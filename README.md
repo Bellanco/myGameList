@@ -1,2 +1,2 @@
 # myGameList
-My Game List
+My Video Game List
