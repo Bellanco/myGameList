@@ -8,7 +8,17 @@
 
     function migrateGame(game, tab) {
         /* Si ya tiene la clave 'name', está en formato v12: no tocar */
-        if ('name' in game) return game;
+        if ('name' in game) {
+            const out = { ...game };
+            if (tab === 'v' && !('reasons' in out)) {
+                if (Array.isArray(game.razones)) out.reasons = game.razones;
+                else if (typeof game.razon === 'string' && game.razon) out.reasons = [game.razon];
+            }
+            if ((tab === 'c' || tab === 'e') && !('weaknesses' in out) && Array.isArray(game.pd)) {
+                out.weaknesses = game.pd;
+            }
+            return out;
+        }
 
         const out = {};
         if (game.id !== undefined) out.id = game.id;
@@ -23,27 +33,27 @@
         if (game.steam_deck) out.steamDeck = true;
 
         if (tab === 'c') {
-            if (game.puntuacion)    out.score      = game.puntuacion;
+            if (game.puntuacion) out.score = game.puntuacion;
             if (game.rejugabilidad) out.replayable = true;
-            if (game.horas != null) out.hours      = game.horas;
-            if (game.años?.length)  out.years      = game.años;
-            if (game.pf?.length)    out.strengths  = game.pf;
-            if (game.pd?.length)    out.weaknesses = game.pd;
-            if (game.reseña)        out.review     = game.reseña;
+            if (game.horas != null) out.hours = game.horas;
+            if (game.años?.length) out.years = game.años;
+            if (game.pf?.length) out.strengths = game.pf;
+            if (game.pd?.length) out.weaknesses = game.pd;
+            if (game.reseña) out.review = game.reseña;
         } else if (tab === 'v') {
-            if (game.pf?.length)    out.strengths  = game.pf;
-            if (game.reseña)        out.review     = game.reseña;
-            if (game.volver)        out.retry      = true;
+            if (game.pf?.length) out.strengths = game.pf;
+            if (game.reseña) out.review = game.reseña;
+            if (game.volver) out.retry = true;
             const reasons = Array.isArray(game.razones)
                 ? game.razones
                 : (typeof game.razon === 'string' && game.razon ? [game.razon] : []);
             if (reasons.length) out.reasons = reasons;
         } else if (tab === 'e') {
-            if (game.pf?.length)    out.strengths  = game.pf;
-            if (game.pd?.length)    out.weaknesses = game.pd;
-            if (game.reseña)        out.review     = game.reseña;
+            if (game.pf?.length) out.strengths = game.pf;
+            if (game.pd?.length) out.weaknesses = game.pd;
+            if (game.reseña) out.review = game.reseña;
         } else if (tab === 'p') {
-            if (game.puntuacion)    out.score      = game.puntuacion;
+            if (game.puntuacion) out.score = game.puntuacion;
         }
 
         return out;
