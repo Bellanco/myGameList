@@ -562,3 +562,22 @@ body.compact-filters .filters-row.open .btn-toggle { justify-content: center; al
     width: 100%;
   }
 }
+
+/* === Clases de utilidad (inline styles migrados desde HTML) === */
+.svg-sprite   { position: absolute; width: 0; height: 0; overflow: hidden; }
+.header-left  { display: flex; align-items: center; gap: .75rem; min-width: 0; }
+.input-hidden { display: none; }
+.modal--sm    { max-width: 540px; }
+
+/* === Texto de ayuda bajo campos de etiquetas === */
+.tag-hint {
+  font-size: .72rem;
+  color: var(--text-muted);
+  margin-top: .18rem;
+  display: block;
+}
+
+/* === Suprimir spinner en inputs numéricos de texto === */
+input[type=number]::-webkit-inner-spin-button,
+input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+input[type=number] { -moz-appearance: textfield; appearance: textfield; }
