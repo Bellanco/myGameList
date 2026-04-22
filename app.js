@@ -2,8 +2,8 @@
 /* ═══════════════════════════════════════════════════════════════════
    CONSTANTES
 ═══════════════════════════════════════════════════════════════════ */
-const STORAGE_KEY = 'mis-listas-v11-unified';
-const LEGACY_KEYS = ['mis-listas-v10-unified', 'mis-listas-v10-separated', 'mis-listas-v9-unified', 'mis-listas-v9-separated', 'mis-listas-v8-unified', 'mis-listas-v8-separated'];
+const STORAGE_KEY = 'mis-listas-v12-unified';
+const LEGACY_KEYS = ['mis-listas-v11-unified', 'mis-listas-v10-unified', 'mis-listas-v10-separated', 'mis-listas-v9-unified', 'mis-listas-v9-separated', 'mis-listas-v8-unified', 'mis-listas-v8-separated'];
 const CURRENT_YEAR = new Date().getFullYear();
 const UI_BREAKPOINTS = { tableCompact: 1100, filtersCompact: 1400 };
 const GIST_DEBOUNCE_MS = 1800;
@@ -13,89 +13,89 @@ const SEARCH_DEBOUNCE_MS = 220;
 ═══════════════════════════════════════════════════════════════════ */
 const TAB_CONFIG = {
     c: {
-        sortDefault: { col: 'años', asc: false },
-        filterScore: true, filterYear: true, filterHours: true, filterBool: { label: '¿Volver a jugar?', field: 'rejugabilidad' },
+        sortDefault: { col: 'years', asc: false },
+        filterScore: true, filterYear: true, filterHours: true, filterBool: { label: '¿Volver a jugar?', field: 'replayable' },
         columns: [
-            { key: 'nombre', label: 'Juego', cls: 'w-name', sortable: true, center: false, render: (g) => `<strong>${UI.esc(g.nombre)}</strong>` },
-            { key: 'años', label: 'Año', cls: 'w-year', sortable: true, center: false, render: (g) => UI.chipList(g.años, 'chip-generic') },
-            { key: '_plat', label: 'Plataformas', cls: 'w-plat col-plat', sortable: false, center: false, render: (g) => UI.chipList(g.plataformas, 'chip-plat') },
-            { key: 'generos', label: 'Géneros', cls: 'w-genre', sortable: true, center: false, render: (g) => UI.chipList(g.generos, 'chip-genre') },
-            { key: '_pf', label: 'Puntos fuertes', cls: 'w-strong col-strong', sortable: false, center: false, render: (g) => UI.chipList(g.pf, 'chip-pf') },
-            { key: '_pd', label: 'Puntos débiles', cls: 'w-weak col-weak', sortable: false, center: false, render: (g) => UI.chipList(g.pd, 'chip-pd') },
-            { key: 'puntuacion', label: 'Punt.', cls: '', sortable: true, center: false, render: (g) => UI.stars(g.puntuacion) },
-            { key: 'rejugabilidad', label: 'Rejug.', cls: 'w-bool', sortable: true, center: true, render: (g) => UI.bool(g.rejugabilidad) },
+            { key: 'nombre', label: 'Juego', cls: 'w-name', sortable: true, center: false, render: (g) => `<strong>${UI.esc(g.name)}</strong>` },
+            { key: 'años', label: 'Año', cls: 'w-year', sortable: true, center: false, render: (g) => UI.chipList(g.years, 'chip-generic') },
+            { key: '_plat', label: 'Plataformas', cls: 'w-plat col-plat', sortable: false, center: false, render: (g) => UI.chipList(g.platforms, 'chip-plat') },
+            { key: 'genres', label: 'Géneros', cls: 'w-genre', sortable: true, center: false, render: (g) => UI.chipList(g.genres, 'chip-genre') },
+            { key: '_pf', label: 'Puntos fuertes', cls: 'w-strong col-strong', sortable: false, center: false, render: (g) => UI.chipList(g.strengths, 'chip-pf') },
+            { key: '_pd', label: 'Puntos débiles', cls: 'w-weak col-weak', sortable: false, center: false, render: (g) => UI.chipList(g.weaknesses, 'chip-pd') },
+            { key: 'score', label: 'Punt.', cls: '', sortable: true, center: false, render: (g) => UI.stars(g.score) },
+            { key: 'rejugabilidad', label: 'Rejug.', cls: 'w-bool', sortable: true, center: true, render: (g) => UI.bool(g.replayable) },
         ],
         detailExtra: [
-            { label: 'Años en los que se completó', render: (g) => UI.chipList(g.años, 'chip-generic') },
+            { label: 'Años en los que se completó', render: (g) => UI.chipList(g.years, 'chip-generic') },
             // Cambio en detalle Horas: hideIfEmpty para ocultar toda la caja si no hay valor
-            { label: 'Tiempo jugado', hideIfEmpty: true, render: (g) => g.horas != null ? `${String(g.horas).replace('.', ',')} horas` : '' },
-            { label: 'Puntos fuertes', render: (g) => UI.chipList(g.pf, 'chip-pf'), cls: 'detail-strong' },
-            { label: 'Puntos débiles', render: (g) => UI.chipList(g.pd, 'chip-pd'), cls: 'detail-weak' },
-            { label: 'Puntuación', render: (g) => UI.stars(g.puntuacion) },
-            { label: 'Rejugabilidad', render: (g) => UI.bool(g.rejugabilidad) },
+            { label: 'Tiempo jugado', hideIfEmpty: true, render: (g) => g.hours != null ? `${String(g.hours).replace('.', ',')} horas` : '' },
+            { label: 'Puntos fuertes', render: (g) => UI.chipList(g.strengths, 'chip-pf'), cls: 'detail-strong' },
+            { label: 'Puntos débiles', render: (g) => UI.chipList(g.weaknesses, 'chip-pd'), cls: 'detail-weak' },
+            { label: 'Puntuación', render: (g) => UI.stars(g.score) },
+            { label: 'Rejugabilidad', render: (g) => UI.bool(g.replayable) },
         ],
         actions: [],
         modalTitles: { new: 'Nuevo juego completado', prefill: 'Pasar a completados', edit: 'Editar juego' },
-        form: { hasScore: true, scoreRequired: true, hasYears: true, hasHours: true, hasPF: true, hasPD: true, hasRazones: false, hasBool: true, boolLabel: '¿Volver a jugar?', boolField: 'rejugabilidad', hasNotes: true },
-        tagKeys: ['generos', 'plataformas', 'years', 'pf', 'pd'],
+        form: { hasScore: true, scoreRequired: true, hasYears: true, hasHours: true, hasStrengths: true, hasWeaknesses: true, hasReasons: false, hasBool: true, boolLabel: '¿Volver a jugar?', boolField: 'rejugabilidad', hasReview: true },
+        tagKeys: ['genres', 'platforms', 'years', 'strengths', 'weaknesses'],
     },
     v: {
-        sortDefault: { col: 'nombre', asc: true },
-        filterScore: false, filterYear: false, filterHours: false, filterBool: { label: '¿Dar otra oportunidad?', field: 'volver' },
+        sortDefault: { col: 'name', asc: true },
+        filterScore: false, filterYear: false, filterHours: false, filterBool: { label: '¿Dar otra oportunidad?', field: 'retry' },
         columns: [
-            { key: 'nombre', label: 'Juego', cls: 'w-name', sortable: true, center: false, render: (g) => `<strong>${UI.esc(g.nombre)}</strong>` },
-            { key: '_plat', label: 'Plataformas', cls: 'w-plat col-plat', sortable: false, center: false, render: (g) => UI.chipList(g.plataformas, 'chip-plat') },
-            { key: 'generos', label: 'Géneros', cls: 'w-genre', sortable: true, center: false, render: (g) => UI.chipList(g.generos, 'chip-genre') },
-            { key: '_pf', label: 'Puntos fuertes', cls: 'w-strong col-strong', sortable: false, center: false, render: (g) => UI.chipList(g.pf, 'chip-pf') },
-            { key: '_razones', label: 'Puntos débiles', cls: 'w-weak col-weak', sortable: false, center: false, render: (g) => UI.chipList(g.razones, 'chip-pd') },
-            { key: 'volver', label: 'Dar otra oportunidad', cls: 'w-bool', sortable: true, center: true, render: (g) => UI.bool(g.volver) },
+            { key: 'nombre', label: 'Juego', cls: 'w-name', sortable: true, center: false, render: (g) => `<strong>${UI.esc(g.name)}</strong>` },
+            { key: '_plat', label: 'Plataformas', cls: 'w-plat col-plat', sortable: false, center: false, render: (g) => UI.chipList(g.platforms, 'chip-plat') },
+            { key: 'genres', label: 'Géneros', cls: 'w-genre', sortable: true, center: false, render: (g) => UI.chipList(g.genres, 'chip-genre') },
+            { key: '_pf', label: 'Puntos fuertes', cls: 'w-strong col-strong', sortable: false, center: false, render: (g) => UI.chipList(g.strengths, 'chip-pf') },
+            { key: '_razones', label: 'Puntos débiles', cls: 'w-weak col-weak', sortable: false, center: false, render: (g) => UI.chipList(g.reasons, 'chip-pd') },
+            { key: 'volver', label: 'Dar otra oportunidad', cls: 'w-bool', sortable: true, center: true, render: (g) => UI.bool(g.retry) },
         ],
         detailExtra: [
-            { label: 'Puntos fuertes', render: (g) => UI.chipList(g.pf, 'chip-pf'), cls: 'detail-strong' },
-            { label: 'Puntos débiles', render: (g) => UI.chipList(g.razones, 'chip-pd'), cls: 'detail-weak' },
-            { label: 'Dar otra oportunidad', render: (g) => UI.bool(g.volver) },
+            { label: 'Puntos fuertes', render: (g) => UI.chipList(g.strengths, 'chip-pf'), cls: 'detail-strong' },
+            { label: 'Puntos débiles', render: (g) => UI.chipList(g.reasons, 'chip-pd'), cls: 'detail-weak' },
+            { label: 'Dar otra oportunidad', render: (g) => UI.bool(g.retry) },
         ],
         actions: [
             { label: 'Pasar a completados', btnCls: 'btn-complete', target: 'c' },
             { label: 'Pasar a en curso', btnCls: 'btn-inprogress', target: 'e' },
         ],
         modalTitles: { new: 'Nuevo juego abandonado', prefill: 'Pasar a abandonados', edit: 'Editar juego' },
-        form: { hasScore: false, scoreRequired: false, hasYears: false, hasHours: false, hasPF: true, hasPD: false, hasRazones: true, hasBool: true, boolLabel: '¿Dar otra oportunidad?', boolField: 'volver', hasNotes: true },
-        tagKeys: ['generos', 'plataformas', 'pf', 'razones'],
+        form: { hasScore: false, scoreRequired: false, hasYears: false, hasHours: false, hasStrengths: true, hasWeaknesses: false, hasReasons: true, hasBool: true, boolLabel: '¿Dar otra oportunidad?', boolField: 'volver', hasReview: true },
+        tagKeys: ['genres', 'platforms', 'strengths', 'reasons'],
     },
     e: {
-        sortDefault: { col: 'nombre', asc: true },
+        sortDefault: { col: 'name', asc: true },
         filterScore: false, filterYear: false, filterHours: false, filterBool: null,
         columns: [
-            { key: 'nombre', label: 'Juego', cls: 'w-name', sortable: true, center: false, render: (g) => `<strong>${UI.esc(g.nombre)}</strong>` },
-            { key: '_plat', label: 'Plataformas', cls: 'w-plat col-plat', sortable: false, center: false, render: (g) => UI.chipList(g.plataformas, 'chip-plat') },
-            { key: 'generos', label: 'Géneros', cls: 'w-genre', sortable: true, center: false, render: (g) => UI.chipList(g.generos, 'chip-genre') },
-            { key: '_pf', label: 'Puntos fuertes', cls: 'w-strong col-strong', sortable: false, center: false, render: (g) => UI.chipList(g.pf, 'chip-pf') },
-            { key: '_pd', label: 'Puntos débiles', cls: 'w-weak col-weak', sortable: false, center: false, render: (g) => UI.chipList(g.pd, 'chip-pd') },
+            { key: 'nombre', label: 'Juego', cls: 'w-name', sortable: true, center: false, render: (g) => `<strong>${UI.esc(g.name)}</strong>` },
+            { key: '_plat', label: 'Plataformas', cls: 'w-plat col-plat', sortable: false, center: false, render: (g) => UI.chipList(g.platforms, 'chip-plat') },
+            { key: 'genres', label: 'Géneros', cls: 'w-genre', sortable: true, center: false, render: (g) => UI.chipList(g.genres, 'chip-genre') },
+            { key: '_pf', label: 'Puntos fuertes', cls: 'w-strong col-strong', sortable: false, center: false, render: (g) => UI.chipList(g.strengths, 'chip-pf') },
+            { key: '_pd', label: 'Puntos débiles', cls: 'w-weak col-weak', sortable: false, center: false, render: (g) => UI.chipList(g.weaknesses, 'chip-pd') },
         ],
         detailExtra: [
-            { label: 'Puntos fuertes', render: (g) => UI.chipList(g.pf, 'chip-pf'), cls: 'detail-strong' },
-            { label: 'Puntos débiles', render: (g) => UI.chipList(g.pd, 'chip-pd'), cls: 'detail-weak' },
+            { label: 'Puntos fuertes', render: (g) => UI.chipList(g.strengths, 'chip-pf'), cls: 'detail-strong' },
+            { label: 'Puntos débiles', render: (g) => UI.chipList(g.weaknesses, 'chip-pd'), cls: 'detail-weak' },
         ],
         actions: [
             { label: 'Pasar a completados', btnCls: 'btn-complete', target: 'c' },
             { label: 'Pasar a abandonados', btnCls: 'btn-abandoned', target: 'v' },
         ],
         modalTitles: { new: 'Nuevo juego en curso', prefill: 'Pasar a en curso', edit: 'Editar juego' },
-        form: { hasScore: false, scoreRequired: false, hasYears: false, hasHours: false, hasPF: true, hasPD: true, hasRazones: false, hasBool: false, boolLabel: '', boolField: '', hasNotes: true },
-        tagKeys: ['generos', 'plataformas', 'pf', 'pd'],
+        form: { hasScore: false, scoreRequired: false, hasYears: false, hasHours: false, hasStrengths: true, hasWeaknesses: true, hasReasons: false, hasBool: false, boolLabel: '', boolField: '', hasReview: true },
+        tagKeys: ['genres', 'platforms', 'strengths', 'weaknesses'],
     },
     p: {
-        sortDefault: { col: 'puntuacion', asc: false },
+        sortDefault: { col: 'score', asc: false },
         filterScore: true, filterYear: false, filterHours: false, filterBool: null,
         columns: [
-            { key: 'nombre', label: 'Juego', cls: 'w-name', sortable: true, center: false, render: (g) => `<strong>${UI.esc(g.nombre)}</strong>` },
-            { key: '_plat', label: 'Plataformas', cls: 'w-plat col-plat', sortable: false, center: false, render: (g) => UI.chipList(g.plataformas, 'chip-plat') },
-            { key: 'generos', label: 'Géneros', cls: 'w-genre', sortable: true, center: false, render: (g) => UI.chipList(g.generos, 'chip-genre') },
-            { key: 'puntuacion', label: 'Interés', cls: '', sortable: true, center: false, render: (g) => g.puntuacion ? UI.stars(g.puntuacion) : '<span style="color:var(--text-muted)">—</span>' },
+            { key: 'nombre', label: 'Juego', cls: 'w-name', sortable: true, center: false, render: (g) => `<strong>${UI.esc(g.name)}</strong>` },
+            { key: '_plat', label: 'Plataformas', cls: 'w-plat col-plat', sortable: false, center: false, render: (g) => UI.chipList(g.platforms, 'chip-plat') },
+            { key: 'genres', label: 'Géneros', cls: 'w-genre', sortable: true, center: false, render: (g) => UI.chipList(g.genres, 'chip-genre') },
+            { key: 'score', label: 'Interés', cls: '', sortable: true, center: false, render: (g) => g.score ? UI.stars(g.score) : '<span style="color:var(--text-muted)">—</span>' },
         ],
         detailExtra: [
-            { label: 'Interés', render: (g) => g.puntuacion ? UI.stars(g.puntuacion) : '<span style="color:var(--text-muted)">Sin valorar</span>' },
+            { label: 'Interés', render: (g) => g.score ? UI.stars(g.score) : '<span style="color:var(--text-muted)">Sin valorar</span>' },
         ],
         actions: [
             { label: 'Pasar a en curso', btnCls: 'btn-inprogress', target: 'e' },
@@ -103,8 +103,8 @@ const TAB_CONFIG = {
             { label: 'Pasar a abandonados', btnCls: 'btn-abandoned', target: 'v' },
         ],
         modalTitles: { new: 'Nuevo juego próximo', prefill: 'Añadir a próximos', edit: 'Editar juego' },
-        form: { hasScore: true, scoreRequired: false, hasYears: false, hasHours: false, hasPF: false, hasPD: false, hasRazones: false, hasBool: false, boolLabel: '', boolField: '', hasNotes: false },
-        tagKeys: ['generos', 'plataformas'],
+        form: { hasScore: true, scoreRequired: false, hasYears: false, hasHours: false, hasStrengths: false, hasWeaknesses: false, hasReasons: false, hasBool: false, boolLabel: '', boolField: '', hasReview: false },
+        tagKeys: ['genres', 'platforms'],
     },
 };
 /* ═══════════════════════════════════════════════════════════════════
@@ -132,10 +132,10 @@ const UI = {
             : `<span class="icon-bool false">${this.icon('close')}</span>`;
     },
     nameCell(game, compact = false) {
-        const title = `<strong>${this.esc(game?.nombre ?? '')}</strong>`;
+        const title = `<strong>${this.esc(game?.name ?? '')}</strong>`;
         if (!compact)
             return title;
-        const score = Number(game?.puntuacion || 0);
+        const score = Number(game?.score || 0);
         const stars = score > 0 ? `<span class="compact-score">${this.stars(score)}</span>` : '';
         return `<div class="compact-name-cell"><span class="compact-name-text">${title}</span>${stars}</div>`;
     },
@@ -148,12 +148,14 @@ const GIST_CFG_KEY = 'mis-listas-gist-config';
 const GIST_FILENAME = 'myGames.json';
 const GH_API = 'https://api.github.com';
 const GistSync = {
-    getCfg() { try {
-        return JSON.parse(localStorage.getItem(GIST_CFG_KEY) || 'null');
-    }
-    catch {
-        return null;
-    } },
+    getCfg() {
+        try {
+            return JSON.parse(localStorage.getItem(GIST_CFG_KEY) || 'null');
+        }
+        catch {
+            return null;
+        }
+    },
     saveCfg(cfg) { localStorage.setItem(GIST_CFG_KEY, JSON.stringify(cfg)); },
     clearCfg() { localStorage.removeItem(GIST_CFG_KEY); },
     _h(token) {
@@ -168,8 +170,10 @@ const GistSync = {
     async create(token) {
         const r = await fetch(`${GH_API}/gists`, {
             method: 'POST', headers: this._h(token),
-            body: JSON.stringify({ description: 'Mis Listas – datos de juegos', public: false,
-                files: { [GIST_FILENAME]: { content: JSON.stringify({ c: [], v: [], e: [], p: [], updatedAt: Date.now() }) } } })
+            body: JSON.stringify({
+                description: 'Mis Listas – datos de juegos', public: false,
+                files: { [GIST_FILENAME]: { content: JSON.stringify({ c: [], v: [], e: [], p: [], updatedAt: Date.now() }) } }
+            })
         });
         if (!r.ok)
             throw new Error(`No se pudo crear el Gist (${r.status})`);
@@ -196,7 +200,8 @@ const GistSync = {
         catch {
             throw new Error('El Gist contiene datos inválidos o corruptos');
         }
-        return { data: parsed, etag: body.etag || r.headers.get('ETag') || null };
+        const migratedGist = typeof window.migrateData === 'function' ? window.migrateData(parsed) : parsed;
+        return { data: migratedGist, etag: body.etag || r.headers.get('ETag') || null };
     },
     async write(token, gistId, data, _etag = null) {
         const headers = this._h(token);
@@ -215,8 +220,8 @@ class SteamListApp {
         this.currentTab = 'c';
         this.expandedId = null;
         this.editCtx = { type: null, id: null, migrateId: null, sourceTab: null };
-        this.tempTags = { generos: [], plataformas: [], years: [], pf: [], pd: [], razones: [] };
-        this.currentAdminTab = 'generos';
+        this.tempTags = { genres: [], platforms: [], years: [], strengths: [], weaknesses: [], reasons: [] };
+        this.currentAdminTab = 'genres';
         this.adminEditState = null;
         this.statusTimer = null;
         this.adminTimer = null;
@@ -225,6 +230,7 @@ class SteamListApp {
         this._renderTableTimer = null;
         this._pushTimer = null;
         this._eventsBound = false;
+        this._yearWarningShown = false;
         this.meta = null;
         this.lookups = {};
         this.sortConfig = Object.fromEntries(Object.entries(TAB_CONFIG).map(([k, v]) => [k, { ...v.sortDefault }]));
@@ -267,7 +273,8 @@ class SteamListApp {
                     continue;
                 const p = JSON.parse(raw);
                 const src = p?.data && typeof p.data === 'object' ? p.data : p;
-                this.data = { c: src.c || [], v: src.v || [], e: src.e || [], p: src.p || [] };
+                const rawLoaded = { c: src.c || [], v: src.v || [], e: src.e || [], p: src.p || [] };
+                this.data = typeof window.migrateData === 'function' ? window.migrateData(rawLoaded) : rawLoaded;
                 this.meta = {
                     updatedAt: Number(p?.updatedAt ?? p?.meta?.updatedAt ?? 0) || 0,
                     etag: p?.etag ?? p?.meta?.etag ?? null,
@@ -284,23 +291,23 @@ class SteamListApp {
         const toList = (v) => Array.from(new Set((Array.isArray(v) ? v : []).flatMap(item => typeof item === 'number' ? [item] : splitLn(item)).filter(Boolean)));
         const base = (item) => ({
             id: Number.isFinite(item?.id) ? item.id : 0,
-            nombre: String(item?.nombre ?? '').trim(),
-            plataformas: toList(item?.plataformas ?? (item?.plataforma ? [item.plataforma] : [])),
-            generos: toList(item?.generos ?? (item?.genero ? [item.genero] : [])),
-            steam_deck: Boolean(item?.steam_deck),
+            name: String(item?.name ?? '').trim(),
+            platforms: toList(item?.platforms ?? (item?.platform ? [item.platform] : [])),
+            genres: toList(item?.genres ?? (item?.genre ? [item.genre] : [])),
+            steamDeck: Boolean(item?.steamDeck),
         });
         const normFns = {
-            c: i => ({ ...base(i), pf: toList(i?.pf), reseña: String(i?.reseña ?? '').trim(), años: toList(i?.años).map(Number).filter(Number.isFinite), pd: toList(i?.pd), puntuacion: Math.min(5, Math.max(0, Number(i?.puntuacion ?? 0))), rejugabilidad: Boolean(i?.rejugabilidad), horas: i?.horas ? Number(i.horas) : null }),
+            c: i => ({ ...base(i), strengths: toList(i?.strengths), review: String(i?.review ?? '').trim(), years: toList(i?.years).map(Number).filter(Number.isFinite), weaknesses: toList(i?.weaknesses), score: Math.min(5, Math.max(0, Number(i?.score ?? 0))), replayable: Boolean(i?.replayable), hours: i?.hours ? Number(i.hours) : null }),
             v: i => {
                 let razones = [];
-                if (Array.isArray(i?.razones))
-                    razones = i.razones.flatMap(v => typeof v === 'string' ? splitLn(v) : []).filter(Boolean);
-                else if (typeof i?.razon === 'string')
-                    razones = splitLn(i.razon);
-                return { ...base(i), pf: toList(i?.pf), reseña: String(i?.reseña ?? '').trim(), razones, volver: Boolean(i?.volver) };
+                if (Array.isArray(i?.reasons))
+                    razones = i.reasons.flatMap(v => typeof v === 'string' ? splitLn(v) : []).filter(Boolean);
+                else if (typeof i?.reason === 'string')
+                    razones = splitLn(i.reason);
+                return { ...base(i), strengths: toList(i?.strengths), review: String(i?.review ?? '').trim(), razones, retry: Boolean(i?.retry) };
             },
-            e: i => ({ ...base(i), pf: toList(i?.pf), reseña: String(i?.reseña ?? '').trim(), pd: toList(i?.pd) }),
-            p: i => ({ ...base(i), puntuacion: Math.min(5, Math.max(0, Number(i?.puntuacion ?? 0))) }),
+            e: i => ({ ...base(i), strengths: toList(i?.strengths), review: String(i?.review ?? '').trim(), weaknesses: toList(i?.weaknesses) }),
+            p: i => ({ ...base(i), score: Math.min(5, Math.max(0, Number(i?.score ?? 0))) }),
         };
         for (const t of ['c', 'v', 'e', 'p']) {
             this.data[t] = (Array.isArray(this.data[t]) ? this.data[t].map(i => normFns[t](i)) : []);
@@ -313,22 +320,24 @@ class SteamListApp {
     }
     /* ── Lookups ───────────────────────────────────────────────────── */
     refreshLookups() {
-        this.lookups = { generos: new Set(), plataformas: new Set(), pf: new Set(), pd_razon: new Set(), years: new Set() };
+        this.lookups = { genres: new Set(), platforms: new Set(), strengths: new Set(), weaknesses: new Set(), years: new Set() };
         for (const item of Object.values(this.data).flat()) {
-            (item.generos || []).forEach(v => this.lookups.generos.add(v));
-            (item.plataformas || []).forEach(v => this.lookups.plataformas.add(v));
-            (item.pf || []).forEach(v => this.lookups.pf.add(v));
-            (item.pd || []).forEach(v => this.lookups.pd_razon.add(v));
-            (item.razones || []).forEach(v => this.lookups.pd_razon.add(v));
-            (item.años || []).forEach(v => this.lookups.years.add(v));
+            (item.genres || []).forEach(v => this.lookups.genres.add(v));
+            (item.platforms || []).forEach(v => this.lookups.platforms.add(v));
+            (item.strengths || []).forEach(v => this.lookups.strengths.add(v));
+            (item.weaknesses || []).forEach(v => this.lookups.weaknesses.add(v));
+            (item.reasons || []).forEach(v => this.lookups.weaknesses.add(v));
+            (item.years || []).forEach(v => this.lookups.years.add(v));
         }
         const sortEs = (a, b) => String(a).localeCompare(String(b), 'es');
-        const fill = (id, set, fn) => { const el = document.getElementById(id); if (el)
-            el.innerHTML = [...set].sort(fn).map(v => `<option value="${UI.esc(v)}">`).join(''); };
-        fill('dl-genres', this.lookups.generos, sortEs);
-        fill('dl-plataformas', this.lookups.plataformas, sortEs);
-        fill('dl-pf', this.lookups.pf, sortEs);
-        fill('dl-pd', this.lookups.pd_razon, sortEs);
+        const fill = (id, set, fn) => {
+            const el = document.getElementById(id); if (el)
+                el.innerHTML = [...set].sort(fn).map(v => `<option value="${UI.esc(v)}">`).join('');
+        };
+        fill('dl-genres', this.lookups.genres, sortEs);
+        fill('dl-platforms', this.lookups.platforms, sortEs);
+        fill('dl-strengths', this.lookups.strengths, sortEs);
+        fill('dl-weaknesses', this.lookups.weaknesses, sortEs);
     }
     persist() {
         this.normalize();
@@ -558,8 +567,10 @@ class SteamListApp {
     }
     clearAllFilters() {
         const ids = ['t-search', 't-gen', 't-plat', 't-score', 't-hours'];
-        ids.forEach(id => { const el = document.getElementById(id); if (el)
-            el.value = ''; });
+        ids.forEach(id => {
+            const el = document.getElementById(id); if (el)
+                el.value = '';
+        });
         document.getElementById('t-only')?.classList.remove('active');
         document.getElementById('t-deck')?.classList.remove('active', 'btn-toggle-deck');
         this.renderToolbar();
@@ -600,13 +611,13 @@ class SteamListApp {
         const compact = this.isFiltersCompact();
         const setG = new Set(), setP = new Set();
         tabData.forEach(i => {
-            (i.generos || []).forEach(v => setG.add(v));
-            (i.plataformas || []).forEach(v => setP.add(v));
+            (i.genres || []).forEach(v => setG.add(v));
+            (i.platforms || []).forEach(v => setP.add(v));
         });
         const opts = (set, fn) => [...set].sort(fn).map(v => `<option value="${UI.esc(v)}">${UI.esc(v)}</option>`).join('');
         const genres = opts(setG, sortEs);
         const plats = opts(setP, sortEs);
-        const scores = [...new Set(tabData.map(g => Number(g.puntuacion || 0)))]
+        const scores = [...new Set(tabData.map(g => Number(g.score || 0)))]
             .filter(s => s > 0).sort((a, b) => b - a)
             .map(s => `<option value="${s}">${'★'.repeat(s)}${'☆'.repeat(5 - s)} ${s} o más</option>`).join('');
         const activeCount = this.getActiveFilterCount(state);
@@ -663,7 +674,7 @@ class SteamListApp {
         ${cfg.filterBool ? `<div class="filter-field filter-field-toggle">
           <label class="flabel filter-field-hidden-label" aria-hidden="true">${UI.esc(cfg.filterBool.label)}</label>
           <button class="btn btn-toggle ${state.only ? 'active' : ''}" id="t-only" data-action="toggle-only" title="${cfg.filterBool.label}">
-            ${UI.icon(cfg.filterBool.field === 'rejugabilidad' ? 'repeat' : 'undo')}<span>${UI.esc(cfg.filterBool.label)}</span>
+            ${UI.icon(cfg.filterBool.field === 'replayable' ? 'repeat' : 'undo')}<span>${UI.esc(cfg.filterBool.label)}</span>
           </button>
         </div>` : ''}
         <div class="filter-field filter-field-toggle">
@@ -702,23 +713,23 @@ class SteamListApp {
         const tab = this.currentTab;
         const cfg = TAB_CONFIG[tab];
         const filtered = this.data[tab].filter(item => {
-            if (state.search && !String(item.nombre || '').toLowerCase().includes(state.search.toLowerCase()))
+            if (state.search && !String(item.name || '').toLowerCase().includes(state.search.toLowerCase()))
                 return false;
-            if (state.genre && !(item.generos || []).some(v => String(v).toLowerCase().includes(String(state.genre).toLowerCase())))
+            if (state.genre && !(item.genres || []).some(v => String(v).toLowerCase().includes(String(state.genre).toLowerCase())))
                 return false;
-            if (state.platform && !(item.plataformas || []).some(v => String(v).toLowerCase().includes(String(state.platform).toLowerCase())))
+            if (state.platform && !(item.platforms || []).some(v => String(v).toLowerCase().includes(String(state.platform).toLowerCase())))
                 return false;
-            if (state.deck && !item.steam_deck)
+            if (state.deck && !item.steamDeck)
                 return false;
-            if (state.score && Number(item.puntuacion || 0) < Number(state.score))
+            if (state.score && Number(item.score || 0) < Number(state.score))
                 return false;
             if (state.only && cfg.filterBool && !item[cfg.filterBool.field])
                 return false;
             if (state.hours) {
-                const hasH = item.horas !== undefined && item.horas !== null && item.horas !== '';
+                const hasH = item.hours !== undefined && item.hours !== null && item.hours !== '';
                 if (!hasH)
                     return false;
-                const hNum = Number(item.horas);
+                const hNum = Number(item.hours);
                 if (state.hours === '0-5' && hNum > 5)
                     return false;
                 if (state.hours === '5-10' && (hNum <= 5 || hNum > 10))
@@ -740,12 +751,12 @@ class SteamListApp {
         return filtered.sort((a, b) => {
             let va = a[col], vb = b[col];
             if (col === 'años') {
-                va = a.años?.length ? Math.max(...a.años) : 0;
-                vb = b.años?.length ? Math.max(...b.años) : 0;
+                va = a.years?.length ? Math.max(...a.years) : 0;
+                vb = b.years?.length ? Math.max(...b.years) : 0;
             }
-            if (col === 'generos') {
-                va = (a.generos || [])[0] || '';
-                vb = (b.generos || [])[0] || '';
+            if (col === 'genres') {
+                va = (a.genres || [])[0] || '';
+                vb = (b.genres || [])[0] || '';
             }
             if (typeof va === 'boolean') {
                 va = Number(va);
@@ -758,7 +769,7 @@ class SteamListApp {
     }
     sortBy(col) {
         const cfg = this.sortConfig[this.currentTab];
-        const numericCols = ['años', 'puntuacion', 'volver', 'rejugabilidad', 'steam_deck', 'horas'];
+        const numericCols = ['years', 'score', 'retry', 'replayable', 'steamDeck', 'hours'];
         if (cfg.col === col) {
             cfg.asc = !cfg.asc;
         }
@@ -792,7 +803,7 @@ class SteamListApp {
         const tab = this.currentTab;
         const expanded = this.expandedId === game.id;
         const cells = cols.map(col => {
-            const value = (this.isTableCompact() && col.key === 'nombre') ? UI.nameCell(game, true) : col.render(game);
+            const value = (this.isTableCompact() && col.key === 'name') ? UI.nameCell(game, true) : col.render(game);
             return `<td${col.center ? ' style="text-align:center;"' : ''}>${value}</td>`;
         }).join('');
         const mainRow = `<tr class="main-row ${idx % 2 === 0 ? 'striped' : ''}" data-action="toggle-expand" data-id="${game.id}" data-dbl-action="edit-game" data-tab="${tab}" data-id="${game.id}">${cells}</tr>`;
@@ -801,12 +812,12 @@ class SteamListApp {
     renderDetailRow(game, expanded, colCount) {
         const tab = this.currentTab;
         const tabCfg = TAB_CONFIG[tab];
-        const platChips = (game.plataformas || []).map(p => UI.chip(p, 'chip-plat')).join('');
-        const deckChip = game.steam_deck ? `<span class="chip chip-deck">${UI.icon('steamdeck')}<span>Steam Deck</span></span>` : '';
+        const platChips = (game.platforms || []).map(p => UI.chip(p, 'chip-plat')).join('');
+        const deckChip = game.steamDeck ? `<span class="chip chip-deck">${UI.icon('steamdeck')}<span>Steam Deck</span></span>` : '';
         const platHtml = (platChips || deckChip) ? `<div class="chips">${platChips}${deckChip}</div>` : `<span style="color:var(--text-muted)">—</span>`;
         const fields = [
             this.dbox('Plataformas', platHtml, 'detail-plat'),
-            this.dbox('Géneros', UI.chipList(game.generos, 'chip-genre')),
+            this.dbox('Géneros', UI.chipList(game.genres, 'chip-genre')),
             ...tabCfg.detailExtra.map(f => {
                 const val = f.render(game);
                 if (f.hideIfEmpty && !val)
@@ -814,10 +825,10 @@ class SteamListApp {
                 return this.dbox(f.label, val, f.cls || '');
             })
         ].filter(Boolean).join('');
-        const notesHtml = tabCfg.form.hasNotes ? `
+        const notesHtml = tabCfg.form.hasReview ? `
       <div class="detail-box" style="grid-column:1/-1;">
         <span class="detail-label">Análisis</span>
-        ${game.reseña ? `<div class="detail-value">${UI.esc(game.reseña).replace(/\n/g, '<br>')}</div>` : '<span style="color:var(--text-muted)">Sin análisis</span>'}
+        ${game.review ? `<div class="detail-value">${UI.esc(game.review).replace(/\n/g, '<br>')}</div>` : '<span style="color:var(--text-muted)">Sin análisis</span>'}
       </div>` : '';
         const migBtns = tabCfg.actions.map(a => `<button class="btn ${a.btnCls}" type="button" data-action="migrate-game" data-id="${game.id}" data-target="${a.target}">${UI.icon('arrow-right')}<span>${a.label}</span></button>`).join('');
         return `
@@ -841,6 +852,7 @@ class SteamListApp {
     /* ── Modal formulario ──────────────────────────────────────────── */
     openModal(type, id = null, prefill = null) {
         this.clearErrors();
+        this._yearWarningShown = false;
         this.editCtx = { type, id, migrateId: this.editCtx?.migrateId || null, sourceTab: this.editCtx?.sourceTab || null };
         if (!id && !prefill) {
             this.editCtx.migrateId = null;
@@ -850,12 +862,12 @@ class SteamListApp {
         const f = tabCfg.form;
         const draft = prefill || (id ? this.data[type].find(i => i.id === id) : {}) || {};
         this.tempTags = {
-            generos: [...(draft.generos || [])],
-            plataformas: [...(draft.plataformas || [])],
-            years: f.hasYears ? [...(draft.años || [])] : [],
-            pf: f.hasPF ? [...(draft.pf || [])] : [],
-            pd: f.hasPD ? [...(draft.pd || [])] : [],
-            razones: f.hasRazones ? [...(draft.razones || [])] : [],
+            genres: [...(draft.genres || [])],
+            platforms: [...(draft.platforms || [])],
+            years: f.hasYears ? [...(draft.years || [])] : [],
+            strengths: f.hasStrengths ? [...(draft.strengths || [])] : [],
+            weaknesses: f.hasWeaknesses ? [...(draft.weaknesses || [])] : [],
+            reasons: f.hasReasons ? [...(draft.reasons || [])] : [],
         };
         let title = tabCfg.modalTitles.edit;
         if (!id)
@@ -864,27 +876,31 @@ class SteamListApp {
         document.getElementById('m-body').innerHTML = this.buildFormHTML(draft, type);
         this.renderTags();
         this.bindTagInputs(tabCfg.tagKeys);
+        this._bindYearInput();
+        this._bindHorasInput();
         document.getElementById('modal-form').classList.add('active');
     }
     buildFormHTML(draft, type) {
         const f = TAB_CONFIG[type].form;
-        const rating = Number(draft.puntuacion || 0);
+        const rating = Number(draft.score || 0);
         const boolOn = f.boolField ? Boolean(draft[f.boolField]) : false;
         return `
       <div class="frow">
         <div class="fg">
           <label class="flabel">Nombre *</label>
-          <input class="finput" id="f-nombre" placeholder="Escribe el nombre del juego" value="${UI.esc(draft.nombre || '')}">
+          <input class="finput" id="f-name" placeholder="Escribe el nombre del juego" value="${UI.esc(draft.name || '')}">
         </div>
         <div class="fg">
           <label class="flabel">Géneros *</label>
-          <div class="tag-inp-wrap" id="gnw"><input type="text" id="inp-generos" list="dl-genres" placeholder="Añadir..."></div>
+          <div class="tag-inp-wrap" id="genresWrap"><input type="text" id="inp-genres" list="dl-genres" placeholder="Añadir..."></div>
+          <span class="tag-hint">Pulsa Enter para añadir</span>
         </div>
       </div>
       <div class="frow">
         <div class="fg">
           <label class="flabel">Plataformas *</label>
-          <div class="tag-inp-wrap" id="plw"><input type="text" id="inp-plataformas" list="dl-plataformas" placeholder="Añadir..."></div>
+          <div class="tag-inp-wrap" id="platformsWrap"><input type="text" id="inp-platforms" list="dl-platforms" placeholder="Añadir..."></div>
+          <span class="tag-hint">Pulsa Enter para añadir</span>
         </div>
         ${f.hasScore ? `
           <div class="fg">
@@ -899,29 +915,31 @@ class SteamListApp {
           ${f.hasYears ? `
           <div class="fg">
             <label class="flabel">Años completado *</label>
-            <div class="tag-inp-wrap" id="yw"><input type="number" id="inp-years" placeholder="Ej: ${CURRENT_YEAR}" style="-moz-appearance:textfield;appearance:textfield;"></div>
+            <div class="tag-inp-wrap" id="yearsWrap"><input type="text" inputmode="numeric" id="inp-years" placeholder="Ej: ${CURRENT_YEAR}" maxlength="4"></div>
+            <span class="tag-hint">Pulsa Enter para añadir</span>
           </div>` : ''}
           ${f.hasHours ? `
           <div class="fg">
             <label class="flabel">Horas jugadas</label>
-            <input type="text" inputmode="decimal" class="finput" id="f-horas" placeholder="Ej: 45 o 12,5" value="${draft.horas != null ? String(draft.horas).replace('.', ',') : ''}" oninput="var v=this.value.replace(/[^0-9.,]/g,'');var s=v.search(/[.,]/);if(s>=0){v=v.slice(0,s+1).replace(',','.')+v.slice(s+1).replace(/[.,]/g,'').slice(0,1);}this.value=v.slice(0,5);">
+            <input type="text" inputmode="decimal" class="finput" id="f-horas" placeholder="Ej: 45 o 12,5" value="${draft.hours != null ? String(draft.hours).replace('.', ',') : ''}">
           </div>` : ''}
         </div>
       ` : ''}
-      ${f.hasRazones ? `
+      ${f.hasReasons ? `
         <div class="fg">
           <label class="flabel">Puntos débiles</label>
-          <div class="tag-inp-wrap" id="rzw"><input type="text" id="inp-razones" list="dl-pd" placeholder="Añadir..."></div>
+          <div class="tag-inp-wrap" id="reasonsWrap"><input type="text" id="inp-reasons" list="dl-weaknesses" placeholder="Añadir..."></div>
+          <span class="tag-hint">Pulsa Enter para añadir</span>
         </div>` : ''}
-      ${f.hasPF || f.hasPD ? `
+      ${f.hasStrengths || f.hasWeaknesses ? `
         <div class="frow">
-          ${f.hasPF ? `<div class="fg"><label class="flabel">Puntos fuertes</label><div class="tag-inp-wrap" id="pfw"><input type="text" id="inp-pf" list="dl-pf" placeholder="Añadir..."></div></div>` : ''}
-          ${f.hasPD ? `<div class="fg"><label class="flabel">Puntos débiles</label><div class="tag-inp-wrap" id="pdw"><input type="text" id="inp-pd" list="dl-pd" placeholder="Añadir..."></div></div>` : ''}
+          ${f.hasStrengths ? `<div class="fg"><label class="flabel">Puntos fuertes</label><div class="tag-inp-wrap" id="strengthsWrap"><input type="text" id="inp-strengths" list="dl-strengths" placeholder="Añadir..."></div><span class="tag-hint">Pulsa Enter para añadir</span></div>` : ''}
+          ${f.hasWeaknesses ? `<div class="fg"><label class="flabel">Puntos débiles</label><div class="tag-inp-wrap" id="weaknessesWrap"><input type="text" id="inp-weaknesses" list="dl-weaknesses" placeholder="Añadir..."></div><span class="tag-hint">Pulsa Enter para añadir</span></div>` : ''}
         </div>` : ''}
       <div class="frow">
         <div class="fg">
           <label class="flabel form-toggle-label" aria-hidden="true">Steam Deck</label>
-          <button class="btn btn-toggle ${draft.steam_deck ? 'active btn-toggle-deck' : ''}" type="button" id="f-deck-btn"
+          <button class="btn btn-toggle ${draft.steamDeck ? 'active btn-toggle-deck' : ''}" type="button" id="f-deck-btn"
                   data-action="toggle-form-deck"
                   aria-label="Steam Deck"
                   style="width:100%;justify-content:flex-start;">
@@ -933,14 +951,14 @@ class SteamListApp {
             <label class="flabel form-toggle-label" aria-hidden="true">${f.boolLabel}</label>
             <button class="btn btn-toggle ${boolOn ? 'active' : ''}" type="button" id="f-bool-btn"
                     data-action="toggle-form-bool" aria-label="${UI.esc(f.boolLabel)}" style="width:100%;justify-content:flex-start;">
-              ${UI.icon(f.boolField === 'rejugabilidad' ? 'repeat' : 'undo')}<span>${f.boolLabel}</span>
+              ${UI.icon(f.boolField === 'replayable' ? 'repeat' : 'undo')}<span>${f.boolLabel}</span>
             </button>
           </div>` : ''}
       </div>
-      ${f.hasNotes ? `
+      ${f.hasReview ? `
         <div class="fg">
           <label class="flabel">Análisis</label>
-          <textarea class="ftextarea" id="f-reseña" placeholder="Escribe tu análisis del juego">${UI.esc(draft.reseña || '')}</textarea>
+          <textarea class="ftextarea" id="f-review" placeholder="Escribe tu análisis del juego">${UI.esc(draft.review || '')}</textarea>
         </div>` : ''}
     `;
     }
@@ -951,6 +969,40 @@ class SteamListApp {
                 input.onkeydown = (ev) => this.addTag(ev, key);
         }
     }
+    _bindYearInput() {
+        const input = document.getElementById('inp-years');
+        if (!input) return;
+        input.addEventListener('input', () => {
+            const clean = input.value.replace(/\D/g, '').slice(0, 4);
+            if (input.value !== clean) input.value = clean;
+            if (this._yearWarningShown) { this._yearWarningShown = false; this.setFieldState(input, null); }
+        });
+        input.addEventListener('paste', (e) => {
+            e.preventDefault();
+            const text = (e.clipboardData || window.clipboardData).getData('text');
+            input.value = text.replace(/\D/g, '').slice(0, 4);
+            this._yearWarningShown = false;
+            this.setFieldState(input, null);
+        });
+    }
+    _bindHorasInput() {
+        const input = document.getElementById('f-horas');
+        if (!input) return;
+        input.addEventListener('input', function () {
+            let v = this.value.replace(/[^0-9.,]/g, '');
+            const s = v.search(/[.,]/);
+            if (s >= 0) v = v.slice(0, s + 1).replace(',', '.') + v.slice(s + 1).replace(/[.,]/g, '').slice(0, 1);
+            this.value = v.slice(0, 5);
+        });
+        input.addEventListener('paste', function (e) {
+            e.preventDefault();
+            const text = (e.clipboardData || window.clipboardData).getData('text');
+            let v = text.replace(/[^0-9.,]/g, '');
+            const s = v.search(/[.,]/);
+            if (s >= 0) v = v.slice(0, s + 1).replace(',', '.') + v.slice(s + 1).replace(/[.,]/g, '').slice(0, 1);
+            this.value = v.slice(0, 5);
+        });
+    }
     setStar(v) {
         const box = document.getElementById('f-stars');
         if (!box)
@@ -958,6 +1010,37 @@ class SteamListApp {
         box.dataset.v = String(v);
         box.querySelectorAll('span').forEach(s => s.classList.toggle('f', Number(s.dataset.v) <= v));
         this.clearErrors();
+    }
+
+    commitTag(list, value) {
+        const val = value.trim();
+        if (!val) return;
+
+        if (list === 'years') {
+            // Solo se admite año de 4 dígitos
+            if (!/^\d{4}$/.test(val)) return;
+            const year = Number(val);
+            if (!this.tempTags.years.includes(year)) {
+                this.tempTags.years.push(year);
+                this.tempTags.years.sort((a, b) => a - b);
+            }
+        } else {
+            const lowerVal = val.toLowerCase();
+            let finalVal = val;
+            const lookupKey = list === 'reasons' ? 'weaknesses' : list;
+            if (this.lookups[lookupKey]) {
+                for (const existing of this.lookups[lookupKey]) {
+                    if (String(existing).toLowerCase() === lowerVal) {
+                        finalVal = existing;
+                        break;
+                    }
+                }
+            }
+            const alreadyAdded = this.tempTags[list].some(t => String(t).toLowerCase() === lowerVal);
+            if (!alreadyAdded) {
+                this.tempTags[list].push(finalVal);
+            }
+        }
     }
     addTag(e, list) {
         if (e.key !== 'Enter')
@@ -969,20 +1052,32 @@ class SteamListApp {
             return;
         if (list === 'years') {
             if (!/^\d{4}$/.test(val)) {
-                this.setFieldState(input, 'error');
-                this.notify('Año inválido', 'err');
+                if (!this._yearWarningShown) {
+                    this._yearWarningShown = true;
+                    this.setFieldState(input, 'warning');
+                    this.notify('El año debe tener exactamente 4 dígitos.', 'warn');
+                } else {
+                    input.value = '';
+                    this.setFieldState(input, null);
+                    this._yearWarningShown = false;
+                }
                 return;
             }
+            this._yearWarningShown = false;
             const year = Number(val);
             if (!this.tempTags.years.includes(year)) {
                 this.tempTags.years.push(year);
                 this.tempTags.years.sort((a, b) => a - b);
             }
+            input.value = '';
+            this.setFieldState(input, null);
+            this.renderTags();
+            return;
         }
         else {
             const lowerVal = val.toLowerCase();
             let finalVal = val;
-            const lookupKey = list === 'razones' ? 'pd_razon' : list;
+            const lookupKey = list === 'reasons' ? 'weaknesses' : list;
             if (this.lookups[lookupKey]) {
                 for (const existing of this.lookups[lookupKey]) {
                     if (String(existing).toLowerCase() === lowerVal) {
@@ -1002,8 +1097,8 @@ class SteamListApp {
     }
     removeTag(list, value) { this.tempTags[list] = this.tempTags[list].filter(v => v !== value); this.renderTags(); }
     renderTags() {
-        const wrapMap = { generos: 'gnw', plataformas: 'plw', years: 'yw', pf: 'pfw', pd: 'pdw', razones: 'rzw' };
-        const classMap = { generos: 'chip-genre', plataformas: 'chip-plat', pf: 'chip-pf', pd: 'chip-pd', razones: 'chip-pd', years: 'chip-generic' };
+        const wrapMap = { genres: 'genresWrap', platforms: 'platformsWrap', years: 'yearsWrap', strengths: 'strengthsWrap', weaknesses: 'weaknessesWrap', reasons: 'reasonsWrap' };
+        const classMap = { genres: 'chip-genre', platforms: 'chip-plat', strengths: 'chip-pf', weaknesses: 'chip-pd', reasons: 'chip-pd', years: 'chip-generic' };
         for (const [key, wrapId] of Object.entries(wrapMap)) {
             const wrap = document.getElementById(wrapId);
             if (!wrap)
@@ -1042,11 +1137,11 @@ class SteamListApp {
             return;
         let prefill = { ...game };
         if (targetTab === 'c')
-            prefill = { ...prefill, años: [CURRENT_YEAR], puntuacion: game.puntuacion || 5, rejugabilidad: false, pd: prefill.pd || game.razones || [] };
+            prefill = { ...prefill, years: [CURRENT_YEAR], score: game.score || 5, replayable: false, weaknesses: prefill.weaknesses || game.reasons || [] };
         if (targetTab === 'v')
-            prefill = { ...prefill, razones: prefill.razones || game.pd || [], volver: true };
+            prefill = { ...prefill, reasons: prefill.reasons || game.weaknesses || [], retry: true };
         if (targetTab === 'e')
-            prefill = { ...prefill, pd: prefill.pd || game.razones || [] };
+            prefill = { ...prefill, weaknesses: prefill.weaknesses || game.reasons || [] };
         this.editCtx.migrateId = id;
         this.editCtx.sourceTab = this.currentTab;
         this.openModal(targetTab, null, prefill);
@@ -1057,48 +1152,68 @@ class SteamListApp {
         const { type, id, migrateId, sourceTab } = this.editCtx;
         const f = TAB_CONFIG[type].form;
         const payload = {
-            nombre: document.getElementById('f-nombre').value.trim(),
-            generos: [...this.tempTags.generos],
-            plataformas: [...this.tempTags.plataformas],
-            steam_deck: document.getElementById('f-deck-btn').classList.contains('active'),
-            reseña: f.hasNotes ? (document.getElementById('f-reseña')?.value.trim() || '') : '',
+            name: document.getElementById('f-name').value.trim(),
+            genres: [...this.tempTags.genres],
+            platforms: [...this.tempTags.platforms],
+            steamDeck: document.getElementById('f-deck-btn').classList.contains('active'),
+            review: f.hasReview ? (document.getElementById('f-review')?.value.trim() || '') : '',
         };
-        if (f.hasPF)
-            payload.pf = [...this.tempTags.pf];
-        if (f.hasPD)
-            payload.pd = [...this.tempTags.pd];
-        if (f.hasRazones)
-            payload.razones = [...this.tempTags.razones];
+        if (f.hasStrengths)
+            payload.strengths = [...this.tempTags.strengths];
+        if (f.hasWeaknesses)
+            payload.weaknesses = [...this.tempTags.weaknesses];
+        if (f.hasReasons)
+            payload.reasons = [...this.tempTags.reasons];
         if (f.hasYears)
-            payload.años = [...this.tempTags.years];
+            payload.years = [...this.tempTags.years];
         if (f.hasScore)
-            payload.puntuacion = Number(document.getElementById('f-stars')?.dataset.v || 0);
+            payload.score = Number(document.getElementById('f-stars')?.dataset.v || 0);
         if (f.hasBool)
             payload[f.boolField] = document.getElementById('f-bool-btn').classList.contains('active');
         if (f.hasHours) {
             const hVal = document.getElementById('f-horas')?.value.trim().replace(',', '.');
             const hNum = hVal ? parseFloat(hVal) : NaN;
-            payload.horas = (hVal && !isNaN(hNum) && hNum >= 0) ? hNum : null;
+            payload.hours = (hVal && !isNaN(hNum) && hNum >= 0) ? hNum : null;
         }
         let hasError = false;
         const err = (elId) => { this.setFieldState(document.getElementById(elId), 'error'); hasError = true; };
-        if (!payload.nombre)
-            err('f-nombre');
-        if (!payload.generos.length)
-            err('gnw');
-        if (!payload.plataformas.length)
-            err('plw');
-        if (f.hasYears && !payload.años.length)
-            err('yw');
-        if (f.scoreRequired && payload.puntuacion <= 0)
+        if (!payload.name)
+            err('f-name');
+        if (!payload.genres.length)
+            err('genresWrap');
+        if (!payload.platforms.length)
+            err('platformsWrap');
+        if (f.hasYears && !payload.years.length)
+            err('yearsWrap');
+        if (f.scoreRequired && payload.score <= 0)
             err('f-stars');
+        let autoCommitted = false;
         for (const key of TAB_CONFIG[type].tagKeys) {
             const input = document.getElementById(`inp-${key}`);
-            if (input?.value.trim()) {
-                this.setFieldState(input, 'warning');
-                hasError = true;
+            const pendingVal = input?.value.trim();
+            if (!pendingVal) continue;
+            if (key === 'years') {
+                if (/^\d{4}$/.test(pendingVal)) {
+                    this.commitTag(key, pendingVal);
+                    if (input) input.value = '';
+                    autoCommitted = true;
+                } else {
+                    if (!this._yearWarningShown) {
+                        this._yearWarningShown = true;
+                        this.setFieldState(input, 'warning');
+                        this.notify('El año debe tener exactamente 4 dígitos. Pulsa Guardar de nuevo para ignorarlo.', 'warn');
+                        return;
+                    }
+                    if (input) input.value = '';
+                    this._yearWarningShown = false;
+                }
+            } else {
+                this.commitTag(key, pendingVal);
+                if (input) input.value = '';
+                autoCommitted = true;
             }
         }
+        if (autoCommitted) this.renderTags();
         if (hasError) {
             this.notify('Revisa los campos marcados antes de guardar.', 'warn');
             return;
@@ -1173,7 +1288,7 @@ class SteamListApp {
     openAdminModal() {
         document.getElementById('modal-admin').classList.add('active');
         this.clearAdminNotice();
-        this.switchAdminTab('generos', document.querySelector('.admin-tab'));
+        this.switchAdminTab('genres', document.querySelector('.admin-tab'));
     }
     switchAdminTab(tab, btn) {
         this.currentAdminTab = tab;
@@ -1236,17 +1351,17 @@ class SteamListApp {
         const tab = this.currentAdminTab;
         const merge = (arr) => Array.from(new Set(arr.map(v => v === oldV ? newV : v)));
         for (const game of Object.values(this.data).flat()) {
-            if (tab === 'generos')
-                game.generos = merge(game.generos || []);
-            if (tab === 'plataformas')
-                game.plataformas = merge(game.plataformas || []);
-            if (tab === 'pf')
-                game.pf = merge(game.pf || []);
-            if (tab === 'pd_razon') {
-                if (game.pd)
-                    game.pd = merge(game.pd);
-                if (game.razones)
-                    game.razones = merge(game.razones);
+            if (tab === 'genres')
+                game.genres = merge(game.genres || []);
+            if (tab === 'platforms')
+                game.platforms = merge(game.platforms || []);
+            if (tab === 'strengths')
+                game.strengths = merge(game.strengths || []);
+            if (tab === 'weaknesses') {
+                if (game.weaknesses)
+                    game.weaknesses = merge(game.weaknesses);
+                if (game.reasons)
+                    game.reasons = merge(game.reasons);
             }
         }
         this.persist();
@@ -1258,17 +1373,17 @@ class SteamListApp {
             return;
         const tab = this.currentAdminTab;
         for (const game of Object.values(this.data).flat()) {
-            if (tab === 'generos')
-                game.generos = (game.generos || []).filter(v => v !== value);
-            if (tab === 'plataformas')
-                game.plataformas = (game.plataformas || []).filter(v => v !== value);
-            if (tab === 'pf')
-                game.pf = (game.pf || []).filter(v => v !== value);
-            if (tab === 'pd_razon') {
-                if (game.pd)
-                    game.pd = game.pd.filter(v => v !== value);
-                if (game.razones)
-                    game.razones = game.razones.filter(v => v !== value);
+            if (tab === 'genres')
+                game.genres = (game.genres || []).filter(v => v !== value);
+            if (tab === 'platforms')
+                game.platforms = (game.platforms || []).filter(v => v !== value);
+            if (tab === 'strengths')
+                game.strengths = (game.strengths || []).filter(v => v !== value);
+            if (tab === 'weaknesses') {
+                if (game.weaknesses)
+                    game.weaknesses = game.weaknesses.filter(v => v !== value);
+                if (game.reasons)
+                    game.reasons = game.reasons.filter(v => v !== value);
             }
         }
         this.persist();
@@ -1286,7 +1401,7 @@ class SteamListApp {
                 continue;
             if (typeof v === 'boolean' && !v)
                 continue;
-            if (k === 'puntuacion' && v === 0)
+            if (k === 'score' && v === 0)
                 continue;
             out[k] = v;
         }
@@ -1312,7 +1427,8 @@ class SteamListApp {
             try {
                 const parsed = JSON.parse(ev.target.result);
                 if (parsed && typeof parsed === 'object' && confirm('¿Sobrescribir los datos actuales?')) {
-                    this.data = { c: parsed.c || [], v: parsed.v || [], e: parsed.e || [], p: parsed.p || [] };
+                    const importMigrated = typeof window.migrateData === 'function' ? window.migrateData(parsed) : parsed;
+                    this.data = { c: importMigrated.c || [], v: importMigrated.v || [], e: importMigrated.e || [], p: importMigrated.p || [] };
                     this.persist();
                     this.notify('Importado correctamente', 'ok');
                 }
