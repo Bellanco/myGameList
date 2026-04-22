@@ -6,3 +6,21 @@
   Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=()
   Cross-Origin-Opener-Policy: same-origin
   Cross-Origin-Resource-Policy: same-origin
+
+# HTML: nunca cachear — los deploys llegan al instante
+/index.html
+  Cache-Control: no-cache, no-store, must-revalidate
+
+# CSS y JS: 1 hora con revalidación
+/*.css
+  Cache-Control: public, max-age=3600, must-revalidate
+
+/*.js
+  Cache-Control: public, max-age=3600, must-revalidate
+
+# Fuentes locales (si las alojas en el futuro)
+/*.woff2
+  Cache-Control: public, max-age=31536000, immutable
+
+/*.woff
+  Cache-Control: public, max-age=31536000, immutable
