@@ -143,61 +143,6 @@ const UI = {
     sortIcon(asc) { return asc ? '▲' : '▼'; },
 };
 
-/* ═══════════════════════════════════════════════════════════════════
-   GIST SYNC
-═══════════════════════════════════════════════════════════════════ */
-const GIST_CFG_KEY = 'mis-listas-gist-config';
-const GIST_FILENAME = 'myGames.json';
-const GH_API = 'https://api.github.com';
-
-const GistSync = {
-    getCfg() {
-        try { return JSON.parse(localStorage.getItem(GIST_CFG_KEY) || 'null'); } catch { return null; }
-    },
-    saveCfg(cfg) { localStorage.setItem(GIST_CFG_KEY, JSON.stringify(cfg)); },
-    clearCfg() { localStorage.removeItem(GIST_CFG_KEY); },
-    _h(token) { return { 'Authorization': `token ${token}`, 'Accept': 'application/vnd.github.v3+json', 'Content-Type': 'application/json' }; },
-    async whoami(token) {
-        const r = await fetch(`${GH_API}/user`, { headers: this._h(token) });
-        if (!r.ok) throw new Error(`Token inválido (${r.status})`);
-        return (await r.json()).login;
-    },
-    async create(token) {
-        const r = await fetch(`${GH_API}/gists`, {
-            method: 'POST', headers: this._h(token),
-            body: JSON.stringify({
-                description: 'Mis Listas – datos de juegos', public: false,
-                files: { [GIST_FILENAME]: { content: JSON.stringify({ c: [], v: [], e: [], p: [], deleted: [], updatedAt: Date.now() }) } }
-            })
-        });
-        if (!r.ok) throw new Error(`No se pudo crear el Gist (${r.status})`);
-        return (await r.json()).id;
-    },
-    async read(token, gistId, etag = null) {
-        const headers = this._h(token);
-        if (etag) headers['If-None-Match'] = etag;
-        const url = `${GH_API}/gists/${gistId}?_ts=${Date.now()}`;
-        const r = await fetch(url, { headers, cache: 'no-store' });
-        if (r.status === 304) return { notModified: true, etag: r.headers.get('ETag') || etag };
-        if (!r.ok) throw new Error(`Error al leer el Gist (${r.status})`);
-        const body = await r.json();
-        const raw = body.files?.[GIST_FILENAME]?.content;
-        if (!raw) throw new Error('Archivo no encontrado en el Gist');
-        let parsed;
-        try { parsed = JSON.parse(raw); } catch { throw new Error('El Gist contiene datos inválidos o corruptos'); }
-        const migratedGist = typeof window.migrateData === 'function' ? window.migrateData(parsed) : parsed;
-        return { data: migratedGist, etag: body.etag || r.headers.get('ETag') || null };
-    },
-    async write(token, gistId, data, _etag = null) {
-        const headers = this._h(token);
-        const r = await fetch(`${GH_API}/gists/${gistId}`, {
-            method: 'PATCH', headers,
-            body: JSON.stringify({ files: { [GIST_FILENAME]: { content: JSON.stringify(data) } } })
-        });
-        if (!r.ok) throw new Error(`Error al guardar en Gist (${r.status})`);
-        return { etag: r.headers.get('ETag') || null };
-    },
-};
 
 /* ═══════════════════════════════════════════════════════════════════
    APP PRINCIPAL
@@ -386,62 +331,7 @@ class SteamListApp {
     // ==== LÓGICA CRDT: FUSIÓN DE DATOS INTELIGENTE ====
     _mergeData(remoteData, remoteTs) {
         const localTs = Number(this.meta?.updatedAt || 0);
-        const lMap = new Map();
-        const rMap = new Map();
-
-        // 1. Mapear datos locales
-        ['c', 'v', 'e', 'p'].forEach(tab => {
-            (this.data[tab] || []).forEach(g => lMap.set(g.id, { ...g, _tab: tab, _ts: g._ts || localTs }));
-        });
-
-        // 2. Mapear datos remotos
-        ['c', 'v', 'e', 'p'].forEach(tab => {
-            (remoteData[tab] || []).forEach(g => rMap.set(g.id, { ...g, _tab: tab, _ts: g._ts || remoteTs }));
-        });
-
-        // 3. Mapear papeleras de reciclaje
-        const lDel = new Map((this.data.deleted || []).map(d => [d.id, d._ts || localTs]));
-        const rDel = new Map((remoteData.deleted || []).map(d => [d.id, d._ts || remoteTs]));
-
-        const allIds = new Set([...lMap.keys(), ...rMap.keys(), ...lDel.keys(), ...rDel.keys()]);
-        const merged = { c: [], v: [], e: [], p: [], deleted: [] };
-
-        let hasChanges = false;
-
-        allIds.forEach(id => {
-            const lItem = lMap.get(id);
-            const rItem = rMap.get(id);
-            const delTs = Math.max(lDel.get(id) || 0, rDel.get(id) || 0);
-
-            const lItemTs = lItem ? lItem._ts : 0;
-            const rItemTs = rItem ? rItem._ts : 0;
-
-            // Si el juego fue borrado DESPUÉS de la última modificación en ambos lados, se queda borrado
-            if (delTs > Math.max(lItemTs, rItemTs)) {
-                merged.deleted.push({ id, _ts: delTs });
-                return;
-            }
-
-            let winner = null;
-            if (lItem && rItem) {
-                // Existe en ambos: gana el timestamp individual (_ts) más reciente
-                winner = lItemTs >= rItemTs ? lItem : rItem;
-                if (lItemTs !== rItemTs) hasChanges = true;
-            } else if (lItem) {
-                winner = lItem;
-                hasChanges = true; // Solo está en local
-            } else if (rItem) {
-                winner = rItem;
-                hasChanges = true; // Solo está en remoto
-            }
-
-            if (winner) {
-                const tab = winner._tab;
-                delete winner._tab; // Limpiar flag temporal
-                merged[tab].push(winner);
-            }
-        });
-
+        const { merged, hasChanges } = DataSync.mergeData(this.data, localTs, remoteData, remoteTs);
         return { mergedData: merged, hasChanges };
     }
     // ===================================================
