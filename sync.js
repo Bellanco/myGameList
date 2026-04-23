@@ -234,9 +234,9 @@ const DataSync = {
             
             if (winner) {
                 const tab = winner._tab;
-                delete winner._tab;
-                delete winner._ts;
-                merged[tab].push(winner);
+                const item = { ...winner };
+                delete item._tab;
+                merged[tab].push(item);
             }
         });
         
