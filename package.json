@@ -1,0 +1,13 @@
+{
+  "name": "mygamelist",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "validate": "node scripts/ci-validate.js && html-validate public/index.html && eslint public/js --ext .js",
+    "test": "npm run validate"
+  },
+  "devDependencies": {
+    "eslint": "^10.2.1",
+    "html-validate": "^10.13.1"
+  }
+}
