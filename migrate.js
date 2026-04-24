@@ -66,6 +66,8 @@
             v: (Array.isArray(data.v) ? data.v : []).map(g => migrateGame(g, 'v')),
             e: (Array.isArray(data.e) ? data.e : []).map(g => migrateGame(g, 'e')),
             p: (Array.isArray(data.p) ? data.p : []).map(g => migrateGame(g, 'p')),
+            deleted: Array.isArray(data.deleted) ? data.deleted : [],
+            updatedAt: Number(data.updatedAt ?? data.meta?.updatedAt ?? 0) || Date.now(),
         };
     };
 }());
