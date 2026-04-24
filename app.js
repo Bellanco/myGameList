@@ -399,9 +399,9 @@ class SteamListApp {
             case 'open-admin': return this.openAdminModal();
             case 'open-add-modal': return this.openModal(this.currentTab);
             case 'save-game': return this.saveGame();
-            case 'sync-connect': return this._syncConnect();
+            case 'sync-connect': return this.syncConnect();
             case 'sync-disconnect': return this.syncDisconnect();
-            case 'sync-now': return this._syncNow();
+            case 'sync-now': return this.syncNow();
             case 'close-modal': return this.closeModal(targetEl);
             case 'switch-tab': return this.switchTab(tab);
             case 'switch-admin-tab': return this.switchAdminTab(admin, el);
@@ -1372,7 +1372,7 @@ class SteamListApp {
         }
     }
 
-    async _syncConnect() {
+    async syncConnect() {
         const token = document.getElementById('sy-token')?.value.trim();
         const gistInput = document.getElementById('sy-gist')?.value.trim();
         if (!token) { this.syncMsg('Falta el token', 'err'); return; }
@@ -1381,7 +1381,7 @@ class SteamListApp {
             await GistSync.whoami(token);
             if (!gistInput) {
                 if (!confirm('¿Crear nuevo Gist?')) return;
-                const gistId = await GistSync.create(token);
+                const { gistId } = await GistSync.create(token);
                 GistSync.saveCfg({ token, gistId, etag: null, lastRemoteUpdatedAt: 0 });
                 await this._pushToGist(true);
                 this.syncMsg('Conectado y subido', 'ok');
@@ -1406,7 +1406,7 @@ class SteamListApp {
         } catch (err) { this.syncMsg(err.message, 'err'); }
     }
 
-    async _syncNow() {
+    async syncNow() {
         const cfg = GistSync.getCfg();
         if (!cfg) return;
         this.syncMsg('Sincronizando…', 'warn');
