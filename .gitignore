@@ -1,2 +1,31 @@
-myGames.json
-/.md
+# Ignorar datos de usuario locales
+/data/myGames.json
+
+# Ignorar dependencias y artefactos de Node
+/node_modules
+/npm-debug.log*
+/yarn-debug.log*
+/yarn-error.log*
+/pnpm-debug.log*
+
+# Ignorar archivos de sistema y editores
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Ignorar archivos de entorno
+.env
+.env.local
+.env.*.local
+
+# Ignorar logs y temporales
+logs
+*.log
+*.tmp
+*.temp
+
+# Ignorar generados por GitHub Actions
+.github/workflows/*.retry
