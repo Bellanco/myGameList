@@ -149,7 +149,6 @@ const UI = {
 ═══════════════════════════════════════════════════════════════════ */
 class SteamListApp {
     constructor() {
-        // Estructura actualizada con soporte para borrados (deleted)
         this.data = { c: [], v: [], e: [], p: [], deleted: [] };
         this.currentTab = 'c';
         this.expandedId = null;
@@ -236,10 +235,7 @@ class SteamListApp {
             v: i => {
                 let reasons = [];
                 if (Array.isArray(i?.reasons)) reasons = i.reasons.flatMap(v => typeof v === 'string' ? splitLn(v) : []).filter(Boolean);
-                else if (typeof i?.reason === 'string') reasons = splitLn(i.reason);
-                else if (Array.isArray(i?.razones)) reasons = toList(i.razones);
-                else if (Array.isArray(i?.weaknesses)) reasons = toList(i.weaknesses);
-                return { ...base(i), strengths: toList(i?.strengths), review: String(i?.review ?? '').trim(), reasons, retry: Boolean(i?.retry) };
+                return { ...base(i), strengths: toList(i?.strengths), review: String(i?.review ?? '').trim(), reasons: toList(i?.reasons), retry: Boolean(i?.retry) };
             },
             e: i => ({ ...base(i), strengths: toList(i?.strengths), review: String(i?.review ?? '').trim(), weaknesses: toList(i?.weaknesses) }),
             p: i => ({ ...base(i), score: Math.min(5, Math.max(0, Number(i?.score ?? 0))) }),
@@ -251,11 +247,21 @@ class SteamListApp {
         this.data.deleted = this.data.deleted || [];
 
         const allItems = ['c', 'v', 'e', 'p'].flatMap(t => this.data[t] || []);
-        let nextId = Math.max(0, ...allItems.map(i => i.id)) + 1;
+        const initialIds = allItems
+            .map(i => Number.isFinite(i?.id) ? Number(i.id) : 0)
+            .filter(id => id > 0);
+        let nextId = Math.max(0, ...initialIds) + 1;
+        const usedIds = new Set();
         
         for (const list of ['c', 'v', 'e', 'p'].map(t => this.data[t])) {
             for (const item of list) {
-                if (!item.id) item.id = nextId++;
+                const rawId = Number.isFinite(item?.id) ? Number(item.id) : 0;
+                if (rawId > 0 && !usedIds.has(rawId)) {
+                    item.id = rawId;
+                } else {
+                    item.id = nextId++;
+                }
+                usedIds.add(item.id);
             }
         }
     }
@@ -393,9 +399,9 @@ class SteamListApp {
             case 'open-admin': return this.openAdminModal();
             case 'open-add-modal': return this.openModal(this.currentTab);
             case 'save-game': return this.saveGame();
-            case 'sync-connect': return this._syncConnect();
+            case 'sync-connect': return this.syncConnect();
             case 'sync-disconnect': return this.syncDisconnect();
-            case 'sync-now': return this._syncNow();
+            case 'sync-now': return this.syncNow();
             case 'close-modal': return this.closeModal(targetEl);
             case 'switch-tab': return this.switchTab(tab);
             case 'switch-admin-tab': return this.switchAdminTab(admin, el);
@@ -1366,7 +1372,7 @@ class SteamListApp {
         }
     }
 
-    async _syncConnect() {
+    async syncConnect() {
         const token = document.getElementById('sy-token')?.value.trim();
         const gistInput = document.getElementById('sy-gist')?.value.trim();
         if (!token) { this.syncMsg('Falta el token', 'err'); return; }
@@ -1375,7 +1381,7 @@ class SteamListApp {
             await GistSync.whoami(token);
             if (!gistInput) {
                 if (!confirm('¿Crear nuevo Gist?')) return;
-                const gistId = await GistSync.create(token);
+                const { gistId } = await GistSync.create(token);
                 GistSync.saveCfg({ token, gistId, etag: null, lastRemoteUpdatedAt: 0 });
                 await this._pushToGist(true);
                 this.syncMsg('Conectado y subido', 'ok');
@@ -1400,7 +1406,7 @@ class SteamListApp {
         } catch (err) { this.syncMsg(err.message, 'err'); }
     }
 
-    async _syncNow() {
+    async syncNow() {
         const cfg = GistSync.getCfg();
         if (!cfg) return;
         this.syncMsg('Sincronizando…', 'warn');
@@ -1422,7 +1428,6 @@ class SteamListApp {
             const remoteData = this._extractSyncPayload(remote?.data || remote);
             const remoteTs = Number(remoteData.updatedAt || 0);
             
-            // Fusionar en lugar de sobrescribir
             const { mergedData, hasChanges } = this._mergeData(remoteData.data, remoteTs);
             this.data = mergedData;
             
@@ -1431,7 +1436,6 @@ class SteamListApp {
             this.normalize(); this.refreshLookups(); this.render();
             GistSync.saveCfg({ ...cfg, etag: remote?.etag || null, lastRemoteUpdatedAt: remoteTs || 0 });
             
-            // Subir el resultado del Merge si hemos mezclado datos de ambos sitios
             await this._pushToGist(true);
             this._setSyncStatus('ok');
             this.syncMsg('Fusión completa (Datos sincronizados)', 'ok');
