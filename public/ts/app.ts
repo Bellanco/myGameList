@@ -98,6 +98,22 @@ const UI_BREAKPOINTS = { tableCompact: 1100, filtersCompact: 1400 };
 const GIST_DEBOUNCE_MS = 1800;
 const SEARCH_DEBOUNCE_MS = 220;
 
+const ALERT_TYPES = {
+    DELETE: 'delete',
+    WARNING: 'warning',
+    CREATE: 'create',
+    OVERWRITE: 'overwrite',
+    DISCONNECT: 'disconnect',
+};
+
+const ALERT_CONFIG = {
+    delete: { btnClass: 'btn-danger', btnText: 'Eliminar' },
+    warning: { btnClass: 'btn-secondary', btnText: 'Continuar' },
+    create: { btnClass: 'btn-secondary', btnText: 'Crear' },
+    overwrite: { btnClass: 'btn-danger', btnText: 'Sobrescribir' },
+    disconnect: { btnClass: 'btn-danger', btnText: 'Desconectar' },
+}
+
 /* ═══════════════════════════════════════════════════════════════════
    TAB_CONFIG
 ═══════════════════════════════════════════════════════════════════ */
@@ -113,15 +129,15 @@ const TAB_CONFIG = {
             { key: '_pf', label: TAB_C_LABELS.columns.strengths.label, cls: 'w-strong col-strong', sortable: false, center: false, render: g => UI.chipList((g || {}).strengths, 'chip-pf') },
             { key: '_pd', label: TAB_C_LABELS.columns.weaknesses.label, cls: 'w-weak col-weak', sortable: false, center: false, render: g => UI.chipList((g || {}).weaknesses, 'chip-pd') },
             { key: 'score', label: TAB_C_LABELS.columns.score.label, cls: '', sortable: true, center: false, render: g => UI.stars((g || {}).score) },
-            { key: 'rejugabilidad', label: TAB_C_LABELS.columns.replayable.label, cls: 'w-bool', sortable: true, center: true, render: g => UI.bool((g || {}).replayable) },
+            { key: 'rejugabilidad', label: TAB_C_LABELS.columns.replayable.label, cls: 'w-bool', sortable: true, center: true, render: g => UI.bool((g || {}).replayable, 'replayable', TAB_C_LABELS.boolTooltips) },
         ],
         detailExtra: [
-            { label: TAB_C_LABELS.details.years, render: g => UI.chipList((g || {}).years, 'chip-generic') },
+            { label: TAB_C_LABELS.details.years, hideIfEmpty: true, render: g => UI.chipList((g || {}).years, 'chip-generic') },
             { label: TAB_C_LABELS.details.hours, hideIfEmpty: true, render: g => (g || {}).hours != null ? `${String((g || {}).hours).replace('.', ',')} horas` : '' },
-            { label: TAB_C_LABELS.details.strengths, render: g => UI.chipList((g || {}).strengths, 'chip-pf'), cls: 'detail-strong' },
-            { label: TAB_C_LABELS.details.weaknesses, render: g => UI.chipList((g || {}).weaknesses, 'chip-pd'), cls: 'detail-weak' },
-            { label: TAB_C_LABELS.details.score, render: g => UI.stars((g || {}).score) },
-            { label: TAB_C_LABELS.details.replayable, render: g => UI.bool((g || {}).replayable) },
+            { label: TAB_C_LABELS.details.strengths, hideIfEmpty: true, render: g => UI.chipList((g || {}).strengths, 'chip-pf'), cls: 'detail-strong' },
+            { label: TAB_C_LABELS.details.weaknesses, hideIfEmpty: true, render: g => UI.chipList((g || {}).weaknesses, 'chip-pd'), cls: 'detail-weak' },
+            { label: TAB_C_LABELS.details.score, hideIfEmpty: true, render: g => UI.stars((g || {}).score) },
+            { label: TAB_C_LABELS.details.replayable, hideIfEmpty: true, render: g => UI.bool((g || {}).replayable, 'replayable', TAB_C_LABELS.boolTooltips) },
         ],
         actions: [],
         modalTitles: { new: TAB_C_LABELS.modal.new, prefill: TAB_C_LABELS.modal.prefill, edit: TAB_C_LABELS.modal.edit },
@@ -137,12 +153,12 @@ const TAB_CONFIG = {
             { key: 'genres', label: TAB_V_LABELS.columns.genres.label, cls: 'w-genre', sortable: true, center: false, render: g => UI.chipList((g || {}).genres, 'chip-genre') },
             { key: '_pf', label: TAB_V_LABELS.columns.strengths.label, cls: 'w-strong col-strong', sortable: false, center: false, render: g => UI.chipList((g || {}).strengths, 'chip-pf') },
             { key: '_razoes', label: TAB_V_LABELS.columns.reasons.label, cls: 'w-weak col-weak', sortable: false, center: false, render: g => UI.chipList((g || {}).reasons, 'chip-pd') },
-            { key: 'volver', label: TAB_V_LABELS.columns.retry.label, cls: 'w-bool', sortable: true, center: true, render: g => UI.bool((g || {}).retry) },
+            { key: 'volver', label: TAB_V_LABELS.columns.retry.label, cls: 'w-bool', sortable: true, center: true, render: g => UI.bool((g || {}).retry, 'opportunity', TAB_V_LABELS.boolTooltips) },
         ],
         detailExtra: [
-            { label: TAB_V_LABELS.details.strengths, render: g => UI.chipList((g || {}).strengths, 'chip-pf'), cls: 'detail-strong' },
-            { label: TAB_V_LABELS.details.reasons, render: g => UI.chipList((g || {}).reasons, 'chip-pd'), cls: 'detail-weak' },
-            { label: TAB_V_LABELS.details.retry, render: g => UI.bool((g || {}).retry) },
+            { label: TAB_V_LABELS.details.strengths, hideIfEmpty: true, render: g => UI.chipList((g || {}).strengths, 'chip-pf'), cls: 'detail-strong' },
+            { label: TAB_V_LABELS.details.reasons, hideIfEmpty: true, render: g => UI.chipList((g || {}).reasons, 'chip-pd'), cls: 'detail-weak' },
+            { label: TAB_V_LABELS.details.retry, hideIfEmpty: true, render: g => UI.bool((g || {}).retry, 'opportunity', TAB_V_LABELS.boolTooltips) },
         ],
         actions: [
             { label: TAB_V_LABELS.actions[0].label, btnCls: TAB_V_LABELS.actions[0].btnCls, target: TAB_V_LABELS.actions[0].target },
@@ -163,8 +179,8 @@ const TAB_CONFIG = {
             { key: '_pd', label: TAB_E_LABELS.columns.weaknesses.label, cls: 'w-weak col-weak', sortable: false, center: false, render: g => UI.chipList((g || {}).weaknesses, 'chip-pd') },
         ],
         detailExtra: [
-            { label: TAB_E_LABELS.details.strengths, render: g => UI.chipList((g || {}).strengths, 'chip-pf'), cls: 'detail-strong' },
-            { label: TAB_E_LABELS.details.weaknesses, render: g => UI.chipList((g || {}).weaknesses, 'chip-pd'), cls: 'detail-weak' },
+            { label: TAB_E_LABELS.details.strengths, hideIfEmpty: true, render: g => UI.chipList((g || {}).strengths, 'chip-pf'), cls: 'detail-strong' },
+            { label: TAB_E_LABELS.details.weaknesses, hideIfEmpty: true, render: g => UI.chipList((g || {}).weaknesses, 'chip-pd'), cls: 'detail-weak' },
         ],
         actions: [
             { label: TAB_E_LABELS.actions[0].label, btnCls: TAB_E_LABELS.actions[0].btnCls, target: TAB_E_LABELS.actions[0].target },
@@ -184,7 +200,7 @@ const TAB_CONFIG = {
             { key: 'score', label: TAB_P_LABELS.columns.score.label, cls: '', sortable: true, center: false, render: g => (g || {}).score ? UI.stars((g || {}).score) : '<span style="color:var(--text-muted)">—</span>' },
         ],
         detailExtra: [
-            { label: TAB_P_LABELS.details.score.label, render: g => (g || {}).score ? UI.stars((g || {}).score) : `<span style="color:var(--text-muted)">${TAB_P_LABELS.details.score.empty}</span>` },
+            { label: TAB_P_LABELS.details.score.label, hideIfEmpty: true, render: g => (g || {}).score ? UI.stars((g || {}).score) : `<span style="color:var(--text-muted)">${TAB_P_LABELS.details.score.empty}</span>` },
         ],
         actions: [
             { label: TAB_P_LABELS.actions[0].label, btnCls: TAB_P_LABELS.actions[0].btnCls, target: TAB_P_LABELS.actions[0].target },
@@ -242,14 +258,31 @@ const UI = {
         return list.length ? `<div class="chips">${list.map(v => this.chip(v, cls)).join('')}</div>` : `<span style="color:var(--text-muted)">—</span>`;
     },
     /**
-     * Renderiza icono de boolean
+     * Renderiza icono de boolean con estilos contextuales
      * @param {any} v - Valor boolean
+     * @param {string} fieldType - Tipo de campo: 'replayable' o 'opportunity'
      * @returns {string} HTML del icono
      */
-    bool(v) {
-        return v
-            ? `<span class="icon-bool true">${this.icon('check')}</span>`
-            : `<span class="icon-bool false">${this.icon('close')}</span>`;
+    bool(v, fieldType = 'replayable', tooltips = null) {
+        // Usar tooltips proporcionados o valores por defecto
+        const activeLabel = tooltips?.active || 'Activo';
+        const inactiveLabel = tooltips?.inactive || 'Inactivo';
+        
+        if (fieldType === 'opportunity') {
+            // Nueva Oportunidad: Refresh (activo) o Lock (inactivo)
+            if (v) {
+                return `<span class="badge-opp-activo" title="${activeLabel}" aria-label="${activeLabel}">${this.icon('refresh')}</span>`;
+            } else {
+                return `<span class="badge-opp-inactivo" title="${inactiveLabel}" aria-label="${inactiveLabel}">${this.icon('lock')}</span>`;
+            }
+        } else {
+            // Rejugar: Star (activo) o Stack (inactivo)
+            if (v) {
+                return `<span class="badge-rejugar-activo" title="${activeLabel}" aria-label="${activeLabel}">${this.icon('star')}</span>`;
+            } else {
+                return `<span class="badge-rejugar-inactivo" title="${inactiveLabel}" aria-label="${inactiveLabel}"><svg style="width:20px;height:20px;"><rect x="3" y="2" width="14" height="2" fill="currentColor" opacity="0.8"/><rect x="3" y="6" width="14" height="2" fill="currentColor" opacity="0.9"/><rect x="3" y="10" width="14" height="8" fill="currentColor"/></svg></span>`;
+            }
+        }
     },
     /**
      * Renderiza celda de nombre con opcional puntuación
@@ -330,6 +363,7 @@ export class SteamListApp {
         this.data = { c: [], v: [], e: [], p: [], deleted: [] };
         this.currentTab = 'c';
         this.expandedId = null;
+        this._confirmPending = null;
         this.editCtx = { type: null, id: null, migrateId: null, sourceTab: null };
         this.tempTags = { genres: [], platforms: [], years: [], strengths: [], weaknesses: [], reasons: [] };
         this.currentAdminTab = 'genres';
@@ -357,6 +391,7 @@ export class SteamListApp {
         this.syncResponsiveMode();
         this.render();
         this._bindDelegatedEvents();
+        this._initConfirmDialog();
         window.addEventListener('resize', () => {
             if (this._resizeTimer) clearTimeout(this._resizeTimer);
             this._resizeTimer = window.setTimeout(() => {
@@ -606,7 +641,8 @@ export class SteamListApp {
                 const i = document.getElementById('sy-token');
                 if (!i) return;
                 i.type = i.type === 'password' ? 'text' : 'password';
-                el.textContent = i.type === 'password' ? '👁' : '🙈'; return;
+                const icon = i.type === 'password' ? 'icon-eye' : 'icon-eye-off';
+                el.innerHTML = `<svg class="ui-icon" aria-hidden="true"><use href="#${icon}"></use></svg>`; return;
             }
             case 'sort-by': return this.sortBy(col);
             case 'toggle-expand': return this.toggleExpand(Number(id));
@@ -759,7 +795,7 @@ export class SteamListApp {
                  value="${UI.esc(state.search)}" data-action="search-input" data-event="input">
           <button type="button" id="t-search-clear" class="search-clear"
                   data-action="clear-search"
-                  title="Limpiar" style="display:${state.search ? 'flex' : 'none'};">${UI.icon('close')}</button>
+                  title="Limpiar búsqueda" style="display:${state.search ? 'flex' : 'none'};">${UI.icon('close')}</button>
         </div>
         ${compact ? `<button class="btn-icon btn-filter-toggle ${this._filtersOpen ? 'active' : ''} ${activeCount ? 'has-active' : ''}" type="button"
                 id="t-filter-toggle" data-action="toggle-filters"
@@ -888,11 +924,31 @@ export class SteamListApp {
         const tab = this.currentTab;
         const expanded = this.expandedId === game.id;
         const cells = cols.map(col => {
-            const value = (this.isTableCompact() && col.key === 'name') ? UI.nameCell(game, true) : col.render(game);
+            let value: string;
+            if (col.key === 'nombre' && this.isTableCompact()) {
+                // For compact view, show name with stars on the right
+                const name = UI.esc((game || {}).name);
+                const stars = UI.stars((game || {}).score);
+                value = `<div class="name-with-stars"><strong>${name}</strong><div class="stars-right">${stars}</div></div>`;
+            } else if (col.key === 'nombre' && window.innerWidth < 1100) {
+                // For medium view (< 1100px), show name with stars on the right
+                const name = UI.esc((game || {}).name);
+                const stars = UI.stars((game || {}).score);
+                value = `<div class="name-with-stars"><strong>${name}</strong><div class="stars-right">${stars}</div></div>`;
+            } else if (this.isTableCompact() && col.key === 'name') {
+                value = UI.nameCell(game, true);
+            } else {
+                value = col.render(game);
+            }
             return `<td${col.center ? ' style="text-align:center;"' : ''}>${value}</td>`;
         }).join('');
         const mainRow = `<tr class="main-row ${idx % 2 === 0 ? 'striped' : ''}" data-action="toggle-expand" data-id="${game.id}" data-dbl-action="edit-game" data-tab="${tab}">${cells}</tr>`;
         return mainRow + this.renderDetailRow(game, expanded, cols.length);
+    }
+
+    _isEmptyValue(val) {
+        // Detecta si un valor renderizado está vacío
+        return !val || val.includes('style="color:var(--text-muted)"');
     }
 
     renderDetailRow(game, expanded, colCount) {
@@ -901,19 +957,21 @@ export class SteamListApp {
         const platChips = (game.platforms || []).map(p => UI.chip(p, 'chip-plat')).join('');
         const deckChip = game.steamDeck ? `<span class="chip chip-deck">${UI.icon('steamdeck')}<span>Steam Deck</span></span>` : '';
         const platHtml = (platChips || deckChip) ? `<div class="chips">${platChips}${deckChip}</div>` : `<span style="color:var(--text-muted)">—</span>`;
+        const genresHtml = UI.chipList(game.genres, 'chip-genre');
         const fields = [
-            this.dbox('Plataformas', platHtml, 'detail-plat'),
-            this.dbox('Géneros', UI.chipList(game.genres, 'chip-genre')),
+            ...(!this._isEmptyValue(platHtml) ? [this.dbox('Plataformas', platHtml, 'detail-plat')] : []),
+            ...(!this._isEmptyValue(genresHtml) ? [this.dbox('Géneros', genresHtml)] : []),
             ...tabCfg.detailExtra.map(f => {
                 const val = f.render(game);
-                if (f.hideIfEmpty && !val) return '';
+                if (f.hideIfEmpty && this._isEmptyValue(val)) return '';
                 return this.dbox(f.label, val, f.cls || '');
             })
         ].filter(Boolean).join('');
-        const notesHtml = tabCfg.form.hasReview ? `
+        const reviewHtml = game.review ? `<div class="detail-value">${UI.esc(game.review).replace(/\n/g, '<br>')}</div>` : '';
+        const notesHtml = tabCfg.form.hasReview && game.review ? `
       <div class="detail-box" style="grid-column:1/-1;">
         <span class="detail-label">Análisis</span>
-        ${game.review ? `<div class="detail-value">${UI.esc(game.review).replace(/\n/g, '<br>')}</div>` : '<span style="color:var(--text-muted)">Sin análisis</span>'}
+        ${reviewHtml}
       </div>` : '';
         const migBtns = tabCfg.actions.map(a => `<button class="btn ${a.btnCls}" type="button" data-action="migrate-game" data-id="${game.id}" data-target="${a.target}">${UI.icon('arrow-right')}<span>${a.label}</span></button>`).join('');
         return `
@@ -1278,14 +1336,62 @@ export class SteamListApp {
         this.clearErrors();
     }
 
+    _initConfirmDialog() {
+        const dialog = document.getElementById('confirm-dialog') as HTMLDialogElement;
+        const cancelBtn = document.getElementById('dialog-cancel') as HTMLButtonElement;
+        const confirmBtn = document.getElementById('dialog-confirm') as HTMLButtonElement;
+        
+        if (!dialog || !cancelBtn || !confirmBtn) return;
+        
+        cancelBtn.addEventListener('click', () => {
+            dialog.close();
+            this._confirmPending = null;
+        });
+        
+        confirmBtn.addEventListener('click', () => {
+            if (!this._confirmPending) return;
+            const { action } = this._confirmPending;
+            dialog.close();
+            this._confirmPending = null;
+            action();
+        });
+        
+        dialog.addEventListener('close', () => {
+            this._confirmPending = null;
+        });
+    }
+
+    showConfirmDialog(title, message, type = 'warning', action = () => {}) {
+        const dialog = document.getElementById('confirm-dialog') as HTMLDialogElement;
+        const titleEl = document.getElementById('dialog-title') as HTMLElement;
+        const confirmBtn = document.getElementById('dialog-confirm') as HTMLButtonElement;
+        
+        if (!dialog || !titleEl || !confirmBtn) return;
+        
+        const config = ALERT_CONFIG[type] || ALERT_CONFIG.warning;
+        titleEl.textContent = title;
+        confirmBtn.className = `btn ${config.btnClass}`;
+        confirmBtn.textContent = config.btnText;
+        dialog.setAttribute('data-type', type);
+        
+        this._confirmPending = { action };
+        dialog.showModal();
+    }
+
     deleteGame(type, id) {
-        if (!confirm('¿Eliminar juego?')) return;
-        this.data[type] = this.data[type].filter(g => g.id !== id);
-        this.data.deleted = this.data.deleted || [];
-        this.data.deleted.push({ id, _ts: Date.now() }); // Marca temporal para que Gist sepa que se borró
-        if (this.expandedId === id) this.expandedId = null;
-        this.persist();
-        this.notify('Juego eliminado', 'ok');
+        this.showConfirmDialog(
+            '¿Eliminar juego?',
+            null,
+            ALERT_TYPES.DELETE,
+            () => {
+                this.data[type] = this.data[type].filter(g => g.id !== id);
+                this.data.deleted = this.data.deleted || [];
+                this.data.deleted.push({ id, _ts: Date.now() });
+                if (this.expandedId === id) this.expandedId = null;
+                this.persist();
+                this.notify('Juego eliminado', 'ok');
+            }
+        );
     }
 
     /* ── Notificaciones ────────────────────────────────────────────── */
@@ -1359,7 +1465,7 @@ export class SteamListApp {
         row.classList.add('editing');
         const enc = encodeURIComponent(value);
         row.innerHTML = `
-      <input type="text" class="finput" id="ae-inp" value="${UI.esc(value)}" style="flex:1">
+      <input type="text" class="finput" id="ae-inp" placeholder="Escribe el nuevo valor" value="${UI.esc(value)}" style="flex:1">
       <div class="row-actions">
         <button class="btn btn-secondary" type="button" data-action="render-admin-list">Cancelar</button>
         <button class="btn btn-steam"     type="button" data-action="save-admin-tag" data-value="${enc}">Guardar</button>
@@ -1401,13 +1507,19 @@ export class SteamListApp {
     }
 
     deleteAdminTag(value) {
-        if (!confirm(`¿Eliminar etiqueta "${value}"?`)) return;
-        const tab = this.currentAdminTab;
-        this._updateGameTagField(tab, (arr) => {
-            return arr.includes(value) ? arr.filter(v => v !== value) : null;
-        });
-        this.persist(); this.renderAdminList();
-        this.adminNotify('Etiqueta eliminada', 'ok');
+        this.showConfirmDialog(
+            `¿Eliminar etiqueta "${value}"?`,
+            null,
+            ALERT_TYPES.DELETE,
+            () => {
+                const tab = this.currentAdminTab;
+                this._updateGameTagField(tab, (arr) => {
+                    return arr.includes(value) ? arr.filter(v => v !== value) : null;
+                });
+                this.persist(); this.renderAdminList();
+                this.adminNotify('Etiqueta eliminada', 'ok');
+            }
+        );
     }
 
     /* ── Exportar / Importar ────────────────────────────────────────── */
@@ -1442,14 +1554,21 @@ export class SteamListApp {
         reader.onload = ev => {
             try {
                 const parsed = JSON.parse(ev.target.result);
-                if (parsed && typeof parsed === 'object' && confirm('¿Sobrescribir los datos actuales?')) {
-                    const importMigrated = typeof window.migrateData === 'function' ? window.migrateData(parsed) : parsed;
-                    this.data = { 
-                        c: importMigrated.c || [], v: importMigrated.v || [], 
-                        e: importMigrated.e || [], p: importMigrated.p || [], deleted: [] 
-                    };
-                    this.persist();
-                    this.notify('Importado correctamente', 'ok');
+                if (parsed && typeof parsed === 'object') {
+                    this.showConfirmDialog(
+                        '¿Sobrescribir los datos actuales?',
+                        'Esta acción no se puede deshacer',
+                        ALERT_TYPES.OVERWRITE,
+                        () => {
+                            const importMigrated = typeof window.migrateData === 'function' ? window.migrateData(parsed) : parsed;
+                            this.data = { 
+                                c: importMigrated.c || [], v: importMigrated.v || [], 
+                                e: importMigrated.e || [], p: importMigrated.p || [], deleted: [] 
+                            };
+                            this.persist();
+                            this.notify('Importado correctamente', 'ok');
+                        }
+                    );
                 }
             } catch (_) { this.notify('Archivo JSON no válido', 'err'); }
         };
@@ -1532,8 +1651,8 @@ export class SteamListApp {
         if (!cfg) {
             body.innerHTML = `<div class="sync-section"><div class="sync-help"><strong>Cómo configurar:</strong><br>Ve a GitHub > Settings > Tokens. Crea uno con permiso <code>gist</code> y pégalo aquí.</div></div>
         <div class="sync-section">
-          <div class="fg"><label class="flabel">Token *</label><div class="token-row"><input class="finput" id="sy-token" type="password" placeholder="ghp_..."><button class="token-toggle" type="button" data-action="toggle-token-visibility">👁</button></div></div>
-          <div class="fg"><label class="flabel">Gist ID (Vacio la 1ª vez)</label><input class="finput" id="sy-gist" type="text"></div>
+          <div class="fg"><label class="flabel">Token *</label><div class="token-row"><input class="finput" id="sy-token" type="password" placeholder="ghp_xxxxxxxxxxxxxxxxxxxxxxx"><button class="token-toggle" type="button" data-action="toggle-token-visibility" aria-label="Mostrar token"><svg class="ui-icon" aria-hidden="true"><use href="#icon-eye"></use></svg></button></div><span class="tag-hint">Token personal de GitHub (comienza con ghp_)</span></div>
+          <div class="fg"><label class="flabel">Gist ID (Vacio la 1ª vez)</label><input class="finput" id="sy-gist" type="text" placeholder="Ej: a1b2c3d4e5f6..."><span class="tag-hint">ID alfanumérico del Gist, disponible en la URL</span></div>
           <div id="sy-msg" class="sync-status-msg"></div>
         </div>`;
             foot.innerHTML = `<button class="btn btn-secondary" type="button" data-action="close-modal" data-target="modal-sync">Cancelar</button><button class="btn btn-steam" type="button" data-action="sync-connect">Conectar</button>`;
@@ -1551,11 +1670,7 @@ export class SteamListApp {
         try {
             await GistSync.whoami(token);
             if (!gistInput) {
-                if (!confirm('¿Crear nuevo Gist?')) return;
-                const { gistId } = await GistSync.create(token);
-                GistSync.saveCfg({ token, gistId, etag: null, lastRemoteUpdatedAt: 0 });
-                await this._pushToGist(true);
-                this.syncMsg('Conectado y subido', 'ok');
+                return this._showCreateGistDialog(token);
             } else {
                 const remote = await GistSync.read(token, gistInput, null);
                 const payload = this._extractSyncPayload(remote?.data || remote);
@@ -1614,9 +1729,31 @@ export class SteamListApp {
         } catch (err) { this.syncMsg(err.message, 'err'); }
     }
 
+    _showCreateGistDialog(token) {
+        this.showConfirmDialog(
+            '¿Crear nuevo Gist?',
+            'Se creará un Gist privado en tu cuenta de GitHub',
+            ALERT_TYPES.CREATE,
+            async () => {
+                try {
+                    const { gistId } = await GistSync.create(token);
+                    GistSync.saveCfg({ token, gistId, etag: null, lastRemoteUpdatedAt: 0 });
+                    await this._pushToGist(true);
+                    this.syncMsg('Conectado y subido', 'ok');
+                } catch (err) { this.syncMsg(err.message, 'err'); }
+            }
+        );
+    }
+
     syncDisconnect() {
-        if (!confirm('¿Desconectar?')) return;
-        GistSync.clearCfg(); this._setSyncStatus('idle'); this.closeModal('modal-sync');
+        this.showConfirmDialog(
+            '¿Desconectar?',
+            'Se borrará la configuración de sincronización local',
+            ALERT_TYPES.DISCONNECT,
+            () => {
+                GistSync.clearCfg(); this._setSyncStatus('idle'); this.closeModal('modal-sync');
+            }
+        );
     }
 
     syncMsg(text, kind = 'ok') {

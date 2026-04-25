@@ -32,6 +32,10 @@ export const TAB_C_LABELS = {
         boolLabel: '¿Volver a jugar?',
         boolField: 'rejugabilidad',
     },
+    boolTooltips: {
+        active: 'Rejugable',
+        inactive: 'No rejugable',
+    },
     modal: {
         new: 'Nuevo juego completado',
         prefill: 'Pasar a completados',
@@ -57,6 +61,10 @@ export const TAB_V_LABELS = {
         strengths: 'Puntos fuertes',
         reasons: 'Puntos débiles',
         retry: 'Dar otra oportunidad',
+    },
+    boolTooltips: {
+        active: 'Dar una oportunidad',
+        inactive: 'No merece una nueva oportunidad',
     },
     actions: [
         { label: 'Pasar a completados', btnCls: 'btn-complete', target: 'c' },

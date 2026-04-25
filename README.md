@@ -1,76 +1,119 @@
 # Mis Listas de Juegos - v2.0.0
 
-Gestor moderno de colecciones de videojuegos con sincronizaciÛn en la nube (GitHub Gist).
+Gestor moderno de colecciones de videojuegos con sincronizaci√≥n en la nube (GitHub Gist).
 
-## ? CaracterÌsticas
+## Caracter√≠sticas
 
-- ?? DiseÒo responsivo mobile-first
-- ?? SincronizaciÛn con GitHub Gist
-- ?? CRDT merge (cero pÈrdida de datos)
-- ?? 4 categorÌas (Completados, Visitados, En curso, PrÛximos)
-- ??? Sistema avanzado de etiquetas
-- ?? Filtros inteligentes
-- ?? Offline-first con Service Worker
-- ?? Tests unitarios con Vitest
-- ? Sin build step, carga directa
-- ? Accesible WCAG AA
-- ?? TypeScript (opcional)
+- Dise√±o responsivo mobile-first
+- Sincronizaci√≥n con GitHub Gist
+- CRDT merge (cero p√©rdida de datos)
+- 4 categor√≠as (Completados, Visitados, En curso, Pr√≥ximos)
+- Sistema avanzado de etiquetas
+- Filtros inteligentes
+- Offline-first con Service Worker
+- Tests unitarios con Vitest
+- Sin build step, carga directa
+- Accesible WCAG AA
+- TypeScript (soporte completo)
 
-## ?? Inicio R·pido
+## Inicio R√°pido
 
-\\\ash
+```bash
 git clone https://github.com/tuusuario/myGameList.git
 cd myGameList
 npm install
 npm run dev       # http://localhost:8000
 npm run test      # Tests unitarios
-npm run validate  # Lint + validaciÛn
-\\\
+npm run validate  # Lint + validaci√≥n
+```
 
-## ?? Uso
+## Uso
 
-1. Abre la app ? Click en engranaje (Configurar)
+1. Abre la app y haz click en el engranaje (Configurar)
 2. Introduce token GitHub + ID Gist
-3. Click en + para aÒadir juegos
-4. Sincroniza autom·ticamente cada 1.8s
+3. Click en + para a√±adir juegos
+4. Sincroniza autom√°ticamente cada 1.8s
 5. Funciona completamente offline
 
-## ??? Arquitectura
+## Arquitectura
 
 **Vanilla JavaScript** (sin framework)
-- \public/js/app.ts\ - SPA principal (1,382 LOC, TypeScript)
-- \public/js/sync.js\ - API GitHub Gist + CRDT merge
-- \public/js/migrate.js\ - MigraciÛn de datos
-- Service Worker para offline
-- PWA con manifest.json
+- `public/ts/app.ts` - SPA principal (1,500+ LOC, TypeScript)
+- `public/ts/sync.ts` - API GitHub Gist + CRDT merge
+- `public/ts/migrate.ts` - Migraci√≥n de datos
+- `public/style.css` - CSS3 con variables y BEM
+- `public/service-worker.js` - Service Worker para offline
+- `public/manifest.json` - PWA manifest
 
-## ?? Tests
+## Dise√±o de Iconos (v2.0)
 
-\\\ash
+### Estados Positivos (Azul Sutil)
+- **Rejugar Activo**: Estrella azul - juego rejugable
+- **Nueva Oportunidad Activo**: Refresh azul - hay oportunidad disponible
+
+### Estados Negativos (Colores C√°lidos)
+- **Rejugar Inactivo**: Stack ambar - no rejugable
+- **Nueva Oportunidad Inactivo**: Candado rojo - sin oportunidad
+
+Todos con gradientes suaves y glow sutil para coherencia visual.
+
+## Testing
+
+```bash
 npm run test        # Ejecutar tests una vez
 npm run test:watch  # Modo watch
-\\\
+```
 
-## ?? DocumentaciÛn
+Cobertura:
+- CRDT merge logic
+- Sincronizaci√≥n GitHub Gist
+- Validaci√≥n de datos
+- Breakpoints responsive
 
-- [GuÌa de SincronizaciÛn](./docs/SYNC_GUIDE.md) - Estrategia CRDT
-- [Instrucciones Copilot](./.github/copilot-instructions.md) - GuÌa de desarrollo
-- [English README](./README.en.md)
+## Documentaci√≥n
 
-## ?? Requisitos
+- [Gu√≠a de Sincronizaci√≥n](./docs/SYNC_GUIDE.md) - Estrategia CRDT
+- [Instrucciones Copilot](./.github/copilot-instructions.md) - Gu√≠a de desarrollo
+- [CHANGELOG](./CHANGELOG.md) - Historial de versiones
+
+## Requisitos
 
 - Node.js 20+ LTS
 - Cuenta GitHub (para Gist sync)
+- Navegador moderno (Chrome, Firefox, Safari, Edge)
 
-## ?? Seguridad
+## Seguridad
 
 - Token almacenado en localStorage (solo navegador del usuario)
 - Gists privados por defecto
-- Input sanitizado
+- Input sanitizado con `UI.esc()`
 - HTTPS recomendado con tokens
+- CRDT previene conflictos de sincronizaci√≥n
 
-## ?? Licencia
+## Stack T√©cnico
 
-MIT © 2026
+| Aspecto | Tecnolog√≠a |
+|--------|-----------|
+| Frontend | HTML5 + Vanilla JS ES6+ + CSS3 |
+| Tipado | TypeScript (opcional) |
+| Persistencia | GitHub Gist REST API |
+| Offline | Service Worker + localStorage |
+| Testing | Vitest |
+| Linting | ESLint |
+| Validaci√≥n | html-validate |
+| Build | Vite |
 
-**Hecho con ?? usando tecnologÌas web vanilla**
+## Caracter√≠sticas Destacadas
+
+- **CRDT Merge**: Sincronizaci√≥n bidireccional sin conflictos
+- **Offline Mode**: Funciona completamente sin conexi√≥n
+- **Responsive Design**: Breakpoints 1100px y 1400px
+- **Accesibilidad**: WCAG AA m√≠nimo, aria-* atributos
+- **PWA**: Instalable como app nativa
+- **Rendimiento**: Carga r√°pida, sin dependencias pesadas
+
+## Licencia
+
+MIT - 2026
+
+Desarrollado con tecnolog√≠as web vanilla.
