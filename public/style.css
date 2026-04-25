@@ -34,7 +34,7 @@ body {
   text-rendering: optimizeLegibility;
 }
 
-@media (max-width:1399px) {
+@media (max-width:1400px) {
   body {
     height: auto;
     min-height: 100dvh;
@@ -133,7 +133,6 @@ button { -webkit-tap-highlight-color: transparent; }
   padding: 0;
   box-shadow: var(--shadow);
   max-width: 320px;
-  margin: auto;
   position: fixed;
   top: 50%;
   left: 50%;
@@ -252,9 +251,22 @@ thead th.sortable { cursor: pointer; transition: color .2s; }
 @media (hover:hover) { thead th.sortable:hover { color: var(--text); } }
 thead th.sorted { color: var(--steam); }
 
-/* Ajuste de columnas para incluir Horas */
-.w-name{width:21%} .w-year{width:11%} .w-hours{width:10%} .w-plat{width:16%}
-.w-genre{width:15%} .w-strong{width:14%} .w-weak{width:13%} .w-bool{width:10%}
+/* Ajuste de columnas por tabla */
+/* Completados (c) - 8 columnas: nombre(18%) año(9%) plat(14%) género(13%) fort(12%) debil(12%) score(10%) rejugar(12%) */
+.w-name-c{width:18%} .w-year-c{width:9%} .w-plat-c{width:14%} .w-genre-c{width:13%} .w-strong-c{width:12%} .w-weak-c{width:12%} .w-score-c{width:10%} .w-bool-c{width:12%}
+
+/* Visitados (v) - 6 columnas: nombre(23%) plat(17%) género(15%) fort(14%) razones(14%) reintentos(17%) */
+.w-name-v{width:23%} .w-plat-v{width:17%} .w-genre-v{width:15%} .w-strong-v{width:14%} .w-weak-v{width:14%} .w-bool-v{width:17%}
+
+/* En curso (e) - 5 columnas: nombre(25%) plat(20%) género(18%) fort(18%) debil(19%) */
+.w-name-e{width:25%} .w-plat-e{width:20%} .w-genre-e{width:18%} .w-strong-e{width:18%} .w-weak-e{width:19%}
+
+/* Próximos (p) - 4 columnas: nombre(25%) plat(32%) género(31%) interés(12%) */
+.w-score{width:12%} .w-name-p{width:25%} .w-plat-p{width:32%} .w-genre-p{width:31%}
+
+/* Mantener compatibilidad para anchos genéricos si es necesario */
+.w-name{width:18%} .w-year{width:9%} .w-hours{width:10%} .w-plat{width:14%}
+.w-genre{width:13%} .w-strong{width:12%} .w-weak{width:12%} .w-bool{width:12%}
 
 tbody tr.main-row { border-top: 1px solid var(--border); transition: background .2s; cursor: pointer; }
 tbody tr.main-row.striped { background: var(--surface-soft); }
@@ -687,9 +699,9 @@ input[type=number]::-webkit-inner-spin-button,
 input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
 input[type=number] { -moz-appearance: textfield; appearance: textfield; }
 
-/* === MEDIA QUERY: 1100px - 1399px === */
+/* === MEDIA QUERY: 1100px - 1400px === */
 /* Página completa scrolleable */
-@media (min-width:1101px) and (max-width:1399px) {
+@media (min-width:1101px) and (max-width:1400px) {
   body {
     height: auto;
     min-height: 100dvh;
