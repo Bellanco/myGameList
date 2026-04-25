@@ -11,7 +11,7 @@
   <link rel="manifest" href="manifest.json">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
 </head>
 
@@ -31,13 +31,11 @@
       <path
         d="M19.14 12.94c.04-.3.06-.61.06-.94s-.02-.64-.06-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94L14.4 2.81c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41L9.25 5.35c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.73 8.87c-.11.2-.06.47.12.61l2.03 1.58c-.04.3-.06.61-.06.94s.02.64.06.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .43-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.11-.2.06-.47-.12-.61l-2.03-1.58zM12 15.6A3.6 3.6 0 1112 8.4a3.6 3.6 0 010 7.2z" />
     </symbol>
-    <symbol id="icon-edit" viewBox="0 0 24 24">
-      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-      <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+    <symbol id="icon-edit" viewBox="0 -960 960 960">
+      <path d="M200-120q-33 0-56.5-23.5T120-200v-560q0-33 23.5-56.5T200-840h357l-80 80H200v560h560v-278l80-80v358q0 33-23.5 56.5T760-120H200Zm280-360ZM360-360v-170l367-367q12-12 27-18t30-6q16 0 30.5 6t26.5 18l56 57q11 12 17 26.5t6 29.5q0 15-5.5 29.5T897-728L530-360H360Zm481-424-56-56 56 56ZM440-440h56l232-232-28-28-29-28-231 231v57Zm260-260-29-28 29 28 28 28-28-28Z" />
     </symbol>
-    <symbol id="icon-trash" viewBox="0 0 24 24">
-      <path
-        d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zm3.5-9h1.5v8H9.5v-8zm3.5 0h1.5v8H13v-8zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z" />
+    <symbol id="icon-trash" viewBox="0 -960 960 960">
+      <path d="M280-120q-33 0-56.5-23.5T200-200v-520h-40v-80h200v-40h240v40h200v80h-40v520q0 33-23.5 56.5T680-120H280Zm400-600H280v520h400v-520ZM360-280h80v-360h-80v360Zm160 0h80v-360h-80v360ZM280-720v520-520Z" />
     </symbol>
     <symbol id="icon-check" viewBox="0 0 24 24">
       <path d="M9 16.17 4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" />
@@ -138,14 +136,26 @@
   </header>
 
   <div class="tabs">
-    <button class="tab-btn active" id="tab-c" type="button" data-action="switch-tab" data-tab="c">Lista del completista
-      <span class="count-badge" id="cnt-c">0</span></button>
-    <button class="tab-btn" id="tab-v" type="button" data-action="switch-tab" data-tab="v">Lista de la vergüenza <span
-        class="count-badge" id="cnt-v">0</span></button>
-    <button class="tab-btn" id="tab-e" type="button" data-action="switch-tab" data-tab="e">En curso <span
-        class="count-badge" id="cnt-e">0</span></button>
-    <button class="tab-btn" id="tab-p" type="button" data-action="switch-tab" data-tab="p">Lista de próximos <span
-        class="count-badge" id="cnt-p">0</span></button>
+    <button class="tab-btn active" id="tab-c" type="button" data-action="switch-tab" data-tab="c" data-tooltip="Completados">
+      <span class="tab-text-full">Lista del completista</span>
+      <svg class="tab-icon" aria-hidden="true"><use href="#icon-trophy"></use></svg>
+      <span class="count-badge" id="cnt-c">0</span>
+    </button>
+    <button class="tab-btn" id="tab-v" type="button" data-action="switch-tab" data-tab="v" data-tooltip="Abandonados">
+      <span class="tab-text-full">Lista de la vergüenza</span>
+      <svg class="tab-icon" aria-hidden="true"><use href="#icon-abandoned"></use></svg>
+      <span class="count-badge" id="cnt-v">0</span>
+    </button>
+    <button class="tab-btn" id="tab-e" type="button" data-action="switch-tab" data-tab="e" data-tooltip="En curso">
+      <span class="tab-text-full">En curso</span>
+      <svg class="tab-icon" aria-hidden="true"><use href="#icon-play"></use></svg>
+      <span class="count-badge" id="cnt-e">0</span>
+    </button>
+    <button class="tab-btn" id="tab-p" type="button" data-action="switch-tab" data-tab="p" data-tooltip="Próximos">
+      <span class="tab-text-full">Lista de próximos</span>
+      <svg class="tab-icon" aria-hidden="true"><use href="#icon-star"></use></svg>
+      <span class="count-badge" id="cnt-p">0</span>
+    </button>
   </div>
 
   <div class="status-banner" id="status-banner" hidden></div>
@@ -190,6 +200,9 @@
         </button>
       </div>
       <div class="modal-body">
+        <div class="admin-description">
+          <p>Gestiona los filtros disponibles en tus listas. Añade, edita o elimina categorías personalizadas.</p>
+        </div>
         <div class="admin-tabs">
           <button class="tab-btn active admin-tab" type="button" data-action="switch-admin-tab"
             data-admin="genres">Géneros</button>

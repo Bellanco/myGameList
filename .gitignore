@@ -8,6 +8,10 @@
 /yarn-error.log*
 /pnpm-debug.log*
 
+# Ignorar build output (autogenerado por Vite)
+/dist/
+/coverage/
+
 # Ignorar archivos de sistema y editores
 .DS_Store
 Thumbs.db
