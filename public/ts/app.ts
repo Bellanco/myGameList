@@ -93,6 +93,7 @@ import { GistSync, DataSync } from './sync.ts';
 ═══════════════════════════════════════════════════════════════════ */
 const STORAGE_KEY = 'mis-listas-v12-unified';
 const LEGACY_KEYS = ['mis-listas-v11-unified', 'mis-listas-v10-unified', 'mis-listas-v10-separated', 'mis-listas-v9-unified', 'mis-listas-v9-separated', 'mis-listas-v8-unified', 'mis-listas-v8-separated'];
+const TABS = ['c', 'v', 'e', 'p'];
 const CURRENT_YEAR = new Date().getFullYear();
 const UI_BREAKPOINTS = { tableCompact: 1100, filtersCompact: 1400 };
 const GIST_DEBOUNCE_MS = 1800;
@@ -122,14 +123,14 @@ const TAB_CONFIG = {
         sortDefault: { col: 'years', asc: false },
         filterScore: true, filterYear: true, filterHours: true, filterBool: { label: TAB_C_LABELS.filterBoolLabel, field: TAB_C_LABELS.filterBoolField },
         columns: [
-            { key: 'nombre', label: TAB_C_LABELS.columns.name.label, cls: 'w-name', sortable: true, center: false, render: g => `<strong>${UI.esc((g || {}).name)}</strong>` },
-            { key: 'years', label: TAB_C_LABELS.columns.years.label, cls: 'w-year', sortable: true, center: false, render: g => UI.chipList((g || {}).years, 'chip-generic') },
-            { key: '_plat', label: TAB_C_LABELS.columns.platforms.label, cls: 'w-plat col-plat', sortable: false, center: false, render: g => UI.chipList((g || {}).platforms, 'chip-plat') },
-            { key: 'genres', label: TAB_C_LABELS.columns.genres.label, cls: 'w-genre', sortable: true, center: false, render: g => UI.chipList((g || {}).genres, 'chip-genre') },
-            { key: '_pf', label: TAB_C_LABELS.columns.strengths.label, cls: 'w-strong col-strong', sortable: false, center: false, render: g => UI.chipList((g || {}).strengths, 'chip-pf') },
-            { key: '_pd', label: TAB_C_LABELS.columns.weaknesses.label, cls: 'w-weak col-weak', sortable: false, center: false, render: g => UI.chipList((g || {}).weaknesses, 'chip-pd') },
-            { key: 'score', label: TAB_C_LABELS.columns.score.label, cls: '', sortable: true, center: false, render: g => UI.stars((g || {}).score) },
-            { key: 'rejugabilidad', label: TAB_C_LABELS.columns.replayable.label, cls: 'w-bool', sortable: true, center: true, render: g => UI.bool((g || {}).replayable, 'replayable', TAB_C_LABELS.boolTooltips) },
+            { key: 'nombre', label: TAB_C_LABELS.columns.name.label, cls: 'w-name-c', sortable: true, center: false, render: g => `<strong>${UI.esc((g || {}).name)}</strong>` },
+            { key: 'years', label: TAB_C_LABELS.columns.years.label, cls: 'w-year-c', sortable: true, center: false, render: g => UI.chipList((g || {}).years, 'chip-generic') },
+            { key: '_plat', label: TAB_C_LABELS.columns.platforms.label, cls: 'w-plat-c col-plat', sortable: false, center: false, render: g => UI.chipList((g || {}).platforms, 'chip-plat') },
+            { key: 'genres', label: TAB_C_LABELS.columns.genres.label, cls: 'w-genre-c', sortable: true, center: false, render: g => UI.chipList((g || {}).genres, 'chip-genre') },
+            { key: '_pf', label: TAB_C_LABELS.columns.strengths.label, cls: 'w-strong-c col-strong', sortable: false, center: false, render: g => UI.chipList((g || {}).strengths, 'chip-pf') },
+            { key: '_pd', label: TAB_C_LABELS.columns.weaknesses.label, cls: 'w-weak-c col-weak', sortable: false, center: false, render: g => UI.chipList((g || {}).weaknesses, 'chip-pd') },
+            { key: 'score', label: TAB_C_LABELS.columns.score.label, cls: 'w-score-c', sortable: true, center: false, render: g => UI.stars((g || {}).score) },
+            { key: 'rejugabilidad', label: TAB_C_LABELS.columns.replayable.label, cls: 'w-bool-c', sortable: true, center: true, render: g => UI.bool((g || {}).replayable, 'replayable', TAB_C_LABELS.boolTooltips) },
         ],
         detailExtra: [
             { label: TAB_C_LABELS.details.years, hideIfEmpty: true, render: g => UI.chipList((g || {}).years, 'chip-generic') },
@@ -148,12 +149,12 @@ const TAB_CONFIG = {
         sortDefault: { col: 'name', asc: true },
         filterScore: false, filterYear: false, filterHours: false, filterBool: { label: TAB_V_LABELS.filterBoolLabel, field: TAB_V_LABELS.filterBoolField },
         columns: [
-            { key: 'nombre', label: TAB_V_LABELS.columns.name.label, cls: 'w-name', sortable: true, center: false, render: g => `<strong>${UI.esc((g || {}).name)}</strong>` },
-            { key: '_plat', label: TAB_V_LABELS.columns.platforms.label, cls: 'w-plat col-plat', sortable: false, center: false, render: g => UI.chipList((g || {}).platforms, 'chip-plat') },
-            { key: 'genres', label: TAB_V_LABELS.columns.genres.label, cls: 'w-genre', sortable: true, center: false, render: g => UI.chipList((g || {}).genres, 'chip-genre') },
-            { key: '_pf', label: TAB_V_LABELS.columns.strengths.label, cls: 'w-strong col-strong', sortable: false, center: false, render: g => UI.chipList((g || {}).strengths, 'chip-pf') },
-            { key: '_razoes', label: TAB_V_LABELS.columns.reasons.label, cls: 'w-weak col-weak', sortable: false, center: false, render: g => UI.chipList((g || {}).reasons, 'chip-pd') },
-            { key: 'volver', label: TAB_V_LABELS.columns.retry.label, cls: 'w-bool', sortable: true, center: true, render: g => UI.bool((g || {}).retry, 'opportunity', TAB_V_LABELS.boolTooltips) },
+            { key: 'nombre', label: TAB_V_LABELS.columns.name.label, cls: 'w-name-v', sortable: true, center: false, render: g => `<strong>${UI.esc((g || {}).name)}</strong>` },
+            { key: '_plat', label: TAB_V_LABELS.columns.platforms.label, cls: 'w-plat-v col-plat', sortable: false, center: false, render: g => UI.chipList((g || {}).platforms, 'chip-plat') },
+            { key: 'genres', label: TAB_V_LABELS.columns.genres.label, cls: 'w-genre-v', sortable: true, center: false, render: g => UI.chipList((g || {}).genres, 'chip-genre') },
+            { key: '_pf', label: TAB_V_LABELS.columns.strengths.label, cls: 'w-strong-v col-strong', sortable: false, center: false, render: g => UI.chipList((g || {}).strengths, 'chip-pf') },
+            { key: '_razoes', label: TAB_V_LABELS.columns.reasons.label, cls: 'w-weak-v col-weak', sortable: false, center: false, render: g => UI.chipList((g || {}).reasons, 'chip-pd') },
+            { key: 'volver', label: TAB_V_LABELS.columns.retry.label, cls: 'w-bool-v', sortable: true, center: true, render: g => UI.bool((g || {}).retry, 'opportunity', TAB_V_LABELS.boolTooltips) },
         ],
         detailExtra: [
             { label: TAB_V_LABELS.details.strengths, hideIfEmpty: true, render: g => UI.chipList((g || {}).strengths, 'chip-pf'), cls: 'detail-strong' },
@@ -172,11 +173,11 @@ const TAB_CONFIG = {
         sortDefault: { col: 'name', asc: true },
         filterScore: false, filterYear: false, filterHours: false, filterBool: null,
         columns: [
-            { key: 'nombre', label: TAB_E_LABELS.columns.name.label, cls: 'w-name', sortable: true, center: false, render: g => `<strong>${UI.esc((g || {}).name)}</strong>` },
-            { key: '_plat', label: TAB_E_LABELS.columns.platforms.label, cls: 'w-plat col-plat', sortable: false, center: false, render: g => UI.chipList((g || {}).platforms, 'chip-plat') },
-            { key: 'genres', label: TAB_E_LABELS.columns.genres.label, cls: 'w-genre', sortable: true, center: false, render: g => UI.chipList((g || {}).genres, 'chip-genre') },
-            { key: '_pf', label: TAB_E_LABELS.columns.strengths.label, cls: 'w-strong col-strong', sortable: false, center: false, render: g => UI.chipList((g || {}).strengths, 'chip-pf') },
-            { key: '_pd', label: TAB_E_LABELS.columns.weaknesses.label, cls: 'w-weak col-weak', sortable: false, center: false, render: g => UI.chipList((g || {}).weaknesses, 'chip-pd') },
+            { key: 'nombre', label: TAB_E_LABELS.columns.name.label, cls: 'w-name-e', sortable: true, center: false, render: g => `<strong>${UI.esc((g || {}).name)}</strong>` },
+            { key: '_plat', label: TAB_E_LABELS.columns.platforms.label, cls: 'w-plat-e col-plat', sortable: false, center: false, render: g => UI.chipList((g || {}).platforms, 'chip-plat') },
+            { key: 'genres', label: TAB_E_LABELS.columns.genres.label, cls: 'w-genre-e', sortable: true, center: false, render: g => UI.chipList((g || {}).genres, 'chip-genre') },
+            { key: '_pf', label: TAB_E_LABELS.columns.strengths.label, cls: 'w-strong-e col-strong', sortable: false, center: false, render: g => UI.chipList((g || {}).strengths, 'chip-pf') },
+            { key: '_pd', label: TAB_E_LABELS.columns.weaknesses.label, cls: 'w-weak-e col-weak', sortable: false, center: false, render: g => UI.chipList((g || {}).weaknesses, 'chip-pd') },
         ],
         detailExtra: [
             { label: TAB_E_LABELS.details.strengths, hideIfEmpty: true, render: g => UI.chipList((g || {}).strengths, 'chip-pf'), cls: 'detail-strong' },
@@ -194,10 +195,10 @@ const TAB_CONFIG = {
         sortDefault: { col: 'score', asc: false },
         filterScore: true, filterYear: false, filterHours: false, filterBool: null,
         columns: [
-            { key: 'nombre', label: TAB_P_LABELS.columns.name.label, cls: 'w-name', sortable: true, center: false, render: g => `<strong>${UI.esc((g || {}).name)}</strong>` },
-            { key: '_plat', label: TAB_P_LABELS.columns.platforms.label, cls: 'w-plat col-plat', sortable: false, center: false, render: g => UI.chipList((g || {}).platforms, 'chip-plat') },
-            { key: 'genres', label: TAB_P_LABELS.columns.genres.label, cls: 'w-genre', sortable: true, center: false, render: g => UI.chipList((g || {}).genres, 'chip-genre') },
-            { key: 'score', label: TAB_P_LABELS.columns.score.label, cls: '', sortable: true, center: false, render: g => (g || {}).score ? UI.stars((g || {}).score) : '<span style="color:var(--text-muted)">—</span>' },
+            { key: 'nombre', label: TAB_P_LABELS.columns.name.label, cls: 'w-name-p', sortable: true, center: false, render: g => `<strong>${UI.esc((g || {}).name)}</strong>` },
+            { key: '_plat', label: TAB_P_LABELS.columns.platforms.label, cls: 'w-plat-p col-plat', sortable: false, center: false, render: g => UI.chipList((g || {}).platforms, 'chip-plat') },
+            { key: 'genres', label: TAB_P_LABELS.columns.genres.label, cls: 'w-genre-p', sortable: true, center: false, render: g => UI.chipList((g || {}).genres, 'chip-genre') },
+            { key: 'score', label: TAB_P_LABELS.columns.score.label, cls: 'w-score', sortable: true, center: false, render: g => (g || {}).score ? UI.stars((g || {}).score) : '<span style="color:var(--text-muted)">—</span>' },
         ],
         detailExtra: [
             { label: TAB_P_LABELS.details.score.label, hideIfEmpty: true, render: g => (g || {}).score ? UI.stars((g || {}).score) : `<span style="color:var(--text-muted)">${TAB_P_LABELS.details.score.empty}</span>` },
@@ -311,6 +312,16 @@ const UI = {
    APP PRINCIPAL
 ═══════════════════════════════════════════════════════════════════ */
 export class SteamListApp {
+    /**
+     * Ordena strings en español (locale-aware)
+     * @param {any} a - Valor A
+     * @param {any} b - Valor B
+     * @returns {number} Resultado de comparación
+     */
+    static sortEs(a, b) {
+        return String(a).localeCompare(String(b), 'es');
+    }
+
     // Propiedades de datos
     /** @type {Record<string, any[]>} */
     data;
@@ -453,7 +464,7 @@ export class SteamListApp {
             e: i => ({ ...base(i), strengths: toList(i?.strengths), review: String(i?.review ?? '').trim(), weaknesses: toList(i?.weaknesses) }),
             p: i => ({ ...base(i), score: Math.min(5, Math.max(0, Number(i?.score ?? 0))) }),
         };
-        for (const t of ['c', 'v', 'e', 'p']) {
+        for (const t of TABS) {
             this.data[t] = (Array.isArray(this.data[t]) ? this.data[t].map(i => normFns[t](i)) : []);
         }
         
@@ -489,7 +500,6 @@ export class SteamListApp {
             (item.reasons || []).forEach(v => this.lookups.weaknesses.add(v));
             (item.years || []).forEach(v => this.lookups.years.add(v));
         }
-        const sortEs = (a, b) => String(a).localeCompare(String(b), 'es');
         const fill = (id, set, fn) => {
             const el = document.getElementById(id); 
             if (el) el.innerHTML = [...set].sort(fn).map(v => `<option value="${UI.esc(v)}">`).join('');
@@ -923,15 +933,12 @@ export class SteamListApp {
     renderRow(game, idx, cols) {
         const tab = this.currentTab;
         const expanded = this.expandedId === game.id;
+        const tabCfg = TAB_CONFIG[tab];
+        const hasScore = tabCfg.form.hasScore; // Solo mostrar estrellas si la tabla tiene score
         const cells = cols.map(col => {
             let value: string;
-            if (col.key === 'nombre' && this.isTableCompact()) {
-                // For compact view, show name with stars on the right
-                const name = UI.esc((game || {}).name);
-                const stars = UI.stars((game || {}).score);
-                value = `<div class="name-with-stars"><strong>${name}</strong><div class="stars-right">${stars}</div></div>`;
-            } else if (col.key === 'nombre' && window.innerWidth < 1100) {
-                // For medium view (< 1100px), show name with stars on the right
+            // En vista compacta o < 1100px, mostrar nombre con estrellas para la columna 'nombre' (solo si la tabla tiene score)
+            if (col.key === 'nombre' && (this.isTableCompact() || window.innerWidth < 1100) && hasScore) {
                 const name = UI.esc((game || {}).name);
                 const stars = UI.stars((game || {}).score);
                 value = `<div class="name-with-stars"><strong>${name}</strong><div class="stars-right">${stars}</div></div>`;
