@@ -1,0 +1,10 @@
+name = "mygamelist"
+type = "javascript"
+
+[build]
+command = "npm run build"
+cwd = "./"
+destination_dir = "dist"
+
+[build.upload]
+format = "modules"
