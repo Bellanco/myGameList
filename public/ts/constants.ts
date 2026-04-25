@@ -67,8 +67,8 @@ export const TAB_V_LABELS = {
         inactive: 'No merece una nueva oportunidad',
     },
     actions: [
-        { label: 'Pasar a completados', btnCls: 'btn-complete', target: 'c' },
-        { label: 'Pasar a en curso', btnCls: 'btn-playing', target: 'e' },
+        { label: 'Pasar a completados', btnCls: 'btn-complete', target: 'c', icon: 'trophy' },
+        { label: 'Pasar a en curso', btnCls: 'btn-playing', target: 'e', icon: 'play' },
     ],
     modal: {
         new: 'Nuevo juego visitado',
@@ -94,8 +94,8 @@ export const TAB_E_LABELS = {
         weaknesses: 'Puntos débiles',
     },
     actions: [
-        { label: 'Pasar a completados', btnCls: 'btn-complete', target: 'c' },
-        { label: 'Pasar a abandonados', btnCls: 'btn-abandoned', target: 'v' },
+        { label: 'Pasar a completados', btnCls: 'btn-complete', target: 'c', icon: 'trophy' },
+        { label: 'Pasar a abandonados', btnCls: 'btn-abandoned', target: 'v', icon: 'abandoned' },
     ],
     modal: {
         new: 'Nuevo juego en curso',
@@ -119,7 +119,7 @@ export const TAB_P_LABELS = {
         score: { label: 'Interés', empty: 'Sin valorar' },
     },
     actions: [
-        { label: 'Pasar a en curso', btnCls: 'btn-playing', target: 'e' },
+        { label: 'Pasar a en curso', btnCls: 'btn-playing', target: 'e', icon: 'play' },
     ],
     modal: {
         new: 'Nuevo juego próximo',

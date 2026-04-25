@@ -162,8 +162,8 @@ const TAB_CONFIG = {
             { label: TAB_V_LABELS.details.retry, hideIfEmpty: true, render: g => UI.bool((g || {}).retry, 'opportunity', TAB_V_LABELS.boolTooltips) },
         ],
         actions: [
-            { label: TAB_V_LABELS.actions[0].label, btnCls: TAB_V_LABELS.actions[0].btnCls, target: TAB_V_LABELS.actions[0].target },
-            { label: TAB_V_LABELS.actions[1].label, btnCls: TAB_V_LABELS.actions[1].btnCls, target: TAB_V_LABELS.actions[1].target },
+            { label: TAB_V_LABELS.actions[0].label, btnCls: TAB_V_LABELS.actions[0].btnCls, target: TAB_V_LABELS.actions[0].target, icon: TAB_V_LABELS.actions[0].icon },
+            { label: TAB_V_LABELS.actions[1].label, btnCls: TAB_V_LABELS.actions[1].btnCls, target: TAB_V_LABELS.actions[1].target, icon: TAB_V_LABELS.actions[1].icon },
         ],
         modalTitles: { new: TAB_V_LABELS.modal.new, prefill: TAB_V_LABELS.modal.prefill, edit: TAB_V_LABELS.modal.edit },
         form: { hasScore: false, scoreRequired: false, hasYears: false, hasHours: false, hasStrengths: true, hasWeaknesses: false, hasReasons: true, hasBool: true, boolLabel: TAB_V_LABELS.filterBoolLabel, boolField: TAB_V_LABELS.filterBoolField, hasReview: true },
@@ -184,8 +184,8 @@ const TAB_CONFIG = {
             { label: TAB_E_LABELS.details.weaknesses, hideIfEmpty: true, render: g => UI.chipList((g || {}).weaknesses, 'chip-pd'), cls: 'detail-weak' },
         ],
         actions: [
-            { label: TAB_E_LABELS.actions[0].label, btnCls: TAB_E_LABELS.actions[0].btnCls, target: TAB_E_LABELS.actions[0].target },
-            { label: TAB_E_LABELS.actions[1].label, btnCls: TAB_E_LABELS.actions[1].btnCls, target: TAB_E_LABELS.actions[1].target },
+            { label: TAB_E_LABELS.actions[0].label, btnCls: TAB_E_LABELS.actions[0].btnCls, target: TAB_E_LABELS.actions[0].target, icon: TAB_E_LABELS.actions[0].icon },
+            { label: TAB_E_LABELS.actions[1].label, btnCls: TAB_E_LABELS.actions[1].btnCls, target: TAB_E_LABELS.actions[1].target, icon: TAB_E_LABELS.actions[1].icon },
         ],
         modalTitles: { new: TAB_E_LABELS.modal.new, prefill: TAB_E_LABELS.modal.prefill, edit: TAB_E_LABELS.modal.edit },
         form: { hasScore: false, scoreRequired: false, hasYears: false, hasHours: false, hasStrengths: true, hasWeaknesses: true, hasReasons: false, hasBool: false, boolLabel: '', boolField: '', hasReview: true },
@@ -204,7 +204,7 @@ const TAB_CONFIG = {
             { label: TAB_P_LABELS.details.score.label, hideIfEmpty: true, render: g => (g || {}).score ? UI.stars((g || {}).score) : `<span style="color:var(--text-muted)">${TAB_P_LABELS.details.score.empty}</span>` },
         ],
         actions: [
-            { label: TAB_P_LABELS.actions[0].label, btnCls: TAB_P_LABELS.actions[0].btnCls, target: TAB_P_LABELS.actions[0].target },
+            { label: TAB_P_LABELS.actions[0].label, btnCls: TAB_P_LABELS.actions[0].btnCls, target: TAB_P_LABELS.actions[0].target, icon: TAB_P_LABELS.actions[0].icon },
         ],
         modalTitles: { new: TAB_P_LABELS.modal.new, prefill: TAB_P_LABELS.modal.prefill, edit: TAB_P_LABELS.modal.edit },
         form: { hasScore: true, scoreRequired: false, hasYears: false, hasHours: false, hasStrengths: false, hasWeaknesses: false, hasReasons: false, hasBool: false, boolLabel: '', boolField: '', hasReview: false },
@@ -980,7 +980,7 @@ export class SteamListApp {
         <span class="detail-label">Análisis</span>
         ${reviewHtml}
       </div>` : '';
-        const migBtns = tabCfg.actions.map(a => `<button class="btn ${a.btnCls}" type="button" data-action="migrate-game" data-id="${game.id}" data-target="${a.target}">${UI.icon('arrow-right')}<span>${a.label}</span></button>`).join('');
+        const migBtns = tabCfg.actions.map(a => `<button class="btn ${a.btnCls}" type="button" data-action="migrate-game" data-id="${game.id}" data-target="${a.target}">${UI.icon(a.icon || 'arrow-right')}<span>${a.label}</span></button>`).join('');
         return `
       <tr class="detail-row ${expanded ? 'open' : ''}" data-dbl-action="toggle-expand" data-id="${game.id}">
         <td colspan="${colCount}" style="padding:0;">
