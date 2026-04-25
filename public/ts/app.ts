@@ -129,7 +129,7 @@ const TAB_CONFIG = {
             { key: 'genres', label: TAB_C_LABELS.columns.genres.label, cls: 'w-genre-c', sortable: true, center: false, render: g => UI.chipList((g || {}).genres, 'chip-genre') },
             { key: '_pf', label: TAB_C_LABELS.columns.strengths.label, cls: 'w-strong-c col-strong', sortable: false, center: false, render: g => UI.chipList((g || {}).strengths, 'chip-pf') },
             { key: '_pd', label: TAB_C_LABELS.columns.weaknesses.label, cls: 'w-weak-c col-weak', sortable: false, center: false, render: g => UI.chipList((g || {}).weaknesses, 'chip-pd') },
-            { key: 'score', label: TAB_C_LABELS.columns.score.label, cls: 'w-score-c', sortable: true, center: false, render: g => UI.stars((g || {}).score) },
+            { key: 'score', label: TAB_C_LABELS.columns.score.label, cls: 'w-score-c', sortable: true, center: true, render: g => UI.stars((g || {}).score) },
             { key: 'rejugabilidad', label: TAB_C_LABELS.columns.replayable.label, cls: 'w-bool-c', sortable: true, center: true, render: g => UI.bool((g || {}).replayable, 'replayable', TAB_C_LABELS.boolTooltips) },
         ],
         detailExtra: [
@@ -239,7 +239,7 @@ const UI = {
      */
     stars(val) {
         const n = Math.max(0, Math.min(5, Number(val || 0)));
-        return `<span class="stars">${[1, 2, 3, 4, 5].map(i => `<span class="${i <= n ? 'f' : ''}">★</span>`).join('')}</span>`;
+        return `<span class="stars" title="${n} de 5 estrellas" aria-label="${n} de 5 estrellas">${[1, 2, 3, 4, 5].map(i => `<span class="${i <= n ? 'f' : ''}">★</span>`).join('')}</span>`;
     },
     /**
      * Renderiza un chip
@@ -921,9 +921,10 @@ export class SteamListApp {
         const cols = tabCfg.columns;
         document.getElementById('thead').innerHTML = `<tr>${cols.map(col => {
             const sorted = sort.col === col.key;
+            const centerStyle = col.center ? ' style="text-align:center;"' : '';
             return col.sortable
-                ? `<th class="sortable ${col.cls} ${sorted ? 'sorted' : ''}" data-action="sort-by" data-col="${col.key}">${col.label}${sorted ? ' ' + UI.sortIcon(sort.asc) : ''}</th>`
-                : `<th class="${col.cls}">${col.label}</th>`;
+                ? `<th class="sortable ${col.cls} ${sorted ? 'sorted' : ''}" data-action="sort-by" data-col="${col.key}"${centerStyle}>${col.label}${sorted ? ' ' + UI.sortIcon(sort.asc) : ''}</th>`
+                : `<th class="${col.cls}"${centerStyle}>${col.label}</th>`;
         }).join('')}</tr>`;
         const list = this.getFilteredSortedList();
         const body = document.getElementById('tbody');
@@ -1501,10 +1502,10 @@ export class SteamListApp {
             const id = this.tagDomId(v);
             const enc = encodeURIComponent(v);
             return `<div class="admin-item${this.adminEditState?.original === v ? ' editing' : ''}" id="${id}">
-        <span>${UI.esc(v)}</span>
+        <span class="admin-item-name">${UI.esc(v)}</span>
         <div class="row-actions">
-          <button class="btn btn-secondary" type="button" data-action="edit-admin-tag" data-value="${enc}">${UI.icon('edit')}<span>Editar</span></button>
-          <button class="btn btn-danger"    type="button" data-action="delete-admin-tag" data-value="${enc}">${UI.icon('trash')}<span>Eliminar</span></button>
+          <button class="btn btn-secondary btn-icon-text" type="button" data-action="edit-admin-tag" data-value="${enc}" title="Editar">${UI.icon('edit')}<span>Editar</span></button>
+          <button class="btn btn-danger btn-icon-text"    type="button" data-action="delete-admin-tag" data-value="${enc}" title="Eliminar">${UI.icon('trash')}<span>Eliminar</span></button>
         </div></div>`;
         }).join('');
     }
