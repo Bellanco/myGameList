@@ -13,7 +13,7 @@ env:
 
 jobs:
   test-and-validate:
-    name: Test, Validate & Security
+    name: Test, Validate, Coverage & Security
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -32,8 +32,27 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Build project
+        run: npm run build
+        
+      - name: TypeScript check
+        run: npx tsc --noEmit
+
       - name: Run unit tests
         run: npm run test -- --reporter=verbose
+
+      - name: Run tests with coverage
+        run: npm run test:coverage
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          files: ./coverage/lcov.info
+          flags: unittests
+          name: coverage
+          fail_ci_if_error: false
+          verbose: true
+        continue-on-error: true
 
       - name: Run validation (ESLint + html-validate)
         run: npm run validate
