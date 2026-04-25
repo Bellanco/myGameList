@@ -10,10 +10,12 @@
     "validate": "node scripts/ci-validate.js && html-validate public/index.html && eslint public/ts --ext .ts",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
     "lint": "eslint public/ts --ext .ts --fix"
   },
   "devDependencies": {
     "@typescript-eslint/parser": "^8.59.0",
+    "@vitest/coverage-v8": "^4.1.5",
     "eslint": "^10.2.1",
     "html-validate": "^10.13.1",
     "jsdom": "^29.0.2",
