@@ -369,6 +369,8 @@ export class SteamListApp {
     _eventsBound;
     /** @type {boolean} */
     _yearWarningShown;
+    /** @type {ResizeObserver | null} */
+    _nameTextObserver;
 
     constructor() {
         this.data = { c: [], v: [], e: [], p: [], deleted: [] };
@@ -388,6 +390,7 @@ export class SteamListApp {
         this._eventsBound = false;
         this._yearWarningShown = false;
         this.meta = null;
+        this._nameTextObserver = null;
         this.lookups = {};
         this.sortConfig = Object.fromEntries(Object.entries(TAB_CONFIG).map(([k, v]) => [k, { ...v.sortDefault }]));
         this.tableCompact = window.innerWidth <= UI_BREAKPOINTS.tableCompact;
@@ -408,6 +411,7 @@ export class SteamListApp {
             this._resizeTimer = window.setTimeout(() => {
                 const changed = this.syncResponsiveMode();
                 if (changed) this.renderToolbar();
+                this._detectOverflow();
             }, 80);
         });
         document.addEventListener('keydown', (e) => {
@@ -928,6 +932,48 @@ export class SteamListApp {
             return;
         }
         body.innerHTML = list.map((game, idx) => this.renderRow(game, idx, cols)).join('');
+        
+        // Setup ResizeObserver para detectar overflow dinámicamente
+        this._setupNameTextObserver();
+        // Detectar overflow inmediatamente
+        this._detectOverflow();
+    }
+
+    _setupNameTextObserver() {
+        // Limpiar observer anterior si existe
+        if (this._nameTextObserver) {
+            this._nameTextObserver.disconnect();
+        }
+        
+        // Crear nuevo observer
+        this._nameTextObserver = new ResizeObserver(() => {
+            this._detectOverflow();
+        });
+        
+        // Observar todos los elementos .name-text
+        document.querySelectorAll('.name-text').forEach(el => {
+            this._nameTextObserver.observe(el);
+        });
+    }
+
+    _detectOverflow() {
+        document.querySelectorAll('.name-text').forEach(el => {
+            const parent = el.parentElement; // .name-with-stars strong
+            const scrollWidth = el.scrollWidth; // Ancho completo del texto
+            const parentWidth = parent ? parent.clientWidth : 0; // Ancho visible (contenedor con overflow: hidden)
+            
+            if (scrollWidth > parentWidth + 2) {
+                el.classList.add('overflow');
+                // Calcular el porcentaje exacto que necesita desplazarse
+                const excess = scrollWidth - parentWidth;
+                const percentToMove = (excess / scrollWidth) * 100;
+                // Aplicar como variable CSS para la animación
+                el.style.setProperty('--marquee-distance', `${percentToMove}%`);
+            } else {
+                el.classList.remove('overflow');
+                el.style.removeProperty('--marquee-distance');
+            }
+        });
     }
 
     renderRow(game, idx, cols) {
@@ -941,7 +987,7 @@ export class SteamListApp {
             if (col.key === 'nombre' && (this.isTableCompact() || window.innerWidth < 1100) && hasScore) {
                 const name = UI.esc((game || {}).name);
                 const stars = UI.stars((game || {}).score);
-                value = `<div class="name-with-stars"><strong>${name}</strong><div class="stars-right">${stars}</div></div>`;
+                value = `<div class="name-with-stars"><strong data-checkoverflow="${game.id}"><span class="name-text" data-game-id="${game.id}">${name}</span></strong><span class="stars-right">${stars}</span></div>`;
             } else if (this.isTableCompact() && col.key === 'name') {
                 value = UI.nameCell(game, true);
             } else {
