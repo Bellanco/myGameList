@@ -1,0 +1,23 @@
+{
+  "name": "mygamelist",
+  "version": "2.0.0",
+  "description": "Application for managing video game lists with GitHub Gist synchronization",
+  "private": true,
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "validate": "node scripts/ci-validate.js && html-validate public/index.html && eslint public/ts --ext .ts",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "eslint public/ts --ext .ts --fix"
+  },
+  "devDependencies": {
+    "@typescript-eslint/parser": "^8.59.0",
+    "eslint": "^10.2.1",
+    "html-validate": "^10.13.1",
+    "jsdom": "^29.0.2",
+    "vite": "^8.0.10",
+    "vitest": "^4.1.5"
+  }
+}
