@@ -20,6 +20,7 @@ All notable changes to this project will be documented in this file.
 - **Security** - XSS prevention, CSRF mitigation, token management
 - **Documentation** - Comprehensive API docs and deployment guides
 - **Developer Experience** - Zero build step, direct Python server
+- **Mobile UX** - Long game names now scroll smoothly (marquee animation) on small screens while preserving rating stars display
 
 ### 🗑️ Removed
 - Duplicate `public/js/` folder (consolidated to `public/ts/`)
