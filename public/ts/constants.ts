@@ -8,7 +8,7 @@
    TAB: COMPLETADOS (c)
 ═══════════════════════════════════════════════════════════════════ */
 export const TAB_C_LABELS = {
-    filterBoolLabel: '¿Volver a jugar?',
+    filterBoolLabel: 'Rejugar',
     filterBoolField: 'replayable',
     columns: {
         name: { label: 'Juego' },
@@ -17,8 +17,8 @@ export const TAB_C_LABELS = {
         genres: { label: 'Géneros' },
         strengths: { label: 'Puntos fuertes' },
         weaknesses: { label: 'Puntos débiles' },
-        score: { label: 'Punt.' },
-        replayable: { label: 'Rejug.' },
+        score: { label: 'Puntuación' },
+        replayable: { label: 'Rejugar' },
     },
     details: {
         years: 'Años en los que se completó',
@@ -29,7 +29,7 @@ export const TAB_C_LABELS = {
         replayable: 'Rejugabilidad',
     },
     form: {
-        boolLabel: '¿Volver a jugar?',
+        boolLabel: 'Rejugar',
         boolField: 'rejugabilidad',
     },
     boolTooltips: {
