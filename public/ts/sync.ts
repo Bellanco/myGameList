@@ -1,43 +1,130 @@
+// @ts-nocheck
+/**
+ * SYNC.TS — Sincronización robusta con GitHub Gist
+ * 
+ * Responsabilidades:
+ * - Comunicación con API de Gist (read, write, create, whoami)
+ * - Merge inteligente de datos locales y remotos
+ * - Manejo de timestamps para resolver conflictos
+ * - Validación de datos antes de operaciones
+ */
+
 "use strict";
-/* ═══════════════════════════════════════════════════════════════════
-   SYNC.JS — Sincronización robusta con GitHub Gist
-   
-   Responsabilidades:
-   - Comunicación con API de Gist (read, write, create, whoami)
-   - Merge inteligente de datos locales y remotos
-   - Manejo de timestamps para resolver conflictos
-   - Validación de datos antes de operaciones
-═══════════════════════════════════════════════════════════════════ */
+
+// ═══════════════════════════════════════════════════════════════════
+// TYPE DEFINITIONS (JSDoc compatible)
+// ═══════════════════════════════════════════════════════════════════
+
+/**
+ * @typedef {Object} GistConfig
+ * @property {string} token
+ * @property {string} gistId
+ * @property {string | null} etag
+ * @property {number} lastRemoteUpdatedAt
+ */
+
+/**
+ * @typedef {Object} GistReadResponse
+ * @property {boolean} [notModified]
+ * @property {TabData} [data]
+ * @property {string | null} [etag]
+ */
+
+/**
+ * @typedef {Object} Game
+ * @property {number} id
+ * @property {number} _ts - Timestamp para CRDT
+ * @property {string} name
+ * @property {string[]} platforms
+ * @property {string[]} genres
+ * @property {boolean} steamDeck
+ * @property {string} review
+ */
+
+/**
+ * @typedef {Object} TabData
+ * @property {Game[]} c - Completados
+ * @property {Game[]} v - Visitados
+ * @property {Game[]} e - En curso
+ * @property {Game[]} p - Próximos
+ * @property {Array<{id: number, _ts: number}>} deleted - Historial de borrados
+ */
+
+/**
+ * @typedef {Object} MergeResult
+ * @property {TabData} merged - Datos mergeados
+ * @property {boolean} hasChanges - Si hubo cambios
+ */
+
+// ═══════════════════════════════════════════════════════════════════
+// CONSTANTS
+// ═══════════════════════════════════════════════════════════════════
 
 const GIST_FILENAME = 'myGames.json';
 const GIST_API_BASE = 'https://api.github.com/gists';
 const GIST_CFG_KEY = 'mis-listas-gist-config';
 
-/* ═══════════════════════════════════════════════════════════════════
-   GistSync - Cliente de Gist
-═══════════════════════════════════════════════════════════════════ */
-const GistSync = {
-    // Carga configuración de Gist del localStorage
+// ═══════════════════════════════════════════════════════════════════
+// GistSync - Cliente de Gist
+// ═══════════════════════════════════════════════════════════════════
+
+/**
+ * Cliente para interactuar con GitHub Gist API
+ * Maneja autenticación, lectura, escritura y eliminación de Gists
+ */
+export const GistSync = {
+    /**
+     * Carga configuración de Gist del localStorage
+     * @returns {GistConfig | null} Configuración almacenada o null
+     */
     getCfg() {
-        try { return JSON.parse(localStorage.getItem(GIST_CFG_KEY) || 'null'); } catch { return null; }
+        try {
+            const raw = localStorage.getItem(GIST_CFG_KEY);
+            return raw ? JSON.parse(raw) : null;
+        } catch {
+            return null;
+        }
     },
     
-    // Guarda configuración de Gist en localStorage
-    saveCfg(cfg) { localStorage.setItem(GIST_CFG_KEY, JSON.stringify(cfg)); },
+    /**
+     * Guarda configuración de Gist en localStorage
+     * @param {GistConfig} cfg - Configuración a guardar
+     * @returns {void}
+     */
+    saveCfg(cfg) {
+        localStorage.setItem(GIST_CFG_KEY, JSON.stringify(cfg));
+    },
     
-    // Limpia configuración de Gist
-    clearCfg() { localStorage.removeItem(GIST_CFG_KEY); },
+    /**
+     * Limpia configuración de Gist del localStorage
+     */
+    clearCfg() {
+        localStorage.removeItem(GIST_CFG_KEY);
+    },
     
-    // Obtiene datos del usuario autenticado
+    /**
+     * Obtiene datos del usuario autenticado en GitHub
+     * @param {string} token - Token de autenticación GitHub
+     * @returns {Promise<Object>} Datos del usuario
+     * @throws {Error} Si la autenticación falla
+     */
     async whoami(token) {
         const res = await fetch('https://api.github.com/user', {
-            headers: { 'Authorization': `token ${token}`, 'X-GitHub-Api-Version': '2022-11-28' }
+            headers: {
+                'Authorization': `token ${token}`,
+                'X-GitHub-Api-Version': '2022-11-28'
+            }
         });
         if (!res.ok) throw new Error(`Auth failed: ${res.statusText}`);
         return res.json();
     },
     
-    // Crea un nuevo Gist con datos iniciales
+    /**
+     * Crea un nuevo Gist con datos iniciales
+     * @param {string} token - Token de autenticación GitHub
+     * @returns {Promise<{gistId: string, etag: (string|null)}>} ID y etag del Gist creado
+     * @throws {Error} Si la creación falla
+     */
     async create(token) {
         const res = await fetch(GIST_API_BASE, {
             method: 'POST',
@@ -65,7 +152,14 @@ const GistSync = {
         return { gistId: body.id, etag: res.headers.get('etag') };
     },
     
-    // Lee datos del Gist
+    /**
+     * Lee datos del Gist con soporte para ETag (caché)
+     * @param {string} token - Token de autenticación GitHub
+     * @param {string} gistId - ID del Gist
+     * @param {(string|null)=} etag - ETag para caché condicional
+     * @returns {Promise<GistReadResponse>} Datos del Gist o notModified
+     * @throws {Error} Si la lectura falla o estructura es inválida
+     */
     async read(token, gistId, etag = null) {
         const url = `${GIST_API_BASE}/${gistId}`;
         const headers = {
@@ -86,12 +180,12 @@ const GistSync = {
         try {
             data = JSON.parse(raw);
         } catch (err) {
-            throw new Error(`Invalid JSON in Gist: ${err.message}`);
+            throw new Error(`Invalid JSON in Gist: ${err instanceof Error ? err.message : String(err)}`);
         }
         
-        // Aplicar migración si es necesario (similar a app.js)
-        if (typeof window.migrateData === 'function') {
-            data = window.migrateData(data);
+        // Aplicar migración si es necesario
+        if (typeof (window).migrateData === 'function') {
+            data = (window).migrateData(data);
         }
         
         // Validar estructura
@@ -102,11 +196,18 @@ const GistSync = {
         return {
             data,
             etag: res.headers.get('etag'),
-            updatedAt: data.updatedAt || Date.now()
         };
     },
     
-    // Escribe datos en Gist
+    /**
+     * Escribe datos en Gist (PATCH)
+     * @param {string} token - Token de autenticación GitHub
+     * @param {string} gistId - ID del Gist
+     * @param {TabData} data - Datos a escribir
+     * @param {(string|null)=} _etag - ETag (no usado en PUT)
+     * @returns {Promise<{etag: (string|null), updatedAt: number}>} ETag de la respuesta
+     * @throws {Error} Si la escritura falla
+     */
     async write(token, gistId, data, _etag = null) {
         const res = await fetch(`${GIST_API_BASE}/${gistId}`, {
             method: 'PATCH',
@@ -129,23 +230,37 @@ const GistSync = {
     }
 };
 
-/* ═══════════════════════════════════════════════════════════════════
-   DataSync - Lógica de sincronización
-═══════════════════════════════════════════════════════════════════ */
-const DataSync = {
+// ═══════════════════════════════════════════════════════════════════
+// DataSync - Lógica de sincronización CRDT
+// ═══════════════════════════════════════════════════════════════════
+
+/**
+ * Algoritmo de sincronización sin conflictos (CRDT)
+ * Basado en timestamps para resolver conflictos
+ */
+export const DataSync = {
     /**
      * Realiza un merge inteligente entre datos locales y remotos.
      * 
-     * Estrategia:
+     * Estrategia CRDT (Conflict-free Replicated Data Type):
      * 1. Nunca descartar datos: si existe en local o remoto, se incluye
      * 2. En caso de conflicto (existe en ambos), gana el timestamp más reciente
-     * 3. Respetar deletion history (borrados)
+     * 3. Respetar deletion history (borrados marcados con _ts)
      * 4. Validar datos antes de usarlos
+     * 
+     * @param {TabData} localData - Datos locales
+     * @param {number} localTs - Timestamp local (ms desde epoch)
+     * @param {TabData} remoteData - Datos remotos
+     * @param {number} remoteTs - Timestamp remoto (ms desde epoch)
+     * @returns {MergeResult} Datos mergeados y si hubo cambios
      */
     mergeData(localData, localTs, remoteData, remoteTs) {
         if (!this.isValidData(localData)) {
             console.warn('DataSync: local data invalid, using remote');
-            return { merged: this.isValidData(remoteData) ? remoteData : this.createEmptyData(), hasChanges: true };
+            return {
+                merged: this.isValidData(remoteData) ? remoteData : this.createEmptyData(),
+                hasChanges: true
+            };
         }
         if (!this.isValidData(remoteData)) {
             console.warn('DataSync: remote data invalid, using local');
@@ -244,14 +359,9 @@ const DataSync = {
     },
     
     /**
-     * Crea una estructura de datos vacía válida.
-     */
-    createEmptyData() {
-        return { c: [], v: [], e: [], p: [], deleted: [], updatedAt: Date.now() };
-    },
-    
-    /**
      * Valida que los datos tengan la estructura esperada.
+     * @param {Object} data - Datos a validar
+     * @returns {boolean} True si la estructura es válida
      */
     isValidData(data) {
         return data &&
@@ -264,12 +374,22 @@ const DataSync = {
     },
     
     /**
+     * Crea una estructura de datos vacía pero válida
+     * @returns {TabData} Estructura vacía
+     */
+    createEmptyData() {
+        return { c: [], v: [], e: [], p: [], deleted: [] };
+    },
+    
+    /**
      * Normaliza datos: asegura que todos los juegos tienen campos requeridos,
      * SIN perder datos existentes.
+     * @param {Object} data - Datos a normalizar
+     * @returns {TabData} Datos normalizados
      */
     normalize(data) {
         if (!this.isValidData(data)) {
-            return { c: [], v: [], e: [], p: [], deleted: [], updatedAt: Date.now() };
+            return this.createEmptyData();
         }
         
         const normalized = {
@@ -298,6 +418,8 @@ const DataSync = {
     
     /**
      * Normaliza un juego individual, preservando todos los campos relevantes.
+     * @param {Object} game - Juego a normalizar
+     * @returns {(Object|null)} Juego normalizado o null si es inválido
      */
     normalizeGame(game) {
         if (!game || typeof game !== 'object') return null;
@@ -328,6 +450,8 @@ const DataSync = {
     
     /**
      * Cuenta elementos en los datos.
+     * @param {Object} data - Datos a contar
+     * @returns {number} Total de juegos
      */
     countGames(data) {
         if (!this.isValidData(data)) return 0;
@@ -336,7 +460,6 @@ const DataSync = {
 };
 
 /* ═══════════════════════════════════════════════════════════════════
-   Exportar API pública
+   API exportada
 ═══════════════════════════════════════════════════════════════════ */
-window.GistSync = GistSync;
-window.DataSync = DataSync;
+// Módulos exportados como ES6 modules (ver main.ts)

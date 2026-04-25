@@ -1,24 +1,26 @@
 const fs = require('fs');
 const path = require('path');
-const vm = require('vm');
 
 const root = path.join(__dirname, '..');
 const publicDir = path.join(root, 'public');
-const dataDir = path.join(root, 'data');
 const docsDir = path.join(root, 'docs');
 const requiredFiles = [
   path.join(publicDir, 'index.html'),
   path.join(publicDir, 'style.css'),
   path.join(publicDir, 'robots.txt'),
   path.join(publicDir, '_headers'),
-  path.join(publicDir, 'js', 'migrate.js'),
-  path.join(publicDir, 'js', 'sync.js'),
-  path.join(publicDir, 'js', 'app.js'),
-  path.join(dataDir, 'myGames.json'),
-  path.join(docsDir, 'SYNC_FLOW.md'),
-  path.join(docsDir, 'TEST_SYNC.md'),
+  path.join(publicDir, 'manifest.json'),
+  path.join(publicDir, 'service-worker.js'),
+  path.join(publicDir, 'ts', 'main.ts'),
+  path.join(publicDir, 'ts', 'migrate.ts'),
+  path.join(publicDir, 'ts', 'sync.ts'),
+  path.join(publicDir, 'ts', 'app.ts'),
+  path.join(publicDir, 'ts', 'constants.ts'),
   path.join(root, 'README.md'),
   path.join(root, 'CHANGELOG.md'),
+  path.join(root, 'tsconfig.json'),
+  path.join(root, 'vite.config.ts'),
+  path.join(root, 'vitest.config.js'),
 ];
 
 const fail = (message) => {
@@ -33,32 +35,9 @@ for (const file of requiredFiles) {
 }
 
 const html = fs.readFileSync(path.join(publicDir, 'index.html'), 'utf8');
-const requiredScripts = ['js/migrate.js', 'js/sync.js', 'js/app.js'];
-for (const script of requiredScripts) {
-  if (!html.includes(`src="${script}"`)) {
-    fail(`index.html does not reference required script: ${script}`);
-  }
+// Check for main.ts as module entry point (ES6 modules via Vite)
+if (!html.includes('type="module"') || !html.includes('ts/main.ts')) {
+  fail('index.html does not reference ts/main.ts as module entry point');
 }
 
-const jsonPath = path.join(dataDir, 'myGames.json');
-try {
-  JSON.parse(fs.readFileSync(jsonPath, 'utf8'));
-} catch (err) {
-  fail(`Invalid JSON in ${path.relative(root, jsonPath)}: ${err.message}`);
-}
-
-const jsFiles = [
-  path.join(publicDir, 'js', 'migrate.js'),
-  path.join(publicDir, 'js', 'sync.js'),
-  path.join(publicDir, 'js', 'app.js'),
-];
-for (const file of jsFiles) {
-  const code = fs.readFileSync(file, 'utf8');
-  try {
-    new vm.Script(code, { filename: file });
-  } catch (err) {
-    fail(`JavaScript syntax error in ${path.relative(root, file)}: ${err.message}`);
-  }
-}
-
-console.log('CI validation passed. All required files are present and syntactically valid.');
+console.log('CI validation passed. All required files are present.');

@@ -1,4 +1,93 @@
+// @ts-nocheck
 "use strict";
+
+import { TAB_C_LABELS, TAB_V_LABELS, TAB_E_LABELS, TAB_P_LABELS, UI_CONFIG } from './constants.ts';
+import { GistSync, DataSync } from './sync.ts';
+
+/* ═══════════════════════════════════════════════════════════════════
+   TYPE DEFINITIONS
+═══════════════════════════════════════════════════════════════════ */
+
+/**
+ * @typedef {Object} GameItem
+ * @property {number} id
+ * @property {number} _ts
+ * @property {string} name
+ * @property {string[]} platforms
+ * @property {string[]} genres
+ * @property {boolean} steamDeck
+ * @property {string} review
+ * @property {number} [score]
+ * @property {number[]} [years]
+ * @property {string[]} [strengths]
+ * @property {string[]} [weaknesses]
+ * @property {string[]} [reasons]
+ * @property {boolean} [replayable]
+ * @property {boolean} [retry]
+ * @property {number} [hours]
+ */
+
+/**
+ * @typedef {Object} TabColumn
+ * @property {string} key
+ * @property {string} label
+ * @property {string} cls
+ * @property {boolean} sortable
+ * @property {boolean} center
+ * @property {(g: GameItem) => string} render
+ */
+
+/**
+ * @typedef {Object} DetailField
+ * @property {string} label
+ * @property {(g: GameItem) => string} render
+ * @property {string} [cls]
+ * @property {boolean} [hideIfEmpty]
+ */
+
+/**
+ * @typedef {Object} TabAction
+ * @property {string} label
+ * @property {string} btnCls
+ * @property {string} target
+ */
+
+/**
+ * @typedef {Object} FormConfig
+ * @property {boolean} hasScore
+ * @property {boolean} scoreRequired
+ * @property {boolean} hasYears
+ * @property {boolean} hasHours
+ * @property {boolean} hasStrengths
+ * @property {boolean} hasWeaknesses
+ * @property {boolean} hasReasons
+ * @property {boolean} hasBool
+ * @property {string} boolLabel
+ * @property {string} boolField
+ * @property {boolean} hasReview
+ */
+
+/**
+ * @typedef {Object} TabFilterBool
+ * @property {string} label
+ * @property {string} field
+ */
+
+/**
+ * @typedef {Object} TabConfig
+ * @property {{col: string, asc: boolean}} sortDefault
+ * @property {boolean} filterScore
+ * @property {boolean} filterYear
+ * @property {boolean} filterHours
+ * @property {TabFilterBool | null} filterBool
+ * @property {TabColumn[]} columns
+ * @property {DetailField[]} detailExtra
+ * @property {TabAction[]} actions
+ * @property {{new: string, prefill: string, edit: string}} modalTitles
+ * @property {FormConfig} form
+ * @property {string[]} tagKeys
+ */
+
 /* ═══════════════════════════════════════════════════════════════════
    CONSTANTES
 ═══════════════════════════════════════════════════════════════════ */
@@ -15,73 +104,73 @@ const SEARCH_DEBOUNCE_MS = 220;
 const TAB_CONFIG = {
     c: {
         sortDefault: { col: 'years', asc: false },
-        filterScore: true, filterYear: true, filterHours: true, filterBool: { label: '¿Volver a jugar?', field: 'replayable' },
+        filterScore: true, filterYear: true, filterHours: true, filterBool: { label: TAB_C_LABELS.filterBoolLabel, field: TAB_C_LABELS.filterBoolField },
         columns: [
-            { key: 'nombre', label: 'Juego', cls: 'w-name', sortable: true, center: false, render: (g) => `<strong>${UI.esc(g.name)}</strong>` },
-            { key: 'years', label: 'Año', cls: 'w-year', sortable: true, center: false, render: (g) => UI.chipList(g.years, 'chip-generic') },
-            { key: '_plat', label: 'Plataformas', cls: 'w-plat col-plat', sortable: false, center: false, render: (g) => UI.chipList(g.platforms, 'chip-plat') },
-            { key: 'genres', label: 'Géneros', cls: 'w-genre', sortable: true, center: false, render: (g) => UI.chipList(g.genres, 'chip-genre') },
-            { key: '_pf', label: 'Puntos fuertes', cls: 'w-strong col-strong', sortable: false, center: false, render: (g) => UI.chipList(g.strengths, 'chip-pf') },
-            { key: '_pd', label: 'Puntos débiles', cls: 'w-weak col-weak', sortable: false, center: false, render: (g) => UI.chipList(g.weaknesses, 'chip-pd') },
-            { key: 'score', label: 'Punt.', cls: '', sortable: true, center: false, render: (g) => UI.stars(g.score) },
-            { key: 'rejugabilidad', label: 'Rejug.', cls: 'w-bool', sortable: true, center: true, render: (g) => UI.bool(g.replayable) },
+            { key: 'nombre', label: TAB_C_LABELS.columns.name.label, cls: 'w-name', sortable: true, center: false, render: g => `<strong>${UI.esc((g || {}).name)}</strong>` },
+            { key: 'years', label: TAB_C_LABELS.columns.years.label, cls: 'w-year', sortable: true, center: false, render: g => UI.chipList((g || {}).years, 'chip-generic') },
+            { key: '_plat', label: TAB_C_LABELS.columns.platforms.label, cls: 'w-plat col-plat', sortable: false, center: false, render: g => UI.chipList((g || {}).platforms, 'chip-plat') },
+            { key: 'genres', label: TAB_C_LABELS.columns.genres.label, cls: 'w-genre', sortable: true, center: false, render: g => UI.chipList((g || {}).genres, 'chip-genre') },
+            { key: '_pf', label: TAB_C_LABELS.columns.strengths.label, cls: 'w-strong col-strong', sortable: false, center: false, render: g => UI.chipList((g || {}).strengths, 'chip-pf') },
+            { key: '_pd', label: TAB_C_LABELS.columns.weaknesses.label, cls: 'w-weak col-weak', sortable: false, center: false, render: g => UI.chipList((g || {}).weaknesses, 'chip-pd') },
+            { key: 'score', label: TAB_C_LABELS.columns.score.label, cls: '', sortable: true, center: false, render: g => UI.stars((g || {}).score) },
+            { key: 'rejugabilidad', label: TAB_C_LABELS.columns.replayable.label, cls: 'w-bool', sortable: true, center: true, render: g => UI.bool((g || {}).replayable) },
         ],
         detailExtra: [
-            { label: 'Años en los que se completó', render: (g) => UI.chipList(g.years, 'chip-generic') },
-            { label: 'Tiempo jugado', hideIfEmpty: true, render: (g) => g.hours != null ? `${String(g.hours).replace('.', ',')} horas` : '' },
-            { label: 'Puntos fuertes', render: (g) => UI.chipList(g.strengths, 'chip-pf'), cls: 'detail-strong' },
-            { label: 'Puntos débiles', render: (g) => UI.chipList(g.weaknesses, 'chip-pd'), cls: 'detail-weak' },
-            { label: 'Puntuación', render: (g) => UI.stars(g.score) },
-            { label: 'Rejugabilidad', render: (g) => UI.bool(g.replayable) },
+            { label: TAB_C_LABELS.details.years, render: g => UI.chipList((g || {}).years, 'chip-generic') },
+            { label: TAB_C_LABELS.details.hours, hideIfEmpty: true, render: g => (g || {}).hours != null ? `${String((g || {}).hours).replace('.', ',')} horas` : '' },
+            { label: TAB_C_LABELS.details.strengths, render: g => UI.chipList((g || {}).strengths, 'chip-pf'), cls: 'detail-strong' },
+            { label: TAB_C_LABELS.details.weaknesses, render: g => UI.chipList((g || {}).weaknesses, 'chip-pd'), cls: 'detail-weak' },
+            { label: TAB_C_LABELS.details.score, render: g => UI.stars((g || {}).score) },
+            { label: TAB_C_LABELS.details.replayable, render: g => UI.bool((g || {}).replayable) },
         ],
         actions: [],
-        modalTitles: { new: 'Nuevo juego completado', prefill: 'Pasar a completados', edit: 'Editar juego' },
-        form: { hasScore: true, scoreRequired: true, hasYears: true, hasHours: true, hasStrengths: true, hasWeaknesses: true, hasReasons: false, hasBool: true, boolLabel: '¿Volver a jugar?', boolField: 'rejugabilidad', hasReview: true },
+        modalTitles: { new: TAB_C_LABELS.modal.new, prefill: TAB_C_LABELS.modal.prefill, edit: TAB_C_LABELS.modal.edit },
+        form: { hasScore: true, scoreRequired: true, hasYears: true, hasHours: true, hasStrengths: true, hasWeaknesses: true, hasReasons: false, hasBool: true, boolLabel: TAB_C_LABELS.form.boolLabel, boolField: TAB_C_LABELS.form.boolField, hasReview: true },
         tagKeys: ['genres', 'platforms', 'years', 'strengths', 'weaknesses'],
     },
     v: {
         sortDefault: { col: 'name', asc: true },
-        filterScore: false, filterYear: false, filterHours: false, filterBool: { label: '¿Dar otra oportunidad?', field: 'retry' },
+        filterScore: false, filterYear: false, filterHours: false, filterBool: { label: TAB_V_LABELS.filterBoolLabel, field: TAB_V_LABELS.filterBoolField },
         columns: [
-            { key: 'nombre', label: 'Juego', cls: 'w-name', sortable: true, center: false, render: (g) => `<strong>${UI.esc(g.name)}</strong>` },
-            { key: '_plat', label: 'Plataformas', cls: 'w-plat col-plat', sortable: false, center: false, render: (g) => UI.chipList(g.platforms, 'chip-plat') },
-            { key: 'genres', label: 'Géneros', cls: 'w-genre', sortable: true, center: false, render: (g) => UI.chipList(g.genres, 'chip-genre') },
-            { key: '_pf', label: 'Puntos fuertes', cls: 'w-strong col-strong', sortable: false, center: false, render: (g) => UI.chipList(g.strengths, 'chip-pf') },
-            { key: '_razones', label: 'Puntos débiles', cls: 'w-weak col-weak', sortable: false, center: false, render: (g) => UI.chipList(g.reasons, 'chip-pd') },
-            { key: 'volver', label: 'Dar otra oportunidad', cls: 'w-bool', sortable: true, center: true, render: (g) => UI.bool(g.retry) },
+            { key: 'nombre', label: TAB_V_LABELS.columns.name.label, cls: 'w-name', sortable: true, center: false, render: g => `<strong>${UI.esc((g || {}).name)}</strong>` },
+            { key: '_plat', label: TAB_V_LABELS.columns.platforms.label, cls: 'w-plat col-plat', sortable: false, center: false, render: g => UI.chipList((g || {}).platforms, 'chip-plat') },
+            { key: 'genres', label: TAB_V_LABELS.columns.genres.label, cls: 'w-genre', sortable: true, center: false, render: g => UI.chipList((g || {}).genres, 'chip-genre') },
+            { key: '_pf', label: TAB_V_LABELS.columns.strengths.label, cls: 'w-strong col-strong', sortable: false, center: false, render: g => UI.chipList((g || {}).strengths, 'chip-pf') },
+            { key: '_razoes', label: TAB_V_LABELS.columns.reasons.label, cls: 'w-weak col-weak', sortable: false, center: false, render: g => UI.chipList((g || {}).reasons, 'chip-pd') },
+            { key: 'volver', label: TAB_V_LABELS.columns.retry.label, cls: 'w-bool', sortable: true, center: true, render: g => UI.bool((g || {}).retry) },
         ],
         detailExtra: [
-            { label: 'Puntos fuertes', render: (g) => UI.chipList(g.strengths, 'chip-pf'), cls: 'detail-strong' },
-            { label: 'Puntos débiles', render: (g) => UI.chipList(g.reasons, 'chip-pd'), cls: 'detail-weak' },
-            { label: 'Dar otra oportunidad', render: (g) => UI.bool(g.retry) },
+            { label: TAB_V_LABELS.details.strengths, render: g => UI.chipList((g || {}).strengths, 'chip-pf'), cls: 'detail-strong' },
+            { label: TAB_V_LABELS.details.reasons, render: g => UI.chipList((g || {}).reasons, 'chip-pd'), cls: 'detail-weak' },
+            { label: TAB_V_LABELS.details.retry, render: g => UI.bool((g || {}).retry) },
         ],
         actions: [
-            { label: 'Pasar a completados', btnCls: 'btn-complete', target: 'c' },
-            { label: 'Pasar a en curso', btnCls: 'btn-inprogress', target: 'e' },
+            { label: TAB_V_LABELS.actions[0].label, btnCls: TAB_V_LABELS.actions[0].btnCls, target: TAB_V_LABELS.actions[0].target },
+            { label: TAB_V_LABELS.actions[1].label, btnCls: TAB_V_LABELS.actions[1].btnCls, target: TAB_V_LABELS.actions[1].target },
         ],
-        modalTitles: { new: 'Nuevo juego abandonado', prefill: 'Pasar a abandonados', edit: 'Editar juego' },
-        form: { hasScore: false, scoreRequired: false, hasYears: false, hasHours: false, hasStrengths: true, hasWeaknesses: false, hasReasons: true, hasBool: true, boolLabel: '¿Dar otra oportunidad?', boolField: 'volver', hasReview: true },
+        modalTitles: { new: TAB_V_LABELS.modal.new, prefill: TAB_V_LABELS.modal.prefill, edit: TAB_V_LABELS.modal.edit },
+        form: { hasScore: false, scoreRequired: false, hasYears: false, hasHours: false, hasStrengths: true, hasWeaknesses: false, hasReasons: true, hasBool: true, boolLabel: TAB_V_LABELS.filterBoolLabel, boolField: TAB_V_LABELS.filterBoolField, hasReview: true },
         tagKeys: ['genres', 'platforms', 'strengths', 'reasons'],
     },
     e: {
         sortDefault: { col: 'name', asc: true },
         filterScore: false, filterYear: false, filterHours: false, filterBool: null,
         columns: [
-            { key: 'nombre', label: 'Juego', cls: 'w-name', sortable: true, center: false, render: (g) => `<strong>${UI.esc(g.name)}</strong>` },
-            { key: '_plat', label: 'Plataformas', cls: 'w-plat col-plat', sortable: false, center: false, render: (g) => UI.chipList(g.platforms, 'chip-plat') },
-            { key: 'genres', label: 'Géneros', cls: 'w-genre', sortable: true, center: false, render: (g) => UI.chipList(g.genres, 'chip-genre') },
-            { key: '_pf', label: 'Puntos fuertes', cls: 'w-strong col-strong', sortable: false, center: false, render: (g) => UI.chipList(g.strengths, 'chip-pf') },
-            { key: '_pd', label: 'Puntos débiles', cls: 'w-weak col-weak', sortable: false, center: false, render: (g) => UI.chipList(g.weaknesses, 'chip-pd') },
+            { key: 'nombre', label: TAB_E_LABELS.columns.name.label, cls: 'w-name', sortable: true, center: false, render: g => `<strong>${UI.esc((g || {}).name)}</strong>` },
+            { key: '_plat', label: TAB_E_LABELS.columns.platforms.label, cls: 'w-plat col-plat', sortable: false, center: false, render: g => UI.chipList((g || {}).platforms, 'chip-plat') },
+            { key: 'genres', label: TAB_E_LABELS.columns.genres.label, cls: 'w-genre', sortable: true, center: false, render: g => UI.chipList((g || {}).genres, 'chip-genre') },
+            { key: '_pf', label: TAB_E_LABELS.columns.strengths.label, cls: 'w-strong col-strong', sortable: false, center: false, render: g => UI.chipList((g || {}).strengths, 'chip-pf') },
+            { key: '_pd', label: TAB_E_LABELS.columns.weaknesses.label, cls: 'w-weak col-weak', sortable: false, center: false, render: g => UI.chipList((g || {}).weaknesses, 'chip-pd') },
         ],
         detailExtra: [
-            { label: 'Puntos fuertes', render: (g) => UI.chipList(g.strengths, 'chip-pf'), cls: 'detail-strong' },
-            { label: 'Puntos débiles', render: (g) => UI.chipList(g.weaknesses, 'chip-pd'), cls: 'detail-weak' },
+            { label: TAB_E_LABELS.details.strengths, render: g => UI.chipList((g || {}).strengths, 'chip-pf'), cls: 'detail-strong' },
+            { label: TAB_E_LABELS.details.weaknesses, render: g => UI.chipList((g || {}).weaknesses, 'chip-pd'), cls: 'detail-weak' },
         ],
         actions: [
-            { label: 'Pasar a completados', btnCls: 'btn-complete', target: 'c' },
-            { label: 'Pasar a abandonados', btnCls: 'btn-abandoned', target: 'v' },
+            { label: TAB_E_LABELS.actions[0].label, btnCls: TAB_E_LABELS.actions[0].btnCls, target: TAB_E_LABELS.actions[0].target },
+            { label: TAB_E_LABELS.actions[1].label, btnCls: TAB_E_LABELS.actions[1].btnCls, target: TAB_E_LABELS.actions[1].target },
         ],
-        modalTitles: { new: 'Nuevo juego en curso', prefill: 'Pasar a en curso', edit: 'Editar juego' },
+        modalTitles: { new: TAB_E_LABELS.modal.new, prefill: TAB_E_LABELS.modal.prefill, edit: TAB_E_LABELS.modal.edit },
         form: { hasScore: false, scoreRequired: false, hasYears: false, hasHours: false, hasStrengths: true, hasWeaknesses: true, hasReasons: false, hasBool: false, boolLabel: '', boolField: '', hasReview: true },
         tagKeys: ['genres', 'platforms', 'strengths', 'weaknesses'],
     },
@@ -89,20 +178,18 @@ const TAB_CONFIG = {
         sortDefault: { col: 'score', asc: false },
         filterScore: true, filterYear: false, filterHours: false, filterBool: null,
         columns: [
-            { key: 'nombre', label: 'Juego', cls: 'w-name', sortable: true, center: false, render: (g) => `<strong>${UI.esc(g.name)}</strong>` },
-            { key: '_plat', label: 'Plataformas', cls: 'w-plat col-plat', sortable: false, center: false, render: (g) => UI.chipList(g.platforms, 'chip-plat') },
-            { key: 'genres', label: 'Géneros', cls: 'w-genre', sortable: true, center: false, render: (g) => UI.chipList(g.genres, 'chip-genre') },
-            { key: 'score', label: 'Interés', cls: '', sortable: true, center: false, render: (g) => g.score ? UI.stars(g.score) : '<span style="color:var(--text-muted)">—</span>' },
+            { key: 'nombre', label: TAB_P_LABELS.columns.name.label, cls: 'w-name', sortable: true, center: false, render: g => `<strong>${UI.esc((g || {}).name)}</strong>` },
+            { key: '_plat', label: TAB_P_LABELS.columns.platforms.label, cls: 'w-plat col-plat', sortable: false, center: false, render: g => UI.chipList((g || {}).platforms, 'chip-plat') },
+            { key: 'genres', label: TAB_P_LABELS.columns.genres.label, cls: 'w-genre', sortable: true, center: false, render: g => UI.chipList((g || {}).genres, 'chip-genre') },
+            { key: 'score', label: TAB_P_LABELS.columns.score.label, cls: '', sortable: true, center: false, render: g => (g || {}).score ? UI.stars((g || {}).score) : '<span style="color:var(--text-muted)">—</span>' },
         ],
         detailExtra: [
-            { label: 'Interés', render: (g) => g.score ? UI.stars(g.score) : '<span style="color:var(--text-muted)">Sin valorar</span>' },
+            { label: TAB_P_LABELS.details.score.label, render: g => (g || {}).score ? UI.stars((g || {}).score) : `<span style="color:var(--text-muted)">${TAB_P_LABELS.details.score.empty}</span>` },
         ],
         actions: [
-            { label: 'Pasar a en curso', btnCls: 'btn-inprogress', target: 'e' },
-            { label: 'Pasar a completados', btnCls: 'btn-complete', target: 'c' },
-            { label: 'Pasar a abandonados', btnCls: 'btn-abandoned', target: 'v' },
+            { label: TAB_P_LABELS.actions[0].label, btnCls: TAB_P_LABELS.actions[0].btnCls, target: TAB_P_LABELS.actions[0].target },
         ],
-        modalTitles: { new: 'Nuevo juego próximo', prefill: 'Añadir a próximos', edit: 'Editar juego' },
+        modalTitles: { new: TAB_P_LABELS.modal.new, prefill: TAB_P_LABELS.modal.prefill, edit: TAB_P_LABELS.modal.edit },
         form: { hasScore: true, scoreRequired: false, hasYears: false, hasHours: false, hasStrengths: false, hasWeaknesses: false, hasReasons: false, hasBool: false, boolLabel: '', boolField: '', hasReview: false },
         tagKeys: ['genres', 'platforms'],
     },
@@ -112,26 +199,64 @@ const TAB_CONFIG = {
    UTILIDADES DE UI
 ═══════════════════════════════════════════════════════════════════ */
 const UI = {
+    /**
+     * Escapa caracteres especiales HTML
+     * @param {any} val - Valor a escapar
+     * @returns {string} Texto escapado
+     */
     esc(val) {
         return String(val ?? '').replace(/[&<>"'`=\/]/g, m => ({
             '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;', '`': '&#x60;', '=': '&#x3D;', '/': '&#x2F;'
-        }[m] || m));
+        })[m] || m);
     },
+    /**
+     * Renderiza un icono SVG
+     * @param {string} name - Nombre del icono
+     * @returns {string} HTML del icono
+     */
     icon(name) { return `<svg class="ui-icon" aria-hidden="true"><use href="#icon-${name}"></use></svg>`; },
+    /**
+     * Renderiza estrellas
+     * @param {any} val - Valor numérico (0-5)
+     * @returns {string} HTML de estrellas
+     */
     stars(val) {
         const n = Math.max(0, Math.min(5, Number(val || 0)));
         return `<span class="stars">${[1, 2, 3, 4, 5].map(i => `<span class="${i <= n ? 'f' : ''}">★</span>`).join('')}</span>`;
     },
+    /**
+     * Renderiza un chip
+     * @param {any} txt - Texto del chip
+     * @param {string} cls - Clase CSS
+     * @returns {string} HTML del chip
+     */
     chip(txt, cls) { return txt ? `<span class="chip ${cls}">${this.esc(txt)}</span>` : ''; },
+    /**
+     * Renderiza lista de chips
+     * @param {any} vals - Array de valores
+     * @param {string} cls - Clase CSS
+     * @returns {string} HTML de chips
+     */
     chipList(vals, cls) {
         const list = Array.isArray(vals) ? vals.filter(Boolean) : [];
         return list.length ? `<div class="chips">${list.map(v => this.chip(v, cls)).join('')}</div>` : `<span style="color:var(--text-muted)">—</span>`;
     },
+    /**
+     * Renderiza icono de boolean
+     * @param {any} v - Valor boolean
+     * @returns {string} HTML del icono
+     */
     bool(v) {
         return v
             ? `<span class="icon-bool true">${this.icon('check')}</span>`
             : `<span class="icon-bool false">${this.icon('close')}</span>`;
     },
+    /**
+     * Renderiza celda de nombre con opcional puntuación
+     * @param {GameItem} game - Objeto del juego
+     * @param {boolean} [compact=false] - Modo compacto
+     * @returns {string} HTML de la celda
+     */
     nameCell(game, compact = false) {
         const title = `<strong>${this.esc(game?.name ?? '')}</strong>`;
         if (!compact)
@@ -140,6 +265,11 @@ const UI = {
         const stars = score > 0 ? `<span class="compact-score">${this.stars(score)}</span>` : '';
         return `<div class="compact-name-cell"><span class="compact-name-text">${title}</span>${stars}</div>`;
     },
+    /**
+     * Icono de orden
+     * @param {boolean} asc - Ascendente
+     * @returns {string} Símbolo de flecha
+     */
     sortIcon(asc) { return asc ? '▲' : '▼'; },
 };
 
@@ -147,7 +277,55 @@ const UI = {
 /* ═══════════════════════════════════════════════════════════════════
    APP PRINCIPAL
 ═══════════════════════════════════════════════════════════════════ */
-class SteamListApp {
+export class SteamListApp {
+    // Propiedades de datos
+    /** @type {Record<string, any[]>} */
+    data;
+    /** @type {string} */
+    currentTab;
+    /** @type {number | null} */
+    expandedId;
+    /** @type {Object} */
+    editCtx;
+    /** @type {Record<string, string[]>} */
+    tempTags;
+    /** @type {string} */
+    currentAdminTab;
+    /** @type {any} */
+    adminEditState;
+    /** @type {any} */
+    meta;
+    /** @type {Record<string, any>} */
+    lookups;
+    /** @type {Record<string, any>} */
+    sortConfig;
+    
+    // Propiedades de UI
+    /** @type {boolean} */
+    tableCompact;
+    /** @type {boolean} */
+    filtersCompact;
+    /** @type {boolean} */
+    _filtersOpen;
+    
+    // Propiedades de timers
+    /** @type {number | null} */
+    statusTimer;
+    /** @type {number | null} */
+    adminTimer;
+    /** @type {number | null} */
+    _resizeTimer;
+    /** @type {number | null} */
+    _renderTableTimer;
+    /** @type {number | null} */
+    _pushTimer;
+    
+    // Propiedades de control
+    /** @type {boolean} */
+    _eventsBound;
+    /** @type {boolean} */
+    _yearWarningShown;
+
     constructor() {
         this.data = { c: [], v: [], e: [], p: [], deleted: [] };
         this.currentTab = 'c';
@@ -281,10 +459,10 @@ class SteamListApp {
             const el = document.getElementById(id); 
             if (el) el.innerHTML = [...set].sort(fn).map(v => `<option value="${UI.esc(v)}">`).join('');
         };
-        fill('dl-genres', this.lookups.genres, sortEs);
-        fill('dl-platforms', this.lookups.platforms, sortEs);
-        fill('dl-strengths', this.lookups.strengths, sortEs);
-        fill('dl-weaknesses', this.lookups.weaknesses, sortEs);
+        fill('dl-genres', this.lookups.genres, SteamListApp.sortEs);
+        fill('dl-platforms', this.lookups.platforms, SteamListApp.sortEs);
+        fill('dl-strengths', this.lookups.strengths, SteamListApp.sortEs);
+        fill('dl-weaknesses', this.lookups.weaknesses, SteamListApp.sortEs);
     }
 
     persist() {
@@ -503,8 +681,8 @@ class SteamListApp {
     }
 
     clearFilter(key) {
-        const el = document.getElementById(key === 'only' ? 't-only' : key === 'deck' ? 't-deck' : key === 'search' ? 't-search' :
-            key === 'genre' ? 't-gen' : key === 'platform' ? 't-plat' : key === 'score' ? 't-score' : key === 'hours' ? 't-hours' : '');
+        const FILTER_ID_MAP = { search: 't-search', genre: 't-gen', platform: 't-plat', score: 't-score', hours: 't-hours', only: 't-only', deck: 't-deck' };
+        const el = document.getElementById(FILTER_ID_MAP[key] || '');
         if (key === 'only') el?.classList.remove('active');
         else if (key === 'deck') el?.classList.remove('active', 'btn-toggle-deck');
         else if (el) el.value = '';
@@ -532,8 +710,9 @@ class SteamListApp {
         if (state.platform) chips.push(chip('platform', 'Plataforma', state.platform));
         if (state.score) chips.push(chip('score', 'Punt.', `≥ ${state.score}`));
         if (state.hours) {
-            const hoursLabels = { '0-5': 'Menos de 5h', '5-10': '5 - 10h', '10-20': '10 - 20h', '20-40': '20 - 40h', '40-80': '40 - 80h', '80-150': '80 - 150h', '150+': 'Más de 150h' };
-            chips.push(chip('hours', 'Duración', hoursLabels[state.hours] || state.hours));
+            const range = UI_CONFIG.hoursRanges.find(r => r.key === state.hours);
+            const label = range?.shortLabel || state.hours;
+            chips.push(chip('hours', 'Duración', label));
         }
         if (state.only) chips.push(chip('only', this.getToolbarBoolLabel(), 'Activado'));
         if (state.deck) chips.push(chip('deck', 'Steam Deck', 'Activado'));
@@ -542,11 +721,20 @@ class SteamListApp {
             : `<div class="active-filters"></div>`;
     }
 
+    generateHoursRanges() {
+        const tabData = this.data[this.currentTab];
+        const gamesWithHours = tabData.filter(g => g.hours !== undefined && g.hours !== null && g.hours !== '');
+        if (gamesWithHours.length === 0) return '';
+        return UI_CONFIG.hoursRanges
+            .filter(r => gamesWithHours.some(g => r.check(Number(g.hours))))
+            .map(r => `<option value="${r.key}">${r.label}</option>`)
+            .join('');
+    }
+
     renderToolbar() {
         const state = this.getToolbarState();
         const cfg = TAB_CONFIG[this.currentTab];
         const tabData = this.data[this.currentTab];
-        const sortEs = (a, b) => String(a).localeCompare(String(b), 'es');
         const compact = this.isFiltersCompact();
         const setG = new Set(), setP = new Set();
         tabData.forEach(i => {
@@ -554,8 +742,8 @@ class SteamListApp {
             (i.platforms || []).forEach(v => setP.add(v));
         });
         const opts = (set, fn) => [...set].sort(fn).map(v => `<option value="${UI.esc(v)}">${UI.esc(v)}</option>`).join('');
-        const genres = opts(setG, sortEs);
-        const plats = opts(setP, sortEs);
+        const genres = opts(setG, SteamListApp.sortEs);
+        const plats = opts(setP, SteamListApp.sortEs);
         const scores = [...new Set(tabData.map(g => Number(g.score || 0)))]
             .filter(s => s > 0).sort((a, b) => b - a)
             .map(s => `<option value="${s}">${'★'.repeat(s)}${'☆'.repeat(5 - s)} ${s} o más</option>`).join('');
@@ -599,14 +787,7 @@ class SteamListApp {
         ${cfg.filterHours ? `<div class="filter-field">
           <label class="flabel">Horas</label>
           <select class="input-base" id="t-hours" data-action="render-table" data-event="change">
-            <option value="">Cualquier duración</option>
-            <option value="0-5">Menos de 5 horas</option>
-            <option value="5-10">De 5 a 10 horas</option>
-            <option value="10-20">De 10 a 20 horas</option>
-            <option value="20-40">De 20 a 40 horas</option>
-            <option value="40-80">De 40 a 80 horas</option>
-            <option value="80-150">De 80 a 150 horas</option>
-            <option value="150+">Más de 150 horas</option>
+            <option value="">Cualquier duración</option>${this.generateHoursRanges()}
           </select>
         </div>` : ''}
         ${cfg.filterBool ? `<div class="filter-field filter-field-toggle">
@@ -656,13 +837,8 @@ class SteamListApp {
                 const hasH = item.hours !== undefined && item.hours !== null && item.hours !== '';
                 if (!hasH) return false;
                 const hNum = Number(item.hours);
-                if (state.hours === '0-5' && hNum > 5) return false;
-                if (state.hours === '5-10' && (hNum <= 5 || hNum > 10)) return false;
-                if (state.hours === '10-20' && (hNum <= 10 || hNum > 20)) return false;
-                if (state.hours === '20-40' && (hNum <= 20 || hNum > 40)) return false;
-                if (state.hours === '40-80' && (hNum <= 40 || hNum > 80)) return false;
-                if (state.hours === '80-150' && (hNum <= 80 || hNum > 150)) return false;
-                if (state.hours === '150+' && hNum <= 150) return false;
+                const range = UI_CONFIG.hoursRanges.find(r => r.key === state.hours);
+                if (range && !range.check(hNum)) return false;
             }
             return true;
         });
@@ -715,7 +891,7 @@ class SteamListApp {
             const value = (this.isTableCompact() && col.key === 'name') ? UI.nameCell(game, true) : col.render(game);
             return `<td${col.center ? ' style="text-align:center;"' : ''}>${value}</td>`;
         }).join('');
-        const mainRow = `<tr class="main-row ${idx % 2 === 0 ? 'striped' : ''}" data-action="toggle-expand" data-id="${game.id}" data-dbl-action="edit-game" data-tab="${tab}" data-id="${game.id}">${cells}</tr>`;
+        const mainRow = `<tr class="main-row ${idx % 2 === 0 ? 'striped' : ''}" data-action="toggle-expand" data-id="${game.id}" data-dbl-action="edit-game" data-tab="${tab}">${cells}</tr>`;
         return mainRow + this.renderDetailRow(game, expanded, cols.length);
     }
 
@@ -920,11 +1096,13 @@ class SteamListApp {
         this.clearErrors();
     }
 
+    isValidYear(val) { return /^\d{4}$/.test(String(val).trim()); }
+
     commitTag(list, value) {
         const val = value.trim();
         if (!val) return;
         if (list === 'years') {
-            if (!/^\d{4}$/.test(val)) return;
+            if (!this.isValidYear(val)) return;
             const year = Number(val);
             if (!this.tempTags.years.includes(year)) {
                 this.tempTags.years.push(year);
@@ -952,19 +1130,17 @@ class SteamListApp {
         const val = input.value.trim();
         if (!val) return;
         
-        if (list === 'years') {
-            if (!/^\d{4}$/.test(val)) {
-                if (!this._yearWarningShown) {
-                    this._yearWarningShown = true;
-                    this.setFieldState(input, 'warning');
-                    this.notify('El año debe tener exactamente 4 dígitos.', 'warn');
-                } else {
-                    input.value = ''; this.setFieldState(input, null); this._yearWarningShown = false;
-                }
+        if (list === 'years' && !this.isValidYear(val)) {
+            if (!this._yearWarningShown) {
+                this._yearWarningShown = true;
+                this.setFieldState(input, 'warning');
+                this.notify('El año debe tener exactamente 4 dígitos.', 'warn');
                 return;
             }
-            this._yearWarningShown = false;
+            input.value = ''; this.setFieldState(input, null); this._yearWarningShown = false;
+            return;
         }
+        this._yearWarningShown = false;
         this.commitTag(list, val);
         input.value = '';
         this.setFieldState(input, null);
@@ -1018,6 +1194,9 @@ class SteamListApp {
         this.openModal(targetTab, null, prefill);
     }
 
+    _getFormValue(id) { return document.getElementById(id)?.value?.trim() || ''; }
+    _getBoolValue(id) { return document.getElementById(id)?.classList?.contains('active') ?? false; }
+
     saveGame() {
         this.clearErrors();
         const { type, id, migrateId, sourceTab } = this.editCtx;
@@ -1026,11 +1205,11 @@ class SteamListApp {
         // El timestamp CRDT que se añade al juego para resolver conflictos
         const payload = {
             _ts: Date.now(), 
-            name: document.getElementById('f-name').value.trim(),
+            name: this._getFormValue('f-name'),
             genres: [...this.tempTags.genres],
             platforms: [...this.tempTags.platforms],
-            steamDeck: document.getElementById('f-deck-btn').classList.contains('active'),
-            review: f.hasReview ? (document.getElementById('f-review')?.value.trim() || '') : '',
+            steamDeck: this._getBoolValue('f-deck-btn'),
+            review: f.hasReview ? this._getFormValue('f-review') : '',
         };
         
         if (f.hasStrengths) payload.strengths = [...this.tempTags.strengths];
@@ -1038,9 +1217,9 @@ class SteamListApp {
         if (f.hasReasons) payload.reasons = [...this.tempTags.reasons];
         if (f.hasYears) payload.years = [...this.tempTags.years];
         if (f.hasScore) payload.score = Number(document.getElementById('f-stars')?.dataset.v || 0);
-        if (f.hasBool) payload[f.boolField] = document.getElementById('f-bool-btn').classList.contains('active');
+        if (f.hasBool) payload[f.boolField] = this._getBoolValue('f-bool-btn');
         if (f.hasHours) {
-            const hVal = document.getElementById('f-horas')?.value.trim().replace(',', '.');
+            const hVal = this._getFormValue('f-horas').replace(',', '.');
             const hNum = hVal ? parseFloat(hVal) : NaN;
             payload.hours = (hVal && !isNaN(hNum) && hNum >= 0) ? hNum : null;
         }
@@ -1058,17 +1237,14 @@ class SteamListApp {
             const input = document.getElementById(`inp-${key}`);
             const pendingVal = input?.value.trim();
             if (!pendingVal) continue;
-            if (key === 'years') {
-                if (/^\d{4}$/.test(pendingVal)) { this.commitTag(key, pendingVal); if (input) input.value = ''; autoCommitted = true; } 
-                else {
-                    if (!this._yearWarningShown) {
-                        this._yearWarningShown = true;
-                        this.setFieldState(input, 'warning');
-                        this.notify('El año debe tener exactamente 4 dígitos. Pulsa Guardar de nuevo para ignorarlo.', 'warn');
-                        return;
-                    }
-                    if (input) input.value = ''; this._yearWarningShown = false;
+            if (key === 'years' && !this.isValidYear(pendingVal)) {
+                if (!this._yearWarningShown) {
+                    this._yearWarningShown = true;
+                    this.setFieldState(input, 'warning');
+                    this.notify('El año debe tener exactamente 4 dígitos. Pulsa Guardar de nuevo para ignorarlo.', 'warn');
+                    return;
                 }
+                if (input) input.value = ''; this._yearWarningShown = false;
             } else {
                 this.commitTag(key, pendingVal);
                 if (input) input.value = ''; autoCommitted = true;
@@ -1191,6 +1367,18 @@ class SteamListApp {
         document.getElementById('ae-inp').focus();
     }
 
+    _updateGameTagField(tab, updater) {
+        for (const game of ['c', 'v', 'e', 'p'].flatMap(t => this.data[t] || [])) {
+            let changed = false;
+            if (tab === 'genres' && game.genres) { const res = updater(game.genres); if (res !== null) { game.genres = res; changed = true; } }
+            if (tab === 'platforms' && game.platforms) { const res = updater(game.platforms); if (res !== null) { game.platforms = res; changed = true; } }
+            if (tab === 'strengths' && game.strengths) { const res = updater(game.strengths); if (res !== null) { game.strengths = res; changed = true; } }
+            if (tab === 'weaknesses' && game.weaknesses) { const res = updater(game.weaknesses); if (res !== null) { game.weaknesses = res; changed = true; } }
+            if (tab === 'weaknesses' && game.reasons) { const res = updater(game.reasons); if (res !== null) { game.reasons = res; changed = true; } }
+            if (changed) game._ts = Date.now();
+        }
+    }
+
     saveAdminTag(oldV) {
         const input = document.getElementById('ae-inp');
         if (!input) return;
@@ -1204,19 +1392,10 @@ class SteamListApp {
             return;
         }
         const tab = this.currentAdminTab;
-        const merge = (arr) => Array.from(new Set(arr.map(v => v === oldV ? newV : v)));
-        
-        for (const game of ['c', 'v', 'e', 'p'].flatMap(t => this.data[t] || [])) {
-            let changed = false;
-            if (tab === 'genres' && game.genres?.includes(oldV)) { game.genres = merge(game.genres); changed = true; }
-            if (tab === 'platforms' && game.platforms?.includes(oldV)) { game.platforms = merge(game.platforms); changed = true; }
-            if (tab === 'strengths' && game.strengths?.includes(oldV)) { game.strengths = merge(game.strengths); changed = true; }
-            if (tab === 'weaknesses') {
-                if (game.weaknesses?.includes(oldV)) { game.weaknesses = merge(game.weaknesses); changed = true; }
-                if (game.reasons?.includes(oldV)) { game.reasons = merge(game.reasons); changed = true; }
-            }
-            if (changed) game._ts = Date.now(); // Actualizar fecha individual
-        }
+        this._updateGameTagField(tab, (arr) => {
+            if (!arr.includes(oldV)) return null;
+            return arr.map(v => v === oldV ? newV : v);
+        });
         this.persist(); this.renderAdminList();
         this.adminNotify(exists ? 'Fusionado correctamente' : 'Actualizado correctamente', 'ok');
     }
@@ -1224,17 +1403,9 @@ class SteamListApp {
     deleteAdminTag(value) {
         if (!confirm(`¿Eliminar etiqueta "${value}"?`)) return;
         const tab = this.currentAdminTab;
-        for (const game of ['c', 'v', 'e', 'p'].flatMap(t => this.data[t] || [])) {
-            let changed = false;
-            if (tab === 'genres' && game.genres?.includes(value)) { game.genres = game.genres.filter(v => v !== value); changed = true; }
-            if (tab === 'platforms' && game.platforms?.includes(value)) { game.platforms = game.platforms.filter(v => v !== value); changed = true; }
-            if (tab === 'strengths' && game.strengths?.includes(value)) { game.strengths = game.strengths.filter(v => v !== value); changed = true; }
-            if (tab === 'weaknesses') {
-                if (game.weaknesses?.includes(value)) { game.weaknesses = game.weaknesses.filter(v => v !== value); changed = true; }
-                if (game.reasons?.includes(value)) { game.reasons = game.reasons.filter(v => v !== value); changed = true; }
-            }
-            if (changed) game._ts = Date.now();
-        }
+        this._updateGameTagField(tab, (arr) => {
+            return arr.includes(value) ? arr.filter(v => v !== value) : null;
+        });
         this.persist(); this.renderAdminList();
         this.adminNotify('Etiqueta eliminada', 'ok');
     }
