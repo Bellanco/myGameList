@@ -1,0 +1,42 @@
+# robots.txt - Aplicación Privada en CloudFlare
+# Esta es una aplicación SPA privada sin contenido público.
+# No permitir rastreo general de bots.
+
+User-agent: *
+Disallow: /
+
+# Explícitamente bloquear bots sociales
+User-agent: facebookexternalhit
+Disallow: /
+
+User-agent: Twitterbot
+Disallow: /
+
+User-agent: LinkedInBot
+Disallow: /
+
+# Bloquear bots maliciosos y de reconocimiento conocidos
+User-agent: MJ12bot
+Disallow: /
+
+User-agent: AhrefsBot
+Disallow: /
+
+User-agent: SemrushBot
+Disallow: /
+
+User-agent: DotBot
+Disallow: /
+
+# Configuración general: sin rastreo, sin demora (CloudFlare cachea la página)
+User-agent: *
+Disallow: /
+Crawl-delay: 0
+
+# Nota sobre CloudFlare:
+# CloudFlare puede hacer caché de páginas independientemente de robots.txt.
+# Para cambiar comportamiento de caché, usar Page Rules de CloudFlare.
+# robots.txt solo afecta crawlers externos (no CloudFlare).
+
+# No incluir sitemap: aplicación privada, no indexable públicamente
+# Sitemap: https://ejemplo.com/sitemap.xml

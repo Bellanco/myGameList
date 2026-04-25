@@ -33,6 +33,14 @@ body {
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
 }
+
+@media (max-width:1400px) {
+  body {
+    height: auto;
+    min-height: 100dvh;
+    overflow: auto;
+  }
+}
 button, input, select, textarea { font: inherit; }
 button { -webkit-tap-highlight-color: transparent; }
 .ui-icon { width: 1.05rem; height: 1.05rem; fill: currentColor; flex: 0 0 auto; }
@@ -115,6 +123,65 @@ button { -webkit-tap-highlight-color: transparent; }
   background: transparent; color: var(--text-muted); cursor: pointer;
 }
 .search-clear:hover { color: var(--text); background: rgba(255,255,255,.05); }
+
+/* Dialog */
+.alert-dialog {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  color: var(--text);
+  padding: 0;
+  box-shadow: var(--shadow);
+  max-width: 320px;
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 1000;
+}
+.alert-dialog::backdrop {
+  background: rgba(0, 0, 0, 0.5);
+}
+
+.dialog-content {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1.5rem;
+}
+.dialog-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+.dialog-actions {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: flex-end;
+}
+.dialog-actions .btn {
+  flex: 1;
+}
+
+/* Name with stars */
+.name-with-stars {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+}
+.name-with-stars strong {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.stars-right {
+  flex: 1;
+  text-align: right;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
 .toolbar .toolbar select.input-base,
 .filters-row select.input-base {
   flex: 1 1 auto; cursor: pointer; padding-right: 1rem;
@@ -184,9 +251,22 @@ thead th.sortable { cursor: pointer; transition: color .2s; }
 @media (hover:hover) { thead th.sortable:hover { color: var(--text); } }
 thead th.sorted { color: var(--steam); }
 
-/* Ajuste de columnas para incluir Horas */
-.w-name{width:21%} .w-year{width:11%} .w-hours{width:10%} .w-plat{width:16%}
-.w-genre{width:15%} .w-strong{width:14%} .w-weak{width:13%} .w-bool{width:10%}
+/* Ajuste de columnas por tabla */
+/* Completados (c) - 8 columnas: nombre(18%) año(9%) plat(14%) género(13%) fort(12%) debil(12%) score(10%) rejugar(12%) */
+.w-name-c{width:18%} .w-year-c{width:9%} .w-plat-c{width:14%} .w-genre-c{width:13%} .w-strong-c{width:12%} .w-weak-c{width:12%} .w-score-c{width:10%} .w-bool-c{width:12%}
+
+/* Visitados (v) - 6 columnas: nombre(23%) plat(17%) género(15%) fort(14%) razones(14%) reintentos(17%) */
+.w-name-v{width:23%} .w-plat-v{width:17%} .w-genre-v{width:15%} .w-strong-v{width:14%} .w-weak-v{width:14%} .w-bool-v{width:17%}
+
+/* En curso (e) - 5 columnas: nombre(25%) plat(20%) género(18%) fort(18%) debil(19%) */
+.w-name-e{width:25%} .w-plat-e{width:20%} .w-genre-e{width:18%} .w-strong-e{width:18%} .w-weak-e{width:19%}
+
+/* Próximos (p) - 4 columnas: nombre(25%) plat(32%) género(31%) interés(12%) */
+.w-score{width:12%} .w-name-p{width:25%} .w-plat-p{width:32%} .w-genre-p{width:31%}
+
+/* Mantener compatibilidad para anchos genéricos si es necesario */
+.w-name{width:18%} .w-year{width:9%} .w-hours{width:10%} .w-plat{width:14%}
+.w-genre{width:13%} .w-strong{width:12%} .w-weak{width:12%} .w-bool{width:12%}
 
 tbody tr.main-row { border-top: 1px solid var(--border); transition: background .2s; cursor: pointer; }
 tbody tr.main-row.striped { background: var(--surface-soft); }
@@ -215,17 +295,44 @@ tbody tr.detail-row.open { display: table-row; }
 .chip-rm:hover { opacity: 1; }
 
 /* Stars */
-.stars { color: var(--text-muted); letter-spacing: 2px; white-space: nowrap; display: inline-flex; gap: .12rem; }
-.stars .f { color: #f0c75e; }
+.stars { color: #3d5573; letter-spacing: 2px; white-space: nowrap; display: inline-flex; gap: .12rem; }
+.stars .f { color: #7dd3ff; }
 .star-inp { display: flex; gap: .18rem; cursor: pointer; font-size: 1.45rem; flex-wrap: wrap; }
-.star-inp span { color: var(--text-muted); transition: transform .2s, color .2s; line-height: 1; }
-.star-inp span.f { color: #f0c75e; }
+.star-inp span { color: #3d5573; transition: transform .2s, color .2s; line-height: 1; }
+.star-inp span.f { color: #7dd3ff; }
 @media (hover:hover) { .star-inp span:hover { transform: scale(1.12); } }
 
-/* Bool icon */
-.icon-bool { display: inline-flex; align-items: center; justify-content: center; width: 1.5rem; height: 1.5rem; border-radius: 50%; }
-.icon-bool.true  { color: var(--success); background: rgba(103,193,141,.12); }
-.icon-bool.false { color: var(--text-muted); background: rgba(143,152,160,.12); opacity: .75; }
+/* Rejugar - Activo (Star Azul) */
+.badge-rejugar-activo {
+  width: 36px; height: 36px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; border: none; cursor: pointer;
+  background: linear-gradient(135deg, #465b75, #586088);
+  color: #7da3c6;
+  box-shadow: 0 0 12px rgba(88, 96, 136, 0.25), 0 0 20px rgba(70, 91, 117, 0.1), inset 0 0 10px rgba(0,0,0,0.15);
+}
+
+/* Rejugar - Inactivo (Stack Ambar) */
+.badge-rejugar-inactivo {
+  width: 36px; height: 36px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; border: none; cursor: default;
+  background: linear-gradient(135deg, #553d33, #6d4d3f);
+  color: #8b7a6f;
+  box-shadow: 0 0 15px rgba(139, 93, 61, 0.3), inset 0 0 10px rgba(0,0,0,0.2);
+}
+
+/* Nueva Oportunidad - Activo (Refresh Azul) */
+.badge-opp-activo {
+  width: 36px; height: 36px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; border: none; cursor: pointer;
+  background: linear-gradient(135deg, #465b75, #586088);
+  color: #c9d4e0;
+  box-shadow: 0 0 12px rgba(88, 96, 136, 0.25), 0 0 20px rgba(70, 91, 117, 0.1), inset 0 0 10px rgba(0,0,0,0.15);
+}
+
+/* Nueva Oportunidad - Inactivo (Lock Rojo) */
+.badge-opp-inactivo {
+  width: 36px; height: 36px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; border: none; cursor: default;
+  background: linear-gradient(135deg, #553333, #6d3f3f);
+  color: #8b6f6f;
+  box-shadow: 0 0 15px rgba(139, 77, 77, 0.3), inset 0 0 10px rgba(0,0,0,0.2);
+}
 
 /* Modals */
 .modal-ov {
@@ -352,8 +459,9 @@ body.compact-filters .filters-row.open .btn-toggle { justify-content: center; al
 /* --- BLOQUE CORREGIDO PARA TABLETS (Xiaomi Pad 7 - 721px a 1100px) --- */
 @media (min-width:721px) and (max-width:1100px) {
   body {
-    height: 100vh;
-    overflow: hidden;
+    height: auto;
+    min-height: 100vh;
+    overflow: auto;
   }
 
   .app-header {
@@ -365,8 +473,8 @@ body.compact-filters .filters-row.open .btn-toggle { justify-content: center; al
   }
 
   .main {
-    flex: 1 1 0;
-    overflow: hidden;
+    flex: 1 1 auto;
+    overflow: visible;
     padding: 1rem 1rem 1.5rem;
   }
 
@@ -381,9 +489,9 @@ body.compact-filters .filters-row.open .btn-toggle { justify-content: center; al
   }
 
   .table-wrap {
-    flex: 1 1 0;
-    overflow-y: auto;
+    overflow: visible;
     height: auto;
+    flex: 1 1 auto;
     scrollbar-width: none;
   }
 
@@ -459,10 +567,18 @@ body.compact-filters .filters-row.open .btn-toggle { justify-content: center; al
 }
 
 /* Responsive Móvil Estricto */
+@media (max-width:720px) and (min-width:621px) {
+  .header-actions .btn span { display: none; }
+}
+
 @media (max-width:720px) {
-  body { height: 100vh; overflow: hidden; }
-  .main { flex: 1 1 0; overflow: hidden; padding-bottom: 5rem; }
-  .table-wrap { flex: 1 1 0; overflow-x: auto; overflow-y: auto; scrollbar-width: thin; }
+  body { 
+    height: auto;
+    min-height: 100vh;
+    overflow: auto; 
+  }
+  .main { flex: 1 1 auto; overflow: visible; padding-bottom: 5rem; }
+  .table-wrap { overflow: visible; flex: 1 1 auto; height: auto; scrollbar-width: thin; }
   .table-wrap::-webkit-scrollbar { display: block; height: 4px; width: 4px; }
   .table-wrap::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
 
@@ -532,6 +648,7 @@ body.compact-filters .filters-row.open .btn-toggle { justify-content: center; al
 .token-toggle { position:absolute; right:.55rem; top:50%; transform:translateY(-50%);
   background:none; border:none; cursor:pointer; color:var(--text-muted);
   font-size:.9rem; padding:.2rem; line-height:1; }
+.token-toggle .ui-icon { width: 1.15rem; height: 1.15rem; }
 .token-toggle:hover { color:var(--text); }
 .sync-status-msg { font-size:.82rem; padding:.55rem .85rem; border-radius:var(--radius-sm); border:1px solid transparent; display:none; }
 .sync-status-msg.ok   { background:rgba(103,193,141,.1); border-color:rgba(103,193,141,.25); color:#84d5a8; display:block; }
@@ -581,3 +698,25 @@ body.compact-filters .filters-row.open .btn-toggle { justify-content: center; al
 input[type=number]::-webkit-inner-spin-button,
 input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
 input[type=number] { -moz-appearance: textfield; appearance: textfield; }
+
+/* === MEDIA QUERY: 1100px - 1400px === */
+/* Página completa scrolleable */
+@media (min-width:1101px) and (max-width:1400px) {
+  body {
+    height: auto;
+    min-height: 100dvh;
+    overflow: auto;
+  }
+  
+  .main { 
+    flex: 1 1 auto;
+    overflow: visible;
+    padding-bottom: 2rem;
+  }
+  
+  .table-wrap { 
+    overflow: visible;
+    flex: 1 1 auto;
+    height: auto;
+  }
+}
