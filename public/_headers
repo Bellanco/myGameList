@@ -11,16 +11,25 @@
 /index.html
   Cache-Control: no-cache, no-store, must-revalidate
 
-# CSS y JS: 1 hora con revalidación
+# CSS, JS, TS: 1 hora con revalidación
 /*.css
   Cache-Control: public, max-age=3600, must-revalidate
 
 /*.js
   Cache-Control: public, max-age=3600, must-revalidate
 
-# Fuentes locales (si las alojas en el futuro)
-/*.woff2
+/*.ts
+  Content-Type: application/typescript
+  Cache-Control: public, max-age=3600, must-revalidate
+
+# Fuentes externas (Google Fonts)
+/fonts/*
   Cache-Control: public, max-age=31536000, immutable
 
-/*.woff
-  Cache-Control: public, max-age=31536000, immutable
+# Service Worker: breve TTL para actualizaciones rápidas
+/service-worker.js
+  Cache-Control: public, max-age=86400, must-revalidate
+
+# Manifest
+/manifest.json
+  Cache-Control: public, max-age=3600, must-revalidate
