@@ -928,10 +928,13 @@ export class SteamListApp {
         }).join('')}</tr>`;
         const list = this.getFilteredSortedList();
         const body = document.getElementById('tbody');
+        const thead = document.getElementById('thead');
         if (!list.length) {
-            body.innerHTML = `<tr><td colspan="${cols.length}" style="text-align:center;padding:2rem;color:var(--text-muted)">No hay juegos</td></tr>`;
+            thead.style.display = 'none';
+            body.innerHTML = `<tr><td colspan="${cols.length}" style="text-align:center;padding:3rem 2rem;color:var(--text-muted);font-size:1.1rem;font-weight:500">No hay juegos</td></tr>`;
             return;
         }
+        thead.style.display = '';
         body.innerHTML = list.map((game, idx) => this.renderRow(game, idx, cols)).join('');
         
         // Setup ResizeObserver para detectar overflow dinámicamente

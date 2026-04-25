@@ -10,6 +10,7 @@
 
 # Ignorar build output (autogenerado por Vite)
 /dist/
+/dist/assets/
 /coverage/
 
 # Ignorar archivos de sistema y editores
