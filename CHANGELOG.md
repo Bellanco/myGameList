@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.0.1] - 2026-04-26
+
+### 🐛 Fixed
+- **Button Double-Processing** - Added event deduplication flag to prevent toggle buttons from firing twice
+- **Service Worker in Development** - SW now auto-unregisters in localhost for proper TypeScript module loading with Vite
+- **Form Button Labels** - Added `form:` structure to TAB_V_LABELS for correct bool button labels (Dar otra oportunidad)
+
+### 🔄 Improved
+- **Development Experience** - Vite modules now load without Service Worker interference
+- **Event Handling** - Form buttons (Steam Deck, Dar otra oportunidad) now respond reliably to clicks
+
+---
+
 ## [2.0.0] - 2026-04-25
 
 ### ✨ Added
