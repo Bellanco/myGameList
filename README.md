@@ -72,8 +72,6 @@ Cobertura:
 
 ## Documentación
 
-- [Guía de Sincronización](./docs/SYNC_GUIDE.md) - Estrategia CRDT
-- [Instrucciones Copilot](./.github/copilot-instructions.md) - Guía de desarrollo
 - [CHANGELOG](./CHANGELOG.md) - Historial de versiones
 
 ## Requisitos
