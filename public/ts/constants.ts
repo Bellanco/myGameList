@@ -62,6 +62,10 @@ export const TAB_V_LABELS = {
         reasons: 'Puntos débiles',
         retry: 'Dar otra oportunidad',
     },
+    form: {
+        boolLabel: 'Dar otra oportunidad',
+        boolField: 'retry',
+    },
     boolTooltips: {
         active: 'Dar una oportunidad',
         inactive: 'No merece una nueva oportunidad',

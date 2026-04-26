@@ -166,7 +166,7 @@ const TAB_CONFIG = {
             { label: TAB_V_LABELS.actions[1].label, btnCls: TAB_V_LABELS.actions[1].btnCls, target: TAB_V_LABELS.actions[1].target, icon: TAB_V_LABELS.actions[1].icon },
         ],
         modalTitles: { new: TAB_V_LABELS.modal.new, prefill: TAB_V_LABELS.modal.prefill, edit: TAB_V_LABELS.modal.edit },
-        form: { hasScore: false, scoreRequired: false, hasYears: false, hasHours: false, hasStrengths: true, hasWeaknesses: false, hasReasons: true, hasBool: true, boolLabel: TAB_V_LABELS.filterBoolLabel, boolField: TAB_V_LABELS.filterBoolField, hasReview: true },
+        form: { hasScore: false, scoreRequired: false, hasYears: false, hasHours: false, hasStrengths: true, hasWeaknesses: false, hasReasons: true, hasBool: true, boolLabel: TAB_V_LABELS.form.boolLabel, boolField: TAB_V_LABELS.form.boolField, hasReview: true },
         tagKeys: ['genres', 'platforms', 'strengths', 'reasons'],
     },
     e: {
@@ -605,6 +605,9 @@ export class SteamListApp {
     }
 
     _handleDelegatedAction(e) {
+        if ((e as any).__handledByApp) return;
+        (e as any).__handledByApp = true;
+        
         const target = e.target;
         const selector = e.type === 'dblclick' ? '[data-dbl-action]' : '[data-action]';
         const el = target.closest(selector);
@@ -1142,16 +1145,14 @@ export class SteamListApp {
       <div class="frow">
         <div class="fg">
           <label class="flabel form-toggle-label" aria-hidden="true">Steam Deck</label>
-          <button class="btn btn-toggle ${draft.steamDeck ? 'active btn-toggle-deck' : ''}" type="button" id="f-deck-btn"
-                  data-action="toggle-form-deck" aria-label="Steam Deck" style="width:100%;justify-content:flex-start;">
+          <button class="btn btn-toggle ${draft.steamDeck ? 'active btn-toggle-deck' : ''}" type="button" id="f-deck-btn" data-action="toggle-form-deck" aria-label="Steam Deck" style="width:100%;justify-content:flex-start;">
             ${UI.icon('steamdeck')}<span>Steam Deck</span>
           </button>
         </div>
         ${f.hasBool ? `
           <div class="fg">
             <label class="flabel form-toggle-label" aria-hidden="true">${f.boolLabel}</label>
-            <button class="btn btn-toggle ${boolOn ? 'active' : ''}" type="button" id="f-bool-btn"
-                    data-action="toggle-form-bool" aria-label="${UI.esc(f.boolLabel)}" style="width:100%;justify-content:flex-start;">
+            <button class="btn btn-toggle ${boolOn ? 'active' : ''}" type="button" id="f-bool-btn" data-action="toggle-form-bool" aria-label="${UI.esc(f.boolLabel)}" style="width:100%;justify-content:flex-start;">
               ${UI.icon(f.boolField === 'replayable' ? 'repeat' : 'undo')}<span>${f.boolLabel}</span>
             </button>
           </div>` : ''}
