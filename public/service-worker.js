@@ -8,9 +8,6 @@ const ASSETS = [
   '/',
   '/index.html',
   '/style.css',
-  '/ts/app.ts',
-  '/ts/sync.ts',
-  '/ts/migrate.ts',
   '/manifest.json',
 ];
 
@@ -18,10 +15,8 @@ const ASSETS = [
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      console.log('[Service Worker] Installing and caching assets');
       return cache.addAll(ASSETS).catch(() => {
         // Some assets might fail to cache (e.g., if offline during install)
-        console.warn('[Service Worker] Some assets failed to cache');
       });
     }).then(() => self.skipWaiting())
   );
@@ -34,10 +29,7 @@ self.addEventListener('activate', (event) => {
       return Promise.all(
         cacheNames
           .filter((name) => name !== CACHE_NAME)
-          .map((name) => {
-            console.log('[Service Worker] Deleting old cache:', name);
-            return caches.delete(name);
-          })
+          .map((name) => caches.delete(name))
       );
     }).then(() => self.clients.claim())
   );
@@ -46,9 +38,18 @@ self.addEventListener('activate', (event) => {
 // Fetch: Network-first with cache fallback
 self.addEventListener('fetch', (event) => {
   const { request } = event;
+  const url = new URL(request.url);
   
   // Skip non-GET requests and external requests
   if (request.method !== 'GET' || request.url.includes('gist.github')) {
+    return;
+  }
+
+  if (url.pathname.includes('/ts/') || 
+      url.pathname.includes('@vite') ||
+      url.pathname.endsWith('.ts') ||
+      url.pathname.endsWith('.json') ||
+      url.pathname.includes('__vite')) {
     return;
   }
 
@@ -67,11 +68,11 @@ self.addEventListener('fetch', (event) => {
         // Fall back to cache
         return caches.match(request).then((cached) => {
           if (cached) {
-            console.log('[Service Worker] Serving from cache:', request.url);
             return cached;
           }
           // Offline fallback for HTML pages
-          if (request.headers.get('accept').includes('text/html')) {
+          const acceptHeader = request.headers.get('accept') || '';
+          if (acceptHeader.includes('text/html')) {
             return caches.match('/index.html');
           }
           // Generic offline response
