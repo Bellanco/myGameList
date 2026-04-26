@@ -304,7 +304,10 @@ const UI = {
      * @param {boolean} asc - Ascendente
      * @returns {string} Símbolo de flecha
      */
-    sortIcon(asc) { return asc ? '▲' : '▼'; },
+    sortIcon(asc) { 
+      const path = asc ? 'M480-528 296-344l-56-56 240-240 240 240-56 56-184-184Z' : 'M480-344 240-584l56-56 184 184 184-184 56 56-240 240Z';
+      return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" style="width:1.5em;height:1.5em;display:inline-block;vertical-align:middle;margin-left:0.3em;opacity:0.7;fill:currentColor"><path d="${path}"/></svg>`;
+    },
 };
 
 
@@ -799,7 +802,7 @@ export class SteamListApp {
             .map(s => `<option value="${s}">${'★'.repeat(s)}${'☆'.repeat(5 - s)} ${s} o más</option>`).join('');
         
         const activeCount = this.getActiveFilterCount(state);
-        const toggleIcon = this._filtersOpen ? 'close' : (activeCount ? 'filter-active' : 'filter');
+        const toggleIcon = this._filtersOpen ? 'filter-close' : (activeCount ? 'filter-active' : 'filter');
         const tb = document.getElementById('toolbar');
         
         tb.innerHTML = `

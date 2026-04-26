@@ -117,6 +117,7 @@ button { -webkit-tap-highlight-color: transparent; }
   .tab-btn .tab-text-full { display: none; }
   .tab-btn .tab-icon { display: inline; }
   .count-badge { padding: .15rem .5rem; font-size: .65rem; }
+  thead { display: none; }
 }
 
 /* Main */
