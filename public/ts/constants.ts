@@ -186,6 +186,127 @@ export const ADMIN_LABELS = {
 };
 
 /* ═══════════════════════════════════════════════════════════════════
+   TEXTOS DE SINCRONIZACIÓN
+═══════════════════════════════════════════════════════════════════ */
+export const SYNC_LABELS = {
+    introduction: {
+        title: '¿Qué es GitHub Gist?',
+        description: 'GitHub Gist es un servicio para guardar tus datos en la nube de forma segura. Al conectar tu cuenta, tus listas se sincronizarán automáticamente entre todos tus dispositivos.',
+    },
+    setup: {
+        title: 'Cómo configurar:',
+        description: 'Ve a GitHub > Settings > Tokens. Crea uno con permiso <code>gist</code> y pégalo aquí.',
+    },
+    form: {
+        tokenLabel: 'Token *',
+        tokenPlaceholder: 'ghp_xxxxxxxxxxxxxxxxxxxxxxx',
+        tokenHint: 'Token personal de GitHub (comienza con ghp_)',
+        gistIdLabel: 'Gist ID (Vacio la 1ª vez)',
+        gistIdPlaceholder: 'Ej: a1b2c3d4e5f6...',
+        gistIdHint: 'ID alfanumérico del Gist, disponible en la URL',
+    },
+    buttons: {
+        cancel: 'Cancelar',
+        connect: 'Conectar',
+        disconnect: 'Desconectar',
+        close: 'Cerrar',
+        sync: 'Sincronizar',
+    },
+    configured: {
+        gistIdLabel: 'Gist ID: ',
+    },
+};
+
+/* ═══════════════════════════════════════════════════════════════════
+   TIPOS Y CONFIGURACIÓN DE ALERTAS
+═══════════════════════════════════════════════════════════════════ */
+export const ALERT_TYPES = {
+    DELETE: 'delete',
+    WARNING: 'warning',
+    CREATE: 'create',
+    OVERWRITE: 'overwrite',
+    DISCONNECT: 'disconnect',
+};
+
+export const ALERT_CONFIG = {
+    delete: { btnClass: 'btn-danger', btnText: 'Eliminar' },
+    warning: { btnClass: 'btn-secondary', btnText: 'Continuar' },
+    create: { btnClass: 'btn-secondary', btnText: 'Crear' },
+    overwrite: { btnClass: 'btn-danger', btnText: 'Sobrescribir' },
+    disconnect: { btnClass: 'btn-danger', btnText: 'Desconectar' },
+};
+
+/* ═══════════════════════════════════════════════════════════════════
+   MENSAJES Y NOTIFICACIONES
+═══════════════════════════════════════════════════════════════════ */
+export const NOTIFICATION_LABELS = {
+    error: 'Error',
+    warning: 'Aviso',
+    success: 'Correcto',
+};
+
+export const SYNC_STATUS_LABELS = {
+    badge: {
+        idle: 'No Sincronizado',
+        ok: 'Sincronizado',
+        syncing: 'Sincronizando…',
+        error: 'Error Sync',
+    },
+    tooltip: {
+        idle: 'No sincronizado',
+        ok: 'Sincronizado con Gist',
+        syncing: 'Sincronizando…',
+        error: (msg) => `Error: ${msg}`,
+    },
+};
+
+export const DIALOG_MESSAGES = {
+    deleteGame: {
+        title: '¿Eliminar juego?',
+        success: 'Juego eliminado',
+    },
+    importData: {
+        title: '¿Sobrescribir los datos actuales?',
+        message: 'Esta acción no se puede deshacer',
+        success: 'Importado correctamente',
+    },
+    createGist: {
+        title: '¿Crear nuevo Gist?',
+        message: 'Se creará un Gist privado en tu cuenta de GitHub',
+        success: 'Conectado y subido',
+    },
+    disconnectSync: {
+        title: '¿Desconectar?',
+        message: 'Se borrará la configuración de sincronización local',
+    },
+    deleteTag: {
+        title: (tag) => `¿Eliminar etiqueta "${tag}"?`,
+        success: 'Etiqueta eliminada',
+    },
+};
+
+export const VALIDATION_MESSAGES = {
+    yearInvalid: 'El año debe tener exactamente 4 dígitos. Pulsa Guardar de nuevo para ignorarlo.',
+    fieldsInvalid: 'Revisa los campos marcados antes de guardar.',
+    tagExists: 'Ya existe. Pulsa Guardar otra vez para fusionar.',
+    tagMerged: 'Fusionado correctamente',
+    tagUpdated: 'Actualizado correctamente',
+};
+
+export const UI_MESSAGES = {
+    admin: {
+        noTags: 'No hay etiquetas',
+        editPlaceholder: 'Escribe el nuevo valor',
+        editCancelBtn: 'Cancelar',
+        editSaveBtn: 'Guardar',
+    },
+    form: {
+        yearsPlaceholder: (year) => `Ej: ${year}`,
+        yearsHint: 'Pulsa Enter para añadir',
+    },
+};
+
+/* ═══════════════════════════════════════════════════════════════════
    CLASES CSS COMUNES
 ═══════════════════════════════════════════════════════════════════ */
 export const CSS_CLASSES = {
