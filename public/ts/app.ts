@@ -1,7 +1,7 @@
 // @ts-nocheck
 "use strict";
 
-import { TAB_C_LABELS, TAB_V_LABELS, TAB_E_LABELS, TAB_P_LABELS, UI_CONFIG } from './constants.ts';
+import { TAB_C_LABELS, TAB_V_LABELS, TAB_E_LABELS, TAB_P_LABELS, UI_CONFIG, SYNC_LABELS, ALERT_TYPES, ALERT_CONFIG, NOTIFICATION_LABELS, SYNC_STATUS_LABELS, DIALOG_MESSAGES, VALIDATION_MESSAGES, UI_MESSAGES, DATA_KEYS } from './constants.ts';
 import { GistSync, DataSync } from './sync.ts';
 
 /* ═══════════════════════════════════════════════════════════════════
@@ -91,29 +91,13 @@ import { GistSync, DataSync } from './sync.ts';
 /* ═══════════════════════════════════════════════════════════════════
    CONSTANTES
 ═══════════════════════════════════════════════════════════════════ */
-const STORAGE_KEY = 'mis-listas-v12-unified';
-const LEGACY_KEYS = ['mis-listas-v11-unified', 'mis-listas-v10-unified', 'mis-listas-v10-separated', 'mis-listas-v9-unified', 'mis-listas-v9-separated', 'mis-listas-v8-unified', 'mis-listas-v8-separated'];
+const STORAGE_KEY = DATA_KEYS.storage.key;
+const LEGACY_KEYS = DATA_KEYS.storage.legacyKeys;
 const TABS = ['c', 'v', 'e', 'p'];
 const CURRENT_YEAR = new Date().getFullYear();
-const UI_BREAKPOINTS = { tableCompact: 1100, filtersCompact: 1400 };
-const GIST_DEBOUNCE_MS = 1800;
-const SEARCH_DEBOUNCE_MS = 220;
-
-const ALERT_TYPES = {
-    DELETE: 'delete',
-    WARNING: 'warning',
-    CREATE: 'create',
-    OVERWRITE: 'overwrite',
-    DISCONNECT: 'disconnect',
-};
-
-const ALERT_CONFIG = {
-    delete: { btnClass: 'btn-danger', btnText: 'Eliminar' },
-    warning: { btnClass: 'btn-secondary', btnText: 'Continuar' },
-    create: { btnClass: 'btn-secondary', btnText: 'Crear' },
-    overwrite: { btnClass: 'btn-danger', btnText: 'Sobrescribir' },
-    disconnect: { btnClass: 'btn-danger', btnText: 'Desconectar' },
-}
+const UI_BREAKPOINTS = UI_CONFIG.breakpoints;
+const GIST_DEBOUNCE_MS = UI_CONFIG.debounceMs.gist;
+const SEARCH_DEBOUNCE_MS = UI_CONFIG.debounceMs.search;
 
 /* ═══════════════════════════════════════════════════════════════════
    TAB_CONFIG
@@ -1121,8 +1105,8 @@ export class SteamListApp {
           ${f.hasYears ? `
           <div class="fg">
             <label class="flabel">Años completado *</label>
-            <div class="tag-inp-wrap" id="yearsWrap"><input type="text" inputmode="numeric" id="inp-years" placeholder="Ej: ${CURRENT_YEAR}" maxlength="4"></div>
-            <span class="tag-hint">Pulsa Enter para añadir</span>
+            <div class="tag-inp-wrap" id="yearsWrap"><input type="text" inputmode="numeric" id="inp-years" placeholder="${UI_MESSAGES.form.yearsPlaceholder(CURRENT_YEAR)}" maxlength="4"></div>
+            <span class="tag-hint">${UI_MESSAGES.form.yearsHint}</span>
           </div>` : ''}
           ${f.hasHours ? `
           <div class="fg">
@@ -1253,7 +1237,7 @@ export class SteamListApp {
             if (!this._yearWarningShown) {
                 this._yearWarningShown = true;
                 this.setFieldState(input, 'warning');
-                this.notify('El año debe tener exactamente 4 dígitos.', 'warn');
+                this.notify(VALIDATION_MESSAGES.yearInvalid, 'warn');
                 return;
             }
             input.value = ''; this.setFieldState(input, null); this._yearWarningShown = false;
@@ -1360,7 +1344,7 @@ export class SteamListApp {
                 if (!this._yearWarningShown) {
                     this._yearWarningShown = true;
                     this.setFieldState(input, 'warning');
-                    this.notify('El año debe tener exactamente 4 dígitos. Pulsa Guardar de nuevo para ignorarlo.', 'warn');
+                    this.notify(VALIDATION_MESSAGES.yearInvalid, 'warn');
                     return;
                 }
                 if (input) input.value = ''; this._yearWarningShown = false;
@@ -1370,7 +1354,7 @@ export class SteamListApp {
             }
         }
         if (autoCommitted) this.renderTags();
-        if (hasError) { this.notify('Revisa los campos marcados antes de guardar.', 'warn'); return; }
+        if (hasError) { this.notify(VALIDATION_MESSAGES.fieldsInvalid, 'warn'); return; }
 
         if (id) {
             const idx = this.data[type].findIndex(g => g.id === id);
@@ -1441,7 +1425,7 @@ export class SteamListApp {
 
     deleteGame(type, id) {
         this.showConfirmDialog(
-            '¿Eliminar juego?',
+            DIALOG_MESSAGES.deleteGame.title,
             null,
             ALERT_TYPES.DELETE,
             () => {
@@ -1450,7 +1434,7 @@ export class SteamListApp {
                 this.data.deleted.push({ id, _ts: Date.now() });
                 if (this.expandedId === id) this.expandedId = null;
                 this.persist();
-                this.notify('Juego eliminado', 'ok');
+                this.notify(DIALOG_MESSAGES.deleteGame.success, 'ok');
             }
         );
     }
@@ -1460,7 +1444,8 @@ export class SteamListApp {
         const isAdmin = target === 'admin';
         const el = document.getElementById(isAdmin ? 'admin-warning' : 'status-banner');
         if (!el) return;
-        const label = kind === 'err' ? 'Error' : kind === 'warn' ? 'Aviso' : 'Correcto';
+        const labelKey = kind === 'err' ? 'error' : kind === 'warn' ? 'warning' : 'success';
+        const label = NOTIFICATION_LABELS[labelKey];
         if (isAdmin) {
             if (this.adminTimer) clearTimeout(this.adminTimer);
             el.className = `admin-warning show ${kind}`;
@@ -1502,7 +1487,7 @@ export class SteamListApp {
         const container = document.getElementById('admin-list-container');
         const values = [...(this.lookups[this.currentAdminTab] || [])].sort((a, b) => String(a).localeCompare(String(b), 'es'));
         if (!values.length) {
-            container.innerHTML = '<span style="color:var(--text-muted)">No hay etiquetas</span>';
+            container.innerHTML = `<span style="color:var(--text-muted)">${UI_MESSAGES.admin.noTags}</span>`;
             return;
         }
         container.innerHTML = values.map(v => {
@@ -1526,10 +1511,10 @@ export class SteamListApp {
         row.classList.add('editing');
         const enc = encodeURIComponent(value);
         row.innerHTML = `
-      <input type="text" class="finput" id="ae-inp" placeholder="Escribe el nuevo valor" value="${UI.esc(value)}" style="flex:1">
+      <input type="text" class="finput" id="ae-inp" placeholder="${UI_MESSAGES.admin.editPlaceholder}" value="${UI.esc(value)}" style="flex:1">
       <div class="row-actions">
-        <button class="btn btn-secondary" type="button" data-action="render-admin-list">Cancelar</button>
-        <button class="btn btn-steam"     type="button" data-action="save-admin-tag" data-value="${enc}">Guardar</button>
+        <button class="btn btn-secondary" type="button" data-action="render-admin-list">${UI_MESSAGES.admin.editCancelBtn}</button>
+        <button class="btn btn-steam"     type="button" data-action="save-admin-tag" data-value="${enc}">${UI_MESSAGES.admin.editSaveBtn}</button>
       </div>`;
         document.getElementById('ae-inp').focus();
     }
@@ -1555,7 +1540,7 @@ export class SteamListApp {
         if (exists && !this.adminEditState?.mergePending) {
             this.adminEditState.mergePending = true;
             this.setFieldState(input, 'warning');
-            this.adminNotify('Ya existe. Pulsa Guardar otra vez para fusionar.', 'warn');
+            this.adminNotify(VALIDATION_MESSAGES.tagExists, 'warn');
             return;
         }
         const tab = this.currentAdminTab;
@@ -1564,12 +1549,12 @@ export class SteamListApp {
             return arr.map(v => v === oldV ? newV : v);
         });
         this.persist(); this.renderAdminList();
-        this.adminNotify(exists ? 'Fusionado correctamente' : 'Actualizado correctamente', 'ok');
+        this.adminNotify(exists ? VALIDATION_MESSAGES.tagMerged : VALIDATION_MESSAGES.tagUpdated, 'ok');
     }
 
     deleteAdminTag(value) {
         this.showConfirmDialog(
-            `¿Eliminar etiqueta "${value}"?`,
+            DIALOG_MESSAGES.deleteTag.title(value),
             null,
             ALERT_TYPES.DELETE,
             () => {
@@ -1578,7 +1563,7 @@ export class SteamListApp {
                     return arr.includes(value) ? arr.filter(v => v !== value) : null;
                 });
                 this.persist(); this.renderAdminList();
-                this.adminNotify('Etiqueta eliminada', 'ok');
+                this.adminNotify(DIALOG_MESSAGES.deleteTag.success, 'ok');
             }
         );
     }
@@ -1617,8 +1602,8 @@ export class SteamListApp {
                 const parsed = JSON.parse(ev.target.result);
                 if (parsed && typeof parsed === 'object') {
                     this.showConfirmDialog(
-                        '¿Sobrescribir los datos actuales?',
-                        'Esta acción no se puede deshacer',
+                        DIALOG_MESSAGES.importData.title,
+                        DIALOG_MESSAGES.importData.message,
                         ALERT_TYPES.OVERWRITE,
                         () => {
                             const importMigrated = typeof window.migrateData === 'function' ? window.migrateData(parsed) : parsed;
@@ -1627,7 +1612,7 @@ export class SteamListApp {
                                 e: importMigrated.e || [], p: importMigrated.p || [], deleted: [] 
                             };
                             this.persist();
-                            this.notify('Importado correctamente', 'ok');
+                            this.notify(DIALOG_MESSAGES.importData.success, 'ok');
                         }
                     );
                 }
@@ -1694,10 +1679,10 @@ export class SteamListApp {
         const lbl = document.getElementById('sync-label');
         if (!badge) return;
         badge.className = `sync-badge s-${status}`;
-        const labels = { idle: 'No Sincronizado', ok: 'Sincronizado', syncing: 'Sincronizando…', error: 'Error Sync' };
+        const labels = SYNC_STATUS_LABELS.badge;
         if (lbl) lbl.textContent = labels[status] || status;
-        const tips = { idle: 'No sincronizado', ok: 'Sincronizado con Gist', syncing: 'Sincronizando…', error: `Error: ${msg}` };
-        badge.title = tips[status] || '';
+        const tips = SYNC_STATUS_LABELS.tooltip;
+        badge.title = typeof tips[status] === 'function' ? tips[status](msg) : (tips[status] || '');
     }
 
     openSyncModal() {
@@ -1709,17 +1694,19 @@ export class SteamListApp {
         const cfg = GistSync.getCfg();
         const body = document.getElementById('sync-body');
         const foot = document.getElementById('sync-footer');
+        const L = SYNC_LABELS;
         if (!cfg) {
-            body.innerHTML = `<div class="sync-section"><div class="sync-help"><strong>Cómo configurar:</strong><br>Ve a GitHub > Settings > Tokens. Crea uno con permiso <code>gist</code> y pégalo aquí.</div></div>
+            body.innerHTML = `<div class="sync-section"><div class="sync-help"><strong>${L.introduction.title}</strong><br>${L.introduction.description}</div></div>
+        <div class="sync-section"><div class="sync-help"><strong>${L.setup.title}</strong><br>${L.setup.description}</div></div>
         <div class="sync-section">
-          <div class="fg"><label class="flabel">Token *</label><div class="token-row"><input class="finput" id="sy-token" type="password" placeholder="ghp_xxxxxxxxxxxxxxxxxxxxxxx"><button class="token-toggle" type="button" data-action="toggle-token-visibility" aria-label="Mostrar token"><svg class="ui-icon" aria-hidden="true"><use href="#icon-eye"></use></svg></button></div><span class="tag-hint">Token personal de GitHub (comienza con ghp_)</span></div>
-          <div class="fg"><label class="flabel">Gist ID (Vacio la 1ª vez)</label><input class="finput" id="sy-gist" type="text" placeholder="Ej: a1b2c3d4e5f6..."><span class="tag-hint">ID alfanumérico del Gist, disponible en la URL</span></div>
+          <div class="fg"><label class="flabel">${L.form.tokenLabel}</label><div class="token-row"><input class="finput" id="sy-token" type="password" placeholder="${L.form.tokenPlaceholder}"><button class="token-toggle" type="button" data-action="toggle-token-visibility" aria-label="Mostrar token"><svg class="ui-icon" aria-hidden="true"><use href="#icon-eye"></use></svg></button></div><span class="tag-hint">${L.form.tokenHint}</span></div>
+          <div class="fg"><label class="flabel">${L.form.gistIdLabel}</label><input class="finput" id="sy-gist" type="text" placeholder="${L.form.gistIdPlaceholder}"><span class="tag-hint">${L.form.gistIdHint}</span></div>
           <div id="sy-msg" class="sync-status-msg"></div>
         </div>`;
-            foot.innerHTML = `<button class="btn btn-secondary" type="button" data-action="close-modal" data-target="modal-sync">Cancelar</button><button class="btn btn-steam" type="button" data-action="sync-connect">Conectar</button>`;
+            foot.innerHTML = `<button class="btn btn-secondary" type="button" data-action="close-modal" data-target="modal-sync">${L.buttons.cancel}</button><button class="btn btn-steam" type="button" data-action="sync-connect">${L.buttons.connect}</button>`;
         } else {
-            body.innerHTML = `<div class="sync-section"><div class="sync-help">Gist ID: <code>${UI.esc(cfg.gistId)}</code></div><div id="sy-msg" class="sync-status-msg"></div></div>`;
-            foot.innerHTML = `<button class="btn btn-danger" type="button" data-action="sync-disconnect">Desconectar</button><button class="btn btn-secondary" type="button" data-action="close-modal" data-target="modal-sync">Cerrar</button><button class="btn btn-steam" type="button" data-action="sync-now">Sincronizar</button>`;
+            body.innerHTML = `<div class="sync-section"><div class="sync-help">${L.configured.gistIdLabel}<code>${UI.esc(cfg.gistId)}</code></div><div id="sy-msg" class="sync-status-msg"></div></div>`;
+            foot.innerHTML = `<button class="btn btn-danger" type="button" data-action="sync-disconnect">${L.buttons.disconnect}</button><button class="btn btn-secondary" type="button" data-action="close-modal" data-target="modal-sync">${L.buttons.close}</button><button class="btn btn-steam" type="button" data-action="sync-now">${L.buttons.sync}</button>`;
         }
     }
 
@@ -1792,15 +1779,15 @@ export class SteamListApp {
 
     _showCreateGistDialog(token) {
         this.showConfirmDialog(
-            '¿Crear nuevo Gist?',
-            'Se creará un Gist privado en tu cuenta de GitHub',
+            DIALOG_MESSAGES.createGist.title,
+            DIALOG_MESSAGES.createGist.message,
             ALERT_TYPES.CREATE,
             async () => {
                 try {
                     const { gistId } = await GistSync.create(token);
                     GistSync.saveCfg({ token, gistId, etag: null, lastRemoteUpdatedAt: 0 });
                     await this._pushToGist(true);
-                    this.syncMsg('Conectado y subido', 'ok');
+                    this.syncMsg(DIALOG_MESSAGES.createGist.success, 'ok');
                 } catch (err) { this.syncMsg(err.message, 'err'); }
             }
         );
@@ -1808,8 +1795,8 @@ export class SteamListApp {
 
     syncDisconnect() {
         this.showConfirmDialog(
-            '¿Desconectar?',
-            'Se borrará la configuración de sincronización local',
+            DIALOG_MESSAGES.disconnectSync.title,
+            DIALOG_MESSAGES.disconnectSync.message,
             ALERT_TYPES.DISCONNECT,
             () => {
                 GistSync.clearCfg(); this._setSyncStatus('idle'); this.closeModal('modal-sync');
