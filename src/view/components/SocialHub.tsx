@@ -1,4 +1,5 @@
-import { memo, useCallback, useEffect, useMemo, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type MouseEvent as ReactMouseEvent } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { createSocialGist, getSocialSyncConfig, getSyncConfig, readPublicSocialGistById, readSocialGist, saveSocialSyncConfig, writeSocialGist, updateGistPrivacy } from '../../model/repository/gistRepository';
 import { SOCIAL_UI } from '../../core/constants/labels';
 import {
@@ -23,6 +24,12 @@ import { SocialGameCardSelector } from './SocialGameCardSelector';
  * - Pantalla social vacia tras autenticacion
  */
 export const SocialHub = memo(function SocialHub() {
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  // Determinar panel basado en URL
+  const activePanel = location.pathname.includes('/profile') ? 'profile' : 'feed';
+
   const [socialCfgGistId, setSocialCfgGistId] = useState<string>('');
   const [socialCfgEtag, setSocialCfgEtag] = useState<string | null>(null);
   const [authUser, setAuthUser] = useState<SocialAuthUser | null>(null);
@@ -33,7 +40,6 @@ export const SocialHub = memo(function SocialHub() {
   const [status, setStatus] = useState('');
   const [statusKind, setStatusKind] = useState<'ok' | 'warn' | 'err'>('ok');
   const [showSocialSpace, setShowSocialSpace] = useState(false);
-  const [activePanel, setActivePanel] = useState<'feed' | 'profile'>('feed');
   const [hasCreatedProfile, setHasCreatedProfile] = useState(false);
   const [profileName, setProfileName] = useState('');
   const [favoriteGameIds, setFavoriteGameIds] = useState<number[]>([]);
@@ -41,11 +47,18 @@ export const SocialHub = memo(function SocialHub() {
   const [socialPrivate, setSocialPrivate] = useState(false);
   const [favoriteSearch, setFavoriteSearch] = useState('');
   const [recommendationSearch, setRecommendationSearch] = useState('');
+  const [feedSearch, setFeedSearch] = useState('');
+  const [feedFilter, setFeedFilter] = useState<'all' | 'favorites' | 'recommendations'>('all');
   const [socialPayload, setSocialPayload] = useState<{ recommendations: Array<{ id: number; fromUid: string; toUid: string; gameId: number; gameName: string; createdAt: number }>; activity: Array<{ id: number; type: string; actorUid: string; createdAt: number }> }>({ recommendations: [], activity: [] });
   const [hydratingProfile, setHydratingProfile] = useState(false);
   const [savingProfile, setSavingProfile] = useState(false);
   const [loadingDirectory, setLoadingDirectory] = useState(false);
   const [socialDirectory, setSocialDirectory] = useState<Array<{ id: string; displayName: string; email: string; socialGistId: string; favorites: string[]; recommendations: string[] }>>([]);
+  const feedRowRef = useRef<HTMLDivElement | null>(null);
+  const feedDraggingRef = useRef(false);
+  const feedStartXRef = useRef(0);
+  const feedStartScrollRef = useRef(0);
+  const [isFeedDragging, setIsFeedDragging] = useState(false);
 
   const setFeedback = useCallback((kind: 'ok' | 'warn' | 'err', message: string) => {
     setStatusKind(kind);
@@ -112,8 +125,8 @@ export const SocialHub = memo(function SocialHub() {
     }
 
     setShowSocialSpace(true);
-    setActivePanel('feed');
-  }, [hasReadyAccess, showSocialSpace]);
+    navigate('/social');
+  }, [hasReadyAccess, showSocialSpace, navigate]);
 
   const gatewaySteps = SOCIAL_UI.steps.map((step, index) => ({
     ...step,
@@ -189,6 +202,101 @@ export const SocialHub = memo(function SocialHub() {
     };
   }, [socialDirectory]);
 
+  const socialDisplayName = useMemo(() => {
+    const preferred = profileName.trim();
+    if (preferred) {
+      return preferred;
+    }
+
+    return authUser?.displayName || authUser?.email || '';
+  }, [authUser, profileName]);
+
+  const filteredSocialDirectory = useMemo(() => {
+    const normalizedQuery = feedSearch.trim().toLowerCase();
+
+    return socialDirectory.filter((entry) => {
+      const matchesFilter =
+        feedFilter === 'all' ||
+        (feedFilter === 'favorites' && entry.favorites.length > 0) ||
+        (feedFilter === 'recommendations' && entry.recommendations.length > 0);
+
+      if (!matchesFilter) {
+        return false;
+      }
+
+      if (!normalizedQuery) {
+        return true;
+      }
+
+      const searchable = [
+        entry.displayName,
+        entry.email,
+        ...entry.favorites,
+        ...entry.recommendations,
+      ]
+        .join(' ')
+        .toLowerCase();
+
+      return searchable.includes(normalizedQuery);
+    });
+  }, [feedFilter, feedSearch, socialDirectory]);
+
+  const handleFeedRowMouseDown = useCallback((event: ReactMouseEvent<HTMLDivElement>) => {
+    if (event.button !== 0 || !feedRowRef.current) {
+      return;
+    }
+
+    feedDraggingRef.current = true;
+    feedStartXRef.current = event.clientX;
+    feedStartScrollRef.current = feedRowRef.current.scrollLeft;
+    setIsFeedDragging(true);
+  }, []);
+
+  const handleFeedRowKeyDown = useCallback((event: ReactKeyboardEvent<HTMLDivElement>) => {
+    if (!feedRowRef.current) {
+      return;
+    }
+
+    if (event.key === 'ArrowRight') {
+      feedRowRef.current.scrollLeft += 140;
+      event.preventDefault();
+    }
+
+    if (event.key === 'ArrowLeft') {
+      feedRowRef.current.scrollLeft -= 140;
+      event.preventDefault();
+    }
+  }, []);
+
+  useEffect(() => {
+    const handleMouseMove = (event: MouseEvent) => {
+      if (!feedDraggingRef.current || !feedRowRef.current) {
+        return;
+      }
+
+      const deltaX = event.clientX - feedStartXRef.current;
+      feedRowRef.current.scrollLeft = feedStartScrollRef.current - deltaX;
+      event.preventDefault();
+    };
+
+    const handleMouseUp = () => {
+      if (!feedDraggingRef.current) {
+        return;
+      }
+
+      feedDraggingRef.current = false;
+      setIsFeedDragging(false);
+    };
+
+    window.addEventListener('mousemove', handleMouseMove, { passive: false });
+    window.addEventListener('mouseup', handleMouseUp);
+
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, []);
+
   const handleCreateSocialGist = useCallback(async () => {
     if (!mainSyncConfig?.token) {
       setFeedback('warn', SOCIAL_UI.status.needMainSync);
@@ -234,8 +342,8 @@ export const SocialHub = memo(function SocialHub() {
         setShowSocialSpace(true);
         setFeedback('ok', SOCIAL_UI.status.signInAndLinked);
       } else {
-        setShowSocialSpace(false);
-        setFeedback('warn', SOCIAL_UI.status.signInNeedCreate);
+        // No hacer nada aquí; el useEffect automático manejará la creación del gist
+        setFeedback('ok', SOCIAL_UI.status.signInNeedCreate);
       }
     } catch (error) {
       setFeedback('err', error instanceof Error ? error.message : SOCIAL_UI.status.signInFailed);
@@ -276,7 +384,7 @@ export const SocialHub = memo(function SocialHub() {
       setRecommendationGameIds(highlighted);
       setSocialPrivate(Boolean(socialRead.data.profile.private));
       setHasCreatedProfile(profileExists);
-      setActivePanel('feed');
+      navigate('/social');
       setSocialPayload({
         recommendations: socialRead.data.recommendations,
         activity: socialRead.data.activity,
@@ -343,6 +451,13 @@ export const SocialHub = memo(function SocialHub() {
     void hydrateSocialDirectory();
   }, [hydrateSocialDirectory]);
 
+  // Auto-crear gist social si tenemos token + Google pero no gist
+  useEffect(() => {
+    if (hasMainSync && authUser && !hasSocialGist && !connecting && !resolvingSocialGist && !signingIn) {
+      void handleCreateSocialGist();
+    }
+  }, [hasMainSync, authUser, hasSocialGist, connecting, resolvingSocialGist, signingIn, handleCreateSocialGist]);
+
   const toggleGameInSet = useCallback((id: number, current: number[], setFn: (next: number[]) => void) => {
     if (current.includes(id)) {
       setFn(current.filter((entry) => entry !== id));
@@ -398,7 +513,7 @@ export const SocialHub = memo(function SocialHub() {
       });
       setSocialCfgEtag(writeResult.etag || socialCfgEtag);
       setHasCreatedProfile(true);
-      setActivePanel('feed');
+      navigate('/social');
       setFeedback('ok', SOCIAL_UI.status.profileSaved);
     } catch (error) {
       setFeedback('err', error instanceof Error ? error.message : SOCIAL_UI.status.saveProfileFailed);
@@ -415,6 +530,17 @@ export const SocialHub = memo(function SocialHub() {
   }, [setFeedback]);
 
   const primaryGatewayCta = useMemo(() => {
+    // Paso 1: Conectar sincronización principal (token)
+    if (!hasMainSync) {
+      return {
+        icon: 'settings' as const,
+        label: SOCIAL_UI.gateway.connectSync,
+        action: () => navigate('/ajustes'),
+        disabled: false,
+      };
+    }
+
+    // Paso 2: Google (si tenemos token pero no sesión)
     if (resolvingSocialGist) {
       return {
         icon: 'cloud-sync' as const,
@@ -433,6 +559,7 @@ export const SocialHub = memo(function SocialHub() {
       };
     }
 
+    // Paso 3: Gist social (si tenemos sesión pero no gist) - normalmente automático pero se puede forzar
     if (canConnectSocialGist) {
       return {
         icon: 'cloud-sync' as const,
@@ -443,7 +570,7 @@ export const SocialHub = memo(function SocialHub() {
     }
 
     return null;
-  }, [canConnectSocialGist, canSignInGoogle, connecting, handleCreateSocialGist, handleSignInGoogle, resolvingSocialGist, signingIn]);
+  }, [canConnectSocialGist, canSignInGoogle, connecting, handleCreateSocialGist, handleSignInGoogle, hasMainSync, navigate, resolvingSocialGist, signingIn]);
 
   if (loading) {
     return (
@@ -472,25 +599,25 @@ export const SocialHub = memo(function SocialHub() {
               <p>{SOCIAL_UI.profile.subtitle}</p>
             </header>
 
-            <div className="social-screen-actions" aria-label="Acciones del perfil social">
-              <button className="btn btn-secondary" type="button" onClick={() => setShowSocialSpace(false)}>
-                <Icon name="close" />
-                {SOCIAL_UI.profile.back}
-              </button>
-              {hasCreatedProfile ? (
-                <button className="btn btn-secondary" type="button" onClick={() => setActivePanel('feed')}>
-                  <Icon name="arrow-right" />
-                  {SOCIAL_UI.profile.toFeed}
+            <div className="social-screen-actions social-screen-actions-split" aria-label="Acciones del perfil social">
+              <div className="social-screen-actions-left">
+                {hasCreatedProfile ? (
+                  <button className="btn btn-secondary" type="button" onClick={() => navigate('/social')}>
+                    <Icon name="arrow-right" />
+                    {SOCIAL_UI.profile.toFeed}
+                  </button>
+                ) : null}
+                <button className="btn btn-primary" type="button" disabled={savingProfile || hydratingProfile} onClick={handleSaveProfile}>
+                  <Icon name="save" />
+                  {savingProfile ? SOCIAL_UI.profile.saving : SOCIAL_UI.profile.save}
                 </button>
-              ) : null}
-              <button className="btn btn-primary" type="button" disabled={savingProfile || hydratingProfile} onClick={handleSaveProfile}>
-                <Icon name="save" />
-                {savingProfile ? SOCIAL_UI.profile.saving : SOCIAL_UI.profile.save}
-              </button>
-              <button className="btn btn-danger" type="button" onClick={handleSignOut}>
-                <Icon name="logout" />
-                {SOCIAL_UI.profile.signOut}
-              </button>
+              </div>
+              <div className="social-screen-actions-right">
+                <button className="btn btn-danger" type="button" onClick={handleSignOut}>
+                  <Icon name="logout" />
+                  {SOCIAL_UI.profile.signOut}
+                </button>
+              </div>
             </div>
 
             <div className="social-profile-layout">
@@ -563,11 +690,12 @@ export const SocialHub = memo(function SocialHub() {
               <h2>{SOCIAL_UI.feed.title}</h2>
             </div>
             <p>{SOCIAL_UI.feed.subtitle}</p>
+            <h3 className="social-feed-owner">{socialDisplayName}</h3>
           </header>
 
           <div className="social-screen-actions social-screen-actions-split" aria-label="Acciones del feed social">
             <div className="social-screen-actions-left">
-              <button className="btn btn-secondary" type="button" onClick={() => setActivePanel('profile')}>
+              <button className="btn btn-secondary" type="button" onClick={() => navigate('/social/profile')}>
                 <Icon name="edit" />
                 {SOCIAL_UI.feed.profile}
               </button>
@@ -599,21 +727,60 @@ export const SocialHub = memo(function SocialHub() {
             </article>
           </div>
 
-          <div className="social-hub-tags" aria-label="Identidad social">
-            <span className="social-chip">{SOCIAL_UI.feed.identityUid(authUser.uid)}</span>
-            <span className="social-chip">{SOCIAL_UI.feed.identityGist(socialCfgGistId)}</span>
-            <span className="social-chip">{SOCIAL_UI.feed.identityCollections}</span>
+          <div className="social-feed-toolbar" aria-label="Búsqueda y filtros del feed">
+            <label className="social-feed-search">
+              <span>{SOCIAL_UI.feed.searchLabel}</span>
+              <input
+                type="text"
+                className="finput"
+                value={feedSearch}
+                placeholder={SOCIAL_UI.feed.searchPlaceholder}
+                onChange={(event) => setFeedSearch(event.target.value)}
+              />
+            </label>
+            <div className="social-feed-filters" role="tablist" aria-label="Filtro de perfiles">
+              <button
+                type="button"
+                className={`social-filter-chip ${feedFilter === 'all' ? 'is-active' : ''}`}
+                onClick={() => setFeedFilter('all')}
+              >
+                {SOCIAL_UI.feed.filterAll}
+              </button>
+              <button
+                type="button"
+                className={`social-filter-chip ${feedFilter === 'favorites' ? 'is-active' : ''}`}
+                onClick={() => setFeedFilter('favorites')}
+              >
+                {SOCIAL_UI.feed.filterFavorites}
+              </button>
+              <button
+                type="button"
+                className={`social-filter-chip ${feedFilter === 'recommendations' ? 'is-active' : ''}`}
+                onClick={() => setFeedFilter('recommendations')}
+              >
+                {SOCIAL_UI.feed.filterRecommendations}
+              </button>
+            </div>
+            <p className="social-feed-result-count">{SOCIAL_UI.feed.resultCount(filteredSocialDirectory.length)}</p>
           </div>
 
           <div className="fg">
             <span className="flabel">{SOCIAL_UI.feed.sectionTitle}</span>
             {loadingDirectory ? <p>{SOCIAL_UI.feed.loading}</p> : null}
-            {!loadingDirectory && socialDirectory.length === 0 ? (
+            {!loadingDirectory && filteredSocialDirectory.length === 0 ? (
               <p>{SOCIAL_UI.feed.empty}</p>
             ) : null}
-            {!loadingDirectory && socialDirectory.length > 0 ? (
-              <div className="social-feed-list" aria-label="Feed social">
-                {socialDirectory.map((entry) => (
+            {!loadingDirectory && filteredSocialDirectory.length > 0 ? (
+              <div
+                ref={feedRowRef}
+                className={`social-feed-row ${isFeedDragging ? 'is-dragging' : ''}`}
+                aria-label="Feed social"
+                role="group"
+                tabIndex={0}
+                onMouseDown={handleFeedRowMouseDown}
+                onKeyDown={handleFeedRowKeyDown}
+              >
+                {filteredSocialDirectory.map((entry) => (
                   <article key={entry.id} className="social-feed-card">
                     <header>
                       <h3>{entry.displayName}</h3>

@@ -465,8 +465,7 @@ export default function App() {
         <Route path="/en-curso" element={null} />
         <Route path="/proximos" element={null} />
         <Route path="/social" element={null} />
-        <Route path="/social/perfil" element={null} />
-        <Route path="/social/hub" element={null} />
+        <Route path="/social/profile" element={null} />
         <Route path="/ajustes" element={null} />
         <Route path="*" element={<Navigate to="/completados" replace />} />
       </Routes>
