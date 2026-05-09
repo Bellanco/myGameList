@@ -170,10 +170,11 @@ export const SocialHub = memo(function SocialHub() {
     }
   }, [mainSyncConfig, setFeedback]);
 
-  const localGames = useMemo(() => {
-    const state = loadLocalState();
+  const localState = useMemo(() => loadLocalState(), []);
+
+  const completedGames = useMemo(() => {
     const map = new Map<number, string>();
-    [...state.c, ...state.v, ...state.e, ...state.p].forEach((game) => {
+    localState.c.forEach((game) => {
       if (game.id > 0 && game.name) {
         map.set(game.id, game.name);
       }
@@ -182,15 +183,36 @@ export const SocialHub = memo(function SocialHub() {
     return [...map.entries()]
       .map(([id, name]) => ({ id, name }))
       .sort((a, b) => a.name.localeCompare(b.name, 'es'));
-  }, []);
+  }, [localState]);
 
-  const gameNameById = useMemo(() => {
+  const nonCompletedGames = useMemo(() => {
     const map = new Map<number, string>();
-    localGames.forEach((game) => {
+    [...localState.v, ...localState.e, ...localState.p].forEach((game) => {
+      if (game.id > 0 && game.name) {
+        map.set(game.id, game.name);
+      }
+    });
+
+    return [...map.entries()]
+      .map(([id, name]) => ({ id, name }))
+      .sort((a, b) => a.name.localeCompare(b.name, 'es'));
+  }, [localState]);
+
+  const completedGameNameById = useMemo(() => {
+    const map = new Map<number, string>();
+    completedGames.forEach((game) => {
       map.set(game.id, game.name);
     });
     return map;
-  }, [localGames]);
+  }, [completedGames]);
+
+  const nonCompletedGameNameById = useMemo(() => {
+    const map = new Map<number, string>();
+    nonCompletedGames.forEach((game) => {
+      map.set(game.id, game.name);
+    });
+    return map;
+  }, [nonCompletedGames]);
 
   const feedStats = useMemo(() => {
     const favorites = socialDirectory.reduce((acc, entry) => acc + entry.favorites.length, 0);
@@ -373,8 +395,12 @@ export const SocialHub = memo(function SocialHub() {
       }
 
       const nextName = socialRead.data.profile.name || existingProfile?.displayName || authUser.displayName || authUser.email;
-      const favorites = socialRead.data.profile.favoriteGames.map((entry) => entry.id).filter((id) => gameNameById.has(id));
-      const highlighted = socialRead.data.profile.recommendations.map((entry) => entry.id).filter((id) => gameNameById.has(id));
+      const favorites = socialRead.data.profile.favoriteGames
+        .map((entry) => entry.id)
+        .filter((id) => completedGameNameById.has(id));
+      const highlighted = socialRead.data.profile.recommendations
+        .map((entry) => entry.id)
+        .filter((id) => nonCompletedGameNameById.has(id));
       const existsInGist = Boolean(socialRead.data.profile.name.trim()) || favorites.length > 0 || highlighted.length > 0;
       const existsInFirestore = Boolean(existingProfile?.id && existingProfile.socialEnabled && existingProfile.socialGistId);
       const profileExists = existsInGist || existsInFirestore;
@@ -389,9 +415,7 @@ export const SocialHub = memo(function SocialHub() {
         recommendations: socialRead.data.recommendations,
         activity: socialRead.data.activity,
       });
-      if (profileExists) {
-        setStatus('');
-      } else {
+      if (!profileExists) {
         setFeedback('warn', SOCIAL_UI.status.profileMissing);
       }
     } catch (error) {
@@ -399,7 +423,7 @@ export const SocialHub = memo(function SocialHub() {
     } finally {
       setHydratingProfile(false);
     }
-  }, [authUser, gameNameById, setFeedback, showSocialSpace, socialCfgEtag, socialCfgGistId]);
+  }, [authUser, completedGameNameById, nonCompletedGameNameById, setFeedback, showSocialSpace, socialCfgEtag, socialCfgGistId]);
 
   useEffect(() => {
     void hydrateSocialProfile();
@@ -412,19 +436,25 @@ export const SocialHub = memo(function SocialHub() {
 
     try {
       setLoadingDirectory(true);
-      const entries = await listSocialDirectory(10);
+      const entries = await listSocialDirectory(50);
 
       const withProfiles = await Promise.all(
         entries.map(async (entry) => {
           try {
             const socialData = await readPublicSocialGistById(entry.socialGistId);
+            const highlightedRecommendations = socialData.profile.recommendations.map((game) => game.name);
+            const sharedRecommendations = socialData.recommendations.map((entry) => entry.gameName);
+            const mergedRecommendations = [...new Set([...highlightedRecommendations, ...sharedRecommendations])]
+              .filter((name) => Boolean(name && name.trim()))
+              .slice(0, 8);
+
             return {
               id: entry.id,
               displayName: socialData.profile.name || entry.displayName || entry.email,
               email: entry.email,
               socialGistId: entry.socialGistId,
               favorites: socialData.profile.favoriteGames.map((game) => game.name).slice(0, 5),
-              recommendations: socialData.profile.recommendations.map((game) => game.name).slice(0, 5),
+              recommendations: mergedRecommendations,
             };
           } catch {
             return {
@@ -440,12 +470,13 @@ export const SocialHub = memo(function SocialHub() {
       );
 
       setSocialDirectory(withProfiles);
-    } catch {
+    } catch (error) {
       setSocialDirectory([]);
+      setFeedback('warn', error instanceof Error ? error.message : SOCIAL_UI.status.firestoreCheckFailed);
     } finally {
       setLoadingDirectory(false);
     }
-  }, [activePanel, authUser, showSocialSpace, socialCfgGistId]);
+  }, [activePanel, authUser, setFeedback, showSocialSpace, socialCfgGistId]);
 
   useEffect(() => {
     void hydrateSocialDirectory();
@@ -476,16 +507,20 @@ export const SocialHub = memo(function SocialHub() {
 
     try {
       setSavingProfile(true);
+      const validFavoriteIds = favoriteGameIds.filter((id) => completedGameNameById.has(id));
+      const validRecommendationIds = recommendationGameIds.filter((id) => nonCompletedGameNameById.has(id));
+      const nextSharedRecommendations = validRecommendationIds.length === 0 ? [] : socialPayload.recommendations;
+
       const profile = {
         name: profileName.trim() || authUser.displayName || authUser.email,
         private: socialPrivate,
-        favoriteGames: favoriteGameIds.map((id) => ({ id, name: gameNameById.get(id) || `Juego ${id}` })),
-        recommendations: recommendationGameIds.map((id) => ({ id, name: gameNameById.get(id) || `Juego ${id}` })),
+        favoriteGames: validFavoriteIds.map((id) => ({ id, name: completedGameNameById.get(id) || `Juego ${id}` })),
+        recommendations: validRecommendationIds.map((id) => ({ id, name: nonCompletedGameNameById.get(id) || `Juego ${id}` })),
       };
 
       const writeResult = await writeSocialGist(socialConfig.token, socialCfgGistId, {
         profile,
-        recommendations: socialPayload.recommendations,
+        recommendations: nextSharedRecommendations,
         activity: socialPayload.activity,
         updatedAt: Date.now(),
       });
@@ -513,14 +548,33 @@ export const SocialHub = memo(function SocialHub() {
       });
       setSocialCfgEtag(writeResult.etag || socialCfgEtag);
       setHasCreatedProfile(true);
+      setSocialPayload((prev) => ({
+        ...prev,
+        recommendations: nextSharedRecommendations,
+      }));
       navigate('/social');
+      void hydrateSocialDirectory();
       setFeedback('ok', SOCIAL_UI.status.profileSaved);
     } catch (error) {
       setFeedback('err', error instanceof Error ? error.message : SOCIAL_UI.status.saveProfileFailed);
     } finally {
       setSavingProfile(false);
     }
-  }, [authUser, favoriteGameIds, gameNameById, profileName, recommendationGameIds, setFeedback, socialCfgEtag, socialCfgGistId, socialPayload.activity, socialPayload.recommendations, socialPrivate]);
+  }, [
+    authUser,
+    completedGameNameById,
+    favoriteGameIds,
+    hydrateSocialDirectory,
+    nonCompletedGameNameById,
+    profileName,
+    recommendationGameIds,
+    setFeedback,
+    socialCfgEtag,
+    socialCfgGistId,
+    socialPayload.activity,
+    socialPayload.recommendations,
+    socialPrivate,
+  ]);
 
   const handleSignOut = useCallback(async () => {
     await signOutSocialUser();
@@ -655,7 +709,7 @@ export const SocialHub = memo(function SocialHub() {
                 searchPlaceholder={SOCIAL_UI.profile.favoritesSearchPlaceholder}
                 searchValue={favoriteSearch}
                 selectedIds={favoriteGameIds}
-                options={localGames}
+                options={completedGames}
                 emptyMessage={SOCIAL_UI.profile.searchEmpty}
                 onSearchChange={setFavoriteSearch}
                 onToggle={(id) => toggleGameInSet(id, favoriteGameIds, setFavoriteGameIds)}
@@ -667,7 +721,7 @@ export const SocialHub = memo(function SocialHub() {
                 searchPlaceholder={SOCIAL_UI.profile.recommendationsSearchPlaceholder}
                 searchValue={recommendationSearch}
                 selectedIds={recommendationGameIds}
-                options={localGames}
+                options={nonCompletedGames}
                 emptyMessage={SOCIAL_UI.profile.searchEmpty}
                 onSearchChange={setRecommendationSearch}
                 onToggle={(id) => toggleGameInSet(id, recommendationGameIds, setRecommendationGameIds)}
@@ -784,7 +838,6 @@ export const SocialHub = memo(function SocialHub() {
                   <article key={entry.id} className="social-feed-card">
                     <header>
                       <h3>{entry.displayName}</h3>
-                      <p className="social-feed-email">{entry.email}</p>
                     </header>
                     <p>
                       {entry.favorites.length

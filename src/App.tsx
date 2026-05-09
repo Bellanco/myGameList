@@ -2,7 +2,8 @@ import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } fro
 import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import { DIALOG_MESSAGES, ROUTE_TAB, SYNC_BADGE_TEXT, TAB_ROUTE } from './core/constants/labels';
 import type { TabData, TabId } from './model/types/game';
-import { sendGameRecommendation, getCurrentSocialAuthUser } from './model/repository/firebaseRepository';
+import { ensureProfileByEmail, getCurrentSocialAuthUser } from './model/repository/firebaseRepository';
+import { getSocialSyncConfig, readSocialGist, saveSocialSyncConfig, writeSocialGist } from './model/repository/gistRepository';
 import { IconSprite } from './view/components/IconSprite';
 import { Header } from './view/components/Header';
 import { TabBar } from './view/components/TabBar';
@@ -279,23 +280,70 @@ export default function App() {
       throw new Error('No hay sesión de usuario para enviar recomendación. Inicia sesión en Social primero.');
     }
 
+    const socialConfig = getSocialSyncConfig();
+    if (!socialConfig?.token || !socialConfig.gistId) {
+      throw new Error('No hay gist social conectado. Configura Social primero.');
+    }
+
     const game = recommendationGame;
     if (!game) {
       throw new Error('No hay juego seleccionado para recomendar');
     }
 
     try {
-      await sendGameRecommendation({
-        fromUid: authUser.uid,
-        fromEmail: authUser.email,
-        fromDisplayName: authUser.displayName || authUser.email,
-        toEmail,
-        gameId: game.id,
-        gameName: game.name,
-        message,
+      const socialRead = await readSocialGist(
+        socialConfig.token,
+        socialConfig.gistId,
+        socialConfig.etag || null,
+      );
+
+      const now = Date.now();
+      const toUid = toEmail.trim().toLowerCase() || 'public';
+      const nextRecommendations = [
+        {
+          id: now,
+          fromUid: authUser.uid,
+          toUid,
+          gameId: game.id,
+          gameName: game.name,
+          createdAt: now,
+        },
+        ...socialRead.data.recommendations,
+      ].slice(0, 120);
+
+      const nextActivity = [
+        {
+          id: now,
+          type: message.trim() ? 'recommendation_with_message' : 'recommendation',
+          actorUid: authUser.uid,
+          createdAt: now,
+        },
+        ...socialRead.data.activity,
+      ].slice(0, 120);
+
+      const writeResult = await writeSocialGist(socialConfig.token, socialConfig.gistId, {
+        ...socialRead.data,
+        recommendations: nextRecommendations,
+        activity: nextActivity,
+        updatedAt: now,
       });
 
-      notify('ok', `Recomendación de "${game.name}" enviada a ${toEmail}`);
+      saveSocialSyncConfig({
+        token: socialConfig.token,
+        gistId: socialConfig.gistId,
+        etag: writeResult.etag || socialConfig.etag || null,
+        lastRemoteUpdatedAt: now,
+      });
+
+      // Mantener el perfil social descubrible por otras cuentas en el feed.
+      await ensureProfileByEmail({
+        user: authUser,
+        socialGistId: socialConfig.gistId,
+        socialGistEtag: writeResult.etag || socialConfig.etag || null,
+        preferredName: authUser.displayName || authUser.email,
+      });
+
+      notify('ok', `Recomendación de "${game.name}" publicada en tu gist social`);
     } catch (error) {
       const msg = error instanceof Error ? error.message : 'Error desconocido';
       notify('err', `Error al enviar recomendación: ${msg}`);

@@ -1,6 +1,6 @@
 import { getApp, getApps, initializeApp, type FirebaseApp } from 'firebase/app';
 import { GoogleAuthProvider, getAuth, setPersistence, browserLocalPersistence, signInWithPopup, signOut, type Auth } from 'firebase/auth';
-import { collection, doc, getDocs, getFirestore, limit, query, serverTimestamp, setDoc, where, type Firestore } from 'firebase/firestore';
+import { collection, doc, documentId, getDocs, getFirestore, limit, query, serverTimestamp, setDoc, where, type Firestore } from 'firebase/firestore';
 
 type AnalyticsModule = typeof import('firebase/analytics');
 type Analytics = ReturnType<AnalyticsModule['getAnalytics']>;
@@ -417,16 +417,20 @@ export async function listSocialDirectory(limitCount = 12): Promise<SocialDirect
     throw new Error('Firebase no está configurado en este entorno');
   }
 
-  const q = query(collection(services.firestore, 'profiles'), limit(Math.max(1, limitCount)));
+  const q = query(
+    collection(services.firestore, 'profiles'),
+    where('social.enabled', '==', true),
+    where(documentId(), '!=', '_placeholder'),
+    limit(Math.max(1, limitCount)),
+  );
 
   let snapshot;
   try {
     snapshot = await getDocs(q);
   } catch (error) {
     if (isPermissionDeniedError(error)) {
-      return [];
+      throw new Error('Permisos insuficientes para leer perfiles sociales en Firestore');
     }
-
     throw error;
   }
 

@@ -11,8 +11,8 @@ interface RecommendationModalProps {
 }
 
 /**
- * Modal para recomendar un juego a un amigo.
- * Permite ingresar email del amigo y un mensaje opcional.
+ * Modal para publicar una recomendación en el gist social.
+ * Permite opcionalmente etiquetar un email de destino y añadir un mensaje.
  */
 export const RecommendationModal = memo(function RecommendationModal({
   open,
@@ -29,12 +29,7 @@ export const RecommendationModal = memo(function RecommendationModal({
   const handleSend = useCallback(async () => {
     const cleanEmail = toEmail.trim().toLowerCase();
 
-    if (!cleanEmail) {
-      setErrorMsg('Por favor, ingresa el email del amigo');
-      return;
-    }
-
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) {
+    if (cleanEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) {
       setErrorMsg('Email no válido');
       return;
     }
@@ -85,7 +80,7 @@ export const RecommendationModal = memo(function RecommendationModal({
     >
       <div className="modal">
         <div className="modal-hd">
-          <div className="modal-title">Recomendar juego</div>
+          <div className="modal-title">Publicar recomendación social</div>
           <button className="btn-icon" type="button" onClick={handleClose} aria-label="Cerrar">
             <Icon name={COMMON_ICONS.close} />
           </button>
@@ -106,10 +101,10 @@ export const RecommendationModal = memo(function RecommendationModal({
 
           <div className="frow">
             <div className="fg">
-              <label className="flabel" htmlFor="rec-to-email">Email del amigo *</label>
+              <label className="flabel" htmlFor="rec-to-email">Email de destino (opcional)</label>
               <input
                 id="rec-to-email"
-                className={`finput ${errorMsg && toEmail.trim() === '' ? 'has-error' : ''}`.trim()}
+                className="finput"
                 type="email"
                 placeholder="amigo@example.com"
                 value={toEmail}
@@ -147,7 +142,7 @@ export const RecommendationModal = memo(function RecommendationModal({
 
           <div className="frow">
             <small className="tag-hint" style={{ color: 'var(--text-muted)' }}>
-              {currentUserName} te recomienda jugar "{game.name}"
+              {currentUserName} publicará "{game.name}" en su perfil social para que aparezca en el hub.
             </small>
           </div>
         </div>
@@ -165,9 +160,9 @@ export const RecommendationModal = memo(function RecommendationModal({
             className="btn btn-primary"
             type="button"
             onClick={() => void handleSend()}
-            disabled={sending || !toEmail.trim()}
+            disabled={sending}
           >
-            {sending ? 'Enviando...' : 'Enviar recomendación'}
+            {sending ? 'Publicando...' : 'Publicar recomendación'}
           </button>
         </div>
       </div>
