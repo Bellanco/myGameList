@@ -257,7 +257,7 @@ export default function App() {
           activeSection === 'lists'
             ? 'Listados'
             : activeSection === 'social'
-              ? 'Hub social'
+              ? 'Social'
               : 'Ajustes'
         }
       />

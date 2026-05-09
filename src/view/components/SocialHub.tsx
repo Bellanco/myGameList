@@ -6,11 +6,11 @@ import { Icon } from './Icon';
  */
 export const SocialHub = memo(function SocialHub() {
   return (
-    <section className="social-hub" aria-label="Hub social">
+    <section className="social-hub" aria-label="Social">
       <div className="social-hub-card">
         <div className="social-hub-title-wrap">
           <Icon name="bottom-hub" className="social-hub-icon" />
-          <h2>Hub social</h2>
+          <h2>Social</h2>
         </div>
         <p>
           Esta seccion estara enfocada en compartir listas, comparar progreso y descubrir recomendaciones.
