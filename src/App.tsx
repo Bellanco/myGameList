@@ -2,6 +2,7 @@ import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } fro
 import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import { DIALOG_MESSAGES, ROUTE_TAB, SYNC_BADGE_TEXT, TAB_ROUTE } from './core/constants/labels';
 import type { TabData, TabId } from './model/types/game';
+import { sendGameRecommendation, getCurrentSocialAuthUser } from './model/repository/firebaseRepository';
 import { IconSprite } from './view/components/IconSprite';
 import { Header } from './view/components/Header';
 import { TabBar } from './view/components/TabBar';
@@ -18,9 +19,16 @@ const FormModal = lazy(() => import('./view/modals/FormModal').then((module) => 
 const AdminModal = lazy(() => import('./view/modals/AdminModal').then((module) => ({ default: module.AdminModal })));
 const SyncModal = lazy(() => import('./view/modals/SyncModal').then((module) => ({ default: module.SyncModal })));
 const ConfirmModal = lazy(() => import('./view/modals/ConfirmModal').then((module) => ({ default: module.ConfirmModal })));
+const RecommendationModal = lazy(() => import('./view/modals/RecommendationModal').then((module) => ({ default: module.RecommendationModal })));
 
 function getCurrentTab(pathname: string): TabId {
   return ROUTE_TAB[pathname] || 'c';
+}
+
+function getCurrentSection(pathname: string): AppSection {
+  if (pathname.startsWith('/social')) return 'social';
+  if (pathname.startsWith('/ajustes')) return 'settings';
+  return 'lists';
 }
 
 function isCompactFilters(): boolean {
@@ -35,6 +43,7 @@ export default function App() {
   const location = useLocation();
   const navigate = useNavigate();
   const currentTab = getCurrentTab(location.pathname);
+  const activeSection = getCurrentSection(location.pathname);
 
   const vm = useGameListViewModel();
   const {
@@ -68,7 +77,8 @@ export default function App() {
   const [showToken, setShowToken] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [compactFilters, setCompactFilters] = useState(isCompactFilters());
-  const [activeSection, setActiveSection] = useState<AppSection>('lists');
+  const [recommendationOpen, setRecommendationOpen] = useState(false);
+  const [recommendationGame, setRecommendationGame] = useState<{ id: number; name: string } | null>(null);
   const resizeRafRef = useRef<number | null>(null);
 
   const tabFilter = vm.filters[currentTab];
@@ -185,12 +195,23 @@ export default function App() {
   }, [navigate, setExpandedId]);
 
   const handleSectionChange = useCallback((section: AppSection) => {
-    setActiveSection(section);
     setExpandedId(null);
     if (section !== 'lists') {
       setFiltersOpen(false);
     }
-  }, [setExpandedId]);
+
+    if (section === 'lists') {
+      navigate('/completados');
+      return;
+    }
+
+    if (section === 'social') {
+      navigate('/social');
+      return;
+    }
+
+    navigate('/ajustes');
+  }, [navigate, setExpandedId]);
 
   const handleOpenSync = useCallback(() => {
     setSyncModalOpen(true);
@@ -247,6 +268,46 @@ export default function App() {
     setConfirmState(null);
   }, [confirmState, setConfirmState]);
 
+  const handleRecommendGame = useCallback((game: { id: number; name: string }) => {
+    setRecommendationGame(game);
+    setRecommendationOpen(true);
+  }, []);
+
+  const handleSendRecommendation = useCallback(async (toEmail: string, message: string) => {
+    const authUser = await getCurrentSocialAuthUser();
+    if (!authUser) {
+      throw new Error('No hay sesión de usuario para enviar recomendación. Inicia sesión en Social primero.');
+    }
+
+    const game = recommendationGame;
+    if (!game) {
+      throw new Error('No hay juego seleccionado para recomendar');
+    }
+
+    try {
+      await sendGameRecommendation({
+        fromUid: authUser.uid,
+        fromEmail: authUser.email,
+        fromDisplayName: authUser.displayName || authUser.email,
+        toEmail,
+        gameId: game.id,
+        gameName: game.name,
+        message,
+      });
+
+      notify('ok', `Recomendación de "${game.name}" enviada a ${toEmail}`);
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : 'Error desconocido';
+      notify('err', `Error al enviar recomendación: ${msg}`);
+      throw error;
+    }
+  }, [recommendationGame, notify]);
+
+  const handleCloseRecommendationModal = useCallback(() => {
+    setRecommendationOpen(false);
+    setRecommendationGame(null);
+  }, []);
+
   const syncBadgeText = SYNC_BADGE_TEXT[syncVm.status] || SYNC_BADGE_TEXT.idle;
 
   return (
@@ -294,6 +355,7 @@ export default function App() {
               onEdit={vm.openEditGame}
               onDelete={vm.deleteGame}
               onMigrate={vm.migrateGame}
+              onRecommend={handleRecommendGame}
               tabActions={vm.tabActions[currentTab]}
             />
           </>
@@ -366,6 +428,14 @@ export default function App() {
           onCancel={handleConfirmCancel}
           onConfirm={handleConfirmDelete}
         />
+
+        <RecommendationModal
+          open={recommendationOpen}
+          game={recommendationGame}
+          currentUserName={vm.meta.currentUserName || 'Jugador'}
+          onClose={handleCloseRecommendationModal}
+          onSend={handleSendRecommendation}
+        />
       </Suspense>
 
       <datalist id="dl-genres">
@@ -394,6 +464,10 @@ export default function App() {
         <Route path="/visitados" element={null} />
         <Route path="/en-curso" element={null} />
         <Route path="/proximos" element={null} />
+        <Route path="/social" element={null} />
+        <Route path="/social/perfil" element={null} />
+        <Route path="/social/hub" element={null} />
+        <Route path="/ajustes" element={null} />
         <Route path="*" element={<Navigate to="/completados" replace />} />
       </Routes>
     </>
