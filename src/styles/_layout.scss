@@ -612,6 +612,91 @@ button.social-chip.active {
   gap: .7rem;
 }
 
+.social-feed-row {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(17rem, 21rem);
+  gap: .75rem;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: .35rem .1rem .55rem;
+  scrollbar-width: thin;
+  cursor: grab;
+}
+
+.social-feed-row.is-dragging {
+  cursor: grabbing;
+}
+
+.social-feed-row::-webkit-scrollbar {
+  height: 7px;
+}
+
+.social-feed-row::-webkit-scrollbar-thumb {
+  background: rgba(26,159,255,.36);
+  border-radius: 999px;
+}
+
+.social-feed-toolbar {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: rgba(26,30,36,.55);
+  padding: .78rem;
+  display: grid;
+  gap: .6rem;
+}
+
+.social-feed-owner {
+  margin: -.2rem 0 0;
+  font-size: 1.03rem;
+  color: #d8efff;
+  font-weight: 800;
+  letter-spacing: .01em;
+}
+
+.social-feed-search {
+  display: grid;
+  gap: .3rem;
+}
+
+.social-feed-search span {
+  color: var(--text-muted);
+  font-size: .75rem;
+  text-transform: uppercase;
+  letter-spacing: .03em;
+  font-weight: 700;
+}
+
+.social-feed-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .45rem;
+}
+
+.social-filter-chip {
+  border: 1px solid rgba(26,159,255,.35);
+  background: rgba(26,159,255,.1);
+  color: #b5ddf8;
+  border-radius: 999px;
+  padding: .28rem .72rem;
+  font-size: .76rem;
+  font-weight: 700;
+  font-family: inherit;
+  transition: border-color .2s ease, background .2s ease, color .2s ease;
+}
+
+.social-filter-chip.is-active {
+  border-color: rgba(103,193,141,.65);
+  background: rgba(103,193,141,.2);
+  color: #b8f1cd;
+}
+
+.social-feed-result-count {
+  margin: 0;
+  font-size: .78rem;
+  color: var(--text-muted);
+}
+
 .social-feed-card {
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
@@ -916,6 +1001,10 @@ button.social-chip.active {
     grid-auto-columns: minmax(9.5rem, 11.2rem);
     padding-top: .4rem;
     padding-bottom: .6rem;
+  }
+
+  .social-feed-row {
+    grid-auto-columns: minmax(14rem, 17rem);
   }
 
   .social-hub-gateway {
