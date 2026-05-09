@@ -13,8 +13,13 @@ if not exist node_modules (
 )
 
 REM Ejecutar servidor de desarrollo
-echo [*] Iniciando servidor de desarrollo...
-call npm run dev -- --open
+if exist node_modules\.vite (
+    echo [*] Limpiando cache de Vite...
+    rmdir /s /q node_modules\.vite
+)
+
+echo [*] Iniciando servidor de desarrollo (reoptimizando modulos)...
+call npm run dev -- --open --force
 if errorlevel 1 (
     echo [ERROR] npm run dev fallo. Ver errores arriba.
 )
