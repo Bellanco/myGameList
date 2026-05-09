@@ -81,6 +81,37 @@ Medidas aplicadas:
 
 Nota: el token de GitHub se guarda en localStorage para permitir sincronizacion persistente. Se recomienda usar dispositivo de confianza y HTTPS.
 
+## Firebase (Analytics, Firestore y Authentication)
+
+La app incluye una capa de integracion en el repositorio:
+- src/model/repository/firebaseRepository.ts
+
+Servicios preparados:
+- Firebase Analytics (web)
+- Cloud Firestore
+- Firebase Authentication
+
+Importante sobre Crashlytics:
+- Firebase Crashlytics no tiene soporte oficial para aplicaciones web JavaScript.
+- Se deja trazabilidad de errores via eventos de Analytics como alternativa inicial.
+
+Variables de entorno necesarias (Vite):
+- VITE_FIREBASE_API_KEY
+- VITE_FIREBASE_AUTH_DOMAIN
+- VITE_FIREBASE_PROJECT_ID
+- VITE_FIREBASE_STORAGE_BUCKET
+- VITE_FIREBASE_MESSAGING_SENDER_ID
+- VITE_FIREBASE_APP_ID
+- VITE_FIREBASE_MEASUREMENT_ID (opcional, habilita Analytics)
+- VITE_ENABLE_ANALYTICS (opcional: en produccion por defecto true, usar false para desactivar)
+
+Pasos rapidos:
+1. Crear proyecto en Firebase Console.
+2. Habilitar Authentication (por ejemplo Google o Email/Password).
+3. Crear base de datos Cloud Firestore en modo bloqueado y reglas seguras.
+4. Copiar la configuracion web al archivo .env local a partir de .env.example.
+5. Ejecutar npm run dev.
+
 ## Compatibilidad de datos
 
 La app mantiene migracion de formatos antiguos mediante:
