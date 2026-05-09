@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { FILTER_BOOL, UI_MESSAGES, VALIDATION_MESSAGES } from '../../core/constants/labels';
 import { COMMON_ICONS } from '../../core/constants/icons';
-import type { GameDraft, TabId } from '../../viewmodel/useGameListViewModel';
+import type { TabId } from '../../model/types/game';
+import type { GameDraft } from '../../viewmodel/useGameListViewModel';
 import { Icon } from '../components/Icon';
 import { StarPicker } from '../components/StarPicker';
 import { TagInput } from '../components/TagInput';
@@ -78,8 +79,6 @@ function isValidYearValue(value: string): boolean {
 }
 
 export function FormModal({ open, draft, currentTab, lookups, onClose, onDraftChange, onSave, onNotice }: FormModalProps) {
-  if (!open) return null;
-
   const boolField = getTabBoolField(currentTab);
   const [pending, setPending] = useState<PendingTagFields>(EMPTY_PENDING);
   const [fieldErrors, setFieldErrors] = useState<FieldErrorMap>({});
@@ -90,6 +89,20 @@ export function FormModal({ open, draft, currentTab, lookups, onClose, onDraftCh
     setFieldErrors({});
     setYearWarningShown(false);
   }, [open, draft.id, currentTab]);
+
+  useEffect(() => {
+    if (!open) return;
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        onClose();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [open, onClose]);
 
   const tagKeys = useMemo(() => {
     const keys: Array<keyof PendingTagFields> = ['genres', 'platforms'];
@@ -215,7 +228,7 @@ export function FormModal({ open, draft, currentTab, lookups, onClose, onDraftCh
       return;
     }
 
-    if (nextDraft.hours != null && (!Number.isFinite(nextDraft.hours) || Number(nextDraft.hours) < 0)) {
+    if (nextDraft.hours !== null && (!Number.isFinite(nextDraft.hours) || Number(nextDraft.hours) < 0)) {
       onNotice('warn', VALIDATION_MESSAGES.fieldsInvalid);
       return;
     }
@@ -224,8 +237,27 @@ export function FormModal({ open, draft, currentTab, lookups, onClose, onDraftCh
     onSave(nextDraft);
   };
 
+  if (!open) return null;
+
   return (
-    <div className="modal-ov active">
+    <div
+      className="modal-ov active"
+      role="button"
+      tabIndex={0}
+      aria-label="Cerrar modal"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) {
+          onClose();
+        }
+      }}
+      onKeyDown={(event) => {
+        if (event.target !== event.currentTarget) return;
+        if (event.key === 'Escape' || event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          onClose();
+        }
+      }}
+    >
       <div className="modal">
         <div className="modal-hd">
           <div className="modal-title">{draft.id ? 'Editar juego' : 'Nuevo juego'}</div>
@@ -236,15 +268,18 @@ export function FormModal({ open, draft, currentTab, lookups, onClose, onDraftCh
         <div className="modal-body">
           <div className="frow">
             <div className="fg">
-              <label className="flabel">Nombre *</label>
+              <label htmlFor="draft-name" className="flabel">Nombre *</label>
               <input
+                id="draft-name"
                 className={`finput ${fieldErrors.name ? 'has-error' : ''}`.trim()}
                 value={draft.name}
+                placeholder="Ej: The Witcher 3"
                 onChange={(event) => {
                   setFieldErrors((prev) => ({ ...prev, name: false }));
                   onDraftChange({ ...draft, name: event.target.value });
                 }}
               />
+              <small className="tag-hint tag-hint--spacer" aria-hidden="true">Pulsa Enter para anadir</small>
             </div>
             <TagInput
               label="Géneros"
@@ -259,6 +294,7 @@ export function FormModal({ open, draft, currentTab, lookups, onClose, onDraftCh
               }}
               onRemove={(value) => removeTextTag('genres', value)}
               chipClassName="chip-genre"
+              hint={UI_MESSAGES.form.yearsHint}
               invalid={Boolean(fieldErrors.genres)}
             />
           </div>
@@ -277,6 +313,7 @@ export function FormModal({ open, draft, currentTab, lookups, onClose, onDraftCh
               }}
               onRemove={(value) => removeTextTag('platforms', value)}
               chipClassName="chip-plat"
+              hint={UI_MESSAGES.form.yearsHint}
               invalid={Boolean(fieldErrors.platforms)}
             />
             {supportsScore(currentTab) ? (
@@ -286,6 +323,7 @@ export function FormModal({ open, draft, currentTab, lookups, onClose, onDraftCh
                   <StarPicker value={draft.score} onChange={(v) => onDraftChange({ ...draft, score: v })} />
                 </div>
                 {fieldErrors.score ? <small className="tag-hint" style={{ color: 'var(--danger)' }}>Selecciona una puntuación</small> : null}
+                {!fieldErrors.score ? <small className="tag-hint tag-hint--spacer" aria-hidden="true">Pulsa Enter para anadir</small> : null}
               </div>
             ) : null}
           </div>
@@ -312,9 +350,12 @@ export function FormModal({ open, draft, currentTab, lookups, onClose, onDraftCh
               />
               {supportsHours(currentTab) ? (
                 <div className="fg">
-                  <label className="flabel">Horas jugadas</label>
+                  <label htmlFor="draft-hours" className="flabel">Horas jugadas</label>
                   <input
+                    id="draft-hours"
                     className="finput"
+                    type="number"
+                    placeholder="Ej: 120"
                     value={draft.hours ?? ''}
                     onChange={(event) =>
                       onDraftChange({
@@ -323,6 +364,7 @@ export function FormModal({ open, draft, currentTab, lookups, onClose, onDraftCh
                       })
                     }
                   />
+                  <small className="tag-hint tag-hint--spacer" aria-hidden="true">Pulsa Enter para anadir</small>
                 </div>
               ) : null}
             </div>
@@ -343,6 +385,7 @@ export function FormModal({ open, draft, currentTab, lookups, onClose, onDraftCh
                   }}
                   onRemove={(value) => removeTextTag('strengths', value)}
                   chipClassName="chip-pf"
+                  hint={UI_MESSAGES.form.yearsHint}
                 />
               ) : null}
 
@@ -359,6 +402,7 @@ export function FormModal({ open, draft, currentTab, lookups, onClose, onDraftCh
                   }}
                   onRemove={(value) => removeTextTag('weaknesses', value)}
                   chipClassName="chip-pd"
+                  hint={UI_MESSAGES.form.yearsHint}
                 />
               ) : null}
 
@@ -375,6 +419,7 @@ export function FormModal({ open, draft, currentTab, lookups, onClose, onDraftCh
                   }}
                   onRemove={(value) => removeTextTag('reasons', value)}
                   chipClassName="chip-pd"
+                  hint={UI_MESSAGES.form.yearsHint}
                 />
               ) : null}
             </div>
@@ -382,10 +427,10 @@ export function FormModal({ open, draft, currentTab, lookups, onClose, onDraftCh
 
           <div className="frow">
             <div className="fg">
-              <label className="flabel">Steam Deck</label>
               <button
                 className={`btn btn-toggle ${draft.steamDeck ? 'active btn-toggle-deck' : ''}`}
                 type="button"
+                aria-label="Steam Deck"
                 onClick={() => onDraftChange({ ...draft, steamDeck: !draft.steamDeck })}
               >
                 <Icon name={COMMON_ICONS.steamDeck} />
@@ -394,12 +439,12 @@ export function FormModal({ open, draft, currentTab, lookups, onClose, onDraftCh
             </div>
             {boolField ? (
               <div className="fg">
-                <label className="flabel">{FILTER_BOOL[currentTab]?.label}</label>
                 <button
                   className={`btn btn-toggle ${
                     (boolField === 'replayable' ? draft.replayable : draft.retry) ? 'active' : ''
                   }`}
                   type="button"
+                  aria-label={FILTER_BOOL[currentTab]?.label}
                   onClick={() => {
                     if (boolField === 'replayable') onDraftChange({ ...draft, replayable: !draft.replayable });
                     if (boolField === 'retry') onDraftChange({ ...draft, retry: !draft.retry });
@@ -414,10 +459,12 @@ export function FormModal({ open, draft, currentTab, lookups, onClose, onDraftCh
 
           {supportsReview(currentTab) ? (
             <div className="fg">
-              <label className="flabel">Análisis</label>
+              <label htmlFor="draft-review" className="flabel">Análisis</label>
               <textarea
+                id="draft-review"
                 className="ftextarea"
                 value={draft.review}
+                placeholder="Ej: Historia sólida, combate excelente y gran ambientación."
                 onChange={(event) => onDraftChange({ ...draft, review: event.target.value })}
               />
             </div>

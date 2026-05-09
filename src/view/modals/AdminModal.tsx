@@ -26,8 +26,6 @@ const TAB_LABELS: Record<string, string> = {
 };
 
 export function AdminModal({ open, adminTab, lookups, onClose, onTabChange, onEdit, onDelete }: AdminModalProps) {
-  if (!open) return null;
-
   const [editingTag, setEditingTag] = useState<string | null>(null);
   const [draftValue, setDraftValue] = useState('');
   const [mergePending, setMergePending] = useState(false);
@@ -46,6 +44,22 @@ export function AdminModal({ open, adminTab, lookups, onClose, onTabChange, onEd
     setMergePending(false);
     setNotice(null);
   }, [adminTab, open]);
+
+  useEffect(() => {
+    if (!open) return;
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        onClose();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [open, onClose]);
+
+  if (!open) return null;
 
   const startEdit = (tag: string) => {
     setEditingTag(tag);
@@ -84,7 +98,24 @@ export function AdminModal({ open, adminTab, lookups, onClose, onTabChange, onEd
   };
 
   return (
-    <div className="modal-ov active">
+    <div
+      className="modal-ov active"
+      role="button"
+      tabIndex={0}
+      aria-label="Cerrar modal"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) {
+          onClose();
+        }
+      }}
+      onKeyDown={(event) => {
+        if (event.target !== event.currentTarget) return;
+        if (event.key === 'Escape' || event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          onClose();
+        }
+      }}
+    >
       <div className="modal">
         <div className="modal-hd">
           <div className="modal-title">Administración de filtros</div>

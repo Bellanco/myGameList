@@ -66,7 +66,7 @@
 
 /* FAB */
 .fab {
-  position: fixed; right: 1.2rem; bottom: calc(1.2rem + env(safe-area-inset-bottom,0px));
+  position: fixed; right: 1.2rem; bottom: calc(5.7rem + env(safe-area-inset-bottom,0px));
   z-index: 110; width: 58px; height: 58px; border-radius: 50%;
   border: 1px solid rgba(26,159,255,.28); background: linear-gradient(180deg,var(--steam),#1377c0);
   color: #fff; display: inline-flex; align-items: center; justify-content: center;
@@ -252,7 +252,7 @@ body.compact-filters .filters-row.open .btn-toggle { justify-content: center; al
     min-height: 100vh;
     overflow: auto; 
   }
-  .main { flex: 1 1 auto; overflow: visible; padding-bottom: 5rem; }
+  .main { flex: 1 1 auto; overflow: visible; padding-bottom: 7.4rem; }
   .table-wrap { overflow: visible; flex: 1 1 auto; height: auto; scrollbar-width: thin; }
   .table-wrap::-webkit-scrollbar { display: block; height: 4px; width: 4px; }
   .table-wrap::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
@@ -383,6 +383,13 @@ body.compact-filters .filters-row.open .btn-toggle { justify-content: center; al
   color: var(--text-muted);
   margin-top: .18rem;
   display: block;
+  line-height: 1.2;
+  min-height: .86rem;
+}
+
+.tag-hint--spacer {
+  visibility: hidden;
+  pointer-events: none;
 }
 
 /* === Suprimir spinner en inputs numéricos de texto === */

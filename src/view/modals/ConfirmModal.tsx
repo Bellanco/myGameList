@@ -1,3 +1,5 @@
+import { memo } from 'react';
+
 interface ConfirmModalProps {
   open: boolean;
   title: string;
@@ -5,7 +7,7 @@ interface ConfirmModalProps {
   onConfirm: () => void;
 }
 
-export function ConfirmModal({ open, title, onCancel, onConfirm }: ConfirmModalProps) {
+export const ConfirmModal = memo(function ConfirmModal({ open, title, onCancel, onConfirm }: ConfirmModalProps) {
   if (!open) return null;
 
   return (
@@ -23,4 +25,4 @@ export function ConfirmModal({ open, title, onCancel, onConfirm }: ConfirmModalP
       </div>
     </dialog>
   );
-}
+});

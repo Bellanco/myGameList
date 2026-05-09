@@ -1,6 +1,13 @@
 import type { IconName } from './icons';
 import type { TabId } from '../../model/types/game';
 
+export interface TabAction {
+  target: TabId;
+  label: string;
+  btnCls: string;
+  icon: IconName;
+}
+
 export const TAB_ORDER: TabId[] = ['c', 'v', 'e', 'p'];
 
 export const TAB_TITLES: Record<TabId, string> = {
@@ -31,7 +38,7 @@ export const ROUTE_TAB: Record<string, TabId> = {
   '/proximos': 'p',
 };
 
-export const TAB_ACTIONS: Record<TabId, Array<{ target: TabId; label: string; btnCls: string; icon: IconName }>> = {
+export const TAB_ACTIONS: Record<TabId, TabAction[]> = {
   c: [],
   v: [
     { target: 'c', label: 'Pasar a completados', btnCls: 'btn-complete', icon: 'trophy' },
