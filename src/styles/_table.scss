@@ -1,0 +1,109 @@
+/* Table */
+.table-wrap {
+  background: var(--surface); border-radius: var(--radius-md);
+  overflow: auto; overflow-x: auto; border: 1px solid var(--border); box-shadow: var(--shadow);
+  flex: 1 1 auto; min-height: 18rem; scrollbar-width: none;
+}
+.table-wrap::-webkit-scrollbar { display: none; }
+table { width: 100%; border-collapse: collapse; text-align: left; min-width: 1050px; }
+thead th {
+  background: var(--surface-hover); padding: .95rem 1rem;
+  font-weight: 700; color: var(--text-muted); font-size: .74rem;
+  text-transform: uppercase; letter-spacing: .5px; user-select: none;
+  white-space: nowrap; position: sticky; top: 0; z-index: 2;
+}
+thead th.sortable { cursor: pointer; transition: color .2s; }
+@media (hover:hover) { thead th.sortable:hover { color: var(--text); } }
+thead th.sorted { color: var(--steam); }
+
+/* Ajuste de columnas por tabla */
+/* Completados (c) - 8 columnas: nombre(18%) año(9%) plat(14%) género(13%) fort(15%) debil(15%) score(10%) rejugar(6%) */
+.w-name-c{width:18%} .w-year-c{width:9%} .w-plat-c{width:14%} .w-genre-c{width:13%} .w-strong-c{width:15%} .w-weak-c{width:15%} .w-score-c{width:10%} .w-bool-c{width:6%}
+
+/* Visitados (v) - 6 columnas: nombre(23%) plat(15%) género(13%) fort(16%) razones(16%) reintentos(6%) */
+.w-name-v{width:23%} .w-plat-v{width:15%} .w-genre-v{width:13%} .w-strong-v{width:16%} .w-weak-v{width:16%} .w-bool-v{width:6%}
+
+/* En curso (e) - 5 columnas: nombre(25%) plat(20%) género(18%) fort(18%) debil(19%) */
+.w-name-e{width:25%} .w-plat-e{width:20%} .w-genre-e{width:18%} .w-strong-e{width:18%} .w-weak-e{width:19%}
+
+/* Próximos (p) - 4 columnas: nombre(25%) plat(32%) género(31%) interés(12%) */
+.w-score{width:12%} .w-name-p{width:25%} .w-plat-p{width:32%} .w-genre-p{width:31%}
+
+/* Mantener compatibilidad para anchos genéricos si es necesario */
+.w-name{width:18%} .w-year{width:9%} .w-hours{width:10%} .w-plat{width:14%}
+.w-genre{width:13%} .w-strong{width:12%} .w-weak{width:12%} .w-bool{width:12%}
+
+tbody tr.main-row { border-top: 1px solid var(--border); transition: background .2s; cursor: pointer; }
+tbody tr.main-row.striped { background: var(--surface-soft); }
+@media (hover:hover) { tbody tr.main-row:hover { background: var(--surface-hover); } }
+tbody td { padding: .95rem 1rem; font-size: .88rem; vertical-align: middle; }
+tbody tr.detail-row { display: none; background: rgba(0,0,0,.22); border-top: 1px dashed var(--border); }
+tbody tr.detail-row.open { display: table-row; }
+
+/* Detail */
+.detail-content { padding: 1.1rem 1rem 1.2rem; display: grid; gap: .95rem; grid-template-columns: repeat(auto-fit,minmax(220px,1fr)); }
+.detail-box { display: flex; flex-direction: column; gap: .45rem; min-width: 0; }
+.detail-label { font-size: .72rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase; letter-spacing: .9px; }
+.detail-value { font-size: .88rem; line-height: 1.55; color: var(--text); background: var(--surface); padding: .9rem 1rem; border-radius: var(--radius-sm); border: 1px solid var(--border); white-space: pre-wrap; overflow-wrap: anywhere; }
+.detail-actions { display: flex; flex-wrap: wrap; gap: .75rem; justify-content: flex-end; grid-column: 1/-1; border-top: 1px solid var(--border); padding-top: 1rem; }
+
+/* Chips */
+.chips { display: flex; flex-wrap: wrap; gap: .4rem; min-width: 0; align-items: center; }
+.chip { padding: .22rem .64rem; border-radius: var(--radius-sm); font-size: .75rem; font-weight: 600; display: inline-flex; align-items: center; gap: .35rem; }
+.chip-generic { background: rgba(232,184,32,.16); color: #fcd34d; border: 1px solid rgba(232,184,32,.32); }
+.chip-plat    { background: rgba(99,102,241,.16); color: #c7d2fe; border: 1px solid rgba(99,102,241,.32); }
+.chip-genre   { background: rgba(26,159,255,.18);  color: #66c0f4; border: 1px solid rgba(26,159,255,.35); }
+.chip-pf      { background: rgba(34,197,94,.15);color: #86efac; border: 1px solid rgba(34,197,94,.3); }
+.chip-pd      { background: rgba(239,68,68,.15);  color: #fca5a5; border: 1px solid rgba(239,68,68,.3); }
+.chip-deck    { background: rgba(26,159,255,.18); color: #66c0f4; border: 1px solid rgba(26,159,255,.4); }
+.chip-rm { background: transparent; border: none; color: inherit; cursor: pointer; opacity: .78; }
+.chip-rm:hover { opacity: 1; }
+
+/* Stars */
+.stars { color: #3d5573; letter-spacing: 2px; white-space: nowrap; display: inline-flex; gap: .12rem; }
+.stars .f { color: #7dd3ff; }
+.star-inp { display: flex; gap: .18rem; cursor: pointer; font-size: 1.45rem; flex-wrap: wrap; }
+.star-inp span { color: #3d5573; transition: transform .2s, color .2s; line-height: 1; }
+.star-inp span.f { color: #7dd3ff; }
+.star-inp-field { align-items: center; }
+.fg-score-field { justify-content: flex-start; }
+.score-input-shell {
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  padding: 0 .2rem;
+}
+@media (hover:hover) { .star-inp span:hover { transform: scale(1.12); } }
+
+/* Rejugar - Activo (Star Azul) */
+.badge-rejugar-activo {
+  width: 32px; height: 32px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; border: none; cursor: pointer;
+  background: linear-gradient(135deg, #465b75, #586088);
+  color: #7da3c6;
+  box-shadow: 0 0 12px rgba(88, 96, 136, 0.25), 0 0 20px rgba(70, 91, 117, 0.1), inset 0 0 10px rgba(0,0,0,0.15);
+}
+
+/* Rejugar - Inactivo (Stack Ambar) */
+.badge-rejugar-inactivo {
+  width: 32px; height: 32px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; border: none; cursor: default;
+  background: linear-gradient(135deg, #553d33, #6d4d3f);
+  color: #8b7a6f;
+  box-shadow: 0 0 15px rgba(139, 93, 61, 0.3), inset 0 0 10px rgba(0,0,0,0.2);
+}
+
+/* Nueva Oportunidad - Activo (Refresh Azul) */
+.badge-opp-activo {
+  width: 32px; height: 32px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; border: none; cursor: pointer;
+  background: linear-gradient(135deg, #465b75, #586088);
+  color: #c9d4e0;
+  box-shadow: 0 0 12px rgba(88, 96, 136, 0.25), 0 0 20px rgba(70, 91, 117, 0.1), inset 0 0 10px rgba(0,0,0,0.15);
+}
+
+/* Nueva Oportunidad - Inactivo (Lock Rojo) */
+.badge-opp-inactivo {
+  width: 32px; height: 32px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; border: none; cursor: default;
+  background: linear-gradient(135deg, #553333, #6d3f3f);
+  color: #8b6f6f;
+  box-shadow: 0 0 15px rgba(139, 77, 77, 0.3), inset 0 0 10px rgba(0,0,0,0.2);
+}
+

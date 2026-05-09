@@ -107,7 +107,7 @@ You are an expert assistant for **myGameList** — a single-page application for
 - sync.test.ts: 121 lines (8 unit tests for CRDT merge)
 - migrate.ts: 65 lines (data format migration)
 - index.html: 204 lines
-- style.css: 522 lines
+- src/styles/*.scss: modularized stylesheets
 - **Total source: ~2,800 lines**
 - **Test coverage: 37/37 tests passing ✅**
 - **Validation: ESLint + html-validate + TypeScript (zero errors) ✅**

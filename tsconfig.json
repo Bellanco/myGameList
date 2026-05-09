@@ -1,14 +1,14 @@
 {
   "compilerOptions": {
     "target": "ES2020",
-    "module": "Node16",
+    "module": "ESNext",
     "lib": ["ES2020", "DOM", "DOM.Iterable"],
     "allowJs": false,
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
-    "moduleResolution": "node16",
+    "moduleResolution": "Bundler",
     "resolveJsonModule": true,
     "noImplicitAny": true,
     "noUnusedLocals": false,
@@ -18,8 +18,9 @@
     "strictFunctionTypes": true,
     "declaration": false,
     "sourceMap": false,
-    "noEmit": true
+    "noEmit": true,
+    "jsx": "react-jsx"
   },
-  "include": ["public/ts/**/*.ts"],
-  "exclude": ["node_modules", "public/ts/**/*.js"]
+  "include": ["src/**/*.ts", "src/**/*.tsx", "tests/**/*.ts", "tests/**/*.tsx"],
+  "exclude": ["node_modules", "dist"]
 }
