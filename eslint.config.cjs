@@ -2,7 +2,7 @@ const tsParser = require('@typescript-eslint/parser');
 
 module.exports = [
   {
-    files: ["public/ts/**/*.ts", "!public/ts/**/*.test.ts"],
+    files: ["src/**/*.{ts,tsx}", "!src/**/*.test.ts", "!src/**/*.test.tsx"],
     languageOptions: {
       ecmaVersion: "latest",
       sourceType: "module",
@@ -16,7 +16,7 @@ module.exports = [
         Event: "readonly"
       },
       parserOptions: {
-        ecmaFeatures: { jsx: false }
+        ecmaFeatures: { jsx: true }
       }
     },
     rules: {
@@ -24,7 +24,7 @@ module.exports = [
     }
   },
   {
-    files: ["public/ts/**/*.test.ts"],
+    files: ["tests/**/*.{ts,tsx}", "src/**/*.test.{ts,tsx}"],
     languageOptions: {
       ecmaVersion: "latest",
       sourceType: "module",
@@ -37,7 +37,7 @@ module.exports = [
         afterEach: "readonly"
       },
       parserOptions: {
-        ecmaFeatures: { jsx: false }
+        ecmaFeatures: { jsx: true }
       }
     },
     rules: {

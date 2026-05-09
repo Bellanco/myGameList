@@ -7,18 +7,27 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "validate": "node scripts/ci-validate.js && html-validate public/index.html && eslint public/ts --ext .ts",
+    "validate": "node scripts/ci-validate.js && html-validate index.html && eslint src tests --ext .ts,.tsx",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
-    "lint": "eslint public/ts --ext .ts --fix"
+    "lint": "eslint src tests --ext .ts,.tsx --fix"
+  },
+  "dependencies": {
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "react-router-dom": "^7.9.5"
   },
   "devDependencies": {
+    "@types/react": "^19.2.2",
+    "@types/react-dom": "^19.2.2",
     "@typescript-eslint/parser": "^8.59.0",
+    "@vitejs/plugin-react-swc": "^4.2.0",
     "@vitest/coverage-v8": "^4.1.5",
     "eslint": "^10.2.1",
     "html-validate": "^10.13.1",
     "jsdom": "^29.0.2",
+    "sass": "^1.99.0",
     "vite": "^8.0.10",
     "vitest": "^4.1.5"
   }

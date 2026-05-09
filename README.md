@@ -1,117 +1,82 @@
-# Mis Listas de Juegos - v2.0.0
+﻿# myGameList - React MVVM
 
-Gestor moderno de colecciones de videojuegos con sincronización en la nube (GitHub Gist).
+Aplicacion web para gestionar listas de videojuegos con sincronizacion en GitHub Gist, arquitectura MVVM y enfoque offline-first.
 
-## Características
+## Estado actual
 
-- Diseño responsivo mobile-first
-- Sincronización con GitHub Gist
-- CRDT merge (cero pérdida de datos)
-- 4 categorías (Completados, Visitados, En curso, Próximos)
-- Sistema avanzado de etiquetas
-- Filtros inteligentes
-- Offline-first con Service Worker
-- Tests unitarios con Vitest
-- Sin build step, carga directa
-- Accesible WCAG AA
-- TypeScript (soporte completo)
+Migrada de JavaScript vanilla a React 19 + TypeScript manteniendo:
+- Estilo visual y comportamiento funcional principal.
+- Estructura de datos compatible con storage legacy.
+- Sincronizacion CRDT para evitar perdida de datos.
+- Diseno responsive mobile-first.
 
-## Inicio Rápido
+## Stack
 
-```bash
-git clone https://github.com/tuusuario/myGameList.git
-cd myGameList
-npm install
-npm run dev       # http://localhost:8000
-npm run test      # Tests unitarios
-npm run validate  # Lint + validación
-```
+- React 19
+- TypeScript
+- React Router
+- Vite 8
+- Vitest
+- ESLint
 
-## Uso
+## Arquitectura MVVM
 
-1. Abre la app y haz click en el engranaje (Configurar)
-2. Introduce token GitHub + ID Gist
-3. Click en + para añadir juegos
-4. Sincroniza automáticamente cada 1.8s
-5. Funciona completamente offline
+Estructura principal:
 
-## Arquitectura
+- src/model
+  - types: contratos de datos (GameItem, TabData, SyncConfig)
+  - repository: acceso a datos local, migracion legacy, sync CRDT y Gist
+- src/viewmodel
+  - useGameListViewModel: estado de listas, filtros, ordenacion, CRUD, modales
+  - useSyncViewModel: conexion/sincronizacion GitHub Gist
+- src/view
+  - components: iconos y piezas visuales reutilizables
+  - hooks: utilidades de UI (debounce)
+- src/core
+  - constants: labels, rutas, breakpoints y claves de almacenamiento
+  - security: sanitizacion y validaciones defensivas
+  - utils: comparadores y helpers puros
 
-**Vanilla JavaScript** (sin framework)
-- `public/ts/app.ts` - SPA principal (1,500+ LOC, TypeScript)
-- `public/ts/sync.ts` - API GitHub Gist + CRDT merge
-- `public/ts/migrate.ts` - Migración de datos
-- `public/style.css` - CSS3 con variables y BEM
-- `public/service-worker.js` - Service Worker para offline
-- `public/manifest.json` - PWA manifest
+## Scripts
 
-## Diseño de Iconos (v2.0)
-
-### Estados Positivos (Azul Sutil)
-- **Rejugar Activo**: Estrella azul - juego rejugable
-- **Nueva Oportunidad Activo**: Refresh azul - hay oportunidad disponible
-
-### Estados Negativos (Colores Cálidos)
-- **Rejugar Inactivo**: Stack ambar - no rejugable
-- **Nueva Oportunidad Inactivo**: Candado rojo - sin oportunidad
-
-Todos con gradientes suaves y glow sutil para coherencia visual.
-
-## Testing
-
-```bash
-npm run test        # Ejecutar tests una vez
-npm run test:watch  # Modo watch
-```
-
-Cobertura:
-- CRDT merge logic
-- Sincronización GitHub Gist
-- Validación de datos
-- Breakpoints responsive
-
-## Documentación
-
-- [CHANGELOG](./CHANGELOG.md) - Historial de versiones
-
-## Requisitos
-
-- Node.js 20+ LTS
-- Cuenta GitHub (para Gist sync)
-- Navegador moderno (Chrome, Firefox, Safari, Edge)
+- npm run dev: servidor local en puerto 8000
+- npm run build: compilacion de produccion
+- npm run preview: preview de build
+- npm run test: pruebas unitarias
+- npm run validate: validacion CI + HTML + ESLint
+- npm run lint: autocorrecciones lint
 
 ## Seguridad
 
-- Token almacenado en localStorage (solo navegador del usuario)
-- Gists privados por defecto
-- Input sanitizado con `UI.esc()`
-- HTTPS recomendado con tokens
-- CRDT previene conflictos de sincronización
+Medidas aplicadas:
 
-## Stack Técnico
+- Sanitizacion y normalizacion centralizada en src/core/security/sanitize.ts.
+- Validacion de formatos para token GitHub y Gist ID.
+- Renderizado React sin inyeccion HTML insegura.
+- Cabeceras de seguridad en public/_headers (CSP, X-Frame-Options, etc.).
+- Sincronizacion robusta con merge CRDT para minimizar conflictos y perdida de informacion.
 
-| Aspecto | Tecnología |
-|--------|-----------|
-| Frontend | HTML5 + Vanilla JS ES6+ + CSS3 |
-| Tipado | TypeScript (opcional) |
-| Persistencia | GitHub Gist REST API |
-| Offline | Service Worker + localStorage |
-| Testing | Vitest |
-| Linting | ESLint |
-| Validación | html-validate |
-| Build | Vite |
+Nota: el token de GitHub se guarda en localStorage para permitir sincronizacion persistente, por lo que se recomienda usar dispositivo de confianza y HTTPS.
 
-## Características Destacadas
+## Compatibilidad de datos
 
-- **CRDT Merge**: Sincronización bidireccional sin conflictos
-- **Offline Mode**: Funciona completamente sin conexión
-- **Responsive Design**: Breakpoints 1100px y 1400px
-- **Accesibilidad**: WCAG AA mínimo, aria-* atributos
-- **PWA**: Instalable como app nativa
-- **Rendimiento**: Carga rápida, sin dependencias pesadas
+La app mantiene migracion de formatos antiguos mediante:
+- src/model/repository/migrateRepository.ts
+- src/model/repository/localRepository.ts
 
-## Licencia
+Esto permite cargar y normalizar datos legacy sin romper el historico existente.
 
-MIT - 2026
+## Testing
 
-Desarrollado con tecnologías web vanilla.
+Pruebas incluidas:
+- tests/unit/syncRepository.test.ts
+- tests/unit/sanitize.test.ts
+
+Se ejecutan con Vitest en entorno jsdom.
+
+## Despliegue
+
+La configuracion esta preparada para despliegue estatico con:
+- index.html en raiz (entrada Vite)
+- assets publicos en public/
+- fallback SPA configurado en public/_routes.json

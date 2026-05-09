@@ -1,0 +1,47 @@
+:root {
+  --bg: #1a1e24;
+  --surface: #212429;
+  --surface-hover: #2a2f36;
+  --surface-elevated: #31363e;
+  --surface-soft: rgba(255,255,255,.03);
+  --border: #3d4450;
+  --text: #dcdedf;
+  --text-muted: #8f98a0;
+  --steam: #1a9fff;
+  --steam-hover: #66c0f4;
+  --steam-soft: rgba(26,159,255,.12);
+  --success: #67c18d;
+  --danger: #d15b58;
+  --warn: #e5b143;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 22px;
+  --radius-pill: 9999px;
+  --shadow: 0 10px 28px rgba(0,0,0,.38);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { color-scheme: dark; }
+body {
+  font-family: 'DM Sans', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  overflow: auto;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+@media (max-width:1400px) {
+  body {
+    height: auto;
+    min-height: 100dvh;
+    overflow: auto;
+  }
+}
+button, input, select, textarea { font: inherit; }
+button { -webkit-tap-highlight-color: transparent; }
+.ui-icon { width: 1.05rem; height: 1.05rem; fill: currentColor; flex: 0 0 auto; }
+

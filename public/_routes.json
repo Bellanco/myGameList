@@ -10,7 +10,7 @@
   ],
   "routes": [
     {
-      "pattern": "/",
+      "pattern": "/*",
       "serve": "/index.html"
     }
   ]
