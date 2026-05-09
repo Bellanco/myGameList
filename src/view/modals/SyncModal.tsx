@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { COMMON_ICONS } from '../../core/constants/icons';
 import type { SyncStatus } from '../../viewmodel/useSyncViewModel';
 import { Icon } from '../components/Icon';
@@ -37,10 +38,41 @@ export function SyncModal({
   onDisconnect,
   onSyncNow,
 }: SyncModalProps) {
+  useEffect(() => {
+    if (!open) return;
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        onClose();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [open, onClose]);
+
   if (!open) return null;
 
   return (
-    <div className="modal-ov active">
+    <div
+      className="modal-ov active"
+      role="button"
+      tabIndex={0}
+      aria-label="Cerrar modal"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) {
+          onClose();
+        }
+      }}
+      onKeyDown={(event) => {
+        if (event.target !== event.currentTarget) return;
+        if (event.key === 'Escape' || event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          onClose();
+        }
+      }}
+    >
       <div className="modal modal--sm">
         <div className="modal-hd">
           <div className="modal-title">Sincronización — GitHub Gist</div>
@@ -62,9 +94,10 @@ export function SyncModal({
                 Crea un token en GitHub con permiso gist y pégalo aquí.
               </div>
               <div className="fg">
-                <label className="flabel">Token *</label>
+                <label htmlFor="sync-token" className="flabel">Token *</label>
                 <div className="token-row">
                   <input
+                    id="sync-token"
                     className="finput"
                     type={showToken ? 'text' : 'password'}
                     value={token}
@@ -77,8 +110,9 @@ export function SyncModal({
                 </div>
               </div>
               <div className="fg">
-                <label className="flabel">Gist ID (vacío la primera vez)</label>
+                <label htmlFor="sync-gist-id" className="flabel">Gist ID (vacío la primera vez)</label>
                 <input
+                  id="sync-gist-id"
                   className="finput"
                   value={gistId}
                   onChange={(event) => onGistIdChange(event.target.value)}

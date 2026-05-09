@@ -1,8 +1,12 @@
 const tsParser = require('@typescript-eslint/parser');
+const jsxA11yPlugin = require('eslint-plugin-jsx-a11y');
 
 module.exports = [
   {
-    files: ["src/**/*.{ts,tsx}", "!src/**/*.test.ts", "!src/**/*.test.tsx"],
+    ignores: ['dist/', 'node_modules/', 'coverage/']
+  },
+  {
+    files: ["src/**/*.{ts,tsx}", "tests/**/*.{ts,tsx}"],
     languageOptions: {
       ecmaVersion: "latest",
       sourceType: "module",
@@ -13,35 +17,43 @@ module.exports = [
         localStorage: "readonly",
         fetch: "readonly",
         navigator: "readonly",
-        Event: "readonly"
-      },
-      parserOptions: {
-        ecmaFeatures: { jsx: true }
-      }
-    },
-    rules: {
-      "no-console": "off"
-    }
-  },
-  {
-    files: ["tests/**/*.{ts,tsx}", "src/**/*.test.{ts,tsx}"],
-    languageOptions: {
-      ecmaVersion: "latest",
-      sourceType: "module",
-      parser: tsParser,
-      globals: {
+        Event: "readonly",
+        indexedDB: "readonly",
+        IDBDatabase: "readonly",
+        IDBObjectStore: "readonly",
         describe: "readonly",
         it: "readonly",
         expect: "readonly",
         beforeEach: "readonly",
-        afterEach: "readonly"
+        afterEach: "readonly",
+        vi: "readonly"
       },
       parserOptions: {
         ecmaFeatures: { jsx: true }
       }
     },
+    plugins: {
+      'jsx-a11y': jsxA11yPlugin
+    },
     rules: {
-      "no-console": "off"
+      // Core rules
+      "no-console": ["warn", { allow: ["warn", "error"] }],
+      "no-var": "error",
+      "prefer-const": "error",
+      "eqeqeq": ["error", "always"],
+      "no-restricted-globals": ["error", "isNaN", "isFinite"],
+      
+      // React rules
+      "react/jsx-uses-react": "off",
+      "react/react-in-jsx-scope": "off",
+      
+      // Accessibility rules - warn level for gradual adoption
+      "jsx-a11y/click-events-have-key-events": "warn",
+      "jsx-a11y/no-static-element-interactions": "warn",
+      "jsx-a11y/interactive-supports-focus": "warn",
+      "jsx-a11y/label-has-associated-control": "warn",
+      "jsx-a11y/anchor-is-valid": "warn",
+      "jsx-a11y/no-noninteractive-element-to-interactive-role": "warn"
     }
   }
 ];

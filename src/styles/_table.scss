@@ -63,8 +63,18 @@ tbody tr.detail-row.open { display: table-row; }
 .stars { color: #3d5573; letter-spacing: 2px; white-space: nowrap; display: inline-flex; gap: .12rem; }
 .stars .f { color: #7dd3ff; }
 .star-inp { display: flex; gap: .18rem; cursor: pointer; font-size: 1.45rem; flex-wrap: wrap; }
-.star-inp span { color: #3d5573; transition: transform .2s, color .2s; line-height: 1; }
-.star-inp span.f { color: #7dd3ff; }
+.star-inp button { 
+  color: #3d5573; 
+  transition: transform .2s, color .2s; 
+  line-height: 1; 
+  background: none; 
+  border: none; 
+  cursor: pointer; 
+  padding: 0;
+  font-size: inherit;
+  font-family: inherit;
+}
+.star-inp button.f { color: #7dd3ff; }
 .star-inp-field { align-items: center; }
 .fg-score-field { justify-content: flex-start; }
 .score-input-shell {
@@ -73,7 +83,7 @@ tbody tr.detail-row.open { display: table-row; }
   align-items: center;
   padding: 0 .2rem;
 }
-@media (hover:hover) { .star-inp span:hover { transform: scale(1.12); } }
+@media (hover:hover) { .star-inp button:hover { transform: scale(1.12); } }
 
 /* Rejugar - Activo (Star Azul) */
 .badge-rejugar-activo {

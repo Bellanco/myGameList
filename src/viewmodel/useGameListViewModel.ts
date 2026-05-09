@@ -1,9 +1,10 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { FILTER_BOOL, TAB_ACTIONS, TAB_ORDER, VALIDATION_MESSAGES } from '../core/constants/labels';
 import { HOURS_RANGES } from '../core/constants/uiConfig';
 import { sortEs, uniqueCaseInsensitive } from '../core/utils/compare';
 import { normalizeTag, safeTrim } from '../core/security/sanitize';
-import { loadLocalState, normalizeData, saveLocalState } from '../model/repository/localRepository';
+import { loadLocalState, loadLocalStateAsync, normalizeData, saveLocalState } from '../model/repository/localRepository';
+import type { TabAction as LabelsTabAction } from '../core/constants/labels';
 import type { GameItem, StatusNotice, TabData, TabId, TabSort, ToolbarFilters } from '../model/types/game';
 
 const DEFAULT_FILTERS: ToolbarFilters = {
@@ -23,14 +24,14 @@ const DEFAULT_SORT: Record<TabId, TabSort> = {
   p: { col: 'score', asc: false },
 };
 
-const DEFAULT_DATA: TabData = {
-  c: [],
-  v: [],
-  e: [],
-  p: [],
-  deleted: [],
-  updatedAt: Date.now(),
-};
+export interface LookupData {
+  genres: string[];
+  platforms: string[];
+  strengths: string[];
+  weaknesses: string[];
+}
+
+export type TabAction = LabelsTabAction;
 
 export interface GameDraft {
   id?: number;
@@ -79,7 +80,7 @@ function toNormalizedDraft(game?: Partial<GameItem>): GameDraft {
     genres: game?.genres || [],
     platforms: game?.platforms || [],
     review: game?.review || '',
-    hours: game?.hours == null ? null : Number(game.hours),
+    hours: game?.hours === null ? null : Number(game?.hours),
   };
 }
 
@@ -109,6 +110,41 @@ export function useGameListViewModel() {
   const [draft, setDraft] = useState<GameDraft>(EMPTY_DRAFT);
   const [adminTab, setAdminTab] = useState<'genres' | 'platforms' | 'strengths' | 'weaknesses'>('genres');
 
+  useEffect(() => {
+    let cancelled = false;
+
+    const hydrateFromFallback = async () => {
+      const hydrated = await loadLocalStateAsync();
+      if (cancelled) return;
+
+      setData((prev) => {
+        const currentHasData = prev.c.length > 0 || prev.v.length > 0 || prev.e.length > 0 || prev.p.length > 0 || prev.deleted.length > 0;
+        const hydratedHasData = hydrated.c.length > 0 || hydrated.v.length > 0 || hydrated.e.length > 0 || hydrated.p.length > 0 || hydrated.deleted.length > 0;
+
+        if (!hydratedHasData) return prev;
+        if (currentHasData && hydrated.updatedAt <= (prev.updatedAt || 0)) return prev;
+
+        return normalizeData(hydrated);
+      });
+
+      setMeta((prev) => {
+        if (hydrated.updatedAt <= (prev.updatedAt || 0)) return prev;
+        return {
+          ...prev,
+          updatedAt: hydrated.updatedAt,
+          etag: hydrated.etag,
+          lastRemoteUpdatedAt: hydrated.lastRemoteUpdatedAt,
+        };
+      });
+    };
+
+    void hydrateFromFallback();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const persist = useCallback(
     (nextData: TabData, nextMeta = meta) => {
       const normalized = normalizeData(nextData);
@@ -137,7 +173,7 @@ export function useGameListViewModel() {
     [data],
   );
 
-  const lookups = useMemo(() => {
+  const lookups = useMemo<LookupData>(() => {
     const genres = new Set<string>();
     const platforms = new Set<string>();
     const strengths = new Set<string>();
@@ -158,6 +194,8 @@ export function useGameListViewModel() {
       weaknesses: [...weaknesses].sort(sortEs),
     };
   }, [data]);
+
+  const tabActions: Record<TabId, TabAction[]> = TAB_ACTIONS;
 
   const setFilter = useCallback((tab: TabId, key: keyof ToolbarFilters, value: string | boolean) => {
     setFilters((prev) => ({
@@ -337,7 +375,7 @@ export function useGameListViewModel() {
         reasons: uniqueCaseInsensitive((nextDraft.reasons || []).map(normalizeTag).filter(Boolean)),
         replayable: nextDraft.replayable,
         retry: nextDraft.retry,
-        hours: nextDraft.hours == null ? null : Number(nextDraft.hours),
+        hours: nextDraft.hours === null ? null : Number(nextDraft.hours),
       };
 
       if (!base.name || !base.genres.length || !base.platforms.length) {
@@ -371,8 +409,11 @@ export function useGameListViewModel() {
 
   const deleteGame = useCallback(
     (tab: TabId, id: number) => {
+      const game = data[tab].find((item) => item.id === id);
+      if (!game) return;
+
       setConfirmState({
-        title: '¿Eliminar juego?',
+        title: `¿Eliminar "${game.name}"?`,
         action: () => {
           const nextData: TabData = {
             ...data,
@@ -528,6 +569,6 @@ export function useGameListViewModel() {
     renameTagAcrossGames,
     notify,
     persist,
-    tabActions: TAB_ACTIONS,
+    tabActions,
   };
 }

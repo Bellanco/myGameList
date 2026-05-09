@@ -26,7 +26,10 @@ export type IconName =
   | 'trophy'
   | 'play'
   | 'abandoned'
-  | 'checkered-flag';
+  | 'checkered-flag'
+  | 'bottom-lists'
+  | 'bottom-settings'
+  | 'bottom-hub';
 
 export const TAB_ICONS: Record<TabId, IconName> = {
   c: 'trophy',

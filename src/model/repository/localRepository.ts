@@ -1,8 +1,35 @@
 import { LEGACY_STORAGE_KEYS, STORAGE_KEY } from '../../core/constants/storageKeys';
 import { migrateData } from './migrateRepository';
+import { loadIndexedDbState, saveIndexedDbState } from './indexedDbRepository';
 import type { GameItem, StoragePayload, TabData } from '../types/game';
 
 const EMPTY_DATA: TabData = { c: [], v: [], e: [], p: [], deleted: [], updatedAt: Date.now() };
+
+function hasStoredData(payload: Pick<StoragePayload, 'c' | 'v' | 'e' | 'p' | 'deleted'>): boolean {
+  return payload.c.length > 0 || payload.v.length > 0 || payload.e.length > 0 || payload.p.length > 0 || payload.deleted.length > 0;
+}
+
+function buildStoragePayload(parsed: Record<string, unknown>): StoragePayload {
+  const source = parsed.data && typeof parsed.data === 'object' ? (parsed.data as Record<string, unknown>) : parsed;
+  const migrated = migrateData(source);
+  const normalized = normalizeData(migrated);
+
+  return {
+    ...normalized,
+    updatedAt: Number(parsed.updatedAt ?? (parsed.meta as Record<string, unknown> | undefined)?.updatedAt ?? normalized.updatedAt),
+    etag: String(parsed.etag ?? (parsed.meta as Record<string, unknown> | undefined)?.etag ?? '') || null,
+    lastRemoteUpdatedAt: Number(parsed.lastRemoteUpdatedAt ?? (parsed.meta as Record<string, unknown> | undefined)?.lastRemoteUpdatedAt ?? 0),
+  };
+}
+
+function getEmptyPayload(): StoragePayload {
+  return {
+    ...EMPTY_DATA,
+    updatedAt: Date.now(),
+    etag: null,
+    lastRemoteUpdatedAt: 0,
+  };
+}
 
 function toList(value: unknown): string[] {
   if (!Array.isArray(value)) return [];
@@ -28,7 +55,7 @@ function normalizeGame(game: Record<string, unknown>, defaultTs: number): GameIt
     retry: Boolean(game.retry),
     review: String(game.review ?? '').trim(),
     score: Number.isFinite(Number(game.score)) ? Math.max(0, Math.min(5, Number(game.score))) : 0,
-    hours: game.hours == null || game.hours === '' ? null : Number(game.hours),
+    hours: game.hours === null || game.hours === '' ? null : Number(game.hours),
   };
 }
 
@@ -69,31 +96,53 @@ export function loadLocalState(): StoragePayload {
       if (!raw) continue;
 
       const parsed = JSON.parse(raw) as Record<string, unknown>;
-      const source = parsed.data && typeof parsed.data === 'object' ? (parsed.data as Record<string, unknown>) : parsed;
-      const migrated = migrateData(source);
-      const normalized = normalizeData(migrated);
-
-      return {
-        ...normalized,
-        updatedAt: Number(parsed.updatedAt ?? (parsed.meta as Record<string, unknown> | undefined)?.updatedAt ?? normalized.updatedAt),
-        etag: String(parsed.etag ?? (parsed.meta as Record<string, unknown> | undefined)?.etag ?? '') || null,
-        lastRemoteUpdatedAt: Number(parsed.lastRemoteUpdatedAt ?? (parsed.meta as Record<string, unknown> | undefined)?.lastRemoteUpdatedAt ?? 0),
-      };
+      return buildStoragePayload(parsed);
     } catch {
       continue;
     }
   }
 
-  return {
-    ...EMPTY_DATA,
-    updatedAt: Date.now(),
-    etag: null,
-    lastRemoteUpdatedAt: 0,
+  return getEmptyPayload();
+}
+
+export async function loadLocalStateAsync(): Promise<StoragePayload> {
+  const localPayload = loadLocalState();
+  const indexedPayload = await loadIndexedDbState();
+
+  if (!indexedPayload) {
+    return localPayload;
+  }
+
+  const normalizedIndexed = normalizeData(indexedPayload);
+  const indexedState: StoragePayload = {
+    ...normalizedIndexed,
+    updatedAt: Number(indexedPayload.updatedAt || normalizedIndexed.updatedAt || Date.now()),
+    etag: indexedPayload.etag || null,
+    lastRemoteUpdatedAt: Number(indexedPayload.lastRemoteUpdatedAt || 0),
   };
+
+  const localHasData = hasStoredData(localPayload);
+  const indexedHasData = hasStoredData(indexedState);
+
+  if (!localHasData && indexedHasData) {
+    return indexedState;
+  }
+
+  if (localHasData && !indexedHasData) {
+    return localPayload;
+  }
+
+  return indexedState.updatedAt > localPayload.updatedAt ? indexedState : localPayload;
 }
 
 export function saveLocalState(payload: StoragePayload): void {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+  } catch {
+    // Ignore quota/storage errors and rely on IndexedDB fallback.
+  }
+
+  void saveIndexedDbState(payload);
 }
 
 export function createExportBlob(data: TabData): Blob {

@@ -1,9 +1,10 @@
-import { useMemo } from 'react';
+import { memo, useEffect, useMemo, useState } from 'react';
 import { COMMON_ICONS } from '../../core/constants/icons';
 import { FILTER_BOOL } from '../../core/constants/labels';
 import { HOURS_RANGES } from '../../core/constants/uiConfig';
 import type { TabId, ToolbarFilters } from '../../model/types/game';
 import { renderStars } from '../../core/utils/renderStars';
+import { useDebouncedValue } from '../hooks/useDebouncedValue';
 import { Icon } from './Icon';
 
 interface ToolbarProps {
@@ -24,7 +25,7 @@ interface ToolbarProps {
   onClearAll: () => void;
 }
 
-export function Toolbar({
+export const Toolbar = memo(function Toolbar({
   currentTab,
   filters,
   lookups,
@@ -36,6 +37,18 @@ export function Toolbar({
   onClearFilter,
   onClearAll,
 }: ToolbarProps) {
+  const [searchDraft, setSearchDraft] = useState(filters.search);
+  const debouncedSearch = useDebouncedValue(searchDraft, 180);
+
+  useEffect(() => {
+    setSearchDraft(filters.search);
+  }, [filters.search]);
+
+  useEffect(() => {
+    if (debouncedSearch === filters.search) return;
+    onFilterChange('search', debouncedSearch);
+  }, [debouncedSearch, filters.search, onFilterChange]);
+
   const supportsScore = (tab: TabId) => tab === 'c' || tab === 'p';
   const supportsHours = (tab: TabId) => tab === 'c';
   const config = FILTER_BOOL[currentTab];
@@ -65,11 +78,18 @@ export function Toolbar({
             type="search"
             className="input-base search-input"
             placeholder="Buscar"
-            value={filters.search}
-            onChange={(event) => onFilterChange('search', event.target.value)}
+            value={searchDraft}
+            onChange={(event) => setSearchDraft(event.target.value)}
           />
-          {filters.search ? (
-            <button type="button" className="search-clear" onClick={() => onClearFilter('search')}>
+          {searchDraft ? (
+            <button
+              type="button"
+              className="search-clear"
+              onClick={() => {
+                setSearchDraft('');
+                onClearFilter('search');
+              }}
+            >
               <Icon name={COMMON_ICONS.close} />
             </button>
           ) : null}
@@ -83,8 +103,8 @@ export function Toolbar({
 
       <div className={`filters-row ${!compactFilters || filtersOpen ? 'open' : ''}`}>
         <div className="filter-field">
-          <label className="flabel">Género</label>
-          <select className="input-base" value={filters.genre} onChange={(event) => onFilterChange('genre', event.target.value)}>
+          <label htmlFor="filter-genre" className="flabel">Género</label>
+          <select id="filter-genre" className="input-base" value={filters.genre} onChange={(event) => onFilterChange('genre', event.target.value)}>
             <option value="">Todos los géneros</option>
             {lookups.genres.map((value) => (
               <option key={value} value={value}>
@@ -94,8 +114,8 @@ export function Toolbar({
           </select>
         </div>
         <div className="filter-field">
-          <label className="flabel">Plataforma</label>
-          <select className="input-base" value={filters.platform} onChange={(event) => onFilterChange('platform', event.target.value)}>
+          <label htmlFor="filter-platform" className="flabel">Plataforma</label>
+          <select id="filter-platform" className="input-base" value={filters.platform} onChange={(event) => onFilterChange('platform', event.target.value)}>
             <option value="">Todas las plataformas</option>
             {lookups.platforms.map((value) => (
               <option key={value} value={value}>
@@ -107,8 +127,8 @@ export function Toolbar({
 
         {supportsScore(currentTab) ? (
           <div className="filter-field">
-            <label className="flabel">Puntuación</label>
-            <select className="input-base" value={filters.score} onChange={(event) => onFilterChange('score', event.target.value)}>
+            <label htmlFor="filter-score" className="flabel">Puntuación</label>
+            <select id="filter-score" className="input-base" value={filters.score} onChange={(event) => onFilterChange('score', event.target.value)}>
               <option value="">Cualquier puntuación</option>
               {[5, 4, 3, 2, 1].map((value) => (
                 <option key={value} value={String(value)}>
@@ -121,8 +141,8 @@ export function Toolbar({
 
         {supportsHours(currentTab) ? (
           <div className="filter-field">
-            <label className="flabel">Horas</label>
-            <select className="input-base" value={filters.hours} onChange={(event) => onFilterChange('hours', event.target.value)}>
+            <label htmlFor="filter-hours" className="flabel">Horas</label>
+            <select id="filter-hours" className="input-base" value={filters.hours} onChange={(event) => onFilterChange('hours', event.target.value)}>
               <option value="">Cualquier duración</option>
               {HOURS_RANGES.map((range) => (
                 <option key={range.key} value={range.key}>
@@ -150,12 +170,10 @@ export function Toolbar({
         ) : null}
 
         <div className="filter-field filter-field-toggle">
-          <label className="flabel filter-field-hidden-label" aria-hidden="true">
-            Steam Deck
-          </label>
           <button
             className={`btn btn-toggle ${filters.deck ? 'active btn-toggle-deck' : ''}`}
             type="button"
+            aria-label="Steam Deck"
             onClick={() => onFilterChange('deck', !filters.deck)}
           >
             <Icon name={COMMON_ICONS.steamDeck} />
@@ -186,4 +204,4 @@ export function Toolbar({
       ) : null}
     </div>
   );
-}
+});

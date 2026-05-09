@@ -1,7 +1,8 @@
-import { Fragment } from 'react';
+import { Fragment, memo, useMemo, useRef } from 'react';
+import { useVirtualizer } from '@tanstack/react-virtual';
 import { COMMON_ICONS } from '../../core/constants/icons';
-import type { IconName } from '../../core/constants/icons';
 import type { GameItem, TabId } from '../../model/types/game';
+import type { TabAction } from '../../viewmodel/useGameListViewModel';
 import { Icon } from './Icon';
 import { StarRating } from './StarRating';
 
@@ -13,7 +14,13 @@ interface GameTableProps {
   onEdit: (tab: TabId, id: number) => void;
   onDelete: (tab: TabId, id: number) => void;
   onMigrate: (tab: TabId, id: number, target: TabId) => void;
-  tabActions: Array<{ target: TabId; label: string; btnCls: string; icon: IconName }>;
+  tabActions: TabAction[];
+}
+
+interface VirtualRow {
+  type: 'main' | 'detail';
+  gameId: number;
+  index: number;
 }
 
 function renderTags(values: string[], className: string) {
@@ -45,7 +52,7 @@ function renderBooleanBadge(type: 'replayable' | 'retry', value: boolean) {
   );
 }
 
-export function GameTable({
+export const GameTable = memo(function GameTable({
   games,
   currentTab,
   expandedId,
@@ -62,12 +69,7 @@ export function GameTable({
     return ['Juego', 'Plataformas', 'Géneros', 'Interés'];
   };
 
-  const supportsScore = (tab: TabId) => tab === 'c' || tab === 'p';
-  const supportsYears = (tab: TabId) => tab === 'c';
   const supportsReview = (tab: TabId) => tab !== 'p';
-  const supportsStrengths = (tab: TabId) => tab === 'c' || tab === 'v' || tab === 'e';
-  const supportsWeaknesses = (tab: TabId) => tab === 'c' || tab === 'e';
-  const supportsReasons = (tab: TabId) => tab === 'v';
   const getColSpan = (tab: TabId) => {
     if (tab === 'c') return 8;
     if (tab === 'v') return 6;
@@ -75,8 +77,41 @@ export function GameTable({
     return 4;
   };
 
+  // Create virtual rows (main + optionally detail rows)
+  const virtualRows = useMemo(() => {
+    const rows: VirtualRow[] = [];
+    games.forEach((game, index) => {
+      rows.push({ type: 'main', gameId: game.id, index });
+      if (expandedId === game.id) {
+        rows.push({ type: 'detail', gameId: game.id, index });
+      }
+    });
+    return rows;
+  }, [games, expandedId]);
+
+  const parentRef = useRef<HTMLDivElement>(null);
+
+  const virtualizer = useVirtualizer({
+    count: virtualRows.length,
+    getScrollElement: () => parentRef.current,
+    measureElement: (element) => element.getBoundingClientRect().height,
+    estimateSize: (index) => {
+      const row = virtualRows[index];
+      return row?.type === 'detail' ? 320 : 50;
+    },
+    overscan: 5,
+  });
+
+  const virtualRowEntries = virtualizer.getVirtualItems();
+  const totalSize = virtualizer.getTotalSize();
+  const topSpacerHeight = virtualRowEntries.length > 0 ? virtualRowEntries[0].start : 0;
+  const bottomSpacerHeight =
+    virtualRowEntries.length > 0 ? totalSize - virtualRowEntries[virtualRowEntries.length - 1].end : 0;
+
+  const gameMap = useMemo(() => new Map(games.map((g) => [g.id, g])), [games]);
+
   return (
-    <div className="table-wrap">
+    <div className="table-wrap" ref={parentRef}>
       <table>
         <thead>
           <tr>
@@ -93,33 +128,61 @@ export function GameTable({
               </td>
             </tr>
           ) : (
-            games.map((game, index) => {
-              const expanded = expandedId === game.id;
-              return (
-                <Fragment key={game.id}>
-                  <tr
-                    className={`main-row ${index % 2 === 0 ? 'striped' : ''}`}
-                    onClick={() => onExpandedChange(expanded ? null : game.id)}
-                    onDoubleClick={() => onEdit(currentTab, game.id)}
-                  >
-                    <td>
-                      <strong>{game.name}</strong>
-                    </td>
-                    {currentTab === 'c' ? <td>{renderTags(game.years?.map(String) || [], 'chip-generic')}</td> : null}
-                    <td>{renderTags(game.platforms, 'chip-plat')}</td>
-                    <td>{renderTags(game.genres, 'chip-genre')}</td>
-                    {(currentTab === 'c' || currentTab === 'v' || currentTab === 'e') ? (
-                      <td>{renderTags(game.strengths || [], 'chip-pf')}</td>
-                    ) : null}
-                    {(currentTab === 'c' || currentTab === 'e') ? (
-                      <td>{renderTags(game.weaknesses || [], 'chip-pd')}</td>
-                    ) : null}
-                    {currentTab === 'v' ? <td>{renderTags(game.reasons || [], 'chip-pd')}</td> : null}
-                    {(currentTab === 'c' || currentTab === 'p') ? <td><StarRating value={game.score || 0} /></td> : null}
-                    {currentTab === 'c' ? <td>{renderBooleanBadge('replayable', Boolean(game.replayable))}</td> : null}
-                    {currentTab === 'v' ? <td>{renderBooleanBadge('retry', Boolean(game.retry))}</td> : null}
-                  </tr>
-                  <tr className={`detail-row ${expanded ? 'open' : ''}`}>
+            <>
+              {topSpacerHeight > 0 ? (
+                <tr aria-hidden="true">
+                  <td colSpan={getColSpan(currentTab)} style={{ height: `${topSpacerHeight}px`, padding: 0, border: 0 }} />
+                </tr>
+              ) : null}
+              {virtualRowEntries.map((virtualRow) => {
+                const row = virtualRows[virtualRow.index];
+                const game = gameMap.get(row.gameId);
+                if (!game) return null;
+
+                if (row.type === 'main') {
+                  const expanded = expandedId === game.id;
+                  return (
+                    <tr
+                      key={`main-${game.id}`}
+                      data-index={virtualRow.index}
+                      ref={virtualizer.measureElement}
+                      className={`main-row ${row.index % 2 === 0 ? 'striped' : ''}`}
+                      tabIndex={0}
+                      aria-expanded={expanded}
+                      aria-label={`${expanded ? 'Contraer' : 'Expandir'} detalles de ${game.name}`}
+                      onClick={() => onExpandedChange(expanded ? null : game.id)}
+                      onKeyDown={(event) => {
+                        if (event.key === 'Enter' || event.key === ' ') {
+                          event.preventDefault();
+                          onExpandedChange(expanded ? null : game.id);
+                        }
+                      }}
+                      onDoubleClick={() => onEdit(currentTab, game.id)}
+                    >
+                      <td>
+                        <strong>{game.name}</strong>
+                      </td>
+                      {currentTab === 'c' ? <td>{renderTags(game.years?.map(String) || [], 'chip-generic')}</td> : null}
+                      <td>{renderTags(game.platforms, 'chip-plat')}</td>
+                      <td>{renderTags(game.genres, 'chip-genre')}</td>
+                      {(currentTab === 'c' || currentTab === 'v' || currentTab === 'e') ? (
+                        <td>{renderTags(game.strengths || [], 'chip-pf')}</td>
+                      ) : null}
+                      {(currentTab === 'c' || currentTab === 'e') ? (
+                        <td>{renderTags(game.weaknesses || [], 'chip-pd')}</td>
+                      ) : null}
+                      {currentTab === 'v' ? <td>{renderTags(game.reasons || [], 'chip-pd')}</td> : null}
+                      {(currentTab === 'c' || currentTab === 'p') ? <td><StarRating value={game.score || 0} /></td> : null}
+                      {currentTab === 'c' ? <td>{renderBooleanBadge('replayable', Boolean(game.replayable))}</td> : null}
+                      {currentTab === 'v' ? <td>{renderBooleanBadge('retry', Boolean(game.retry))}</td> : null}
+                    </tr>
+                  );
+                }
+
+                const reviewLines = game.review ? game.review.split('\n') : [];
+
+                return (
+                  <tr key={`detail-${game.id}`} data-index={virtualRow.index} ref={virtualizer.measureElement} className="detail-row open">
                     <td colSpan={getColSpan(currentTab)} style={{ padding: 0 }}>
                       <div className="detail-content">
                         <div className="detail-box">
@@ -145,7 +208,7 @@ export function GameTable({
                             <div>{renderTags(game.years?.map(String) || [], 'chip-generic')}</div>
                           </div>
                         )}
-                        {currentTab === 'c' && game.hours != null && (
+                        {currentTab === 'c' && game.hours !== null && (
                           <div className="detail-box">
                             <span className="detail-label">Tiempo jugado</span>
                             <div>{String(game.hours).replace('.', ',')} horas</div>
@@ -169,11 +232,11 @@ export function GameTable({
                             <div>{renderTags(game.reasons, 'chip-pd')}</div>
                           </div>
                         )}
-                        {(currentTab === 'c' || currentTab === 'p') && game.score != null && (
+                        {(currentTab === 'c' || currentTab === 'p') && game.score !== null && (
                           <div className="detail-box">
                             <span className="detail-label">{currentTab === 'p' ? 'Interés' : 'Puntuación'}</span>
                             <div>
-                              <StarRating value={game.score} />
+                              <StarRating value={Number(game.score || 0)} />
                             </div>
                           </div>
                         )}
@@ -192,12 +255,14 @@ export function GameTable({
                         {supportsReview(currentTab) && game.review ? (
                           <div className="detail-box" style={{ gridColumn: '1/-1' }}>
                             <span className="detail-label">Análisis</span>
-                            <div className="detail-value">{game.review.split('\n').map((line, i) => (
-                              <Fragment key={i}>
-                                {line}
-                                {i < game.review.split('\n').length - 1 && <br />}
-                              </Fragment>
-                            ))}</div>
+                            <div className="detail-value">
+                              {reviewLines.map((line, i) => (
+                                <Fragment key={i}>
+                                  {line}
+                                  {i < reviewLines.length - 1 && <br />}
+                                </Fragment>
+                              ))}
+                            </div>
                           </div>
                         ) : null}
                         <div className="detail-actions">
@@ -227,7 +292,7 @@ export function GameTable({
                               onEdit(currentTab, game.id);
                             }}
                           >
-                              <Icon name={COMMON_ICONS.edit} />
+                            <Icon name={COMMON_ICONS.edit} />
                             <span>Editar</span>
                           </button>
                           <button
@@ -240,19 +305,24 @@ export function GameTable({
                               onDelete(currentTab, game.id);
                             }}
                           >
-                              <Icon name={COMMON_ICONS.trash} />
+                            <Icon name={COMMON_ICONS.trash} />
                             <span>Eliminar</span>
                           </button>
                         </div>
                       </div>
                     </td>
                   </tr>
-                </Fragment>
-              );
-            })
+                );
+              })}
+              {bottomSpacerHeight > 0 ? (
+                <tr aria-hidden="true">
+                  <td colSpan={getColSpan(currentTab)} style={{ height: `${bottomSpacerHeight}px`, padding: 0, border: 0 }} />
+                </tr>
+              ) : null}
+            </>
           )}
         </tbody>
       </table>
     </div>
   );
-}
+});

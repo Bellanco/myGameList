@@ -1,7 +1,7 @@
 import { useCallback, useState } from 'react';
 import { mergeCrdt } from '../model/repository/syncRepository';
 import { clearSyncConfig, createGist, getSyncConfig, readGist, saveSyncConfig, whoAmI, writeGist } from '../model/repository/gistRepository';
-import type { TabData } from '../model/types/game';
+import type { GameItem, TabData, TabId } from '../model/types/game';
 
 export type SyncStatus = 'idle' | 'syncing' | 'ok' | 'error';
 
@@ -20,8 +20,122 @@ interface WriteOutcome {
   remoteUpdatedAt: number;
 }
 
+type SyncOperation = 'initializeSync' | 'connectSync' | 'syncNow' | 'writeWithConflictRecovery';
+
+interface SyncErrorLogEntry {
+  timestamp: number;
+  operation: SyncOperation;
+  message: string;
+}
+
+const SYNC_ERROR_LOG_KEY = 'myGameList.syncErrorLog';
+const SYNC_ERROR_LOG_LIMIT = 30;
+
 function isWriteConflict(error: unknown): boolean {
   return error instanceof Error && /Write failed:\s*409\b/.test(error.message);
+}
+
+function getLatestItems(data: TabData): Map<number, { item: GameItem; tab: TabId; ts: number }> {
+  const map = new Map<number, { item: GameItem; tab: TabId; ts: number }>();
+
+  for (const tab of ['c', 'v', 'e', 'p'] as const) {
+    for (const game of data[tab]) {
+      const ts = game._ts || data.updatedAt;
+      const current = map.get(game.id);
+      if (!current || ts >= current.ts) {
+        map.set(game.id, { item: game, tab, ts });
+      }
+    }
+  }
+
+  return map;
+}
+
+function getLatestDeleted(data: TabData): Map<number, number> {
+  return new Map((data.deleted || []).map((entry) => [entry.id, entry._ts || data.updatedAt]));
+}
+
+function getEntitySnapshot(
+  items: Map<number, { item: GameItem; tab: TabId; ts: number }>,
+  deleted: Map<number, number>,
+  id: number,
+): { kind: 'missing' | 'alive' | 'deleted'; tab?: TabId; ts: number } {
+  const item = items.get(id);
+  const deletedTs = deleted.get(id) || 0;
+
+  if (!item && !deletedTs) {
+    return { kind: 'missing', ts: 0 };
+  }
+
+  if (deletedTs > (item?.ts || 0)) {
+    return { kind: 'deleted', ts: deletedTs };
+  }
+
+  if (item) {
+    return { kind: 'alive', tab: item.tab, ts: item.ts };
+  }
+
+  return { kind: 'missing', ts: 0 };
+}
+
+function isSameSnapshot(
+  a: { kind: 'missing' | 'alive' | 'deleted'; tab?: TabId; ts: number },
+  b: { kind: 'missing' | 'alive' | 'deleted'; tab?: TabId; ts: number },
+): boolean {
+  return a.kind === b.kind && a.tab === b.tab && a.ts === b.ts;
+}
+
+function countRemoteChangesApplied(localData: TabData, remoteData: TabData, mergedData: TabData): number {
+  const localItems = getLatestItems(localData);
+  const localDeleted = getLatestDeleted(localData);
+  const remoteItems = getLatestItems(remoteData);
+  const remoteDeleted = getLatestDeleted(remoteData);
+  const mergedItems = getLatestItems(mergedData);
+  const mergedDeleted = getLatestDeleted(mergedData);
+
+  const remoteIds = new Set<number>();
+
+  for (const tab of ['c', 'v', 'e', 'p'] as const) {
+    for (const game of remoteData[tab]) {
+      remoteIds.add(game.id);
+    }
+  }
+
+  for (const entry of remoteData.deleted || []) {
+    remoteIds.add(entry.id);
+  }
+
+  let count = 0;
+
+  for (const id of remoteIds) {
+    const localSnapshot = getEntitySnapshot(localItems, localDeleted, id);
+    const remoteSnapshot = getEntitySnapshot(remoteItems, remoteDeleted, id);
+    const mergedSnapshot = getEntitySnapshot(mergedItems, mergedDeleted, id);
+
+    if (!isSameSnapshot(mergedSnapshot, localSnapshot) && isSameSnapshot(mergedSnapshot, remoteSnapshot)) {
+      count += 1;
+    }
+  }
+
+  return count;
+}
+
+function logSyncError(operation: SyncOperation, error: unknown): void {
+  const message = error instanceof Error ? error.message : String(error);
+  const entry: SyncErrorLogEntry = {
+    timestamp: Date.now(),
+    operation,
+    message,
+  };
+
+  try {
+    const raw = localStorage.getItem(SYNC_ERROR_LOG_KEY);
+    const parsed = raw ? (JSON.parse(raw) as SyncErrorLogEntry[]) : [];
+    const next = [...parsed, entry].slice(-SYNC_ERROR_LOG_LIMIT);
+    localStorage.setItem(SYNC_ERROR_LOG_KEY, JSON.stringify(next));
+  } catch {
+    // Silent fallback: app flow should not break if logging fails.
+  }
 }
 
 export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice, persist }: SyncDeps) {
@@ -30,6 +144,7 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
   const [token, setToken] = useState('');
   const [gistId, setGistId] = useState('');
   const [connectedGistId, setConnectedGistId] = useState('');
+  const [lastRemoteChangesApplied, setLastRemoteChangesApplied] = useState<number | null>(null);
 
   const writeWithConflictRecovery = useCallback(
     async (syncToken: string, syncGistId: string, localData: TabData, localUpdatedAt: number): Promise<WriteOutcome> => {
@@ -42,6 +157,7 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
         };
       } catch (error) {
         if (!isWriteConflict(error)) {
+          logSyncError('writeWithConflictRecovery', error);
           throw error;
         }
 
@@ -68,6 +184,7 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
     if (!config) {
       setStatus('idle');
       setConnectedGistId('');
+      setLastRemoteChangesApplied(null);
       return;
     }
 
@@ -78,6 +195,7 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
     try {
       const remote = await readGist(config.token, config.gistId, config.etag);
       if (remote.notModified) {
+        setLastRemoteChangesApplied(0);
         setStatus('ok');
         return;
       }
@@ -86,6 +204,8 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
       const localData = getData();
       const remoteData = remote.data as TabData;
       const merged = mergeCrdt(localData, localMeta.updatedAt, remoteData, remoteData.updatedAt);
+      const remoteChanges = countRemoteChangesApplied(localData, remoteData, merged.merged);
+      setLastRemoteChangesApplied(remoteChanges);
 
       setData(merged.merged);
 
@@ -106,15 +226,20 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
       saveSyncConfig({ ...config, etag: finalMeta.etag, lastRemoteUpdatedAt: finalMeta.lastRemoteUpdatedAt });
       persist(writeOutcome.data, finalMeta);
       setStatus('ok');
+      if (remoteChanges > 0) {
+        onNotice('ok', `Sincronización inicial completada: ${remoteChanges} cambios remotos aplicados`);
+      }
     } catch (error) {
       setStatus('error');
       setStatusMessage(error instanceof Error ? error.message : 'Error de sincronización');
+      logSyncError('initializeSync', error);
     }
-  }, [getData, getMeta, persist, setData, setMeta, writeWithConflictRecovery]);
+  }, [getData, getMeta, onNotice, persist, setData, setMeta, writeWithConflictRecovery]);
 
   const connectSync = useCallback(async () => {
     try {
       setStatus('syncing');
+      setLastRemoteChangesApplied(null);
       const cleanToken = token.trim();
       const cleanGistId = gistId.trim();
       await whoAmI(cleanToken);
@@ -124,19 +249,28 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
         const config = { token: cleanToken, gistId: created.gistId, etag: created.etag, lastRemoteUpdatedAt: 0 };
         saveSyncConfig(config);
         await writeWithConflictRecovery(cleanToken, created.gistId, getData(), Date.now());
+        setLastRemoteChangesApplied(0);
         setConnectedGistId(created.gistId);
       } else {
         const remote = await readGist(cleanToken, cleanGistId);
         const remoteData = remote.data as TabData;
         const localMeta = getMeta();
-        const merged = mergeCrdt(getData(), localMeta.updatedAt, remoteData, remoteData.updatedAt);
+        const localData = getData();
+        const merged = mergeCrdt(localData, localMeta.updatedAt, remoteData, remoteData.updatedAt);
+        const remoteChanges = countRemoteChangesApplied(localData, remoteData, merged.merged);
+        setLastRemoteChangesApplied(remoteChanges);
         const writeOutcome = await writeWithConflictRecovery(cleanToken, cleanGistId, merged.merged, Date.now());
         setData(writeOutcome.data);
         saveSyncConfig({ token: cleanToken, gistId: cleanGistId, etag: writeOutcome.etag || remote.etag || null, lastRemoteUpdatedAt: Math.max(remoteData.updatedAt, writeOutcome.remoteUpdatedAt) });
         setConnectedGistId(cleanGistId);
+        if (remoteChanges > 0) {
+          onNotice('ok', `Sincronización configurada: ${remoteChanges} cambios remotos aplicados`);
+        }
       }
 
-      onNotice('ok', 'Sincronización configurada');
+      if (!cleanGistId) {
+        onNotice('ok', 'Sincronización configurada');
+      }
       setStatus('ok');
       setToken('');
       setGistId(cleanGistId);
@@ -144,6 +278,7 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
       setStatus('error');
       setStatusMessage(error instanceof Error ? error.message : 'Error al conectar sincronización');
       onNotice('err', error instanceof Error ? error.message : 'Error al conectar sincronización');
+      logSyncError('connectSync', error);
     }
   }, [getData, getMeta, gistId, onNotice, setData, token, writeWithConflictRecovery]);
 
@@ -156,9 +291,11 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
 
     try {
       setStatus('syncing');
+      setLastRemoteChangesApplied(null);
       const remote = await readGist(config.token, config.gistId, config.etag);
 
       if (remote.notModified) {
+        setLastRemoteChangesApplied(0);
         await writeWithConflictRecovery(config.token, config.gistId, getData(), Date.now());
         setStatus('ok');
         onNotice('ok', 'Datos sincronizados');
@@ -167,7 +304,10 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
 
       const remoteData = remote.data as TabData;
       const localMeta = getMeta();
-      const merged = mergeCrdt(getData(), localMeta.updatedAt, remoteData, remoteData.updatedAt);
+      const localData = getData();
+      const merged = mergeCrdt(localData, localMeta.updatedAt, remoteData, remoteData.updatedAt);
+      const remoteChanges = countRemoteChangesApplied(localData, remoteData, merged.merged);
+      setLastRemoteChangesApplied(remoteChanges);
       const writeOutcome = await writeWithConflictRecovery(config.token, config.gistId, merged.merged, Date.now());
       setData(writeOutcome.data);
       const nextMeta = {
@@ -180,12 +320,13 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
       persist(writeOutcome.data, nextMeta);
 
       setStatus('ok');
-      onNotice('ok', 'Fusión sincronizada correctamente');
+      onNotice('ok', `Fusión sincronizada correctamente: ${remoteChanges} cambios remotos aplicados`);
     } catch (error) {
       setStatus('error');
       const message = error instanceof Error ? error.message : 'Error al sincronizar';
       setStatusMessage(message);
       onNotice('err', message);
+      logSyncError('syncNow', error);
     }
   }, [getData, getMeta, onNotice, persist, setData, setMeta, writeWithConflictRecovery]);
 
@@ -195,6 +336,7 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
     setConnectedGistId('');
     setToken('');
     setGistId('');
+    setLastRemoteChangesApplied(null);
     onNotice('ok', 'Sincronización desconectada');
   }, [onNotice]);
 
@@ -210,6 +352,7 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
     syncNow,
     disconnectSync,
     connectedGistId,
+    lastRemoteChangesApplied,
     hasConfig: Boolean(getSyncConfig()),
     currentConfig: getSyncConfig(),
   };

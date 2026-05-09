@@ -7,13 +7,15 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "validate": "node scripts/ci-validate.js && html-validate index.html && eslint src tests --ext .ts,.tsx",
-    "test": "vitest run",
+    "validate": "node scripts/ci-validate.js && html-validate index.html && eslint src tests",
+    "test": "vitest run tests/unit src",
+    "test:all": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
-    "lint": "eslint src tests --ext .ts,.tsx --fix"
+    "lint": "eslint src tests --fix"
   },
   "dependencies": {
+    "@tanstack/react-virtual": "^3.13.24",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-router-dom": "^7.9.5"
@@ -24,10 +26,15 @@
     "@typescript-eslint/parser": "^8.59.0",
     "@vitejs/plugin-react-swc": "^4.2.0",
     "@vitest/coverage-v8": "^4.1.5",
-    "eslint": "^10.2.1",
+    "eslint": "^8.57.1",
+    "eslint-config-airbnb": "^19.0.4",
+    "eslint-plugin-import": "^2.32.0",
+    "eslint-plugin-jsx-a11y": "^6.10.2",
+    "eslint-plugin-react": "^7.37.5",
     "html-validate": "^10.13.1",
     "jsdom": "^29.0.2",
     "sass": "^1.99.0",
+    "typescript": "^6.0.3",
     "vite": "^8.0.10",
     "vitest": "^4.1.5"
   }

@@ -12,13 +12,9 @@ if not exist node_modules (
     )
 )
 
-REM Abrir navegador
-echo [*] Abriendo Firefox...
-start firefox http://localhost:8000/
-
 REM Ejecutar servidor de desarrollo
 echo [*] Iniciando servidor de desarrollo...
-call npm run dev
+call npm run dev -- --open
 if errorlevel 1 (
     echo [ERROR] npm run dev fallo. Ver errores arriba.
 )

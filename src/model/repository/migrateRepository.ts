@@ -33,7 +33,7 @@ function migrateGame(game: LegacyGame, tab: 'c' | 'v' | 'e' | 'p'): Record<strin
   if (tab === 'c') {
     if (game.puntuacion) out.score = game.puntuacion;
     if (game.rejugabilidad) out.replayable = true;
-    if (game.horas != null) out.hours = game.horas;
+    if (game.horas !== null) out.hours = game.horas;
     if (Array.isArray(game.años) && game.años.length) out.years = game.años;
     if (Array.isArray(game.pf) && game.pf.length) out.strengths = game.pf;
     if (Array.isArray(game.pd) && game.pd.length) out.weaknesses = game.pd;
