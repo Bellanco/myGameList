@@ -11,7 +11,7 @@ interface BottomNavigationProps {
 
 const NAV_ITEMS: Array<{ key: AppSection; label: string; icon: IconName }> = [
   { key: 'lists', label: 'Listados', icon: 'bottom-lists' },
-  { key: 'social', label: 'Hub social', icon: 'bottom-hub' },
+  { key: 'social', label: 'Social', icon: 'bottom-hub' },
   { key: 'settings', label: 'Ajustes', icon: 'bottom-settings' },
 ];
 

@@ -1,5 +1,6 @@
 const tsParser = require('@typescript-eslint/parser');
 const jsxA11yPlugin = require('eslint-plugin-jsx-a11y');
+const reactPlugin = require('eslint-plugin-react');
 
 module.exports = [
   {
@@ -33,7 +34,13 @@ module.exports = [
       }
     },
     plugins: {
+      react: reactPlugin,
       'jsx-a11y': jsxA11yPlugin
+    },
+    settings: {
+      react: {
+        version: 'detect'
+      }
     },
     rules: {
       // Core rules
