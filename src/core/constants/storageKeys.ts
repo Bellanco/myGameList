@@ -11,3 +11,4 @@ export const LEGACY_STORAGE_KEYS = [
 ] as const;
 
 export const GIST_CFG_KEY = 'mis-listas-gist-config';
+export const SOCIAL_GIST_CFG_KEY = 'mis-listas-social-gist-config';

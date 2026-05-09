@@ -14,6 +14,7 @@ interface GameTableProps {
   onEdit: (tab: TabId, id: number) => void;
   onDelete: (tab: TabId, id: number) => void;
   onMigrate: (tab: TabId, id: number, target: TabId) => void;
+  onRecommend?: (game: GameItem) => void;
   tabActions: TabAction[];
 }
 
@@ -60,6 +61,7 @@ export const GameTable = memo(function GameTable({
   onEdit,
   onDelete,
   onMigrate,
+  onRecommend,
   tabActions,
 }: GameTableProps) {
   const getTableHeaders = (): string[] => {
@@ -282,6 +284,21 @@ export const GameTable = memo(function GameTable({
                               <span>{action.label}</span>
                             </button>
                           ))}
+                          {onRecommend ? (
+                            <button
+                              className="btn btn-secondary"
+                              type="button"
+                              title={`Recomendar - ${game.name}`}
+                              aria-label={`Recomendar - ${game.name}`}
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                onRecommend(game);
+                              }}
+                            >
+                              <Icon name={COMMON_ICONS.gift} />
+                              <span>Recomendar</span>
+                            </button>
+                          ) : null}
                           <button
                             className="btn btn-secondary"
                             type="button"

@@ -29,7 +29,8 @@ export type IconName =
   | 'checkered-flag'
   | 'bottom-lists'
   | 'bottom-settings'
-  | 'bottom-hub';
+  | 'bottom-hub'
+  | 'logout';
 
 export const TAB_ICONS: Record<TabId, IconName> = {
   c: 'trophy',
@@ -40,6 +41,7 @@ export const TAB_ICONS: Record<TabId, IconName> = {
 
 export const COMMON_ICONS = {
   close: 'close',
+  logout: 'logout',
   edit: 'edit',
   save: 'save',
   trash: 'trash',
