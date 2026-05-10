@@ -1040,8 +1040,6 @@ export const SocialHub = memo(function SocialHub() {
         feedStats={feedStats}
         feedSearch={feedSearch}
         setFeedSearch={setFeedSearch}
-        feedFilter={feedFilter}
-        setFeedFilter={(v) => setFeedFilter(v as 'all' | 'favorites')}
         filteredSocialDirectory={filteredSocialDirectory}
         loadingDirectory={loadingDirectory}
         hydrateSocialDirectory={hydrateSocialDirectory}

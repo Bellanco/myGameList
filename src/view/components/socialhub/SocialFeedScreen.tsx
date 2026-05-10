@@ -12,8 +12,6 @@ export function SocialFeedScreen({
   feedStats,
   feedSearch,
   setFeedSearch,
-  feedFilter,
-  setFeedFilter,
   filteredSocialDirectory,
   loadingDirectory,
   hydrateSocialDirectory,
@@ -36,8 +34,6 @@ export function SocialFeedScreen({
   feedStats: any;
   feedSearch: string;
   setFeedSearch: (v: string) => void;
-  feedFilter: 'all' | 'favorites';
-  setFeedFilter: (v: 'all' | 'favorites') => void;
   filteredSocialDirectory: any[];
   loadingDirectory: boolean;
   hydrateSocialDirectory: () => void;
@@ -150,22 +146,6 @@ export function SocialFeedScreen({
               onChange={(event) => setFeedSearch(event.target.value)}
             />
           </label>
-          <div className="social-feed-filters" role="tablist" aria-label="Filtro de perfiles">
-            <button
-              type="button"
-              className={`social-filter-chip ${feedFilter === 'all' ? 'is-active' : ''}`}
-              onClick={() => setFeedFilter('all')}
-            >
-              {SOCIAL_UI.feed.filterAll}
-            </button>
-            <button
-              type="button"
-              className={`social-filter-chip ${feedFilter === 'favorites' ? 'is-active' : ''}`}
-              onClick={() => setFeedFilter('favorites')}
-            >
-              {SOCIAL_UI.feed.filterFavorites}
-            </button>
-          </div>
           <p className="social-feed-result-count">{SOCIAL_UI.feed.resultCount(filteredSocialDirectory.length)}</p>
         </div>
         <div className="fg">
