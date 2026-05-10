@@ -1,3 +1,19 @@
+// Botones de acción en línea para settings
+.settings-actions-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 0.5rem;
+  .btn-label {
+    display: inline;
+  }
+}
+
+@media (max-width: 480px) {
+  .settings-actions-row .btn-label {
+    display: none;
+  }
+}
 /* Modals */
 .modal-ov {
   position: fixed; inset: 0; background: rgba(0,0,0,.6); backdrop-filter: blur(4px);

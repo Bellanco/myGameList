@@ -46,7 +46,7 @@ export const SettingsHub = memo(function SettingsHub({
   onTokenChange,
   onGistIdChange,
   onConnectSync,
-  onSyncNow,
+  onSyncNow: _onSyncNow,
   onDisconnectSync,
   onCopyGistId,
   onRecoverGistId,
@@ -57,12 +57,7 @@ export const SettingsHub = memo(function SettingsHub({
   onDeleteTag,
 }: SettingsHubProps) {
   const [showToken, setShowToken] = useState(false);
-  const [openSections, setOpenSections] = useState<Record<AdminCategoryKey, boolean>>({
-    genres: true,
-    platforms: false,
-    strengths: false,
-    weaknesses: false,
-  });
+  const [activeAdminCategory, setActiveAdminCategory] = useState<AdminCategoryKey>('genres');
   const [editingTag, setEditingTag] = useState<{ key: AdminCategoryKey; value: string } | null>(null);
   const [draftValue, setDraftValue] = useState('');
   const [mergePending, setMergePending] = useState(false);
@@ -80,10 +75,7 @@ export const SettingsHub = memo(function SettingsHub({
   );
 
   const configuredGistId = connectedGistId || gistId;
-
-  const toggleCategory = (key: AdminCategoryKey) => {
-    setOpenSections((prev) => ({ ...prev, [key]: !prev[key] }));
-  };
+  const activeCategory = categories.find((category) => category.key === activeAdminCategory) ?? categories[0];
 
   const startEdit = (key: AdminCategoryKey, value: string) => {
     setEditingTag({ key, value });
@@ -127,11 +119,20 @@ export const SettingsHub = memo(function SettingsHub({
         <p>
           {UI_MESSAGES.settings.sync.status}: <strong>{syncStatus}</strong>
         </p>
-
-
-        {/* Si hay sync activa, solo mostrar el estado y gist conectado. Si no, mostrar los campos de configuración */}
         {hasSyncConfig && configuredGistId ? (
-          <div className="sync-help">{UI_MESSAGES.settings.sync.gistConnectedPrefix}: {configuredGistId}</div>
+          <div className="sync-help">
+            {UI_MESSAGES.settings.sync.gistConnectedPrefix}: {configuredGistId}
+            <button
+              className="sync-gist-action"
+              type="button"
+              aria-label={UI_MESSAGES.settings.sync.copyAriaLabel}
+              title={UI_MESSAGES.settings.sync.copyBtn}
+              onClick={onCopyGistId}
+              style={{ marginLeft: '0.5rem' }}
+            >
+              <Icon name={COMMON_ICONS.syncCopy} />
+            </button>
+          </div>
         ) : null}
 
         {!hasSyncConfig && (
@@ -178,54 +179,43 @@ export const SettingsHub = memo(function SettingsHub({
                   onChange={(event) => onGistIdChange(event.target.value)}
                   placeholder={UI_MESSAGES.settings.sync.gistPlaceholder}
                 />
-                <div className="sync-gist-actions">
-                  <button
-                    className="sync-gist-action"
-                    type="button"
-                    aria-label={UI_MESSAGES.settings.sync.copyAriaLabel}
-                    title={UI_MESSAGES.settings.sync.copyBtn}
-                    onClick={onCopyGistId}
-                    disabled={!gistId}
-                  >
-                    <Icon name={COMMON_ICONS.syncCopy} />
-                  </button>
-                  <button
-                    className="sync-gist-action"
-                    type="button"
-                    aria-label={UI_MESSAGES.settings.sync.recoverAriaLabel}
-                    title={recoveringGistId ? UI_MESSAGES.settings.sync.recoveringBtn : UI_MESSAGES.settings.sync.recoverBtn}
-                    onClick={onRecoverGistId}
-                    disabled={recoveringGistId}
-                  >
-                    <Icon name={COMMON_ICONS.googleRecover} />
-                  </button>
-                </div>
               </div>
+            </div>
+
+            <div className="settings-actions settings-actions-row">
+              <button
+                className="btn btn-steam btn-connect"
+                type="button"
+                onClick={onConnectSync}
+                style={{ marginRight: 'auto' }}
+              >
+                <Icon name="cloud-sync" />
+                <span className="btn-label desktop-only">{UI_MESSAGES.settings.sync.connectBtn}</span>
+              </button>
+              <button
+                className="btn btn-secondary btn-recover"
+                type="button"
+                onClick={onRecoverGistId}
+                disabled={recoveringGistId}
+                style={{ marginLeft: 'auto' }}
+              >
+                <Icon name={COMMON_ICONS.googleRecover} />
+                <span className="btn-label desktop-only">{recoveringGistId ? UI_MESSAGES.settings.sync.recoveringBtn : UI_MESSAGES.settings.sync.recoverBtn}</span>
+              </button>
             </div>
           </>
         )}
 
         {syncError ? <div className="sync-status-msg err">{syncError}</div> : null}
 
-        <div className="settings-actions">
-          {!hasSyncConfig ? (
-            <button className="btn btn-steam" type="button" onClick={onConnectSync}>
-              <Icon name="cloud-sync" />
-              <span>{UI_MESSAGES.settings.sync.connectBtn}</span>
+        {hasSyncConfig && (
+          <div className="settings-actions">
+            <button className="btn btn-danger" type="button" onClick={onDisconnectSync}>
+              <Icon name={COMMON_ICONS.close} />
+              <span>{UI_MESSAGES.settings.sync.disconnectBtn}</span>
             </button>
-          ) : (
-            <>
-              <button className="btn btn-steam" type="button" onClick={onSyncNow}>
-                <Icon name={COMMON_ICONS.refresh} />
-                <span>{UI_MESSAGES.settings.sync.syncBtn}</span>
-              </button>
-              <button className="btn btn-danger" type="button" onClick={onDisconnectSync}>
-                <Icon name={COMMON_ICONS.close} />
-                <span>{UI_MESSAGES.settings.sync.disconnectBtn}</span>
-              </button>
-            </>
-          )}
-        </div>
+          </div>
+        )}
       </div>
 
       <div className="settings-card">
@@ -260,94 +250,89 @@ export const SettingsHub = memo(function SettingsHub({
 
         {adminNotice ? <div className={`admin-warning show ${adminNotice.kind}`}>{adminNotice.message}</div> : null}
 
-        <div className="settings-admin-categories">
-          {categories.map((category) => {
-            const isOpen = openSections[category.key];
+        <div className="settings-admin-tabs" role="tablist" aria-label={UI_MESSAGES.settings.admin.title}>
+          {categories.map((category) => (
+            <button
+              key={category.key}
+              className={`settings-admin-tab ${activeAdminCategory === category.key ? 'active' : ''}`}
+              type="button"
+              role="tab"
+              aria-selected={activeAdminCategory === category.key}
+              onClick={() => {
+                setActiveAdminCategory(category.key);
+                cancelEdit();
+              }}
+            >
+              {category.label}
+            </button>
+          ))}
+        </div>
 
-            return (
-              <section key={category.key} className="settings-admin-category">
-                <button
-                  className="settings-admin-toggle"
-                  type="button"
-                  onClick={() => toggleCategory(category.key)}
-                  aria-expanded={isOpen}
-                  aria-label={isOpen ? UI_MESSAGES.settings.admin.collapseAria : UI_MESSAGES.settings.admin.expandAria}
-                >
-                  <strong>{category.label}</strong>
-                  <Icon name={COMMON_ICONS.keyboardArrowUp} className={`ui-icon settings-admin-arrow ${isOpen ? 'open' : ''}`} />
-                </button>
+        <div className="fg">
+          {activeCategory.values.length ? (
+            activeCategory.values.map((tag) => {
+              const isEditing = editingTag?.key === activeCategory.key && editingTag?.value === tag;
 
-                {isOpen ? (
-                  <div className="fg">
-                    {category.values.length ? (
-                      category.values.map((tag) => {
-                        const isEditing = editingTag?.key === category.key && editingTag?.value === tag;
-
-                        return (
-                          <div key={`${category.key}-${tag}`} className={`admin-item ${isEditing ? 'editing' : ''}`}>
-                            {isEditing ? (
-                              <>
-                                <input
-                                  type="text"
-                                  className={`finput ${mergePending ? 'has-warning' : ''}`.trim()}
-                                  value={draftValue}
-                                  placeholder={UI_MESSAGES.admin.editPlaceholder}
-                                  onChange={(event) => setDraftValue(event.target.value)}
-                                  onKeyDown={(event) => {
-                                    if (event.key !== 'Enter') return;
-                                    event.preventDefault();
-                                    saveEdit(category.key, tag, category.values);
-                                  }}
-                                />
-                                <div className="row-actions">
-                                  <button className="btn btn-secondary btn-icon-text admin-action-btn" type="button" onClick={cancelEdit}>
-                                    <Icon name={COMMON_ICONS.close} />
-                                    <span>{UI_MESSAGES.admin.editCancelBtn}</span>
-                                  </button>
-                                  <button
-                                    className="btn btn-steam btn-icon-text admin-action-btn"
-                                    type="button"
-                                    onClick={() => saveEdit(category.key, tag, category.values)}
-                                  >
-                                    <Icon name={COMMON_ICONS.save} />
-                                    <span>{UI_MESSAGES.admin.editSaveBtn}</span>
-                                  </button>
-                                </div>
-                              </>
-                            ) : (
-                              <>
-                                <span className="admin-item-name">{tag}</span>
-                                <div className="row-actions">
-                                  <button
-                                    className="btn btn-secondary btn-icon-text admin-action-btn"
-                                    type="button"
-                                    onClick={() => startEdit(category.key, tag)}
-                                  >
-                                    <Icon name={COMMON_ICONS.edit} />
-                                    <span>{UI_MESSAGES.admin.editBtn}</span>
-                                  </button>
-                                  <button
-                                    className="btn btn-danger btn-icon-text admin-action-btn"
-                                    type="button"
-                                    onClick={() => onDeleteTag(category.key, tag)}
-                                  >
-                                    <Icon name={COMMON_ICONS.trash} />
-                                    <span>{UI_MESSAGES.admin.deleteBtn}</span>
-                                  </button>
-                                </div>
-                              </>
-                            )}
-                          </div>
-                        );
-                      })
-                    ) : (
-                      <span className="settings-admin-empty">{UI_MESSAGES.admin.noTags}</span>
-                    )}
-                  </div>
-                ) : null}
-              </section>
-            );
-          })}
+              return (
+                <div key={`${activeCategory.key}-${tag}`} className={`admin-item ${isEditing ? 'editing' : ''}`}>
+                  {isEditing ? (
+                    <>
+                      <input
+                        type="text"
+                        className={`finput ${mergePending ? 'has-warning' : ''}`.trim()}
+                        value={draftValue}
+                        placeholder={UI_MESSAGES.admin.editPlaceholder}
+                        onChange={(event) => setDraftValue(event.target.value)}
+                        onKeyDown={(event) => {
+                          if (event.key !== 'Enter') return;
+                          event.preventDefault();
+                          saveEdit(activeCategory.key, tag, activeCategory.values);
+                        }}
+                      />
+                      <div className="row-actions">
+                        <button className="btn btn-secondary btn-icon-text admin-action-btn" type="button" onClick={cancelEdit}>
+                          <Icon name={COMMON_ICONS.close} />
+                          <span>{UI_MESSAGES.admin.editCancelBtn}</span>
+                        </button>
+                        <button
+                          className="btn btn-steam btn-icon-text admin-action-btn"
+                          type="button"
+                          onClick={() => saveEdit(activeCategory.key, tag, activeCategory.values)}
+                        >
+                          <Icon name={COMMON_ICONS.save} />
+                          <span>{UI_MESSAGES.admin.editSaveBtn}</span>
+                        </button>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <span className="admin-item-name">{tag}</span>
+                      <div className="row-actions">
+                        <button
+                          className="btn btn-secondary btn-icon-text admin-action-btn"
+                          type="button"
+                          onClick={() => startEdit(activeCategory.key, tag)}
+                        >
+                          <Icon name={COMMON_ICONS.edit} />
+                          <span>{UI_MESSAGES.admin.editBtn}</span>
+                        </button>
+                        <button
+                          className="btn btn-danger btn-icon-text admin-action-btn"
+                          type="button"
+                          onClick={() => onDeleteTag(activeCategory.key, tag)}
+                        >
+                          <Icon name={COMMON_ICONS.trash} />
+                          <span>{UI_MESSAGES.admin.deleteBtn}</span>
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
+              );
+            })
+          ) : (
+            <span className="settings-admin-empty">{UI_MESSAGES.admin.noTags}</span>
+          )}
         </div>
       </div>
     </section>
