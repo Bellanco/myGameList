@@ -25,6 +25,7 @@ export interface SocialProfileReference {
   displayName: string;
   socialGistId: string;
   gamesGistId: string;
+  githubToken: string;
   socialEnabled: boolean;
 }
 
@@ -270,6 +271,7 @@ export async function upsertProfileSocialReferences(input: {
   user: SocialAuthUser;
   socialGistId: string;
   gamesGistId?: string;
+  githubToken?: string;
   socialGistEtag: string | null;
   preferredName?: string;
 }): Promise<void> {
@@ -290,6 +292,7 @@ export async function upsertProfileSocialReferences(input: {
       social: {
         gistId: input.socialGistId,
         gamesGistId: String(input.gamesGistId || ''),
+        githubToken: String(input.githubToken || ''),
         gistFile: 'myGameList.social.json',
         etag: input.socialGistEtag,
         enabled: true,
@@ -341,7 +344,7 @@ export async function findSocialProfileByEmail(email: string): Promise<SocialPro
   const data = docEntry.data() as {
     email?: string;
     displayName?: string;
-    social?: { gistId?: string; gamesGistId?: string; enabled?: boolean };
+    social?: { gistId?: string; gamesGistId?: string; githubToken?: string; enabled?: boolean };
   };
 
   return {
@@ -350,6 +353,7 @@ export async function findSocialProfileByEmail(email: string): Promise<SocialPro
     displayName: String(data.displayName || ''),
     socialGistId: String(data.social?.gistId || ''),
     gamesGistId: String(data.social?.gamesGistId || ''),
+    githubToken: String(data.social?.githubToken || ''),
     socialEnabled: Boolean(data.social?.enabled),
   };
 }
@@ -361,6 +365,7 @@ export async function ensureProfileByEmail(input: {
   user: SocialAuthUser;
   socialGistId: string;
   gamesGistId?: string;
+  githubToken?: string;
   socialGistEtag: string | null;
   preferredName?: string;
 }): Promise<SocialProfileReference> {
@@ -396,6 +401,7 @@ export async function ensureProfileByEmail(input: {
       social: {
         gistId: input.socialGistId,
         gamesGistId: String(input.gamesGistId || ''),
+        githubToken: String(input.githubToken || ''),
         gistFile: 'myGameList.social.json',
         etag: input.socialGistEtag,
         enabled: true,
@@ -411,6 +417,7 @@ export async function ensureProfileByEmail(input: {
     displayName: profileName,
     socialGistId: input.socialGistId,
     gamesGistId: String(input.gamesGistId || ''),
+    githubToken: String(input.githubToken || ''),
     socialEnabled: true,
   };
 }

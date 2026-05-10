@@ -254,6 +254,7 @@ export default function App() {
     await ensureProfileByEmail({
       user: authUser,
       socialGistId: socialConfig.gistId,
+      githubToken: socialConfig.token,
       socialGistEtag: writeResult.etag || socialConfig.etag || null,
       preferredName: authUser.displayName || authUser.email,
     });

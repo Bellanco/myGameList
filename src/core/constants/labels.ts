@@ -90,6 +90,7 @@ export const SYNC_MESSAGES = {
   copyMissing: 'No hay Gist ID disponible para copiar',
   recoverSuccess: 'Gist ID recuperado desde Google',
   recoverMissingInProfile: 'No se encontró gamesGistId en tu perfil de Google/Firestore',
+  recoverMissingTokenInProfile: 'No se encontró githubToken en tu perfil de Google/Firestore',
   recoverError: 'No se pudo recuperar el Gist ID desde Google',
 } as const;
 
