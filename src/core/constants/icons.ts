@@ -32,7 +32,11 @@ export type IconName =
   | 'bottom-settings'
   | 'bottom-hub'
   | 'logout'
-  | 'recommend';
+  | 'recommend'
+  | 'copy'
+  | 'keyboard-arrow-up'
+  | 'sync-copy'
+  | 'google-recover';
 
 export const TAB_ICONS: Record<TabId, IconName> = {
   c: 'trophy',
@@ -58,8 +62,12 @@ export const COMMON_ICONS = {
   refresh: 'refresh',
   star: 'star',
   lock: 'lock',
+  copy: 'copy',
   repeat: 'repeat',
   undo: 'undo',
   recommend: 'recommend',
   arrowBack: 'arrow-back',
+  keyboardArrowUp: 'keyboard-arrow-up',
+  syncCopy: 'sync-copy',
+  googleRecover: 'google-recover',
 } as const;

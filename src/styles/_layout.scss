@@ -120,7 +120,7 @@
 }
 
 .settings-card {
-  grid-column: span 4;
+  grid-column: span 12;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
@@ -149,6 +149,82 @@
 
 .settings-import-label {
   cursor: pointer;
+}
+
+.settings-card-status {
+  border-top: 2px solid rgba(26,159,255,.35);
+}
+
+.settings-card-admin {
+  border-top: 2px solid rgba(103,193,141,.35);
+}
+
+.settings-admin-categories {
+  display: flex;
+  flex-direction: column;
+  gap: .75rem;
+}
+
+.settings-admin-category {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: rgba(26,30,36,.55);
+  padding: .65rem;
+}
+
+.settings-admin-toggle {
+  width: 100%;
+  border: none;
+  background: transparent;
+  color: var(--text);
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .75rem;
+  text-align: left;
+  border-radius: var(--radius-sm);
+  padding: .35rem .2rem;
+}
+
+.settings-admin-toggle strong {
+  font-size: .9rem;
+}
+
+.settings-admin-arrow {
+  transition: transform .2s ease;
+  transform: rotate(180deg);
+}
+
+.settings-admin-arrow.open {
+  transform: rotate(0deg);
+}
+
+.settings-admin-empty {
+  color: var(--text-muted);
+}
+
+@media (min-width: 48rem) {
+  .settings-card-status {
+    grid-column: span 7;
+  }
+
+  .settings-card:not(.settings-card-status):not(.settings-card-admin) {
+    grid-column: span 5;
+  }
+
+  .settings-card-admin {
+    grid-column: span 12;
+  }
+}
+
+@media (min-width: 80rem) {
+  .settings-card-status {
+    grid-column: span 6;
+  }
+
+  .settings-card:not(.settings-card-status):not(.settings-card-admin) {
+    grid-column: span 6;
+  }
 }
 
 .bottom-nav {

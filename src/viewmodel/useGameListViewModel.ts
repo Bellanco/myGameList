@@ -104,7 +104,6 @@ export function useGameListViewModel() {
   const [notice, setNotice] = useState<StatusNotice | null>(null);
   const [formModalOpen, setFormModalOpen] = useState(false);
   const [adminModalOpen, setAdminModalOpen] = useState(false);
-  const [syncModalOpen, setSyncModalOpen] = useState(false);
   const [confirmState, setConfirmState] = useState<{ title: string; action: () => void } | null>(null);
   const [editingTab, setEditingTab] = useState<TabId>('c');
   const [draft, setDraft] = useState<GameDraft>(EMPTY_DRAFT);
@@ -544,8 +543,6 @@ export function useGameListViewModel() {
     setFormModalOpen,
     adminModalOpen,
     setAdminModalOpen,
-    syncModalOpen,
-    setSyncModalOpen,
     confirmState,
     setConfirmState,
     editingTab,

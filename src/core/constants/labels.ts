@@ -77,15 +77,74 @@ export const VALIDATION_MESSAGES = {
   tagUpdated: 'Actualizado correctamente',
 } as const;
 
+export const SYNC_MESSAGES = {
+  needsConfiguration: 'Primero configura la sincronización.',
+  connectSuccess: 'Sincronización configurada',
+  connectError: 'Error al conectar sincronización',
+  syncSuccess: 'Datos sincronizados',
+  syncError: 'Error al sincronizar',
+  initError: 'Error de sincronización',
+  disconnectSuccess: 'Sincronización desconectada',
+  copySuccess: 'Gist ID copiado al portapapeles',
+  copyError: 'No se pudo copiar el Gist ID',
+  copyMissing: 'No hay Gist ID disponible para copiar',
+  recoverSuccess: 'Gist ID recuperado desde Google',
+  recoverMissingInProfile: 'No se encontró gamesGistId en tu perfil de Google/Firestore',
+  recoverError: 'No se pudo recuperar el Gist ID desde Google',
+} as const;
+
 export const UI_MESSAGES = {
   admin: {
     noTags: 'No hay etiquetas',
     editPlaceholder: 'Escribe el nuevo valor',
+    editBtn: 'Editar',
+    deleteBtn: 'Eliminar',
     editCancelBtn: 'Cancelar',
     editSaveBtn: 'Guardar',
   },
   form: {
     yearsHint: 'Pulsa Enter para añadir',
+  },
+  settings: {
+    title: 'Ajustes',
+    sync: {
+      title: 'Sincronización',
+      status: 'Estado actual',
+      gistConnectedPrefix: 'Gist conectado',
+      helpGithubTitle: '¿Qué es GitHub Gist?',
+      helpGithubBody: 'GitHub Gist permite guardar tus listas en la nube privada para sincronizarlas entre dispositivos.',
+      helpConfigTitle: 'Cómo configurar',
+      helpConfigBody: 'Crea un token en GitHub con permiso gist y pégalo aquí. Si no recuerdas el Gist ID, puedes recuperarlo desde Google.',
+      tokenLabel: 'Token *',
+      tokenPlaceholder: 'ghp_xxxxxxxxxxxxxxxxxxxxxxx',
+      gistLabel: 'Gist ID (vacío la primera vez)',
+      gistPlaceholder: 'Ej: a1b2c3d4e5f6...',
+      connectBtn: 'Conectar',
+      syncBtn: 'Sincronizar',
+      disconnectBtn: 'Desconectar',
+      copyBtn: 'Copiar Gist ID',
+      recoverBtn: 'Recuperar de Google',
+      recoveringBtn: 'Recuperando...',
+      copyAriaLabel: 'Copiar Gist ID',
+      recoverAriaLabel: 'Recuperar Gist ID desde Google',
+    },
+    backup: {
+      title: 'Respaldo de datos',
+      description: 'Exporta o importa tus listados en formato JSON.',
+      exportBtn: 'Exportar',
+      importBtn: 'Importar',
+      importAriaLabel: 'Seleccionar archivo para importar',
+    },
+    admin: {
+      title: 'Administración de filtros',
+      description: 'Gestiona géneros, plataformas y etiquetas comunes por categoría.',
+      genres: 'Géneros',
+      platforms: 'Plataformas',
+      strengths: 'Puntos fuertes',
+      weaknesses: 'Puntos débiles / razón',
+      collapseAria: 'Ocultar categoría',
+      expandAria: 'Mostrar categoría',
+    },
   },
 } as const;
 
