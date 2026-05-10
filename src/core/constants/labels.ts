@@ -93,7 +93,7 @@ export const SOCIAL_UI = {
   hubTitle: 'Espacio social',
   loading: 'Cargando estado social...',
   gateway: {
-    lead: 'Configura tu espacio social en tres pasos: sincronización principal, identidad Google y vinculación del gist social.',
+    lead: 'Configura tu espacio social en tres pasos: conecta GitHub, valida con Google y crea tu espacio social.',
     stepCaption: (current: number, total: number) => `Paso actual: ${current} de ${total}`,
     progress: (value: number) => `${value}% completado`,
     connectSync: 'Ir a Sincronización',
@@ -111,8 +111,8 @@ export const SOCIAL_UI = {
     gistActive: (gistId: string) => `Gist social activo: ${gistId}`,
     gistMissing: 'Aún no hay gist social enlazado.',
     detailsSummary: 'Ver estado técnico',
-    stateSync: 'Sincronización principal',
-    stateGist: 'Gist social',
+    stateSync: 'Sincronización',
+    stateGist: 'Espacio social',
     stateSession: 'Sesión Google',
     stateConnected: 'Conectada a GitHub',
     stateNotConnected: 'No conectada',
@@ -120,7 +120,7 @@ export const SOCIAL_UI = {
     stateNotLinked: 'No enlazado',
     stateActive: 'Activa',
     stateNotStarted: 'No iniciada',
-    flow: ['1. Sync principal', '2. Google login', '3. Gist social', '4. Feed'],
+    flow: ['1. GitHub', '2. Google', '3. Espacio social', '4. Feed'],
   },
   feed: {
     title: 'Feed social',
@@ -189,8 +189,8 @@ export const SOCIAL_UI = {
     saveProfileFailed: 'No se pudo guardar tu perfil social.',
   },
   steps: [
-    { id: 'sync', title: 'Sync principal', subtitle: 'Conecta GitHub' },
-    { id: 'google', title: 'Google', subtitle: 'Identidad activa' },
-    { id: 'gist', title: 'Gist social', subtitle: 'Único y enlazado' },
+    { id: 'sync', title: 'GitHub', subtitle: 'Conectar' },
+    { id: 'google', title: 'Google', subtitle: 'Validar' },
+    { id: 'gist', title: 'Espacio social', subtitle: 'Crear' },
   ],
 } as const;
