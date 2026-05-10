@@ -1,7 +1,7 @@
 import { GIST_CFG_KEY, SOCIAL_GIST_CFG_KEY } from '../../core/constants/storageKeys';
 import { isValidGistId, isValidGithubToken } from '../../core/security/sanitize';
 import { migrateData } from './migrateRepository';
-import type { SyncConfig, TabData } from '../types/game';
+import type { SyncConfig, TabData, TabId } from '../types/game';
 
 const GIST_FILENAME = 'myGames.json';
 const SOCIAL_GIST_FILENAME = 'myGameList.social.json';
@@ -12,6 +12,31 @@ export interface SocialGistProfile {
   private: boolean;
   favoriteGames: Array<{ id: number; name: string }>;
   recommendations: Array<{ id: number; name: string }>;
+  visibility: SocialProfileVisibility;
+  sharedLists: Partial<Record<TabId, SocialSharedGame[]>>;
+}
+
+export interface SocialProfileVisibility {
+  hiddenTabs: TabId[];
+  hideReplayable: boolean;
+  hideRetry: boolean;
+    hideGameTime: boolean;
+}
+
+export interface SocialSharedGame {
+  id: number;
+  name: string;
+  platforms: string[];
+  genres: string[];
+  steamDeck: boolean;
+  review: string;
+  score: number;
+  strengths: string[];
+  weaknesses: string[];
+  reasons: string[];
+  replayable: boolean;
+  retry: boolean;
+  hours: number | null;
 }
 
 export type SocialActivityType = 'recommendation' | 'review';
@@ -102,11 +127,102 @@ function getEmptySocialGistData(): SocialGistData {
       private: false,
       favoriteGames: [],
       recommendations: [],
+      visibility: {
+        hiddenTabs: [],
+        hideReplayable: false,
+        hideRetry: false,
+        hideGameTime: false,
+      },
+      sharedLists: {},
     },
     recommendations: [],
     activity: [],
     updatedAt: Date.now(),
   };
+}
+
+function normalizeTabId(value: unknown): TabId | null {
+  const tab = String(value || '').trim() as TabId;
+  if (tab === 'c' || tab === 'v' || tab === 'e' || tab === 'p') {
+    return tab;
+  }
+
+  return null;
+}
+
+function normalizeSocialVisibility(value: unknown): SocialProfileVisibility {
+  const source = (value && typeof value === 'object' ? value : {}) as Partial<SocialProfileVisibility>;
+  const hiddenTabs = Array.isArray(source.hiddenTabs)
+    ? source.hiddenTabs
+        .map((tab) => normalizeTabId(tab))
+        .filter((tab): tab is TabId => Boolean(tab))
+    : [];
+
+  return {
+    hiddenTabs: [...new Set(hiddenTabs)],
+    hideReplayable: Boolean(source.hideReplayable),
+    hideRetry: Boolean(source.hideRetry),
+      hideGameTime: Boolean(source.hideGameTime),
+  };
+}
+
+function normalizeSocialSharedGame(value: unknown): SocialSharedGame | null {
+  const source = (value && typeof value === 'object' ? value : {}) as Record<string, unknown>;
+  const id = Number(source.id || 0);
+  const name = String(source.name || '').trim();
+  if (id <= 0 || !name) {
+    return null;
+  }
+
+  const toStringArray = (items: unknown): string[] => {
+    if (!Array.isArray(items)) {
+      return [];
+    }
+
+    return items
+      .map((entry) => String(entry || '').trim())
+      .filter(Boolean)
+      .slice(0, 24);
+  };
+
+  const rawHours = Number(source.hours);
+
+  return {
+    id,
+    name,
+    platforms: toStringArray(source.platforms),
+    genres: toStringArray(source.genres),
+    steamDeck: Boolean(source.steamDeck),
+    review: String(source.review || '').trim(),
+    score: clampRating(source.score),
+    strengths: toStringArray(source.strengths),
+    weaknesses: toStringArray(source.weaknesses),
+    reasons: toStringArray(source.reasons),
+    replayable: Boolean(source.replayable),
+    retry: Boolean(source.retry),
+    hours: Number.isFinite(rawHours) && rawHours >= 0 ? rawHours : null,
+  };
+}
+
+function normalizeSocialSharedLists(value: unknown): Partial<Record<TabId, SocialSharedGame[]>> {
+  const source = (value && typeof value === 'object' ? value : {}) as Record<string, unknown>;
+  const output: Partial<Record<TabId, SocialSharedGame[]>> = {};
+
+  (['c', 'v', 'e', 'p'] as const).forEach((tab) => {
+    const rawItems = source[tab];
+    if (!Array.isArray(rawItems)) {
+      return;
+    }
+
+    const items = rawItems
+      .map((entry) => normalizeSocialSharedGame(entry))
+      .filter((entry): entry is SocialSharedGame => Boolean(entry))
+      .slice(0, 120);
+
+    output[tab] = items;
+  });
+
+  return output;
 }
 
 function clampRating(value: unknown): number {
@@ -396,6 +512,8 @@ function normalizeSocialGistData(data: unknown): SocialGistData {
       private: Boolean(profile.private),
       favoriteGames: toGames(profile.favoriteGames),
       recommendations: toGames(profile.recommendations),
+      visibility: normalizeSocialVisibility(profile.visibility),
+      sharedLists: normalizeSocialSharedLists(profile.sharedLists),
     },
     recommendations: normalizeRecommendationItems(source.recommendations),
     activity: normalizeActivityItems(source.activity),
@@ -578,16 +696,32 @@ export async function readSocialGist(token: string, gistId: string, etag: string
   }
 }
 
-export async function readPublicSocialGistById(gistId: string): Promise<SocialGistData> {
+export async function readPublicSocialGistById(gistId: string, token?: string): Promise<SocialGistData> {
   if (!isValidGistId(gistId)) {
     throw new Error('Gist ID inválido');
   }
 
-  const response = await fetch(`${GIST_API_BASE}/${gistId}`, {
-    headers: {
-      'X-GitHub-Api-Version': '2022-11-28',
-    },
+  const canUseToken = Boolean(token && isValidGithubToken(token));
+  const baseHeaders: Record<string, string> = {
+    'X-GitHub-Api-Version': '2022-11-28',
+  };
+
+  if (canUseToken && token) {
+    baseHeaders.Authorization = getGithubAuthHeader(token);
+  }
+
+  let response = await fetch(`${GIST_API_BASE}/${gistId}`, {
+    headers: baseHeaders,
   });
+
+  if ((response.status === 401 || response.status === 403) && canUseToken) {
+    // Fallback unauthenticated for public/secret-by-link gists when token is invalid or blocked.
+    response = await fetch(`${GIST_API_BASE}/${gistId}`, {
+      headers: {
+        'X-GitHub-Api-Version': '2022-11-28',
+      },
+    });
+  }
 
   if (!response.ok) {
     throw new Error(await buildGithubError(response, 'Read public social gist failed'));
@@ -603,6 +737,50 @@ export async function readPublicSocialGistById(gistId: string): Promise<SocialGi
     return normalizeSocialGistData(JSON.parse(raw));
   } catch {
     return getEmptySocialGistData();
+  }
+}
+
+export async function readPublicGamesGistById(gistId: string, token?: string): Promise<TabData> {
+  if (!isValidGistId(gistId)) {
+    throw new Error('Gist ID inválido');
+  }
+
+  const canUseToken = Boolean(token && isValidGithubToken(token));
+  const baseHeaders: Record<string, string> = {
+    'X-GitHub-Api-Version': '2022-11-28',
+  };
+
+  if (canUseToken && token) {
+    baseHeaders.Authorization = getGithubAuthHeader(token);
+  }
+
+  let response = await fetch(`${GIST_API_BASE}/${gistId}`, {
+    headers: baseHeaders,
+  });
+
+  if ((response.status === 401 || response.status === 403) && canUseToken) {
+    response = await fetch(`${GIST_API_BASE}/${gistId}`, {
+      headers: {
+        'X-GitHub-Api-Version': '2022-11-28',
+      },
+    });
+  }
+
+  if (!response.ok) {
+    throw new Error(await buildGithubError(response, 'Read public games gist failed'));
+  }
+
+  const body = (await response.json()) as { files?: Record<string, { content: string }> };
+  const raw = body.files?.[GIST_FILENAME]?.content;
+
+  if (!raw) {
+    return migrateData({});
+  }
+
+  try {
+    return migrateData(JSON.parse(raw));
+  } catch {
+    return migrateData({});
   }
 }
 

@@ -4,15 +4,19 @@ import {
   createSocialGist,
   getSocialSyncConfig,
   getSyncConfig,
+  readPublicGamesGistById,
   readPublicSocialGistById,
   readSocialGist,
   saveSocialSyncConfig,
   type SocialActivityEntry,
+  type SocialProfileVisibility,
+  type SocialSharedGame,
   updateGistPrivacy,
   writeSocialGist,
 } from '../../model/repository/gistRepository';
 import { SOCIAL_UI } from '../../core/constants/labels';
 import type { IconName } from '../../core/constants/icons';
+import type { GameItem, TabId } from '../../model/types/game';
 import {
   ensureProfileByEmail,
   getCurrentSocialAuthUser,
@@ -24,8 +28,11 @@ import {
 } from '../../model/repository/firebaseRepository';
 import { loadLocalState } from '../../model/repository/localRepository';
 import { Icon } from './Icon';
-import { SocialGameCardSelector } from './SocialGameCardSelector';
-import { StarRating } from './StarRating';
+
+import { SocialProfileScreen } from './socialhub/SocialProfileScreen';
+import { SocialDetailScreen } from './socialhub/SocialDetailScreen';
+import { SocialProfileDetailScreen } from './socialhub/SocialProfileDetailScreen';
+import { SocialFeedScreen } from './socialhub/SocialFeedScreen';
 
 /**
  * Hub social - Fase 1.
@@ -54,6 +61,19 @@ export const SocialHub = memo(function SocialHub() {
     socialGistId: string;
   };
 
+  type SocialDirectoryEntry = {
+    id: string;
+    displayName: string;
+    email: string;
+    socialGistId: string;
+    gamesGistId: string;
+    favorites: string[];
+    recommendations: string[];
+    activity: SocialActivityFeedItem[];
+    sharedLists: Partial<Record<TabId, SocialSharedGame[]>>;
+    visibility: SocialProfileVisibility;
+  };
+
   const [socialCfgGistId, setSocialCfgGistId] = useState<string>('');
   const [socialCfgEtag, setSocialCfgEtag] = useState<string | null>(null);
   const [authUser, setAuthUser] = useState<SocialAuthUser | null>(null);
@@ -67,25 +87,34 @@ export const SocialHub = memo(function SocialHub() {
   const [hasCreatedProfile, setHasCreatedProfile] = useState(false);
   const [profileName, setProfileName] = useState('');
   const [favoriteGameIds, setFavoriteGameIds] = useState<number[]>([]);
-  const [recommendationGameIds, setRecommendationGameIds] = useState<number[]>([]);
+  const [hiddenTabs, setHiddenTabs] = useState<TabId[]>([]);
+  const [hideReplayable, setHideReplayable] = useState(false);
+  const [hideRetry, setHideRetry] = useState(false);
+  const [hideGameTime, setHideGameTime] = useState(false);
   const [favoriteSearch, setFavoriteSearch] = useState('');
-  const [recommendationSearch, setRecommendationSearch] = useState('');
   const [feedSearch, setFeedSearch] = useState('');
-  const [feedFilter, setFeedFilter] = useState<'all' | 'favorites' | 'recommendations'>('all');
+  const [feedFilter, setFeedFilter] = useState<'all' | 'favorites'>('all');
   const [socialPayload, setSocialPayload] = useState<{ recommendations: Array<{ id: number; fromUid: string; toUid: string; gameId: number; gameName: string; message: string; rating: number; createdAt: number; updatedAt: number }>; activity: SocialActivityEntry[] }>({ recommendations: [], activity: [] });
   const [hydratingProfile, setHydratingProfile] = useState(false);
   const [savingProfile, setSavingProfile] = useState(false);
   const [loadingDirectory, setLoadingDirectory] = useState(false);
-  const [socialDirectory, setSocialDirectory] = useState<Array<{ id: string; displayName: string; email: string; socialGistId: string; favorites: string[]; recommendations: string[]; activity: SocialActivityFeedItem[] }>>([]);
+  const [socialDirectory, setSocialDirectory] = useState<SocialDirectoryEntry[]>([]);
   const feedRowRef = useRef<HTMLDivElement | null>(null);
   const feedDraggingRef = useRef(false);
   const feedStartXRef = useRef(0);
   const feedStartScrollRef = useRef(0);
   const [isFeedDragging, setIsFeedDragging] = useState(false);
 
-  const setFeedback = useCallback((kind: 'ok' | 'warn' | 'err', message: string) => {
+  const setFeedback = useCallback((kind: 'ok' | 'warn' | 'err', message: string, duration?: 'short' | 'long') => {
     setStatusKind(kind);
     setStatus(message);
+
+    if (kind === 'err') {
+      return;
+    }
+
+    const ms = duration === 'long' ? 6000 : 3000;
+    setTimeout(() => setStatus(''), ms);
   }, []);
 
   useEffect(() => {
@@ -208,19 +237,6 @@ export const SocialHub = memo(function SocialHub() {
       .sort((a, b) => a.name.localeCompare(b.name, 'es'));
   }, [localState]);
 
-  const nonCompletedGames = useMemo(() => {
-    const map = new Map<number, string>();
-    [...localState.v, ...localState.e, ...localState.p].forEach((game) => {
-      if (game.id > 0 && game.name) {
-        map.set(game.id, game.name);
-      }
-    });
-
-    return [...map.entries()]
-      .map(([id, name]) => ({ id, name }))
-      .sort((a, b) => a.name.localeCompare(b.name, 'es'));
-  }, [localState]);
-
   const completedGameNameById = useMemo(() => {
     const map = new Map<number, string>();
     completedGames.forEach((game) => {
@@ -229,13 +245,46 @@ export const SocialHub = memo(function SocialHub() {
     return map;
   }, [completedGames]);
 
-  const nonCompletedGameNameById = useMemo(() => {
-    const map = new Map<number, string>();
-    nonCompletedGames.forEach((game) => {
-      map.set(game.id, game.name);
+  const defaultSocialVisibility: SocialProfileVisibility = useMemo(() => ({
+    hiddenTabs: [],
+    hideReplayable: false,
+    hideRetry: false,
+    hideGameTime: false,
+  }), []);
+
+  const getOrderedUniqueTabs = useCallback((tabs: TabId[]): TabId[] => {
+    const seen = new Set<TabId>();
+    const ordered: TabId[] = [];
+
+    tabs.forEach((tab) => {
+      if (seen.has(tab)) {
+        return;
+      }
+
+      seen.add(tab);
+      ordered.push(tab);
     });
-    return map;
-  }, [nonCompletedGames]);
+
+    return ordered;
+  }, []);
+
+  const toSharedGame = useCallback((game: GameItem): SocialSharedGame => {
+    return {
+      id: game.id,
+      name: game.name,
+      platforms: game.platforms || [],
+      genres: game.genres || [],
+      steamDeck: Boolean(game.steamDeck),
+      review: game.review || '',
+      score: Number(game.score || 0),
+      strengths: game.strengths || [],
+      weaknesses: game.weaknesses || [],
+      reasons: game.reasons || [],
+      replayable: Boolean(game.replayable),
+      retry: Boolean(game.retry),
+      hours: typeof game.hours === 'number' ? game.hours : null,
+    };
+  }, []);
 
   const visibleSocialDirectory = useMemo(() => {
     return socialDirectory.filter((entry) => entry.socialGistId !== socialCfgGistId);
@@ -243,12 +292,10 @@ export const SocialHub = memo(function SocialHub() {
 
   const feedStats = useMemo(() => {
     const favorites = visibleSocialDirectory.reduce((acc, entry) => acc + entry.favorites.length, 0);
-    const recommendations = visibleSocialDirectory.reduce((acc, entry) => acc + entry.recommendations.length, 0);
     const activities = visibleSocialDirectory.reduce((acc, entry) => acc + entry.activity.length, 0);
     return {
       profiles: visibleSocialDirectory.length,
       favorites,
-      recommendations,
       activities,
     };
   }, [visibleSocialDirectory]);
@@ -268,8 +315,7 @@ export const SocialHub = memo(function SocialHub() {
     return visibleSocialDirectory.filter((entry) => {
       const matchesFilter =
         feedFilter === 'all' ||
-        (feedFilter === 'favorites' && entry.favorites.length > 0) ||
-        (feedFilter === 'recommendations' && entry.recommendations.length > 0);
+        (feedFilter === 'favorites' && entry.favorites.length > 0);
 
       if (!matchesFilter) {
         return false;
@@ -283,7 +329,6 @@ export const SocialHub = memo(function SocialHub() {
         entry.displayName,
         entry.email,
         ...entry.favorites,
-        ...entry.recommendations,
       ]
         .join(' ')
         .toLowerCase();
@@ -292,7 +337,7 @@ export const SocialHub = memo(function SocialHub() {
     });
   }, [feedFilter, feedSearch, visibleSocialDirectory]);
 
-  const activeProfileDetail = useMemo(() => {
+  const selectedProfileDetail = useMemo(() => {
     if (activePanel !== 'profile-detail' || !profileDetailId) {
       return null;
     }
@@ -543,7 +588,6 @@ export const SocialHub = memo(function SocialHub() {
         setFeedback('ok', SOCIAL_UI.status.signInAndLinked);
       } else {
         // No hacer nada aquí; el useEffect automático manejará la creación del gist
-        setFeedback('ok', SOCIAL_UI.status.signInNeedCreate);
       }
     } catch (error) {
       setFeedback('err', error instanceof Error ? error.message : SOCIAL_UI.status.signInFailed);
@@ -576,20 +620,21 @@ export const SocialHub = memo(function SocialHub() {
       const favorites = socialRead.data.profile.favoriteGames
         .map((entry) => entry.id)
         .filter((id) => completedGameNameById.has(id));
-      const highlighted = socialRead.data.profile.recommendations
-        .map((entry) => entry.id)
-        .filter((id) => nonCompletedGameNameById.has(id));
-      const existsInGist = Boolean(socialRead.data.profile.name.trim()) || favorites.length > 0 || highlighted.length > 0;
+      const profileVisibility = socialRead.data.profile.visibility || defaultSocialVisibility;
+      const existsInGist = Boolean(socialRead.data.profile.name.trim()) || favorites.length > 0;
       const existsInFirestore = Boolean(existingProfile?.id && existingProfile.socialEnabled && existingProfile.socialGistId);
       const profileExists = existsInGist || existsInFirestore;
 
       setProfileName(nextName);
       setFavoriteGameIds(favorites);
-      setRecommendationGameIds(highlighted);
+      setHiddenTabs(getOrderedUniqueTabs(profileVisibility.hiddenTabs || []));
+      setHideReplayable(Boolean(profileVisibility.hideReplayable));
+      setHideRetry(Boolean(profileVisibility.hideRetry));
+      setHideGameTime(Boolean(profileVisibility.hideGameTime));
       setHasCreatedProfile(profileExists);
       navigate('/social');
       setSocialPayload({
-        recommendations: socialRead.data.recommendations,
+        recommendations: [],
         activity: socialRead.data.activity,
       });
       if (!profileExists) {
@@ -600,7 +645,7 @@ export const SocialHub = memo(function SocialHub() {
     } finally {
       setHydratingProfile(false);
     }
-  }, [authUser, completedGameNameById, nonCompletedGameNameById, setFeedback, showSocialSpace, socialCfgEtag, socialCfgGistId]);
+  }, [authUser, completedGameNameById, defaultSocialVisibility, getOrderedUniqueTabs, setFeedback, showSocialSpace, socialCfgEtag, socialCfgGistId]);
 
   useEffect(() => {
     void hydrateSocialProfile();
@@ -618,7 +663,23 @@ export const SocialHub = memo(function SocialHub() {
       const withProfiles = await Promise.all(
         entries.map(async (entry) => {
           try {
-            const socialData = await readPublicSocialGistById(entry.socialGistId);
+            const socialData = await readPublicSocialGistById(entry.socialGistId, mainSyncConfig?.token);
+            let sharedLists: Partial<Record<TabId, SocialSharedGame[]>> = socialData.profile.sharedLists || {};
+
+            if (entry.gamesGistId) {
+              try {
+                const gamesData = await readPublicGamesGistById(entry.gamesGistId, mainSyncConfig?.token);
+                sharedLists = {
+                  c: gamesData.c.map((game) => toSharedGame(game)).slice(0, 300),
+                  v: gamesData.v.map((game) => toSharedGame(game)).slice(0, 300),
+                  e: gamesData.e.map((game) => toSharedGame(game)).slice(0, 300),
+                  p: gamesData.p.map((game) => toSharedGame(game)).slice(0, 300),
+                };
+              } catch {
+                // Keep social shared snapshot as fallback.
+              }
+            }
+
             const highlightedRecommendations = socialData.profile.recommendations.map((game) => game.name);
             const sharedRecommendations = socialData.recommendations.map((entry) => entry.gameName);
             const mergedRecommendations = [...new Set([...highlightedRecommendations, ...sharedRecommendations])]
@@ -638,9 +699,12 @@ export const SocialHub = memo(function SocialHub() {
               displayName: socialData.profile.name || entry.displayName || entry.email,
               email: entry.email,
               socialGistId: entry.socialGistId,
+              gamesGistId: entry.gamesGistId,
               favorites: socialData.profile.favoriteGames.map((game) => game.name).slice(0, 5),
               recommendations: mergedRecommendations,
               activity,
+              sharedLists,
+              visibility: socialData.profile.visibility || defaultSocialVisibility,
             };
           } catch {
             return {
@@ -648,9 +712,12 @@ export const SocialHub = memo(function SocialHub() {
               displayName: entry.displayName || entry.email,
               email: entry.email,
               socialGistId: entry.socialGistId,
+              gamesGistId: entry.gamesGistId,
               favorites: [],
               recommendations: [],
               activity: [],
+              sharedLists: {},
+              visibility: defaultSocialVisibility,
             };
           }
         }),
@@ -663,7 +730,7 @@ export const SocialHub = memo(function SocialHub() {
     } finally {
       setLoadingDirectory(false);
     }
-  }, [activePanel, authUser, setFeedback, showSocialSpace, socialCfgGistId]);
+  }, [activePanel, authUser, defaultSocialVisibility, mainSyncConfig?.token, setFeedback, showSocialSpace, socialCfgGistId, toSharedGame]);
 
   useEffect(() => {
     void hydrateSocialDirectory();
@@ -695,19 +762,42 @@ export const SocialHub = memo(function SocialHub() {
     try {
       setSavingProfile(true);
       const validFavoriteIds = favoriteGameIds.filter((id) => completedGameNameById.has(id));
-      const validRecommendationIds = recommendationGameIds.filter((id) => nonCompletedGameNameById.has(id));
-      const nextSharedRecommendations = validRecommendationIds.length === 0 ? [] : socialPayload.recommendations;
+      const normalizedHiddenTabs = getOrderedUniqueTabs(hiddenTabs);
+      const hiddenTabsSet = new Set<TabId>(normalizedHiddenTabs);
+
+      const visibility: SocialProfileVisibility = {
+        hiddenTabs: normalizedHiddenTabs,
+        hideReplayable,
+        hideRetry,
+        hideGameTime,
+      };
+
+      const sharedLists: Partial<Record<TabId, SocialSharedGame[]>> = {};
+      (['c', 'v', 'e', 'p'] as const).forEach((tab) => {
+        if (hiddenTabsSet.has(tab)) {
+          return;
+        }
+
+        const compactGames = localState[tab]
+          .map((game) => toSharedGame(game))
+          .filter((game) => game.id > 0 && Boolean(game.name.trim()))
+          .slice(0, 300);
+
+        sharedLists[tab] = compactGames;
+      });
 
       const profile = {
         name: profileName.trim() || authUser.displayName || authUser.email,
         private: false,
         favoriteGames: validFavoriteIds.map((id) => ({ id, name: completedGameNameById.get(id) || `Juego ${id}` })),
-        recommendations: validRecommendationIds.map((id) => ({ id, name: nonCompletedGameNameById.get(id) || `Juego ${id}` })),
+        recommendations: [], // No más recomendaciones destacadas
+        visibility,
+        sharedLists,
       };
 
       const writeResult = await writeSocialGist(socialConfig.token, socialCfgGistId, {
         profile,
-        recommendations: nextSharedRecommendations,
+        recommendations: [],
         activity: socialPayload.activity,
         updatedAt: Date.now(),
       });
@@ -718,6 +808,7 @@ export const SocialHub = memo(function SocialHub() {
       await ensureProfileByEmail({
         user: authUser,
         socialGistId: socialCfgGistId,
+        gamesGistId: mainSyncConfig?.gistId || '',
         socialGistEtag: writeResult.etag || socialCfgEtag,
         preferredName: profile.name,
       });
@@ -730,10 +821,6 @@ export const SocialHub = memo(function SocialHub() {
       });
       setSocialCfgEtag(writeResult.etag || socialCfgEtag);
       setHasCreatedProfile(true);
-      setSocialPayload((prev) => ({
-        ...prev,
-        recommendations: nextSharedRecommendations,
-      }));
       navigate('/social');
       void hydrateSocialDirectory();
       setFeedback('ok', SOCIAL_UI.status.profileSaved);
@@ -746,22 +833,26 @@ export const SocialHub = memo(function SocialHub() {
     authUser,
     completedGameNameById,
     favoriteGameIds,
+    getOrderedUniqueTabs,
+    hiddenTabs,
+    hideReplayable,
+    hideRetry,
+      hideGameTime,
     hydrateSocialDirectory,
-    nonCompletedGameNameById,
+    localState,
     profileName,
-    recommendationGameIds,
     setFeedback,
     socialCfgEtag,
     socialCfgGistId,
     socialPayload.activity,
-    socialPayload.recommendations,
+    toSharedGame,
   ]);
 
   const handleSignOut = useCallback(async () => {
     await signOutSocialUser();
     setAuthUser(null);
     setShowSocialSpace(false);
-    setFeedback('ok', SOCIAL_UI.status.signOut);
+    setFeedback('ok', SOCIAL_UI.status.signOut, 'long');
   }, [setFeedback]);
 
   const primaryGatewayCta = useMemo(() => {
@@ -831,444 +922,90 @@ export const SocialHub = memo(function SocialHub() {
   if (showSocialSpace && authUser) {
     if (activePanel === 'profile') {
       return (
-        <section className="social-hub social-screen" aria-label="Social">
-          <div className="social-hub-card social-screen-card social-profile-card">
-            <header className="social-screen-header">
-              <div className="social-hub-title-wrap">
-                <Icon name="bottom-hub" className="social-hub-icon" />
-                <h2>{SOCIAL_UI.profile.title}</h2>
-              </div>
-              <p>{SOCIAL_UI.profile.subtitle}</p>
-            </header>
-
-            <div className="social-screen-actions social-screen-actions-split" aria-label="Acciones del perfil social">
-              <div className="social-screen-actions-left">
-                {hasCreatedProfile ? (
-                  <button className="btn btn-secondary" type="button" onClick={() => navigate('/social')}>
-                    <Icon name="arrow-back" />
-                    {SOCIAL_UI.profile.toFeed}
-                  </button>
-                ) : null}
-                <button className="btn btn-primary" type="button" disabled={savingProfile || hydratingProfile} onClick={handleSaveProfile}>
-                  <Icon name="save" />
-                  {savingProfile ? SOCIAL_UI.profile.saving : SOCIAL_UI.profile.save}
-                </button>
-              </div>
-              <div className="social-screen-actions-right">
-                <button className="btn btn-danger" type="button" onClick={handleSignOut}>
-                  <Icon name="logout" />
-                  {SOCIAL_UI.profile.signOut}
-                </button>
-              </div>
-            </div>
-
-            <div className="social-profile-layout">
-              <article className="social-profile-block">
-                <h3>{SOCIAL_UI.profile.identityTitle}</h3>
-                <p>{SOCIAL_UI.profile.identityDescription}</p>
-                <label className="flabel" htmlFor="social-profile-name">{SOCIAL_UI.profile.nameLabel}</label>
-                <input
-                  id="social-profile-name"
-                  className="finput"
-                  type="text"
-                  maxLength={60}
-                  value={profileName}
-                  onChange={(event) => setProfileName(event.target.value)}
-                  placeholder={SOCIAL_UI.profile.namePlaceholder}
-                />
-              </article>
-
-              <SocialGameCardSelector
-                title={SOCIAL_UI.profile.favoritesTitle}
-                description={SOCIAL_UI.profile.favoritesDescription}
-                searchPlaceholder={SOCIAL_UI.profile.favoritesSearchPlaceholder}
-                searchValue={favoriteSearch}
-                selectedIds={favoriteGameIds}
-                options={completedGames}
-                emptyMessage={SOCIAL_UI.profile.searchEmpty}
-                onSearchChange={setFavoriteSearch}
-                onToggle={(id) => toggleGameInSet(id, favoriteGameIds, setFavoriteGameIds)}
-              />
-
-              <SocialGameCardSelector
-                title={SOCIAL_UI.profile.recommendationsTitle}
-                description={SOCIAL_UI.profile.recommendationsDescription}
-                searchPlaceholder={SOCIAL_UI.profile.recommendationsSearchPlaceholder}
-                searchValue={recommendationSearch}
-                selectedIds={recommendationGameIds}
-                options={nonCompletedGames}
-                emptyMessage={SOCIAL_UI.profile.searchEmpty}
-                onSearchChange={setRecommendationSearch}
-                onToggle={(id) => toggleGameInSet(id, recommendationGameIds, setRecommendationGameIds)}
-              />
-            </div>
-
-            {hydratingProfile ? <p>{SOCIAL_UI.profile.hydrating}</p> : null}
-            {status ? <div className={`sync-status-msg ${statusKind}`}>{status}</div> : null}
-          </div>
-        </section>
+        <SocialProfileScreen
+          SOCIAL_UI={SOCIAL_UI}
+          profileName={profileName}
+          setProfileName={setProfileName}
+          favoriteSearch={favoriteSearch}
+          setFavoriteSearch={setFavoriteSearch}
+          favoriteGameIds={favoriteGameIds}
+          setFavoriteGameIds={setFavoriteGameIds}
+          completedGames={completedGames}
+          hydratingProfile={hydratingProfile}
+          savingProfile={savingProfile}
+          hasCreatedProfile={hasCreatedProfile}
+          onSaveProfile={handleSaveProfile}
+          onSignOut={handleSignOut}
+          onBack={() => navigate('/social')}
+          status={status}
+          statusKind={statusKind}
+          toggleGameInSet={toggleGameInSet}
+          hiddenTabs={hiddenTabs}
+          onHiddenTabsChange={setHiddenTabs}
+          hideReplayable={hideReplayable}
+          setHideReplayable={setHideReplayable}
+          hideRetry={hideRetry}
+          setHideRetry={setHideRetry}
+            hideGameTime={hideGameTime}
+            setHideGameTime={setHideGameTime}
+        />
       );
     }
-
     if (activePanel === 'detail') {
       return (
-        <section className="social-hub social-screen" aria-label="Social">
-          <div className="social-hub-card social-screen-card social-feed-card-shell">
-            <header className="social-screen-header">
-              <div className="social-hub-title-wrap">
-                <Icon name="bottom-hub" className="social-hub-icon" />
-                <h2>{SOCIAL_UI.feed.detailTitle}</h2>
-              </div>
-              <p>{SOCIAL_UI.feed.detailSubtitle}</p>
-            </header>
-
-            <div className="social-screen-actions social-screen-actions-split" aria-label="Acciones del detalle social">
-              <div className="social-screen-actions-left">
-                <button className="btn btn-secondary" type="button" onClick={() => navigate('/social')}>
-                  <Icon name="arrow-back" />
-                  {SOCIAL_UI.feed.backToFeed}
-                </button>
-              </div>
-            </div>
-
-            {!activeDetailEvent ? (
-              <p>{SOCIAL_UI.feed.detailMissing}</p>
-            ) : (() => {
-              const gameItem = getGameItemById(activeDetailEvent.gameId);
-
-              return (
-                <article className="social-feed-card social-feed-card-detail">
-                  <header>
-                    <h3>{activeDetailEvent.profileDisplayName}</h3>
-                    <small>{new Date(activeDetailEvent.updatedAt).toLocaleString('es-ES')}</small>
-                  </header>
-                  <p>
-                    {activeDetailEvent.type === 'review'
-                      ? SOCIAL_UI.feed.reviewHeadline(activeDetailEvent.gameName)
-                      : SOCIAL_UI.feed.recommendationHeadline(activeDetailEvent.gameName)}
-                  </p>
-                  <StarRating value={Number(activeDetailEvent.rating || 0)} />
-                  {activeDetailEvent.type === 'review' ? (
-                    <p>{activeDetailEvent.reviewText}</p>
-                  ) : activeDetailEvent.reviewText ? (
-                    <p>{activeDetailEvent.reviewText}</p>
-                  ) : null}
-
-                  {gameItem ? (
-                    <div className="social-detail-metadata">
-                      {gameItem.platforms && gameItem.platforms.length > 0 ? (
-                        <div className="social-metadata-section">
-                          <strong>Plataformas:</strong>
-                          <div className="social-metadata-tags">
-                            {gameItem.platforms.map((platform) => (
-                              <span key={platform} className="social-metadata-tag">
-                                {platform}
-                              </span>
-                            ))}
-                          </div>
-                        </div>
-                      ) : null}
-
-                      {gameItem.genres && gameItem.genres.length > 0 ? (
-                        <div className="social-metadata-section">
-                          <strong>Géneros:</strong>
-                          <div className="social-metadata-tags">
-                            {gameItem.genres.map((genre) => (
-                              <span key={genre} className="social-metadata-tag">
-                                {genre}
-                              </span>
-                            ))}
-                          </div>
-                        </div>
-                      ) : null}
-
-                      {gameItem.strengths && gameItem.strengths.length > 0 ? (
-                        <div className="social-metadata-section">
-                          <strong>Puntos fuertes:</strong>
-                          <div className="chips">
-                            {gameItem.strengths.map((strength) => (
-                              <span key={strength} className="chip chip-pf">
-                                {strength}
-                              </span>
-                            ))}
-                          </div>
-                        </div>
-                      ) : null}
-
-                      {gameItem.weaknesses && gameItem.weaknesses.length > 0 ? (
-                        <div className="social-metadata-section">
-                          <strong>Puntos débiles:</strong>
-                          <div className="chips">
-                            {gameItem.weaknesses.map((weakness) => (
-                              <span key={weakness} className="chip chip-pd">
-                                {weakness}
-                              </span>
-                            ))}
-                          </div>
-                        </div>
-                      ) : null}
-                    </div>
-                  ) : null}
-                </article>
-              );
-            })()}
-
-            {status ? <div className={`sync-status-msg ${statusKind}`}>{status}</div> : null}
-          </div>
-        </section>
+        <SocialDetailScreen
+          SOCIAL_UI={SOCIAL_UI}
+          activeDetailEvent={activeDetailEvent}
+          getGameItemById={getGameItemById}
+          onBack={() => navigate('/social')}
+          status={status}
+          statusKind={statusKind}
+        />
       );
     }
-
     if (activePanel === 'profile-detail') {
       return (
-        <section className="social-hub social-screen" aria-label="Social">
-          <div className="social-hub-card social-screen-card social-feed-card-shell">
-            <header className="social-screen-header">
-              <div className="social-hub-title-wrap">
-                <Icon name="bottom-hub" className="social-hub-icon" />
-                <h2>{SOCIAL_UI.feed.profileDetailTitle}</h2>
-              </div>
-              <p>{SOCIAL_UI.feed.profileDetailSubtitle}</p>
-            </header>
-
-            <div className="social-screen-actions social-screen-actions-split" aria-label="Acciones del detalle de perfil social">
-              <div className="social-screen-actions-left">
-                <button className="btn btn-secondary" type="button" onClick={() => navigate('/social')}>
-                  <Icon name="arrow-back" />
-                  {SOCIAL_UI.feed.backToFeed}
-                </button>
-              </div>
-            </div>
-
-            {!activeProfileDetail ? (
-              <p>{SOCIAL_UI.feed.profileDetailMissing}</p>
-            ) : (
-              <article className="social-feed-card social-feed-card-detail">
-                <header>
-                  <h3>{activeProfileDetail.displayName}</h3>
-                </header>
-
-                <div className="social-detail-metadata">
-                  <div className="social-metadata-section">
-                    <strong>{SOCIAL_UI.feed.profileFavoritesTitle}</strong>
-                    {activeProfileDetail.favorites.length > 0 ? (
-                      <div className="social-card-row">
-                        {activeProfileDetail.favorites.map((favorite) => (
-                          <div key={favorite} className="social-game-card is-read-only">
-                            <span className="social-game-card-title">{favorite}</span>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <p>{SOCIAL_UI.feed.noFavorites}</p>
-                    )}
-                  </div>
-
-                  <div className="social-metadata-section">
-                    <strong>{SOCIAL_UI.feed.profileRecommendationsTitle}</strong>
-                    {activeProfileDetail.recommendations.length > 0 ? (
-                      <div className="social-card-row">
-                        {activeProfileDetail.recommendations.map((recommendedGame) => (
-                          <div key={recommendedGame} className="social-game-card is-read-only">
-                            <span className="social-game-card-title">{recommendedGame}</span>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <p>{SOCIAL_UI.feed.noRecommendations}</p>
-                    )}
-                  </div>
-                </div>
-              </article>
-            )}
-
-            {status ? <div className={`sync-status-msg ${statusKind}`}>{status}</div> : null}
-          </div>
-        </section>
+        <SocialProfileDetailScreen
+          SOCIAL_UI={SOCIAL_UI}
+          activeProfileDetail={selectedProfileDetail}
+          onBack={() => navigate('/social')}
+          status={status}
+          statusKind={statusKind}
+        />
       );
     }
-
     return (
-      <section className="social-hub social-screen" aria-label="Social">
-        <div className="social-hub-card social-screen-card social-feed-card-shell">
-          <header className="social-screen-header">
-            <div className="social-hub-title-wrap">
-              <Icon name="bottom-hub" className="social-hub-icon" />
-              <h2>{SOCIAL_UI.feed.title}</h2>
-            </div>
-            <p>{SOCIAL_UI.feed.subtitle}</p>
-            <h3 className="social-feed-owner">{socialDisplayName}</h3>
-          </header>
-
-          <div className="social-screen-actions social-screen-actions-split" aria-label="Acciones del feed social">
-            <div className="social-screen-actions-left">
-              <button className="btn btn-secondary" type="button" onClick={() => navigate('/social/profile')}>
-                <Icon name="edit" />
-                {SOCIAL_UI.feed.profile}
-              </button>
-              <button className="btn btn-secondary" type="button" disabled={loadingDirectory} onClick={() => void hydrateSocialDirectory()}>
-                <Icon name="refresh" />
-                {loadingDirectory ? SOCIAL_UI.feed.refreshing : SOCIAL_UI.feed.refresh}
-              </button>
-            </div>
-            <div className="social-screen-actions-right">
-              <button className="btn btn-danger" type="button" onClick={handleSignOut}>
-                <Icon name="logout" />
-                {SOCIAL_UI.feed.signOut}
-              </button>
-            </div>
-          </div>
-
-          <div className="fg">
-            <span className="flabel">{SOCIAL_UI.feed.activityTitle}</span>
-            {!loadingDirectory && activityFeedItems.length === 0 ? <p>{SOCIAL_UI.feed.activityEmpty}</p> : null}
-            {!loadingDirectory && activityFeedItems.length > 0 ? (
-              <div className="social-feed-activity-list" role="list" aria-label="Actividad social">
-                {groupedActivityFeedItems.map((group) => (
-                  <div key={group.dayDate.toISOString()} className="social-feed-day-group">
-                    <div className="social-feed-day-header">
-                      <h4>{group.dayHeader}</h4>
-                    </div>
-                    {group.items.map((entry) => {
-                      const reviewText = entry.reviewText.trim();
-                      const cardTypeClass = entry.type === 'review' ? 'is-review' : 'is-recommendation';
-
-                      return (
-                        <article
-                          key={entry.id}
-                          className={`social-feed-card social-feed-activity-item ${cardTypeClass}`}
-                          role="listitem"
-                          tabIndex={0}
-                          aria-label={`Abrir detalle de actividad de ${entry.profileDisplayName} sobre ${entry.gameName}`}
-                          onClick={() => openActivityDetail(entry)}
-                          onKeyDown={(event) => handleActivityItemKeyDown(event, entry)}
-                        >
-                          <header>
-                            <h3>{entry.profileDisplayName}</h3>
-                          </header>
-                          <p>
-                            {entry.type === 'review'
-                              ? SOCIAL_UI.feed.reviewHeadline(entry.gameName)
-                              : SOCIAL_UI.feed.recommendationHeadline(entry.gameName)}
-                          </p>
-                          <StarRating value={Number(entry.rating || 0)} />
-                          {entry.type === 'review' ? (
-                            <p className="social-feed-review-text" title={reviewText}>{reviewText}</p>
-                          ) : reviewText ? (
-                            <p className="social-feed-recommendation-text" title={reviewText}>{reviewText}</p>
-                          ) : null}
-                        </article>
-                      );
-                    })}
-                  </div>
-                ))}
-              </div>
-            ) : null}
-          </div>
-
-          <div className="social-feed-metrics" aria-label="Resumen del feed social">
-            <article className="social-metric-card">
-              <span>{SOCIAL_UI.feed.statsProfiles}</span>
-              <strong>{feedStats.profiles}</strong>
-            </article>
-            <article className="social-metric-card">
-              <span>{SOCIAL_UI.feed.statsFavorites}</span>
-              <strong>{feedStats.favorites}</strong>
-            </article>
-            <article className="social-metric-card">
-              <span>{SOCIAL_UI.feed.statsRecommendations}</span>
-              <strong>{feedStats.recommendations}</strong>
-            </article>
-            <article className="social-metric-card">
-              <span>{SOCIAL_UI.feed.statsActivities}</span>
-              <strong>{feedStats.activities}</strong>
-            </article>
-          </div>
-
-          <div className="social-feed-toolbar" aria-label="Búsqueda y filtros del feed">
-            <label className="social-feed-search">
-              <span>{SOCIAL_UI.feed.searchLabel}</span>
-              <input
-                type="text"
-                className="finput"
-                value={feedSearch}
-                placeholder={SOCIAL_UI.feed.searchPlaceholder}
-                onChange={(event) => setFeedSearch(event.target.value)}
-              />
-            </label>
-            <div className="social-feed-filters" role="tablist" aria-label="Filtro de perfiles">
-              <button
-                type="button"
-                className={`social-filter-chip ${feedFilter === 'all' ? 'is-active' : ''}`}
-                onClick={() => setFeedFilter('all')}
-              >
-                {SOCIAL_UI.feed.filterAll}
-              </button>
-              <button
-                type="button"
-                className={`social-filter-chip ${feedFilter === 'favorites' ? 'is-active' : ''}`}
-                onClick={() => setFeedFilter('favorites')}
-              >
-                {SOCIAL_UI.feed.filterFavorites}
-              </button>
-              <button
-                type="button"
-                className={`social-filter-chip ${feedFilter === 'recommendations' ? 'is-active' : ''}`}
-                onClick={() => setFeedFilter('recommendations')}
-              >
-                {SOCIAL_UI.feed.filterRecommendations}
-              </button>
-            </div>
-            <p className="social-feed-result-count">{SOCIAL_UI.feed.resultCount(filteredSocialDirectory.length)}</p>
-          </div>
-
-          <div className="fg">
-            <span className="flabel">{SOCIAL_UI.feed.sectionTitle}</span>
-            {loadingDirectory ? <p>{SOCIAL_UI.feed.loading}</p> : null}
-            {!loadingDirectory && filteredSocialDirectory.length === 0 ? (
-              <p>{SOCIAL_UI.feed.empty}</p>
-            ) : null}
-            {!loadingDirectory && filteredSocialDirectory.length > 0 ? (
-              <div
-                ref={feedRowRef}
-                className={`social-feed-row ${isFeedDragging ? 'is-dragging' : ''}`}
-                aria-label="Feed social"
-                role="group"
-                tabIndex={0}
-                onMouseDown={handleFeedRowMouseDown}
-                onKeyDown={handleFeedRowKeyDown}
-              >
-                {filteredSocialDirectory.map((entry) => (
-                  <article
-                    key={entry.id}
-                    className="social-feed-card social-feed-profile-item"
-                    tabIndex={0}
-                    aria-label={`Abrir perfil social de ${entry.displayName}`}
-                    onClick={() => openProfileDetail(entry.id)}
-                    onKeyDown={(event) => handleProfileCardKeyDown(event, entry.id)}
-                  >
-                    <header>
-                      <h3>{entry.displayName}</h3>
-                    </header>
-                    <p>
-                      {entry.favorites.length
-                        ? `${SOCIAL_UI.feed.favoritesPrefix}${entry.favorites.join(', ')}`
-                        : SOCIAL_UI.feed.noFavorites}
-                    </p>
-                    <p>
-                      {entry.recommendations.length
-                        ? `${SOCIAL_UI.feed.recommendationsPrefix}${entry.recommendations.join(', ')}`
-                        : SOCIAL_UI.feed.noRecommendations}
-                    </p>
-                  </article>
-                ))}
-              </div>
-            ) : null}
-          </div>
-
-          {status ? <div className={`sync-status-msg ${statusKind}`}>{status}</div> : null}
-        </div>
-      </section>
+      <SocialFeedScreen
+        SOCIAL_UI={SOCIAL_UI}
+        socialDisplayName={socialDisplayName}
+        feedStats={feedStats}
+        feedSearch={feedSearch}
+        setFeedSearch={setFeedSearch}
+        feedFilter={feedFilter}
+        setFeedFilter={(v) => setFeedFilter(v as 'all' | 'favorites')}
+        filteredSocialDirectory={filteredSocialDirectory}
+        loadingDirectory={loadingDirectory}
+        hydrateSocialDirectory={hydrateSocialDirectory}
+        openProfileDetail={(id) => {
+          if (id === 'profile') {
+            navigate('/social/profile');
+          } else {
+            openProfileDetail(id);
+          }
+        }}
+        handleProfileCardKeyDown={handleProfileCardKeyDown}
+        groupedActivityFeedItems={groupedActivityFeedItems}
+        activityFeedItems={activityFeedItems}
+        openActivityDetail={openActivityDetail}
+        handleActivityItemKeyDown={handleActivityItemKeyDown}
+        isFeedDragging={isFeedDragging}
+        feedRowRef={feedRowRef as React.RefObject<HTMLDivElement | null>}
+        handleFeedRowMouseDown={handleFeedRowMouseDown}
+        handleFeedRowKeyDown={handleFeedRowKeyDown}
+        status={status}
+        statusKind={statusKind}
+        handleSignOut={handleSignOut}
+      />
     );
   }
 
@@ -1354,7 +1091,7 @@ export const SocialHub = memo(function SocialHub() {
             </article>
             <article className={`social-status-card ${hasSocialGist ? 'is-ok' : 'is-pending'}`}>
               <span className="social-status-label">{SOCIAL_UI.gateway.stateGist}</span>
-              <strong>{hasSocialGist ? SOCIAL_UI.gateway.stateLinked(socialCfgGistId) : SOCIAL_UI.gateway.stateNotLinked}</strong>
+              <strong>{hasSocialGist ? SOCIAL_UI.gateway.stateLinked : SOCIAL_UI.gateway.stateNotLinked}</strong>
             </article>
             <article className={`social-status-card ${hasSocialSession ? 'is-ok' : 'is-pending'}`}>
               <span className="social-status-label">{SOCIAL_UI.gateway.stateSession}</span>
@@ -1369,7 +1106,7 @@ export const SocialHub = memo(function SocialHub() {
           </div>
         </details>
 
-        {hasSocialGist ? <p>{SOCIAL_UI.gateway.gistActive(socialCfgGistId)}</p> : <p>{SOCIAL_UI.gateway.gistMissing}</p>}
+        {!hasSocialGist ? <p>{SOCIAL_UI.gateway.gistMissing}</p> : null}
         {status ? <div className={`sync-status-msg ${statusKind}`}>{status}</div> : null}
       </div>
     </section>

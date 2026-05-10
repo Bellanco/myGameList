@@ -3,7 +3,7 @@ import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-
 import { DIALOG_MESSAGES, ROUTE_TAB, SYNC_BADGE_TEXT, TAB_ROUTE } from './core/constants/labels';
 import type { TabData, TabId } from './model/types/game';
 import { ensureProfileByEmail, getCurrentSocialAuthUser } from './model/repository/firebaseRepository';
-import { getSocialSyncConfig, readSocialGist, saveSocialSyncConfig, upsertRecommendationActivity, upsertReviewActivity, writeSocialGist } from './model/repository/gistRepository';
+import { getSocialSyncConfig, readSocialGist, saveSocialSyncConfig, upsertReviewActivity, writeSocialGist } from './model/repository/gistRepository';
 import { IconSprite } from './view/components/IconSprite';
 import { Header } from './view/components/Header';
 import { TabBar } from './view/components/TabBar';
@@ -20,7 +20,6 @@ const FormModal = lazy(() => import('./view/modals/FormModal').then((module) => 
 const AdminModal = lazy(() => import('./view/modals/AdminModal').then((module) => ({ default: module.AdminModal })));
 const SyncModal = lazy(() => import('./view/modals/SyncModal').then((module) => ({ default: module.SyncModal })));
 const ConfirmModal = lazy(() => import('./view/modals/ConfirmModal').then((module) => ({ default: module.ConfirmModal })));
-const RecommendationModal = lazy(() => import('./view/modals/RecommendationModal').then((module) => ({ default: module.RecommendationModal })));
 
 function getCurrentTab(pathname: string): TabId {
   return ROUTE_TAB[pathname] || 'c';
@@ -78,9 +77,6 @@ export default function App() {
   const [showToken, setShowToken] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [compactFilters, setCompactFilters] = useState(isCompactFilters());
-  const [recommendationOpen, setRecommendationOpen] = useState(false);
-  const [recommendationGame, setRecommendationGame] = useState<{ id: number; name: string; score: number } | null>(null);
-  const [recommendedGameIds, setRecommendedGameIds] = useState<number[]>([]);
   const resizeRafRef = useRef<number | null>(null);
 
   const tabFilter = vm.filters[currentTab];
@@ -92,34 +88,6 @@ export default function App() {
   useEffect(() => {
     setFilter(currentTab, 'search', '');
   }, [currentTab, setFilter]);
-
-  /**
-   * Carga los juegos recomendados del gist social para mostrar estado visual en el botón.
-   */
-  useEffect(() => {
-    const loadRecommendedGames = async () => {
-      try {
-        const socialConfig = getSocialSyncConfig();
-        if (!socialConfig?.token || !socialConfig.gistId) {
-          setRecommendedGameIds([]);
-          return;
-        }
-
-        const socialRead = await readSocialGist(
-          socialConfig.token,
-          socialConfig.gistId,
-          socialConfig.etag || null,
-        );
-
-        const gameIds = socialRead.data.recommendations.map((rec) => rec.gameId);
-        setRecommendedGameIds([...new Set(gameIds)]);
-      } catch {
-        setRecommendedGameIds([]);
-      }
-    };
-
-    void loadRecommendedGames();
-  }, []);
 
   useEffect(() => {
     const applyLayoutFlags = () => {
@@ -375,82 +343,7 @@ export default function App() {
     setConfirmState(null);
   }, [confirmState, setConfirmState]);
 
-  const handleRecommendGame = useCallback((game: { id: number; name: string; score?: number }) => {
-    setRecommendationGame({
-      id: game.id,
-      name: game.name,
-      score: Number(game.score || 0),
-    });
-    setRecommendationOpen(true);
-  }, []);
 
-  const handleSendRecommendation = useCallback(async () => {
-    const authUser = await getCurrentSocialAuthUser();
-    if (!authUser) {
-      throw new Error('No hay sesión de usuario para enviar recomendación. Inicia sesión en Social primero.');
-    }
-
-    const socialConfig = getSocialSyncConfig();
-    if (!socialConfig?.token || !socialConfig.gistId) {
-      throw new Error('No hay gist social conectado. Configura Social primero.');
-    }
-
-    const game = recommendationGame;
-    if (!game) {
-      throw new Error('No hay juego seleccionado para recomendar');
-    }
-
-    try {
-      const socialRead = await readSocialGist(
-        socialConfig.token,
-        socialConfig.gistId,
-        socialConfig.etag || null,
-      );
-
-      const now = Date.now();
-      const nextPayload = upsertRecommendationActivity(socialRead.data, {
-        actorUid: authUser.uid,
-        actorName: authUser.displayName || authUser.email,
-        gameId: game.id,
-        gameName: game.name,
-        rating: game.score,
-        timestamp: now,
-      });
-
-      const writeResult = await writeSocialGist(socialConfig.token, socialConfig.gistId, nextPayload);
-
-      saveSocialSyncConfig({
-        token: socialConfig.token,
-        gistId: socialConfig.gistId,
-        etag: writeResult.etag || socialConfig.etag || null,
-        lastRemoteUpdatedAt: now,
-      });
-
-      // Mantener el perfil social descubrible por otras cuentas en el feed.
-      await ensureProfileByEmail({
-        user: authUser,
-        socialGistId: socialConfig.gistId,
-        socialGistEtag: writeResult.etag || socialConfig.etag || null,
-        preferredName: authUser.displayName || authUser.email,
-      });
-
-      // Actualizar lista de recomendados para UI
-      setRecommendedGameIds((prev) => 
-        prev.includes(game.id) ? prev.filter((id) => id !== game.id) : [...prev, game.id]
-      );
-
-      notify('ok', `Recomendación de "${game.name}" publicada en tu gist social`);
-    } catch (error) {
-      const msg = error instanceof Error ? error.message : 'Error desconocido';
-      notify('err', `Error al enviar recomendación: ${msg}`);
-      throw error;
-    }
-  }, [recommendationGame, notify]);
-
-  const handleCloseRecommendationModal = useCallback(() => {
-    setRecommendationOpen(false);
-    setRecommendationGame(null);
-  }, []);
 
   const syncBadgeText = SYNC_BADGE_TEXT[syncVm.status] || SYNC_BADGE_TEXT.idle;
 
@@ -499,8 +392,6 @@ export default function App() {
               onEdit={vm.openEditGame}
               onDelete={vm.deleteGame}
               onMigrate={vm.migrateGame}
-              onRecommend={handleRecommendGame}
-              recommendedGameIds={recommendedGameIds}
               tabActions={vm.tabActions[currentTab]}
             />
           </>
@@ -572,14 +463,6 @@ export default function App() {
           title={vm.confirmState?.title || ''}
           onCancel={handleConfirmCancel}
           onConfirm={handleConfirmDelete}
-        />
-
-        <RecommendationModal
-          open={recommendationOpen}
-          game={recommendationGame}
-          currentUserName={'Jugador'}
-          onClose={handleCloseRecommendationModal}
-          onSend={handleSendRecommendation}
         />
       </Suspense>
 

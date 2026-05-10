@@ -14,9 +14,14 @@ interface GameTableProps {
   onEdit: (tab: TabId, id: number) => void;
   onDelete: (tab: TabId, id: number) => void;
   onMigrate: (tab: TabId, id: number, target: TabId) => void;
-  onRecommend?: (game: GameItem) => void;
-  recommendedGameIds?: number[];
   tabActions: TabAction[];
+  readOnly?: boolean;
+  visibility?: {
+    showYears?: boolean;
+    showReplayable?: boolean;
+    showRetry?: boolean;
+    showHours?: boolean;
+  };
 }
 
 interface VirtualRow {
@@ -62,21 +67,46 @@ export const GameTable = memo(function GameTable({
   onEdit,
   onDelete,
   onMigrate,
-  onRecommend,
-  recommendedGameIds = [],
   tabActions,
+  readOnly = false,
+  visibility,
 }: GameTableProps) {
+  const showYears = visibility?.showYears ?? true;
+  const showReplayable = visibility?.showReplayable ?? true;
+  const showRetry = visibility?.showRetry ?? true;
+  const showHours = visibility?.showHours ?? true;
+
   const getTableHeaders = (): string[] => {
-    if (currentTab === 'c') return ['Juego', 'Año', 'Plataformas', 'Géneros', 'Puntos fuertes', 'Puntos débiles', 'Puntuación', 'Rejugar'];
-    if (currentTab === 'v') return ['Juego', 'Plataformas', 'Géneros', 'Puntos fuertes', 'Puntos débiles', 'Dar otra oportunidad'];
+    if (currentTab === 'c') {
+      return [
+        'Juego',
+        ...(showYears ? ['Año'] : []),
+        'Plataformas',
+        'Géneros',
+        'Puntos fuertes',
+        'Puntos débiles',
+        'Puntuación',
+        ...(showReplayable ? ['Rejugar'] : []),
+      ];
+    }
+    if (currentTab === 'v') {
+      return [
+        'Juego',
+        'Plataformas',
+        'Géneros',
+        'Puntos fuertes',
+        'Puntos débiles',
+        ...(showRetry ? ['Dar otra oportunidad'] : []),
+      ];
+    }
     if (currentTab === 'e') return ['Juego', 'Plataformas', 'Géneros', 'Puntos fuertes', 'Puntos débiles'];
     return ['Juego', 'Plataformas', 'Géneros', 'Interés'];
   };
 
   const supportsReview = (tab: TabId) => tab !== 'p';
   const getColSpan = (tab: TabId) => {
-    if (tab === 'c') return 8;
-    if (tab === 'v') return 6;
+    if (tab === 'c') return 6 + (showYears ? 1 : 0) + (showReplayable ? 1 : 0);
+    if (tab === 'v') return 5 + (showRetry ? 1 : 0);
     if (tab === 'e') return 5;
     return 4;
   };
@@ -111,6 +141,10 @@ export const GameTable = memo(function GameTable({
   const topSpacerHeight = virtualRowEntries.length > 0 ? virtualRowEntries[0].start : 0;
   const bottomSpacerHeight =
     virtualRowEntries.length > 0 ? totalSize - virtualRowEntries[virtualRowEntries.length - 1].end : 0;
+  const fallbackToFullRender = games.length > 0 && virtualRows.length > 0 && virtualRowEntries.length === 0;
+  const rowIndexesToRender = fallbackToFullRender
+    ? virtualRows.map((_, index) => index)
+    : virtualRowEntries.map((entry) => entry.index);
 
   const gameMap = useMemo(() => new Map(games.map((g) => [g.id, g])), [games]);
 
@@ -133,13 +167,13 @@ export const GameTable = memo(function GameTable({
             </tr>
           ) : (
             <>
-              {topSpacerHeight > 0 ? (
+              {topSpacerHeight > 0 && !fallbackToFullRender ? (
                 <tr aria-hidden="true">
                   <td colSpan={getColSpan(currentTab)} style={{ height: `${topSpacerHeight}px`, padding: 0, border: 0 }} />
                 </tr>
               ) : null}
-              {virtualRowEntries.map((virtualRow) => {
-                const row = virtualRows[virtualRow.index];
+              {rowIndexesToRender.map((rowIndex) => {
+                const row = virtualRows[rowIndex];
                 const game = gameMap.get(row.gameId);
                 if (!game) return null;
 
@@ -148,7 +182,7 @@ export const GameTable = memo(function GameTable({
                   return (
                     <tr
                       key={`main-${game.id}`}
-                      data-index={virtualRow.index}
+                      data-index={rowIndex}
                       ref={virtualizer.measureElement}
                       className={`main-row ${row.index % 2 === 0 ? 'striped' : ''}`}
                       tabIndex={0}
@@ -161,12 +195,16 @@ export const GameTable = memo(function GameTable({
                           onExpandedChange(expanded ? null : game.id);
                         }
                       }}
-                      onDoubleClick={() => onEdit(currentTab, game.id)}
+                      onDoubleClick={() => {
+                        if (!readOnly) {
+                          onEdit(currentTab, game.id);
+                        }
+                      }}
                     >
                       <td>
                         <strong>{game.name}</strong>
                       </td>
-                      {currentTab === 'c' ? <td>{renderTags(game.years?.map(String) || [], 'chip-generic')}</td> : null}
+                      {currentTab === 'c' && showYears ? <td>{renderTags(game.years?.map(String) || [], 'chip-generic')}</td> : null}
                       <td>{renderTags(game.platforms, 'chip-plat')}</td>
                       <td>{renderTags(game.genres, 'chip-genre')}</td>
                       {(currentTab === 'c' || currentTab === 'v' || currentTab === 'e') ? (
@@ -177,8 +215,8 @@ export const GameTable = memo(function GameTable({
                       ) : null}
                       {currentTab === 'v' ? <td>{renderTags(game.reasons || [], 'chip-pd')}</td> : null}
                       {(currentTab === 'c' || currentTab === 'p') ? <td><StarRating value={game.score || 0} /></td> : null}
-                      {currentTab === 'c' ? <td>{renderBooleanBadge('replayable', Boolean(game.replayable))}</td> : null}
-                      {currentTab === 'v' ? <td>{renderBooleanBadge('retry', Boolean(game.retry))}</td> : null}
+                      {currentTab === 'c' && showReplayable ? <td>{renderBooleanBadge('replayable', Boolean(game.replayable))}</td> : null}
+                      {currentTab === 'v' && showRetry ? <td>{renderBooleanBadge('retry', Boolean(game.retry))}</td> : null}
                     </tr>
                   );
                 }
@@ -186,7 +224,7 @@ export const GameTable = memo(function GameTable({
                 const reviewLines = game.review ? game.review.split('\n') : [];
 
                 return (
-                  <tr key={`detail-${game.id}`} data-index={virtualRow.index} ref={virtualizer.measureElement} className="detail-row open">
+                  <tr key={`detail-${game.id}`} data-index={rowIndex} ref={virtualizer.measureElement} className="detail-row open">
                     <td colSpan={getColSpan(currentTab)} style={{ padding: 0 }}>
                       <div className="detail-content">
                         <div className="detail-box">
@@ -206,13 +244,13 @@ export const GameTable = memo(function GameTable({
                           <span className="detail-label">Géneros</span>
                           <div>{renderTags(game.genres, 'chip-genre')}</div>
                         </div>
-                        {currentTab === 'c' && game.years && game.years.length > 0 && (
+                        {currentTab === 'c' && showYears && game.years && game.years.length > 0 && (
                           <div className="detail-box">
                             <span className="detail-label">Años en los que se completó</span>
                             <div>{renderTags(game.years?.map(String) || [], 'chip-generic')}</div>
                           </div>
                         )}
-                        {currentTab === 'c' && game.hours !== null && (
+                        {currentTab === 'c' && showHours && game.hours !== null && (
                           <div className="detail-box">
                             <span className="detail-label">Tiempo jugado</span>
                             <div>{String(game.hours).replace('.', ',')} horas</div>
@@ -244,13 +282,13 @@ export const GameTable = memo(function GameTable({
                             </div>
                           </div>
                         )}
-                        {currentTab === 'c' && (
+                        {currentTab === 'c' && showReplayable && (
                           <div className="detail-box">
                             <span className="detail-label">Rejugabilidad</span>
                             <div>{renderBooleanBadge('replayable', Boolean(game.replayable))}</div>
                           </div>
                         )}
-                        {currentTab === 'v' && (
+                        {currentTab === 'v' && showRetry && (
                           <div className="detail-box">
                             <span className="detail-label">Dar otra oportunidad</span>
                             <div>{renderBooleanBadge('retry', Boolean(game.retry))}</div>
@@ -269,71 +307,58 @@ export const GameTable = memo(function GameTable({
                             </div>
                           </div>
                         ) : null}
-                        <div className="detail-actions">
-                          {tabActions.map((action) => (
+                        {!readOnly ? (
+                          <div className="detail-actions">
+                            {tabActions.map((action) => (
+                              <button
+                                key={`${game.id}-${action.target}`}
+                                className={`btn ${action.btnCls}`}
+                                type="button"
+                                title={`${action.label} - ${game.name}`}
+                                aria-label={`${action.label} - ${game.name}`}
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  onMigrate(currentTab, game.id, action.target);
+                                }}
+                              >
+                                <Icon name={action.icon} />
+                                <span>{action.label}</span>
+                              </button>
+                            ))}
                             <button
-                              key={`${game.id}-${action.target}`}
-                              className={`btn ${action.btnCls}`}
+                              className="btn btn-secondary"
                               type="button"
-                              title={`${action.label} - ${game.name}`}
-                              aria-label={`${action.label} - ${game.name}`}
+                              title={`Editar - ${game.name}`}
+                              aria-label={`Editar - ${game.name}`}
                               onClick={(event) => {
                                 event.stopPropagation();
-                                onMigrate(currentTab, game.id, action.target);
+                                onEdit(currentTab, game.id);
                               }}
                             >
-                              <Icon name={action.icon} />
-                              <span>{action.label}</span>
+                              <Icon name={COMMON_ICONS.edit} />
+                              <span>Editar</span>
                             </button>
-                          ))}
-                          {onRecommend ? (
                             <button
-                              className={`btn ${recommendedGameIds.includes(game.id) ? 'btn-recommend-active' : 'btn-recommend'}`}
+                              className="btn btn-danger"
                               type="button"
-                              title={`${recommendedGameIds.includes(game.id) ? 'Dejar de' : 'Añadir a'} recomendar - ${game.name}`}
-                              aria-label={`${recommendedGameIds.includes(game.id) ? 'Dejar de' : 'Añadir a'} recomendar - ${game.name}`}
+                              title={`Eliminar - ${game.name}`}
+                              aria-label={`Eliminar - ${game.name}`}
                               onClick={(event) => {
                                 event.stopPropagation();
-                                onRecommend(game);
+                                onDelete(currentTab, game.id);
                               }}
                             >
-                              <Icon name={COMMON_ICONS.recommend} />
-                              <span>{recommendedGameIds.includes(game.id) ? 'Dejar de recomendar' : 'Recomendar'}</span>
+                              <Icon name={COMMON_ICONS.trash} />
+                              <span>Eliminar</span>
                             </button>
-                          ) : null}
-                          <button
-                            className="btn btn-secondary"
-                            type="button"
-                            title={`Editar - ${game.name}`}
-                            aria-label={`Editar - ${game.name}`}
-                            onClick={(event) => {
-                              event.stopPropagation();
-                              onEdit(currentTab, game.id);
-                            }}
-                          >
-                            <Icon name={COMMON_ICONS.edit} />
-                            <span>Editar</span>
-                          </button>
-                          <button
-                            className="btn btn-danger"
-                            type="button"
-                            title={`Eliminar - ${game.name}`}
-                            aria-label={`Eliminar - ${game.name}`}
-                            onClick={(event) => {
-                              event.stopPropagation();
-                              onDelete(currentTab, game.id);
-                            }}
-                          >
-                            <Icon name={COMMON_ICONS.trash} />
-                            <span>Eliminar</span>
-                          </button>
-                        </div>
+                          </div>
+                        ) : null}
                       </div>
                     </td>
                   </tr>
                 );
               })}
-              {bottomSpacerHeight > 0 ? (
+              {bottomSpacerHeight > 0 && !fallbackToFullRender ? (
                 <tr aria-hidden="true">
                   <td colSpan={getColSpan(currentTab)} style={{ height: `${bottomSpacerHeight}px`, padding: 0, border: 0 }} />
                 </tr>

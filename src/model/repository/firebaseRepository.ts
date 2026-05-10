@@ -24,6 +24,7 @@ export interface SocialProfileReference {
   email: string;
   displayName: string;
   socialGistId: string;
+  gamesGistId: string;
   socialEnabled: boolean;
 }
 
@@ -32,6 +33,7 @@ export interface SocialDirectoryEntry {
   email: string;
   displayName: string;
   socialGistId: string;
+  gamesGistId: string;
 }
 
 export interface GameRecommendation {
@@ -267,6 +269,7 @@ export async function signOutSocialUser(): Promise<void> {
 export async function upsertProfileSocialReferences(input: {
   user: SocialAuthUser;
   socialGistId: string;
+  gamesGistId?: string;
   socialGistEtag: string | null;
   preferredName?: string;
 }): Promise<void> {
@@ -286,6 +289,7 @@ export async function upsertProfileSocialReferences(input: {
       photoURL: input.user.photoURL,
       social: {
         gistId: input.socialGistId,
+        gamesGistId: String(input.gamesGistId || ''),
         gistFile: 'myGameList.social.json',
         etag: input.socialGistEtag,
         enabled: true,
@@ -337,7 +341,7 @@ export async function findSocialProfileByEmail(email: string): Promise<SocialPro
   const data = docEntry.data() as {
     email?: string;
     displayName?: string;
-    social?: { gistId?: string; enabled?: boolean };
+    social?: { gistId?: string; gamesGistId?: string; enabled?: boolean };
   };
 
   return {
@@ -345,6 +349,7 @@ export async function findSocialProfileByEmail(email: string): Promise<SocialPro
     email: String(data.email || ''),
     displayName: String(data.displayName || ''),
     socialGistId: String(data.social?.gistId || ''),
+    gamesGistId: String(data.social?.gamesGistId || ''),
     socialEnabled: Boolean(data.social?.enabled),
   };
 }
@@ -355,6 +360,7 @@ export async function findSocialProfileByEmail(email: string): Promise<SocialPro
 export async function ensureProfileByEmail(input: {
   user: SocialAuthUser;
   socialGistId: string;
+  gamesGistId?: string;
   socialGistEtag: string | null;
   preferredName?: string;
 }): Promise<SocialProfileReference> {
@@ -389,6 +395,7 @@ export async function ensureProfileByEmail(input: {
       photoURL: input.user.photoURL,
       social: {
         gistId: input.socialGistId,
+        gamesGistId: String(input.gamesGistId || ''),
         gistFile: 'myGameList.social.json',
         etag: input.socialGistEtag,
         enabled: true,
@@ -403,6 +410,7 @@ export async function ensureProfileByEmail(input: {
     email: cleanEmail,
     displayName: profileName,
     socialGistId: input.socialGistId,
+    gamesGistId: String(input.gamesGistId || ''),
     socialEnabled: true,
   };
 }
@@ -439,7 +447,7 @@ export async function listSocialDirectory(limitCount = 12): Promise<SocialDirect
       const data = entry.data() as {
         email?: string;
         displayName?: string;
-        social?: { gistId?: string; enabled?: boolean };
+        social?: { gistId?: string; gamesGistId?: string; enabled?: boolean };
       };
 
       return {
@@ -447,6 +455,7 @@ export async function listSocialDirectory(limitCount = 12): Promise<SocialDirect
         email: String(data.email || ''),
         displayName: String(data.displayName || ''),
         socialGistId: String(data.social?.gistId || ''),
+        gamesGistId: String(data.social?.gamesGistId || ''),
         enabled: Boolean(data.social?.enabled),
       };
     })
@@ -456,6 +465,7 @@ export async function listSocialDirectory(limitCount = 12): Promise<SocialDirect
       email: entry.email,
       displayName: entry.displayName,
       socialGistId: entry.socialGistId,
+      gamesGistId: entry.gamesGistId,
     }));
 }
 
