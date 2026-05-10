@@ -6,12 +6,7 @@
     "/manifest.json",
     "/robots.txt",
     "/_headers",
+    "/_redirects",
     "/service-worker.js"
-  ],
-  "routes": [
-    {
-      "pattern": "/*",
-      "serve": "/index.html"
-    }
   ]
 }
