@@ -39,11 +39,14 @@ export const SocialHub = memo(function SocialHub() {
   const location = useLocation();
   const navigate = useNavigate();
 
+  const profileEditMatch = location.pathname.match(/^\/social\/profile\/?$/);
+  const profileDetailMatch = location.pathname.match(/^\/social\/profiles\/([^/]+)$/);
   const detailMatch = location.pathname.match(/^\/social\/user\/([^/]+)\/game\/(\d+)\/(review|recommendation)$/);
+  const profileDetailId = profileDetailMatch ? decodeURIComponent(profileDetailMatch[1]) : '';
   const detailActorUid = detailMatch ? decodeURIComponent(detailMatch[1]) : '';
   const detailGameId = detailMatch ? Number(detailMatch[2]) : 0;
   const detailEventType = detailMatch ? detailMatch[3] : '';
-  const activePanel = location.pathname.includes('/profile') ? 'profile' : detailMatch ? 'detail' : 'feed';
+  const activePanel = profileEditMatch ? 'profile' : profileDetailMatch ? 'profile-detail' : detailMatch ? 'detail' : 'feed';
 
   type SocialActivityFeedItem = SocialActivityEntry & {
     profileId: string;
@@ -234,17 +237,21 @@ export const SocialHub = memo(function SocialHub() {
     return map;
   }, [nonCompletedGames]);
 
+  const visibleSocialDirectory = useMemo(() => {
+    return socialDirectory.filter((entry) => entry.socialGistId !== socialCfgGistId);
+  }, [socialCfgGistId, socialDirectory]);
+
   const feedStats = useMemo(() => {
-    const favorites = socialDirectory.reduce((acc, entry) => acc + entry.favorites.length, 0);
-    const recommendations = socialDirectory.reduce((acc, entry) => acc + entry.recommendations.length, 0);
-    const activities = socialDirectory.reduce((acc, entry) => acc + entry.activity.length, 0);
+    const favorites = visibleSocialDirectory.reduce((acc, entry) => acc + entry.favorites.length, 0);
+    const recommendations = visibleSocialDirectory.reduce((acc, entry) => acc + entry.recommendations.length, 0);
+    const activities = visibleSocialDirectory.reduce((acc, entry) => acc + entry.activity.length, 0);
     return {
-      profiles: socialDirectory.length,
+      profiles: visibleSocialDirectory.length,
       favorites,
       recommendations,
       activities,
     };
-  }, [socialDirectory]);
+  }, [visibleSocialDirectory]);
 
   const socialDisplayName = useMemo(() => {
     const preferred = profileName.trim();
@@ -258,7 +265,7 @@ export const SocialHub = memo(function SocialHub() {
   const filteredSocialDirectory = useMemo(() => {
     const normalizedQuery = feedSearch.trim().toLowerCase();
 
-    return socialDirectory.filter((entry) => {
+    return visibleSocialDirectory.filter((entry) => {
       const matchesFilter =
         feedFilter === 'all' ||
         (feedFilter === 'favorites' && entry.favorites.length > 0) ||
@@ -283,7 +290,15 @@ export const SocialHub = memo(function SocialHub() {
 
       return searchable.includes(normalizedQuery);
     });
-  }, [feedFilter, feedSearch, socialDirectory]);
+  }, [feedFilter, feedSearch, visibleSocialDirectory]);
+
+  const activeProfileDetail = useMemo(() => {
+    if (activePanel !== 'profile-detail' || !profileDetailId) {
+      return null;
+    }
+
+    return socialDirectory.find((entry) => entry.id === profileDetailId) || null;
+  }, [activePanel, profileDetailId, socialDirectory]);
 
   const activityFeedItems = useMemo(() => {
     const normalizedQuery = feedSearch.trim().toLowerCase();
@@ -393,6 +408,12 @@ export const SocialHub = memo(function SocialHub() {
       return;
     }
 
+    // No iniciar arrastre si el click es en una tarjeta de perfil
+    const target = event.target as HTMLElement;
+    if (target.closest('.social-feed-profile-item')) {
+      return;
+    }
+
     feedDraggingRef.current = true;
     feedStartXRef.current = event.clientX;
     feedStartScrollRef.current = feedRowRef.current.scrollLeft;
@@ -419,6 +440,10 @@ export const SocialHub = memo(function SocialHub() {
     navigate(`/social/user/${encodeURIComponent(entry.actorUid)}/game/${entry.gameId}/${entry.type}`);
   }, [navigate]);
 
+  const openProfileDetail = useCallback((profileId: string) => {
+    navigate(`/social/profiles/${encodeURIComponent(profileId)}`);
+  }, [navigate]);
+
   const handleActivityItemKeyDown = useCallback(
     (event: ReactKeyboardEvent<HTMLElement>, entry: SocialActivityFeedItem) => {
       if (event.key !== 'Enter' && event.key !== ' ') {
@@ -429,6 +454,18 @@ export const SocialHub = memo(function SocialHub() {
       openActivityDetail(entry);
     },
     [openActivityDetail],
+  );
+
+  const handleProfileCardKeyDown = useCallback(
+    (event: ReactKeyboardEvent<HTMLElement>, profileId: string) => {
+      if (event.key !== 'Enter' && event.key !== ' ') {
+        return;
+      }
+
+      event.preventDefault();
+      openProfileDetail(profileId);
+    },
+    [openProfileDetail],
   );
 
   useEffect(() => {
@@ -982,6 +1019,75 @@ export const SocialHub = memo(function SocialHub() {
       );
     }
 
+    if (activePanel === 'profile-detail') {
+      return (
+        <section className="social-hub social-screen" aria-label="Social">
+          <div className="social-hub-card social-screen-card social-feed-card-shell">
+            <header className="social-screen-header">
+              <div className="social-hub-title-wrap">
+                <Icon name="bottom-hub" className="social-hub-icon" />
+                <h2>{SOCIAL_UI.feed.profileDetailTitle}</h2>
+              </div>
+              <p>{SOCIAL_UI.feed.profileDetailSubtitle}</p>
+            </header>
+
+            <div className="social-screen-actions social-screen-actions-split" aria-label="Acciones del detalle de perfil social">
+              <div className="social-screen-actions-left">
+                <button className="btn btn-secondary" type="button" onClick={() => navigate('/social')}>
+                  <Icon name="arrow-back" />
+                  {SOCIAL_UI.feed.backToFeed}
+                </button>
+              </div>
+            </div>
+
+            {!activeProfileDetail ? (
+              <p>{SOCIAL_UI.feed.profileDetailMissing}</p>
+            ) : (
+              <article className="social-feed-card social-feed-card-detail">
+                <header>
+                  <h3>{activeProfileDetail.displayName}</h3>
+                </header>
+
+                <div className="social-detail-metadata">
+                  <div className="social-metadata-section">
+                    <strong>{SOCIAL_UI.feed.profileFavoritesTitle}</strong>
+                    {activeProfileDetail.favorites.length > 0 ? (
+                      <div className="social-card-row">
+                        {activeProfileDetail.favorites.map((favorite) => (
+                          <div key={favorite} className="social-game-card is-read-only">
+                            <span className="social-game-card-title">{favorite}</span>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p>{SOCIAL_UI.feed.noFavorites}</p>
+                    )}
+                  </div>
+
+                  <div className="social-metadata-section">
+                    <strong>{SOCIAL_UI.feed.profileRecommendationsTitle}</strong>
+                    {activeProfileDetail.recommendations.length > 0 ? (
+                      <div className="social-card-row">
+                        {activeProfileDetail.recommendations.map((recommendedGame) => (
+                          <div key={recommendedGame} className="social-game-card is-read-only">
+                            <span className="social-game-card-title">{recommendedGame}</span>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p>{SOCIAL_UI.feed.noRecommendations}</p>
+                    )}
+                  </div>
+                </div>
+              </article>
+            )}
+
+            {status ? <div className={`sync-status-msg ${statusKind}`}>{status}</div> : null}
+          </div>
+        </section>
+      );
+    }
+
     return (
       <section className="social-hub social-screen" aria-label="Social">
         <div className="social-hub-card social-screen-card social-feed-card-shell">
@@ -1133,7 +1239,14 @@ export const SocialHub = memo(function SocialHub() {
                 onKeyDown={handleFeedRowKeyDown}
               >
                 {filteredSocialDirectory.map((entry) => (
-                  <article key={entry.id} className="social-feed-card">
+                  <article
+                    key={entry.id}
+                    className="social-feed-card social-feed-profile-item"
+                    tabIndex={0}
+                    aria-label={`Abrir perfil social de ${entry.displayName}`}
+                    onClick={() => openProfileDetail(entry.id)}
+                    onKeyDown={(event) => handleProfileCardKeyDown(event, entry.id)}
+                  >
                     <header>
                       <h3>{entry.displayName}</h3>
                     </header>
