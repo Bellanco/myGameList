@@ -42,6 +42,10 @@ const shouldRedirectToProfileEditor = (mustCreateProfile: boolean, activePanel: 
   return mustCreateProfile && activePanel !== 'profile';
 };
 
+const isNotFoundGistError = (error: unknown): boolean => {
+  return error instanceof Error && /\b404\b/.test(error.message);
+};
+
 type SocialPanel = 'profile' | 'profile-detail' | 'detail' | 'feed';
 
 type SocialRouteState = {
@@ -125,7 +129,7 @@ export const SocialHub = memo(function SocialHub() {
   const [hideGameTime, setHideGameTime] = useState(false);
   const [favoriteSearch, setFavoriteSearch] = useState('');
   const [feedSearch, setFeedSearch] = useState('');
-  const [feedFilter, setFeedFilter] = useState<'all' | 'favorites'>('all');
+  const [feedFilter] = useState<'all' | 'favorites'>('all');
   const [socialPayload, setSocialPayload] = useState<{ recommendations: Array<{ id: number; fromUid: string; toUid: string; gameId: number; gameName: string; message: string; rating: number; createdAt: number; updatedAt: number }>; activity: SocialActivityEntry[] }>({ recommendations: [], activity: [] });
   const [hydratingProfile, setHydratingProfile] = useState(false);
   const [savingProfile, setSavingProfile] = useState(false);
@@ -164,6 +168,22 @@ export const SocialHub = memo(function SocialHub() {
           const gistId = profile?.socialEnabled ? profile.socialGistId.trim() : '';
 
           if (gistId) {
+            try {
+              await readSocialGist(mainConfig.token, gistId, null);
+            } catch (error) {
+              if (isNotFoundGistError(error)) {
+                resolvedGistId = '';
+                setSocialCfgGistId('');
+                setSocialCfgEtag(null);
+                setMustCreateProfile(true);
+                navigate('/social/profile');
+                setLoading(false);
+                return;
+              }
+
+              throw error;
+            }
+
             saveSocialSyncConfig({
               token: mainConfig.token,
               gistId,
@@ -193,7 +213,7 @@ export const SocialHub = memo(function SocialHub() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [navigate]);
 
   const mainSyncConfig = useMemo(() => getSyncConfig(), []);
   const hasMainSync = Boolean(mainSyncConfig?.token && mainSyncConfig?.gistId);
@@ -234,6 +254,16 @@ export const SocialHub = memo(function SocialHub() {
 
       if (!existingGistId) {
         return false;
+      }
+
+      try {
+        await readSocialGist(mainSyncConfig.token, existingGistId, null);
+      } catch (error) {
+        if (isNotFoundGistError(error)) {
+          return false;
+        }
+
+        throw error;
       }
 
       saveSocialSyncConfig({
@@ -321,16 +351,6 @@ export const SocialHub = memo(function SocialHub() {
   const visibleSocialDirectory = useMemo(() => {
     return socialDirectory.filter((entry) => entry.socialGistId !== socialCfgGistId);
   }, [socialCfgGistId, socialDirectory]);
-
-  const feedStats = useMemo(() => {
-    const favorites = visibleSocialDirectory.reduce((acc, entry) => acc + entry.favorites.length, 0);
-    const activities = visibleSocialDirectory.reduce((acc, entry) => acc + entry.activity.length, 0);
-    return {
-      profiles: visibleSocialDirectory.length,
-      favorites,
-      activities,
-    };
-  }, [visibleSocialDirectory]);
 
   const socialDisplayName = useMemo(() => {
     const preferred = profileName.trim();
@@ -654,7 +674,13 @@ export const SocialHub = memo(function SocialHub() {
         .filter((id) => completedGameNameById.has(id));
       const profileVisibility = socialRead.data.profile.visibility || defaultSocialVisibility;
       const existsInGist = Boolean(socialRead.data.profile.name.trim()) || favorites.length > 0;
-      const existsInFirestore = Boolean(existingProfile?.id && existingProfile.socialEnabled && existingProfile.socialGistId);
+      const firestoreGistId = existingProfile?.socialGistId?.trim() || '';
+      const existsInFirestore = Boolean(
+        existingProfile?.id &&
+          existingProfile.socialEnabled &&
+          firestoreGistId &&
+          firestoreGistId === socialCfgGistId,
+      );
       const profileExists = existsInGist || existsInFirestore;
 
       setProfileName(nextName);
@@ -681,11 +707,39 @@ export const SocialHub = memo(function SocialHub() {
         setMustCreateProfile(false);
       }
     } catch (error) {
+      if (isNotFoundGistError(error) && authUser && mainSyncConfig?.token) {
+        saveSocialSyncConfig({
+          token: mainSyncConfig.token,
+          gistId: '',
+          etag: null,
+          lastRemoteUpdatedAt: 0,
+        });
+        setSocialCfgGistId('');
+        setSocialCfgEtag(null);
+        setHasCreatedProfile(false);
+        setMustCreateProfile(true);
+        navigate('/social/profile');
+        setFeedback('warn', SOCIAL_UI.gateway.gistMissing);
+        return;
+      }
+
       setFeedback('err', error instanceof Error ? error.message : SOCIAL_UI.status.loadProfileFailed);
     } finally {
       setHydratingProfile(false);
     }
-  }, [authUser, completedGameNameById, defaultSocialVisibility, getOrderedUniqueTabs, navigate, setFeedback, showSocialSpace, socialCfgEtag, socialCfgGistId, justSavedProfile]);
+  }, [
+    authUser,
+    completedGameNameById,
+    defaultSocialVisibility,
+    getOrderedUniqueTabs,
+    navigate,
+    setFeedback,
+    showSocialSpace,
+    socialCfgEtag,
+    socialCfgGistId,
+    justSavedProfile,
+    mainSyncConfig?.token,
+  ]);
 
   useEffect(() => {
     // Force profile edit if profile doesn't exist yet
@@ -1038,7 +1092,7 @@ export const SocialHub = memo(function SocialHub() {
       <SocialFeedScreen
         SOCIAL_UI={SOCIAL_UI}
         socialDisplayName={socialDisplayName}
-        feedStats={feedStats}
+        currentSocialGistId={socialCfgGistId}
         feedSearch={feedSearch}
         setFeedSearch={setFeedSearch}
         filteredSocialDirectory={filteredSocialDirectory}

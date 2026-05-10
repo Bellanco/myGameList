@@ -991,14 +991,14 @@ button.social-chip.active {
   background: inherit;
 }
 
-.social-feed-activity-item.is-review {
-  border-color: rgba(26,159,255,.32);
-  background: linear-gradient(160deg, rgba(26,159,255,.14), rgba(33,36,41,.92));
+.social-feed-activity-item.is-external-activity {
+  border-color: rgba(26,159,255,.34);
+  background: linear-gradient(160deg, rgba(26,159,255,.16), rgba(33,36,41,.9));
 }
 
-.social-feed-activity-item.is-recommendation {
-  border-color: rgba(137,154,168,.28);
-  background: linear-gradient(160deg, rgba(139,160,176,.09), rgba(33,36,41,.74));
+.social-feed-activity-item.is-own-activity {
+  border-color: rgba(137,154,168,.3);
+  background: linear-gradient(160deg, rgba(139,160,176,.1), rgba(33,36,41,.78));
   color: #afc2d0;
 }
 
@@ -1010,8 +1010,8 @@ button.social-chip.active {
   outline: none;
 }
 
-.social-feed-activity-item.is-recommendation:hover,
-.social-feed-activity-item.is-recommendation:focus-visible {
+.social-feed-activity-item.is-own-activity:hover,
+.social-feed-activity-item.is-own-activity:focus-visible {
   border-color: rgba(168,185,199,.42);
   box-shadow: 0 8px 18px rgba(0,0,0,.16);
 }
