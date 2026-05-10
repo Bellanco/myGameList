@@ -4,20 +4,15 @@ export default defineConfig({
   test: {
     environment: 'jsdom',
     globals: true,
-    include: ['public/**/*.test.ts'],
-    exclude: ['node_modules'],
+    include: ['tests/**/*.test.ts', 'src/**/*.test.ts'],
+    exclude: ['node_modules', 'public/**'],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'lcov', 'html'],
       reportOnFailure: true,
       all: true,
-      include: ['public/ts/**/*.ts'],
-      exclude: [
-        'node_modules/',
-        'public/ts/**/*.test.ts',
-        'public/ts/migrate.ts',
-        'public/ts/constants.ts',
-      ],
+      include: ['src/**/*.ts', 'src/**/*.tsx'],
+      exclude: ['node_modules/', 'src/main.tsx', 'src/view/components/IconSprite.tsx'],
     },
   },
 });

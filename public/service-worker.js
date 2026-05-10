@@ -3,11 +3,10 @@
  * Enables offline functionality and caching strategy
  */
 
-const CACHE_NAME = 'mygamelist-v2';
+const CACHE_NAME = 'mygamelist-v3';
 const ASSETS = [
   '/',
   '/index.html',
-  '/style.css',
   '/manifest.json',
 ];
 
