@@ -3,7 +3,7 @@
  * Enables offline functionality and caching strategy
  */
 
-const CACHE_NAME = 'mygamelist-v3';
+const CACHE_NAME = 'mygamelist-v4';
 const ASSETS = [
   '/',
   '/index.html',
@@ -39,15 +39,17 @@ self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
   
-  // Skip non-GET requests and external requests
-  if (request.method !== 'GET' || request.url.includes('gist.github')) {
+  // Keep API/auth requests out of runtime cache to avoid stale sensitive data.
+  if (request.method !== 'GET') {
     return;
   }
 
-  if (url.pathname.includes('/ts/') || 
+  if (url.origin !== self.location.origin) {
+    return;
+  }
+
+  if (url.pathname.includes('/ts/') ||
       url.pathname.includes('@vite') ||
-      url.pathname.endsWith('.ts') ||
-      url.pathname.endsWith('.json') ||
       url.pathname.includes('__vite')) {
     return;
   }
@@ -57,7 +59,7 @@ self.addEventListener('fetch', (event) => {
     fetch(request)
       .then((response) => {
         // Cache successful responses
-        if (response && response.status === 200) {
+        if (response && response.status === 200 && response.type === 'basic') {
           const cache = caches.open(CACHE_NAME);
           cache.then((c) => c.put(request, response.clone()));
         }

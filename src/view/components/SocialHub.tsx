@@ -38,8 +38,12 @@ const shouldRequireProfileCreation = (profileExists: boolean, justSavedProfile: 
   return !profileExists && !justSavedProfile;
 };
 
-const shouldRedirectToProfileEditor = (mustCreateProfile: boolean, activePanel: string): boolean => {
-  return mustCreateProfile && activePanel !== 'profile';
+const shouldRedirectToProfileEditor = (isProfileEditorLocked: boolean, activePanel: string): boolean => {
+  return isProfileEditorLocked && activePanel !== 'profile';
+};
+
+const isProfileEditorLocked = (mustCreateProfile: boolean, hasBlockingSocialIssue: boolean): boolean => {
+  return mustCreateProfile || hasBlockingSocialIssue;
 };
 
 const isNotFoundGistError = (error: unknown): boolean => {
@@ -117,6 +121,7 @@ export const SocialHub = memo(function SocialHub() {
   const [signingIn, setSigningIn] = useState(false);
   const [status, setStatus] = useState('');
   const [statusKind, setStatusKind] = useState<'ok' | 'warn' | 'err'>('ok');
+  const [hasBlockingSocialIssue, setHasBlockingSocialIssue] = useState(false);
   const [showSocialSpace, setShowSocialSpace] = useState(false);
   const [hasCreatedProfile, setHasCreatedProfile] = useState(false);
   const [mustCreateProfile, setMustCreateProfile] = useState(false);
@@ -145,6 +150,13 @@ export const SocialHub = memo(function SocialHub() {
     setStatusKind(kind);
     setStatus(message);
 
+    // Any warning/error blocks feed access until a successful social action clears it.
+    if (kind === 'ok') {
+      setHasBlockingSocialIssue(false);
+    } else {
+      setHasBlockingSocialIssue(true);
+    }
+
     if (kind === 'err') {
       return;
     }
@@ -152,6 +164,14 @@ export const SocialHub = memo(function SocialHub() {
     const ms = duration === 'long' ? 6000 : 3000;
     setTimeout(() => setStatus(''), ms);
   }, []);
+
+  const lockProfileEditor = useCallback(() => {
+    setMustCreateProfile(true);
+
+    if (activePanel !== 'profile') {
+      navigate('/social/profile');
+    }
+  }, [activePanel, navigate]);
 
   useEffect(() => {
     let cancelled = false;
@@ -175,8 +195,7 @@ export const SocialHub = memo(function SocialHub() {
                 resolvedGistId = '';
                 setSocialCfgGistId('');
                 setSocialCfgEtag(null);
-                setMustCreateProfile(true);
-                navigate('/social/profile');
+                lockProfileEditor();
                 setLoading(false);
                 return;
               }
@@ -213,13 +232,14 @@ export const SocialHub = memo(function SocialHub() {
     return () => {
       cancelled = true;
     };
-  }, [navigate]);
+  }, [lockProfileEditor, navigate]);
 
   const mainSyncConfig = useMemo(() => getSyncConfig(), []);
   const hasMainSync = Boolean(mainSyncConfig?.token && mainSyncConfig?.gistId);
   const hasSocialGist = Boolean(socialCfgGistId);
   const hasSocialSession = Boolean(authUser);
   const hasReadyAccess = hasSocialSession && hasSocialGist;
+  const profileEditorLocked = isProfileEditorLocked(mustCreateProfile, hasBlockingSocialIssue);
   const canConnectSocialGist = hasMainSync && hasSocialSession && !hasSocialGist && !connecting && !resolvingSocialGist;
   const canSignInGoogle = hasMainSync && !hasSocialSession && !signingIn;
 
@@ -699,10 +719,7 @@ export const SocialHub = memo(function SocialHub() {
 
       // Keep profile creation routing centralized to avoid navigation regressions.
       if (mustCreate) {
-        setMustCreateProfile(true);
-        if (activePanel !== 'profile') {
-          navigate('/social/profile');
-        }
+        lockProfileEditor();
       } else if (profileExists) {
         setMustCreateProfile(false);
       }
@@ -717,8 +734,7 @@ export const SocialHub = memo(function SocialHub() {
         setSocialCfgGistId('');
         setSocialCfgEtag(null);
         setHasCreatedProfile(false);
-        setMustCreateProfile(true);
-        navigate('/social/profile');
+        lockProfileEditor();
         setFeedback('warn', SOCIAL_UI.gateway.gistMissing);
         return;
       }
@@ -732,6 +748,7 @@ export const SocialHub = memo(function SocialHub() {
     completedGameNameById,
     defaultSocialVisibility,
     getOrderedUniqueTabs,
+    lockProfileEditor,
     navigate,
     setFeedback,
     showSocialSpace,
@@ -743,17 +760,17 @@ export const SocialHub = memo(function SocialHub() {
 
   useEffect(() => {
     // Force profile edit if profile doesn't exist yet
-    if (shouldRedirectToProfileEditor(mustCreateProfile, activePanel)) {
+    if (shouldRedirectToProfileEditor(profileEditorLocked, activePanel)) {
       navigate('/social/profile');
     }
-  }, [mustCreateProfile, activePanel, navigate]);
+  }, [profileEditorLocked, activePanel, navigate]);
 
   useEffect(() => {
     void hydrateSocialProfile();
   }, [hydrateSocialProfile]);
 
   const hydrateSocialDirectory = useCallback(async () => {
-    if (!showSocialSpace || activePanel === 'profile' || mustCreateProfile || !authUser || !socialCfgGistId) {
+    if (!showSocialSpace || activePanel === 'profile' || profileEditorLocked || !authUser || !socialCfgGistId) {
       return;
     }
 
@@ -831,7 +848,7 @@ export const SocialHub = memo(function SocialHub() {
     } finally {
       setLoadingDirectory(false);
     }
-  }, [activePanel, authUser, defaultSocialVisibility, mainSyncConfig?.token, mustCreateProfile, setFeedback, showSocialSpace, socialCfgGistId, toSharedGame]);
+  }, [activePanel, authUser, defaultSocialVisibility, mainSyncConfig?.token, profileEditorLocked, setFeedback, showSocialSpace, socialCfgGistId, toSharedGame]);
 
   useEffect(() => {
     void hydrateSocialDirectory();
