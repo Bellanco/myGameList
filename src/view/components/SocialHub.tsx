@@ -931,9 +931,9 @@ export const SocialHub = memo(function SocialHub() {
                   <StarRating value={Number(activeDetailEvent.rating || 0)} />
                   {activeDetailEvent.type === 'review' ? (
                     <p>{activeDetailEvent.reviewText}</p>
-                  ) : (
-                    <p>{activeDetailEvent.recommendationText || SOCIAL_UI.feed.recommendationEmpty}</p>
-                  )}
+                  ) : activeDetailEvent.reviewText ? (
+                    <p>{activeDetailEvent.reviewText}</p>
+                  ) : null}
 
                   {gameItem ? (
                     <div className="social-detail-metadata">
@@ -1126,9 +1126,9 @@ export const SocialHub = memo(function SocialHub() {
                                 </button>
                               ) : null}
                             </>
-                          ) : (
-                            <p>{entry.recommendationText || SOCIAL_UI.feed.recommendationEmpty}</p>
-                          )}
+                          ) : entry.reviewText ? (
+                            <p>{entry.reviewText}</p>
+                          ) : null}
                           <button type="button" className="btn btn-primary" onClick={() => openActivityDetail(entry)}>
                             {SOCIAL_UI.feed.viewDetail}
                           </button>

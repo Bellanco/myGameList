@@ -80,6 +80,7 @@ export default function App() {
   const [compactFilters, setCompactFilters] = useState(isCompactFilters());
   const [recommendationOpen, setRecommendationOpen] = useState(false);
   const [recommendationGame, setRecommendationGame] = useState<{ id: number; name: string; score: number } | null>(null);
+  const [recommendedGameIds, setRecommendedGameIds] = useState<number[]>([]);
   const resizeRafRef = useRef<number | null>(null);
 
   const tabFilter = vm.filters[currentTab];
@@ -91,6 +92,34 @@ export default function App() {
   useEffect(() => {
     setFilter(currentTab, 'search', '');
   }, [currentTab, setFilter]);
+
+  /**
+   * Carga los juegos recomendados del gist social para mostrar estado visual en el botón.
+   */
+  useEffect(() => {
+    const loadRecommendedGames = async () => {
+      try {
+        const socialConfig = getSocialSyncConfig();
+        if (!socialConfig?.token || !socialConfig.gistId) {
+          setRecommendedGameIds([]);
+          return;
+        }
+
+        const socialRead = await readSocialGist(
+          socialConfig.token,
+          socialConfig.gistId,
+          socialConfig.etag || null,
+        );
+
+        const gameIds = socialRead.data.recommendations.map((rec) => rec.gameId);
+        setRecommendedGameIds([...new Set(gameIds)]);
+      } catch {
+        setRecommendedGameIds([]);
+      }
+    };
+
+    void loadRecommendedGames();
+  }, []);
 
   useEffect(() => {
     const applyLayoutFlags = () => {
@@ -355,7 +384,7 @@ export default function App() {
     setRecommendationOpen(true);
   }, []);
 
-  const handleSendRecommendation = useCallback(async (toEmail: string, message: string) => {
+  const handleSendRecommendation = useCallback(async () => {
     const authUser = await getCurrentSocialAuthUser();
     if (!authUser) {
       throw new Error('No hay sesión de usuario para enviar recomendación. Inicia sesión en Social primero.');
@@ -379,14 +408,11 @@ export default function App() {
       );
 
       const now = Date.now();
-      const toUid = toEmail.trim().toLowerCase() || 'public';
       const nextPayload = upsertRecommendationActivity(socialRead.data, {
         actorUid: authUser.uid,
         actorName: authUser.displayName || authUser.email,
-        toUid,
         gameId: game.id,
         gameName: game.name,
-        message: message.trim(),
         rating: game.score,
         timestamp: now,
       });
@@ -407,6 +433,11 @@ export default function App() {
         socialGistEtag: writeResult.etag || socialConfig.etag || null,
         preferredName: authUser.displayName || authUser.email,
       });
+
+      // Actualizar lista de recomendados para UI
+      setRecommendedGameIds((prev) => 
+        prev.includes(game.id) ? prev.filter((id) => id !== game.id) : [...prev, game.id]
+      );
 
       notify('ok', `Recomendación de "${game.name}" publicada en tu gist social`);
     } catch (error) {
@@ -469,6 +500,7 @@ export default function App() {
               onDelete={vm.deleteGame}
               onMigrate={vm.migrateGame}
               onRecommend={handleRecommendGame}
+              recommendedGameIds={recommendedGameIds}
               tabActions={vm.tabActions[currentTab]}
             />
           </>

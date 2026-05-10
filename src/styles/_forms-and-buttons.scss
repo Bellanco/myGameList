@@ -137,6 +137,12 @@
 .btn-inprogress:hover { background: rgba(229,177,67,.2); }
 .btn-abandoned    { background: rgba(209,91,88,.1);   color: #ffb5b2;  border: 1px solid rgba(209,91,88,.24); }
 .btn-abandoned:hover  { background: rgba(209,91,88,.18); }
+.btn-recommend { background: rgba(103,193,141,.12); color: #84d5a8; border: 1px solid rgba(103,193,141,.28); transition: all .25s; }
+.btn-recommend:hover { background: rgba(103,193,141,.22); }
+.btn-recommend:active { transform: scale(.98); }
+.btn-recommend-active { background: rgba(239,68,68,.15); color: #fca5a5; border: 1px solid rgba(239,68,68,.3); transition: all .25s; }
+.btn-recommend-active:hover { background: rgba(239,68,68,.25); }
+.btn-recommend-active:active { transform: scale(.98); }
 .btn-toggle { background: var(--surface-elevated); color: var(--text-muted); border: 1px solid var(--border); }
 .btn-toggle.active { background: var(--steam-soft); color: var(--steam-hover); border-color: rgba(26,159,255,.34); }
 .btn-toggle span { white-space: nowrap; }

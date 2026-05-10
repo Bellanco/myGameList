@@ -19,10 +19,8 @@ export type SocialActivityType = 'recommendation' | 'review';
 export interface SocialRecommendationEntry {
   id: number;
   fromUid: string;
-  toUid: string;
   gameId: number;
   gameName: string;
-  message: string;
   rating: number;
   createdAt: number;
   updatedAt: number;
@@ -53,10 +51,8 @@ export interface SocialGistData {
 export interface UpsertRecommendationInput {
   actorUid: string;
   actorName: string;
-  toUid: string;
   gameId: number;
   gameName: string;
-  message: string;
   rating: number;
   timestamp?: number;
 }
@@ -169,10 +165,8 @@ function normalizeRecommendationItems(items: unknown): SocialRecommendationEntry
       return {
         id: Number(record.id || createdAt),
         fromUid,
-        toUid: String(record.toUid || 'public').trim() || 'public',
         gameId,
         gameName,
-        message: String(record.message || '').trim(),
         rating: clampRating(record.rating),
         createdAt,
         updatedAt,
@@ -247,7 +241,7 @@ function mergeLegacyActivity(
       gameId: recommendation.gameId,
       gameName: recommendation.gameName,
       rating: recommendation.rating,
-      recommendationText: recommendation.message,
+      recommendationText: '',
       reviewText: '',
       createdAt: current?.createdAt || recommendation.createdAt,
       updatedAt: Math.max(current?.updatedAt || 0, recommendation.updatedAt),
@@ -297,10 +291,8 @@ function upsertRecommendationEntry(
   const next: SocialRecommendationEntry = {
     id: existing?.id || timestamp,
     fromUid: input.actorUid,
-    toUid: input.toUid,
     gameId: input.gameId,
     gameName: input.gameName,
-    message: input.message,
     rating: clampRating(input.rating),
     createdAt,
     updatedAt: timestamp,
@@ -330,11 +322,7 @@ export function upsertRecommendationActivity(data: SocialGistData, input: Upsert
     return data;
   }
 
-  const recommendations = upsertRecommendationEntry(data.recommendations || [], {
-    ...input,
-    gameName: cleanName,
-    message: String(input.message || '').trim(),
-  }, now);
+  const recommendations = upsertRecommendationEntry(data.recommendations || [], input, now);
 
   const activity = upsertActivityEntry(data.activity || [], {
     type: 'recommendation',
@@ -343,7 +331,7 @@ export function upsertRecommendationActivity(data: SocialGistData, input: Upsert
     gameId: input.gameId,
     gameName: cleanName,
     rating: clampRating(input.rating),
-    recommendationText: String(input.message || '').trim(),
+    recommendationText: '',
     reviewText: '',
   }, now);
 
