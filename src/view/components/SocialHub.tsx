@@ -1,7 +1,19 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type MouseEvent as ReactMouseEvent } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { createSocialGist, getSocialSyncConfig, getSyncConfig, readPublicSocialGistById, readSocialGist, saveSocialSyncConfig, writeSocialGist, updateGistPrivacy } from '../../model/repository/gistRepository';
+import {
+  buildReviewExcerpt,
+  createSocialGist,
+  getSocialSyncConfig,
+  getSyncConfig,
+  readPublicSocialGistById,
+  readSocialGist,
+  saveSocialSyncConfig,
+  type SocialActivityEntry,
+  writeSocialGist,
+  updateGistPrivacy,
+} from '../../model/repository/gistRepository';
 import { SOCIAL_UI } from '../../core/constants/labels';
+import type { IconName } from '../../core/constants/icons';
 import {
   ensureProfileByEmail,
   getCurrentSocialAuthUser,
@@ -14,6 +26,7 @@ import {
 import { loadLocalState } from '../../model/repository/localRepository';
 import { Icon } from './Icon';
 import { SocialGameCardSelector } from './SocialGameCardSelector';
+import { StarRating } from './StarRating';
 
 /**
  * Hub social - Fase 1.
@@ -27,8 +40,17 @@ export const SocialHub = memo(function SocialHub() {
   const location = useLocation();
   const navigate = useNavigate();
 
-  // Determinar panel basado en URL
-  const activePanel = location.pathname.includes('/profile') ? 'profile' : 'feed';
+  const detailMatch = location.pathname.match(/^\/social\/user\/([^/]+)\/game\/(\d+)\/(review|recommendation)$/);
+  const detailActorUid = detailMatch ? decodeURIComponent(detailMatch[1]) : '';
+  const detailGameId = detailMatch ? Number(detailMatch[2]) : 0;
+  const detailEventType = detailMatch ? detailMatch[3] : '';
+  const activePanel = location.pathname.includes('/profile') ? 'profile' : detailMatch ? 'detail' : 'feed';
+
+  type SocialActivityFeedItem = SocialActivityEntry & {
+    profileId: string;
+    profileDisplayName: string;
+    socialGistId: string;
+  };
 
   const [socialCfgGistId, setSocialCfgGistId] = useState<string>('');
   const [socialCfgEtag, setSocialCfgEtag] = useState<string | null>(null);
@@ -49,11 +71,12 @@ export const SocialHub = memo(function SocialHub() {
   const [recommendationSearch, setRecommendationSearch] = useState('');
   const [feedSearch, setFeedSearch] = useState('');
   const [feedFilter, setFeedFilter] = useState<'all' | 'favorites' | 'recommendations'>('all');
-  const [socialPayload, setSocialPayload] = useState<{ recommendations: Array<{ id: number; fromUid: string; toUid: string; gameId: number; gameName: string; createdAt: number }>; activity: Array<{ id: number; type: string; actorUid: string; createdAt: number }> }>({ recommendations: [], activity: [] });
+  const [socialPayload, setSocialPayload] = useState<{ recommendations: Array<{ id: number; fromUid: string; toUid: string; gameId: number; gameName: string; message: string; rating: number; createdAt: number; updatedAt: number }>; activity: SocialActivityEntry[] }>({ recommendations: [], activity: [] });
   const [hydratingProfile, setHydratingProfile] = useState(false);
   const [savingProfile, setSavingProfile] = useState(false);
   const [loadingDirectory, setLoadingDirectory] = useState(false);
-  const [socialDirectory, setSocialDirectory] = useState<Array<{ id: string; displayName: string; email: string; socialGistId: string; favorites: string[]; recommendations: string[] }>>([]);
+  const [socialDirectory, setSocialDirectory] = useState<Array<{ id: string; displayName: string; email: string; socialGistId: string; favorites: string[]; recommendations: string[]; activity: SocialActivityFeedItem[] }>>([]);
+  const [expandedFeedItems, setExpandedFeedItems] = useState<Record<string, boolean>>({});
   const feedRowRef = useRef<HTMLDivElement | null>(null);
   const feedDraggingRef = useRef(false);
   const feedStartXRef = useRef(0);
@@ -217,10 +240,12 @@ export const SocialHub = memo(function SocialHub() {
   const feedStats = useMemo(() => {
     const favorites = socialDirectory.reduce((acc, entry) => acc + entry.favorites.length, 0);
     const recommendations = socialDirectory.reduce((acc, entry) => acc + entry.recommendations.length, 0);
+    const activities = socialDirectory.reduce((acc, entry) => acc + entry.activity.length, 0);
     return {
       profiles: socialDirectory.length,
       favorites,
       recommendations,
+      activities,
     };
   }, [socialDirectory]);
 
@@ -263,6 +288,109 @@ export const SocialHub = memo(function SocialHub() {
     });
   }, [feedFilter, feedSearch, socialDirectory]);
 
+  const activityFeedItems = useMemo(() => {
+    const normalizedQuery = feedSearch.trim().toLowerCase();
+
+    const feedItems = socialDirectory
+      .flatMap((entry) => entry.activity)
+      .sort((a, b) => b.updatedAt - a.updatedAt)
+      .slice(0, 300);
+
+    if (!normalizedQuery) {
+      return feedItems;
+    }
+
+    return feedItems.filter((item) => {
+      const haystack = [
+        item.profileDisplayName,
+        item.actorName,
+        item.gameName,
+        item.recommendationText,
+        item.reviewText,
+      ]
+        .join(' ')
+        .toLowerCase();
+
+      return haystack.includes(normalizedQuery);
+    });
+  }, [feedSearch, socialDirectory]);
+
+  const activeDetailEvent = useMemo(() => {
+    if (activePanel !== 'detail' || !detailActorUid || detailGameId <= 0 || !detailEventType) {
+      return null;
+    }
+
+    return activityFeedItems.find(
+      (entry) =>
+        entry.actorUid === detailActorUid &&
+        entry.gameId === detailGameId &&
+        entry.type === detailEventType,
+    ) || null;
+  }, [activePanel, activityFeedItems, detailActorUid, detailEventType, detailGameId]);
+
+  /**
+   * Obtiene el GameItem por su ID desde el estado local de todas las tabs.
+   */
+  const getGameItemById = useCallback((gameId: number) => {
+    const allGames = [
+      ...localState.c,
+      ...localState.v,
+      ...localState.e,
+      ...localState.p,
+    ];
+    return allGames.find((game) => game.id === gameId) || null;
+  }, [localState]);
+
+  /**
+   * Formatea la fecha como "DD de MMM".
+   */
+  const formatDayHeader = (date: Date): string => {
+    const monthNames = [
+      'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
+      'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre',
+    ];
+
+    return `${date.getDate()} de ${monthNames[date.getMonth()]}`;
+  };
+
+  /**
+   * Agrupa las actividades por día y retorna array con day headers.
+   */
+  const groupedActivityFeedItems = useMemo(() => {
+    const groups: Array<{
+      dayHeader: string;
+      dayDate: Date;
+      items: SocialActivityFeedItem[];
+    }> = [];
+
+    const itemsByDay = new Map<string, SocialActivityFeedItem[]>();
+
+    activityFeedItems.forEach((item) => {
+      const itemDate = new Date(item.updatedAt);
+      const dayKey = itemDate.toISOString().split('T')[0];
+
+      if (!itemsByDay.has(dayKey)) {
+        itemsByDay.set(dayKey, []);
+      }
+
+      itemsByDay.get(dayKey)!.push(item);
+    });
+
+    const sortedDays = Array.from(itemsByDay.entries())
+      .sort((a, b) => new Date(b[0]).getTime() - new Date(a[0]).getTime());
+
+    sortedDays.forEach(([dayKey, items]) => {
+      const dayDate = new Date(dayKey);
+      groups.push({
+        dayHeader: formatDayHeader(dayDate),
+        dayDate,
+        items,
+      });
+    });
+
+    return groups;
+  }, [activityFeedItems, formatDayHeader]);
+
   const handleFeedRowMouseDown = useCallback((event: ReactMouseEvent<HTMLDivElement>) => {
     if (event.button !== 0 || !feedRowRef.current) {
       return;
@@ -289,6 +417,17 @@ export const SocialHub = memo(function SocialHub() {
       event.preventDefault();
     }
   }, []);
+
+  const toggleFeedReviewExpanded = useCallback((entryId: string) => {
+    setExpandedFeedItems((prev) => ({
+      ...prev,
+      [entryId]: !prev[entryId],
+    }));
+  }, []);
+
+  const openActivityDetail = useCallback((entry: SocialActivityFeedItem) => {
+    navigate(`/social/user/${encodeURIComponent(entry.actorUid)}/game/${entry.gameId}/${entry.type}`);
+  }, [navigate]);
 
   useEffect(() => {
     const handleMouseMove = (event: MouseEvent) => {
@@ -430,7 +569,7 @@ export const SocialHub = memo(function SocialHub() {
   }, [hydrateSocialProfile]);
 
   const hydrateSocialDirectory = useCallback(async () => {
-    if (!showSocialSpace || activePanel !== 'feed' || !authUser || !socialCfgGistId) {
+    if (!showSocialSpace || activePanel === 'profile' || !authUser || !socialCfgGistId) {
       return;
     }
 
@@ -447,6 +586,14 @@ export const SocialHub = memo(function SocialHub() {
             const mergedRecommendations = [...new Set([...highlightedRecommendations, ...sharedRecommendations])]
               .filter((name) => Boolean(name && name.trim()))
               .slice(0, 8);
+            const activity = socialData.activity
+              .map((activityEntry) => ({
+                ...activityEntry,
+                profileId: entry.id,
+                profileDisplayName: socialData.profile.name || entry.displayName || entry.email,
+                socialGistId: entry.socialGistId,
+              }))
+              .slice(0, 40);
 
             return {
               id: entry.id,
@@ -455,6 +602,7 @@ export const SocialHub = memo(function SocialHub() {
               socialGistId: entry.socialGistId,
               favorites: socialData.profile.favoriteGames.map((game) => game.name).slice(0, 5),
               recommendations: mergedRecommendations,
+              activity,
             };
           } catch {
             return {
@@ -464,6 +612,7 @@ export const SocialHub = memo(function SocialHub() {
               socialGistId: entry.socialGistId,
               favorites: [],
               recommendations: [],
+              activity: [],
             };
           }
         }),
@@ -584,43 +733,50 @@ export const SocialHub = memo(function SocialHub() {
   }, [setFeedback]);
 
   const primaryGatewayCta = useMemo(() => {
+    type GatewayCta = {
+      icon: IconName;
+      label: string;
+      action: () => void;
+      disabled: boolean;
+    };
+
     // Paso 1: Conectar sincronización principal (token)
     if (!hasMainSync) {
       return {
-        icon: 'settings' as const,
+        icon: 'gear',
         label: SOCIAL_UI.gateway.connectSync,
         action: () => navigate('/ajustes'),
         disabled: false,
-      };
+      } satisfies GatewayCta;
     }
 
     // Paso 2: Google (si tenemos token pero no sesión)
     if (resolvingSocialGist) {
       return {
-        icon: 'cloud-sync' as const,
+        icon: 'cloud-sync',
         label: SOCIAL_UI.gateway.resolveProfile,
         action: () => undefined,
         disabled: true,
-      };
+      } satisfies GatewayCta;
     }
 
     if (canSignInGoogle) {
       return {
-        icon: 'bottom-hub' as const,
+        icon: 'bottom-hub',
         label: signingIn ? SOCIAL_UI.gateway.signingIn : SOCIAL_UI.gateway.signIn,
         action: () => void handleSignInGoogle(),
         disabled: signingIn,
-      };
+      } satisfies GatewayCta;
     }
 
     // Paso 3: Gist social (si tenemos sesión pero no gist) - normalmente automático pero se puede forzar
     if (canConnectSocialGist) {
       return {
-        icon: 'cloud-sync' as const,
+        icon: 'cloud-sync',
         label: connecting ? SOCIAL_UI.gateway.creatingGist : SOCIAL_UI.gateway.createGist,
         action: () => void handleCreateSocialGist(),
         disabled: connecting,
-      };
+      } satisfies GatewayCta;
     }
 
     return null;
@@ -735,6 +891,115 @@ export const SocialHub = memo(function SocialHub() {
       );
     }
 
+    if (activePanel === 'detail') {
+      return (
+        <section className="social-hub social-screen" aria-label="Social">
+          <div className="social-hub-card social-screen-card social-feed-card-shell">
+            <header className="social-screen-header">
+              <div className="social-hub-title-wrap">
+                <Icon name="bottom-hub" className="social-hub-icon" />
+                <h2>{SOCIAL_UI.feed.detailTitle}</h2>
+              </div>
+              <p>{SOCIAL_UI.feed.detailSubtitle}</p>
+            </header>
+
+            <div className="social-screen-actions social-screen-actions-split" aria-label="Acciones del detalle social">
+              <div className="social-screen-actions-left">
+                <button className="btn btn-secondary" type="button" onClick={() => navigate('/social')}>
+                  <Icon name="arrow-right" />
+                  {SOCIAL_UI.feed.backToFeed}
+                </button>
+              </div>
+            </div>
+
+            {!activeDetailEvent ? (
+              <p>{SOCIAL_UI.feed.detailMissing}</p>
+            ) : (() => {
+              const gameItem = getGameItemById(activeDetailEvent.gameId);
+
+              return (
+                <article className="social-feed-card social-feed-card-detail">
+                  <header>
+                    <h3>{activeDetailEvent.profileDisplayName}</h3>
+                    <small>{new Date(activeDetailEvent.updatedAt).toLocaleString('es-ES')}</small>
+                  </header>
+                  <p>
+                    {activeDetailEvent.type === 'review'
+                      ? SOCIAL_UI.feed.reviewHeadline(activeDetailEvent.gameName)
+                      : SOCIAL_UI.feed.recommendationHeadline(activeDetailEvent.gameName)}
+                  </p>
+                  <StarRating value={Number(activeDetailEvent.rating || 0)} />
+                  {activeDetailEvent.type === 'review' ? (
+                    <p>{activeDetailEvent.reviewText}</p>
+                  ) : (
+                    <p>{activeDetailEvent.recommendationText || SOCIAL_UI.feed.recommendationEmpty}</p>
+                  )}
+
+                  {gameItem ? (
+                    <div className="social-detail-metadata">
+                      {gameItem.platforms && gameItem.platforms.length > 0 ? (
+                        <div className="social-metadata-section">
+                          <strong>Plataformas:</strong>
+                          <div className="social-metadata-tags">
+                            {gameItem.platforms.map((platform) => (
+                              <span key={platform} className="social-metadata-tag">
+                                {platform}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      ) : null}
+
+                      {gameItem.genres && gameItem.genres.length > 0 ? (
+                        <div className="social-metadata-section">
+                          <strong>Géneros:</strong>
+                          <div className="social-metadata-tags">
+                            {gameItem.genres.map((genre) => (
+                              <span key={genre} className="social-metadata-tag">
+                                {genre}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      ) : null}
+
+                      {gameItem.strengths && gameItem.strengths.length > 0 ? (
+                        <div className="social-metadata-section">
+                          <strong>Puntos fuertes:</strong>
+                          <div className="chips">
+                            {gameItem.strengths.map((strength) => (
+                              <span key={strength} className="chip chip-pf">
+                                {strength}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      ) : null}
+
+                      {gameItem.weaknesses && gameItem.weaknesses.length > 0 ? (
+                        <div className="social-metadata-section">
+                          <strong>Puntos débiles:</strong>
+                          <div className="chips">
+                            {gameItem.weaknesses.map((weakness) => (
+                              <span key={weakness} className="chip chip-pd">
+                                {weakness}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      ) : null}
+                    </div>
+                  ) : null}
+                </article>
+              );
+            })()}
+
+            {status ? <div className={`sync-status-msg ${statusKind}`}>{status}</div> : null}
+          </div>
+        </section>
+      );
+    }
+
     return (
       <section className="social-hub social-screen" aria-label="Social">
         <div className="social-hub-card social-screen-card social-feed-card-shell">
@@ -779,6 +1044,10 @@ export const SocialHub = memo(function SocialHub() {
               <span>{SOCIAL_UI.feed.statsRecommendations}</span>
               <strong>{feedStats.recommendations}</strong>
             </article>
+            <article className="social-metric-card">
+              <span>{SOCIAL_UI.feed.statsActivities}</span>
+              <strong>{feedStats.activities}</strong>
+            </article>
           </div>
 
           <div className="social-feed-toolbar" aria-label="Búsqueda y filtros del feed">
@@ -816,6 +1085,60 @@ export const SocialHub = memo(function SocialHub() {
               </button>
             </div>
             <p className="social-feed-result-count">{SOCIAL_UI.feed.resultCount(filteredSocialDirectory.length)}</p>
+          </div>
+
+          <div className="fg">
+            <span className="flabel">{SOCIAL_UI.feed.activityTitle}</span>
+            {!loadingDirectory && activityFeedItems.length === 0 ? <p>{SOCIAL_UI.feed.activityEmpty}</p> : null}
+            {!loadingDirectory && activityFeedItems.length > 0 ? (
+              <div className="social-feed-activity-list" role="list" aria-label="Actividad social">
+                {groupedActivityFeedItems.map((group) => (
+                  <div key={group.dayDate.toISOString()} className="social-feed-day-group">
+                    <div className="social-feed-day-header">
+                      <h4>{group.dayHeader}</h4>
+                    </div>
+                    {group.items.map((entry) => {
+                      const excerpt = buildReviewExcerpt(entry.reviewText, 180);
+                      const hasFullReview = entry.type === 'review' && excerpt.length < entry.reviewText.trim().length;
+                      const expanded = Boolean(expandedFeedItems[entry.id]);
+
+                      return (
+                        <article key={entry.id} className="social-feed-card social-feed-activity-item" role="listitem">
+                          <header>
+                            <h3>{entry.profileDisplayName}</h3>
+                          </header>
+                          <p>
+                            {entry.type === 'review'
+                              ? SOCIAL_UI.feed.reviewHeadline(entry.gameName)
+                              : SOCIAL_UI.feed.recommendationHeadline(entry.gameName)}
+                          </p>
+                          <StarRating value={Number(entry.rating || 0)} />
+                          {entry.type === 'review' ? (
+                            <>
+                              <p>{expanded ? entry.reviewText : excerpt}</p>
+                              {hasFullReview ? (
+                                <button
+                                  type="button"
+                                  className="btn btn-secondary"
+                                  onClick={() => toggleFeedReviewExpanded(entry.id)}
+                                >
+                                  {expanded ? SOCIAL_UI.feed.showLess : SOCIAL_UI.feed.showMore}
+                                </button>
+                              ) : null}
+                            </>
+                          ) : (
+                            <p>{entry.recommendationText || SOCIAL_UI.feed.recommendationEmpty}</p>
+                          )}
+                          <button type="button" className="btn btn-primary" onClick={() => openActivityDetail(entry)}>
+                            {SOCIAL_UI.feed.viewDetail}
+                          </button>
+                        </article>
+                      );
+                    })}
+                  </div>
+                ))}
+              </div>
+            ) : null}
           </div>
 
           <div className="fg">

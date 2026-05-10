@@ -14,11 +14,61 @@ export interface SocialGistProfile {
   recommendations: Array<{ id: number; name: string }>;
 }
 
+export type SocialActivityType = 'recommendation' | 'review';
+
+export interface SocialRecommendationEntry {
+  id: number;
+  fromUid: string;
+  toUid: string;
+  gameId: number;
+  gameName: string;
+  message: string;
+  rating: number;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface SocialActivityEntry {
+  id: string;
+  key: string;
+  type: SocialActivityType;
+  actorUid: string;
+  actorName: string;
+  gameId: number;
+  gameName: string;
+  rating: number;
+  recommendationText: string;
+  reviewText: string;
+  createdAt: number;
+  updatedAt: number;
+}
+
 export interface SocialGistData {
   profile: SocialGistProfile;
-  recommendations: Array<{ id: number; fromUid: string; toUid: string; gameId: number; gameName: string; createdAt: number }>;
-  activity: Array<{ id: number; type: string; actorUid: string; createdAt: number }>;
+  recommendations: SocialRecommendationEntry[];
+  activity: SocialActivityEntry[];
   updatedAt: number;
+}
+
+export interface UpsertRecommendationInput {
+  actorUid: string;
+  actorName: string;
+  toUid: string;
+  gameId: number;
+  gameName: string;
+  message: string;
+  rating: number;
+  timestamp?: number;
+}
+
+export interface UpsertReviewInput {
+  actorUid: string;
+  actorName: string;
+  gameId: number;
+  gameName: string;
+  reviewText: string;
+  rating: number;
+  timestamp?: number;
 }
 
 function getGithubAuthHeader(token: string): string {
@@ -63,6 +113,275 @@ function getEmptySocialGistData(): SocialGistData {
   };
 }
 
+function clampRating(value: unknown): number {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) {
+    return 0;
+  }
+
+  return Math.max(0, Math.min(5, numeric));
+}
+
+function normalizeTimestamp(value: unknown, fallback: number): number {
+  const numeric = Number(value);
+  return Number.isFinite(numeric) && numeric > 0 ? numeric : fallback;
+}
+
+function normalizeActivityType(value: unknown): SocialActivityType | null {
+  const normalized = String(value || '').trim().toLowerCase();
+  if (normalized === 'review' || normalized === 'review_created' || normalized === 'review_updated') {
+    return 'review';
+  }
+
+  if (normalized === 'recommendation' || normalized === 'recommendation_with_message') {
+    return 'recommendation';
+  }
+
+  return null;
+}
+
+function buildActivityKey(actorUid: string, gameId: number, type: SocialActivityType): string {
+  return `${actorUid}:${gameId}:${type}`;
+}
+
+function buildActivityId(actorUid: string, gameId: number, type: SocialActivityType): string {
+  return buildActivityKey(actorUid, gameId, type);
+}
+
+function normalizeRecommendationItems(items: unknown): SocialRecommendationEntry[] {
+  if (!Array.isArray(items)) {
+    return [];
+  }
+
+  return items
+    .map((entry) => {
+      const record = (entry && typeof entry === 'object' ? entry : {}) as Record<string, unknown>;
+      const gameId = Number(record.gameId || 0);
+      const fromUid = String(record.fromUid || '').trim();
+      const gameName = String(record.gameName || '').trim();
+      const createdAt = normalizeTimestamp(record.createdAt, Date.now());
+      const updatedAt = normalizeTimestamp(record.updatedAt, createdAt);
+
+      if (!fromUid || gameId <= 0 || !gameName) {
+        return null;
+      }
+
+      return {
+        id: Number(record.id || createdAt),
+        fromUid,
+        toUid: String(record.toUid || 'public').trim() || 'public',
+        gameId,
+        gameName,
+        message: String(record.message || '').trim(),
+        rating: clampRating(record.rating),
+        createdAt,
+        updatedAt,
+      } satisfies SocialRecommendationEntry;
+    })
+    .filter((entry): entry is SocialRecommendationEntry => Boolean(entry))
+    .sort((a, b) => b.updatedAt - a.updatedAt)
+    .slice(0, 160);
+}
+
+function normalizeActivityItems(items: unknown): SocialActivityEntry[] {
+  if (!Array.isArray(items)) {
+    return [];
+  }
+
+  return items
+    .map((entry) => {
+      const record = (entry && typeof entry === 'object' ? entry : {}) as Record<string, unknown>;
+      const type = normalizeActivityType(record.type);
+      const actorUid = String(record.actorUid || '').trim();
+      const gameId = Number(record.gameId || 0);
+      const gameName = String(record.gameName || '').trim();
+      const createdAt = normalizeTimestamp(record.createdAt, Date.now());
+      const updatedAt = normalizeTimestamp(record.updatedAt, createdAt);
+
+      if (!type || !actorUid || gameId <= 0 || !gameName) {
+        return null;
+      }
+
+      const key = String(record.key || buildActivityKey(actorUid, gameId, type)).trim() || buildActivityKey(actorUid, gameId, type);
+
+      return {
+        id: String(record.id || buildActivityId(actorUid, gameId, type)),
+        key,
+        type,
+        actorUid,
+        actorName: String(record.actorName || '').trim(),
+        gameId,
+        gameName,
+        rating: clampRating(record.rating),
+        recommendationText: String(record.recommendationText || '').trim(),
+        reviewText: String(record.reviewText || '').trim(),
+        createdAt,
+        updatedAt,
+      } satisfies SocialActivityEntry;
+    })
+    .filter((entry): entry is SocialActivityEntry => Boolean(entry))
+    .sort((a, b) => b.updatedAt - a.updatedAt)
+    .slice(0, 320);
+}
+
+function mergeLegacyActivity(
+  normalizedActivity: SocialActivityEntry[],
+  recommendations: SocialRecommendationEntry[],
+): SocialActivityEntry[] {
+  const map = new Map<string, SocialActivityEntry>();
+
+  normalizedActivity.forEach((entry) => {
+    map.set(entry.key, entry);
+  });
+
+  recommendations.forEach((recommendation) => {
+    const key = buildActivityKey(recommendation.fromUid, recommendation.gameId, 'recommendation');
+    const current = map.get(key);
+
+    const candidate: SocialActivityEntry = {
+      id: buildActivityId(recommendation.fromUid, recommendation.gameId, 'recommendation'),
+      key,
+      type: 'recommendation',
+      actorUid: recommendation.fromUid,
+      actorName: current?.actorName || '',
+      gameId: recommendation.gameId,
+      gameName: recommendation.gameName,
+      rating: recommendation.rating,
+      recommendationText: recommendation.message,
+      reviewText: '',
+      createdAt: current?.createdAt || recommendation.createdAt,
+      updatedAt: Math.max(current?.updatedAt || 0, recommendation.updatedAt),
+    };
+
+    map.set(key, candidate);
+  });
+
+  return [...map.values()]
+    .sort((a, b) => b.updatedAt - a.updatedAt)
+    .slice(0, 320);
+}
+
+function upsertActivityEntry(
+  items: SocialActivityEntry[],
+  next: Omit<SocialActivityEntry, 'id' | 'key' | 'createdAt' | 'updatedAt'>,
+  timestamp: number,
+): SocialActivityEntry[] {
+  const key = buildActivityKey(next.actorUid, next.gameId, next.type);
+  const existing = items.find((entry) => entry.key === key);
+  const createdAt = existing?.createdAt || timestamp;
+
+  const entry: SocialActivityEntry = {
+    id: existing?.id || buildActivityId(next.actorUid, next.gameId, next.type),
+    key,
+    createdAt,
+    updatedAt: timestamp,
+    ...next,
+  };
+
+  return [
+    entry,
+    ...items.filter((candidate) => candidate.key !== key),
+  ]
+    .sort((a, b) => b.updatedAt - a.updatedAt)
+    .slice(0, 320);
+}
+
+function upsertRecommendationEntry(
+  items: SocialRecommendationEntry[],
+  input: UpsertRecommendationInput,
+  timestamp: number,
+): SocialRecommendationEntry[] {
+  const existing = items.find((entry) => entry.fromUid === input.actorUid && entry.gameId === input.gameId);
+  const createdAt = existing?.createdAt || timestamp;
+
+  const next: SocialRecommendationEntry = {
+    id: existing?.id || timestamp,
+    fromUid: input.actorUid,
+    toUid: input.toUid,
+    gameId: input.gameId,
+    gameName: input.gameName,
+    message: input.message,
+    rating: clampRating(input.rating),
+    createdAt,
+    updatedAt: timestamp,
+  };
+
+  return [
+    next,
+    ...items.filter((entry) => !(entry.fromUid === input.actorUid && entry.gameId === input.gameId)),
+  ]
+    .sort((a, b) => b.updatedAt - a.updatedAt)
+    .slice(0, 160);
+}
+
+export function buildReviewExcerpt(text: string, maxLength = 180): string {
+  const clean = String(text || '').trim().replace(/\s+/g, ' ');
+  if (clean.length <= maxLength) {
+    return clean;
+  }
+
+  return `${clean.slice(0, Math.max(0, maxLength - 1)).trimEnd()}…`;
+}
+
+export function upsertRecommendationActivity(data: SocialGistData, input: UpsertRecommendationInput): SocialGistData {
+  const now = input.timestamp || Date.now();
+  const cleanName = String(input.gameName || '').trim();
+  if (!input.actorUid || input.gameId <= 0 || !cleanName) {
+    return data;
+  }
+
+  const recommendations = upsertRecommendationEntry(data.recommendations || [], {
+    ...input,
+    gameName: cleanName,
+    message: String(input.message || '').trim(),
+  }, now);
+
+  const activity = upsertActivityEntry(data.activity || [], {
+    type: 'recommendation',
+    actorUid: input.actorUid,
+    actorName: String(input.actorName || '').trim(),
+    gameId: input.gameId,
+    gameName: cleanName,
+    rating: clampRating(input.rating),
+    recommendationText: String(input.message || '').trim(),
+    reviewText: '',
+  }, now);
+
+  return {
+    ...data,
+    recommendations,
+    activity,
+    updatedAt: now,
+  };
+}
+
+export function upsertReviewActivity(data: SocialGistData, input: UpsertReviewInput): SocialGistData {
+  const now = input.timestamp || Date.now();
+  const cleanReview = String(input.reviewText || '').trim();
+  const cleanName = String(input.gameName || '').trim();
+
+  if (!input.actorUid || input.gameId <= 0 || !cleanName || !cleanReview) {
+    return data;
+  }
+
+  const activity = upsertActivityEntry(data.activity || [], {
+    type: 'review',
+    actorUid: input.actorUid,
+    actorName: String(input.actorName || '').trim(),
+    gameId: input.gameId,
+    gameName: cleanName,
+    rating: clampRating(input.rating),
+    recommendationText: '',
+    reviewText: cleanReview,
+  }, now);
+
+  return {
+    ...data,
+    activity,
+    updatedAt: now,
+  };
+}
+
 function normalizeSocialGistData(data: unknown): SocialGistData {
   const source = (data && typeof data === 'object' ? data : {}) as Partial<SocialGistData>;
   const profile = (source.profile && typeof source.profile === 'object' ? source.profile : {}) as Partial<SocialGistProfile>;
@@ -90,10 +409,12 @@ function normalizeSocialGistData(data: unknown): SocialGistData {
       favoriteGames: toGames(profile.favoriteGames),
       recommendations: toGames(profile.recommendations),
     },
-    recommendations: Array.isArray(source.recommendations) ? (source.recommendations as SocialGistData['recommendations']) : [],
-    activity: Array.isArray(source.activity) ? (source.activity as SocialGistData['activity']) : [],
+    recommendations: normalizeRecommendationItems(source.recommendations),
+    activity: normalizeActivityItems(source.activity),
     updatedAt: Number(source.updatedAt || Date.now()),
   };
+
+  normalized.activity = mergeLegacyActivity(normalized.activity, normalized.recommendations);
 
   return normalized;
 }
