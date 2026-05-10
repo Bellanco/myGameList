@@ -30,7 +30,8 @@ export type IconName =
   | 'bottom-lists'
   | 'bottom-settings'
   | 'bottom-hub'
-  | 'logout';
+  | 'logout'
+  | 'recommend';
 
 export const TAB_ICONS: Record<TabId, IconName> = {
   c: 'trophy',
@@ -58,4 +59,5 @@ export const COMMON_ICONS = {
   lock: 'lock',
   repeat: 'repeat',
   undo: 'undo',
+  recommend: 'recommend',
 } as const;

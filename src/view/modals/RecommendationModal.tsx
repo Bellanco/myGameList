@@ -4,15 +4,15 @@ import { COMMON_ICONS } from '../../core/constants/icons';
 
 interface RecommendationModalProps {
   open: boolean;
-  game: { id: number; name: string } | null;
+  game: { id: number; name: string; score: number } | null;
   currentUserName: string;
   onClose: () => void;
-  onSend: (toEmail: string, message: string) => Promise<void>;
+  onSend: () => Promise<void>;
 }
 
 /**
  * Modal para publicar una recomendación en el gist social.
- * Permite opcionalmente etiquetar un email de destino y añadir un mensaje.
+ * Solo permite activar/desactivar la recomendación del juego.
  */
 export const RecommendationModal = memo(function RecommendationModal({
   open,
@@ -21,36 +21,23 @@ export const RecommendationModal = memo(function RecommendationModal({
   onClose,
   onSend,
 }: RecommendationModalProps) {
-  const [toEmail, setToEmail] = useState('');
-  const [message, setMessage] = useState('');
   const [sending, setSending] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
 
   const handleSend = useCallback(async () => {
-    const cleanEmail = toEmail.trim().toLowerCase();
-
-    if (cleanEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) {
-      setErrorMsg('Email no válido');
-      return;
-    }
-
     try {
       setSending(true);
       setErrorMsg('');
-      await onSend(cleanEmail, message.trim());
-      setToEmail('');
-      setMessage('');
+      await onSend();
       onClose();
     } catch (error) {
-      setErrorMsg(error instanceof Error ? error.message : 'Error al enviar recomendación');
+      setErrorMsg(error instanceof Error ? error.message : 'Error al publicar recomendación');
     } finally {
       setSending(false);
     }
-  }, [toEmail, message, onSend, onClose]);
+  }, [onSend, onClose]);
 
   const handleClose = useCallback(() => {
-    setToEmail('');
-    setMessage('');
     setErrorMsg('');
     onClose();
   }, [onClose]);
@@ -101,33 +88,13 @@ export const RecommendationModal = memo(function RecommendationModal({
 
           <div className="frow">
             <div className="fg">
-              <label className="flabel" htmlFor="rec-to-email">Email de destino (opcional)</label>
+              <label className="flabel" htmlFor="rec-puntuacion">Puntuación</label>
               <input
-                id="rec-to-email"
+                id="rec-puntuacion"
                 className="finput"
-                type="email"
-                placeholder="amigo@example.com"
-                value={toEmail}
-                onChange={(event) => {
-                  setToEmail(event.target.value);
-                  setErrorMsg('');
-                }}
-                disabled={sending}
-              />
-            </div>
-          </div>
-
-          <div className="frow">
-            <div className="fg">
-              <label className="flabel" htmlFor="rec-message">Mensaje (opcional)</label>
-              <textarea
-                id="rec-message"
-                className="finput"
-                placeholder={`Te recomiendo jugar "${game.name}" porque...`}
-                value={message}
-                onChange={(event) => setMessage(event.target.value)}
-                disabled={sending}
-                rows={4}
+                type="text"
+                readOnly
+                value={game.score > 0 ? `${game.score}/5` : 'Sin puntuación'}
               />
             </div>
           </div>
@@ -142,7 +109,7 @@ export const RecommendationModal = memo(function RecommendationModal({
 
           <div className="frow">
             <small className="tag-hint" style={{ color: 'var(--text-muted)' }}>
-              {currentUserName} publicará "{game.name}" en su perfil social para que aparezca en el hub.
+              {currentUserName} publicará "{game.name}" como recomendación en el feed social de sus contactos.
             </small>
           </div>
         </div>

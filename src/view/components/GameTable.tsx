@@ -15,6 +15,7 @@ interface GameTableProps {
   onDelete: (tab: TabId, id: number) => void;
   onMigrate: (tab: TabId, id: number, target: TabId) => void;
   onRecommend?: (game: GameItem) => void;
+  recommendedGameIds?: number[];
   tabActions: TabAction[];
 }
 
@@ -62,6 +63,7 @@ export const GameTable = memo(function GameTable({
   onDelete,
   onMigrate,
   onRecommend,
+  recommendedGameIds = [],
   tabActions,
 }: GameTableProps) {
   const getTableHeaders = (): string[] => {
@@ -286,17 +288,17 @@ export const GameTable = memo(function GameTable({
                           ))}
                           {onRecommend ? (
                             <button
-                              className="btn btn-secondary"
+                              className={`btn ${recommendedGameIds.includes(game.id) ? 'btn-recommend-active' : 'btn-recommend'}`}
                               type="button"
-                              title={`Recomendar - ${game.name}`}
-                              aria-label={`Recomendar - ${game.name}`}
+                              title={`${recommendedGameIds.includes(game.id) ? 'Dejar de' : 'Añadir a'} recomendar - ${game.name}`}
+                              aria-label={`${recommendedGameIds.includes(game.id) ? 'Dejar de' : 'Añadir a'} recomendar - ${game.name}`}
                               onClick={(event) => {
                                 event.stopPropagation();
                                 onRecommend(game);
                               }}
                             >
-                              <Icon name={COMMON_ICONS.gift} />
-                              <span>Recomendar</span>
+                              <Icon name={COMMON_ICONS.recommend} />
+                              <span>{recommendedGameIds.includes(game.id) ? 'Dejar de recomendar' : 'Recomendar'}</span>
                             </button>
                           ) : null}
                           <button
