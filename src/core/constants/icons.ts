@@ -10,6 +10,7 @@ export type IconName =
   | 'trash'
   | 'close'
   | 'filter-close'
+  | 'arrow-back'
   | 'arrow-right'
   | 'cloud-sync'
   | 'refresh'
@@ -60,4 +61,5 @@ export const COMMON_ICONS = {
   repeat: 'repeat',
   undo: 'undo',
   recommend: 'recommend',
+  arrowBack: 'arrow-back',
 } as const;

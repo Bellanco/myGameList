@@ -161,7 +161,7 @@ export const SOCIAL_UI = {
   },
   profile: {
     title: 'Mi perfil social',
-    subtitle: 'Define tu identidad pública, selecciona tus juegos clave y mantén tu perfil sincronizado en producción.',
+    subtitle: 'Define tu identidad pública, selecciona tus juegos clave y mantén tu perfil sincronizado.',
     toFeed: 'Ir al feed social',
     save: 'Guardar perfil',
     saving: 'Guardando perfil...',

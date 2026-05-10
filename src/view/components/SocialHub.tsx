@@ -1,7 +1,6 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type MouseEvent as ReactMouseEvent } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
-  buildReviewExcerpt,
   createSocialGist,
   getSocialSyncConfig,
   getSyncConfig,
@@ -9,8 +8,8 @@ import {
   readSocialGist,
   saveSocialSyncConfig,
   type SocialActivityEntry,
-  writeSocialGist,
   updateGistPrivacy,
+  writeSocialGist,
 } from '../../model/repository/gistRepository';
 import { SOCIAL_UI } from '../../core/constants/labels';
 import type { IconName } from '../../core/constants/icons';
@@ -66,7 +65,6 @@ export const SocialHub = memo(function SocialHub() {
   const [profileName, setProfileName] = useState('');
   const [favoriteGameIds, setFavoriteGameIds] = useState<number[]>([]);
   const [recommendationGameIds, setRecommendationGameIds] = useState<number[]>([]);
-  const [socialPrivate, setSocialPrivate] = useState(false);
   const [favoriteSearch, setFavoriteSearch] = useState('');
   const [recommendationSearch, setRecommendationSearch] = useState('');
   const [feedSearch, setFeedSearch] = useState('');
@@ -76,7 +74,6 @@ export const SocialHub = memo(function SocialHub() {
   const [savingProfile, setSavingProfile] = useState(false);
   const [loadingDirectory, setLoadingDirectory] = useState(false);
   const [socialDirectory, setSocialDirectory] = useState<Array<{ id: string; displayName: string; email: string; socialGistId: string; favorites: string[]; recommendations: string[]; activity: SocialActivityFeedItem[] }>>([]);
-  const [expandedFeedItems, setExpandedFeedItems] = useState<Record<string, boolean>>({});
   const feedRowRef = useRef<HTMLDivElement | null>(null);
   const feedDraggingRef = useRef(false);
   const feedStartXRef = useRef(0);
@@ -418,16 +415,21 @@ export const SocialHub = memo(function SocialHub() {
     }
   }, []);
 
-  const toggleFeedReviewExpanded = useCallback((entryId: string) => {
-    setExpandedFeedItems((prev) => ({
-      ...prev,
-      [entryId]: !prev[entryId],
-    }));
-  }, []);
-
   const openActivityDetail = useCallback((entry: SocialActivityFeedItem) => {
     navigate(`/social/user/${encodeURIComponent(entry.actorUid)}/game/${entry.gameId}/${entry.type}`);
   }, [navigate]);
+
+  const handleActivityItemKeyDown = useCallback(
+    (event: ReactKeyboardEvent<HTMLElement>, entry: SocialActivityFeedItem) => {
+      if (event.key !== 'Enter' && event.key !== ' ') {
+        return;
+      }
+
+      event.preventDefault();
+      openActivityDetail(entry);
+    },
+    [openActivityDetail],
+  );
 
   useEffect(() => {
     const handleMouseMove = (event: MouseEvent) => {
@@ -547,7 +549,6 @@ export const SocialHub = memo(function SocialHub() {
       setProfileName(nextName);
       setFavoriteGameIds(favorites);
       setRecommendationGameIds(highlighted);
-      setSocialPrivate(Boolean(socialRead.data.profile.private));
       setHasCreatedProfile(profileExists);
       navigate('/social');
       setSocialPayload({
@@ -662,7 +663,7 @@ export const SocialHub = memo(function SocialHub() {
 
       const profile = {
         name: profileName.trim() || authUser.displayName || authUser.email,
-        private: socialPrivate,
+        private: false,
         favoriteGames: validFavoriteIds.map((id) => ({ id, name: completedGameNameById.get(id) || `Juego ${id}` })),
         recommendations: validRecommendationIds.map((id) => ({ id, name: nonCompletedGameNameById.get(id) || `Juego ${id}` })),
       };
@@ -674,13 +675,8 @@ export const SocialHub = memo(function SocialHub() {
         updatedAt: Date.now(),
       });
 
-      // Actualizar privacidad del gist si cambió
-      try {
-        await updateGistPrivacy(socialConfig.token, socialCfgGistId, !socialPrivate);
-      } catch (error) {
-        // Log but don't fail on privacy update - main profile save succeeded
-        console.warn('Warning: Could not update gist privacy setting:', error);
-      }
+      // Todos los perfiles sociales se fuerzan como públicos.
+      await updateGistPrivacy(socialConfig.token, socialCfgGistId, true);
 
       await ensureProfileByEmail({
         user: authUser,
@@ -722,7 +718,6 @@ export const SocialHub = memo(function SocialHub() {
     socialCfgGistId,
     socialPayload.activity,
     socialPayload.recommendations,
-    socialPrivate,
   ]);
 
   const handleSignOut = useCallback(async () => {
@@ -813,7 +808,7 @@ export const SocialHub = memo(function SocialHub() {
               <div className="social-screen-actions-left">
                 {hasCreatedProfile ? (
                   <button className="btn btn-secondary" type="button" onClick={() => navigate('/social')}>
-                    <Icon name="arrow-right" />
+                    <Icon name="arrow-back" />
                     {SOCIAL_UI.profile.toFeed}
                   </button>
                 ) : null}
@@ -844,19 +839,6 @@ export const SocialHub = memo(function SocialHub() {
                   onChange={(event) => setProfileName(event.target.value)}
                   placeholder={SOCIAL_UI.profile.namePlaceholder}
                 />
-              </article>
-
-              <article className="social-profile-block">
-                <h3>{SOCIAL_UI.profile.privacyTitle}</h3>
-                <label className="social-profile-checkbox">
-                  <input
-                    type="checkbox"
-                    checked={socialPrivate}
-                    onChange={(event) => setSocialPrivate(event.target.checked)}
-                  />
-                  <span>{SOCIAL_UI.profile.privacyLabel}</span>
-                </label>
-                <p>{socialPrivate ? SOCIAL_UI.profile.privacyPrivate : SOCIAL_UI.profile.privacyPublic}</p>
               </article>
 
               <SocialGameCardSelector
@@ -906,7 +888,7 @@ export const SocialHub = memo(function SocialHub() {
             <div className="social-screen-actions social-screen-actions-split" aria-label="Acciones del detalle social">
               <div className="social-screen-actions-left">
                 <button className="btn btn-secondary" type="button" onClick={() => navigate('/social')}>
-                  <Icon name="arrow-right" />
+                  <Icon name="arrow-back" />
                   {SOCIAL_UI.feed.backToFeed}
                 </button>
               </div>
@@ -1098,12 +1080,19 @@ export const SocialHub = memo(function SocialHub() {
                       <h4>{group.dayHeader}</h4>
                     </div>
                     {group.items.map((entry) => {
-                      const excerpt = buildReviewExcerpt(entry.reviewText, 180);
-                      const hasFullReview = entry.type === 'review' && excerpt.length < entry.reviewText.trim().length;
-                      const expanded = Boolean(expandedFeedItems[entry.id]);
+                      const reviewText = entry.reviewText.trim();
+                      const cardTypeClass = entry.type === 'review' ? 'is-review' : 'is-recommendation';
 
                       return (
-                        <article key={entry.id} className="social-feed-card social-feed-activity-item" role="listitem">
+                        <article
+                          key={entry.id}
+                          className={`social-feed-card social-feed-activity-item ${cardTypeClass}`}
+                          role="listitem"
+                          tabIndex={0}
+                          aria-label={`Abrir detalle de actividad de ${entry.profileDisplayName} sobre ${entry.gameName}`}
+                          onClick={() => openActivityDetail(entry)}
+                          onKeyDown={(event) => handleActivityItemKeyDown(event, entry)}
+                        >
                           <header>
                             <h3>{entry.profileDisplayName}</h3>
                           </header>
@@ -1114,24 +1103,10 @@ export const SocialHub = memo(function SocialHub() {
                           </p>
                           <StarRating value={Number(entry.rating || 0)} />
                           {entry.type === 'review' ? (
-                            <>
-                              <p>{expanded ? entry.reviewText : excerpt}</p>
-                              {hasFullReview ? (
-                                <button
-                                  type="button"
-                                  className="btn btn-secondary"
-                                  onClick={() => toggleFeedReviewExpanded(entry.id)}
-                                >
-                                  {expanded ? SOCIAL_UI.feed.showLess : SOCIAL_UI.feed.showMore}
-                                </button>
-                              ) : null}
-                            </>
-                          ) : entry.reviewText ? (
-                            <p>{entry.reviewText}</p>
+                            <p className="social-feed-review-text" title={reviewText}>{reviewText}</p>
+                          ) : reviewText ? (
+                            <p className="social-feed-recommendation-text" title={reviewText}>{reviewText}</p>
                           ) : null}
-                          <button type="button" className="btn btn-primary" onClick={() => openActivityDetail(entry)}>
-                            {SOCIAL_UI.feed.viewDetail}
-                          </button>
                         </article>
                       );
                     })}

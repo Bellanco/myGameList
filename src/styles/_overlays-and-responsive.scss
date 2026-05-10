@@ -214,10 +214,20 @@ body.compact-filters .filters-row.open .btn-toggle { justify-content: center; al
 
   .detail-actions {
     justify-content: stretch;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(42px, 1fr));
+    gap: .55rem;
   }
 
   .detail-actions .btn {
     width: 100%;
+    min-height: 42px;
+    justify-content: center;
+    padding: .55rem .45rem;
+  }
+
+  .detail-actions .btn span {
+    display: none;
   }
 
   .col-plat,
@@ -264,8 +274,19 @@ body.compact-filters .filters-row.open .btn-toggle { justify-content: center; al
   tbody tr.detail-row.open { display: block; width: 100%; }
   tbody tr.detail-row td { display: block; width: 100%; padding: 0; border: none; }
   .detail-content { grid-template-columns: 1fr; }
-  .detail-actions { justify-content: stretch; }
-  .detail-actions .btn { width: 100%; }
+  .detail-actions {
+    justify-content: stretch;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(42px, 1fr));
+    gap: .55rem;
+  }
+  .detail-actions .btn {
+    width: 100%;
+    min-height: 42px;
+    justify-content: center;
+    padding: .55rem .45rem;
+  }
+  .detail-actions .btn span { display: none; }
   .col-plat, .col-strong { display: none!important; }
   .detail-plat, .detail-strong { display: flex!important; }
 

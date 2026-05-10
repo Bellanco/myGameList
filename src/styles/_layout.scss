@@ -317,6 +317,7 @@
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: .8rem;
+  min-width: 0;
 }
 
 .social-profile-block {
@@ -327,6 +328,8 @@
   display: flex;
   flex-direction: column;
   gap: .55rem;
+  min-width: 0;
+  overflow-x: hidden;
 }
 
 .social-profile-block h3 {
@@ -357,6 +360,7 @@
 
 .social-card-selector {
   gap: .75rem;
+  min-width: 0;
 }
 
 .social-card-selector-head {
@@ -364,6 +368,11 @@
   align-items: flex-start;
   justify-content: space-between;
   gap: .6rem;
+  min-width: 0;
+}
+
+.social-card-selector-head > div {
+  min-width: 0;
 }
 
 .social-card-selector-counter {
@@ -383,6 +392,12 @@
   display: flex;
   flex-direction: column;
   gap: .35rem;
+  min-width: 0;
+}
+
+.social-card-selector-search .finput {
+  width: 100%;
+  min-width: 0;
 }
 
 .social-card-selector-search span {
@@ -718,6 +733,79 @@ button.social-chip.active {
   line-height: 1.35;
 }
 
+.social-feed-activity-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.social-feed-day-group {
+  gap: .7rem;
+  margin-bottom: 1rem;
+}
+
+.social-feed-activity-item {
+  position: relative;
+  padding: .95rem 1rem;
+  border-radius: 1rem;
+  gap: .55rem;
+  cursor: pointer;
+  transition: transform .2s ease, border-color .2s ease, box-shadow .2s ease, background .2s ease;
+}
+
+.social-feed-activity-item::before {
+  content: '';
+  position: absolute;
+  left: -0.35rem;
+  top: 1rem;
+  width: .7rem;
+  height: .7rem;
+  transform: rotate(45deg);
+  border-left: 1px solid rgba(26,159,255,.16);
+  border-bottom: 1px solid rgba(26,159,255,.16);
+  background: inherit;
+}
+
+.social-feed-activity-item.is-review {
+  border-color: rgba(26,159,255,.32);
+  background: linear-gradient(160deg, rgba(26,159,255,.14), rgba(33,36,41,.92));
+}
+
+.social-feed-activity-item.is-recommendation {
+  border-color: rgba(137,154,168,.28);
+  background: linear-gradient(160deg, rgba(139,160,176,.09), rgba(33,36,41,.74));
+  color: #afc2d0;
+}
+
+.social-feed-activity-item:hover,
+.social-feed-activity-item:focus-visible {
+  transform: translateY(-1px);
+  border-color: rgba(26,159,255,.46);
+  box-shadow: 0 10px 20px rgba(0,0,0,.2);
+  outline: none;
+}
+
+.social-feed-activity-item.is-recommendation:hover,
+.social-feed-activity-item.is-recommendation:focus-visible {
+  border-color: rgba(168,185,199,.42);
+  box-shadow: 0 8px 18px rgba(0,0,0,.16);
+}
+
+.social-feed-review-text {
+  margin: 0;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 4;
+  overflow: hidden;
+  line-height: 1.4;
+}
+
+.social-feed-recommendation-text {
+  margin: 0;
+  color: #9fb2c1;
+  line-height: 1.4;
+}
+
 .social-feed-email {
   color: var(--text);
   font-weight: 700;
@@ -940,8 +1028,6 @@ button.social-chip.active {
 .social-feed-day-group {
   display: flex;
   flex-direction: column;
-  gap: .5rem;
-  margin-bottom: .8rem;
 }
 
 .social-feed-day-header {
@@ -1043,6 +1129,10 @@ button.social-chip.active {
     grid-column: span 12;
   }
 
+  .social-feed-review-text {
+    -webkit-line-clamp: 3;
+  }
+
   .bottom-nav-btn span {
     font-size: .82rem;
   }
@@ -1053,17 +1143,51 @@ button.social-chip.active {
   }
 
   .social-screen-actions {
-    flex-direction: column;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    gap: .45rem;
+    overflow-x: visible;
   }
 
   .social-screen-actions-left,
   .social-screen-actions-right {
-    width: 100%;
-    flex-direction: column;
+    width: auto;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    flex: 0 0 auto;
+  }
+
+  .social-profile-card .social-screen-actions-split {
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .social-profile-card .social-screen-actions-right {
+    margin-left: auto;
   }
 
   .social-screen-actions .btn {
-    width: 100%;
+    width: 44px;
+    min-width: 44px;
+    height: 44px;
+    padding: 0;
+    font-size: 0;
+  }
+
+  .social-screen-actions .btn .ui-icon {
+    width: 1rem;
+    height: 1rem;
+  }
+
+  .social-profile-card .social-profile-block > p,
+  .social-profile-card .social-card-selector-head p,
+  .social-profile-card .social-card-selector-search span,
+  .social-profile-card .social-game-card-status {
+    display: none;
+  }
+
+  .social-profile-card .social-game-card {
+    min-height: 4.8rem;
   }
 
   .social-card-row {
