@@ -1,4 +1,6 @@
 import { useCallback, useState } from 'react';
+import { SYNC_MESSAGES } from '../core/constants/labels';
+import { findSocialProfileByEmail, getCurrentSocialAuthUser, signInWithGoogle } from '../model/repository/firebaseRepository';
 import { mergeCrdt } from '../model/repository/syncRepository';
 import { clearSyncConfig, createGist, getSyncConfig, readGist, saveSyncConfig, whoAmI, writeGist } from '../model/repository/gistRepository';
 import type { GameItem, TabData, TabId } from '../model/types/game';
@@ -145,6 +147,7 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
   const [gistId, setGistId] = useState('');
   const [connectedGistId, setConnectedGistId] = useState('');
   const [lastRemoteChangesApplied, setLastRemoteChangesApplied] = useState<number | null>(null);
+  const [recoveringGistId, setRecoveringGistId] = useState(false);
 
   const writeWithConflictRecovery = useCallback(
     async (syncToken: string, syncGistId: string, localData: TabData, localUpdatedAt: number): Promise<WriteOutcome> => {
@@ -231,7 +234,7 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
       }
     } catch (error) {
       setStatus('error');
-      setStatusMessage(error instanceof Error ? error.message : 'Error de sincronización');
+      setStatusMessage(error instanceof Error ? error.message : SYNC_MESSAGES.initError);
       logSyncError('initializeSync', error);
     }
   }, [getData, getMeta, onNotice, persist, setData, setMeta, writeWithConflictRecovery]);
@@ -269,15 +272,15 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
       }
 
       if (!cleanGistId) {
-        onNotice('ok', 'Sincronización configurada');
+        onNotice('ok', SYNC_MESSAGES.connectSuccess);
       }
       setStatus('ok');
       setToken('');
       setGistId(cleanGistId);
     } catch (error) {
       setStatus('error');
-      setStatusMessage(error instanceof Error ? error.message : 'Error al conectar sincronización');
-      onNotice('err', error instanceof Error ? error.message : 'Error al conectar sincronización');
+      setStatusMessage(error instanceof Error ? error.message : SYNC_MESSAGES.connectError);
+      onNotice('err', error instanceof Error ? error.message : SYNC_MESSAGES.connectError);
       logSyncError('connectSync', error);
     }
   }, [getData, getMeta, gistId, onNotice, setData, token, writeWithConflictRecovery]);
@@ -285,7 +288,7 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
   const syncNow = useCallback(async () => {
     const config = getSyncConfig();
     if (!config) {
-      onNotice('warn', 'Primero configura la sincronización.');
+      onNotice('warn', SYNC_MESSAGES.needsConfiguration);
       return;
     }
 
@@ -298,7 +301,7 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
         setLastRemoteChangesApplied(0);
         await writeWithConflictRecovery(config.token, config.gistId, getData(), Date.now());
         setStatus('ok');
-        onNotice('ok', 'Datos sincronizados');
+        onNotice('ok', SYNC_MESSAGES.syncSuccess);
         return;
       }
 
@@ -323,12 +326,41 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
       onNotice('ok', `Fusión sincronizada correctamente: ${remoteChanges} cambios remotos aplicados`);
     } catch (error) {
       setStatus('error');
-      const message = error instanceof Error ? error.message : 'Error al sincronizar';
+      const message = error instanceof Error ? error.message : SYNC_MESSAGES.syncError;
       setStatusMessage(message);
       onNotice('err', message);
       logSyncError('syncNow', error);
     }
   }, [getData, getMeta, onNotice, persist, setData, setMeta, writeWithConflictRecovery]);
+
+  const recoverGistIdFromGoogle = useCallback(async () => {
+    setRecoveringGistId(true);
+
+    try {
+      const user = (await getCurrentSocialAuthUser()) || (await signInWithGoogle());
+
+      const profile = await findSocialProfileByEmail(user.email);
+      const recoveredGistId = String(profile?.gamesGistId || '').trim();
+
+      if (!recoveredGistId) {
+        setStatus('error');
+        setStatusMessage(SYNC_MESSAGES.recoverMissingInProfile);
+        onNotice('err', SYNC_MESSAGES.recoverMissingInProfile);
+        return;
+      }
+
+      setGistId(recoveredGistId);
+      setStatusMessage('');
+      onNotice('ok', SYNC_MESSAGES.recoverSuccess);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : SYNC_MESSAGES.recoverError;
+      setStatus('error');
+      setStatusMessage(message);
+      onNotice('err', message);
+    } finally {
+      setRecoveringGistId(false);
+    }
+  }, [onNotice]);
 
   const disconnectSync = useCallback(() => {
     clearSyncConfig();
@@ -337,7 +369,7 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
     setToken('');
     setGistId('');
     setLastRemoteChangesApplied(null);
-    onNotice('ok', 'Sincronización desconectada');
+    onNotice('ok', SYNC_MESSAGES.disconnectSuccess);
   }, [onNotice]);
 
   return {
@@ -351,8 +383,10 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
     connectSync,
     syncNow,
     disconnectSync,
+    recoverGistIdFromGoogle,
     connectedGistId,
     lastRemoteChangesApplied,
+    recoveringGistId,
     hasConfig: Boolean(getSyncConfig()),
     currentConfig: getSyncConfig(),
   };

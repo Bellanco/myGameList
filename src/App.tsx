@@ -1,6 +1,6 @@
 import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
-import { DIALOG_MESSAGES, ROUTE_TAB, SYNC_BADGE_TEXT, TAB_ROUTE } from './core/constants/labels';
+import { DIALOG_MESSAGES, ROUTE_TAB, SYNC_BADGE_TEXT, SYNC_MESSAGES, TAB_ROUTE } from './core/constants/labels';
 import type { TabData, TabId } from './model/types/game';
 import { ensureProfileByEmail, getCurrentSocialAuthUser } from './model/repository/firebaseRepository';
 import { getSocialSyncConfig, readSocialGist, saveSocialSyncConfig, upsertReviewActivity, writeSocialGist } from './model/repository/gistRepository';
@@ -17,8 +17,6 @@ import { useGameListViewModel } from './viewmodel/useGameListViewModel';
 import { useSyncViewModel } from './viewmodel/useSyncViewModel';
 
 const FormModal = lazy(() => import('./view/modals/FormModal').then((module) => ({ default: module.FormModal })));
-const AdminModal = lazy(() => import('./view/modals/AdminModal').then((module) => ({ default: module.AdminModal })));
-const SyncModal = lazy(() => import('./view/modals/SyncModal').then((module) => ({ default: module.SyncModal })));
 const ConfirmModal = lazy(() => import('./view/modals/ConfirmModal').then((module) => ({ default: module.ConfirmModal })));
 
 function getCurrentTab(pathname: string): TabId {
@@ -51,8 +49,6 @@ export default function App() {
     clearFilter,
     clearAllFilters,
     setExpandedId,
-    setSyncModalOpen,
-    setAdminModalOpen,
     openNewGame,
     setFormModalOpen,
     saveDraft,
@@ -74,7 +70,6 @@ export default function App() {
     persist,
   });
 
-  const [showToken, setShowToken] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [compactFilters, setCompactFilters] = useState(isCompactFilters());
   const resizeRafRef = useRef<number | null>(null);
@@ -211,14 +206,6 @@ export default function App() {
     navigate('/ajustes');
   }, [navigate, setExpandedId]);
 
-  const handleOpenSync = useCallback(() => {
-    setSyncModalOpen(true);
-  }, [setSyncModalOpen]);
-
-  const handleOpenAdmin = useCallback(() => {
-    setAdminModalOpen(true);
-  }, [setAdminModalOpen]);
-
   const handleAddGame = useCallback(() => {
     openNewGame(currentTab);
   }, [currentTab, openNewGame]);
@@ -308,10 +295,6 @@ export default function App() {
     });
   }, [editingTab, notify, publishReviewActivity, saveDraft, vm.data]);
 
-  const handleCloseAdmin = useCallback(() => {
-    setAdminModalOpen(false);
-  }, [setAdminModalOpen]);
-
   const handleEditTag = useCallback((key: 'genres' | 'platforms' | 'strengths' | 'weaknesses', oldValue: string, newValue: string) => {
     renameTagAcrossGames(key, oldValue, newValue);
   }, [renameTagAcrossGames]);
@@ -323,13 +306,24 @@ export default function App() {
     });
   }, [removeTagAcrossGames, setConfirmState]);
 
-  const handleCloseSync = useCallback(() => {
-    setSyncModalOpen(false);
-  }, [setSyncModalOpen]);
+  const handleCopyGistId = useCallback(async () => {
+    const currentGistId = (syncVm.connectedGistId || syncVm.currentConfig?.gistId || syncVm.gistId || '').trim();
+    if (!currentGistId) {
+      notify('warn', SYNC_MESSAGES.copyMissing);
+      return;
+    }
 
-  const handleToggleShowToken = useCallback(() => {
-    setShowToken((prev) => !prev);
-  }, []);
+    try {
+      await navigator.clipboard.writeText(currentGistId);
+      notify('ok', SYNC_MESSAGES.copySuccess);
+    } catch {
+      notify('err', SYNC_MESSAGES.copyError);
+    }
+  }, [notify, syncVm.connectedGistId, syncVm.currentConfig?.gistId, syncVm.gistId]);
+
+  const handleRecoverGistId = useCallback(() => {
+    void syncVm.recoverGistIdFromGoogle();
+  }, [syncVm]);
 
   const handleConfirmCancel = useCallback(() => {
     setConfirmState(null);
@@ -400,10 +394,24 @@ export default function App() {
         ) : (
           <SettingsHub
             syncStatus={syncBadgeText}
-            onOpenSync={handleOpenSync}
+            hasSyncConfig={syncVm.hasConfig}
+            connectedGistId={syncVm.connectedGistId || syncVm.currentConfig?.gistId || ''}
+            token={syncVm.token}
+            gistId={syncVm.gistId}
+            syncError={syncVm.statusMessage}
+            recoveringGistId={syncVm.recoveringGistId}
+            onTokenChange={syncVm.setToken}
+            onGistIdChange={syncVm.setGistId}
+            onConnectSync={syncVm.connectSync}
+            onSyncNow={syncVm.syncNow}
+            onDisconnectSync={syncVm.disconnectSync}
+            onCopyGistId={handleCopyGistId}
+            onRecoverGistId={handleRecoverGistId}
             onExport={exportData}
             onImport={importData}
-            onOpenAdmin={handleOpenAdmin}
+            lookups={vm.lookups}
+            onEditTag={handleEditTag}
+            onDeleteTag={handleDeleteTag}
           />
         )}
       </main>
@@ -428,34 +436,6 @@ export default function App() {
           onDraftChange={vm.setDraft}
           onSave={handleSaveDraft}
           onNotice={vm.notify}
-        />
-
-        <AdminModal
-          open={vm.adminModalOpen}
-          adminTab={vm.adminTab}
-          lookups={vm.lookups}
-          onClose={handleCloseAdmin}
-          onTabChange={vm.setAdminTab}
-          onEdit={handleEditTag}
-          onDelete={handleDeleteTag}
-        />
-
-        <SyncModal
-          open={vm.syncModalOpen}
-          status={syncVm.status}
-          hasConfig={syncVm.hasConfig}
-          connectedGistId={syncVm.connectedGistId || syncVm.currentConfig?.gistId || ''}
-          token={syncVm.token}
-          gistId={syncVm.gistId}
-          statusMessage={syncVm.statusMessage}
-          showToken={showToken}
-          onClose={handleCloseSync}
-          onTokenChange={syncVm.setToken}
-          onGistIdChange={syncVm.setGistId}
-          onShowTokenToggle={handleToggleShowToken}
-          onConnect={syncVm.connectSync}
-          onDisconnect={syncVm.disconnectSync}
-          onSyncNow={syncVm.syncNow}
         />
 
         <ConfirmModal
