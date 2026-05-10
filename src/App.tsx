@@ -1,4 +1,4 @@
-import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState, Component } from 'react';
 import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import { DIALOG_MESSAGES, ROUTE_TAB, SYNC_BADGE_TEXT, SYNC_MESSAGES, TAB_ROUTE } from './core/constants/labels';
 import type { TabData, TabId } from './model/types/game';
@@ -18,6 +18,50 @@ const FormModal = lazy(() => import('./view/modals/FormModal').then((module) => 
 const ConfirmModal = lazy(() => import('./view/modals/ConfirmModal').then((module) => ({ default: module.ConfirmModal })));
 const SettingsHub = lazy(() => import('./view/components/SettingsHub').then((module) => ({ default: module.SettingsHub })));
 const SocialHub = lazy(() => import('./view/components/SocialHub').then((module) => ({ default: module.SocialHub })));
+
+/**
+ * Error Boundary para capturar errores en componentes lazy-loaded.
+ */
+class ErrorBoundary extends Component<
+  { children: React.ReactNode; section: string },
+  { hasError: boolean; error: Error | null }
+> {
+  constructor(props: { children: React.ReactNode; section: string }) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error: Error) {
+    console.error(`Error en sección ${this.props.section}:`, error);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <section className="social-hub social-hub-gateway" aria-label="Error">
+          <div className="social-hub-card social-hub-gateway-card">
+            <div className="social-hub-title-wrap">
+              <h2>Error al cargar</h2>
+            </div>
+            <p>No se pudo cargar la sección {this.props.section}.</p>
+            <details>
+              <summary>Detalles del error</summary>
+              <pre style={{ fontSize: '0.75rem', overflow: 'auto' }}>
+                {this.state.error?.toString()}
+              </pre>
+            </details>
+          </div>
+        </section>
+      );
+    }
+
+    return this.props.children;
+  }
+}
 
 function getCurrentTab(pathname: string): TabId {
   return ROUTE_TAB[pathname] || 'c';
@@ -391,9 +435,11 @@ export default function App() {
             />
           </>
         ) : activeSection === 'social' ? (
-          <Suspense fallback={null}>
-            <SocialHub />
-          </Suspense>
+          <ErrorBoundary section="social">
+            <Suspense fallback={null}>
+              <SocialHub />
+            </Suspense>
+          </ErrorBoundary>
         ) : (
           <Suspense fallback={null}>
             <SettingsHub
