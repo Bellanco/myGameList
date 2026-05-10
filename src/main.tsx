@@ -28,7 +28,10 @@ if (typeof idleScheduler === 'function') {
 }
 
 if ('serviceWorker' in navigator) {
-  if (location.hostname === 'localhost') {
+  const hostnameParts = location.hostname.split('.');
+  const isCloudflarePreview = location.hostname.endsWith('.pages.dev') && hostnameParts.length > 3;
+
+  if (location.hostname === 'localhost' || isCloudflarePreview) {
     navigator.serviceWorker.getRegistrations().then((registrations) => {
       registrations.forEach((registration) => registration.unregister());
     });

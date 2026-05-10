@@ -50,6 +50,11 @@ const isNotFoundGistError = (error: unknown): boolean => {
   return error instanceof Error && /\b404\b/.test(error.message);
 };
 
+const toSafeTimestamp = (value: unknown, fallback: number): number => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+};
+
 type SocialPanel = 'profile' | 'profile-detail' | 'detail' | 'feed';
 
 type SocialRouteState = {
@@ -495,7 +500,10 @@ export const SocialHub = memo(function SocialHub() {
     const itemsByDay = new Map<string, SocialActivityFeedItem[]>();
 
     activityFeedItems.forEach((item) => {
-      const itemDate = new Date(item.updatedAt);
+      const itemDate = new Date(toSafeTimestamp(item.updatedAt, Date.now()));
+      if (Number.isNaN(itemDate.getTime())) {
+        return;
+      }
       const dayKey = itemDate.toISOString().split('T')[0];
 
       if (!itemsByDay.has(dayKey)) {
@@ -804,12 +812,20 @@ export const SocialHub = memo(function SocialHub() {
               .filter((name) => Boolean(name && name.trim()))
               .slice(0, 8);
             const activity = socialData.activity
-              .map((activityEntry) => ({
-                ...activityEntry,
-                profileId: entry.id,
-                profileDisplayName: socialData.profile.name || entry.displayName || entry.email,
-                socialGistId: entry.socialGistId,
-              }))
+              .map((activityEntry) => {
+                const now = Date.now();
+                const createdAt = toSafeTimestamp(activityEntry.createdAt, now);
+                const updatedAt = toSafeTimestamp(activityEntry.updatedAt, createdAt);
+
+                return {
+                  ...activityEntry,
+                  createdAt,
+                  updatedAt,
+                  profileId: entry.id,
+                  profileDisplayName: socialData.profile.name || entry.displayName || entry.email,
+                  socialGistId: entry.socialGistId,
+                };
+              })
               .slice(0, 40);
 
             return {
