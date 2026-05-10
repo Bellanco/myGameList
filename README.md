@@ -1,117 +1,137 @@
-# Mis Listas de Juegos - v2.0.0
+﻿# myGameList - React MVVM
 
-Gestor moderno de colecciones de videojuegos con sincronización en la nube (GitHub Gist).
+Aplicacion web para gestionar listas de videojuegos con sincronizacion en GitHub Gist, arquitectura MVVM y enfoque offline-first.
 
-## Características
+## Estado actual
 
-- Diseño responsivo mobile-first
-- Sincronización con GitHub Gist
-- CRDT merge (cero pérdida de datos)
-- 4 categorías (Completados, Visitados, En curso, Próximos)
-- Sistema avanzado de etiquetas
-- Filtros inteligentes
-- Offline-first con Service Worker
-- Tests unitarios con Vitest
-- Sin build step, carga directa
-- Accesible WCAG AA
-- TypeScript (soporte completo)
+Migrada de JavaScript vanilla a React 19 + TypeScript manteniendo:
+- Estilo visual y comportamiento funcional principal.
+- Estructura de datos compatible con storage legacy.
+- Sincronizacion CRDT para reducir perdida de datos en conflictos.
+- Diseno responsive mobile-first.
 
-## Inicio Rápido
+## Stack real del proyecto
 
-```bash
-git clone https://github.com/tuusuario/myGameList.git
-cd myGameList
-npm install
-npm run dev       # http://localhost:8000
-npm run test      # Tests unitarios
-npm run validate  # Lint + validación
-```
+Dependencias principales declaradas en package.json:
+- react ^19.2.0
+- react-dom ^19.2.0
+- react-router-dom ^7.9.5
+- @tanstack/react-virtual ^3.13.24
 
-## Uso
+Tooling principal declarado:
+- vite ^8.0.11
+- @vitejs/plugin-react ^6.0.1
+- typescript ^6.0.3
+- vitest ^4.1.5
+- eslint ^9.39.4
+- sass ^1.99.0
 
-1. Abre la app y haz click en el engranaje (Configurar)
-2. Introduce token GitHub + ID Gist
-3. Click en + para añadir juegos
-4. Sincroniza automáticamente cada 1.8s
-5. Funciona completamente offline
+## Estado de dependencias (verificado el 2026-05-09)
 
-## Arquitectura
+Resumen de comprobacion con npm outdated:
+- Upgrade mayor aplicado en este estado del repositorio para:
+  - @vitejs/plugin-react: 4.x -> 6.0.1
+  - vite: 6.x -> 8.0.11
+  - eslint: 8.x -> 9.39.4
+- Pendiente de major adicional:
+  - eslint: 9.39.4 -> 10.3.0
 
-**Vanilla JavaScript** (sin framework)
-- `public/ts/app.ts` - SPA principal (1,500+ LOC, TypeScript)
-- `public/ts/sync.ts` - API GitHub Gist + CRDT merge
-- `public/ts/migrate.ts` - Migración de datos
-- `public/style.css` - CSS3 con variables y BEM
-- `public/service-worker.js` - Service Worker para offline
-- `public/manifest.json` - PWA manifest
+Conclusion:
+- Las dependencias estan actualizadas al estado objetivo del upgrade implementado.
+- ESLint se mantiene en v9 por compatibilidad actual de plugins (react/jsx-a11y) con la major 10.
 
-## Diseño de Iconos (v2.0)
+## Arquitectura MVVM
 
-### Estados Positivos (Azul Sutil)
-- **Rejugar Activo**: Estrella azul - juego rejugable
-- **Nueva Oportunidad Activo**: Refresh azul - hay oportunidad disponible
+Estructura principal:
+- src/model
+  - types: contratos de datos (GameItem y tipos relacionados)
+  - repository: acceso a datos local, migracion legacy, sync CRDT y Gist
+- src/viewmodel
+  - useGameListViewModel: estado de listas, filtros, ordenacion, CRUD, modales
+  - useSyncViewModel: conexion/sincronizacion con GitHub Gist
+- src/view
+  - components: iconos y piezas visuales reutilizables
+  - hooks: utilidades de UI (debounce)
+  - modals: formularios y acciones de administracion/sync
+- src/core
+  - constants: labels, iconos, storage keys y configuracion UI
+  - security: sanitizacion y validaciones defensivas
+  - utils: comparadores y helpers puros
 
-### Estados Negativos (Colores Cálidos)
-- **Rejugar Inactivo**: Stack ambar - no rejugable
-- **Nueva Oportunidad Inactivo**: Candado rojo - sin oportunidad
+## Scripts
 
-Todos con gradientes suaves y glow sutil para coherencia visual.
-
-## Testing
-
-```bash
-npm run test        # Ejecutar tests una vez
-npm run test:watch  # Modo watch
-```
-
-Cobertura:
-- CRDT merge logic
-- Sincronización GitHub Gist
-- Validación de datos
-- Breakpoints responsive
-
-## Documentación
-
-- [CHANGELOG](./CHANGELOG.md) - Historial de versiones
-
-## Requisitos
-
-- Node.js 20+ LTS
-- Cuenta GitHub (para Gist sync)
-- Navegador moderno (Chrome, Firefox, Safari, Edge)
+- npm run dev: servidor local Vite en puerto 8000
+- npm run build: compilacion de produccion
+- npm run preview: preview de build
+- npm run test: pruebas unitarias de src y tests/unit
+- npm run test:all: ejecucion completa de pruebas
+- npm run test:watch: modo watch de Vitest
+- npm run test:coverage: cobertura
+- npm run validate: validacion CI + HTML + ESLint
+- npm run lint: autocorrecciones ESLint
 
 ## Seguridad
 
-- Token almacenado en localStorage (solo navegador del usuario)
-- Gists privados por defecto
-- Input sanitizado con `UI.esc()`
-- HTTPS recomendado con tokens
-- CRDT previene conflictos de sincronización
+Medidas aplicadas:
+- Sanitizacion y normalizacion centralizada en src/core/security/sanitize.ts.
+- Validacion de formatos para token GitHub y Gist ID.
+- Renderizado React sin inyeccion HTML insegura.
+- Cabeceras de seguridad en public/_headers (CSP, X-Frame-Options, etc.).
+- Sincronizacion con merge CRDT para minimizar conflictos y perdida de informacion.
 
-## Stack Técnico
+Nota: el token de GitHub se guarda en localStorage para permitir sincronizacion persistente. Se recomienda usar dispositivo de confianza y HTTPS.
 
-| Aspecto | Tecnología |
-|--------|-----------|
-| Frontend | HTML5 + Vanilla JS ES6+ + CSS3 |
-| Tipado | TypeScript (opcional) |
-| Persistencia | GitHub Gist REST API |
-| Offline | Service Worker + localStorage |
-| Testing | Vitest |
-| Linting | ESLint |
-| Validación | html-validate |
-| Build | Vite |
+## Firebase (Analytics, Firestore y Authentication)
 
-## Características Destacadas
+La app incluye una capa de integracion en el repositorio:
+- src/model/repository/firebaseRepository.ts
 
-- **CRDT Merge**: Sincronización bidireccional sin conflictos
-- **Offline Mode**: Funciona completamente sin conexión
-- **Responsive Design**: Breakpoints 1100px y 1400px
-- **Accesibilidad**: WCAG AA mínimo, aria-* atributos
-- **PWA**: Instalable como app nativa
-- **Rendimiento**: Carga rápida, sin dependencias pesadas
+Servicios preparados:
+- Firebase Analytics (web)
+- Cloud Firestore
+- Firebase Authentication
 
-## Licencia
+Importante sobre Crashlytics:
+- Firebase Crashlytics no tiene soporte oficial para aplicaciones web JavaScript.
+- Se deja trazabilidad de errores via eventos de Analytics como alternativa inicial.
 
-MIT - 2026
+Variables de entorno necesarias (Vite):
+- VITE_FIREBASE_API_KEY
+- VITE_FIREBASE_AUTH_DOMAIN
+- VITE_FIREBASE_PROJECT_ID
+- VITE_FIREBASE_STORAGE_BUCKET
+- VITE_FIREBASE_MESSAGING_SENDER_ID
+- VITE_FIREBASE_APP_ID
+- VITE_FIREBASE_MEASUREMENT_ID (opcional, habilita Analytics)
+- VITE_ENABLE_ANALYTICS (opcional: en produccion por defecto true, usar false para desactivar)
 
-Desarrollado con tecnologías web vanilla.
+Pasos rapidos:
+1. Crear proyecto en Firebase Console.
+2. Habilitar Authentication (por ejemplo Google o Email/Password).
+3. Crear base de datos Cloud Firestore en modo bloqueado y reglas seguras.
+4. Copiar la configuracion web al archivo .env local a partir de .env.example.
+5. Ejecutar npm run dev.
+
+## Compatibilidad de datos
+
+La app mantiene migracion de formatos antiguos mediante:
+- src/model/repository/migrateRepository.ts
+- src/model/repository/localRepository.ts
+
+Esto permite cargar y normalizar datos legacy sin romper el historico existente.
+
+## Testing
+
+Suite de pruebas actual:
+- Unit: tests/unit
+- Integration: tests/integration
+- E2E: tests/e2e
+
+Ejecucion con Vitest (entorno jsdom para pruebas que lo requieren).
+
+## Despliegue
+
+Configurada para despliegue estatico con:
+- index.html en raiz (entrada Vite)
+- assets publicos en public/
+- fallback SPA en public/_routes.json
