@@ -59,10 +59,10 @@ export const FILTER_BOOL: Record<TabId, { field: 'replayable' | 'retry'; label: 
 };
 
 export const SYNC_BADGE_TEXT = {
-  idle: 'No Sincronizado',
+  idle: 'No sincronizado',
   ok: 'Sincronizado',
   syncing: 'Sincronizando…',
-  error: 'Error Sync',
+  error: 'Error de sincronización',
 } as const;
 
 export const DIALOG_MESSAGES = {
@@ -90,7 +90,7 @@ export const SYNC_MESSAGES = {
   copyMissing: 'No hay Gist ID disponible para copiar',
   recoverSuccess: 'Gist ID recuperado desde Google',
   recoverMissingInProfile: 'No se encontró gamesGistId en tu perfil de Google/Firestore',
-  recoverMissingTokenInProfile: 'No se encontró githubToken en tu perfil de Google/Firestore',
+  recoverMissingTokenInProfile: 'No se encontró el token en tu perfil de Google/Firestore',
   recoverError: 'No se pudo recuperar el Gist ID desde Google',
 } as const;
 
@@ -151,7 +151,7 @@ export const UI_MESSAGES = {
 
 export const SOCIAL_UI = {
   hubTitle: 'Espacio social',
-  loading: 'Cargando estado social...',
+  loading: 'Cargando espacio social...',
   gateway: {
     lead: 'Configura tu espacio social en tres pasos: conecta GitHub, valida con Google y crea tu espacio social.',
     stepCaption: (current: number, total: number) => `Paso actual: ${current} de ${total}`,
@@ -194,7 +194,7 @@ export const SOCIAL_UI = {
     sectionTitle: 'Actividad de perfiles',
     activityTitle: 'Actividad del feed',
     loading: 'Cargando feed social...',
-    empty: 'No hay perfiles visibles todavía o no hay permisos de lectura en Firestore.',
+    empty: 'No hay perfiles visibles todavía o faltan permisos de lectura en Firestore.',
     activityEmpty: 'Aún no hay actividad de análisis para mostrar.',
     noFavorites: 'Sin favoritos publicados',
     favoritesPrefix: 'Favoritos: ',
