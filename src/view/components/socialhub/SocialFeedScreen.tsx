@@ -85,8 +85,8 @@ export function SocialFeedScreen({
           {!loadingDirectory && activityFeedItems.length === 0 ? <p>{SOCIAL_UI.feed.activityEmpty}</p> : null}
           {!loadingDirectory && activityFeedItems.length > 0 ? (
             <div className="social-feed-activity-list" role="list" aria-label="Actividad social">
-              {groupedActivityFeedItems.map((group) => (
-                <div key={group.dayDate.toISOString()} className="social-feed-day-group">
+              {groupedActivityFeedItems.map((group, groupIndex) => (
+                <div key={`${group.dayHeader}-${groupIndex}`} className="social-feed-day-group">
                   <div className="social-feed-day-header">
                     <h4>{group.dayHeader}</h4>
                   </div>
