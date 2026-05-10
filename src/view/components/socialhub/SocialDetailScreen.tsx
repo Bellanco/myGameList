@@ -1,10 +1,10 @@
-import React from 'react';
+﻿import React from 'react';
 import { Icon } from '../Icon';
 import { StarRating } from '../StarRating';
 
 /**
  * Pantalla de detalle de actividad social.
- * Presentacional, sin lógica de negocio.
+ * Presentacional, sin lÃ³gica de negocio.
  */
 export function SocialDetailScreen({
   SOCIAL_UI,
@@ -23,17 +23,17 @@ export function SocialDetailScreen({
 }) {
   if (!activeDetailEvent) {
     return (
-      <section className="social-hub social-screen" aria-label="Social">
-        <div className="social-hub-card social-screen-card social-feed-card-shell">
-          <header className="social-screen-header">
-            <div className="social-hub-title-wrap">
-              <Icon name="bottom-hub" className="social-hub-icon" />
+      <section className="hub-hub hub-screen" aria-label="Social">
+        <div className="hub-hub-card hub-screen-card hub-feed-card-shell">
+          <header className="hub-screen-header">
+            <div className="hub-hub-title-wrap">
+              <Icon name="bottom-hub" className="hub-hub-icon" />
               <h2>{SOCIAL_UI.feed.detailTitle}</h2>
             </div>
             <p>{SOCIAL_UI.feed.detailSubtitle}</p>
           </header>
-          <div className="social-screen-actions social-screen-actions-split" aria-label="Acciones del detalle social">
-            <div className="social-screen-actions-left">
+          <div className="hub-screen-actions hub-screen-actions-split" aria-label="Acciones del detalle social">
+            <div className="hub-screen-actions-left">
               <button className="btn btn-secondary" type="button" onClick={onBack}>
                 <Icon name="arrow-back" />
                 {SOCIAL_UI.feed.backToFeed}
@@ -48,24 +48,24 @@ export function SocialDetailScreen({
   }
   const gameItem = getGameItemById(activeDetailEvent.gameId);
   return (
-    <section className="social-hub social-screen" aria-label="Social">
-      <div className="social-hub-card social-screen-card social-feed-card-shell">
-        <header className="social-screen-header">
-          <div className="social-hub-title-wrap">
-            <Icon name="bottom-hub" className="social-hub-icon" />
+    <section className="hub-hub hub-screen" aria-label="Social">
+      <div className="hub-hub-card hub-screen-card hub-feed-card-shell">
+        <header className="hub-screen-header">
+          <div className="hub-hub-title-wrap">
+            <Icon name="bottom-hub" className="hub-hub-icon" />
             <h2>{SOCIAL_UI.feed.detailTitle}</h2>
           </div>
           <p>{SOCIAL_UI.feed.detailSubtitle}</p>
         </header>
-        <div className="social-screen-actions social-screen-actions-split" aria-label="Acciones del detalle social">
-          <div className="social-screen-actions-left">
+        <div className="hub-screen-actions hub-screen-actions-split" aria-label="Acciones del detalle social">
+          <div className="hub-screen-actions-left">
             <button className="btn btn-secondary" type="button" onClick={onBack}>
               <Icon name="arrow-back" />
               {SOCIAL_UI.feed.backToFeed}
             </button>
           </div>
         </div>
-        <article className="social-feed-card social-feed-card-detail">
+        <article className="hub-feed-card hub-feed-card-detail">
           <header>
             <h3>{activeDetailEvent.profileDisplayName}</h3>
             <small>{new Date(activeDetailEvent.updatedAt).toLocaleString('es-ES')}</small>
@@ -78,29 +78,29 @@ export function SocialDetailScreen({
             <p>{activeDetailEvent.reviewText}</p>
           ) : null}
           {gameItem ? (
-            <div className="social-detail-metadata">
+            <div className="hub-detail-metadata">
               {gameItem.platforms && gameItem.platforms.length > 0 ? (
-                <div className="social-metadata-section">
+                <div className="hub-metadata-section">
                   <strong>Plataformas:</strong>
-                  <div className="social-metadata-tags">
+                  <div className="hub-metadata-tags">
                     {gameItem.platforms.map((platform: string) => (
-                      <span key={platform} className="social-metadata-tag">{platform}</span>
+                      <span key={platform} className="hub-metadata-tag">{platform}</span>
                     ))}
                   </div>
                 </div>
               ) : null}
               {gameItem.genres && gameItem.genres.length > 0 ? (
-                <div className="social-metadata-section">
-                  <strong>Géneros:</strong>
-                  <div className="social-metadata-tags">
+                <div className="hub-metadata-section">
+                  <strong>GÃ©neros:</strong>
+                  <div className="hub-metadata-tags">
                     {gameItem.genres.map((genre: string) => (
-                      <span key={genre} className="social-metadata-tag">{genre}</span>
+                      <span key={genre} className="hub-metadata-tag">{genre}</span>
                     ))}
                   </div>
                 </div>
               ) : null}
               {gameItem.strengths && gameItem.strengths.length > 0 ? (
-                <div className="social-metadata-section">
+                <div className="hub-metadata-section">
                   <strong>Puntos fuertes:</strong>
                   <div className="chips">
                     {gameItem.strengths.map((strength: string) => (
@@ -110,8 +110,8 @@ export function SocialDetailScreen({
                 </div>
               ) : null}
               {gameItem.weaknesses && gameItem.weaknesses.length > 0 ? (
-                <div className="social-metadata-section">
-                  <strong>Puntos débiles:</strong>
+                <div className="hub-metadata-section">
+                  <strong>Puntos dÃ©biles:</strong>
                   <div className="chips">
                     {gameItem.weaknesses.map((weakness: string) => (
                       <span key={weakness} className="chip chip-pd">{weakness}</span>
@@ -127,3 +127,4 @@ export function SocialDetailScreen({
     </section>
   );
 }
+

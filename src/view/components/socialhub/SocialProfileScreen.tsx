@@ -1,10 +1,10 @@
-import { Icon } from '../Icon';
+﻿import { Icon } from '../Icon';
 import { SocialGameCardSelector } from '../SocialGameCardSelector';
 import type { TabId } from '../../../model/types/game';
 
 /**
- * Pantalla de edición de perfil social.
- * Presentacional, sin lógica de negocio.
+ * Pantalla de ediciÃ³n de perfil social.
+ * Presentacional, sin lÃ³gica de negocio.
  */
 export function SocialProfileScreen({
   SOCIAL_UI,
@@ -72,17 +72,17 @@ export function SocialProfileScreen({
   // onBack button will not be shown when mustCreateProfile is true (since hasCreatedProfile will be false)
 
   return (
-    <section className="social-hub social-screen" aria-label="Social">
-      <div className="social-hub-card social-screen-card social-profile-card">
-        <header className="social-screen-header">
-          <div className="social-hub-title-wrap">
-            <Icon name="bottom-hub" className="social-hub-icon" />
+    <section className="hub-hub hub-screen" aria-label="Social">
+      <div className="hub-hub-card hub-screen-card hub-profile-card">
+        <header className="hub-screen-header">
+          <div className="hub-hub-title-wrap">
+            <Icon name="bottom-hub" className="hub-hub-icon" />
             <h2>{SOCIAL_UI.profile.title}</h2>
           </div>
           <p>{SOCIAL_UI.profile.subtitle}</p>
         </header>
-        <div className="social-screen-actions social-screen-actions-split" aria-label="Acciones del perfil social">
-          <div className="social-screen-actions-left">
+        <div className="hub-screen-actions hub-screen-actions-split" aria-label="Acciones del perfil social">
+          <div className="hub-screen-actions-left">
             {hasCreatedProfile ? (
               <button className="btn btn-secondary" type="button" onClick={onBack}>
                 <Icon name="arrow-back" />
@@ -94,20 +94,20 @@ export function SocialProfileScreen({
               {savingProfile ? SOCIAL_UI.profile.saving : SOCIAL_UI.profile.save}
             </button>
           </div>
-          <div className="social-screen-actions-right">
+          <div className="hub-screen-actions-right">
             <button className="btn btn-danger" type="button" onClick={onSignOut}>
               <Icon name="logout" />
               {SOCIAL_UI.profile.signOut}
             </button>
           </div>
         </div>
-        <div className="social-profile-layout">
-          <article className="social-profile-block">
+        <div className="hub-profile-layout">
+          <article className="hub-profile-block">
             <h3>{SOCIAL_UI.profile.identityTitle}</h3>
             <p>{SOCIAL_UI.profile.identityDescription}</p>
-            <label className="flabel" htmlFor="social-profile-name">{SOCIAL_UI.profile.nameLabel}</label>
+            <label className="flabel" htmlFor="hub-profile-name">{SOCIAL_UI.profile.nameLabel}</label>
             <input
-              id="social-profile-name"
+              id="hub-profile-name"
               className="finput"
               type="text"
               maxLength={60}
@@ -127,34 +127,34 @@ export function SocialProfileScreen({
             onSearchChange={setFavoriteSearch}
             onToggle={(id) => toggleGameInSet(id, favoriteGameIds, setFavoriteGameIds)}
           />
-          <article className="social-profile-block">
+          <article className="hub-profile-block">
             <h3>{SOCIAL_UI.profile.visibilityTitle}</h3>
             <p>{SOCIAL_UI.profile.visibilityDescription}</p>
             
             <div className="visibility-section">
               <span className="visibility-label">{SOCIAL_UI.profile.hideListSectionTitle}</span>
               <div className="visibility-group">
-                <label className="visibility-check" htmlFor="social-hide-list-v">
+                <label className="visibility-check" htmlFor="hub-hide-list-v">
                   <input
-                    id="social-hide-list-v"
+                    id="hub-hide-list-v"
                     type="checkbox"
                     checked={hiddenTabs.includes('v')}
                     onChange={() => toggleHiddenTab('v')}
                   />
                   <span>{SOCIAL_UI.profile.hideVisitedList}</span>
                 </label>
-                <label className="visibility-check" htmlFor="social-hide-list-e">
+                <label className="visibility-check" htmlFor="hub-hide-list-e">
                   <input
-                    id="social-hide-list-e"
+                    id="hub-hide-list-e"
                     type="checkbox"
                     checked={hiddenTabs.includes('e')}
                     onChange={() => toggleHiddenTab('e')}
                   />
                   <span>{SOCIAL_UI.profile.hidePlayingList}</span>
                 </label>
-                <label className="visibility-check" htmlFor="social-hide-list-p">
+                <label className="visibility-check" htmlFor="hub-hide-list-p">
                   <input
-                    id="social-hide-list-p"
+                    id="hub-hide-list-p"
                     type="checkbox"
                     checked={hiddenTabs.includes('p')}
                     onChange={() => toggleHiddenTab('p')}
@@ -167,18 +167,18 @@ export function SocialProfileScreen({
             <div className="visibility-section">
               <span className="visibility-label">{SOCIAL_UI.profile.hideFieldSectionTitle}</span>
               <div className="visibility-group">
-                <label className="visibility-check" htmlFor="social-hide-field-replayable">
+                <label className="visibility-check" htmlFor="hub-hide-field-replayable">
                   <input
-                    id="social-hide-field-replayable"
+                    id="hub-hide-field-replayable"
                     type="checkbox"
                     checked={hideReplayable}
                     onChange={(event) => setHideReplayable(event.target.checked)}
                   />
                   <span>{SOCIAL_UI.profile.hideReplayableField}</span>
                 </label>
-                <label className="visibility-check" htmlFor="social-hide-field-retry">
+                <label className="visibility-check" htmlFor="hub-hide-field-retry">
                   <input
-                    id="social-hide-field-retry"
+                    id="hub-hide-field-retry"
                     type="checkbox"
                     checked={hideRetry}
                     onChange={(event) => setHideRetry(event.target.checked)}
@@ -186,9 +186,9 @@ export function SocialProfileScreen({
                   <span>{SOCIAL_UI.profile.hideRetryField}</span>
                 </label>
                 {setHideGameTime ? (
-                  <label className="visibility-check" htmlFor="social-hide-field-gametime">
+                  <label className="visibility-check" htmlFor="hub-hide-field-gametime">
                     <input
-                      id="social-hide-field-gametime"
+                      id="hub-hide-field-gametime"
                       type="checkbox"
                       checked={hideGameTime || false}
                       onChange={(event) => setHideGameTime?.(event.target.checked)}
@@ -206,3 +206,4 @@ export function SocialProfileScreen({
     </section>
   );
 }
+

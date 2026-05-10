@@ -1,4 +1,4 @@
-import { memo, useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type MouseEvent as ReactMouseEvent } from 'react';
+﻿import { memo, useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type MouseEvent as ReactMouseEvent } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
   createSocialGist,
@@ -488,7 +488,7 @@ export const SocialHub = memo(function SocialHub() {
   };
 
   /**
-   * Agrupa las actividades por día y retorna array con day headers.
+   * Agrupa las actividades por dÃ­a y retorna array con day headers.
    */
   const groupedActivityFeedItems = useMemo(() => {
     const groups: Array<{
@@ -535,7 +535,7 @@ export const SocialHub = memo(function SocialHub() {
 
     // No iniciar arrastre si el click es en una tarjeta de perfil
     const target = event.target as HTMLElement;
-    if (target.closest('.social-feed-profile-item')) {
+    if (target.closest('.hub-feed-profile-item')) {
       return;
     }
 
@@ -667,7 +667,7 @@ export const SocialHub = memo(function SocialHub() {
         setShowSocialSpace(true);
         setFeedback('ok', SOCIAL_UI.status.signInAndLinked);
       } else {
-        // No hacer nada aquí; el useEffect automático manejará la creación del gist
+        // No hacer nada aquÃ­; el useEffect automÃ¡tico manejarÃ¡ la creaciÃ³n del gist
       }
     } catch (error) {
       setFeedback('err', error instanceof Error ? error.message : SOCIAL_UI.status.signInFailed);
@@ -883,7 +883,7 @@ export const SocialHub = memo(function SocialHub() {
       return;
     }
 
-    // Máximo de 3 favoritos
+    // MÃ¡ximo de 3 favoritos
     if (current.length >= 3) {
       setFeedback('warn', SOCIAL_UI.status.maxFavoritesReached);
       return;
@@ -930,7 +930,7 @@ export const SocialHub = memo(function SocialHub() {
         name: profileName.trim() || authUser.displayName || authUser.email,
         private: false,
         favoriteGames: validFavoriteIds.map((id) => ({ id, name: completedGameNameById.get(id) || `Juego ${id}` })),
-        recommendations: [], // No más recomendaciones destacadas
+        recommendations: [], // No mÃ¡s recomendaciones destacadas
         visibility,
         sharedLists,
       };
@@ -942,7 +942,7 @@ export const SocialHub = memo(function SocialHub() {
         updatedAt: Date.now(),
       });
 
-      // Todos los perfiles sociales se fuerzan como públicos.
+      // Todos los perfiles sociales se fuerzan como pÃºblicos.
       await updateGistPrivacy(socialConfig.token, socialCfgGistId, true);
 
       await ensureProfileByEmail({
@@ -1010,7 +1010,7 @@ export const SocialHub = memo(function SocialHub() {
       disabled: boolean;
     };
 
-    // Paso 1: Conectar sincronización principal (token)
+    // Paso 1: Conectar sincronizaciÃ³n principal (token)
     if (!hasMainSync) {
       return {
         icon: 'gear',
@@ -1020,7 +1020,7 @@ export const SocialHub = memo(function SocialHub() {
       } satisfies GatewayCta;
     }
 
-    // Paso 2: Google (si tenemos token pero no sesión)
+    // Paso 2: Google (si tenemos token pero no sesiÃ³n)
     if (resolvingSocialGist) {
       return {
         icon: 'cloud-sync',
@@ -1039,7 +1039,7 @@ export const SocialHub = memo(function SocialHub() {
       } satisfies GatewayCta;
     }
 
-    // Paso 3: Gist social (si tenemos sesión pero no gist) - normalmente automático pero se puede forzar
+    // Paso 3: Gist social (si tenemos sesiÃ³n pero no gist) - normalmente automÃ¡tico pero se puede forzar
     if (canConnectSocialGist) {
       return {
         icon: 'cloud-sync',
@@ -1054,10 +1054,10 @@ export const SocialHub = memo(function SocialHub() {
 
   if (loading) {
     return (
-      <section className="social-hub social-hub-gateway" aria-label="Social">
-        <div className="social-hub-card social-hub-gateway-card">
-          <div className="social-hub-title-wrap">
-            <Icon name="bottom-hub" className="social-hub-icon" />
+      <section className="hub-hub hub-hub-gateway" aria-label="Social">
+        <div className="hub-hub-card hub-hub-gateway-card">
+          <div className="hub-hub-title-wrap">
+            <Icon name="bottom-hub" className="hub-hub-icon" />
             <h2>{SOCIAL_UI.hubTitle}</h2>
           </div>
           <p>{SOCIAL_UI.loading}</p>
@@ -1155,22 +1155,22 @@ export const SocialHub = memo(function SocialHub() {
   }
 
   return (
-    <section className="social-hub social-hub-gateway" aria-label="Social">
-      <div className="social-hub-card social-hub-gateway-card">
-        <div className="social-hub-title-wrap">
-          <Icon name="bottom-hub" className="social-hub-icon" />
+    <section className="hub-hub hub-hub-gateway" aria-label="Social">
+      <div className="hub-hub-card hub-hub-gateway-card">
+        <div className="hub-hub-title-wrap">
+          <Icon name="bottom-hub" className="hub-hub-icon" />
           <h2>{SOCIAL_UI.hubTitle}</h2>
         </div>
-        <p className="social-gateway-lead">
+        <p className="hub-gateway-lead">
           {SOCIAL_UI.gateway.lead}
         </p>
 
-        <p className="social-gateway-step-caption">{SOCIAL_UI.gateway.stepCaption(currentStep, gatewaySteps.length)}</p>
+        <p className="hub-gateway-step-caption">{SOCIAL_UI.gateway.stepCaption(currentStep, gatewaySteps.length)}</p>
 
-        <div className="social-gateway-actions" aria-label="Acciones principales social">
+        <div className="hub-gateway-actions" aria-label="Acciones principales social">
           {primaryGatewayCta ? (
             <button
-              className="btn btn-primary social-gateway-btn social-gateway-btn-primary"
+              className="btn btn-primary hub-gateway-btn hub-gateway-btn-primary"
               type="button"
               onClick={primaryGatewayCta.action}
               disabled={primaryGatewayCta.disabled}
@@ -1181,31 +1181,31 @@ export const SocialHub = memo(function SocialHub() {
           ) : null}
 
           {hasSocialSession ? (
-            <button className="btn btn-danger social-gateway-btn" type="button" onClick={handleSignOut}>
+            <button className="btn btn-danger hub-gateway-btn" type="button" onClick={handleSignOut}>
               <Icon name="logout" />
               <span>{SOCIAL_UI.gateway.signOut}</span>
             </button>
           ) : null}
         </div>
 
-        <div className="social-gateway-progress" aria-label="Progreso de configuracion social">
-          <div className="social-gateway-progress-track" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={gatewayProgress}>
-            <span className="social-gateway-progress-fill" style={{ width: `${gatewayProgress}%` }} />
+        <div className="hub-gateway-progress" aria-label="Progreso de configuracion social">
+          <div className="hub-gateway-progress-track" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={gatewayProgress}>
+            <span className="hub-gateway-progress-fill" style={{ width: `${gatewayProgress}%` }} />
           </div>
           <small>{SOCIAL_UI.gateway.progress(gatewayProgress)}</small>
         </div>
 
-        <div className="social-gateway-steps" aria-label="Pasos de configuracion social">
+        <div className="hub-gateway-steps" aria-label="Pasos de configuracion social">
           {gatewaySteps.map((step, index) => {
             const stepNumber = index + 1;
             const isCurrent = stepNumber === currentStep && !step.done;
             return (
               <article
                 key={step.id}
-                className={`social-gateway-step ${step.done ? 'is-done' : ''} ${isCurrent ? 'is-current' : ''}`.trim()}
+                className={`hub-gateway-step ${step.done ? 'is-done' : ''} ${isCurrent ? 'is-current' : ''}`.trim()}
               >
-                <span className="social-gateway-step-badge" aria-hidden="true">{step.done ? 'OK' : stepNumber}</span>
-                <div className="social-gateway-step-copy">
+                <span className="hub-gateway-step-badge" aria-hidden="true">{step.done ? 'OK' : stepNumber}</span>
+                <div className="hub-gateway-step-copy">
                   <strong>{step.title}</strong>
                   <small>{step.subtitle}</small>
                 </div>
@@ -1227,26 +1227,26 @@ export const SocialHub = memo(function SocialHub() {
           <p>{SOCIAL_UI.gateway.gistReadySignIn}</p>
         ) : null}
 
-        <details className="social-gateway-details" open>
+        <details className="hub-gateway-details" open>
           <summary>{SOCIAL_UI.gateway.detailsSummary}</summary>
-          <div className="social-status-grid" aria-label="Estado de configuracion social">
-            <article className={`social-status-card ${hasMainSync ? 'is-ok' : 'is-pending'}`}>
-              <span className="social-status-label">{SOCIAL_UI.gateway.stateSync}</span>
+          <div className="hub-status-grid" aria-label="Estado de configuracion social">
+            <article className={`hub-status-card ${hasMainSync ? 'is-ok' : 'is-pending'}`}>
+              <span className="hub-status-label">{SOCIAL_UI.gateway.stateSync}</span>
               <strong>{hasMainSync ? SOCIAL_UI.gateway.stateConnected : SOCIAL_UI.gateway.stateNotConnected}</strong>
             </article>
-            <article className={`social-status-card ${hasSocialGist ? 'is-ok' : 'is-pending'}`}>
-              <span className="social-status-label">{SOCIAL_UI.gateway.stateGist}</span>
+            <article className={`hub-status-card ${hasSocialGist ? 'is-ok' : 'is-pending'}`}>
+              <span className="hub-status-label">{SOCIAL_UI.gateway.stateGist}</span>
               <strong>{hasSocialGist ? SOCIAL_UI.gateway.stateLinked : SOCIAL_UI.gateway.stateNotLinked}</strong>
             </article>
-            <article className={`social-status-card ${hasSocialSession ? 'is-ok' : 'is-pending'}`}>
-              <span className="social-status-label">{SOCIAL_UI.gateway.stateSession}</span>
+            <article className={`hub-status-card ${hasSocialSession ? 'is-ok' : 'is-pending'}`}>
+              <span className="hub-status-label">{SOCIAL_UI.gateway.stateSession}</span>
               <strong>{hasSocialSession ? (authUser?.displayName || authUser?.email || SOCIAL_UI.gateway.stateActive) : SOCIAL_UI.gateway.stateNotStarted}</strong>
             </article>
           </div>
 
-          <div className="social-hub-tags" aria-label="Flujo social">
+          <div className="hub-hub-tags" aria-label="Flujo social">
             {SOCIAL_UI.gateway.flow.map((flowStep) => (
-              <span key={flowStep} className="social-chip">{flowStep}</span>
+              <span key={flowStep} className="hub-chip">{flowStep}</span>
             ))}
           </div>
         </details>
@@ -1257,3 +1257,4 @@ export const SocialHub = memo(function SocialHub() {
     </section>
   );
 });
+

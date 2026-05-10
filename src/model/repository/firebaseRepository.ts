@@ -69,6 +69,27 @@ function isPermissionDeniedError(error: unknown): boolean {
 
 let cachedServicesPromise: Promise<FirebaseServices | null> | null = null;
 
+type FirebaseWebConfig = {
+  apiKey: string;
+  authDomain: string;
+  projectId: string;
+  storageBucket: string;
+  messagingSenderId: string;
+  appId: string;
+  measurementId: string;
+};
+
+// Firebase web config is public by design; security is enforced by Auth and Firestore rules.
+const FALLBACK_FIREBASE_WEB_CONFIG: FirebaseWebConfig = {
+  apiKey: 'AIzaSyBfMLi-pJfUiLqsfoUYsXQSgiAw1hWHfKg',
+  authDomain: 'mylists-f7313.firebaseapp.com',
+  projectId: 'mylists-f7313',
+  storageBucket: 'mylists-f7313.firebasestorage.app',
+  messagingSenderId: '721023375695',
+  appId: '1:721023375695:web:da7ab55e6d8afc73470d3a',
+  measurementId: 'G-V3BT053S55',
+};
+
 function parseEnvBoolean(value: string | undefined, fallback: boolean): boolean {
   if (!value) {
     return fallback;
@@ -87,14 +108,38 @@ function isAnalyticsEnabledInCurrentEnv(): boolean {
   return parseEnvBoolean(import.meta.env.VITE_ENABLE_ANALYTICS, true);
 }
 
+function getFirebaseWebConfig(): FirebaseWebConfig {
+  const envConfig: FirebaseWebConfig = {
+    apiKey: String(import.meta.env.VITE_FIREBASE_API_KEY || '').trim(),
+    authDomain: String(import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || '').trim(),
+    projectId: String(import.meta.env.VITE_FIREBASE_PROJECT_ID || '').trim(),
+    storageBucket: String(import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || '').trim(),
+    messagingSenderId: String(import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || '').trim(),
+    appId: String(import.meta.env.VITE_FIREBASE_APP_ID || '').trim(),
+    measurementId: String(import.meta.env.VITE_FIREBASE_MEASUREMENT_ID || '').trim(),
+  };
+
+  const hasRequiredEnv = Boolean(
+    envConfig.apiKey &&
+      envConfig.authDomain &&
+      envConfig.projectId &&
+      envConfig.storageBucket &&
+      envConfig.messagingSenderId &&
+      envConfig.appId,
+  );
+
+  return hasRequiredEnv ? envConfig : FALLBACK_FIREBASE_WEB_CONFIG;
+}
+
 function isFirebaseConfigReady(): boolean {
+  const config = getFirebaseWebConfig();
   return Boolean(
-    import.meta.env.VITE_FIREBASE_API_KEY &&
-      import.meta.env.VITE_FIREBASE_AUTH_DOMAIN &&
-      import.meta.env.VITE_FIREBASE_PROJECT_ID &&
-      import.meta.env.VITE_FIREBASE_STORAGE_BUCKET &&
-      import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID &&
-      import.meta.env.VITE_FIREBASE_APP_ID,
+    config.apiKey &&
+      config.authDomain &&
+      config.projectId &&
+      config.storageBucket &&
+      config.messagingSenderId &&
+      config.appId,
   );
 }
 
@@ -103,14 +148,16 @@ function getFirebaseApp(): FirebaseApp {
     return getApp();
   }
 
+  const config = getFirebaseWebConfig();
+
   return initializeApp({
-    apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-    authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
-    projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
-    storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
-    messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
-    appId: import.meta.env.VITE_FIREBASE_APP_ID,
-    measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID,
+    apiKey: config.apiKey,
+    authDomain: config.authDomain,
+    projectId: config.projectId,
+    storageBucket: config.storageBucket,
+    messagingSenderId: config.messagingSenderId,
+    appId: config.appId,
+    measurementId: config.measurementId,
   });
 }
 
@@ -134,7 +181,7 @@ async function buildFirebaseServices(): Promise<FirebaseServices | null> {
   });
 
   let analytics: Analytics | null = null;
-  const hasMeasurementId = Boolean(import.meta.env.VITE_FIREBASE_MEASUREMENT_ID);
+  const hasMeasurementId = Boolean(getFirebaseWebConfig().measurementId);
   const analyticsEnabled = isAnalyticsEnabledInCurrentEnv();
 
   if (hasMeasurementId && analyticsEnabled && typeof window !== 'undefined') {

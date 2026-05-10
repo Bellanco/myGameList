@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+﻿import { useMemo, useState } from 'react';
 import { Icon } from '../Icon';
 import { GameTable } from '../GameTable';
 import type { GameItem, TabId } from '../../../model/types/game';
@@ -12,7 +12,7 @@ const TAB_LABELS: Record<TabId, string> = {
 
 /**
  * Pantalla de detalle de perfil social.
- * Presentacional, sin lógica de negocio.
+ * Presentacional, sin lÃ³gica de negocio.
  */
 export function SocialProfileDetailScreen({
   SOCIAL_UI,
@@ -64,17 +64,17 @@ export function SocialProfileDetailScreen({
 
   if (!activeProfileDetail) {
     return (
-      <section className="social-hub social-screen" aria-label="Social">
-        <div className="social-hub-card social-screen-card social-feed-card-shell">
-          <header className="social-screen-header">
-            <div className="social-hub-title-wrap">
-              <Icon name="bottom-hub" className="social-hub-icon" />
+      <section className="hub-hub hub-screen" aria-label="Social">
+        <div className="hub-hub-card hub-screen-card hub-feed-card-shell">
+          <header className="hub-screen-header">
+            <div className="hub-hub-title-wrap">
+              <Icon name="bottom-hub" className="hub-hub-icon" />
               <h2>{SOCIAL_UI.feed.profileDetailTitle}</h2>
             </div>
             <p>{SOCIAL_UI.feed.profileDetailSubtitle}</p>
           </header>
-          <div className="social-screen-actions social-screen-actions-split" aria-label="Acciones del detalle de perfil social">
-            <div className="social-screen-actions-left">
+          <div className="hub-screen-actions hub-screen-actions-split" aria-label="Acciones del detalle de perfil social">
+            <div className="hub-screen-actions-left">
               <button className="btn btn-secondary" type="button" onClick={onBack}>
                 <Icon name="arrow-back" />
                 {SOCIAL_UI.feed.backToFeed}
@@ -88,35 +88,35 @@ export function SocialProfileDetailScreen({
     );
   }
   return (
-    <section className="social-hub social-screen" aria-label="Social">
-      <div className="social-hub-card social-screen-card social-feed-card-shell">
-        <header className="social-screen-header">
-          <div className="social-hub-title-wrap">
-            <Icon name="bottom-hub" className="social-hub-icon" />
+    <section className="hub-hub hub-screen" aria-label="Social">
+      <div className="hub-hub-card hub-screen-card hub-feed-card-shell">
+        <header className="hub-screen-header">
+          <div className="hub-hub-title-wrap">
+            <Icon name="bottom-hub" className="hub-hub-icon" />
             <h2>{SOCIAL_UI.feed.profileDetailTitle}</h2>
           </div>
           <p>{SOCIAL_UI.feed.profileDetailSubtitle}</p>
         </header>
-        <div className="social-screen-actions social-screen-actions-split" aria-label="Acciones del detalle de perfil social">
-          <div className="social-screen-actions-left">
+        <div className="hub-screen-actions hub-screen-actions-split" aria-label="Acciones del detalle de perfil social">
+          <div className="hub-screen-actions-left">
             <button className="btn btn-secondary" type="button" onClick={onBack}>
               <Icon name="arrow-back" />
               {SOCIAL_UI.feed.backToFeed}
             </button>
           </div>
         </div>
-        <article className="social-feed-card social-feed-card-detail">
+        <article className="hub-feed-card hub-feed-card-detail">
           <header>
             <h3>{activeProfileDetail.displayName}</h3>
           </header>
-          <div className="social-detail-metadata">
-            <div className="social-metadata-section">
+          <div className="hub-detail-metadata">
+            <div className="hub-metadata-section">
               <strong>{SOCIAL_UI.feed.profileFavoritesTitle}</strong>
               {activeProfileDetail.favorites.length > 0 ? (
-                <div className="social-card-row">
+                <div className="hub-card-row">
                   {activeProfileDetail.favorites.map((favorite: string) => (
-                    <div key={favorite} className="social-game-card is-read-only">
-                      <span className="social-game-card-title">{favorite}</span>
+                    <div key={favorite} className="hub-game-card is-read-only">
+                      <span className="hub-game-card-title">{favorite}</span>
                     </div>
                   ))}
                 </div>
@@ -124,16 +124,16 @@ export function SocialProfileDetailScreen({
                 <p>{SOCIAL_UI.feed.noFavorites}</p>
               )}
             </div>
-            <div className="social-metadata-section">
+            <div className="hub-metadata-section">
               <strong>{SOCIAL_UI.feed.profileListsTitle}</strong>
               {visibleTabs.length > 0 ? (
                 <>
-                  <div className="social-feed-filters" role="tablist" aria-label={SOCIAL_UI.feed.profileListsTitle}>
+                  <div className="hub-feed-filters" role="tablist" aria-label={SOCIAL_UI.feed.profileListsTitle}>
                     {visibleTabs.map((tab) => (
                       <button
                         key={tab}
                         type="button"
-                        className={`social-filter-chip ${currentTab === tab ? 'is-active' : ''}`}
+                        className={`hub-filter-chip ${currentTab === tab ? 'is-active' : ''}`}
                         onClick={() => setActiveListTab(tab)}
                       >
                         {SOCIAL_UI.feed[TAB_LABELS[tab]]}
@@ -169,3 +169,4 @@ export function SocialProfileDetailScreen({
     </section>
   );
 }
+

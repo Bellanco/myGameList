@@ -1,4 +1,4 @@
-import { memo, useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type MouseEvent as ReactMouseEvent } from 'react';
+﻿import { memo, useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type MouseEvent as ReactMouseEvent } from 'react';
 
 interface GameOption {
   id: number;
@@ -113,16 +113,16 @@ export const SocialGameCardSelector = memo(function SocialGameCardSelector({
   }, []);
 
   return (
-    <article className="social-profile-block social-profile-block-wide social-card-selector">
-      <div className="social-card-selector-head">
+    <article className="hub-profile-block hub-profile-block-wide hub-card-selector">
+      <div className="hub-card-selector-head">
         <div>
           <h3>{title}</h3>
           <p>{description}</p>
         </div>
-        <strong className="social-card-selector-counter">{selectedIds.length}</strong>
+        <strong className="hub-card-selector-counter">{selectedIds.length}</strong>
       </div>
 
-      <label className="social-card-selector-search" aria-label={`${title} buscador`}>
+      <label className="hub-card-selector-search" aria-label={`${title} buscador`}>
         <span>Buscar</span>
         <input
           type="text"
@@ -134,11 +134,11 @@ export const SocialGameCardSelector = memo(function SocialGameCardSelector({
       </label>
 
       {filteredOptions.length === 0 ? (
-        <p className="social-card-selector-empty">{emptyMessage}</p>
+        <p className="hub-card-selector-empty">{emptyMessage}</p>
       ) : (
         <div
           ref={rowRef}
-          className={`social-card-row ${isDragging ? 'is-dragging' : ''}`}
+          className={`hub-card-row ${isDragging ? 'is-dragging' : ''}`}
           aria-label={`${title} cards`}
           role="group"
           tabIndex={0}
@@ -151,7 +151,7 @@ export const SocialGameCardSelector = memo(function SocialGameCardSelector({
               <button
                 key={option.id}
                 type="button"
-                className={`social-game-card ${isSelected ? 'is-selected' : ''}`}
+                className={`hub-game-card ${isSelected ? 'is-selected' : ''}`}
                 onClick={() => {
                   if (didDragRef.current) {
                     return;
@@ -160,8 +160,8 @@ export const SocialGameCardSelector = memo(function SocialGameCardSelector({
                   onToggle(option.id);
                 }}
               >
-                <span className="social-game-card-title">{option.name}</span>
-                <span className="social-game-card-status">{isSelected ? 'Seleccionado' : 'Seleccionar'}</span>
+                <span className="hub-game-card-title">{option.name}</span>
+                <span className="hub-game-card-status">{isSelected ? 'Seleccionado' : 'Seleccionar'}</span>
               </button>
             );
           })}
@@ -170,3 +170,4 @@ export const SocialGameCardSelector = memo(function SocialGameCardSelector({
     </article>
   );
 });
+

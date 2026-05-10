@@ -1,10 +1,10 @@
-import React from 'react';
+﻿import React from 'react';
 import { Icon } from '../Icon';
 import { StarRating } from '../StarRating';
 
 /**
  * Pantalla principal del feed social.
- * Presentacional, sin lógica de negocio.
+ * Presentacional, sin lÃ³gica de negocio.
  */
 export function SocialFeedScreen({
   SOCIAL_UI,
@@ -52,18 +52,18 @@ export function SocialFeedScreen({
   handleSignOut: () => void;
 }) {
   return (
-    <section className="social-hub social-screen" aria-label="Social">
-      <div className="social-hub-card social-screen-card social-feed-card-shell">
-        <header className="social-screen-header">
-          <div className="social-hub-title-wrap">
-            <Icon name="bottom-hub" className="social-hub-icon" />
+    <section className="hub-hub hub-screen" aria-label="Social">
+      <div className="hub-hub-card hub-screen-card hub-feed-card-shell">
+        <header className="hub-screen-header">
+          <div className="hub-hub-title-wrap">
+            <Icon name="bottom-hub" className="hub-hub-icon" />
             <h2>{SOCIAL_UI.feed.title}</h2>
           </div>
           <p>{SOCIAL_UI.feed.subtitle}</p>
-          <h3 className="social-feed-owner">{socialDisplayName}</h3>
+          <h3 className="hub-feed-owner">{socialDisplayName}</h3>
         </header>
-        <div className="social-screen-actions social-screen-actions-split" aria-label="Acciones del feed social">
-          <div className="social-screen-actions-left">
+        <div className="hub-screen-actions hub-screen-actions-split" aria-label="Acciones del feed social">
+          <div className="hub-screen-actions-left">
             <button className="btn btn-secondary" type="button" onClick={() => openProfileDetail('profile')}>
               <Icon name="edit" />
               {SOCIAL_UI.feed.profile}
@@ -73,7 +73,7 @@ export function SocialFeedScreen({
               {loadingDirectory ? SOCIAL_UI.feed.refreshing : SOCIAL_UI.feed.refresh}
             </button>
           </div>
-          <div className="social-screen-actions-right">
+          <div className="hub-screen-actions-right">
             <button className="btn btn-danger" type="button" onClick={handleSignOut}>
               <Icon name="logout" />
               {SOCIAL_UI.feed.signOut}
@@ -84,10 +84,10 @@ export function SocialFeedScreen({
           <span className="flabel">{SOCIAL_UI.feed.activityTitle}</span>
           {!loadingDirectory && activityFeedItems.length === 0 ? <p>{SOCIAL_UI.feed.activityEmpty}</p> : null}
           {!loadingDirectory && activityFeedItems.length > 0 ? (
-            <div className="social-feed-activity-list" role="list" aria-label="Actividad social">
+            <div className="hub-feed-activity-list" role="list" aria-label="Actividad social">
               {groupedActivityFeedItems.map((group, groupIndex) => (
-                <div key={`${group.dayHeader}-${groupIndex}`} className="social-feed-day-group">
-                  <div className="social-feed-day-header">
+                <div key={`${group.dayHeader}-${groupIndex}`} className="hub-feed-day-group">
+                  <div className="hub-feed-day-header">
                     <h4>{group.dayHeader}</h4>
                   </div>
                   {group.items.map((entry: any) => {
@@ -97,7 +97,7 @@ export function SocialFeedScreen({
                     return (
                       <article
                         key={entry.id}
-                        className={`social-feed-card social-feed-activity-item ${cardTypeClass} ${ownershipClass}`}
+                        className={`hub-feed-card hub-feed-activity-item ${cardTypeClass} ${ownershipClass}`}
                         role="listitem"
                         tabIndex={0}
                         aria-label={`Abrir detalle de actividad de ${entry.profileDisplayName} sobre ${entry.gameName}`}
@@ -110,9 +110,9 @@ export function SocialFeedScreen({
                         <p>{SOCIAL_UI.feed.reviewHeadline(entry.gameName)}</p>
                         <StarRating value={Number(entry.rating || 0)} />
                         {entry.type === 'review' ? (
-                          <p className="social-feed-review-text" title={reviewText}>{reviewText}</p>
+                          <p className="hub-feed-review-text" title={reviewText}>{reviewText}</p>
                         ) : reviewText ? (
-                          <p className="social-feed-recommendation-text" title={reviewText}>{reviewText}</p>
+                          <p className="hub-feed-recommendation-text" title={reviewText}>{reviewText}</p>
                         ) : null}
                       </article>
                     );
@@ -122,8 +122,8 @@ export function SocialFeedScreen({
             </div>
           ) : null}
         </div>
-        <div className="social-feed-toolbar" aria-label="Búsqueda y filtros del feed">
-          <label className="social-feed-search">
+        <div className="hub-feed-toolbar" aria-label="BÃºsqueda y filtros del feed">
+          <label className="hub-feed-search">
             <span>{SOCIAL_UI.feed.searchLabel}</span>
             <input
               type="text"
@@ -133,7 +133,7 @@ export function SocialFeedScreen({
               onChange={(event) => setFeedSearch(event.target.value)}
             />
           </label>
-          <p className="social-feed-result-count">{SOCIAL_UI.feed.resultCount(filteredSocialDirectory.length)}</p>
+          <p className="hub-feed-result-count">{SOCIAL_UI.feed.resultCount(filteredSocialDirectory.length)}</p>
         </div>
         <div className="fg">
           <span className="flabel">{SOCIAL_UI.feed.sectionTitle}</span>
@@ -144,7 +144,7 @@ export function SocialFeedScreen({
           {!loadingDirectory && filteredSocialDirectory.length > 0 ? (
             <div
               ref={feedRowRef}
-              className={`social-feed-row ${isFeedDragging ? 'is-dragging' : ''}`}
+              className={`hub-feed-row ${isFeedDragging ? 'is-dragging' : ''}`}
               aria-label="Feed social"
               role="group"
               tabIndex={0}
@@ -154,7 +154,7 @@ export function SocialFeedScreen({
               {filteredSocialDirectory.map((entry) => (
                 <article
                   key={entry.id}
-                  className="social-feed-card social-feed-profile-item"
+                  className="hub-feed-card hub-feed-profile-item"
                   tabIndex={0}
                   aria-label={`Abrir perfil social de ${entry.displayName}`}
                   onClick={() => openProfileDetail(entry.id)}
@@ -178,3 +178,4 @@ export function SocialFeedScreen({
     </section>
   );
 }
+
