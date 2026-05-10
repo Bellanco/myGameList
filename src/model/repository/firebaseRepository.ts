@@ -271,6 +271,25 @@ function toSocialAuthUser(user: { uid: string; displayName: string | null; email
   };
 }
 
+function isCloudflarePreviewHost(): boolean {
+  if (typeof window === 'undefined') {
+    return false;
+  }
+
+  const hostname = window.location.hostname;
+  const hostnameParts = hostname.split('.');
+  return hostname.endsWith('.pages.dev') && hostnameParts.length > 3;
+}
+
+function getFirebaseErrorCode(error: unknown): string {
+  if (!error || typeof error !== 'object') {
+    return '';
+  }
+
+  const candidate = error as { code?: string };
+  return String(candidate.code || '');
+}
+
 /**
  * Devuelve el usuario autenticado actual para el hub social.
  */
@@ -287,6 +306,10 @@ export async function getCurrentSocialAuthUser(): Promise<SocialAuthUser | null>
  * Inicia sesión con Google para funcionalidades sociales.
  */
 export async function signInWithGoogle(): Promise<SocialAuthUser> {
+  if (isCloudflarePreviewHost()) {
+    throw new Error('Google no está disponible en previews de Cloudflare. Usa el dominio principal o autoriza este subdominio en Firebase Auth.');
+  }
+
   const services = await initializeFirebaseServices();
   if (!services) {
     throw new Error('Firebase no está configurado en este entorno');
@@ -294,8 +317,17 @@ export async function signInWithGoogle(): Promise<SocialAuthUser> {
 
   const provider = new GoogleAuthProvider();
   provider.setCustomParameters({ prompt: 'select_account' });
-  const result = await signInWithPopup(services.auth, provider);
-  return toSocialAuthUser(result.user);
+  try {
+    const result = await signInWithPopup(services.auth, provider);
+    return toSocialAuthUser(result.user);
+  } catch (error) {
+    const code = getFirebaseErrorCode(error);
+    if (code === 'auth/internal-error' || code === 'auth/unauthorized-domain') {
+      throw new Error('El dominio actual no está autorizado en Firebase Auth para Google Sign-In. Revisa Authorized domains.');
+    }
+
+    throw error;
+  }
 }
 
 /**
