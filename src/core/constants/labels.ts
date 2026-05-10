@@ -209,6 +209,7 @@ export const SOCIAL_UI = {
     signInFailed: 'No se pudo iniciar sesión con Google.',
     loadProfileFailed: 'No se pudo cargar tu perfil social.',
     saveProfileFailed: 'No se pudo guardar tu perfil social.',
+    maxFavoritesReached: 'Máximo de 3 juegos favoritos permitidos.',
   },
   steps: [
     { id: 'sync', title: 'GitHub', subtitle: 'Conectar' },

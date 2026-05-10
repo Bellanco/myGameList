@@ -34,6 +34,42 @@ import { SocialDetailScreen } from './socialhub/SocialDetailScreen';
 import { SocialProfileDetailScreen } from './socialhub/SocialProfileDetailScreen';
 import { SocialFeedScreen } from './socialhub/SocialFeedScreen';
 
+const shouldRequireProfileCreation = (profileExists: boolean, justSavedProfile: boolean): boolean => {
+  return !profileExists && !justSavedProfile;
+};
+
+const shouldRedirectToProfileEditor = (mustCreateProfile: boolean, activePanel: string): boolean => {
+  return mustCreateProfile && activePanel !== 'profile';
+};
+
+type SocialPanel = 'profile' | 'profile-detail' | 'detail' | 'feed';
+
+type SocialRouteState = {
+  activePanel: SocialPanel;
+  profileDetailId: string;
+  detailActorUid: string;
+  detailGameId: number;
+  detailEventType: string;
+};
+
+const PROFILE_EDIT_PATH = /^\/social\/profile\/?$/;
+const PROFILE_DETAIL_PATH = /^\/social\/profiles\/([^/]+)$/;
+const ACTIVITY_DETAIL_PATH = /^\/social\/user\/([^/]+)\/game\/(\d+)\/(review|recommendation)$/;
+
+const getSocialRouteState = (pathname: string): SocialRouteState => {
+  const profileEditMatch = pathname.match(PROFILE_EDIT_PATH);
+  const profileDetailMatch = pathname.match(PROFILE_DETAIL_PATH);
+  const detailMatch = pathname.match(ACTIVITY_DETAIL_PATH);
+
+  return {
+    activePanel: profileEditMatch ? 'profile' : profileDetailMatch ? 'profile-detail' : detailMatch ? 'detail' : 'feed',
+    profileDetailId: profileDetailMatch ? decodeURIComponent(profileDetailMatch[1]) : '',
+    detailActorUid: detailMatch ? decodeURIComponent(detailMatch[1]) : '',
+    detailGameId: detailMatch ? Number(detailMatch[2]) : 0,
+    detailEventType: detailMatch ? detailMatch[3] : '',
+  };
+};
+
 /**
  * Hub social - Fase 1.
  *
@@ -46,14 +82,8 @@ export const SocialHub = memo(function SocialHub() {
   const location = useLocation();
   const navigate = useNavigate();
 
-  const profileEditMatch = location.pathname.match(/^\/social\/profile\/?$/);
-  const profileDetailMatch = location.pathname.match(/^\/social\/profiles\/([^/]+)$/);
-  const detailMatch = location.pathname.match(/^\/social\/user\/([^/]+)\/game\/(\d+)\/(review|recommendation)$/);
-  const profileDetailId = profileDetailMatch ? decodeURIComponent(profileDetailMatch[1]) : '';
-  const detailActorUid = detailMatch ? decodeURIComponent(detailMatch[1]) : '';
-  const detailGameId = detailMatch ? Number(detailMatch[2]) : 0;
-  const detailEventType = detailMatch ? detailMatch[3] : '';
-  const activePanel = profileEditMatch ? 'profile' : profileDetailMatch ? 'profile-detail' : detailMatch ? 'detail' : 'feed';
+  const routeState = useMemo(() => getSocialRouteState(location.pathname), [location.pathname]);
+  const { activePanel, profileDetailId, detailActorUid, detailGameId, detailEventType } = routeState;
 
   type SocialActivityFeedItem = SocialActivityEntry & {
     profileId: string;
@@ -85,6 +115,8 @@ export const SocialHub = memo(function SocialHub() {
   const [statusKind, setStatusKind] = useState<'ok' | 'warn' | 'err'>('ok');
   const [showSocialSpace, setShowSocialSpace] = useState(false);
   const [hasCreatedProfile, setHasCreatedProfile] = useState(false);
+  const [mustCreateProfile, setMustCreateProfile] = useState(false);
+  const [justSavedProfile, setJustSavedProfile] = useState(false);
   const [profileName, setProfileName] = useState('');
   const [favoriteGameIds, setFavoriteGameIds] = useState<number[]>([]);
   const [hiddenTabs, setHiddenTabs] = useState<TabId[]>([]);
@@ -632,27 +664,42 @@ export const SocialHub = memo(function SocialHub() {
       setHideRetry(Boolean(profileVisibility.hideRetry));
       setHideGameTime(Boolean(profileVisibility.hideGameTime));
       setHasCreatedProfile(profileExists);
-      navigate('/social');
       setSocialPayload({
         recommendations: [],
         activity: socialRead.data.activity,
       });
-      if (!profileExists) {
-        setFeedback('warn', SOCIAL_UI.status.profileMissing);
+      
+      const mustCreate = shouldRequireProfileCreation(profileExists, justSavedProfile);
+
+      // Keep profile creation routing centralized to avoid navigation regressions.
+      if (mustCreate) {
+        setMustCreateProfile(true);
+        if (activePanel !== 'profile') {
+          navigate('/social/profile');
+        }
+      } else if (profileExists) {
+        setMustCreateProfile(false);
       }
     } catch (error) {
       setFeedback('err', error instanceof Error ? error.message : SOCIAL_UI.status.loadProfileFailed);
     } finally {
       setHydratingProfile(false);
     }
-  }, [authUser, completedGameNameById, defaultSocialVisibility, getOrderedUniqueTabs, setFeedback, showSocialSpace, socialCfgEtag, socialCfgGistId]);
+  }, [authUser, completedGameNameById, defaultSocialVisibility, getOrderedUniqueTabs, navigate, setFeedback, showSocialSpace, socialCfgEtag, socialCfgGistId, justSavedProfile]);
+
+  useEffect(() => {
+    // Force profile edit if profile doesn't exist yet
+    if (shouldRedirectToProfileEditor(mustCreateProfile, activePanel)) {
+      navigate('/social/profile');
+    }
+  }, [mustCreateProfile, activePanel, navigate]);
 
   useEffect(() => {
     void hydrateSocialProfile();
   }, [hydrateSocialProfile]);
 
   const hydrateSocialDirectory = useCallback(async () => {
-    if (!showSocialSpace || activePanel === 'profile' || !authUser || !socialCfgGistId) {
+    if (!showSocialSpace || activePanel === 'profile' || mustCreateProfile || !authUser || !socialCfgGistId) {
       return;
     }
 
@@ -730,7 +777,7 @@ export const SocialHub = memo(function SocialHub() {
     } finally {
       setLoadingDirectory(false);
     }
-  }, [activePanel, authUser, defaultSocialVisibility, mainSyncConfig?.token, setFeedback, showSocialSpace, socialCfgGistId, toSharedGame]);
+  }, [activePanel, authUser, defaultSocialVisibility, mainSyncConfig?.token, mustCreateProfile, setFeedback, showSocialSpace, socialCfgGistId, toSharedGame]);
 
   useEffect(() => {
     void hydrateSocialDirectory();
@@ -749,8 +796,14 @@ export const SocialHub = memo(function SocialHub() {
       return;
     }
 
+    // Máximo de 3 favoritos
+    if (current.length >= 3) {
+      setFeedback('warn', SOCIAL_UI.status.maxFavoritesReached);
+      return;
+    }
+
     setFn([...current, id]);
-  }, []);
+  }, [setFeedback]);
 
   const handleSaveProfile = useCallback(async () => {
     const socialConfig = getSocialSyncConfig();
@@ -821,9 +874,14 @@ export const SocialHub = memo(function SocialHub() {
       });
       setSocialCfgEtag(writeResult.etag || socialCfgEtag);
       setHasCreatedProfile(true);
+      setMustCreateProfile(false);
+      setJustSavedProfile(true);
       navigate('/social');
       void hydrateSocialDirectory();
       setFeedback('ok', SOCIAL_UI.status.profileSaved);
+      
+      // Clear the flag after a short delay to allow normal hydration flow again
+      setTimeout(() => setJustSavedProfile(false), 1000);
     } catch (error) {
       setFeedback('err', error instanceof Error ? error.message : SOCIAL_UI.status.saveProfileFailed);
     } finally {
@@ -837,9 +895,10 @@ export const SocialHub = memo(function SocialHub() {
     hiddenTabs,
     hideReplayable,
     hideRetry,
-      hideGameTime,
+    hideGameTime,
     hydrateSocialDirectory,
     localState,
+    navigate,
     profileName,
     setFeedback,
     socialCfgEtag,

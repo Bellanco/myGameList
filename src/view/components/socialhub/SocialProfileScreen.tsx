@@ -68,6 +68,9 @@ export function SocialProfileScreen({
     onHiddenTabsChange([...hiddenTabs, tab]);
   };
 
+  // mustCreateProfile: when true, user must create/save profile before accessing feed.
+  // onBack button will not be shown when mustCreateProfile is true (since hasCreatedProfile will be false)
+
   return (
     <section className="social-hub social-screen" aria-label="Social">
       <div className="social-hub-card social-screen-card social-profile-card">
