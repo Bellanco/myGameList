@@ -936,6 +936,75 @@ button.social-chip.active {
   }
 }
 
+/* Activity feed day grouping */
+.social-feed-day-group {
+  display: flex;
+  flex-direction: column;
+  gap: .5rem;
+  margin-bottom: .8rem;
+}
+
+.social-feed-day-header {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  padding: .35rem .75rem;
+  background: rgba(26,159,255,.08);
+  border-left: 3px solid rgba(26,159,255,.45);
+  border-radius: 0 .3rem .3rem 0;
+}
+
+.social-feed-day-header h4 {
+  margin: 0;
+  font-size: .88rem;
+  font-weight: 700;
+  letter-spacing: .02em;
+  color: #b5ddf8;
+  text-transform: uppercase;
+}
+
+/* Detail panel metadata */
+.social-detail-metadata {
+  display: flex;
+  flex-direction: column;
+  gap: .7rem;
+  margin-top: .9rem;
+  padding-top: .8rem;
+  border-top: 1px solid var(--border);
+}
+
+.social-metadata-section {
+  display: flex;
+  flex-direction: column;
+  gap: .4rem;
+}
+
+.social-metadata-section strong {
+  font-size: .85rem;
+  color: #d9f0ff;
+  text-transform: uppercase;
+  letter-spacing: .02em;
+  font-weight: 700;
+}
+
+.social-metadata-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .4rem;
+}
+
+.social-metadata-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: .25rem .55rem;
+  border-radius: .5rem;
+  background: rgba(26,159,255,.15);
+  border: 1px solid rgba(26,159,255,.35);
+  color: #c5ddf5;
+  font-size: .78rem;
+  font-weight: 600;
+}
+
 @media (min-width:1957px) {
   .status-banner,
   .main {

@@ -3,7 +3,7 @@ import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-
 import { DIALOG_MESSAGES, ROUTE_TAB, SYNC_BADGE_TEXT, TAB_ROUTE } from './core/constants/labels';
 import type { TabData, TabId } from './model/types/game';
 import { ensureProfileByEmail, getCurrentSocialAuthUser } from './model/repository/firebaseRepository';
-import { getSocialSyncConfig, readSocialGist, saveSocialSyncConfig, writeSocialGist } from './model/repository/gistRepository';
+import { getSocialSyncConfig, readSocialGist, saveSocialSyncConfig, upsertRecommendationActivity, upsertReviewActivity, writeSocialGist } from './model/repository/gistRepository';
 import { IconSprite } from './view/components/IconSprite';
 import { Header } from './view/components/Header';
 import { TabBar } from './view/components/TabBar';
@@ -79,7 +79,7 @@ export default function App() {
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [compactFilters, setCompactFilters] = useState(isCompactFilters());
   const [recommendationOpen, setRecommendationOpen] = useState(false);
-  const [recommendationGame, setRecommendationGame] = useState<{ id: number; name: string } | null>(null);
+  const [recommendationGame, setRecommendationGame] = useState<{ id: number; name: string; score: number } | null>(null);
   const resizeRafRef = useRef<number | null>(null);
 
   const tabFilter = vm.filters[currentTab];
@@ -230,9 +230,86 @@ export default function App() {
     setFormModalOpen(false);
   }, [setFormModalOpen]);
 
+  const publishReviewActivity = useCallback(async (input: { id: number; name: string; review: string; score: number }) => {
+    const authUser = await getCurrentSocialAuthUser();
+    if (!authUser) {
+      return;
+    }
+
+    const socialConfig = getSocialSyncConfig();
+    if (!socialConfig?.token || !socialConfig.gistId) {
+      return;
+    }
+
+    const socialRead = await readSocialGist(
+      socialConfig.token,
+      socialConfig.gistId,
+      socialConfig.etag || null,
+    );
+
+    const now = Date.now();
+    const nextPayload = upsertReviewActivity(socialRead.data, {
+      actorUid: authUser.uid,
+      actorName: authUser.displayName || authUser.email,
+      gameId: input.id,
+      gameName: input.name,
+      reviewText: input.review,
+      rating: input.score,
+      timestamp: now,
+    });
+
+    const writeResult = await writeSocialGist(socialConfig.token, socialConfig.gistId, nextPayload);
+
+    saveSocialSyncConfig({
+      token: socialConfig.token,
+      gistId: socialConfig.gistId,
+      etag: writeResult.etag || socialConfig.etag || null,
+      lastRemoteUpdatedAt: now,
+    });
+
+    await ensureProfileByEmail({
+      user: authUser,
+      socialGistId: socialConfig.gistId,
+      socialGistEtag: writeResult.etag || socialConfig.etag || null,
+      preferredName: authUser.displayName || authUser.email,
+    });
+  }, []);
+
   const handleSaveDraft = useCallback((nextDraft: typeof vm.draft) => {
+    const predictedId =
+      nextDraft.id ||
+      Math.max(
+        0,
+        ...['c', 'v', 'e', 'p'].flatMap((tab) => vm.data[tab as TabId].map((item) => item.id)),
+      ) + 1;
+
+    const previousGame = [...vm.data.c, ...vm.data.v, ...vm.data.e, ...vm.data.p].find((entry) => entry.id === predictedId);
+    const cleanReview = nextDraft.review.trim();
+    const nextScore = Number(nextDraft.score || 0);
+
     saveDraft(editingTab, nextDraft);
-  }, [editingTab, saveDraft]);
+
+    if (editingTab === 'p' || !cleanReview) {
+      return;
+    }
+
+    const reviewChanged = (previousGame?.review || '').trim() !== cleanReview;
+    const scoreChanged = Number(previousGame?.score || 0) !== nextScore;
+    const nameChanged = (previousGame?.name || '').trim() !== nextDraft.name.trim();
+
+    if (!reviewChanged && !scoreChanged && !nameChanged) {
+      return;
+    }
+
+    void publishReviewActivity({
+      id: predictedId,
+      name: nextDraft.name.trim(),
+      review: cleanReview,
+      score: nextScore,
+    }).catch(() => {
+      notify('warn', 'Juego guardado, pero no se pudo actualizar la actividad social de reseña.');
+    });
+  }, [editingTab, notify, publishReviewActivity, saveDraft, vm.data]);
 
   const handleCloseAdmin = useCallback(() => {
     setAdminModalOpen(false);
@@ -269,8 +346,12 @@ export default function App() {
     setConfirmState(null);
   }, [confirmState, setConfirmState]);
 
-  const handleRecommendGame = useCallback((game: { id: number; name: string }) => {
-    setRecommendationGame(game);
+  const handleRecommendGame = useCallback((game: { id: number; name: string; score?: number }) => {
+    setRecommendationGame({
+      id: game.id,
+      name: game.name,
+      score: Number(game.score || 0),
+    });
     setRecommendationOpen(true);
   }, []);
 
@@ -299,34 +380,18 @@ export default function App() {
 
       const now = Date.now();
       const toUid = toEmail.trim().toLowerCase() || 'public';
-      const nextRecommendations = [
-        {
-          id: now,
-          fromUid: authUser.uid,
-          toUid,
-          gameId: game.id,
-          gameName: game.name,
-          createdAt: now,
-        },
-        ...socialRead.data.recommendations,
-      ].slice(0, 120);
-
-      const nextActivity = [
-        {
-          id: now,
-          type: message.trim() ? 'recommendation_with_message' : 'recommendation',
-          actorUid: authUser.uid,
-          createdAt: now,
-        },
-        ...socialRead.data.activity,
-      ].slice(0, 120);
-
-      const writeResult = await writeSocialGist(socialConfig.token, socialConfig.gistId, {
-        ...socialRead.data,
-        recommendations: nextRecommendations,
-        activity: nextActivity,
-        updatedAt: now,
+      const nextPayload = upsertRecommendationActivity(socialRead.data, {
+        actorUid: authUser.uid,
+        actorName: authUser.displayName || authUser.email,
+        toUid,
+        gameId: game.id,
+        gameName: game.name,
+        message: message.trim(),
+        rating: game.score,
+        timestamp: now,
       });
+
+      const writeResult = await writeSocialGist(socialConfig.token, socialConfig.gistId, nextPayload);
 
       saveSocialSyncConfig({
         token: socialConfig.token,
@@ -480,7 +545,7 @@ export default function App() {
         <RecommendationModal
           open={recommendationOpen}
           game={recommendationGame}
-          currentUserName={vm.meta.currentUserName || 'Jugador'}
+          currentUserName={'Jugador'}
           onClose={handleCloseRecommendationModal}
           onSend={handleSendRecommendation}
         />
@@ -514,6 +579,7 @@ export default function App() {
         <Route path="/proximos" element={null} />
         <Route path="/social" element={null} />
         <Route path="/social/profile" element={null} />
+        <Route path="/social/user/:userId/game/:gameId/:eventType" element={null} />
         <Route path="/ajustes" element={null} />
         <Route path="*" element={<Navigate to="/completados" replace />} />
       </Routes>
