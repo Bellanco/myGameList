@@ -466,6 +466,18 @@
   box-shadow: 0 8px 18px rgba(103,193,141,.22);
 }
 
+.social-game-card.is-read-only {
+  cursor: default;
+  opacity: .85;
+  border-color: rgba(26,159,255,.18);
+}
+
+.social-game-card.is-read-only:hover {
+  transform: none;
+  border-color: rgba(26,159,255,.18);
+  box-shadow: none;
+}
+
 .social-game-card-title {
   font-size: .9rem;
   font-weight: 800;
@@ -720,6 +732,19 @@ button.social-chip.active {
   display: flex;
   flex-direction: column;
   gap: .45rem;
+}
+
+.social-feed-profile-item {
+  cursor: pointer;
+  transition: transform .2s ease, border-color .2s ease, box-shadow .2s ease;
+}
+
+.social-feed-profile-item:hover,
+.social-feed-profile-item:focus-visible {
+  transform: translateY(-1px);
+  border-color: rgba(26,159,255,.42);
+  box-shadow: 0 8px 16px rgba(0,0,0,.18);
+  outline: none;
 }
 
 .social-feed-card h3 {
