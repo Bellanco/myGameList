@@ -290,6 +290,15 @@ function getFirebaseErrorCode(error: unknown): string {
   return String(candidate.code || '');
 }
 
+function getAuthRuntimeContext(): { hostname: string; projectId: string; authDomain: string } {
+  const config = getFirebaseWebConfig();
+  return {
+    hostname: typeof window !== 'undefined' ? window.location.hostname : 'unknown',
+    projectId: config.projectId,
+    authDomain: config.authDomain,
+  };
+}
+
 /**
  * Devuelve el usuario autenticado actual para el hub social.
  */
@@ -322,8 +331,18 @@ export async function signInWithGoogle(): Promise<SocialAuthUser> {
     return toSocialAuthUser(result.user);
   } catch (error) {
     const code = getFirebaseErrorCode(error);
-    if (code === 'auth/internal-error' || code === 'auth/unauthorized-domain') {
-      throw new Error('El dominio actual no está autorizado en Firebase Auth para Google Sign-In. Revisa Authorized domains.');
+    if (code === 'auth/unauthorized-domain') {
+      const context = getAuthRuntimeContext();
+      throw new Error(
+        `El dominio ${context.hostname} no está autorizado en Firebase Auth para Google Sign-In. Proyecto activo: ${context.projectId} (${context.authDomain}). Revisa Authorized domains.`,
+      );
+    }
+
+    if (code === 'auth/internal-error') {
+      const context = getAuthRuntimeContext();
+      throw new Error(
+        `Firebase devolvió auth/internal-error en ${context.hostname} usando el proyecto ${context.projectId} (${context.authDomain}). Suele deberse a bloqueo de popup/cookies/extensiones o a configuración OAuth del proveedor Google.`,
+      );
     }
 
     throw error;
