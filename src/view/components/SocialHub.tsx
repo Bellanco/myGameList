@@ -862,6 +862,7 @@ export const SocialHub = memo(function SocialHub() {
         user: authUser,
         socialGistId: socialCfgGistId,
         gamesGistId: mainSyncConfig?.gistId || '',
+        githubToken: mainSyncConfig?.token || socialConfig.token,
         socialGistEtag: writeResult.etag || socialCfgEtag,
         preferredName: profile.name,
       });

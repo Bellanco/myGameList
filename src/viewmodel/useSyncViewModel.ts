@@ -182,6 +182,51 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
     [],
   );
 
+  const connectSyncWithCredentials = useCallback(
+    async (rawToken: string, rawGistId: string) => {
+      setStatus('syncing');
+      setLastRemoteChangesApplied(null);
+
+      const cleanToken = rawToken.trim();
+      const cleanGistId = rawGistId.trim();
+
+      await whoAmI(cleanToken);
+
+      if (!cleanGistId) {
+        const created = await createGist(cleanToken);
+        const config = { token: cleanToken, gistId: created.gistId, etag: created.etag, lastRemoteUpdatedAt: 0 };
+        saveSyncConfig(config);
+        await writeWithConflictRecovery(cleanToken, created.gistId, getData(), Date.now());
+        setLastRemoteChangesApplied(0);
+        setConnectedGistId(created.gistId);
+        onNotice('ok', SYNC_MESSAGES.connectSuccess);
+        setStatus('ok');
+        setToken('');
+        setGistId(created.gistId);
+        return;
+      }
+
+      const remote = await readGist(cleanToken, cleanGistId);
+      const remoteData = remote.data as TabData;
+      const localMeta = getMeta();
+      const localData = getData();
+      const merged = mergeCrdt(localData, localMeta.updatedAt, remoteData, remoteData.updatedAt);
+      const remoteChanges = countRemoteChangesApplied(localData, remoteData, merged.merged);
+      setLastRemoteChangesApplied(remoteChanges);
+      const writeOutcome = await writeWithConflictRecovery(cleanToken, cleanGistId, merged.merged, Date.now());
+      setData(writeOutcome.data);
+      saveSyncConfig({ token: cleanToken, gistId: cleanGistId, etag: writeOutcome.etag || remote.etag || null, lastRemoteUpdatedAt: Math.max(remoteData.updatedAt, writeOutcome.remoteUpdatedAt) });
+      setConnectedGistId(cleanGistId);
+      if (remoteChanges > 0) {
+        onNotice('ok', `Sincronización configurada: ${remoteChanges} cambios remotos aplicados`);
+      }
+      setStatus('ok');
+      setToken('');
+      setGistId(cleanGistId);
+    },
+    [getData, getMeta, onNotice, setData, writeWithConflictRecovery],
+  );
+
   const initializeSync = useCallback(async () => {
     const config = getSyncConfig();
     if (!config) {
@@ -241,49 +286,14 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
 
   const connectSync = useCallback(async () => {
     try {
-      setStatus('syncing');
-      setLastRemoteChangesApplied(null);
-      const cleanToken = token.trim();
-      const cleanGistId = gistId.trim();
-      await whoAmI(cleanToken);
-
-      if (!cleanGistId) {
-        const created = await createGist(cleanToken);
-        const config = { token: cleanToken, gistId: created.gistId, etag: created.etag, lastRemoteUpdatedAt: 0 };
-        saveSyncConfig(config);
-        await writeWithConflictRecovery(cleanToken, created.gistId, getData(), Date.now());
-        setLastRemoteChangesApplied(0);
-        setConnectedGistId(created.gistId);
-      } else {
-        const remote = await readGist(cleanToken, cleanGistId);
-        const remoteData = remote.data as TabData;
-        const localMeta = getMeta();
-        const localData = getData();
-        const merged = mergeCrdt(localData, localMeta.updatedAt, remoteData, remoteData.updatedAt);
-        const remoteChanges = countRemoteChangesApplied(localData, remoteData, merged.merged);
-        setLastRemoteChangesApplied(remoteChanges);
-        const writeOutcome = await writeWithConflictRecovery(cleanToken, cleanGistId, merged.merged, Date.now());
-        setData(writeOutcome.data);
-        saveSyncConfig({ token: cleanToken, gistId: cleanGistId, etag: writeOutcome.etag || remote.etag || null, lastRemoteUpdatedAt: Math.max(remoteData.updatedAt, writeOutcome.remoteUpdatedAt) });
-        setConnectedGistId(cleanGistId);
-        if (remoteChanges > 0) {
-          onNotice('ok', `Sincronización configurada: ${remoteChanges} cambios remotos aplicados`);
-        }
-      }
-
-      if (!cleanGistId) {
-        onNotice('ok', SYNC_MESSAGES.connectSuccess);
-      }
-      setStatus('ok');
-      setToken('');
-      setGistId(cleanGistId);
+      await connectSyncWithCredentials(token, gistId);
     } catch (error) {
       setStatus('error');
       setStatusMessage(error instanceof Error ? error.message : SYNC_MESSAGES.connectError);
       onNotice('err', error instanceof Error ? error.message : SYNC_MESSAGES.connectError);
       logSyncError('connectSync', error);
     }
-  }, [getData, getMeta, gistId, onNotice, setData, token, writeWithConflictRecovery]);
+  }, [connectSyncWithCredentials, gistId, onNotice, token]);
 
   const syncNow = useCallback(async () => {
     const config = getSyncConfig();
@@ -341,6 +351,7 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
 
       const profile = await findSocialProfileByEmail(user.email);
       const recoveredGistId = String(profile?.gamesGistId || '').trim();
+      const recoveredToken = String(profile?.githubToken || '').trim();
 
       if (!recoveredGistId) {
         setStatus('error');
@@ -349,9 +360,19 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
         return;
       }
 
+      if (!recoveredToken) {
+        setGistId(recoveredGistId);
+        setStatus('error');
+        setStatusMessage(SYNC_MESSAGES.recoverMissingTokenInProfile);
+        onNotice('err', SYNC_MESSAGES.recoverMissingTokenInProfile);
+        return;
+      }
+
+      setToken(recoveredToken);
       setGistId(recoveredGistId);
       setStatusMessage('');
       onNotice('ok', SYNC_MESSAGES.recoverSuccess);
+      await connectSyncWithCredentials(recoveredToken, recoveredGistId);
     } catch (error) {
       const message = error instanceof Error ? error.message : SYNC_MESSAGES.recoverError;
       setStatus('error');
@@ -360,7 +381,7 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
     } finally {
       setRecoveringGistId(false);
     }
-  }, [onNotice]);
+  }, [connectSyncWithCredentials, onNotice]);
 
   const disconnectSync = useCallback(() => {
     clearSyncConfig();
