@@ -3,11 +3,10 @@
  * Enables offline functionality and caching strategy
  */
 
-const CACHE_NAME = 'mygamelist-v2';
+const CACHE_NAME = 'mygamelist-v5';
 const ASSETS = [
   '/',
   '/index.html',
-  '/style.css',
   '/manifest.json',
 ];
 
@@ -35,52 +34,56 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// Fetch: Network-first with cache fallback
+// Fetch: Network-first for navigation, no runtime caching for hashed assets
 self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
   
-  // Skip non-GET requests and external requests
-  if (request.method !== 'GET' || request.url.includes('gist.github')) {
+  // Keep API/auth requests out of runtime cache to avoid stale sensitive data.
+  if (request.method !== 'GET') {
     return;
   }
 
-  if (url.pathname.includes('/ts/') || 
+  if (url.origin !== self.location.origin) {
+    return;
+  }
+
+  if (url.pathname.includes('/ts/') ||
       url.pathname.includes('@vite') ||
-      url.pathname.endsWith('.ts') ||
-      url.pathname.endsWith('.json') ||
       url.pathname.includes('__vite')) {
     return;
   }
 
+  const acceptHeader = request.headers.get('accept') || '';
+  const isHtmlNavigation = request.mode === 'navigate' || acceptHeader.includes('text/html');
+  const isImmutableAsset = url.pathname.startsWith('/assets/');
+
+  // Always go to network for hashed assets to avoid stale chunk mismatch after deploys.
+  if (isImmutableAsset) {
+    event.respondWith(fetch(request));
+    return;
+  }
+
   event.respondWith(
-    // Try network first
     fetch(request)
       .then((response) => {
-        // Cache successful responses
-        if (response && response.status === 200) {
-          const cache = caches.open(CACHE_NAME);
-          cache.then((c) => c.put(request, response.clone()));
+        if (isHtmlNavigation && response && response.status === 200 && response.type === 'basic') {
+          caches.open(CACHE_NAME).then((cache) => cache.put('/index.html', response.clone()));
         }
         return response;
       })
-      .catch(() => {
-        // Fall back to cache
-        return caches.match(request).then((cached) => {
-          if (cached) {
-            return cached;
+      .catch(async () => {
+        if (isHtmlNavigation) {
+          const offlineShell = await caches.match('/index.html');
+          if (offlineShell) {
+            return offlineShell;
           }
-          // Offline fallback for HTML pages
-          const acceptHeader = request.headers.get('accept') || '';
-          if (acceptHeader.includes('text/html')) {
-            return caches.match('/index.html');
-          }
-          // Generic offline response
-          return new Response('Offline - Content unavailable', {
-            status: 503,
-            statusText: 'Service Unavailable',
-            headers: new Headers({ 'Content-Type': 'text/plain' }),
-          });
+        }
+
+        return new Response('Offline - Content unavailable', {
+          status: 503,
+          statusText: 'Service Unavailable',
+          headers: new Headers({ 'Content-Type': 'text/plain' }),
         });
       })
   );

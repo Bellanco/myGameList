@@ -3,19 +3,14 @@ const path = require('path');
 
 const root = path.join(__dirname, '..');
 const publicDir = path.join(root, 'public');
-const docsDir = path.join(root, 'docs');
 const requiredFiles = [
-  path.join(publicDir, 'index.html'),
-  path.join(publicDir, 'style.css'),
+  path.join(root, 'index.html'),
   path.join(publicDir, 'robots.txt'),
   path.join(publicDir, '_headers'),
   path.join(publicDir, 'manifest.json'),
   path.join(publicDir, 'service-worker.js'),
-  path.join(publicDir, 'ts', 'main.ts'),
-  path.join(publicDir, 'ts', 'migrate.ts'),
-  path.join(publicDir, 'ts', 'sync.ts'),
-  path.join(publicDir, 'ts', 'app.ts'),
-  path.join(publicDir, 'ts', 'constants.ts'),
+  path.join(root, 'src', 'main.tsx'),
+  path.join(root, 'src', 'App.tsx'),
   path.join(root, 'README.md'),
   path.join(root, 'CHANGELOG.md'),
   path.join(root, 'tsconfig.json'),
@@ -34,10 +29,9 @@ for (const file of requiredFiles) {
   }
 }
 
-const html = fs.readFileSync(path.join(publicDir, 'index.html'), 'utf8');
-// Check for main.ts as module entry point (ES6 modules via Vite)
-if (!html.includes('type="module"') || !html.includes('ts/main.ts')) {
-  fail('index.html does not reference ts/main.ts as module entry point');
+const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
+if (!html.includes('type="module"') || !html.includes('/src/main.tsx')) {
+  fail('index.html does not reference /src/main.tsx as module entry point');
 }
 
 console.log('CI validation passed. All required files are present.');
