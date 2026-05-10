@@ -9,7 +9,7 @@ import { StarRating } from '../StarRating';
 export function SocialFeedScreen({
   SOCIAL_UI,
   socialDisplayName,
-  feedStats,
+  currentSocialGistId,
   feedSearch,
   setFeedSearch,
   filteredSocialDirectory,
@@ -31,7 +31,7 @@ export function SocialFeedScreen({
 }: {
   SOCIAL_UI: any;
   socialDisplayName: string;
-  feedStats: any;
+  currentSocialGistId: string;
   feedSearch: string;
   setFeedSearch: (v: string) => void;
   filteredSocialDirectory: any[];
@@ -90,13 +90,14 @@ export function SocialFeedScreen({
                   <div className="social-feed-day-header">
                     <h4>{group.dayHeader}</h4>
                   </div>
-                  {group.items.map((entry) => {
+                  {group.items.map((entry: any) => {
                     const reviewText = entry.reviewText.trim();
                     const cardTypeClass = entry.type === 'review' ? 'is-review' : 'is-recommendation';
+                    const ownershipClass = entry.socialGistId === currentSocialGistId ? 'is-own-activity' : 'is-external-activity';
                     return (
                       <article
                         key={entry.id}
-                        className={`social-feed-card social-feed-activity-item ${cardTypeClass}`}
+                        className={`social-feed-card social-feed-activity-item ${cardTypeClass} ${ownershipClass}`}
                         role="listitem"
                         tabIndex={0}
                         aria-label={`Abrir detalle de actividad de ${entry.profileDisplayName} sobre ${entry.gameName}`}
@@ -120,20 +121,6 @@ export function SocialFeedScreen({
               ))}
             </div>
           ) : null}
-        </div>
-        <div className="social-feed-metrics" aria-label="Resumen del feed social">
-          <article className="social-metric-card">
-            <span>{SOCIAL_UI.feed.statsProfiles}</span>
-            <strong>{feedStats.profiles}</strong>
-          </article>
-          <article className="social-metric-card">
-            <span>{SOCIAL_UI.feed.statsFavorites}</span>
-            <strong>{feedStats.favorites}</strong>
-          </article>
-          <article className="social-metric-card">
-            <span>{SOCIAL_UI.feed.statsActivities}</span>
-            <strong>{feedStats.activities}</strong>
-          </article>
         </div>
         <div className="social-feed-toolbar" aria-label="Búsqueda y filtros del feed">
           <label className="social-feed-search">
