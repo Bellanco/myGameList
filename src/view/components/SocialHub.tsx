@@ -1119,6 +1119,53 @@ export const SocialHub = memo(function SocialHub() {
             </div>
           </div>
 
+          <div className="fg">
+            <span className="flabel">{SOCIAL_UI.feed.activityTitle}</span>
+            {!loadingDirectory && activityFeedItems.length === 0 ? <p>{SOCIAL_UI.feed.activityEmpty}</p> : null}
+            {!loadingDirectory && activityFeedItems.length > 0 ? (
+              <div className="social-feed-activity-list" role="list" aria-label="Actividad social">
+                {groupedActivityFeedItems.map((group) => (
+                  <div key={group.dayDate.toISOString()} className="social-feed-day-group">
+                    <div className="social-feed-day-header">
+                      <h4>{group.dayHeader}</h4>
+                    </div>
+                    {group.items.map((entry) => {
+                      const reviewText = entry.reviewText.trim();
+                      const cardTypeClass = entry.type === 'review' ? 'is-review' : 'is-recommendation';
+
+                      return (
+                        <article
+                          key={entry.id}
+                          className={`social-feed-card social-feed-activity-item ${cardTypeClass}`}
+                          role="listitem"
+                          tabIndex={0}
+                          aria-label={`Abrir detalle de actividad de ${entry.profileDisplayName} sobre ${entry.gameName}`}
+                          onClick={() => openActivityDetail(entry)}
+                          onKeyDown={(event) => handleActivityItemKeyDown(event, entry)}
+                        >
+                          <header>
+                            <h3>{entry.profileDisplayName}</h3>
+                          </header>
+                          <p>
+                            {entry.type === 'review'
+                              ? SOCIAL_UI.feed.reviewHeadline(entry.gameName)
+                              : SOCIAL_UI.feed.recommendationHeadline(entry.gameName)}
+                          </p>
+                          <StarRating value={Number(entry.rating || 0)} />
+                          {entry.type === 'review' ? (
+                            <p className="social-feed-review-text" title={reviewText}>{reviewText}</p>
+                          ) : reviewText ? (
+                            <p className="social-feed-recommendation-text" title={reviewText}>{reviewText}</p>
+                          ) : null}
+                        </article>
+                      );
+                    })}
+                  </div>
+                ))}
+              </div>
+            ) : null}
+          </div>
+
           <div className="social-feed-metrics" aria-label="Resumen del feed social">
             <article className="social-metric-card">
               <span>{SOCIAL_UI.feed.statsProfiles}</span>
@@ -1173,53 +1220,6 @@ export const SocialHub = memo(function SocialHub() {
               </button>
             </div>
             <p className="social-feed-result-count">{SOCIAL_UI.feed.resultCount(filteredSocialDirectory.length)}</p>
-          </div>
-
-          <div className="fg">
-            <span className="flabel">{SOCIAL_UI.feed.activityTitle}</span>
-            {!loadingDirectory && activityFeedItems.length === 0 ? <p>{SOCIAL_UI.feed.activityEmpty}</p> : null}
-            {!loadingDirectory && activityFeedItems.length > 0 ? (
-              <div className="social-feed-activity-list" role="list" aria-label="Actividad social">
-                {groupedActivityFeedItems.map((group) => (
-                  <div key={group.dayDate.toISOString()} className="social-feed-day-group">
-                    <div className="social-feed-day-header">
-                      <h4>{group.dayHeader}</h4>
-                    </div>
-                    {group.items.map((entry) => {
-                      const reviewText = entry.reviewText.trim();
-                      const cardTypeClass = entry.type === 'review' ? 'is-review' : 'is-recommendation';
-
-                      return (
-                        <article
-                          key={entry.id}
-                          className={`social-feed-card social-feed-activity-item ${cardTypeClass}`}
-                          role="listitem"
-                          tabIndex={0}
-                          aria-label={`Abrir detalle de actividad de ${entry.profileDisplayName} sobre ${entry.gameName}`}
-                          onClick={() => openActivityDetail(entry)}
-                          onKeyDown={(event) => handleActivityItemKeyDown(event, entry)}
-                        >
-                          <header>
-                            <h3>{entry.profileDisplayName}</h3>
-                          </header>
-                          <p>
-                            {entry.type === 'review'
-                              ? SOCIAL_UI.feed.reviewHeadline(entry.gameName)
-                              : SOCIAL_UI.feed.recommendationHeadline(entry.gameName)}
-                          </p>
-                          <StarRating value={Number(entry.rating || 0)} />
-                          {entry.type === 'review' ? (
-                            <p className="social-feed-review-text" title={reviewText}>{reviewText}</p>
-                          ) : reviewText ? (
-                            <p className="social-feed-recommendation-text" title={reviewText}>{reviewText}</p>
-                          ) : null}
-                        </article>
-                      );
-                    })}
-                  </div>
-                ))}
-              </div>
-            ) : null}
           </div>
 
           <div className="fg">
