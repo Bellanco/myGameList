@@ -275,33 +275,81 @@
 
 .social-feed-metrics {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: .6rem;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: .35rem;
 }
 
 .social-metric-card {
   border: 1px solid rgba(26,159,255,.26);
   border-radius: var(--radius-md);
   background: linear-gradient(145deg, rgba(26,159,255,.14), rgba(26,30,36,.72));
-  padding: .75rem .85rem;
+  padding: .35rem .4rem;
   display: flex;
   flex-direction: column;
-  gap: .28rem;
+  gap: .12rem;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  min-height: 3.2rem;
 }
 
 .social-metric-card span {
   color: #9ec6e0;
-  font-size: .73rem;
-  letter-spacing: .03em;
+  font-size: .55rem;
+  letter-spacing: .01em;
   text-transform: uppercase;
   font-weight: 700;
+  line-height: 1.1;
+  word-break: break-word;
+  display: block;
+  width: 100%;
 }
 
 .social-metric-card strong {
-  font-size: 1.35rem;
+  font-size: .82rem;
   color: #e8f4ff;
   line-height: 1;
+  font-weight: 800;
 }
+
+@media (min-width: 48rem) {
+  .social-feed-metrics {
+    gap: .4rem;
+  }
+
+  .social-metric-card {
+    padding: .5rem .5rem;
+    min-height: 3.5rem;
+  }
+
+  .social-metric-card span {
+    font-size: .62rem;
+  }
+
+  .social-metric-card strong {
+    font-size: .95rem;
+  }
+}
+
+@media (min-width: 80rem) {
+  .social-feed-metrics {
+    gap: .6rem;
+  }
+
+  .social-metric-card {
+    padding: .65rem .75rem;
+    min-height: 3.8rem;
+  }
+
+  .social-metric-card span {
+    font-size: .71rem;
+  }
+
+  .social-metric-card strong {
+    font-size: 1.2rem;
+  }
+}
+
 
 .social-feed-card header {
   display: flex;
@@ -529,6 +577,7 @@
 .social-hub-title-wrap {
   display: flex;
   align-items: center;
+  justify-content: flex-start;
   gap: .65rem;
 }
 
@@ -840,6 +889,10 @@ button.social-chip.active {
   width: 1.6rem;
   height: 1.6rem;
   color: var(--steam-hover);
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 /* Social gateway login-like */
@@ -1133,10 +1186,6 @@ button.social-chip.active {
   }
 
   .social-status-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .social-feed-metrics {
     grid-template-columns: 1fr;
   }
 
