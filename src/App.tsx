@@ -11,13 +11,13 @@ import { Toolbar } from './view/components/Toolbar';
 import { GameTable } from './view/components/GameTable';
 import { StatusBanner } from './view/components/StatusBanner';
 import { BottomNavigation, type AppSection } from './view/components/BottomNavigation';
-import { SettingsHub } from './view/components/SettingsHub';
-import { SocialHub } from './view/components/SocialHub';
 import { useGameListViewModel } from './viewmodel/useGameListViewModel';
 import { useSyncViewModel } from './viewmodel/useSyncViewModel';
 
 const FormModal = lazy(() => import('./view/modals/FormModal').then((module) => ({ default: module.FormModal })));
 const ConfirmModal = lazy(() => import('./view/modals/ConfirmModal').then((module) => ({ default: module.ConfirmModal })));
+const SettingsHub = lazy(() => import('./view/components/SettingsHub').then((module) => ({ default: module.SettingsHub })));
+const SocialHub = lazy(() => import('./view/components/SocialHub').then((module) => ({ default: module.SocialHub })));
 
 function getCurrentTab(pathname: string): TabId {
   return ROUTE_TAB[pathname] || 'c';
@@ -391,29 +391,33 @@ export default function App() {
             />
           </>
         ) : activeSection === 'social' ? (
-          <SocialHub />
+          <Suspense fallback={null}>
+            <SocialHub />
+          </Suspense>
         ) : (
-          <SettingsHub
-            syncStatus={syncBadgeText}
-            hasSyncConfig={syncVm.hasConfig}
-            connectedGistId={syncVm.connectedGistId || syncVm.currentConfig?.gistId || ''}
-            token={syncVm.token}
-            gistId={syncVm.gistId}
-            syncError={syncVm.statusMessage}
-            recoveringGistId={syncVm.recoveringGistId}
-            onTokenChange={syncVm.setToken}
-            onGistIdChange={syncVm.setGistId}
-            onConnectSync={syncVm.connectSync}
-            onSyncNow={syncVm.syncNow}
-            onDisconnectSync={syncVm.disconnectSync}
-            onCopyGistId={handleCopyGistId}
-            onRecoverGistId={handleRecoverGistId}
-            onExport={exportData}
-            onImport={importData}
-            lookups={vm.lookups}
-            onEditTag={handleEditTag}
-            onDeleteTag={handleDeleteTag}
-          />
+          <Suspense fallback={null}>
+            <SettingsHub
+              syncStatus={syncBadgeText}
+              hasSyncConfig={syncVm.hasConfig}
+              connectedGistId={syncVm.connectedGistId || syncVm.currentConfig?.gistId || ''}
+              token={syncVm.token}
+              gistId={syncVm.gistId}
+              syncError={syncVm.statusMessage}
+              recoveringGistId={syncVm.recoveringGistId}
+              onTokenChange={syncVm.setToken}
+              onGistIdChange={syncVm.setGistId}
+              onConnectSync={syncVm.connectSync}
+              onSyncNow={syncVm.syncNow}
+              onDisconnectSync={syncVm.disconnectSync}
+              onCopyGistId={handleCopyGistId}
+              onRecoverGistId={handleRecoverGistId}
+              onExport={exportData}
+              onImport={importData}
+              lookups={vm.lookups}
+              onEditTag={handleEditTag}
+              onDeleteTag={handleDeleteTag}
+            />
+          </Suspense>
         )}
       </main>
 
