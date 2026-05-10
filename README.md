@@ -134,7 +134,7 @@ Ejecucion con Vitest (entorno jsdom para pruebas que lo requieren).
 Configurada para despliegue estatico con:
 - index.html en raiz (entrada Vite)
 - assets publicos en public/
-- fallback SPA en public/_routes.json
+- fallback SPA en public/_redirects (NO se usa _routes.json porque la app es estática pura)
 
 ## Guia Cloudflare Pages (optima y escalable)
 
@@ -256,7 +256,7 @@ Actualización completa para Cloudflare Pages óptimo y escalable:
 
 ### Fallback SPA
 - ✅ public/_redirects: /* /index.html 200 para soporte de rutas internas
-- ✅ public/_routes.json: limpiado para solo Functions
+- ✅ Sin _routes.json: La app es estática pura, no usa Cloudflare Functions
 
 ### Node.js
 - ✅ Configurado en package.json engines: >=20.0.0
