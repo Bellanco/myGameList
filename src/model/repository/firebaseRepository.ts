@@ -71,6 +71,7 @@ let cachedServicesPromise: Promise<FirebaseServices | null> | null = null;
 
 const SOCIAL_PROFILE_CACHE_TTL_MS = 60_000;
 const SOCIAL_DIRECTORY_CACHE_TTL_MS = 30_000;
+const RECEIVED_RECOMMENDATIONS_CACHE_TTL_MS = 15_000;
 
 type CachedValue<T> = {
   value: T;
@@ -81,6 +82,11 @@ const socialProfileByEmailCache = new Map<string, CachedValue<SocialProfileRefer
 const socialProfileByEmailInFlight = new Map<string, Promise<SocialProfileReference | null>>();
 const socialDirectoryCacheByLimit = new Map<number, CachedValue<SocialDirectoryEntry[]>>();
 const socialDirectoryInFlightByLimit = new Map<number, Promise<SocialDirectoryEntry[]>>();
+const receivedRecommendationsByEmailCache = new Map<string, CachedValue<GameRecommendation[]>>();
+const receivedRecommendationsInFlightByEmail = new Map<string, Promise<GameRecommendation[]>>();
+
+let analyticsModuleCache: AnalyticsModule | null | undefined = undefined;
+let analyticsModulePromise: Promise<AnalyticsModule | null> | null = null;
 
 type FirebaseWebConfig = {
   apiKey: string;
@@ -174,6 +180,23 @@ function getFirebaseApp(): FirebaseApp {
   });
 }
 
+async function getAnalyticsModule(): Promise<AnalyticsModule | null> {
+  if (analyticsModuleCache !== undefined) {
+    return analyticsModuleCache;
+  }
+
+  if (!analyticsModulePromise) {
+    analyticsModulePromise = import('firebase/analytics')
+      .catch(() => null)
+      .then((module) => {
+        analyticsModuleCache = module;
+        return module;
+      });
+  }
+
+  return analyticsModulePromise;
+}
+
 /**
  * Inicializa Firebase para web de forma perezosa y segura.
  *
@@ -199,7 +222,11 @@ async function buildFirebaseServices(): Promise<FirebaseServices | null> {
 
   if (hasMeasurementId && analyticsEnabled && typeof window !== 'undefined') {
     try {
-      const analyticsModule = await import('firebase/analytics');
+      const analyticsModule = await getAnalyticsModule();
+      if (!analyticsModule) {
+        return { app, auth, firestore, analytics };
+      }
+
       const supported = await analyticsModule.isSupported();
       if (supported) {
         analytics = analyticsModule.getAnalytics(app);
@@ -240,7 +267,7 @@ export async function reportHandledError(error: unknown, fatal = false): Promise
     return;
   }
 
-  const analyticsModule = await import('firebase/analytics').catch(() => null);
+  const analyticsModule = await getAnalyticsModule();
   if (!analyticsModule) {
     return;
   }
@@ -267,7 +294,7 @@ export async function trackAnalyticsEvent(
     return;
   }
 
-  const analyticsModule = await import('firebase/analytics').catch(() => null);
+  const analyticsModule = await getAnalyticsModule();
   if (!analyticsModule) {
     return;
   }
@@ -347,6 +374,36 @@ function readSocialDirectoryCache(limitCount: number): SocialDirectoryEntry[] | 
 
 function invalidateSocialDirectoryCache(): void {
   socialDirectoryCacheByLimit.clear();
+}
+
+function readReceivedRecommendationsCache(email: string): GameRecommendation[] | null {
+  const cached = receivedRecommendationsByEmailCache.get(email);
+  if (!cached) {
+    return null;
+  }
+
+  if (cached.expiresAt <= Date.now()) {
+    receivedRecommendationsByEmailCache.delete(email);
+    return null;
+  }
+
+  return cached.value;
+}
+
+function saveReceivedRecommendationsCache(email: string, value: GameRecommendation[]): void {
+  receivedRecommendationsByEmailCache.set(email, {
+    value,
+    expiresAt: Date.now() + RECEIVED_RECOMMENDATIONS_CACHE_TTL_MS,
+  });
+}
+
+function invalidateReceivedRecommendationsCache(email?: string): void {
+  if (email) {
+    receivedRecommendationsByEmailCache.delete(email);
+    return;
+  }
+
+  receivedRecommendationsByEmailCache.clear();
 }
 
 function getAuthRuntimeContext(): { hostname: string; projectId: string; authDomain: string } {
@@ -471,8 +528,6 @@ export async function upsertProfileSocialReferences(input: {
       socialEnabled: true,
     });
   }
-
-  invalidateSocialDirectoryCache();
 }
 
 /**
@@ -763,6 +818,8 @@ export async function sendGameRecommendation(input: {
     updatedAt: now,
   });
 
+  invalidateReceivedRecommendationsCache(toEmailClean);
+
   return { id: docRef.id };
 }
 
@@ -781,53 +838,76 @@ export async function getReceivedRecommendations(toEmail: string): Promise<GameR
     return [];
   }
 
-  const q = query(
-    collection(services.firestore, 'recommendations'),
-    where('toEmail', '==', toEmailClean),
-    where('status', '==', 'pending'),
-  );
-
-  let snapshot;
-  try {
-    snapshot = await getDocs(q);
-  } catch (error) {
-    if (isPermissionDeniedError(error)) {
-      return [];
-    }
-
-    throw error;
+  const cached = readReceivedRecommendationsCache(toEmailClean);
+  if (cached) {
+    return cached;
   }
 
-  return snapshot.docs
-    .map((docEntry) => {
-      const data = docEntry.data() as {
-        fromUid?: string;
-        fromEmail?: string;
-        fromDisplayName?: string;
-        toEmail?: string;
-        gameId?: number;
-        gameName?: string;
-        message?: string;
-        status?: string;
-        createdAt?: number;
-        updatedAt?: number;
-      };
+  const inFlight = receivedRecommendationsInFlightByEmail.get(toEmailClean);
+  if (inFlight) {
+    return inFlight;
+  }
 
-      return {
-        id: docEntry.id,
-        fromUid: String(data.fromUid || ''),
-        fromEmail: String(data.fromEmail || ''),
-        fromDisplayName: String(data.fromDisplayName || ''),
-        toEmail: String(data.toEmail || ''),
-        gameId: Number(data.gameId || 0),
-        gameName: String(data.gameName || ''),
-        message: String(data.message || ''),
-        status: (data.status === 'pending' || data.status === 'accepted' || data.status === 'declined' ? data.status : 'pending') as 'pending' | 'accepted' | 'declined',
-        createdAt: Number(data.createdAt || 0),
-        updatedAt: Number(data.updatedAt || 0),
-      };
-    })
-    .sort((a, b) => b.createdAt - a.createdAt);
+  const request = (async () => {
+    const q = query(
+      collection(services.firestore, 'recommendations'),
+      where('toEmail', '==', toEmailClean),
+      where('status', '==', 'pending'),
+    );
+
+    let snapshot;
+    try {
+      snapshot = await getDocs(q);
+    } catch (error) {
+      if (isPermissionDeniedError(error)) {
+        saveReceivedRecommendationsCache(toEmailClean, []);
+        return [];
+      }
+
+      throw error;
+    }
+
+    const recommendations = snapshot.docs
+      .map((docEntry) => {
+        const data = docEntry.data() as {
+          fromUid?: string;
+          fromEmail?: string;
+          fromDisplayName?: string;
+          toEmail?: string;
+          gameId?: number;
+          gameName?: string;
+          message?: string;
+          status?: string;
+          createdAt?: number;
+          updatedAt?: number;
+        };
+
+        return {
+          id: docEntry.id,
+          fromUid: String(data.fromUid || ''),
+          fromEmail: String(data.fromEmail || ''),
+          fromDisplayName: String(data.fromDisplayName || ''),
+          toEmail: String(data.toEmail || ''),
+          gameId: Number(data.gameId || 0),
+          gameName: String(data.gameName || ''),
+          message: String(data.message || ''),
+          status: (data.status === 'pending' || data.status === 'accepted' || data.status === 'declined' ? data.status : 'pending') as 'pending' | 'accepted' | 'declined',
+          createdAt: Number(data.createdAt || 0),
+          updatedAt: Number(data.updatedAt || 0),
+        };
+      })
+      .sort((a, b) => b.createdAt - a.createdAt);
+
+    saveReceivedRecommendationsCache(toEmailClean, recommendations);
+    return recommendations;
+  })();
+
+  receivedRecommendationsInFlightByEmail.set(toEmailClean, request);
+  try {
+    return await request;
+  } finally {
+    receivedRecommendationsInFlightByEmail.delete(toEmailClean);
+  }
 }
 
 /**
@@ -850,5 +930,7 @@ export async function updateRecommendationStatus(
     },
     { merge: true },
   );
+
+  invalidateReceivedRecommendationsCache();
 }
 

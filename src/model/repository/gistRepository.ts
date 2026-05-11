@@ -120,7 +120,7 @@ function buildSessionCacheKey(prefix: string, id: string): string {
   return `${prefix}:${id}`;
 }
 
-function readSessionCachedValue<T>(key: string): SessionCachedValue<T> | null {
+function readSessionCachedValue<T>(key: string, options?: { includeExpired?: boolean }): SessionCachedValue<T> | null {
   if (typeof window === 'undefined') {
     return null;
   }
@@ -132,7 +132,12 @@ function readSessionCachedValue<T>(key: string): SessionCachedValue<T> | null {
     }
 
     const parsed = JSON.parse(raw) as SessionCachedValue<T>;
-    if (!parsed || typeof parsed !== 'object' || Number(parsed.expiresAt || 0) <= Date.now()) {
+    if (!parsed || typeof parsed !== 'object') {
+      window.sessionStorage.removeItem(key);
+      return null;
+    }
+
+    if (!options?.includeExpired && Number(parsed.expiresAt || 0) <= Date.now()) {
       window.sessionStorage.removeItem(key);
       return null;
     }
@@ -183,26 +188,27 @@ function saveSocialGistCache(gistId: string, data: SocialGistData, etag: string 
   writeSessionCachedValue(buildSessionCacheKey(SESSION_CACHE_SOCIAL_GIST_PREFIX, gistId), cached);
 }
 
-function readPublicSocialGistCache(gistId: string): SocialGistData | null {
+function readPublicSocialGistCache(gistId: string, options?: { includeExpired?: boolean }): SessionCachedValue<SocialGistData> | null {
   const memory = publicSocialGistCacheById.get(gistId);
-  if (memory && memory.expiresAt > Date.now()) {
-    return memory.value;
+  if (memory && (options?.includeExpired || memory.expiresAt > Date.now())) {
+    return memory;
   }
 
   const key = buildSessionCacheKey(SESSION_CACHE_PUBLIC_SOCIAL_GIST_PREFIX, gistId);
-  const sessionValue = readSessionCachedValue<SocialGistData>(key);
+  const sessionValue = readSessionCachedValue<SocialGistData>(key, { includeExpired: options?.includeExpired });
   if (!sessionValue) {
     publicSocialGistCacheById.delete(gistId);
     return null;
   }
 
   publicSocialGistCacheById.set(gistId, sessionValue);
-  return sessionValue.value;
+  return sessionValue;
 }
 
-function savePublicSocialGistCache(gistId: string, data: SocialGistData): void {
+function savePublicSocialGistCache(gistId: string, data: SocialGistData, etag: string | null = null): void {
   const cached: SessionCachedValue<SocialGistData> = {
     value: data,
+    etag,
     expiresAt: Date.now() + PUBLIC_SOCIAL_GIST_CACHE_TTL_MS,
   };
 
@@ -210,26 +216,27 @@ function savePublicSocialGistCache(gistId: string, data: SocialGistData): void {
   writeSessionCachedValue(buildSessionCacheKey(SESSION_CACHE_PUBLIC_SOCIAL_GIST_PREFIX, gistId), cached);
 }
 
-function readPublicGamesGistCache(gistId: string): TabData | null {
+function readPublicGamesGistCache(gistId: string, options?: { includeExpired?: boolean }): SessionCachedValue<TabData> | null {
   const memory = publicGamesGistCacheById.get(gistId);
-  if (memory && memory.expiresAt > Date.now()) {
-    return memory.value;
+  if (memory && (options?.includeExpired || memory.expiresAt > Date.now())) {
+    return memory;
   }
 
   const key = buildSessionCacheKey(SESSION_CACHE_PUBLIC_GAMES_GIST_PREFIX, gistId);
-  const sessionValue = readSessionCachedValue<TabData>(key);
+  const sessionValue = readSessionCachedValue<TabData>(key, { includeExpired: options?.includeExpired });
   if (!sessionValue) {
     publicGamesGistCacheById.delete(gistId);
     return null;
   }
 
   publicGamesGistCacheById.set(gistId, sessionValue);
-  return sessionValue.value;
+  return sessionValue;
 }
 
-function savePublicGamesGistCache(gistId: string, data: TabData): void {
+function savePublicGamesGistCache(gistId: string, data: TabData, etag: string | null = null): void {
   const cached: SessionCachedValue<TabData> = {
     value: data,
+    etag,
     expiresAt: Date.now() + PUBLIC_GAMES_GIST_CACHE_TTL_MS,
   };
 
@@ -750,8 +757,6 @@ export async function createSocialGist(token: string): Promise<{ gistId: string;
     throw new Error('Formato de token inválido');
   }
 
-  await whoAmI(token);
-
   const response = await fetch(GIST_API_BASE, {
     method: 'POST',
     headers: {
@@ -874,15 +879,17 @@ export async function readSocialGist(token: string, gistId: string, etag: string
   }
 }
 
-export async function readPublicSocialGistById(gistId: string, token?: string): Promise<SocialGistData> {
+export async function readPublicSocialGistById(gistId: string): Promise<SocialGistData> {
   if (!isValidGistId(gistId)) {
     throw new Error('Gist ID inválido');
   }
 
   const cached = readPublicSocialGistCache(gistId);
   if (cached) {
-    return cached;
+    return cached.value;
   }
+
+  const staleCached = readPublicSocialGistCache(gistId, { includeExpired: true });
 
   const inFlight = publicSocialGistInFlightById.get(gistId);
   if (inFlight) {
@@ -890,26 +897,21 @@ export async function readPublicSocialGistById(gistId: string, token?: string): 
   }
 
   const request = (async () => {
-    const canUseToken = Boolean(token && isValidGithubToken(token));
     const baseHeaders: Record<string, string> = {
       'X-GitHub-Api-Version': '2022-11-28',
     };
 
-    if (canUseToken && token) {
-      baseHeaders.Authorization = getGithubAuthHeader(token);
+    if (staleCached?.etag) {
+      baseHeaders['If-None-Match'] = staleCached.etag;
     }
 
-    let response = await fetch(`${GIST_API_BASE}/${gistId}`, {
+    const response = await fetch(`${GIST_API_BASE}/${gistId}`, {
       headers: baseHeaders,
     });
 
-    if ((response.status === 401 || response.status === 403) && canUseToken) {
-      // Fallback unauthenticated for public/secret-by-link gists when token is invalid or blocked.
-      response = await fetch(`${GIST_API_BASE}/${gistId}`, {
-        headers: {
-          'X-GitHub-Api-Version': '2022-11-28',
-        },
-      });
+    if (response.status === 304 && staleCached) {
+      savePublicSocialGistCache(gistId, staleCached.value, staleCached.etag || null);
+      return staleCached.value;
     }
 
     if (!response.ok) {
@@ -918,6 +920,7 @@ export async function readPublicSocialGistById(gistId: string, token?: string): 
 
     const body = (await response.json()) as { files?: Record<string, { content: string }> };
     const raw = body.files?.[SOCIAL_GIST_FILENAME]?.content;
+    const responseEtag = response.headers.get('etag');
     let normalized = getEmptySocialGistData();
     if (raw) {
       try {
@@ -927,7 +930,7 @@ export async function readPublicSocialGistById(gistId: string, token?: string): 
       }
     }
 
-    savePublicSocialGistCache(gistId, normalized);
+    savePublicSocialGistCache(gistId, normalized, responseEtag);
     return normalized;
   })();
 
@@ -939,15 +942,17 @@ export async function readPublicSocialGistById(gistId: string, token?: string): 
   }
 }
 
-export async function readPublicGamesGistById(gistId: string, token?: string): Promise<TabData> {
+export async function readPublicGamesGistById(gistId: string): Promise<TabData> {
   if (!isValidGistId(gistId)) {
     throw new Error('Gist ID inválido');
   }
 
   const cached = readPublicGamesGistCache(gistId);
   if (cached) {
-    return cached;
+    return cached.value;
   }
+
+  const staleCached = readPublicGamesGistCache(gistId, { includeExpired: true });
 
   const inFlight = publicGamesGistInFlightById.get(gistId);
   if (inFlight) {
@@ -955,25 +960,21 @@ export async function readPublicGamesGistById(gistId: string, token?: string): P
   }
 
   const request = (async () => {
-    const canUseToken = Boolean(token && isValidGithubToken(token));
     const baseHeaders: Record<string, string> = {
       'X-GitHub-Api-Version': '2022-11-28',
     };
 
-    if (canUseToken && token) {
-      baseHeaders.Authorization = getGithubAuthHeader(token);
+    if (staleCached?.etag) {
+      baseHeaders['If-None-Match'] = staleCached.etag;
     }
 
-    let response = await fetch(`${GIST_API_BASE}/${gistId}`, {
+    const response = await fetch(`${GIST_API_BASE}/${gistId}`, {
       headers: baseHeaders,
     });
 
-    if ((response.status === 401 || response.status === 403) && canUseToken) {
-      response = await fetch(`${GIST_API_BASE}/${gistId}`, {
-        headers: {
-          'X-GitHub-Api-Version': '2022-11-28',
-        },
-      });
+    if (response.status === 304 && staleCached) {
+      savePublicGamesGistCache(gistId, staleCached.value, staleCached.etag || null);
+      return staleCached.value;
     }
 
     if (!response.ok) {
@@ -982,6 +983,7 @@ export async function readPublicGamesGistById(gistId: string, token?: string): P
 
     const body = (await response.json()) as { files?: Record<string, { content: string }> };
     const raw = body.files?.[GIST_FILENAME]?.content;
+    const responseEtag = response.headers.get('etag');
     let normalized = migrateData({});
     if (raw) {
       try {
@@ -991,7 +993,7 @@ export async function readPublicGamesGistById(gistId: string, token?: string): P
       }
     }
 
-    savePublicGamesGistCache(gistId, normalized);
+    savePublicGamesGistCache(gistId, normalized, responseEtag);
     return normalized;
   })();
 
