@@ -57,6 +57,7 @@ export const SettingsHub = memo(function SettingsHub({
   onDeleteTag,
 }: SettingsHubProps) {
   const [showToken, setShowToken] = useState(false);
+  const [showConfigHelp, setShowConfigHelp] = useState(false);
   const [activeAdminCategory, setActiveAdminCategory] = useState<AdminCategoryKey>('genres');
   const [editingTag, setEditingTag] = useState<{ key: AdminCategoryKey; value: string } | null>(null);
   const [draftValue, setDraftValue] = useState('');
@@ -146,6 +147,35 @@ export const SettingsHub = memo(function SettingsHub({
               <strong>{UI_MESSAGES.settings.sync.helpConfigTitle}</strong>
               <br />
               {UI_MESSAGES.settings.sync.helpConfigBody}
+              <br />
+              <a
+                href={UI_MESSAGES.settings.sync.helpConfigLinkUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                {UI_MESSAGES.settings.sync.helpConfigLinkLabel}
+              </a>
+              <div className="sync-help-actions">
+                <button
+                  className="sync-help-toggle"
+                  type="button"
+                  onClick={() => setShowConfigHelp((prev) => !prev)}
+                  aria-expanded={showConfigHelp}
+                >
+                  {showConfigHelp ? UI_MESSAGES.settings.sync.helpConfigCollapse : UI_MESSAGES.settings.sync.helpConfigExpand}
+                </button>
+              </div>
+              {showConfigHelp ? (
+                <ol>
+                  <li>{UI_MESSAGES.settings.sync.helpConfigStep1}</li>
+                  <li>{UI_MESSAGES.settings.sync.helpConfigStep2}</li>
+                  <li>{UI_MESSAGES.settings.sync.helpConfigStep3}</li>
+                  <li>{UI_MESSAGES.settings.sync.helpConfigStep4}</li>
+                  <li>{UI_MESSAGES.settings.sync.helpConfigStep5}</li>
+                  <li>{UI_MESSAGES.settings.sync.helpConfigStep6}</li>
+                  <li>{UI_MESSAGES.settings.sync.helpConfigStep7}</li>
+                </ol>
+              ) : null}
             </div>
 
             <div className="fg">

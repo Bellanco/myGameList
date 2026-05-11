@@ -883,8 +883,8 @@ export const SocialHub = memo(function SocialHub() {
       return;
     }
 
-    // MÃ¡ximo de 3 favoritos
-    if (current.length >= 3) {
+    // MÃ¡ximo de 5 favoritos
+    if (current.length >= 5) {
       setFeedback('warn', SOCIAL_UI.status.maxFavoritesReached);
       return;
     }
@@ -1104,6 +1104,7 @@ export const SocialHub = memo(function SocialHub() {
           SOCIAL_UI={SOCIAL_UI}
           activeDetailEvent={activeDetailEvent}
           getGameItemById={getGameItemById}
+          onOpenProfileDetail={openProfileDetail}
           onBack={() => navigate('/social')}
           status={status}
           statusKind={statusKind}

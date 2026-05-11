@@ -12,7 +12,7 @@ const TAB_LABELS: Record<TabId, string> = {
 
 /**
  * Pantalla de detalle de perfil social.
- * Presentacional, sin lÃ³gica de negocio.
+ * Presentacional, sin lógica de negocio.
  */
 export function SocialProfileDetailScreen({
   SOCIAL_UI,
