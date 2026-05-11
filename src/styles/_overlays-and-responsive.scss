@@ -371,6 +371,25 @@ body.compact-filters .filters-row.open .btn-toggle { justify-content: center; al
 .sync-help ol { padding-left:1.2rem; }
 .sync-help li { margin-top:.28rem; }
 .sync-help code { background:rgba(0,0,0,.3); border-radius:3px; padding:.05rem .35rem; font-family:monospace; font-size:.85em; }
+.sync-help-actions { margin-top:.45rem; }
+.sync-help-toggle {
+  appearance: none;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  background: rgba(255,255,255,.03);
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: .76rem;
+  font-weight: 700;
+  line-height: 1;
+  padding: .34rem .62rem;
+  transition: color .2s, border-color .2s, background .2s;
+}
+.sync-help-toggle:hover {
+  color: var(--text);
+  border-color: rgba(26,159,255,.35);
+  background: rgba(26,159,255,.09);
+}
 .token-row { position:relative; display:flex; }
 .token-row .finput { padding-right:2.8rem; flex:1; }
 .token-toggle { position:absolute; right:.55rem; top:50%; transform:translateY(-50%);

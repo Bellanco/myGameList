@@ -1,5 +1,4 @@
-﻿import React from 'react';
-import { Icon } from '../Icon';
+﻿import { Icon } from '../Icon';
 import { StarRating } from '../StarRating';
 
 /**
@@ -10,6 +9,7 @@ export function SocialDetailScreen({
   SOCIAL_UI,
   activeDetailEvent,
   getGameItemById,
+  onOpenProfileDetail,
   onBack,
   status,
   statusKind
@@ -17,6 +17,7 @@ export function SocialDetailScreen({
   SOCIAL_UI: any;
   activeDetailEvent: any;
   getGameItemById: (id: number) => any;
+  onOpenProfileDetail: (id: string) => void;
   onBack: () => void;
   status: string;
   statusKind: string;
@@ -67,7 +68,16 @@ export function SocialDetailScreen({
         </div>
         <article className="hub-feed-card hub-feed-card-detail">
           <header>
-            <h3>{activeDetailEvent.profileDisplayName}</h3>
+            <h3>
+              <button
+                className="hub-detail-profile-link"
+                type="button"
+                aria-label={`Abrir perfil social de ${activeDetailEvent.profileDisplayName}`}
+                onClick={() => onOpenProfileDetail(activeDetailEvent.profileId)}
+              >
+                {activeDetailEvent.profileDisplayName}
+              </button>
+            </h3>
             <small>{new Date(activeDetailEvent.updatedAt).toLocaleString('es-ES')}</small>
           </header>
           <p>{SOCIAL_UI.feed.reviewHeadline(activeDetailEvent.gameName)}</p>

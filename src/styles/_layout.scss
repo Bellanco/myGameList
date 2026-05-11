@@ -281,12 +281,17 @@
 
 .hub-hub {
   display: grid;
-  grid-template-columns: repeat(12, minmax(0, 1fr));
+  grid-template-columns: minmax(0, 1fr);
   gap: 1rem;
 }
 
 .hub-hub-card {
-  grid-column: 3 / span 8;
+  grid-column: 1;
+  width: 100%;
+  margin-inline: auto;
+  min-width: 0;
+  container-type: inline-size;
+  container-name: social-card;
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
   background: linear-gradient(145deg, rgba(49,54,62,.82), rgba(33,36,41,.96));
@@ -296,6 +301,12 @@
   flex-direction: column;
   gap: .85rem;
   border-top: 2px solid rgba(26,159,255,.3);
+}
+
+@media (min-width: 62rem) {
+  .hub-hub-card {
+    width: min(92vw, 100%);
+  }
 }
 
 .hub-screen-card {
@@ -339,10 +350,12 @@
   display: flex;
   gap: .6rem;
   align-items: center;
+  min-width: 0;
 }
 
 .hub-feed-card-shell {
   gap: 1.05rem;
+  min-width: 0;
 }
 
 .hub-feed-metrics {
@@ -928,6 +941,7 @@ button.hub-chip.active {
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
   background: var(--surface-elevated);
+  min-width: 0;
   padding: .8rem;
   display: flex;
   flex-direction: column;
@@ -1283,6 +1297,7 @@ button.hub-chip.active {
   display: flex;
   flex-direction: column;
   gap: .7rem;
+  min-width: 0;
   margin-top: .9rem;
   padding-top: .8rem;
   border-top: 1px solid var(--border);
@@ -1292,6 +1307,7 @@ button.hub-chip.active {
   display: flex;
   flex-direction: column;
   gap: .4rem;
+  min-width: 0;
 }
 
 .hub-metadata-section strong {
@@ -1320,6 +1336,84 @@ button.hub-chip.active {
   font-weight: 600;
 }
 
+.hub-detail-profile-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  min-height: 2.75rem;
+  min-width: 2.75rem;
+  margin: -.25rem -.35rem;
+  padding: .25rem .35rem;
+  border: 1px solid transparent;
+  border-radius: .5rem;
+  background: transparent;
+  color: var(--steam-hover);
+  font-size: inherit;
+  font-weight: inherit;
+  line-height: 1.2;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color .2s ease, background .2s ease, color .2s ease;
+}
+
+.hub-detail-profile-link:hover {
+  color: #8ccfff;
+}
+
+.hub-detail-profile-link:focus-visible {
+  outline: none;
+  border-color: rgba(26,159,255,.42);
+  background: rgba(26,159,255,.12);
+  box-shadow: 0 0 0 2px rgba(26,159,255,.2);
+}
+
+@container social-card (max-width: 66rem) {
+  .hub-feed-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .hub-feed-card {
+    padding: .72rem;
+  }
+}
+
+@container social-card (max-width: 58rem) {
+  .hub-screen-actions-split {
+    flex-direction: column;
+    align-items: stretch;
+    gap: .55rem;
+  }
+
+  .hub-screen-actions-left,
+  .hub-screen-actions-right {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+
+  .hub-screen-actions-right {
+    justify-content: flex-start;
+  }
+}
+
+@container social-card (max-width: 48rem) {
+  .hub-screen-actions .btn {
+    width: 100%;
+  }
+
+  .hub-feed-metrics {
+    grid-template-columns: 1fr;
+  }
+
+  .hub-feed-owner {
+    font-size: .97rem;
+  }
+
+  .hub-filter-chip {
+    font-size: .72rem;
+    padding: .24rem .62rem;
+  }
+}
+
 @media (min-width:1200px) {
   .hub-profile-layout {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1343,7 +1437,7 @@ button.hub-chip.active {
   }
 
   .hub-hub-card {
-    grid-column: 2 / span 10;
+    width: min(100%, 100%);
   }
 
   .hub-status-grid {
@@ -1377,7 +1471,7 @@ button.hub-chip.active {
   }
 
   .hub-hub-card {
-    grid-column: span 12;
+    width: min(100%, 100%);
     padding: 1.1rem;
   }
 
