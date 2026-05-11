@@ -791,12 +791,12 @@ export const SocialHub = memo(function SocialHub() {
       const withProfiles = await Promise.all(
         entries.map(async (entry) => {
           try {
-            const socialData = await readPublicSocialGistById(entry.socialGistId, mainSyncConfig?.token);
+            const socialData = await readPublicSocialGistById(entry.socialGistId);
             let sharedLists: Partial<Record<TabId, SocialSharedGame[]>> = socialData.profile.sharedLists || {};
 
             if (entry.gamesGistId) {
               try {
-                const gamesData = await readPublicGamesGistById(entry.gamesGistId, mainSyncConfig?.token);
+                const gamesData = await readPublicGamesGistById(entry.gamesGistId);
                 sharedLists = {
                   c: gamesData.c.map((game) => toSharedGame(game)).slice(0, 300),
                   v: gamesData.v.map((game) => toSharedGame(game)).slice(0, 300),
