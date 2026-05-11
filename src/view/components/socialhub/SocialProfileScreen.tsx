@@ -3,7 +3,7 @@ import { SocialGameCardSelector } from '../SocialGameCardSelector';
 import type { TabId } from '../../../model/types/game';
 
 /**
- * Pantalla de ediciÃ³n de perfil social.
+ * Pantalla de edición de perfil social.
  * Presentacional, sin lÃ³gica de negocio.
  */
 export function SocialProfileScreen({

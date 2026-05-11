@@ -155,11 +155,13 @@ export const SocialHub = memo(function SocialHub() {
     setStatusKind(kind);
     setStatus(message);
 
-    // Any warning/error blocks feed access until a successful social action clears it.
+    // Only hard errors should block feed access.
     if (kind === 'ok') {
       setHasBlockingSocialIssue(false);
-    } else {
+    } else if (kind === 'err') {
       setHasBlockingSocialIssue(true);
+    } else {
+      setHasBlockingSocialIssue(false);
     }
 
     if (kind === 'err') {
@@ -777,14 +779,14 @@ export const SocialHub = memo(function SocialHub() {
     void hydrateSocialProfile();
   }, [hydrateSocialProfile]);
 
-  const hydrateSocialDirectory = useCallback(async () => {
+  const hydrateSocialDirectory = useCallback(async (forceRefresh = false) => {
     if (!showSocialSpace || activePanel === 'profile' || profileEditorLocked || !authUser || !socialCfgGistId) {
       return;
     }
 
     try {
       setLoadingDirectory(true);
-      const entries = await listSocialDirectory(50);
+      const entries = await listSocialDirectory(50, { forceRefresh });
 
       const withProfiles = await Promise.all(
         entries.map(async (entry) => {
@@ -1131,7 +1133,7 @@ export const SocialHub = memo(function SocialHub() {
         setFeedSearch={setFeedSearch}
         filteredSocialDirectory={filteredSocialDirectory}
         loadingDirectory={loadingDirectory}
-        hydrateSocialDirectory={hydrateSocialDirectory}
+        hydrateSocialDirectory={(force) => void hydrateSocialDirectory(force)}
         openProfileDetail={(id) => {
           if (id === 'profile') {
             navigate('/social/profile');
