@@ -974,6 +974,15 @@ button.hub-chip.active {
   line-height: 1.35;
 }
 
+.hub-feed-game-subtitle {
+  display: block;
+  margin-top: .2rem;
+  color: #b9e3ff;
+  font-size: .78rem;
+  font-weight: 600;
+  letter-spacing: .02em;
+}
+
 .hub-feed-activity-list {
   display: flex;
   flex-direction: column;

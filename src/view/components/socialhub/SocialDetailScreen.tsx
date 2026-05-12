@@ -49,6 +49,11 @@ export function SocialDetailScreen({
   }
   const gameItem = getGameItemById(activeDetailEvent.gameId);
   const reviewText = String(activeDetailEvent.reviewText || '').trim();
+  const updatedAtDate = new Date(activeDetailEvent.updatedAt);
+  const hasValidUpdatedAt = !Number.isNaN(updatedAtDate.getTime());
+  const analyzedAtLabel = hasValidUpdatedAt
+    ? `Analizado el ${updatedAtDate.toLocaleDateString('es-ES', { day: '2-digit' })} de ${updatedAtDate.toLocaleDateString('es-ES', { month: 'long' })} a las ${updatedAtDate.toLocaleTimeString('es-ES', { hour: 'numeric', minute: '2-digit' })}`
+    : 'Analizado recientemente';
   return (
     <section className="hub-hub hub-screen" aria-label={SOCIAL_UI.feed.sectionAria}>
       <div className="hub-hub-card hub-screen-card hub-feed-card-shell">
@@ -79,9 +84,9 @@ export function SocialDetailScreen({
                 {activeDetailEvent.profileDisplayName}
               </button>
             </h3>
-            <small>{new Date(activeDetailEvent.updatedAt).toLocaleString('es-ES')}</small>
+            <small className="hub-feed-game-subtitle">{activeDetailEvent.gameName}</small>
           </header>
-          <p>{SOCIAL_UI.feed.reviewHeadline(activeDetailEvent.gameName)}</p>
+          <p>{analyzedAtLabel}</p>
           <StarRating value={Number(activeDetailEvent.rating || 0)} />
           {reviewText ? <p className="hub-feed-review-text">{reviewText}</p> : null}
           {gameItem ? (
