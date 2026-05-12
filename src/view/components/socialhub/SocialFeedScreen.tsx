@@ -51,6 +51,14 @@ export function SocialFeedScreen({
   statusKind: string;
   handleSignOut: () => void;
 }) {
+  const formatAnalyzedAtLabel = (updatedAt: string) => {
+    const updatedAtDate = new Date(updatedAt);
+    if (Number.isNaN(updatedAtDate.getTime())) {
+      return 'Analizado recientemente';
+    }
+    return `Analizado el ${updatedAtDate.toLocaleDateString('es-ES', { day: '2-digit' })} de ${updatedAtDate.toLocaleDateString('es-ES', { month: 'long' })} a las ${updatedAtDate.toLocaleTimeString('es-ES', { hour: 'numeric', minute: '2-digit' })}`;
+  };
+
   return (
     <section className="hub-hub hub-screen" aria-label={SOCIAL_UI.feed.sectionAria}>
       <div className="hub-hub-card hub-screen-card hub-feed-card-shell">
@@ -92,6 +100,7 @@ export function SocialFeedScreen({
                   </div>
                   {group.items.map((entry: any) => {
                     const reviewText = entry.reviewText.trim();
+                    const analyzedAtLabel = formatAnalyzedAtLabel(String(entry.updatedAt || ''));
                     const cardTypeClass = entry.type === 'review' ? 'is-review' : 'is-recommendation';
                     const ownershipClass = entry.socialGistId === currentSocialGistId ? 'is-own-activity' : 'is-external-activity';
                     return (
@@ -106,8 +115,9 @@ export function SocialFeedScreen({
                       >
                         <header>
                           <h3>{entry.profileDisplayName}</h3>
+                          <small className="hub-feed-game-subtitle">{entry.gameName}</small>
                         </header>
-                        <p>{SOCIAL_UI.feed.reviewHeadline(entry.gameName)}</p>
+                        <p>{analyzedAtLabel}</p>
                         <StarRating value={Number(entry.rating || 0)} />
                         {reviewText ? <p className="hub-feed-review-text" title={reviewText}>{reviewText}</p> : null}
                       </article>
