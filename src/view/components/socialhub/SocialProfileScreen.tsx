@@ -4,7 +4,7 @@ import type { TabId } from '../../../model/types/game';
 
 /**
  * Pantalla de edición de perfil social.
- * Presentacional, sin lÃ³gica de negocio.
+ * Presentacional, sin lógica de negocio.
  */
 export function SocialProfileScreen({
   SOCIAL_UI,
@@ -72,7 +72,7 @@ export function SocialProfileScreen({
   // onBack button will not be shown when mustCreateProfile is true (since hasCreatedProfile will be false)
 
   return (
-    <section className="hub-hub hub-screen" aria-label="Social">
+    <section className="hub-hub hub-screen" aria-label={SOCIAL_UI.profile.sectionAria}>
       <div className="hub-hub-card hub-screen-card hub-profile-card">
         <header className="hub-screen-header">
           <div className="hub-hub-title-wrap">
@@ -81,7 +81,7 @@ export function SocialProfileScreen({
           </div>
           <p>{SOCIAL_UI.profile.subtitle}</p>
         </header>
-        <div className="hub-screen-actions hub-screen-actions-split" aria-label="Acciones del perfil social">
+        <div className="hub-screen-actions hub-screen-actions-split" aria-label={SOCIAL_UI.profile.actionsAria}>
           <div className="hub-screen-actions-left">
             {hasCreatedProfile ? (
               <button className="btn btn-secondary" type="button" onClick={onBack}>

@@ -64,7 +64,7 @@ export function SocialProfileDetailScreen({
 
   if (!activeProfileDetail) {
     return (
-      <section className="hub-hub hub-screen" aria-label="Social">
+      <section className="hub-hub hub-screen" aria-label={SOCIAL_UI.feed.sectionAria}>
         <div className="hub-hub-card hub-screen-card hub-feed-card-shell">
           <header className="hub-screen-header">
             <div className="hub-hub-title-wrap">
@@ -73,7 +73,7 @@ export function SocialProfileDetailScreen({
             </div>
             <p>{SOCIAL_UI.feed.profileDetailSubtitle}</p>
           </header>
-          <div className="hub-screen-actions hub-screen-actions-split" aria-label="Acciones del detalle de perfil social">
+          <div className="hub-screen-actions hub-screen-actions-split" aria-label={SOCIAL_UI.feed.profileDetailActionsAria}>
             <div className="hub-screen-actions-left">
               <button className="btn btn-secondary" type="button" onClick={onBack}>
                 <Icon name="arrow-back" />
@@ -88,7 +88,7 @@ export function SocialProfileDetailScreen({
     );
   }
   return (
-    <section className="hub-hub hub-screen" aria-label="Social">
+    <section className="hub-hub hub-screen" aria-label={SOCIAL_UI.feed.sectionAria}>
       <div className="hub-hub-card hub-screen-card hub-feed-card-shell">
         <header className="hub-screen-header">
           <div className="hub-hub-title-wrap">
@@ -97,7 +97,7 @@ export function SocialProfileDetailScreen({
           </div>
           <p>{SOCIAL_UI.feed.profileDetailSubtitle}</p>
         </header>
-        <div className="hub-screen-actions hub-screen-actions-split" aria-label="Acciones del detalle de perfil social">
+        <div className="hub-screen-actions hub-screen-actions-split" aria-label={SOCIAL_UI.feed.profileDetailActionsAria}>
           <div className="hub-screen-actions-left">
             <button className="btn btn-secondary" type="button" onClick={onBack}>
               <Icon name="arrow-back" />

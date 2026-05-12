@@ -669,7 +669,7 @@ export const SocialHub = memo(function SocialHub() {
         setShowSocialSpace(true);
         setFeedback('ok', SOCIAL_UI.status.signInAndLinked);
       } else {
-        // No hacer nada aquÃ­; el useEffect automÃ¡tico manejarÃ¡ la creaciÃ³n del gist
+        // No hacer nada aquÃ­; el useEffect automÃ¡tico manejarÃ¡ la creación del gist
       }
     } catch (error) {
       setFeedback('err', error instanceof Error ? error.message : SOCIAL_UI.status.signInFailed);
@@ -1012,7 +1012,7 @@ export const SocialHub = memo(function SocialHub() {
       disabled: boolean;
     };
 
-    // Paso 1: Conectar sincronizaciÃ³n principal (token)
+    // Paso 1: Conectar sincronización principal (token)
     if (!hasMainSync) {
       return {
         icon: 'gear',
@@ -1022,7 +1022,7 @@ export const SocialHub = memo(function SocialHub() {
       } satisfies GatewayCta;
     }
 
-    // Paso 2: Google (si tenemos token pero no sesiÃ³n)
+    // Paso 2: Google (si tenemos token pero no sesión)
     if (resolvingSocialGist) {
       return {
         icon: 'cloud-sync',
@@ -1041,7 +1041,7 @@ export const SocialHub = memo(function SocialHub() {
       } satisfies GatewayCta;
     }
 
-    // Paso 3: Gist social (si tenemos sesiÃ³n pero no gist) - normalmente automÃ¡tico pero se puede forzar
+    // Paso 3: Gist social (si tenemos sesión pero no gist) - normalmente automÃ¡tico pero se puede forzar
     if (canConnectSocialGist) {
       return {
         icon: 'cloud-sync',

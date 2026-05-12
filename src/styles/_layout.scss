@@ -695,6 +695,7 @@
   font-weight: 800;
   line-height: 1.2;
   display: -webkit-box;
+  line-clamp: 3;
   -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
   overflow: hidden;
@@ -1035,15 +1036,19 @@ button.hub-chip.active {
   margin: 0;
   display: -webkit-box;
   -webkit-box-orient: vertical;
+  line-clamp: 4;
   -webkit-line-clamp: 4;
   overflow: hidden;
-  line-height: 1.4;
+  font-size: clamp(.88rem, .74rem + .55vw, 1.18rem);
+  line-height: 1.55;
+  color: var(--text);
 }
 
-.hub-feed-recommendation-text {
-  margin: 0;
-  color: #9fb2c1;
-  line-height: 1.4;
+.hub-feed-card-detail .hub-feed-review-text {
+  display: block;
+  line-clamp: unset;
+  -webkit-line-clamp: unset;
+  overflow: visible;
 }
 
 .hub-feed-email {
@@ -1464,6 +1469,8 @@ button.hub-chip.active {
   }
 
   .hub-feed-review-text {
+    font-size: .88rem;
+    line-clamp: 3;
     -webkit-line-clamp: 3;
   }
 
