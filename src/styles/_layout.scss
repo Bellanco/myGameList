@@ -820,6 +820,7 @@
   display: flex;
   flex-wrap: wrap;
   gap: .5rem;
+  margin-top: .8rem;
 }
 
 .hub-chip {
@@ -1175,12 +1176,12 @@ button.hub-chip.active {
 }
 
 .hub-gateway-details > summary::before {
-  content: 'â–¸';
+  content: '▸';
   margin-right: .4rem;
 }
 
 .hub-gateway-details[open] > summary::before {
-  content: 'â–¾';
+  content: '▾';
 }
 
 .hub-gateway-steps {
