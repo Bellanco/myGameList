@@ -112,8 +112,8 @@ export interface UpsertReviewInput {
 }
 
 function getGithubAuthHeader(token: string): string {
-  // GitHub REST examples use Bearer for PATs.
-  return `Bearer ${token}`;
+  // GitHub REST API uses 'token' scheme for Personal Access Tokens (PAT).
+  return `token ${token}`;
 }
 
 function buildSessionCacheKey(prefix: string, id: string): string {
@@ -188,60 +188,64 @@ function saveSocialGistCache(gistId: string, data: SocialGistData, etag: string 
   writeSessionCachedValue(buildSessionCacheKey(SESSION_CACHE_SOCIAL_GIST_PREFIX, gistId), cached);
 }
 
-function readPublicSocialGistCache(gistId: string, options?: { includeExpired?: boolean }): SessionCachedValue<SocialGistData> | null {
-  const memory = publicSocialGistCacheById.get(gistId);
+function readPublicSocialGistCache(gistId: string, token: string | null = null, options?: { includeExpired?: boolean }): SessionCachedValue<SocialGistData> | null {
+  const cacheKey = `${gistId}:${token || 'anon'}`;
+  const memory = publicSocialGistCacheById.get(cacheKey);
   if (memory && (options?.includeExpired || memory.expiresAt > Date.now())) {
     return memory;
   }
 
-  const key = buildSessionCacheKey(SESSION_CACHE_PUBLIC_SOCIAL_GIST_PREFIX, gistId);
+  const key = buildSessionCacheKey(SESSION_CACHE_PUBLIC_SOCIAL_GIST_PREFIX, cacheKey);
   const sessionValue = readSessionCachedValue<SocialGistData>(key, { includeExpired: options?.includeExpired });
   if (!sessionValue) {
-    publicSocialGistCacheById.delete(gistId);
+    publicSocialGistCacheById.delete(cacheKey);
     return null;
   }
 
-  publicSocialGistCacheById.set(gistId, sessionValue);
+  publicSocialGistCacheById.set(cacheKey, sessionValue);
   return sessionValue;
 }
 
-function savePublicSocialGistCache(gistId: string, data: SocialGistData, etag: string | null = null): void {
+function savePublicSocialGistCache(gistId: string, data: SocialGistData, etag: string | null = null, token: string | null = null): void {
+  const cacheKey = `${gistId}:${token || 'anon'}`;
   const cached: SessionCachedValue<SocialGistData> = {
     value: data,
     etag,
     expiresAt: Date.now() + PUBLIC_SOCIAL_GIST_CACHE_TTL_MS,
   };
 
-  publicSocialGistCacheById.set(gistId, cached);
-  writeSessionCachedValue(buildSessionCacheKey(SESSION_CACHE_PUBLIC_SOCIAL_GIST_PREFIX, gistId), cached);
+  publicSocialGistCacheById.set(cacheKey, cached);
+  writeSessionCachedValue(buildSessionCacheKey(SESSION_CACHE_PUBLIC_SOCIAL_GIST_PREFIX, cacheKey), cached);
 }
 
-function readPublicGamesGistCache(gistId: string, options?: { includeExpired?: boolean }): SessionCachedValue<TabData> | null {
-  const memory = publicGamesGistCacheById.get(gistId);
+function readPublicGamesGistCache(gistId: string, token: string | null = null, options?: { includeExpired?: boolean }): SessionCachedValue<TabData> | null {
+  const cacheKey = `${gistId}:${token || 'anon'}`;
+  const memory = publicGamesGistCacheById.get(cacheKey);
   if (memory && (options?.includeExpired || memory.expiresAt > Date.now())) {
     return memory;
   }
 
-  const key = buildSessionCacheKey(SESSION_CACHE_PUBLIC_GAMES_GIST_PREFIX, gistId);
+  const key = buildSessionCacheKey(SESSION_CACHE_PUBLIC_GAMES_GIST_PREFIX, cacheKey);
   const sessionValue = readSessionCachedValue<TabData>(key, { includeExpired: options?.includeExpired });
   if (!sessionValue) {
-    publicGamesGistCacheById.delete(gistId);
+    publicGamesGistCacheById.delete(cacheKey);
     return null;
   }
 
-  publicGamesGistCacheById.set(gistId, sessionValue);
+  publicGamesGistCacheById.set(cacheKey, sessionValue);
   return sessionValue;
 }
 
-function savePublicGamesGistCache(gistId: string, data: TabData, etag: string | null = null): void {
+function savePublicGamesGistCache(gistId: string, data: TabData, etag: string | null = null, token: string | null = null): void {
+  const cacheKey = `${gistId}:${token || 'anon'}`;
   const cached: SessionCachedValue<TabData> = {
     value: data,
     etag,
     expiresAt: Date.now() + PUBLIC_GAMES_GIST_CACHE_TTL_MS,
   };
 
-  publicGamesGistCacheById.set(gistId, cached);
-  writeSessionCachedValue(buildSessionCacheKey(SESSION_CACHE_PUBLIC_GAMES_GIST_PREFIX, gistId), cached);
+  publicGamesGistCacheById.set(cacheKey, cached);
+  writeSessionCachedValue(buildSessionCacheKey(SESSION_CACHE_PUBLIC_GAMES_GIST_PREFIX, cacheKey), cached);
 }
 
 async function buildGithubError(response: Response, prefix: string): Promise<string> {
@@ -726,6 +730,10 @@ export async function whoAmI(token: string): Promise<{ login: string }> {
 }
 
 export async function createGist(token: string): Promise<{ gistId: string; etag: string | null }> {
+  if (!isValidGithubToken(token)) {
+    throw new Error('Formato de token inválido');
+  }
+
   const response = await fetch(GIST_API_BASE, {
     method: 'POST',
     headers: {
@@ -879,17 +887,17 @@ export async function readSocialGist(token: string, gistId: string, etag: string
   }
 }
 
-export async function readPublicSocialGistById(gistId: string): Promise<SocialGistData> {
+export async function readPublicSocialGistById(gistId: string, token: string | null = null): Promise<SocialGistData> {
   if (!isValidGistId(gistId)) {
     throw new Error('Gist ID inválido');
   }
 
-  const cached = readPublicSocialGistCache(gistId);
+  const cached = readPublicSocialGistCache(gistId, token);
   if (cached) {
     return cached.value;
   }
 
-  const staleCached = readPublicSocialGistCache(gistId, { includeExpired: true });
+  const staleCached = readPublicSocialGistCache(gistId, token, { includeExpired: true });
 
   const inFlight = publicSocialGistInFlightById.get(gistId);
   if (inFlight) {
@@ -901,6 +909,10 @@ export async function readPublicSocialGistById(gistId: string): Promise<SocialGi
       'X-GitHub-Api-Version': '2022-11-28',
     };
 
+    if (token && isValidGithubToken(token)) {
+      baseHeaders['Authorization'] = getGithubAuthHeader(token);
+    }
+
     if (staleCached?.etag) {
       baseHeaders['If-None-Match'] = staleCached.etag;
     }
@@ -910,7 +922,7 @@ export async function readPublicSocialGistById(gistId: string): Promise<SocialGi
     });
 
     if (response.status === 304 && staleCached) {
-      savePublicSocialGistCache(gistId, staleCached.value, staleCached.etag || null);
+      savePublicSocialGistCache(gistId, staleCached.value, staleCached.etag || null, token);
       return staleCached.value;
     }
 
@@ -930,7 +942,7 @@ export async function readPublicSocialGistById(gistId: string): Promise<SocialGi
       }
     }
 
-    savePublicSocialGistCache(gistId, normalized, responseEtag);
+    savePublicSocialGistCache(gistId, normalized, responseEtag, token);
     return normalized;
   })();
 
@@ -942,17 +954,17 @@ export async function readPublicSocialGistById(gistId: string): Promise<SocialGi
   }
 }
 
-export async function readPublicGamesGistById(gistId: string): Promise<TabData> {
+export async function readPublicGamesGistById(gistId: string, token: string | null = null): Promise<TabData> {
   if (!isValidGistId(gistId)) {
     throw new Error('Gist ID inválido');
   }
 
-  const cached = readPublicGamesGistCache(gistId);
+  const cached = readPublicGamesGistCache(gistId, token);
   if (cached) {
     return cached.value;
   }
 
-  const staleCached = readPublicGamesGistCache(gistId, { includeExpired: true });
+  const staleCached = readPublicGamesGistCache(gistId, token, { includeExpired: true });
 
   const inFlight = publicGamesGistInFlightById.get(gistId);
   if (inFlight) {
@@ -964,6 +976,10 @@ export async function readPublicGamesGistById(gistId: string): Promise<TabData> 
       'X-GitHub-Api-Version': '2022-11-28',
     };
 
+    if (token && isValidGithubToken(token)) {
+      baseHeaders['Authorization'] = getGithubAuthHeader(token);
+    }
+
     if (staleCached?.etag) {
       baseHeaders['If-None-Match'] = staleCached.etag;
     }
@@ -973,7 +989,7 @@ export async function readPublicGamesGistById(gistId: string): Promise<TabData> 
     });
 
     if (response.status === 304 && staleCached) {
-      savePublicGamesGistCache(gistId, staleCached.value, staleCached.etag || null);
+      savePublicGamesGistCache(gistId, staleCached.value, staleCached.etag || null, token);
       return staleCached.value;
     }
 
@@ -993,7 +1009,7 @@ export async function readPublicGamesGistById(gistId: string): Promise<TabData> 
       }
     }
 
-    savePublicGamesGistCache(gistId, normalized, responseEtag);
+    savePublicGamesGistCache(gistId, normalized, responseEtag, token);
     return normalized;
   })();
 
@@ -1048,6 +1064,10 @@ export async function writeSocialGist(token: string, gistId: string, payload: So
 }
 
 export async function readGist(token: string, gistId: string, etag: string | null = null): Promise<GistReadResponse> {
+  if (!isValidGithubToken(token)) {
+    throw new Error('Formato de token inválido');
+  }
+
   if (!isValidGistId(gistId)) {
     throw new Error('Gist ID inválido');
   }
@@ -1092,6 +1112,10 @@ export async function readGist(token: string, gistId: string, etag: string | nul
 }
 
 export async function writeGist(token: string, gistId: string, payload: TabData): Promise<{ etag: string | null; updatedAt: number }> {
+  if (!isValidGithubToken(token)) {
+    throw new Error('Formato de token inválido');
+  }
+
   if (!isValidGistId(gistId)) {
     throw new Error('Gist ID inválido');
   }
