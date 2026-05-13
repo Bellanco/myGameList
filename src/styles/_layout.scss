@@ -969,7 +969,7 @@ button.hub-chip.active {
 }
 
 .hub-feed-card p {
-  font-size: .8rem;
+  font-size: clamp(.88rem, .7rem + .75vw, .92rem);
   color: var(--text-muted);
   line-height: 1.35;
 }
@@ -1048,8 +1048,10 @@ button.hub-chip.active {
   line-clamp: 4;
   -webkit-line-clamp: 4;
   overflow: hidden;
-  font-size: clamp(.88rem, .74rem + .55vw, 1.18rem);
-  line-height: 1.55;
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+  font-size: clamp(.88rem, .7rem + .75vw, 1.15rem);
+  line-height: 0.92;
   color: var(--text);
 }
 
@@ -1058,6 +1060,7 @@ button.hub-chip.active {
   line-clamp: unset;
   -webkit-line-clamp: unset;
   overflow: visible;
+  white-space: pre-wrap;
 }
 
 .hub-feed-email {
@@ -1475,12 +1478,6 @@ button.hub-chip.active {
 @media (max-width:620px) {
   .settings-card {
     grid-column: span 12;
-  }
-
-  .hub-feed-review-text {
-    font-size: .88rem;
-    line-clamp: 3;
-    -webkit-line-clamp: 3;
   }
 
   .bottom-nav-btn span {
