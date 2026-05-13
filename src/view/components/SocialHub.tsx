@@ -140,7 +140,7 @@ export const SocialHub = memo(function SocialHub() {
   const [favoriteSearch, setFavoriteSearch] = useState('');
   const [feedSearch, setFeedSearch] = useState('');
   const [feedFilter] = useState<'all' | 'favorites'>('all');
-  const [socialPayload, setSocialPayload] = useState<{ recommendations: Array<{ id: number; fromUid: string; toUid: string; gameId: number; gameName: string; message: string; rating: number; createdAt: number; updatedAt: number }>; activity: SocialActivityEntry[] }>({ recommendations: [], activity: [] });
+  const [socialPayload, setSocialPayload] = useState<{ activity: SocialActivityEntry[] }>({ activity: [] });
   const [hydratingProfile, setHydratingProfile] = useState(false);
   const [savingProfile, setSavingProfile] = useState(false);
   const [loadingDirectory, setLoadingDirectory] = useState(false);
@@ -465,9 +465,27 @@ export const SocialHub = memo(function SocialHub() {
   }, [activePanel, activityFeedItems, detailActorUid, detailEventType, detailGameId]);
 
   /**
-   * Obtiene el GameItem por su ID desde el estado local de todas las tabs.
+   * Obtiene GameItem desde listas compartidas cargadas por gamesGistId.
+   * Mantiene fallback local para no romper eventos propios sin datos remotos.
    */
-  const getGameItemById = useCallback((gameId: number) => {
+  const getGameItemById = useCallback((profileId: string, gameId: number) => {
+    const profileEntry = socialDirectory.find((entry) => entry.id === profileId);
+    if (profileEntry) {
+      const allShared = [
+        ...(profileEntry.sharedLists.c || []),
+        ...(profileEntry.sharedLists.v || []),
+        ...(profileEntry.sharedLists.e || []),
+        ...(profileEntry.sharedLists.p || []),
+      ];
+      const sharedMatch = allShared.find((game) => game.id === gameId);
+      if (sharedMatch) {
+        return {
+          ...sharedMatch,
+          _ts: 0,
+        };
+      }
+    }
+
     const allGames = [
       ...localState.c,
       ...localState.v,
@@ -475,7 +493,7 @@ export const SocialHub = memo(function SocialHub() {
       ...localState.p,
     ];
     return allGames.find((game) => game.id === gameId) || null;
-  }, [localState]);
+  }, [localState, socialDirectory]);
 
   /**
    * Formatea la fecha como "DD de MMM".
@@ -698,6 +716,34 @@ export const SocialHub = memo(function SocialHub() {
         setSocialCfgEtag(socialRead.etag || null);
       }
 
+      const hasLegacySharedLists = Object.keys(socialRead.data.profile.sharedLists || {}).length > 0;
+      const hasLegacyRecommendations =
+        (socialRead.data.profile.recommendations || []).length > 0 ||
+        (socialRead.data.recommendations || []).length > 0;
+
+      if (hasLegacySharedLists || hasLegacyRecommendations) {
+        const cleanedPayload = {
+          ...socialRead.data,
+          profile: {
+            ...socialRead.data.profile,
+            recommendations: [],
+            sharedLists: {},
+          },
+          recommendations: [],
+          updatedAt: Date.now(),
+        };
+
+        const cleanedWrite = await writeSocialGist(socialConfig.token, socialCfgGistId, cleanedPayload);
+        const nextEtag = cleanedWrite.etag || socialRead.etag || null;
+        setSocialCfgEtag(nextEtag);
+        saveSocialSyncConfig({
+          token: socialConfig.token,
+          gistId: socialCfgGistId,
+          etag: nextEtag,
+          lastRemoteUpdatedAt: Date.now(),
+        });
+      }
+
       const nextName = socialRead.data.profile.name || existingProfile?.displayName || authUser.displayName || authUser.email;
       const favorites = socialRead.data.profile.favoriteGames
         .map((entry) => entry.id)
@@ -721,7 +767,6 @@ export const SocialHub = memo(function SocialHub() {
       setHideGameTime(Boolean(profileVisibility.hideGameTime));
       setHasCreatedProfile(profileExists);
       setSocialPayload({
-        recommendations: [],
         activity: socialRead.data.activity,
       });
       
@@ -793,7 +838,7 @@ export const SocialHub = memo(function SocialHub() {
         entries.map(async (entry) => {
           try {
             const socialData = await readPublicSocialGistById(entry.socialGistId, socialConfig?.token || null);
-            let sharedLists: Partial<Record<TabId, SocialSharedGame[]>> = socialData.profile.sharedLists || {};
+            let sharedLists: Partial<Record<TabId, SocialSharedGame[]>> = {};
 
             if (entry.gamesGistId) {
               try {
@@ -805,13 +850,15 @@ export const SocialHub = memo(function SocialHub() {
                   p: gamesData.p.map((game) => toSharedGame(game)).slice(0, 300),
                 };
               } catch {
-                // Keep social shared snapshot as fallback.
+                // Keep empty lists when games gist is unavailable.
               }
             }
 
-            const highlightedRecommendations = socialData.profile.recommendations.map((game) => game.name);
-            const sharedRecommendations = socialData.recommendations.map((entry) => entry.gameName);
-            const mergedRecommendations = [...new Set([...highlightedRecommendations, ...sharedRecommendations])]
+            const mergedRecommendations = socialData.activity
+              .filter((activityEntry) => activityEntry.type === 'recommendation')
+              .map((activityEntry) => activityEntry.gameName)
+              .filter((name) => Boolean(name && name.trim()))
+              .filter((name, index, arr) => arr.indexOf(name) === index)
               .filter((name) => Boolean(name && name.trim()))
               .slice(0, 8);
             const activity = socialData.activity
@@ -906,7 +953,6 @@ export const SocialHub = memo(function SocialHub() {
       setSavingProfile(true);
       const validFavoriteIds = favoriteGameIds.filter((id) => completedGameNameById.has(id));
       const normalizedHiddenTabs = getOrderedUniqueTabs(hiddenTabs);
-      const hiddenTabsSet = new Set<TabId>(normalizedHiddenTabs);
 
       const visibility: SocialProfileVisibility = {
         hiddenTabs: normalizedHiddenTabs,
@@ -915,27 +961,13 @@ export const SocialHub = memo(function SocialHub() {
         hideGameTime,
       };
 
-      const sharedLists: Partial<Record<TabId, SocialSharedGame[]>> = {};
-      (['c', 'v', 'e', 'p'] as const).forEach((tab) => {
-        if (hiddenTabsSet.has(tab)) {
-          return;
-        }
-
-        const compactGames = localState[tab]
-          .map((game) => toSharedGame(game))
-          .filter((game) => game.id > 0 && Boolean(game.name.trim()))
-          .slice(0, 300);
-
-        sharedLists[tab] = compactGames;
-      });
-
       const profile = {
         name: profileName.trim() || authUser.displayName || authUser.email,
         private: false,
         favoriteGames: validFavoriteIds.map((id) => ({ id, name: completedGameNameById.get(id) || `Juego ${id}` })),
-        recommendations: [], // No mÃ¡s recomendaciones destacadas
+        recommendations: [],
         visibility,
-        sharedLists,
+        sharedLists: {},
       };
 
       const writeResult = await writeSocialGist(socialConfig.token, socialCfgGistId, {
@@ -988,14 +1020,12 @@ export const SocialHub = memo(function SocialHub() {
     hideRetry,
     hideGameTime,
     hydrateSocialDirectory,
-    localState,
     navigate,
     profileName,
     setFeedback,
     socialCfgEtag,
     socialCfgGistId,
     socialPayload.activity,
-    toSharedGame,
   ]);
 
   const handleSignOut = useCallback(async () => {
