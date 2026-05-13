@@ -169,9 +169,9 @@ export function SocialFeedScreen({
                   <header>
                     <h3>{entry.displayName}</h3>
                   </header>
-                  <p>
+                  <p style={{ whiteSpace: 'pre-line' }}>
                     {entry.favorites.length
-                      ? `${SOCIAL_UI.feed.favoritesPrefix}${entry.favorites.join(', ')}`
+                      ? `${SOCIAL_UI.feed.favoritesPrefix}\n${entry.favorites.join('\n')}`
                       : SOCIAL_UI.feed.noFavorites}
                   </p>
                 </article>
