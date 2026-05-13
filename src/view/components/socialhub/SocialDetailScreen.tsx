@@ -16,7 +16,7 @@ export function SocialDetailScreen({
 }: {
   SOCIAL_UI: any;
   activeDetailEvent: any;
-  getGameItemById: (id: number) => any;
+  getGameItemById: (profileId: string, id: number) => any;
   onOpenProfileDetail: (id: string) => void;
   onBack: () => void;
   status: string;
@@ -47,7 +47,7 @@ export function SocialDetailScreen({
       </section>
     );
   }
-  const gameItem = getGameItemById(activeDetailEvent.gameId);
+  const gameItem = getGameItemById(activeDetailEvent.profileId, activeDetailEvent.gameId);
   const reviewText = String(activeDetailEvent.reviewText || '').trim();
   const updatedAtDate = new Date(activeDetailEvent.updatedAt);
   const hasValidUpdatedAt = !Number.isNaN(updatedAtDate.getTime());
