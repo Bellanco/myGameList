@@ -970,16 +970,17 @@ export const SocialHub = memo(function SocialHub() {
         sharedLists: {},
       };
 
+      const currentGistResult = await readSocialGist(socialConfig.token, socialCfgGistId, null);
+      const currentGistData = currentGistResult.data;
+
       const writeResult = await writeSocialGist(socialConfig.token, socialCfgGistId, {
         profile,
-        recommendations: [],
-        activity: socialPayload.activity,
+        recommendations: currentGistData.recommendations,
+        activity: currentGistData.activity,
         updatedAt: Date.now(),
       });
 
-      // Todos los perfiles sociales se fuerzan como pÃºblicos.
       await updateGistPrivacy(socialConfig.token, socialCfgGistId, true);
-
       await ensureProfileByEmail({
         user: authUser,
         socialGistId: socialCfgGistId,
@@ -996,6 +997,11 @@ export const SocialHub = memo(function SocialHub() {
         lastRemoteUpdatedAt: Date.now(),
       });
       setSocialCfgEtag(writeResult.etag || socialCfgEtag);
+
+      setSocialPayload({
+        activity: currentGistData.activity,
+      });
+
       setHasCreatedProfile(true);
       setMustCreateProfile(false);
       setJustSavedProfile(true);
@@ -1003,7 +1009,6 @@ export const SocialHub = memo(function SocialHub() {
       void hydrateSocialDirectory();
       setFeedback('ok', SOCIAL_UI.status.profileSaved);
       
-      // Clear the flag after a short delay to allow normal hydration flow again
       setTimeout(() => setJustSavedProfile(false), 1000);
     } catch (error) {
       setFeedback('err', error instanceof Error ? error.message : SOCIAL_UI.status.saveProfileFailed);

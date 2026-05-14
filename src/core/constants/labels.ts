@@ -234,7 +234,7 @@ export const SOCIAL_UI = {
     profileListsTitle: 'Listados públicos',
     profileListsEmpty: 'Este perfil no ha publicado listados todavía.',
     profileListTabCompleted: 'Completados',
-    profileListTabVisited: 'Visitados',
+    profileListTabVisited: 'Abandonados',
     profileListTabPlaying: 'En curso',
     profileListTabPlanned: 'Próximos',
     backToFeed: 'Volver al feed',

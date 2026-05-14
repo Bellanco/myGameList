@@ -51,13 +51,7 @@ export function SocialFeedScreen({
   statusKind: string;
   handleSignOut: () => void;
 }) {
-  const formatAnalyzedAtLabel = (updatedAt: string) => {
-    const updatedAtDate = new Date(updatedAt);
-    if (Number.isNaN(updatedAtDate.getTime())) {
-      return 'Analizado recientemente';
-    }
-    return `Analizado el ${updatedAtDate.toLocaleDateString('es-ES', { day: '2-digit' })} de ${updatedAtDate.toLocaleDateString('es-ES', { month: 'long' })} a las ${updatedAtDate.toLocaleTimeString('es-ES', { hour: 'numeric', minute: '2-digit' })}`;
-  };
+
 
   return (
     <section className="hub-hub hub-screen" aria-label={SOCIAL_UI.feed.sectionAria}>
@@ -100,7 +94,11 @@ export function SocialFeedScreen({
                   </div>
                   {group.items.map((entry: any) => {
                     const reviewText = entry.reviewText.trim();
-                    const analyzedAtLabel = formatAnalyzedAtLabel(String(entry.updatedAt || ''));
+                    const updatedAtDate = new Date(entry.updatedAt || '');
+                    const hasValidUpdatedAt = !Number.isNaN(updatedAtDate.getTime());
+                    const analyzedAtLabel = hasValidUpdatedAt
+                      ? `Analizado el ${updatedAtDate.toLocaleDateString('es-ES', { day: '2-digit' })} de ${updatedAtDate.toLocaleDateString('es-ES', { month: 'long' })} a las ${updatedAtDate.toLocaleTimeString('es-ES', { hour: 'numeric', minute: '2-digit' })}`
+                      : 'Analizado recientemente';
                     const cardTypeClass = entry.type === 'review' ? 'is-review' : 'is-recommendation';
                     const ownershipClass = entry.socialGistId === currentSocialGistId ? 'is-own-activity' : 'is-external-activity';
                     return (

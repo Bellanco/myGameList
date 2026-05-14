@@ -152,9 +152,9 @@ export function SocialProfileDetailScreen({
                     readOnly
                     visibility={{
                       showYears: false,
-                      showReplayable: !Boolean(activeProfileDetail.visibility?.hideReplayable),
-                      showRetry: !Boolean(activeProfileDetail.visibility?.hideRetry),
-                      showHours: !Boolean(activeProfileDetail.visibility?.hideGameTime),
+                      showReplayable: !activeProfileDetail.visibility?.hideReplayable,
+                      showRetry: !activeProfileDetail.visibility?.hideRetry,
+                      showHours: !activeProfileDetail.visibility?.hideGameTime,
                     }}
                   />
                 </>
