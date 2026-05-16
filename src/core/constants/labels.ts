@@ -104,7 +104,7 @@ export const UI_MESSAGES = {
     editSaveBtn: 'Guardar',
   },
   form: {
-    yearsHint: 'Pulsa Enter para añadir',
+    enterToAddHint: 'Pulsa Enter para añadir',
   },
   settings: {
     title: 'Ajustes',
