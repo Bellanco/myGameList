@@ -62,12 +62,27 @@ export function TagInput({
           list={listId}
           value={pendingValue}
           placeholder={placeholder}
-          onChange={(event) => onPendingValueChange(event.target.value)}
+          enterKeyHint="done"
           onKeyDown={(event) => {
             if (event.key !== 'Enter') return;
             event.preventDefault();
             onAdd();
+          }}  
+          onChange={(event) => {
+            const val = event.target.value;
+            if (val.includes('\n') || val.includes('\r')) {
+              onAdd();
+              return;
+            }
+            onPendingValueChange(val);
           }}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter') {
+              event.preventDefault();
+              onAdd();
+            }
+          }}
+
         />
       </div>
       {hint ? <small className="tag-hint">{hint}</small> : null}

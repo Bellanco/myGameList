@@ -294,7 +294,7 @@ export function FormModal({ open, draft, currentTab, lookups, onClose, onDraftCh
               }}
               onRemove={(value) => removeTextTag('genres', value)}
               chipClassName="chip-genre"
-              hint={UI_MESSAGES.form.yearsHint}
+              hint={UI_MESSAGES.form.enterToAddHint}
               invalid={Boolean(fieldErrors.genres)}
             />
           </div>
@@ -313,7 +313,7 @@ export function FormModal({ open, draft, currentTab, lookups, onClose, onDraftCh
               }}
               onRemove={(value) => removeTextTag('platforms', value)}
               chipClassName="chip-plat"
-              hint={UI_MESSAGES.form.yearsHint}
+              hint={UI_MESSAGES.form.enterToAddHint}
               invalid={Boolean(fieldErrors.platforms)}
             />
             {supportsScore(currentTab) ? (
@@ -344,7 +344,7 @@ export function FormModal({ open, draft, currentTab, lookups, onClose, onDraftCh
                   onDraftChange({ ...draft, years: draft.years.filter((entry) => entry !== Number(value)) });
                 }}
                 chipClassName="chip-generic"
-                hint={UI_MESSAGES.form.yearsHint}
+                hint={UI_MESSAGES.form.enterToAddHint}
                 invalid={Boolean(fieldErrors.years)}
                 warning={yearWarningShown}
               />
@@ -385,7 +385,7 @@ export function FormModal({ open, draft, currentTab, lookups, onClose, onDraftCh
                   }}
                   onRemove={(value) => removeTextTag('strengths', value)}
                   chipClassName="chip-pf"
-                  hint={UI_MESSAGES.form.yearsHint}
+                  hint={UI_MESSAGES.form.enterToAddHint}
                 />
               ) : null}
 
@@ -402,7 +402,7 @@ export function FormModal({ open, draft, currentTab, lookups, onClose, onDraftCh
                   }}
                   onRemove={(value) => removeTextTag('weaknesses', value)}
                   chipClassName="chip-pd"
-                  hint={UI_MESSAGES.form.yearsHint}
+                  hint={UI_MESSAGES.form.enterToAddHint}
                 />
               ) : null}
 
@@ -419,7 +419,7 @@ export function FormModal({ open, draft, currentTab, lookups, onClose, onDraftCh
                   }}
                   onRemove={(value) => removeTextTag('reasons', value)}
                   chipClassName="chip-pd"
-                  hint={UI_MESSAGES.form.yearsHint}
+                  hint={UI_MESSAGES.form.enterToAddHint}
                 />
               ) : null}
             </div>
