@@ -141,6 +141,9 @@ export function SocialProfileScreen({
                     checked={hiddenTabs.includes('v')}
                     onChange={() => toggleHiddenTab('v')}
                   />
+                  <span className="visibility-toggle-track" aria-hidden="true">
+                    <span className="visibility-toggle-thumb" />
+                  </span>
                   <span>{SOCIAL_UI.profile.hideVisitedList}</span>
                 </label>
                 <label className="visibility-check" htmlFor="hub-hide-list-e">
@@ -150,6 +153,9 @@ export function SocialProfileScreen({
                     checked={hiddenTabs.includes('e')}
                     onChange={() => toggleHiddenTab('e')}
                   />
+                  <span className="visibility-toggle-track" aria-hidden="true">
+                    <span className="visibility-toggle-thumb" />
+                  </span>
                   <span>{SOCIAL_UI.profile.hidePlayingList}</span>
                 </label>
                 <label className="visibility-check" htmlFor="hub-hide-list-p">
@@ -159,6 +165,9 @@ export function SocialProfileScreen({
                     checked={hiddenTabs.includes('p')}
                     onChange={() => toggleHiddenTab('p')}
                   />
+                  <span className="visibility-toggle-track" aria-hidden="true">
+                    <span className="visibility-toggle-thumb" />
+                  </span>
                   <span>{SOCIAL_UI.profile.hidePlannedList}</span>
                 </label>
               </div>
@@ -174,6 +183,9 @@ export function SocialProfileScreen({
                     checked={hideReplayable}
                     onChange={(event) => setHideReplayable(event.target.checked)}
                   />
+                  <span className="visibility-toggle-track" aria-hidden="true">
+                    <span className="visibility-toggle-thumb" />
+                  </span>
                   <span>{SOCIAL_UI.profile.hideReplayableField}</span>
                 </label>
                 <label className="visibility-check" htmlFor="hub-hide-field-retry">
@@ -183,6 +195,9 @@ export function SocialProfileScreen({
                     checked={hideRetry}
                     onChange={(event) => setHideRetry(event.target.checked)}
                   />
+                  <span className="visibility-toggle-track" aria-hidden="true">
+                    <span className="visibility-toggle-thumb" />
+                  </span>
                   <span>{SOCIAL_UI.profile.hideRetryField}</span>
                 </label>
                 {setHideGameTime ? (
@@ -193,6 +208,9 @@ export function SocialProfileScreen({
                       checked={hideGameTime || false}
                       onChange={(event) => setHideGameTime?.(event.target.checked)}
                     />
+                    <span className="visibility-toggle-track" aria-hidden="true">
+                      <span className="visibility-toggle-thumb" />
+                    </span>
                     <span>{SOCIAL_UI.profile.hideGameTimeField}</span>
                   </label>
                 ) : null}

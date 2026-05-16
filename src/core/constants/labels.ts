@@ -142,7 +142,10 @@ export const UI_MESSAGES = {
     },
     backup: {
       title: 'Respaldo de datos',
+      note: 'Control total sobre tus listas, tanto local como en la nube.',
       description: 'Exporta o importa tus listados en formato JSON.',
+      overwriteLabel: 'Sobreescribir datos existentes (local y Gist)',
+      overwriteHint: 'Marcar esta opción reemplaza por completo los datos almacenados y también actualizará tu Gist cuando haya sincronización activa.',
       exportBtn: 'Exportar',
       importBtn: 'Importar',
       importAriaLabel: 'Seleccionar archivo para importar',
