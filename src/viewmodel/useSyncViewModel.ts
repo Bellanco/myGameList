@@ -383,6 +383,22 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
     }
   }, [connectSyncWithCredentials, onNotice]);
 
+  const overwriteRemoteData = useCallback(async (data: TabData): Promise<boolean> => {
+    const config = getSyncConfig();
+    if (!config?.token || !config?.gistId) {
+      return false;
+    }
+
+    const writeResult = await writeGist(config.token, config.gistId, data);
+    saveSyncConfig({
+      ...config,
+      etag: writeResult.etag,
+      lastRemoteUpdatedAt: Date.now(),
+    });
+
+    return true;
+  }, []);
+
   const disconnectSync = useCallback(() => {
     clearSyncConfig();
     setStatus('idle');
@@ -405,6 +421,7 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
     syncNow,
     disconnectSync,
     recoverGistIdFromGoogle,
+    overwriteRemoteData,
     connectedGistId,
     lastRemoteChangesApplied,
     recoveringGistId,

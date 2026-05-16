@@ -151,6 +151,113 @@
   cursor: pointer;
 }
 
+.settings-card-backup {
+  gap: 1rem;
+  border-top: 2px solid rgba(103,193,141,.35);
+}
+
+.settings-card-head {
+  display: flex;
+  flex-direction: column;
+  gap: .35rem;
+}
+
+.settings-card-note {
+  color: var(--text-muted);
+  font-size: .88rem;
+}
+
+.settings-backup-row {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+}
+
+.settings-backup-info p {
+  margin: 0;
+  color: var(--text-muted);
+}
+
+.settings-backup-warning {
+  border: 1px solid rgba(26,159,255,.18);
+  background: rgba(26,159,255,.08);
+  border-radius: var(--radius-sm);
+  padding: .85rem 1rem;
+  color: var(--text);
+  font-size: .88rem;
+  line-height: 1.4;
+}
+
+.settings-backup-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: .65rem;
+}
+
+.settings-backup-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: .85rem;
+  cursor: pointer;
+  color: var(--text);
+  font-weight: 700;
+  background: transparent;
+  border: none;
+  padding: 0;
+  transition: color .2s ease;
+}
+
+.settings-backup-toggle:hover {
+  color: var(--steam-hover);
+}
+
+.settings-backup-toggle input {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.settings-backup-toggle-track {
+  width: 52px;
+  height: 28px;
+  border-radius: 999px;
+  background: rgba(255,255,255,.08);
+  border: 1px solid var(--border);
+  position: relative;
+  transition: background .2s ease, border-color .2s ease;
+  flex-shrink: 0;
+}
+
+.settings-backup-toggle-thumb {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--surface);
+  box-shadow: 0 6px 16px rgba(0,0,0,.08);
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  transition: transform .2s ease, background .2s ease;
+}
+
+.settings-backup-toggle input:checked + .settings-backup-toggle-track {
+  background: rgba(26,159,255,.2);
+  border-color: rgba(26,159,255,.35);
+}
+
+.settings-backup-toggle input:checked + .settings-backup-toggle-track .settings-backup-toggle-thumb {
+  transform: translateX(24px);
+  background: #ffffff;
+}
+
+.settings-backup-toggle-label {
+  font-size: .95rem;
+  color: var(--text);
+  line-height: 1.4;
+}
+
 .settings-card-status {
   border-top: 2px solid rgba(26,159,255,.35);
 }
@@ -506,54 +613,62 @@
 .visibility-check {
   display: flex;
   align-items: center;
-  gap: .6rem;
-  padding: .5rem .6rem;
+  gap: .8rem;
+  padding: .55rem .75rem;
   border-radius: var(--radius-sm);
   cursor: pointer;
-  transition: background-color 0.15s ease;
+  transition: background-color 0.15s ease, transform .15s ease;
   user-select: none;
 }
 
 .visibility-check:hover {
   background-color: rgba(255, 255, 255, 0.05);
+  transform: translateY(-0.5px);
 }
 
 .visibility-check input {
-  appearance: none;
-  -webkit-appearance: none;
-  -moz-appearance: none;
-  width: 1.1rem;
-  height: 1.1rem;
-  border: 2px solid rgba(216, 239, 255, 0.4);
-  border-radius: 0.25rem;
-  background-color: transparent;
-  cursor: pointer;
-  transition: all 0.15s ease;
-  flex-shrink: 0;
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.visibility-toggle-track {
+  width: 46px;
+  height: 24px;
+  border-radius: 999px;
+  background: rgba(255,255,255,.08);
+  border: 1px solid rgba(216, 239, 255, 0.35);
   position: relative;
+  flex-shrink: 0;
+  transition: background .2s ease, border-color .2s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 2px;
 }
 
-.visibility-check input:hover {
-  border-color: var(--steam);
-  background-color: rgba(59, 184, 228, 0.05);
+.visibility-toggle-thumb {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--surface);
+  box-shadow: 0 4px 12px rgba(0,0,0,.08);
+  transition: transform .2s ease, background .2s ease;
 }
 
-.visibility-check input:checked {
-  background-color: var(--steam);
-  border-color: var(--steam);
-  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='white' d='M13.78 4.22a.75.75 0 010 1.06l-7.25 7.25a.75.75 0 01-1.06 0L2.22 9.28a.75.75 0 011.06-1.06L6 11.94l6.72-6.72a.75.75 0 011.06 0z'/%3e%3c/svg%3e");
-  background-repeat: no-repeat;
-  background-position: center;
-  background-size: 100%;
+.visibility-check input:checked + .visibility-toggle-track {
+  background: rgba(26,159,255,.22);
+  border-color: rgba(26,159,255,.45);
 }
 
-.visibility-check input:focus {
-  outline: none;
-  box-shadow: 0 0 0 3px rgba(59, 184, 228, 0.2);
+.visibility-check input:checked + .visibility-toggle-track .visibility-toggle-thumb {
+  transform: translateX(22px);
+  background: #ffffff;
 }
 
 .visibility-check span {
-  font-size: .85rem;
+  font-size: .9rem;
   color: var(--text);
   font-weight: 500;
 }
