@@ -2,6 +2,7 @@
 import { Icon } from '../Icon';
 import { GameTable } from '../GameTable';
 import type { GameItem, TabId } from '../../../model/types/game';
+import type { SocialSharedGame } from '../../../model/repository/gistRepository';
 
 const TAB_LABELS: Record<TabId, string> = {
   c: 'profileListTabCompleted',
@@ -14,6 +15,18 @@ const TAB_LABELS: Record<TabId, string> = {
  * Pantalla de detalle de perfil social.
  * Presentacional, sin lógica de negocio.
  */
+type SocialProfileDetail = {
+  displayName: string;
+  visibility?: {
+    hiddenTabs?: TabId[];
+    hideReplayable?: boolean;
+    hideRetry?: boolean;
+    hideGameTime?: boolean;
+  };
+  sharedLists?: Partial<Record<TabId, Array<GameItem | SocialSharedGame>>>;
+  favorites?: string[];
+};
+
 export function SocialProfileDetailScreen({
   SOCIAL_UI,
   activeProfileDetail,
@@ -22,7 +35,7 @@ export function SocialProfileDetailScreen({
   statusKind
 }: {
   SOCIAL_UI: any;
-  activeProfileDetail: any;
+  activeProfileDetail: SocialProfileDetail | null;
   onBack: () => void;
   status: string;
   statusKind: string;
@@ -43,7 +56,6 @@ export function SocialProfileDetailScreen({
 
   const currentGames: GameItem[] = useMemo(() => {
     const sharedGames = activeProfileDetail?.sharedLists?.[currentTab] || [];
-
     return sharedGames.map((game: any) => ({
       id: Number(game.id || 0),
       _ts: 0,
@@ -61,6 +73,8 @@ export function SocialProfileDetailScreen({
       hours: typeof game.hours === 'number' ? game.hours : null,
     }));
   }, [activeProfileDetail, currentTab]);
+
+  const favoriteGames = activeProfileDetail?.favorites || [];
 
   if (!activeProfileDetail) {
     return (
@@ -112,9 +126,9 @@ export function SocialProfileDetailScreen({
           <div className="hub-detail-metadata">
             <div className="hub-metadata-section">
               <strong>{SOCIAL_UI.feed.profileFavoritesTitle}</strong>
-              {activeProfileDetail.favorites.length > 0 ? (
+              {favoriteGames.length > 0 ? (
                 <div className="hub-card-row">
-                  {activeProfileDetail.favorites.map((favorite: string) => (
+                  {favoriteGames.map((favorite: string) => (
                     <div key={favorite} className="hub-game-card is-read-only">
                       <span className="hub-game-card-title">{favorite}</span>
                     </div>
