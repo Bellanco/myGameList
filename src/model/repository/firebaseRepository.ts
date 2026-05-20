@@ -99,8 +99,10 @@ type FirebaseWebConfig = {
 };
 
 // Firebase web config is public by design; security is enforced by Auth and Firestore rules.
+// Do NOT keep live API keys in source. Use environment variables (VITE_*)
+// and set a blank fallback to avoid accidental leaks.
 const FALLBACK_FIREBASE_WEB_CONFIG: FirebaseWebConfig = {
-  apiKey: 'AIzaSyBfMLi-pJfUiLqsfoUYsXQSgiAw1hWHfKg',
+  apiKey: '',
   authDomain: 'mylists-f7313.firebaseapp.com',
   projectId: 'mylists-f7313',
   storageBucket: 'mylists-f7313.firebasestorage.app',
