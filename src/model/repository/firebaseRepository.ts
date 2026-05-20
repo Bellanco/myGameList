@@ -129,6 +129,17 @@ function isAnalyticsEnabledInCurrentEnv(): boolean {
   return parseEnvBoolean(import.meta.env.VITE_ENABLE_ANALYTICS, true);
 }
 
+function getMissingFirebaseEnvKeys(): string[] {
+  return [
+    import.meta.env.VITE_FIREBASE_API_KEY ? null : 'VITE_FIREBASE_API_KEY',
+    import.meta.env.VITE_FIREBASE_AUTH_DOMAIN ? null : 'VITE_FIREBASE_AUTH_DOMAIN',
+    import.meta.env.VITE_FIREBASE_PROJECT_ID ? null : 'VITE_FIREBASE_PROJECT_ID',
+    import.meta.env.VITE_FIREBASE_STORAGE_BUCKET ? null : 'VITE_FIREBASE_STORAGE_BUCKET',
+    import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID ? null : 'VITE_FIREBASE_MESSAGING_SENDER_ID',
+    import.meta.env.VITE_FIREBASE_APP_ID ? null : 'VITE_FIREBASE_APP_ID',
+  ].filter(Boolean) as string[];
+}
+
 function getFirebaseWebConfig(): FirebaseWebConfig {
   const envConfig: FirebaseWebConfig = {
     apiKey: String(import.meta.env.VITE_FIREBASE_API_KEY || '').trim(),
@@ -207,6 +218,10 @@ async function getAnalyticsModule(): Promise<AnalyticsModule | null> {
  */
 async function buildFirebaseServices(): Promise<FirebaseServices | null> {
   if (!isFirebaseConfigReady()) {
+    const missingKeys = getMissingFirebaseEnvKeys();
+    if (missingKeys.length > 0 && typeof window !== 'undefined') {
+      console.warn(`Firebase env missing: ${missingKeys.join(', ')}`);
+    }
     return null;
   }
 
@@ -439,7 +454,9 @@ export async function signInWithGoogle(): Promise<SocialAuthUser> {
 
   const services = await initializeFirebaseServices();
   if (!services) {
-    throw new Error('Firebase no está configurado en este entorno');
+    const missingKeys = getMissingFirebaseEnvKeys();
+    const missingMessage = missingKeys.length ? `Faltan variables: ${missingKeys.join(', ')}. ` : '';
+    throw new Error(`${missingMessage}Firebase no está configurado en este entorno`);
   }
 
   const provider = new GoogleAuthProvider();
