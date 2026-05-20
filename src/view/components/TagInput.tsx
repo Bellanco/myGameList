@@ -37,7 +37,13 @@ export function TagInput({
   warning = false,
   required = false,
 }: TagInputProps) {
-  const isFirefoxMobile = typeof navigator !== 'undefined' && /Firefox\//.test(navigator.userAgent) && /Mobi|Android|iPhone|iPad/.test(navigator.userAgent);
+  const isFirefoxMobile = typeof navigator !== 'undefined'
+    && /Firefox\//.test(navigator.userAgent)
+    && (
+      /Mobi|Android|iPhone|iPad/.test(navigator.userAgent)
+      || navigator.maxTouchPoints > 1
+      || (typeof window !== 'undefined' && window.matchMedia?.('(pointer: coarse)').matches)
+    );
   const [options, setOptions] = useState<string[]>([]);
   const [filtered, setFiltered] = useState<string[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
