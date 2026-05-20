@@ -53,6 +53,8 @@ const EMPTY_PENDING: PendingTagFields = {
   reasons: '',
 };
 
+const REVIEW_MAX_LENGTH = 25000;
+
 type FieldErrorMap = {
   name?: boolean;
   genres?: boolean;
@@ -83,6 +85,9 @@ export function FormModal({ open, draft, currentTab, lookups, onClose, onDraftCh
   const [pending, setPending] = useState<PendingTagFields>(EMPTY_PENDING);
   const [fieldErrors, setFieldErrors] = useState<FieldErrorMap>({});
   const [yearWarningShown, setYearWarningShown] = useState(false);
+  const reviewCount = draft.review.length;
+  const reviewProgress = Math.min(100, Math.round((reviewCount / REVIEW_MAX_LENGTH) * 100));
+  const reviewProgressClass = reviewProgress >= 100 ? 'has-error' : reviewProgress >= 90 ? 'has-warning' : '';
 
   useEffect(() => {
     setPending(EMPTY_PENDING);
@@ -463,10 +468,22 @@ export function FormModal({ open, draft, currentTab, lookups, onClose, onDraftCh
               <textarea
                 id="draft-review"
                 className="ftextarea"
+                maxLength={REVIEW_MAX_LENGTH}
                 value={draft.review}
                 placeholder="Ej: Historia sólida, combate excelente y gran ambientación."
-                onChange={(event) => onDraftChange({ ...draft, review: event.target.value })}
+                onChange={(event) => {
+                  const nextReview = event.target.value.slice(0, REVIEW_MAX_LENGTH);
+                  onDraftChange({ ...draft, review: nextReview });
+                }}
               />
+              <div className="field-footer">
+                <small
+                  className={`tag-hint ${reviewProgressClass}`.trim()}
+                  aria-live="polite"
+                >
+                  {`${reviewCount.toLocaleString()} / ${REVIEW_MAX_LENGTH.toLocaleString()} caracteres`}
+                </small>
+              </div>
             </div>
           ) : null}
         </div>

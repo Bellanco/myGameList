@@ -487,6 +487,23 @@ body.compact-filters .filters-row.open .btn-toggle { justify-content: center; al
   min-height: .86rem;
 }
 
+.field-footer {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.field-footer .tag-hint {
+  margin-top: 0;
+}
+
+.field-footer .tag-hint.has-warning {
+  color: var(--warn);
+}
+
+.field-footer .tag-hint.has-error {
+  color: var(--danger);
+}
+
 .tag-hint--spacer {
   visibility: hidden;
   pointer-events: none;
