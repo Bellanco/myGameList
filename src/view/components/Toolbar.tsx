@@ -16,6 +16,7 @@ interface ToolbarProps {
     strengths: string[];
     weaknesses: string[];
   };
+  
   activeFilterCount: number;
   compactFilters: boolean;
   filtersOpen: boolean;
