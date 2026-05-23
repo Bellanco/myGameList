@@ -4,7 +4,6 @@ import { FILTER_BOOL } from '../../core/constants/labels';
 import { HOURS_RANGES } from '../../core/constants/uiConfig';
 import type { TabId, ToolbarFilters } from '../../model/types/game';
 import { renderStars } from '../../core/utils/renderStars';
-import { useDebouncedValue } from '../hooks/useDebouncedValue';
 import { Icon } from './Icon';
 
 interface ToolbarProps {
@@ -39,16 +38,22 @@ export const Toolbar = memo(function Toolbar({
   onClearAll,
 }: ToolbarProps) {
   const [searchDraft, setSearchDraft] = useState(filters.search);
-  const debouncedSearch = useDebouncedValue(searchDraft, 180);
 
   useEffect(() => {
     setSearchDraft(filters.search);
   }, [filters.search]);
 
   useEffect(() => {
-    if (debouncedSearch === filters.search) return;
-    onFilterChange('search', debouncedSearch);
-  }, [debouncedSearch, filters.search, onFilterChange]);
+    const timeoutId = window.setTimeout(() => {
+      if (searchDraft !== filters.search) {
+        onFilterChange('search', searchDraft);
+      }
+    }, 180);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [searchDraft, filters.search, onFilterChange]);
 
   const supportsScore = (tab: TabId) => tab === 'c' || tab === 'p';
   const supportsHours = (tab: TabId) => tab === 'c';
