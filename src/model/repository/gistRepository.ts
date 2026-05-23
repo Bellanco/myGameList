@@ -112,8 +112,17 @@ export interface UpsertReviewInput {
 }
 
 function getGithubAuthHeader(token: string): string {
-  // GitHub REST API uses 'token' scheme for Personal Access Tokens (PAT).
-  return `token ${token}`;
+  // Use Bearer scheme which is recommended and compatible with PATs.
+  return `Bearer ${token}`;
+}
+
+function shortTokenDiscriminant(token: string | null | undefined): string {
+  if (!token) return 'anon';
+  try {
+    return String(token).slice(-8);
+  } catch {
+    return 'anon';
+  }
 }
 
 function buildSessionCacheKey(prefix: string, id: string): string {
@@ -189,7 +198,7 @@ function saveSocialGistCache(gistId: string, data: SocialGistData, etag: string 
 }
 
 function readPublicSocialGistCache(gistId: string, token: string | null = null, options?: { includeExpired?: boolean }): SessionCachedValue<SocialGistData> | null {
-  const cacheKey = `${gistId}:${token || 'anon'}`;
+  const cacheKey = `${gistId}:${shortTokenDiscriminant(token)}`;
   const memory = publicSocialGistCacheById.get(cacheKey);
   if (memory && (options?.includeExpired || memory.expiresAt > Date.now())) {
     return memory;
@@ -207,7 +216,7 @@ function readPublicSocialGistCache(gistId: string, token: string | null = null, 
 }
 
 function savePublicSocialGistCache(gistId: string, data: SocialGistData, etag: string | null = null, token: string | null = null): void {
-  const cacheKey = `${gistId}:${token || 'anon'}`;
+  const cacheKey = `${gistId}:${shortTokenDiscriminant(token)}`;
   const cached: SessionCachedValue<SocialGistData> = {
     value: data,
     etag,
@@ -219,7 +228,7 @@ function savePublicSocialGistCache(gistId: string, data: SocialGistData, etag: s
 }
 
 function readPublicGamesGistCache(gistId: string, token: string | null = null, options?: { includeExpired?: boolean }): SessionCachedValue<TabData> | null {
-  const cacheKey = `${gistId}:${token || 'anon'}`;
+  const cacheKey = `${gistId}:${shortTokenDiscriminant(token)}`;
   const memory = publicGamesGistCacheById.get(cacheKey);
   if (memory && (options?.includeExpired || memory.expiresAt > Date.now())) {
     return memory;
@@ -237,7 +246,7 @@ function readPublicGamesGistCache(gistId: string, token: string | null = null, o
 }
 
 function savePublicGamesGistCache(gistId: string, data: TabData, etag: string | null = null, token: string | null = null): void {
-  const cacheKey = `${gistId}:${token || 'anon'}`;
+  const cacheKey = `${gistId}:${shortTokenDiscriminant(token)}`;
   const cached: SessionCachedValue<TabData> = {
     value: data,
     etag,
@@ -810,7 +819,8 @@ export async function readSocialGist(token: string, gistId: string, etag: string
     };
   }
 
-  const requestKey = `${gistId}:${etag || ''}`;
+  // Deduplicate by gistId only (etag variations should reuse same in-flight request)
+  const requestKey = gistId;
   const inFlight = socialGistInFlightByKey.get(requestKey);
   if (inFlight) {
     return inFlight;
@@ -837,13 +847,33 @@ export async function readSocialGist(token: string, gistId: string, etag: string
         };
       }
 
-      // Fallback only when no cache exists for this session.
-      const fresh = await readSocialGist(token, gistId, null);
-      return {
-        data: fresh.data,
-        etag: fresh.etag,
-        notModified: true,
+      // No cached value in this session: perform a fresh fetch without ETag header
+      const freshHeaders: Record<string, string> = {
+        Authorization: getGithubAuthHeader(token),
+        'X-GitHub-Api-Version': '2022-11-28',
       };
+      const freshResp = await fetch(`${GIST_API_BASE}/${gistId}`, { headers: freshHeaders });
+      if (!freshResp.ok) {
+        throw new Error(await buildGithubError(freshResp, 'Read social gist fallback failed'));
+      }
+      const freshBody = (await freshResp.json()) as { files?: Record<string, { content: string }> };
+      const rawFresh = freshBody.files?.[SOCIAL_GIST_FILENAME]?.content;
+      const responseEtagFresh = freshResp.headers.get('etag');
+      if (!rawFresh) {
+        const empty = getEmptySocialGistData();
+        saveSocialGistCache(gistId, empty, responseEtagFresh);
+        return { data: empty, etag: responseEtagFresh };
+      }
+
+      try {
+        const normalizedFresh = normalizeSocialGistData(JSON.parse(rawFresh));
+        saveSocialGistCache(gistId, normalizedFresh, responseEtagFresh);
+        return { data: normalizedFresh, etag: responseEtagFresh };
+      } catch {
+        const empty = getEmptySocialGistData();
+        saveSocialGistCache(gistId, empty, responseEtagFresh);
+        return { data: empty, etag: responseEtagFresh };
+      }
     }
 
     if (!response.ok) {
@@ -1155,27 +1185,7 @@ export async function writeGist(token: string, gistId: string, payload: TabData)
  * @param isPublic - true para público, false para privado
  */
 export async function updateGistPrivacy(token: string, gistId: string, isPublic: boolean): Promise<void> {
-  if (!isValidGithubToken(token)) {
-    throw new Error('Formato de token inválido');
-  }
-
-  if (!isValidGistId(gistId)) {
-    throw new Error('Gist ID inválido');
-  }
-
-  const response = await fetch(`${GIST_API_BASE}/${gistId}`, {
-    method: 'PATCH',
-    headers: {
-      Authorization: getGithubAuthHeader(token),
-      'Content-Type': 'application/json',
-      'X-GitHub-Api-Version': '2022-11-28',
-    },
-    body: JSON.stringify({
-      public: Boolean(isPublic),
-    }),
-  });
-
-  if (!response.ok) {
-    throw new Error(await buildGithubError(response, 'Update gist privacy failed'));
-  }
+  // GitHub Gists API does not allow changing the visibility of an existing gist.
+  // Intentionally fail so calling code can inform the user.
+  throw new Error('La API de GitHub Gists no permite cambiar la visibilidad de un gist existente. Para cambiar la visibilidad es necesario crear un nuevo gist.');
 }
