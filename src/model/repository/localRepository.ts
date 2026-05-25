@@ -39,13 +39,15 @@ function toList(value: unknown): string[] {
     .filter(Boolean);
 }
 
-function normalizeGame(game: Record<string, unknown>, defaultTs: number): GameItem {
+function normalizeGame(game: Record<string, unknown>, defaultTs: number, forceTimestamp: boolean): GameItem {
   return {
     id: Number(game.id || 0),
-    _ts: (() => {
-      const ts = Number(game._ts);
-      return Number.isFinite(ts) && ts > 0 ? ts : defaultTs;
-    })(),
+    _ts: forceTimestamp
+      ? defaultTs
+      : (() => {
+          const ts = Number(game._ts);
+          return Number.isFinite(ts) && ts > 0 ? ts : defaultTs;
+        })(),
     name: String(game.name ?? '').trim(),
     genres: toList(game.genres),
     platforms: toList(game.platforms),
@@ -67,14 +69,17 @@ function normalizeGame(game: Record<string, unknown>, defaultTs: number): GameIt
   };
 }
 
-export function normalizeData(data: TabData): TabData {
+export function normalizeData(data: TabData, options?: { forceTimestamp?: boolean }): TabData {
   const ts = Date.now();
+  const forceTimestamp = Boolean(options?.forceTimestamp);
   const normalized: TabData = {
-    c: (data.c || []).map((game) => normalizeGame(game as unknown as Record<string, unknown>, ts)),
-    v: (data.v || []).map((game) => normalizeGame(game as unknown as Record<string, unknown>, ts)),
-    e: (data.e || []).map((game) => normalizeGame(game as unknown as Record<string, unknown>, ts)),
-    p: (data.p || []).map((game) => normalizeGame(game as unknown as Record<string, unknown>, ts)),
-    deleted: (data.deleted || []).filter((item) => item && Number(item.id) > 0),
+    c: (data.c || []).map((game) => normalizeGame(game as unknown as Record<string, unknown>, ts, forceTimestamp)),
+    v: (data.v || []).map((game) => normalizeGame(game as unknown as Record<string, unknown>, ts, forceTimestamp)),
+    e: (data.e || []).map((game) => normalizeGame(game as unknown as Record<string, unknown>, ts, forceTimestamp)),
+    p: (data.p || []).map((game) => normalizeGame(game as unknown as Record<string, unknown>, ts, forceTimestamp)),
+    deleted: (data.deleted || [])
+      .filter((item) => item && Number(item.id) > 0)
+      .map((entry) => ({ id: Number(entry.id), _ts: forceTimestamp ? ts : Number(entry._ts) || ts })),
     updatedAt: Number(data.updatedAt || ts),
   };
 

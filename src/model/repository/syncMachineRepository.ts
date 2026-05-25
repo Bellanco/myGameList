@@ -48,6 +48,17 @@ export function canRead(): boolean {
   return Date.now() - lastReadAt > MIN_READ_INTERVAL_MS;
 }
 
+/**
+ * Like `canRead` but allows forcing a read regardless of the lastReadAt throttle.
+ * When `force` is true the only restriction is the current state (no reads while writing/merging/checking/error_backoff).
+ */
+export function canReadNow(force: boolean = false): boolean {
+  const { status, lastReadAt } = _state;
+  if (status === 'error_backoff' || status === 'checking' || status === 'merging' || status === 'writing') return false;
+  if (force) return true;
+  return Date.now() - lastReadAt > MIN_READ_INTERVAL_MS;
+}
+
 export function getNextReadDelayMs(): number {
   const diff = MIN_READ_INTERVAL_MS - (Date.now() - _state.lastReadAt);
   return diff > 0 ? diff : 0;

@@ -4,6 +4,7 @@ import { DIALOG_MESSAGES, ROUTE_TAB, SYNC_BADGE_TEXT, SYNC_MESSAGES, TAB_ROUTE }
 import type { TabData, TabId } from './model/types/game';
 import { ensureProfileByEmail, getCurrentSocialAuthUser } from './model/repository/firebaseRepository';
 import { getSyncConfig, getSocialSyncConfig, readSocialGist, saveSocialSyncConfig, upsertReviewActivity, writeSocialGist } from './model/repository/gistRepository';
+import { normalizeData } from './model/repository/localRepository';
 import { IconSprite } from './view/components/IconSprite';
 import { Header } from './view/components/Header';
 import { TabBar } from './view/components/TabBar';
@@ -158,13 +159,15 @@ export default function App() {
         e: payload.e || [],
         p: payload.p || [],
         deleted: payload.deleted || [],
-        updatedAt: payload.updatedAt || Date.now(),
+        updatedAt: Date.now(),
       };
+      const normalizedData = normalizeData(nextData, { forceTimestamp: true });
+      normalizedData.updatedAt = Date.now();
 
-      persist(nextData);
+      persist(normalizedData);
 
       if (overwrite) {
-        const overwritten = await syncVm.overwriteRemoteData(nextData);
+        const overwritten = await syncVm.overwriteRemoteData(normalizedData);
         if (overwritten) {
           notify('ok', 'Datos importados y Gist sobrescrito correctamente');
           return;
