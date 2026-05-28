@@ -770,10 +770,15 @@ export async function createGist(token: string): Promise<{ gistId: string; etag:
 }
 
 export async function createSocialGist(token: string): Promise<{ gistId: string; etag: string | null }> {
+  return createSocialGistWithData(token, getEmptySocialGistData(), true);
+}
+
+async function createSocialGistWithData(token: string, data: SocialGistData, isPublic: boolean): Promise<{ gistId: string; etag: string | null }> {
   if (!isValidGithubToken(token)) {
     throw new Error('Formato de token inválido');
   }
 
+  const normalized = normalizeSocialGistData(data);
   const response = await fetch(GIST_API_BASE, {
     method: 'POST',
     headers: {
@@ -783,11 +788,10 @@ export async function createSocialGist(token: string): Promise<{ gistId: string;
     },
     body: JSON.stringify({
       description: 'myGameList - Social Sync',
-      // Public gist allows read-only social profile queries by gistId without sharing private tokens.
-      public: true,
+      public: isPublic,
       files: {
         [SOCIAL_GIST_FILENAME]: {
-          content: JSON.stringify(getEmptySocialGistData()),
+          content: JSON.stringify(normalized),
         },
       },
     }),
@@ -799,6 +803,15 @@ export async function createSocialGist(token: string): Promise<{ gistId: string;
 
   const body = (await response.json()) as { id: string };
   return { gistId: body.id, etag: response.headers.get('etag') };
+}
+
+async function isPublicSocialGistAccessible(gistId: string): Promise<boolean> {
+  try {
+    await readPublicSocialGistById(gistId, null);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 export async function readSocialGist(token: string, gistId: string, etag: string | null = null): Promise<{ data: SocialGistData; etag: string | null; notModified?: boolean }> {
@@ -1178,14 +1191,34 @@ export async function writeGist(token: string, gistId: string, payload: TabData)
 }
 
 /**
- * Actualiza la privacidad de un gist social (público/privado).
- * 
+ * Garantiza que el gist social tenga la visibilidad deseada.
+ *
+ * Si la visibilidad actual no coincide con la deseada, se clona el contenido
+ * en un nuevo gist con la visibilidad adecuada.
+ *
  * @param token - Token de GitHub con permisos de gist
- * @param gistId - ID del gist social
+ * @param gistId - ID del gist social original
  * @param isPublic - true para público, false para privado
  */
-export async function updateGistPrivacy(token: string, gistId: string, isPublic: boolean): Promise<void> {
-  // GitHub Gists API does not allow changing the visibility of an existing gist.
-  // Intentionally fail so calling code can inform the user.
-  throw new Error('La API de GitHub Gists no permite cambiar la visibilidad de un gist existente. Para cambiar la visibilidad es necesario crear un nuevo gist.');
+export async function updateGistPrivacy(token: string, gistId: string, isPublic: boolean): Promise<{ gistId: string; etag: string | null }> {
+  if (!isValidGithubToken(token)) {
+    throw new Error('Formato de token inválido');
+  }
+
+  if (!isValidGistId(gistId)) {
+    throw new Error('Gist ID inválido');
+  }
+
+  const sourceGist = await readSocialGist(token, gistId, null);
+  const currentlyPublic = await isPublicSocialGistAccessible(gistId);
+
+  if ((isPublic && currentlyPublic) || (!isPublic && !currentlyPublic)) {
+    return { gistId, etag: sourceGist.etag || null };
+  }
+
+  const migration = await createSocialGistWithData(token, sourceGist.data, isPublic);
+  return {
+    gistId: migration.gistId,
+    etag: migration.etag,
+  };
 }
