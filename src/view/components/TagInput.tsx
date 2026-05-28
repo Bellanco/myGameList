@@ -158,8 +158,9 @@ export function TagInput({
                   id={`${suggestionListId}-opt-${idx}`}
                   role="option"
                   aria-selected={activeIndex === idx}
-                  onMouseDown={(ev) => {
+                  onClick={(ev) => {
                     ev.preventDefault();
+                    ev.stopPropagation();
                     onPendingValueChange(opt);
                     onAdd();
                     setShowSuggestions(false);

@@ -980,23 +980,27 @@ export const SocialHub = memo(function SocialHub() {
         updatedAt: Date.now(),
       });
 
-      await updateGistPrivacy(socialConfig.token, socialCfgGistId, true);
+      const privacyResult = await updateGistPrivacy(socialConfig.token, socialCfgGistId, true);
+      const finalGistId = privacyResult.gistId;
+      const finalEtag = privacyResult.etag || writeResult.etag || socialCfgEtag;
+
       await ensureProfileByEmail({
         user: authUser,
-        socialGistId: socialCfgGistId,
+        socialGistId: finalGistId,
         gamesGistId: mainSyncConfig?.gistId || '',
         githubToken: mainSyncConfig?.token || socialConfig.token,
-        socialGistEtag: writeResult.etag || socialCfgEtag,
+        socialGistEtag: finalEtag,
         preferredName: profile.name,
       });
 
       saveSocialSyncConfig({
         token: socialConfig.token,
-        gistId: socialCfgGistId,
-        etag: writeResult.etag || socialCfgEtag,
+        gistId: finalGistId,
+        etag: finalEtag,
         lastRemoteUpdatedAt: Date.now(),
       });
-      setSocialCfgEtag(writeResult.etag || socialCfgEtag);
+      setSocialCfgGistId(finalGistId);
+      setSocialCfgEtag(finalEtag);
 
       setSocialPayload({
         activity: currentGistData.activity,
