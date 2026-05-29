@@ -126,8 +126,9 @@ export function FormModal({ open, draft, currentTab, lookups, onClose, onDraftCh
     key: 'genres' | 'platforms' | 'strengths' | 'weaknesses' | 'reasons',
     lookup: string[],
     values: string[],
+    explicitValue?: string,
   ): boolean => {
-    const rawValue = pending[key].trim();
+    const rawValue = (explicitValue ?? pending[key]).trim();
     if (!rawValue) return true;
     const finalValue = getCanonicalTag(lookup, rawValue);
     if (!hasTagValue(values, finalValue)) {
@@ -294,8 +295,8 @@ export function FormModal({ open, draft, currentTab, lookups, onClose, onDraftCh
               values={draft.genres}
               pendingValue={pending.genres}
               onPendingValueChange={(value) => setPendingValue('genres', value)}
-              onAdd={() => {
-                commitTextTag('genres', lookups.genres, draft.genres);
+              onAdd={(val) => {
+                commitTextTag('genres', lookups.genres, draft.genres, val);
               }}
               onRemove={(value) => removeTextTag('genres', value)}
               chipClassName="chip-genre"
@@ -313,8 +314,8 @@ export function FormModal({ open, draft, currentTab, lookups, onClose, onDraftCh
               values={draft.platforms}
               pendingValue={pending.platforms}
               onPendingValueChange={(value) => setPendingValue('platforms', value)}
-              onAdd={() => {
-                commitTextTag('platforms', lookups.platforms, draft.platforms);
+              onAdd={(val) => {
+                commitTextTag('platforms', lookups.platforms, draft.platforms, val);
               }}
               onRemove={(value) => removeTextTag('platforms', value)}
               chipClassName="chip-plat"
@@ -385,8 +386,8 @@ export function FormModal({ open, draft, currentTab, lookups, onClose, onDraftCh
                   values={draft.strengths}
                   pendingValue={pending.strengths}
                   onPendingValueChange={(value) => setPendingValue('strengths', value)}
-                  onAdd={() => {
-                    commitTextTag('strengths', lookups.strengths, draft.strengths);
+                  onAdd={(val) => {
+                    commitTextTag('strengths', lookups.strengths, draft.strengths, val);
                   }}
                   onRemove={(value) => removeTextTag('strengths', value)}
                   chipClassName="chip-pf"
@@ -402,8 +403,8 @@ export function FormModal({ open, draft, currentTab, lookups, onClose, onDraftCh
                   values={draft.weaknesses}
                   pendingValue={pending.weaknesses}
                   onPendingValueChange={(value) => setPendingValue('weaknesses', value)}
-                  onAdd={() => {
-                    commitTextTag('weaknesses', lookups.weaknesses, draft.weaknesses);
+                  onAdd={(val) => {
+                    commitTextTag('weaknesses', lookups.weaknesses, draft.weaknesses, val);
                   }}
                   onRemove={(value) => removeTextTag('weaknesses', value)}
                   chipClassName="chip-pd"
@@ -419,8 +420,8 @@ export function FormModal({ open, draft, currentTab, lookups, onClose, onDraftCh
                   values={draft.reasons}
                   pendingValue={pending.reasons}
                   onPendingValueChange={(value) => setPendingValue('reasons', value)}
-                  onAdd={() => {
-                    commitTextTag('reasons', lookups.weaknesses, draft.reasons);
+                  onAdd={(val) => {
+                    commitTextTag('reasons', lookups.weaknesses, draft.reasons, val);
                   }}
                   onRemove={(value) => removeTextTag('reasons', value)}
                   chipClassName="chip-pd"
