@@ -7,9 +7,11 @@ interface TagInputProps {
   values: Array<string | number>;
   pendingValue: string;
   onPendingValueChange: (value: string) => void;
-  onAdd: () => void;
+  /** Se actualizó para permitir pasar el valor directamente y evitar race conditions */
+  onAdd: (explicitValue?: string) => void;
   onRemove: (value: string | number) => void;
   listId?: string;
+  options?: string[]; // Propiedad recomendada para escalabilidad
   placeholder?: string;
   hint?: string;
   chipClassName: string;
@@ -18,10 +20,15 @@ interface TagInputProps {
   required?: boolean;
 }
 
-/**
- * Tag input con datalist nativo y chips.
- * Agrega valores al pulsar Enter para mantener el flujo de captura original.
- */
+// Se extrae la detección del agente para ejecutarla solo una vez en la carga del script
+const IS_FIREFOX_MOBILE = typeof navigator !== 'undefined'
+  && /Firefox\//.test(navigator.userAgent)
+  && (
+    /Mobi|Android|iPhone|iPad/.test(navigator.userAgent)
+    || navigator.maxTouchPoints > 1
+    || (typeof window !== 'undefined' && window.matchMedia?.('(pointer: coarse)').matches)
+  );
+
 export function TagInput({
   label,
   values,
@@ -30,6 +37,7 @@ export function TagInput({
   onAdd,
   onRemove,
   listId,
+  options: externalOptions,
   placeholder,
   hint,
   chipClassName,
@@ -37,35 +45,48 @@ export function TagInput({
   warning = false,
   required = false,
 }: TagInputProps) {
-  const isFirefoxMobile = typeof navigator !== 'undefined'
-    && /Firefox\//.test(navigator.userAgent)
-    && (
-      /Mobi|Android|iPhone|iPad/.test(navigator.userAgent)
-      || navigator.maxTouchPoints > 1
-      || (typeof window !== 'undefined' && window.matchMedia?.('(pointer: coarse)').matches)
-    );
-  const [options, setOptions] = useState<string[]>([]);
+  const [localOptions, setLocalOptions] = useState<string[]>([]);
   const [filtered, setFiltered] = useState<string[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [activeIndex, setActiveIndex] = useState<number>(-1);
   const inputRef = useRef<HTMLInputElement | null>(null);
 
+  // Sincronizar opciones internas priorizando la prop directa sobre el DOM scraping
   useEffect(() => {
-    if (!listId) return;
-    const el = document.getElementById(listId) as HTMLDataListElement | null;
-    if (!el) return setOptions([]);
-    const opts = Array.from(el.querySelectorAll('option')).map((o) => (o as HTMLOptionElement).value);
-    setOptions(opts);
-  }, [listId]);
+    if (externalOptions) {
+      setLocalOptions(externalOptions);
+      return;
+    }
+    if (!listId) return setLocalOptions([]);
 
+    const el = document.getElementById(listId) as HTMLDataListElement | null;
+    if (!el) return setLocalOptions([]);
+
+    const opts = Array.from(el.querySelectorAll('option')).map((o) => o.value);
+    setLocalOptions(opts);
+  }, [listId, externalOptions]);
+
+  // Se corrige la lógica del filtro
   const updateFilter = useMemo(() => (val: string) => {
-    if (!isFirefoxMobile || !options.length) return setShowSuggestions(false);
+    if (!IS_FIREFOX_MOBILE || !localOptions.length) return setShowSuggestions(false);
+
     const lower = val.toLowerCase().trim();
-    const matched = !lower ? options.slice(0, 8) : options.filter((o) => o.toLowerCase().includes(lower)).slice(0, 8);
+    const matched = !lower 
+      ? localOptions.slice(0, 8) 
+      : localOptions.filter((o) => o.toLowerCase().includes(lower)).slice(0, 8);
+
     setFiltered(matched);
-    setActiveIndex(matched.length ? 0 : -1);
+    setActiveIndex(-1); // Cambiado a -1 para evitar falsas selecciones automáticas al pulsar Enter
     setShowSuggestions(matched.length > 0);
-  }, [isFirefoxMobile, options]);
+  }, [localOptions]);
+
+  const handleSelectSuggestion = (value: string) => {
+    onPendingValueChange('');
+    onAdd(value); // Pasamos el valor directamente eliminando el setTimeout peligroso
+    setShowSuggestions(false);
+    setActiveIndex(-1);
+    inputRef.current?.focus();
+  };
 
   const suggestionListId = `${(listId || label.replace(/\s+/g, '-').toLowerCase())}-suggestions`;
 
@@ -89,11 +110,12 @@ export function TagInput({
             </button>
           </span>
         ))}
-        <div style={{ position: 'relative' }}>
+        
+        <div style={{ position: 'relative', display: 'inline-block', flexGrow: 1 }}>
           <input
             type="text"
             className="finput"
-            list={isFirefoxMobile ? undefined : listId}
+            list={IS_FIREFOX_MOBILE ? undefined : listId}
             value={pendingValue}
             placeholder={placeholder}
             enterKeyHint="done"
@@ -101,42 +123,40 @@ export function TagInput({
             ref={inputRef}
             onKeyDown={(event: KeyboardEvent<HTMLInputElement>) => {
               const key = event.key;
-              if (isFirefoxMobile && showSuggestions && (key === 'ArrowDown' || key === 'ArrowUp')) {
-                event.preventDefault();
-                setActiveIndex((prev) => {
-                  if (filtered.length === 0) return -1;
-                  if (key === 'ArrowDown') return prev < filtered.length - 1 ? prev + 1 : 0;
-                  return prev > 0 ? prev - 1 : filtered.length - 1;
-                });
-                return;
-              }
 
-              if (key === 'Escape') {
-                setShowSuggestions(false);
-                setActiveIndex(-1);
-                return;
-              }
-
-              if (key === 'Enter') {
-                if (isFirefoxMobile && showSuggestions && activeIndex >= 0 && filtered[activeIndex]) {
+              if (IS_FIREFOX_MOBILE && showSuggestions) {
+                if (key === 'ArrowDown' || key === 'ArrowUp') {
                   event.preventDefault();
-                  const opt = filtered[activeIndex];
-                  onPendingValueChange(opt);
-                  onAdd();
+                  if (!filtered.length) return;
+                  setActiveIndex((prev) => {
+                    if (key === 'ArrowDown') return prev < filtered.length - 1 ? prev + 1 : 0;
+                    return prev > 0 ? prev - 1 : filtered.length - 1;
+                  });
+                  return;
+                }
+
+                if (key === 'Escape') {
                   setShowSuggestions(false);
                   setActiveIndex(-1);
                   return;
                 }
+              }
+
+              if (key === 'Enter') {
                 event.preventDefault();
-                onAdd();
+                if (IS_FIREFOX_MOBILE && showSuggestions && activeIndex >= 0 && filtered[activeIndex]) {
+                  handleSelectSuggestion(filtered[activeIndex]);
+                } else {
+                  onAdd(); // Añade el valor pendiente desde el estado del padre
+                }
               }
             }}
             onChange={(event) => {
               const val = event.target.value;
               if (val.includes('\n') || val.includes('\r')) {
                 const cleaned = val.replace(/\r|\n/g, '').trim();
-                onPendingValueChange(cleaned);
-                onAdd();
+                onPendingValueChange('');
+                onAdd(cleaned);
                 setShowSuggestions(false);
                 setActiveIndex(-1);
                 return;
@@ -146,31 +166,48 @@ export function TagInput({
             }}
             onFocus={() => updateFilter(pendingValue)}
             onBlur={() => {
-              setTimeout(() => setShowSuggestions(false), 150);
+              // Mantener un retraso prudente para permitir clicks físicos antes de desmontar
+              setTimeout(() => setShowSuggestions(false), 200);
             }}
           />
 
-          {isFirefoxMobile && showSuggestions && filtered.length ? (
-            <ul className="tag-suggestions" role="listbox" id={suggestionListId} style={{ position: 'absolute', zIndex: 20 }}>
-              {filtered.map((opt, idx) => (
-                <li
-                  key={opt}
-                  id={`${suggestionListId}-opt-${idx}`}
-                  role="option"
-                  aria-selected={activeIndex === idx}
-                  onClick={(ev) => {
-                    ev.preventDefault();
-                    ev.stopPropagation();
-                    onPendingValueChange(opt);
-                    onAdd();
-                    setShowSuggestions(false);
-                    setActiveIndex(-1);
-                  }}
-                >
-                  {opt}
-                </li>
-              ))}
-            </ul>
+          {IS_FIREFOX_MOBILE && showSuggestions && filtered.length ? (
+            <div 
+              className="tag-suggestions" 
+              role="listbox" 
+              id={suggestionListId} 
+              style={{ position: 'absolute', zIndex: 20, width: '100%' }}
+            >
+              {filtered.map((opt, idx) => {
+                const isSelected = activeIndex === idx;
+                return (
+                  <div key={opt} id={`${suggestionListId}-opt-${idx}`}>
+                    <button
+                      type="button"
+                      role="option"
+                      aria-selected={isSelected}
+                      // Deberías mapear una clase de CSS para resaltar visualmente el foco del teclado
+                      className={`tag-suggestion-btn ${isSelected ? 'is-active' : ''}`.trim()}
+                      onClick={(ev) => {
+                        ev.preventDefault();
+                        ev.stopPropagation();
+                        handleSelectSuggestion(opt);
+                      }}
+                      style={{
+                        display: 'block',
+                        width: '100%',
+                        padding: '.6rem .8rem',
+                        textAlign: 'left',
+                        border: 'none',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      {opt}
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
           ) : null}
         </div>
       </div>
