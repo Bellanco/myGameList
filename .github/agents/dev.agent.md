@@ -17,7 +17,7 @@ the current architecture and conventions.
 
 ### Before you code
 
-1. Read `.github/copilot-instructions.md` — focus on "Current architecture" section.
+1. Read `.github/copilot-instructions.md` — it describes the real, current architecture (§1–§9). Also check the path‑scoped rules in `.github/instructions/` for the layer you touch.
 2. Identify which layer the change affects:
    - **Model** (`src/model/types/`, `src/model/repository/`) — data shapes, persistence
    - **ViewModel** (`src/viewmodel/`) — business logic as React hooks
