@@ -12,10 +12,11 @@ Eres el agente de desarrollo de **myGameList**. Antes de tocar nada, lee
 
 **Reglas de ejecución (obligatorias):**
 1. Ejecuta **una sola sub‑fase a la vez**, en orden. No agrupes fases.
-2. Tras cada sub‑fase: `npx tsc --noEmit` → `npm run test` → `npm run validate`. Si algo
-   falla, arréglalo antes de continuar. No marques una casilla si no compila/pasa.
-3. **Las Fases 0–2 protegen contra pérdida de datos y filtración de credenciales: tienen
-   prioridad absoluta.** No empieces refactors (Fase 5) hasta que la Fase 0 (tests) esté hecha.
+2. Tras cada sub‑fase: `npm run test` → `npm run validate` → `npx tsc --noEmit`. No marques una
+   casilla si los tests o `validate` fallan. (`tsc --noEmit` ya arrastra errores pre‑existentes
+   ajenos a este plan — ver **6.6**; no introduzcas ninguno nuevo.)
+3. **Las Fases 1–2 protegen contra pérdida de datos y filtración de credenciales: prioridad
+   absoluta.** No empieces refactors (Fases 4–5) hasta tener las Fases 1–2 en verde.
 4. Cambios que tocan el modelo de datos o el merge → muestra un diff y pide confirmación
    antes de aplicar. Nunca borres gists/datos del usuario sin avisar.
 5. Trabaja en una rama, commits pequeños por sub‑fase (`fix(sec): …`, `fix(sync): …`, `refactor: …`).
@@ -23,26 +24,12 @@ Eres el agente de desarrollo de **myGameList**. Antes de tocar nada, lee
 > Toda la evidencia (`file:line`) procede de una auditoría del código real. Si una línea no
 > coincide (el código pudo cambiar), localiza el patrón equivalente antes de editar.
 
----
-
-## FASE 0 — Red de seguridad (tests del merge/sync) — *hacer primero*
-
-El merge CRDT casi no tiene tests de los caminos peligrosos. Sin ellos, las Fases 2 y 5 son
-arriesgadas. Añade tests **que fallen hoy** documentando los bugs, antes de arreglarlos.
-
-- [ ] **0.1** En `tests/unit/syncRepository.test.ts` añade casos para `mergeCrdt`:
-  - empate de `_ts` con **contenido distinto** mismo tab (hoy: ninguno se actualiza → divergen).
-  - edit‑vs‑delete con `_ts` igual (hoy: se pierde el tombstone).
-  - tombstone más antiguo que una edición posterior (resurrección correcta).
-  - mismo `id` con `name` distinto en cada lado (colisión de id → hoy se pierde uno).
-  - item presente solo en un lado: verificar flags `localNeedsUpdate`/`remoteNeedsUpdate`.
-  - remoto con un juego sin `genres`/`platforms` (array undefined) → no debe romper.
-- [ ] **0.2** En `tests/unit/syncMachineRepository.test.ts` añade: máquina que queda atascada en
-  `checking`/`writing` tras error y no vuelve a `idle`/`error_backoff`.
-- [ ] **0.3** Marca con `it.fails`/`todo` los que reflejan bugs aún sin corregir, para que la
-  suite quede verde pero deje constancia. Se irán activando en la Fase 2.
-
-Verificación: `npm run test`.
+> **Red de tests ya creada (lo que fue la Fase 0):** `tests/unit/syncRepository.test.ts` y
+> `tests/unit/syncMachineRepository.test.ts` cubren los caminos peligrosos del merge y la máquina
+> de sync. Los bugs corregibles dentro de `mergeCrdt` están marcados como `it.fails` (**H1** empate
+> edit‑vs‑edit, **H2** empate edit‑vs‑delete): al corregirlos en la Fase 2, **cambia `it.fails` →
+> `it`** y verifica verde. Hay tests de caracterización (C1 colisión de id, L2 normalización) que
+> documentan bugs cuyo fix vive fuera de `mergeCrdt`; actualízalos cuando completes esos fixes.
 
 ---
 
@@ -153,13 +140,15 @@ seguidos) y todas leen‑mergean‑escriben (`useSyncViewModel.ts:217,452,349`).
 `syncRepository.ts:100,105-114`: con `_ts` igual y mismo tab, ni `localNeedsUpdate` ni
 `remoteNeedsUpdate` se activan aunque el contenido difiera → divergencia permanente.
 - [ ] En empate, compara contenido (hash/serialización estable) y elige por un desempate
-  determinista; activa los flags `needsUpdate` cuando el contenido difiera. Activa el test 0.1.
+  determinista; activa los flags `needsUpdate` cuando el contenido difiera. Después,
+  cambia `it.fails('BUG (H1) …')` → `it` en `tests/unit/syncRepository.test.ts` y verifica verde.
 
 ### 2.5 — Empate edit‑vs‑delete preserva el tombstone  *(High · H2)*
 `syncRepository.ts:90` usa `maxDelTs > maxItemTs` (estricto): en empate cae al branch de winner
 y **no** mete el tombstone en `merged.deleted` → el delete se pierde.
 - [ ] Define la política de empate y **preserva el tombstone en ambos casos** (mantenlo con su
-  `_ts` hasta que sea estrictamente superado). Activa el test 0.1.
+  `_ts` hasta que sea estrictamente superado). Después, cambia `it.fails('BUG (H2) …')` → `it`
+  en `tests/unit/syncRepository.test.ts` y verifica verde.
 
 ### 2.6 — Estado de sync atascado tras error en recuperación  *(High · H3)*
 `recoverGistIdFromGoogle` (`useSyncViewModel.ts:657-662`) captura el error pero **no** llama a
@@ -222,8 +211,8 @@ de tags (`:436-534`) ya reconstruyen todo y luego se normaliza otra vez.
 
 ## FASE 4 — Reutilización en repositorios (mayor ahorro de código)
 
-> Hacer **después** de la Fase 0 (tests) y de las correcciones de la Fase 2 (no mezclar refactor
-> con corrección de bugs). Añade tests de los helpers nuevos.
+> Hacer **después** de las correcciones de la Fase 2 (no mezclar refactor con corrección de
+> bugs). La red de tests del merge/sync ya existe. Añade tests de los helpers nuevos.
 
 ### 4.1 — Cliente HTTP de GitHub unificado  *(High · ~400 líneas)*
 `gistRepository.ts` repite cabeceras auth/versión, validación token/gistId, flujo ETag (304 →
@@ -316,6 +305,13 @@ Shell de pantalla social duplicado 4× (`SocialDetailScreen`, `SocialFeedScreen`
   donde usa `schedulePendingRemoteSync`).
 - [ ] README: elimina o crea los docs referenciados que no existen (`BUNDLE_ANALYSIS.md`,
   `CLOUDFLARE_DEPLOYMENT.md`, `SYNC_GUIDE.md`).
+- [ ] **6.6 — Errores `tsc --noEmit` pre‑existentes** (el job de CI los ejecuta ahora que se
+  corrigió `.github/workflows/`): `idbConnectionRepository.ts:17,50` (`Promise<unknown>`/`null`
+  no asignable a `Promise<IDBDatabase>`), `StarPicker.tsx:11` y `StarRating.tsx:9` (`Cannot find
+  namespace 'JSX'` → usar `import type { JSX } from 'react'` o `React.JSX.Element`), y
+  `tests/e2e/smoke.test.ts` + `tests/integration/adminTags.test.ts` (importan `@playwright/test`
+  no instalado → instalar Playwright o excluir esos tests del `include` de tsconfig). Déjalo en
+  verde para que CI pase.
 
 ---
 
