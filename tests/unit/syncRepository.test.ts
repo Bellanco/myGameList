@@ -1,9 +1,20 @@
 import { describe, expect, it } from 'vitest';
 import { mergeCrdt } from '../../src/model/repository/syncRepository';
-import type { TabData } from '../../src/model/types/game';
+import type { GameItem, TabData } from '../../src/model/types/game';
 
 function empty(): TabData {
   return { c: [], v: [], e: [], p: [], deleted: [], updatedAt: Date.now() };
+}
+
+function mkGame(over: Partial<GameItem> & { id: number; _ts: number }): GameItem {
+  return {
+    name: `Game ${over.id}`,
+    genres: ['RPG'],
+    platforms: ['PC'],
+    steamDeck: false,
+    review: '',
+    ...over,
+  };
 }
 
 describe('mergeCrdt', () => {
@@ -72,5 +83,95 @@ describe('mergeCrdt', () => {
     expect(result.merged.c).toHaveLength(0);
     expect(result.merged.deleted).toHaveLength(1);
     expect(result.merged.deleted[0].id).toBe(1);
+  });
+});
+
+/**
+ * Phase 0 — characterization & known-bug tests for the CRDT merge.
+ *
+ * These pin down the risky paths flagged in the remediation audit. Some assert
+ * the CURRENT (buggy) behavior so a later fix surfaces here; the genuine bugs that
+ * are fixable INSIDE mergeCrdt are written with `it.fails` — they pass today
+ * (because the correct assertion fails) and will START failing once Phase 2 fixes
+ * them, which is the signal to flip `it.fails` → `it`.
+ */
+describe('mergeCrdt — Phase 0 risky paths', () => {
+  // ---- Correct behavior that already holds (regression guards) ----
+
+  it('a newer edit wins over an older delete (resurrection)', () => {
+    const local = empty();
+    local.deleted.push({ id: 1, _ts: 10 });
+    const remote = empty();
+    remote.c.push(mkGame({ id: 1, _ts: 20, name: 'Revived' }));
+
+    const result = mergeCrdt(local, 10, remote, 20);
+    expect(result.merged.c).toHaveLength(1);
+    expect(result.merged.c[0].name).toBe('Revived');
+    expect(result.merged.deleted).toHaveLength(0);
+  });
+
+  it('an item present on only one side is kept and the other side is flagged for update', () => {
+    const local = empty();
+    local.c.push(mkGame({ id: 1, _ts: 10, name: 'Local only' }));
+
+    const result = mergeCrdt(local, 10, empty(), 0);
+    expect(result.merged.c).toHaveLength(1);
+    expect(result.remoteNeedsUpdate).toBe(true);
+    expect(result.localNeedsUpdate).toBe(false);
+  });
+
+  // ---- Characterization of bugs whose FIX lives outside mergeCrdt ----
+
+  it('CHAR (C1): two different games sharing an id silently lose one — fix is unique ids at creation, not here', () => {
+    // Device A (offline) created id=5 "Halo"; Device B (offline) created id=5 "Zelda".
+    // The merge keys by numeric id, so only the newest _ts survives. This documents the
+    // data-loss; the real fix is crypto.randomUUID() ids in useGameListViewModel, not mergeCrdt.
+    const local = empty();
+    local.c.push(mkGame({ id: 5, _ts: 10, name: 'Halo' }));
+    const remote = empty();
+    remote.c.push(mkGame({ id: 5, _ts: 20, name: 'Zelda' }));
+
+    const result = mergeCrdt(local, 10, remote, 20);
+    expect(result.merged.c).toHaveLength(1);
+    expect(result.merged.c[0].name).toBe('Zelda'); // 'Halo' is gone forever
+  });
+
+  it('CHAR (L2): mergeCrdt passes through items missing genres/platforms unchanged — callers must normalize first', () => {
+    // A hand-edited / legacy gist game without genres. mergeCrdt does not normalize, so the
+    // field stays undefined and a later `game.genres.forEach` in the view would throw.
+    // Fix: normalizeData(migrateData(remote)) before merge (in useSyncViewModel), not here.
+    const remote = empty();
+    remote.c.push({ id: 1, _ts: 20, name: 'NoGenres', review: '', steamDeck: false } as unknown as GameItem);
+
+    const result = mergeCrdt(empty(), 0, remote, 20);
+    expect(result.merged.c).toHaveLength(1);
+    expect(result.merged.c[0].genres).toBeUndefined();
+  });
+
+  // ---- Genuine bugs fixable INSIDE mergeCrdt (expected to fail today) ----
+
+  it.fails('BUG (H1): equal _ts with different content must flag at least one side for update', () => {
+    // Both devices edited id=1 to different content in the same millisecond, same tab.
+    // Today: winner = local (>=), but neither needsUpdate flag is set, so remote keeps its
+    // different content forever (permanent divergence). Correct: the stale side must be flagged.
+    const local = empty();
+    local.c.push(mkGame({ id: 1, _ts: 100, name: 'Name A' }));
+    const remote = empty();
+    remote.c.push(mkGame({ id: 1, _ts: 100, name: 'Name B' }));
+
+    const result = mergeCrdt(local, 100, remote, 100);
+    expect(result.remoteNeedsUpdate).toBe(true); // FAILS today (stays false)
+  });
+
+  it.fails('BUG (H2): an edit-vs-delete tie must preserve the tombstone', () => {
+    // Delete (_ts=100) races an edit (_ts=100). `maxDelTs > maxItemTs` is strict, so the
+    // tombstone is dropped and a later independent delete has nothing to merge against.
+    const local = empty();
+    local.c.push(mkGame({ id: 1, _ts: 100, name: 'Edited' }));
+    const remote = empty();
+    remote.deleted.push({ id: 1, _ts: 100 });
+
+    const result = mergeCrdt(local, 100, remote, 100);
+    expect(result.merged.deleted.some((d) => d.id === 1)).toBe(true); // FAILS today
   });
 });
