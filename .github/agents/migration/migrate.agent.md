@@ -45,7 +45,7 @@ The prompts were written early. Adapt these differences:
 Follow this loop:
 
 ```
-READ   .github/prompts/{N}-*.prompt.md
+READ   .github/prompts/migration/{N}-*.prompt.md
 IMPLEMENT the output files described in the prompt
 RUN    tsc --noEmit
 IF typecheck fails:

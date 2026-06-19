@@ -6,7 +6,7 @@ description: "Crear un nuevo componente React para Mi Lista"
 # Nuevo componente: {{component_name}}
 
 ## Contexto
-Lee `.github/copilot-instructions.md` sección "Current architecture".
+Lee `.github/copilot-instructions.md` (§3 estructura, §7 capa de vista) y `.github/instructions/view.instructions.md`.
 
 ## Requisitos del componente
 {{requirements}}
