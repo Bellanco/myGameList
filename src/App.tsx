@@ -3,7 +3,8 @@ import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-
 import { DIALOG_MESSAGES, ROUTE_TAB, SYNC_BADGE_TEXT, SYNC_MESSAGES, TAB_ROUTE } from './core/constants/labels';
 import type { TabData, TabId } from './model/types/game';
 import { ensureProfileByEmail, getCurrentSocialAuthUser } from './model/repository/firebaseRepository';
-import { getSocialSyncConfig, readSocialGist, saveSocialSyncConfig, upsertReviewActivity, writeSocialGist } from './model/repository/gistRepository';
+import { getSyncConfig, getSocialSyncConfig, readSocialGist, saveSocialSyncConfig, upsertReviewActivity, writeSocialGist } from './model/repository/gistRepository';
+import { normalizeData } from './model/repository/localRepository';
 import { IconSprite } from './view/components/IconSprite';
 import { Header } from './view/components/Header';
 import { TabBar } from './view/components/TabBar';
@@ -148,23 +149,38 @@ export default function App() {
     URL.revokeObjectURL(href);
   }, [vm.data.c, vm.data.v, vm.data.e, vm.data.p]);
 
-  const importData = useCallback(async (file: File) => {
+  const importData = useCallback(async (file: File, overwrite = false) => {
     try {
       const text = await file.text();
       const payload = JSON.parse(text) as Partial<TabData>;
-      persist({
+      const nextData: TabData = {
         c: payload.c || [],
         v: payload.v || [],
         e: payload.e || [],
         p: payload.p || [],
         deleted: payload.deleted || [],
-        updatedAt: payload.updatedAt || Date.now(),
-      });
+        updatedAt: Date.now(),
+      };
+      const normalizedData = normalizeData(nextData, { forceTimestamp: true });
+      normalizedData.updatedAt = Date.now();
+
+      persist(normalizedData);
+
+      if (overwrite) {
+        const overwritten = await syncVm.overwriteRemoteData(normalizedData);
+        if (overwritten) {
+          notify('ok', 'Datos importados y Gist sobrescrito correctamente');
+          return;
+        }
+        notify('warn', 'Datos importados localmente, pero no hay Gist configurado para sobrescribir.');
+        return;
+      }
+
       notify('ok', 'Datos importados correctamente');
     } catch {
       notify('err', 'Archivo JSON no válido');
     }
-  }, [notify, persist]);
+  }, [notify, persist, syncVm]);
 
   const handleFiltersToggle = useCallback(() => {
     setFiltersOpen((prev) => !prev);
@@ -243,6 +259,7 @@ export default function App() {
     });
 
     const writeResult = await writeSocialGist(socialConfig.token, socialConfig.gistId, nextPayload);
+    const mainSyncConfig = getSyncConfig();
 
     saveSocialSyncConfig({
       token: socialConfig.token,
@@ -254,7 +271,8 @@ export default function App() {
     await ensureProfileByEmail({
       user: authUser,
       socialGistId: socialConfig.gistId,
-      githubToken: socialConfig.token,
+      gamesGistId: mainSyncConfig?.gistId || '',
+      githubToken: mainSyncConfig?.token || socialConfig.token,
       socialGistEtag: writeResult.etag || socialConfig.etag || null,
       preferredName: authUser.displayName || authUser.email,
     });

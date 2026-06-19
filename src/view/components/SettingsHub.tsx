@@ -21,7 +21,7 @@ interface SettingsHubProps {
   onCopyGistId: () => void;
   onRecoverGistId: () => void;
   onExport: () => void;
-  onImport: (file: File) => void;
+  onImport: (file: File, overwrite: boolean) => void;
   lookups: {
     genres: string[];
     platforms: string[];
@@ -57,10 +57,12 @@ export const SettingsHub = memo(function SettingsHub({
   onDeleteTag,
 }: SettingsHubProps) {
   const [showToken, setShowToken] = useState(false);
+  const [showConfigHelp, setShowConfigHelp] = useState(false);
   const [activeAdminCategory, setActiveAdminCategory] = useState<AdminCategoryKey>('genres');
   const [editingTag, setEditingTag] = useState<{ key: AdminCategoryKey; value: string } | null>(null);
   const [draftValue, setDraftValue] = useState('');
   const [mergePending, setMergePending] = useState(false);
+  const [overwriteImport, setOverwriteImport] = useState(false);
   const [adminNotice, setAdminNotice] = useState<{ kind: 'ok' | 'warn' | 'err'; message: string } | null>(null);
 
   const categories = useMemo(
@@ -146,6 +148,35 @@ export const SettingsHub = memo(function SettingsHub({
               <strong>{UI_MESSAGES.settings.sync.helpConfigTitle}</strong>
               <br />
               {UI_MESSAGES.settings.sync.helpConfigBody}
+              <br />
+              <a
+                href={UI_MESSAGES.settings.sync.helpConfigLinkUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                {UI_MESSAGES.settings.sync.helpConfigLinkLabel}
+              </a>
+              <div className="sync-help-actions">
+                <button
+                  className="sync-help-toggle"
+                  type="button"
+                  onClick={() => setShowConfigHelp((prev) => !prev)}
+                  aria-expanded={showConfigHelp}
+                >
+                  {showConfigHelp ? UI_MESSAGES.settings.sync.helpConfigCollapse : UI_MESSAGES.settings.sync.helpConfigExpand}
+                </button>
+              </div>
+              {showConfigHelp ? (
+                <ol>
+                  <li>{UI_MESSAGES.settings.sync.helpConfigStep1}</li>
+                  <li>{UI_MESSAGES.settings.sync.helpConfigStep2}</li>
+                  <li>{UI_MESSAGES.settings.sync.helpConfigStep3}</li>
+                  <li>{UI_MESSAGES.settings.sync.helpConfigStep4}</li>
+                  <li>{UI_MESSAGES.settings.sync.helpConfigStep5}</li>
+                  <li>{UI_MESSAGES.settings.sync.helpConfigStep6}</li>
+                  <li>{UI_MESSAGES.settings.sync.helpConfigStep7}</li>
+                </ol>
+              ) : null}
             </div>
 
             <div className="fg">
@@ -218,29 +249,56 @@ export const SettingsHub = memo(function SettingsHub({
         )}
       </div>
 
-      <div className="settings-card">
-        <h2>{UI_MESSAGES.settings.backup.title}</h2>
-        <p>{UI_MESSAGES.settings.backup.description}</p>
-        <div className="settings-actions">
-          <button className="btn btn-secondary" type="button" onClick={onExport}>
-            <Icon name={COMMON_ICONS.download} />
-            <span>{UI_MESSAGES.settings.backup.exportBtn}</span>
-          </button>
-          <label className="btn btn-secondary settings-import-label">
-            <Icon name={COMMON_ICONS.upload} />
-            <span>{UI_MESSAGES.settings.backup.importBtn}</span>
-            <input
-              type="file"
-              accept=".json"
-              className="input-hidden"
-              aria-label={UI_MESSAGES.settings.backup.importAriaLabel}
-              onChange={(event) => {
-                const file = event.target.files?.[0];
-                if (file) onImport(file);
-                event.currentTarget.value = '';
-              }}
-            />
-          </label>
+      <div className="settings-card settings-card-backup">
+        <div className="settings-card-head">
+          <h2>{UI_MESSAGES.settings.backup.title}</h2>
+          <p className="settings-card-note">{UI_MESSAGES.settings.backup.note}</p>
+        </div>
+
+        <div className="settings-backup-row">
+          <div className="settings-backup-info">
+            <p>{UI_MESSAGES.settings.backup.description}</p>
+          </div>
+
+          <div className="settings-backup-actions">
+            <button className="btn btn-secondary" type="button" onClick={onExport}>
+              <Icon name={COMMON_ICONS.download} />
+              <span>{UI_MESSAGES.settings.backup.exportBtn}</span>
+            </button>
+            <label className="btn btn-secondary settings-import-label">
+              <Icon name={COMMON_ICONS.upload} />
+              <span>{UI_MESSAGES.settings.backup.importBtn}</span>
+              <input
+                type="file"
+                accept=".json"
+                className="input-hidden"
+                aria-label={UI_MESSAGES.settings.backup.importAriaLabel}
+                onChange={(event) => {
+                  const file = event.target.files?.[0];
+                  if (file) onImport(file, overwriteImport);
+                  event.currentTarget.value = '';
+                }}
+              />
+            </label>
+          </div>
+        </div>
+
+        <label className="settings-backup-toggle">
+          <input
+            type="checkbox"
+            checked={overwriteImport}
+            onChange={(event) => setOverwriteImport(event.target.checked)}
+          />
+          <span className="settings-backup-toggle-track">
+            <span className="settings-backup-toggle-thumb" />
+          </span>
+          <span className="settings-backup-toggle-label">
+            {UI_MESSAGES.settings.backup.overwriteLabel}
+          </span>
+        </label>
+
+        <div className="settings-backup-warning">
+          {UI_MESSAGES.settings.backup.overwriteHint}
         </div>
       </div>
 

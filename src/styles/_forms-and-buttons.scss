@@ -163,3 +163,19 @@
 .compact-name-text { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .compact-score { flex:0 0 auto; }
 
+/* TagInput suggestion dropdown for Firefox fallback */
+.tag-suggestions {
+  margin: 0; padding: .25rem 0; list-style: none;
+  background: var(--surface-elevated); border: 1px solid var(--border);
+  border-radius: 6px; min-width: 160px; max-width: 320px;
+  box-shadow: 0 6px 18px rgba(0,0,0,.12); overflow: hidden;
+}
+.tag-suggestions li {
+  padding: .6rem .8rem; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  color: var(--text); background: transparent;
+}
+.tag-suggestions li:hover { background: var(--surface-hover); }
+/* Make items touch-friendly */
+.tag-suggestions li { touch-action: manipulation; }
+
+

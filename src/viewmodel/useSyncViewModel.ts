@@ -1,8 +1,11 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { SYNC_MESSAGES } from '../core/constants/labels';
 import { findSocialProfileByEmail, getCurrentSocialAuthUser, signInWithGoogle } from '../model/repository/firebaseRepository';
 import { mergeCrdt } from '../model/repository/syncRepository';
 import { clearSyncConfig, createGist, getSyncConfig, readGist, saveSyncConfig, whoAmI, writeGist } from '../model/repository/gistRepository';
+import { normalizeData } from '../model/repository/localRepository';
+import { clearDirty, loadSyncDirtyState } from '../model/repository/syncStateRepository';
+import { canRead, canWrite, getBackoffMs, getNextReadDelayMs, getSyncState, subscribeSyncState, transitionTo, canReadNow } from '../model/repository/syncMachineRepository';
 import type { GameItem, TabData, TabId } from '../model/types/game';
 
 export type SyncStatus = 'idle' | 'syncing' | 'ok' | 'error';
@@ -148,17 +151,32 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
   const [connectedGistId, setConnectedGistId] = useState('');
   const [lastRemoteChangesApplied, setLastRemoteChangesApplied] = useState<number | null>(null);
   const [recoveringGistId, setRecoveringGistId] = useState(false);
+  const pendingRemoteSyncRef = useRef(false);
+  const pendingRemoteSyncTimerRef = useRef<number | null>(null);
+  const pollTimerRef = useRef<number | null>(null);
+  const POLL_INTERVAL_MS = 60_000; // 60s polling with ETag
 
   const writeWithConflictRecovery = useCallback(
     async (syncToken: string, syncGistId: string, localData: TabData, localUpdatedAt: number): Promise<WriteOutcome> => {
       try {
+        transitionTo('writing');
         const writeResult = await writeGist(syncToken, syncGistId, localData);
+        try {
+          if (typeof BroadcastChannel !== 'undefined') {
+            const ch = new BroadcastChannel('mygamelist-sync');
+            ch.postMessage({ type: 'remote-write', updatedAt: Date.now(), etag: writeResult.etag || null });
+            ch.close();
+          }
+        } catch {}
+        transitionTo('idle', { lastWriteAt: Date.now(), errorCount: 0 });
+        clearDirty();
         return {
           data: localData,
           etag: writeResult.etag,
-          remoteUpdatedAt: localUpdatedAt,
+          remoteUpdatedAt: writeResult.updatedAt,
         };
       } catch (error) {
+        transitionTo('error_backoff', { lastErrorAt: Date.now(), errorCount: (getSyncState().errorCount || 0) + 1, pendingAction: 'write' });
         if (!isWriteConflict(error)) {
           logSyncError('writeWithConflictRecovery', error);
           throw error;
@@ -172,6 +190,15 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
         const remoteData = latest.data as TabData;
         const merged = mergeCrdt(localData, localUpdatedAt, remoteData, remoteData.updatedAt);
         const retry = await writeGist(syncToken, syncGistId, merged.merged);
+        try {
+          if (typeof BroadcastChannel !== 'undefined') {
+            const ch = new BroadcastChannel('mygamelist-sync');
+            ch.postMessage({ type: 'remote-write', updatedAt: Date.now(), etag: retry.etag || null });
+            ch.close();
+          }
+        } catch {}
+        transitionTo('idle', { lastWriteAt: Date.now(), errorCount: 0 });
+        clearDirty();
         return {
           data: merged.merged,
           etag: retry.etag,
@@ -182,8 +209,88 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
     [],
   );
 
+    /**
+     * Lightweight refresh that checks remote with ETag and merges only when needed.
+     * If `force` is true it bypasses the MIN_READ_INTERVAL_MS throttle but still
+     * avoids reads when the sync state is busy/error.
+     */
+    const refreshRemote = useCallback(async (force = false) => {
+      const config = getSyncConfig();
+      if (!config) return;
+
+      if (!canReadNow(force)) return;
+
+      try {
+        transitionTo('checking');
+        setStatus('syncing');
+        setLastRemoteChangesApplied(null);
+
+        const remote = await readGist(config.token, config.gistId, config.etag);
+        if (remote.notModified) {
+          transitionTo('idle', { lastReadAt: Date.now(), errorCount: 0, pendingAction: null });
+          setStatus('ok');
+          return;
+        }
+
+        const remoteData = remote.data as TabData;
+        const localMeta = getMeta();
+        const localData = getData();
+        transitionTo('merging');
+        const merged = mergeCrdt(localData, localMeta.updatedAt, remoteData, remoteData.updatedAt);
+        const remoteChanges = countRemoteChangesApplied(localData, remoteData, merged.merged);
+        setLastRemoteChangesApplied(remoteChanges);
+
+        if (merged.localNeedsUpdate) setData(merged.merged);
+
+        let writeOutcome: WriteOutcome = { data: merged.merged, etag: remote.etag || null, remoteUpdatedAt: remoteData.updatedAt };
+        if (merged.remoteNeedsUpdate && canWrite()) {
+          writeOutcome = await writeWithConflictRecovery(config.token, config.gistId, merged.merged, Date.now());
+        }
+
+        setData(writeOutcome.data);
+        const nextMeta = {
+          updatedAt: Date.now(),
+          etag: writeOutcome.etag,
+          lastRemoteUpdatedAt: Math.max(remoteData.updatedAt, writeOutcome.remoteUpdatedAt),
+        };
+        setMeta(nextMeta);
+        saveSyncConfig({ ...config, etag: nextMeta.etag, lastRemoteUpdatedAt: nextMeta.lastRemoteUpdatedAt });
+        persist(writeOutcome.data, nextMeta);
+        transitionTo('idle', { lastReadAt: Date.now(), errorCount: 0, pendingAction: null });
+        setStatus('ok');
+        if (remoteChanges > 0) {
+          onNotice('ok', `Fusión sincronizada correctamente: ${remoteChanges} cambios remotos aplicados`);
+        }
+      } catch (error) {
+        transitionTo('error_backoff', { lastErrorAt: Date.now(), errorCount: getSyncState().errorCount + 1, pendingAction: 'read' });
+        setStatus('error');
+        const message = error instanceof Error ? error.message : SYNC_MESSAGES.syncError;
+        setStatusMessage(message);
+        onNotice('err', message);
+        logSyncError('syncNow', error);
+      }
+    }, [getData, getMeta, onNotice, persist, setData, setMeta, writeWithConflictRecovery]);
+
+    const startPolling = useCallback(() => {
+      if (pollTimerRef.current !== null) return;
+      pollTimerRef.current = window.setInterval(() => {
+        const config = getSyncConfig();
+        if (!config) return;
+        if (document.visibilityState !== 'visible') return;
+        void refreshRemote(false);
+      }, POLL_INTERVAL_MS);
+    }, [refreshRemote]);
+
+    const stopPolling = useCallback(() => {
+      if (pollTimerRef.current !== null) {
+        window.clearInterval(pollTimerRef.current);
+        pollTimerRef.current = null;
+      }
+    }, []);
+
   const connectSyncWithCredentials = useCallback(
     async (rawToken: string, rawGistId: string) => {
+      transitionTo('checking');
       setStatus('syncing');
       setLastRemoteChangesApplied(null);
 
@@ -210,16 +317,28 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
       const remoteData = remote.data as TabData;
       const localMeta = getMeta();
       const localData = getData();
+      transitionTo('merging');
       const merged = mergeCrdt(localData, localMeta.updatedAt, remoteData, remoteData.updatedAt);
       const remoteChanges = countRemoteChangesApplied(localData, remoteData, merged.merged);
       setLastRemoteChangesApplied(remoteChanges);
-      const writeOutcome = await writeWithConflictRecovery(cleanToken, cleanGistId, merged.merged, Date.now());
+
+      // apply local updates when needed
+      if (merged.localNeedsUpdate) {
+        setData(merged.merged);
+      }
+
+      let writeOutcome: WriteOutcome = { data: merged.merged, etag: remote.etag || null, remoteUpdatedAt: remoteData.updatedAt };
+      if (merged.remoteNeedsUpdate) {
+        writeOutcome = await writeWithConflictRecovery(cleanToken, cleanGistId, merged.merged, Date.now());
+      }
+
       setData(writeOutcome.data);
       saveSyncConfig({ token: cleanToken, gistId: cleanGistId, etag: writeOutcome.etag || remote.etag || null, lastRemoteUpdatedAt: Math.max(remoteData.updatedAt, writeOutcome.remoteUpdatedAt) });
       setConnectedGistId(cleanGistId);
       if (remoteChanges > 0) {
         onNotice('ok', `Sincronización configurada: ${remoteChanges} cambios remotos aplicados`);
       }
+      transitionTo('idle', { lastReadAt: Date.now(), errorCount: 0, pendingAction: null });
       setStatus('ok');
       setToken('');
       setGistId(cleanGistId);
@@ -238,12 +357,14 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
 
     setConnectedGistId(config.gistId);
 
+    transitionTo('checking');
     setStatus('syncing');
 
     try {
       const remote = await readGist(config.token, config.gistId, config.etag);
       if (remote.notModified) {
         setLastRemoteChangesApplied(0);
+        transitionTo('idle', { lastReadAt: Date.now(), errorCount: 0, pendingAction: null });
         setStatus('ok');
         return;
       }
@@ -251,11 +372,15 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
       const localMeta = getMeta();
       const localData = getData();
       const remoteData = remote.data as TabData;
+      transitionTo('merging');
       const merged = mergeCrdt(localData, localMeta.updatedAt, remoteData, remoteData.updatedAt);
       const remoteChanges = countRemoteChangesApplied(localData, remoteData, merged.merged);
       setLastRemoteChangesApplied(remoteChanges);
 
-      setData(merged.merged);
+      // apply local updates if needed
+      if (merged.localNeedsUpdate) {
+        setData(merged.merged);
+      }
 
       const nextMeta = {
         updatedAt: Date.now(),
@@ -263,7 +388,12 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
         lastRemoteUpdatedAt: remoteData.updatedAt,
       };
 
-      const writeOutcome = await writeWithConflictRecovery(config.token, config.gistId, merged.merged, nextMeta.updatedAt);
+      // Write remote only when needed
+      let writeOutcome: WriteOutcome = { data: merged.merged, etag: nextMeta.etag, remoteUpdatedAt: nextMeta.lastRemoteUpdatedAt };
+      if (merged.remoteNeedsUpdate) {
+        writeOutcome = await writeWithConflictRecovery(config.token, config.gistId, merged.merged, nextMeta.updatedAt);
+      }
+
       setData(writeOutcome.data);
       const finalMeta = {
         updatedAt: Date.now(),
@@ -273,21 +403,45 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
       setMeta(finalMeta);
       saveSyncConfig({ ...config, etag: finalMeta.etag, lastRemoteUpdatedAt: finalMeta.lastRemoteUpdatedAt });
       persist(writeOutcome.data, finalMeta);
+      transitionTo('idle', { lastReadAt: Date.now(), errorCount: 0, pendingAction: null });
       setStatus('ok');
       if (remoteChanges > 0) {
         onNotice('ok', `Sincronización inicial completada: ${remoteChanges} cambios remotos aplicados`);
       }
     } catch (error) {
+      transitionTo('error_backoff', { lastErrorAt: Date.now(), errorCount: getSyncState().errorCount + 1, pendingAction: 'read' });
       setStatus('error');
       setStatusMessage(error instanceof Error ? error.message : SYNC_MESSAGES.initError);
       logSyncError('initializeSync', error);
     }
   }, [getData, getMeta, onNotice, persist, setData, setMeta, writeWithConflictRecovery]);
 
+  const schedulePendingRemoteSync = useCallback(() => {
+    if (!pendingRemoteSyncRef.current) return;
+
+    if (canRead()) {
+      pendingRemoteSyncRef.current = false;
+      if (pendingRemoteSyncTimerRef.current) {
+        window.clearTimeout(pendingRemoteSyncTimerRef.current);
+        pendingRemoteSyncTimerRef.current = null;
+      }
+      void initializeSync();
+      return;
+    }
+
+    if (pendingRemoteSyncTimerRef.current) return;
+    const delay = Math.max(getNextReadDelayMs(), 1000);
+    pendingRemoteSyncTimerRef.current = window.setTimeout(() => {
+      pendingRemoteSyncTimerRef.current = null;
+      schedulePendingRemoteSync();
+    }, delay);
+  }, [canRead, getNextReadDelayMs, initializeSync]);
+
   const connectSync = useCallback(async () => {
     try {
       await connectSyncWithCredentials(token, gistId);
     } catch (error) {
+      transitionTo('error_backoff', { lastErrorAt: Date.now(), errorCount: getSyncState().errorCount + 1, pendingAction: 'read' });
       setStatus('error');
       setStatusMessage(error instanceof Error ? error.message : SYNC_MESSAGES.connectError);
       onNotice('err', error instanceof Error ? error.message : SYNC_MESSAGES.connectError);
@@ -303,13 +457,18 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
     }
 
     try {
+      transitionTo('checking');
       setStatus('syncing');
       setLastRemoteChangesApplied(null);
       const remote = await readGist(config.token, config.gistId, config.etag);
 
       if (remote.notModified) {
         setLastRemoteChangesApplied(0);
-        await writeWithConflictRecovery(config.token, config.gistId, getData(), Date.now());
+        const dirtyState = loadSyncDirtyState();
+        if (dirtyState.isDirty && canWrite()) {
+          await writeWithConflictRecovery(config.token, config.gistId, getData(), Date.now());
+        }
+        transitionTo('idle', { lastReadAt: Date.now(), errorCount: 0, pendingAction: null });
         setStatus('ok');
         onNotice('ok', SYNC_MESSAGES.syncSuccess);
         return;
@@ -318,10 +477,18 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
       const remoteData = remote.data as TabData;
       const localMeta = getMeta();
       const localData = getData();
+      transitionTo('merging');
       const merged = mergeCrdt(localData, localMeta.updatedAt, remoteData, remoteData.updatedAt);
       const remoteChanges = countRemoteChangesApplied(localData, remoteData, merged.merged);
       setLastRemoteChangesApplied(remoteChanges);
-      const writeOutcome = await writeWithConflictRecovery(config.token, config.gistId, merged.merged, Date.now());
+
+      if (merged.localNeedsUpdate) setData(merged.merged);
+
+      let writeOutcome: WriteOutcome = { data: merged.merged, etag: remote.etag || null, remoteUpdatedAt: remoteData.updatedAt };
+      if (merged.remoteNeedsUpdate && canWrite()) {
+        writeOutcome = await writeWithConflictRecovery(config.token, config.gistId, merged.merged, Date.now());
+      }
+
       setData(writeOutcome.data);
       const nextMeta = {
         updatedAt: Date.now(),
@@ -331,10 +498,12 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
       setMeta(nextMeta);
       saveSyncConfig({ ...config, etag: writeOutcome.etag, lastRemoteUpdatedAt: nextMeta.lastRemoteUpdatedAt });
       persist(writeOutcome.data, nextMeta);
+      transitionTo('idle', { lastReadAt: Date.now(), errorCount: 0, pendingAction: null });
 
       setStatus('ok');
       onNotice('ok', `Fusión sincronizada correctamente: ${remoteChanges} cambios remotos aplicados`);
     } catch (error) {
+      transitionTo('error_backoff', { lastErrorAt: Date.now(), errorCount: getSyncState().errorCount + 1, pendingAction: 'read' });
       setStatus('error');
       const message = error instanceof Error ? error.message : SYNC_MESSAGES.syncError;
       setStatusMessage(message);
@@ -342,6 +511,119 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
       logSyncError('syncNow', error);
     }
   }, [getData, getMeta, onNotice, persist, setData, setMeta, writeWithConflictRecovery]);
+
+  useEffect(() => {
+    const dirtyState = loadSyncDirtyState();
+    if (dirtyState.isDirty) {
+      transitionTo('dirty');
+    }
+
+    const config = getSyncConfig();
+    if (config && canRead()) {
+      void initializeSync();
+    }
+  }, [initializeSync]);
+
+  // start/stop polling when we have a connected gist id
+  useEffect(() => {
+    if (connectedGistId) {
+      startPolling();
+    } else {
+      stopPolling();
+    }
+    return () => {
+      stopPolling();
+    };
+  }, [connectedGistId, startPolling, stopPolling]);
+
+  // Visibility/focus handlers to trigger reads when allowed
+  useEffect(() => {
+    function handleVisibilityChange(): void {
+      if (document.visibilityState === 'visible') {
+        pendingRemoteSyncRef.current = false;
+        void refreshRemote(true);
+        startPolling();
+        return;
+      }
+
+      // when hidden, stop polling to avoid wasted reads
+      stopPolling();
+    }
+
+    function handleWindowFocus(): void {
+      // on focus, attempt an immediate refresh
+      void refreshRemote(true);
+    }
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('focus', handleWindowFocus);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('focus', handleWindowFocus);
+    };
+  }, [refreshRemote, startPolling, stopPolling]);
+
+  // BroadcastChannel: listen for remote writes from other tabs
+  useEffect(() => {
+    if (typeof BroadcastChannel === 'undefined') return undefined;
+    const ch = new BroadcastChannel('mygamelist-sync');
+    const onMsg = (ev: MessageEvent) => {
+      const msg = ev.data as { type: string } | null;
+      if (!msg) return;
+      if (msg.type === 'remote-write') {
+        pendingRemoteSyncRef.current = true;
+        schedulePendingRemoteSync();
+      }
+    };
+    ch.addEventListener('message', onMsg as any);
+    return () => {
+      ch.removeEventListener('message', onMsg as any);
+      ch.close();
+    };
+  }, [initializeSync]);
+
+  useEffect(() => {
+    let timer: number | null = null;
+    const unsubscribe = subscribeSyncState((state) => {
+      if (pendingRemoteSyncRef.current) {
+        schedulePendingRemoteSync();
+      }
+
+      if (state.status !== 'error_backoff' || !state.pendingAction) return;
+      if (timer) {
+        window.clearTimeout(timer);
+        timer = null;
+      }
+      const delay = getBackoffMs(state.errorCount);
+      timer = window.setTimeout(() => {
+        if (getSyncState().status !== 'error_backoff' || getSyncState().pendingAction !== state.pendingAction) return;
+        if (state.pendingAction === 'read') {
+          void initializeSync();
+          return;
+        }
+        if (state.pendingAction === 'write') {
+          const config = getSyncConfig();
+          if (config) {
+            void writeWithConflictRecovery(config.token, config.gistId, getData(), Date.now());
+          }
+        }
+      }, delay);
+    });
+    return () => {
+      unsubscribe();
+      if (timer) {
+        window.clearTimeout(timer);
+      }
+    };
+  }, [getData, initializeSync, schedulePendingRemoteSync, writeWithConflictRecovery]);
+
+  useEffect(() => {
+    return () => {
+      if (pendingRemoteSyncTimerRef.current) {
+        window.clearTimeout(pendingRemoteSyncTimerRef.current);
+        pendingRemoteSyncTimerRef.current = null;
+      }
+    };
+  }, []);
 
   const recoverGistIdFromGoogle = useCallback(async () => {
     setRecoveringGistId(true);
@@ -383,6 +665,36 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
     }
   }, [connectSyncWithCredentials, onNotice]);
 
+  const overwriteRemoteData = useCallback(async (data: TabData): Promise<boolean> => {
+    const config = getSyncConfig();
+    if (!config?.token || !config?.gistId) {
+      return false;
+    }
+
+    const normalizedData = normalizeData(data, { forceTimestamp: true });
+    normalizedData.updatedAt = Date.now();
+
+    const writeResult = await writeGist(config.token, config.gistId, normalizedData);
+    try {
+      if (typeof BroadcastChannel !== 'undefined') {
+        const ch = new BroadcastChannel('mygamelist-sync');
+        ch.postMessage({ type: 'remote-write', updatedAt: Date.now(), etag: writeResult.etag || null });
+        ch.close();
+      }
+    } catch {}
+
+    saveSyncConfig({
+      ...config,
+      etag: writeResult.etag,
+      lastRemoteUpdatedAt: writeResult.updatedAt,
+    });
+
+    clearDirty();
+    transitionTo('idle');
+
+    return true;
+  }, []);
+
   const disconnectSync = useCallback(() => {
     clearSyncConfig();
     setStatus('idle');
@@ -405,6 +717,7 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
     syncNow,
     disconnectSync,
     recoverGistIdFromGoogle,
+    overwriteRemoteData,
     connectedGistId,
     lastRemoteChangesApplied,
     recoveringGistId,

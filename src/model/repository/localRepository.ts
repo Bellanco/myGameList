@@ -3,7 +3,7 @@ import { migrateData } from './migrateRepository';
 import { loadIndexedDbState, saveIndexedDbState } from './indexedDbRepository';
 import type { GameItem, StoragePayload, TabData } from '../types/game';
 
-const EMPTY_DATA: TabData = { c: [], v: [], e: [], p: [], deleted: [], updatedAt: Date.now() };
+const EMPTY_DATA: TabData = { c: [], v: [], e: [], p: [], deleted: [], updatedAt: 0 };
 
 function hasStoredData(payload: Pick<StoragePayload, 'c' | 'v' | 'e' | 'p' | 'deleted'>): boolean {
   return payload.c.length > 0 || payload.v.length > 0 || payload.e.length > 0 || payload.p.length > 0 || payload.deleted.length > 0;
@@ -25,7 +25,7 @@ function buildStoragePayload(parsed: Record<string, unknown>): StoragePayload {
 function getEmptyPayload(): StoragePayload {
   return {
     ...EMPTY_DATA,
-    updatedAt: Date.now(),
+    updatedAt: 0,
     etag: null,
     lastRemoteUpdatedAt: 0,
   };
@@ -39,10 +39,15 @@ function toList(value: unknown): string[] {
     .filter(Boolean);
 }
 
-function normalizeGame(game: Record<string, unknown>, defaultTs: number): GameItem {
+function normalizeGame(game: Record<string, unknown>, defaultTs: number, forceTimestamp: boolean): GameItem {
   return {
     id: Number(game.id || 0),
-    _ts: Number(game._ts || defaultTs),
+    _ts: forceTimestamp
+      ? defaultTs
+      : (() => {
+          const ts = Number(game._ts);
+          return Number.isFinite(ts) && ts > 0 ? ts : defaultTs;
+        })(),
     name: String(game.name ?? '').trim(),
     genres: toList(game.genres),
     platforms: toList(game.platforms),
@@ -55,18 +60,26 @@ function normalizeGame(game: Record<string, unknown>, defaultTs: number): GameIt
     retry: Boolean(game.retry),
     review: String(game.review ?? '').trim(),
     score: Number.isFinite(Number(game.score)) ? Math.max(0, Math.min(5, Number(game.score))) : 0,
-    hours: game.hours === null || game.hours === '' ? null : Number(game.hours),
+    hours: (() => {
+      const raw = (game as Record<string, unknown>).hours;
+      if (raw === null || raw === undefined || raw === '') return null;
+      const n = Number(raw);
+      return Number.isFinite(n) && n >= 0 ? n : null;
+    })(),
   };
 }
 
-export function normalizeData(data: TabData): TabData {
+export function normalizeData(data: TabData, options?: { forceTimestamp?: boolean }): TabData {
   const ts = Date.now();
+  const forceTimestamp = Boolean(options?.forceTimestamp);
   const normalized: TabData = {
-    c: (data.c || []).map((game) => normalizeGame(game as unknown as Record<string, unknown>, ts)),
-    v: (data.v || []).map((game) => normalizeGame(game as unknown as Record<string, unknown>, ts)),
-    e: (data.e || []).map((game) => normalizeGame(game as unknown as Record<string, unknown>, ts)),
-    p: (data.p || []).map((game) => normalizeGame(game as unknown as Record<string, unknown>, ts)),
-    deleted: (data.deleted || []).filter((item) => item && Number(item.id) > 0),
+    c: (data.c || []).map((game) => normalizeGame(game as unknown as Record<string, unknown>, ts, forceTimestamp)),
+    v: (data.v || []).map((game) => normalizeGame(game as unknown as Record<string, unknown>, ts, forceTimestamp)),
+    e: (data.e || []).map((game) => normalizeGame(game as unknown as Record<string, unknown>, ts, forceTimestamp)),
+    p: (data.p || []).map((game) => normalizeGame(game as unknown as Record<string, unknown>, ts, forceTimestamp)),
+    deleted: (data.deleted || [])
+      .filter((item) => item && Number(item.id) > 0)
+      .map((entry) => ({ id: Number(entry.id), _ts: forceTimestamp ? ts : Number(entry._ts) || ts })),
     updatedAt: Number(data.updatedAt || ts),
   };
 
@@ -96,7 +109,23 @@ export function loadLocalState(): StoragePayload {
       if (!raw) continue;
 
       const parsed = JSON.parse(raw) as Record<string, unknown>;
-      return buildStoragePayload(parsed);
+      const payload = buildStoragePayload(parsed);
+
+      // If we read from a legacy key, attempt to migrate to STORAGE_KEY and remove the old key
+      if (key !== STORAGE_KEY) {
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+        } catch {
+          // ignore quota errors on migration
+        }
+        try {
+          localStorage.removeItem(key);
+        } catch {
+          // ignore removal errors
+        }
+      }
+
+      return payload;
     } catch {
       continue;
     }
