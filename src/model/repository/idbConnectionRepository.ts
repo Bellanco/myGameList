@@ -14,7 +14,7 @@ export function openSharedDatabase(): Promise<IDBDatabase> {
     return _dbPromise;
   }
 
-  _dbPromise = new Promise((resolve, reject) => {
+  const promise = new Promise<IDBDatabase>((resolve, reject) => {
     if (!supportsIndexedDb()) {
       reject(new Error('IndexedDB no soportado en este entorno'));
       _dbPromise = null;
@@ -47,5 +47,6 @@ export function openSharedDatabase(): Promise<IDBDatabase> {
     throw error;
   });
 
-  return _dbPromise;
+  _dbPromise = promise;
+  return promise;
 }

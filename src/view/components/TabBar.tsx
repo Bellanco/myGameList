@@ -1,5 +1,5 @@
 import { memo } from 'react';
-import { TAB_TITLES, TAB_TOOLTIPS } from '../../core/constants/labels';
+import { TAB_ORDER, TAB_TITLES, TAB_TOOLTIPS } from '../../core/constants/labels';
 import { TAB_ICONS } from '../../core/constants/icons';
 import type { TabId } from '../../model/types/game';
 
@@ -8,8 +8,6 @@ interface TabBarProps {
   tabCounts: Record<TabId, number>;
   onTabChange: (tab: TabId) => void;
 }
-
-const TAB_ORDER: TabId[] = ['c', 'v', 'e', 'p'];
 
 export const TabBar = memo(function TabBar({ currentTab, tabCounts, onTabChange }: TabBarProps) {
   return (

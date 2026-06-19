@@ -6,7 +6,7 @@ import { clearSyncConfig, createGist, getSyncConfig, readGist, saveSyncConfig, w
 import { normalizeData } from '../model/repository/localRepository';
 import { clearDirty, loadSyncDirtyState } from '../model/repository/syncStateRepository';
 import { canRead, canWrite, getBackoffMs, getNextReadDelayMs, getSyncState, subscribeSyncState, transitionTo, canReadNow } from '../model/repository/syncMachineRepository';
-import type { GameItem, TabData, TabId } from '../model/types/game';
+import { TAB_IDS, type GameItem, type TabData, type TabId } from '../model/types/game';
 
 export type SyncStatus = 'idle' | 'syncing' | 'ok' | 'error';
 
@@ -43,7 +43,7 @@ function isWriteConflict(error: unknown): boolean {
 function getLatestItems(data: TabData): Map<number, { item: GameItem; tab: TabId; ts: number }> {
   const map = new Map<number, { item: GameItem; tab: TabId; ts: number }>();
 
-  for (const tab of ['c', 'v', 'e', 'p'] as const) {
+  for (const tab of TAB_IDS) {
     for (const game of data[tab]) {
       const ts = game._ts || data.updatedAt;
       const current = map.get(game.id);
@@ -100,7 +100,7 @@ function countRemoteChangesApplied(localData: TabData, remoteData: TabData, merg
 
   const remoteIds = new Set<number>();
 
-  for (const tab of ['c', 'v', 'e', 'p'] as const) {
+  for (const tab of TAB_IDS) {
     for (const game of remoteData[tab]) {
       remoteIds.add(game.id);
     }
@@ -579,7 +579,7 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
       ch.removeEventListener('message', onMsg as any);
       ch.close();
     };
-  }, [initializeSync]);
+  }, [schedulePendingRemoteSync]);
 
   useEffect(() => {
     let timer: number | null = null;

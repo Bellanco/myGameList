@@ -1,7 +1,7 @@
 import { GIST_CFG_KEY, SOCIAL_GIST_CFG_KEY } from '../../core/constants/storageKeys';
 import { isValidGistId, isValidGithubToken } from '../../core/security/sanitize';
 import { migrateData } from './migrateRepository';
-import type { SyncConfig, TabData, TabId } from '../types/game';
+import { TAB_IDS, type SyncConfig, type TabData, type TabId } from '../types/game';
 
 const GIST_FILENAME = 'myGames.json';
 const SOCIAL_GIST_FILENAME = 'myGameList.social.json';
@@ -368,7 +368,7 @@ function normalizeSocialSharedLists(value: unknown): Partial<Record<TabId, Socia
   const source = (value && typeof value === 'object' ? value : {}) as Record<string, unknown>;
   const output: Partial<Record<TabId, SocialSharedGame[]>> = {};
 
-  (['c', 'v', 'e', 'p'] as const).forEach((tab) => {
+  TAB_IDS.forEach((tab) => {
     const rawItems = source[tab];
     if (!Array.isArray(rawItems)) {
       return;
@@ -414,10 +414,6 @@ function normalizeActivityType(value: unknown): SocialActivityType | null {
 
 function buildActivityKey(actorUid: string, gameId: number, type: SocialActivityType): string {
   return `${actorUid}:${gameId}:${type}`;
-}
-
-function buildActivityId(actorUid: string, gameId: number, type: SocialActivityType): string {
-  return buildActivityKey(actorUid, gameId, type);
 }
 
 function normalizeRecommendationItems(items: unknown): SocialRecommendationEntry[] {
@@ -475,7 +471,7 @@ function normalizeActivityItems(items: unknown): SocialActivityEntry[] {
       const key = String(record.key || buildActivityKey(actorUid, gameId, type)).trim() || buildActivityKey(actorUid, gameId, type);
 
       return {
-        id: String(record.id || buildActivityId(actorUid, gameId, type)),
+        id: String(record.id || buildActivityKey(actorUid, gameId, type)),
         key,
         type,
         actorUid,
@@ -509,7 +505,7 @@ function mergeLegacyActivity(
     const current = map.get(key);
 
     const candidate: SocialActivityEntry = {
-      id: buildActivityId(recommendation.fromUid, recommendation.gameId, 'recommendation'),
+      id: buildActivityKey(recommendation.fromUid, recommendation.gameId, 'recommendation'),
       key,
       type: 'recommendation',
       actorUid: recommendation.fromUid,
@@ -541,7 +537,7 @@ function upsertActivityEntry(
   const createdAt = existing?.createdAt || timestamp;
 
   const entry: SocialActivityEntry = {
-    id: existing?.id || buildActivityId(next.actorUid, next.gameId, next.type),
+    id: existing?.id || buildActivityKey(next.actorUid, next.gameId, next.type),
     key,
     createdAt,
     updatedAt: timestamp,
@@ -554,69 +550,6 @@ function upsertActivityEntry(
   ]
     .sort((a, b) => b.updatedAt - a.updatedAt)
     .slice(0, 320);
-}
-
-function upsertRecommendationEntry(
-  items: SocialRecommendationEntry[],
-  input: UpsertRecommendationInput,
-  timestamp: number,
-): SocialRecommendationEntry[] {
-  const existing = items.find((entry) => entry.fromUid === input.actorUid && entry.gameId === input.gameId);
-  const createdAt = existing?.createdAt || timestamp;
-
-  const next: SocialRecommendationEntry = {
-    id: existing?.id || timestamp,
-    fromUid: input.actorUid,
-    gameId: input.gameId,
-    gameName: input.gameName,
-    rating: clampRating(input.rating),
-    createdAt,
-    updatedAt: timestamp,
-  };
-
-  return [
-    next,
-    ...items.filter((entry) => !(entry.fromUid === input.actorUid && entry.gameId === input.gameId)),
-  ]
-    .sort((a, b) => b.updatedAt - a.updatedAt)
-    .slice(0, 160);
-}
-
-export function buildReviewExcerpt(text: string, maxLength = 180): string {
-  const clean = String(text || '').trim().replace(/\s+/g, ' ');
-  if (clean.length <= maxLength) {
-    return clean;
-  }
-
-  return `${clean.slice(0, Math.max(0, maxLength - 1)).trimEnd()}…`;
-}
-
-export function upsertRecommendationActivity(data: SocialGistData, input: UpsertRecommendationInput): SocialGistData {
-  const now = input.timestamp || Date.now();
-  const cleanName = String(input.gameName || '').trim();
-  if (!input.actorUid || input.gameId <= 0 || !cleanName) {
-    return data;
-  }
-
-  const recommendations = upsertRecommendationEntry(data.recommendations || [], input, now);
-
-  const activity = upsertActivityEntry(data.activity || [], {
-    type: 'recommendation',
-    actorUid: input.actorUid,
-    actorName: String(input.actorName || '').trim(),
-    gameId: input.gameId,
-    gameName: cleanName,
-    rating: clampRating(input.rating),
-    recommendationText: '',
-    reviewText: '',
-  }, now);
-
-  return {
-    ...data,
-    recommendations,
-    activity,
-    updatedAt: now,
-  };
 }
 
 export function upsertReviewActivity(data: SocialGistData, input: UpsertReviewInput): SocialGistData {
@@ -713,10 +646,6 @@ export function getSocialSyncConfig(): SyncConfig | null {
 
 export function saveSocialSyncConfig(config: SyncConfig): void {
   localStorage.setItem(SOCIAL_GIST_CFG_KEY, JSON.stringify(config));
-}
-
-export function clearSocialSyncConfig(): void {
-  localStorage.removeItem(SOCIAL_GIST_CFG_KEY);
 }
 
 export async function whoAmI(token: string): Promise<{ login: string }> {

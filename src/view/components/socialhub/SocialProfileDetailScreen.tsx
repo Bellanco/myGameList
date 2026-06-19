@@ -1,7 +1,7 @@
 ﻿import { useMemo, useState } from 'react';
 import { Icon } from '../Icon';
 import { GameTable } from '../GameTable';
-import type { GameItem, TabId } from '../../../model/types/game';
+import { TAB_IDS, type GameItem, type TabId } from '../../../model/types/game';
 import type { SocialSharedGame } from '../../../model/repository/gistRepository';
 
 const TAB_LABELS: Record<TabId, string> = {
@@ -45,11 +45,11 @@ export function SocialProfileDetailScreen({
 
   const visibleTabs = useMemo(() => {
     if (!activeProfileDetail?.visibility) {
-      return ['c', 'v', 'e', 'p'] as TabId[];
+      return [...TAB_IDS];
     }
 
     const hidden = new Set(activeProfileDetail.visibility.hiddenTabs || []);
-    return (['c', 'v', 'e', 'p'] as TabId[]).filter((tab) => !hidden.has(tab));
+    return TAB_IDS.filter((tab) => !hidden.has(tab));
   }, [activeProfileDetail]);
 
   const currentTab = visibleTabs.includes(activeListTab) ? activeListTab : visibleTabs[0] || 'c';
