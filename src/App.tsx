@@ -1,7 +1,7 @@
 import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import { DIALOG_MESSAGES, ROUTE_TAB, SYNC_BADGE_TEXT, SYNC_MESSAGES, TAB_ROUTE } from './core/constants/labels';
-import type { TabData, TabId } from './model/types/game';
+import { TAB_IDS, type TabData, type TabId } from './model/types/game';
 import { ensureProfileByEmail, getCurrentSocialAuthUser } from './model/repository/firebaseRepository';
 import { getSyncConfig, getSocialSyncConfig, readSocialGist, saveSocialSyncConfig, upsertReviewActivity, writeSocialGist } from './model/repository/gistRepository';
 import { normalizeData } from './model/repository/localRepository';
@@ -283,7 +283,7 @@ export default function App() {
       nextDraft.id ||
       Math.max(
         0,
-        ...['c', 'v', 'e', 'p'].flatMap((tab) => vm.data[tab as TabId].map((item) => item.id)),
+        ...TAB_IDS.flatMap((tab) => vm.data[tab].map((item) => item.id)),
       ) + 1;
 
     const previousGame = [...vm.data.c, ...vm.data.v, ...vm.data.e, ...vm.data.p].find((entry) => entry.id === predictedId);

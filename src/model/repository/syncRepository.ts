@@ -1,4 +1,4 @@
-import type { GameItem, TabData } from '../types/game';
+import { TAB_IDS, type GameItem, type TabData } from '../types/game';
 
 function normalizeTimestamp(value: unknown, fallback: number): number {
   const numeric = Number(value);
@@ -41,7 +41,7 @@ export function mergeCrdt(
   const localMap = new Map<number, GameItem & { _tab: 'c' | 'v' | 'e' | 'p' }>();
   const remoteMap = new Map<number, GameItem & { _tab: 'c' | 'v' | 'e' | 'p' }>();
 
-  (['c', 'v', 'e', 'p'] as const).forEach((tab) => {
+  TAB_IDS.forEach((tab) => {
     for (const game of local[tab]) {
       if (!game?.id) continue;
       const ts = Number(game._ts);

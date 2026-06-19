@@ -1,5 +1,5 @@
 import type { IconName } from './icons';
-import type { TabId } from '../../model/types/game';
+import { TAB_IDS, type TabId } from '../../model/types/game';
 
 export interface TabAction {
   target: TabId;
@@ -8,7 +8,7 @@ export interface TabAction {
   icon: IconName;
 }
 
-export const TAB_ORDER: TabId[] = ['c', 'v', 'e', 'p'];
+export const TAB_ORDER: TabId[] = [...TAB_IDS];
 
 export const TAB_TITLES: Record<TabId, string> = {
   c: 'Lista del completista',

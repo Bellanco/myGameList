@@ -1,4 +1,5 @@
-export type TabId = 'c' | 'v' | 'e' | 'p';
+export const TAB_IDS = ['c', 'v', 'e', 'p'] as const;
+export type TabId = (typeof TAB_IDS)[number];
 
 export interface GameItem {
   id: number;

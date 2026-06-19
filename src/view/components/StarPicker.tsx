@@ -8,7 +8,7 @@ import { memo } from 'react';
  * @param value - Valor actual (0-5)
  * @param onChange - Callback cuando cambia el valor
  */
-export const StarPicker = memo(function StarPicker({ value, onChange }: { value: number; onChange: (v: number) => void }): JSX.Element {
+export const StarPicker = memo(function StarPicker({ value, onChange }: { value: number; onChange: (v: number) => void }): React.JSX.Element {
   const current = Math.max(0, Math.min(5, Number(value || 0)));
 
   const handleKeyDown = (star: number, event: React.KeyboardEvent<HTMLButtonElement>) => {

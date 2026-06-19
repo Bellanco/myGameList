@@ -216,10 +216,7 @@ primera carga de la seccion principal.
 
 ## Análisis de performance y bundles
 
-Para detalles sobre el presupuesto de bundles, métricas esperadas en Lighthouse
-y guía de medición en dispositivos móviles a 360px, ver [BUNDLE_ANALYSIS.md](BUNDLE_ANALYSIS.md).
-
-Resumen de optimizaciones aplicadas:
+Resumen de optimizaciones aplicadas (presupuesto de bundles y métricas Lighthouse):
 - Code splitting con manualChunks: firebase, react, router, virtual como chunks separados.
 - Lazy loading: SocialHub, SettingsHub, FormModal, ConfirmModal.
 - Cache inmutable de 1 año para assets versionados.
@@ -227,13 +224,9 @@ Resumen de optimizaciones aplicadas:
 
 ## Guía de deployment paso a paso
 
-Para instrucciones detalladas incluyendo:
-- Configuración exacta de variables de entorno
-- Pasos de validación post-deploy (60 segundos)
-- Troubleshooting rápido
-- Métricas esperadas en Lighthouse
-
-Ver [CLOUDFLARE_DEPLOYMENT.md](CLOUDFLARE_DEPLOYMENT.md).
+Las instrucciones detalladas (variables de entorno, validación post-deploy, troubleshooting y
+métricas Lighthouse) están en la sección **"Guia Cloudflare Pages (optima y escalable)"** más
+arriba en este mismo README.
 
 ## Cambios recientes en esta optimización (Mayo 2026)
 

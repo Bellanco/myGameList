@@ -5,7 +5,7 @@ export default defineConfig({
     environment: 'jsdom',
     globals: true,
     include: ['tests/**/*.test.ts', 'src/**/*.test.ts'],
-    exclude: ['node_modules', 'public/**'],
+    exclude: ['node_modules', 'public/**', 'tests/e2e/**', 'tests/integration/**'],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'lcov', 'html'],

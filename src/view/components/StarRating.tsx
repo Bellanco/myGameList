@@ -6,7 +6,7 @@ import { memo } from 'react';
  *
  * @param value - Valor numérico de puntuación (0-5)
  */
-export const StarRating = memo(function StarRating({ value }: { value: number }): JSX.Element {
+export const StarRating = memo(function StarRating({ value }: { value: number }): React.JSX.Element {
   const n = Math.max(0, Math.min(5, Number(value || 0)));
   const fullStars = n;
   const emptyStars = 5 - n;
