@@ -53,6 +53,8 @@ const EMPTY_PENDING: PendingTagFields = {
   reasons: '',
 };
 
+const REVIEW_MAX_LENGTH = 25000;
+
 type FieldErrorMap = {
   name?: boolean;
   genres?: boolean;
@@ -83,6 +85,9 @@ export function FormModal({ open, draft, currentTab, lookups, onClose, onDraftCh
   const [pending, setPending] = useState<PendingTagFields>(EMPTY_PENDING);
   const [fieldErrors, setFieldErrors] = useState<FieldErrorMap>({});
   const [yearWarningShown, setYearWarningShown] = useState(false);
+  const reviewCount = draft.review.length;
+  const reviewProgress = Math.min(100, Math.round((reviewCount / REVIEW_MAX_LENGTH) * 100));
+  const reviewProgressClass = reviewProgress >= 100 ? 'has-error' : reviewProgress >= 90 ? 'has-warning' : '';
 
   useEffect(() => {
     setPending(EMPTY_PENDING);
@@ -121,8 +126,9 @@ export function FormModal({ open, draft, currentTab, lookups, onClose, onDraftCh
     key: 'genres' | 'platforms' | 'strengths' | 'weaknesses' | 'reasons',
     lookup: string[],
     values: string[],
+    explicitValue?: string,
   ): boolean => {
-    const rawValue = pending[key].trim();
+    const rawValue = (explicitValue ?? pending[key]).trim();
     if (!rawValue) return true;
     const finalValue = getCanonicalTag(lookup, rawValue);
     if (!hasTagValue(values, finalValue)) {
@@ -289,12 +295,12 @@ export function FormModal({ open, draft, currentTab, lookups, onClose, onDraftCh
               values={draft.genres}
               pendingValue={pending.genres}
               onPendingValueChange={(value) => setPendingValue('genres', value)}
-              onAdd={() => {
-                commitTextTag('genres', lookups.genres, draft.genres);
+              onAdd={(val) => {
+                commitTextTag('genres', lookups.genres, draft.genres, val);
               }}
               onRemove={(value) => removeTextTag('genres', value)}
               chipClassName="chip-genre"
-              hint={UI_MESSAGES.form.yearsHint}
+              hint={UI_MESSAGES.form.enterToAddHint}
               invalid={Boolean(fieldErrors.genres)}
             />
           </div>
@@ -308,12 +314,12 @@ export function FormModal({ open, draft, currentTab, lookups, onClose, onDraftCh
               values={draft.platforms}
               pendingValue={pending.platforms}
               onPendingValueChange={(value) => setPendingValue('platforms', value)}
-              onAdd={() => {
-                commitTextTag('platforms', lookups.platforms, draft.platforms);
+              onAdd={(val) => {
+                commitTextTag('platforms', lookups.platforms, draft.platforms, val);
               }}
               onRemove={(value) => removeTextTag('platforms', value)}
               chipClassName="chip-plat"
-              hint={UI_MESSAGES.form.yearsHint}
+              hint={UI_MESSAGES.form.enterToAddHint}
               invalid={Boolean(fieldErrors.platforms)}
             />
             {supportsScore(currentTab) ? (
@@ -344,7 +350,7 @@ export function FormModal({ open, draft, currentTab, lookups, onClose, onDraftCh
                   onDraftChange({ ...draft, years: draft.years.filter((entry) => entry !== Number(value)) });
                 }}
                 chipClassName="chip-generic"
-                hint={UI_MESSAGES.form.yearsHint}
+                hint={UI_MESSAGES.form.enterToAddHint}
                 invalid={Boolean(fieldErrors.years)}
                 warning={yearWarningShown}
               />
@@ -380,12 +386,12 @@ export function FormModal({ open, draft, currentTab, lookups, onClose, onDraftCh
                   values={draft.strengths}
                   pendingValue={pending.strengths}
                   onPendingValueChange={(value) => setPendingValue('strengths', value)}
-                  onAdd={() => {
-                    commitTextTag('strengths', lookups.strengths, draft.strengths);
+                  onAdd={(val) => {
+                    commitTextTag('strengths', lookups.strengths, draft.strengths, val);
                   }}
                   onRemove={(value) => removeTextTag('strengths', value)}
                   chipClassName="chip-pf"
-                  hint={UI_MESSAGES.form.yearsHint}
+                  hint={UI_MESSAGES.form.enterToAddHint}
                 />
               ) : null}
 
@@ -397,12 +403,12 @@ export function FormModal({ open, draft, currentTab, lookups, onClose, onDraftCh
                   values={draft.weaknesses}
                   pendingValue={pending.weaknesses}
                   onPendingValueChange={(value) => setPendingValue('weaknesses', value)}
-                  onAdd={() => {
-                    commitTextTag('weaknesses', lookups.weaknesses, draft.weaknesses);
+                  onAdd={(val) => {
+                    commitTextTag('weaknesses', lookups.weaknesses, draft.weaknesses, val);
                   }}
                   onRemove={(value) => removeTextTag('weaknesses', value)}
                   chipClassName="chip-pd"
-                  hint={UI_MESSAGES.form.yearsHint}
+                  hint={UI_MESSAGES.form.enterToAddHint}
                 />
               ) : null}
 
@@ -414,12 +420,12 @@ export function FormModal({ open, draft, currentTab, lookups, onClose, onDraftCh
                   values={draft.reasons}
                   pendingValue={pending.reasons}
                   onPendingValueChange={(value) => setPendingValue('reasons', value)}
-                  onAdd={() => {
-                    commitTextTag('reasons', lookups.weaknesses, draft.reasons);
+                  onAdd={(val) => {
+                    commitTextTag('reasons', lookups.weaknesses, draft.reasons, val);
                   }}
                   onRemove={(value) => removeTextTag('reasons', value)}
                   chipClassName="chip-pd"
-                  hint={UI_MESSAGES.form.yearsHint}
+                  hint={UI_MESSAGES.form.enterToAddHint}
                 />
               ) : null}
             </div>
@@ -463,10 +469,22 @@ export function FormModal({ open, draft, currentTab, lookups, onClose, onDraftCh
               <textarea
                 id="draft-review"
                 className="ftextarea"
+                maxLength={REVIEW_MAX_LENGTH}
                 value={draft.review}
                 placeholder="Ej: Historia sólida, combate excelente y gran ambientación."
-                onChange={(event) => onDraftChange({ ...draft, review: event.target.value })}
+                onChange={(event) => {
+                  const nextReview = event.target.value.slice(0, REVIEW_MAX_LENGTH);
+                  onDraftChange({ ...draft, review: nextReview });
+                }}
               />
+              <div className="field-footer">
+                <small
+                  className={`tag-hint ${reviewProgressClass}`.trim()}
+                  aria-live="polite"
+                >
+                  {`${reviewCount.toLocaleString()} / ${REVIEW_MAX_LENGTH.toLocaleString()} caracteres`}
+                </small>
+              </div>
             </div>
           ) : null}
         </div>

@@ -6,6 +6,38 @@
 }
 .table-wrap::-webkit-scrollbar { display: none; }
 table { width: 100%; border-collapse: collapse; text-align: left; min-width: 1050px; }
+
+.hub-feed-card-detail .table-wrap {
+  max-width: 100%;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+}
+
+.hub-feed-card-detail table {
+  min-width: clamp(40rem, 100%, 66rem);
+}
+
+.hub-feed-card-detail {
+  container-type: inline-size;
+}
+
+@container (max-width: 62rem) {
+  .hub-feed-card-detail table {
+    min-width: 48rem;
+  }
+}
+
+@container (max-width: 46rem) {
+  .hub-feed-card-detail table {
+    min-width: 36rem;
+  }
+}
+
+@container (max-width: 34rem) {
+  .hub-feed-card-detail table {
+    min-width: 30rem;
+  }
+}
 thead th {
   background: var(--surface-hover); padding: .95rem 1rem;
   font-weight: 700; color: var(--text-muted); font-size: .74rem;

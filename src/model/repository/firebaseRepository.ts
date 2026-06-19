@@ -69,6 +69,25 @@ function isPermissionDeniedError(error: unknown): boolean {
 
 let cachedServicesPromise: Promise<FirebaseServices | null> | null = null;
 
+const SOCIAL_PROFILE_CACHE_TTL_MS = 60_000;
+const SOCIAL_DIRECTORY_CACHE_TTL_MS = 30_000;
+const RECEIVED_RECOMMENDATIONS_CACHE_TTL_MS = 15_000;
+
+type CachedValue<T> = {
+  value: T;
+  expiresAt: number;
+};
+
+const socialProfileByEmailCache = new Map<string, CachedValue<SocialProfileReference | null>>();
+const socialProfileByEmailInFlight = new Map<string, Promise<SocialProfileReference | null>>();
+const socialDirectoryCacheByLimit = new Map<number, CachedValue<SocialDirectoryEntry[]>>();
+const socialDirectoryInFlightByLimit = new Map<number, Promise<SocialDirectoryEntry[]>>();
+const receivedRecommendationsByEmailCache = new Map<string, CachedValue<GameRecommendation[]>>();
+const receivedRecommendationsInFlightByEmail = new Map<string, Promise<GameRecommendation[]>>();
+
+let analyticsModuleCache: AnalyticsModule | null | undefined = undefined;
+let analyticsModulePromise: Promise<AnalyticsModule | null> | null = null;
+
 type FirebaseWebConfig = {
   apiKey: string;
   authDomain: string;
@@ -81,7 +100,7 @@ type FirebaseWebConfig = {
 
 // Firebase web config is public by design; security is enforced by Auth and Firestore rules.
 const FALLBACK_FIREBASE_WEB_CONFIG: FirebaseWebConfig = {
-  apiKey: 'AIzaSyBfMLi-pJfUiLqsfoUYsXQSgiAw1hWHfKg',
+  apiKey: 'AIzaSyD0S3Dn3GXMvJqZLPTOE8t_56iyngl_VZY',
   authDomain: 'mylists-f7313.firebaseapp.com',
   projectId: 'mylists-f7313',
   storageBucket: 'mylists-f7313.firebasestorage.app',
@@ -161,6 +180,23 @@ function getFirebaseApp(): FirebaseApp {
   });
 }
 
+async function getAnalyticsModule(): Promise<AnalyticsModule | null> {
+  if (analyticsModuleCache !== undefined) {
+    return analyticsModuleCache;
+  }
+
+  if (!analyticsModulePromise) {
+    analyticsModulePromise = import('firebase/analytics')
+      .catch(() => null)
+      .then((module) => {
+        analyticsModuleCache = module;
+        return module;
+      });
+  }
+
+  return analyticsModulePromise;
+}
+
 /**
  * Inicializa Firebase para web de forma perezosa y segura.
  *
@@ -186,7 +222,11 @@ async function buildFirebaseServices(): Promise<FirebaseServices | null> {
 
   if (hasMeasurementId && analyticsEnabled && typeof window !== 'undefined') {
     try {
-      const analyticsModule = await import('firebase/analytics');
+      const analyticsModule = await getAnalyticsModule();
+      if (!analyticsModule) {
+        return { app, auth, firestore, analytics };
+      }
+
       const supported = await analyticsModule.isSupported();
       if (supported) {
         analytics = analyticsModule.getAnalytics(app);
@@ -227,7 +267,7 @@ export async function reportHandledError(error: unknown, fatal = false): Promise
     return;
   }
 
-  const analyticsModule = await import('firebase/analytics').catch(() => null);
+  const analyticsModule = await getAnalyticsModule();
   if (!analyticsModule) {
     return;
   }
@@ -254,7 +294,7 @@ export async function trackAnalyticsEvent(
     return;
   }
 
-  const analyticsModule = await import('firebase/analytics').catch(() => null);
+  const analyticsModule = await getAnalyticsModule();
   if (!analyticsModule) {
     return;
   }
@@ -290,6 +330,91 @@ function getFirebaseErrorCode(error: unknown): string {
   return String(candidate.code || '');
 }
 
+function readProfileByEmailCache(email: string): SocialProfileReference | null | undefined {
+  const cached = socialProfileByEmailCache.get(email);
+  if (!cached) {
+    return undefined;
+  }
+
+  if (cached.expiresAt <= Date.now()) {
+    socialProfileByEmailCache.delete(email);
+    return undefined;
+  }
+
+  return cached.value;
+}
+
+function saveProfileByEmailCache(email: string, value: SocialProfileReference | null): void {
+  socialProfileByEmailCache.set(email, {
+    value,
+    expiresAt: Date.now() + SOCIAL_PROFILE_CACHE_TTL_MS,
+  });
+}
+
+function saveSocialDirectoryCache(limitCount: number, value: SocialDirectoryEntry[]): void {
+  socialDirectoryCacheByLimit.set(limitCount, {
+    value,
+    expiresAt: Date.now() + SOCIAL_DIRECTORY_CACHE_TTL_MS,
+  });
+}
+
+function readSocialDirectoryCache(limitCount: number): SocialDirectoryEntry[] | null {
+  const cached = socialDirectoryCacheByLimit.get(limitCount);
+  if (!cached) {
+    return null;
+  }
+
+  if (cached.expiresAt <= Date.now()) {
+    socialDirectoryCacheByLimit.delete(limitCount);
+    return null;
+  }
+
+  return cached.value;
+}
+
+function invalidateSocialDirectoryCache(): void {
+  socialDirectoryCacheByLimit.clear();
+}
+
+function readReceivedRecommendationsCache(email: string): GameRecommendation[] | null {
+  const cached = receivedRecommendationsByEmailCache.get(email);
+  if (!cached) {
+    return null;
+  }
+
+  if (cached.expiresAt <= Date.now()) {
+    receivedRecommendationsByEmailCache.delete(email);
+    return null;
+  }
+
+  return cached.value;
+}
+
+function saveReceivedRecommendationsCache(email: string, value: GameRecommendation[]): void {
+  receivedRecommendationsByEmailCache.set(email, {
+    value,
+    expiresAt: Date.now() + RECEIVED_RECOMMENDATIONS_CACHE_TTL_MS,
+  });
+}
+
+function invalidateReceivedRecommendationsCache(email?: string): void {
+  if (email) {
+    receivedRecommendationsByEmailCache.delete(email);
+    return;
+  }
+
+  receivedRecommendationsByEmailCache.clear();
+}
+
+function getAuthRuntimeContext(): { hostname: string; projectId: string; authDomain: string } {
+  const config = getFirebaseWebConfig();
+  return {
+    hostname: typeof window !== 'undefined' ? window.location.hostname : 'unknown',
+    projectId: config.projectId,
+    authDomain: config.authDomain,
+  };
+}
+
 /**
  * Devuelve el usuario autenticado actual para el hub social.
  */
@@ -322,8 +447,18 @@ export async function signInWithGoogle(): Promise<SocialAuthUser> {
     return toSocialAuthUser(result.user);
   } catch (error) {
     const code = getFirebaseErrorCode(error);
-    if (code === 'auth/internal-error' || code === 'auth/unauthorized-domain') {
-      throw new Error('El dominio actual no está autorizado en Firebase Auth para Google Sign-In. Revisa Authorized domains.');
+    if (code === 'auth/unauthorized-domain') {
+      const context = getAuthRuntimeContext();
+      throw new Error(
+        `El dominio ${context.hostname} no está autorizado en Firebase Auth para Google Sign-In. Proyecto activo: ${context.projectId} (${context.authDomain}). Revisa Authorized domains.`,
+      );
+    }
+
+    if (code === 'auth/internal-error') {
+      const context = getAuthRuntimeContext();
+      throw new Error(
+        `Firebase devolvió auth/internal-error en ${context.hostname} usando el proyecto ${context.projectId} (${context.authDomain}). Suele deberse a bloqueo de popup/cookies/extensiones o a configuración OAuth del proveedor Google.`,
+      );
     }
 
     throw error;
@@ -372,7 +507,6 @@ export async function upsertProfileSocialReferences(input: {
         gistId: input.socialGistId,
         gamesGistId: String(input.gamesGistId || ''),
         githubToken: String(input.githubToken || ''),
-        gistFile: 'myGameList.social.json',
         etag: input.socialGistEtag,
         enabled: true,
       },
@@ -380,6 +514,19 @@ export async function upsertProfileSocialReferences(input: {
     },
     { merge: true },
   );
+
+  const cleanEmail = input.user.email.trim().toLowerCase();
+  if (cleanEmail) {
+    saveProfileByEmailCache(cleanEmail, {
+      id: input.user.uid,
+      email: cleanEmail,
+      displayName: profileName,
+      socialGistId: input.socialGistId,
+      gamesGistId: String(input.gamesGistId || ''),
+      githubToken: String(input.githubToken || ''),
+      socialEnabled: true,
+    });
+  }
 }
 
 /**
@@ -397,44 +544,68 @@ export async function findSocialProfileByEmail(email: string): Promise<SocialPro
     return null;
   }
 
-  const q = query(
-    collection(services.firestore, 'profiles'),
-    where('email', '==', cleanEmail),
-    limit(1),
-  );
+  const cached = readProfileByEmailCache(cleanEmail);
+  if (cached !== undefined) {
+    return cached;
+  }
 
-  let snapshot;
-  try {
-    snapshot = await getDocs(q);
-  } catch (error) {
-    // If rules deny reads, keep flow alive and continue with gist-only profile resolution.
-    if (isPermissionDeniedError(error)) {
+  const inFlight = socialProfileByEmailInFlight.get(cleanEmail);
+  if (inFlight) {
+    return inFlight;
+  }
+
+  const request = (async () => {
+    const q = query(
+      collection(services.firestore, 'profiles'),
+      where('email', '==', cleanEmail),
+      limit(1),
+    );
+
+    let snapshot;
+    try {
+      snapshot = await getDocs(q);
+    } catch (error) {
+      // If rules deny reads, keep flow alive and continue with gist-only profile resolution.
+      if (isPermissionDeniedError(error)) {
+        saveProfileByEmailCache(cleanEmail, null);
+        return null;
+      }
+
+      throw error;
+    }
+
+    if (snapshot.empty) {
+      saveProfileByEmailCache(cleanEmail, null);
       return null;
     }
 
-    throw error;
+    const docEntry = snapshot.docs[0];
+    const data = docEntry.data() as {
+      email?: string;
+      displayName?: string;
+      social?: { gistId?: string; gamesGistId?: string; githubToken?: string; enabled?: boolean };
+    };
+
+    const profile: SocialProfileReference = {
+      id: docEntry.id,
+      email: String(data.email || ''),
+      displayName: String(data.displayName || ''),
+      socialGistId: String(data.social?.gistId || ''),
+      gamesGistId: String(data.social?.gamesGistId || ''),
+      githubToken: String(data.social?.githubToken || ''),
+      socialEnabled: Boolean(data.social?.enabled),
+    };
+
+    saveProfileByEmailCache(cleanEmail, profile);
+    return profile;
+  })();
+
+  socialProfileByEmailInFlight.set(cleanEmail, request);
+  try {
+    return await request;
+  } finally {
+    socialProfileByEmailInFlight.delete(cleanEmail);
   }
-
-  if (snapshot.empty) {
-    return null;
-  }
-
-  const docEntry = snapshot.docs[0];
-  const data = docEntry.data() as {
-    email?: string;
-    displayName?: string;
-    social?: { gistId?: string; gamesGistId?: string; githubToken?: string; enabled?: boolean };
-  };
-
-  return {
-    id: docEntry.id,
-    email: String(data.email || ''),
-    displayName: String(data.displayName || ''),
-    socialGistId: String(data.social?.gistId || ''),
-    gamesGistId: String(data.social?.gamesGistId || ''),
-    githubToken: String(data.social?.githubToken || ''),
-    socialEnabled: Boolean(data.social?.enabled),
-  };
 }
 
 /**
@@ -469,34 +640,57 @@ export async function ensureProfileByEmail(input: {
 
   const profileName = (input.preferredName || input.user.displayName || cleanEmail).trim();
   const targetId = existing?.id || input.user.uid;
+  const gamesGistId = String(input.gamesGistId || '');
+  const githubToken = String(input.githubToken || '');
+  const shouldWriteProfile =
+    !existing ||
+    !existing.socialEnabled ||
+    existing.id !== targetId ||
+    existing.id !== input.user.uid ||
+    existing.displayName.trim() !== profileName ||
+    existing.socialGistId !== input.socialGistId ||
+    existing.gamesGistId !== gamesGistId ||
+    existing.githubToken !== githubToken;
 
-  await setDoc(
-    doc(services.firestore, 'profiles', targetId),
-    {
-      uid: input.user.uid,
-      email: cleanEmail,
-      displayName: profileName,
-      photoURL: input.user.photoURL,
-      social: {
-        gistId: input.socialGistId,
-        gamesGistId: String(input.gamesGistId || ''),
-        githubToken: String(input.githubToken || ''),
-        gistFile: 'myGameList.social.json',
-        etag: input.socialGistEtag,
-        enabled: true,
+  if (shouldWriteProfile) {
+    await setDoc(
+      doc(services.firestore, 'profiles', targetId),
+      {
+        uid: input.user.uid,
+        email: cleanEmail,
+        displayName: profileName,
+        photoURL: input.user.photoURL,
+        social: {
+          gistId: input.socialGistId,
+          gamesGistId,
+          githubToken,
+          etag: input.socialGistEtag,
+          enabled: true,
+        },
+        updatedAt: serverTimestamp(),
       },
-      updatedAt: serverTimestamp(),
-    },
-    { merge: true },
-  );
+      { merge: true },
+    );
+  }
+
+  saveProfileByEmailCache(cleanEmail, {
+    id: targetId,
+    email: cleanEmail,
+    displayName: profileName,
+    socialGistId: input.socialGistId,
+    gamesGistId,
+    githubToken,
+    socialEnabled: true,
+  });
+  invalidateSocialDirectoryCache();
 
   return {
     id: targetId,
     email: cleanEmail,
     displayName: profileName,
     socialGistId: input.socialGistId,
-    gamesGistId: String(input.gamesGistId || ''),
-    githubToken: String(input.githubToken || ''),
+    gamesGistId,
+    githubToken,
     socialEnabled: true,
   };
 }
@@ -505,54 +699,78 @@ export async function ensureProfileByEmail(input: {
  * Devuelve un listado reducido de perfiles para feed social.
  * Si las reglas no permiten lectura, retorna array vacío para no bloquear la UI.
  */
-export async function listSocialDirectory(limitCount = 12): Promise<SocialDirectoryEntry[]> {
+export async function listSocialDirectory(limitCount = 12, options?: { forceRefresh?: boolean }): Promise<SocialDirectoryEntry[]> {
   const services = await initializeFirebaseServices();
   if (!services) {
     throw new Error('Firebase no está configurado en este entorno');
   }
 
-  const q = query(
-    collection(services.firestore, 'profiles'),
-    where('social.enabled', '==', true),
-    where(documentId(), '!=', '_placeholder'),
-    limit(Math.max(1, limitCount)),
-  );
-
-  let snapshot;
-  try {
-    snapshot = await getDocs(q);
-  } catch (error) {
-    if (isPermissionDeniedError(error)) {
-      throw new Error('Permisos insuficientes para leer perfiles sociales en Firestore');
-    }
-    throw error;
+  const normalizedLimit = Math.max(1, limitCount);
+  const forceRefresh = Boolean(options?.forceRefresh);
+  const cached = readSocialDirectoryCache(normalizedLimit);
+  if (!forceRefresh && cached) {
+    return cached;
   }
 
-  return snapshot.docs
-    .map((entry) => {
-      const data = entry.data() as {
-        email?: string;
-        displayName?: string;
-        social?: { gistId?: string; gamesGistId?: string; enabled?: boolean };
-      };
+  const inFlight = forceRefresh ? null : socialDirectoryInFlightByLimit.get(normalizedLimit);
+  if (inFlight) {
+    return inFlight;
+  }
 
-      return {
+  const request = (async () => {
+    const q = query(
+      collection(services.firestore, 'profiles'),
+      where('social.enabled', '==', true),
+      where(documentId(), '!=', '_placeholder'),
+      limit(normalizedLimit),
+    );
+
+    let snapshot;
+    try {
+      snapshot = await getDocs(q);
+    } catch (error) {
+      if (isPermissionDeniedError(error)) {
+        throw new Error('Permisos insuficientes para leer perfiles sociales en Firestore');
+      }
+      throw error;
+    }
+
+    const entries = snapshot.docs
+      .map((entry) => {
+        const data = entry.data() as {
+          email?: string;
+          displayName?: string;
+          social?: { gistId?: string; gamesGistId?: string; enabled?: boolean };
+        };
+
+        return {
+          id: entry.id,
+          email: String(data.email || ''),
+          displayName: String(data.displayName || ''),
+          socialGistId: String(data.social?.gistId || ''),
+          gamesGistId: String(data.social?.gamesGistId || ''),
+          enabled: Boolean(data.social?.enabled),
+        };
+      })
+      .filter((entry) => entry.enabled && Boolean(entry.socialGistId))
+      .map((entry) => ({
         id: entry.id,
-        email: String(data.email || ''),
-        displayName: String(data.displayName || ''),
-        socialGistId: String(data.social?.gistId || ''),
-        gamesGistId: String(data.social?.gamesGistId || ''),
-        enabled: Boolean(data.social?.enabled),
-      };
-    })
-    .filter((entry) => entry.enabled && Boolean(entry.socialGistId))
-    .map((entry) => ({
-      id: entry.id,
-      email: entry.email,
-      displayName: entry.displayName,
-      socialGistId: entry.socialGistId,
-      gamesGistId: entry.gamesGistId,
-    }));
+        email: entry.email,
+        displayName: entry.displayName,
+        socialGistId: entry.socialGistId,
+        gamesGistId: entry.gamesGistId,
+      }));
+
+    saveSocialDirectoryCache(normalizedLimit, entries);
+    return entries;
+  })();
+
+  socialDirectoryInFlightByLimit.set(normalizedLimit, request);
+  try {
+    return await request;
+  } finally {
+    socialDirectoryInFlightByLimit.delete(normalizedLimit);
+  }
 }
 
 /**
@@ -598,6 +816,8 @@ export async function sendGameRecommendation(input: {
     updatedAt: now,
   });
 
+  invalidateReceivedRecommendationsCache(toEmailClean);
+
   return { id: docRef.id };
 }
 
@@ -616,53 +836,76 @@ export async function getReceivedRecommendations(toEmail: string): Promise<GameR
     return [];
   }
 
-  const q = query(
-    collection(services.firestore, 'recommendations'),
-    where('toEmail', '==', toEmailClean),
-    where('status', '==', 'pending'),
-  );
-
-  let snapshot;
-  try {
-    snapshot = await getDocs(q);
-  } catch (error) {
-    if (isPermissionDeniedError(error)) {
-      return [];
-    }
-
-    throw error;
+  const cached = readReceivedRecommendationsCache(toEmailClean);
+  if (cached) {
+    return cached;
   }
 
-  return snapshot.docs
-    .map((docEntry) => {
-      const data = docEntry.data() as {
-        fromUid?: string;
-        fromEmail?: string;
-        fromDisplayName?: string;
-        toEmail?: string;
-        gameId?: number;
-        gameName?: string;
-        message?: string;
-        status?: string;
-        createdAt?: number;
-        updatedAt?: number;
-      };
+  const inFlight = receivedRecommendationsInFlightByEmail.get(toEmailClean);
+  if (inFlight) {
+    return inFlight;
+  }
 
-      return {
-        id: docEntry.id,
-        fromUid: String(data.fromUid || ''),
-        fromEmail: String(data.fromEmail || ''),
-        fromDisplayName: String(data.fromDisplayName || ''),
-        toEmail: String(data.toEmail || ''),
-        gameId: Number(data.gameId || 0),
-        gameName: String(data.gameName || ''),
-        message: String(data.message || ''),
-        status: (data.status === 'pending' || data.status === 'accepted' || data.status === 'declined' ? data.status : 'pending') as 'pending' | 'accepted' | 'declined',
-        createdAt: Number(data.createdAt || 0),
-        updatedAt: Number(data.updatedAt || 0),
-      };
-    })
-    .sort((a, b) => b.createdAt - a.createdAt);
+  const request = (async () => {
+    const q = query(
+      collection(services.firestore, 'recommendations'),
+      where('toEmail', '==', toEmailClean),
+      where('status', '==', 'pending'),
+    );
+
+    let snapshot;
+    try {
+      snapshot = await getDocs(q);
+    } catch (error) {
+      if (isPermissionDeniedError(error)) {
+        saveReceivedRecommendationsCache(toEmailClean, []);
+        return [];
+      }
+
+      throw error;
+    }
+
+    const recommendations = snapshot.docs
+      .map((docEntry) => {
+        const data = docEntry.data() as {
+          fromUid?: string;
+          fromEmail?: string;
+          fromDisplayName?: string;
+          toEmail?: string;
+          gameId?: number;
+          gameName?: string;
+          message?: string;
+          status?: string;
+          createdAt?: number;
+          updatedAt?: number;
+        };
+
+        return {
+          id: docEntry.id,
+          fromUid: String(data.fromUid || ''),
+          fromEmail: String(data.fromEmail || ''),
+          fromDisplayName: String(data.fromDisplayName || ''),
+          toEmail: String(data.toEmail || ''),
+          gameId: Number(data.gameId || 0),
+          gameName: String(data.gameName || ''),
+          message: String(data.message || ''),
+          status: (data.status === 'pending' || data.status === 'accepted' || data.status === 'declined' ? data.status : 'pending') as 'pending' | 'accepted' | 'declined',
+          createdAt: Number(data.createdAt || 0),
+          updatedAt: Number(data.updatedAt || 0),
+        };
+      })
+      .sort((a, b) => b.createdAt - a.createdAt);
+
+    saveReceivedRecommendationsCache(toEmailClean, recommendations);
+    return recommendations;
+  })();
+
+  receivedRecommendationsInFlightByEmail.set(toEmailClean, request);
+  try {
+    return await request;
+  } finally {
+    receivedRecommendationsInFlightByEmail.delete(toEmailClean);
+  }
 }
 
 /**
@@ -685,5 +928,7 @@ export async function updateRecommendationStatus(
     },
     { merge: true },
   );
+
+  invalidateReceivedRecommendationsCache();
 }
 

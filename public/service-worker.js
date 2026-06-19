@@ -3,10 +3,9 @@
  * Enables offline functionality and caching strategy
  */
 
-const CACHE_NAME = 'mygamelist-v5';
+const CACHE_NAME = 'mygamelist-v6';
 const ASSETS = [
   '/',
-  '/index.html',
   '/manifest.json',
 ];
 
@@ -64,17 +63,27 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  const normalizedRequest = isHtmlNavigation && url.pathname === '/index.html'
+    ? new Request('/', {
+      method: 'GET',
+      headers: request.headers,
+      credentials: 'same-origin',
+      redirect: 'follow',
+      cache: 'no-cache',
+    })
+    : request;
+
   event.respondWith(
-    fetch(request)
+    fetch(normalizedRequest)
       .then((response) => {
         if (isHtmlNavigation && response && response.status === 200 && response.type === 'basic') {
-          caches.open(CACHE_NAME).then((cache) => cache.put('/index.html', response.clone()));
+          caches.open(CACHE_NAME).then((cache) => cache.put('/', response.clone()));
         }
         return response;
       })
       .catch(async () => {
         if (isHtmlNavigation) {
-          const offlineShell = await caches.match('/index.html');
+          const offlineShell = await caches.match('/');
           if (offlineShell) {
             return offlineShell;
           }

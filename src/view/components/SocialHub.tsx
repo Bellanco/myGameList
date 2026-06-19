@@ -140,7 +140,7 @@ export const SocialHub = memo(function SocialHub() {
   const [favoriteSearch, setFavoriteSearch] = useState('');
   const [feedSearch, setFeedSearch] = useState('');
   const [feedFilter] = useState<'all' | 'favorites'>('all');
-  const [socialPayload, setSocialPayload] = useState<{ recommendations: Array<{ id: number; fromUid: string; toUid: string; gameId: number; gameName: string; message: string; rating: number; createdAt: number; updatedAt: number }>; activity: SocialActivityEntry[] }>({ recommendations: [], activity: [] });
+  const [socialPayload, setSocialPayload] = useState<{ activity: SocialActivityEntry[] }>({ activity: [] });
   const [hydratingProfile, setHydratingProfile] = useState(false);
   const [savingProfile, setSavingProfile] = useState(false);
   const [loadingDirectory, setLoadingDirectory] = useState(false);
@@ -155,11 +155,13 @@ export const SocialHub = memo(function SocialHub() {
     setStatusKind(kind);
     setStatus(message);
 
-    // Any warning/error blocks feed access until a successful social action clears it.
+    // Only hard errors should block feed access.
     if (kind === 'ok') {
       setHasBlockingSocialIssue(false);
-    } else {
+    } else if (kind === 'err') {
       setHasBlockingSocialIssue(true);
+    } else {
+      setHasBlockingSocialIssue(false);
     }
 
     if (kind === 'err') {
@@ -463,9 +465,27 @@ export const SocialHub = memo(function SocialHub() {
   }, [activePanel, activityFeedItems, detailActorUid, detailEventType, detailGameId]);
 
   /**
-   * Obtiene el GameItem por su ID desde el estado local de todas las tabs.
+   * Obtiene GameItem desde listas compartidas cargadas por gamesGistId.
+   * Mantiene fallback local para no romper eventos propios sin datos remotos.
    */
-  const getGameItemById = useCallback((gameId: number) => {
+  const getGameItemById = useCallback((profileId: string, gameId: number) => {
+    const profileEntry = socialDirectory.find((entry) => entry.id === profileId);
+    if (profileEntry) {
+      const allShared = [
+        ...(profileEntry.sharedLists.c || []),
+        ...(profileEntry.sharedLists.v || []),
+        ...(profileEntry.sharedLists.e || []),
+        ...(profileEntry.sharedLists.p || []),
+      ];
+      const sharedMatch = allShared.find((game) => game.id === gameId);
+      if (sharedMatch) {
+        return {
+          ...sharedMatch,
+          _ts: 0,
+        };
+      }
+    }
+
     const allGames = [
       ...localState.c,
       ...localState.v,
@@ -473,7 +493,7 @@ export const SocialHub = memo(function SocialHub() {
       ...localState.p,
     ];
     return allGames.find((game) => game.id === gameId) || null;
-  }, [localState]);
+  }, [localState, socialDirectory]);
 
   /**
    * Formatea la fecha como "DD de MMM".
@@ -667,7 +687,7 @@ export const SocialHub = memo(function SocialHub() {
         setShowSocialSpace(true);
         setFeedback('ok', SOCIAL_UI.status.signInAndLinked);
       } else {
-        // No hacer nada aquÃ­; el useEffect automÃ¡tico manejarÃ¡ la creaciÃ³n del gist
+        // No hacer nada aquÃ­; el useEffect automÃ¡tico manejarÃ¡ la creación del gist
       }
     } catch (error) {
       setFeedback('err', error instanceof Error ? error.message : SOCIAL_UI.status.signInFailed);
@@ -696,6 +716,34 @@ export const SocialHub = memo(function SocialHub() {
         setSocialCfgEtag(socialRead.etag || null);
       }
 
+      const hasLegacySharedLists = Object.keys(socialRead.data.profile.sharedLists || {}).length > 0;
+      const hasLegacyRecommendations =
+        (socialRead.data.profile.recommendations || []).length > 0 ||
+        (socialRead.data.recommendations || []).length > 0;
+
+      if (hasLegacySharedLists || hasLegacyRecommendations) {
+        const cleanedPayload = {
+          ...socialRead.data,
+          profile: {
+            ...socialRead.data.profile,
+            recommendations: [],
+            sharedLists: {},
+          },
+          recommendations: [],
+          updatedAt: Date.now(),
+        };
+
+        const cleanedWrite = await writeSocialGist(socialConfig.token, socialCfgGistId, cleanedPayload);
+        const nextEtag = cleanedWrite.etag || socialRead.etag || null;
+        setSocialCfgEtag(nextEtag);
+        saveSocialSyncConfig({
+          token: socialConfig.token,
+          gistId: socialCfgGistId,
+          etag: nextEtag,
+          lastRemoteUpdatedAt: Date.now(),
+        });
+      }
+
       const nextName = socialRead.data.profile.name || existingProfile?.displayName || authUser.displayName || authUser.email;
       const favorites = socialRead.data.profile.favoriteGames
         .map((entry) => entry.id)
@@ -719,7 +767,6 @@ export const SocialHub = memo(function SocialHub() {
       setHideGameTime(Boolean(profileVisibility.hideGameTime));
       setHasCreatedProfile(profileExists);
       setSocialPayload({
-        recommendations: [],
         activity: socialRead.data.activity,
       });
       
@@ -777,24 +824,25 @@ export const SocialHub = memo(function SocialHub() {
     void hydrateSocialProfile();
   }, [hydrateSocialProfile]);
 
-  const hydrateSocialDirectory = useCallback(async () => {
+  const hydrateSocialDirectory = useCallback(async (forceRefresh = false) => {
     if (!showSocialSpace || activePanel === 'profile' || profileEditorLocked || !authUser || !socialCfgGistId) {
       return;
     }
 
     try {
       setLoadingDirectory(true);
-      const entries = await listSocialDirectory(50);
+      const entries = await listSocialDirectory(50, { forceRefresh });
+      const socialConfig = getSocialSyncConfig();
 
       const withProfiles = await Promise.all(
         entries.map(async (entry) => {
           try {
-            const socialData = await readPublicSocialGistById(entry.socialGistId, mainSyncConfig?.token);
-            let sharedLists: Partial<Record<TabId, SocialSharedGame[]>> = socialData.profile.sharedLists || {};
+            const socialData = await readPublicSocialGistById(entry.socialGistId, socialConfig?.token || null);
+            let sharedLists: Partial<Record<TabId, SocialSharedGame[]>> = {};
 
             if (entry.gamesGistId) {
               try {
-                const gamesData = await readPublicGamesGistById(entry.gamesGistId, mainSyncConfig?.token);
+                const gamesData = await readPublicGamesGistById(entry.gamesGistId, socialConfig?.token || null);
                 sharedLists = {
                   c: gamesData.c.map((game) => toSharedGame(game)).slice(0, 300),
                   v: gamesData.v.map((game) => toSharedGame(game)).slice(0, 300),
@@ -802,13 +850,15 @@ export const SocialHub = memo(function SocialHub() {
                   p: gamesData.p.map((game) => toSharedGame(game)).slice(0, 300),
                 };
               } catch {
-                // Keep social shared snapshot as fallback.
+                // Keep empty lists when games gist is unavailable.
               }
             }
 
-            const highlightedRecommendations = socialData.profile.recommendations.map((game) => game.name);
-            const sharedRecommendations = socialData.recommendations.map((entry) => entry.gameName);
-            const mergedRecommendations = [...new Set([...highlightedRecommendations, ...sharedRecommendations])]
+            const mergedRecommendations = socialData.activity
+              .filter((activityEntry) => activityEntry.type === 'recommendation')
+              .map((activityEntry) => activityEntry.gameName)
+              .filter((name) => Boolean(name && name.trim()))
+              .filter((name, index, arr) => arr.indexOf(name) === index)
               .filter((name) => Boolean(name && name.trim()))
               .slice(0, 8);
             const activity = socialData.activity
@@ -883,8 +933,8 @@ export const SocialHub = memo(function SocialHub() {
       return;
     }
 
-    // MÃ¡ximo de 3 favoritos
-    if (current.length >= 3) {
+    // MÃ¡ximo de 5 favoritos
+    if (current.length >= 5) {
       setFeedback('warn', SOCIAL_UI.status.maxFavoritesReached);
       return;
     }
@@ -903,7 +953,6 @@ export const SocialHub = memo(function SocialHub() {
       setSavingProfile(true);
       const validFavoriteIds = favoriteGameIds.filter((id) => completedGameNameById.has(id));
       const normalizedHiddenTabs = getOrderedUniqueTabs(hiddenTabs);
-      const hiddenTabsSet = new Set<TabId>(normalizedHiddenTabs);
 
       const visibility: SocialProfileVisibility = {
         hiddenTabs: normalizedHiddenTabs,
@@ -912,55 +961,51 @@ export const SocialHub = memo(function SocialHub() {
         hideGameTime,
       };
 
-      const sharedLists: Partial<Record<TabId, SocialSharedGame[]>> = {};
-      (['c', 'v', 'e', 'p'] as const).forEach((tab) => {
-        if (hiddenTabsSet.has(tab)) {
-          return;
-        }
-
-        const compactGames = localState[tab]
-          .map((game) => toSharedGame(game))
-          .filter((game) => game.id > 0 && Boolean(game.name.trim()))
-          .slice(0, 300);
-
-        sharedLists[tab] = compactGames;
-      });
-
       const profile = {
         name: profileName.trim() || authUser.displayName || authUser.email,
         private: false,
         favoriteGames: validFavoriteIds.map((id) => ({ id, name: completedGameNameById.get(id) || `Juego ${id}` })),
-        recommendations: [], // No mÃ¡s recomendaciones destacadas
+        recommendations: [],
         visibility,
-        sharedLists,
+        sharedLists: {},
       };
+
+      const currentGistResult = await readSocialGist(socialConfig.token, socialCfgGistId, null);
+      const currentGistData = currentGistResult.data;
 
       const writeResult = await writeSocialGist(socialConfig.token, socialCfgGistId, {
         profile,
-        recommendations: [],
-        activity: socialPayload.activity,
+        recommendations: currentGistData.recommendations,
+        activity: currentGistData.activity,
         updatedAt: Date.now(),
       });
 
-      // Todos los perfiles sociales se fuerzan como pÃºblicos.
-      await updateGistPrivacy(socialConfig.token, socialCfgGistId, true);
+      const privacyResult = await updateGistPrivacy(socialConfig.token, socialCfgGistId, true);
+      const finalGistId = privacyResult.gistId;
+      const finalEtag = privacyResult.etag || writeResult.etag || socialCfgEtag;
 
       await ensureProfileByEmail({
         user: authUser,
-        socialGistId: socialCfgGistId,
+        socialGistId: finalGistId,
         gamesGistId: mainSyncConfig?.gistId || '',
         githubToken: mainSyncConfig?.token || socialConfig.token,
-        socialGistEtag: writeResult.etag || socialCfgEtag,
+        socialGistEtag: finalEtag,
         preferredName: profile.name,
       });
 
       saveSocialSyncConfig({
         token: socialConfig.token,
-        gistId: socialCfgGistId,
-        etag: writeResult.etag || socialCfgEtag,
+        gistId: finalGistId,
+        etag: finalEtag,
         lastRemoteUpdatedAt: Date.now(),
       });
-      setSocialCfgEtag(writeResult.etag || socialCfgEtag);
+      setSocialCfgGistId(finalGistId);
+      setSocialCfgEtag(finalEtag);
+
+      setSocialPayload({
+        activity: currentGistData.activity,
+      });
+
       setHasCreatedProfile(true);
       setMustCreateProfile(false);
       setJustSavedProfile(true);
@@ -968,7 +1013,6 @@ export const SocialHub = memo(function SocialHub() {
       void hydrateSocialDirectory();
       setFeedback('ok', SOCIAL_UI.status.profileSaved);
       
-      // Clear the flag after a short delay to allow normal hydration flow again
       setTimeout(() => setJustSavedProfile(false), 1000);
     } catch (error) {
       setFeedback('err', error instanceof Error ? error.message : SOCIAL_UI.status.saveProfileFailed);
@@ -985,14 +1029,12 @@ export const SocialHub = memo(function SocialHub() {
     hideRetry,
     hideGameTime,
     hydrateSocialDirectory,
-    localState,
     navigate,
     profileName,
     setFeedback,
     socialCfgEtag,
     socialCfgGistId,
     socialPayload.activity,
-    toSharedGame,
   ]);
 
   const handleSignOut = useCallback(async () => {
@@ -1010,7 +1052,7 @@ export const SocialHub = memo(function SocialHub() {
       disabled: boolean;
     };
 
-    // Paso 1: Conectar sincronizaciÃ³n principal (token)
+    // Paso 1: Conectar sincronización principal (token)
     if (!hasMainSync) {
       return {
         icon: 'gear',
@@ -1020,7 +1062,7 @@ export const SocialHub = memo(function SocialHub() {
       } satisfies GatewayCta;
     }
 
-    // Paso 2: Google (si tenemos token pero no sesiÃ³n)
+    // Paso 2: Google (si tenemos token pero no sesión)
     if (resolvingSocialGist) {
       return {
         icon: 'cloud-sync',
@@ -1039,7 +1081,7 @@ export const SocialHub = memo(function SocialHub() {
       } satisfies GatewayCta;
     }
 
-    // Paso 3: Gist social (si tenemos sesiÃ³n pero no gist) - normalmente automÃ¡tico pero se puede forzar
+    // Paso 3: Gist social (si tenemos sesión pero no gist) - normalmente automÃ¡tico pero se puede forzar
     if (canConnectSocialGist) {
       return {
         icon: 'cloud-sync',
@@ -1104,6 +1146,7 @@ export const SocialHub = memo(function SocialHub() {
           SOCIAL_UI={SOCIAL_UI}
           activeDetailEvent={activeDetailEvent}
           getGameItemById={getGameItemById}
+          onOpenProfileDetail={openProfileDetail}
           onBack={() => navigate('/social')}
           status={status}
           statusKind={statusKind}
@@ -1130,7 +1173,7 @@ export const SocialHub = memo(function SocialHub() {
         setFeedSearch={setFeedSearch}
         filteredSocialDirectory={filteredSocialDirectory}
         loadingDirectory={loadingDirectory}
-        hydrateSocialDirectory={hydrateSocialDirectory}
+        hydrateSocialDirectory={(force) => void hydrateSocialDirectory(force)}
         openProfileDetail={(id) => {
           if (id === 'profile') {
             navigate('/social/profile');

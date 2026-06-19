@@ -4,7 +4,7 @@ import { StarRating } from '../StarRating';
 
 /**
  * Pantalla principal del feed social.
- * Presentacional, sin lÃ³gica de negocio.
+ * Presentacional, sin lógica de negocio.
  */
 export function SocialFeedScreen({
   SOCIAL_UI,
@@ -36,7 +36,7 @@ export function SocialFeedScreen({
   setFeedSearch: (v: string) => void;
   filteredSocialDirectory: any[];
   loadingDirectory: boolean;
-  hydrateSocialDirectory: () => void;
+  hydrateSocialDirectory: (forceRefresh?: boolean) => void;
   openProfileDetail: (id: string) => void;
   handleProfileCardKeyDown: (event: React.KeyboardEvent<HTMLElement>, id: string) => void;
   groupedActivityFeedItems: any[];
@@ -51,8 +51,10 @@ export function SocialFeedScreen({
   statusKind: string;
   handleSignOut: () => void;
 }) {
+
+
   return (
-    <section className="hub-hub hub-screen" aria-label="Social">
+    <section className="hub-hub hub-screen" aria-label={SOCIAL_UI.feed.sectionAria}>
       <div className="hub-hub-card hub-screen-card hub-feed-card-shell">
         <header className="hub-screen-header">
           <div className="hub-hub-title-wrap">
@@ -62,13 +64,13 @@ export function SocialFeedScreen({
           <p>{SOCIAL_UI.feed.subtitle}</p>
           <h3 className="hub-feed-owner">{socialDisplayName}</h3>
         </header>
-        <div className="hub-screen-actions hub-screen-actions-split" aria-label="Acciones del feed social">
+        <div className="hub-screen-actions hub-screen-actions-split" aria-label={SOCIAL_UI.feed.actionsAria}>
           <div className="hub-screen-actions-left">
             <button className="btn btn-secondary" type="button" onClick={() => openProfileDetail('profile')}>
               <Icon name="edit" />
               {SOCIAL_UI.feed.profile}
             </button>
-            <button className="btn btn-secondary" type="button" disabled={loadingDirectory} onClick={hydrateSocialDirectory}>
+            <button className="btn btn-secondary" type="button" disabled={loadingDirectory} onClick={() => hydrateSocialDirectory(true)}>
               <Icon name="refresh" />
               {loadingDirectory ? SOCIAL_UI.feed.refreshing : SOCIAL_UI.feed.refresh}
             </button>
@@ -84,7 +86,7 @@ export function SocialFeedScreen({
           <span className="flabel">{SOCIAL_UI.feed.activityTitle}</span>
           {!loadingDirectory && activityFeedItems.length === 0 ? <p>{SOCIAL_UI.feed.activityEmpty}</p> : null}
           {!loadingDirectory && activityFeedItems.length > 0 ? (
-            <div className="hub-feed-activity-list" role="list" aria-label="Actividad social">
+            <div className="hub-feed-activity-list" role="list" aria-label={SOCIAL_UI.feed.activityListAria}>
               {groupedActivityFeedItems.map((group, groupIndex) => (
                 <div key={`${group.dayHeader}-${groupIndex}`} className="hub-feed-day-group">
                   <div className="hub-feed-day-header">
@@ -92,6 +94,11 @@ export function SocialFeedScreen({
                   </div>
                   {group.items.map((entry: any) => {
                     const reviewText = entry.reviewText.trim();
+                    const updatedAtDate = new Date(entry.updatedAt || '');
+                    const hasValidUpdatedAt = !Number.isNaN(updatedAtDate.getTime());
+                    const analyzedAtLabel = hasValidUpdatedAt
+                      ? `Analizado el ${updatedAtDate.toLocaleDateString('es-ES', { day: '2-digit' })} de ${updatedAtDate.toLocaleDateString('es-ES', { month: 'long' })} a las ${updatedAtDate.toLocaleTimeString('es-ES', { hour: 'numeric', minute: '2-digit' })}`
+                      : 'Analizado recientemente';
                     const cardTypeClass = entry.type === 'review' ? 'is-review' : 'is-recommendation';
                     const ownershipClass = entry.socialGistId === currentSocialGistId ? 'is-own-activity' : 'is-external-activity';
                     return (
@@ -106,14 +113,11 @@ export function SocialFeedScreen({
                       >
                         <header>
                           <h3>{entry.profileDisplayName}</h3>
+                          <small className="hub-feed-game-subtitle">{entry.gameName}</small>
                         </header>
-                        <p>{SOCIAL_UI.feed.reviewHeadline(entry.gameName)}</p>
+                        <p>{analyzedAtLabel}</p>
                         <StarRating value={Number(entry.rating || 0)} />
-                        {entry.type === 'review' ? (
-                          <p className="hub-feed-review-text" title={reviewText}>{reviewText}</p>
-                        ) : reviewText ? (
-                          <p className="hub-feed-recommendation-text" title={reviewText}>{reviewText}</p>
-                        ) : null}
+                        {reviewText ? <p className="hub-feed-review-text" title={reviewText}>{reviewText}</p> : null}
                       </article>
                     );
                   })}
@@ -122,7 +126,7 @@ export function SocialFeedScreen({
             </div>
           ) : null}
         </div>
-        <div className="hub-feed-toolbar" aria-label="BÃºsqueda y filtros del feed">
+        <div className="hub-feed-toolbar" aria-label={SOCIAL_UI.feed.toolbarAria}>
           <label className="hub-feed-search">
             <span>{SOCIAL_UI.feed.searchLabel}</span>
             <input
@@ -145,7 +149,7 @@ export function SocialFeedScreen({
             <div
               ref={feedRowRef}
               className={`hub-feed-row ${isFeedDragging ? 'is-dragging' : ''}`}
-              aria-label="Feed social"
+              aria-label={SOCIAL_UI.feed.feedRowAria}
               role="group"
               tabIndex={0}
               onMouseDown={handleFeedRowMouseDown}
@@ -163,9 +167,9 @@ export function SocialFeedScreen({
                   <header>
                     <h3>{entry.displayName}</h3>
                   </header>
-                  <p>
+                  <p style={{ whiteSpace: 'pre-line' }}>
                     {entry.favorites.length
-                      ? `${SOCIAL_UI.feed.favoritesPrefix}${entry.favorites.join(', ')}`
+                      ? `${SOCIAL_UI.feed.favoritesPrefix}\n${entry.favorites.join('\n')}`
                       : SOCIAL_UI.feed.noFavorites}
                   </p>
                 </article>

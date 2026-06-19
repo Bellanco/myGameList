@@ -4,6 +4,8 @@ import { HOURS_RANGES } from '../core/constants/uiConfig';
 import { sortEs, uniqueCaseInsensitive } from '../core/utils/compare';
 import { normalizeTag, safeTrim } from '../core/security/sanitize';
 import { loadLocalState, loadLocalStateAsync, normalizeData, saveLocalState } from '../model/repository/localRepository';
+import { markDirty } from '../model/repository/syncStateRepository';
+import { transitionTo } from '../model/repository/syncMachineRepository';
 import type { TabAction as LabelsTabAction } from '../core/constants/labels';
 import type { GameItem, StatusNotice, TabData, TabId, TabSort, ToolbarFilters } from '../model/types/game';
 
@@ -158,6 +160,8 @@ export function useGameListViewModel() {
       setData(normalized);
       setMeta((prev) => ({ ...prev, updatedAt }));
       saveLocalState(payload);
+      markDirty();
+      transitionTo('dirty');
     },
     [meta],
   );
@@ -366,7 +370,7 @@ export function useGameListViewModel() {
         genres: uniqueCaseInsensitive(nextDraft.genres.map(normalizeTag).filter(Boolean)),
         platforms: uniqueCaseInsensitive(nextDraft.platforms.map(normalizeTag).filter(Boolean)),
         steamDeck: nextDraft.steamDeck,
-        review: safeTrim(nextDraft.review, 4000),
+        review: safeTrim(nextDraft.review, 25000),
         score: Math.max(0, Math.min(5, Number(nextDraft.score || 0))),
         years: [...new Set((nextDraft.years || []).map(Number).filter(Number.isFinite))].sort((a, b) => a - b),
         strengths: uniqueCaseInsensitive((nextDraft.strengths || []).map(normalizeTag).filter(Boolean)),

@@ -2,6 +2,7 @@
 import { Icon } from '../Icon';
 import { GameTable } from '../GameTable';
 import type { GameItem, TabId } from '../../../model/types/game';
+import type { SocialSharedGame } from '../../../model/repository/gistRepository';
 
 const TAB_LABELS: Record<TabId, string> = {
   c: 'profileListTabCompleted',
@@ -12,8 +13,20 @@ const TAB_LABELS: Record<TabId, string> = {
 
 /**
  * Pantalla de detalle de perfil social.
- * Presentacional, sin lÃ³gica de negocio.
+ * Presentacional, sin lógica de negocio.
  */
+type SocialProfileDetail = {
+  displayName: string;
+  visibility?: {
+    hiddenTabs?: TabId[];
+    hideReplayable?: boolean;
+    hideRetry?: boolean;
+    hideGameTime?: boolean;
+  };
+  sharedLists?: Partial<Record<TabId, Array<GameItem | SocialSharedGame>>>;
+  favorites?: string[];
+};
+
 export function SocialProfileDetailScreen({
   SOCIAL_UI,
   activeProfileDetail,
@@ -22,7 +35,7 @@ export function SocialProfileDetailScreen({
   statusKind
 }: {
   SOCIAL_UI: any;
-  activeProfileDetail: any;
+  activeProfileDetail: SocialProfileDetail | null;
   onBack: () => void;
   status: string;
   statusKind: string;
@@ -43,7 +56,6 @@ export function SocialProfileDetailScreen({
 
   const currentGames: GameItem[] = useMemo(() => {
     const sharedGames = activeProfileDetail?.sharedLists?.[currentTab] || [];
-
     return sharedGames.map((game: any) => ({
       id: Number(game.id || 0),
       _ts: 0,
@@ -62,9 +74,11 @@ export function SocialProfileDetailScreen({
     }));
   }, [activeProfileDetail, currentTab]);
 
+  const favoriteGames = activeProfileDetail?.favorites || [];
+
   if (!activeProfileDetail) {
     return (
-      <section className="hub-hub hub-screen" aria-label="Social">
+      <section className="hub-hub hub-screen" aria-label={SOCIAL_UI.feed.sectionAria}>
         <div className="hub-hub-card hub-screen-card hub-feed-card-shell">
           <header className="hub-screen-header">
             <div className="hub-hub-title-wrap">
@@ -73,7 +87,7 @@ export function SocialProfileDetailScreen({
             </div>
             <p>{SOCIAL_UI.feed.profileDetailSubtitle}</p>
           </header>
-          <div className="hub-screen-actions hub-screen-actions-split" aria-label="Acciones del detalle de perfil social">
+          <div className="hub-screen-actions hub-screen-actions-split" aria-label={SOCIAL_UI.feed.profileDetailActionsAria}>
             <div className="hub-screen-actions-left">
               <button className="btn btn-secondary" type="button" onClick={onBack}>
                 <Icon name="arrow-back" />
@@ -88,7 +102,7 @@ export function SocialProfileDetailScreen({
     );
   }
   return (
-    <section className="hub-hub hub-screen" aria-label="Social">
+    <section className="hub-hub hub-screen" aria-label={SOCIAL_UI.feed.sectionAria}>
       <div className="hub-hub-card hub-screen-card hub-feed-card-shell">
         <header className="hub-screen-header">
           <div className="hub-hub-title-wrap">
@@ -97,7 +111,7 @@ export function SocialProfileDetailScreen({
           </div>
           <p>{SOCIAL_UI.feed.profileDetailSubtitle}</p>
         </header>
-        <div className="hub-screen-actions hub-screen-actions-split" aria-label="Acciones del detalle de perfil social">
+        <div className="hub-screen-actions hub-screen-actions-split" aria-label={SOCIAL_UI.feed.profileDetailActionsAria}>
           <div className="hub-screen-actions-left">
             <button className="btn btn-secondary" type="button" onClick={onBack}>
               <Icon name="arrow-back" />
@@ -112,9 +126,9 @@ export function SocialProfileDetailScreen({
           <div className="hub-detail-metadata">
             <div className="hub-metadata-section">
               <strong>{SOCIAL_UI.feed.profileFavoritesTitle}</strong>
-              {activeProfileDetail.favorites.length > 0 ? (
+              {favoriteGames.length > 0 ? (
                 <div className="hub-card-row">
-                  {activeProfileDetail.favorites.map((favorite: string) => (
+                  {favoriteGames.map((favorite: string) => (
                     <div key={favorite} className="hub-game-card is-read-only">
                       <span className="hub-game-card-title">{favorite}</span>
                     </div>
@@ -152,9 +166,9 @@ export function SocialProfileDetailScreen({
                     readOnly
                     visibility={{
                       showYears: false,
-                      showReplayable: !Boolean(activeProfileDetail.visibility?.hideReplayable),
-                      showRetry: !Boolean(activeProfileDetail.visibility?.hideRetry),
-                      showHours: !Boolean(activeProfileDetail.visibility?.hideGameTime),
+                      showReplayable: !activeProfileDetail.visibility?.hideReplayable,
+                      showRetry: !activeProfileDetail.visibility?.hideRetry,
+                      showHours: !activeProfileDetail.visibility?.hideGameTime,
                     }}
                   />
                 </>
