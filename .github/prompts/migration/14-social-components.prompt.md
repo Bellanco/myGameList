@@ -1,280 +1,107 @@
 # Prompt 14 — Social UI components
 
+> Adaptado al stack real (React 19 / TS 6 / **SCSS, no Tailwind** / hooks). Diseño destino conservado.
+>
+> **Punto de partida real:** los componentes sociales viven en `src/view/components/socialhub/`
+> (ya existen `SocialFeedScreen`, `SocialProfileScreen`, `SocialProfileDetailScreen`, `SocialDetailScreen`).
+> Los ViewModels son **hooks** (`useSocialFeedViewModel`, `useUserProfileViewModel`), no clases.
+> Los iconos usan `<Icon name="…" />`. Los ids de juego son `number`. No hay `src/components/social/`.
+
 ## Prerequisites
-Prompts 01–13 complete. React 19 + TypeScript 6 + SCSS (no Tailwind).
+Prompts 01–13 completos.
 
 ## Task
-Create all React components for the social hub.
-These components only receive data from ViewModels — they never
-call Gist APIs or Firestore directly.
+Componentes de React para el hub social. Solo reciben datos de los ViewModels (hooks); nunca llaman a la API de gist ni a Firestore.
 
-## Output files
-- `src/components/social/FeedCard.tsx`
-- `src/components/social/FeedList.tsx`
-- `src/components/social/UserProfilePage.tsx`
-- `src/components/social/GameCard.tsx`
-- `src/components/social/GameGrid.tsx`
-- `src/components/social/AvatarHash.tsx`
-- `src/components/social/RatingBadge.tsx`
-- `src/components/social/SnippetText.tsx`
-- `src/components/social/__tests__/FeedCard.test.tsx`
+## Output files (rutas reales)
+- `src/view/components/socialhub/FeedCard.tsx`
+- `src/view/components/socialhub/FeedList.tsx`
+- `src/view/components/socialhub/UserProfilePage.tsx`
+- `src/view/components/socialhub/GameCard.tsx`
+- `src/view/components/socialhub/GameGrid.tsx`
+- `src/view/components/socialhub/AvatarHash.tsx`
+- `src/view/components/socialhub/RatingBadge.tsx`
+- `src/view/components/socialhub/SnippetText.tsx`
+- `tests/unit/FeedCard.test.tsx`
+- estilos en `src/styles/_social.scss` (importado en `index.scss`)
 
----
+## Contrato de datos
+Los componentes reciben `FirestoreFeedCard` o `PublicGame`. **Nunca** un `GameItem` (que tiene campos privados).
+Forzar con TypeScript: pasar un `GameItem` donde se espera `FirestoreFeedCard`/`PublicGame` debe dar **error de compilación**
+(los campos privados son estructuralmente incompatibles).
 
-## Data contract reminder
-
-Components receive `FirestoreFeedCard` or `PublicGame` objects.
-They must never receive or display `Game` objects (which contain private fields).
-
-**Enforce with TypeScript**:
+## `AvatarHash.tsx`
+```tsx
+interface AvatarHashProps { hash: string; displayName: string; size: 'sm'|'md'|'lg'; }
+```
+Color e iniciales deterministas desde el hash; nunca descarga imagen de red.
 ```ts
-// This must cause a type error:
-<FeedCard card={game as FirestoreFeedCard} />
-// Because Game has 'score', 'hours', etc. that FirestoreFeedCard doesn't.
+const hashToColor = (h: string) => `hsl(${parseInt(h.slice(0,6),16)%360}, 60%, 45%)`;
+const hashToInitials = (n: string) => n.split(' ').map(w => w[0]).join('').slice(0,2).toUpperCase();
 ```
 
----
-
-## `src/components/social/AvatarHash.tsx`
-
+## `RatingBadge.tsx`
 ```tsx
-interface AvatarHashProps {
-  hash:        string;     // avatarHash from profile — NOT a URL
-  displayName: string;
-  size:        'sm' | 'md' | 'lg';
-}
+interface RatingBadgeProps { rating: number; size: 'sm'|'md'; }
 ```
+Badge con estrellas (reutilizar `renderStars.ts` de `src/core/utils/`). 1–2 rojo, 3 ámbar, 4–5 verde. `aria-label="Valoración: {rating} de 5"`.
 
-Derives a deterministic color and initials from the hash.
-Never fetches an image URL from the network.
-Renders a colored circle with initials as fallback for all users.
-
-```ts
-function hashToColor(hash: string): string {
-  // Use first 6 chars of hash as HSL hue (0-360)
-  const hue = parseInt(hash.slice(0, 6), 16) % 360;
-  return `hsl(${hue}, 60%, 45%)`;
-}
-function hashToInitials(displayName: string): string {
-  return displayName.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
-}
-```
-
----
-
-## `src/components/social/RatingBadge.tsx`
-
+## `SnippetText.tsx`
 ```tsx
-interface RatingBadgeProps {
-  rating:  number;   // 1–5
-  size:   'sm' | 'md';
-}
+interface SnippetTextProps { snippet: string; hasFullReview: boolean; onReadMore?: () => void; }
 ```
+Muestra el snippet (≤160, nunca review completo). Si `hasFullReview`, enlace "Leer más" que llama `onReadMore` (no descarga nada).
+Indicador visual sutil de que es un avance, no el texto completo.
 
-Renders a star-based badge. 1–2 = red, 3 = amber, 4–5 = green.
-Accessible: include `aria-label="Rating: {rating} out of 5"`.
-
----
-
-## `src/components/social/SnippetText.tsx`
-
-```tsx
-interface SnippetTextProps {
-  snippet:        string;    // ≤160 chars — always a snippet, never full review
-  hasFullReview:  boolean;
-  onReadMore?:    () => void;
-}
-```
-
-Renders the snippet text. If `hasFullReview` is true, shows a "Read more" link.
-**Important**: "Read more" calls `onReadMore` — it does NOT fetch anything itself.
-The parent ViewModel decides what to show in the expanded state.
-
-Add a subtle visual indicator that this is a preview, not the full text.
-
----
-
-## `src/components/social/FeedCard.tsx`
-
+## `FeedCard.tsx`
 ```tsx
 interface FeedCardProps {
-  card:          FirestoreFeedCard;
-  onProfileClick:(profileId: string) => void;
-  onGameClick:   (gameId: string, socialGistId: string) => void;
-  onReadMore:    (card: FirestoreFeedCard) => void;
-  isOwn:         boolean;   // true if card.profileId === currentUser.profileId
+  card: FirestoreFeedCard;
+  onProfileClick: (profileId: string) => void;
+  onGameClick: (gameId: number, socialGistId: string) => void;
+  onReadMore: (card: FirestoreFeedCard) => void;
+  isOwn: boolean;
 }
-
-export function FeedCard(props: FeedCardProps): JSX.Element
 ```
+Usa `<AvatarHash>`, `<RatingBadge>`, `<SnippetText>`. "Hace X días" con función pura (sin librería).
+Avatar/nombre → `onProfileClick(card.profileId)`; nombre del juego → `onGameClick(card.gameId, card.socialGistId)`.
+Si `isOwn`, icono "Editar". `role="article"`, `aria-label="Reseña de {gameName} por {displayName}"`.
+**Nunca** renderiza `score`, `hours`, `review` ni ningún campo privado.
 
-Layout:
-```
-┌──────────────────────────────────────────┐
-│ [Avatar] DisplayName          [Rating]   │
-│          GameName · Genre                │
-│──────────────────────────────────────────│
-│ Snippet text…                            │
-│ [Read more ↗]         [time ago]         │
-└──────────────────────────────────────────┘
-```
-
-Requirements:
-- Uses `<AvatarHash>`, `<RatingBadge>`, `<SnippetText>`.
-- Time ago: relative format ("3 days ago") using a pure function, no library.
-- Avatar and display name are clickable → `onProfileClick(card.profileId)`.
-- Game name is clickable → `onGameClick(card.gameId, card.socialGistId)`.
-- If `isOwn`: show a small "Edit" icon that navigates to the game detail page.
-- Accessible: `role="article"`, `aria-label="Review of {gameName} by {displayName}"`.
-- Never renders `score`, `hours`, `review` (full), or any private field.
-
----
-
-## `src/components/social/FeedList.tsx`
-
+## `FeedList.tsx`
 ```tsx
-interface FeedListProps {
-  viewModel: SocialFeedViewModel;
-}
-
-export function FeedList({ viewModel }: FeedListProps): JSX.Element
+interface FeedListProps { vm: ReturnType<typeof useSocialFeedViewModel>; }
 ```
+Lista de `<FeedCard>`; scroll infinito con `IntersectionObserver` sobre un centinela; skeleton en la primera carga;
+spinner "Cargar más" si `loadingMore`; estado vacío "Aún no hay reseñas"; aviso de error vía `StatusNotice` si `vm.state.error`.
 
-- Renders a list of `<FeedCard>` components.
-- Implements infinite scroll using `IntersectionObserver` on a sentinel element.
-- Shows a skeleton loader for the first load.
-- Shows "Load more" spinner at the bottom when `loadingMore` is true.
-- Shows "No reviews yet" empty state with an illustration.
-- Shows a toast error if `viewModel.state.error` is set.
-
-Skeleton loader: 3 placeholder cards with animated shimmer effect (CSS only).
-
----
-
-## `src/components/social/GameCard.tsx`
-
+## `GameCard.tsx`
 ```tsx
-interface GameCardProps {
-  game:         PublicGame;    // NOT Game — no private fields
-  onGameClick:  (gameId: string) => void;
-  showSnippet:  boolean;
-}
-
-export function GameCard({ game, onGameClick, showSnippet }: GameCardProps): JSX.Element
+interface GameCardProps { game: PublicGame; onGameClick: (gameId: number) => void; showSnippet: boolean; }
 ```
+Badge de pestaña (`TabId`) con las etiquetas reales: `c`=Completado (verde), `v`=En curso (azul), `e`=Excluido (rojo), `p`=Pendiente (gris).
+**No** muestra `score`, `hours`, `steamDeck`, `retry` ni `replayable`.
 
-Layout:
-```
-┌─────────────────────────────┐
-│ GameName                    │
-│ Genres · Platforms          │
-│ [completed] [★ 4]           │
-│                             │
-│ Snippet (if showSnippet)    │
-└─────────────────────────────┘
-```
-
-Status badge colors:
-- `completed` → green
-- `pending` → blue
-- `abandoned` → grey
-- `excluded` → red
-
-Must NOT show `score`, `hours`, `steamDeck`, `retry`, or `replayable`.
-
----
-
-## `src/components/social/GameGrid.tsx`
-
+## `GameGrid.tsx`
 ```tsx
-interface GameGridProps {
-  viewModel:    UserProfileViewModel;
-  filterStatus: GameStatus | 'all';
-}
-
-export function GameGrid({ viewModel, filterStatus }: GameGridProps): JSX.Element
+interface GameGridProps { vm: ReturnType<typeof useUserProfileViewModel>; filterTab: TabId | 'all'; }
 ```
+Grid responsive de `<GameCard>`; filtra por `filterTab` en cliente (datos ya cargados); botón "Cargar más juegos" si `vm.state.hasMoreChunks` → `vm.loadMoreGames()`.
 
-- Renders a responsive grid of `<GameCard>` components.
-- Filters by `filterStatus` client-side (data already loaded from Gist).
-- Shows a "Load more games" button when `viewModel.state.hasMoreChunks`.
-- The button calls `viewModel.loadMoreGames()`.
-
----
-
-## `src/components/social/UserProfilePage.tsx`
-
+## `UserProfilePage.tsx`
 ```tsx
-interface UserProfilePageProps {
-  profileId:    string;
-  socialGistId: string;
-}
-
-export function UserProfilePage(props: UserProfilePageProps): JSX.Element
+interface UserProfilePageProps { profileId: string; socialGistId: string; }
 ```
+Secciones: (1) cabecera con `<AvatarHash>`, nombre, stats; (2) tabs "Juegos" | "Reseñas"; (3) `<GameGrid>` con filtros por `TabId`;
+(4) reseñas como mini `<FeedCard>` desde `ActivityFeedItem`; (5) favoritos (scroll horizontal de `<GameCard>`).
+Carga con `useUserProfileViewModel().load(profileId, socialGistId)`; skeleton mientras carga; si `isOwnProfile`, botón "Editar perfil".
 
-Layout sections:
-1. **Header**: Avatar, display name, stats (completed/reviews/avg rating).
-2. **Tabs**: "Games" | "Reviews"
-3. **Games tab**: `<GameGrid>` with status filter tabs (All / Completed / Abandoned).
-4. **Reviews tab**: list of `ActivityFeedItem` rendered as mini `<FeedCard>`.
-5. **Favorite games** section (horizontal scroll of `<GameCard>`).
-
-Loads data via `UserProfileViewModel.load(profileId, socialGistId)`.
-Shows a skeleton while loading.
-Handles the `isOwnProfile` case: adds an "Edit profile" button.
-
----
-
-## `src/components/social/__tests__/FeedCard.test.tsx`
-
-```tsx
-describe('FeedCard', () => {
-  const card = buildFeedCard({
-    displayName: 'Bellanco',
-    gameName:    'Dispatch',
-    rating:      5,
-    snippet:     'Short snippet',
-    hasFullReview: true,
-  });
-
-  it('renders display name and game name', () => {
-    render(<FeedCard card={card} {...handlers} />);
-    expect(screen.getByText('Bellanco')).toBeInTheDocument();
-    expect(screen.getByText('Dispatch')).toBeInTheDocument();
-  });
-
-  it('does not render review field', () => {
-    const { container } = render(<FeedCard card={card} {...handlers} />);
-    expect(container.textContent).not.toContain('review');
-  });
-
-  it('does not render score or hours', () => {
-    const { container } = render(<FeedCard card={card} {...handlers} />);
-    expect(container.innerHTML).not.toContain('score');
-    expect(container.innerHTML).not.toContain('hours');
-  });
-
-  it('calls onReadMore when Read more is clicked', () => {
-    const onReadMore = vi.fn();
-    render(<FeedCard card={card} onReadMore={onReadMore} {...otherHandlers} />);
-    fireEvent.click(screen.getByText(/read more/i));
-    expect(onReadMore).toHaveBeenCalledWith(card);
-  });
-
-  it('has correct aria-label', () => {
-    render(<FeedCard card={card} {...handlers} />);
-    expect(
-      screen.getByRole('article', { name: /review of dispatch by bellanco/i })
-    ).toBeInTheDocument();
-  });
-});
-```
+## `tests/unit/FeedCard.test.tsx`
+- Renderiza nombre y juego; **no** renderiza `review`/`score`/`hours`; llama `onReadMore(card)` al pulsar "Leer más"; `aria-label` correcto.
 
 ## Constraints
-- No component may import from `src/gist/`, `src/firebase/`, or `src/db/`.
-- All data flows through ViewModel props.
-- `FeedCard` and `GameCard` must have TypeScript compile errors if passed a
-  full `Game` object (private fields must be structurally incompatible).
-- Accessible color contrast ratio ≥ 4.5:1 for all text.
-- All interactive elements have visible focus rings.
+- Ningún componente importa de `src/model/repository/` directamente: los datos llegan por props desde los hooks ViewModel.
+- `FeedCard`/`GameCard` deben dar error de tipos si reciben un `GameItem`.
+- Contraste ≥ 4.5:1; focus rings visibles; jsx-a11y (ESLint) en verde.
+- Estilos en `_social.scss` (SCSS), **sin Tailwind**.
+- `tsc --noEmit` y `npm run test` deben pasar tras este paso.

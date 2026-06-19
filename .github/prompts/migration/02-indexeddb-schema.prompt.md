@@ -1,132 +1,140 @@
-# Prompt 02 — IndexedDB schema (Dexie)
+# Prompt 02 — IndexedDB schema (raw IndexedDB)
+
+> Adaptado al stack real (React 19 / hooks / IndexedDB en crudo / SCSS / Firebase v12). Diseño destino conservado.
+>
+> **Punto de partida real (verificado):** la BD es **`myGameList`, versión 2**, con DOS object stores:
+> `appState` (guarda el `StoragePayload` ENTERO bajo la clave `'latest'` — no por-juego) y `cryptoKeys`.
+> El almacenamiento local usa **IndexedDB en crudo** (sin Dexie) repartido entre `idbConnectionRepository.ts`
+> (conexión + `onupgradeneeded`), `indexedDbRepository.ts` (lecturas/escrituras) y `localRepository.ts`
+> (fallback a localStorage `mis-listas-v12-unified` + legacy v11–v8 con migración automática).
+> `migrateRepository.ts` normaliza nombres de campos legacy (español→inglés).
+>
+> ⚠️ **NO romper los datos locales existentes.** Subir la versión de la BD **2 → 3**, **conservar**
+> `appState` y `cryptoKeys`, y en `onupgradeneeded` **migrar** el `StoragePayload` de `appState['latest']`
+> al nuevo modelo (rellenar el store `games`, `meta`, etc.) **sin borrar** `appState` hasta confirmar la
+> migración. Si los stores nuevos ya existen, no recrearlos.
 
 ## Prerequisites
-Prompt 01 must be complete. Import types from `src/models/`.
+Prompt 01 completo. Importar tipos desde `src/model/types/`.
 
 ## Task
-Create the IndexedDB database definition and all access helpers using Dexie.js.
-This is the local source of truth for the entire app.
+Evolucionar el esquema y los helpers de acceso a IndexedDB usando la **API nativa**
+(`indexedDB.open`, `transaction`, `objectStore`). IndexedDB es la fuente de verdad local.
+**No** añadir Dexie ni ninguna dependencia nueva (regla del proyecto: no añadir deps sin preguntar).
 
-## Output files
-- `src/db/AppDatabase.ts`
-- `src/db/gamesStore.ts`
-- `src/db/metaStore.ts`
-- `src/db/syncQueueStore.ts`
-- `src/db/chunkCacheStore.ts`
-
----
-
-## `src/db/AppDatabase.ts`
-
-Define a Dexie subclass with the following stores:
-
-```
-games
-  Primary key: id (UUID string)
-  Indexes: status, shareLevel, _modified, socialSynced, [status+shareLevel]
-
-meta
-  Primary key: _key (always 'singleton')
-
-syncQueue
-  Primary key: id (UUID string)
-  Indexes: type, createdAt, nextRetry
-
-chunkCache
-  Primary key: gistId (string)
-  Indexes: cachedAt
-
-profileCache
-  Primary key: profileId (string)
-  Indexes: cachedAt
-```
-
-Schema version starts at 1. Add a migration stub from v0 (localStorage) to v1 (IndexedDB):
-- Read the old `mi-lista-v2` key from localStorage if it exists.
-- Parse it and insert all games into the `games` store.
-- Delete the localStorage key after successful migration.
-- If localStorage is empty or parsing fails, proceed silently.
+## Output files (rutas reales)
+- `src/model/repository/idbConnectionRepository.ts` — apertura/versionado/upgrade de la BD (object stores)
+- `src/model/repository/indexedDbRepository.ts`     — helpers de juegos / meta / cola de sync / caché de chunks
+- `src/model/repository/localRepository.ts`         — fallback localStorage + migración del payload legacy
 
 ---
 
-## `src/db/gamesStore.ts`
+## Object stores (BD `myGameList`, versión 3)
 
-Export the following functions. Each takes the Dexie `db` instance as first arg.
+Conservar los existentes y añadir los nuevos:
+```
+appState     (EXISTENTE — conservar)  clave manual 'latest' → StoragePayload entero
+cryptoKeys   (EXISTENTE — conservar)  claves de cifrado (se reutiliza para el token cifrado)
+
+games        keyPath: id (number)   índices: tab, shared, _ts, [tab+shared]
+meta         keyPath: _key ('singleton') → LocalMeta
+syncQueue    keyPath: id (string)   índices: type, createdAt, nextRetry
+chunkCache   keyPath: gistId (string)  índice: cachedAt
+profileCache keyPath: profileId (string)  índice: cachedAt
+conflicts    keyPath: id (string)   índice: gameId, resolved   → SyncConflict (lo usa el paso 06)
+```
+
+Versionado en `onupgradeneeded` (2 → 3):
+- `if (!db.objectStoreNames.contains(name)) db.createObjectStore(...)` para cada store nuevo.
+- **NO** tocar/borrar `appState` ni `cryptoKeys`.
+- **Migrar** el `StoragePayload` de `appState['latest']` al nuevo modelo (poblar `games`, `meta`)
+  dentro del propio upgrade o en un paso de arranque idempotente, **sin** borrar `appState` hasta
+  confirmar. La app debe seguir funcionando aunque la migración a los stores nuevos no haya corrido aún
+  (leer de `appState` como fuente de verdad durante la transición).
+
+Stub de migración legacy (en `localRepository.ts` / `migrateRepository.ts`):
+- Leer el payload legacy de localStorage (`mis-listas-v12-unified` + legacy v11–v8) si existe.
+- Normalizarlo con `migrateRepository.ts` e insertarlo.
+- Conservar el fallback a localStorage (offline-first dual). Si está vacío o falla, continuar en silencio.
+
+---
+
+## Helpers de juegos (en `indexedDbRepository.ts`)
+
+Cada función recibe la conexión (vía `idbConnectionRepository`). Tipos: `GameItem` (no `Game`),
+`id: number`, reloj `_ts`. **No** existe `shareLevel`/`status`: la pertenencia a lista es `TabId`
+(`c|v|e|p`) y el opt-in público es `shared`.
 
 ```ts
-/** Returns all games, sorted by _modified descending */
-getAllGames(db): Promise<Game[]>
+/** Todos los juegos, ordenados por _ts descendente */
+getAllGames(): Promise<GameItem[]>
 
-/** Returns only games with shareLevel 'public', sorted by _modified desc */
-getPublicGames(db): Promise<Game[]>
+/** Solo juegos con shared === true (proyección al canal público), por _ts desc */
+getPublicGames(): Promise<GameItem[]>
 
-/** Returns games modified after a given timestamp */
-getGamesSince(db, since: number): Promise<Game[]>
+/** Juegos modificados después de un timestamp (_ts) */
+getGamesSince(since: number): Promise<GameItem[]>
 
 /**
- * Upsert a game. Increments _v and sets _modified to Date.now().
- * Adds a 'upsertGame' entry to syncQueue automatically.
+ * Upsert de un juego. Fija _ts = Date.now() e incrementa _v.
+ * Encola automáticamente una entrada 'upsertGame' en syncQueue.
  */
-upsertGame(db, game: Omit<Game, '_v' | '_modified' | '_hash'>): Promise<Game>
+upsertGame(game: Omit<GameItem, '_ts' | '_v'>): Promise<GameItem>
 
 /**
- * Soft-delete: removes from games store, adds to a deletedIndex entry in meta,
- * adds a 'deleteGame' syncQueue entry.
+ * Borrado lógico: quita de `games`, añade tombstone a TabData.deleted
+ * (con deletedAt), y encola 'deleteGame' en syncQueue.
  */
-deleteGame(db, id: string): Promise<void>
+deleteGame(id: number): Promise<void>
 
-/** Merge games from a remote chunk. Uses _modified to resolve conflicts. */
-mergeRemoteGames(db, remote: Record<string, Game>): Promise<{ updated: number; skipped: number }>
+/** Merge de juegos remotos (de un chunk). Resuelve conflictos por _ts (más reciente gana). */
+mergeRemoteGames(remote: Record<number, GameItem>): Promise<{ updated: number; skipped: number }>
 
-/** Merge deletedIndex from remote. Removes local games if remote deletedAt > game._modified */
-mergeRemoteDeleted(db, deletedIndex: Record<string, { deletedAt: number }>): Promise<number>
+/** Merge de tombstones remotos. Borra el juego local si remote.deletedAt > game._ts */
+mergeRemoteDeleted(deletedIndex: Record<number, { deletedAt: number }>): Promise<number>
 ```
 
----
+> La lógica de merge canónica vive en `syncRepository.ts` (paso 06); estos helpers la invocan
+> o exponen primitivas atómicas. No dupliques el algoritmo CRDT.
 
-## `src/db/metaStore.ts`
+## Helpers de meta (LocalMeta — en `indexedDbRepository.ts`)
 
 ```ts
-getMeta(db): Promise<LocalMeta | undefined>
-setMeta(db, meta: LocalMeta): Promise<void>
-patchMeta(db, patch: Partial<LocalMeta>): Promise<void>
+getMeta(): Promise<LocalMeta | undefined>
+setMeta(meta: LocalMeta): Promise<void>
+patchMeta(patch: Partial<LocalMeta>): Promise<void>   // lee, fusiona y reescribe en una sola transacción
 ```
 
-`patchMeta` must read the current meta, merge the patch, and write back atomically.
-
----
-
-## `src/db/syncQueueStore.ts`
+## Cola de sync (syncQueue)
 
 ```ts
-enqueue(db, op: Omit<SyncOp, 'id' | 'createdAt' | 'attempts' | 'nextRetry'>): Promise<void>
-getAll(db): Promise<SyncOp[]>
-getPending(db): Promise<SyncOp[]>  // attempts < 3 and nextRetry <= Date.now()
-markFailed(db, id: string): Promise<void>   // increments attempts, sets nextRetry
-clearProcessed(db, ids: string[]): Promise<void>
+enqueue(op: Omit<SyncOp, 'id' | 'createdAt' | 'attempts' | 'nextRetry'>): Promise<void>
+getAllOps(): Promise<SyncOp[]>
+getPendingOps(): Promise<SyncOp[]>   // attempts < 3 y nextRetry <= Date.now()
+markOpFailed(id: string): Promise<void>   // incrementa attempts, fija nextRetry (backoff)
+clearProcessedOps(ids: string[]): Promise<void>
 ```
 
----
-
-## `src/db/chunkCacheStore.ts`
+## Caché de chunks (chunkCache)
 
 ```ts
 interface CachedChunk {
   gistId: string;
-  data: SocialMainFile | SocialChunkFile | GamesMainFile | GamesChunkFile;
+  data: SocialGistData | SocialChunkFile | GamesMainFile | GamesChunkFile;
   etag: string | null;
   cachedAt: number;
 }
 
-getCachedChunk(db, gistId: string): Promise<CachedChunk | undefined>
-setCachedChunk(db, gistId: string, data: unknown, etag: string | null): Promise<void>
-
-/** Evict entries older than maxAgeMs (default 24h) */
-evictStale(db, maxAgeMs?: number): Promise<number>
+getCachedChunk(gistId: string): Promise<CachedChunk | undefined>
+setCachedChunk(gistId: string, data: unknown, etag: string | null): Promise<void>
+evictStaleChunks(maxAgeMs?: number): Promise<number>   // por defecto 24h
 ```
 
 ## Constraints
-- Every store access must be inside a Dexie transaction where multiple writes happen.
-- `mergeRemoteGames` must be atomic — wrap in a single transaction.
-- Export the database instance as a singleton: `export const db = new AppDatabase()`.
-- Add JSDoc on every exported function.
+- API nativa de IndexedDB únicamente (transacciones `readwrite`, `objectStore`, `IDBRequest`). **Sin Dexie.**
+- Toda operación con varias escrituras va dentro de **una** transacción; `mergeRemoteGames` debe ser atómica.
+- Conexión expuesta como singleton a través de `idbConnectionRepository.ts` (reutilizar la apertura, limpiar listeners).
+- Conservar el fallback a localStorage de `localRepository.ts` (offline-first dual).
+- `Date.now()` es válido aquí (código de app, no script de workflow).
+- JSDoc en cada función exportada (convención del proyecto).
+- `tsc --noEmit` debe pasar tras este paso.

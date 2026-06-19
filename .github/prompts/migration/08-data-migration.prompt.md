@@ -1,166 +1,109 @@
 # Prompt 08 — Data migration script
 
+> Adaptado al stack real (React 19 / hooks / IndexedDB / SCSS / Firebase v12). Diseño destino conservado.
+>
+> **Punto de partida real:** el formato de juegos actual **ya** es arrays por pestaña `c|v|e|p` (`TabData`)
+> con reloj `_ts` e `id: number`. La normalización de formas legacy vive en
+> `src/model/repository/migrateRepository.ts`. **No** hay que convertir `id` a UUID: lo que esta migración
+> introduce es el `profileId` público, el **snippet split**, y sacar `githubToken`/`email` de Firestore.
+> **No hay Zustand**: los eventos de UI van por callbacks/Context.
+
 ## Prerequisites
-Prompts 01–07 complete.
+Prompts 01–07 completos.
 
 ## Task
-Create a one-time migration script that transforms existing data
-(old Gist format + current Firestore document) to the new architecture.
-This runs once on first app launch after the update.
+Script one-time que lleva los datos existentes a la arquitectura nueva, en el primer arranque tras la
+actualización. Idempotente y con modo dry-run.
 
-## Output file
-`src/migration/runMigration.ts`
+> ⚠️ **DOS VÍAS INDEPENDIENTES — no acoplar.**
+> - **Vía A (LOCAL/GIST) — se ejecuta para TODOS, incluso sin Google y sin Firestore:** upgrade del esquema
+>   de IndexedDB (`myGameList` v2→v3, conservando `appState`/`cryptoKeys`) y, si se cambia el formato del gist,
+>   el upgrade de formato del gist de juegos. Esta vía **NO** debe requerir sesión Google ni `profileId`.
+> - **Vía B (FIRESTORE/SOCIAL) — solo si hay sesión Google y existe doc antiguo:** generar `profileId`,
+>   reubicar el token (cifrado) a `privateConfig`, normalizar el doc público. Si no hay sesión / no hay doc,
+>   **saltar la vía B por completo** y dejar la app plenamente usable en modo local/gist.
+> - **`profileId` es perezoso:** se genera al activar lo social (vía B), **nunca** en el primer arranque de un
+>   usuario solo-local.
 
----
-
-## Migration steps in order
-
-### Step 0 — Check if migration is needed
-
-```ts
-async function isMigrationNeeded(): Promise<boolean>
-```
-
-- Check IndexedDB for a `migrationVersion` key in the `meta` store.
-- If `migrationVersion >= 3` → already migrated, return false.
-- If old `mi-lista-v2` localStorage key exists → migration needed.
-- If `mi-lista-v2` doesn't exist but the games store is empty → first install, no migration.
-
-### Step 1 — Rotate the GitHub token
-
-```ts
-async function rotateToken(oldMeta: OldLocalStorage): Promise<string>
-```
-
-The current token stored in Firestore is compromised. This step:
-1. Reads the token from the old localStorage or Firestore document.
-2. Prompts the user to input a new GitHub Personal Access Token with `gist` scope.
-   (Show a UI dialog — emit an event to the Zustand store that triggers a modal.)
-3. Validates the new token by making a GET to `https://api.github.com/user`.
-4. Stores the new token in IndexedDB meta only.
-5. Returns the new token.
-
-**This step must block the rest of the migration until the token is provided.**
-
-### Step 2 — Migrate Firestore document
-
-```ts
-async function migrateFirestoreDocument(uid: string, newToken: string): Promise<{
-  profileId: string;
-  socialGistId: string;
-  gamesGistId: string;
-}>
-```
-
-Read the current Firestore document at `/users/{uid}` (old structure).
-Extract the fields we need:
-- `gamesGistId` → move to `/privateConfig/{uid}`
-- `gistId` (profile Gist) → becomes `socialGistId` in `/privateConfig/{uid}`
-- `displayName` → keep in `/users/{profileId}` (new structure)
-
-Then:
-1. Generate a new `profileId` = `crypto.randomUUID()`.
-2. Create `/privateConfig/{uid}` with `{ profileId, gamesGistId, socialGistId, gamesChunks: [], socialChunks: [] }`.
-3. Create `/users/{profileId}` with the cleaned public structure (no private fields).
-4. Delete the fields from the old document: `githubToken`, `email`, `uid`, `gamesGistId`, `gistId`, `etag`, `photoURL`.
-   Use `FieldValue.delete()` for each.
-
-### Step 3 — Migrate games Gist
-
-```ts
-async function migrateGamesGist(gamesGistId: string, token: string): Promise<number>
-```
-
-1. Fetch `games-main.json` from the existing games Gist.
-2. Parse the old format (arrays `c`, `v`, `e`, `p` or the intermediate format from earlier refactors).
-3. For each game:
-   a. Generate a UUID v4 id if the current id is a number.
-   b. Map `status`:
-      - array `c` → `'completed'`
-      - array `v` → `'abandoned'`
-      - array `e` → `'excluded'`
-      - array `p` → `'pending'`
-   c. Set `shareLevel: 'private'` as default (user will opt-in to public).
-   d. Set `_created = _ts`, `_modified = _ts`, `_v = 1`.
-   e. Set `socialSynced = null`.
-   f. Ensure `snippet` is NOT present (remove it if found — it belongs in social layer).
-   g. Ensure `review` is present (copy from `reviewText` if that was the old field name).
-   h. Compute `_hash` = CRC32 of the content fields.
-4. Insert all games into IndexedDB via `upsertGame`.
-5. PATCH the games Gist with the new `games-main.json` format.
-6. Return the count of migrated games.
-
-Old format detection — handle these variants:
-```ts
-function detectOldFormat(raw: unknown): 'arrays' | 'normalized-v1' | 'normalized-v2' | 'unknown'
-```
-- `arrays`: has keys `c`, `v`, `e`, `p` at the root with arrays of games.
-- `normalized-v1`: has a `games` object with integer IDs and a `_list` field.
-- `normalized-v2`: has a `games` object with UUID IDs and a `status` field.
-- `unknown`: throw a migration error asking the user to contact support.
-
-### Step 4 — Create social Gist from scratch
-
-```ts
-async function createSocialGist(profileId: string, token: string, games: Game[]): Promise<string>
-```
-
-1. Create a new **public** Gist via POST to `GIST_API` with an empty `social-main.json`.
-2. Get the new Gist ID.
-3. Call `publishSocial(meta)` to populate it with the current public games.
-   (No games will be public yet — the Gist will have an empty games section. That's correct.)
-4. Store the new `socialGistId` in IndexedDB and `privateConfig`.
-5. Return the new Gist ID.
-
-**Do not create the social Gist from the old profile Gist.**
-The old profile Gist may contain stale data or the wrong format.
-Start fresh and let the user opt-in to sharing each game.
-
-### Step 5 — Mark migration complete
-
-```ts
-async function completeMigration(): Promise<void>
-```
-
-- Set `migrationVersion = 3` in IndexedDB meta.
-- Log `'Migration complete'` to console.
-- Emit a `migrationComplete` event to the Zustand store.
+## Output file (ruta real)
+`src/model/repository/migrateRepository.ts` — extender con el runner y los pasos
+(reutilizar la normalización de formato ya presente). El disparo desde la app se cablea en `App.tsx`/bootstrap (paso 11).
 
 ---
 
-## Migration runner
+## Pasos (en orden, secuenciales)
 
+### 0 — ¿Hace falta migrar? `isMigrationNeeded(): Promise<boolean>`
+- Leer `migrationVersion` del store `meta`. Si `>= 3` → ya migrado, false.
+- Si existe payload legacy en localStorage → migración necesaria.
+- Si no hay legacy y el store `games` está vacío → instalación nueva, false.
+
+### 1 — Token GitHub `ensureToken(oldMeta): Promise<string>` (vía A — sin Google)
+> Hoy el token está en `profiles.social.githubToken` (en claro). El destino lo saca del doc público
+> y lo guarda **cifrado** (decisión tomada: ver paso 2). Esta función NO requiere Google.
+1. Si ya hay token en IndexedDB (`LocalMeta.githubToken`), usarlo.
+2. Si no, e **internamente** hay un token recuperable (de meta legacy), usarlo y guardarlo en IndexedDB.
+3. Solo si no hay ninguno, pedir un PAT nuevo con scope `gist` (modal vía Context/callback, **no Zustand**),
+   validar con GET `https://api.github.com/user`, guardarlo en IndexedDB.
+4. El token vive **siempre** en IndexedDB; el respaldo en Firestore va **cifrado** (paso 2).
+
+### 2 — Migrar doc Firestore `migrateFirestoreDocument(uid): Promise<{ profileId; socialGistId; gamesGistId }>` (vía B — solo con Google)
+**Solo si hay sesión Google y existe `profiles/{uid}` antiguo.** Si no, saltar.
+Leer el doc actual `profiles/{uid}` (con `email`/`uid`/`social.githubToken`/`social.gamesGistId`). Luego:
+1. `profileId = crypto.randomUUID()`.
+2. **Cifrar el token en cliente** con `core/security/crypto.ts` → `encryptedGithubToken`.
+   > Contrato esperado de `crypto.ts`: `encrypt(plaintext: string): Promise<string>` / `decrypt(ciphertext: string): Promise<string>`
+   > usando una clave (WebCrypto AES-GCM) persistida en el store `cryptoKeys` de IndexedDB, **nunca subida**.
+   > Reutilizar las funciones existentes si ya las hay; si no, añadirlas ahí (el store `cryptoKeys` ya existe).
+3. Crear `privateConfig/{uid}` = `{ profileId, gamesGistId, socialGistId, gamesChunks: [], socialChunks: [], encryptedGithubToken }`
+   (token **cifrado**, nunca en claro). Esto preserva la recuperación tras reinstalar (ver paso 11).
+4. Crear/normalizar el índice público `profiles/{profileId}` (`ProfileIndexDoc`, sin campos privados).
+5. Borrar del doc viejo los campos sensibles en claro: `social.githubToken`, `email`, `social.gamesGistId`, `etag` (`deleteField()`).
+> Resultado: Firestore nunca guarda el token en claro; solo el texto cifrado en `privateConfig` (solo dueño).
+
+### 3 — Migrar gist de juegos `migrateGamesGist(gamesGistId, token): Promise<number>`
+1. Traer `myGames.json` del gist actual.
+2. Parsear el formato actual (arrays `c|v|e|p` = `TabData`) — normalizar con `migrateRepository`.
+3. Por cada juego: **conservar `id: number`** (no UUID); conservar `_ts`; fijar `_v = 1` y `shared = false` (opt-in posterior);
+   asegurar que **no** hay `snippet` (es de la capa social); asegurar que `review` está presente.
+4. Insertar en IndexedDB vía `upsertGame`.
+5. PATCH del gist con el `myGames.json` nuevo (`GamesMainFile`).
+6. Devolver el número de juegos migrados.
+
+> La pestaña (`TabId`) ya es `c|v|e|p`; no hay remapeo de estados. `detectFormat()` solo distingue
+> entre el `TabData` plano actual y posibles variantes legacy; si es desconocido, lanzar error guiado.
+
+### 4 — Gist social desde cero `createSocialGist(profileId, token, games): Promise<string>`
+1. POST a `GIST_API` creando un gist **público** con `myGameList.social.json` vacío (`SocialGistData`).
+2. Guardar el `socialGistId` en IndexedDB y `privateConfig`.
+3. `publishSocial(meta)` para poblarlo con los juegos públicos actuales (al inicio ninguno: sección vacía, correcto).
+**No** reconstruir el gist social desde el gist de perfil viejo (puede traer datos rancios): empezar limpio, opt-in por juego.
+
+### 5 — Completar `completeMigration(): Promise<void>`
+- `migrationVersion = 3` en meta; log; emitir evento `migrationComplete` por Context/callback.
+
+---
+
+## Runner
 ```ts
 export async function runMigration(): Promise<MigrationResult>
-
-interface MigrationResult {
-  skipped:         boolean;
-  gamesImported:   number;
-  tokenRotated:    boolean;
-  firestoreCleaned:boolean;
-  errors:          Error[];
-}
+interface MigrationResult { skipped: boolean; gamesImported: number; tokenRotated: boolean; firestoreCleaned: boolean; errors: Error[]; }
 ```
+- Envuelve todos los pasos; ante error no-retryable, detener y guardar `migrationError` en meta (visible al próximo arranque).
+- Pasos 1–5 secuenciales, nunca en paralelo.
 
-- Wraps all steps.
-- If any step throws a non-retryable error, halt and store the error in a `migrationError` key in IndexedDB so the user sees it on next launch.
-- Steps 1–5 must run sequentially — never in parallel.
-
----
-
-## UI integration (not in this file — add a comment pointing to where)
-
-The migration runner emits events that the app shell must handle:
-- `'migration:tokenRequired'` → show the token input modal
-- `'migration:progress'` → update a progress bar with `{ step, total, message }`
-- `'migration:complete'` → dismiss modal, reload app state
-- `'migration:error'` → show error screen with retry button
-
----
+## Integración UI (no en este fichero — solo comentario que apunte dónde)
+Eventos que la app shell maneja (vía Context/estado, no Zustand):
+`migration:tokenRequired`, `migration:progress` `{step,total,message}`, `migration:complete`, `migration:error`.
 
 ## Constraints
-- Never delete data from the games Gist until the IndexedDB write is confirmed.
-- The migration must be idempotent: running it twice must produce the same result.
-- If `migrationVersion` is already 3, return `{ skipped: true }` immediately.
-- Add a `DRY_RUN` mode (env flag `VITE_MIGRATION_DRY_RUN=true`) that logs all
-  operations without writing anything.
+- **Vía A (local/gist) corre para todos**, incluso sin Google/Firestore: incluye el upgrade de IndexedDB
+  `myGameList` v2→v3 (conservando `appState`/`cryptoKeys`, ver paso 02) y, si aplica, el upgrade de formato del gist.
+- **Vía B (Firestore/social) es condicional**: solo si `getCurrentSocialAuthUser()` devuelve usuario y existe doc antiguo.
+- `detectFormat` debe conservar el camino de `migrateData` (nombres legacy español→inglés) y **no** asumir UUID.
+- Nunca borrar datos del gist hasta confirmar la escritura en IndexedDB.
+- Idempotente: ejecutarlo dos veces produce el mismo resultado; si `migrationVersion>=3`, `{ skipped: true }` inmediato.
+- Modo `DRY_RUN` con `import.meta.env.VITE_MIGRATION_DRY_RUN === 'true'`: loguea todo sin escribir.
+  (El script npm `migrate:dry` que lo lanza se añade en el paso 15.)
+- `Date.now()` / `crypto.randomUUID()` válidos aquí (código de app).
+- `tsc --noEmit` debe pasar tras este paso.
