@@ -24,8 +24,11 @@ verify each step, and log progress.
    If it does not exist, create it with all steps marked `pending`.
 3. Check that the following tools are available:
    - `node` (≥ 20), `npm`, `tsc`, `vitest`
-   - Run `node --version && tsc --version`
+   - Run `node --version && npx tsc --version`
    - If any is missing, stop and tell the user what to install.
+   - Note: typecheck is `npx tsc --noEmit` (there is **no** `npm run typecheck` alias until step 15 adds it).
+     The scripts `audit:privacy`, `test:rules`, `migrate:dry` do **not** exist yet either — they are
+     **created** by steps 12, 10/15 and 08/15. Only invoke each after the step that adds it.
 
 ### Critical adaptation rules
 
@@ -47,7 +50,7 @@ Follow this loop:
 ```
 READ   .github/prompts/migration/{N}-*.prompt.md
 IMPLEMENT the output files described in the prompt
-RUN    tsc --noEmit
+RUN    npx tsc --noEmit
 IF typecheck fails:
   FIX the errors (max 3 attempts)
   IF still failing after 3 attempts: PAUSE and ask the user
@@ -61,40 +64,38 @@ PROCEED to step N+1
 
 ### Step-specific rules
 
-**Step 01 (models)**: After generating, verify that:
-- `Game` has no `snippet` field
+**Step 01 (models)**: After generating, verify that (real types in `src/model/types/`):
+- `GameItem` has no `snippet` field (keeps `id: number`, `_ts`; private fields stay here)
 - `PublicGame` has no `review`, `score`, `hours`, `steamDeck`, `retry`, `replayable`
 - `FirestoreFeedCard` has no `review`, `score`, `hours`
-Run a grep check: `grep -rn "snippet" src/model/types/game.ts` must return nothing
-(snippet is derived at publish time, never stored in the Game type).
+Run: `grep -rn "snippet" src/model/types/game.ts` must return nothing
+(snippet is derived at publish time in the social path, never stored on `GameItem`).
 
-**Step 03 (games Gist)**: After generating, verify:
-- Games Gist logic in `src/model/repository/gistRepository.ts` contains no
-  reference to social Gist write functions in the same code path
-- The games Gist path does not call `assertNoReview`
-  (that is only for the social Gist — games Gist stores full review)
+**Step 03 (games Gist)**: After generating, verify (all in `src/model/repository/gistRepository.ts`):
+- The games-Gist code path does not call the social-Gist write functions in the same path
+- The games-Gist path does not call `assertNoPrivateFields`
+  (that guard is only for the social path — the games Gist stores the full review)
 
-**Step 04 (social Gist)**: After generating, verify:
-- `assertNoReview` is called before every social Gist PATCH
-- No `review` field in any object written to social Gist
-- Run: `grep -n '"review"' src/model/repository/gistRepository.ts` in
-  social Gist sections — must return 0 matches in write objects
+**Step 04 (social Gist)**: After generating, verify (in `src/model/repository/gistRepository.ts`):
+- `assertNoPrivateFields` (alias `assertNoReview`) runs before every social-Gist PATCH
+- No `review`/`score`/`hours` in any object written to `myGameList.social.json`
+- Run: `grep -n '"review"' src/model/repository/gistRepository.ts` in the social path
+  — must return 0 matches in write objects
 
-**Step 08 (migration script)**: Before running:
-- Set `VITE_MIGRATION_DRY_RUN=true` in the environment
-- Run `npm run migrate:dry` — must complete without errors
-- Only then mark step 08 complete
+**Step 08 (migration script)**: Before marking complete:
+- The `migrate:dry` script is added in step 15; until then run the dry-run path via the
+  integration test in dry mode (`VITE_MIGRATION_DRY_RUN=true`) — must complete without errors
+- Verify the script keeps `id: number` (no UUID) and never writes `githubToken` to Firestore
 
 **Step 10 (rules)**: After generating `firestore.rules`:
-- Start the emulator: `firebase emulators:start --only firestore &`
-- Run: `npm run test:rules`
-- Stop the emulator
+- Requires `firebase-tools` + `@firebase/rules-unit-testing` (new deps — confirm with the user first)
+- Run: `firebase emulators:exec --only firestore "npm run test:rules"`
 - All tests must pass before marking complete
 
-**Step 12 (audit)**: Run the audit immediately after generation:
-- `npm run audit:privacy`
+**Step 12 (audit)**: After step 12 creates `scripts/audit-privacy.js` + the `audit:privacy` script:
+- Run `npm run audit:privacy`
 - If any Category A violations are found, fix them before proceeding
-  (even if they are in previously generated files)
+  (even in previously generated files). `localStorage` is allowed only in `localRepository.ts`.
 
 ### Parallel steps
 
@@ -140,9 +141,10 @@ to avoid data loss.
 
 ### Final verification
 
-After step 15 is complete:
+After step 15 is complete (all the new scripts now exist):
 1. Run `npm run audit:privacy` — must exit 0.
-2. Run `npm run typecheck` — must exit 0.
+2. Run `npm run typecheck` (alias added in step 15) or `npx tsc --noEmit` — must exit 0.
 3. Run `npm run test:coverage` — coverage must meet thresholds.
-4. Run `npm run build` — must succeed.
-5. Print a summary: "Migration complete. N files generated. M tests passing."
+4. Run `npm run validate` — must pass (ci-validate + html-validate + eslint).
+5. Run `npm run build` — must succeed.
+6. Print a summary: "Migration complete. N files generated. M tests passing."

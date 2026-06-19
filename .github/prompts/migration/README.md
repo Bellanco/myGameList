@@ -1,24 +1,26 @@
-# ⚠️ Future migration prompts — NOT the current architecture
+# Migration prompts — adapted to the real stack (target design still PLANNED)
 
-> **Status: PLANNED / NOT IMPLEMENTED.** Nothing in this folder reflects how the app
-> works today. Do **not** use these prompts as a description of the codebase.
+> **Status:** these 15 numbered prompts (`01`–`15`) have been **adapted to the real codebase**.
+> Paths, stack and npm scripts now target the actual project. They describe the **transformation FROM
+> the current architecture TO a more modern, secure and efficient one** — the target design is the goal,
+> not a description of today's code.
 
-These 15 numbered prompts (`01`–`15`) are a **roadmap for a future redesign**. They were
-drafted against a **different/outdated stack** and reference files, fields, functions and
-npm scripts that **do not exist** in the repository:
+## What the prompts now assume (the real stack)
+- React 19, hooks (`useState`/`useReducer`) + Context (no Zustand), **raw IndexedDB** (no Dexie),
+  SCSS (no Tailwind), Firebase v12 modular, TypeScript 6, Vite 8, Vitest 4. See `../../copilot-instructions.md` §2.
+- Real paths: `src/model/types/`, `src/model/repository/`, `src/viewmodel/`, `src/view/`. See §3.
+- Real model preserved as the starting point: `GameItem` with `id: number` and `_ts` clock, `TabData`
+  buckets `c|v|e|p`, tombstones in `TabData.deleted`. Single-file gists `myGames.json` / `myGameList.social.json`.
 
-- Stack assumed here: React 18, Zustand, Dexie, Tailwind, Firebase v9.
-  **Real stack:** React 19, hooks (`useState`/`useReducer`), raw IndexedDB, SCSS, Firebase v12. See `../../copilot-instructions.md` §2.
-- Paths assumed here: `src/models/`, `src/gist/`, `src/firebase/`, `src/sync/`.
-  **Real paths:** `src/model/types/`, `src/model/repository/`. See `copilot-instructions.md` §3.
-- Concepts assumed here (chunks, `profileId` pseudonym, `snippet` split, Firestore
-  index‑only, `firestore.rules`, per‑item `_v`/`_modified`/`deletedAt`) are **aspirational**.
-  **Real model:** single‑file gists, `uid` used directly, full review stored, single `_ts` clock.
+## What is the TARGET design (introduced by these prompts, not yet in code)
+- **review/snippet split** — public channel stores only a ≤160-char `snippet`, never `review`/`score`/`hours`.
+- **`profileId`** (UUID v4 pseudonym) for all public data instead of `uid`.
+- **Firestore index-only** — token/email out of Firestore (today they ARE stored — §5/§10).
+- **Gist chunking**, **`firestore.rules`** + emulator tests, guards `assertNoPrivateFields`/`toPublicGame`,
+  optional additive per-item `_v`/`deletedAt` (keeping `_ts` as the base clock).
 
 ## How to use them
-Only when explicitly advancing the migration. For each step:
-1. Read the numbered prompt as a **goal**, not a spec.
-2. **Translate every path/stack/field detail to the real project** (`copilot-instructions.md` §2–§7).
-3. Confirm before adding dependencies or changing storage layout.
-
-The companion orchestration agents live in `../../agents/migration/` and carry the same caveats.
+Only when actively advancing the migration. For each step: read the prompt as the goal, implement against
+the real paths/stack, run `npx tsc --noEmit` + `npm run test`, and **confirm before adding any new dependency**
+(`firebase-tools`, `@firebase/rules-unit-testing`, `fake-indexeddb`) or changing storage layout.
+The orchestration agents live in `../../agents/migration/`.

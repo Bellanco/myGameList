@@ -1,180 +1,108 @@
 # Prompt 05 — Firestore repositories
 
+> Adaptado al stack real (React 19 / hooks / IndexedDB / SCSS / Firebase v12 modular). Diseño destino conservado.
+>
+> **Punto de partida real:** todo el acceso a Firebase/Firestore vive en
+> `src/model/repository/firebaseRepository.ts` (Auth Google, colección `profiles` con doc id = uid,
+> colección `recommendations`, Analytics). La inicialización de Firebase es perezosa en `src/main.tsx`.
+> **Hoy `profiles` SÍ guarda `email`/`uid`/`social.githubToken`/`social.gamesGistId`.** Este paso lo
+> reestructura hacia un **índice público (index-only)** identificado por `profileId`, sacando los datos
+> sensibles de Firestore. No existe `src/firebase/`.
+
 ## Prerequisites
-Prompts 01–04 complete. Import from `src/models/FirestoreModels.ts`.
+Prompts 01–04 completos. Importar tipos desde `src/model/types/firestore.ts`.
 
 ## Task
-Create one repository class per Firestore collection.
-All Firestore calls in the entire codebase must go through these repositories.
-No inline `setDoc`, `getDoc`, or `updateDoc` anywhere else.
+Agrupar el acceso a cada colección de Firestore en funciones/objetos repositorio **dentro de
+`firebaseRepository.ts`** (no clases sueltas en `src/firebase/`). Todas las llamadas a Firestore del
+proyecto pasan por aquí: nada de `setDoc`/`getDoc`/`updateDoc` inline en otros módulos.
 
-## Output files
-- `src/firebase/userRepository.ts`
-- `src/firebase/feedRepository.ts`
-- `src/firebase/privateConfigRepository.ts`
-- `src/firebase/firebaseConfig.ts`
-
----
-
-## `src/firebase/firebaseConfig.ts`
-
-Initialize Firebase and export the `db` (Firestore) and `auth` instances.
-Read credentials from `import.meta.env.VITE_FIREBASE_*`.
-Export a `getFirebaseAuth()` helper that returns the current user or throws.
+## Output file (ruta real)
+`src/model/repository/firebaseRepository.ts` — extender con los grupos de funciones de abajo.
+La init de Firebase (credenciales `import.meta.env.VITE_FIREBASE_*`) se mantiene donde está
+(`main.tsx` perezosa + helpers aquí); exponer `getFirebaseAuth()` que devuelve el usuario actual o lanza.
 
 ---
 
-## `src/firebase/userRepository.ts`
+## Grupo Profiles (índice público — `profiles/{profileId}`)
 
 ```ts
-class UserRepository {
-  /**
-   * Creates or fully replaces the public user document.
-   * Validates that no private fields are present before writing.
-   */
-  async upsert(user: FirestoreUser): Promise<void>
-
-  /**
-   * Partial update — only the fields provided are written.
-   * Validates that no private fields are in the patch.
-   */
-  async patch(profileId: string, patch: Partial<FirestoreUser>): Promise<void>
-
-  /**
-   * Reads a public user profile. Returns null if not found or private.
-   */
-  async get(profileId: string): Promise<FirestoreUser | null>
-
-  /**
-   * Updates only the socialChunks array and updatedAt.
-   * Called after a new social overflow chunk is created.
-   */
-  async updateChunks(profileId: string, chunks: ChunkRef[]): Promise<void>
-
-  /**
-   * Updates only the stats sub-object and updatedAt.
-   */
-  async updateStats(profileId: string, stats: FirestoreUser['stats']): Promise<void>
-}
+// Crea/reemplaza el doc público. Valida que no haya campos privados antes de escribir.
+upsertProfileIndex(doc: ProfileIndexDoc): Promise<void>
+// Update parcial; valida que el patch no traiga campos privados.
+patchProfileIndex(profileId: string, patch: Partial<ProfileIndexDoc>): Promise<void>
+// Lee un perfil público. null si no existe o es privado.
+getProfileIndex(profileId: string): Promise<ProfileIndexDoc | null>
+// Actualiza solo socialChunks + updatedAt (tras crear un overflow social).
+updateProfileChunks(profileId: string, chunks: ChunkRef[]): Promise<void>
+// Actualiza solo el subobjeto stats + updatedAt.
+updateProfileStats(profileId: string, stats: ProfileIndexDoc['stats']): Promise<void>
+// Listado/búsqueda del directorio (conserva listSocialDirectory / findSocialProfileByEmail).
+listSocialDirectory(...): Promise<ProfileIndexDoc[]>
 ```
 
-Validation helper (used in `upsert` and `patch`):
+Validación (usada en `upsertProfileIndex` y `patchProfileIndex`):
 ```ts
 const FORBIDDEN_FIELDS = [
   'uid', 'email', 'githubToken', 'gamesGistId',
-  'score', 'hours', 'steamDeck', 'retry', 'replayable',
-  'review', 'photoURL',
+  'score', 'hours', 'steamDeck', 'retry', 'replayable', 'review',
 ] as const;
-
 function assertNoPrivateFields(data: Record<string, unknown>): void {
-  for (const field of FORBIDDEN_FIELDS) {
-    if (field in data) throw new Error(`Forbidden field "${field}" in Firestore write`);
-  }
+  for (const f of FORBIDDEN_FIELDS) if (f in data) throw new Error(`Campo prohibido "${f}" en escritura a Firestore`);
 }
 ```
+Llamar `assertNoPrivateFields` al inicio de toda escritura a `profiles`/`feed`.
 
-Call `assertNoPrivateFields` at the start of `upsert` and `patch`.
+> **Nota:** hay **dos guardas distintas, una por destino** (no son la misma función):
+> - Firestore (aquí): `FORBIDDEN_FIELDS` incluye `uid`/`email`/`githubToken`/`gamesGistId` (además de review/score/…).
+> - Gist social (paso 04): `PRIVATE_FIELDS` solo cubre `review`/`score`/`hours`/`steamDeck`/`retry`/`replayable`.
+> Mantenerlas separadas (p. ej. `assertNoFirestorePrivateFields` vs `assertNoSocialPrivateFields`) para evitar confusión.
 
 ---
 
-## `src/firebase/feedRepository.ts`
+## Grupo Feed (`feed/{reviewId}`)
 
 ```ts
-class FeedRepository {
-  /**
-   * Upsert a feed card. Validates no private fields and snippet ≤ 160 chars.
-   */
-  async upsertCard(card: FirestoreFeedCard): Promise<void>
-
-  /**
-   * Soft-delete: sets status to 'hidden'. Does not remove the document.
-   */
-  async hideCard(reviewId: string): Promise<void>
-
-  /**
-   * Hard-delete: removes the document. Used on consent revocation.
-   */
-  async deleteCard(reviewId: string): Promise<void>
-
-  /**
-   * Paginated feed query. Returns up to `limit` active, non-expired cards
-   * sorted by createdAt descending. Pass the last document snapshot as cursor.
-   */
-  async getPage(limit: number, cursor?: DocumentSnapshot): Promise<{
-    items: FirestoreFeedCard[];
-    nextCursor: DocumentSnapshot | null;
-    hasMore: boolean;
-  }>
-
-  /**
-   * Batch upsert — writes up to 499 cards in a single Firestore batch.
-   * Splits into multiple batches if needed.
-   */
-  async batchUpsert(cards: FirestoreFeedCard[]): Promise<void>
-
-  /**
-   * Delete all cards belonging to a profileId. Used on account deletion.
-   */
-  async deleteAllByProfile(profileId: string): Promise<void>
-}
+upsertFeedCard(card: FirestoreFeedCard): Promise<void>     // valida sin campos privados + snippet ≤ 160
+hideFeedCard(reviewId: string): Promise<void>              // status='hidden' (no borra)
+deleteFeedCard(reviewId: string): Promise<void>            // borrado duro (al revocar consentimiento)
+getFeedPage(limit: number, cursor?: DocumentSnapshot): Promise<{ items: FirestoreFeedCard[]; nextCursor: DocumentSnapshot | null; hasMore: boolean }>
+batchUpsertFeed(cards: FirestoreFeedCard[]): Promise<void> // batches ≤ 499; valida cada tarjeta
+deleteAllFeedByProfile(profileId: string): Promise<void>   // al borrar la cuenta
 ```
-
-Validation in `upsertCard`:
-- `assertNoPrivateFields(card)`
-- `if (card.snippet.length > 160) throw new Error('snippet exceeds 160 chars')`
-- `if ('review' in card) throw new Error('review field forbidden in feed card')`
+Validación en `upsertFeedCard`: `assertNoPrivateFields(card)`, `if (card.snippet.length > 160) throw …`, `if ('review' in card) throw …`.
 
 ---
 
-## `src/firebase/privateConfigRepository.ts`
+## Grupo PrivateConfig (`privateConfig/{uid}` — solo el dueño)
 
 ```ts
-class PrivateConfigRepository {
-  /**
-   * Reads the private config for the current authenticated user.
-   * Uses request.auth.uid match — only the owner can read.
-   */
-  async get(uid: string): Promise<FirestorePrivateConfig | null>
-
-  /**
-   * Creates or replaces the private config.
-   */
-  async set(uid: string, config: FirestorePrivateConfig): Promise<void>
-
-  /**
-   * Adds a new chunk reference to gamesChunks or socialChunks.
-   */
-  async addChunk(uid: string, type: 'games' | 'social', chunk: ChunkRef): Promise<void>
-}
+getPrivateConfig(uid: string): Promise<FirestorePrivateConfig | null>   // request.auth.uid == uid
+setPrivateConfig(uid: string, config: FirestorePrivateConfig): Promise<void>
+addPrivateChunk(uid: string, type: 'games' | 'social', chunk: ChunkRef): Promise<void>
 ```
+> **`privateConfig` guarda ids de gist + chunks + profileId + `encryptedGithubToken`** (token **cifrado**
+> en cliente; Firestore nunca ve el token en claro). El token de uso vive en IndexedDB (`LocalMeta`); el
+> texto cifrado en `privateConfig` solo sirve para **recuperar** tras reinstalar (paso 11). Es el mapa privado
+> uid→profileId. `assertNoPrivateFields` **no** aplica a `privateConfig` (es solo-dueño, no público).
 
 ---
 
-## Security rules reminder (not code — for the developer)
+## Recordatorio de reglas (comentario para el desarrollador, no código)
 
-Add a comment block at the top of each repository file:
-
+Bloque de comentario al inicio del módulo (las reglas reales se escriben en el paso 10):
 ```ts
 /**
- * Security rules for this collection (deploy via Firebase console or CLI):
- *
- * /users/{profileId}:
- *   read: resource.data.private == false && autoExpireAt > now
- *   write: authenticated && isOwner(profileId) && !hasPrivateFields
- *
- * /feed/{reviewId}:
- *   read: status == 'active' && expiresAt > now
- *   write: authenticated && isOwner(profileId prefix) && snippet ≤ 200
- *
- * /privateConfig/{uid}:
- *   read/write: request.auth.uid == uid
+ * profiles/{profileId}:      read: private==false && consent.autoExpireAt>now ; write: isOwner && !privateFields
+ * feed/{reviewId}:           read: status=='active' && expiresAt>now          ; write: isOwner && snippet≤200 && !review
+ * privateConfig/{uid}:       read/write: request.auth.uid == uid
+ * recommendations/{id}:      según destinatario/emisor
  */
 ```
 
----
-
 ## Constraints
-- Export repository instances as singletons.
-- No repository may import from `src/gist/`.
-- All batch operations must split into chunks of ≤ 499 (Firestore batch limit).
-- `batchUpsert` must call `assertNoPrivateFields` on each card.
+- Exportar singletons / funciones; sin acceso inline a Firestore fuera de este módulo.
+- Este módulo no importa de la ruta de gists; coordina el `SyncManager` (paso 06).
+- Operaciones batch en lotes ≤ 499 (límite de Firestore); `batchUpsertFeed` valida cada tarjeta.
+- Auth: solo Google sign-in (conservar `signInWithGoogle`).
+- `tsc --noEmit` debe pasar tras este paso.
