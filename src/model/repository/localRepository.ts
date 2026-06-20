@@ -1,4 +1,5 @@
-import { LEGACY_STORAGE_KEYS, STORAGE_KEY } from '../../core/constants/storageKeys';
+import { STORAGE_KEY } from '../../core/constants/storageKeys';
+import { LEGACY_STORAGE_KEYS } from '../migration/legacyLocalStorage';
 import { migrateData } from './migrateRepository';
 import { loadIndexedDbState, saveIndexedDbState } from './indexedDbRepository';
 import type { GameItem, StoragePayload, TabData } from '../types/game';
