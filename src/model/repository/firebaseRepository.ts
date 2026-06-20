@@ -1,6 +1,6 @@
 import { getApp, getApps, initializeApp, type FirebaseApp } from 'firebase/app';
 import { GoogleAuthProvider, getAuth, setPersistence, browserLocalPersistence, signInWithPopup, signOut, type Auth } from 'firebase/auth';
-import { collection, doc, documentId, getDoc, getDocs, getFirestore, limit, query, serverTimestamp, setDoc, where, type Firestore } from 'firebase/firestore';
+import { collection, deleteField, doc, documentId, getDoc, getDocs, getFirestore, limit, query, serverTimestamp, setDoc, where, type Firestore } from 'firebase/firestore';
 import { decryptFromString, encryptToString } from '../../core/security/crypto';
 import { getOrCreateProfileId } from './indexedDbRepository';
 import type { FirestoreFeedCard, FirestorePrivateConfig, ProfileIndexDoc } from '../types/firestore';
@@ -524,8 +524,15 @@ export async function upsertProfileSocialReferences(input: {
   if (input.githubToken) {
     try {
       await backupGithubToken(input.user.uid, input.githubToken);
+      // Upgrade proactivo: una vez respaldado cifrado, borrar el token en claro LEGACY que perfiles viejos
+      // aún conservan en `profiles.social.githubToken` (merge no lo elimina; deleteField sí).
+      await setDoc(
+        doc(services.firestore, 'profiles', input.user.uid),
+        { social: { githubToken: deleteField() } }, // audit-allow: deleteField() ELIMINA el token en claro legacy, no lo almacena
+        { merge: true },
+      );
     } catch (error) {
-      console.warn('[firebase] No se pudo respaldar el token cifrado:', error instanceof Error ? error.message : error);
+      console.warn('[firebase] No se pudo respaldar/limpiar el token:', error instanceof Error ? error.message : error);
     }
   }
 
