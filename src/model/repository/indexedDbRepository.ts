@@ -160,6 +160,26 @@ export async function getOrCreateProfileId(): Promise<string> {
   return profileId;
 }
 
+/**
+ * 6.2a — Estabiliza el `profileId` entre dispositivos. Dado el `profileId` canónico recuperado de
+ * Firestore (`privateConfig`/`userMap`), lo siembra en `meta` ANTES de que se genere uno local nuevo.
+ * El remoto canónico SIEMPRE gana: si existe y difiere del local, reconcilia (sana dispositivos que ya
+ * hubieran divergido con un UUID aleatorio propio). Como `privateConfig` es un doc único por `uid`, todos
+ * los dispositivos convergen al mismo valor. Si no hay remoto, conserva el local o crea el primero.
+ * Devuelve el `profileId` efectivo.
+ */
+export async function seedProfileIdFromRemote(remoteProfileId: string | null | undefined): Promise<string> {
+  const meta = await getLocalMeta();
+  const local = (meta?.profileId || '').trim();
+  const remote = (remoteProfileId || '').trim();
+  if (remote && remote !== local) {
+    await patchLocalMeta({ profileId: remote });
+    return remote;
+  }
+  if (local) return local;
+  return getOrCreateProfileId();
+}
+
 // Store `games` (v3): cada registro es un GameItem con su pestaña anotada como `_tab`.
 // Aún no es la fuente de verdad (la app sigue en `appState`); lo puebla el runner (paso 08).
 type GameRecord = GameItem & { _tab: TabId };

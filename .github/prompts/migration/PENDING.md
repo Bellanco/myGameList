@@ -11,7 +11,14 @@
 - [ ] **Verificación M3 en navegador** — flujo social completo: gateway→login Google, crear/enlazar gist social, guardar perfil+favoritos+visibilidad, feed/directorio, detalle de actividad y de perfil, arrastre horizontal del feed, sign-out. (No hay test de componente que cubra runtime con datos reales; solo smoke.)
 
 ## B. APLAZADO — requiere verificación en navegador / 2 dispositivos
-- [ ] **6.2a — Estabilizar `profileId` entre dispositivos**: hoy `getOrCreateProfileId()` es UUID aleatorio LOCAL y `establishProfileIdentity` sobrescribe `userMap` con el del dispositivo actual; NADA recupera el profileId de Firestore al login. Hay que recuperarlo de `privateConfig`/`userMap` al iniciar sesión y NO sobrescribir el existente. (Bloquea 6.2b.)
+- [x] **6.2a — Estabilizar `profileId` entre dispositivos** (CÓDIGO HECHO, pendiente verificar en 2 dispositivos):
+      `seedProfileIdFromRemote` (indexedDbRepository) reconcilia el `profileId` local con el remoto canónico (gana el
+      remoto → sana divergencias); `recoverRemoteProfileId`/`getUserMapProfileId`/`resolveStableProfileId`
+      (firebaseRepository) leen `privateConfig.profileId` (fallback `userMap`, ambos owner-readable) ANTES de generar uno
+      local; las 2 escrituras sociales (`upsertProfileSocialReferences`/`ensureProfileByEmail`) usan `resolveStableProfileId`;
+      siembra adicional al login en `recoverGistIdFromGoogle`. Resiliente (Firestore caído → comportamiento local). Tests en
+      `tests/unit/profileIdentity.test.ts`. Verificado tsc/69+2/build/audit A:0 B:0/eslint. ⚠️ **Falta probar en 2 dispositivos
+      reales** que el segundo dispositivo adopta el `profileId` del primero y no lo pisa. (Desbloquea 6.2b.)
 - [ ] **6.2b — uid→profileId en el gist social**: `actorUid→actorProfileId`, `fromUid→fromProfileId`; compat de lectura en `legacySocialFormat.ts` (mapear + migrar la `key` de activity y la ruta `/social/user/:actorUid/...`); extender el schema Zod (6.1) a la forma v2; `schemaVersion: 2`.
 - [ ] **6.2 — `consent`** en el gist social: necesita un **flujo de consentimiento (UX)** que aún no existe; no escribir un bloque hardcodeado.
 - [ ] **6.4 — Delta-sync + escritura granular** (movido de E2): reescribir el camino caliente a `upsertGame`/`deleteGame` + un **consumidor de `syncQueue`**; `appState` deja de ser la fuente del gist. ALTO RIESGO (pérdida de datos) → probar en navegador.

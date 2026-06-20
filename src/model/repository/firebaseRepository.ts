@@ -7,7 +7,7 @@
 // consumidor cambie sus imports.
 import { deleteField, doc, getDoc, serverTimestamp, setDoc } from 'firebase/firestore';
 import { decryptFromString, encryptToString } from '../../core/security/crypto';
-import { getOrCreateProfileId } from './indexedDbRepository';
+import { seedProfileIdFromRemote } from './indexedDbRepository';
 import {
   initializeFirebaseServices,
   isPermissionDeniedError,
@@ -62,7 +62,7 @@ export async function upsertProfileSocialReferences(input: {
   }
 
   const profileName = (input.preferredName || input.user.displayName || input.user.email || '').trim();
-  const profileId = await getOrCreateProfileId();
+  const profileId = await resolveStableProfileId(input.user.uid);
 
   await setDoc(
     doc(services.firestore, 'profiles', input.user.uid),
@@ -187,6 +187,47 @@ export async function establishProfileIdentity(uid: string, profileId: string, g
   }
 }
 
+/** Lee `userMap/{uid}.profileId` (owner-only). Resiliente: cualquier fallo/ausencia → null. */
+export async function getUserMapProfileId(uid: string): Promise<string | null> {
+  try {
+    const services = await initializeFirebaseServices();
+    if (!services || !uid) return null;
+    const snap = await getDoc(doc(services.firestore, 'userMap', uid));
+    if (!snap.exists()) return null;
+    const pid = String((snap.data() as { profileId?: string }).profileId || '').trim();
+    return pid || null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * 6.2a — Recupera el `profileId` canónico desde Firestore: primero `privateConfig/{uid}` (donde lo
+ * deja `establishProfileIdentity`), con fallback a `userMap/{uid}`. Resiliente: permission-denied / offline
+ * / ausencia → null para que el llamador caiga al comportamiento local.
+ */
+export async function recoverRemoteProfileId(uid: string): Promise<string | null> {
+  if (!uid) return null;
+  try {
+    const cfg = await getPrivateConfig(uid);
+    const pid = String(cfg?.profileId || '').trim();
+    if (pid) return pid;
+  } catch {
+    // sigue al fallback de userMap
+  }
+  return getUserMapProfileId(uid);
+}
+
+/**
+ * 6.2a — Resuelve el `profileId` a usar para las escrituras sociales. Reconcilia con el remoto canónico
+ * ANTES de generar uno local nuevo, de modo que todos los dispositivos del mismo usuario converjan al mismo
+ * pseudónimo. Si no hay remoto (primer dispositivo) o Firestore no responde, cae al `profileId` local.
+ */
+export async function resolveStableProfileId(uid: string): Promise<string> {
+  const remote = await recoverRemoteProfileId(uid);
+  return seedProfileIdFromRemote(remote);
+}
+
 /**
  * Garantiza que exista perfil por correo con correo, nombre y gist id.
  */
@@ -221,7 +262,7 @@ export async function ensureProfileByEmail(input: {
   const targetId = existing?.id || input.user.uid;
   const gamesGistId = String(input.gamesGistId || '');
   const githubToken = String(input.githubToken || '');
-  const profileId = await getOrCreateProfileId();
+  const profileId = await resolveStableProfileId(input.user.uid);
   const shouldWriteProfile =
     !existing ||
     !existing.socialEnabled ||

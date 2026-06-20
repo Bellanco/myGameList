@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { SYNC_MESSAGES } from '../core/constants/labels';
-import { findSocialProfileByEmail, getCurrentSocialAuthUser, recoverGithubToken, signInWithGoogle } from '../model/repository/firebaseRepository';
+import { findSocialProfileByEmail, getCurrentSocialAuthUser, recoverGithubToken, resolveStableProfileId, signInWithGoogle } from '../model/repository/firebaseRepository';
 import { mergeCrdt } from '../model/repository/syncRepository';
 import { clearSyncConfig, createGist, getSyncConfig, readGist, saveSyncConfig, whoAmI, writeGist } from '../model/repository/gistRepository';
 import { normalizeData } from '../model/repository/localRepository';
@@ -527,6 +527,10 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
 
     try {
       const user = (await getCurrentSocialAuthUser()) || (await signInWithGoogle());
+
+      // 6.2a: al iniciar sesión, recupera el profileId canónico de Firestore y siémbralo en `meta`
+      // (best-effort) para que este dispositivo NO genere un pseudónimo divergente en el primer guardado.
+      await resolveStableProfileId(user.uid).catch(() => {});
 
       const profile = await findSocialProfileByEmail(user.email);
       const recoveredGistId = String(profile?.gamesGistId || '').trim();
