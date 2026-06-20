@@ -7,6 +7,14 @@ import type { GamesMainFile } from '../types/gist';
 
 const GIST_FILENAME = 'myGames.json';
 const SOCIAL_GIST_FILENAME = 'myGameList.social.json';
+
+/**
+ * Fase C (corte de formato): si está activo, la ESCRITURA del gist de juegos emite el envoltorio
+ * `GamesMainFile` (schemaVersion 3) en lugar del `TabData` plano. La LECTURA ya es retrocompatible
+ * (unwrapGamesFile lee ambos). ⚠️ Mantener en `false` hasta que TODOS los dispositivos tengan la versión
+ * nueva: una versión vieja (sin unwrapGamesFile) no sabría leer el envoltorio. Activar es un cambio de una sola dirección.
+ */
+const ENABLE_GAMES_WRAPPER_WRITE = false;
 const GIST_API_BASE = 'https://api.github.com/gists';
 const SESSION_CACHE_SOCIAL_GIST_PREFIX = 'myGameList.session.socialGist';
 const SESSION_CACHE_PUBLIC_SOCIAL_GIST_PREFIX = 'myGameList.session.publicSocialGist';
@@ -1253,6 +1261,9 @@ export async function writeGist(token: string, gistId: string, payload: TabData)
     throw new Error('Gist ID inválido');
   }
 
+  // Fase C: emitir el envoltorio destino solo si la bandera está activa; si no, TabData plano (retrocompatible).
+  const fileContent = ENABLE_GAMES_WRAPPER_WRITE ? JSON.stringify(buildGamesMainFile(payload)) : JSON.stringify(payload);
+
   const response = await fetch(`${GIST_API_BASE}/${gistId}`, {
     method: 'PATCH',
     headers: {
@@ -1263,7 +1274,7 @@ export async function writeGist(token: string, gistId: string, payload: TabData)
     body: JSON.stringify({
       files: {
         [GIST_FILENAME]: {
-          content: JSON.stringify(payload),
+          content: fileContent,
         },
       },
     }),
