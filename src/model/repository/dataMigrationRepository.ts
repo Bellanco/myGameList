@@ -1,7 +1,6 @@
 import { TAB_IDS, type GameItem } from '../types/game';
 import type { LocalMeta } from '../types/local';
-import { GAMES_STORE } from './idbConnectionRepository';
-import { getLocalMeta, idbPut, patchLocalMeta } from './indexedDbRepository';
+import { getLocalMeta, patchLocalMeta, putGameRecord } from './indexedDbRepository';
 import { loadLocalStateAsync } from './localRepository';
 import { getSyncConfig } from './gistRepository';
 
@@ -51,8 +50,7 @@ export async function runMigration(options: { dryRun?: boolean } = {}): Promise<
         if (!game || !(Number(game.id) > 0)) continue;
         gamesImported += 1;
         if (!dryRun) {
-          // Se anota `_tab` (convención interna) para poder reconstruir TabData desde el store `games`.
-          await idbPut(GAMES_STORE, { ...game, _tab: tab });
+          await putGameRecord(game, tab);
         }
       }
     }
