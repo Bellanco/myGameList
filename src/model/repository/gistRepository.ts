@@ -1,7 +1,7 @@
 import { isValidGistId, isValidGithubToken } from '../../core/security/sanitize';
 import { migrateData } from './migrateRepository';
 import { clampRating, normalizeTimestamp } from '../../core/utils/normalize';
-import { gamesGistNeedsRewrite, unwrapGamesFile } from '../migration/legacyGamesFormat';
+import { assembleChunkedGames, gamesGistNeedsRewrite, unwrapGamesFile } from '../migration/legacyGamesFormat';
 import { pickLegacyReviewText, socialGistNeedsRewrite } from '../migration/legacySocialFormat';
 import { assertValidSocialGist } from '../schemas/socialGistSchema';
 import { TAB_IDS, type TabData, type TabId } from '../types/game';
@@ -10,7 +10,7 @@ import { TAB_IDS, type TabData, type TabId } from '../types/game';
 import {
   assertGistSizeWithinLimit,
   assertNoSocialPrivateFields,
-  buildGamesMainFile,
+  buildGamesFiles,
   buildReviewSnippet,
   leanTabData,
 } from './socialProjection';
@@ -18,9 +18,11 @@ import {
 export {
   assertGistSizeWithinLimit,
   assertNoSocialPrivateFields,
+  buildGamesFiles,
   buildGamesMainFile,
   buildReviewSnippet,
   distributeIntoChunks,
+  gamesChunkFilename,
   leanTabData,
   toPublicGame,
 } from './socialProjection';
@@ -1069,8 +1071,12 @@ export async function readGist(token: string, gistId: string, etag: string | nul
     throw new Error('Invalid JSON in Gist');
   }
 
+  // E4: si el ancla referencia chunks de overflow en el mismo gist, fusiona sus juegos (los ficheros vienen en
+  // la misma respuesta). Para gist plano o de un solo fichero no hace nada (comportamiento actual intacto).
+  const assembled = assembleChunkedGames(parsed, body.files);
+
   return {
-    data: migrateData(unwrapGamesFile(parsed)),
+    data: migrateData(unwrapGamesFile(assembled)),
     etag: response.headers.get('etag'),
     wasLegacy: gamesGistNeedsRewrite(parsed),
   };
@@ -1085,26 +1091,54 @@ export async function writeGist(token: string, gistId: string, payload: TabData)
     throw new Error('Gist ID inválido');
   }
 
-  // Fase C: emitir el envoltorio destino solo si la bandera está activa; si no, TabData plano (retrocompatible).
-  // E1: serialización magra (omite opcionales vacíos) + guarda de tamaño (evita el deadlock al superar el límite de gist).
+  // E1: serialización magra (omite opcionales vacíos) + guarda de tamaño por fichero.
   const lean = leanTabData(payload);
-  const fileContent = ENABLE_GAMES_WRAPPER_WRITE ? JSON.stringify(buildGamesMainFile(lean)) : JSON.stringify(lean);
-  assertGistSizeWithinLimit(fileContent, 'gist de juegos');
+  const headers: Record<string, string> = {
+    Authorization: getGithubAuthHeader(token),
+    'Content-Type': 'application/json',
+    'X-GitHub-Api-Version': '2022-11-28',
+  };
+
+  let files: Record<string, { content: string } | null>;
+
+  if (ENABLE_GAMES_WRAPPER_WRITE) {
+    // E4 (GATED — bandera en false por ahora): envoltorio DESTINO multi-fichero. El ancla lleva el bucket `main`;
+    // el excedente va a ficheros `myGames-chunk-cN.json` del MISMO gist. Cada fichero se mantiene bajo el umbral.
+    const { anchorFile, chunkFiles } = buildGamesFiles(lean);
+    files = {};
+    const anchorContent = JSON.stringify(anchorFile);
+    assertGistSizeWithinLimit(anchorContent, 'gist de juegos (ancla)');
+    files[GIST_FILENAME] = { content: anchorContent };
+    for (const [name, file] of Object.entries(chunkFiles)) {
+      const content = JSON.stringify({ ...file, mainGistId: gistId });
+      assertGistSizeWithinLimit(content, `gist de juegos (${name})`);
+      files[name] = { content };
+    }
+    // Eliminar ficheros chunk obsoletos (existían antes y ya no forman parte del conjunto): listar y poner a null.
+    try {
+      const current = await fetch(`${GIST_API_BASE}/${gistId}`, { headers });
+      if (current.ok) {
+        const currentBody = (await current.json()) as { files?: Record<string, unknown> };
+        for (const name of Object.keys(currentBody.files || {})) {
+          if (/^myGames-chunk-.+\.json$/.test(name) && !(name in files)) {
+            files[name] = null; // null elimina el fichero del gist
+          }
+        }
+      }
+    } catch {
+      // Si no se pudo listar, no borramos obsoletos (no crítico); el PATCH continúa.
+    }
+  } else {
+    // CAMINO ACTUAL (flag OFF) — TabData plano, byte-idéntico al anterior.
+    const fileContent = JSON.stringify(lean);
+    assertGistSizeWithinLimit(fileContent, 'gist de juegos');
+    files = { [GIST_FILENAME]: { content: fileContent } };
+  }
 
   const response = await fetch(`${GIST_API_BASE}/${gistId}`, {
     method: 'PATCH',
-    headers: {
-      Authorization: getGithubAuthHeader(token),
-      'Content-Type': 'application/json',
-      'X-GitHub-Api-Version': '2022-11-28',
-    },
-    body: JSON.stringify({
-      files: {
-        [GIST_FILENAME]: {
-          content: fileContent,
-        },
-      },
-    }),
+    headers,
+    body: JSON.stringify({ files }),
   });
 
   if (!response.ok) {

@@ -4,7 +4,7 @@
 // Extraído de gistRepository.ts (M1) sin cambio de comportamiento.
 import { TAB_IDS, type GameItem, type TabData, type TabId } from '../types/game';
 import type { PublicGame } from '../types/social';
-import type { GamesMainFile } from '../types/gist';
+import type { ChunkRef, GamesChunkFile, GamesMainFile } from '../types/gist';
 
 function checksum32(input: string): string {
   let h = 5381;
@@ -128,6 +128,94 @@ export function buildGamesMainFile(data: TabData): GamesMainFile {
     games,
     deletedIndex,
   };
+}
+
+// E4 (chunking del gist de juegos): tamaño objetivo por fichero antes de repartir el excedente en chunks.
+const GAMES_CHUNK_MAX_KB = 800;
+
+/** Nombre del fichero de overflow dentro del MISMO gist para un `chunkId` dado (decisión: gistId null). */
+export function gamesChunkFilename(chunkId: string): string {
+  return `myGames-chunk-${chunkId}.json`;
+}
+
+function gamesArrayWithTab(data: TabData): Array<GameItem & { _tab: TabId }> {
+  const out: Array<GameItem & { _tab: TabId }> = [];
+  for (const tab of TAB_IDS) {
+    for (const game of data[tab] || []) {
+      if (!game || !(Number(game.id) > 0)) continue;
+      out.push({ ...game, _tab: tab });
+    }
+  }
+  return out;
+}
+
+function toGamesRecord(items: Array<GameItem & { _tab: TabId }>): Record<number, GameItem & { _tab: TabId }> {
+  const rec: Record<number, GameItem & { _tab: TabId }> = {};
+  for (const g of items) rec[g.id] = g;
+  return rec;
+}
+
+function buildDeletedIndex(data: TabData): Record<number, { deletedAt: number; purgeAfter: number }> {
+  const deletedIndex: Record<number, { deletedAt: number; purgeAfter: number }> = {};
+  for (const tomb of data.deleted || []) {
+    if (!tomb || !(Number(tomb.id) > 0)) continue;
+    const ts = Number(tomb.deletedAt ?? tomb._ts) || 0;
+    deletedIndex[tomb.id] = { deletedAt: ts, purgeAfter: ts };
+  }
+  return deletedIndex;
+}
+
+function sizeKB(content: string): number {
+  return Math.round(new Blob([content]).size / 1024);
+}
+
+/**
+ * E4: construye el conjunto de ficheros DESTINO del gist de juegos: el ancla `GamesMainFile` (con el bucket `main`
+ * embebido) + un `GamesChunkFile` por cada bucket de overflow. Reparte por tamaño con `distributeIntoChunks`. El
+ * `chunkIndex` del ancla referencia `main` + cada chunk (gistId null = vive en el mismo gist). Función PURA.
+ * Con pocos juegos solo hay `main` y `chunkFiles` queda vacío (equivalente a un único fichero).
+ */
+export function buildGamesFiles(
+  data: TabData,
+  maxChunkKB: number = GAMES_CHUNK_MAX_KB,
+): { anchorFile: GamesMainFile; chunkFiles: Record<string, GamesChunkFile> } {
+  const generatedAt = Date.now();
+  const buckets = distributeIntoChunks(gamesArrayWithTab(data), maxChunkKB * 1024); // { main, c1, c2, … }
+
+  const mainGames = toGamesRecord(buckets.main || []);
+  const chunkFiles: Record<string, GamesChunkFile> = {};
+  const chunkRefs: ChunkRef[] = [
+    { chunkId: 'main', gistId: null, sizeKB: sizeKB(JSON.stringify(mainGames)), updatedAt: generatedAt },
+  ];
+
+  for (const chunkId of Object.keys(buckets)) {
+    if (chunkId === 'main') continue;
+    const games = toGamesRecord(buckets[chunkId]);
+    const content = JSON.stringify(games);
+    chunkFiles[gamesChunkFilename(chunkId)] = {
+      schemaVersion: 3,
+      fileType: 'games-chunk',
+      chunkId,
+      mainGistId: '', // chunks viven en el MISMO gist (gistId null); se puede sellar en escritura, no es necesario para leer
+      updatedAt: generatedAt,
+      integrity: { algorithm: 'djb2', checksum: checksum32(content), generatedAt },
+      games,
+    };
+    chunkRefs.push({ chunkId, gistId: null, sizeKB: sizeKB(content), updatedAt: generatedAt });
+  }
+
+  const anchorFile: GamesMainFile = {
+    schemaVersion: 3,
+    fileType: 'games-main',
+    updatedAt: data.updatedAt || generatedAt,
+    integrity: { algorithm: 'djb2', checksum: checksum32(JSON.stringify(mainGames)), generatedAt },
+    chunkIndex: { strategy: 'size', maxChunkKB, chunks: chunkRefs },
+    syncMeta: { lamport: 0, updatedAt: generatedAt },
+    games: mainGames,
+    deletedIndex: buildDeletedIndex(data),
+  };
+
+  return { anchorFile, chunkFiles };
 }
 
 const SNIPPET_MAX_CHARS = 160;
