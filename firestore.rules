@@ -1,11 +1,16 @@
 rules_version = '2';
 
 // ============================================================================
-// ⚠️ MODELO DESTINO (index-only) — NO DESPLEGAR TODAVÍA.
-// Estas reglas asumen profiles/{profileId} sin token/email/uid (modelo posterior a la
-// migración). La app ACTUAL escribe profiles/{uid} con email/githubToken/gamesGistId, así que
-// desplegar esto ahora ROMPERÍA la app en producción. Desplegar solo tras el corte index-only,
-// validando antes con el emulador (npm run test:rules). Ver .github/prompts/migration/10.
+// ⚠️ MODELO DESTINO (index-only) — NO DESPLEGAR TAL CUAL TODAVÍA.
+// Estas reglas asumen profiles/{profileId} con campos `private`/`consent`/`socialGistId` planos.
+// La app ACTUAL escribe un doc HÍBRIDO: { uid, profileId, email, displayName, photoURL,
+// social: { gistId, gamesGistId, etag, enabled }, updatedAt } — SIN `private`/`consent`/`socialGistId` plano.
+// Desplegar esto ahora ROMPERÍA la capa social (deniega lecturas: isPublicProfile/consentNotExpired
+// leen campos inexistentes; y creates: hasRequiredProfileFields fallaría). Reconciliar estas reglas con
+// la forma híbrida real ANTES de desplegar. Validar con el emulador (npm run test:rules).
+//
+// PARA HABILITAR LA RECUPERACIÓN DE TOKEN AHORA (sin desplegar todo esto): añade SOLO el bloque
+// `match /privateConfig/{uid}` de abajo a TUS reglas desplegadas actuales. Ver .github/prompts/migration/10.
 // ============================================================================
 
 service cloud.firestore {
