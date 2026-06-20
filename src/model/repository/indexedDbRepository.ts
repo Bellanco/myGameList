@@ -1,6 +1,6 @@
-import type { StoragePayload } from '../types/game';
+import type { GameItem, StoragePayload, TabData, TabId } from '../types/game';
 import type { LocalMeta } from '../types/local';
-import { META_STORE, openSharedDatabase } from './idbConnectionRepository';
+import { GAMES_STORE, META_STORE, openSharedDatabase } from './idbConnectionRepository';
 
 const STORE_NAME = 'appState';
 const STATE_KEY = 'latest';
@@ -148,4 +148,30 @@ export async function patchLocalMeta(patch: Partial<LocalMeta>): Promise<void> {
     tx.onerror = () => reject(tx.error || new Error('patchLocalMeta failed'));
     tx.onabort = () => reject(tx.error || new Error('patchLocalMeta aborted'));
   });
+}
+
+// Store `games` (v3): cada registro es un GameItem con su pestaña anotada como `_tab`.
+// Aún no es la fuente de verdad (la app sigue en `appState`); lo puebla el runner (paso 08).
+type GameRecord = GameItem & { _tab: TabId };
+
+export async function putGameRecord(game: GameItem, tab: TabId): Promise<void> {
+  await idbPut<GameRecord>(GAMES_STORE, { ...game, _tab: tab });
+}
+
+export async function getAllGameRecords(): Promise<GameRecord[]> {
+  return idbGetAll<GameRecord>(GAMES_STORE);
+}
+
+/** Reconstruye un `TabData` a partir del store `games` (agrupando por `_tab`). */
+export async function getGamesAsTabData(): Promise<TabData> {
+  const records = await getAllGameRecords();
+  const data: TabData = { c: [], v: [], e: [], p: [], deleted: [], updatedAt: Date.now() };
+  for (const rec of records) {
+    const tab = rec._tab;
+    if (tab !== 'c' && tab !== 'v' && tab !== 'e' && tab !== 'p') continue;
+    const clean = { ...rec } as Partial<GameRecord>;
+    delete clean._tab;
+    data[tab].push(clean as GameItem);
+  }
+  return data;
 }
