@@ -6,11 +6,20 @@
 > una vez todo migrado, **borrarla sea quitar esos ficheros y sus llamadas**. El plan termina, tras probar,
 > con la **Fase C** activa (gist de juegos en formato nuevo) y la compat eliminada.
 
-## ⚠️ Precondición (innegociable)
-El formato nuevo del gist **no lo puede leer una versión ANTIGUA de la app**. La transformación al leer solo
-cubre "código nuevo ⟶ datos viejos". Por tanto: **actualiza TODOS tus dispositivos a la versión nueva ANTES**
-de activar la escritura del formato nuevo del gist. (Firestore y el gist social son retrocompatibles en ambos
-sentidos porque conservas campos; el riesgo es solo el envoltorio del gist de juegos.)
+## ⚠️ ¿APLICA la Fase 2 (formato nuevo del gist de juegos)? — Casi seguro NO en multiusuario
+La Fase 2 (escribir el envoltorio `GamesMainFile`) **NO es necesaria** para los objetivos de la migración
+(seguridad/privacidad/sync ya están sin ella). Es **solo una optimización** (chunking de gists grandes) y es
+**el único cambio que ROMPE**: una versión ANTIGUA de la app no sabe leer el envoltorio → listas vacías →
+riesgo de pérdida. La transformación al leer solo cubre "código nuevo ⟶ datos viejos", no al revés.
+
+- **App por internet con usuarios en versiones distintas** (tu caso): **NO actives la Fase 2.** Mantén
+  `ENABLE_GAMES_WRAPPER_WRITE = false` indefinidamente. La app escribe el formato PLANO (compatible con todas
+  las versiones) y lee ambos. La migración está completa sin la Fase 2.
+- **Solo si** algún día necesitas chunking de verdad Y controlas todos los lectores de ese gist (p.ej. solo tus
+  dispositivos), entonces sí: actualiza todos primero y activa la bandera.
+
+Nota: el gist SOCIAL (snippet-split, B4/B5) ya cambió y lo leen otros usuarios; ahí la degradación para versiones
+viejas es suave (texto de reseña en blanco), no rompe.
 
 ## Inventario de compatibilidad actual (lo que se aislará y luego se borrará)
 | Pieza | Dónde está hoy | Qué hace |
@@ -52,8 +61,11 @@ Como la compat está aislada, borrar es mecánico. Checklist:
 - [ ] `tsc`/`test`/`build`/`audit` + `test:rules`. Commit "chore: remove legacy migration compat (all data migrated)".
 
 ## Estado final
-Gist de juegos en formato nuevo (Fase C activa) · gist social snippet-only · Firestore con profileId/privateConfig ·
-toda la compat eliminada · un único camino de código.
+- **Multiusuario (recomendado):** gist de juegos en formato PLANO (Fase 2 NO activada) · gist social snippet-only ·
+  Firestore con profileId/privateConfig. La compat de LECTURA (`src/model/migration/`) se queda mientras existan
+  datos viejos; el resto de objetivos (seguridad/privacidad/sync) cumplidos. **La migración se considera terminada aquí.**
+- **Single-user / controlado (opcional):** además, Fase 2 activa (gist juegos en formato nuevo) y, una vez todo
+  migrado, borrar `src/model/migration/*`.
 
 ## Orden recomendado de ejecución
 Fase 1 (aislar, seguro) → desplegar reglas → **actualizar todos los dispositivos** → Fase 2 (escribir nuevo + upgrade proactivo) → Fase 3 (probar en todos) → Fase 4 (borrar compat). 
