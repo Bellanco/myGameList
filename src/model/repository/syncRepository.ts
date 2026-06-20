@@ -1,6 +1,14 @@
 import { TAB_IDS, type GameItem, type TabData } from '../types/game';
 import { normalizeTimestamp } from '../../core/utils/normalize';
 
+/**
+ * E1 (escalabilidad): ventana de retención de tombstones. Un borrado más antiguo que esto se purga del estado
+ * sincronizado SIEMPRE que ya no exista copia viva del item en ningún lado (evita que el array `deleted` infle el
+ * gist indefinidamente). Conservador: 90 días cubren de sobra a un dispositivo que sincroniza con normalidad; solo
+ * un dispositivo offline >90 días podría "revivir" un item borrado.
+ */
+export const TOMBSTONE_RETENTION_MS = 90 * 24 * 60 * 60 * 1000;
+
 function asValidData(data: unknown): TabData {
   const d = (data && typeof data === 'object' ? (data as Partial<TabData>) : {}) as Partial<TabData>;
   const toValidGames = (items: unknown): GameItem[] => {
@@ -69,7 +77,8 @@ export function mergeCrdt(
     ...remoteDeleted.keys(),
   ]);
 
-  const merged: TabData = { c: [], v: [], e: [], p: [], deleted: [], updatedAt: Date.now() };
+  const now = Date.now();
+  const merged: TabData = { c: [], v: [], e: [], p: [], deleted: [], updatedAt: now };
   let localNeedsUpdate = false;
   let remoteNeedsUpdate = false;
 
@@ -84,6 +93,13 @@ export function mergeCrdt(
     const maxItemTs = Math.max(maxLocalTs, maxRemoteTs);
 
     if (maxDelTs > 0 && maxDelTs > maxItemTs) {
+      // E1: purga de tombstones antiguos. Solo si NO hay copia viva en ningún lado (maxItemTs === 0) y el borrado
+      // es anterior a la ventana de retención: se descarta y se marca needsUpdate para que ambos lados lo suelten.
+      if (maxItemTs === 0 && maxDelTs < now - TOMBSTONE_RETENTION_MS) {
+        if (localDeleted.has(id)) localNeedsUpdate = true;
+        if (remoteDeleted.has(id)) remoteNeedsUpdate = true;
+        continue;
+      }
       merged.deleted.push({ id, _ts: maxDelTs });
       // deleted differs from local/remote states
       const ldt = localDeleted.get(id) || 0;
