@@ -42,7 +42,7 @@ export async function runMigration(options: { dryRun?: boolean } = {}): Promise<
 
   try {
     // Fuente de verdad actual: el payload combinado de localStorage + IndexedDB (appState).
-    const payload = await loadLocalStateAsync();
+    const { payload } = await loadLocalStateAsync();
 
     for (const tab of TAB_IDS) {
       const list = (payload[tab] || []) as GameItem[];
