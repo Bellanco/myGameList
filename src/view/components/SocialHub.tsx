@@ -28,6 +28,7 @@ import {
   type SocialAuthUser,
 } from '../../model/repository/firebaseRepository';
 import { loadLocalState } from '../../model/repository/localRepository';
+import { normalizeTimestamp as toSafeTimestamp } from '../../core/utils/normalize';
 import { Icon } from './Icon';
 
 import { SocialProfileScreen } from './socialhub/SocialProfileScreen';
@@ -49,11 +50,6 @@ const isProfileEditorLocked = (mustCreateProfile: boolean, hasBlockingSocialIssu
 
 const isNotFoundGistError = (error: unknown): boolean => {
   return error instanceof Error && /\b404\b/.test(error.message);
-};
-
-const toSafeTimestamp = (value: unknown, fallback: number): number => {
-  const parsed = Number(value);
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
 };
 
 type SocialPanel = 'profile' | 'profile-detail' | 'detail' | 'feed';

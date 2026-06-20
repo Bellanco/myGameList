@@ -1,9 +1,5 @@
 import { TAB_IDS, type GameItem, type TabData } from '../types/game';
-
-function normalizeTimestamp(value: unknown, fallback: number): number {
-  const numeric = Number(value);
-  return Number.isFinite(numeric) && numeric > 0 ? numeric : fallback;
-}
+import { normalizeTimestamp } from '../../core/utils/normalize';
 
 function asValidData(data: unknown): TabData {
   const d = (data && typeof data === 'object' ? (data as Partial<TabData>) : {}) as Partial<TabData>;

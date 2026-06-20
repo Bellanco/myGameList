@@ -1,6 +1,7 @@
 import { GIST_CFG_KEY, SOCIAL_GIST_CFG_KEY } from '../../core/constants/storageKeys';
 import { isValidGistId, isValidGithubToken } from '../../core/security/sanitize';
 import { migrateData } from './migrateRepository';
+import { clampRating, normalizeTimestamp } from '../../core/utils/normalize';
 import { TAB_IDS, type GameItem, type SyncConfig, type TabData, type TabId } from '../types/game';
 import type { PublicGame } from '../types/social';
 import type { GamesMainFile } from '../types/gist';
@@ -550,20 +551,6 @@ function normalizeSocialSharedLists(value: unknown): Partial<Record<TabId, Socia
   });
 
   return output;
-}
-
-function clampRating(value: unknown): number {
-  const numeric = Number(value);
-  if (!Number.isFinite(numeric)) {
-    return 0;
-  }
-
-  return Math.max(0, Math.min(5, numeric));
-}
-
-function normalizeTimestamp(value: unknown, fallback: number): number {
-  const numeric = Number(value);
-  return Number.isFinite(numeric) && numeric > 0 ? numeric : fallback;
 }
 
 function normalizeActivityType(value: unknown): SocialActivityType | null {
