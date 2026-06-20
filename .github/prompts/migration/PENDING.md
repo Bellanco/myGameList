@@ -22,8 +22,18 @@
       juegos propios (fallback local). `readPublicGamesGistById` queda SIN USO → candidato a borrar en Fase 9.
       ⚠️ Verificar en navegador: el detalle de actividad de OTROS usuarios ya no muestra plataformas/géneros (degradación
       index-only intencionada); confirmar que la pantalla se ve bien sin ese bloque.
-- [ ] **Fase 8 — E4** (SIGUIENTE): chunking del gist de juegos (gated, por-usuario, tras E3 + actualizar tus dispositivos): implementar `distributeIntoChunks` de verdad en la escritura + `chunkIndex` + lectura de chunks (extender `unwrapGamesFile`) + poblar `gamesChunks`/`socialChunks` en `privateConfig`. Decisión: chunks como FICHEROS del mismo gist (`gistId: null`).
-- [ ] **Fase 9 — Limpieza**: borrar `src/model/migration/legacy*.ts` + fallbacks (token legacy, lectura plano del gist, claves localStorage viejas) cuando no queden datos ni clientes viejos.
+- [x] **Fase 8 — E4** (IMPLEMENTADA pero GATED `ab1035e`): builder multi-fichero (`buildGamesFiles`), escritura
+      multi-fichero con borrado de chunks obsoletos, ensamblado en lectura (`assembleChunkedGames`), round-trip tests.
+      `ENABLE_GAMES_WRAPPER_WRITE` SIGUE EN `false` → INERTE; camino plano byte-idéntico (64+2 tests verdes).
+      ⏳ **Activar requiere (acción usuario)**: actualizar TODOS tus dispositivos a esta versión + probar en navegador +
+      poner la bandera en `true`. Solo entonces el gist de juegos pasa a multi-fichero. Falta aún: poblar
+      `privateConfig.gamesChunks` con el chunkIndex al escribir (hoy el chunkIndex vive en el ancla; los chunks se
+      reconstruyen al leer el gist, así que no es bloqueante, pero conviene para recuperación tras reinstalar).
+- [ ] **Fase 9 — Limpieza** ⚠️ PREMATURA AHORA: borrar `src/model/migration/legacy*.ts` + fallbacks (token legacy,
+      lectura plano del gist, claves localStorage viejas) SOLO cuando no queden datos ni clientes viejos. Hoy NO se cumple:
+      la bandera de chunking está OFF, 6.2/6.4 aplazados, reglas sin desplegar, sin verificación en navegador. Borrar la
+      compat ahora ROMPERÍA la lectura de datos viejos. → Mantener hasta completar el corte verificado.
+      - Slice SEGURO disponible ya (no depende de migración de datos): borrar `readPublicGamesGistById` (muerto tras E3).
 
 ## D. Notas / deuda menor
 - `myGames.json` en la raíz = **datos reales del usuario** (untracked). NO commitear (`.gitignore` solo cubre `/data/myGames.json`).
