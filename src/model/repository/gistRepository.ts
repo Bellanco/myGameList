@@ -1,7 +1,7 @@
 import { GIST_CFG_KEY, SOCIAL_GIST_CFG_KEY } from '../../core/constants/storageKeys';
 import { isValidGistId, isValidGithubToken } from '../../core/security/sanitize';
 import { migrateData } from './migrateRepository';
-import { TAB_IDS, type SyncConfig, type TabData, type TabId } from '../types/game';
+import { TAB_IDS, type GameItem, type SyncConfig, type TabData, type TabId } from '../types/game';
 
 const GIST_FILENAME = 'myGames.json';
 const SOCIAL_GIST_FILENAME = 'myGameList.social.json';
@@ -25,6 +25,63 @@ const publicGamesGistCacheById = new Map<string, SessionCachedValue<TabData>>();
 const socialGistInFlightByKey = new Map<string, Promise<{ data: SocialGistData; etag: string | null; notModified?: boolean }>>();
 const publicSocialGistInFlightById = new Map<string, Promise<SocialGistData>>();
 const publicGamesGistInFlightById = new Map<string, Promise<TabData>>();
+
+/**
+ * Detecta el envoltorio DESTINO del gist de juegos (`GamesMainFile`: schemaVersion/fileType/games),
+ * frente al formato ACTUAL plano (`TabData` con c/v/e/p).
+ */
+function isGamesMainWrapper(value: unknown): boolean {
+  if (!value || typeof value !== 'object') return false;
+  const o = value as Record<string, unknown>;
+  if (o.fileType === 'games-main') return true;
+  return typeof o.schemaVersion === 'number' && 'games' in o && !('c' in o) && !('v' in o);
+}
+
+/**
+ * Lectura retrocompatible: si el contenido del gist viene en el formato DESTINO (envoltorio
+ * `GamesMainFile`/chunking), lo "desenvuelve" a un `TabData` plano ANTES de `migrateData`.
+ * Para el formato ACTUAL (TabData plano) o legacy, lo devuelve tal cual.
+ * Salvaguarda anti-pérdida: si el envoltorio traía juegos pero ninguno se pudo ubicar, lanza
+ * en vez de devolver listas vacías (evita sobrescribir el gist con datos vacíos).
+ */
+export function unwrapGamesFile(parsed: unknown): unknown {
+  if (!isGamesMainWrapper(parsed)) return parsed;
+
+  const o = parsed as {
+    games?: Record<string, GameItem & { _tab?: TabId }>;
+    deletedIndex?: Record<string, { deletedAt?: number } | undefined>;
+    updatedAt?: number;
+  };
+
+  const buckets: TabData = { c: [], v: [], e: [], p: [], deleted: [], updatedAt: Number(o.updatedAt) || Date.now() };
+  const games = o.games || {};
+  let placed = 0;
+
+  for (const key of Object.keys(games)) {
+    const game = games[key];
+    if (!game) continue;
+    const tab = game._tab;
+    if (tab !== 'c' && tab !== 'v' && tab !== 'e' && tab !== 'p') continue; // sin tab no se puede ubicar
+    const clean = { ...game } as GameItem & { _tab?: TabId };
+    delete clean._tab;
+    buckets[tab].push(clean);
+    placed += 1;
+  }
+
+  const deletedIndex = o.deletedIndex || {};
+  for (const key of Object.keys(deletedIndex)) {
+    const id = Number(key);
+    if (!(id > 0)) continue;
+    const ts = Number(deletedIndex[key]?.deletedAt) || 0;
+    buckets.deleted.push({ id, _ts: ts, deletedAt: ts });
+  }
+
+  if (Object.keys(games).length > 0 && placed === 0) {
+    throw new Error('Gist en formato games-main no reconstruible (faltan tabs); se aborta para no perder datos');
+  }
+
+  return buckets;
+}
 
 export interface SocialGistProfile {
   name: string;
@@ -975,7 +1032,7 @@ export async function readPublicGamesGistById(gistId: string, token: string | nu
     let normalized = migrateData({});
     if (raw) {
       try {
-        normalized = migrateData(JSON.parse(raw));
+        normalized = migrateData(unwrapGamesFile(JSON.parse(raw)));
       } catch {
         normalized = migrateData({});
       }
@@ -1078,7 +1135,7 @@ export async function readGist(token: string, gistId: string, etag: string | nul
   }
 
   return {
-    data: migrateData(parsed),
+    data: migrateData(unwrapGamesFile(parsed)),
     etag: response.headers.get('etag'),
   };
 }
