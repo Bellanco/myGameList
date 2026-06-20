@@ -6,6 +6,8 @@
 > 📋 **Mejoras de calidad/seguridad/rendimiento (revisión global 2026-06-21):** ver
 > [`CODE-REVIEW-IMPROVEMENTS.md`](./CODE-REVIEW-IMPROVEMENTS.md) — lista priorizada de "futuros" (C1-C5 críticos,
 > seguridad del token, robustez de sync, perf React, a11y, refactors, tests). Distinta de este PENDING (corte de migración).
+> 🔌 **Integraciones para enriquecer (fuentes de datos + librerías):** ver [`INTEGRATIONS.md`](./INTEGRATIONS.md)
+> — RAWG + Cloudflare Worker para autocompletar metadatos/carátulas; librerías mapeadas a hallazgos (react-hook-form, Radix Dialog, vite-plugin-pwa…).
 
 ## RESUMEN — qué está hecho y qué queda
 **✅ HECHO y subido a `develop` (verde en CI):** toda la base previa (E1·M1·M2·M3·M4a·E2-base·F6.1·F6.3·E3) +
