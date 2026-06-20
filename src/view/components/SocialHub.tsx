@@ -712,7 +712,9 @@ export const SocialHub = memo(function SocialHub() {
         (socialRead.data.profile.recommendations || []).length > 0 ||
         (socialRead.data.recommendations || []).length > 0;
 
-      if (hasLegacySharedLists || hasLegacyRecommendations) {
+      // Upgrade proactivo: reescribir también si el remoto conserva texto de reseña legacy (review/reviewText),
+      // para dejar el gist social en formato index-only (solo snippet) sin esperar a una nueva publicación.
+      if (hasLegacySharedLists || hasLegacyRecommendations || socialRead.wasLegacy) {
         const cleanedPayload = {
           ...socialRead.data,
           profile: {
