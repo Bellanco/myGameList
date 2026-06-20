@@ -132,8 +132,10 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
 
         if (merged.localNeedsUpdate) setData(merged.merged);
 
+        // Upgrade proactivo: si el remoto estaba en formato viejo, reescribirlo en el actual aunque el merge
+        // no requiera cambios (así el gist queda migrado al primer sync, sin esperar a una edición).
         let writeOutcome: WriteOutcome = { data: merged.merged, etag: remote.etag || null, remoteUpdatedAt: remoteData.updatedAt };
-        if (merged.remoteNeedsUpdate) {
+        if (merged.remoteNeedsUpdate || remote.wasLegacy) {
           writeOutcome = await writeWithConflictRecovery(config.token, config.gistId, merged.merged, Date.now());
         }
 
@@ -218,7 +220,7 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
       }
 
       let writeOutcome: WriteOutcome = { data: merged.merged, etag: remote.etag || null, remoteUpdatedAt: remoteData.updatedAt };
-      if (merged.remoteNeedsUpdate) {
+      if (merged.remoteNeedsUpdate || remote.wasLegacy) {
         writeOutcome = await writeWithConflictRecovery(cleanToken, cleanGistId, merged.merged, Date.now());
       }
 
@@ -283,9 +285,9 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
         lastRemoteUpdatedAt: remoteData.updatedAt,
       };
 
-      // Write remote only when needed
+      // Write remote only when needed (o si el remoto estaba en formato viejo → upgrade proactivo)
       let writeOutcome: WriteOutcome = { data: merged.merged, etag: nextMeta.etag, remoteUpdatedAt: nextMeta.lastRemoteUpdatedAt };
-      if (merged.remoteNeedsUpdate) {
+      if (merged.remoteNeedsUpdate || remote.wasLegacy) {
         writeOutcome = await writeWithConflictRecovery(config.token, config.gistId, merged.merged, nextMeta.updatedAt);
       }
 
@@ -380,7 +382,7 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
       if (merged.localNeedsUpdate) setData(merged.merged);
 
       let writeOutcome: WriteOutcome = { data: merged.merged, etag: remote.etag || null, remoteUpdatedAt: remoteData.updatedAt };
-      if (merged.remoteNeedsUpdate) {
+      if (merged.remoteNeedsUpdate || remote.wasLegacy) {
         writeOutcome = await writeWithConflictRecovery(config.token, config.gistId, merged.merged, Date.now());
       }
 

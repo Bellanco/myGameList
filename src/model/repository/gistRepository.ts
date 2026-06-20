@@ -2,8 +2,8 @@ import { GIST_CFG_KEY, SOCIAL_GIST_CFG_KEY } from '../../core/constants/storageK
 import { isValidGistId, isValidGithubToken } from '../../core/security/sanitize';
 import { migrateData } from './migrateRepository';
 import { clampRating, normalizeTimestamp } from '../../core/utils/normalize';
-import { unwrapGamesFile } from '../migration/legacyGamesFormat';
-import { pickLegacyReviewText } from '../migration/legacySocialFormat';
+import { gamesGistNeedsRewrite, unwrapGamesFile } from '../migration/legacyGamesFormat';
+import { pickLegacyReviewText, socialGistNeedsRewrite } from '../migration/legacySocialFormat';
 import { TAB_IDS, type GameItem, type SyncConfig, type TabData, type TabId } from '../types/game';
 import type { PublicGame } from '../types/social';
 import type { GamesMainFile } from '../types/gist';
@@ -35,7 +35,7 @@ type SessionCachedValue<T> = {
 const socialGistCacheById = new Map<string, SessionCachedValue<SocialGistData>>();
 const publicSocialGistCacheById = new Map<string, SessionCachedValue<SocialGistData>>();
 const publicGamesGistCacheById = new Map<string, SessionCachedValue<TabData>>();
-const socialGistInFlightByKey = new Map<string, Promise<{ data: SocialGistData; etag: string | null; notModified?: boolean }>>();
+const socialGistInFlightByKey = new Map<string, Promise<{ data: SocialGistData; etag: string | null; notModified?: boolean; wasLegacy?: boolean }>>();
 const publicSocialGistInFlightById = new Map<string, Promise<SocialGistData>>();
 const publicGamesGistInFlightById = new Map<string, Promise<TabData>>();
 
@@ -396,6 +396,8 @@ export interface GistReadResponse {
   notModified?: boolean;
   data?: TabData;
   etag?: string | null;
+  /** Upgrade proactivo: el remoto estaba en formato viejo; el ciclo de sync debe reescribirlo en el actual. */
+  wasLegacy?: boolean;
 }
 
 function getEmptySocialGistData(): SocialGistData {
@@ -843,7 +845,7 @@ async function isPublicSocialGistAccessible(gistId: string): Promise<boolean> {
   }
 }
 
-export async function readSocialGist(token: string, gistId: string, etag: string | null = null): Promise<{ data: SocialGistData; etag: string | null; notModified?: boolean }> {
+export async function readSocialGist(token: string, gistId: string, etag: string | null = null): Promise<{ data: SocialGistData; etag: string | null; notModified?: boolean; wasLegacy?: boolean }> {
   if (!isValidGithubToken(token)) {
     throw new Error('Formato de token inválido');
   }
@@ -908,9 +910,10 @@ export async function readSocialGist(token: string, gistId: string, etag: string
       }
 
       try {
-        const normalizedFresh = normalizeSocialGistData(JSON.parse(rawFresh));
+        const parsedFresh = JSON.parse(rawFresh);
+        const normalizedFresh = normalizeSocialGistData(parsedFresh);
         saveSocialGistCache(gistId, normalizedFresh, responseEtagFresh);
-        return { data: normalizedFresh, etag: responseEtagFresh };
+        return { data: normalizedFresh, etag: responseEtagFresh, wasLegacy: socialGistNeedsRewrite(parsedFresh) };
       } catch {
         const empty = getEmptySocialGistData();
         saveSocialGistCache(gistId, empty, responseEtagFresh);
@@ -935,11 +938,13 @@ export async function readSocialGist(token: string, gistId: string, etag: string
     }
 
     try {
-      const normalized = normalizeSocialGistData(JSON.parse(raw));
+      const parsed = JSON.parse(raw);
+      const normalized = normalizeSocialGistData(parsed);
       saveSocialGistCache(gistId, normalized, responseEtag);
       return {
         data: normalized,
         etag: responseEtag,
+        wasLegacy: socialGistNeedsRewrite(parsed),
       };
     } catch {
       const empty = getEmptySocialGistData();
@@ -1181,6 +1186,7 @@ export async function readGist(token: string, gistId: string, etag: string | nul
   return {
     data: migrateData(unwrapGamesFile(parsed)),
     etag: response.headers.get('etag'),
+    wasLegacy: gamesGistNeedsRewrite(parsed),
   };
 }
 

@@ -65,3 +65,40 @@ export function unwrapGamesFile(parsed: unknown): unknown {
 
   return buckets;
 }
+
+/**
+ * Claves de juego en español/legacy que `migrateData` normaliza a su equivalente nuevo (EN).
+ * Su presencia indica que el contenido remoto NO está en el formato actual y debe reescribirse.
+ */
+const LEGACY_GAME_KEYS = [
+  'nombre', 'plataformas', 'plataforma', 'generos', 'genero', 'puntuacion', 'reseña',
+  'razones', 'razon', 'horas', 'años', 'pf', 'pd', 'steam_deck', 'volver', 'rejugabilidad',
+] as const;
+
+/**
+ * Condicional de upgrade proactivo del gist de juegos: ¿el contenido remoto está en una forma VIEJA
+ * que conviene reescribir al formato actual (plano, campos EN)? Devuelve `true` si:
+ *  - viene en el envoltorio `GamesMainFile` (con la escritura en plano, se rebaja a plano legible por todos), o
+ *  - algún juego carece de `name` o conserva claves legacy en español.
+ * Es puro y opera sobre el RAW parseado (antes de `unwrapGamesFile`/`migrateData`). Cuando el gist ya está
+ * en formato actual devuelve `false`, de modo que no genera reescrituras innecesarias.
+ */
+export function gamesGistNeedsRewrite(parsed: unknown): boolean {
+  if (!parsed || typeof parsed !== 'object') return false;
+  if (isGamesMainWrapper(parsed)) return true;
+
+  const o = parsed as Record<string, unknown>;
+  for (const tab of ['c', 'v', 'e', 'p'] as const) {
+    const arr = o[tab];
+    if (!Array.isArray(arr)) continue;
+    for (const item of arr) {
+      if (!item || typeof item !== 'object') continue;
+      const game = item as Record<string, unknown>;
+      if (!('name' in game)) return true;
+      for (const key of LEGACY_GAME_KEYS) {
+        if (key in game) return true;
+      }
+    }
+  }
+  return false;
+}

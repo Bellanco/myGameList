@@ -6,7 +6,8 @@ import {
   distributeIntoChunks,
   toPublicGame,
 } from '../../src/model/repository/gistRepository';
-import { unwrapGamesFile } from '../../src/model/migration/legacyGamesFormat';
+import { gamesGistNeedsRewrite, unwrapGamesFile } from '../../src/model/migration/legacyGamesFormat';
+import { socialGistNeedsRewrite } from '../../src/model/migration/legacySocialFormat';
 import { decryptFromString, encryptToString } from '../../src/core/security/crypto';
 import type { GameItem, TabData } from '../../src/model/types/game';
 
@@ -95,6 +96,54 @@ describe('unwrapGamesFile (lectura retrocompatible)', () => {
   it('salvaguarda anti-pérdida: lanza si el envoltorio trae juegos sin tab ubicable', () => {
     const wrapper = { schemaVersion: 3, fileType: 'games-main', games: { 1: makeGame({ id: 1 }) } };
     expect(() => unwrapGamesFile(wrapper)).toThrow();
+  });
+});
+
+describe('gamesGistNeedsRewrite (condicional de upgrade proactivo)', () => {
+  it('false para un gist plano ya en formato actual (campos EN)', () => {
+    const flat: TabData = { c: [makeGame()], v: [], e: [], p: [], deleted: [], updatedAt: 5 };
+    expect(gamesGistNeedsRewrite(flat)).toBe(false);
+  });
+
+  it('true si viene en el envoltorio GamesMainFile (se rebaja a plano)', () => {
+    const wrapper = { schemaVersion: 3, fileType: 'games-main', games: {}, updatedAt: 1 };
+    expect(gamesGistNeedsRewrite(wrapper)).toBe(true);
+  });
+
+  it('true si un juego conserva claves legacy en español', () => {
+    const legacy = { c: [{ id: 1, nombre: 'Viejo', puntuacion: 5 }], v: [], e: [], p: [] };
+    expect(gamesGistNeedsRewrite(legacy)).toBe(true);
+  });
+
+  it('true si un juego carece de name', () => {
+    const legacy = { c: [{ id: 1, platforms: ['Steam'] }], v: [], e: [], p: [] };
+    expect(gamesGistNeedsRewrite(legacy)).toBe(true);
+  });
+
+  it('false para valores no-objeto', () => {
+    expect(gamesGistNeedsRewrite(null)).toBe(false);
+    expect(gamesGistNeedsRewrite('x')).toBe(false);
+  });
+});
+
+describe('socialGistNeedsRewrite (condicional de upgrade proactivo social)', () => {
+  it('false si activity ya es snippet-only', () => {
+    const data = { activity: [{ gameId: 1, snippet: 'corto' }], recommendations: [] };
+    expect(socialGistNeedsRewrite(data)).toBe(false);
+  });
+
+  it('true si activity conserva el texto de reseña completo legacy (reviewText)', () => {
+    const data = { activity: [{ gameId: 1, reviewText: 'reseña completa' }] };
+    expect(socialGistNeedsRewrite(data)).toBe(true);
+  });
+
+  it('true si recommendations conserva review legacy', () => {
+    const data = { recommendations: [{ id: 1, review: 'texto' }] };
+    expect(socialGistNeedsRewrite(data)).toBe(true);
+  });
+
+  it('false para valores no-objeto', () => {
+    expect(socialGistNeedsRewrite(null)).toBe(false);
   });
 });
 
