@@ -34,3 +34,6 @@ logs
 
 # Ignorar generados por GitHub Actions
 .github/workflows/*.retry
+
+# Privacy audit report (generated)
+audit-report.json
