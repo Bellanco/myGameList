@@ -5,7 +5,7 @@ import { mergeCrdt } from '../model/repository/syncRepository';
 import { clearSyncConfig, createGist, getSyncConfig, readGist, saveSyncConfig, whoAmI, writeGist } from '../model/repository/gistRepository';
 import { normalizeData } from '../model/repository/localRepository';
 import { clearDirty, loadSyncDirtyState } from '../model/repository/syncStateRepository';
-import { canRead, canWrite, getBackoffMs, getNextReadDelayMs, getSyncState, subscribeSyncState, transitionTo, canReadNow } from '../model/repository/syncMachineRepository';
+import { canRead, getBackoffMs, getNextReadDelayMs, getSyncState, subscribeSyncState, transitionTo, canReadNow } from '../model/repository/syncMachineRepository';
 import { TAB_IDS, type GameItem, type TabData, type TabId } from '../model/types/game';
 
 export type SyncStatus = 'idle' | 'syncing' | 'ok' | 'error';
@@ -227,6 +227,12 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
 
         const remote = await readGist(config.token, config.gistId, config.etag);
         if (remote.notModified) {
+          // Aunque el remoto no haya cambiado (304), si hay cambios locales pendientes hay que
+          // empujarlos: de lo contrario una edición en este dispositivo nunca llegaría a los demás.
+          const dirtyState = loadSyncDirtyState();
+          if (dirtyState.isDirty) {
+            await writeWithConflictRecovery(config.token, config.gistId, getData(), Date.now());
+          }
           transitionTo('idle', { lastReadAt: Date.now(), errorCount: 0, pendingAction: null });
           setStatus('ok');
           return;
@@ -243,7 +249,7 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
         if (merged.localNeedsUpdate) setData(merged.merged);
 
         let writeOutcome: WriteOutcome = { data: merged.merged, etag: remote.etag || null, remoteUpdatedAt: remoteData.updatedAt };
-        if (merged.remoteNeedsUpdate && canWrite()) {
+        if (merged.remoteNeedsUpdate) {
           writeOutcome = await writeWithConflictRecovery(config.token, config.gistId, merged.merged, Date.now());
         }
 
@@ -364,6 +370,11 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
       const remote = await readGist(config.token, config.gistId, config.etag);
       if (remote.notModified) {
         setLastRemoteChangesApplied(0);
+        // Empujar cambios locales pendientes aunque el remoto no haya cambiado (propagación cross-device).
+        const dirtyState = loadSyncDirtyState();
+        if (dirtyState.isDirty) {
+          await writeWithConflictRecovery(config.token, config.gistId, getData(), Date.now());
+        }
         transitionTo('idle', { lastReadAt: Date.now(), errorCount: 0, pendingAction: null });
         setStatus('ok');
         return;
@@ -465,7 +476,7 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
       if (remote.notModified) {
         setLastRemoteChangesApplied(0);
         const dirtyState = loadSyncDirtyState();
-        if (dirtyState.isDirty && canWrite()) {
+        if (dirtyState.isDirty) {
           await writeWithConflictRecovery(config.token, config.gistId, getData(), Date.now());
         }
         transitionTo('idle', { lastReadAt: Date.now(), errorCount: 0, pendingAction: null });
@@ -485,7 +496,7 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
       if (merged.localNeedsUpdate) setData(merged.merged);
 
       let writeOutcome: WriteOutcome = { data: merged.merged, etag: remote.etag || null, remoteUpdatedAt: remoteData.updatedAt };
-      if (merged.remoteNeedsUpdate && canWrite()) {
+      if (merged.remoteNeedsUpdate) {
         writeOutcome = await writeWithConflictRecovery(config.token, config.gistId, merged.merged, Date.now());
       }
 
