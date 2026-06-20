@@ -7,7 +7,9 @@ import {
   distributeIntoChunks,
   leanTabData,
   toPublicGame,
+  upsertReviewActivity,
 } from '../../src/model/repository/gistRepository';
+import { assertValidSocialGist } from '../../src/model/schemas/socialGistSchema';
 import { gamesGistNeedsRewrite, unwrapGamesFile } from '../../src/model/migration/legacyGamesFormat';
 import { socialGistNeedsRewrite } from '../../src/model/migration/legacySocialFormat';
 import { decryptFromString, encryptToString } from '../../src/core/security/crypto';
@@ -171,6 +173,34 @@ describe('E1: leanTabData (serialización magra)', () => {
     };
     const g = leanTabData(td).c[0] as unknown as Record<string, unknown>;
     expect(g).toMatchObject({ steamDeck: true, review: 'r', score: 4, years: [2020], strengths: ['x'], replayable: true, retry: true, hours: 12 });
+  });
+});
+
+describe('F6.1: assertValidSocialGist (allowlist estricta Zod)', () => {
+  const emptySocial = {
+    profile: { name: '', private: false, favoriteGames: [], recommendations: [], visibility: { hiddenTabs: [], hideReplayable: false, hideRetry: false, hideGameTime: false }, sharedLists: {} },
+    recommendations: [],
+    activity: [],
+    updatedAt: 0,
+  };
+
+  it('acepta un gist social normalizado válido', () => {
+    expect(() => assertValidSocialGist(emptySocial)).not.toThrow();
+  });
+
+  it('acepta el resultado real de upsertReviewActivity (lo que se escribe)', () => {
+    const next = upsertReviewActivity(emptySocial, { actorUid: 'u', actorName: 'N', gameId: 1, gameName: 'G', reviewText: 'reseña larga'.repeat(30), rating: 5, timestamp: 1000 });
+    expect(() => assertValidSocialGist(next)).not.toThrow();
+    // y nunca debe contener el review completo
+    expect(JSON.stringify(next)).not.toContain('reseña larga'.repeat(30));
+  });
+
+  it('rechaza un campo privado filtrado (review dentro de activity)', () => {
+    const leaked = {
+      ...emptySocial,
+      activity: [{ id: 'u:1:review', key: 'u:1:review', type: 'review', actorUid: 'u', actorName: 'N', gameId: 1, gameName: 'G', rating: 5, recommendationText: '', snippet: 's', createdAt: 1, updatedAt: 1, review: 'FUGA' }],
+    };
+    expect(() => assertValidSocialGist(leaked)).toThrow(/schema/);
   });
 });
 

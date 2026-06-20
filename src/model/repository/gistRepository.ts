@@ -3,6 +3,7 @@ import { migrateData } from './migrateRepository';
 import { clampRating, normalizeTimestamp } from '../../core/utils/normalize';
 import { gamesGistNeedsRewrite, unwrapGamesFile } from '../migration/legacyGamesFormat';
 import { pickLegacyReviewText, socialGistNeedsRewrite } from '../migration/legacySocialFormat';
+import { assertValidSocialGist } from '../schemas/socialGistSchema';
 import { TAB_IDS, type TabData, type TabId } from '../types/game';
 // M1: transforms puros y config de sync extraídos a módulos dedicados. Importamos de vuelta los que se usan
 // internamente y RE-EXPORTAMOS la API pública para no obligar a los consumidores a cambiar sus imports.
@@ -992,7 +993,8 @@ export async function writeSocialGist(token: string, gistId: string, payload: So
     ...payload,
     updatedAt: Date.now(),
   });
-  assertNoSocialPrivateFields(normalized); // canal público: nunca review/reviewText/score/hours/etc.
+  assertNoSocialPrivateFields(normalized); // canal público: nunca review/reviewText/score/hours/etc. (denylist)
+  assertValidSocialGist(normalized); // F6.1: allowlist estricta (Zod) — falla si hay cualquier campo extra/tipo inválido
 
   const socialContent = JSON.stringify(normalized);
   assertGistSizeWithinLimit(socialContent, 'gist social'); // E1: evita el deadlock al superar el límite de gist
