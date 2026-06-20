@@ -1,7 +1,20 @@
 # PENDIENTES — lo que NO está hecho (para que no se olvide)
 
 > Índice vivo de todo lo que queda. Marcar `[x]` al completar. Detalle de cada fase en `MASTER-PLAN.md`.
-> Última actualización: durante la Fase 7 (E3).
+> Última actualización: 2026-06-20 (formato v4 keyed+diccionarios subido).
+
+## RESUMEN — qué está hecho y qué queda
+**✅ HECHO y subido a `develop` (verde en CI):** toda la base previa (E1·M1·M2·M3·M4a·E2-base·F6.1·F6.3·E3) +
+**6.2a** (profileId estable, `96e0632`) + **6.2b** (uid→profileId en gist social, `f5ce4fb`) + **auto-upgrade del estado
+local** (`074ed68`) + **formato v4 del gist de juegos** (keyed por id + diccionarios de categorías + padre/chunks,
+`8c0eec8`, GATED). **6.4** delta-sync CERRADA como no-aplicable (`b6c1614`).
+
+**⏳ QUEDA — todo es acción del USUARIO (navegador/despliegue/2 dispositivos), no código pendiente:**
+1. **Fase 0** (seguridad): desplegar `firestore.rules`, re-guardar perfil social, **revocar el token del chat**.
+2. **Verificar en navegador**: 6.2a/6.2b en 2 dispositivos (profileId estable, activity por pseudónimo), flujo social (M3/E3).
+3. **Activar el formato v4** (flag `ENABLE_GAMES_WRAPPER_WRITE`): 2 pasos, ver la nota en `gistRepository.ts` y la Fase 8 abajo.
+4. **Fase 9** (limpieza de `legacy*.ts`): solo tras el corte verificado en navegador.
+5. Opcional: llevar diccionarios/chunking al gist social; poblar `privateConfig.gamesChunks`.
 
 ## A. Acciones del USUARIO (no son código — requieren navegador/despliegue)
 - [ ] **Fase 0.1** — Probar B1–B5 en navegador real (perfil social, token cifrado en `privateConfig`, "recuperar desde Google", feed/perfil index-only). Ver `TEST-PLAN.md`.
