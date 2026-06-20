@@ -37,3 +37,6 @@ logs
 
 # Privacy audit report (generated)
 audit-report.json
+
+# Claude Code: compartir settings.json, ignorar config local/personal
+.claude/settings.local.json
