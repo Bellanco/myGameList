@@ -1,6 +1,6 @@
-import type { GameItem, StoragePayload, TabData, TabId } from '../types/game';
-import type { LocalMeta } from '../types/local';
-import { GAMES_STORE, META_STORE, openSharedDatabase } from './idbConnectionRepository';
+import type { DeletedItem, GameItem, StoragePayload, TabData, TabId } from '../types/game';
+import type { LocalMeta, SyncOp } from '../types/local';
+import { DELETED_STORE, GAMES_STORE, META_STORE, SYNC_QUEUE_STORE, openSharedDatabase } from './idbConnectionRepository';
 
 const STORE_NAME = 'appState';
 const STATE_KEY = 'latest';
@@ -162,7 +162,7 @@ export async function getAllGameRecords(): Promise<GameRecord[]> {
   return idbGetAll<GameRecord>(GAMES_STORE);
 }
 
-/** Reconstruye un `TabData` a partir del store `games` (agrupando por `_tab`). */
+/** Reconstruye un `TabData` a partir del store `games` (agrupando por `_tab`) + tombstones del store `deleted`. */
 export async function getGamesAsTabData(): Promise<TabData> {
   const records = await getAllGameRecords();
   const data: TabData = { c: [], v: [], e: [], p: [], deleted: [], updatedAt: Date.now() };
@@ -173,5 +173,47 @@ export async function getGamesAsTabData(): Promise<TabData> {
     delete clean._tab;
     data[tab].push(clean as GameItem);
   }
+  data.deleted = await getDeletedRecords();
   return data;
+}
+
+// --- Tombstones (store `deleted`, v4) ---
+export async function putDeletedRecord(item: DeletedItem): Promise<void> {
+  await idbPut<DeletedItem>(DELETED_STORE, item);
+}
+export async function getDeletedRecords(): Promise<DeletedItem[]> {
+  return idbGetAll<DeletedItem>(DELETED_STORE);
+}
+export async function removeTombstone(id: number): Promise<void> {
+  await idbDelete(DELETED_STORE, id);
+}
+
+// --- Cola de sync (store `syncQueue`) ---
+function newOpId(): string {
+  const c = (globalThis as { crypto?: { randomUUID?: () => string } }).crypto;
+  return c?.randomUUID ? c.randomUUID() : `op-${Date.now()}-${Math.round(performance.now())}`;
+}
+export async function enqueueSyncOp(op: Omit<SyncOp, 'id' | 'createdAt' | 'attempts' | 'nextRetry'>): Promise<void> {
+  await idbPut<SyncOp>(SYNC_QUEUE_STORE, { id: newOpId(), createdAt: Date.now(), attempts: 0, nextRetry: null, ...op });
+}
+export async function getSyncQueue(): Promise<SyncOp[]> {
+  return idbGetAll<SyncOp>(SYNC_QUEUE_STORE);
+}
+
+// --- Escritura de juegos (store `games`) ---
+/** Upsert: fija `_ts`, incrementa `_v`, revive (borra tombstone) y encola un SyncOp 'upsertGame'. */
+export async function upsertGame(game: GameItem, tab: TabId): Promise<GameItem> {
+  const next: GameItem = { ...game, _ts: Date.now(), _v: (game._v ?? 0) + 1 };
+  await putGameRecord(next, tab);
+  await removeTombstone(next.id);
+  await enqueueSyncOp({ type: 'upsertGame', payload: { id: next.id, tab } });
+  return next;
+}
+
+/** Borrado: quita del store `games`, escribe tombstone en `deleted` y encola un SyncOp 'deleteGame'. */
+export async function deleteGame(id: number): Promise<void> {
+  const ts = Date.now();
+  await idbDelete(GAMES_STORE, id);
+  await putDeletedRecord({ id, _ts: ts, deletedAt: ts });
+  await enqueueSyncOp({ type: 'deleteGame', payload: { id } });
 }

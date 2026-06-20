@@ -1,5 +1,5 @@
 const DB_NAME = 'myGameList';
-const DB_VERSION = 3;
+const DB_VERSION = 4;
 
 // Stores existentes (v2) — se conservan tal cual.
 const STORE_NAME = 'appState';
@@ -12,6 +12,7 @@ export const SYNC_QUEUE_STORE = 'syncQueue';
 export const CHUNK_CACHE_STORE = 'chunkCache';
 export const PROFILE_CACHE_STORE = 'profileCache';
 export const CONFLICTS_STORE = 'conflicts';
+export const DELETED_STORE = 'deleted'; // tombstones (v4): id → { _ts, deletedAt }
 
 let _dbPromise: Promise<IDBDatabase> | null = null;
 
@@ -62,6 +63,11 @@ function ensureStores(db: IDBDatabase): void {
     const conflicts = db.createObjectStore(CONFLICTS_STORE, { keyPath: 'id' });
     conflicts.createIndex('gameId', 'gameId');
     conflicts.createIndex('resolved', 'resolved');
+  }
+
+  // v4
+  if (!db.objectStoreNames.contains(DELETED_STORE)) {
+    db.createObjectStore(DELETED_STORE, { keyPath: 'id' });
   }
 }
 

@@ -1,6 +1,6 @@
 import { TAB_IDS, type GameItem } from '../types/game';
 import type { LocalMeta } from '../types/local';
-import { getLocalMeta, patchLocalMeta, putGameRecord } from './indexedDbRepository';
+import { getLocalMeta, patchLocalMeta, putDeletedRecord, putGameRecord } from './indexedDbRepository';
 import { loadLocalStateAsync } from './localRepository';
 import { getSyncConfig } from './gistRepository';
 
@@ -52,6 +52,15 @@ export async function runMigration(options: { dryRun?: boolean } = {}): Promise<
         if (!dryRun) {
           await putGameRecord(game, tab);
         }
+      }
+    }
+
+    // Migrar también los tombstones (borrados) al store `deleted`.
+    if (!dryRun) {
+      for (const tomb of payload.deleted || []) {
+        if (!tomb || !(Number(tomb.id) > 0)) continue;
+        const ts = Number(tomb._ts) || 0;
+        await putDeletedRecord({ id: tomb.id, _ts: ts, deletedAt: ts });
       }
     }
 
