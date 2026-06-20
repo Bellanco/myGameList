@@ -2,6 +2,7 @@ import { getApp, getApps, initializeApp, type FirebaseApp } from 'firebase/app';
 import { GoogleAuthProvider, getAuth, setPersistence, browserLocalPersistence, signInWithPopup, signOut, type Auth } from 'firebase/auth';
 import { collection, doc, documentId, getDoc, getDocs, getFirestore, limit, query, serverTimestamp, setDoc, where, type Firestore } from 'firebase/firestore';
 import { decryptFromString, encryptToString } from '../../core/security/crypto';
+import { getOrCreateProfileId } from './indexedDbRepository';
 import type { FirestoreFeedCard, FirestorePrivateConfig, ProfileIndexDoc } from '../types/firestore';
 
 type AnalyticsModule = typeof import('firebase/analytics');
@@ -525,6 +526,9 @@ export async function upsertProfileSocialReferences(input: {
     }
   }
 
+  // B2: establecer profileId/userMap/privateConfig.
+  await establishProfileIdentity(input.user.uid, String(input.gamesGistId || ''), input.socialGistId);
+
   const cleanEmail = input.user.email.trim().toLowerCase();
   if (cleanEmail) {
     saveProfileByEmailCache(cleanEmail, {
@@ -621,6 +625,23 @@ export async function setUserMap(uid: string, profileId: string): Promise<void> 
   const services = await initializeFirebaseServices();
   if (!services) throw new Error('Firebase no está configurado en este entorno');
   await setDoc(doc(services.firestore, 'userMap', uid), { profileId }, { merge: true });
+}
+
+/**
+ * B2: establece la identidad pseudónima al activar lo social — genera/recupera `profileId`,
+ * escribe `userMap/{uid}` y guarda los ids en `privateConfig` (merge, conserva el token cifrado).
+ * Best-effort: no rompe el guardado social si falla.
+ */
+export async function establishProfileIdentity(uid: string, gamesGistId: string, socialGistId: string): Promise<string | null> {
+  try {
+    const profileId = await getOrCreateProfileId();
+    await setUserMap(uid, profileId);
+    await setPrivateConfig(uid, { profileId, gamesGistId, socialGistId });
+    return profileId;
+  } catch (error) {
+    console.warn('[firebase] No se pudo establecer profileId/userMap:', error instanceof Error ? error.message : error);
+    return null;
+  }
 }
 
 /**
@@ -774,6 +795,9 @@ export async function ensureProfileByEmail(input: {
       console.warn('[firebase] No se pudo respaldar el token cifrado:', error instanceof Error ? error.message : error);
     }
   }
+
+  // B2: establecer profileId/userMap/privateConfig.
+  await establishProfileIdentity(input.user.uid, gamesGistId, input.socialGistId);
 
   saveProfileByEmailCache(cleanEmail, {
     id: targetId,
