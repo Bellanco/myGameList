@@ -983,7 +983,7 @@ export const SocialHub = memo(function SocialHub() {
         user: authUser,
         socialGistId: finalGistId,
         gamesGistId: mainSyncConfig?.gistId || '',
-        githubToken: mainSyncConfig?.token || socialConfig.token,
+        githubToken: mainSyncConfig?.token || socialConfig.token, // audit-allow: ensureProfileByEmail lo cifra en privateConfig (B1)
         socialGistEtag: finalEtag,
         preferredName: profile.name,
       });

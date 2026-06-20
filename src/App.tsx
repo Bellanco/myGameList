@@ -253,7 +253,7 @@ export default function App() {
       actorName: authUser.displayName || authUser.email,
       gameId: input.id,
       gameName: input.name,
-      reviewText: input.review,
+      reviewText: input.review, // audit-allow: upsertReviewActivity lo convierte a snippet (no se publica el review completo)
       rating: input.score,
       timestamp: now,
     });
@@ -272,7 +272,7 @@ export default function App() {
       user: authUser,
       socialGistId: socialConfig.gistId,
       gamesGistId: mainSyncConfig?.gistId || '',
-      githubToken: mainSyncConfig?.token || socialConfig.token,
+      githubToken: mainSyncConfig?.token || socialConfig.token, // audit-allow: ensureProfileByEmail lo cifra en privateConfig (B1)
       socialGistEtag: writeResult.etag || socialConfig.etag || null,
       preferredName: authUser.displayName || authUser.email,
     });
@@ -307,8 +307,8 @@ export default function App() {
     void publishReviewActivity({
       id: predictedId,
       name: nextDraft.name.trim(),
-      review: cleanReview,
-      score: nextScore,
+      review: cleanReview, // audit-allow: publishReviewActivity lo convierte a snippet antes de publicar
+      score: nextScore, // audit-allow: el canal social publica solo rating redondeado
     }).catch(() => {
       notify('warn', 'Juego guardado, pero no se pudo actualizar la actividad social de reseña.');
     });

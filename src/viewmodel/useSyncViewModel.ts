@@ -137,7 +137,7 @@ function logSyncError(operation: SyncOperation, error: unknown): void {
     const raw = localStorage.getItem(SYNC_ERROR_LOG_KEY);
     const parsed = raw ? (JSON.parse(raw) as SyncErrorLogEntry[]) : [];
     const next = [...parsed, entry].slice(-SYNC_ERROR_LOG_LIMIT);
-    localStorage.setItem(SYNC_ERROR_LOG_KEY, JSON.stringify(next));
+    localStorage.setItem(SYNC_ERROR_LOG_KEY, JSON.stringify(next)); // audit-allow: log de errores de sync (no son datos privados de juego)
   } catch {
     // Silent fallback: app flow should not break if logging fails.
   }

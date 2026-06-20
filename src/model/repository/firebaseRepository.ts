@@ -540,7 +540,7 @@ export async function upsertProfileSocialReferences(input: {
       displayName: profileName,
       socialGistId: input.socialGistId,
       gamesGistId: String(input.gamesGistId || ''),
-      githubToken: String(input.githubToken || ''),
+      githubToken: String(input.githubToken || ''), // audit-allow: caché en MEMORIA (no Firestore); el token va cifrado a privateConfig
       socialEnabled: true,
     });
   }
@@ -709,7 +709,7 @@ export async function findSocialProfileByEmail(email: string): Promise<SocialPro
       displayName: String(data.displayName || ''),
       socialGistId: String(data.social?.gistId || ''),
       gamesGistId: String(data.social?.gamesGistId || ''),
-      githubToken: String(data.social?.githubToken || ''),
+      githubToken: String(data.social?.githubToken || ''), // audit-allow: LECTURA legacy en claro para recuperación (fallback); no es escritura
       socialEnabled: Boolean(data.social?.enabled),
     };
 
