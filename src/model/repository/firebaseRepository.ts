@@ -581,11 +581,15 @@ export async function backupGithubToken(uid: string, token: string): Promise<voi
   await setPrivateConfig(uid, { encryptedGithubToken });
 }
 
-/** Recupera y descifra el token de GitHub desde `privateConfig` (tras login con Google). */
+/**
+ * Recupera y descifra el token de GitHub desde `privateConfig` (tras login con Google).
+ * Resiliente: si la lectura de `privateConfig` está denegada por reglas (permission-denied) o el
+ * descifrado falla, devuelve null para que el flujo caiga al fallback legacy en vez de romperse.
+ */
 export async function recoverGithubToken(uid: string): Promise<string | null> {
-  const cfg = await getPrivateConfig(uid);
-  if (!cfg?.encryptedGithubToken) return null;
   try {
+    const cfg = await getPrivateConfig(uid);
+    if (!cfg?.encryptedGithubToken) return null;
     return await decryptFromString(cfg.encryptedGithubToken, uid);
   } catch {
     return null;
