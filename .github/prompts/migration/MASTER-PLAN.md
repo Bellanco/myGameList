@@ -8,6 +8,17 @@
 > - `MODERN-FOUNDATION-PLAN.md` — ejes E1–E4 / M1–M4 / modernización + decisiones 1–7.
 > - `TEST-PLAN.md` — pruebas end-to-end. `PHASE-B-FLIP.md` — detalle del flip B1–B6.
 
+## ESTADO GLOBAL (2026-06-20) — checklist vivo en `PENDING.md`
+**✅ Hecho y verde en CI (`develop`, subido):** Fase 1 (compat/auto-upgrade) · E1 (guarda tamaño + purga tombstones + lean) ·
+M1 (partir gistRepository) · M2 (partir firebaseRepository) · M3 (useSocialViewModel) · M4a (publishReviewActivity) ·
+E2-base (runner + lectura games-autoritativa) · F6.1 (Zod social) · F6.3 (schemaVersion Firestore) · E3 (desacople lectura
+cross-user) · E4 (chunking, GATED `ENABLE_GAMES_WRAPPER_WRITE=false`) · slice F9 (borrado de código muerto) · tests de
+componente (RTL). Verificación por fase: tsc · 64+2 tests · build · audit A:0 B:0.
+
+**⏳ Pendiente (requiere acción/navegador/2 dispositivos):** Fase 0 (probar B1–B5, desplegar `firestore.rules`, re-guardar
+perfil, REVOCAR token del chat) · verificación en navegador de M3/E3 · 6.2 (estabilizar `profileId` + uid→profileId) ·
+`consent` (UX) · 6.4 (delta-sync + escritura granular) · activar E4 (flag) · resto de Fase 9 (borrar `legacy*.ts`+fallbacks).
+
 ## Principios (invariantes en todas las fases)
 - **La app trabaja siempre con el modelo NUEVO.** Si llega un dato en formato viejo, se **transforma al leer y se
   reescribe en nuevo** (auto-upgrade). Nada de ramas "modo viejo" en la lógica de negocio.
