@@ -2,6 +2,7 @@ import { GIST_CFG_KEY, SOCIAL_GIST_CFG_KEY } from '../../core/constants/storageK
 import { isValidGistId, isValidGithubToken } from '../../core/security/sanitize';
 import { migrateData } from './migrateRepository';
 import { TAB_IDS, type GameItem, type SyncConfig, type TabData, type TabId } from '../types/game';
+import type { PublicGame } from '../types/social';
 
 const GIST_FILENAME = 'myGames.json';
 const SOCIAL_GIST_FILENAME = 'myGameList.social.json';
@@ -81,6 +82,50 @@ export function unwrapGamesFile(parsed: unknown): unknown {
   }
 
   return buckets;
+}
+
+const SNIPPET_MAX_CHARS = 160;
+
+/** Deriva el snippet público (≤160) del review privado. Reemplaza al antiguo buildReviewExcerpt (muerto). */
+export function buildReviewSnippet(review: string): string {
+  return (review || '').slice(0, SNIPPET_MAX_CHARS).trimEnd();
+}
+
+/**
+ * Proyección pública de un juego (canal social): copia campos públicos y deriva `snippet`,
+ * OMITIENDO siempre los privados (`review`, `score`, `hours`, `steamDeck`, `retry`, `replayable`).
+ * El `tab` se pasa porque vive en la estructura `TabData`, no en el `GameItem`.
+ */
+export function toPublicGame(game: GameItem, tab: TabId): PublicGame {
+  return {
+    id: game.id,
+    name: game.name,
+    genres: game.genres,
+    platforms: game.platforms,
+    strengths: game.strengths,
+    weaknesses: game.weaknesses,
+    tab,
+    rating: game.score ?? null,
+    years: game.years,
+    snippet: buildReviewSnippet(game.review),
+    hasFullReview: (game.review || '').length > 0,
+    updatedAt: game._ts,
+  };
+}
+
+const SOCIAL_PRIVATE_FIELDS = ['review', 'reviewText', 'score', 'hours', 'steamDeck', 'retry', 'replayable'];
+
+/** Guarda de privacidad: lanza si algún campo privado aparece en lo que se escribirá al gist social. */
+export function assertNoSocialPrivateFields(obj: unknown, path = ''): void {
+  if (!obj || typeof obj !== 'object') return;
+  for (const field of SOCIAL_PRIVATE_FIELDS) {
+    if (field in (obj as Record<string, unknown>)) {
+      throw new Error(`Campo privado '${field}' en ${path || 'root'}: el gist social no debe contenerlo`);
+    }
+  }
+  for (const [key, value] of Object.entries(obj as Record<string, unknown>)) {
+    assertNoSocialPrivateFields(value, path ? `${path}.${key}` : key);
+  }
 }
 
 export interface SocialGistProfile {
