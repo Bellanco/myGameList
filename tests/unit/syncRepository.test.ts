@@ -63,6 +63,32 @@ describe('mergeCrdt', () => {
     expect(result.merged.c[0].name).toBe('New Name');
   });
 
+  it('E1: purga tombstones antiguos sin copia viva (dejan de inflar el gist) y marca needsUpdate', () => {
+    const local = empty();
+    local.deleted.push({ id: 1, _ts: 1 }); // epoch → muy anterior a la ventana de retención
+    const result = mergeCrdt(local, 1, empty(), 0);
+    expect(result.merged.deleted).toHaveLength(0);
+    expect(result.localNeedsUpdate).toBe(true); // el local debe soltar el tombstone viejo
+  });
+
+  it('E1: conserva tombstones recientes (dentro de la ventana de retención)', () => {
+    const recent = Date.now() - 24 * 60 * 60 * 1000; // hace 1 día
+    const local = empty();
+    local.deleted.push({ id: 1, _ts: recent });
+    const result = mergeCrdt(local, recent, empty(), 0);
+    expect(result.merged.deleted.some((d) => d.id === 1)).toBe(true);
+  });
+
+  it('E1: no purga ni revive si existe copia viva, aunque el borrado sea antiguo', () => {
+    const local = empty();
+    local.deleted.push({ id: 1, _ts: 1000 }); // borrado antiguo
+    const remote = empty();
+    remote.c.push(mkGame({ id: 1, _ts: 500, name: 'Stale' })); // viva pero más vieja que el borrado
+    const result = mergeCrdt(local, 1000, remote, 500);
+    expect(result.merged.c).toHaveLength(0); // sigue borrada (no resucita)
+    expect(result.merged.deleted.some((d) => d.id === 1)).toBe(true); // tombstone conservado
+  });
+
   it('respects delete tombstones newer than content', () => {
     const local = empty();
     const remote = empty();
