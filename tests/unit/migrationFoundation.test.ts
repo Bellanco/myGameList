@@ -5,8 +5,8 @@ import {
   buildReviewSnippet,
   distributeIntoChunks,
   toPublicGame,
-  unwrapGamesFile,
 } from '../../src/model/repository/gistRepository';
+import { unwrapGamesFile } from '../../src/model/migration/legacyGamesFormat';
 import { decryptFromString, encryptToString } from '../../src/core/security/crypto';
 import type { GameItem, TabData } from '../../src/model/types/game';
 

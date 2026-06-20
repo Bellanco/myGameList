@@ -7,6 +7,7 @@ import { normalizeData } from '../model/repository/localRepository';
 import { clearDirty, loadSyncDirtyState } from '../model/repository/syncStateRepository';
 import { canRead, getBackoffMs, getNextReadDelayMs, getSyncState, subscribeSyncState, transitionTo, canReadNow } from '../model/repository/syncMachineRepository';
 import { countRemoteChangesApplied, isWriteConflict, logSyncError } from '../model/repository/syncLogicRepository';
+import { readLegacyPlaintextToken } from '../model/migration/legacyTokenRecovery';
 import type { TabData } from '../model/types/game';
 
 export type SyncStatus = 'idle' | 'syncing' | 'ok' | 'error';
@@ -528,7 +529,7 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
       const profile = await findSocialProfileByEmail(user.email);
       const recoveredGistId = String(profile?.gamesGistId || '').trim();
       // B1: preferir el token CIFRADO de privateConfig; fallback al campo legacy en claro (perfiles viejos).
-      const recoveredToken = (await recoverGithubToken(user.uid)) || String(profile?.githubToken || '').trim();
+      const recoveredToken = (await recoverGithubToken(user.uid)) || readLegacyPlaintextToken(profile);
 
       if (!recoveredGistId) {
         setStatus('error');
