@@ -32,10 +32,21 @@ const GIST_FILENAME = 'myGames.json';
 const SOCIAL_GIST_FILENAME = 'myGameList.social.json';
 
 /**
- * Fase C (corte de formato): si está activo, la ESCRITURA del gist de juegos emite el envoltorio
- * `GamesMainFile` (schemaVersion 3) en lugar del `TabData` plano. La LECTURA ya es retrocompatible
- * (unwrapGamesFile lee ambos). ⚠️ Mantener en `false` hasta que TODOS los dispositivos tengan la versión
- * nueva: una versión vieja (sin unwrapGamesFile) no sabría leer el envoltorio. Activar es un cambio de una sola dirección.
+ * ┌─ CORTE DE FORMATO DEL GIST DE JUEGOS (schemaVersion 4) — LEER ANTES DE ACTIVAR ─────────────────────┐
+ * Con `true`, la ESCRITURA emite el envoltorio `GamesMainFile` v4: mapa por id (no `c/v/e/p`) +
+ * DICCIONARIOS de categorías deduplicadas (genres/platforms/strengths/weaknesses/reasons) + ancla padre
+ * con `chunkIndex` y chunks hijos de overflow. La LECTURA ya es retrocompatible en ESTA versión
+ * (`unwrapGamesFile`/`assembleChunkedGames` leen plano, keyed-v3 y keyed-v4) y el auto-upgrade reescribe
+ * lo viejo a v4 (`gamesGistNeedsUpgradeToWrapper`).
+ *
+ * ⚠️ ACTIVAR EN 2 PASOS (NO poner `true` de golpe):
+ *   1) Desplegar ESTA versión a TODOS tus dispositivos. Con el flag en `false` ya ganan la LECTURA v4
+ *      (siguen escribiendo plano) → nadie se rompe.
+ *   2) Solo cuando TODOS estén al día, poner esto en `true` + commit + push. En la siguiente sync el gist
+ *      pasa a v4 y se deduplican las categorías.
+ * Una versión ANTERIOR a esta leería los índices del diccionario como números (datos corruptos). Es
+ * REVERSIBLE (volver a `false` → se rebaja a plano). Verificado: round-trip exacto sobre datos reales, 4% menor.
+ * └──────────────────────────────────────────────────────────────────────────────────────────────────────┘
  */
 const ENABLE_GAMES_WRAPPER_WRITE = false;
 const GIST_API_BASE = 'https://api.github.com/gists';
