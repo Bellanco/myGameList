@@ -95,6 +95,12 @@ Regla de oro: **cada cambio de formato de las fases siguientes añade aquí su l
   verificación en NAVEGADOR tras M3.
 
 ## FASE 6 — Modernización (schemaVersion + Zod + cambios de formato público)
+> Estado por sub-paso: ✅ 6.1 (`5b48a14`) Zod + allowlist estricta del gist social validada antes de escribir ·
+> ✅ 6.3 (`71d24c6`) `schemaVersion` aditivo en docs Firestore · ⏸️ 6.2 (uid→profileId) APLAZADA: bloqueada por
+> `profileId` no estable entre dispositivos (requiere 6.2a recuperar profileId de Firestore al login) + necesita prueba
+> en 2 dispositivos; `consent` necesita UX inexistente · ⏸️ 6.4 (delta-sync + escritura granular) APLAZADA: alto riesgo,
+> necesita navegador. 6.2 y 6.4 se agrupan en un esfuerzo verificado en navegador/2 dispositivos.
+
 - Añadir **`schemaVersion`** a cada artefacto persistido y **validación runtime con Zod** antes de escribir
   (integridad + privacidad; sustituye/complementa `assertNoSocialPrivateFields`).
 - **Gist social a `schemaVersion: 2` + `consent`** y **`uid`→`profileId`** en el canal público
