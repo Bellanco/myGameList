@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   assertGistSizeWithinLimit,
   assertNoSocialPrivateFields,
+  buildGamesFiles,
   buildGamesMainFile,
   buildReviewSnippet,
   distributeIntoChunks,
@@ -10,7 +11,7 @@ import {
   upsertReviewActivity,
 } from '../../src/model/repository/gistRepository';
 import { assertValidSocialGist } from '../../src/model/schemas/socialGistSchema';
-import { gamesGistNeedsRewrite, unwrapGamesFile } from '../../src/model/migration/legacyGamesFormat';
+import { assembleChunkedGames, gamesGistNeedsRewrite, unwrapGamesFile } from '../../src/model/migration/legacyGamesFormat';
 import { socialGistNeedsRewrite } from '../../src/model/migration/legacySocialFormat';
 import { decryptFromString, encryptToString } from '../../src/core/security/crypto';
 import type { GameItem, TabData } from '../../src/model/types/game';
@@ -258,5 +259,43 @@ describe('cifrado del token (recuperación cross-device)', () => {
   it.skipIf(!hasSubtle)('no descifra con un secreto distinto', async () => {
     const enc = await encryptToString('ghp_tokensecreto', 'uid-123');
     await expect(decryptFromString(enc, 'uid-otro')).rejects.toBeTruthy();
+  });
+});
+
+describe('F8/E4: chunking multi-fichero del gist de juegos (gated, round-trip)', () => {
+  it('con maxChunkKB pequeño reparte en overflow y el round-trip no pierde datos', () => {
+    const data: TabData = { c: [], v: [], e: [], p: [], deleted: [{ id: 999, _ts: 5 }], updatedAt: 100 };
+    for (let i = 1; i <= 40; i += 1) data.c.push(makeGame({ id: i, name: `C${i}`, review: 'x'.repeat(500) }));
+    for (let i = 41; i <= 60; i += 1) data.p.push(makeGame({ id: i, name: `P${i}` }));
+
+    const { anchorFile, chunkFiles } = buildGamesFiles(data, 5); // 5 KB → fuerza overflow
+    expect(Object.keys(chunkFiles).length).toBeGreaterThan(0);
+    expect(anchorFile.chunkIndex.chunks.length).toBeGreaterThan(1);
+
+    // Simular la respuesta del gist (ancla + ficheros chunk en la misma respuesta).
+    const files: Record<string, { content: string }> = {
+      'myGames.json': { content: JSON.stringify(anchorFile) },
+    };
+    for (const [name, file] of Object.entries(chunkFiles)) files[name] = { content: JSON.stringify(file) };
+
+    const assembled = assembleChunkedGames(JSON.parse(files['myGames.json'].content), files);
+    const round = unwrapGamesFile(assembled) as TabData;
+    const ids = (arr: Array<{ id: number }>) => arr.map((g) => g.id).sort((a, b) => a - b);
+    expect(ids(round.c)).toEqual(ids(data.c));
+    expect(ids(round.p)).toEqual(ids(data.p));
+    expect(round.v).toHaveLength(0);
+    expect(round.deleted.map((d) => d.id)).toContain(999);
+  });
+
+  it('con pocos juegos solo hay chunk main (sin ficheros de overflow) y el round-trip funciona', () => {
+    const data: TabData = { c: [makeGame({ id: 1 })], v: [], e: [], p: [], deleted: [], updatedAt: 1 };
+    const { anchorFile, chunkFiles } = buildGamesFiles(data); // umbral por defecto
+    expect(Object.keys(chunkFiles)).toHaveLength(0);
+    expect(anchorFile.chunkIndex.chunks).toHaveLength(1);
+    expect(anchorFile.chunkIndex.chunks[0].chunkId).toBe('main');
+
+    const assembled = assembleChunkedGames(anchorFile, { 'myGames.json': { content: JSON.stringify(anchorFile) } });
+    const round = unwrapGamesFile(assembled) as TabData;
+    expect(round.c.map((g) => g.id)).toEqual([1]);
   });
 });

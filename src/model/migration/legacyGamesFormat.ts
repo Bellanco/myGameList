@@ -2,6 +2,7 @@
 // Lectura multiformato del gist de juegos: acepta el formato VIEJO (TabData plano) y el NUEVO
 // (envoltorio GamesMainFile). Una vez todo migrado, el lector puede simplificarse a solo-nuevo.
 import type { GameItem, TabData, TabId } from '../types/game';
+import { gamesChunkFilename } from '../repository/socialProjection';
 
 /**
  * Detecta el envoltorio DESTINO del gist de juegos (`GamesMainFile`: schemaVersion/fileType/games),
@@ -64,6 +65,37 @@ export function unwrapGamesFile(parsed: unknown): unknown {
   }
 
   return buckets;
+}
+
+/**
+ * E4 (lectura multi-fichero): si `parsed` es un ancla `GamesMainFile` cuyo `chunkIndex` referencia chunks de overflow
+ * que viven en el MISMO gist (`gistId == null`), fusiona en `games` los registros de cada `GamesChunkFile` presente en
+ * la respuesta del gist (`files[<myGames-chunk-cN.json>].content`). Devuelve un ancla combinado listo para `unwrapGamesFile`.
+ * Para gist plano o ancla de un solo fichero (solo `main`), devuelve `parsed` SIN cambios (comportamiento actual).
+ */
+export function assembleChunkedGames(parsed: unknown, files: Record<string, { content?: string } | undefined> | undefined): unknown {
+  if (!isGamesMainWrapper(parsed) || !files) return parsed;
+  const anchor = parsed as {
+    games?: Record<string, unknown>;
+    chunkIndex?: { chunks?: Array<{ chunkId?: string; gistId?: string | null }> };
+  };
+  const overflow = (anchor.chunkIndex?.chunks || []).filter(
+    (c) => c && c.chunkId && c.chunkId !== 'main' && (c.gistId === null || c.gistId === undefined),
+  );
+  if (overflow.length === 0) return parsed;
+
+  const mergedGames: Record<string, unknown> = { ...(anchor.games || {}) };
+  for (const ref of overflow) {
+    const content = files[gamesChunkFilename(String(ref.chunkId))]?.content;
+    if (!content) continue; // chunk ausente: se conserva lo disponible (la salvaguarda anti-pérdida de unwrap actuará si todo falla)
+    try {
+      const chunkParsed = JSON.parse(content) as { games?: Record<string, unknown> };
+      Object.assign(mergedGames, chunkParsed.games || {});
+    } catch {
+      // chunk corrupto: se ignora ese chunk
+    }
+  }
+  return { ...anchor, games: mergedGames };
 }
 
 /**
