@@ -7,12 +7,12 @@ import {
   initializeTestEnvironment,
   type RulesTestEnvironment,
 } from '@firebase/rules-unit-testing';
-import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
 
 // Test de integración: requiere el emulador de Firestore. Ejecutar con `npm run test:rules`.
-// Excluido de `npm run test`/`test:all` y de tsc (tests/integration).
+// Valida las reglas REALES desplegables (perfiles, privateConfig/userMap solo-dueño, admin, catch-all).
 
-describe('firestore.rules (modelo destino index-only)', () => {
+describe('firestore.rules', () => {
   let env: RulesTestEnvironment;
 
   beforeAll(async () => {
@@ -26,66 +26,65 @@ describe('firestore.rules (modelo destino index-only)', () => {
   afterEach(async () => { await env.clearFirestore(); });
   afterAll(async () => { await env.cleanup(); });
 
-  // Tiempo REAL: las reglas comparan expiresAt/autoExpireAt contra request.time del emulador (ahora real).
-  const now = () => Date.now();
-  const publicProfile = {
-    profileId: 'p-abc', displayName: 'Bellanco', socialGistId: 'g1', private: false,
-    consent: { agreedAt: now(), autoExpireAt: now() + 86_400_000 }, updatedAt: now(),
-  };
+  const ADMIN = { sub: 'admin-uid', email: 'bellanco3@gmail.com', email_verified: true };
+  const ownerDb = (uid: string) => env.authenticatedContext(uid).firestore();
+  const adminDb = () => env.authenticatedContext(ADMIN.sub, { email: ADMIN.email, email_verified: true }).firestore();
+  const anonDb = () => env.unauthenticatedContext().firestore();
 
-  async function seedOwnerMapping() {
+  async function seed(path: string, id: string, data: Record<string, unknown>) {
     await env.withSecurityRulesDisabled(async (ctx) => {
-      await setDoc(doc(ctx.firestore(), 'userMap', 'uid-abc'), { profileId: 'p-abc' });
-      await setDoc(doc(ctx.firestore(), 'profiles', 'p-abc'), publicProfile);
+      await setDoc(doc(ctx.firestore(), path, id), data);
     });
   }
 
-  it('userMap: lectura/escritura denegada incluso autenticado', async () => {
-    const db = env.authenticatedContext('uid-abc').firestore();
-    await assertFails(getDoc(doc(db, 'userMap', 'uid-abc')));
-    await assertFails(setDoc(doc(db, 'userMap', 'uid-abc'), { profileId: 'x' }));
-  });
-
-  it('privateConfig: solo el dueño lee/escribe', async () => {
-    await env.withSecurityRulesDisabled(async (ctx) => {
-      await setDoc(doc(ctx.firestore(), 'privateConfig', 'uid-abc'), { profileId: 'p-abc', gamesGistId: 'g', socialGistId: 's' });
+  describe('profiles', () => {
+    it('el dueño y un autenticado pueden leer un perfil social.enabled; el anónimo no', async () => {
+      await seed('profiles', 'uid-a', { uid: 'uid-a', social: { enabled: true } });
+      await assertSucceeds(getDoc(doc(ownerDb('uid-a'), 'profiles', 'uid-a')));
+      await assertSucceeds(getDoc(doc(ownerDb('uid-b'), 'profiles', 'uid-a')));
+      await assertFails(getDoc(doc(anonDb(), 'profiles', 'uid-a')));
     });
-    await assertSucceeds(getDoc(doc(env.authenticatedContext('uid-abc').firestore(), 'privateConfig', 'uid-abc')));
-    await assertFails(getDoc(doc(env.authenticatedContext('uid-other').firestore(), 'privateConfig', 'uid-abc')));
-    await assertFails(getDoc(doc(env.unauthenticatedContext().firestore(), 'privateConfig', 'uid-abc')));
-  });
 
-  it('profiles: lectura pública si no privado y consentimiento vigente', async () => {
-    await seedOwnerMapping();
-    await assertSucceeds(getDoc(doc(env.unauthenticatedContext().firestore(), 'profiles', 'p-abc')));
-  });
-
-  it('profiles: deniega lectura si consentimiento caducado', async () => {
-    await env.withSecurityRulesDisabled(async (ctx) => {
-      await setDoc(doc(ctx.firestore(), 'profiles', 'p-exp'), { ...publicProfile, profileId: 'p-exp', consent: { agreedAt: now(), autoExpireAt: now() - 1000 } });
+    it('un perfil no social solo lo lee su dueño (o admin)', async () => {
+      await seed('profiles', 'uid-priv', { uid: 'uid-priv', social: { enabled: false } });
+      await assertSucceeds(getDoc(doc(ownerDb('uid-priv'), 'profiles', 'uid-priv')));
+      await assertFails(getDoc(doc(ownerDb('uid-other'), 'profiles', 'uid-priv')));
     });
-    await assertFails(getDoc(doc(env.unauthenticatedContext().firestore(), 'profiles', 'p-exp')));
-  });
 
-  it('profiles: deniega escritura con campos privados (githubToken/uid)', async () => {
-    await seedOwnerMapping();
-    const db = env.authenticatedContext('uid-abc').firestore();
-    await assertFails(updateDoc(doc(db, 'profiles', 'p-abc'), { githubToken: 'secreto' }));
-    await assertFails(updateDoc(doc(db, 'profiles', 'p-abc'), { uid: 'uid-abc' }));
-  });
-
-  it('feed: lectura anónima de tarjeta activa; create con review denegado', async () => {
-    const card = {
-      reviewId: 'p-abc:1:r', profileId: 'p-abc', displayName: 'B', avatarHash: 'h', socialGistId: 'g1',
-      gameId: 1, gameName: 'X', genres: ['RPG'], rating: 5, snippet: 'corto', status: 'active',
-      createdAt: now(), updatedAt: now(), expiresAt: now() + 86_400_000,
-    };
-    await env.withSecurityRulesDisabled(async (ctx) => {
-      await setDoc(doc(ctx.firestore(), 'feed', 'p-abc:1:r'), card);
-      await setDoc(doc(ctx.firestore(), 'userMap', 'uid-abc'), { profileId: 'p-abc' });
+    it('el dueño escribe su perfil con uid coincidente; con uid distinto se deniega', async () => {
+      await assertSucceeds(setDoc(doc(ownerDb('uid-a'), 'profiles', 'uid-a'), { uid: 'uid-a', social: { enabled: true } }));
+      await assertFails(setDoc(doc(ownerDb('uid-a'), 'profiles', 'uid-a'), { uid: 'uid-b', social: { enabled: true } }));
+      await assertFails(setDoc(doc(ownerDb('uid-a'), 'profiles', 'uid-b'), { uid: 'uid-b', social: { enabled: true } }));
     });
-    await assertSucceeds(getDoc(doc(env.unauthenticatedContext().firestore(), 'feed', 'p-abc:1:r')));
-    const db = env.authenticatedContext('uid-abc').firestore();
-    await assertFails(setDoc(doc(db, 'feed', 'p-abc:2:r'), { ...card, reviewId: 'p-abc:2:r', gameId: 2, review: 'full' }));
+  });
+
+  describe('privateConfig (solo dueño)', () => {
+    it('el dueño lee/escribe; otros y anónimo no', async () => {
+      await assertSucceeds(setDoc(doc(ownerDb('uid-a'), 'privateConfig', 'uid-a'), { profileId: 'p', encryptedGithubToken: 'x' }));
+      await assertSucceeds(getDoc(doc(ownerDb('uid-a'), 'privateConfig', 'uid-a')));
+      await assertFails(getDoc(doc(ownerDb('uid-b'), 'privateConfig', 'uid-a')));
+      await assertFails(getDoc(doc(anonDb(), 'privateConfig', 'uid-a')));
+    });
+  });
+
+  describe('userMap (solo dueño)', () => {
+    it('el dueño lee/escribe; otros no', async () => {
+      await assertSucceeds(setDoc(doc(ownerDb('uid-a'), 'userMap', 'uid-a'), { profileId: 'p-a' }));
+      await assertFails(getDoc(doc(ownerDb('uid-b'), 'userMap', 'uid-a')));
+    });
+  });
+
+  describe('recommendations (solo admin)', () => {
+    it('admin escribe/lee; un usuario normal no', async () => {
+      await assertSucceeds(setDoc(doc(adminDb(), 'recommendations', 'r1'), { toEmail: 'x@y.z' }));
+      await assertFails(setDoc(doc(ownerDb('uid-a'), 'recommendations', 'r2'), { toEmail: 'x@y.z' }));
+      await assertFails(getDoc(doc(ownerDb('uid-a'), 'recommendations', 'r1')));
+    });
+  });
+
+  describe('catch-all', () => {
+    it('deniega cualquier otra colección', async () => {
+      await assertFails(getDoc(doc(ownerDb('uid-a'), 'whatever', 'x')));
+    });
   });
 });
