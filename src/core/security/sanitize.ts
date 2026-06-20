@@ -19,8 +19,3 @@ export function isValidGithubToken(token: string): boolean {
 export function isValidGistId(gistId: string): boolean {
   return /^[a-fA-F0-9]{8,}$/.test(gistId);
 }
-
-export function toSafeNumber(input: unknown): number | null {
-  const n = Number(input);
-  return Number.isFinite(n) ? n : null;
-}

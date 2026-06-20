@@ -174,21 +174,6 @@ export function saveLocalState(payload: StoragePayload): void {
   void saveIndexedDbState(payload);
 }
 
-export function createExportBlob(data: TabData): Blob {
-  return new Blob([
-    JSON.stringify(
-      {
-        c: data.c,
-        v: data.v,
-        e: data.e,
-        p: data.p,
-      },
-      null,
-      2,
-    ),
-  ], { type: 'application/json' });
-}
-
 export function parseImportedData(rawText: string): TabData {
   const parsed = JSON.parse(rawText) as unknown;
   return normalizeData(migrateData(parsed));
