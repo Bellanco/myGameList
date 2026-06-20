@@ -17,8 +17,12 @@
 - [ ] **6.4 — Delta-sync + escritura granular** (movido de E2): reescribir el camino caliente a `upsertGame`/`deleteGame` + un **consumidor de `syncQueue`**; `appState` deja de ser la fuente del gist. ALTO RIESGO (pérdida de datos) → probar en navegador.
 
 ## C. FASES del plan aún por hacer
-- [ ] **Fase 7 — E3** (EN CURSO): el canal social deja de leer el gist de juegos en crudo de otros usuarios (`readPublicGamesGistById` en `useSocialViewModel`); usar solo el gist social index-only. Mejora privacidad + desacopla el formato del gist de juegos.
-- [ ] **Fase 8 — E4**: chunking del gist de juegos (gated, por-usuario, tras E3 + actualizar tus dispositivos): implementar `distributeIntoChunks` de verdad en la escritura + `chunkIndex` + lectura de chunks (extender `unwrapGamesFile`) + poblar `gamesChunks`/`socialChunks` en `privateConfig`. Decisión: chunks como FICHEROS del mismo gist (`gistId: null`).
+- [x] **Fase 7 — E3** (HECHA `f23289a`): el canal social ya NO lee el gist de juegos en crudo de otros usuarios; listas
+      compartidas index-only vacías para ajenos; detalle muestra nombre/rating/snippet del evento; metadatos solo para
+      juegos propios (fallback local). `readPublicGamesGistById` queda SIN USO → candidato a borrar en Fase 9.
+      ⚠️ Verificar en navegador: el detalle de actividad de OTROS usuarios ya no muestra plataformas/géneros (degradación
+      index-only intencionada); confirmar que la pantalla se ve bien sin ese bloque.
+- [ ] **Fase 8 — E4** (SIGUIENTE): chunking del gist de juegos (gated, por-usuario, tras E3 + actualizar tus dispositivos): implementar `distributeIntoChunks` de verdad en la escritura + `chunkIndex` + lectura de chunks (extender `unwrapGamesFile`) + poblar `gamesChunks`/`socialChunks` en `privateConfig`. Decisión: chunks como FICHEROS del mismo gist (`gistId: null`).
 - [ ] **Fase 9 — Limpieza**: borrar `src/model/migration/legacy*.ts` + fallbacks (token legacy, lectura plano del gist, claves localStorage viejas) cuando no queden datos ni clientes viejos.
 
 ## D. Notas / deuda menor
