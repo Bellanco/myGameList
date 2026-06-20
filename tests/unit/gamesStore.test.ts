@@ -4,7 +4,9 @@ import {
   deleteGame,
   getAllGameRecords,
   getGamesAsTabData,
+  getLocalMeta,
   getSyncQueue,
+  mirrorTabDataToGames,
   replaceGamesStoreFromTabData,
   upsertGame,
 } from '../../src/model/repository/indexedDbRepository';
@@ -86,5 +88,12 @@ describe('games store write accessors', () => {
     expect(out.c.map((g) => g.id)).toEqual([5]);
     expect(out.v).toEqual([]);
     expect(out.deleted).toEqual([]);
+  });
+
+  it('mirrorTabDataToGames espeja el contenido y registra gamesUpdatedAt', async () => {
+    await mirrorTabDataToGames({ c: [makeGame(1)], v: [], e: [], p: [], deleted: [], updatedAt: 4242 }, 4242);
+    const out = await getGamesAsTabData();
+    expect(out.c.map((g) => g.id)).toEqual([1]);
+    expect((await getLocalMeta())?.gamesUpdatedAt).toBe(4242);
   });
 });

@@ -247,3 +247,9 @@ export async function replaceGamesStoreFromTabData(data: TabData): Promise<void>
     tx.onabort = () => reject(tx.error || new Error('replaceGamesStoreFromTabData aborted'));
   });
 }
+
+/** Espejo + registro del timestamp (`gamesUpdatedAt`) para poder elegir la fuente más fresca al cargar. */
+export async function mirrorTabDataToGames(data: TabData, updatedAt: number): Promise<void> {
+  await replaceGamesStoreFromTabData(data);
+  await patchLocalMeta({ gamesUpdatedAt: updatedAt });
+}

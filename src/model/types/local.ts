@@ -22,6 +22,7 @@ export interface LocalMeta {
   socialChunks: ChunkRef[];
   devices: Record<string, { name: string; lastSeen: number }>;
   migrationVersion?: number; // estado de la migración one-time (>=3 = migrado)
+  gamesUpdatedAt?: number; // updatedAt del último espejo al store `games` (para elegir la fuente más fresca al cargar)
 }
 
 export type SyncOpType =

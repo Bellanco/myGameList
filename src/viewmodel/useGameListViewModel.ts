@@ -4,7 +4,7 @@ import { HOURS_RANGES } from '../core/constants/uiConfig';
 import { sortEs, uniqueCaseInsensitive } from '../core/utils/compare';
 import { normalizeTag, safeTrim } from '../core/security/sanitize';
 import { loadLocalState, loadLocalStateAsync, normalizeData, saveLocalState } from '../model/repository/localRepository';
-import { getGamesAsTabData, replaceGamesStoreFromTabData } from '../model/repository/indexedDbRepository';
+import { getGamesAsTabData, getLocalMeta, mirrorTabDataToGames } from '../model/repository/indexedDbRepository';
 import { markDirty } from '../model/repository/syncStateRepository';
 import { transitionTo } from '../model/repository/syncMachineRepository';
 import type { TabAction as LabelsTabAction } from '../core/constants/labels';
@@ -125,14 +125,18 @@ export function useGameListViewModel() {
       // Fallback de recuperación: si no hay datos en appState, leer del store `games` (p. ej. si se
       // borró localStorage pero IndexedDB sobrevivió). updatedAt se toma de appState (mismo reloj).
       let dataSource: TabData = hydrated;
-      if (!hasData(hydrated)) {
-        try {
-          const fromGames = await getGamesAsTabData();
-          if (cancelled) return;
-          if (hasData(fromGames)) dataSource = { ...fromGames, updatedAt: hydrated.updatedAt };
-        } catch {
-          // Ignorar: el store `games` es opcional; appState sigue mandando.
+      try {
+        const fromGames = await getGamesAsTabData();
+        if (cancelled) return;
+        const gamesTs = (await getLocalMeta())?.gamesUpdatedAt ?? 0;
+        if (cancelled) return;
+        // `games` es autoritativo cuando está al día (su timestamp >= el de appState); si appState es
+        // más fresco (p. ej. un espejo falló), gana appState. Así games es la fuente sin perder la red.
+        if (hasData(fromGames) && gamesTs >= (hydrated.updatedAt || 0)) {
+          dataSource = { ...fromGames, updatedAt: gamesTs || hydrated.updatedAt };
         }
+      } catch {
+        // Ignorar: el store `games` es opcional; appState sigue mandando.
       }
 
       setData((prev) => {
@@ -175,9 +179,9 @@ export function useGameListViewModel() {
       setData(normalized);
       setMeta((prev) => ({ ...prev, updatedAt }));
       saveLocalState(payload);
-      // Espejo al store `games`/`deleted` (dual-write). Best-effort: appState sigue siendo la fuente
-      // de verdad, así que un fallo aquí no afecta al guardado ni al modo offline.
-      void replaceGamesStoreFromTabData(normalized).catch(() => {});
+      // Espejo al store `games`/`deleted` + timestamp (dual-write). Best-effort: appState sigue siendo
+      // el backup, así que un fallo aquí no afecta al guardado ni al modo offline.
+      void mirrorTabDataToGames(normalized, updatedAt).catch(() => {});
       markDirty();
       transitionTo('dirty');
     },
