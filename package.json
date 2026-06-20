@@ -13,7 +13,10 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "lint": "eslint src tests --fix",
-    "audit:privacy": "node scripts/audit-privacy.js"
+    "audit:privacy": "node scripts/audit-privacy.js",
+    "typecheck": "tsc --noEmit",
+    "test:rules": "firebase emulators:exec --only firestore \"vitest run tests/unit/firestore.rules.test.ts\"",
+    "emulators": "firebase emulators:start --only firestore"
   },
   "engines": {
     "node": ">=20.0.0"
