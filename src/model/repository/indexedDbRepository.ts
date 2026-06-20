@@ -1,4 +1,4 @@
-import type { DeletedItem, GameItem, StoragePayload, TabData, TabId } from '../types/game';
+import { TAB_IDS, type DeletedItem, type GameItem, type StoragePayload, type TabData, type TabId } from '../types/game';
 import type { LocalMeta, SyncOp } from '../types/local';
 import { DELETED_STORE, GAMES_STORE, META_STORE, SYNC_QUEUE_STORE, openSharedDatabase } from './idbConnectionRepository';
 
@@ -216,4 +216,34 @@ export async function deleteGame(id: number): Promise<void> {
   await idbDelete(GAMES_STORE, id);
   await putDeletedRecord({ id, _ts: ts, deletedAt: ts });
   await enqueueSyncOp({ type: 'deleteGame', payload: { id } });
+}
+
+/**
+ * Espejo (dual-write): reemplaza atómicamente el contenido de `games` + `deleted` para que reflejen
+ * el `TabData` dado. NO encola SyncOps (la sincronización por gist sigue operando sobre TabData/appState
+ * durante la transición). Mantiene el store `games` siempre al día con cada guardado.
+ */
+export async function replaceGamesStoreFromTabData(data: TabData): Promise<void> {
+  const db = await openSharedDatabase();
+  return new Promise<void>((resolve, reject) => {
+    const tx = db.transaction([GAMES_STORE, DELETED_STORE], 'readwrite');
+    const games = tx.objectStore(GAMES_STORE);
+    const deleted = tx.objectStore(DELETED_STORE);
+    games.clear();
+    deleted.clear();
+    for (const tab of TAB_IDS) {
+      for (const game of data[tab] || []) {
+        if (!game || !(Number(game.id) > 0)) continue;
+        games.put({ ...game, _tab: tab });
+      }
+    }
+    for (const tomb of data.deleted || []) {
+      if (!tomb || !(Number(tomb.id) > 0)) continue;
+      const ts = Number(tomb._ts) || 0;
+      deleted.put({ id: tomb.id, _ts: ts, deletedAt: Number(tomb.deletedAt ?? ts) || ts });
+    }
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error || new Error('replaceGamesStoreFromTabData failed'));
+    tx.onabort = () => reject(tx.error || new Error('replaceGamesStoreFromTabData aborted'));
+  });
 }

@@ -4,6 +4,7 @@ import { HOURS_RANGES } from '../core/constants/uiConfig';
 import { sortEs, uniqueCaseInsensitive } from '../core/utils/compare';
 import { normalizeTag, safeTrim } from '../core/security/sanitize';
 import { loadLocalState, loadLocalStateAsync, normalizeData, saveLocalState } from '../model/repository/localRepository';
+import { replaceGamesStoreFromTabData } from '../model/repository/indexedDbRepository';
 import { markDirty } from '../model/repository/syncStateRepository';
 import { transitionTo } from '../model/repository/syncMachineRepository';
 import type { TabAction as LabelsTabAction } from '../core/constants/labels';
@@ -160,6 +161,9 @@ export function useGameListViewModel() {
       setData(normalized);
       setMeta((prev) => ({ ...prev, updatedAt }));
       saveLocalState(payload);
+      // Espejo al store `games`/`deleted` (dual-write). Best-effort: appState sigue siendo la fuente
+      // de verdad, así que un fallo aquí no afecta al guardado ni al modo offline.
+      void replaceGamesStoreFromTabData(normalized).catch(() => {});
       markDirty();
       transitionTo('dirty');
     },

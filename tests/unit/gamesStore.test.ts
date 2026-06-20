@@ -5,10 +5,11 @@ import {
   getAllGameRecords,
   getGamesAsTabData,
   getSyncQueue,
+  replaceGamesStoreFromTabData,
   upsertGame,
 } from '../../src/model/repository/indexedDbRepository';
 import { DELETED_STORE, GAMES_STORE, META_STORE, SYNC_QUEUE_STORE, openSharedDatabase } from '../../src/model/repository/idbConnectionRepository';
-import type { GameItem } from '../../src/model/types/game';
+import type { GameItem, TabData } from '../../src/model/types/game';
 
 function makeGame(id: number): GameItem {
   return { id, _ts: 1, name: `Game ${id}`, platforms: [], genres: [], steamDeck: false, review: '' };
@@ -65,5 +66,25 @@ describe('games store write accessors', () => {
     const data = await getGamesAsTabData();
     expect(data.p.map((g) => g.id)).toContain(3);
     expect(data.deleted.map((d) => d.id)).not.toContain(3);
+  });
+
+  it('replaceGamesStoreFromTabData refleja el TabData (round-trip) y reemplaza, no acumula', async () => {
+    const td: TabData = {
+      c: [makeGame(1)], v: [makeGame(2)], e: [], p: [makeGame(3)],
+      deleted: [{ id: 9, _ts: 50, deletedAt: 50 }], updatedAt: 7,
+    };
+    await replaceGamesStoreFromTabData(td);
+    let out = await getGamesAsTabData();
+    expect(out.c.map((g) => g.id)).toEqual([1]);
+    expect(out.v.map((g) => g.id)).toEqual([2]);
+    expect(out.p.map((g) => g.id)).toEqual([3]);
+    expect(out.deleted.map((d) => d.id)).toEqual([9]);
+
+    // Segunda llamada con menos datos: debe REEMPLAZAR el contenido anterior.
+    await replaceGamesStoreFromTabData({ c: [makeGame(5)], v: [], e: [], p: [], deleted: [], updatedAt: 8 });
+    out = await getGamesAsTabData();
+    expect(out.c.map((g) => g.id)).toEqual([5]);
+    expect(out.v).toEqual([]);
+    expect(out.deleted).toEqual([]);
   });
 });
