@@ -75,6 +75,70 @@ export function distributeIntoChunks<T extends { id: number }>(items: T[], thres
  * Envuelve un `TabData` en el fichero ancla `GamesMainFile` (formato destino). Cada juego se anota con
  * `_tab` para que `unwrapGamesFile` pueda reconstruir el `TabData`. Función pura; no escribe nada.
  */
+// E1 (escalabilidad): guarda de tamaño del gist. GitHub trunca/rechaza ficheros muy grandes (~1 MB). En vez de
+// dejar que el PATCH falle en bucle (deadlock silencioso), avisamos por consola al acercarnos y lanzamos un error
+// accionable al superar el umbral de bloqueo. El particionado real por tamaño llega en E4 (chunking).
+const GIST_SIZE_WARN_BYTES = 700 * 1024;
+const GIST_SIZE_BLOCK_BYTES = 950 * 1024;
+
+function utf8ByteLength(content: string): number {
+  return new TextEncoder().encode(content).length;
+}
+
+/** Lanza si el contenido supera el umbral seguro; avisa (sin lanzar) al acercarse. Devuelve el tamaño en bytes. */
+export function assertGistSizeWithinLimit(content: string, label: string): number {
+  const bytes = utf8ByteLength(content);
+  const kb = Math.round(bytes / 1024);
+  if (bytes >= GIST_SIZE_BLOCK_BYTES) {
+    throw new Error(
+      `El ${label} ocupa ${kb} KB y supera el límite seguro de gist (~${Math.round(GIST_SIZE_BLOCK_BYTES / 1024)} KB). ` +
+        'No se ha subido para no fallar contra GitHub. Reduce datos (o espera al particionado por tamaño).',
+    );
+  }
+  if (bytes >= GIST_SIZE_WARN_BYTES) {
+    console.warn(`[gist] ${label} grande: ${kb} KB (aviso desde ${Math.round(GIST_SIZE_WARN_BYTES / 1024)} KB).`);
+  }
+  return bytes;
+}
+
+// E1 (escalabilidad): serialización magra. Omite campos OPCIONALES vacíos/por-defecto al escribir el gist de juegos
+// (arrays vacíos, booleanos opcionales en false). Los campos requeridos (id/_ts/name/platforms/genres/steamDeck/review)
+// se conservan siempre. Compat-safe: la lectura tolera ausencia de campos opcionales.
+function leanGameItem(game: GameItem): GameItem {
+  const out: Record<string, unknown> = {
+    id: game.id,
+    _ts: game._ts,
+    name: game.name,
+    platforms: Array.isArray(game.platforms) ? game.platforms : [],
+    genres: Array.isArray(game.genres) ? game.genres : [],
+    steamDeck: Boolean(game.steamDeck),
+    review: game.review || '',
+  };
+  if (game.score !== undefined && game.score !== null) out.score = game.score;
+  if (game.hours !== undefined && game.hours !== null) out.hours = game.hours;
+  if (Array.isArray(game.years) && game.years.length) out.years = game.years;
+  if (Array.isArray(game.strengths) && game.strengths.length) out.strengths = game.strengths;
+  if (Array.isArray(game.weaknesses) && game.weaknesses.length) out.weaknesses = game.weaknesses;
+  if (Array.isArray(game.reasons) && game.reasons.length) out.reasons = game.reasons;
+  if (game.replayable) out.replayable = true;
+  if (game.retry) out.retry = true;
+  if (game._v !== undefined) out._v = game._v;
+  if (game.shared) out.shared = true;
+  return out as unknown as GameItem;
+}
+
+/** Devuelve una copia de `TabData` con cada juego en su forma magra (para escribir el gist más compacto). */
+export function leanTabData(data: TabData): TabData {
+  return {
+    c: (data.c || []).map(leanGameItem),
+    v: (data.v || []).map(leanGameItem),
+    e: (data.e || []).map(leanGameItem),
+    p: (data.p || []).map(leanGameItem),
+    deleted: data.deleted || [],
+    updatedAt: data.updatedAt,
+  };
+}
+
 export function buildGamesMainFile(data: TabData): GamesMainFile {
   const games: Record<number, GameItem & { _tab: TabId }> = {};
   for (const tab of TAB_IDS) {
@@ -1113,6 +1177,9 @@ export async function writeSocialGist(token: string, gistId: string, payload: So
   });
   assertNoSocialPrivateFields(normalized); // canal público: nunca review/reviewText/score/hours/etc.
 
+  const socialContent = JSON.stringify(normalized);
+  assertGistSizeWithinLimit(socialContent, 'gist social'); // E1: evita el deadlock al superar el límite de gist
+
   const response = await fetch(`${GIST_API_BASE}/${gistId}`, {
     method: 'PATCH',
     headers: {
@@ -1123,7 +1190,7 @@ export async function writeSocialGist(token: string, gistId: string, payload: So
     body: JSON.stringify({
       files: {
         [SOCIAL_GIST_FILENAME]: {
-          content: JSON.stringify(normalized),
+          content: socialContent,
         },
       },
     }),
@@ -1200,7 +1267,10 @@ export async function writeGist(token: string, gistId: string, payload: TabData)
   }
 
   // Fase C: emitir el envoltorio destino solo si la bandera está activa; si no, TabData plano (retrocompatible).
-  const fileContent = ENABLE_GAMES_WRAPPER_WRITE ? JSON.stringify(buildGamesMainFile(payload)) : JSON.stringify(payload);
+  // E1: serialización magra (omite opcionales vacíos) + guarda de tamaño (evita el deadlock al superar el límite de gist).
+  const lean = leanTabData(payload);
+  const fileContent = ENABLE_GAMES_WRAPPER_WRITE ? JSON.stringify(buildGamesMainFile(lean)) : JSON.stringify(lean);
+  assertGistSizeWithinLimit(fileContent, 'gist de juegos');
 
   const response = await fetch(`${GIST_API_BASE}/${gistId}`, {
     method: 'PATCH',
