@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { SYNC_MESSAGES } from '../core/constants/labels';
-import { findSocialProfileByEmail, getCurrentSocialAuthUser, signInWithGoogle } from '../model/repository/firebaseRepository';
+import { findSocialProfileByEmail, getCurrentSocialAuthUser, recoverGithubToken, signInWithGoogle } from '../model/repository/firebaseRepository';
 import { mergeCrdt } from '../model/repository/syncRepository';
 import { clearSyncConfig, createGist, getSyncConfig, readGist, saveSyncConfig, whoAmI, writeGist } from '../model/repository/gistRepository';
 import { normalizeData } from '../model/repository/localRepository';
@@ -644,7 +644,8 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
 
       const profile = await findSocialProfileByEmail(user.email);
       const recoveredGistId = String(profile?.gamesGistId || '').trim();
-      const recoveredToken = String(profile?.githubToken || '').trim();
+      // B1: preferir el token CIFRADO de privateConfig; fallback al campo legacy en claro (perfiles viejos).
+      const recoveredToken = (await recoverGithubToken(user.uid)) || String(profile?.githubToken || '').trim();
 
       if (!recoveredGistId) {
         setStatus('error');
