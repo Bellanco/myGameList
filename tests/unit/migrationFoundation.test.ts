@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import {
+  assertGistSizeWithinLimit,
   assertNoSocialPrivateFields,
   buildGamesMainFile,
   buildReviewSnippet,
   distributeIntoChunks,
+  leanTabData,
   toPublicGame,
 } from '../../src/model/repository/gistRepository';
 import { gamesGistNeedsRewrite, unwrapGamesFile } from '../../src/model/migration/legacyGamesFormat';
@@ -144,6 +146,42 @@ describe('socialGistNeedsRewrite (condicional de upgrade proactivo social)', () 
 
   it('false para valores no-objeto', () => {
     expect(socialGistNeedsRewrite(null)).toBe(false);
+  });
+});
+
+describe('E1: leanTabData (serialización magra)', () => {
+  it('omite opcionales vacíos/false y conserva los requeridos', () => {
+    const td: TabData = {
+      c: [{ id: 1, _ts: 5, name: 'A', platforms: ['PC'], genres: [], steamDeck: false, review: '',
+        years: [], strengths: [], weaknesses: [], reasons: [], replayable: false, retry: false }],
+      v: [], e: [], p: [], deleted: [], updatedAt: 5,
+    };
+    const g = leanTabData(td).c[0] as unknown as Record<string, unknown>;
+    expect(g).toMatchObject({ id: 1, _ts: 5, name: 'A', steamDeck: false, review: '' });
+    for (const k of ['years', 'strengths', 'weaknesses', 'reasons', 'replayable', 'retry', 'score', 'hours']) {
+      expect(k in g).toBe(false);
+    }
+  });
+
+  it('conserva opcionales con contenido', () => {
+    const td: TabData = {
+      c: [{ id: 1, _ts: 5, name: 'A', platforms: ['PC'], genres: ['RPG'], steamDeck: true, review: 'r',
+        score: 4, years: [2020], strengths: ['x'], replayable: true, retry: true, hours: 12 }],
+      v: [], e: [], p: [], deleted: [], updatedAt: 5,
+    };
+    const g = leanTabData(td).c[0] as unknown as Record<string, unknown>;
+    expect(g).toMatchObject({ steamDeck: true, review: 'r', score: 4, years: [2020], strengths: ['x'], replayable: true, retry: true, hours: 12 });
+  });
+});
+
+describe('E1: assertGistSizeWithinLimit (guarda de tamaño)', () => {
+  it('no lanza para contenido pequeño', () => {
+    expect(() => assertGistSizeWithinLimit('{"a":1}', 'gist de juegos')).not.toThrow();
+  });
+
+  it('lanza un error accionable al superar el umbral de bloqueo (~950 KB)', () => {
+    const huge = 'x'.repeat(1_000_000); // ~1 MB > 950 KB
+    expect(() => assertGistSizeWithinLimit(huge, 'gist de juegos')).toThrow(/límite seguro/);
   });
 });
 
