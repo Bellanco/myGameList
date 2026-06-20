@@ -6,6 +6,7 @@ import {
   getSyncConfig,
   readPublicSocialGistById,
   readSocialGist,
+  remapSocialActorIds,
   saveSocialSyncConfig,
   type SocialActivityEntry,
   type SocialProfileVisibility,
@@ -21,6 +22,7 @@ import {
   getCurrentSocialAuthUser,
   findSocialProfileByEmail,
   listSocialDirectory,
+  resolveStableProfileId,
   signInWithGoogle,
   signOutSocialUser,
   type SocialAuthUser,
@@ -426,7 +428,7 @@ export function useSocialViewModel() {
 
     return activityFeedItems.find(
       (entry) =>
-        entry.actorUid === detailActorUid &&
+        entry.actorProfileId === detailActorUid &&
         entry.gameId === detailGameId &&
         entry.type === detailEventType,
     ) || null;
@@ -550,7 +552,7 @@ export function useSocialViewModel() {
   }, []);
 
   const openActivityDetail = useCallback((entry: SocialActivityFeedItem) => {
-    navigate(`/social/user/${encodeURIComponent(entry.actorUid)}/game/${entry.gameId}/${entry.type}`);
+    navigate(`/social/user/${encodeURIComponent(entry.actorProfileId)}/game/${entry.gameId}/${entry.type}`);
   }, [navigate]);
 
   const openProfileDetail = useCallback((profileId: string) => {
@@ -692,10 +694,14 @@ export function useSocialViewModel() {
       // Upgrade proactivo: reescribir también si el remoto conserva texto de reseña legacy (review/reviewText),
       // para dejar el gist social en formato index-only (solo snippet) sin esperar a una nueva publicación.
       if (hasLegacySharedLists || hasLegacyRecommendations || socialRead.wasLegacy) {
+        // 6.2b: al reescribir el gist propio, remapea la identidad legacy (miUid → miProfileId) para sacar
+        // el uid del canal público; el resto de la limpieza (snippet-only, sin sharedLists) sigue igual.
+        const myProfileId = await resolveStableProfileId(authUser.uid);
+        const remapped = remapSocialActorIds(socialRead.data, { [authUser.uid]: myProfileId });
         const cleanedPayload = {
-          ...socialRead.data,
+          ...remapped,
           profile: {
-            ...socialRead.data.profile,
+            ...remapped.profile,
             recommendations: [],
             sharedLists: {},
           },

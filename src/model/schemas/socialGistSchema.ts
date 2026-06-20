@@ -39,7 +39,7 @@ const profile = z.strictObject({
 
 const recommendation = z.strictObject({
   id: z.number(),
-  fromUid: z.string(),
+  fromProfileId: z.string(), // 6.2b: pseudónimo público (antes `fromUid`)
   gameId: z.number(),
   gameName: z.string(),
   rating: z.number(),
@@ -51,7 +51,7 @@ const activity = z.strictObject({
   id: z.string(),
   key: z.string(),
   type: z.enum(['recommendation', 'review']),
-  actorUid: z.string(),
+  actorProfileId: z.string(), // 6.2b: pseudónimo público (antes `actorUid`)
   actorName: z.string(),
   gameId: z.number(),
   gameName: z.string(),
@@ -67,6 +67,7 @@ export const socialGistSchema = z.strictObject({
   recommendations: z.array(recommendation),
   activity: z.array(activity),
   updatedAt: z.number(),
+  schemaVersion: z.number(), // 6.2b: 2 = identidad por profileId
 });
 
 /** Valida la proyección social antes de escribir. Lanza con detalle si hay campos extra o tipos inválidos. */
