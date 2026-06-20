@@ -208,20 +208,18 @@ export interface SocialProfileVisibility {
     hideGameTime: boolean;
 }
 
+/**
+ * Proyección PÚBLICA de un juego compartido (canal social, index-only).
+ * NO contiene review completo, score exacto, hours, steamDeck, retry, replayable ni strengths/weaknesses/reasons.
+ * Solo lo mínimo + `rating` (redondeado) y `snippet` (≤160, derivado del review).
+ */
 export interface SocialSharedGame {
   id: number;
   name: string;
   platforms: string[];
   genres: string[];
-  steamDeck: boolean;
-  review: string;
-  score: number;
-  strengths: string[];
-  weaknesses: string[];
-  reasons: string[];
-  replayable: boolean;
-  retry: boolean;
-  hours: number | null;
+  rating: number;
+  snippet: string;
 }
 
 export type SocialActivityType = 'recommendation' | 'review';
@@ -246,7 +244,7 @@ export interface SocialActivityEntry {
   gameName: string;
   rating: number;
   recommendationText: string;
-  reviewText: string;
+  snippet: string;
   createdAt: number;
   updatedAt: number;
 }
@@ -511,22 +509,17 @@ function normalizeSocialSharedGame(value: unknown): SocialSharedGame | null {
       .slice(0, 24);
   };
 
-  const rawHours = Number(source.hours);
+  // Proyección pública: deriva snippet del review legacy (o del snippet ya migrado) y rating del score legacy.
+  const snippet = buildReviewSnippet(String(source.snippet ?? source.review ?? ''));
+  const rating = Math.round(clampRating(source.rating ?? source.score));
 
   return {
     id,
     name,
     platforms: toStringArray(source.platforms),
     genres: toStringArray(source.genres),
-    steamDeck: Boolean(source.steamDeck),
-    review: String(source.review || '').trim(),
-    score: clampRating(source.score),
-    strengths: toStringArray(source.strengths),
-    weaknesses: toStringArray(source.weaknesses),
-    reasons: toStringArray(source.reasons),
-    replayable: Boolean(source.replayable),
-    retry: Boolean(source.retry),
-    hours: Number.isFinite(rawHours) && rawHours >= 0 ? rawHours : null,
+    rating,
+    snippet,
   };
 }
 
@@ -646,7 +639,7 @@ function normalizeActivityItems(items: unknown): SocialActivityEntry[] {
         gameName,
         rating: clampRating(record.rating),
         recommendationText: String(record.recommendationText || '').trim(),
-        reviewText: String(record.reviewText || '').trim(),
+        snippet: buildReviewSnippet(String(record.snippet ?? record.reviewText ?? '')),
         createdAt,
         updatedAt,
       } satisfies SocialActivityEntry;
@@ -680,7 +673,7 @@ function mergeLegacyActivity(
       gameName: recommendation.gameName,
       rating: recommendation.rating,
       recommendationText: '',
-      reviewText: '',
+      snippet: '',
       createdAt: current?.createdAt || recommendation.createdAt,
       updatedAt: Math.max(current?.updatedAt || 0, recommendation.updatedAt),
     };
@@ -735,7 +728,7 @@ export function upsertReviewActivity(data: SocialGistData, input: UpsertReviewIn
     gameName: cleanName,
     rating: clampRating(input.rating),
     recommendationText: '',
-    reviewText: cleanReview,
+    snippet: buildReviewSnippet(cleanReview),
   }, now);
 
   return {
@@ -874,6 +867,7 @@ async function createSocialGistWithData(token: string, data: SocialGistData, isP
   }
 
   const normalized = normalizeSocialGistData(data);
+  assertNoSocialPrivateFields(normalized); // canal público: nunca review/reviewText/score/hours/etc.
   const response = await fetch(GIST_API_BASE, {
     method: 'POST',
     headers: {
@@ -1172,6 +1166,7 @@ export async function writeSocialGist(token: string, gistId: string, payload: So
     ...payload,
     updatedAt: Date.now(),
   });
+  assertNoSocialPrivateFields(normalized); // canal público: nunca review/reviewText/score/hours/etc.
 
   const response = await fetch(`${GIST_API_BASE}/${gistId}`, {
     method: 'PATCH',

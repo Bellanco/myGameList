@@ -1,6 +1,7 @@
 ﻿import { memo, useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type MouseEvent as ReactMouseEvent } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
+  buildReviewSnippet,
   createSocialGist,
   getSocialSyncConfig,
   getSyncConfig,
@@ -358,20 +359,14 @@ export const SocialHub = memo(function SocialHub() {
   }, []);
 
   const toSharedGame = useCallback((game: GameItem): SocialSharedGame => {
+    // Proyección PÚBLICA (index-only): solo básicos + rating redondeado + snippet (≤160). Sin review/score/horas/etc.
     return {
       id: game.id,
       name: game.name,
       platforms: game.platforms || [],
       genres: game.genres || [],
-      steamDeck: Boolean(game.steamDeck),
-      review: game.review || '',
-      score: Number(game.score || 0),
-      strengths: game.strengths || [],
-      weaknesses: game.weaknesses || [],
-      reasons: game.reasons || [],
-      replayable: Boolean(game.replayable),
-      retry: Boolean(game.retry),
-      hours: typeof game.hours === 'number' ? game.hours : null,
+      rating: Math.round(Number(game.score || 0)),
+      snippet: buildReviewSnippet(game.review || ''),
     };
   }, []);
 
@@ -442,7 +437,7 @@ export const SocialHub = memo(function SocialHub() {
         item.actorName,
         item.gameName,
         item.recommendationText,
-        item.reviewText,
+        item.snippet,
       ]
         .join(' ')
         .toLowerCase();
