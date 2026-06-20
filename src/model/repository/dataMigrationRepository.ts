@@ -67,7 +67,7 @@ export async function runMigration(options: { dryRun?: boolean } = {}): Promise<
     if (!dryRun) {
       // Sembrar LocalMeta con lo que tengamos sin Google (gistId/token desde SyncConfig) y marcar versión.
       const cfg = getSyncConfig();
-      const patch: Partial<LocalMeta> = { migrationVersion: TARGET_MIGRATION_VERSION };
+      const patch: Partial<LocalMeta> = { migrationVersion: TARGET_MIGRATION_VERSION, gamesUpdatedAt: payload.updatedAt };
       if (cfg) {
         patch.gamesGistId = cfg.gistId;
         patch.githubToken = cfg.token;
