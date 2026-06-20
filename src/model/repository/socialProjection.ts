@@ -4,7 +4,57 @@
 // Extraído de gistRepository.ts (M1) sin cambio de comportamiento.
 import { TAB_IDS, type GameItem, type TabData, type TabId } from '../types/game';
 import type { PublicGame } from '../types/social';
-import type { ChunkRef, GamesChunkFile, GamesMainFile } from '../types/gist';
+import type { CategoryDictionaries, CategoryKey, ChunkRef, EncodedGameItem, GamesChunkFile, GamesMainFile } from '../types/gist';
+
+// 6.opt — Diccionarios de categorías (schemaVersion 4): deduplican géneros/plataformas/puntos fuertes/débiles/
+// razones. Se construye un diccionario global (en el ancla) y cada juego referencia por índice.
+const CATEGORY_KEYS: CategoryKey[] = ['genres', 'platforms', 'strengths', 'weaknesses', 'reasons'];
+
+/** Construye los diccionarios globales + un mapa valor→índice por categoría a partir de TODOS los juegos. */
+function buildCategoryDictionaries(games: Array<GameItem & { _tab: TabId }>): {
+  dictionaries: CategoryDictionaries;
+  indexMaps: Record<CategoryKey, Map<string, number>>;
+} {
+  const dictionaries: CategoryDictionaries = { genres: [], platforms: [], strengths: [], weaknesses: [], reasons: [] };
+  const indexMaps: Record<CategoryKey, Map<string, number>> = {
+    genres: new Map(), platforms: new Map(), strengths: new Map(), weaknesses: new Map(), reasons: new Map(),
+  };
+  for (const game of games) {
+    for (const key of CATEGORY_KEYS) {
+      for (const value of (game[key] as string[] | undefined) || []) {
+        const v = String(value);
+        if (!indexMaps[key].has(v)) {
+          indexMaps[key].set(v, dictionaries[key].length);
+          dictionaries[key].push(v);
+        }
+      }
+    }
+  }
+  return { dictionaries, indexMaps };
+}
+
+/** Codifica un juego: sustituye las 5 categorías por índices al diccionario; el resto queda igual. PURA.
+ *  Omite las categorías vacías/ausentes (serialización magra: el decoder las trata como []). */
+function encodeGame(game: GameItem & { _tab: TabId }, indexMaps: Record<CategoryKey, Map<string, number>>): EncodedGameItem {
+  const out = { ...game } as Record<string, unknown>;
+  for (const key of CATEGORY_KEYS) {
+    const values = (game[key] as string[] | undefined) || [];
+    const indices = values.map((v) => indexMaps[key].get(String(v))).filter((i): i is number => typeof i === 'number');
+    if (indices.length > 0) out[key] = indices;
+    else delete out[key];
+  }
+  return out as unknown as EncodedGameItem;
+}
+
+/** Codifica un mapa de juegos id→juego usando los diccionarios dados. */
+function encodeGamesRecord(
+  rec: Record<number, GameItem & { _tab: TabId }>,
+  indexMaps: Record<CategoryKey, Map<string, number>>,
+): Record<number, EncodedGameItem> {
+  const out: Record<number, EncodedGameItem> = {};
+  for (const id of Object.keys(rec)) out[Number(id)] = encodeGame(rec[Number(id)], indexMaps);
+  return out;
+}
 
 function checksum32(input: string): string {
   let h = 5381;
@@ -104,29 +154,20 @@ export function leanTabData(data: TabData): TabData {
  * `_tab` para que `unwrapGamesFile` pueda reconstruir el `TabData`. Función pura; no escribe nada.
  */
 export function buildGamesMainFile(data: TabData): GamesMainFile {
-  const games: Record<number, GameItem & { _tab: TabId }> = {};
-  for (const tab of TAB_IDS) {
-    for (const game of data[tab] || []) {
-      if (!game || !(Number(game.id) > 0)) continue;
-      games[game.id] = { ...game, _tab: tab };
-    }
-  }
-  const deletedIndex: Record<number, { deletedAt: number; purgeAfter: number }> = {};
-  for (const tomb of data.deleted || []) {
-    if (!tomb || !(Number(tomb.id) > 0)) continue;
-    const ts = Number(tomb.deletedAt ?? tomb._ts) || 0;
-    deletedIndex[tomb.id] = { deletedAt: ts, purgeAfter: ts };
-  }
+  const withTab = gamesArrayWithTab(data);
+  const { dictionaries, indexMaps } = buildCategoryDictionaries(withTab);
+  const games = encodeGamesRecord(toGamesRecord(withTab), indexMaps);
   const generatedAt = Date.now();
   return {
-    schemaVersion: 3,
+    schemaVersion: 4,
     fileType: 'games-main',
     updatedAt: data.updatedAt || generatedAt,
     integrity: { algorithm: 'djb2', checksum: checksum32(JSON.stringify(games)), generatedAt },
-    chunkIndex: { strategy: 'size', maxChunkKB: 800, chunks: [{ chunkId: 'main', gistId: null, sizeKB: 0, updatedAt: generatedAt }] },
+    chunkIndex: { strategy: 'size', maxChunkKB: GAMES_CHUNK_MAX_KB, chunks: [{ chunkId: 'main', gistId: null, sizeKB: 0, updatedAt: generatedAt }] },
     syncMeta: { lamport: 0, updatedAt: generatedAt },
+    dictionaries,
     games,
-    deletedIndex,
+    deletedIndex: buildDeletedIndex(data),
   };
 }
 
@@ -180,9 +221,21 @@ export function buildGamesFiles(
   maxChunkKB: number = GAMES_CHUNK_MAX_KB,
 ): { anchorFile: GamesMainFile; chunkFiles: Record<string, GamesChunkFile> } {
   const generatedAt = Date.now();
-  const buckets = distributeIntoChunks(gamesArrayWithTab(data), maxChunkKB * 1024); // { main, c1, c2, … }
+  // Diccionarios GLOBALES (sobre todos los juegos, antes de repartir): viven en el ancla y los chunks los referencian.
+  const allGames = gamesArrayWithTab(data);
+  const { dictionaries, indexMaps } = buildCategoryDictionaries(allGames);
 
-  const mainGames = toGamesRecord(buckets.main || []);
+  // Reparto por tamaño sobre los juegos YA codificados (su tamaño real con índices, no con cadenas).
+  const encodedAll = allGames.map((g) => ({ ...encodeGame(g, indexMaps), id: g.id }));
+  const buckets = distributeIntoChunks(encodedAll, maxChunkKB * 1024); // { main, c1, c2, … }
+
+  const toRecord = (items: EncodedGameItem[]): Record<number, EncodedGameItem> => {
+    const rec: Record<number, EncodedGameItem> = {};
+    for (const g of items) rec[g.id] = g;
+    return rec;
+  };
+
+  const mainGames = toRecord(buckets.main || []);
   const chunkFiles: Record<string, GamesChunkFile> = {};
   const chunkRefs: ChunkRef[] = [
     { chunkId: 'main', gistId: null, sizeKB: sizeKB(JSON.stringify(mainGames)), updatedAt: generatedAt },
@@ -190,10 +243,10 @@ export function buildGamesFiles(
 
   for (const chunkId of Object.keys(buckets)) {
     if (chunkId === 'main') continue;
-    const games = toGamesRecord(buckets[chunkId]);
+    const games = toRecord(buckets[chunkId]);
     const content = JSON.stringify(games);
     chunkFiles[gamesChunkFilename(chunkId)] = {
-      schemaVersion: 3,
+      schemaVersion: 4,
       fileType: 'games-chunk',
       chunkId,
       mainGistId: '', // chunks viven en el MISMO gist (gistId null); se puede sellar en escritura, no es necesario para leer
@@ -205,12 +258,13 @@ export function buildGamesFiles(
   }
 
   const anchorFile: GamesMainFile = {
-    schemaVersion: 3,
+    schemaVersion: 4,
     fileType: 'games-main',
     updatedAt: data.updatedAt || generatedAt,
     integrity: { algorithm: 'djb2', checksum: checksum32(JSON.stringify(mainGames)), generatedAt },
     chunkIndex: { strategy: 'size', maxChunkKB, chunks: chunkRefs },
     syncMeta: { lamport: 0, updatedAt: generatedAt },
+    dictionaries,
     games: mainGames,
     deletedIndex: buildDeletedIndex(data),
   };

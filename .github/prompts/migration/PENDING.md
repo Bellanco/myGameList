@@ -45,13 +45,20 @@
       juegos propios (fallback local). `readPublicGamesGistById` queda SIN USO → candidato a borrar en Fase 9.
       ⚠️ Verificar en navegador: el detalle de actividad de OTROS usuarios ya no muestra plataformas/géneros (degradación
       index-only intencionada); confirmar que la pantalla se ve bien sin ese bloque.
-- [x] **Fase 8 — E4** (IMPLEMENTADA pero GATED `ab1035e`): builder multi-fichero (`buildGamesFiles`), escritura
-      multi-fichero con borrado de chunks obsoletos, ensamblado en lectura (`assembleChunkedGames`), round-trip tests.
-      `ENABLE_GAMES_WRAPPER_WRITE` SIGUE EN `false` → INERTE; camino plano byte-idéntico (64+2 tests verdes).
-      ⏳ **Activar requiere (acción usuario)**: actualizar TODOS tus dispositivos a esta versión + probar en navegador +
-      poner la bandera en `true`. Solo entonces el gist de juegos pasa a multi-fichero. Falta aún: poblar
-      `privateConfig.gamesChunks` con el chunkIndex al escribir (hoy el chunkIndex vive en el ancla; los chunks se
-      reconstruyen al leer el gist, así que no es bloqueante, pero conviene para recuperación tras reinstalar).
+- [x] **Fase 8 — E4 + optimización de categorías** (IMPLEMENTADA pero GATED): builder multi-fichero (`buildGamesFiles`),
+      escritura multi-fichero con borrado de chunks obsoletos, ensamblado en lectura (`assembleChunkedGames`), round-trip tests.
+      **schemaVersion 4**: el ancla `GamesMainFile` usa **mapa por id** (no `c/v/e/p`) + **diccionarios de categorías**
+      (`genres`/`platforms`/`strengths`/`weaknesses`/`reasons` deduplicadas; cada juego referencia por índice). El ancla
+      (`myGames.json`) es el **padre**; los chunks hijos referencian sus diccionarios. Lectura retrocompatible: plano (`c/v/e/p`),
+      keyed-v3 (sin dict) y keyed-v4 (`decodeGameCategories` expande índices→cadenas). Auto-upgrade: con el flag ON, `readGist`
+      usa `gamesGistNeedsUpgradeToWrapper` → no-v4 se reescribe a v4, v4 no se toca. Verificado sobre `myGames.json` real:
+      round-trip EXACTO (228→228, 0 categorías distintas), ~4% más pequeño que el plano-lean actual. 83+2 tests.
+      `ENABLE_GAMES_WRAPPER_WRITE` SIGUE EN `false` → INERTE; camino plano intacto. La LECTURA de v4 ya está en esta versión
+      independientemente del flag.
+      ⏳ **Activar (acción usuario, 2 pasos)**: (1) desplegar ESTA versión a TODOS tus dispositivos (con el flag off ya ganan
+      la lectura v4); (2) cuando todos estén al día, poner `ENABLE_GAMES_WRAPPER_WRITE=true` → el gist pasa a v4 y el
+      auto-upgrade reescribe el viejo. ⚠️ NO activar antes: un dispositivo en versión anterior leería índices como números.
+      Reversible (volver a flat). Pendiente menor: poblar `privateConfig.gamesChunks`.
 - [ ] **Fase 9 — Limpieza** ⚠️ PREMATURA AHORA: borrar `src/model/migration/legacy*.ts` + fallbacks (token legacy,
       lectura plano del gist, claves localStorage viejas) SOLO cuando no queden datos ni clientes viejos. Hoy NO se cumple:
       la bandera de chunking está OFF, 6.2/6.4 aplazados, reglas sin desplegar, sin verificación en navegador. Borrar la
