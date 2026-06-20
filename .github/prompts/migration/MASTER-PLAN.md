@@ -109,17 +109,20 @@ Regla de oro: **cada cambio de formato de las fases siguientes añade aquí su l
 > Estado por sub-paso: ✅ 6.1 (`5b48a14`) Zod + allowlist estricta del gist social validada antes de escribir ·
 > ✅ 6.3 (`71d24c6`) `schemaVersion` aditivo en docs Firestore · ⏸️ 6.2 (uid→profileId) APLAZADA: bloqueada por
 > `profileId` no estable entre dispositivos (requiere 6.2a recuperar profileId de Firestore al login) + necesita prueba
-> en 2 dispositivos; `consent` necesita UX inexistente · ⏸️ 6.4 (delta-sync + escritura granular) APLAZADA: alto riesgo,
-> necesita navegador. 6.2 y 6.4 se agrupan en un esfuerzo verificado en navegador/2 dispositivos.
+> en 2 dispositivos; `consent` necesita UX inexistente · ✅ 6.2a/6.2b HECHAS (código): profileId estable + uid→profileId en el
+> gist (commits `96e0632`/`f5ce4fb`) · ❌ 6.4 (delta-sync + escritura granular) CERRADA COMO NO-APLICABLE (ver abajo).
 
 - Añadir **`schemaVersion`** a cada artefacto persistido y **validación runtime con Zod** antes de escribir
   (integridad + privacidad; sustituye/complementa `assertNoSocialPrivateFields`).
 - **Gist social a `schemaVersion: 2` + `consent`** y **`uid`→`profileId`** en el canal público
   (`actorProfileId`/`fromProfileId`), con su compat de lectura en `legacySocialFormat.ts` (Fase 1.1).
 - Firestore: `schemaVersion` en docs + `gamesChunks`/`socialChunks` en `privateConfig` (modelo híbrido, sin index-only puro).
-- **Delta-sync + escritura granular** (lo que se movió de E2): reescribir el camino caliente a `upsertGame`/`deleteGame`
-  (escritura por registro) + un **consumidor de `syncQueue`** que sincronice solo los cambios encolados, no el blob entero.
-  Aquí sí es coherente: `appState` deja de ser la fuente del gist y el store `games` pasa a autoritativo en escritura.
+- ~~**Delta-sync + escritura granular**~~ **CERRADA COMO NO-APLICABLE** (decisión usuario 2026-06-20). El gist se escribe
+  SIEMPRE entero (API de GitHub = reemplazo de fichero completo) y desde el estado React (`writeGist(vm.data)`); `games` ya
+  es espejo exacto. Un consumidor de `syncQueue` no reduce el payload (no hay delta real contra GitHub) y mover la fuente
+  React→games añade fuentes de verdad sin beneficio a <1000 juegos (riesgo de pérdida). Tampoco eliminaría el blob `appState`
+  (eso es "retirar appState", decidido NO hacer). Accesores `upsertGame`/`deleteGame`/`syncQueue` quedan inertes por si en el
+  futuro hay un backend con delta real.
 
 ## FASE 7 — E3: desacoplar la lectura cross-user del gist de juegos
 - El directorio/perfil social deja de leer el gist de juegos en crudo de otros usuarios (`readPublicGamesGistById`);

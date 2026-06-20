@@ -30,7 +30,14 @@
       2 dispositivos: que el segundo adopta el profileId y la activity se agrupa por pseudónimo. NO toca Firestore (doc-keys uid,
       modelo híbrido) ni la colección `recommendations` de Firestore (sigue `fromUid`).
 - [ ] **6.2 — `consent`** en el gist social: necesita un **flujo de consentimiento (UX)** que aún no existe; no escribir un bloque hardcodeado.
-- [ ] **6.4 — Delta-sync + escritura granular** (movido de E2): reescribir el camino caliente a `upsertGame`/`deleteGame` + un **consumidor de `syncQueue`**; `appState` deja de ser la fuente del gist. ALTO RIESGO (pérdida de datos) → probar en navegador.
+- [x] **6.4 — Delta-sync + escritura granular** → **CERRADA COMO NO-APLICABLE** (decisión usuario 2026-06-20). Tras mapear la
+      arquitectura real: el gist se escribe SIEMPRE entero (la API de GitHub reemplaza el fichero completo) y desde el **estado
+      React** (`getData()`→`writeGist(vm.data)`); `localStorage`/`appState`/`games` son solo persistencia del mismo estado, y
+      `games` ya es espejo exacto en cada guardado. Un consumidor de `syncQueue` no reduce el payload (no hay delta real contra
+      GitHub) y mover "la fuente" de React→games es ceremonia que añade una 2ª/3ª fuente de verdad → riesgo de pérdida sin
+      beneficio a <1000 juegos. Además NO eliminaría el blob `appState` (eso es "retirar appState", decidido NO hacer). Los
+      accesores `upsertGame`/`deleteGame`/`getSyncQueue` quedan preparados pero inertes por si en el futuro hay un backend con
+      delta real. No se toca la máquina de sync.
 
 ## C. FASES del plan aún por hacer
 - [x] **Fase 7 — E3** (HECHA `f23289a`): el canal social ya NO lee el gist de juegos en crudo de otros usuarios; listas
