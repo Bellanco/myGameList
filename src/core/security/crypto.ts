@@ -67,9 +67,9 @@ function getSessionSeed(): string {
  * @param plaintext - Texto a encriptar (típicamente JSON stringificado)
  * @returns Objeto con IV y ciphertext en Base64
  */
-export async function encrypt(plaintext: string): Promise<EncryptedData> {
+export async function encrypt(plaintext: string, seed: string = getSessionSeed()): Promise<EncryptedData> {
   try {
-    const key = await deriveKey(getSessionSeed());
+    const key = await deriveKey(seed);
     const iv = crypto.getRandomValues(new Uint8Array(IV_LENGTH));
     const encoder = new TextEncoder();
     const encodedData = encoder.encode(plaintext);
@@ -101,14 +101,14 @@ export async function encrypt(plaintext: string): Promise<EncryptedData> {
  * @param encrypted - Objeto con IV y ciphertext en Base64
  * @returns Texto desencriptado
  */
-export async function decrypt(encrypted: EncryptedData): Promise<string> {
+export async function decrypt(encrypted: EncryptedData, seed: string = getSessionSeed()): Promise<string> {
   try {
     // Solo soportar versión 1
     if (encrypted.version !== 1) {
       throw new Error(`Versión de encriptación no soportada: ${encrypted.version}`);
     }
 
-    const key = await deriveKey(getSessionSeed());
+    const key = await deriveKey(seed);
     
     // Convertir de Base64 a Uint8Array
     const iv = new Uint8Array(atob(encrypted.iv).split('').map((c) => c.charCodeAt(0)));
@@ -135,6 +135,21 @@ export async function decrypt(encrypted: EncryptedData): Promise<string> {
  */
 export function isCryptoAvailable(): boolean {
   return typeof crypto !== 'undefined' && typeof crypto.subtle !== 'undefined';
+}
+
+/**
+ * Cifra a una cadena (JSON) usando una clave derivada de `secret`.
+ * A diferencia de `encrypt()` (clave por dispositivo/navegador), usar un secreto ESTABLE entre
+ * dispositivos (p. ej. el uid de Google) permite descifrar tras reinstalar o en otro equipo.
+ */
+export async function encryptToString(plaintext: string, secret: string): Promise<string> {
+  return JSON.stringify(await encrypt(plaintext, secret));
+}
+
+/** Descifra una cadena producida por `encryptToString` usando el mismo `secret`. */
+export async function decryptFromString(payload: string, secret: string): Promise<string> {
+  const parsed = JSON.parse(payload) as EncryptedData;
+  return decrypt(parsed, secret);
 }
 
 /**

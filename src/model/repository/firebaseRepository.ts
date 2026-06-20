@@ -1,6 +1,8 @@
 import { getApp, getApps, initializeApp, type FirebaseApp } from 'firebase/app';
 import { GoogleAuthProvider, getAuth, setPersistence, browserLocalPersistence, signInWithPopup, signOut, type Auth } from 'firebase/auth';
-import { collection, doc, documentId, getDocs, getFirestore, limit, query, serverTimestamp, setDoc, where, type Firestore } from 'firebase/firestore';
+import { collection, doc, documentId, getDoc, getDocs, getFirestore, limit, query, serverTimestamp, setDoc, where, type Firestore } from 'firebase/firestore';
+import { decryptFromString, encryptToString } from '../../core/security/crypto';
+import type { FirestorePrivateConfig } from '../types/firestore';
 
 type AnalyticsModule = typeof import('firebase/analytics');
 type Analytics = ReturnType<AnalyticsModule['getAnalytics']>;
@@ -526,6 +528,52 @@ export async function upsertProfileSocialReferences(input: {
       githubToken: String(input.githubToken || ''),
       socialEnabled: true,
     });
+  }
+}
+
+// ---------------------------------------------------------------------------
+// privateConfig/{uid} — solo lectura/escritura del dueño (ver firestore.rules destino).
+// Guarda ids de gist/chunks y el token de GitHub CIFRADO (recuperación tras reinstalar).
+// Aditivo: aún no cableado en los flujos actuales (lo usan los pasos 08/11).
+// ---------------------------------------------------------------------------
+
+export async function getPrivateConfig(uid: string): Promise<FirestorePrivateConfig | null> {
+  const services = await initializeFirebaseServices();
+  if (!services) {
+    throw new Error('Firebase no está configurado en este entorno');
+  }
+  const snap = await getDoc(doc(services.firestore, 'privateConfig', uid));
+  return snap.exists() ? (snap.data() as FirestorePrivateConfig) : null;
+}
+
+export async function setPrivateConfig(uid: string, config: Partial<FirestorePrivateConfig>): Promise<void> {
+  const services = await initializeFirebaseServices();
+  if (!services) {
+    throw new Error('Firebase no está configurado en este entorno');
+  }
+  await setDoc(doc(services.firestore, 'privateConfig', uid), { ...config }, { merge: true });
+}
+
+/**
+ * Cifra el token de GitHub con una clave derivada del `uid` (estable entre dispositivos) y lo guarda
+ * en `privateConfig`. Firestore nunca ve el token en claro.
+ * Nota de seguridad: la protección efectiva es la regla owner-only de `privateConfig`; el uid no es
+ * un secreto de alta entropía, así que no sustituye a dicha regla.
+ */
+export async function backupGithubToken(uid: string, token: string): Promise<void> {
+  if (!uid || !token) return;
+  const encryptedGithubToken = await encryptToString(token, uid);
+  await setPrivateConfig(uid, { encryptedGithubToken });
+}
+
+/** Recupera y descifra el token de GitHub desde `privateConfig` (tras login con Google). */
+export async function recoverGithubToken(uid: string): Promise<string | null> {
+  const cfg = await getPrivateConfig(uid);
+  if (!cfg?.encryptedGithubToken) return null;
+  try {
+    return await decryptFromString(cfg.encryptedGithubToken, uid);
+  } catch {
+    return null;
   }
 }
 
