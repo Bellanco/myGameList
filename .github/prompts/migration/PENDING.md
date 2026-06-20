@@ -2,6 +2,10 @@
 
 > Índice vivo de todo lo que queda. Marcar `[x]` al completar. Detalle de cada fase en `MASTER-PLAN.md`.
 > Última actualización: 2026-06-20 (formato v4 keyed+diccionarios subido).
+>
+> 📋 **Mejoras de calidad/seguridad/rendimiento (revisión global 2026-06-21):** ver
+> [`CODE-REVIEW-IMPROVEMENTS.md`](./CODE-REVIEW-IMPROVEMENTS.md) — lista priorizada de "futuros" (C1-C5 críticos,
+> seguridad del token, robustez de sync, perf React, a11y, refactors, tests). Distinta de este PENDING (corte de migración).
 
 ## RESUMEN — qué está hecho y qué queda
 **✅ HECHO y subido a `develop` (verde en CI):** toda la base previa (E1·M1·M2·M3·M4a·E2-base·F6.1·F6.3·E3) +
