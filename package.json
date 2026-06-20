@@ -15,7 +15,7 @@
     "lint": "eslint src tests --fix",
     "audit:privacy": "node scripts/audit-privacy.js",
     "typecheck": "tsc --noEmit",
-    "test:rules": "firebase emulators:exec --only firestore \"vitest run tests/unit/firestore.rules.test.ts\"",
+    "test:rules": "firebase emulators:exec --only firestore \"vitest run --config vitest.rules.config.js\"",
     "emulators": "firebase emulators:start --only firestore"
   },
   "engines": {
@@ -29,6 +29,7 @@
     "react-router-dom": "^7.9.5"
   },
   "devDependencies": {
+    "@firebase/rules-unit-testing": "^5.0.1",
     "@types/react": "^19.2.2",
     "@types/react-dom": "^19.2.2",
     "@typescript-eslint/parser": "^8.59.0",
@@ -37,6 +38,8 @@
     "eslint": "^9.39.4",
     "eslint-plugin-jsx-a11y": "^6.10.2",
     "eslint-plugin-react": "^7.37.5",
+    "fake-indexeddb": "^6.2.5",
+    "firebase-tools": "^15.22.0",
     "html-validate": "^10.13.1",
     "jsdom": "^29.0.2",
     "sass": "^1.99.0",
