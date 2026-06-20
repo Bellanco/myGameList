@@ -150,6 +150,16 @@ export async function patchLocalMeta(patch: Partial<LocalMeta>): Promise<void> {
   });
 }
 
+/** Devuelve el `profileId` (pseudónimo público) creándolo de forma perezosa si no existe. Solo IndexedDB. */
+export async function getOrCreateProfileId(): Promise<string> {
+  const meta = await getLocalMeta();
+  if (meta?.profileId) return meta.profileId;
+  const c = (globalThis as { crypto?: { randomUUID?: () => string } }).crypto;
+  const profileId = c?.randomUUID ? c.randomUUID() : `pid-${Date.now()}-${Math.round(performance.now())}`;
+  await patchLocalMeta({ profileId });
+  return profileId;
+}
+
 // Store `games` (v3): cada registro es un GameItem con su pestaña anotada como `_tab`.
 // Aún no es la fuente de verdad (la app sigue en `appState`); lo puebla el runner (paso 08).
 type GameRecord = GameItem & { _tab: TabId };
