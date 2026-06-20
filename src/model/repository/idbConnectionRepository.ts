@@ -37,7 +37,8 @@ function ensureStores(db: IDBDatabase): void {
     const games = db.createObjectStore(GAMES_STORE, { keyPath: 'id' });
     // Nota: IndexedDB no admite booleanos como clave de índice, así que `shared` no se indexa
     // (el filtrado por compartidos se hará en memoria o con un flag indexable en el paso que lo use).
-    games.createIndex('tab', 'tab');
+    // El tab se guarda como `_tab` (convención interna de mergeCrdt/unwrapGamesFile).
+    games.createIndex('_tab', '_tab');
     games.createIndex('_ts', '_ts');
   }
   if (!db.objectStoreNames.contains(META_STORE)) {
