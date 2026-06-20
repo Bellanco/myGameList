@@ -24,6 +24,7 @@ export interface SocialAuthUser {
 
 export interface SocialProfileReference {
   id: string;
+  profileId?: string;
   email: string;
   displayName: string;
   socialGistId: string;
@@ -498,11 +499,13 @@ export async function upsertProfileSocialReferences(input: {
   }
 
   const profileName = (input.preferredName || input.user.displayName || input.user.email || '').trim();
+  const profileId = await getOrCreateProfileId();
 
   await setDoc(
     doc(services.firestore, 'profiles', input.user.uid),
     {
       uid: input.user.uid,
+      profileId,
       email: input.user.email,
       displayName: profileName,
       photoURL: input.user.photoURL,
@@ -527,7 +530,7 @@ export async function upsertProfileSocialReferences(input: {
   }
 
   // B2: establecer profileId/userMap/privateConfig.
-  await establishProfileIdentity(input.user.uid, String(input.gamesGistId || ''), input.socialGistId);
+  await establishProfileIdentity(input.user.uid, profileId, String(input.gamesGistId || ''), input.socialGistId);
 
   const cleanEmail = input.user.email.trim().toLowerCase();
   if (cleanEmail) {
@@ -632,15 +635,12 @@ export async function setUserMap(uid: string, profileId: string): Promise<void> 
  * escribe `userMap/{uid}` y guarda los ids en `privateConfig` (merge, conserva el token cifrado).
  * Best-effort: no rompe el guardado social si falla.
  */
-export async function establishProfileIdentity(uid: string, gamesGistId: string, socialGistId: string): Promise<string | null> {
+export async function establishProfileIdentity(uid: string, profileId: string, gamesGistId: string, socialGistId: string): Promise<void> {
   try {
-    const profileId = await getOrCreateProfileId();
     await setUserMap(uid, profileId);
     await setPrivateConfig(uid, { profileId, gamesGistId, socialGistId });
-    return profileId;
   } catch (error) {
     console.warn('[firebase] No se pudo establecer profileId/userMap:', error instanceof Error ? error.message : error);
-    return null;
   }
 }
 
@@ -696,6 +696,7 @@ export async function findSocialProfileByEmail(email: string): Promise<SocialPro
 
     const docEntry = snapshot.docs[0];
     const data = docEntry.data() as {
+      profileId?: string;
       email?: string;
       displayName?: string;
       social?: { gistId?: string; gamesGistId?: string; githubToken?: string; enabled?: boolean };
@@ -703,6 +704,7 @@ export async function findSocialProfileByEmail(email: string): Promise<SocialPro
 
     const profile: SocialProfileReference = {
       id: docEntry.id,
+      profileId: String(data.profileId || ''),
       email: String(data.email || ''),
       displayName: String(data.displayName || ''),
       socialGistId: String(data.social?.gistId || ''),
@@ -757,6 +759,7 @@ export async function ensureProfileByEmail(input: {
   const targetId = existing?.id || input.user.uid;
   const gamesGistId = String(input.gamesGistId || '');
   const githubToken = String(input.githubToken || '');
+  const profileId = await getOrCreateProfileId();
   const shouldWriteProfile =
     !existing ||
     !existing.socialEnabled ||
@@ -772,6 +775,7 @@ export async function ensureProfileByEmail(input: {
       doc(services.firestore, 'profiles', targetId),
       {
         uid: input.user.uid,
+        profileId,
         email: cleanEmail,
         displayName: profileName,
         photoURL: input.user.photoURL,
@@ -797,7 +801,7 @@ export async function ensureProfileByEmail(input: {
   }
 
   // B2: establecer profileId/userMap/privateConfig.
-  await establishProfileIdentity(input.user.uid, gamesGistId, input.socialGistId);
+  await establishProfileIdentity(input.user.uid, profileId, gamesGistId, input.socialGistId);
 
   saveProfileByEmailCache(cleanEmail, {
     id: targetId,
