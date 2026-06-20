@@ -3,9 +3,11 @@
  * Detecta posibles fugas de datos privados a canales públicos (gist social / Firestore / logs).
  * Categoría A (crítica), B (aviso), C (info). Exit 1 si hay Categoría A.
  *
- * NOTA: hoy el código pre-migración SÍ guarda token/email/uid en Firestore y review en el gist
- * social; este script lo señalará como deuda a resolver en el corte index-only / snippet-split.
- * Por eso aún NO se cablea como gate de CI.
+ * Consciente de canal: el gist de juegos PRIVADO y el almacenamiento local pueden tener datos completos;
+ * los canales PÚBLICOS (Firestore profiles/feed, gist social) no pueden llevar review/score/hours/token.
+ * email/gamesGistId/uid se conservan por DECISIÓN de producto → Categoría C (informativa).
+ * Falsos positivos del análisis por líneas (args/lecturas) se suprimen con `// audit-allow: <razón>`.
+ * Tras el flip B1–B5, Categoría A = 0, por lo que puede usarse como gate de CI.
  */
 const fs = require('fs');
 const path = require('path');
@@ -13,14 +15,34 @@ const path = require('path');
 const root = path.join(__dirname, '..');
 const srcDir = path.join(root, 'src');
 
-const FORBIDDEN_FIELDS = ['review', 'reviewText', 'score', 'hours', 'steamDeck', 'retry', 'replayable', 'uid', 'email', 'githubToken', 'gamesGistId'];
+// Campos de datos de juego privados: prohibidos en canales PÚBLICOS (Firestore profiles/feed, gist social).
+const GAME_PRIVATE_FIELDS = ['review', 'reviewText', 'score', 'hours', 'steamDeck', 'retry', 'replayable'];
+// Secretos: nunca como campo almacenado fuera del almacenamiento privado local.
+const SECRET_FIELDS = ['githubToken'];
+// Conservados por DECISIÓN de producto (email consentido, gamesGistId es id de gist público, uid = clave de doc): solo info.
+const INFO_FIELDS = ['uid', 'email', 'gamesGistId'];
 
-// Ficheros que legítimamente manejan datos privados (no son canales públicos).
-const PRIVATE_ALLOW = /(localRepository|indexedDbRepository|idbConnectionRepository|migrateRepository|syncRepository|syncStateRepository|syncMachineRepository)\.ts$/;
+// Almacenamiento privado local: maneja datos completos legítimamente (incluido el token).
+const PRIVATE_STORAGE = /(localRepository|indexedDbRepository|idbConnectionRepository|migrateRepository|syncRepository|syncStateRepository|syncMachineRepository)\.ts$/;
+// gistRepository contiene el gist de juegos PRIVADO (datos completos legítimos); el path social está
+// protegido en runtime por assertNoSocialPrivateFields, que el análisis estático no puede aislar por fichero.
+const GAMES_GIST = /gistRepository\.ts$/;
 // Los ficheros de tipos solo DEFINEN campos, no los escriben.
 const TYPE_FILE = /[/\\]model[/\\]types[/\\]/;
 // Indicios de que un fichero ESCRIBE a un canal público.
 const WRITE_HINT = /(setDoc|updateDoc|addDoc|writeSocialGist|writeGist|method:\s*'PATCH')/;
+
+// El valor tras `campo:` es un TIPO (declaración de interface), no una escritura de valor.
+const TYPE_VALUE = /^(string|number|boolean|null|undefined|unknown|any|void|never|TabId|Record<|Array<|Partial<|\{\s*\})/;
+
+/** True solo si `field` aparece como clave con un VALOR (no como declaración de tipo). */
+function fieldWrittenAsValue(line, field) {
+  const match = line.match(new RegExp(`(?:^|[{,\\s])(['"]?)${field}\\1\\s*:\\s*(.*)$`));
+  if (!match) return false;
+  const after = (match[2] || '').trim();
+  if (!after || TYPE_VALUE.test(after)) return false; // sin valor o es una declaración de tipo
+  return true;
+}
 
 function listSourceFiles(dir) {
   const out = [];
@@ -41,17 +63,33 @@ function rel(file) {
   return path.relative(root, file).replace(/\\/g, '/');
 }
 
-/** Categoría A: campo prohibido como clave de objeto en un fichero que escribe a un canal público. */
+/** Categoría A/C: campos sensibles como clave de objeto en un fichero que escribe a un canal público. */
 function detectForbiddenFields(code, file) {
-  if (PRIVATE_ALLOW.test(file) || TYPE_FILE.test(file)) return [];
+  if (PRIVATE_STORAGE.test(file) || TYPE_FILE.test(file)) return [];
   if (!WRITE_HINT.test(code)) return [];
+  const isGamesGist = GAMES_GIST.test(file);
   const violations = [];
   code.split('\n').forEach((line, i) => {
     if (isCommentLine(line)) return;
-    for (const field of FORBIDDEN_FIELDS) {
-      const re = new RegExp(`(^|[{,\\s])(['"]?)${field}\\2\\s*:`);
-      if (re.test(line)) {
-        violations.push({ category: 'A', file: rel(file), line: i + 1, field, context: line.trim().slice(0, 140), message: `Posible campo privado '${field}' escrito a un canal público` });
+    if (line.includes('audit-allow')) return; // supresión explícita y revisada (con razón en el propio código)
+    // Secretos: siempre Categoría A — el token nunca debe ser un campo almacenado en gist/Firestore.
+    for (const field of SECRET_FIELDS) {
+      if (fieldWrittenAsValue(line, field)) {
+        violations.push({ category: 'A', file: rel(file), line: i + 1, field, context: line.trim().slice(0, 140), message: `Secreto '${field}' como campo almacenado en un canal público` });
+      }
+    }
+    // Datos de juego privados: A en canales públicos; en gistRepository se omite (gist de juegos privado + guarda runtime del social).
+    if (!isGamesGist) {
+      for (const field of GAME_PRIVATE_FIELDS) {
+        if (fieldWrittenAsValue(line, field)) {
+          violations.push({ category: 'A', file: rel(file), line: i + 1, field, context: line.trim().slice(0, 140), message: `Campo privado de juego '${field}' escrito a un canal público` });
+        }
+      }
+    }
+    // Conservados por decisión: solo informativo (no bloquea).
+    for (const field of INFO_FIELDS) {
+      if (fieldWrittenAsValue(line, field)) {
+        violations.push({ category: 'C', file: rel(file), line: i + 1, field, context: line.trim().slice(0, 140), message: `Campo '${field}' en canal público (conservado por decisión: email consentido / gamesGistId público / uid doc-key)` });
       }
     }
   });
@@ -70,6 +108,7 @@ function detectPatternB(code, file) {
   const violations = [];
   code.split('\n').forEach((line, i) => {
     if (isCommentLine(line)) return;
+    if (line.includes('audit-allow')) return;
     for (const p of B_PATTERNS) {
       if (p.file && !p.file.test(file)) continue;
       if (p.notFile && p.notFile.test(file)) continue;
@@ -122,4 +161,4 @@ function run() {
 
 if (require.main === module) run();
 
-module.exports = { detectForbiddenFields, detectPatternB, detectPatternC, FORBIDDEN_FIELDS };
+module.exports = { detectForbiddenFields, detectPatternB, detectPatternC, GAME_PRIVATE_FIELDS, SECRET_FIELDS, INFO_FIELDS };
