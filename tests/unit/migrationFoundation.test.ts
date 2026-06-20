@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
   assertNoSocialPrivateFields,
+  buildGamesMainFile,
   buildReviewSnippet,
+  distributeIntoChunks,
   toPublicGame,
   unwrapGamesFile,
 } from '../../src/model/repository/gistRepository';
@@ -93,6 +95,38 @@ describe('unwrapGamesFile (lectura retrocompatible)', () => {
   it('salvaguarda anti-pérdida: lanza si el envoltorio trae juegos sin tab ubicable', () => {
     const wrapper = { schemaVersion: 3, fileType: 'games-main', games: { 1: makeGame({ id: 1 }) } };
     expect(() => unwrapGamesFile(wrapper)).toThrow();
+  });
+});
+
+describe('Fase C (aditivo): buildGamesMainFile + distributeIntoChunks', () => {
+  it('buildGamesMainFile → unwrapGamesFile reconstruye el TabData (round-trip)', () => {
+    const td: TabData = {
+      c: [makeGame({ id: 1 })], v: [makeGame({ id: 2 })], e: [], p: [makeGame({ id: 3 })],
+      deleted: [{ id: 9, _ts: 50 }], updatedAt: 100,
+    };
+    const wrapper = buildGamesMainFile(td);
+    expect(wrapper.schemaVersion).toBe(3);
+    expect(wrapper.fileType).toBe('games-main');
+
+    const back = unwrapGamesFile(wrapper) as TabData;
+    expect(back.c.map((g) => g.id)).toEqual([1]);
+    expect(back.v.map((g) => g.id)).toEqual([2]);
+    expect(back.p.map((g) => g.id)).toEqual([3]);
+    expect(back.c[0]).not.toHaveProperty('_tab');
+    expect(back.deleted.map((d) => d.id)).toEqual([9]);
+  });
+
+  it('distributeIntoChunks: todo en main bajo umbral, crea c1 al superarlo, sin duplicar', () => {
+    const small = Array.from({ length: 5 }, (_, i) => makeGame({ id: i + 1 }));
+    expect(Object.keys(distributeIntoChunks(small, 800 * 1024))).toEqual(['main']);
+
+    const big = Array.from({ length: 100 }, (_, i) => makeGame({ id: i + 1, review: 'X'.repeat(2000) }));
+    const result = distributeIntoChunks(big, 20_000);
+    expect(Object.keys(result).length).toBeGreaterThan(1);
+    expect(result.c1).toBeDefined();
+    const allIds = Object.values(result).flat().map((g) => g.id);
+    expect(new Set(allIds).size).toBe(allIds.length);
+    expect(allIds.length).toBe(100);
   });
 });
 

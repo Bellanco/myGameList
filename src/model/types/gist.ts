@@ -23,7 +23,7 @@ export interface GamesMainFile {
   schemaVersion: 3;
   fileType: 'games-main';
   updatedAt: number;
-  integrity: { algorithm: 'crc32'; checksum: string; generatedAt: number };
+  integrity: { algorithm: string; checksum: string; generatedAt: number };
   chunkIndex: ChunkIndex;
   syncMeta: { lamport: number; updatedAt: number };
   games: Record<number, GameItem>;
@@ -37,7 +37,7 @@ export interface GamesChunkFile {
   chunkId: string;
   mainGistId: string;
   updatedAt: number;
-  integrity: { algorithm: 'crc32'; checksum: string; generatedAt: number };
+  integrity: { algorithm: string; checksum: string; generatedAt: number };
   games: Record<number, GameItem>;
 }
 
@@ -48,7 +48,7 @@ export interface SocialChunkFile {
   chunkId: string;
   mainGistId: string;
   updatedAt: number;
-  integrity: { algorithm: 'crc32'; checksum: string; generatedAt: number };
+  integrity: { algorithm: string; checksum: string; generatedAt: number };
   games: Record<number, PublicGame>; // solo proyección pública
   activityFeed: ActivityFeed;
 }

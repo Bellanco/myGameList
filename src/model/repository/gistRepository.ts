@@ -3,6 +3,7 @@ import { isValidGistId, isValidGithubToken } from '../../core/security/sanitize'
 import { migrateData } from './migrateRepository';
 import { TAB_IDS, type GameItem, type SyncConfig, type TabData, type TabId } from '../types/game';
 import type { PublicGame } from '../types/social';
+import type { GamesMainFile } from '../types/gist';
 
 const GIST_FILENAME = 'myGames.json';
 const SOCIAL_GIST_FILENAME = 'myGameList.social.json';
@@ -82,6 +83,69 @@ export function unwrapGamesFile(parsed: unknown): unknown {
   }
 
   return buckets;
+}
+
+// --- Constructores del formato DESTINO del gist de juegos (ADITIVO, sin cablear). ---
+// La escritura sigue en `TabData` plano (fase A); estos builders son para el futuro corte (fase C).
+
+function checksum32(input: string): string {
+  let h = 5381;
+  for (let i = 0; i < input.length; i += 1) h = ((h << 5) + h + input.charCodeAt(i)) >>> 0;
+  return h.toString(16).padStart(8, '0');
+}
+
+/**
+ * Reparte una lista en buckets `{ main, c1, c2, … }` por tamaño acumulado (JSON). Un item nunca cae en
+ * dos buckets. Núcleo de eficiencia del chunking.
+ */
+export function distributeIntoChunks<T extends { id: number }>(items: T[], thresholdBytes: number): Record<string, T[]> {
+  const buckets: Record<string, T[]> = { main: [] };
+  let current = 'main';
+  let size = 0;
+  let chunkIdx = 0;
+  for (const item of items) {
+    const itemSize = new Blob([JSON.stringify(item)]).size;
+    if (size + itemSize > thresholdBytes && buckets[current].length > 0) {
+      chunkIdx += 1;
+      current = `c${chunkIdx}`;
+      buckets[current] = [];
+      size = 0;
+    }
+    buckets[current].push(item);
+    size += itemSize;
+  }
+  return buckets;
+}
+
+/**
+ * Envuelve un `TabData` en el fichero ancla `GamesMainFile` (formato destino). Cada juego se anota con
+ * `_tab` para que `unwrapGamesFile` pueda reconstruir el `TabData`. Función pura; no escribe nada.
+ */
+export function buildGamesMainFile(data: TabData): GamesMainFile {
+  const games: Record<number, GameItem & { _tab: TabId }> = {};
+  for (const tab of TAB_IDS) {
+    for (const game of data[tab] || []) {
+      if (!game || !(Number(game.id) > 0)) continue;
+      games[game.id] = { ...game, _tab: tab };
+    }
+  }
+  const deletedIndex: Record<number, { deletedAt: number; purgeAfter: number }> = {};
+  for (const tomb of data.deleted || []) {
+    if (!tomb || !(Number(tomb.id) > 0)) continue;
+    const ts = Number(tomb.deletedAt ?? tomb._ts) || 0;
+    deletedIndex[tomb.id] = { deletedAt: ts, purgeAfter: ts };
+  }
+  const generatedAt = Date.now();
+  return {
+    schemaVersion: 3,
+    fileType: 'games-main',
+    updatedAt: data.updatedAt || generatedAt,
+    integrity: { algorithm: 'djb2', checksum: checksum32(JSON.stringify(games)), generatedAt },
+    chunkIndex: { strategy: 'size', maxChunkKB: 800, chunks: [{ chunkId: 'main', gistId: null, sizeKB: 0, updatedAt: generatedAt }] },
+    syncMeta: { lamport: 0, updatedAt: generatedAt },
+    games,
+    deletedIndex,
+  };
 }
 
 const SNIPPET_MAX_CHARS = 160;
