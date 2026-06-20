@@ -83,10 +83,16 @@ Regla de oro: **cada cambio de formato de las fases siguientes añade aquí su l
   al consumidor de `syncQueue` (delta-sync). Hacerlo aislado crearía SyncOps huérfanas y doble fuente de verdad para el
   gist (riesgo de pérdida) sin beneficio a <1.000 juegos. Decisión 2026-06-20: se hace junto al delta-sync en Fase 6.
 
-## FASE 5 — M3+M4: viewmodel social + sacar lógica de la vista
-- Extraer `useSocialViewModel.ts` (los 30 `useState`/12 `useEffect`/orquestación de `SocialHub`); `SocialHub.tsx`
-  queda presentacional. Tipar fuerte props de `Social*Screen`.
-- Mover `publishReviewActivity` de `App.tsx` a un viewmodel; sacar la orquestación de persistencia de `useGameListViewModel`.
+## FASE 5 — M3+M4: viewmodel social + sacar lógica de la vista (HECHA)
+- ✅ M3 (`6b5efc5`): extraído `useSocialViewModel.ts` (1140) verbatim; `SocialHub.tsx` 1296→285, presentacional.
+- ✅ M4a (`3ce1f40`): `publishReviewActivity` movido de `App.tsx` a `socialPublishRepository.ts` (orquestación pura, sin
+  estado React); App pierde 8 imports sociales.
+- ⏭️ M4b (orquestación de persistencia de `useGameListViewModel`): EVALUADO Y OMITIDO. `persist()` son 4 líneas de
+  efectos; extraerlas conflaría capas (helper de persistencia importando la máquina de sync) o sería indirección trivial.
+  Que el viewmodel orqueste persist+marcar-dirty es MVVM correcto. Reabrir solo si se aborda el verdadero peso del VM
+  (gestión de tags/filtros), fuera del alcance de M4.
+- ⚠️ Sin tests de componente: el flujo social (gateway/login, perfil, feed, directorio, detalle, sign-out) necesita
+  verificación en NAVEGADOR tras M3.
 
 ## FASE 6 — Modernización (schemaVersion + Zod + cambios de formato público)
 - Añadir **`schemaVersion`** a cada artefacto persistido y **validación runtime con Zod** antes de escribir
