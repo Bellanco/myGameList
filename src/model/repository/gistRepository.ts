@@ -41,10 +41,8 @@ const ENABLE_GAMES_WRAPPER_WRITE = false;
 const GIST_API_BASE = 'https://api.github.com/gists';
 const SESSION_CACHE_SOCIAL_GIST_PREFIX = 'myGameList.session.socialGist';
 const SESSION_CACHE_PUBLIC_SOCIAL_GIST_PREFIX = 'myGameList.session.publicSocialGist';
-const SESSION_CACHE_PUBLIC_GAMES_GIST_PREFIX = 'myGameList.session.publicGamesGist';
 const SOCIAL_GIST_CACHE_TTL_MS = 20_000;
 const PUBLIC_SOCIAL_GIST_CACHE_TTL_MS = 45_000;
-const PUBLIC_GAMES_GIST_CACHE_TTL_MS = 45_000;
 
 type SessionCachedValue<T> = {
   value: T;
@@ -54,10 +52,8 @@ type SessionCachedValue<T> = {
 
 const socialGistCacheById = new Map<string, SessionCachedValue<SocialGistData>>();
 const publicSocialGistCacheById = new Map<string, SessionCachedValue<SocialGistData>>();
-const publicGamesGistCacheById = new Map<string, SessionCachedValue<TabData>>();
 const socialGistInFlightByKey = new Map<string, Promise<{ data: SocialGistData; etag: string | null; notModified?: boolean; wasLegacy?: boolean }>>();
 const publicSocialGistInFlightById = new Map<string, Promise<SocialGistData>>();
-const publicGamesGistInFlightById = new Map<string, Promise<TabData>>();
 
 
 export interface SocialGistProfile {
@@ -257,36 +253,6 @@ function savePublicSocialGistCache(gistId: string, data: SocialGistData, etag: s
 
   publicSocialGistCacheById.set(cacheKey, cached);
   writeSessionCachedValue(buildSessionCacheKey(SESSION_CACHE_PUBLIC_SOCIAL_GIST_PREFIX, cacheKey), cached);
-}
-
-function readPublicGamesGistCache(gistId: string, token: string | null = null, options?: { includeExpired?: boolean }): SessionCachedValue<TabData> | null {
-  const cacheKey = `${gistId}:${shortTokenDiscriminant(token)}`;
-  const memory = publicGamesGistCacheById.get(cacheKey);
-  if (memory && (options?.includeExpired || memory.expiresAt > Date.now())) {
-    return memory;
-  }
-
-  const key = buildSessionCacheKey(SESSION_CACHE_PUBLIC_GAMES_GIST_PREFIX, cacheKey);
-  const sessionValue = readSessionCachedValue<TabData>(key, { includeExpired: options?.includeExpired });
-  if (!sessionValue) {
-    publicGamesGistCacheById.delete(cacheKey);
-    return null;
-  }
-
-  publicGamesGistCacheById.set(cacheKey, sessionValue);
-  return sessionValue;
-}
-
-function savePublicGamesGistCache(gistId: string, data: TabData, etag: string | null = null, token: string | null = null): void {
-  const cacheKey = `${gistId}:${shortTokenDiscriminant(token)}`;
-  const cached: SessionCachedValue<TabData> = {
-    value: data,
-    etag,
-    expiresAt: Date.now() + PUBLIC_GAMES_GIST_CACHE_TTL_MS,
-  };
-
-  publicGamesGistCacheById.set(cacheKey, cached);
-  writeSessionCachedValue(buildSessionCacheKey(SESSION_CACHE_PUBLIC_GAMES_GIST_PREFIX, cacheKey), cached);
 }
 
 async function buildGithubError(response: Response, prefix: string): Promise<string> {
@@ -912,73 +878,6 @@ export async function readPublicSocialGistById(gistId: string, token: string | n
     return await request;
   } finally {
     publicSocialGistInFlightById.delete(gistId);
-  }
-}
-
-export async function readPublicGamesGistById(gistId: string, token: string | null = null): Promise<TabData> {
-  if (!isValidGistId(gistId)) {
-    throw new Error('Gist ID inválido');
-  }
-
-  const cached = readPublicGamesGistCache(gistId, token);
-  if (cached) {
-    return cached.value;
-  }
-
-  const staleCached = readPublicGamesGistCache(gistId, token, { includeExpired: true });
-
-  const inFlight = publicGamesGistInFlightById.get(gistId);
-  if (inFlight) {
-    return inFlight;
-  }
-
-  const request = (async () => {
-    const baseHeaders: Record<string, string> = {
-      'X-GitHub-Api-Version': '2022-11-28',
-    };
-
-    if (token && isValidGithubToken(token)) {
-      baseHeaders['Authorization'] = getGithubAuthHeader(token);
-    }
-
-    if (staleCached?.etag) {
-      baseHeaders['If-None-Match'] = staleCached.etag;
-    }
-
-    const response = await fetch(`${GIST_API_BASE}/${gistId}`, {
-      headers: baseHeaders,
-    });
-
-    if (response.status === 304 && staleCached) {
-      savePublicGamesGistCache(gistId, staleCached.value, staleCached.etag || null, token);
-      return staleCached.value;
-    }
-
-    if (!response.ok) {
-      throw new Error(await buildGithubError(response, 'Read public games gist failed'));
-    }
-
-    const body = (await response.json()) as { files?: Record<string, { content: string }> };
-    const raw = body.files?.[GIST_FILENAME]?.content;
-    const responseEtag = response.headers.get('etag');
-    let normalized = migrateData({});
-    if (raw) {
-      try {
-        normalized = migrateData(unwrapGamesFile(JSON.parse(raw)));
-      } catch {
-        normalized = migrateData({});
-      }
-    }
-
-    savePublicGamesGistCache(gistId, normalized, responseEtag, token);
-    return normalized;
-  })();
-
-  publicGamesGistInFlightById.set(gistId, request);
-  try {
-    return await request;
-  } finally {
-    publicGamesGistInFlightById.delete(gistId);
   }
 }
 

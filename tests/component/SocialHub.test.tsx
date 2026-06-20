@@ -30,7 +30,6 @@ const gistMocks = vi.hoisted(() => ({
     etag: null,
   })),
   readPublicSocialGistById: vi.fn(async () => ({})),
-  readPublicGamesGistById: vi.fn(async () => ({ c: [], v: [], e: [], p: [], deleted: [], updatedAt: 0 })),
   writeSocialGist: vi.fn(async () => ({ etag: null })),
   saveSocialSyncConfig: vi.fn(),
   updateGistPrivacy: vi.fn(async () => ({ gistId: 'g', etag: null })),
