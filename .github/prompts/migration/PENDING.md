@@ -33,7 +33,8 @@
       lectura plano del gist, claves localStorage viejas) SOLO cuando no queden datos ni clientes viejos. Hoy NO se cumple:
       la bandera de chunking está OFF, 6.2/6.4 aplazados, reglas sin desplegar, sin verificación en navegador. Borrar la
       compat ahora ROMPERÍA la lectura de datos viejos. → Mantener hasta completar el corte verificado.
-      - Slice SEGURO disponible ya (no depende de migración de datos): borrar `readPublicGamesGistById` (muerto tras E3).
+      - [x] Slice SEGURO HECHO (`de0df82`): borrado `readPublicGamesGistById` (muerto tras E3) + sus cachés/estado huérfanos + mock del test.
+      - PENDIENTE (gated): borrar `src/model/migration/legacy*.ts` + fallbacks SOLO tras el corte verificado en navegador.
 
 ## D. Notas / deuda menor
 - `myGames.json` en la raíz = **datos reales del usuario** (untracked). NO commitear (`.gitignore` solo cubre `/data/myGames.json`).
