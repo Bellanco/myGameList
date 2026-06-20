@@ -4,7 +4,7 @@ import { HOURS_RANGES } from '../core/constants/uiConfig';
 import { sortEs, uniqueCaseInsensitive } from '../core/utils/compare';
 import { normalizeTag, safeTrim } from '../core/security/sanitize';
 import { loadLocalState, loadLocalStateAsync, normalizeData, saveLocalState } from '../model/repository/localRepository';
-import { replaceGamesStoreFromTabData } from '../model/repository/indexedDbRepository';
+import { getGamesAsTabData, replaceGamesStoreFromTabData } from '../model/repository/indexedDbRepository';
 import { markDirty } from '../model/repository/syncStateRepository';
 import { transitionTo } from '../model/repository/syncMachineRepository';
 import type { TabAction as LabelsTabAction } from '../core/constants/labels';
@@ -115,18 +115,32 @@ export function useGameListViewModel() {
   useEffect(() => {
     let cancelled = false;
 
+    const hasData = (d: TabData) => d.c.length > 0 || d.v.length > 0 || d.e.length > 0 || d.p.length > 0 || d.deleted.length > 0;
+
     const hydrateFromFallback = async () => {
       const hydrated = await loadLocalStateAsync();
       if (cancelled) return;
 
+      // Fuente primaria: appState/localStorage (probada y, vía el espejo, idéntica al store `games`).
+      // Fallback de recuperación: si no hay datos en appState, leer del store `games` (p. ej. si se
+      // borró localStorage pero IndexedDB sobrevivió). updatedAt se toma de appState (mismo reloj).
+      let dataSource: TabData = hydrated;
+      if (!hasData(hydrated)) {
+        try {
+          const fromGames = await getGamesAsTabData();
+          if (cancelled) return;
+          if (hasData(fromGames)) dataSource = { ...fromGames, updatedAt: hydrated.updatedAt };
+        } catch {
+          // Ignorar: el store `games` es opcional; appState sigue mandando.
+        }
+      }
+
       setData((prev) => {
         const currentHasData = prev.c.length > 0 || prev.v.length > 0 || prev.e.length > 0 || prev.p.length > 0 || prev.deleted.length > 0;
-        const hydratedHasData = hydrated.c.length > 0 || hydrated.v.length > 0 || hydrated.e.length > 0 || hydrated.p.length > 0 || hydrated.deleted.length > 0;
+        if (!hasData(dataSource)) return prev;
+        if (currentHasData && dataSource.updatedAt <= (prev.updatedAt || 0)) return prev;
 
-        if (!hydratedHasData) return prev;
-        if (currentHasData && hydrated.updatedAt <= (prev.updatedAt || 0)) return prev;
-
-        return normalizeData(hydrated);
+        return normalizeData(dataSource);
       });
 
       setMeta((prev) => {
