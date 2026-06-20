@@ -508,7 +508,6 @@ export async function upsertProfileSocialReferences(input: {
       social: {
         gistId: input.socialGistId,
         gamesGistId: String(input.gamesGistId || ''),
-        githubToken: String(input.githubToken || ''),
         etag: input.socialGistEtag,
         enabled: true,
       },
@@ -516,6 +515,15 @@ export async function upsertProfileSocialReferences(input: {
     },
     { merge: true },
   );
+
+  // B1: el token NO se escribe en claro en Firestore; se respalda CIFRADO en privateConfig (recuperación cross-device).
+  if (input.githubToken) {
+    try {
+      await backupGithubToken(input.user.uid, input.githubToken);
+    } catch (error) {
+      console.warn('[firebase] No se pudo respaldar el token cifrado:', error instanceof Error ? error.message : error);
+    }
+  }
 
   const cleanEmail = input.user.email.trim().toLowerCase();
   if (cleanEmail) {
@@ -749,7 +757,6 @@ export async function ensureProfileByEmail(input: {
         social: {
           gistId: input.socialGistId,
           gamesGistId,
-          githubToken,
           etag: input.socialGistEtag,
           enabled: true,
         },
@@ -757,6 +764,15 @@ export async function ensureProfileByEmail(input: {
       },
       { merge: true },
     );
+  }
+
+  // B1: respaldo CIFRADO del token en privateConfig; nunca en claro en `profiles`.
+  if (githubToken) {
+    try {
+      await backupGithubToken(input.user.uid, githubToken);
+    } catch (error) {
+      console.warn('[firebase] No se pudo respaldar el token cifrado:', error instanceof Error ? error.message : error);
+    }
   }
 
   saveProfileByEmailCache(cleanEmail, {
