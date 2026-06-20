@@ -93,7 +93,7 @@ export function SocialFeedScreen({
                     <h4>{group.dayHeader}</h4>
                   </div>
                   {group.items.map((entry: any) => {
-                    const reviewText = entry.reviewText.trim();
+                    const reviewText = String(entry.snippet || '').trim();
                     const updatedAtDate = new Date(entry.updatedAt || '');
                     const hasValidUpdatedAt = !Number.isNaN(updatedAtDate.getTime());
                     const analyzedAtLabel = hasValidUpdatedAt

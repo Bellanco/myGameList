@@ -48,7 +48,7 @@ export function SocialDetailScreen({
     );
   }
   const gameItem = getGameItemById(activeDetailEvent.profileId, activeDetailEvent.gameId);
-  const reviewText = String(activeDetailEvent.reviewText || '').trim();
+  const reviewText = String(activeDetailEvent.snippet || '').trim();
   const updatedAtDate = new Date(activeDetailEvent.updatedAt);
   const hasValidUpdatedAt = !Number.isNaN(updatedAtDate.getTime());
   const analyzedAtLabel = hasValidUpdatedAt
