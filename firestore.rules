@@ -1,0 +1,67 @@
+rules_version = '2';
+
+// ============================================================================
+// ⚠️ MODELO DESTINO (index-only) — NO DESPLEGAR TODAVÍA.
+// Estas reglas asumen profiles/{profileId} sin token/email/uid (modelo posterior a la
+// migración). La app ACTUAL escribe profiles/{uid} con email/githubToken/gamesGistId, así que
+// desplegar esto ahora ROMPERÍA la app en producción. Desplegar solo tras el corte index-only,
+// validando antes con el emulador (npm run test:rules). Ver .github/prompts/migration/10.
+// ============================================================================
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // userMap/{uid} — mapa uid→profileId. Nunca legible por clientes.
+    match /userMap/{uid} {
+      allow read, write: if false;
+    }
+
+    // privateConfig/{uid} — ids de gist + chunks + token CIFRADO. Solo el dueño.
+    match /privateConfig/{uid} {
+      allow read, write: if request.auth != null && request.auth.uid == uid;
+    }
+
+    // profiles/{profileId} — índice público (index-only)
+    match /profiles/{profileId} {
+      allow read:   if isPublicProfile() && consentNotExpired();
+      allow create: if isOwner(profileId) && noPrivateFields(request.resource.data) && hasRequiredProfileFields(request.resource.data);
+      allow update: if isOwner(profileId) && noPrivateFields(request.resource.data);
+      allow delete: if isOwner(profileId);
+    }
+
+    // feed/{reviewId} — tarjetas públicas del feed
+    match /feed/{reviewId} {
+      allow read:   if resource.data.status == 'active' && resource.data.expiresAt > request.time.toMillis();
+      allow create: if isOwner(reviewId.split(':')[0]) && noPrivateFields(request.resource.data) && snippetLength(request.resource.data) && noReviewField(request.resource.data) && validFeedCard(request.resource.data);
+      allow update: if isOwner(reviewId.split(':')[0]) && noPrivateFields(request.resource.data) && noReviewField(request.resource.data);
+      allow delete: if isOwner(reviewId.split(':')[0]);
+    }
+
+    // recommendations/{id} — entrega por email entre usuarios autenticados
+    match /recommendations/{id} {
+      allow read:   if request.auth != null;
+      allow create: if request.auth != null && noReviewField(request.resource.data);
+      allow update, delete: if request.auth != null;
+    }
+
+    function isOwner(profileId) {
+      return request.auth != null
+          && get(/databases/$(database)/documents/userMap/$(request.auth.uid)).data.profileId == profileId;
+    }
+    function isPublicProfile()   { return resource.data.private == false; }
+    function consentNotExpired() { return resource.data.consent.autoExpireAt > request.time.toMillis(); }
+    function noPrivateFields(d) {
+      return !('uid' in d) && !('email' in d) && !('githubToken' in d) && !('gamesGistId' in d)
+          && !('score' in d) && !('hours' in d) && !('steamDeck' in d) && !('retry' in d) && !('replayable' in d);
+    }
+    function noReviewField(d) { return !('review' in d) && !('reviewText' in d); }
+    function snippetLength(d)  { return !('snippet' in d) || d.snippet.size() <= 200; }
+    function hasRequiredProfileFields(d) {
+      return 'profileId' in d && 'displayName' in d && 'socialGistId' in d && 'updatedAt' in d;
+    }
+    function validFeedCard(d) {
+      return 'profileId' in d && 'gameId' in d && 'gameName' in d && 'rating' in d
+          && 'snippet' in d && 'status' in d && 'createdAt' in d && 'expiresAt' in d;
+    }
+  }
+}
