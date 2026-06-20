@@ -2,7 +2,7 @@ import { getApp, getApps, initializeApp, type FirebaseApp } from 'firebase/app';
 import { GoogleAuthProvider, getAuth, setPersistence, browserLocalPersistence, signInWithPopup, signOut, type Auth } from 'firebase/auth';
 import { collection, doc, documentId, getDoc, getDocs, getFirestore, limit, query, serverTimestamp, setDoc, where, type Firestore } from 'firebase/firestore';
 import { decryptFromString, encryptToString } from '../../core/security/crypto';
-import type { FirestorePrivateConfig } from '../types/firestore';
+import type { FirestoreFeedCard, FirestorePrivateConfig, ProfileIndexDoc } from '../types/firestore';
 
 type AnalyticsModule = typeof import('firebase/analytics');
 type Analytics = ReturnType<AnalyticsModule['getAnalytics']>;
@@ -575,6 +575,44 @@ export async function recoverGithubToken(uid: string): Promise<string | null> {
   } catch {
     return null;
   }
+}
+
+// ---------------------------------------------------------------------------
+// Capa index-only (modelo DESTINO). ADITIVO: aún no cableado en los flujos vivos.
+// El flip (sustituir las escrituras actuales de `profiles` por estas) se hará con pruebas.
+// ---------------------------------------------------------------------------
+
+const FIRESTORE_FORBIDDEN_FIELDS = ['uid', 'email', 'githubToken', 'gamesGistId', 'review', 'reviewText', 'score', 'hours', 'steamDeck', 'retry', 'replayable'];
+
+/** Guarda de privacidad para escrituras a Firestore (canales públicos profiles/feed). */
+export function assertNoFirestorePrivateFields(data: Record<string, unknown>): void {
+  for (const field of FIRESTORE_FORBIDDEN_FIELDS) {
+    if (field in data) throw new Error(`Campo prohibido "${field}" en escritura a Firestore`);
+  }
+}
+
+/** profiles/{profileId} — índice público (index-only). Valida que no haya campos privados. */
+export async function upsertProfileIndex(docData: ProfileIndexDoc): Promise<void> {
+  const services = await initializeFirebaseServices();
+  if (!services) throw new Error('Firebase no está configurado en este entorno');
+  assertNoFirestorePrivateFields(docData as unknown as Record<string, unknown>);
+  await setDoc(doc(services.firestore, 'profiles', docData.profileId), { ...docData }, { merge: true });
+}
+
+/** feed/{reviewId} — tarjeta pública. Valida sin campos privados y snippet ≤ 200. */
+export async function upsertFeedCard(card: FirestoreFeedCard): Promise<void> {
+  const services = await initializeFirebaseServices();
+  if (!services) throw new Error('Firebase no está configurado en este entorno');
+  assertNoFirestorePrivateFields(card as unknown as Record<string, unknown>);
+  if (card.snippet.length > 200) throw new Error('snippet supera 200 caracteres');
+  await setDoc(doc(services.firestore, 'feed', card.reviewId), { ...card }, { merge: true });
+}
+
+/** userMap/{uid} → { profileId }. Mapa privado uid→profileId (reglas: nunca legible por clientes). */
+export async function setUserMap(uid: string, profileId: string): Promise<void> {
+  const services = await initializeFirebaseServices();
+  if (!services) throw new Error('Firebase no está configurado en este entorno');
+  await setDoc(doc(services.firestore, 'userMap', uid), { profileId }, { merge: true });
 }
 
 /**

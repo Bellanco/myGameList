@@ -5,6 +5,7 @@ import {
   getAllGameRecords,
   getGamesAsTabData,
   getLocalMeta,
+  getOrCreateProfileId,
   getSyncQueue,
   mirrorTabDataToGames,
   replaceGamesStoreFromTabData,
@@ -95,5 +96,13 @@ describe('games store write accessors', () => {
     const out = await getGamesAsTabData();
     expect(out.c.map((g) => g.id)).toEqual([1]);
     expect((await getLocalMeta())?.gamesUpdatedAt).toBe(4242);
+  });
+
+  it('getOrCreateProfileId genera el pseudónimo una vez y lo persiste (idempotente)', async () => {
+    const first = await getOrCreateProfileId();
+    expect(first).toBeTruthy();
+    expect((await getLocalMeta())?.profileId).toBe(first);
+    const second = await getOrCreateProfileId();
+    expect(second).toBe(first);
   });
 });
