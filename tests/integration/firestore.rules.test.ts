@@ -26,7 +26,8 @@ describe('firestore.rules (modelo destino index-only)', () => {
   afterEach(async () => { await env.clearFirestore(); });
   afterAll(async () => { await env.cleanup(); });
 
-  const now = () => 1_000_000_000_000;
+  // Tiempo REAL: las reglas comparan expiresAt/autoExpireAt contra request.time del emulador (ahora real).
+  const now = () => Date.now();
   const publicProfile = {
     profileId: 'p-abc', displayName: 'Bellanco', socialGistId: 'g1', private: false,
     consent: { agreedAt: now(), autoExpireAt: now() + 86_400_000 }, updatedAt: now(),
