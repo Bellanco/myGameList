@@ -19,7 +19,16 @@
       siembra adicional al login en `recoverGistIdFromGoogle`. Resiliente (Firestore caído → comportamiento local). Tests en
       `tests/unit/profileIdentity.test.ts`. Verificado tsc/69+2/build/audit A:0 B:0/eslint. ⚠️ **Falta probar en 2 dispositivos
       reales** que el segundo dispositivo adopta el `profileId` del primero y no lo pisa. (Desbloquea 6.2b.)
-- [ ] **6.2b — uid→profileId en el gist social**: `actorUid→actorProfileId`, `fromUid→fromProfileId`; compat de lectura en `legacySocialFormat.ts` (mapear + migrar la `key` de activity y la ruta `/social/user/:actorUid/...`); extender el schema Zod (6.1) a la forma v2; `schemaVersion: 2`.
+- [x] **6.2b — uid→profileId en el gist social** (CÓDIGO HECHO, pendiente verificar en 2 dispositivos): `SocialActivityEntry.actorUid→actorProfileId`,
+      `SocialRecommendationEntry.fromUid→fromProfileId`; `key` = `${actorProfileId}:${gameId}:${type}`. Lectura tolerante
+      (`pickLegacyActorId`/`pickLegacyFromId` en legacySocialFormat: `actorProfileId ?? actorUid`); `socialGistNeedsRewrite`
+      detecta uid-form. Escritura: `publishReviewActivity` y la reescritura proactiva de `useSocialViewModel` resuelven el
+      profileId estable (6.2a) y **remapean** el gist propio `{miUid→miProfileId}` con `remapSocialActorIds` antes de escribir;
+      ruta `/social/user/:id/...` y lookup del detalle pasan a `actorProfileId`. Schema Zod v2 (`actorProfileId`/`fromProfileId`
+      + `schemaVersion`). Verificado tsc/77+2/build/audit A:0 B:0/eslint. ⚠️ **Degradación asimétrica**: un cliente NO actualizado
+      que lea nuestro gist nuevo dejará de ver nuestra activity (su normalize exige `actorUid`) hasta que se actualice. Probar en
+      2 dispositivos: que el segundo adopta el profileId y la activity se agrupa por pseudónimo. NO toca Firestore (doc-keys uid,
+      modelo híbrido) ni la colección `recommendations` de Firestore (sigue `fromUid`).
 - [ ] **6.2 — `consent`** en el gist social: necesita un **flujo de consentimiento (UX)** que aún no existe; no escribir un bloque hardcodeado.
 - [ ] **6.4 — Delta-sync + escritura granular** (movido de E2): reescribir el camino caliente a `upsertGame`/`deleteGame` + un **consumidor de `syncQueue`**; `appState` deja de ser la fuente del gist. ALTO RIESGO (pérdida de datos) → probar en navegador.
 

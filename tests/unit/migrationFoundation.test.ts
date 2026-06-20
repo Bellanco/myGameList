@@ -7,12 +7,13 @@ import {
   buildReviewSnippet,
   distributeIntoChunks,
   leanTabData,
+  remapSocialActorIds,
   toPublicGame,
   upsertReviewActivity,
 } from '../../src/model/repository/gistRepository';
 import { assertValidSocialGist } from '../../src/model/schemas/socialGistSchema';
 import { assembleChunkedGames, gamesGistNeedsRewrite, unwrapGamesFile } from '../../src/model/migration/legacyGamesFormat';
-import { socialGistNeedsRewrite } from '../../src/model/migration/legacySocialFormat';
+import { pickLegacyActorId, pickLegacyFromId, socialGistNeedsRewrite } from '../../src/model/migration/legacySocialFormat';
 import { decryptFromString, encryptToString } from '../../src/core/security/crypto';
 import type { GameItem, TabData } from '../../src/model/types/game';
 
@@ -147,8 +148,64 @@ describe('socialGistNeedsRewrite (condicional de upgrade proactivo social)', () 
     expect(socialGistNeedsRewrite(data)).toBe(true);
   });
 
+  it('6.2b: true si activity aún identifica por uid (actorUid sin actorProfileId)', () => {
+    const data = { activity: [{ gameId: 1, snippet: 'corto', actorUid: 'firebase-uid' }] };
+    expect(socialGistNeedsRewrite(data)).toBe(true);
+  });
+
+  it('6.2b: true si recommendations aún usa fromUid', () => {
+    const data = { recommendations: [{ id: 1, fromUid: 'firebase-uid', gameId: 1, gameName: 'G' }] };
+    expect(socialGistNeedsRewrite(data)).toBe(true);
+  });
+
+  it('6.2b: false si ya identifica por actorProfileId', () => {
+    const data = { activity: [{ gameId: 1, snippet: 'corto', actorProfileId: 'pid' }], recommendations: [] };
+    expect(socialGistNeedsRewrite(data)).toBe(false);
+  });
+
   it('false para valores no-objeto', () => {
     expect(socialGistNeedsRewrite(null)).toBe(false);
+  });
+});
+
+describe('6.2b: lectores de identidad y remapSocialActorIds (uid→profileId en el gist social)', () => {
+  it('pickLegacyActorId prefiere el pseudónimo nuevo y cae al uid viejo', () => {
+    expect(pickLegacyActorId({ actorProfileId: 'pid', actorUid: 'uid' })).toBe('pid');
+    expect(pickLegacyActorId({ actorUid: 'uid' })).toBe('uid');
+    expect(pickLegacyActorId({})).toBe('');
+  });
+
+  it('pickLegacyFromId prefiere fromProfileId y cae a fromUid', () => {
+    expect(pickLegacyFromId({ fromProfileId: 'pid', fromUid: 'uid' })).toBe('pid');
+    expect(pickLegacyFromId({ fromUid: 'uid' })).toBe('uid');
+  });
+
+  it('remapSocialActorIds reemplaza el uid propio por su profileId y reconstruye key/id', () => {
+    const data = {
+      profile: { name: '', private: false, favoriteGames: [], recommendations: [], visibility: { hiddenTabs: [], hideReplayable: false, hideRetry: false, hideGameTime: false }, sharedLists: {} },
+      recommendations: [{ id: 1, fromProfileId: 'my-uid', gameId: 7, gameName: 'G', rating: 5, createdAt: 1, updatedAt: 1 }],
+      activity: [{ id: 'my-uid:5:review', key: 'my-uid:5:review', type: 'review' as const, actorProfileId: 'my-uid', actorName: 'N', gameId: 5, gameName: 'G', rating: 5, recommendationText: '', snippet: 's', createdAt: 1, updatedAt: 1 }],
+      updatedAt: 1,
+      schemaVersion: 2,
+    };
+    const out = remapSocialActorIds(data, { 'my-uid': 'pid-123' });
+    expect(out.activity[0].actorProfileId).toBe('pid-123');
+    expect(out.activity[0].key).toBe('pid-123:5:review');
+    expect(out.activity[0].id).toBe('pid-123:5:review');
+    expect(out.recommendations[0].fromProfileId).toBe('pid-123');
+  });
+
+  it('remapSocialActorIds NO toca ids ajenos (mapa vacío) — degradación suave para otros usuarios', () => {
+    const data = {
+      profile: { name: '', private: false, favoriteGames: [], recommendations: [], visibility: { hiddenTabs: [], hideReplayable: false, hideRetry: false, hideGameTime: false }, sharedLists: {} },
+      recommendations: [],
+      activity: [{ id: 'other-uid:5:review', key: 'other-uid:5:review', type: 'review' as const, actorProfileId: 'other-uid', actorName: 'N', gameId: 5, gameName: 'G', rating: 5, recommendationText: '', snippet: 's', createdAt: 1, updatedAt: 1 }],
+      updatedAt: 1,
+      schemaVersion: 2,
+    };
+    const out = remapSocialActorIds(data, {});
+    expect(out.activity[0].actorProfileId).toBe('other-uid');
+    expect(out.activity[0]).toBe(data.activity[0]); // sin cambios → misma referencia
   });
 });
 
@@ -183,6 +240,7 @@ describe('F6.1: assertValidSocialGist (allowlist estricta Zod)', () => {
     recommendations: [],
     activity: [],
     updatedAt: 0,
+    schemaVersion: 2,
   };
 
   it('acepta un gist social normalizado válido', () => {
@@ -190,8 +248,11 @@ describe('F6.1: assertValidSocialGist (allowlist estricta Zod)', () => {
   });
 
   it('acepta el resultado real de upsertReviewActivity (lo que se escribe)', () => {
-    const next = upsertReviewActivity(emptySocial, { actorUid: 'u', actorName: 'N', gameId: 1, gameName: 'G', reviewText: 'reseña larga'.repeat(30), rating: 5, timestamp: 1000 });
+    const next = upsertReviewActivity(emptySocial, { actorProfileId: 'pid-1', actorName: 'N', gameId: 1, gameName: 'G', reviewText: 'reseña larga'.repeat(30), rating: 5, timestamp: 1000 });
     expect(() => assertValidSocialGist(next)).not.toThrow();
+    // 6.2b: identifica por profileId, nunca por el uid de Firebase
+    expect(next.activity[0].actorProfileId).toBe('pid-1');
+    expect(next.activity[0].key).toBe('pid-1:1:review');
     // y nunca debe contener el review completo
     expect(JSON.stringify(next)).not.toContain('reseña larga'.repeat(30));
   });
@@ -199,9 +260,17 @@ describe('F6.1: assertValidSocialGist (allowlist estricta Zod)', () => {
   it('rechaza un campo privado filtrado (review dentro de activity)', () => {
     const leaked = {
       ...emptySocial,
-      activity: [{ id: 'u:1:review', key: 'u:1:review', type: 'review', actorUid: 'u', actorName: 'N', gameId: 1, gameName: 'G', rating: 5, recommendationText: '', snippet: 's', createdAt: 1, updatedAt: 1, review: 'FUGA' }],
+      activity: [{ id: 'p:1:review', key: 'p:1:review', type: 'review', actorProfileId: 'p', actorName: 'N', gameId: 1, gameName: 'G', rating: 5, recommendationText: '', snippet: 's', createdAt: 1, updatedAt: 1, review: 'FUGA' }],
     };
     expect(() => assertValidSocialGist(leaked)).toThrow(/schema/);
+  });
+
+  it('rechaza el campo legacy actorUid (ya no permitido en el canal público)', () => {
+    const legacy = {
+      ...emptySocial,
+      activity: [{ id: 'u:1:review', key: 'u:1:review', type: 'review', actorUid: 'u', actorName: 'N', gameId: 1, gameName: 'G', rating: 5, recommendationText: '', snippet: 's', createdAt: 1, updatedAt: 1 }],
+    };
+    expect(() => assertValidSocialGist(legacy)).toThrow(/schema/);
   });
 });
 

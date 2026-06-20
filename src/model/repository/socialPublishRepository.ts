@@ -1,11 +1,12 @@
 // Publicación de actividad social al guardar una reseña (M4): orquestación pura de repos, sin estado de React.
 // Extraído verbatim de App.tsx para sacar la lógica de negocio del componente. Lee el gist social, inserta/actualiza
 // la actividad (que se convierte a snippet index-only), reescribe el gist y asegura el perfil en Firestore.
-import { ensureProfileByEmail, getCurrentSocialAuthUser } from './firebaseRepository';
+import { ensureProfileByEmail, getCurrentSocialAuthUser, resolveStableProfileId } from './firebaseRepository';
 import {
   getSyncConfig,
   getSocialSyncConfig,
   readSocialGist,
+  remapSocialActorIds,
   saveSocialSyncConfig,
   upsertReviewActivity,
   writeSocialGist,
@@ -29,9 +30,15 @@ export async function publishReviewActivity(input: { id: number; name: string; r
     socialConfig.etag || null,
   );
 
+  // 6.2b: identidad por profileId (pseudónimo estable, 6.2a) en vez del uid de Firebase. Remapea las
+  // entradas legacy del gist propio (actorUid==miUid → miProfileId) antes de insertar la nueva actividad,
+  // de modo que el uid sale del canal público y toda nuestra actividad queda agrupada por profileId.
+  const profileId = await resolveStableProfileId(authUser.uid);
+  const migratedData = remapSocialActorIds(socialRead.data, { [authUser.uid]: profileId });
+
   const now = Date.now();
-  const nextPayload = upsertReviewActivity(socialRead.data, {
-    actorUid: authUser.uid,
+  const nextPayload = upsertReviewActivity(migratedData, {
+    actorProfileId: profileId,
     actorName: authUser.displayName || authUser.email,
     gameId: input.id,
     gameName: input.name,

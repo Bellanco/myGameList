@@ -2,7 +2,7 @@ import { isValidGistId, isValidGithubToken } from '../../core/security/sanitize'
 import { migrateData } from './migrateRepository';
 import { clampRating, normalizeTimestamp } from '../../core/utils/normalize';
 import { assembleChunkedGames, gamesGistNeedsRewrite, unwrapGamesFile } from '../migration/legacyGamesFormat';
-import { pickLegacyReviewText, socialGistNeedsRewrite } from '../migration/legacySocialFormat';
+import { pickLegacyActorId, pickLegacyFromId, pickLegacyReviewText, socialGistNeedsRewrite } from '../migration/legacySocialFormat';
 import { assertValidSocialGist } from '../schemas/socialGistSchema';
 import { TAB_IDS, type TabData, type TabId } from '../types/game';
 // M1: transforms puros y config de sync extraídos a módulos dedicados. Importamos de vuelta los que se usan
@@ -90,7 +90,7 @@ export type SocialActivityType = 'recommendation' | 'review';
 
 export interface SocialRecommendationEntry {
   id: number;
-  fromUid: string;
+  fromProfileId: string; // 6.2b: pseudónimo público (antes `fromUid`)
   gameId: number;
   gameName: string;
   rating: number;
@@ -102,7 +102,7 @@ export interface SocialActivityEntry {
   id: string;
   key: string;
   type: SocialActivityType;
-  actorUid: string;
+  actorProfileId: string; // 6.2b: pseudónimo público (antes `actorUid`)
   actorName: string;
   gameId: number;
   gameName: string;
@@ -118,10 +118,11 @@ export interface SocialGistData {
   recommendations: SocialRecommendationEntry[];
   activity: SocialActivityEntry[];
   updatedAt: number;
+  schemaVersion?: number; // 6.2b: 2 = identidad por profileId (uid fuera del canal público)
 }
 
 export interface UpsertRecommendationInput {
-  actorUid: string;
+  actorProfileId: string;
   actorName: string;
   gameId: number;
   gameName: string;
@@ -130,7 +131,7 @@ export interface UpsertRecommendationInput {
 }
 
 export interface UpsertReviewInput {
-  actorUid: string;
+  actorProfileId: string;
   actorName: string;
   gameId: number;
   gameName: string;
@@ -393,8 +394,11 @@ function normalizeActivityType(value: unknown): SocialActivityType | null {
   return null;
 }
 
-function buildActivityKey(actorUid: string, gameId: number, type: SocialActivityType): string {
-  return `${actorUid}:${gameId}:${type}`;
+// 6.2b: versión del esquema del gist social. 2 = identidad por profileId (sin uid en el canal público).
+const SOCIAL_GIST_SCHEMA_VERSION = 2;
+
+function buildActivityKey(actorId: string, gameId: number, type: SocialActivityType): string {
+  return `${actorId}:${gameId}:${type}`;
 }
 
 function normalizeRecommendationItems(items: unknown): SocialRecommendationEntry[] {
@@ -406,18 +410,18 @@ function normalizeRecommendationItems(items: unknown): SocialRecommendationEntry
     .map((entry) => {
       const record = (entry && typeof entry === 'object' ? entry : {}) as Record<string, unknown>;
       const gameId = Number(record.gameId || 0);
-      const fromUid = String(record.fromUid || '').trim();
+      const fromProfileId = pickLegacyFromId(record);
       const gameName = String(record.gameName || '').trim();
       const createdAt = normalizeTimestamp(record.createdAt, Date.now());
       const updatedAt = normalizeTimestamp(record.updatedAt, createdAt);
 
-      if (!fromUid || gameId <= 0 || !gameName) {
+      if (!fromProfileId || gameId <= 0 || !gameName) {
         return null;
       }
 
       return {
         id: Number(record.id || createdAt),
-        fromUid,
+        fromProfileId,
         gameId,
         gameName,
         rating: clampRating(record.rating),
@@ -439,23 +443,23 @@ function normalizeActivityItems(items: unknown): SocialActivityEntry[] {
     .map((entry) => {
       const record = (entry && typeof entry === 'object' ? entry : {}) as Record<string, unknown>;
       const type = normalizeActivityType(record.type);
-      const actorUid = String(record.actorUid || '').trim();
+      const actorProfileId = pickLegacyActorId(record);
       const gameId = Number(record.gameId || 0);
       const gameName = String(record.gameName || '').trim();
       const createdAt = normalizeTimestamp(record.createdAt, Date.now());
       const updatedAt = normalizeTimestamp(record.updatedAt, createdAt);
 
-      if (!type || !actorUid || gameId <= 0 || !gameName) {
+      if (!type || !actorProfileId || gameId <= 0 || !gameName) {
         return null;
       }
 
-      const key = String(record.key || buildActivityKey(actorUid, gameId, type)).trim() || buildActivityKey(actorUid, gameId, type);
+      const key = String(record.key || buildActivityKey(actorProfileId, gameId, type)).trim() || buildActivityKey(actorProfileId, gameId, type);
 
       return {
-        id: String(record.id || buildActivityKey(actorUid, gameId, type)),
+        id: String(record.id || buildActivityKey(actorProfileId, gameId, type)),
         key,
         type,
-        actorUid,
+        actorProfileId,
         actorName: String(record.actorName || '').trim(),
         gameId,
         gameName,
@@ -482,14 +486,14 @@ function mergeLegacyActivity(
   });
 
   recommendations.forEach((recommendation) => {
-    const key = buildActivityKey(recommendation.fromUid, recommendation.gameId, 'recommendation');
+    const key = buildActivityKey(recommendation.fromProfileId, recommendation.gameId, 'recommendation');
     const current = map.get(key);
 
     const candidate: SocialActivityEntry = {
-      id: buildActivityKey(recommendation.fromUid, recommendation.gameId, 'recommendation'),
+      id: buildActivityKey(recommendation.fromProfileId, recommendation.gameId, 'recommendation'),
       key,
       type: 'recommendation',
-      actorUid: recommendation.fromUid,
+      actorProfileId: recommendation.fromProfileId,
       actorName: current?.actorName || '',
       gameId: recommendation.gameId,
       gameName: recommendation.gameName,
@@ -513,12 +517,12 @@ function upsertActivityEntry(
   next: Omit<SocialActivityEntry, 'id' | 'key' | 'createdAt' | 'updatedAt'>,
   timestamp: number,
 ): SocialActivityEntry[] {
-  const key = buildActivityKey(next.actorUid, next.gameId, next.type);
+  const key = buildActivityKey(next.actorProfileId, next.gameId, next.type);
   const existing = items.find((entry) => entry.key === key);
   const createdAt = existing?.createdAt || timestamp;
 
   const entry: SocialActivityEntry = {
-    id: existing?.id || buildActivityKey(next.actorUid, next.gameId, next.type),
+    id: existing?.id || buildActivityKey(next.actorProfileId, next.gameId, next.type),
     key,
     createdAt,
     updatedAt: timestamp,
@@ -538,13 +542,13 @@ export function upsertReviewActivity(data: SocialGistData, input: UpsertReviewIn
   const cleanReview = String(input.reviewText || '').trim();
   const cleanName = String(input.gameName || '').trim();
 
-  if (!input.actorUid || input.gameId <= 0 || !cleanName || !cleanReview) {
+  if (!input.actorProfileId || input.gameId <= 0 || !cleanName || !cleanReview) {
     return data;
   }
 
   const activity = upsertActivityEntry(data.activity || [], {
     type: 'review',
-    actorUid: input.actorUid,
+    actorProfileId: input.actorProfileId,
     actorName: String(input.actorName || '').trim(),
     gameId: input.gameId,
     gameName: cleanName,
@@ -592,11 +596,36 @@ function normalizeSocialGistData(data: unknown): SocialGistData {
     recommendations: normalizeRecommendationItems(source.recommendations),
     activity: normalizeActivityItems(source.activity),
     updatedAt: Number(source.updatedAt || Date.now()),
+    schemaVersion: SOCIAL_GIST_SCHEMA_VERSION,
   };
 
   normalized.activity = mergeLegacyActivity(normalized.activity, normalized.recommendations);
 
   return normalized;
+}
+
+/**
+ * 6.2b — Remapea la identidad del actor del contenido social: cualquier `actorProfileId`/`fromProfileId`
+ * que coincida con un uid conocido se sustituye por su `profileId`, reconstruyendo `key`/`id`. Pura.
+ * Solo debe aplicarse al gist PROPIO (el llamador pasa `{ [miUid]: miProfileId }`); para gists ajenos el
+ * mapa va vacío y no cambia nada. Sirve para sacar el uid del canal público al reescribir un gist legacy.
+ */
+export function remapSocialActorIds(data: SocialGistData, uidToProfileId: Record<string, string>): SocialGistData {
+  const map = (id: string): string => uidToProfileId[id] || id;
+
+  const activity = (data.activity || []).map((entry) => {
+    const actorProfileId = map(entry.actorProfileId);
+    if (actorProfileId === entry.actorProfileId) return entry;
+    const key = buildActivityKey(actorProfileId, entry.gameId, entry.type);
+    return { ...entry, actorProfileId, key, id: key };
+  });
+
+  const recommendations = (data.recommendations || []).map((rec) => {
+    const fromProfileId = map(rec.fromProfileId);
+    return fromProfileId === rec.fromProfileId ? rec : { ...rec, fromProfileId };
+  });
+
+  return { ...data, activity, recommendations };
 }
 
 export async function whoAmI(token: string): Promise<{ login: string }> {

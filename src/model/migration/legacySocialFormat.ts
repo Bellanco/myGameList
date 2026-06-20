@@ -8,6 +8,33 @@ export function pickLegacyReviewText(source: Record<string, unknown>): string {
   return String(source.snippet ?? source.review ?? source.reviewText ?? '');
 }
 
+// 6.2b — uid→profileId en el canal social. El formato NUEVO identifica al actor con `actorProfileId`
+// (pseudónimo); el VIEJO usaba `actorUid` (uid de Firebase). Igual para recomendaciones
+// (`fromProfileId` nuevo / `fromUid` viejo). Estos lectores toleran ambos: prefieren el pseudónimo y
+// caen al uid (que, en gists ajenos aún sin migrar, se usa como identificador hasta que su dueño reescriba).
+
+/** Identificador del actor de una entrada de activity (nuevo `actorProfileId` / viejo `actorUid`). */
+export function pickLegacyActorId(source: Record<string, unknown>): string {
+  return String(source.actorProfileId ?? source.actorUid ?? '').trim();
+}
+
+/** Identificador "from" de una recomendación (nuevo `fromProfileId` / viejo `fromUid`). */
+export function pickLegacyFromId(source: Record<string, unknown>): string {
+  return String(source.fromProfileId ?? source.fromUid ?? '').trim();
+}
+
+/** True si algún item conserva la forma vieja con uid (`actorUid`/`fromUid`) sin el pseudónimo nuevo. */
+function hasLegacyUidIdentity(items: unknown): boolean {
+  return (
+    Array.isArray(items) &&
+    items.some((item) => {
+      if (!item || typeof item !== 'object') return false;
+      const record = item as Record<string, unknown>;
+      return ('actorUid' in record && !('actorProfileId' in record)) || ('fromUid' in record && !('fromProfileId' in record));
+    })
+  );
+}
+
 /** True si la lista contiene algún item con el texto de reseña completo legacy (`review`/`reviewText`). */
 function hasLegacyReviewText(items: unknown): boolean {
   return (
@@ -29,6 +56,8 @@ export function socialGistNeedsRewrite(raw: unknown): boolean {
   if (!raw || typeof raw !== 'object') return false;
   const o = raw as Record<string, unknown>;
   if (hasLegacyReviewText(o.activity) || hasLegacyReviewText(o.recommendations)) return true;
+  // 6.2b: también si el gist aún identifica al actor por uid (actorUid/fromUid) en vez de profileId.
+  if (hasLegacyUidIdentity(o.activity) || hasLegacyUidIdentity(o.recommendations)) return true;
   const profile = (o.profile && typeof o.profile === 'object' ? o.profile : {}) as Record<string, unknown>;
   return hasLegacyReviewText(profile.recommendations);
 }
