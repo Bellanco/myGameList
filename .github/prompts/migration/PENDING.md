@@ -60,6 +60,11 @@
       - PENDIENTE (gated): borrar `src/model/migration/legacy*.ts` + fallbacks SOLO tras el corte verificado en navegador.
 
 ## D. Notas / deuda menor
+- ✅ **Auto-upgrade del estado LOCAL** (forward-migration, independiente de 6.4): al cargar, `loadLocalStateAsync` devuelve
+  `wasLegacy` (detector puro `localStateNeedsUpgrade` en `legacyLocalStorage.ts`: campos legacy en español o sin `schemaVersion`)
+  y `useGameListViewModel` reescribe UNA vez el estado en formato nuevo (sin tocar `updatedAt` ni marcar dirty → no fuerza push
+  al gist). `saveLocalState` estampa `LOCAL_SCHEMA_VERSION` → el upgrade es único y no se repite. NO elimina el blob `appState`
+  en sí (eso sería "retirar appState", descartado); solo garantiza que su CONTENIDO sea nuevo. Tests en `migrationFoundation.test.ts`.
 - `myGames.json` en la raíz = **datos reales del usuario** (untracked). NO commitear (`.gitignore` solo cubre `/data/myGames.json`).
 - `dist/index.html` se regenera en cada `build`; no commitear en fases de código.
 - **M4b** (extraer `persist()` de `useGameListViewModel`): EVALUADO Y OMITIDO por criterio (MVVM correcto); no es deuda.

@@ -14,6 +14,8 @@ import {
 import { assertValidSocialGist } from '../../src/model/schemas/socialGistSchema';
 import { assembleChunkedGames, gamesGistNeedsRewrite, unwrapGamesFile } from '../../src/model/migration/legacyGamesFormat';
 import { pickLegacyActorId, pickLegacyFromId, socialGistNeedsRewrite } from '../../src/model/migration/legacySocialFormat';
+import { localStateNeedsUpgrade } from '../../src/model/migration/legacyLocalStorage';
+import { LOCAL_SCHEMA_VERSION } from '../../src/core/constants/storageKeys';
 import { decryptFromString, encryptToString } from '../../src/core/security/crypto';
 import type { GameItem, TabData } from '../../src/model/types/game';
 
@@ -206,6 +208,31 @@ describe('6.2b: lectores de identidad y remapSocialActorIds (uid→profileId en 
     const out = remapSocialActorIds(data, {});
     expect(out.activity[0].actorProfileId).toBe('other-uid');
     expect(out.activity[0]).toBe(data.activity[0]); // sin cambios → misma referencia
+  });
+});
+
+describe('Auto-upgrade local: localStateNeedsUpgrade (detector del estado guardado)', () => {
+  it('true si un item conserva campos legacy en español (nombre/generos/…)', () => {
+    expect(localStateNeedsUpgrade({ c: [{ id: 1, nombre: 'Juego' }], schemaVersion: LOCAL_SCHEMA_VERSION })).toBe(true);
+    expect(localStateNeedsUpgrade({ v: [{ id: 1, pf: ['x'] }] })).toBe(true);
+  });
+
+  it('true si hay datos pero falta la marca schemaVersion (upgrade único)', () => {
+    expect(localStateNeedsUpgrade({ c: [{ id: 1, name: 'Juego', genres: [] }] })).toBe(true);
+  });
+
+  it('false si ya es formato nuevo con schemaVersion actual', () => {
+    expect(localStateNeedsUpgrade({ c: [{ id: 1, name: 'Juego', genres: [] }], schemaVersion: LOCAL_SCHEMA_VERSION })).toBe(false);
+  });
+
+  it('false para estado vacío o no-objeto (no fuerza reescrituras espurias)', () => {
+    expect(localStateNeedsUpgrade({ c: [], v: [], e: [], p: [] })).toBe(false);
+    expect(localStateNeedsUpgrade(null)).toBe(false);
+    expect(localStateNeedsUpgrade('x')).toBe(false);
+  });
+
+  it('soporta el envoltorio { data: {...} } de formatos antiguos', () => {
+    expect(localStateNeedsUpgrade({ data: { c: [{ id: 1, puntuacion: 5 }] } })).toBe(true);
   });
 });
 

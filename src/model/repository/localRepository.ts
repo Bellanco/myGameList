@@ -1,5 +1,5 @@
-import { STORAGE_KEY } from '../../core/constants/storageKeys';
-import { LEGACY_STORAGE_KEYS } from '../migration/legacyLocalStorage';
+import { LOCAL_SCHEMA_VERSION, STORAGE_KEY } from '../../core/constants/storageKeys';
+import { LEGACY_STORAGE_KEYS, localStateNeedsUpgrade } from '../migration/legacyLocalStorage';
 import { migrateData } from './migrateRepository';
 import { loadIndexedDbState, saveIndexedDbState } from './indexedDbRepository';
 import type { GameItem, StoragePayload, TabData } from '../types/game';
@@ -135,12 +135,30 @@ export function loadLocalState(): StoragePayload {
   return getEmptyPayload();
 }
 
-export async function loadLocalStateAsync(): Promise<StoragePayload> {
+/** Lee y parsea el RAW de localStorage (clave actual) para el detector de auto-upgrade (sin normalizar). */
+function readRawLocalStorage(): unknown {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    return raw ? (JSON.parse(raw) as unknown) : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Carga el estado combinando localStorage + IndexedDB (`appState`) y devuelve además `wasLegacy`: si el
+ * estado RAW de alguna de las dos fuentes está en forma vieja (campos legacy o sin `schemaVersion`). El
+ * llamador usa `wasLegacy` para reescribir una sola vez el estado en formato nuevo (auto-upgrade).
+ */
+export async function loadLocalStateAsync(): Promise<{ payload: StoragePayload; wasLegacy: boolean }> {
   const localPayload = loadLocalState();
   const indexedPayload = await loadIndexedDbState();
 
+  // Detección sobre el RAW (antes de normalizar, que borraría las marcas legacy).
+  const wasLegacy = localStateNeedsUpgrade(readRawLocalStorage()) || localStateNeedsUpgrade(indexedPayload);
+
   if (!indexedPayload) {
-    return localPayload;
+    return { payload: localPayload, wasLegacy };
   }
 
   const normalizedIndexed = normalizeData(indexedPayload);
@@ -155,24 +173,26 @@ export async function loadLocalStateAsync(): Promise<StoragePayload> {
   const indexedHasData = hasStoredData(indexedState);
 
   if (!localHasData && indexedHasData) {
-    return indexedState;
+    return { payload: indexedState, wasLegacy };
   }
 
   if (localHasData && !indexedHasData) {
-    return localPayload;
+    return { payload: localPayload, wasLegacy };
   }
 
-  return indexedState.updatedAt > localPayload.updatedAt ? indexedState : localPayload;
+  return { payload: indexedState.updatedAt > localPayload.updatedAt ? indexedState : localPayload, wasLegacy };
 }
 
 export function saveLocalState(payload: StoragePayload): void {
+  // Estampa la versión del esquema: marca el estado como "nuevo" para que el auto-upgrade no se repita.
+  const stamped: StoragePayload = { ...payload, schemaVersion: LOCAL_SCHEMA_VERSION };
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(stamped));
   } catch {
     // Ignore quota/storage errors and rely on IndexedDB fallback.
   }
 
-  void saveIndexedDbState(payload);
+  void saveIndexedDbState(stamped);
 }
 
 export function parseImportedData(rawText: string): TabData {

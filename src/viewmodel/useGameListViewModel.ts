@@ -118,7 +118,7 @@ export function useGameListViewModel() {
     const hasData = (d: TabData) => d.c.length > 0 || d.v.length > 0 || d.e.length > 0 || d.p.length > 0 || d.deleted.length > 0;
 
     const hydrateFromFallback = async () => {
-      const hydrated = await loadLocalStateAsync();
+      const { payload: hydrated, wasLegacy } = await loadLocalStateAsync();
       if (cancelled) return;
 
       // Fuente primaria: appState/localStorage (probada y, vía el espejo, idéntica al store `games`).
@@ -156,6 +156,21 @@ export function useGameListViewModel() {
           lastRemoteUpdatedAt: hydrated.lastRemoteUpdatedAt,
         };
       });
+
+      // Auto-upgrade del estado local: si venía en forma vieja (campos legacy o sin `schemaVersion`),
+      // reescribir UNA vez en formato nuevo. Conserva `updatedAt` y NO marca dirty: el disco queda en
+      // formato nuevo sin forzar un push al gist (el gist tiene su propio upgrade al sincronizar).
+      if (wasLegacy && hasData(dataSource)) {
+        const upgraded = normalizeData(dataSource);
+        const keepUpdatedAt = dataSource.updatedAt || hydrated.updatedAt;
+        saveLocalState({
+          ...upgraded,
+          updatedAt: keepUpdatedAt,
+          etag: hydrated.etag,
+          lastRemoteUpdatedAt: hydrated.lastRemoteUpdatedAt,
+        });
+        void mirrorTabDataToGames(upgraded, keepUpdatedAt).catch(() => {});
+      }
     };
 
     void hydrateFromFallback();

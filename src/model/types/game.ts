@@ -53,6 +53,7 @@ export interface StoragePayload {
   updatedAt: number;
   etag: string | null;
   lastRemoteUpdatedAt: number;
+  schemaVersion?: number; // marca de auto-upgrade del estado local (ver LOCAL_SCHEMA_VERSION)
 }
 
 export interface TabSort {
