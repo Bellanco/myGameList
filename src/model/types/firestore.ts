@@ -56,6 +56,7 @@ export interface RecommendationDoc {
  * El token de GitHub se guarda CIFRADO en cliente (nunca en claro); la clave de descifrado vive en IndexedDB.
  */
 export interface FirestorePrivateConfig {
+  schemaVersion?: number; // F6.3: versión del documento (aditiva)
   profileId: string;
   gamesGistId: string;
   socialGistId: string;

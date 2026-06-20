@@ -39,6 +39,11 @@ export {
   updateRecommendationStatus,
 } from './firebaseSocialRepository';
 
+// F6.3 (modernización): marca de versión de esquema en los docs de Firestore (profiles/userMap/privateConfig).
+// Aditiva — las reglas no validan un conjunto exacto de campos, así que no requiere redesplegar reglas. Permite a
+// futuras migraciones detectar la versión del documento.
+const FIRESTORE_SCHEMA_VERSION = 1;
+
 /**
  * Guarda referencia mínima de perfil en Firestore.
  * No lee ni elimina documentos de placeholder en colecciones sociales.
@@ -62,6 +67,7 @@ export async function upsertProfileSocialReferences(input: {
   await setDoc(
     doc(services.firestore, 'profiles', input.user.uid),
     {
+      schemaVersion: FIRESTORE_SCHEMA_VERSION,
       uid: input.user.uid,
       profileId,
       email: input.user.email,
@@ -130,7 +136,7 @@ export async function setPrivateConfig(uid: string, config: Partial<FirestorePri
   if (!services) {
     throw new Error('Firebase no está configurado en este entorno');
   }
-  await setDoc(doc(services.firestore, 'privateConfig', uid), { ...config }, { merge: true });
+  await setDoc(doc(services.firestore, 'privateConfig', uid), { ...config, schemaVersion: FIRESTORE_SCHEMA_VERSION }, { merge: true });
 }
 
 /**
@@ -164,7 +170,7 @@ export async function recoverGithubToken(uid: string): Promise<string | null> {
 export async function setUserMap(uid: string, profileId: string): Promise<void> {
   const services = await initializeFirebaseServices();
   if (!services) throw new Error('Firebase no está configurado en este entorno');
-  await setDoc(doc(services.firestore, 'userMap', uid), { profileId }, { merge: true });
+  await setDoc(doc(services.firestore, 'userMap', uid), { profileId, schemaVersion: FIRESTORE_SCHEMA_VERSION }, { merge: true });
 }
 
 /**
@@ -230,6 +236,7 @@ export async function ensureProfileByEmail(input: {
     await setDoc(
       doc(services.firestore, 'profiles', targetId),
       {
+        schemaVersion: FIRESTORE_SCHEMA_VERSION,
         uid: input.user.uid,
         profileId,
         email: cleanEmail,
