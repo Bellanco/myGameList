@@ -4,8 +4,12 @@
 > Herramientas: navegador + DevTools → **Application** (IndexedDB / Local Storage), consola de **Firebase**
 > (Firestore), y la API de **GitHub Gist** (ver el contenido de los gists). Marca cada casilla.
 
+> **Estado (2026-06-20):** lo CI-verificable ya está verde (tsc · 64+2 tests · build · audit A:0 B:0). Lo que queda es
+> precisamente la **verificación en NAVEGADOR** de este plan (B1–B5, runner, sync cross-device, social de M3, detalle
+> ajeno de E3) + activar lo gated (E4) y desplegar reglas. Seguimiento vivo de pendientes: **`PENDING.md`**.
+
 ## 0. Pre-requisitos
-- [ ] `git pull` de `develop` con todo lo subido.
+- [ ] `git pull` de `develop` con todo lo subido (último: tras `cf92c77`).
 - [ ] `npm ci` (instala deps, incl. firebase-tools / rules-unit-testing / fake-indexeddb).
 - [ ] Comandos en verde: `npx tsc --noEmit` · `npm test` (41 ✓) · `npm run validate` · `npm run build` · `npm run audit:privacy` (**A:0**).
 - [ ] **Backup** antes de probar en producción: exporta tu gist de juegos, tu gist social y tu doc `profiles` (por si hay que revertir).

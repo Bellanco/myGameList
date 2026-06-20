@@ -5,6 +5,12 @@
 > capa, recoge lo ya hecho en la migración previa (forward-migration, compat aislada, privacidad index-only) y
 > propone fases **implementables y verificables**, cada una con build verde + tests + `audit:privacy A:0`.
 
+## ESTADO (2026-06-20)
+Hecho y verde en CI: E1 · M1 · M2 · M3 · M4a · E2-base · F6.1 · F6.3 · E3 · E4 (GATED, flag off) · slice de limpieza F9.
+Pendiente (navegador/2 dispositivos/acción): 6.2 (estabilizar `profileId` + uid→profileId), `consent` (UX), 6.4 (delta-sync
++ escritura granular), activar E4 (flag), Fase 0 (desplegar reglas, revocar token, probar), resto de Fase 9. M4b se descartó
+por criterio (MVVM correcto). **Checklist vivo y detalle: `PENDING.md`; roadmap end-to-end: `MASTER-PLAN.md`.**
+
 ## Principios heredados (no romper)
 - **Forward-migration**: la app trabaja con el modelo nuevo; al leer datos viejos los transforma y reescribe. Toda
   la compat vive aislada en `src/model/migration/legacy*.ts` y se borra cuando ya no quedan datos viejos (Fase 4 del plan previo).

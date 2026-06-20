@@ -6,6 +6,14 @@
 > una vez todo migrado, **borrarla sea quitar esos ficheros y sus llamadas**. El plan termina, tras probar,
 > con la **Fase C** activa (gist de juegos en formato nuevo) y la compat eliminada.
 
+## ESTADO (2026-06-20)
+- ✅ **Fase 1** (aislar compat en `src/model/migration/legacy*.ts`) HECHA. ✅ **Auto-upgrade** al leer formato viejo
+  (detectores `gamesGistNeedsRewrite`/`socialGistNeedsRewrite` + reescritura) HECHO. ✅ Token en claro legacy borrado.
+- 🔶 **Escritura del envoltorio nuevo del gist de juegos**: implementada como chunking GATED (`ENABLE_GAMES_WRAPPER_WRITE
+  =false`, ver E4 en `MASTER-PLAN.md`). Sigue escribiendo PLANO mientras la bandera esté off (compat con clientes viejos).
+- ⏳ **Fase 4 (borrar la compat)**: PENDIENTE y gated — solo tras el corte verificado en navegador (ver `PENDING.md`).
+- Fuente única de pendientes: **`PENDING.md`**. Roadmap completo: **`MASTER-PLAN.md`**.
+
 ## ⚠️ ¿APLICA la Fase 2 (formato nuevo del gist de juegos)? — Casi seguro NO en multiusuario
 La Fase 2 (escribir el envoltorio `GamesMainFile`) **NO es necesaria** para los objetivos de la migración
 (seguridad/privacidad/sync ya están sin ella). Es **solo una optimización** (chunking de gists grandes) y es

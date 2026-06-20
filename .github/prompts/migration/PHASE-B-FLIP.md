@@ -1,8 +1,10 @@
 # Fase B — Plan del "flip" en vivo (social / Firestore index-only + snippet-split)
 
-> **Estado:** la **capa aditiva** de la Fase B ya está en `develop` (funciones nuevas, sin cablear, sin
-> impacto en vivo). Este documento es el plan para **activarla** (el "flip"), que SÍ cambia datos en
-> Firestore y la UI social. **Ejecutar paso a paso, probando cada uno** (no probable en CI/headless).
+> **Estado (2026-06-20):** **B1–B5 YA están implementados y cableados** en `develop` (token cifrado en `privateConfig`
+> + borrado del token en claro; profileId/userMap; gist social snippet-only; UI social actualizada). Lo que **falta es
+> B6**: `npm run test:rules` (7/7) + `firebase deploy --only firestore:rules`, y la **prueba en navegador** de B1–B5
+> (no verificable en CI/headless). Fuente única de pendientes: **`PENDING.md`** (Fase 0). Roadmap: **`MASTER-PLAN.md`**.
+> Este documento queda como **detalle/histórico** del flip; el seguimiento vivo está en PENDING/MASTER.
 >
 > Regla de oro: cada paso es un commit propio + puerta de calidad (`npx tsc --noEmit`, `npm test`,
 > `npm run validate`, `npm run build`) + **prueba manual en navegador** + push. Si algo falla, `git revert` del paso.
