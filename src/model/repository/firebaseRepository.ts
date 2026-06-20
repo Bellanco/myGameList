@@ -806,8 +806,15 @@ export async function ensureProfileByEmail(input: {
   if (githubToken) {
     try {
       await backupGithubToken(input.user.uid, githubToken);
+      // Upgrade proactivo: una vez respaldado cifrado, borrar el token en claro LEGACY que perfiles viejos
+      // aún conservan en `profiles.social.githubToken` (merge no lo elimina; deleteField sí).
+      await setDoc(
+        doc(services.firestore, 'profiles', targetId),
+        { social: { githubToken: deleteField() } }, // audit-allow: deleteField() ELIMINA el token en claro legacy, no lo almacena
+        { merge: true },
+      );
     } catch (error) {
-      console.warn('[firebase] No se pudo respaldar el token cifrado:', error instanceof Error ? error.message : error);
+      console.warn('[firebase] No se pudo respaldar/limpiar el token:', error instanceof Error ? error.message : error);
     }
   }
 
