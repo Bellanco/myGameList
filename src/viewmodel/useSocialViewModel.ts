@@ -1,11 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type MouseEvent as ReactMouseEvent } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
-  buildReviewSnippet,
   createSocialGist,
   getSocialSyncConfig,
   getSyncConfig,
-  readPublicGamesGistById,
   readPublicSocialGistById,
   readSocialGist,
   saveSocialSyncConfig,
@@ -17,7 +15,7 @@ import {
 } from '../model/repository/gistRepository';
 import { SOCIAL_UI } from '../core/constants/labels';
 import type { IconName } from '../core/constants/icons';
-import type { GameItem, TabId } from '../model/types/game';
+import type { TabId } from '../model/types/game';
 import {
   ensureProfileByEmail,
   getCurrentSocialAuthUser,
@@ -343,18 +341,6 @@ export function useSocialViewModel() {
     });
 
     return ordered;
-  }, []);
-
-  const toSharedGame = useCallback((game: GameItem): SocialSharedGame => {
-    // Proyección PÚBLICA (index-only): solo básicos + rating redondeado + snippet (≤160). Sin review/score/horas/etc.
-    return {
-      id: game.id,
-      name: game.name,
-      platforms: game.platforms || [],
-      genres: game.genres || [],
-      rating: Math.round(Number(game.score || 0)),
-      snippet: buildReviewSnippet(game.review || ''), // audit-allow: usa el helper canónico buildReviewSnippet (proyección index-only); movido verbatim de SocialHub en M3
-    };
   }, []);
 
   const visibleSocialDirectory = useMemo(() => {
@@ -822,21 +808,11 @@ export function useSocialViewModel() {
         entries.map(async (entry) => {
           try {
             const socialData = await readPublicSocialGistById(entry.socialGistId, socialConfig?.token || null);
-            let sharedLists: Partial<Record<TabId, SocialSharedGame[]>> = {};
-
-            if (entry.gamesGistId) {
-              try {
-                const gamesData = await readPublicGamesGistById(entry.gamesGistId, socialConfig?.token || null);
-                sharedLists = {
-                  c: gamesData.c.map((game) => toSharedGame(game)).slice(0, 300),
-                  v: gamesData.v.map((game) => toSharedGame(game)).slice(0, 300),
-                  e: gamesData.e.map((game) => toSharedGame(game)).slice(0, 300),
-                  p: gamesData.p.map((game) => toSharedGame(game)).slice(0, 300),
-                };
-              } catch {
-                // Keep empty lists when games gist is unavailable.
-              }
-            }
+            // E3: el canal social NO lee el gist de juegos EN CRUDO de otros usuarios (privacidad + desacople del
+            // formato del gist de juegos). Las listas compartidas quedan index-only vacías para perfiles ajenos: el
+            // detalle de actividad muestra nombre/rating/snippet del propio evento social; los metadatos
+            // (plataformas/géneros) solo se ven para los juegos PROPIOS (fallback local en getGameItemById).
+            const sharedLists: Partial<Record<TabId, SocialSharedGame[]>> = {};
 
             const mergedRecommendations = socialData.activity
               .filter((activityEntry) => activityEntry.type === 'recommendation')
@@ -898,7 +874,7 @@ export function useSocialViewModel() {
     } finally {
       setLoadingDirectory(false);
     }
-  }, [activePanel, authUser, defaultSocialVisibility, mainSyncConfig?.token, profileEditorLocked, setFeedback, showSocialSpace, socialCfgGistId, toSharedGame]);
+  }, [activePanel, authUser, defaultSocialVisibility, mainSyncConfig?.token, profileEditorLocked, setFeedback, showSocialSpace, socialCfgGistId]);
 
   useEffect(() => {
     void hydrateSocialDirectory();
