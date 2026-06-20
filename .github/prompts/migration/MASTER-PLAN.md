@@ -76,11 +76,12 @@ Regla de oro: **cada cambio de formato de las fases siguientes añade aquí su l
   `firebaseProfileRepository.ts` · `firebaseSocialRepository.ts`.
 - Verificar con los tests existentes (no cambia comportamiento).
 
-## FASE 4 — E2: IndexedDB autoritativo + escritura granular
-- Promover `games`/`deleted`/`meta` a fuente de escritura: editar/borrar 1 juego escribe **solo ese registro**.
-- **Cablear el runner** `dataMigrationRepository` en el arranque (idle) para migrar `appState` → stores (idempotente).
-- `appState` pasa a backup derivado; retirarlo solo tras probar en navegador.
-- Verificar con `fake-indexeddb` (granular, arranque desde stores, idempotencia, no-pérdida).
+## FASE 4 — E2: IndexedDB autoritativo (CERRADA — base ya en su sitio)
+- ✅ **Runner cableado** en `main.tsx` (idle, idempotente, no destructivo): puebla `games`/`deleted` desde `appState`.
+- ✅ **Lectura games-autoritativa cuando está al día** (corte A3 previo); `appState` como backup/fallback.
+- ⏭️ **Escritura granular MOVIDA a la Fase 6**: reescribir el camino caliente a `upsertGame`/`deleteGame` está acoplado
+  al consumidor de `syncQueue` (delta-sync). Hacerlo aislado crearía SyncOps huérfanas y doble fuente de verdad para el
+  gist (riesgo de pérdida) sin beneficio a <1.000 juegos. Decisión 2026-06-20: se hace junto al delta-sync en Fase 6.
 
 ## FASE 5 — M3+M4: viewmodel social + sacar lógica de la vista
 - Extraer `useSocialViewModel.ts` (los 30 `useState`/12 `useEffect`/orquestación de `SocialHub`); `SocialHub.tsx`
@@ -93,7 +94,9 @@ Regla de oro: **cada cambio de formato de las fases siguientes añade aquí su l
 - **Gist social a `schemaVersion: 2` + `consent`** y **`uid`→`profileId`** en el canal público
   (`actorProfileId`/`fromProfileId`), con su compat de lectura en `legacySocialFormat.ts` (Fase 1.1).
 - Firestore: `schemaVersion` en docs + `gamesChunks`/`socialChunks` en `privateConfig` (modelo híbrido, sin index-only puro).
-- **Delta-sync** (sobre E2): sincronizar solo registros cambiados (usa `syncQueue`).
+- **Delta-sync + escritura granular** (lo que se movió de E2): reescribir el camino caliente a `upsertGame`/`deleteGame`
+  (escritura por registro) + un **consumidor de `syncQueue`** que sincronice solo los cambios encolados, no el blob entero.
+  Aquí sí es coherente: `appState` deja de ser la fuente del gist y el store `games` pasa a autoritativo en escritura.
 
 ## FASE 7 — E3: desacoplar la lectura cross-user del gist de juegos
 - El directorio/perfil social deja de leer el gist de juegos en crudo de otros usuarios (`readPublicGamesGistById`);
