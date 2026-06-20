@@ -319,15 +319,45 @@ describe('Fase C (aditivo): buildGamesMainFile + distributeIntoChunks', () => {
       deleted: [{ id: 9, _ts: 50 }], updatedAt: 100,
     };
     const wrapper = buildGamesMainFile(td);
-    expect(wrapper.schemaVersion).toBe(3);
+    expect(wrapper.schemaVersion).toBe(4);
     expect(wrapper.fileType).toBe('games-main');
+    expect(wrapper.dictionaries).toBeDefined();
 
     const back = unwrapGamesFile(wrapper) as TabData;
     expect(back.c.map((g) => g.id)).toEqual([1]);
     expect(back.v.map((g) => g.id)).toEqual([2]);
     expect(back.p.map((g) => g.id)).toEqual([3]);
     expect(back.c[0]).not.toHaveProperty('_tab');
+    // las categorías se reconstruyen como cadenas (decodificadas desde el diccionario)
+    expect(back.c[0].genres).toEqual(['RPG']);
+    expect(back.c[0].platforms).toEqual(['Steam']);
     expect(back.deleted.map((d) => d.id)).toEqual([9]);
+  });
+
+  it('schemaVersion 4: deduplica categorías en diccionario y el round-trip reconstruye las cadenas exactas', () => {
+    const td: TabData = {
+      c: [
+        makeGame({ id: 1, genres: ['Acción', 'RPG'], platforms: ['Steam'], strengths: ['Jugabilidad', 'Historia'] }),
+        makeGame({ id: 2, genres: ['Acción'], platforms: ['Steam'], strengths: ['Jugabilidad'] }),
+        makeGame({ id: 3, genres: ['RPG', 'Acción'], platforms: ['Switch'], strengths: ['Historia'] }),
+      ],
+      v: [], e: [], p: [], deleted: [], updatedAt: 1,
+    };
+    const wrapper = buildGamesMainFile(td);
+    // diccionarios SIN repetición pese a aparecer en varios juegos ([...] para NO mutar el dict con sort)
+    expect([...(wrapper.dictionaries?.genres ?? [])].sort()).toEqual(['Acción', 'RPG']);
+    expect([...(wrapper.dictionaries?.platforms ?? [])].sort()).toEqual(['Steam', 'Switch']);
+    expect([...(wrapper.dictionaries?.strengths ?? [])].sort()).toEqual(['Historia', 'Jugabilidad']);
+    // en el juego, las categorías quedan como índices (números), no cadenas
+    const encoded = wrapper.games[1] as unknown as { genres: unknown[] };
+    expect(encoded.genres.every((x) => typeof x === 'number')).toBe(true);
+
+    // round-trip exacto
+    const back = unwrapGamesFile(wrapper) as TabData;
+    const byId = (id: number) => back.c.find((g) => g.id === id)!;
+    expect(byId(1).genres).toEqual(['Acción', 'RPG']);
+    expect(byId(3).genres).toEqual(['RPG', 'Acción']); // conserva el ORDEN propio de cada juego
+    expect(byId(2).strengths).toEqual(['Jugabilidad']);
   });
 
   it('distributeIntoChunks: todo en main bajo umbral, crea c1 al superarlo, sin duplicar', () => {

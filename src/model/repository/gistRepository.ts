@@ -1,7 +1,7 @@
 import { isValidGistId, isValidGithubToken } from '../../core/security/sanitize';
 import { migrateData } from './migrateRepository';
 import { clampRating, normalizeTimestamp } from '../../core/utils/normalize';
-import { assembleChunkedGames, gamesGistNeedsRewrite, unwrapGamesFile } from '../migration/legacyGamesFormat';
+import { assembleChunkedGames, gamesGistNeedsRewrite, gamesGistNeedsUpgradeToWrapper, unwrapGamesFile } from '../migration/legacyGamesFormat';
 import { pickLegacyActorId, pickLegacyFromId, pickLegacyReviewText, socialGistNeedsRewrite } from '../migration/legacySocialFormat';
 import { assertValidSocialGist } from '../schemas/socialGistSchema';
 import { TAB_IDS, type TabData, type TabId } from '../types/game';
@@ -1006,7 +1006,9 @@ export async function readGist(token: string, gistId: string, etag: string | nul
   return {
     data: migrateData(unwrapGamesFile(assembled)),
     etag: response.headers.get('etag'),
-    wasLegacy: gamesGistNeedsRewrite(parsed),
+    // El "viejo" depende del DESTINO de escritura: con el envoltorio v4 activado, "viejo" = no-v4 (se re-encoda);
+    // con escritura plana, "viejo" = envoltorio o legacy (se rebaja a plano). Así el auto-upgrade apunta al destino real.
+    wasLegacy: ENABLE_GAMES_WRAPPER_WRITE ? gamesGistNeedsUpgradeToWrapper(parsed) : gamesGistNeedsRewrite(parsed),
   };
 }
 

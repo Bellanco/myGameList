@@ -2,7 +2,27 @@
 // Lectura multiformato del gist de juegos: acepta el formato VIEJO (TabData plano) y el NUEVO
 // (envoltorio GamesMainFile). Una vez todo migrado, el lector puede simplificarse a solo-nuevo.
 import type { GameItem, TabData, TabId } from '../types/game';
+import type { CategoryDictionaries, CategoryKey } from '../types/gist';
 import { gamesChunkFilename } from '../repository/socialProjection';
+
+const CATEGORY_KEYS: CategoryKey[] = ['genres', 'platforms', 'strengths', 'weaknesses', 'reasons'];
+
+/**
+ * Decodifica un juego del formato v4 (categorías como índices) a `GameItem` (categorías como cadenas),
+ * usando los diccionarios del ancla. Tolera índices fuera de rango (se descartan). Si no hay diccionarios
+ * (v3) o el campo ya es array de cadenas, lo devuelve tal cual.
+ */
+function decodeGameCategories(game: Record<string, unknown>, dictionaries: CategoryDictionaries | undefined): Record<string, unknown> {
+  if (!dictionaries) return game;
+  const out = { ...game };
+  for (const key of CATEGORY_KEYS) {
+    const raw = game[key];
+    if (!Array.isArray(raw)) continue;
+    const dict = dictionaries[key] || [];
+    out[key] = raw.map((i) => (typeof i === 'number' ? dict[i] : i)).filter((v): v is string => typeof v === 'string');
+  }
+  return out;
+}
 
 /**
  * Detecta el envoltorio DESTINO del gist de juegos (`GamesMainFile`: schemaVersion/fileType/games),
@@ -32,8 +52,9 @@ export function unwrapGamesFile(parsed: unknown): unknown {
   if (!isGamesMainWrapper(parsed)) return parsed;
 
   const o = parsed as {
-    games?: Record<string, GameItem & { _tab?: TabId }>;
+    games?: Record<string, (GameItem & { _tab?: TabId }) | undefined>;
     deletedIndex?: Record<string, { deletedAt?: number } | undefined>;
+    dictionaries?: CategoryDictionaries;
     updatedAt?: number;
   };
 
@@ -46,7 +67,9 @@ export function unwrapGamesFile(parsed: unknown): unknown {
     if (!game) continue;
     const tab = game._tab;
     if (tab !== 'c' && tab !== 'v' && tab !== 'e' && tab !== 'p') continue; // sin tab no se puede ubicar
-    const clean = { ...game } as GameItem & { _tab?: TabId };
+    // v4: expandir índices→cadenas con los diccionarios del ancla; v3: ya son cadenas (no-op).
+    const decoded = decodeGameCategories(game as unknown as Record<string, unknown>, o.dictionaries);
+    const clean = { ...decoded } as unknown as GameItem & { _tab?: TabId };
     delete clean._tab;
     buckets[tab].push(clean);
     placed += 1;
@@ -133,4 +156,20 @@ export function gamesGistNeedsRewrite(parsed: unknown): boolean {
     }
   }
   return false;
+}
+
+/**
+ * Detector del auto-upgrade cuando el DESTINO es el envoltorio v4 (escritura keyed activada). Devuelve `true`
+ * si el contenido NO está en v4 y debe reescribirse:
+ *  - plano/legacy (`c/v/e/p`) → envolver en v4, o
+ *  - envoltorio `GamesMainFile` con `schemaVersion < 4` (p.ej. v3 sin diccionarios) → re-encodear a v4.
+ * Para un ancla ya v4 devuelve `false` (no reescribe). "Si llega la nueva, no pasa por este código."
+ */
+export function gamesGistNeedsUpgradeToWrapper(parsed: unknown): boolean {
+  if (!parsed || typeof parsed !== 'object') return false;
+  if (isGamesMainWrapper(parsed)) {
+    return Number((parsed as Record<string, unknown>).schemaVersion) < 4;
+  }
+  const o = parsed as Record<string, unknown>;
+  return 'c' in o || 'v' in o || 'e' in o || 'p' in o;
 }
