@@ -24,19 +24,15 @@ export type {
   SocialAuthUser,
   SocialProfileReference,
   SocialDirectoryEntry,
-  GameRecommendation,
 } from './firebaseClient';
 export { reportHandledError, trackAnalyticsEvent } from './telemetryRepository';
 export { getCurrentSocialAuthUser, signInWithGoogle, signOutSocialUser } from './firebaseAuthRepository';
+// C5: el índice público (upsertProfileIndex/upsertFeedCard) y las recomendaciones quedaron sin consumidores y
+// con reglas admin-only (rotas en cliente). Código muerto eliminado; la migración a índice pseudónimo por
+// profileId (con guarda recursiva de campos privados) queda registrada como tarea gated en CODE-REVIEW-IMPROVEMENTS.md.
 export {
-  assertNoFirestorePrivateFields,
-  upsertProfileIndex,
-  upsertFeedCard,
   findSocialProfileByEmail,
   listSocialDirectory,
-  sendGameRecommendation,
-  getReceivedRecommendations,
-  updateRecommendationStatus,
 } from './firebaseSocialRepository';
 
 // F6.3 (modernización): marca de versión de esquema en los docs de Firestore (profiles/userMap/privateConfig).

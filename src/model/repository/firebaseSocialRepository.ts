@@ -1,18 +1,17 @@
-// Capa social en Firestore: directorio de perfiles, índice público (index-only), recomendaciones y sus cachés.
-// Extraído de firebaseRepository.ts (M2) sin cambio de comportamiento. NO importa de la fachada (sin ciclos).
-import { collection, doc, documentId, getDocs, limit, query, serverTimestamp, setDoc, where } from 'firebase/firestore';
+// Capa social en Firestore: directorio de perfiles y búsqueda por email (+ sus cachés).
+// Extraído de firebaseRepository.ts (M2). NO importa de la fachada (sin ciclos).
+// C5: eliminados el índice público (upsertProfileIndex/upsertFeedCard) y las recomendaciones — código muerto
+// (sin consumidores) y con reglas admin-only. Ver CODE-REVIEW-IMPROVEMENTS.md (migración PII gated).
+import { collection, documentId, getDocs, limit, query, where } from 'firebase/firestore';
 import {
   initializeFirebaseServices,
   isPermissionDeniedError,
-  type GameRecommendation,
   type SocialDirectoryEntry,
   type SocialProfileReference,
 } from './firebaseClient';
-import type { FirestoreFeedCard, ProfileIndexDoc } from '../types/firestore';
 
 const SOCIAL_PROFILE_CACHE_TTL_MS = 60_000;
 const SOCIAL_DIRECTORY_CACHE_TTL_MS = 30_000;
-const RECEIVED_RECOMMENDATIONS_CACHE_TTL_MS = 15_000;
 
 type CachedValue<T> = {
   value: T;
@@ -23,8 +22,6 @@ const socialProfileByEmailCache = new Map<string, CachedValue<SocialProfileRefer
 const socialProfileByEmailInFlight = new Map<string, Promise<SocialProfileReference | null>>();
 const socialDirectoryCacheByLimit = new Map<number, CachedValue<SocialDirectoryEntry[]>>();
 const socialDirectoryInFlightByLimit = new Map<number, Promise<SocialDirectoryEntry[]>>();
-const receivedRecommendationsByEmailCache = new Map<string, CachedValue<GameRecommendation[]>>();
-const receivedRecommendationsInFlightByEmail = new Map<string, Promise<GameRecommendation[]>>();
 
 function readProfileByEmailCache(email: string): SocialProfileReference | null | undefined {
   const cached = socialProfileByEmailCache.get(email);
@@ -73,62 +70,6 @@ function readSocialDirectoryCache(limitCount: number): SocialDirectoryEntry[] | 
 // Exportado para que la fachada invalide el directorio tras crear/actualizar un perfil.
 export function invalidateSocialDirectoryCache(): void {
   socialDirectoryCacheByLimit.clear();
-}
-
-function readReceivedRecommendationsCache(email: string): GameRecommendation[] | null {
-  const cached = receivedRecommendationsByEmailCache.get(email);
-  if (!cached) {
-    return null;
-  }
-
-  if (cached.expiresAt <= Date.now()) {
-    receivedRecommendationsByEmailCache.delete(email);
-    return null;
-  }
-
-  return cached.value;
-}
-
-function saveReceivedRecommendationsCache(email: string, value: GameRecommendation[]): void {
-  receivedRecommendationsByEmailCache.set(email, {
-    value,
-    expiresAt: Date.now() + RECEIVED_RECOMMENDATIONS_CACHE_TTL_MS,
-  });
-}
-
-function invalidateReceivedRecommendationsCache(email?: string): void {
-  if (email) {
-    receivedRecommendationsByEmailCache.delete(email);
-    return;
-  }
-
-  receivedRecommendationsByEmailCache.clear();
-}
-
-const FIRESTORE_FORBIDDEN_FIELDS = ['uid', 'email', 'githubToken', 'gamesGistId', 'review', 'reviewText', 'score', 'hours', 'steamDeck', 'retry', 'replayable'];
-
-/** Guarda de privacidad para escrituras a Firestore (canales públicos profiles/feed). */
-export function assertNoFirestorePrivateFields(data: Record<string, unknown>): void {
-  for (const field of FIRESTORE_FORBIDDEN_FIELDS) {
-    if (field in data) throw new Error(`Campo prohibido "${field}" en escritura a Firestore`);
-  }
-}
-
-/** profiles/{profileId} — índice público (index-only). Valida que no haya campos privados. */
-export async function upsertProfileIndex(docData: ProfileIndexDoc): Promise<void> {
-  const services = await initializeFirebaseServices();
-  if (!services) throw new Error('Firebase no está configurado en este entorno');
-  assertNoFirestorePrivateFields(docData as unknown as Record<string, unknown>);
-  await setDoc(doc(services.firestore, 'profiles', docData.profileId), { ...docData }, { merge: true });
-}
-
-/** feed/{reviewId} — tarjeta pública. Valida sin campos privados y snippet ≤ 200. */
-export async function upsertFeedCard(card: FirestoreFeedCard): Promise<void> {
-  const services = await initializeFirebaseServices();
-  if (!services) throw new Error('Firebase no está configurado en este entorno');
-  assertNoFirestorePrivateFields(card as unknown as Record<string, unknown>);
-  if (card.snippet.length > 200) throw new Error('snippet supera 200 caracteres');
-  await setDoc(doc(services.firestore, 'feed', card.reviewId), { ...card }, { merge: true });
 }
 
 /**
@@ -288,163 +229,4 @@ export async function listSocialDirectory(limitCount = 12, options?: { forceRefr
   } finally {
     socialDirectoryInFlightByLimit.delete(normalizedLimit);
   }
-}
-
-/**
- * Envía una recomendación de juego a un amigo.
- * Guarda en la colección 'recommendations' de Firestore.
- */
-export async function sendGameRecommendation(input: {
-  fromUid: string;
-  fromEmail: string;
-  fromDisplayName: string;
-  toEmail: string;
-  gameId: number;
-  gameName: string;
-  message?: string;
-}): Promise<{ id: string }> {
-  const services = await initializeFirebaseServices();
-  if (!services) {
-    throw new Error('Firebase no está configurado en este entorno');
-  }
-
-  const toEmailClean = input.toEmail.trim().toLowerCase();
-  if (!toEmailClean) {
-    throw new Error('Email del destinatario es requerido');
-  }
-
-  if (input.gameId <= 0) {
-    throw new Error('ID de juego inválido');
-  }
-
-  const now = Date.now();
-  const docRef = doc(collection(services.firestore, 'recommendations'));
-
-  await setDoc(docRef, {
-    fromUid: input.fromUid,
-    fromEmail: input.fromEmail.toLowerCase(),
-    fromDisplayName: input.fromDisplayName || input.fromEmail,
-    toEmail: toEmailClean,
-    gameId: input.gameId,
-    gameName: String(input.gameName || `Juego ${input.gameId}`).trim(),
-    message: String(input.message || '').trim(),
-    status: 'pending',
-    createdAt: now,
-    updatedAt: now,
-  });
-
-  invalidateReceivedRecommendationsCache(toEmailClean);
-
-  return { id: docRef.id };
-}
-
-/**
- * Obtiene recomendaciones pendientes recibidas para un correo.
- * Si las reglas denegan permisos, retorna array vacío.
- */
-export async function getReceivedRecommendations(toEmail: string): Promise<GameRecommendation[]> {
-  const services = await initializeFirebaseServices();
-  if (!services) {
-    throw new Error('Firebase no está configurado en este entorno');
-  }
-
-  const toEmailClean = toEmail.trim().toLowerCase();
-  if (!toEmailClean) {
-    return [];
-  }
-
-  const cached = readReceivedRecommendationsCache(toEmailClean);
-  if (cached) {
-    return cached;
-  }
-
-  const inFlight = receivedRecommendationsInFlightByEmail.get(toEmailClean);
-  if (inFlight) {
-    return inFlight;
-  }
-
-  const request = (async () => {
-    const q = query(
-      collection(services.firestore, 'recommendations'),
-      where('toEmail', '==', toEmailClean),
-      where('status', '==', 'pending'),
-    );
-
-    let snapshot;
-    try {
-      snapshot = await getDocs(q);
-    } catch (error) {
-      if (isPermissionDeniedError(error)) {
-        saveReceivedRecommendationsCache(toEmailClean, []);
-        return [];
-      }
-
-      throw error;
-    }
-
-    const recommendations = snapshot.docs
-      .map((docEntry) => {
-        const data = docEntry.data() as {
-          fromUid?: string;
-          fromEmail?: string;
-          fromDisplayName?: string;
-          toEmail?: string;
-          gameId?: number;
-          gameName?: string;
-          message?: string;
-          status?: string;
-          createdAt?: number;
-          updatedAt?: number;
-        };
-
-        return {
-          id: docEntry.id,
-          fromUid: String(data.fromUid || ''),
-          fromEmail: String(data.fromEmail || ''),
-          fromDisplayName: String(data.fromDisplayName || ''),
-          toEmail: String(data.toEmail || ''),
-          gameId: Number(data.gameId || 0),
-          gameName: String(data.gameName || ''),
-          message: String(data.message || ''),
-          status: (data.status === 'pending' || data.status === 'accepted' || data.status === 'declined' ? data.status : 'pending') as 'pending' | 'accepted' | 'declined',
-          createdAt: Number(data.createdAt || 0),
-          updatedAt: Number(data.updatedAt || 0),
-        };
-      })
-      .sort((a, b) => b.createdAt - a.createdAt);
-
-    saveReceivedRecommendationsCache(toEmailClean, recommendations);
-    return recommendations;
-  })();
-
-  receivedRecommendationsInFlightByEmail.set(toEmailClean, request);
-  try {
-    return await request;
-  } finally {
-    receivedRecommendationsInFlightByEmail.delete(toEmailClean);
-  }
-}
-
-/**
- * Actualiza el estado de una recomendación (accept/decline).
- */
-export async function updateRecommendationStatus(
-  recommendationId: string,
-  status: 'accepted' | 'declined',
-): Promise<void> {
-  const services = await initializeFirebaseServices();
-  if (!services) {
-    throw new Error('Firebase no está configurado en este entorno');
-  }
-
-  await setDoc(
-    doc(services.firestore, 'recommendations', recommendationId),
-    {
-      status,
-      updatedAt: serverTimestamp(),
-    },
-    { merge: true },
-  );
-
-  invalidateReceivedRecommendationsCache();
 }

@@ -26,7 +26,7 @@ export {
   leanTabData,
   toPublicGame,
 } from './socialProjection';
-export { getSyncConfig, saveSyncConfig, clearSyncConfig, getSocialSyncConfig, saveSocialSyncConfig } from './gistConfigRepository';
+export { getSyncConfig, saveSyncConfig, clearSyncConfig, getSocialSyncConfig, saveSocialSyncConfig, ensureSyncConfigLoaded } from './gistConfigRepository';
 
 const GIST_FILENAME = 'myGames.json';
 const SOCIAL_GIST_FILENAME = 'myGameList.social.json';

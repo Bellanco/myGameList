@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { SYNC_MESSAGES } from '../core/constants/labels';
 import { findSocialProfileByEmail, getCurrentSocialAuthUser, recoverGithubToken, resolveStableProfileId, signInWithGoogle } from '../model/repository/firebaseRepository';
 import { mergeCrdt } from '../model/repository/syncRepository';
-import { clearSyncConfig, createGist, getSyncConfig, readGist, saveSyncConfig, whoAmI, writeGist } from '../model/repository/gistRepository';
+import { clearSyncConfig, createGist, ensureSyncConfigLoaded, getSyncConfig, readGist, saveSyncConfig, whoAmI, writeGist } from '../model/repository/gistRepository';
 import { normalizeData } from '../model/repository/localRepository';
 import { clearDirty, loadSyncDirtyState } from '../model/repository/syncStateRepository';
 import { canRead, getBackoffMs, getNextReadDelayMs, getSyncState, subscribeSyncState, transitionTo, canReadNow } from '../model/repository/syncMachineRepository';
@@ -94,11 +94,44 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
   );
 
     /**
+     * C2 — Empuja cambios locales pendientes (dirty) re-mergeando SIEMPRE contra el remoto fresco antes de escribir.
+     * Un 304 solo garantiza que NUESTRO etag no cambió, pero el etag guardado puede estar desactualizado respecto al
+     * remoto real (escritura concurrente desde otro dispositivo). Como el PATCH de gists de GitHub no honra `If-Match`
+     * de forma fiable, la red de seguridad es esta re-lectura sin etag + merge CRDT, no la cabecera. Tras escribir,
+     * actualiza etag/meta/config para que el siguiente sondeo reciba 304 y no re-mergee de balde.
+     */
+    const pushDirtyWithMerge = useCallback(async (syncToken: string, syncGistId: string): Promise<WriteOutcome> => {
+      const latest = await readGist(syncToken, syncGistId, null);
+      const localData = getData();
+      const localMeta = getMeta();
+      let toWrite = localData;
+      let baseRemoteUpdatedAt = 0;
+      if (latest.data) {
+        const remoteData = latest.data as TabData;
+        baseRemoteUpdatedAt = remoteData.updatedAt;
+        const merged = mergeCrdt(localData, localMeta.updatedAt, remoteData, remoteData.updatedAt);
+        toWrite = merged.merged;
+      }
+      const outcome = await writeWithConflictRecovery(syncToken, syncGistId, toWrite, Date.now());
+      const nextMeta = {
+        updatedAt: Date.now(),
+        etag: outcome.etag,
+        lastRemoteUpdatedAt: Math.max(baseRemoteUpdatedAt, outcome.remoteUpdatedAt),
+      };
+      setMeta(nextMeta);
+      const config = getSyncConfig();
+      if (config) saveSyncConfig({ ...config, etag: nextMeta.etag, lastRemoteUpdatedAt: nextMeta.lastRemoteUpdatedAt });
+      persist(outcome.data, nextMeta);
+      return outcome;
+    }, [getData, getMeta, persist, setMeta, writeWithConflictRecovery]);
+
+    /**
      * Lightweight refresh that checks remote with ETag and merges only when needed.
      * If `force` is true it bypasses the MIN_READ_INTERVAL_MS throttle but still
      * avoids reads when the sync state is busy/error.
      */
     const refreshRemote = useCallback(async (force = false) => {
+      await ensureSyncConfigLoaded(); // C4: garantiza el token descifrado en caché antes de leer el gist
       const config = getSyncConfig();
       if (!config) return;
 
@@ -112,10 +145,10 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
         const remote = await readGist(config.token, config.gistId, config.etag);
         if (remote.notModified) {
           // Aunque el remoto no haya cambiado (304), si hay cambios locales pendientes hay que
-          // empujarlos: de lo contrario una edición en este dispositivo nunca llegaría a los demás.
+          // empujarlos (C2): re-mergeando contra el remoto fresco para no pisar escrituras concurrentes.
           const dirtyState = loadSyncDirtyState();
           if (dirtyState.isDirty) {
-            await writeWithConflictRecovery(config.token, config.gistId, getData(), Date.now());
+            await pushDirtyWithMerge(config.token, config.gistId);
           }
           transitionTo('idle', { lastReadAt: Date.now(), errorCount: 0, pendingAction: null });
           setStatus('ok');
@@ -161,7 +194,7 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
         onNotice('err', message);
         logSyncError('syncNow', error);
       }
-    }, [getData, getMeta, onNotice, persist, setData, setMeta, writeWithConflictRecovery]);
+    }, [getData, getMeta, onNotice, persist, setData, setMeta, writeWithConflictRecovery, pushDirtyWithMerge]);
 
     const startPolling = useCallback(() => {
       if (pollTimerRef.current !== null) return;
@@ -239,6 +272,7 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
   );
 
   const initializeSync = useCallback(async () => {
+    await ensureSyncConfigLoaded(); // C4: hidrata el token cifrado antes del primer uso
     const config = getSyncConfig();
     if (!config) {
       setStatus('idle');
@@ -256,10 +290,10 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
       const remote = await readGist(config.token, config.gistId, config.etag);
       if (remote.notModified) {
         setLastRemoteChangesApplied(0);
-        // Empujar cambios locales pendientes aunque el remoto no haya cambiado (propagación cross-device).
+        // Empujar cambios locales pendientes aunque el remoto no haya cambiado (propagación cross-device, C2).
         const dirtyState = loadSyncDirtyState();
         if (dirtyState.isDirty) {
-          await writeWithConflictRecovery(config.token, config.gistId, getData(), Date.now());
+          await pushDirtyWithMerge(config.token, config.gistId);
         }
         transitionTo('idle', { lastReadAt: Date.now(), errorCount: 0, pendingAction: null });
         setStatus('ok');
@@ -311,7 +345,7 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
       setStatusMessage(error instanceof Error ? error.message : SYNC_MESSAGES.initError);
       logSyncError('initializeSync', error);
     }
-  }, [getData, getMeta, onNotice, persist, setData, setMeta, writeWithConflictRecovery]);
+  }, [getData, getMeta, onNotice, persist, setData, setMeta, writeWithConflictRecovery, pushDirtyWithMerge]);
 
   const schedulePendingRemoteSync = useCallback(() => {
     if (!pendingRemoteSyncRef.current) return;
@@ -347,6 +381,7 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
   }, [connectSyncWithCredentials, gistId, onNotice, token]);
 
   const syncNow = useCallback(async () => {
+    await ensureSyncConfigLoaded(); // C4
     const config = getSyncConfig();
     if (!config) {
       onNotice('warn', SYNC_MESSAGES.needsConfiguration);
@@ -363,7 +398,7 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
         setLastRemoteChangesApplied(0);
         const dirtyState = loadSyncDirtyState();
         if (dirtyState.isDirty) {
-          await writeWithConflictRecovery(config.token, config.gistId, getData(), Date.now());
+          await pushDirtyWithMerge(config.token, config.gistId);
         }
         transitionTo('idle', { lastReadAt: Date.now(), errorCount: 0, pendingAction: null });
         setStatus('ok');
@@ -407,7 +442,7 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
       onNotice('err', message);
       logSyncError('syncNow', error);
     }
-  }, [getData, getMeta, onNotice, persist, setData, setMeta, writeWithConflictRecovery]);
+  }, [getData, getMeta, onNotice, persist, setData, setMeta, writeWithConflictRecovery, pushDirtyWithMerge]);
 
   useEffect(() => {
     const dirtyState = loadSyncDirtyState();
@@ -568,6 +603,7 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
   }, [connectSyncWithCredentials, onNotice]);
 
   const overwriteRemoteData = useCallback(async (data: TabData): Promise<boolean> => {
+    await ensureSyncConfigLoaded(); // C4
     const config = getSyncConfig();
     if (!config?.token || !config?.gistId) {
       return false;
