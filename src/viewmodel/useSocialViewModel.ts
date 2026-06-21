@@ -456,6 +456,17 @@ export function useSocialViewModel() {
       }
     }
 
+    // Datos COMPLETOS (review/strengths/weaknesses/…) solo para juegos PROPIOS. Para eventos AJENOS no se cae a
+    // `localState`: los `id` son `max+1` por dispositivo y pueden colisionar entre usuarios → un id ajeno podría
+    // coincidir con un juego local distinto y filtrar su metadata. Los ajenos se quedan index-only (snippet del
+    // evento). Mantiene la frontera de privacidad de E3.
+    const isOwn = Boolean(
+      authUser?.email &&
+      profileEntry?.email &&
+      authUser.email.toLowerCase() === profileEntry.email.toLowerCase(),
+    );
+    if (!isOwn) return null;
+
     const allGames = [
       ...localState.c,
       ...localState.v,
@@ -463,7 +474,7 @@ export function useSocialViewModel() {
       ...localState.p,
     ];
     return allGames.find((game) => game.id === gameId) || null;
-  }, [localState, socialDirectory]);
+  }, [authUser, localState, socialDirectory]);
 
   /**
    * Formatea la fecha como "DD de MMM".

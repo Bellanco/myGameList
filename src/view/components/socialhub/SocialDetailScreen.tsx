@@ -48,7 +48,8 @@ export function SocialDetailScreen({
     );
   }
   const gameItem = getGameItemById(activeDetailEvent.profileId, activeDetailEvent.gameId);
-  const reviewText = String(activeDetailEvent.snippet || '').trim();
+  // Reseña COMPLETA para juegos propios (gameItem.review); para eventos ajenos cae al snippet (≤160) del evento.
+  const reviewText = String((gameItem?.review ?? activeDetailEvent.snippet) || '').trim();
   const updatedAtDate = new Date(activeDetailEvent.updatedAt);
   const hasValidUpdatedAt = !Number.isNaN(updatedAtDate.getTime());
   const analyzedAtLabel = hasValidUpdatedAt
@@ -131,6 +132,47 @@ export function SocialDetailScreen({
                   </div>
                 </div>
               ) : null}
+              {/* FUTURO — campos adicionales del juego propio. Para mostrarlos, descomenta este bloque
+                  (las labels ya existen en SOCIAL_UI.feed.metadataReasons/metadataYears/metadataHours/metadataFlags):
+              {gameItem.reasons && gameItem.reasons.length > 0 ? (
+                <div className="hub-metadata-section">
+                  <strong>{SOCIAL_UI.feed.metadataReasons}</strong>
+                  <div className="chips">
+                    {gameItem.reasons.map((reason: string) => (
+                      <span key={reason} className="chip chip-pd">{reason}</span>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+              {gameItem.years && gameItem.years.length > 0 ? (
+                <div className="hub-metadata-section">
+                  <strong>{SOCIAL_UI.feed.metadataYears}</strong>
+                  <div className="hub-metadata-tags">
+                    {gameItem.years.map((year: number) => (
+                      <span key={year} className="hub-metadata-tag">{year}</span>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+              {typeof gameItem.hours === 'number' ? (
+                <div className="hub-metadata-section">
+                  <strong>{SOCIAL_UI.feed.metadataHours}</strong>
+                  <div className="hub-metadata-tags">
+                    <span className="hub-metadata-tag">{gameItem.hours}</span>
+                  </div>
+                </div>
+              ) : null}
+              {(gameItem.steamDeck || gameItem.replayable || gameItem.retry) ? (
+                <div className="hub-metadata-section">
+                  <strong>{SOCIAL_UI.feed.metadataFlags}</strong>
+                  <div className="hub-metadata-tags">
+                    {gameItem.steamDeck ? <span className="hub-metadata-tag">Steam Deck</span> : null}
+                    {gameItem.replayable ? <span className="hub-metadata-tag">Rejugable</span> : null}
+                    {gameItem.retry ? <span className="hub-metadata-tag">Reintentar</span> : null}
+                  </div>
+                </div>
+              ) : null}
+              */}
             </div>
           ) : null}
         </article>
