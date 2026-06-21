@@ -69,8 +69,10 @@ tests de caracterización (`it.fails`), CSP fuerte. Los problemas de fondo se co
 
 ## 🟠 BLOQUE 3 — ROBUSTEZ DE SYNC (correctitud)
 
-- [ ] **S1 — Desempate de `_ts` no determinista en `mergeCrdt`** **[v]**: `syncRepository.ts:112` (`local gana` en empate)
-  → dos dispositivos pueden no converger. **Solución:** desempate estable `_ts → _v → hash/deviceId`, idéntico en ambos lados.
+- [x] **S1 — Desempate de `_ts` no determinista en `mergeCrdt`** **[v]** ✅ (2026-06-21): `pickDeterministic()` con orden
+  estable `_ts → _v → contentKey` (hash de contenido independiente del lado) reemplaza el `local._ts >= remote._ts`. Además
+  el flagging de `needsUpdate` compara `contentKey` (divergencia de contenido, no solo `_ts`/`_tab`) → arregla también el bug
+  caracterizado H1. Tests: convergencia desde ambas perspectivas + prioridad de `_v`. tsc/95+1/eslint OK.
 - [ ] **S2 — Sin mutex de sync**: focus/visibility/poll/BroadcastChannel/backoff solapan ciclos; `connectSync`/`syncNow`/
   `overwriteRemoteData` no consultan estado. **Solución:** lock async in-flight (como `socialGistInFlightByKey`) +
   `canWrite()` como guardia explícita.
