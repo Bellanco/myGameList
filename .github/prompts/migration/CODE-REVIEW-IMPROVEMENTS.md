@@ -17,51 +17,53 @@ tests de caracterización (`it.fails`), CSP fuerte. Los problemas de fondo se co
 
 ## 🔴 BLOQUE 1 — CRÍTICO (antes de activar flag v4 / desplegar `firestore.rules`)
 
-- [ ] **C1 — `persist` deja el estado `dirty` tras cada ciclo de sync → escritura espuria perpetua** **[v]**
+> ✅ **C1-C5 IMPLEMENTADOS el 2026-06-21** (tsc · 101 tests incl. 9/9 reglas en emulador · eslint · build · audit A:0 B:0).
+> Queda como acción de USUARIO: `firebase deploy --only firestore:rules` (C5) y verificación en navegador/2 dispositivos.
+> El único resto de C5 es la migración PII (email/uid → índice pseudónimo), aplazada como tarea gated (abajo).
+
+- [x] **C1 — `persist` dejaba el estado `dirty` tras cada ciclo de sync → escritura espuria perpetua** **[v]** ✅
+      `persistInternal(markDirtyState)` + `persistFromSync`; el sync se cableó a la variante sin-dirty (App.tsx).
   `useGameListViewModel.ts:200-201` hace `markDirty()` + `transitionTo('dirty')` al final de `persist`. Los ciclos de
   sync llaman `clearDirty()` dentro de `writeWithConflictRecovery` y *después* `persist(...)`, que vuelve a marcar dirty
   → en el siguiente 304 se dispara un PATCH innecesario; además contamina la memoización (ver P1).
   **Solución:** separar persistencia *por edición de usuario* (marca dirty) de la *de sync* (no debe). Variante
   `persistFromSync(data, meta)` sin `markDirty`. Fix acotado y verificable con los tests existentes.
 
-- [ ] **C2 — El fix del bug 304 empuja sin re-mergear → riesgo de pisar datos remotos**
-  `useSyncViewModel.ts:113-122, 257-266, 362-371`: en la rama `notModified`+`dirty` se escribe `getData()` con
-  `Date.now()` sin re-leer. Combinado con que **`writeGist` no envía `If-Match`** (`gistRepository.ts:1079`), GitHub
-  acepta el PATCH casi siempre y la recuperación 409 casi nunca se dispara → ventana de carrera read→write no protegida.
-  **Solución:** en dirty-tras-304: `readGist(token, gistId, null)` forzado → `mergeCrdt` → escribir el merge. Unificar
-  con la rama 409 en un `pushDirtyWithMerge()`. Investigar si la API de gists honra `If-Match`/`412`.
+- [x] **C2 — El fix del bug 304 empujaba sin re-mergear → riesgo de pisar datos remotos** ✅
+  Implementado `pushDirtyWithMerge()` (re-lee remoto sin etag → `mergeCrdt` → escribe → actualiza etag/meta/config) y
+  reemplazadas las 3 ramas dirty-tras-304 (initialize/refresh/syncNow). Confirmado que el PATCH de gists no honra
+  `If-Match` de forma fiable → el re-read+merge es el mecanismo correcto (no la cabecera).
 
-- [ ] **C3 — El "cifrado" del token es ofuscación, no confidencialidad** (2 revisores coinciden)
-  `crypto.ts:26-45` + `firebaseRepository.ts:148-167`: clave derivada del `uid` (público, = clave del documento).
-  Quien lea `privateConfig` descifra trivialmente. El comentario `firestore.ts:56` ("clave en IndexedDB") es **falso**.
-  **Solución:** decidir (a) documentar honestamente que es ofuscación y que la frontera real es la regla owner-only, o
-  (b) cifrado real con clave aleatoria persistida por dispositivo en IndexedDB. Corregir comentario y `SECURITY.md`.
-  Usar PAT *fine-grained* con scope solo-gist y expiración.
+- [x] **C3 — El "cifrado" del token de Firestore es ofuscación** (decisión: honestidad + higiene) ✅
+  Corregidos los comentarios falsos (`firestore.ts:56`, cabecera de `crypto.ts`) y `SECURITY.md`. Higiene: cifrado v2
+  con salt aleatorio por mensaje + 600k iteraciones PBKDF2, manteniendo lectura v1. El cross-device exige un secreto
+  reproducible (uid) → no hay confidencialidad real client-side; la frontera es la regla owner-only (documentado).
 
-- [ ] **C4 — Copia operativa del token en claro en localStorage** **[v]**
-  `gistConfigRepository.ts:16-18`: `saveSyncConfig` serializa `{token, ...}` como JSON plano. Más expuesta que la de
-  Firestore (legible por cualquier XSS). **Solución:** cifrar en reposo (WebCrypto + clave no exportable en IndexedDB)
-  o mantener en memoria rehidratando desde la fuente cifrada.
+- [x] **C4 — Copia operativa del token en claro en localStorage** **[v]** ✅
+  `gistConfigRepository` reescrito: token cifrado en reposo con clave de dispositivo **no exportable** en IndexedDB
+  (`encryptWithDeviceKey`); caché en memoria + `ensureSyncConfigLoaded()` (hidrata/migra el legacy en claro). Los
+  campos no sensibles siguen síncronos. Tests en `gistConfig.test.ts` + `crypto.test.ts`.
 
-- [ ] **C5 — Fuga de PII y mismatch reglas↔código en la capa social** (bloqueante antes de desplegar reglas)
-  - `firestore.rules:41-47`: cualquier autenticado lee el doc `profiles` completo → expone `email` y `uid`. El código
-    sigue leyendo `email` como fallback (`useSocialViewModel.ts:841,849`).
-  - `firestore.rules:90-92`: `recommendations` es admin-only, pero el cliente escribe/lee ahí como usuario normal
-    (`firebaseSocialRepository.ts:323,368,440`) → `permission-denied` en producción para todos menos el admin.
-  **Solución:** mover el índice público a `ProfileIndexDoc` (sin email/uid); dejar de seleccionar `email` en el
-  directorio. Decidir si `recommendations` está vivo (reglas con `fromUid==auth.uid` + validación) o muerto (borrar).
+- [~] **C5 — Fuga de PII y mismatch reglas↔código en la capa social** (parcial: hardening hecho; migración PII gated)
+  - ✅ **Recomendaciones (código muerto) ELIMINADAS**: `sendGameRecommendation`/`getReceivedRecommendations`/
+    `updateRecommendationStatus`/`upsertProfileIndex`/`upsertFeedCard` + sus cachés/re-exports/guarda. Sin consumidores.
+  - ✅ **Reglas endurecidas (C5/T4)**: `hasOnly` de campos permitidos en `profiles` y `privateConfig` + guarda de
+    existencia de `social` en la lectura. Tests de emulador 9/9 (incl. rechazo de campos fuera de allowlist).
+  - [ ] **PENDIENTE GATED — migración PII**: `profiles` aún guarda `email`/`uid` (legibles por autenticados con
+    `social.enabled`) porque `findSocialProfileByEmail` los necesita para "recuperar desde Google". El fix completo
+    (índice pseudónimo por `profileId`, sin email/uid, + guarda recursiva de campos privados reintroducida) es la
+    misma cutover que 6.2 → requiere verificación en navegador/2 dispositivos. NO ejecutar a ciegas. (audit C:15 = esto.)
+  - ⏳ Acción de usuario: `firebase deploy --only firestore:rules` para activar las reglas endurecidas.
 
 ---
 
 ## 🟠 BLOQUE 2 — SEGURIDAD DEL TOKEN / CIFRADO
 
-- [ ] **SE1 — Seed de cifrado volátil**: `crypto.ts:52-61` deriva de `UA|idioma|timezoneOffset` → cambia con DST/viaje/
-  update del navegador y vuelve **indescifrable** lo cifrado sin secreto explícito. Persistir clave aleatoria por
-  dispositivo en IndexedDB. (El token usa `uid` explícito, no le afecta; afecta a cualquier uso por defecto de `encrypt()`.)
-- [ ] **SE2 — PBKDF2 débil para 2026**: salt fijo (`'myGameList-v1-salt'`) + iteraciones bajas. Salt aleatorio por mensaje
-  guardado junto al ciphertext; subir iteraciones (OWASP ≥600k SHA-256). (Inseparable de C3.)
-- [ ] **SE3 — `SECURITY.md` desactualizado**: vende la encriptación como capa fuerte y marca pendiente lo ya hecho.
-  Actualizar a estado real tras decidir C3.
+- [~] **SE1 — Seed de cifrado volátil**: `crypto.ts` `getSessionSeed` (UA|idioma|tz) sigue como default de `encrypt()`,
+  pero ya NO se usa para datos persistentes: el token de Firestore usa `uid` explícito y el token local usa la clave de
+  dispositivo en IndexedDB (C4). Riesgo residual solo si en el futuro se llama `encrypt()` sin secreto. Pendiente menor.
+- [x] **SE2 — PBKDF2 débil**: ✅ v2 con salt aleatorio por mensaje + 600k iteraciones (lee v1). Hecho en C3.
+- [x] **SE3 — `SECURITY.md` desactualizado**: ✅ actualizado (sección de cifrado + tabla de estado) en C3.
 
 ---
 

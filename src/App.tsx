@@ -58,16 +58,18 @@ export default function App() {
     renameTagAcrossGames,
     confirmState,
     persist,
+    persistFromSync,
     notify,
   } = vm;
 
+  // C1: el ciclo de sync persiste SIN marcar dirty (aplica merge/resultado remoto, no es edición de usuario).
   const syncVm = useSyncViewModel({
     getData: () => vm.data,
-    setData: (next) => persist(next),
+    setData: (next) => persistFromSync(next),
     getMeta: () => vm.meta,
     setMeta: vm.setMeta,
     onNotice: notify,
-    persist,
+    persist: persistFromSync,
   });
 
   const [filtersOpen, setFiltersOpen] = useState(false);

@@ -180,8 +180,11 @@ export function useGameListViewModel() {
     };
   }, []);
 
-  const persist = useCallback(
-    (nextData: TabData, nextMeta = meta) => {
+  // C1: persistencia base. `markDirtyState` distingue una EDICIÓN del usuario (debe marcar dirty → empuja al gist)
+  // de una persistencia derivada del CICLO DE SYNC (aplicar merge/resultado remoto → NO debe marcar dirty, o cada
+  // sync dejaría el estado sucio y dispararía una escritura espuria en el siguiente 304).
+  const persistInternal = useCallback(
+    (nextData: TabData, nextMeta = meta, markDirtyState = true) => {
       const normalized = normalizeData(nextData);
       const updatedAt = Date.now();
       const payload = {
@@ -197,10 +200,24 @@ export function useGameListViewModel() {
       // Espejo al store `games`/`deleted` + timestamp (dual-write). Best-effort: appState sigue siendo
       // el backup, así que un fallo aquí no afecta al guardado ni al modo offline.
       void mirrorTabDataToGames(normalized, updatedAt).catch(() => {});
-      markDirty();
-      transitionTo('dirty');
+      if (markDirtyState) {
+        markDirty();
+        transitionTo('dirty');
+      }
     },
     [meta],
+  );
+
+  // Edición de usuario → marca dirty.
+  const persist = useCallback(
+    (nextData: TabData, nextMeta = meta) => persistInternal(nextData, nextMeta, true),
+    [meta, persistInternal],
+  );
+
+  // Persistencia desde el ciclo de sync (merge/resultado remoto) → NO marca dirty.
+  const persistFromSync = useCallback(
+    (nextData: TabData, nextMeta = meta) => persistInternal(nextData, nextMeta, false),
+    [meta, persistInternal],
   );
 
   const tabCounts = useMemo(
@@ -607,6 +624,7 @@ export function useGameListViewModel() {
     renameTagAcrossGames,
     notify,
     persist,
+    persistFromSync,
     tabActions,
   };
 }

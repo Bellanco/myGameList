@@ -56,6 +56,16 @@ describe('firestore.rules', () => {
       await assertFails(setDoc(doc(ownerDb('uid-a'), 'profiles', 'uid-a'), { uid: 'uid-b', social: { enabled: true } }));
       await assertFails(setDoc(doc(ownerDb('uid-a'), 'profiles', 'uid-b'), { uid: 'uid-b', social: { enabled: true } }));
     });
+
+    it('C5/T4: acepta el esquema esperado y rechaza campos fuera de la allowlist', async () => {
+      await assertSucceeds(setDoc(doc(ownerDb('uid-a'), 'profiles', 'uid-a'), {
+        schemaVersion: 1, uid: 'uid-a', profileId: 'p', email: 'a@b.c', displayName: 'A', photoURL: '', social: { enabled: true }, updatedAt: 1,
+      }));
+      // Campo arbitrario no permitido → denegado.
+      await assertFails(setDoc(doc(ownerDb('uid-a'), 'profiles', 'uid-a'), { uid: 'uid-a', social: { enabled: true }, hackField: 'x' }));
+      // Token en claro a nivel raíz → denegado.
+      await assertFails(setDoc(doc(ownerDb('uid-a'), 'profiles', 'uid-a'), { uid: 'uid-a', social: { enabled: true }, githubToken: 'ghp_x' }));
+    });
   });
 
   describe('privateConfig (solo dueño)', () => {
@@ -64,6 +74,10 @@ describe('firestore.rules', () => {
       await assertSucceeds(getDoc(doc(ownerDb('uid-a'), 'privateConfig', 'uid-a')));
       await assertFails(getDoc(doc(ownerDb('uid-b'), 'privateConfig', 'uid-a')));
       await assertFails(getDoc(doc(anonDb(), 'privateConfig', 'uid-a')));
+    });
+
+    it('C5/T4: rechaza una escritura con campos fuera de la allowlist', async () => {
+      await assertFails(setDoc(doc(ownerDb('uid-a'), 'privateConfig', 'uid-a'), { profileId: 'p', secretoArbitrario: 'x' }));
     });
   });
 

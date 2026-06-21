@@ -25,6 +25,23 @@ service cloud.firestore {
       return docId == "_placeholder";
     }
 
+    // C5/T4 — Validación de esquema (allowlist) de escrituras: un cliente hostil autenticado no puede
+    // inyectar campos arbitrarios en su propio doc. hasOnly admite un subconjunto, así que las escrituras
+    // parciales por merge siguen valiendo mientras no introduzcan claves fuera de la lista.
+    function profileWriteIsValid() {
+      return request.resource.data.uid is string
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.keys().hasOnly([
+          "schemaVersion", "uid", "profileId", "email", "displayName", "photoURL", "social", "updatedAt"
+        ]);
+    }
+
+    function privateConfigWriteIsValid() {
+      return request.resource.data.keys().hasOnly([
+        "schemaVersion", "profileId", "gamesGistId", "socialGistId", "gamesChunks", "socialChunks", "encryptedGithubToken"
+      ]);
+    }
+
     // ==========================================
     // COLECCION: PROFILES
     // ==========================================
@@ -43,15 +60,16 @@ service cloud.firestore {
         isOwner(userId) ||
         (
           isSignedIn() &&
+          resource.data.keys().hasAny(['social']) &&
           resource.data.social.enabled == true
         );
 
-      // Crear o editar perfil propio (asegurando que el UID coincida) o ser admin.
+      // Crear o editar perfil propio (uid coincidente + esquema válido) o ser admin.
       allow create, update: if !isPlaceholder(userId) && (
         isAdmin() ||
         (
           isOwner(userId) &&
-          request.resource.data.uid == request.auth.uid
+          profileWriteIsValid()
         )
       );
 
@@ -66,7 +84,8 @@ service cloud.firestore {
     // ==========================================
 
     match /privateConfig/{userId} {
-      allow read, write: if isOwner(userId);
+      allow read: if isOwner(userId);
+      allow write: if isOwner(userId) && privateConfigWriteIsValid();
     }
 
     // ==========================================

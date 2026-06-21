@@ -53,7 +53,9 @@ export interface RecommendationDoc {
 
 /**
  * privateConfig/{uid} — solo el dueño (request.auth.uid == uid). Permite recuperar la config tras reinstalar.
- * El token de GitHub se guarda CIFRADO en cliente (nunca en claro); la clave de descifrado vive en IndexedDB.
+ * El token de GitHub se guarda "cifrado" con una clave DERIVADA del uid (estable cross-device para poder
+ * recuperarlo en otro dispositivo). Como el uid no es secreto, esto es OFUSCACIÓN: la confidencialidad real la
+ * da la regla owner-only de Firestore, no el cifrado. (Ver src/core/security/crypto.ts.)
  */
 export interface FirestorePrivateConfig {
   schemaVersion?: number; // F6.3: versión del documento (aditiva)

@@ -22,25 +22,19 @@ Se realizó una auditoría completa de seguridad que identificó y mitiga los si
 
 ### ✅ Mejoras Implementadas
 
-#### 1. Encriptación de localStorage (`src/core/security/crypto.ts`)
-- ✨ Nueva API de encriptación usando WebCrypto nativo
-- 🔐 Encriptación AES-GCM de 256 bits
-- 🎯 Clave derivada por dispositivo/navegador (PBKDF2)
-- 📦 Datos encriptados/desencriptados transparentemente
+#### 1. Cifrado del token de GitHub (`src/core/security/crypto.ts`)
+WebCrypto nativo (AES-GCM 256). Hay DOS mecanismos con garantías DISTINTAS — importante no confundirlos:
 
-**Uso futuro:**
-```typescript
-import { encrypt, decrypt, isCryptoAvailable } from './core/security/crypto';
+- **Token operativo en localStorage (C4): cifrado en reposo de verdad.** Se cifra con una clave AES-GCM
+  aleatoria **no exportable** guardada en IndexedDB; ni el propio JS puede leer el material de la clave. El token
+  NUNCA se guarda en claro. Protege ante copia/volcado del localStorage. NO protege ante un XSS ya ejecutándose
+  en el origen (que también podría usar la clave). Migración automática del token en claro legacy al cargar.
 
-// Guardar datos encriptados
-const encrypted = await encrypt(JSON.stringify(myGameListData));
-localStorage.setItem('encrypted-data', JSON.stringify(encrypted));
-
-// Recuperar datos desencriptados
-const stored = JSON.parse(localStorage.getItem('encrypted-data'));
-const decrypted = await decrypt(stored);
-const data = JSON.parse(decrypted);
-```
+- **Token en Firestore `privateConfig` (C3): OFUSCACIÓN, no confidencialidad.** Se "cifra" con una clave
+  derivada del `uid` (PBKDF2, salt aleatorio por mensaje + 600k iteraciones desde C3). Como el `uid` es público
+  (es la clave del propio documento), quien pueda leer el doc puede descifrarlo. **La protección real es la regla
+  owner-only de Firestore (`privateConfig/{uid}`), no el cifrado.** El cifrado del uid es defensa en profundidad.
+  Para reducir el alcance: usar un PAT *fine-grained* con scope solo-gist y expiración.
 
 #### 2. Eliminación de Funcionalidad de Recomendados
 - ✂️ Modal de recomendación eliminado completamente
@@ -89,10 +83,12 @@ const data = JSON.parse(decrypted);
 
 | Componente | Estado | Detalles |
 |-----------|--------|---------|
-| Módulo de Crypto | ✅ Listo | AES-GCM 256-bit disponible |
-| Encriptación localStorage | 🔄 Pendiente | Necesita integración en localRepository |
-| Encriptación Gist | 🔄 Pendiente | Necesita integración en gistRepository |
-| Eliminación recomendados | ✅ Completado | Todos los componentes actualizados |
+| Módulo de Crypto | ✅ Listo | AES-GCM 256-bit; v2 con salt aleatorio + 600k PBKDF2 (lee v1) |
+| Token en localStorage cifrado en reposo (C4) | ✅ Hecho | Clave de dispositivo no exportable en IndexedDB; sin token en claro |
+| Token en Firestore (C3) | ⚠️ Ofuscación | Frontera real = regla owner-only `privateConfig`; el uid no es secreto |
+| Validación de esquema en reglas (C5/T4) | ✅ Hecho | `hasOnly` en profiles/privateConfig + tests de emulador (9/9) |
+| Recomendaciones (código muerto) | ✅ Eliminado | Sin consumidores y reglas admin-only |
+| Migración PII (email/uid en `profiles`) | ⏳ Gated | Índice pseudónimo por profileId — ver CODE-REVIEW-IMPROVEMENTS.md |
 | Documentación seguridad | ✅ Completado | Este archivo |
 
 ### 🔒 Niveles de Seguridad
