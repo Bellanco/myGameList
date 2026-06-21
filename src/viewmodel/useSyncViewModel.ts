@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { SYNC_MESSAGES } from '../core/constants/labels';
 import { findSocialProfileByEmail, getCurrentSocialAuthUser, recoverGithubToken, resolveStableProfileId, signInWithGoogle } from '../model/repository/firebaseRepository';
 import { mergeCrdt } from '../model/repository/syncRepository';
-import { clearSyncConfig, createGist, ensureSyncConfigLoaded, getSyncConfig, readGist, saveSyncConfig, whoAmI, writeGist } from '../model/repository/gistRepository';
+import { clearSyncConfig, createGist, ensureSyncConfigLoaded, getRetryAfterMs, getSyncConfig, isDeferredNetworkError, readGist, saveSyncConfig, whoAmI, writeGist } from '../model/repository/gistRepository';
 import { normalizeData } from '../model/repository/localRepository';
 import { clearDirty, loadSyncDirtyState } from '../model/repository/syncStateRepository';
 import { canRead, getBackoffMs, getNextReadDelayMs, getSyncState, subscribeSyncState, transitionTo, canReadNow } from '../model/repository/syncMachineRepository';
@@ -60,7 +60,7 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
           remoteUpdatedAt: writeResult.updatedAt,
         };
       } catch (error) {
-        transitionTo('error_backoff', { lastErrorAt: Date.now(), errorCount: (getSyncState().errorCount || 0) + 1, pendingAction: 'write' });
+        transitionTo('error_backoff', { lastErrorAt: Date.now(), errorCount: (getSyncState().errorCount || 0) + 1, pendingAction: 'write', retryAfterMs: getRetryAfterMs(error) || null }); // S3: respeta rate-limit
         if (!isWriteConflict(error)) {
           logSyncError('writeWithConflictRecovery', error);
           throw error;
@@ -187,11 +187,18 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
           onNotice('ok', `Fusión sincronizada correctamente: ${remoteChanges} cambios remotos aplicados`);
         }
       } catch (error) {
-        transitionTo('error_backoff', { lastErrorAt: Date.now(), errorCount: getSyncState().errorCount + 1, pendingAction: 'read' });
+        // S3: offline/red diferible → backoff + reintento al volver la conexión, sin toast de error duro.
+        const deferred = isDeferredNetworkError(error);
+        transitionTo('error_backoff', {
+          lastErrorAt: Date.now(),
+          errorCount: getSyncState().errorCount + 1,
+          pendingAction: 'read',
+          retryAfterMs: getRetryAfterMs(error) || null,
+        });
         setStatus('error');
-        const message = error instanceof Error ? error.message : SYNC_MESSAGES.syncError;
+        const message = deferred ? SYNC_MESSAGES.offline : error instanceof Error ? error.message : SYNC_MESSAGES.syncError;
         setStatusMessage(message);
-        onNotice('err', message);
+        if (!deferred) onNotice('err', message);
         logSyncError('syncNow', error);
       }
     }, [getData, getMeta, onNotice, persist, setData, setMeta, writeWithConflictRecovery, pushDirtyWithMerge]);
@@ -340,9 +347,15 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
         onNotice('ok', `Sincronización inicial completada: ${remoteChanges} cambios remotos aplicados`);
       }
     } catch (error) {
-      transitionTo('error_backoff', { lastErrorAt: Date.now(), errorCount: getSyncState().errorCount + 1, pendingAction: 'read' });
+      const deferred = isDeferredNetworkError(error); // S3
+      transitionTo('error_backoff', {
+        lastErrorAt: Date.now(),
+        errorCount: getSyncState().errorCount + 1,
+        pendingAction: 'read',
+        retryAfterMs: getRetryAfterMs(error) || null,
+      });
       setStatus('error');
-      setStatusMessage(error instanceof Error ? error.message : SYNC_MESSAGES.initError);
+      setStatusMessage(deferred ? SYNC_MESSAGES.offline : error instanceof Error ? error.message : SYNC_MESSAGES.initError);
       logSyncError('initializeSync', error);
     }
   }, [getData, getMeta, onNotice, persist, setData, setMeta, writeWithConflictRecovery, pushDirtyWithMerge]);
@@ -372,10 +385,17 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
     try {
       await connectSyncWithCredentials(token, gistId);
     } catch (error) {
-      transitionTo('error_backoff', { lastErrorAt: Date.now(), errorCount: getSyncState().errorCount + 1, pendingAction: 'read' });
+      const deferred = isDeferredNetworkError(error); // S3
+      transitionTo('error_backoff', {
+        lastErrorAt: Date.now(),
+        errorCount: getSyncState().errorCount + 1,
+        pendingAction: 'read',
+        retryAfterMs: getRetryAfterMs(error) || null,
+      });
       setStatus('error');
-      setStatusMessage(error instanceof Error ? error.message : SYNC_MESSAGES.connectError);
-      onNotice('err', error instanceof Error ? error.message : SYNC_MESSAGES.connectError);
+      const message = deferred ? SYNC_MESSAGES.offline : error instanceof Error ? error.message : SYNC_MESSAGES.connectError;
+      setStatusMessage(message);
+      if (!deferred) onNotice('err', message);
       logSyncError('connectSync', error);
     }
   }, [connectSyncWithCredentials, gistId, onNotice, token]);
@@ -435,11 +455,17 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
       setStatus('ok');
       onNotice('ok', `Fusión sincronizada correctamente: ${remoteChanges} cambios remotos aplicados`);
     } catch (error) {
-      transitionTo('error_backoff', { lastErrorAt: Date.now(), errorCount: getSyncState().errorCount + 1, pendingAction: 'read' });
+      const deferred = isDeferredNetworkError(error); // S3
+      transitionTo('error_backoff', {
+        lastErrorAt: Date.now(),
+        errorCount: getSyncState().errorCount + 1,
+        pendingAction: 'read',
+        retryAfterMs: getRetryAfterMs(error) || null,
+      });
       setStatus('error');
-      const message = error instanceof Error ? error.message : SYNC_MESSAGES.syncError;
+      const message = deferred ? SYNC_MESSAGES.offline : error instanceof Error ? error.message : SYNC_MESSAGES.syncError;
       setStatusMessage(message);
-      onNotice('err', message);
+      if (!deferred) onNotice('err', message);
       logSyncError('syncNow', error);
     }
   }, [getData, getMeta, onNotice, persist, setData, setMeta, writeWithConflictRecovery, pushDirtyWithMerge]);
@@ -486,13 +512,31 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
       // on focus, attempt an immediate refresh
       void refreshRemote(true);
     }
+
+    // S3: al recuperar la red tras un fallo diferible (offline), no esperes al backoff: sal de
+    // error_backoff y reintenta la acción pendiente de inmediato.
+    function handleOnline(): void {
+      const st = getSyncState();
+      if (st.status !== 'error_backoff' || !st.pendingAction) return;
+      const pending = st.pendingAction;
+      transitionTo('idle', { errorCount: 0, pendingAction: null });
+      if (pending === 'write') {
+        const config = getSyncConfig();
+        if (config) void writeWithConflictRecovery(config.token, config.gistId, getData(), Date.now());
+        return;
+      }
+      void refreshRemote(true);
+    }
+
     document.addEventListener('visibilitychange', handleVisibilityChange);
     window.addEventListener('focus', handleWindowFocus);
+    window.addEventListener('online', handleOnline);
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       window.removeEventListener('focus', handleWindowFocus);
+      window.removeEventListener('online', handleOnline);
     };
-  }, [refreshRemote, startPolling, stopPolling]);
+  }, [refreshRemote, startPolling, stopPolling, writeWithConflictRecovery, getData]);
 
   // BroadcastChannel: listen for remote writes from other tabs
   useEffect(() => {
@@ -525,7 +569,8 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
         window.clearTimeout(timer);
         timer = null;
       }
-      const delay = getBackoffMs(state.errorCount);
+      // S3: respeta el rate-limit del servidor (Retry-After / X-RateLimit-Reset) si es mayor que el backoff exponencial.
+      const delay = Math.max(getBackoffMs(state.errorCount), state.retryAfterMs || 0);
       timer = window.setTimeout(() => {
         if (getSyncState().status !== 'error_backoff' || getSyncState().pendingAction !== state.pendingAction) return;
         if (state.pendingAction === 'read') {
