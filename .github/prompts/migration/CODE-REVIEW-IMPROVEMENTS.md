@@ -149,6 +149,63 @@ tests de caracterización (`it.fails`), CSP fuerte. Los problemas de fondo se co
 
 ---
 
+## 🟣 BLOQUE 8 — ESTRUCTURA DE ALMACENAMIENTO (auditoría 2026-06-21: Firestore + ambos gists)
+> Salida de 3 auditorías de modelado (Firestore, gist de juegos, gist social). Veredicto: base sólida (lean,
+> guardas de tamaño, cachés ETag+dedup, merge/deleteField, deny-all, hasOnly, snippet-only+doble guarda,
+> identidad por profileId). Las mejoras se concentran en privacidad del doc público, datos muertos y defensa de esquema.
+> **Requisito transversal**: toda migración de estructura debe ser RETROCOMPATIBLE con auto-upgrade al leer (igual que
+> el gist de juegos v3→v4): leer formato viejo y nuevo, transformar a nuevo al encontrarlo, sin romper clientes en versión previa.
+
+> **Progreso P1 (solo código, sin despliegue) — 2026-06-21:** enabler de PROPIEDAD POR IDENTIDAD hecho. Helper puro
+> `isOwnProfileIdentity(entryId, uid, profileId)` (exportado, testeado) + estado `ownProfileId` (resuelto de `uid` vía
+> `resolveStableProfileId`). `getGameItemById` y `selectedProfileDetail` detectan lo propio por uid/profileId, NO por
+> email; display ya no cae a email (`'Usuario'`). Tolera ambas eras (hoy id=uid; index-only id=profileId) sin tocar este
+> código en el cutover. Tests: `socialIdentity.test.ts` (5). **Pendiente P1**: Enabler 1 (recuperación por uid en vez de
+> `findSocialProfileByEmail`) — entrelazado con el fallback de token legacy y el flujo de login → se hará junto a P2 con
+> verificación en 2 dispositivos. Reglas (P0/P3) y escritura minimal (P2) siguen pendientes (requieren deploy).
+
+### 🔴 ALTA — privacidad del documento público `profiles`
+- [ ] **ST1 — `email`/`photoURL` legibles por cualquier autenticado** (`firestore.rules:58-65`) y `email` emitido por
+  `listSocialDirectory` sin uso (`firebaseSocialRepository.ts:207,219`). Es el refactor index-only (relacionado con C5, gated).
+  *Quick win previo al cutover*: dejar de emitir/escribir `email` en el doc público. Fix completo: doc público pseudónimo por
+  `profileId` (sin email/uid/photoURL) + doc privado por uid. **Auto-upgrade**: al leer un perfil viejo (email/uid en público),
+  reescribir al esquema nuevo la próxima vez que el dueño guarde / al detectarlo.
+- [ ] **ST2 — Barrido de purga del `social.githubToken` legacy en claro** (`firebaseRepository.ts:88-93`): hoy solo se borra
+  cuando el dueño reguarda → un tercero podría leer el token de un perfil viejo. Falta purga proactiva (al detectar el campo en
+  cualquier lectura propia → `deleteField`).
+
+### 🟠 MEDIA — datos muertos / redundancia
+- [ ] **ST3 — `recommendations` top-level y `profile.recommendations` del gist social MUERTOS** (sin writer; siempre `[]`,
+  fusionados en `activity`). Eliminar tipos/schema/normalizador (`gistRepository.ts:131,76`); dejar solo detección legacy en
+  `socialGistNeedsRewrite` para limpieza (auto-upgrade: al leer un gist con esos arrays poblados, reescribir sin ellos).
+- [ ] **ST4 — `gamesGistId`/`etag` en el doc público `profiles`** (`firebaseRepository.ts:74,76`) → mover solo a `privateConfig`
+  (owner-only). Auto-upgrade al reguardar.
+- [ ] **ST5 — `actorName` duplicado en cada entrada de `activity`** (×320; `gistRepository.ts:483`) → normalizar a raíz
+  (`actors:{[profileId]:{name}}`) o reusar `profile.name`. Lectura tolerante a ambos.
+- [ ] **ST6 — `gamesChunks`/`socialChunks`** en reglas+tipos pero nunca escritos (`firestore.rules:40-42`) → campos muertos.
+- [ ] **ST7 — `profileId` en 3 sitios** (`profiles`/`userMap`/`privateConfig`); `userMap` casi-redundante (fallback ya canónico).
+
+### 🟠 MEDIA — defensa de esquema
+- [ ] **ST8 — Cotas Zod en el gist social**: `recommendationText`/`actorName`/`snippet`/`gameName` sin `.max`, `rating` sin
+  `min/max` (`socialGistSchema.ts:53-60`). Añadir cotas (defensa positiva, no solo en normalize).
+- [ ] **ST9 — `userMap` sin validación de esquema en reglas** (`firestore.rules:96-98`) → `hasOnly(["profileId","schemaVersion"])` (relacionado con T4).
+
+### 🟡 BAJA — eficiencia / limpieza
+- [ ] **ST10 — `leanGameItem` emite `review:""` y `steamDeck:false`** aunque vacíos (asimetría con replayable/retry;
+  `socialProjection.ts:124,126`) → omitir cuando vacío (decoder ya tolera). Ahorro gratis.
+- [ ] **ST11 — Flujo de guardado social = hasta 5 escrituras Firestore secuenciales** (`firebaseRepository.ts:63-100`) →
+  agrupar en `writeBatch` (atómico + 1 RTT); fusionar las dos de `privateConfig`.
+- [ ] **ST12 — `listSocialDirectory` usa `where(documentId(),'!=','_placeholder')`** (fuerza índice; `firebaseSocialRepository.ts:182`)
+  → filtrar el placeholder en cliente (ya lo hace) y quitar el `where`. Reducir el doc devuelto a campos públicos.
+- [ ] **ST13 — `unwrapGamesFile` solo avisa si se pierden TODOS los juegos** (`legacyGamesFormat.ts:86`) → contador/warn cuando `placed < total`.
+
+### 🔁 Ya conocido / gated (no nuevo)
+- Tombstones sin purga: en v4 `purgeAfter` se calcula pero nadie barre (`socialProjection.ts:204`) — ver S4.
+- Activar formato v4 (diccionarios+chunking): mayor ahorro + rompe deadlock del límite plano; gated (Fase 8, acción usuario).
+- Reescritura completa del gist en cada PATCH: limitación inherente de la API de gists; el chunking de v4 la mitiga por-fichero.
+
+---
+
 ## COLA LARGA (menor) — detallar al abordar
 - `StarRating`/`StarPicker`: redondeo de scores decimales (`Math.round`), roving tabindex incorrecto (fija en estrella 1).
 - `TagInput`: hace scraping del `<datalist>` del DOM → sugerencias desfasadas en Firefox-mobile; pasar `options={lookups.x}`

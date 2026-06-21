@@ -79,6 +79,22 @@ const getSocialRouteState = (pathname: string): SocialRouteState => {
  * comportamiento: mismo estado, mismos efectos, mismas dependencias y misma lógica. `SocialHub.tsx`
  * queda presentacional y consume este hook.
  */
+
+/**
+ * P1 (privacidad index-only): ¿la entrada de perfil/directorio (`entryId`) es la del usuario actual?
+ * Compara por IDENTIDAD (uid o profileId), no por `email` — que sale del documento público en el refactor
+ * index-only (ST1). Tolera ambas eras sin tocar este código en el cutover: hoy el id del doc es el `uid`; tras
+ * el corte index-only será el `profileId`. Ambos se comprueban.
+ */
+export function isOwnProfileIdentity(
+  entryId: string | null | undefined,
+  uid: string | null | undefined,
+  ownProfileId: string | null | undefined,
+): boolean {
+  if (!entryId) return false;
+  return (Boolean(uid) && entryId === uid) || (Boolean(ownProfileId) && entryId === ownProfileId);
+}
+
 export function useSocialViewModel() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -109,6 +125,9 @@ export function useSocialViewModel() {
   const [socialCfgGistId, setSocialCfgGistId] = useState<string>('');
   const [socialCfgEtag, setSocialCfgEtag] = useState<string | null>(null);
   const [authUser, setAuthUser] = useState<SocialAuthUser | null>(null);
+  // P1: profileId canónico del usuario (6.2a), para detectar propiedad por identidad (no por email). Hoy el id del
+  // doc de directorio es el uid; tras el cutover index-only será el profileId → comprobamos ambos (ver isOwnProfileIdentity).
+  const [ownProfileId, setOwnProfileId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [resolvingSocialGist, setResolvingSocialGist] = useState(false);
   const [connecting, setConnecting] = useState(false);
@@ -302,6 +321,26 @@ export function useSocialViewModel() {
 
   const localState = useMemo(() => loadLocalState(), []);
 
+  // P1: resuelve el profileId canónico del usuario actual (best-effort) para la detección de propiedad por identidad.
+  useEffect(() => {
+    const uid = authUser?.uid;
+    if (!uid) {
+      setOwnProfileId(null);
+      return;
+    }
+    let cancelled = false;
+    resolveStableProfileId(uid)
+      .then((pid) => {
+        if (!cancelled) setOwnProfileId(pid || null);
+      })
+      .catch(() => {
+        /* Firestore caído → la propiedad cae a comparar por uid (entry.id === uid hoy). */
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [authUser?.uid]);
+
   const completedGames = useMemo(() => {
     const map = new Map<number, string>();
     localState.c.forEach((game) => {
@@ -398,11 +437,8 @@ export function useSocialViewModel() {
     // E3 deja `sharedLists` vacío para TODOS los perfiles del directorio (no se exponen las listas ajenas). Para el
     // perfil PROPIO repoblamos las listas desde `localState` (juegos completos) para que el usuario SÍ vea sus
     // listados; la visibilidad (pestañas ocultas) la sigue aplicando el componente. Perfiles ajenos: index-only.
-    const isOwn = Boolean(
-      authUser?.email &&
-      entry.email &&
-      authUser.email.toLowerCase() === entry.email.toLowerCase(),
-    );
+    // P1: propiedad por identidad (uid/profileId), no por email.
+    const isOwn = isOwnProfileIdentity(entry.id, authUser?.uid, ownProfileId);
     if (!isOwn) return entry;
 
     return {
@@ -414,7 +450,7 @@ export function useSocialViewModel() {
         p: localState.p,
       },
     };
-  }, [activePanel, authUser, localState, profileDetailId, socialDirectory]);
+  }, [activePanel, authUser, localState, ownProfileId, profileDetailId, socialDirectory]);
 
   const activityFeedItems = useMemo(() => {
     const normalizedQuery = feedSearch.trim().toLowerCase();
@@ -482,11 +518,8 @@ export function useSocialViewModel() {
     // `localState`: los `id` son `max+1` por dispositivo y pueden colisionar entre usuarios → un id ajeno podría
     // coincidir con un juego local distinto y filtrar su metadata. Los ajenos se quedan index-only (snippet del
     // evento). Mantiene la frontera de privacidad de E3.
-    const isOwn = Boolean(
-      authUser?.email &&
-      profileEntry?.email &&
-      authUser.email.toLowerCase() === profileEntry.email.toLowerCase(),
-    );
+    // P1: propiedad por identidad (uid/profileId), no por email.
+    const isOwn = isOwnProfileIdentity(profileId, authUser?.uid, ownProfileId);
     if (!isOwn) return null;
 
     const allGames = [
@@ -496,7 +529,7 @@ export function useSocialViewModel() {
       ...localState.p,
     ];
     return allGames.find((game) => game.id === gameId) || null;
-  }, [authUser, localState, socialDirectory]);
+  }, [authUser, localState, ownProfileId, socialDirectory]);
 
   /**
    * Formatea la fecha como "DD de MMM".
@@ -871,7 +904,7 @@ export function useSocialViewModel() {
                   createdAt,
                   updatedAt,
                   profileId: entry.id,
-                  profileDisplayName: socialData.profile.name || entry.displayName || entry.email,
+                  profileDisplayName: socialData.profile.name || entry.displayName || 'Usuario',
                   socialGistId: entry.socialGistId,
                 };
               })
@@ -879,7 +912,7 @@ export function useSocialViewModel() {
 
             return {
               id: entry.id,
-              displayName: socialData.profile.name || entry.displayName || entry.email,
+              displayName: socialData.profile.name || entry.displayName || 'Usuario',
               email: entry.email,
               socialGistId: entry.socialGistId,
               gamesGistId: entry.gamesGistId,
@@ -892,7 +925,7 @@ export function useSocialViewModel() {
           } catch {
             return {
               id: entry.id,
-              displayName: entry.displayName || entry.email,
+              displayName: entry.displayName || 'Usuario',
               email: entry.email,
               socialGistId: entry.socialGistId,
               gamesGistId: entry.gamesGistId,

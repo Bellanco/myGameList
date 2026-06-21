@@ -12,6 +12,7 @@ const firebaseMocks = vi.hoisted(() => ({
   listSocialDirectory: vi.fn(async () => []),
   signInWithGoogle: vi.fn(async () => null),
   signOutSocialUser: vi.fn(async () => {}),
+  resolveStableProfileId: vi.fn(async (uid: string) => uid), // P1: detección de propiedad por identidad
 }));
 
 vi.mock('../../src/model/repository/firebaseRepository', () => firebaseMocks);
