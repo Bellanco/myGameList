@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { canRead, canReadNow, canWrite, getNextReadDelayMs, resetSyncState, transitionTo } from '../../src/model/repository/syncMachineRepository';
+import { acquireSyncLock, canRead, canReadNow, canWrite, getNextReadDelayMs, isSyncInFlight, resetSyncState, transitionTo } from '../../src/model/repository/syncMachineRepository';
 
 describe('syncMachineRepository', () => {
   beforeEach(() => {
@@ -52,5 +52,43 @@ describe('syncMachineRepository', () => {
 
     transitionTo('idle'); // an explicit recovery is the only way out
     expect(canWrite()).toBe(true);
+  });
+});
+
+describe('syncMachineRepository — S2 in-flight lock', () => {
+  beforeEach(() => {
+    resetSyncState();
+  });
+
+  it('the second concurrent acquire is refused while the first holds the lock', () => {
+    expect(isSyncInFlight()).toBe(false);
+    const lock = acquireSyncLock();
+    expect(lock).not.toBeNull();
+    expect(isSyncInFlight()).toBe(true);
+
+    // A second high-level cycle starting before the first finishes must be coalesced (skipped).
+    expect(acquireSyncLock()).toBeNull();
+
+    lock!.release();
+    expect(isSyncInFlight()).toBe(false);
+    // Once released, a new cycle can run.
+    expect(acquireSyncLock()).not.toBeNull();
+  });
+
+  it('release is idempotent (double release does not free a later lock)', () => {
+    const first = acquireSyncLock();
+    first!.release();
+    const second = acquireSyncLock(); // takes the lock again
+    first!.release(); // stale release must be a no-op
+    expect(isSyncInFlight()).toBe(true); // second still holds it
+    expect(acquireSyncLock()).toBeNull();
+    second!.release();
+  });
+
+  it('resetSyncState frees a stuck lock', () => {
+    acquireSyncLock();
+    expect(isSyncInFlight()).toBe(true);
+    resetSyncState();
+    expect(isSyncInFlight()).toBe(false);
   });
 });

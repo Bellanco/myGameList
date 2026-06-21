@@ -85,6 +85,7 @@ export const SYNC_MESSAGES = {
   syncError: 'Error al sincronizar',
   initError: 'Error de sincronización',
   offline: 'Sin conexión: se reintentará al recuperar la red',
+  syncInProgress: 'Sincronización ya en curso',
   disconnectSuccess: 'Sincronización desconectada',
   copySuccess: 'Gist ID copiado al portapapeles',
   copyError: 'No se pudo copiar el Gist ID',

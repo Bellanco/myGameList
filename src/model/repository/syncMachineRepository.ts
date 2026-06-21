@@ -91,8 +91,45 @@ export function resetSyncState(): void {
     lastErrorAt: null,
     errorCount: 0,
     pendingAction: null,
+    retryAfterMs: null,
   };
+  _locked = false;
   _listeners.clear();
+}
+
+// S2: mutex in-flight que SERIALIZA los ciclos de sync de alto nivel. La "máquina" de estado por sí sola no
+// era un lock real (`transitionTo` solo escribe un campo), así que focus/visibility/poll/BroadcastChannel/backoff
+// podían arrancar ciclos solapados cuyos `await` se entrelazaban y se pisaban etag/errorCount/datos.
+let _locked = false;
+
+export function isSyncInFlight(): boolean {
+  return _locked;
+}
+
+export interface SyncLock {
+  release: () => void;
+}
+
+/**
+ * Intenta tomar el lock de sync. Devuelve un `SyncLock` (llamar `release()` en `finally`) o `null` si YA hay un
+ * ciclo en vuelo → el llamador debe SALTARSE su ciclo (coalescing). Saltarse es seguro: el flag `dirty` se persiste
+ * en disco, así que el ciclo en curso o el siguiente empujarán los cambios; no se pierde nada.
+ *
+ * El check-and-set es atómico (no hay `await` entre comprobar `_locked` y tomarlo, y JS es monohilo). `release()` es
+ * idempotente. NO tomar el lock en operaciones ANIDADAS (p. ej. `writeWithConflictRecovery` dentro de un ciclo de
+ * lectura que ya lo tiene): se bloquearían a sí mismas. Se aplica solo en los puntos de entrada de alto nivel.
+ */
+export function acquireSyncLock(): SyncLock | null {
+  if (_locked) return null;
+  _locked = true;
+  let released = false;
+  return {
+    release() {
+      if (released) return;
+      released = true;
+      _locked = false;
+    },
+  };
 }
 
 export function getBackoffMs(attempt: number): number {

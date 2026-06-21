@@ -73,9 +73,14 @@ tests de caracterización (`it.fails`), CSP fuerte. Los problemas de fondo se co
   estable `_ts → _v → contentKey` (hash de contenido independiente del lado) reemplaza el `local._ts >= remote._ts`. Además
   el flagging de `needsUpdate` compara `contentKey` (divergencia de contenido, no solo `_ts`/`_tab`) → arregla también el bug
   caracterizado H1. Tests: convergencia desde ambas perspectivas + prioridad de `_v`. tsc/95+1/eslint OK.
-- [ ] **S2 — Sin mutex de sync**: focus/visibility/poll/BroadcastChannel/backoff solapan ciclos; `connectSync`/`syncNow`/
-  `overwriteRemoteData` no consultan estado. **Solución:** lock async in-flight (como `socialGistInFlightByKey`) +
-  `canWrite()` como guardia explícita.
+- [x] **S2 — Sin mutex de sync** ✅ (2026-06-21): `acquireSyncLock()`/`isSyncInFlight()` en `syncMachineRepository`
+  (mutex in-flight real; antes `transitionTo` solo escribía un campo → no era lock). Todos los puntos de entrada de
+  alto nivel toman el lock: `refreshRemote`, `initializeSync`, `syncNow`, `connectSync` (+ el sync de
+  `recoverGistIdFromGoogle`), `overwriteRemoteData` y los reintentos de escritura standalone (backoff + `online`). Si ya
+  hay un ciclo en vuelo se COALESCE (skip): seguro porque `dirty` se persiste y el ciclo en curso/siguiente lo empuja
+  (manual `syncNow`/`connectSync` avisan "sincronización ya en curso"). Las escrituras ANIDADAS (writeWithConflictRecovery/
+  pushDirtyWithMerge dentro de un ciclo) NO toman el lock (se bloquearían a sí mismas). `release()` idempotente,
+  `finally` siempre, `resetSyncState` lo libera. Tests: 3 nuevos en `syncMachineRepository.test.ts`. tsc/109+1/eslint/build OK.
 - [x] **S3 — Red sin timeout ni distinción offline/HTTP** ✅ (2026-06-21): nueva capa `githubHttp.ts` (alineada con el
   split R1 futuro) centraliza TODOS los `fetch` del gist con `githubFetch` (AbortController + timeout 15s → un socket
   colgado ya no deja el estado atascado en `checking`/`writing`). `!navigator.onLine`/`AbortError`/`TypeError` se reescriben
