@@ -76,10 +76,13 @@ tests de caracterización (`it.fails`), CSP fuerte. Los problemas de fondo se co
 - [ ] **S2 — Sin mutex de sync**: focus/visibility/poll/BroadcastChannel/backoff solapan ciclos; `connectSync`/`syncNow`/
   `overwriteRemoteData` no consultan estado. **Solución:** lock async in-flight (como `socialGistInFlightByKey`) +
   `canWrite()` como guardia explícita.
-- [ ] **S3 — Red sin timeout ni distinción offline/HTTP**: ningún `fetch` de `gistRepository.ts` tiene `AbortController`
-  → socket colgado deja el estado atascado en `checking`/`writing`. Offline cuenta como error con backoff y notifica error.
-  **Solución:** timeout en todos los fetch; tratar `TypeError`/`!navigator.onLine` como "diferido" (reintento en `online`);
-  respetar `Retry-After`/`X-RateLimit-Reset` en 403/429.
+- [x] **S3 — Red sin timeout ni distinción offline/HTTP** ✅ (2026-06-21): nueva capa `githubHttp.ts` (alineada con el
+  split R1 futuro) centraliza TODOS los `fetch` del gist con `githubFetch` (AbortController + timeout 15s → un socket
+  colgado ya no deja el estado atascado en `checking`/`writing`). `!navigator.onLine`/`AbortError`/`TypeError` se reescriben
+  a `NetworkDeferredError` → la máquina de sync va a backoff PERO no spamea toast de error (mensaje "sin conexión") y un
+  listener `online` reintenta la acción pendiente de inmediato. `403/429` con `Retry-After`/`X-RateLimit-Reset` adjuntan
+  `retryAfterMs` al error (`buildGithubError` → `Error`) y el backoff usa `max(backoff, retryAfterMs)`
+  (`SyncState.retryAfterMs`). Tests: `githubHttp.test.ts` (11). tsc/106+1/eslint/build OK.
 - [ ] **S4 — Purga de tombstones puede revivir borrados** (documentado/aceptado): `syncRepository.ts:95-102`. Dispositivo
   offline >90 días con ítem vivo lo resucita. Registrado; subir ventana o confirmar al revivir si se quiere robustez.
 

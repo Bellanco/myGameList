@@ -5,6 +5,8 @@ import { assembleChunkedGames, gamesGistNeedsRewrite, gamesGistNeedsUpgradeToWra
 import { pickLegacyActorId, pickLegacyFromId, pickLegacyReviewText, socialGistNeedsRewrite } from '../migration/legacySocialFormat';
 import { assertValidSocialGist } from '../schemas/socialGistSchema';
 import { TAB_IDS, type TabData, type TabId } from '../types/game';
+import { githubFetch, parseRetryAfterMs } from './githubHttp';
+export { NetworkDeferredError, isDeferredNetworkError, getRetryAfterMs } from './githubHttp';
 // M1: transforms puros y config de sync extraídos a módulos dedicados. Importamos de vuelta los que se usan
 // internamente y RE-EXPORTAMOS la API pública para no obligar a los consumidores a cambiar sus imports.
 import {
@@ -267,9 +269,10 @@ function savePublicSocialGistCache(gistId: string, data: SocialGistData, etag: s
   writeSessionCachedValue(buildSessionCacheKey(SESSION_CACHE_PUBLIC_SOCIAL_GIST_PREFIX, cacheKey), cached);
 }
 
-async function buildGithubError(response: Response, prefix: string): Promise<string> {
+async function buildGithubError(response: Response, prefix: string): Promise<Error> {
   const statusPart = `${response.status}${response.statusText ? ` ${response.statusText}` : ''}`;
 
+  let message: string;
   try {
     const payload = (await response.json()) as { message?: string; errors?: Array<{ message?: string }> };
     const apiMessage = payload?.message?.trim();
@@ -278,10 +281,16 @@ async function buildGithubError(response: Response, prefix: string): Promise<str
       .filter(Boolean)
       .join(', ');
     const details = [apiMessage, apiDetails].filter(Boolean).join(' | ');
-    return details ? `${prefix}: ${statusPart} - ${details}` : `${prefix}: ${statusPart}`;
+    message = details ? `${prefix}: ${statusPart} - ${details}` : `${prefix}: ${statusPart}`;
   } catch {
-    return `${prefix}: ${statusPart}`;
+    message = `${prefix}: ${statusPart}`;
   }
+
+  const error = new Error(message);
+  // S3: en 403/429 adjunta cuánto esperar (Retry-After / X-RateLimit-Reset) para que el backoff lo respete.
+  const retryAfterMs = parseRetryAfterMs(response, Date.now());
+  if (retryAfterMs > 0) (error as { retryAfterMs?: number }).retryAfterMs = retryAfterMs;
+  return error;
 }
 
 export interface GistReadResponse {
@@ -644,7 +653,7 @@ export async function whoAmI(token: string): Promise<{ login: string }> {
     throw new Error('Formato de token inválido');
   }
 
-  const response = await fetch('https://api.github.com/user', {
+  const response = await githubFetch('https://api.github.com/user', {
     headers: {
       Authorization: getGithubAuthHeader(token),
       'X-GitHub-Api-Version': '2022-11-28',
@@ -652,7 +661,7 @@ export async function whoAmI(token: string): Promise<{ login: string }> {
   });
 
   if (!response.ok) {
-    throw new Error(await buildGithubError(response, 'Auth failed'));
+    throw await buildGithubError(response, 'Auth failed');
   }
 
   return (await response.json()) as { login: string };
@@ -663,7 +672,7 @@ export async function createGist(token: string): Promise<{ gistId: string; etag:
     throw new Error('Formato de token inválido');
   }
 
-  const response = await fetch(GIST_API_BASE, {
+  const response = await githubFetch(GIST_API_BASE, {
     method: 'POST',
     headers: {
       Authorization: getGithubAuthHeader(token),
@@ -682,7 +691,7 @@ export async function createGist(token: string): Promise<{ gistId: string; etag:
   });
 
   if (!response.ok) {
-    throw new Error(await buildGithubError(response, 'Create failed'));
+    throw await buildGithubError(response, 'Create failed');
   }
 
   const body = (await response.json()) as { id: string };
@@ -700,7 +709,7 @@ async function createSocialGistWithData(token: string, data: SocialGistData, isP
 
   const normalized = normalizeSocialGistData(data);
   assertNoSocialPrivateFields(normalized); // canal público: nunca review/reviewText/score/hours/etc.
-  const response = await fetch(GIST_API_BASE, {
+  const response = await githubFetch(GIST_API_BASE, {
     method: 'POST',
     headers: {
       Authorization: getGithubAuthHeader(token),
@@ -719,7 +728,7 @@ async function createSocialGistWithData(token: string, data: SocialGistData, isP
   });
 
   if (!response.ok) {
-    throw new Error(await buildGithubError(response, 'Create social gist failed'));
+    throw await buildGithubError(response, 'Create social gist failed');
   }
 
   const body = (await response.json()) as { id: string };
@@ -770,7 +779,7 @@ export async function readSocialGist(token: string, gistId: string, etag: string
       headers['If-None-Match'] = etag;
     }
 
-    const response = await fetch(`${GIST_API_BASE}/${gistId}`, { headers });
+    const response = await githubFetch(`${GIST_API_BASE}/${gistId}`, { headers });
 
     if (response.status === 304) {
       if (cached) {
@@ -786,9 +795,9 @@ export async function readSocialGist(token: string, gistId: string, etag: string
         Authorization: getGithubAuthHeader(token),
         'X-GitHub-Api-Version': '2022-11-28',
       };
-      const freshResp = await fetch(`${GIST_API_BASE}/${gistId}`, { headers: freshHeaders });
+      const freshResp = await githubFetch(`${GIST_API_BASE}/${gistId}`, { headers: freshHeaders });
       if (!freshResp.ok) {
-        throw new Error(await buildGithubError(freshResp, 'Read social gist fallback failed'));
+        throw await buildGithubError(freshResp, 'Read social gist fallback failed');
       }
       const freshBody = (await freshResp.json()) as { files?: Record<string, { content: string }> };
       const rawFresh = freshBody.files?.[SOCIAL_GIST_FILENAME]?.content;
@@ -812,7 +821,7 @@ export async function readSocialGist(token: string, gistId: string, etag: string
     }
 
     if (!response.ok) {
-      throw new Error(await buildGithubError(response, 'Read social gist failed'));
+      throw await buildGithubError(response, 'Read social gist failed');
     }
 
     const body = (await response.json()) as { files?: Record<string, { content: string }> };
@@ -884,7 +893,7 @@ export async function readPublicSocialGistById(gistId: string, token: string | n
       baseHeaders['If-None-Match'] = staleCached.etag;
     }
 
-    const response = await fetch(`${GIST_API_BASE}/${gistId}`, {
+    const response = await githubFetch(`${GIST_API_BASE}/${gistId}`, {
       headers: baseHeaders,
     });
 
@@ -894,7 +903,7 @@ export async function readPublicSocialGistById(gistId: string, token: string | n
     }
 
     if (!response.ok) {
-      throw new Error(await buildGithubError(response, 'Read public social gist failed'));
+      throw await buildGithubError(response, 'Read public social gist failed');
     }
 
     const body = (await response.json()) as { files?: Record<string, { content: string }> };
@@ -940,7 +949,7 @@ export async function writeSocialGist(token: string, gistId: string, payload: So
   const socialContent = JSON.stringify(normalized);
   assertGistSizeWithinLimit(socialContent, 'gist social'); // E1: evita el deadlock al superar el límite de gist
 
-  const response = await fetch(`${GIST_API_BASE}/${gistId}`, {
+  const response = await githubFetch(`${GIST_API_BASE}/${gistId}`, {
     method: 'PATCH',
     headers: {
       Authorization: getGithubAuthHeader(token),
@@ -957,7 +966,7 @@ export async function writeSocialGist(token: string, gistId: string, payload: So
   });
 
   if (!response.ok) {
-    throw new Error(await buildGithubError(response, 'Write social gist failed'));
+    throw await buildGithubError(response, 'Write social gist failed');
   }
 
   const etag = response.headers.get('etag');
@@ -986,14 +995,14 @@ export async function readGist(token: string, gistId: string, etag: string | nul
     headers['If-None-Match'] = etag;
   }
 
-  const response = await fetch(`${GIST_API_BASE}/${gistId}`, { headers });
+  const response = await githubFetch(`${GIST_API_BASE}/${gistId}`, { headers });
 
   if (response.status === 304) {
     return { notModified: true };
   }
 
   if (!response.ok) {
-    throw new Error(await buildGithubError(response, 'Read failed'));
+    throw await buildGithubError(response, 'Read failed');
   }
 
   const body = (await response.json()) as { files?: Record<string, { content: string }> };
@@ -1057,7 +1066,7 @@ export async function writeGist(token: string, gistId: string, payload: TabData)
     }
     // Eliminar ficheros chunk obsoletos (existían antes y ya no forman parte del conjunto): listar y poner a null.
     try {
-      const current = await fetch(`${GIST_API_BASE}/${gistId}`, { headers });
+      const current = await githubFetch(`${GIST_API_BASE}/${gistId}`, { headers });
       if (current.ok) {
         const currentBody = (await current.json()) as { files?: Record<string, unknown> };
         for (const name of Object.keys(currentBody.files || {})) {
@@ -1076,14 +1085,14 @@ export async function writeGist(token: string, gistId: string, payload: TabData)
     files = { [GIST_FILENAME]: { content: fileContent } };
   }
 
-  const response = await fetch(`${GIST_API_BASE}/${gistId}`, {
+  const response = await githubFetch(`${GIST_API_BASE}/${gistId}`, {
     method: 'PATCH',
     headers,
     body: JSON.stringify({ files }),
   });
 
   if (!response.ok) {
-    throw new Error(await buildGithubError(response, 'Write failed'));
+    throw await buildGithubError(response, 'Write failed');
   }
 
   const body = (await response.json()) as { updated_at?: string };

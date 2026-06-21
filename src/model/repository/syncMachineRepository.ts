@@ -13,6 +13,9 @@ export interface SyncState {
   lastErrorAt: number | null;
   errorCount: number;
   pendingAction: 'read' | 'write' | null;
+  // S3: ms mínimos a esperar antes del próximo reintento, impuestos por el servidor (rate-limit 403/429).
+  // El backoff usa `max(backoffExponencial, retryAfterMs)`. null = sin restricción del servidor.
+  retryAfterMs?: number | null;
 }
 
 const MIN_READ_INTERVAL_MS = 45_000;
@@ -24,6 +27,7 @@ let _state: SyncState = {
   lastErrorAt: null,
   errorCount: 0,
   pendingAction: null,
+  retryAfterMs: null,
 };
 
 const _listeners = new Set<(state: SyncState) => void>();
@@ -70,7 +74,13 @@ export function canWrite(): boolean {
 }
 
 export function transitionTo(status: SyncStatus, extra?: Partial<SyncState>): void {
-  setState({ status, ...(extra || {}) });
+  const patch: Partial<SyncState> = { status, ...(extra || {}) };
+  // S3: la restricción de rate-limit solo aplica mientras seguimos en backoff; al salir de él se limpia
+  // (salvo que el llamador la fije explícitamente).
+  if (status !== 'error_backoff' && !(extra && 'retryAfterMs' in extra)) {
+    patch.retryAfterMs = null;
+  }
+  setState(patch);
 }
 
 export function resetSyncState(): void {
