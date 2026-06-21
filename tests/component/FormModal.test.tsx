@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { FormModal } from '../../src/view/modals/FormModal';
 import type { GameDraft } from '../../src/viewmodel/useGameListViewModel';
@@ -74,5 +74,42 @@ describe('FormModal — draft local (P3)', () => {
 
     expect(onSave).toHaveBeenCalledTimes(1);
     expect(onSave.mock.calls[0][0]).toMatchObject({ name: 'Halo Infinite', id: 1 });
+  });
+});
+
+// A11y-1: <dialog> nativo en modo modal (showModal) → Esc cierra (evento `cancel`) y click en backdrop cierra.
+describe('FormModal — native dialog (A11y-1)', () => {
+  function renderModal(onClose = vi.fn()) {
+    render(
+      <FormModal
+        open
+        draft={makeDraft({ id: 1, genres: ['RPG'], platforms: ['PC'], score: 5, years: [2024] })}
+        currentTab="c"
+        lookups={{ genres: [], platforms: [], strengths: [], weaknesses: [] }}
+        onClose={onClose}
+        onSave={vi.fn()}
+        onNotice={vi.fn()}
+      />,
+    );
+    return onClose;
+  }
+
+  it('renders as a <dialog> and opens it modally', () => {
+    renderModal();
+    const dialog = screen.getByRole('dialog');
+    expect(dialog.tagName).toBe('DIALOG');
+    expect((dialog as HTMLDialogElement).open).toBe(true);
+  });
+
+  it('Esc (native cancel event) calls onClose', () => {
+    const onClose = renderModal();
+    fireEvent(screen.getByRole('dialog'), new Event('cancel', { cancelable: true }));
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('mousedown on the backdrop (the dialog itself) calls onClose', () => {
+    const onClose = renderModal();
+    fireEvent.mouseDown(screen.getByRole('dialog')); // target === dialog → backdrop
+    expect(onClose).toHaveBeenCalledTimes(1);
   });
 });

@@ -110,8 +110,15 @@ tests de caracterización (`it.fails`), CSP fuerte. Los problemas de fondo se co
 
 ## 🟡 BLOQUE 5 — ACCESIBILIDAD
 
-- [ ] **A11y-1 — Modales sin focus trap ni restauración de foco** (`FormModal.tsx`, `ConfirmModal.tsx`); `FormModal` usa
-  `<div role="button">` como overlay. **Mayor déficit de a11y.** Migrar a `<dialog>`+`showModal()` (trap e `::backdrop` nativos).
+- [x] **A11y-1 — Modales sin focus trap ni restauración de foco** ✅ (2026-06-21): hook compartido `useNativeDialog`
+  (showModal/close + Esc vía evento `cancel`). `FormModal` deja de usar `<div role="button">` como overlay → ahora es un
+  `<dialog className="modal-dialog">` (focus trap, restauración de foco y `::backdrop` nativos; CSS nuevo en
+  `_overlays-and-responsive.scss`; el recuadro visible sigue siendo `.modal`); click en backdrop y Esc cierran.
+  `ConfirmModal` pasa de `<dialog open>` (no-modal, sin backdrop) a `showModal()`; Esc → onCancel; sin dismiss por click
+  fuera (confirmación destructiva). Polyfill mínimo de showModal/close en `tests/setup.ts` (jsdom no los implementa).
+  Tests de componente: `FormModal.test.tsx` (+3 a11y) y `ConfirmModal.test.tsx` (4). tsc/118+1/eslint/build OK.
+  ⚠️ Pendiente verificación visual en navegador (aspecto del `::backdrop`/centrado). `AdminModal` sigue con `.modal-ov`
+  (fuera del alcance de A11y-1; mismo patrón a migrar si se quiere consistencia).
 - [ ] **A11y-2 — Fila expandible es `<tr tabIndex=0 aria-expanded>`** (no se anuncia como botón) y "editar = doble clic"
   sin equivalente de teclado (`GameTable.tsx:183-203`). Botón disparador real con `aria-controls` + atajo de teclado.
 - [ ] **A11y-3 — `aria-live` del contador de caracteres anuncia en cada pulsación** (`FormModal.tsx:483`). Anunciar solo en umbrales.
