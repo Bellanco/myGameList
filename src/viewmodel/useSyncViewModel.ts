@@ -5,7 +5,7 @@ import { mergeCrdt } from '../model/repository/syncRepository';
 import { clearSyncConfig, createGist, ensureSyncConfigLoaded, getRetryAfterMs, getSyncConfig, isDeferredNetworkError, readGist, saveSyncConfig, whoAmI, writeGist } from '../model/repository/gistRepository';
 import { normalizeData } from '../model/repository/localRepository';
 import { clearDirty, loadSyncDirtyState } from '../model/repository/syncStateRepository';
-import { canRead, getBackoffMs, getNextReadDelayMs, getSyncState, subscribeSyncState, transitionTo, canReadNow } from '../model/repository/syncMachineRepository';
+import { acquireSyncLock, canRead, getBackoffMs, getNextReadDelayMs, getSyncState, subscribeSyncState, transitionTo, canReadNow } from '../model/repository/syncMachineRepository';
 import { countRemoteChangesApplied, isWriteConflict, logSyncError } from '../model/repository/syncLogicRepository';
 import { readLegacyPlaintextToken } from '../model/migration/legacyTokenRecovery';
 import type { TabData } from '../model/types/game';
@@ -137,6 +137,9 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
 
       if (!canReadNow(force)) return;
 
+      // S2: coalesce ciclos solapados (poll/focus/online/backoff). Si ya hay uno en vuelo, saltar (dirty persiste).
+      const lock = acquireSyncLock();
+      if (!lock) return;
       try {
         transitionTo('checking');
         setStatus('syncing');
@@ -200,6 +203,8 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
         setStatusMessage(message);
         if (!deferred) onNotice('err', message);
         logSyncError('syncNow', error);
+      } finally {
+        lock.release();
       }
     }, [getData, getMeta, onNotice, persist, setData, setMeta, writeWithConflictRecovery, pushDirtyWithMerge]);
 
@@ -290,6 +295,8 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
 
     setConnectedGistId(config.gistId);
 
+    const lock = acquireSyncLock(); // S2: no solapar con otro ciclo en vuelo
+    if (!lock) return;
     transitionTo('checking');
     setStatus('syncing');
 
@@ -357,6 +364,8 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
       setStatus('error');
       setStatusMessage(deferred ? SYNC_MESSAGES.offline : error instanceof Error ? error.message : SYNC_MESSAGES.initError);
       logSyncError('initializeSync', error);
+    } finally {
+      lock.release();
     }
   }, [getData, getMeta, onNotice, persist, setData, setMeta, writeWithConflictRecovery, pushDirtyWithMerge]);
 
@@ -382,6 +391,11 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
   }, [canRead, getNextReadDelayMs, initializeSync]);
 
   const connectSync = useCallback(async () => {
+    const lock = acquireSyncLock(); // S2: no conectar/sincronizar en paralelo con un ciclo en vuelo
+    if (!lock) {
+      onNotice('ok', SYNC_MESSAGES.syncInProgress);
+      return;
+    }
     try {
       await connectSyncWithCredentials(token, gistId);
     } catch (error) {
@@ -397,6 +411,8 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
       setStatusMessage(message);
       if (!deferred) onNotice('err', message);
       logSyncError('connectSync', error);
+    } finally {
+      lock.release();
     }
   }, [connectSyncWithCredentials, gistId, onNotice, token]);
 
@@ -408,6 +424,12 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
       return;
     }
 
+    // S2: si ya hay un ciclo en vuelo (poll/focus/etc.), no arrancar otro manual en paralelo.
+    const lock = acquireSyncLock();
+    if (!lock) {
+      onNotice('ok', SYNC_MESSAGES.syncInProgress);
+      return;
+    }
     try {
       transitionTo('checking');
       setStatus('syncing');
@@ -467,6 +489,8 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
       setStatusMessage(message);
       if (!deferred) onNotice('err', message);
       logSyncError('syncNow', error);
+    } finally {
+      lock.release();
     }
   }, [getData, getMeta, onNotice, persist, setData, setMeta, writeWithConflictRecovery, pushDirtyWithMerge]);
 
@@ -522,7 +546,12 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
       transitionTo('idle', { errorCount: 0, pendingAction: null });
       if (pending === 'write') {
         const config = getSyncConfig();
-        if (config) void writeWithConflictRecovery(config.token, config.gistId, getData(), Date.now());
+        const lock = config ? acquireSyncLock() : null; // S2
+        if (config && lock) {
+          void writeWithConflictRecovery(config.token, config.gistId, getData(), Date.now())
+            .catch(() => {})
+            .finally(() => lock.release());
+        }
         return;
       }
       void refreshRemote(true);
@@ -579,8 +608,11 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
         }
         if (state.pendingAction === 'write') {
           const config = getSyncConfig();
-          if (config) {
-            void writeWithConflictRecovery(config.token, config.gistId, getData(), Date.now());
+          const lock = config ? acquireSyncLock() : null; // S2: no solapar el reintento de escritura
+          if (config && lock) {
+            void writeWithConflictRecovery(config.token, config.gistId, getData(), Date.now())
+              .catch(() => {})
+              .finally(() => lock.release());
           }
         }
       }, delay);
@@ -636,7 +668,14 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
       setGistId(recoveredGistId);
       setStatusMessage('');
       onNotice('ok', SYNC_MESSAGES.recoverSuccess);
-      await connectSyncWithCredentials(recoveredToken, recoveredGistId);
+      const lock = acquireSyncLock(); // S2: no solapar el sync de conexión con otro ciclo en vuelo
+      if (lock) {
+        try {
+          await connectSyncWithCredentials(recoveredToken, recoveredGistId);
+        } finally {
+          lock.release();
+        }
+      }
     } catch (error) {
       const message = error instanceof Error ? error.message : SYNC_MESSAGES.recoverError;
       setStatus('error');
@@ -654,28 +693,35 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
       return false;
     }
 
-    const normalizedData = normalizeData(data, { forceTimestamp: true });
-    normalizedData.updatedAt = Date.now();
-
-    const writeResult = await writeGist(config.token, config.gistId, normalizedData);
+    // S2: sobrescritura destructiva del remoto → no debe correr en paralelo con un ciclo de sync.
+    const lock = acquireSyncLock();
+    if (!lock) return false;
     try {
-      if (typeof BroadcastChannel !== 'undefined') {
-        const ch = new BroadcastChannel('mygamelist-sync');
-        ch.postMessage({ type: 'remote-write', updatedAt: Date.now(), etag: writeResult.etag || null });
-        ch.close();
-      }
-    } catch {}
+      const normalizedData = normalizeData(data, { forceTimestamp: true });
+      normalizedData.updatedAt = Date.now();
 
-    saveSyncConfig({
-      ...config,
-      etag: writeResult.etag,
-      lastRemoteUpdatedAt: writeResult.updatedAt,
-    });
+      const writeResult = await writeGist(config.token, config.gistId, normalizedData);
+      try {
+        if (typeof BroadcastChannel !== 'undefined') {
+          const ch = new BroadcastChannel('mygamelist-sync');
+          ch.postMessage({ type: 'remote-write', updatedAt: Date.now(), etag: writeResult.etag || null });
+          ch.close();
+        }
+      } catch {}
 
-    clearDirty();
-    transitionTo('idle');
+      saveSyncConfig({
+        ...config,
+        etag: writeResult.etag,
+        lastRemoteUpdatedAt: writeResult.updatedAt,
+      });
 
-    return true;
+      clearDirty();
+      transitionTo('idle');
+
+      return true;
+    } finally {
+      lock.release();
+    }
   }, []);
 
   const disconnectSync = useCallback(() => {
