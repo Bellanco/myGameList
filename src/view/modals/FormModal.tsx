@@ -6,6 +6,7 @@ import type { GameDraft } from '../../viewmodel/useGameListViewModel';
 import { Icon } from '../components/Icon';
 import { StarPicker } from '../components/StarPicker';
 import { TagInput } from '../components/TagInput';
+import { useNativeDialog } from './useNativeDialog';
 
 interface FormModalProps {
   open: boolean;
@@ -87,6 +88,8 @@ export function FormModal({ open, draft: initialDraft, currentTab, lookups, onCl
   const [pending, setPending] = useState<PendingTagFields>(EMPTY_PENDING);
   const [fieldErrors, setFieldErrors] = useState<FieldErrorMap>({});
   const [yearWarningShown, setYearWarningShown] = useState(false);
+  // A11y-1: `<dialog>` nativo en modo modal → focus trap, restauración de foco, `::backdrop` y Esc → onClose.
+  const dialogRef = useNativeDialog(open, onClose);
   const reviewCount = draft.review.length;
   const reviewProgress = Math.min(100, Math.round((reviewCount / REVIEW_MAX_LENGTH) * 100));
   const reviewProgressClass = reviewProgress >= 100 ? 'has-error' : reviewProgress >= 90 ? 'has-warning' : '';
@@ -98,20 +101,6 @@ export function FormModal({ open, draft: initialDraft, currentTab, lookups, onCl
     setFieldErrors({});
     setYearWarningShown(false);
   }, [open, initialDraft, currentTab]);
-
-  useEffect(() => {
-    if (!open) return;
-
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        event.preventDefault();
-        onClose();
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [open, onClose]);
 
   const tagKeys = useMemo(() => {
     const keys: Array<keyof PendingTagFields> = ['genres', 'platforms'];
@@ -247,27 +236,17 @@ export function FormModal({ open, draft: initialDraft, currentTab, lookups, onCl
     onSave(nextDraft);
   };
 
-  if (!open) return null;
-
   return (
-    <div
-      className="modal-ov active"
-      role="button"
-      tabIndex={0}
-      aria-label="Cerrar modal"
+    <dialog
+      ref={dialogRef}
+      className="modal-dialog"
+      aria-label={initialDraft.id ? 'Editar juego' : 'Nuevo juego'}
       onMouseDown={(event) => {
-        if (event.target === event.currentTarget) {
-          onClose();
-        }
-      }}
-      onKeyDown={(event) => {
-        if (event.target !== event.currentTarget) return;
-        if (event.key === 'Escape' || event.key === 'Enter' || event.key === ' ') {
-          event.preventDefault();
-          onClose();
-        }
+        // Click en el backdrop (fuera de .modal) → cerrar; el target es el propio <dialog>.
+        if (event.target === event.currentTarget) onClose();
       }}
     >
+      {open ? (
       <div className="modal">
         <div className="modal-hd">
           <div className="modal-title">{draft.id ? 'Editar juego' : 'Nuevo juego'}</div>
@@ -501,6 +480,7 @@ export function FormModal({ open, draft: initialDraft, currentTab, lookups, onCl
           </button>
         </div>
       </div>
-    </div>
+      ) : null}
+    </dialog>
   );
 }
