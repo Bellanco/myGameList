@@ -24,7 +24,7 @@ local** (`074ed68`) + **formato v4 del gist de juegos** (keyed por id + dicciona
 
 ## A. Acciones del USUARIO (no son código — requieren navegador/despliegue)
 - [ ] **Fase 0.1** — Probar B1–B5 en navegador real (perfil social, token cifrado en `privateConfig`, "recuperar desde Google", feed/perfil index-only). Ver `TEST-PLAN.md`.
-- [~] **Fase 0.2** — `npm run test:rules` (emulador) ✅ **7/7 OK** (2026-06-20); falta `firebase deploy --only firestore:rules` (acción usuario, requiere auth Firebase).
+- [x] **Fase 0.2** — `npm run test:rules` (emulador) ✅ **9/9 OK** (2026-06-21, incl. validación de esquema C5/T4); **reglas DESPLEGADAS** a `mylists-f7313` el 2026-06-21 (`firebase deploy --only firestore:rules`, cuenta `bellanco3@gmail.com`). Reglas endurecidas activas en producción.
 - [ ] **Fase 0.3** — Tras desplegar, **re-guardar el perfil social una vez** (materializa el token cifrado y dispara el `deleteField()` que borra el token en claro legacy).
 - [ ] **Fase 0.4** — **REVOCAR en GitHub el token** que pasó por el chat (seguridad).
 - [ ] **Verificación M3 en navegador** — flujo social completo: gateway→login Google, crear/enlazar gist social, guardar perfil+favoritos+visibilidad, feed/directorio, detalle de actividad y de perfil, arrastre horizontal del feed, sign-out. (No hay test de componente que cubra runtime con datos reales; solo smoke.)
