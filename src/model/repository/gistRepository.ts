@@ -50,7 +50,7 @@ const SOCIAL_GIST_FILENAME = 'myGameList.social.json';
  * REVERSIBLE (volver a `false` → se rebaja a plano). Verificado: round-trip exacto sobre datos reales, 4% menor.
  * └──────────────────────────────────────────────────────────────────────────────────────────────────────┘
  */
-const ENABLE_GAMES_WRAPPER_WRITE = false;
+const ENABLE_GAMES_WRAPPER_WRITE = true;
 const GIST_API_BASE = 'https://api.github.com/gists';
 const SESSION_CACHE_SOCIAL_GIST_PREFIX = 'myGameList.session.socialGist';
 const SESSION_CACHE_PUBLIC_SOCIAL_GIST_PREFIX = 'myGameList.session.publicSocialGist';

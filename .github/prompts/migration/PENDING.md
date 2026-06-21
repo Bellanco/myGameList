@@ -18,7 +18,11 @@ local** (`074ed68`) + **formato v4 del gist de juegos** (keyed por id + dicciona
 **⏳ QUEDA — todo es acción del USUARIO (navegador/despliegue/2 dispositivos), no código pendiente:**
 1. **Fase 0** (seguridad): desplegar `firestore.rules`, re-guardar perfil social, **revocar el token del chat**.
 2. **Verificar en navegador**: 6.2a/6.2b en 2 dispositivos (profileId estable, activity por pseudónimo), flujo social (M3/E3).
-3. **Activar el formato v4** (flag `ENABLE_GAMES_WRAPPER_WRITE`): 2 pasos, ver la nota en `gistRepository.ts` y la Fase 8 abajo.
+3. **Activar el formato v4** (flag `ENABLE_GAMES_WRAPPER_WRITE`): ✅ **CÓDIGO ACTIVADO** (`= true`, `gistRepository.ts:53`)
+   + test de borde `tests/unit/gistWrite.test.ts` (emisión v4 + round-trip write→read). Verde: tsc/132+1xfail/build.
+   ⏳ **Pendiente:** desplegar y **verificar en navegador en 2 dispositivos** (A reescribe `myGames.json` a
+   `{schemaVersion:4, fileType:"games-main"}`; B lo lee sin pérdida y lo mantiene v4; 2º sync sin cambios no reescribe).
+   Seguro por diseño: el SW es network-first y `/assets/` siempre va a red → ningún cliente online sirve bundle viejo.
 4. **Fase 9** (limpieza de `legacy*.ts`): solo tras el corte verificado en navegador.
 5. Opcional: llevar diccionarios/chunking al gist social; poblar `privateConfig.gamesChunks`.
 
