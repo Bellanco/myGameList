@@ -6,18 +6,25 @@ import { z } from 'zod';
 
 const tabId = z.enum(['c', 'v', 'e', 'p']);
 
+// ST8 — cotas de longitud/rango (defensa positiva): un bug aguas arriba o un gist construido a mano no puede
+// publicar texto sin límite ni un rating fuera de rango. Generosas: nunca rechazan datos válidos actuales.
+const NAME_MAX = 500;
+const SNIPPET_MAX = 200; // el snippet real es ≤160 (SNIPPET_MAX_CHARS); margen por trimEnd/legacy
+const TEXT_MAX = 5000;
+const ratingSchema = z.number().min(0).max(5);
+
 const idName = z.strictObject({
   id: z.number(),
-  name: z.string(),
+  name: z.string().max(NAME_MAX),
 });
 
 const sharedGame = z.strictObject({
   id: z.number(),
-  name: z.string(),
+  name: z.string().max(NAME_MAX),
   platforms: z.array(z.string()),
   genres: z.array(z.string()),
-  rating: z.number(),
-  snippet: z.string(),
+  rating: ratingSchema,
+  snippet: z.string().max(SNIPPET_MAX),
 });
 
 const visibility = z.strictObject({
@@ -28,23 +35,13 @@ const visibility = z.strictObject({
 });
 
 const profile = z.strictObject({
-  name: z.string(),
+  name: z.string().max(NAME_MAX),
   private: z.boolean(),
   favoriteGames: z.array(idName),
-  recommendations: z.array(idName),
+  // ST3: `profile.recommendations` eliminado (código muerto). La lectura tolera gists viejos que lo lleven.
   visibility,
   // sharedLists es Partial<Record<TabId, SharedGame[]>>: claves 'c'|'v'|'e'|'p', subconjunto permitido.
   sharedLists: z.record(z.string(), z.array(sharedGame)),
-});
-
-const recommendation = z.strictObject({
-  id: z.number(),
-  fromProfileId: z.string(), // 6.2b: pseudónimo público (antes `fromUid`)
-  gameId: z.number(),
-  gameName: z.string(),
-  rating: z.number(),
-  createdAt: z.number(),
-  updatedAt: z.number(),
 });
 
 const activity = z.strictObject({
@@ -52,19 +49,19 @@ const activity = z.strictObject({
   key: z.string(),
   type: z.enum(['recommendation', 'review']),
   actorProfileId: z.string(), // 6.2b: pseudónimo público (antes `actorUid`)
-  actorName: z.string(),
+  actorName: z.string().max(NAME_MAX),
   gameId: z.number(),
-  gameName: z.string(),
-  rating: z.number(),
-  recommendationText: z.string(),
-  snippet: z.string(),
+  gameName: z.string().max(NAME_MAX),
+  rating: ratingSchema,
+  recommendationText: z.string().max(TEXT_MAX),
+  snippet: z.string().max(SNIPPET_MAX),
   createdAt: z.number(),
   updatedAt: z.number(),
 });
 
 export const socialGistSchema = z.strictObject({
   profile,
-  recommendations: z.array(recommendation),
+  // ST3: `recommendations` top-level eliminado (código muerto; se fusionaba en activity). La lectura tolera gists viejos.
   activity: z.array(activity),
   updatedAt: z.number(),
   schemaVersion: z.number(), // 6.2b: 2 = identidad por profileId

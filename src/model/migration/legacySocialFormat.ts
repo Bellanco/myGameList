@@ -59,5 +59,10 @@ export function socialGistNeedsRewrite(raw: unknown): boolean {
   // 6.2b: también si el gist aún identifica al actor por uid (actorUid/fromUid) en vez de profileId.
   if (hasLegacyUidIdentity(o.activity) || hasLegacyUidIdentity(o.recommendations)) return true;
   const profile = (o.profile && typeof o.profile === 'object' ? o.profile : {}) as Record<string, unknown>;
-  return hasLegacyReviewText(profile.recommendations);
+  if (hasLegacyReviewText(profile.recommendations)) return true;
+  // ST3: arrays de recomendaciones legacy (top-level o en profile) con contenido → reescribir para dejarlos fuera
+  // (se fusionan en activity en la lectura; el rewrite los elimina del gist). El formato actual no los lleva.
+  if (Array.isArray(o.recommendations) && o.recommendations.length > 0) return true;
+  if (Array.isArray(profile.recommendations) && profile.recommendations.length > 0) return true;
+  return false;
 }

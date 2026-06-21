@@ -175,9 +175,11 @@ tests de caracterización (`it.fails`), CSP fuerte. Los problemas de fondo se co
   cualquier lectura propia → `deleteField`).
 
 ### 🟠 MEDIA — datos muertos / redundancia
-- [ ] **ST3 — `recommendations` top-level y `profile.recommendations` del gist social MUERTOS** (sin writer; siempre `[]`,
-  fusionados en `activity`). Eliminar tipos/schema/normalizador (`gistRepository.ts:131,76`); dejar solo detección legacy en
-  `socialGistNeedsRewrite` para limpieza (auto-upgrade: al leer un gist con esos arrays poblados, reescribir sin ellos).
+- [x] **ST3 — `recommendations` top-level y `profile.recommendations` del gist social MUERTOS** ✅ (2026-06-21):
+  eliminados del tipo `SocialGistData`/`SocialGistProfile`, del schema Zod estricto, de `normalizeSocialGistData`,
+  `remapSocialActorIds` y `getEmptySocialGistData`. **Retrocompat/auto-upgrade**: la LECTURA sigue leyendo el raw
+  `recommendations` y lo fusiona en `activity` (`mergeLegacyActivity`, sin pérdida); `socialGistNeedsRewrite` detecta
+  arrays legacy con contenido → `wasLegacy` fuerza reescritura que los deja fuera. Tests en `migrationFoundation.test.ts`.
 - [ ] **ST4 — `gamesGistId`/`etag` en el doc público `profiles`** (`firebaseRepository.ts:74,76`) → mover solo a `privateConfig`
   (owner-only). Auto-upgrade al reguardar.
 - [ ] **ST5 — `actorName` duplicado en cada entrada de `activity`** (×320; `gistRepository.ts:483`) → normalizar a raíz
@@ -186,15 +188,21 @@ tests de caracterización (`it.fails`), CSP fuerte. Los problemas de fondo se co
 - [ ] **ST7 — `profileId` en 3 sitios** (`profiles`/`userMap`/`privateConfig`); `userMap` casi-redundante (fallback ya canónico).
 
 ### 🟠 MEDIA — defensa de esquema
-- [ ] **ST8 — Cotas Zod en el gist social**: `recommendationText`/`actorName`/`snippet`/`gameName` sin `.max`, `rating` sin
-  `min/max` (`socialGistSchema.ts:53-60`). Añadir cotas (defensa positiva, no solo en normalize).
-- [ ] **ST9 — `userMap` sin validación de esquema en reglas** (`firestore.rules:96-98`) → `hasOnly(["profileId","schemaVersion"])` (relacionado con T4).
+- [x] **ST8 — Cotas Zod en el gist social** ✅ (2026-06-21): `actorName`/`gameName`/`profile.name`/`idName.name` `.max(500)`,
+  `snippet` `.max(200)`, `recommendationText` `.max(5000)`, `rating` `.min(0).max(5)` (matchea clampRating). Cotas
+  generosas: nunca rechazan datos válidos actuales, frenan abusos/bugs. `socialGistSchema.ts`.
+- [x] **ST9 — `userMap` sin validación de esquema en reglas** ✅ (2026-06-21): `userMapWriteIsValid()` con
+  `hasOnly(["profileId","schemaVersion"])` (`firestore.rules`). Test de emulador añadido (`firestore.rules.test.ts`).
+  ⏳ **Acción usuario**: `firebase deploy --only firestore:rules` + `npm run test:rules`.
 
 ### 🟡 BAJA — eficiencia / limpieza
-- [ ] **ST10 — `leanGameItem` emite `review:""` y `steamDeck:false`** aunque vacíos (asimetría con replayable/retry;
-  `socialProjection.ts:124,126`) → omitir cuando vacío (decoder ya tolera). Ahorro gratis.
-- [ ] **ST11 — Flujo de guardado social = hasta 5 escrituras Firestore secuenciales** (`firebaseRepository.ts:63-100`) →
-  agrupar en `writeBatch` (atómico + 1 RTT); fusionar las dos de `privateConfig`.
+- [x] **ST10 — `leanGameItem` emitía `review:""` y `steamDeck:false`** ✅ (2026-06-21): ahora se omiten cuando vacíos/false
+  (simétrico con replayable/retry). **Retrocompat**: `migrateGame` los DEFAULTEA en lectura (`withRequiredDefaults`) → el
+  GameItem en memoria queda completo. Tests de round-trip en `migrationFoundation.test.ts`.
+- [x] **ST11 — Flujo de guardado social = hasta 5 escrituras Firestore secuenciales** ✅ (2026-06-21): `upsertProfileSocialReferences`
+  reescrito con un único `writeBatch` ATÓMICO (profiles + privateConfig + userMap, 1 RTT; las dos escrituras de privateConfig
+  fusionadas; el borrado del token legacy va en el mismo set/merge del perfil). `firebaseRepository.ts`.
+  ⚠️ **Sin cobertura automática** (todo mockeado) → verificar el guardado social en navegador.
 - [ ] **ST12 — `listSocialDirectory` usa `where(documentId(),'!=','_placeholder')`** (fuerza índice; `firebaseSocialRepository.ts:182`)
   → filtrar el placeholder en cliente (ya lo hace) y quitar el `where`. Reducir el doc devuelto a campos públicos.
 - [ ] **ST13 — `unwrapGamesFile` solo avisa si se pierden TODOS los juegos** (`legacyGamesFormat.ts:86`) → contador/warn cuando `placed < total`.

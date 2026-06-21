@@ -753,13 +753,11 @@ export function useSocialViewModel() {
       }
 
       const hasLegacySharedLists = Object.keys(socialRead.data.profile.sharedLists || {}).length > 0;
-      const hasLegacyRecommendations =
-        (socialRead.data.profile.recommendations || []).length > 0 ||
-        (socialRead.data.recommendations || []).length > 0;
 
-      // Upgrade proactivo: reescribir también si el remoto conserva texto de reseña legacy (review/reviewText),
-      // para dejar el gist social en formato index-only (solo snippet) sin esperar a una nueva publicación.
-      if (hasLegacySharedLists || hasLegacyRecommendations || socialRead.wasLegacy) {
+      // Upgrade proactivo: reescribir si el remoto conserva texto de reseña legacy (review/reviewText), identidad por
+      // uid, sharedLists, o arrays de recomendaciones legacy (ST3) → todo eso lo detecta socialGistNeedsRewrite
+      // (socialRead.wasLegacy). Deja el gist en formato index-only actual (snippet-only, sin recommendations/sharedLists).
+      if (hasLegacySharedLists || socialRead.wasLegacy) {
         // 6.2b: al reescribir el gist propio, remapea la identidad legacy (miUid → miProfileId) para sacar
         // el uid del canal público; el resto de la limpieza (snippet-only, sin sharedLists) sigue igual.
         const myProfileId = await resolveStableProfileId(authUser.uid);
@@ -768,10 +766,8 @@ export function useSocialViewModel() {
           ...remapped,
           profile: {
             ...remapped.profile,
-            recommendations: [],
             sharedLists: {},
           },
-          recommendations: [],
           updatedAt: Date.now(),
         };
 
@@ -997,7 +993,6 @@ export function useSocialViewModel() {
         name: profileName.trim() || authUser.displayName || authUser.email,
         private: false,
         favoriteGames: validFavoriteIds.map((id) => ({ id, name: completedGameNameById.get(id) || `Juego ${id}` })),
-        recommendations: [],
         visibility,
         sharedLists: {},
       };
@@ -1007,7 +1002,6 @@ export function useSocialViewModel() {
 
       const writeResult = await writeSocialGist(socialConfig.token, socialCfgGistId, {
         profile,
-        recommendations: currentGistData.recommendations,
         activity: currentGistData.activity,
         updatedAt: Date.now(),
       });

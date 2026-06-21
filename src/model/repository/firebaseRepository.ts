@@ -5,7 +5,7 @@
 //  - firebaseSocialRepository: directorio, índice público, recomendaciones (+ sus cachés).
 // Este fichero conserva el NÚCLEO de perfil/identidad/token y RE-EXPORTA la API pública para que ningún
 // consumidor cambie sus imports.
-import { deleteField, doc, getDoc, serverTimestamp, setDoc } from 'firebase/firestore';
+import { deleteField, doc, getDoc, serverTimestamp, setDoc, writeBatch } from 'firebase/firestore';
 import { decryptFromString, encryptToString } from '../../core/security/crypto';
 import { seedProfileIdFromRemote } from './indexedDbRepository';
 import {
@@ -59,8 +59,25 @@ export async function upsertProfileSocialReferences(input: {
 
   const profileName = (input.preferredName || input.user.displayName || input.user.email || '').trim();
   const profileId = await resolveStableProfileId(input.user.uid);
+  const gamesGistId = String(input.gamesGistId || '');
 
-  await setDoc(
+  // ST11: el token se cifra ANTES de construir el batch (paso async). Si el cifrado falla, se guarda el resto
+  // sin token (best-effort) en vez de romper todo el guardado social.
+  let encryptedGithubToken: string | null = null;
+  if (input.githubToken) {
+    try {
+      encryptedGithubToken = await encryptToString(input.githubToken, input.user.uid);
+    } catch (error) {
+      console.warn('[firebase] No se pudo cifrar el token:', error instanceof Error ? error.message : error);
+    }
+  }
+
+  // ST11: una sola escritura ATÓMICA (1 RTT) agrupa profiles + privateConfig + userMap. Antes eran hasta 5 setDoc
+  // secuenciales (perfil, backup token, borrado token legacy, userMap, ids). Una operación por documento (sin dobles
+  // escrituras al mismo doc): el borrado del token legacy y las referencias van fusionados en sus respectivos set/merge.
+  const batch = writeBatch(services.firestore);
+
+  batch.set(
     doc(services.firestore, 'profiles', input.user.uid),
     {
       schemaVersion: FIRESTORE_SCHEMA_VERSION,
@@ -71,33 +88,38 @@ export async function upsertProfileSocialReferences(input: {
       photoURL: input.user.photoURL,
       social: {
         gistId: input.socialGistId,
-        gamesGistId: String(input.gamesGistId || ''),
+        gamesGistId,
         etag: input.socialGistEtag,
         enabled: true,
+        // Upgrade proactivo: al respaldar el token CIFRADO, borra el token en claro LEGACY del doc público.
+        ...(encryptedGithubToken ? { githubToken: deleteField() } : {}), // audit-allow: deleteField() ELIMINA el token legacy, no lo almacena
       },
       updatedAt: serverTimestamp(),
     },
     { merge: true },
   );
 
-  // B1: el token NO se escribe en claro en Firestore; se respalda CIFRADO en privateConfig (recuperación cross-device).
-  if (input.githubToken) {
-    try {
-      await backupGithubToken(input.user.uid, input.githubToken);
-      // Upgrade proactivo: una vez respaldado cifrado, borrar el token en claro LEGACY que perfiles viejos
-      // aún conservan en `profiles.social.githubToken` (merge no lo elimina; deleteField sí).
-      await setDoc(
-        doc(services.firestore, 'profiles', input.user.uid),
-        { social: { githubToken: deleteField() } }, // audit-allow: deleteField() ELIMINA el token en claro legacy, no lo almacena
-        { merge: true },
-      );
-    } catch (error) {
-      console.warn('[firebase] No se pudo respaldar/limpiar el token:', error instanceof Error ? error.message : error);
-    }
-  }
+  // B1/B2: privateConfig agrupa ids + token cifrado en una sola escritura (antes dos setDoc).
+  batch.set(
+    doc(services.firestore, 'privateConfig', input.user.uid),
+    {
+      schemaVersion: FIRESTORE_SCHEMA_VERSION,
+      profileId,
+      gamesGistId,
+      socialGistId: input.socialGistId,
+      ...(encryptedGithubToken ? { encryptedGithubToken } : {}),
+    },
+    { merge: true },
+  );
 
-  // B2: establecer profileId/userMap/privateConfig.
-  await establishProfileIdentity(input.user.uid, profileId, String(input.gamesGistId || ''), input.socialGistId);
+  // userMap: mapa privado uid→profileId.
+  batch.set(
+    doc(services.firestore, 'userMap', input.user.uid),
+    { profileId, schemaVersion: FIRESTORE_SCHEMA_VERSION },
+    { merge: true },
+  );
+
+  await batch.commit();
 
   const cleanEmail = input.user.email.trim().toLowerCase();
   if (cleanEmail) {
