@@ -193,7 +193,8 @@ tests de caracterización (`it.fails`), CSP fuerte. Los problemas de fondo se co
   generosas: nunca rechazan datos válidos actuales, frenan abusos/bugs. `socialGistSchema.ts`.
 - [x] **ST9 — `userMap` sin validación de esquema en reglas** ✅ (2026-06-21): `userMapWriteIsValid()` con
   `hasOnly(["profileId","schemaVersion"])` (`firestore.rules`). Test de emulador añadido (`firestore.rules.test.ts`).
-  ⏳ **Acción usuario**: `firebase deploy --only firestore:rules` + `npm run test:rules`.
+  ✅ **DESPLEGADO** a `mylists-f7313` el 2026-06-21 (`firebase deploy --only firestore:rules`, compiló OK). Queda
+  `npm run test:rules` (emulador) si se quiere verificar en local.
 
 ### 🟡 BAJA — eficiencia / limpieza
 - [x] **ST10 — `leanGameItem` emitía `review:""` y `steamDeck:false`** ✅ (2026-06-21): ahora se omiten cuando vacíos/false
