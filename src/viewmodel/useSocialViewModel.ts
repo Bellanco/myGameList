@@ -16,7 +16,7 @@ import {
 } from '../model/repository/gistRepository';
 import { SOCIAL_UI } from '../core/constants/labels';
 import type { IconName } from '../core/constants/icons';
-import type { TabId } from '../model/types/game';
+import type { GameItem, TabId } from '../model/types/game';
 import {
   ensureProfileByEmail,
   getCurrentSocialAuthUser,
@@ -101,7 +101,8 @@ export function useSocialViewModel() {
     favorites: string[];
     recommendations: string[];
     activity: SocialActivityFeedItem[];
-    sharedLists: Partial<Record<TabId, SocialSharedGame[]>>;
+    // Index-only (SocialSharedGame) para perfiles ajenos; para el perfil PROPIO se repuebla con GameItem completos.
+    sharedLists: Partial<Record<TabId, Array<GameItem | SocialSharedGame>>>;
     visibility: SocialProfileVisibility;
   };
 
@@ -391,8 +392,29 @@ export function useSocialViewModel() {
       return null;
     }
 
-    return socialDirectory.find((entry) => entry.id === profileDetailId) || null;
-  }, [activePanel, profileDetailId, socialDirectory]);
+    const entry = socialDirectory.find((item) => item.id === profileDetailId) || null;
+    if (!entry) return null;
+
+    // E3 deja `sharedLists` vacío para TODOS los perfiles del directorio (no se exponen las listas ajenas). Para el
+    // perfil PROPIO repoblamos las listas desde `localState` (juegos completos) para que el usuario SÍ vea sus
+    // listados; la visibilidad (pestañas ocultas) la sigue aplicando el componente. Perfiles ajenos: index-only.
+    const isOwn = Boolean(
+      authUser?.email &&
+      entry.email &&
+      authUser.email.toLowerCase() === entry.email.toLowerCase(),
+    );
+    if (!isOwn) return entry;
+
+    return {
+      ...entry,
+      sharedLists: {
+        c: localState.c,
+        v: localState.v,
+        e: localState.e,
+        p: localState.p,
+      },
+    };
+  }, [activePanel, authUser, localState, profileDetailId, socialDirectory]);
 
   const activityFeedItems = useMemo(() => {
     const normalizedQuery = feedSearch.trim().toLowerCase();
