@@ -409,7 +409,6 @@ export default function App() {
           currentTab={vm.editingTab}
           lookups={vm.lookups}
           onClose={handleCloseFormModal}
-          onDraftChange={vm.setDraft}
           onSave={handleSaveDraft}
           onNotice={vm.notify}
         />

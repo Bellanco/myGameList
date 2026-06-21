@@ -95,8 +95,11 @@ tests de caracterización (`it.fails`), CSP fuerte. Los problemas de fondo se co
 
 ## 🟡 BLOQUE 4 — RENDIMIENTO REACT (quick wins primero)
 
-- [ ] **P3 — `FormModal` emite `onDraftChange` por keystroke → re-render de todo el árbol** (`FormModal.tsx:135,166`).
-  **Mejor relación impacto/esfuerzo.** Draft local al modal, emitir solo en `onSave`.
+- [x] **P3 — `FormModal` emite `onDraftChange` por keystroke → re-render de todo el árbol** ✅ (2026-06-21): el borrador
+  ahora es estado LOCAL del modal (`useState`, seedeado de la prop al abrir/cambiar de juego); todas las ediciones llaman
+  a `setLocalDraft` y solo `onSave(nextDraft)` propaga al VM. Eliminada la prop `onDraftChange` (FormModal + App.tsx).
+  Cada pulsación re-renderiza solo el modal, no App/GameTable. Test de componente `FormModal.test.tsx` (2): no emite por
+  tecla + `onSave` recibe el draft editado. tsc/111+1/eslint/build OK.
 - [ ] **P1 — VM retorna objeto literal no memoizado** (`useGameListViewModel.ts:573-611`) + `persist` depende de `meta`
   (que cambia en cada `persist`) → cascada de recreación de callbacks. Leer `meta` vía `metaRef`, `persist` con dep `[]`.
 - [ ] **P2 — `useMemo` de `list` con deps mal declaradas** (`App.tsx:122`): usar `[vm.getFilteredList, currentTab]`.
