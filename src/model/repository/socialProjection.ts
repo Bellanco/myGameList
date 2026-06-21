@@ -112,8 +112,9 @@ export function assertGistSizeWithinLimit(content: string, label: string): numbe
 }
 
 // E1 (escalabilidad): serialización magra. Omite campos OPCIONALES vacíos/por-defecto al escribir el gist de juegos
-// (arrays vacíos, booleanos opcionales en false). Los campos requeridos (id/_ts/name/platforms/genres/steamDeck/review)
-// se conservan siempre. Compat-safe: la lectura tolera ausencia de campos opcionales.
+// (arrays vacíos, booleanos opcionales en false). ST10: también se omiten `steamDeck` (cuando false) y `review`
+// (cuando vacío), simétrico con replayable/retry. La lectura los defaultea (migrateGame) → el GameItem en memoria
+// queda completo. Compat-safe: clientes que leen toleran su ausencia (igual que replayable/retry desde siempre).
 function leanGameItem(game: GameItem): GameItem {
   const out: Record<string, unknown> = {
     id: game.id,
@@ -121,9 +122,9 @@ function leanGameItem(game: GameItem): GameItem {
     name: game.name,
     platforms: Array.isArray(game.platforms) ? game.platforms : [],
     genres: Array.isArray(game.genres) ? game.genres : [],
-    steamDeck: Boolean(game.steamDeck),
-    review: game.review || '',
   };
+  if (game.steamDeck) out.steamDeck = true; // ST10: omitir cuando false
+  if (game.review) out.review = game.review; // ST10: omitir cuando vacío
   if (game.score !== undefined && game.score !== null) out.score = game.score;
   if (game.hours !== undefined && game.hours !== null) out.hours = game.hours;
   if (Array.isArray(game.years) && game.years.length) out.years = game.years;

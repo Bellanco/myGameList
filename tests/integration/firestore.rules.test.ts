@@ -86,6 +86,11 @@ describe('firestore.rules', () => {
       await assertSucceeds(setDoc(doc(ownerDb('uid-a'), 'userMap', 'uid-a'), { profileId: 'p-a' }));
       await assertFails(getDoc(doc(ownerDb('uid-b'), 'userMap', 'uid-a')));
     });
+
+    it('ST9: rechaza campos fuera de la allowlist (profileId/schemaVersion)', async () => {
+      await assertSucceeds(setDoc(doc(ownerDb('uid-a'), 'userMap', 'uid-a'), { profileId: 'p-a', schemaVersion: 1 }));
+      await assertFails(setDoc(doc(ownerDb('uid-a'), 'userMap', 'uid-a'), { profileId: 'p-a', hackField: 'x' }));
+    });
   });
 
   describe('recommendations (solo admin)', () => {

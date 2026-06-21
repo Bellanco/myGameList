@@ -73,7 +73,6 @@ export interface SocialGistProfile {
   name: string;
   private: boolean;
   favoriteGames: Array<{ id: number; name: string }>;
-  recommendations: Array<{ id: number; name: string }>;
   visibility: SocialProfileVisibility;
   sharedLists: Partial<Record<TabId, SocialSharedGame[]>>;
 }
@@ -128,7 +127,9 @@ export interface SocialActivityEntry {
 
 export interface SocialGistData {
   profile: SocialGistProfile;
-  recommendations: SocialRecommendationEntry[];
+  // ST3: el array `recommendations` top-level era código muerto (sin writer; siempre []). Se elimina del modelo.
+  // La LECTURA tolera gists viejos que aún lo lleven: sus recs se fusionan en `activity` (mergeLegacyActivity) y
+  // al reescribir el gist propio (socialGistNeedsRewrite → wasLegacy) se deja fuera. `profile.recommendations` ídem.
   activity: SocialActivityEntry[];
   updatedAt: number;
   schemaVersion?: number; // 6.2b: 2 = identidad por profileId (uid fuera del canal público)
@@ -307,7 +308,6 @@ function getEmptySocialGistData(): SocialGistData {
       name: '',
       private: false,
       favoriteGames: [],
-      recommendations: [],
       visibility: {
         hiddenTabs: [],
         hideReplayable: false,
@@ -316,7 +316,6 @@ function getEmptySocialGistData(): SocialGistData {
       },
       sharedLists: {},
     },
-    recommendations: [],
     activity: [],
     updatedAt: Date.now(),
   };
@@ -604,22 +603,24 @@ function normalizeSocialGistData(data: unknown): SocialGistData {
       .filter((entry) => entry.id > 0 && Boolean(entry.name));
   };
 
+  // ST3: las recomendaciones legacy (top-level y en profile) NO se incluyen en el modelo normalizado, pero se LEEN
+  // del raw para fusionarlas en `activity` (sin pérdida de datos); al reescribir el gist se quedan fuera.
+  const legacyRecommendations = normalizeRecommendationItems((source as { recommendations?: unknown }).recommendations);
+
   const normalized: SocialGistData = {
     profile: {
       name: String(profile.name || '').trim(),
       private: Boolean(profile.private),
       favoriteGames: toGames(profile.favoriteGames),
-      recommendations: toGames(profile.recommendations),
       visibility: normalizeSocialVisibility(profile.visibility),
       sharedLists: normalizeSocialSharedLists(profile.sharedLists),
     },
-    recommendations: normalizeRecommendationItems(source.recommendations),
     activity: normalizeActivityItems(source.activity),
     updatedAt: Number(source.updatedAt || Date.now()),
     schemaVersion: SOCIAL_GIST_SCHEMA_VERSION,
   };
 
-  normalized.activity = mergeLegacyActivity(normalized.activity, normalized.recommendations);
+  normalized.activity = mergeLegacyActivity(normalized.activity, legacyRecommendations);
 
   return normalized;
 }
@@ -640,12 +641,7 @@ export function remapSocialActorIds(data: SocialGistData, uidToProfileId: Record
     return { ...entry, actorProfileId, key, id: key };
   });
 
-  const recommendations = (data.recommendations || []).map((rec) => {
-    const fromProfileId = map(rec.fromProfileId);
-    return fromProfileId === rec.fromProfileId ? rec : { ...rec, fromProfileId };
-  });
-
-  return { ...data, activity, recommendations };
+  return { ...data, activity };
 }
 
 export async function whoAmI(token: string): Promise<{ login: string }> {

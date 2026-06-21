@@ -12,6 +12,7 @@ import {
   upsertReviewActivity,
 } from '../../src/model/repository/gistRepository';
 import { assertValidSocialGist } from '../../src/model/schemas/socialGistSchema';
+import { migrateData } from '../../src/model/repository/migrateRepository';
 import { assembleChunkedGames, gamesGistNeedsRewrite, unwrapGamesFile } from '../../src/model/migration/legacyGamesFormat';
 import { pickLegacyActorId, pickLegacyFromId, socialGistNeedsRewrite } from '../../src/model/migration/legacySocialFormat';
 import { localStateNeedsUpgrade } from '../../src/model/migration/legacyLocalStorage';
@@ -184,8 +185,7 @@ describe('6.2b: lectores de identidad y remapSocialActorIds (uid→profileId en 
 
   it('remapSocialActorIds reemplaza el uid propio por su profileId y reconstruye key/id', () => {
     const data = {
-      profile: { name: '', private: false, favoriteGames: [], recommendations: [], visibility: { hiddenTabs: [], hideReplayable: false, hideRetry: false, hideGameTime: false }, sharedLists: {} },
-      recommendations: [{ id: 1, fromProfileId: 'my-uid', gameId: 7, gameName: 'G', rating: 5, createdAt: 1, updatedAt: 1 }],
+      profile: { name: '', private: false, favoriteGames: [], visibility: { hiddenTabs: [], hideReplayable: false, hideRetry: false, hideGameTime: false }, sharedLists: {} },
       activity: [{ id: 'my-uid:5:review', key: 'my-uid:5:review', type: 'review' as const, actorProfileId: 'my-uid', actorName: 'N', gameId: 5, gameName: 'G', rating: 5, recommendationText: '', snippet: 's', createdAt: 1, updatedAt: 1 }],
       updatedAt: 1,
       schemaVersion: 2,
@@ -194,13 +194,11 @@ describe('6.2b: lectores de identidad y remapSocialActorIds (uid→profileId en 
     expect(out.activity[0].actorProfileId).toBe('pid-123');
     expect(out.activity[0].key).toBe('pid-123:5:review');
     expect(out.activity[0].id).toBe('pid-123:5:review');
-    expect(out.recommendations[0].fromProfileId).toBe('pid-123');
   });
 
   it('remapSocialActorIds NO toca ids ajenos (mapa vacío) — degradación suave para otros usuarios', () => {
     const data = {
-      profile: { name: '', private: false, favoriteGames: [], recommendations: [], visibility: { hiddenTabs: [], hideReplayable: false, hideRetry: false, hideGameTime: false }, sharedLists: {} },
-      recommendations: [],
+      profile: { name: '', private: false, favoriteGames: [], visibility: { hiddenTabs: [], hideReplayable: false, hideRetry: false, hideGameTime: false }, sharedLists: {} },
       activity: [{ id: 'other-uid:5:review', key: 'other-uid:5:review', type: 'review' as const, actorProfileId: 'other-uid', actorName: 'N', gameId: 5, gameName: 'G', rating: 5, recommendationText: '', snippet: 's', createdAt: 1, updatedAt: 1 }],
       updatedAt: 1,
       schemaVersion: 2,
@@ -237,15 +235,16 @@ describe('Auto-upgrade local: localStateNeedsUpgrade (detector del estado guarda
 });
 
 describe('E1: leanTabData (serialización magra)', () => {
-  it('omite opcionales vacíos/false y conserva los requeridos', () => {
+  it('omite opcionales vacíos/false (incl. review/steamDeck, ST10) y conserva id/_ts/name/platforms/genres', () => {
     const td: TabData = {
       c: [{ id: 1, _ts: 5, name: 'A', platforms: ['PC'], genres: [], steamDeck: false, review: '',
         years: [], strengths: [], weaknesses: [], reasons: [], replayable: false, retry: false }],
       v: [], e: [], p: [], deleted: [], updatedAt: 5,
     };
     const g = leanTabData(td).c[0] as unknown as Record<string, unknown>;
-    expect(g).toMatchObject({ id: 1, _ts: 5, name: 'A', steamDeck: false, review: '' });
-    for (const k of ['years', 'strengths', 'weaknesses', 'reasons', 'replayable', 'retry', 'score', 'hours']) {
+    expect(g).toMatchObject({ id: 1, _ts: 5, name: 'A', platforms: ['PC'], genres: [] });
+    // ST10: review/steamDeck también se omiten cuando vacíos/false (simétrico con replayable/retry).
+    for (const k of ['review', 'steamDeck', 'years', 'strengths', 'weaknesses', 'reasons', 'replayable', 'retry', 'score', 'hours']) {
       expect(k in g).toBe(false);
     }
   });
@@ -259,12 +258,27 @@ describe('E1: leanTabData (serialización magra)', () => {
     const g = leanTabData(td).c[0] as unknown as Record<string, unknown>;
     expect(g).toMatchObject({ steamDeck: true, review: 'r', score: 4, years: [2020], strengths: ['x'], replayable: true, retry: true, hours: 12 });
   });
+
+  it('ST10: la lectura defaultea review/steamDeck ausentes (round-trip lean→migrateData queda completo)', () => {
+    const td: TabData = {
+      c: [{ id: 1, _ts: 5, name: 'A', platforms: ['PC'], genres: ['RPG'], steamDeck: false, review: '',
+        years: [], strengths: [], weaknesses: [], reasons: [], replayable: false, retry: false }],
+      v: [], e: [], p: [], deleted: [], updatedAt: 5,
+    };
+    const lean = leanTabData(td);
+    // El gist lean ya NO lleva review/steamDeck...
+    expect('review' in (lean.c[0] as object)).toBe(false);
+    expect('steamDeck' in (lean.c[0] as object)).toBe(false);
+    // ...pero la lectura los defaultea → GameItem completo en memoria.
+    const back = migrateData(lean).c[0];
+    expect(back.review).toBe('');
+    expect(back.steamDeck).toBe(false);
+  });
 });
 
 describe('F6.1: assertValidSocialGist (allowlist estricta Zod)', () => {
   const emptySocial = {
-    profile: { name: '', private: false, favoriteGames: [], recommendations: [], visibility: { hiddenTabs: [], hideReplayable: false, hideRetry: false, hideGameTime: false }, sharedLists: {} },
-    recommendations: [],
+    profile: { name: '', private: false, favoriteGames: [], visibility: { hiddenTabs: [], hideReplayable: false, hideRetry: false, hideGameTime: false }, sharedLists: {} },
     activity: [],
     updatedAt: 0,
     schemaVersion: 2,
@@ -272,6 +286,17 @@ describe('F6.1: assertValidSocialGist (allowlist estricta Zod)', () => {
 
   it('acepta un gist social normalizado válido', () => {
     expect(() => assertValidSocialGist(emptySocial)).not.toThrow();
+  });
+
+  it('ST3: rechaza el array `recommendations` legacy (top-level o en profile) — ya fuera de la allowlist', () => {
+    expect(() => assertValidSocialGist({ ...emptySocial, recommendations: [] })).toThrow(/schema/);
+    expect(() => assertValidSocialGist({ ...emptySocial, profile: { ...emptySocial.profile, recommendations: [] } })).toThrow(/schema/);
+  });
+
+  it('ST3: socialGistNeedsRewrite detecta arrays de recomendaciones legacy con contenido (auto-upgrade)', () => {
+    expect(socialGistNeedsRewrite({ ...emptySocial, recommendations: [{ id: 1, name: 'X' }] })).toBe(true);
+    expect(socialGistNeedsRewrite({ ...emptySocial, profile: { ...emptySocial.profile, recommendations: [{ id: 1, name: 'X' }] } })).toBe(true);
+    expect(socialGistNeedsRewrite(emptySocial)).toBe(false);
   });
 
   it('acepta el resultado real de upsertReviewActivity (lo que se escribe)', () => {

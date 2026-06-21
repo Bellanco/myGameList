@@ -42,6 +42,12 @@ service cloud.firestore {
       ]);
     }
 
+    // ST9 — validación de esquema (allowlist) de userMap: un dueño no puede inyectar campos arbitrarios/payloads
+    // grandes en su propio doc. Solo `profileId` + `schemaVersion`.
+    function userMapWriteIsValid() {
+      return request.resource.data.keys().hasOnly(["profileId", "schemaVersion"]);
+    }
+
     // ==========================================
     // COLECCION: PROFILES
     // ==========================================
@@ -94,7 +100,8 @@ service cloud.firestore {
     // ==========================================
 
     match /userMap/{userId} {
-      allow read, write: if isOwner(userId);
+      allow read: if isOwner(userId);
+      allow write: if isOwner(userId) && userMapWriteIsValid();
     }
 
     // ==========================================
