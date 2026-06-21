@@ -176,17 +176,52 @@ describe('mergeCrdt — Phase 0 risky paths', () => {
 
   // ---- Genuine bugs fixable INSIDE mergeCrdt (expected to fail today) ----
 
-  it.fails('BUG (H1): equal _ts with different content must flag at least one side for update', () => {
+  it('S1 (was BUG H1): equal _ts with different content flags the stale side for update', () => {
     // Both devices edited id=1 to different content in the same millisecond, same tab.
-    // Today: winner = local (>=), but neither needsUpdate flag is set, so remote keeps its
-    // different content forever (permanent divergence). Correct: the stale side must be flagged.
+    // With the deterministic tiebreak the loser side is flagged so it re-writes the winner.
     const local = empty();
     local.c.push(mkGame({ id: 1, _ts: 100, name: 'Name A' }));
     const remote = empty();
     remote.c.push(mkGame({ id: 1, _ts: 100, name: 'Name B' }));
 
     const result = mergeCrdt(local, 100, remote, 100);
-    expect(result.remoteNeedsUpdate).toBe(true); // FAILS today (stays false)
+    // At least one side must be flagged so divergence can't persist.
+    expect(result.localNeedsUpdate || result.remoteNeedsUpdate).toBe(true);
+  });
+
+  it('S1: deterministic tiebreak — both devices converge on the SAME winner regardless of which side is local', () => {
+    // Same id, same _ts, same _v (undefined), different content. The winner must be identical
+    // when computed from device A's view (A=local) and from device B's view (B=local).
+    const a = mkGame({ id: 1, _ts: 100, name: 'Name A' });
+    const b = mkGame({ id: 1, _ts: 100, name: 'Name B' });
+
+    const fromA = empty();
+    fromA.c.push({ ...a });
+    const fromARemote = empty();
+    fromARemote.c.push({ ...b });
+
+    const fromB = empty();
+    fromB.c.push({ ...b });
+    const fromBRemote = empty();
+    fromBRemote.c.push({ ...a });
+
+    const resA = mergeCrdt(fromA, 100, fromARemote, 100);
+    const resB = mergeCrdt(fromB, 100, fromBRemote, 100);
+
+    expect(resA.merged.c).toHaveLength(1);
+    expect(resB.merged.c).toHaveLength(1);
+    expect(resA.merged.c[0].name).toBe(resB.merged.c[0].name); // same winner on both devices
+  });
+
+  it('S1: _v breaks an equal-_ts tie before content hash (higher version wins)', () => {
+    const local = empty();
+    local.c.push(mkGame({ id: 1, _ts: 100, _v: 1, name: 'Old' }));
+    const remote = empty();
+    remote.c.push(mkGame({ id: 1, _ts: 100, _v: 2, name: 'New' }));
+
+    const result = mergeCrdt(local, 100, remote, 100);
+    expect(result.merged.c[0].name).toBe('New');
+    expect(result.localNeedsUpdate).toBe(true);
   });
 
   it.fails('BUG (H2): an edit-vs-delete tie must preserve the tombstone', () => {
