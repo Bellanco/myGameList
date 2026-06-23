@@ -1,5 +1,3 @@
-import { existsSync, readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { readGist, writeGist } from '../../src/model/repository/gistRepository';
 import type { GameItem, TabData } from '../../src/model/types/game';
@@ -12,13 +10,19 @@ import type { GameItem, TabData } from '../../src/model/types/game';
  *   1. Un gist legacy (plano `c/v/e/p`) se lee → la app lo detecta como "necesita upgrade".
  *   2. La app reescribe el gist en formato v4 (anchor GamesMainFile + diccionarios).
  *   3. Una segunda lectura reconstruye el TabData SIN PÉRDIDA (round-trip exacto).
- *   4. El gist v4 ya NO pide re-upgrade (idempotente) y reescribirlo es byte-idéntico.
+ *   4. El gist v4 ya NO pide re-upgrade (idempotente) y el ciclo v4→v4 es estable.
  *
- * El fichero `myGames.json` está SIN COMMITEAR (datos reales). En CI no existe → el test se
- * salta automáticamente; en la máquina del usuario corre contra sus 228 juegos reales.
+ * `myGames.json` está SIN COMMITEAR (datos reales). `import.meta.glob` lo resuelve en tiempo de
+ * transform: si no existe (CI) devuelve `{}` → el bloque se salta; en la máquina del usuario corre
+ * contra sus juegos reales. No usa built-ins de Node (sin @types/node).
  */
-const REAL_DATA_PATH = resolve(__dirname, '../../myGames.json');
-const HAS_REAL_DATA = existsSync(REAL_DATA_PATH);
+const realDataModules = import.meta.glob('/myGames.json', {
+  query: '?raw',
+  import: 'default',
+  eager: true,
+}) as Record<string, string>;
+const RAW_REAL_DATA: string | null = realDataModules['/myGames.json'] ?? null;
+const HAS_REAL_DATA = RAW_REAL_DATA !== null;
 
 const TOKEN = 'ghp_0123456789abcdefghij';
 const GIST_ID = 'abc12345';
@@ -84,12 +88,11 @@ afterEach(() => {
 });
 
 describe.skipIf(!HAS_REAL_DATA)('Cutover v4 sobre datos reales (myGames.json de la raíz)', () => {
-  // Lazy: el cuerpo del describe se ejecuta en la colección incluso con skipIf; sin datos reales
-  // (CI) no debe intentar leer el fichero. Con datos, se parsea una vez.
-  const flat = (HAS_REAL_DATA ? JSON.parse(readFileSync(REAL_DATA_PATH, 'utf8')) : {}) as TabData;
+  // Sin datos reales (CI) RAW_REAL_DATA es null y el bloque está saltado; el `{}` evita parsear null.
+  const flat = (HAS_REAL_DATA ? JSON.parse(RAW_REAL_DATA as string) : {}) as TabData;
 
   it('parte de un gist legacy plano (sin schemaVersion v4)', () => {
-    expect((flat as Record<string, unknown>).schemaVersion).not.toBe(4);
+    expect((flat as unknown as Record<string, unknown>).schemaVersion).not.toBe(4);
     expect(totalGames(flat)).toBeGreaterThan(0);
   });
 
@@ -140,6 +143,7 @@ describe.skipIf(!HAS_REAL_DATA)('Cutover v4 sobre datos reales (myGames.json de 
       ) as { integrity?: { checksum?: string } };
       return anchor.integrity?.checksum;
     };
+
     // Baseline = primera escritura YA derivada de v4 (la escritura del cutover legacy→v4 puede
     // serializar el diccionario en otro orden; lo que debe ser estable es el ciclo v4→v4).
     await writeGist(TOKEN, GIST_ID, read2.data as TabData);
