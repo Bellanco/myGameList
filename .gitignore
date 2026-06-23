@@ -1,5 +1,6 @@
 # Ignorar datos de usuario locales
 /data/myGames.json
+/myGames.json
 
 # Ignorar dependencias y artefactos de Node
 /node_modules
