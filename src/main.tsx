@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import App from './App';
 import { initializeFirebaseServices } from './model/repository/firebaseRepository';
+import { runMigration } from './model/repository/dataMigrationRepository';
 import './styles/index.scss';
 
 createRoot(document.getElementById('root') as HTMLElement).render(
@@ -17,13 +18,21 @@ const idleScheduler = (globalThis as unknown as {
   requestIdleCallback?: (callback: () => void) => number;
 }).requestIdleCallback;
 
+function runIdleStartupTasks(): void {
+  void initializeFirebaseServices();
+  // Migración local (Vía A): puebla el store `games` (v4) en idle. Es idempotente (guardada por
+  // migrationVersion) y NO destructiva (appState sigue siendo la fuente de verdad), así que la app
+  // funciona igual. Cualquier error queda aislado y no afecta al arranque.
+  void runMigration().catch(() => {});
+}
+
 if (typeof idleScheduler === 'function') {
   idleScheduler(() => {
-    void initializeFirebaseServices();
+    runIdleStartupTasks();
   });
 } else {
   setTimeout(() => {
-    void initializeFirebaseServices();
+    runIdleStartupTasks();
   }, 0);
 }
 

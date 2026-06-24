@@ -2,6 +2,14 @@ import type { GameItem, TabData } from '../types/game';
 
 type LegacyGame = Record<string, unknown>;
 
+// ST10: el formato lean omite `review`/`steamDeck` cuando están vacíos/false. La lectura los defaultea aquí para
+// que el GameItem en memoria quede completo (campos requeridos del tipo). No-op si ya vienen presentes.
+function withRequiredDefaults(out: Record<string, unknown>): Record<string, unknown> {
+  if (!('review' in out)) out.review = '';
+  if (!('steamDeck' in out)) out.steamDeck = false;
+  return out;
+}
+
 function migrateGame(game: LegacyGame, tab: 'c' | 'v' | 'e' | 'p'): Record<string, unknown> {
   if ('name' in game) {
     const out = { ...game };
@@ -15,7 +23,7 @@ function migrateGame(game: LegacyGame, tab: 'c' | 'v' | 'e' | 'p'): Record<strin
       out.weaknesses = game.pd;
     }
 
-    return out;
+    return withRequiredDefaults(out);
   }
 
   const out: Record<string, unknown> = {};
@@ -62,7 +70,7 @@ function migrateGame(game: LegacyGame, tab: 'c' | 'v' | 'e' | 'p'): Record<strin
     out.score = game.puntuacion;
   }
 
-  return out;
+  return withRequiredDefaults(out);
 }
 
 export function migrateData(input: unknown): TabData {

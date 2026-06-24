@@ -1,17 +1,61 @@
-import { GIST_CFG_KEY, SOCIAL_GIST_CFG_KEY } from '../../core/constants/storageKeys';
 import { isValidGistId, isValidGithubToken } from '../../core/security/sanitize';
 import { migrateData } from './migrateRepository';
-import { TAB_IDS, type SyncConfig, type TabData, type TabId } from '../types/game';
+import { clampRating, normalizeTimestamp } from '../../core/utils/normalize';
+import { assembleChunkedGames, gamesGistNeedsRewrite, gamesGistNeedsUpgradeToWrapper, unwrapGamesFile } from '../migration/legacyGamesFormat';
+import { pickLegacyActorId, pickLegacyFromId, pickLegacyReviewText, socialGistNeedsRewrite } from '../migration/legacySocialFormat';
+import { assertValidSocialGist } from '../schemas/socialGistSchema';
+import { TAB_IDS, type TabData, type TabId } from '../types/game';
+import { githubFetch, parseRetryAfterMs } from './githubHttp';
+export { NetworkDeferredError, isDeferredNetworkError, getRetryAfterMs } from './githubHttp';
+// M1: transforms puros y config de sync extraídos a módulos dedicados. Importamos de vuelta los que se usan
+// internamente y RE-EXPORTAMOS la API pública para no obligar a los consumidores a cambiar sus imports.
+import {
+  assertGistSizeWithinLimit,
+  assertNoSocialPrivateFields,
+  buildGamesFiles,
+  buildReviewSnippet,
+  leanTabData,
+} from './socialProjection';
+
+export {
+  assertGistSizeWithinLimit,
+  assertNoSocialPrivateFields,
+  buildGamesFiles,
+  buildGamesMainFile,
+  buildReviewSnippet,
+  distributeIntoChunks,
+  gamesChunkFilename,
+  leanTabData,
+  toPublicGame,
+} from './socialProjection';
+export { getSyncConfig, saveSyncConfig, clearSyncConfig, getSocialSyncConfig, saveSocialSyncConfig, ensureSyncConfigLoaded } from './gistConfigRepository';
 
 const GIST_FILENAME = 'myGames.json';
 const SOCIAL_GIST_FILENAME = 'myGameList.social.json';
+
+/**
+ * ┌─ CORTE DE FORMATO DEL GIST DE JUEGOS (schemaVersion 4) — LEER ANTES DE ACTIVAR ─────────────────────┐
+ * Con `true`, la ESCRITURA emite el envoltorio `GamesMainFile` v4: mapa por id (no `c/v/e/p`) +
+ * DICCIONARIOS de categorías deduplicadas (genres/platforms/strengths/weaknesses/reasons) + ancla padre
+ * con `chunkIndex` y chunks hijos de overflow. La LECTURA ya es retrocompatible en ESTA versión
+ * (`unwrapGamesFile`/`assembleChunkedGames` leen plano, keyed-v3 y keyed-v4) y el auto-upgrade reescribe
+ * lo viejo a v4 (`gamesGistNeedsUpgradeToWrapper`).
+ *
+ * ⚠️ ACTIVAR EN 2 PASOS (NO poner `true` de golpe):
+ *   1) Desplegar ESTA versión a TODOS tus dispositivos. Con el flag en `false` ya ganan la LECTURA v4
+ *      (siguen escribiendo plano) → nadie se rompe.
+ *   2) Solo cuando TODOS estén al día, poner esto en `true` + commit + push. En la siguiente sync el gist
+ *      pasa a v4 y se deduplican las categorías.
+ * Una versión ANTERIOR a esta leería los índices del diccionario como números (datos corruptos). Es
+ * REVERSIBLE (volver a `false` → se rebaja a plano). Verificado: round-trip exacto sobre datos reales, 4% menor.
+ * └──────────────────────────────────────────────────────────────────────────────────────────────────────┘
+ */
+const ENABLE_GAMES_WRAPPER_WRITE = true;
 const GIST_API_BASE = 'https://api.github.com/gists';
 const SESSION_CACHE_SOCIAL_GIST_PREFIX = 'myGameList.session.socialGist';
 const SESSION_CACHE_PUBLIC_SOCIAL_GIST_PREFIX = 'myGameList.session.publicSocialGist';
-const SESSION_CACHE_PUBLIC_GAMES_GIST_PREFIX = 'myGameList.session.publicGamesGist';
 const SOCIAL_GIST_CACHE_TTL_MS = 20_000;
 const PUBLIC_SOCIAL_GIST_CACHE_TTL_MS = 45_000;
-const PUBLIC_GAMES_GIST_CACHE_TTL_MS = 45_000;
 
 type SessionCachedValue<T> = {
   value: T;
@@ -21,16 +65,14 @@ type SessionCachedValue<T> = {
 
 const socialGistCacheById = new Map<string, SessionCachedValue<SocialGistData>>();
 const publicSocialGistCacheById = new Map<string, SessionCachedValue<SocialGistData>>();
-const publicGamesGistCacheById = new Map<string, SessionCachedValue<TabData>>();
-const socialGistInFlightByKey = new Map<string, Promise<{ data: SocialGistData; etag: string | null; notModified?: boolean }>>();
+const socialGistInFlightByKey = new Map<string, Promise<{ data: SocialGistData; etag: string | null; notModified?: boolean; wasLegacy?: boolean }>>();
 const publicSocialGistInFlightById = new Map<string, Promise<SocialGistData>>();
-const publicGamesGistInFlightById = new Map<string, Promise<TabData>>();
+
 
 export interface SocialGistProfile {
   name: string;
   private: boolean;
   favoriteGames: Array<{ id: number; name: string }>;
-  recommendations: Array<{ id: number; name: string }>;
   visibility: SocialProfileVisibility;
   sharedLists: Partial<Record<TabId, SocialSharedGame[]>>;
 }
@@ -42,27 +84,25 @@ export interface SocialProfileVisibility {
     hideGameTime: boolean;
 }
 
+/**
+ * Proyección PÚBLICA de un juego compartido (canal social, index-only).
+ * NO contiene review completo, score exacto, hours, steamDeck, retry, replayable ni strengths/weaknesses/reasons.
+ * Solo lo mínimo + `rating` (redondeado) y `snippet` (≤160, derivado del review).
+ */
 export interface SocialSharedGame {
   id: number;
   name: string;
   platforms: string[];
   genres: string[];
-  steamDeck: boolean;
-  review: string;
-  score: number;
-  strengths: string[];
-  weaknesses: string[];
-  reasons: string[];
-  replayable: boolean;
-  retry: boolean;
-  hours: number | null;
+  rating: number;
+  snippet: string;
 }
 
 export type SocialActivityType = 'recommendation' | 'review';
 
 export interface SocialRecommendationEntry {
   id: number;
-  fromUid: string;
+  fromProfileId: string; // 6.2b: pseudónimo público (antes `fromUid`)
   gameId: number;
   gameName: string;
   rating: number;
@@ -74,26 +114,29 @@ export interface SocialActivityEntry {
   id: string;
   key: string;
   type: SocialActivityType;
-  actorUid: string;
+  actorProfileId: string; // 6.2b: pseudónimo público (antes `actorUid`)
   actorName: string;
   gameId: number;
   gameName: string;
   rating: number;
   recommendationText: string;
-  reviewText: string;
+  snippet: string;
   createdAt: number;
   updatedAt: number;
 }
 
 export interface SocialGistData {
   profile: SocialGistProfile;
-  recommendations: SocialRecommendationEntry[];
+  // ST3: el array `recommendations` top-level era código muerto (sin writer; siempre []). Se elimina del modelo.
+  // La LECTURA tolera gists viejos que aún lo lleven: sus recs se fusionan en `activity` (mergeLegacyActivity) y
+  // al reescribir el gist propio (socialGistNeedsRewrite → wasLegacy) se deja fuera. `profile.recommendations` ídem.
   activity: SocialActivityEntry[];
   updatedAt: number;
+  schemaVersion?: number; // 6.2b: 2 = identidad por profileId (uid fuera del canal público)
 }
 
 export interface UpsertRecommendationInput {
-  actorUid: string;
+  actorProfileId: string;
   actorName: string;
   gameId: number;
   gameName: string;
@@ -102,7 +145,7 @@ export interface UpsertRecommendationInput {
 }
 
 export interface UpsertReviewInput {
-  actorUid: string;
+  actorProfileId: string;
   actorName: string;
   gameId: number;
   gameName: string;
@@ -227,39 +270,10 @@ function savePublicSocialGistCache(gistId: string, data: SocialGistData, etag: s
   writeSessionCachedValue(buildSessionCacheKey(SESSION_CACHE_PUBLIC_SOCIAL_GIST_PREFIX, cacheKey), cached);
 }
 
-function readPublicGamesGistCache(gistId: string, token: string | null = null, options?: { includeExpired?: boolean }): SessionCachedValue<TabData> | null {
-  const cacheKey = `${gistId}:${shortTokenDiscriminant(token)}`;
-  const memory = publicGamesGistCacheById.get(cacheKey);
-  if (memory && (options?.includeExpired || memory.expiresAt > Date.now())) {
-    return memory;
-  }
-
-  const key = buildSessionCacheKey(SESSION_CACHE_PUBLIC_GAMES_GIST_PREFIX, cacheKey);
-  const sessionValue = readSessionCachedValue<TabData>(key, { includeExpired: options?.includeExpired });
-  if (!sessionValue) {
-    publicGamesGistCacheById.delete(cacheKey);
-    return null;
-  }
-
-  publicGamesGistCacheById.set(cacheKey, sessionValue);
-  return sessionValue;
-}
-
-function savePublicGamesGistCache(gistId: string, data: TabData, etag: string | null = null, token: string | null = null): void {
-  const cacheKey = `${gistId}:${shortTokenDiscriminant(token)}`;
-  const cached: SessionCachedValue<TabData> = {
-    value: data,
-    etag,
-    expiresAt: Date.now() + PUBLIC_GAMES_GIST_CACHE_TTL_MS,
-  };
-
-  publicGamesGistCacheById.set(cacheKey, cached);
-  writeSessionCachedValue(buildSessionCacheKey(SESSION_CACHE_PUBLIC_GAMES_GIST_PREFIX, cacheKey), cached);
-}
-
-async function buildGithubError(response: Response, prefix: string): Promise<string> {
+async function buildGithubError(response: Response, prefix: string): Promise<Error> {
   const statusPart = `${response.status}${response.statusText ? ` ${response.statusText}` : ''}`;
 
+  let message: string;
   try {
     const payload = (await response.json()) as { message?: string; errors?: Array<{ message?: string }> };
     const apiMessage = payload?.message?.trim();
@@ -268,16 +282,24 @@ async function buildGithubError(response: Response, prefix: string): Promise<str
       .filter(Boolean)
       .join(', ');
     const details = [apiMessage, apiDetails].filter(Boolean).join(' | ');
-    return details ? `${prefix}: ${statusPart} - ${details}` : `${prefix}: ${statusPart}`;
+    message = details ? `${prefix}: ${statusPart} - ${details}` : `${prefix}: ${statusPart}`;
   } catch {
-    return `${prefix}: ${statusPart}`;
+    message = `${prefix}: ${statusPart}`;
   }
+
+  const error = new Error(message);
+  // S3: en 403/429 adjunta cuánto esperar (Retry-After / X-RateLimit-Reset) para que el backoff lo respete.
+  const retryAfterMs = parseRetryAfterMs(response, Date.now());
+  if (retryAfterMs > 0) (error as { retryAfterMs?: number }).retryAfterMs = retryAfterMs;
+  return error;
 }
 
 export interface GistReadResponse {
   notModified?: boolean;
   data?: TabData;
   etag?: string | null;
+  /** Upgrade proactivo: el remoto estaba en formato viejo; el ciclo de sync debe reescribirlo en el actual. */
+  wasLegacy?: boolean;
 }
 
 function getEmptySocialGistData(): SocialGistData {
@@ -286,7 +308,6 @@ function getEmptySocialGistData(): SocialGistData {
       name: '',
       private: false,
       favoriteGames: [],
-      recommendations: [],
       visibility: {
         hiddenTabs: [],
         hideReplayable: false,
@@ -295,7 +316,6 @@ function getEmptySocialGistData(): SocialGistData {
       },
       sharedLists: {},
     },
-    recommendations: [],
     activity: [],
     updatedAt: Date.now(),
   };
@@ -345,22 +365,17 @@ function normalizeSocialSharedGame(value: unknown): SocialSharedGame | null {
       .slice(0, 24);
   };
 
-  const rawHours = Number(source.hours);
+  // Proyección pública: deriva snippet del review legacy (o del snippet ya migrado) y rating del score legacy.
+  const snippet = buildReviewSnippet(pickLegacyReviewText(source));
+  const rating = Math.round(clampRating(source.rating ?? source.score));
 
   return {
     id,
     name,
     platforms: toStringArray(source.platforms),
     genres: toStringArray(source.genres),
-    steamDeck: Boolean(source.steamDeck),
-    review: String(source.review || '').trim(),
-    score: clampRating(source.score),
-    strengths: toStringArray(source.strengths),
-    weaknesses: toStringArray(source.weaknesses),
-    reasons: toStringArray(source.reasons),
-    replayable: Boolean(source.replayable),
-    retry: Boolean(source.retry),
-    hours: Number.isFinite(rawHours) && rawHours >= 0 ? rawHours : null,
+    rating,
+    snippet,
   };
 }
 
@@ -385,20 +400,6 @@ function normalizeSocialSharedLists(value: unknown): Partial<Record<TabId, Socia
   return output;
 }
 
-function clampRating(value: unknown): number {
-  const numeric = Number(value);
-  if (!Number.isFinite(numeric)) {
-    return 0;
-  }
-
-  return Math.max(0, Math.min(5, numeric));
-}
-
-function normalizeTimestamp(value: unknown, fallback: number): number {
-  const numeric = Number(value);
-  return Number.isFinite(numeric) && numeric > 0 ? numeric : fallback;
-}
-
 function normalizeActivityType(value: unknown): SocialActivityType | null {
   const normalized = String(value || '').trim().toLowerCase();
   if (normalized === 'review' || normalized === 'review_created' || normalized === 'review_updated') {
@@ -412,8 +413,11 @@ function normalizeActivityType(value: unknown): SocialActivityType | null {
   return null;
 }
 
-function buildActivityKey(actorUid: string, gameId: number, type: SocialActivityType): string {
-  return `${actorUid}:${gameId}:${type}`;
+// 6.2b: versión del esquema del gist social. 2 = identidad por profileId (sin uid en el canal público).
+const SOCIAL_GIST_SCHEMA_VERSION = 2;
+
+function buildActivityKey(actorId: string, gameId: number, type: SocialActivityType): string {
+  return `${actorId}:${gameId}:${type}`;
 }
 
 function normalizeRecommendationItems(items: unknown): SocialRecommendationEntry[] {
@@ -425,18 +429,18 @@ function normalizeRecommendationItems(items: unknown): SocialRecommendationEntry
     .map((entry) => {
       const record = (entry && typeof entry === 'object' ? entry : {}) as Record<string, unknown>;
       const gameId = Number(record.gameId || 0);
-      const fromUid = String(record.fromUid || '').trim();
+      const fromProfileId = pickLegacyFromId(record);
       const gameName = String(record.gameName || '').trim();
       const createdAt = normalizeTimestamp(record.createdAt, Date.now());
       const updatedAt = normalizeTimestamp(record.updatedAt, createdAt);
 
-      if (!fromUid || gameId <= 0 || !gameName) {
+      if (!fromProfileId || gameId <= 0 || !gameName) {
         return null;
       }
 
       return {
         id: Number(record.id || createdAt),
-        fromUid,
+        fromProfileId,
         gameId,
         gameName,
         rating: clampRating(record.rating),
@@ -458,29 +462,29 @@ function normalizeActivityItems(items: unknown): SocialActivityEntry[] {
     .map((entry) => {
       const record = (entry && typeof entry === 'object' ? entry : {}) as Record<string, unknown>;
       const type = normalizeActivityType(record.type);
-      const actorUid = String(record.actorUid || '').trim();
+      const actorProfileId = pickLegacyActorId(record);
       const gameId = Number(record.gameId || 0);
       const gameName = String(record.gameName || '').trim();
       const createdAt = normalizeTimestamp(record.createdAt, Date.now());
       const updatedAt = normalizeTimestamp(record.updatedAt, createdAt);
 
-      if (!type || !actorUid || gameId <= 0 || !gameName) {
+      if (!type || !actorProfileId || gameId <= 0 || !gameName) {
         return null;
       }
 
-      const key = String(record.key || buildActivityKey(actorUid, gameId, type)).trim() || buildActivityKey(actorUid, gameId, type);
+      const key = String(record.key || buildActivityKey(actorProfileId, gameId, type)).trim() || buildActivityKey(actorProfileId, gameId, type);
 
       return {
-        id: String(record.id || buildActivityKey(actorUid, gameId, type)),
+        id: String(record.id || buildActivityKey(actorProfileId, gameId, type)),
         key,
         type,
-        actorUid,
+        actorProfileId,
         actorName: String(record.actorName || '').trim(),
         gameId,
         gameName,
         rating: clampRating(record.rating),
         recommendationText: String(record.recommendationText || '').trim(),
-        reviewText: String(record.reviewText || '').trim(),
+        snippet: buildReviewSnippet(pickLegacyReviewText(record)),
         createdAt,
         updatedAt,
       } satisfies SocialActivityEntry;
@@ -501,20 +505,20 @@ function mergeLegacyActivity(
   });
 
   recommendations.forEach((recommendation) => {
-    const key = buildActivityKey(recommendation.fromUid, recommendation.gameId, 'recommendation');
+    const key = buildActivityKey(recommendation.fromProfileId, recommendation.gameId, 'recommendation');
     const current = map.get(key);
 
     const candidate: SocialActivityEntry = {
-      id: buildActivityKey(recommendation.fromUid, recommendation.gameId, 'recommendation'),
+      id: buildActivityKey(recommendation.fromProfileId, recommendation.gameId, 'recommendation'),
       key,
       type: 'recommendation',
-      actorUid: recommendation.fromUid,
+      actorProfileId: recommendation.fromProfileId,
       actorName: current?.actorName || '',
       gameId: recommendation.gameId,
       gameName: recommendation.gameName,
       rating: recommendation.rating,
       recommendationText: '',
-      reviewText: '',
+      snippet: '',
       createdAt: current?.createdAt || recommendation.createdAt,
       updatedAt: Math.max(current?.updatedAt || 0, recommendation.updatedAt),
     };
@@ -532,12 +536,12 @@ function upsertActivityEntry(
   next: Omit<SocialActivityEntry, 'id' | 'key' | 'createdAt' | 'updatedAt'>,
   timestamp: number,
 ): SocialActivityEntry[] {
-  const key = buildActivityKey(next.actorUid, next.gameId, next.type);
+  const key = buildActivityKey(next.actorProfileId, next.gameId, next.type);
   const existing = items.find((entry) => entry.key === key);
   const createdAt = existing?.createdAt || timestamp;
 
   const entry: SocialActivityEntry = {
-    id: existing?.id || buildActivityKey(next.actorUid, next.gameId, next.type),
+    id: existing?.id || buildActivityKey(next.actorProfileId, next.gameId, next.type),
     key,
     createdAt,
     updatedAt: timestamp,
@@ -557,19 +561,19 @@ export function upsertReviewActivity(data: SocialGistData, input: UpsertReviewIn
   const cleanReview = String(input.reviewText || '').trim();
   const cleanName = String(input.gameName || '').trim();
 
-  if (!input.actorUid || input.gameId <= 0 || !cleanName || !cleanReview) {
+  if (!input.actorProfileId || input.gameId <= 0 || !cleanName || !cleanReview) {
     return data;
   }
 
   const activity = upsertActivityEntry(data.activity || [], {
     type: 'review',
-    actorUid: input.actorUid,
+    actorProfileId: input.actorProfileId,
     actorName: String(input.actorName || '').trim(),
     gameId: input.gameId,
     gameName: cleanName,
     rating: clampRating(input.rating),
     recommendationText: '',
-    reviewText: cleanReview,
+    snippet: buildReviewSnippet(cleanReview),
   }, now);
 
   return {
@@ -599,53 +603,45 @@ function normalizeSocialGistData(data: unknown): SocialGistData {
       .filter((entry) => entry.id > 0 && Boolean(entry.name));
   };
 
+  // ST3: las recomendaciones legacy (top-level y en profile) NO se incluyen en el modelo normalizado, pero se LEEN
+  // del raw para fusionarlas en `activity` (sin pérdida de datos); al reescribir el gist se quedan fuera.
+  const legacyRecommendations = normalizeRecommendationItems((source as { recommendations?: unknown }).recommendations);
+
   const normalized: SocialGistData = {
     profile: {
       name: String(profile.name || '').trim(),
       private: Boolean(profile.private),
       favoriteGames: toGames(profile.favoriteGames),
-      recommendations: toGames(profile.recommendations),
       visibility: normalizeSocialVisibility(profile.visibility),
       sharedLists: normalizeSocialSharedLists(profile.sharedLists),
     },
-    recommendations: normalizeRecommendationItems(source.recommendations),
     activity: normalizeActivityItems(source.activity),
     updatedAt: Number(source.updatedAt || Date.now()),
+    schemaVersion: SOCIAL_GIST_SCHEMA_VERSION,
   };
 
-  normalized.activity = mergeLegacyActivity(normalized.activity, normalized.recommendations);
+  normalized.activity = mergeLegacyActivity(normalized.activity, legacyRecommendations);
 
   return normalized;
 }
 
-export function getSyncConfig(): SyncConfig | null {
-  try {
-    const raw = localStorage.getItem(GIST_CFG_KEY);
-    return raw ? (JSON.parse(raw) as SyncConfig) : null;
-  } catch {
-    return null;
-  }
-}
+/**
+ * 6.2b — Remapea la identidad del actor del contenido social: cualquier `actorProfileId`/`fromProfileId`
+ * que coincida con un uid conocido se sustituye por su `profileId`, reconstruyendo `key`/`id`. Pura.
+ * Solo debe aplicarse al gist PROPIO (el llamador pasa `{ [miUid]: miProfileId }`); para gists ajenos el
+ * mapa va vacío y no cambia nada. Sirve para sacar el uid del canal público al reescribir un gist legacy.
+ */
+export function remapSocialActorIds(data: SocialGistData, uidToProfileId: Record<string, string>): SocialGistData {
+  const map = (id: string): string => uidToProfileId[id] || id;
 
-export function saveSyncConfig(config: SyncConfig): void {
-  localStorage.setItem(GIST_CFG_KEY, JSON.stringify(config));
-}
+  const activity = (data.activity || []).map((entry) => {
+    const actorProfileId = map(entry.actorProfileId);
+    if (actorProfileId === entry.actorProfileId) return entry;
+    const key = buildActivityKey(actorProfileId, entry.gameId, entry.type);
+    return { ...entry, actorProfileId, key, id: key };
+  });
 
-export function clearSyncConfig(): void {
-  localStorage.removeItem(GIST_CFG_KEY);
-}
-
-export function getSocialSyncConfig(): SyncConfig | null {
-  try {
-    const raw = localStorage.getItem(SOCIAL_GIST_CFG_KEY);
-    return raw ? (JSON.parse(raw) as SyncConfig) : null;
-  } catch {
-    return null;
-  }
-}
-
-export function saveSocialSyncConfig(config: SyncConfig): void {
-  localStorage.setItem(SOCIAL_GIST_CFG_KEY, JSON.stringify(config));
+  return { ...data, activity };
 }
 
 export async function whoAmI(token: string): Promise<{ login: string }> {
@@ -653,7 +649,7 @@ export async function whoAmI(token: string): Promise<{ login: string }> {
     throw new Error('Formato de token inválido');
   }
 
-  const response = await fetch('https://api.github.com/user', {
+  const response = await githubFetch('https://api.github.com/user', {
     headers: {
       Authorization: getGithubAuthHeader(token),
       'X-GitHub-Api-Version': '2022-11-28',
@@ -661,7 +657,7 @@ export async function whoAmI(token: string): Promise<{ login: string }> {
   });
 
   if (!response.ok) {
-    throw new Error(await buildGithubError(response, 'Auth failed'));
+    throw await buildGithubError(response, 'Auth failed');
   }
 
   return (await response.json()) as { login: string };
@@ -672,7 +668,7 @@ export async function createGist(token: string): Promise<{ gistId: string; etag:
     throw new Error('Formato de token inválido');
   }
 
-  const response = await fetch(GIST_API_BASE, {
+  const response = await githubFetch(GIST_API_BASE, {
     method: 'POST',
     headers: {
       Authorization: getGithubAuthHeader(token),
@@ -691,7 +687,7 @@ export async function createGist(token: string): Promise<{ gistId: string; etag:
   });
 
   if (!response.ok) {
-    throw new Error(await buildGithubError(response, 'Create failed'));
+    throw await buildGithubError(response, 'Create failed');
   }
 
   const body = (await response.json()) as { id: string };
@@ -708,7 +704,8 @@ async function createSocialGistWithData(token: string, data: SocialGistData, isP
   }
 
   const normalized = normalizeSocialGistData(data);
-  const response = await fetch(GIST_API_BASE, {
+  assertNoSocialPrivateFields(normalized); // canal público: nunca review/reviewText/score/hours/etc.
+  const response = await githubFetch(GIST_API_BASE, {
     method: 'POST',
     headers: {
       Authorization: getGithubAuthHeader(token),
@@ -727,7 +724,7 @@ async function createSocialGistWithData(token: string, data: SocialGistData, isP
   });
 
   if (!response.ok) {
-    throw new Error(await buildGithubError(response, 'Create social gist failed'));
+    throw await buildGithubError(response, 'Create social gist failed');
   }
 
   const body = (await response.json()) as { id: string };
@@ -743,7 +740,7 @@ async function isPublicSocialGistAccessible(gistId: string): Promise<boolean> {
   }
 }
 
-export async function readSocialGist(token: string, gistId: string, etag: string | null = null): Promise<{ data: SocialGistData; etag: string | null; notModified?: boolean }> {
+export async function readSocialGist(token: string, gistId: string, etag: string | null = null): Promise<{ data: SocialGistData; etag: string | null; notModified?: boolean; wasLegacy?: boolean }> {
   if (!isValidGithubToken(token)) {
     throw new Error('Formato de token inválido');
   }
@@ -778,7 +775,7 @@ export async function readSocialGist(token: string, gistId: string, etag: string
       headers['If-None-Match'] = etag;
     }
 
-    const response = await fetch(`${GIST_API_BASE}/${gistId}`, { headers });
+    const response = await githubFetch(`${GIST_API_BASE}/${gistId}`, { headers });
 
     if (response.status === 304) {
       if (cached) {
@@ -794,9 +791,9 @@ export async function readSocialGist(token: string, gistId: string, etag: string
         Authorization: getGithubAuthHeader(token),
         'X-GitHub-Api-Version': '2022-11-28',
       };
-      const freshResp = await fetch(`${GIST_API_BASE}/${gistId}`, { headers: freshHeaders });
+      const freshResp = await githubFetch(`${GIST_API_BASE}/${gistId}`, { headers: freshHeaders });
       if (!freshResp.ok) {
-        throw new Error(await buildGithubError(freshResp, 'Read social gist fallback failed'));
+        throw await buildGithubError(freshResp, 'Read social gist fallback failed');
       }
       const freshBody = (await freshResp.json()) as { files?: Record<string, { content: string }> };
       const rawFresh = freshBody.files?.[SOCIAL_GIST_FILENAME]?.content;
@@ -808,9 +805,10 @@ export async function readSocialGist(token: string, gistId: string, etag: string
       }
 
       try {
-        const normalizedFresh = normalizeSocialGistData(JSON.parse(rawFresh));
+        const parsedFresh = JSON.parse(rawFresh);
+        const normalizedFresh = normalizeSocialGistData(parsedFresh);
         saveSocialGistCache(gistId, normalizedFresh, responseEtagFresh);
-        return { data: normalizedFresh, etag: responseEtagFresh };
+        return { data: normalizedFresh, etag: responseEtagFresh, wasLegacy: socialGistNeedsRewrite(parsedFresh) };
       } catch {
         const empty = getEmptySocialGistData();
         saveSocialGistCache(gistId, empty, responseEtagFresh);
@@ -819,7 +817,7 @@ export async function readSocialGist(token: string, gistId: string, etag: string
     }
 
     if (!response.ok) {
-      throw new Error(await buildGithubError(response, 'Read social gist failed'));
+      throw await buildGithubError(response, 'Read social gist failed');
     }
 
     const body = (await response.json()) as { files?: Record<string, { content: string }> };
@@ -835,11 +833,13 @@ export async function readSocialGist(token: string, gistId: string, etag: string
     }
 
     try {
-      const normalized = normalizeSocialGistData(JSON.parse(raw));
+      const parsed = JSON.parse(raw);
+      const normalized = normalizeSocialGistData(parsed);
       saveSocialGistCache(gistId, normalized, responseEtag);
       return {
         data: normalized,
         etag: responseEtag,
+        wasLegacy: socialGistNeedsRewrite(parsed),
       };
     } catch {
       const empty = getEmptySocialGistData();
@@ -889,7 +889,7 @@ export async function readPublicSocialGistById(gistId: string, token: string | n
       baseHeaders['If-None-Match'] = staleCached.etag;
     }
 
-    const response = await fetch(`${GIST_API_BASE}/${gistId}`, {
+    const response = await githubFetch(`${GIST_API_BASE}/${gistId}`, {
       headers: baseHeaders,
     });
 
@@ -899,7 +899,7 @@ export async function readPublicSocialGistById(gistId: string, token: string | n
     }
 
     if (!response.ok) {
-      throw new Error(await buildGithubError(response, 'Read public social gist failed'));
+      throw await buildGithubError(response, 'Read public social gist failed');
     }
 
     const body = (await response.json()) as { files?: Record<string, { content: string }> };
@@ -926,73 +926,6 @@ export async function readPublicSocialGistById(gistId: string, token: string | n
   }
 }
 
-export async function readPublicGamesGistById(gistId: string, token: string | null = null): Promise<TabData> {
-  if (!isValidGistId(gistId)) {
-    throw new Error('Gist ID inválido');
-  }
-
-  const cached = readPublicGamesGistCache(gistId, token);
-  if (cached) {
-    return cached.value;
-  }
-
-  const staleCached = readPublicGamesGistCache(gistId, token, { includeExpired: true });
-
-  const inFlight = publicGamesGistInFlightById.get(gistId);
-  if (inFlight) {
-    return inFlight;
-  }
-
-  const request = (async () => {
-    const baseHeaders: Record<string, string> = {
-      'X-GitHub-Api-Version': '2022-11-28',
-    };
-
-    if (token && isValidGithubToken(token)) {
-      baseHeaders['Authorization'] = getGithubAuthHeader(token);
-    }
-
-    if (staleCached?.etag) {
-      baseHeaders['If-None-Match'] = staleCached.etag;
-    }
-
-    const response = await fetch(`${GIST_API_BASE}/${gistId}`, {
-      headers: baseHeaders,
-    });
-
-    if (response.status === 304 && staleCached) {
-      savePublicGamesGistCache(gistId, staleCached.value, staleCached.etag || null, token);
-      return staleCached.value;
-    }
-
-    if (!response.ok) {
-      throw new Error(await buildGithubError(response, 'Read public games gist failed'));
-    }
-
-    const body = (await response.json()) as { files?: Record<string, { content: string }> };
-    const raw = body.files?.[GIST_FILENAME]?.content;
-    const responseEtag = response.headers.get('etag');
-    let normalized = migrateData({});
-    if (raw) {
-      try {
-        normalized = migrateData(JSON.parse(raw));
-      } catch {
-        normalized = migrateData({});
-      }
-    }
-
-    savePublicGamesGistCache(gistId, normalized, responseEtag, token);
-    return normalized;
-  })();
-
-  publicGamesGistInFlightById.set(gistId, request);
-  try {
-    return await request;
-  } finally {
-    publicGamesGistInFlightById.delete(gistId);
-  }
-}
-
 export async function writeSocialGist(token: string, gistId: string, payload: SocialGistData): Promise<{ etag: string | null }> {
   if (!isValidGithubToken(token)) {
     throw new Error('Formato de token inválido');
@@ -1006,8 +939,13 @@ export async function writeSocialGist(token: string, gistId: string, payload: So
     ...payload,
     updatedAt: Date.now(),
   });
+  assertNoSocialPrivateFields(normalized); // canal público: nunca review/reviewText/score/hours/etc. (denylist)
+  assertValidSocialGist(normalized); // F6.1: allowlist estricta (Zod) — falla si hay cualquier campo extra/tipo inválido
 
-  const response = await fetch(`${GIST_API_BASE}/${gistId}`, {
+  const socialContent = JSON.stringify(normalized);
+  assertGistSizeWithinLimit(socialContent, 'gist social'); // E1: evita el deadlock al superar el límite de gist
+
+  const response = await githubFetch(`${GIST_API_BASE}/${gistId}`, {
     method: 'PATCH',
     headers: {
       Authorization: getGithubAuthHeader(token),
@@ -1017,14 +955,14 @@ export async function writeSocialGist(token: string, gistId: string, payload: So
     body: JSON.stringify({
       files: {
         [SOCIAL_GIST_FILENAME]: {
-          content: JSON.stringify(normalized),
+          content: socialContent,
         },
       },
     }),
   });
 
   if (!response.ok) {
-    throw new Error(await buildGithubError(response, 'Write social gist failed'));
+    throw await buildGithubError(response, 'Write social gist failed');
   }
 
   const etag = response.headers.get('etag');
@@ -1053,14 +991,14 @@ export async function readGist(token: string, gistId: string, etag: string | nul
     headers['If-None-Match'] = etag;
   }
 
-  const response = await fetch(`${GIST_API_BASE}/${gistId}`, { headers });
+  const response = await githubFetch(`${GIST_API_BASE}/${gistId}`, { headers });
 
   if (response.status === 304) {
     return { notModified: true };
   }
 
   if (!response.ok) {
-    throw new Error(await buildGithubError(response, 'Read failed'));
+    throw await buildGithubError(response, 'Read failed');
   }
 
   const body = (await response.json()) as { files?: Record<string, { content: string }> };
@@ -1077,9 +1015,16 @@ export async function readGist(token: string, gistId: string, etag: string | nul
     throw new Error('Invalid JSON in Gist');
   }
 
+  // E4: si el ancla referencia chunks de overflow en el mismo gist, fusiona sus juegos (los ficheros vienen en
+  // la misma respuesta). Para gist plano o de un solo fichero no hace nada (comportamiento actual intacto).
+  const assembled = assembleChunkedGames(parsed, body.files);
+
   return {
-    data: migrateData(parsed),
+    data: migrateData(unwrapGamesFile(assembled)),
     etag: response.headers.get('etag'),
+    // El "viejo" depende del DESTINO de escritura: con el envoltorio v4 activado, "viejo" = no-v4 (se re-encoda);
+    // con escritura plana, "viejo" = envoltorio o legacy (se rebaja a plano). Así el auto-upgrade apunta al destino real.
+    wasLegacy: ENABLE_GAMES_WRAPPER_WRITE ? gamesGistNeedsUpgradeToWrapper(parsed) : gamesGistNeedsRewrite(parsed),
   };
 }
 
@@ -1092,24 +1037,58 @@ export async function writeGist(token: string, gistId: string, payload: TabData)
     throw new Error('Gist ID inválido');
   }
 
-  const response = await fetch(`${GIST_API_BASE}/${gistId}`, {
+  // E1: serialización magra (omite opcionales vacíos) + guarda de tamaño por fichero.
+  const lean = leanTabData(payload);
+  const headers: Record<string, string> = {
+    Authorization: getGithubAuthHeader(token),
+    'Content-Type': 'application/json',
+    'X-GitHub-Api-Version': '2022-11-28',
+  };
+
+  let files: Record<string, { content: string } | null>;
+
+  if (ENABLE_GAMES_WRAPPER_WRITE) {
+    // E4 (GATED — bandera en false por ahora): envoltorio DESTINO multi-fichero. El ancla lleva el bucket `main`;
+    // el excedente va a ficheros `myGames-chunk-cN.json` del MISMO gist. Cada fichero se mantiene bajo el umbral.
+    const { anchorFile, chunkFiles } = buildGamesFiles(lean);
+    files = {};
+    const anchorContent = JSON.stringify(anchorFile);
+    assertGistSizeWithinLimit(anchorContent, 'gist de juegos (ancla)');
+    files[GIST_FILENAME] = { content: anchorContent };
+    for (const [name, file] of Object.entries(chunkFiles)) {
+      const content = JSON.stringify({ ...file, mainGistId: gistId });
+      assertGistSizeWithinLimit(content, `gist de juegos (${name})`);
+      files[name] = { content };
+    }
+    // Eliminar ficheros chunk obsoletos (existían antes y ya no forman parte del conjunto): listar y poner a null.
+    try {
+      const current = await githubFetch(`${GIST_API_BASE}/${gistId}`, { headers });
+      if (current.ok) {
+        const currentBody = (await current.json()) as { files?: Record<string, unknown> };
+        for (const name of Object.keys(currentBody.files || {})) {
+          if (/^myGames-chunk-.+\.json$/.test(name) && !(name in files)) {
+            files[name] = null; // null elimina el fichero del gist
+          }
+        }
+      }
+    } catch {
+      // Si no se pudo listar, no borramos obsoletos (no crítico); el PATCH continúa.
+    }
+  } else {
+    // CAMINO ACTUAL (flag OFF) — TabData plano, byte-idéntico al anterior.
+    const fileContent = JSON.stringify(lean);
+    assertGistSizeWithinLimit(fileContent, 'gist de juegos');
+    files = { [GIST_FILENAME]: { content: fileContent } };
+  }
+
+  const response = await githubFetch(`${GIST_API_BASE}/${gistId}`, {
     method: 'PATCH',
-    headers: {
-      Authorization: getGithubAuthHeader(token),
-      'Content-Type': 'application/json',
-      'X-GitHub-Api-Version': '2022-11-28',
-    },
-    body: JSON.stringify({
-      files: {
-        [GIST_FILENAME]: {
-          content: JSON.stringify(payload),
-        },
-      },
-    }),
+    headers,
+    body: JSON.stringify({ files }),
   });
 
   if (!response.ok) {
-    throw new Error(await buildGithubError(response, 'Write failed'));
+    throw await buildGithubError(response, 'Write failed');
   }
 
   const body = (await response.json()) as { updated_at?: string };

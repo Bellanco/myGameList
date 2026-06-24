@@ -34,6 +34,18 @@
 .modal-body::-webkit-scrollbar { display: none; }
 .modal-ft { padding: 1.2rem 1.5rem; border-top: 1px solid rgba(26,159,255,.12); display: flex; justify-content: flex-end; gap: .6rem; flex-wrap: wrap; background: rgba(26,159,255,.02); }
 
+/* A11y-1: FormModal como <dialog> nativo (showModal) → focus trap, restauración de foco y ::backdrop nativos.
+   El <dialog> es solo el contenedor de posición a pantalla completa; el recuadro visible sigue siendo .modal. */
+dialog.modal-dialog {
+  border: 0; padding: 0; margin: 0; max-width: none; max-height: none; background: transparent; color: inherit;
+}
+dialog.modal-dialog[open] {
+  position: fixed; inset: 0; width: 100%; height: 100%;
+  display: flex; align-items: center; justify-content: center; padding: 1rem;
+}
+dialog.modal-dialog::backdrop { background: rgba(0,0,0,.6); backdrop-filter: blur(4px); }
+dialog.modal-dialog[open] .modal { transform: translateY(0) scale(1); }
+
 /* Form */
 .fg    { display: flex; flex-direction: column; gap: .42rem; min-width: 0; }
 .frow  { display: grid; grid-template-columns: repeat(auto-fit,minmax(240px,1fr)); gap: 1rem; }

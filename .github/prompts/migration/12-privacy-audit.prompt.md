@@ -1,144 +1,104 @@
 # Prompt 12 — Privacy audit
 
+> Adaptado al stack real (rutas `src/model/repository/`, `src/viewmodel/` · scripts node como `scripts/ci-validate.js`). Diseño destino conservado.
+>
+> **Punto de partida real:** no existe `scripts/audit-privacy.ts` ni el script npm `audit:privacy` (los crea este paso).
+> El I/O de gist vive en `gistRepository.ts`, el de Firestore en `firebaseRepository.ts`, los ViewModels en `src/viewmodel/`.
+> `localStorage` **sí** se usa legítimamente en `localRepository.ts` (fallback offline-first), así que solo es violación fuera de ahí.
+
 ## Prerequisites
-Prompts 01–11 complete. All source files exist in `src/`.
+Prompts 01–11 completos.
 
 ## Task
-Perform a full static audit of the codebase before running the migration.
-Find every place where private data could leak into public channels.
-Output a structured report and fix all issues found.
+Auditoría estática del código que detecte cualquier fuga de datos privados a canales públicos. Genera un informe y falla en violaciones críticas.
 
-## Output files
-- `src/__tests__/privacy-audit.test.ts`
-- `scripts/audit-privacy.ts`  ← runnable standalone script
+## Output files (rutas reales)
+- `scripts/audit-privacy.js`        — script node ejecutable (estilo `scripts/ci-validate.js`; sin dep nueva `tsx`)
+- `tests/unit/privacy-audit.test.ts`
 
 ---
 
-## What counts as a violation
+## Qué cuenta como violación
 
-### Category A — Critical (block migration)
-A field from this list appears in an object that is written to:
-- The social Gist (`social-main.json` / `social-chunk-N.json`)
-- Any Firestore collection other than `/privateConfig`
-- Any HTTP response body sent to a non-owner
+### Categoría A — Crítica (bloquea migración)
+Un campo de la lista aparece en un objeto que se escribe en:
+- el gist social (`myGameList.social.json` / `myGameList.social-chunk-N.json`),
+- cualquier colección de Firestore distinta de `privateConfig`,
+- cualquier cuerpo de respuesta HTTP enviado a un no-dueño.
 
-Forbidden fields: `review`, `score`, `hours`, `steamDeck`, `retry`,
-`replayable`, `uid`, `email`, `githubToken`, `gamesGistId`, `photoURL`.
+Campos prohibidos: `review`, `score`, `hours`, `steamDeck`, `retry`, `replayable`, `uid`, `email`, `githubToken`, `gamesGistId`.
 
-### Category B — Warning (fix before release)
-- A `snippet` field computed inside a ViewModel (should only be in `socialGistManager`).
-- A direct `fetch('https://api.github.com')` call outside `src/gist/`.
-- A direct `setDoc` / `updateDoc` / `addDoc` call outside `src/firebase/`.
-- A `localStorage.setItem` call anywhere (all persistence must be IndexedDB).
-- A `console.log` that could print a token or uid.
+### Categoría B — Aviso (corregir antes de release)
+- `snippet` computado dentro de un ViewModel (debe estar solo en `toPublicGame`, `gistRepository.ts`).
+- `fetch('https://api.github.com')` directo fuera de `gistRepository.ts`.
+- `setDoc` / `updateDoc` / `addDoc` fuera de `firebaseRepository.ts`.
+- `localStorage.setItem` **fuera de** `localRepository.ts` (ahí es legítimo).
+- `console.log` que pueda imprimir token o uid.
 
-### Category C — Info (document but do not block)
-- Any `TODO` or `FIXME` comment related to sync or privacy.
-- Any `as any` cast in a function that handles game data.
+### Categoría C — Info (documentar, no bloquea)
+- `TODO`/`FIXME` relacionados con sync o privacidad.
+- `as any` en funciones que manejan datos de juego.
 
 ---
 
-## `scripts/audit-privacy.ts`
+## `scripts/audit-privacy.js`
+Script node (ESM, sin app construida). Debe:
+1. Escanear recursivamente `.ts`/`.tsx` bajo `src/`.
+2. Categoría A: localizar literales de objeto y llamadas `set()/update()/PATCH` con un campo prohibido como clave,
+   en módulos que escriben a Firestore o al gist social.
+3. Categoría B (regex), con rutas reales:
+```js
+const B_PATTERNS = [
+  { pattern: /snippet\s*[:=]/g,                    file: /ViewModel\.ts$/,         message: 'snippet computado en ViewModel' },
+  { pattern: /fetch\(['"]https:\/\/api\.github/g,  notFile: /gistRepository/,      message: 'API de Gist fuera de gistRepository' },
+  { pattern: /setDoc|updateDoc|addDoc/g,           notFile: /firebaseRepository/,  message: 'escritura a Firestore fuera de firebaseRepository' },
+  { pattern: /localStorage\.setItem/g,             notFile: /localRepository/,     message: 'localStorage fuera de localRepository' },
+  { pattern: /console\.log.*(token|uid)/gi,                                         message: 'posible fuga de token/uid en console.log' },
+];
+```
+4. Volcar `audit-report.json`: `{ runAt, summary:{ critical, warnings, info }, violations:[{ category, file, line, field, context, message }] }`.
+5. Exit 1 si hay alguna violación A; exit 0 si solo B/C (imprimiéndolas igual).
 
-Implement as a Node.js script using the TypeScript compiler API or
-simple regex scanning. It must:
-
-1. Recursively scan all `.ts` and `.tsx` files under `src/`.
-2. For each file, check for Category A violations using AST analysis:
-   - Find all object literals or `set()`/`update()` calls where a
-     forbidden field name appears as a key.
-   - Track whether the surrounding function is in a module that writes
-     to Firestore or the social Gist.
-3. Check for Category B violations using regex:
-   ```ts
-   const B_PATTERNS = [
-     { pattern: /snippet\s*[:=]/g,        file: /ViewModel\.ts$/, message: 'snippet computed in ViewModel' },
-     { pattern: /fetch\(['"]https:\/\/api\.github/g, notFile: /gistManager/, message: 'Gist API call outside gistManager' },
-     { pattern: /setDoc|updateDoc|addDoc/g, notFile: /Repository/, message: 'Firestore write outside repository' },
-     { pattern: /localStorage\.setItem/g,  message: 'localStorage write — use IndexedDB' },
-     { pattern: /console\.log.*token|console\.log.*uid/gi, message: 'Potential token/uid leak in console.log' },
-   ];
-   ```
-4. Output a JSON report to `audit-report.json`:
-   ```json
-   {
-     "runAt": "<ISO timestamp>",
-     "summary": { "critical": 0, "warnings": 0, "info": 0 },
-     "violations": [
-       {
-         "category": "A",
-         "file": "src/viewmodels/GameDetailViewModel.ts",
-         "line": 42,
-         "field": "score",
-         "context": "setDoc(ref, { score: game.score, ... })",
-         "message": "Private field 'score' in Firestore write"
-       }
-     ]
-   }
-   ```
-5. Exit with code 1 if any Category A violations are found.
-6. Exit with code 0 if only B or C violations exist (but still print them).
-
-Add an npm script:
+Añadir el script npm (lo formaliza el paso 15):
 ```json
-"audit:privacy": "tsx scripts/audit-privacy.ts"
+"audit:privacy": "node scripts/audit-privacy.js"
 ```
 
----
-
-## `src/__tests__/privacy-audit.test.ts`
-
-Unit tests for the audit script logic itself.
-
+## `tests/unit/privacy-audit.test.ts`
+Tests de la lógica del auditor (rutas reales):
 ```ts
 describe('detectForbiddenFields', () => {
-  it('flags score in an object passed to setDoc', () => {
-    const code = `setDoc(ref, { profileId: 'x', score: 5, displayName: 'Y' })`;
-    const violations = detectForbiddenFields(code, 'test.ts');
-    expect(violations).toHaveLength(1);
-    expect(violations[0].field).toBe('score');
-    expect(violations[0].category).toBe('A');
+  it('marca score en objeto a setDoc', () => {
+    const v = detectForbiddenFields(`setDoc(ref, { profileId:'x', score:5 })`, 'test.ts');
+    expect(v[0].field).toBe('score'); expect(v[0].category).toBe('A');
   });
-
-  it('does not flag score inside gamesGistManager', () => {
-    const code = `const payload = { score: game.score };`;
-    const violations = detectForbiddenFields(code, 'src/gist/gamesGistManager.ts');
-    expect(violations).toHaveLength(0);
+  it('no marca score en gistRepository (ruta de juegos, privado)', () => {
+    expect(detectForbiddenFields(`const p = { score: game.score };`, 'src/model/repository/gistRepository.ts')).toHaveLength(0);
   });
-
-  it('flags review in social Gist write', () => {
-    const code = `patchGist(id, filename, { games: { id1: { review: 'text' } } })`;
-    const violations = detectForbiddenFields(code, 'src/gist/socialGistManager.ts');
-    expect(violations[0].field).toBe('review');
+  it('marca review en escritura del gist social', () => {
+    const v = detectForbiddenFields(`writeSocialGist(id, { games: { 1: { review:'t' } } })`, 'src/model/repository/gistRepository.ts');
+    expect(v[0].field).toBe('review');
   });
-
-  it('flags snippet computation in ViewModel', () => {
-    const code = `const snippet = game.review.slice(0, 160);`;
-    const warnings = detectPatternB(code, 'src/viewmodels/GamesListViewModel.ts');
-    expect(warnings[0].message).toContain('snippet computed in ViewModel');
+  it('marca snippet computado en ViewModel', () => {
+    const w = detectPatternB(`const snippet = game.review.slice(0,160);`, 'src/viewmodel/useGameListViewModel.ts');
+    expect(w[0].message).toContain('snippet computado en ViewModel');
   });
-
-  it('flags direct fetch to GitHub API outside gistManager', () => {
-    const code = `fetch('https://api.github.com/gists/123')`;
-    const warnings = detectPatternB(code, 'src/sync/syncManager.ts');
-    expect(warnings[0].message).toContain('Gist API call outside gistManager');
+  it('marca fetch a GitHub fuera de gistRepository', () => {
+    const w = detectPatternB(`fetch('https://api.github.com/gists/123')`, 'src/model/repository/syncRepository.ts');
+    expect(w[0].message).toContain('API de Gist fuera de gistRepository');
   });
 });
 ```
 
----
-
-## Integration with CI
-
-Add to `.github/workflows/ci.yml` (created in Prompt 15):
+## Integración con CI
+Añadir a `.github/workflows/ci.yml` (paso 15):
 ```yaml
 - name: Privacy audit
-  run: npm run audit:privacy
-  # Fails the build on any Category A violation
+  run: npm run audit:privacy   # falla en cualquier violación de Categoría A
 ```
 
 ## Constraints
-- The script must run without the app being built — pure static analysis.
-- No false positives on comments (`// score: ...` must not trigger).
-- The report file `audit-report.json` must be gitignored.
-- Add `audit-report.json` to `.gitignore`.
+- Análisis estático puro (sin construir la app).
+- Sin falsos positivos en comentarios (`// score: …` no dispara).
+- Añadir `audit-report.json` a `.gitignore`.
+- `npm run audit:privacy` debe existir tras el paso 15 y salir 0 en el código ya adaptado.

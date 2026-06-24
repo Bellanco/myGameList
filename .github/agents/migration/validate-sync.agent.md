@@ -16,13 +16,20 @@ You are the sync validation agent for Mi Lista.
 Your job is to verify that the games Gist, social Gist, Firestore, and
 IndexedDB all remain consistent through a series of simulated operations.
 
+> **Adapted to the real stack.** IndexedDB is **raw** (no Dexie) — use separate DB names via
+> `idbConnectionRepository`, and the helpers from `indexedDbRepository.ts` (`getAllGames`, `upsertGame`,
+> `deleteGame`, …). Game ids are **`number`** (not UUID). The CRDT clock is **`_ts`** (the destination
+> may add `_v`/`deletedAt`). Public opt-in is **`shared === true`** (no `shareLevel`/`status`). The social
+> gist file is **`myGameList.social.json`**. Run these scenarios as Vitest integration tests against the
+> emulator (a **new dep** — confirm first); do not hand-run against production.
+
 ### Prerequisites check
 
 Before starting:
 ```bash
-tsc --noEmit            # must exit 0
+npx tsc --noEmit        # must exit 0
 npm run test            # must exit 0
-firebase emulators:start --only firestore &   # start emulator
+firebase emulators:start --only firestore &   # requires firebase-tools (new dep — confirm)
 ```
 
 Set environment:
@@ -36,27 +43,27 @@ export VITE_MIGRATION_DRY_RUN=false
 **Goal**: A game edited on device A is visible on device B after sync.
 
 Steps:
-1. Initialize two IndexedDB instances (use different Dexie DB names):
+1. Initialize two raw IndexedDB instances (different DB names via `idbConnectionRepository`):
    `db-device-a` and `db-device-b`.
-2. On device A: call `upsertGame(dbA, testGame)`.
-3. On device A: call `runSyncCycle()` — should push to games Gist.
-4. On device B: call `runSyncCycle()` — should pull from games Gist.
-5. Verify `dbB.games.get(testGame.id)` returns the game.
-6. Verify the game has the same `_v` and content on both devices.
+2. On device A: `upsertGame(testGame)` (testGame.id is a `number`).
+3. On device A: `runSyncCycle()` — should push to the games Gist (`myGames.json`).
+4. On device B: `runSyncCycle()` — should pull from the games Gist.
+5. Verify device B reads back the game by id (`getAllGames()` includes `testGame.id`).
+6. Verify the game has the same content and `_ts` on both devices.
 
 Expected: ✓ Game synchronized between devices.
 
 ### Test scenario 2 — Conflict resolution
 
 **Goal**: When two devices edit the same game concurrently, the
-newer `_modified` wins and a conflict is recorded.
+newer `_ts` wins and a conflict is recorded.
 
 Steps:
-1. Both devices start with the same game (version 1).
-2. Device A edits `name` to "Name A" — increments `_v` to 2, sets `_modified = T+100`.
-3. Device B edits `review` to "Review B" — increments `_v` to 2, sets `_modified = T+50`.
+1. Both devices start with the same game (`_v = 1`).
+2. Device A edits `name` to "Name A" — `_v → 2`, `_ts = T+100`.
+3. Device B edits `review` to "Review B" — `_v → 2`, `_ts = T+50`.
 4. Device A pushes first.
-5. Device B pulls — detects `_v` conflict (both are v2 but content differs).
+5. Device B pulls — detects the conflict (both are `_v` 2 but content differs).
 6. Verify a `SyncConflict` is created in the conflicts store.
 7. Call `resolveConflict(gameId, 'local')` on device B.
 8. Verify device B now has "Review B" as the winner.
@@ -67,12 +74,12 @@ Expected: ✓ Conflict detected, recorded, and resolvable.
 ### Test scenario 3 — Delete wins over edit
 
 **Goal**: If device A deletes a game after device B edits it,
-the delete wins (deletedAt > game._modified).
+the delete wins (deletedAt > game._ts).
 
 Steps:
-1. Both devices have game with `_modified = T`.
-2. Device B edits the game — `_modified = T+100`.
-3. Device A deletes the game — `deletedAt = T+200`.
+1. Both devices have game with `_ts = T`.
+2. Device B edits the game — `_ts = T+100`.
+3. Device A deletes the game — tombstone `deletedAt = T+200`.
 4. Device A pushes.
 5. Device B pulls.
 6. Verify the game is removed from device B's IndexedDB.
@@ -85,8 +92,8 @@ Expected: ✓ Delete propagated correctly.
 the edit wins.
 
 Steps:
-1. Device A deletes game — `deletedAt = T`.
-2. Device B edits the same game — `_modified = T+500` (after the delete).
+1. Device A deletes game — tombstone `deletedAt = T`.
+2. Device B edits the same game — `_ts = T+500` (after the delete).
 3. Device B pushes.
 4. Device A pulls.
 5. Verify the game is restored on device A with device B's content.
@@ -104,7 +111,7 @@ Steps:
    ```ts
    const bigReview = 'X'.repeat(5000);
    for (let i = 0; i < 200; i++) {
-     await upsertGame(db, { ...testGame, id: crypto.randomUUID(), review: bigReview });
+     await upsertGame({ ...testGame, id: i + 1, review: bigReview });  // ids are numbers
    }
    ```
 3. Call `pushGames(meta)`.
@@ -121,15 +128,14 @@ Expected: ✓ Chunk created, all games synced across chunks.
 no private fields and snippets must be ≤ 160 chars.
 
 Steps:
-1. Add 5 games with `shareLevel: 'public'` and reviews of varying lengths.
-2. Add 3 games with `shareLevel: 'private'`.
+1. Add 5 games with `shared: true` and reviews of varying lengths.
+2. Add 3 games with `shared: false`.
 3. Call `publishSocial(meta)`.
-4. Fetch the resulting social Gist content.
+4. Fetch the resulting `myGameList.social.json` content.
 5. Run these assertions on the content:
    ```ts
    // Must pass:
-   assertNoReview(socialContent);           // throws if review field found
-   assertNoPrivateFields(socialContent);    // throws if score/hours/etc found
+   assertNoPrivateFields(socialContent);    // throws if review/score/hours/etc found (assertNoReview is an alias)
 
    // Private games must not appear:
    const privateGameIds = privateGames.map(g => g.id);

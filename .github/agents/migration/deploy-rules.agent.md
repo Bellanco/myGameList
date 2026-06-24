@@ -16,6 +16,11 @@ You are the Firestore Rules deployment agent for Mi Lista.
 Your job is to ensure the security rules are correct before
 they go to production, where a mistake could expose private data.
 
+> **Prerequisite reality:** `firestore.rules`, `firebase.json` and the emulator do **not** exist
+> until migration step 10 creates them, and `firebase-tools` / `@firebase/rules-unit-testing` are
+> **new deps** (confirm before installing). The public profile collection is **`profiles`**
+> (not `users`). Do not run this agent before step 10 is complete — there is nothing to deploy.
+
 ### Step 1 — Pre-flight checks
 
 ```bash
@@ -100,7 +105,7 @@ Must show `request.auth.uid == uid` — no other read access.
 ```bash
 grep "autoExpireAt\|consentNotExpired" firestore.rules
 ```
-Must appear in the `read` condition for `/users` and `/users/.../games`.
+Must appear in the `read` condition for `/profiles/{profileId}`.
 
 If any check fails, stop and report the specific rule that is missing.
 
@@ -122,15 +127,11 @@ Firestore Rules Summary
   Write: ✓ Owner only
   Note:  Contains gamesGistId and socialGistId. Never publicly readable.
 
-/users/{profileId}
+/profiles/{profileId}
   Read:  ✓ Public if profile.private == false AND consent not expired
   Write: ✓ Owner only, private fields blocked
   Note:  Forbidden fields: uid, email, githubToken, gamesGistId,
-         score, hours, steamDeck, retry, replayable, review, photoURL
-
-/users/{profileId}/games/{gameId}
-  Read:  ✓ Public if parent profile is public
-  Write: ✓ Owner only, private fields blocked, no review field
+         score, hours, steamDeck, retry, replayable, review
 
 /feed/{reviewId}
   Read:  ✓ Public if status == 'active' AND not expired
@@ -171,7 +172,7 @@ to verify the rules are active:
 
 ```bash
 # This should succeed (public profile read)
-curl -s "https://firestore.googleapis.com/v1/projects/{PROJECT_ID}/databases/(default)/documents/users/{TEST_PROFILE_ID}" \
+curl -s "https://firestore.googleapis.com/v1/projects/{PROJECT_ID}/databases/(default)/documents/profiles/{TEST_PROFILE_ID}" \
   | python3 -m json.tool | grep -c "fields"
 
 # This should fail (userMap read — should return 403)
@@ -187,7 +188,7 @@ alert the user immediately.
 ### When to run this agent
 
 - Before every production deploy that changes `firestore.rules`.
-- After any change to `src/firebase/` that might require new rule permissions.
+- After any change to `src/model/repository/firebaseRepository.ts` that might require new rule permissions.
 - When the `deploy-rules` CI workflow fails.
 - After rotating credentials (to verify owner-only rules still work).
 

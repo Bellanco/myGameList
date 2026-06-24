@@ -194,10 +194,12 @@ There are **no** scripts named `typecheck`, `audit:privacy`, `test:rules`, `migr
 
 `.github/prompts/migration/` (15 numbered prompts) and `.github/agents/migration/`
 (`migrate`, `deploy-rules`, `validate-sync`, `audit-privacy`) describe a **future** redesign
-that **does not exist in the current code**. They were drafted against a **different/outdated
-stack** (React 18, Zustand, Dexie, Tailwind, Firebase v9) and reference files, fields,
-functions and npm scripts that are **not present**. Use them only as a roadmap, never as a
-description of how the code works today.
+that **does not exist in the current code**. They have been **adapted to the real stack**
+(React 19, hooks + Context, raw IndexedDB, SCSS, Firebase v12, real paths under `src/model/`,
+`src/viewmodel/`, `src/view/`), so paths/stack/scripts now match reality — but the **target
+design** they implement (review/snippet split, `profileId`, index-only Firestore, gist chunking,
+`firestore.rules`, additive `_v`/`deletedAt`) is still **not built**. Use them as a roadmap for
+that transformation, never as a description of how the code works today.
 
 The future design (aspirational, NOT current) includes:
 - **review/snippet split** — public channel would store only a ≤160‑char `snippet`, never `review`.

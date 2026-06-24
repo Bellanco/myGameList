@@ -1,19 +1,19 @@
-# ⚠️ Migration agents — for FUTURE work only
+# Migration agents — adapted to the real stack (design still PLANNED)
 
-> **Status: PLANNED / NOT IMPLEMENTED.** These agents orchestrate the future redesign in
-> `../../prompts/migration/`. They reference commands, files and infrastructure that **do
-> not exist** in the repo today and must not be run as‑is.
+> **Status:** the prompts/agents have been **adapted to the real codebase** (React 19 / hooks + Context /
+> raw IndexedDB / SCSS / Firebase v12, real paths under `src/model/`, `src/viewmodel/`, `src/view/`).
+> Paths, stack and script names now match reality. **The target *design* is still NOT implemented in code** —
+> these agents orchestrate that future migration; they don't describe how the app works today.
 
-| Agent | Assumes (NOT present today) |
-|-------|------------------------------|
-| `migrate.agent.md` | `MIGRATION_STATE.md`, prompt paths, `npm run typecheck`/`migrate:dry`/`audit:privacy`/`test:rules` |
-| `deploy-rules.agent.md` | `firestore.rules`, Firebase emulator, `npm run test:rules` |
-| `validate-sync.agent.md` | chunks, `profileId`, `snippet`, `_v`/`_modified`, emulator, `publishSocial`/`distributeIntoChunks` |
-| `audit-privacy.agent.md` | `npm run audit:privacy`, `audit-report.json`, snippet split, Firestore index‑only |
+| Agent | What it does | Real-stack caveats |
+|-------|--------------|--------------------|
+| `migrate.agent.md` | Orchestrates prompts 01→15, verifies each step | `npx tsc --noEmit` (no `typecheck` alias yet). Scripts `audit:privacy`/`test:rules`/`migrate:dry` are **created by** steps 12/10/08/15 — only invoked after. |
+| `deploy-rules.agent.md` | Validates + deploys `firestore.rules` | Rules/`firebase.json`/emulator don't exist until step 10. Public collection is `profiles` (not `users`). `firebase-tools`/`@firebase/rules-unit-testing` are new deps — confirm first. |
+| `validate-sync.agent.md` | End-to-end sync scenarios | Raw IndexedDB (no Dexie), ids are `number`, clock is `_ts`, public opt-in is `shared`, social file `myGameList.social.json`. Run as Vitest integration tests vs emulator. |
+| `audit-privacy.agent.md` | Scans for private-data leaks | Real paths under `src/model/repository/` & `src/viewmodel/`. `localStorage` allowed only in `localRepository.ts`. `audit-report.json` requires step 12's script. |
 
-**Reality check:** the only npm scripts that exist are `dev build preview validate lint test
-test:all test:watch test:coverage` (+ `npx tsc --noEmit`). The live Firestore `profiles` doc
-**does** store `email`/`uid`/`githubToken` (the audit‑privacy agent assumes it must not — that
-is the *target*, not the current state). See `../../copilot-instructions.md` §5 and §10.
+**Current sensitive reality:** the live `profiles` doc still stores `email`/`uid`/`githubToken`/`gamesGistId`
+(see `../../copilot-instructions.md` §5). Removing that is one of the goals of this migration (the index-only model
+is the *target*, not the current state).
 
-For day‑to‑day work use the real agents in `../` (`dev`, `debug`, `review`).
+For day-to-day work use the real agents in `../` (`dev`, `debug`, `review`).

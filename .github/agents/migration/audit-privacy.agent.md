@@ -18,12 +18,13 @@ into public channels (social Gist, Firestore public collections, logs).
 
 ### Step 1 — Read the rules
 
-Read `.github/copilot-instructions.md` sections:
-- "Data split: review vs snippet"
-- "Firestore is an index only"
-- "Identity"
+Read `.github/copilot-instructions.md`:
+- §4 (data model — what `GameItem` holds vs the public projection)
+- §5 (repository layer — Gist model + "Known sensitive reality" for Firestore)
+- §10 (planned/not-implemented — review/snippet split, profileId, index-only Firestore)
 
-These define what is private and what is public.
+These define what is private and what is public. Note the **current** reality (§5): the live
+`profiles` doc still stores `email`/`uid`/`githubToken` — that is exactly what this migration removes.
 
 ### Step 2 — Run the automated audit
 
@@ -115,7 +116,7 @@ grep -rn "snippet" src/model/repository/gistRepository.ts
 grep -rn "snippet" src/viewmodel/
 
 # Review must not appear in social Gist write objects:
-grep -n '"review"' src/model/repository/gistRepository.ts | grep -v "assertNoReview"
+grep -n '"review"' src/model/repository/gistRepository.ts | grep -v "assertNoPrivateFields\|assertNoReview"
 ```
 
 ### Step 4 — Build the report
@@ -135,9 +136,9 @@ Passed checks:         14
 (none)
 
 ## Warnings (fix before release)
-- src/viewmodels/GamesListViewModel.ts:88
+- src/viewmodel/useGameListViewModel.ts:88
   Pattern: `const snippet = game.review.slice`
-  Issue: Snippet computed in ViewModel — move to socialGistManager
+  Issue: Snippet computed in ViewModel — move to toPublicGame (gistRepository.ts)
 
 ## Passed Checks
 ✓ No review field in socialGistManager PATCH calls
@@ -159,9 +160,10 @@ For each warning (not critical — those need human review):
 ### Trigger conditions
 
 Suggest running this agent:
-- Before any `git push` to `main`
-- After modifying any file in `src/gist/`, `src/firebase/`, or `src/sync/`
-- After adding a new field to `Game` or `PublicGame`
+- Before any `git push` to `master`
+- After modifying the gist/Firestore/sync code in `src/model/repository/`
+  (`gistRepository.ts`, `firebaseRepository.ts`, `syncRepository.ts`)
+- After adding a new field to `GameItem` or `PublicGame`
 - After any change to `firestore.rules`
 
 ### Exit codes

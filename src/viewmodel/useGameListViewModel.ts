@@ -4,6 +4,7 @@ import { HOURS_RANGES } from '../core/constants/uiConfig';
 import { sortEs, uniqueCaseInsensitive } from '../core/utils/compare';
 import { normalizeTag, safeTrim } from '../core/security/sanitize';
 import { loadLocalState, loadLocalStateAsync, normalizeData, saveLocalState } from '../model/repository/localRepository';
+import { getGamesAsTabData, getLocalMeta, mirrorTabDataToGames } from '../model/repository/indexedDbRepository';
 import { markDirty } from '../model/repository/syncStateRepository';
 import { transitionTo } from '../model/repository/syncMachineRepository';
 import type { TabAction as LabelsTabAction } from '../core/constants/labels';
@@ -114,18 +115,36 @@ export function useGameListViewModel() {
   useEffect(() => {
     let cancelled = false;
 
+    const hasData = (d: TabData) => d.c.length > 0 || d.v.length > 0 || d.e.length > 0 || d.p.length > 0 || d.deleted.length > 0;
+
     const hydrateFromFallback = async () => {
-      const hydrated = await loadLocalStateAsync();
+      const { payload: hydrated, wasLegacy } = await loadLocalStateAsync();
       if (cancelled) return;
+
+      // Fuente primaria: appState/localStorage (probada y, vía el espejo, idéntica al store `games`).
+      // Fallback de recuperación: si no hay datos en appState, leer del store `games` (p. ej. si se
+      // borró localStorage pero IndexedDB sobrevivió). updatedAt se toma de appState (mismo reloj).
+      let dataSource: TabData = hydrated;
+      try {
+        const fromGames = await getGamesAsTabData();
+        if (cancelled) return;
+        const gamesTs = (await getLocalMeta())?.gamesUpdatedAt ?? 0;
+        if (cancelled) return;
+        // `games` es autoritativo cuando está al día (su timestamp >= el de appState); si appState es
+        // más fresco (p. ej. un espejo falló), gana appState. Así games es la fuente sin perder la red.
+        if (hasData(fromGames) && gamesTs >= (hydrated.updatedAt || 0)) {
+          dataSource = { ...fromGames, updatedAt: gamesTs || hydrated.updatedAt };
+        }
+      } catch {
+        // Ignorar: el store `games` es opcional; appState sigue mandando.
+      }
 
       setData((prev) => {
         const currentHasData = prev.c.length > 0 || prev.v.length > 0 || prev.e.length > 0 || prev.p.length > 0 || prev.deleted.length > 0;
-        const hydratedHasData = hydrated.c.length > 0 || hydrated.v.length > 0 || hydrated.e.length > 0 || hydrated.p.length > 0 || hydrated.deleted.length > 0;
+        if (!hasData(dataSource)) return prev;
+        if (currentHasData && dataSource.updatedAt <= (prev.updatedAt || 0)) return prev;
 
-        if (!hydratedHasData) return prev;
-        if (currentHasData && hydrated.updatedAt <= (prev.updatedAt || 0)) return prev;
-
-        return normalizeData(hydrated);
+        return normalizeData(dataSource);
       });
 
       setMeta((prev) => {
@@ -137,6 +156,21 @@ export function useGameListViewModel() {
           lastRemoteUpdatedAt: hydrated.lastRemoteUpdatedAt,
         };
       });
+
+      // Auto-upgrade del estado local: si venía en forma vieja (campos legacy o sin `schemaVersion`),
+      // reescribir UNA vez en formato nuevo. Conserva `updatedAt` y NO marca dirty: el disco queda en
+      // formato nuevo sin forzar un push al gist (el gist tiene su propio upgrade al sincronizar).
+      if (wasLegacy && hasData(dataSource)) {
+        const upgraded = normalizeData(dataSource);
+        const keepUpdatedAt = dataSource.updatedAt || hydrated.updatedAt;
+        saveLocalState({
+          ...upgraded,
+          updatedAt: keepUpdatedAt,
+          etag: hydrated.etag,
+          lastRemoteUpdatedAt: hydrated.lastRemoteUpdatedAt,
+        });
+        void mirrorTabDataToGames(upgraded, keepUpdatedAt).catch(() => {});
+      }
     };
 
     void hydrateFromFallback();
@@ -146,8 +180,11 @@ export function useGameListViewModel() {
     };
   }, []);
 
-  const persist = useCallback(
-    (nextData: TabData, nextMeta = meta) => {
+  // C1: persistencia base. `markDirtyState` distingue una EDICIÓN del usuario (debe marcar dirty → empuja al gist)
+  // de una persistencia derivada del CICLO DE SYNC (aplicar merge/resultado remoto → NO debe marcar dirty, o cada
+  // sync dejaría el estado sucio y dispararía una escritura espuria en el siguiente 304).
+  const persistInternal = useCallback(
+    (nextData: TabData, nextMeta = meta, markDirtyState = true) => {
       const normalized = normalizeData(nextData);
       const updatedAt = Date.now();
       const payload = {
@@ -160,10 +197,27 @@ export function useGameListViewModel() {
       setData(normalized);
       setMeta((prev) => ({ ...prev, updatedAt }));
       saveLocalState(payload);
-      markDirty();
-      transitionTo('dirty');
+      // Espejo al store `games`/`deleted` + timestamp (dual-write). Best-effort: appState sigue siendo
+      // el backup, así que un fallo aquí no afecta al guardado ni al modo offline.
+      void mirrorTabDataToGames(normalized, updatedAt).catch(() => {});
+      if (markDirtyState) {
+        markDirty();
+        transitionTo('dirty');
+      }
     },
     [meta],
+  );
+
+  // Edición de usuario → marca dirty.
+  const persist = useCallback(
+    (nextData: TabData, nextMeta = meta) => persistInternal(nextData, nextMeta, true),
+    [meta, persistInternal],
+  );
+
+  // Persistencia desde el ciclo de sync (merge/resultado remoto) → NO marca dirty.
+  const persistFromSync = useCallback(
+    (nextData: TabData, nextMeta = meta) => persistInternal(nextData, nextMeta, false),
+    [meta, persistInternal],
   );
 
   const tabCounts = useMemo(
@@ -570,6 +624,7 @@ export function useGameListViewModel() {
     renameTagAcrossGames,
     notify,
     persist,
+    persistFromSync,
     tabActions,
   };
 }
