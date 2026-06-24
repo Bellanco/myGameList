@@ -63,8 +63,9 @@ export function SocialProfileDetailScreen({
       platforms: Array.isArray(game.platforms) ? game.platforms : [],
       genres: Array.isArray(game.genres) ? game.genres : [],
       steamDeck: Boolean(game.steamDeck),
-      review: String(game.review || ''),
-      score: Number(game.score || 0),
+      // Canal público index-only: para perfiles de otros solo hay snippet/rating; para datos propios, review/score completos.
+      review: String(game.review || game.snippet || ''),
+      score: Number(game.score || game.rating || 0),
       strengths: Array.isArray(game.strengths) ? game.strengths : [],
       weaknesses: Array.isArray(game.weaknesses) ? game.weaknesses : [],
       reasons: Array.isArray(game.reasons) ? game.reasons : [],

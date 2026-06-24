@@ -57,6 +57,9 @@ jobs:
       - name: Run validation (ESLint + html-validate)
         run: npm run validate
 
+      - name: Privacy audit (no private data in public channels)
+        run: npm run audit:privacy
+
       - name: Security audit
         run: npm audit --audit-level=moderate
         continue-on-error: true

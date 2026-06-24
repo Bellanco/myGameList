@@ -1,38 +1,29 @@
 # Prompt 15 — CI pipeline & workspace config
 
-## Prerequisites
-Prompts 01–14 complete.
+> Adaptado al stack real (Vitest 4 · jsdom · Cloudflare Pages para la app · Firebase solo para reglas). Diseño destino conservado.
+>
+> **Punto de partida real:** **ya existe** `.github/workflows/ci.yml` (build → `tsc --noEmit` → tests → coverage → `validate` → `npm audit`).
+> El typecheck real es `npx tsc --noEmit` (**no** hay alias `typecheck`). La app se despliega en **Cloudflare Pages** (`wrangler.toml`),
+> no en Firebase Hosting. Scripts reales: `dev build preview validate lint test test:all test:watch test:coverage`.
+> Este paso **extiende** ci.yml y **añade** los scripts nuevos que crean los pasos previos.
 
-## Task
-Create the GitHub Actions CI pipeline, VS Code workspace config,
-and all project config files needed to run the full suite.
+## Prerequisites
+Prompts 01–14 completos.
 
 ## Output files
-- `.github/workflows/ci.yml`
-- `.github/workflows/deploy-rules.yml`
-- `.vscode/settings.json`
-- `.vscode/extensions.json`
-- `vitest.config.ts`
-- `firebase.json`
+- `.github/workflows/ci.yml`           — **ya existe**: añadir jobs `audit` y `rules-test`
+- `.github/workflows/deploy-rules.yml`  — nuevo (solo reglas de Firestore)
+- `vitest.config.ts`                    — **ya existe**: ajustar coverage a rutas reales
+- `firebase.json` + `firestore.indexes.json` — nuevos (raíz)
+- `.vscode/settings.json` + `.vscode/extensions.json`
 - `.env.example`
-- `package.json` (scripts section only — merge with existing)
+- `package.json` (solo la sección scripts — fusionar con la existente)
 
 ---
 
-## `.github/workflows/ci.yml`
-
-Runs on every push and pull request to `main` and `develop`.
-
+## `ci.yml` — añadir a lo existente (no reescribir lo que funciona)
+Conservar los pasos actuales (`build`, `tsc --noEmit`, `test`, `test:coverage`, `validate`, `npm audit`) y añadir:
 ```yaml
-name: CI
-
-on:
-  push:
-    branches: [main, develop]
-  pull_request:
-    branches: [main, develop]
-
-jobs:
   audit:
     name: Privacy audit
     runs-on: ubuntu-latest
@@ -41,284 +32,84 @@ jobs:
       - uses: actions/setup-node@v4
         with: { node-version: 20, cache: npm }
       - run: npm ci
-      - name: Run privacy audit
-        run: npm run audit:privacy
-        # Exits 1 on any Category A violation
-
-  lint:
-    name: Lint & typecheck
-    runs-on: ubuntu-latest
-    needs: audit
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with: { node-version: 20, cache: npm }
-      - run: npm ci
-      - run: npm run lint
-      - run: npm run typecheck
-
-  test:
-    name: Unit tests
-    runs-on: ubuntu-latest
-    needs: lint
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with: { node-version: 20, cache: npm }
-      - run: npm ci
-      - name: Run tests with coverage
-        run: npm run test:coverage
-      - name: Upload coverage
-        uses: codecov/codecov-action@v4
-        with: { files: ./coverage/lcov.info }
+      - run: npm run audit:privacy        # exit 1 en cualquier violación Categoría A
 
   rules-test:
     name: Firestore rules tests
     runs-on: ubuntu-latest
-    needs: lint
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with: { node-version: 20, cache: npm }
       - run: npm ci
-      - name: Install Firebase CLI
-        run: npm install -g firebase-tools
-      - name: Run rules tests against emulator
-        run: firebase emulators:exec --only firestore "npm run test:rules"
-        env:
-          FIREBASE_TOKEN: ${{ secrets.FIREBASE_CI_TOKEN }}
-
-  build:
-    name: Build
-    runs-on: ubuntu-latest
-    needs: [test, rules-test]
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with: { node-version: 20, cache: npm }
-      - run: npm ci
-      - run: npm run build
-      - name: Check bundle size
-        run: npm run size-check
+      - run: npm install -g firebase-tools
+      - run: firebase emulators:exec --only firestore "npm run test:rules"
 ```
+> El job `build`/lint/test existente debe depender de `audit` (`needs: audit`). El despliegue de la **app** sigue en Cloudflare Pages (no tocar).
 
----
-
-## `.github/workflows/deploy-rules.yml`
-
-Manual trigger + auto on merge to `main`.
-
+## `deploy-rules.yml` (nuevo — solo reglas)
 ```yaml
 name: Deploy Firestore Rules
-
 on:
   workflow_dispatch:
-  push:
-    branches: [main]
-    paths:
-      - 'firestore.rules'
-
+  push: { branches: [master], paths: ['firestore.rules'] }   # rama por defecto real: master
 jobs:
   deploy:
-    name: Deploy rules
     runs-on: ubuntu-latest
     environment: production
     steps:
       - uses: actions/checkout@v4
-      - name: Install Firebase CLI
-        run: npm install -g firebase-tools
-      - name: Run rules tests (must pass before deploy)
-        run: firebase emulators:exec --only firestore "npm run test:rules"
-        env:
-          FIREBASE_TOKEN: ${{ secrets.FIREBASE_CI_TOKEN }}
-      - name: Deploy to Firebase
-        run: firebase deploy --only firestore:rules
-        env:
-          FIREBASE_TOKEN: ${{ secrets.FIREBASE_CI_TOKEN }}
+      - run: npm install -g firebase-tools
+      - run: firebase emulators:exec --only firestore "npm run test:rules"   # deben pasar antes
+        env: { FIREBASE_TOKEN: ${{ secrets.FIREBASE_CI_TOKEN }} }
+      - run: firebase deploy --only firestore:rules
+        env: { FIREBASE_TOKEN: ${{ secrets.FIREBASE_CI_TOKEN }} }
 ```
 
----
-
-## `vitest.config.ts`
-
+## `vitest.config.ts` (ajustar coverage a rutas reales)
 ```ts
-import { defineConfig } from 'vitest/config';
-import react from '@vitejs/plugin-react';
-import { resolve } from 'path';
-
-export default defineConfig({
-  plugins: [react()],
-  test: {
-    environment: 'happy-dom',
-    globals: true,
-    setupFiles: ['src/__tests__/setup.ts'],
-    coverage: {
-      provider: 'v8',
-      reporter: ['text', 'lcov', 'html'],
-      include: [
-        'src/models/**',
-        'src/gist/**',
-        'src/firebase/**',
-        'src/migration/**',
-        'src/sync/**',
-        'src/db/**',
-      ],
-      thresholds: {
-        lines:     80,
-        functions: 80,
-        branches:  75,
-        statements:80,
-      },
-    },
-  },
-  resolve: {
-    alias: { '@': resolve(__dirname, 'src') },
-  },
-});
+coverage: {
+  provider: 'v8',
+  reporter: ['text', 'lcov', 'html'],
+  include: ['src/model/**', 'src/model/repository/**', 'src/viewmodel/**'],
+  thresholds: { lines: 80, functions: 80, branches: 75, statements: 80 },
+},
+// environment: 'jsdom'  (el proyecto usa jsdom, no happy-dom)
 ```
+Si se necesita mock de IndexedDB en tests, `fake-indexeddb` es **dep nueva** → confirmar antes de instalar.
 
-Create `src/__tests__/setup.ts`:
-```ts
-import '@testing-library/jest-dom';
-import { vi } from 'vitest';
-
-// Mock IndexedDB for tests
-import 'fake-indexeddb/auto';
-
-// Suppress console.error in tests (still fails if assertions fail)
-vi.spyOn(console, 'error').mockImplementation(() => {});
-```
-
----
-
-## `firebase.json`
-
+## `firebase.json` + `firestore.indexes.json` (raíz)
 ```json
-{
-  "firestore": {
-    "rules": "firestore.rules",
-    "indexes": "firestore.indexes.json"
-  },
-  "emulators": {
-    "firestore": { "port": 8080 },
-    "ui": { "enabled": true, "port": 4000 }
-  }
-}
+{ "firestore": { "rules": "firestore.rules", "indexes": "firestore.indexes.json" },
+  "emulators": { "firestore": { "port": 8080 }, "ui": { "enabled": true, "port": 4000 } } }
 ```
+Índices del feed: `(status, expiresAt, createdAt desc)` y `(profileId, status, createdAt desc)`.
 
-Create `firestore.indexes.json`:
-```json
-{
-  "indexes": [
-    {
-      "collectionGroup": "feed",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "status",    "order": "ASCENDING" },
-        { "fieldPath": "expiresAt", "order": "ASCENDING" },
-        { "fieldPath": "createdAt", "order": "DESCENDING" }
-      ]
-    },
-    {
-      "collectionGroup": "feed",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "profileId", "order": "ASCENDING" },
-        { "fieldPath": "status",    "order": "ASCENDING" },
-        { "fieldPath": "createdAt", "order": "DESCENDING" }
-      ]
-    }
-  ],
-  "fieldOverrides": []
-}
-```
-
----
+## `.vscode/extensions.json` (sin Tailwind)
+Recomendar: `GitHub.copilot`, `GitHub.copilot-chat`, `dbaeumer.vscode-eslint`, `vitest.explorer`, `usernamehw.errorlens`.
+**Quitar** `bradlc.vscode-tailwindcss` (no se usa Tailwind). Prettier solo si el proyecto lo adopta (hoy el formato lo lleva ESLint).
 
 ## `.vscode/settings.json`
+Mantener `editor.codeActionsOnSave.source.fixAll.eslint`, `typescript.tsdk`, asociaciones `*.prompt.md`/`*.agent.md` → markdown,
+`search.exclude` de `node_modules`/`dist`/`audit-report.json`, y el enlace a `.github/copilot-instructions.md`.
 
+## `package.json` — scripts a añadir (fusionar, no borrar los reales)
 ```json
 {
-  "editor.formatOnSave": true,
-  "editor.defaultFormatter": "esbenp.prettier-vscode",
-  "editor.codeActionsOnSave": {
-    "source.fixAll.eslint": "explicit"
-  },
-  "typescript.tsdk": "node_modules/typescript/lib",
-  "typescript.enablePromptUseWorkspaceTsdk": true,
-
-  "github.copilot.chat.codeGeneration.instructions": [
-    { "file": ".github/copilot-instructions.md" }
-  ],
-
-  "github.copilot.chat.agent.thinkingTool": true,
-
-  "files.associations": {
-    "*.prompt.md": "markdown",
-    "*.agent.md":  "markdown"
-  },
-
-  "search.exclude": {
-    "**/node_modules": true,
-    "**/dist":         true,
-    "audit-report.json": true
-  },
-
-  "[typescript]":  { "editor.defaultFormatter": "esbenp.prettier-vscode" },
-  "[typescriptreact]": { "editor.defaultFormatter": "esbenp.prettier-vscode" }
+  "typecheck":     "tsc --noEmit",
+  "test:rules":    "vitest run tests/unit/firestore.rules.test.ts",
+  "audit:privacy": "node scripts/audit-privacy.js",
+  "migrate:dry":   "VITE_MIGRATION_DRY_RUN=true vitest run tests/integration/migration.dry.test.ts",
+  "emulators":     "firebase emulators:start --only firestore"
 }
 ```
-
----
-
-## `.vscode/extensions.json`
-
-```json
-{
-  "recommendations": [
-    "GitHub.copilot",
-    "GitHub.copilot-chat",
-    "esbenp.prettier-vscode",
-    "dbaeumer.vscode-eslint",
-    "bradlc.vscode-tailwindcss",
-    "vitest.explorer",
-    "ms-vscode.vscode-typescript-next",
-    "formulahendry.auto-rename-tag",
-    "usernamehw.errorlens"
-  ]
-}
-```
-
----
-
-## `package.json` — scripts to add/replace
-
-```json
-{
-  "scripts": {
-    "dev":            "vite",
-    "build":          "tsc -b && vite build",
-    "typecheck":      "tsc --noEmit",
-    "lint":           "eslint src --ext .ts,.tsx --max-warnings 0",
-    "lint:fix":       "eslint src --ext .ts,.tsx --fix",
-    "test":           "vitest run",
-    "test:watch":     "vitest",
-    "test:coverage":  "vitest run --coverage",
-    "test:rules":     "vitest run src/__tests__/firestore.rules.test.ts",
-    "audit:privacy":  "tsx scripts/audit-privacy.ts",
-    "migrate:dry":    "VITE_MIGRATION_DRY_RUN=true tsx src/migration/runMigration.ts",
-    "size-check":     "npx bundlesize",
-    "emulators":      "firebase emulators:start --only firestore"
-  }
-}
-```
-
----
+> `audit:privacy` usa **node** (estilo `scripts/ci-validate.js`), no `tsx` (evita dep nueva). `migrate:dry` se valida vía un test
+> de integración en modo dry-run (sin runner nuevo). Conservar todos los scripts existentes (`dev build preview validate lint test …`).
+> No añadir `size-check`/`bundlesize` salvo que el usuario lo pida (dep nueva).
 
 ## `.env.example`
-
 ```
-# Firebase — public config (safe to commit)
+# Firebase — config pública (segura de commitear)
 VITE_FIREBASE_API_KEY=
 VITE_FIREBASE_AUTH_DOMAIN=
 VITE_FIREBASE_PROJECT_ID=
@@ -326,26 +117,18 @@ VITE_FIREBASE_STORAGE_BUCKET=
 VITE_FIREBASE_MESSAGING_SENDER_ID=
 VITE_FIREBASE_APP_ID=
 
-# Feature flags
+# Flags
 VITE_MIGRATION_DRY_RUN=false
 VITE_USE_EMULATOR=false
 
-# GitHub OAuth (Firebase provider — only client ID is public)
-VITE_GITHUB_CLIENT_ID=
-
-# Never put these in .env — they live in IndexedDB only:
-# GITHUB_TOKEN, GIST_ID, FIREBASE_UID
+# NUNCA aquí (viven solo en IndexedDB): GITHUB_TOKEN (PAT), GIST_ID, FIREBASE_UID
 ```
-
-Add a comment at the top:
-```
-# Copy to .env.local and fill in values.
-# NEVER commit .env.local or any file containing real credentials.
-# GitHub token and Gist IDs belong in IndexedDB, not here.
-```
+> No hay `VITE_GITHUB_CLIENT_ID`: GitHub no es proveedor de Firebase Auth (se usa un PAT introducido por el usuario).
+> Cabecera: "Copia a `.env.local` y rellena. NUNCA commitees `.env.local`. El token de GitHub y los Gist IDs van en IndexedDB, no aquí."
 
 ## Constraints
-- `.env.local` and `audit-report.json` must be in `.gitignore`.
-- The `audit` job in CI must run before `lint` and `test`.
-- `test:rules` must use the Firebase emulator, not production.
-- Bundle size limit: 500 KB gzipped for the main chunk.
+- `.env.local` y `audit-report.json` en `.gitignore`.
+- El job `audit` corre antes que `lint`/`test`.
+- `test:rules` usa el emulador de Firebase, nunca producción.
+- Despliegue de la app: Cloudflare Pages (existente); Firebase solo para reglas.
+- Confirmar antes de instalar deps nuevas (`firebase-tools`, `@firebase/rules-unit-testing`, `fake-indexeddb`).

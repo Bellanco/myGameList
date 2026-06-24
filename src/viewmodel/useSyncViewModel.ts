@@ -1,12 +1,14 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { SYNC_MESSAGES } from '../core/constants/labels';
-import { findSocialProfileByEmail, getCurrentSocialAuthUser, signInWithGoogle } from '../model/repository/firebaseRepository';
+import { findSocialProfileByEmail, getCurrentSocialAuthUser, recoverGithubToken, resolveStableProfileId, signInWithGoogle } from '../model/repository/firebaseRepository';
 import { mergeCrdt } from '../model/repository/syncRepository';
-import { clearSyncConfig, createGist, getSyncConfig, readGist, saveSyncConfig, whoAmI, writeGist } from '../model/repository/gistRepository';
+import { clearSyncConfig, createGist, ensureSyncConfigLoaded, getRetryAfterMs, getSyncConfig, isDeferredNetworkError, readGist, saveSyncConfig, whoAmI, writeGist } from '../model/repository/gistRepository';
 import { normalizeData } from '../model/repository/localRepository';
 import { clearDirty, loadSyncDirtyState } from '../model/repository/syncStateRepository';
-import { canRead, canWrite, getBackoffMs, getNextReadDelayMs, getSyncState, subscribeSyncState, transitionTo, canReadNow } from '../model/repository/syncMachineRepository';
-import { TAB_IDS, type GameItem, type TabData, type TabId } from '../model/types/game';
+import { acquireSyncLock, canRead, getBackoffMs, getNextReadDelayMs, getSyncState, subscribeSyncState, transitionTo, canReadNow } from '../model/repository/syncMachineRepository';
+import { countRemoteChangesApplied, isWriteConflict, logSyncError } from '../model/repository/syncLogicRepository';
+import { readLegacyPlaintextToken } from '../model/migration/legacyTokenRecovery';
+import type { TabData } from '../model/types/game';
 
 export type SyncStatus = 'idle' | 'syncing' | 'ok' | 'error';
 
@@ -23,124 +25,6 @@ interface WriteOutcome {
   data: TabData;
   etag: string | null;
   remoteUpdatedAt: number;
-}
-
-type SyncOperation = 'initializeSync' | 'connectSync' | 'syncNow' | 'writeWithConflictRecovery';
-
-interface SyncErrorLogEntry {
-  timestamp: number;
-  operation: SyncOperation;
-  message: string;
-}
-
-const SYNC_ERROR_LOG_KEY = 'myGameList.syncErrorLog';
-const SYNC_ERROR_LOG_LIMIT = 30;
-
-function isWriteConflict(error: unknown): boolean {
-  return error instanceof Error && /Write failed:\s*409\b/.test(error.message);
-}
-
-function getLatestItems(data: TabData): Map<number, { item: GameItem; tab: TabId; ts: number }> {
-  const map = new Map<number, { item: GameItem; tab: TabId; ts: number }>();
-
-  for (const tab of TAB_IDS) {
-    for (const game of data[tab]) {
-      const ts = game._ts || data.updatedAt;
-      const current = map.get(game.id);
-      if (!current || ts >= current.ts) {
-        map.set(game.id, { item: game, tab, ts });
-      }
-    }
-  }
-
-  return map;
-}
-
-function getLatestDeleted(data: TabData): Map<number, number> {
-  return new Map((data.deleted || []).map((entry) => [entry.id, entry._ts || data.updatedAt]));
-}
-
-function getEntitySnapshot(
-  items: Map<number, { item: GameItem; tab: TabId; ts: number }>,
-  deleted: Map<number, number>,
-  id: number,
-): { kind: 'missing' | 'alive' | 'deleted'; tab?: TabId; ts: number } {
-  const item = items.get(id);
-  const deletedTs = deleted.get(id) || 0;
-
-  if (!item && !deletedTs) {
-    return { kind: 'missing', ts: 0 };
-  }
-
-  if (deletedTs > (item?.ts || 0)) {
-    return { kind: 'deleted', ts: deletedTs };
-  }
-
-  if (item) {
-    return { kind: 'alive', tab: item.tab, ts: item.ts };
-  }
-
-  return { kind: 'missing', ts: 0 };
-}
-
-function isSameSnapshot(
-  a: { kind: 'missing' | 'alive' | 'deleted'; tab?: TabId; ts: number },
-  b: { kind: 'missing' | 'alive' | 'deleted'; tab?: TabId; ts: number },
-): boolean {
-  return a.kind === b.kind && a.tab === b.tab && a.ts === b.ts;
-}
-
-function countRemoteChangesApplied(localData: TabData, remoteData: TabData, mergedData: TabData): number {
-  const localItems = getLatestItems(localData);
-  const localDeleted = getLatestDeleted(localData);
-  const remoteItems = getLatestItems(remoteData);
-  const remoteDeleted = getLatestDeleted(remoteData);
-  const mergedItems = getLatestItems(mergedData);
-  const mergedDeleted = getLatestDeleted(mergedData);
-
-  const remoteIds = new Set<number>();
-
-  for (const tab of TAB_IDS) {
-    for (const game of remoteData[tab]) {
-      remoteIds.add(game.id);
-    }
-  }
-
-  for (const entry of remoteData.deleted || []) {
-    remoteIds.add(entry.id);
-  }
-
-  let count = 0;
-
-  for (const id of remoteIds) {
-    const localSnapshot = getEntitySnapshot(localItems, localDeleted, id);
-    const remoteSnapshot = getEntitySnapshot(remoteItems, remoteDeleted, id);
-    const mergedSnapshot = getEntitySnapshot(mergedItems, mergedDeleted, id);
-
-    if (!isSameSnapshot(mergedSnapshot, localSnapshot) && isSameSnapshot(mergedSnapshot, remoteSnapshot)) {
-      count += 1;
-    }
-  }
-
-  return count;
-}
-
-function logSyncError(operation: SyncOperation, error: unknown): void {
-  const message = error instanceof Error ? error.message : String(error);
-  const entry: SyncErrorLogEntry = {
-    timestamp: Date.now(),
-    operation,
-    message,
-  };
-
-  try {
-    const raw = localStorage.getItem(SYNC_ERROR_LOG_KEY);
-    const parsed = raw ? (JSON.parse(raw) as SyncErrorLogEntry[]) : [];
-    const next = [...parsed, entry].slice(-SYNC_ERROR_LOG_LIMIT);
-    localStorage.setItem(SYNC_ERROR_LOG_KEY, JSON.stringify(next));
-  } catch {
-    // Silent fallback: app flow should not break if logging fails.
-  }
 }
 
 export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice, persist }: SyncDeps) {
@@ -176,7 +60,7 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
           remoteUpdatedAt: writeResult.updatedAt,
         };
       } catch (error) {
-        transitionTo('error_backoff', { lastErrorAt: Date.now(), errorCount: (getSyncState().errorCount || 0) + 1, pendingAction: 'write' });
+        transitionTo('error_backoff', { lastErrorAt: Date.now(), errorCount: (getSyncState().errorCount || 0) + 1, pendingAction: 'write', retryAfterMs: getRetryAfterMs(error) || null }); // S3: respeta rate-limit
         if (!isWriteConflict(error)) {
           logSyncError('writeWithConflictRecovery', error);
           throw error;
@@ -210,16 +94,52 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
   );
 
     /**
+     * C2 — Empuja cambios locales pendientes (dirty) re-mergeando SIEMPRE contra el remoto fresco antes de escribir.
+     * Un 304 solo garantiza que NUESTRO etag no cambió, pero el etag guardado puede estar desactualizado respecto al
+     * remoto real (escritura concurrente desde otro dispositivo). Como el PATCH de gists de GitHub no honra `If-Match`
+     * de forma fiable, la red de seguridad es esta re-lectura sin etag + merge CRDT, no la cabecera. Tras escribir,
+     * actualiza etag/meta/config para que el siguiente sondeo reciba 304 y no re-mergee de balde.
+     */
+    const pushDirtyWithMerge = useCallback(async (syncToken: string, syncGistId: string): Promise<WriteOutcome> => {
+      const latest = await readGist(syncToken, syncGistId, null);
+      const localData = getData();
+      const localMeta = getMeta();
+      let toWrite = localData;
+      let baseRemoteUpdatedAt = 0;
+      if (latest.data) {
+        const remoteData = latest.data as TabData;
+        baseRemoteUpdatedAt = remoteData.updatedAt;
+        const merged = mergeCrdt(localData, localMeta.updatedAt, remoteData, remoteData.updatedAt);
+        toWrite = merged.merged;
+      }
+      const outcome = await writeWithConflictRecovery(syncToken, syncGistId, toWrite, Date.now());
+      const nextMeta = {
+        updatedAt: Date.now(),
+        etag: outcome.etag,
+        lastRemoteUpdatedAt: Math.max(baseRemoteUpdatedAt, outcome.remoteUpdatedAt),
+      };
+      setMeta(nextMeta);
+      const config = getSyncConfig();
+      if (config) saveSyncConfig({ ...config, etag: nextMeta.etag, lastRemoteUpdatedAt: nextMeta.lastRemoteUpdatedAt });
+      persist(outcome.data, nextMeta);
+      return outcome;
+    }, [getData, getMeta, persist, setMeta, writeWithConflictRecovery]);
+
+    /**
      * Lightweight refresh that checks remote with ETag and merges only when needed.
      * If `force` is true it bypasses the MIN_READ_INTERVAL_MS throttle but still
      * avoids reads when the sync state is busy/error.
      */
     const refreshRemote = useCallback(async (force = false) => {
+      await ensureSyncConfigLoaded(); // C4: garantiza el token descifrado en caché antes de leer el gist
       const config = getSyncConfig();
       if (!config) return;
 
       if (!canReadNow(force)) return;
 
+      // S2: coalesce ciclos solapados (poll/focus/online/backoff). Si ya hay uno en vuelo, saltar (dirty persiste).
+      const lock = acquireSyncLock();
+      if (!lock) return;
       try {
         transitionTo('checking');
         setStatus('syncing');
@@ -227,6 +147,12 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
 
         const remote = await readGist(config.token, config.gistId, config.etag);
         if (remote.notModified) {
+          // Aunque el remoto no haya cambiado (304), si hay cambios locales pendientes hay que
+          // empujarlos (C2): re-mergeando contra el remoto fresco para no pisar escrituras concurrentes.
+          const dirtyState = loadSyncDirtyState();
+          if (dirtyState.isDirty) {
+            await pushDirtyWithMerge(config.token, config.gistId);
+          }
           transitionTo('idle', { lastReadAt: Date.now(), errorCount: 0, pendingAction: null });
           setStatus('ok');
           return;
@@ -242,8 +168,10 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
 
         if (merged.localNeedsUpdate) setData(merged.merged);
 
+        // Upgrade proactivo: si el remoto estaba en formato viejo, reescribirlo en el actual aunque el merge
+        // no requiera cambios (así el gist queda migrado al primer sync, sin esperar a una edición).
         let writeOutcome: WriteOutcome = { data: merged.merged, etag: remote.etag || null, remoteUpdatedAt: remoteData.updatedAt };
-        if (merged.remoteNeedsUpdate && canWrite()) {
+        if (merged.remoteNeedsUpdate || remote.wasLegacy) {
           writeOutcome = await writeWithConflictRecovery(config.token, config.gistId, merged.merged, Date.now());
         }
 
@@ -262,14 +190,23 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
           onNotice('ok', `Fusión sincronizada correctamente: ${remoteChanges} cambios remotos aplicados`);
         }
       } catch (error) {
-        transitionTo('error_backoff', { lastErrorAt: Date.now(), errorCount: getSyncState().errorCount + 1, pendingAction: 'read' });
+        // S3: offline/red diferible → backoff + reintento al volver la conexión, sin toast de error duro.
+        const deferred = isDeferredNetworkError(error);
+        transitionTo('error_backoff', {
+          lastErrorAt: Date.now(),
+          errorCount: getSyncState().errorCount + 1,
+          pendingAction: 'read',
+          retryAfterMs: getRetryAfterMs(error) || null,
+        });
         setStatus('error');
-        const message = error instanceof Error ? error.message : SYNC_MESSAGES.syncError;
+        const message = deferred ? SYNC_MESSAGES.offline : error instanceof Error ? error.message : SYNC_MESSAGES.syncError;
         setStatusMessage(message);
-        onNotice('err', message);
+        if (!deferred) onNotice('err', message);
         logSyncError('syncNow', error);
+      } finally {
+        lock.release();
       }
-    }, [getData, getMeta, onNotice, persist, setData, setMeta, writeWithConflictRecovery]);
+    }, [getData, getMeta, onNotice, persist, setData, setMeta, writeWithConflictRecovery, pushDirtyWithMerge]);
 
     const startPolling = useCallback(() => {
       if (pollTimerRef.current !== null) return;
@@ -328,7 +265,7 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
       }
 
       let writeOutcome: WriteOutcome = { data: merged.merged, etag: remote.etag || null, remoteUpdatedAt: remoteData.updatedAt };
-      if (merged.remoteNeedsUpdate) {
+      if (merged.remoteNeedsUpdate || remote.wasLegacy) {
         writeOutcome = await writeWithConflictRecovery(cleanToken, cleanGistId, merged.merged, Date.now());
       }
 
@@ -347,6 +284,7 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
   );
 
   const initializeSync = useCallback(async () => {
+    await ensureSyncConfigLoaded(); // C4: hidrata el token cifrado antes del primer uso
     const config = getSyncConfig();
     if (!config) {
       setStatus('idle');
@@ -357,6 +295,8 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
 
     setConnectedGistId(config.gistId);
 
+    const lock = acquireSyncLock(); // S2: no solapar con otro ciclo en vuelo
+    if (!lock) return;
     transitionTo('checking');
     setStatus('syncing');
 
@@ -364,6 +304,11 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
       const remote = await readGist(config.token, config.gistId, config.etag);
       if (remote.notModified) {
         setLastRemoteChangesApplied(0);
+        // Empujar cambios locales pendientes aunque el remoto no haya cambiado (propagación cross-device, C2).
+        const dirtyState = loadSyncDirtyState();
+        if (dirtyState.isDirty) {
+          await pushDirtyWithMerge(config.token, config.gistId);
+        }
         transitionTo('idle', { lastReadAt: Date.now(), errorCount: 0, pendingAction: null });
         setStatus('ok');
         return;
@@ -388,9 +333,9 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
         lastRemoteUpdatedAt: remoteData.updatedAt,
       };
 
-      // Write remote only when needed
+      // Write remote only when needed (o si el remoto estaba en formato viejo → upgrade proactivo)
       let writeOutcome: WriteOutcome = { data: merged.merged, etag: nextMeta.etag, remoteUpdatedAt: nextMeta.lastRemoteUpdatedAt };
-      if (merged.remoteNeedsUpdate) {
+      if (merged.remoteNeedsUpdate || remote.wasLegacy) {
         writeOutcome = await writeWithConflictRecovery(config.token, config.gistId, merged.merged, nextMeta.updatedAt);
       }
 
@@ -409,12 +354,20 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
         onNotice('ok', `Sincronización inicial completada: ${remoteChanges} cambios remotos aplicados`);
       }
     } catch (error) {
-      transitionTo('error_backoff', { lastErrorAt: Date.now(), errorCount: getSyncState().errorCount + 1, pendingAction: 'read' });
+      const deferred = isDeferredNetworkError(error); // S3
+      transitionTo('error_backoff', {
+        lastErrorAt: Date.now(),
+        errorCount: getSyncState().errorCount + 1,
+        pendingAction: 'read',
+        retryAfterMs: getRetryAfterMs(error) || null,
+      });
       setStatus('error');
-      setStatusMessage(error instanceof Error ? error.message : SYNC_MESSAGES.initError);
+      setStatusMessage(deferred ? SYNC_MESSAGES.offline : error instanceof Error ? error.message : SYNC_MESSAGES.initError);
       logSyncError('initializeSync', error);
+    } finally {
+      lock.release();
     }
-  }, [getData, getMeta, onNotice, persist, setData, setMeta, writeWithConflictRecovery]);
+  }, [getData, getMeta, onNotice, persist, setData, setMeta, writeWithConflictRecovery, pushDirtyWithMerge]);
 
   const schedulePendingRemoteSync = useCallback(() => {
     if (!pendingRemoteSyncRef.current) return;
@@ -438,24 +391,45 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
   }, [canRead, getNextReadDelayMs, initializeSync]);
 
   const connectSync = useCallback(async () => {
+    const lock = acquireSyncLock(); // S2: no conectar/sincronizar en paralelo con un ciclo en vuelo
+    if (!lock) {
+      onNotice('ok', SYNC_MESSAGES.syncInProgress);
+      return;
+    }
     try {
       await connectSyncWithCredentials(token, gistId);
     } catch (error) {
-      transitionTo('error_backoff', { lastErrorAt: Date.now(), errorCount: getSyncState().errorCount + 1, pendingAction: 'read' });
+      const deferred = isDeferredNetworkError(error); // S3
+      transitionTo('error_backoff', {
+        lastErrorAt: Date.now(),
+        errorCount: getSyncState().errorCount + 1,
+        pendingAction: 'read',
+        retryAfterMs: getRetryAfterMs(error) || null,
+      });
       setStatus('error');
-      setStatusMessage(error instanceof Error ? error.message : SYNC_MESSAGES.connectError);
-      onNotice('err', error instanceof Error ? error.message : SYNC_MESSAGES.connectError);
+      const message = deferred ? SYNC_MESSAGES.offline : error instanceof Error ? error.message : SYNC_MESSAGES.connectError;
+      setStatusMessage(message);
+      if (!deferred) onNotice('err', message);
       logSyncError('connectSync', error);
+    } finally {
+      lock.release();
     }
   }, [connectSyncWithCredentials, gistId, onNotice, token]);
 
   const syncNow = useCallback(async () => {
+    await ensureSyncConfigLoaded(); // C4
     const config = getSyncConfig();
     if (!config) {
       onNotice('warn', SYNC_MESSAGES.needsConfiguration);
       return;
     }
 
+    // S2: si ya hay un ciclo en vuelo (poll/focus/etc.), no arrancar otro manual en paralelo.
+    const lock = acquireSyncLock();
+    if (!lock) {
+      onNotice('ok', SYNC_MESSAGES.syncInProgress);
+      return;
+    }
     try {
       transitionTo('checking');
       setStatus('syncing');
@@ -465,8 +439,8 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
       if (remote.notModified) {
         setLastRemoteChangesApplied(0);
         const dirtyState = loadSyncDirtyState();
-        if (dirtyState.isDirty && canWrite()) {
-          await writeWithConflictRecovery(config.token, config.gistId, getData(), Date.now());
+        if (dirtyState.isDirty) {
+          await pushDirtyWithMerge(config.token, config.gistId);
         }
         transitionTo('idle', { lastReadAt: Date.now(), errorCount: 0, pendingAction: null });
         setStatus('ok');
@@ -485,7 +459,7 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
       if (merged.localNeedsUpdate) setData(merged.merged);
 
       let writeOutcome: WriteOutcome = { data: merged.merged, etag: remote.etag || null, remoteUpdatedAt: remoteData.updatedAt };
-      if (merged.remoteNeedsUpdate && canWrite()) {
+      if (merged.remoteNeedsUpdate || remote.wasLegacy) {
         writeOutcome = await writeWithConflictRecovery(config.token, config.gistId, merged.merged, Date.now());
       }
 
@@ -503,14 +477,22 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
       setStatus('ok');
       onNotice('ok', `Fusión sincronizada correctamente: ${remoteChanges} cambios remotos aplicados`);
     } catch (error) {
-      transitionTo('error_backoff', { lastErrorAt: Date.now(), errorCount: getSyncState().errorCount + 1, pendingAction: 'read' });
+      const deferred = isDeferredNetworkError(error); // S3
+      transitionTo('error_backoff', {
+        lastErrorAt: Date.now(),
+        errorCount: getSyncState().errorCount + 1,
+        pendingAction: 'read',
+        retryAfterMs: getRetryAfterMs(error) || null,
+      });
       setStatus('error');
-      const message = error instanceof Error ? error.message : SYNC_MESSAGES.syncError;
+      const message = deferred ? SYNC_MESSAGES.offline : error instanceof Error ? error.message : SYNC_MESSAGES.syncError;
       setStatusMessage(message);
-      onNotice('err', message);
+      if (!deferred) onNotice('err', message);
       logSyncError('syncNow', error);
+    } finally {
+      lock.release();
     }
-  }, [getData, getMeta, onNotice, persist, setData, setMeta, writeWithConflictRecovery]);
+  }, [getData, getMeta, onNotice, persist, setData, setMeta, writeWithConflictRecovery, pushDirtyWithMerge]);
 
   useEffect(() => {
     const dirtyState = loadSyncDirtyState();
@@ -554,13 +536,36 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
       // on focus, attempt an immediate refresh
       void refreshRemote(true);
     }
+
+    // S3: al recuperar la red tras un fallo diferible (offline), no esperes al backoff: sal de
+    // error_backoff y reintenta la acción pendiente de inmediato.
+    function handleOnline(): void {
+      const st = getSyncState();
+      if (st.status !== 'error_backoff' || !st.pendingAction) return;
+      const pending = st.pendingAction;
+      transitionTo('idle', { errorCount: 0, pendingAction: null });
+      if (pending === 'write') {
+        const config = getSyncConfig();
+        const lock = config ? acquireSyncLock() : null; // S2
+        if (config && lock) {
+          void writeWithConflictRecovery(config.token, config.gistId, getData(), Date.now())
+            .catch(() => {})
+            .finally(() => lock.release());
+        }
+        return;
+      }
+      void refreshRemote(true);
+    }
+
     document.addEventListener('visibilitychange', handleVisibilityChange);
     window.addEventListener('focus', handleWindowFocus);
+    window.addEventListener('online', handleOnline);
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       window.removeEventListener('focus', handleWindowFocus);
+      window.removeEventListener('online', handleOnline);
     };
-  }, [refreshRemote, startPolling, stopPolling]);
+  }, [refreshRemote, startPolling, stopPolling, writeWithConflictRecovery, getData]);
 
   // BroadcastChannel: listen for remote writes from other tabs
   useEffect(() => {
@@ -593,7 +598,8 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
         window.clearTimeout(timer);
         timer = null;
       }
-      const delay = getBackoffMs(state.errorCount);
+      // S3: respeta el rate-limit del servidor (Retry-After / X-RateLimit-Reset) si es mayor que el backoff exponencial.
+      const delay = Math.max(getBackoffMs(state.errorCount), state.retryAfterMs || 0);
       timer = window.setTimeout(() => {
         if (getSyncState().status !== 'error_backoff' || getSyncState().pendingAction !== state.pendingAction) return;
         if (state.pendingAction === 'read') {
@@ -602,8 +608,11 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
         }
         if (state.pendingAction === 'write') {
           const config = getSyncConfig();
-          if (config) {
-            void writeWithConflictRecovery(config.token, config.gistId, getData(), Date.now());
+          const lock = config ? acquireSyncLock() : null; // S2: no solapar el reintento de escritura
+          if (config && lock) {
+            void writeWithConflictRecovery(config.token, config.gistId, getData(), Date.now())
+              .catch(() => {})
+              .finally(() => lock.release());
           }
         }
       }, delay);
@@ -631,9 +640,14 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
     try {
       const user = (await getCurrentSocialAuthUser()) || (await signInWithGoogle());
 
+      // 6.2a: al iniciar sesión, recupera el profileId canónico de Firestore y siémbralo en `meta`
+      // (best-effort) para que este dispositivo NO genere un pseudónimo divergente en el primer guardado.
+      await resolveStableProfileId(user.uid).catch(() => {});
+
       const profile = await findSocialProfileByEmail(user.email);
       const recoveredGistId = String(profile?.gamesGistId || '').trim();
-      const recoveredToken = String(profile?.githubToken || '').trim();
+      // B1: preferir el token CIFRADO de privateConfig; fallback al campo legacy en claro (perfiles viejos).
+      const recoveredToken = (await recoverGithubToken(user.uid)) || readLegacyPlaintextToken(profile);
 
       if (!recoveredGistId) {
         setStatus('error');
@@ -654,7 +668,14 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
       setGistId(recoveredGistId);
       setStatusMessage('');
       onNotice('ok', SYNC_MESSAGES.recoverSuccess);
-      await connectSyncWithCredentials(recoveredToken, recoveredGistId);
+      const lock = acquireSyncLock(); // S2: no solapar el sync de conexión con otro ciclo en vuelo
+      if (lock) {
+        try {
+          await connectSyncWithCredentials(recoveredToken, recoveredGistId);
+        } finally {
+          lock.release();
+        }
+      }
     } catch (error) {
       const message = error instanceof Error ? error.message : SYNC_MESSAGES.recoverError;
       setStatus('error');
@@ -666,33 +687,41 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
   }, [connectSyncWithCredentials, onNotice]);
 
   const overwriteRemoteData = useCallback(async (data: TabData): Promise<boolean> => {
+    await ensureSyncConfigLoaded(); // C4
     const config = getSyncConfig();
     if (!config?.token || !config?.gistId) {
       return false;
     }
 
-    const normalizedData = normalizeData(data, { forceTimestamp: true });
-    normalizedData.updatedAt = Date.now();
-
-    const writeResult = await writeGist(config.token, config.gistId, normalizedData);
+    // S2: sobrescritura destructiva del remoto → no debe correr en paralelo con un ciclo de sync.
+    const lock = acquireSyncLock();
+    if (!lock) return false;
     try {
-      if (typeof BroadcastChannel !== 'undefined') {
-        const ch = new BroadcastChannel('mygamelist-sync');
-        ch.postMessage({ type: 'remote-write', updatedAt: Date.now(), etag: writeResult.etag || null });
-        ch.close();
-      }
-    } catch {}
+      const normalizedData = normalizeData(data, { forceTimestamp: true });
+      normalizedData.updatedAt = Date.now();
 
-    saveSyncConfig({
-      ...config,
-      etag: writeResult.etag,
-      lastRemoteUpdatedAt: writeResult.updatedAt,
-    });
+      const writeResult = await writeGist(config.token, config.gistId, normalizedData);
+      try {
+        if (typeof BroadcastChannel !== 'undefined') {
+          const ch = new BroadcastChannel('mygamelist-sync');
+          ch.postMessage({ type: 'remote-write', updatedAt: Date.now(), etag: writeResult.etag || null });
+          ch.close();
+        }
+      } catch {}
 
-    clearDirty();
-    transitionTo('idle');
+      saveSyncConfig({
+        ...config,
+        etag: writeResult.etag,
+        lastRemoteUpdatedAt: writeResult.updatedAt,
+      });
 
-    return true;
+      clearDirty();
+      transitionTo('idle');
+
+      return true;
+    } finally {
+      lock.release();
+    }
   }, []);
 
   const disconnectSync = useCallback(() => {

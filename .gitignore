@@ -1,5 +1,6 @@
 # Ignorar datos de usuario locales
 /data/myGames.json
+/myGames.json
 
 # Ignorar dependencias y artefactos de Node
 /node_modules
@@ -34,3 +35,9 @@ logs
 
 # Ignorar generados por GitHub Actions
 .github/workflows/*.retry
+
+# Privacy audit report (generated)
+audit-report.json
+
+# Claude Code: compartir settings.json, ignorar config local/personal
+.claude/settings.local.json

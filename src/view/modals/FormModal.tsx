@@ -6,6 +6,7 @@ import type { GameDraft } from '../../viewmodel/useGameListViewModel';
 import { Icon } from '../components/Icon';
 import { StarPicker } from '../components/StarPicker';
 import { TagInput } from '../components/TagInput';
+import { useNativeDialog } from './useNativeDialog';
 
 interface FormModalProps {
   open: boolean;
@@ -18,7 +19,6 @@ interface FormModalProps {
     weaknesses: string[];
   };
   onClose: () => void;
-  onDraftChange: (draft: GameDraft) => void;
   onSave: (draft: GameDraft) => void;
   onNotice: (kind: 'ok' | 'warn' | 'err', message: string) => void;
 }
@@ -80,34 +80,27 @@ function isValidYearValue(value: string): boolean {
   return year > 0 && year <= new Date().getFullYear();
 }
 
-export function FormModal({ open, draft, currentTab, lookups, onClose, onDraftChange, onSave, onNotice }: FormModalProps) {
+export function FormModal({ open, draft: initialDraft, currentTab, lookups, onClose, onSave, onNotice }: FormModalProps) {
   const boolField = getTabBoolField(currentTab);
+  // P3: el borrador vive LOCAL al modal y solo se emite en `onSave`. Antes cada pulsación llamaba a `onDraftChange`
+  // (estado del VM) → re-render de todo el árbol (App/GameTable). Ahora solo re-renderiza el propio modal.
+  const [draft, setLocalDraft] = useState<GameDraft>(initialDraft);
   const [pending, setPending] = useState<PendingTagFields>(EMPTY_PENDING);
   const [fieldErrors, setFieldErrors] = useState<FieldErrorMap>({});
   const [yearWarningShown, setYearWarningShown] = useState(false);
+  // A11y-1: `<dialog>` nativo en modo modal → focus trap, restauración de foco, `::backdrop` y Esc → onClose.
+  const dialogRef = useNativeDialog(open, onClose);
   const reviewCount = draft.review.length;
   const reviewProgress = Math.min(100, Math.round((reviewCount / REVIEW_MAX_LENGTH) * 100));
   const reviewProgressClass = reviewProgress >= 100 ? 'has-error' : reviewProgress >= 90 ? 'has-warning' : '';
 
   useEffect(() => {
+    // Re-seedea el borrador local desde la prop al abrir o cambiar de juego/pestaña (la prop solo cambia entonces).
+    setLocalDraft(initialDraft);
     setPending(EMPTY_PENDING);
     setFieldErrors({});
     setYearWarningShown(false);
-  }, [open, draft.id, currentTab]);
-
-  useEffect(() => {
-    if (!open) return;
-
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        event.preventDefault();
-        onClose();
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [open, onClose]);
+  }, [open, initialDraft, currentTab]);
 
   const tagKeys = useMemo(() => {
     const keys: Array<keyof PendingTagFields> = ['genres', 'platforms'];
@@ -132,7 +125,7 @@ export function FormModal({ open, draft, currentTab, lookups, onClose, onDraftCh
     if (!rawValue) return true;
     const finalValue = getCanonicalTag(lookup, rawValue);
     if (!hasTagValue(values, finalValue)) {
-      onDraftChange({ ...draft, [key]: [...values, finalValue] });
+      setLocalDraft({ ...draft, [key]: [...values, finalValue] });
     }
     setPending((prev) => ({ ...prev, [key]: '' }));
     setFieldErrors((prev) => ({ ...prev, [key]: false }));
@@ -163,7 +156,7 @@ export function FormModal({ open, draft, currentTab, lookups, onClose, onDraftCh
 
     const parsed = Number(rawValue);
     if (!draft.years.includes(parsed)) {
-      onDraftChange({ ...draft, years: [...draft.years, parsed].sort((a, b) => a - b) });
+      setLocalDraft({ ...draft, years: [...draft.years, parsed].sort((a, b) => a - b) });
     }
     setPending((prev) => ({ ...prev, years: '' }));
     setYearWarningShown(false);
@@ -176,7 +169,7 @@ export function FormModal({ open, draft, currentTab, lookups, onClose, onDraftCh
     value: string | number,
   ) => {
     const asString = String(value);
-    onDraftChange({
+    setLocalDraft({
       ...draft,
       [key]: draft[key].filter((entry) => entry !== asString),
     });
@@ -239,31 +232,21 @@ export function FormModal({ open, draft, currentTab, lookups, onClose, onDraftCh
       return;
     }
 
-    onDraftChange(nextDraft);
+    setLocalDraft(nextDraft);
     onSave(nextDraft);
   };
 
-  if (!open) return null;
-
   return (
-    <div
-      className="modal-ov active"
-      role="button"
-      tabIndex={0}
-      aria-label="Cerrar modal"
+    <dialog
+      ref={dialogRef}
+      className="modal-dialog"
+      aria-label={initialDraft.id ? 'Editar juego' : 'Nuevo juego'}
       onMouseDown={(event) => {
-        if (event.target === event.currentTarget) {
-          onClose();
-        }
-      }}
-      onKeyDown={(event) => {
-        if (event.target !== event.currentTarget) return;
-        if (event.key === 'Escape' || event.key === 'Enter' || event.key === ' ') {
-          event.preventDefault();
-          onClose();
-        }
+        // Click en el backdrop (fuera de .modal) → cerrar; el target es el propio <dialog>.
+        if (event.target === event.currentTarget) onClose();
       }}
     >
+      {open ? (
       <div className="modal">
         <div className="modal-hd">
           <div className="modal-title">{draft.id ? 'Editar juego' : 'Nuevo juego'}</div>
@@ -282,7 +265,7 @@ export function FormModal({ open, draft, currentTab, lookups, onClose, onDraftCh
                 placeholder="Ej: The Witcher 3"
                 onChange={(event) => {
                   setFieldErrors((prev) => ({ ...prev, name: false }));
-                  onDraftChange({ ...draft, name: event.target.value });
+                  setLocalDraft({ ...draft, name: event.target.value });
                 }}
               />
               <small className="tag-hint tag-hint--spacer" aria-hidden="true">Pulsa Enter para anadir</small>
@@ -326,7 +309,7 @@ export function FormModal({ open, draft, currentTab, lookups, onClose, onDraftCh
               <div className="fg fg-score-field">
                 <label className="flabel">{currentTab === 'p' ? 'Interés' : 'Puntuación'} {currentTab === 'c' ? '*' : ''}</label>
                 <div className={`score-input-shell ${fieldErrors.score ? 'has-error' : ''}`.trim()}>
-                  <StarPicker value={draft.score} onChange={(v) => onDraftChange({ ...draft, score: v })} />
+                  <StarPicker value={draft.score} onChange={(v) => setLocalDraft({ ...draft, score: v })} />
                 </div>
                 {fieldErrors.score ? <small className="tag-hint" style={{ color: 'var(--danger)' }}>Selecciona una puntuación</small> : null}
                 {!fieldErrors.score ? <small className="tag-hint tag-hint--spacer" aria-hidden="true">Pulsa Enter para anadir</small> : null}
@@ -347,7 +330,7 @@ export function FormModal({ open, draft, currentTab, lookups, onClose, onDraftCh
                   commitYearTag('enter');
                 }}
                 onRemove={(value) => {
-                  onDraftChange({ ...draft, years: draft.years.filter((entry) => entry !== Number(value)) });
+                  setLocalDraft({ ...draft, years: draft.years.filter((entry) => entry !== Number(value)) });
                 }}
                 chipClassName="chip-generic"
                 hint={UI_MESSAGES.form.enterToAddHint}
@@ -364,7 +347,7 @@ export function FormModal({ open, draft, currentTab, lookups, onClose, onDraftCh
                     placeholder="Ej: 120"
                     value={draft.hours ?? ''}
                     onChange={(event) =>
-                      onDraftChange({
+                      setLocalDraft({
                         ...draft,
                         hours: event.target.value ? Number(event.target.value.replace(',', '.')) : null,
                       })
@@ -437,7 +420,7 @@ export function FormModal({ open, draft, currentTab, lookups, onClose, onDraftCh
                 className={`btn btn-toggle ${draft.steamDeck ? 'active btn-toggle-deck' : ''}`}
                 type="button"
                 aria-label="Steam Deck"
-                onClick={() => onDraftChange({ ...draft, steamDeck: !draft.steamDeck })}
+                onClick={() => setLocalDraft({ ...draft, steamDeck: !draft.steamDeck })}
               >
                 <Icon name={COMMON_ICONS.steamDeck} />
                 <span>Steam Deck</span>
@@ -452,8 +435,8 @@ export function FormModal({ open, draft, currentTab, lookups, onClose, onDraftCh
                   type="button"
                   aria-label={FILTER_BOOL[currentTab]?.label}
                   onClick={() => {
-                    if (boolField === 'replayable') onDraftChange({ ...draft, replayable: !draft.replayable });
-                    if (boolField === 'retry') onDraftChange({ ...draft, retry: !draft.retry });
+                    if (boolField === 'replayable') setLocalDraft({ ...draft, replayable: !draft.replayable });
+                    if (boolField === 'retry') setLocalDraft({ ...draft, retry: !draft.retry });
                   }}
                 >
                   <Icon name={boolField === 'replayable' ? COMMON_ICONS.repeat : COMMON_ICONS.undo} />
@@ -474,7 +457,7 @@ export function FormModal({ open, draft, currentTab, lookups, onClose, onDraftCh
                 placeholder="Ej: Historia sólida, combate excelente y gran ambientación."
                 onChange={(event) => {
                   const nextReview = event.target.value.slice(0, REVIEW_MAX_LENGTH);
-                  onDraftChange({ ...draft, review: nextReview });
+                  setLocalDraft({ ...draft, review: nextReview });
                 }}
               />
               <div className="field-footer">
@@ -497,6 +480,7 @@ export function FormModal({ open, draft, currentTab, lookups, onClose, onDraftCh
           </button>
         </div>
       </div>
-    </div>
+      ) : null}
+    </dialog>
   );
 }

@@ -1,0 +1,133 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ==========================================
+    // FUNCIONES GLOBALES
+    // ==========================================
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isSignedIn()
+        && request.auth.token.email != null
+        && request.auth.token.email_verified == true
+        && request.auth.token.email == "bellanco3@gmail.com";
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isPlaceholder(docId) {
+      return docId == "_placeholder";
+    }
+
+    // C5/T4 — Validación de esquema (allowlist) de escrituras: un cliente hostil autenticado no puede
+    // inyectar campos arbitrarios en su propio doc. hasOnly admite un subconjunto, así que las escrituras
+    // parciales por merge siguen valiendo mientras no introduzcan claves fuera de la lista.
+    function profileWriteIsValid() {
+      return request.resource.data.uid is string
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.keys().hasOnly([
+          "schemaVersion", "uid", "profileId", "email", "displayName", "photoURL", "social", "updatedAt"
+        ]);
+    }
+
+    function privateConfigWriteIsValid() {
+      return request.resource.data.keys().hasOnly([
+        "schemaVersion", "profileId", "gamesGistId", "socialGistId", "gamesChunks", "socialChunks", "encryptedGithubToken"
+      ]);
+    }
+
+    // ST9 — validación de esquema (allowlist) de userMap: un dueño no puede inyectar campos arbitrarios/payloads
+    // grandes en su propio doc. Solo `profileId` + `schemaVersion`.
+    function userMapWriteIsValid() {
+      return request.resource.data.keys().hasOnly(["profileId", "schemaVersion"]);
+    }
+
+    // ==========================================
+    // COLECCION: PROFILES
+    // ==========================================
+
+    match /profiles/{userId} {
+      // IMPORTANTE:
+      // Lectura social compatible con consultas de coleccion:
+      // - Admin
+      // - Propietario
+      // - Usuarios autenticados sobre perfiles con social.enabled == true
+      //
+      // Nota: Se evita condicionar la lectura con !isPlaceholder(userId)
+      // para no romper consultas de coleccion (query rules inference).
+      allow read: if
+        isAdmin() ||
+        isOwner(userId) ||
+        (
+          isSignedIn() &&
+          resource.data.keys().hasAny(['social']) &&
+          resource.data.social.enabled == true
+        );
+
+      // Crear o editar perfil propio (uid coincidente + esquema válido) o ser admin.
+      allow create, update: if !isPlaceholder(userId) && (
+        isAdmin() ||
+        (
+          isOwner(userId) &&
+          profileWriteIsValid()
+        )
+      );
+
+      // Solo el admin puede borrar perfiles (excepto el placeholder).
+      allow delete: if !isPlaceholder(userId) && isAdmin();
+    }
+
+    // ==========================================
+    // COLECCION: PRIVATE CONFIG (migración — solo el dueño)
+    // Guarda ids de gist + el token de GitHub CIFRADO (recuperación cross-device).
+    // El doc se identifica por el uid; nunca es legible por otros.
+    // ==========================================
+
+    match /privateConfig/{userId} {
+      allow read: if isOwner(userId);
+      allow write: if isOwner(userId) && privateConfigWriteIsValid();
+    }
+
+    // ==========================================
+    // COLECCION: USER MAP (migración — mapa privado uid -> profileId)
+    // Solo el dueño escribe/lee su propia entrada.
+    // ==========================================
+
+    match /userMap/{userId} {
+      allow read: if isOwner(userId);
+      allow write: if isOwner(userId) && userMapWriteIsValid();
+    }
+
+    // ==========================================
+    // COLECCIONES EN FASE 1 (SOLO ADMIN)
+    // ==========================================
+
+    // Aplicable a: friendships, recommendations, activity_events
+    match /friendships/{docId} {
+      allow read, write: if !isPlaceholder(docId) && isAdmin();
+    }
+
+    match /recommendations/{docId} {
+      allow read, write: if !isPlaceholder(docId) && isAdmin();
+    }
+
+    match /activity_events/{docId} {
+      allow read, write: if !isPlaceholder(docId) && isAdmin();
+    }
+
+    // ==========================================
+    // REGLA DE CIERRE
+    // ==========================================
+
+    // Denegar cualquier otro acceso no especificado explicitamente arriba
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

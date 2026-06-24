@@ -2,8 +2,7 @@ import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } fro
 import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import { DIALOG_MESSAGES, ROUTE_TAB, SYNC_BADGE_TEXT, SYNC_MESSAGES, TAB_ROUTE } from './core/constants/labels';
 import { TAB_IDS, type TabData, type TabId } from './model/types/game';
-import { ensureProfileByEmail, getCurrentSocialAuthUser } from './model/repository/firebaseRepository';
-import { getSyncConfig, getSocialSyncConfig, readSocialGist, saveSocialSyncConfig, upsertReviewActivity, writeSocialGist } from './model/repository/gistRepository';
+import { publishReviewActivity } from './model/repository/socialPublishRepository';
 import { normalizeData } from './model/repository/localRepository';
 import { IconSprite } from './view/components/IconSprite';
 import { Header } from './view/components/Header';
@@ -59,16 +58,18 @@ export default function App() {
     renameTagAcrossGames,
     confirmState,
     persist,
+    persistFromSync,
     notify,
   } = vm;
 
+  // C1: el ciclo de sync persiste SIN marcar dirty (aplica merge/resultado remoto, no es edición de usuario).
   const syncVm = useSyncViewModel({
     getData: () => vm.data,
-    setData: (next) => persist(next),
+    setData: (next) => persistFromSync(next),
     getMeta: () => vm.meta,
     setMeta: vm.setMeta,
     onNotice: notify,
-    persist,
+    persist: persistFromSync,
   });
 
   const [filtersOpen, setFiltersOpen] = useState(false);
@@ -230,54 +231,6 @@ export default function App() {
     setFormModalOpen(false);
   }, [setFormModalOpen]);
 
-  const publishReviewActivity = useCallback(async (input: { id: number; name: string; review: string; score: number }) => {
-    const authUser = await getCurrentSocialAuthUser();
-    if (!authUser) {
-      return;
-    }
-
-    const socialConfig = getSocialSyncConfig();
-    if (!socialConfig?.token || !socialConfig.gistId) {
-      return;
-    }
-
-    const socialRead = await readSocialGist(
-      socialConfig.token,
-      socialConfig.gistId,
-      socialConfig.etag || null,
-    );
-
-    const now = Date.now();
-    const nextPayload = upsertReviewActivity(socialRead.data, {
-      actorUid: authUser.uid,
-      actorName: authUser.displayName || authUser.email,
-      gameId: input.id,
-      gameName: input.name,
-      reviewText: input.review,
-      rating: input.score,
-      timestamp: now,
-    });
-
-    const writeResult = await writeSocialGist(socialConfig.token, socialConfig.gistId, nextPayload);
-    const mainSyncConfig = getSyncConfig();
-
-    saveSocialSyncConfig({
-      token: socialConfig.token,
-      gistId: socialConfig.gistId,
-      etag: writeResult.etag || socialConfig.etag || null,
-      lastRemoteUpdatedAt: now,
-    });
-
-    await ensureProfileByEmail({
-      user: authUser,
-      socialGistId: socialConfig.gistId,
-      gamesGistId: mainSyncConfig?.gistId || '',
-      githubToken: mainSyncConfig?.token || socialConfig.token,
-      socialGistEtag: writeResult.etag || socialConfig.etag || null,
-      preferredName: authUser.displayName || authUser.email,
-    });
-  }, []);
-
   const handleSaveDraft = useCallback((nextDraft: typeof vm.draft) => {
     const predictedId =
       nextDraft.id ||
@@ -307,12 +260,12 @@ export default function App() {
     void publishReviewActivity({
       id: predictedId,
       name: nextDraft.name.trim(),
-      review: cleanReview,
-      score: nextScore,
+      review: cleanReview, // audit-allow: publishReviewActivity lo convierte a snippet antes de publicar
+      score: nextScore, // audit-allow: el canal social publica solo rating redondeado
     }).catch(() => {
       notify('warn', 'Juego guardado, pero no se pudo actualizar la actividad social de reseña.');
     });
-  }, [editingTab, notify, publishReviewActivity, saveDraft, vm.data]);
+  }, [editingTab, notify, saveDraft, vm.data]);
 
   const handleEditTag = useCallback((key: 'genres' | 'platforms' | 'strengths' | 'weaknesses', oldValue: string, newValue: string) => {
     renameTagAcrossGames(key, oldValue, newValue);
@@ -456,7 +409,6 @@ export default function App() {
           currentTab={vm.editingTab}
           lookups={vm.lookups}
           onClose={handleCloseFormModal}
-          onDraftChange={vm.setDraft}
           onSave={handleSaveDraft}
           onNotice={vm.notify}
         />

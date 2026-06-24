@@ -17,11 +17,15 @@ export interface GameItem {
   replayable?: boolean;
   retry?: boolean;
   hours?: number | null;
+  // Destino de la migración (aditivo, opcional para no romper datos legacy):
+  _v?: number; // versión entera, incrementa en cada edición (metadato; el reloj CRDT sigue siendo _ts)
+  shared?: boolean; // opt-in: este juego se proyecta al canal público (gist social / Firestore)
 }
 
 export interface DeletedItem {
   id: number;
   _ts: number;
+  deletedAt?: number; // destino: marca de borrado explícita (aditivo)
 }
 
 export interface TabData {
@@ -49,6 +53,7 @@ export interface StoragePayload {
   updatedAt: number;
   etag: string | null;
   lastRemoteUpdatedAt: number;
+  schemaVersion?: number; // marca de auto-upgrade del estado local (ver LOCAL_SCHEMA_VERSION)
 }
 
 export interface TabSort {
