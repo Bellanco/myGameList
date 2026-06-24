@@ -50,7 +50,9 @@ const SOCIAL_GIST_FILENAME = 'myGameList.social.json';
  * REVERSIBLE (volver a `false` → se rebaja a plano). Verificado: round-trip exacto sobre datos reales, 4% menor.
  * └──────────────────────────────────────────────────────────────────────────────────────────────────────┘
  */
-const ENABLE_GAMES_WRAPPER_WRITE = true;
+// Exportado para que los tests del formato v4 (gistWrite / gistV4Cutover) se salten solos cuando la
+// escritura v4 está apagada: documentan el comportamiento del cutover, no el plano de lanzamiento.
+export const ENABLE_GAMES_WRAPPER_WRITE = false;
 const GIST_API_BASE = 'https://api.github.com/gists';
 const SESSION_CACHE_SOCIAL_GIST_PREFIX = 'myGameList.session.socialGist';
 const SESSION_CACHE_PUBLIC_SOCIAL_GIST_PREFIX = 'myGameList.session.publicSocialGist';

@@ -677,10 +677,19 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
         }
       }
     } catch (error) {
-      const message = error instanceof Error ? error.message : SYNC_MESSAGES.recoverError;
+      // H3: connectSyncWithCredentials deja la máquina en 'checking'/'merging' si lanza a mitad; sin un
+      // transitionTo aquí el sync quedaría bloqueado hasta recargar. Mismo patrón de recuperación que connectSync.
+      const deferred = isDeferredNetworkError(error);
+      transitionTo('error_backoff', {
+        lastErrorAt: Date.now(),
+        errorCount: getSyncState().errorCount + 1,
+        pendingAction: 'read',
+        retryAfterMs: getRetryAfterMs(error) || null,
+      });
+      const message = deferred ? SYNC_MESSAGES.offline : error instanceof Error ? error.message : SYNC_MESSAGES.recoverError;
       setStatus('error');
       setStatusMessage(message);
-      onNotice('err', message);
+      if (!deferred) onNotice('err', message);
     } finally {
       setRecoveringGistId(false);
     }
