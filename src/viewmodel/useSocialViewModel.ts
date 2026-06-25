@@ -491,22 +491,35 @@ export function useSocialViewModel() {
     });
   }, [feedSearch, socialDirectory]);
 
-  // F3 — publicaciones agregadas de todo el directorio (incluye las propias), filtradas por la misma búsqueda.
-  const postFeedItems = useMemo(() => {
+  // F3 — feed COMBINADO: reseñas/recomendaciones (actividad) + publicaciones, mezcladas y ordenadas por fecha.
+  // Los posts llevan `kind:'post'` para distinguirlos al renderizar; la actividad conserva su `type`.
+  const feedItems = useMemo(() => {
     const normalizedQuery = feedSearch.trim().toLowerCase();
 
-    const items = socialDirectory
-      .flatMap((entry) => entry.posts)
+    const activity = socialDirectory.flatMap((entry) => entry.activity);
+    const posts = socialDirectory.flatMap((entry) => entry.posts).map((post) => ({ ...post, kind: 'post' as const }));
+
+    const merged = [...activity, ...posts]
       .sort((a, b) => b.updatedAt - a.updatedAt)
-      .slice(0, 100);
+      .slice(0, 300);
 
     if (!normalizedQuery) {
-      return items;
+      return merged;
     }
 
-    return items.filter((item) =>
-      [item.profileDisplayName, item.authorName, item.text].join(' ').toLowerCase().includes(normalizedQuery),
-    );
+    return merged.filter((item) => {
+      const isPost = (item as { kind?: string }).kind === 'post';
+      const haystack = isPost
+        ? [(item as SocialPostFeedItem).profileDisplayName, (item as SocialPostFeedItem).authorName, (item as SocialPostFeedItem).text]
+        : [
+            (item as SocialActivityFeedItem).profileDisplayName,
+            (item as SocialActivityFeedItem).actorName,
+            (item as SocialActivityFeedItem).gameName,
+            (item as SocialActivityFeedItem).recommendationText,
+            (item as SocialActivityFeedItem).snippet,
+          ];
+      return haystack.join(' ').toLowerCase().includes(normalizedQuery);
+    });
   }, [feedSearch, socialDirectory]);
 
   const activeDetailEvent = useMemo(() => {
@@ -576,16 +589,17 @@ export function useSocialViewModel() {
   /**
    * Agrupa las actividades por dÃ­a y retorna array con day headers.
    */
-  const groupedActivityFeedItems = useMemo(() => {
+  const groupedFeedItems = useMemo(() => {
+    type FeedItem = (typeof feedItems)[number];
     const groups: Array<{
       dayHeader: string;
       dayDate: Date;
-      items: SocialActivityFeedItem[];
+      items: FeedItem[];
     }> = [];
 
-    const itemsByDay = new Map<string, SocialActivityFeedItem[]>();
+    const itemsByDay = new Map<string, FeedItem[]>();
 
-    activityFeedItems.forEach((item) => {
+    feedItems.forEach((item) => {
       const itemDate = new Date(toSafeTimestamp(item.updatedAt, Date.now()));
       if (Number.isNaN(itemDate.getTime())) {
         return;
@@ -612,7 +626,7 @@ export function useSocialViewModel() {
     });
 
     return groups;
-  }, [activityFeedItems, formatDayHeader]);
+  }, [feedItems, formatDayHeader]);
 
   const handleFeedRowMouseDown = useCallback((event: ReactMouseEvent<HTMLDivElement>) => {
     if (event.button !== 0 || !feedRowRef.current) {
@@ -1219,7 +1233,7 @@ export function useSocialViewModel() {
     setComposePostText,
     publishingPost,
     handlePublishPost,
-    postFeedItems,
+    feedItems,
     hydratingProfile,
     savingProfile,
     loadingDirectory,
@@ -1235,10 +1249,9 @@ export function useSocialViewModel() {
     socialDisplayName,
     filteredSocialDirectory,
     selectedProfileDetail,
-    activityFeedItems,
     activeDetailEvent,
     getGameItemById,
-    groupedActivityFeedItems,
+    groupedFeedItems,
     handleFeedRowMouseDown,
     handleFeedRowKeyDown,
     openActivityDetail,

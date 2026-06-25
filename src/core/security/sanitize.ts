@@ -20,8 +20,8 @@ export function isValidGistId(gistId: string): boolean {
   return /^[a-fA-F0-9]{8,}$/.test(gistId);
 }
 
-// F3 — publicaciones del feed social (texto libre + hipervínculos).
-export const POST_MAX_LENGTH = 1000;
+// F3 — publicaciones del feed social (texto libre + hipervínculos). Post corto tipo "estado".
+export const POST_MAX_LENGTH = 280;
 
 /** Texto de una publicación: recorta espacios y cota la longitud. No interpreta HTML (se renderiza como texto). */
 export function safePostText(input: unknown): string {

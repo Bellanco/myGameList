@@ -38,8 +38,8 @@ describe('sanitize', () => {
     expect(isValidHttpUrl(null)).toBe(false);
   });
 
-  it('recorta y cota el texto de una publicación', () => {
+  it('recorta y cota el texto de una publicación (post corto)', () => {
     expect(safePostText('  hola  ')).toBe('hola');
-    expect(safePostText('a'.repeat(2000)).length).toBe(1000);
+    expect(safePostText('a'.repeat(2000)).length).toBe(280);
   });
 });

@@ -19,11 +19,10 @@ export function SocialFeedScreen({
   hydrateSocialDirectory,
   openProfileDetail,
   handleProfileCardKeyDown,
-  groupedActivityFeedItems,
-  activityFeedItems,
+  groupedFeedItems,
+  feedItems,
   openActivityDetail,
   handleActivityItemKeyDown,
-  postFeedItems,
   composePostText,
   setComposePostText,
   publishingPost,
@@ -46,11 +45,10 @@ export function SocialFeedScreen({
   hydrateSocialDirectory: (forceRefresh?: boolean) => void;
   openProfileDetail: (id: string) => void;
   handleProfileCardKeyDown: (event: React.KeyboardEvent<HTMLElement>, id: string) => void;
-  groupedActivityFeedItems: any[];
-  activityFeedItems: any[];
+  groupedFeedItems: any[];
+  feedItems: any[];
   openActivityDetail: (entry: any) => void;
   handleActivityItemKeyDown: (event: React.KeyboardEvent<HTMLElement>, entry: any) => void;
-  postFeedItems: any[];
   composePostText: string;
   setComposePostText: (v: string) => void;
   publishingPost: boolean;
@@ -95,24 +93,72 @@ export function SocialFeedScreen({
           </div>
         </div>
         <div className="fg">
+          <span className="flabel">{SOCIAL_UI.feed.postsTitle}</span>
+          <div className="hub-post-composer">
+            <label className="sr-only" htmlFor="hub-post-text">{SOCIAL_UI.feed.postComposerLabel}</label>
+            <input
+              id="hub-post-text"
+              type="text"
+              className="finput hub-post-input"
+              value={composePostText}
+              placeholder={SOCIAL_UI.feed.postPlaceholder}
+              maxLength={POST_MAX_LENGTH}
+              onChange={(event) => setComposePostText(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter') {
+                  event.preventDefault();
+                  if (!publishingPost && composePostText.trim()) handlePublishPost();
+                }
+              }}
+            />
+            <button
+              className="btn btn-steam hub-post-publish"
+              type="button"
+              disabled={publishingPost || !composePostText.trim()}
+              onClick={handlePublishPost}
+              aria-label={publishingPost ? SOCIAL_UI.feed.postPublishing : SOCIAL_UI.feed.postPublish}
+              title={publishingPost ? SOCIAL_UI.feed.postPublishing : SOCIAL_UI.feed.postPublish}
+            >
+              <Icon name="edit" />
+            </button>
+          </div>
+        </div>
+        <div className="fg">
           <span className="flabel">{SOCIAL_UI.feed.activityTitle}</span>
-          {!loadingDirectory && activityFeedItems.length === 0 ? <p>{SOCIAL_UI.feed.activityEmpty}</p> : null}
-          {!loadingDirectory && activityFeedItems.length > 0 ? (
+          {!loadingDirectory && feedItems.length === 0 ? <p>{SOCIAL_UI.feed.activityEmpty}</p> : null}
+          {!loadingDirectory && feedItems.length > 0 ? (
             <div className="hub-feed-activity-list" role="list" aria-label={SOCIAL_UI.feed.activityListAria}>
-              {groupedActivityFeedItems.map((group, groupIndex) => (
+              {groupedFeedItems.map((group, groupIndex) => (
                 <div key={`${group.dayHeader}-${groupIndex}`} className="hub-feed-day-group">
                   <div className="hub-feed-day-header">
                     <h4>{group.dayHeader}</h4>
                   </div>
                   {group.items.map((entry: any) => {
+                    const itemDate = new Date(entry.updatedAt || '');
+                    const hasValidDate = !Number.isNaN(itemDate.getTime());
+                    const ownershipClass = entry.socialGistId === currentSocialGistId ? 'is-own-activity' : 'is-external-activity';
+
+                    if (entry.kind === 'post') {
+                      return (
+                        <article
+                          key={entry.id}
+                          className={`hub-feed-card hub-feed-activity-item is-post ${ownershipClass}`}
+                          role="listitem"
+                        >
+                          <header>
+                            <h3>{entry.profileDisplayName || entry.authorName || 'Usuario'}</h3>
+                          </header>
+                          <p>{hasValidDate ? SOCIAL_UI.feed.postedAt(itemDate) : SOCIAL_UI.feed.analyzedRecently}</p>
+                          <p className="hub-post-text"><PostText text={entry.text} /></p>
+                        </article>
+                      );
+                    }
+
                     const reviewText = String(entry.snippet || '').trim();
-                    const updatedAtDate = new Date(entry.updatedAt || '');
-                    const hasValidUpdatedAt = !Number.isNaN(updatedAtDate.getTime());
-                    const analyzedAtLabel = hasValidUpdatedAt
-                      ? SOCIAL_UI.feed.analyzedAt(updatedAtDate)
+                    const analyzedAtLabel = hasValidDate
+                      ? SOCIAL_UI.feed.analyzedAt(itemDate)
                       : SOCIAL_UI.feed.analyzedRecently;
                     const cardTypeClass = entry.type === 'review' ? 'is-review' : 'is-recommendation';
-                    const ownershipClass = entry.socialGistId === currentSocialGistId ? 'is-own-activity' : 'is-external-activity';
                     return (
                       <article
                         key={entry.id}
@@ -137,54 +183,6 @@ export function SocialFeedScreen({
               ))}
             </div>
           ) : null}
-        </div>
-        <div className="fg hub-posts">
-          <span className="flabel">{SOCIAL_UI.feed.postsTitle}</span>
-          <div className="hub-post-composer">
-            <label className="sr-only" htmlFor="hub-post-text">{SOCIAL_UI.feed.postComposerLabel}</label>
-            <textarea
-              id="hub-post-text"
-              className="ftextarea hub-post-textarea"
-              value={composePostText}
-              placeholder={SOCIAL_UI.feed.postPlaceholder}
-              maxLength={POST_MAX_LENGTH}
-              onChange={(event) => setComposePostText(event.target.value)}
-            />
-            <div className="hub-post-composer-actions">
-              <small className="hub-post-note">{SOCIAL_UI.feed.postPublicNote}</small>
-              <button
-                className="btn btn-steam"
-                type="button"
-                disabled={publishingPost || !composePostText.trim()}
-                onClick={handlePublishPost}
-              >
-                <Icon name="edit" />
-                <span>{publishingPost ? SOCIAL_UI.feed.postPublishing : SOCIAL_UI.feed.postPublish}</span>
-              </button>
-            </div>
-          </div>
-
-          {postFeedItems.length === 0 ? (
-            <p>{SOCIAL_UI.feed.postsEmpty}</p>
-          ) : (
-            <div className="hub-posts-list" role="list" aria-label={SOCIAL_UI.feed.postsListAria}>
-              {postFeedItems.map((post) => {
-                const postDate = new Date(post.updatedAt || '');
-                const postDateLabel = !Number.isNaN(postDate.getTime())
-                  ? `${postDate.toLocaleDateString('es-ES', { day: '2-digit', month: 'long' })} · ${postDate.toLocaleTimeString('es-ES', { hour: 'numeric', minute: '2-digit' })}`
-                  : '';
-                return (
-                  <article key={post.id} className="hub-feed-card hub-post-item" role="listitem">
-                    <header>
-                      <h3>{post.profileDisplayName || post.authorName || 'Usuario'}</h3>
-                      {postDateLabel ? <small className="hub-feed-game-subtitle">{postDateLabel}</small> : null}
-                    </header>
-                    <p className="hub-post-text"><PostText text={post.text} /></p>
-                  </article>
-                );
-              })}
-            </div>
-          )}
         </div>
 
         <div className="hub-feed-toolbar" aria-label={SOCIAL_UI.feed.toolbarAria}>

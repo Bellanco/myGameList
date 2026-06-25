@@ -41,7 +41,7 @@ describe('F3 — publicaciones del feed social', () => {
     expect(upsertPost(data, { authorProfileId: 'p1', authorName: 'X', text: '   ' }).posts).toHaveLength(0);
 
     const long = upsertPost(data, { authorProfileId: 'p1', authorName: 'X', text: 'a'.repeat(2000), timestamp: 1 });
-    expect(long.posts?.[0].text.length).toBe(1000);
+    expect(long.posts?.[0].text.length).toBe(280);
   });
 
   it('el schema estricto acepta gists con y sin posts, y rechaza campos extra (allowlist)', () => {
