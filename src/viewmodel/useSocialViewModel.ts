@@ -9,11 +9,13 @@ import {
   remapSocialActorIds,
   saveSocialSyncConfig,
   type SocialActivityEntry,
+  type SocialPostEntry,
   type SocialProfileVisibility,
   type SocialSharedGame,
   updateGistPrivacy,
   writeSocialGist,
 } from '../model/repository/gistRepository';
+import { publishPost } from '../model/repository/socialPublishRepository';
 import { SOCIAL_UI } from '../core/constants/labels';
 import type { IconName } from '../core/constants/icons';
 import type { GameItem, TabId } from '../model/types/game';
@@ -108,6 +110,13 @@ export function useSocialViewModel() {
     socialGistId: string;
   };
 
+  // F3 — publicación enriquecida con la identidad de su autor (para el feed).
+  type SocialPostFeedItem = SocialPostEntry & {
+    profileId: string;
+    profileDisplayName: string;
+    socialGistId: string;
+  };
+
   type SocialDirectoryEntry = {
     id: string;
     displayName: string;
@@ -117,6 +126,7 @@ export function useSocialViewModel() {
     favorites: string[];
     recommendations: string[];
     activity: SocialActivityFeedItem[];
+    posts: SocialPostFeedItem[];
     // Index-only (SocialSharedGame) para perfiles ajenos; para el perfil PROPIO se repuebla con GameItem completos.
     sharedLists: Partial<Record<TabId, Array<GameItem | SocialSharedGame>>>;
     visibility: SocialProfileVisibility;
@@ -147,6 +157,8 @@ export function useSocialViewModel() {
   const [hideGameTime, setHideGameTime] = useState(false);
   const [favoriteSearch, setFavoriteSearch] = useState('');
   const [feedSearch, setFeedSearch] = useState('');
+  const [composePostText, setComposePostText] = useState('');
+  const [publishingPost, setPublishingPost] = useState(false);
   const [feedFilter] = useState<'all' | 'favorites'>('all');
   const [socialPayload, setSocialPayload] = useState<{ activity: SocialActivityEntry[] }>({ activity: [] });
   const [hydratingProfile, setHydratingProfile] = useState(false);
@@ -477,6 +489,24 @@ export function useSocialViewModel() {
 
       return haystack.includes(normalizedQuery);
     });
+  }, [feedSearch, socialDirectory]);
+
+  // F3 — publicaciones agregadas de todo el directorio (incluye las propias), filtradas por la misma búsqueda.
+  const postFeedItems = useMemo(() => {
+    const normalizedQuery = feedSearch.trim().toLowerCase();
+
+    const items = socialDirectory
+      .flatMap((entry) => entry.posts)
+      .sort((a, b) => b.updatedAt - a.updatedAt)
+      .slice(0, 100);
+
+    if (!normalizedQuery) {
+      return items;
+    }
+
+    return items.filter((item) =>
+      [item.profileDisplayName, item.authorName, item.text].join(' ').toLowerCase().includes(normalizedQuery),
+    );
   }, [feedSearch, socialDirectory]);
 
   const activeDetailEvent = useMemo(() => {
@@ -906,6 +936,23 @@ export function useSocialViewModel() {
               })
               .slice(0, 40);
 
+            const posts = (socialData.posts || [])
+              .map((postEntry) => {
+                const now = Date.now();
+                const createdAt = toSafeTimestamp(postEntry.createdAt, now);
+                const updatedAt = toSafeTimestamp(postEntry.updatedAt, createdAt);
+
+                return {
+                  ...postEntry,
+                  createdAt,
+                  updatedAt,
+                  profileId: entry.id,
+                  profileDisplayName: socialData.profile.name || entry.displayName || 'Usuario',
+                  socialGistId: entry.socialGistId,
+                };
+              })
+              .slice(0, 40);
+
             return {
               id: entry.id,
               displayName: socialData.profile.name || entry.displayName || 'Usuario',
@@ -915,6 +962,7 @@ export function useSocialViewModel() {
               favorites: socialData.profile.favoriteGames.map((game) => game.name).slice(0, 5),
               recommendations: mergedRecommendations,
               activity,
+              posts,
               sharedLists,
               visibility: socialData.profile.visibility || defaultSocialVisibility,
             };
@@ -928,6 +976,7 @@ export function useSocialViewModel() {
               favorites: [],
               recommendations: [],
               activity: [],
+              posts: [],
               sharedLists: {},
               visibility: defaultSocialVisibility,
             };
@@ -943,6 +992,25 @@ export function useSocialViewModel() {
       setLoadingDirectory(false);
     }
   }, [activePanel, authUser, defaultSocialVisibility, mainSyncConfig?.token, profileEditorLocked, setFeedback, showSocialSpace, socialCfgGistId]);
+
+  // F3 — publica una publicación de texto libre y refresca el feed (definido tras hydrateSocialDirectory para evitar TDZ).
+  const handlePublishPost = useCallback(async () => {
+    const text = composePostText.trim();
+    if (!text || publishingPost) {
+      return;
+    }
+
+    try {
+      setPublishingPost(true);
+      await publishPost({ text });
+      setComposePostText('');
+      await hydrateSocialDirectory(true);
+    } catch (error) {
+      setFeedback('err', error instanceof Error ? error.message : 'No se pudo publicar la publicación');
+    } finally {
+      setPublishingPost(false);
+    }
+  }, [composePostText, publishingPost, hydrateSocialDirectory, setFeedback]);
 
   useEffect(() => {
     void hydrateSocialDirectory();
@@ -1146,6 +1214,11 @@ export function useSocialViewModel() {
     setFavoriteSearch,
     feedSearch,
     setFeedSearch,
+    composePostText,
+    setComposePostText,
+    publishingPost,
+    handlePublishPost,
+    postFeedItems,
     hydratingProfile,
     savingProfile,
     loadingDirectory,

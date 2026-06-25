@@ -45,6 +45,11 @@ export const SocialHub = memo(function SocialHub() {
     setFavoriteSearch,
     feedSearch,
     setFeedSearch,
+    composePostText,
+    setComposePostText,
+    publishingPost,
+    handlePublishPost,
+    postFeedItems,
     hydratingProfile,
     savingProfile,
     loadingDirectory,
@@ -169,6 +174,11 @@ export const SocialHub = memo(function SocialHub() {
         activityFeedItems={activityFeedItems}
         openActivityDetail={openActivityDetail}
         handleActivityItemKeyDown={handleActivityItemKeyDown}
+        postFeedItems={postFeedItems}
+        composePostText={composePostText}
+        setComposePostText={setComposePostText}
+        publishingPost={publishingPost}
+        handlePublishPost={handlePublishPost}
         isFeedDragging={isFeedDragging}
         feedRowRef={feedRowRef as React.RefObject<HTMLDivElement | null>}
         handleFeedRowMouseDown={handleFeedRowMouseDown}

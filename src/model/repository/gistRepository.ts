@@ -1,4 +1,4 @@
-import { isValidGistId, isValidGithubToken } from '../../core/security/sanitize';
+import { isValidGistId, isValidGithubToken, safePostText } from '../../core/security/sanitize';
 import { migrateData } from './migrateRepository';
 import { clampRating, normalizeTimestamp } from '../../core/utils/normalize';
 import { assembleChunkedGames, gamesGistNeedsRewrite, gamesGistNeedsUpgradeToWrapper, unwrapGamesFile } from '../migration/legacyGamesFormat';
@@ -127,14 +127,35 @@ export interface SocialActivityEntry {
   updatedAt: number;
 }
 
+// F3 — publicación de texto libre del feed (noticias/enlaces). Los hipervínculos se detectan del propio `text`
+// al renderizar (URLs http/s validadas); no hay HTML ni campo de enlaces aparte.
+export interface SocialPostEntry {
+  id: string;
+  authorProfileId: string; // pseudónimo público (como actorProfileId)
+  authorName: string;
+  text: string;
+  createdAt: number;
+  updatedAt: number;
+}
+
 export interface SocialGistData {
   profile: SocialGistProfile;
   // ST3: el array `recommendations` top-level era código muerto (sin writer; siempre []). Se elimina del modelo.
   // La LECTURA tolera gists viejos que aún lo lleven: sus recs se fusionan en `activity` (mergeLegacyActivity) y
   // al reescribir el gist propio (socialGistNeedsRewrite → wasLegacy) se deja fuera. `profile.recommendations` ídem.
   activity: SocialActivityEntry[];
+  // F3 (aditivo, Opción B): publicaciones de texto libre. La lectura vieja lo ignora; un cliente NUEVO lo preserva
+  // en el round-trip (normalizeSocialGistData). Opcional en el schema → no rompe gists sin posts.
+  posts?: SocialPostEntry[];
   updatedAt: number;
   schemaVersion?: number; // 6.2b: 2 = identidad por profileId (uid fuera del canal público)
+}
+
+export interface UpsertPostInput {
+  authorProfileId: string;
+  authorName: string;
+  text: string;
+  timestamp?: number;
 }
 
 export interface UpsertRecommendationInput {
@@ -319,6 +340,7 @@ function getEmptySocialGistData(): SocialGistData {
       sharedLists: {},
     },
     activity: [],
+    posts: [],
     updatedAt: Date.now(),
   };
 }
@@ -496,6 +518,37 @@ function normalizeActivityItems(items: unknown): SocialActivityEntry[] {
     .slice(0, 320);
 }
 
+function normalizePostItems(items: unknown): SocialPostEntry[] {
+  if (!Array.isArray(items)) {
+    return [];
+  }
+
+  return items
+    .map((entry) => {
+      const record = (entry && typeof entry === 'object' ? entry : {}) as Record<string, unknown>;
+      const authorProfileId = String(record.authorProfileId || '').trim();
+      const text = safePostText(record.text);
+      const createdAt = normalizeTimestamp(record.createdAt, Date.now());
+      const updatedAt = normalizeTimestamp(record.updatedAt, createdAt);
+
+      if (!authorProfileId || !text) {
+        return null;
+      }
+
+      return {
+        id: String(record.id || `${authorProfileId}:${createdAt}`),
+        authorProfileId,
+        authorName: String(record.authorName || '').trim(),
+        text,
+        createdAt,
+        updatedAt,
+      } satisfies SocialPostEntry;
+    })
+    .filter((entry): entry is SocialPostEntry => Boolean(entry))
+    .sort((a, b) => b.updatedAt - a.updatedAt)
+    .slice(0, 100);
+}
+
 function mergeLegacyActivity(
   normalizedActivity: SocialActivityEntry[],
   recommendations: SocialRecommendationEntry[],
@@ -585,6 +638,35 @@ export function upsertReviewActivity(data: SocialGistData, input: UpsertReviewIn
   };
 }
 
+/** F3 — añade una publicación de texto libre al gist propio (prepend). No-op si falta autor o texto. */
+export function upsertPost(data: SocialGistData, input: UpsertPostInput): SocialGistData {
+  const now = input.timestamp || Date.now();
+  const text = safePostText(input.text);
+
+  if (!input.authorProfileId || !text) {
+    return data;
+  }
+
+  const post: SocialPostEntry = {
+    id: `${input.authorProfileId}:${now}`,
+    authorProfileId: input.authorProfileId,
+    authorName: String(input.authorName || '').trim(),
+    text,
+    createdAt: now,
+    updatedAt: now,
+  };
+
+  const posts = [post, ...(data.posts || [])]
+    .sort((a, b) => b.updatedAt - a.updatedAt)
+    .slice(0, 100);
+
+  return {
+    ...data,
+    posts,
+    updatedAt: now,
+  };
+}
+
 function normalizeSocialGistData(data: unknown): SocialGistData {
   const source = (data && typeof data === 'object' ? data : {}) as Partial<SocialGistData>;
   const profile = (source.profile && typeof source.profile === 'object' ? source.profile : {}) as Partial<SocialGistProfile>;
@@ -618,6 +700,7 @@ function normalizeSocialGistData(data: unknown): SocialGistData {
       sharedLists: normalizeSocialSharedLists(profile.sharedLists),
     },
     activity: normalizeActivityItems(source.activity),
+    posts: normalizePostItems(source.posts),
     updatedAt: Number(source.updatedAt || Date.now()),
     schemaVersion: SOCIAL_GIST_SCHEMA_VERSION,
   };

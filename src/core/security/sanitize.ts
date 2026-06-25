@@ -19,3 +19,25 @@ export function isValidGithubToken(token: string): boolean {
 export function isValidGistId(gistId: string): boolean {
   return /^[a-fA-F0-9]{8,}$/.test(gistId);
 }
+
+// F3 — publicaciones del feed social (texto libre + hipervínculos).
+export const POST_MAX_LENGTH = 1000;
+
+/** Texto de una publicación: recorta espacios y cota la longitud. No interpreta HTML (se renderiza como texto). */
+export function safePostText(input: unknown): string {
+  return safeTrim(input, POST_MAX_LENGTH);
+}
+
+/**
+ * Solo URLs http(s) absolutas son válidas para renderizar como enlace. Rechaza `javascript:`, `data:`, etc.
+ * Es la frontera anti-XSS al "linkificar" el texto de las publicaciones.
+ */
+export function isValidHttpUrl(value: unknown): boolean {
+  let url: URL;
+  try {
+    url = new URL(String(value ?? ''));
+  } catch {
+    return false;
+  }
+  return url.protocol === 'http:' || url.protocol === 'https:';
+}

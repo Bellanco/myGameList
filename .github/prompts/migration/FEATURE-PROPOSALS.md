@@ -213,7 +213,19 @@ Enfoque: `data-theme` en `<html>`, paleta por variables CSS, persistencia local,
 
 Riesgo: bajo. No toca datos ni sync. Reversible quitando el bloque light + el toggle.
 
-## PLAN F3 — Feed social con texto libre + hipervínculos
+## PLAN F3 — Feed social con texto libre + hipervínculos  ✅ IMPLEMENTADO (2026-06-25, rama `develop`)
+
+> Hecho y verificado: `typecheck` + `eslint src tests` + `npm test` (138 ok, +8 F3) + `validate` (CI) + `build` verdes.
+> **Decisión de v1:** post = SOLO texto; los hipervínculos se detectan/renderizan del propio texto (URLs http/s
+> validadas con `isValidHttpUrl`), sin campo de enlaces ni HTML. Posts en **sección propia** del feed (no interleaving).
+> Ficheros: `sanitize.ts` (`isValidHttpUrl`/`safePostText`/`POST_MAX_LENGTH`), `gistRepository.ts` (`SocialPostEntry`,
+> `posts` en `SocialGistData`, `normalizePostItems`, `upsertPost`, posts en `getEmptySocialGistData`/`normalizeSocialGistData`),
+> `socialGistSchema.ts` (`post` strictObject + `posts` opcional), `socialPublishRepository.ts` (`publishPost`),
+> `useSocialViewModel.ts` (hidrata posts del directorio + `postFeedItems` + compositor `composePostText`/`handlePublishPost`),
+> `SocialFeedScreen.tsx` (compositor + lista), `PostText.tsx` (linkify seguro), `SocialHub.tsx` (props), `labels.ts`, estilos.
+> Tests: `sanitize.test.ts` (URLs/texto), `socialPosts.test.ts` (upsert + allowlist estricta), `PostText.test.tsx` (linkify anti-XSS).
+> **Compat:** la lectura vieja ignora `posts`; el round-trip nuevo los preserva (`normalizeSocialGistData`); riesgo
+> residual = drop al reescribir desde un dispositivo viejo (documentado). NO dependió del cutover v4. **F3 completo.**
 
 > **Decisión (2026-06-25): OPCIÓN B — `posts` dentro de `myGameList.social.json`** (campo aditivo en el mismo fichero).
 > **Aclaración del análisis:** F3 **NO depende del cutover v4** (eso es el gist de *juegos*). El gist *social* es otro
