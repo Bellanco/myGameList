@@ -110,6 +110,12 @@ export const UI_MESSAGES = {
   },
   settings: {
     title: 'Ajustes',
+    appearance: {
+      groupAria: 'Tema de la aplicación',
+      light: 'Claro',
+      dark: 'Oscuro',
+      cycleHint: 'Pulsa para cambiar a',
+    },
     sync: {
       title: 'Sincronización',
       status: 'Estado actual',
