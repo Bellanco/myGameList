@@ -108,6 +108,7 @@ export function useSocialViewModel() {
     profileId: string;
     profileDisplayName: string;
     socialGistId: string;
+    photoURL: string;
   };
 
   // F3 — publicación enriquecida con la identidad de su autor (para el feed).
@@ -115,6 +116,7 @@ export function useSocialViewModel() {
     profileId: string;
     profileDisplayName: string;
     socialGistId: string;
+    photoURL: string;
   };
 
   type SocialDirectoryEntry = {
@@ -152,6 +154,7 @@ export function useSocialViewModel() {
   const [profileName, setProfileName] = useState('');
   const [favoriteGameIds, setFavoriteGameIds] = useState<number[]>([]);
   const [hiddenTabs, setHiddenTabs] = useState<TabId[]>([]);
+  const [showPhoto, setShowPhoto] = useState(true);
   const [hideReplayable, setHideReplayable] = useState(false);
   const [hideRetry, setHideRetry] = useState(false);
   const [hideGameTime, setHideGameTime] = useState(false);
@@ -379,6 +382,7 @@ export function useSocialViewModel() {
     hideReplayable: false,
     hideRetry: false,
     hideGameTime: false,
+    showPhoto: true,
   }), []);
 
   const getOrderedUniqueTabs = useCallback((tabs: TabId[]): TabId[] => {
@@ -847,6 +851,7 @@ export function useSocialViewModel() {
       setHideReplayable(Boolean(profileVisibility.hideReplayable));
       setHideRetry(Boolean(profileVisibility.hideRetry));
       setHideGameTime(Boolean(profileVisibility.hideGameTime));
+      setShowPhoto(profileVisibility.showPhoto !== false);
       setHasCreatedProfile(profileExists);
       setSocialPayload({
         activity: socialRead.data.activity,
@@ -915,9 +920,12 @@ export function useSocialViewModel() {
       setLoadingDirectory(true);
       const entries = await listSocialDirectory(50, { forceRefresh });
       const socialConfig = getSocialSyncConfig();
+      // Foto propia inmediata (de la sesión Google) aunque aún no se haya re-guardado el perfil; respeta showPhoto.
+      const ownPhotoURL = showPhoto && authUser?.photoURL ? authUser.photoURL : '';
 
       const withProfiles = await Promise.all(
         entries.map(async (entry) => {
+          const isOwnEntry = entry.socialGistId === socialCfgGistId;
           try {
             const socialData = await readPublicSocialGistById(entry.socialGistId, socialConfig?.token || null);
             // E3: el canal social NO lee el gist de juegos EN CRUDO de otros usuarios (privacidad + desacople del
@@ -946,6 +954,7 @@ export function useSocialViewModel() {
                   profileId: entry.id,
                   profileDisplayName: socialData.profile.name || entry.displayName || 'Usuario',
                   socialGistId: entry.socialGistId,
+                  photoURL: socialData.profile.photoURL || (isOwnEntry ? ownPhotoURL : ''),
                 };
               })
               .slice(0, 40);
@@ -963,6 +972,7 @@ export function useSocialViewModel() {
                   profileId: entry.id,
                   profileDisplayName: socialData.profile.name || entry.displayName || 'Usuario',
                   socialGistId: entry.socialGistId,
+                  photoURL: socialData.profile.photoURL || (isOwnEntry ? ownPhotoURL : ''),
                 };
               })
               .slice(0, 40);
@@ -1005,7 +1015,7 @@ export function useSocialViewModel() {
     } finally {
       setLoadingDirectory(false);
     }
-  }, [activePanel, authUser, defaultSocialVisibility, mainSyncConfig?.token, profileEditorLocked, setFeedback, showSocialSpace, socialCfgGistId]);
+  }, [activePanel, authUser, defaultSocialVisibility, mainSyncConfig?.token, profileEditorLocked, setFeedback, showSocialSpace, socialCfgGistId, showPhoto]);
 
   // F3 — publica una publicación de texto libre y refresca el feed (definido tras hydrateSocialDirectory para evitar TDZ).
   const handlePublishPost = useCallback(async () => {
@@ -1070,6 +1080,7 @@ export function useSocialViewModel() {
         hideReplayable,
         hideRetry,
         hideGameTime,
+        showPhoto,
       };
 
       const profile = {
@@ -1078,6 +1089,8 @@ export function useSocialViewModel() {
         favoriteGames: validFavoriteIds.map((id) => ({ id, name: completedGameNameById.get(id) || `Juego ${id}` })),
         visibility,
         sharedLists: {},
+        // Solo se publica la foto si el usuario la muestra (normalize la valida/descarta si no).
+        ...(showPhoto && authUser.photoURL ? { photoURL: authUser.photoURL } : {}),
       };
 
       const currentGistResult = await readSocialGist(socialConfig.token, socialCfgGistId, null);
@@ -1086,6 +1099,7 @@ export function useSocialViewModel() {
       const writeResult = await writeSocialGist(socialConfig.token, socialCfgGistId, {
         profile,
         activity: currentGistData.activity,
+        posts: currentGistData.posts, // preservar las publicaciones al guardar el perfil
         updatedAt: Date.now(),
       });
 
@@ -1225,6 +1239,8 @@ export function useSocialViewModel() {
     setHideRetry,
     hideGameTime,
     setHideGameTime,
+    showPhoto,
+    setShowPhoto,
     favoriteSearch,
     setFavoriteSearch,
     feedSearch,

@@ -8,7 +8,7 @@ function baseGist(): SocialGistData {
       name: 'Autor',
       private: false,
       favoriteGames: [],
-      visibility: { hiddenTabs: [], hideReplayable: false, hideRetry: false, hideGameTime: false },
+      visibility: { hiddenTabs: [], hideReplayable: false, hideRetry: false, hideGameTime: false, showPhoto: true },
       sharedLists: {},
     },
     activity: [],

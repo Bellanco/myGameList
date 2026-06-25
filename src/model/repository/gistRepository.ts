@@ -1,4 +1,4 @@
-import { isValidGistId, isValidGithubToken, safePostText } from '../../core/security/sanitize';
+import { isValidGistId, isValidGithubToken, isValidHttpUrl, safePostText } from '../../core/security/sanitize';
 import { migrateData } from './migrateRepository';
 import { clampRating, normalizeTimestamp } from '../../core/utils/normalize';
 import { assembleChunkedGames, gamesGistNeedsRewrite, gamesGistNeedsUpgradeToWrapper, unwrapGamesFile } from '../migration/legacyGamesFormat';
@@ -77,13 +77,17 @@ export interface SocialGistProfile {
   favoriteGames: Array<{ id: number; name: string }>;
   visibility: SocialProfileVisibility;
   sharedLists: Partial<Record<TabId, SocialSharedGame[]>>;
+  // F-social: foto de perfil pública. Solo se publica si visibility.showPhoto está activo (el usuario controla
+  // la publicación de su propia foto). Si está oculta, no se escribe → nadie la ve.
+  photoURL?: string;
 }
 
 export interface SocialProfileVisibility {
   hiddenTabs: TabId[];
   hideReplayable: boolean;
   hideRetry: boolean;
-    hideGameTime: boolean;
+  hideGameTime: boolean;
+  showPhoto: boolean; // defecto true; controla la publicación/visibilidad de la foto de perfil
 }
 
 /**
@@ -336,6 +340,7 @@ function getEmptySocialGistData(): SocialGistData {
         hideReplayable: false,
         hideRetry: false,
         hideGameTime: false,
+        showPhoto: true,
       },
       sharedLists: {},
     },
@@ -366,7 +371,9 @@ function normalizeSocialVisibility(value: unknown): SocialProfileVisibility {
     hiddenTabs: [...new Set(hiddenTabs)],
     hideReplayable: Boolean(source.hideReplayable),
     hideRetry: Boolean(source.hideRetry),
-      hideGameTime: Boolean(source.hideGameTime),
+    hideGameTime: Boolean(source.hideGameTime),
+    // Defecto true (mostrar) si no está definido, para gists previos sin el campo.
+    showPhoto: source.showPhoto === undefined ? true : Boolean(source.showPhoto),
   };
 }
 
@@ -691,13 +698,20 @@ function normalizeSocialGistData(data: unknown): SocialGistData {
   // del raw para fusionarlas en `activity` (sin pérdida de datos); al reescribir el gist se quedan fuera.
   const legacyRecommendations = normalizeRecommendationItems((source as { recommendations?: unknown }).recommendations);
 
+  const normalizedVisibility = normalizeSocialVisibility(profile.visibility);
+  // Privacidad: la foto solo se conserva si el usuario la muestra Y es una URL http(s) válida; si oculta la foto,
+  // se descarta aquí (defensa) → no se publica al reescribir el gist.
+  const rawPhotoURL = (profile as { photoURL?: unknown }).photoURL;
+  const photoURL = normalizedVisibility.showPhoto && isValidHttpUrl(rawPhotoURL) ? String(rawPhotoURL) : undefined;
+
   const normalized: SocialGistData = {
     profile: {
       name: String(profile.name || '').trim(),
       private: Boolean(profile.private),
       favoriteGames: toGames(profile.favoriteGames),
-      visibility: normalizeSocialVisibility(profile.visibility),
+      visibility: normalizedVisibility,
       sharedLists: normalizeSocialSharedLists(profile.sharedLists),
+      ...(photoURL ? { photoURL } : {}),
     },
     activity: normalizeActivityItems(source.activity),
     posts: normalizePostItems(source.posts),

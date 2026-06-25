@@ -4,6 +4,18 @@ import { StarRating } from '../StarRating';
 import { PostText } from './PostText';
 import { POST_MAX_LENGTH } from '../../../core/security/sanitize';
 
+// Avatar determinista a partir del nombre: inicial + tono (0-5) estable, sin exponer datos.
+function avatarInitial(name: string): string {
+  const trimmed = String(name || '').trim();
+  return trimmed ? trimmed[0].toUpperCase() : '?';
+}
+function avatarTone(name: string): number {
+  const s = String(name || '');
+  let h = 0;
+  for (let i = 0; i < s.length; i += 1) h = (h * 31 + s.charCodeAt(i)) >>> 0;
+  return h % 6;
+}
+
 /**
  * Pantalla principal del feed social.
  * Presentacional, sin lógica de negocio.
@@ -125,6 +137,23 @@ export function SocialFeedScreen({
         </div>
         <div className="fg">
           <span className="flabel">{SOCIAL_UI.feed.activityTitle}</span>
+          {loadingDirectory ? (
+            <div className="hub-feed-activity-list" aria-hidden="true">
+              {[0, 1, 2, 3].map((i) => (
+                <article key={i} className="hub-feed-card hub-feed-activity-item hub-skeleton-card">
+                  <header className="hub-feed-card-head">
+                    <span className="hub-avatar hub-skeleton" />
+                    <div className="hub-feed-card-head-text">
+                      <span className="hub-skeleton hub-skeleton-line" style={{ width: '45%' }} />
+                    </div>
+                  </header>
+                  <span className="hub-skeleton hub-skeleton-line" style={{ width: '30%' }} />
+                  <span className="hub-skeleton hub-skeleton-line" style={{ width: '92%' }} />
+                  <span className="hub-skeleton hub-skeleton-line" style={{ width: '70%' }} />
+                </article>
+              ))}
+            </div>
+          ) : null}
           {!loadingDirectory && feedItems.length === 0 ? <p>{SOCIAL_UI.feed.activityEmpty}</p> : null}
           {!loadingDirectory && feedItems.length > 0 ? (
             <div className="hub-feed-activity-list" role="list" aria-label={SOCIAL_UI.feed.activityListAria}>
@@ -145,8 +174,17 @@ export function SocialFeedScreen({
                           className={`hub-feed-card hub-feed-activity-item is-post ${ownershipClass}`}
                           role="listitem"
                         >
-                          <header>
-                            <h3>{entry.profileDisplayName || entry.authorName || 'Usuario'}</h3>
+                          <header className="hub-feed-card-head">
+                            {entry.photoURL ? (
+                              <img className="hub-avatar hub-avatar-img" src={entry.photoURL} alt="" referrerPolicy="no-referrer" />
+                            ) : (
+                              <span className={`hub-avatar hub-avatar--${avatarTone(entry.profileDisplayName || entry.authorName)}`} aria-hidden="true">
+                                {avatarInitial(entry.profileDisplayName || entry.authorName)}
+                              </span>
+                            )}
+                            <div className="hub-feed-card-head-text">
+                              <h3>{entry.profileDisplayName || entry.authorName || 'Usuario'}</h3>
+                            </div>
                           </header>
                           <p>{hasValidDate ? SOCIAL_UI.feed.postedAt(itemDate) : SOCIAL_UI.feed.analyzedRecently}</p>
                           <p className="hub-post-text"><PostText text={entry.text} /></p>
@@ -169,9 +207,18 @@ export function SocialFeedScreen({
                         onClick={() => openActivityDetail(entry)}
                         onKeyDown={(event) => handleActivityItemKeyDown(event, entry)}
                       >
-                        <header>
-                          <h3>{entry.profileDisplayName}</h3>
-                          <small className="hub-feed-game-subtitle">{entry.gameName}</small>
+                        <header className="hub-feed-card-head">
+                          {entry.photoURL ? (
+                            <img className="hub-avatar hub-avatar-img" src={entry.photoURL} alt="" referrerPolicy="no-referrer" />
+                          ) : (
+                            <span className={`hub-avatar hub-avatar--${avatarTone(entry.profileDisplayName)}`} aria-hidden="true">
+                              {avatarInitial(entry.profileDisplayName)}
+                            </span>
+                          )}
+                          <div className="hub-feed-card-head-text">
+                            <h3>{entry.profileDisplayName}</h3>
+                            {entry.gameName ? <span className="hub-feed-game-chip">{entry.gameName}</span> : null}
+                          </div>
                         </header>
                         <p>{analyzedAtLabel}</p>
                         <StarRating value={Number(entry.rating || 0)} />

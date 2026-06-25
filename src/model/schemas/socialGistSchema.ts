@@ -32,6 +32,7 @@ const visibility = z.strictObject({
   hideReplayable: z.boolean(),
   hideRetry: z.boolean(),
   hideGameTime: z.boolean(),
+  showPhoto: z.boolean(),
 });
 
 const profile = z.strictObject({
@@ -42,6 +43,8 @@ const profile = z.strictObject({
   visibility,
   // sharedLists es Partial<Record<TabId, SharedGame[]>>: claves 'c'|'v'|'e'|'p', subconjunto permitido.
   sharedLists: z.record(z.string(), z.array(sharedGame)),
+  // Foto de perfil pública (opcional): solo presente si el usuario la comparte. URL http(s) acotada.
+  photoURL: z.string().max(2048).optional(),
 });
 
 const activity = z.strictObject({

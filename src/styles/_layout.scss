@@ -1079,8 +1079,12 @@ button.hub-chip.active {
 }
 
 .hub-feed-card h3 {
-  font-size: .93rem;
+  font-size: clamp(.9rem, .84rem + .3vw, 1.02rem);
+  font-weight: 700;
   color: var(--steam-hover);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .hub-feed-card p {
@@ -1109,55 +1113,115 @@ button.hub-chip.active {
   margin-bottom: 1rem;
 }
 
+/* Fase 2 — tarjeta tranquila: superficie plana + borde de acento por tipo. Burbuja de chat: ancho a
+   contenido, alineada a la izquierda (otros) por defecto y a la derecha (tuyo). */
 .hub-feed-activity-item {
   position: relative;
   padding: .95rem 1rem;
-  border-radius: 1rem;
-  gap: .55rem;
+  border-radius: var(--radius-md);
+  gap: .5rem;
   cursor: pointer;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--border);
+  align-self: flex-start;
+  width: min(80%, 34rem); /* ancho uniforme para todas las burbujas */
+  max-width: 100%;
   transition: transform .2s ease, border-color .2s ease, box-shadow .2s ease, background .2s ease;
 }
 
-.hub-feed-activity-item::before {
-  content: '';
-  position: absolute;
-  left: -0.35rem;
-  top: 1rem;
-  width: .7rem;
-  height: .7rem;
-  transform: rotate(45deg);
-  border-left: 1px solid rgba(26,159,255,.16);
-  border-bottom: 1px solid rgba(26,159,255,.16);
-  background: inherit;
-}
+/* Acento por tipo de evento */
+.hub-feed-activity-item.is-review { border-left-color: var(--steam); }
+.hub-feed-activity-item.is-recommendation { border-left-color: var(--success); }
+.hub-feed-activity-item.is-post { border-left-color: var(--text-muted); cursor: default; }
 
-.hub-feed-activity-item.is-external-activity {
-  border-color: rgba(26,159,255,.34);
-  background: linear-gradient(160deg, rgba(26,159,255,.16), var(--hub-grad-end));
-}
-
+/* "Tuyo" = a la derecha, con leve tinte; ajeno = a la izquierda, superficie plana */
 .hub-feed-activity-item.is-own-activity {
-  border-color: rgba(137,154,168,.3);
-  background: linear-gradient(160deg, rgba(139,160,176,.1), var(--hub-grad-end));
-  color: var(--hub-text-muted);
+  align-self: flex-end;
+  background: var(--steam-soft);
 }
 
-.hub-feed-activity-item:hover,
-.hub-feed-activity-item:focus-visible {
+.hub-feed-activity-item:not(.is-post):hover,
+.hub-feed-activity-item:not(.is-post):focus-visible {
   transform: translateY(-1px);
-  border-color: rgba(26,159,255,.46);
-  box-shadow: 0 10px 20px rgba(0,0,0,.2);
-  outline: none;
+  border-color: var(--steam);
+  border-left-color: var(--steam);
+  box-shadow: var(--shadow);
 }
 
-.hub-feed-activity-item.is-own-activity:hover,
-.hub-feed-activity-item.is-own-activity:focus-visible {
-  border-color: rgba(168,185,199,.42);
-  box-shadow: 0 8px 18px rgba(0,0,0,.16);
+.hub-feed-activity-item:focus-visible {
+  outline: 2px solid var(--steam);
+  outline-offset: 2px;
 }
+
+/* Cabecera con avatar */
+.hub-feed-card-head {
+  display: flex;
+  align-items: center;
+  gap: .6rem;
+}
+.hub-feed-card-head-text {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: .15rem;
+}
+.hub-avatar {
+  flex: 0 0 auto;
+  width: 2.1rem;
+  height: 2.1rem;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: .85rem;
+  line-height: 1;
+  user-select: none;
+}
+.hub-avatar--0 { background: var(--steam-soft); color: var(--steam-hover); }
+.hub-avatar--1 { background: rgba(103,193,141,.18); color: var(--fg-green); }
+.hub-avatar--2 { background: rgba(232,184,32,.18); color: var(--fg-amber); }
+.hub-avatar--3 { background: rgba(99,102,241,.18); color: var(--fg-indigo); }
+.hub-avatar--4 { background: rgba(209,91,88,.18); color: var(--fg-red); }
+.hub-avatar--5 { background: rgba(26,159,255,.18); color: var(--fg-sky); }
+.hub-avatar-img { object-fit: cover; background: var(--surface-hover); }
+
+/* Juego como chip sutil */
+.hub-feed-game-chip {
+  display: inline-block;
+  max-width: 100%;
+  padding: .08rem .5rem;
+  border-radius: var(--radius-pill);
+  background: var(--surface-soft);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  font-size: .72rem;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Fase 3 — skeletons de carga */
+@keyframes hub-skeleton-pulse { 0%,100% { opacity: .55; } 50% { opacity: 1; } }
+.hub-skeleton {
+  background: var(--surface-hover);
+  border-radius: var(--radius-sm);
+  animation: hub-skeleton-pulse 1.2s ease-in-out infinite;
+}
+.hub-skeleton-line {
+  display: block;
+  height: .7rem;
+}
+.hub-skeleton-card { cursor: default; }
 
 .hub-feed-review-text {
   margin: 0;
+  max-width: 65ch;
   display: -webkit-box;
   -webkit-box-orient: vertical;
   line-clamp: 4;
@@ -1165,8 +1229,8 @@ button.hub-chip.active {
   overflow: hidden;
   white-space: pre-line;
   overflow-wrap: anywhere;
-  font-size: clamp(.88rem, .7rem + .75vw, 1.15rem);
-  line-height: 0.92;
+  font-size: clamp(.88rem, .7rem + .75vw, 1.05rem);
+  line-height: 1.3;
   color: var(--text);
 }
 
@@ -1204,6 +1268,7 @@ button.hub-chip.active {
 }
 .hub-post-text {
   margin: .25rem 0 0;
+  max-width: 65ch; /* medida de lectura cómoda aunque la tarjeta sea ancha */
   white-space: pre-wrap;
   overflow-wrap: anywhere;
   line-height: 1.45;
@@ -1433,19 +1498,27 @@ button.hub-chip.active {
 }
 
 /* Activity feed day grouping */
+/* Chat: hilo cronológico en columna; las burbujas se alinean a izquierda (otros) o derecha (tú).
+   El separador de día va centrado y sticky. */
 .hub-feed-day-group {
   display: flex;
   flex-direction: column;
 }
 
 .hub-feed-day-header {
-  display: flex;
+  align-self: center;
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: inline-flex;
   align-items: center;
   gap: .5rem;
-  padding: .35rem .75rem;
-  background: rgba(26,159,255,.08);
-  border-left: 3px solid rgba(26,159,255,.45);
-  border-radius: 0 .3rem .3rem 0;
+  margin: .2rem 0 .6rem;
+  padding: .25rem .8rem;
+  border-radius: var(--radius-pill);
+  /* opaco al quedar fijo (tinte steam sobre superficie) para que las tarjetas no se transparenten */
+  background: linear-gradient(0deg, var(--steam-soft), var(--steam-soft)), var(--surface);
+  border: 1px solid var(--border);
 }
 
 .hub-feed-day-header h4 {
