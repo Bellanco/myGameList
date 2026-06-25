@@ -84,7 +84,7 @@ export const SocialHub = memo(function SocialHub() {
 
   if (loading) {
     return (
-      <section className="hub-hub hub-hub-gateway" aria-label="Social">
+      <section className="hub-hub hub-hub-gateway" aria-label={SOCIAL_UI.screenAria}>
         <div className="hub-hub-card hub-hub-gateway-card">
           <div className="hub-hub-title-wrap">
             <Icon name="bottom-hub" className="hub-hub-icon" />
@@ -191,7 +191,7 @@ export const SocialHub = memo(function SocialHub() {
   }
 
   return (
-    <section className="hub-hub hub-hub-gateway" aria-label="Social">
+    <section className="hub-hub hub-hub-gateway" aria-label={SOCIAL_UI.screenAria}>
       <div className="hub-hub-card hub-hub-gateway-card">
         <div className="hub-hub-title-wrap">
           <Icon name="bottom-hub" className="hub-hub-icon" />
@@ -203,7 +203,7 @@ export const SocialHub = memo(function SocialHub() {
 
         <p className="hub-gateway-step-caption">{SOCIAL_UI.gateway.stepCaption(currentStep, gatewaySteps.length)}</p>
 
-        <div className="hub-gateway-actions" aria-label="Acciones principales social">
+        <div className="hub-gateway-actions" aria-label={SOCIAL_UI.gateway.actionsAria}>
           {primaryGatewayCta ? (
             <button
               className="btn btn-primary hub-gateway-btn hub-gateway-btn-primary"
@@ -224,14 +224,14 @@ export const SocialHub = memo(function SocialHub() {
           ) : null}
         </div>
 
-        <div className="hub-gateway-progress" aria-label="Progreso de configuracion social">
+        <div className="hub-gateway-progress" aria-label={SOCIAL_UI.gateway.progressAria}>
           <div className="hub-gateway-progress-track" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={gatewayProgress}>
             <span className="hub-gateway-progress-fill" style={{ width: `${gatewayProgress}%` }} />
           </div>
           <small>{SOCIAL_UI.gateway.progress(gatewayProgress)}</small>
         </div>
 
-        <div className="hub-gateway-steps" aria-label="Pasos de configuracion social">
+        <div className="hub-gateway-steps" aria-label={SOCIAL_UI.gateway.stepsAria}>
           {gatewaySteps.map((step, index) => {
             const stepNumber = index + 1;
             const isCurrent = stepNumber === currentStep && !step.done;
@@ -265,7 +265,7 @@ export const SocialHub = memo(function SocialHub() {
 
         <details className="hub-gateway-details" open>
           <summary>{SOCIAL_UI.gateway.detailsSummary}</summary>
-          <div className="hub-status-grid" aria-label="Estado de configuracion social">
+          <div className="hub-status-grid" aria-label={SOCIAL_UI.gateway.stateAria}>
             <article className={`hub-status-card ${hasMainSync ? 'is-ok' : 'is-pending'}`}>
               <span className="hub-status-label">{SOCIAL_UI.gateway.stateSync}</span>
               <strong>{hasMainSync ? SOCIAL_UI.gateway.stateConnected : SOCIAL_UI.gateway.stateNotConnected}</strong>
@@ -280,7 +280,7 @@ export const SocialHub = memo(function SocialHub() {
             </article>
           </div>
 
-          <div className="hub-hub-tags" aria-label="Flujo social">
+          <div className="hub-hub-tags" aria-label={SOCIAL_UI.gateway.flowAria}>
             {SOCIAL_UI.gateway.flow.map((flowStep) => (
               <span key={flowStep} className="hub-chip">{flowStep}</span>
             ))}

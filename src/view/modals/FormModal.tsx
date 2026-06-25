@@ -240,7 +240,7 @@ export function FormModal({ open, draft: initialDraft, currentTab, lookups, onCl
     <dialog
       ref={dialogRef}
       className="modal-dialog"
-      aria-label={initialDraft.id ? 'Editar juego' : 'Nuevo juego'}
+      aria-label={initialDraft.id ? UI_MESSAGES.form.editTitle : UI_MESSAGES.form.newTitle}
       onMouseDown={(event) => {
         // Click en el backdrop (fuera de .modal) → cerrar; el target es el propio <dialog>.
         if (event.target === event.currentTarget) onClose();
@@ -249,7 +249,7 @@ export function FormModal({ open, draft: initialDraft, currentTab, lookups, onCl
       {open ? (
       <div className="modal">
         <div className="modal-hd">
-          <div className="modal-title">{draft.id ? 'Editar juego' : 'Nuevo juego'}</div>
+          <div className="modal-title">{draft.id ? UI_MESSAGES.form.editTitle : UI_MESSAGES.form.newTitle}</div>
           <button className="btn-icon" type="button" onClick={onClose}>
             <Icon name={COMMON_ICONS.close} />
           </button>
@@ -257,24 +257,24 @@ export function FormModal({ open, draft: initialDraft, currentTab, lookups, onCl
         <div className="modal-body">
           <div className="frow">
             <div className="fg">
-              <label htmlFor="draft-name" className="flabel">Nombre *</label>
+              <label htmlFor="draft-name" className="flabel">{UI_MESSAGES.form.nameLabel}</label>
               <input
                 id="draft-name"
                 className={`finput ${fieldErrors.name ? 'has-error' : ''}`.trim()}
                 value={draft.name}
-                placeholder="Ej: The Witcher 3"
+                placeholder={UI_MESSAGES.form.namePlaceholder}
                 onChange={(event) => {
                   setFieldErrors((prev) => ({ ...prev, name: false }));
                   setLocalDraft({ ...draft, name: event.target.value });
                 }}
               />
-              <small className="tag-hint tag-hint--spacer" aria-hidden="true">Pulsa Enter para anadir</small>
+              <small className="tag-hint tag-hint--spacer" aria-hidden="true">{UI_MESSAGES.form.enterToAddHint}</small>
             </div>
             <TagInput
-              label="Géneros"
+              label={UI_MESSAGES.form.genresLabel}
               required
               listId="dl-genres"
-              placeholder="Ej: Acción"
+              placeholder={UI_MESSAGES.form.genresPlaceholder}
               values={draft.genres}
               pendingValue={pending.genres}
               onPendingValueChange={(value) => setPendingValue('genres', value)}
@@ -290,10 +290,10 @@ export function FormModal({ open, draft: initialDraft, currentTab, lookups, onCl
 
           <div className="frow">
             <TagInput
-              label="Plataformas"
+              label={UI_MESSAGES.form.platformsLabel}
               required
               listId="dl-platforms"
-              placeholder="Ej: PC"
+              placeholder={UI_MESSAGES.form.platformsPlaceholder}
               values={draft.platforms}
               pendingValue={pending.platforms}
               onPendingValueChange={(value) => setPendingValue('platforms', value)}
@@ -307,12 +307,12 @@ export function FormModal({ open, draft: initialDraft, currentTab, lookups, onCl
             />
             {supportsScore(currentTab) ? (
               <div className="fg fg-score-field">
-                <label className="flabel">{currentTab === 'p' ? 'Interés' : 'Puntuación'} {currentTab === 'c' ? '*' : ''}</label>
+                <label className="flabel">{currentTab === 'p' ? UI_MESSAGES.form.interestLabel : UI_MESSAGES.form.scoreLabel} {currentTab === 'c' ? '*' : ''}</label>
                 <div className={`score-input-shell ${fieldErrors.score ? 'has-error' : ''}`.trim()}>
                   <StarPicker value={draft.score} onChange={(v) => setLocalDraft({ ...draft, score: v })} />
                 </div>
-                {fieldErrors.score ? <small className="tag-hint" style={{ color: 'var(--danger)' }}>Selecciona una puntuación</small> : null}
-                {!fieldErrors.score ? <small className="tag-hint tag-hint--spacer" aria-hidden="true">Pulsa Enter para anadir</small> : null}
+                {fieldErrors.score ? <small className="tag-hint" style={{ color: 'var(--danger)' }}>{VALIDATION_MESSAGES.scoreRequired}</small> : null}
+                {!fieldErrors.score ? <small className="tag-hint tag-hint--spacer" aria-hidden="true">{UI_MESSAGES.form.enterToAddHint}</small> : null}
               </div>
             ) : null}
           </div>
@@ -320,9 +320,9 @@ export function FormModal({ open, draft: initialDraft, currentTab, lookups, onCl
           {supportsYears(currentTab) ? (
             <div className="frow">
               <TagInput
-                label="Años completado"
+                label={UI_MESSAGES.form.yearsLabel}
                 required
-                placeholder={`Ej: ${new Date().getFullYear()}`}
+                placeholder={UI_MESSAGES.form.yearsPlaceholder(new Date().getFullYear())}
                 values={draft.years}
                 pendingValue={pending.years}
                 onPendingValueChange={(value) => setPendingValue('years', value)}
@@ -339,12 +339,12 @@ export function FormModal({ open, draft: initialDraft, currentTab, lookups, onCl
               />
               {supportsHours(currentTab) ? (
                 <div className="fg">
-                  <label htmlFor="draft-hours" className="flabel">Horas jugadas</label>
+                  <label htmlFor="draft-hours" className="flabel">{UI_MESSAGES.form.hoursLabel}</label>
                   <input
                     id="draft-hours"
                     className="finput"
                     type="number"
-                    placeholder="Ej: 120"
+                    placeholder={UI_MESSAGES.form.hoursPlaceholder}
                     value={draft.hours ?? ''}
                     onChange={(event) =>
                       setLocalDraft({
@@ -353,7 +353,7 @@ export function FormModal({ open, draft: initialDraft, currentTab, lookups, onCl
                       })
                     }
                   />
-                  <small className="tag-hint tag-hint--spacer" aria-hidden="true">Pulsa Enter para anadir</small>
+                  <small className="tag-hint tag-hint--spacer" aria-hidden="true">{UI_MESSAGES.form.enterToAddHint}</small>
                 </div>
               ) : null}
             </div>
@@ -363,9 +363,9 @@ export function FormModal({ open, draft: initialDraft, currentTab, lookups, onCl
             <div className="frow">
               {supportsStrengths(currentTab) ? (
                 <TagInput
-                  label="Puntos fuertes"
+                  label={UI_MESSAGES.form.strengthsLabel}
                   listId="dl-strengths"
-                  placeholder="Ej: Combate"
+                  placeholder={UI_MESSAGES.form.strengthsPlaceholder}
                   values={draft.strengths}
                   pendingValue={pending.strengths}
                   onPendingValueChange={(value) => setPendingValue('strengths', value)}
@@ -380,9 +380,9 @@ export function FormModal({ open, draft: initialDraft, currentTab, lookups, onCl
 
               {supportsWeaknesses(currentTab) ? (
                 <TagInput
-                  label="Puntos débiles"
+                  label={UI_MESSAGES.form.weaknessesLabel}
                   listId="dl-weaknesses"
-                  placeholder="Ej: Repetitivo"
+                  placeholder={UI_MESSAGES.form.weaknessesPlaceholder}
                   values={draft.weaknesses}
                   pendingValue={pending.weaknesses}
                   onPendingValueChange={(value) => setPendingValue('weaknesses', value)}
@@ -397,9 +397,9 @@ export function FormModal({ open, draft: initialDraft, currentTab, lookups, onCl
 
               {supportsReasons(currentTab) ? (
                 <TagInput
-                  label="Razones"
+                  label={UI_MESSAGES.form.reasonsLabel}
                   listId="dl-weaknesses"
-                  placeholder="Ej: Falta de tiempo"
+                  placeholder={UI_MESSAGES.form.reasonsPlaceholder}
                   values={draft.reasons}
                   pendingValue={pending.reasons}
                   onPendingValueChange={(value) => setPendingValue('reasons', value)}
@@ -419,11 +419,11 @@ export function FormModal({ open, draft: initialDraft, currentTab, lookups, onCl
               <button
                 className={`btn btn-toggle ${draft.steamDeck ? 'active btn-toggle-deck' : ''}`}
                 type="button"
-                aria-label="Steam Deck"
+                aria-label={UI_MESSAGES.form.steamDeck}
                 onClick={() => setLocalDraft({ ...draft, steamDeck: !draft.steamDeck })}
               >
                 <Icon name={COMMON_ICONS.steamDeck} />
-                <span>Steam Deck</span>
+                <span>{UI_MESSAGES.form.steamDeck}</span>
               </button>
             </div>
             {boolField ? (
@@ -448,13 +448,13 @@ export function FormModal({ open, draft: initialDraft, currentTab, lookups, onCl
 
           {supportsReview(currentTab) ? (
             <div className="fg">
-              <label htmlFor="draft-review" className="flabel">Análisis</label>
+              <label htmlFor="draft-review" className="flabel">{UI_MESSAGES.form.reviewLabel}</label>
               <textarea
                 id="draft-review"
                 className="ftextarea"
                 maxLength={REVIEW_MAX_LENGTH}
                 value={draft.review}
-                placeholder="Ej: Historia sólida, combate excelente y gran ambientación."
+                placeholder={UI_MESSAGES.form.reviewPlaceholder}
                 onChange={(event) => {
                   const nextReview = event.target.value.slice(0, REVIEW_MAX_LENGTH);
                   setLocalDraft({ ...draft, review: nextReview });
@@ -465,7 +465,7 @@ export function FormModal({ open, draft: initialDraft, currentTab, lookups, onCl
                   className={`tag-hint ${reviewProgressClass}`.trim()}
                   aria-live="polite"
                 >
-                  {`${reviewCount.toLocaleString()} / ${REVIEW_MAX_LENGTH.toLocaleString()} caracteres`}
+                  {UI_MESSAGES.form.charCount(reviewCount, REVIEW_MAX_LENGTH)}
                 </small>
               </div>
             </div>
@@ -473,10 +473,10 @@ export function FormModal({ open, draft: initialDraft, currentTab, lookups, onCl
         </div>
         <div className="modal-ft">
           <button className="btn btn-secondary" type="button" onClick={onClose}>
-            Cancelar
+            {UI_MESSAGES.form.cancel}
           </button>
           <button className="btn btn-steam" type="button" onClick={runSave}>
-            Guardar
+            {UI_MESSAGES.form.save}
           </button>
         </div>
       </div>

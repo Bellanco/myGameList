@@ -53,8 +53,8 @@ export function SocialDetailScreen({
   const updatedAtDate = new Date(activeDetailEvent.updatedAt);
   const hasValidUpdatedAt = !Number.isNaN(updatedAtDate.getTime());
   const analyzedAtLabel = hasValidUpdatedAt
-    ? `Analizado el ${updatedAtDate.toLocaleDateString('es-ES', { day: '2-digit' })} de ${updatedAtDate.toLocaleDateString('es-ES', { month: 'long' })} a las ${updatedAtDate.toLocaleTimeString('es-ES', { hour: 'numeric', minute: '2-digit' })}`
-    : 'Analizado recientemente';
+    ? SOCIAL_UI.feed.analyzedAt(updatedAtDate)
+    : SOCIAL_UI.feed.analyzedRecently;
   return (
     <section className="hub-hub hub-screen" aria-label={SOCIAL_UI.feed.sectionAria}>
       <div className="hub-hub-card hub-screen-card hub-feed-card-shell">
@@ -79,7 +79,7 @@ export function SocialDetailScreen({
               <button
                 className="hub-detail-profile-link"
                 type="button"
-                aria-label={`Abrir perfil social de ${activeDetailEvent.profileDisplayName}`}
+                aria-label={SOCIAL_UI.feed.openProfileAria(activeDetailEvent.profileDisplayName)}
                 onClick={() => onOpenProfileDetail(activeDetailEvent.profileId)}
               >
                 {activeDetailEvent.profileDisplayName}

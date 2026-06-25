@@ -1005,8 +1005,9 @@ export function useSocialViewModel() {
       await publishPost({ text });
       setComposePostText('');
       await hydrateSocialDirectory(true);
+      setFeedback('ok', SOCIAL_UI.status.postPublished);
     } catch (error) {
-      setFeedback('err', error instanceof Error ? error.message : 'No se pudo publicar la publicación');
+      setFeedback('err', error instanceof Error ? error.message : SOCIAL_UI.status.postPublishFailed);
     } finally {
       setPublishingPost(false);
     }

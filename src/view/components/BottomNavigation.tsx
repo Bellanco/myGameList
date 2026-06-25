@@ -1,5 +1,6 @@
 import { memo } from 'react';
 import type { IconName } from '../../core/constants/icons';
+import { UI_MESSAGES } from '../../core/constants/labels';
 import { Icon } from './Icon';
 
 export type AppSection = 'lists' | 'social' | 'settings';
@@ -10,9 +11,9 @@ interface BottomNavigationProps {
 }
 
 const NAV_ITEMS: Array<{ key: AppSection; label: string; icon: IconName }> = [
-  { key: 'lists', label: 'Listados', icon: 'bottom-lists' },
-  { key: 'social', label: 'Social', icon: 'bottom-hub' },
-  { key: 'settings', label: 'Ajustes', icon: 'bottom-settings' },
+  { key: 'lists', label: UI_MESSAGES.nav.lists, icon: 'bottom-lists' },
+  { key: 'social', label: UI_MESSAGES.nav.social, icon: 'bottom-hub' },
+  { key: 'settings', label: UI_MESSAGES.nav.settings, icon: 'bottom-settings' },
 ];
 
 /**
@@ -20,7 +21,7 @@ const NAV_ITEMS: Array<{ key: AppSection; label: string; icon: IconName }> = [
  */
 export const BottomNavigation = memo(function BottomNavigation({ currentSection, onSectionChange }: BottomNavigationProps) {
   return (
-    <nav className="bottom-nav" aria-label="Navegacion principal">
+    <nav className="bottom-nav" aria-label={UI_MESSAGES.nav.ariaLabel}>
       <div className="bottom-nav-inner">
         {NAV_ITEMS.map((item) => (
           <button

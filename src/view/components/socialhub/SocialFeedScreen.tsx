@@ -109,8 +109,8 @@ export function SocialFeedScreen({
                     const updatedAtDate = new Date(entry.updatedAt || '');
                     const hasValidUpdatedAt = !Number.isNaN(updatedAtDate.getTime());
                     const analyzedAtLabel = hasValidUpdatedAt
-                      ? `Analizado el ${updatedAtDate.toLocaleDateString('es-ES', { day: '2-digit' })} de ${updatedAtDate.toLocaleDateString('es-ES', { month: 'long' })} a las ${updatedAtDate.toLocaleTimeString('es-ES', { hour: 'numeric', minute: '2-digit' })}`
-                      : 'Analizado recientemente';
+                      ? SOCIAL_UI.feed.analyzedAt(updatedAtDate)
+                      : SOCIAL_UI.feed.analyzedRecently;
                     const cardTypeClass = entry.type === 'review' ? 'is-review' : 'is-recommendation';
                     const ownershipClass = entry.socialGistId === currentSocialGistId ? 'is-own-activity' : 'is-external-activity';
                     return (
@@ -119,7 +119,7 @@ export function SocialFeedScreen({
                         className={`hub-feed-card hub-feed-activity-item ${cardTypeClass} ${ownershipClass}`}
                         role="listitem"
                         tabIndex={0}
-                        aria-label={`Abrir detalle de actividad de ${entry.profileDisplayName} sobre ${entry.gameName}`}
+                        aria-label={SOCIAL_UI.feed.openActivityAria(entry.profileDisplayName, entry.gameName)}
                         onClick={() => openActivityDetail(entry)}
                         onKeyDown={(event) => handleActivityItemKeyDown(event, entry)}
                       >
@@ -221,7 +221,7 @@ export function SocialFeedScreen({
                   key={entry.id}
                   className="hub-feed-card hub-feed-profile-item"
                   tabIndex={0}
-                  aria-label={`Abrir perfil social de ${entry.displayName}`}
+                  aria-label={SOCIAL_UI.feed.openProfileAria(entry.displayName)}
                   onClick={() => openProfileDetail(entry.id)}
                   onKeyDown={(event) => handleProfileCardKeyDown(event, entry.id)}
                 >
