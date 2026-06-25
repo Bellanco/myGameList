@@ -22,6 +22,8 @@ export function SocialFeedScreen({
   handleProfileCardKeyDown,
   groupedFeedItems,
   feedItems,
+  hasMoreFeed,
+  showMoreFeed,
   openActivityDetail,
   handleActivityItemKeyDown,
   composePostText,
@@ -48,6 +50,8 @@ export function SocialFeedScreen({
   handleProfileCardKeyDown: (event: React.KeyboardEvent<HTMLElement>, id: string) => void;
   groupedFeedItems: any[];
   feedItems: any[];
+  hasMoreFeed: boolean;
+  showMoreFeed: () => void;
   openActivityDetail: (entry: any) => void;
   handleActivityItemKeyDown: (event: React.KeyboardEvent<HTMLElement>, entry: any) => void;
   composePostText: string;
@@ -219,6 +223,11 @@ export function SocialFeedScreen({
               ))}
             </div>
           ) : null}
+          {!loadingDirectory && hasMoreFeed ? (
+            <button className="btn btn-secondary hub-feed-load-more" type="button" onClick={showMoreFeed}>
+              {SOCIAL_UI.feed.feedLoadMore}
+            </button>
+          ) : null}
         </div>
 
         <div className="hub-feed-toolbar" aria-label={SOCIAL_UI.feed.toolbarAria}>
@@ -259,14 +268,27 @@ export function SocialFeedScreen({
                   onClick={() => openProfileDetail(entry.id)}
                   onKeyDown={(event) => handleProfileCardKeyDown(event, entry.id)}
                 >
-                  <header>
-                    <h3>{entry.displayName}</h3>
+                  <header className="hub-feed-card-head">
+                    {entry.photoURL ? (
+                      <img className="hub-avatar hub-avatar-img" src={entry.photoURL} alt="" referrerPolicy="no-referrer" />
+                    ) : (
+                      <span className={`hub-avatar hub-avatar--${avatarTone(entry.displayName)}`} aria-hidden="true">
+                        {avatarInitial(entry.displayName)}
+                      </span>
+                    )}
+                    <div className="hub-feed-card-head-text">
+                      <h3>{entry.displayName}</h3>
+                    </div>
                   </header>
-                  <p style={{ whiteSpace: 'pre-line' }}>
-                    {entry.favorites.length
-                      ? `${SOCIAL_UI.feed.favoritesPrefix}\n${entry.favorites.join('\n')}`
-                      : SOCIAL_UI.feed.noFavorites}
-                  </p>
+                  {entry.favorites.length ? (
+                    <div className="hub-profile-fav-chips">
+                      {entry.favorites.map((name: string, i: number) => (
+                        <span key={`${name}-${i}`} className="hub-feed-game-chip">{name}</span>
+                      ))}
+                    </div>
+                  ) : (
+                    <p>{SOCIAL_UI.feed.noFavorites}</p>
+                  )}
                 </article>
               ))}
             </div>

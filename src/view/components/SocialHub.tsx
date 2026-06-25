@@ -70,6 +70,8 @@ export const SocialHub = memo(function SocialHub() {
     activeDetailEvent,
     getGameItemById,
     groupedFeedItems,
+    hasMoreFeed,
+    showMoreFeed,
     handleFeedRowMouseDown,
     handleFeedRowKeyDown,
     openActivityDetail,
@@ -128,6 +130,7 @@ export const SocialHub = memo(function SocialHub() {
             setHideGameTime={setHideGameTime}
           showPhoto={showPhoto}
           setShowPhoto={setShowPhoto}
+          ownPhotoURL={authUser?.photoURL || ''}
         />
       );
     }
@@ -175,6 +178,8 @@ export const SocialHub = memo(function SocialHub() {
         handleProfileCardKeyDown={handleProfileCardKeyDown}
         groupedFeedItems={groupedFeedItems}
         feedItems={feedItems}
+        hasMoreFeed={hasMoreFeed}
+        showMoreFeed={showMoreFeed}
         openActivityDetail={openActivityDetail}
         handleActivityItemKeyDown={handleActivityItemKeyDown}
         composePostText={composePostText}
