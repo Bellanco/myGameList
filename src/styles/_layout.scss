@@ -1541,6 +1541,38 @@ button.hub-chip.active {
   border-top: 1px solid var(--border);
 }
 
+/* Detalle: reseña + metadatos. Apilados por defecto (metadatos debajo, con divisor superior);
+   en fila (metadatos a la derecha de la reseña, con divisor lateral) cuando el detalle tiene ancho.
+   Container query sobre `.hub-feed-card-detail` (container-type: inline-size). */
+.hub-detail-body {
+  display: flex;
+  flex-direction: column;
+  gap: .9rem;
+  min-width: 0;
+}
+.hub-detail-body .hub-feed-review-text {
+  min-width: 0;
+}
+
+@container (min-width: 44rem) {
+  .hub-detail-body {
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 1.1rem;
+  }
+  .hub-detail-body .hub-feed-review-text {
+    flex: 1 1 0;
+  }
+  .hub-detail-body .hub-detail-metadata {
+    flex: 0 0 17rem;
+    margin-top: 0;
+    padding-top: 0;
+    border-top: none;
+    padding-left: 1.1rem;
+    border-left: 1px solid var(--border);
+  }
+}
+
 .hub-metadata-section {
   display: flex;
   flex-direction: column;
