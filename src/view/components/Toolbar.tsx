@@ -1,6 +1,6 @@
 import { memo, useEffect, useMemo, useState } from 'react';
 import { COMMON_ICONS } from '../../core/constants/icons';
-import { FILTER_BOOL } from '../../core/constants/labels';
+import { FILTER_BOOL, UI_MESSAGES } from '../../core/constants/labels';
 import { HOURS_RANGES } from '../../core/constants/uiConfig';
 import type { TabId, ToolbarFilters } from '../../model/types/game';
 import { renderStars } from '../../core/utils/renderStars';
@@ -83,7 +83,7 @@ export const Toolbar = memo(function Toolbar({
           <input
             type="search"
             className="input-base search-input"
-            placeholder="Buscar"
+            placeholder={UI_MESSAGES.toolbar.searchPlaceholder}
             value={searchDraft}
             onChange={(event) => setSearchDraft(event.target.value)}
           />
@@ -109,9 +109,9 @@ export const Toolbar = memo(function Toolbar({
 
       <div className={`filters-row ${!compactFilters || filtersOpen ? 'open' : ''}`}>
         <div className="filter-field">
-          <label htmlFor="filter-genre" className="flabel">Género</label>
+          <label htmlFor="filter-genre" className="flabel">{UI_MESSAGES.toolbar.genre}</label>
           <select id="filter-genre" className="input-base" value={filters.genre} onChange={(event) => onFilterChange('genre', event.target.value)}>
-            <option value="">Todos los géneros</option>
+            <option value="">{UI_MESSAGES.toolbar.allGenres}</option>
             {lookups.genres.map((value) => (
               <option key={value} value={value}>
                 {value}
@@ -120,9 +120,9 @@ export const Toolbar = memo(function Toolbar({
           </select>
         </div>
         <div className="filter-field">
-          <label htmlFor="filter-platform" className="flabel">Plataforma</label>
+          <label htmlFor="filter-platform" className="flabel">{UI_MESSAGES.toolbar.platform}</label>
           <select id="filter-platform" className="input-base" value={filters.platform} onChange={(event) => onFilterChange('platform', event.target.value)}>
-            <option value="">Todas las plataformas</option>
+            <option value="">{UI_MESSAGES.toolbar.allPlatforms}</option>
             {lookups.platforms.map((value) => (
               <option key={value} value={value}>
                 {value}
@@ -133,12 +133,12 @@ export const Toolbar = memo(function Toolbar({
 
         {supportsScore(currentTab) ? (
           <div className="filter-field">
-            <label htmlFor="filter-score" className="flabel">Puntuación</label>
+            <label htmlFor="filter-score" className="flabel">{UI_MESSAGES.toolbar.score}</label>
             <select id="filter-score" className="input-base" value={filters.score} onChange={(event) => onFilterChange('score', event.target.value)}>
-              <option value="">Cualquier puntuación</option>
+              <option value="">{UI_MESSAGES.toolbar.anyScore}</option>
               {[5, 4, 3, 2, 1].map((value) => (
                 <option key={value} value={String(value)}>
-                  {renderStars(value)} {value} o más
+                  {renderStars(value)} {UI_MESSAGES.toolbar.scoreOrMore(value)}
                 </option>
               ))}
             </select>
@@ -147,9 +147,9 @@ export const Toolbar = memo(function Toolbar({
 
         {supportsHours(currentTab) ? (
           <div className="filter-field">
-            <label htmlFor="filter-hours" className="flabel">Horas</label>
+            <label htmlFor="filter-hours" className="flabel">{UI_MESSAGES.toolbar.hours}</label>
             <select id="filter-hours" className="input-base" value={filters.hours} onChange={(event) => onFilterChange('hours', event.target.value)}>
-              <option value="">Cualquier duración</option>
+              <option value="">{UI_MESSAGES.toolbar.anyDuration}</option>
               {HOURS_RANGES.map((range) => (
                 <option key={range.key} value={range.key}>
                   {range.label}
@@ -179,11 +179,11 @@ export const Toolbar = memo(function Toolbar({
           <button
             className={`btn btn-toggle ${filters.deck ? 'active btn-toggle-deck' : ''}`}
             type="button"
-            aria-label="Steam Deck"
+            aria-label={UI_MESSAGES.toolbar.steamDeck}
             onClick={() => onFilterChange('deck', !filters.deck)}
           >
             <Icon name={COMMON_ICONS.steamDeck} />
-            <span>Steam Deck</span>
+            <span>{UI_MESSAGES.toolbar.steamDeck}</span>
           </button>
         </div>
       </div>
@@ -196,7 +196,7 @@ export const Toolbar = memo(function Toolbar({
               <button
                 type="button"
                 className="chip-x"
-                aria-label={`Quitar filtro ${item.label}`}
+                aria-label={UI_MESSAGES.toolbar.removeFilter(item.label)}
                 onClick={() => onClearFilter(item.key)}
               >
                 <Icon name={COMMON_ICONS.close} />

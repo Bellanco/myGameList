@@ -1,4 +1,5 @@
 import { memo } from 'react';
+import { UI_MESSAGES } from '../../core/constants/labels';
 
 /**
  * Selector visual de puntuación (1-5 estrellas) para formularios.
@@ -27,7 +28,7 @@ export const StarPicker = memo(function StarPicker({ value, onChange }: { value:
   };
 
   return (
-    <div className="star-inp star-inp-field" role="radiogroup" aria-label="Seleccionar puntuación">
+    <div className="star-inp star-inp-field" role="radiogroup" aria-label={UI_MESSAGES.starPicker.groupAria}>
       {[1, 2, 3, 4, 5].map((star) => (
         <button
           key={star}
@@ -37,7 +38,7 @@ export const StarPicker = memo(function StarPicker({ value, onChange }: { value:
           className={star <= current ? 'f' : ''}
           role="radio"
           aria-checked={star === current}
-          aria-label={`${star} estrella${star > 1 ? 's' : ''}`}
+          aria-label={UI_MESSAGES.starPicker.starAria(star)}
           tabIndex={star === 1 ? 0 : -1}
         >
           ★
