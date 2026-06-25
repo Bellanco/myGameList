@@ -67,6 +67,12 @@ type SessionCachedValue<T> = {
 
 const socialGistCacheById = new Map<string, SessionCachedValue<SocialGistData>>();
 const publicSocialGistCacheById = new Map<string, SessionCachedValue<SocialGistData>>();
+// Upgrade proactivo del gist de JUEGOS: gistIds cuyo FORMATO ya hemos inspeccionado a fondo en ESTA sesión.
+// Un 304 confirma que nuestro etag coincide, pero NO trae contenido → no se puede evaluar `wasLegacy`. Para un
+// dispositivo ya conectado con un gist viejo, su etag siempre coincide y el upgrade no se dispararía nunca.
+// Igual que `readSocialGist` (que aprovecha la caché de sesión), hacemos UNA lectura completa por sesión ante el
+// primer 304 para evaluar el formato; tras verla, confiamos en el 304 (barato). Se reinicia al recargar la página.
+const gamesGistFormatVerifiedThisSession = new Set<string>();
 const socialGistInFlightByKey = new Map<string, Promise<{ data: SocialGistData; etag: string | null; notModified?: boolean; wasLegacy?: boolean }>>();
 const publicSocialGistInFlightById = new Map<string, Promise<SocialGistData>>();
 
@@ -1072,6 +1078,38 @@ export async function writeSocialGist(token: string, gistId: string, payload: So
   };
 }
 
+/**
+ * Construye la respuesta de lectura del gist de juegos a partir del cuerpo de GitHub: parsea el fichero principal,
+ * ensambla los chunks de overflow (E4), migra al formato actual y calcula `wasLegacy` (upgrade proactivo).
+ * Lanza si el fichero falta o el JSON es inválido (mismas garantías anti-pérdida que el camino directo).
+ */
+function buildGistReadResponse(body: { files?: Record<string, { content: string } | undefined> }, etag: string | null): GistReadResponse {
+  const raw = body.files?.[GIST_FILENAME]?.content;
+
+  if (!raw) {
+    throw new Error('Gist file not found');
+  }
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    throw new Error('Invalid JSON in Gist');
+  }
+
+  // E4: si el ancla referencia chunks de overflow en el mismo gist, fusiona sus juegos (los ficheros vienen en
+  // la misma respuesta). Para gist plano o de un solo fichero no hace nada (comportamiento actual intacto).
+  const assembled = assembleChunkedGames(parsed, body.files);
+
+  return {
+    data: migrateData(unwrapGamesFile(assembled)),
+    etag,
+    // El "viejo" depende del DESTINO de escritura: con el envoltorio v4 activado, "viejo" = no-v4 (se re-encoda);
+    // con escritura plana, "viejo" = envoltorio o legacy (se rebaja a plano). Así el auto-upgrade apunta al destino real.
+    wasLegacy: ENABLE_GAMES_WRAPPER_WRITE ? gamesGistNeedsUpgradeToWrapper(parsed) : gamesGistNeedsRewrite(parsed),
+  };
+}
+
 export async function readGist(token: string, gistId: string, etag: string | null = null): Promise<GistReadResponse> {
   if (!isValidGithubToken(token)) {
     throw new Error('Formato de token inválido');
@@ -1093,7 +1131,36 @@ export async function readGist(token: string, gistId: string, etag: string | nul
   const response = await githubFetch(`${GIST_API_BASE}/${gistId}`, { headers });
 
   if (response.status === 304) {
-    return { notModified: true };
+    // Si ya inspeccionamos el formato de este gist en esta sesión, confiamos en el 304 (no trae contenido).
+    if (gamesGistFormatVerifiedThisSession.has(gistId)) {
+      return { notModified: true };
+    }
+
+    // Primer 304 de la sesión: una relectura COMPLETA (sin If-None-Match) para evaluar `wasLegacy` y permitir el
+    // upgrade proactivo en dispositivos ya conectados a un gist viejo. Best-effort: si falla, no rompemos el sync
+    // (se devuelve notModified y se reintenta en la próxima sesión).
+    try {
+      const freshResp = await githubFetch(`${GIST_API_BASE}/${gistId}`, {
+        headers: {
+          Authorization: getGithubAuthHeader(token),
+          'X-GitHub-Api-Version': '2022-11-28',
+        },
+      });
+      if (!freshResp.ok) {
+        return { notModified: true };
+      }
+      const freshBody = (await freshResp.json()) as { files?: Record<string, { content: string }> };
+      const result = buildGistReadResponse(freshBody, freshResp.headers.get('etag'));
+      gamesGistFormatVerifiedThisSession.add(gistId);
+      // Solo divergemos del camino 304 cuando hay que migrar: si el formato ya es el actual, devolvemos
+      // notModified para conservar exactamente el comportamiento barato (el viewmodel empuja dirty si toca).
+      if (!result.wasLegacy) {
+        return { notModified: true };
+      }
+      return result;
+    } catch {
+      return { notModified: true };
+    }
   }
 
   if (!response.ok) {
@@ -1101,30 +1168,10 @@ export async function readGist(token: string, gistId: string, etag: string | nul
   }
 
   const body = (await response.json()) as { files?: Record<string, { content: string }> };
-  const raw = body.files?.[GIST_FILENAME]?.content;
-
-  if (!raw) {
-    throw new Error('Gist file not found');
-  }
-
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(raw);
-  } catch {
-    throw new Error('Invalid JSON in Gist');
-  }
-
-  // E4: si el ancla referencia chunks de overflow en el mismo gist, fusiona sus juegos (los ficheros vienen en
-  // la misma respuesta). Para gist plano o de un solo fichero no hace nada (comportamiento actual intacto).
-  const assembled = assembleChunkedGames(parsed, body.files);
-
-  return {
-    data: migrateData(unwrapGamesFile(assembled)),
-    etag: response.headers.get('etag'),
-    // El "viejo" depende del DESTINO de escritura: con el envoltorio v4 activado, "viejo" = no-v4 (se re-encoda);
-    // con escritura plana, "viejo" = envoltorio o legacy (se rebaja a plano). Así el auto-upgrade apunta al destino real.
-    wasLegacy: ENABLE_GAMES_WRAPPER_WRITE ? gamesGistNeedsUpgradeToWrapper(parsed) : gamesGistNeedsRewrite(parsed),
-  };
+  const result = buildGistReadResponse(body, response.headers.get('etag'));
+  // Hemos visto el contenido completo: marca el formato como verificado para esta sesión (evita relecturas en 304).
+  gamesGistFormatVerifiedThisSession.add(gistId);
+  return result;
 }
 
 export async function writeGist(token: string, gistId: string, payload: TabData): Promise<{ etag: string | null; updatedAt: number }> {
