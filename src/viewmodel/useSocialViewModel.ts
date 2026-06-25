@@ -402,7 +402,11 @@ export function useSocialViewModel() {
   }, []);
 
   const visibleSocialDirectory = useMemo(() => {
-    return socialDirectory.filter((entry) => entry.socialGistId !== socialCfgGistId);
+    // Un perfil sin favoritos se considera INCOMPLETO: no aparece en el directorio ("Actividad de perfiles")
+    // ni se puede abrir su detalle (ver selectedProfileDetail/openProfileDetail). Excluye además el propio.
+    return socialDirectory.filter(
+      (entry) => entry.socialGistId !== socialCfgGistId && entry.favorites.length > 0,
+    );
   }, [socialCfgGistId, socialDirectory]);
 
   const socialDisplayName = useMemo(() => {
@@ -448,7 +452,8 @@ export function useSocialViewModel() {
     }
 
     const entry = socialDirectory.find((item) => item.id === profileDetailId) || null;
-    if (!entry) return null;
+    // Perfil incompleto (sin favoritos): no se puede entrar → se trata como inexistente.
+    if (!entry || entry.favorites.length === 0) return null;
 
     // E3 deja `sharedLists` vacío para TODOS los perfiles del directorio (no se exponen las listas ajenas). Para el
     // perfil PROPIO repoblamos las listas desde `localState` (juegos completos) para que el usuario SÍ vea sus
@@ -670,8 +675,13 @@ export function useSocialViewModel() {
   }, [navigate]);
 
   const openProfileDetail = useCallback((profileId: string) => {
+    // No abrir el detalle de un perfil incompleto (sin favoritos). El propio se gestiona aparte (editor).
+    const target = socialDirectory.find((entry) => entry.id === profileId);
+    if (target && target.favorites.length === 0) {
+      return;
+    }
     navigate(`/social/profiles/${encodeURIComponent(profileId)}`);
-  }, [navigate]);
+  }, [navigate, socialDirectory]);
 
   const handleActivityItemKeyDown = useCallback(
     (event: ReactKeyboardEvent<HTMLElement>, entry: SocialActivityFeedItem) => {
