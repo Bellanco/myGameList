@@ -49,7 +49,6 @@ export const SocialHub = memo(function SocialHub() {
     setComposePostText,
     publishingPost,
     handlePublishPost,
-    postFeedItems,
     hydratingProfile,
     savingProfile,
     loadingDirectory,
@@ -65,10 +64,10 @@ export const SocialHub = memo(function SocialHub() {
     socialDisplayName,
     filteredSocialDirectory,
     selectedProfileDetail,
-    activityFeedItems,
+    feedItems,
     activeDetailEvent,
     getGameItemById,
-    groupedActivityFeedItems,
+    groupedFeedItems,
     handleFeedRowMouseDown,
     handleFeedRowKeyDown,
     openActivityDetail,
@@ -170,11 +169,10 @@ export const SocialHub = memo(function SocialHub() {
           }
         }}
         handleProfileCardKeyDown={handleProfileCardKeyDown}
-        groupedActivityFeedItems={groupedActivityFeedItems}
-        activityFeedItems={activityFeedItems}
+        groupedFeedItems={groupedFeedItems}
+        feedItems={feedItems}
         openActivityDetail={openActivityDetail}
         handleActivityItemKeyDown={handleActivityItemKeyDown}
-        postFeedItems={postFeedItems}
         composePostText={composePostText}
         setComposePostText={setComposePostText}
         publishingPost={publishingPost}

@@ -1183,34 +1183,24 @@ button.hub-chip.active {
   font-weight: 700;
 }
 
-/* F3 — Publicaciones (texto libre + enlaces) */
+/* F3 — Publicaciones (texto libre + enlaces). Compositor de UNA línea: input + botón a la derecha. */
 .hub-post-composer {
   display: flex;
-  flex-direction: column;
+  align-items: stretch; /* el botón se estira a la altura del input */
   gap: .6rem;
 }
-.hub-post-textarea {
-  min-height: 92px;
+.hub-post-input {
+  flex: 1 1 auto;
+  min-width: 0;
 }
-.hub-post-composer-actions {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: .75rem;
-  flex-wrap: wrap;
+.hub-post-publish {
+  flex: 0 0 auto;
+  aspect-ratio: 1; /* icono solo → botón cuadrado a la altura del input */
+  padding: 0;
 }
-.hub-post-note {
-  color: var(--text-muted);
-  font-size: .76rem;
-}
-.hub-posts-list {
-  display: flex;
-  flex-direction: column;
-  gap: .6rem;
-  margin-top: .85rem;
-}
-.hub-post-item {
-  padding: .85rem .95rem;
+/* Tarjeta de post dentro del feed: mismo estilo que la reseña pero sin afordancia de clic. */
+.hub-feed-activity-item.is-post {
+  cursor: default;
 }
 .hub-post-text {
   margin: .25rem 0 0;
