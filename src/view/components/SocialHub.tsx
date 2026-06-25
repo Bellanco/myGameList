@@ -41,6 +41,8 @@ export const SocialHub = memo(function SocialHub() {
     setHideRetry,
     hideGameTime,
     setHideGameTime,
+    showPhoto,
+    setShowPhoto,
     favoriteSearch,
     setFavoriteSearch,
     feedSearch,
@@ -124,6 +126,8 @@ export const SocialHub = memo(function SocialHub() {
           setHideRetry={setHideRetry}
             hideGameTime={hideGameTime}
             setHideGameTime={setHideGameTime}
+          showPhoto={showPhoto}
+          setShowPhoto={setShowPhoto}
         />
       );
     }

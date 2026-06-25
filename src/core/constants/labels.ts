@@ -392,6 +392,8 @@ export const SOCIAL_UI = {
     hideReplayableField: 'Rejugar',
     hideRetryField: 'Dar otra oportunidad',
     hideGameTimeField: 'Tiempo jugado',
+    photoSectionTitle: 'Foto de perfil',
+    showPhotoField: 'Mostrar mi foto de perfil',
   },
   status: {
     needMainSync: 'Activa la sincronización principal para continuar.',
