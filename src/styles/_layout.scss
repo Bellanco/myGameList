@@ -1183,6 +1183,48 @@ button.hub-chip.active {
   font-weight: 700;
 }
 
+/* F3 — Publicaciones (texto libre + enlaces) */
+.hub-post-composer {
+  display: flex;
+  flex-direction: column;
+  gap: .6rem;
+}
+.hub-post-textarea {
+  min-height: 92px;
+}
+.hub-post-composer-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .75rem;
+  flex-wrap: wrap;
+}
+.hub-post-note {
+  color: var(--text-muted);
+  font-size: .76rem;
+}
+.hub-posts-list {
+  display: flex;
+  flex-direction: column;
+  gap: .6rem;
+  margin-top: .85rem;
+}
+.hub-post-item {
+  padding: .85rem .95rem;
+}
+.hub-post-text {
+  margin: .25rem 0 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  line-height: 1.45;
+  color: var(--text);
+}
+.hub-post-text a {
+  color: var(--steam-hover);
+  text-decoration: underline;
+  overflow-wrap: anywhere;
+}
+
 .hub-hub-icon {
   width: 1.6rem;
   height: 1.6rem;
