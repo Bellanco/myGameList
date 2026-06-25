@@ -1,6 +1,7 @@
 ﻿import { useMemo, useState } from 'react';
 import { Icon } from '../Icon';
 import { GameTable } from '../GameTable';
+import { avatarInitial, avatarTone } from './avatar';
 import { TAB_IDS, type GameItem, type TabId } from '../../../model/types/game';
 import type { SocialSharedGame } from '../../../model/repository/gistRepository';
 
@@ -17,6 +18,7 @@ const TAB_LABELS: Record<TabId, string> = {
  */
 type SocialProfileDetail = {
   displayName: string;
+  photoURL?: string;
   visibility?: {
     hiddenTabs?: TabId[];
     hideReplayable?: boolean;
@@ -77,6 +79,12 @@ export function SocialProfileDetailScreen({
 
   const favoriteGames = activeProfileDetail?.favorites || [];
 
+  // ¿Hay algún listado público con juegos? (para perfiles ajenos suele estar vacío por privacidad E3).
+  const hasSharedLists = useMemo(
+    () => TAB_IDS.some((tab) => (activeProfileDetail?.sharedLists?.[tab]?.length || 0) > 0),
+    [activeProfileDetail],
+  );
+
   if (!activeProfileDetail) {
     return (
       <section className="hub-hub hub-screen" aria-label={SOCIAL_UI.feed.sectionAria}>
@@ -121,18 +129,24 @@ export function SocialProfileDetailScreen({
           </div>
         </div>
         <article className="hub-feed-card hub-feed-card-detail">
-          <header>
-            <h3>{activeProfileDetail.displayName}</h3>
-          </header>
+          <div className="hub-profile-hero">
+            {activeProfileDetail.photoURL ? (
+              <img className="hub-avatar hub-avatar-lg hub-avatar-img" src={activeProfileDetail.photoURL} alt="" referrerPolicy="no-referrer" />
+            ) : (
+              <span className={`hub-avatar hub-avatar-lg hub-avatar--${avatarTone(activeProfileDetail.displayName)}`} aria-hidden="true">
+                {avatarInitial(activeProfileDetail.displayName)}
+              </span>
+            )}
+            <h3 className="hub-profile-hero-name">{activeProfileDetail.displayName}</h3>
+            <p className="hub-profile-hero-meta">{SOCIAL_UI.feed.profileFavoritesCount(favoriteGames.length)}</p>
+          </div>
           <div className="hub-detail-metadata">
             <div className="hub-metadata-section">
               <strong>{SOCIAL_UI.feed.profileFavoritesTitle}</strong>
               {favoriteGames.length > 0 ? (
-                <div className="hub-card-row">
-                  {favoriteGames.map((favorite: string) => (
-                    <div key={favorite} className="hub-game-card is-read-only">
-                      <span className="hub-game-card-title">{favorite}</span>
-                    </div>
+                <div className="hub-profile-fav-chips">
+                  {favoriteGames.map((favorite: string, i: number) => (
+                    <span key={`${favorite}-${i}`} className="hub-feed-game-chip">{favorite}</span>
                   ))}
                 </div>
               ) : (
@@ -141,7 +155,7 @@ export function SocialProfileDetailScreen({
             </div>
             <div className="hub-metadata-section">
               <strong>{SOCIAL_UI.feed.profileListsTitle}</strong>
-              {visibleTabs.length > 0 ? (
+              {hasSharedLists && visibleTabs.length > 0 ? (
                 <>
                   <div className="hub-feed-filters" role="tablist" aria-label={SOCIAL_UI.feed.profileListsTitle}>
                     {visibleTabs.map((tab) => (

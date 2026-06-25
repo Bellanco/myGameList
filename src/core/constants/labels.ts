@@ -321,6 +321,7 @@ export const SOCIAL_UI = {
     openActivityAria: (name: string, gameName: string) => `Abrir detalle de actividad de ${name} sobre ${gameName}`,
     openProfileAria: (name: string) => `Abrir perfil social de ${name}`,
     analyzedRecently: 'Analizado recientemente',
+    feedLoadMore: 'Mostrar más',
     analyzedAt: (date: Date) =>
       `Analizado el ${date.toLocaleDateString('es-ES', { day: '2-digit' })} de ${date.toLocaleDateString('es-ES', { month: 'long' })} a las ${date.toLocaleTimeString('es-ES', { hour: 'numeric', minute: '2-digit' })}`,
     noFavorites: 'Sin favoritos publicados',
@@ -346,6 +347,7 @@ export const SOCIAL_UI = {
     profileDetailSubtitle: 'Vista pública del perfil seleccionado con sus favoritos.',
     profileDetailActionsAria: 'Acciones del detalle de perfil social',
     profileDetailMissing: 'No se encontró el perfil solicitado o ya no está disponible.',
+    profileFavoritesCount: (count: number) => `${count} ${count === 1 ? 'favorito' : 'favoritos'}`,
     profileFavoritesTitle: 'Favoritos publicados',
     profileListsTitle: 'Listados públicos',
     profileListsEmpty: 'Este perfil no ha publicado listados todavía.',

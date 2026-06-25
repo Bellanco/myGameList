@@ -58,6 +58,7 @@ type SocialRouteState = {
   detailEventType: string;
 };
 
+const FEED_PAGE_SIZE = 25;
 const PROFILE_EDIT_PATH = /^\/social\/profile\/?$/;
 const PROFILE_DETAIL_PATH = /^\/social\/profiles\/([^/]+)$/;
 const ACTIVITY_DETAIL_PATH = /^\/social\/user\/([^/]+)\/game\/(\d+)\/(review|recommendation)$/;
@@ -125,6 +126,7 @@ export function useSocialViewModel() {
     email: string;
     socialGistId: string;
     gamesGistId: string;
+    photoURL: string;
     favorites: string[];
     recommendations: string[];
     activity: SocialActivityFeedItem[];
@@ -160,6 +162,8 @@ export function useSocialViewModel() {
   const [hideGameTime, setHideGameTime] = useState(false);
   const [favoriteSearch, setFavoriteSearch] = useState('');
   const [feedSearch, setFeedSearch] = useState('');
+  // Paginación del feed: 25 inicial, +25 por "Mostrar más". Se reinicia al cambiar la búsqueda.
+  const [feedVisibleCount, setFeedVisibleCount] = useState(FEED_PAGE_SIZE);
   const [composePostText, setComposePostText] = useState('');
   const [publishingPost, setPublishingPost] = useState(false);
   const [feedFilter] = useState<'all' | 'favorites'>('all');
@@ -608,7 +612,8 @@ export function useSocialViewModel() {
 
     const itemsByDay = new Map<string, FeedItem[]>();
 
-    feedItems.forEach((item) => {
+    // Solo los elementos visibles según la paginación (25, +25 con "Mostrar más").
+    feedItems.slice(0, feedVisibleCount).forEach((item) => {
       const itemDate = new Date(toSafeTimestamp(item.updatedAt, Date.now()));
       if (Number.isNaN(itemDate.getTime())) {
         return;
@@ -635,7 +640,18 @@ export function useSocialViewModel() {
     });
 
     return groups;
-  }, [feedItems, formatDayHeader]);
+  }, [feedItems, feedVisibleCount, formatDayHeader]);
+
+  // Paginación del feed: ¿hay más allá de lo visible? y handler para mostrar otros 25.
+  const hasMoreFeed = feedItems.length > feedVisibleCount;
+  const showMoreFeed = useCallback(() => {
+    setFeedVisibleCount((count) => count + FEED_PAGE_SIZE);
+  }, []);
+
+  // Al cambiar la búsqueda, volver a la primera página.
+  useEffect(() => {
+    setFeedVisibleCount(FEED_PAGE_SIZE);
+  }, [feedSearch]);
 
   const handleFeedRowMouseDown = useCallback((event: ReactMouseEvent<HTMLDivElement>) => {
     if (event.button !== 0 || !feedRowRef.current) {
@@ -993,6 +1009,7 @@ export function useSocialViewModel() {
               email: entry.email,
               socialGistId: entry.socialGistId,
               gamesGistId: entry.gamesGistId,
+              photoURL: socialData.profile.photoURL || (isOwnEntry ? ownPhotoURL : ''),
               favorites: socialData.profile.favoriteGames.map((game) => game.name).slice(0, 5),
               recommendations: mergedRecommendations,
               activity,
@@ -1007,6 +1024,7 @@ export function useSocialViewModel() {
               email: entry.email,
               socialGistId: entry.socialGistId,
               gamesGistId: entry.gamesGistId,
+              photoURL: '',
               favorites: [],
               recommendations: [],
               activity: [],
@@ -1278,6 +1296,8 @@ export function useSocialViewModel() {
     activeDetailEvent,
     getGameItemById,
     groupedFeedItems,
+    hasMoreFeed,
+    showMoreFeed,
     handleFeedRowMouseDown,
     handleFeedRowKeyDown,
     openActivityDetail,
