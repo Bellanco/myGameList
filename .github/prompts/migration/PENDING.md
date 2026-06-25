@@ -1,13 +1,26 @@
 # PENDIENTES — lo que NO está hecho (para que no se olvide)
 
 > Índice vivo de todo lo que queda. Marcar `[x]` al completar. Detalle de cada fase en `MASTER-PLAN.md`.
-> Última actualización: 2026-06-20 (formato v4 keyed+diccionarios subido).
+> Última actualización: **2026-06-24** (primer lanzamiento a Cloudflare Pages).
+>
+> 🚀 **LANZADO a Cloudflare Pages (2026-06-23/24).** Estado de lanzamiento (commit `ef55f8d`):
+> - `ENABLE_GAMES_WRAPPER_WRITE` se REVIRTIÓ a `false` (el usuario tiene dispositivos en versión anterior sin
+>   lector v4 → escribir v4 los corrompería). La LECTURA de v4 ya viaja en esta versión. Reactivar SOLO cuando
+>   todos los dispositivos estén al día (ver §C, Fase 8). Los tests v4 (gistWrite/gistV4Cutover) se auto-saltan
+>   con el flag off (`describe.skipIf`).
+> - Pre-lanzamiento aplicado: `X-Robots-Tag: noindex` (`public/_headers`), `manifest` dark (#1a1e24), fix H3
+>   (`recover()` resetea la máquina de sync para que un fallo de `recoverGistIdFromGoogle` no deje el sync atascado).
+> - ⚠️ ACCIÓN USUARIO en consola Firebase: añadir el dominio de Cloudflare (`*.pages.dev` + dominio propio) a
+>   Authentication → Authorized domains, o `signInWithPopup` falla.
 >
 > 📋 **Mejoras de calidad/seguridad/rendimiento (revisión global 2026-06-21):** ver
 > [`CODE-REVIEW-IMPROVEMENTS.md`](./CODE-REVIEW-IMPROVEMENTS.md) — lista priorizada de "futuros" (C1-C5 críticos,
 > seguridad del token, robustez de sync, perf React, a11y, refactors, tests). Distinta de este PENDING (corte de migración).
 > 🔌 **Integraciones para enriquecer (fuentes de datos + librerías):** ver [`INTEGRATIONS.md`](./INTEGRATIONS.md)
 > — RAWG + Cloudflare Worker para autocompletar metadatos/carátulas; librerías mapeadas a hallazgos (react-hook-form, Radix Dialog, vite-plugin-pwa…).
+> ✨ **Propuestas de funcionalidad de producto (2026-06-25):** ver [`FEATURE-PROPOSALS.md`](./FEATURE-PROPOSALS.md)
+> — F1 tema claro/oscuro, F2 puntuación 0-100↔estrellas, F3 feed con texto+enlaces, F4 empezó/completó como entrada en
+> el feed (no push), F5 "me gusta" a una reseña. Viabilidad evaluada contra el código actual; F5 vía gist (sin backend).
 
 ## RESUMEN — qué está hecho y qué queda
 **✅ HECHO y subido a `develop` (verde en CI):** toda la base previa (E1·M1·M2·M3·M4a·E2-base·F6.1·F6.3·E3) +
@@ -18,11 +31,13 @@ local** (`074ed68`) + **formato v4 del gist de juegos** (keyed por id + dicciona
 **⏳ QUEDA — todo es acción del USUARIO (navegador/despliegue/2 dispositivos), no código pendiente:**
 1. **Fase 0** (seguridad): desplegar `firestore.rules`, re-guardar perfil social, **revocar el token del chat**.
 2. **Verificar en navegador**: 6.2a/6.2b en 2 dispositivos (profileId estable, activity por pseudónimo), flujo social (M3/E3).
-3. **Activar el formato v4** (flag `ENABLE_GAMES_WRAPPER_WRITE`): ✅ **CÓDIGO ACTIVADO** (`= true`, `gistRepository.ts:53`)
-   + test de borde `tests/unit/gistWrite.test.ts` (emisión v4 + round-trip write→read). Verde: tsc/132+1xfail/build.
-   ⏳ **Pendiente:** desplegar y **verificar en navegador en 2 dispositivos** (A reescribe `myGames.json` a
-   `{schemaVersion:4, fileType:"games-main"}`; B lo lee sin pérdida y lo mantiene v4; 2º sync sin cambios no reescribe).
-   Seguro por diseño: el SW es network-first y `/assets/` siempre va a red → ningún cliente online sirve bundle viejo.
+3. **Activar el formato v4** (flag `ENABLE_GAMES_WRAPPER_WRITE`): ⚠️ **REVERTIDO a `false`** (`gistRepository.ts:55`)
+   para el lanzamiento a Cloudflare — el usuario confirmó dispositivos en versión anterior (sin lector v4). El código
+   v4 (escritura + round-trip) está completo y testeado; los tests v4 se auto-saltan con el flag off.
+   ⏳ **Para activar (2 pasos del usuario):** (1) abrir la app ya desplegada en TODOS los dispositivos (con el flag off
+   ya ganan la lectura v4); (2) SOLO entonces poner el flag a `true`, desplegar y **verificar en 2 dispositivos**
+   (A reescribe `myGames.json` a `{schemaVersion:4, fileType:"games-main"}`; B lo lee sin pérdida y lo mantiene v4;
+   2º sync sin cambios no reescribe). Seguro por diseño: el SW es network-first y `/assets/` siempre va a red.
 4. **Fase 9** (limpieza de `legacy*.ts`): solo tras el corte verificado en navegador.
 5. Opcional: llevar diccionarios/chunking al gist social; poblar `privateConfig.gamesChunks`.
 

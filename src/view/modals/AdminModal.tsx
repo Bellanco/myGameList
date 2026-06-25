@@ -102,7 +102,7 @@ export function AdminModal({ open, adminTab, lookups, onClose, onTabChange, onEd
       className="modal-ov active"
       role="button"
       tabIndex={0}
-      aria-label="Cerrar modal"
+      aria-label={UI_MESSAGES.admin.closeAria}
       onMouseDown={(event) => {
         if (event.target === event.currentTarget) {
           onClose();
@@ -118,7 +118,7 @@ export function AdminModal({ open, adminTab, lookups, onClose, onTabChange, onEd
     >
       <div className="modal">
         <div className="modal-hd">
-          <div className="modal-title">Administración de filtros</div>
+          <div className="modal-title">{UI_MESSAGES.settings.admin.title}</div>
           <button className="btn-icon" type="button" onClick={onClose}>
             <Icon name={COMMON_ICONS.close} />
           </button>
@@ -171,11 +171,11 @@ export function AdminModal({ open, adminTab, lookups, onClose, onTabChange, onEd
                     <div className="row-actions">
                       <button className="btn btn-secondary btn-icon-text admin-action-btn" type="button" onClick={() => startEdit(tag)}>
                         <Icon name={COMMON_ICONS.edit} />
-                        <span>Editar</span>
+                        <span>{UI_MESSAGES.admin.editBtn}</span>
                       </button>
                       <button className="btn btn-danger btn-icon-text admin-action-btn" type="button" onClick={() => onDelete(adminTab, tag)}>
                         <Icon name={COMMON_ICONS.trash} />
-                        <span>Eliminar</span>
+                        <span>{UI_MESSAGES.admin.deleteBtn}</span>
                       </button>
                     </div>
                   </>

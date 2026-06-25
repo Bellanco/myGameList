@@ -1,5 +1,6 @@
 ﻿import { Icon } from '../Icon';
 import { StarRating } from '../StarRating';
+import { avatarInitial, avatarTone } from './avatar';
 
 /**
  * Pantalla de detalle de actividad social.
@@ -53,8 +54,8 @@ export function SocialDetailScreen({
   const updatedAtDate = new Date(activeDetailEvent.updatedAt);
   const hasValidUpdatedAt = !Number.isNaN(updatedAtDate.getTime());
   const analyzedAtLabel = hasValidUpdatedAt
-    ? `Analizado el ${updatedAtDate.toLocaleDateString('es-ES', { day: '2-digit' })} de ${updatedAtDate.toLocaleDateString('es-ES', { month: 'long' })} a las ${updatedAtDate.toLocaleTimeString('es-ES', { hour: 'numeric', minute: '2-digit' })}`
-    : 'Analizado recientemente';
+    ? SOCIAL_UI.feed.analyzedAt(updatedAtDate)
+    : SOCIAL_UI.feed.analyzedRecently;
   return (
     <section className="hub-hub hub-screen" aria-label={SOCIAL_UI.feed.sectionAria}>
       <div className="hub-hub-card hub-screen-card hub-feed-card-shell">
@@ -74,21 +75,31 @@ export function SocialDetailScreen({
           </div>
         </div>
         <article className="hub-feed-card hub-feed-card-detail">
-          <header>
-            <h3>
-              <button
-                className="hub-detail-profile-link"
-                type="button"
-                aria-label={`Abrir perfil social de ${activeDetailEvent.profileDisplayName}`}
-                onClick={() => onOpenProfileDetail(activeDetailEvent.profileId)}
-              >
-                {activeDetailEvent.profileDisplayName}
-              </button>
-            </h3>
-            <small className="hub-feed-game-subtitle">{activeDetailEvent.gameName}</small>
+          <header className="hub-feed-card-head">
+            {activeDetailEvent.photoURL ? (
+              <img className="hub-avatar hub-avatar-img" src={activeDetailEvent.photoURL} alt="" referrerPolicy="no-referrer" />
+            ) : (
+              <span className={`hub-avatar hub-avatar--${avatarTone(activeDetailEvent.profileDisplayName)}`} aria-hidden="true">
+                {avatarInitial(activeDetailEvent.profileDisplayName)}
+              </span>
+            )}
+            <div className="hub-feed-card-head-text">
+              <h3>
+                <button
+                  className="hub-detail-profile-link"
+                  type="button"
+                  aria-label={SOCIAL_UI.feed.openProfileAria(activeDetailEvent.profileDisplayName)}
+                  onClick={() => onOpenProfileDetail(activeDetailEvent.profileId)}
+                >
+                  {activeDetailEvent.profileDisplayName}
+                </button>
+              </h3>
+              {activeDetailEvent.gameName ? <span className="hub-feed-game-chip">{activeDetailEvent.gameName}</span> : null}
+            </div>
           </header>
           <p>{analyzedAtLabel}</p>
           <StarRating value={Number(activeDetailEvent.rating || 0)} />
+          <div className="hub-detail-body">
           {reviewText ? <p className="hub-feed-review-text">{reviewText}</p> : null}
           {gameItem ? (
             <div className="hub-detail-metadata">
@@ -175,6 +186,7 @@ export function SocialDetailScreen({
               */}
             </div>
           ) : null}
+          </div>
         </article>
         {status ? <div className={`sync-status-msg ${statusKind}`}>{status}</div> : null}
       </div>

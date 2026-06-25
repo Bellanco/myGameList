@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { readGist, writeGist } from '../../src/model/repository/gistRepository';
+import { ENABLE_GAMES_WRAPPER_WRITE, readGist, writeGist } from '../../src/model/repository/gistRepository';
 import type { GameItem, TabData } from '../../src/model/types/game';
 
 // Token/gistId con formato válido (ver isValidGithubToken/isValidGistId en core/security/sanitize).
@@ -58,7 +58,7 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-describe('writeGist con ENABLE_GAMES_WRAPPER_WRITE activo (formato v4)', () => {
+describe.skipIf(!ENABLE_GAMES_WRAPPER_WRITE)('writeGist con ENABLE_GAMES_WRAPPER_WRITE activo (formato v4)', () => {
   it('emite el envoltorio GamesMainFile v4 (fileType/schemaVersion) en el PATCH', async () => {
     const { patchBodies } = stubGistStore();
     const data: TabData = {

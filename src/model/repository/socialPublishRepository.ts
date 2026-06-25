@@ -8,6 +8,7 @@ import {
   readSocialGist,
   remapSocialActorIds,
   saveSocialSyncConfig,
+  upsertPost,
   upsertReviewActivity,
   writeSocialGist,
 } from './gistRepository';
@@ -44,6 +45,59 @@ export async function publishReviewActivity(input: { id: number; name: string; r
     gameName: input.name,
     reviewText: input.review, // audit-allow: upsertReviewActivity lo convierte a snippet (no se publica el review completo)
     rating: input.score,
+    timestamp: now,
+  });
+
+  const writeResult = await writeSocialGist(socialConfig.token, socialConfig.gistId, nextPayload);
+  const mainSyncConfig = getSyncConfig();
+
+  saveSocialSyncConfig({
+    token: socialConfig.token,
+    gistId: socialConfig.gistId,
+    etag: writeResult.etag || socialConfig.etag || null,
+    lastRemoteUpdatedAt: now,
+  });
+
+  await ensureProfileByEmail({
+    user: authUser,
+    socialGistId: socialConfig.gistId,
+    gamesGistId: mainSyncConfig?.gistId || '',
+    githubToken: mainSyncConfig?.token || socialConfig.token, // audit-allow: ensureProfileByEmail lo cifra en privateConfig (B1)
+    socialGistEtag: writeResult.etag || socialConfig.etag || null,
+    preferredName: authUser.displayName || authUser.email,
+  });
+}
+
+/**
+ * F3 — Publica una publicación de texto libre (noticias/enlaces) en el gist social propio. Mismo flujo que la
+ * reseña: lee el gist, remapea identidad legacy, inserta el post, reescribe y asegura el perfil. No-op sin sesión
+ * Google ni gist social configurado. Los hipervínculos se derivan del texto al renderizar (no se publican como HTML).
+ */
+export async function publishPost(input: { text: string }): Promise<void> {
+  const authUser = await getCurrentSocialAuthUser();
+  if (!authUser) {
+    return;
+  }
+
+  const socialConfig = getSocialSyncConfig();
+  if (!socialConfig?.token || !socialConfig.gistId) {
+    return;
+  }
+
+  const socialRead = await readSocialGist(
+    socialConfig.token,
+    socialConfig.gistId,
+    socialConfig.etag || null,
+  );
+
+  const profileId = await resolveStableProfileId(authUser.uid);
+  const migratedData = remapSocialActorIds(socialRead.data, { [authUser.uid]: profileId });
+
+  const now = Date.now();
+  const nextPayload = upsertPost(migratedData, {
+    authorProfileId: profileId,
+    authorName: authUser.displayName || authUser.email,
+    text: input.text,
     timestamp: now,
   });
 

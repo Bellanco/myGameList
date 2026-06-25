@@ -1,4 +1,5 @@
 ﻿import { memo, useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type MouseEvent as ReactMouseEvent } from 'react';
+import { SOCIAL_UI } from '../../core/constants/labels';
 
 interface GameOption {
   id: number;
@@ -122,8 +123,8 @@ export const SocialGameCardSelector = memo(function SocialGameCardSelector({
         <strong className="hub-card-selector-counter">{selectedIds.length}</strong>
       </div>
 
-      <label className="hub-card-selector-search" aria-label={`${title} buscador`}>
-        <span>Buscar</span>
+      <label className="hub-card-selector-search" aria-label={SOCIAL_UI.cardSelector.searchAria(title)}>
+        <span>{SOCIAL_UI.cardSelector.searchLabel}</span>
         <input
           type="text"
           className="finput"
@@ -139,7 +140,7 @@ export const SocialGameCardSelector = memo(function SocialGameCardSelector({
         <div
           ref={rowRef}
           className={`hub-card-row ${isDragging ? 'is-dragging' : ''}`}
-          aria-label={`${title} cards`}
+          aria-label={SOCIAL_UI.cardSelector.cardsAria(title)}
           role="group"
           tabIndex={0}
           onMouseDown={handleMouseDown}

@@ -32,6 +32,7 @@ const visibility = z.strictObject({
   hideReplayable: z.boolean(),
   hideRetry: z.boolean(),
   hideGameTime: z.boolean(),
+  showPhoto: z.boolean(),
 });
 
 const profile = z.strictObject({
@@ -42,6 +43,8 @@ const profile = z.strictObject({
   visibility,
   // sharedLists es Partial<Record<TabId, SharedGame[]>>: claves 'c'|'v'|'e'|'p', subconjunto permitido.
   sharedLists: z.record(z.string(), z.array(sharedGame)),
+  // Foto de perfil pública (opcional): solo presente si el usuario la comparte. URL http(s) acotada.
+  photoURL: z.string().max(2048).optional(),
 });
 
 const activity = z.strictObject({
@@ -59,10 +62,23 @@ const activity = z.strictObject({
   updatedAt: z.number(),
 });
 
+// F3 — publicación de texto libre (noticias/enlaces). Allowlist estricta: solo estos campos. El texto va cotado;
+// los hipervínculos se derivan del propio texto al renderizar (no hay HTML ni campo de enlaces).
+const post = z.strictObject({
+  id: z.string(),
+  authorProfileId: z.string(),
+  authorName: z.string().max(NAME_MAX),
+  text: z.string().max(TEXT_MAX),
+  createdAt: z.number(),
+  updatedAt: z.number(),
+});
+
 export const socialGistSchema = z.strictObject({
   profile,
   // ST3: `recommendations` top-level eliminado (código muerto; se fusionaba en activity). La lectura tolera gists viejos.
   activity: z.array(activity),
+  // F3 (aditivo, Opción B): opcional → gists sin posts siguen validando; clientes viejos ignoran el campo en lectura.
+  posts: z.array(post).optional(),
   updatedAt: z.number(),
   schemaVersion: z.number(), // 6.2b: 2 = identidad por profileId
 });

@@ -1,6 +1,9 @@
 ﻿import React from 'react';
 import { Icon } from '../Icon';
 import { StarRating } from '../StarRating';
+import { PostText } from './PostText';
+import { avatarInitial, avatarTone } from './avatar';
+import { POST_MAX_LENGTH } from '../../../core/security/sanitize';
 
 /**
  * Pantalla principal del feed social.
@@ -17,10 +20,16 @@ export function SocialFeedScreen({
   hydrateSocialDirectory,
   openProfileDetail,
   handleProfileCardKeyDown,
-  groupedActivityFeedItems,
-  activityFeedItems,
+  groupedFeedItems,
+  feedItems,
+  hasMoreFeed,
+  showMoreFeed,
   openActivityDetail,
   handleActivityItemKeyDown,
+  composePostText,
+  setComposePostText,
+  publishingPost,
+  handlePublishPost,
   isFeedDragging,
   feedRowRef,
   handleFeedRowMouseDown,
@@ -39,10 +48,16 @@ export function SocialFeedScreen({
   hydrateSocialDirectory: (forceRefresh?: boolean) => void;
   openProfileDetail: (id: string) => void;
   handleProfileCardKeyDown: (event: React.KeyboardEvent<HTMLElement>, id: string) => void;
-  groupedActivityFeedItems: any[];
-  activityFeedItems: any[];
+  groupedFeedItems: any[];
+  feedItems: any[];
+  hasMoreFeed: boolean;
+  showMoreFeed: () => void;
   openActivityDetail: (entry: any) => void;
   handleActivityItemKeyDown: (event: React.KeyboardEvent<HTMLElement>, entry: any) => void;
+  composePostText: string;
+  setComposePostText: (v: string) => void;
+  publishingPost: boolean;
+  handlePublishPost: () => void;
   isFeedDragging: boolean;
   feedRowRef: React.RefObject<HTMLDivElement | null>;
   handleFeedRowMouseDown: (event: React.MouseEvent<HTMLDivElement>) => void;
@@ -83,37 +98,120 @@ export function SocialFeedScreen({
           </div>
         </div>
         <div className="fg">
+          <span className="flabel">{SOCIAL_UI.feed.postsTitle}</span>
+          <div className="hub-post-composer">
+            <label className="sr-only" htmlFor="hub-post-text">{SOCIAL_UI.feed.postComposerLabel}</label>
+            <input
+              id="hub-post-text"
+              type="text"
+              className="finput hub-post-input"
+              value={composePostText}
+              placeholder={SOCIAL_UI.feed.postPlaceholder}
+              maxLength={POST_MAX_LENGTH}
+              onChange={(event) => setComposePostText(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter') {
+                  event.preventDefault();
+                  if (!publishingPost && composePostText.trim()) handlePublishPost();
+                }
+              }}
+            />
+            <button
+              className="btn btn-steam hub-post-publish"
+              type="button"
+              disabled={publishingPost || !composePostText.trim()}
+              onClick={handlePublishPost}
+              aria-label={publishingPost ? SOCIAL_UI.feed.postPublishing : SOCIAL_UI.feed.postPublish}
+              title={publishingPost ? SOCIAL_UI.feed.postPublishing : SOCIAL_UI.feed.postPublish}
+            >
+              <Icon name="edit" />
+            </button>
+          </div>
+        </div>
+        <div className="fg">
           <span className="flabel">{SOCIAL_UI.feed.activityTitle}</span>
-          {!loadingDirectory && activityFeedItems.length === 0 ? <p>{SOCIAL_UI.feed.activityEmpty}</p> : null}
-          {!loadingDirectory && activityFeedItems.length > 0 ? (
+          {loadingDirectory ? (
+            <div className="hub-feed-activity-list" aria-hidden="true">
+              {[0, 1, 2, 3].map((i) => (
+                <article key={i} className="hub-feed-card hub-feed-activity-item hub-skeleton-card">
+                  <header className="hub-feed-card-head">
+                    <span className="hub-avatar hub-skeleton" />
+                    <div className="hub-feed-card-head-text">
+                      <span className="hub-skeleton hub-skeleton-line" style={{ width: '45%' }} />
+                    </div>
+                  </header>
+                  <span className="hub-skeleton hub-skeleton-line" style={{ width: '30%' }} />
+                  <span className="hub-skeleton hub-skeleton-line" style={{ width: '92%' }} />
+                  <span className="hub-skeleton hub-skeleton-line" style={{ width: '70%' }} />
+                </article>
+              ))}
+            </div>
+          ) : null}
+          {!loadingDirectory && feedItems.length === 0 ? <p>{SOCIAL_UI.feed.activityEmpty}</p> : null}
+          {!loadingDirectory && feedItems.length > 0 ? (
             <div className="hub-feed-activity-list" role="list" aria-label={SOCIAL_UI.feed.activityListAria}>
-              {groupedActivityFeedItems.map((group, groupIndex) => (
+              {groupedFeedItems.map((group, groupIndex) => (
                 <div key={`${group.dayHeader}-${groupIndex}`} className="hub-feed-day-group">
                   <div className="hub-feed-day-header">
                     <h4>{group.dayHeader}</h4>
                   </div>
                   {group.items.map((entry: any) => {
-                    const reviewText = String(entry.snippet || '').trim();
-                    const updatedAtDate = new Date(entry.updatedAt || '');
-                    const hasValidUpdatedAt = !Number.isNaN(updatedAtDate.getTime());
-                    const analyzedAtLabel = hasValidUpdatedAt
-                      ? `Analizado el ${updatedAtDate.toLocaleDateString('es-ES', { day: '2-digit' })} de ${updatedAtDate.toLocaleDateString('es-ES', { month: 'long' })} a las ${updatedAtDate.toLocaleTimeString('es-ES', { hour: 'numeric', minute: '2-digit' })}`
-                      : 'Analizado recientemente';
-                    const cardTypeClass = entry.type === 'review' ? 'is-review' : 'is-recommendation';
+                    const itemDate = new Date(entry.updatedAt || '');
+                    const hasValidDate = !Number.isNaN(itemDate.getTime());
                     const ownershipClass = entry.socialGistId === currentSocialGistId ? 'is-own-activity' : 'is-external-activity';
+
+                    if (entry.kind === 'post') {
+                      return (
+                        <article
+                          key={entry.id}
+                          className={`hub-feed-card hub-feed-activity-item is-post ${ownershipClass}`}
+                          role="listitem"
+                        >
+                          <header className="hub-feed-card-head">
+                            {entry.photoURL ? (
+                              <img className="hub-avatar hub-avatar-img" src={entry.photoURL} alt="" referrerPolicy="no-referrer" />
+                            ) : (
+                              <span className={`hub-avatar hub-avatar--${avatarTone(entry.profileDisplayName || entry.authorName)}`} aria-hidden="true">
+                                {avatarInitial(entry.profileDisplayName || entry.authorName)}
+                              </span>
+                            )}
+                            <div className="hub-feed-card-head-text">
+                              <h3>{entry.profileDisplayName || entry.authorName || 'Usuario'}</h3>
+                            </div>
+                          </header>
+                          <p>{hasValidDate ? SOCIAL_UI.feed.postedAt(itemDate) : SOCIAL_UI.feed.analyzedRecently}</p>
+                          <p className="hub-post-text"><PostText text={entry.text} /></p>
+                        </article>
+                      );
+                    }
+
+                    const reviewText = String(entry.snippet || '').trim();
+                    const analyzedAtLabel = hasValidDate
+                      ? SOCIAL_UI.feed.analyzedAt(itemDate)
+                      : SOCIAL_UI.feed.analyzedRecently;
+                    const cardTypeClass = entry.type === 'review' ? 'is-review' : 'is-recommendation';
                     return (
                       <article
                         key={entry.id}
                         className={`hub-feed-card hub-feed-activity-item ${cardTypeClass} ${ownershipClass}`}
                         role="listitem"
                         tabIndex={0}
-                        aria-label={`Abrir detalle de actividad de ${entry.profileDisplayName} sobre ${entry.gameName}`}
+                        aria-label={SOCIAL_UI.feed.openActivityAria(entry.profileDisplayName, entry.gameName)}
                         onClick={() => openActivityDetail(entry)}
                         onKeyDown={(event) => handleActivityItemKeyDown(event, entry)}
                       >
-                        <header>
-                          <h3>{entry.profileDisplayName}</h3>
-                          <small className="hub-feed-game-subtitle">{entry.gameName}</small>
+                        <header className="hub-feed-card-head">
+                          {entry.photoURL ? (
+                            <img className="hub-avatar hub-avatar-img" src={entry.photoURL} alt="" referrerPolicy="no-referrer" />
+                          ) : (
+                            <span className={`hub-avatar hub-avatar--${avatarTone(entry.profileDisplayName)}`} aria-hidden="true">
+                              {avatarInitial(entry.profileDisplayName)}
+                            </span>
+                          )}
+                          <div className="hub-feed-card-head-text">
+                            <h3>{entry.profileDisplayName}</h3>
+                            {entry.gameName ? <span className="hub-feed-game-chip">{entry.gameName}</span> : null}
+                          </div>
                         </header>
                         <p>{analyzedAtLabel}</p>
                         <StarRating value={Number(entry.rating || 0)} />
@@ -125,7 +223,13 @@ export function SocialFeedScreen({
               ))}
             </div>
           ) : null}
+          {!loadingDirectory && hasMoreFeed ? (
+            <button className="btn btn-secondary hub-feed-load-more" type="button" onClick={showMoreFeed}>
+              {SOCIAL_UI.feed.feedLoadMore}
+            </button>
+          ) : null}
         </div>
+
         <div className="hub-feed-toolbar" aria-label={SOCIAL_UI.feed.toolbarAria}>
           <label className="hub-feed-search">
             <span>{SOCIAL_UI.feed.searchLabel}</span>
@@ -160,18 +264,31 @@ export function SocialFeedScreen({
                   key={entry.id}
                   className="hub-feed-card hub-feed-profile-item"
                   tabIndex={0}
-                  aria-label={`Abrir perfil social de ${entry.displayName}`}
+                  aria-label={SOCIAL_UI.feed.openProfileAria(entry.displayName)}
                   onClick={() => openProfileDetail(entry.id)}
                   onKeyDown={(event) => handleProfileCardKeyDown(event, entry.id)}
                 >
-                  <header>
-                    <h3>{entry.displayName}</h3>
+                  <header className="hub-feed-card-head">
+                    {entry.photoURL ? (
+                      <img className="hub-avatar hub-avatar-img" src={entry.photoURL} alt="" referrerPolicy="no-referrer" />
+                    ) : (
+                      <span className={`hub-avatar hub-avatar--${avatarTone(entry.displayName)}`} aria-hidden="true">
+                        {avatarInitial(entry.displayName)}
+                      </span>
+                    )}
+                    <div className="hub-feed-card-head-text">
+                      <h3>{entry.displayName}</h3>
+                    </div>
                   </header>
-                  <p style={{ whiteSpace: 'pre-line' }}>
-                    {entry.favorites.length
-                      ? `${SOCIAL_UI.feed.favoritesPrefix}\n${entry.favorites.join('\n')}`
-                      : SOCIAL_UI.feed.noFavorites}
-                  </p>
+                  {entry.favorites.length ? (
+                    <div className="hub-profile-fav-chips">
+                      {entry.favorites.map((name: string, i: number) => (
+                        <span key={`${name}-${i}`} className="hub-feed-game-chip">{name}</span>
+                      ))}
+                    </div>
+                  ) : (
+                    <p>{SOCIAL_UI.feed.noFavorites}</p>
+                  )}
                 </article>
               ))}
             </div>

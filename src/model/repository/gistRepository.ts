@@ -1,4 +1,4 @@
-import { isValidGistId, isValidGithubToken } from '../../core/security/sanitize';
+import { isValidGistId, isValidGithubToken, isValidHttpUrl, safePostText } from '../../core/security/sanitize';
 import { migrateData } from './migrateRepository';
 import { clampRating, normalizeTimestamp } from '../../core/utils/normalize';
 import { assembleChunkedGames, gamesGistNeedsRewrite, gamesGistNeedsUpgradeToWrapper, unwrapGamesFile } from '../migration/legacyGamesFormat';
@@ -50,7 +50,9 @@ const SOCIAL_GIST_FILENAME = 'myGameList.social.json';
  * REVERSIBLE (volver a `false` → se rebaja a plano). Verificado: round-trip exacto sobre datos reales, 4% menor.
  * └──────────────────────────────────────────────────────────────────────────────────────────────────────┘
  */
-const ENABLE_GAMES_WRAPPER_WRITE = true;
+// Exportado para que los tests del formato v4 (gistWrite / gistV4Cutover) se salten solos cuando la
+// escritura v4 está apagada: documentan el comportamiento del cutover, no el plano de lanzamiento.
+export const ENABLE_GAMES_WRAPPER_WRITE = false;
 const GIST_API_BASE = 'https://api.github.com/gists';
 const SESSION_CACHE_SOCIAL_GIST_PREFIX = 'myGameList.session.socialGist';
 const SESSION_CACHE_PUBLIC_SOCIAL_GIST_PREFIX = 'myGameList.session.publicSocialGist';
@@ -65,6 +67,12 @@ type SessionCachedValue<T> = {
 
 const socialGistCacheById = new Map<string, SessionCachedValue<SocialGistData>>();
 const publicSocialGistCacheById = new Map<string, SessionCachedValue<SocialGistData>>();
+// Upgrade proactivo del gist de JUEGOS: gistIds cuyo FORMATO ya hemos inspeccionado a fondo en ESTA sesión.
+// Un 304 confirma que nuestro etag coincide, pero NO trae contenido → no se puede evaluar `wasLegacy`. Para un
+// dispositivo ya conectado con un gist viejo, su etag siempre coincide y el upgrade no se dispararía nunca.
+// Igual que `readSocialGist` (que aprovecha la caché de sesión), hacemos UNA lectura completa por sesión ante el
+// primer 304 para evaluar el formato; tras verla, confiamos en el 304 (barato). Se reinicia al recargar la página.
+const gamesGistFormatVerifiedThisSession = new Set<string>();
 const socialGistInFlightByKey = new Map<string, Promise<{ data: SocialGistData; etag: string | null; notModified?: boolean; wasLegacy?: boolean }>>();
 const publicSocialGistInFlightById = new Map<string, Promise<SocialGistData>>();
 
@@ -75,13 +83,17 @@ export interface SocialGistProfile {
   favoriteGames: Array<{ id: number; name: string }>;
   visibility: SocialProfileVisibility;
   sharedLists: Partial<Record<TabId, SocialSharedGame[]>>;
+  // F-social: foto de perfil pública. Solo se publica si visibility.showPhoto está activo (el usuario controla
+  // la publicación de su propia foto). Si está oculta, no se escribe → nadie la ve.
+  photoURL?: string;
 }
 
 export interface SocialProfileVisibility {
   hiddenTabs: TabId[];
   hideReplayable: boolean;
   hideRetry: boolean;
-    hideGameTime: boolean;
+  hideGameTime: boolean;
+  showPhoto: boolean; // defecto true; controla la publicación/visibilidad de la foto de perfil
 }
 
 /**
@@ -125,14 +137,35 @@ export interface SocialActivityEntry {
   updatedAt: number;
 }
 
+// F3 — publicación de texto libre del feed (noticias/enlaces). Los hipervínculos se detectan del propio `text`
+// al renderizar (URLs http/s validadas); no hay HTML ni campo de enlaces aparte.
+export interface SocialPostEntry {
+  id: string;
+  authorProfileId: string; // pseudónimo público (como actorProfileId)
+  authorName: string;
+  text: string;
+  createdAt: number;
+  updatedAt: number;
+}
+
 export interface SocialGistData {
   profile: SocialGistProfile;
   // ST3: el array `recommendations` top-level era código muerto (sin writer; siempre []). Se elimina del modelo.
   // La LECTURA tolera gists viejos que aún lo lleven: sus recs se fusionan en `activity` (mergeLegacyActivity) y
   // al reescribir el gist propio (socialGistNeedsRewrite → wasLegacy) se deja fuera. `profile.recommendations` ídem.
   activity: SocialActivityEntry[];
+  // F3 (aditivo, Opción B): publicaciones de texto libre. La lectura vieja lo ignora; un cliente NUEVO lo preserva
+  // en el round-trip (normalizeSocialGistData). Opcional en el schema → no rompe gists sin posts.
+  posts?: SocialPostEntry[];
   updatedAt: number;
   schemaVersion?: number; // 6.2b: 2 = identidad por profileId (uid fuera del canal público)
+}
+
+export interface UpsertPostInput {
+  authorProfileId: string;
+  authorName: string;
+  text: string;
+  timestamp?: number;
 }
 
 export interface UpsertRecommendationInput {
@@ -313,10 +346,12 @@ function getEmptySocialGistData(): SocialGistData {
         hideReplayable: false,
         hideRetry: false,
         hideGameTime: false,
+        showPhoto: true,
       },
       sharedLists: {},
     },
     activity: [],
+    posts: [],
     updatedAt: Date.now(),
   };
 }
@@ -342,7 +377,9 @@ function normalizeSocialVisibility(value: unknown): SocialProfileVisibility {
     hiddenTabs: [...new Set(hiddenTabs)],
     hideReplayable: Boolean(source.hideReplayable),
     hideRetry: Boolean(source.hideRetry),
-      hideGameTime: Boolean(source.hideGameTime),
+    hideGameTime: Boolean(source.hideGameTime),
+    // Defecto true (mostrar) si no está definido, para gists previos sin el campo.
+    showPhoto: source.showPhoto === undefined ? true : Boolean(source.showPhoto),
   };
 }
 
@@ -494,6 +531,37 @@ function normalizeActivityItems(items: unknown): SocialActivityEntry[] {
     .slice(0, 320);
 }
 
+function normalizePostItems(items: unknown): SocialPostEntry[] {
+  if (!Array.isArray(items)) {
+    return [];
+  }
+
+  return items
+    .map((entry) => {
+      const record = (entry && typeof entry === 'object' ? entry : {}) as Record<string, unknown>;
+      const authorProfileId = String(record.authorProfileId || '').trim();
+      const text = safePostText(record.text);
+      const createdAt = normalizeTimestamp(record.createdAt, Date.now());
+      const updatedAt = normalizeTimestamp(record.updatedAt, createdAt);
+
+      if (!authorProfileId || !text) {
+        return null;
+      }
+
+      return {
+        id: String(record.id || `${authorProfileId}:${createdAt}`),
+        authorProfileId,
+        authorName: String(record.authorName || '').trim(),
+        text,
+        createdAt,
+        updatedAt,
+      } satisfies SocialPostEntry;
+    })
+    .filter((entry): entry is SocialPostEntry => Boolean(entry))
+    .sort((a, b) => b.updatedAt - a.updatedAt)
+    .slice(0, 100);
+}
+
 function mergeLegacyActivity(
   normalizedActivity: SocialActivityEntry[],
   recommendations: SocialRecommendationEntry[],
@@ -583,6 +651,35 @@ export function upsertReviewActivity(data: SocialGistData, input: UpsertReviewIn
   };
 }
 
+/** F3 — añade una publicación de texto libre al gist propio (prepend). No-op si falta autor o texto. */
+export function upsertPost(data: SocialGistData, input: UpsertPostInput): SocialGistData {
+  const now = input.timestamp || Date.now();
+  const text = safePostText(input.text);
+
+  if (!input.authorProfileId || !text) {
+    return data;
+  }
+
+  const post: SocialPostEntry = {
+    id: `${input.authorProfileId}:${now}`,
+    authorProfileId: input.authorProfileId,
+    authorName: String(input.authorName || '').trim(),
+    text,
+    createdAt: now,
+    updatedAt: now,
+  };
+
+  const posts = [post, ...(data.posts || [])]
+    .sort((a, b) => b.updatedAt - a.updatedAt)
+    .slice(0, 100);
+
+  return {
+    ...data,
+    posts,
+    updatedAt: now,
+  };
+}
+
 function normalizeSocialGistData(data: unknown): SocialGistData {
   const source = (data && typeof data === 'object' ? data : {}) as Partial<SocialGistData>;
   const profile = (source.profile && typeof source.profile === 'object' ? source.profile : {}) as Partial<SocialGistProfile>;
@@ -607,15 +704,23 @@ function normalizeSocialGistData(data: unknown): SocialGistData {
   // del raw para fusionarlas en `activity` (sin pérdida de datos); al reescribir el gist se quedan fuera.
   const legacyRecommendations = normalizeRecommendationItems((source as { recommendations?: unknown }).recommendations);
 
+  const normalizedVisibility = normalizeSocialVisibility(profile.visibility);
+  // Privacidad: la foto solo se conserva si el usuario la muestra Y es una URL http(s) válida; si oculta la foto,
+  // se descarta aquí (defensa) → no se publica al reescribir el gist.
+  const rawPhotoURL = (profile as { photoURL?: unknown }).photoURL;
+  const photoURL = normalizedVisibility.showPhoto && isValidHttpUrl(rawPhotoURL) ? String(rawPhotoURL) : undefined;
+
   const normalized: SocialGistData = {
     profile: {
       name: String(profile.name || '').trim(),
       private: Boolean(profile.private),
       favoriteGames: toGames(profile.favoriteGames),
-      visibility: normalizeSocialVisibility(profile.visibility),
+      visibility: normalizedVisibility,
       sharedLists: normalizeSocialSharedLists(profile.sharedLists),
+      ...(photoURL ? { photoURL } : {}),
     },
     activity: normalizeActivityItems(source.activity),
+    posts: normalizePostItems(source.posts),
     updatedAt: Number(source.updatedAt || Date.now()),
     schemaVersion: SOCIAL_GIST_SCHEMA_VERSION,
   };
@@ -973,6 +1078,38 @@ export async function writeSocialGist(token: string, gistId: string, payload: So
   };
 }
 
+/**
+ * Construye la respuesta de lectura del gist de juegos a partir del cuerpo de GitHub: parsea el fichero principal,
+ * ensambla los chunks de overflow (E4), migra al formato actual y calcula `wasLegacy` (upgrade proactivo).
+ * Lanza si el fichero falta o el JSON es inválido (mismas garantías anti-pérdida que el camino directo).
+ */
+function buildGistReadResponse(body: { files?: Record<string, { content: string } | undefined> }, etag: string | null): GistReadResponse {
+  const raw = body.files?.[GIST_FILENAME]?.content;
+
+  if (!raw) {
+    throw new Error('Gist file not found');
+  }
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    throw new Error('Invalid JSON in Gist');
+  }
+
+  // E4: si el ancla referencia chunks de overflow en el mismo gist, fusiona sus juegos (los ficheros vienen en
+  // la misma respuesta). Para gist plano o de un solo fichero no hace nada (comportamiento actual intacto).
+  const assembled = assembleChunkedGames(parsed, body.files);
+
+  return {
+    data: migrateData(unwrapGamesFile(assembled)),
+    etag,
+    // El "viejo" depende del DESTINO de escritura: con el envoltorio v4 activado, "viejo" = no-v4 (se re-encoda);
+    // con escritura plana, "viejo" = envoltorio o legacy (se rebaja a plano). Así el auto-upgrade apunta al destino real.
+    wasLegacy: ENABLE_GAMES_WRAPPER_WRITE ? gamesGistNeedsUpgradeToWrapper(parsed) : gamesGistNeedsRewrite(parsed),
+  };
+}
+
 export async function readGist(token: string, gistId: string, etag: string | null = null): Promise<GistReadResponse> {
   if (!isValidGithubToken(token)) {
     throw new Error('Formato de token inválido');
@@ -994,7 +1131,36 @@ export async function readGist(token: string, gistId: string, etag: string | nul
   const response = await githubFetch(`${GIST_API_BASE}/${gistId}`, { headers });
 
   if (response.status === 304) {
-    return { notModified: true };
+    // Si ya inspeccionamos el formato de este gist en esta sesión, confiamos en el 304 (no trae contenido).
+    if (gamesGistFormatVerifiedThisSession.has(gistId)) {
+      return { notModified: true };
+    }
+
+    // Primer 304 de la sesión: una relectura COMPLETA (sin If-None-Match) para evaluar `wasLegacy` y permitir el
+    // upgrade proactivo en dispositivos ya conectados a un gist viejo. Best-effort: si falla, no rompemos el sync
+    // (se devuelve notModified y se reintenta en la próxima sesión).
+    try {
+      const freshResp = await githubFetch(`${GIST_API_BASE}/${gistId}`, {
+        headers: {
+          Authorization: getGithubAuthHeader(token),
+          'X-GitHub-Api-Version': '2022-11-28',
+        },
+      });
+      if (!freshResp.ok) {
+        return { notModified: true };
+      }
+      const freshBody = (await freshResp.json()) as { files?: Record<string, { content: string }> };
+      const result = buildGistReadResponse(freshBody, freshResp.headers.get('etag'));
+      gamesGistFormatVerifiedThisSession.add(gistId);
+      // Solo divergemos del camino 304 cuando hay que migrar: si el formato ya es el actual, devolvemos
+      // notModified para conservar exactamente el comportamiento barato (el viewmodel empuja dirty si toca).
+      if (!result.wasLegacy) {
+        return { notModified: true };
+      }
+      return result;
+    } catch {
+      return { notModified: true };
+    }
   }
 
   if (!response.ok) {
@@ -1002,30 +1168,10 @@ export async function readGist(token: string, gistId: string, etag: string | nul
   }
 
   const body = (await response.json()) as { files?: Record<string, { content: string }> };
-  const raw = body.files?.[GIST_FILENAME]?.content;
-
-  if (!raw) {
-    throw new Error('Gist file not found');
-  }
-
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(raw);
-  } catch {
-    throw new Error('Invalid JSON in Gist');
-  }
-
-  // E4: si el ancla referencia chunks de overflow en el mismo gist, fusiona sus juegos (los ficheros vienen en
-  // la misma respuesta). Para gist plano o de un solo fichero no hace nada (comportamiento actual intacto).
-  const assembled = assembleChunkedGames(parsed, body.files);
-
-  return {
-    data: migrateData(unwrapGamesFile(assembled)),
-    etag: response.headers.get('etag'),
-    // El "viejo" depende del DESTINO de escritura: con el envoltorio v4 activado, "viejo" = no-v4 (se re-encoda);
-    // con escritura plana, "viejo" = envoltorio o legacy (se rebaja a plano). Así el auto-upgrade apunta al destino real.
-    wasLegacy: ENABLE_GAMES_WRAPPER_WRITE ? gamesGistNeedsUpgradeToWrapper(parsed) : gamesGistNeedsRewrite(parsed),
-  };
+  const result = buildGistReadResponse(body, response.headers.get('etag'));
+  // Hemos visto el contenido completo: marca el formato como verificado para esta sesión (evita relecturas en 304).
+  gamesGistFormatVerifiedThisSession.add(gistId);
+  return result;
 }
 
 export async function writeGist(token: string, gistId: string, payload: TabData): Promise<{ etag: string | null; updatedAt: number }> {

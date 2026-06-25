@@ -1,4 +1,5 @@
 import { COMMON_ICONS } from '../../core/constants/icons';
+import { UI_MESSAGES } from '../../core/constants/labels';
 import { Icon } from './Icon';
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 
@@ -103,7 +104,7 @@ export function TagInput({
             <button
               type="button"
               className="chip-rm"
-              aria-label={`Eliminar ${String(value)}`}
+              aria-label={UI_MESSAGES.table.removeTag(String(value))}
               onClick={() => onRemove(value)}
             >
               <Icon name={COMMON_ICONS.close} />
