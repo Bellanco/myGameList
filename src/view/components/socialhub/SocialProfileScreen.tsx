@@ -1,5 +1,6 @@
 ﻿import { Icon } from '../Icon';
 import { SocialGameCardSelector } from '../SocialGameCardSelector';
+import { avatarInitial, avatarTone } from './avatar';
 import type { TabId } from '../../../model/types/game';
 
 /**
@@ -32,6 +33,9 @@ export function SocialProfileScreen({
   setHideRetry,
   hideGameTime,
   setHideGameTime,
+  showPhoto,
+  setShowPhoto,
+  ownPhotoURL,
 }: {
   SOCIAL_UI: any;
   profileName: string;
@@ -58,6 +62,9 @@ export function SocialProfileScreen({
   setHideRetry: (value: boolean) => void;
   hideGameTime?: boolean;
   setHideGameTime?: (value: boolean) => void;
+  showPhoto?: boolean;
+  setShowPhoto?: (value: boolean) => void;
+  ownPhotoURL?: string;
 }) {
   const toggleHiddenTab = (tab: TabId) => {
     if (hiddenTabs.includes(tab)) {
@@ -103,7 +110,18 @@ export function SocialProfileScreen({
         </div>
         <div className="hub-profile-layout">
           <article className="hub-profile-block">
-            <h3>{SOCIAL_UI.profile.identityTitle}</h3>
+            <header className="hub-feed-card-head">
+              {showPhoto !== false && ownPhotoURL ? (
+                <img className="hub-avatar hub-avatar-img" src={ownPhotoURL} alt="" referrerPolicy="no-referrer" />
+              ) : (
+                <span className={`hub-avatar hub-avatar--${avatarTone(profileName || 'Usuario')}`} aria-hidden="true">
+                  {avatarInitial(profileName || 'Usuario')}
+                </span>
+              )}
+              <div className="hub-feed-card-head-text">
+                <h3>{SOCIAL_UI.profile.identityTitle}</h3>
+              </div>
+            </header>
             <p>{SOCIAL_UI.profile.identityDescription}</p>
             <label className="flabel" htmlFor="hub-profile-name">{SOCIAL_UI.profile.nameLabel}</label>
             <input
@@ -216,6 +234,26 @@ export function SocialProfileScreen({
                 ) : null}
               </div>
             </div>
+
+            {setShowPhoto ? (
+              <div className="visibility-section">
+                <span className="visibility-label">{SOCIAL_UI.profile.photoSectionTitle}</span>
+                <div className="visibility-group">
+                  <label className="visibility-check" htmlFor="hub-show-photo">
+                    <input
+                      id="hub-show-photo"
+                      type="checkbox"
+                      checked={showPhoto !== false}
+                      onChange={(event) => setShowPhoto?.(event.target.checked)}
+                    />
+                    <span className="visibility-toggle-track" aria-hidden="true">
+                      <span className="visibility-toggle-thumb" />
+                    </span>
+                    <span>{SOCIAL_UI.profile.showPhotoField}</span>
+                  </label>
+                </div>
+              </div>
+            ) : null}
           </article>
           {hydratingProfile ? <p>{SOCIAL_UI.profile.hydrating}</p> : null}
         </div>

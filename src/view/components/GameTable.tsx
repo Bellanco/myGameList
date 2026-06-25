@@ -1,6 +1,7 @@
 import { Fragment, memo, useMemo, useRef } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { COMMON_ICONS } from '../../core/constants/icons';
+import { UI_MESSAGES } from '../../core/constants/labels';
 import type { GameItem, TabId } from '../../model/types/game';
 import type { TabAction } from '../../viewmodel/useGameListViewModel';
 import { Icon } from './Icon';
@@ -187,7 +188,7 @@ export const GameTable = memo(function GameTable({
                       className={`main-row ${row.index % 2 === 0 ? 'striped' : ''}`}
                       tabIndex={0}
                       aria-expanded={expanded}
-                      aria-label={`${expanded ? 'Contraer' : 'Expandir'} detalles de ${game.name}`}
+                      aria-label={UI_MESSAGES.table.rowDetailsAria(expanded, game.name)}
                       onClick={() => onExpandedChange(expanded ? null : game.id)}
                       onKeyDown={(event) => {
                         if (event.key === 'Enter' || event.key === ' ') {
@@ -228,55 +229,55 @@ export const GameTable = memo(function GameTable({
                     <td colSpan={getColSpan(currentTab)} style={{ padding: 0 }}>
                       <div className="detail-content">
                         <div className="detail-box">
-                          <span className="detail-label">Plataformas</span>
+                          <span className="detail-label">{UI_MESSAGES.detail.platforms}</span>
                           <div className="chips">
                             {renderTags(game.platforms, 'chip-plat')}
                             {game.steamDeck && (
                               <span className="chip chip-deck">
                                 <Icon name={COMMON_ICONS.steamDeck} />
-                                <span>Steam Deck</span>
+                                <span>{UI_MESSAGES.detail.steamDeck}</span>
                               </span>
                             )}
                           </div>
                           {game.platforms.length === 0 && !game.steamDeck && <span>—</span>}
                         </div>
                         <div className="detail-box">
-                          <span className="detail-label">Géneros</span>
+                          <span className="detail-label">{UI_MESSAGES.detail.genres}</span>
                           <div>{renderTags(game.genres, 'chip-genre')}</div>
                         </div>
                         {currentTab === 'c' && showYears && game.years && game.years.length > 0 && (
                           <div className="detail-box">
-                            <span className="detail-label">Años en los que se completó</span>
+                            <span className="detail-label">{UI_MESSAGES.detail.yearsCompleted}</span>
                             <div>{renderTags(game.years?.map(String) || [], 'chip-generic')}</div>
                           </div>
                         )}
                         {currentTab === 'c' && showHours && game.hours !== null && (
                           <div className="detail-box">
-                            <span className="detail-label">Tiempo jugado</span>
-                            <div>{String(game.hours).replace('.', ',')} horas</div>
+                            <span className="detail-label">{UI_MESSAGES.detail.playtime}</span>
+                            <div>{UI_MESSAGES.detail.hoursSuffix(String(game.hours).replace('.', ','))}</div>
                           </div>
                         )}
                         {(currentTab === 'c' || currentTab === 'v' || currentTab === 'e') && game.strengths && game.strengths.length > 0 && (
                           <div className="detail-box detail-strong">
-                            <span className="detail-label">Puntos fuertes</span>
+                            <span className="detail-label">{UI_MESSAGES.detail.strengths}</span>
                             <div>{renderTags(game.strengths, 'chip-pf')}</div>
                           </div>
                         )}
                         {(currentTab === 'c' || currentTab === 'e') && game.weaknesses && game.weaknesses.length > 0 && (
                           <div className="detail-box detail-weak">
-                            <span className="detail-label">Puntos débiles</span>
+                            <span className="detail-label">{UI_MESSAGES.detail.weaknesses}</span>
                             <div>{renderTags(game.weaknesses, 'chip-pd')}</div>
                           </div>
                         )}
                         {currentTab === 'v' && game.reasons && game.reasons.length > 0 && (
                           <div className="detail-box detail-weak">
-                            <span className="detail-label">Puntos débiles</span>
+                            <span className="detail-label">{UI_MESSAGES.detail.weaknesses}</span>
                             <div>{renderTags(game.reasons, 'chip-pd')}</div>
                           </div>
                         )}
                         {(currentTab === 'c' || currentTab === 'p') && game.score !== null && (
                           <div className="detail-box">
-                            <span className="detail-label">{currentTab === 'p' ? 'Interés' : 'Puntuación'}</span>
+                            <span className="detail-label">{currentTab === 'p' ? UI_MESSAGES.detail.interest : UI_MESSAGES.detail.score}</span>
                             <div>
                               <StarRating value={Number(game.score || 0)} />
                             </div>
@@ -284,19 +285,19 @@ export const GameTable = memo(function GameTable({
                         )}
                         {currentTab === 'c' && showReplayable && (
                           <div className="detail-box">
-                            <span className="detail-label">Rejugabilidad</span>
+                            <span className="detail-label">{UI_MESSAGES.detail.replayability}</span>
                             <div>{renderBooleanBadge('replayable', Boolean(game.replayable))}</div>
                           </div>
                         )}
                         {currentTab === 'v' && showRetry && (
                           <div className="detail-box">
-                            <span className="detail-label">Dar otra oportunidad</span>
+                            <span className="detail-label">{UI_MESSAGES.detail.retry}</span>
                             <div>{renderBooleanBadge('retry', Boolean(game.retry))}</div>
                           </div>
                         )}
                         {supportsReview(currentTab) && game.review ? (
                           <div className="detail-box" style={{ gridColumn: '1/-1' }}>
-                            <span className="detail-label">Análisis</span>
+                            <span className="detail-label">{UI_MESSAGES.detail.review}</span>
                             <div className="detail-value">
                               {reviewLines.map((line, i) => (
                                 <Fragment key={i}>
@@ -314,8 +315,8 @@ export const GameTable = memo(function GameTable({
                                 key={`${game.id}-${action.target}`}
                                 className={`btn ${action.btnCls}`}
                                 type="button"
-                                title={`${action.label} - ${game.name}`}
-                                aria-label={`${action.label} - ${game.name}`}
+                                title={UI_MESSAGES.table.actionAria(action.label, game.name)}
+                                aria-label={UI_MESSAGES.table.actionAria(action.label, game.name)}
                                 onClick={(event) => {
                                   event.stopPropagation();
                                   onMigrate(currentTab, game.id, action.target);
@@ -328,28 +329,28 @@ export const GameTable = memo(function GameTable({
                             <button
                               className="btn btn-secondary"
                               type="button"
-                              title={`Editar - ${game.name}`}
-                              aria-label={`Editar - ${game.name}`}
+                              title={UI_MESSAGES.table.editAria(game.name)}
+                              aria-label={UI_MESSAGES.table.editAria(game.name)}
                               onClick={(event) => {
                                 event.stopPropagation();
                                 onEdit(currentTab, game.id);
                               }}
                             >
                               <Icon name={COMMON_ICONS.edit} />
-                              <span>Editar</span>
+                              <span>{UI_MESSAGES.table.edit}</span>
                             </button>
                             <button
                               className="btn btn-danger"
                               type="button"
-                              title={`Eliminar - ${game.name}`}
-                              aria-label={`Eliminar - ${game.name}`}
+                              title={UI_MESSAGES.table.deleteAria(game.name)}
+                              aria-label={UI_MESSAGES.table.deleteAria(game.name)}
                               onClick={(event) => {
                                 event.stopPropagation();
                                 onDelete(currentTab, game.id);
                               }}
                             >
                               <Icon name={COMMON_ICONS.trash} />
-                              <span>Eliminar</span>
+                              <span>{UI_MESSAGES.table.delete}</span>
                             </button>
                           </div>
                         ) : null}

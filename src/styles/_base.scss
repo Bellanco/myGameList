@@ -1,3 +1,5 @@
+/* F1 — Tema oscuro (por defecto). Todos los colores cuelgan de estas variables; el tema claro las
+   sobrescribe en `:root[data-theme="light"]`. Los radios no dependen del tema. */
 :root {
   --bg: #1a1e24;
   --surface: #212429;
@@ -13,6 +15,35 @@
   --success: #67c18d;
   --danger: #d15b58;
   --warn: #e5b143;
+
+  /* Estrellas (puntuación) */
+  --star-empty: #3d5573;
+  --star-full: #7dd3ff;
+
+  /* Acentos de texto sobre fondos translúcidos (chips/badges/botones de estado).
+     En oscuro = valores actuales (apariencia idéntica); en claro se oscurecen para contraste. */
+  --fg-amber: #fcd34d;
+  --fg-amber-soft: #f5d080;
+  --fg-indigo: #c7d2fe;
+  --fg-sky: #66c0f4;
+  --fg-green: #86efac;
+  --fg-green-soft: #84d5a8;
+  --fg-red: #ff9d9a;
+  --fg-red-soft: #fca5a5;
+  --fg-red-pink: #ffb5b2;
+
+  /* Overlays neutros dependientes del tema (hover fantasma, fila de detalle). */
+  --overlay-hover: rgba(255,255,255,.05);
+  --detail-row-bg: rgba(0,0,0,.22);
+  /* Superficie translúcida (barra inferior con blur). */
+  --surface-glass: rgba(33,36,41,.96);
+  /* Social hub: texto sobre tarjetas + superficies/gradientes de tarjeta. */
+  --hub-text: #e8f4ff;
+  --hub-text-muted: #9ec6e0;
+  --hub-card-bg: rgba(26,30,36,.55);
+  --hub-grad-start: rgba(49,54,62,.82);
+  --hub-grad-end: rgba(33,36,41,.92);
+
   --radius-sm: 8px;
   --radius-md: 12px;
   --radius-lg: 22px;
@@ -20,8 +51,51 @@
   --shadow: 0 10px 28px rgba(0,0,0,.38);
 }
 
+/* Tema claro: solo redefine colores (los radios y la estructura no cambian). */
+:root[data-theme="light"] {
+  --bg: #eef1f5;
+  --surface: #ffffff;
+  --surface-hover: #e7ecf2;
+  --surface-elevated: #f4f6f9;
+  --surface-soft: rgba(0,0,0,.03);
+  --border: #d4dae2;
+  --text: #1c2530;
+  --text-muted: #5d6b7a;
+  --steam: #1a82e0;
+  --steam-hover: #1469bd;
+  --steam-soft: rgba(26,130,224,.12);
+  --success: #1f9d57;
+  --danger: #c0322b;
+  --warn: #b9821a;
+
+  --star-empty: #c3ccd6;
+  --star-full: #1a82e0;
+
+  --fg-amber: #946200;
+  --fg-amber-soft: #8a5a00;
+  --fg-indigo: #4348c4;
+  --fg-sky: #0b6cb3;
+  --fg-green: #1f7a4d;
+  --fg-green-soft: #1f7a4d;
+  --fg-red: #c0322b;
+  --fg-red-soft: #c0322b;
+  --fg-red-pink: #b3322e;
+
+  --overlay-hover: rgba(0,0,0,.05);
+  --detail-row-bg: rgba(0,0,0,.04);
+  --surface-glass: rgba(255,255,255,.96);
+  --hub-text: #1c2530;
+  --hub-text-muted: #5d6b7a;
+  --hub-card-bg: rgba(0,0,0,.04);
+  --hub-grad-start: rgba(244,246,249,.95);
+  --hub-grad-end: rgba(255,255,255,.9);
+
+  --shadow: 0 8px 24px rgba(20,30,45,.12);
+}
+
 * { box-sizing: border-box; margin: 0; padding: 0; }
-html { color-scheme: dark; }
+:root { color-scheme: dark; }
+:root[data-theme="light"] { color-scheme: light; }
 body {
   font-family: 'DM Sans', sans-serif;
   background: var(--bg);

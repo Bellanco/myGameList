@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { readGist, writeGist } from '../../src/model/repository/gistRepository';
+import { ENABLE_GAMES_WRAPPER_WRITE, readGist, writeGist } from '../../src/model/repository/gistRepository';
 import type { GameItem, TabData } from '../../src/model/types/game';
 
 /**
@@ -87,7 +87,7 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-describe.skipIf(!HAS_REAL_DATA)('Cutover v4 sobre datos reales (myGames.json de la raíz)', () => {
+describe.skipIf(!HAS_REAL_DATA || !ENABLE_GAMES_WRAPPER_WRITE)('Cutover v4 sobre datos reales (myGames.json de la raíz)', () => {
   // Sin datos reales (CI) RAW_REAL_DATA es null y el bloque está saltado; el `{}` evita parsear null.
   const flat = (HAS_REAL_DATA ? JSON.parse(RAW_REAL_DATA as string) : {}) as TabData;
 

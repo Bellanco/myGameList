@@ -9,11 +9,13 @@ import {
   remapSocialActorIds,
   saveSocialSyncConfig,
   type SocialActivityEntry,
+  type SocialPostEntry,
   type SocialProfileVisibility,
   type SocialSharedGame,
   updateGistPrivacy,
   writeSocialGist,
 } from '../model/repository/gistRepository';
+import { publishPost } from '../model/repository/socialPublishRepository';
 import { SOCIAL_UI } from '../core/constants/labels';
 import type { IconName } from '../core/constants/icons';
 import type { GameItem, TabId } from '../model/types/game';
@@ -56,6 +58,7 @@ type SocialRouteState = {
   detailEventType: string;
 };
 
+const FEED_PAGE_SIZE = 25;
 const PROFILE_EDIT_PATH = /^\/social\/profile\/?$/;
 const PROFILE_DETAIL_PATH = /^\/social\/profiles\/([^/]+)$/;
 const ACTIVITY_DETAIL_PATH = /^\/social\/user\/([^/]+)\/game\/(\d+)\/(review|recommendation)$/;
@@ -106,6 +109,15 @@ export function useSocialViewModel() {
     profileId: string;
     profileDisplayName: string;
     socialGistId: string;
+    photoURL: string;
+  };
+
+  // F3 — publicación enriquecida con la identidad de su autor (para el feed).
+  type SocialPostFeedItem = SocialPostEntry & {
+    profileId: string;
+    profileDisplayName: string;
+    socialGistId: string;
+    photoURL: string;
   };
 
   type SocialDirectoryEntry = {
@@ -114,9 +126,11 @@ export function useSocialViewModel() {
     email: string;
     socialGistId: string;
     gamesGistId: string;
+    photoURL: string;
     favorites: string[];
     recommendations: string[];
     activity: SocialActivityFeedItem[];
+    posts: SocialPostFeedItem[];
     // Index-only (SocialSharedGame) para perfiles ajenos; para el perfil PROPIO se repuebla con GameItem completos.
     sharedLists: Partial<Record<TabId, Array<GameItem | SocialSharedGame>>>;
     visibility: SocialProfileVisibility;
@@ -142,11 +156,16 @@ export function useSocialViewModel() {
   const [profileName, setProfileName] = useState('');
   const [favoriteGameIds, setFavoriteGameIds] = useState<number[]>([]);
   const [hiddenTabs, setHiddenTabs] = useState<TabId[]>([]);
+  const [showPhoto, setShowPhoto] = useState(true);
   const [hideReplayable, setHideReplayable] = useState(false);
   const [hideRetry, setHideRetry] = useState(false);
   const [hideGameTime, setHideGameTime] = useState(false);
   const [favoriteSearch, setFavoriteSearch] = useState('');
   const [feedSearch, setFeedSearch] = useState('');
+  // Paginación del feed: 25 inicial, +25 por "Mostrar más". Se reinicia al cambiar la búsqueda.
+  const [feedVisibleCount, setFeedVisibleCount] = useState(FEED_PAGE_SIZE);
+  const [composePostText, setComposePostText] = useState('');
+  const [publishingPost, setPublishingPost] = useState(false);
   const [feedFilter] = useState<'all' | 'favorites'>('all');
   const [socialPayload, setSocialPayload] = useState<{ activity: SocialActivityEntry[] }>({ activity: [] });
   const [hydratingProfile, setHydratingProfile] = useState(false);
@@ -367,6 +386,7 @@ export function useSocialViewModel() {
     hideReplayable: false,
     hideRetry: false,
     hideGameTime: false,
+    showPhoto: true,
   }), []);
 
   const getOrderedUniqueTabs = useCallback((tabs: TabId[]): TabId[] => {
@@ -386,7 +406,11 @@ export function useSocialViewModel() {
   }, []);
 
   const visibleSocialDirectory = useMemo(() => {
-    return socialDirectory.filter((entry) => entry.socialGistId !== socialCfgGistId);
+    // Un perfil sin favoritos se considera INCOMPLETO: no aparece en el directorio ("Actividad de perfiles")
+    // ni se puede abrir su detalle (ver selectedProfileDetail/openProfileDetail). Excluye además el propio.
+    return socialDirectory.filter(
+      (entry) => entry.socialGistId !== socialCfgGistId && entry.favorites.length > 0,
+    );
   }, [socialCfgGistId, socialDirectory]);
 
   const socialDisplayName = useMemo(() => {
@@ -432,7 +456,8 @@ export function useSocialViewModel() {
     }
 
     const entry = socialDirectory.find((item) => item.id === profileDetailId) || null;
-    if (!entry) return null;
+    // Perfil incompleto (sin favoritos): no se puede entrar → se trata como inexistente.
+    if (!entry || entry.favorites.length === 0) return null;
 
     // E3 deja `sharedLists` vacío para TODOS los perfiles del directorio (no se exponen las listas ajenas). Para el
     // perfil PROPIO repoblamos las listas desde `localState` (juegos completos) para que el usuario SÍ vea sus
@@ -476,6 +501,37 @@ export function useSocialViewModel() {
         .toLowerCase();
 
       return haystack.includes(normalizedQuery);
+    });
+  }, [feedSearch, socialDirectory]);
+
+  // F3 — feed COMBINADO: reseñas/recomendaciones (actividad) + publicaciones, mezcladas y ordenadas por fecha.
+  // Los posts llevan `kind:'post'` para distinguirlos al renderizar; la actividad conserva su `type`.
+  const feedItems = useMemo(() => {
+    const normalizedQuery = feedSearch.trim().toLowerCase();
+
+    const activity = socialDirectory.flatMap((entry) => entry.activity);
+    const posts = socialDirectory.flatMap((entry) => entry.posts).map((post) => ({ ...post, kind: 'post' as const }));
+
+    const merged = [...activity, ...posts]
+      .sort((a, b) => b.updatedAt - a.updatedAt)
+      .slice(0, 300);
+
+    if (!normalizedQuery) {
+      return merged;
+    }
+
+    return merged.filter((item) => {
+      const isPost = (item as { kind?: string }).kind === 'post';
+      const haystack = isPost
+        ? [(item as SocialPostFeedItem).profileDisplayName, (item as SocialPostFeedItem).authorName, (item as SocialPostFeedItem).text]
+        : [
+            (item as SocialActivityFeedItem).profileDisplayName,
+            (item as SocialActivityFeedItem).actorName,
+            (item as SocialActivityFeedItem).gameName,
+            (item as SocialActivityFeedItem).recommendationText,
+            (item as SocialActivityFeedItem).snippet,
+          ];
+      return haystack.join(' ').toLowerCase().includes(normalizedQuery);
     });
   }, [feedSearch, socialDirectory]);
 
@@ -546,16 +602,18 @@ export function useSocialViewModel() {
   /**
    * Agrupa las actividades por dÃ­a y retorna array con day headers.
    */
-  const groupedActivityFeedItems = useMemo(() => {
+  const groupedFeedItems = useMemo(() => {
+    type FeedItem = (typeof feedItems)[number];
     const groups: Array<{
       dayHeader: string;
       dayDate: Date;
-      items: SocialActivityFeedItem[];
+      items: FeedItem[];
     }> = [];
 
-    const itemsByDay = new Map<string, SocialActivityFeedItem[]>();
+    const itemsByDay = new Map<string, FeedItem[]>();
 
-    activityFeedItems.forEach((item) => {
+    // Solo los elementos visibles según la paginación (25, +25 con "Mostrar más").
+    feedItems.slice(0, feedVisibleCount).forEach((item) => {
       const itemDate = new Date(toSafeTimestamp(item.updatedAt, Date.now()));
       if (Number.isNaN(itemDate.getTime())) {
         return;
@@ -582,7 +640,18 @@ export function useSocialViewModel() {
     });
 
     return groups;
-  }, [activityFeedItems, formatDayHeader]);
+  }, [feedItems, feedVisibleCount, formatDayHeader]);
+
+  // Paginación del feed: ¿hay más allá de lo visible? y handler para mostrar otros 25.
+  const hasMoreFeed = feedItems.length > feedVisibleCount;
+  const showMoreFeed = useCallback(() => {
+    setFeedVisibleCount((count) => count + FEED_PAGE_SIZE);
+  }, []);
+
+  // Al cambiar la búsqueda, volver a la primera página.
+  useEffect(() => {
+    setFeedVisibleCount(FEED_PAGE_SIZE);
+  }, [feedSearch]);
 
   const handleFeedRowMouseDown = useCallback((event: ReactMouseEvent<HTMLDivElement>) => {
     if (event.button !== 0 || !feedRowRef.current) {
@@ -622,8 +691,13 @@ export function useSocialViewModel() {
   }, [navigate]);
 
   const openProfileDetail = useCallback((profileId: string) => {
+    // No abrir el detalle de un perfil incompleto (sin favoritos). El propio se gestiona aparte (editor).
+    const target = socialDirectory.find((entry) => entry.id === profileId);
+    if (target && target.favorites.length === 0) {
+      return;
+    }
     navigate(`/social/profiles/${encodeURIComponent(profileId)}`);
-  }, [navigate]);
+  }, [navigate, socialDirectory]);
 
   const handleActivityItemKeyDown = useCallback(
     (event: ReactKeyboardEvent<HTMLElement>, entry: SocialActivityFeedItem) => {
@@ -803,6 +877,7 @@ export function useSocialViewModel() {
       setHideReplayable(Boolean(profileVisibility.hideReplayable));
       setHideRetry(Boolean(profileVisibility.hideRetry));
       setHideGameTime(Boolean(profileVisibility.hideGameTime));
+      setShowPhoto(profileVisibility.showPhoto !== false);
       setHasCreatedProfile(profileExists);
       setSocialPayload({
         activity: socialRead.data.activity,
@@ -871,9 +946,12 @@ export function useSocialViewModel() {
       setLoadingDirectory(true);
       const entries = await listSocialDirectory(50, { forceRefresh });
       const socialConfig = getSocialSyncConfig();
+      // Foto propia inmediata (de la sesión Google) aunque aún no se haya re-guardado el perfil; respeta showPhoto.
+      const ownPhotoURL = showPhoto && authUser?.photoURL ? authUser.photoURL : '';
 
       const withProfiles = await Promise.all(
         entries.map(async (entry) => {
+          const isOwnEntry = entry.socialGistId === socialCfgGistId;
           try {
             const socialData = await readPublicSocialGistById(entry.socialGistId, socialConfig?.token || null);
             // E3: el canal social NO lee el gist de juegos EN CRUDO de otros usuarios (privacidad + desacople del
@@ -902,6 +980,25 @@ export function useSocialViewModel() {
                   profileId: entry.id,
                   profileDisplayName: socialData.profile.name || entry.displayName || 'Usuario',
                   socialGistId: entry.socialGistId,
+                  photoURL: socialData.profile.photoURL || (isOwnEntry ? ownPhotoURL : ''),
+                };
+              })
+              .slice(0, 40);
+
+            const posts = (socialData.posts || [])
+              .map((postEntry) => {
+                const now = Date.now();
+                const createdAt = toSafeTimestamp(postEntry.createdAt, now);
+                const updatedAt = toSafeTimestamp(postEntry.updatedAt, createdAt);
+
+                return {
+                  ...postEntry,
+                  createdAt,
+                  updatedAt,
+                  profileId: entry.id,
+                  profileDisplayName: socialData.profile.name || entry.displayName || 'Usuario',
+                  socialGistId: entry.socialGistId,
+                  photoURL: socialData.profile.photoURL || (isOwnEntry ? ownPhotoURL : ''),
                 };
               })
               .slice(0, 40);
@@ -912,9 +1009,11 @@ export function useSocialViewModel() {
               email: entry.email,
               socialGistId: entry.socialGistId,
               gamesGistId: entry.gamesGistId,
+              photoURL: socialData.profile.photoURL || (isOwnEntry ? ownPhotoURL : ''),
               favorites: socialData.profile.favoriteGames.map((game) => game.name).slice(0, 5),
               recommendations: mergedRecommendations,
               activity,
+              posts,
               sharedLists,
               visibility: socialData.profile.visibility || defaultSocialVisibility,
             };
@@ -925,9 +1024,11 @@ export function useSocialViewModel() {
               email: entry.email,
               socialGistId: entry.socialGistId,
               gamesGistId: entry.gamesGistId,
+              photoURL: '',
               favorites: [],
               recommendations: [],
               activity: [],
+              posts: [],
               sharedLists: {},
               visibility: defaultSocialVisibility,
             };
@@ -942,7 +1043,27 @@ export function useSocialViewModel() {
     } finally {
       setLoadingDirectory(false);
     }
-  }, [activePanel, authUser, defaultSocialVisibility, mainSyncConfig?.token, profileEditorLocked, setFeedback, showSocialSpace, socialCfgGistId]);
+  }, [activePanel, authUser, defaultSocialVisibility, mainSyncConfig?.token, profileEditorLocked, setFeedback, showSocialSpace, socialCfgGistId, showPhoto]);
+
+  // F3 — publica una publicación de texto libre y refresca el feed (definido tras hydrateSocialDirectory para evitar TDZ).
+  const handlePublishPost = useCallback(async () => {
+    const text = composePostText.trim();
+    if (!text || publishingPost) {
+      return;
+    }
+
+    try {
+      setPublishingPost(true);
+      await publishPost({ text });
+      setComposePostText('');
+      await hydrateSocialDirectory(true);
+      setFeedback('ok', SOCIAL_UI.status.postPublished);
+    } catch (error) {
+      setFeedback('err', error instanceof Error ? error.message : SOCIAL_UI.status.postPublishFailed);
+    } finally {
+      setPublishingPost(false);
+    }
+  }, [composePostText, publishingPost, hydrateSocialDirectory, setFeedback]);
 
   useEffect(() => {
     void hydrateSocialDirectory();
@@ -987,6 +1108,7 @@ export function useSocialViewModel() {
         hideReplayable,
         hideRetry,
         hideGameTime,
+        showPhoto,
       };
 
       const profile = {
@@ -995,6 +1117,8 @@ export function useSocialViewModel() {
         favoriteGames: validFavoriteIds.map((id) => ({ id, name: completedGameNameById.get(id) || `Juego ${id}` })),
         visibility,
         sharedLists: {},
+        // Solo se publica la foto si el usuario la muestra (normalize la valida/descarta si no).
+        ...(showPhoto && authUser.photoURL ? { photoURL: authUser.photoURL } : {}),
       };
 
       const currentGistResult = await readSocialGist(socialConfig.token, socialCfgGistId, null);
@@ -1003,6 +1127,7 @@ export function useSocialViewModel() {
       const writeResult = await writeSocialGist(socialConfig.token, socialCfgGistId, {
         profile,
         activity: currentGistData.activity,
+        posts: currentGistData.posts, // preservar las publicaciones al guardar el perfil
         updatedAt: Date.now(),
       });
 
@@ -1142,10 +1267,17 @@ export function useSocialViewModel() {
     setHideRetry,
     hideGameTime,
     setHideGameTime,
+    showPhoto,
+    setShowPhoto,
     favoriteSearch,
     setFavoriteSearch,
     feedSearch,
     setFeedSearch,
+    composePostText,
+    setComposePostText,
+    publishingPost,
+    handlePublishPost,
+    feedItems,
     hydratingProfile,
     savingProfile,
     loadingDirectory,
@@ -1161,10 +1293,11 @@ export function useSocialViewModel() {
     socialDisplayName,
     filteredSocialDirectory,
     selectedProfileDetail,
-    activityFeedItems,
     activeDetailEvent,
     getGameItemById,
-    groupedActivityFeedItems,
+    groupedFeedItems,
+    hasMoreFeed,
+    showMoreFeed,
     handleFeedRowMouseDown,
     handleFeedRowKeyDown,
     openActivityDetail,
