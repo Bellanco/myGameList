@@ -100,11 +100,15 @@ tests de caracterización (`it.fails`), CSP fuerte. Los problemas de fondo se co
   a `setLocalDraft` y solo `onSave(nextDraft)` propaga al VM. Eliminada la prop `onDraftChange` (FormModal + App.tsx).
   Cada pulsación re-renderiza solo el modal, no App/GameTable. Test de componente `FormModal.test.tsx` (2): no emite por
   tecla + `onSave` recibe el draft editado. tsc/111+1/eslint/build OK.
-- [ ] **P1 — VM retorna objeto literal no memoizado** (`useGameListViewModel.ts:573-611`) + `persist` depende de `meta`
-  (que cambia en cada `persist`) → cascada de recreación de callbacks. Leer `meta` vía `metaRef`, `persist` con dep `[]`.
-- [ ] **P2 — `useMemo` de `list` con deps mal declaradas** (`App.tsx:122`): usar `[vm.getFilteredList, currentTab]`.
-- [ ] **P4 — `getFilteredList` recomputa `Math.max(...years)` en cada comparación del sort** (O(n log n·k)). Decorate-sort-undecorate.
-- [ ] **P5 — `notify` guarda el timer como propiedad mutada de la función** (`useGameListViewModel.ts:343`). `useRef` + cleanup.
+- [x] **P1 — `persist` dependía de `meta` → cascada de recreación de callbacks** ✅ (2026-06-26): `metaRef` (sincronizado
+  en render) reemplaza la dependencia `[meta]` en `persistInternal`/`persist`/`persistFromSync` → ahora estables
+  (dep `[]`/`[persistInternal]`), no se recrean en cada guardado ni arrastran a saveDraft/deleteGame/etc.
+- [x] **P2 — `useMemo` de `list` con deps mal declaradas** ✅ (2026-06-26): `App.tsx` usa `[vm.getFilteredList, currentTab]`
+  (la función ya está memoizada sobre data/filters/sort) en vez de re-listar sus internals.
+- [x] **P4 — `getFilteredList` recomputaba `Math.max(...years)` en cada comparación** ✅ (2026-06-26): decorate-sort-undecorate
+  (`keyOf` calcula la clave una vez por juego, se ordena sobre la clave materializada).
+- [x] **P5 — `notify` guardaba el timer como propiedad mutada de la función** ✅ (2026-06-26): `noticeTimerRef` (`useRef`)
+  + cleanup `clearTimeout` al desmontar. (P1/P2/P4/P5 verificados juntos: tsc · eslint · 171 tests · build OK.)
 
 ---
 
@@ -119,9 +123,15 @@ tests de caracterización (`it.fails`), CSP fuerte. Los problemas de fondo se co
   Tests de componente: `FormModal.test.tsx` (+3 a11y) y `ConfirmModal.test.tsx` (4). tsc/118+1/eslint/build OK.
   ⚠️ Pendiente verificación visual en navegador (aspecto del `::backdrop`/centrado). `AdminModal` sigue con `.modal-ov`
   (fuera del alcance de A11y-1; mismo patrón a migrar si se quiere consistencia).
-- [ ] **A11y-2 — Fila expandible es `<tr tabIndex=0 aria-expanded>`** (no se anuncia como botón) y "editar = doble clic"
-  sin equivalente de teclado (`GameTable.tsx:183-203`). Botón disparador real con `aria-controls` + atajo de teclado.
-- [ ] **A11y-3 — `aria-live` del contador de caracteres anuncia en cada pulsación** (`FormModal.tsx:483`). Anunciar solo en umbrales.
+- [x] **A11y-2 — Fila expandible no se anunciaba como botón** ✅ (2026-06-26): el disparador de detalles es ahora un
+  `<button class="row-toggle" aria-expanded aria-controls={game-detail-id}>` REAL en la 1ª celda (anunciado como botón,
+  navegable y accionable por teclado con Enter/Espacio nativos); la `<tr>` deja de ser focusable y conserva click/doble-clic
+  solo como atajos de ratón. El detalle expandido lleva `id` para `aria-controls`. Equivalente de teclado para editar:
+  expandir → botón "Editar" del panel (ya existente, focusable). Estilo `.row-toggle` (texto plano + `:focus-visible`) en `_table.scss`.
+- [x] **A11y-3 — `aria-live` del contador de caracteres anunciaba en cada pulsación** ✅ (2026-06-26): el conteo visible
+  pierde `aria-live`; se añade una región `sr-only` `role="status" aria-live="polite"` con un mensaje de UMBRAL constante
+  (90% / 100%) → el lector lo anuncia una vez al cruzar la banda, no por tecla. Strings nuevas en `labels.ts`
+  (`charNearLimit`/`charLimitReached`). (A11y-2/A11y-3: tsc · eslint · 171 tests · build · html-validate OK.)
 
 ---
 

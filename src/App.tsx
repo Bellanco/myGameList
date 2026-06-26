@@ -121,7 +121,9 @@ export default function App() {
     };
   }, []);
 
-  const list = useMemo(() => vm.getFilteredList(currentTab), [currentTab, vm.data, vm.filters, vm.sort]);
+  // P2: `getFilteredList` ya está memoizado sobre data/filters/sort; basta con depender de la propia función
+  // (cambia cuando cambian esos inputs) y de la pestaña, en vez de re-listar sus internals.
+  const list = useMemo(() => vm.getFilteredList(currentTab), [vm.getFilteredList, currentTab]);
   const activeFilterCount = useMemo(() => {
     const count =
       (tabFilter.search.trim() ? 1 : 0) +

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { FILTER_BOOL, TAB_ACTIONS, TAB_ORDER, VALIDATION_MESSAGES } from '../core/constants/labels';
 import { HOURS_RANGES } from '../core/constants/uiConfig';
 import { sortEs, uniqueCaseInsensitive } from '../core/utils/compare';
@@ -97,6 +97,11 @@ export function useGameListViewModel() {
     etag: initial.etag,
     lastRemoteUpdatedAt: initial.lastRemoteUpdatedAt,
   });
+  // P1: `meta` cambia en cada `persist` (nuevo `updatedAt`). Si `persistInternal` lo cerrara por dependencia,
+  // se recrearía en cada guardado y arrastraría la recreación de TODOS los callbacks que dependen de `persist`
+  // (saveDraft/deleteGame/…). Lo leemos vía ref → `persist` y derivados quedan estables (dep []).
+  const metaRef = useRef(meta);
+  metaRef.current = meta;
   const [filters, setFilters] = useState<Record<TabId, ToolbarFilters>>({
     c: { ...DEFAULT_FILTERS },
     v: { ...DEFAULT_FILTERS },
@@ -183,7 +188,7 @@ export function useGameListViewModel() {
   // de una persistencia derivada del CICLO DE SYNC (aplicar merge/resultado remoto → NO debe marcar dirty, o cada
   // sync dejaría el estado sucio y dispararía una escritura espuria en el siguiente 304).
   const persistInternal = useCallback(
-    (nextData: TabData, nextMeta = meta, markDirtyState = true) => {
+    (nextData: TabData, nextMeta = metaRef.current, markDirtyState = true) => {
       const normalized = normalizeData(nextData);
       const updatedAt = Date.now();
       const payload = {
@@ -204,19 +209,19 @@ export function useGameListViewModel() {
         transitionTo('dirty');
       }
     },
-    [meta],
+    [],
   );
 
   // Edición de usuario → marca dirty.
   const persist = useCallback(
-    (nextData: TabData, nextMeta = meta) => persistInternal(nextData, nextMeta, true),
-    [meta, persistInternal],
+    (nextData: TabData, nextMeta = metaRef.current) => persistInternal(nextData, nextMeta, true),
+    [persistInternal],
   );
 
   // Persistencia desde el ciclo de sync (merge/resultado remoto) → NO marca dirty.
   const persistFromSync = useCallback(
-    (nextData: TabData, nextMeta = meta) => persistInternal(nextData, nextMeta, false),
-    [meta, persistInternal],
+    (nextData: TabData, nextMeta = metaRef.current) => persistInternal(nextData, nextMeta, false),
+    [persistInternal],
   );
 
   const tabCounts = useMemo(
@@ -324,27 +329,22 @@ export function useGameListViewModel() {
       });
 
       const currentSort = sort[tab];
+      const col = currentSort.col;
 
-      return filtered.sort((a, b) => {
-        let va: string | number | boolean = '';
-        let vb: string | number | boolean = '';
+      // P4: decorate-sort-undecorate. Calcula la clave de orden UNA vez por juego (antes `Math.max(...years)`
+      // se reevaluaba en cada comparación → O(n·log n·k)) y ordena sobre la clave ya materializada.
+      const keyOf = (game: GameItem): string | number => {
+        if (col === 'years') return game.years?.length ? Math.max(...game.years) : 0;
+        if (col === 'genres') return game.genres[0] || '';
+        const raw = (game[col as keyof GameItem] as string | number | boolean | undefined) ?? '';
+        return typeof raw === 'boolean' ? Number(raw) : raw;
+      };
 
-        if (currentSort.col === 'years') {
-          va = a.years?.length ? Math.max(...a.years) : 0;
-          vb = b.years?.length ? Math.max(...b.years) : 0;
-        } else if (currentSort.col === 'genres') {
-          va = a.genres[0] || '';
-          vb = b.genres[0] || '';
-        } else {
-          const key = currentSort.col as keyof GameItem;
-          va = (a[key] as string | number | boolean | undefined) ?? '';
-          vb = (b[key] as string | number | boolean | undefined) ?? '';
-        }
+      const decorated = filtered.map((game) => ({ game, key: keyOf(game) }));
 
-        if (typeof va === 'boolean') {
-          va = Number(va);
-          vb = Number(vb);
-        }
+      decorated.sort((a, b) => {
+        const va = a.key;
+        const vb = b.key;
 
         if (typeof va === 'number' && typeof vb === 'number') {
           return currentSort.asc ? va - vb : vb - va;
@@ -352,17 +352,23 @@ export function useGameListViewModel() {
 
         return currentSort.asc ? sortEs(String(va || ''), String(vb || '')) : sortEs(String(vb || ''), String(va || ''));
       });
+
+      return decorated.map((entry) => entry.game);
     },
     [data, filters, sort],
   );
 
+  // P5: el timer del aviso vive en un ref (no como propiedad mutada de la función) y se limpia al desmontar.
+  const noticeTimerRef = useRef<number | undefined>(undefined);
   const notify = useCallback((kind: StatusNotice['kind'], message: string) => {
     setNotice({ kind, message });
-    window.clearTimeout((notify as unknown as { _timer?: number })._timer);
-    (notify as unknown as { _timer?: number })._timer = window.setTimeout(() => {
+    window.clearTimeout(noticeTimerRef.current);
+    noticeTimerRef.current = window.setTimeout(() => {
       setNotice(null);
     }, 3200);
   }, []);
+
+  useEffect(() => () => window.clearTimeout(noticeTimerRef.current), []);
 
   const openNewGame = useCallback((tab: TabId) => {
     setEditingTab(tab);
