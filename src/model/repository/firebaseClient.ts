@@ -29,6 +29,7 @@ export interface SocialProfileReference {
   profileId?: string;
   email: string;
   displayName: string;
+  photoURL: string;
   socialGistId: string;
   gamesGistId: string;
   githubToken: string;
@@ -39,6 +40,7 @@ export interface SocialDirectoryEntry {
   id: string;
   email: string;
   displayName: string;
+  photoURL: string;
   socialGistId: string;
   gamesGistId: string;
 }
