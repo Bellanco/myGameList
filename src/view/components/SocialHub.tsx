@@ -66,6 +66,8 @@ export const SocialHub = memo(function SocialHub() {
     socialDisplayName,
     filteredSocialDirectory,
     selectedProfileDetail,
+    refreshProfileDetail,
+    loadingForeignProfile,
     feedItems,
     activeDetailEvent,
     getGameItemById,
@@ -153,6 +155,8 @@ export const SocialHub = memo(function SocialHub() {
           SOCIAL_UI={SOCIAL_UI}
           activeProfileDetail={selectedProfileDetail}
           onBack={() => navigate('/social')}
+          onRefresh={refreshProfileDetail}
+          refreshing={loadingForeignProfile}
           status={status}
           statusKind={statusKind}
         />

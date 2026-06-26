@@ -76,13 +76,20 @@ export function SocialDetailScreen({
         </div>
         <article className="hub-feed-card hub-feed-card-detail">
           <header className="hub-feed-card-head">
-            {activeDetailEvent.photoURL ? (
-              <img className="hub-avatar hub-avatar-img" src={activeDetailEvent.photoURL} alt="" referrerPolicy="no-referrer" />
-            ) : (
-              <span className={`hub-avatar hub-avatar--${avatarTone(activeDetailEvent.profileDisplayName)}`} aria-hidden="true">
-                {avatarInitial(activeDetailEvent.profileDisplayName)}
-              </span>
-            )}
+            <button
+              className="hub-avatar-link"
+              type="button"
+              aria-label={SOCIAL_UI.feed.openProfileAria(activeDetailEvent.profileDisplayName)}
+              onClick={() => onOpenProfileDetail(activeDetailEvent.profileId)}
+            >
+              {activeDetailEvent.photoURL ? (
+                <img className="hub-avatar hub-avatar-img" src={activeDetailEvent.photoURL} alt="" referrerPolicy="no-referrer" />
+              ) : (
+                <span className={`hub-avatar hub-avatar--${avatarTone(activeDetailEvent.profileDisplayName)}`} aria-hidden="true">
+                  {avatarInitial(activeDetailEvent.profileDisplayName)}
+                </span>
+              )}
+            </button>
             <div className="hub-feed-card-head-text">
               <h3>
                 <button

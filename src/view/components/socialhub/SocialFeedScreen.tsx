@@ -168,15 +168,26 @@ export function SocialFeedScreen({
                           role="listitem"
                         >
                           <header className="hub-feed-card-head">
-                            {entry.photoURL ? (
-                              <img className="hub-avatar hub-avatar-img" src={entry.photoURL} alt="" referrerPolicy="no-referrer" />
-                            ) : (
-                              <span className={`hub-avatar hub-avatar--${avatarTone(entry.profileDisplayName || entry.authorName)}`} aria-hidden="true">
-                                {avatarInitial(entry.profileDisplayName || entry.authorName)}
-                              </span>
-                            )}
+                            <button
+                              className="hub-avatar-link"
+                              type="button"
+                              aria-label={SOCIAL_UI.feed.openProfileAria(entry.profileDisplayName || entry.authorName)}
+                              onClick={() => openProfileDetail(entry.profileId)}
+                            >
+                              {entry.photoURL ? (
+                                <img className="hub-avatar hub-avatar-img" src={entry.photoURL} alt="" referrerPolicy="no-referrer" />
+                              ) : (
+                                <span className={`hub-avatar hub-avatar--${avatarTone(entry.profileDisplayName || entry.authorName)}`} aria-hidden="true">
+                                  {avatarInitial(entry.profileDisplayName || entry.authorName)}
+                                </span>
+                              )}
+                            </button>
                             <div className="hub-feed-card-head-text">
-                              <h3>{entry.profileDisplayName || entry.authorName || 'Usuario'}</h3>
+                              <h3>
+                                <button className="hub-name-link" type="button" onClick={() => openProfileDetail(entry.profileId)}>
+                                  {entry.profileDisplayName || entry.authorName || 'Usuario'}
+                                </button>
+                              </h3>
                             </div>
                           </header>
                           <p>{hasValidDate ? SOCIAL_UI.feed.postedAt(itemDate) : SOCIAL_UI.feed.analyzedRecently}</p>
@@ -201,15 +212,30 @@ export function SocialFeedScreen({
                         onKeyDown={(event) => handleActivityItemKeyDown(event, entry)}
                       >
                         <header className="hub-feed-card-head">
-                          {entry.photoURL ? (
-                            <img className="hub-avatar hub-avatar-img" src={entry.photoURL} alt="" referrerPolicy="no-referrer" />
-                          ) : (
-                            <span className={`hub-avatar hub-avatar--${avatarTone(entry.profileDisplayName)}`} aria-hidden="true">
-                              {avatarInitial(entry.profileDisplayName)}
-                            </span>
-                          )}
+                          <button
+                            className="hub-avatar-link"
+                            type="button"
+                            aria-label={SOCIAL_UI.feed.openProfileAria(entry.profileDisplayName)}
+                            onClick={(event) => { event.stopPropagation(); openProfileDetail(entry.profileId); }}
+                          >
+                            {entry.photoURL ? (
+                              <img className="hub-avatar hub-avatar-img" src={entry.photoURL} alt="" referrerPolicy="no-referrer" />
+                            ) : (
+                              <span className={`hub-avatar hub-avatar--${avatarTone(entry.profileDisplayName)}`} aria-hidden="true">
+                                {avatarInitial(entry.profileDisplayName)}
+                              </span>
+                            )}
+                          </button>
                           <div className="hub-feed-card-head-text">
-                            <h3>{entry.profileDisplayName}</h3>
+                            <h3>
+                              <button
+                                className="hub-name-link"
+                                type="button"
+                                onClick={(event) => { event.stopPropagation(); openProfileDetail(entry.profileId); }}
+                              >
+                                {entry.profileDisplayName}
+                              </button>
+                            </h3>
                             {entry.gameName ? <span className="hub-feed-game-chip">{entry.gameName}</span> : null}
                           </div>
                         </header>

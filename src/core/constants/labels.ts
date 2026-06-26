@@ -351,6 +351,8 @@ export const SOCIAL_UI = {
     profileFavoritesTitle: 'Favoritos publicados',
     profileListsTitle: 'Listados públicos',
     profileListsEmpty: 'Este perfil no ha publicado listados todavía.',
+    profileDetailRefresh: 'Actualizar listados',
+    profileDetailRefreshing: 'Actualizando…',
     profileListTabCompleted: 'Completados',
     profileListTabVisited: 'Abandonados',
     profileListTabPlaying: 'En curso',
@@ -416,6 +418,7 @@ export const SOCIAL_UI = {
     maxFavoritesReached: 'Máximo de 5 juegos favoritos permitidos.',
     postPublished: 'Publicación compartida.',
     postPublishFailed: 'No se pudo compartir la publicación.',
+    profileGamesRefreshFailed: 'No se pudieron actualizar los listados de este perfil.',
   },
   steps: [
     { id: 'sync', title: 'GitHub', subtitle: 'Conectar' },
