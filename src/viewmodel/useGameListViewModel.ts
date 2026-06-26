@@ -106,11 +106,9 @@ export function useGameListViewModel() {
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const [notice, setNotice] = useState<StatusNotice | null>(null);
   const [formModalOpen, setFormModalOpen] = useState(false);
-  const [adminModalOpen, setAdminModalOpen] = useState(false);
   const [confirmState, setConfirmState] = useState<{ title: string; action: () => void } | null>(null);
   const [editingTab, setEditingTab] = useState<TabId>('c');
   const [draft, setDraft] = useState<GameDraft>(EMPTY_DRAFT);
-  const [adminTab, setAdminTab] = useState<'genres' | 'platforms' | 'strengths' | 'weaknesses'>('genres');
 
   useEffect(() => {
     let cancelled = false;
@@ -599,8 +597,6 @@ export function useGameListViewModel() {
     setNotice,
     formModalOpen,
     setFormModalOpen,
-    adminModalOpen,
-    setAdminModalOpen,
     confirmState,
     setConfirmState,
     editingTab,
@@ -608,8 +604,6 @@ export function useGameListViewModel() {
     setDraft,
     tabCounts,
     lookups,
-    adminTab,
-    setAdminTab,
     getFilteredList,
     setFilter,
     clearFilter,
