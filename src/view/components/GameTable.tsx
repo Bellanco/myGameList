@@ -1,6 +1,6 @@
 import { Fragment, memo, useMemo, useRef } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
-import { COMMON_ICONS } from '../../core/constants/icons';
+import { COMMON_ICONS, TAB_ICONS } from '../../core/constants/icons';
 import { UI_MESSAGES } from '../../core/constants/labels';
 import type { GameItem, TabId } from '../../model/types/game';
 import type { TabAction } from '../../viewmodel/useGameListViewModel';
@@ -15,6 +15,7 @@ interface GameTableProps {
   onEdit: (tab: TabId, id: number) => void;
   onDelete: (tab: TabId, id: number) => void;
   onMigrate: (tab: TabId, id: number, target: TabId) => void;
+  onAddGame?: () => void;
   tabActions: TabAction[];
   readOnly?: boolean;
   visibility?: {
@@ -31,30 +32,53 @@ interface VirtualRow {
   index: number;
 }
 
-function renderTags(values: string[], className: string) {
+function renderTags(values: string[], className: string, maxVisible?: number) {
   if (!values.length) return <span>—</span>;
+  const overflow = maxVisible && values.length > maxVisible ? values.length - maxVisible : 0;
+  const visible = overflow ? values.slice(0, maxVisible) : values;
   return (
     <div className="chips">
-      {values.map((value) => (
+      {visible.map((value) => (
         <span key={value} className={`chip ${className}`}>
           {value}
         </span>
       ))}
+      {overflow ? (
+        <span className="chip chip-more" title={values.slice(maxVisible).join(', ')}>
+          {UI_MESSAGES.table.moreCount(overflow)}
+        </span>
+      ) : null}
     </div>
   );
 }
 
+/* Meta compacto (móvil/tablet): primer valor de una categoría + recuento "+N". */
+function metaValue(values?: string[]) {
+  if (!values?.length) return null;
+  const extra = values.length - 1;
+  return (
+    <>
+      {values[0]}
+      {extra > 0 ? <span className="rm-more">{UI_MESSAGES.table.moreCount(extra)}</span> : null}
+    </>
+  );
+}
+
+const MAX_ROW_CHIPS = 3;
+
 function renderBooleanBadge(type: 'replayable' | 'retry', value: boolean) {
   if (type === 'replayable') {
+    const label = value ? 'Rejugar: Sí' : 'Rejugar: No';
     return (
-      <span className={value ? 'badge-rejugar-activo' : 'badge-rejugar-inactivo'} aria-label={value ? 'Rejugar: Sí' : 'Rejugar: No'}>
+      <span className={value ? 'badge-rejugar-activo' : 'badge-rejugar-inactivo'} aria-label={label} title={label}>
         <Icon name={value ? COMMON_ICONS.star : COMMON_ICONS.lock} />
       </span>
     );
   }
 
+  const label = value ? 'Dar otra oportunidad: Sí' : 'Dar otra oportunidad: No';
   return (
-    <span className={value ? 'badge-opp-activo' : 'badge-opp-inactivo'} aria-label={value ? 'Dar otra oportunidad: Sí' : 'Dar otra oportunidad: No'}>
+    <span className={value ? 'badge-opp-activo' : 'badge-opp-inactivo'} aria-label={label} title={label}>
       <Icon name={value ? COMMON_ICONS.refresh : COMMON_ICONS.lock} />
     </span>
   );
@@ -68,6 +92,7 @@ export const GameTable = memo(function GameTable({
   onEdit,
   onDelete,
   onMigrate,
+  onAddGame,
   tabActions,
   readOnly = false,
   visibility,
@@ -154,16 +179,37 @@ export const GameTable = memo(function GameTable({
       <table>
         <thead>
           <tr>
-            {getTableHeaders().map((header) => (
-              <th key={header}>{header}</th>
-            ))}
+            {getTableHeaders().map((header) => {
+              const tip =
+                header === 'Rejugar'
+                  ? UI_MESSAGES.table.replayHeaderTip
+                  : header === 'Dar otra oportunidad'
+                    ? UI_MESSAGES.table.retryHeaderTip
+                    : undefined;
+              return (
+                <th key={header} title={tip}>
+                  {header}
+                </th>
+              );
+            })}
           </tr>
         </thead>
         <tbody>
           {!games.length ? (
             <tr>
-              <td colSpan={getColSpan(currentTab)} style={{ textAlign: 'center', padding: '3rem 2rem', color: 'var(--text-muted)' }}>
-                No hay juegos
+              <td colSpan={getColSpan(currentTab)} className="table-empty-cell">
+                <div className="table-empty">
+                  <svg className="table-empty-icon" aria-hidden="true">
+                    <use href={`#icon-${TAB_ICONS[currentTab]}`} />
+                  </svg>
+                  <p className="table-empty-title">{UI_MESSAGES.table.emptyTitle}</p>
+                  {!readOnly && onAddGame ? (
+                    <button type="button" className="btn btn-primary" onClick={onAddGame}>
+                      <Icon name={COMMON_ICONS.plus} />
+                      <span>{UI_MESSAGES.table.emptyCta}</span>
+                    </button>
+                  ) : null}
+                </div>
               </td>
             </tr>
           ) : (
@@ -208,19 +254,38 @@ export const GameTable = memo(function GameTable({
                             onExpandedChange(expanded ? null : game.id);
                           }}
                         >
-                          <strong>{game.name}</strong>
+                          <span className="row-chevron" aria-hidden="true" />
+                          <span className="row-toggle-body">
+                            <strong className="row-name">{game.name}</strong>
+                            {/* Meta compacto solo en vista colapsada (móvil/tablet); revela categorías
+                                según el ancho disponible vía container queries. aria-hidden: la info ya
+                                está en las columnas/detalle y el botón anuncia el nombre. */}
+                            <span className="row-meta" aria-hidden="true">
+                              {(currentTab === 'c' || currentTab === 'p') && (game.score ?? 0) > 0 ? (
+                                <span className="row-meta-item rm-score">
+                                  <StarRating value={game.score || 0} />
+                                </span>
+                              ) : null}
+                              {game.platforms?.length ? (
+                                <span className="row-meta-item rm-plat">{metaValue(game.platforms)}</span>
+                              ) : null}
+                              {game.genres?.length ? (
+                                <span className="row-meta-item rm-genre">{metaValue(game.genres)}</span>
+                              ) : null}
+                            </span>
+                          </span>
                         </button>
                       </td>
-                      {currentTab === 'c' && showYears ? <td>{renderTags(game.years?.map(String) || [], 'chip-generic')}</td> : null}
-                      <td>{renderTags(game.platforms, 'chip-plat')}</td>
-                      <td>{renderTags(game.genres, 'chip-genre')}</td>
+                      {currentTab === 'c' && showYears ? <td>{renderTags(game.years?.map(String) || [], 'chip-generic', MAX_ROW_CHIPS)}</td> : null}
+                      <td>{renderTags(game.platforms, 'chip-plat', MAX_ROW_CHIPS)}</td>
+                      <td>{renderTags(game.genres, 'chip-genre', MAX_ROW_CHIPS)}</td>
                       {(currentTab === 'c' || currentTab === 'v' || currentTab === 'e') ? (
-                        <td>{renderTags(game.strengths || [], 'chip-pf')}</td>
+                        <td>{renderTags(game.strengths || [], 'chip-pf', MAX_ROW_CHIPS)}</td>
                       ) : null}
                       {(currentTab === 'c' || currentTab === 'e') ? (
-                        <td>{renderTags(game.weaknesses || [], 'chip-pd')}</td>
+                        <td>{renderTags(game.weaknesses || [], 'chip-pd', MAX_ROW_CHIPS)}</td>
                       ) : null}
-                      {currentTab === 'v' ? <td>{renderTags(game.reasons || [], 'chip-pd')}</td> : null}
+                      {currentTab === 'v' ? <td>{renderTags(game.reasons || [], 'chip-pd', MAX_ROW_CHIPS)}</td> : null}
                       {(currentTab === 'c' || currentTab === 'p') ? <td><StarRating value={game.score || 0} /></td> : null}
                       {currentTab === 'c' && showReplayable ? <td>{renderBooleanBadge('replayable', Boolean(game.replayable))}</td> : null}
                       {currentTab === 'v' && showRetry ? <td>{renderBooleanBadge('retry', Boolean(game.retry))}</td> : null}

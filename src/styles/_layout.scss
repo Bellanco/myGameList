@@ -46,10 +46,13 @@
 
 /* Tabs */
 .tabs {
-  display: flex; gap: 0; padding: 0 clamp(1rem, 5vw, 2rem);
+  display: flex; gap: 0;
+  /* Franja superior para los controles flotantes (tema + sync), igual que Social/Ajustes,
+     para que el cluster no se mezcle con las pestañas. */
+  padding: 3.4rem clamp(1rem, 5vw, 2rem) 0;
   background: var(--surface); border-bottom: 2px solid var(--border);
   overflow-x: auto; scrollbar-width: thin; flex: 0 0 auto;
-  width: 100%; justify-content: center;
+  width: 100%; justify-content: safe center;
 }
 .tabs::-webkit-scrollbar { height: 4px; }
 .tabs::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
@@ -80,11 +83,14 @@
   animation: fadeIn .2s ease-in; pointer-events: none;
 }
 @keyframes fadeIn { from { opacity: 0; transform: translateX(-50%) translateY(-5px); } to { opacity: 1; transform: translateX(-50%) translateY(0); } }
-@media (max-width:720px) {
+/* Tablet y móvil: las etiquetas largas de las pestañas se recortan; pasamos a iconos. */
+@media (max-width:1024px) {
   .tab-btn { padding: .85rem .75rem; font-size: .85rem; }
   .tab-btn .tab-text-full { display: none; }
   .tab-btn .tab-icon { display: inline; }
   .count-badge { padding: .15rem .5rem; font-size: .65rem; }
+}
+@media (max-width:720px) {
   thead { display: none; }
 }
 
@@ -97,6 +103,9 @@
 
 .main-lists {
   position: relative;
+  /* Contenedor para el meta dinámico de las filas (revela categorías según el ancho). */
+  container-type: inline-size;
+  container-name: gamelist;
 }
 
 .main-lists::before {
@@ -1937,6 +1946,9 @@ button.hub-chip.active {
     height: 44px;
     padding: 0;
     font-size: 0;
+    /* El texto se colapsa con font-size:0 pero sigue siendo un ítem flex; sin esto, el
+       `gap` del .btn desplaza el icono a la izquierda. Centrado real del icono solo. */
+    gap: 0;
   }
 
   .hub-screen-actions .btn .ui-icon {
