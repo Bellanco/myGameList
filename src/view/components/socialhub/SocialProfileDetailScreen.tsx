@@ -1,6 +1,7 @@
 ﻿import { useEffect, useMemo, useState } from 'react';
 import { Icon } from '../Icon';
 import { GameTable } from '../GameTable';
+import { StarRating } from '../StarRating';
 import { HubAvatar } from './HubAvatar';
 import { TAB_IDS, type GameItem, type TabId } from '../../../model/types/game';
 import type { SocialSharedGame } from '../../../model/repository/gistRepository';
@@ -35,12 +36,16 @@ type SocialProfileDetail = {
 export function SocialProfileDetailScreen({
   SOCIAL_UI,
   activeProfileDetail,
+  isOwnProfile = false,
+  onEditProfile,
   onBack,
   status,
   statusKind
 }: {
   SOCIAL_UI: any;
   activeProfileDetail: SocialProfileDetail | null;
+  isOwnProfile?: boolean;
+  onEditProfile?: () => void;
   onBack: () => void;
   status: string;
   statusKind: string;
@@ -48,6 +53,40 @@ export function SocialProfileDetailScreen({
   const [activeListTab, setActiveListTab] = useState<TabId>('c');
   const [expandedByTab, setExpandedByTab] = useState<Partial<Record<TabId, number | null>>>({});
   const [visibleCount, setVisibleCount] = useState(LIST_PAGE_SIZE);
+  const [showReviews, setShowReviews] = useState(false);
+
+  // Reseñas tomadas del LISTADO de juegos del perfil (no del feed social): cada juego con texto de reseña en
+  // cualquiera de sus listados. Ordenadas por fecha (_ts) de más reciente a más antigua; los perfiles ajenos
+  // (index-only, sin _ts) conservan el orden del listado.
+  const reviews = useMemo(() => {
+    const lists = activeProfileDetail?.sharedLists || {};
+    const seen = new Set<number>();
+    const items: { id: number; gameName: string; rating: number; reviewText: string; ts: number }[] = [];
+
+    TAB_IDS.forEach((tab) => {
+      (lists[tab] || []).forEach((game: any) => {
+        const reviewText = String(game.review || game.snippet || '').trim();
+        if (!reviewText) return;
+        const id = Number(game.id || 0);
+        if (seen.has(id)) return;
+        seen.add(id);
+        items.push({
+          id,
+          gameName: String(game.name || ''),
+          rating: Number(game.score || game.rating || 0),
+          reviewText,
+          ts: typeof game._ts === 'number' ? game._ts : 0,
+        });
+      });
+    });
+
+    return items.sort((a, b) => b.ts - a.ts);
+  }, [activeProfileDetail]);
+
+  // Al cambiar de perfil, volver siempre a la vista de perfil (no arrastrar la de reseñas).
+  useEffect(() => {
+    setShowReviews(false);
+  }, [activeProfileDetail]);
 
   const visibleTabs = useMemo(() => {
     if (!activeProfileDetail?.visibility) {
@@ -138,6 +177,21 @@ export function SocialProfileDetailScreen({
               <Icon name="arrow-back" />
               {SOCIAL_UI.feed.backToFeed}
             </button>
+            {isOwnProfile && onEditProfile ? (
+              <button className="btn btn-secondary btn-accent" type="button" onClick={onEditProfile}>
+                <Icon name="edit" />
+                {SOCIAL_UI.feed.profile}
+              </button>
+            ) : null}
+            <button
+              className={`btn btn-secondary ${showReviews ? 'is-active' : ''}`.trim()}
+              type="button"
+              aria-pressed={showReviews}
+              onClick={() => setShowReviews((prev) => !prev)}
+            >
+              <Icon name={showReviews ? 'eye' : 'star'} />
+              {showReviews ? SOCIAL_UI.feed.reviewsBack : SOCIAL_UI.feed.reviewsButton}
+            </button>
           </div>
         </div>
         <article className="hub-feed-card hub-feed-card-detail">
@@ -146,6 +200,35 @@ export function SocialProfileDetailScreen({
             <h3 className="hub-profile-hero-name">{activeProfileDetail.displayName}</h3>
             <p className="hub-profile-hero-meta">{SOCIAL_UI.feed.profileFavoritesCount(favoriteGames.length)}</p>
           </div>
+          {showReviews ? (
+            <div className="hub-detail-metadata">
+              <div className="hub-metadata-section">
+                <strong>{SOCIAL_UI.feed.reviewsTitle}</strong>
+                {reviews.length === 0 ? (
+                  <p>{SOCIAL_UI.feed.reviewsEmptyProfile}</p>
+                ) : (
+                  <div className="hub-feed-activity-list hub-profile-reviews-list" role="list" aria-label={SOCIAL_UI.feed.reviewsTitle}>
+                    {reviews.map((review) => {
+                      const itemDate = new Date(review.ts || 0);
+                      const hasValidDate = review.ts > 0 && !Number.isNaN(itemDate.getTime());
+                      return (
+                        <article key={review.id} className="hub-feed-card hub-feed-activity-item is-review" role="listitem">
+                          <header className="hub-feed-card-head">
+                            <div className="hub-feed-card-head-text">
+                              {review.gameName ? <span className="hub-feed-game-chip">{review.gameName}</span> : null}
+                            </div>
+                          </header>
+                          {hasValidDate ? <p>{SOCIAL_UI.feed.analyzedAt(itemDate)}</p> : null}
+                          <StarRating value={Number(review.rating || 0)} />
+                          {review.reviewText ? <p className="hub-feed-review-text" title={review.reviewText}>{review.reviewText}</p> : null}
+                        </article>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
+          ) : (
           <div className="hub-detail-metadata">
             <div className="hub-metadata-section">
               <strong>{SOCIAL_UI.feed.profileFavoritesTitle}</strong>
@@ -207,6 +290,7 @@ export function SocialProfileDetailScreen({
               )}
             </div>
           </div>
+          )}
         </article>
         {status ? <div className={`sync-status-msg ${statusKind}`}>{status}</div> : null}
       </div>

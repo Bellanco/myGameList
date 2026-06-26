@@ -54,7 +54,7 @@ const isNotFoundGistError = (error: unknown): boolean => {
   return error instanceof Error && /\b404\b/.test(error.message);
 };
 
-type SocialPanel = 'profile' | 'profile-detail' | 'detail' | 'feed';
+type SocialPanel = 'profile' | 'profiles' | 'profile-detail' | 'detail' | 'feed';
 
 type SocialRouteState = {
   activePanel: SocialPanel;
@@ -71,16 +71,18 @@ const FORCED_REFRESH_MIN_MS = 12_000;
 // reduce el consumo de rate-limit a costa de mostrar menos perfiles/actividad en el feed. Tunable.
 const SOCIAL_DIRECTORY_LIMIT = 30;
 const PROFILE_EDIT_PATH = /^\/social\/profile\/?$/;
+const PROFILES_PATH = /^\/social\/profiles\/?$/;
 const PROFILE_DETAIL_PATH = /^\/social\/profiles\/([^/]+)$/;
 const ACTIVITY_DETAIL_PATH = /^\/social\/user\/([^/]+)\/game\/(\d+)\/(review|recommendation)$/;
 
 const getSocialRouteState = (pathname: string): SocialRouteState => {
   const profileEditMatch = pathname.match(PROFILE_EDIT_PATH);
+  const profilesMatch = pathname.match(PROFILES_PATH);
   const profileDetailMatch = pathname.match(PROFILE_DETAIL_PATH);
   const detailMatch = pathname.match(ACTIVITY_DETAIL_PATH);
 
   return {
-    activePanel: profileEditMatch ? 'profile' : profileDetailMatch ? 'profile-detail' : detailMatch ? 'detail' : 'feed',
+    activePanel: profileEditMatch ? 'profile' : profilesMatch ? 'profiles' : profileDetailMatch ? 'profile-detail' : detailMatch ? 'detail' : 'feed',
     profileDetailId: profileDetailMatch ? decodeURIComponent(profileDetailMatch[1]) : '',
     detailActorUid: detailMatch ? decodeURIComponent(detailMatch[1]) : '',
     detailGameId: detailMatch ? Number(detailMatch[2]) : 0,
@@ -172,7 +174,8 @@ export function useSocialViewModel() {
   const [hideRetry, setHideRetry] = useState(false);
   const [hideGameTime, setHideGameTime] = useState(false);
   const [favoriteSearch, setFavoriteSearch] = useState('');
-  const [feedSearch, setFeedSearch] = useState('');
+  // Filtro por nombre de la pantalla "Perfiles" (directorio social). El feed de actividad ya no se filtra.
+  const [profileSearch, setProfileSearch] = useState('');
   // Paginación del feed: 25 inicial, +25 por "Mostrar más". Se reinicia al cambiar la búsqueda.
   const [feedVisibleCount, setFeedVisibleCount] = useState(FEED_PAGE_SIZE);
   const [composePostText, setComposePostText] = useState('');
@@ -449,23 +452,15 @@ export function useSocialViewModel() {
   }, [authUser, profileName]);
 
   const filteredSocialDirectory = useMemo(() => {
-    const normalizedQuery = feedSearch.trim().toLowerCase();
+    const normalizedQuery = profileSearch.trim().toLowerCase();
     if (!normalizedQuery) {
       return visibleSocialDirectory;
     }
 
-    return visibleSocialDirectory.filter((entry) => {
-      const searchable = [
-        entry.displayName,
-        entry.email,
-        ...entry.favorites,
-      ]
-        .join(' ')
-        .toLowerCase();
-
-      return searchable.includes(normalizedQuery);
-    });
-  }, [feedSearch, visibleSocialDirectory]);
+    return visibleSocialDirectory.filter((entry) =>
+      entry.displayName.toLowerCase().includes(normalizedQuery),
+    );
+  }, [profileSearch, visibleSocialDirectory]);
 
   const selectedProfileDetail = useMemo(() => {
     if (activePanel !== 'profile-detail' || !profileDetailId) {
@@ -501,62 +496,22 @@ export function useSocialViewModel() {
   }, [activePanel, authUser, foreignGamesByProfile, localState, ownProfileId, profileDetailId, socialDirectory]);
 
   const activityFeedItems = useMemo(() => {
-    const normalizedQuery = feedSearch.trim().toLowerCase();
-
-    const feedItems = socialDirectory
+    return socialDirectory
       .flatMap((entry) => entry.activity)
       .sort((a, b) => b.updatedAt - a.updatedAt)
       .slice(0, 300);
-
-    if (!normalizedQuery) {
-      return feedItems;
-    }
-
-    return feedItems.filter((item) => {
-      const haystack = [
-        item.profileDisplayName,
-        item.actorName,
-        item.gameName,
-        item.recommendationText,
-        item.snippet,
-      ]
-        .join(' ')
-        .toLowerCase();
-
-      return haystack.includes(normalizedQuery);
-    });
-  }, [feedSearch, socialDirectory]);
+  }, [socialDirectory]);
 
   // F3 — feed COMBINADO: reseñas/recomendaciones (actividad) + publicaciones, mezcladas y ordenadas por fecha.
   // Los posts llevan `kind:'post'` para distinguirlos al renderizar; la actividad conserva su `type`.
   const feedItems = useMemo(() => {
-    const normalizedQuery = feedSearch.trim().toLowerCase();
-
     const activity = socialDirectory.flatMap((entry) => entry.activity);
     const posts = socialDirectory.flatMap((entry) => entry.posts).map((post) => ({ ...post, kind: 'post' as const }));
 
-    const merged = [...activity, ...posts]
+    return [...activity, ...posts]
       .sort((a, b) => b.updatedAt - a.updatedAt)
       .slice(0, 300);
-
-    if (!normalizedQuery) {
-      return merged;
-    }
-
-    return merged.filter((item) => {
-      const isPost = (item as { kind?: string }).kind === 'post';
-      const haystack = isPost
-        ? [(item as SocialPostFeedItem).profileDisplayName, (item as SocialPostFeedItem).authorName, (item as SocialPostFeedItem).text]
-        : [
-            (item as SocialActivityFeedItem).profileDisplayName,
-            (item as SocialActivityFeedItem).actorName,
-            (item as SocialActivityFeedItem).gameName,
-            (item as SocialActivityFeedItem).recommendationText,
-            (item as SocialActivityFeedItem).snippet,
-          ];
-      return haystack.join(' ').toLowerCase().includes(normalizedQuery);
-    });
-  }, [feedSearch, socialDirectory]);
+  }, [socialDirectory]);
 
   const activeDetailEvent = useMemo(() => {
     if (activePanel !== 'detail' || !detailActorUid || detailGameId <= 0 || !detailEventType) {
@@ -677,11 +632,6 @@ export function useSocialViewModel() {
     setFeedVisibleCount((count) => count + FEED_PAGE_SIZE);
   }, []);
 
-  // Al cambiar la búsqueda, volver a la primera página.
-  useEffect(() => {
-    setFeedVisibleCount(FEED_PAGE_SIZE);
-  }, [feedSearch]);
-
   const handleFeedRowMouseDown = useCallback((event: ReactMouseEvent<HTMLDivElement>) => {
     if (event.button !== 0 || !feedRowRef.current) {
       return;
@@ -727,6 +677,24 @@ export function useSocialViewModel() {
     }
     navigate(`/social/profiles/${encodeURIComponent(profileId)}`);
   }, [navigate, socialDirectory]);
+
+  // Abre el DETALLE del perfil propio (vista pública con sus listados), no el editor. Si aún no existe entrada
+  // propia con favoritos en el directorio, cae al editor para que el usuario complete su perfil.
+  const openOwnProfileDetail = useCallback(() => {
+    const ownEntry = socialDirectory.find(
+      (entry) => entry.socialGistId === socialCfgGistId && entry.favorites.length > 0,
+    );
+    if (ownEntry) {
+      navigate(`/social/profiles/${encodeURIComponent(ownEntry.id)}`);
+    } else {
+      navigate('/social/profile');
+    }
+  }, [navigate, socialCfgGistId, socialDirectory]);
+
+  const isOwnProfileDetail = useMemo(
+    () => Boolean(selectedProfileDetail) && isOwnProfileIdentity(selectedProfileDetail!.id, authUser?.uid, ownProfileId),
+    [selectedProfileDetail, authUser, ownProfileId],
+  );
 
   // Bloque 3/4 — al abrir el detalle de una reseña o un perfil AJENO, baja su lista completa de juegos (cache-first
   // 24h en IndexedDB; sin red si está fresca) y la guarda filtrada por su visibilidad. El perfil propio no se baja
@@ -1494,8 +1462,8 @@ export function useSocialViewModel() {
     setShowPhoto,
     favoriteSearch,
     setFavoriteSearch,
-    feedSearch,
-    setFeedSearch,
+    profileSearch,
+    setProfileSearch,
     composePostText,
     setComposePostText,
     publishingPost,
@@ -1528,6 +1496,8 @@ export function useSocialViewModel() {
     handleFeedRowKeyDown,
     openActivityDetail,
     openProfileDetail,
+    openOwnProfileDetail,
+    isOwnProfileDetail,
     handleActivityItemKeyDown,
     handleProfileCardKeyDown,
     handleCreateSocialGist,

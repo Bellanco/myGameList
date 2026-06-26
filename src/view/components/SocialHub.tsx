@@ -6,6 +6,7 @@ import { Icon } from './Icon';
 import { SocialProfileScreen } from './socialhub/SocialProfileScreen';
 import { SocialDetailScreen } from './socialhub/SocialDetailScreen';
 import { SocialProfileDetailScreen } from './socialhub/SocialProfileDetailScreen';
+import { SocialProfilesScreen } from './socialhub/SocialProfilesScreen';
 import { SocialFeedScreen } from './socialhub/SocialFeedScreen';
 
 /**
@@ -45,8 +46,8 @@ export const SocialHub = memo(function SocialHub() {
     setShowPhoto,
     favoriteSearch,
     setFavoriteSearch,
-    feedSearch,
-    setFeedSearch,
+    profileSearch,
+    setProfileSearch,
     composePostText,
     setComposePostText,
     publishingPost,
@@ -66,7 +67,6 @@ export const SocialHub = memo(function SocialHub() {
     socialDisplayName,
     filteredSocialDirectory,
     selectedProfileDetail,
-    refreshCoolingDown,
     feedItems,
     activeDetailEvent,
     getGameItemById,
@@ -77,9 +77,10 @@ export const SocialHub = memo(function SocialHub() {
     handleFeedRowKeyDown,
     openActivityDetail,
     openProfileDetail,
+    openOwnProfileDetail,
+    isOwnProfileDetail,
     handleActivityItemKeyDown,
     handleProfileCardKeyDown,
-    hydrateSocialDirectory,
     toggleGameInSet,
     handleSaveProfile,
     handleSignOut,
@@ -153,6 +154,34 @@ export const SocialHub = memo(function SocialHub() {
         <SocialProfileDetailScreen
           SOCIAL_UI={SOCIAL_UI}
           activeProfileDetail={selectedProfileDetail}
+          isOwnProfile={isOwnProfileDetail}
+          onEditProfile={() => navigate('/social/profile')}
+          onBack={() => navigate('/social')}
+          status={status}
+          statusKind={statusKind}
+        />
+      );
+    }
+    if (activePanel === 'profiles') {
+      return (
+        <SocialProfilesScreen
+          SOCIAL_UI={SOCIAL_UI}
+          profileSearch={profileSearch}
+          setProfileSearch={setProfileSearch}
+          filteredSocialDirectory={filteredSocialDirectory}
+          loadingDirectory={loadingDirectory}
+          openProfileDetail={(id) => {
+            if (id === 'profile') {
+              navigate('/social/profile');
+            } else {
+              openProfileDetail(id);
+            }
+          }}
+          handleProfileCardKeyDown={handleProfileCardKeyDown}
+          isFeedDragging={isFeedDragging}
+          feedRowRef={feedRowRef as React.RefObject<HTMLDivElement | null>}
+          handleFeedRowMouseDown={handleFeedRowMouseDown}
+          handleFeedRowKeyDown={handleFeedRowKeyDown}
           onBack={() => navigate('/social')}
           status={status}
           statusKind={statusKind}
@@ -163,13 +192,9 @@ export const SocialHub = memo(function SocialHub() {
       <SocialFeedScreen
         SOCIAL_UI={SOCIAL_UI}
         socialDisplayName={socialDisplayName}
+        ownPhotoURL={authUser?.photoURL || ''}
         currentSocialGistId={socialCfgGistId}
-        feedSearch={feedSearch}
-        setFeedSearch={setFeedSearch}
-        filteredSocialDirectory={filteredSocialDirectory}
         loadingDirectory={loadingDirectory}
-        hydrateSocialDirectory={(force) => void hydrateSocialDirectory(force)}
-        refreshCoolingDown={refreshCoolingDown}
         openProfileDetail={(id) => {
           if (id === 'profile') {
             navigate('/social/profile');
@@ -177,7 +202,8 @@ export const SocialHub = memo(function SocialHub() {
             openProfileDetail(id);
           }
         }}
-        handleProfileCardKeyDown={handleProfileCardKeyDown}
+        onOpenProfiles={() => navigate('/social/profiles')}
+        onOpenOwnProfile={openOwnProfileDetail}
         groupedFeedItems={groupedFeedItems}
         feedItems={feedItems}
         hasMoreFeed={hasMoreFeed}
@@ -188,10 +214,6 @@ export const SocialHub = memo(function SocialHub() {
         setComposePostText={setComposePostText}
         publishingPost={publishingPost}
         handlePublishPost={handlePublishPost}
-        isFeedDragging={isFeedDragging}
-        feedRowRef={feedRowRef as React.RefObject<HTMLDivElement | null>}
-        handleFeedRowMouseDown={handleFeedRowMouseDown}
-        handleFeedRowKeyDown={handleFeedRowKeyDown}
         status={status}
         statusKind={statusKind}
         handleSignOut={handleSignOut}

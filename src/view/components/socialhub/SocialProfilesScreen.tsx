@@ -1,0 +1,122 @@
+import React from 'react';
+import { Icon } from '../Icon';
+import { HubAvatar } from './HubAvatar';
+
+/**
+ * Pantalla de perfiles sociales (directorio).
+ * Antes vivía como sección dentro del feed; ahora es una pantalla propia con su
+ * filtro por nombre. Presentacional, sin lógica de negocio.
+ */
+export function SocialProfilesScreen({
+  SOCIAL_UI,
+  profileSearch,
+  setProfileSearch,
+  filteredSocialDirectory,
+  loadingDirectory,
+  openProfileDetail,
+  handleProfileCardKeyDown,
+  isFeedDragging,
+  feedRowRef,
+  handleFeedRowMouseDown,
+  handleFeedRowKeyDown,
+  onBack,
+  status,
+  statusKind
+}: {
+  SOCIAL_UI: any;
+  profileSearch: string;
+  setProfileSearch: (v: string) => void;
+  filteredSocialDirectory: any[];
+  loadingDirectory: boolean;
+  openProfileDetail: (id: string) => void;
+  handleProfileCardKeyDown: (event: React.KeyboardEvent<HTMLElement>, id: string) => void;
+  isFeedDragging: boolean;
+  feedRowRef: React.RefObject<HTMLDivElement | null>;
+  handleFeedRowMouseDown: (event: React.MouseEvent<HTMLDivElement>) => void;
+  handleFeedRowKeyDown: (event: React.KeyboardEvent<HTMLDivElement>) => void;
+  onBack: () => void;
+  status: string;
+  statusKind: string;
+}) {
+  return (
+    <section className="hub-hub hub-screen" aria-label={SOCIAL_UI.profiles.sectionAria}>
+      <div className="hub-hub-card hub-screen-card hub-feed-card-shell">
+        <header className="hub-screen-header">
+          <div className="hub-hub-title-wrap">
+            <Icon name="bottom-hub" className="hub-hub-icon" />
+            <h2>{SOCIAL_UI.profiles.title}</h2>
+          </div>
+          <p>{SOCIAL_UI.profiles.subtitle}</p>
+        </header>
+        <div className="hub-screen-actions hub-screen-actions-split" aria-label={SOCIAL_UI.profiles.actionsAria}>
+          <div className="hub-screen-actions-left">
+            <button className="btn btn-secondary" type="button" onClick={onBack}>
+              <Icon name="arrow-back" />
+              {SOCIAL_UI.profiles.back}
+            </button>
+          </div>
+        </div>
+
+        <div className="hub-feed-toolbar" aria-label={SOCIAL_UI.profiles.toolbarAria}>
+          <label className="hub-feed-search">
+            <span>{SOCIAL_UI.profiles.searchLabel}</span>
+            <input
+              type="text"
+              className="finput"
+              value={profileSearch}
+              placeholder={SOCIAL_UI.profiles.searchPlaceholder}
+              onChange={(event) => setProfileSearch(event.target.value)}
+            />
+          </label>
+          <p className="hub-feed-result-count">{SOCIAL_UI.profiles.resultCount(filteredSocialDirectory.length)}</p>
+        </div>
+
+        <div className="fg">
+          {loadingDirectory ? <p>{SOCIAL_UI.profiles.loading}</p> : null}
+          {!loadingDirectory && filteredSocialDirectory.length === 0 ? (
+            <p>{SOCIAL_UI.profiles.empty}</p>
+          ) : null}
+          {!loadingDirectory && filteredSocialDirectory.length > 0 ? (
+            <div
+              ref={feedRowRef}
+              className={`hub-feed-row ${isFeedDragging ? 'is-dragging' : ''}`}
+              aria-label={SOCIAL_UI.profiles.rowAria}
+              role="group"
+              tabIndex={0}
+              onMouseDown={handleFeedRowMouseDown}
+              onKeyDown={handleFeedRowKeyDown}
+            >
+              {filteredSocialDirectory.map((entry) => (
+                <article
+                  key={entry.id}
+                  className="hub-feed-card hub-feed-profile-item"
+                  tabIndex={0}
+                  aria-label={SOCIAL_UI.profiles.openProfileAria(entry.displayName)}
+                  onClick={() => openProfileDetail(entry.id)}
+                  onKeyDown={(event) => handleProfileCardKeyDown(event, entry.id)}
+                >
+                  <header className="hub-feed-card-head">
+                    <HubAvatar name={entry.displayName} photoURL={entry.photoURL} />
+                    <div className="hub-feed-card-head-text">
+                      <h3>{entry.displayName}</h3>
+                    </div>
+                  </header>
+                  {entry.favorites.length ? (
+                    <div className="hub-profile-fav-chips">
+                      {entry.favorites.map((name: string, i: number) => (
+                        <span key={`${name}-${i}`} className="hub-feed-game-chip">{name}</span>
+                      ))}
+                    </div>
+                  ) : (
+                    <p>{SOCIAL_UI.profiles.noFavorites}</p>
+                  )}
+                </article>
+              ))}
+            </div>
+          ) : null}
+        </div>
+        {status ? <div className={`sync-status-msg ${statusKind}`}>{status}</div> : null}
+      </div>
+    </section>
+  );
+}
