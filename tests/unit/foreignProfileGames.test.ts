@@ -217,6 +217,19 @@ describe('loadForeignProfileGames', () => {
     expect(result).toBeNull();
   });
 
+  it('deduplica lecturas concurrentes del mismo gist en una sola llamada de red', async () => {
+    const fetchMock = stubGamesGist(makeTabData([makeGame()]));
+    vi.spyOn(Date, 'now').mockReturnValue(1_000_000_000_000);
+
+    const [a, b] = await Promise.all([
+      loadForeignProfileGames({ profileId: 'p1', gamesGistId: GIST_ID, token: TOKEN }),
+      loadForeignProfileGames({ profileId: 'p1', gamesGistId: GIST_ID, token: TOKEN }),
+    ]);
+    expect(a?.c[0].id).toBe(7);
+    expect(b?.c[0].id).toBe(7);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
   afterEach(async () => {
     await invalidateProfileGames('p1');
   });
