@@ -12,15 +12,12 @@ import { POST_MAX_LENGTH } from '../../../core/security/sanitize';
 export function SocialFeedScreen({
   SOCIAL_UI,
   socialDisplayName,
+  ownPhotoURL,
   currentSocialGistId,
-  feedSearch,
-  setFeedSearch,
-  filteredSocialDirectory,
   loadingDirectory,
-  hydrateSocialDirectory,
-  refreshCoolingDown,
   openProfileDetail,
-  handleProfileCardKeyDown,
+  onOpenProfiles,
+  onOpenOwnProfile,
   groupedFeedItems,
   feedItems,
   hasMoreFeed,
@@ -31,25 +28,18 @@ export function SocialFeedScreen({
   setComposePostText,
   publishingPost,
   handlePublishPost,
-  isFeedDragging,
-  feedRowRef,
-  handleFeedRowMouseDown,
-  handleFeedRowKeyDown,
   status,
   statusKind,
   handleSignOut
 }: {
   SOCIAL_UI: any;
   socialDisplayName: string;
+  ownPhotoURL: string;
   currentSocialGistId: string;
-  feedSearch: string;
-  setFeedSearch: (v: string) => void;
-  filteredSocialDirectory: any[];
   loadingDirectory: boolean;
-  hydrateSocialDirectory: (forceRefresh?: boolean) => void;
-  refreshCoolingDown: boolean;
   openProfileDetail: (id: string) => void;
-  handleProfileCardKeyDown: (event: React.KeyboardEvent<HTMLElement>, id: string) => void;
+  onOpenProfiles: () => void;
+  onOpenOwnProfile: () => void;
   groupedFeedItems: any[];
   feedItems: any[];
   hasMoreFeed: boolean;
@@ -60,10 +50,6 @@ export function SocialFeedScreen({
   setComposePostText: (v: string) => void;
   publishingPost: boolean;
   handlePublishPost: () => void;
-  isFeedDragging: boolean;
-  feedRowRef: React.RefObject<HTMLDivElement | null>;
-  handleFeedRowMouseDown: (event: React.MouseEvent<HTMLDivElement>) => void;
-  handleFeedRowKeyDown: (event: React.KeyboardEvent<HTMLDivElement>) => void;
   status: string;
   statusKind: string;
   handleSignOut: () => void;
@@ -73,23 +59,29 @@ export function SocialFeedScreen({
   return (
     <section className="hub-hub hub-screen" aria-label={SOCIAL_UI.feed.sectionAria}>
       <div className="hub-hub-card hub-screen-card hub-feed-card-shell">
-        <header className="hub-screen-header">
-          <div className="hub-hub-title-wrap">
-            <Icon name="bottom-hub" className="hub-hub-icon" />
-            <h2>{SOCIAL_UI.feed.title}</h2>
+        <header className="hub-screen-header hub-feed-header">
+          <div className="hub-feed-header-text">
+            <div className="hub-hub-title-wrap">
+              <Icon name="bottom-hub" className="hub-hub-icon" />
+              <h2>{SOCIAL_UI.feed.title}</h2>
+            </div>
+            <p>{SOCIAL_UI.feed.subtitle}</p>
           </div>
-          <p>{SOCIAL_UI.feed.subtitle}</p>
-          <h3 className="hub-feed-owner">{socialDisplayName}</h3>
+          <button
+            className="hub-avatar-link hub-feed-owner-avatar"
+            type="button"
+            aria-label={SOCIAL_UI.feed.openOwnProfile}
+            title={socialDisplayName || SOCIAL_UI.feed.openOwnProfile}
+            onClick={onOpenOwnProfile}
+          >
+            <HubAvatar name={socialDisplayName} photoURL={ownPhotoURL} />
+          </button>
         </header>
         <div className="hub-screen-actions hub-screen-actions-split" aria-label={SOCIAL_UI.feed.actionsAria}>
           <div className="hub-screen-actions-left">
-            <button className="btn btn-secondary" type="button" onClick={() => openProfileDetail('profile')}>
-              <Icon name="edit" />
-              {SOCIAL_UI.feed.profile}
-            </button>
-            <button className="btn btn-secondary" type="button" disabled={loadingDirectory || refreshCoolingDown} onClick={() => hydrateSocialDirectory(true)}>
-              <Icon name="refresh" />
-              {loadingDirectory ? SOCIAL_UI.feed.refreshing : SOCIAL_UI.feed.refresh}
+            <button className="btn btn-secondary btn-accent" type="button" onClick={onOpenProfiles}>
+              <Icon name="bottom-hub" />
+              {SOCIAL_UI.feed.openProfiles}
             </button>
           </div>
           <div className="hub-screen-actions-right">
@@ -243,65 +235,6 @@ export function SocialFeedScreen({
             <button className="btn btn-secondary hub-feed-load-more" type="button" onClick={showMoreFeed}>
               {SOCIAL_UI.feed.feedLoadMore}
             </button>
-          ) : null}
-        </div>
-
-        <div className="hub-feed-toolbar" aria-label={SOCIAL_UI.feed.toolbarAria}>
-          <label className="hub-feed-search">
-            <span>{SOCIAL_UI.feed.searchLabel}</span>
-            <input
-              type="text"
-              className="finput"
-              value={feedSearch}
-              placeholder={SOCIAL_UI.feed.searchPlaceholder}
-              onChange={(event) => setFeedSearch(event.target.value)}
-            />
-          </label>
-          <p className="hub-feed-result-count">{SOCIAL_UI.feed.resultCount(filteredSocialDirectory.length)}</p>
-        </div>
-        <div className="fg">
-          <span className="flabel">{SOCIAL_UI.feed.sectionTitle}</span>
-          {loadingDirectory ? <p>{SOCIAL_UI.feed.loading}</p> : null}
-          {!loadingDirectory && filteredSocialDirectory.length === 0 ? (
-            <p>{SOCIAL_UI.feed.empty}</p>
-          ) : null}
-          {!loadingDirectory && filteredSocialDirectory.length > 0 ? (
-            <div
-              ref={feedRowRef}
-              className={`hub-feed-row ${isFeedDragging ? 'is-dragging' : ''}`}
-              aria-label={SOCIAL_UI.feed.feedRowAria}
-              role="group"
-              tabIndex={0}
-              onMouseDown={handleFeedRowMouseDown}
-              onKeyDown={handleFeedRowKeyDown}
-            >
-              {filteredSocialDirectory.map((entry) => (
-                <article
-                  key={entry.id}
-                  className="hub-feed-card hub-feed-profile-item"
-                  tabIndex={0}
-                  aria-label={SOCIAL_UI.feed.openProfileAria(entry.displayName)}
-                  onClick={() => openProfileDetail(entry.id)}
-                  onKeyDown={(event) => handleProfileCardKeyDown(event, entry.id)}
-                >
-                  <header className="hub-feed-card-head">
-                    <HubAvatar name={entry.displayName} photoURL={entry.photoURL} />
-                    <div className="hub-feed-card-head-text">
-                      <h3>{entry.displayName}</h3>
-                    </div>
-                  </header>
-                  {entry.favorites.length ? (
-                    <div className="hub-profile-fav-chips">
-                      {entry.favorites.map((name: string, i: number) => (
-                        <span key={`${name}-${i}`} className="hub-feed-game-chip">{name}</span>
-                      ))}
-                    </div>
-                  ) : (
-                    <p>{SOCIAL_UI.feed.noFavorites}</p>
-                  )}
-                </article>
-              ))}
-            </div>
           ) : null}
         </div>
         {status ? <div className={`sync-status-msg ${statusKind}`}>{status}</div> : null}

@@ -449,6 +449,7 @@ export default function App() {
         <Route path="/proximos" element={null} />
         <Route path="/social" element={null} />
         <Route path="/social/profile" element={null} />
+        <Route path="/social/profiles" element={null} />
         <Route path="/social/profiles/:profileId" element={null} />
         <Route path="/social/user/:userId/game/:gameId/:eventType" element={null} />
         <Route path="/ajustes" element={null} />
