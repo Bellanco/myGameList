@@ -293,7 +293,7 @@ export const SOCIAL_UI = {
   },
   feed: {
     sectionAria: 'Social',
-    title: 'Feed social',
+    title: 'Actividad social',
     subtitle: 'Descubre perfiles públicos, análisis y recomendaciones destacadas de otros jugadores.',
     actionsAria: 'Acciones del feed social',
     activityListAria: 'Actividad social',
@@ -307,7 +307,7 @@ export const SOCIAL_UI = {
     statsFavorites: 'Favoritos publicados',
     statsActivities: 'Eventos de actividad',
     sectionTitle: 'Actividad de perfiles',
-    activityTitle: 'Actividad del feed',
+    activityTitle: 'Actividad',
     postsTitle: 'Publicaciones',
     postComposerLabel: 'Comparte una noticia o un enlace',
     postPlaceholder: 'Comparte una noticia o un enlace…',
