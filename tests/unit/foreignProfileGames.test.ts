@@ -144,21 +144,25 @@ describe('caché de perfiles ajenos (profileCache, TTL 1 día)', () => {
   });
 });
 
-describe('caché del directorio social (TTL 5 min)', () => {
-  const FIVE_MIN_MS = 5 * 60 * 1000;
+describe('caché del directorio social (TTL 30 min)', () => {
+  const THIRTY_MIN_MS = 30 * 60 * 1000;
 
   beforeEach(async () => {
     await clearProfileCache();
   });
 
-  it('sirve el directorio fresco y lo descarta pasados 5 min', async () => {
+  it('sirve el directorio fresco y lo descarta pasados 30 min', async () => {
     const now = 1_000_000_000_000;
     const nowSpy = vi.spyOn(Date, 'now').mockReturnValue(now);
 
     await putCachedSocialDirectory('own-gist', [{ id: 'p1' }, { id: 'p2' }]);
     expect(await getCachedSocialDirectory('own-gist')).toHaveLength(2);
 
-    nowSpy.mockReturnValue(now + FIVE_MIN_MS + 1);
+    // Sigue fresco dentro de la ventana (p. ej. a los 5 min).
+    nowSpy.mockReturnValue(now + 5 * 60 * 1000);
+    expect(await getCachedSocialDirectory('own-gist')).toHaveLength(2);
+
+    nowSpy.mockReturnValue(now + THIRTY_MIN_MS + 1);
     expect(await getCachedSocialDirectory('own-gist')).toBeNull();
   });
 

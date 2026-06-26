@@ -1,5 +1,6 @@
 import { TAB_IDS, type DeletedItem, type GameItem, type StoragePayload, type TabData, type TabId } from '../types/game';
 import type { LocalMeta, SyncOp } from '../types/local';
+import type { SocialActivityEntry } from './gistRepository';
 import { DELETED_STORE, GAMES_STORE, META_STORE, PROFILE_CACHE_STORE, SYNC_QUEUE_STORE, openSharedDatabase } from './idbConnectionRepository';
 
 const STORE_NAME = 'appState';
@@ -337,10 +338,10 @@ export async function invalidateProfileGames(profileId: string): Promise<void> {
 // ---------------------------------------------------------------------------
 // Caché persistente del DIRECTORIO social ya ensamblado (perfiles + actividad + posts). Reutiliza el store
 // `profileCache` con una clave reservada por gist propio (`__dir__:<ownGistId>`), que no colisiona con los
-// profileId (UUID) de la caché de juegos. TTL corto: dentro de la ventana, la navegación (feed→detalle→feed) y los
+// profileId (UUID) de la caché de juegos. TTL 30 min: dentro de la ventana, la navegación (feed→detalle→feed) y los
 // re-render sirven de IndexedDB sin releer los ~N gists sociales; el refresco manual (forceRefresh) la reescribe.
 // ---------------------------------------------------------------------------
-const SOCIAL_DIRECTORY_TTL_MS = 5 * 60 * 1000;
+const SOCIAL_DIRECTORY_TTL_MS = 30 * 60 * 1000;
 const SOCIAL_DIRECTORY_KEY_PREFIX = '__dir__:';
 
 interface CachedSocialDirectory<T> {
@@ -369,6 +370,76 @@ export async function putCachedSocialDirectory<T>(ownGistId: string, entries: T[
       cachedAt: Date.now(),
       entries,
     });
+  } catch {
+    // best-effort.
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Caché persistente del PERFIL PROPIO ya resuelto (nombre + favoritos + visibilidad + actividad). Reutiliza el store
+// `profileCache` con clave reservada por gist propio (`__profile__:<ownGistId>`). TTL corto: al volver a navegar a la
+// pantalla social dentro de la ventana se sirve de IndexedDB sin releer el gist propio ni consultar Firestore. El
+// guardado del perfil invalida esta caché para reflejar los cambios. keyPath = `profileId`.
+// ---------------------------------------------------------------------------
+const SOCIAL_PROFILE_TTL_MS = 5 * 60 * 1000;
+const SOCIAL_PROFILE_KEY_PREFIX = '__profile__:';
+
+export interface CachedSocialProfileData {
+  name: string;
+  favorites: number[];
+  hiddenTabs: TabId[];
+  hideReplayable: boolean;
+  hideRetry: boolean;
+  hideGameTime: boolean;
+  showPhoto: boolean;
+  profileExists: boolean;
+  activity: SocialActivityEntry[];
+}
+
+interface CachedSocialProfile extends CachedSocialProfileData {
+  profileId: string; // keyPath del store
+  cachedAt: number;
+}
+
+export async function getCachedSocialProfile(ownGistId: string): Promise<CachedSocialProfileData | null> {
+  if (!ownGistId) return null;
+  try {
+    const rec = await idbGet<CachedSocialProfile>(PROFILE_CACHE_STORE, SOCIAL_PROFILE_KEY_PREFIX + ownGistId);
+    if (!rec) return null;
+    if (Date.now() - rec.cachedAt >= SOCIAL_PROFILE_TTL_MS) return null;
+    return {
+      name: rec.name,
+      favorites: rec.favorites,
+      hiddenTabs: rec.hiddenTabs,
+      hideReplayable: rec.hideReplayable,
+      hideRetry: rec.hideRetry,
+      hideGameTime: rec.hideGameTime,
+      showPhoto: rec.showPhoto,
+      profileExists: rec.profileExists,
+      activity: rec.activity,
+    };
+  } catch {
+    return null;
+  }
+}
+
+export async function putCachedSocialProfile(ownGistId: string, data: CachedSocialProfileData): Promise<void> {
+  if (!ownGistId) return;
+  try {
+    await idbPut<CachedSocialProfile>(PROFILE_CACHE_STORE, {
+      profileId: SOCIAL_PROFILE_KEY_PREFIX + ownGistId,
+      cachedAt: Date.now(),
+      ...data,
+    });
+  } catch {
+    // best-effort.
+  }
+}
+
+export async function invalidateCachedSocialProfile(ownGistId: string): Promise<void> {
+  if (!ownGistId) return;
+  try {
+    await idbDelete(PROFILE_CACHE_STORE, SOCIAL_PROFILE_KEY_PREFIX + ownGistId);
   } catch {
     // best-effort.
   }
