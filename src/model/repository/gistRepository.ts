@@ -1174,6 +1174,34 @@ export async function readGist(token: string, gistId: string, etag: string | nul
   return result;
 }
 
+/**
+ * Lee el gist de listados de OTRO usuario por su ID. Los gists "privados" de GitHub son SECRETOS: cualquiera que
+ * conozca el ID los puede leer (con cualquier token o incluso sin él), no solo el dueño. Decodifica con la misma
+ * tubería que `readGist` (chunks/diccionarios v4 → `TabData`). De SOLO LECTURA: sin upgrade proactivo ni las
+ * cachés de sesión del gist propio. El `readerToken` es opcional y solo mejora el rate-limit del lector.
+ */
+export async function readForeignGamesGist(readerToken: string | null, gamesGistId: string): Promise<TabData> {
+  if (!isValidGistId(gamesGistId)) {
+    throw new Error('Gist ID inválido');
+  }
+
+  const headers: Record<string, string> = {
+    'X-GitHub-Api-Version': '2022-11-28',
+  };
+  if (readerToken && isValidGithubToken(readerToken)) {
+    headers['Authorization'] = getGithubAuthHeader(readerToken);
+  }
+
+  const response = await githubFetch(`${GIST_API_BASE}/${gamesGistId}`, { headers });
+  if (!response.ok) {
+    throw await buildGithubError(response, 'Read foreign games gist failed');
+  }
+
+  const body = (await response.json()) as { files?: Record<string, { content: string } | undefined> };
+  const result = buildGistReadResponse(body, response.headers.get('etag'));
+  return result.data as TabData;
+}
+
 export async function writeGist(token: string, gistId: string, payload: TabData): Promise<{ etag: string | null; updatedAt: number }> {
   if (!isValidGithubToken(token)) {
     throw new Error('Formato de token inválido');
