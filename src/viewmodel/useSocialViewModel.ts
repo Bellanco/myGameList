@@ -186,6 +186,9 @@ export function useSocialViewModel() {
   const [foreignGamesByProfile, setForeignGamesByProfile] = useState<Record<string, Record<TabId, GameItem[]>>>({});
   const [loadingForeignProfile, setLoadingForeignProfile] = useState(false);
   const lastForcedHydrateRef = useRef(0);
+  // Cooldown visible del botón "Actualizar": se deshabilita durante FORCED_REFRESH_MIN_MS tras un refresco forzado.
+  const [refreshCoolingDown, setRefreshCoolingDown] = useState(false);
+  const cooldownTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const feedRowRef = useRef<HTMLDivElement | null>(null);
   const feedDraggingRef = useRef(false);
   const feedStartXRef = useRef(0);
@@ -750,7 +753,9 @@ export function useSocialViewModel() {
         /* fallback index-only: el detalle/perfil muestra snippet/vacío sin romper la pantalla. */
       })
       .finally(() => {
-        if (!cancelled) setLoadingForeignProfile(false);
+        // Flag de UI (no datos rancios): debe bajar SIEMPRE, aunque el efecto se haya cancelado al navegar; si no,
+        // un perfil abierto luego desde caché (return temprano) dejaría el botón "Actualizar listados" colgado.
+        setLoadingForeignProfile(false);
       });
 
     return () => {
@@ -1034,6 +1039,10 @@ export function useSocialViewModel() {
         return;
       }
       lastForcedHydrateRef.current = now;
+      // Deshabilita el botón durante el cooldown (en vez de solo avisar al pulsar).
+      setRefreshCoolingDown(true);
+      if (cooldownTimerRef.current) clearTimeout(cooldownTimerRef.current);
+      cooldownTimerRef.current = setTimeout(() => setRefreshCoolingDown(false), FORCED_REFRESH_MIN_MS);
     } else {
       // Caché persistente: si el directorio sigue fresco (<5 min), se sirve de IndexedDB sin releer ningún gist
       // social. Evita el coste N+1 al navegar feed→detalle→feed o al re-renderizar. El refresco manual lo evita.
@@ -1177,6 +1186,11 @@ export function useSocialViewModel() {
   useEffect(() => {
     void hydrateSocialDirectory();
   }, [hydrateSocialDirectory]);
+
+  // Limpia el timer del cooldown al desmontar (evita setState tras desmontar).
+  useEffect(() => () => {
+    if (cooldownTimerRef.current) clearTimeout(cooldownTimerRef.current);
+  }, []);
 
   // Bloque 2 — propaga la foto propia a los DEMÁS: la foto solo la ven otros si está en NUESTRO gist social
   // público. Gists creados antes del soporte de foto (o sin re-guardar el perfil) no la llevan, así que nadie veía
@@ -1456,6 +1470,7 @@ export function useSocialViewModel() {
     selectedProfileDetail,
     refreshProfileDetail,
     loadingForeignProfile,
+    refreshCoolingDown,
     activeDetailEvent,
     getGameItemById,
     groupedFeedItems,
