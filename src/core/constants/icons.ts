@@ -46,6 +46,7 @@ export const TAB_ICONS: Record<TabId, IconName> = {
 };
 
 export const COMMON_ICONS = {
+  plus: 'plus',
   close: 'close',
   logout: 'logout',
   edit: 'edit',

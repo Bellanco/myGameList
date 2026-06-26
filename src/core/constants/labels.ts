@@ -173,6 +173,11 @@ export const UI_MESSAGES = {
     editAria: (name: string) => `Editar - ${name}`,
     deleteAria: (name: string) => `Eliminar - ${name}`,
     removeTag: (value: string) => `Eliminar ${value}`,
+    emptyTitle: 'No hay juegos aquí todavía',
+    emptyCta: 'Añadir juego',
+    moreCount: (count: number) => `+${count}`,
+    replayHeaderTip: 'Indica si el juego es rejugable',
+    retryHeaderTip: 'Indica si merece otra oportunidad',
   },
   detail: {
     platforms: 'Plataformas',
