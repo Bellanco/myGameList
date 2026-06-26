@@ -1,6 +1,7 @@
 ﻿import { Icon } from '../Icon';
 import { SocialGameCardSelector } from '../SocialGameCardSelector';
 import { HubAvatar } from './HubAvatar';
+import { MAX_SOCIAL_FAVORITES } from '../../../core/constants/uiConfig';
 import type { TabId } from '../../../model/types/game';
 
 /**
@@ -136,6 +137,7 @@ export function SocialProfileScreen({
             selectedIds={favoriteGameIds}
             options={completedGames}
             emptyMessage={SOCIAL_UI.profile.searchEmpty}
+            maxSelected={MAX_SOCIAL_FAVORITES}
             onSearchChange={setFavoriteSearch}
             onToggle={(id) => toggleGameInSet(id, favoriteGameIds, setFavoriteGameIds)}
           />

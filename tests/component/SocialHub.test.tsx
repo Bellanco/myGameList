@@ -20,6 +20,7 @@ vi.mock('../../src/model/repository/firebaseRepository', () => firebaseMocks);
 const gistMocks = vi.hoisted(() => ({
   getSocialSyncConfig: vi.fn(() => null as null | { token: string; gistId: string; etag: string | null; lastRemoteUpdatedAt: number }),
   getSyncConfig: vi.fn(() => null),
+  ensureSyncConfigLoaded: vi.fn(async () => {}),
   createSocialGist: vi.fn(async () => ({ gistId: 'g', etag: null })),
   readSocialGist: vi.fn(async () => ({
     data: {

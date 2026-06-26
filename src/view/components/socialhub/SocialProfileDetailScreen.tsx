@@ -1,9 +1,12 @@
-﻿import { useMemo, useState } from 'react';
+﻿import { useEffect, useMemo, useState } from 'react';
 import { Icon } from '../Icon';
 import { GameTable } from '../GameTable';
 import { HubAvatar } from './HubAvatar';
 import { TAB_IDS, type GameItem, type TabId } from '../../../model/types/game';
 import type { SocialSharedGame } from '../../../model/repository/gistRepository';
+
+// Paginación de los juegos del perfil: se muestran de 15 en 15 para evitar scroll excesivo al abrir el detalle.
+const LIST_PAGE_SIZE = 15;
 
 const TAB_LABELS: Record<TabId, string> = {
   c: 'profileListTabCompleted',
@@ -33,21 +36,18 @@ export function SocialProfileDetailScreen({
   SOCIAL_UI,
   activeProfileDetail,
   onBack,
-  onRefresh,
-  refreshing,
   status,
   statusKind
 }: {
   SOCIAL_UI: any;
   activeProfileDetail: SocialProfileDetail | null;
   onBack: () => void;
-  onRefresh?: () => void;
-  refreshing?: boolean;
   status: string;
   statusKind: string;
 }) {
   const [activeListTab, setActiveListTab] = useState<TabId>('c');
   const [expandedByTab, setExpandedByTab] = useState<Partial<Record<TabId, number | null>>>({});
+  const [visibleCount, setVisibleCount] = useState(LIST_PAGE_SIZE);
 
   const visibleTabs = useMemo(() => {
     if (!activeProfileDetail?.visibility) {
@@ -80,6 +80,14 @@ export function SocialProfileDetailScreen({
       hours: typeof game.hours === 'number' ? game.hours : null,
     }));
   }, [activeProfileDetail, currentTab]);
+
+  // Al cambiar de pestaña o de perfil, volver a la primera página (15) para no arrastrar scroll.
+  useEffect(() => {
+    setVisibleCount(LIST_PAGE_SIZE);
+  }, [currentTab, activeProfileDetail]);
+
+  const visibleGames = useMemo(() => currentGames.slice(0, visibleCount), [currentGames, visibleCount]);
+  const hasMoreGames = currentGames.length > visibleCount;
 
   const favoriteGames = activeProfileDetail?.favorites || [];
 
@@ -130,12 +138,6 @@ export function SocialProfileDetailScreen({
               <Icon name="arrow-back" />
               {SOCIAL_UI.feed.backToFeed}
             </button>
-            {onRefresh ? (
-              <button className="btn btn-secondary" type="button" disabled={refreshing} onClick={onRefresh}>
-                <Icon name="refresh" />
-                {refreshing ? SOCIAL_UI.feed.profileDetailRefreshing : SOCIAL_UI.feed.profileDetailRefresh}
-              </button>
-            ) : null}
           </div>
         </div>
         <article className="hub-feed-card hub-feed-card-detail">
@@ -174,7 +176,7 @@ export function SocialProfileDetailScreen({
                     ))}
                   </div>
                   <GameTable
-                    games={currentGames}
+                    games={visibleGames}
                     currentTab={currentTab}
                     expandedId={expandedByTab[currentTab] ?? null}
                     onExpandedChange={(id) => setExpandedByTab((prev) => ({ ...prev, [currentTab]: id }))}
@@ -190,6 +192,15 @@ export function SocialProfileDetailScreen({
                       showHours: !activeProfileDetail.visibility?.hideGameTime,
                     }}
                   />
+                  {hasMoreGames ? (
+                    <button
+                      className="btn btn-secondary hub-feed-load-more"
+                      type="button"
+                      onClick={() => setVisibleCount((prev) => prev + LIST_PAGE_SIZE)}
+                    >
+                      {SOCIAL_UI.feed.feedLoadMore}
+                    </button>
+                  ) : null}
                 </>
               ) : (
                 <p>{SOCIAL_UI.feed.profileListsEmpty}</p>
