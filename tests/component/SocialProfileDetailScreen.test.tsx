@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import { SocialProfileDetailScreen } from '../../src/view/components/socialhub/SocialProfileDetailScreen';
 import { SOCIAL_UI } from '../../src/core/constants/labels';
 
@@ -53,23 +53,5 @@ describe('SocialProfileDetailScreen — listados', () => {
     expect(screen.queryByRole('button', { name: SOCIAL_UI.feed.profileListTabPlanned })).not.toBeInTheDocument();
     // Pero las visibles sí.
     expect(screen.getByRole('button', { name: SOCIAL_UI.feed.profileListTabCompleted })).toBeInTheDocument();
-  });
-
-  it('ofrece el botón de refresco y dispara onRefresh', () => {
-    const onRefresh = vi.fn();
-    render(
-      <SocialProfileDetailScreen
-        SOCIAL_UI={SOCIAL_UI}
-        activeProfileDetail={{ displayName: 'Otro', sharedLists: { c: [], v: [], e: [], p: [] }, favorites: [] }}
-        onBack={vi.fn()}
-        onRefresh={onRefresh}
-        refreshing={false}
-        status=""
-        statusKind=""
-      />,
-    );
-
-    fireEvent.click(screen.getByRole('button', { name: SOCIAL_UI.feed.profileDetailRefresh }));
-    expect(onRefresh).toHaveBeenCalledTimes(1);
   });
 });

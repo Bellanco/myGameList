@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent a
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
   createSocialGist,
+  ensureSyncConfigLoaded,
   getSocialSyncConfig,
   getSyncConfig,
   readPublicSocialGistById,
@@ -17,11 +18,12 @@ import {
 } from '../model/repository/gistRepository';
 import { publishPost } from '../model/repository/socialPublishRepository';
 import { invalidateProfileGames, loadForeignProfileGames } from '../model/repository/foreignProfileRepository';
-import { getCachedSocialDirectory, getLocalMeta, patchLocalMeta, putCachedSocialDirectory } from '../model/repository/indexedDbRepository';
+import { getCachedSocialDirectory, getCachedSocialProfile, getLocalMeta, patchLocalMeta, putCachedSocialDirectory, putCachedSocialProfile } from '../model/repository/indexedDbRepository';
 import { applyProfileVisibility } from '../core/utils/profileVisibility';
 import { SOCIAL_UI } from '../core/constants/labels';
+import { MAX_SOCIAL_FAVORITES } from '../core/constants/uiConfig';
 import type { IconName } from '../core/constants/icons';
-import type { GameItem, TabId } from '../model/types/game';
+import type { GameItem, SyncConfig, TabId } from '../model/types/game';
 import {
   ensureProfileByEmail,
   getCurrentSocialAuthUser,
@@ -227,7 +229,12 @@ export function useSocialViewModel() {
     let cancelled = false;
 
     const hydrate = async () => {
+      await ensureSyncConfigLoaded(); // C4: garantiza el token descifrado antes de leer la config de sync
+      if (cancelled) {
+        return;
+      }
       const mainConfig = getSyncConfig();
+      setMainSyncConfig(mainConfig);
       const socialConfig = getSocialSyncConfig();
       const currentUser = await getCurrentSocialAuthUser();
       let resolvedGistId = socialConfig?.gistId || '';
@@ -284,7 +291,10 @@ export function useSocialViewModel() {
     };
   }, [lockProfileEditor, navigate]);
 
-  const mainSyncConfig = useMemo(() => getSyncConfig(), []);
+  // El token del gist de juegos se cifra y se descifra de forma asíncrona (ensureSyncConfigLoaded).
+  // Mantener la config en estado y refrescarla tras la hidratación evita la carrera en la que
+  // getSyncConfig() devolvía token='' al montar (hasMainSync=false → gateway → /ajustes y lecturas 401).
+  const [mainSyncConfig, setMainSyncConfig] = useState<SyncConfig | null>(() => getSyncConfig());
   const hasMainSync = Boolean(mainSyncConfig?.token && mainSyncConfig?.gistId);
   const hasSocialGist = Boolean(socialCfgGistId);
   const hasSocialSession = Boolean(authUser);
@@ -894,6 +904,29 @@ export function useSocialViewModel() {
       return;
     }
 
+    // Caché persistente del perfil propio: al volver a la pantalla social dentro de la ventana (<5 min) se sirve de
+    // IndexedDB sin releer el gist propio ni consultar Firestore. El guardado del perfil invalida esta caché.
+    const cachedProfile = await getCachedSocialProfile(socialCfgGistId);
+    if (cachedProfile) {
+      setProfileName(cachedProfile.name);
+      setFavoriteGameIds(cachedProfile.favorites.filter((id) => completedGameNameById.has(id)));
+      setHiddenTabs(getOrderedUniqueTabs(cachedProfile.hiddenTabs || []));
+      setHideReplayable(cachedProfile.hideReplayable);
+      setHideRetry(cachedProfile.hideRetry);
+      setHideGameTime(cachedProfile.hideGameTime);
+      setShowPhoto(cachedProfile.showPhoto);
+      setHasCreatedProfile(cachedProfile.profileExists);
+      setSocialPayload({ activity: cachedProfile.activity });
+
+      const mustCreateCached = shouldRequireProfileCreation(cachedProfile.profileExists, justSavedProfile);
+      if (mustCreateCached) {
+        lockProfileEditor();
+      } else if (cachedProfile.profileExists) {
+        setMustCreateProfile(false);
+      }
+      return;
+    }
+
     try {
       setHydratingProfile(true);
       const existingProfile = await findSocialProfileByEmail(authUser.email);
@@ -957,6 +990,19 @@ export function useSocialViewModel() {
       setShowPhoto(profileVisibility.showPhoto !== false);
       setHasCreatedProfile(profileExists);
       setSocialPayload({
+        activity: socialRead.data.activity,
+      });
+
+      // Sembrar la caché para que la próxima navegación a social no relea el gist propio dentro de la ventana de TTL.
+      void putCachedSocialProfile(socialCfgGistId, {
+        name: nextName,
+        favorites,
+        hiddenTabs: getOrderedUniqueTabs(profileVisibility.hiddenTabs || []),
+        hideReplayable: Boolean(profileVisibility.hideReplayable),
+        hideRetry: Boolean(profileVisibility.hideRetry),
+        hideGameTime: Boolean(profileVisibility.hideGameTime),
+        showPhoto: profileVisibility.showPhoto !== false,
+        profileExists,
         activity: socialRead.data.activity,
       });
 
@@ -1034,7 +1080,7 @@ export function useSocialViewModel() {
       if (cooldownTimerRef.current) clearTimeout(cooldownTimerRef.current);
       cooldownTimerRef.current = setTimeout(() => setRefreshCoolingDown(false), FORCED_REFRESH_MIN_MS);
     } else {
-      // Caché persistente: si el directorio sigue fresco (<5 min), se sirve de IndexedDB sin releer ningún gist
+      // Caché persistente: si el directorio sigue fresco (<30 min), se sirve de IndexedDB sin releer ningún gist
       // social. Evita el coste N+1 al navegar feed→detalle→feed o al re-renderizar. El refresco manual lo evita.
       const cachedDirectory = await getCachedSocialDirectory<SocialDirectoryEntry>(socialCfgGistId);
       if (cachedDirectory) {
@@ -1244,8 +1290,7 @@ export function useSocialViewModel() {
       return;
     }
 
-    // MÃ¡ximo de 5 favoritos
-    if (current.length >= 5) {
+    if (current.length >= MAX_SOCIAL_FAVORITES) {
       setFeedback('warn', SOCIAL_UI.status.maxFavoritesReached);
       return;
     }
@@ -1318,6 +1363,20 @@ export function useSocialViewModel() {
       setSocialCfgEtag(finalEtag);
 
       setSocialPayload({
+        activity: currentGistData.activity,
+      });
+
+      // Refrescar la caché del perfil con lo recién guardado: evita releer el gist al volver a social y mantiene
+      // la caché coherente con la edición.
+      void putCachedSocialProfile(finalGistId, {
+        name: profile.name,
+        favorites: validFavoriteIds,
+        hiddenTabs: normalizedHiddenTabs,
+        hideReplayable,
+        hideRetry,
+        hideGameTime,
+        showPhoto,
+        profileExists: true,
         activity: currentGistData.activity,
       });
 
