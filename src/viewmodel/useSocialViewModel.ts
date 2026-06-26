@@ -16,9 +16,10 @@ import {
   writeSocialGist,
 } from '../model/repository/gistRepository';
 import { publishPost } from '../model/repository/socialPublishRepository';
+import { invalidateProfileGames, loadForeignProfileGames } from '../model/repository/foreignProfileRepository';
 import { SOCIAL_UI } from '../core/constants/labels';
 import type { IconName } from '../core/constants/icons';
-import type { GameItem, TabId } from '../model/types/game';
+import { TAB_IDS, type GameItem, type TabData, type TabId } from '../model/types/game';
 import {
   ensureProfileByEmail,
   getCurrentSocialAuthUser,
@@ -98,6 +99,27 @@ export function isOwnProfileIdentity(
   return (Boolean(uid) && entryId === uid) || (Boolean(ownProfileId) && entryId === ownProfileId);
 }
 
+/**
+ * Bloque 6 — Filtra la lista de juegos de OTRO perfil según la visibilidad que ese usuario publicó (respeto de la
+ * visibilidad del lado cliente): vacía las pestañas ocultas y elimina los campos que no quiere exponer
+ * (horas/rejugable/reintentar). PURA. La lista cruda llega del gist de listados; este filtro decide qué se muestra.
+ */
+export function applyProfileVisibility(games: TabData, visibility: SocialProfileVisibility): Record<TabId, GameItem[]> {
+  const hidden = new Set(visibility.hiddenTabs || []);
+  const scrub = (game: GameItem): GameItem => {
+    const next: GameItem = { ...game };
+    if (visibility.hideGameTime) next.hours = null;
+    if (visibility.hideReplayable) next.replayable = false;
+    if (visibility.hideRetry) next.retry = false;
+    return next;
+  };
+  const out = { c: [], v: [], e: [], p: [] } as Record<TabId, GameItem[]>;
+  for (const tab of TAB_IDS) {
+    out[tab] = hidden.has(tab) ? [] : (games[tab] || []).map(scrub);
+  }
+  return out;
+}
+
 export function useSocialViewModel() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -172,6 +194,10 @@ export function useSocialViewModel() {
   const [savingProfile, setSavingProfile] = useState(false);
   const [loadingDirectory, setLoadingDirectory] = useState(false);
   const [socialDirectory, setSocialDirectory] = useState<SocialDirectoryEntry[]>([]);
+  // Listas completas de OTROS perfiles, cargadas bajo demanda (al abrir reseña/perfil) y filtradas por su
+  // visibilidad. Clave = id del perfil del directorio. Alimenta getGameItemById y selectedProfileDetail.
+  const [foreignGamesByProfile, setForeignGamesByProfile] = useState<Record<string, Record<TabId, GameItem[]>>>({});
+  const [loadingForeignProfile, setLoadingForeignProfile] = useState(false);
   const feedRowRef = useRef<HTMLDivElement | null>(null);
   const feedDraggingRef = useRef(false);
   const feedStartXRef = useRef(0);
@@ -464,7 +490,13 @@ export function useSocialViewModel() {
     // listados; la visibilidad (pestañas ocultas) la sigue aplicando el componente. Perfiles ajenos: index-only.
     // P1: propiedad por identidad (uid/profileId), no por email.
     const isOwn = isOwnProfileIdentity(entry.id, authUser?.uid, ownProfileId);
-    if (!isOwn) return entry;
+    if (!isOwn) {
+      // Perfiles ajenos: si ya bajamos su lista completa (gist de listados, filtrada por su visibilidad) la
+      // mostramos; mientras llega (o si no hay token/datos) se queda index-only y el componente muestra el vacío.
+      const foreign = foreignGamesByProfile[entry.id];
+      if (foreign) return { ...entry, sharedLists: foreign };
+      return entry;
+    }
 
     return {
       ...entry,
@@ -475,7 +507,7 @@ export function useSocialViewModel() {
         p: localState.p,
       },
     };
-  }, [activePanel, authUser, localState, ownProfileId, profileDetailId, socialDirectory]);
+  }, [activePanel, authUser, foreignGamesByProfile, localState, ownProfileId, profileDetailId, socialDirectory]);
 
   const activityFeedItems = useMemo(() => {
     const normalizedQuery = feedSearch.trim().toLowerCase();
@@ -570,13 +602,19 @@ export function useSocialViewModel() {
       }
     }
 
-    // Datos COMPLETOS (review/strengths/weaknesses/…) solo para juegos PROPIOS. Para eventos AJENOS no se cae a
-    // `localState`: los `id` son `max+1` por dispositivo y pueden colisionar entre usuarios → un id ajeno podría
-    // coincidir con un juego local distinto y filtrar su metadata. Los ajenos se quedan index-only (snippet del
-    // evento). Mantiene la frontera de privacidad de E3.
     // P1: propiedad por identidad (uid/profileId), no por email.
     const isOwn = isOwnProfileIdentity(profileId, authUser?.uid, ownProfileId);
-    if (!isOwn) return null;
+    if (!isOwn) {
+      // Eventos AJENOS: la reseña completa (review/strengths/weaknesses/categorías) sale de la lista bajada de SU
+      // gist de listados, ya filtrada por su visibilidad (las pestañas ocultas quedan vacías → no se revela el
+      // juego). Si aún no ha llegado, devolvemos null y el detalle muestra el snippet del evento.
+      const foreign = foreignGamesByProfile[profileId];
+      if (foreign) {
+        const match = [...foreign.c, ...foreign.v, ...foreign.e, ...foreign.p].find((game) => game.id === gameId);
+        if (match) return match;
+      }
+      return null;
+    }
 
     const allGames = [
       ...localState.c,
@@ -585,7 +623,7 @@ export function useSocialViewModel() {
       ...localState.p,
     ];
     return allGames.find((game) => game.id === gameId) || null;
-  }, [authUser, localState, ownProfileId, socialDirectory]);
+  }, [authUser, foreignGamesByProfile, localState, ownProfileId, socialDirectory]);
 
   /**
    * Formatea la fecha como "DD de MMM".
@@ -698,6 +736,62 @@ export function useSocialViewModel() {
     }
     navigate(`/social/profiles/${encodeURIComponent(profileId)}`);
   }, [navigate, socialDirectory]);
+
+  // Bloque 3/4 — al abrir el detalle de una reseña o un perfil AJENO, baja su lista completa de juegos (cache-first
+  // 24h en IndexedDB; sin red si está fresca) y la guarda filtrada por su visibilidad. El perfil propio no se baja
+  // (ya tiene datos locales). Sin token o ante fallo de red se queda index-only (snippet del evento).
+  useEffect(() => {
+    if (activePanel !== 'detail' && activePanel !== 'profile-detail') return;
+    const targetProfileId = activePanel === 'profile-detail' ? profileDetailId : activeDetailEvent?.profileId || '';
+    if (!targetProfileId) return;
+    if (isOwnProfileIdentity(targetProfileId, authUser?.uid, ownProfileId)) return;
+    if (foreignGamesByProfile[targetProfileId]) return;
+    const entry = socialDirectory.find((item) => item.id === targetProfileId);
+    if (!entry || !entry.gamesGistId) return;
+
+    let cancelled = false;
+    const token = getSocialSyncConfig()?.token || mainSyncConfig?.token || null;
+    setLoadingForeignProfile(true);
+    loadForeignProfileGames({ profileId: targetProfileId, gamesGistId: entry.gamesGistId, token })
+      .then((games) => {
+        if (cancelled || !games) return;
+        const visible = applyProfileVisibility(games, entry.visibility || defaultSocialVisibility);
+        setForeignGamesByProfile((prev) => ({ ...prev, [targetProfileId]: visible }));
+      })
+      .catch(() => {
+        /* fallback index-only: el detalle/perfil muestra snippet/vacío sin romper la pantalla. */
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingForeignProfile(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activePanel, activeDetailEvent, authUser, defaultSocialVisibility, foreignGamesByProfile, mainSyncConfig?.token, ownProfileId, profileDetailId, socialDirectory]);
+
+  // Bloque 4 — refresco manual del perfil abierto: invalida la caché de IndexedDB y relee del gist de listados.
+  const refreshProfileDetail = useCallback(async () => {
+    const profileId = profileDetailId;
+    const entry = socialDirectory.find((item) => item.id === profileId);
+    if (!entry || !entry.gamesGistId || isOwnProfileIdentity(profileId, authUser?.uid, ownProfileId)) return;
+    try {
+      setLoadingForeignProfile(true);
+      await invalidateProfileGames(profileId);
+      const token = getSocialSyncConfig()?.token || mainSyncConfig?.token || null;
+      const games = await loadForeignProfileGames({ profileId, gamesGistId: entry.gamesGistId, token, forceRefresh: true });
+      if (games) {
+        const visible = applyProfileVisibility(games, entry.visibility || defaultSocialVisibility);
+        setForeignGamesByProfile((prev) => ({ ...prev, [profileId]: visible }));
+      } else {
+        setFeedback('warn', SOCIAL_UI.status.profileGamesRefreshFailed);
+      }
+    } catch (error) {
+      setFeedback('warn', error instanceof Error ? error.message : SOCIAL_UI.status.profileGamesRefreshFailed);
+    } finally {
+      setLoadingForeignProfile(false);
+    }
+  }, [authUser, defaultSocialVisibility, mainSyncConfig?.token, ownProfileId, profileDetailId, setFeedback, socialDirectory]);
 
   const handleActivityItemKeyDown = useCallback(
     (event: ReactKeyboardEvent<HTMLElement>, entry: SocialActivityFeedItem) => {
@@ -1069,6 +1163,43 @@ export function useSocialViewModel() {
     void hydrateSocialDirectory();
   }, [hydrateSocialDirectory]);
 
+  // Bloque 2 — propaga la foto propia a los DEMÁS: la foto solo la ven otros si está en NUESTRO gist social
+  // público. Gists creados antes del soporte de foto (o sin re-guardar el perfil) no la llevan, así que nadie veía
+  // la de nadie. Aquí, una vez por sesión, si tenemos foto de Google y `showPhoto`, la escribimos en el gist si
+  // falta o difiere. Best-effort: si falla, se reintenta en la próxima sesión.
+  const photoHealAttemptedRef = useRef(false);
+  useEffect(() => {
+    if (photoHealAttemptedRef.current) return;
+    if (!showSocialSpace || !socialCfgGistId || !showPhoto) return;
+    const photo = authUser?.photoURL;
+    if (!photo) return;
+    const cfg = getSocialSyncConfig();
+    if (!cfg?.token) return;
+    photoHealAttemptedRef.current = true;
+
+    void (async () => {
+      try {
+        const current = await readSocialGist(cfg.token, socialCfgGistId, null);
+        const data = current.data;
+        if (!data) return;
+        if (data.profile.photoURL === photo && data.profile.visibility?.showPhoto !== false) return; // ya propagada
+        await writeSocialGist(cfg.token, socialCfgGistId, {
+          profile: {
+            ...data.profile,
+            visibility: { ...data.profile.visibility, showPhoto: true },
+            photoURL: photo,
+          },
+          activity: data.activity,
+          posts: data.posts,
+          updatedAt: Date.now(),
+        });
+        await hydrateSocialDirectory(true);
+      } catch {
+        // best-effort: no bloquea el feed; se reintenta la próxima sesión.
+      }
+    })();
+  }, [authUser?.photoURL, hydrateSocialDirectory, showPhoto, showSocialSpace, socialCfgGistId]);
+
   // Auto-crear gist social si tenemos token + Google pero no gist
   useEffect(() => {
     if (hasMainSync && authUser && !hasSocialGist && !connecting && !resolvingSocialGist && !signingIn) {
@@ -1293,6 +1424,8 @@ export function useSocialViewModel() {
     socialDisplayName,
     filteredSocialDirectory,
     selectedProfileDetail,
+    refreshProfileDetail,
+    loadingForeignProfile,
     activeDetailEvent,
     getGameItemById,
     groupedFeedItems,

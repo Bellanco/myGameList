@@ -1677,6 +1677,43 @@ button.hub-chip.active {
   box-shadow: 0 0 0 2px rgba(26,159,255,.2);
 }
 
+/* Avatar clicable (feed/detalle): botón sin chrome que envuelve la foto/inicial y navega al perfil. */
+.hub-avatar-link {
+  flex: 0 0 auto;
+  display: inline-flex;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 50%;
+  background: transparent;
+  cursor: pointer;
+  transition: box-shadow .2s ease, border-color .2s ease;
+}
+.hub-avatar-link:hover { box-shadow: 0 0 0 2px rgba(26,159,255,.28); }
+.hub-avatar-link:focus-visible {
+  outline: none;
+  border-color: rgba(26,159,255,.42);
+  box-shadow: 0 0 0 2px rgba(26,159,255,.2);
+}
+
+/* Nombre clicable (feed): botón inline con apariencia de texto que navega al perfil. */
+.hub-name-link {
+  display: inline;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.hub-name-link:hover { color: var(--steam-hover); text-decoration: underline; }
+.hub-name-link:focus-visible {
+  outline: none;
+  border-radius: .25rem;
+  box-shadow: 0 0 0 2px rgba(26,159,255,.2);
+}
+
 @container social-card (max-width: 66rem) {
   .hub-feed-metrics {
     grid-template-columns: repeat(2, minmax(0, 1fr));

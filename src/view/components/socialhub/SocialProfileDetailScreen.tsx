@@ -33,12 +33,16 @@ export function SocialProfileDetailScreen({
   SOCIAL_UI,
   activeProfileDetail,
   onBack,
+  onRefresh,
+  refreshing,
   status,
   statusKind
 }: {
   SOCIAL_UI: any;
   activeProfileDetail: SocialProfileDetail | null;
   onBack: () => void;
+  onRefresh?: () => void;
+  refreshing?: boolean;
   status: string;
   statusKind: string;
 }) {
@@ -126,6 +130,12 @@ export function SocialProfileDetailScreen({
               <Icon name="arrow-back" />
               {SOCIAL_UI.feed.backToFeed}
             </button>
+            {onRefresh ? (
+              <button className="btn btn-secondary" type="button" disabled={refreshing} onClick={onRefresh}>
+                <Icon name="refresh" />
+                {refreshing ? SOCIAL_UI.feed.profileDetailRefreshing : SOCIAL_UI.feed.profileDetailRefresh}
+              </button>
+            ) : null}
           </div>
         </div>
         <article className="hub-feed-card hub-feed-card-detail">
