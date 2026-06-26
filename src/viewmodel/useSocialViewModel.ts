@@ -17,7 +17,7 @@ import {
 } from '../model/repository/gistRepository';
 import { publishPost } from '../model/repository/socialPublishRepository';
 import { invalidateProfileGames, loadForeignProfileGames } from '../model/repository/foreignProfileRepository';
-import { getCachedSocialDirectory, putCachedSocialDirectory } from '../model/repository/indexedDbRepository';
+import { getCachedSocialDirectory, getLocalMeta, patchLocalMeta, putCachedSocialDirectory } from '../model/repository/indexedDbRepository';
 import { applyProfileVisibility } from '../core/utils/profileVisibility';
 import { SOCIAL_UI } from '../core/constants/labels';
 import type { IconName } from '../core/constants/icons';
@@ -1187,28 +1187,34 @@ export function useSocialViewModel() {
 
     void (async () => {
       try {
+        // 2b — idempotencia entre sesiones: si ya propagamos esta misma foto, no releemos ni reescribimos el gist.
+        const meta = await getLocalMeta();
+        if (meta?.photoHealedFor === photo) return;
+
         const current = await readSocialGist(cfg.token, socialCfgGistId, null);
         const data = current.data;
         if (!data) return;
         // El gist es la fuente de verdad: si el usuario tiene la foto desactivada, NO la republicamos (evita revertir
         // su opt-out por una carrera con la hidratación del perfil, que arranca con showPhoto=true por defecto).
         if (data.profile.visibility?.showPhoto === false) return;
-        if (data.profile.photoURL === photo) return; // ya propagada
-        await writeSocialGist(cfg.token, socialCfgGistId, {
-          profile: {
-            ...data.profile,
-            photoURL: photo,
-          },
-          activity: data.activity,
-          posts: data.posts,
-          updatedAt: Date.now(),
-        });
-        await hydrateSocialDirectory(true);
+
+        if (data.profile.photoURL !== photo) {
+          await writeSocialGist(cfg.token, socialCfgGistId, {
+            profile: { ...data.profile, photoURL: photo },
+            activity: data.activity,
+            posts: data.posts,
+            updatedAt: Date.now(),
+          });
+          // 2a — sin re-hidratación completa (~30 lecturas). La foto propia ya se ve por el fallback de sesión; solo
+          // parcheamos la entrada propia del directorio en memoria por si acaso, y la del directorio cacheado.
+          setSocialDirectory((prev) => prev.map((e) => (e.socialGistId === socialCfgGistId ? { ...e, photoURL: photo } : e)));
+        }
+        await patchLocalMeta({ photoHealedFor: photo });
       } catch {
         // best-effort: no bloquea el feed; se reintenta la próxima sesión.
       }
     })();
-  }, [authUser?.photoURL, hydrateSocialDirectory, showPhoto, showSocialSpace, socialCfgGistId]);
+  }, [authUser?.photoURL, showPhoto, showSocialSpace, socialCfgGistId]);
 
   // Auto-crear gist social si tenemos token + Google pero no gist
   useEffect(() => {

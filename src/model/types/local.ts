@@ -23,6 +23,7 @@ export interface LocalMeta {
   devices: Record<string, { name: string; lastSeen: number }>;
   migrationVersion?: number; // estado de la migración one-time (>=3 = migrado)
   gamesUpdatedAt?: number; // updatedAt del último espejo al store `games` (para elegir la fuente más fresca al cargar)
+  photoHealedFor?: string; // última photoURL ya propagada al gist social (evita releer/reescribir cada sesión)
 }
 
 export type SyncOpType =
