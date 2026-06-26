@@ -2,7 +2,7 @@
 import { Icon } from '../Icon';
 import { StarRating } from '../StarRating';
 import { PostText } from './PostText';
-import { avatarInitial, avatarTone } from './avatar';
+import { HubAvatar } from './HubAvatar';
 import { POST_MAX_LENGTH } from '../../../core/security/sanitize';
 
 /**
@@ -174,13 +174,7 @@ export function SocialFeedScreen({
                               aria-label={SOCIAL_UI.feed.openProfileAria(entry.profileDisplayName || entry.authorName)}
                               onClick={() => openProfileDetail(entry.profileId)}
                             >
-                              {entry.photoURL ? (
-                                <img className="hub-avatar hub-avatar-img" src={entry.photoURL} alt="" referrerPolicy="no-referrer" />
-                              ) : (
-                                <span className={`hub-avatar hub-avatar--${avatarTone(entry.profileDisplayName || entry.authorName)}`} aria-hidden="true">
-                                  {avatarInitial(entry.profileDisplayName || entry.authorName)}
-                                </span>
-                              )}
+                              <HubAvatar name={entry.profileDisplayName || entry.authorName} photoURL={entry.photoURL} />
                             </button>
                             <div className="hub-feed-card-head-text">
                               <h3>
@@ -218,13 +212,7 @@ export function SocialFeedScreen({
                             aria-label={SOCIAL_UI.feed.openProfileAria(entry.profileDisplayName)}
                             onClick={(event) => { event.stopPropagation(); openProfileDetail(entry.profileId); }}
                           >
-                            {entry.photoURL ? (
-                              <img className="hub-avatar hub-avatar-img" src={entry.photoURL} alt="" referrerPolicy="no-referrer" />
-                            ) : (
-                              <span className={`hub-avatar hub-avatar--${avatarTone(entry.profileDisplayName)}`} aria-hidden="true">
-                                {avatarInitial(entry.profileDisplayName)}
-                              </span>
-                            )}
+                            <HubAvatar name={entry.profileDisplayName} photoURL={entry.photoURL} />
                           </button>
                           <div className="hub-feed-card-head-text">
                             <h3>
@@ -295,13 +283,7 @@ export function SocialFeedScreen({
                   onKeyDown={(event) => handleProfileCardKeyDown(event, entry.id)}
                 >
                   <header className="hub-feed-card-head">
-                    {entry.photoURL ? (
-                      <img className="hub-avatar hub-avatar-img" src={entry.photoURL} alt="" referrerPolicy="no-referrer" />
-                    ) : (
-                      <span className={`hub-avatar hub-avatar--${avatarTone(entry.displayName)}`} aria-hidden="true">
-                        {avatarInitial(entry.displayName)}
-                      </span>
-                    )}
+                    <HubAvatar name={entry.displayName} photoURL={entry.photoURL} />
                     <div className="hub-feed-card-head-text">
                       <h3>{entry.displayName}</h3>
                     </div>

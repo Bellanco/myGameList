@@ -1,6 +1,6 @@
 ﻿import { Icon } from '../Icon';
 import { StarRating } from '../StarRating';
-import { avatarInitial, avatarTone } from './avatar';
+import { HubAvatar } from './HubAvatar';
 
 /**
  * Pantalla de detalle de actividad social.
@@ -82,13 +82,7 @@ export function SocialDetailScreen({
               aria-label={SOCIAL_UI.feed.openProfileAria(activeDetailEvent.profileDisplayName)}
               onClick={() => onOpenProfileDetail(activeDetailEvent.profileId)}
             >
-              {activeDetailEvent.photoURL ? (
-                <img className="hub-avatar hub-avatar-img" src={activeDetailEvent.photoURL} alt="" referrerPolicy="no-referrer" />
-              ) : (
-                <span className={`hub-avatar hub-avatar--${avatarTone(activeDetailEvent.profileDisplayName)}`} aria-hidden="true">
-                  {avatarInitial(activeDetailEvent.profileDisplayName)}
-                </span>
-              )}
+              <HubAvatar name={activeDetailEvent.profileDisplayName} photoURL={activeDetailEvent.photoURL} />
             </button>
             <div className="hub-feed-card-head-text">
               <h3>
