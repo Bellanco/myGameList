@@ -338,11 +338,6 @@ export const SOCIAL_UI = {
     metadataGenres: 'Géneros:',
     metadataStrengths: 'Puntos fuertes:',
     metadataWeaknesses: 'Puntos débiles:',
-    // Labels listas para campos opcionales del detalle (hoy comentados en SocialDetailScreen; descomentar allí):
-    metadataReasons: 'Razones:',
-    metadataYears: 'Años completado:',
-    metadataHours: 'Horas jugadas:',
-    metadataFlags: 'Otros:',
     profileDetailTitle: 'Detalle de perfil social',
     profileDetailSubtitle: 'Vista pública del perfil seleccionado con sus favoritos.',
     profileDetailActionsAria: 'Acciones del detalle de perfil social',

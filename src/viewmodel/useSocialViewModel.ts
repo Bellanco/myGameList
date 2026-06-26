@@ -175,7 +175,6 @@ export function useSocialViewModel() {
   const [feedVisibleCount, setFeedVisibleCount] = useState(FEED_PAGE_SIZE);
   const [composePostText, setComposePostText] = useState('');
   const [publishingPost, setPublishingPost] = useState(false);
-  const [feedFilter] = useState<'all' | 'favorites'>('all');
   const [socialPayload, setSocialPayload] = useState<{ activity: SocialActivityEntry[] }>({ activity: [] });
   const [hydratingProfile, setHydratingProfile] = useState(false);
   const [savingProfile, setSavingProfile] = useState(false);
@@ -441,20 +440,11 @@ export function useSocialViewModel() {
 
   const filteredSocialDirectory = useMemo(() => {
     const normalizedQuery = feedSearch.trim().toLowerCase();
+    if (!normalizedQuery) {
+      return visibleSocialDirectory;
+    }
 
     return visibleSocialDirectory.filter((entry) => {
-      const matchesFilter =
-        feedFilter === 'all' ||
-        (feedFilter === 'favorites' && entry.favorites.length > 0);
-
-      if (!matchesFilter) {
-        return false;
-      }
-
-      if (!normalizedQuery) {
-        return true;
-      }
-
       const searchable = [
         entry.displayName,
         entry.email,
@@ -465,7 +455,7 @@ export function useSocialViewModel() {
 
       return searchable.includes(normalizedQuery);
     });
-  }, [feedFilter, feedSearch, visibleSocialDirectory]);
+  }, [feedSearch, visibleSocialDirectory]);
 
   const selectedProfileDetail = useMemo(() => {
     if (activePanel !== 'profile-detail' || !profileDetailId) {
@@ -1081,7 +1071,6 @@ export function useSocialViewModel() {
               .map((activityEntry) => activityEntry.gameName)
               .filter((name) => Boolean(name && name.trim()))
               .filter((name, index, arr) => arr.indexOf(name) === index)
-              .filter((name) => Boolean(name && name.trim()))
               .slice(0, 8);
             const activity = socialData.activity
               .map((activityEntry) => {
