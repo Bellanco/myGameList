@@ -30,6 +30,7 @@ import {
   resolveStableProfileId,
   signInWithGoogle,
   signOutSocialUser,
+  updateProfilePhoto,
   type SocialAuthUser,
 } from '../model/repository/firebaseRepository';
 import { loadLocalState } from '../model/repository/localRepository';
@@ -1055,6 +1056,11 @@ export function useSocialViewModel() {
           const isOwnEntry = entry.socialGistId === socialCfgGistId;
           try {
             const socialData = await readPublicSocialGistById(entry.socialGistId, socialConfig?.token || null);
+            // Foto: prioridad al gist (con su visibilidad); si no la trae, se usa la del directorio de Firestore
+            // (`entry.photoURL`) SIEMPRE QUE el usuario no la tenga desactivada. Esto propaga la foto de quienes
+            // tienen el gist antiguo (sin photoURL) sin esperar a que reentren. Para uno mismo, fallback a la sesión.
+            const showsPhoto = socialData.profile.visibility?.showPhoto !== false;
+            const resolvedPhoto = socialData.profile.photoURL || (showsPhoto ? entry.photoURL || '' : '') || (isOwnEntry ? ownPhotoURL : '');
             // E3: el canal social NO lee el gist de juegos EN CRUDO de otros usuarios (privacidad + desacople del
             // formato del gist de juegos). Las listas compartidas quedan index-only vacías para perfiles ajenos: el
             // detalle de actividad muestra nombre/rating/snippet del propio evento social; los metadatos
@@ -1081,7 +1087,7 @@ export function useSocialViewModel() {
                   profileId: entry.id,
                   profileDisplayName: socialData.profile.name || entry.displayName || 'Usuario',
                   socialGistId: entry.socialGistId,
-                  photoURL: socialData.profile.photoURL || (isOwnEntry ? ownPhotoURL : ''),
+                  photoURL: resolvedPhoto,
                 };
               })
               .slice(0, 40);
@@ -1099,7 +1105,7 @@ export function useSocialViewModel() {
                   profileId: entry.id,
                   profileDisplayName: socialData.profile.name || entry.displayName || 'Usuario',
                   socialGistId: entry.socialGistId,
-                  photoURL: socialData.profile.photoURL || (isOwnEntry ? ownPhotoURL : ''),
+                  photoURL: resolvedPhoto,
                 };
               })
               .slice(0, 40);
@@ -1110,7 +1116,7 @@ export function useSocialViewModel() {
               email: entry.email,
               socialGistId: entry.socialGistId,
               gamesGistId: entry.gamesGistId,
-              photoURL: socialData.profile.photoURL || (isOwnEntry ? ownPhotoURL : ''),
+              photoURL: resolvedPhoto,
               favorites: socialData.profile.favoriteGames.map((game) => game.name).slice(0, 5),
               recommendations: mergedRecommendations,
               activity,
@@ -1125,7 +1131,8 @@ export function useSocialViewModel() {
               email: entry.email,
               socialGistId: entry.socialGistId,
               gamesGistId: entry.gamesGistId,
-              photoURL: '',
+              // Gist ilegible: usamos la foto del directorio de Firestore (best-effort) para no perderla.
+              photoURL: entry.photoURL || (isOwnEntry ? ownPhotoURL : ''),
               favorites: [],
               recommendations: [],
               activity: [],
@@ -1209,6 +1216,11 @@ export function useSocialViewModel() {
           // parcheamos la entrada propia del directorio en memoria por si acaso, y la del directorio cacheado.
           setSocialDirectory((prev) => prev.map((e) => (e.socialGistId === socialCfgGistId ? { ...e, photoURL: photo } : e)));
         }
+        // Propaga también la foto al doc público de Firestore (la lee el directorio), para que la vean los demás
+        // sin depender de que cada uno reabra la app y re-publique su gist. Best-effort.
+        if (authUser?.uid) {
+          await updateProfilePhoto(authUser.uid, photo);
+        }
         await patchLocalMeta({ photoHealedFor: photo });
       } catch {
         // best-effort: no bloquea el feed; se reintenta la próxima sesión.
@@ -1289,6 +1301,8 @@ export function useSocialViewModel() {
         githubToken: mainSyncConfig?.token || socialConfig.token, // audit-allow: ensureProfileByEmail lo cifra en privateConfig (B1)
         socialGistEtag: finalEtag,
         preferredName: profile.name,
+        // Publica la foto en el doc público (la lee el directorio); '' la borra si el usuario desactiva la foto.
+        photoURL: showPhoto && authUser.photoURL ? authUser.photoURL : '',
       });
 
       saveSocialSyncConfig({
