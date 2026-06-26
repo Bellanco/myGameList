@@ -14,6 +14,7 @@ interface SocialGameCardSelectorProps {
   selectedIds: number[];
   options: GameOption[];
   emptyMessage: string;
+  maxSelected?: number;
   onSearchChange: (value: string) => void;
   onToggle: (id: number) => void;
 }
@@ -29,6 +30,7 @@ export const SocialGameCardSelector = memo(function SocialGameCardSelector({
   selectedIds,
   options,
   emptyMessage,
+  maxSelected,
   onSearchChange,
   onToggle,
 }: SocialGameCardSelectorProps) {
@@ -120,7 +122,9 @@ export const SocialGameCardSelector = memo(function SocialGameCardSelector({
           <h3>{title}</h3>
           <p>{description}</p>
         </div>
-        <strong className="hub-card-selector-counter">{selectedIds.length}</strong>
+        <strong className={`hub-card-selector-counter ${maxSelected && selectedIds.length >= maxSelected ? 'is-full' : ''}`.trim()}>
+          {maxSelected ? `${selectedIds.length} / ${maxSelected}` : selectedIds.length}
+        </strong>
       </div>
 
       <label className="hub-card-selector-search" aria-label={SOCIAL_UI.cardSelector.searchAria(title)}>
@@ -152,6 +156,7 @@ export const SocialGameCardSelector = memo(function SocialGameCardSelector({
               <button
                 key={option.id}
                 type="button"
+                aria-pressed={isSelected}
                 className={`hub-game-card ${isSelected ? 'is-selected' : ''}`}
                 onClick={() => {
                   if (didDragRef.current) {
@@ -161,6 +166,7 @@ export const SocialGameCardSelector = memo(function SocialGameCardSelector({
                   onToggle(option.id);
                 }}
               >
+                <span className="hub-game-card-check" aria-hidden="true" />
                 <span className="hub-game-card-title">{option.name}</span>
                 <span className="hub-game-card-status">{isSelected ? 'Seleccionado' : 'Seleccionar'}</span>
               </button>
