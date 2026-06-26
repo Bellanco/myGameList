@@ -68,6 +68,7 @@ export const SocialHub = memo(function SocialHub() {
     selectedProfileDetail,
     refreshProfileDetail,
     loadingForeignProfile,
+    refreshCoolingDown,
     feedItems,
     activeDetailEvent,
     getGameItemById,
@@ -172,6 +173,7 @@ export const SocialHub = memo(function SocialHub() {
         filteredSocialDirectory={filteredSocialDirectory}
         loadingDirectory={loadingDirectory}
         hydrateSocialDirectory={(force) => void hydrateSocialDirectory(force)}
+        refreshCoolingDown={refreshCoolingDown}
         openProfileDetail={(id) => {
           if (id === 'profile') {
             navigate('/social/profile');

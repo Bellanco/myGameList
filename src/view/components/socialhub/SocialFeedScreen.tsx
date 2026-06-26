@@ -18,6 +18,7 @@ export function SocialFeedScreen({
   filteredSocialDirectory,
   loadingDirectory,
   hydrateSocialDirectory,
+  refreshCoolingDown,
   openProfileDetail,
   handleProfileCardKeyDown,
   groupedFeedItems,
@@ -46,6 +47,7 @@ export function SocialFeedScreen({
   filteredSocialDirectory: any[];
   loadingDirectory: boolean;
   hydrateSocialDirectory: (forceRefresh?: boolean) => void;
+  refreshCoolingDown: boolean;
   openProfileDetail: (id: string) => void;
   handleProfileCardKeyDown: (event: React.KeyboardEvent<HTMLElement>, id: string) => void;
   groupedFeedItems: any[];
@@ -85,7 +87,7 @@ export function SocialFeedScreen({
               <Icon name="edit" />
               {SOCIAL_UI.feed.profile}
             </button>
-            <button className="btn btn-secondary" type="button" disabled={loadingDirectory} onClick={() => hydrateSocialDirectory(true)}>
+            <button className="btn btn-secondary" type="button" disabled={loadingDirectory || refreshCoolingDown} onClick={() => hydrateSocialDirectory(true)}>
               <Icon name="refresh" />
               {loadingDirectory ? SOCIAL_UI.feed.refreshing : SOCIAL_UI.feed.refresh}
             </button>
