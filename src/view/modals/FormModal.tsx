@@ -93,6 +93,9 @@ export function FormModal({ open, draft: initialDraft, currentTab, lookups, onCl
   const reviewCount = draft.review.length;
   const reviewProgress = Math.min(100, Math.round((reviewCount / REVIEW_MAX_LENGTH) * 100));
   const reviewProgressClass = reviewProgress >= 100 ? 'has-error' : reviewProgress >= 90 ? 'has-warning' : '';
+  // A11y-3: mensaje anunciado por SR solo en umbrales (texto constante por banda → no se reanuncia por tecla).
+  const reviewLiveMessage =
+    reviewProgress >= 100 ? UI_MESSAGES.form.charLimitReached : reviewProgress >= 90 ? UI_MESSAGES.form.charNearLimit : '';
 
   useEffect(() => {
     // Re-seedea el borrador local desde la prop al abrir o cambiar de juego/pestaña (la prop solo cambia entonces).
@@ -461,12 +464,14 @@ export function FormModal({ open, draft: initialDraft, currentTab, lookups, onCl
                 }}
               />
               <div className="field-footer">
-                <small
-                  className={`tag-hint ${reviewProgressClass}`.trim()}
-                  aria-live="polite"
-                >
+                {/* A11y-3: conteo visible sin aria-live (ya no se anuncia por pulsación). */}
+                <small className={`tag-hint ${reviewProgressClass}`.trim()}>
                   {UI_MESSAGES.form.charCount(reviewCount, REVIEW_MAX_LENGTH)}
                 </small>
+                {/* Región viva exclusiva para SR: solo lleva texto en los umbrales (90% / 100%). */}
+                <span className="sr-only" role="status" aria-live="polite">
+                  {reviewLiveMessage}
+                </span>
               </div>
             </div>
           ) : null}

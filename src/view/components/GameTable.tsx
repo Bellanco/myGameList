@@ -180,22 +180,16 @@ export const GameTable = memo(function GameTable({
 
                 if (row.type === 'main') {
                   const expanded = expandedId === game.id;
+                  const detailId = `game-detail-${game.id}`;
                   return (
                     <tr
                       key={`main-${game.id}`}
                       data-index={rowIndex}
                       ref={virtualizer.measureElement}
                       className={`main-row ${row.index % 2 === 0 ? 'striped' : ''}`}
-                      tabIndex={0}
-                      aria-expanded={expanded}
-                      aria-label={UI_MESSAGES.table.rowDetailsAria(expanded, game.name)}
+                      // A11y-2: el disparador accesible es el botón de la 1ª celda (anunciado como botón + aria-controls).
+                      // La fila conserva click/doble-click como atajos de RATÓN, pero ya no es un control focusable.
                       onClick={() => onExpandedChange(expanded ? null : game.id)}
-                      onKeyDown={(event) => {
-                        if (event.key === 'Enter' || event.key === ' ') {
-                          event.preventDefault();
-                          onExpandedChange(expanded ? null : game.id);
-                        }
-                      }}
                       onDoubleClick={() => {
                         if (!readOnly) {
                           onEdit(currentTab, game.id);
@@ -203,7 +197,19 @@ export const GameTable = memo(function GameTable({
                       }}
                     >
                       <td>
-                        <strong>{game.name}</strong>
+                        <button
+                          type="button"
+                          className="row-toggle"
+                          aria-expanded={expanded}
+                          aria-controls={detailId}
+                          aria-label={UI_MESSAGES.table.rowDetailsAria(expanded, game.name)}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            onExpandedChange(expanded ? null : game.id);
+                          }}
+                        >
+                          <strong>{game.name}</strong>
+                        </button>
                       </td>
                       {currentTab === 'c' && showYears ? <td>{renderTags(game.years?.map(String) || [], 'chip-generic')}</td> : null}
                       <td>{renderTags(game.platforms, 'chip-plat')}</td>
@@ -225,7 +231,7 @@ export const GameTable = memo(function GameTable({
                 const reviewLines = game.review ? game.review.split('\n') : [];
 
                 return (
-                  <tr key={`detail-${game.id}`} data-index={rowIndex} ref={virtualizer.measureElement} className="detail-row open">
+                  <tr key={`detail-${game.id}`} id={`game-detail-${game.id}`} data-index={rowIndex} ref={virtualizer.measureElement} className="detail-row open">
                     <td colSpan={getColSpan(currentTab)} style={{ padding: 0 }}>
                       <div className="detail-content">
                         <div className="detail-box">

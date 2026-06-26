@@ -133,6 +133,10 @@ export const UI_MESSAGES = {
     reviewLabel: 'Análisis',
     reviewPlaceholder: 'Ej: Historia sólida, combate excelente y gran ambientación.',
     charCount: (count: number, max: number) => `${count.toLocaleString()} / ${max.toLocaleString()} caracteres`,
+    // A11y-3: mensajes de umbral para lectores de pantalla (texto constante por banda → se anuncian una vez al
+    // cruzar el umbral, no en cada pulsación). El conteo numérico se deja como texto visible SIN aria-live.
+    charNearLimit: 'Te acercas al límite de caracteres del análisis.',
+    charLimitReached: 'Has alcanzado el límite de caracteres del análisis.',
     cancel: 'Cancelar',
     save: 'Guardar',
   },
