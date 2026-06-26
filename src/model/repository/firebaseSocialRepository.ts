@@ -127,6 +127,7 @@ export async function findSocialProfileByEmail(email: string): Promise<SocialPro
       profileId?: string;
       email?: string;
       displayName?: string;
+      photoURL?: string;
       social?: { gistId?: string; gamesGistId?: string; githubToken?: string; enabled?: boolean };
     };
 
@@ -135,6 +136,7 @@ export async function findSocialProfileByEmail(email: string): Promise<SocialPro
       profileId: String(data.profileId || ''),
       email: String(data.email || ''),
       displayName: String(data.displayName || ''),
+      photoURL: String(data.photoURL || ''),
       socialGistId: String(data.social?.gistId || ''),
       gamesGistId: String(data.social?.gamesGistId || ''),
       githubToken: String(data.social?.githubToken || ''), // audit-allow: LECTURA legacy en claro para recuperación (fallback); no es escritura
@@ -198,6 +200,7 @@ export async function listSocialDirectory(limitCount = 12, options?: { forceRefr
         const data = entry.data() as {
           email?: string;
           displayName?: string;
+          photoURL?: string;
           social?: { gistId?: string; gamesGistId?: string; enabled?: boolean };
         };
 
@@ -205,6 +208,7 @@ export async function listSocialDirectory(limitCount = 12, options?: { forceRefr
           id: entry.id,
           email: String(data.email || ''),
           displayName: String(data.displayName || ''),
+          photoURL: String(data.photoURL || ''),
           socialGistId: String(data.social?.gistId || ''),
           gamesGistId: String(data.social?.gamesGistId || ''),
           enabled: Boolean(data.social?.enabled),
@@ -215,6 +219,7 @@ export async function listSocialDirectory(limitCount = 12, options?: { forceRefr
         id: entry.id,
         email: entry.email,
         displayName: entry.displayName,
+        photoURL: entry.photoURL,
         socialGistId: entry.socialGistId,
         gamesGistId: entry.gamesGistId,
       }));

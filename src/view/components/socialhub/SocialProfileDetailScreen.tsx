@@ -1,7 +1,7 @@
 ﻿import { useMemo, useState } from 'react';
 import { Icon } from '../Icon';
 import { GameTable } from '../GameTable';
-import { avatarInitial, avatarTone } from './avatar';
+import { HubAvatar } from './HubAvatar';
 import { TAB_IDS, type GameItem, type TabId } from '../../../model/types/game';
 import type { SocialSharedGame } from '../../../model/repository/gistRepository';
 
@@ -33,12 +33,16 @@ export function SocialProfileDetailScreen({
   SOCIAL_UI,
   activeProfileDetail,
   onBack,
+  onRefresh,
+  refreshing,
   status,
   statusKind
 }: {
   SOCIAL_UI: any;
   activeProfileDetail: SocialProfileDetail | null;
   onBack: () => void;
+  onRefresh?: () => void;
+  refreshing?: boolean;
   status: string;
   statusKind: string;
 }) {
@@ -126,17 +130,17 @@ export function SocialProfileDetailScreen({
               <Icon name="arrow-back" />
               {SOCIAL_UI.feed.backToFeed}
             </button>
+            {onRefresh ? (
+              <button className="btn btn-secondary" type="button" disabled={refreshing} onClick={onRefresh}>
+                <Icon name="refresh" />
+                {refreshing ? SOCIAL_UI.feed.profileDetailRefreshing : SOCIAL_UI.feed.profileDetailRefresh}
+              </button>
+            ) : null}
           </div>
         </div>
         <article className="hub-feed-card hub-feed-card-detail">
           <div className="hub-profile-hero">
-            {activeProfileDetail.photoURL ? (
-              <img className="hub-avatar hub-avatar-lg hub-avatar-img" src={activeProfileDetail.photoURL} alt="" referrerPolicy="no-referrer" />
-            ) : (
-              <span className={`hub-avatar hub-avatar-lg hub-avatar--${avatarTone(activeProfileDetail.displayName)}`} aria-hidden="true">
-                {avatarInitial(activeProfileDetail.displayName)}
-              </span>
-            )}
+            <HubAvatar name={activeProfileDetail.displayName} photoURL={activeProfileDetail.photoURL} sizeClass="hub-avatar-lg" />
             <h3 className="hub-profile-hero-name">{activeProfileDetail.displayName}</h3>
             <p className="hub-profile-hero-meta">{SOCIAL_UI.feed.profileFavoritesCount(favoriteGames.length)}</p>
           </div>

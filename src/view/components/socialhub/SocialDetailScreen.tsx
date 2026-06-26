@@ -1,6 +1,6 @@
 ﻿import { Icon } from '../Icon';
 import { StarRating } from '../StarRating';
-import { avatarInitial, avatarTone } from './avatar';
+import { HubAvatar } from './HubAvatar';
 
 /**
  * Pantalla de detalle de actividad social.
@@ -76,13 +76,14 @@ export function SocialDetailScreen({
         </div>
         <article className="hub-feed-card hub-feed-card-detail">
           <header className="hub-feed-card-head">
-            {activeDetailEvent.photoURL ? (
-              <img className="hub-avatar hub-avatar-img" src={activeDetailEvent.photoURL} alt="" referrerPolicy="no-referrer" />
-            ) : (
-              <span className={`hub-avatar hub-avatar--${avatarTone(activeDetailEvent.profileDisplayName)}`} aria-hidden="true">
-                {avatarInitial(activeDetailEvent.profileDisplayName)}
-              </span>
-            )}
+            <button
+              className="hub-avatar-link"
+              type="button"
+              aria-label={SOCIAL_UI.feed.openProfileAria(activeDetailEvent.profileDisplayName)}
+              onClick={() => onOpenProfileDetail(activeDetailEvent.profileId)}
+            >
+              <HubAvatar name={activeDetailEvent.profileDisplayName} photoURL={activeDetailEvent.photoURL} />
+            </button>
             <div className="hub-feed-card-head-text">
               <h3>
                 <button
@@ -143,47 +144,6 @@ export function SocialDetailScreen({
                   </div>
                 </div>
               ) : null}
-              {/* FUTURO — campos adicionales del juego propio. Para mostrarlos, descomenta este bloque
-                  (las labels ya existen en SOCIAL_UI.feed.metadataReasons/metadataYears/metadataHours/metadataFlags):
-              {gameItem.reasons && gameItem.reasons.length > 0 ? (
-                <div className="hub-metadata-section">
-                  <strong>{SOCIAL_UI.feed.metadataReasons}</strong>
-                  <div className="chips">
-                    {gameItem.reasons.map((reason: string) => (
-                      <span key={reason} className="chip chip-pd">{reason}</span>
-                    ))}
-                  </div>
-                </div>
-              ) : null}
-              {gameItem.years && gameItem.years.length > 0 ? (
-                <div className="hub-metadata-section">
-                  <strong>{SOCIAL_UI.feed.metadataYears}</strong>
-                  <div className="hub-metadata-tags">
-                    {gameItem.years.map((year: number) => (
-                      <span key={year} className="hub-metadata-tag">{year}</span>
-                    ))}
-                  </div>
-                </div>
-              ) : null}
-              {typeof gameItem.hours === 'number' ? (
-                <div className="hub-metadata-section">
-                  <strong>{SOCIAL_UI.feed.metadataHours}</strong>
-                  <div className="hub-metadata-tags">
-                    <span className="hub-metadata-tag">{gameItem.hours}</span>
-                  </div>
-                </div>
-              ) : null}
-              {(gameItem.steamDeck || gameItem.replayable || gameItem.retry) ? (
-                <div className="hub-metadata-section">
-                  <strong>{SOCIAL_UI.feed.metadataFlags}</strong>
-                  <div className="hub-metadata-tags">
-                    {gameItem.steamDeck ? <span className="hub-metadata-tag">Steam Deck</span> : null}
-                    {gameItem.replayable ? <span className="hub-metadata-tag">Rejugable</span> : null}
-                    {gameItem.retry ? <span className="hub-metadata-tag">Reintentar</span> : null}
-                  </div>
-                </div>
-              ) : null}
-              */}
             </div>
           ) : null}
           </div>
