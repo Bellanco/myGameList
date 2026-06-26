@@ -1,6 +1,6 @@
 ﻿import { Icon } from '../Icon';
 import { SocialGameCardSelector } from '../SocialGameCardSelector';
-import { avatarInitial, avatarTone } from './avatar';
+import { HubAvatar } from './HubAvatar';
 import type { TabId } from '../../../model/types/game';
 
 /**
@@ -111,13 +111,7 @@ export function SocialProfileScreen({
         <div className="hub-profile-layout">
           <article className="hub-profile-block">
             <header className="hub-feed-card-head">
-              {showPhoto !== false && ownPhotoURL ? (
-                <img className="hub-avatar hub-avatar-img" src={ownPhotoURL} alt="" referrerPolicy="no-referrer" />
-              ) : (
-                <span className={`hub-avatar hub-avatar--${avatarTone(profileName || 'Usuario')}`} aria-hidden="true">
-                  {avatarInitial(profileName || 'Usuario')}
-                </span>
-              )}
+              <HubAvatar name={profileName || 'Usuario'} photoURL={showPhoto !== false ? ownPhotoURL : undefined} />
               <div className="hub-feed-card-head-text">
                 <h3>{SOCIAL_UI.profile.identityTitle}</h3>
               </div>

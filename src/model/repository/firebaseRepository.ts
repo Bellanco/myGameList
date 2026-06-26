@@ -127,6 +127,7 @@ export async function upsertProfileSocialReferences(input: {
       id: input.user.uid,
       email: cleanEmail,
       displayName: profileName,
+      photoURL: String(input.user.photoURL || ''),
       socialGistId: input.socialGistId,
       gamesGistId: String(input.gamesGistId || ''),
       githubToken: String(input.githubToken || ''), // audit-allow: caché en MEMORIA (no Firestore); el token va cifrado a privateConfig
@@ -256,6 +257,9 @@ export async function ensureProfileByEmail(input: {
   githubToken?: string;
   socialGistEtag: string | null;
   preferredName?: string;
+  // Foto a publicar en el doc público (la lee el directorio). '' la borra (opt-out de foto). Si se omite,
+  // se conserva la de la sesión de Google (compatibilidad).
+  photoURL?: string;
 }): Promise<SocialProfileReference> {
   const services = await initializeFirebaseServices();
   if (!services) {
@@ -280,6 +284,7 @@ export async function ensureProfileByEmail(input: {
   const targetId = existing?.id || input.user.uid;
   const gamesGistId = String(input.gamesGistId || '');
   const githubToken = String(input.githubToken || '');
+  const resolvedPhotoURL = input.photoURL !== undefined ? input.photoURL : String(input.user.photoURL || '');
   const profileId = await resolveStableProfileId(input.user.uid);
   const shouldWriteProfile =
     !existing ||
@@ -287,6 +292,7 @@ export async function ensureProfileByEmail(input: {
     existing.id !== targetId ||
     existing.id !== input.user.uid ||
     existing.displayName.trim() !== profileName ||
+    (existing.photoURL || '') !== resolvedPhotoURL ||
     existing.socialGistId !== input.socialGistId ||
     existing.gamesGistId !== gamesGistId ||
     existing.githubToken !== githubToken;
@@ -300,7 +306,7 @@ export async function ensureProfileByEmail(input: {
         profileId,
         email: cleanEmail,
         displayName: profileName,
-        photoURL: input.user.photoURL,
+        photoURL: resolvedPhotoURL,
         social: {
           gistId: input.socialGistId,
           gamesGistId,
@@ -336,6 +342,7 @@ export async function ensureProfileByEmail(input: {
     id: targetId,
     email: cleanEmail,
     displayName: profileName,
+    photoURL: resolvedPhotoURL,
     socialGistId: input.socialGistId,
     gamesGistId,
     githubToken,
@@ -347,9 +354,27 @@ export async function ensureProfileByEmail(input: {
     id: targetId,
     email: cleanEmail,
     displayName: profileName,
+    photoURL: resolvedPhotoURL,
     socialGistId: input.socialGistId,
     gamesGistId,
     githubToken,
     socialEnabled: true,
   };
+}
+
+/**
+ * Actualización ligera de la foto del doc público de perfil (la lee el directorio social). Cumple las reglas:
+ * incluye `uid` y solo toca `photoURL`. `''` borra la foto (opt-out). El doc del dueño vive en `profiles/{uid}`.
+ * Best-effort: no lanza si Firebase no está configurado.
+ */
+export async function updateProfilePhoto(uid: string, photoURL: string): Promise<void> {
+  if (!uid) return;
+  const services = await initializeFirebaseServices();
+  if (!services) return;
+  await setDoc(
+    doc(services.firestore, 'profiles', uid),
+    { uid, photoURL: photoURL || '' },
+    { merge: true },
+  );
+  invalidateSocialDirectoryCache();
 }

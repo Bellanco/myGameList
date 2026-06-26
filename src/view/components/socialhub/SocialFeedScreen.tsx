@@ -2,7 +2,7 @@
 import { Icon } from '../Icon';
 import { StarRating } from '../StarRating';
 import { PostText } from './PostText';
-import { avatarInitial, avatarTone } from './avatar';
+import { HubAvatar } from './HubAvatar';
 import { POST_MAX_LENGTH } from '../../../core/security/sanitize';
 
 /**
@@ -18,6 +18,7 @@ export function SocialFeedScreen({
   filteredSocialDirectory,
   loadingDirectory,
   hydrateSocialDirectory,
+  refreshCoolingDown,
   openProfileDetail,
   handleProfileCardKeyDown,
   groupedFeedItems,
@@ -46,6 +47,7 @@ export function SocialFeedScreen({
   filteredSocialDirectory: any[];
   loadingDirectory: boolean;
   hydrateSocialDirectory: (forceRefresh?: boolean) => void;
+  refreshCoolingDown: boolean;
   openProfileDetail: (id: string) => void;
   handleProfileCardKeyDown: (event: React.KeyboardEvent<HTMLElement>, id: string) => void;
   groupedFeedItems: any[];
@@ -85,7 +87,7 @@ export function SocialFeedScreen({
               <Icon name="edit" />
               {SOCIAL_UI.feed.profile}
             </button>
-            <button className="btn btn-secondary" type="button" disabled={loadingDirectory} onClick={() => hydrateSocialDirectory(true)}>
+            <button className="btn btn-secondary" type="button" disabled={loadingDirectory || refreshCoolingDown} onClick={() => hydrateSocialDirectory(true)}>
               <Icon name="refresh" />
               {loadingDirectory ? SOCIAL_UI.feed.refreshing : SOCIAL_UI.feed.refresh}
             </button>
@@ -168,15 +170,20 @@ export function SocialFeedScreen({
                           role="listitem"
                         >
                           <header className="hub-feed-card-head">
-                            {entry.photoURL ? (
-                              <img className="hub-avatar hub-avatar-img" src={entry.photoURL} alt="" referrerPolicy="no-referrer" />
-                            ) : (
-                              <span className={`hub-avatar hub-avatar--${avatarTone(entry.profileDisplayName || entry.authorName)}`} aria-hidden="true">
-                                {avatarInitial(entry.profileDisplayName || entry.authorName)}
-                              </span>
-                            )}
+                            <button
+                              className="hub-avatar-link"
+                              type="button"
+                              aria-label={SOCIAL_UI.feed.openProfileAria(entry.profileDisplayName || entry.authorName)}
+                              onClick={() => openProfileDetail(entry.profileId)}
+                            >
+                              <HubAvatar name={entry.profileDisplayName || entry.authorName} photoURL={entry.photoURL} />
+                            </button>
                             <div className="hub-feed-card-head-text">
-                              <h3>{entry.profileDisplayName || entry.authorName || 'Usuario'}</h3>
+                              <h3>
+                                <button className="hub-name-link" type="button" onClick={() => openProfileDetail(entry.profileId)}>
+                                  {entry.profileDisplayName || entry.authorName || 'Usuario'}
+                                </button>
+                              </h3>
                             </div>
                           </header>
                           <p>{hasValidDate ? SOCIAL_UI.feed.postedAt(itemDate) : SOCIAL_UI.feed.analyzedRecently}</p>
@@ -201,15 +208,24 @@ export function SocialFeedScreen({
                         onKeyDown={(event) => handleActivityItemKeyDown(event, entry)}
                       >
                         <header className="hub-feed-card-head">
-                          {entry.photoURL ? (
-                            <img className="hub-avatar hub-avatar-img" src={entry.photoURL} alt="" referrerPolicy="no-referrer" />
-                          ) : (
-                            <span className={`hub-avatar hub-avatar--${avatarTone(entry.profileDisplayName)}`} aria-hidden="true">
-                              {avatarInitial(entry.profileDisplayName)}
-                            </span>
-                          )}
+                          <button
+                            className="hub-avatar-link"
+                            type="button"
+                            aria-label={SOCIAL_UI.feed.openProfileAria(entry.profileDisplayName)}
+                            onClick={(event) => { event.stopPropagation(); openProfileDetail(entry.profileId); }}
+                          >
+                            <HubAvatar name={entry.profileDisplayName} photoURL={entry.photoURL} />
+                          </button>
                           <div className="hub-feed-card-head-text">
-                            <h3>{entry.profileDisplayName}</h3>
+                            <h3>
+                              <button
+                                className="hub-name-link"
+                                type="button"
+                                onClick={(event) => { event.stopPropagation(); openProfileDetail(entry.profileId); }}
+                              >
+                                {entry.profileDisplayName}
+                              </button>
+                            </h3>
                             {entry.gameName ? <span className="hub-feed-game-chip">{entry.gameName}</span> : null}
                           </div>
                         </header>
@@ -269,13 +285,7 @@ export function SocialFeedScreen({
                   onKeyDown={(event) => handleProfileCardKeyDown(event, entry.id)}
                 >
                   <header className="hub-feed-card-head">
-                    {entry.photoURL ? (
-                      <img className="hub-avatar hub-avatar-img" src={entry.photoURL} alt="" referrerPolicy="no-referrer" />
-                    ) : (
-                      <span className={`hub-avatar hub-avatar--${avatarTone(entry.displayName)}`} aria-hidden="true">
-                        {avatarInitial(entry.displayName)}
-                      </span>
-                    )}
+                    <HubAvatar name={entry.displayName} photoURL={entry.photoURL} />
                     <div className="hub-feed-card-head-text">
                       <h3>{entry.displayName}</h3>
                     </div>

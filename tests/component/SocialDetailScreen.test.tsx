@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { SocialDetailScreen } from '../../src/view/components/socialhub/SocialDetailScreen';
 import { SOCIAL_UI } from '../../src/core/constants/labels';
 
@@ -67,5 +67,24 @@ describe('SocialDetailScreen — game/:id/review', () => {
     // No se filtran fuertes/débiles/plataformas de ningún juego local.
     expect(screen.queryByText('Historia')).not.toBeInTheDocument();
     expect(screen.queryByText(SOCIAL_UI.feed.metadataPlatforms)).not.toBeInTheDocument();
+  });
+
+  it('el avatar es clicable y abre el perfil del autor', () => {
+    const onOpenProfileDetail = vi.fn();
+    render(
+      <SocialDetailScreen
+        SOCIAL_UI={SOCIAL_UI}
+        activeDetailEvent={baseEvent}
+        getGameItemById={() => null}
+        onOpenProfileDetail={onOpenProfileDetail}
+        onBack={vi.fn()}
+        status=""
+        statusKind=""
+      />,
+    );
+
+    const links = screen.getAllByRole('button', { name: SOCIAL_UI.feed.openProfileAria('Ada') });
+    fireEvent.click(links[0]);
+    expect(onOpenProfileDetail).toHaveBeenCalledWith('p1');
   });
 });
