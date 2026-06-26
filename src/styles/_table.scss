@@ -66,6 +66,13 @@ thead th.sorted { color: var(--steam); }
 .w-genre{width:13%} .w-strong{width:12%} .w-weak{width:12%} .w-bool{width:12%}
 
 tbody tr.main-row { border-top: 1px solid var(--border); transition: background .2s; cursor: pointer; }
+/* A11y-2: el disparador de detalles es un <button> real, pero se presenta como el texto del nombre. */
+tbody tr.main-row .row-toggle {
+  display: inline-flex; align-items: center; gap: .4rem;
+  background: none; border: 0; padding: 0; margin: 0;
+  font: inherit; color: inherit; text-align: left; cursor: pointer;
+}
+tbody tr.main-row .row-toggle:focus-visible { outline: 2px solid var(--steam, #66c0f4); outline-offset: 2px; border-radius: 3px; }
 tbody tr.main-row.striped { background: var(--surface-soft); }
 @media (hover:hover) { tbody tr.main-row:hover { background: var(--surface-hover); } }
 tbody td { padding: .95rem 1rem; font-size: .88rem; vertical-align: middle; }

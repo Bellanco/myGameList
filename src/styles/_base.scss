@@ -43,6 +43,11 @@
   --hub-card-bg: rgba(26,30,36,.55);
   --hub-grad-start: rgba(49,54,62,.82);
   --hub-grad-end: rgba(33,36,41,.92);
+  /* Relieve de los botones del hub (cristal 3D): brillo superior + sombra de profundidad. */
+  --hub-btn-hi: rgba(255,255,255,.12);
+  --hub-btn-hi-strong: rgba(255,255,255,.22);
+  --hub-btn-depth: rgba(0,0,0,.5);
+  --hub-btn-depth-soft: rgba(0,0,0,.34);
 
   --radius-sm: 8px;
   --radius-md: 12px;
@@ -89,6 +94,10 @@
   --hub-card-bg: rgba(0,0,0,.04);
   --hub-grad-start: rgba(244,246,249,.95);
   --hub-grad-end: rgba(255,255,255,.9);
+  --hub-btn-hi: rgba(255,255,255,.9);
+  --hub-btn-hi-strong: #ffffff;
+  --hub-btn-depth: rgba(20,30,45,.22);
+  --hub-btn-depth-soft: rgba(20,30,45,.12);
 
   --shadow: 0 8px 24px rgba(20,30,45,.12);
 }
