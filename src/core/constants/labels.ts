@@ -344,7 +344,7 @@ export const SOCIAL_UI = {
     profileDetailMissing: 'No se encontró el perfil solicitado o ya no está disponible.',
     profileFavoritesCount: (count: number) => `${count} ${count === 1 ? 'favorito' : 'favoritos'}`,
     profileFavoritesTitle: 'Favoritos publicados',
-    profileListsTitle: 'Listados públicos',
+    profileListsTitle: 'Juegos',
     profileListsEmpty: 'Este perfil no ha publicado listados todavía.',
     profileDetailRefresh: 'Actualizar listados',
     profileDetailRefreshing: 'Actualizando…',
