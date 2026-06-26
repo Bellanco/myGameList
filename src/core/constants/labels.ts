@@ -419,6 +419,7 @@ export const SOCIAL_UI = {
     postPublished: 'Publicación compartida.',
     postPublishFailed: 'No se pudo compartir la publicación.',
     profileGamesRefreshFailed: 'No se pudieron actualizar los listados de este perfil.',
+    refreshThrottled: 'Espera unos segundos antes de volver a actualizar.',
   },
   steps: [
     { id: 'sync', title: 'GitHub', subtitle: 'Conectar' },

@@ -61,6 +61,8 @@ type SocialRouteState = {
 };
 
 const FEED_PAGE_SIZE = 25;
+// Cooldown mínimo entre refrescos forzados del directorio (botón "Actualizar feed").
+const FORCED_REFRESH_MIN_MS = 12_000;
 const PROFILE_EDIT_PATH = /^\/social\/profile\/?$/;
 const PROFILE_DETAIL_PATH = /^\/social\/profiles\/([^/]+)$/;
 const ACTIVITY_DETAIL_PATH = /^\/social\/user\/([^/]+)\/game\/(\d+)\/(review|recommendation)$/;
@@ -178,6 +180,7 @@ export function useSocialViewModel() {
   // visibilidad. Clave = id del perfil del directorio. Alimenta getGameItemById y selectedProfileDetail.
   const [foreignGamesByProfile, setForeignGamesByProfile] = useState<Record<string, Record<TabId, GameItem[]>>>({});
   const [loadingForeignProfile, setLoadingForeignProfile] = useState(false);
+  const lastForcedHydrateRef = useRef(0);
   const feedRowRef = useRef<HTMLDivElement | null>(null);
   const feedDraggingRef = useRef(false);
   const feedStartXRef = useRef(0);
@@ -1016,6 +1019,18 @@ export function useSocialViewModel() {
       return;
     }
 
+    // Anti-spam del refresco forzado: cada `forceRefresh` relee el directorio + ~50 gists sociales (cuenta contra el
+    // rate-limit del token aunque devuelvan 304). Si se pulsa "Actualizar feed" repetidamente en pocos segundos, se
+    // ignora y se avisa. Las cargas automáticas (forceRefresh=false) usan la caché de sesión y no entran aquí.
+    if (forceRefresh) {
+      const now = Date.now();
+      if (now - lastForcedHydrateRef.current < FORCED_REFRESH_MIN_MS) {
+        setFeedback('warn', SOCIAL_UI.status.refreshThrottled);
+        return;
+      }
+      lastForcedHydrateRef.current = now;
+    }
+
     try {
       setLoadingDirectory(true);
       const entries = await listSocialDirectory(50, { forceRefresh });
@@ -1162,11 +1177,13 @@ export function useSocialViewModel() {
         const current = await readSocialGist(cfg.token, socialCfgGistId, null);
         const data = current.data;
         if (!data) return;
-        if (data.profile.photoURL === photo && data.profile.visibility?.showPhoto !== false) return; // ya propagada
+        // El gist es la fuente de verdad: si el usuario tiene la foto desactivada, NO la republicamos (evita revertir
+        // su opt-out por una carrera con la hidratación del perfil, que arranca con showPhoto=true por defecto).
+        if (data.profile.visibility?.showPhoto === false) return;
+        if (data.profile.photoURL === photo) return; // ya propagada
         await writeSocialGist(cfg.token, socialCfgGistId, {
           profile: {
             ...data.profile,
-            visibility: { ...data.profile.visibility, showPhoto: true },
             photoURL: photo,
           },
           activity: data.activity,
