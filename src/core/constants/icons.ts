@@ -12,6 +12,7 @@ export type IconName =
   | 'filter-close'
   | 'arrow-back'
   | 'arrow-right'
+  | 'angle-right'
   | 'cloud-sync'
   | 'refresh'
   | 'filter'

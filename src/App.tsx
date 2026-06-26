@@ -5,7 +5,7 @@ import { TAB_IDS, type TabData, type TabId } from './model/types/game';
 import { publishReviewActivity } from './model/repository/socialPublishRepository';
 import { normalizeData } from './model/repository/localRepository';
 import { IconSprite } from './view/components/IconSprite';
-import { Header } from './view/components/Header';
+import { FloatingControls } from './view/components/FloatingControls';
 import { TabBar } from './view/components/TabBar';
 import { Toolbar } from './view/components/Toolbar';
 import { GameTable } from './view/components/GameTable';
@@ -318,15 +318,7 @@ export default function App() {
   return (
     <>
       <IconSprite />
-      <Header
-        sectionLabel={
-          activeSection === 'lists'
-            ? 'Listados'
-            : activeSection === 'social'
-              ? 'Social'
-              : 'Ajustes'
-        }
-      />
+      <FloatingControls syncStatus={syncVm.status} syncLabel={syncBadgeText} showSync={activeSection === 'lists'} onSyncClick={() => navigate('/ajustes')} />
       {activeSection === 'lists' ? <TabBar currentTab={currentTab} tabCounts={vm.tabCounts} onTabChange={handleTabChange} /> : null}
       <StatusBanner notice={vm.notice} remoteChangesApplied={syncVm.lastRemoteChangesApplied} />
       <main

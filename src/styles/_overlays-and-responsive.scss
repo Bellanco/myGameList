@@ -103,6 +103,58 @@ dialog.modal-dialog[open] .modal { transform: translateY(0) scale(1); }
 .fab:hover { transform: translateY(-2px); filter: brightness(1.05); }
 .fab svg { width: 1.5rem; height: 1.5rem; fill: currentColor; }
 
+/* Controles flotantes (diseño headerless): estado de sync + tema en la esquina superior derecha.
+   Fondo de cristal para que floten legibles sobre cualquier contenido. El FAB queda abajo-dcha. */
+.floating-controls {
+  position: fixed;
+  top: calc(.75rem + env(safe-area-inset-top, 0px));
+  right: .9rem;
+  z-index: 120;
+  display: inline-flex;
+  align-items: center;
+  gap: .5rem;
+  transition: opacity .25s ease, transform .25s ease;
+}
+/* Se ocultan al hacer scroll (reaparecen al volver arriba). */
+.floating-controls.is-hidden {
+  opacity: 0;
+  transform: translateY(-12px);
+  pointer-events: none;
+}
+.floating-controls .sync-badge,
+.floating-controls .theme-toggle-btn {
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  box-shadow: 0 6px 18px rgba(0,0,0,.28);
+}
+.floating-controls .theme-toggle-btn { background: var(--surface-glass); }
+
+/* Indicador de sync: círculo neutro con icono de sincronización (S de dos flechas).
+   Mismo borde y tamaño que el botón de tema. El selector de elemento gana a .sync-badge.s-*. */
+.floating-controls button.sync-badge {
+  width: 38px; height: 38px; padding: 0;
+  border-radius: 50%; justify-content: center;
+  background: var(--surface-glass);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+}
+.floating-controls .sync-badge .ui-icon { width: 1.15rem; height: 1.15rem; }
+.floating-controls .sync-badge:hover { color: var(--steam); }
+/* Estado sutil mediante el color del icono. */
+.floating-controls .sync-badge.s-syncing { color: var(--steam); }
+.floating-controls .sync-badge.s-error { color: var(--danger); }
+@keyframes fc-sync-spin { to { transform: rotate(360deg); } }
+.floating-controls .sync-badge.s-syncing .ui-icon { animation: fc-sync-spin 1s linear infinite; transform-origin: 50% 50%; }
+
+@media (prefers-reduced-motion: reduce) {
+  .floating-controls { transition: none; }
+  .floating-controls .sync-badge.s-syncing .ui-icon { animation: none; }
+}
+
+/* Sin barra superior: Social y Ajustes dejan hueco arriba para los controles flotantes. */
+.main-social,
+.main-settings { padding-top: 3.4rem; }
+
 /* Number inputs (sin flechitas) */
 input[type=number]::-webkit-inner-spin-button,
 input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
