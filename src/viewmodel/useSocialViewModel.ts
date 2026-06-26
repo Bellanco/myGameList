@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent a
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
   createSocialGist,
+  ensureSyncConfigLoaded,
   getSocialSyncConfig,
   getSyncConfig,
   readPublicSocialGistById,
@@ -21,7 +22,7 @@ import { getCachedSocialDirectory, getLocalMeta, patchLocalMeta, putCachedSocial
 import { applyProfileVisibility } from '../core/utils/profileVisibility';
 import { SOCIAL_UI } from '../core/constants/labels';
 import type { IconName } from '../core/constants/icons';
-import type { GameItem, TabId } from '../model/types/game';
+import type { GameItem, SyncConfig, TabId } from '../model/types/game';
 import {
   ensureProfileByEmail,
   getCurrentSocialAuthUser,
@@ -227,7 +228,12 @@ export function useSocialViewModel() {
     let cancelled = false;
 
     const hydrate = async () => {
+      await ensureSyncConfigLoaded(); // C4: garantiza el token descifrado antes de leer la config de sync
+      if (cancelled) {
+        return;
+      }
       const mainConfig = getSyncConfig();
+      setMainSyncConfig(mainConfig);
       const socialConfig = getSocialSyncConfig();
       const currentUser = await getCurrentSocialAuthUser();
       let resolvedGistId = socialConfig?.gistId || '';
@@ -284,7 +290,10 @@ export function useSocialViewModel() {
     };
   }, [lockProfileEditor, navigate]);
 
-  const mainSyncConfig = useMemo(() => getSyncConfig(), []);
+  // El token del gist de juegos se cifra y se descifra de forma asíncrona (ensureSyncConfigLoaded).
+  // Mantener la config en estado y refrescarla tras la hidratación evita la carrera en la que
+  // getSyncConfig() devolvía token='' al montar (hasMainSync=false → gateway → /ajustes y lecturas 401).
+  const [mainSyncConfig, setMainSyncConfig] = useState<SyncConfig | null>(() => getSyncConfig());
   const hasMainSync = Boolean(mainSyncConfig?.token && mainSyncConfig?.gistId);
   const hasSocialGist = Boolean(socialCfgGistId);
   const hasSocialSession = Boolean(authUser);
