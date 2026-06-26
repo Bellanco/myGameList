@@ -1,6 +1,6 @@
 import { TAB_IDS, type DeletedItem, type GameItem, type StoragePayload, type TabData, type TabId } from '../types/game';
 import type { LocalMeta, SyncOp } from '../types/local';
-import { DELETED_STORE, GAMES_STORE, META_STORE, SYNC_QUEUE_STORE, openSharedDatabase } from './idbConnectionRepository';
+import { DELETED_STORE, GAMES_STORE, META_STORE, PROFILE_CACHE_STORE, SYNC_QUEUE_STORE, openSharedDatabase } from './idbConnectionRepository';
 
 const STORE_NAME = 'appState';
 const STATE_KEY = 'latest';
@@ -282,4 +282,54 @@ export async function replaceGamesStoreFromTabData(data: TabData): Promise<void>
 export async function mirrorTabDataToGames(data: TabData, updatedAt: number): Promise<void> {
   await replaceGamesStoreFromTabData(data);
   await patchLocalMeta({ gamesUpdatedAt: updatedAt });
+}
+
+// ---------------------------------------------------------------------------
+// Caché de las listas de juegos de OTROS perfiles (store `profileCache`, v3).
+// TTL de 1 día: dentro de la ventana se sirve de IndexedDB sin tocar la red (ahorra el rate-limit del token de
+// gist). El refresco manual fuerza la relectura (ver loadForeignProfileGames). keyPath = `profileId`.
+// ---------------------------------------------------------------------------
+const PROFILE_GAMES_TTL_MS = 24 * 60 * 60 * 1000;
+
+interface CachedProfileGames {
+  profileId: string; // keyPath del store
+  gamesGistId: string; // invalida la caché si el perfil cambia de gist de listados
+  cachedAt: number;
+  games: TabData;
+}
+
+/**
+ * Devuelve los juegos cacheados de un perfil si siguen frescos (<24h) y corresponden al mismo `gamesGistId`.
+ * Con `allowExpired` los devuelve aunque hayan caducado (último recurso cuando no hay token para releer).
+ */
+export async function getCachedProfileGames(
+  profileId: string,
+  gamesGistId: string,
+  options?: { allowExpired?: boolean },
+): Promise<TabData | null> {
+  try {
+    const rec = await idbGet<CachedProfileGames>(PROFILE_CACHE_STORE, profileId);
+    if (!rec || rec.gamesGistId !== gamesGistId) return null;
+    const fresh = Date.now() - rec.cachedAt < PROFILE_GAMES_TTL_MS;
+    if (!fresh && !options?.allowExpired) return null;
+    return rec.games;
+  } catch {
+    return null;
+  }
+}
+
+export async function putCachedProfileGames(profileId: string, gamesGistId: string, games: TabData): Promise<void> {
+  try {
+    await idbPut<CachedProfileGames>(PROFILE_CACHE_STORE, { profileId, gamesGistId, cachedAt: Date.now(), games });
+  } catch {
+    // best-effort: que no se pueda escribir la caché no debe romper la carga del perfil.
+  }
+}
+
+export async function invalidateProfileGames(profileId: string): Promise<void> {
+  try {
+    await idbDelete(PROFILE_CACHE_STORE, profileId);
+  } catch {
+    // best-effort.
+  }
 }
