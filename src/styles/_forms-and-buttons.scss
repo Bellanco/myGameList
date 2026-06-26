@@ -115,36 +115,57 @@
 .toolbar select.input-base option { background-color: var(--bg); color: var(--text); padding: 10px; }
 .toolbar select.input-base option:nth-child(even) { background-color: var(--surface-hover); }
 
-/* Buttons */
+/* Buttons — sistema unificado: cristal (superficie translúcida + borde tenue + relieve) con ligera
+   inclinación 3D al pasar el ratón. El color de rol vive en texto/icono/borde; la acción principal
+   (.btn-steam) conserva relleno azul sólido como CTA fuerte. */
 .btn {
   display: inline-flex; align-items: center; justify-content: center; gap: .5rem;
-  border: none; border-radius: var(--radius-pill); padding: .55rem 1rem;
-  cursor: pointer; transition: transform .2s, background .2s, color .2s, border-color .2s, box-shadow .2s;
-  font-weight: 700;
+  border: 1px solid color-mix(in srgb, var(--steam) 16%, var(--border));
+  border-radius: var(--radius-pill); padding: .55rem 1rem;
+  cursor: pointer; font-weight: 700; color: var(--text);
+  background: linear-gradient(160deg, var(--hub-grad-start), var(--hub-grad-end));
+  -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
+  box-shadow: inset 0 1px 0 var(--hub-btn-hi), 0 4px 12px var(--hub-btn-depth-soft);
+  transition: transform .14s ease, box-shadow .14s ease, background .2s, color .2s, border-color .2s;
 }
-.btn:hover  { transform: translateY(-1px); }
-.btn:active { transform: translateY(0); }
-.btn-steam { background: linear-gradient(180deg,var(--steam),#1377c0); color:#fff; box-shadow:0 10px 22px rgba(26,159,255,.18); }
-.btn-steam:hover { background: linear-gradient(180deg,var(--steam-hover),var(--steam)); }
-.btn-secondary { background: var(--surface-elevated); color: var(--text); border: 1px solid var(--border); transition: all .25s; }
-.btn-secondary:hover { background: var(--surface-hover); border-color: rgba(26,159,255,.3); box-shadow: 0 4px 12px rgba(26,159,255,.1); }
-.btn-secondary:active { transform: scale(.98); }
-.btn-danger   { background: rgba(209,91,88,.12); color: var(--fg-red); border: 1px solid rgba(209,91,88,.26); }
-.btn-danger:hover   { background: rgba(209,91,88,.22); }
-.btn-complete   { background: rgba(103,193,141,.12); color: var(--fg-green-soft); border: 1px solid rgba(103,193,141,.28); }
-.btn-complete:hover { background: rgba(103,193,141,.22); }
-.btn-inprogress   { background: rgba(229,177,67,.1);  color: var(--fg-amber-soft);  border: 1px solid rgba(229,177,67,.26); }
-.btn-inprogress:hover { background: rgba(229,177,67,.2); }
-.btn-abandoned    { background: rgba(209,91,88,.1);   color: var(--fg-red-pink);  border: 1px solid rgba(209,91,88,.24); }
-.btn-abandoned:hover  { background: rgba(209,91,88,.18); }
-.btn-recommend { background: rgba(103,193,141,.12); color: var(--fg-green-soft); border: 1px solid rgba(103,193,141,.28); transition: all .25s; }
-.btn-recommend:hover { background: rgba(103,193,141,.22); }
-.btn-recommend:active { transform: scale(.98); }
-.btn-recommend-active { background: rgba(239,68,68,.15); color: var(--fg-red-soft); border: 1px solid rgba(239,68,68,.3); transition: all .25s; }
-.btn-recommend-active:hover { background: rgba(239,68,68,.25); }
-.btn-recommend-active:active { transform: scale(.98); }
-.btn-toggle { background: var(--surface-elevated); color: var(--text-muted); border: 1px solid var(--border); }
-.btn-toggle.active { background: var(--steam-soft); color: var(--steam-hover); border-color: rgba(26,159,255,.34); }
+.btn:hover {
+  transform: perspective(460px) rotateX(16deg) translateY(-2px);
+  box-shadow: inset 0 1px 0 var(--hub-btn-hi-strong), 0 16px 24px var(--hub-btn-depth);
+  border-color: color-mix(in srgb, var(--steam) 40%, var(--border));
+}
+.btn:active { transform: perspective(460px) rotateX(8deg) translateY(0); }
+
+/* Acción principal sólida (CTA fuerte): conserva el relleno azul, con relieve e inclinación. */
+.btn-steam {
+  background: linear-gradient(180deg, var(--steam), #1377c0); color: #fff;
+  border-color: color-mix(in srgb, var(--steam) 70%, #000);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.25), 0 8px 18px rgba(26,159,255,.18);
+}
+.btn-steam:hover { background: linear-gradient(180deg, var(--steam-hover), var(--steam)); box-shadow: inset 0 1px 0 rgba(255,255,255,.3), 0 16px 26px rgba(26,159,255,.22); }
+
+/* Acento azul de la app (texto/icono/borde) sobre el cristal: navegación principal y toggles activos. */
+.btn-accent, .btn.is-active, .btn-toggle.active, .btn-toggle-deck.active {
+  color: var(--steam-hover); border-color: color-mix(in srgb, var(--steam) 55%, transparent);
+}
+.btn-accent:hover, .btn.is-active:hover { border-color: color-mix(in srgb, var(--steam) 60%, transparent); }
+
+/* Neutro */
+.btn-secondary { color: var(--text); }
+
+/* Roles: el color va en texto + borde; la superficie es el mismo cristal (sin rellenos planos). */
+.btn-danger { color: var(--fg-red); border-color: color-mix(in srgb, var(--danger) 42%, transparent); }
+.btn-danger:hover { border-color: color-mix(in srgb, var(--danger) 58%, transparent); }
+.btn-complete { color: var(--fg-green-soft); border-color: color-mix(in srgb, var(--success) 42%, transparent); }
+.btn-complete:hover { border-color: color-mix(in srgb, var(--success) 58%, transparent); }
+.btn-inprogress { color: var(--fg-amber-soft); border-color: color-mix(in srgb, var(--warn) 42%, transparent); }
+.btn-inprogress:hover { border-color: color-mix(in srgb, var(--warn) 58%, transparent); }
+.btn-abandoned { color: var(--fg-red-pink); border-color: color-mix(in srgb, var(--danger) 38%, transparent); }
+.btn-abandoned:hover { border-color: color-mix(in srgb, var(--danger) 52%, transparent); }
+.btn-recommend { color: var(--fg-green-soft); border-color: color-mix(in srgb, var(--success) 42%, transparent); }
+.btn-recommend:hover { border-color: color-mix(in srgb, var(--success) 58%, transparent); }
+.btn-recommend-active { color: var(--fg-red-soft); border-color: color-mix(in srgb, var(--danger) 45%, transparent); }
+.btn-recommend-active:hover { border-color: color-mix(in srgb, var(--danger) 60%, transparent); }
+.btn-toggle { color: var(--text-muted); }
 .btn-toggle span { white-space: nowrap; }
 
 /* F1 — botón-icono de tema en el header: compacto y discreto, glow sutil al hover. */
@@ -170,8 +191,10 @@
 }
 .btn-icon:hover { color: var(--steam); background: var(--steam-soft); border-color: rgba(26,159,255,.25); transform: translateY(-2px); box-shadow: 0 4px 12px rgba(26,159,255,.15); }
 .btn-icon:active { transform: scale(.95); }
-.btn-ghost { background: transparent; color: var(--text-muted); border: 1px solid transparent; }
-.btn-ghost:hover { background: var(--overlay-hover); color: var(--text); border-color: var(--border); }
+/* Ghost: se mantiene plano y transparente (sin cristal ni inclinación 3D). */
+.btn-ghost { background: transparent; color: var(--text-muted); border: 1px solid transparent; box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; }
+.btn-ghost:hover { background: var(--overlay-hover); color: var(--text); border-color: var(--border); box-shadow: none; transform: translateY(-1px); }
+.btn-ghost:active { transform: translateY(0); }
 .sr-only { position:absolute!important; width:1px!important; height:1px!important; padding:0!important; margin:-1px!important; overflow:hidden!important; clip:rect(0,0,0,0)!important; white-space:nowrap!important; border:0!important; }
 .filter-field-hidden-label, .form-toggle-label { visibility:hidden; }
 .compact-name-cell { display:flex; align-items:center; justify-content:space-between; gap:.6rem; width:100%; }
@@ -192,5 +215,11 @@
 .tag-suggestions li:hover { background: var(--surface-hover); }
 /* Make items touch-friendly */
 .tag-suggestions li { touch-action: manipulation; }
+
+/* Sin movimiento si el sistema lo pide: se desactiva la inclinación 3D de todos los botones. */
+@media (prefers-reduced-motion: reduce) {
+  .btn:hover,
+  .btn:active { transform: none; }
+}
 
 

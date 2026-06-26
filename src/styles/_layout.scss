@@ -1067,12 +1067,29 @@ button.hub-chip.active {
   gap: .6rem;
 }
 
-.hub-feed-owner {
-  margin: -.2rem 0 0;
-  font-size: 1.03rem;
-  color: var(--hub-text);
-  font-weight: 800;
-  letter-spacing: .01em;
+/* Header del feed: texto a la izquierda, avatar (clica → mi perfil) a la derecha. */
+.hub-feed-header {
+  flex-direction: row;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.hub-feed-header-text {
+  display: flex;
+  flex-direction: column;
+  gap: .45rem;
+  min-width: 0;
+}
+
+.hub-feed-owner-avatar {
+  margin-top: .1rem;
+}
+
+.hub-feed-owner-avatar .hub-avatar {
+  width: 3.2rem;
+  height: 3.2rem;
+  font-size: 1.2rem;
 }
 
 .hub-feed-search {
@@ -1203,6 +1220,14 @@ button.hub-chip.active {
   width: min(80%, 34rem); /* ancho uniforme para todas las burbujas */
   max-width: 100%;
   transition: transform .2s ease, border-color .2s ease, box-shadow .2s ease, background .2s ease;
+}
+
+/* Reseñas del listado de juegos (detalle de perfil): ocupan todo el ancho del listado y no son clicables. */
+.hub-profile-reviews-list .hub-feed-activity-item {
+  width: 100%;
+  max-width: none;
+  align-self: stretch;
+  cursor: default;
 }
 
 /* Acento por tipo de evento */
@@ -1813,10 +1838,6 @@ button.hub-chip.active {
 
   .hub-feed-metrics {
     grid-template-columns: 1fr;
-  }
-
-  .hub-feed-owner {
-    font-size: .97rem;
   }
 
   .hub-filter-chip {
