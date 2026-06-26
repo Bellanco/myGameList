@@ -333,3 +333,43 @@ export async function invalidateProfileGames(profileId: string): Promise<void> {
     // best-effort.
   }
 }
+
+// ---------------------------------------------------------------------------
+// Caché persistente del DIRECTORIO social ya ensamblado (perfiles + actividad + posts). Reutiliza el store
+// `profileCache` con una clave reservada por gist propio (`__dir__:<ownGistId>`), que no colisiona con los
+// profileId (UUID) de la caché de juegos. TTL corto: dentro de la ventana, la navegación (feed→detalle→feed) y los
+// re-render sirven de IndexedDB sin releer los ~N gists sociales; el refresco manual (forceRefresh) la reescribe.
+// ---------------------------------------------------------------------------
+const SOCIAL_DIRECTORY_TTL_MS = 5 * 60 * 1000;
+const SOCIAL_DIRECTORY_KEY_PREFIX = '__dir__:';
+
+interface CachedSocialDirectory<T> {
+  profileId: string; // keyPath del store
+  cachedAt: number;
+  entries: T[];
+}
+
+export async function getCachedSocialDirectory<T>(ownGistId: string): Promise<T[] | null> {
+  if (!ownGistId) return null;
+  try {
+    const rec = await idbGet<CachedSocialDirectory<T>>(PROFILE_CACHE_STORE, SOCIAL_DIRECTORY_KEY_PREFIX + ownGistId);
+    if (!rec) return null;
+    if (Date.now() - rec.cachedAt >= SOCIAL_DIRECTORY_TTL_MS) return null;
+    return rec.entries;
+  } catch {
+    return null;
+  }
+}
+
+export async function putCachedSocialDirectory<T>(ownGistId: string, entries: T[]): Promise<void> {
+  if (!ownGistId) return;
+  try {
+    await idbPut<CachedSocialDirectory<T>>(PROFILE_CACHE_STORE, {
+      profileId: SOCIAL_DIRECTORY_KEY_PREFIX + ownGistId,
+      cachedAt: Date.now(),
+      entries,
+    });
+  } catch {
+    // best-effort.
+  }
+}

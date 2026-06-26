@@ -17,6 +17,7 @@ import {
 } from '../model/repository/gistRepository';
 import { publishPost } from '../model/repository/socialPublishRepository';
 import { invalidateProfileGames, loadForeignProfileGames } from '../model/repository/foreignProfileRepository';
+import { getCachedSocialDirectory, putCachedSocialDirectory } from '../model/repository/indexedDbRepository';
 import { applyProfileVisibility } from '../core/utils/profileVisibility';
 import { SOCIAL_UI } from '../core/constants/labels';
 import type { IconName } from '../core/constants/icons';
@@ -63,6 +64,9 @@ type SocialRouteState = {
 const FEED_PAGE_SIZE = 25;
 // Cooldown mínimo entre refrescos forzados del directorio (botón "Actualizar feed").
 const FORCED_REFRESH_MIN_MS = 12_000;
+// Tope de perfiles del directorio social. Cada perfil = 1 lectura de gist social al refrescar; bajar este número
+// reduce el consumo de rate-limit a costa de mostrar menos perfiles/actividad en el feed. Tunable.
+const SOCIAL_DIRECTORY_LIMIT = 30;
 const PROFILE_EDIT_PATH = /^\/social\/profile\/?$/;
 const PROFILE_DETAIL_PATH = /^\/social\/profiles\/([^/]+)$/;
 const ACTIVITY_DETAIL_PATH = /^\/social\/user\/([^/]+)\/game\/(\d+)\/(review|recommendation)$/;
@@ -1029,11 +1033,19 @@ export function useSocialViewModel() {
         return;
       }
       lastForcedHydrateRef.current = now;
+    } else {
+      // Caché persistente: si el directorio sigue fresco (<5 min), se sirve de IndexedDB sin releer ningún gist
+      // social. Evita el coste N+1 al navegar feed→detalle→feed o al re-renderizar. El refresco manual lo evita.
+      const cachedDirectory = await getCachedSocialDirectory<SocialDirectoryEntry>(socialCfgGistId);
+      if (cachedDirectory) {
+        setSocialDirectory(cachedDirectory);
+        return;
+      }
     }
 
     try {
       setLoadingDirectory(true);
-      const entries = await listSocialDirectory(50, { forceRefresh });
+      const entries = await listSocialDirectory(SOCIAL_DIRECTORY_LIMIT, { forceRefresh });
       const socialConfig = getSocialSyncConfig();
       // Foto propia inmediata (de la sesión Google) aunque aún no se haya re-guardado el perfil; respeta showPhoto.
       const ownPhotoURL = showPhoto && authUser?.photoURL ? authUser.photoURL : '';
@@ -1126,6 +1138,7 @@ export function useSocialViewModel() {
       );
 
       setSocialDirectory(withProfiles);
+      void putCachedSocialDirectory(socialCfgGistId, withProfiles);
     } catch (error) {
       setSocialDirectory([]);
       setFeedback('warn', error instanceof Error ? error.message : SOCIAL_UI.status.firestoreCheckFailed);

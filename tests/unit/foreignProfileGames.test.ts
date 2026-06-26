@@ -3,8 +3,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { readForeignGamesGist } from '../../src/model/repository/gistRepository';
 import {
   getCachedProfileGames,
+  getCachedSocialDirectory,
   invalidateProfileGames,
   putCachedProfileGames,
+  putCachedSocialDirectory,
 } from '../../src/model/repository/indexedDbRepository';
 import { loadForeignProfileGames } from '../../src/model/repository/foreignProfileRepository';
 import { applyProfileVisibility } from '../../src/core/utils/profileVisibility';
@@ -139,6 +141,32 @@ describe('caché de perfiles ajenos (profileCache, TTL 1 día)', () => {
   it('invalida la caché si cambia el gamesGistId', async () => {
     await putCachedProfileGames('p1', GIST_ID, makeTabData([makeGame()]));
     expect(await getCachedProfileGames('p1', OTHER_GIST_ID)).toBeNull();
+  });
+});
+
+describe('caché del directorio social (TTL 5 min)', () => {
+  const FIVE_MIN_MS = 5 * 60 * 1000;
+
+  beforeEach(async () => {
+    await clearProfileCache();
+  });
+
+  it('sirve el directorio fresco y lo descarta pasados 5 min', async () => {
+    const now = 1_000_000_000_000;
+    const nowSpy = vi.spyOn(Date, 'now').mockReturnValue(now);
+
+    await putCachedSocialDirectory('own-gist', [{ id: 'p1' }, { id: 'p2' }]);
+    expect(await getCachedSocialDirectory('own-gist')).toHaveLength(2);
+
+    nowSpy.mockReturnValue(now + FIVE_MIN_MS + 1);
+    expect(await getCachedSocialDirectory('own-gist')).toBeNull();
+  });
+
+  it('está aislado por gist propio y no devuelve nada sin clave', async () => {
+    vi.spyOn(Date, 'now').mockReturnValue(1_000_000_000_000);
+    await putCachedSocialDirectory('own-gist', [{ id: 'p1' }]);
+    expect(await getCachedSocialDirectory('otro-gist')).toBeNull();
+    expect(await getCachedSocialDirectory('')).toBeNull();
   });
 });
 
