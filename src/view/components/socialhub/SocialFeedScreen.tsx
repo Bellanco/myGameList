@@ -118,7 +118,7 @@ export function SocialFeedScreen({
               aria-label={publishingPost ? SOCIAL_UI.feed.postPublishing : SOCIAL_UI.feed.postPublish}
               title={publishingPost ? SOCIAL_UI.feed.postPublishing : SOCIAL_UI.feed.postPublish}
             >
-              <Icon name="edit" />
+              <Icon name="angle-right" />
             </button>
           </div>
         </div>

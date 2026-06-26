@@ -46,7 +46,10 @@
 
 /* Tabs */
 .tabs {
-  display: flex; gap: 0; padding: 0 clamp(1rem, 5vw, 2rem);
+  display: flex; gap: 0;
+  /* Franja superior para los controles flotantes (tema + sync), igual que Social/Ajustes,
+     para que el cluster no se mezcle con las pestañas. */
+  padding: 3.4rem clamp(1rem, 5vw, 2rem) 0;
   background: var(--surface); border-bottom: 2px solid var(--border);
   overflow-x: auto; scrollbar-width: thin; flex: 0 0 auto;
   width: 100%; justify-content: safe center;
@@ -1943,6 +1946,9 @@ button.hub-chip.active {
     height: 44px;
     padding: 0;
     font-size: 0;
+    /* El texto se colapsa con font-size:0 pero sigue siendo un ítem flex; sin esto, el
+       `gap` del .btn desplaza el icono a la izquierda. Centrado real del icono solo. */
+    gap: 0;
   }
 
   .hub-screen-actions .btn .ui-icon {
