@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { FILTER_BOOL, TAB_ACTIONS, TAB_ORDER, VALIDATION_MESSAGES } from '../core/constants/labels';
 import { HOURS_RANGES } from '../core/constants/uiConfig';
 import { sortEs, uniqueCaseInsensitive } from '../core/utils/compare';
+import { mapTabDataTags, type TagCategory } from '../core/utils/tagMutations';
 import { normalizeTag, safeTrim } from '../core/security/sanitize';
 import { loadLocalState, loadLocalStateAsync, normalizeData, saveLocalState } from '../model/repository/localRepository';
 import { getGamesAsTabData, getLocalMeta, mirrorTabDataToGames } from '../model/repository/indexedDbRepository';
@@ -486,43 +487,9 @@ export function useGameListViewModel() {
   );
 
   const removeTagAcrossGames = useCallback(
-    (tabKey: 'genres' | 'platforms' | 'strengths' | 'weaknesses', value: string) => {
-      const normalizeMatch = (entry: string) => entry.toLowerCase() !== value.toLowerCase();
-      const nextData: TabData = {
-        ...data,
-        c: data.c.map((game) => ({
-          ...game,
-          _ts: Date.now(),
-          genres: tabKey === 'genres' ? game.genres.filter(normalizeMatch) : game.genres,
-          platforms: tabKey === 'platforms' ? game.platforms.filter(normalizeMatch) : game.platforms,
-          strengths: tabKey === 'strengths' ? (game.strengths || []).filter(normalizeMatch) : game.strengths,
-          weaknesses: tabKey === 'weaknesses' ? (game.weaknesses || []).filter(normalizeMatch) : game.weaknesses,
-        })),
-        v: data.v.map((game) => ({
-          ...game,
-          _ts: Date.now(),
-          genres: tabKey === 'genres' ? game.genres.filter(normalizeMatch) : game.genres,
-          platforms: tabKey === 'platforms' ? game.platforms.filter(normalizeMatch) : game.platforms,
-          strengths: tabKey === 'strengths' ? (game.strengths || []).filter(normalizeMatch) : game.strengths,
-          reasons: tabKey === 'weaknesses' ? (game.reasons || []).filter(normalizeMatch) : game.reasons,
-        })),
-        e: data.e.map((game) => ({
-          ...game,
-          _ts: Date.now(),
-          genres: tabKey === 'genres' ? game.genres.filter(normalizeMatch) : game.genres,
-          platforms: tabKey === 'platforms' ? game.platforms.filter(normalizeMatch) : game.platforms,
-          strengths: tabKey === 'strengths' ? (game.strengths || []).filter(normalizeMatch) : game.strengths,
-          weaknesses: tabKey === 'weaknesses' ? (game.weaknesses || []).filter(normalizeMatch) : game.weaknesses,
-        })),
-        p: data.p.map((game) => ({
-          ...game,
-          _ts: Date.now(),
-          genres: tabKey === 'genres' ? game.genres.filter(normalizeMatch) : game.genres,
-          platforms: tabKey === 'platforms' ? game.platforms.filter(normalizeMatch) : game.platforms,
-        })),
-        updatedAt: Date.now(),
-      };
-
+    (tabKey: TagCategory, value: string) => {
+      const keep = (entry: string) => entry.toLowerCase() !== value.toLowerCase();
+      const nextData = mapTabDataTags(data, tabKey, (values) => values.filter(keep), Date.now());
       persist(nextData);
       notify('ok', 'Etiqueta eliminada');
     },
@@ -530,7 +497,7 @@ export function useGameListViewModel() {
   );
 
   const renameTagAcrossGames = useCallback(
-    (tabKey: 'genres' | 'platforms' | 'strengths' | 'weaknesses', oldValue: string, newValue: string) => {
+    (tabKey: TagCategory, oldValue: string, newValue: string) => {
       const normalized = normalizeTag(newValue);
       if (!normalized) return;
 
@@ -539,46 +506,12 @@ export function useGameListViewModel() {
       const finalValue = existing || normalized;
       const wasMerge = Boolean(existing && existing.toLowerCase() !== oldValue.toLowerCase());
 
-      const replace = (values: string[] = []) => {
+      const replace = (values: string[]) => {
         if (!values.some((value) => value.toLowerCase() === oldValue.toLowerCase())) return values;
         return uniqueCaseInsensitive(values.map((value) => (value.toLowerCase() === oldValue.toLowerCase() ? finalValue : value)));
       };
 
-      const nextData: TabData = {
-        ...data,
-        c: data.c.map((game) => ({
-          ...game,
-          _ts: Date.now(),
-          genres: tabKey === 'genres' ? replace(game.genres) : game.genres,
-          platforms: tabKey === 'platforms' ? replace(game.platforms) : game.platforms,
-          strengths: tabKey === 'strengths' ? replace(game.strengths) : game.strengths,
-          weaknesses: tabKey === 'weaknesses' ? replace(game.weaknesses) : game.weaknesses,
-        })),
-        v: data.v.map((game) => ({
-          ...game,
-          _ts: Date.now(),
-          genres: tabKey === 'genres' ? replace(game.genres) : game.genres,
-          platforms: tabKey === 'platforms' ? replace(game.platforms) : game.platforms,
-          strengths: tabKey === 'strengths' ? replace(game.strengths) : game.strengths,
-          reasons: tabKey === 'weaknesses' ? replace(game.reasons) : game.reasons,
-        })),
-        e: data.e.map((game) => ({
-          ...game,
-          _ts: Date.now(),
-          genres: tabKey === 'genres' ? replace(game.genres) : game.genres,
-          platforms: tabKey === 'platforms' ? replace(game.platforms) : game.platforms,
-          strengths: tabKey === 'strengths' ? replace(game.strengths) : game.strengths,
-          weaknesses: tabKey === 'weaknesses' ? replace(game.weaknesses) : game.weaknesses,
-        })),
-        p: data.p.map((game) => ({
-          ...game,
-          _ts: Date.now(),
-          genres: tabKey === 'genres' ? replace(game.genres) : game.genres,
-          platforms: tabKey === 'platforms' ? replace(game.platforms) : game.platforms,
-        })),
-        updatedAt: Date.now(),
-      };
-
+      const nextData = mapTabDataTags(data, tabKey, replace, Date.now());
       persist(nextData);
       notify('ok', wasMerge ? VALIDATION_MESSAGES.tagMerged : VALIDATION_MESSAGES.tagUpdated);
     },
