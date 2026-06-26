@@ -111,10 +111,12 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
 
 /* Filtros colapsables */
 .filters-row {
-  display: flex; gap: .75rem; flex-wrap: wrap; align-items: center; width: 100%;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: .75rem; align-items: end; width: 100%;
 }
 .filter-field {
-  display: flex; flex-direction: column; gap: .35rem; min-width: 0; flex: 1 1 220px;
+  display: flex; flex-direction: column; gap: .35rem; min-width: 0;
 }
 .filter-field .input-base { width: 100%; }
 .filter-field-toggle { align-self: end; }
@@ -178,7 +180,7 @@ body.compact-filters .filters-row.open .btn-toggle { justify-content: center; al
   .main {
     flex: 1 1 auto;
     overflow: visible;
-    padding: 1rem 1rem 1.5rem;
+    padding: 1rem 1rem 6.5rem;
   }
 
   .toolbar {
@@ -301,7 +303,8 @@ body.compact-filters .filters-row.open .btn-toggle { justify-content: center; al
   tbody tr.main-row td:first-child { width: 100%; }
   tbody tr.detail-row.open { display: block; width: 100%; }
   tbody tr.detail-row td { display: block; width: 100%; padding: 0; border: none; }
-  .detail-content { grid-template-columns: 1fr; }
+  .detail-content { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .7rem; padding: .9rem .85rem 1rem; }
+  .detail-value { padding: .65rem .75rem; }
   .detail-actions {
     justify-content: stretch;
     display: grid;

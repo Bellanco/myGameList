@@ -360,6 +360,7 @@ export default function App() {
               onEdit={vm.openEditGame}
               onDelete={vm.deleteGame}
               onMigrate={vm.migrateGame}
+              onAddGame={handleAddGame}
               tabActions={vm.tabActions[currentTab]}
             />
           </>
