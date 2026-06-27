@@ -66,6 +66,19 @@ function metaValue(values?: string[]) {
 
 const MAX_ROW_CHIPS = 3;
 
+// Clase por columna en Completados (c): controla ancho por importancia y permite ocultar
+// progresivamente las columnas menos importantes en escritorio estrecho (ver _table.scss).
+const C_COLUMN_CLASS: Record<string, string> = {
+  Juego: 'col-c-name',
+  Puntuación: 'col-c-score',
+  Plataformas: 'col-c-plat',
+  Géneros: 'col-c-genre',
+  Año: 'col-c-year',
+  Rejugar: 'col-c-replay',
+  'Puntos fuertes': 'col-c-strong',
+  'Puntos débiles': 'col-c-weak',
+};
+
 function renderBooleanBadge(type: 'replayable' | 'retry', value: boolean) {
   if (type === 'replayable') {
     const label = value ? 'Rejugar: Sí' : 'Rejugar: No';
@@ -101,6 +114,10 @@ export const GameTable = memo(function GameTable({
   const showReplayable = visibility?.showReplayable ?? true;
   const showRetry = visibility?.showRetry ?? true;
   const showHours = visibility?.showHours ?? true;
+
+  // Clase de columna de Completados, solo cuando la pestaña es 'c' (las celdas plat/género/score
+  // se comparten con otras pestañas, que no llevan estas clases de peso/ocultación).
+  const cCol = (cls: string | undefined) => (currentTab === 'c' ? cls : undefined);
 
   const getTableHeaders = (): string[] => {
     if (currentTab === 'c') {
@@ -205,7 +222,7 @@ export const GameTable = memo(function GameTable({
                     ? UI_MESSAGES.table.retryHeaderTip
                     : undefined;
               return (
-                <th key={header} title={tip}>
+                <th key={header} title={tip} className={cCol(C_COLUMN_CLASS[header])}>
                   {header}
                 </th>
               );
@@ -260,7 +277,7 @@ export const GameTable = memo(function GameTable({
                         }
                       }}
                     >
-                      <td>
+                      <td className={cCol('col-c-name')}>
                         <button
                           type="button"
                           className="row-toggle"
@@ -290,22 +307,25 @@ export const GameTable = memo(function GameTable({
                               {game.genres?.length ? (
                                 <span className="row-meta-item rm-genre">{metaValue(game.genres)}</span>
                               ) : null}
+                              {currentTab === 'c' && showYears && game.years?.length ? (
+                                <span className="row-meta-item rm-year">{metaValue(game.years.map(String))}</span>
+                              ) : null}
                             </span>
                           </span>
                         </button>
                       </td>
-                      {currentTab === 'c' && showYears ? <td>{renderTags(game.years?.map(String) || [], 'chip-generic', MAX_ROW_CHIPS)}</td> : null}
-                      <td>{renderTags(game.platforms, 'chip-plat', MAX_ROW_CHIPS)}</td>
-                      <td>{renderTags(game.genres, 'chip-genre', MAX_ROW_CHIPS)}</td>
+                      {currentTab === 'c' && showYears ? <td className="col-c-year">{renderTags(game.years?.map(String) || [], 'chip-generic', MAX_ROW_CHIPS)}</td> : null}
+                      <td className={cCol('col-c-plat')}>{renderTags(game.platforms, 'chip-plat', MAX_ROW_CHIPS)}</td>
+                      <td className={cCol('col-c-genre')}>{renderTags(game.genres, 'chip-genre', MAX_ROW_CHIPS)}</td>
                       {(currentTab === 'c' || currentTab === 'v' || currentTab === 'e') ? (
-                        <td>{renderTags(game.strengths || [], 'chip-pf', MAX_ROW_CHIPS)}</td>
+                        <td className={cCol('col-c-strong')}>{renderTags(game.strengths || [], 'chip-pf', MAX_ROW_CHIPS)}</td>
                       ) : null}
                       {(currentTab === 'c' || currentTab === 'e') ? (
-                        <td>{renderTags(game.weaknesses || [], 'chip-pd', MAX_ROW_CHIPS)}</td>
+                        <td className={cCol('col-c-weak')}>{renderTags(game.weaknesses || [], 'chip-pd', MAX_ROW_CHIPS)}</td>
                       ) : null}
                       {currentTab === 'v' ? <td>{renderTags(game.reasons || [], 'chip-pd', MAX_ROW_CHIPS)}</td> : null}
-                      {(currentTab === 'c' || currentTab === 'p') ? <td><StarRating value={game.score || 0} /></td> : null}
-                      {currentTab === 'c' && showReplayable ? <td>{renderBooleanBadge('replayable', Boolean(game.replayable))}</td> : null}
+                      {(currentTab === 'c' || currentTab === 'p') ? <td className={cCol('col-c-score')}><StarRating value={game.score || 0} /></td> : null}
+                      {currentTab === 'c' && showReplayable ? <td className="col-c-replay">{renderBooleanBadge('replayable', Boolean(game.replayable))}</td> : null}
                       {currentTab === 'v' && showRetry ? <td>{renderBooleanBadge('retry', Boolean(game.retry))}</td> : null}
                     </tr>
                   );
