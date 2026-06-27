@@ -1245,6 +1245,52 @@ button.hub-chip.active {
   cursor: default;
 }
 
+/* Pantalla "Reseñas" de un perfil: layout de lectura. Título del juego prominente, fila de
+   meta (estrellas + fecha) y texto COMPLETO (sin recorte) con tipografía cómoda. */
+.hub-profile-reviews-list { gap: .8rem; }
+.hub-review-entry {
+  padding: 1.05rem 1.15rem;
+  gap: .55rem;
+  align-items: stretch;
+}
+.hub-review-entry-head {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: .3rem;
+}
+.hub-review-game {
+  margin: 0;
+  font-size: 1.02rem;
+  font-weight: 800;
+  letter-spacing: -.01em;
+  line-height: 1.25;
+  color: var(--text);
+}
+.hub-review-meta {
+  display: flex;
+  align-items: center;
+  gap: .6rem;
+  flex-wrap: wrap;
+}
+.hub-review-date {
+  font-size: .72rem;
+  color: var(--text-dim);
+  letter-spacing: .02em;
+}
+.hub-profile-reviews-list .hub-review-text {
+  display: block;
+  -webkit-line-clamp: unset;
+  line-clamp: unset;
+  overflow: visible;
+  white-space: pre-wrap;
+  max-width: 66ch;
+  margin: .15rem 0 0;
+  font-size: clamp(.92rem, .88rem + .25vw, 1rem);
+  line-height: 1.6;
+  color: var(--text);
+}
+
 /* Acento por tipo de evento */
 .hub-feed-activity-item.is-review { border-left-color: var(--steam); }
 .hub-feed-activity-item.is-recommendation { border-left-color: var(--success); }
