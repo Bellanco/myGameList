@@ -121,34 +121,15 @@ dialog.modal-dialog[open] .modal { transform: translateY(0) scale(1); }
   transform: translateY(-12px);
   pointer-events: none;
 }
-.floating-controls .sync-badge,
 .floating-controls .theme-toggle-btn {
+  background: var(--surface-glass);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
   box-shadow: 0 6px 18px rgba(0,0,0,.28);
 }
-.floating-controls .theme-toggle-btn { background: var(--surface-glass); }
-
-/* Indicador de sync: círculo neutro con icono de sincronización (S de dos flechas).
-   Mismo borde y tamaño que el botón de tema. El selector de elemento gana a .sync-badge.s-*. */
-.floating-controls button.sync-badge {
-  width: 38px; height: 38px; padding: 0;
-  border-radius: 50%; justify-content: center;
-  background: var(--surface-glass);
-  border: 1px solid var(--border);
-  color: var(--text-muted);
-}
-.floating-controls .sync-badge .ui-icon { width: 1.15rem; height: 1.15rem; }
-.floating-controls .sync-badge:hover { color: var(--steam); }
-/* Estado sutil mediante el color del icono. */
-.floating-controls .sync-badge.s-syncing { color: var(--steam); }
-.floating-controls .sync-badge.s-error { color: var(--danger); }
-@keyframes fc-sync-spin { to { transform: rotate(360deg); } }
-.floating-controls .sync-badge.s-syncing .ui-icon { animation: fc-sync-spin 1s linear infinite; transform-origin: 50% 50%; }
 
 @media (prefers-reduced-motion: reduce) {
   .floating-controls { transition: none; }
-  .floating-controls .sync-badge.s-syncing .ui-icon { animation: none; }
 }
 
 /* Sin barra superior: Social y Ajustes dejan hueco arriba para los controles flotantes. */
