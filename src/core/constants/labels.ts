@@ -448,6 +448,7 @@ export const SOCIAL_UI = {
     loadProfileFailed: 'No se pudo cargar tu perfil social.',
     saveProfileFailed: 'No se pudo guardar tu perfil social.',
     maxFavoritesReached: 'Máximo de 5 juegos favoritos permitidos.',
+    profileIncomplete: 'Para guardar tu perfil necesitas un nombre y al menos un juego favorito.',
     postPublished: 'Publicación compartida.',
     postPublishFailed: 'No se pudo compartir la publicación.',
     profileGamesRefreshFailed: 'No se pudieron actualizar los listados de este perfil.',

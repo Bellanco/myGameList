@@ -97,7 +97,12 @@ export function SocialProfileScreen({
                 {SOCIAL_UI.profile.toFeed}
               </button>
             ) : null}
-            <button className="btn btn-primary" type="button" disabled={savingProfile || hydratingProfile} onClick={onSaveProfile}>
+            <button
+              className="btn btn-primary"
+              type="button"
+              disabled={savingProfile || hydratingProfile || !profileName.trim() || favoriteGameIds.length === 0}
+              onClick={onSaveProfile}
+            >
               <Icon name="save" />
               {savingProfile ? SOCIAL_UI.profile.saving : SOCIAL_UI.profile.save}
             </button>
