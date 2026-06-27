@@ -1259,13 +1259,19 @@ button.hub-chip.active {
   align-items: flex-start;
   gap: .3rem;
 }
-/* Título del juego: mismo registro que los demás títulos del hub (.hub-feed-card h3). */
+/* Título del juego: estilo "chip" calmado como los favoritos del perfil (.hub-feed-game-chip),
+   pero algo más grande. No compite con la lectura de la reseña. */
 .hub-review-game {
+  display: inline-block;
   margin: 0;
-  font-size: 1.02rem;
-  font-weight: 700;
-  line-height: 1.25;
-  color: var(--steam-hover);
+  padding: .15rem .65rem;
+  border-radius: var(--radius-pill);
+  background: var(--surface-soft);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  font-size: .9rem;
+  font-weight: 600;
+  line-height: 1.35;
 }
 .hub-review-meta {
   display: flex;
