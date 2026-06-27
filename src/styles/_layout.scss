@@ -1330,6 +1330,7 @@ button.hub-chip.active {
 }
 .hub-feed-load-more:hover { background: var(--surface-soft); color: var(--steam-hover); }
 .hub-feed-load-more:active { background: var(--overlay-hover); }
+.hub-game-filter-empty { color: var(--text-muted); font-size: .88rem; padding: .6rem .2rem; margin: 0; }
 
 /* Acento por tipo de evento */
 .hub-feed-activity-item.is-review { border-left-color: var(--steam); }

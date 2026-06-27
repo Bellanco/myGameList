@@ -39,6 +39,7 @@ export type IconName =
   | 'sync-copy'
   | 'google-recover'
   | 'dice-d20'
+  | 'uncharted'
   | 'chevron-down'
   | 'chevron-up';
 
