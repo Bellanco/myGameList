@@ -1,4 +1,4 @@
-import { Fragment, memo, useMemo, useRef } from 'react';
+import { Fragment, memo, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { COMMON_ICONS, TAB_ICONS } from '../../core/constants/icons';
 import { UI_MESSAGES } from '../../core/constants/labels';
@@ -151,6 +151,23 @@ export const GameTable = memo(function GameTable({
 
   const parentRef = useRef<HTMLDivElement>(null);
 
+  // En móvil/tablet (≤1400px) `.table-wrap` se declara `overflow:visible`: quien scrollea es la
+  // ventana, no este contenedor. El virtualizador de elemento necesita un scroll-container propio;
+  // apuntado a un elemento no-scrollable sus medidas dependen del motor (Chromium reporta la altura
+  // completa y pinta todo; Firefox deja un spacer final que infla el contenedor). Por eso solo
+  // virtualizamos cuando `.table-wrap` es realmente scrollable; si scrollea la página, render plano.
+  const [pageScrolls, setPageScrolls] = useState(false);
+  useLayoutEffect(() => {
+    const update = () => {
+      const el = parentRef.current;
+      if (el) setPageScrolls(getComputedStyle(el).overflowY === 'visible');
+    };
+    update();
+    window.addEventListener('resize', update);
+    return () => window.removeEventListener('resize', update);
+  }, []);
+  const virtualize = !pageScrolls;
+
   const virtualizer = useVirtualizer({
     count: virtualRows.length,
     getScrollElement: () => parentRef.current,
@@ -167,7 +184,8 @@ export const GameTable = memo(function GameTable({
   const topSpacerHeight = virtualRowEntries.length > 0 ? virtualRowEntries[0].start : 0;
   const bottomSpacerHeight =
     virtualRowEntries.length > 0 ? totalSize - virtualRowEntries[virtualRowEntries.length - 1].end : 0;
-  const fallbackToFullRender = games.length > 0 && virtualRows.length > 0 && virtualRowEntries.length === 0;
+  const fallbackToFullRender =
+    !virtualize || (games.length > 0 && virtualRows.length > 0 && virtualRowEntries.length === 0);
   const rowIndexesToRender = fallbackToFullRender
     ? virtualRows.map((_, index) => index)
     : virtualRowEntries.map((entry) => entry.index);
@@ -231,7 +249,7 @@ export const GameTable = memo(function GameTable({
                     <tr
                       key={`main-${game.id}`}
                       data-index={rowIndex}
-                      ref={virtualizer.measureElement}
+                      ref={virtualize ? virtualizer.measureElement : undefined}
                       className={`main-row ${row.index % 2 === 0 ? 'striped' : ''}`}
                       // A11y-2: el disparador accesible es el botón de la 1ª celda (anunciado como botón + aria-controls).
                       // La fila conserva click/doble-click como atajos de RATÓN, pero ya no es un control focusable.
@@ -296,7 +314,7 @@ export const GameTable = memo(function GameTable({
                 const reviewLines = game.review ? game.review.split('\n') : [];
 
                 return (
-                  <tr key={`detail-${game.id}`} id={`game-detail-${game.id}`} data-index={rowIndex} ref={virtualizer.measureElement} className="detail-row open">
+                  <tr key={`detail-${game.id}`} id={`game-detail-${game.id}`} data-index={rowIndex} ref={virtualize ? virtualizer.measureElement : undefined} className="detail-row open">
                     <td colSpan={getColSpan(currentTab)} style={{ padding: 0 }}>
                       <div className="detail-content">
                         <div className="detail-box">

@@ -46,33 +46,40 @@
 
 /* Tabs */
 .tabs {
-  display: flex; gap: 0;
+  display: flex; gap: .15rem;
   /* Franja superior para los controles flotantes (tema + sync), igual que Social/Ajustes,
      para que el cluster no se mezcle con las pestañas. */
   padding: 3.4rem clamp(1rem, 5vw, 2rem) 0;
-  background: var(--surface); border-bottom: 2px solid var(--border);
+  background: var(--surface); border-bottom: 1px solid var(--border);
   overflow-x: auto; scrollbar-width: thin; flex: 0 0 auto;
   width: 100%; justify-content: safe center;
 }
 .tabs::-webkit-scrollbar { height: 4px; }
 .tabs::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
 .tab-btn {
-  background: transparent; color: var(--text-muted);
-  border: none; border-bottom: 3px solid transparent;
-  padding: 1rem 1.2rem; font-weight: 700; font-size: .95rem;
-  cursor: pointer; transition: all .25s;
+  background: transparent; color: var(--text-dim);
+  border: none;
+  padding: .85rem 1rem; font-weight: 500; font-size: .95rem;
+  cursor: pointer; transition: color .2s, font-weight .2s;
   white-space: nowrap; display: inline-flex; align-items: center; gap: .5rem;
   font-family: inherit; position: relative;
 }
-.tab-btn:focus { outline: none; box-shadow: inset 0 -3px 0 var(--steam); }
-@media (hover:hover) { .tab-btn:hover { color: var(--text); border-bottom-color: rgba(26,159,255,.4); } }
-.tab-btn.active { color: var(--steam-hover); border-bottom-color: var(--steam); }
-.count-badge {
-  background: rgba(26,159,255,.15); color: var(--steam-hover);
-  padding: .2rem .6rem; border-radius: var(--radius-pill);
-  font-size: .72rem; font-weight: 600;
+/* Barra inferior con brillo centrado (G2): se desvanece en los extremos. Solo en la activa. */
+.tab-btn::before {
+  content: ''; position: absolute; left: 0; right: 0; bottom: -1px; height: 0;
+  background: var(--tab-bar); border-radius: 2px; transition: height .2s;
 }
-.tab-icon { width: 1.1rem; height: 1.1rem; display: none; fill: currentColor; stroke: currentColor; }
+.tab-btn:focus-visible { outline: none; box-shadow: inset 0 -2px 0 var(--steam-hover); border-radius: 6px; }
+@media (hover:hover) { .tab-btn:hover { color: var(--text-muted); } }
+.tab-btn.active { color: var(--tab-active); font-weight: 700; }
+.tab-btn.active::before { height: 1.5px; }
+.count-badge {
+  color: var(--text-dim); font-size: .78rem; font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.tab-btn.active .count-badge { color: var(--tab-active); }
+.tab-icon { width: 1.1rem; height: 1.1rem; opacity: .55; fill: currentColor; stroke: currentColor; transition: opacity .2s; }
+.tab-btn.active .tab-icon { opacity: 1; }
 .tab-btn[data-tooltip] { position: relative; }
 .tab-btn[data-tooltip]:hover::after {
   content: attr(data-tooltip);
@@ -85,10 +92,9 @@
 @keyframes fadeIn { from { opacity: 0; transform: translateX(-50%) translateY(-5px); } to { opacity: 1; transform: translateX(-50%) translateY(0); } }
 /* Tablet y móvil: las etiquetas largas de las pestañas se recortan; pasamos a iconos. */
 @media (max-width:1024px) {
-  .tab-btn { padding: .85rem .75rem; font-size: .85rem; }
+  .tab-btn { padding: .8rem .7rem; font-size: .85rem; }
   .tab-btn .tab-text-full { display: none; }
-  .tab-btn .tab-icon { display: inline; }
-  .count-badge { padding: .15rem .5rem; font-size: .65rem; }
+  .count-badge { font-size: .72rem; }
 }
 @media (max-width:720px) {
   thead { display: none; }

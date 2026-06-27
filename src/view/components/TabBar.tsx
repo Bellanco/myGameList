@@ -20,10 +20,10 @@ export const TabBar = memo(function TabBar({ currentTab, tabCounts, onTabChange 
           data-tooltip={TAB_TOOLTIPS[tab]}
           onClick={() => onTabChange(tab)}
         >
-          <span className="tab-text-full">{TAB_TITLES[tab]}</span>
           <svg className="tab-icon" aria-hidden="true">
             <use href={`#icon-${TAB_ICONS[tab]}`} />
           </svg>
+          <span className="tab-text-full">{TAB_TITLES[tab]}</span>
           <span className="count-badge">{tabCounts[tab]}</span>
         </button>
       ))}
