@@ -1319,7 +1319,15 @@ button.hub-chip.active {
 .hub-more-soft .ui-icon { width: .95rem; height: .95rem; }
 .hub-more-soft:hover { color: var(--steam-hover); background: var(--surface-soft); }
 .hub-more-soft:focus-visible { outline: 2px solid var(--steam-hover); outline-offset: 2px; }
-.hub-review-more { margin-top: .15rem; }
+/* "Ver más/menos" de cada reseña: a todo el ancho, igual que el "Mostrar más". */
+.hub-review-more {
+  align-self: stretch;
+  width: 100%;
+  margin-top: .35rem;
+  border-radius: var(--radius-md);
+}
+.hub-review-more:hover { background: var(--surface-soft); color: var(--steam-hover); }
+.hub-review-more:active { background: var(--overlay-hover); }
 /* "Mostrar más": misma altura, pero la zona pulsable abarca todo el ancho de la columna,
    con feedback de botón muy sutil (hover/active). Va tras .hub-more-soft para ganar en cascada. */
 .hub-feed-load-more {
