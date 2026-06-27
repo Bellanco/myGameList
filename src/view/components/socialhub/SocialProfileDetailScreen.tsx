@@ -9,6 +9,10 @@ import type { SocialSharedGame } from '../../../model/repository/gistRepository'
 // Paginación de los juegos del perfil: se muestran de 15 en 15 para evitar scroll excesivo al abrir el detalle.
 const LIST_PAGE_SIZE = 15;
 
+// Paginación de las reseñas: lote inicial pequeño y se amplía por scroll infinito (centinela al final) para no
+// renderizar todo de golpe ni dejar un scroll interminable. El filtro reinicia el lote.
+const REVIEW_PAGE_SIZE = 8;
+
 const TAB_LABELS: Record<TabId, string> = {
   c: 'profileListTabCompleted',
   v: 'profileListTabVisited',
@@ -97,6 +101,8 @@ export function SocialProfileDetailScreen({
   const [showReviews, setShowReviews] = useState(false);
   const [gameQuery, setGameQuery] = useState('');
   const [reviewQuery, setReviewQuery] = useState('');
+  const [reviewVisibleCount, setReviewVisibleCount] = useState(REVIEW_PAGE_SIZE);
+  const reviewSentinelRef = useRef<HTMLButtonElement>(null);
 
   // Reseñas tomadas del LISTADO de juegos del perfil (no del feed social): cada juego con texto de reseña en
   // cualquiera de sus listados. Ordenadas por fecha (_ts) de más reciente a más antigua; los perfiles ajenos
@@ -138,6 +144,35 @@ export function SocialProfileDetailScreen({
     if (!q) return reviews;
     return reviews.filter((review) => review.gameName.toLowerCase().includes(q));
   }, [reviews, reviewQuery]);
+
+  // Reinicia la paginación de reseñas al filtrar o al (re)entrar en la vista de reseñas.
+  useEffect(() => {
+    setReviewVisibleCount(REVIEW_PAGE_SIZE);
+  }, [reviewQuery, showReviews]);
+
+  const visibleReviews = useMemo(
+    () => filteredReviews.slice(0, reviewVisibleCount),
+    [filteredReviews, reviewVisibleCount],
+  );
+  const hasMoreReviews = filteredReviews.length > reviewVisibleCount;
+
+  // Scroll infinito: el botón "mostrar más" del final hace de centinela; cuando entra en viewport, amplía el lote
+  // automáticamente (y se mantiene clicable como alternativa accesible). Sin más reseñas, no se observa nada.
+  useEffect(() => {
+    if (!showReviews || !hasMoreReviews) return;
+    const el = reviewSentinelRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) {
+          setReviewVisibleCount((prev) => prev + REVIEW_PAGE_SIZE);
+        }
+      },
+      { rootMargin: '200px' },
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [showReviews, hasMoreReviews, filteredReviews]);
 
   const visibleTabs = useMemo(() => {
     if (!activeProfileDetail?.visibility) {
@@ -241,12 +276,6 @@ export function SocialProfileDetailScreen({
               <Icon name="arrow-back" />
               {SOCIAL_UI.feed.backToFeed}
             </button>
-            {isOwnProfile && onEditProfile ? (
-              <button className="btn btn-secondary btn-accent" type="button" onClick={onEditProfile}>
-                <Icon name="edit" />
-                {SOCIAL_UI.feed.profile}
-              </button>
-            ) : null}
             <button
               className={`btn btn-secondary ${showReviews ? 'is-active' : ''}`.trim()}
               type="button"
@@ -257,6 +286,14 @@ export function SocialProfileDetailScreen({
               {showReviews ? SOCIAL_UI.feed.reviewsBack : SOCIAL_UI.feed.reviewsButton}
             </button>
           </div>
+          {isOwnProfile && onEditProfile ? (
+            <div className="hub-screen-actions-right">
+              <button className="btn btn-secondary btn-accent" type="button" onClick={onEditProfile}>
+                <Icon name="edit" />
+                {SOCIAL_UI.feed.profile}
+              </button>
+            </div>
+          ) : null}
         </div>
         <article className="hub-feed-card hub-feed-card-detail">
           <div className="hub-profile-hero">
@@ -284,7 +321,7 @@ export function SocialProfileDetailScreen({
                     <p className="hub-game-filter-empty">{SOCIAL_UI.feed.gameFilterEmpty}</p>
                   ) : (
                   <div className="hub-feed-activity-list hub-profile-reviews-list" role="list" aria-label={SOCIAL_UI.feed.reviewsTitle}>
-                    {filteredReviews.map((review) => {
+                    {visibleReviews.map((review) => {
                       const itemDate = new Date(review.ts || 0);
                       const hasValidDate = review.ts > 0 && !Number.isNaN(itemDate.getTime());
                       return (
@@ -308,6 +345,18 @@ export function SocialProfileDetailScreen({
                     })}
                   </div>
                   )}
+                  {hasMoreReviews ? (
+                    <button
+                      ref={reviewSentinelRef}
+                      className="hub-more-soft hub-feed-load-more"
+                      type="button"
+                      aria-label={SOCIAL_UI.feed.feedLoadMore}
+                      title={SOCIAL_UI.feed.feedLoadMore}
+                      onClick={() => setReviewVisibleCount((prev) => prev + REVIEW_PAGE_SIZE)}
+                    >
+                      <Icon name="chevron-down" />
+                    </button>
+                  ) : null}
                   </>
                 )}
               </div>
