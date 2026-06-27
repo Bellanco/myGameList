@@ -59,7 +59,6 @@ thead th.sortable { cursor: pointer; transition: color .2s; }
 @media (hover:hover) { thead th.sortable:hover { color: var(--text); } }
 thead th.sorted { color: var(--steam); }
 
-/* Ajuste de columnas por tabla */
 /* Completados (c): el peso de cada columna (en su <th>/<td>) refleja su importancia
    (nombre manda, fuertes/débiles los que menos). Solo en escritorio; en tablet/móvil
    la tabla colapsa a tarjeta y la 1ª celda ocupa el 100%. */
@@ -93,22 +92,6 @@ thead th.sorted { color: var(--steam); }
   .col-c-year, .col-c-plat, .col-c-genre,
   .col-c-strong, .col-c-weak, .col-c-score, .col-c-replay { width: 0; }
 }
-
-/* Completados (c) - 8 columnas: nombre(18%) año(9%) plat(14%) género(13%) fort(15%) debil(15%) score(10%) rejugar(6%) */
-.w-name-c{width:18%} .w-year-c{width:9%} .w-plat-c{width:14%} .w-genre-c{width:13%} .w-strong-c{width:15%} .w-weak-c{width:15%} .w-score-c{width:10%} .w-bool-c{width:6%}
-
-/* Visitados (v) - 6 columnas: nombre(23%) plat(15%) género(13%) fort(16%) razones(16%) reintentos(6%) */
-.w-name-v{width:23%} .w-plat-v{width:15%} .w-genre-v{width:13%} .w-strong-v{width:16%} .w-weak-v{width:16%} .w-bool-v{width:6%}
-
-/* En curso (e) - 5 columnas: nombre(25%) plat(20%) género(18%) fort(18%) debil(19%) */
-.w-name-e{width:25%} .w-plat-e{width:20%} .w-genre-e{width:18%} .w-strong-e{width:18%} .w-weak-e{width:19%}
-
-/* Próximos (p) - 4 columnas: nombre(25%) plat(32%) género(31%) interés(12%) */
-.w-score{width:12%} .w-name-p{width:25%} .w-plat-p{width:32%} .w-genre-p{width:31%}
-
-/* Mantener compatibilidad para anchos genéricos si es necesario */
-.w-name{width:18%} .w-year{width:9%} .w-hours{width:10%} .w-plat{width:14%}
-.w-genre{width:13%} .w-strong{width:12%} .w-weak{width:12%} .w-bool{width:12%}
 
 tbody tr.main-row { border-top: 1px solid var(--border); transition: background .2s ease, box-shadow .2s ease; cursor: pointer; }
 /* A11y-2: el disparador de detalles es un <button> real, pero se presenta como el texto del nombre. */
