@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { FILTER_BOOL, TAB_ACTIONS, TAB_ORDER, VALIDATION_MESSAGES } from '../core/constants/labels';
 import { HOURS_RANGES } from '../core/constants/uiConfig';
 import { sortEs, uniqueCaseInsensitive } from '../core/utils/compare';
+import { DEFAULT_SORT, sortGames } from '../core/utils/sortGames';
 import { mapTabDataTags, type TagCategory } from '../core/utils/tagMutations';
 import { normalizeTag, safeTrim } from '../core/security/sanitize';
 import { loadLocalState, loadLocalStateAsync, normalizeData, saveLocalState } from '../model/repository/localRepository';
@@ -19,13 +20,6 @@ const DEFAULT_FILTERS: ToolbarFilters = {
   hours: '',
   only: false,
   deck: false,
-};
-
-const DEFAULT_SORT: Record<TabId, TabSort> = {
-  c: { col: 'years', asc: false },
-  v: { col: 'name', asc: true },
-  e: { col: 'name', asc: true },
-  p: { col: 'score', asc: false },
 };
 
 export interface LookupData {
@@ -328,38 +322,8 @@ export function useGameListViewModel() {
         return true;
       });
 
-      const currentSort = sort[tab];
-      const col = currentSort.col;
-
-      // P4: decorate-sort-undecorate. Calcula la clave de orden UNA vez por juego (antes `Math.max(...years)`
-      // se reevaluaba en cada comparación → O(n·log n·k)) y ordena sobre la clave ya materializada.
-      const keyOf = (game: GameItem): string | number => {
-        if (col === 'years') return game.years?.length ? Math.max(...game.years) : 0;
-        if (col === 'genres') return game.genres[0] || '';
-        const raw = (game[col as keyof GameItem] as string | number | boolean | undefined) ?? '';
-        return typeof raw === 'boolean' ? Number(raw) : raw;
-      };
-
-      // En completista el orden por defecto es el año; ante empate gana la llegada más reciente a la lista.
-      const tieBreak = tab === 'c';
-      const decorated = filtered.map((game) => ({ game, key: keyOf(game), tie: game.listedAt ?? game._ts ?? 0 }));
-
-      decorated.sort((a, b) => {
-        const va = a.key;
-        const vb = b.key;
-
-        let cmp: number;
-        if (typeof va === 'number' && typeof vb === 'number') {
-          cmp = currentSort.asc ? va - vb : vb - va;
-        } else {
-          cmp = currentSort.asc ? sortEs(String(va || ''), String(vb || '')) : sortEs(String(vb || ''), String(va || ''));
-        }
-
-        if (cmp === 0 && tieBreak) return b.tie - a.tie; // completista: llegada más reciente primero
-        return cmp;
-      });
-
-      return decorated.map((entry) => entry.game);
+      // Orden compartido con el perfil social (fuente única en core/utils/sortGames).
+      return sortGames(filtered, sort[tab], tab);
     },
     [data, filters, sort],
   );

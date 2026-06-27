@@ -1864,7 +1864,9 @@ button.hub-chip.active {
   min-width: 0;
 }
 
-.hub-metadata-section strong {
+/* Solo el título de la sección (hijo directo) va en mayúsculas; no los <strong> anidados,
+   como el nombre del juego (`.row-name`) que GameTable renderiza dentro de la sección. */
+.hub-metadata-section > strong {
   font-size: .85rem;
   color: var(--hub-text);
   text-transform: uppercase;
