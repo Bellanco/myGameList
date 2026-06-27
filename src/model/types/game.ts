@@ -20,6 +20,7 @@ export interface GameItem {
   // Destino de la migración (aditivo, opcional para no romper datos legacy):
   _v?: number; // versión entera, incrementa en cada edición (metadato; el reloj CRDT sigue siendo _ts)
   shared?: boolean; // opt-in: este juego se proyecta al canal público (gist social / Firestore)
+  listedAt?: number; // fecha de llegada a la lista actual (ms); NO se reescribe al editar
 }
 
 export interface DeletedItem {

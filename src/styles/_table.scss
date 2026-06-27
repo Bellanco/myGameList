@@ -95,7 +95,9 @@ tbody tr.detail-row.open { display: table-row; }
 
 /* Chips */
 .chips { display: flex; flex-wrap: wrap; gap: .4rem; min-width: 0; align-items: center; }
-.chip { padding: .22rem .64rem; border-radius: var(--radius-sm); font-size: .75rem; font-weight: 600; display: inline-flex; align-items: center; gap: .35rem; }
+/* Cada chip se mantiene en una sola línea (no parte su texto a la mitad); si no cabe,
+   el .chips contenedor (flex-wrap) salta la pastilla entera a la fila siguiente. */
+.chip { padding: .22rem .64rem; border-radius: var(--radius-sm); font-size: .75rem; font-weight: 600; display: inline-flex; align-items: center; gap: .35rem; white-space: nowrap; }
 .chip-generic { background: rgba(232,184,32,.16); color: var(--fg-amber); border: 1px solid rgba(232,184,32,.32); }
 .chip-plat    { background: var(--chip-plat-bg); color: var(--chip-plat-fg); border: 1px solid var(--chip-plat-border); }
 .chip-genre   { background: rgba(26,159,255,.18);  color: var(--fg-sky); border: 1px solid rgba(26,159,255,.35); }
