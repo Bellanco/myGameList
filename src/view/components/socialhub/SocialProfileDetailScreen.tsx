@@ -4,6 +4,7 @@ import { GameTable } from '../GameTable';
 import { StarRating } from '../StarRating';
 import { HubAvatar } from './HubAvatar';
 import { TAB_IDS, type GameItem, type TabId } from '../../../model/types/game';
+import { DEFAULT_SORT, sortGames } from '../../../core/utils/sortGames';
 import type { SocialSharedGame } from '../../../model/repository/gistRepository';
 
 // Paginación de los juegos del perfil: se muestran de 15 en 15 para evitar scroll excesivo al abrir el detalle.
@@ -187,9 +188,9 @@ export function SocialProfileDetailScreen({
 
   const currentGames: GameItem[] = useMemo(() => {
     const sharedGames = activeProfileDetail?.sharedLists?.[currentTab] || [];
-    return sharedGames.map((game: any) => ({
+    const mapped: GameItem[] = sharedGames.map((game: any) => ({
       id: Number(game.id || 0),
-      _ts: 0,
+      _ts: typeof game._ts === 'number' ? game._ts : 0,
       name: String(game.name || ''),
       platforms: Array.isArray(game.platforms) ? game.platforms : [],
       genres: Array.isArray(game.genres) ? game.genres : [],
@@ -197,6 +198,10 @@ export function SocialProfileDetailScreen({
       // Canal público index-only: para perfiles de otros solo hay snippet/rating; para datos propios, review/score completos.
       review: String(game.review || game.snippet || ''),
       score: Number(game.score || game.rating || 0),
+      // `years`/`listedAt` solo llegan en datos propios/hidratados (no en la proyección pública index-only),
+      // pero son necesarios para ordenar igual que el listado principal (año + desempate por fecha de añadido).
+      years: Array.isArray(game.years) ? game.years.map(Number).filter(Number.isFinite) : [],
+      listedAt: typeof game.listedAt === 'number' ? game.listedAt : undefined,
       strengths: Array.isArray(game.strengths) ? game.strengths : [],
       weaknesses: Array.isArray(game.weaknesses) ? game.weaknesses : [],
       reasons: Array.isArray(game.reasons) ? game.reasons : [],
@@ -204,6 +209,8 @@ export function SocialProfileDetailScreen({
       retry: Boolean(game.retry),
       hours: typeof game.hours === 'number' ? game.hours : null,
     }));
+    // Misma lógica de orden que el listado principal (fuente única en core/utils/sortGames).
+    return sortGames(mapped, DEFAULT_SORT[currentTab], currentTab);
   }, [activeProfileDetail, currentTab]);
 
   // Al cambiar de pestaña o de perfil, volver a la primera página (15) y limpiar el filtro.

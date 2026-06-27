@@ -19,6 +19,10 @@ table { width: 100%; border-collapse: collapse; text-align: left; min-width: 105
 
 .hub-feed-card-detail {
   container-type: inline-size;
+  /* Mismo nombre de contenedor que `.main-lists`, para que el revelado progresivo del meta
+     (estrellas → año → plataforma → género) use la misma lógica en el perfil social que en el
+     listado principal, respondiendo al ancho de la tarjeta. */
+  container-name: gamelist;
 }
 
 @container (max-width: 62rem) {
@@ -55,24 +59,41 @@ thead th.sortable { cursor: pointer; transition: color .2s; }
 @media (hover:hover) { thead th.sortable:hover { color: var(--text); } }
 thead th.sorted { color: var(--steam); }
 
-/* Ajuste de columnas por tabla */
-/* Completados (c) - 8 columnas: nombre(18%) año(9%) plat(14%) género(13%) fort(15%) debil(15%) score(10%) rejugar(6%) */
-.w-name-c{width:18%} .w-year-c{width:9%} .w-plat-c{width:14%} .w-genre-c{width:13%} .w-strong-c{width:15%} .w-weak-c{width:15%} .w-score-c{width:10%} .w-bool-c{width:6%}
+/* Completados (c): el peso de cada columna (en su <th>/<td>) refleja su importancia
+   (nombre manda, fuertes/débiles los que menos). Solo en escritorio; en tablet/móvil
+   la tabla colapsa a tarjeta y la 1ª celda ocupa el 100%. */
+@media (min-width: 1101px) {
+  .col-c-name   { width: 24%; }
+  .col-c-score  { width: 12%; }
+  .col-c-plat   { width: 15%; }
+  .col-c-genre  { width: 13%; }
+  .col-c-year   { width: 8%; }
+  .col-c-replay { width: 6%; }
+  .col-c-strong { width: 11%; }
+  .col-c-weak   { width: 11%; }
+}
 
-/* Visitados (v) - 6 columnas: nombre(23%) plat(15%) género(13%) fort(16%) razones(16%) reintentos(6%) */
-.w-name-v{width:23%} .w-plat-v{width:15%} .w-genre-v{width:13%} .w-strong-v{width:16%} .w-weak-v{width:16%} .w-bool-v{width:6%}
+/* Escritorio estrecho: antes de colapsar a tarjeta (≤1100px), en vez de comprimir el nombre
+   hasta partirlo en muchas líneas, retiramos las columnas menos importantes —primero «Puntos
+   débiles», luego «Puntos fuertes»— para dar aire al nombre. Sus datos siguen en el detalle
+   expandible. Al ocultar la columna (th+td), el resto se redistribuye solo. */
+@media (min-width: 1101px) and (max-width: 1340px) {
+  .col-c-weak { display: none; }
+}
+@media (min-width: 1101px) and (max-width: 1200px) {
+  .col-c-strong { display: none; }
+}
 
-/* En curso (e) - 5 columnas: nombre(25%) plat(20%) género(18%) fort(18%) debil(19%) */
-.w-name-e{width:25%} .w-plat-e{width:20%} .w-genre-e{width:18%} .w-strong-e{width:18%} .w-weak-e{width:19%}
+/* Tablet/móvil: la tabla colapsa a tarjeta con `table-layout: fixed`, donde el ancho de columna
+   lo fija la 1ª fila. Forzamos la 1ª columna al 100% y anulamos el resto para que la tarjeta
+   ocupe todo el ancho (las demás celdas están ocultas). */
+@media (max-width: 1100px) {
+  .col-c-name { width: 100%; }
+  .col-c-year, .col-c-plat, .col-c-genre,
+  .col-c-strong, .col-c-weak, .col-c-score, .col-c-replay { width: 0; }
+}
 
-/* Próximos (p) - 4 columnas: nombre(25%) plat(32%) género(31%) interés(12%) */
-.w-score{width:12%} .w-name-p{width:25%} .w-plat-p{width:32%} .w-genre-p{width:31%}
-
-/* Mantener compatibilidad para anchos genéricos si es necesario */
-.w-name{width:18%} .w-year{width:9%} .w-hours{width:10%} .w-plat{width:14%}
-.w-genre{width:13%} .w-strong{width:12%} .w-weak{width:12%} .w-bool{width:12%}
-
-tbody tr.main-row { border-top: 1px solid var(--border); transition: background .2s; cursor: pointer; }
+tbody tr.main-row { border-top: 1px solid var(--border); transition: background .2s ease, box-shadow .2s ease; cursor: pointer; }
 /* A11y-2: el disparador de detalles es un <button> real, pero se presenta como el texto del nombre. */
 tbody tr.main-row .row-toggle {
   display: inline-flex; align-items: center; gap: .4rem;
@@ -81,7 +102,7 @@ tbody tr.main-row .row-toggle {
 }
 tbody tr.main-row .row-toggle:focus-visible { outline: 2px solid var(--steam, #66c0f4); outline-offset: 2px; border-radius: 3px; }
 tbody tr.main-row.striped { background: var(--surface-soft); }
-@media (hover:hover) { tbody tr.main-row:hover { background: var(--surface-hover); } }
+@media (hover:hover) { tbody tr.main-row:hover { background: var(--surface-hover); box-shadow: inset 3px 0 0 var(--steam, #66c0f4); } }
 tbody td { padding: .95rem 1rem; font-size: .88rem; vertical-align: middle; }
 tbody tr.detail-row { display: none; background: var(--detail-row-bg); border-top: 1px dashed var(--border); }
 tbody tr.detail-row.open { display: table-row; }
@@ -97,7 +118,8 @@ tbody tr.detail-row.open { display: table-row; }
 .chips { display: flex; flex-wrap: wrap; gap: .4rem; min-width: 0; align-items: center; }
 /* Cada chip se mantiene en una sola línea (no parte su texto a la mitad); si no cabe,
    el .chips contenedor (flex-wrap) salta la pastilla entera a la fila siguiente. */
-.chip { padding: .22rem .64rem; border-radius: var(--radius-sm); font-size: .75rem; font-weight: 600; display: inline-flex; align-items: center; gap: .35rem; white-space: nowrap; }
+.chip { padding: .22rem .64rem; border-radius: var(--radius-sm); font-size: .75rem; font-weight: 600; display: inline-flex; align-items: center; gap: .35rem; white-space: nowrap; transition: transform .15s ease, filter .15s ease; }
+@media (hover:hover) { .chip:hover { transform: translateY(-1px); filter: brightness(1.08); } }
 .chip-generic { background: rgba(232,184,32,.16); color: var(--fg-amber); border: 1px solid rgba(232,184,32,.32); }
 .chip-plat    { background: var(--chip-plat-bg); color: var(--chip-plat-fg); border: 1px solid var(--chip-plat-border); }
 .chip-genre   { background: rgba(26,159,255,.18);  color: var(--fg-sky); border: 1px solid rgba(26,159,255,.35); }
@@ -220,13 +242,22 @@ tbody tr.detail-row.open { display: table-row; }
 
 /* Plataforma y género como mini-píldoras discretas, con el color de su categoría
    (mismos tokens que .chip-plat / .chip-genre) para poder diferenciarlas. */
-.rm-plat, .rm-genre {
+.rm-plat, .rm-genre, .rm-year {
   padding: .04rem .4rem; border-radius: var(--radius-sm);
   font-size: .68rem; font-weight: 600; line-height: 1.5;
   border: 1px solid transparent;
 }
 .rm-plat  { background: var(--chip-plat-bg); color: var(--chip-plat-fg); border-color: var(--chip-plat-border); }
 .rm-genre { background: rgba(26,159,255,.14); color: var(--fg-sky);    border-color: rgba(26,159,255,.3); }
+.rm-year  { background: rgba(232,184,32,.16); color: var(--fg-amber); border-color: rgba(232,184,32,.32); }
+
+/* Orden visual del meta (móvil/tablet): estrellas → año → plataforma → género.
+   Es independiente de la ocultación por ancho: cada píldora aparece/desaparece según su umbral
+   de container query (ver más abajo), pero su posición en la fila es fija. */
+.rm-score { order: 1; }
+.rm-year  { order: 2; }
+.rm-plat  { order: 3; }
+.rm-genre { order: 4; }
 
 /* En vista colapsada (≤1100px) la tabla pasa a una sola columna: chevron + meta. */
 @media (max-width: 1100px) {
@@ -239,9 +270,39 @@ tbody tr.detail-row.open { display: table-row; }
   .rm-score { display: inline-flex; } /* la puntuación siempre que haya meta */
 }
 
-/* Revelado progresivo "según lo que quepa": plataforma y género según ancho. */
-@container gamelist (min-width: 240px) { .rm-plat  { display: inline-flex; } }
-@container gamelist (min-width: 320px) { .rm-genre { display: inline-flex; } }
+/* Revelado progresivo "según lo que quepa", en el mismo orden de importancia que las columnas
+   de escritorio: tras puntuación (siempre), aparecen plataforma → género → año a medida que
+   crece el ancho de la tarjeta, y desaparecen al estrecharse. Misma lógica en todas las vistas. */
+@container gamelist (min-width: 240px) { .rm-plat   { display: inline-flex; } }
+@container gamelist (min-width: 320px) { .rm-genre  { display: inline-flex; } }
+@container gamelist (min-width: 430px) { .rm-year   { display: inline-flex; } }
+
+/* Despliegue del detalle: aparición suave (no altera la altura medida por el virtualizador,
+   solo opacidad y un leve desplazamiento, así no pelea con la medición de filas). */
+tbody tr.detail-row.open .detail-content { animation: detailReveal .22s ease-out both; }
+@keyframes detailReveal {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* Badge de rejugar/oportunidad: leve realce al pasar el ratón cuando es interactivo. */
+@media (hover:hover) {
+  .badge-rejugar-activo:hover,
+  .badge-opp-activo:hover { transform: scale(1.08); transition: transform .15s ease; }
+}
+
+/* Accesibilidad: quien prefiere menos movimiento no recibe animaciones/transiciones. */
+@media (prefers-reduced-motion: reduce) {
+  tbody tr.main-row,
+  .chip,
+  .row-chevron,
+  .badge-rejugar-activo,
+  .badge-opp-activo { transition: none; }
+  tbody tr.detail-row.open .detail-content { animation: none; }
+  .chip:hover,
+  .badge-rejugar-activo:hover,
+  .badge-opp-activo:hover { transform: none; filter: none; }
+}
 
 /* Estado vacío */
 .table-empty-cell { padding: 0; }
