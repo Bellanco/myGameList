@@ -232,8 +232,14 @@ export function SocialFeedScreen({
             </div>
           ) : null}
           {!loadingDirectory && hasMoreFeed ? (
-            <button className="hub-more-soft hub-feed-load-more" type="button" onClick={showMoreFeed}>
-              {SOCIAL_UI.feed.feedLoadMore}
+            <button
+              className="hub-more-soft hub-feed-load-more"
+              type="button"
+              aria-label={SOCIAL_UI.feed.feedLoadMore}
+              title={SOCIAL_UI.feed.feedLoadMore}
+              onClick={showMoreFeed}
+            >
+              <Icon name="chevron-down" />
             </button>
           ) : null}
         </div>

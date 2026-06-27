@@ -37,7 +37,10 @@ export type IconName =
   | 'copy'
   | 'keyboard-arrow-up'
   | 'sync-copy'
-  | 'google-recover';
+  | 'google-recover'
+  | 'dnd'
+  | 'chevron-down'
+  | 'chevron-up';
 
 export const TAB_ICONS: Record<TabId, IconName> = {
   c: 'trophy',
