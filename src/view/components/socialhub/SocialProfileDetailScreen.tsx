@@ -212,15 +212,15 @@ export function SocialProfileDetailScreen({
                       const itemDate = new Date(review.ts || 0);
                       const hasValidDate = review.ts > 0 && !Number.isNaN(itemDate.getTime());
                       return (
-                        <article key={review.id} className="hub-feed-card hub-feed-activity-item is-review" role="listitem">
-                          <header className="hub-feed-card-head">
-                            <div className="hub-feed-card-head-text">
-                              {review.gameName ? <span className="hub-feed-game-chip">{review.gameName}</span> : null}
+                        <article key={review.id} className="hub-feed-card hub-feed-activity-item is-review hub-review-entry" role="listitem">
+                          <header className="hub-review-entry-head">
+                            {review.gameName ? <h4 className="hub-review-game">{review.gameName}</h4> : null}
+                            <div className="hub-review-meta">
+                              <StarRating value={Number(review.rating || 0)} />
+                              {hasValidDate ? <span className="hub-review-date">{SOCIAL_UI.feed.analyzedAt(itemDate)}</span> : null}
                             </div>
                           </header>
-                          {hasValidDate ? <p>{SOCIAL_UI.feed.analyzedAt(itemDate)}</p> : null}
-                          <StarRating value={Number(review.rating || 0)} />
-                          {review.reviewText ? <p className="hub-feed-review-text" title={review.reviewText}>{review.reviewText}</p> : null}
+                          {review.reviewText ? <p className="hub-feed-review-text hub-review-text">{review.reviewText}</p> : null}
                         </article>
                       );
                     })}
