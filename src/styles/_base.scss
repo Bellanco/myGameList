@@ -12,6 +12,10 @@
   --steam: #1a9fff;
   --steam-hover: #66c0f4;
   --steam-soft: rgba(26,159,255,.12);
+  /* Pestañas del listado: inactivo tenue, activo azul de aplicación (T3), barra con brillo centrado (G2). */
+  --text-dim: #6b747c;
+  --tab-active: #7fb6e8;
+  --tab-bar: linear-gradient(90deg, rgba(26,159,255,0), var(--steam-hover) 50%, rgba(26,159,255,0));
   --success: #67c18d;
   --danger: #d15b58;
   --warn: #e5b143;
@@ -74,6 +78,9 @@
   --steam: #1a82e0;
   --steam-hover: #1469bd;
   --steam-soft: rgba(26,130,224,.12);
+  --text-dim: #8793a0;
+  --tab-active: #2774c2;
+  --tab-bar: linear-gradient(90deg, rgba(26,130,224,0), var(--steam) 50%, rgba(26,130,224,0));
   --success: #1f9d57;
   --danger: #c0322b;
   --warn: #b9821a;
