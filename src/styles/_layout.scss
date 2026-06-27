@@ -1253,6 +1253,19 @@ button.hub-chip.active {
   gap: .55rem;
   align-items: stretch;
 }
+/* Anula el borde sólido de .is-review (mayor especificidad que esa regla) para dejar ver el degradado. */
+.hub-profile-reviews-list .hub-review-entry.is-review { border-left-color: transparent; }
+/* Acento lateral suave: degradado vertical con el color y difuminado de la barra de pestañas. */
+.hub-review-entry::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  border-radius: 3px;
+  background: var(--tab-bar-v);
+}
 .hub-review-entry-head {
   display: flex;
   flex-direction: column;
@@ -1263,7 +1276,8 @@ button.hub-chip.active {
    pero algo más grande. No compite con la lectura de la reseña. */
 .hub-review-game {
   display: inline-block;
-  margin: 0;
+  align-self: center;
+  margin: .3rem 0;
   padding: .15rem .65rem;
   border-radius: var(--radius-pill);
   background: var(--surface-soft);
