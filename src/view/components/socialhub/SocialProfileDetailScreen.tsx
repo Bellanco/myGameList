@@ -96,6 +96,7 @@ export function SocialProfileDetailScreen({
   const [visibleCount, setVisibleCount] = useState(LIST_PAGE_SIZE);
   const [showReviews, setShowReviews] = useState(false);
   const [gameQuery, setGameQuery] = useState('');
+  const [reviewQuery, setReviewQuery] = useState('');
 
   // Reseñas tomadas del LISTADO de juegos del perfil (no del feed social): cada juego con texto de reseña en
   // cualquiera de sus listados. Ordenadas por fecha (_ts) de más reciente a más antigua; los perfiles ajenos
@@ -125,10 +126,18 @@ export function SocialProfileDetailScreen({
     return items.sort((a, b) => b.ts - a.ts);
   }, [activeProfileDetail]);
 
-  // Al cambiar de perfil, volver siempre a la vista de perfil (no arrastrar la de reseñas).
+  // Al cambiar de perfil, volver siempre a la vista de perfil (no arrastrar la de reseñas) y limpiar filtros.
   useEffect(() => {
     setShowReviews(false);
+    setReviewQuery('');
   }, [activeProfileDetail]);
+
+  // Filtro de reseñas por título del juego (insensible a mayúsculas), automático al escribir.
+  const filteredReviews = useMemo(() => {
+    const q = reviewQuery.trim().toLowerCase();
+    if (!q) return reviews;
+    return reviews.filter((review) => review.gameName.toLowerCase().includes(q));
+  }, [reviews, reviewQuery]);
 
   const visibleTabs = useMemo(() => {
     if (!activeProfileDetail?.visibility) {
@@ -262,8 +271,20 @@ export function SocialProfileDetailScreen({
                 {reviews.length === 0 ? (
                   <p>{SOCIAL_UI.feed.reviewsEmptyProfile}</p>
                 ) : (
+                  <>
+                  <input
+                    type="text"
+                    className="input-base hub-game-filter"
+                    value={reviewQuery}
+                    onChange={(event) => setReviewQuery(event.target.value)}
+                    placeholder={SOCIAL_UI.feed.gameFilterPlaceholder}
+                    aria-label={SOCIAL_UI.feed.gameFilterPlaceholder}
+                  />
+                  {filteredReviews.length === 0 ? (
+                    <p className="hub-game-filter-empty">{SOCIAL_UI.feed.gameFilterEmpty}</p>
+                  ) : (
                   <div className="hub-feed-activity-list hub-profile-reviews-list" role="list" aria-label={SOCIAL_UI.feed.reviewsTitle}>
-                    {reviews.map((review) => {
+                    {filteredReviews.map((review) => {
                       const itemDate = new Date(review.ts || 0);
                       const hasValidDate = review.ts > 0 && !Number.isNaN(itemDate.getTime());
                       return (
@@ -286,6 +307,8 @@ export function SocialProfileDetailScreen({
                       );
                     })}
                   </div>
+                  )}
+                  </>
                 )}
               </div>
             </div>
