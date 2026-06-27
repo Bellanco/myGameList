@@ -107,9 +107,9 @@ export function SocialDetailScreen({
               {gameItem.platforms && gameItem.platforms.length > 0 ? (
                 <div className="hub-metadata-section">
                   <strong>{SOCIAL_UI.feed.metadataPlatforms}</strong>
-                  <div className="hub-metadata-tags">
+                  <div className="chips">
                     {gameItem.platforms.map((platform: string) => (
-                      <span key={platform} className="hub-metadata-tag">{platform}</span>
+                      <span key={platform} className="chip chip-plat">{platform}</span>
                     ))}
                   </div>
                 </div>
@@ -117,9 +117,9 @@ export function SocialDetailScreen({
               {gameItem.genres && gameItem.genres.length > 0 ? (
                 <div className="hub-metadata-section">
                   <strong>{SOCIAL_UI.feed.metadataGenres}</strong>
-                  <div className="hub-metadata-tags">
+                  <div className="chips">
                     {gameItem.genres.map((genre: string) => (
-                      <span key={genre} className="hub-metadata-tag">{genre}</span>
+                      <span key={genre} className="chip chip-genre">{genre}</span>
                     ))}
                   </div>
                 </div>

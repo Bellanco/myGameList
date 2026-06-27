@@ -1863,24 +1863,6 @@ button.hub-chip.active {
   font-weight: 700;
 }
 
-.hub-metadata-tags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: .4rem;
-}
-
-.hub-metadata-tag {
-  display: inline-flex;
-  align-items: center;
-  padding: .25rem .55rem;
-  border-radius: .5rem;
-  background: rgba(26,159,255,.15);
-  border: 1px solid rgba(26,159,255,.35);
-  color: var(--hub-text);
-  font-size: .78rem;
-  font-weight: 600;
-}
-
 .hub-detail-profile-link {
   display: inline-flex;
   align-items: center;
