@@ -876,20 +876,25 @@ export function useSocialViewModel() {
     // IndexedDB sin releer el gist propio ni consultar Firestore. El guardado del perfil invalida esta caché.
     const cachedProfile = await getCachedSocialProfile(socialCfgGistId);
     if (cachedProfile) {
+      const cachedFavorites = cachedProfile.favorites.filter((id) => completedGameNameById.has(id));
+      // No confiamos en el `profileExists` cacheado (pudo escribirse con la regla antigua "solo nombre"): lo
+      // recalculamos con el criterio actual (nombre Y ≥1 favorito) para que los perfiles incompletos ya guardados
+      // sean redirigidos al editor sin esperar a que caduque la caché (~5 min).
+      const cachedProfileExists = Boolean(cachedProfile.name.trim()) && cachedFavorites.length > 0;
       setProfileName(cachedProfile.name);
-      setFavoriteGameIds(cachedProfile.favorites.filter((id) => completedGameNameById.has(id)));
+      setFavoriteGameIds(cachedFavorites);
       setHiddenTabs(getOrderedUniqueTabs(cachedProfile.hiddenTabs || []));
       setHideReplayable(cachedProfile.hideReplayable);
       setHideRetry(cachedProfile.hideRetry);
       setHideGameTime(cachedProfile.hideGameTime);
       setShowPhoto(cachedProfile.showPhoto);
-      setHasCreatedProfile(cachedProfile.profileExists);
+      setHasCreatedProfile(cachedProfileExists);
       setSocialPayload({ activity: cachedProfile.activity });
 
-      const mustCreateCached = shouldRequireProfileCreation(cachedProfile.profileExists, justSavedProfile);
+      const mustCreateCached = shouldRequireProfileCreation(cachedProfileExists, justSavedProfile);
       if (mustCreateCached) {
         lockProfileEditor();
-      } else if (cachedProfile.profileExists) {
+      } else if (cachedProfileExists) {
         setMustCreateProfile(false);
       }
       return;
@@ -939,15 +944,11 @@ export function useSocialViewModel() {
         .map((entry) => entry.id)
         .filter((id) => completedGameNameById.has(id));
       const profileVisibility = socialRead.data.profile.visibility || defaultSocialVisibility;
-      const existsInGist = Boolean(socialRead.data.profile.name.trim()) || favorites.length > 0;
-      const firestoreGistId = existingProfile?.socialGistId?.trim() || '';
-      const existsInFirestore = Boolean(
-        existingProfile?.id &&
-          existingProfile.socialEnabled &&
-          firestoreGistId &&
-          firestoreGistId === socialCfgGistId,
-      );
-      const profileExists = existsInGist || existsInFirestore;
+      // Un perfil se considera COMPLETO (y por tanto utilizable sin pasar por el editor) solo si tiene nombre Y al
+      // menos un favorito: misma regla que aplica la visibilidad del directorio/detalle (visibleSocialDirectory,
+      // selectedProfileDetail, openProfileDetail). Así el dueño no se cuela al feed con un perfil que nadie más puede
+      // abrir. Un doc en Firestore (era previa o reconexión) NO basta si el gist no cumple ambos campos.
+      const profileExists = Boolean(socialRead.data.profile.name.trim()) && favorites.length > 0;
 
       setProfileName(nextName);
       setFavoriteGameIds(favorites);
@@ -1273,9 +1274,16 @@ export function useSocialViewModel() {
       return;
     }
 
+    // Un perfil solo es válido con nombre Y al menos un favorito (coherente con la visibilidad: sin ambos, nadie
+    // más podría abrirlo). Bloquea aquí la creación del estado incompleto que dejaba al perfil invisible para todos.
+    const validFavoriteIds = favoriteGameIds.filter((id) => completedGameNameById.has(id));
+    if (!profileName.trim() || validFavoriteIds.length === 0) {
+      setFeedback('warn', SOCIAL_UI.status.profileIncomplete);
+      return;
+    }
+
     try {
       setSavingProfile(true);
-      const validFavoriteIds = favoriteGameIds.filter((id) => completedGameNameById.has(id));
       const normalizedHiddenTabs = getOrderedUniqueTabs(hiddenTabs);
 
       const visibility: SocialProfileVisibility = {

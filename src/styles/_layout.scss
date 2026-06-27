@@ -1831,6 +1831,8 @@ button.hub-chip.active {
   }
   .hub-detail-body .hub-feed-review-text {
     flex: 1 1 0;
+    /* En el detalle la reseña llena el hueco hasta los metadatos (sin el tope de 65ch global). */
+    max-width: none;
   }
   .hub-detail-body .hub-detail-metadata {
     flex: 0 0 17rem;
@@ -1839,6 +1841,10 @@ button.hub-chip.active {
     border-top: none;
     padding-left: 1.1rem;
     border-left: 1px solid var(--border);
+    /* Panel compacto a la derecha que se mantiene visible al scrollear una reseña larga. */
+    position: sticky;
+    top: 1rem;
+    align-self: flex-start;
   }
 }
 
@@ -1855,24 +1861,6 @@ button.hub-chip.active {
   text-transform: uppercase;
   letter-spacing: .02em;
   font-weight: 700;
-}
-
-.hub-metadata-tags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: .4rem;
-}
-
-.hub-metadata-tag {
-  display: inline-flex;
-  align-items: center;
-  padding: .25rem .55rem;
-  border-radius: .5rem;
-  background: rgba(26,159,255,.15);
-  border: 1px solid rgba(26,159,255,.35);
-  color: var(--hub-text);
-  font-size: .78rem;
-  font-weight: 600;
 }
 
 .hub-detail-profile-link {
