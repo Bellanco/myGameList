@@ -9,9 +9,7 @@ export type IconName =
   | 'edit'
   | 'trash'
   | 'close'
-  | 'filter-close'
   | 'arrow-back'
-  | 'arrow-right'
   | 'angle-right'
   | 'cloud-sync'
   | 'refresh'
@@ -20,7 +18,6 @@ export type IconName =
   | 'steamdeck'
   | 'repeat'
   | 'undo'
-  | 'device'
   | 'eye'
   | 'eye-off'
   | 'star'
@@ -33,8 +30,6 @@ export type IconName =
   | 'bottom-settings'
   | 'bottom-hub'
   | 'logout'
-  | 'recommend'
-  | 'copy'
   | 'keyboard-arrow-up'
   | 'sync-copy'
   | 'google-recover'
@@ -68,10 +63,8 @@ export const COMMON_ICONS = {
   refresh: 'refresh',
   star: 'star',
   lock: 'lock',
-  copy: 'copy',
   repeat: 'repeat',
   undo: 'undo',
-  recommend: 'recommend',
   arrowBack: 'arrow-back',
   keyboardArrowUp: 'keyboard-arrow-up',
   syncCopy: 'sync-copy',
