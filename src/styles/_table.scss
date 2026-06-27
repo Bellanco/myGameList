@@ -38,6 +38,13 @@ table { width: 100%; border-collapse: collapse; text-align: left; min-width: 105
     min-width: 30rem;
   }
 }
+
+/* Móvil: el listado de juegos del perfil social cae al layout de tarjeta (como la lista principal),
+   sin min-width que fuerce scroll lateral. Va tras las container queries para ganar en cascada. */
+@media (max-width: 720px) {
+  .hub-feed-card-detail .table-wrap { overflow-x: hidden; }
+  .hub-feed-card-detail table { min-width: 0; }
+}
 thead th {
   background: var(--surface-hover); padding: .95rem 1rem;
   font-weight: 700; color: var(--text-muted); font-size: .74rem;
@@ -94,7 +101,7 @@ tbody tr.detail-row.open { display: table-row; }
 .chip-genre   { background: rgba(26,159,255,.18);  color: var(--fg-sky); border: 1px solid rgba(26,159,255,.35); }
 .chip-pf      { background: rgba(34,197,94,.15);color: var(--fg-green); border: 1px solid rgba(34,197,94,.3); }
 .chip-pd      { background: rgba(239,68,68,.15);  color: var(--fg-red-soft); border: 1px solid rgba(239,68,68,.3); }
-.chip-deck    { background: rgba(26,159,255,.18); color: var(--fg-sky); border: 1px solid rgba(26,159,255,.4); }
+.chip-deck    { background: var(--chip-deck-bg); color: var(--chip-deck-fg); border: 1px solid var(--chip-deck-border); }
 .chip-rm { background: transparent; border: none; color: inherit; cursor: pointer; opacity: .78; }
 .chip-rm:hover { opacity: 1; }
 
