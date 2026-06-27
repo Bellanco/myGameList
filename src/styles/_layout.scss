@@ -1384,6 +1384,16 @@ button.hub-chip.active {
   outline-offset: 2px;
 }
 
+/* Las reseñas no son seleccionables: sin realce de hover/foco (con el acento en degradado se veía raro). */
+.hub-profile-reviews-list .hub-review-entry.is-review:hover,
+.hub-profile-reviews-list .hub-review-entry.is-review:focus-visible {
+  transform: none;
+  border-color: var(--border);
+  border-left-color: transparent;
+  box-shadow: none;
+  outline: none;
+}
+
 /* Cabecera con avatar */
 .hub-feed-card-head {
   display: flex;
