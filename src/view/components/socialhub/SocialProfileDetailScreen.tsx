@@ -46,9 +46,11 @@ function ReviewText({ text, moreLabel, lessLabel }: { text: string; moreLabel: s
           type="button"
           className="hub-more-soft hub-review-more"
           aria-expanded={expanded}
+          aria-label={expanded ? lessLabel : moreLabel}
+          title={expanded ? lessLabel : moreLabel}
           onClick={() => setExpanded((prev) => !prev)}
         >
-          {expanded ? lessLabel : moreLabel}
+          <Icon name={expanded ? 'chevron-up' : 'chevron-down'} />
         </button>
       ) : null}
     </>
@@ -228,7 +230,7 @@ export function SocialProfileDetailScreen({
               aria-pressed={showReviews}
               onClick={() => setShowReviews((prev) => !prev)}
             >
-              <Icon name={showReviews ? 'eye' : 'star'} />
+              <Icon name={showReviews ? 'dnd' : 'star'} />
               {showReviews ? SOCIAL_UI.feed.reviewsBack : SOCIAL_UI.feed.reviewsButton}
             </button>
           </div>
@@ -324,9 +326,11 @@ export function SocialProfileDetailScreen({
                     <button
                       className="hub-more-soft hub-feed-load-more"
                       type="button"
+                      aria-label={SOCIAL_UI.feed.feedLoadMore}
+                      title={SOCIAL_UI.feed.feedLoadMore}
                       onClick={() => setVisibleCount((prev) => prev + LIST_PAGE_SIZE)}
                     >
-                      {SOCIAL_UI.feed.feedLoadMore}
+                      <Icon name="chevron-down" />
                     </button>
                   ) : null}
                 </>

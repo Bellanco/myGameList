@@ -1301,24 +1301,25 @@ button.hub-chip.active {
   white-space: pre-wrap;
 }
 
-/* Botón "ver más/menos" discreto: parece un enlace suave, no un botón sólido.
-   Reemplaza a los antiguos .btn-secondary de "Mostrar más" del hub. */
+/* Botón "ver más/menos" discreto: solo un chevron centrado, sin texto, que no llama la atención.
+   Mismo tratamiento para el "ver más" de reseñas y el "mostrar más" de las listas/feed del hub. */
 .hub-more-soft {
+  align-self: center;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   background: none;
   border: none;
-  padding: .2rem .45rem;
-  margin: 0;
-  font: inherit;
-  font-size: .8rem;
-  font-weight: 600;
+  padding: .35rem;
   color: var(--text-dim);
   cursor: pointer;
-  border-radius: 6px;
+  border-radius: 50%;
   transition: color .2s ease, background .2s ease;
 }
+.hub-more-soft .ui-icon { width: .95rem; height: .95rem; }
 .hub-more-soft:hover { color: var(--steam-hover); background: var(--surface-soft); }
 .hub-more-soft:focus-visible { outline: 2px solid var(--steam-hover); outline-offset: 2px; }
-.hub-review-more { align-self: flex-start; margin-top: .1rem; }
+.hub-review-more { margin-top: .15rem; }
 
 /* Acento por tipo de evento */
 .hub-feed-activity-item.is-review { border-left-color: var(--steam); }
