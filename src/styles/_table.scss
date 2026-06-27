@@ -38,6 +38,13 @@ table { width: 100%; border-collapse: collapse; text-align: left; min-width: 105
     min-width: 30rem;
   }
 }
+
+/* Móvil: el listado de juegos del perfil social cae al layout de tarjeta (como la lista principal),
+   sin min-width que fuerce scroll lateral. Va tras las container queries para ganar en cascada. */
+@media (max-width: 720px) {
+  .hub-feed-card-detail .table-wrap { overflow-x: hidden; }
+  .hub-feed-card-detail table { min-width: 0; }
+}
 thead th {
   background: var(--surface-hover); padding: .95rem 1rem;
   font-weight: 700; color: var(--text-muted); font-size: .74rem;

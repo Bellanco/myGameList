@@ -38,7 +38,7 @@ export type IconName =
   | 'keyboard-arrow-up'
   | 'sync-copy'
   | 'google-recover'
-  | 'dnd'
+  | 'dice-d20'
   | 'chevron-down'
   | 'chevron-up';
 
