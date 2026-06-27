@@ -16,6 +16,7 @@
   --text-dim: #6b747c;
   --tab-active: #7fb6e8;
   --tab-bar: linear-gradient(90deg, rgba(26,159,255,0), var(--steam-hover) 50%, rgba(26,159,255,0));
+  --tab-bar-v: linear-gradient(180deg, rgba(26,159,255,0), var(--steam-hover) 50%, rgba(26,159,255,0));
   --success: #67c18d;
   --danger: #d15b58;
   --warn: #e5b143;
@@ -85,6 +86,7 @@
   --text-dim: #8793a0;
   --tab-active: #2774c2;
   --tab-bar: linear-gradient(90deg, rgba(26,130,224,0), var(--steam) 50%, rgba(26,130,224,0));
+  --tab-bar-v: linear-gradient(180deg, rgba(26,130,224,0), var(--steam) 50%, rgba(26,130,224,0));
   --success: #1f9d57;
   --danger: #c0322b;
   --warn: #b9821a;
