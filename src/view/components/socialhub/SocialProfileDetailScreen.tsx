@@ -241,12 +241,6 @@ export function SocialProfileDetailScreen({
               <Icon name="arrow-back" />
               {SOCIAL_UI.feed.backToFeed}
             </button>
-            {isOwnProfile && onEditProfile ? (
-              <button className="btn btn-secondary btn-accent" type="button" onClick={onEditProfile}>
-                <Icon name="edit" />
-                {SOCIAL_UI.feed.profile}
-              </button>
-            ) : null}
             <button
               className={`btn btn-secondary ${showReviews ? 'is-active' : ''}`.trim()}
               type="button"
@@ -257,6 +251,14 @@ export function SocialProfileDetailScreen({
               {showReviews ? SOCIAL_UI.feed.reviewsBack : SOCIAL_UI.feed.reviewsButton}
             </button>
           </div>
+          {isOwnProfile && onEditProfile ? (
+            <div className="hub-screen-actions-right">
+              <button className="btn btn-secondary btn-accent" type="button" onClick={onEditProfile}>
+                <Icon name="edit" />
+                {SOCIAL_UI.feed.profile}
+              </button>
+            </div>
+          ) : null}
         </div>
         <article className="hub-feed-card hub-feed-card-detail">
           <div className="hub-profile-hero">
