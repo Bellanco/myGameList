@@ -363,6 +363,8 @@ export const SOCIAL_UI = {
     reviewsBack: 'Ver perfil',
     reviewsTitle: 'Reseñas',
     reviewsEmptyProfile: 'Este perfil no ha publicado reseñas todavía.',
+    reviewExpand: 'Ver más',
+    reviewCollapse: 'Ver menos',
     profileListTabCompleted: 'Completados',
     profileListTabVisited: 'Abandonados',
     profileListTabPlaying: 'En curso',

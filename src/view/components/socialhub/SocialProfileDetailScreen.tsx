@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useState } from 'react';
+﻿import { useEffect, useMemo, useRef, useState } from 'react';
 import { Icon } from '../Icon';
 import { GameTable } from '../GameTable';
 import { StarRating } from '../StarRating';
@@ -15,6 +15,45 @@ const TAB_LABELS: Record<TabId, string> = {
   e: 'profileListTabPlaying',
   p: 'profileListTabPlanned',
 };
+
+/**
+ * Texto de reseña truncado a unas líneas, con un botón suave para expandir/colapsar.
+ * El botón solo aparece cuando el texto realmente desborda (medido sobre el recorte).
+ */
+function ReviewText({ text, moreLabel, lessLabel }: { text: string; moreLabel: string; lessLabel: string }) {
+  const ref = useRef<HTMLParagraphElement>(null);
+  const [expanded, setExpanded] = useState(false);
+  const [canExpand, setCanExpand] = useState(false);
+
+  useEffect(() => {
+    // Medimos solo en estado recortado; una vez expandido, conservamos el botón ("Ver menos").
+    if (expanded) return;
+    const el = ref.current;
+    if (!el) return;
+    const check = () => setCanExpand(el.scrollHeight - el.clientHeight > 2);
+    check();
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
+  }, [text, expanded]);
+
+  return (
+    <>
+      <p ref={ref} className={`hub-feed-review-text hub-review-text ${expanded ? 'is-expanded' : ''}`.trim()}>
+        {text}
+      </p>
+      {canExpand ? (
+        <button
+          type="button"
+          className="hub-more-soft hub-review-more"
+          aria-expanded={expanded}
+          onClick={() => setExpanded((prev) => !prev)}
+        >
+          {expanded ? lessLabel : moreLabel}
+        </button>
+      ) : null}
+    </>
+  );
+}
 
 /**
  * Pantalla de detalle de perfil social.
@@ -220,7 +259,13 @@ export function SocialProfileDetailScreen({
                               {hasValidDate ? <span className="hub-review-date">{SOCIAL_UI.feed.analyzedAt(itemDate)}</span> : null}
                             </div>
                           </header>
-                          {review.reviewText ? <p className="hub-feed-review-text hub-review-text">{review.reviewText}</p> : null}
+                          {review.reviewText ? (
+                            <ReviewText
+                              text={review.reviewText}
+                              moreLabel={SOCIAL_UI.feed.reviewExpand}
+                              lessLabel={SOCIAL_UI.feed.reviewCollapse}
+                            />
+                          ) : null}
                         </article>
                       );
                     })}
@@ -277,7 +322,7 @@ export function SocialProfileDetailScreen({
                   />
                   {hasMoreGames ? (
                     <button
-                      className="btn btn-secondary hub-feed-load-more"
+                      className="hub-more-soft hub-feed-load-more"
                       type="button"
                       onClick={() => setVisibleCount((prev) => prev + LIST_PAGE_SIZE)}
                     >

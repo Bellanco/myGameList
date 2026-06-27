@@ -232,7 +232,7 @@ export function SocialFeedScreen({
             </div>
           ) : null}
           {!loadingDirectory && hasMoreFeed ? (
-            <button className="btn btn-secondary hub-feed-load-more" type="button" onClick={showMoreFeed}>
+            <button className="hub-more-soft hub-feed-load-more" type="button" onClick={showMoreFeed}>
               {SOCIAL_UI.feed.feedLoadMore}
             </button>
           ) : null}
