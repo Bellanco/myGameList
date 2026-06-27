@@ -16,6 +16,7 @@
   --text-dim: #6b747c;
   --tab-active: #7fb6e8;
   --tab-bar: linear-gradient(90deg, rgba(26,159,255,0), var(--steam-hover) 50%, rgba(26,159,255,0));
+  --tab-bar-v: linear-gradient(180deg, rgba(26,159,255,0), var(--steam-hover) 50%, rgba(26,159,255,0));
   --success: #67c18d;
   --danger: #d15b58;
   --warn: #e5b143;
@@ -40,6 +41,10 @@
   --chip-plat-fg: #d7dce4;
   --chip-plat-bg: rgba(190,198,212,.13);
   --chip-plat-border: rgba(200,208,222,.30);
+  /* Steam Deck — plateado con un toque azulado: se diferencia sutilmente del chip de plataforma. */
+  --chip-deck-fg: #c6d4ee;
+  --chip-deck-bg: rgba(150,176,226,.16);
+  --chip-deck-border: rgba(168,192,232,.36);
 
   /* Overlays neutros dependientes del tema (hover fantasma, fila de detalle). */
   --overlay-hover: rgba(255,255,255,.05);
@@ -81,6 +86,7 @@
   --text-dim: #8793a0;
   --tab-active: #2774c2;
   --tab-bar: linear-gradient(90deg, rgba(26,130,224,0), var(--steam) 50%, rgba(26,130,224,0));
+  --tab-bar-v: linear-gradient(180deg, rgba(26,130,224,0), var(--steam) 50%, rgba(26,130,224,0));
   --success: #1f9d57;
   --danger: #c0322b;
   --warn: #b9821a;
@@ -102,6 +108,10 @@
   --chip-plat-fg: #55606e;
   --chip-plat-bg: rgba(110,124,143,.13);
   --chip-plat-border: rgba(110,124,143,.34);
+  /* Steam Deck — plateado con toque azulado (pizarra algo más azul que plataforma). */
+  --chip-deck-fg: #455777;
+  --chip-deck-bg: rgba(82,108,158,.14);
+  --chip-deck-border: rgba(82,108,158,.38);
 
   --overlay-hover: rgba(0,0,0,.05);
   --detail-row-bg: rgba(0,0,0,.04);

@@ -1245,6 +1245,121 @@ button.hub-chip.active {
   cursor: default;
 }
 
+/* Pantalla "Reseñas" de un perfil: layout de lectura. Título del juego prominente, fila de
+   meta (estrellas + fecha) y texto COMPLETO (sin recorte) con tipografía cómoda. */
+.hub-profile-reviews-list { gap: .8rem; }
+.hub-review-entry {
+  padding: 1.05rem 1.15rem;
+  gap: .55rem;
+  align-items: stretch;
+}
+/* Anula el borde sólido de .is-review (mayor especificidad que esa regla) para dejar ver el degradado. */
+.hub-profile-reviews-list .hub-review-entry.is-review { border-left-color: transparent; }
+/* Acento lateral suave: degradado vertical con el color y difuminado de la barra de pestañas. */
+.hub-review-entry::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  border-radius: 3px;
+  background: var(--tab-bar-v);
+}
+.hub-review-entry-head {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: .3rem;
+}
+/* Título del juego: estilo "chip" calmado como los favoritos del perfil (.hub-feed-game-chip),
+   pero algo más grande. No compite con la lectura de la reseña. */
+.hub-review-game {
+  display: inline-block;
+  align-self: center;
+  margin: .3rem 0;
+  padding: .15rem .65rem;
+  border-radius: var(--radius-pill);
+  background: var(--surface-soft);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  font-size: .9rem;
+  font-weight: 600;
+  line-height: 1.35;
+}
+.hub-review-meta {
+  display: flex;
+  align-items: center;
+  gap: .6rem;
+  flex-wrap: wrap;
+}
+.hub-review-date {
+  font-size: .72rem;
+  color: var(--text-dim);
+  letter-spacing: .02em;
+}
+/* Reseña recortada a 3 líneas; el botón suave la expande (.is-expanded).
+   Prefijo .hub-feed-card-detail para ganar a la regla que desactiva el clamp en ese contenedor. */
+.hub-feed-card-detail .hub-profile-reviews-list .hub-review-text {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  overflow: hidden;
+  white-space: pre-line;
+  max-width: 66ch;
+  margin: .15rem 0 0;
+  font-size: clamp(.92rem, .88rem + .25vw, 1rem);
+  line-height: 1.6;
+  color: var(--text);
+}
+.hub-feed-card-detail .hub-profile-reviews-list .hub-review-text.is-expanded {
+  display: block;
+  -webkit-line-clamp: unset;
+  line-clamp: unset;
+  overflow: visible;
+  white-space: pre-wrap;
+}
+
+/* Botón "ver más/menos" discreto: solo un chevron centrado, sin texto, que no llama la atención.
+   Mismo tratamiento para el "ver más" de reseñas y el "mostrar más" de las listas/feed del hub. */
+.hub-more-soft {
+  align-self: center;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  padding: .35rem;
+  color: var(--text-dim);
+  cursor: pointer;
+  border-radius: 50%;
+  transition: color .2s ease, background .2s ease;
+}
+.hub-more-soft .ui-icon { width: .95rem; height: .95rem; }
+.hub-more-soft:hover { color: var(--steam-hover); background: var(--surface-soft); }
+.hub-more-soft:focus-visible { outline: 2px solid var(--steam-hover); outline-offset: 2px; }
+/* "Ver más/menos" de cada reseña: a todo el ancho, igual que el "Mostrar más". */
+.hub-review-more {
+  align-self: stretch;
+  width: 100%;
+  margin-top: .35rem;
+  border-radius: var(--radius-md);
+}
+.hub-review-more:hover { background: var(--surface-soft); color: var(--steam-hover); }
+.hub-review-more:active { background: var(--overlay-hover); }
+/* "Mostrar más": misma altura, pero la zona pulsable abarca todo el ancho de la columna,
+   con feedback de botón muy sutil (hover/active). Va tras .hub-more-soft para ganar en cascada. */
+.hub-feed-load-more {
+  align-self: stretch;
+  width: 100%;
+  margin-top: .5rem;
+  border-radius: var(--radius-md);
+}
+.hub-feed-load-more:hover { background: var(--surface-soft); color: var(--steam-hover); }
+.hub-feed-load-more:active { background: var(--overlay-hover); }
+.hub-game-filter-empty { color: var(--text-muted); font-size: .88rem; padding: .6rem .2rem; margin: 0; }
+
 /* Acento por tipo de evento */
 .hub-feed-activity-item.is-review { border-left-color: var(--steam); }
 .hub-feed-activity-item.is-recommendation { border-left-color: var(--success); }
@@ -1267,6 +1382,16 @@ button.hub-chip.active {
 .hub-feed-activity-item:focus-visible {
   outline: 2px solid var(--steam);
   outline-offset: 2px;
+}
+
+/* Las reseñas no son seleccionables: sin realce de hover/foco (con el acento en degradado se veía raro). */
+.hub-profile-reviews-list .hub-review-entry.is-review:hover,
+.hub-profile-reviews-list .hub-review-entry.is-review:focus-visible {
+  transform: none;
+  border-color: var(--border);
+  border-left-color: transparent;
+  box-shadow: none;
+  outline: none;
 }
 
 /* Cabecera con avatar */

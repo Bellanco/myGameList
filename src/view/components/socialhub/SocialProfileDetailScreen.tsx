@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useState } from 'react';
+﻿import { useEffect, useMemo, useRef, useState } from 'react';
 import { Icon } from '../Icon';
 import { GameTable } from '../GameTable';
 import { StarRating } from '../StarRating';
@@ -15,6 +15,47 @@ const TAB_LABELS: Record<TabId, string> = {
   e: 'profileListTabPlaying',
   p: 'profileListTabPlanned',
 };
+
+/**
+ * Texto de reseña truncado a unas líneas, con un botón suave para expandir/colapsar.
+ * El botón solo aparece cuando el texto realmente desborda (medido sobre el recorte).
+ */
+function ReviewText({ text, moreLabel, lessLabel }: { text: string; moreLabel: string; lessLabel: string }) {
+  const ref = useRef<HTMLParagraphElement>(null);
+  const [expanded, setExpanded] = useState(false);
+  const [canExpand, setCanExpand] = useState(false);
+
+  useEffect(() => {
+    // Medimos solo en estado recortado; una vez expandido, conservamos el botón ("Ver menos").
+    if (expanded) return;
+    const el = ref.current;
+    if (!el) return;
+    const check = () => setCanExpand(el.scrollHeight - el.clientHeight > 2);
+    check();
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
+  }, [text, expanded]);
+
+  return (
+    <>
+      <p ref={ref} className={`hub-feed-review-text hub-review-text ${expanded ? 'is-expanded' : ''}`.trim()}>
+        {text}
+      </p>
+      {canExpand ? (
+        <button
+          type="button"
+          className="hub-more-soft hub-review-more"
+          aria-expanded={expanded}
+          aria-label={expanded ? lessLabel : moreLabel}
+          title={expanded ? lessLabel : moreLabel}
+          onClick={() => setExpanded((prev) => !prev)}
+        >
+          <Icon name={expanded ? 'chevron-up' : 'chevron-down'} />
+        </button>
+      ) : null}
+    </>
+  );
+}
 
 /**
  * Pantalla de detalle de perfil social.
@@ -54,6 +95,8 @@ export function SocialProfileDetailScreen({
   const [expandedByTab, setExpandedByTab] = useState<Partial<Record<TabId, number | null>>>({});
   const [visibleCount, setVisibleCount] = useState(LIST_PAGE_SIZE);
   const [showReviews, setShowReviews] = useState(false);
+  const [gameQuery, setGameQuery] = useState('');
+  const [reviewQuery, setReviewQuery] = useState('');
 
   // Reseñas tomadas del LISTADO de juegos del perfil (no del feed social): cada juego con texto de reseña en
   // cualquiera de sus listados. Ordenadas por fecha (_ts) de más reciente a más antigua; los perfiles ajenos
@@ -83,10 +126,18 @@ export function SocialProfileDetailScreen({
     return items.sort((a, b) => b.ts - a.ts);
   }, [activeProfileDetail]);
 
-  // Al cambiar de perfil, volver siempre a la vista de perfil (no arrastrar la de reseñas).
+  // Al cambiar de perfil, volver siempre a la vista de perfil (no arrastrar la de reseñas) y limpiar filtros.
   useEffect(() => {
     setShowReviews(false);
+    setReviewQuery('');
   }, [activeProfileDetail]);
+
+  // Filtro de reseñas por título del juego (insensible a mayúsculas), automático al escribir.
+  const filteredReviews = useMemo(() => {
+    const q = reviewQuery.trim().toLowerCase();
+    if (!q) return reviews;
+    return reviews.filter((review) => review.gameName.toLowerCase().includes(q));
+  }, [reviews, reviewQuery]);
 
   const visibleTabs = useMemo(() => {
     if (!activeProfileDetail?.visibility) {
@@ -120,13 +171,26 @@ export function SocialProfileDetailScreen({
     }));
   }, [activeProfileDetail, currentTab]);
 
-  // Al cambiar de pestaña o de perfil, volver a la primera página (15) para no arrastrar scroll.
+  // Al cambiar de pestaña o de perfil, volver a la primera página (15) y limpiar el filtro.
   useEffect(() => {
     setVisibleCount(LIST_PAGE_SIZE);
+    setGameQuery('');
   }, [currentTab, activeProfileDetail]);
 
-  const visibleGames = useMemo(() => currentGames.slice(0, visibleCount), [currentGames, visibleCount]);
-  const hasMoreGames = currentGames.length > visibleCount;
+  // Al escribir en el filtro, volver a la primera página.
+  useEffect(() => {
+    setVisibleCount(LIST_PAGE_SIZE);
+  }, [gameQuery]);
+
+  // Filtro por título (insensible a mayúsculas), automático al escribir.
+  const filteredGames = useMemo(() => {
+    const q = gameQuery.trim().toLowerCase();
+    if (!q) return currentGames;
+    return currentGames.filter((game) => game.name.toLowerCase().includes(q));
+  }, [currentGames, gameQuery]);
+
+  const visibleGames = useMemo(() => filteredGames.slice(0, visibleCount), [filteredGames, visibleCount]);
+  const hasMoreGames = filteredGames.length > visibleCount;
 
   const favoriteGames = activeProfileDetail?.favorites || [];
 
@@ -189,7 +253,7 @@ export function SocialProfileDetailScreen({
               aria-pressed={showReviews}
               onClick={() => setShowReviews((prev) => !prev)}
             >
-              <Icon name={showReviews ? 'eye' : 'star'} />
+              <Icon name={showReviews ? 'dice-d20' : 'uncharted'} />
               {showReviews ? SOCIAL_UI.feed.reviewsBack : SOCIAL_UI.feed.reviewsButton}
             </button>
           </div>
@@ -207,24 +271,44 @@ export function SocialProfileDetailScreen({
                 {reviews.length === 0 ? (
                   <p>{SOCIAL_UI.feed.reviewsEmptyProfile}</p>
                 ) : (
+                  <>
+                  <input
+                    type="text"
+                    className="input-base hub-game-filter"
+                    value={reviewQuery}
+                    onChange={(event) => setReviewQuery(event.target.value)}
+                    placeholder={SOCIAL_UI.feed.gameFilterPlaceholder}
+                    aria-label={SOCIAL_UI.feed.gameFilterPlaceholder}
+                  />
+                  {filteredReviews.length === 0 ? (
+                    <p className="hub-game-filter-empty">{SOCIAL_UI.feed.gameFilterEmpty}</p>
+                  ) : (
                   <div className="hub-feed-activity-list hub-profile-reviews-list" role="list" aria-label={SOCIAL_UI.feed.reviewsTitle}>
-                    {reviews.map((review) => {
+                    {filteredReviews.map((review) => {
                       const itemDate = new Date(review.ts || 0);
                       const hasValidDate = review.ts > 0 && !Number.isNaN(itemDate.getTime());
                       return (
-                        <article key={review.id} className="hub-feed-card hub-feed-activity-item is-review" role="listitem">
-                          <header className="hub-feed-card-head">
-                            <div className="hub-feed-card-head-text">
-                              {review.gameName ? <span className="hub-feed-game-chip">{review.gameName}</span> : null}
+                        <article key={review.id} className="hub-feed-card hub-feed-activity-item is-review hub-review-entry" role="listitem">
+                          <header className="hub-review-entry-head">
+                            {review.gameName ? <h4 className="hub-review-game">{review.gameName}</h4> : null}
+                            <div className="hub-review-meta">
+                              <StarRating value={Number(review.rating || 0)} />
+                              {hasValidDate ? <span className="hub-review-date">{SOCIAL_UI.feed.analyzedAt(itemDate)}</span> : null}
                             </div>
                           </header>
-                          {hasValidDate ? <p>{SOCIAL_UI.feed.analyzedAt(itemDate)}</p> : null}
-                          <StarRating value={Number(review.rating || 0)} />
-                          {review.reviewText ? <p className="hub-feed-review-text" title={review.reviewText}>{review.reviewText}</p> : null}
+                          {review.reviewText ? (
+                            <ReviewText
+                              text={review.reviewText}
+                              moreLabel={SOCIAL_UI.feed.reviewExpand}
+                              lessLabel={SOCIAL_UI.feed.reviewCollapse}
+                            />
+                          ) : null}
                         </article>
                       );
                     })}
                   </div>
+                  )}
+                  </>
                 )}
               </div>
             </div>
@@ -258,6 +342,17 @@ export function SocialProfileDetailScreen({
                       </button>
                     ))}
                   </div>
+                  <input
+                    type="text"
+                    className="input-base hub-game-filter"
+                    value={gameQuery}
+                    onChange={(event) => setGameQuery(event.target.value)}
+                    placeholder={SOCIAL_UI.feed.gameFilterPlaceholder}
+                    aria-label={SOCIAL_UI.feed.gameFilterPlaceholder}
+                  />
+                  {gameQuery.trim() && filteredGames.length === 0 ? (
+                    <p className="hub-game-filter-empty">{SOCIAL_UI.feed.gameFilterEmpty}</p>
+                  ) : (
                   <GameTable
                     games={visibleGames}
                     currentTab={currentTab}
@@ -275,13 +370,16 @@ export function SocialProfileDetailScreen({
                       showHours: !activeProfileDetail.visibility?.hideGameTime,
                     }}
                   />
+                  )}
                   {hasMoreGames ? (
                     <button
-                      className="btn btn-secondary hub-feed-load-more"
+                      className="hub-more-soft hub-feed-load-more"
                       type="button"
+                      aria-label={SOCIAL_UI.feed.feedLoadMore}
+                      title={SOCIAL_UI.feed.feedLoadMore}
                       onClick={() => setVisibleCount((prev) => prev + LIST_PAGE_SIZE)}
                     >
-                      {SOCIAL_UI.feed.feedLoadMore}
+                      <Icon name="chevron-down" />
                     </button>
                   ) : null}
                 </>

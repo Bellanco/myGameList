@@ -362,8 +362,6 @@ body.compact-filters .filters-row.open .btn-toggle { justify-content: center; al
   
   .header-actions { gap: .3rem; }
   .header-actions .btn { padding: .55rem .65rem; min-width: 42px; }
-  .sync-badge { padding: .3rem .4rem; font-size: .6rem; }
-  .sync-badge .sync-label { display: none; }
   .toolbar { padding: .75rem; gap: .5rem; }
   
   .btn-icon-text span { display: none; }
@@ -384,25 +382,6 @@ body.compact-filters .filters-row.open .btn-toggle { justify-content: center; al
   .header-actions .btn span { display: none; }
 }
 
-/* Sync badge */
-.sync-badge {
-  display:inline-flex; align-items:center; gap:.45rem;
-  padding:.32rem .85rem; border-radius:var(--radius-pill);
-  font-size:.78rem; font-weight:700; cursor:pointer;
-  border:1px solid transparent; transition:all .25s;
-  user-select:none; white-space:nowrap;
-}
-.sync-dot { width:.55rem; height:.55rem; border-radius:50%; flex:0 0 auto; transition: all .3s; }
-.sync-badge:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,.2); }
-.sync-badge.s-idle    { background:rgba(139,149,159,.08); border-color:var(--border); color:var(--text-muted); }
-.sync-badge.s-idle .sync-dot    { background:var(--text-muted); }
-.sync-badge.s-ok      { background:rgba(103,193,141,.15); border-color:rgba(103,193,141,.35); color:var(--fg-green-soft); }
-.sync-badge.s-ok .sync-dot      { background:var(--success); box-shadow: 0 0 8px rgba(103,193,141,.4); }
-.sync-badge.s-syncing { background:var(--steam-soft); border-color:rgba(26,159,255,.35); color:var(--steam-hover); }
-.sync-badge.s-syncing .sync-dot { background:var(--steam); animation:pulse-dot .85s ease-in-out infinite; box-shadow: 0 0 12px rgba(26,159,255,.5); }
-.sync-badge.s-error   { background:rgba(209,91,88,.15); border-color:rgba(209,91,88,.35); color:var(--fg-red); }
-.sync-badge.s-error .sync-dot   { background:var(--danger); box-shadow: 0 0 8px rgba(209,91,88,.4); }
-@keyframes pulse-dot { 0%,100%{opacity:1}50%{opacity:.2} }
 @keyframes slideIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes slideInDown { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
 
