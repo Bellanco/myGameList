@@ -39,7 +39,7 @@ export const ROUTE_TAB: Record<string, TabId> = {
 };
 
 export const TAB_ACTIONS: Record<TabId, TabAction[]> = {
-  c: [],
+  c: [{ target: 'e', label: 'Pasar a en curso', btnCls: 'btn-playing', icon: 'play' }],
   v: [
     { target: 'c', label: 'Pasar a completados', btnCls: 'btn-complete', icon: 'trophy' },
     { target: 'e', label: 'Pasar a en curso', btnCls: 'btn-playing', icon: 'play' },
