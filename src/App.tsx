@@ -318,7 +318,7 @@ export default function App() {
   return (
     <>
       <IconSprite />
-      <FloatingControls syncStatus={syncVm.status} syncLabel={syncBadgeText} showSync={activeSection === 'lists'} onSyncClick={() => navigate('/ajustes')} />
+      <FloatingControls />
       {activeSection === 'lists' ? <TabBar currentTab={currentTab} tabCounts={vm.tabCounts} onTabChange={handleTabChange} /> : null}
       <StatusBanner notice={vm.notice} remoteChangesApplied={syncVm.lastRemoteChangesApplied} />
       <main
