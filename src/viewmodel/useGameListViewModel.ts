@@ -340,17 +340,23 @@ export function useGameListViewModel() {
         return typeof raw === 'boolean' ? Number(raw) : raw;
       };
 
-      const decorated = filtered.map((game) => ({ game, key: keyOf(game) }));
+      // En completista el orden por defecto es el año; ante empate gana la llegada más reciente a la lista.
+      const tieBreak = tab === 'c';
+      const decorated = filtered.map((game) => ({ game, key: keyOf(game), tie: game.listedAt ?? game._ts ?? 0 }));
 
       decorated.sort((a, b) => {
         const va = a.key;
         const vb = b.key;
 
+        let cmp: number;
         if (typeof va === 'number' && typeof vb === 'number') {
-          return currentSort.asc ? va - vb : vb - va;
+          cmp = currentSort.asc ? va - vb : vb - va;
+        } else {
+          cmp = currentSort.asc ? sortEs(String(va || ''), String(vb || '')) : sortEs(String(vb || ''), String(va || ''));
         }
 
-        return currentSort.asc ? sortEs(String(va || ''), String(vb || '')) : sortEs(String(vb || ''), String(va || ''));
+        if (cmp === 0 && tieBreak) return b.tie - a.tie; // completista: llegada más reciente primero
+        return cmp;
       });
 
       return decorated.map((entry) => entry.game);
@@ -410,6 +416,7 @@ export function useGameListViewModel() {
 
       if (targetTab === 'e') {
         migrated.weaknesses = migrated.weaknesses.length ? migrated.weaknesses : migrated.reasons;
+        if (sourceTab === 'p') migrated.score = 0; // próximos→en curso: estrellas vacías
       }
 
       setEditingTab(targetTab);
@@ -422,8 +429,10 @@ export function useGameListViewModel() {
   const saveDraft = useCallback(
     (tab: TabId, nextDraft: GameDraft) => {
       const now = Date.now();
+      const id = nextDraft.id || Math.max(0, ...TAB_ORDER.flatMap((key) => data[key].map((item) => item.id))) + 1;
+      const existing = data[tab].find((item) => item.id === id);
       const base: GameItem = {
-        id: nextDraft.id || Math.max(0, ...TAB_ORDER.flatMap((key) => data[key].map((item) => item.id))) + 1,
+        id,
         _ts: now,
         name: safeTrim(nextDraft.name, 120),
         genres: uniqueCaseInsensitive(nextDraft.genres.map(normalizeTag).filter(Boolean)),
@@ -438,6 +447,7 @@ export function useGameListViewModel() {
         replayable: nextDraft.replayable,
         retry: nextDraft.retry,
         hours: nextDraft.hours === null ? null : Number(nextDraft.hours),
+        listedAt: existing ? (existing.listedAt ?? existing._ts ?? now) : now,
       };
 
       if (!base.name || !base.genres.length || !base.platforms.length) {

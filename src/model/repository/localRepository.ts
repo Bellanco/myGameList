@@ -67,6 +67,12 @@ function normalizeGame(game: Record<string, unknown>, defaultTs: number, forceTi
       const n = Number(raw);
       return Number.isFinite(n) && n >= 0 ? n : null;
     })(),
+    listedAt: (() => {
+      const n = Number(game.listedAt);
+      if (Number.isFinite(n) && n > 0) return n;
+      const ts = Number(game._ts);
+      return Number.isFinite(ts) && ts > 0 ? ts : defaultTs; // legacy: aproxima con _ts
+    })(),
   };
 }
 

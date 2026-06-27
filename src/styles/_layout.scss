@@ -1165,11 +1165,20 @@ button.hub-chip.active {
   cursor: pointer;
   transition: transform .2s ease, border-color .2s ease, box-shadow .2s ease;
 }
-/* Favoritos del perfil como chips (acorde con el resto). */
+/* Favoritos del perfil (por defecto, p. ej. "Favoritos publicados" del detalle):
+   en línea horizontal; cuando no cabe, la pastilla salta entera (el chip ya es
+   white-space: nowrap, así que el nombre nunca se parte). */
 .hub-profile-fav-chips {
   display: flex;
   flex-wrap: wrap;
   gap: .35rem;
+}
+/* En las cards del directorio de perfiles: uno por línea, cada pastilla ajustada
+   al ancho de su nombre (align-items: flex-start evita estirarla a toda la card). */
+.hub-feed-profile-item .hub-profile-fav-chips {
+  flex-direction: column;
+  flex-wrap: nowrap;
+  align-items: flex-start;
 }
 /* Botón "Mostrar más" del feed, centrado bajo la lista. */
 .hub-feed-load-more {
