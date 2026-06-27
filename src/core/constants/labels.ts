@@ -357,6 +357,8 @@ export const SOCIAL_UI = {
     profileFavoritesTitle: 'Favoritos publicados',
     profileListsTitle: 'Juegos',
     profileListsEmpty: 'Este perfil no ha publicado listados todavía.',
+    gameFilterPlaceholder: 'Filtrar por título…',
+    gameFilterEmpty: 'Ningún juego coincide con la búsqueda.',
     profileDetailRefresh: 'Actualizar listados',
     profileDetailRefreshing: 'Actualizando…',
     reviewsButton: 'Reseñas',

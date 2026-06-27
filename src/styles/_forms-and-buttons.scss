@@ -14,6 +14,8 @@
   outline: none; transition: border-color .2s, box-shadow .2s; min-width: 0;
 }
 .input-base:focus { border-color: var(--steam); box-shadow: 0 0 0 3px rgba(26,159,255,.12); }
+/* Filtro de juegos del perfil social: campo compacto (tras .input-base para ajustar tamaño). */
+.hub-game-filter { width: 100%; min-height: 36px; padding: .4rem .85rem; font-size: .88rem; }
 .toolbar .search-input { width: 100%; padding-right: 2.7rem; }
 .search-clear {
   position: absolute; right: .7rem; top: 50%; transform: translateY(-50%);

@@ -95,6 +95,7 @@ export function SocialProfileDetailScreen({
   const [expandedByTab, setExpandedByTab] = useState<Partial<Record<TabId, number | null>>>({});
   const [visibleCount, setVisibleCount] = useState(LIST_PAGE_SIZE);
   const [showReviews, setShowReviews] = useState(false);
+  const [gameQuery, setGameQuery] = useState('');
 
   // Reseñas tomadas del LISTADO de juegos del perfil (no del feed social): cada juego con texto de reseña en
   // cualquiera de sus listados. Ordenadas por fecha (_ts) de más reciente a más antigua; los perfiles ajenos
@@ -161,13 +162,26 @@ export function SocialProfileDetailScreen({
     }));
   }, [activeProfileDetail, currentTab]);
 
-  // Al cambiar de pestaña o de perfil, volver a la primera página (15) para no arrastrar scroll.
+  // Al cambiar de pestaña o de perfil, volver a la primera página (15) y limpiar el filtro.
   useEffect(() => {
     setVisibleCount(LIST_PAGE_SIZE);
+    setGameQuery('');
   }, [currentTab, activeProfileDetail]);
 
-  const visibleGames = useMemo(() => currentGames.slice(0, visibleCount), [currentGames, visibleCount]);
-  const hasMoreGames = currentGames.length > visibleCount;
+  // Al escribir en el filtro, volver a la primera página.
+  useEffect(() => {
+    setVisibleCount(LIST_PAGE_SIZE);
+  }, [gameQuery]);
+
+  // Filtro por título (insensible a mayúsculas), automático al escribir.
+  const filteredGames = useMemo(() => {
+    const q = gameQuery.trim().toLowerCase();
+    if (!q) return currentGames;
+    return currentGames.filter((game) => game.name.toLowerCase().includes(q));
+  }, [currentGames, gameQuery]);
+
+  const visibleGames = useMemo(() => filteredGames.slice(0, visibleCount), [filteredGames, visibleCount]);
+  const hasMoreGames = filteredGames.length > visibleCount;
 
   const favoriteGames = activeProfileDetail?.favorites || [];
 
@@ -230,7 +244,7 @@ export function SocialProfileDetailScreen({
               aria-pressed={showReviews}
               onClick={() => setShowReviews((prev) => !prev)}
             >
-              <Icon name={showReviews ? 'dice-d20' : 'star'} />
+              <Icon name={showReviews ? 'dice-d20' : 'uncharted'} />
               {showReviews ? SOCIAL_UI.feed.reviewsBack : SOCIAL_UI.feed.reviewsButton}
             </button>
           </div>
@@ -305,6 +319,17 @@ export function SocialProfileDetailScreen({
                       </button>
                     ))}
                   </div>
+                  <input
+                    type="text"
+                    className="input-base hub-game-filter"
+                    value={gameQuery}
+                    onChange={(event) => setGameQuery(event.target.value)}
+                    placeholder={SOCIAL_UI.feed.gameFilterPlaceholder}
+                    aria-label={SOCIAL_UI.feed.gameFilterPlaceholder}
+                  />
+                  {gameQuery.trim() && filteredGames.length === 0 ? (
+                    <p className="hub-game-filter-empty">{SOCIAL_UI.feed.gameFilterEmpty}</p>
+                  ) : (
                   <GameTable
                     games={visibleGames}
                     currentTab={currentTab}
@@ -322,6 +347,7 @@ export function SocialProfileDetailScreen({
                       showHours: !activeProfileDetail.visibility?.hideGameTime,
                     }}
                   />
+                  )}
                   {hasMoreGames ? (
                     <button
                       className="hub-more-soft hub-feed-load-more"
