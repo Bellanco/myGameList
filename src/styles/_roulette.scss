@@ -32,6 +32,10 @@
 
 /* Modal: algo más ancho para alojar ruleta + tarjeta sin que la ruleta se desplace. */
 .rl-dialog .rl-modal { max-width: 720px; width: min(92vw, 720px); }
+/* En modo "detalle de reseña" el modal es algo más ancho. */
+.rl-dialog .rl-modal.is-review { max-width: 820px; width: min(94vw, 820px); }
+/* Título ocupa el espacio → el back (icono) queda a su izquierda y la X a la derecha. */
+.rl-modal .modal-title { flex: 1; min-width: 0; }
 
 .rl-body.rl-body { /* gana especificidad sobre .modal-body sin !important */
   display: grid;
@@ -175,7 +179,6 @@
 
 /* Detalle de reseña dentro del modal (parte común ReviewDetail). */
 .rl-review-body { display: block; }
-.rl-review-actions { margin-bottom: 14px; }
 .rl-review-card { width: 100%; }
 .rl-card-action { width: 100%; }
 
