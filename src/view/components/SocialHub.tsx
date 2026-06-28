@@ -1,5 +1,6 @@
 import { memo } from 'react';
 import { SOCIAL_UI } from '../../core/constants/labels';
+import type { GameItem } from '../../model/types/game';
 import { useSocialViewModel } from '../../viewmodel/useSocialViewModel';
 import { Icon } from './Icon';
 
@@ -19,7 +20,20 @@ import { SocialFeedScreen } from './socialhub/SocialFeedScreen';
  *
  * Componente PRESENTACIONAL: toda la lógica vive en `useSocialViewModel` (M3).
  */
-export const SocialHub = memo(function SocialHub() {
+interface SocialHubProps {
+  /** Ruleta (perfil social) — añadir un juego ajeno a mi lista de próximos. */
+  onAddToProximos?: (game: Partial<GameItem>) => 'added' | 'duplicate' | 'invalid';
+  /** Ruleta (perfil social) — ¿ya tengo este juego (por nombre) en alguna de mis listas? */
+  hasGameInLists?: (name: string) => boolean;
+  /** Ruleta (perfil social) — si ya es mío, llevarlo a "En curso". */
+  moveGameToCurrentByName?: (name: string) => void;
+}
+
+export const SocialHub = memo(function SocialHub({
+  onAddToProximos,
+  hasGameInLists,
+  moveGameToCurrentByName,
+}: SocialHubProps = {}) {
   const {
     navigate,
     activePanel,
@@ -159,6 +173,9 @@ export const SocialHub = memo(function SocialHub() {
           onBack={() => navigate('/social')}
           status={status}
           statusKind={statusKind}
+          onAddToProximos={onAddToProximos}
+          hasGameInLists={hasGameInLists}
+          moveGameToCurrentByName={moveGameToCurrentByName}
         />
       );
     }

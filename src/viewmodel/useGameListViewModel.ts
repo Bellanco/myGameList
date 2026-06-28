@@ -5,6 +5,7 @@ import { sortEs, uniqueCaseInsensitive } from '../core/utils/compare';
 import { DEFAULT_SORT, sortGames } from '../core/utils/sortGames';
 import { mapTabDataTags, type TagCategory } from '../core/utils/tagMutations';
 import { normalizeTag, safeTrim } from '../core/security/sanitize';
+import { normalizeName } from '../core/roulette/roulette';
 import { loadLocalState, loadLocalStateAsync, normalizeData, saveLocalState } from '../model/repository/localRepository';
 import { getGamesAsTabData, getLocalMeta, mirrorTabDataToGames } from '../model/repository/indexedDbRepository';
 import { markDirty } from '../model/repository/syncStateRepository';
@@ -498,6 +499,94 @@ export function useGameListViewModel() {
     [data, lookups, notify, persist],
   );
 
+  // Ruleta — mover directo a otro listado (sin abrir el formulario). Variante no interactiva de migrateGame
+  // pensada para la acción "En curso" de la tarjeta-resultado.
+  const moveGameToTab = useCallback(
+    (sourceTab: TabId, id: number, targetTab: TabId) => {
+      if (sourceTab === targetTab) return;
+      const source = data[sourceTab].find((item) => item.id === id);
+      if (!source) return;
+
+      const now = Date.now();
+      const moved: GameItem = { ...source, _ts: now, listedAt: now };
+      // Próximos → en curso: las estrellas de "interés" no son puntuación del juego.
+      if (sourceTab === 'p' && targetTab === 'e') moved.score = 0;
+
+      const nextData: TabData = {
+        ...data,
+        [sourceTab]: data[sourceTab].filter((item) => item.id !== id),
+        [targetTab]: [...data[targetTab], moved],
+      };
+      persist(nextData);
+      notify('ok', 'Juego pasado a En curso');
+    },
+    [data, persist, notify],
+  );
+
+  // Ruleta (perfil social) — ¿ya tengo este juego en alguna de mis listas? Se compara por nombre normalizado
+  // porque los IDs son locales por usuario y no son comparables entre perfiles.
+  const hasGameInLists = useCallback(
+    (name: string) => {
+      const norm = normalizeName(name);
+      if (!norm) return false;
+      return TAB_ORDER.some((tab) => data[tab].some((game) => normalizeName(game.name) === norm));
+    },
+    [data],
+  );
+
+  // Ruleta (perfil social) — añadir un juego ajeno a MI lista de próximos, evitando duplicados.
+  const addGameToProximos = useCallback(
+    (game: Partial<GameItem>): 'added' | 'duplicate' | 'invalid' => {
+      const name = safeTrim(game.name || '', 120);
+      if (!name) {
+        notify('warn', 'El juego no tiene nombre.');
+        return 'invalid';
+      }
+      if (hasGameInLists(name)) {
+        notify('warn', `"${name}" ya está en tus listas.`);
+        return 'duplicate';
+      }
+
+      const now = Date.now();
+      const id = Math.max(0, ...TAB_ORDER.flatMap((key) => data[key].map((item) => item.id))) + 1;
+      const newGame: GameItem = {
+        id,
+        _ts: now,
+        name,
+        platforms: uniqueCaseInsensitive((game.platforms || []).map(normalizeTag).filter(Boolean)),
+        genres: uniqueCaseInsensitive((game.genres || []).map(normalizeTag).filter(Boolean)),
+        steamDeck: Boolean(game.steamDeck),
+        review: safeTrim(game.review || '', 25000),
+        score: Math.max(0, Math.min(5, Number(game.score || 0))),
+        listedAt: now,
+      };
+      persist({ ...data, p: [...data.p, newGame] });
+      notify('ok', `"${name}" añadido a próximos`);
+      return 'added';
+    },
+    [data, hasGameInLists, persist, notify],
+  );
+
+  // Ruleta (perfil social) — si el juego ya es tuyo, llevarlo a "En curso". Busca por nombre normalizado en
+  // todas las listas y lo mueve desde donde esté; si ya está en curso, no hace nada (solo avisa).
+  const moveGameToCurrentByName = useCallback(
+    (name: string) => {
+      const norm = normalizeName(name);
+      if (!norm) return;
+      for (const tab of TAB_ORDER) {
+        const game = data[tab].find((item) => normalizeName(item.name) === norm);
+        if (!game) continue;
+        if (tab === 'e') {
+          notify('ok', `"${game.name}" ya está en curso`);
+          return;
+        }
+        moveGameToTab(tab, game.id, 'e');
+        return;
+      }
+    },
+    [data, moveGameToTab, notify],
+  );
+
   return {
     data,
     meta,
@@ -525,6 +614,10 @@ export function useGameListViewModel() {
     openNewGame,
     openEditGame,
     migrateGame,
+    moveGameToTab,
+    moveGameToCurrentByName,
+    addGameToProximos,
+    hasGameInLists,
     saveDraft,
     deleteGame,
     removeTagAcrossGames,
