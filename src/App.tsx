@@ -1,6 +1,6 @@
 import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
-import { DIALOG_MESSAGES, ROUTE_TAB, SYNC_BADGE_TEXT, SYNC_MESSAGES, TAB_ROUTE } from './core/constants/labels';
+import { DIALOG_MESSAGES, ROUTE_TAB, SYNC_BADGE_TEXT, SYNC_MESSAGES, TAB_ROUTE, TAB_TITLES } from './core/constants/labels';
 import { TAB_IDS, type TabData, type TabId } from './model/types/game';
 import { publishReviewActivity } from './model/repository/socialPublishRepository';
 import { normalizeData } from './model/repository/localRepository';
@@ -13,11 +13,13 @@ import { StatusBanner } from './view/components/StatusBanner';
 import { BottomNavigation, type AppSection } from './view/components/BottomNavigation';
 import { useGameListViewModel } from './viewmodel/useGameListViewModel';
 import { useSyncViewModel } from './viewmodel/useSyncViewModel';
+import { buildListsPool, listsWeight } from './core/roulette/roulette';
 
 const FormModal = lazy(() => import('./view/modals/FormModal').then((module) => ({ default: module.FormModal })));
 const ConfirmModal = lazy(() => import('./view/modals/ConfirmModal').then((module) => ({ default: module.ConfirmModal })));
 const SettingsHub = lazy(() => import('./view/components/SettingsHub').then((module) => ({ default: module.SettingsHub })));
 const SocialHub = lazy(() => import('./view/components/SocialHub').then((module) => ({ default: module.SocialHub })));
+const RouletteModal = lazy(() => import('./view/components/roulette/RouletteModal').then((module) => ({ default: module.RouletteModal })));
 
 function getCurrentTab(pathname: string): TabId {
   return ROUTE_TAB[pathname] || 'c';
@@ -77,6 +79,9 @@ export default function App() {
   const resizeRafRef = useRef<number | null>(null);
 
   const tabFilter = vm.filters[currentTab];
+
+  const [rouletteOpen, setRouletteOpen] = useState(false);
+  const roulettePool = useMemo(() => buildListsPool(vm.data), [vm.data]);
 
   useEffect(() => {
     syncVm.initializeSync();
@@ -358,7 +363,11 @@ export default function App() {
           </>
         ) : activeSection === 'social' ? (
           <Suspense fallback={null}>
-            <SocialHub />
+            <SocialHub
+              onAddToProximos={vm.addGameToProximos}
+              hasGameInLists={vm.hasGameInLists}
+              moveGameToCurrentByName={vm.moveGameToCurrentByName}
+            />
           </Suspense>
         ) : (
           <Suspense fallback={null}>
@@ -388,11 +397,23 @@ export default function App() {
       </main>
 
       {activeSection === 'lists' ? (
-        <button className="fab" type="button" aria-label="Añadir juego" onClick={handleAddGame}>
-          <svg aria-hidden="true">
-            <use href="#icon-plus" />
-          </svg>
-        </button>
+        <>
+          <button
+            className="fab-roulette"
+            type="button"
+            aria-label="Sortear próximo juego"
+            onClick={() => setRouletteOpen(true)}
+          >
+            <svg className="ui-icon" aria-hidden="true">
+              <use href="#icon-dice-d20" />
+            </svg>
+          </button>
+          <button className="fab" type="button" aria-label="Añadir juego" onClick={handleAddGame}>
+            <svg aria-hidden="true">
+              <use href="#icon-plus" />
+            </svg>
+          </button>
+        </>
       ) : null}
 
       <BottomNavigation currentSection={activeSection} onSectionChange={handleSectionChange} />
@@ -413,6 +434,24 @@ export default function App() {
           title={vm.confirmState?.title || ''}
           onCancel={handleConfirmCancel}
           onConfirm={handleConfirmDelete}
+        />
+
+        <RouletteModal
+          open={rouletteOpen}
+          onClose={() => setRouletteOpen(false)}
+          title="Elige tu próximo juego"
+          candidates={roulettePool}
+          weight={listsWeight}
+          tag={(candidate) => TAB_TITLES[candidate.sourceTab]}
+          action={() => ({
+            btnClass: 'btn-complete',
+            icon: 'play',
+            label: 'Pasa a "En curso"',
+            doneLabel: '✓ En curso',
+            onAct: (candidate) => {
+              vm.moveGameToTab(candidate.sourceTab, candidate.game.id, 'e');
+            },
+          })}
         />
       </Suspense>
 

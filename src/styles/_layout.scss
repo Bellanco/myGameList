@@ -1264,6 +1264,12 @@ button.hub-chip.active {
 }
 /* Anula el borde sólido de .is-review (mayor especificidad que esa regla) para dejar ver el degradado. */
 .hub-profile-reviews-list .hub-review-entry.is-review { border-left-color: transparent; }
+/* Tarjeta de reseña más cuidada: leve degradado de superficie + sombra sutil (estática: las reseñas no son
+   clicables, así que sin realce de hover). Ocupan todo el ancho del listado. */
+.hub-profile-reviews-list .hub-review-entry {
+  background: linear-gradient(180deg, var(--surface-elevated), var(--surface));
+  box-shadow: 0 1px 2px rgba(0, 0, 0, .18);
+}
 /* Acento lateral suave: degradado vertical con el color y difuminado de la barra de pestañas. */
 .hub-review-entry::before {
   content: '';
@@ -1299,6 +1305,8 @@ button.hub-chip.active {
 .hub-review-meta {
   display: flex;
   align-items: center;
+  justify-content: space-between;
+  width: 100%;
   gap: .6rem;
   flex-wrap: wrap;
 }
@@ -1316,11 +1324,11 @@ button.hub-chip.active {
   line-clamp: 3;
   overflow: hidden;
   white-space: pre-line;
-  max-width: 66ch;
+  max-width: none; /* ocupa todo el ancho de la tarjeta (anula el 65ch de .hub-feed-review-text) */
   margin: .15rem 0 0;
   font-size: clamp(.92rem, .88rem + .25vw, 1rem);
   line-height: 1.6;
-  color: var(--text);
+  color: var(--text-muted);
 }
 .hub-feed-card-detail .hub-profile-reviews-list .hub-review-text.is-expanded {
   display: block;
