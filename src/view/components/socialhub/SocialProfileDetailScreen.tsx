@@ -305,7 +305,7 @@ export function SocialProfileDetailScreen({
               aria-pressed={showReviews}
               onClick={() => setShowReviews((prev) => !prev)}
             >
-              <Icon name={showReviews ? 'signature' : 'record-vinyl'} />
+              <Icon name={showReviews ? 'grav' : 'signature'} />
               {showReviews ? SOCIAL_UI.feed.reviewsBack : SOCIAL_UI.feed.reviewsButton}
             </button>
             <button
