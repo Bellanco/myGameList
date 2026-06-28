@@ -164,6 +164,19 @@
   border-left: 2px solid var(--border); padding-left: 11px; margin-bottom: 16px;
   display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden;
 }
+/* La reseña en la tarjeta-resultado es pulsable → abre el detalle. */
+.rl-card-snip-btn {
+  width: 100%; text-align: left; background: transparent; cursor: pointer;
+  border: 0; border-left: 2px solid var(--border); font-family: inherit;
+  transition: color .15s, border-color .15s;
+}
+.rl-card-snip-btn:hover { color: var(--text); border-left-color: var(--steam); }
+.rl-card-snip-btn:focus-visible { outline: 2px solid var(--steam); outline-offset: 2px; }
+
+/* Detalle de reseña dentro del modal (parte común ReviewDetail). */
+.rl-review-body { display: block; }
+.rl-review-actions { margin-bottom: 14px; }
+.rl-review-card { width: 100%; }
 .rl-card-action { width: 100%; }
 
 @media (prefers-reduced-motion: reduce) {

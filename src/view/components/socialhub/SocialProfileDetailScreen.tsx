@@ -480,6 +480,7 @@ export function SocialProfileDetailScreen({
         title="Elige tu próximo juego"
         candidates={roulettePool}
         weight={profileWeight}
+        reviewAuthor={{ name: activeProfileDetail.displayName, photoURL: activeProfileDetail.photoURL }}
         action={
           onAddToProximos
             ? (game) => {
