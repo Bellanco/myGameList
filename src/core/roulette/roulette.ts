@@ -31,7 +31,7 @@ export function gameWeight(game: GameItem): number {
 }
 
 /** Multiplicador por lista en LISTADOS: salen más los próximos, luego la vergüenza, luego completados. */
-export const TAB_WEIGHT: Record<TabId, number> = { p: 3, v: 2, c: 1, e: 1 };
+const TAB_WEIGHT: Record<TabId, number> = { p: 3, v: 2, c: 1, e: 1 };
 
 /** Ponderación en LISTADOS: curva de puntuación × multiplicador de lista (más probable lo de próximos). */
 export function listsWeight(candidate: RouletteCandidate): number {
@@ -39,7 +39,7 @@ export function listsWeight(candidate: RouletteCandidate): number {
 }
 
 /** Empujón por rejugable en SOCIAL: cuenta, pero por debajo de un escalón de nota (un buen no-rejugable puede salir). */
-export const REPLAYABLE_BONUS = 1.5;
+const REPLAYABLE_BONUS = 1.5;
 
 /** Ponderación en SOCIAL: curva de puntuación, con un plus si el juego es rejugable. */
 export function profileWeight(candidate: RouletteCandidate): number {
