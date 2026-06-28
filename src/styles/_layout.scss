@@ -1324,7 +1324,7 @@ button.hub-chip.active {
   line-clamp: 3;
   overflow: hidden;
   white-space: pre-line;
-  max-width: 66ch;
+  max-width: none; /* ocupa todo el ancho de la tarjeta (anula el 65ch de .hub-feed-review-text) */
   margin: .15rem 0 0;
   font-size: clamp(.92rem, .88rem + .25vw, 1rem);
   line-height: 1.6;
