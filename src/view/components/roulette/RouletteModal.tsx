@@ -2,6 +2,7 @@ import { useCallback, useLayoutEffect, useMemo, useRef, useState, type CSSProper
 import { useNativeDialog } from '../../modals/useNativeDialog';
 import { Icon } from '../Icon';
 import { StarRating } from '../StarRating';
+import { ReviewDetail, type ReviewAuthor } from './ReviewDetail';
 import type { IconName } from '../../../core/constants/icons';
 import type { GameItem } from '../../../model/types/game';
 import { pickWeighted, type RouletteCandidate } from '../../../core/roulette/roulette';
@@ -30,6 +31,8 @@ interface RouletteModalProps {
   weight: (candidate: RouletteCandidate) => number;
   /** Etiqueta de la tarjeta-resultado según el juego elegido (p. ej. su lista en listados). Por defecto, "Tu próximo juego". */
   tag?: (candidate: RouletteCandidate) => string;
+  /** Autor para el detalle de reseña (solo social: muestra avatar + nombre). En listados se omite. */
+  reviewAuthor?: ReviewAuthor;
   action?: RouletteAction | null;
 }
 
@@ -71,7 +74,7 @@ function drumStyle(th: number, idle = false): CSSProperties {
   };
 }
 
-export function RouletteModal({ open, onClose, title, candidates, weight, tag, action }: RouletteModalProps) {
+export function RouletteModal({ open, onClose, title, candidates, weight, tag, reviewAuthor, action }: RouletteModalProps) {
   const dialogRef = useNativeDialog(open, onClose);
   const stageRef = useRef<HTMLDivElement>(null);
   const posRef = useRef(0);
@@ -82,6 +85,7 @@ export function RouletteModal({ open, onClose, title, candidates, weight, tag, a
   const [phase, setPhase] = useState<'idle' | 'spinning' | 'result'>('idle');
   const [winner, setWinner] = useState<RouletteCandidate | null>(null);
   const [acted, setActed] = useState(false);
+  const [reviewOpen, setReviewOpen] = useState(false);
   // Pool congelado por sesión: el sorteo es sobre lo que había al abrir. Así, ejecutar la acción
   // (mover a "en curso" / añadir a próximos) muta las listas SIN reiniciar la ruleta ni borrar el resultado.
   const [pool, setPool] = useState<RouletteCandidate[]>([]);
@@ -135,6 +139,7 @@ export function RouletteModal({ open, onClose, title, candidates, weight, tag, a
     setPhase('idle');
     setWinner(null);
     setActed(false);
+    setReviewOpen(false);
     picksRef.current = new Map();
   }, [open]);
 
@@ -187,6 +192,7 @@ export function RouletteModal({ open, onClose, title, candidates, weight, tag, a
     posRef.current = SPIN_START;
     setWinner(null);
     setActed(false);
+    setReviewOpen(false);
     setPhase('spinning');
   }, [phase, n, pool, weight, buildSpinReel]);
 
@@ -222,6 +228,11 @@ export function RouletteModal({ open, onClose, title, candidates, weight, tag, a
             </button>
           </div>
 
+          {reviewOpen && winnerGame ? (
+            <div className="modal-body rl-review-body">
+              <ReviewDetail game={winnerGame} author={reviewAuthor} onBack={() => setReviewOpen(false)} />
+            </div>
+          ) : (
           <div className="modal-body rl-body">
             {!n ? (
               <p className="rl-empty">No hay juegos elegibles para sortear.</p>
@@ -272,7 +283,16 @@ export function RouletteModal({ open, onClose, title, candidates, weight, tag, a
                           ))}
                         </div>
                       ) : null}
-                      {winnerGame.review ? <p className="rl-card-snip">{winnerGame.review}</p> : null}
+                      {winnerGame.review ? (
+                        <button
+                          type="button"
+                          className="rl-card-snip rl-card-snip-btn"
+                          onClick={() => setReviewOpen(true)}
+                          aria-label="Ver la reseña completa"
+                        >
+                          {winnerGame.review}
+                        </button>
+                      ) : null}
                       {resolvedAction ? (
                         <button
                           className={`btn ${resolvedAction.btnClass} rl-card-action`}
@@ -297,6 +317,7 @@ export function RouletteModal({ open, onClose, title, candidates, weight, tag, a
               </>
             )}
           </div>
+          )}
         </div>
       ) : null}
     </dialog>
