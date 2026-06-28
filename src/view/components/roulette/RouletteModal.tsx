@@ -249,7 +249,7 @@ export function RouletteModal({ open, onClose, title, candidates, weight, tag, a
                   </button>
                 </div>
 
-                <div className={`rl-result-col ${phase === 'result' && winnerGame ? 'is-shown' : ''}`.trim()}>
+                <div className="rl-result-col">
                   {phase === 'result' && winnerGame ? (
                     <div className="rl-card">
                       <div className="rl-card-tag">{tagText}</div>
@@ -285,7 +285,14 @@ export function RouletteModal({ open, onClose, title, candidates, weight, tag, a
                         </button>
                       ) : null}
                     </div>
-                  ) : null}
+                  ) : (
+                    <div className={`rl-ghost ${phase === 'spinning' ? 'is-spinning' : ''}`.trim()} aria-hidden="true">
+                      <Icon name="dice-d20" className="ui-icon rl-ghost-icon" />
+                      <p className="rl-ghost-text">
+                        {phase === 'spinning' ? 'Eligiendo…' : 'Tu próximo juego aparecerá aquí'}
+                      </p>
+                    </div>
+                  )}
                 </div>
               </>
             )}
