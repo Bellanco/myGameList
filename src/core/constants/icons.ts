@@ -36,7 +36,9 @@ export type IconName =
   | 'dice-d20'
   | 'uncharted'
   | 'chevron-down'
-  | 'chevron-up';
+  | 'chevron-up'
+  | 'signature'
+  | 'record-vinyl';
 
 export const TAB_ICONS: Record<TabId, IconName> = {
   c: 'trophy',
