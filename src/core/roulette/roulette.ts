@@ -18,22 +18,45 @@ export interface RouletteCandidate {
 /** Peso base para juegos sin puntuación: entran al sorteo con probabilidad mínima en vez de quedar fuera. */
 export const BASE_WEIGHT = 1;
 
-/** Peso de un juego: a mayor puntuación (0–5), más probable. Sin puntuar → peso base. */
+/** Curva de puntuación (cuadrática): a más nota, mucho más peso. Score 0 / sin puntuar → peso base. */
+export function curveScore(score?: number): number {
+  const s = Math.max(0, Math.min(5, Number(score || 0)));
+  return s > 0 ? s * s : BASE_WEIGHT;
+}
+
+/** Peso lineal simple (score o base); ponderación por defecto de pickWeighted. */
 export function gameWeight(game: GameItem): number {
   const score = Number(game.score || 0);
   return score > 0 ? score : BASE_WEIGHT;
 }
 
-/** Selección aleatoria ponderada por puntuación. `rng` es inyectable para tests deterministas. */
+/** Multiplicador por lista en LISTADOS: salen más los próximos, luego la vergüenza, luego completados. */
+export const TAB_WEIGHT: Record<TabId, number> = { p: 3, v: 2, c: 1, e: 1 };
+
+/** Ponderación en LISTADOS: curva de puntuación × multiplicador de lista (más probable lo de próximos). */
+export function listsWeight(candidate: RouletteCandidate): number {
+  return curveScore(candidate.game.score) * (TAB_WEIGHT[candidate.sourceTab] ?? 1);
+}
+
+/** Empujón por rejugable en SOCIAL: cuenta, pero por debajo de un escalón de nota (un buen no-rejugable puede salir). */
+export const REPLAYABLE_BONUS = 1.5;
+
+/** Ponderación en SOCIAL: curva de puntuación, con un plus si el juego es rejugable. */
+export function profileWeight(candidate: RouletteCandidate): number {
+  return curveScore(candidate.game.score) * (candidate.game.replayable ? REPLAYABLE_BONUS : 1);
+}
+
+/** Selección aleatoria ponderada. `weigher` define el peso de cada candidato; `rng` inyectable en tests. */
 export function pickWeighted(
   candidates: RouletteCandidate[],
+  weigher: (candidate: RouletteCandidate) => number = (c) => gameWeight(c.game),
   rng: () => number = Math.random,
 ): RouletteCandidate | null {
   if (!candidates.length) return null;
-  const total = candidates.reduce((sum, c) => sum + gameWeight(c.game), 0);
+  const total = candidates.reduce((sum, c) => sum + weigher(c), 0);
   let r = rng() * total;
   for (const candidate of candidates) {
-    r -= gameWeight(candidate.game);
+    r -= weigher(candidate);
     if (r <= 0) return candidate;
   }
   return candidates[candidates.length - 1];
