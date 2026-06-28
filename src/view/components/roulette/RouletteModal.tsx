@@ -25,6 +25,8 @@ interface RouletteModalProps {
   onClose: () => void;
   title: string;
   candidates: RouletteCandidate[];
+  /** Ponderación del sorteo según el contexto (listados vs social). Por defecto, lineal por puntuación. */
+  weight?: (candidate: RouletteCandidate) => number;
   action?: RouletteAction | null;
 }
 
@@ -34,7 +36,7 @@ const RADIUS = 120; // px
 const THRESH = 1.5; // oculta más allá de ~86°
 const REPEAT = 13; // copias del pool en la cinta (margen para que siempre haya nombres arriba/abajo)
 const LOOPS = 3; // vueltas antes de frenar (menos distancia = gira más despacio, misma duración)
-const DURATION = 3600; // ms
+const DURATION = 3000; // ms (un poco más rápido que antes, manteniendo la frenada)
 
 function starString(score: number): string {
   const n = Math.max(0, Math.min(5, Math.round(score)));
@@ -61,7 +63,7 @@ function drumStyle(th: number, idle = false): CSSProperties {
   };
 }
 
-export function RouletteModal({ open, onClose, title, candidates, action }: RouletteModalProps) {
+export function RouletteModal({ open, onClose, title, candidates, weight, action }: RouletteModalProps) {
   const dialogRef = useNativeDialog(open, onClose);
   const stageRef = useRef<HTMLDivElement>(null);
   const posRef = useRef(0);
@@ -129,7 +131,7 @@ export function RouletteModal({ open, onClose, title, candidates, action }: Roul
 
   const spin = useCallback(() => {
     if (phase === 'spinning' || !n) return;
-    const chosen = pickWeighted(pool);
+    const chosen = pickWeighted(pool, weight);
     if (!chosen) return;
 
     setWinner(null);
@@ -164,7 +166,7 @@ export function RouletteModal({ open, onClose, title, candidates, action }: Roul
       else settle();
     };
     rafRef.current = requestAnimationFrame(frame);
-  }, [phase, n, pool, layout]);
+  }, [phase, n, pool, layout, weight]);
 
   const winnerGame = winner?.game ?? null;
   const resolvedAction = winnerGame && action ? action(winnerGame) : null;

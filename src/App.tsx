@@ -13,7 +13,7 @@ import { StatusBanner } from './view/components/StatusBanner';
 import { BottomNavigation, type AppSection } from './view/components/BottomNavigation';
 import { useGameListViewModel } from './viewmodel/useGameListViewModel';
 import { useSyncViewModel } from './viewmodel/useSyncViewModel';
-import { buildListsPool } from './core/roulette/roulette';
+import { buildListsPool, listsWeight } from './core/roulette/roulette';
 
 const FormModal = lazy(() => import('./view/modals/FormModal').then((module) => ({ default: module.FormModal })));
 const ConfirmModal = lazy(() => import('./view/modals/ConfirmModal').then((module) => ({ default: module.ConfirmModal })));
@@ -441,6 +441,7 @@ export default function App() {
           onClose={() => setRouletteOpen(false)}
           title="Elige tu próximo juego"
           candidates={roulettePool}
+          weight={listsWeight}
           action={() => ({
             btnClass: 'btn-complete',
             icon: 'play',

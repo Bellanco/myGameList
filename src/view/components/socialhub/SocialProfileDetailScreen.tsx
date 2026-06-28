@@ -7,7 +7,7 @@ import { TAB_IDS, type GameItem, type TabId } from '../../../model/types/game';
 import { DEFAULT_SORT, sortGames } from '../../../core/utils/sortGames';
 import type { SocialSharedGame } from '../../../model/repository/gistRepository';
 import { RouletteModal } from '../roulette/RouletteModal';
-import { buildProfilePool } from '../../../core/roulette/roulette';
+import { buildProfilePool, profileWeight } from '../../../core/roulette/roulette';
 
 // Paginación de los juegos del perfil: se muestran de 15 en 15 para evitar scroll excesivo al abrir el detalle.
 const LIST_PAGE_SIZE = 15;
@@ -315,7 +315,7 @@ export function SocialProfileDetailScreen({
               disabled={!roulettePool.length}
             >
               <Icon name="dice-d20" />
-              Elegir juego
+              Elige tu próximo juego
             </button>
           </div>
           {isOwnProfile && onEditProfile ? (
@@ -479,6 +479,7 @@ export function SocialProfileDetailScreen({
         onClose={() => setRouletteOpen(false)}
         title="Elige tu próximo juego"
         candidates={roulettePool}
+        weight={profileWeight}
         action={
           onAddToProximos
             ? (game) => {
