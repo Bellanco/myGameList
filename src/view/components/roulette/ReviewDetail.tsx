@@ -1,4 +1,3 @@
-import { Icon } from '../Icon';
 import { StarRating } from '../StarRating';
 import { HubAvatar } from '../socialhub/HubAvatar';
 import type { GameItem } from '../../../model/types/game';
@@ -12,7 +11,6 @@ export interface ReviewAuthor {
 interface ReviewDetailProps {
   game: GameItem;
   author?: ReviewAuthor;
-  onBack: () => void;
 }
 
 function MetaSection({ label, items, cls }: { label: string; items?: string[]; cls: string }) {
@@ -36,16 +34,10 @@ function MetaSection({ label, items, cls }: { label: string; items?: string[]; c
  * Con `author` (social) muestra avatar + nombre del autor y el juego como chip; sin él (listados),
  * el título es el propio juego. El botón "Atrás" lo decide quien lo monta.
  */
-export function ReviewDetail({ game, author, onBack }: ReviewDetailProps) {
+export function ReviewDetail({ game, author }: ReviewDetailProps) {
   const review = String(game.review || '').trim();
   return (
     <div className="rl-review">
-      <div className="rl-review-actions">
-        <button className="btn btn-secondary" type="button" onClick={onBack}>
-          <Icon name="arrow-back" />
-          Atrás
-        </button>
-      </div>
       <article className="hub-feed-card hub-feed-card-detail rl-review-card">
         <header className="hub-feed-card-head">
           {author ? <HubAvatar name={author.name} photoURL={author.photoURL} /> : null}
