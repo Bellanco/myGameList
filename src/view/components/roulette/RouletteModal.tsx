@@ -1,9 +1,9 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
+import { useCallback, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { useNativeDialog } from '../../modals/useNativeDialog';
 import { Icon } from '../Icon';
 import type { IconName } from '../../../core/constants/icons';
 import type { GameItem } from '../../../model/types/game';
-import { pickWeighted, type RouletteCandidate } from '../../../core/roulette/roulette';
+import { gameWeight, pickWeighted, type RouletteCandidate } from '../../../core/roulette/roulette';
 
 /** Acción inferior de la tarjeta-resultado, resuelta para el juego elegido. */
 export interface RouletteResolvedAction {
@@ -34,9 +34,19 @@ interface RouletteModalProps {
 const STEP = 0.42; // rad entre filas
 const RADIUS = 120; // px
 const THRESH = 1.5; // oculta más allá de ~86°
-const REPEAT = 13; // copias del pool en la cinta (margen para que siempre haya nombres arriba/abajo)
-const LOOPS = 3; // vueltas antes de frenar (menos distancia = gira más despacio, misma duración)
-const DURATION = 3000; // ms (un poco más rápido que antes, manteniendo la frenada)
+const DURATION = 3000; // ms
+// La cinta de giro tiene longitud FIJA (no depende de cuántos juegos haya): el ganador se coloca siempre en el
+// mismo índice, así el recorrido —y por tanto la velocidad— es el mismo con 10 que con 100 juegos.
+const SPIN_START = 5; // posición inicial (deja nombres por encima al arrancar)
+const SPIN_TRAVEL = 46; // ítems que recorre el giro → velocidad constante (ajustable: más = más rápido)
+const BELOW = 5; // nombres por debajo del ganador al frenar
+const LAND = SPIN_START + SPIN_TRAVEL; // índice del ganador en la cinta de giro
+const SPIN_LEN = LAND + 1 + BELOW; // longitud de la cinta de giro
+const IDLE_LEN = 9; // cinta en reposo (unos pocos nombres)
+const IDLE_CENTER = 4; // centro de la cinta en reposo
+// Penalización de repetición (solo en memoria, mientras el modal esté abierto): cada vez que un juego sale,
+// su peso se multiplica por esto, para que no se repita una y otra vez. Se resetea al cerrar/reabrir.
+const REPEAT_DECAY = 0.25;
 
 function starString(score: number): string {
   const n = Math.max(0, Math.min(5, Math.round(score)));
@@ -68,6 +78,8 @@ export function RouletteModal({ open, onClose, title, candidates, weight, action
   const stageRef = useRef<HTMLDivElement>(null);
   const posRef = useRef(0);
   const rafRef = useRef<number | null>(null);
+  // Veces que ha salido cada candidato en esta sesión (mientras el modal está abierto) → penaliza repeticiones.
+  const picksRef = useRef<Map<RouletteCandidate, number>>(new Map());
 
   const [phase, setPhase] = useState<'idle' | 'spinning' | 'result'>('idle');
   const [winner, setWinner] = useState<RouletteCandidate | null>(null);
@@ -77,12 +89,20 @@ export function RouletteModal({ open, onClose, title, candidates, weight, action
   const [pool, setPool] = useState<RouletteCandidate[]>([]);
 
   const n = pool.length;
-  const seq = useMemo<GameItem[]>(() => {
-    if (!n) return [];
-    const arr: GameItem[] = [];
-    for (let k = 0; k < REPEAT; k++) for (const c of pool) arr.push(c.game);
+
+  // Cinta renderizada de longitud FIJA. En reposo, unos pocos nombres; al girar, una cinta con el ganador en LAND.
+  const [reel, setReel] = useState<GameItem[]>([]);
+  const pendingRef = useRef<RouletteCandidate | null>(null);
+
+  const buildIdleReel = useCallback(
+    (p: RouletteCandidate[]) => Array.from({ length: IDLE_LEN }, (_, i) => p[i % p.length].game),
+    [],
+  );
+  const buildSpinReel = useCallback((p: RouletteCandidate[], chosen: RouletteCandidate) => {
+    const arr = Array.from({ length: SPIN_LEN }, (_, i) => p[i % p.length].game);
+    arr[LAND] = chosen.game; // el ganador SIEMPRE cae en el mismo índice → recorrido (y velocidad) constante
     return arr;
-  }, [pool, n]);
+  }, []);
 
   // Animación de giro: actualiza el DOM directamente (imperativo) frame a frame.
   const layout = useCallback((pos: number, idle = false) => {
@@ -99,15 +119,17 @@ export function RouletteModal({ open, onClose, title, candidates, weight, action
     }
   }, []);
 
-  // Estado de REPOSO calculado en el render: el primer pintado ya es correcto (sin depender del timing de un
-  // efecto). Memoizado por `seq`/`n` → es estable entre re-renders, así la animación imperativa no se pisa.
-  const idlePos = n * 2;
-  const idleStyles = useMemo<CSSProperties[]>(
-    () => seq.map((_, i) => drumStyle((i - idlePos) * STEP, true)),
-    [seq, idlePos],
+  // Estilos calculados en el render (primer pintado correcto, sin depender del timing de un efecto). Estables
+  // mientras no cambien fase/cinta, así la animación imperativa no se pisa. Reposo = todo difuminado; resultado
+  // = ganador nítido y centrado.
+  const renderPos = phase === 'result' ? LAND : phase === 'spinning' ? SPIN_START : IDLE_CENTER;
+  const renderIdle = phase === 'idle';
+  const itemStyles = useMemo<CSSProperties[]>(
+    () => reel.map((_, i) => drumStyle((i - renderPos) * STEP, renderIdle)),
+    [reel, renderPos, renderIdle],
   );
 
-  // Al abrir: congela el pool actual y vuelve a estado inicial (useLayoutEffect evita el parpadeo de "sin juegos").
+  // Al abrir: congela el pool, vuelve a reposo y limpia penalizaciones de repetición.
   useLayoutEffect(() => {
     if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
     if (!open) return;
@@ -115,58 +137,61 @@ export function RouletteModal({ open, onClose, title, candidates, weight, action
     setPhase('idle');
     setWinner(null);
     setActed(false);
+    picksRef.current = new Map();
   }, [open]);
 
-  // Coloca el tambor en reposo cuando se renderiza el pool congelado. useLayoutEffect (síncrono tras el
-  // commit del DOM) evita la carrera con el rAF en el montaje. No depende de `phase` para no recolocar al girar.
+  // Con el pool congelado, monta la cinta de reposo (síncrono → primer pintado correcto).
   useLayoutEffect(() => {
     if (!open || !n || phase !== 'idle') return;
-    posRef.current = n * 2;
-    layout(posRef.current, true);
-  }, [open, seq, n]);
+    setReel(buildIdleReel(pool));
+    posRef.current = IDLE_CENTER;
+  }, [open, pool, n]);
 
-  useEffect(() => () => {
-    if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
-  }, []);
-
-  const spin = useCallback(() => {
-    if (phase === 'spinning' || !n) return;
-    const chosen = pickWeighted(pool, weight);
-    if (!chosen) return;
-
-    setWinner(null);
-    setActed(false);
-    setPhase('spinning');
-
+  // Arranque del giro: tras montar la cinta de giro (useLayoutEffect → el DOM ya tiene los nombres), anima
+  // de SPIN_START a LAND con la MISMA distancia siempre → velocidad uniforme con cualquier nº de juegos.
+  useLayoutEffect(() => {
+    if (phase !== 'spinning') return;
     const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    const winnerPos = pool.indexOf(chosen);
-    const cur = posRef.current;
-    const base = Math.round(cur) + LOOPS * n;
-    const target = base + (((winnerPos - (base % n)) + n) % n);
     const dur = reduce ? 0 : DURATION;
     const start = performance.now();
-
-    const settle = () => {
-      let p = target;
-      // Normaliza hacia atrás (contenido idéntico cada `n`): deja sitio arriba/abajo para el próximo giro.
-      while (p > n * (REPEAT - 3)) p -= n;
-      posRef.current = p;
-      layout(p);
-      setWinner(chosen);
-      setPhase('result');
-    };
-
     const frame = (t: number) => {
       const k = Math.min(1, (t - start) / (dur || 1));
       const e = 1 - Math.pow(1 - k, 3);
-      const pos = cur + e * (target - cur);
-      posRef.current = pos;
-      layout(pos);
-      if (k < 1) rafRef.current = requestAnimationFrame(frame);
-      else settle();
+      posRef.current = SPIN_START + e * (LAND - SPIN_START);
+      layout(posRef.current);
+      if (k < 1) {
+        rafRef.current = requestAnimationFrame(frame);
+      } else {
+        posRef.current = LAND;
+        layout(LAND);
+        setWinner(pendingRef.current);
+        setPhase('result');
+      }
     };
     rafRef.current = requestAnimationFrame(frame);
-  }, [phase, n, pool, layout, weight]);
+    return () => {
+      if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
+    };
+  }, [phase, reel, layout]);
+
+  const spin = useCallback(() => {
+    if (phase === 'spinning' || !n) return;
+    // Peso efectivo: ponderación de contexto × penalización por veces que ya ha salido en esta sesión.
+    const effectiveWeight = (candidate: RouletteCandidate) => {
+      const base = weight ? weight(candidate) : gameWeight(candidate.game);
+      const picked = picksRef.current.get(candidate) ?? 0;
+      return base * REPEAT_DECAY ** picked;
+    };
+    const chosen = pickWeighted(pool, effectiveWeight);
+    if (!chosen) return;
+    picksRef.current.set(chosen, (picksRef.current.get(chosen) ?? 0) + 1);
+    pendingRef.current = chosen;
+    setReel(buildSpinReel(pool, chosen));
+    posRef.current = SPIN_START;
+    setWinner(null);
+    setActed(false);
+    setPhase('spinning');
+  }, [phase, n, pool, weight, buildSpinReel]);
 
   const winnerGame = winner?.game ?? null;
   const resolvedAction = winnerGame && action ? action(winnerGame) : null;
@@ -215,8 +240,8 @@ export function RouletteModal({ open, onClose, title, candidates, weight, action
                   >
                     <div className="rl-view">
                       <div className="rl-stage" ref={stageRef}>
-                        {seq.map((game, i) => (
-                          <div className="rl-item" key={i} style={idleStyles[i]}>
+                        {reel.map((game, i) => (
+                          <div className="rl-item" key={i} style={itemStyles[i]}>
                             {game.name}
                           </div>
                         ))}
