@@ -1,9 +1,10 @@
 import { useCallback, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { useNativeDialog } from '../../modals/useNativeDialog';
 import { Icon } from '../Icon';
+import { StarRating } from '../StarRating';
 import type { IconName } from '../../../core/constants/icons';
 import type { GameItem } from '../../../model/types/game';
-import { gameWeight, pickWeighted, type RouletteCandidate } from '../../../core/roulette/roulette';
+import { pickWeighted, type RouletteCandidate } from '../../../core/roulette/roulette';
 
 /** Acción inferior de la tarjeta-resultado, resuelta para el juego elegido. */
 export interface RouletteResolvedAction {
@@ -25,15 +26,17 @@ interface RouletteModalProps {
   onClose: () => void;
   title: string;
   candidates: RouletteCandidate[];
-  /** Ponderación del sorteo según el contexto (listados vs social). Por defecto, lineal por puntuación. */
-  weight?: (candidate: RouletteCandidate) => number;
+  /** Ponderación del sorteo según el contexto (listados vs social). */
+  weight: (candidate: RouletteCandidate) => number;
+  /** Etiqueta de la tarjeta-resultado según el juego elegido (p. ej. su lista en listados). Por defecto, "Tu próximo juego". */
+  tag?: (candidate: RouletteCandidate) => string;
   action?: RouletteAction | null;
 }
 
-// Geometría del tambor (coherente con la vista previa aprobada).
-const STEP = 0.42; // rad entre filas
-const RADIUS = 120; // px
-const THRESH = 1.5; // oculta más allá de ~86°
+// Geometría del tambor: ajustada para que se vean 7 nombres a la vez (aspecto circular).
+const STEP = 0.34; // rad entre filas (menor = más nombres visibles, más curvatura)
+const RADIUS = 150; // px
+const THRESH = 1.2; // oculta más allá de ±~3 filas → 7 visibles (d -3..3)
 const DURATION = 3000; // ms
 // La cinta de giro tiene longitud FIJA (no depende de cuántos juegos haya): el ganador se coloca siempre en el
 // mismo índice, así el recorrido —y por tanto la velocidad— es el mismo con 10 que con 100 juegos.
@@ -47,11 +50,6 @@ const IDLE_CENTER = 4; // centro de la cinta en reposo
 // Penalización de repetición (solo en memoria, mientras el modal esté abierto): cada vez que un juego sale,
 // su peso se multiplica por esto, para que no se repita una y otra vez. Se resetea al cerrar/reabrir.
 const REPEAT_DECAY = 0.25;
-
-function starString(score: number): string {
-  const n = Math.max(0, Math.min(5, Math.round(score)));
-  return '★'.repeat(n) + '☆'.repeat(5 - n);
-}
 
 // Desenfoque base en reposo: como aún no se ha elegido nada, TODOS los nombres salen difuminados (incluido
 // el central). Al girar/terminar el desenfoque base es 0 y el elegido queda nítido.
@@ -73,7 +71,7 @@ function drumStyle(th: number, idle = false): CSSProperties {
   };
 }
 
-export function RouletteModal({ open, onClose, title, candidates, weight, action }: RouletteModalProps) {
+export function RouletteModal({ open, onClose, title, candidates, weight, tag, action }: RouletteModalProps) {
   const dialogRef = useNativeDialog(open, onClose);
   const stageRef = useRef<HTMLDivElement>(null);
   const posRef = useRef(0);
@@ -178,9 +176,8 @@ export function RouletteModal({ open, onClose, title, candidates, weight, action
     if (phase === 'spinning' || !n) return;
     // Peso efectivo: ponderación de contexto × penalización por veces que ya ha salido en esta sesión.
     const effectiveWeight = (candidate: RouletteCandidate) => {
-      const base = weight ? weight(candidate) : gameWeight(candidate.game);
       const picked = picksRef.current.get(candidate) ?? 0;
-      return base * REPEAT_DECAY ** picked;
+      return weight(candidate) * REPEAT_DECAY ** picked;
     };
     const chosen = pickWeighted(pool, effectiveWeight);
     if (!chosen) return;
@@ -195,6 +192,7 @@ export function RouletteModal({ open, onClose, title, candidates, weight, action
 
   const winnerGame = winner?.game ?? null;
   const resolvedAction = winnerGame && action ? action(winnerGame) : null;
+  const tagText = winner && tag ? tag(winner) : 'Tu próximo juego';
 
   const handleAct = useCallback(() => {
     if (!winner || acted) return;
@@ -254,10 +252,10 @@ export function RouletteModal({ open, onClose, title, candidates, weight, action
                 <div className={`rl-result-col ${phase === 'result' && winnerGame ? 'is-shown' : ''}`.trim()}>
                   {phase === 'result' && winnerGame ? (
                     <div className="rl-card">
-                      <div className="rl-card-tag">Tu próximo juego</div>
+                      <div className="rl-card-tag">{tagText}</div>
                       <h3 className="rl-card-name">{winnerGame.name}</h3>
                       <div className="rl-card-stars" aria-label={`Puntuación ${winnerGame.score || 0} de 5`}>
-                        {starString(Number(winnerGame.score || 0))}
+                        <StarRating value={Number(winnerGame.score || 0)} />
                         <small>{winnerGame.score ? `${winnerGame.score}/5` : 'sin puntuar'}</small>
                       </div>
                       {winnerGame.platforms.length || winnerGame.genres.length ? (

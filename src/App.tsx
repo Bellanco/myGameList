@@ -1,6 +1,6 @@
 import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
-import { DIALOG_MESSAGES, ROUTE_TAB, SYNC_BADGE_TEXT, SYNC_MESSAGES, TAB_ROUTE } from './core/constants/labels';
+import { DIALOG_MESSAGES, ROUTE_TAB, SYNC_BADGE_TEXT, SYNC_MESSAGES, TAB_ROUTE, TAB_TITLES } from './core/constants/labels';
 import { TAB_IDS, type TabData, type TabId } from './model/types/game';
 import { publishReviewActivity } from './model/repository/socialPublishRepository';
 import { normalizeData } from './model/repository/localRepository';
@@ -442,6 +442,7 @@ export default function App() {
           title="Elige tu próximo juego"
           candidates={roulettePool}
           weight={listsWeight}
+          tag={(candidate) => TAB_TITLES[candidate.sourceTab]}
           action={() => ({
             btnClass: 'btn-complete',
             icon: 'play',
