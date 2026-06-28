@@ -18,6 +18,7 @@ optionally share a public social profile with other users.
 - **Social**: optional Google sign‑in publishes a social profile and an activity feed; a **Firestore** directory lets users find each other and send game recommendations.
 - **Offline‑first**: dual local storage (IndexedDB primary, localStorage fallback).
 - **Hosting**: static build deployed on **Cloudflare Pages**.
+- **Next‑game picker** (*"Elige tu próximo juego"*): a score‑weighted roulette that suggests what to play next. In the lists it draws from completed‑with‑replayable + excluded‑with‑retry + all pending (biased toward pending); in a social profile it draws from that user's completed games. Shared UI + pure weighting (see §3 / §7).
 
 Architecture is **MVVM**: `model` (data) → `viewmodel` (React hooks) → `view` (components).
 
@@ -53,6 +54,7 @@ src/
     constants/                  # icons.ts, labels.ts, storageKeys.ts, uiConfig.ts
     security/                   # crypto.ts, sanitize.ts (input sanitization/normalization)
     utils/                      # compare.ts, renderStars.ts (pure helpers)
+    roulette/                   # roulette.ts — pure next-game picker (pool builders + context weighting)
   model/
     types/game.ts               # ALL shared types (see §4)
     repository/                 # the ONLY layer allowed to touch storage / network (see §5)
@@ -62,9 +64,10 @@ src/
   view/
     components/                 # GameTable, Header, Toolbar, TabBar, SocialHub, SettingsHub, …
     components/socialhub/       # SocialFeedScreen, SocialProfileScreen, SocialProfileDetailScreen, SocialDetailScreen
+    components/roulette/        # RouletteModal — shared "next game" roulette (lists + social profile detail)
     modals/                     # FormModal, ConfirmModal, AdminModal
     hooks/                      # useDebouncedValue
-  styles/                       # SCSS partials (_base, _layout, _table, _forms-and-buttons, _overlays-and-responsive) + index.scss
+  styles/                       # SCSS partials (_base, _layout, _table, _forms-and-buttons, _overlays-and-responsive, _roulette) + index.scss
 tests/{unit,integration,e2e}/   # Vitest
 scripts/ci-validate.js          # checks required files exist (run by `npm run validate`)
 ```
@@ -141,7 +144,7 @@ Deletions are tombstones in `TabData.deleted`. Merge = newest `_ts` wins, tombst
 ## 6. ViewModel layer — `src/viewmodel/`
 
 - ViewModels are **React custom hooks** (`use*ViewModel`), **not classes**. State via `useState`/`useReducer` inside the hook.
-- `useGameListViewModel()` — list/filter/sort state, CRUD, modal drafts (`GameDraft`, `LookupData`, `TabAction`).
+- `useGameListViewModel()` — list/filter/sort state, CRUD, modal drafts (`GameDraft`, `LookupData`, `TabAction`). Roulette helpers: `moveGameToTab`, `moveGameToCurrentByName`, `addGameToProximos` (adds an external game to *pending*, deduping by normalized name across all lists), `hasGameInLists`.
 - `useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice, persist })` — drives the sync cycle; exposes `SyncStatus = 'idle' | 'syncing' | 'ok' | 'error'`.
 - Components consume hooks; hooks call repositories. Keep state updates **immutable** (spread/clone, never mutate). Clean up effects (intervals, BroadcastChannel, subscriptions) in the `useEffect` return.
 
@@ -152,6 +155,7 @@ Deletions are tombstones in `TabData.deleted`. Merge = newest `_ts` wins, tombst
 - Components are presentational: they receive data/handlers from a ViewModel hook or parent props. They do **not** import repositories.
 - `App.tsx` lazy‑loads heavy sections (`SocialHub`, `SettingsHub`) and modals with `React.lazy()` — follow this for new heavy sections.
 - Table is virtualized via `@tanstack/react-virtual`. Icons use the existing `<Icon name="…" />` (`Icon.tsx` + `IconSprite.tsx`).
+- The **next‑game roulette** is `view/components/roulette/RouletteModal.tsx` — one shared, lazy‑loaded modal used both from the lists (floating launcher above the FAB) and the social profile detail (button next to "Reseñas"). It takes `candidates`, a context `weight` function, and an `action` resolver; the **pure** pool building + weighting live in `core/roulette/roulette.ts` (`buildListsPool`, `buildProfilePool`, `listsWeight`, `profileWeight`, `pickWeighted`). Change weighting there, not in the component.
 - Styling is **SCSS** in `src/styles/`. Add to the right partial or create `_feature.scss` and import it in `index.scss`. Mobile‑first; verify at **360 / 768 / 1024 / 1440 px**. Accessibility: ARIA labels, semantic roles, keyboard nav (jsx‑a11y is enforced by ESLint).
 
 ---

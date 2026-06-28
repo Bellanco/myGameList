@@ -6,6 +6,8 @@ import { HubAvatar } from './HubAvatar';
 import { TAB_IDS, type GameItem, type TabId } from '../../../model/types/game';
 import { DEFAULT_SORT, sortGames } from '../../../core/utils/sortGames';
 import type { SocialSharedGame } from '../../../model/repository/gistRepository';
+import { RouletteModal } from '../roulette/RouletteModal';
+import { buildProfilePool, profileWeight } from '../../../core/roulette/roulette';
 
 // Paginación de los juegos del perfil: se muestran de 15 en 15 para evitar scroll excesivo al abrir el detalle.
 const LIST_PAGE_SIZE = 15;
@@ -86,7 +88,10 @@ export function SocialProfileDetailScreen({
   onEditProfile,
   onBack,
   status,
-  statusKind
+  statusKind,
+  onAddToProximos,
+  hasGameInLists,
+  moveGameToCurrentByName,
 }: {
   SOCIAL_UI: any;
   activeProfileDetail: SocialProfileDetail | null;
@@ -95,8 +100,12 @@ export function SocialProfileDetailScreen({
   onBack: () => void;
   status: string;
   statusKind: string;
+  onAddToProximos?: (game: Partial<GameItem>) => 'added' | 'duplicate' | 'invalid';
+  hasGameInLists?: (name: string) => boolean;
+  moveGameToCurrentByName?: (name: string) => void;
 }) {
   const [activeListTab, setActiveListTab] = useState<TabId>('c');
+  const [rouletteOpen, setRouletteOpen] = useState(false);
   const [expandedByTab, setExpandedByTab] = useState<Partial<Record<TabId, number | null>>>({});
   const [visibleCount, setVisibleCount] = useState(LIST_PAGE_SIZE);
   const [showReviews, setShowReviews] = useState(false);
@@ -133,10 +142,17 @@ export function SocialProfileDetailScreen({
     return items.sort((a, b) => b.ts - a.ts);
   }, [activeProfileDetail]);
 
+  // Ruleta (perfil social): pool = SOLO la lista de completados de este perfil.
+  const roulettePool = useMemo(
+    () => buildProfilePool(activeProfileDetail?.sharedLists),
+    [activeProfileDetail],
+  );
+
   // Al cambiar de perfil, volver siempre a la vista de perfil (no arrastrar la de reseñas) y limpiar filtros.
   useEffect(() => {
     setShowReviews(false);
     setReviewQuery('');
+    setRouletteOpen(false);
   }, [activeProfileDetail]);
 
   // Filtro de reseñas por título del juego (insensible a mayúsculas), automático al escribir.
@@ -289,8 +305,17 @@ export function SocialProfileDetailScreen({
               aria-pressed={showReviews}
               onClick={() => setShowReviews((prev) => !prev)}
             >
-              <Icon name={showReviews ? 'dice-d20' : 'uncharted'} />
+              <Icon name={showReviews ? 'grav' : 'signature'} />
               {showReviews ? SOCIAL_UI.feed.reviewsBack : SOCIAL_UI.feed.reviewsButton}
+            </button>
+            <button
+              className="btn btn-secondary"
+              type="button"
+              onClick={() => setRouletteOpen(true)}
+              disabled={!roulettePool.length}
+            >
+              <Icon name="dice-d20" />
+              Elige tu próximo juego
             </button>
           </div>
           {isOwnProfile && onEditProfile ? (
@@ -448,6 +473,39 @@ export function SocialProfileDetailScreen({
         </article>
         {status ? <div className={`sync-status-msg ${statusKind}`}>{status}</div> : null}
       </div>
+
+      <RouletteModal
+        open={rouletteOpen}
+        onClose={() => setRouletteOpen(false)}
+        title="Elige tu próximo juego"
+        candidates={roulettePool}
+        weight={profileWeight}
+        reviewAuthor={{ name: activeProfileDetail.displayName, photoURL: activeProfileDetail.photoURL }}
+        action={
+          onAddToProximos
+            ? (game) => {
+                // Si ya es tuyo (perfil propio o duplicado por nombre) → llevarlo a "En curso";
+                // si no, añadirlo a tu lista de próximos.
+                const owned = isOwnProfile || (hasGameInLists?.(game.name) ?? false);
+                return owned
+                  ? {
+                      btnClass: 'btn-complete',
+                      icon: 'play',
+                      label: 'Pasa a "En curso"',
+                      doneLabel: '✓ En curso',
+                      onAct: (candidate) => moveGameToCurrentByName?.(candidate.game.name),
+                    }
+                  : {
+                      btnClass: 'btn-accent',
+                      icon: 'plus',
+                      label: 'Añadir a próximos',
+                      doneLabel: '✓ Añadido a próximos',
+                      onAct: (candidate) => onAddToProximos(candidate.game),
+                    };
+              }
+            : null
+        }
+      />
     </section>
   );
 }
