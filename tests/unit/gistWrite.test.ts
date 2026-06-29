@@ -115,4 +115,29 @@ describe.skipIf(!ENABLE_GAMES_WRAPPER_WRITE)('writeGist con ENABLE_GAMES_WRAPPER
     // El gist ya está en v4 → no debe pedir un re-upgrade espurio en el siguiente sync.
     expect(read.wasLegacy).toBe(false);
   });
+
+  it('A7: con overflow, una edición puntual solo reenvía el chunk afectado (+ ancla), no todos', async () => {
+    const { patchBodies } = stubGistStore();
+    // Dataset grande (reviews de longitud fija) → fuerza varios ficheros chunk: main + c1 + c2…
+    const review = 'x'.repeat(900);
+    const c: GameItem[] = [];
+    for (let i = 1; i <= 2500; i += 1) c.push(makeGame({ id: i, name: `Juego ${i}`, review }));
+    const data: TabData = { c, v: [], e: [], p: [], deleted: [], updatedAt: 1 };
+
+    await writeGist(TOKEN, GIST_ID, data); // 1ª escritura: sube ancla + TODOS los chunks (gist vacío)
+    const firstChunks = Object.keys(patchBodies[patchBodies.length - 1].files).filter((n) =>
+      /^myGames-chunk-.+\.json$/.test(n),
+    );
+    expect(firstChunks.length).toBeGreaterThanOrEqual(2); // hay overflow real
+
+    // Edita el review del ÚLTIMO juego (misma longitud → no rebucketiza; solo cambia el checksum de su chunk).
+    const edited = c.map((g) => (g.id === 2500 ? { ...g, review: 'y'.repeat(900) } : g));
+    await writeGist(TOKEN, GIST_ID, { ...data, c: edited, updatedAt: 2 });
+
+    const secondFiles = Object.keys(patchBodies[patchBodies.length - 1].files);
+    const secondChunks = secondFiles.filter((n) => /^myGames-chunk-.+\.json$/.test(n));
+    expect(secondFiles).toContain(GIST_FILENAME); // el ancla siempre se reescribe
+    expect(secondChunks.length).toBe(1); // solo el chunk del juego editado
+    expect(secondChunks.length).toBeLessThan(firstChunks.length);
+  });
 });

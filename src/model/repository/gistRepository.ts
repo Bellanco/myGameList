@@ -10,10 +10,12 @@ export { NetworkDeferredError, isDeferredNetworkError, getRetryAfterMs } from '.
 // M1: transforms puros y config de sync extraídos a módulos dedicados. Importamos de vuelta los que se usan
 // internamente y RE-EXPORTAMOS la API pública para no obligar a los consumidores a cambiar sus imports.
 import {
+  assembleChunkedSocial,
   assertGistSizeWithinLimit,
   assertNoSocialPrivateFields,
   buildGamesFiles,
   buildReviewSnippet,
+  buildSocialFiles,
   leanTabData,
 } from './socialProjection';
 
@@ -52,7 +54,15 @@ const SOCIAL_GIST_FILENAME = 'myGameList.social.json';
  */
 // Exportado para que los tests del formato v4 (gistWrite / gistV4Cutover) se salten solos cuando la
 // escritura v4 está apagada: documentan el comportamiento del cutover, no el plano de lanzamiento.
-export const ENABLE_GAMES_WRAPPER_WRITE = false;
+export const ENABLE_GAMES_WRAPPER_WRITE = true;
+
+/**
+ * A6 — Chunking del gist SOCIAL por `sharedLists` (la "lista pública" grande). Mismo contrato que el de juegos:
+ * la LECTURA ya reensambla en ESTA versión (`assembleChunkedSocial`, retrocompatible con gists planos) y la
+ * ESCRITURA va GATED. Activar en 2 pasos como juegos: (1) desplegar con lectura activa y este flag en `false`;
+ * (2) cuando todos los dispositivos estén al día, poner `true`. Sigue OFF hasta validar el cutover social.
+ */
+export const ENABLE_SOCIAL_WRAPPER_WRITE = false;
 const GIST_API_BASE = 'https://api.github.com/gists';
 const SESSION_CACHE_SOCIAL_GIST_PREFIX = 'myGameList.session.socialGist';
 const SESSION_CACHE_PUBLIC_SOCIAL_GIST_PREFIX = 'myGameList.session.publicSocialGist';
@@ -911,7 +921,7 @@ export async function readSocialGist(token: string, gistId: string, etag: string
 
       try {
         const parsedFresh = JSON.parse(rawFresh);
-        const normalizedFresh = normalizeSocialGistData(parsedFresh);
+        const normalizedFresh = normalizeSocialGistData(assembleChunkedSocial(parsedFresh, freshBody.files));
         saveSocialGistCache(gistId, normalizedFresh, responseEtagFresh);
         return { data: normalizedFresh, etag: responseEtagFresh, wasLegacy: socialGistNeedsRewrite(parsedFresh) };
       } catch {
@@ -939,7 +949,8 @@ export async function readSocialGist(token: string, gistId: string, etag: string
 
     try {
       const parsed = JSON.parse(raw);
-      const normalized = normalizeSocialGistData(parsed);
+      // A6: si el ancla referencia chunks de overflow de `sharedLists` (mismo gist), se fusionan antes de normalizar.
+      const normalized = normalizeSocialGistData(assembleChunkedSocial(parsed, body.files));
       saveSocialGistCache(gistId, normalized, responseEtag);
       return {
         data: normalized,
@@ -1013,7 +1024,8 @@ export async function readPublicSocialGistById(gistId: string, token: string | n
     let normalized = getEmptySocialGistData();
     if (raw) {
       try {
-        normalized = normalizeSocialGistData(JSON.parse(raw));
+        // A6: reensambla los chunks de overflow de `sharedLists` (lectura pública de gist ajeno).
+        normalized = normalizeSocialGistData(assembleChunkedSocial(JSON.parse(raw), body.files));
       } catch {
         normalized = getEmptySocialGistData();
       }
@@ -1047,23 +1059,61 @@ export async function writeSocialGist(token: string, gistId: string, payload: So
   assertNoSocialPrivateFields(normalized); // canal público: nunca review/reviewText/score/hours/etc. (denylist)
   assertValidSocialGist(normalized); // F6.1: allowlist estricta (Zod) — falla si hay cualquier campo extra/tipo inválido
 
-  const socialContent = JSON.stringify(normalized);
-  assertGistSizeWithinLimit(socialContent, 'gist social'); // E1: evita el deadlock al superar el límite de gist
+  const headers: Record<string, string> = {
+    Authorization: getGithubAuthHeader(token),
+    'Content-Type': 'application/json',
+    'X-GitHub-Api-Version': '2022-11-28',
+  };
+
+  let files: Record<string, { content: string } | null>;
+
+  if (ENABLE_SOCIAL_WRAPPER_WRITE) {
+    // A6: envoltorio multi-fichero del gist social. El ancla lleva el bucket `main` de `sharedLists` + `chunkIndex`;
+    // el excedente va a ficheros `myGameList.social-chunk-cN.json` del MISMO gist. Privacidad + tamaño POR fichero.
+    const { anchor, chunkFiles } = buildSocialFiles(normalized);
+    const anchorContent = JSON.stringify(anchor);
+    assertValidSocialGist(anchor); // el ancla (con chunkIndex + main slice) sigue cumpliendo la allowlist estricta
+    assertGistSizeWithinLimit(anchorContent, 'gist social (ancla)');
+    files = { [SOCIAL_GIST_FILENAME]: { content: anchorContent } };
+
+    // A7 (incremental): lee el estado actual UNA vez para omitir chunks sin cambios y borrar obsoletos. El ancla
+    // siempre se reescribe. Si no se puede leer el estado actual, se sube todo y no se borra nada (seguro).
+    let currentFiles: Record<string, { content?: string } | undefined> = {};
+    try {
+      const current = await githubFetch(`${GIST_API_BASE}/${gistId}`, { headers });
+      if (current.ok) {
+        const currentBody = (await current.json()) as { files?: Record<string, { content?: string }> };
+        currentFiles = currentBody.files || {};
+      }
+    } catch {
+      // sin estado actual: subimos el conjunto completo y no borramos nada
+    }
+
+    for (const [name, file] of Object.entries(chunkFiles)) {
+      const sealed = { ...file, mainGistId: gistId };
+      assertNoSocialPrivateFields(sealed); // cada chunk es canal público: misma guarda de privacidad
+      const content = JSON.stringify(sealed);
+      assertGistSizeWithinLimit(content, `gist social (${name})`);
+      if (chunkFileChecksum(currentFiles[name]?.content) === file.integrity.checksum) continue; // sin cambios
+      files[name] = { content };
+    }
+    // Borrar chunks sociales obsoletos (comparado contra el conjunto completo `chunkFiles`, no contra el PATCH).
+    for (const name of Object.keys(currentFiles)) {
+      if (/^myGameList\.social-chunk-.+\.json$/.test(name) && !(name in chunkFiles)) {
+        files[name] = null;
+      }
+    }
+  } else {
+    // CAMINO ACTUAL (flag OFF): un único fichero plano, byte-idéntico al anterior.
+    const socialContent = JSON.stringify(normalized);
+    assertGistSizeWithinLimit(socialContent, 'gist social'); // E1: evita el deadlock al superar el límite de gist
+    files = { [SOCIAL_GIST_FILENAME]: { content: socialContent } };
+  }
 
   const response = await githubFetch(`${GIST_API_BASE}/${gistId}`, {
     method: 'PATCH',
-    headers: {
-      Authorization: getGithubAuthHeader(token),
-      'Content-Type': 'application/json',
-      'X-GitHub-Api-Version': '2022-11-28',
-    },
-    body: JSON.stringify({
-      files: {
-        [SOCIAL_GIST_FILENAME]: {
-          content: socialContent,
-        },
-      },
-    }),
+    headers,
+    body: JSON.stringify({ files }),
   });
 
   if (!response.ok) {
@@ -1202,6 +1252,22 @@ export async function readForeignGamesGist(readerToken: string | null, gamesGist
   return result.data as TabData;
 }
 
+/**
+ * A7 (reescritura incremental): extrae el checksum de integridad de un fichero chunk remoto (juegos o social). Es
+ * estable —depende solo del contenido, no de marcas de tiempo (`generatedAt`)— así que comparar el checksum del
+ * chunk construido con el remoto detecta si cambió sin reescribirlo. Devuelve `null` si falta o no parsea (→ se reescribe).
+ */
+function chunkFileChecksum(content: string | undefined): string | null {
+  if (!content) return null;
+  try {
+    const parsed = JSON.parse(content) as { integrity?: { checksum?: unknown } };
+    const c = parsed?.integrity?.checksum;
+    return typeof c === 'string' || typeof c === 'number' ? String(c) : null;
+  } catch {
+    return null;
+  }
+}
+
 export async function writeGist(token: string, gistId: string, payload: TabData): Promise<{ etag: string | null; updatedAt: number }> {
   if (!isValidGithubToken(token)) {
     throw new Error('Formato de token inválido');
@@ -1222,31 +1288,45 @@ export async function writeGist(token: string, gistId: string, payload: TabData)
   let files: Record<string, { content: string } | null>;
 
   if (ENABLE_GAMES_WRAPPER_WRITE) {
-    // E4 (GATED — bandera en false por ahora): envoltorio DESTINO multi-fichero. El ancla lleva el bucket `main`;
-    // el excedente va a ficheros `myGames-chunk-cN.json` del MISMO gist. Cada fichero se mantiene bajo el umbral.
+    // E4: envoltorio DESTINO multi-fichero. El ancla lleva el bucket `main` + diccionarios/chunkIndex; el excedente
+    // va a ficheros `myGames-chunk-cN.json` del MISMO gist. Cada fichero se mantiene bajo el umbral de tamaño.
     const { anchorFile, chunkFiles } = buildGamesFiles(lean);
     files = {};
     const anchorContent = JSON.stringify(anchorFile);
     assertGistSizeWithinLimit(anchorContent, 'gist de juegos (ancla)');
     files[GIST_FILENAME] = { content: anchorContent };
-    for (const [name, file] of Object.entries(chunkFiles)) {
-      const content = JSON.stringify({ ...file, mainGistId: gistId });
-      assertGistSizeWithinLimit(content, `gist de juegos (${name})`);
-      files[name] = { content };
-    }
-    // Eliminar ficheros chunk obsoletos (existían antes y ya no forman parte del conjunto): listar y poner a null.
+
+    // A7 (reescritura incremental): lee el estado actual del gist UNA vez para (a) OMITIR del PATCH los chunks cuyo
+    // contenido no cambió (comparando su checksum estable) y (b) borrar los obsoletos. El ancla SIEMPRE se reescribe
+    // (lleva chunkIndex/diccionarios/updatedAt). Si la lectura del estado actual falla, se sube todo y no se borra
+    // nada (comportamiento seguro). Con datos grandes, una edición puntual reescribe 1 chunk en vez de todos.
+    let currentFiles: Record<string, { content?: string } | undefined> = {};
     try {
       const current = await githubFetch(`${GIST_API_BASE}/${gistId}`, { headers });
       if (current.ok) {
-        const currentBody = (await current.json()) as { files?: Record<string, unknown> };
-        for (const name of Object.keys(currentBody.files || {})) {
-          if (/^myGames-chunk-.+\.json$/.test(name) && !(name in files)) {
-            files[name] = null; // null elimina el fichero del gist
-          }
-        }
+        const currentBody = (await current.json()) as { files?: Record<string, { content?: string }> };
+        currentFiles = currentBody.files || {};
       }
     } catch {
-      // Si no se pudo listar, no borramos obsoletos (no crítico); el PATCH continúa.
+      // Sin estado actual: subimos el conjunto completo y no borramos nada.
+    }
+
+    for (const [name, file] of Object.entries(chunkFiles)) {
+      const content = JSON.stringify({ ...file, mainGistId: gistId });
+      assertGistSizeWithinLimit(content, `gist de juegos (${name})`);
+      if (chunkFileChecksum(currentFiles[name]?.content) === file.integrity.checksum) {
+        continue; // sin cambios respecto al remoto: no reenviar este chunk
+      }
+      files[name] = { content };
+    }
+
+    // Borrar chunks obsoletos: existían en el gist y ya no forman parte del conjunto actual (`chunkFiles`).
+    // OJO: se compara contra `chunkFiles` (conjunto completo), no contra `files` (subconjunto del PATCH), para no
+    // borrar por error un chunk que se omitió por estar sin cambios.
+    for (const name of Object.keys(currentFiles)) {
+      if (/^myGames-chunk-.+\.json$/.test(name) && !(name in chunkFiles)) {
+        files[name] = null; // null elimina el fichero del gist
+      }
     }
   } else {
     // CAMINO ACTUAL (flag OFF) — TabData plano, byte-idéntico al anterior.
