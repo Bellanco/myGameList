@@ -1142,6 +1142,11 @@ export async function writeSocialGist(token: string, gistId: string, payload: So
 
   const etag = response.headers.get('etag');
   saveSocialGistCache(gistId, normalized, etag);
+  // El feed re-lee el gist PROPIO por la vía pública (readPublicSocialGistById) justo tras publicar/editar/borrar; su
+  // caché de sesión (45 s) seguiría sirviendo la versión ANTERIOR y el contenido recién escrito "no aparecería en el
+  // histórico". Como acabamos de escribirlo, refrescamos también esa caché pública (mismo token) → el re-fetch del
+  // feed lo ve al instante. No añade llamadas a GitHub ni cambia la lógica de 304/sync.
+  savePublicSocialGistCache(gistId, normalized, etag, token);
 
   return {
     etag,
