@@ -146,14 +146,18 @@ Activar únicamente cuando el **gist completo** (ancla + todos los chunks) se ac
 
 > Nota: el roadmap actual marcó esto como _"no urgente"_ y eligió multi-fichero. Esta fase es la que **realmente** habilita "varios gists" y debe planificarse explícitamente si ese requisito es firme.
 
-### Fase C — Higiene de escala (independiente) — *prioridad media*
+### Fase C — Higiene de escala — *reevaluada con el código en mano*
 
-1. **C1 (offline/localStorage).** Dejar de serializar el estado completo en localStorage cuando supere un umbral; usar IndexedDB como fuente primaria y localStorage solo como _hint_/arranque. Evita `QuotaExceededError` silencioso.
-2. **C2 (carga).** Hidratación/merge por lotes o diferida para listas grandes (los stores `games`/`deleted` ya tienen índices `_tab`/`_ts`); evitar `getAll()` íntegro y mapas de todo el dataset en RAM.
-3. **C3 (social N+1).** Cargar el directorio de forma incremental/perezosa (por viewport) en lugar de 30 lecturas en `Promise.all`; subir TTL o revalidar por ETag para no refrescar tras 30 min al cambiar de pestaña.
-4. **C4 (feed).** Virtualizar el feed social (mismo patrón que `GameTable`) y no materializar 300 items.
-5. **C5 (publicación social).** Publicar **deltas** del gist social (append al `activityFeed`/chunk afectado) en vez de reescribir el documento completo.
-6. **C6 (listados >10k).** Si se persigue >10 k juegos: indexar en memoria (Map por id/nombre) o mover filtro/orden a un Web Worker.
+Tras revisar la implementación real, la mayoría de los ítems estaban **ya cubiertos** (paginación, cachés, ETag/304, dual-write) o serían **optimización prematura** dado que un único gist limita el dataset a unos pocos miles de juegos. Solo uno aportaba mejora segura y se ha hecho.
+
+- **C3 (fan-out del directorio) — ✅ HECHO.** El directorio leía el gist social de ~30 perfiles con `Promise.all` (30 GET simultáneos → riesgo de *secondary rate limits* de GitHub al crecer). Ahora se limita la concurrencia con `mapWithConcurrency` (`SOCIAL_DIRECTORY_FETCH_CONCURRENCY = 6`), preservando orden y la tolerancia a errores por entrada. Coste de latencia bajo (las lecturas revalidan con ETag/304). Test: `concurrency.test.ts`.
+- **C1 (localStorage) — descartado.** El dual-write localStorage+IndexedDB con reconciliación por `updatedAt` ya es robusto y los `QuotaExceededError` se capturan. Quitar la copia de localStorage REDUCIRÍA la redundancia (peor durabilidad) y rompería el primer pintado síncrono. Neto negativo.
+- **C2 (hidratación/merge) — diferido (prematuro).** `getAll()` + mapas en RAM sobre unos pocos miles de juegos (techo real de un gist) son milisegundos. Solo importaría con 100k+, que NO caben en un único gist → eso es territorio de **Fase B**, no de optimización local.
+- **C4 (virtualizar feed) — innecesario.** El feed ya pagina: `groupedFeedItems` se construye con `feedItems.slice(0, feedVisibleCount)` (25). El DOM tiene ~25 tarjetas; el array de ≤300 objetos en memoria es trivial. Virtualizar 25 nodos no aporta.
+- **C5 (publicación social por deltas) — bloqueado por A6.** Con la escritura social en un único fichero (flag A6 OFF), GitHub reemplaza el fichero entero: no hay "delta" posible. Solo tiene sentido tras activar el chunking social (flip de A6), donde se podría reescribir solo el chunk afectado (la maquinaria incremental A7 ya está lista).
+- **C6 (filtro/orden con worker) — diferido (prematuro).** `GameTable` ya virtualiza el render; filtrar/ordenar O(n) sobre ≤10k es submilisegundo. Un Web Worker añadiría complejidad sin beneficio medible al techo actual.
+
+**Conclusión:** en eficiencia, la app **ya está lista para producción** al escalar dentro de un gist único. Lo que queda de "escala de verdad" es **Fase B** (multi-gist) y el **flip de A6** (que habilita C5).
 
 ---
 
@@ -161,4 +165,4 @@ Activar únicamente cuando el **gist completo** (ancla + todos los chunks) se ac
 
 - Si el objetivo es **"un usuario grande funcione sin romperse"** → **Fase A** (+ C1/C2) cubre el caso real con poco riesgo: quita el muro de 950 KB y aprovecha la deduplicación. Es lo que el propio diseño dejó listo y apagado.
 - Si el requisito de **"varios gists"** es firme (datos por encima de lo que cabe en un único gist incluso troceado) → hay que ejecutar **Fase B**, que es trabajo nuevo no contemplado hoy.
-- **C3–C5** mejoran la eficiencia social y conviene abordarlas en paralelo, son ortogonales a A/B.
+- **Fase C** se reevaluó con el código: solo C3 (límite de concurrencia del directorio) aportaba mejora segura y ya está hecha; el resto está cubierto, es prematuro al techo de un gist, o depende del flip de A6 (ver arriba).
