@@ -14,6 +14,7 @@
 | F3 | Feed social: texto libre + hipervínculos | ✅ (con seguridad) | ~3-5 d | Medio (XSS) | No |
 | F4 | "Empezó/completó un juego" como entrada en el feed | ✅ | ~2 d | Bajo-medio | No |
 | F5 | "Me gusta" a una reseña | ✅ (con matiz arquitectónico) | ~2-3 d | Medio | No (vía gist) |
+| F6 | Editar y borrar contenido social (posts/imágenes/enlaces) | ✅ | ~1-2 d | Bajo (mismo canal que publicar) | No (vía gist) |
 
 **Orden sugerido:** F1 (independiente, sin riesgo) → F2-A (presentación) → F3 → F4 (feed de actividad) → F5 (like).
 F2-B y F5 conviene abordarlos **después del cutover v4** (`ENABLE_GAMES_WRAPPER_WRITE`, hoy `false`).
@@ -279,3 +280,65 @@ El feed lo fusiona con `activity` al leer.
 Riesgos: (a) XSS = punto crítico → "nunca HTML, solo URLs http/s validadas". (b) posts PÚBLICOS (gist). (c) compat con
 clientes viejos: la LECTURA no se rompe (campo ignorado); riesgo residual = drop al REESCRIBIR desde un dispositivo
 viejo → mitigado actualizando el build en todos los dispositivos (NO requiere el cutover v4; es un canal distinto).
+
+### Extensión (2026-06-29): incrustar imágenes/vídeo de orígenes de confianza  ✅ IMPLEMENTADO (rama `develop`)
+
+> Sobre F3: si un post incluye una URL de imagen/vídeo de un **host de confianza** (lista blanca), se incrusta como
+> `<img>`/`<video>` en lugar de enlace; el resto sigue siendo enlace clicable. El enlace se guarda igual en `text`
+> (sin campo nuevo); el cambio es solo de RENDER. Ficheros: `src/core/social/postMedia.ts` (`resolvePostMedia` +
+> `isSteamSharedFilePage`), `PostText.tsx`, `labels.ts`, `_layout.scss`. Hosts: GitHub raw, Steam
+> (`steamusercontent.com`/`steamuserimages`/`steamstatic.com`), Google Drive (transforma el enlace de compartir),
+> PSN/Xbox (best-effort). Seguridad: solo http(s) + host en lista blanca; `<img referrerPolicy=no-referrer loading=lazy>`
+> con fallback a enlace; SVG excluido. Limitación: `steamcommunity.com/sharedfiles/filedetails/?id=…` es una PÁGINA
+> (CORS impide leer su `og:image`) → se muestra como enlace + aviso para pegar la URL DIRECTA de la imagen.
+
+---
+
+## PLAN F6 — Editar y borrar contenido social (posts, imágenes, enlaces)  ⬜ PROPUESTO (2026-06-29)
+
+> Pedido por el usuario (2026-06-29): poder **borrar y editar** los textos, imágenes y demás contenido publicado en la
+> parte social. Como una imagen/enlace vive DENTRO del `text` de un post (no hay campo aparte), editar/borrar el post
+> cubre también su imagen y enlaces. Las reseñas/recomendaciones del feed son DERIVADAS del gist de juegos → se
+> editan/borran en la lista de juegos, no aquí (conviene aclararlo en la UI).
+
+Alcance: opera sobre `posts` del gist social PROPIO. Solo el autor ve los controles (`socialGistId === currentSocialGistId`).
+
+**Fase 1 — Modelo/escritura (espejo de `upsertPost`)**
+- [ ] `gistRepository.ts`: `editPost(data, { postId, text, timestamp })` (saneado con `safePostText`, actualiza `updatedAt`)
+      y `removePost(data, postId)` (filtra el array `posts`). Misma guarda de privacidad/allowlist al reescribir.
+- [ ] `socialPublishRepository.ts`: `updatePost({ postId, text })` y `deletePost({ postId })` reusando el flujo
+      `readSocialGist → remapSocialActorIds → editPost/removePost → writeSocialGist → ensureProfileByEmail`.
+
+**Fase 2 — ViewModel**
+- [ ] `useSocialViewModel.ts`: `handleEditPost(postId, text)` / `handleDeletePost(postId)`; tras escribir,
+      `hydrateSocialDirectory(true)` (el refresco ya refleja el cambio al instante gracias al FIX de caché — ver abajo).
+- [ ] Estado de edición en línea (qué post se edita) + confirmación de borrado (reusar `ConfirmModal`).
+
+**Fase 3 — UI**
+- [ ] `SocialFeedScreen.tsx`: en las tarjetas `is-post` PROPIAS, botones Editar/Borrar; editar = textarea inline con el
+      mismo compositor/validación; borrar = `ConfirmModal`. Las tarjetas ajenas NO muestran controles.
+
+**Fase 4 — Verificación**
+- [ ] Tests: `editPost`/`removePost` (unidad) + flujo que refleja el cambio en el feed. Manual: editar texto/imagen,
+      borrar, comprobar en feed propio y en otro dispositivo.
+
+Riesgos: (a) sigue siendo PÚBLICO; (b) editar/borrar es el mismo PATCH aditivo que publicar (sin riesgo nuevo de compat);
+(c) un dispositivo viejo que reescriba su `social.json` dropea posts (riesgo ya documentado en F3).
+
+---
+
+## FIX — El contenido recién publicado no aparecía en el histórico  ✅ CORREGIDO (2026-06-29, rama `develop`)
+
+> Reportado por el usuario: tras publicar (post/imagen), el contenido no salía en el feed "porque no se había
+> recuperado". **Causa raíz:** `readPublicSocialGistById` cachea el gist público en sesión 45 s; al re-leer el gist
+> PROPIO justo tras escribir, servía la versión anterior. `writeSocialGist` solo refrescaba la caché del gist
+> AUTENTICADO, no la PÚBLICA.
+> **Arreglo (mínimo, sin tocar la lógica de 304/sync):** al final de `writeSocialGist`, refrescar también
+> `savePublicSocialGistCache(gistId, normalized, etag, token)` con el contenido recién escrito (mismo token). El
+> re-fetch del feed lo ve al instante; no añade llamadas a GitHub. Test: `tests/unit/socialPublishRefresh.test.ts`.
+>
+> **Mejora residual (diferida, opcional):** los posts NUEVOS de OTROS perfiles tardan hasta 45 s en verse al pulsar
+> "Actualizar", porque `readPublicSocialGistById` no respeta `forceRefresh`. Arreglo futuro: propagar `forceRefresh`
+> (saltar la caché de sesión) desde `hydrateSocialDirectory` → `readPublicSocialGistById`. No se hizo ahora para no
+> aumentar la carga de lecturas (~50 gists por refresco forzado) sin necesidad; el caso del usuario (su propio
+> contenido) ya queda resuelto por el FIX de caché.
