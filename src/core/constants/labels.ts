@@ -324,6 +324,7 @@ export const SOCIAL_UI = {
     postPlaceholder: 'Comparte una noticia o un enlace…',
     postPublish: 'Publicar',
     postPublishing: 'Publicando...',
+    postSharedFileHint: 'Pega la URL directa de la imagen (clic derecho → «Copiar la URL de la imagen») para verla incrustada.',
     postedAt: (date: Date) =>
       `Publicado el ${date.toLocaleDateString('es-ES', { day: '2-digit' })} de ${date.toLocaleDateString('es-ES', { month: 'long' })} a las ${date.toLocaleTimeString('es-ES', { hour: 'numeric', minute: '2-digit' })}`,
     loading: 'Cargando actividad...',
