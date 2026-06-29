@@ -12,6 +12,8 @@ import { GameTable } from './view/components/GameTable';
 import { StatusBanner } from './view/components/StatusBanner';
 import { BottomNavigation, type AppSection } from './view/components/BottomNavigation';
 import { useGameListViewModel } from './viewmodel/useGameListViewModel';
+import { useToolbarFilters } from './viewmodel/useToolbarFilters';
+import { computeTabOptions, countActiveFilters } from './viewmodel/toolbarFilters';
 import { useSyncViewModel } from './viewmodel/useSyncViewModel';
 import { buildListsPool, listsWeight } from './core/roulette/roulette';
 
@@ -46,10 +48,8 @@ export default function App() {
   const activeSection = getCurrentSection(location.pathname);
 
   const vm = useGameListViewModel();
+  const { filters, setFilter, toggleFilterValue, clearFilter, clearAllFilters } = useToolbarFilters();
   const {
-    setFilter,
-    clearFilter,
-    clearAllFilters,
     setExpandedId,
     openNewGame,
     setFormModalOpen,
@@ -78,7 +78,8 @@ export default function App() {
   const [compactFilters, setCompactFilters] = useState(isCompactFilters());
   const resizeRafRef = useRef<number | null>(null);
 
-  const tabFilter = vm.filters[currentTab];
+  const tabFilter = filters;
+  const tabOptions = useMemo(() => computeTabOptions(vm.data[currentTab]), [vm.data, currentTab]);
 
   const [rouletteOpen, setRouletteOpen] = useState(false);
   const roulettePool = useMemo(() => buildListsPool(vm.data), [vm.data]);
@@ -86,10 +87,6 @@ export default function App() {
   useEffect(() => {
     syncVm.initializeSync();
   }, []);
-
-  useEffect(() => {
-    setFilter(currentTab, 'search', '');
-  }, [currentTab, setFilter]);
 
   useEffect(() => {
     const applyLayoutFlags = () => {
@@ -128,18 +125,8 @@ export default function App() {
 
   // P2: `getFilteredList` ya está memoizado sobre data/filters/sort; basta con depender de la propia función
   // (cambia cuando cambian esos inputs) y de la pestaña, en vez de re-listar sus internals.
-  const list = useMemo(() => vm.getFilteredList(currentTab), [vm.getFilteredList, currentTab]);
-  const activeFilterCount = useMemo(() => {
-    const count =
-      (tabFilter.search.trim() ? 1 : 0) +
-      (tabFilter.genre ? 1 : 0) +
-      (tabFilter.platform ? 1 : 0) +
-      (tabFilter.score ? 1 : 0) +
-      (tabFilter.hours ? 1 : 0) +
-      (tabFilter.only ? 1 : 0) +
-      (tabFilter.deck ? 1 : 0);
-    return count;
-  }, [tabFilter]);
+  const list = useMemo(() => vm.getFilteredList(currentTab, filters), [vm.getFilteredList, currentTab, filters]);
+  const activeFilterCount = useMemo(() => countActiveFilters(filters), [filters]);
 
   const exportData = useCallback(() => {
     const payload = {
@@ -195,16 +182,20 @@ export default function App() {
   }, []);
 
   const handleFilterChange = useCallback((key: keyof typeof tabFilter, value: string | boolean) => {
-    setFilter(currentTab, key, value);
-  }, [currentTab, setFilter]);
+    setFilter(key, value);
+  }, [setFilter]);
+
+  const handleToggleValue = useCallback((key: 'genres' | 'platforms', value: string) => {
+    toggleFilterValue(key, value);
+  }, [toggleFilterValue]);
 
   const handleClearFilter = useCallback((key: keyof typeof tabFilter) => {
-    clearFilter(currentTab, key);
-  }, [clearFilter, currentTab]);
+    clearFilter(key);
+  }, [clearFilter]);
 
   const handleClearAllFilters = useCallback(() => {
-    clearAllFilters(currentTab);
-  }, [clearAllFilters, currentTab]);
+    clearAllFilters();
+  }, [clearAllFilters]);
 
   const handleTabChange = useCallback((tab: TabId) => {
     navigate(TAB_ROUTE[tab]);
@@ -340,12 +331,13 @@ export default function App() {
             <Toolbar
               currentTab={currentTab}
               filters={tabFilter}
-              lookups={vm.lookups}
+              options={tabOptions}
               activeFilterCount={activeFilterCount}
               compactFilters={compactFilters}
               filtersOpen={filtersOpen}
               onFiltersToggle={handleFiltersToggle}
               onFilterChange={handleFilterChange}
+              onToggleValue={handleToggleValue}
               onClearFilter={handleClearFilter}
               onClearAll={handleClearAllFilters}
             />
