@@ -64,8 +64,8 @@ export interface TabSort {
 
 export interface ToolbarFilters {
   search: string;
-  genre: string;
-  platform: string;
+  genres: string[];
+  platforms: string[];
   score: string;
   hours: string;
   only: boolean;

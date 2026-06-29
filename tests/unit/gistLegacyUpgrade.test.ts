@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { readGist } from '../../src/model/repository/gistRepository';
-import type { TabData } from '../../src/model/types/game';
+import { ENABLE_GAMES_WRAPPER_WRITE, readGist } from '../../src/model/repository/gistRepository';
+import { buildGamesMainFile } from '../../src/model/repository/socialProjection';
+import type { GameItem, TabData } from '../../src/model/types/game';
 
 // Regresión: el upgrade proactivo (wasLegacy) debe dispararse aunque el gist responda 304. Un dispositivo ya
 // conectado a un gist VIEJO recibe 304 en cada sync (su etag coincide); sin relectura, nunca migraría.
@@ -17,15 +18,21 @@ const LEGACY_CONTENT = JSON.stringify({
   updatedAt: 1000,
 });
 
-// Contenido ACTUAL plano: el juego ya tiene `name` y campos EN → no necesita reescritura.
-const CURRENT_CONTENT = JSON.stringify({
-  c: [{ id: 1, _ts: 1000, name: 'Juego Nuevo', platforms: ['Steam'], genres: ['RPG'], score: 4 }],
+// Contenido "ya ACTUAL": NO debe disparar reescritura espuria. El formato destino depende del flag de escritura:
+// con el envoltorio v4 activo, "actual" = `GamesMainFile` v4 (construido con el mismo builder de la app); con la
+// escritura plana, "actual" = `TabData` plano con campos EN. Así el test expresa "ya está en el formato destino"
+// sea cual sea el flag, y permanece verde tras el flip.
+const CURRENT_TABDATA: TabData = {
+  c: [{ id: 1, _ts: 1000, name: 'Juego Nuevo', platforms: ['Steam'], genres: ['RPG'], score: 4 } as GameItem],
   v: [],
   e: [],
   p: [],
   deleted: [],
   updatedAt: 1000,
-});
+};
+const CURRENT_CONTENT = ENABLE_GAMES_WRAPPER_WRITE
+  ? JSON.stringify(buildGamesMainFile(CURRENT_TABDATA))
+  : JSON.stringify(CURRENT_TABDATA);
 
 /**
  * Mock que devuelve 304 cuando la petición trae `If-None-Match` (etag coincide) y el contenido completo cuando NO
