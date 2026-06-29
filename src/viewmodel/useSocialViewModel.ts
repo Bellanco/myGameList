@@ -37,6 +37,7 @@ import {
 } from '../model/repository/firebaseRepository';
 import { loadLocalState } from '../model/repository/localRepository';
 import { normalizeTimestamp as toSafeTimestamp } from '../core/utils/normalize';
+import { mapWithConcurrency } from '../core/utils/concurrency';
 
 const shouldRequireProfileCreation = (profileExists: boolean, justSavedProfile: boolean): boolean => {
   return !profileExists && !justSavedProfile;
@@ -70,6 +71,11 @@ const FORCED_REFRESH_MIN_MS = 12_000;
 // Tope de perfiles del directorio social. Cada perfil = 1 lectura de gist social al refrescar; bajar este número
 // reduce el consumo de rate-limit a costa de mostrar menos perfiles/actividad en el feed. Tunable.
 const SOCIAL_DIRECTORY_LIMIT = 30;
+// C3: el directorio se hidrata leyendo el gist social de cada perfil. En vez de disparar TODAS las lecturas a la
+// vez (ráfaga que puede activar los "secondary rate limits" de GitHub al crecer el directorio), se limita la
+// concurrencia. Las lecturas son baratas (caché de sesión + revalidación ETag/304), así que el coste en latencia
+// de la carga fría es pequeño y se gana robustez frente a 403 por ráfaga.
+const SOCIAL_DIRECTORY_FETCH_CONCURRENCY = 6;
 const PROFILE_EDIT_PATH = /^\/social\/profile\/?$/;
 const PROFILES_PATH = /^\/social\/profiles\/?$/;
 const PROFILE_DETAIL_PATH = /^\/social\/profiles\/([^/]+)$/;
@@ -1065,8 +1071,10 @@ export function useSocialViewModel() {
       // Foto propia inmediata (de la sesión Google) aunque aún no se haya re-guardado el perfil; respeta showPhoto.
       const ownPhotoURL = showPhoto && authUser?.photoURL ? authUser.photoURL : '';
 
-      const withProfiles = await Promise.all(
-        entries.map(async (entry) => {
+      const withProfiles = await mapWithConcurrency(
+        entries,
+        SOCIAL_DIRECTORY_FETCH_CONCURRENCY,
+        async (entry) => {
           const isOwnEntry = entry.socialGistId === socialCfgGistId;
           try {
             const socialData = await readPublicSocialGistById(entry.socialGistId, socialConfig?.token || null);
@@ -1154,7 +1162,7 @@ export function useSocialViewModel() {
               visibility: defaultSocialVisibility,
             };
           }
-        }),
+        },
       );
 
       setSocialDirectory(withProfiles);
