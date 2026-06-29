@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { FILTER_BOOL, TAB_ACTIONS, TAB_ORDER, VALIDATION_MESSAGES } from '../core/constants/labels';
-import { HOURS_RANGES } from '../core/constants/uiConfig';
+import { TAB_ACTIONS, TAB_ORDER, VALIDATION_MESSAGES } from '../core/constants/labels';
 import { sortEs, uniqueCaseInsensitive } from '../core/utils/compare';
 import { DEFAULT_SORT, sortGames } from '../core/utils/sortGames';
 import { mapTabDataTags, type TagCategory } from '../core/utils/tagMutations';
@@ -12,16 +11,7 @@ import { markDirty } from '../model/repository/syncStateRepository';
 import { transitionTo } from '../model/repository/syncMachineRepository';
 import type { TabAction as LabelsTabAction } from '../core/constants/labels';
 import type { GameItem, StatusNotice, TabData, TabId, TabSort, ToolbarFilters } from '../model/types/game';
-
-const DEFAULT_FILTERS: ToolbarFilters = {
-  search: '',
-  genre: '',
-  platform: '',
-  score: '',
-  hours: '',
-  only: false,
-  deck: false,
-};
+import { filterGames } from './toolbarFilters';
 
 export interface LookupData {
   genres: string[];
@@ -97,12 +87,6 @@ export function useGameListViewModel() {
   // (saveDraft/deleteGame/…). Lo leemos vía ref → `persist` y derivados quedan estables (dep []).
   const metaRef = useRef(meta);
   metaRef.current = meta;
-  const [filters, setFilters] = useState<Record<TabId, ToolbarFilters>>({
-    c: { ...DEFAULT_FILTERS },
-    v: { ...DEFAULT_FILTERS },
-    e: { ...DEFAULT_FILTERS },
-    p: { ...DEFAULT_FILTERS },
-  });
   const [sort, setSort] = useState<Record<TabId, TabSort>>(DEFAULT_SORT);
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const [notice, setNotice] = useState<StatusNotice | null>(null);
@@ -253,30 +237,6 @@ export function useGameListViewModel() {
 
   const tabActions: Record<TabId, TabAction[]> = TAB_ACTIONS;
 
-  const setFilter = useCallback((tab: TabId, key: keyof ToolbarFilters, value: string | boolean) => {
-    setFilters((prev) => ({
-      ...prev,
-      [tab]: {
-        ...prev[tab],
-        [key]: value,
-      },
-    }));
-  }, []);
-
-  const clearFilter = useCallback((tab: TabId, key: keyof ToolbarFilters) => {
-    setFilters((prev) => ({
-      ...prev,
-      [tab]: {
-        ...prev[tab],
-        [key]: DEFAULT_FILTERS[key],
-      },
-    }));
-  }, []);
-
-  const clearAllFilters = useCallback((tab: TabId) => {
-    setFilters((prev) => ({ ...prev, [tab]: { ...DEFAULT_FILTERS } }));
-  }, []);
-
   const sortBy = useCallback((tab: TabId, column: string) => {
     setSort((prev) => {
       const current = prev[tab];
@@ -300,33 +260,12 @@ export function useGameListViewModel() {
     });
   }, []);
 
+  // El filtrado vive en `toolbarFilters.filterGames` (puro y testeable); aquí solo aplicamos el orden,
+  // compartido con el perfil social (fuente única en core/utils/sortGames). Los filtros llegan desde la
+  // URL (useToolbarFilters), no se guardan en el view-model.
   const getFilteredList = useCallback(
-    (tab: TabId): GameItem[] => {
-      const tabData = data[tab];
-      const state = filters[tab];
-      const config = FILTER_BOOL[tab];
-
-      const filtered = tabData.filter((game) => {
-        if (state.search && !game.name.toLowerCase().includes(state.search.toLowerCase())) return false;
-        if (state.genre && !game.genres.some((value) => value.toLowerCase().includes(state.genre.toLowerCase()))) return false;
-        if (state.platform && !game.platforms.some((value) => value.toLowerCase().includes(state.platform.toLowerCase()))) return false;
-        if (state.deck && !game.steamDeck) return false;
-        if (state.score && Number(game.score || 0) < Number(state.score)) return false;
-        if (state.only && config && !Boolean(game[config.field])) return false;
-
-        if (state.hours) {
-          const range = HOURS_RANGES.find((entry) => entry.key === state.hours);
-          const hours = Number(game.hours || 0);
-          if (!range || !range.check(hours)) return false;
-        }
-
-        return true;
-      });
-
-      // Orden compartido con el perfil social (fuente única en core/utils/sortGames).
-      return sortGames(filtered, sort[tab], tab);
-    },
-    [data, filters, sort],
+    (tab: TabId, toolbarFilters: ToolbarFilters): GameItem[] => sortGames(filterGames(data[tab], toolbarFilters, tab), sort[tab], tab),
+    [data, sort],
   );
 
   // P5: el timer del aviso vive en un ref (no como propiedad mutada de la función) y se limpia al desmontar.
@@ -591,7 +530,6 @@ export function useGameListViewModel() {
     data,
     meta,
     setMeta,
-    filters,
     sort,
     expandedId,
     setExpandedId,
@@ -607,9 +545,6 @@ export function useGameListViewModel() {
     tabCounts,
     lookups,
     getFilteredList,
-    setFilter,
-    clearFilter,
-    clearAllFilters,
     sortBy,
     openNewGame,
     openEditGame,

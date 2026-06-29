@@ -5,17 +5,22 @@ import { assembleChunkedGames, gamesGistNeedsRewrite, gamesGistNeedsUpgradeToWra
 import { pickLegacyActorId, pickLegacyFromId, pickLegacyReviewText, socialGistNeedsRewrite } from '../migration/legacySocialFormat';
 import { assertValidSocialGist } from '../schemas/socialGistSchema';
 import { TAB_IDS, type TabData, type TabId } from '../types/game';
+import type { GamesChunkFile, GamesMainFile } from '../types/gist';
 import { githubFetch, parseRetryAfterMs } from './githubHttp';
 export { NetworkDeferredError, isDeferredNetworkError, getRetryAfterMs } from './githubHttp';
 // M1: transforms puros y config de sync extraídos a módulos dedicados. Importamos de vuelta los que se usan
 // internamente y RE-EXPORTAMOS la API pública para no obligar a los consumidores a cambiar sus imports.
 import {
+  assembleChunkedSocial,
   assertGistSizeWithinLimit,
   assertNoSocialPrivateFields,
   buildGamesFiles,
   buildReviewSnippet,
+  buildSocialFiles,
+  gamesChunkFilename,
   leanTabData,
 } from './socialProjection';
+import { mapWithConcurrency } from '../../core/utils/concurrency';
 
 export {
   assertGistSizeWithinLimit,
@@ -52,7 +57,32 @@ const SOCIAL_GIST_FILENAME = 'myGameList.social.json';
  */
 // Exportado para que los tests del formato v4 (gistWrite / gistV4Cutover) se salten solos cuando la
 // escritura v4 está apagada: documentan el comportamiento del cutover, no el plano de lanzamiento.
-export const ENABLE_GAMES_WRAPPER_WRITE = false;
+export const ENABLE_GAMES_WRAPPER_WRITE = true;
+
+/**
+ * A6 — Chunking del gist SOCIAL por `sharedLists` (la "lista pública" grande). Mismo contrato que el de juegos:
+ * la LECTURA ya reensambla en ESTA versión (`assembleChunkedSocial`, retrocompatible con gists planos) y la
+ * ESCRITURA va GATED. Activar en 2 pasos como juegos: (1) desplegar con lectura activa y este flag en `false`;
+ * (2) cuando todos los dispositivos estén al día, poner `true`. Sigue OFF hasta validar el cutover social.
+ */
+export const ENABLE_SOCIAL_WRAPPER_WRITE = false;
+
+/**
+ * Fase B — Gists de OVERFLOW del gist de juegos. Cuando un único gist se queda sin sitio (presupuesto de chunks),
+ * los chunks excedentes se reparten en gists ADICIONALES y el `chunkIndex` del ancla guarda su `gistId` (≠ null) —
+ * el ancla es el manifiesto autodescriptivo, así que cualquier dispositivo que lea el gist principal sabe qué gists
+ * extra debe traer (no hace falta Firestore para leer).
+ *
+ * La LECTURA de overflow va ACTIVA y es retrocompatible (no-op si ningún chunk tiene `gistId`). La ESCRITURA va
+ * GATED igual que A3: activar en 2 pasos — (1) desplegar con la lectura activa y este flag en `false`; (2) cuando
+ * TODOS los dispositivos estén al día, poner `true`. Un cliente sin la lectura de overflow vería los chunks
+ * externos como "ausentes": por eso la lectura LANZA (no devuelve parcial) y la escritura espera al paso 1.
+ */
+export const ENABLE_GAMES_OVERFLOW_GISTS = false;
+// Nº máximo de ficheros chunk de overflow por gist (el ancla cuenta aparte). Al superarse, se usa otro gist.
+const MAX_OVERFLOW_CHUNKS_PER_GIST = 4;
+// Fan-out de lectura de gists de overflow (reutiliza el limitador de C3 para no disparar ráfagas a GitHub).
+const OVERFLOW_GIST_READ_CONCURRENCY = 4;
 const GIST_API_BASE = 'https://api.github.com/gists';
 const SESSION_CACHE_SOCIAL_GIST_PREFIX = 'myGameList.session.socialGist';
 const SESSION_CACHE_PUBLIC_SOCIAL_GIST_PREFIX = 'myGameList.session.publicSocialGist';
@@ -911,7 +941,7 @@ export async function readSocialGist(token: string, gistId: string, etag: string
 
       try {
         const parsedFresh = JSON.parse(rawFresh);
-        const normalizedFresh = normalizeSocialGistData(parsedFresh);
+        const normalizedFresh = normalizeSocialGistData(assembleChunkedSocial(parsedFresh, freshBody.files));
         saveSocialGistCache(gistId, normalizedFresh, responseEtagFresh);
         return { data: normalizedFresh, etag: responseEtagFresh, wasLegacy: socialGistNeedsRewrite(parsedFresh) };
       } catch {
@@ -939,7 +969,8 @@ export async function readSocialGist(token: string, gistId: string, etag: string
 
     try {
       const parsed = JSON.parse(raw);
-      const normalized = normalizeSocialGistData(parsed);
+      // A6: si el ancla referencia chunks de overflow de `sharedLists` (mismo gist), se fusionan antes de normalizar.
+      const normalized = normalizeSocialGistData(assembleChunkedSocial(parsed, body.files));
       saveSocialGistCache(gistId, normalized, responseEtag);
       return {
         data: normalized,
@@ -1013,7 +1044,8 @@ export async function readPublicSocialGistById(gistId: string, token: string | n
     let normalized = getEmptySocialGistData();
     if (raw) {
       try {
-        normalized = normalizeSocialGistData(JSON.parse(raw));
+        // A6: reensambla los chunks de overflow de `sharedLists` (lectura pública de gist ajeno).
+        normalized = normalizeSocialGistData(assembleChunkedSocial(JSON.parse(raw), body.files));
       } catch {
         normalized = getEmptySocialGistData();
       }
@@ -1047,23 +1079,61 @@ export async function writeSocialGist(token: string, gistId: string, payload: So
   assertNoSocialPrivateFields(normalized); // canal público: nunca review/reviewText/score/hours/etc. (denylist)
   assertValidSocialGist(normalized); // F6.1: allowlist estricta (Zod) — falla si hay cualquier campo extra/tipo inválido
 
-  const socialContent = JSON.stringify(normalized);
-  assertGistSizeWithinLimit(socialContent, 'gist social'); // E1: evita el deadlock al superar el límite de gist
+  const headers: Record<string, string> = {
+    Authorization: getGithubAuthHeader(token),
+    'Content-Type': 'application/json',
+    'X-GitHub-Api-Version': '2022-11-28',
+  };
+
+  let files: Record<string, { content: string } | null>;
+
+  if (ENABLE_SOCIAL_WRAPPER_WRITE) {
+    // A6: envoltorio multi-fichero del gist social. El ancla lleva el bucket `main` de `sharedLists` + `chunkIndex`;
+    // el excedente va a ficheros `myGameList.social-chunk-cN.json` del MISMO gist. Privacidad + tamaño POR fichero.
+    const { anchor, chunkFiles } = buildSocialFiles(normalized);
+    const anchorContent = JSON.stringify(anchor);
+    assertValidSocialGist(anchor); // el ancla (con chunkIndex + main slice) sigue cumpliendo la allowlist estricta
+    assertGistSizeWithinLimit(anchorContent, 'gist social (ancla)');
+    files = { [SOCIAL_GIST_FILENAME]: { content: anchorContent } };
+
+    // A7 (incremental): lee el estado actual UNA vez para omitir chunks sin cambios y borrar obsoletos. El ancla
+    // siempre se reescribe. Si no se puede leer el estado actual, se sube todo y no se borra nada (seguro).
+    let currentFiles: Record<string, { content?: string } | undefined> = {};
+    try {
+      const current = await githubFetch(`${GIST_API_BASE}/${gistId}`, { headers });
+      if (current.ok) {
+        const currentBody = (await current.json()) as { files?: Record<string, { content?: string }> };
+        currentFiles = currentBody.files || {};
+      }
+    } catch {
+      // sin estado actual: subimos el conjunto completo y no borramos nada
+    }
+
+    for (const [name, file] of Object.entries(chunkFiles)) {
+      const sealed = { ...file, mainGistId: gistId };
+      assertNoSocialPrivateFields(sealed); // cada chunk es canal público: misma guarda de privacidad
+      const content = JSON.stringify(sealed);
+      assertGistSizeWithinLimit(content, `gist social (${name})`);
+      if (chunkFileChecksum(currentFiles[name]?.content) === file.integrity.checksum) continue; // sin cambios
+      files[name] = { content };
+    }
+    // Borrar chunks sociales obsoletos (comparado contra el conjunto completo `chunkFiles`, no contra el PATCH).
+    for (const name of Object.keys(currentFiles)) {
+      if (/^myGameList\.social-chunk-.+\.json$/.test(name) && !(name in chunkFiles)) {
+        files[name] = null;
+      }
+    }
+  } else {
+    // CAMINO ACTUAL (flag OFF): un único fichero plano, byte-idéntico al anterior.
+    const socialContent = JSON.stringify(normalized);
+    assertGistSizeWithinLimit(socialContent, 'gist social'); // E1: evita el deadlock al superar el límite de gist
+    files = { [SOCIAL_GIST_FILENAME]: { content: socialContent } };
+  }
 
   const response = await githubFetch(`${GIST_API_BASE}/${gistId}`, {
     method: 'PATCH',
-    headers: {
-      Authorization: getGithubAuthHeader(token),
-      'Content-Type': 'application/json',
-      'X-GitHub-Api-Version': '2022-11-28',
-    },
-    body: JSON.stringify({
-      files: {
-        [SOCIAL_GIST_FILENAME]: {
-          content: socialContent,
-        },
-      },
-    }),
+    headers,
+    body: JSON.stringify({ files }),
   });
 
   if (!response.ok) {
@@ -1083,7 +1153,64 @@ export async function writeSocialGist(token: string, gistId: string, payload: So
  * ensambla los chunks de overflow (E4), migra al formato actual y calcula `wasLegacy` (upgrade proactivo).
  * Lanza si el fichero falta o el JSON es inválido (mismas garantías anti-pérdida que el camino directo).
  */
-function buildGistReadResponse(body: { files?: Record<string, { content: string } | undefined> }, etag: string | null): GistReadResponse {
+/**
+ * Fase B (lectura): si el ancla `chunkIndex` referencia chunks que viven en OTROS gists (`gistId` ≠ null), trae
+ * esos gists (con concurrencia limitada) y fusiona sus juegos en el ancla. Anti-pérdida ESTRICTO: si un gist de
+ * overflow no es accesible o le falta un chunk referenciado, LANZA (lectura incompleta) en vez de devolver datos
+ * parciales — así el ciclo de sync trata el error como tal (backoff) y NUNCA reescribe dejando fuera esos juegos.
+ * No-op (sin red) cuando ningún chunk tiene `gistId` → los usuarios de un único gist no pagan nada.
+ */
+async function mergeOverflowGistChunks(anchor: unknown, token: string | null): Promise<unknown> {
+  if (!anchor || typeof anchor !== 'object') return anchor;
+  const a = anchor as {
+    games?: Record<string, unknown>;
+    chunkIndex?: { chunks?: Array<{ chunkId?: string; gistId?: string | null }> };
+  };
+  const overflow = (a.chunkIndex?.chunks || []).filter((c) => c && c.chunkId && c.chunkId !== 'main' && c.gistId);
+  if (overflow.length === 0) return anchor;
+
+  const chunkIdsByGist = new Map<string, string[]>();
+  for (const c of overflow) {
+    const id = String(c.gistId);
+    if (!chunkIdsByGist.has(id)) chunkIdsByGist.set(id, []);
+    chunkIdsByGist.get(id)!.push(String(c.chunkId));
+  }
+
+  const gistIds = [...chunkIdsByGist.keys()];
+  const fetched = await mapWithConcurrency(gistIds, OVERFLOW_GIST_READ_CONCURRENCY, async (overflowGistId) => {
+    const headers: Record<string, string> = { 'X-GitHub-Api-Version': '2022-11-28' };
+    if (token && isValidGithubToken(token)) headers['Authorization'] = getGithubAuthHeader(token);
+    const resp = await githubFetch(`${GIST_API_BASE}/${overflowGistId}`, { headers });
+    if (!resp.ok) {
+      throw new Error(`Gist de overflow ${overflowGistId} no accesible (lectura incompleta; se aborta para no perder datos)`);
+    }
+    const b = (await resp.json()) as { files?: Record<string, { content?: string } | undefined> };
+    return { overflowGistId, files: b.files || {} };
+  });
+
+  const mergedGames: Record<string, unknown> = { ...(a.games || {}) };
+  for (const { overflowGistId, files } of fetched) {
+    for (const chunkId of chunkIdsByGist.get(overflowGistId)!) {
+      const content = files[gamesChunkFilename(chunkId)]?.content;
+      if (!content) {
+        throw new Error(`Chunk ${chunkId} ausente en el gist de overflow ${overflowGistId} (lectura incompleta; se aborta)`);
+      }
+      try {
+        const chunkParsed = JSON.parse(content) as { games?: Record<string, unknown> };
+        Object.assign(mergedGames, chunkParsed.games || {});
+      } catch {
+        throw new Error(`Chunk ${chunkId} corrupto en el gist de overflow ${overflowGistId} (se aborta)`);
+      }
+    }
+  }
+  return { ...a, games: mergedGames };
+}
+
+async function buildGistReadResponse(
+  body: { files?: Record<string, { content: string } | undefined> },
+  etag: string | null,
+  token: string | null,
+): Promise<GistReadResponse> {
   const raw = body.files?.[GIST_FILENAME]?.content;
 
   if (!raw) {
@@ -1097,9 +1224,10 @@ function buildGistReadResponse(body: { files?: Record<string, { content: string 
     throw new Error('Invalid JSON in Gist');
   }
 
-  // E4: si el ancla referencia chunks de overflow en el mismo gist, fusiona sus juegos (los ficheros vienen en
-  // la misma respuesta). Para gist plano o de un solo fichero no hace nada (comportamiento actual intacto).
-  const assembled = assembleChunkedGames(parsed, body.files);
+  // E4: chunks de overflow en el MISMO gist (vienen en esta respuesta). No-op para gist plano/un solo fichero.
+  const sameGist = assembleChunkedGames(parsed, body.files);
+  // Fase B: chunks de overflow en OTROS gists (`gistId` ≠ null) → fetch + merge (lanza si la lectura es incompleta).
+  const assembled = await mergeOverflowGistChunks(sameGist, token);
 
   return {
     data: migrateData(unwrapGamesFile(assembled)),
@@ -1150,7 +1278,7 @@ export async function readGist(token: string, gistId: string, etag: string | nul
         return { notModified: true };
       }
       const freshBody = (await freshResp.json()) as { files?: Record<string, { content: string }> };
-      const result = buildGistReadResponse(freshBody, freshResp.headers.get('etag'));
+      const result = await buildGistReadResponse(freshBody, freshResp.headers.get('etag'), token);
       gamesGistFormatVerifiedThisSession.add(gistId);
       // Solo divergemos del camino 304 cuando hay que migrar: si el formato ya es el actual, devolvemos
       // notModified para conservar exactamente el comportamiento barato (el viewmodel empuja dirty si toca).
@@ -1168,7 +1296,7 @@ export async function readGist(token: string, gistId: string, etag: string | nul
   }
 
   const body = (await response.json()) as { files?: Record<string, { content: string }> };
-  const result = buildGistReadResponse(body, response.headers.get('etag'));
+  const result = await buildGistReadResponse(body, response.headers.get('etag'), token);
   // Hemos visto el contenido completo: marca el formato como verificado para esta sesión (evita relecturas en 304).
   gamesGistFormatVerifiedThisSession.add(gistId);
   return result;
@@ -1198,8 +1326,133 @@ export async function readForeignGamesGist(readerToken: string | null, gamesGist
   }
 
   const body = (await response.json()) as { files?: Record<string, { content: string } | undefined> };
-  const result = buildGistReadResponse(body, response.headers.get('etag'));
+  const result = await buildGistReadResponse(body, response.headers.get('etag'), readerToken);
   return result.data as TabData;
+}
+
+/**
+ * A7 (reescritura incremental): extrae el checksum de integridad de un fichero chunk remoto (juegos o social). Es
+ * estable —depende solo del contenido, no de marcas de tiempo (`generatedAt`)— así que comparar el checksum del
+ * chunk construido con el remoto detecta si cambió sin reescribirlo. Devuelve `null` si falta o no parsea (→ se reescribe).
+ */
+function chunkFileChecksum(content: string | undefined): string | null {
+  if (!content) return null;
+  try {
+    const parsed = JSON.parse(content) as { integrity?: { checksum?: unknown } };
+    const c = parsed?.integrity?.checksum;
+    return typeof c === 'string' || typeof c === 'number' ? String(c) : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Fase B: lee los ficheros actuales de un gist por id (vacío si no accesible). Para reparto/incremental. */
+async function readGistFilesById(token: string, id: string): Promise<Record<string, { content?: string } | undefined>> {
+  try {
+    const resp = await githubFetch(`${GIST_API_BASE}/${id}`, {
+      headers: { Authorization: getGithubAuthHeader(token), 'X-GitHub-Api-Version': '2022-11-28' },
+    });
+    if (!resp.ok) return {};
+    const b = (await resp.json()) as { files?: Record<string, { content?: string }> };
+    return b.files || {};
+  } catch {
+    return {};
+  }
+}
+
+/** Fase B: extrae las refs de chunk del ancla actual (para reutilizar gists de overflow ya existentes). */
+function parseAnchorChunkRefs(content: string | undefined): Array<{ chunkId: string; gistId: string | null }> {
+  if (!content) return [];
+  try {
+    const p = JSON.parse(content) as { chunkIndex?: { chunks?: Array<{ chunkId?: string; gistId?: string | null }> } };
+    return (p.chunkIndex?.chunks || []).filter((c) => c && c.chunkId).map((c) => ({ chunkId: String(c.chunkId), gistId: c.gistId ?? null }));
+  } catch {
+    return [];
+  }
+}
+
+/** Fase B: crea un gist PRIVADO de overflow con los ficheros dados. Devuelve su id. */
+async function createOverflowGist(token: string, filesContent: Record<string, { content: string }>): Promise<string> {
+  const resp = await githubFetch(GIST_API_BASE, {
+    method: 'POST',
+    headers: { Authorization: getGithubAuthHeader(token), 'Content-Type': 'application/json', 'X-GitHub-Api-Version': '2022-11-28' },
+    body: JSON.stringify({ description: 'Mi Lista de Juegos - Overflow', public: false, files: filesContent }),
+  });
+  if (!resp.ok) throw await buildGithubError(resp, 'Create overflow gist failed');
+  const body = (await resp.json()) as { id: string };
+  return body.id;
+}
+
+/**
+ * Fase B (gated): reparte los chunks que no caben en el gist principal (más de `MAX_OVERFLOW_CHUNKS_PER_GIST`) entre
+ * gists de OVERFLOW, reutilizando los del ancla actual y creando nuevos si faltan. Los escribe (incremental) ANTES
+ * que el ancla y fija el `gistId` de cada chunk en `anchorFile.chunkIndex`. Devuelve el conjunto de nombres de
+ * chunk que se quedan en el gist principal. Escribir overflow primero + ancla después garantiza que el manifiesto
+ * nunca apunte a chunks aún no persistidos (si algo falla a mitad, el ancla viejo sigue siendo válido → sin pérdida).
+ * No borra gists/chunks viejos (higiene de huérfanos diferida): el ancla es el manifiesto, así que lo no referenciado
+ * simplemente se ignora en lectura.
+ */
+async function assignAndWriteOverflowGists(
+  token: string,
+  mainGistId: string,
+  anchorFile: GamesMainFile,
+  chunkFiles: Record<string, GamesChunkFile>,
+  currentMainFiles: Record<string, { content?: string } | undefined>,
+): Promise<Set<string>> {
+  const chunkNum = (name: string) => Number(chunkFiles[name].chunkId.replace(/\D/g, '')) || 0;
+  const chunkNames = Object.keys(chunkFiles).sort((a, b) => chunkNum(a) - chunkNum(b));
+  const mainChunkNames = chunkNames.slice(0, MAX_OVERFLOW_CHUNKS_PER_GIST);
+  const overflowChunkNames = chunkNames.slice(MAX_OVERFLOW_CHUNKS_PER_GIST);
+  if (overflowChunkNames.length === 0) return new Set(mainChunkNames);
+
+  const existingOverflowGistIds = [
+    ...new Set(parseAnchorChunkRefs(currentMainFiles[GIST_FILENAME]?.content).map((r) => r.gistId).filter((g): g is string => Boolean(g))),
+  ];
+
+  const batches: string[][] = [];
+  for (let i = 0; i < overflowChunkNames.length; i += MAX_OVERFLOW_CHUNKS_PER_GIST) {
+    batches.push(overflowChunkNames.slice(i, i + MAX_OVERFLOW_CHUNKS_PER_GIST));
+  }
+
+  const chunkIdToGist = new Map<string, string>();
+  for (let i = 0; i < batches.length; i += 1) {
+    const batch = batches[i];
+    const batchContents: Record<string, { content: string }> = {};
+    for (const name of batch) {
+      const content = JSON.stringify({ ...chunkFiles[name], mainGistId });
+      assertGistSizeWithinLimit(content, `gist de overflow (${name})`);
+      batchContents[name] = { content };
+    }
+    let overflowId = existingOverflowGistIds[i];
+    if (overflowId) {
+      // Reutiliza un gist de overflow existente: PATCH incremental (solo los chunks cuyo checksum cambió).
+      const cur = await readGistFilesById(token, overflowId);
+      const toPatch: Record<string, { content: string }> = {};
+      for (const name of batch) {
+        if (chunkFileChecksum(cur[name]?.content) === chunkFiles[name].integrity.checksum) continue;
+        toPatch[name] = batchContents[name];
+      }
+      if (Object.keys(toPatch).length > 0) {
+        const resp = await githubFetch(`${GIST_API_BASE}/${overflowId}`, {
+          method: 'PATCH',
+          headers: { Authorization: getGithubAuthHeader(token), 'Content-Type': 'application/json', 'X-GitHub-Api-Version': '2022-11-28' },
+          body: JSON.stringify({ files: toPatch }),
+        });
+        if (!resp.ok) throw await buildGithubError(resp, 'Write overflow gist failed');
+      }
+    } else {
+      overflowId = await createOverflowGist(token, batchContents);
+    }
+    for (const name of batch) chunkIdToGist.set(chunkFiles[name].chunkId, overflowId);
+  }
+
+  // Fija el gistId en el manifiesto del ancla: chunks del gist principal → null; del overflow → su gist.
+  for (const ref of anchorFile.chunkIndex.chunks) {
+    if (ref.chunkId === 'main') continue;
+    ref.gistId = chunkIdToGist.get(ref.chunkId) ?? null;
+  }
+
+  return new Set(mainChunkNames);
 }
 
 export async function writeGist(token: string, gistId: string, payload: TabData): Promise<{ etag: string | null; updatedAt: number }> {
@@ -1222,31 +1475,52 @@ export async function writeGist(token: string, gistId: string, payload: TabData)
   let files: Record<string, { content: string } | null>;
 
   if (ENABLE_GAMES_WRAPPER_WRITE) {
-    // E4 (GATED — bandera en false por ahora): envoltorio DESTINO multi-fichero. El ancla lleva el bucket `main`;
-    // el excedente va a ficheros `myGames-chunk-cN.json` del MISMO gist. Cada fichero se mantiene bajo el umbral.
+    // E4: envoltorio DESTINO multi-fichero. El ancla lleva el bucket `main` + diccionarios/chunkIndex; el excedente
+    // va a ficheros `myGames-chunk-cN.json`. Cada fichero se mantiene bajo el umbral de tamaño.
     const { anchorFile, chunkFiles } = buildGamesFiles(lean);
     files = {};
-    const anchorContent = JSON.stringify(anchorFile);
-    assertGistSizeWithinLimit(anchorContent, 'gist de juegos (ancla)');
-    files[GIST_FILENAME] = { content: anchorContent };
-    for (const [name, file] of Object.entries(chunkFiles)) {
-      const content = JSON.stringify({ ...file, mainGistId: gistId });
-      assertGistSizeWithinLimit(content, `gist de juegos (${name})`);
-      files[name] = { content };
-    }
-    // Eliminar ficheros chunk obsoletos (existían antes y ya no forman parte del conjunto): listar y poner a null.
+
+    // A7 (reescritura incremental) + B (reparto): lee el estado actual del gist principal UNA vez para (a) OMITIR
+    // del PATCH los chunks sin cambios (checksum estable), (b) borrar obsoletos y (c) reutilizar gists de overflow.
+    let currentFiles: Record<string, { content?: string } | undefined> = {};
     try {
       const current = await githubFetch(`${GIST_API_BASE}/${gistId}`, { headers });
       if (current.ok) {
-        const currentBody = (await current.json()) as { files?: Record<string, unknown> };
-        for (const name of Object.keys(currentBody.files || {})) {
-          if (/^myGames-chunk-.+\.json$/.test(name) && !(name in files)) {
-            files[name] = null; // null elimina el fichero del gist
-          }
-        }
+        const currentBody = (await current.json()) as { files?: Record<string, { content?: string }> };
+        currentFiles = currentBody.files || {};
       }
     } catch {
-      // Si no se pudo listar, no borramos obsoletos (no crítico); el PATCH continúa.
+      // Sin estado actual: subimos el conjunto completo y no borramos nada.
+    }
+
+    // B (gated): si está activado, reparte el excedente en gists de OVERFLOW (los escribe ANTES que el ancla y fija
+    // su `gistId` en el manifiesto). Si no, todos los chunks van al gist principal (comportamiento A7 intacto).
+    const mainChunkNames: Set<string> = ENABLE_GAMES_OVERFLOW_GISTS
+      ? await assignAndWriteOverflowGists(token, gistId, anchorFile, chunkFiles, currentFiles)
+      : new Set(Object.keys(chunkFiles));
+
+    // El ancla se serializa DESPUÉS de fijar los `gistId` (manifiesto correcto) y se escribe en el gist principal
+    // junto al PATCH de abajo — es decir, AL FINAL, cuando los chunks de overflow ya están persistidos.
+    const anchorContent = JSON.stringify(anchorFile);
+    assertGistSizeWithinLimit(anchorContent, 'gist de juegos (ancla)');
+    files[GIST_FILENAME] = { content: anchorContent };
+
+    for (const name of mainChunkNames) {
+      const file = chunkFiles[name];
+      const content = JSON.stringify({ ...file, mainGistId: gistId });
+      assertGistSizeWithinLimit(content, `gist de juegos (${name})`);
+      if (chunkFileChecksum(currentFiles[name]?.content) === file.integrity.checksum) {
+        continue; // sin cambios respecto al remoto: no reenviar este chunk
+      }
+      files[name] = { content };
+    }
+
+    // Borrar del gist principal los chunks que ya no le corresponden (obsoletos o movidos a overflow). Se compara
+    // contra `mainChunkNames` (no contra el subconjunto del PATCH) para no borrar uno omitido por estar sin cambios.
+    for (const name of Object.keys(currentFiles)) {
+      if (/^myGames-chunk-.+\.json$/.test(name) && !mainChunkNames.has(name)) {
+        files[name] = null; // null elimina el fichero del gist
+      }
     }
   } else {
     // CAMINO ACTUAL (flag OFF) — TabData plano, byte-idéntico al anterior.

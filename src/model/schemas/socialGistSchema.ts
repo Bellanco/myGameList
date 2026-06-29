@@ -73,6 +73,20 @@ const post = z.strictObject({
   updatedAt: z.number(),
 });
 
+// A6 (gated): índice de chunking del gist social. Aditivo y opcional → un ancla con overflow de `sharedLists`
+// (gistId null = mismo gist) valida; los gists planos sin chunking siguen validando igual.
+const chunkRef = z.strictObject({
+  chunkId: z.string(),
+  gistId: z.string().nullable(),
+  sizeKB: z.number(),
+  updatedAt: z.number(),
+});
+const chunkIndex = z.strictObject({
+  strategy: z.literal('size'),
+  maxChunkKB: z.number(),
+  chunks: z.array(chunkRef),
+});
+
 export const socialGistSchema = z.strictObject({
   profile,
   // ST3: `recommendations` top-level eliminado (código muerto; se fusionaba en activity). La lectura tolera gists viejos.
@@ -81,6 +95,8 @@ export const socialGistSchema = z.strictObject({
   posts: z.array(post).optional(),
   updatedAt: z.number(),
   schemaVersion: z.number(), // 6.2b: 2 = identidad por profileId
+  // A6 (gated): presente solo cuando la escritura multi-fichero está activa y hay overflow de sharedLists.
+  chunkIndex: chunkIndex.optional(),
 });
 
 /** Valida la proyección social antes de escribir. Lanza con detalle si hay campos extra o tipos inválidos. */

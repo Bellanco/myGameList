@@ -179,7 +179,7 @@ export function SocialFeedScreen({
                             </div>
                           </header>
                           <p>{hasValidDate ? SOCIAL_UI.feed.postedAt(itemDate) : SOCIAL_UI.feed.analyzedRecently}</p>
-                          <p className="hub-post-text"><PostText text={entry.text} /></p>
+                          <p className="hub-post-text"><PostText text={entry.text} sharedFilePageHint={SOCIAL_UI.feed.postSharedFileHint} /></p>
                         </article>
                       );
                     }

@@ -3,24 +3,21 @@ import { COMMON_ICONS } from '../../core/constants/icons';
 import { FILTER_BOOL, UI_MESSAGES } from '../../core/constants/labels';
 import { HOURS_RANGES } from '../../core/constants/uiConfig';
 import type { TabId, ToolbarFilters } from '../../model/types/game';
+import type { TabOptions } from '../../viewmodel/toolbarFilters';
 import { renderStars } from '../../core/utils/renderStars';
 import { Icon } from './Icon';
 
 interface ToolbarProps {
   currentTab: TabId;
   filters: ToolbarFilters;
-  lookups: {
-    genres: string[];
-    platforms: string[];
-    strengths: string[];
-    weaknesses: string[];
-  };
-  
+  options: TabOptions;
+
   activeFilterCount: number;
   compactFilters: boolean;
   filtersOpen: boolean;
   onFiltersToggle: () => void;
   onFilterChange: (key: keyof ToolbarFilters, value: string | boolean) => void;
+  onToggleValue: (key: 'genres' | 'platforms', value: string) => void;
   onClearFilter: (key: keyof ToolbarFilters) => void;
   onClearAll: () => void;
 }
@@ -28,12 +25,13 @@ interface ToolbarProps {
 export const Toolbar = memo(function Toolbar({
   currentTab,
   filters,
-  lookups,
+  options,
   activeFilterCount,
   compactFilters,
   filtersOpen,
   onFiltersToggle,
   onFilterChange,
+  onToggleValue,
   onClearFilter,
   onClearAll,
 }: ToolbarProps) {
@@ -58,23 +56,32 @@ export const Toolbar = memo(function Toolbar({
   const supportsScore = (tab: TabId) => tab === 'c' || tab === 'p';
   const supportsHours = (tab: TabId) => tab === 'c';
   const config = FILTER_BOOL[currentTab];
-  const activeItems = useMemo(
-    () => {
-      const items: Array<{ key: keyof ToolbarFilters; label: string }> = [];
-      if (filters.search.trim()) items.push({ key: 'search', label: `Buscar: ${filters.search.trim()}` });
-      if (filters.genre) items.push({ key: 'genre', label: `Género: ${filters.genre}` });
-      if (filters.platform) items.push({ key: 'platform', label: `Plataforma: ${filters.platform}` });
-      if (filters.score) items.push({ key: 'score', label: `Puntuación: ${filters.score}+` });
-      if (filters.hours) {
-        const range = HOURS_RANGES.find((entry) => entry.key === filters.hours);
-        items.push({ key: 'hours', label: `Horas: ${range?.label || filters.hours}` });
-      }
-      if (filters.only && config) items.push({ key: 'only', label: config.label });
-      if (filters.deck) items.push({ key: 'deck', label: 'Steam Deck' });
-      return items;
-    },
-    [filters, config],
+
+  // Multiselección por adición: el <select> queda siempre en su opción por defecto y, al elegir un valor,
+  // lo añade (los ya seleccionados se ocultan de la lista y se ven como chips abajo, con su "x" para quitar).
+  const genreOptions = useMemo(() => options.genres.filter((value) => !filters.genres.includes(value)), [options.genres, filters.genres]);
+  const platformOptions = useMemo(
+    () => options.platforms.filter((value) => !filters.platforms.includes(value)),
+    [options.platforms, filters.platforms],
   );
+  const hoursOptions = useMemo(() => HOURS_RANGES.filter((range) => options.hours.includes(range.key)), [options.hours]);
+
+  const activeItems = useMemo(() => {
+    const items: Array<{ id: string; label: string; onRemove: () => void }> = [];
+    if (filters.search.trim()) items.push({ id: 'search', label: `Buscar: ${filters.search.trim()}`, onRemove: () => onClearFilter('search') });
+    filters.genres.forEach((value) => items.push({ id: `genre:${value}`, label: `Género: ${value}`, onRemove: () => onToggleValue('genres', value) }));
+    filters.platforms.forEach((value) =>
+      items.push({ id: `platform:${value}`, label: `Plataforma: ${value}`, onRemove: () => onToggleValue('platforms', value) }),
+    );
+    if (filters.score) items.push({ id: 'score', label: `Puntuación: ${filters.score}+`, onRemove: () => onClearFilter('score') });
+    if (filters.hours) {
+      const range = HOURS_RANGES.find((entry) => entry.key === filters.hours);
+      items.push({ id: 'hours', label: `Horas: ${range?.label || filters.hours}`, onRemove: () => onClearFilter('hours') });
+    }
+    if (filters.only && config) items.push({ id: 'only', label: config.label, onRemove: () => onClearFilter('only') });
+    if (filters.deck) items.push({ id: 'deck', label: 'Steam Deck', onRemove: () => onClearFilter('deck') });
+    return items;
+  }, [filters, config, onClearFilter, onToggleValue]);
 
   return (
     <div className="toolbar">
@@ -108,35 +115,53 @@ export const Toolbar = memo(function Toolbar({
       </div>
 
       <div className={`filters-row ${!compactFilters || filtersOpen ? 'open' : ''}`}>
-        <div className="filter-field">
-          <label htmlFor="filter-genre" className="flabel">{UI_MESSAGES.toolbar.genre}</label>
-          <select id="filter-genre" className="input-base" value={filters.genre} onChange={(event) => onFilterChange('genre', event.target.value)}>
-            <option value="">{UI_MESSAGES.toolbar.allGenres}</option>
-            {lookups.genres.map((value) => (
-              <option key={value} value={value}>
-                {value}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div className="filter-field">
-          <label htmlFor="filter-platform" className="flabel">{UI_MESSAGES.toolbar.platform}</label>
-          <select id="filter-platform" className="input-base" value={filters.platform} onChange={(event) => onFilterChange('platform', event.target.value)}>
-            <option value="">{UI_MESSAGES.toolbar.allPlatforms}</option>
-            {lookups.platforms.map((value) => (
-              <option key={value} value={value}>
-                {value}
-              </option>
-            ))}
-          </select>
-        </div>
+        {genreOptions.length || filters.genres.length ? (
+          <div className="filter-field">
+            <label htmlFor="filter-genre" className="flabel">{UI_MESSAGES.toolbar.genre}</label>
+            <select
+              id="filter-genre"
+              className="input-base"
+              value=""
+              onChange={(event) => {
+                if (event.target.value) onToggleValue('genres', event.target.value);
+              }}
+            >
+              <option value="">{UI_MESSAGES.toolbar.allGenres}</option>
+              {genreOptions.map((value) => (
+                <option key={value} value={value}>
+                  {value}
+                </option>
+              ))}
+            </select>
+          </div>
+        ) : null}
+        {platformOptions.length || filters.platforms.length ? (
+          <div className="filter-field">
+            <label htmlFor="filter-platform" className="flabel">{UI_MESSAGES.toolbar.platform}</label>
+            <select
+              id="filter-platform"
+              className="input-base"
+              value=""
+              onChange={(event) => {
+                if (event.target.value) onToggleValue('platforms', event.target.value);
+              }}
+            >
+              <option value="">{UI_MESSAGES.toolbar.allPlatforms}</option>
+              {platformOptions.map((value) => (
+                <option key={value} value={value}>
+                  {value}
+                </option>
+              ))}
+            </select>
+          </div>
+        ) : null}
 
-        {supportsScore(currentTab) ? (
+        {supportsScore(currentTab) && options.scores.length ? (
           <div className="filter-field">
             <label htmlFor="filter-score" className="flabel">{UI_MESSAGES.toolbar.score}</label>
             <select id="filter-score" className="input-base" value={filters.score} onChange={(event) => onFilterChange('score', event.target.value)}>
               <option value="">{UI_MESSAGES.toolbar.anyScore}</option>
-              {[5, 4, 3, 2, 1].map((value) => (
+              {options.scores.map((value) => (
                 <option key={value} value={String(value)}>
                   {renderStars(value)} {UI_MESSAGES.toolbar.scoreOrMore(value)}
                 </option>
@@ -145,12 +170,12 @@ export const Toolbar = memo(function Toolbar({
           </div>
         ) : null}
 
-        {supportsHours(currentTab) ? (
+        {supportsHours(currentTab) && hoursOptions.length ? (
           <div className="filter-field">
             <label htmlFor="filter-hours" className="flabel">{UI_MESSAGES.toolbar.hours}</label>
             <select id="filter-hours" className="input-base" value={filters.hours} onChange={(event) => onFilterChange('hours', event.target.value)}>
               <option value="">{UI_MESSAGES.toolbar.anyDuration}</option>
-              {HOURS_RANGES.map((range) => (
+              {hoursOptions.map((range) => (
                 <option key={range.key} value={range.key}>
                   {range.label}
                 </option>
@@ -191,13 +216,13 @@ export const Toolbar = memo(function Toolbar({
       {activeFilterCount ? (
         <div className="active-filters show">
           {activeItems.map((item) => (
-            <span key={item.key} className="active-filter-chip">
+            <span key={item.id} className="active-filter-chip">
               <span>{item.label}</span>
               <button
                 type="button"
                 className="chip-x"
                 aria-label={UI_MESSAGES.toolbar.removeFilter(item.label)}
-                onClick={() => onClearFilter(item.key)}
+                onClick={item.onRemove}
               >
                 <Icon name={COMMON_ICONS.close} />
               </button>

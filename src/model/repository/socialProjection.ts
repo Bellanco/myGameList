@@ -4,7 +4,7 @@
 // Extraído de gistRepository.ts (M1) sin cambio de comportamiento.
 import { TAB_IDS, type GameItem, type TabData, type TabId } from '../types/game';
 import type { PublicGame } from '../types/social';
-import type { CategoryDictionaries, CategoryKey, ChunkRef, EncodedGameItem, GamesChunkFile, GamesMainFile } from '../types/gist';
+import type { CategoryDictionaries, CategoryKey, ChunkIndex, ChunkRef, EncodedGameItem, GamesChunkFile, GamesMainFile } from '../types/gist';
 
 // 6.opt — Diccionarios de categorías (schemaVersion 4): deduplican géneros/plataformas/puntos fuertes/débiles/
 // razones. Se construye un diccionario global (en el ancla) y cada juego referencia por índice.
@@ -300,6 +300,133 @@ export function toPublicGame(game: GameItem, tab: TabId): PublicGame {
     hasFullReview: (game.review || '').length > 0,
     updatedAt: game._ts,
   };
+}
+
+// ── A6 (gated): chunking del gist social por `sharedLists` (la "lista pública" grande) ──────────────────────
+// Mismo patrón que el gist de juegos: el ancla lleva el bucket `main` + `chunkIndex`; el excedente va a ficheros
+// de overflow del MISMO gist (`gistId: null`). La LECTURA reensambla (assembleChunkedSocial) y es retrocompatible
+// con gists planos (sin `chunkIndex`). La ESCRITURA va gated (ENABLE_SOCIAL_WRAPPER_WRITE) como hizo juegos.
+export const SOCIAL_SHARED_CHUNK_MAX_KB = 800;
+
+/** Nombre del fichero de overflow del gist social (sharedLists) para un `chunkId` (mismo gist, `gistId: null`). */
+export function socialChunkFilename(chunkId: string): string {
+  return `myGameList.social-chunk-${chunkId}.json`;
+}
+
+// Las funciones de chunking social solo dependen de `profile.sharedLists`, así que se tipan de forma ESTRUCTURAL
+// (no del `SocialGistData` concreto del repositorio) para no acoplar ni crear ciclos de import. La entrada mínima
+// necesaria es `id` (para repartir por tamaño); el resto de campos públicos se preservan tal cual.
+type SharedListEntry = { id: number };
+type SocialSharedLists = Partial<Record<string, SharedListEntry[]>>;
+
+/** Fichero de overflow del gist social: una porción de `sharedLists` (proyección PÚBLICA, sin campos privados). */
+export interface SocialSharedChunkFile {
+  schemaVersion: 2;
+  fileType: 'social-shared-chunk';
+  chunkId: string;
+  mainGistId: string;
+  updatedAt: number;
+  integrity: { algorithm: string; checksum: string; generatedAt: number };
+  sharedLists: Record<string, SharedListEntry[]>;
+}
+
+type SharedBucketItem = { id: number; _tab: string; game: SharedListEntry };
+
+function flattenSharedLists(sharedLists: SocialSharedLists | undefined): SharedBucketItem[] {
+  const out: SharedBucketItem[] = [];
+  for (const tab of TAB_IDS) {
+    for (const game of sharedLists?.[tab] || []) {
+      if (!game || !(Number(game.id) > 0)) continue;
+      out.push({ id: Number(game.id), _tab: tab, game });
+    }
+  }
+  return out;
+}
+
+function groupSharedByTab(items: SharedBucketItem[]): Record<string, SharedListEntry[]> {
+  const out: Record<string, SharedListEntry[]> = {};
+  for (const { _tab, game } of items) (out[_tab] ||= []).push(game);
+  return out;
+}
+
+/**
+ * A6 (gated): construye los ficheros DESTINO del gist social: el ancla (con `chunkIndex` y el bucket `main` de
+ * `sharedLists` embebido) + un `SocialSharedChunkFile` por bucket de overflow. Reparte por tamaño. Con pocas listas
+ * solo hay `main` y `chunkFiles` queda vacío (gist de un único fichero). PURA. La privacidad la asegura el llamador
+ * sobre cada fichero (assertNoSocialPrivateFields). Genérica en la forma del gist social (solo usa sharedLists).
+ */
+export function buildSocialFiles<T extends { profile: { sharedLists?: SocialSharedLists } }>(
+  data: T,
+  maxChunkKB: number = SOCIAL_SHARED_CHUNK_MAX_KB,
+): { anchor: T & { chunkIndex: ChunkIndex }; chunkFiles: Record<string, SocialSharedChunkFile> } {
+  const generatedAt = Date.now();
+  const buckets = distributeIntoChunks(flattenSharedLists(data.profile?.sharedLists), maxChunkKB * 1024);
+
+  const mainShared = groupSharedByTab(buckets.main || []);
+  const chunkFiles: Record<string, SocialSharedChunkFile> = {};
+  const chunkRefs: ChunkRef[] = [
+    { chunkId: 'main', gistId: null, sizeKB: Math.round(new Blob([JSON.stringify(mainShared)]).size / 1024), updatedAt: generatedAt },
+  ];
+
+  for (const chunkId of Object.keys(buckets)) {
+    if (chunkId === 'main') continue;
+    const sharedLists = groupSharedByTab(buckets[chunkId]);
+    const content = JSON.stringify(sharedLists);
+    chunkFiles[socialChunkFilename(chunkId)] = {
+      schemaVersion: 2,
+      fileType: 'social-shared-chunk',
+      chunkId,
+      mainGistId: '', // viven en el MISMO gist (gistId null); se sella en escritura, no es necesario para leer
+      updatedAt: generatedAt,
+      integrity: { algorithm: 'djb2', checksum: checksum32(content), generatedAt },
+      sharedLists,
+    };
+    chunkRefs.push({ chunkId, gistId: null, sizeKB: Math.round(new Blob([content]).size / 1024), updatedAt: generatedAt });
+  }
+
+  const chunkIndex: ChunkIndex = { strategy: 'size', maxChunkKB, chunks: chunkRefs };
+  const anchor = { ...data, profile: { ...data.profile, sharedLists: mainShared }, chunkIndex } as T & { chunkIndex: ChunkIndex };
+  return { anchor, chunkFiles };
+}
+
+/**
+ * A6 (lectura multi-fichero): si `parsed` es un ancla social con `chunkIndex` que referencia overflow en el MISMO
+ * gist (`gistId == null`), fusiona en `profile.sharedLists` (por pestaña) las listas de cada fichero de overflow
+ * presente en la respuesta. Para gist social plano (sin `chunkIndex`/overflow) devuelve `parsed` SIN cambios.
+ */
+export function assembleChunkedSocial(
+  parsed: unknown,
+  files: Record<string, { content?: string } | undefined> | undefined,
+): unknown {
+  if (!parsed || typeof parsed !== 'object' || !files) return parsed;
+  const anchor = parsed as {
+    profile?: { sharedLists?: Record<string, unknown[]> };
+    chunkIndex?: { chunks?: Array<{ chunkId?: string; gistId?: string | null }> };
+  };
+  const overflow = (anchor.chunkIndex?.chunks || []).filter(
+    (c) => c && c.chunkId && c.chunkId !== 'main' && (c.gistId === null || c.gistId === undefined),
+  );
+  if (overflow.length === 0) return parsed;
+
+  const merged: Record<string, unknown[]> = {};
+  for (const tab of TAB_IDS) {
+    const list = anchor.profile?.sharedLists?.[tab];
+    if (Array.isArray(list)) merged[tab] = [...list];
+  }
+  for (const ref of overflow) {
+    const content = files[socialChunkFilename(String(ref.chunkId))]?.content;
+    if (!content) continue; // chunk ausente: se conserva lo disponible
+    try {
+      const chunk = JSON.parse(content) as { sharedLists?: Record<string, unknown[]> };
+      for (const tab of TAB_IDS) {
+        const list = chunk.sharedLists?.[tab];
+        if (Array.isArray(list)) (merged[tab] ||= []).push(...list);
+      }
+    } catch {
+      // chunk corrupto: se ignora
+    }
+  }
+  return { ...anchor, profile: { ...(anchor.profile || {}), sharedLists: merged } };
 }
 
 const SOCIAL_PRIVATE_FIELDS = ['review', 'reviewText', 'score', 'hours', 'steamDeck', 'retry', 'replayable'];
