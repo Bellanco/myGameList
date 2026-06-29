@@ -132,17 +132,19 @@ Pasos en orden:
 
 **Salida:** un usuario realista (miles de juegos) deja de chocar con 950 KB; el gist se reparte en ficheros <800 KB dentro de un único gist, y la deduplicación de categorías reduce el tamaño total.
 
-### Fase B — Guarda de tamaño total + overflow a un segundo gist — *solo si A no alcanza*
+### Fase B — Overflow a varios gists — *implementada (lectura activa, escritura gated)*
 
-Activar únicamente cuando el **gist completo** (ancla + todos los chunks) se acerque al límite práctico de GitHub.
+Mismo patrón disciplinado que A3: la **lectura** de overflow va **activa y es retrocompatible** (no-op para usuarios de un único gist); la **escritura** va **gated** (`ENABLE_GAMES_OVERFLOW_GISTS = false`) hasta que la lectura esté desplegada en todos los dispositivos.
 
-1. **B1.** Añadir guarda de **tamaño total** del gist (suma de ficheros) además de la guarda por fichero; al superar el umbral, **no lanzar**: derivar a overflow.
-2. **B2.** Implementar **gists de overflow** (lo que hoy es solo tipo):
-   - escritura: crear gist(s) adicionales, escribir chunks con `ChunkRef.gistId = <id overflow>`;
-   - persistir los IDs en `privateConfig.gamesChunks` / `socialChunks` (las reglas **ya lo permiten**, `firestore.rules:40-43`) para descubrimiento cross-device;
-   - lectura: ampliar `assembleChunkedGames` para **buscar chunks con `gistId != null`** (fetch del gist de overflow) además del mismo gist;
-   - merge/CRDT y borrado de chunks obsoletos a través de varios gists.
-3. **B3.** Recuperación cross-device: al recuperar config por Google, leer `gamesChunks`/`socialChunks` de Firestore para reconstruir el conjunto de gists.
+- **B-lectura — ✅ HECHA (activa).** `mergeOverflowGistChunks` (en `gistRepository`): si el `chunkIndex` del ancla referencia chunks con `gistId` ≠ null, trae esos gists (fan-out limitado con `mapWithConcurrency`, reutilizando C3) y fusiona sus juegos. **Anti-pérdida estricto:** si un gist de overflow no es accesible o falta un chunk referenciado, **LANZA** (lectura incompleta) en vez de devolver datos parciales → el sync trata el error como tal (backoff) y **nunca reescribe dejando fuera juegos**. No-op sin red cuando ningún chunk tiene `gistId` (los usuarios de un gist no pagan nada). Aplica también a la lectura ajena (`readForeignGamesGist`).
+- **B-escritura — ✅ HECHA (gated).** `assignAndWriteOverflowGists`: cuando el nº de ficheros chunk supera `MAX_OVERFLOW_CHUNKS_PER_GIST` (4) en el gist principal, reparte el excedente en gists de overflow (**reutiliza** los del manifiesto actual, **crea** nuevos si faltan), los escribe **ANTES** que el ancla (incremental A7 por gist) y fija el `gistId` de cada chunk en el `chunkIndex`. Escribir overflow→ancla en ese orden garantiza que el manifiesto nunca apunte a chunks no persistidos (si algo falla, el ancla viejo sigue válido → sin pérdida/corrupción).
+- **Descubrimiento cross-device — sin Firestore.** El `chunkIndex` del ancla (en el gist principal, cuyo id está en `SyncConfig`) **es el manifiesto autodescriptivo**: lista cada chunk con su `gistId`. Cualquier dispositivo que lea el gist principal sabe qué gists extra traer. (`privateConfig.gamesChunks` queda como hardening opcional, no necesario para leer.)
+- **Tests:** `gistOverflow.test.ts` — lectura: fusión multi-gist sin pérdida, *throw* en gist inaccesible / chunk ausente, no-op de un solo gist; escritura (gated): reparto a overflow + round-trip de 7000 juegos, reutilización del gist existente.
+
+**Pendiente de B (follow-ups, no bloquean):**
+- **Flip de escritura:** poner `ENABLE_GAMES_OVERFLOW_GISTS = true` tras confirmar que la lectura está desplegada en todos los dispositivos (paso 2, como A3).
+- **Higiene de huérfanos:** hoy NO se borran chunks/gists viejos al encoger (no afecta a la corrección: lo no referenciado por el manifiesto se ignora en lectura). Reclamación de gists de overflow vacíos → diferida.
+- **Guarda de tamaño TOTAL por gist** (suma de ficheros) como disparador adicional al recuento de ficheros.
 
 > Nota: el roadmap actual marcó esto como _"no urgente"_ y eligió multi-fichero. Esta fase es la que **realmente** habilita "varios gists" y debe planificarse explícitamente si ese requisito es firme.
 
