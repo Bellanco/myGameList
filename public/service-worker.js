@@ -3,7 +3,7 @@
  * Enables offline functionality and caching strategy
  */
 
-const CACHE_NAME = 'mygamelist-v6';
+const CACHE_NAME = 'mygamelist-v7';
 const ASSETS = [
   '/',
   '/manifest.json',
