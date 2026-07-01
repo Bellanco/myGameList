@@ -157,7 +157,15 @@ export function SocialFeedScreen({
               ))}
             </div>
           ) : null}
-          {!loadingDirectory && feedItems.length === 0 ? <p>{SOCIAL_UI.feed.activityEmpty}</p> : null}
+          {!loadingDirectory && feedItems.length === 0 ? (
+            <div className="hub-feed-empty">
+              <p>{SOCIAL_UI.feed.activityEmptyNoFriends}</p>
+              <button className="btn btn-secondary btn-accent" type="button" onClick={onOpenProfiles}>
+                <Icon name="bottom-hub" />
+                {SOCIAL_UI.feed.discoverFriends}
+              </button>
+            </div>
+          ) : null}
           {!loadingDirectory && feedItems.length > 0 ? (
             <div className="hub-feed-activity-list" role="list" aria-label={SOCIAL_UI.feed.activityListAria}>
               {groupedFeedItems.map((group, groupIndex) => (

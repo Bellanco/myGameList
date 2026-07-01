@@ -504,6 +504,14 @@
   margin-top: .4rem;
 }
 
+// Estado vacío del feed (sin amigos): mensaje + CTA para descubrir perfiles.
+.hub-feed-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: .7rem;
+}
+
 // Botón de amistad en las tarjetas del directorio (no debe empujar el layout de la tarjeta).
 .hub-card-friend-action {
   margin-top: .5rem;
