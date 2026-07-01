@@ -3,11 +3,14 @@ import {
   BASE_WEIGHT,
   buildListsPool,
   buildProfilePool,
+  buildListsWeigher,
   curveScore,
   gameWeight,
   listsWeight,
   NEUTRAL_SCORE,
   normalizeName,
+  parseSeries,
+  SEQUEL_DECAY,
   pickWeighted,
   profileWeight,
   type RouletteCandidate,
@@ -157,5 +160,47 @@ describe('scoreless shame list fairness', () => {
 
   it('a shame game with a real score still uses it', () => {
     expect(listsWeight(cand('v', 4))).toBe(16 * 2);
+  });
+});
+
+describe('series-aware ordering', () => {
+  const g = (id: number, name: string) => game({ id, name });
+  const p = (game_: GameItem): RouletteCandidate => ({ game: game_, sourceTab: 'p' });
+
+  it('parseSeries handles arabic, roman, subtitle, years and no-number', () => {
+    expect(parseSeries('Portal')).toEqual({ base: 'portal', ordinal: 1 });
+    expect(parseSeries('Portal 2')).toEqual({ base: 'portal', ordinal: 2 });
+    expect(parseSeries('Final Fantasy VII')).toEqual({ base: 'final fantasy', ordinal: 7 });
+    expect(parseSeries('The Witcher 3: Wild Hunt')).toEqual({ base: 'the witcher', ordinal: 3 });
+    expect(parseSeries('Cyberpunk 2077')).toEqual({ base: 'cyberpunk 2077', ordinal: 1 }); // año, no secuela
+    expect(parseSeries('Left 4 Dead 2')).toEqual({ base: 'left 4 dead', ordinal: 2 }); // nº en medio no cuenta
+  });
+
+  it('puts the earlier entry ahead when both are pending', () => {
+    const data = tabData({ p: [g(1, 'Portal'), g(2, 'Portal 2')] });
+    const w = buildListsWeigher(data);
+    expect(w(p(data.p[0]))).toBeGreaterThan(w(p(data.p[1])));
+  });
+
+  it('promotes the next unplayed sequel over later ones (played 1-3 of 5)', () => {
+    const data = tabData({
+      c: [g(1, 'Saga'), g(2, 'Saga 2'), g(3, 'Saga 3')],
+      p: [g(4, 'Saga 4'), g(5, 'Saga 5')],
+    });
+    const w = buildListsWeigher(data);
+    expect(w(p(data.p[0]))).toBeGreaterThan(w(p(data.p[1])));
+  });
+
+  it('does not penalize skipped (not owned) earlier entries', () => {
+    const data = tabData({ c: [g(1, 'Saga')], p: [g(4, 'Saga 4')] });
+    const w = buildListsWeigher(data);
+    // Saga 4: solo tienes 1 (jugada) y 4; 2 y 3 no las tienes → sin penalización.
+    expect(w(p(data.p[0]))).toBe(listsWeight(p(data.p[0])));
+  });
+
+  it('suppresses the whole series while one entry is in progress', () => {
+    const data = tabData({ e: [g(2, 'Saga 2')], p: [g(3, 'Saga 3')] });
+    const w = buildListsWeigher(data);
+    expect(w(p(data.p[0]))).toBeCloseTo(listsWeight(p(data.p[0])) * SEQUEL_DECAY);
   });
 });
