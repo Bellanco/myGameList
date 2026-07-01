@@ -857,6 +857,33 @@ export async function createGist(token: string): Promise<{ gistId: string; etag:
   return { gistId: body.id, etag: response.headers.get('etag') };
 }
 
+/**
+ * Autodescubre el gist de JUEGOS del usuario listando sus gists (scope `gist`) y buscando el que contiene
+ * `myGames.json`. Se usa tras el login OAuth: con el token pero sin gistId, evita crear un gist nuevo que
+ * partiría los datos de un usuario que ya tenía uno. Devuelve '' si no encuentra ninguno (→ primera conexión).
+ */
+export async function findGamesGistId(token: string): Promise<string> {
+  if (!isValidGithubToken(token)) {
+    throw new Error('Formato de token inválido');
+  }
+
+  // 100 por página cubre de sobra el caso real (un usuario tiene pocos gists). No paginamos para mantenerlo simple.
+  const response = await githubFetch(`${GIST_API_BASE}?per_page=100`, {
+    headers: {
+      Authorization: getGithubAuthHeader(token),
+      'X-GitHub-Api-Version': '2022-11-28',
+    },
+  });
+
+  if (!response.ok) {
+    throw await buildGithubError(response, 'List gists failed');
+  }
+
+  const gists = (await response.json()) as Array<{ id: string; files?: Record<string, unknown> }>;
+  const match = gists.find((gist) => gist.files && Object.prototype.hasOwnProperty.call(gist.files, GIST_FILENAME));
+  return match?.id ?? '';
+}
+
 export async function createSocialGist(token: string): Promise<{ gistId: string; etag: string | null }> {
   return createSocialGistWithData(token, getEmptySocialGistData(), true);
 }

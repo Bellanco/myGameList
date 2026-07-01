@@ -2,7 +2,8 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { SYNC_MESSAGES } from '../core/constants/labels';
 import { findSocialProfileByEmail, getCurrentSocialAuthUser, recoverGithubToken, resolveStableProfileId, signInWithGoogle } from '../model/repository/firebaseRepository';
 import { mergeCrdt } from '../model/repository/syncRepository';
-import { clearSyncConfig, createGist, ensureSyncConfigLoaded, getRetryAfterMs, getSyncConfig, isDeferredNetworkError, readGist, saveSyncConfig, whoAmI, writeGist } from '../model/repository/gistRepository';
+import { clearSyncConfig, createGist, ensureSyncConfigLoaded, findGamesGistId, getRetryAfterMs, getSyncConfig, isDeferredNetworkError, readGist, saveSyncConfig, whoAmI, writeGist } from '../model/repository/gistRepository';
+import { beginGithubOAuth, completeGithubOAuth, hasGithubOAuthRedirect, isGithubOAuthConfigured } from '../model/repository/githubOAuthRepository';
 import { normalizeData } from '../model/repository/localRepository';
 import { clearDirty, clearDirtyIfUnchanged, loadSyncDirtyState } from '../model/repository/syncStateRepository';
 import { acquireSyncLock, canRead, getBackoffMs, getNextReadDelayMs, getSyncState, subscribeSyncState, transitionTo, canReadNow } from '../model/repository/syncMachineRepository';
@@ -35,6 +36,7 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
   const [connectedGistId, setConnectedGistId] = useState('');
   const [lastRemoteChangesApplied, setLastRemoteChangesApplied] = useState<number | null>(null);
   const [recoveringGistId, setRecoveringGistId] = useState(false);
+  const [githubLoggingIn, setGithubLoggingIn] = useState(false);
   const pendingRemoteSyncRef = useRef(false);
   const pendingRemoteSyncTimerRef = useRef<number | null>(null);
   const pollTimerRef = useRef<number | null>(null);
@@ -432,6 +434,52 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
     }
   }, [connectSyncWithCredentials, gistId, onNotice, token]);
 
+  // Paso 0 — "Conectar con GitHub" (OAuth). Redirige a GitHub; el usuario autoriza y vuelve a /ajustes con un `code`.
+  const beginGithubLogin = useCallback(() => {
+    try {
+      setGithubLoggingIn(true);
+      beginGithubOAuth(); // navega fuera de la app; no vuelve de esta función
+    } catch (error) {
+      setGithubLoggingIn(false);
+      onNotice('err', error instanceof Error ? error.message : SYNC_MESSAGES.connectError);
+    }
+  }, [onNotice]);
+
+  // Al volver del redirect de GitHub: canjea el `code` por un token, autodescubre el gist existente (para no
+  // duplicarlo) y conecta reusando el mismo camino que el flujo manual. Se invoca desde App al detectar el retorno.
+  const completeGithubLoginFromRedirect = useCallback(async () => {
+    if (!hasGithubOAuthRedirect()) return;
+    setGithubLoggingIn(true);
+    setStatus('syncing');
+    const lock = acquireSyncLock(); // S2: no solapar con un ciclo en vuelo
+    if (!lock) {
+      setGithubLoggingIn(false);
+      onNotice('ok', SYNC_MESSAGES.syncInProgress);
+      return;
+    }
+    try {
+      const githubToken = await completeGithubOAuth();
+      const existingGistId = await findGamesGistId(githubToken); // '' si es su primera conexión
+      await connectSyncWithCredentials(githubToken, existingGistId);
+    } catch (error) {
+      const deferred = isDeferredNetworkError(error); // S3
+      transitionTo('error_backoff', {
+        lastErrorAt: Date.now(),
+        errorCount: getSyncState().errorCount + 1,
+        pendingAction: 'read',
+        retryAfterMs: getRetryAfterMs(error) || null,
+      });
+      setStatus('error');
+      const message = deferred ? SYNC_MESSAGES.offline : error instanceof Error ? error.message : SYNC_MESSAGES.connectError;
+      setStatusMessage(message);
+      if (!deferred) onNotice('err', message);
+      logSyncError('completeGithubLoginFromRedirect', error);
+    } finally {
+      lock.release();
+      setGithubLoggingIn(false);
+    }
+  }, [connectSyncWithCredentials, onNotice]);
+
   const syncNow = useCallback(async () => {
     await ensureSyncConfigLoaded(); // C4
     const config = getSyncConfig();
@@ -772,6 +820,10 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
     disconnectSync,
     recoverGistIdFromGoogle,
     overwriteRemoteData,
+    githubOAuthEnabled: isGithubOAuthConfigured(),
+    githubLoggingIn,
+    beginGithubLogin,
+    completeGithubLoginFromRedirect,
     connectedGistId,
     lastRemoteChangesApplied,
     recoveringGistId,
