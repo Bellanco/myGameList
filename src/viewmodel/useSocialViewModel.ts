@@ -150,6 +150,7 @@ export function useSocialViewModel() {
 
   type SocialDirectoryEntry = {
     id: string;
+    uid: string; // uid de Firebase (para relaciones de amistad); hoy coincide con `id`, robusto ante el cutover uid→profileId
     displayName: string;
     email: string;
     socialGistId: string;
@@ -446,7 +447,7 @@ export function useSocialViewModel() {
   // Vista de solicitud para la bandeja: enriquece nombre/foto desde el directorio cuando el doc no los trae aún
   // (p. ej. una petición ENVIADA no tiene los datos del destinatario hasta que acepta). Directorio ya cargado → gratis.
   const enrichFriendRequest = useCallback((view: FriendshipView) => {
-    const dir = socialDirectory.find((entry) => entry.id === view.otherUid);
+    const dir = socialDirectory.find((entry) => entry.uid === view.otherUid);
     return {
       docId: view.docId,
       otherUid: view.otherUid,
@@ -1254,6 +1255,7 @@ export function useSocialViewModel() {
 
             return {
               id: entry.id,
+              uid: entry.uid,
               displayName: socialData.profile.name || entry.displayName || 'Usuario',
               email: entry.email,
               socialGistId: entry.socialGistId,
@@ -1269,6 +1271,7 @@ export function useSocialViewModel() {
           } catch {
             return {
               id: entry.id,
+              uid: entry.uid,
               displayName: entry.displayName || 'Usuario',
               email: entry.email,
               socialGistId: entry.socialGistId,

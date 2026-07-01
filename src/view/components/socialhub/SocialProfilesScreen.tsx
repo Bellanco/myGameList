@@ -1,6 +1,8 @@
 import React from 'react';
 import { Icon } from '../Icon';
 import { HubAvatar } from './HubAvatar';
+import { FriendshipButton } from './FriendshipButton';
+import type { RelationshipState } from '../../../model/types/social';
 
 /**
  * Pantalla de perfiles sociales (directorio).
@@ -19,6 +21,10 @@ export function SocialProfilesScreen({
   feedRowRef,
   handleFeedRowMouseDown,
   handleFeedRowKeyDown,
+  relationshipWith,
+  friendshipBusyUid,
+  onAddOrAcceptFriend,
+  onCancelFriendRequest,
   onBack,
   status,
   statusKind
@@ -34,6 +40,10 @@ export function SocialProfilesScreen({
   feedRowRef: React.RefObject<HTMLDivElement | null>;
   handleFeedRowMouseDown: (event: React.MouseEvent<HTMLDivElement>) => void;
   handleFeedRowKeyDown: (event: React.KeyboardEvent<HTMLDivElement>) => void;
+  relationshipWith: (uid: string) => RelationshipState;
+  friendshipBusyUid: string;
+  onAddOrAcceptFriend: (uid: string) => void;
+  onCancelFriendRequest: (uid: string) => void;
   onBack: () => void;
   status: string;
   statusKind: string;
@@ -110,6 +120,22 @@ export function SocialProfilesScreen({
                   ) : (
                     <p>{SOCIAL_UI.profiles.noFavorites}</p>
                   )}
+                  {/* La acción de amistad no debe abrir el detalle: se detiene la propagación del click/teclado. */}
+                  <div
+                    className="hub-card-friend-action"
+                    onClick={(event) => event.stopPropagation()}
+                    onKeyDown={(event) => event.stopPropagation()}
+                    role="presentation"
+                  >
+                    <FriendshipButton
+                      SOCIAL_UI={SOCIAL_UI}
+                      state={relationshipWith(entry.uid)}
+                      name={entry.displayName}
+                      busy={friendshipBusyUid === entry.uid}
+                      onAddOrAccept={() => onAddOrAcceptFriend(entry.uid)}
+                      onCancel={() => onCancelFriendRequest(entry.uid)}
+                    />
+                  </div>
                 </article>
               ))}
             </div>
