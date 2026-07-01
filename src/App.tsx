@@ -41,6 +41,23 @@ function isCompactTable(): boolean {
   return window.innerWidth <= 1100;
 }
 
+// Rutas VÁLIDAS de la app. El `<Route path="*">` redirige a /completados cualquier ruta no listada aquí, así que
+// TODA pantalla nueva (incl. las sub-rutas sociales de useSocialViewModel) debe añadirse a esta lista o quedará
+// inaccesible (rebotaría a completados). Exportada para el test de regresión de rutas.
+export const APP_ROUTE_PATHS = [
+  '/completados',
+  '/visitados',
+  '/en-curso',
+  '/proximos',
+  '/social',
+  '/social/profile',
+  '/social/profiles',
+  '/social/profiles/:profileId',
+  '/social/requests',
+  '/social/user/:userId/game/:gameId/:eventType',
+  '/ajustes',
+] as const;
+
 export default function App() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -479,16 +496,9 @@ export default function App() {
       </datalist>
 
       <Routes>
-        <Route path="/completados" element={null} />
-        <Route path="/visitados" element={null} />
-        <Route path="/en-curso" element={null} />
-        <Route path="/proximos" element={null} />
-        <Route path="/social" element={null} />
-        <Route path="/social/profile" element={null} />
-        <Route path="/social/profiles" element={null} />
-        <Route path="/social/profiles/:profileId" element={null} />
-        <Route path="/social/user/:userId/game/:gameId/:eventType" element={null} />
-        <Route path="/ajustes" element={null} />
+        {APP_ROUTE_PATHS.map((path) => (
+          <Route key={path} path={path} element={null} />
+        ))}
         <Route path="*" element={<Navigate to="/completados" replace />} />
       </Routes>
     </>
