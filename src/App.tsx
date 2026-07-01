@@ -64,11 +64,20 @@ export default function App() {
     notify,
   } = vm;
 
+  // El sync lee el estado local vía refs (no closures del render) para que un ciclo EN VUELO vea las
+  // ediciones confirmadas mientras estaba esperando la red. Con `() => vm.data` un ciclo iniciado antes
+  // de una edición leía la foto vieja y, al fusionar/persistir, revertía la edición y limpiaba dirty
+  // (pérdida de datos silenciosa). Mismo patrón que el `metaRef` interno de useGameListViewModel.
+  const dataRef = useRef(vm.data);
+  dataRef.current = vm.data;
+  const metaRef = useRef(vm.meta);
+  metaRef.current = vm.meta;
+
   // C1: el ciclo de sync persiste SIN marcar dirty (aplica merge/resultado remoto, no es edición de usuario).
   const syncVm = useSyncViewModel({
-    getData: () => vm.data,
+    getData: () => dataRef.current,
     setData: (next) => persistFromSync(next),
-    getMeta: () => vm.meta,
+    getMeta: () => metaRef.current,
     setMeta: vm.setMeta,
     onNotice: notify,
     persist: persistFromSync,
