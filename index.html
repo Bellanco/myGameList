@@ -21,7 +21,10 @@
     <meta name="twitter:image" content="/share-card.svg">
     <title>Mis Listas de juegos</title>
     <!-- Iconos como archivos reales (no data: URI): así Firefox y Chromium los usan de forma
-         fiable en pestaña, marcadores, historial y página de inicio, en escritorio y móvil. -->
+         fiable en pestaña, marcadores, historial y página de inicio, en escritorio y móvil.
+         El .ico va primero: superficies como la barra de favoritos y los accesos directos
+         piden /favicon.ico de forma implícita; sin él, Chromium/Edge muestran la letra del título. -->
+    <link rel="icon" href="/favicon.ico" sizes="32x32">
     <link rel="icon" type="image/svg+xml" href="/favicon.svg">
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
     <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png">
