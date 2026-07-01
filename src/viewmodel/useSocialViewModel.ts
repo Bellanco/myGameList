@@ -16,25 +16,32 @@ import {
   updateGistPrivacy,
   writeSocialGist,
 } from '../model/repository/gistRepository';
-import { publishPost } from '../model/repository/socialPublishRepository';
+import { publishPost, unpublishReviewActivity } from '../model/repository/socialPublishRepository';
 import { invalidateProfileGames, loadForeignProfileGames } from '../model/repository/foreignProfileRepository';
-import { getCachedSocialDirectory, getCachedSocialProfile, getLocalMeta, patchLocalMeta, putCachedSocialDirectory, putCachedSocialProfile } from '../model/repository/indexedDbRepository';
+import { getCachedSocialDirectory, getCachedSocialProfile, getLocalMeta, invalidateCachedSocialDirectory, patchLocalMeta, putCachedSocialDirectory, putCachedSocialProfile } from '../model/repository/indexedDbRepository';
 import { applyProfileVisibility } from '../core/utils/profileVisibility';
 import { SOCIAL_UI } from '../core/constants/labels';
 import { MAX_SOCIAL_FAVORITES } from '../core/constants/uiConfig';
 import type { IconName } from '../core/constants/icons';
 import type { GameItem, SyncConfig, TabId } from '../model/types/game';
 import {
+  acceptFriendRequest,
+  deleteFriendship,
   ensureProfileByEmail,
   getCurrentSocialAuthUser,
   findSocialProfileByEmail,
+  getMyFriendships,
   listSocialDirectory,
+  readFriendship,
   resolveStableProfileId,
+  sendFriendRequest,
   signInWithGoogle,
   signOutSocialUser,
   updateProfilePhoto,
+  type FriendshipSelfInfo,
   type SocialAuthUser,
 } from '../model/repository/firebaseRepository';
+import type { FriendshipView, MyFriendships, RelationshipState } from '../model/types/social';
 import { loadLocalState } from '../model/repository/localRepository';
 import { normalizeTimestamp as toSafeTimestamp } from '../core/utils/normalize';
 import { mapWithConcurrency } from '../core/utils/concurrency';
@@ -55,7 +62,7 @@ const isNotFoundGistError = (error: unknown): boolean => {
   return error instanceof Error && /\b404\b/.test(error.message);
 };
 
-type SocialPanel = 'profile' | 'profiles' | 'profile-detail' | 'detail' | 'feed';
+type SocialPanel = 'profile' | 'profiles' | 'profile-detail' | 'detail' | 'requests' | 'feed';
 
 type SocialRouteState = {
   activePanel: SocialPanel;
@@ -78,17 +85,19 @@ const SOCIAL_DIRECTORY_LIMIT = 30;
 const SOCIAL_DIRECTORY_FETCH_CONCURRENCY = 6;
 const PROFILE_EDIT_PATH = /^\/social\/profile\/?$/;
 const PROFILES_PATH = /^\/social\/profiles\/?$/;
+const REQUESTS_PATH = /^\/social\/requests\/?$/;
 const PROFILE_DETAIL_PATH = /^\/social\/profiles\/([^/]+)$/;
 const ACTIVITY_DETAIL_PATH = /^\/social\/user\/([^/]+)\/game\/(\d+)\/(review|recommendation)$/;
 
 const getSocialRouteState = (pathname: string): SocialRouteState => {
   const profileEditMatch = pathname.match(PROFILE_EDIT_PATH);
   const profilesMatch = pathname.match(PROFILES_PATH);
+  const requestsMatch = pathname.match(REQUESTS_PATH);
   const profileDetailMatch = pathname.match(PROFILE_DETAIL_PATH);
   const detailMatch = pathname.match(ACTIVITY_DETAIL_PATH);
 
   return {
-    activePanel: profileEditMatch ? 'profile' : profilesMatch ? 'profiles' : profileDetailMatch ? 'profile-detail' : detailMatch ? 'detail' : 'feed',
+    activePanel: profileEditMatch ? 'profile' : profilesMatch ? 'profiles' : requestsMatch ? 'requests' : profileDetailMatch ? 'profile-detail' : detailMatch ? 'detail' : 'feed',
     profileDetailId: profileDetailMatch ? decodeURIComponent(profileDetailMatch[1]) : '',
     detailActorUid: detailMatch ? decodeURIComponent(detailMatch[1]) : '',
     detailGameId: detailMatch ? Number(detailMatch[2]) : 0,
@@ -141,6 +150,7 @@ export function useSocialViewModel() {
 
   type SocialDirectoryEntry = {
     id: string;
+    uid: string; // uid de Firebase (para relaciones de amistad); hoy coincide con `id`, robusto ante el cutover uid→profileId
     displayName: string;
     email: string;
     socialGistId: string;
@@ -204,6 +214,12 @@ export function useSocialViewModel() {
   const feedStartXRef = useRef(0);
   const feedStartScrollRef = useRef(0);
   const [isFeedDragging, setIsFeedDragging] = useState(false);
+
+  // Amistad (aceptación mutua). Todo el estado sale de UNA query `array-contains` (cacheada en el repositorio).
+  const [friendships, setFriendships] = useState<MyFriendships>({ friends: [], incoming: [], outgoing: [], byOtherUid: {} });
+  const [loadingFriendships, setLoadingFriendships] = useState(false);
+  // uid del "otro" sobre el que hay una mutación en curso (para deshabilitar su botón sin bloquear el resto).
+  const [friendshipBusyUid, setFriendshipBusyUid] = useState<string>('');
 
   const setFeedback = useCallback((kind: 'ok' | 'warn' | 'err', message: string, duration?: 'short' | 'long') => {
     setStatusKind(kind);
@@ -395,6 +411,76 @@ export function useSocialViewModel() {
     };
   }, [authUser?.uid]);
 
+  // Carga el estado de amistad (amigos + peticiones) con UNA query cacheada. Degrada a vacío si Firestore falla.
+  const refreshFriendships = useCallback(async (forceRefresh = false) => {
+    const uid = authUser?.uid;
+    if (!uid) {
+      setFriendships({ friends: [], incoming: [], outgoing: [], byOtherUid: {} });
+      return;
+    }
+    try {
+      setLoadingFriendships(true);
+      const next = await getMyFriendships(uid, { forceRefresh });
+      setFriendships(next);
+    } catch {
+      /* best-effort: sin amistad el resto del social sigue usable. */
+    } finally {
+      setLoadingFriendships(false);
+    }
+  }, [authUser?.uid]);
+
+  useEffect(() => {
+    if (!showSocialSpace || !authUser?.uid) {
+      return;
+    }
+    void refreshFriendships();
+  }, [showSocialSpace, authUser?.uid, refreshFriendships]);
+
+  // Tras un cambio de amistad (aceptar/eliminar), el conjunto de amigos cambia y con él la actividad que debe salir
+  // en el feed. Se invalida la caché del directorio (feed solo-amigos) y se refresca la amistad; el efecto que
+  // depende de `friendships.friends` rehidrata el directorio releyendo los gists de los amigos actuales.
+  const refreshAfterFriendshipChange = useCallback(async () => {
+    if (socialCfgGistId) {
+      await invalidateCachedSocialDirectory(socialCfgGistId);
+    }
+    await refreshFriendships(true);
+  }, [refreshFriendships, socialCfgGistId]);
+
+  // Estado de relación con OTRO usuario (para pintar el botón correcto en tarjetas/perfil).
+  const relationshipWith = useCallback((otherUid: string): RelationshipState => {
+    if (!otherUid) return 'none';
+    return friendships.byOtherUid[otherUid]?.state ?? 'none';
+  }, [friendships]);
+
+  const pendingIncomingCount = friendships.incoming.length;
+
+  // Vista de solicitud para la bandeja: enriquece nombre/foto desde el directorio cuando el doc no los trae aún
+  // (p. ej. una petición ENVIADA no tiene los datos del destinatario hasta que acepta). Directorio ya cargado → gratis.
+  const enrichFriendRequest = useCallback((view: FriendshipView) => {
+    const dir = socialDirectory.find((entry) => entry.uid === view.otherUid);
+    return {
+      docId: view.docId,
+      otherUid: view.otherUid,
+      name: view.otherName || dir?.displayName || SOCIAL_UI.requests.unknownUser,
+      photo: view.otherPhoto || dir?.photoURL || '',
+    };
+  }, [socialDirectory]);
+
+  const incomingRequests = useMemo(
+    () => friendships.incoming.map(enrichFriendRequest),
+    [friendships.incoming, enrichFriendRequest],
+  );
+  const outgoingRequests = useMemo(
+    () => friendships.outgoing.map(enrichFriendRequest),
+    [friendships.outgoing, enrichFriendRequest],
+  );
+  // Lista de amigos (aceptados) para gestión: se deriva de los docs de amistad, NO del directorio, así SIEMPRE se
+  // puede ver y eliminar a un amigo aunque no esté en el top-30 del directorio o haya desactivado su social.
+  const friendsList = useMemo(
+    () => friendships.friends.map(enrichFriendRequest),
+    [friendships.friends, enrichFriendRequest],
+  );
+
   const completedGames = useMemo(() => {
     const map = new Map<number, string>();
     localState.c.forEach((game) => {
@@ -441,11 +527,11 @@ export function useSocialViewModel() {
   }, []);
 
   const visibleSocialDirectory = useMemo(() => {
-    // Un perfil sin favoritos se considera INCOMPLETO: no aparece en el directorio ("Actividad de perfiles")
-    // ni se puede abrir su detalle (ver selectedProfileDetail/openProfileDetail). Excluye además el propio.
-    return socialDirectory.filter(
-      (entry) => entry.socialGistId !== socialCfgGistId && entry.favorites.length > 0,
-    );
+    // Directorio de descubrimiento: se muestran TODOS los perfiles publicados (el propio excluido). Ya no se filtra
+    // por `favorites.length > 0`: con el feed solo-amigos ya no leemos el gist de los no-amigos, así que su lista de
+    // favoritos viene vacía; exigirla ocultaría a todo el mundo e impediría enviarles peticiones de amistad. Los
+    // perfiles del directorio ya vienen acotados por Firestore (`social.enabled` + gist social presente).
+    return socialDirectory.filter((entry) => entry.socialGistId !== socialCfgGistId);
   }, [socialCfgGistId, socialDirectory]);
 
   const socialDisplayName = useMemo(() => {
@@ -474,8 +560,8 @@ export function useSocialViewModel() {
     }
 
     const entry = socialDirectory.find((item) => item.id === profileDetailId) || null;
-    // Perfil incompleto (sin favoritos): no se puede entrar → se trata como inexistente.
-    if (!entry || entry.favorites.length === 0) return null;
+    // Se puede abrir el detalle de cualquier perfil del directorio (para no-amigos: hero + "Añadir amigo").
+    if (!entry) return null;
 
     // E3 deja `sharedLists` vacío para TODOS los perfiles del directorio (no se exponen las listas ajenas). Para el
     // perfil PROPIO repoblamos las listas desde `localState` (juegos completos) para que el usuario SÍ vea sus
@@ -577,6 +663,58 @@ export function useSocialViewModel() {
     return allGames.find((game) => game.id === gameId) || null;
   }, [authUser, foreignGamesByProfile, localState, ownProfileId, socialDirectory]);
 
+  // Evita despublicar la misma reseña dos veces mientras la escritura está en vuelo (StrictMode / re-render).
+  const orphanUnpublishInFlightRef = useRef<Set<number>>(new Set());
+
+  // Reseña huérfana PROPIA: el dueño abre el detalle de una reseña cuyo juego ya no existe en sus listados
+  // (borrado o perdido). Sin contraparte, `getGameItemById` devuelve null y el detalle sale vacío; entonces la
+  // despublicamos del gist social para que no quede una reseña fantasma en el feed y volvemos al feed.
+  // Salvaguarda: solo si hay listados cargados (localStorage no vacío/sin hidratar), para no borrar por un
+  // estado local transitoriamente vacío. Solo actúa sobre el perfil propio y sobre eventos de tipo 'review'.
+  useEffect(() => {
+    if (activePanel !== 'detail') return;
+    const event = activeDetailEvent;
+    if (!event || event.type !== 'review') return;
+    if (!isOwnProfileIdentity(event.profileId, authUser?.uid, ownProfileId)) return;
+
+    const ownGames = [...localState.c, ...localState.v, ...localState.e, ...localState.p];
+    if (ownGames.length === 0) return; // sin listados cargados → no despublicar (evita falsos positivos)
+    if (ownGames.some((game) => game.id === event.gameId)) return; // tiene contraparte → no es huérfana
+
+    const gameId = event.gameId;
+    if (orphanUnpublishInFlightRef.current.has(gameId)) return;
+    orphanUnpublishInFlightRef.current.add(gameId);
+
+    let cancelled = false;
+    void unpublishReviewActivity({ id: gameId })
+      .then(() => {
+        if (cancelled) return;
+        // Quita la entrada del feed local (payload propio + entrada propia del directorio) para que desaparezca
+        // sin recargar, y vuelve al feed.
+        setSocialPayload((prev) => ({
+          activity: prev.activity.filter((entry) => !(entry.gameId === gameId && entry.type === 'review')),
+        }));
+        setSocialDirectory((prev) =>
+          prev.map((entry) =>
+            entry.socialGistId === socialCfgGistId
+              ? { ...entry, activity: entry.activity.filter((a) => !(a.gameId === gameId && a.type === 'review')) }
+              : entry,
+          ),
+        );
+        navigate('/social');
+      })
+      .catch(() => {
+        /* best-effort: si falla la red se reintenta la próxima vez que se abra el detalle */
+      })
+      .finally(() => {
+        orphanUnpublishInFlightRef.current.delete(gameId);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activePanel, activeDetailEvent, authUser, localState, navigate, ownProfileId, socialCfgGistId]);
+
   /**
    * Formatea la fecha como "DD de MMM".
    */
@@ -676,13 +814,9 @@ export function useSocialViewModel() {
   }, [navigate]);
 
   const openProfileDetail = useCallback((profileId: string) => {
-    // No abrir el detalle de un perfil incompleto (sin favoritos). El propio se gestiona aparte (editor).
-    const target = socialDirectory.find((entry) => entry.id === profileId);
-    if (target && target.favorites.length === 0) {
-      return;
-    }
+    // Cualquier perfil del directorio se puede abrir (para no-amigos: hero + "Añadir amigo").
     navigate(`/social/profiles/${encodeURIComponent(profileId)}`);
-  }, [navigate, socialDirectory]);
+  }, [navigate]);
 
   // Abre el DETALLE del perfil propio (vista pública con sus listados), no el editor. Si aún no existe entrada
   // propia con favoritos en el directorio, cae al editor para que el usuario complete su perfil.
@@ -713,6 +847,9 @@ export function useSocialViewModel() {
     if (foreignGamesByProfile[targetProfileId]) return;
     const entry = socialDirectory.find((item) => item.id === targetProfileId);
     if (!entry || !entry.gamesGistId) return;
+    // Amistad: solo se baja el gist de listados COMPLETO de un amigo. Para no-amigos no se lee nada (ahorro de
+    // llamadas + coherente con "perfil no-amigo = solo nombre y foto"); el detalle muestra el CTA de "Añadir amigo".
+    if (relationshipWith(entry.uid) !== 'friends') return;
 
     let cancelled = false;
     const token = getSocialSyncConfig()?.token || mainSyncConfig?.token || null;
@@ -735,13 +872,14 @@ export function useSocialViewModel() {
     return () => {
       cancelled = true;
     };
-  }, [activePanel, activeDetailEvent, authUser, defaultSocialVisibility, foreignGamesByProfile, mainSyncConfig?.token, ownProfileId, profileDetailId, socialDirectory]);
+  }, [activePanel, activeDetailEvent, authUser, defaultSocialVisibility, foreignGamesByProfile, mainSyncConfig?.token, ownProfileId, profileDetailId, relationshipWith, socialDirectory]);
 
   // Bloque 4 — refresco manual del perfil abierto: invalida la caché de IndexedDB y relee del gist de listados.
   const refreshProfileDetail = useCallback(async () => {
     const profileId = profileDetailId;
     const entry = socialDirectory.find((item) => item.id === profileId);
     if (!entry || !entry.gamesGistId || isOwnProfileIdentity(profileId, authUser?.uid, ownProfileId)) return;
+    if (relationshipWith(entry.uid) !== 'friends') return; // solo se refrescan listados de amigos.
     try {
       setLoadingForeignProfile(true);
       await invalidateProfileGames(profileId);
@@ -758,7 +896,7 @@ export function useSocialViewModel() {
     } finally {
       setLoadingForeignProfile(false);
     }
-  }, [authUser, defaultSocialVisibility, mainSyncConfig?.token, ownProfileId, profileDetailId, setFeedback, socialDirectory]);
+  }, [authUser, defaultSocialVisibility, mainSyncConfig?.token, ownProfileId, profileDetailId, relationshipWith, setFeedback, socialDirectory]);
 
   const handleActivityItemKeyDown = useCallback(
     (event: ReactKeyboardEvent<HTMLElement>, entry: SocialActivityFeedItem) => {
@@ -1066,16 +1204,58 @@ export function useSocialViewModel() {
 
     try {
       setLoadingDirectory(true);
-      const entries = await listSocialDirectory(SOCIAL_DIRECTORY_LIMIT, { forceRefresh });
+      const dirEntries = await listSocialDirectory(SOCIAL_DIRECTORY_LIMIT, { forceRefresh });
       const socialConfig = getSocialSyncConfig();
       // Foto propia inmediata (de la sesión Google) aunque aún no se haya re-guardado el perfil; respeta showPhoto.
       const ownPhotoURL = showPhoto && authUser?.photoURL ? authUser.photoURL : '';
+      // FEED SOLO-AMIGOS: el gist social (actividad/publicaciones/favoritos) SOLO se lee de tus amigos y del propio.
+      // Los no-amigos quedan index-only (nombre/foto del directorio Firestore), sin lectura de gist → gran ahorro de
+      // llamadas. Como el feed deriva su actividad de estas entradas, mostrar solo la de amigos es automático.
+      const friendUids = new Set(friendships.friends.map((friend) => friend.otherUid));
+
+      // Escalabilidad (>30 amigos): el directorio de descubrimiento está capado a SOCIAL_DIRECTORY_LIMIT y solo lista
+      // perfiles con `social.enabled`. Para que NINGÚN amigo desaparezca del feed / detalle / gestión por caer fuera
+      // de ese tope (o por desactivar social), se sintetizan entradas para los amigos ausentes usando los datos
+      // DENORMALIZADOS del doc de amistad (nombre/foto/gists). Así los amigos son autosuficientes e independientes del
+      // tope del directorio; los pendientes NO se sintetizan (no son amigos aún).
+      const directoryUids = new Set(dirEntries.map((entry) => entry.uid));
+      const friendOnlyEntries = friendships.friends
+        .filter((friend) => friend.otherSocialGistId && !directoryUids.has(friend.otherUid))
+        .map((friend) => ({
+          id: friend.otherUid,
+          uid: friend.otherUid,
+          email: '',
+          displayName: friend.otherName || 'Usuario',
+          photoURL: friend.otherPhoto || '',
+          socialGistId: friend.otherSocialGistId,
+          gamesGistId: friend.otherGamesGistId,
+        }));
+      const entries = [...dirEntries, ...friendOnlyEntries];
 
       const withProfiles = await mapWithConcurrency(
         entries,
         SOCIAL_DIRECTORY_FETCH_CONCURRENCY,
         async (entry) => {
           const isOwnEntry = entry.socialGistId === socialCfgGistId;
+          const isFriend = friendUids.has(entry.uid);
+          if (!isOwnEntry && !isFriend) {
+            // No-amigo: index-only, sin leer su gist. Solo nombre/foto (Firestore); sin actividad/posts/favoritos.
+            return {
+              id: entry.id,
+              uid: entry.uid,
+              displayName: entry.displayName || 'Usuario',
+              email: entry.email,
+              socialGistId: entry.socialGistId,
+              gamesGistId: entry.gamesGistId,
+              photoURL: entry.photoURL || '',
+              favorites: [],
+              recommendations: [],
+              activity: [],
+              posts: [],
+              sharedLists: {},
+              visibility: defaultSocialVisibility,
+            };
+          }
           try {
             const socialData = await readPublicSocialGistById(entry.socialGistId, socialConfig?.token || null);
             // Foto: prioridad al gist (con su visibilidad); si no la trae, se usa la del directorio de Firestore
@@ -1133,6 +1313,7 @@ export function useSocialViewModel() {
 
             return {
               id: entry.id,
+              uid: entry.uid,
               displayName: socialData.profile.name || entry.displayName || 'Usuario',
               email: entry.email,
               socialGistId: entry.socialGistId,
@@ -1148,6 +1329,7 @@ export function useSocialViewModel() {
           } catch {
             return {
               id: entry.id,
+              uid: entry.uid,
               displayName: entry.displayName || 'Usuario',
               email: entry.email,
               socialGistId: entry.socialGistId,
@@ -1173,7 +1355,7 @@ export function useSocialViewModel() {
     } finally {
       setLoadingDirectory(false);
     }
-  }, [activePanel, authUser, defaultSocialVisibility, mainSyncConfig?.token, profileEditorLocked, setFeedback, showSocialSpace, socialCfgGistId, showPhoto]);
+  }, [activePanel, authUser, defaultSocialVisibility, friendships.friends, mainSyncConfig?.token, profileEditorLocked, setFeedback, showSocialSpace, socialCfgGistId, showPhoto]);
 
   // F3 — publica una publicación de texto libre y refresca el feed (definido tras hydrateSocialDirectory para evitar TDZ).
   const handlePublishPost = useCallback(async () => {
@@ -1402,6 +1584,94 @@ export function useSocialViewModel() {
     setFeedback('ok', SOCIAL_UI.status.signOut, 'long');
   }, [setFeedback]);
 
+  // Datos que YO aporto al doc de amistad (denormalizados): mi nombre/foto (respetando showPhoto) + mis ids de gist.
+  const buildFriendshipSelfInfo = useCallback((): FriendshipSelfInfo => ({
+    name: socialDisplayName,
+    photo: showPhoto && authUser?.photoURL ? authUser.photoURL : '',
+    socialGistId: socialCfgGistId,
+    gamesGistId: mainSyncConfig?.gistId || '',
+  }), [authUser?.photoURL, mainSyncConfig?.gistId, showPhoto, socialCfgGistId, socialDisplayName]);
+
+  // "Añadir amigo" o "Aceptar": según el estado actual. Si no hay relación, envía petición; si el otro ya me pidió,
+  // acepta. Maneja la carrera de petición simultánea (el doc canónico ya existe) releyendo y aceptando si procede.
+  const handleAddOrAcceptFriend = useCallback(async (otherUid: string) => {
+    const myUid = authUser?.uid;
+    if (!myUid || !otherUid || myUid === otherUid) {
+      return;
+    }
+    const relation = relationshipWith(otherUid);
+    if (relation === 'friends' || relation === 'outgoing') {
+      return; // ya gestionado desde otra acción específica.
+    }
+    try {
+      setFriendshipBusyUid(otherUid);
+      if (relation === 'incoming') {
+        const docId = friendships.byOtherUid[otherUid]?.docId;
+        if (docId) {
+          await acceptFriendRequest({ myUid, docId, self: buildFriendshipSelfInfo() });
+          await refreshAfterFriendshipChange();
+          setFeedback('ok', SOCIAL_UI.status.friendRequestAccepted);
+        }
+        return;
+      }
+      try {
+        await sendFriendRequest({ myUid, otherUid, self: buildFriendshipSelfInfo() });
+        await refreshAfterFriendshipChange();
+        setFeedback('ok', SOCIAL_UI.status.friendRequestSent);
+      } catch (error) {
+        // Carrera: el doc canónico ya existía. Releer y decidir.
+        const existing = await readFriendship(myUid, otherUid);
+        if (existing?.state === 'incoming') {
+          await acceptFriendRequest({ myUid, docId: existing.docId, self: buildFriendshipSelfInfo() });
+          await refreshAfterFriendshipChange();
+          setFeedback('ok', SOCIAL_UI.status.friendRequestAccepted);
+          return;
+        }
+        if (existing) {
+          await refreshAfterFriendshipChange(); // ya outgoing/friends: reflejar el estado real sin error ruidoso.
+          return;
+        }
+        throw error;
+      }
+    } catch (error) {
+      setFeedback('err', error instanceof Error ? error.message : SOCIAL_UI.status.friendActionFailed);
+    } finally {
+      setFriendshipBusyUid('');
+    }
+  }, [authUser?.uid, buildFriendshipSelfInfo, friendships, refreshAfterFriendshipChange, relationshipWith, setFeedback]);
+
+  // Borra el doc de amistad (cancelar enviada / rechazar recibida / eliminar amistad), con mensaje específico.
+  const deleteRelationship = useCallback(async (otherUid: string, successMsg: string) => {
+    const myUid = authUser?.uid;
+    const docId = friendships.byOtherUid[otherUid]?.docId;
+    if (!myUid || !docId) {
+      return;
+    }
+    try {
+      setFriendshipBusyUid(otherUid);
+      await deleteFriendship({ myUid, docId });
+      await refreshAfterFriendshipChange();
+      setFeedback('ok', successMsg);
+    } catch (error) {
+      setFeedback('err', error instanceof Error ? error.message : SOCIAL_UI.status.friendActionFailed);
+    } finally {
+      setFriendshipBusyUid('');
+    }
+  }, [authUser?.uid, friendships, refreshAfterFriendshipChange, setFeedback]);
+
+  const handleCancelFriendRequest = useCallback(
+    (otherUid: string) => deleteRelationship(otherUid, SOCIAL_UI.status.friendRequestCanceled),
+    [deleteRelationship],
+  );
+  const handleRejectFriendRequest = useCallback(
+    (otherUid: string) => deleteRelationship(otherUid, SOCIAL_UI.status.friendRequestRejected),
+    [deleteRelationship],
+  );
+  const handleRemoveFriend = useCallback(
+    (otherUid: string) => deleteRelationship(otherUid, SOCIAL_UI.status.friendRemoved),
+    [deleteRelationship],
+  );
+
   const primaryGatewayCta = useMemo(() => {
     type GatewayCta = {
       icon: IconName;
@@ -1523,5 +1793,19 @@ export function useSocialViewModel() {
     handleSaveProfile,
     handleSignOut,
     primaryGatewayCta,
+    // Amistad
+    friendships,
+    loadingFriendships,
+    friendshipBusyUid,
+    pendingIncomingCount,
+    incomingRequests,
+    outgoingRequests,
+    friendsList,
+    relationshipWith,
+    refreshFriendships,
+    handleAddOrAcceptFriend,
+    handleCancelFriendRequest,
+    handleRejectFriendRequest,
+    handleRemoveFriend,
   };
 }

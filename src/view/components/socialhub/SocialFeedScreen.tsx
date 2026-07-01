@@ -18,6 +18,8 @@ export function SocialFeedScreen({
   openProfileDetail,
   onOpenProfiles,
   onOpenOwnProfile,
+  onOpenRequests,
+  pendingIncomingCount,
   groupedFeedItems,
   feedItems,
   hasMoreFeed,
@@ -40,6 +42,8 @@ export function SocialFeedScreen({
   openProfileDetail: (id: string) => void;
   onOpenProfiles: () => void;
   onOpenOwnProfile: () => void;
+  onOpenRequests: () => void;
+  pendingIncomingCount: number;
   groupedFeedItems: any[];
   feedItems: any[];
   hasMoreFeed: boolean;
@@ -82,6 +86,20 @@ export function SocialFeedScreen({
             <button className="btn btn-secondary btn-accent" type="button" onClick={onOpenProfiles}>
               <Icon name="bottom-hub" />
               {SOCIAL_UI.feed.openProfiles}
+            </button>
+            <button
+              className="btn btn-secondary hub-requests-btn"
+              type="button"
+              onClick={onOpenRequests}
+              aria-label={SOCIAL_UI.feed.openRequestsAria(pendingIncomingCount)}
+            >
+              <span
+                className={`hub-requests-count ${pendingIncomingCount > 0 ? 'is-active' : 'is-empty'}`}
+                aria-hidden="true"
+              >
+                {pendingIncomingCount}
+              </span>
+              {SOCIAL_UI.feed.openRequests}
             </button>
           </div>
           <div className="hub-screen-actions-right">
@@ -141,7 +159,15 @@ export function SocialFeedScreen({
               ))}
             </div>
           ) : null}
-          {!loadingDirectory && feedItems.length === 0 ? <p>{SOCIAL_UI.feed.activityEmpty}</p> : null}
+          {!loadingDirectory && feedItems.length === 0 ? (
+            <div className="hub-feed-empty">
+              <p>{SOCIAL_UI.feed.activityEmptyNoFriends}</p>
+              <button className="btn btn-secondary btn-accent" type="button" onClick={onOpenProfiles}>
+                <Icon name="bottom-hub" />
+                {SOCIAL_UI.feed.discoverFriends}
+              </button>
+            </div>
+          ) : null}
           {!loadingDirectory && feedItems.length > 0 ? (
             <div className="hub-feed-activity-list" role="list" aria-label={SOCIAL_UI.feed.activityListAria}>
               {groupedFeedItems.map((group, groupIndex) => (

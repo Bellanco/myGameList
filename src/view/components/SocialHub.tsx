@@ -9,6 +9,7 @@ import { SocialDetailScreen } from './socialhub/SocialDetailScreen';
 import { SocialProfileDetailScreen } from './socialhub/SocialProfileDetailScreen';
 import { SocialProfilesScreen } from './socialhub/SocialProfilesScreen';
 import { SocialFeedScreen } from './socialhub/SocialFeedScreen';
+import { SocialRequestsScreen } from './socialhub/SocialRequestsScreen';
 
 /**
  * Hub social - Fase 1.
@@ -99,6 +100,17 @@ export const SocialHub = memo(function SocialHub({
     handleSaveProfile,
     handleSignOut,
     primaryGatewayCta,
+    pendingIncomingCount,
+    incomingRequests,
+    outgoingRequests,
+    friendsList,
+    loadingFriendships,
+    friendshipBusyUid,
+    relationshipWith,
+    handleAddOrAcceptFriend,
+    handleRejectFriendRequest,
+    handleCancelFriendRequest,
+    handleRemoveFriend,
   } = useSocialViewModel();
 
   if (loading) {
@@ -176,6 +188,30 @@ export const SocialHub = memo(function SocialHub({
           onAddToProximos={onAddToProximos}
           hasGameInLists={hasGameInLists}
           moveGameToCurrentByName={moveGameToCurrentByName}
+          friendshipState={selectedProfileDetail ? relationshipWith((selectedProfileDetail as { uid?: string }).uid || '') : 'none'}
+          friendshipBusy={Boolean(selectedProfileDetail) && friendshipBusyUid === (selectedProfileDetail as { uid?: string }).uid}
+          onAddOrAcceptFriend={() => handleAddOrAcceptFriend((selectedProfileDetail as { uid?: string }).uid || '')}
+          onCancelFriendRequest={() => handleCancelFriendRequest((selectedProfileDetail as { uid?: string }).uid || '')}
+          onRemoveFriend={() => handleRemoveFriend((selectedProfileDetail as { uid?: string }).uid || '')}
+        />
+      );
+    }
+    if (activePanel === 'requests') {
+      return (
+        <SocialRequestsScreen
+          SOCIAL_UI={SOCIAL_UI}
+          incomingRequests={incomingRequests}
+          outgoingRequests={outgoingRequests}
+          friendsList={friendsList}
+          loading={loadingFriendships}
+          busyUid={friendshipBusyUid}
+          onAccept={handleAddOrAcceptFriend}
+          onReject={handleRejectFriendRequest}
+          onCancel={handleCancelFriendRequest}
+          onRemove={handleRemoveFriend}
+          onBack={() => navigate('/social')}
+          status={status}
+          statusKind={statusKind}
         />
       );
     }
@@ -199,6 +235,10 @@ export const SocialHub = memo(function SocialHub({
           feedRowRef={feedRowRef as React.RefObject<HTMLDivElement | null>}
           handleFeedRowMouseDown={handleFeedRowMouseDown}
           handleFeedRowKeyDown={handleFeedRowKeyDown}
+          relationshipWith={relationshipWith}
+          friendshipBusyUid={friendshipBusyUid}
+          onAddOrAcceptFriend={handleAddOrAcceptFriend}
+          onCancelFriendRequest={handleCancelFriendRequest}
           onBack={() => navigate('/social')}
           status={status}
           statusKind={statusKind}
@@ -221,6 +261,8 @@ export const SocialHub = memo(function SocialHub({
         }}
         onOpenProfiles={() => navigate('/social/profiles')}
         onOpenOwnProfile={openOwnProfileDetail}
+        onOpenRequests={() => navigate('/social/requests')}
+        pendingIncomingCount={pendingIncomingCount}
         groupedFeedItems={groupedFeedItems}
         feedItems={feedItems}
         hasMoreFeed={hasMoreFeed}

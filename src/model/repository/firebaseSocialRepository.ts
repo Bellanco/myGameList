@@ -198,6 +198,7 @@ export async function listSocialDirectory(limitCount = 12, options?: { forceRefr
     const entries = snapshot.docs
       .map((entry) => {
         const data = entry.data() as {
+          uid?: string;
           email?: string;
           displayName?: string;
           photoURL?: string;
@@ -206,6 +207,8 @@ export async function listSocialDirectory(limitCount = 12, options?: { forceRefr
 
         return {
           id: entry.id,
+          // uid explícito del doc; hoy coincide con el id, pero tras el cutover uid→profileId el id será el profileId.
+          uid: String(data.uid || entry.id),
           email: String(data.email || ''),
           displayName: String(data.displayName || ''),
           photoURL: String(data.photoURL || ''),
@@ -217,6 +220,7 @@ export async function listSocialDirectory(limitCount = 12, options?: { forceRefr
       .filter((entry) => entry.enabled && Boolean(entry.socialGistId))
       .map((entry) => ({
         id: entry.id,
+        uid: entry.uid,
         email: entry.email,
         displayName: entry.displayName,
         photoURL: entry.photoURL,

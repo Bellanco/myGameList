@@ -52,6 +52,32 @@ export interface RecommendationDoc {
 }
 
 /**
+ * friendships/{docId} — amistad con aceptación mutua. Un doc por par no ordenado, id canónico `minUid__maxUid`.
+ * Identidad SIEMPRE por `uid` (única verificable en reglas). Los campos `*Name/*Photo/*SocialGistId/*GamesGistId`
+ * están DENORMALIZADOS: cada parte escribe SOLO los suyos (requester al crear, recipient al aceptar), de modo que
+ * la lista de amigos, la bandeja de solicitudes y el feed se resuelven desde el propio doc sin leer el directorio
+ * (evita el tope de `SOCIAL_DIRECTORY_LIMIT` y el choque con las reglas de `profiles`).
+ */
+export type FriendshipStatus = 'pending' | 'accepted';
+
+export interface FriendshipDoc {
+  users: [string, string]; // [uidA, uidB] ordenados lexicográficamente
+  requester: string; // uid de quien envió la petición (∈ users)
+  recipient: string; // uid del otro (∈ users)
+  status: FriendshipStatus;
+  createdAt: number;
+  updatedAt: number;
+  requesterName: string;
+  requesterPhoto: string;
+  requesterSocialGistId: string;
+  requesterGamesGistId: string;
+  recipientName: string;
+  recipientPhoto: string;
+  recipientSocialGistId: string;
+  recipientGamesGistId: string;
+}
+
+/**
  * privateConfig/{uid} — solo el dueño (request.auth.uid == uid). Permite recuperar la config tras reinstalar.
  * El token de GitHub se guarda "cifrado" con una clave DERIVADA del uid (estable cross-device para poder
  * recuperarlo en otro dispositivo). Como el uid no es secreto, esto es OFUSCACIÓN: la confidencialidad real la

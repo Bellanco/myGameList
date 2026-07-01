@@ -71,6 +71,36 @@ export interface SocialGistProfile {
   sharedLists: Record<TabId, PublicGame[]>; // destino: PublicGame (sin review)
 }
 
+/**
+ * Estado de la relación con OTRO usuario desde el punto de vista del actual.
+ * - `none`     → sin relación (mostrar "Añadir amigo").
+ * - `outgoing` → le envié petición, pendiente de que acepte ("Pendiente").
+ * - `incoming` → me envió petición, pendiente de que acepte ("Aceptar").
+ * - `friends`  → amistad confirmada por ambos.
+ */
+export type RelationshipState = 'none' | 'outgoing' | 'incoming' | 'friends';
+
+/** Relación resuelta desde el punto de vista del usuario actual (el "otro" ya extraído del doc denormalizado). */
+export interface FriendshipView {
+  docId: string;
+  otherUid: string;
+  otherName: string;
+  otherPhoto: string;
+  otherSocialGistId: string;
+  otherGamesGistId: string;
+  state: Exclude<RelationshipState, 'none'>;
+  createdAt: number;
+  updatedAt: number;
+}
+
+/** Todo el estado de amistad del usuario actual, derivado de UNA sola query `array-contains`. */
+export interface MyFriendships {
+  friends: FriendshipView[];
+  incoming: FriendshipView[]; // peticiones recibidas pendientes
+  outgoing: FriendshipView[]; // peticiones enviadas pendientes
+  byOtherUid: Record<string, FriendshipView>; // acceso O(1) por uid del otro (para el estado en tarjetas/perfil)
+}
+
 export interface SocialRecommendationEntry {
   gameId: number;
   gameName: string;

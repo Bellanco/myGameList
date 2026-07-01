@@ -13,7 +13,8 @@ export function isValidYear(value: string): boolean {
 }
 
 export function isValidGithubToken(token: string): boolean {
-  return /^(ghp_|github_pat_)[A-Za-z0-9_]{20,}$/.test(token);
+  // ghp_ / github_pat_ = tokens personales (PAT); gho_ = token de una GitHub OAuth App (flujo "Conectar con GitHub").
+  return /^(ghp_|gho_|github_pat_)[A-Za-z0-9_]{20,}$/.test(token);
 }
 
 export function isValidGistId(gistId: string): boolean {

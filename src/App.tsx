@@ -15,6 +15,7 @@ import { useGameListViewModel } from './viewmodel/useGameListViewModel';
 import { useToolbarFilters } from './viewmodel/useToolbarFilters';
 import { computeTabOptions, countActiveFilters } from './viewmodel/toolbarFilters';
 import { useSyncViewModel } from './viewmodel/useSyncViewModel';
+import { hasGithubOAuthRedirect } from './model/repository/githubOAuthRepository';
 import { buildListsPool, buildListsWeigher } from './core/roulette/roulette';
 
 const FormModal = lazy(() => import('./view/modals/FormModal').then((module) => ({ default: module.FormModal })));
@@ -41,6 +42,23 @@ function isCompactTable(): boolean {
   return window.innerWidth <= 1100;
 }
 
+// Rutas VÁLIDAS de la app. El `<Route path="*">` redirige a /completados cualquier ruta no listada aquí, así que
+// TODA pantalla nueva (incl. las sub-rutas sociales de useSocialViewModel) debe añadirse a esta lista o quedará
+// inaccesible (rebotaría a completados). Exportada para el test de regresión de rutas.
+export const APP_ROUTE_PATHS = [
+  '/completados',
+  '/visitados',
+  '/en-curso',
+  '/proximos',
+  '/social',
+  '/social/profile',
+  '/social/profiles',
+  '/social/profiles/:profileId',
+  '/social/requests',
+  '/social/user/:userId/game/:gameId/:eventType',
+  '/ajustes',
+] as const;
+
 export default function App() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -64,11 +82,20 @@ export default function App() {
     notify,
   } = vm;
 
+  // El sync lee el estado local vía refs (no closures del render) para que un ciclo EN VUELO vea las
+  // ediciones confirmadas mientras estaba esperando la red. Con `() => vm.data` un ciclo iniciado antes
+  // de una edición leía la foto vieja y, al fusionar/persistir, revertía la edición y limpiaba dirty
+  // (pérdida de datos silenciosa). Mismo patrón que el `metaRef` interno de useGameListViewModel.
+  const dataRef = useRef(vm.data);
+  dataRef.current = vm.data;
+  const metaRef = useRef(vm.meta);
+  metaRef.current = vm.meta;
+
   // C1: el ciclo de sync persiste SIN marcar dirty (aplica merge/resultado remoto, no es edición de usuario).
   const syncVm = useSyncViewModel({
-    getData: () => vm.data,
+    getData: () => dataRef.current,
     setData: (next) => persistFromSync(next),
-    getMeta: () => vm.meta,
+    getMeta: () => metaRef.current,
     setMeta: vm.setMeta,
     onNotice: notify,
     persist: persistFromSync,
@@ -86,7 +113,12 @@ export default function App() {
   const rouletteWeight = useMemo(() => buildListsWeigher(vm.data), [vm.data]);
 
   useEffect(() => {
-    syncVm.initializeSync();
+    // Si volvemos del "Conectar con GitHub" (OAuth), completamos ese flujo; si no, arrancamos el sync normal.
+    if (hasGithubOAuthRedirect()) {
+      void syncVm.completeGithubLoginFromRedirect();
+    } else {
+      syncVm.initializeSync();
+    }
   }, []);
 
   useEffect(() => {
@@ -372,6 +404,9 @@ export default function App() {
               gistId={syncVm.gistId}
               syncError={syncVm.statusMessage}
               recoveringGistId={syncVm.recoveringGistId}
+              githubOAuthEnabled={syncVm.githubOAuthEnabled}
+              githubLoggingIn={syncVm.githubLoggingIn}
+              onGithubLogin={syncVm.beginGithubLogin}
               onTokenChange={syncVm.setToken}
               onGistIdChange={syncVm.setGistId}
               onConnectSync={syncVm.connectSync}
@@ -470,16 +505,9 @@ export default function App() {
       </datalist>
 
       <Routes>
-        <Route path="/completados" element={null} />
-        <Route path="/visitados" element={null} />
-        <Route path="/en-curso" element={null} />
-        <Route path="/proximos" element={null} />
-        <Route path="/social" element={null} />
-        <Route path="/social/profile" element={null} />
-        <Route path="/social/profiles" element={null} />
-        <Route path="/social/profiles/:profileId" element={null} />
-        <Route path="/social/user/:userId/game/:gameId/:eventType" element={null} />
-        <Route path="/ajustes" element={null} />
+        {APP_ROUTE_PATHS.map((path) => (
+          <Route key={path} path={path} element={null} />
+        ))}
         <Route path="*" element={<Navigate to="/completados" replace />} />
       </Routes>
     </>

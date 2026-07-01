@@ -681,6 +681,34 @@ export function upsertReviewActivity(data: SocialGistData, input: UpsertReviewIn
   };
 }
 
+/**
+ * Elimina del gist social la actividad de reseña de un juego (despublicar). Se usa cuando el dueño abre una reseña
+ * que ya no tiene contraparte en sus listados (juego borrado/perdido): sin juego real detrás quedaría como una
+ * reseña vacía en el feed, así que se retira. Devuelve la MISMA referencia si no había nada que quitar, para que
+ * el orquestador pueda saltarse la reescritura del gist.
+ */
+export function removeReviewActivity(
+  data: SocialGistData,
+  input: { actorProfileId: string; gameId: number; timestamp?: number },
+): SocialGistData {
+  if (!input.actorProfileId || input.gameId <= 0) {
+    return data;
+  }
+
+  const key = buildActivityKey(input.actorProfileId, input.gameId, 'review');
+  const activity = data.activity || [];
+  const next = activity.filter((entry) => entry.key !== key);
+  if (next.length === activity.length) {
+    return data;
+  }
+
+  return {
+    ...data,
+    activity: next,
+    updatedAt: input.timestamp || Date.now(),
+  };
+}
+
 /** F3 — añade una publicación de texto libre al gist propio (prepend). No-op si falta autor o texto. */
 export function upsertPost(data: SocialGistData, input: UpsertPostInput): SocialGistData {
   const now = input.timestamp || Date.now();
@@ -827,6 +855,33 @@ export async function createGist(token: string): Promise<{ gistId: string; etag:
 
   const body = (await response.json()) as { id: string };
   return { gistId: body.id, etag: response.headers.get('etag') };
+}
+
+/**
+ * Autodescubre el gist de JUEGOS del usuario listando sus gists (scope `gist`) y buscando el que contiene
+ * `myGames.json`. Se usa tras el login OAuth: con el token pero sin gistId, evita crear un gist nuevo que
+ * partiría los datos de un usuario que ya tenía uno. Devuelve '' si no encuentra ninguno (→ primera conexión).
+ */
+export async function findGamesGistId(token: string): Promise<string> {
+  if (!isValidGithubToken(token)) {
+    throw new Error('Formato de token inválido');
+  }
+
+  // 100 por página cubre de sobra el caso real (un usuario tiene pocos gists). No paginamos para mantenerlo simple.
+  const response = await githubFetch(`${GIST_API_BASE}?per_page=100`, {
+    headers: {
+      Authorization: getGithubAuthHeader(token),
+      'X-GitHub-Api-Version': '2022-11-28',
+    },
+  });
+
+  if (!response.ok) {
+    throw await buildGithubError(response, 'List gists failed');
+  }
+
+  const gists = (await response.json()) as Array<{ id: string; files?: Record<string, unknown> }>;
+  const match = gists.find((gist) => gist.files && Object.prototype.hasOwnProperty.call(gist.files, GIST_FILENAME));
+  return match?.id ?? '';
 }
 
 export async function createSocialGist(token: string): Promise<{ gistId: string; etag: string | null }> {

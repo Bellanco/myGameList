@@ -105,14 +105,70 @@ service cloud.firestore {
     }
 
     // ==========================================
+    // COLECCION: FRIENDSHIPS (amistad con aceptación mutua)
+    // Un doc por par no ordenado, id canónico `minUid__maxUid`. Solo los participantes leen/borran.
+    // Campos denormalizados: cada parte escribe SOLO los suyos (requester en create, recipient al aceptar).
+    // ==========================================
+
+    match /friendships/{docId} {
+      function isFriendshipParticipant() {
+        return isSignedIn() && request.auth.uid in resource.data.users;
+      }
+
+      // Crear petición: solo el requester, id/orden canónico, estado pending y allowlist de sus propios campos.
+      function newFriendshipIsValid() {
+        return request.resource.data.keys().hasOnly([
+            "users", "requester", "recipient", "status", "createdAt", "updatedAt",
+            "requesterName", "requesterPhoto", "requesterSocialGistId", "requesterGamesGistId"
+          ])
+          && request.resource.data.users.size() == 2
+          && request.resource.data.users[0] < request.resource.data.users[1]
+          && docId == request.resource.data.users[0] + "__" + request.resource.data.users[1]
+          && request.auth.uid == request.resource.data.requester
+          && request.resource.data.requester in request.resource.data.users
+          && request.resource.data.recipient in request.resource.data.users
+          && request.resource.data.recipient != request.resource.data.requester
+          && request.resource.data.status == "pending";
+      }
+
+      // Aceptar: solo el recipient, pending -> accepted, escribiendo SOLO sus campos denormalizados + updatedAt.
+      function friendshipAcceptTransition() {
+        return request.auth.uid == resource.data.recipient
+          && resource.data.status == "pending"
+          && request.resource.data.status == "accepted"
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            "status", "updatedAt", "recipientName", "recipientPhoto", "recipientSocialGistId", "recipientGamesGistId"
+          ]);
+      }
+
+      // Sanear: cada parte refresca SOLO sus propios campos denormalizados (nombre/foto), sin tocar estado/identidad.
+      function friendshipHealOwnFields() {
+        return request.resource.data.status == resource.data.status
+          && request.resource.data.users == resource.data.users
+          && request.resource.data.requester == resource.data.requester
+          && request.resource.data.recipient == resource.data.recipient
+          && (
+            (request.auth.uid == resource.data.requester
+              && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+                "requesterName", "requesterPhoto", "requesterSocialGistId", "requesterGamesGistId", "updatedAt"]))
+            ||
+            (request.auth.uid == resource.data.recipient
+              && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+                "recipientName", "recipientPhoto", "recipientSocialGistId", "recipientGamesGistId", "updatedAt"]))
+          );
+      }
+
+      allow read:   if !isPlaceholder(docId) && (isAdmin() || isFriendshipParticipant());
+      allow create: if !isPlaceholder(docId) && (isAdmin() || newFriendshipIsValid());
+      allow update: if !isPlaceholder(docId) && (isAdmin() || (isFriendshipParticipant() && (friendshipAcceptTransition() || friendshipHealOwnFields())));
+      allow delete: if !isPlaceholder(docId) && (isAdmin() || isFriendshipParticipant()); // cancelar / rechazar / eliminar
+    }
+
+    // ==========================================
     // COLECCIONES EN FASE 1 (SOLO ADMIN)
     // ==========================================
 
-    // Aplicable a: friendships, recommendations, activity_events
-    match /friendships/{docId} {
-      allow read, write: if !isPlaceholder(docId) && isAdmin();
-    }
-
+    // Aplicable a: recommendations, activity_events
     match /recommendations/{docId} {
       allow read, write: if !isPlaceholder(docId) && isAdmin();
     }
