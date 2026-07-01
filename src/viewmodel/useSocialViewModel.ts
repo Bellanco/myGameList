@@ -474,6 +474,12 @@ export function useSocialViewModel() {
     () => friendships.outgoing.map(enrichFriendRequest),
     [friendships.outgoing, enrichFriendRequest],
   );
+  // Lista de amigos (aceptados) para gestión: se deriva de los docs de amistad, NO del directorio, así SIEMPRE se
+  // puede ver y eliminar a un amigo aunque no esté en el top-30 del directorio o haya desactivado su social.
+  const friendsList = useMemo(
+    () => friendships.friends.map(enrichFriendRequest),
+    [friendships.friends, enrichFriendRequest],
+  );
 
   const completedGames = useMemo(() => {
     const map = new Map<number, string>();
@@ -1794,6 +1800,7 @@ export function useSocialViewModel() {
     pendingIncomingCount,
     incomingRequests,
     outgoingRequests,
+    friendsList,
     relationshipWith,
     refreshFriendships,
     handleAddOrAcceptFriend,
