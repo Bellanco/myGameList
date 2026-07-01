@@ -1,3 +1,9 @@
 name = "mygamelist"
 compatibility_date = "2026-05-10"
 pages_build_output_dir = "./dist"
+
+# Runtime de las Pages Functions. client_id PÚBLICO de la GitHub OAuth App (aparece en el bundle, no es secreto).
+# El secret NO va aquí: se pone cifrado con `npx wrangler pages secret put GITHUB_CLIENT_SECRET`.
+# El gemelo de build (VITE_GITHUB_CLIENT_ID) está en .env.production.
+[vars]
+GITHUB_CLIENT_ID = "Ov23ctq0mTkYHf9zqfGB"

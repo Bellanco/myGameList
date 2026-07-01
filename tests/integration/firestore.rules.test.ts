@@ -7,7 +7,7 @@ import {
   initializeTestEnvironment,
   type RulesTestEnvironment,
 } from '@firebase/rules-unit-testing';
-import { deleteDoc, doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
+import { collection, deleteDoc, doc, getDoc, getDocs, query, setDoc, updateDoc, where } from 'firebase/firestore';
 
 // Test de integración: requiere el emulador de Firestore. Ejecutar con `npm run test:rules`.
 // Valida las reglas REALES desplegables (perfiles, privateConfig/userMap solo-dueño, admin, catch-all).
@@ -140,6 +140,23 @@ describe('firestore.rules', () => {
       await assertFails(
         setDoc(doc(ownerDb('uid-a'), 'friendships', DOC_ID), { ...pendingFromAtoB(), status: 'accepted' }),
       );
+    });
+
+    it('query: un participante consulta sus amistades por array-contains (patrón feed/bandeja)', async () => {
+      await seed('friendships', DOC_ID, pendingFromAtoB());
+      // Es EXACTAMENTE la consulta de getMyFriendships. Si las reglas la deniegan, la bandeja/feed salen vacíos.
+      const q = (uid: string) => query(collection(ownerDb(uid), 'friendships'), where('users', 'array-contains', uid));
+      await assertSucceeds(getDocs(q('uid-a')));
+      await assertSucceeds(getDocs(q('uid-b')));
+    });
+
+    it('query+create: el requester crea y luego SE VE su petición en la consulta (read-your-write)', async () => {
+      const dbA = ownerDb('uid-a');
+      await assertSucceeds(setDoc(doc(dbA, 'friendships', DOC_ID), pendingFromAtoB()));
+      const snap = await getDocs(query(collection(dbA, 'friendships'), where('users', 'array-contains', 'uid-a')));
+      if (snap.empty) {
+        throw new Error('La petición recién creada no aparece en la consulta del propio requester');
+      }
     });
 
     it('read: solo los participantes leen el doc; un tercero no', async () => {
