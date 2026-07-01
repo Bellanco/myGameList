@@ -475,25 +475,34 @@
   min-width: 0;
 }
 
-// Botón "Solicitudes" con badge de pendientes en la cabecera del feed.
+// Botón "Solicitudes": contador de pendientes inscrito en un círculo (gris si 0, verde si hay alguna).
 .hub-requests-btn {
   position: relative;
 }
 
-.hub-requests-badge {
+.hub-requests-count {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 1.15rem;
-  height: 1.15rem;
-  padding: 0 .3rem;
-  margin-left: .1rem;
-  border-radius: 999px;
-  background: var(--danger, #e5484d);
-  color: #fff;
-  font-size: .72rem;
+  width: 1.35rem;
+  height: 1.35rem;
+  border-radius: 50%;
+  font-size: .78rem;
   font-weight: 700;
   line-height: 1;
+  flex: 0 0 auto;
+
+  &.is-empty {
+    background: rgba(148, 163, 184, .25);
+    color: var(--text-muted, #94a3b8);
+    border: 1px solid rgba(148, 163, 184, .45);
+  }
+
+  &.is-active {
+    background: var(--success, #2ea043);
+    color: #fff;
+    border: 1px solid var(--success, #2ea043);
+  }
 }
 
 // Acciones (aceptar/rechazar/cancelar) de cada tarjeta de solicitud.

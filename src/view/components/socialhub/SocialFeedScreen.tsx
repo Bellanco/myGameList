@@ -93,11 +93,13 @@ export function SocialFeedScreen({
               onClick={onOpenRequests}
               aria-label={SOCIAL_UI.feed.openRequestsAria(pendingIncomingCount)}
             >
-              <Icon name="plus" />
+              <span
+                className={`hub-requests-count ${pendingIncomingCount > 0 ? 'is-active' : 'is-empty'}`}
+                aria-hidden="true"
+              >
+                {pendingIncomingCount}
+              </span>
               {SOCIAL_UI.feed.openRequests}
-              {pendingIncomingCount > 0 ? (
-                <span className="hub-requests-badge" aria-hidden="true">{pendingIncomingCount}</span>
-              ) : null}
             </button>
           </div>
           <div className="hub-screen-actions-right">
