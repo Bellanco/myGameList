@@ -5,11 +5,13 @@ import { SOCIAL_UI } from '../../src/core/constants/labels';
 
 const baseProps = {
   SOCIAL_UI,
+  friendsList: [],
   loading: false,
   busyUid: '',
   onAccept: vi.fn(),
   onReject: vi.fn(),
   onCancel: vi.fn(),
+  onRemove: vi.fn(),
   onBack: vi.fn(),
   status: '',
   statusKind: 'ok',
@@ -20,6 +22,23 @@ describe('SocialRequestsScreen', () => {
     render(<SocialRequestsScreen {...baseProps} incomingRequests={[]} outgoingRequests={[]} />);
     expect(screen.getByText(SOCIAL_UI.requests.incomingEmpty)).toBeInTheDocument();
     expect(screen.getByText(SOCIAL_UI.requests.outgoingEmpty)).toBeInTheDocument();
+    expect(screen.getByText(SOCIAL_UI.requests.friendsEmpty)).toBeInTheDocument();
+  });
+
+  it('lista los amigos y permite eliminarlos (gestión independiente del directorio)', () => {
+    const onRemove = vi.fn();
+    render(
+      <SocialRequestsScreen
+        {...baseProps}
+        onRemove={onRemove}
+        incomingRequests={[]}
+        outgoingRequests={[]}
+        friendsList={[{ docId: 'ada__me', otherUid: 'ada', name: 'Ada', photo: '' }]}
+      />,
+    );
+    expect(screen.getByText('Ada')).toBeInTheDocument();
+    fireEvent.click(screen.getByLabelText(SOCIAL_UI.requests.removeAria('Ada')));
+    expect(onRemove).toHaveBeenCalledWith('ada');
   });
 
   it('acepta y rechaza una petición recibida con el uid correcto', () => {

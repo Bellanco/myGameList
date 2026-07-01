@@ -103,6 +103,7 @@ export const SocialHub = memo(function SocialHub({
     pendingIncomingCount,
     incomingRequests,
     outgoingRequests,
+    friendsList,
     loadingFriendships,
     friendshipBusyUid,
     relationshipWith,
@@ -201,11 +202,13 @@ export const SocialHub = memo(function SocialHub({
           SOCIAL_UI={SOCIAL_UI}
           incomingRequests={incomingRequests}
           outgoingRequests={outgoingRequests}
+          friendsList={friendsList}
           loading={loadingFriendships}
           busyUid={friendshipBusyUid}
           onAccept={handleAddOrAcceptFriend}
           onReject={handleRejectFriendRequest}
           onCancel={handleCancelFriendRequest}
+          onRemove={handleRemoveFriend}
           onBack={() => navigate('/social')}
           status={status}
           statusKind={statusKind}

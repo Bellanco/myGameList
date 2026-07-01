@@ -11,11 +11,13 @@ export function SocialRequestsScreen({
   SOCIAL_UI,
   incomingRequests,
   outgoingRequests,
+  friendsList,
   loading,
   busyUid,
   onAccept,
   onReject,
   onCancel,
+  onRemove,
   onBack,
   status,
   statusKind,
@@ -23,11 +25,13 @@ export function SocialRequestsScreen({
   SOCIAL_UI: any;
   incomingRequests: RequestView[];
   outgoingRequests: RequestView[];
+  friendsList: RequestView[];
   loading: boolean;
   busyUid: string;
   onAccept: (otherUid: string) => void;
   onReject: (otherUid: string) => void;
   onCancel: (otherUid: string) => void;
+  onRemove: (otherUid: string) => void;
   onBack: () => void;
   status: string;
   statusKind: string;
@@ -120,6 +124,38 @@ export function SocialRequestsScreen({
                     >
                       <Icon name="close" />
                       {R.cancel}
+                    </button>
+                  </div>
+                </article>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="fg">
+          <span className="flabel">{R.friendsTitle}</span>
+          {friendsList.length === 0 ? (
+            <p>{R.friendsEmpty}</p>
+          ) : (
+            <div className="hub-feed-activity-list" role="list" aria-label={R.friendsTitle}>
+              {friendsList.map((friend) => (
+                <article key={friend.docId} className="hub-feed-card hub-feed-activity-item hub-request-item" role="listitem">
+                  <header className="hub-feed-card-head">
+                    <HubAvatar name={friend.name} photoURL={friend.photo} />
+                    <div className="hub-feed-card-head-text">
+                      <h3>{friend.name}</h3>
+                    </div>
+                  </header>
+                  <div className="hub-request-actions">
+                    <button
+                      className="btn btn-danger"
+                      type="button"
+                      disabled={busyUid === friend.otherUid}
+                      aria-label={R.removeAria(friend.name)}
+                      onClick={() => onRemove(friend.otherUid)}
+                    >
+                      <Icon name="close" />
+                      {R.remove}
                     </button>
                   </div>
                 </article>
