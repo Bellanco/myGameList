@@ -14,6 +14,13 @@ Introducir relaciones de **amistad bidireccionales** en el hub social:
 2. **Gestión de peticiones** → bandeja global de "Solicitudes" con icono + badge de pendientes.
 3. **Acciones** → ciclo completo: enviar, cancelar (enviada), aceptar, rechazar (recibida), eliminar amistad.
 
+### Ajustes v2 (tras revisar el código)
+- **A1 — Denormalización en el doc de amistad**: cada parte escribe SUS datos (`name`, `photo`, `socialGistId`, `gamesGistId`) en el propio doc. El directorio está capado a 30 (`SOCIAL_DIRECTORY_LIMIT`) y leer perfiles sueltos por `uid` choca con las reglas (`profiles` solo legible si `social.enabled==true`). Denormalizar hace el doc **autosuficiente** (lista de amigos, bandeja y feed sin depender del directorio ni de su tope) → escala y minimiza llamadas.
+- **A2 — `uid` en la proyección de `listSocialDirectory`**: necesario para mapear tarjeta→estado y para enviar peticiones; robusto ante el cutover `uid→profileId`.
+- **A3 — Feed desacoplado del directorio**: se construye leyendo los gists de amigos por su `socialGistId` denormalizado + la actividad propia.
+- **A4 — Reglas en dos fases** (`diff().affectedKeys()`): el `requester` escribe sus campos en `create`; el `recipient` acepta y escribe los suyos en `update`; cada parte puede "sanear" (heal) solo sus propios campos.
+- **Coste asumido**: nombre/foto denormalizados pueden quedar levemente desactualizados en la lista (el detalle lee en vivo del gist). Mitigable con "heal on save" (paso posterior opcional).
+
 ---
 
 ## Diagnóstico de la base actual (lo que condiciona el diseño)
@@ -35,7 +42,7 @@ Introducir relaciones de **amistad bidireccionales** en el hub social:
 docId = `${minUid}__${maxUid}`   // los dos uid ordenados lexicográficamente
 ```
 
-Campos del documento:
+Campos del documento (denormalizados — cada parte escribe SOLO los suyos):
 
 ```ts
 interface FriendshipDoc {
@@ -45,8 +52,13 @@ interface FriendshipDoc {
   status: 'pending' | 'accepted';
   createdAt: number;
   updatedAt: number;
+  // Identidad/punteros denormalizados (A1) — el requester los pone en create; el recipient los suyos al aceptar.
+  requesterName: string;  requesterPhoto: string;  requesterSocialGistId: string;  requesterGamesGistId: string;
+  recipientName: string;  recipientPhoto: string;  recipientSocialGistId: string;  recipientGamesGistId: string;
 }
 ```
+
+Con esto la bandeja, la lista de amigos y el feed se resuelven **desde el propio doc**, sin leer el directorio ni perfiles sueltos (evita el tope de 30 y el choque con las reglas de `profiles`).
 
 - **Amigos** = doc con `status === 'accepted'`.
 - **Pendiente** = `status === 'pending'`; el `recipient` puede **aceptar** (→`accepted`) o **rechazar** (borra doc); el `requester` puede **cancelar** (borra doc).
@@ -68,31 +80,48 @@ match /friendships/{docId} {
     return isSignedIn() && request.auth.uid in resource.data.users;
   }
   function newDocIsValid() {
-    return request.resource.data.keys().hasOnly(
-      ['users','requester','recipient','status','createdAt','updatedAt'])
+    return request.resource.data.keys().hasOnly([
+        'users','requester','recipient','status','createdAt','updatedAt',
+        'requesterName','requesterPhoto','requesterSocialGistId','requesterGamesGistId'
+      ])
       && request.resource.data.users.size() == 2
       && request.resource.data.users[0] < request.resource.data.users[1]      // orden canónico
       && docId == request.resource.data.users[0] + '__' + request.resource.data.users[1] // id canónico
-      && request.auth.uid in request.resource.data.users
-      && request.resource.data.requester == request.auth.uid                  // solo creas peticiones TUYAS
+      && request.auth.uid == request.resource.data.requester                  // solo creas peticiones TUYAS
+      && request.resource.data.requester in request.resource.data.users
       && request.resource.data.recipient in request.resource.data.users
-      && request.resource.data.recipient != request.auth.uid
+      && request.resource.data.recipient != request.resource.data.requester
       && request.resource.data.status == 'pending';
   }
-  function acceptOnly() {
-    // El recipient pasa pending → accepted; el resto de campos inmutables.
+  function acceptTransition() {
+    // El recipient pasa pending → accepted y escribe SOLO sus campos denormalizados + updatedAt.
     return request.auth.uid == resource.data.recipient
       && resource.data.status == 'pending'
       && request.resource.data.status == 'accepted'
+      && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+        'status','updatedAt','recipientName','recipientPhoto','recipientSocialGistId','recipientGamesGistId'
+      ]);
+  }
+  function healOwnFields() {
+    // Cada parte puede refrescar SOLO sus propios campos denormalizados (nombre/foto), sin tocar estado ni identidad.
+    return request.resource.data.status == resource.data.status
       && request.resource.data.users == resource.data.users
       && request.resource.data.requester == resource.data.requester
       && request.resource.data.recipient == resource.data.recipient
-      && request.resource.data.createdAt == resource.data.createdAt;
+      && (
+        (request.auth.uid == resource.data.requester
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'requesterName','requesterPhoto','requesterSocialGistId','requesterGamesGistId','updatedAt']))
+        ||
+        (request.auth.uid == resource.data.recipient
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'recipientName','recipientPhoto','recipientSocialGistId','recipientGamesGistId','updatedAt']))
+      );
   }
 
   allow read:   if !isPlaceholder(docId) && (isAdmin() || isParticipant());
   allow create: if !isPlaceholder(docId) && (isAdmin() || newDocIsValid());
-  allow update: if !isPlaceholder(docId) && (isAdmin() || (isParticipant() && acceptOnly()));
+  allow update: if !isPlaceholder(docId) && (isAdmin() || (isParticipant() && (acceptTransition() || healOwnFields())));
   allow delete: if !isPlaceholder(docId) && (isAdmin() || isParticipant());   // cancelar / rechazar / eliminar
 }
 ```
