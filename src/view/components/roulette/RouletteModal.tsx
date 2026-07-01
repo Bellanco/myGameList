@@ -53,6 +53,9 @@ const IDLE_CENTER = 4; // centro de la cinta en reposo
 // Penalización de repetición (solo en memoria, mientras el modal esté abierto): cada vez que un juego sale,
 // su peso se multiplica por esto, para que no se repita una y otra vez. Se resetea al cerrar/reabrir.
 const REPEAT_DECAY = 0.25;
+// Variedad por género (en sesión): por cada vez que ha salido un género, los juegos de ese género pesan menos
+// en los siguientes giros, para no repetir siempre el mismo tipo. Suave; también se resetea al cerrar/reabrir.
+const GENRE_VARIETY_DECAY = 0.6;
 
 // Desenfoque base en reposo: como aún no se ha elegido nada, TODOS los nombres salen difuminados (incluido
 // el central). Al girar/terminar el desenfoque base es 0 y el elegido queda nítido.
@@ -81,6 +84,8 @@ export function RouletteModal({ open, onClose, title, candidates, weight, tag, r
   const rafRef = useRef<number | null>(null);
   // Veces que ha salido cada candidato en esta sesión (mientras el modal está abierto) → penaliza repeticiones.
   const picksRef = useRef<Map<RouletteCandidate, number>>(new Map());
+  // Veces que ha salido cada género en la sesión → variedad (baja el peso de los géneros ya vistos).
+  const genrePicksRef = useRef<Map<string, number>>(new Map());
 
   const [phase, setPhase] = useState<'idle' | 'spinning' | 'result'>('idle');
   const [winner, setWinner] = useState<RouletteCandidate | null>(null);
@@ -141,6 +146,7 @@ export function RouletteModal({ open, onClose, title, candidates, weight, tag, r
     setActed(false);
     setReviewOpen(false);
     picksRef.current = new Map();
+    genrePicksRef.current = new Map();
   }, [open]);
 
   // Con el pool congelado, monta la cinta de reposo (síncrono → primer pintado correcto).
@@ -179,14 +185,19 @@ export function RouletteModal({ open, onClose, title, candidates, weight, tag, r
 
   const spin = useCallback(() => {
     if (phase === 'spinning' || !n) return;
-    // Peso efectivo: ponderación de contexto × penalización por veces que ya ha salido en esta sesión.
+    // Peso efectivo: ponderación de contexto × anti-repetición del juego × variedad por género (en sesión).
     const effectiveWeight = (candidate: RouletteCandidate) => {
       const picked = picksRef.current.get(candidate) ?? 0;
-      return weight(candidate) * REPEAT_DECAY ** picked;
+      let genreHits = 0;
+      for (const genre of candidate.game.genres) genreHits += genrePicksRef.current.get(genre) ?? 0;
+      return weight(candidate) * REPEAT_DECAY ** picked * GENRE_VARIETY_DECAY ** genreHits;
     };
     const chosen = pickWeighted(pool, effectiveWeight);
     if (!chosen) return;
     picksRef.current.set(chosen, (picksRef.current.get(chosen) ?? 0) + 1);
+    for (const genre of chosen.game.genres) {
+      genrePicksRef.current.set(genre, (genrePicksRef.current.get(genre) ?? 0) + 1);
+    }
     pendingRef.current = chosen;
     setReel(buildSpinReel(pool, chosen));
     posRef.current = SPIN_START;
