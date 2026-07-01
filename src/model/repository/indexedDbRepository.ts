@@ -375,6 +375,18 @@ export async function putCachedSocialDirectory<T>(ownGistId: string, entries: T[
   }
 }
 
+// Invalida la caché del directorio. Se llama al cambiar el grafo de amistad (aceptar/eliminar): como el directorio
+// solo lee el gist social de tus AMIGOS, un cambio de amistad altera qué actividad debe aparecer en el feed y hay
+// que releer sin esperar al TTL de 30 min.
+export async function invalidateCachedSocialDirectory(ownGistId: string): Promise<void> {
+  if (!ownGistId) return;
+  try {
+    await idbDelete(PROFILE_CACHE_STORE, SOCIAL_DIRECTORY_KEY_PREFIX + ownGistId);
+  } catch {
+    // best-effort.
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Caché persistente del PERFIL PROPIO ya resuelto (nombre + favoritos + visibilidad + actividad). Reutiliza el store
 // `profileCache` con clave reservada por gist propio (`__profile__:<ownGistId>`). TTL corto: al volver a navegar a la

@@ -333,6 +333,8 @@ export const SOCIAL_UI = {
     loading: 'Cargando actividad...',
     empty: 'No hay perfiles visibles todavía o faltan permisos de lectura en Firestore.',
     activityEmpty: 'Aún no hay actividad de análisis para mostrar.',
+    activityEmptyNoFriends: 'Tu feed muestra la actividad de tus amigos. Descubre perfiles y añade amigos para empezar a ver sus análisis y publicaciones.',
+    discoverFriends: 'Descubre y añade amigos',
     openActivityAria: (name: string, gameName: string) => `Abrir detalle de actividad de ${name} sobre ${gameName}`,
     openProfileAria: (name: string) => `Abrir perfil social de ${name}`,
     analyzedRecently: 'Analizado recientemente',
