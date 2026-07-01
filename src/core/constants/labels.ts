@@ -454,6 +454,12 @@ export const SOCIAL_UI = {
     postPublishFailed: 'No se pudo compartir la publicación.',
     profileGamesRefreshFailed: 'No se pudieron actualizar los listados de este perfil.',
     refreshThrottled: 'Espera unos segundos antes de volver a actualizar.',
+    friendRequestSent: 'Petición de amistad enviada.',
+    friendRequestAccepted: 'Ahora sois amigos.',
+    friendRequestCanceled: 'Petición cancelada.',
+    friendRequestRejected: 'Petición rechazada.',
+    friendRemoved: 'Amistad eliminada.',
+    friendActionFailed: 'No se pudo completar la acción. Inténtalo de nuevo.',
   },
   steps: [
     { id: 'sync', title: 'GitHub', subtitle: 'Conectar' },
