@@ -38,6 +38,7 @@ export interface SocialProfileReference {
 
 export interface SocialDirectoryEntry {
   id: string;
+  uid: string; // uid de Firebase del perfil — necesario para relaciones de amistad (id del doc canónico) y robusto ante el cutover uid→profileId
   email: string;
   displayName: string;
   photoURL: string;

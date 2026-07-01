@@ -7,7 +7,7 @@ import {
   initializeTestEnvironment,
   type RulesTestEnvironment,
 } from '@firebase/rules-unit-testing';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { deleteDoc, doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
 
 // Test de integración: requiere el emulador de Firestore. Ejecutar con `npm run test:rules`.
 // Valida las reglas REALES desplegables (perfiles, privateConfig/userMap solo-dueño, admin, catch-all).
@@ -98,6 +98,87 @@ describe('firestore.rules', () => {
       await assertSucceeds(setDoc(doc(adminDb(), 'recommendations', 'r1'), { toEmail: 'x@y.z' }));
       await assertFails(setDoc(doc(ownerDb('uid-a'), 'recommendations', 'r2'), { toEmail: 'x@y.z' }));
       await assertFails(getDoc(doc(ownerDb('uid-a'), 'recommendations', 'r1')));
+    });
+  });
+
+  describe('friendships (aceptación mutua)', () => {
+    // A < B lexicográficamente → doc canónico 'uid-a__uid-b', users ['uid-a','uid-b'].
+    const DOC_ID = 'uid-a__uid-b';
+    const pendingFromAtoB = () => ({
+      users: ['uid-a', 'uid-b'],
+      requester: 'uid-a',
+      recipient: 'uid-b',
+      status: 'pending',
+      createdAt: 1,
+      updatedAt: 1,
+      requesterName: 'A',
+      requesterPhoto: '',
+      requesterSocialGistId: 'gsA',
+      requesterGamesGistId: 'ggA',
+    });
+
+    it('create: el requester crea la petición canónica (pending) con sus propios campos', async () => {
+      await assertSucceeds(setDoc(doc(ownerDb('uid-a'), 'friendships', DOC_ID), pendingFromAtoB()));
+    });
+
+    it('create: rechaza si el requester no es quien escribe', async () => {
+      // uid-b intenta crear una petición diciendo que la envía uid-a.
+      await assertFails(setDoc(doc(ownerDb('uid-b'), 'friendships', DOC_ID), pendingFromAtoB()));
+    });
+
+    it('create: rechaza id no canónico o users desordenados', async () => {
+      await assertFails(setDoc(doc(ownerDb('uid-a'), 'friendships', 'uid-b__uid-a'), pendingFromAtoB()));
+      await assertFails(
+        setDoc(doc(ownerDb('uid-a'), 'friendships', DOC_ID), { ...pendingFromAtoB(), users: ['uid-b', 'uid-a'] }),
+      );
+    });
+
+    it('create: rechaza escribir campos del recipient o estado != pending', async () => {
+      await assertFails(
+        setDoc(doc(ownerDb('uid-a'), 'friendships', DOC_ID), { ...pendingFromAtoB(), recipientName: 'B' }),
+      );
+      await assertFails(
+        setDoc(doc(ownerDb('uid-a'), 'friendships', DOC_ID), { ...pendingFromAtoB(), status: 'accepted' }),
+      );
+    });
+
+    it('read: solo los participantes leen el doc; un tercero no', async () => {
+      await seed('friendships', DOC_ID, pendingFromAtoB());
+      await assertSucceeds(getDoc(doc(ownerDb('uid-a'), 'friendships', DOC_ID)));
+      await assertSucceeds(getDoc(doc(ownerDb('uid-b'), 'friendships', DOC_ID)));
+      await assertFails(getDoc(doc(ownerDb('uid-c'), 'friendships', DOC_ID)));
+    });
+
+    it('accept: el recipient pasa pending→accepted escribiendo sus campos; el requester no puede aceptar', async () => {
+      await seed('friendships', DOC_ID, pendingFromAtoB());
+      // El requester (uid-a) NO puede autoaceptar.
+      await assertFails(
+        updateDoc(doc(ownerDb('uid-a'), 'friendships', DOC_ID), { status: 'accepted', updatedAt: 2 }),
+      );
+      // El recipient (uid-b) acepta y añade sus campos denormalizados.
+      await assertSucceeds(
+        updateDoc(doc(ownerDb('uid-b'), 'friendships', DOC_ID), {
+          status: 'accepted',
+          updatedAt: 2,
+          recipientName: 'B',
+          recipientPhoto: '',
+          recipientSocialGistId: 'gsB',
+          recipientGamesGistId: 'ggB',
+        }),
+      );
+    });
+
+    it('accept: rechaza si el recipient intenta modificar campos del requester', async () => {
+      await seed('friendships', DOC_ID, pendingFromAtoB());
+      await assertFails(
+        updateDoc(doc(ownerDb('uid-b'), 'friendships', DOC_ID), { status: 'accepted', requesterName: 'hack' }),
+      );
+    });
+
+    it('delete: cualquier participante puede borrar (cancelar/rechazar/eliminar); un tercero no', async () => {
+      await seed('friendships', DOC_ID, pendingFromAtoB());
+      await assertFails(deleteDoc(doc(ownerDb('uid-c'), 'friendships', DOC_ID)));
+      await assertSucceeds(deleteDoc(doc(ownerDb('uid-b'), 'friendships', DOC_ID)));
     });
   });
 
