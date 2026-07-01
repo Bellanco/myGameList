@@ -41,6 +41,3 @@ audit-report.json
 
 # Claude Code: compartir settings.json, ignorar config local/personal
 .claude/settings.local.json
-
-# Secretos locales de wrangler pages dev (client_secret de GitHub OAuth)
-.dev.vars
