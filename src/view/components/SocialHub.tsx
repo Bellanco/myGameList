@@ -105,9 +105,11 @@ export const SocialHub = memo(function SocialHub({
     outgoingRequests,
     loadingFriendships,
     friendshipBusyUid,
+    relationshipWith,
     handleAddOrAcceptFriend,
     handleRejectFriendRequest,
     handleCancelFriendRequest,
+    handleRemoveFriend,
   } = useSocialViewModel();
 
   if (loading) {
@@ -185,6 +187,11 @@ export const SocialHub = memo(function SocialHub({
           onAddToProximos={onAddToProximos}
           hasGameInLists={hasGameInLists}
           moveGameToCurrentByName={moveGameToCurrentByName}
+          friendshipState={selectedProfileDetail ? relationshipWith((selectedProfileDetail as { uid?: string }).uid || '') : 'none'}
+          friendshipBusy={Boolean(selectedProfileDetail) && friendshipBusyUid === (selectedProfileDetail as { uid?: string }).uid}
+          onAddOrAcceptFriend={() => handleAddOrAcceptFriend((selectedProfileDetail as { uid?: string }).uid || '')}
+          onCancelFriendRequest={() => handleCancelFriendRequest((selectedProfileDetail as { uid?: string }).uid || '')}
+          onRemoveFriend={() => handleRemoveFriend((selectedProfileDetail as { uid?: string }).uid || '')}
         />
       );
     }
@@ -225,6 +232,10 @@ export const SocialHub = memo(function SocialHub({
           feedRowRef={feedRowRef as React.RefObject<HTMLDivElement | null>}
           handleFeedRowMouseDown={handleFeedRowMouseDown}
           handleFeedRowKeyDown={handleFeedRowKeyDown}
+          relationshipWith={relationshipWith}
+          friendshipBusyUid={friendshipBusyUid}
+          onAddOrAcceptFriend={handleAddOrAcceptFriend}
+          onCancelFriendRequest={handleCancelFriendRequest}
           onBack={() => navigate('/social')}
           status={status}
           statusKind={statusKind}

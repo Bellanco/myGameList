@@ -419,6 +419,17 @@ export const SOCIAL_UI = {
     cancelAria: (name: string) => `Cancelar la petición enviada a ${name}`,
     unknownUser: 'Usuario',
   },
+  friendship: {
+    add: 'Añadir amigo',
+    accept: 'Aceptar',
+    pending: 'Pendiente',
+    friends: 'Amigos',
+    remove: 'Eliminar amistad',
+    addAria: (name: string) => `Enviar petición de amistad a ${name}`,
+    acceptAria: (name: string) => `Aceptar la petición de ${name}`,
+    cancelAria: (name: string) => `Cancelar la petición enviada a ${name}`,
+    removeAria: (name: string) => `Eliminar tu amistad con ${name}`,
+  },
   profile: {
     sectionAria: 'Social',
     actionsAria: 'Acciones del perfil social',

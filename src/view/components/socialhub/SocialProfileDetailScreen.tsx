@@ -8,6 +8,8 @@ import { DEFAULT_SORT, sortGames } from '../../../core/utils/sortGames';
 import type { SocialSharedGame } from '../../../model/repository/gistRepository';
 import { RouletteModal } from '../roulette/RouletteModal';
 import { buildProfilePool, profileWeight } from '../../../core/roulette/roulette';
+import { FriendshipButton } from './FriendshipButton';
+import type { RelationshipState } from '../../../model/types/social';
 
 // Paginación de los juegos del perfil: se muestran de 15 en 15 para evitar scroll excesivo al abrir el detalle.
 const LIST_PAGE_SIZE = 15;
@@ -92,6 +94,11 @@ export function SocialProfileDetailScreen({
   onAddToProximos,
   hasGameInLists,
   moveGameToCurrentByName,
+  friendshipState = 'none',
+  friendshipBusy = false,
+  onAddOrAcceptFriend,
+  onCancelFriendRequest,
+  onRemoveFriend,
 }: {
   SOCIAL_UI: any;
   activeProfileDetail: SocialProfileDetail | null;
@@ -103,6 +110,11 @@ export function SocialProfileDetailScreen({
   onAddToProximos?: (game: Partial<GameItem>) => 'added' | 'duplicate' | 'invalid';
   hasGameInLists?: (name: string) => boolean;
   moveGameToCurrentByName?: (name: string) => void;
+  friendshipState?: RelationshipState;
+  friendshipBusy?: boolean;
+  onAddOrAcceptFriend?: () => void;
+  onCancelFriendRequest?: () => void;
+  onRemoveFriend?: () => void;
 }) {
   const [activeListTab, setActiveListTab] = useState<TabId>('c');
   const [rouletteOpen, setRouletteOpen] = useState(false);
@@ -324,6 +336,18 @@ export function SocialProfileDetailScreen({
                 <Icon name="edit" />
                 {SOCIAL_UI.feed.profile}
               </button>
+            </div>
+          ) : !isOwnProfile && onAddOrAcceptFriend ? (
+            <div className="hub-screen-actions-right">
+              <FriendshipButton
+                SOCIAL_UI={SOCIAL_UI}
+                state={friendshipState}
+                name={activeProfileDetail.displayName}
+                busy={friendshipBusy}
+                onAddOrAccept={onAddOrAcceptFriend}
+                onCancel={onCancelFriendRequest || (() => undefined)}
+                onRemove={onRemoveFriend}
+              />
             </div>
           ) : null}
         </div>
