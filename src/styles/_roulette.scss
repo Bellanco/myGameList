@@ -120,7 +120,8 @@
 /* Columna del resultado: espacio reservado a la derecha → la ruleta no se mueve al abrirlo. */
 .rl-result-col { width: 320px; min-height: 240px; display: flex; align-items: center; }
 
-/* Tarjeta "fantasma": llena el hueco reservado en reposo y mientras gira (antes del primer resultado). */
+/* Tarjeta "fantasma": llena el hueco reservado en reposo y mientras gira (antes del primer resultado).
+   Es un botón: al pulsarla también gira la ruleta (para no dejar sensación de clic muerto). */
 .rl-ghost {
   width: 100%;
   display: flex;
@@ -133,8 +134,19 @@
   border-radius: var(--radius-lg);
   background: var(--surface-soft);
   color: var(--text-muted);
+  font: inherit;
+  cursor: pointer;
+  transition: border-color .18s, background .18s, color .18s;
 }
+.rl-ghost:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--steam) 45%, var(--border));
+  background: var(--steam-soft);
+  color: var(--text);
+}
+.rl-ghost:focus-visible { outline: 2px solid var(--steam); outline-offset: 3px; }
+.rl-ghost:disabled { cursor: progress; }
 .rl-ghost-icon { width: 40px; height: 40px; color: var(--text-dim); }
+.rl-ghost:hover:not(:disabled) .rl-ghost-icon { color: var(--steam); }
 .rl-ghost-text { font-size: 14px; }
 .rl-ghost.is-spinning { border-color: color-mix(in srgb, var(--steam) 30%, var(--border)); color: var(--text); }
 .rl-ghost.is-spinning .rl-ghost-icon { color: var(--steam); animation: rl-pulse 1.1s ease-in-out infinite; }

@@ -33,9 +33,112 @@ export function gameWeight(game: GameItem): number {
 /** Multiplicador por lista en LISTADOS: salen más los próximos, luego la vergüenza, luego completados. */
 const TAB_WEIGHT: Record<TabId, number> = { p: 3, v: 2, c: 1, e: 1 };
 
+/** Nota "neutra" para listas que NO se puntúan (la vergüenza): así no quedan atrás por no tener estrellas. */
+export const NEUTRAL_SCORE = 4;
+
+/**
+ * Score efectivo para la ponderación por lista. Si no hay nota: la vergüenza (que no se puntúa) usa la neutra
+ * para competir por prioridad de lista; el resto (próximos/completados sin nota) mantiene el peso base mínimo.
+ */
+function scoreForWeight(game: GameItem, tab: TabId): number {
+  const s = Number(game.score || 0);
+  if (s > 0) return s;
+  return tab === 'v' ? NEUTRAL_SCORE : 0;
+}
+
 /** Ponderación en LISTADOS: curva de puntuación × multiplicador de lista (más probable lo de próximos). */
 export function listsWeight(candidate: RouletteCandidate): number {
-  return curveScore(candidate.game.score) * (TAB_WEIGHT[candidate.sourceTab] ?? 1);
+  return curveScore(scoreForWeight(candidate.game, candidate.sourceTab)) * (TAB_WEIGHT[candidate.sourceTab] ?? 1);
+}
+
+// ————— Conciencia de saga (orden dentro de una serie) —————
+
+/** Penalización por cada entrega ANTERIOR que tienes y aún no has terminado (y suprime la saga si hay una en curso). */
+export const SEQUEL_DECAY = 0.4;
+
+const ROMAN: Record<string, number> = {
+  i: 1, ii: 2, iii: 3, iv: 4, v: 5, vi: 6, vii: 7, viii: 8, ix: 9, x: 10,
+  xi: 11, xii: 12, xiii: 13, xiv: 14, xv: 15, xvi: 16, xvii: 17, xviii: 18, xix: 19, xx: 20,
+};
+
+/**
+ * Descompone un nombre en (base de la saga, ordinal). El ordinal se detecta como número arábigo de 1–3 dígitos
+ * (evita años como "2077"), número romano, o número antes de un subtítulo tras ":". Sin número → ordinal 1
+ * (la primera entrega). Los números en medio del nombre ("Left 4 Dead") no cuentan.
+ */
+export function parseSeries(name: string): { base: string; ordinal: number } {
+  const main = String(name || '').trim().split(':')[0].trim();
+  const tokens = main.split(/\s+/);
+  const last = (tokens[tokens.length - 1] || '').toLowerCase().replace(/[.,]$/, '');
+
+  let ordinal = 1;
+  let baseTokens = tokens;
+  if (/^\d{1,3}$/.test(last)) {
+    ordinal = Number(last);
+    baseTokens = tokens.slice(0, -1);
+  } else if (ROMAN[last] !== undefined) {
+    ordinal = ROMAN[last];
+    baseTokens = tokens.slice(0, -1);
+  }
+
+  const base = baseTokens.join(' ').trim().toLowerCase();
+  // Si al quitar el ordinal no queda base (el número/romano era todo el nombre), trátalo como primera entrega.
+  if (!base) return { base: main.toLowerCase(), ordinal: 1 };
+  return { base, ordinal };
+}
+
+interface SeriesInfo {
+  ownedOrdinals: Set<number>; // entregas presentes en cualquier lista
+  completedOrdinals: Set<number>; // entregas en completados (c)
+  hasInProgress: boolean; // alguna entrega en curso (e)
+}
+
+/** Índice de sagas a partir de TODO el catálogo (para saber qué está jugado / en curso / es tuyo). */
+function buildSeriesIndex(data: TabData): Map<string, SeriesInfo> {
+  const index = new Map<string, SeriesInfo>();
+  const add = (game: GameItem, tab: TabId) => {
+    const { base, ordinal } = parseSeries(game.name);
+    let info = index.get(base);
+    if (!info) {
+      info = { ownedOrdinals: new Set(), completedOrdinals: new Set(), hasInProgress: false };
+      index.set(base, info);
+    }
+    info.ownedOrdinals.add(ordinal);
+    if (tab === 'c') info.completedOrdinals.add(ordinal);
+    if (tab === 'e') info.hasInProgress = true;
+  };
+  for (const game of data.c) add(game, 'c');
+  for (const game of data.v) add(game, 'v');
+  for (const game of data.e) add(game, 'e');
+  for (const game of data.p) add(game, 'p');
+  return index;
+}
+
+/**
+ * Factor de saga para un juego: 1 si no forma serie (o solo tienes una entrega). Si hay una entrega EN CURSO,
+ * suprime la saga (termina esa antes). Si no, penaliza por cada entrega ANTERIOR que tienes y no has terminado
+ * (así sale primero la más temprana pendiente; las entregas que NO tienes —saltos— no penalizan).
+ */
+function seriesFactor(index: Map<string, SeriesInfo>, name: string): number {
+  const { base, ordinal } = parseSeries(name);
+  const info = index.get(base);
+  if (!info || info.ownedOrdinals.size < 2) return 1;
+  if (info.hasInProgress) return SEQUEL_DECAY;
+
+  let earlierPending = 0;
+  for (const owned of info.ownedOrdinals) {
+    if (owned < ordinal && !info.completedOrdinals.has(owned)) earlierPending++;
+  }
+  return SEQUEL_DECAY ** earlierPending;
+}
+
+/**
+ * Weigher de LISTADOS con contexto global: ponderación por lista (con la vergüenza justa) × conciencia de saga.
+ * Precomputa el índice de sagas una vez y devuelve el weigher para `pickWeighted`.
+ */
+export function buildListsWeigher(data: TabData): (candidate: RouletteCandidate) => number {
+  const index = buildSeriesIndex(data);
+  return (candidate) => listsWeight(candidate) * seriesFactor(index, candidate.game.name);
 }
 
 /** Empujón por rejugable en SOCIAL: cuenta, pero por debajo de un escalón de nota (un buen no-rejugable puede salir). */
