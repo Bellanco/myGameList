@@ -6,6 +6,7 @@ import {
   curveScore,
   gameWeight,
   listsWeight,
+  NEUTRAL_SCORE,
   normalizeName,
   pickWeighted,
   profileWeight,
@@ -136,5 +137,25 @@ describe('normalizeName', () => {
   it('trims and lowercases for cross-user duplicate checks', () => {
     expect(normalizeName('  Hollow KNIGHT ')).toBe('hollow knight');
     expect(normalizeName('')).toBe('');
+  });
+});
+
+describe('scoreless shame list fairness', () => {
+  const cand = (tab: TabId, score: number): RouletteCandidate => ({
+    game: game({ id: 1, name: 'x', score }),
+    sourceTab: tab,
+  });
+
+  it('a scoreless shame game uses the neutral score instead of the tiny base', () => {
+    // vergüenza sin nota → curveScore(NEUTRAL_SCORE) × TAB(v=2) (compite, no se queda en ~2)
+    expect(listsWeight(cand('v', 0))).toBe(curveScore(NEUTRAL_SCORE) * 2);
+    // un próximo sin "interés" mantiene el peso base (1 × 3)
+    expect(listsWeight(cand('p', 0))).toBe(1 * 3);
+    // así la vergüenza no queda por detrás de una lista sin puntuar
+    expect(listsWeight(cand('v', 0))).toBeGreaterThan(listsWeight(cand('p', 0)));
+  });
+
+  it('a shame game with a real score still uses it', () => {
+    expect(listsWeight(cand('v', 4))).toBe(16 * 2);
   });
 });
