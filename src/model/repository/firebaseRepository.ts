@@ -34,6 +34,17 @@ export {
   findSocialProfileByEmail,
   listSocialDirectory,
 } from './firebaseSocialRepository';
+// Amistad (aceptación mutua): un doc por par, id canónico, denormalización de identidad. Ver firebaseFriendshipRepository.
+export {
+  acceptFriendRequest,
+  deleteFriendship,
+  friendshipDocId,
+  getMyFriendships,
+  invalidateMyFriendshipsCache,
+  readFriendship,
+  sendFriendRequest,
+  type FriendshipSelfInfo,
+} from './firebaseFriendshipRepository';
 
 // F6.3 (modernización): marca de versión de esquema en los docs de Firestore (profiles/userMap/privateConfig).
 // Aditiva — las reglas no validan un conjunto exacto de campos, así que no requiere redesplegar reglas. Permite a

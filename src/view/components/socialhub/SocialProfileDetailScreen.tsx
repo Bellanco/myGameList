@@ -8,6 +8,8 @@ import { DEFAULT_SORT, sortGames } from '../../../core/utils/sortGames';
 import type { SocialSharedGame } from '../../../model/repository/gistRepository';
 import { RouletteModal } from '../roulette/RouletteModal';
 import { buildProfilePool, profileWeight } from '../../../core/roulette/roulette';
+import { FriendshipButton } from './FriendshipButton';
+import type { RelationshipState } from '../../../model/types/social';
 
 // Paginación de los juegos del perfil: se muestran de 15 en 15 para evitar scroll excesivo al abrir el detalle.
 const LIST_PAGE_SIZE = 15;
@@ -92,6 +94,11 @@ export function SocialProfileDetailScreen({
   onAddToProximos,
   hasGameInLists,
   moveGameToCurrentByName,
+  friendshipState = 'none',
+  friendshipBusy = false,
+  onAddOrAcceptFriend,
+  onCancelFriendRequest,
+  onRemoveFriend,
 }: {
   SOCIAL_UI: any;
   activeProfileDetail: SocialProfileDetail | null;
@@ -103,6 +110,11 @@ export function SocialProfileDetailScreen({
   onAddToProximos?: (game: Partial<GameItem>) => 'added' | 'duplicate' | 'invalid';
   hasGameInLists?: (name: string) => boolean;
   moveGameToCurrentByName?: (name: string) => void;
+  friendshipState?: RelationshipState;
+  friendshipBusy?: boolean;
+  onAddOrAcceptFriend?: () => void;
+  onCancelFriendRequest?: () => void;
+  onRemoveFriend?: () => void;
 }) {
   const [activeListTab, setActiveListTab] = useState<TabId>('c');
   const [rouletteOpen, setRouletteOpen] = useState(false);
@@ -113,6 +125,10 @@ export function SocialProfileDetailScreen({
   const [reviewQuery, setReviewQuery] = useState('');
   const [reviewVisibleCount, setReviewVisibleCount] = useState(REVIEW_PAGE_SIZE);
   const reviewSentinelRef = useRef<HTMLButtonElement>(null);
+
+  // Amistad: solo el perfil propio o el de un amigo muestra reseñas, ruleta y listados. Para no-amigos, "solo nombre
+  // y foto" + CTA de "Añadir amigo"; el resto queda bloqueado con un aviso.
+  const canSeeFullProfile = isOwnProfile || friendshipState === 'friends';
 
   // Reseñas tomadas del LISTADO de juegos del perfil (no del feed social): cada juego con texto de reseña en
   // cualquiera de sus listados. Ordenadas por fecha (_ts) de más reciente a más antigua; los perfiles ajenos
@@ -299,24 +315,28 @@ export function SocialProfileDetailScreen({
               <Icon name="arrow-back" />
               {SOCIAL_UI.feed.backToFeed}
             </button>
-            <button
-              className={`btn btn-secondary ${showReviews ? 'is-active' : ''}`.trim()}
-              type="button"
-              aria-pressed={showReviews}
-              onClick={() => setShowReviews((prev) => !prev)}
-            >
-              <Icon name={showReviews ? 'grav' : 'signature'} />
-              {showReviews ? SOCIAL_UI.feed.reviewsBack : SOCIAL_UI.feed.reviewsButton}
-            </button>
-            <button
-              className="btn btn-secondary"
-              type="button"
-              onClick={() => setRouletteOpen(true)}
-              disabled={!roulettePool.length}
-            >
-              <Icon name="dice-d20" />
-              Elige tu próximo juego
-            </button>
+            {canSeeFullProfile ? (
+              <>
+                <button
+                  className={`btn btn-secondary ${showReviews ? 'is-active' : ''}`.trim()}
+                  type="button"
+                  aria-pressed={showReviews}
+                  onClick={() => setShowReviews((prev) => !prev)}
+                >
+                  <Icon name={showReviews ? 'grav' : 'signature'} />
+                  {showReviews ? SOCIAL_UI.feed.reviewsBack : SOCIAL_UI.feed.reviewsButton}
+                </button>
+                <button
+                  className="btn btn-secondary"
+                  type="button"
+                  onClick={() => setRouletteOpen(true)}
+                  disabled={!roulettePool.length}
+                >
+                  <Icon name="dice-d20" />
+                  Elige tu próximo juego
+                </button>
+              </>
+            ) : null}
           </div>
           {isOwnProfile && onEditProfile ? (
             <div className="hub-screen-actions-right">
@@ -325,15 +345,36 @@ export function SocialProfileDetailScreen({
                 {SOCIAL_UI.feed.profile}
               </button>
             </div>
+          ) : !isOwnProfile && onAddOrAcceptFriend ? (
+            <div className="hub-screen-actions-right">
+              <FriendshipButton
+                SOCIAL_UI={SOCIAL_UI}
+                state={friendshipState}
+                name={activeProfileDetail.displayName}
+                busy={friendshipBusy}
+                onAddOrAccept={onAddOrAcceptFriend}
+                onCancel={onCancelFriendRequest || (() => undefined)}
+                onRemove={onRemoveFriend}
+              />
+            </div>
           ) : null}
         </div>
         <article className="hub-feed-card hub-feed-card-detail">
           <div className="hub-profile-hero">
             <HubAvatar name={activeProfileDetail.displayName} photoURL={activeProfileDetail.photoURL} sizeClass="hub-avatar-lg" />
             <h3 className="hub-profile-hero-name">{activeProfileDetail.displayName}</h3>
-            <p className="hub-profile-hero-meta">{SOCIAL_UI.feed.profileFavoritesCount(favoriteGames.length)}</p>
+            {canSeeFullProfile ? (
+              <p className="hub-profile-hero-meta">{SOCIAL_UI.feed.profileFavoritesCount(favoriteGames.length)}</p>
+            ) : null}
           </div>
-          {showReviews ? (
+          {!canSeeFullProfile ? (
+            <div className="hub-detail-metadata">
+              <div className="hub-metadata-section">
+                <strong>{SOCIAL_UI.feed.profileFriendsOnlyTitle}</strong>
+                <p>{SOCIAL_UI.feed.profileFriendsOnly}</p>
+              </div>
+            </div>
+          ) : showReviews ? (
             <div className="hub-detail-metadata">
               <div className="hub-metadata-section">
                 <strong>{SOCIAL_UI.feed.reviewsTitle}</strong>

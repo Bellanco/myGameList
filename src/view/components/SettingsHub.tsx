@@ -13,6 +13,9 @@ interface SettingsHubProps {
   gistId: string;
   syncError: string;
   recoveringGistId: boolean;
+  githubOAuthEnabled: boolean;
+  githubLoggingIn: boolean;
+  onGithubLogin: () => void;
   onTokenChange: (value: string) => void;
   onGistIdChange: (value: string) => void;
   onConnectSync: () => void;
@@ -43,6 +46,9 @@ export const SettingsHub = memo(function SettingsHub({
   gistId,
   syncError,
   recoveringGistId,
+  githubOAuthEnabled,
+  githubLoggingIn,
+  onGithubLogin,
   onTokenChange,
   onGistIdChange,
   onConnectSync,
@@ -58,6 +64,9 @@ export const SettingsHub = memo(function SettingsHub({
 }: SettingsHubProps) {
   const [showToken, setShowToken] = useState(false);
   const [showConfigHelp, setShowConfigHelp] = useState(false);
+  // Con OAuth disponible, el modo manual (PAT) queda plegado como opción avanzada; sin OAuth, se muestra siempre.
+  const [showManual, setShowManual] = useState(false);
+  const manualVisible = !githubOAuthEnabled || showManual;
   const [activeAdminCategory, setActiveAdminCategory] = useState<AdminCategoryKey>('genres');
   const [editingTag, setEditingTag] = useState<{ key: AdminCategoryKey; value: string } | null>(null);
   const [draftValue, setDraftValue] = useState('');
@@ -144,6 +153,39 @@ export const SettingsHub = memo(function SettingsHub({
               <br />
               {UI_MESSAGES.settings.sync.helpGithubBody}
             </div>
+
+            {githubOAuthEnabled && (
+              <>
+                <div className="sync-help">{UI_MESSAGES.settings.sync.oauthHelpBody}</div>
+                <div className="settings-actions">
+                  <button
+                    className="btn btn-steam btn-connect"
+                    type="button"
+                    onClick={onGithubLogin}
+                    disabled={githubLoggingIn}
+                    style={{ marginRight: 'auto' }}
+                  >
+                    <Icon name="cloud-sync" />
+                    <span className="btn-label">
+                      {githubLoggingIn ? UI_MESSAGES.settings.sync.oauthConnectingBtn : UI_MESSAGES.settings.sync.oauthConnectBtn}
+                    </span>
+                  </button>
+                </div>
+                <div className="sync-help-actions">
+                  <button
+                    className="sync-help-toggle"
+                    type="button"
+                    onClick={() => setShowManual((prev) => !prev)}
+                    aria-expanded={showManual}
+                  >
+                    {showManual ? UI_MESSAGES.settings.sync.manualToggleHide : UI_MESSAGES.settings.sync.manualToggleShow}
+                  </button>
+                </div>
+              </>
+            )}
+
+            {manualVisible && (
+            <>
             <div className="sync-help">
               <strong>{UI_MESSAGES.settings.sync.helpConfigTitle}</strong>
               <br />
@@ -234,6 +276,8 @@ export const SettingsHub = memo(function SettingsHub({
                 <span className="btn-label desktop-only">{recoveringGistId ? UI_MESSAGES.settings.sync.recoveringBtn : UI_MESSAGES.settings.sync.recoverBtn}</span>
               </button>
             </div>
+            </>
+            )}
           </>
         )}
 

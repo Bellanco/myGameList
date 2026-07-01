@@ -475,6 +475,77 @@
   min-width: 0;
 }
 
+// Botón "Solicitudes": contador de pendientes inscrito en un círculo (gris si 0, verde si hay alguna).
+.hub-requests-btn {
+  position: relative;
+}
+
+.hub-requests-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.35rem;
+  height: 1.35rem;
+  border-radius: 50%;
+  font-size: .78rem;
+  font-weight: 700;
+  line-height: 1;
+  flex: 0 0 auto;
+
+  &.is-empty {
+    background: rgba(148, 163, 184, .25);
+    color: var(--text-muted, #94a3b8);
+    border: 1px solid rgba(148, 163, 184, .45);
+  }
+
+  &.is-active {
+    background: var(--success, #2ea043);
+    color: #fff;
+    border: 1px solid var(--success, #2ea043);
+  }
+}
+
+// Acciones (aceptar/rechazar/cancelar) de cada tarjeta de solicitud.
+.hub-request-actions {
+  display: flex;
+  gap: .5rem;
+  flex-wrap: wrap;
+  margin-top: .4rem;
+}
+
+// Estado vacío del feed (sin amigos): mensaje + CTA para descubrir perfiles.
+.hub-feed-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: .7rem;
+}
+
+// Botón de amistad en las tarjetas del directorio (no debe empujar el layout de la tarjeta).
+.hub-card-friend-action {
+  margin-top: .5rem;
+  display: flex;
+}
+
+// Estado "Amigos" (chip) + posible botón de eliminar en el detalle.
+.hub-friend-state {
+  display: inline-flex;
+  align-items: center;
+  gap: .5rem;
+}
+
+.hub-friend-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: .25rem .55rem;
+  border-radius: 999px;
+  background: rgba(46,160,67,.16);
+  color: var(--success, #2ea043);
+  border: 1px solid rgba(46,160,67,.3);
+  font-size: .8rem;
+  font-weight: 600;
+}
+
 .hub-feed-card-shell {
   gap: 1.05rem;
   min-width: 0;

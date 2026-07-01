@@ -2,9 +2,10 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { SYNC_MESSAGES } from '../core/constants/labels';
 import { findSocialProfileByEmail, getCurrentSocialAuthUser, recoverGithubToken, resolveStableProfileId, signInWithGoogle } from '../model/repository/firebaseRepository';
 import { mergeCrdt } from '../model/repository/syncRepository';
-import { clearSyncConfig, createGist, ensureSyncConfigLoaded, getRetryAfterMs, getSyncConfig, isDeferredNetworkError, readGist, saveSyncConfig, whoAmI, writeGist } from '../model/repository/gistRepository';
+import { clearSyncConfig, createGist, ensureSyncConfigLoaded, findGamesGistId, getRetryAfterMs, getSyncConfig, isDeferredNetworkError, readGist, saveSyncConfig, whoAmI, writeGist } from '../model/repository/gistRepository';
+import { beginGithubOAuth, completeGithubOAuth, hasGithubOAuthRedirect, isGithubOAuthConfigured } from '../model/repository/githubOAuthRepository';
 import { normalizeData } from '../model/repository/localRepository';
-import { clearDirty, loadSyncDirtyState } from '../model/repository/syncStateRepository';
+import { clearDirty, clearDirtyIfUnchanged, loadSyncDirtyState } from '../model/repository/syncStateRepository';
 import { acquireSyncLock, canRead, getBackoffMs, getNextReadDelayMs, getSyncState, subscribeSyncState, transitionTo, canReadNow } from '../model/repository/syncMachineRepository';
 import { countRemoteChangesApplied, isWriteConflict, logSyncError } from '../model/repository/syncLogicRepository';
 import { readLegacyPlaintextToken } from '../model/migration/legacyTokenRecovery';
@@ -35,6 +36,7 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
   const [connectedGistId, setConnectedGistId] = useState('');
   const [lastRemoteChangesApplied, setLastRemoteChangesApplied] = useState<number | null>(null);
   const [recoveringGistId, setRecoveringGistId] = useState(false);
+  const [githubLoggingIn, setGithubLoggingIn] = useState(false);
   const pendingRemoteSyncRef = useRef(false);
   const pendingRemoteSyncTimerRef = useRef<number | null>(null);
   const pollTimerRef = useRef<number | null>(null);
@@ -42,6 +44,9 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
 
   const writeWithConflictRecovery = useCallback(
     async (syncToken: string, syncGistId: string, localData: TabData, localUpdatedAt: number): Promise<WriteOutcome> => {
+      // Sello dirty al INICIAR la escritura: si una edición del usuario lo avanza mientras escribimos en red,
+      // no debemos limpiar dirty (esa edición aún no está en el remoto). Ver clearDirtyIfUnchanged.
+      const dirtyAtBefore = loadSyncDirtyState().dirtyAt;
       try {
         transitionTo('writing');
         const writeResult = await writeGist(syncToken, syncGistId, localData);
@@ -53,7 +58,7 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
           }
         } catch {}
         transitionTo('idle', { lastWriteAt: Date.now(), errorCount: 0 });
-        clearDirty();
+        clearDirtyIfUnchanged(dirtyAtBefore);
         return {
           data: localData,
           etag: writeResult.etag,
@@ -82,7 +87,7 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
           }
         } catch {}
         transitionTo('idle', { lastWriteAt: Date.now(), errorCount: 0 });
-        clearDirty();
+        clearDirtyIfUnchanged(dirtyAtBefore);
         return {
           data: merged.merged,
           etag: retry.etag,
@@ -92,6 +97,19 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
     },
     [],
   );
+
+    /**
+     * Antes de persistir el resultado de un ciclo de sync, reconcilia con el estado local ACTUAL: si el usuario
+     * guardó una edición mientras el ciclo esperaba/escribía en red, su `_ts` es más reciente y gana en el merge,
+     * así el persist del sync NUNCA pisa una edición concurrente. Esa edición sigue marcada dirty
+     * (clearDirtyIfUnchanged) y se sube en el próximo ciclo. Cierra la ventana residual que las refs no cubren
+     * (edición llegada entre la lectura de `getData()` y el persist final).
+     */
+    const reconcileWithLocal = useCallback(
+      (synced: TabData, remoteUpdatedAt: number): TabData =>
+        mergeCrdt(getData(), getMeta().updatedAt, synced, remoteUpdatedAt).merged,
+      [getData, getMeta],
+    );
 
     /**
      * C2 — Empuja cambios locales pendientes (dirty) re-mergeando SIEMPRE contra el remoto fresco antes de escribir.
@@ -121,9 +139,9 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
       setMeta(nextMeta);
       const config = getSyncConfig();
       if (config) saveSyncConfig({ ...config, etag: nextMeta.etag, lastRemoteUpdatedAt: nextMeta.lastRemoteUpdatedAt });
-      persist(outcome.data, nextMeta);
+      persist(reconcileWithLocal(outcome.data, nextMeta.lastRemoteUpdatedAt), nextMeta);
       return outcome;
-    }, [getData, getMeta, persist, setMeta, writeWithConflictRecovery]);
+    }, [getData, getMeta, persist, setMeta, writeWithConflictRecovery, reconcileWithLocal]);
 
     /**
      * Lightweight refresh that checks remote with ETag and merges only when needed.
@@ -183,7 +201,7 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
         };
         setMeta(nextMeta);
         saveSyncConfig({ ...config, etag: nextMeta.etag, lastRemoteUpdatedAt: nextMeta.lastRemoteUpdatedAt });
-        persist(writeOutcome.data, nextMeta);
+        persist(reconcileWithLocal(writeOutcome.data, nextMeta.lastRemoteUpdatedAt), nextMeta);
         transitionTo('idle', { lastReadAt: Date.now(), errorCount: 0, pendingAction: null });
         setStatus('ok');
         if (remoteChanges > 0) {
@@ -206,7 +224,7 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
       } finally {
         lock.release();
       }
-    }, [getData, getMeta, onNotice, persist, setData, setMeta, writeWithConflictRecovery, pushDirtyWithMerge]);
+    }, [getData, getMeta, onNotice, persist, setData, setMeta, writeWithConflictRecovery, pushDirtyWithMerge, reconcileWithLocal]);
 
     const startPolling = useCallback(() => {
       if (pollTimerRef.current !== null) return;
@@ -347,7 +365,7 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
       };
       setMeta(finalMeta);
       saveSyncConfig({ ...config, etag: finalMeta.etag, lastRemoteUpdatedAt: finalMeta.lastRemoteUpdatedAt });
-      persist(writeOutcome.data, finalMeta);
+      persist(reconcileWithLocal(writeOutcome.data, finalMeta.lastRemoteUpdatedAt), finalMeta);
       transitionTo('idle', { lastReadAt: Date.now(), errorCount: 0, pendingAction: null });
       setStatus('ok');
       if (remoteChanges > 0) {
@@ -367,7 +385,7 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
     } finally {
       lock.release();
     }
-  }, [getData, getMeta, onNotice, persist, setData, setMeta, writeWithConflictRecovery, pushDirtyWithMerge]);
+  }, [getData, getMeta, onNotice, persist, setData, setMeta, writeWithConflictRecovery, pushDirtyWithMerge, reconcileWithLocal]);
 
   const schedulePendingRemoteSync = useCallback(() => {
     if (!pendingRemoteSyncRef.current) return;
@@ -415,6 +433,52 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
       lock.release();
     }
   }, [connectSyncWithCredentials, gistId, onNotice, token]);
+
+  // Paso 0 — "Conectar con GitHub" (OAuth). Redirige a GitHub; el usuario autoriza y vuelve a /ajustes con un `code`.
+  const beginGithubLogin = useCallback(() => {
+    try {
+      setGithubLoggingIn(true);
+      beginGithubOAuth(); // navega fuera de la app; no vuelve de esta función
+    } catch (error) {
+      setGithubLoggingIn(false);
+      onNotice('err', error instanceof Error ? error.message : SYNC_MESSAGES.connectError);
+    }
+  }, [onNotice]);
+
+  // Al volver del redirect de GitHub: canjea el `code` por un token, autodescubre el gist existente (para no
+  // duplicarlo) y conecta reusando el mismo camino que el flujo manual. Se invoca desde App al detectar el retorno.
+  const completeGithubLoginFromRedirect = useCallback(async () => {
+    if (!hasGithubOAuthRedirect()) return;
+    setGithubLoggingIn(true);
+    setStatus('syncing');
+    const lock = acquireSyncLock(); // S2: no solapar con un ciclo en vuelo
+    if (!lock) {
+      setGithubLoggingIn(false);
+      onNotice('ok', SYNC_MESSAGES.syncInProgress);
+      return;
+    }
+    try {
+      const githubToken = await completeGithubOAuth();
+      const existingGistId = await findGamesGistId(githubToken); // '' si es su primera conexión
+      await connectSyncWithCredentials(githubToken, existingGistId);
+    } catch (error) {
+      const deferred = isDeferredNetworkError(error); // S3
+      transitionTo('error_backoff', {
+        lastErrorAt: Date.now(),
+        errorCount: getSyncState().errorCount + 1,
+        pendingAction: 'read',
+        retryAfterMs: getRetryAfterMs(error) || null,
+      });
+      setStatus('error');
+      const message = deferred ? SYNC_MESSAGES.offline : error instanceof Error ? error.message : SYNC_MESSAGES.connectError;
+      setStatusMessage(message);
+      if (!deferred) onNotice('err', message);
+      logSyncError('completeGithubLoginFromRedirect', error);
+    } finally {
+      lock.release();
+      setGithubLoggingIn(false);
+    }
+  }, [connectSyncWithCredentials, onNotice]);
 
   const syncNow = useCallback(async () => {
     await ensureSyncConfigLoaded(); // C4
@@ -471,7 +535,7 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
       };
       setMeta(nextMeta);
       saveSyncConfig({ ...config, etag: writeOutcome.etag, lastRemoteUpdatedAt: nextMeta.lastRemoteUpdatedAt });
-      persist(writeOutcome.data, nextMeta);
+      persist(reconcileWithLocal(writeOutcome.data, nextMeta.lastRemoteUpdatedAt), nextMeta);
       transitionTo('idle', { lastReadAt: Date.now(), errorCount: 0, pendingAction: null });
 
       setStatus('ok');
@@ -492,7 +556,7 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
     } finally {
       lock.release();
     }
-  }, [getData, getMeta, onNotice, persist, setData, setMeta, writeWithConflictRecovery, pushDirtyWithMerge]);
+  }, [getData, getMeta, onNotice, persist, setData, setMeta, writeWithConflictRecovery, pushDirtyWithMerge, reconcileWithLocal]);
 
   useEffect(() => {
     const dirtyState = loadSyncDirtyState();
@@ -756,6 +820,10 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
     disconnectSync,
     recoverGistIdFromGoogle,
     overwriteRemoteData,
+    githubOAuthEnabled: isGithubOAuthConfigured(),
+    githubLoggingIn,
+    beginGithubLogin,
+    completeGithubLoginFromRedirect,
     connectedGistId,
     lastRemoteChangesApplied,
     recoveringGistId,
