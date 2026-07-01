@@ -25,16 +25,23 @@ import { MAX_SOCIAL_FAVORITES } from '../core/constants/uiConfig';
 import type { IconName } from '../core/constants/icons';
 import type { GameItem, SyncConfig, TabId } from '../model/types/game';
 import {
+  acceptFriendRequest,
+  deleteFriendship,
   ensureProfileByEmail,
   getCurrentSocialAuthUser,
   findSocialProfileByEmail,
+  getMyFriendships,
   listSocialDirectory,
+  readFriendship,
   resolveStableProfileId,
+  sendFriendRequest,
   signInWithGoogle,
   signOutSocialUser,
   updateProfilePhoto,
+  type FriendshipSelfInfo,
   type SocialAuthUser,
 } from '../model/repository/firebaseRepository';
+import type { MyFriendships, RelationshipState } from '../model/types/social';
 import { loadLocalState } from '../model/repository/localRepository';
 import { normalizeTimestamp as toSafeTimestamp } from '../core/utils/normalize';
 import { mapWithConcurrency } from '../core/utils/concurrency';
@@ -204,6 +211,12 @@ export function useSocialViewModel() {
   const feedStartXRef = useRef(0);
   const feedStartScrollRef = useRef(0);
   const [isFeedDragging, setIsFeedDragging] = useState(false);
+
+  // Amistad (aceptación mutua). Todo el estado sale de UNA query `array-contains` (cacheada en el repositorio).
+  const [friendships, setFriendships] = useState<MyFriendships>({ friends: [], incoming: [], outgoing: [], byOtherUid: {} });
+  const [loadingFriendships, setLoadingFriendships] = useState(false);
+  // uid del "otro" sobre el que hay una mutación en curso (para deshabilitar su botón sin bloquear el resto).
+  const [friendshipBusyUid, setFriendshipBusyUid] = useState<string>('');
 
   const setFeedback = useCallback((kind: 'ok' | 'warn' | 'err', message: string, duration?: 'short' | 'long') => {
     setStatusKind(kind);
@@ -394,6 +407,39 @@ export function useSocialViewModel() {
       cancelled = true;
     };
   }, [authUser?.uid]);
+
+  // Carga el estado de amistad (amigos + peticiones) con UNA query cacheada. Degrada a vacío si Firestore falla.
+  const refreshFriendships = useCallback(async (forceRefresh = false) => {
+    const uid = authUser?.uid;
+    if (!uid) {
+      setFriendships({ friends: [], incoming: [], outgoing: [], byOtherUid: {} });
+      return;
+    }
+    try {
+      setLoadingFriendships(true);
+      const next = await getMyFriendships(uid, { forceRefresh });
+      setFriendships(next);
+    } catch {
+      /* best-effort: sin amistad el resto del social sigue usable. */
+    } finally {
+      setLoadingFriendships(false);
+    }
+  }, [authUser?.uid]);
+
+  useEffect(() => {
+    if (!showSocialSpace || !authUser?.uid) {
+      return;
+    }
+    void refreshFriendships();
+  }, [showSocialSpace, authUser?.uid, refreshFriendships]);
+
+  // Estado de relación con OTRO usuario (para pintar el botón correcto en tarjetas/perfil).
+  const relationshipWith = useCallback((otherUid: string): RelationshipState => {
+    if (!otherUid) return 'none';
+    return friendships.byOtherUid[otherUid]?.state ?? 'none';
+  }, [friendships]);
+
+  const pendingIncomingCount = friendships.incoming.length;
 
   const completedGames = useMemo(() => {
     const map = new Map<number, string>();
@@ -1454,6 +1500,94 @@ export function useSocialViewModel() {
     setFeedback('ok', SOCIAL_UI.status.signOut, 'long');
   }, [setFeedback]);
 
+  // Datos que YO aporto al doc de amistad (denormalizados): mi nombre/foto (respetando showPhoto) + mis ids de gist.
+  const buildFriendshipSelfInfo = useCallback((): FriendshipSelfInfo => ({
+    name: socialDisplayName,
+    photo: showPhoto && authUser?.photoURL ? authUser.photoURL : '',
+    socialGistId: socialCfgGistId,
+    gamesGistId: mainSyncConfig?.gistId || '',
+  }), [authUser?.photoURL, mainSyncConfig?.gistId, showPhoto, socialCfgGistId, socialDisplayName]);
+
+  // "Añadir amigo" o "Aceptar": según el estado actual. Si no hay relación, envía petición; si el otro ya me pidió,
+  // acepta. Maneja la carrera de petición simultánea (el doc canónico ya existe) releyendo y aceptando si procede.
+  const handleAddOrAcceptFriend = useCallback(async (otherUid: string) => {
+    const myUid = authUser?.uid;
+    if (!myUid || !otherUid || myUid === otherUid) {
+      return;
+    }
+    const relation = relationshipWith(otherUid);
+    if (relation === 'friends' || relation === 'outgoing') {
+      return; // ya gestionado desde otra acción específica.
+    }
+    try {
+      setFriendshipBusyUid(otherUid);
+      if (relation === 'incoming') {
+        const docId = friendships.byOtherUid[otherUid]?.docId;
+        if (docId) {
+          await acceptFriendRequest({ myUid, docId, self: buildFriendshipSelfInfo() });
+          await refreshFriendships(true);
+          setFeedback('ok', SOCIAL_UI.status.friendRequestAccepted);
+        }
+        return;
+      }
+      try {
+        await sendFriendRequest({ myUid, otherUid, self: buildFriendshipSelfInfo() });
+        await refreshFriendships(true);
+        setFeedback('ok', SOCIAL_UI.status.friendRequestSent);
+      } catch (error) {
+        // Carrera: el doc canónico ya existía. Releer y decidir.
+        const existing = await readFriendship(myUid, otherUid);
+        if (existing?.state === 'incoming') {
+          await acceptFriendRequest({ myUid, docId: existing.docId, self: buildFriendshipSelfInfo() });
+          await refreshFriendships(true);
+          setFeedback('ok', SOCIAL_UI.status.friendRequestAccepted);
+          return;
+        }
+        if (existing) {
+          await refreshFriendships(true); // ya outgoing/friends: reflejar el estado real sin error ruidoso.
+          return;
+        }
+        throw error;
+      }
+    } catch (error) {
+      setFeedback('err', error instanceof Error ? error.message : SOCIAL_UI.status.friendActionFailed);
+    } finally {
+      setFriendshipBusyUid('');
+    }
+  }, [authUser?.uid, buildFriendshipSelfInfo, friendships, refreshFriendships, relationshipWith, setFeedback]);
+
+  // Borra el doc de amistad (cancelar enviada / rechazar recibida / eliminar amistad), con mensaje específico.
+  const deleteRelationship = useCallback(async (otherUid: string, successMsg: string) => {
+    const myUid = authUser?.uid;
+    const docId = friendships.byOtherUid[otherUid]?.docId;
+    if (!myUid || !docId) {
+      return;
+    }
+    try {
+      setFriendshipBusyUid(otherUid);
+      await deleteFriendship({ myUid, docId });
+      await refreshFriendships(true);
+      setFeedback('ok', successMsg);
+    } catch (error) {
+      setFeedback('err', error instanceof Error ? error.message : SOCIAL_UI.status.friendActionFailed);
+    } finally {
+      setFriendshipBusyUid('');
+    }
+  }, [authUser?.uid, friendships, refreshFriendships, setFeedback]);
+
+  const handleCancelFriendRequest = useCallback(
+    (otherUid: string) => deleteRelationship(otherUid, SOCIAL_UI.status.friendRequestCanceled),
+    [deleteRelationship],
+  );
+  const handleRejectFriendRequest = useCallback(
+    (otherUid: string) => deleteRelationship(otherUid, SOCIAL_UI.status.friendRequestRejected),
+    [deleteRelationship],
+  );
+  const handleRemoveFriend = useCallback(
+    (otherUid: string) => deleteRelationship(otherUid, SOCIAL_UI.status.friendRemoved),
+    [deleteRelationship],
+  );
+
   const primaryGatewayCta = useMemo(() => {
     type GatewayCta = {
       icon: IconName;
@@ -1575,5 +1709,16 @@ export function useSocialViewModel() {
     handleSaveProfile,
     handleSignOut,
     primaryGatewayCta,
+    // Amistad
+    friendships,
+    loadingFriendships,
+    friendshipBusyUid,
+    pendingIncomingCount,
+    relationshipWith,
+    refreshFriendships,
+    handleAddOrAcceptFriend,
+    handleCancelFriendRequest,
+    handleRejectFriendRequest,
+    handleRemoveFriend,
   };
 }
