@@ -1198,7 +1198,7 @@ export function useSocialViewModel() {
 
     try {
       setLoadingDirectory(true);
-      const entries = await listSocialDirectory(SOCIAL_DIRECTORY_LIMIT, { forceRefresh });
+      const dirEntries = await listSocialDirectory(SOCIAL_DIRECTORY_LIMIT, { forceRefresh });
       const socialConfig = getSocialSyncConfig();
       // Foto propia inmediata (de la sesión Google) aunque aún no se haya re-guardado el perfil; respeta showPhoto.
       const ownPhotoURL = showPhoto && authUser?.photoURL ? authUser.photoURL : '';
@@ -1206,6 +1206,25 @@ export function useSocialViewModel() {
       // Los no-amigos quedan index-only (nombre/foto del directorio Firestore), sin lectura de gist → gran ahorro de
       // llamadas. Como el feed deriva su actividad de estas entradas, mostrar solo la de amigos es automático.
       const friendUids = new Set(friendships.friends.map((friend) => friend.otherUid));
+
+      // Escalabilidad (>30 amigos): el directorio de descubrimiento está capado a SOCIAL_DIRECTORY_LIMIT y solo lista
+      // perfiles con `social.enabled`. Para que NINGÚN amigo desaparezca del feed / detalle / gestión por caer fuera
+      // de ese tope (o por desactivar social), se sintetizan entradas para los amigos ausentes usando los datos
+      // DENORMALIZADOS del doc de amistad (nombre/foto/gists). Así los amigos son autosuficientes e independientes del
+      // tope del directorio; los pendientes NO se sintetizan (no son amigos aún).
+      const directoryUids = new Set(dirEntries.map((entry) => entry.uid));
+      const friendOnlyEntries = friendships.friends
+        .filter((friend) => friend.otherSocialGistId && !directoryUids.has(friend.otherUid))
+        .map((friend) => ({
+          id: friend.otherUid,
+          uid: friend.otherUid,
+          email: '',
+          displayName: friend.otherName || 'Usuario',
+          photoURL: friend.otherPhoto || '',
+          socialGistId: friend.otherSocialGistId,
+          gamesGistId: friend.otherGamesGistId,
+        }));
+      const entries = [...dirEntries, ...friendOnlyEntries];
 
       const withProfiles = await mapWithConcurrency(
         entries,
