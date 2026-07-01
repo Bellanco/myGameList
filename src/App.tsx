@@ -15,7 +15,7 @@ import { useGameListViewModel } from './viewmodel/useGameListViewModel';
 import { useToolbarFilters } from './viewmodel/useToolbarFilters';
 import { computeTabOptions, countActiveFilters } from './viewmodel/toolbarFilters';
 import { useSyncViewModel } from './viewmodel/useSyncViewModel';
-import { buildListsPool, listsWeight } from './core/roulette/roulette';
+import { buildListsPool, buildListsWeigher } from './core/roulette/roulette';
 
 const FormModal = lazy(() => import('./view/modals/FormModal').then((module) => ({ default: module.FormModal })));
 const ConfirmModal = lazy(() => import('./view/modals/ConfirmModal').then((module) => ({ default: module.ConfirmModal })));
@@ -83,6 +83,7 @@ export default function App() {
 
   const [rouletteOpen, setRouletteOpen] = useState(false);
   const roulettePool = useMemo(() => buildListsPool(vm.data), [vm.data]);
+  const rouletteWeight = useMemo(() => buildListsWeigher(vm.data), [vm.data]);
 
   useEffect(() => {
     syncVm.initializeSync();
@@ -433,7 +434,7 @@ export default function App() {
           onClose={() => setRouletteOpen(false)}
           title="Elige tu próximo juego"
           candidates={roulettePool}
-          weight={listsWeight}
+          weight={rouletteWeight}
           tag={(candidate) => TAB_TITLES[candidate.sourceTab]}
           action={() => ({
             btnClass: 'btn-complete',
