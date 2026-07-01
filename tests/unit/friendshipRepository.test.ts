@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 // Mock de la capa Firestore: getMyFriendships solo necesita initializeFirebaseServices + getDocs.
 const getDocsMock = vi.fn();
+const deleteDocMock = vi.fn();
 
 vi.mock('../../src/model/repository/firebaseClient', () => ({
   initializeFirebaseServices: vi.fn(async () => ({ firestore: {} })),
@@ -18,10 +19,11 @@ vi.mock('firebase/firestore', () => ({
   getDoc: vi.fn(),
   setDoc: vi.fn(),
   updateDoc: vi.fn(),
-  deleteDoc: vi.fn(),
+  deleteDoc: (...args: unknown[]) => deleteDocMock(...args),
 }));
 
 import {
+  deleteFriendship,
   friendshipDocId,
   getMyFriendships,
   invalidateMyFriendshipsCache,
@@ -92,5 +94,19 @@ describe('getMyFriendships', () => {
     getDocsMock.mockRejectedValueOnce({ code: 'permission-denied' });
     const result = await getMyFriendships('me');
     expect(result).toEqual({ friends: [], incoming: [], outgoing: [], byOtherUid: {} });
+  });
+});
+
+describe('deleteFriendship', () => {
+  beforeEach(() => deleteDocMock.mockReset());
+
+  it('trata un doc ya borrado (permission-denied) como éxito idempotente', async () => {
+    deleteDocMock.mockRejectedValueOnce({ code: 'permission-denied' });
+    await expect(deleteFriendship({ myUid: 'me', docId: 'me__x' })).resolves.toBeUndefined();
+  });
+
+  it('propaga errores reales (no permission-denied)', async () => {
+    deleteDocMock.mockRejectedValueOnce(new Error('network'));
+    await expect(deleteFriendship({ myUid: 'me', docId: 'me__x' })).rejects.toThrow('network');
   });
 });
