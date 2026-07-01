@@ -16,7 +16,7 @@ import {
   updateGistPrivacy,
   writeSocialGist,
 } from '../model/repository/gistRepository';
-import { publishPost } from '../model/repository/socialPublishRepository';
+import { publishPost, unpublishReviewActivity } from '../model/repository/socialPublishRepository';
 import { invalidateProfileGames, loadForeignProfileGames } from '../model/repository/foreignProfileRepository';
 import { getCachedSocialDirectory, getCachedSocialProfile, getLocalMeta, patchLocalMeta, putCachedSocialDirectory, putCachedSocialProfile } from '../model/repository/indexedDbRepository';
 import { applyProfileVisibility } from '../core/utils/profileVisibility';
@@ -576,6 +576,58 @@ export function useSocialViewModel() {
     ];
     return allGames.find((game) => game.id === gameId) || null;
   }, [authUser, foreignGamesByProfile, localState, ownProfileId, socialDirectory]);
+
+  // Evita despublicar la misma reseña dos veces mientras la escritura está en vuelo (StrictMode / re-render).
+  const orphanUnpublishInFlightRef = useRef<Set<number>>(new Set());
+
+  // Reseña huérfana PROPIA: el dueño abre el detalle de una reseña cuyo juego ya no existe en sus listados
+  // (borrado o perdido). Sin contraparte, `getGameItemById` devuelve null y el detalle sale vacío; entonces la
+  // despublicamos del gist social para que no quede una reseña fantasma en el feed y volvemos al feed.
+  // Salvaguarda: solo si hay listados cargados (localStorage no vacío/sin hidratar), para no borrar por un
+  // estado local transitoriamente vacío. Solo actúa sobre el perfil propio y sobre eventos de tipo 'review'.
+  useEffect(() => {
+    if (activePanel !== 'detail') return;
+    const event = activeDetailEvent;
+    if (!event || event.type !== 'review') return;
+    if (!isOwnProfileIdentity(event.profileId, authUser?.uid, ownProfileId)) return;
+
+    const ownGames = [...localState.c, ...localState.v, ...localState.e, ...localState.p];
+    if (ownGames.length === 0) return; // sin listados cargados → no despublicar (evita falsos positivos)
+    if (ownGames.some((game) => game.id === event.gameId)) return; // tiene contraparte → no es huérfana
+
+    const gameId = event.gameId;
+    if (orphanUnpublishInFlightRef.current.has(gameId)) return;
+    orphanUnpublishInFlightRef.current.add(gameId);
+
+    let cancelled = false;
+    void unpublishReviewActivity({ id: gameId })
+      .then(() => {
+        if (cancelled) return;
+        // Quita la entrada del feed local (payload propio + entrada propia del directorio) para que desaparezca
+        // sin recargar, y vuelve al feed.
+        setSocialPayload((prev) => ({
+          activity: prev.activity.filter((entry) => !(entry.gameId === gameId && entry.type === 'review')),
+        }));
+        setSocialDirectory((prev) =>
+          prev.map((entry) =>
+            entry.socialGistId === socialCfgGistId
+              ? { ...entry, activity: entry.activity.filter((a) => !(a.gameId === gameId && a.type === 'review')) }
+              : entry,
+          ),
+        );
+        navigate('/social');
+      })
+      .catch(() => {
+        /* best-effort: si falla la red se reintenta la próxima vez que se abra el detalle */
+      })
+      .finally(() => {
+        orphanUnpublishInFlightRef.current.delete(gameId);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activePanel, activeDetailEvent, authUser, localState, navigate, ownProfileId, socialCfgGistId]);
 
   /**
    * Formatea la fecha como "DD de MMM".
