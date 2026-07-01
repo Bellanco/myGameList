@@ -254,7 +254,16 @@ export async function deleteFriendship(input: { myUid: string; docId: string }):
     throw new Error('Firebase no está configurado en este entorno');
   }
 
-  await deleteDoc(doc(services.firestore, 'friendships', docId));
+  try {
+    await deleteDoc(doc(services.firestore, 'friendships', docId));
+  } catch (error) {
+    // Si el doc ya no existe (la otra parte lo canceló/eliminó a la vez), la regla `delete` deniega porque no hay
+    // `resource.data.users` que comprobar → permission-denied. El estado deseado (ya no sois amigos) YA se cumple,
+    // así que lo tratamos como éxito idempotente en vez de propagar un error confuso. Solo delete es idempotente aquí.
+    if (!isPermissionDeniedError(error)) {
+      throw error;
+    }
+  }
   invalidateMyFriendshipsCache(myUid);
 }
 
