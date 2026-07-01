@@ -681,6 +681,34 @@ export function upsertReviewActivity(data: SocialGistData, input: UpsertReviewIn
   };
 }
 
+/**
+ * Elimina del gist social la actividad de reseña de un juego (despublicar). Se usa cuando el dueño abre una reseña
+ * que ya no tiene contraparte en sus listados (juego borrado/perdido): sin juego real detrás quedaría como una
+ * reseña vacía en el feed, así que se retira. Devuelve la MISMA referencia si no había nada que quitar, para que
+ * el orquestador pueda saltarse la reescritura del gist.
+ */
+export function removeReviewActivity(
+  data: SocialGistData,
+  input: { actorProfileId: string; gameId: number; timestamp?: number },
+): SocialGistData {
+  if (!input.actorProfileId || input.gameId <= 0) {
+    return data;
+  }
+
+  const key = buildActivityKey(input.actorProfileId, input.gameId, 'review');
+  const activity = data.activity || [];
+  const next = activity.filter((entry) => entry.key !== key);
+  if (next.length === activity.length) {
+    return data;
+  }
+
+  return {
+    ...data,
+    activity: next,
+    updatedAt: input.timestamp || Date.now(),
+  };
+}
+
 /** F3 — añade una publicación de texto libre al gist propio (prepend). No-op si falta autor o texto. */
 export function upsertPost(data: SocialGistData, input: UpsertPostInput): SocialGistData {
   const now = input.timestamp || Date.now();
