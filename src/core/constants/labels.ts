@@ -361,6 +361,8 @@ export const SOCIAL_UI = {
     profileFavoritesTitle: 'Favoritos publicados',
     profileListsTitle: 'Juegos',
     profileListsEmpty: 'Este perfil no ha publicado listados todavía.',
+    profileFriendsOnly: 'Hazte amigo de este jugador para ver sus reseñas, listados y recomendaciones.',
+    profileFriendsOnlyTitle: 'Perfil de amigos',
     gameFilterPlaceholder: 'Filtrar por título…',
     gameFilterEmpty: 'Ningún juego coincide con la búsqueda.',
     profileDetailRefresh: 'Actualizar listados',

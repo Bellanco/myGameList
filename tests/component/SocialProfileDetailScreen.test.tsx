@@ -16,6 +16,7 @@ describe('SocialProfileDetailScreen — listados', () => {
     render(
       <SocialProfileDetailScreen
         SOCIAL_UI={SOCIAL_UI}
+        isOwnProfile
         activeProfileDetail={{
           displayName: 'Yo',
           visibility: { hiddenTabs: [], hideReplayable: false, hideRetry: false, hideGameTime: false },
@@ -37,6 +38,7 @@ describe('SocialProfileDetailScreen — listados', () => {
     render(
       <SocialProfileDetailScreen
         SOCIAL_UI={SOCIAL_UI}
+        isOwnProfile
         activeProfileDetail={{
           displayName: 'Yo',
           visibility: { hiddenTabs: ['p'], hideReplayable: false, hideRetry: false, hideGameTime: false },
@@ -53,5 +55,59 @@ describe('SocialProfileDetailScreen — listados', () => {
     expect(screen.queryByRole('button', { name: SOCIAL_UI.feed.profileListTabPlanned })).not.toBeInTheDocument();
     // Pero las visibles sí.
     expect(screen.getByRole('button', { name: SOCIAL_UI.feed.profileListTabCompleted })).toBeInTheDocument();
+  });
+});
+
+describe('SocialProfileDetailScreen — gating por amistad', () => {
+  const foreignProfile = {
+    displayName: 'Ada',
+    visibility: { hiddenTabs: [], hideReplayable: false, hideRetry: false, hideGameTime: false },
+    sharedLists: { c: [game(1, 'Halo')], v: [], e: [], p: [] },
+    favorites: ['Halo'],
+  };
+
+  it('no-amigo: oculta reseñas/ruleta/listados, muestra aviso y botón Añadir amigo', () => {
+    render(
+      <SocialProfileDetailScreen
+        SOCIAL_UI={SOCIAL_UI}
+        activeProfileDetail={foreignProfile}
+        friendshipState="none"
+        onAddOrAcceptFriend={vi.fn()}
+        onCancelFriendRequest={vi.fn()}
+        onBack={vi.fn()}
+        status=""
+        statusKind=""
+      />,
+    );
+
+    expect(screen.getByText(SOCIAL_UI.feed.profileFriendsOnly)).toBeInTheDocument();
+    expect(screen.getByLabelText(SOCIAL_UI.friendship.addAria('Ada'))).toBeInTheDocument();
+    // Reseñas y ruleta ocultas; los juegos del listado no se muestran.
+    expect(screen.queryByRole('button', { name: SOCIAL_UI.feed.reviewsButton })).not.toBeInTheDocument();
+    expect(screen.queryByText('Elige tu próximo juego')).not.toBeInTheDocument();
+    expect(screen.queryByText('Halo')).not.toBeInTheDocument();
+  });
+
+  it('amigo: muestra reseñas/ruleta/listados', () => {
+    render(
+      <SocialProfileDetailScreen
+        SOCIAL_UI={SOCIAL_UI}
+        activeProfileDetail={foreignProfile}
+        friendshipState="friends"
+        onAddOrAcceptFriend={vi.fn()}
+        onCancelFriendRequest={vi.fn()}
+        onRemoveFriend={vi.fn()}
+        onBack={vi.fn()}
+        status=""
+        statusKind=""
+      />,
+    );
+
+    expect(screen.getByRole('button', { name: SOCIAL_UI.feed.reviewsButton })).toBeInTheDocument();
+    expect(screen.getByText('Elige tu próximo juego')).toBeInTheDocument();
+    // "Halo" aparece como chip de favorito y como fila del listado → basta con que exista al menos una vez.
+    expect(screen.getAllByText('Halo').length).toBeGreaterThan(0);
+    // Y ofrece eliminar amistad.
+    expect(screen.getByLabelText(SOCIAL_UI.friendship.removeAria('Ada'))).toBeInTheDocument();
   });
 });
