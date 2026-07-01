@@ -475,6 +475,35 @@
   min-width: 0;
 }
 
+// Botón "Solicitudes" con badge de pendientes en la cabecera del feed.
+.hub-requests-btn {
+  position: relative;
+}
+
+.hub-requests-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.15rem;
+  height: 1.15rem;
+  padding: 0 .3rem;
+  margin-left: .1rem;
+  border-radius: 999px;
+  background: var(--danger, #e5484d);
+  color: #fff;
+  font-size: .72rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+// Acciones (aceptar/rechazar/cancelar) de cada tarjeta de solicitud.
+.hub-request-actions {
+  display: flex;
+  gap: .5rem;
+  flex-wrap: wrap;
+  margin-top: .4rem;
+}
+
 .hub-feed-card-shell {
   gap: 1.05rem;
   min-width: 0;
