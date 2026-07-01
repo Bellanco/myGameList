@@ -33,9 +33,22 @@ export function gameWeight(game: GameItem): number {
 /** Multiplicador por lista en LISTADOS: salen más los próximos, luego la vergüenza, luego completados. */
 const TAB_WEIGHT: Record<TabId, number> = { p: 3, v: 2, c: 1, e: 1 };
 
+/** Nota "neutra" para listas que NO se puntúan (la vergüenza): así no quedan atrás por no tener estrellas. */
+export const NEUTRAL_SCORE = 4;
+
+/**
+ * Score efectivo para la ponderación por lista. Si no hay nota: la vergüenza (que no se puntúa) usa la neutra
+ * para competir por prioridad de lista; el resto (próximos/completados sin nota) mantiene el peso base mínimo.
+ */
+function scoreForWeight(game: GameItem, tab: TabId): number {
+  const s = Number(game.score || 0);
+  if (s > 0) return s;
+  return tab === 'v' ? NEUTRAL_SCORE : 0;
+}
+
 /** Ponderación en LISTADOS: curva de puntuación × multiplicador de lista (más probable lo de próximos). */
 export function listsWeight(candidate: RouletteCandidate): number {
-  return curveScore(candidate.game.score) * (TAB_WEIGHT[candidate.sourceTab] ?? 1);
+  return curveScore(scoreForWeight(candidate.game, candidate.sourceTab)) * (TAB_WEIGHT[candidate.sourceTab] ?? 1);
 }
 
 /** Empujón por rejugable en SOCIAL: cuenta, pero por debajo de un escalón de nota (un buen no-rejugable puede salir). */
