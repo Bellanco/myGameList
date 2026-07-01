@@ -56,9 +56,9 @@ vi.mock('../../src/model/repository/localRepository', () => localMocks);
 
 import { SocialHub } from '../../src/view/components/SocialHub';
 
-function renderHub() {
+function renderHub(initialPath = '/social') {
   return render(
-    <MemoryRouter initialEntries={['/social']}>
+    <MemoryRouter initialEntries={[initialPath]}>
       <SocialHub />
     </MemoryRouter>,
   );
@@ -145,6 +145,34 @@ describe('SocialHub (componente, post-M3)', () => {
     expect(screen.queryByText('BobGame')).not.toBeInTheDocument();
     const readGistIds = gistMocks.readPublicSocialGistById.mock.calls.map((call) => call[0]);
     expect(readGistIds).toContain('ada-social');
+    expect(readGistIds).not.toContain('bob-social');
+  });
+
+  it('directorio: muestra a los NO-amigos (favoritos vacíos) para poder enviarles petición', async () => {
+    firebaseMocks.getCurrentSocialAuthUser.mockResolvedValue({ uid: 'me', email: 'me@x.com', displayName: 'Me', photoURL: null });
+    gistMocks.getSocialSyncConfig.mockReturnValue({ token: 'ghp_x', gistId: 'my-social', etag: null, lastRemoteUpdatedAt: 0 });
+    localMocks.loadLocalState.mockReturnValue({
+      c: [{ id: 1, name: 'Halo', _ts: 1, platforms: [], genres: [], steamDeck: false, review: '', score: 5, years: [], strengths: [], weaknesses: [], reasons: [], replayable: false, retry: false, hours: 0 }],
+      v: [], e: [], p: [], deleted: [], updatedAt: 0,
+    });
+    gistMocks.readSocialGist.mockResolvedValue({
+      data: {
+        profile: { name: 'Me', private: false, favoriteGames: [{ id: 1, name: 'Halo' }], visibility: { hiddenTabs: [], hideReplayable: false, hideRetry: false, hideGameTime: false, showPhoto: true }, sharedLists: {} },
+        recommendations: [], activity: [], posts: [], updatedAt: 0,
+      },
+      etag: null,
+    });
+    // Solo un extraño en el directorio; sin amigos.
+    firebaseMocks.listSocialDirectory.mockResolvedValue([
+      { id: 'strangerUid', uid: 'strangerUid', email: 'bob@x.com', displayName: 'Bob', photoURL: '', socialGistId: 'bob-social', gamesGistId: 'bob-games' },
+    ]);
+    firebaseMocks.getMyFriendships.mockResolvedValue({ friends: [], incoming: [], outgoing: [], byOtherUid: {} });
+
+    renderHub('/social/profiles');
+
+    // El no-amigo aparece en el directorio (aunque no tenga favoritos y no se lea su gist).
+    expect(await screen.findByText('Bob')).toBeInTheDocument();
+    const readGistIds = gistMocks.readPublicSocialGistById.mock.calls.map((call) => call[0]);
     expect(readGistIds).not.toContain('bob-social');
   });
 });

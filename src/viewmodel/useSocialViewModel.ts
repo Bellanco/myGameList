@@ -521,11 +521,11 @@ export function useSocialViewModel() {
   }, []);
 
   const visibleSocialDirectory = useMemo(() => {
-    // Un perfil sin favoritos se considera INCOMPLETO: no aparece en el directorio ("Actividad de perfiles")
-    // ni se puede abrir su detalle (ver selectedProfileDetail/openProfileDetail). Excluye además el propio.
-    return socialDirectory.filter(
-      (entry) => entry.socialGistId !== socialCfgGistId && entry.favorites.length > 0,
-    );
+    // Directorio de descubrimiento: se muestran TODOS los perfiles publicados (el propio excluido). Ya no se filtra
+    // por `favorites.length > 0`: con el feed solo-amigos ya no leemos el gist de los no-amigos, así que su lista de
+    // favoritos viene vacía; exigirla ocultaría a todo el mundo e impediría enviarles peticiones de amistad. Los
+    // perfiles del directorio ya vienen acotados por Firestore (`social.enabled` + gist social presente).
+    return socialDirectory.filter((entry) => entry.socialGistId !== socialCfgGistId);
   }, [socialCfgGistId, socialDirectory]);
 
   const socialDisplayName = useMemo(() => {
@@ -554,8 +554,8 @@ export function useSocialViewModel() {
     }
 
     const entry = socialDirectory.find((item) => item.id === profileDetailId) || null;
-    // Perfil incompleto (sin favoritos): no se puede entrar → se trata como inexistente.
-    if (!entry || entry.favorites.length === 0) return null;
+    // Se puede abrir el detalle de cualquier perfil del directorio (para no-amigos: hero + "Añadir amigo").
+    if (!entry) return null;
 
     // E3 deja `sharedLists` vacío para TODOS los perfiles del directorio (no se exponen las listas ajenas). Para el
     // perfil PROPIO repoblamos las listas desde `localState` (juegos completos) para que el usuario SÍ vea sus
@@ -808,13 +808,9 @@ export function useSocialViewModel() {
   }, [navigate]);
 
   const openProfileDetail = useCallback((profileId: string) => {
-    // No abrir el detalle de un perfil incompleto (sin favoritos). El propio se gestiona aparte (editor).
-    const target = socialDirectory.find((entry) => entry.id === profileId);
-    if (target && target.favorites.length === 0) {
-      return;
-    }
+    // Cualquier perfil del directorio se puede abrir (para no-amigos: hero + "Añadir amigo").
     navigate(`/social/profiles/${encodeURIComponent(profileId)}`);
-  }, [navigate, socialDirectory]);
+  }, [navigate]);
 
   // Abre el DETALLE del perfil propio (vista pública con sus listados), no el editor. Si aún no existe entrada
   // propia con favoritos en el directorio, cae al editor para que el usuario complete su perfil.
