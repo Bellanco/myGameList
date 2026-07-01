@@ -111,6 +111,8 @@ service cloud.firestore {
     // ==========================================
 
     match /friendships/{docId} {
+      // Solo en update/delete (operaciones sobre un doc concreto → `resource` poblado). La LECTURA no usa esta
+      // función: en `list` el acceso a `resource.data` da "Null value error" y hay que evitarlo (ver `allow read`).
       function isFriendshipParticipant() {
         return isSignedIn() && request.auth.uid in resource.data.users;
       }
@@ -158,7 +160,10 @@ service cloud.firestore {
           );
       }
 
-      allow read:   if !isPlaceholder(docId) && (isAdmin() || isFriendshipParticipant());
+      // Lectura: admin, o participante. Sin `!isPlaceholder(docId)` (en `list` el docId no está ligado y romper el
+      // acceso a `resource.data` da "Null value error" que deniega TODA la consulta del feed/bandeja). El placeholder
+      // no tiene `users`, así que la consulta `array-contains` nunca lo devuelve.
+      allow read:   if isAdmin() || (isSignedIn() && request.auth.uid in resource.data.users);
       allow create: if !isPlaceholder(docId) && (isAdmin() || newFriendshipIsValid());
       allow update: if !isPlaceholder(docId) && (isAdmin() || (isFriendshipParticipant() && (friendshipAcceptTransition() || friendshipHealOwnFields())));
       allow delete: if !isPlaceholder(docId) && (isAdmin() || isFriendshipParticipant()); // cancelar / rechazar / eliminar
