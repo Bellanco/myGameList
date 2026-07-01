@@ -15,6 +15,7 @@ import { useGameListViewModel } from './viewmodel/useGameListViewModel';
 import { useToolbarFilters } from './viewmodel/useToolbarFilters';
 import { computeTabOptions, countActiveFilters } from './viewmodel/toolbarFilters';
 import { useSyncViewModel } from './viewmodel/useSyncViewModel';
+import { hasGithubOAuthRedirect } from './model/repository/githubOAuthRepository';
 import { buildListsPool, buildListsWeigher } from './core/roulette/roulette';
 
 const FormModal = lazy(() => import('./view/modals/FormModal').then((module) => ({ default: module.FormModal })));
@@ -112,7 +113,12 @@ export default function App() {
   const rouletteWeight = useMemo(() => buildListsWeigher(vm.data), [vm.data]);
 
   useEffect(() => {
-    syncVm.initializeSync();
+    // Si volvemos del "Conectar con GitHub" (OAuth), completamos ese flujo; si no, arrancamos el sync normal.
+    if (hasGithubOAuthRedirect()) {
+      void syncVm.completeGithubLoginFromRedirect();
+    } else {
+      syncVm.initializeSync();
+    }
   }, []);
 
   useEffect(() => {
@@ -398,6 +404,9 @@ export default function App() {
               gistId={syncVm.gistId}
               syncError={syncVm.statusMessage}
               recoveringGistId={syncVm.recoveringGistId}
+              githubOAuthEnabled={syncVm.githubOAuthEnabled}
+              githubLoggingIn={syncVm.githubLoggingIn}
+              onGithubLogin={syncVm.beginGithubLogin}
               onTokenChange={syncVm.setToken}
               onGistIdChange={syncVm.setGistId}
               onConnectSync={syncVm.connectSync}
