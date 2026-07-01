@@ -41,7 +41,7 @@ import {
   type FriendshipSelfInfo,
   type SocialAuthUser,
 } from '../model/repository/firebaseRepository';
-import type { MyFriendships, RelationshipState } from '../model/types/social';
+import type { FriendshipView, MyFriendships, RelationshipState } from '../model/types/social';
 import { loadLocalState } from '../model/repository/localRepository';
 import { normalizeTimestamp as toSafeTimestamp } from '../core/utils/normalize';
 import { mapWithConcurrency } from '../core/utils/concurrency';
@@ -62,7 +62,7 @@ const isNotFoundGistError = (error: unknown): boolean => {
   return error instanceof Error && /\b404\b/.test(error.message);
 };
 
-type SocialPanel = 'profile' | 'profiles' | 'profile-detail' | 'detail' | 'feed';
+type SocialPanel = 'profile' | 'profiles' | 'profile-detail' | 'detail' | 'requests' | 'feed';
 
 type SocialRouteState = {
   activePanel: SocialPanel;
@@ -85,17 +85,19 @@ const SOCIAL_DIRECTORY_LIMIT = 30;
 const SOCIAL_DIRECTORY_FETCH_CONCURRENCY = 6;
 const PROFILE_EDIT_PATH = /^\/social\/profile\/?$/;
 const PROFILES_PATH = /^\/social\/profiles\/?$/;
+const REQUESTS_PATH = /^\/social\/requests\/?$/;
 const PROFILE_DETAIL_PATH = /^\/social\/profiles\/([^/]+)$/;
 const ACTIVITY_DETAIL_PATH = /^\/social\/user\/([^/]+)\/game\/(\d+)\/(review|recommendation)$/;
 
 const getSocialRouteState = (pathname: string): SocialRouteState => {
   const profileEditMatch = pathname.match(PROFILE_EDIT_PATH);
   const profilesMatch = pathname.match(PROFILES_PATH);
+  const requestsMatch = pathname.match(REQUESTS_PATH);
   const profileDetailMatch = pathname.match(PROFILE_DETAIL_PATH);
   const detailMatch = pathname.match(ACTIVITY_DETAIL_PATH);
 
   return {
-    activePanel: profileEditMatch ? 'profile' : profilesMatch ? 'profiles' : profileDetailMatch ? 'profile-detail' : detailMatch ? 'detail' : 'feed',
+    activePanel: profileEditMatch ? 'profile' : profilesMatch ? 'profiles' : requestsMatch ? 'requests' : profileDetailMatch ? 'profile-detail' : detailMatch ? 'detail' : 'feed',
     profileDetailId: profileDetailMatch ? decodeURIComponent(profileDetailMatch[1]) : '',
     detailActorUid: detailMatch ? decodeURIComponent(detailMatch[1]) : '',
     detailGameId: detailMatch ? Number(detailMatch[2]) : 0,
@@ -440,6 +442,27 @@ export function useSocialViewModel() {
   }, [friendships]);
 
   const pendingIncomingCount = friendships.incoming.length;
+
+  // Vista de solicitud para la bandeja: enriquece nombre/foto desde el directorio cuando el doc no los trae aún
+  // (p. ej. una petición ENVIADA no tiene los datos del destinatario hasta que acepta). Directorio ya cargado → gratis.
+  const enrichFriendRequest = useCallback((view: FriendshipView) => {
+    const dir = socialDirectory.find((entry) => entry.id === view.otherUid);
+    return {
+      docId: view.docId,
+      otherUid: view.otherUid,
+      name: view.otherName || dir?.displayName || SOCIAL_UI.requests.unknownUser,
+      photo: view.otherPhoto || dir?.photoURL || '',
+    };
+  }, [socialDirectory]);
+
+  const incomingRequests = useMemo(
+    () => friendships.incoming.map(enrichFriendRequest),
+    [friendships.incoming, enrichFriendRequest],
+  );
+  const outgoingRequests = useMemo(
+    () => friendships.outgoing.map(enrichFriendRequest),
+    [friendships.outgoing, enrichFriendRequest],
+  );
 
   const completedGames = useMemo(() => {
     const map = new Map<number, string>();
@@ -1714,6 +1737,8 @@ export function useSocialViewModel() {
     loadingFriendships,
     friendshipBusyUid,
     pendingIncomingCount,
+    incomingRequests,
+    outgoingRequests,
     relationshipWith,
     refreshFriendships,
     handleAddOrAcceptFriend,

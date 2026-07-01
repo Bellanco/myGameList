@@ -9,6 +9,7 @@ import { SocialDetailScreen } from './socialhub/SocialDetailScreen';
 import { SocialProfileDetailScreen } from './socialhub/SocialProfileDetailScreen';
 import { SocialProfilesScreen } from './socialhub/SocialProfilesScreen';
 import { SocialFeedScreen } from './socialhub/SocialFeedScreen';
+import { SocialRequestsScreen } from './socialhub/SocialRequestsScreen';
 
 /**
  * Hub social - Fase 1.
@@ -99,6 +100,14 @@ export const SocialHub = memo(function SocialHub({
     handleSaveProfile,
     handleSignOut,
     primaryGatewayCta,
+    pendingIncomingCount,
+    incomingRequests,
+    outgoingRequests,
+    loadingFriendships,
+    friendshipBusyUid,
+    handleAddOrAcceptFriend,
+    handleRejectFriendRequest,
+    handleCancelFriendRequest,
   } = useSocialViewModel();
 
   if (loading) {
@@ -179,6 +188,23 @@ export const SocialHub = memo(function SocialHub({
         />
       );
     }
+    if (activePanel === 'requests') {
+      return (
+        <SocialRequestsScreen
+          SOCIAL_UI={SOCIAL_UI}
+          incomingRequests={incomingRequests}
+          outgoingRequests={outgoingRequests}
+          loading={loadingFriendships}
+          busyUid={friendshipBusyUid}
+          onAccept={handleAddOrAcceptFriend}
+          onReject={handleRejectFriendRequest}
+          onCancel={handleCancelFriendRequest}
+          onBack={() => navigate('/social')}
+          status={status}
+          statusKind={statusKind}
+        />
+      );
+    }
     if (activePanel === 'profiles') {
       return (
         <SocialProfilesScreen
@@ -221,6 +247,8 @@ export const SocialHub = memo(function SocialHub({
         }}
         onOpenProfiles={() => navigate('/social/profiles')}
         onOpenOwnProfile={openOwnProfileDetail}
+        onOpenRequests={() => navigate('/social/requests')}
+        pendingIncomingCount={pendingIncomingCount}
         groupedFeedItems={groupedFeedItems}
         feedItems={feedItems}
         hasMoreFeed={hasMoreFeed}

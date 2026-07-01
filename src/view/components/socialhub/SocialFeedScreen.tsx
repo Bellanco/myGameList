@@ -18,6 +18,8 @@ export function SocialFeedScreen({
   openProfileDetail,
   onOpenProfiles,
   onOpenOwnProfile,
+  onOpenRequests,
+  pendingIncomingCount,
   groupedFeedItems,
   feedItems,
   hasMoreFeed,
@@ -40,6 +42,8 @@ export function SocialFeedScreen({
   openProfileDetail: (id: string) => void;
   onOpenProfiles: () => void;
   onOpenOwnProfile: () => void;
+  onOpenRequests: () => void;
+  pendingIncomingCount: number;
   groupedFeedItems: any[];
   feedItems: any[];
   hasMoreFeed: boolean;
@@ -82,6 +86,18 @@ export function SocialFeedScreen({
             <button className="btn btn-secondary btn-accent" type="button" onClick={onOpenProfiles}>
               <Icon name="bottom-hub" />
               {SOCIAL_UI.feed.openProfiles}
+            </button>
+            <button
+              className="btn btn-secondary hub-requests-btn"
+              type="button"
+              onClick={onOpenRequests}
+              aria-label={SOCIAL_UI.feed.openRequestsAria(pendingIncomingCount)}
+            >
+              <Icon name="plus" />
+              {SOCIAL_UI.feed.openRequests}
+              {pendingIncomingCount > 0 ? (
+                <span className="hub-requests-badge" aria-hidden="true">{pendingIncomingCount}</span>
+              ) : null}
             </button>
           </div>
           <div className="hub-screen-actions-right">
