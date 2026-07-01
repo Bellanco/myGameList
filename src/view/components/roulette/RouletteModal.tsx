@@ -311,12 +311,18 @@ export function RouletteModal({ open, onClose, title, candidates, weight, tag, r
                       ) : null}
                     </div>
                   ) : (
-                    <div className={`rl-ghost ${phase === 'spinning' ? 'is-spinning' : ''}`.trim()} aria-hidden="true">
+                    <button
+                      type="button"
+                      className={`rl-ghost ${phase === 'spinning' ? 'is-spinning' : ''}`.trim()}
+                      onClick={spin}
+                      disabled={phase === 'spinning'}
+                      aria-label="Girar la ruleta"
+                    >
                       <Icon name="dice-d20" className="ui-icon rl-ghost-icon" />
-                      <p className="rl-ghost-text">
+                      <span className="rl-ghost-text">
                         {phase === 'spinning' ? 'Eligiendo…' : 'Tu próximo juego aparecerá aquí'}
-                      </p>
-                    </div>
+                      </span>
+                    </button>
                   )}
                 </div>
               </>
