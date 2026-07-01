@@ -126,6 +126,10 @@ export function SocialProfileDetailScreen({
   const [reviewVisibleCount, setReviewVisibleCount] = useState(REVIEW_PAGE_SIZE);
   const reviewSentinelRef = useRef<HTMLButtonElement>(null);
 
+  // Amistad: solo el perfil propio o el de un amigo muestra reseñas, ruleta y listados. Para no-amigos, "solo nombre
+  // y foto" + CTA de "Añadir amigo"; el resto queda bloqueado con un aviso.
+  const canSeeFullProfile = isOwnProfile || friendshipState === 'friends';
+
   // Reseñas tomadas del LISTADO de juegos del perfil (no del feed social): cada juego con texto de reseña en
   // cualquiera de sus listados. Ordenadas por fecha (_ts) de más reciente a más antigua; los perfiles ajenos
   // (index-only, sin _ts) conservan el orden del listado.
@@ -311,24 +315,28 @@ export function SocialProfileDetailScreen({
               <Icon name="arrow-back" />
               {SOCIAL_UI.feed.backToFeed}
             </button>
-            <button
-              className={`btn btn-secondary ${showReviews ? 'is-active' : ''}`.trim()}
-              type="button"
-              aria-pressed={showReviews}
-              onClick={() => setShowReviews((prev) => !prev)}
-            >
-              <Icon name={showReviews ? 'grav' : 'signature'} />
-              {showReviews ? SOCIAL_UI.feed.reviewsBack : SOCIAL_UI.feed.reviewsButton}
-            </button>
-            <button
-              className="btn btn-secondary"
-              type="button"
-              onClick={() => setRouletteOpen(true)}
-              disabled={!roulettePool.length}
-            >
-              <Icon name="dice-d20" />
-              Elige tu próximo juego
-            </button>
+            {canSeeFullProfile ? (
+              <>
+                <button
+                  className={`btn btn-secondary ${showReviews ? 'is-active' : ''}`.trim()}
+                  type="button"
+                  aria-pressed={showReviews}
+                  onClick={() => setShowReviews((prev) => !prev)}
+                >
+                  <Icon name={showReviews ? 'grav' : 'signature'} />
+                  {showReviews ? SOCIAL_UI.feed.reviewsBack : SOCIAL_UI.feed.reviewsButton}
+                </button>
+                <button
+                  className="btn btn-secondary"
+                  type="button"
+                  onClick={() => setRouletteOpen(true)}
+                  disabled={!roulettePool.length}
+                >
+                  <Icon name="dice-d20" />
+                  Elige tu próximo juego
+                </button>
+              </>
+            ) : null}
           </div>
           {isOwnProfile && onEditProfile ? (
             <div className="hub-screen-actions-right">
@@ -355,9 +363,18 @@ export function SocialProfileDetailScreen({
           <div className="hub-profile-hero">
             <HubAvatar name={activeProfileDetail.displayName} photoURL={activeProfileDetail.photoURL} sizeClass="hub-avatar-lg" />
             <h3 className="hub-profile-hero-name">{activeProfileDetail.displayName}</h3>
-            <p className="hub-profile-hero-meta">{SOCIAL_UI.feed.profileFavoritesCount(favoriteGames.length)}</p>
+            {canSeeFullProfile ? (
+              <p className="hub-profile-hero-meta">{SOCIAL_UI.feed.profileFavoritesCount(favoriteGames.length)}</p>
+            ) : null}
           </div>
-          {showReviews ? (
+          {!canSeeFullProfile ? (
+            <div className="hub-detail-metadata">
+              <div className="hub-metadata-section">
+                <strong>{SOCIAL_UI.feed.profileFriendsOnlyTitle}</strong>
+                <p>{SOCIAL_UI.feed.profileFriendsOnly}</p>
+              </div>
+            </div>
+          ) : showReviews ? (
             <div className="hub-detail-metadata">
               <div className="hub-metadata-section">
                 <strong>{SOCIAL_UI.feed.reviewsTitle}</strong>

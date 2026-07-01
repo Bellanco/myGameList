@@ -835,6 +835,9 @@ export function useSocialViewModel() {
     if (foreignGamesByProfile[targetProfileId]) return;
     const entry = socialDirectory.find((item) => item.id === targetProfileId);
     if (!entry || !entry.gamesGistId) return;
+    // Amistad: solo se baja el gist de listados COMPLETO de un amigo. Para no-amigos no se lee nada (ahorro de
+    // llamadas + coherente con "perfil no-amigo = solo nombre y foto"); el detalle muestra el CTA de "Añadir amigo".
+    if (relationshipWith(entry.uid) !== 'friends') return;
 
     let cancelled = false;
     const token = getSocialSyncConfig()?.token || mainSyncConfig?.token || null;
@@ -857,13 +860,14 @@ export function useSocialViewModel() {
     return () => {
       cancelled = true;
     };
-  }, [activePanel, activeDetailEvent, authUser, defaultSocialVisibility, foreignGamesByProfile, mainSyncConfig?.token, ownProfileId, profileDetailId, socialDirectory]);
+  }, [activePanel, activeDetailEvent, authUser, defaultSocialVisibility, foreignGamesByProfile, mainSyncConfig?.token, ownProfileId, profileDetailId, relationshipWith, socialDirectory]);
 
   // Bloque 4 — refresco manual del perfil abierto: invalida la caché de IndexedDB y relee del gist de listados.
   const refreshProfileDetail = useCallback(async () => {
     const profileId = profileDetailId;
     const entry = socialDirectory.find((item) => item.id === profileId);
     if (!entry || !entry.gamesGistId || isOwnProfileIdentity(profileId, authUser?.uid, ownProfileId)) return;
+    if (relationshipWith(entry.uid) !== 'friends') return; // solo se refrescan listados de amigos.
     try {
       setLoadingForeignProfile(true);
       await invalidateProfileGames(profileId);
@@ -880,7 +884,7 @@ export function useSocialViewModel() {
     } finally {
       setLoadingForeignProfile(false);
     }
-  }, [authUser, defaultSocialVisibility, mainSyncConfig?.token, ownProfileId, profileDetailId, setFeedback, socialDirectory]);
+  }, [authUser, defaultSocialVisibility, mainSyncConfig?.token, ownProfileId, profileDetailId, relationshipWith, setFeedback, socialDirectory]);
 
   const handleActivityItemKeyDown = useCallback(
     (event: ReactKeyboardEvent<HTMLElement>, entry: SocialActivityFeedItem) => {
