@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 
 // Mock de los repos que consume useSocialViewModel: aísla la UI de red/Firebase/IndexedDB.
@@ -55,6 +55,7 @@ const localMocks = vi.hoisted(() => ({
 vi.mock('../../src/model/repository/localRepository', () => localMocks);
 
 import { SocialHub } from '../../src/view/components/SocialHub';
+import { SOCIAL_UI } from '../../src/core/constants/labels';
 
 function renderHub(initialPath = '/social') {
   return render(
@@ -180,6 +181,39 @@ describe('SocialHub (componente, post-M3)', () => {
     expect(await screen.findByText('CelesteGame')).toBeInTheDocument();
     const readGistIds = gistMocks.readPublicSocialGistById.mock.calls.map((call) => call[0]);
     expect(readGistIds).toContain('ada-social');
+  });
+
+  it('dejar de ser amigos: pide confirmación y no borra hasta confirmar', async () => {
+    firebaseMocks.getCurrentSocialAuthUser.mockResolvedValue({ uid: 'me', email: 'me@x.com', displayName: 'Me', photoURL: null });
+    gistMocks.getSocialSyncConfig.mockReturnValue({ token: 'ghp_x', gistId: 'my-social', etag: null, lastRemoteUpdatedAt: 0 });
+    localMocks.loadLocalState.mockReturnValue({
+      c: [{ id: 1, name: 'Halo', _ts: 1, platforms: [], genres: [], steamDeck: false, review: '', score: 5, years: [], strengths: [], weaknesses: [], reasons: [], replayable: false, retry: false, hours: 0 }],
+      v: [], e: [], p: [], deleted: [], updatedAt: 0,
+    });
+    gistMocks.readSocialGist.mockResolvedValue({
+      data: {
+        profile: { name: 'Me', private: false, favoriteGames: [{ id: 1, name: 'Halo' }], visibility: { hiddenTabs: [], hideReplayable: false, hideRetry: false, hideGameTime: false, showPhoto: true }, sharedLists: {} },
+        recommendations: [], activity: [], posts: [], updatedAt: 0,
+      },
+      etag: null,
+    });
+    gistMocks.readPublicSocialGistById.mockResolvedValue({ profile: { name: 'Ada', favoriteGames: [], visibility: {} }, activity: [], posts: [] });
+    firebaseMocks.listSocialDirectory.mockResolvedValue([]);
+    const adaView = { docId: 'ada__me', otherUid: 'ada', otherName: 'Ada', otherPhoto: '', otherSocialGistId: 'ada-social', otherGamesGistId: 'ada-games', state: 'friends', createdAt: 0, updatedAt: 1 };
+    firebaseMocks.getMyFriendships.mockResolvedValue({ friends: [adaView], incoming: [], outgoing: [], byOtherUid: { ada: adaView } });
+
+    renderHub('/social/requests');
+
+    // El amigo aparece en la lista de gestión.
+    fireEvent.click(await screen.findByLabelText(SOCIAL_UI.friendship.removeAria('Ada')));
+
+    // Se abre la confirmación y NO se borra todavía.
+    expect(await screen.findByText(SOCIAL_UI.friendship.removeConfirmTitle('Ada'))).toBeInTheDocument();
+    expect(firebaseMocks.deleteFriendship).not.toHaveBeenCalled();
+
+    // Al confirmar, se borra con el docId canónico.
+    fireEvent.click(screen.getByRole('button', { name: SOCIAL_UI.friendship.removeConfirmAction }));
+    await waitFor(() => expect(firebaseMocks.deleteFriendship).toHaveBeenCalledWith({ myUid: 'me', docId: 'ada__me' }));
   });
 
   it('directorio: muestra a los NO-amigos (favoritos vacíos) para poder enviarles petición', async () => {

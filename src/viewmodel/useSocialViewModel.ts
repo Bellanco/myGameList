@@ -220,6 +220,8 @@ export function useSocialViewModel() {
   const [loadingFriendships, setLoadingFriendships] = useState(false);
   // uid del "otro" sobre el que hay una mutación en curso (para deshabilitar su botón sin bloquear el resto).
   const [friendshipBusyUid, setFriendshipBusyUid] = useState<string>('');
+  // Confirmación de "dejar de ser amigos" (evita pulsaciones accidentales): guarda a quién se va a eliminar.
+  const [removeFriendTarget, setRemoveFriendTarget] = useState<{ uid: string; name: string } | null>(null);
 
   const setFeedback = useCallback((kind: 'ok' | 'warn' | 'err', message: string, duration?: 'short' | 'long') => {
     setStatusKind(kind);
@@ -1667,10 +1669,23 @@ export function useSocialViewModel() {
     (otherUid: string) => deleteRelationship(otherUid, SOCIAL_UI.status.friendRequestRejected),
     [deleteRelationship],
   );
-  const handleRemoveFriend = useCallback(
-    (otherUid: string) => deleteRelationship(otherUid, SOCIAL_UI.status.friendRemoved),
-    [deleteRelationship],
-  );
+  // "Dejar de ser amigos": NO borra directamente; abre un diálogo de confirmación (evita pulsaciones sin querer).
+  const handleRemoveFriend = useCallback((otherUid: string) => {
+    const view = friendships.byOtherUid[otherUid];
+    const name = view ? enrichFriendRequest(view).name : SOCIAL_UI.requests.unknownUser;
+    setRemoveFriendTarget({ uid: otherUid, name });
+  }, [friendships, enrichFriendRequest]);
+
+  const cancelRemoveFriend = useCallback(() => setRemoveFriendTarget(null), []);
+
+  const confirmRemoveFriend = useCallback(async () => {
+    const target = removeFriendTarget;
+    if (!target) {
+      return;
+    }
+    setRemoveFriendTarget(null);
+    await deleteRelationship(target.uid, SOCIAL_UI.status.friendRemoved);
+  }, [removeFriendTarget, deleteRelationship]);
 
   const primaryGatewayCta = useMemo(() => {
     type GatewayCta = {
@@ -1807,5 +1822,8 @@ export function useSocialViewModel() {
     handleCancelFriendRequest,
     handleRejectFriendRequest,
     handleRemoveFriend,
+    removeFriendTarget,
+    confirmRemoveFriend,
+    cancelRemoveFriend,
   };
 }
