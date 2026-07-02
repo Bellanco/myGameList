@@ -266,6 +266,14 @@ export const SOCIAL_UI = {
   hubTitle: 'Espacio social',
   loading: 'Cargando espacio social...',
   screenAria: 'Social',
+  errorBoundary: {
+    sectionAria: 'Error del espacio social',
+    title: 'No se pudo mostrar el espacio social',
+    body: 'Ha ocurrido un problema al cargar esta sección. El resto de la aplicación sigue disponible.',
+    retry: 'Reintentar',
+    // El reintento está limitado (1 cada 15 min) para no reintentar de forma indiscriminada ante un fallo persistente.
+    retryIn: (minutes: number) => `Podrás reintentar en ${minutes} min`,
+  },
   cardSelector: {
     searchLabel: 'Buscar',
     searchAria: (title: string) => `${title} buscador`,
