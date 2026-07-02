@@ -3,6 +3,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 // Mock de la capa Firestore: getMyFriendships solo necesita initializeFirebaseServices + getDocs.
 const getDocsMock = vi.fn();
 const deleteDocMock = vi.fn();
+const updateDocMock = vi.fn((..._args: unknown[]) => Promise.resolve());
+const docMock = vi.fn((...args: unknown[]) => ({ id: String(args[2] ?? '') }));
 
 vi.mock('../../src/model/repository/firebaseClient', () => ({
   initializeFirebaseServices: vi.fn(async () => ({ firestore: {} })),
@@ -15,10 +17,10 @@ vi.mock('firebase/firestore', () => ({
   query: vi.fn((...args: unknown[]) => args),
   where: vi.fn((...args: unknown[]) => args),
   getDocs: (...args: unknown[]) => getDocsMock(...args),
-  doc: vi.fn(() => ({})),
+  doc: (...args: unknown[]) => docMock(...args),
   getDoc: vi.fn(),
   setDoc: vi.fn(),
-  updateDoc: vi.fn(),
+  updateDoc: (...args: unknown[]) => updateDocMock(...args),
   deleteDoc: (...args: unknown[]) => deleteDocMock(...args),
 }));
 
@@ -26,6 +28,7 @@ import {
   deleteFriendship,
   friendshipDocId,
   getMyFriendships,
+  healOwnFriendshipIdentity,
   invalidateMyFriendshipsCache,
 } from '../../src/model/repository/firebaseFriendshipRepository';
 
@@ -108,5 +111,38 @@ describe('deleteFriendship', () => {
   it('propaga errores reales (no permission-denied)', async () => {
     deleteDocMock.mockRejectedValueOnce(new Error('network'));
     await expect(deleteFriendship({ myUid: 'me', docId: 'me__x' })).rejects.toThrow('network');
+  });
+});
+
+describe('healOwnFriendshipIdentity', () => {
+  beforeEach(() => {
+    updateDocMock.mockClear();
+    getDocsMock.mockReset();
+    invalidateMyFriendshipsCache();
+  });
+
+  it('actualiza SOLO mis campos (requester* si soy requester, recipient* si soy recipient)', async () => {
+    getDocsMock.mockResolvedValueOnce(
+      snapshot([
+        { id: 'me__x', data: { users: ['me', 'x'], requester: 'me', recipient: 'x', status: 'accepted' } },
+        { id: 'y__me', data: { users: ['me', 'y'], requester: 'y', recipient: 'me', status: 'pending' } },
+      ]),
+    );
+
+    await healOwnFriendshipIdentity('me', { name: 'MiNick', photo: 'p', socialGistId: 'gs', gamesGistId: 'gg' });
+
+    expect(updateDocMock).toHaveBeenCalledTimes(2);
+    // Doc donde soy requester → solo campos requester*.
+    const findFields = (docId: string): Record<string, unknown> => {
+      const call = updateDocMock.mock.calls.find((c) => (c[0] as { id: string }).id === docId);
+      return (call?.[1] ?? {}) as Record<string, unknown>;
+    };
+    const requesterUpdate = findFields('me__x');
+    expect(requesterUpdate).toMatchObject({ requesterName: 'MiNick', requesterSocialGistId: 'gs' });
+    expect(Object.keys(requesterUpdate)).not.toContain('recipientName');
+    // Doc donde soy recipient → solo campos recipient*.
+    const recipientUpdate = findFields('y__me');
+    expect(recipientUpdate).toMatchObject({ recipientName: 'MiNick' });
+    expect(Object.keys(recipientUpdate)).not.toContain('requesterName');
   });
 });
