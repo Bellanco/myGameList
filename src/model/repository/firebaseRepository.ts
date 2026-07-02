@@ -392,3 +392,34 @@ export async function updateProfilePhoto(uid: string, photoURL: string): Promise
   );
   invalidateSocialDirectoryCache();
 }
+
+/**
+ * Auto-heal del directorio: sincroniza `profiles/{uid}.social.gistId` con el gist social ACTUAL del dueño (el de su
+ * sesión). El doc del directorio solo se reescribe al re-publicar el perfil, así que puede quedar anclado a un gist
+ * viejo si el usuario cambió de gist social sin volver a publicar → el feed de sus amigos leería un gist obsoleto.
+ * Este heal (best-effort, análogo a `healOwnFriendshipIdentity`) lo corrige sin intervención del usuario. Escribe
+ * SOLO si de verdad diverge (evita writes/invalidaciones de caché en cada apertura). Merge de `social` → preserva
+ * `gamesGistId`/`enabled`/etc. Devuelve true si aplicó una corrección.
+ */
+export async function healOwnDirectoryGist(uid: string, socialGistId: string, socialGistEtag: string | null = null): Promise<boolean> {
+  if (!uid || !socialGistId) return false;
+  const services = await initializeFirebaseServices();
+  if (!services) return false;
+  const ref = doc(services.firestore, 'profiles', uid);
+  const snap = await getDoc(ref);
+  // Sin doc → nada que sanear (se creará al publicar el perfil). Ya coincide → no se escribe.
+  if (!snap.exists()) return false;
+  const data = snap.data() as { social?: { gistId?: string } };
+  if (String(data.social?.gistId || '') === socialGistId) return false;
+  await setDoc(
+    ref,
+    {
+      uid,
+      social: { gistId: socialGistId, ...(socialGistEtag ? { etag: socialGistEtag } : {}) },
+      updatedAt: serverTimestamp(),
+    },
+    { merge: true },
+  );
+  invalidateSocialDirectoryCache();
+  return true;
+}
