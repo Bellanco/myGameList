@@ -73,6 +73,14 @@ type SocialRouteState = {
 };
 
 const FEED_PAGE_SIZE = 25;
+// Rango válido de JS Date en ms (±100M días). Un `updatedAt` fuera de rango (p. ej. gist de otro usuario con el
+// timestamp en micro/nanosegundos o corrupto) daría `new Date(x)` → Invalid Date, que el feed agrupado descarta.
+// Si esos ítems ordenan arriba y copan el corte visible, el feed quedaría EN BLANCO. Se saca del feed en origen.
+const MAX_VALID_DATE_MS = 8.64e15;
+function hasRenderableTimestamp(value: unknown): boolean {
+  const numeric = Number(value);
+  return Number.isFinite(numeric) && numeric > 0 && numeric <= MAX_VALID_DATE_MS;
+}
 // Cooldown mínimo entre refrescos forzados del directorio (botón "Actualizar feed").
 const FORCED_REFRESH_MIN_MS = 12_000;
 // Tope de perfiles del directorio social. Cada perfil = 1 lectura de gist social al refrescar; bajar este número
@@ -590,8 +598,10 @@ export function useSocialViewModel() {
   }, [activePanel, authUser, foreignGamesByProfile, localState, ownProfileId, profileDetailId, socialDirectory]);
 
   const activityFeedItems = useMemo(() => {
+    // `|| []`: una entrada de caché antigua/malformada podría no traer `activity` → flatMap+sort reventaría con
+    // "undefined.updatedAt" (pantalla en blanco). Se protege el acceso.
     return socialDirectory
-      .flatMap((entry) => entry.activity)
+      .flatMap((entry) => entry.activity || [])
       .sort((a, b) => b.updatedAt - a.updatedAt)
       .slice(0, 300);
   }, [socialDirectory]);
@@ -599,10 +609,13 @@ export function useSocialViewModel() {
   // F3 — feed COMBINADO: reseñas/recomendaciones (actividad) + publicaciones, mezcladas y ordenadas por fecha.
   // Los posts llevan `kind:'post'` para distinguirlos al renderizar; la actividad conserva su `type`.
   const feedItems = useMemo(() => {
-    const activity = socialDirectory.flatMap((entry) => entry.activity);
-    const posts = socialDirectory.flatMap((entry) => entry.posts).map((post) => ({ ...post, kind: 'post' as const }));
+    const activity = socialDirectory.flatMap((entry) => entry.activity || []);
+    const posts = socialDirectory.flatMap((entry) => entry.posts || []).map((post) => ({ ...post, kind: 'post' as const }));
 
     return [...activity, ...posts]
+      // Descarta ítems con timestamp inválido/fuera de rango ANTES de ordenar y cortar: si no, ordenarían arriba,
+      // coparían el corte visible y el agrupado por día los eliminaría, dejando el feed en blanco (ver bug del 2º amigo).
+      .filter((item) => hasRenderableTimestamp(item.updatedAt))
       .sort((a, b) => b.updatedAt - a.updatedAt)
       .slice(0, 300);
   }, [socialDirectory]);
