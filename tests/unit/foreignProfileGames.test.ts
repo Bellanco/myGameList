@@ -60,6 +60,25 @@ function stubGamesGist(tabData: TabData) {
   return fetchMock;
 }
 
+/**
+ * Stub que HONRA `If-None-Match`: devuelve 304 (sin cuerpo) cuando el ETag condicional coincide con el actual, y 200
+ * con contenido en caso contrario. Simula el comportamiento real de GitHub para probar la revalidación condicional.
+ */
+function stubGamesGistConditional(tabData: TabData, etag = 'W/"etag-1"') {
+  const fetchMock = vi.fn(async (_url: string, init?: RequestInit) => {
+    const headers = (init?.headers || {}) as Record<string, string>;
+    if (headers['If-None-Match'] === etag) {
+      return new Response(null, { status: 304, headers: { etag } });
+    }
+    return new Response(JSON.stringify({ files: { [GAMES_FILENAME]: { content: JSON.stringify(tabData) } } }), {
+      status: 200,
+      headers: { etag },
+    });
+  });
+  vi.stubGlobal('fetch', fetchMock);
+  return fetchMock;
+}
+
 async function clearProfileCache(): Promise<void> {
   const db = await openSharedDatabase();
   await new Promise<void>((resolve, reject) => {
@@ -78,10 +97,22 @@ afterEach(() => {
 describe('readForeignGamesGist', () => {
   it('lee y decodifica el gist de listados de otro usuario por su ID', async () => {
     stubGamesGist(makeTabData([makeGame()]));
-    const data = await readForeignGamesGist(TOKEN, GIST_ID);
-    expect(data.c).toHaveLength(1);
-    expect(data.c[0].id).toBe(7);
-    expect(data.c[0].strengths).toContain('Combate');
+    const res = await readForeignGamesGist(TOKEN, GIST_ID);
+    expect(res.data?.c).toHaveLength(1);
+    expect(res.data?.c[0].id).toBe(7);
+    expect(res.data?.c[0].strengths).toContain('Combate');
+    expect(res.etag).toBe('W/"etag-1"');
+    expect(res.notModified).toBeFalsy();
+  });
+
+  it('devuelve notModified (304) sin cuerpo cuando el ETag condicional coincide', async () => {
+    const fetchMock = stubGamesGistConditional(makeTabData([makeGame()]));
+    const res = await readForeignGamesGist(TOKEN, GIST_ID, 'W/"etag-1"');
+    expect(res.notModified).toBe(true);
+    expect(res.data).toBeNull();
+    expect(res.etag).toBe('W/"etag-1"');
+    const sentHeaders = (fetchMock.mock.calls[0][1]?.headers || {}) as Record<string, string>;
+    expect(sentHeaders['If-None-Match']).toBe('W/"etag-1"');
   });
 
   it('rechaza un gistId con formato inválido sin tocar la red', async () => {
@@ -179,21 +210,33 @@ describe('loadForeignProfileGames', () => {
     await clearProfileCache();
   });
 
-  it('lee de red la primera vez y luego sirve de caché sin volver a la red (<24h)', async () => {
-    const fetchMock = stubGamesGist(makeTabData([makeGame()]));
-    const now = 1_000_000_000_000;
-    const nowSpy = vi.spyOn(Date, 'now').mockReturnValue(now);
+  it('revalida con If-None-Match: un 304 sirve la caché sin re-descargar contenido', async () => {
+    const fetchMock = stubGamesGistConditional(makeTabData([makeGame()]));
+    vi.spyOn(Date, 'now').mockReturnValue(1_000_000_000_000);
 
     const first = await loadForeignProfileGames({ profileId: 'p1', gamesGistId: GIST_ID, token: TOKEN });
     expect(first?.c[0].id).toBe(7);
-    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock).toHaveBeenCalledTimes(1); // primera vez: 200 (sin ETag que enviar)
 
-    await loadForeignProfileGames({ profileId: 'p1', gamesGistId: GIST_ID, token: TOKEN });
-    expect(fetchMock).toHaveBeenCalledTimes(1); // cache hit, sin red
+    const second = await loadForeignProfileGames({ profileId: 'p1', gamesGistId: GIST_ID, token: TOKEN });
+    expect(second?.c[0].id).toBe(7); // servido de caché tras el 304
+    expect(fetchMock).toHaveBeenCalledTimes(2); // revalida (petición condicional), pero
+    const sentHeaders = (fetchMock.mock.calls[1][1]?.headers || {}) as Record<string, string>;
+    expect(sentHeaders['If-None-Match']).toBe('W/"etag-1"'); // ...con If-None-Match → 304, sin cuerpo
+  });
 
-    nowSpy.mockReturnValue(now + DAY_MS + 1);
-    await loadForeignProfileGames({ profileId: 'p1', gamesGistId: GIST_ID, token: TOKEN });
-    expect(fetchMock).toHaveBeenCalledTimes(2); // caché caducada → relee
+  it('BUG 2 fix: al cambiar el gist remoto, la revalidación trae el título nuevo (no rancio)', async () => {
+    // Primera carga: "Hollow Knight" con etag-1, cacheado.
+    stubGamesGistConditional(makeTabData([makeGame({ name: 'Hollow Knight' })]), 'W/"etag-1"');
+    vi.spyOn(Date, 'now').mockReturnValue(1_000_000_000_000);
+    const first = await loadForeignProfileGames({ profileId: 'p1', gamesGistId: GIST_ID, token: TOKEN });
+    expect(first?.c[0].name).toBe('Hollow Knight');
+
+    // El autor renombra el juego → su gist cambia de ETag y contenido. Dentro de la ventana de 24h, la caché vieja
+    // seguía "fresca", pero la revalidación condicional (If-None-Match: etag-1 ≠ etag-2) recibe 200 con lo nuevo.
+    stubGamesGistConditional(makeTabData([makeGame({ name: 'Hollow Knight: Silksong' })]), 'W/"etag-2"');
+    const second = await loadForeignProfileGames({ profileId: 'p1', gamesGistId: GIST_ID, token: TOKEN });
+    expect(second?.c[0].name).toBe('Hollow Knight: Silksong');
   });
 
   it('forceRefresh salta la caché aunque esté fresca', async () => {
