@@ -2,7 +2,7 @@ import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } fro
 import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import { DIALOG_MESSAGES, ROUTE_TAB, SYNC_BADGE_TEXT, SYNC_MESSAGES, TAB_ROUTE, TAB_TITLES } from './core/constants/labels';
 import { TAB_IDS, type TabData, type TabId } from './model/types/game';
-import { publishReviewActivity } from './model/repository/socialPublishRepository';
+import { publishReviewActivity, unpublishReviewActivity } from './model/repository/socialPublishRepository';
 import { normalizeData } from './model/repository/localRepository';
 import { IconSprite } from './view/components/IconSprite';
 import { FloatingControls } from './view/components/FloatingControls';
@@ -276,7 +276,16 @@ export default function App() {
 
     saveDraft(editingTab, nextDraft);
 
+    // Sin reseña publicable (pestaña 'próximos' o texto vacío): si el juego TENÍA una reseña, se retira del feed
+    // para no dejar una entrada fantasma con el título/snippet viejos (p. ej. al vaciar el texto y renombrar). Si
+    // nunca la tuvo, `unpublishReviewActivity` es un no-op (no reescribe el gist).
     if (editingTab === 'p' || !cleanReview) {
+      const hadPublishedReview = (previousGame?.review || '').trim().length > 0;
+      if (hadPublishedReview) {
+        void unpublishReviewActivity({ id: predictedId }).catch(() => {
+          notify('warn', 'Juego guardado, pero no se pudo actualizar la actividad social de reseña.');
+        });
+      }
       return;
     }
 
