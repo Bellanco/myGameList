@@ -10,6 +10,8 @@ import { SocialProfileDetailScreen } from './socialhub/SocialProfileDetailScreen
 import { SocialProfilesScreen } from './socialhub/SocialProfilesScreen';
 import { SocialFeedScreen } from './socialhub/SocialFeedScreen';
 import { SocialRequestsScreen } from './socialhub/SocialRequestsScreen';
+import { ConfirmModal } from '../modals/ConfirmModal';
+import { SocialErrorBoundary } from './socialhub/SocialErrorBoundary';
 
 /**
  * Hub social - Fase 1.
@@ -30,7 +32,7 @@ interface SocialHubProps {
   moveGameToCurrentByName?: (name: string) => void;
 }
 
-export const SocialHub = memo(function SocialHub({
+const SocialHubInner = memo(function SocialHubInner({
   onAddToProximos,
   hasGameInLists,
   moveGameToCurrentByName,
@@ -111,7 +113,21 @@ export const SocialHub = memo(function SocialHub({
     handleRejectFriendRequest,
     handleCancelFriendRequest,
     handleRemoveFriend,
+    removeFriendTarget,
+    confirmRemoveFriend,
+    cancelRemoveFriend,
   } = useSocialViewModel();
+
+  // Diálogo de confirmación de "Dejar de ser amigos" (se dispara desde el detalle y desde la bandeja).
+  const removeFriendDialog = (
+    <ConfirmModal
+      open={Boolean(removeFriendTarget)}
+      title={removeFriendTarget ? SOCIAL_UI.friendship.removeConfirmTitle(removeFriendTarget.name) : ''}
+      confirmLabel={SOCIAL_UI.friendship.removeConfirmAction}
+      onCancel={cancelRemoveFriend}
+      onConfirm={confirmRemoveFriend}
+    />
+  );
 
   if (loading) {
     return (
@@ -177,6 +193,7 @@ export const SocialHub = memo(function SocialHub({
     }
     if (activePanel === 'profile-detail') {
       return (
+        <>
         <SocialProfileDetailScreen
           SOCIAL_UI={SOCIAL_UI}
           activeProfileDetail={selectedProfileDetail}
@@ -194,25 +211,30 @@ export const SocialHub = memo(function SocialHub({
           onCancelFriendRequest={() => handleCancelFriendRequest((selectedProfileDetail as { uid?: string }).uid || '')}
           onRemoveFriend={() => handleRemoveFriend((selectedProfileDetail as { uid?: string }).uid || '')}
         />
+        {removeFriendDialog}
+        </>
       );
     }
     if (activePanel === 'requests') {
       return (
-        <SocialRequestsScreen
-          SOCIAL_UI={SOCIAL_UI}
-          incomingRequests={incomingRequests}
-          outgoingRequests={outgoingRequests}
-          friendsList={friendsList}
-          loading={loadingFriendships}
-          busyUid={friendshipBusyUid}
-          onAccept={handleAddOrAcceptFriend}
-          onReject={handleRejectFriendRequest}
-          onCancel={handleCancelFriendRequest}
-          onRemove={handleRemoveFriend}
-          onBack={() => navigate('/social')}
-          status={status}
-          statusKind={statusKind}
-        />
+        <>
+          <SocialRequestsScreen
+            SOCIAL_UI={SOCIAL_UI}
+            incomingRequests={incomingRequests}
+            outgoingRequests={outgoingRequests}
+            friendsList={friendsList}
+            loading={loadingFriendships}
+            busyUid={friendshipBusyUid}
+            onAccept={handleAddOrAcceptFriend}
+            onReject={handleRejectFriendRequest}
+            onCancel={handleCancelFriendRequest}
+            onRemove={handleRemoveFriend}
+            onBack={() => navigate('/social')}
+            status={status}
+            statusKind={statusKind}
+          />
+          {removeFriendDialog}
+        </>
       );
     }
     if (activePanel === 'profiles') {
@@ -383,3 +405,15 @@ export const SocialHub = memo(function SocialHub({
     </section>
   );
 });
+
+/**
+ * Hub social envuelto en su error boundary: si el render interno lanza (dato inesperado, etc.), se muestra un
+ * fallback con reintento limitado a 1 cada 15 min en vez de dejar la app en blanco. El resto de la app no se ve afectado.
+ */
+export function SocialHub(props: SocialHubProps = {}) {
+  return (
+    <SocialErrorBoundary>
+      <SocialHubInner {...props} />
+    </SocialErrorBoundary>
+  );
+}

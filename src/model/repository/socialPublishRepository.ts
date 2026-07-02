@@ -2,6 +2,7 @@
 // Extraído verbatim de App.tsx para sacar la lógica de negocio del componente. Lee el gist social, inserta/actualiza
 // la actividad (que se convierte a snippet index-only), reescribe el gist y asegura el perfil en Firestore.
 import { ensureProfileByEmail, getCurrentSocialAuthUser, resolveStableProfileId } from './firebaseRepository';
+import { invalidateCachedSocialDirectory } from './indexedDbRepository';
 import {
   getSyncConfig,
   getSocialSyncConfig,
@@ -59,6 +60,11 @@ export async function publishReviewActivity(input: { id: number; name: string; r
     lastRemoteUpdatedAt: now,
   });
 
+  // El feed sirve `gameName` desde la caché IndexedDB del directorio (TTL 30 min), una capa por delante de la caché
+  // de sesión del gist. Sin invalidarla, tras publicar/renombrar una reseña el propio autor seguiría viendo el
+  // título viejo en su feed hasta 30 min. La invalidamos para que el próximo montaje del hub relea el directorio.
+  await invalidateCachedSocialDirectory(socialConfig.gistId);
+
   await ensureProfileByEmail({
     user: authUser,
     socialGistId: socialConfig.gistId,
@@ -108,6 +114,9 @@ export async function unpublishReviewActivity(input: { id: number }): Promise<vo
     etag: writeResult.etag || socialConfig.etag || null,
     lastRemoteUpdatedAt: now,
   });
+
+  // Igual que al publicar: invalida la caché del directorio para que el feed no siga mostrando la reseña retirada.
+  await invalidateCachedSocialDirectory(socialConfig.gistId);
 }
 
 /**

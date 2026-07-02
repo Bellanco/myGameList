@@ -6,9 +6,11 @@ interface ConfirmModalProps {
   title: string;
   onCancel: () => void;
   onConfirm: () => void;
+  /** Texto del botón de confirmación. Por defecto "Eliminar" (borrado de juego). */
+  confirmLabel?: string;
 }
 
-export const ConfirmModal = memo(function ConfirmModal({ open, title, onCancel, onConfirm }: ConfirmModalProps) {
+export const ConfirmModal = memo(function ConfirmModal({ open, title, onCancel, onConfirm, confirmLabel = 'Eliminar' }: ConfirmModalProps) {
   // A11y-1: `showModal()` (no el atributo `open`) → focus trap, restauración de foco, `::backdrop` y Esc → onCancel.
   const dialogRef = useNativeDialog(open, onCancel);
 
@@ -22,7 +24,7 @@ export const ConfirmModal = memo(function ConfirmModal({ open, title, onCancel, 
               Cancelar
             </button>
             <button className="btn btn-danger" type="button" onClick={onConfirm}>
-              Eliminar
+              {confirmLabel}
             </button>
           </div>
         </div>

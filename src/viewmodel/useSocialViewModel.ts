@@ -73,6 +73,14 @@ type SocialRouteState = {
 };
 
 const FEED_PAGE_SIZE = 25;
+// Rango válido de JS Date en ms (±100M días). Un `updatedAt` fuera de rango (p. ej. gist de otro usuario con el
+// timestamp en micro/nanosegundos o corrupto) daría `new Date(x)` → Invalid Date, que el feed agrupado descarta.
+// Si esos ítems ordenan arriba y copan el corte visible, el feed quedaría EN BLANCO. Se saca del feed en origen.
+const MAX_VALID_DATE_MS = 8.64e15;
+function hasRenderableTimestamp(value: unknown): boolean {
+  const numeric = Number(value);
+  return Number.isFinite(numeric) && numeric > 0 && numeric <= MAX_VALID_DATE_MS;
+}
 // Cooldown mínimo entre refrescos forzados del directorio (botón "Actualizar feed").
 const FORCED_REFRESH_MIN_MS = 12_000;
 // Tope de perfiles del directorio social. Cada perfil = 1 lectura de gist social al refrescar; bajar este número
@@ -218,8 +226,14 @@ export function useSocialViewModel() {
   // Amistad (aceptación mutua). Todo el estado sale de UNA query `array-contains` (cacheada en el repositorio).
   const [friendships, setFriendships] = useState<MyFriendships>({ friends: [], incoming: [], outgoing: [], byOtherUid: {} });
   const [loadingFriendships, setLoadingFriendships] = useState(false);
+  // ¿Se ha resuelto ya el estado de amistad al menos una vez? El feed solo-amigos lee gists SOLO de `friendships.friends`;
+  // si el directorio se hidratara (y cacheara) ANTES de conocer a los amigos, cachearía a los amigos como index-only
+  // (sin actividad) y el feed quedaría en blanco hasta invalidar la caché. Se espera a esta resolución antes de hidratar.
+  const [friendshipsResolved, setFriendshipsResolved] = useState(false);
   // uid del "otro" sobre el que hay una mutación en curso (para deshabilitar su botón sin bloquear el resto).
   const [friendshipBusyUid, setFriendshipBusyUid] = useState<string>('');
+  // Confirmación de "dejar de ser amigos" (evita pulsaciones accidentales): guarda a quién se va a eliminar.
+  const [removeFriendTarget, setRemoveFriendTarget] = useState<{ uid: string; name: string } | null>(null);
 
   const setFeedback = useCallback((kind: 'ok' | 'warn' | 'err', message: string, duration?: 'short' | 'long') => {
     setStatusKind(kind);
@@ -416,6 +430,7 @@ export function useSocialViewModel() {
     const uid = authUser?.uid;
     if (!uid) {
       setFriendships({ friends: [], incoming: [], outgoing: [], byOtherUid: {} });
+      setFriendshipsResolved(true);
       return;
     }
     try {
@@ -426,6 +441,8 @@ export function useSocialViewModel() {
       /* best-effort: sin amistad el resto del social sigue usable. */
     } finally {
       setLoadingFriendships(false);
+      // Marca resuelto SIEMPRE (incluso si Firestore falló): degrada a feed sin amigos en vez de bloquearlo para siempre.
+      setFriendshipsResolved(true);
     }
   }, [authUser?.uid]);
 
@@ -588,8 +605,10 @@ export function useSocialViewModel() {
   }, [activePanel, authUser, foreignGamesByProfile, localState, ownProfileId, profileDetailId, socialDirectory]);
 
   const activityFeedItems = useMemo(() => {
+    // `|| []`: una entrada de caché antigua/malformada podría no traer `activity` → flatMap+sort reventaría con
+    // "undefined.updatedAt" (pantalla en blanco). Se protege el acceso.
     return socialDirectory
-      .flatMap((entry) => entry.activity)
+      .flatMap((entry) => entry.activity || [])
       .sort((a, b) => b.updatedAt - a.updatedAt)
       .slice(0, 300);
   }, [socialDirectory]);
@@ -597,10 +616,13 @@ export function useSocialViewModel() {
   // F3 — feed COMBINADO: reseñas/recomendaciones (actividad) + publicaciones, mezcladas y ordenadas por fecha.
   // Los posts llevan `kind:'post'` para distinguirlos al renderizar; la actividad conserva su `type`.
   const feedItems = useMemo(() => {
-    const activity = socialDirectory.flatMap((entry) => entry.activity);
-    const posts = socialDirectory.flatMap((entry) => entry.posts).map((post) => ({ ...post, kind: 'post' as const }));
+    const activity = socialDirectory.flatMap((entry) => entry.activity || []);
+    const posts = socialDirectory.flatMap((entry) => entry.posts || []).map((post) => ({ ...post, kind: 'post' as const }));
 
     return [...activity, ...posts]
+      // Descarta ítems con timestamp inválido/fuera de rango ANTES de ordenar y cortar: si no, ordenarían arriba,
+      // coparían el corte visible y el agrupado por día los eliminaría, dejando el feed en blanco (ver bug del 2º amigo).
+      .filter((item) => hasRenderableTimestamp(item.updatedAt))
       .sort((a, b) => b.updatedAt - a.updatedAt)
       .slice(0, 300);
   }, [socialDirectory]);
@@ -1174,7 +1196,9 @@ export function useSocialViewModel() {
   }, [hydrateSocialProfile]);
 
   const hydrateSocialDirectory = useCallback(async (forceRefresh = false) => {
-    if (!showSocialSpace || activePanel === 'profile' || profileEditorLocked || !authUser || !socialCfgGistId) {
+    // `!friendshipsResolved`: NO hidratar (ni cachear) hasta conocer a los amigos. Si no, el feed solo-amigos cachearía
+    // el directorio sin actividad de amigos (carrera de arranque) y quedaría en blanco hasta invalidar la caché.
+    if (!showSocialSpace || activePanel === 'profile' || profileEditorLocked || !authUser || !socialCfgGistId || !friendshipsResolved) {
       return;
     }
 
@@ -1355,7 +1379,7 @@ export function useSocialViewModel() {
     } finally {
       setLoadingDirectory(false);
     }
-  }, [activePanel, authUser, defaultSocialVisibility, friendships.friends, mainSyncConfig?.token, profileEditorLocked, setFeedback, showSocialSpace, socialCfgGistId, showPhoto]);
+  }, [activePanel, authUser, defaultSocialVisibility, friendships.friends, friendshipsResolved, mainSyncConfig?.token, profileEditorLocked, setFeedback, showSocialSpace, socialCfgGistId, showPhoto]);
 
   // F3 — publica una publicación de texto libre y refresca el feed (definido tras hydrateSocialDirectory para evitar TDZ).
   const handlePublishPost = useCallback(async () => {
@@ -1667,10 +1691,23 @@ export function useSocialViewModel() {
     (otherUid: string) => deleteRelationship(otherUid, SOCIAL_UI.status.friendRequestRejected),
     [deleteRelationship],
   );
-  const handleRemoveFriend = useCallback(
-    (otherUid: string) => deleteRelationship(otherUid, SOCIAL_UI.status.friendRemoved),
-    [deleteRelationship],
-  );
+  // "Dejar de ser amigos": NO borra directamente; abre un diálogo de confirmación (evita pulsaciones sin querer).
+  const handleRemoveFriend = useCallback((otherUid: string) => {
+    const view = friendships.byOtherUid[otherUid];
+    const name = view ? enrichFriendRequest(view).name : SOCIAL_UI.requests.unknownUser;
+    setRemoveFriendTarget({ uid: otherUid, name });
+  }, [friendships, enrichFriendRequest]);
+
+  const cancelRemoveFriend = useCallback(() => setRemoveFriendTarget(null), []);
+
+  const confirmRemoveFriend = useCallback(async () => {
+    const target = removeFriendTarget;
+    if (!target) {
+      return;
+    }
+    setRemoveFriendTarget(null);
+    await deleteRelationship(target.uid, SOCIAL_UI.status.friendRemoved);
+  }, [removeFriendTarget, deleteRelationship]);
 
   const primaryGatewayCta = useMemo(() => {
     type GatewayCta = {
@@ -1807,5 +1844,8 @@ export function useSocialViewModel() {
     handleCancelFriendRequest,
     handleRejectFriendRequest,
     handleRemoveFriend,
+    removeFriendTarget,
+    confirmRemoveFriend,
+    cancelRemoveFriend,
   };
 }
