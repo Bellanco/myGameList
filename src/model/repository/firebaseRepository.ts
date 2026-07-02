@@ -40,6 +40,7 @@ export {
   deleteFriendship,
   friendshipDocId,
   getMyFriendships,
+  healOwnFriendshipIdentity,
   invalidateMyFriendshipsCache,
   readFriendship,
   sendFriendRequest,
