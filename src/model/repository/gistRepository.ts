@@ -592,14 +592,38 @@ function normalizePostItems(items: unknown): SocialPostEntry[] {
     .slice(0, 100);
 }
 
+/**
+ * Colapsa entradas de actividad duplicadas por `(gameId, type)` conservando la de `updatedAt` MAYOR. Dentro de UN
+ * gist social (un único actor) el par `(gameId, type)` identifica una sola reseña/recomendación, así que las dos
+ * entradas que puede dejar la transición de identidad uid→profileId (claves DISTINTAS, mismo juego) se funden en la
+ * más reciente. Evita tarjetas duplicadas —una con el título viejo— en el lector, y las depura al reescribir.
+ */
+function dedupeActivityByGame(items: SocialActivityEntry[]): SocialActivityEntry[] {
+  const byGame = new Map<string, SocialActivityEntry>();
+  for (const entry of items) {
+    const gameKey = `${entry.gameId}:${entry.type}`;
+    const current = byGame.get(gameKey);
+    if (!current || entry.updatedAt > current.updatedAt) {
+      byGame.set(gameKey, entry);
+    }
+  }
+  return [...byGame.values()];
+}
+
 function mergeLegacyActivity(
   normalizedActivity: SocialActivityEntry[],
   recommendations: SocialRecommendationEntry[],
 ): SocialActivityEntry[] {
   const map = new Map<string, SocialActivityEntry>();
 
+  // Para claves repetidas conserva la de `updatedAt` MAYOR. Antes se hacía `map.set` sin comparar sobre una lista
+  // ordenada de más nuevo a más viejo, por lo que la ÚLTIMA asignación (la más antigua) ganaba y fijaba el título
+  // viejo (BUG: el orden por updatedAt ocultaba la entrada actualizada).
   normalizedActivity.forEach((entry) => {
-    map.set(entry.key, entry);
+    const current = map.get(entry.key);
+    if (!current || entry.updatedAt > current.updatedAt) {
+      map.set(entry.key, entry);
+    }
   });
 
   recommendations.forEach((recommendation) => {
@@ -624,7 +648,7 @@ function mergeLegacyActivity(
     map.set(key, candidate);
   });
 
-  return [...map.values()]
+  return dedupeActivityByGame([...map.values()])
     .sort((a, b) => b.updatedAt - a.updatedAt)
     .slice(0, 320);
 }
