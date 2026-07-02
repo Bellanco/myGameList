@@ -39,10 +39,12 @@ export async function publishReviewActivity(input: { id: number; name: string; r
   const profileId = await resolveStableProfileId(authUser.uid);
   const migratedData = remapSocialActorIds(socialRead.data, { [authUser.uid]: profileId });
 
+  // PRIVACIDAD: el nombre público en la actividad es el NICK del perfil social (del gist), NUNCA el nombre real de Google.
+  const socialNick = String(socialRead.data.profile.name || '').trim();
   const now = Date.now();
   const nextPayload = upsertReviewActivity(migratedData, {
     actorProfileId: profileId,
-    actorName: authUser.displayName || authUser.email,
+    actorName: socialNick,
     gameId: input.id,
     gameName: input.name,
     reviewText: input.review, // audit-allow: upsertReviewActivity lo convierte a snippet (no se publica el review completo)
@@ -71,7 +73,7 @@ export async function publishReviewActivity(input: { id: number; name: string; r
     gamesGistId: mainSyncConfig?.gistId || '',
     githubToken: mainSyncConfig?.token || socialConfig.token, // audit-allow: ensureProfileByEmail lo cifra en privateConfig (B1)
     socialGistEtag: writeResult.etag || socialConfig.etag || null,
-    preferredName: authUser.displayName || authUser.email,
+    preferredName: socialNick,
   });
 }
 
@@ -144,10 +146,12 @@ export async function publishPost(input: { text: string }): Promise<void> {
   const profileId = await resolveStableProfileId(authUser.uid);
   const migratedData = remapSocialActorIds(socialRead.data, { [authUser.uid]: profileId });
 
+  // PRIVACIDAD: el nombre público del post es el NICK del perfil social (del gist), NUNCA el nombre real de Google.
+  const socialNick = String(socialRead.data.profile.name || '').trim();
   const now = Date.now();
   const nextPayload = upsertPost(migratedData, {
     authorProfileId: profileId,
-    authorName: authUser.displayName || authUser.email,
+    authorName: socialNick,
     text: input.text,
     timestamp: now,
   });
@@ -168,6 +172,6 @@ export async function publishPost(input: { text: string }): Promise<void> {
     gamesGistId: mainSyncConfig?.gistId || '',
     githubToken: mainSyncConfig?.token || socialConfig.token, // audit-allow: ensureProfileByEmail lo cifra en privateConfig (B1)
     socialGistEtag: writeResult.etag || socialConfig.etag || null,
-    preferredName: authUser.displayName || authUser.email,
+    preferredName: socialNick,
   });
 }

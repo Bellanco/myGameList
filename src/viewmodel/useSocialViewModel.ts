@@ -454,6 +454,24 @@ export function useSocialViewModel() {
     void refreshFriendships();
   }, [showSocialSpace, authUser?.uid, refreshFriendships]);
 
+  // PRIVACIDAD (saneo al abrir social): una vez por sesión, cuando el nick ya está hidratado, propaga mi nick actual a
+  // mis docs de amistad ya existentes (que pudieron guardar un nombre antiguo/real antes del arreglo). Se espera a que
+  // el nick esté cargado (`profileName` no vacío) para NO sanear con vacío.
+  const friendshipHealedRef = useRef(false);
+  useEffect(() => {
+    if (friendshipHealedRef.current) return;
+    if (!showSocialSpace || !authUser?.uid || !socialCfgGistId) return;
+    const nick = profileName.trim();
+    if (!nick) return;
+    friendshipHealedRef.current = true;
+    void healOwnFriendshipIdentity(authUser.uid, {
+      name: nick,
+      photo: showPhoto && authUser.photoURL ? authUser.photoURL : '',
+      socialGistId: socialCfgGistId,
+      gamesGistId: mainSyncConfig?.gistId || '',
+    });
+  }, [showSocialSpace, authUser?.uid, authUser?.photoURL, socialCfgGistId, profileName, showPhoto, mainSyncConfig?.gistId]);
+
   // Tras un cambio de amistad (aceptar/eliminar), el conjunto de amigos cambia y con él la actividad que debe salir
   // en el feed. Se invalida la caché del directorio (feed solo-amigos) y se refresca la amistad; el efecto que
   // depende de `friendships.friends` rehidrata el directorio releyendo los gists de los amigos actuales.

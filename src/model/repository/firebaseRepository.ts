@@ -292,7 +292,9 @@ export async function ensureProfileByEmail(input: {
     }
   }
 
-  const profileName = (input.preferredName || input.user.displayName || cleanEmail).trim();
+  // PRIVACIDAD: el displayName público es el NICK del perfil social (`preferredName`); si no llega, se PRESERVA el
+  // existente (que ya era el nick). NUNCA se cae al nombre real de Google (`input.user.displayName`) ni al email.
+  const profileName = (input.preferredName || existing?.displayName || '').trim();
   const targetId = existing?.id || input.user.uid;
   const gamesGistId = String(input.gamesGistId || '');
   const githubToken = String(input.githubToken || '');
