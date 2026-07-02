@@ -1257,6 +1257,15 @@ export function useSocialViewModel() {
       // Los no-amigos quedan index-only (nombre/foto del directorio Firestore), sin lectura de gist → gran ahorro de
       // llamadas. Como el feed deriva su actividad de estas entradas, mostrar solo la de amigos es automático.
       const friendUids = new Set(friendships.friends.map((friend) => friend.otherUid));
+      // Para un AMIGO, el `otherSocialGistId` del doc de amistad es la fuente FIABLE de su gist social: se sanea en
+      // cada apertura del hub (healOwnFriendshipIdentity), mientras que el `social.gistId` del directorio Firestore
+      // solo se reescribe al re-publicar el perfil y puede quedar anclado a un gist viejo/vacío. Si divergen, leer el
+      // del directorio hace que sus reseñas nunca aparezcan en el feed (bug del amigo con perfil sin re-publicar).
+      const friendSocialGistByUid = new Map(
+        friendships.friends
+          .filter((friend) => friend.otherSocialGistId)
+          .map((friend) => [friend.otherUid, friend.otherSocialGistId] as const),
+      );
 
       // Escalabilidad (>30 amigos): el directorio de descubrimiento está capado a SOCIAL_DIRECTORY_LIMIT y solo lista
       // perfiles con `social.enabled`. Para que NINGÚN amigo desaparezca del feed / detalle / gestión por caer fuera
@@ -1283,6 +1292,10 @@ export function useSocialViewModel() {
         async (entry) => {
           const isOwnEntry = entry.socialGistId === socialCfgGistId;
           const isFriend = friendUids.has(entry.uid);
+          // Amigo: usa su gist social saneado desde la amistad (si difiere del del directorio, este último puede estar
+          // obsoleto). No-amigo/propio: se respeta el del directorio/config.
+          const friendSocialGistId = isFriend ? friendSocialGistByUid.get(entry.uid) : undefined;
+          const effectiveSocialGistId = friendSocialGistId || entry.socialGistId;
           if (!isOwnEntry && !isFriend) {
             // No-amigo: index-only, sin leer su gist. Solo nombre/foto (Firestore); sin actividad/posts/favoritos.
             return {
@@ -1302,7 +1315,7 @@ export function useSocialViewModel() {
             };
           }
           try {
-            const socialData = await readPublicSocialGistById(entry.socialGistId, socialConfig?.token || null);
+            const socialData = await readPublicSocialGistById(effectiveSocialGistId, socialConfig?.token || null);
             // Foto: prioridad al gist (con su visibilidad); si no la trae, se usa la del directorio de Firestore
             // (`entry.photoURL`) SIEMPRE QUE el usuario no la tenga desactivada. Esto propaga la foto de quienes
             // tienen el gist antiguo (sin photoURL) sin esperar a que reentren. Para uno mismo, fallback a la sesión.
@@ -1332,7 +1345,7 @@ export function useSocialViewModel() {
                   updatedAt,
                   profileId: entry.id,
                   profileDisplayName: socialData.profile.name || entry.displayName || 'Usuario',
-                  socialGistId: entry.socialGistId,
+                  socialGistId: effectiveSocialGistId,
                   photoURL: resolvedPhoto,
                 };
               })
@@ -1350,7 +1363,7 @@ export function useSocialViewModel() {
                   updatedAt,
                   profileId: entry.id,
                   profileDisplayName: socialData.profile.name || entry.displayName || 'Usuario',
-                  socialGistId: entry.socialGistId,
+                  socialGistId: effectiveSocialGistId,
                   photoURL: resolvedPhoto,
                 };
               })
@@ -1361,7 +1374,7 @@ export function useSocialViewModel() {
               uid: entry.uid,
               displayName: socialData.profile.name || entry.displayName || 'Usuario',
               email: entry.email,
-              socialGistId: entry.socialGistId,
+              socialGistId: effectiveSocialGistId,
               gamesGistId: entry.gamesGistId,
               photoURL: resolvedPhoto,
               favorites: socialData.profile.favoriteGames.map((game) => game.name).slice(0, 5),
@@ -1377,7 +1390,7 @@ export function useSocialViewModel() {
               uid: entry.uid,
               displayName: entry.displayName || 'Usuario',
               email: entry.email,
-              socialGistId: entry.socialGistId,
+              socialGistId: effectiveSocialGistId,
               gamesGistId: entry.gamesGistId,
               // Gist ilegible: usamos la foto del directorio de Firestore (best-effort) para no perderla.
               photoURL: entry.photoURL || (isOwnEntry ? ownPhotoURL : ''),

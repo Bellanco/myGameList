@@ -184,6 +184,49 @@ describe('SocialHub (componente, post-M3)', () => {
     expect(readGistIds).toContain('ada-social');
   });
 
+  it('feed: amigo PRESENTE en el directorio con gistId obsoleto → usa el gist saneado de la amistad', async () => {
+    firebaseMocks.getCurrentSocialAuthUser.mockResolvedValue({ uid: 'me', email: 'me@x.com', displayName: 'Me', photoURL: null });
+    gistMocks.getSocialSyncConfig.mockReturnValue({ token: 'ghp_x', gistId: 'my-social', etag: null, lastRemoteUpdatedAt: 0 });
+    localMocks.loadLocalState.mockReturnValue({
+      c: [{ id: 1, name: 'Halo', _ts: 1, platforms: [], genres: [], steamDeck: false, review: '', score: 5, years: [], strengths: [], weaknesses: [], reasons: [], replayable: false, retry: false, hours: 0 }],
+      v: [], e: [], p: [], deleted: [], updatedAt: 0,
+    });
+    gistMocks.readSocialGist.mockResolvedValue({
+      data: {
+        profile: { name: 'Me', private: false, favoriteGames: [{ id: 1, name: 'Halo' }], visibility: { hiddenTabs: [], hideReplayable: false, hideRetry: false, hideGameTime: false, showPhoto: true }, sharedLists: {} },
+        recommendations: [], activity: [], posts: [], updatedAt: 0,
+      },
+      etag: null,
+    });
+    // El directorio Firestore trae el gist OBSOLETO de Ada (no re-publicó su perfil); el doc de amistad trae el saneado.
+    firebaseMocks.listSocialDirectory.mockResolvedValue([
+      { id: 'ada', uid: 'ada', email: 'ada@x.com', displayName: 'Ada', photoURL: '', socialGistId: 'ada-social-OLD', gamesGistId: 'ada-games' },
+    ]);
+    firebaseMocks.getMyFriendships.mockResolvedValue({
+      friends: [{ docId: 'ada__me', otherUid: 'ada', otherName: 'Ada', otherPhoto: '', otherSocialGistId: 'ada-social-NEW', otherGamesGistId: 'ada-games', state: 'friends', createdAt: 0, updatedAt: 1 }],
+      incoming: [], outgoing: [], byOtherUid: {},
+    });
+    gistMocks.readPublicSocialGistById.mockImplementation(async (gistId?: string) => {
+      if (gistId === 'ada-social-NEW') {
+        return {
+          profile: { name: 'Ada', favoriteGames: [], visibility: { hiddenTabs: [], hideReplayable: false, hideRetry: false, hideGameTime: false, showPhoto: true } },
+          activity: [{ id: 'a1', key: 'k1', type: 'review', actorProfileId: 'ada', actorName: 'Ada', gameId: 9, gameName: 'CelesteGame', rating: 5, recommendationText: '', snippet: 'genial', createdAt: 1000, updatedAt: 2000 }],
+          posts: [],
+        };
+      }
+      // El gist obsoleto está vacío (como el 64d4d0f… real).
+      return { profile: { name: 'Ada', favoriteGames: [], visibility: {} }, activity: [], posts: [] };
+    });
+
+    renderHub('/social');
+
+    // Sus reseñas aparecen, leyendo el gist saneado de la amistad y NO el obsoleto del directorio.
+    expect(await screen.findByText('CelesteGame')).toBeInTheDocument();
+    const readGistIds = gistMocks.readPublicSocialGistById.mock.calls.map((call) => call[0]);
+    expect(readGistIds).toContain('ada-social-NEW');
+    expect(readGistIds).not.toContain('ada-social-OLD');
+  });
+
   it('feed: no cachea vacío si la amistad resuelve TARDE (carrera de arranque)', async () => {
     firebaseMocks.getCurrentSocialAuthUser.mockResolvedValue({ uid: 'me', email: 'me@x.com', displayName: 'Me', photoURL: null });
     gistMocks.getSocialSyncConfig.mockReturnValue({ token: 'ghp_x', gistId: 'my-social', etag: null, lastRemoteUpdatedAt: 0 });
