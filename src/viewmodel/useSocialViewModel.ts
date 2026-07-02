@@ -226,6 +226,10 @@ export function useSocialViewModel() {
   // Amistad (aceptación mutua). Todo el estado sale de UNA query `array-contains` (cacheada en el repositorio).
   const [friendships, setFriendships] = useState<MyFriendships>({ friends: [], incoming: [], outgoing: [], byOtherUid: {} });
   const [loadingFriendships, setLoadingFriendships] = useState(false);
+  // ¿Se ha resuelto ya el estado de amistad al menos una vez? El feed solo-amigos lee gists SOLO de `friendships.friends`;
+  // si el directorio se hidratara (y cacheara) ANTES de conocer a los amigos, cachearía a los amigos como index-only
+  // (sin actividad) y el feed quedaría en blanco hasta invalidar la caché. Se espera a esta resolución antes de hidratar.
+  const [friendshipsResolved, setFriendshipsResolved] = useState(false);
   // uid del "otro" sobre el que hay una mutación en curso (para deshabilitar su botón sin bloquear el resto).
   const [friendshipBusyUid, setFriendshipBusyUid] = useState<string>('');
   // Confirmación de "dejar de ser amigos" (evita pulsaciones accidentales): guarda a quién se va a eliminar.
@@ -426,6 +430,7 @@ export function useSocialViewModel() {
     const uid = authUser?.uid;
     if (!uid) {
       setFriendships({ friends: [], incoming: [], outgoing: [], byOtherUid: {} });
+      setFriendshipsResolved(true);
       return;
     }
     try {
@@ -436,6 +441,8 @@ export function useSocialViewModel() {
       /* best-effort: sin amistad el resto del social sigue usable. */
     } finally {
       setLoadingFriendships(false);
+      // Marca resuelto SIEMPRE (incluso si Firestore falló): degrada a feed sin amigos en vez de bloquearlo para siempre.
+      setFriendshipsResolved(true);
     }
   }, [authUser?.uid]);
 
@@ -1189,7 +1196,9 @@ export function useSocialViewModel() {
   }, [hydrateSocialProfile]);
 
   const hydrateSocialDirectory = useCallback(async (forceRefresh = false) => {
-    if (!showSocialSpace || activePanel === 'profile' || profileEditorLocked || !authUser || !socialCfgGistId) {
+    // `!friendshipsResolved`: NO hidratar (ni cachear) hasta conocer a los amigos. Si no, el feed solo-amigos cachearía
+    // el directorio sin actividad de amigos (carrera de arranque) y quedaría en blanco hasta invalidar la caché.
+    if (!showSocialSpace || activePanel === 'profile' || profileEditorLocked || !authUser || !socialCfgGistId || !friendshipsResolved) {
       return;
     }
 
@@ -1370,7 +1379,7 @@ export function useSocialViewModel() {
     } finally {
       setLoadingDirectory(false);
     }
-  }, [activePanel, authUser, defaultSocialVisibility, friendships.friends, mainSyncConfig?.token, profileEditorLocked, setFeedback, showSocialSpace, socialCfgGistId, showPhoto]);
+  }, [activePanel, authUser, defaultSocialVisibility, friendships.friends, friendshipsResolved, mainSyncConfig?.token, profileEditorLocked, setFeedback, showSocialSpace, socialCfgGistId, showPhoto]);
 
   // F3 — publica una publicación de texto libre y refresca el feed (definido tras hydrateSocialDirectory para evitar TDZ).
   const handlePublishPost = useCallback(async () => {

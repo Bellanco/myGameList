@@ -183,6 +183,40 @@ describe('SocialHub (componente, post-M3)', () => {
     expect(readGistIds).toContain('ada-social');
   });
 
+  it('feed: no cachea vacío si la amistad resuelve TARDE (carrera de arranque)', async () => {
+    firebaseMocks.getCurrentSocialAuthUser.mockResolvedValue({ uid: 'me', email: 'me@x.com', displayName: 'Me', photoURL: null });
+    gistMocks.getSocialSyncConfig.mockReturnValue({ token: 'ghp_x', gistId: 'my-social', etag: null, lastRemoteUpdatedAt: 0 });
+    localMocks.loadLocalState.mockReturnValue({
+      c: [{ id: 1, name: 'Halo', _ts: 1, platforms: [], genres: [], steamDeck: false, review: '', score: 5, years: [], strengths: [], weaknesses: [], reasons: [], replayable: false, retry: false, hours: 0 }],
+      v: [], e: [], p: [], deleted: [], updatedAt: 0,
+    });
+    gistMocks.readSocialGist.mockResolvedValue({
+      data: {
+        profile: { name: 'Me', private: false, favoriteGames: [{ id: 1, name: 'Halo' }], visibility: { hiddenTabs: [], hideReplayable: false, hideRetry: false, hideGameTime: false, showPhoto: true }, sharedLists: {} },
+        recommendations: [], activity: [], posts: [], updatedAt: 0,
+      },
+      etag: null,
+    });
+    firebaseMocks.listSocialDirectory.mockResolvedValue([
+      { id: 'ada', uid: 'ada', email: 'ada@x.com', displayName: 'Ada', photoURL: '', socialGistId: 'ada-social', gamesGistId: 'ada-games' },
+    ]);
+    // La amistad resuelve DESPUÉS de un tick: reproduce el arranque donde el hydrate podría correr antes.
+    const ada = { docId: 'ada__me', otherUid: 'ada', otherName: 'Ada', otherPhoto: '', otherSocialGistId: 'ada-social', otherGamesGistId: 'ada-games', state: 'friends', createdAt: 0, updatedAt: 1 };
+    firebaseMocks.getMyFriendships.mockImplementation(
+      () => new Promise((resolve) => setTimeout(() => resolve({ friends: [ada], incoming: [], outgoing: [], byOtherUid: { ada } }), 30)),
+    );
+    gistMocks.readPublicSocialGistById.mockResolvedValue({
+      profile: { name: 'Ada', favoriteGames: [], visibility: {} },
+      activity: [{ id: 'a1', key: 'k1', type: 'review', actorProfileId: 'ada', actorName: 'Ada', gameId: 9, gameName: 'CelesteGame', rating: 5, recommendationText: '', snippet: 'ok', createdAt: 1000, updatedAt: 2000 }],
+      posts: [],
+    });
+
+    renderHub('/social');
+
+    // El hydrate espera a que la amistad resuelva → la actividad del amigo aparece (no queda cacheado en blanco).
+    expect(await screen.findByText('CelesteGame')).toBeInTheDocument();
+  });
+
   it('feed robusto: un amigo con timestamp fuera de rango no rompe ni vacía el feed', async () => {
     firebaseMocks.getCurrentSocialAuthUser.mockResolvedValue({ uid: 'me', email: 'me@x.com', displayName: 'Me', photoURL: null });
     gistMocks.getSocialSyncConfig.mockReturnValue({ token: 'ghp_x', gistId: 'my-social', etag: null, lastRemoteUpdatedAt: 0 });
