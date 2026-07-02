@@ -287,8 +287,9 @@ export async function mirrorTabDataToGames(data: TabData, updatedAt: number): Pr
 
 // ---------------------------------------------------------------------------
 // Caché de las listas de juegos de OTROS perfiles (store `profileCache`, v3).
-// TTL de 1 día: dentro de la ventana se sirve de IndexedDB sin tocar la red (ahorra el rate-limit del token de
-// gist). El refresco manual fuerza la relectura (ver loadForeignProfileGames). keyPath = `profileId`.
+// TTL de 1 día: es el tope para servir la caché en modo degradado (sin token o ante fallo de red). En el camino
+// normal con token, loadForeignProfileGames revalida con If-None-Match (el ETag guardado aquí): un 304 no gasta
+// rate-limit y refresca la marca de tiempo; un 200 trae títulos nuevos. keyPath = `profileId`.
 // ---------------------------------------------------------------------------
 const PROFILE_GAMES_TTL_MS = 24 * 60 * 60 * 1000;
 
@@ -297,6 +298,7 @@ interface CachedProfileGames {
   gamesGistId: string; // invalida la caché si el perfil cambia de gist de listados
   cachedAt: number;
   games: TabData;
+  etag?: string | null; // ETag del gist para revalidación condicional (If-None-Match) — evita títulos rancios
 }
 
 /**
@@ -319,9 +321,31 @@ export async function getCachedProfileGames(
   }
 }
 
-export async function putCachedProfileGames(profileId: string, gamesGistId: string, games: TabData): Promise<void> {
+/**
+ * Devuelve el registro de caché COMPLETO (juegos + ETag + si sigue fresco) para el mismo `gamesGistId`, sin filtrar
+ * por caducidad. Se usa para la revalidación condicional: aunque haya caducado, su ETag sirve para pedir un 304.
+ */
+export async function getCachedProfileGamesEntry(
+  profileId: string,
+  gamesGistId: string,
+): Promise<{ games: TabData; etag: string | null; fresh: boolean } | null> {
   try {
-    await idbPut<CachedProfileGames>(PROFILE_CACHE_STORE, { profileId, gamesGistId, cachedAt: Date.now(), games });
+    const rec = await idbGet<CachedProfileGames>(PROFILE_CACHE_STORE, profileId);
+    if (!rec || rec.gamesGistId !== gamesGistId) return null;
+    return { games: rec.games, etag: rec.etag ?? null, fresh: Date.now() - rec.cachedAt < PROFILE_GAMES_TTL_MS };
+  } catch {
+    return null;
+  }
+}
+
+export async function putCachedProfileGames(
+  profileId: string,
+  gamesGistId: string,
+  games: TabData,
+  etag: string | null = null,
+): Promise<void> {
+  try {
+    await idbPut<CachedProfileGames>(PROFILE_CACHE_STORE, { profileId, gamesGistId, cachedAt: Date.now(), games, etag });
   } catch {
     // best-effort: que no se pueda escribir la caché no debe romper la carga del perfil.
   }

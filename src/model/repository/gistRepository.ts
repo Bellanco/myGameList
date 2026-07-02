@@ -1368,7 +1368,11 @@ export async function readGist(token: string, gistId: string, etag: string | nul
  * tubería que `readGist` (chunks/diccionarios v4 → `TabData`). De SOLO LECTURA: sin upgrade proactivo ni las
  * cachés de sesión del gist propio. El `readerToken` es opcional y solo mejora el rate-limit del lector.
  */
-export async function readForeignGamesGist(readerToken: string | null, gamesGistId: string): Promise<TabData> {
+export async function readForeignGamesGist(
+  readerToken: string | null,
+  gamesGistId: string,
+  etag: string | null = null,
+): Promise<{ data: TabData | null; etag: string | null; notModified?: boolean }> {
   if (!isValidGistId(gamesGistId)) {
     throw new Error('Gist ID inválido');
   }
@@ -1379,15 +1383,24 @@ export async function readForeignGamesGist(readerToken: string | null, gamesGist
   if (readerToken && isValidGithubToken(readerToken)) {
     headers['Authorization'] = getGithubAuthHeader(readerToken);
   }
+  // Revalidación condicional: si el llamador trae el ETag cacheado, GitHub responde 304 (sin cuerpo) cuando el gist
+  // no ha cambiado. Un 304 condicional NO cuenta contra el rate-limit del token, así que revalidar es barato.
+  if (etag) {
+    headers['If-None-Match'] = etag;
+  }
 
   const response = await githubFetch(`${GIST_API_BASE}/${gamesGistId}`, { headers });
+  // 304 no entra en `response.ok`: hay que interceptarlo ANTES del throw. Sin cuerpo → el llamador conserva su caché.
+  if (response.status === 304) {
+    return { data: null, etag: response.headers.get('etag') || etag, notModified: true };
+  }
   if (!response.ok) {
     throw await buildGithubError(response, 'Read foreign games gist failed');
   }
 
   const body = (await response.json()) as { files?: Record<string, { content: string } | undefined> };
   const result = await buildGistReadResponse(body, response.headers.get('etag'), readerToken);
-  return result.data as TabData;
+  return { data: result.data as TabData, etag: response.headers.get('etag') || null };
 }
 
 /**
