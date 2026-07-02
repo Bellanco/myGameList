@@ -48,6 +48,53 @@ export function SocialProfilesScreen({
   status: string;
   statusKind: string;
 }) {
+  // Dos listas: amigos y no-amigos. La relación sale de `relationshipWith` (los amigos ya tienen sus favoritos del gist).
+  const friendProfiles = filteredSocialDirectory.filter((entry) => relationshipWith(entry.uid) === 'friends');
+  const otherProfiles = filteredSocialDirectory.filter((entry) => relationshipWith(entry.uid) !== 'friends');
+
+  const renderProfileCard = (entry: any) => (
+    <article
+      key={entry.id}
+      className="hub-feed-card hub-feed-profile-item"
+      tabIndex={0}
+      aria-label={SOCIAL_UI.profiles.openProfileAria(entry.displayName)}
+      onClick={() => openProfileDetail(entry.id)}
+      onKeyDown={(event) => handleProfileCardKeyDown(event, entry.id)}
+    >
+      <header className="hub-feed-card-head">
+        <HubAvatar name={entry.displayName} photoURL={entry.photoURL} />
+        <div className="hub-feed-card-head-text">
+          <h3>{entry.displayName}</h3>
+        </div>
+      </header>
+      {entry.favorites.length ? (
+        <div className="hub-profile-fav-chips">
+          {entry.favorites.map((name: string, i: number) => (
+            <span key={`${name}-${i}`} className="hub-feed-game-chip">{name}</span>
+          ))}
+        </div>
+      ) : (
+        <p>{SOCIAL_UI.profiles.noFavorites}</p>
+      )}
+      {/* La acción de amistad no debe abrir el detalle: se detiene la propagación del click/teclado. */}
+      <div
+        className="hub-card-friend-action"
+        onClick={(event) => event.stopPropagation()}
+        onKeyDown={(event) => event.stopPropagation()}
+        role="presentation"
+      >
+        <FriendshipButton
+          SOCIAL_UI={SOCIAL_UI}
+          state={relationshipWith(entry.uid)}
+          name={entry.displayName}
+          busy={friendshipBusyUid === entry.uid}
+          onAddOrAccept={() => onAddOrAcceptFriend(entry.uid)}
+          onCancel={() => onCancelFriendRequest(entry.uid)}
+        />
+      </div>
+    </article>
+  );
+
   return (
     <section className="hub-hub hub-screen" aria-label={SOCIAL_UI.profiles.sectionAria}>
       <div className="hub-hub-card hub-screen-card hub-feed-card-shell">
@@ -81,66 +128,43 @@ export function SocialProfilesScreen({
           <p className="hub-feed-result-count">{SOCIAL_UI.profiles.resultCount(filteredSocialDirectory.length)}</p>
         </div>
 
-        <div className="fg">
-          {loadingDirectory ? <p>{SOCIAL_UI.profiles.loading}</p> : null}
-          {!loadingDirectory && filteredSocialDirectory.length === 0 ? (
-            <p>{SOCIAL_UI.profiles.empty}</p>
-          ) : null}
-          {!loadingDirectory && filteredSocialDirectory.length > 0 ? (
-            <div
-              ref={feedRowRef}
-              className={`hub-feed-row ${isFeedDragging ? 'is-dragging' : ''}`}
-              aria-label={SOCIAL_UI.profiles.rowAria}
-              role="group"
-              tabIndex={0}
-              onMouseDown={handleFeedRowMouseDown}
-              onKeyDown={handleFeedRowKeyDown}
-            >
-              {filteredSocialDirectory.map((entry) => (
-                <article
-                  key={entry.id}
-                  className="hub-feed-card hub-feed-profile-item"
-                  tabIndex={0}
-                  aria-label={SOCIAL_UI.profiles.openProfileAria(entry.displayName)}
-                  onClick={() => openProfileDetail(entry.id)}
-                  onKeyDown={(event) => handleProfileCardKeyDown(event, entry.id)}
-                >
-                  <header className="hub-feed-card-head">
-                    <HubAvatar name={entry.displayName} photoURL={entry.photoURL} />
-                    <div className="hub-feed-card-head-text">
-                      <h3>{entry.displayName}</h3>
-                    </div>
-                  </header>
-                  {entry.favorites.length ? (
-                    <div className="hub-profile-fav-chips">
-                      {entry.favorites.map((name: string, i: number) => (
-                        <span key={`${name}-${i}`} className="hub-feed-game-chip">{name}</span>
-                      ))}
-                    </div>
-                  ) : (
-                    <p>{SOCIAL_UI.profiles.noFavorites}</p>
-                  )}
-                  {/* La acción de amistad no debe abrir el detalle: se detiene la propagación del click/teclado. */}
-                  <div
-                    className="hub-card-friend-action"
-                    onClick={(event) => event.stopPropagation()}
-                    onKeyDown={(event) => event.stopPropagation()}
-                    role="presentation"
-                  >
-                    <FriendshipButton
-                      SOCIAL_UI={SOCIAL_UI}
-                      state={relationshipWith(entry.uid)}
-                      name={entry.displayName}
-                      busy={friendshipBusyUid === entry.uid}
-                      onAddOrAccept={() => onAddOrAcceptFriend(entry.uid)}
-                      onCancel={() => onCancelFriendRequest(entry.uid)}
-                    />
-                  </div>
-                </article>
-              ))}
+        {loadingDirectory ? (
+          <div className="fg"><p>{SOCIAL_UI.profiles.loading}</p></div>
+        ) : filteredSocialDirectory.length === 0 ? (
+          <div className="fg"><p>{SOCIAL_UI.profiles.empty}</p></div>
+        ) : (
+          <>
+            <div className="fg">
+              <span className="flabel">{SOCIAL_UI.profiles.friendsTitle}</span>
+              {friendProfiles.length === 0 ? (
+                <p>{SOCIAL_UI.profiles.friendsEmpty}</p>
+              ) : (
+                <div className="hub-feed-row" aria-label={SOCIAL_UI.profiles.friendsTitle} role="group">
+                  {friendProfiles.map(renderProfileCard)}
+                </div>
+              )}
             </div>
-          ) : null}
-        </div>
+
+            <div className="fg">
+              <span className="flabel">{SOCIAL_UI.profiles.othersTitle}</span>
+              {otherProfiles.length === 0 ? (
+                <p>{SOCIAL_UI.profiles.othersEmpty}</p>
+              ) : (
+                <div
+                  ref={feedRowRef}
+                  className={`hub-feed-row ${isFeedDragging ? 'is-dragging' : ''}`}
+                  aria-label={SOCIAL_UI.profiles.othersTitle}
+                  role="group"
+                  tabIndex={0}
+                  onMouseDown={handleFeedRowMouseDown}
+                  onKeyDown={handleFeedRowKeyDown}
+                >
+                  {otherProfiles.map(renderProfileCard)}
+                </div>
+              )}
+            </div>
+          </>
+        )}
         {status ? <div className={`sync-status-msg ${statusKind}`}>{status}</div> : null}
       </div>
     </section>

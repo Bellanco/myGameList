@@ -31,6 +31,7 @@ import {
   getCurrentSocialAuthUser,
   findSocialProfileByEmail,
   getMyFriendships,
+  healOwnFriendshipIdentity,
   listSocialDirectory,
   readFriendship,
   resolveStableProfileId,
@@ -453,6 +454,24 @@ export function useSocialViewModel() {
     void refreshFriendships();
   }, [showSocialSpace, authUser?.uid, refreshFriendships]);
 
+  // PRIVACIDAD (saneo al abrir social): una vez por sesión, cuando el nick ya está hidratado, propaga mi nick actual a
+  // mis docs de amistad ya existentes (que pudieron guardar un nombre antiguo/real antes del arreglo). Se espera a que
+  // el nick esté cargado (`profileName` no vacío) para NO sanear con vacío.
+  const friendshipHealedRef = useRef(false);
+  useEffect(() => {
+    if (friendshipHealedRef.current) return;
+    if (!showSocialSpace || !authUser?.uid || !socialCfgGistId) return;
+    const nick = profileName.trim();
+    if (!nick) return;
+    friendshipHealedRef.current = true;
+    void healOwnFriendshipIdentity(authUser.uid, {
+      name: nick,
+      photo: showPhoto && authUser.photoURL ? authUser.photoURL : '',
+      socialGistId: socialCfgGistId,
+      gamesGistId: mainSyncConfig?.gistId || '',
+    });
+  }, [showSocialSpace, authUser?.uid, authUser?.photoURL, socialCfgGistId, profileName, showPhoto, mainSyncConfig?.gistId]);
+
   // Tras un cambio de amistad (aceptar/eliminar), el conjunto de amigos cambia y con él la actividad que debe salir
   // en el feed. Se invalida la caché del directorio (feed solo-amigos) y se refresca la amistad; el efecto que
   // depende de `friendships.friends` rehidrata el directorio releyendo los gists de los amigos actuales.
@@ -478,7 +497,9 @@ export function useSocialViewModel() {
     return {
       docId: view.docId,
       otherUid: view.otherUid,
-      name: view.otherName || dir?.displayName || SOCIAL_UI.requests.unknownUser,
+      // PRIVACIDAD: el nombre sale SOLO del nick denormalizado en el doc de amistad (`otherName`). NO se cae al
+      // `displayName` del directorio (Firestore), que puede ser el nombre real; si no hay nick, "Usuario".
+      name: view.otherName || SOCIAL_UI.requests.unknownUser,
       photo: view.otherPhoto || dir?.photoURL || '',
     };
   }, [socialDirectory]);
@@ -1552,6 +1573,15 @@ export function useSocialViewModel() {
       setSocialCfgGistId(finalGistId);
       setSocialCfgEtag(finalEtag);
 
+      // PRIVACIDAD: propaga el nick recién guardado a mis docs de amistad ya existentes (que pudieron quedar con un
+      // nombre antiguo/real). Best-effort: no bloquea el guardado del perfil.
+      void healOwnFriendshipIdentity(authUser.uid, {
+        name: profile.name,
+        photo: showPhoto && authUser.photoURL ? authUser.photoURL : '',
+        socialGistId: finalGistId,
+        gamesGistId: mainSyncConfig?.gistId || '',
+      });
+
       setSocialPayload({
         activity: currentGistData.activity,
       });
@@ -1609,12 +1639,15 @@ export function useSocialViewModel() {
   }, [setFeedback]);
 
   // Datos que YO aporto al doc de amistad (denormalizados): mi nombre/foto (respetando showPhoto) + mis ids de gist.
+  // PRIVACIDAD: el nombre es SIEMPRE el nick del perfil social (`profileName`), NUNCA el nombre real de Google
+  // (`authUser.displayName`) ni el email. Si el nick aún no está cargado, se guarda vacío (el lector muestra un
+  // placeholder) en lugar de filtrar el nombre real.
   const buildFriendshipSelfInfo = useCallback((): FriendshipSelfInfo => ({
-    name: socialDisplayName,
+    name: profileName.trim(),
     photo: showPhoto && authUser?.photoURL ? authUser.photoURL : '',
     socialGistId: socialCfgGistId,
     gamesGistId: mainSyncConfig?.gistId || '',
-  }), [authUser?.photoURL, mainSyncConfig?.gistId, showPhoto, socialCfgGistId, socialDisplayName]);
+  }), [authUser?.photoURL, mainSyncConfig?.gistId, showPhoto, profileName, socialCfgGistId]);
 
   // "Añadir amigo" o "Aceptar": según el estado actual. Si no hay relación, envía petición; si el otro ya me pidió,
   // acepta. Maneja la carrera de petición simultánea (el doc canónico ya existe) releyendo y aceptando si procede.

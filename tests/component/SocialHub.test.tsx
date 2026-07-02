@@ -20,6 +20,7 @@ const firebaseMocks = vi.hoisted(() => ({
   deleteFriendship: vi.fn(async () => {}),
   sendFriendRequest: vi.fn(async () => {}),
   readFriendship: vi.fn(async (): Promise<any> => null),
+  healOwnFriendshipIdentity: vi.fn(async () => {}),
   invalidateMyFriendshipsCache: vi.fn(),
 }));
 
