@@ -268,6 +268,62 @@ export async function deleteFriendship(input: { myUid: string; docId: string }):
 }
 
 /**
+ * "Sanea" MI identidad denormalizada (nick/foto/ids) en TODOS mis docs de amistad. Se llama al guardar el perfil:
+ * si cambié el nick, mis amigos/solicitudes deben reflejar el nick nuevo (privacidad: nunca queda el nombre real
+ * de un doc antiguo). Solo toca MIS campos (requester* si soy requester, recipient* si soy recipient) → lo permite
+ * la regla `friendshipHealOwnFields`. Best-effort: los fallos por doc no rompen el guardado del perfil.
+ */
+export async function healOwnFriendshipIdentity(myUid: string, self: FriendshipSelfInfo): Promise<void> {
+  if (!myUid) {
+    return;
+  }
+  const services = await initializeFirebaseServices();
+  if (!services) {
+    return;
+  }
+
+  let snapshot;
+  try {
+    snapshot = await getDocs(
+      query(collection(services.firestore, 'friendships'), where('users', 'array-contains', myUid)),
+    );
+  } catch (error) {
+    if (isPermissionDeniedError(error)) {
+      return;
+    }
+    throw error;
+  }
+
+  const now = Date.now();
+  await Promise.all(
+    snapshot.docs.map((entry) => {
+      const data = entry.data() as Partial<FriendshipDoc>;
+      const amRequester = data.requester === myUid;
+      const fields = amRequester
+        ? {
+            requesterName: self.name,
+            requesterPhoto: self.photo,
+            requesterSocialGistId: self.socialGistId,
+            requesterGamesGistId: self.gamesGistId,
+            updatedAt: now,
+          }
+        : {
+            recipientName: self.name,
+            recipientPhoto: self.photo,
+            recipientSocialGistId: self.socialGistId,
+            recipientGamesGistId: self.gamesGistId,
+            updatedAt: now,
+          };
+      return updateDoc(doc(services.firestore, 'friendships', entry.id), fields).catch(() => {
+        /* best-effort por doc: no rompe el resto ni el guardado del perfil. */
+      });
+    }),
+  );
+
+  invalidateMyFriendshipsCache(myUid);
+}
+
+/**
  * Lee un doc de amistad concreto por par (best-effort). Útil para resolver una carrera de petición simultánea:
  * si al enviar ya existía, el llamador puede releer y decidir aceptar. Devuelve null si no existe o no es legible.
  */

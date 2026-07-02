@@ -416,6 +416,10 @@ export const SOCIAL_UI = {
     empty: 'No hay perfiles visibles todavía o faltan permisos de lectura en Firestore.',
     noFavorites: 'Sin favoritos publicados',
     openProfileAria: (name: string) => `Abrir perfil social de ${name}`,
+    friendsTitle: 'Amigos',
+    othersTitle: 'Descubrir',
+    friendsEmpty: 'Aún no tienes amigos. Envía una petición desde la lista de abajo.',
+    othersEmpty: 'No hay más perfiles que mostrar.',
   },
   requests: {
     sectionAria: 'Solicitudes de amistad',
