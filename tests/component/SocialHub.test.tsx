@@ -21,6 +21,7 @@ const firebaseMocks = vi.hoisted(() => ({
   sendFriendRequest: vi.fn(async () => {}),
   readFriendship: vi.fn(async (): Promise<any> => null),
   healOwnFriendshipIdentity: vi.fn(async () => {}),
+  healOwnDirectoryGist: vi.fn(async () => false),
   invalidateMyFriendshipsCache: vi.fn(),
 }));
 
@@ -99,6 +100,17 @@ describe('SocialHub (componente, post-M3)', () => {
       expect(firebaseMocks.getCurrentSocialAuthUser).toHaveBeenCalled();
       expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
     });
+  });
+
+  it('auto-heal directorio: al abrir social sincroniza mi profiles.social.gistId con el gist actual de mi sesión', async () => {
+    firebaseMocks.getCurrentSocialAuthUser.mockResolvedValue({ uid: 'uid-1', email: 'jaime@example.com', displayName: 'Jaime', photoURL: null });
+    gistMocks.getSocialSyncConfig.mockReturnValue({ token: 'ghp_x', gistId: 'social-gist', etag: null, lastRemoteUpdatedAt: 0 });
+
+    renderHub();
+
+    // El heal se dispara una vez con mi uid y el gist ACTUAL (no hay que re-publicar el perfil a mano).
+    await waitFor(() => expect(firebaseMocks.healOwnDirectoryGist).toHaveBeenCalled());
+    expect(firebaseMocks.healOwnDirectoryGist.mock.calls[0].slice(0, 2)).toEqual(['uid-1', 'social-gist']);
   });
 
   it('feed solo-amigos: muestra la actividad del amigo y NO lee el gist del no-amigo', async () => {

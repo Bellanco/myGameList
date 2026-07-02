@@ -31,6 +31,7 @@ import {
   getCurrentSocialAuthUser,
   findSocialProfileByEmail,
   getMyFriendships,
+  healOwnDirectoryGist,
   healOwnFriendshipIdentity,
   listSocialDirectory,
   readFriendship,
@@ -471,6 +472,18 @@ export function useSocialViewModel() {
       gamesGistId: mainSyncConfig?.gistId || '',
     });
   }, [showSocialSpace, authUser?.uid, authUser?.photoURL, socialCfgGistId, profileName, showPhoto, mainSyncConfig?.gistId]);
+
+  // AUTO-HEAL del directorio (una vez por sesión): si mi `profiles/{uid}.social.gistId` quedó anclado a un gist viejo
+  // (cambié de gist social sin re-publicar el perfil), lo sincroniza con el gist ACTUAL de mi sesión. Sin esto, el
+  // feed de mis amigos leería mi gist obsoleto y no vería mi actividad. Complementa al heal de amistades: corrige el
+  // problema en ORIGEN (Firestore) sin que el usuario tenga que hacer nada. Solo escribe si de verdad diverge.
+  const directoryHealedRef = useRef(false);
+  useEffect(() => {
+    if (directoryHealedRef.current) return;
+    if (!showSocialSpace || !authUser?.uid || !socialCfgGistId) return;
+    directoryHealedRef.current = true;
+    void healOwnDirectoryGist(authUser.uid, socialCfgGistId, socialCfgEtag);
+  }, [showSocialSpace, authUser?.uid, socialCfgGistId, socialCfgEtag]);
 
   // Tras un cambio de amistad (aceptar/eliminar), el conjunto de amigos cambia y con él la actividad que debe salir
   // en el feed. Se invalida la caché del directorio (feed solo-amigos) y se refresca la amistad; el efecto que
