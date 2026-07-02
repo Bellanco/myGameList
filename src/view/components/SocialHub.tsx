@@ -11,6 +11,7 @@ import { SocialProfilesScreen } from './socialhub/SocialProfilesScreen';
 import { SocialFeedScreen } from './socialhub/SocialFeedScreen';
 import { SocialRequestsScreen } from './socialhub/SocialRequestsScreen';
 import { ConfirmModal } from '../modals/ConfirmModal';
+import { SocialErrorBoundary } from './socialhub/SocialErrorBoundary';
 
 /**
  * Hub social - Fase 1.
@@ -31,7 +32,7 @@ interface SocialHubProps {
   moveGameToCurrentByName?: (name: string) => void;
 }
 
-export const SocialHub = memo(function SocialHub({
+const SocialHubInner = memo(function SocialHubInner({
   onAddToProximos,
   hasGameInLists,
   moveGameToCurrentByName,
@@ -404,3 +405,15 @@ export const SocialHub = memo(function SocialHub({
     </section>
   );
 });
+
+/**
+ * Hub social envuelto en su error boundary: si el render interno lanza (dato inesperado, etc.), se muestra un
+ * fallback con reintento limitado a 1 cada 15 min en vez de dejar la app en blanco. El resto de la app no se ve afectado.
+ */
+export function SocialHub(props: SocialHubProps = {}) {
+  return (
+    <SocialErrorBoundary>
+      <SocialHubInner {...props} />
+    </SocialErrorBoundary>
+  );
+}
