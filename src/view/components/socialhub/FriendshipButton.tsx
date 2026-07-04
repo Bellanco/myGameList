@@ -1,5 +1,6 @@
 import { Icon } from '../Icon';
 import type { RelationshipState } from '../../../model/types/social';
+import type { SocialUiLabels } from '../../../core/constants/labels';
 
 /**
  * Botón de relación de amistad, reutilizado en las tarjetas del directorio y en el detalle de perfil.
@@ -18,7 +19,7 @@ export function FriendshipButton({
   onCancel,
   onRemove,
 }: {
-  SOCIAL_UI: any;
+  SOCIAL_UI: SocialUiLabels;
   state: RelationshipState;
   name: string;
   busy?: boolean;

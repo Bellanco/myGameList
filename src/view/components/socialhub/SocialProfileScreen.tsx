@@ -1,13 +1,13 @@
 ﻿import { Icon } from '../Icon';
 import { SocialGameCardSelector } from '../SocialGameCardSelector';
 import { HubAvatar } from './HubAvatar';
+import type { SocialUiLabels } from '../../../core/constants/labels';
+import { HubStatus } from './HubStatus';
+import { HubBackButton } from './HubBackButton';
 import { MAX_SOCIAL_FAVORITES } from '../../../core/constants/uiConfig';
 import type { TabId } from '../../../model/types/game';
 
-/**
- * Pantalla de edición de perfil social.
- * Presentacional, sin lógica de negocio.
- */
+/** Pantalla de edición de perfil social. */
 export function SocialProfileScreen({
   SOCIAL_UI,
   profileName,
@@ -38,7 +38,7 @@ export function SocialProfileScreen({
   setShowPhoto,
   ownPhotoURL,
 }: {
-  SOCIAL_UI: any;
+  SOCIAL_UI: SocialUiLabels;
   profileName: string;
   setProfileName: (v: string) => void;
   favoriteSearch: string;
@@ -76,8 +76,8 @@ export function SocialProfileScreen({
     onHiddenTabsChange([...hiddenTabs, tab]);
   };
 
-  // mustCreateProfile: when true, user must create/save profile before accessing feed.
-  // onBack button will not be shown when mustCreateProfile is true (since hasCreatedProfile will be false)
+  // El botón "Atrás" solo se muestra cuando hasCreatedProfile es true: sin perfil creado, el usuario
+  // debe crearlo antes de poder volver al feed.
 
   return (
     <section className="hub-hub hub-screen" aria-label={SOCIAL_UI.profile.sectionAria}>
@@ -86,16 +86,17 @@ export function SocialProfileScreen({
           <div className="hub-hub-title-wrap">
             <Icon name="bottom-hub" className="hub-hub-icon" />
             <h2>{SOCIAL_UI.profile.title}</h2>
+            <span className={`hub-profile-sync-chip ${hasCreatedProfile ? 'is-synced' : ''}`}>
+              <span className="dot" aria-hidden="true" />
+              {hasCreatedProfile ? SOCIAL_UI.profile.statusSynced : SOCIAL_UI.profile.statusUnpublished}
+            </span>
           </div>
           <p>{SOCIAL_UI.profile.subtitle}</p>
         </header>
         <div className="hub-screen-actions hub-screen-actions-split" aria-label={SOCIAL_UI.profile.actionsAria}>
           <div className="hub-screen-actions-left">
             {hasCreatedProfile ? (
-              <button className="btn btn-secondary" type="button" onClick={onBack}>
-                <Icon name="arrow-back" />
-                {SOCIAL_UI.profile.toFeed}
-              </button>
+              <HubBackButton onBack={onBack} label={SOCIAL_UI.profile.toFeed} />
             ) : null}
             <button
               className="btn btn-primary"
@@ -115,26 +116,28 @@ export function SocialProfileScreen({
           </div>
         </div>
         <div className="hub-profile-layout">
-          <article className="hub-profile-block">
-            <header className="hub-feed-card-head">
-              <HubAvatar name={profileName || 'Usuario'} photoURL={showPhoto !== false ? ownPhotoURL : undefined} />
-              <div className="hub-feed-card-head-text">
-                <h3>{SOCIAL_UI.profile.identityTitle}</h3>
-              </div>
-            </header>
+          <article className="hub-profile-block hub-profile-identity">
+            <div className="hub-block-head">
+              <span className="hub-block-step">1</span>
+              <h3>{SOCIAL_UI.profile.identityTitle}</h3>
+            </div>
             <p>{SOCIAL_UI.profile.identityDescription}</p>
             <label className="flabel" htmlFor="hub-profile-name">{SOCIAL_UI.profile.nameLabel}</label>
-            <input
-              id="hub-profile-name"
-              className="finput"
-              type="text"
-              maxLength={60}
-              value={profileName}
-              onChange={(event) => setProfileName(event.target.value)}
-              placeholder={SOCIAL_UI.profile.namePlaceholder}
-            />
+            <div className="hub-identity-hero">
+              <HubAvatar name={profileName || 'Usuario'} photoURL={showPhoto !== false ? ownPhotoURL : undefined} />
+              <input
+                id="hub-profile-name"
+                className="finput"
+                type="text"
+                maxLength={60}
+                value={profileName}
+                onChange={(event) => setProfileName(event.target.value)}
+                placeholder={SOCIAL_UI.profile.namePlaceholder}
+              />
+            </div>
           </article>
           <SocialGameCardSelector
+            step={2}
             title={SOCIAL_UI.profile.favoritesTitle}
             description={SOCIAL_UI.profile.favoritesDescription}
             searchPlaceholder={SOCIAL_UI.profile.favoritesSearchPlaceholder}
@@ -147,7 +150,10 @@ export function SocialProfileScreen({
             onToggle={(id) => toggleGameInSet(id, favoriteGameIds, setFavoriteGameIds)}
           />
           <article className="hub-profile-block">
-            <h3>{SOCIAL_UI.profile.visibilityTitle}</h3>
+            <div className="hub-block-head">
+              <span className="hub-block-step">3</span>
+              <h3>{SOCIAL_UI.profile.visibilityTitle}</h3>
+            </div>
             <p>{SOCIAL_UI.profile.visibilityDescription}</p>
             
             <div className="visibility-section">
@@ -258,7 +264,7 @@ export function SocialProfileScreen({
           </article>
           {hydratingProfile ? <p>{SOCIAL_UI.profile.hydrating}</p> : null}
         </div>
-        {status ? <div className={`sync-status-msg ${statusKind}`}>{status}</div> : null}
+        <HubStatus status={status} statusKind={statusKind} />
       </div>
     </section>
   );

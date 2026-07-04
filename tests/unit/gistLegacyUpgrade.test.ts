@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { ENABLE_GAMES_WRAPPER_WRITE, readGist } from '../../src/model/repository/gistRepository';
+import { ENABLE_GAMES_COMPRESSION, ENABLE_GAMES_WRAPPER_WRITE, readGist } from '../../src/model/repository/gistRepository';
 import { buildGamesMainFile } from '../../src/model/repository/socialProjection';
+import { encodeCompressed } from '../../src/core/utils/gistCompression';
 import type { GameItem, TabData } from '../../src/model/types/game';
 
 // Regresión: el upgrade proactivo (wasLegacy) debe dispararse aunque el gist responda 304. Un dispositivo ya
@@ -30,9 +31,15 @@ const CURRENT_TABDATA: TabData = {
   deleted: [],
   updatedAt: 1000,
 };
-const CURRENT_CONTENT = ENABLE_GAMES_WRAPPER_WRITE
+const CURRENT_V4_OR_FLAT = ENABLE_GAMES_WRAPPER_WRITE
   ? JSON.stringify(buildGamesMainFile(CURRENT_TABDATA))
   : JSON.stringify(CURRENT_TABDATA);
+// "Ya actual" también contempla la compresión: con el flag ON, el formato destino es el sobre `enc` sobre el v4.
+async function currentContent(): Promise<string> {
+  return ENABLE_GAMES_COMPRESSION && ENABLE_GAMES_WRAPPER_WRITE
+    ? encodeCompressed('games', CURRENT_V4_OR_FLAT)
+    : CURRENT_V4_OR_FLAT;
+}
 
 /**
  * Mock que devuelve 304 cuando la petición trae `If-None-Match` (etag coincide) y el contenido completo cuando NO
@@ -86,7 +93,7 @@ describe('readGist — upgrade proactivo en 304', () => {
 
   it('ante un 304 con gist ya ACTUAL, relee una vez y devuelve notModified (sin reescritura espuria)', async () => {
     const gistId = 'cccc3333';
-    const fetchMock = stubGistWithEtagMatch(CURRENT_CONTENT);
+    const fetchMock = stubGistWithEtagMatch(await currentContent());
 
     const read = await readGist(TOKEN, gistId, 'W/"etag-1"');
 

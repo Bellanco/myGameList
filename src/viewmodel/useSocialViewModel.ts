@@ -167,7 +167,6 @@ export function useSocialViewModel() {
     gamesGistId: string;
     photoURL: string;
     favorites: string[];
-    recommendations: string[];
     activity: SocialActivityFeedItem[];
     posts: SocialPostFeedItem[];
     // Index-only (SocialSharedGame) para perfiles ajenos; para el perfil PROPIO se repuebla con GameItem completos.
@@ -206,7 +205,6 @@ export function useSocialViewModel() {
   const [feedVisibleCount, setFeedVisibleCount] = useState(FEED_PAGE_SIZE);
   const [composePostText, setComposePostText] = useState('');
   const [publishingPost, setPublishingPost] = useState(false);
-  const [socialPayload, setSocialPayload] = useState<{ activity: SocialActivityEntry[] }>({ activity: [] });
   const [hydratingProfile, setHydratingProfile] = useState(false);
   const [savingProfile, setSavingProfile] = useState(false);
   const [loadingDirectory, setLoadingDirectory] = useState(false);
@@ -675,27 +673,10 @@ export function useSocialViewModel() {
   }, [activePanel, activityFeedItems, detailActorUid, detailEventType, detailGameId]);
 
   /**
-   * Obtiene GameItem desde listas compartidas cargadas por gamesGistId.
-   * Mantiene fallback local para no romper eventos propios sin datos remotos.
+   * Obtiene un GameItem para un evento del feed. Para perfiles ajenos usa su lista bajada
+   * (`foreignGamesByProfile`, filtrada por su visibilidad); para el propio, fallback local.
    */
   const getGameItemById = useCallback((profileId: string, gameId: number) => {
-    const profileEntry = socialDirectory.find((entry) => entry.id === profileId);
-    if (profileEntry) {
-      const allShared = [
-        ...(profileEntry.sharedLists.c || []),
-        ...(profileEntry.sharedLists.v || []),
-        ...(profileEntry.sharedLists.e || []),
-        ...(profileEntry.sharedLists.p || []),
-      ];
-      const sharedMatch = allShared.find((game) => game.id === gameId);
-      if (sharedMatch) {
-        return {
-          ...sharedMatch,
-          _ts: 0,
-        };
-      }
-    }
-
     // P1: propiedad por identidad (uid/profileId), no por email.
     const isOwn = isOwnProfileIdentity(profileId, authUser?.uid, ownProfileId);
     if (!isOwn) {
@@ -717,7 +698,7 @@ export function useSocialViewModel() {
       ...localState.p,
     ];
     return allGames.find((game) => game.id === gameId) || null;
-  }, [authUser, foreignGamesByProfile, localState, ownProfileId, socialDirectory]);
+  }, [authUser, foreignGamesByProfile, localState, ownProfileId]);
 
   // Evita despublicar la misma reseña dos veces mientras la escritura está en vuelo (StrictMode / re-render).
   const orphanUnpublishInFlightRef = useRef<Set<number>>(new Set());
@@ -745,11 +726,7 @@ export function useSocialViewModel() {
     void unpublishReviewActivity({ id: gameId })
       .then(() => {
         if (cancelled) return;
-        // Quita la entrada del feed local (payload propio + entrada propia del directorio) para que desaparezca
-        // sin recargar, y vuelve al feed.
-        setSocialPayload((prev) => ({
-          activity: prev.activity.filter((entry) => !(entry.gameId === gameId && entry.type === 'review')),
-        }));
+        // Quita la entrada propia del directorio para que desaparezca del feed sin recargar, y vuelve al feed.
         setSocialDirectory((prev) =>
           prev.map((entry) =>
             entry.socialGistId === socialCfgGistId
@@ -783,9 +760,6 @@ export function useSocialViewModel() {
     return `${date.getDate()} de ${monthNames[date.getMonth()]}`;
   };
 
-  /**
-   * Agrupa las actividades por dÃ­a y retorna array con day headers.
-   */
   const groupedFeedItems = useMemo(() => {
     type FeedItem = (typeof feedItems)[number];
     const groups: Array<{
@@ -1052,7 +1026,7 @@ export function useSocialViewModel() {
         setShowSocialSpace(true);
         setFeedback('ok', SOCIAL_UI.status.signInAndLinked);
       } else {
-        // No hacer nada aquÃ­; el useEffect automÃ¡tico manejarÃ¡ la creación del gist
+        // No hacer nada aquí; el useEffect automático manejará la creación del gist
       }
     } catch (error) {
       setFeedback('err', error instanceof Error ? error.message : SOCIAL_UI.status.signInFailed);
@@ -1089,7 +1063,6 @@ export function useSocialViewModel() {
       setHideGameTime(cachedProfile.hideGameTime);
       setShowPhoto(cachedProfile.showPhoto);
       setHasCreatedProfile(cachedProfileExists);
-      setSocialPayload({ activity: cachedProfile.activity });
 
       const mustCreateCached = shouldRequireProfileCreation(cachedProfileExists, justSavedProfile);
       if (mustCreateCached) {
@@ -1158,9 +1131,6 @@ export function useSocialViewModel() {
       setHideGameTime(Boolean(profileVisibility.hideGameTime));
       setShowPhoto(profileVisibility.showPhoto !== false);
       setHasCreatedProfile(profileExists);
-      setSocialPayload({
-        activity: socialRead.data.activity,
-      });
 
       // Sembrar la caché para que la próxima navegación a social no relea el gist propio dentro de la ventana de TTL.
       void putCachedSocialProfile(socialCfgGistId, {
@@ -1320,7 +1290,6 @@ export function useSocialViewModel() {
               gamesGistId: entry.gamesGistId,
               photoURL: entry.photoURL || '',
               favorites: [],
-              recommendations: [],
               activity: [],
               posts: [],
               sharedLists: {},
@@ -1340,12 +1309,6 @@ export function useSocialViewModel() {
             // (plataformas/géneros) solo se ven para los juegos PROPIOS (fallback local en getGameItemById).
             const sharedLists: Partial<Record<TabId, SocialSharedGame[]>> = {};
 
-            const mergedRecommendations = socialData.activity
-              .filter((activityEntry) => activityEntry.type === 'recommendation')
-              .map((activityEntry) => activityEntry.gameName)
-              .filter((name) => Boolean(name && name.trim()))
-              .filter((name, index, arr) => arr.indexOf(name) === index)
-              .slice(0, 8);
             const activity = socialData.activity
               .map((activityEntry) => {
                 const now = Date.now();
@@ -1391,7 +1354,6 @@ export function useSocialViewModel() {
               gamesGistId: entry.gamesGistId,
               photoURL: resolvedPhoto,
               favorites: socialData.profile.favoriteGames.map((game) => game.name).slice(0, 5),
-              recommendations: mergedRecommendations,
               activity,
               posts,
               sharedLists,
@@ -1408,7 +1370,6 @@ export function useSocialViewModel() {
               // Gist ilegible: usamos la foto del directorio de Firestore (best-effort) para no perderla.
               photoURL: entry.photoURL || (isOwnEntry ? ownPhotoURL : ''),
               favorites: [],
-              recommendations: [],
               activity: [],
               posts: [],
               sharedLists: {},
@@ -1608,10 +1569,6 @@ export function useSocialViewModel() {
         gamesGistId: mainSyncConfig?.gistId || '',
       });
 
-      setSocialPayload({
-        activity: currentGistData.activity,
-      });
-
       // Refrescar la caché del perfil con lo recién guardado: evita releer el gist al volver a social y mantiene
       // la caché coherente con la edición.
       void putCachedSocialProfile(finalGistId, {
@@ -1654,7 +1611,6 @@ export function useSocialViewModel() {
     setFeedback,
     socialCfgEtag,
     socialCfgGistId,
-    socialPayload.activity,
   ]);
 
   const handleSignOut = useCallback(async () => {
@@ -1805,7 +1761,7 @@ export function useSocialViewModel() {
       } satisfies GatewayCta;
     }
 
-    // Paso 3: Gist social (si tenemos sesión pero no gist) - normalmente automÃ¡tico pero se puede forzar
+    // Paso 3: Gist social (si tenemos sesión pero no gist) - normalmente automático pero se puede forzar
     if (canConnectSocialGist) {
       return {
         icon: 'cloud-sync',

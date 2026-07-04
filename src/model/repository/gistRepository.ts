@@ -21,6 +21,7 @@ import {
   leanTabData,
 } from './socialProjection';
 import { mapWithConcurrency } from '../../core/utils/concurrency';
+import { decodeGistContent, encodeCompressed } from '../../core/utils/gistCompression';
 
 export {
   assertGistSizeWithinLimit,
@@ -58,6 +59,20 @@ const SOCIAL_GIST_FILENAME = 'myGameList.social.json';
 // Exportado para que los tests del formato v4 (gistWrite / gistV4Cutover) se salten solos cuando la
 // escritura v4 está apagada: documentan el comportamiento del cutover, no el plano de lanzamiento.
 export const ENABLE_GAMES_WRAPPER_WRITE = true;
+
+/**
+ * Compresión del gist de JUEGOS (gzip + base64 en un sobre versionado `{enc:'gzip+b64', payload}`). Con `true`, la
+ * ESCRITURA comprime el JSON v4 antes del PATCH (~70-75% menos, aleja el muro de 950 KB). La LECTURA ya sabe
+ * descomprimir en ESTA versión (`decodeGistContent`, retrocompatible con contenido plano) → activar en 2 pasos como
+ * el envoltorio v4: (1) desplegar con lectura activa y este flag en `false`; (2) cuando TODOS los dispositivos estén
+ * al día, poner `true`. Un cliente sin la lectura vería el `{enc:...}` como no-legible. Implica v4 (comprime el v4).
+ * Sigue OFF: la ESCRITURA comprimida es Fase 2. Ver .github/prompts/migration/GIST-COMPRESSION-PLAN.md.
+ */
+export const ENABLE_GAMES_COMPRESSION = false;
+
+// La compresión comprime el JSON v4, así que requiere el envoltorio activo. Si el wrapper está OFF, no se comprime
+// (evita comprimir TabData plano, que dispararía un auto-upgrade en bucle: plano→comprimido→sigue "no-v4").
+const COMPRESS_GAMES_WRITES = ENABLE_GAMES_COMPRESSION && ENABLE_GAMES_WRAPPER_WRITE;
 
 /**
  * A6 — Chunking del gist SOCIAL por `sharedLists` (la "lista pública" grande). Mismo contrato que el de juegos:
@@ -1280,7 +1295,8 @@ async function mergeOverflowGistChunks(anchor: unknown, token: string | null): P
         throw new Error(`Chunk ${chunkId} ausente en el gist de overflow ${overflowGistId} (lectura incompleta; se aborta)`);
       }
       try {
-        const chunkParsed = JSON.parse(content) as { games?: Record<string, unknown> };
+        const { content: plain } = await decodeGistContent(content); // Fase 1: descomprime si viene el sobre `enc`.
+        const chunkParsed = JSON.parse(plain) as { games?: Record<string, unknown> };
         Object.assign(mergedGames, chunkParsed.games || {});
       } catch {
         throw new Error(`Chunk ${chunkId} corrupto en el gist de overflow ${overflowGistId} (se aborta)`);
@@ -1290,12 +1306,70 @@ async function mergeOverflowGistChunks(anchor: unknown, token: string | null): P
   return { ...a, games: mergedGames };
 }
 
+/**
+ * ¿El gist remoto está en una forma VIEJA que conviene reescribir al DESTINO de escritura actual?
+ *  - destino comprimido (`ENABLE_GAMES_COMPRESSION`): cualquier gist NO comprimido, o no-v4 → reescribir.
+ *  - destino v4 (`ENABLE_GAMES_WRAPPER_WRITE`): no-v4 → reescribir (auto-upgrade a v4).
+ *  - destino plano: envoltorio o legacy → rebajar a plano.
+ * `wasCompressed` = el ancla venía en el sobre `{enc}`. `parsed` es el RAW ya descomprimido.
+ */
+function gamesGistWasLegacy(parsed: unknown, wasCompressed: boolean): boolean {
+  if (COMPRESS_GAMES_WRITES) {
+    return !wasCompressed || gamesGistNeedsUpgradeToWrapper(parsed);
+  }
+  return ENABLE_GAMES_WRAPPER_WRITE ? gamesGistNeedsUpgradeToWrapper(parsed) : gamesGistNeedsRewrite(parsed);
+}
+
+// Fase 2: envuelve el JSON del gist de juegos en el sobre comprimido si la escritura comprimida está activa; si no,
+// lo deja plano (byte-idéntico al camino actual). Se aplica a ancla y chunks JUSTO antes de la guarda de tamaño,
+// de modo que `assertGistSizeWithinLimit` mide el contenido YA comprimido.
+async function encodeGamesContent(json: string): Promise<string> {
+  return COMPRESS_GAMES_WRITES ? encodeCompressed('games', json) : json;
+}
+
+// Descomprime el `content` de cada fichero de un mapa (no-op sobre contenido plano) y conserva si venía comprimido.
+// Se usa para que las comparaciones de reescritura incremental (checksum de chunk, refs del ancla) operen sobre JSON
+// plano aunque el remoto esté comprimido, y para saber si el chunk remoto ya está en el formato de compresión destino.
+type DecodedRemoteFile = { content: string; wasCompressed: boolean };
+async function decodeFilesMap(
+  files: Record<string, { content?: string } | undefined>,
+): Promise<Record<string, DecodedRemoteFile | undefined>> {
+  const out: Record<string, DecodedRemoteFile | undefined> = {};
+  await Promise.all(
+    Object.entries(files).map(async ([name, file]) => {
+      const content = file?.content;
+      if (typeof content !== 'string') {
+        out[name] = undefined; // fichero sin contenido (p.ej. truncado): mantiene la clave para el barrido de obsoletos
+        return;
+      }
+      const decoded = await decodeGistContent(content);
+      out[name] = { content: decoded.content, wasCompressed: decoded.wasCompressed };
+    }),
+  );
+  return out;
+}
+
 async function buildGistReadResponse(
   body: { files?: Record<string, { content: string } | undefined> },
   etag: string | null,
   token: string | null,
 ): Promise<GistReadResponse> {
-  const raw = body.files?.[GIST_FILENAME]?.content;
+  // Fase 1: descomprime (si viene el sobre `enc`) el ancla y los chunks del MISMO gist ANTES de todo el pipeline,
+  // que opera sobre JSON plano (`assembleChunkedGames`/`unwrapGamesFile`/detectores `wasLegacy`). No-op si nada
+  // está comprimido (contenido plano se devuelve tal cual).
+  const decodedFiles: Record<string, { content: string }> = {};
+  let anchorWasCompressed = false;
+  await Promise.all(
+    Object.entries(body.files ?? {}).map(async ([name, file]) => {
+      const content = file?.content;
+      if (typeof content !== 'string') return;
+      const decoded = await decodeGistContent(content);
+      decodedFiles[name] = { content: decoded.content };
+      if (name === GIST_FILENAME) anchorWasCompressed = decoded.wasCompressed;
+    }),
+  );
+
+  const raw = decodedFiles[GIST_FILENAME]?.content;
 
   if (!raw) {
     throw new Error('Gist file not found');
@@ -1309,16 +1383,14 @@ async function buildGistReadResponse(
   }
 
   // E4: chunks de overflow en el MISMO gist (vienen en esta respuesta). No-op para gist plano/un solo fichero.
-  const sameGist = assembleChunkedGames(parsed, body.files);
+  const sameGist = assembleChunkedGames(parsed, decodedFiles);
   // Fase B: chunks de overflow en OTROS gists (`gistId` ≠ null) → fetch + merge (lanza si la lectura es incompleta).
   const assembled = await mergeOverflowGistChunks(sameGist, token);
 
   return {
     data: migrateData(unwrapGamesFile(assembled)),
     etag,
-    // El "viejo" depende del DESTINO de escritura: con el envoltorio v4 activado, "viejo" = no-v4 (se re-encoda);
-    // con escritura plana, "viejo" = envoltorio o legacy (se rebaja a plano). Así el auto-upgrade apunta al destino real.
-    wasLegacy: ENABLE_GAMES_WRAPPER_WRITE ? gamesGistNeedsUpgradeToWrapper(parsed) : gamesGistNeedsRewrite(parsed),
+    wasLegacy: gamesGistWasLegacy(parsed, anchorWasCompressed),
   };
 }
 
@@ -1516,17 +1588,19 @@ async function assignAndWriteOverflowGists(
     const batch = batches[i];
     const batchContents: Record<string, { content: string }> = {};
     for (const name of batch) {
-      const content = JSON.stringify({ ...chunkFiles[name], mainGistId });
+      const content = await encodeGamesContent(JSON.stringify({ ...chunkFiles[name], mainGistId }));
       assertGistSizeWithinLimit(content, `gist de overflow (${name})`);
       batchContents[name] = { content };
     }
     let overflowId = existingOverflowGistIds[i];
     if (overflowId) {
       // Reutiliza un gist de overflow existente: PATCH incremental (solo los chunks cuyo checksum cambió).
-      const cur = await readGistFilesById(token, overflowId);
+      const cur = await decodeFilesMap(await readGistFilesById(token, overflowId));
       const toPatch: Record<string, { content: string }> = {};
       for (const name of batch) {
-        if (chunkFileChecksum(cur[name]?.content) === chunkFiles[name].integrity.checksum) continue;
+        const remote = cur[name];
+        // Igual que en el gist principal: omitir solo si no cambió Y ya está en la compresión destino.
+        if (remote && chunkFileChecksum(remote.content) === chunkFiles[name].integrity.checksum && remote.wasCompressed === COMPRESS_GAMES_WRITES) continue;
         toPatch[name] = batchContents[name];
       }
       if (Object.keys(toPatch).length > 0) {
@@ -1579,12 +1653,13 @@ export async function writeGist(token: string, gistId: string, payload: TabData)
 
     // A7 (reescritura incremental) + B (reparto): lee el estado actual del gist principal UNA vez para (a) OMITIR
     // del PATCH los chunks sin cambios (checksum estable), (b) borrar obsoletos y (c) reutilizar gists de overflow.
-    let currentFiles: Record<string, { content?: string } | undefined> = {};
+    let currentFiles: Record<string, DecodedRemoteFile | undefined> = {};
     try {
       const current = await githubFetch(`${GIST_API_BASE}/${gistId}`, { headers });
       if (current.ok) {
         const currentBody = (await current.json()) as { files?: Record<string, { content?: string }> };
-        currentFiles = currentBody.files || {};
+        // Fase 2: descomprime el remoto para que checksum/refs del ancla comparen JSON plano contra lo que construimos.
+        currentFiles = await decodeFilesMap(currentBody.files || {});
       }
     } catch {
       // Sin estado actual: subimos el conjunto completo y no borramos nada.
@@ -1598,16 +1673,19 @@ export async function writeGist(token: string, gistId: string, payload: TabData)
 
     // El ancla se serializa DESPUÉS de fijar los `gistId` (manifiesto correcto) y se escribe en el gist principal
     // junto al PATCH de abajo — es decir, AL FINAL, cuando los chunks de overflow ya están persistidos.
-    const anchorContent = JSON.stringify(anchorFile);
+    const anchorContent = await encodeGamesContent(JSON.stringify(anchorFile));
     assertGistSizeWithinLimit(anchorContent, 'gist de juegos (ancla)');
     files[GIST_FILENAME] = { content: anchorContent };
 
     for (const name of mainChunkNames) {
       const file = chunkFiles[name];
-      const content = JSON.stringify({ ...file, mainGistId: gistId });
+      const content = await encodeGamesContent(JSON.stringify({ ...file, mainGistId: gistId }));
       assertGistSizeWithinLimit(content, `gist de juegos (${name})`);
-      if (chunkFileChecksum(currentFiles[name]?.content) === file.integrity.checksum) {
-        continue; // sin cambios respecto al remoto: no reenviar este chunk
+      // Omitir solo si el chunk no cambió Y su compresión remota ya coincide con el destino: así el flip a comprimido
+      // (o el revert a plano) reescribe también los chunks sin cambios, en vez de dejarlos en el formato viejo.
+      const remote = currentFiles[name];
+      if (remote && chunkFileChecksum(remote.content) === file.integrity.checksum && remote.wasCompressed === COMPRESS_GAMES_WRITES) {
+        continue; // sin cambios y misma compresión que el remoto: no reenviar este chunk
       }
       files[name] = { content };
     }

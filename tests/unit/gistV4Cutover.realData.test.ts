@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ENABLE_GAMES_WRAPPER_WRITE, readGist, writeGist } from '../../src/model/repository/gistRepository';
+import { decodeGistContent } from '../../src/core/utils/gistCompression';
 import type { GameItem, TabData } from '../../src/model/types/game';
 
 /**
@@ -108,8 +109,9 @@ describe.skipIf(!HAS_REAL_DATA || !ENABLE_GAMES_WRAPPER_WRITE)('Cutover v4 sobre
 
     // 2. La app reescribe en v4.
     await writeGist(TOKEN, GIST_ID, data1);
+    // Robusto al flag de compresión: se descomprime el ancla (sobre `enc`) antes de inspeccionar el formato v4.
     const anchor = JSON.parse(
-      (patchBodies[patchBodies.length - 1].files[GIST_FILENAME] as { content: string }).content,
+      (await decodeGistContent((patchBodies[patchBodies.length - 1].files[GIST_FILENAME] as { content: string }).content)).content,
     ) as Record<string, unknown>;
     expect(anchor.schemaVersion).toBe(4);
     expect(anchor.fileType).toBe('games-main');
@@ -137,9 +139,10 @@ describe.skipIf(!HAS_REAL_DATA || !ENABLE_GAMES_WRAPPER_WRITE)('Cutover v4 sobre
     // El checksum de integridad es función pura de los datos: dos escrituras del mismo estado v4
     // comparten checksum aunque los timestamps de generación difieran. (La decisión de "no PATCHear
     // en un sync sin cambios" vive en la máquina de sync, una capa por encima de writeGist.)
-    const checksumOf = () => {
+    // Robusto al flag de compresión: descomprime el ancla (sobre `enc`) antes de extraer el checksum de integridad.
+    const checksumOf = async () => {
       const anchor = JSON.parse(
-        (patchBodies[patchBodies.length - 1].files[GIST_FILENAME] as { content: string }).content,
+        (await decodeGistContent((patchBodies[patchBodies.length - 1].files[GIST_FILENAME] as { content: string }).content)).content,
       ) as { integrity?: { checksum?: string } };
       return anchor.integrity?.checksum;
     };
@@ -147,12 +150,12 @@ describe.skipIf(!HAS_REAL_DATA || !ENABLE_GAMES_WRAPPER_WRITE)('Cutover v4 sobre
     // Baseline = primera escritura YA derivada de v4 (la escritura del cutover legacy→v4 puede
     // serializar el diccionario en otro orden; lo que debe ser estable es el ciclo v4→v4).
     await writeGist(TOKEN, GIST_ID, read2.data as TabData);
-    const checksumA = checksumOf();
+    const checksumA = await checksumOf();
     expect(checksumA).toBeTruthy();
 
     const read3 = await readGist(TOKEN, GIST_ID);
     await writeGist(TOKEN, GIST_ID, read3.data as TabData);
-    expect(checksumOf(), 'el ciclo v4→v4 deriva (checksum inestable)').toBe(checksumA);
+    expect(await checksumOf(), 'el ciclo v4→v4 deriva (checksum inestable)').toBe(checksumA);
 
     // Y el dato decodificado tras esa reescritura sigue intacto (sin deriva acumulativa).
     const d2 = read2.data as TabData;

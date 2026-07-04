@@ -1,10 +1,10 @@
 import { Icon } from '../Icon';
 import { HubAvatar } from './HubAvatar';
+import type { SocialUiLabels } from '../../../core/constants/labels';
+import { HubStatus } from './HubStatus';
+import { HubBackButton } from './HubBackButton';
 
-/**
- * Bandeja de solicitudes de amistad (recibidas / enviadas).
- * Presentacional, sin lógica de negocio: recibe las listas ya enriquecidas y los handlers del ViewModel.
- */
+/** Bandeja de solicitudes de amistad (recibidas / enviadas). */
 type RequestView = { docId: string; otherUid: string; name: string; photo: string };
 
 export function SocialRequestsScreen({
@@ -22,7 +22,7 @@ export function SocialRequestsScreen({
   status,
   statusKind,
 }: {
-  SOCIAL_UI: any;
+  SOCIAL_UI: SocialUiLabels;
   incomingRequests: RequestView[];
   outgoingRequests: RequestView[];
   friendsList: RequestView[];
@@ -50,13 +50,24 @@ export function SocialRequestsScreen({
         </header>
 
         <div className="hub-screen-actions" aria-label={R.actionsAria}>
-          <button className="btn btn-secondary" type="button" onClick={onBack}>
-            <Icon name="arrow-back" />
-            {R.back}
-          </button>
+          <HubBackButton onBack={onBack} label={R.back} />
         </div>
 
-        {loading ? <p>{R.loading}</p> : null}
+        {loading ? (
+          <div className="hub-feed-activity-list" aria-hidden="true">
+            <p className="sr-only">{R.loading}</p>
+            {[0, 1, 2].map((i) => (
+              <article key={i} className="hub-feed-card hub-feed-activity-item hub-skeleton-card">
+                <header className="hub-feed-card-head">
+                  <span className="hub-avatar hub-skeleton" />
+                  <div className="hub-feed-card-head-text">
+                    <span className="hub-skeleton hub-skeleton-line" style={{ width: '50%' }} />
+                  </div>
+                </header>
+              </article>
+            ))}
+          </div>
+        ) : null}
 
         <div className="fg">
           <span className="flabel">{R.incomingTitle}</span>
@@ -65,7 +76,7 @@ export function SocialRequestsScreen({
           ) : (
             <div className="hub-feed-activity-list" role="list" aria-label={R.incomingTitle}>
               {incomingRequests.map((request) => (
-                <article key={request.docId} className="hub-feed-card hub-feed-activity-item hub-request-item" role="listitem">
+                <article key={request.docId} className={`hub-feed-card hub-feed-activity-item hub-request-item ${busyUid === request.otherUid ? 'is-busy' : ''}`.trim()} role="listitem">
                   <header className="hub-feed-card-head">
                     <HubAvatar name={request.name} photoURL={request.photo} />
                     <div className="hub-feed-card-head-text">
@@ -107,7 +118,7 @@ export function SocialRequestsScreen({
           ) : (
             <div className="hub-feed-activity-list" role="list" aria-label={R.outgoingTitle}>
               {outgoingRequests.map((request) => (
-                <article key={request.docId} className="hub-feed-card hub-feed-activity-item hub-request-item" role="listitem">
+                <article key={request.docId} className={`hub-feed-card hub-feed-activity-item hub-request-item ${busyUid === request.otherUid ? 'is-busy' : ''}`.trim()} role="listitem">
                   <header className="hub-feed-card-head">
                     <HubAvatar name={request.name} photoURL={request.photo} />
                     <div className="hub-feed-card-head-text">
@@ -139,7 +150,7 @@ export function SocialRequestsScreen({
           ) : (
             <div className="hub-feed-activity-list" role="list" aria-label={R.friendsTitle}>
               {friendsList.map((friend) => (
-                <article key={friend.docId} className="hub-feed-card hub-feed-activity-item hub-request-item" role="listitem">
+                <article key={friend.docId} className={`hub-feed-card hub-feed-activity-item hub-request-item ${busyUid === friend.otherUid ? 'is-busy' : ''}`.trim()} role="listitem">
                   <header className="hub-feed-card-head">
                     <HubAvatar name={friend.name} photoURL={friend.photo} />
                     <div className="hub-feed-card-head-text">
@@ -164,7 +175,7 @@ export function SocialRequestsScreen({
           )}
         </div>
 
-        {status ? <div className={`sync-status-msg ${statusKind}`}>{status}</div> : null}
+        <HubStatus status={status} statusKind={statusKind} />
       </div>
     </section>
   );

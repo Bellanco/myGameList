@@ -10,6 +10,7 @@ import { SocialProfileDetailScreen } from './socialhub/SocialProfileDetailScreen
 import { SocialProfilesScreen } from './socialhub/SocialProfilesScreen';
 import { SocialFeedScreen } from './socialhub/SocialFeedScreen';
 import { SocialRequestsScreen } from './socialhub/SocialRequestsScreen';
+import { HubStatus } from './socialhub/HubStatus';
 import { ConfirmModal } from '../modals/ConfirmModal';
 import { SocialErrorBoundary } from './socialhub/SocialErrorBoundary';
 
@@ -400,7 +401,7 @@ const SocialHubInner = memo(function SocialHubInner({
         </details>
 
         {!hasSocialGist ? <p>{SOCIAL_UI.gateway.gistMissing}</p> : null}
-        {status ? <div className={`sync-status-msg ${statusKind}`}>{status}</div> : null}
+        <HubStatus status={status} statusKind={statusKind} />
       </div>
     </section>
   );

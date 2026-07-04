@@ -1,14 +1,13 @@
 ﻿import React from 'react';
 import { Icon } from '../Icon';
 import { StarRating } from '../StarRating';
+import type { SocialUiLabels } from '../../../core/constants/labels';
+import { HubStatus } from './HubStatus';
 import { PostText } from './PostText';
 import { HubAvatar } from './HubAvatar';
 import { POST_MAX_LENGTH } from '../../../core/security/sanitize';
 
-/**
- * Pantalla principal del feed social.
- * Presentacional, sin lógica de negocio.
- */
+/** Pantalla principal del feed social. */
 export function SocialFeedScreen({
   SOCIAL_UI,
   socialDisplayName,
@@ -34,7 +33,7 @@ export function SocialFeedScreen({
   statusKind,
   handleSignOut
 }: {
-  SOCIAL_UI: any;
+  SOCIAL_UI: SocialUiLabels;
   socialDisplayName: string;
   ownPhotoURL: string;
   currentSocialGistId: string;
@@ -58,7 +57,25 @@ export function SocialFeedScreen({
   statusKind: string;
   handleSignOut: () => void;
 }) {
+  const feedSentinelRef = React.useRef<HTMLButtonElement>(null);
 
+  // Scroll infinito: el botón "mostrar más" del final hace de centinela; cuando entra en viewport, amplía el lote
+  // automáticamente (y se mantiene clicable como alternativa accesible). Sin más elementos, no se observa nada.
+  React.useEffect(() => {
+    if (loadingDirectory || !hasMoreFeed) return;
+    const el = feedSentinelRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) {
+          showMoreFeed();
+        }
+      },
+      { rootMargin: '200px' },
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [loadingDirectory, hasMoreFeed, showMoreFeed, groupedFeedItems]);
 
   return (
     <section className="hub-hub hub-screen" aria-label={SOCIAL_UI.feed.sectionAria}>
@@ -92,14 +109,14 @@ export function SocialFeedScreen({
               type="button"
               onClick={onOpenRequests}
               aria-label={SOCIAL_UI.feed.openRequestsAria(pendingIncomingCount)}
+              title={SOCIAL_UI.feed.openRequests}
             >
-              <span
-                className={`hub-requests-count ${pendingIncomingCount > 0 ? 'is-active' : 'is-empty'}`}
-                aria-hidden="true"
-              >
-                {pendingIncomingCount}
-              </span>
-              {SOCIAL_UI.feed.openRequests}
+              <Icon name="bell" />
+              {pendingIncomingCount > 0 ? (
+                <span className="hub-requests-count is-active" aria-hidden="true">
+                  {pendingIncomingCount}
+                </span>
+              ) : null}
             </button>
           </div>
           <div className="hub-screen-actions-right">
@@ -136,7 +153,7 @@ export function SocialFeedScreen({
               aria-label={publishingPost ? SOCIAL_UI.feed.postPublishing : SOCIAL_UI.feed.postPublish}
               title={publishingPost ? SOCIAL_UI.feed.postPublishing : SOCIAL_UI.feed.postPublish}
             >
-              <Icon name="angle-right" />
+              {publishingPost ? <span className="hub-spinner" aria-hidden="true" /> : <Icon name="angle-right" />}
             </button>
           </div>
         </div>
@@ -259,6 +276,7 @@ export function SocialFeedScreen({
           ) : null}
           {!loadingDirectory && hasMoreFeed ? (
             <button
+              ref={feedSentinelRef}
               className="hub-more-soft hub-feed-load-more"
               type="button"
               aria-label={SOCIAL_UI.feed.feedLoadMore}
@@ -269,7 +287,7 @@ export function SocialFeedScreen({
             </button>
           ) : null}
         </div>
-        {status ? <div className={`sync-status-msg ${statusKind}`}>{status}</div> : null}
+        <HubStatus status={status} statusKind={statusKind} />
       </div>
     </section>
   );

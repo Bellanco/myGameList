@@ -262,6 +262,10 @@ export default function App() {
     setFormModalOpen(false);
   }, [setFormModalOpen]);
 
+  // Destello de fila: id del juego recién guardado; se limpia tras la animación.
+  const [recentlyChangedId, setRecentlyChangedId] = useState<number | null>(null);
+  const flashTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const handleSaveDraft = useCallback((nextDraft: typeof vm.draft) => {
     const predictedId =
       nextDraft.id ||
@@ -275,6 +279,11 @@ export default function App() {
     const nextScore = Number(nextDraft.score || 0);
 
     saveDraft(editingTab, nextDraft);
+
+    // Marca la fila guardada para el destello de localización (se limpia a los 1,4 s).
+    setRecentlyChangedId(predictedId);
+    if (flashTimer.current) clearTimeout(flashTimer.current);
+    flashTimer.current = setTimeout(() => setRecentlyChangedId(null), 1400);
 
     // Sin reseña publicable (pestaña 'próximos' o texto vacío): si el juego TENÍA una reseña, se retira del feed
     // para no dejar una entrada fantasma con el título/snippet viejos (p. ej. al vaciar el texto y renombrar). Si
@@ -393,6 +402,7 @@ export default function App() {
               onMigrate={vm.migrateGame}
               onAddGame={handleAddGame}
               tabActions={vm.tabActions[currentTab]}
+              recentlyChangedId={recentlyChangedId}
             />
           </>
         ) : activeSection === 'social' ? (

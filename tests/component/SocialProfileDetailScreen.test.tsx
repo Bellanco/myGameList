@@ -52,9 +52,9 @@ describe('SocialProfileDetailScreen — listados', () => {
     );
 
     // La pestaña 'próximos' (p) está oculta → su chip no aparece.
-    expect(screen.queryByRole('button', { name: SOCIAL_UI.feed.profileListTabPlanned })).not.toBeInTheDocument();
-    // Pero las visibles sí.
-    expect(screen.getByRole('button', { name: SOCIAL_UI.feed.profileListTabCompleted })).toBeInTheDocument();
+    expect(screen.queryByRole('tab', { name: SOCIAL_UI.feed.profileListTabPlanned })).not.toBeInTheDocument();
+    // Pero las visibles sí (se renderizan con role="tab").
+    expect(screen.getByRole('tab', { name: SOCIAL_UI.feed.profileListTabCompleted })).toBeInTheDocument();
   });
 });
 

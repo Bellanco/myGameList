@@ -42,13 +42,7 @@ function base64ToBytes(b64: string): Uint8Array<ArrayBuffer> {
   return new Uint8Array(atob(b64).split('').map((c) => c.charCodeAt(0)));
 }
 
-/**
- * Genera una clave derivada usando PBKDF2.
- * Se deriva desde el hash de la sesión del navegador para que sea único por dispositivo/navegador.
- * 
- * @param password - Contraseña o seed para derivar la clave
- * @returns Clave CryptoKey para usar con encriptación AES-GCM
- */
+/** Deriva una CryptoKey AES-GCM desde `password` (seed de sesión o secreto estable) mediante PBKDF2. */
 async function deriveKey(password: string, salt: Uint8Array<ArrayBuffer>, iterations: number): Promise<CryptoKey> {
   const encoder = new TextEncoder();
 
@@ -75,13 +69,9 @@ async function deriveKey(password: string, salt: Uint8Array<ArrayBuffer>, iterat
  * NOTA: Esto NO es una clave de usuario, es una clave de sesión local.
  */
 function getSessionSeed(): string {
-  // Usar información del navegador para crear un seed único
-  // Esto hace que la encriptación sea específica del navegador/dispositivo
   const ua = navigator.userAgent;
   const lang = navigator.language;
   const tz = new Date().getTimezoneOffset().toString();
-  
-  // Combinar para crear un seed único
   return `${ua}|${lang}|${tz}`;
 }
 
@@ -113,7 +103,7 @@ export async function encrypt(plaintext: string, seed: string = getSessionSeed()
       ciphertext: bytesToBase64(new Uint8Array(ciphertext)),
     };
   } catch (error) {
-    console.error('Encryptión falló:', error);
+    console.error('Encriptación falló:', error);
     throw error;
   }
 }
@@ -158,14 +148,6 @@ export async function decrypt(encrypted: EncryptedData, seed: string = getSessio
     console.error('Desencriptación falló:', error);
     throw error;
   }
-}
-
-/**
- * Detecta si SubtleCrypto está disponible en el navegador.
- * En navegadores modernos, crypto.subtle siempre debe estar disponible.
- */
-export function isCryptoAvailable(): boolean {
-  return typeof crypto !== 'undefined' && typeof crypto.subtle !== 'undefined';
 }
 
 // ---------------------------------------------------------------------------

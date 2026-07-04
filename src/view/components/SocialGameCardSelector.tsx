@@ -1,4 +1,4 @@
-﻿import { memo, useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type MouseEvent as ReactMouseEvent } from 'react';
+﻿import { memo, useMemo } from 'react';
 import { SOCIAL_UI } from '../../core/constants/labels';
 
 interface GameOption {
@@ -8,6 +8,8 @@ interface GameOption {
 
 interface SocialGameCardSelectorProps {
   title: string;
+  /** Número de paso opcional (1,2,3…) que se muestra como badge junto al título. */
+  step?: number;
   description: string;
   searchPlaceholder: string;
   searchValue: string;
@@ -24,6 +26,7 @@ interface SocialGameCardSelectorProps {
  */
 export const SocialGameCardSelector = memo(function SocialGameCardSelector({
   title,
+  step,
   description,
   searchPlaceholder,
   searchValue,
@@ -34,13 +37,6 @@ export const SocialGameCardSelector = memo(function SocialGameCardSelector({
   onSearchChange,
   onToggle,
 }: SocialGameCardSelectorProps) {
-  const rowRef = useRef<HTMLDivElement | null>(null);
-  const draggingRef = useRef(false);
-  const dragStartXRef = useRef(0);
-  const dragStartScrollRef = useRef(0);
-  const didDragRef = useRef(false);
-  const [isDragging, setIsDragging] = useState(false);
-
   const filteredOptions = useMemo(() => {
     const query = searchValue.trim().toLowerCase();
     if (!query) {
@@ -50,76 +46,18 @@ export const SocialGameCardSelector = memo(function SocialGameCardSelector({
     return options.filter((option) => option.name.toLowerCase().includes(query));
   }, [options, searchValue]);
 
-  const handleMouseDown = useCallback((event: ReactMouseEvent<HTMLDivElement>) => {
-    if (event.button !== 0 || !rowRef.current) {
-      return;
-    }
-
-    draggingRef.current = true;
-    didDragRef.current = false;
-    dragStartXRef.current = event.clientX;
-    dragStartScrollRef.current = rowRef.current.scrollLeft;
-    setIsDragging(true);
-  }, []);
-
-  const handleKeyDown = useCallback((event: ReactKeyboardEvent<HTMLDivElement>) => {
-    if (!rowRef.current) {
-      return;
-    }
-
-    if (event.key === 'ArrowRight') {
-      rowRef.current.scrollLeft += 120;
-      event.preventDefault();
-    }
-
-    if (event.key === 'ArrowLeft') {
-      rowRef.current.scrollLeft -= 120;
-      event.preventDefault();
-    }
-  }, []);
-
-  useEffect(() => {
-    const handleMouseMove = (event: MouseEvent) => {
-      if (!draggingRef.current || !rowRef.current) {
-        return;
-      }
-
-      const deltaX = event.clientX - dragStartXRef.current;
-      if (Math.abs(deltaX) > 4) {
-        didDragRef.current = true;
-      }
-
-      rowRef.current.scrollLeft = dragStartScrollRef.current - deltaX;
-      event.preventDefault();
-    };
-
-    const handleMouseUp = () => {
-      if (!draggingRef.current) {
-        return;
-      }
-
-      draggingRef.current = false;
-      setIsDragging(false);
-
-      window.setTimeout(() => {
-        didDragRef.current = false;
-      }, 0);
-    };
-
-    window.addEventListener('mousemove', handleMouseMove, { passive: false });
-    window.addEventListener('mouseup', handleMouseUp);
-
-    return () => {
-      window.removeEventListener('mousemove', handleMouseMove);
-      window.removeEventListener('mouseup', handleMouseUp);
-    };
-  }, []);
+  // Cupo lleno: al alcanzar el máximo, las tarjetas NO seleccionadas se deshabilitan (y cambian su literal).
+  const full = maxSelected != null && selectedIds.length >= maxSelected;
 
   return (
     <article className="hub-profile-block hub-profile-block-wide hub-card-selector">
       <div className="hub-card-selector-head">
         <div>
-          <h3>{title}</h3>
+          {step ? (
+            <div className="hub-block-head"><span className="hub-block-step">{step}</span><h3>{title}</h3></div>
+          ) : (
+            <h3>{title}</h3>
+          )}
           <p>{description}</p>
         </div>
         <strong className={`hub-card-selector-counter ${maxSelected && selectedIds.length >= maxSelected ? 'is-full' : ''}`.trim()}>
@@ -142,33 +80,28 @@ export const SocialGameCardSelector = memo(function SocialGameCardSelector({
         <p className="hub-card-selector-empty">{emptyMessage}</p>
       ) : (
         <div
-          ref={rowRef}
-          className={`hub-card-row ${isDragging ? 'is-dragging' : ''}`}
+          className="hub-card-grid"
           aria-label={SOCIAL_UI.cardSelector.cardsAria(title)}
           role="group"
-          tabIndex={0}
-          onMouseDown={handleMouseDown}
-          onKeyDown={handleKeyDown}
         >
-          {filteredOptions.map((option) => {
+          {filteredOptions.map((option, i) => {
             const isSelected = selectedIds.includes(option.id);
+            const disabled = !isSelected && full;
             return (
               <button
                 key={option.id}
                 type="button"
                 aria-pressed={isSelected}
-                className={`hub-game-card ${isSelected ? 'is-selected' : ''}`}
-                onClick={() => {
-                  if (didDragRef.current) {
-                    return;
-                  }
-
-                  onToggle(option.id);
-                }}
+                disabled={disabled}
+                // Tono variado por posición (--0..4): distingue las casillas de sus vecinas (lados y arriba/abajo).
+                className={`hub-game-card hub-game-card--${i % 5} ${isSelected ? 'is-selected' : ''}`.trim()}
+                onClick={() => onToggle(option.id)}
               >
                 <span className="hub-game-card-check" aria-hidden="true" />
                 <span className="hub-game-card-title">{option.name}</span>
-                <span className="hub-game-card-status">{isSelected ? 'Seleccionado' : 'Seleccionar'}</span>
+                <span className="hub-game-card-status">
+                  {isSelected ? 'Seleccionado' : disabled ? 'Máximo alcanzado' : 'Seleccionar'}
+                </span>
               </button>
             );
           })}
