@@ -106,6 +106,13 @@ tbody tr.main-row.striped { background: var(--surface-soft); }
 tbody td { padding: .95rem 1rem; font-size: .88rem; vertical-align: middle; }
 tbody tr.detail-row { display: none; background: var(--detail-row-bg); border-top: 1px dashed var(--border); }
 tbody tr.detail-row.open { display: table-row; }
+/* Destello al añadir/editar un juego: la fila recién guardada se resalta y se desvanece, confirmando
+   dónde quedó (antes no había ningún feedback al guardar). */
+tbody tr.main-row.just-changed { animation: rowFlash 1.3s ease-out; }
+@keyframes rowFlash {
+  0%   { background: var(--steam-soft); box-shadow: inset 3px 0 0 var(--steam); }
+  100% { background: transparent; box-shadow: inset 3px 0 0 transparent; }
+}
 
 /* Detail */
 .detail-content { padding: 1.1rem 1rem 1.2rem; display: grid; gap: .95rem; grid-template-columns: repeat(auto-fit,minmax(220px,1fr)); }
@@ -144,7 +151,8 @@ tbody tr.detail-row.open { display: table-row; }
   font-size: inherit;
   font-family: inherit;
 }
-.star-inp button.f { color: var(--star-full); }
+.star-inp button.f { color: var(--star-full); animation: starPop .34s cubic-bezier(.2,1.2,.3,1); }
+@keyframes starPop { 0% { transform: scale(.6); } 55% { transform: scale(1.3); } 100% { transform: scale(1); } }
 .star-inp-field { align-items: center; }
 .fg-score-field { justify-content: flex-start; }
 .score-input-shell {
@@ -298,7 +306,11 @@ tbody tr.detail-row.open .detail-content { animation: detailReveal .22s ease-out
   .row-chevron,
   .badge-rejugar-activo,
   .badge-opp-activo { transition: none; }
-  tbody tr.detail-row.open .detail-content { animation: none; }
+  tbody tr.detail-row.open .detail-content,
+  tbody tr.main-row.just-changed,
+  .star-inp button.f,
+  .table-empty,
+  .table-empty-icon { animation: none; }
   .chip:hover,
   .badge-rejugar-activo:hover,
   .badge-opp-activo:hover { transform: none; filter: none; }
@@ -315,4 +327,9 @@ tbody tr.detail-row.open .detail-content { animation: detailReveal .22s ease-out
   fill: currentColor; stroke: currentColor;
 }
 .table-empty-title { margin: 0; font-size: .95rem; font-weight: 600; }
+/* Estado vacío con vida: entra con un fade suave y el icono "respira" en vez de quedarse inerte. */
+.table-empty { animation: emptyIn .5s ease both; }
+.table-empty-icon { animation: emptyFloat 3.4s ease-in-out infinite; }
+@keyframes emptyIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes emptyFloat { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
 
