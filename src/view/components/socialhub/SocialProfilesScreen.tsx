@@ -2,6 +2,8 @@ import React from 'react';
 import { Icon } from '../Icon';
 import { HubAvatar } from './HubAvatar';
 import type { SocialUiLabels } from '../../../core/constants/labels';
+import { HubStatus } from './HubStatus';
+import { HubBackButton } from './HubBackButton';
 import { FriendshipButton } from './FriendshipButton';
 import type { RelationshipState } from '../../../model/types/social';
 
@@ -104,10 +106,7 @@ export function SocialProfilesScreen({
         </header>
         <div className="hub-screen-actions hub-screen-actions-split" aria-label={SOCIAL_UI.profiles.actionsAria}>
           <div className="hub-screen-actions-left">
-            <button className="btn btn-secondary" type="button" onClick={onBack}>
-              <Icon name="arrow-back" />
-              {SOCIAL_UI.profiles.back}
-            </button>
+            <HubBackButton onBack={onBack} label={SOCIAL_UI.profiles.back} />
           </div>
         </div>
 
@@ -177,7 +176,7 @@ export function SocialProfilesScreen({
             </div>
           </>
         )}
-        {status ? <div className={`sync-status-msg ${statusKind}`}>{status}</div> : null}
+        <HubStatus status={status} statusKind={statusKind} />
       </div>
     </section>
   );

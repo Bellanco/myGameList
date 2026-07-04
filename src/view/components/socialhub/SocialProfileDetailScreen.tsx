@@ -2,6 +2,8 @@
 import { Icon } from '../Icon';
 import { GameTable } from '../GameTable';
 import type { SocialUiLabels } from '../../../core/constants/labels';
+import { HubStatus } from './HubStatus';
+import { HubBackButton } from './HubBackButton';
 import { StarRating } from '../StarRating';
 import { HubAvatar } from './HubAvatar';
 import { TAB_IDS, type GameItem, type TabId } from '../../../model/types/game';
@@ -345,14 +347,11 @@ export function SocialProfileDetailScreen({
           </header>
           <div className="hub-screen-actions hub-screen-actions-split" aria-label={SOCIAL_UI.feed.profileDetailActionsAria}>
             <div className="hub-screen-actions-left">
-              <button className="btn btn-secondary" type="button" onClick={onBack}>
-                <Icon name="arrow-back" />
-                {SOCIAL_UI.feed.backToFeed}
-              </button>
+              <HubBackButton onBack={onBack} label={SOCIAL_UI.feed.backToFeed} />
             </div>
           </div>
           <p>{SOCIAL_UI.feed.profileDetailMissing}</p>
-          {status ? <div className={`sync-status-msg ${statusKind}`}>{status}</div> : null}
+          <HubStatus status={status} statusKind={statusKind} />
         </div>
       </section>
     );
@@ -369,10 +368,7 @@ export function SocialProfileDetailScreen({
         </header>
         <div className="hub-screen-actions hub-screen-actions-split" aria-label={SOCIAL_UI.feed.profileDetailActionsAria}>
           <div className="hub-screen-actions-left">
-            <button className="btn btn-secondary" type="button" onClick={onBack}>
-              <Icon name="arrow-back" />
-              {SOCIAL_UI.feed.backToFeed}
-            </button>
+            <HubBackButton onBack={onBack} label={SOCIAL_UI.feed.backToFeed} />
             {canSeeFullProfile ? (
               <>
                 <button
@@ -590,7 +586,7 @@ export function SocialProfileDetailScreen({
           </div>
           )}
         </article>
-        {status ? <div className={`sync-status-msg ${statusKind}`}>{status}</div> : null}
+        <HubStatus status={status} statusKind={statusKind} />
       </div>
 
       <RouletteModal

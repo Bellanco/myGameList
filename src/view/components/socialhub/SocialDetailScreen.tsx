@@ -1,7 +1,10 @@
 ﻿import { Icon } from '../Icon';
 import { StarRating } from '../StarRating';
+import { MetaSection } from '../MetaSection';
 import { HubAvatar } from './HubAvatar';
 import type { SocialUiLabels } from '../../../core/constants/labels';
+import { HubStatus } from './HubStatus';
+import { HubBackButton } from './HubBackButton';
 
 /** Pantalla de detalle de actividad social. */
 export function SocialDetailScreen({
@@ -34,14 +37,11 @@ export function SocialDetailScreen({
           </header>
           <div className="hub-screen-actions hub-screen-actions-split" aria-label={SOCIAL_UI.feed.detailActionsAria}>
             <div className="hub-screen-actions-left">
-              <button className="btn btn-secondary" type="button" onClick={onBack}>
-                <Icon name="arrow-back" />
-                {SOCIAL_UI.feed.backToFeed}
-              </button>
+              <HubBackButton onBack={onBack} label={SOCIAL_UI.feed.backToFeed} />
             </div>
           </div>
           <p>{SOCIAL_UI.feed.detailMissing}</p>
-          {status ? <div className={`sync-status-msg ${statusKind}`}>{status}</div> : null}
+          <HubStatus status={status} statusKind={statusKind} />
         </div>
       </section>
     );
@@ -66,10 +66,7 @@ export function SocialDetailScreen({
         </header>
         <div className="hub-screen-actions hub-screen-actions-split" aria-label={SOCIAL_UI.feed.detailActionsAria}>
           <div className="hub-screen-actions-left">
-            <button className="btn btn-secondary" type="button" onClick={onBack}>
-              <Icon name="arrow-back" />
-              {SOCIAL_UI.feed.backToFeed}
-            </button>
+            <HubBackButton onBack={onBack} label={SOCIAL_UI.feed.backToFeed} />
           </div>
         </div>
         <article className="hub-feed-card hub-feed-card-detail">
@@ -102,51 +99,15 @@ export function SocialDetailScreen({
           {reviewText ? <p className="hub-feed-review-text">{reviewText}</p> : null}
           {gameItem ? (
             <div className="hub-detail-metadata">
-              {gameItem.platforms && gameItem.platforms.length > 0 ? (
-                <div className="hub-metadata-section">
-                  <strong>{SOCIAL_UI.feed.metadataPlatforms}</strong>
-                  <div className="chips">
-                    {gameItem.platforms.map((platform: string) => (
-                      <span key={platform} className="chip chip-plat">{platform}</span>
-                    ))}
-                  </div>
-                </div>
-              ) : null}
-              {gameItem.genres && gameItem.genres.length > 0 ? (
-                <div className="hub-metadata-section">
-                  <strong>{SOCIAL_UI.feed.metadataGenres}</strong>
-                  <div className="chips">
-                    {gameItem.genres.map((genre: string) => (
-                      <span key={genre} className="chip chip-genre">{genre}</span>
-                    ))}
-                  </div>
-                </div>
-              ) : null}
-              {gameItem.strengths && gameItem.strengths.length > 0 ? (
-                <div className="hub-metadata-section">
-                  <strong>{SOCIAL_UI.feed.metadataStrengths}</strong>
-                  <div className="chips">
-                    {gameItem.strengths.map((strength: string) => (
-                      <span key={strength} className="chip chip-pf">{strength}</span>
-                    ))}
-                  </div>
-                </div>
-              ) : null}
-              {gameItem.weaknesses && gameItem.weaknesses.length > 0 ? (
-                <div className="hub-metadata-section">
-                  <strong>{SOCIAL_UI.feed.metadataWeaknesses}</strong>
-                  <div className="chips">
-                    {gameItem.weaknesses.map((weakness: string) => (
-                      <span key={weakness} className="chip chip-pd">{weakness}</span>
-                    ))}
-                  </div>
-                </div>
-              ) : null}
+              <MetaSection label={SOCIAL_UI.feed.metadataPlatforms} items={gameItem.platforms} cls="chip-plat" />
+              <MetaSection label={SOCIAL_UI.feed.metadataGenres} items={gameItem.genres} cls="chip-genre" />
+              <MetaSection label={SOCIAL_UI.feed.metadataStrengths} items={gameItem.strengths} cls="chip-pf" />
+              <MetaSection label={SOCIAL_UI.feed.metadataWeaknesses} items={gameItem.weaknesses} cls="chip-pd" />
             </div>
           ) : null}
           </div>
         </article>
-        {status ? <div className={`sync-status-msg ${statusKind}`}>{status}</div> : null}
+        <HubStatus status={status} statusKind={statusKind} />
       </div>
     </section>
   );
