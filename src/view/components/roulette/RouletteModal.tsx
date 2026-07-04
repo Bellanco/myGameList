@@ -101,15 +101,28 @@ export function RouletteModal({ open, onClose, title, candidates, weight, tag, r
   const [reel, setReel] = useState<GameItem[]>([]);
   const pendingRef = useRef<RouletteCandidate | null>(null);
 
-  const buildIdleReel = useCallback(
-    (p: RouletteCandidate[]) => Array.from({ length: IDLE_LEN }, (_, i) => p[i % p.length].game),
-    [],
-  );
-  const buildSpinReel = useCallback((p: RouletteCandidate[], chosen: RouletteCandidate) => {
-    const arr = Array.from({ length: SPIN_LEN }, (_, i) => p[i % p.length].game);
-    arr[LAND] = chosen.game; // el ganador SIEMPRE cae en el mismo índice → recorrido (y velocidad) constante
-    return arr;
+  // Juego al azar del pool, evitando repetir el inmediatamente anterior (para no ver dos veces seguidas el
+  // mismo nombre). Así los nombres que pasan —y los de arriba/abajo del ganador— cambian en cada giro y el
+  // efecto es más realista (antes salían siempre en el mismo orden).
+  const randomGame = useCallback((p: RouletteCandidate[], prev?: GameItem): GameItem => {
+    if (p.length === 1) return p[0].game;
+    let g: GameItem;
+    do {
+      g = p[Math.floor(Math.random() * p.length)].game;
+    } while (g === prev);
+    return g;
   }, []);
+  const buildIdleReel = useCallback((p: RouletteCandidate[]) => {
+    const arr: GameItem[] = [];
+    for (let i = 0; i < IDLE_LEN; i++) arr.push(randomGame(p, arr[i - 1]));
+    return arr;
+  }, [randomGame]);
+  const buildSpinReel = useCallback((p: RouletteCandidate[], chosen: RouletteCandidate) => {
+    const arr: GameItem[] = [];
+    // El ganador SIEMPRE cae en LAND (recorrido/velocidad constantes); el resto de posiciones son aleatorias.
+    for (let i = 0; i < SPIN_LEN; i++) arr.push(i === LAND ? chosen.game : randomGame(p, arr[i - 1]));
+    return arr;
+  }, [randomGame]);
 
   // Animación de giro: actualiza el DOM directamente (imperativo) frame a frame.
   const layout = useCallback((pos: number, idle = false) => {
