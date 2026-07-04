@@ -579,8 +579,10 @@
   background: var(--steam-soft); color: var(--steam-hover);
   border: 1px solid color-mix(in srgb, var(--steam) 35%, transparent);
 }
-.hub-identity-hero { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; }
-.hub-identity-fields { flex: 1 1 12rem; min-width: 0; display: flex; flex-direction: column; gap: .4rem; }
+/* Hero de identidad: avatar (tamaño contenido) centrado verticalmente con el campo, que ocupa el resto. */
+.hub-identity-hero { display: flex; align-items: center; gap: .8rem; }
+.hub-identity-hero .hub-avatar { flex: 0 0 auto; width: 2.5rem; height: 2.5rem; font-size: 1rem; }
+.hub-identity-hero .finput { flex: 1; min-width: 0; }
 .hub-profile-sync-chip {
   margin-left: auto;
   display: inline-flex; align-items: center; gap: .4rem;
@@ -858,19 +860,21 @@
   grid-column: span 1;
 }
 
+/* Visibilidad (rediseño): secciones con subtítulo y filas tipo "ajustes": etiqueta a la izquierda,
+   interruptor a la derecha (orden explícito), con separadores finos entre filas. */
 .visibility-section {
   display: flex;
   flex-direction: column;
-  gap: .5rem;
 }
+.visibility-section + .visibility-section { margin-top: .6rem; }
 
 .visibility-label {
-  font-size: .85rem;
-  font-weight: 600;
+  font-size: .7rem;
+  font-weight: 700;
   color: var(--hub-text-muted);
   text-transform: uppercase;
-  letter-spacing: 0.5px;
-  padding: .25rem 0;
+  letter-spacing: .06em;
+  padding: .1rem 0;
 }
 
 .visibility-group {
@@ -878,14 +882,12 @@
   flex-direction: column;
 }
 
-/* Fila de ajuste (rediseño): etiqueta a la izquierda + interruptor a la derecha, con separadores. */
 .visibility-check {
   display: flex;
-  flex-direction: row-reverse; /* DOM: [track][span] → visual: [span ……… track] con space-between */
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
-  padding: .7rem .3rem;
+  padding: .65rem .15rem;
   border-top: 1px solid var(--border);
   cursor: pointer;
   transition: background-color .15s ease;
@@ -905,44 +907,52 @@
   height: 0;
 }
 
+/* Interruptor con buen contraste en ambos temas: apagado = pista gris + mando gris visible;
+   encendido = pista azul + mando blanco. El mando va posicionado de forma absoluta (fiable). */
 .visibility-toggle-track {
-  width: 46px;
+  order: 2; /* interruptor a la derecha */
+  flex: 0 0 auto;
+  width: 42px;
   height: 24px;
-  border-radius: 999px;
-  background: var(--overlay-hover);
+  border-radius: var(--radius-pill);
+  background: var(--surface-hover);
   border: 1px solid var(--border);
   position: relative;
-  flex-shrink: 0;
   transition: background .2s ease, border-color .2s ease;
-  display: inline-flex;
-  align-items: center;
-  justify-content: flex-start;
-  padding: 2px;
 }
 
 .visibility-toggle-thumb {
-  width: 20px;
-  height: 20px;
+  position: absolute;
+  top: 50%;
+  left: 3px;
+  transform: translateY(-50%);
+  width: 16px;
+  height: 16px;
   border-radius: 50%;
-  background: var(--surface);
-  box-shadow: 0 4px 12px rgba(0,0,0,.08);
-  transition: transform .2s ease, background .2s ease;
+  background: var(--text-muted);
+  box-shadow: 0 1px 3px rgba(0,0,0,.3);
+  transition: transform .22s cubic-bezier(.2,.8,.25,1), background .2s ease;
 }
 
 .visibility-check input:checked + .visibility-toggle-track {
-  background: rgba(26,159,255,.22);
-  border-color: rgba(26,159,255,.45);
+  background: var(--steam);
+  border-color: var(--steam);
 }
 
 .visibility-check input:checked + .visibility-toggle-track .visibility-toggle-thumb {
-  transform: translateX(22px);
-  background: #ffffff;
+  transform: translate(18px, -50%);
+  background: #fff;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .visibility-toggle-track, .visibility-toggle-thumb { transition: none; }
 }
 
 .visibility-check span {
+  order: 1; /* etiqueta a la izquierda, ocupa el resto */
   flex: 1;
-  font-size: .9rem;
-  color: var(--text);
+  font-size: .88rem;
+  color: var(--hub-text);
   font-weight: 500;
 }
 
@@ -2310,15 +2320,8 @@ button.hub-chip.active {
   }
 }
 
-@media (min-width:1200px) {
-  .hub-profile-layout {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .visibility-group {
-    grid-template-columns: 1fr 1fr;
-  }
-}
+/* El editor de perfil va siempre a una columna: los tres bloques con la MISMA anchura (Favoritos solo es
+   más alto por sus filas de tarjetas). */
 
 @media (min-width:1957px) {
   .status-banner,
