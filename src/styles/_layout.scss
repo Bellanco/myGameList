@@ -1515,8 +1515,8 @@ button.hub-chip.active {
    + barra lateral del mismo color; título como encabezado, meta (estrellas + fecha) y texto/“ver más” a lo ancho.
    El tono lo aporta cada tarjeta con `--rev-hue` en línea; la luz sale de `--acc-l` (theme-aware). */
 .hub-review-entry {
-  --acc: hsl(var(--rev-hue, 135) 48% var(--acc-l));
-  --acc-soft: hsl(var(--rev-hue, 135) 48% var(--acc-l) / .16);
+  --acc: hsl(var(--rev-hue, 135) 50% calc(var(--acc-l) + var(--rev-ladj, 0%)));
+  --acc-soft: hsl(var(--rev-hue, 135) 50% calc(var(--acc-l) + var(--rev-ladj, 0%)) / .16);
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
   grid-template-areas: 'medal head' 'body body';
@@ -1551,6 +1551,8 @@ button.hub-chip.active {
   background: var(--acc-soft);
   border: 2px solid var(--acc);
 }
+/* Estrellas de la reseña: llenas con el color de la propia nota (las vacías quedan tenues). */
+.hub-review-entry .stars .f { color: var(--acc); }
 .hub-review-entry-head {
   grid-area: head;
   display: flex;

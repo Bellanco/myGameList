@@ -460,16 +460,17 @@ export function SocialProfileDetailScreen({
                       const rating = Number(review.rating || 0);
                       const itemDate = new Date(review.ts || 0);
                       const hasValidDate = review.ts > 0 && !Number.isNaN(itemDate.getTime());
-                      // Color por nota (rojo→verde): 1=rojo (4°), 2=amarillo (55°), 3→5 hacia verde (135°).
-                      const reviewHue = rating <= 2
-                        ? Math.round(4 + Math.max(0, rating - 1) * 51)
-                        : Math.round(55 + ((rating - 2) / 3) * 80);
+                      // Color por nota: 1=rojo, 2=amarillo; 3/4/5 bien separados en tono (lima→verde→esmeralda)
+                      // y en luminosidad (3 más claro, 5 el más profundo) para distinguirlos de un vistazo.
+                      const rScore = Math.max(1, Math.min(5, Math.round(rating)));
+                      const reviewHue = [0, 4, 50, 82, 120, 156][rScore];
+                      const reviewLAdj = [0, 0, 0, 10, 5, 0][rScore];
                       return (
                         <article
                           key={review.id}
                           className="hub-feed-card hub-feed-activity-item is-review hub-review-entry"
                           role="listitem"
-                          style={{ '--rev-hue': String(reviewHue) } as CSSProperties}
+                          style={{ '--rev-hue': String(reviewHue), '--rev-ladj': `${reviewLAdj}%` } as CSSProperties}
                         >
                           <span className="hub-review-medal" aria-hidden="true">{Math.round(rating)}</span>
                           <header className="hub-review-entry-head">
