@@ -1,6 +1,8 @@
 import { Icon } from '../Icon';
 import { HubAvatar } from './HubAvatar';
 import type { SocialUiLabels } from '../../../core/constants/labels';
+import { HubStatus } from './HubStatus';
+import { HubBackButton } from './HubBackButton';
 
 /** Bandeja de solicitudes de amistad (recibidas / enviadas). */
 type RequestView = { docId: string; otherUid: string; name: string; photo: string };
@@ -48,10 +50,7 @@ export function SocialRequestsScreen({
         </header>
 
         <div className="hub-screen-actions" aria-label={R.actionsAria}>
-          <button className="btn btn-secondary" type="button" onClick={onBack}>
-            <Icon name="arrow-back" />
-            {R.back}
-          </button>
+          <HubBackButton onBack={onBack} label={R.back} />
         </div>
 
         {loading ? (
@@ -176,7 +175,7 @@ export function SocialRequestsScreen({
           )}
         </div>
 
-        {status ? <div className={`sync-status-msg ${statusKind}`}>{status}</div> : null}
+        <HubStatus status={status} statusKind={statusKind} />
       </div>
     </section>
   );

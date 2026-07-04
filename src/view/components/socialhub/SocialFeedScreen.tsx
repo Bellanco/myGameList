@@ -2,6 +2,7 @@
 import { Icon } from '../Icon';
 import { StarRating } from '../StarRating';
 import type { SocialUiLabels } from '../../../core/constants/labels';
+import { HubStatus } from './HubStatus';
 import { PostText } from './PostText';
 import { HubAvatar } from './HubAvatar';
 import { POST_MAX_LENGTH } from '../../../core/security/sanitize';
@@ -286,7 +287,7 @@ export function SocialFeedScreen({
             </button>
           ) : null}
         </div>
-        {status ? <div className={`sync-status-msg ${statusKind}`}>{status}</div> : null}
+        <HubStatus status={status} statusKind={statusKind} />
       </div>
     </section>
   );

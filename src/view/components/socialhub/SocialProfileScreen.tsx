@@ -2,6 +2,8 @@
 import { SocialGameCardSelector } from '../SocialGameCardSelector';
 import { HubAvatar } from './HubAvatar';
 import type { SocialUiLabels } from '../../../core/constants/labels';
+import { HubStatus } from './HubStatus';
+import { HubBackButton } from './HubBackButton';
 import { MAX_SOCIAL_FAVORITES } from '../../../core/constants/uiConfig';
 import type { TabId } from '../../../model/types/game';
 
@@ -94,10 +96,7 @@ export function SocialProfileScreen({
         <div className="hub-screen-actions hub-screen-actions-split" aria-label={SOCIAL_UI.profile.actionsAria}>
           <div className="hub-screen-actions-left">
             {hasCreatedProfile ? (
-              <button className="btn btn-secondary" type="button" onClick={onBack}>
-                <Icon name="arrow-back" />
-                {SOCIAL_UI.profile.toFeed}
-              </button>
+              <HubBackButton onBack={onBack} label={SOCIAL_UI.profile.toFeed} />
             ) : null}
             <button
               className="btn btn-primary"
@@ -267,7 +266,7 @@ export function SocialProfileScreen({
           </article>
           {hydratingProfile ? <p>{SOCIAL_UI.profile.hydrating}</p> : null}
         </div>
-        {status ? <div className={`sync-status-msg ${statusKind}`}>{status}</div> : null}
+        <HubStatus status={status} statusKind={statusKind} />
       </div>
     </section>
   );
