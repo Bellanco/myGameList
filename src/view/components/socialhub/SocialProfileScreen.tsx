@@ -122,20 +122,18 @@ export function SocialProfileScreen({
               <h3>{SOCIAL_UI.profile.identityTitle}</h3>
             </div>
             <p>{SOCIAL_UI.profile.identityDescription}</p>
+            <label className="flabel" htmlFor="hub-profile-name">{SOCIAL_UI.profile.nameLabel}</label>
             <div className="hub-identity-hero">
               <HubAvatar name={profileName || 'Usuario'} photoURL={showPhoto !== false ? ownPhotoURL : undefined} />
-              <div className="hub-identity-fields">
-                <label className="flabel" htmlFor="hub-profile-name">{SOCIAL_UI.profile.nameLabel}</label>
-                <input
-                  id="hub-profile-name"
-                  className="finput"
-                  type="text"
-                  maxLength={60}
-                  value={profileName}
-                  onChange={(event) => setProfileName(event.target.value)}
-                  placeholder={SOCIAL_UI.profile.namePlaceholder}
-                />
-              </div>
+              <input
+                id="hub-profile-name"
+                className="finput"
+                type="text"
+                maxLength={60}
+                value={profileName}
+                onChange={(event) => setProfileName(event.target.value)}
+                placeholder={SOCIAL_UI.profile.namePlaceholder}
+              />
             </div>
           </article>
           <SocialGameCardSelector
