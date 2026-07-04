@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ENABLE_GAMES_WRAPPER_WRITE, readGist, writeGist } from '../../src/model/repository/gistRepository';
+import { decodeGistContent } from '../../src/core/utils/gistCompression';
 import type { GameItem, TabData } from '../../src/model/types/game';
 
 // Token/gistId con formato válido (ver isValidGithubToken/isValidGistId en core/security/sanitize).
@@ -74,7 +75,8 @@ describe.skipIf(!ENABLE_GAMES_WRAPPER_WRITE)('writeGist con ENABLE_GAMES_WRAPPER
 
     const lastPatch = patchBodies[patchBodies.length - 1];
     const anchorContent = (lastPatch.files[GIST_FILENAME] as { content: string }).content;
-    const anchor = JSON.parse(anchorContent) as Record<string, unknown>;
+    // Robusto al flag de compresión: si el ancla va comprimida (sobre `enc`), se descomprime antes de inspeccionar.
+    const anchor = JSON.parse((await decodeGistContent(anchorContent)).content) as Record<string, unknown>;
     expect(anchor.fileType).toBe('games-main');
     expect(anchor.schemaVersion).toBe(4);
     expect(anchor).toHaveProperty('games');
