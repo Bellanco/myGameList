@@ -3,7 +3,7 @@ import { TAB_IDS, type GameItem, type TabData, type TabId } from '../types/game'
 // Helpers puros de la lógica de sync (diff de cambios remotos aplicados, detección de conflicto, log de errores).
 // Extraídos de useSyncViewModel para mantener el hook centrado en orquestación.
 
-type SyncOperation = 'initializeSync' | 'connectSync' | 'syncNow' | 'writeWithConflictRecovery' | 'completeGithubLoginFromRedirect';
+export type SyncOperation = 'initializeSync' | 'connectSync' | 'syncNow' | 'writeWithConflictRecovery' | 'completeGithubLoginFromRedirect';
 
 interface SyncErrorLogEntry {
   timestamp: number;
