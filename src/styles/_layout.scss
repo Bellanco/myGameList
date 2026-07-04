@@ -912,8 +912,8 @@
 .visibility-toggle-track {
   order: 2; /* interruptor a la derecha */
   flex: 0 0 auto;
-  width: 42px;
-  height: 24px;
+  width: 34px;
+  height: 20px;
   border-radius: var(--radius-pill);
   background: var(--surface-hover);
   border: 1px solid var(--border);
@@ -926,22 +926,23 @@
   top: 50%;
   left: 3px;
   transform: translateY(-50%);
-  width: 16px;
-  height: 16px;
+  width: 14px;
+  height: 14px;
   border-radius: 50%;
   background: var(--text-muted);
-  box-shadow: 0 1px 3px rgba(0,0,0,.3);
+  box-shadow: 0 1px 2px rgba(0,0,0,.3);
   transition: transform .22s cubic-bezier(.2,.8,.25,1), background .2s ease;
 }
 
+/* Encendido: azul más oscuro y apagado (mezcla de steam con la superficie) → menos contraste. */
 .visibility-check input:checked + .visibility-toggle-track {
-  background: var(--steam);
-  border-color: var(--steam);
+  background: color-mix(in srgb, var(--steam) 60%, var(--surface-elevated));
+  border-color: color-mix(in srgb, var(--steam) 45%, transparent);
 }
 
 .visibility-check input:checked + .visibility-toggle-track .visibility-toggle-thumb {
-  transform: translate(18px, -50%);
-  background: #fff;
+  transform: translate(13px, -50%);
+  background: #eef2f6;
 }
 
 @media (prefers-reduced-motion: reduce) {
