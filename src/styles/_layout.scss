@@ -874,25 +874,28 @@
 }
 
 .visibility-group {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: .75rem;
+  display: flex;
+  flex-direction: column;
 }
 
+/* Fila de ajuste (rediseño): etiqueta a la izquierda + interruptor a la derecha, con separadores. */
 .visibility-check {
   display: flex;
+  flex-direction: row-reverse; /* DOM: [track][span] → visual: [span ……… track] con space-between */
   align-items: center;
-  gap: .8rem;
-  padding: .55rem .75rem;
-  border-radius: var(--radius-sm);
+  justify-content: space-between;
+  gap: 1rem;
+  padding: .7rem .3rem;
+  border-top: 1px solid var(--border);
   cursor: pointer;
-  transition: background-color 0.15s ease, transform .15s ease;
+  transition: background-color .15s ease;
   user-select: none;
 }
 
+.visibility-check:first-child { border-top: none; }
+
 .visibility-check:hover {
   background-color: var(--overlay-hover);
-  transform: translateY(-0.5px);
 }
 
 .visibility-check input {
@@ -937,6 +940,7 @@
 }
 
 .visibility-check span {
+  flex: 1;
   font-size: .9rem;
   color: var(--text);
   font-weight: 500;
@@ -1018,6 +1022,20 @@
   color: var(--text-muted);
   font-style: italic;
 }
+
+/* Rejilla adaptativa de favoritos (rediseño): las tarjetas se reparten el ancho y bajan de fila; con scroll
+   vertical si hay muchas, para no alargar el editor. */
+.hub-card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(10.5rem, 100%), 1fr));
+  gap: .6rem;
+  padding: .2rem .15rem;
+  max-height: 22rem;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+.hub-card-grid::-webkit-scrollbar { width: 7px; }
+.hub-card-grid::-webkit-scrollbar-thumb { background: var(--border); border-radius: var(--radius-pill); }
 
 .hub-card-row {
   display: grid;
