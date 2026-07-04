@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import {
   COMPRESSION_ENC,
+  COMPRESSION_ENVELOPE_VERSION,
   compressToBase64,
   decodeGistContent,
   decompressFromBase64,
+  encodeCompressed,
   isCompressedEnvelope,
 } from '../../src/core/utils/gistCompression';
 
@@ -53,6 +55,22 @@ describe('gistCompression', () => {
     });
     const decoded = await decodeGistContent(envelope);
     expect(decoded).toEqual({ content: plainJson, wasCompressed: true });
+  });
+
+  it('encodeCompressed produce un sobre válido que decodeGistContent revierte (round-trip de escritura)', async () => {
+    const anchor = JSON.stringify({ schemaVersion: 4, fileType: 'games-main', games: { 1: { name: 'X' } } });
+    const envelope = await encodeCompressed('games', anchor);
+    const parsed = JSON.parse(envelope);
+    expect(parsed.enc).toBe(COMPRESSION_ENC);
+    expect(parsed.schemaVersion).toBe(COMPRESSION_ENVELOPE_VERSION);
+    expect(parsed.fileType).toBe('games');
+    expect(isCompressedEnvelope(parsed)).toBe(true);
+    expect(await decodeGistContent(envelope)).toEqual({ content: anchor, wasCompressed: true });
+  });
+
+  it('el sobre comprimido sigue siendo JSON válido (cliente sin soporte no explota al parsear)', async () => {
+    const envelope = await encodeCompressed('games', JSON.stringify({ a: 1 }));
+    expect(() => JSON.parse(envelope)).not.toThrow();
   });
 
   it('decodeGistContent deja pasar contenido plano sin tocar', async () => {
