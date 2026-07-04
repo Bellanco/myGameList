@@ -949,7 +949,9 @@
   .visibility-toggle-track, .visibility-toggle-thumb { transition: none; }
 }
 
-.visibility-check span {
+/* Solo la etiqueta (span suelto), NO el `<span class="visibility-toggle-track">` — si no, el switch heredaría
+   flex:1 y crecería ocupando media fila. */
+.visibility-check > span:not(.visibility-toggle-track) {
   order: 1; /* etiqueta a la izquierda, ocupa el resto */
   flex: 1;
   font-size: .88rem;
