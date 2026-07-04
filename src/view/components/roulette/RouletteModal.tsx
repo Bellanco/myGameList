@@ -94,6 +94,8 @@ export function RouletteModal({ open, onClose, title, candidates, weight, tag, r
   // Pool congelado por sesión: el sorteo es sobre lo que había al abrir. Así, ejecutar la acción
   // (mover a "en curso" / añadir a próximos) muta las listas SIN reiniciar la ruleta ni borrar el resultado.
   const [pool, setPool] = useState<RouletteCandidate[]>([]);
+  // Giro del dado (2D): dirección y duración aleatorias en cada tirada, para que no se vea siempre igual.
+  const [diceSpin, setDiceSpin] = useState<{ dur: string; dir: string }>({ dur: '0.9s', dir: 'normal' });
 
   const n = pool.length;
 
@@ -217,6 +219,7 @@ export function RouletteModal({ open, onClose, title, candidates, weight, tag, r
     setWinner(null);
     setActed(false);
     setReviewOpen(false);
+    setDiceSpin({ dur: `${(0.7 + Math.random() * 0.5).toFixed(2)}s`, dir: Math.random() < 0.5 ? 'normal' : 'reverse' });
     setPhase('spinning');
   }, [phase, n, pool, weight, buildSpinReel]);
 
@@ -294,9 +297,15 @@ export function RouletteModal({ open, onClose, title, candidates, weight, tag, r
                     <div className="rl-card">
                       <div className="rl-card-tag">{tagText}</div>
                       <h3 className="rl-card-name">{winnerGame.name}</h3>
-                      <div className="rl-card-stars" aria-label={`Puntuación ${winnerGame.score || 0} de 5`}>
-                        <StarRating value={Number(winnerGame.score || 0)} />
-                        <small>{winnerGame.score ? `${winnerGame.score}/5` : 'sin puntuar'}</small>
+                      <div className="rl-card-stars" aria-label={winnerGame.score ? `Puntuación ${winnerGame.score} de 5` : 'Sin puntuar'}>
+                        {winnerGame.score ? (
+                          <>
+                            <StarRating value={Number(winnerGame.score)} />
+                            <small>{winnerGame.score}/5</small>
+                          </>
+                        ) : (
+                          <small>Sin puntuar</small>
+                        )}
                       </div>
                       {winnerGame.platforms.length || winnerGame.genres.length ? (
                         <div className="rl-chips">
@@ -341,6 +350,7 @@ export function RouletteModal({ open, onClose, title, candidates, weight, tag, r
                       onClick={spin}
                       disabled={phase === 'spinning'}
                       aria-label="Girar la ruleta"
+                      style={phase === 'spinning' ? ({ '--dice-dur': diceSpin.dur, '--dice-dir': diceSpin.dir } as CSSProperties) : undefined}
                     >
                       <Icon name="dice-d20" className="ui-icon rl-ghost-icon" />
                       <span className="rl-ghost-text">
