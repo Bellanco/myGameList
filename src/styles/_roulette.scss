@@ -130,7 +130,7 @@
   text-align: center;
   gap: 10px;
   padding: 28px 22px;
-  border: 1px dashed var(--border);
+  border: 1px solid transparent;
   border-radius: var(--radius-lg);
   background: var(--surface-soft);
   color: var(--text-muted);
@@ -145,12 +145,13 @@
 }
 .rl-ghost:focus-visible { outline: 2px solid var(--steam); outline-offset: 3px; }
 .rl-ghost:disabled { cursor: progress; }
-.rl-ghost-icon { width: 40px; height: 40px; color: var(--text-dim); }
-.rl-ghost:hover:not(:disabled) .rl-ghost-icon { color: var(--steam); }
+.rl-ghost-icon { width: 40px; height: 40px; color: var(--text-dim); transition: color .18s ease, transform .3s cubic-bezier(.2,.8,.25,1); }
+.rl-ghost:hover:not(:disabled) .rl-ghost-icon { color: var(--steam); transform: rotate(-16deg) scale(1.06); }
 .rl-ghost-text { font-size: 14px; }
 .rl-ghost.is-spinning { border-color: color-mix(in srgb, var(--steam) 30%, var(--border)); color: var(--text); }
-.rl-ghost.is-spinning .rl-ghost-icon { color: var(--steam); animation: rl-pulse 1.1s ease-in-out infinite; }
-@keyframes rl-pulse { 0%, 100% { opacity: .5; transform: scale(1); } 50% { opacity: 1; transform: scale(1.1); } }
+/* El dado rueda (gira) mientras se elige, en vez de un pulso. */
+.rl-ghost.is-spinning .rl-ghost-icon { color: var(--steam); animation: rl-dice-roll .85s cubic-bezier(.45,.05,.4,.95) infinite; }
+@keyframes rl-dice-roll { 0% { transform: rotate(0deg) scale(1); } 55% { transform: rotate(220deg) scale(1.14); } 100% { transform: rotate(360deg) scale(1); } }
 
 .rl-card {
   width: 100%;
@@ -198,6 +199,7 @@
   .rl-item { transition: none !important; }
   .rl-card { animation: none; }
   .rl-ghost.is-spinning .rl-ghost-icon { animation: none; }
+  .rl-ghost:hover:not(:disabled) .rl-ghost-icon { transform: none; }
 }
 
 /* Móvil: el resultado cae debajo (nunca encima de la ruleta). */
