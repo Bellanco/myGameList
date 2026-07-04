@@ -9,6 +9,9 @@
 /** Marcador del envoltorio comprimido. `payload` = base64(gzip(JSON plano)). */
 export const COMPRESSION_ENC = 'gzip+b64';
 
+/** Versión del formato del SOBRE (no del contenido: el JSON de dentro conserva su propio `schemaVersion`). */
+export const COMPRESSION_ENVELOPE_VERSION = 5;
+
 /** Sobre versionado que envuelve el contenido comprimido de un fichero del gist. Es JSON válido. */
 export interface CompressedEnvelope {
   fileType: string;
@@ -57,6 +60,15 @@ export async function decompressFromBase64(b64: string): Promise<string> {
   const bytes = base64ToBytes(b64);
   const out = await pipeThroughStream(bytes, new DecompressionStream('gzip'));
   return new TextDecoder().decode(out);
+}
+
+/**
+ * Envuelve un JSON plano en el sobre comprimido `{fileType, schemaVersion, enc, payload}`. El resultado SIGUE SIENDO
+ * JSON válido (un cliente sin soporte lo parsea pero no reconoce `enc` → lo trata como no-legible). Escritura (Fase 2).
+ */
+export async function encodeCompressed(fileType: string, plainJson: string): Promise<string> {
+  const payload = await compressToBase64(plainJson);
+  return JSON.stringify({ fileType, schemaVersion: COMPRESSION_ENVELOPE_VERSION, enc: COMPRESSION_ENC, payload });
 }
 
 /** ¿El valor parseado es un sobre comprimido `{enc:'gzip+b64', payload:string}`? Tolerante en lectura. */

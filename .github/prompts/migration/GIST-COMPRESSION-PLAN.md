@@ -4,6 +4,10 @@
 >
 > Contexto verificado (código en `develop`, 2026): el contenido del gist se guarda hoy como `JSON.stringify` **plano** (`files[<nombre>].content: string`). **No hay compresión de ningún tipo.** El envoltorio v4 (`ENABLE_GAMES_WRAPPER_WRITE = true`) ya deduplica categorías por diccionario, pero solo logró **~4 % menor** (ver `gistRepository.ts:55`). gzip encima ataca el problema donde el v4 se quedó corto.
 
+> **Estado de implementación (juegos):** Fases 0, 1 y 2 **hechas** en `develop`. Util `src/core/utils/gistCompression.ts` (gzip nativo + base64 troceado, sobre `{enc,payload}` schemaVersion 5). Lectura retrocompatible (`decodeGistContent` en `buildGistReadResponse` y en los merges de overflow). Escritura **gated** por `ENABLE_GAMES_COMPRESSION` (hoy `false`) → cuando esté `true` comprime ancla + chunks + overflow antes de `assertGistSizeWithinLimit`. Verificado: round-trip write→read sin pérdida con el flag ON. Pendiente ejecutar el **cutover** (Fase 4) y decidir el social (diferido).
+>
+> **Decisión sobre el chunking (punto 8):** el particionado (`buildGamesFiles`/`distributeIntoChunks`) sigue midiendo sobre JSON **sin comprimir** (presupuesto 800 KB) — conservador y seguro (el contenido comprimido nunca supera ese presupuesto). Solo el contenido **almacenado y medido** (`assertGistSizeWithinLimit`) va comprimido. Optimizar el nº de chunks según el tamaño comprimido (menos overflow) queda **diferido**: es una mejora, no un requisito de corrección.
+
 ---
 
 ## TL;DR
