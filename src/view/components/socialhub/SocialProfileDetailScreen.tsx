@@ -117,11 +117,9 @@ function ReviewText({ text, moreLabel, lessLabel }: { text: string; moreLabel: s
           type="button"
           className="hub-more-soft hub-review-more"
           aria-expanded={expanded}
-          aria-label={expanded ? lessLabel : moreLabel}
-          title={expanded ? lessLabel : moreLabel}
           onClick={() => setExpanded((prev) => !prev)}
         >
-          <Icon name={expanded ? 'chevron-up' : 'chevron-down'} />
+          {expanded ? lessLabel : moreLabel}
         </button>
       ) : null}
     </>

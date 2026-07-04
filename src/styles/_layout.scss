@@ -1638,6 +1638,9 @@ button.hub-chip.active {
   width: 100%;
   margin-top: .35rem;
   border-radius: var(--radius-md);
+  /* Texto "Ver más/menos" en lugar del chevron; el botón conserva el mismo tamaño (barra a todo el ancho). */
+  font-size: .8rem;
+  font-weight: 700;
 }
 .hub-review-more:hover { background: var(--surface-soft); color: var(--steam-hover); }
 .hub-review-more:active { background: var(--overlay-hover); }
