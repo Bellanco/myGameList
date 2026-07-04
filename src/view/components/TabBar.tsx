@@ -1,4 +1,4 @@
-import { memo } from 'react';
+import { memo, useLayoutEffect, useRef, useState } from 'react';
 import { TAB_ORDER, TAB_TITLES, TAB_TOOLTIPS } from '../../core/constants/labels';
 import { TAB_ICONS } from '../../core/constants/icons';
 import type { TabId } from '../../model/types/game';
@@ -10,8 +10,22 @@ interface TabBarProps {
 }
 
 export const TabBar = memo(function TabBar({ currentTab, tabCounts, onTabChange }: TabBarProps) {
+  const tabsRef = useRef<HTMLDivElement>(null);
+  const [indicator, setIndicator] = useState<{ left: number; width: number } | null>(null);
+
+  // Subrayado deslizante: mide la pestaña activa y coloca `.tab-underline` bajo ella (se anima vía CSS).
+  useLayoutEffect(() => {
+    const container = tabsRef.current;
+    const active = container?.querySelector<HTMLElement>('.tab-btn.active');
+    if (!container || !active) return;
+    const update = () => setIndicator({ left: active.offsetLeft, width: active.offsetWidth });
+    update();
+    window.addEventListener('resize', update);
+    return () => window.removeEventListener('resize', update);
+  }, [currentTab, tabCounts]);
+
   return (
-    <div className="tabs">
+    <div className="tabs" ref={tabsRef}>
       {TAB_ORDER.map((tab) => (
         <button
           key={tab}
@@ -27,6 +41,13 @@ export const TabBar = memo(function TabBar({ currentTab, tabCounts, onTabChange 
           <span className="count-badge">{tabCounts[tab]}</span>
         </button>
       ))}
+      {indicator ? (
+        <span
+          className="tab-underline"
+          aria-hidden="true"
+          style={{ transform: `translateX(${indicator.left}px)`, width: `${indicator.width}px` }}
+        />
+      ) : null}
     </div>
   );
 });

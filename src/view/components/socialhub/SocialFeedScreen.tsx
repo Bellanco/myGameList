@@ -58,7 +58,25 @@ export function SocialFeedScreen({
   statusKind: string;
   handleSignOut: () => void;
 }) {
+  const feedSentinelRef = React.useRef<HTMLButtonElement>(null);
 
+  // Scroll infinito: el botón "mostrar más" del final hace de centinela; cuando entra en viewport, amplía el lote
+  // automáticamente (y se mantiene clicable como alternativa accesible). Sin más elementos, no se observa nada.
+  React.useEffect(() => {
+    if (loadingDirectory || !hasMoreFeed) return;
+    const el = feedSentinelRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) {
+          showMoreFeed();
+        }
+      },
+      { rootMargin: '200px' },
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [loadingDirectory, hasMoreFeed, showMoreFeed, groupedFeedItems]);
 
   return (
     <section className="hub-hub hub-screen" aria-label={SOCIAL_UI.feed.sectionAria}>
@@ -136,7 +154,7 @@ export function SocialFeedScreen({
               aria-label={publishingPost ? SOCIAL_UI.feed.postPublishing : SOCIAL_UI.feed.postPublish}
               title={publishingPost ? SOCIAL_UI.feed.postPublishing : SOCIAL_UI.feed.postPublish}
             >
-              <Icon name="angle-right" />
+              {publishingPost ? <span className="hub-spinner" aria-hidden="true" /> : <Icon name="angle-right" />}
             </button>
           </div>
         </div>
@@ -259,6 +277,7 @@ export function SocialFeedScreen({
           ) : null}
           {!loadingDirectory && hasMoreFeed ? (
             <button
+              ref={feedSentinelRef}
               className="hub-more-soft hub-feed-load-more"
               type="button"
               aria-label={SOCIAL_UI.feed.feedLoadMore}

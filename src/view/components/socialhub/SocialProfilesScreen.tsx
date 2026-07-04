@@ -129,7 +129,22 @@ export function SocialProfilesScreen({
         </div>
 
         {loadingDirectory ? (
-          <div className="fg"><p>{SOCIAL_UI.profiles.loading}</p></div>
+          <div className="fg">
+            <p className="sr-only">{SOCIAL_UI.profiles.loading}</p>
+            <div className="hub-feed-row" aria-hidden="true">
+              {[0, 1, 2, 3].map((i) => (
+                <article key={i} className="hub-feed-card hub-feed-profile-item hub-skeleton-card">
+                  <header className="hub-feed-card-head">
+                    <span className="hub-avatar hub-skeleton" />
+                    <div className="hub-feed-card-head-text">
+                      <span className="hub-skeleton hub-skeleton-line" style={{ width: '60%' }} />
+                    </div>
+                  </header>
+                  <span className="hub-skeleton hub-skeleton-line" style={{ width: '85%' }} />
+                </article>
+              ))}
+            </div>
+          </div>
         ) : filteredSocialDirectory.length === 0 ? (
           <div className="fg"><p>{SOCIAL_UI.profiles.empty}</p></div>
         ) : (

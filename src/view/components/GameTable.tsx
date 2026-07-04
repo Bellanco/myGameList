@@ -18,6 +18,8 @@ interface GameTableProps {
   onAddGame?: () => void;
   tabActions: TabAction[];
   readOnly?: boolean;
+  /** Id del juego recién guardado (añadido/editado): su fila destella brevemente para localizar el cambio. */
+  recentlyChangedId?: number | null;
   visibility?: {
     showYears?: boolean;
     showReplayable?: boolean;
@@ -109,6 +111,7 @@ export const GameTable = memo(function GameTable({
   tabActions,
   readOnly = false,
   visibility,
+  recentlyChangedId = null,
 }: GameTableProps) {
   const showYears = visibility?.showYears ?? true;
   const showReplayable = visibility?.showReplayable ?? true;
@@ -267,7 +270,7 @@ export const GameTable = memo(function GameTable({
                       key={`main-${game.id}`}
                       data-index={rowIndex}
                       ref={virtualize ? virtualizer.measureElement : undefined}
-                      className={`main-row ${row.index % 2 === 0 ? 'striped' : ''}`}
+                      className={`main-row ${row.index % 2 === 0 ? 'striped' : ''} ${game.id === recentlyChangedId ? 'just-changed' : ''}`.trim()}
                       // A11y-2: el disparador accesible es el botón de la 1ª celda (anunciado como botón + aria-controls).
                       // La fila conserva click/doble-click como atajos de RATÓN, pero ya no es un control focusable.
                       onClick={() => onExpandedChange(expanded ? null : game.id)}

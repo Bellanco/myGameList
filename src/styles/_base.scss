@@ -155,3 +155,14 @@ button, input, select, textarea { font: inherit; }
 button { -webkit-tap-highlight-color: transparent; }
 .ui-icon { width: 1.05rem; height: 1.05rem; fill: currentColor; flex: 0 0 auto; }
 
+/* Cross-fade al cambiar de tema: durante el cambio se añade `.theme-anim` al <html> (~400ms) para
+   fundir colores en vez de saltar en seco. Es una clase temporal, así que no afecta a hover/scroll. */
+:root.theme-anim,
+:root.theme-anim * {
+  transition: background-color .35s ease, border-color .35s ease, color .35s ease, fill .35s ease !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  :root.theme-anim,
+  :root.theme-anim * { transition: none !important; }
+}
+

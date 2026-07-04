@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { THEME_KEY } from '../../core/constants/storageKeys';
 
 export type ThemePreference = 'dark' | 'light';
@@ -55,12 +55,18 @@ function applyTheme(theme: ThemePreference): void {
 /** Toggle de tema (claro/oscuro) con persistencia local. Default = tema del sistema (fallback oscuro). */
 export function useTheme(): { theme: ThemePreference; toggle: () => void } {
   const [theme, setTheme] = useState<ThemePreference>(readInitialPreference);
+  const themeAnimTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     applyTheme(theme);
   }, [theme]);
 
   const toggle = useCallback(() => {
+    // Cross-fade: marca el <html> mientras cambia el tema para fundir los colores (ver `.theme-anim` en _base.scss).
+    const root = document.documentElement;
+    root.classList.add('theme-anim');
+    if (themeAnimTimer.current) clearTimeout(themeAnimTimer.current);
+    themeAnimTimer.current = setTimeout(() => root.classList.remove('theme-anim'), 400);
     setTheme((current) => {
       const next: ThemePreference = current === 'dark' ? 'light' : 'dark';
       try {
