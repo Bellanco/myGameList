@@ -1551,9 +1551,8 @@ button.hub-chip.active {
   background: var(--acc-soft);
   border: 2px solid var(--acc);
 }
-.hub-review-medal .ui-icon { width: 1.65rem; height: 1.65rem; }
-/* Reseña sin puntuación (lista de la vergüenza y demás): medallón azul con icono, sin estrellas. */
-.hub-review-entry.is-noscore { --acc: var(--steam); --acc-soft: var(--steam-soft); }
+/* Reseña sin puntuación (lista de la vergüenza y demás): medallón "??" en azul suave (poco contraste), sin estrellas. */
+.hub-review-entry.is-noscore { --acc: hsl(208 34% var(--acc-l)); --acc-soft: hsl(208 34% var(--acc-l) / .14); }
 /* Estrellas de la reseña: llenas con el color de la propia nota (las vacías quedan tenues). */
 .hub-review-entry .stars .f { color: var(--acc); }
 .hub-review-entry-head {
