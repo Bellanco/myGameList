@@ -1,14 +1,11 @@
 import React from 'react';
 import { Icon } from '../Icon';
 import { HubAvatar } from './HubAvatar';
+import type { SocialUiLabels } from '../../../core/constants/labels';
 import { FriendshipButton } from './FriendshipButton';
 import type { RelationshipState } from '../../../model/types/social';
 
-/**
- * Pantalla de perfiles sociales (directorio).
- * Antes vivía como sección dentro del feed; ahora es una pantalla propia con su
- * filtro por nombre. Presentacional, sin lógica de negocio.
- */
+/** Pantalla de perfiles sociales (directorio), con filtro por nombre. */
 export function SocialProfilesScreen({
   SOCIAL_UI,
   profileSearch,
@@ -29,7 +26,7 @@ export function SocialProfilesScreen({
   status,
   statusKind
 }: {
-  SOCIAL_UI: any;
+  SOCIAL_UI: SocialUiLabels;
   profileSearch: string;
   setProfileSearch: (v: string) => void;
   filteredSocialDirectory: any[];

@@ -1,13 +1,11 @@
 ﻿import { Icon } from '../Icon';
 import { SocialGameCardSelector } from '../SocialGameCardSelector';
 import { HubAvatar } from './HubAvatar';
+import type { SocialUiLabels } from '../../../core/constants/labels';
 import { MAX_SOCIAL_FAVORITES } from '../../../core/constants/uiConfig';
 import type { TabId } from '../../../model/types/game';
 
-/**
- * Pantalla de edición de perfil social.
- * Presentacional, sin lógica de negocio.
- */
+/** Pantalla de edición de perfil social. */
 export function SocialProfileScreen({
   SOCIAL_UI,
   profileName,
@@ -38,7 +36,7 @@ export function SocialProfileScreen({
   setShowPhoto,
   ownPhotoURL,
 }: {
-  SOCIAL_UI: any;
+  SOCIAL_UI: SocialUiLabels;
   profileName: string;
   setProfileName: (v: string) => void;
   favoriteSearch: string;

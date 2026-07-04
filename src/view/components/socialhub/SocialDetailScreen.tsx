@@ -1,11 +1,9 @@
 ﻿import { Icon } from '../Icon';
 import { StarRating } from '../StarRating';
 import { HubAvatar } from './HubAvatar';
+import type { SocialUiLabels } from '../../../core/constants/labels';
 
-/**
- * Pantalla de detalle de actividad social.
- * Presentacional, sin lógica de negocio.
- */
+/** Pantalla de detalle de actividad social. */
 export function SocialDetailScreen({
   SOCIAL_UI,
   activeDetailEvent,
@@ -15,7 +13,7 @@ export function SocialDetailScreen({
   status,
   statusKind
 }: {
-  SOCIAL_UI: any;
+  SOCIAL_UI: SocialUiLabels;
   activeDetailEvent: any;
   getGameItemById: (profileId: string, id: number) => any;
   onOpenProfileDetail: (id: string) => void;

@@ -1,16 +1,10 @@
 import { memo } from 'react';
 import { UI_MESSAGES } from '../../core/constants/labels';
+import { clampRating } from '../../core/utils/normalize';
 
-/**
- * Selector visual de puntuación (1-5 estrellas) para formularios.
- * Permite hacer click en cada estrella para seleccionar una puntuación.
- * Soporta navegación con teclado (Arrow keys, Enter).
- *
- * @param value - Valor actual (0-5)
- * @param onChange - Callback cuando cambia el valor
- */
+/** Selector visual de puntuación (0-5 estrellas) para formularios, con navegación por teclado. */
 export const StarPicker = memo(function StarPicker({ value, onChange }: { value: number; onChange: (v: number) => void }): React.JSX.Element {
-  const current = Math.max(0, Math.min(5, Number(value || 0)));
+  const current = clampRating(value);
 
   const handleKeyDown = (star: number, event: React.KeyboardEvent<HTMLButtonElement>) => {
     if (event.key === 'Enter' || event.key === ' ') {

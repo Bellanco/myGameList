@@ -1,5 +1,6 @@
 import { memo } from 'react';
 import { useNativeDialog } from './useNativeDialog';
+import { DIALOG_MESSAGES } from '../../core/constants/labels';
 
 interface ConfirmModalProps {
   open: boolean;
@@ -10,7 +11,7 @@ interface ConfirmModalProps {
   confirmLabel?: string;
 }
 
-export const ConfirmModal = memo(function ConfirmModal({ open, title, onCancel, onConfirm, confirmLabel = 'Eliminar' }: ConfirmModalProps) {
+export const ConfirmModal = memo(function ConfirmModal({ open, title, onCancel, onConfirm, confirmLabel = DIALOG_MESSAGES.confirmDelete }: ConfirmModalProps) {
   // A11y-1: `showModal()` (no el atributo `open`) → focus trap, restauración de foco, `::backdrop` y Esc → onCancel.
   const dialogRef = useNativeDialog(open, onCancel);
 
@@ -21,7 +22,7 @@ export const ConfirmModal = memo(function ConfirmModal({ open, title, onCancel, 
           <div className="dialog-title">{title}</div>
           <div className="dialog-actions">
             <button className="btn btn-secondary" type="button" onClick={onCancel}>
-              Cancelar
+              {DIALOG_MESSAGES.cancel}
             </button>
             <button className="btn btn-danger" type="button" onClick={onConfirm}>
               {confirmLabel}

@@ -67,6 +67,8 @@ export const SYNC_BADGE_TEXT = {
 
 export const DIALOG_MESSAGES = {
   deleteTagTitle: (tag: string) => `¿Eliminar etiqueta "${tag}"?`,
+  cancel: 'Cancelar',
+  confirmDelete: 'Eliminar',
 } as const;
 
 export const VALIDATION_MESSAGES = {
@@ -375,6 +377,7 @@ export const SOCIAL_UI = {
     profileFavoritesCount: (count: number) => `${count} ${count === 1 ? 'favorito' : 'favoritos'}`,
     profileFavoritesTitle: 'Favoritos publicados',
     profileListsTitle: 'Juegos',
+    roulettePick: 'Elige tu próximo juego',
     profileListsEmpty: 'Este perfil no ha publicado listados todavía.',
     profileFriendsOnly: 'Hazte amigo de este jugador para ver sus reseñas, listados y recomendaciones.',
     profileFriendsOnlyTitle: 'Perfil de amigos',
@@ -529,3 +532,6 @@ export const SOCIAL_UI = {
     { id: 'gist', title: 'Espacio social', subtitle: 'Crear' },
   ],
 } as const;
+
+/** Tipo de los textos de la UI social; usar en los componentes en lugar de `any`. */
+export type SocialUiLabels = typeof SOCIAL_UI;

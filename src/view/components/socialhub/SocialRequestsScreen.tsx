@@ -1,10 +1,8 @@
 import { Icon } from '../Icon';
 import { HubAvatar } from './HubAvatar';
+import type { SocialUiLabels } from '../../../core/constants/labels';
 
-/**
- * Bandeja de solicitudes de amistad (recibidas / enviadas).
- * Presentacional, sin lógica de negocio: recibe las listas ya enriquecidas y los handlers del ViewModel.
- */
+/** Bandeja de solicitudes de amistad (recibidas / enviadas). */
 type RequestView = { docId: string; otherUid: string; name: string; photo: string };
 
 export function SocialRequestsScreen({
@@ -22,7 +20,7 @@ export function SocialRequestsScreen({
   status,
   statusKind,
 }: {
-  SOCIAL_UI: any;
+  SOCIAL_UI: SocialUiLabels;
   incomingRequests: RequestView[];
   outgoingRequests: RequestView[];
   friendsList: RequestView[];
