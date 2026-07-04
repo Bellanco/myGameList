@@ -8,6 +8,8 @@ interface GameOption {
 
 interface SocialGameCardSelectorProps {
   title: string;
+  /** Número de paso opcional (1,2,3…) que se muestra como badge junto al título. */
+  step?: number;
   description: string;
   searchPlaceholder: string;
   searchValue: string;
@@ -24,6 +26,7 @@ interface SocialGameCardSelectorProps {
  */
 export const SocialGameCardSelector = memo(function SocialGameCardSelector({
   title,
+  step,
   description,
   searchPlaceholder,
   searchValue,
@@ -119,7 +122,11 @@ export const SocialGameCardSelector = memo(function SocialGameCardSelector({
     <article className="hub-profile-block hub-profile-block-wide hub-card-selector">
       <div className="hub-card-selector-head">
         <div>
-          <h3>{title}</h3>
+          {step ? (
+            <div className="hub-block-head"><span className="hub-block-step">{step}</span><h3>{title}</h3></div>
+          ) : (
+            <h3>{title}</h3>
+          )}
           <p>{description}</p>
         </div>
         <strong className={`hub-card-selector-counter ${maxSelected && selectedIds.length >= maxSelected ? 'is-full' : ''}`.trim()}>
