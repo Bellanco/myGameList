@@ -46,6 +46,7 @@
 
 /* Tabs */
 .tabs {
+  position: relative;
   display: flex; gap: .15rem;
   /* Franja superior para los controles flotantes (tema + sync), igual que Social/Ajustes,
      para que el cluster no se mezcle con las pestañas. */
@@ -72,7 +73,7 @@
 .tab-btn:focus-visible { outline: none; box-shadow: inset 0 -2px 0 var(--steam-hover); border-radius: 6px; }
 @media (hover:hover) { .tab-btn:hover { color: var(--text-muted); } }
 .tab-btn.active { color: var(--tab-active); font-weight: 700; }
-.tab-btn.active::before { height: 1.5px; }
+/* El subrayado activo ahora lo dibuja el indicador deslizante `.tab-underline` (posicionado por JS). */
 .count-badge {
   color: var(--text-dim); font-size: .78rem; font-weight: 600;
   font-variant-numeric: tabular-nums;
@@ -356,6 +357,7 @@
 }
 
 .bottom-nav-inner {
+  position: relative;
   max-width: 760px;
   margin: 0 auto;
   border: 1px solid var(--border);
@@ -370,6 +372,8 @@
 }
 
 .bottom-nav-btn {
+  position: relative;
+  z-index: 1;
   border: none;
   background: transparent;
   color: var(--text-muted);
@@ -387,8 +391,7 @@
 
 .bottom-nav-btn.active {
   color: var(--steam-hover);
-  background: linear-gradient(180deg, rgba(26,159,255,.18), rgba(26,159,255,.1));
-  box-shadow: inset 0 0 0 1px rgba(26,159,255,.25);
+  /* El fondo/relieve del activo lo dibuja ahora la pastilla deslizante `.bottom-nav-ind`. */
 }
 
 .bottom-nav-btn:not(.active):hover {
@@ -399,6 +402,7 @@
 .bottom-nav-icon {
   width: 1.05rem;
   height: 1.05rem;
+  transition: transform .25s cubic-bezier(.2,.8,.25,1);
 }
 
 .hub-hub {
@@ -480,28 +484,35 @@
   position: relative;
 }
 
+/* Botón de solicitudes: icono de campana cuadrado; el contador va como badge en la esquina inferior derecha. */
+.btn.hub-requests-btn {
+  width: 2.7rem;
+  padding: 0;
+  display: inline-grid;
+  place-items: center;
+}
+.hub-requests-btn .ui-icon { width: 1.25rem; height: 1.25rem; }
+
 .hub-requests-count {
+  position: absolute;
+  right: -.4rem;
+  bottom: -.4rem;
+  min-width: 1.2rem;
+  height: 1.2rem;
+  padding: 0 .3rem;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 1.35rem;
-  height: 1.35rem;
-  border-radius: 50%;
-  font-size: .78rem;
-  font-weight: 700;
+  border-radius: var(--radius-pill);
+  font-size: .68rem;
+  font-weight: 800;
   line-height: 1;
-  flex: 0 0 auto;
-
-  &.is-empty {
-    background: rgba(148, 163, 184, .25);
-    color: var(--text-muted, #94a3b8);
-    border: 1px solid rgba(148, 163, 184, .45);
-  }
+  border: 2px solid var(--surface);
+  box-shadow: 0 2px 6px rgba(0,0,0,.28);
 
   &.is-active {
     background: var(--success, #2ea043);
     color: #fff;
-    border: 1px solid var(--success, #2ea043);
   }
 }
 
@@ -519,6 +530,180 @@
   flex-direction: column;
   align-items: flex-start;
   gap: .7rem;
+}
+
+/* Favoritos publicados — estantería de cartuchos (opción A): mini-tarjetas con franja de color.
+   Rejilla adaptativa: cada cartucho ocupa un ancho cómodo y se reparten el espacio; en pantallas
+   estrechas caben menos columnas y se ajustan sin desbordar (min() evita overflow en móvil). */
+.hub-fav-shelf {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(10.5rem, 100%), 1fr));
+  gap: .5rem;
+}
+.hub-fav-cart {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-elevated);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease;
+}
+.hub-fav-cart:hover { transform: translateY(-2px); border-color: var(--steam); box-shadow: var(--shadow); }
+.hub-fav-cart-top { height: .4rem; flex: 0 0 auto; background: linear-gradient(90deg, var(--steam), #7c3aed); }
+.hub-fav-cart-title {
+  padding: .55rem .65rem .65rem;
+  font-size: .82rem; font-weight: 700; line-height: 1.25;
+  color: var(--hub-text);
+  overflow-wrap: anywhere;
+  display: -webkit-box; line-clamp: 2; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+/* Lomos de colores variados (ciclo por índice), como una estantería real. */
+.hub-fav-cart--1 .hub-fav-cart-top { background: linear-gradient(90deg, #7c3aed, #db2777); }
+.hub-fav-cart--2 .hub-fav-cart-top { background: linear-gradient(90deg, #f59e0b, #ef4444); }
+.hub-fav-cart--3 .hub-fav-cart-top { background: linear-gradient(90deg, #10b981, #06b6d4); }
+.hub-fav-cart--4 .hub-fav-cart-top { background: linear-gradient(90deg, #ef4444, #f59e0b); }
+@media (prefers-reduced-motion: reduce) {
+  .hub-fav-cart { transition: none; }
+  .hub-fav-cart:hover { transform: none; }
+}
+
+/* ── Rediseño "Mi perfil social" (edición): pasos numerados, hero de identidad y chip de estado ── */
+.hub-block-head { display: flex; align-items: center; gap: .55rem; }
+.hub-block-head h3 { margin: 0; }
+.hub-block-step {
+  flex: 0 0 auto;
+  width: 1.5rem; height: 1.5rem; border-radius: 50%;
+  display: inline-grid; place-items: center;
+  font-size: .78rem; font-weight: 800;
+  background: var(--steam-soft); color: var(--steam-hover);
+  border: 1px solid color-mix(in srgb, var(--steam) 35%, transparent);
+}
+/* Hero de identidad: avatar (tamaño contenido) centrado verticalmente con el campo, que ocupa el resto. */
+.hub-identity-hero { display: flex; align-items: center; gap: .8rem; }
+.hub-identity-hero .hub-avatar { flex: 0 0 auto; width: 2.5rem; height: 2.5rem; font-size: 1rem; }
+.hub-identity-hero .finput { flex: 1; min-width: 0; }
+.hub-profile-sync-chip {
+  margin-left: auto;
+  display: inline-flex; align-items: center; gap: .4rem;
+  font-size: .72rem; font-weight: 700;
+  padding: .3rem .65rem; border-radius: var(--radius-pill);
+  background: var(--surface-soft); border: 1px solid var(--border); color: var(--text-muted);
+}
+.hub-profile-sync-chip .dot { width: .5rem; height: .5rem; border-radius: 50%; background: var(--text-dim); flex: 0 0 auto; }
+.hub-profile-sync-chip.is-synced {
+  background: color-mix(in srgb, var(--success) 14%, transparent);
+  border-color: color-mix(in srgb, var(--success) 40%, transparent);
+  color: var(--success);
+}
+.hub-profile-sync-chip.is-synced .dot { background: var(--success); box-shadow: 0 0 0 3px color-mix(in srgb, var(--success) 22%, transparent); }
+
+/* ── Detalle de perfil · Juegos: control segmentado con pastilla deslizante; encabezado si hay una sola categoría ── */
+.hub-seg {
+  position: relative;
+  display: inline-flex;
+  max-width: 100%;
+  background: var(--surface-soft);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  padding: 4px; gap: 2px;
+  overflow-x: auto; scrollbar-width: none;
+}
+.hub-seg::-webkit-scrollbar { display: none; }
+.hub-seg-ind {
+  position: absolute; top: 4px; bottom: 4px; left: 0; z-index: 0;
+  border-radius: var(--radius-pill);
+  background: linear-gradient(180deg, var(--steam), #1377c0);
+  box-shadow: 0 6px 16px rgba(26,159,255,.4);
+  transition: transform .32s cubic-bezier(.2,.8,.25,1), width .32s cubic-bezier(.2,.8,.25,1);
+}
+.hub-seg-btn {
+  position: relative; z-index: 1;
+  border: none; background: transparent;
+  color: var(--text-muted); font: inherit; font-weight: 700; font-size: .82rem;
+  padding: .5rem .95rem; border-radius: var(--radius-pill);
+  cursor: pointer; white-space: nowrap;
+  transition: color .22s ease;
+}
+.hub-seg-btn.is-active { color: #fff; }
+.hub-seg-btn:not(.is-active):hover { color: var(--text); }
+.hub-seg-btn:focus-visible { outline: 2px solid var(--steam); outline-offset: 2px; }
+.hub-games-solo { display: inline-flex; align-items: center; gap: .55rem; }
+.hub-games-solo-label { font-size: .95rem; font-weight: 800; color: var(--hub-text); }
+@media (prefers-reduced-motion: reduce) {
+  .hub-seg-ind { transition: none; }
+}
+
+/* ═══════════════════ Micro-interacciones (efectos añadidos) ═══════════════════
+   Todas con su guarda `prefers-reduced-motion` al final de este bloque. */
+
+/* Aviso de estado: entra con un leve fade+desplazamiento al aparecer (antes surgía de golpe). */
+.status-banner > div { animation: statusBannerIn .3s ease both; }
+@keyframes statusBannerIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+
+/* Pestañas: subrayado que se desliza bajo la activa (posición y ancho los fija TabBar por JS). */
+.tab-underline {
+  position: absolute; bottom: -1px; left: 0; height: 1.5px;
+  background: var(--tab-bar); border-radius: 2px; pointer-events: none;
+  transition: transform .28s cubic-bezier(.2,.8,.25,1), width .28s cubic-bezier(.2,.8,.25,1);
+}
+
+/* Navegación inferior: pastilla deslizante tras la sección activa + icono que sube. */
+.bottom-nav-ind {
+  position: absolute; top: .4rem; bottom: .4rem; left: 0; z-index: 0;
+  border-radius: var(--radius-pill);
+  background: linear-gradient(180deg, rgba(26,159,255,.18), rgba(26,159,255,.1));
+  box-shadow: inset 0 0 0 1px rgba(26,159,255,.25);
+  transition: transform .3s cubic-bezier(.2,.8,.25,1), width .3s cubic-bezier(.2,.8,.25,1);
+}
+.bottom-nav-btn.active .bottom-nav-icon { transform: translateY(-2px) scale(1.08); }
+
+/* Feed social: las tarjetas de actividad entran escalonadas al cargar. */
+.hub-feed-activity-item { animation: feedItemIn .42s ease-out both; }
+.hub-feed-activity-list .hub-feed-activity-item:nth-child(2) { animation-delay: .06s; }
+.hub-feed-activity-list .hub-feed-activity-item:nth-child(3) { animation-delay: .12s; }
+.hub-feed-activity-list .hub-feed-activity-item:nth-child(4) { animation-delay: .18s; }
+.hub-feed-activity-list .hub-feed-activity-item:nth-child(5) { animation-delay: .24s; }
+.hub-feed-activity-list .hub-feed-activity-item:nth-child(n+6) { animation-delay: .28s; }
+@keyframes feedItemIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+/* Tarjeta del selector de juego: barrido de brillo sutil al pasar el ratón (guiño a las cartas de Steam). */
+.hub-game-card { overflow: hidden; }
+.hub-game-card::after {
+  content: ""; position: absolute; inset: -40% -60%; pointer-events: none;
+  background: linear-gradient(105deg, transparent 40%, rgba(255,255,255,.28) 50%, transparent 60%);
+  transform: translateX(-120%);
+  transition: transform .7s cubic-bezier(.2,.8,.25,1);
+}
+.hub-game-card:hover::after { transform: translateX(120%); }
+
+/* Contador de peticiones: "pop" al volverse activo (llega una petición). */
+.hub-requests-count.is-active { animation: badgePop .45s cubic-bezier(.2,1.4,.3,1); }
+@keyframes badgePop { 0% { transform: scale(.4); } 55% { transform: scale(1.35); } 100% { transform: scale(1); } }
+
+/* Estado "Amigos": el chip aparece con un "pop" de confirmación al aceptar la amistad. */
+.hub-friend-chip { animation: friendChipPop .42s cubic-bezier(.2,1.3,.3,1) both; }
+@keyframes friendChipPop { 0% { opacity: 0; transform: scale(.6); } 60% { transform: scale(1.12); } 100% { opacity: 1; transform: scale(1); } }
+
+/* Estado vacío del feed (sin amigos): entra con fade (reutiliza emptyIn de _table). */
+.hub-feed-empty { animation: emptyIn .5s ease both; }
+
+/* Spinner del botón de publicar mientras se envía el post (reutiliza hubSpin de _overlays). */
+.hub-spinner {
+  display: inline-block; width: 1.05rem; height: 1.05rem; border-radius: 50%;
+  border: 2px solid currentColor; border-right-color: transparent;
+  animation: hubSpin .7s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .status-banner > div,
+  .hub-feed-activity-item,
+  .hub-requests-count.is-active,
+  .hub-friend-chip,
+  .hub-feed-empty { animation: none; }
+  .tab-underline, .bottom-nav-ind { transition: none; }
+  .bottom-nav-btn.active .bottom-nav-icon { transform: none; }
+  .hub-game-card::after { display: none; }
 }
 
 // Botón de amistad en las tarjetas del directorio (no debe empujar el layout de la tarjeta).
@@ -675,41 +860,44 @@
   grid-column: span 1;
 }
 
+/* Visibilidad (rediseño): secciones con subtítulo y filas tipo "ajustes": etiqueta a la izquierda,
+   interruptor a la derecha (orden explícito), con separadores finos entre filas. */
 .visibility-section {
   display: flex;
   flex-direction: column;
-  gap: .5rem;
 }
+.visibility-section + .visibility-section { margin-top: .6rem; }
 
 .visibility-label {
-  font-size: .85rem;
-  font-weight: 600;
+  font-size: .7rem;
+  font-weight: 700;
   color: var(--hub-text-muted);
   text-transform: uppercase;
-  letter-spacing: 0.5px;
-  padding: .25rem 0;
+  letter-spacing: .06em;
+  padding: .1rem 0;
 }
 
 .visibility-group {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: .75rem;
+  display: flex;
+  flex-direction: column;
 }
 
 .visibility-check {
   display: flex;
   align-items: center;
-  gap: .8rem;
-  padding: .55rem .75rem;
-  border-radius: var(--radius-sm);
+  justify-content: space-between;
+  gap: 1rem;
+  padding: .65rem .15rem;
+  border-top: 1px solid var(--border);
   cursor: pointer;
-  transition: background-color 0.15s ease, transform .15s ease;
+  transition: background-color .15s ease;
   user-select: none;
 }
 
+.visibility-check:first-child { border-top: none; }
+
 .visibility-check:hover {
   background-color: var(--overlay-hover);
-  transform: translateY(-0.5px);
 }
 
 .visibility-check input {
@@ -719,43 +907,55 @@
   height: 0;
 }
 
+/* Interruptor con buen contraste en ambos temas: apagado = pista gris + mando gris visible;
+   encendido = pista azul + mando blanco. El mando va posicionado de forma absoluta (fiable). */
 .visibility-toggle-track {
-  width: 46px;
-  height: 24px;
-  border-radius: 999px;
-  background: var(--overlay-hover);
+  order: 2; /* interruptor a la derecha */
+  flex: 0 0 auto;
+  width: 34px;
+  height: 20px;
+  border-radius: var(--radius-pill);
+  background: var(--surface-hover);
   border: 1px solid var(--border);
   position: relative;
-  flex-shrink: 0;
   transition: background .2s ease, border-color .2s ease;
-  display: inline-flex;
-  align-items: center;
-  justify-content: flex-start;
-  padding: 2px;
 }
 
 .visibility-toggle-thumb {
-  width: 20px;
-  height: 20px;
+  position: absolute;
+  top: 50%;
+  left: 3px;
+  transform: translateY(-50%);
+  width: 14px;
+  height: 14px;
   border-radius: 50%;
-  background: var(--surface);
-  box-shadow: 0 4px 12px rgba(0,0,0,.08);
-  transition: transform .2s ease, background .2s ease;
+  background: var(--text-muted);
+  box-shadow: 0 1px 2px rgba(0,0,0,.3);
+  transition: transform .22s cubic-bezier(.2,.8,.25,1), background .2s ease;
 }
 
+/* Encendido: azul más oscuro y apagado (mezcla de steam con la superficie) → menos contraste. */
 .visibility-check input:checked + .visibility-toggle-track {
-  background: rgba(26,159,255,.22);
-  border-color: rgba(26,159,255,.45);
+  background: color-mix(in srgb, var(--steam) 60%, var(--surface-elevated));
+  border-color: color-mix(in srgb, var(--steam) 45%, transparent);
 }
 
 .visibility-check input:checked + .visibility-toggle-track .visibility-toggle-thumb {
-  transform: translateX(22px);
-  background: #ffffff;
+  transform: translate(13px, -50%);
+  background: #eef2f6;
 }
 
-.visibility-check span {
-  font-size: .9rem;
-  color: var(--text);
+@media (prefers-reduced-motion: reduce) {
+  .visibility-toggle-track, .visibility-toggle-thumb { transition: none; }
+}
+
+/* Solo la etiqueta (span suelto), NO el `<span class="visibility-toggle-track">` — si no, el switch heredaría
+   flex:1 y crecería ocupando media fila. */
+.visibility-check > span:not(.visibility-toggle-track) {
+  order: 1; /* etiqueta a la izquierda, ocupa el resto */
+  flex: 1;
+  font-size: .88rem;
+  color: var(--hub-text);
   font-weight: 500;
 }
 
@@ -836,6 +1036,20 @@
   font-style: italic;
 }
 
+/* Rejilla adaptativa de favoritos (rediseño): las tarjetas se reparten el ancho y bajan de fila; con scroll
+   vertical si hay muchas, para no alargar el editor. */
+.hub-card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(10.5rem, 100%), 1fr));
+  gap: .6rem;
+  padding: .2rem .15rem;
+  max-height: 22rem;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+.hub-card-grid::-webkit-scrollbar { width: 7px; }
+.hub-card-grid::-webkit-scrollbar-thumb { background: var(--border); border-radius: var(--radius-pill); }
+
 .hub-card-row {
   display: grid;
   grid-auto-flow: column;
@@ -899,6 +1113,24 @@
   outline: 2px solid var(--steam);
   outline-offset: 2px;
 }
+
+/* Cupo lleno: las tarjetas no seleccionables se atenúan y no reaccionan. */
+.hub-game-card:disabled {
+  opacity: .4;
+  cursor: not-allowed;
+}
+.hub-game-card:disabled:hover {
+  transform: none;
+  border-color: var(--border);
+  box-shadow: none;
+}
+.hub-game-card:disabled::after { display: none; }
+
+/* Tonos de gris variados por posición (base = --surface-elevated): sutil, solo para distinguir vecinas. */
+.hub-game-card--1 { background: color-mix(in srgb, var(--surface-elevated) 95%, #fff); }
+.hub-game-card--2 { background: color-mix(in srgb, var(--surface-elevated) 95%, #000); }
+.hub-game-card--3 { background: color-mix(in srgb, var(--surface-elevated) 90%, #fff); }
+.hub-game-card--4 { background: color-mix(in srgb, var(--surface-elevated) 90%, #000); }
 
 .hub-game-card.is-selected {
   border-color: rgba(103,193,141,.65);
@@ -1328,50 +1560,67 @@ button.hub-chip.active {
 /* Pantalla "Reseñas" de un perfil: layout de lectura. Título del juego prominente, fila de
    meta (estrellas + fecha) y texto COMPLETO (sin recorte) con tipografía cómoda. */
 .hub-profile-reviews-list { gap: .8rem; }
+/* Reseña rediseñada: medallón con la nota (color rojo→verde según puntuación: 1=rojo, 2=amarillo, 3→5 verde)
+   + barra lateral del mismo color; título como encabezado, meta (estrellas + fecha) y texto/“ver más” a lo ancho.
+   El tono lo aporta cada tarjeta con `--rev-hue` en línea; la luz sale de `--acc-l` (theme-aware). */
 .hub-review-entry {
-  padding: 1.05rem 1.15rem;
-  gap: .55rem;
-  align-items: stretch;
+  --acc: hsl(var(--rev-hue, 135) 50% calc(var(--acc-l) + var(--rev-ladj, 0%)));
+  --acc-soft: hsl(var(--rev-hue, 135) 50% calc(var(--acc-l) + var(--rev-ladj, 0%)) / .16);
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-areas: 'medal head' 'body body';
+  align-items: start;
+  gap: .5rem .9rem;
+  padding: 1rem 1.15rem 1rem 1.35rem;
 }
-/* Anula el borde sólido de .is-review (mayor especificidad que esa regla) para dejar ver el degradado. */
 .hub-profile-reviews-list .hub-review-entry.is-review { border-left-color: transparent; }
-/* Tarjeta de reseña más cuidada: leve degradado de superficie + sombra sutil (estática: las reseñas no son
-   clicables, así que sin realce de hover). Ocupan todo el ancho del listado. */
+/* Superficie plana (sin degradado) + sombra sutil. */
 .hub-profile-reviews-list .hub-review-entry {
-  background: linear-gradient(180deg, var(--surface-elevated), var(--surface));
-  box-shadow: 0 1px 2px rgba(0, 0, 0, .18);
+  background: var(--hub-card-bg);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, .14);
 }
-/* Acento lateral suave: degradado vertical con el color y difuminado de la barra de pestañas. */
+/* Barra lateral con el color de la nota. */
 .hub-review-entry::before {
   content: '';
   position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  width: 3px;
-  border-radius: 3px;
-  background: var(--tab-bar-v);
+  left: 0; top: 0; bottom: 0;
+  width: 4px;
+  background: var(--acc);
 }
+/* Medallón circular con la nota (número entero), coloreado por puntuación. */
+.hub-review-medal {
+  grid-area: medal;
+  align-self: start;
+  width: 3.4rem; height: 3.4rem;
+  border-radius: 50%;
+  display: grid; place-items: center;
+  font-size: 1.45rem; font-weight: 800; line-height: 1;
+  font-variant-numeric: tabular-nums;
+  color: var(--acc);
+  background: var(--acc-soft);
+  border: 2px solid var(--acc);
+}
+/* Reseña sin puntuación (lista de la vergüenza y demás): medallón "??" en azul suave (poco contraste), sin estrellas. */
+.hub-review-entry.is-noscore { --acc: hsl(208 34% var(--acc-l)); --acc-soft: hsl(208 34% var(--acc-l) / .14); }
+/* Estrellas de la reseña: llenas con el color de la propia nota (las vacías quedan tenues). */
+.hub-review-entry .stars .f { color: var(--acc); }
 .hub-review-entry-head {
+  grid-area: head;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   gap: .3rem;
+  min-width: 0;
 }
-/* Título del juego: estilo "chip" calmado como los favoritos del perfil (.hub-feed-game-chip),
-   pero algo más grande. No compite con la lectura de la reseña. */
+/* Título del juego como encabezado (ya no un chip): protagonista y legible. */
 .hub-review-game {
-  display: inline-block;
-  align-self: center;
-  margin: .3rem 0;
-  padding: .15rem .65rem;
-  border-radius: var(--radius-pill);
-  background: var(--surface-soft);
-  border: 1px solid var(--border);
-  color: var(--text-muted);
-  font-size: .9rem;
-  font-weight: 600;
-  line-height: 1.35;
+  align-self: stretch;
+  margin: 0;
+  font-size: 1.02rem;
+  font-weight: 800;
+  color: var(--hub-text);
+  line-height: 1.25;
+  overflow-wrap: anywhere;
 }
 .hub-review-meta {
   display: flex;
@@ -1383,8 +1632,15 @@ button.hub-chip.active {
 }
 .hub-review-date {
   font-size: .72rem;
-  color: var(--text-dim);
+  color: var(--hub-text-muted);
   letter-spacing: .02em;
+}
+/* Texto + botón "ver más" ocupan las dos columnas (a lo ancho de la tarjeta). */
+.hub-review-body {
+  grid-area: body;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
 }
 /* Reseña recortada a 3 líneas; el botón suave la expande (.is-expanded).
    Prefijo .hub-feed-card-detail para ganar a la regla que desactiva el clamp en ese contenedor. */
@@ -1433,6 +1689,9 @@ button.hub-chip.active {
   width: 100%;
   margin-top: .35rem;
   border-radius: var(--radius-md);
+  /* Texto "Ver más/menos" en lugar del chevron; el botón conserva el mismo tamaño (barra a todo el ancho). */
+  font-size: .8rem;
+  font-weight: 700;
 }
 .hub-review-more:hover { background: var(--surface-soft); color: var(--steam-hover); }
 .hub-review-more:active { background: var(--overlay-hover); }
@@ -2082,15 +2341,8 @@ button.hub-chip.active {
   }
 }
 
-@media (min-width:1200px) {
-  .hub-profile-layout {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .visibility-group {
-    grid-template-columns: 1fr 1fr;
-  }
-}
+/* El editor de perfil va siempre a una columna: los tres bloques con la MISMA anchura (Favoritos solo es
+   más alto por sus filas de tarjetas). */
 
 @media (min-width:1957px) {
   .status-banner,

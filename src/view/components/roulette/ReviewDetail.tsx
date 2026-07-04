@@ -1,4 +1,5 @@
 import { StarRating } from '../StarRating';
+import { MetaSection } from '../MetaSection';
 import { HubAvatar } from '../socialhub/HubAvatar';
 import type { GameItem } from '../../../model/types/game';
 
@@ -11,22 +12,6 @@ export interface ReviewAuthor {
 interface ReviewDetailProps {
   game: GameItem;
   author?: ReviewAuthor;
-}
-
-function MetaSection({ label, items, cls }: { label: string; items?: string[]; cls: string }) {
-  if (!items || items.length === 0) return null;
-  return (
-    <div className="hub-metadata-section">
-      <strong>{label}</strong>
-      <div className="chips">
-        {items.map((item) => (
-          <span key={item} className={`chip ${cls}`}>
-            {item}
-          </span>
-        ))}
-      </div>
-    </div>
-  );
 }
 
 /**

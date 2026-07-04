@@ -1,6 +1,9 @@
-﻿import { useEffect, useMemo, useRef, useState } from 'react';
+﻿import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { Icon } from '../Icon';
 import { GameTable } from '../GameTable';
+import type { SocialUiLabels } from '../../../core/constants/labels';
+import { HubStatus } from './HubStatus';
+import { HubBackButton } from './HubBackButton';
 import { StarRating } from '../StarRating';
 import { HubAvatar } from './HubAvatar';
 import { TAB_IDS, type GameItem, type TabId } from '../../../model/types/game';
@@ -18,12 +21,74 @@ const LIST_PAGE_SIZE = 15;
 // renderizar todo de golpe ni dejar un scroll interminable. El filtro reinicia el lote.
 const REVIEW_PAGE_SIZE = 8;
 
-const TAB_LABELS: Record<TabId, string> = {
+const TAB_LABELS = {
   c: 'profileListTabCompleted',
   v: 'profileListTabVisited',
   e: 'profileListTabPlaying',
   p: 'profileListTabPlanned',
-};
+} as const satisfies Record<TabId, keyof SocialUiLabels['feed']>;
+
+/**
+ * Categorías de "Juegos" del detalle de perfil. Control segmentado con pastilla deslizante entre
+ * categorías; cuando solo hay una visible (el resto están ocultas), se muestra como encabezado limpio
+ * en vez de una pestaña solitaria.
+ */
+function GameCategoryTabs({
+  tabs,
+  currentTab,
+  onChange,
+  labelFor,
+}: {
+  tabs: TabId[];
+  currentTab: TabId;
+  onChange: (tab: TabId) => void;
+  labelFor: (tab: TabId) => string;
+}) {
+  const segRef = useRef<HTMLDivElement>(null);
+  const [indicator, setIndicator] = useState<{ left: number; width: number } | null>(null);
+
+  useLayoutEffect(() => {
+    const active = segRef.current?.querySelector<HTMLElement>('.hub-seg-btn.is-active');
+    if (!active) return;
+    const update = () => setIndicator({ left: active.offsetLeft, width: active.offsetWidth });
+    update();
+    window.addEventListener('resize', update);
+    return () => window.removeEventListener('resize', update);
+  }, [currentTab, tabs]);
+
+  if (tabs.length === 0) return null;
+  if (tabs.length === 1) {
+    return (
+      <div className="hub-games-solo">
+        <span className="hub-games-solo-label">{labelFor(tabs[0])}</span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="hub-seg" role="tablist" ref={segRef}>
+      {indicator ? (
+        <span
+          className="hub-seg-ind"
+          aria-hidden="true"
+          style={{ transform: `translateX(${indicator.left}px)`, width: `${indicator.width}px` }}
+        />
+      ) : null}
+      {tabs.map((tab) => (
+        <button
+          key={tab}
+          type="button"
+          role="tab"
+          aria-selected={currentTab === tab}
+          className={`hub-seg-btn ${currentTab === tab ? 'is-active' : ''}`}
+          onClick={() => onChange(tab)}
+        >
+          {labelFor(tab)}
+        </button>
+      ))}
+    </div>
+  );
+}
 
 /**
  * Texto de reseña truncado a unas líneas, con un botón suave para expandir/colapsar.
@@ -55,21 +120,16 @@ function ReviewText({ text, moreLabel, lessLabel }: { text: string; moreLabel: s
           type="button"
           className="hub-more-soft hub-review-more"
           aria-expanded={expanded}
-          aria-label={expanded ? lessLabel : moreLabel}
-          title={expanded ? lessLabel : moreLabel}
           onClick={() => setExpanded((prev) => !prev)}
         >
-          <Icon name={expanded ? 'chevron-up' : 'chevron-down'} />
+          {expanded ? lessLabel : moreLabel}
         </button>
       ) : null}
     </>
   );
 }
 
-/**
- * Pantalla de detalle de perfil social.
- * Presentacional, sin lógica de negocio.
- */
+/** Pantalla de detalle de perfil social. */
 type SocialProfileDetail = {
   displayName: string;
   photoURL?: string;
@@ -100,7 +160,7 @@ export function SocialProfileDetailScreen({
   onCancelFriendRequest,
   onRemoveFriend,
 }: {
-  SOCIAL_UI: any;
+  SOCIAL_UI: SocialUiLabels;
   activeProfileDetail: SocialProfileDetail | null;
   isOwnProfile?: boolean;
   onEditProfile?: () => void;
@@ -287,14 +347,11 @@ export function SocialProfileDetailScreen({
           </header>
           <div className="hub-screen-actions hub-screen-actions-split" aria-label={SOCIAL_UI.feed.profileDetailActionsAria}>
             <div className="hub-screen-actions-left">
-              <button className="btn btn-secondary" type="button" onClick={onBack}>
-                <Icon name="arrow-back" />
-                {SOCIAL_UI.feed.backToFeed}
-              </button>
+              <HubBackButton onBack={onBack} label={SOCIAL_UI.feed.backToFeed} />
             </div>
           </div>
           <p>{SOCIAL_UI.feed.profileDetailMissing}</p>
-          {status ? <div className={`sync-status-msg ${statusKind}`}>{status}</div> : null}
+          <HubStatus status={status} statusKind={statusKind} />
         </div>
       </section>
     );
@@ -311,10 +368,7 @@ export function SocialProfileDetailScreen({
         </header>
         <div className="hub-screen-actions hub-screen-actions-split" aria-label={SOCIAL_UI.feed.profileDetailActionsAria}>
           <div className="hub-screen-actions-left">
-            <button className="btn btn-secondary" type="button" onClick={onBack}>
-              <Icon name="arrow-back" />
-              {SOCIAL_UI.feed.backToFeed}
-            </button>
+            <HubBackButton onBack={onBack} label={SOCIAL_UI.feed.backToFeed} />
             {canSeeFullProfile ? (
               <>
                 <button
@@ -333,7 +387,7 @@ export function SocialProfileDetailScreen({
                   disabled={!roulettePool.length}
                 >
                   <Icon name="dice-d20" />
-                  Elige tu próximo juego
+                  {SOCIAL_UI.feed.roulettePick}
                 </button>
               </>
             ) : null}
@@ -395,23 +449,46 @@ export function SocialProfileDetailScreen({
                   ) : (
                   <div className="hub-feed-activity-list hub-profile-reviews-list" role="list" aria-label={SOCIAL_UI.feed.reviewsTitle}>
                     {visibleReviews.map((review) => {
+                      const rating = Number(review.rating || 0);
+                      // Reseña sin puntuación (p. ej. juegos de la lista de la vergüenza): medallón azul con
+                      // un icono en vez del número y sin estrellas.
+                      const hasRating = rating > 0;
                       const itemDate = new Date(review.ts || 0);
                       const hasValidDate = review.ts > 0 && !Number.isNaN(itemDate.getTime());
+                      // Color por nota: 1=rojo, 2=amarillo; 3/4/5 bien separados en tono (lima→verde→esmeralda)
+                      // y en luminosidad (3 más claro, 5 el más profundo) para distinguirlos de un vistazo.
+                      const rScore = Math.max(1, Math.min(5, Math.round(rating)));
+                      const reviewHue = [0, 4, 50, 82, 120, 156][rScore];
+                      const reviewLAdj = [0, 0, 0, 10, 5, 0][rScore];
                       return (
-                        <article key={review.id} className="hub-feed-card hub-feed-activity-item is-review hub-review-entry" role="listitem">
+                        <article
+                          key={review.id}
+                          className={`hub-feed-card hub-feed-activity-item is-review hub-review-entry ${hasRating ? '' : 'is-noscore'}`.trim()}
+                          role="listitem"
+                          style={hasRating ? ({ '--rev-hue': String(reviewHue), '--rev-ladj': `${reviewLAdj}%` } as CSSProperties) : undefined}
+                        >
+                          <span className="hub-review-medal" aria-hidden="true">
+                            {hasRating ? Math.round(rating) : '¿?'}
+                          </span>
                           <header className="hub-review-entry-head">
                             {review.gameName ? <h4 className="hub-review-game">{review.gameName}</h4> : null}
                             <div className="hub-review-meta">
-                              <StarRating value={Number(review.rating || 0)} />
-                              {hasValidDate ? <span className="hub-review-date">{SOCIAL_UI.feed.analyzedAt(itemDate)}</span> : null}
+                              {hasRating ? <StarRating value={rating} /> : null}
+                              {hasValidDate ? (
+                                <span className="hub-review-date">
+                                  {itemDate.toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })}
+                                </span>
+                              ) : null}
                             </div>
                           </header>
                           {review.reviewText ? (
-                            <ReviewText
-                              text={review.reviewText}
-                              moreLabel={SOCIAL_UI.feed.reviewExpand}
-                              lessLabel={SOCIAL_UI.feed.reviewCollapse}
-                            />
+                            <div className="hub-review-body">
+                              <ReviewText
+                                text={review.reviewText}
+                                moreLabel={SOCIAL_UI.feed.reviewExpand}
+                                lessLabel={SOCIAL_UI.feed.reviewCollapse}
+                              />
+                            </div>
                           ) : null}
                         </article>
                       );
@@ -439,9 +516,12 @@ export function SocialProfileDetailScreen({
             <div className="hub-metadata-section">
               <strong>{SOCIAL_UI.feed.profileFavoritesTitle}</strong>
               {favoriteGames.length > 0 ? (
-                <div className="hub-profile-fav-chips">
+                <div className="hub-fav-shelf">
                   {favoriteGames.map((favorite: string, i: number) => (
-                    <span key={`${favorite}-${i}`} className="hub-feed-game-chip">{favorite}</span>
+                    <span key={`${favorite}-${i}`} className={`hub-fav-cart hub-fav-cart--${i % 5}`} title={favorite}>
+                      <span className="hub-fav-cart-top" aria-hidden="true" />
+                      <span className="hub-fav-cart-title">{favorite}</span>
+                    </span>
                   ))}
                 </div>
               ) : (
@@ -452,18 +532,12 @@ export function SocialProfileDetailScreen({
               <strong>{SOCIAL_UI.feed.profileListsTitle}</strong>
               {hasSharedLists && visibleTabs.length > 0 ? (
                 <>
-                  <div className="hub-feed-filters" role="tablist" aria-label={SOCIAL_UI.feed.profileListsTitle}>
-                    {visibleTabs.map((tab) => (
-                      <button
-                        key={tab}
-                        type="button"
-                        className={`hub-filter-chip ${currentTab === tab ? 'is-active' : ''}`}
-                        onClick={() => setActiveListTab(tab)}
-                      >
-                        {SOCIAL_UI.feed[TAB_LABELS[tab]]}
-                      </button>
-                    ))}
-                  </div>
+                  <GameCategoryTabs
+                    tabs={visibleTabs}
+                    currentTab={currentTab}
+                    onChange={setActiveListTab}
+                    labelFor={(tab) => SOCIAL_UI.feed[TAB_LABELS[tab]]}
+                  />
                   <input
                     type="text"
                     className="input-base hub-game-filter"
@@ -512,13 +586,13 @@ export function SocialProfileDetailScreen({
           </div>
           )}
         </article>
-        {status ? <div className={`sync-status-msg ${statusKind}`}>{status}</div> : null}
+        <HubStatus status={status} statusKind={statusKind} />
       </div>
 
       <RouletteModal
         open={rouletteOpen}
         onClose={() => setRouletteOpen(false)}
-        title="Elige tu próximo juego"
+        title={SOCIAL_UI.feed.roulettePick}
         candidates={roulettePool}
         weight={profileWeight}
         reviewAuthor={{ name: activeProfileDetail.displayName, photoURL: activeProfileDetail.photoURL }}

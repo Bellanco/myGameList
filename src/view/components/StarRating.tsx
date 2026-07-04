@@ -1,13 +1,9 @@
 import { memo } from 'react';
+import { clampRating } from '../../core/utils/normalize';
 
-/**
- * Componente para mostrar una puntuación de 1-5 estrellas.
- * Renderiza estrellas llenas (★) y vacías (☆) de forma óptima en React.
- *
- * @param value - Valor numérico de puntuación (0-5)
- */
+/** Muestra una puntuación (0-5) como estrellas llenas (★) y vacías (☆). */
 export const StarRating = memo(function StarRating({ value }: { value: number }): React.JSX.Element {
-  const n = Math.max(0, Math.min(5, Number(value || 0)));
+  const n = clampRating(value);
   const fullStars = n;
   const emptyStars = 5 - n;
 

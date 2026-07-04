@@ -38,7 +38,8 @@ export type IconName =
   | 'chevron-down'
   | 'chevron-up'
   | 'signature'
-  | 'grav';
+  | 'grav'
+  | 'bell';
 
 export const TAB_ICONS: Record<TabId, IconName> = {
   c: 'trophy',

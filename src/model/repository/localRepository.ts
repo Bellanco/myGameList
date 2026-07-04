@@ -3,6 +3,7 @@ import { LEGACY_STORAGE_KEYS, localStateNeedsUpgrade } from '../migration/legacy
 import { migrateData } from './migrateRepository';
 import { loadIndexedDbState, saveIndexedDbState } from './indexedDbRepository';
 import type { GameItem, StoragePayload, TabData } from '../types/game';
+import { clampRating } from '../../core/utils/normalize';
 
 const EMPTY_DATA: TabData = { c: [], v: [], e: [], p: [], deleted: [], updatedAt: 0 };
 
@@ -60,7 +61,7 @@ function normalizeGame(game: Record<string, unknown>, defaultTs: number, forceTi
     replayable: Boolean(game.replayable),
     retry: Boolean(game.retry),
     review: String(game.review ?? '').trim(),
-    score: Number.isFinite(Number(game.score)) ? Math.max(0, Math.min(5, Number(game.score))) : 0,
+    score: clampRating(game.score),
     hours: (() => {
       const raw = (game as Record<string, unknown>).hours;
       if (raw === null || raw === undefined || raw === '') return null;

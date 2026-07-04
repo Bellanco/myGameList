@@ -1,14 +1,13 @@
 import React from 'react';
 import { Icon } from '../Icon';
 import { HubAvatar } from './HubAvatar';
+import type { SocialUiLabels } from '../../../core/constants/labels';
+import { HubStatus } from './HubStatus';
+import { HubBackButton } from './HubBackButton';
 import { FriendshipButton } from './FriendshipButton';
 import type { RelationshipState } from '../../../model/types/social';
 
-/**
- * Pantalla de perfiles sociales (directorio).
- * Antes vivía como sección dentro del feed; ahora es una pantalla propia con su
- * filtro por nombre. Presentacional, sin lógica de negocio.
- */
+/** Pantalla de perfiles sociales (directorio), con filtro por nombre. */
 export function SocialProfilesScreen({
   SOCIAL_UI,
   profileSearch,
@@ -29,7 +28,7 @@ export function SocialProfilesScreen({
   status,
   statusKind
 }: {
-  SOCIAL_UI: any;
+  SOCIAL_UI: SocialUiLabels;
   profileSearch: string;
   setProfileSearch: (v: string) => void;
   filteredSocialDirectory: any[];
@@ -107,10 +106,7 @@ export function SocialProfilesScreen({
         </header>
         <div className="hub-screen-actions hub-screen-actions-split" aria-label={SOCIAL_UI.profiles.actionsAria}>
           <div className="hub-screen-actions-left">
-            <button className="btn btn-secondary" type="button" onClick={onBack}>
-              <Icon name="arrow-back" />
-              {SOCIAL_UI.profiles.back}
-            </button>
+            <HubBackButton onBack={onBack} label={SOCIAL_UI.profiles.back} />
           </div>
         </div>
 
@@ -129,7 +125,22 @@ export function SocialProfilesScreen({
         </div>
 
         {loadingDirectory ? (
-          <div className="fg"><p>{SOCIAL_UI.profiles.loading}</p></div>
+          <div className="fg">
+            <p className="sr-only">{SOCIAL_UI.profiles.loading}</p>
+            <div className="hub-feed-row" aria-hidden="true">
+              {[0, 1, 2, 3].map((i) => (
+                <article key={i} className="hub-feed-card hub-feed-profile-item hub-skeleton-card">
+                  <header className="hub-feed-card-head">
+                    <span className="hub-avatar hub-skeleton" />
+                    <div className="hub-feed-card-head-text">
+                      <span className="hub-skeleton hub-skeleton-line" style={{ width: '60%' }} />
+                    </div>
+                  </header>
+                  <span className="hub-skeleton hub-skeleton-line" style={{ width: '85%' }} />
+                </article>
+              ))}
+            </div>
+          </div>
         ) : filteredSocialDirectory.length === 0 ? (
           <div className="fg"><p>{SOCIAL_UI.profiles.empty}</p></div>
         ) : (
@@ -165,7 +176,7 @@ export function SocialProfilesScreen({
             </div>
           </>
         )}
-        {status ? <div className={`sync-status-msg ${statusKind}`}>{status}</div> : null}
+        <HubStatus status={status} statusKind={statusKind} />
       </div>
     </section>
   );

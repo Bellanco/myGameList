@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { TAB_ACTIONS, TAB_ORDER, VALIDATION_MESSAGES } from '../core/constants/labels';
 import { sortEs, uniqueCaseInsensitive } from '../core/utils/compare';
 import { DEFAULT_SORT, sortGames } from '../core/utils/sortGames';
+import { clampRating } from '../core/utils/normalize';
 import { mapTabDataTags, type TagCategory } from '../core/utils/tagMutations';
 import { normalizeTag, safeTrim } from '../core/security/sanitize';
 import { normalizeName } from '../core/roulette/roulette';
@@ -343,7 +344,7 @@ export function useGameListViewModel() {
         platforms: uniqueCaseInsensitive(nextDraft.platforms.map(normalizeTag).filter(Boolean)),
         steamDeck: nextDraft.steamDeck,
         review: safeTrim(nextDraft.review, 25000),
-        score: Math.max(0, Math.min(5, Number(nextDraft.score || 0))),
+        score: clampRating(nextDraft.score),
         years: [...new Set((nextDraft.years || []).map(Number).filter(Number.isFinite))].sort((a, b) => a - b),
         strengths: uniqueCaseInsensitive((nextDraft.strengths || []).map(normalizeTag).filter(Boolean)),
         weaknesses: uniqueCaseInsensitive((nextDraft.weaknesses || []).map(normalizeTag).filter(Boolean)),
@@ -496,7 +497,7 @@ export function useGameListViewModel() {
         genres: uniqueCaseInsensitive((game.genres || []).map(normalizeTag).filter(Boolean)),
         steamDeck: Boolean(game.steamDeck),
         review: safeTrim(game.review || '', 25000),
-        score: Math.max(0, Math.min(5, Number(game.score || 0))),
+        score: clampRating(game.score),
         listedAt: now,
       };
       persist({ ...data, p: [...data.p, newGame] });

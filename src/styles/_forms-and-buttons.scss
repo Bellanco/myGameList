@@ -43,6 +43,19 @@
 .alert-dialog::backdrop {
   background: rgba(0, 0, 0, 0.5);
 }
+/* Entrada del diálogo de confirmación: como <dialog> nativo se monta ya en [open], usamos animación
+   (no transición) para que se vea al aparecer. */
+dialog.alert-dialog[open] { animation: alertDialogIn .24s cubic-bezier(.2,.9,.3,1.05) both; }
+dialog.alert-dialog[open]::backdrop { animation: alertBackdropIn .24s ease both; }
+@keyframes alertDialogIn {
+  from { opacity: 0; transform: translate(-50%, -46%) scale(.97); }
+  to   { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+}
+@keyframes alertBackdropIn { from { opacity: 0; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) {
+  dialog.alert-dialog[open],
+  dialog.alert-dialog[open]::backdrop { animation: none; }
+}
 
 .dialog-content {
   display: flex;
