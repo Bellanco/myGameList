@@ -456,6 +456,9 @@ export function SocialProfileDetailScreen({
                   <div className="hub-feed-activity-list hub-profile-reviews-list" role="list" aria-label={SOCIAL_UI.feed.reviewsTitle}>
                     {visibleReviews.map((review) => {
                       const rating = Number(review.rating || 0);
+                      // Reseña sin puntuación (p. ej. juegos de la lista de la vergüenza): medallón azul con
+                      // un icono en vez del número y sin estrellas.
+                      const hasRating = rating > 0;
                       const itemDate = new Date(review.ts || 0);
                       const hasValidDate = review.ts > 0 && !Number.isNaN(itemDate.getTime());
                       // Color por nota: 1=rojo, 2=amarillo; 3/4/5 bien separados en tono (lima→verde→esmeralda)
@@ -466,15 +469,17 @@ export function SocialProfileDetailScreen({
                       return (
                         <article
                           key={review.id}
-                          className="hub-feed-card hub-feed-activity-item is-review hub-review-entry"
+                          className={`hub-feed-card hub-feed-activity-item is-review hub-review-entry ${hasRating ? '' : 'is-noscore'}`.trim()}
                           role="listitem"
-                          style={{ '--rev-hue': String(reviewHue), '--rev-ladj': `${reviewLAdj}%` } as CSSProperties}
+                          style={hasRating ? ({ '--rev-hue': String(reviewHue), '--rev-ladj': `${reviewLAdj}%` } as CSSProperties) : undefined}
                         >
-                          <span className="hub-review-medal" aria-hidden="true">{Math.round(rating)}</span>
+                          <span className="hub-review-medal" aria-hidden="true">
+                            {hasRating ? Math.round(rating) : <Icon name="abandoned" />}
+                          </span>
                           <header className="hub-review-entry-head">
                             {review.gameName ? <h4 className="hub-review-game">{review.gameName}</h4> : null}
                             <div className="hub-review-meta">
-                              <StarRating value={rating} />
+                              {hasRating ? <StarRating value={rating} /> : null}
                               {hasValidDate ? (
                                 <span className="hub-review-date">
                                   {itemDate.toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })}
