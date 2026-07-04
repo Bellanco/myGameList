@@ -1114,6 +1114,24 @@
   outline-offset: 2px;
 }
 
+/* Cupo lleno: las tarjetas no seleccionables se atenúan y no reaccionan. */
+.hub-game-card:disabled {
+  opacity: .4;
+  cursor: not-allowed;
+}
+.hub-game-card:disabled:hover {
+  transform: none;
+  border-color: var(--border);
+  box-shadow: none;
+}
+.hub-game-card:disabled::after { display: none; }
+
+/* Tonos de gris variados por posición (base = --surface-elevated): sutil, solo para distinguir vecinas. */
+.hub-game-card--1 { background: color-mix(in srgb, var(--surface-elevated) 95%, #fff); }
+.hub-game-card--2 { background: color-mix(in srgb, var(--surface-elevated) 95%, #000); }
+.hub-game-card--3 { background: color-mix(in srgb, var(--surface-elevated) 90%, #fff); }
+.hub-game-card--4 { background: color-mix(in srgb, var(--surface-elevated) 90%, #000); }
+
 .hub-game-card.is-selected {
   border-color: rgba(103,193,141,.65);
   background: linear-gradient(155deg, rgba(103,193,141,.16), var(--surface-elevated));
