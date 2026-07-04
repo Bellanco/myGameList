@@ -154,14 +154,17 @@
 .rl-ghost:hover:not(:disabled) .rl-ghost-icon { color: var(--steam); transform: rotate(-16deg) scale(1.06); }
 .rl-ghost-text { font-size: 14px; }
 .rl-ghost.is-spinning { color: var(--text); }
-/* El dado rueda con un volteo 3D multieje (más realista que un giro plano) mientras se elige. */
-.rl-ghost.is-spinning .rl-ghost-icon { color: var(--steam); animation: rl-dice-roll .9s cubic-bezier(.45,.05,.4,.95) infinite; }
+/* El dado rueda en 2D (giro en el plano, es un icono plano). Dirección y duración son aleatorias por tirada
+   (`--dice-dir` / `--dice-dur` inyectadas al girar) para que no se vea siempre igual. */
+.rl-ghost.is-spinning .rl-ghost-icon {
+  color: var(--steam);
+  animation: rl-dice-roll var(--dice-dur, .9s) cubic-bezier(.5,.1,.4,.9) infinite;
+  animation-direction: var(--dice-dir, normal);
+}
 @keyframes rl-dice-roll {
-  0%   { transform: perspective(520px) rotateX(0deg) rotateY(0deg) rotateZ(0deg) scale(1); }
-  25%  { transform: perspective(520px) rotateX(150deg) rotateY(80deg) rotateZ(35deg) scale(1.12); }
-  50%  { transform: perspective(520px) rotateX(230deg) rotateY(210deg) rotateZ(-25deg) scale(1.18); }
-  75%  { transform: perspective(520px) rotateX(320deg) rotateY(290deg) rotateZ(20deg) scale(1.12); }
-  100% { transform: perspective(520px) rotateX(360deg) rotateY(360deg) rotateZ(0deg) scale(1); }
+  0%   { transform: rotate(0deg) scale(1); }
+  50%  { transform: rotate(180deg) scale(1.16); }
+  100% { transform: rotate(360deg) scale(1); }
 }
 
 .rl-card {
