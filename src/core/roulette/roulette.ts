@@ -1,4 +1,5 @@
 import type { GameItem, TabData, TabId } from '../../model/types/game';
+import { clampRating } from '../utils/normalize';
 
 /**
  * Lógica unificada de la "ruleta de juegos" (fuente única, sin React).
@@ -20,7 +21,7 @@ export const BASE_WEIGHT = 1;
 
 /** Curva de puntuación (cuadrática): a más nota, mucho más peso. Score 0 / sin puntuar → peso base. */
 export function curveScore(score?: number): number {
-  const s = Math.max(0, Math.min(5, Number(score || 0)));
+  const s = clampRating(score);
   return s > 0 ? s * s : BASE_WEIGHT;
 }
 

@@ -1,14 +1,12 @@
 ﻿import React from 'react';
 import { Icon } from '../Icon';
 import { StarRating } from '../StarRating';
+import type { SocialUiLabels } from '../../../core/constants/labels';
 import { PostText } from './PostText';
 import { HubAvatar } from './HubAvatar';
 import { POST_MAX_LENGTH } from '../../../core/security/sanitize';
 
-/**
- * Pantalla principal del feed social.
- * Presentacional, sin lógica de negocio.
- */
+/** Pantalla principal del feed social. */
 export function SocialFeedScreen({
   SOCIAL_UI,
   socialDisplayName,
@@ -34,7 +32,7 @@ export function SocialFeedScreen({
   statusKind,
   handleSignOut
 }: {
-  SOCIAL_UI: any;
+  SOCIAL_UI: SocialUiLabels;
   socialDisplayName: string;
   ownPhotoURL: string;
   currentSocialGistId: string;

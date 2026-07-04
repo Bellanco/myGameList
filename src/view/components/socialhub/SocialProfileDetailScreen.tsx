@@ -1,6 +1,7 @@
 ﻿import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { Icon } from '../Icon';
 import { GameTable } from '../GameTable';
+import type { SocialUiLabels } from '../../../core/constants/labels';
 import { StarRating } from '../StarRating';
 import { HubAvatar } from './HubAvatar';
 import { TAB_IDS, type GameItem, type TabId } from '../../../model/types/game';
@@ -18,12 +19,12 @@ const LIST_PAGE_SIZE = 15;
 // renderizar todo de golpe ni dejar un scroll interminable. El filtro reinicia el lote.
 const REVIEW_PAGE_SIZE = 8;
 
-const TAB_LABELS: Record<TabId, string> = {
+const TAB_LABELS = {
   c: 'profileListTabCompleted',
   v: 'profileListTabVisited',
   e: 'profileListTabPlaying',
   p: 'profileListTabPlanned',
-};
+} as const satisfies Record<TabId, keyof SocialUiLabels['feed']>;
 
 /**
  * Categorías de "Juegos" del detalle de perfil. Control segmentado con pastilla deslizante entre
@@ -126,10 +127,7 @@ function ReviewText({ text, moreLabel, lessLabel }: { text: string; moreLabel: s
   );
 }
 
-/**
- * Pantalla de detalle de perfil social.
- * Presentacional, sin lógica de negocio.
- */
+/** Pantalla de detalle de perfil social. */
 type SocialProfileDetail = {
   displayName: string;
   photoURL?: string;
@@ -160,7 +158,7 @@ export function SocialProfileDetailScreen({
   onCancelFriendRequest,
   onRemoveFriend,
 }: {
-  SOCIAL_UI: any;
+  SOCIAL_UI: SocialUiLabels;
   activeProfileDetail: SocialProfileDetail | null;
   isOwnProfile?: boolean;
   onEditProfile?: () => void;
@@ -393,7 +391,7 @@ export function SocialProfileDetailScreen({
                   disabled={!roulettePool.length}
                 >
                   <Icon name="dice-d20" />
-                  Elige tu próximo juego
+                  {SOCIAL_UI.feed.roulettePick}
                 </button>
               </>
             ) : null}
@@ -598,7 +596,7 @@ export function SocialProfileDetailScreen({
       <RouletteModal
         open={rouletteOpen}
         onClose={() => setRouletteOpen(false)}
-        title="Elige tu próximo juego"
+        title={SOCIAL_UI.feed.roulettePick}
         candidates={roulettePool}
         weight={profileWeight}
         reviewAuthor={{ name: activeProfileDetail.displayName, photoURL: activeProfileDetail.photoURL }}
