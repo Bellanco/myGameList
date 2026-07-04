@@ -47,7 +47,7 @@ export const SocialGameCardSelector = memo(function SocialGameCardSelector({
   }, [options, searchValue]);
 
   // Cupo lleno: al alcanzar el máximo, las tarjetas NO seleccionadas se deshabilitan (y cambian su literal).
-  const full = maxSelected != null && selectedIds.length >= maxSelected;
+  const full = maxSelected !== undefined && selectedIds.length >= maxSelected;
 
   return (
     <article className="hub-profile-block hub-profile-block-wide hub-card-selector">
