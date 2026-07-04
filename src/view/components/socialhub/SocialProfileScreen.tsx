@@ -76,8 +76,8 @@ export function SocialProfileScreen({
     onHiddenTabsChange([...hiddenTabs, tab]);
   };
 
-  // mustCreateProfile: when true, user must create/save profile before accessing feed.
-  // onBack button will not be shown when mustCreateProfile is true (since hasCreatedProfile will be false)
+  // El botón "Atrás" solo se muestra cuando hasCreatedProfile es true: sin perfil creado, el usuario
+  // debe crearlo antes de poder volver al feed.
 
   return (
     <section className="hub-hub hub-screen" aria-label={SOCIAL_UI.profile.sectionAria}>

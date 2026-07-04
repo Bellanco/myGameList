@@ -1,11 +1,3 @@
-export const UI_BREAKPOINTS = {
-  tableCompact: 1100,
-  filtersCompact: 1400,
-} as const;
-
-export const GIST_DEBOUNCE_MS = 1800;
-export const SEARCH_DEBOUNCE_MS = 220;
-
 // Máximo de juegos favoritos que se pueden destacar en el perfil social.
 export const MAX_SOCIAL_FAVORITES = 5;
 
