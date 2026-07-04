@@ -21,6 +21,7 @@ import {
   leanTabData,
 } from './socialProjection';
 import { mapWithConcurrency } from '../../core/utils/concurrency';
+import { decodeGistContent } from '../../core/utils/gistCompression';
 
 export {
   assertGistSizeWithinLimit,
@@ -58,6 +59,16 @@ const SOCIAL_GIST_FILENAME = 'myGameList.social.json';
 // Exportado para que los tests del formato v4 (gistWrite / gistV4Cutover) se salten solos cuando la
 // escritura v4 está apagada: documentan el comportamiento del cutover, no el plano de lanzamiento.
 export const ENABLE_GAMES_WRAPPER_WRITE = true;
+
+/**
+ * Compresión del gist de JUEGOS (gzip + base64 en un sobre versionado `{enc:'gzip+b64', payload}`). Con `true`, la
+ * ESCRITURA comprime el JSON v4 antes del PATCH (~70-75% menos, aleja el muro de 950 KB). La LECTURA ya sabe
+ * descomprimir en ESTA versión (`decodeGistContent`, retrocompatible con contenido plano) → activar en 2 pasos como
+ * el envoltorio v4: (1) desplegar con lectura activa y este flag en `false`; (2) cuando TODOS los dispositivos estén
+ * al día, poner `true`. Un cliente sin la lectura vería el `{enc:...}` como no-legible. Implica v4 (comprime el v4).
+ * Sigue OFF: la ESCRITURA comprimida es Fase 2. Ver .github/prompts/migration/GIST-COMPRESSION-PLAN.md.
+ */
+export const ENABLE_GAMES_COMPRESSION = false;
 
 /**
  * A6 — Chunking del gist SOCIAL por `sharedLists` (la "lista pública" grande). Mismo contrato que el de juegos:
@@ -1280,7 +1291,8 @@ async function mergeOverflowGistChunks(anchor: unknown, token: string | null): P
         throw new Error(`Chunk ${chunkId} ausente en el gist de overflow ${overflowGistId} (lectura incompleta; se aborta)`);
       }
       try {
-        const chunkParsed = JSON.parse(content) as { games?: Record<string, unknown> };
+        const { content: plain } = await decodeGistContent(content); // Fase 1: descomprime si viene el sobre `enc`.
+        const chunkParsed = JSON.parse(plain) as { games?: Record<string, unknown> };
         Object.assign(mergedGames, chunkParsed.games || {});
       } catch {
         throw new Error(`Chunk ${chunkId} corrupto en el gist de overflow ${overflowGistId} (se aborta)`);
@@ -1290,12 +1302,41 @@ async function mergeOverflowGistChunks(anchor: unknown, token: string | null): P
   return { ...a, games: mergedGames };
 }
 
+/**
+ * ¿El gist remoto está en una forma VIEJA que conviene reescribir al DESTINO de escritura actual?
+ *  - destino comprimido (`ENABLE_GAMES_COMPRESSION`): cualquier gist NO comprimido, o no-v4 → reescribir.
+ *  - destino v4 (`ENABLE_GAMES_WRAPPER_WRITE`): no-v4 → reescribir (auto-upgrade a v4).
+ *  - destino plano: envoltorio o legacy → rebajar a plano.
+ * `wasCompressed` = el ancla venía en el sobre `{enc}`. `parsed` es el RAW ya descomprimido.
+ */
+function gamesGistWasLegacy(parsed: unknown, wasCompressed: boolean): boolean {
+  if (ENABLE_GAMES_COMPRESSION) {
+    return !wasCompressed || gamesGistNeedsUpgradeToWrapper(parsed);
+  }
+  return ENABLE_GAMES_WRAPPER_WRITE ? gamesGistNeedsUpgradeToWrapper(parsed) : gamesGistNeedsRewrite(parsed);
+}
+
 async function buildGistReadResponse(
   body: { files?: Record<string, { content: string } | undefined> },
   etag: string | null,
   token: string | null,
 ): Promise<GistReadResponse> {
-  const raw = body.files?.[GIST_FILENAME]?.content;
+  // Fase 1: descomprime (si viene el sobre `enc`) el ancla y los chunks del MISMO gist ANTES de todo el pipeline,
+  // que opera sobre JSON plano (`assembleChunkedGames`/`unwrapGamesFile`/detectores `wasLegacy`). No-op si nada
+  // está comprimido (contenido plano se devuelve tal cual).
+  const decodedFiles: Record<string, { content: string }> = {};
+  let anchorWasCompressed = false;
+  await Promise.all(
+    Object.entries(body.files ?? {}).map(async ([name, file]) => {
+      const content = file?.content;
+      if (typeof content !== 'string') return;
+      const decoded = await decodeGistContent(content);
+      decodedFiles[name] = { content: decoded.content };
+      if (name === GIST_FILENAME) anchorWasCompressed = decoded.wasCompressed;
+    }),
+  );
+
+  const raw = decodedFiles[GIST_FILENAME]?.content;
 
   if (!raw) {
     throw new Error('Gist file not found');
@@ -1309,16 +1350,14 @@ async function buildGistReadResponse(
   }
 
   // E4: chunks de overflow en el MISMO gist (vienen en esta respuesta). No-op para gist plano/un solo fichero.
-  const sameGist = assembleChunkedGames(parsed, body.files);
+  const sameGist = assembleChunkedGames(parsed, decodedFiles);
   // Fase B: chunks de overflow en OTROS gists (`gistId` ≠ null) → fetch + merge (lanza si la lectura es incompleta).
   const assembled = await mergeOverflowGistChunks(sameGist, token);
 
   return {
     data: migrateData(unwrapGamesFile(assembled)),
     etag,
-    // El "viejo" depende del DESTINO de escritura: con el envoltorio v4 activado, "viejo" = no-v4 (se re-encoda);
-    // con escritura plana, "viejo" = envoltorio o legacy (se rebaja a plano). Así el auto-upgrade apunta al destino real.
-    wasLegacy: ENABLE_GAMES_WRAPPER_WRITE ? gamesGistNeedsUpgradeToWrapper(parsed) : gamesGistNeedsRewrite(parsed),
+    wasLegacy: gamesGistWasLegacy(parsed, anchorWasCompressed),
   };
 }
 
