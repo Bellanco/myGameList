@@ -71,9 +71,11 @@
   border-radius: var(--radius-md);
   background:
     linear-gradient(180deg, color-mix(in srgb, var(--bg) 70%, #000), var(--surface) 50%, color-mix(in srgb, var(--bg) 70%, #000));
-  transition: border-color .2s, box-shadow .2s;
+  /* Sombra de elevación: el tambor parece flotar por encima (efecto 3D), sin borde azul. */
+  box-shadow: var(--shadow);
+  transition: box-shadow .2s, transform .2s;
 }
-.rl-drum:hover { border-color: color-mix(in srgb, var(--steam) 45%, var(--border)); box-shadow: 0 0 0 3px var(--steam-soft); }
+.rl-drum:hover { transform: translateY(-3px); box-shadow: 0 18px 38px rgba(0,0,0,.42); }
 .rl-drum:focus-visible { outline: 2px solid var(--steam); outline-offset: 3px; }
 .rl-drum[aria-busy="true"] { cursor: progress; }
 
@@ -136,22 +138,31 @@
   color: var(--text-muted);
   font: inherit;
   cursor: pointer;
-  transition: border-color .18s, background .18s, color .18s;
+  /* Sombra de elevación (3D), sin borde azul. */
+  box-shadow: var(--shadow);
+  transition: box-shadow .18s, background .18s, color .18s, transform .18s;
 }
 .rl-ghost:hover:not(:disabled) {
-  border-color: color-mix(in srgb, var(--steam) 45%, var(--border));
-  background: var(--steam-soft);
+  background: var(--surface-hover);
   color: var(--text);
+  transform: translateY(-3px);
+  box-shadow: 0 18px 38px rgba(0,0,0,.42);
 }
 .rl-ghost:focus-visible { outline: 2px solid var(--steam); outline-offset: 3px; }
 .rl-ghost:disabled { cursor: progress; }
 .rl-ghost-icon { width: 40px; height: 40px; color: var(--text-dim); transition: color .18s ease, transform .3s cubic-bezier(.2,.8,.25,1); }
 .rl-ghost:hover:not(:disabled) .rl-ghost-icon { color: var(--steam); transform: rotate(-16deg) scale(1.06); }
 .rl-ghost-text { font-size: 14px; }
-.rl-ghost.is-spinning { border-color: color-mix(in srgb, var(--steam) 30%, var(--border)); color: var(--text); }
-/* El dado rueda (gira) mientras se elige, en vez de un pulso. */
-.rl-ghost.is-spinning .rl-ghost-icon { color: var(--steam); animation: rl-dice-roll .85s cubic-bezier(.45,.05,.4,.95) infinite; }
-@keyframes rl-dice-roll { 0% { transform: rotate(0deg) scale(1); } 55% { transform: rotate(220deg) scale(1.14); } 100% { transform: rotate(360deg) scale(1); } }
+.rl-ghost.is-spinning { color: var(--text); }
+/* El dado rueda con un volteo 3D multieje (más realista que un giro plano) mientras se elige. */
+.rl-ghost.is-spinning .rl-ghost-icon { color: var(--steam); animation: rl-dice-roll .9s cubic-bezier(.45,.05,.4,.95) infinite; }
+@keyframes rl-dice-roll {
+  0%   { transform: perspective(520px) rotateX(0deg) rotateY(0deg) rotateZ(0deg) scale(1); }
+  25%  { transform: perspective(520px) rotateX(150deg) rotateY(80deg) rotateZ(35deg) scale(1.12); }
+  50%  { transform: perspective(520px) rotateX(230deg) rotateY(210deg) rotateZ(-25deg) scale(1.18); }
+  75%  { transform: perspective(520px) rotateX(320deg) rotateY(290deg) rotateZ(20deg) scale(1.12); }
+  100% { transform: perspective(520px) rotateX(360deg) rotateY(360deg) rotateZ(0deg) scale(1); }
+}
 
 .rl-card {
   width: 100%;
@@ -200,6 +211,7 @@
   .rl-card { animation: none; }
   .rl-ghost.is-spinning .rl-ghost-icon { animation: none; }
   .rl-ghost:hover:not(:disabled) .rl-ghost-icon { transform: none; }
+  .rl-drum:hover, .rl-ghost:hover:not(:disabled) { transform: none; }
 }
 
 /* Móvil: el resultado cae debajo (nunca encima de la ruleta). */
