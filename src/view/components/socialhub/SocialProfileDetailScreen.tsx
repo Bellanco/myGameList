@@ -474,7 +474,7 @@ export function SocialProfileDetailScreen({
                           style={hasRating ? ({ '--rev-hue': String(reviewHue), '--rev-ladj': `${reviewLAdj}%` } as CSSProperties) : undefined}
                         >
                           <span className="hub-review-medal" aria-hidden="true">
-                            {hasRating ? Math.round(rating) : '??'}
+                            {hasRating ? Math.round(rating) : '¿?'}
                           </span>
                           <header className="hub-review-entry-head">
                             {review.gameName ? <h4 className="hub-review-game">{review.gameName}</h4> : null}
