@@ -1511,50 +1511,63 @@ button.hub-chip.active {
 /* Pantalla "Reseñas" de un perfil: layout de lectura. Título del juego prominente, fila de
    meta (estrellas + fecha) y texto COMPLETO (sin recorte) con tipografía cómoda. */
 .hub-profile-reviews-list { gap: .8rem; }
+/* Reseña rediseñada: medallón con la nota (color rojo→verde según puntuación: 1=rojo, 2=amarillo, 3→5 verde)
+   + barra lateral del mismo color; título como encabezado, meta (estrellas + fecha) y texto/“ver más” a lo ancho.
+   El tono lo aporta cada tarjeta con `--rev-hue` en línea; la luz sale de `--acc-l` (theme-aware). */
 .hub-review-entry {
-  padding: 1.05rem 1.15rem;
-  gap: .55rem;
-  align-items: stretch;
+  --acc: hsl(var(--rev-hue, 135) 48% var(--acc-l));
+  --acc-soft: hsl(var(--rev-hue, 135) 48% var(--acc-l) / .16);
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-areas: 'medal head' 'body body';
+  align-items: start;
+  gap: .5rem .9rem;
+  padding: 1rem 1.15rem 1rem 1.35rem;
 }
-/* Anula el borde sólido de .is-review (mayor especificidad que esa regla) para dejar ver el degradado. */
 .hub-profile-reviews-list .hub-review-entry.is-review { border-left-color: transparent; }
-/* Tarjeta de reseña más cuidada: leve degradado de superficie + sombra sutil (estática: las reseñas no son
-   clicables, así que sin realce de hover). Ocupan todo el ancho del listado. */
+/* Superficie plana (sin degradado) + sombra sutil. */
 .hub-profile-reviews-list .hub-review-entry {
-  background: linear-gradient(180deg, var(--surface-elevated), var(--surface));
-  box-shadow: 0 1px 2px rgba(0, 0, 0, .18);
+  background: var(--hub-card-bg);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, .14);
 }
-/* Acento lateral suave: degradado vertical con el color y difuminado de la barra de pestañas. */
+/* Barra lateral con el color de la nota. */
 .hub-review-entry::before {
   content: '';
   position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  width: 3px;
-  border-radius: 3px;
-  background: var(--tab-bar-v);
+  left: 0; top: 0; bottom: 0;
+  width: 4px;
+  background: var(--acc);
+}
+/* Medallón circular con la nota (número entero), coloreado por puntuación. */
+.hub-review-medal {
+  grid-area: medal;
+  align-self: start;
+  width: 3.4rem; height: 3.4rem;
+  border-radius: 50%;
+  display: grid; place-items: center;
+  font-size: 1.45rem; font-weight: 800; line-height: 1;
+  font-variant-numeric: tabular-nums;
+  color: var(--acc);
+  background: var(--acc-soft);
+  border: 2px solid var(--acc);
 }
 .hub-review-entry-head {
+  grid-area: head;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   gap: .3rem;
+  min-width: 0;
 }
-/* Título del juego: estilo "chip" calmado como los favoritos del perfil (.hub-feed-game-chip),
-   pero algo más grande. No compite con la lectura de la reseña. */
+/* Título del juego como encabezado (ya no un chip): protagonista y legible. */
 .hub-review-game {
-  display: inline-block;
-  align-self: center;
-  margin: .3rem 0;
-  padding: .15rem .65rem;
-  border-radius: var(--radius-pill);
-  background: var(--surface-soft);
-  border: 1px solid var(--border);
-  color: var(--text-muted);
-  font-size: .9rem;
-  font-weight: 600;
-  line-height: 1.35;
+  align-self: stretch;
+  margin: 0;
+  font-size: 1.02rem;
+  font-weight: 800;
+  color: var(--hub-text);
+  line-height: 1.25;
+  overflow-wrap: anywhere;
 }
 .hub-review-meta {
   display: flex;
@@ -1566,8 +1579,15 @@ button.hub-chip.active {
 }
 .hub-review-date {
   font-size: .72rem;
-  color: var(--text-dim);
+  color: var(--hub-text-muted);
   letter-spacing: .02em;
+}
+/* Texto + botón "ver más" ocupan las dos columnas (a lo ancho de la tarjeta). */
+.hub-review-body {
+  grid-area: body;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
 }
 /* Reseña recortada a 3 líneas; el botón suave la expande (.is-expanded).
    Prefijo .hub-feed-card-detail para ganar a la regla que desactiva el clamp en ese contenedor. */

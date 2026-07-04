@@ -68,6 +68,8 @@
   --radius-lg: 22px;
   --radius-pill: 9999px;
   --shadow: 0 10px 28px rgba(0,0,0,.38);
+  /* Luminosidad del acento por-nota de las reseñas (rojo→verde); algo más claro en oscuro para que lea. */
+  --acc-l: 58%;
 }
 
 /* Tema claro: solo redefine colores (los radios y la estructura no cambian). */
@@ -127,6 +129,7 @@
   --hub-btn-depth-soft: rgba(20,30,45,.12);
 
   --shadow: 0 8px 24px rgba(20,30,45,.12);
+  --acc-l: 42%;
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
