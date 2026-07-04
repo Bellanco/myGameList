@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useRef, useState } from 'react';
+﻿import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Icon } from '../Icon';
 import { GameTable } from '../GameTable';
 import { StarRating } from '../StarRating';
@@ -24,6 +24,68 @@ const TAB_LABELS: Record<TabId, string> = {
   e: 'profileListTabPlaying',
   p: 'profileListTabPlanned',
 };
+
+/**
+ * Categorías de "Juegos" del detalle de perfil. Control segmentado con pastilla deslizante entre
+ * categorías; cuando solo hay una visible (el resto están ocultas), se muestra como encabezado limpio
+ * en vez de una pestaña solitaria.
+ */
+function GameCategoryTabs({
+  tabs,
+  currentTab,
+  onChange,
+  labelFor,
+}: {
+  tabs: TabId[];
+  currentTab: TabId;
+  onChange: (tab: TabId) => void;
+  labelFor: (tab: TabId) => string;
+}) {
+  const segRef = useRef<HTMLDivElement>(null);
+  const [indicator, setIndicator] = useState<{ left: number; width: number } | null>(null);
+
+  useLayoutEffect(() => {
+    const active = segRef.current?.querySelector<HTMLElement>('.hub-seg-btn.is-active');
+    if (!active) return;
+    const update = () => setIndicator({ left: active.offsetLeft, width: active.offsetWidth });
+    update();
+    window.addEventListener('resize', update);
+    return () => window.removeEventListener('resize', update);
+  }, [currentTab, tabs]);
+
+  if (tabs.length === 0) return null;
+  if (tabs.length === 1) {
+    return (
+      <div className="hub-games-solo">
+        <span className="hub-games-solo-label">{labelFor(tabs[0])}</span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="hub-seg" role="tablist" ref={segRef}>
+      {indicator ? (
+        <span
+          className="hub-seg-ind"
+          aria-hidden="true"
+          style={{ transform: `translateX(${indicator.left}px)`, width: `${indicator.width}px` }}
+        />
+      ) : null}
+      {tabs.map((tab) => (
+        <button
+          key={tab}
+          type="button"
+          role="tab"
+          aria-selected={currentTab === tab}
+          className={`hub-seg-btn ${currentTab === tab ? 'is-active' : ''}`}
+          onClick={() => onChange(tab)}
+        >
+          {labelFor(tab)}
+        </button>
+      ))}
+    </div>
+  );
+}
 
 /**
  * Texto de reseña truncado a unas líneas, con un botón suave para expandir/colapsar.
@@ -441,7 +503,7 @@ export function SocialProfileDetailScreen({
               {favoriteGames.length > 0 ? (
                 <div className="hub-fav-shelf">
                   {favoriteGames.map((favorite: string, i: number) => (
-                    <span key={`${favorite}-${i}`} className={`hub-fav-cart hub-fav-cart--${i % 5}`}>
+                    <span key={`${favorite}-${i}`} className={`hub-fav-cart hub-fav-cart--${i % 5}`} title={favorite}>
                       <span className="hub-fav-cart-top" aria-hidden="true" />
                       <span className="hub-fav-cart-title">{favorite}</span>
                     </span>
@@ -455,18 +517,12 @@ export function SocialProfileDetailScreen({
               <strong>{SOCIAL_UI.feed.profileListsTitle}</strong>
               {hasSharedLists && visibleTabs.length > 0 ? (
                 <>
-                  <div className="hub-feed-filters" role="tablist" aria-label={SOCIAL_UI.feed.profileListsTitle}>
-                    {visibleTabs.map((tab) => (
-                      <button
-                        key={tab}
-                        type="button"
-                        className={`hub-filter-chip ${currentTab === tab ? 'is-active' : ''}`}
-                        onClick={() => setActiveListTab(tab)}
-                      >
-                        {SOCIAL_UI.feed[TAB_LABELS[tab]]}
-                      </button>
-                    ))}
-                  </div>
+                  <GameCategoryTabs
+                    tabs={visibleTabs}
+                    currentTab={currentTab}
+                    onChange={setActiveListTab}
+                    labelFor={(tab) => SOCIAL_UI.feed[TAB_LABELS[tab]]}
+                  />
                   <input
                     type="text"
                     className="input-base hub-game-filter"

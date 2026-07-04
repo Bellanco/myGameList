@@ -532,10 +532,15 @@
   gap: .7rem;
 }
 
-/* Favoritos publicados — estantería de cartuchos (opción A): mini-tarjetas con franja de color. */
-.hub-fav-shelf { display: flex; flex-wrap: wrap; gap: .5rem; }
+/* Favoritos publicados — estantería de cartuchos (opción A): mini-tarjetas con franja de color.
+   Rejilla adaptativa: cada cartucho ocupa un ancho cómodo y se reparten el espacio; en pantallas
+   estrechas caben menos columnas y se ajustan sin desbordar (min() evita overflow en móvil). */
+.hub-fav-shelf {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(10.5rem, 100%), 1fr));
+  gap: .5rem;
+}
 .hub-fav-cart {
-  width: 7rem;
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   background: var(--surface-elevated);
@@ -547,9 +552,10 @@
 .hub-fav-cart:hover { transform: translateY(-2px); border-color: var(--steam); box-shadow: var(--shadow); }
 .hub-fav-cart-top { height: .4rem; flex: 0 0 auto; background: linear-gradient(90deg, var(--steam), #7c3aed); }
 .hub-fav-cart-title {
-  padding: .5rem .55rem .6rem;
-  font-size: .78rem; font-weight: 700; line-height: 1.2;
+  padding: .55rem .65rem .65rem;
+  font-size: .82rem; font-weight: 700; line-height: 1.25;
   color: var(--hub-text);
+  overflow-wrap: anywhere;
   display: -webkit-box; line-clamp: 2; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
 }
 /* Lomos de colores variados (ciclo por índice), como una estantería real. */
@@ -560,6 +566,70 @@
 @media (prefers-reduced-motion: reduce) {
   .hub-fav-cart { transition: none; }
   .hub-fav-cart:hover { transform: none; }
+}
+
+/* ── Rediseño "Mi perfil social" (edición): pasos numerados, hero de identidad y chip de estado ── */
+.hub-block-head { display: flex; align-items: center; gap: .55rem; }
+.hub-block-head h3 { margin: 0; }
+.hub-block-step {
+  flex: 0 0 auto;
+  width: 1.5rem; height: 1.5rem; border-radius: 50%;
+  display: inline-grid; place-items: center;
+  font-size: .78rem; font-weight: 800;
+  background: var(--steam-soft); color: var(--steam-hover);
+  border: 1px solid color-mix(in srgb, var(--steam) 35%, transparent);
+}
+.hub-identity-hero { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; }
+.hub-identity-fields { flex: 1 1 12rem; min-width: 0; display: flex; flex-direction: column; gap: .4rem; }
+.hub-profile-sync-chip {
+  margin-left: auto;
+  display: inline-flex; align-items: center; gap: .4rem;
+  font-size: .72rem; font-weight: 700;
+  padding: .3rem .65rem; border-radius: var(--radius-pill);
+  background: var(--surface-soft); border: 1px solid var(--border); color: var(--text-muted);
+}
+.hub-profile-sync-chip .dot { width: .5rem; height: .5rem; border-radius: 50%; background: var(--text-dim); flex: 0 0 auto; }
+.hub-profile-sync-chip.is-synced {
+  background: color-mix(in srgb, var(--success) 14%, transparent);
+  border-color: color-mix(in srgb, var(--success) 40%, transparent);
+  color: var(--success);
+}
+.hub-profile-sync-chip.is-synced .dot { background: var(--success); box-shadow: 0 0 0 3px color-mix(in srgb, var(--success) 22%, transparent); }
+
+/* ── Detalle de perfil · Juegos: control segmentado con pastilla deslizante; encabezado si hay una sola categoría ── */
+.hub-seg {
+  position: relative;
+  display: inline-flex;
+  max-width: 100%;
+  background: var(--surface-soft);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  padding: 4px; gap: 2px;
+  overflow-x: auto; scrollbar-width: none;
+}
+.hub-seg::-webkit-scrollbar { display: none; }
+.hub-seg-ind {
+  position: absolute; top: 4px; bottom: 4px; left: 0; z-index: 0;
+  border-radius: var(--radius-pill);
+  background: linear-gradient(180deg, var(--steam), #1377c0);
+  box-shadow: 0 6px 16px rgba(26,159,255,.4);
+  transition: transform .32s cubic-bezier(.2,.8,.25,1), width .32s cubic-bezier(.2,.8,.25,1);
+}
+.hub-seg-btn {
+  position: relative; z-index: 1;
+  border: none; background: transparent;
+  color: var(--text-muted); font: inherit; font-weight: 700; font-size: .82rem;
+  padding: .5rem .95rem; border-radius: var(--radius-pill);
+  cursor: pointer; white-space: nowrap;
+  transition: color .22s ease;
+}
+.hub-seg-btn.is-active { color: #fff; }
+.hub-seg-btn:not(.is-active):hover { color: var(--text); }
+.hub-seg-btn:focus-visible { outline: 2px solid var(--steam); outline-offset: 2px; }
+.hub-games-solo { display: inline-flex; align-items: center; gap: .55rem; }
+.hub-games-solo-label { font-size: .95rem; font-weight: 800; color: var(--hub-text); }
+@media (prefers-reduced-motion: reduce) {
+  .hub-seg-ind { transition: none; }
 }
 
 /* ═══════════════════ Micro-interacciones (efectos añadidos) ═══════════════════

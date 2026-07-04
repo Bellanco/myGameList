@@ -86,6 +86,10 @@ export function SocialProfileScreen({
           <div className="hub-hub-title-wrap">
             <Icon name="bottom-hub" className="hub-hub-icon" />
             <h2>{SOCIAL_UI.profile.title}</h2>
+            <span className={`hub-profile-sync-chip ${hasCreatedProfile ? 'is-synced' : ''}`}>
+              <span className="dot" aria-hidden="true" />
+              {hasCreatedProfile ? SOCIAL_UI.profile.statusSynced : SOCIAL_UI.profile.statusUnpublished}
+            </span>
           </div>
           <p>{SOCIAL_UI.profile.subtitle}</p>
         </header>
@@ -115,26 +119,30 @@ export function SocialProfileScreen({
           </div>
         </div>
         <div className="hub-profile-layout">
-          <article className="hub-profile-block">
-            <header className="hub-feed-card-head">
-              <HubAvatar name={profileName || 'Usuario'} photoURL={showPhoto !== false ? ownPhotoURL : undefined} />
-              <div className="hub-feed-card-head-text">
-                <h3>{SOCIAL_UI.profile.identityTitle}</h3>
-              </div>
-            </header>
+          <article className="hub-profile-block hub-profile-identity">
+            <div className="hub-block-head">
+              <span className="hub-block-step">1</span>
+              <h3>{SOCIAL_UI.profile.identityTitle}</h3>
+            </div>
             <p>{SOCIAL_UI.profile.identityDescription}</p>
-            <label className="flabel" htmlFor="hub-profile-name">{SOCIAL_UI.profile.nameLabel}</label>
-            <input
-              id="hub-profile-name"
-              className="finput"
-              type="text"
-              maxLength={60}
-              value={profileName}
-              onChange={(event) => setProfileName(event.target.value)}
-              placeholder={SOCIAL_UI.profile.namePlaceholder}
-            />
+            <div className="hub-identity-hero">
+              <HubAvatar name={profileName || 'Usuario'} photoURL={showPhoto !== false ? ownPhotoURL : undefined} />
+              <div className="hub-identity-fields">
+                <label className="flabel" htmlFor="hub-profile-name">{SOCIAL_UI.profile.nameLabel}</label>
+                <input
+                  id="hub-profile-name"
+                  className="finput"
+                  type="text"
+                  maxLength={60}
+                  value={profileName}
+                  onChange={(event) => setProfileName(event.target.value)}
+                  placeholder={SOCIAL_UI.profile.namePlaceholder}
+                />
+              </div>
+            </div>
           </article>
           <SocialGameCardSelector
+            step={2}
             title={SOCIAL_UI.profile.favoritesTitle}
             description={SOCIAL_UI.profile.favoritesDescription}
             searchPlaceholder={SOCIAL_UI.profile.favoritesSearchPlaceholder}
@@ -147,7 +155,10 @@ export function SocialProfileScreen({
             onToggle={(id) => toggleGameInSet(id, favoriteGameIds, setFavoriteGameIds)}
           />
           <article className="hub-profile-block">
-            <h3>{SOCIAL_UI.profile.visibilityTitle}</h3>
+            <div className="hub-block-head">
+              <span className="hub-block-step">3</span>
+              <h3>{SOCIAL_UI.profile.visibilityTitle}</h3>
+            </div>
             <p>{SOCIAL_UI.profile.visibilityDescription}</p>
             
             <div className="visibility-section">

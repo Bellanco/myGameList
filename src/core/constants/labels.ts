@@ -466,6 +466,8 @@ export const SOCIAL_UI = {
     save: 'Guardar perfil',
     saving: 'Guardando perfil...',
     signOut: 'Cerrar sesión',
+    statusSynced: 'Sincronizado',
+    statusUnpublished: 'Sin publicar',
     identityTitle: 'Identidad visible',
     identityDescription: 'Este nombre se mostrará en la actividad social y en análisis compartidos.',
     nameLabel: 'Nombre social',
