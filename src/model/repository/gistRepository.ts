@@ -1327,16 +1327,23 @@ async function encodeGamesContent(json: string): Promise<string> {
   return COMPRESS_GAMES_WRITES ? encodeCompressed('games', json) : json;
 }
 
-// Descomprime el `content` de cada fichero de un mapa (no-op sobre contenido plano). Se usa para que las comparaciones
-// de reescritura incremental (checksum de chunk, refs del ancla) operen sobre JSON plano aunque el remoto esté comprimido.
+// Descomprime el `content` de cada fichero de un mapa (no-op sobre contenido plano) y conserva si venía comprimido.
+// Se usa para que las comparaciones de reescritura incremental (checksum de chunk, refs del ancla) operen sobre JSON
+// plano aunque el remoto esté comprimido, y para saber si el chunk remoto ya está en el formato de compresión destino.
+type DecodedRemoteFile = { content: string; wasCompressed: boolean };
 async function decodeFilesMap(
   files: Record<string, { content?: string } | undefined>,
-): Promise<Record<string, { content?: string } | undefined>> {
-  const out: Record<string, { content?: string } | undefined> = {};
+): Promise<Record<string, DecodedRemoteFile | undefined>> {
+  const out: Record<string, DecodedRemoteFile | undefined> = {};
   await Promise.all(
     Object.entries(files).map(async ([name, file]) => {
       const content = file?.content;
-      out[name] = typeof content === 'string' ? { content: (await decodeGistContent(content)).content } : file;
+      if (typeof content !== 'string') {
+        out[name] = undefined; // fichero sin contenido (p.ej. truncado): mantiene la clave para el barrido de obsoletos
+        return;
+      }
+      const decoded = await decodeGistContent(content);
+      out[name] = { content: decoded.content, wasCompressed: decoded.wasCompressed };
     }),
   );
   return out;
@@ -1591,7 +1598,9 @@ async function assignAndWriteOverflowGists(
       const cur = await decodeFilesMap(await readGistFilesById(token, overflowId));
       const toPatch: Record<string, { content: string }> = {};
       for (const name of batch) {
-        if (chunkFileChecksum(cur[name]?.content) === chunkFiles[name].integrity.checksum) continue;
+        const remote = cur[name];
+        // Igual que en el gist principal: omitir solo si no cambió Y ya está en la compresión destino.
+        if (remote && chunkFileChecksum(remote.content) === chunkFiles[name].integrity.checksum && remote.wasCompressed === COMPRESS_GAMES_WRITES) continue;
         toPatch[name] = batchContents[name];
       }
       if (Object.keys(toPatch).length > 0) {
@@ -1644,7 +1653,7 @@ export async function writeGist(token: string, gistId: string, payload: TabData)
 
     // A7 (reescritura incremental) + B (reparto): lee el estado actual del gist principal UNA vez para (a) OMITIR
     // del PATCH los chunks sin cambios (checksum estable), (b) borrar obsoletos y (c) reutilizar gists de overflow.
-    let currentFiles: Record<string, { content?: string } | undefined> = {};
+    let currentFiles: Record<string, DecodedRemoteFile | undefined> = {};
     try {
       const current = await githubFetch(`${GIST_API_BASE}/${gistId}`, { headers });
       if (current.ok) {
@@ -1672,8 +1681,11 @@ export async function writeGist(token: string, gistId: string, payload: TabData)
       const file = chunkFiles[name];
       const content = await encodeGamesContent(JSON.stringify({ ...file, mainGistId: gistId }));
       assertGistSizeWithinLimit(content, `gist de juegos (${name})`);
-      if (chunkFileChecksum(currentFiles[name]?.content) === file.integrity.checksum) {
-        continue; // sin cambios respecto al remoto: no reenviar este chunk
+      // Omitir solo si el chunk no cambió Y su compresión remota ya coincide con el destino: así el flip a comprimido
+      // (o el revert a plano) reescribe también los chunks sin cambios, en vez de dejarlos en el formato viejo.
+      const remote = currentFiles[name];
+      if (remote && chunkFileChecksum(remote.content) === file.integrity.checksum && remote.wasCompressed === COMPRESS_GAMES_WRITES) {
+        continue; // sin cambios y misma compresión que el remoto: no reenviar este chunk
       }
       files[name] = { content };
     }

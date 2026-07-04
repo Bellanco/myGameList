@@ -62,6 +62,16 @@ async function compressStore(store: Record<string, { content: string }>): Promis
   }
 }
 
+/** Descomprime en sitio cada fichero (simula un gist PRE-FLIP dejado en plano por un cliente antiguo). */
+async function decompressStore(store: Record<string, { content: string }>): Promise<void> {
+  for (const name of Object.keys(store)) {
+    store[name] = { content: (await decodeGistContent(store[name].content)).content };
+  }
+}
+
+const isCompressed = (content: string) => isCompressedEnvelope(JSON.parse(content));
+const chunkNamesOf = (files: Record<string, unknown>) => Object.keys(files).filter((n) => /^myGames-chunk-.+\.json$/.test(n));
+
 const ids = (arr: GameItem[]) => arr.map((g) => g.id);
 
 afterEach(() => {
@@ -201,5 +211,34 @@ describe.skipIf(!ENABLE_GAMES_COMPRESSION)('escritura comprimida (ENABLE_GAMES_C
     expect(out.c[0].name).toBe('Hollow Knight');
     expect(out.v[0].retry).toBe(true);
     expect(read.wasLegacy).toBe(false); // ya comprimido → no pide re-upgrade
+  });
+
+  it('el flip comprime también los chunks SIN CAMBIOS que estaban en plano (y no los reescribe si ya coinciden)', async () => {
+    const { store, patchBodies } = stubGistStore();
+    const review = 'x'.repeat(900);
+    const c: GameItem[] = [];
+    for (let i = 1; i <= 2500; i += 1) c.push(makeGame({ id: i, name: `Juego ${i}`, review }));
+    const big: TabData = { c, v: [], e: [], p: [], deleted: [], updatedAt: 1 };
+
+    await writeGist(TOKEN, GIST_ID, big);
+    const chunkNames = chunkNamesOf(store);
+    expect(chunkNames.length).toBeGreaterThanOrEqual(1); // hay chunking real
+
+    // Simula el estado PRE-FLIP: mismos datos pero en PLANO (como lo dejó un cliente antiguo antes del cutover).
+    await decompressStore(store);
+    expect(isCompressed(store[chunkNames[0]].content)).toBe(false);
+
+    // Reescribe los MISMOS datos con la compresión activa: los chunks sin cambios deben REENVIARSE (comprimidos),
+    // en vez de saltarse por checksum dejándolos en plano.
+    await writeGist(TOKEN, GIST_ID, big);
+    const flipPatch = patchBodies[patchBodies.length - 1].files;
+    for (const n of chunkNames) {
+      expect(flipPatch[n], `el chunk ${n} debe reenviarse en el flip`).toBeTruthy();
+      expect(isCompressed((flipPatch[n] as { content: string }).content)).toBe(true);
+    }
+
+    // Ahora el remoto ya está comprimido y los datos no cambian → el skip incremental se mantiene: no reenvía chunks.
+    await writeGist(TOKEN, GIST_ID, big);
+    expect(chunkNamesOf(patchBodies[patchBodies.length - 1].files)).toEqual([]);
   });
 });
