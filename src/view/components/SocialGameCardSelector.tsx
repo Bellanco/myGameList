@@ -46,6 +46,9 @@ export const SocialGameCardSelector = memo(function SocialGameCardSelector({
     return options.filter((option) => option.name.toLowerCase().includes(query));
   }, [options, searchValue]);
 
+  // Cupo lleno: al alcanzar el máximo, las tarjetas NO seleccionadas se deshabilitan (y cambian su literal).
+  const full = maxSelected != null && selectedIds.length >= maxSelected;
+
   return (
     <article className="hub-profile-block hub-profile-block-wide hub-card-selector">
       <div className="hub-card-selector-head">
@@ -81,19 +84,24 @@ export const SocialGameCardSelector = memo(function SocialGameCardSelector({
           aria-label={SOCIAL_UI.cardSelector.cardsAria(title)}
           role="group"
         >
-          {filteredOptions.map((option) => {
+          {filteredOptions.map((option, i) => {
             const isSelected = selectedIds.includes(option.id);
+            const disabled = !isSelected && full;
             return (
               <button
                 key={option.id}
                 type="button"
                 aria-pressed={isSelected}
-                className={`hub-game-card ${isSelected ? 'is-selected' : ''}`}
+                disabled={disabled}
+                // Tono variado por posición (--0..4): distingue las casillas de sus vecinas (lados y arriba/abajo).
+                className={`hub-game-card hub-game-card--${i % 5} ${isSelected ? 'is-selected' : ''}`.trim()}
                 onClick={() => onToggle(option.id)}
               >
                 <span className="hub-game-card-check" aria-hidden="true" />
                 <span className="hub-game-card-title">{option.name}</span>
-                <span className="hub-game-card-status">{isSelected ? 'Seleccionado' : 'Seleccionar'}</span>
+                <span className="hub-game-card-status">
+                  {isSelected ? 'Seleccionado' : disabled ? 'Máximo alcanzado' : 'Seleccionar'}
+                </span>
               </button>
             );
           })}
