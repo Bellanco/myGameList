@@ -439,9 +439,12 @@ export function SocialProfileDetailScreen({
             <div className="hub-metadata-section">
               <strong>{SOCIAL_UI.feed.profileFavoritesTitle}</strong>
               {favoriteGames.length > 0 ? (
-                <div className="hub-profile-fav-chips">
+                <div className="hub-fav-shelf">
                   {favoriteGames.map((favorite: string, i: number) => (
-                    <span key={`${favorite}-${i}`} className="hub-feed-game-chip">{favorite}</span>
+                    <span key={`${favorite}-${i}`} className={`hub-fav-cart hub-fav-cart--${i % 5}`}>
+                      <span className="hub-fav-cart-top" aria-hidden="true" />
+                      <span className="hub-fav-cart-title">{favorite}</span>
+                    </span>
                   ))}
                 </div>
               ) : (
