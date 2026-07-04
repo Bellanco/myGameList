@@ -1,4 +1,4 @@
-﻿import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+﻿import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { Icon } from '../Icon';
 import { GameTable } from '../GameTable';
 import { StarRating } from '../StarRating';
@@ -457,23 +457,40 @@ export function SocialProfileDetailScreen({
                   ) : (
                   <div className="hub-feed-activity-list hub-profile-reviews-list" role="list" aria-label={SOCIAL_UI.feed.reviewsTitle}>
                     {visibleReviews.map((review) => {
+                      const rating = Number(review.rating || 0);
                       const itemDate = new Date(review.ts || 0);
                       const hasValidDate = review.ts > 0 && !Number.isNaN(itemDate.getTime());
+                      // Color por nota (rojo→verde): 1=rojo (4°), 2=amarillo (55°), 3→5 hacia verde (135°).
+                      const reviewHue = rating <= 2
+                        ? Math.round(4 + Math.max(0, rating - 1) * 51)
+                        : Math.round(55 + ((rating - 2) / 3) * 80);
                       return (
-                        <article key={review.id} className="hub-feed-card hub-feed-activity-item is-review hub-review-entry" role="listitem">
+                        <article
+                          key={review.id}
+                          className="hub-feed-card hub-feed-activity-item is-review hub-review-entry"
+                          role="listitem"
+                          style={{ '--rev-hue': String(reviewHue) } as CSSProperties}
+                        >
+                          <span className="hub-review-medal" aria-hidden="true">{Math.round(rating)}</span>
                           <header className="hub-review-entry-head">
                             {review.gameName ? <h4 className="hub-review-game">{review.gameName}</h4> : null}
                             <div className="hub-review-meta">
-                              <StarRating value={Number(review.rating || 0)} />
-                              {hasValidDate ? <span className="hub-review-date">{SOCIAL_UI.feed.analyzedAt(itemDate)}</span> : null}
+                              <StarRating value={rating} />
+                              {hasValidDate ? (
+                                <span className="hub-review-date">
+                                  {itemDate.toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })}
+                                </span>
+                              ) : null}
                             </div>
                           </header>
                           {review.reviewText ? (
-                            <ReviewText
-                              text={review.reviewText}
-                              moreLabel={SOCIAL_UI.feed.reviewExpand}
-                              lessLabel={SOCIAL_UI.feed.reviewCollapse}
-                            />
+                            <div className="hub-review-body">
+                              <ReviewText
+                                text={review.reviewText}
+                                moreLabel={SOCIAL_UI.feed.reviewExpand}
+                                lessLabel={SOCIAL_UI.feed.reviewCollapse}
+                              />
+                            </div>
                           ) : null}
                         </article>
                       );
