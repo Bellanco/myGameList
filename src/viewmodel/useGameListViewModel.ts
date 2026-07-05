@@ -49,7 +49,8 @@ const EMPTY_DRAFT: GameDraft = {
   genres: [],
   platforms: [],
   steamDeck: false,
-  score: 0,
+  score: 3, // puntuación por defecto al añadir: 3★ ≡ nota 60 (evita partir de 0)
+  grade: 60,
   years: [],
   strengths: [],
   weaknesses: [],
