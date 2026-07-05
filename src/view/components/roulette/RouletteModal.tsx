@@ -1,11 +1,13 @@
 import { useCallback, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { useNativeDialog } from '../../modals/useNativeDialog';
 import { Icon } from '../Icon';
-import { StarRating } from '../StarRating';
+import { ScoreDisplay } from '../ScoreDisplay';
 import { ReviewDetail, type ReviewAuthor } from './ReviewDetail';
 import type { IconName } from '../../../core/constants/icons';
 import type { GameItem } from '../../../model/types/game';
 import { pickWeighted, type RouletteCandidate } from '../../../core/roulette/roulette';
+import { resolveGrade, resolveStars, STARS_MAX } from '../../../core/utils/scoreScale';
+import { useScoreScale } from '../../hooks/useScoreScale';
 
 /** Acción inferior de la tarjeta-resultado, resuelta para el juego elegido. */
 export interface RouletteResolvedAction {
@@ -79,6 +81,7 @@ function drumStyle(th: number, idle = false): CSSProperties {
 
 export function RouletteModal({ open, onClose, title, candidates, weight, tag, reviewAuthor, action }: RouletteModalProps) {
   const dialogRef = useNativeDialog(open, onClose);
+  const scoreScale = useScoreScale();
   const stageRef = useRef<HTMLDivElement>(null);
   const posRef = useRef(0);
   const rafRef = useRef<number | null>(null);
@@ -297,11 +300,11 @@ export function RouletteModal({ open, onClose, title, candidates, weight, tag, r
                     <div className="rl-card">
                       <div className="rl-card-tag">{tagText}</div>
                       <h3 className="rl-card-name">{winnerGame.name}</h3>
-                      <div className="rl-card-stars" aria-label={winnerGame.score ? `Puntuación ${winnerGame.score} de 5` : 'Sin puntuar'}>
-                        {winnerGame.score ? (
+                      <div className="rl-card-stars" aria-label={resolveGrade(winnerGame) > 0 ? (scoreScale === 'grade' ? `Nota ${resolveGrade(winnerGame)} de 100` : `Puntuación ${resolveStars(winnerGame)} de ${STARS_MAX}`) : 'Sin puntuar'}>
+                        {resolveGrade(winnerGame) > 0 ? (
                           <>
-                            <StarRating value={Number(winnerGame.score)} />
-                            <small>{winnerGame.score}/5</small>
+                            <ScoreDisplay game={winnerGame} />
+                            {scoreScale === 'stars' ? <small>{resolveStars(winnerGame)}/{STARS_MAX}</small> : null}
                           </>
                         ) : (
                           <small>Sin puntuar</small>

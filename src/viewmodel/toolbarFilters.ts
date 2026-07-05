@@ -1,6 +1,7 @@
 import { FILTER_BOOL } from '../core/constants/labels';
 import { HOURS_RANGES } from '../core/constants/uiConfig';
 import { sortEs } from '../core/utils/compare';
+import { resolveStars } from '../core/utils/scoreScale';
 import type { GameItem, TabId, ToolbarFilters } from '../model/types/game';
 
 // Filtros de la Toolbar como funciones puras: testeables sin montar el hook y reutilizables tanto por
@@ -79,7 +80,7 @@ export function filterGames(games: GameItem[], filters: ToolbarFilters, tab: Tab
     if (filters.genres.length && !game.genres.some((value) => filters.genres.includes(value))) return false;
     if (filters.platforms.length && !game.platforms.some((value) => filters.platforms.includes(value))) return false;
     if (filters.deck && !game.steamDeck) return false;
-    if (minScore && Number(game.score || 0) < minScore) return false;
+    if (minScore && resolveStars(game) < minScore) return false;
     if (filters.only && config && !Boolean(game[config.field])) return false;
     if (filters.hours) {
       if (!range || !range.check(Number(game.hours || 0))) return false;
@@ -105,7 +106,7 @@ export function computeTabOptions(games: GameItem[]): TabOptions {
   for (const game of games) {
     game.genres.forEach((value) => genres.add(value));
     game.platforms.forEach((value) => platforms.add(value));
-    const score = Number(game.score || 0);
+    const score = resolveStars(game);
     if (score > maxScore) maxScore = score;
     const range = HOURS_RANGES.find((entry) => entry.check(Number(game.hours || 0)));
     if (range) hours.add(range.key);

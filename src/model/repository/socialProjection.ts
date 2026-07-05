@@ -3,6 +3,7 @@
 // la serialización magra, y la proyección pública (snippet/PublicGame) + la guarda de privacidad del canal social.
 // Extraído de gistRepository.ts (M1) sin cambio de comportamiento.
 import { TAB_IDS, type GameItem, type TabData, type TabId } from '../types/game';
+import { starsFromGrade } from '../../core/utils/scoreScale';
 import type { PublicGame } from '../types/social';
 import type { CategoryDictionaries, CategoryKey, ChunkIndex, ChunkRef, EncodedGameItem, GamesChunkFile, GamesMainFile } from '../types/gist';
 
@@ -126,6 +127,7 @@ function leanGameItem(game: GameItem): GameItem {
   if (game.steamDeck) out.steamDeck = true; // ST10: omitir cuando false
   if (game.review) out.review = game.review; // ST10: omitir cuando vacío
   if (game.score !== undefined && game.score !== null) out.score = game.score;
+  if (game.grade !== undefined && game.grade !== null) out.grade = game.grade; // F2: nota fina 0–100 (privada)
   if (game.hours !== undefined && game.hours !== null) out.hours = game.hours;
   if (Array.isArray(game.years) && game.years.length) out.years = game.years;
   if (Array.isArray(game.strengths) && game.strengths.length) out.strengths = game.strengths;
@@ -294,7 +296,9 @@ export function toPublicGame(game: GameItem, tab: TabId): PublicGame {
     strengths: game.strengths,
     weaknesses: game.weaknesses,
     tab,
-    rating: game.score ?? null,
+    // Canal público SIEMPRE en 0–5 (clientes antiguos validan max(5)): deriva de la nota fina `grade` si está,
+    // si no del espejo `score` 0–5. Nunca se expone `grade` (va en la denylist de privacidad).
+    rating: typeof game.grade === 'number' ? starsFromGrade(game.grade) : (game.score ?? null),
     years: game.years,
     snippet: buildReviewSnippet(game.review),
     hasFullReview: (game.review || '').length > 0,
@@ -429,7 +433,7 @@ export function assembleChunkedSocial(
   return { ...anchor, profile: { ...(anchor.profile || {}), sharedLists: merged } };
 }
 
-const SOCIAL_PRIVATE_FIELDS = ['review', 'reviewText', 'score', 'hours', 'steamDeck', 'retry', 'replayable'];
+const SOCIAL_PRIVATE_FIELDS = ['review', 'reviewText', 'score', 'grade', 'hours', 'steamDeck', 'retry', 'replayable'];
 
 /** Guarda de privacidad: lanza si algún campo privado aparece en lo que se escribirá al gist social. */
 export function assertNoSocialPrivateFields(obj: unknown, path = ''): void {

@@ -61,16 +61,19 @@ Mapeo pedido: 20=★, 60=★★★, 100=★★★★★  →  `numérico = estre
 - [ ] Render condicional en `StarRating.tsx` (`{score*20}/100` vs estrellas) y en `StarPicker.tsx`.
 - [ ] Opciones de filtro del `Toolbar.tsx` etiquetadas según modo.
 
-### Opción B — 0-100 real (granular, ~4-5 d, riesgo medio)
-- Input fino 0-100. Campo NUEVO (no sobrescribir `score`).
-- [ ] Utilidad `src/core/utils/scoreConversion.ts` (`starToNumeric`/`numericToStar`, definir round vs ceil).
-- [ ] Ampliar Zod (`scoreModeSchema` opcional; rango 0-100 en campo nuevo).
-- [ ] `ScorePicker` que conmuta entre estrellas y numérico.
-- [ ] Filtro/orden en `useGameListViewModel.ts:315` convirtiendo según modo.
-- [ ] Migración + bump `LOCAL_SCHEMA_VERSION` (asignar modo por defecto a juegos existentes).
-- [ ] Decisión proyección social (`socialProjection.ts`): exponer modo o normalizar a una escala.
-- ⚠️ **NO sobrescribir `score` 0-5 con 0-100**: los clientes en versión antigua lo recortan a 5 → corrupción.
-- ⚠️ **Esperar al cutover v4** antes de tocar el esquema de puntuación (hoy `ENABLE_GAMES_WRAPPER_WRITE=false`).
+### Opción B — 0-100 real (granular) — **PASO 1 IMPLEMENTADO (2026-07-05) vía campo aditivo `grade`**
+Enfoque final elegido (mejor que reinterpretar `score`): **campo NUEVO `grade` (0-100)** aditivo e inerte + ESPEJO
+`score` 0-5 mantenido para compat. Sin migración destructiva, sin bump de esquema, sin despliegue en 2 pasos
+(los clientes antiguos leen/escriben el espejo `score` 0-5 y, aunque reescriban, no corrompen: `grade` se
+recalcula del `score`). Regla de lectura (fallback): `grade ?? score×20`, punto único en `resolveGrade`.
+- [x] Utilidad `src/core/utils/scoreScale.ts` (`clampGrade`/`starsFromGrade`/`gradeFromStars`/`resolveGrade`/`resolveStars`, `GRADE_MAX`/`STARS_MAX`).
+- [x] Tipo `GameItem.grade?: number|null` (`game.ts`); preservado en `localRepository.normalizeGame` y en `leanGameItem` (gist v4).
+- [x] Escritura: `saveDraft` guarda `score` (espejo 0-5) + `grade` (0-100 = `gradeFromStars(estrellas)`); reset p→e limpia ambos.
+- [x] Lectura efectiva vía `resolveStars`/`resolveGrade` en `GameTable`, `ReviewDetail`, `RouletteModal` (constante `STARS_MAX`, no `/5` hardcodeado), filtro `toolbarFilters`, ruleta (`roulette.ts`).
+- [x] Social intacto: proyección pública `rating` SIEMPRE 0-5 (`toPublicGame` deriva de `grade`→estrellas o del espejo); `grade` en la denylist `SOCIAL_PRIVATE_FIELDS`.
+- [x] Tests: `tests/unit/scoreScale.test.ts` (conversión/fallback/proyección) + round-trip `grade` en `gistWrite.test.ts`.
+- **Pendiente (Paso 2, futuro):** input numérico 0-100 (hoy el picker es de estrellas → `grade` solo múltiplos de 20); toggle de vista estrellas↔número; y, cuando TODOS los dispositivos estén al día, **borrar el espejo `score`** (basta simplificar `resolveGrade` y quitar la escritura del espejo).
+- Nota: el bloqueo histórico "esperar al cutover v4" ya no aplica (`ENABLE_GAMES_WRAPPER_WRITE=true`). Con el enfoque aditivo tampoco haría falta.
 
 ---
 

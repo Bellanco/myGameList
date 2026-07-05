@@ -1,4 +1,5 @@
 import type { ChunkRef } from './gist';
+import type { ScoreScale } from '../../core/utils/scoreScale';
 
 /**
  * Tipos de Firestore (destino: índice público "index-only").
@@ -91,4 +92,13 @@ export interface FirestorePrivateConfig {
   gamesChunks: ChunkRef[];
   socialChunks: ChunkRef[];
   encryptedGithubToken?: string;
+}
+
+/**
+ * publicConfig/{uid} — preferencias NO sensibles del dueño (F2). Separada de `privateConfig` para diferenciarla.
+ * Owner-only (regla `publicConfig` en firestore.rules). Aditiva: hoy solo la escala de puntuación.
+ */
+export interface FirestorePublicConfig {
+  schemaVersion?: number;
+  scoreScale?: ScoreScale;
 }

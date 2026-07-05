@@ -3,6 +3,7 @@ import { TAB_ACTIONS, TAB_ORDER, VALIDATION_MESSAGES } from '../core/constants/l
 import { sortEs, uniqueCaseInsensitive } from '../core/utils/compare';
 import { DEFAULT_SORT, sortGames } from '../core/utils/sortGames';
 import { clampRating } from '../core/utils/normalize';
+import { clampGrade, gradeFromStars, resolveStars, starsFromGrade } from '../core/utils/scoreScale';
 import { mapTabDataTags, type TagCategory } from '../core/utils/tagMutations';
 import { normalizeTag, safeTrim } from '../core/security/sanitize';
 import { normalizeName } from '../core/roulette/roulette';
@@ -31,7 +32,8 @@ export interface GameDraft {
   genres: string[];
   platforms: string[];
   steamDeck: boolean;
-  score: number;
+  score: number; // estrellas 0–5 (input clásico y espejo)
+  grade?: number | null; // F2: nota fina 0–100 cuando la escala es 'grade'; ausente → se deriva del score
   years: number[];
   strengths: string[];
   weaknesses: string[];
@@ -62,7 +64,9 @@ function toNormalizedDraft(game?: Partial<GameItem>): GameDraft {
   return {
     ...EMPTY_DRAFT,
     ...game,
-    score: Number(game?.score || 0),
+    // El picker de estrellas parte de la nota efectiva (grade || score×20); el dial parte de `grade`.
+    score: resolveStars(game || {}),
+    grade: typeof game?.grade === 'number' ? game.grade : undefined,
     years: (game?.years || []).map(Number).filter(Number.isFinite),
     strengths: game?.strengths || [],
     weaknesses: game?.weaknesses || [],
@@ -309,7 +313,13 @@ export function useGameListViewModel() {
 
       if (targetTab === 'c') {
         migrated.years = migrated.years.length ? migrated.years : [new Date().getFullYear()];
-        migrated.score = migrated.score || 5;
+        // Sin nota previa → por defecto 5★/100; con nota → conserva la fina y sincroniza el espejo.
+        if (!migrated.score) {
+          migrated.score = 5;
+          migrated.grade = gradeFromStars(5);
+        } else if (typeof migrated.grade !== 'number') {
+          migrated.grade = gradeFromStars(migrated.score);
+        }
         migrated.replayable = false;
         migrated.weaknesses = migrated.weaknesses.length ? migrated.weaknesses : migrated.reasons;
       }
@@ -321,7 +331,7 @@ export function useGameListViewModel() {
 
       if (targetTab === 'e') {
         migrated.weaknesses = migrated.weaknesses.length ? migrated.weaknesses : migrated.reasons;
-        if (sourceTab === 'p') migrated.score = 0; // próximos→en curso: estrellas vacías
+        if (sourceTab === 'p') { migrated.score = 0; migrated.grade = 0; } // próximos→en curso: sin puntuación
       }
 
       setEditingTab(targetTab);
@@ -344,7 +354,12 @@ export function useGameListViewModel() {
         platforms: uniqueCaseInsensitive(nextDraft.platforms.map(normalizeTag).filter(Boolean)),
         steamDeck: nextDraft.steamDeck,
         review: safeTrim(nextDraft.review, 25000),
-        score: clampRating(nextDraft.score),
+        // F2: la nota fina 0–100 es la FUENTE (del dial si viene; si no, derivada de las estrellas). El `score`
+        // 0–5 es el ESPEJO derivado de la nota (compat con clientes antiguos y con la escala de estrellas).
+        ...(() => {
+          const grade = typeof nextDraft.grade === 'number' ? clampGrade(nextDraft.grade) : gradeFromStars(nextDraft.score);
+          return { score: starsFromGrade(grade), grade };
+        })(),
         years: [...new Set((nextDraft.years || []).map(Number).filter(Number.isFinite))].sort((a, b) => a - b),
         strengths: uniqueCaseInsensitive((nextDraft.strengths || []).map(normalizeTag).filter(Boolean)),
         weaknesses: uniqueCaseInsensitive((nextDraft.weaknesses || []).map(normalizeTag).filter(Boolean)),
@@ -449,8 +464,11 @@ export function useGameListViewModel() {
 
       const now = Date.now();
       const moved: GameItem = { ...source, _ts: now, listedAt: now };
-      // Próximos → en curso: las estrellas de "interés" no son puntuación del juego.
-      if (sourceTab === 'p' && targetTab === 'e') moved.score = 0;
+      // Próximos → en curso: las estrellas de "interés" no son puntuación del juego (resetea espejo y nota fina).
+      if (sourceTab === 'p' && targetTab === 'e') {
+        moved.score = 0;
+        moved.grade = 0;
+      }
 
       const nextData: TabData = {
         ...data,
