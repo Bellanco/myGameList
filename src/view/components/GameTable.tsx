@@ -4,9 +4,9 @@ import { COMMON_ICONS, TAB_ICONS } from '../../core/constants/icons';
 import { UI_MESSAGES } from '../../core/constants/labels';
 import type { GameItem, TabId } from '../../model/types/game';
 import type { TabAction } from '../../viewmodel/useGameListViewModel';
-import { resolveGrade, resolveStars } from '../../core/utils/scoreScale';
+import { resolveGrade } from '../../core/utils/scoreScale';
 import { Icon } from './Icon';
-import { StarRating } from './StarRating';
+import { ScoreDisplay } from './ScoreDisplay';
 
 interface GameTableProps {
   games: GameItem[];
@@ -302,7 +302,7 @@ export const GameTable = memo(function GameTable({
                             <span className="row-meta" aria-hidden="true">
                               {(currentTab === 'c' || currentTab === 'p') && resolveGrade(game) > 0 ? (
                                 <span className="row-meta-item rm-score">
-                                  <StarRating value={resolveStars(game)} />
+                                  <ScoreDisplay game={game} />
                                 </span>
                               ) : null}
                               {game.platforms?.length ? (
@@ -328,7 +328,7 @@ export const GameTable = memo(function GameTable({
                         <td className={cCol('col-c-weak')}>{renderTags(game.weaknesses || [], 'chip-pd', MAX_ROW_CHIPS)}</td>
                       ) : null}
                       {currentTab === 'v' ? <td>{renderTags(game.reasons || [], 'chip-pd', MAX_ROW_CHIPS)}</td> : null}
-                      {(currentTab === 'c' || currentTab === 'p') ? <td className={cCol('col-c-score')}><StarRating value={resolveStars(game)} /></td> : null}
+                      {(currentTab === 'c' || currentTab === 'p') ? <td className={cCol('col-c-score')}><ScoreDisplay game={game} /></td> : null}
                       {currentTab === 'c' && showReplayable ? <td className="col-c-replay">{renderBooleanBadge('replayable', Boolean(game.replayable))}</td> : null}
                       {currentTab === 'v' && showRetry ? <td>{renderBooleanBadge('retry', Boolean(game.retry))}</td> : null}
                     </tr>
@@ -392,7 +392,7 @@ export const GameTable = memo(function GameTable({
                           <div className="detail-box">
                             <span className="detail-label">{currentTab === 'p' ? UI_MESSAGES.detail.interest : UI_MESSAGES.detail.score}</span>
                             <div>
-                              <StarRating value={resolveStars(game)} />
+                              <ScoreDisplay game={game} />
                             </div>
                           </div>
                         )}

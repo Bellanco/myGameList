@@ -48,6 +48,14 @@ service cloud.firestore {
       return request.resource.data.keys().hasOnly(["profileId", "schemaVersion"]);
     }
 
+    // F2 — publicConfig: preferencias NO sensibles del dueño (p. ej. la escala de puntuación estrellas/nota).
+    // Separada de privateConfig (token/ids) para diferenciarla. Solo `schemaVersion` + `scoreScale`.
+    function publicConfigWriteIsValid() {
+      return request.resource.data.keys().hasOnly(["schemaVersion", "scoreScale"])
+        && (!("scoreScale" in request.resource.data)
+            || request.resource.data.scoreScale in ["stars", "grade"]);
+    }
+
     // ==========================================
     // COLECCION: PROFILES
     // ==========================================
@@ -92,6 +100,17 @@ service cloud.firestore {
     match /privateConfig/{userId} {
       allow read: if isOwner(userId);
       allow write: if isOwner(userId) && privateConfigWriteIsValid();
+    }
+
+    // ==========================================
+    // COLECCION: PUBLIC CONFIG (F2 — preferencias no sensibles del dueño)
+    // Escala de puntuación (estrellas/nota) por usuario, para que le siga entre dispositivos.
+    // Solo el dueño lee/escribe su propia entrada; validación de esquema por allowlist.
+    // ==========================================
+
+    match /publicConfig/{userId} {
+      allow read: if isOwner(userId);
+      allow write: if isOwner(userId) && publicConfigWriteIsValid();
     }
 
     // ==========================================

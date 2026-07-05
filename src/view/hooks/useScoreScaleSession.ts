@@ -1,0 +1,27 @@
+import { useEffect, useState } from 'react';
+import { onSocialAuthChanged } from '../../model/repository/firebaseRepository';
+import { hydrateScoreScale, resetScoreScale } from '../../model/repository/scorePreferenceRepository';
+
+/**
+ * Enlaza la sesión de Google con la preferencia de escala (F2): al restaurar/iniciar sesión hidrata la escala
+ * desde Firestore (`publicConfig/{uid}`); al cerrar sesión vuelve a estrellas. Devuelve el `uid` actual (o null),
+ * que Ajustes usa para gatear la opción (candado si no hay sesión) y para persistir el cambio.
+ *
+ * Se monta UNA vez cerca de la raíz (App) para que la escala esté disponible en toda la app, no solo en el hub social.
+ */
+export function useScoreScaleSession(): string | null {
+  const [uid, setUid] = useState<string | null>(null);
+
+  useEffect(() => {
+    return onSocialAuthChanged((user) => {
+      setUid(user?.uid ?? null);
+      if (user?.uid) {
+        void hydrateScoreScale(user.uid);
+      } else {
+        resetScoreScale();
+      }
+    });
+  }, []);
+
+  return uid;
+}

@@ -204,6 +204,16 @@ export const UI_MESSAGES = {
       dark: 'Oscuro',
       cycleHint: 'Pulsa para cambiar a',
     },
+    scoreScale: {
+      title: 'Puntuación',
+      subtitle: 'Cómo se muestran las notas de tus juegos.',
+      groupAria: 'Escala de puntuación',
+      starsLabel: 'Estrellas',
+      starsHint: 'Escala clásica de 0 a 5',
+      gradeLabel: 'Nota 0–100',
+      gradeHint: 'Aro numérico, de rojo a verde',
+      lockedHint: 'Asocia tu cuenta de Google para elegir la escala (se guarda y sincroniza entre dispositivos).',
+    },
     sync: {
       title: 'Sincronización',
       status: 'Estado actual',

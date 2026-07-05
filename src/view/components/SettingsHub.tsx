@@ -1,7 +1,12 @@
 import { memo, useMemo, useState } from 'react';
 import { COMMON_ICONS } from '../../core/constants/icons';
 import { UI_MESSAGES, VALIDATION_MESSAGES } from '../../core/constants/labels';
+import { SCORE_SCALES } from '../../core/utils/scoreScale';
+import { persistScoreScale } from '../../model/repository/scorePreferenceRepository';
+import { useScoreScale } from '../hooks/useScoreScale';
 import { Icon } from './Icon';
+import { StarRating } from './StarRating';
+import { ScoreRing } from './ScoreRing';
 
 type AdminCategoryKey = 'genres' | 'platforms' | 'strengths' | 'weaknesses';
 
@@ -33,6 +38,7 @@ interface SettingsHubProps {
   };
   onEditTag: (key: AdminCategoryKey, oldValue: string, newValue: string) => void;
   onDeleteTag: (key: AdminCategoryKey, value: string) => void;
+  scoreScaleUid: string | null; // F2: uid de Google si hay sesión (para gatear/guardar la escala); null → candado
 }
 
 /**
@@ -61,7 +67,10 @@ export const SettingsHub = memo(function SettingsHub({
   lookups,
   onEditTag,
   onDeleteTag,
+  scoreScaleUid,
 }: SettingsHubProps) {
+  const scoreScale = useScoreScale();
+  const scoreScaleLabels = UI_MESSAGES.settings.scoreScale;
   const [showToken, setShowToken] = useState(false);
   const [showConfigHelp, setShowConfigHelp] = useState(false);
   // Con OAuth disponible, el modo manual (PAT) queda plegado como opción avanzada; sin OAuth, se muestra siempre.
@@ -125,6 +134,37 @@ export const SettingsHub = memo(function SettingsHub({
 
   return (
     <section className="settings-hub" aria-label={UI_MESSAGES.settings.title}>
+      <div className="settings-card settings-card-score">
+        <h2>{scoreScaleLabels.title}</h2>
+        <p className="settings-card-sub">{scoreScaleLabels.subtitle}</p>
+        <div className={`score-scale-choice${scoreScaleUid ? '' : ' is-locked'}`} role="radiogroup" aria-label={scoreScaleLabels.groupAria}>
+          {SCORE_SCALES.map((opt) => {
+            const isStars = opt === 'stars';
+            return (
+              <button
+                key={opt}
+                type="button"
+                role="radio"
+                aria-checked={scoreScale === opt}
+                disabled={!scoreScaleUid}
+                className={`score-scale-opt${scoreScale === opt ? ' on' : ''}`}
+                onClick={() => { if (scoreScaleUid) void persistScoreScale(scoreScaleUid, opt); }}
+              >
+                <span className="score-scale-dot" aria-hidden="true" />
+                <span className="score-scale-txt">
+                  <b>{isStars ? scoreScaleLabels.starsLabel : scoreScaleLabels.gradeLabel}</b>
+                  <span>{isStars ? scoreScaleLabels.starsHint : scoreScaleLabels.gradeHint}</span>
+                </span>
+                <span className="score-scale-sample" aria-hidden="true">
+                  {isStars ? <StarRating value={4} /> : <ScoreRing grade={80} />}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+        {!scoreScaleUid ? <p className="score-scale-locked">🔒 {scoreScaleLabels.lockedHint}</p> : null}
+      </div>
+
       <div className="settings-card settings-card-status">
         <h2>{UI_MESSAGES.settings.sync.title}</h2>
         <p>
