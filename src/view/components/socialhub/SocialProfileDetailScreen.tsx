@@ -5,6 +5,8 @@ import type { SocialUiLabels } from '../../../core/constants/labels';
 import { HubStatus } from './HubStatus';
 import { HubBackButton } from './HubBackButton';
 import { StarRating } from '../StarRating';
+import { useScoreScale } from '../../hooks/useScoreScale';
+import { gradeFromStars } from '../../../core/utils/scoreScale';
 import { HubAvatar } from './HubAvatar';
 import { TAB_IDS, type GameItem, type TabId } from '../../../model/types/game';
 import { DEFAULT_SORT, sortGames } from '../../../core/utils/sortGames';
@@ -176,6 +178,7 @@ export function SocialProfileDetailScreen({
   onCancelFriendRequest?: () => void;
   onRemoveFriend?: () => void;
 }) {
+  const scoreScale = useScoreScale();
   const [activeListTab, setActiveListTab] = useState<TabId>('c');
   const [rouletteOpen, setRouletteOpen] = useState(false);
   const [expandedByTab, setExpandedByTab] = useState<Partial<Record<TabId, number | null>>>({});
@@ -468,12 +471,12 @@ export function SocialProfileDetailScreen({
                           style={hasRating ? ({ '--rev-hue': String(reviewHue), '--rev-ladj': `${reviewLAdj}%` } as CSSProperties) : undefined}
                         >
                           <span className="hub-review-medal" aria-hidden="true">
-                            {hasRating ? Math.round(rating) : '¿?'}
+                            {hasRating ? (scoreScale === 'grade' ? gradeFromStars(rating) : Math.round(rating)) : '¿?'}
                           </span>
                           <header className="hub-review-entry-head">
                             {review.gameName ? <h4 className="hub-review-game">{review.gameName}</h4> : null}
                             <div className="hub-review-meta">
-                              {hasRating ? <StarRating value={rating} /> : null}
+                              {hasRating && scoreScale !== 'grade' ? <StarRating value={rating} /> : null}
                               {hasValidDate ? (
                                 <span className="hub-review-date">
                                   {itemDate.toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })}

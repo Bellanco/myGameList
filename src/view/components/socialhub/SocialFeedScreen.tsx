@@ -1,6 +1,6 @@
 ﻿import React from 'react';
 import { Icon } from '../Icon';
-import { StarRating } from '../StarRating';
+import { ScoreDisplay } from '../ScoreDisplay';
 import type { SocialUiLabels } from '../../../core/constants/labels';
 import { HubStatus } from './HubStatus';
 import { PostText } from './PostText';
@@ -265,7 +265,7 @@ export function SocialFeedScreen({
                           </div>
                         </header>
                         <p>{analyzedAtLabel}</p>
-                        <StarRating value={Number(entry.rating || 0)} />
+                        <ScoreDisplay game={{ score: Number(entry.rating || 0) }} />
                         {reviewText ? <p className="hub-feed-review-text" title={reviewText}>{reviewText}</p> : null}
                       </article>
                     );

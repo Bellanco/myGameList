@@ -1,8 +1,6 @@
-import { StarRating } from '../StarRating';
 import { ScoreDisplay } from '../ScoreDisplay';
 import { MetaSection } from '../MetaSection';
 import { HubAvatar } from '../socialhub/HubAvatar';
-import { resolveStars } from '../../../core/utils/scoreScale';
 import type { GameItem } from '../../../model/types/game';
 
 /** Autor de la reseña (solo en social). En listados no se pasa → la cabecera muestra el nombre del juego. */
@@ -33,8 +31,8 @@ export function ReviewDetail({ game, author }: ReviewDetailProps) {
             {author && game.name ? <span className="hub-feed-game-chip">{game.name}</span> : null}
           </div>
         </header>
-        {/* Reseña de un amigo (canal social 0–5) → estrellas; propia → escala elegida por el usuario. */}
-        {author ? <StarRating value={resolveStars(game)} /> : <ScoreDisplay game={game} />}
+        {/* Puntuación según la escala elegida por quien mira (estrellas 0–5 o aro 0–100). */}
+        <ScoreDisplay game={game} />
         <div className="hub-detail-body">
           {review ? <p className="hub-feed-review-text">{review}</p> : null}
           <div className="hub-detail-metadata">
