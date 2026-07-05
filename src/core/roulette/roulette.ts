@@ -1,5 +1,6 @@
 import type { GameItem, TabData, TabId } from '../../model/types/game';
 import { clampRating } from '../utils/normalize';
+import { resolveStars } from '../utils/scoreScale';
 
 /**
  * Lógica unificada de la "ruleta de juegos" (fuente única, sin React).
@@ -25,9 +26,9 @@ export function curveScore(score?: number): number {
   return s > 0 ? s * s : BASE_WEIGHT;
 }
 
-/** Peso lineal simple (score o base); ponderación por defecto de pickWeighted. */
+/** Peso lineal simple (estrellas efectivas o base); ponderación por defecto de pickWeighted. */
 export function gameWeight(game: GameItem): number {
-  const score = Number(game.score || 0);
+  const score = resolveStars(game);
   return score > 0 ? score : BASE_WEIGHT;
 }
 
@@ -42,7 +43,7 @@ export const NEUTRAL_SCORE = 4;
  * para competir por prioridad de lista; el resto (próximos/completados sin nota) mantiene el peso base mínimo.
  */
 function scoreForWeight(game: GameItem, tab: TabId): number {
-  const s = Number(game.score || 0);
+  const s = resolveStars(game);
   if (s > 0) return s;
   return tab === 'v' ? NEUTRAL_SCORE : 0;
 }
@@ -147,7 +148,7 @@ const REPLAYABLE_BONUS = 1.5;
 
 /** Ponderación en SOCIAL: curva de puntuación, con un plus si el juego es rejugable. */
 export function profileWeight(candidate: RouletteCandidate): number {
-  return curveScore(candidate.game.score) * (candidate.game.replayable ? REPLAYABLE_BONUS : 1);
+  return curveScore(resolveStars(candidate.game)) * (candidate.game.replayable ? REPLAYABLE_BONUS : 1);
 }
 
 /** Selección aleatoria ponderada. `weigher` define el peso de cada candidato; `rng` inyectable en tests. */

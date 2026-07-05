@@ -4,6 +4,7 @@ import { migrateData } from './migrateRepository';
 import { loadIndexedDbState, saveIndexedDbState } from './indexedDbRepository';
 import type { GameItem, StoragePayload, TabData } from '../types/game';
 import { clampRating } from '../../core/utils/normalize';
+import { clampGrade } from '../../core/utils/scoreScale';
 
 const EMPTY_DATA: TabData = { c: [], v: [], e: [], p: [], deleted: [], updatedAt: 0 };
 
@@ -62,6 +63,8 @@ function normalizeGame(game: Record<string, unknown>, defaultTs: number, forceTi
     retry: Boolean(game.retry),
     review: String(game.review ?? '').trim(),
     score: clampRating(game.score),
+    // F2: nota fina 0–100 (aditivo). Se preserva si viene; ausente → los lectores caen al `score` 0–5.
+    grade: typeof game.grade === 'number' ? clampGrade(game.grade) : undefined,
     hours: (() => {
       const raw = (game as Record<string, unknown>).hours;
       if (raw === null || raw === undefined || raw === '') return null;

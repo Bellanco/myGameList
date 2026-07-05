@@ -118,6 +118,24 @@ describe.skipIf(!ENABLE_GAMES_WRAPPER_WRITE)('writeGist con ENABLE_GAMES_WRAPPER
     expect(read.wasLegacy).toBe(false);
   });
 
+  it('F2: preserva la nota fina `grade` (0–100) en el round-trip del gist privado', async () => {
+    stubGistStore();
+    const data: TabData = {
+      c: [makeGame({ id: 1, name: 'Con nota fina', score: 4, grade: 73 })],
+      v: [],
+      e: [],
+      p: [],
+      deleted: [],
+      updatedAt: 1,
+    };
+
+    await writeGist(TOKEN, GIST_ID, data);
+    const out = (await readGist(TOKEN, GIST_ID)).data as TabData;
+
+    expect(out.c[0].grade).toBe(73); // fuente fina intacta
+    expect(out.c[0].score).toBe(4); // espejo 0–5 para clientes antiguos
+  });
+
   it('A7: con overflow, una edición puntual solo reenvía el chunk afectado (+ ancla), no todos', async () => {
     const { patchBodies } = stubGistStore();
     // Dataset grande (reviews de longitud fija) → fuerza varios ficheros chunk: main + c1 + c2…
