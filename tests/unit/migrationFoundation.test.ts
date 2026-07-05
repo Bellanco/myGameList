@@ -186,7 +186,7 @@ describe('6.2b: lectores de identidad y remapSocialActorIds (uid→profileId en 
   it('remapSocialActorIds reemplaza el uid propio por su profileId y reconstruye key/id', () => {
     const data = {
       profile: { name: '', private: false, favoriteGames: [], visibility: { hiddenTabs: [], hideReplayable: false, hideRetry: false, hideGameTime: false, showPhoto: true }, sharedLists: {} },
-      activity: [{ id: 'my-uid:5:review', key: 'my-uid:5:review', type: 'review' as const, actorProfileId: 'my-uid', actorName: 'N', gameId: 5, gameName: 'G', rating: 5, recommendationText: '', snippet: 's', createdAt: 1, updatedAt: 1 }],
+      activity: [{ id: 'my-uid:5:review', key: 'my-uid:5:review', type: 'review' as const, actorProfileId: 'my-uid', actorName: 'N', gameId: 5, gameName: 'G', rating: 5, grade: 100, recommendationText: '', snippet: 's', createdAt: 1, updatedAt: 1 }],
       updatedAt: 1,
       schemaVersion: 2,
     };
@@ -199,7 +199,7 @@ describe('6.2b: lectores de identidad y remapSocialActorIds (uid→profileId en 
   it('remapSocialActorIds NO toca ids ajenos (mapa vacío) — degradación suave para otros usuarios', () => {
     const data = {
       profile: { name: '', private: false, favoriteGames: [], visibility: { hiddenTabs: [], hideReplayable: false, hideRetry: false, hideGameTime: false, showPhoto: true }, sharedLists: {} },
-      activity: [{ id: 'other-uid:5:review', key: 'other-uid:5:review', type: 'review' as const, actorProfileId: 'other-uid', actorName: 'N', gameId: 5, gameName: 'G', rating: 5, recommendationText: '', snippet: 's', createdAt: 1, updatedAt: 1 }],
+      activity: [{ id: 'other-uid:5:review', key: 'other-uid:5:review', type: 'review' as const, actorProfileId: 'other-uid', actorName: 'N', gameId: 5, gameName: 'G', rating: 5, grade: 100, recommendationText: '', snippet: 's', createdAt: 1, updatedAt: 1 }],
       updatedAt: 1,
       schemaVersion: 2,
     };
@@ -300,11 +300,14 @@ describe('F6.1: assertValidSocialGist (allowlist estricta Zod)', () => {
   });
 
   it('acepta el resultado real de upsertReviewActivity (lo que se escribe)', () => {
-    const next = upsertReviewActivity(emptySocial, { actorProfileId: 'pid-1', actorName: 'N', gameId: 1, gameName: 'G', reviewText: 'reseña larga'.repeat(30), rating: 5, timestamp: 1000 });
+    const next = upsertReviewActivity(emptySocial, { actorProfileId: 'pid-1', actorName: 'N', gameId: 1, gameName: 'G', reviewText: 'reseña larga'.repeat(30), rating: 5, grade: 92, timestamp: 1000 });
     expect(() => assertValidSocialGist(next)).not.toThrow();
     // 6.2b: identifica por profileId, nunca por el uid de Firebase
     expect(next.activity[0].actorProfileId).toBe('pid-1');
     expect(next.activity[0].key).toBe('pid-1:1:review');
+    // F2: la nota fina 0–100 se publica junto al espejo 0–5
+    expect(next.activity[0].rating).toBe(5);
+    expect(next.activity[0].grade).toBe(92);
     // y nunca debe contener el review completo
     expect(JSON.stringify(next)).not.toContain('reseña larga'.repeat(30));
   });

@@ -5,6 +5,8 @@ import type { SocialUiLabels } from '../../../core/constants/labels';
 import { HubStatus } from './HubStatus';
 import { HubBackButton } from './HubBackButton';
 import { StarRating } from '../StarRating';
+import { useScoreScale } from '../../hooks/useScoreScale';
+import { resolveGrade } from '../../../core/utils/scoreScale';
 import { HubAvatar } from './HubAvatar';
 import { TAB_IDS, type GameItem, type TabId } from '../../../model/types/game';
 import { DEFAULT_SORT, sortGames } from '../../../core/utils/sortGames';
@@ -176,6 +178,7 @@ export function SocialProfileDetailScreen({
   onCancelFriendRequest?: () => void;
   onRemoveFriend?: () => void;
 }) {
+  const scoreScale = useScoreScale();
   const [activeListTab, setActiveListTab] = useState<TabId>('c');
   const [rouletteOpen, setRouletteOpen] = useState(false);
   const [expandedByTab, setExpandedByTab] = useState<Partial<Record<TabId, number | null>>>({});
@@ -196,7 +199,7 @@ export function SocialProfileDetailScreen({
   const reviews = useMemo(() => {
     const lists = activeProfileDetail?.sharedLists || {};
     const seen = new Set<number>();
-    const items: { id: number; gameName: string; rating: number; reviewText: string; ts: number }[] = [];
+    const items: { id: number; gameName: string; rating: number; grade: number | null; reviewText: string; ts: number }[] = [];
 
     TAB_IDS.forEach((tab) => {
       (lists[tab] || []).forEach((game: any) => {
@@ -209,6 +212,7 @@ export function SocialProfileDetailScreen({
           id,
           gameName: String(game.name || ''),
           rating: Number(game.score || game.rating || 0),
+          grade: typeof game.grade === 'number' ? game.grade : null,
           reviewText,
           ts: typeof game._ts === 'number' ? game._ts : 0,
         });
@@ -290,6 +294,8 @@ export function SocialProfileDetailScreen({
       // Canal público index-only: para perfiles de otros solo hay snippet/rating; para datos propios, review/score completos.
       review: String(game.review || game.snippet || ''),
       score: Number(game.score || game.rating || 0),
+      grade: typeof game.grade === 'number' ? game.grade : undefined, // nota fina 0–100 del canal social si viene
+
       // `years`/`listedAt` solo llegan en datos propios/hidratados (no en la proyección pública index-only),
       // pero son necesarios para ordenar igual que el listado principal (año + desempate por fecha de añadido).
       years: Array.isArray(game.years) ? game.years.map(Number).filter(Number.isFinite) : [],
@@ -468,12 +474,12 @@ export function SocialProfileDetailScreen({
                           style={hasRating ? ({ '--rev-hue': String(reviewHue), '--rev-ladj': `${reviewLAdj}%` } as CSSProperties) : undefined}
                         >
                           <span className="hub-review-medal" aria-hidden="true">
-                            {hasRating ? Math.round(rating) : '¿?'}
+                            {hasRating ? (scoreScale === 'grade' ? Math.round(resolveGrade({ grade: review.grade, score: rating })) : Math.round(rating)) : '¿?'}
                           </span>
                           <header className="hub-review-entry-head">
                             {review.gameName ? <h4 className="hub-review-game">{review.gameName}</h4> : null}
                             <div className="hub-review-meta">
-                              {hasRating ? <StarRating value={rating} /> : null}
+                              {hasRating && scoreScale !== 'grade' ? <StarRating value={rating} /> : null}
                               {hasValidDate ? (
                                 <span className="hub-review-date">
                                   {itemDate.toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })}

@@ -14,7 +14,8 @@ export interface PublicGame {
   strengths?: string[];
   weaknesses?: string[];
   tab: TabId; // pestaña/estado (mapea c|v|e|p)
-  rating: number | null; // derivado de score
+  rating: number | null; // 0–5, espejo para clientes antiguos (validan max(5))
+  grade?: number | null; // F2: nota fina 0–100 (misma nombre que en el listado); ausente → derivar de rating×20
   years?: number[];
   snippet: string; // ≤160 chars, derivado de review — nunca el review completo
   hasFullReview: boolean; // indica que existe review privado (sin exponerlo)
@@ -40,6 +41,7 @@ export interface ActivityFeedItem {
   gameId: number;
   gameName: string;
   rating: number | null;
+  grade?: number | null; // nota fina 0–100 si el autor la publicó; ausente → derivar de rating×20
   snippet: string; // ≤160 chars — nunca review completo
   createdAt: number;
   updatedAt: number;
@@ -105,12 +107,14 @@ export interface SocialRecommendationEntry {
   gameId: number;
   gameName: string;
   rating: number | null; // sin review
+  grade?: number | null; // nota fina 0–100 si está
 }
 
 export interface SocialActivityEntry {
   gameId: number;
   gameName: string;
   rating: number | null;
+  grade?: number | null; // nota fina 0–100 si el autor la publicó
   snippet: string; // destino (≤160). Forma vieja real: `reviewText` (completo) — migrar en lectura.
   createdAt: number;
   updatedAt: number;
