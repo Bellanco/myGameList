@@ -5,8 +5,11 @@ import type { TabId } from '../../model/types/game';
 import type { GameDraft } from '../../viewmodel/useGameListViewModel';
 import { Icon } from '../components/Icon';
 import { StarPicker } from '../components/StarPicker';
+import { ScoreDial } from '../components/ScoreDial';
 import { TagInput } from '../components/TagInput';
 import { useNativeDialog } from './useNativeDialog';
+import { useScoreScale } from '../hooks/useScoreScale';
+import { gradeFromStars, resolveGrade, starsFromGrade } from '../../core/utils/scoreScale';
 
 interface FormModalProps {
   open: boolean;
@@ -82,6 +85,7 @@ function isValidYearValue(value: string): boolean {
 
 export function FormModal({ open, draft: initialDraft, currentTab, lookups, onClose, onSave, onNotice }: FormModalProps) {
   const boolField = getTabBoolField(currentTab);
+  const scoreScale = useScoreScale();
   // P3: el borrador vive LOCAL al modal y solo se emite en `onSave`. Antes cada pulsación llamaba a `onDraftChange`
   // (estado del VM) → re-render de todo el árbol (App/GameTable). Ahora solo re-renderiza el propio modal.
   const [draft, setLocalDraft] = useState<GameDraft>(initialDraft);
@@ -222,7 +226,8 @@ export function FormModal({ open, draft: initialDraft, currentTab, lookups, onCl
     if (!nextDraft.genres.length) errors.genres = true;
     if (!nextDraft.platforms.length) errors.platforms = true;
     if (supportsYears(currentTab) && !nextDraft.years.length) errors.years = true;
-    if (currentTab === 'c' && Number(nextDraft.score || 0) <= 0) errors.score = true;
+    // Completados requieren puntuación: vale la nota efectiva (estrellas o dial), sea cual sea la escala.
+    if (currentTab === 'c' && resolveGrade({ grade: nextDraft.grade, score: nextDraft.score }) <= 0) errors.score = true;
 
     setFieldErrors(errors);
     if (Object.values(errors).some(Boolean)) {
@@ -312,7 +317,14 @@ export function FormModal({ open, draft: initialDraft, currentTab, lookups, onCl
               <div className="fg fg-score-field">
                 <label className="flabel">{currentTab === 'p' ? UI_MESSAGES.form.interestLabel : UI_MESSAGES.form.scoreLabel} {currentTab === 'c' ? '*' : ''}</label>
                 <div className={`score-input-shell ${fieldErrors.score ? 'has-error' : ''}`.trim()}>
-                  <StarPicker value={draft.score} onChange={(v) => setLocalDraft({ ...draft, score: v })} />
+                  {scoreScale === 'grade' ? (
+                    <ScoreDial
+                      value={typeof draft.grade === 'number' ? draft.grade : gradeFromStars(draft.score)}
+                      onChange={(g) => setLocalDraft({ ...draft, grade: g, score: starsFromGrade(g) })}
+                    />
+                  ) : (
+                    <StarPicker value={draft.score} onChange={(v) => setLocalDraft({ ...draft, score: v, grade: gradeFromStars(v) })} />
+                  )}
                 </div>
                 {fieldErrors.score ? <small className="tag-hint" style={{ color: 'var(--danger)' }}>{VALIDATION_MESSAGES.scoreRequired}</small> : null}
                 {!fieldErrors.score ? <small className="tag-hint tag-hint--spacer" aria-hidden="true">{UI_MESSAGES.form.enterToAddHint}</small> : null}

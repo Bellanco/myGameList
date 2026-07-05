@@ -15,7 +15,7 @@ import {
   type SocialProfileReference,
 } from './firebaseClient';
 import { findSocialProfileByEmail, invalidateSocialDirectoryCache, saveProfileByEmailCache } from './firebaseSocialRepository';
-import type { FirestorePrivateConfig } from '../types/firestore';
+import type { FirestorePrivateConfig, FirestorePublicConfig } from '../types/firestore';
 
 // --- RE-EXPORTS: API pública estable (los consumidores siguen importando desde firebaseRepository) ---
 export { initializeFirebaseServices } from './firebaseClient';
@@ -26,7 +26,7 @@ export type {
   SocialDirectoryEntry,
 } from './firebaseClient';
 export { reportHandledError, trackAnalyticsEvent } from './telemetryRepository';
-export { getCurrentSocialAuthUser, signInWithGoogle, signOutSocialUser } from './firebaseAuthRepository';
+export { getCurrentSocialAuthUser, onSocialAuthChanged, signInWithGoogle, signOutSocialUser } from './firebaseAuthRepository';
 // C5: el índice público (upsertProfileIndex/upsertFeedCard) y las recomendaciones quedaron sin consumidores y
 // con reglas admin-only (rotas en cliente). Código muerto eliminado; la migración a índice pseudónimo por
 // profileId (con guarda recursiva de campos privados) queda registrada como tarea gated en CODE-REVIEW-IMPROVEMENTS.md.
@@ -168,6 +168,28 @@ export async function setPrivateConfig(uid: string, config: Partial<FirestorePri
     throw new Error('Firebase no está configurado en este entorno');
   }
   await setDoc(doc(services.firestore, 'privateConfig', uid), { ...config, schemaVersion: FIRESTORE_SCHEMA_VERSION }, { merge: true });
+}
+
+// ---------------------------------------------------------------------------
+// publicConfig/{uid} — preferencias NO sensibles del dueño (F2), owner-only (ver firestore.rules).
+// Separada de privateConfig para diferenciarla. Hoy solo la escala de puntuación (estrellas/nota).
+// ---------------------------------------------------------------------------
+
+export async function getPublicConfig(uid: string): Promise<FirestorePublicConfig | null> {
+  const services = await initializeFirebaseServices();
+  if (!services) {
+    throw new Error('Firebase no está configurado en este entorno');
+  }
+  const snap = await getDoc(doc(services.firestore, 'publicConfig', uid));
+  return snap.exists() ? (snap.data() as FirestorePublicConfig) : null;
+}
+
+export async function setPublicConfig(uid: string, config: Partial<FirestorePublicConfig>): Promise<void> {
+  const services = await initializeFirebaseServices();
+  if (!services) {
+    throw new Error('Firebase no está configurado en este entorno');
+  }
+  await setDoc(doc(services.firestore, 'publicConfig', uid), { ...config, schemaVersion: FIRESTORE_SCHEMA_VERSION }, { merge: true });
 }
 
 /**

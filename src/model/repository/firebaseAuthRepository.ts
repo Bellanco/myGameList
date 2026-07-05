@@ -1,6 +1,6 @@
 // Autenticación social (Google): sign-in/out y usuario actual, con mensajes de error contextualizados.
 // Extraído de firebaseRepository.ts (M2) sin cambio de comportamiento.
-import { GoogleAuthProvider, signInWithPopup, signOut } from 'firebase/auth';
+import { GoogleAuthProvider, onAuthStateChanged, signInWithPopup, signOut } from 'firebase/auth';
 import {
   getFirebaseErrorCode,
   getFirebaseWebConfig,
@@ -46,6 +46,29 @@ export async function getCurrentSocialAuthUser(): Promise<SocialAuthUser | null>
   }
 
   return toSocialAuthUser(services.auth.currentUser);
+}
+
+/**
+ * Suscribe a los cambios de sesión de Google (incluida la restauración de sesión al arrancar, que es asíncrona).
+ * Emite el usuario actual (o null) y devuelve la función para desuscribir. Best-effort: si Firebase no está
+ * configurado, emite null una vez y no suscribe.
+ */
+export function onSocialAuthChanged(callback: (user: SocialAuthUser | null) => void): () => void {
+  let unsubscribe: (() => void) | null = null;
+  let cancelled = false;
+  void initializeFirebaseServices().then((services) => {
+    if (cancelled || !services) {
+      callback(null);
+      return;
+    }
+    unsubscribe = onAuthStateChanged(services.auth, (user) => {
+      callback(user ? toSocialAuthUser(user) : null);
+    });
+  });
+  return () => {
+    cancelled = true;
+    if (unsubscribe) unsubscribe();
+  };
 }
 
 /**

@@ -157,6 +157,32 @@
   line-height: 1.4;
 }
 
+/* F2 — selector de escala de puntuación (estrellas / nota) en Ajustes. */
+.score-scale-choice { display: grid; gap: .6rem; }
+.score-scale-choice.is-locked { opacity: .6; }
+.score-scale-opt {
+  display: flex; align-items: center; gap: .8rem;
+  padding: .7rem .85rem;
+  background: var(--surface-soft); border: 1px solid var(--border); border-radius: 9px;
+  cursor: pointer; text-align: left; color: var(--text); font: inherit;
+  transition: background .16s, border-color .16s;
+}
+.score-scale-opt:hover:not(:disabled) { background: var(--surface-hover); }
+.score-scale-opt:disabled { cursor: not-allowed; }
+.score-scale-opt.on { border-color: var(--fg-sky); }
+.score-scale-opt:focus-visible { outline: 2px solid var(--fg-sky); outline-offset: 2px; }
+.score-scale-dot {
+  width: 17px; height: 17px; border-radius: 50%; border: 2px solid var(--text-dim);
+  flex: 0 0 auto; display: grid; place-items: center;
+}
+.score-scale-opt.on .score-scale-dot { border-color: var(--fg-sky); }
+.score-scale-opt.on .score-scale-dot::after { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--fg-sky); }
+.score-scale-txt { flex: 1 1 auto; display: grid; gap: .1rem; }
+.score-scale-txt b { font-size: .92rem; font-weight: 600; }
+.score-scale-txt span { color: var(--text-muted); font-size: .8rem; }
+.score-scale-sample { flex: 0 0 auto; display: inline-flex; align-items: center; }
+.score-scale-locked { color: var(--text-dim); font-size: .8rem; }
+
 .settings-actions {
   display: flex;
   flex-wrap: wrap;
@@ -327,12 +353,18 @@
     grid-column: span 7;
   }
 
-  .settings-card:not(.settings-card-status):not(.settings-card-admin) {
+  .settings-card:not(.settings-card-status):not(.settings-card-admin):not(.settings-card-score) {
     grid-column: span 5;
   }
 
-  .settings-card-admin {
+  .settings-card-admin,
+  .settings-card-score {
     grid-column: span 12;
+  }
+
+  /* F2: en ancho, las dos opciones de escala van en paralelo para llenar la tarjeta a lo ancho. */
+  .score-scale-choice {
+    grid-template-columns: 1fr 1fr;
   }
 }
 
@@ -341,7 +373,7 @@
     grid-column: span 6;
   }
 
-  .settings-card:not(.settings-card-status):not(.settings-card-admin) {
+  .settings-card:not(.settings-card-status):not(.settings-card-admin):not(.settings-card-score) {
     grid-column: span 6;
   }
 }
