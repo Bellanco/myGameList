@@ -14,6 +14,7 @@ function activity(over: Partial<SocialActivityEntry>): SocialActivityEntry {
     gameId,
     gameName: 'Juego',
     rating: 4,
+    grade: 80,
     recommendationText: '',
     snippet: 'reseña',
     createdAt: 1_000,

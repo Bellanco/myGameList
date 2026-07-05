@@ -1,6 +1,7 @@
 import { isValidGistId, isValidGithubToken, isValidHttpUrl, safePostText } from '../../core/security/sanitize';
 import { migrateData } from './migrateRepository';
 import { clampRating, normalizeTimestamp } from '../../core/utils/normalize';
+import { resolveGrade } from '../../core/utils/scoreScale';
 import { assembleChunkedGames, gamesGistNeedsRewrite, gamesGistNeedsUpgradeToWrapper, unwrapGamesFile } from '../migration/legacyGamesFormat';
 import { pickLegacyActorId, pickLegacyFromId, pickLegacyReviewText, socialGistNeedsRewrite } from '../migration/legacySocialFormat';
 import { assertValidSocialGist } from '../schemas/socialGistSchema';
@@ -152,6 +153,7 @@ export interface SocialSharedGame {
   platforms: string[];
   genres: string[];
   rating: number;
+  grade: number; // nota fina 0–100 (normalize la deriva del rating si el gist no la trae)
   snippet: string;
 }
 
@@ -163,6 +165,7 @@ export interface SocialRecommendationEntry {
   gameId: number;
   gameName: string;
   rating: number;
+  grade: number; // nota fina 0–100 (normalize la deriva del rating si falta)
   createdAt: number;
   updatedAt: number;
 }
@@ -176,6 +179,7 @@ export interface SocialActivityEntry {
   gameId: number;
   gameName: string;
   rating: number;
+  grade: number; // nota fina 0–100 (normalize la deriva del rating si falta)
   recommendationText: string;
   snippet: string;
   createdAt: number;
@@ -219,6 +223,7 @@ export interface UpsertRecommendationInput {
   gameId: number;
   gameName: string;
   rating: number;
+  grade?: number | null;
   timestamp?: number;
 }
 
@@ -229,6 +234,7 @@ export interface UpsertReviewInput {
   gameName: string;
   reviewText: string;
   rating: number;
+  grade?: number | null;
   timestamp?: number;
 }
 
@@ -450,6 +456,8 @@ function normalizeSocialSharedGame(value: unknown): SocialSharedGame | null {
   // Proyección pública: deriva snippet del review legacy (o del snippet ya migrado) y rating del score legacy.
   const snippet = buildReviewSnippet(pickLegacyReviewText(source));
   const rating = Math.round(clampRating(source.rating ?? source.score));
+  // Nota fina 0–100: preserva `grade` si el gist lo trae; si no (gist de cliente antiguo), la deriva del rating ×20.
+  const grade = resolveGrade({ grade: typeof source.grade === 'number' ? source.grade : null, score: rating });
 
   return {
     id,
@@ -457,6 +465,7 @@ function normalizeSocialSharedGame(value: unknown): SocialSharedGame | null {
     platforms: toStringArray(source.platforms),
     genres: toStringArray(source.genres),
     rating,
+    grade,
     snippet,
   };
 }
@@ -526,6 +535,7 @@ function normalizeRecommendationItems(items: unknown): SocialRecommendationEntry
         gameId,
         gameName,
         rating: clampRating(record.rating),
+        grade: resolveGrade({ grade: typeof record.grade === 'number' ? record.grade : null, score: clampRating(record.rating) }),
         createdAt,
         updatedAt,
       } satisfies SocialRecommendationEntry;
@@ -565,6 +575,7 @@ function normalizeActivityItems(items: unknown): SocialActivityEntry[] {
         gameId,
         gameName,
         rating: clampRating(record.rating),
+        grade: resolveGrade({ grade: typeof record.grade === 'number' ? record.grade : null, score: clampRating(record.rating) }),
         recommendationText: String(record.recommendationText || '').trim(),
         snippet: buildReviewSnippet(pickLegacyReviewText(record)),
         createdAt,
@@ -654,6 +665,7 @@ function mergeLegacyActivity(
       gameId: recommendation.gameId,
       gameName: recommendation.gameName,
       rating: recommendation.rating,
+      grade: resolveGrade({ grade: recommendation.grade ?? null, score: recommendation.rating }),
       recommendationText: '',
       snippet: '',
       createdAt: current?.createdAt || recommendation.createdAt,
@@ -709,6 +721,7 @@ export function upsertReviewActivity(data: SocialGistData, input: UpsertReviewIn
     gameId: input.gameId,
     gameName: cleanName,
     rating: clampRating(input.rating),
+    grade: resolveGrade({ grade: input.grade ?? null, score: input.rating }),
     recommendationText: '',
     snippet: buildReviewSnippet(cleanReview),
   }, now);
