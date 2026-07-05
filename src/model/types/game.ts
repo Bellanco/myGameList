@@ -9,7 +9,8 @@ export interface GameItem {
   genres: string[];
   steamDeck: boolean;
   review: string;
-  score?: number;
+  score?: number; // ESPEJO 0–5 (legacy; se mantiene por compat con clientes antiguos, se borrará en el futuro).
+  grade?: number | null; // F2: nota fina 0–100 (fuente). Ausente/null → se deriva del `score` 0–5.
   years?: number[];
   strengths?: string[];
   weaknesses?: string[];

@@ -6,6 +6,7 @@ import { ReviewDetail, type ReviewAuthor } from './ReviewDetail';
 import type { IconName } from '../../../core/constants/icons';
 import type { GameItem } from '../../../model/types/game';
 import { pickWeighted, type RouletteCandidate } from '../../../core/roulette/roulette';
+import { resolveGrade, resolveStars, STARS_MAX } from '../../../core/utils/scoreScale';
 
 /** Acción inferior de la tarjeta-resultado, resuelta para el juego elegido. */
 export interface RouletteResolvedAction {
@@ -297,11 +298,11 @@ export function RouletteModal({ open, onClose, title, candidates, weight, tag, r
                     <div className="rl-card">
                       <div className="rl-card-tag">{tagText}</div>
                       <h3 className="rl-card-name">{winnerGame.name}</h3>
-                      <div className="rl-card-stars" aria-label={winnerGame.score ? `Puntuación ${winnerGame.score} de 5` : 'Sin puntuar'}>
-                        {winnerGame.score ? (
+                      <div className="rl-card-stars" aria-label={resolveGrade(winnerGame) > 0 ? `Puntuación ${resolveStars(winnerGame)} de ${STARS_MAX}` : 'Sin puntuar'}>
+                        {resolveGrade(winnerGame) > 0 ? (
                           <>
-                            <StarRating value={Number(winnerGame.score)} />
-                            <small>{winnerGame.score}/5</small>
+                            <StarRating value={resolveStars(winnerGame)} />
+                            <small>{resolveStars(winnerGame)}/{STARS_MAX}</small>
                           </>
                         ) : (
                           <small>Sin puntuar</small>
