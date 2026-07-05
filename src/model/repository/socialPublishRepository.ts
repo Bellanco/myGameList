@@ -16,7 +16,7 @@ import {
 } from './gistRepository';
 
 /** Publica/actualiza la actividad social de una reseña. No-op si no hay sesión Google ni gist social configurado. */
-export async function publishReviewActivity(input: { id: number; name: string; review: string; score: number }): Promise<void> {
+export async function publishReviewActivity(input: { id: number; name: string; review: string; score: number; grade?: number | null }): Promise<void> {
   const authUser = await getCurrentSocialAuthUser();
   if (!authUser) {
     return;
@@ -49,6 +49,7 @@ export async function publishReviewActivity(input: { id: number; name: string; r
     gameName: input.name,
     reviewText: input.review, // audit-allow: upsertReviewActivity lo convierte a snippet (no se publica el review completo)
     rating: input.score,
+    grade: input.grade ?? null, // nota fina 0–100 (aditiva; el espejo 0–5 va en rating)
     timestamp: now,
   });
 

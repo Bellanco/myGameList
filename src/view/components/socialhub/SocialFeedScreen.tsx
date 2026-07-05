@@ -265,7 +265,7 @@ export function SocialFeedScreen({
                           </div>
                         </header>
                         <p>{analyzedAtLabel}</p>
-                        <ScoreDisplay game={{ score: Number(entry.rating || 0) }} />
+                        <ScoreDisplay game={{ score: Number(entry.rating || 0), grade: entry.grade ?? null }} />
                         {reviewText ? <p className="hub-feed-review-text" title={reviewText}>{reviewText}</p> : null}
                       </article>
                     );

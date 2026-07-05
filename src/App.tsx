@@ -2,6 +2,7 @@ import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } fro
 import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import { DIALOG_MESSAGES, ROUTE_TAB, SYNC_BADGE_TEXT, SYNC_MESSAGES, TAB_ROUTE, TAB_TITLES } from './core/constants/labels';
 import { TAB_IDS, type TabData, type TabId } from './model/types/game';
+import { resolveGrade } from './core/utils/scoreScale';
 import { publishReviewActivity, unpublishReviewActivity } from './model/repository/socialPublishRepository';
 import { normalizeData } from './model/repository/localRepository';
 import { IconSprite } from './view/components/IconSprite';
@@ -281,6 +282,7 @@ export default function App() {
     const previousGame = [...vm.data.c, ...vm.data.v, ...vm.data.e, ...vm.data.p].find((entry) => entry.id === predictedId);
     const cleanReview = nextDraft.review.trim();
     const nextScore = Number(nextDraft.score || 0);
+    const nextGrade = resolveGrade(nextDraft); // nota fina 0–100 (real si la usa, si no derivada del score)
 
     saveDraft(editingTab, nextDraft);
 
@@ -304,9 +306,11 @@ export default function App() {
 
     const reviewChanged = (previousGame?.review || '').trim() !== cleanReview;
     const scoreChanged = Number(previousGame?.score || 0) !== nextScore;
+    // La nota fina puede cambiar sin mover las estrellas (p. ej. 73→77 = 4★): también dispara republicación.
+    const gradeChanged = resolveGrade(previousGame || {}) !== nextGrade;
     const nameChanged = (previousGame?.name || '').trim() !== nextDraft.name.trim();
 
-    if (!reviewChanged && !scoreChanged && !nameChanged) {
+    if (!reviewChanged && !scoreChanged && !gradeChanged && !nameChanged) {
       return;
     }
 
@@ -315,6 +319,7 @@ export default function App() {
       name: nextDraft.name.trim(),
       review: cleanReview, // audit-allow: publishReviewActivity lo convierte a snippet antes de publicar
       score: nextScore, // audit-allow: el canal social publica solo rating redondeado
+      grade: nextGrade, // nota fina 0–100 (misma nombre que en el listado)
     }).catch(() => {
       notify('warn', 'Juego guardado, pero no se pudo actualizar la actividad social de reseña.');
     });

@@ -12,6 +12,8 @@ const NAME_MAX = 500;
 const SNIPPET_MAX = 200; // el snippet real es ≤160 (SNIPPET_MAX_CHARS); margen por trimEnd/legacy
 const TEXT_MAX = 5000;
 const ratingSchema = z.number().min(0).max(5);
+// F2: nota fina 0–100 (aditiva, opcional). Clientes antiguos ignoran el campo al leer; el espejo `rating` 0–5 se mantiene.
+const gradeSchema = z.number().min(0).max(100).nullable().optional();
 
 const idName = z.strictObject({
   id: z.number(),
@@ -24,6 +26,7 @@ const sharedGame = z.strictObject({
   platforms: z.array(z.string()),
   genres: z.array(z.string()),
   rating: ratingSchema,
+  grade: gradeSchema,
   snippet: z.string().max(SNIPPET_MAX),
 });
 
@@ -56,6 +59,7 @@ const activity = z.strictObject({
   gameId: z.number(),
   gameName: z.string().max(NAME_MAX),
   rating: ratingSchema,
+  grade: gradeSchema,
   recommendationText: z.string().max(TEXT_MAX),
   snippet: z.string().max(SNIPPET_MAX),
   createdAt: z.number(),
