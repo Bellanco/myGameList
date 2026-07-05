@@ -1,5 +1,5 @@
 ﻿import { Icon } from '../Icon';
-import { StarRating } from '../StarRating';
+import { ScoreDisplay } from '../ScoreDisplay';
 import { MetaSection } from '../MetaSection';
 import { HubAvatar } from './HubAvatar';
 import type { SocialUiLabels } from '../../../core/constants/labels';
@@ -94,7 +94,7 @@ export function SocialDetailScreen({
             </div>
           </header>
           <p>{analyzedAtLabel}</p>
-          <StarRating value={Number(activeDetailEvent.rating || 0)} />
+          <ScoreDisplay game={{ score: Number(activeDetailEvent.rating || 0), grade: activeDetailEvent.grade ?? null }} />
           <div className="hub-detail-body">
           {reviewText ? <p className="hub-feed-review-text">{reviewText}</p> : null}
           {gameItem ? (

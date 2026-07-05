@@ -83,19 +83,23 @@ function ownGame(extra: Partial<GameItem>): GameItem {
   };
 }
 
-describe('proyección pública — el rating social sigue en 0–5', () => {
-  it('deriva rating 0–5 desde grade sin exponer la nota fina', () => {
+describe('proyección pública — rating 0–5 (espejo) + grade fino 0–100', () => {
+  it('mantiene rating 0–5 y publica la nota fina; nunca el score local', () => {
     const pub = toPublicGame(ownGame({ grade: 100, score: 5 }), 'c');
     expect(pub.rating).toBe(5);
-    expect((pub as unknown as Record<string, unknown>).grade).toBeUndefined();
+    expect(pub.grade).toBe(100);
     expect((pub as unknown as Record<string, unknown>).score).toBeUndefined();
   });
 
-  it('sin grade, usa el espejo score 0–5', () => {
-    expect(toPublicGame(ownGame({ score: 3 }), 'c').rating).toBe(3);
+  it('sin grade, usa el espejo score 0–5 y deriva la nota fina (×20)', () => {
+    const pub = toPublicGame(ownGame({ score: 3 }), 'c');
+    expect(pub.rating).toBe(3);
+    expect(pub.grade).toBe(60);
   });
 
-  it('un grade granular (73) se publica redondeado a estrellas (4), nunca 73', () => {
-    expect(toPublicGame(ownGame({ grade: 73 }), 'c').rating).toBe(4);
+  it('un grade granular (73) publica rating 4 (espejo) pero conserva grade 73', () => {
+    const pub = toPublicGame(ownGame({ grade: 73 }), 'c');
+    expect(pub.rating).toBe(4);
+    expect(pub.grade).toBe(73);
   });
 });

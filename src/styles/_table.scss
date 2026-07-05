@@ -153,7 +153,7 @@ tbody tr.main-row.just-changed { animation: rowFlash 1.3s ease-out; }
 }
 .star-inp button.f { color: var(--star-full); animation: starPop .34s cubic-bezier(.2,1.2,.3,1); }
 @keyframes starPop { 0% { transform: scale(.6); } 55% { transform: scale(1.3); } 100% { transform: scale(1); } }
-.star-inp-field { align-items: center; }
+.star-inp-field { align-items: center; justify-content: center; font-size: 1.2rem; }
 
 /* ── F2 — aro de puntuación (nota 0–100), rojo→verde reutilizando la luminosidad --acc-l de las reseñas ── */
 /* Color del relleno/número según la nota (--score-hue: 0=rojo → ~135=verde). Borde fino; disco central grande. */
@@ -178,7 +178,7 @@ tbody tr.main-row.just-changed { animation: rowFlash 1.3s ease-out; }
 
 /* Dial: el mismo aro, interactivo (input del formulario en modo nota). Borde MUY fino, manecilla mayor que el borde. */
 .score-dial {
-  --sz: 8.5rem; --track-w: 7px;
+  --sz: 6.5rem; --track-w: 6px;
   position: relative;
   width: var(--sz); height: var(--sz);
   border-radius: 50%;
@@ -208,9 +208,11 @@ tbody tr.main-row.just-changed { animation: rowFlash 1.3s ease-out; }
 }
 .fg-score-field { justify-content: flex-start; }
 .score-input-shell {
+  flex: 1 1 auto;
   min-height: 48px;
   display: flex;
   align-items: center;
+  justify-content: center;
   padding: 0 .2rem;
 }
 @media (hover:hover) { .star-inp button:hover { transform: scale(1.12); } }

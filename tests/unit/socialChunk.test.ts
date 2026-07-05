@@ -17,6 +17,7 @@ function makeShared(id: number) {
     platforms: ['Steam'],
     genres: ['RPG'],
     rating: 4,
+    grade: 73, // F2: nota fina 0–100 (aditiva) — debe validar y sobrevivir el round-trip
     snippet: 's'.repeat(120), // snippet realista (≤160) para inflar el tamaño y forzar overflow
   };
 }
@@ -90,6 +91,15 @@ describe('A6 — chunking del gist social (sharedLists)', () => {
   it('el ancla (con chunkIndex + bucket main) sigue cumpliendo la allowlist estricta del schema social', () => {
     const { anchor } = buildSocialFiles(makeData(2500));
     expect(() => assertValidSocialGist(anchor)).not.toThrow();
+  });
+
+  it('la nota fina `grade` valida en el schema y sobrevive el round-trip de chunking', () => {
+    const data = makeData(3);
+    expect(() => assertValidSocialGist(buildSocialFiles(data).anchor)).not.toThrow();
+    const files = toGistFiles(data);
+    const reassembled = assembleChunkedSocial(JSON.parse(files[SOCIAL_GIST_FILENAME].content), files) as SocialGistData;
+    const first = (reassembled.profile.sharedLists as unknown as Record<string, Array<{ grade?: number }>>).c[0];
+    expect(first.grade).toBe(73);
   });
 
   it('un chunk ausente conserva lo disponible (no rompe la lectura)', () => {

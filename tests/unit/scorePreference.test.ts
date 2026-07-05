@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 // Mock del repo de Firebase: el store no debe tocar red en tests.
 const getPublicConfig = vi.fn();
-const setPublicConfig = vi.fn(async () => {});
+const setPublicConfig = vi.fn(async (_uid: string, _cfg: unknown) => {});
 vi.mock('../../src/model/repository/firebaseRepository', () => ({
   getPublicConfig: (uid: string) => getPublicConfig(uid),
   setPublicConfig: (uid: string, cfg: unknown) => setPublicConfig(uid, cfg),
