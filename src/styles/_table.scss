@@ -154,6 +154,58 @@ tbody tr.main-row.just-changed { animation: rowFlash 1.3s ease-out; }
 .star-inp button.f { color: var(--star-full); animation: starPop .34s cubic-bezier(.2,1.2,.3,1); }
 @keyframes starPop { 0% { transform: scale(.6); } 55% { transform: scale(1.3); } 100% { transform: scale(1); } }
 .star-inp-field { align-items: center; }
+
+/* ── F2 — aro de puntuación (nota 0–100), rojo→verde reutilizando la luminosidad --acc-l de las reseñas ── */
+/* Color del relleno/número según la nota (--score-hue: 0=rojo → ~135=verde). Borde fino; disco central grande. */
+.score-ring {
+  --sz: 2.35rem;
+  position: relative;
+  width: var(--sz); height: var(--sz);
+  border-radius: 50%;
+  display: inline-grid; place-items: center;
+  flex: 0 0 auto;
+  background: conic-gradient(hsl(var(--score-hue, 0) 58% var(--acc-l)) calc(var(--score-pct, 0) * 1%), var(--score-track) 0);
+}
+.score-ring::after { content: ""; position: absolute; inset: 3px; border-radius: 50%; background: var(--surface); }
+.score-ring.is-blank { background: var(--score-track); }
+.score-ring-num {
+  position: relative; z-index: 1;
+  font-weight: 800; font-variant-numeric: tabular-nums; line-height: 1;
+  font-size: calc(var(--sz) * .36);
+  color: hsl(var(--score-hue, 0) 58% var(--acc-l));
+}
+.score-ring.is-blank .score-ring-num { color: var(--text-dim); }
+
+/* Dial: el mismo aro, interactivo (input del formulario en modo nota). Borde MUY fino, manecilla mayor que el borde. */
+.score-dial {
+  --sz: 8.5rem; --track-w: 7px;
+  position: relative;
+  width: var(--sz); height: var(--sz);
+  border-radius: 50%;
+  touch-action: none; cursor: pointer; user-select: none;
+  background: conic-gradient(hsl(var(--score-hue, 0) 58% var(--acc-l)) calc(var(--score-pct, 0) * 1%), var(--score-track) 0);
+}
+.score-dial::after { content: ""; position: absolute; inset: var(--track-w); border-radius: 50%; background: var(--surface); box-shadow: inset 0 1px 3px rgba(0,0,0,.22); }
+.score-dial:focus-visible { outline: 3px solid var(--fg-sky); outline-offset: 4px; }
+.score-dial-num {
+  position: absolute; inset: 0; z-index: 1;
+  display: grid; place-items: center;
+  font-weight: 800; font-variant-numeric: tabular-nums; line-height: 1;
+  font-size: calc(var(--sz) * .3);
+  color: hsl(var(--score-hue, 0) 58% var(--acc-l));
+}
+.score-dial-knob {
+  position: absolute; z-index: 2;
+  left: var(--knob-left, 50%); top: var(--knob-top, 0%);
+  width: 1.35rem; height: 1.35rem; border-radius: 50%;
+  background: #fff; border: 3px solid hsl(var(--score-hue, 0) 58% var(--acc-l));
+  transform: translate(-50%, -50%);
+  box-shadow: 0 1px 5px rgba(0,0,0,.4);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .score-ring, .score-dial { transition: background .25s; }
+  .score-ring-num, .score-dial-num { transition: color .25s; }
+}
 .fg-score-field { justify-content: flex-start; }
 .score-input-shell {
   min-height: 48px;

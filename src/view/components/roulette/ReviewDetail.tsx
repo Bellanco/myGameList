@@ -1,4 +1,5 @@
 import { StarRating } from '../StarRating';
+import { ScoreDisplay } from '../ScoreDisplay';
 import { MetaSection } from '../MetaSection';
 import { HubAvatar } from '../socialhub/HubAvatar';
 import { resolveStars } from '../../../core/utils/scoreScale';
@@ -32,7 +33,8 @@ export function ReviewDetail({ game, author }: ReviewDetailProps) {
             {author && game.name ? <span className="hub-feed-game-chip">{game.name}</span> : null}
           </div>
         </header>
-        <StarRating value={resolveStars(game)} />
+        {/* Reseña de un amigo (canal social 0–5) → estrellas; propia → escala elegida por el usuario. */}
+        {author ? <StarRating value={resolveStars(game)} /> : <ScoreDisplay game={game} />}
         <div className="hub-detail-body">
           {review ? <p className="hub-feed-review-text">{review}</p> : null}
           <div className="hub-detail-metadata">

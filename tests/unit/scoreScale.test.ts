@@ -5,6 +5,7 @@ import {
   STARS_MAX,
   clampGrade,
   gradeFromStars,
+  hueFromGrade,
   resolveGrade,
   resolveStars,
   starsFromGrade,
@@ -41,6 +42,14 @@ describe('scoreScale — conversión estrellas ↔ nota 0–100', () => {
     for (let s = 0; s <= STARS_MAX; s++) {
       expect(starsFromGrade(gradeFromStars(s))).toBe(s);
     }
+  });
+
+  it('hueFromGrade va de rojo (0) a verde (~135) monótonamente', () => {
+    expect(hueFromGrade(0)).toBe(0);
+    expect(hueFromGrade(100)).toBe(135);
+    expect(hueFromGrade(50)).toBeGreaterThan(0);
+    expect(hueFromGrade(50)).toBeLessThan(135);
+    expect(hueFromGrade(80)).toBeGreaterThan(hueFromGrade(40));
   });
 });
 

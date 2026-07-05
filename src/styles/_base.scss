@@ -71,6 +71,8 @@
   /* Luminosidad base del acento por-nota de las reseñas (rojo→verde). Cada nota le suma un ajuste
      (--rev-ladj) para separar 3/4/5: 3 más claro, 5 el más profundo. */
   --acc-l: 54%;
+  /* F2 — pista (fondo) del aro de puntuación sin rellenar. */
+  --score-track: rgba(255,255,255,.10);
 }
 
 /* Tema claro: solo redefine colores (los radios y la estructura no cambian). */
@@ -131,6 +133,7 @@
 
   --shadow: 0 8px 24px rgba(20,30,45,.12);
   --acc-l: 40%;
+  --score-track: rgba(0,0,0,.11);
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }

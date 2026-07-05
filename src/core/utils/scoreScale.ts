@@ -16,6 +16,19 @@ export const STARS_MAX = 5;
 /** Puntos de nota por estrella: 100 / 5 = 20 (★=20, ★★★=60, ★★★★★=100). */
 export const GRADE_PER_STAR = GRADE_MAX / STARS_MAX;
 
+/** Escala de puntuación elegida por el usuario (F2). `stars` = 0–5 estrellas (defecto); `grade` = aro 0–100. */
+export type ScoreScale = 'stars' | 'grade';
+export const SCORE_SCALES: readonly ScoreScale[] = ['stars', 'grade'];
+export const DEFAULT_SCORE_SCALE: ScoreScale = 'stars';
+
+/**
+ * Tono HSL rojo→verde para una nota 0–100 (0=rojo, 100≈verde), como el medallón de reseñas privadas
+ * (`--rev-hue`). Se usa para pintar el aro de puntuación.
+ */
+export function hueFromGrade(grade: unknown): number {
+  return Math.round((clampGrade(grade) / GRADE_MAX) * 135);
+}
+
 /** Acota una nota fina al rango [0, 100]; 0 si no es finita. */
 export function clampGrade(value: unknown): number {
   const numeric = Number(value);
