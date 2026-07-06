@@ -10,6 +10,7 @@ import { normalizeName } from '../core/roulette/roulette';
 import { loadLocalState, loadLocalStateAsync, normalizeData, saveLocalState } from '../model/repository/localRepository';
 import { getGamesAsTabData, getLocalMeta, mirrorTabDataToGames } from '../model/repository/indexedDbRepository';
 import { markDirty } from '../model/repository/syncStateRepository';
+import { trackAnalyticsEvent } from '../model/repository/firebaseRepository';
 import { transitionTo } from '../model/repository/syncMachineRepository';
 import type { TabAction as LabelsTabAction } from '../core/constants/labels';
 import type { GameItem, StatusNotice, TabData, TabId, TabSort, ToolbarFilters } from '../model/types/game';
@@ -396,6 +397,7 @@ export function useGameListViewModel() {
       setFormModalOpen(false);
       setDraft(EMPTY_DRAFT);
       notify('ok', 'Juego guardado correctamente');
+      void trackAnalyticsEvent('game_saved', { tab, is_edit: Boolean(existing), has_review: Boolean(base.review) });
     },
     [data, notify, persist],
   );
@@ -478,6 +480,7 @@ export function useGameListViewModel() {
       };
       persist(nextData);
       notify('ok', 'Juego pasado a En curso');
+      void trackAnalyticsEvent('game_moved', { from: sourceTab, to: targetTab });
     },
     [data, persist, notify],
   );

@@ -2536,3 +2536,36 @@ button.hub-chip.active {
 }
 
 
+
+// Fallback del error boundary RAÍZ (AppErrorBoundary): pantalla centrada con tarjeta y botón de recarga.
+.app-error {
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  background: var(--bg);
+  color: var(--text);
+}
+
+.app-error-card {
+  max-width: 30rem;
+  width: 100%;
+  text-align: center;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: .75rem;
+  padding: 2rem 1.75rem;
+
+  h1 {
+    margin: 0 0 .75rem;
+    font-size: 1.35rem;
+  }
+
+  p {
+    margin: 0 0 1.5rem;
+    color: var(--text-dim);
+    line-height: 1.5;
+  }
+}
