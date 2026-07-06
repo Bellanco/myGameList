@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { SYNC_MESSAGES } from '../core/constants/labels';
-import { findSocialProfileByEmail, getCurrentSocialAuthUser, recoverGithubToken, resolveStableProfileId, signInWithGoogle } from '../model/repository/firebaseRepository';
+import { findSocialProfileByEmail, getCurrentSocialAuthUser, recoverGithubToken, resolveStableProfileId, setAnalyticsUser, signInWithGoogle, trackAnalyticsEvent } from '../model/repository/firebaseRepository';
 import { mergeCrdt } from '../model/repository/syncRepository';
 import { clearSyncConfig, createGist, ensureSyncConfigLoaded, findGamesGistId, getRetryAfterMs, getSyncConfig, isDeferredNetworkError, readGist, saveSyncConfig, whoAmI, writeGist } from '../model/repository/gistRepository';
 import { beginGithubOAuth, completeGithubOAuth, hasGithubOAuthRedirect, isGithubOAuthConfigured } from '../model/repository/githubOAuthRepository';
@@ -667,6 +667,10 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
 
     try {
       const user = (await getCurrentSocialAuthUser()) || (await signInWithGoogle());
+
+      // Telemetría: vincula los eventos/errores posteriores a este usuario (uid opaco) y registra el login.
+      void setAnalyticsUser(user.uid);
+      void trackAnalyticsEvent('login', { method: 'google' });
 
       // 6.2a: al iniciar sesión, recupera el profileId canónico de Firestore y siémbralo en `meta`
       // (best-effort) para que este dispositivo NO genere un pseudónimo divergente en el primer guardado.
