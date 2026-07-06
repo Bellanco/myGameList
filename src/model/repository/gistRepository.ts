@@ -1341,6 +1341,74 @@ async function encodeGamesContent(json: string): Promise<string> {
   return COMPRESS_GAMES_WRITES ? encodeCompressed('games', json) : json;
 }
 
+// Objetivo de tamaño COMPRIMIDO por fichero, con margen bajo el bloqueo duro (~950KB de `assertGistSizeWithinLimit`)
+// para absorber la variación de ratio entre ficheros. Solo aplica cuando la escritura es comprimida.
+const GAMES_COMPRESSED_TARGET_BYTES = 880 * 1024;
+// Presupuesto de plano "sin límite práctico": fuerza que buildGamesFiles meta todo en `main` (sin chunks) para el sondeo.
+const GAMES_UNCHUNKED_BUDGET_KB = 1024 * 1024;
+const CHUNK_FIT_MAX_ATTEMPTS = 4;
+
+function contentByteLength(content: string): number {
+  return new TextEncoder().encode(content).length;
+}
+
+// Tamaño (bytes) del fichero COMPRIMIDO más grande del conjunto construido (ancla + chunks), tal como se almacenaría.
+async function largestCompressedFileBytes(built: {
+  anchorFile: GamesMainFile;
+  chunkFiles: Record<string, GamesChunkFile>;
+}): Promise<number> {
+  const contents = [JSON.stringify(built.anchorFile), ...Object.values(built.chunkFiles).map((f) => JSON.stringify(f))];
+  const sizes = await Promise.all(contents.map(async (json) => contentByteLength(await encodeGamesContent(json))));
+  return Math.max(...sizes);
+}
+
+/**
+ * Construye los ficheros del gist de juegos fijando el nº de chunks por el tamaño REAL almacenado.
+ *
+ * Sin compresión: presupuesto en PLANO (comportamiento actual, 800KB) — el comprimido nunca supera al plano, así
+ * que trocear por plano es conservador y correcto.
+ *
+ * Con compresión: patrón ESTIMAR-Y-VERIFICAR, porque el tamaño comprimido no es lineal (depende del buffer entero
+ * y del diccionario) y comprimir es async:
+ *   1) ESTIMAR el ratio real comprimiendo el conjunto SIN trocear (todo en `main`). Si ya cabe comprimido bajo el
+ *      objetivo, un único fichero (cero chunks).
+ *   2) Estimar un presupuesto de PLANO tal que `plano × ratio` quede bajo el objetivo (margen del 8%).
+ *   3) VERIFICAR el tamaño comprimido real de cada fichero; si el mayor se pasa, encoger el presupuesto según el
+ *      exceso observado y reconstruir (converge en 1-2 vueltas). La guarda de 950KB en `writeGist` sigue siendo el
+ *      backstop de corrección si un caso patológico (p. ej. diccionarios enormes) no cupiera.
+ */
+async function buildGamesFilesForStorage(
+  data: TabData,
+): Promise<{ anchorFile: GamesMainFile; chunkFiles: Record<string, GamesChunkFile> }> {
+  if (!COMPRESS_GAMES_WRITES) {
+    return buildGamesFiles(data);
+  }
+
+  // (1) ESTIMAR: sin trocear, mide el ratio real de compresión sobre este dataset concreto (autocalibrado).
+  const single = buildGamesFiles(data, GAMES_UNCHUNKED_BUDGET_KB);
+  const singleJson = JSON.stringify(single.anchorFile);
+  const singleComp = contentByteLength(await encodeGamesContent(singleJson));
+  if (singleComp <= GAMES_COMPRESSED_TARGET_BYTES) {
+    return single; // cabe entero comprimido → un solo fichero
+  }
+  const ratio = singleComp / contentByteLength(singleJson);
+
+  // (2) Presupuesto de plano estimado a partir del ratio medido.
+  let budgetKB = Math.max(1, Math.floor(((GAMES_COMPRESSED_TARGET_BYTES / ratio) * 0.92) / 1024));
+  let built = buildGamesFiles(data, budgetKB);
+
+  // (3) VERIFICAR el tamaño comprimido real y ajustar si algún fichero se pasa del objetivo.
+  for (let attempt = 0; attempt < CHUNK_FIT_MAX_ATTEMPTS; attempt += 1) {
+    const maxComp = await largestCompressedFileBytes(built);
+    if (maxComp <= GAMES_COMPRESSED_TARGET_BYTES) {
+      break;
+    }
+    budgetKB = Math.max(1, Math.floor(budgetKB * (GAMES_COMPRESSED_TARGET_BYTES / maxComp) * 0.9));
+    built = buildGamesFiles(data, budgetKB);
+  }
+  return built;
+}
+
 // Descomprime el `content` de cada fichero de un mapa (no-op sobre contenido plano) y conserva si venía comprimido.
 // Se usa para que las comparaciones de reescritura incremental (checksum de chunk, refs del ancla) operen sobre JSON
 // plano aunque el remoto esté comprimido, y para saber si el chunk remoto ya está en el formato de compresión destino.
@@ -1661,8 +1729,9 @@ export async function writeGist(token: string, gistId: string, payload: TabData)
 
   if (ENABLE_GAMES_WRAPPER_WRITE) {
     // E4: envoltorio DESTINO multi-fichero. El ancla lleva el bucket `main` + diccionarios/chunkIndex; el excedente
-    // va a ficheros `myGames-chunk-cN.json`. Cada fichero se mantiene bajo el umbral de tamaño.
-    const { anchorFile, chunkFiles } = buildGamesFiles(lean);
+    // va a ficheros `myGames-chunk-cN.json`. Con compresión activa, el nº de chunks se fija por el tamaño REAL
+    // almacenado (comprimido) vía estimar-y-verificar; sin compresión, por el JSON plano (800KB).
+    const { anchorFile, chunkFiles } = await buildGamesFilesForStorage(lean);
     files = {};
 
     // A7 (reescritura incremental) + B (reparto): lee el estado actual del gist principal UNA vez para (a) OMITIR

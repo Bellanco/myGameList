@@ -26,6 +26,20 @@ function makeGame(overrides: Partial<GameItem> = {}): GameItem {
   };
 }
 
+// Texto pseudo-aleatorio DETERMINISTA (LCG, alfabeto de 64 → ~6 bits/char) — poco compresible. Necesario para
+// forzar chunking real ahora que el nº de chunks se fija por el tamaño COMPRIMIDO: un review repetitivo (p. ej.
+// 'x'*900) gzip lo reduce casi a cero y ya no trocearía.
+function noisyText(seed: number, len: number): string {
+  const alphabet = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 .,';
+  let s = (seed * 2654435761) >>> 0;
+  let out = '';
+  for (let i = 0; i < len; i += 1) {
+    s = (s * 1664525 + 1013904223) >>> 0;
+    out += alphabet[(s >>> 9) % alphabet.length];
+  }
+  return out;
+}
+
 /**
  * Mockea `fetch` con un gist en memoria: PATCH fusiona ficheros (null borra) y GET devuelve el estado actual.
  * Reproduce el contrato mínimo que `writeGist` (PATCH, + GET previo para limpiar chunks obsoletos) y `readGist`
@@ -138,10 +152,10 @@ describe.skipIf(!ENABLE_GAMES_WRAPPER_WRITE)('writeGist con ENABLE_GAMES_WRAPPER
 
   it('A7: con overflow, una edición puntual solo reenvía el chunk afectado (+ ancla), no todos', async () => {
     const { patchBodies } = stubGistStore();
-    // Dataset grande (reviews de longitud fija) → fuerza varios ficheros chunk: main + c1 + c2…
-    const review = 'x'.repeat(900);
+    // Dataset grande y POCO compresible (reviews ruidosos de longitud fija) → fuerza varios ficheros chunk bajo el
+    // presupuesto COMPRIMIDO: main + c1 + c2…
     const c: GameItem[] = [];
-    for (let i = 1; i <= 2500; i += 1) c.push(makeGame({ id: i, name: `Juego ${i}`, review }));
+    for (let i = 1; i <= 2000; i += 1) c.push(makeGame({ id: i, name: `Juego ${i}`, review: noisyText(i, 2000) }));
     const data: TabData = { c, v: [], e: [], p: [], deleted: [], updatedAt: 1 };
 
     await writeGist(TOKEN, GIST_ID, data); // 1ª escritura: sube ancla + TODOS los chunks (gist vacío)
@@ -151,7 +165,7 @@ describe.skipIf(!ENABLE_GAMES_WRAPPER_WRITE)('writeGist con ENABLE_GAMES_WRAPPER
     expect(firstChunks.length).toBeGreaterThanOrEqual(2); // hay overflow real
 
     // Edita el review del ÚLTIMO juego (misma longitud → no rebucketiza; solo cambia el checksum de su chunk).
-    const edited = c.map((g) => (g.id === 2500 ? { ...g, review: 'y'.repeat(900) } : g));
+    const edited = c.map((g) => (g.id === 2000 ? { ...g, review: noisyText(999999, 2000) } : g));
     await writeGist(TOKEN, GIST_ID, { ...data, c: edited, updatedAt: 2 });
 
     const secondFiles = Object.keys(patchBodies[patchBodies.length - 1].files);
