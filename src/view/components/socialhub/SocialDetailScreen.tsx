@@ -1,5 +1,7 @@
 ﻿import { Icon } from '../Icon';
 import { ScoreDisplay } from '../ScoreDisplay';
+import { NoScoreMedal } from '../NoScoreMedal';
+import { resolveGrade } from '../../../core/utils/scoreScale';
 import { MetaSection } from '../MetaSection';
 import { HubAvatar } from './HubAvatar';
 import type { SocialUiLabels } from '../../../core/constants/labels';
@@ -94,7 +96,9 @@ export function SocialDetailScreen({
             </div>
           </header>
           <p>{analyzedAtLabel}</p>
-          <ScoreDisplay game={{ score: Number(activeDetailEvent.rating || 0), grade: activeDetailEvent.grade ?? null }} />
+          {resolveGrade({ score: Number(activeDetailEvent.rating || 0), grade: activeDetailEvent.grade ?? null }) > 0
+            ? <ScoreDisplay game={{ score: Number(activeDetailEvent.rating || 0), grade: activeDetailEvent.grade ?? null }} />
+            : <NoScoreMedal />}
           <div className="hub-detail-body">
           {reviewText ? <p className="hub-feed-review-text">{reviewText}</p> : null}
           {gameItem ? (
