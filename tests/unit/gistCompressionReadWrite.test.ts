@@ -1,10 +1,12 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   ENABLE_GAMES_COMPRESSION,
+  buildGamesFiles,
   readForeignGamesGist,
   readGist,
   writeGist,
 } from '../../src/model/repository/gistRepository';
+import { leanTabData } from '../../src/model/repository/socialProjection';
 import { decodeGistContent, encodeCompressed, isCompressedEnvelope } from '../../src/core/utils/gistCompression';
 import type { GameItem, TabData } from '../../src/model/types/game';
 
@@ -28,6 +30,36 @@ function makeGame(overrides: Partial<GameItem> = {}): GameItem {
     replayable: false,
     ...overrides,
   };
+}
+
+// Texto pseudo-aleatorio DETERMINISTA (LCG, alfabeto de 64 → ~6 bits/char) — poco compresible. Necesario para
+// forzar chunking real ahora que el nº de chunks se fija por el tamaño COMPRIMIDO: un review repetitivo gzip lo
+// reduce casi a cero y ya no trocearía.
+function noisyText(seed: number, len: number): string {
+  const alphabet = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 .,';
+  let s = (seed * 2654435761) >>> 0;
+  let out = '';
+  for (let i = 0; i < len; i += 1) {
+    s = (s * 1664525 + 1013904223) >>> 0;
+    out += alphabet[(s >>> 9) % alphabet.length];
+  }
+  return out;
+}
+
+// Texto tipo lenguaje natural (vocabulario acotado) → compresible de forma REALISTA (~como reseñas reales), a
+// diferencia de noisyText (casi incompresible). Se usa para demostrar la reducción de chunks del presupuesto comprimido.
+const WORDY_VOCAB =
+  'el la de que un una juego historia jugable mundo abierto personaje combate banda sonora graficos duracion final epico dificil sencillo recomendable horas rejugable nivel diseno arte narrativa ritmo control camara mapa mision secundaria principal protagonista enemigo jefe arma habilidad progreso exploracion aventura accion rol estrategia'.split(
+    ' ',
+  );
+function wordyText(seed: number, len: number): string {
+  let s = (seed * 2654435761) >>> 0;
+  let out = '';
+  while (out.length < len) {
+    s = (s * 1664525 + 1013904223) >>> 0;
+    out += `${WORDY_VOCAB[(s >>> 9) % WORDY_VOCAB.length]} `;
+  }
+  return out.slice(0, len);
 }
 
 function stubGistStore(initialFiles: Record<string, { content: string }> = {}) {
@@ -112,10 +144,9 @@ describe('lectura retrocompatible de gists comprimidos', () => {
 
   it('lee sin pérdida un gist comprimido CON chunks de overflow en el mismo gist', async () => {
     const { store } = stubGistStore();
-    // Dataset grande → fuerza main + varios ficheros chunk.
-    const review = 'x'.repeat(900);
+    // Dataset grande y POCO compresible → fuerza main + al menos un fichero chunk bajo el presupuesto comprimido.
     const c: GameItem[] = [];
-    for (let i = 1; i <= 2500; i += 1) c.push(makeGame({ id: i, name: `Juego ${i}`, review }));
+    for (let i = 1; i <= 1500; i += 1) c.push(makeGame({ id: i, name: `Juego ${i}`, review: noisyText(i, 2000) }));
     const big: TabData = { c, v: [], e: [], p: [], deleted: [], updatedAt: 1 };
 
     await writeGist(TOKEN, GIST_ID, big);
@@ -125,8 +156,8 @@ describe('lectura retrocompatible de gists comprimidos', () => {
 
     const read = await readGist(TOKEN, GIST_ID);
     const out = read.data as TabData;
-    expect(out.c.length).toBe(2500);
-    expect(out.c.find((g) => g.id === 2500)?.name).toBe('Juego 2500');
+    expect(out.c.length).toBe(1500);
+    expect(out.c.find((g) => g.id === 1500)?.name).toBe('Juego 1500');
   });
 
   it('readForeignGamesGist también descomprime (lectura del gist de un amigo)', async () => {
@@ -215,9 +246,8 @@ describe.skipIf(!ENABLE_GAMES_COMPRESSION)('escritura comprimida (ENABLE_GAMES_C
 
   it('el flip comprime también los chunks SIN CAMBIOS que estaban en plano (y no los reescribe si ya coinciden)', async () => {
     const { store, patchBodies } = stubGistStore();
-    const review = 'x'.repeat(900);
     const c: GameItem[] = [];
-    for (let i = 1; i <= 2500; i += 1) c.push(makeGame({ id: i, name: `Juego ${i}`, review }));
+    for (let i = 1; i <= 1500; i += 1) c.push(makeGame({ id: i, name: `Juego ${i}`, review: noisyText(i, 2000) }));
     const big: TabData = { c, v: [], e: [], p: [], deleted: [], updatedAt: 1 };
 
     await writeGist(TOKEN, GIST_ID, big);
@@ -240,5 +270,31 @@ describe.skipIf(!ENABLE_GAMES_COMPRESSION)('escritura comprimida (ENABLE_GAMES_C
     // Ahora el remoto ya está comprimido y los datos no cambian → el skip incremental se mantiene: no reenvía chunks.
     await writeGist(TOKEN, GIST_ID, big);
     expect(chunkNamesOf(patchBodies[patchBodies.length - 1].files)).toEqual([]);
+  });
+
+  it('estimar-y-verificar: trocea por el tamaño COMPRIMIDO → menos chunks que el presupuesto plano, cada fichero bajo el límite', async () => {
+    const { store } = stubGistStore();
+    // Dataset grande y compresible de forma realista: en plano supera 800KB varias veces; comprimido cabe en menos ficheros.
+    const c: GameItem[] = [];
+    for (let i = 1; i <= 2500; i += 1) c.push(makeGame({ id: i, name: `Juego ${i}`, review: wordyText(i, 2000) }));
+    const big: TabData = { c, v: [], e: [], p: [], deleted: [], updatedAt: 1 };
+
+    await writeGist(TOKEN, GIST_ID, big);
+
+    // Cada fichero ALMACENADO (comprimido) queda bajo el bloqueo duro (~950KB).
+    const bytes = (s: string) => new TextEncoder().encode(s).length;
+    for (const name of Object.keys(store)) {
+      expect(bytes(store[name].content), `${name} bajo el límite de gist`).toBeLessThan(950 * 1024);
+    }
+
+    // Menos chunks que los que produciría el presupuesto PLANO de 800KB (buildGamesFiles por defecto).
+    const storedChunks = Object.keys(store).filter((n) => /^myGames-chunk-.+\.json$/.test(n)).length;
+    const plainBaselineChunks = Object.keys(buildGamesFiles(leanTabData(big)).chunkFiles).length;
+    expect(storedChunks).toBeLessThan(plainBaselineChunks);
+
+    // Y sigue leyéndose sin pérdida.
+    const out = (await readGist(TOKEN, GIST_ID)).data as TabData;
+    expect(out.c.length).toBe(2500);
+    expect(out.c.find((g) => g.id === 2500)?.name).toBe('Juego 2500');
   });
 });
