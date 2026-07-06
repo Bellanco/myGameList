@@ -1,6 +1,6 @@
 {
   "name": "mygamelist",
-  "version": "2.0.0",
+  "version": "3.2.0",
   "description": "Application for managing video game lists with GitHub Gist synchronization",
   "private": true,
   "scripts": {

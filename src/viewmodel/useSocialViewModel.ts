@@ -26,6 +26,7 @@ import type { IconName } from '../core/constants/icons';
 import type { GameItem, SyncConfig, TabId } from '../model/types/game';
 import {
   acceptFriendRequest,
+  clearAnalyticsUser,
   deleteFriendship,
   ensureProfileByEmail,
   getCurrentSocialAuthUser,
@@ -1615,6 +1616,7 @@ export function useSocialViewModel() {
 
   const handleSignOut = useCallback(async () => {
     await signOutSocialUser();
+    void clearAnalyticsUser(); // desvincula al usuario de los eventos/errores posteriores (simétrico con setAnalyticsUser en login)
     setAuthUser(null);
     setShowSocialSpace(false);
     setFeedback('ok', SOCIAL_UI.status.signOut, 'long');

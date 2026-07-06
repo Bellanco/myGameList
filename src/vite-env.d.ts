@@ -17,3 +17,6 @@ interface ImportMetaEnv {
 interface ImportMeta {
   readonly env: ImportMetaEnv;
 }
+
+// Versión de la app inyectada por Vite (`define`) en build. Etiqueta errores y eventos de telemetría.
+declare const __APP_VERSION__: string;
