@@ -67,9 +67,10 @@ export const ENABLE_GAMES_WRAPPER_WRITE = true;
  * descomprimir en ESTA versión (`decodeGistContent`, retrocompatible con contenido plano) → activar en 2 pasos como
  * el envoltorio v4: (1) desplegar con lectura activa y este flag en `false`; (2) cuando TODOS los dispositivos estén
  * al día, poner `true`. Un cliente sin la lectura vería el `{enc:...}` como no-legible. Implica v4 (comprime el v4).
- * Sigue OFF: la ESCRITURA comprimida es Fase 2. Ver .github/prompts/migration/GIST-COMPRESSION-PLAN.md.
+ * CUTOVER HECHO (ON): la ESCRITURA comprime; gists en plano se auto-reescriben comprimidos. Reversible a `false`.
+ * Ver .github/prompts/migration/GIST-COMPRESSION-PLAN.md.
  */
-export const ENABLE_GAMES_COMPRESSION = false;
+export const ENABLE_GAMES_COMPRESSION = true;
 
 // La compresión comprime el JSON v4, así que requiere el envoltorio activo. Si el wrapper está OFF, no se comprime
 // (evita comprimir TabData plano, que dispararía un auto-upgrade en bucle: plano→comprimido→sigue "no-v4").
