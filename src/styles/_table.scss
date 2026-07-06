@@ -168,6 +168,14 @@ tbody tr.main-row.just-changed { animation: rowFlash 1.3s ease-out; }
 }
 .score-ring::after { content: ""; position: absolute; inset: 3px; border-radius: 50%; background: var(--surface); }
 .score-ring.is-blank { background: var(--score-track); }
+/* Sin puntuación (p. ej. reseña de un juego de la lista de la vergüenza): medallón azul suave con "¿?",
+   mismo lenguaje que el medallón de reseñas (`.hub-review-entry.is-noscore`). */
+.score-ring.is-noscore {
+  background: hsl(208 34% var(--acc-l) / .16);
+  border: 2px solid hsl(208 34% var(--acc-l));
+}
+.score-ring.is-noscore::after { display: none; }
+.score-ring.is-noscore .score-ring-num { color: hsl(208 34% var(--acc-l)); }
 .score-ring-num {
   position: relative; z-index: 1;
   font-weight: 800; font-variant-numeric: tabular-nums; line-height: 1;

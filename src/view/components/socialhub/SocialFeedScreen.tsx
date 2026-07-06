@@ -1,6 +1,8 @@
 ﻿import React from 'react';
 import { Icon } from '../Icon';
 import { ScoreDisplay } from '../ScoreDisplay';
+import { NoScoreMedal } from '../NoScoreMedal';
+import { resolveGrade } from '../../../core/utils/scoreScale';
 import type { SocialUiLabels } from '../../../core/constants/labels';
 import { HubStatus } from './HubStatus';
 import { PostText } from './PostText';
@@ -265,7 +267,9 @@ export function SocialFeedScreen({
                           </div>
                         </header>
                         <p>{analyzedAtLabel}</p>
-                        <ScoreDisplay game={{ score: Number(entry.rating || 0), grade: entry.grade ?? null }} />
+                        {resolveGrade({ score: Number(entry.rating || 0), grade: entry.grade ?? null }) > 0
+                          ? <ScoreDisplay game={{ score: Number(entry.rating || 0), grade: entry.grade ?? null }} />
+                          : <NoScoreMedal />}
                         {reviewText ? <p className="hub-feed-review-text" title={reviewText}>{reviewText}</p> : null}
                       </article>
                     );
