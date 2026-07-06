@@ -1,6 +1,6 @@
 // Fachada del repositorio Firebase. El código se reparte en módulos cohesivos (M2):
 //  - firebaseClient: init de servicios + config + analytics module + helpers de error + interfaces de dominio.
-//  - telemetryRepository: reportHandledError / trackAnalyticsEvent.
+//  - telemetryRepository: reportHandledError / trackAnalyticsEvent / setAnalyticsUser / clearAnalyticsUser.
 //  - firebaseAuthRepository: sign-in/out con Google + usuario actual.
 //  - firebaseSocialRepository: directorio, índice público, recomendaciones (+ sus cachés).
 // Este fichero conserva el NÚCLEO de perfil/identidad/token y RE-EXPORTA la API pública para que ningún
@@ -25,7 +25,7 @@ export type {
   SocialProfileReference,
   SocialDirectoryEntry,
 } from './firebaseClient';
-export { reportHandledError, trackAnalyticsEvent } from './telemetryRepository';
+export { reportHandledError, trackAnalyticsEvent, setAnalyticsUser, clearAnalyticsUser } from './telemetryRepository';
 export { getCurrentSocialAuthUser, onSocialAuthChanged, signInWithGoogle, signOutSocialUser } from './firebaseAuthRepository';
 // C5: el índice público (upsertProfileIndex/upsertFeedCard) y las recomendaciones quedaron sin consumidores y
 // con reglas admin-only (rotas en cliente). Código muerto eliminado; la migración a índice pseudónimo por

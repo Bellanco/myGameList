@@ -2,15 +2,27 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import App from './App';
-import { initializeFirebaseServices } from './model/repository/firebaseRepository';
+import { AppErrorBoundary } from './view/components/AppErrorBoundary';
+import { initializeFirebaseServices, reportHandledError } from './model/repository/firebaseRepository';
 import { runMigration } from './model/repository/dataMigrationRepository';
 import './styles/index.scss';
 
+// Red de seguridad global para errores que NO pasan por un error boundary de React (código async, promesas
+// rechazadas sin catch, event handlers). Best-effort: reporta a la telemetría sin bloquear ni relanzar.
+window.addEventListener('error', (event) => {
+  void reportHandledError(event.error ?? event.message, false, 'window.error');
+});
+window.addEventListener('unhandledrejection', (event) => {
+  void reportHandledError(event.reason, false, 'unhandledrejection');
+});
+
 createRoot(document.getElementById('root') as HTMLElement).render(
   <StrictMode>
-    <BrowserRouter>
-      <App />
-    </BrowserRouter>
+    <AppErrorBoundary>
+      <BrowserRouter>
+        <App />
+      </BrowserRouter>
+    </AppErrorBoundary>
   </StrictMode>,
 );
 

@@ -274,6 +274,14 @@ export const UI_MESSAGES = {
   },
 } as const;
 
+// Pantalla de reemplazo del error boundary RAÍZ (fallo de render que tumbaría toda la app).
+export const APP_ERROR_UI = {
+  sectionAria: 'Error de la aplicación',
+  title: 'Algo ha ido mal',
+  body: 'La aplicación ha encontrado un error inesperado. Vuelve a cargar la página para continuar; tus datos están a salvo.',
+  reload: 'Recargar',
+} as const;
+
 export const SOCIAL_UI = {
   hubTitle: 'Espacio social',
   loading: 'Cargando espacio social...',
