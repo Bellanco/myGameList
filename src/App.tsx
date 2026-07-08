@@ -411,6 +411,8 @@ export default function App() {
               onMigrate={vm.migrateGame}
               onAddGame={handleAddGame}
               tabActions={vm.tabActions[currentTab]}
+              sort={vm.sort[currentTab]}
+              onSort={vm.sortBy}
               recentlyChangedId={recentlyChangedId}
             />
           </>

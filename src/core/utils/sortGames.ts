@@ -24,6 +24,7 @@ export function sortGames(games: GameItem[], sort: TabSort, tab: TabId): GameIte
   const keyOf = (game: GameItem): string | number => {
     if (col === 'years') return game.years?.length ? Math.max(...game.years) : 0;
     if (col === 'genres') return game.genres[0] || '';
+    if (col === 'platforms') return game.platforms[0] || '';
     const raw = (game[col as keyof GameItem] as string | number | boolean | undefined) ?? '';
     return typeof raw === 'boolean' ? Number(raw) : raw;
   };
