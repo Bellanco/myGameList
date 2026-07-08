@@ -137,6 +137,10 @@ function leanGameItem(game: GameItem): GameItem {
   if (game.retry) out.retry = true;
   if (game._v !== undefined) out._v = game._v;
   if (game.shared) out.shared = true;
+  // `listedAt` (llegada a la lista) NO se reescribe al editar; debe sobrevivir el round-trip del gist. Si se omite,
+  // la lectura lo re-deriva del `_ts` (que SÍ sube al editar) y el juego salta de posición en Completados tras
+  // sincronizar, aunque no haya cambiado de lista. Por eso se persiste explícitamente.
+  if (game.listedAt !== undefined) out.listedAt = game.listedAt;
   return out as unknown as GameItem;
 }
 
