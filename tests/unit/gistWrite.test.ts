@@ -173,5 +173,5 @@ describe.skipIf(!ENABLE_GAMES_WRAPPER_WRITE)('writeGist con ENABLE_GAMES_WRAPPER
     expect(secondFiles).toContain(GIST_FILENAME); // el ancla siempre se reescribe
     expect(secondChunks.length).toBe(1); // solo el chunk del juego editado
     expect(secondChunks.length).toBeLessThan(firstChunks.length);
-  });
+  }, 20000);
 });

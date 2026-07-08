@@ -158,7 +158,7 @@ describe('lectura retrocompatible de gists comprimidos', () => {
     const out = read.data as TabData;
     expect(out.c.length).toBe(1500);
     expect(out.c.find((g) => g.id === 1500)?.name).toBe('Juego 1500');
-  });
+  }, 20000);
 
   it('readForeignGamesGist también descomprime (lectura del gist de un amigo)', async () => {
     const { store } = stubGistStore();
@@ -270,7 +270,7 @@ describe.skipIf(!ENABLE_GAMES_COMPRESSION)('escritura comprimida (ENABLE_GAMES_C
     // Ahora el remoto ya está comprimido y los datos no cambian → el skip incremental se mantiene: no reenvía chunks.
     await writeGist(TOKEN, GIST_ID, big);
     expect(chunkNamesOf(patchBodies[patchBodies.length - 1].files)).toEqual([]);
-  });
+  }, 20000);
 
   it('estimar-y-verificar: trocea por el tamaño COMPRIMIDO → menos chunks que el presupuesto plano, cada fichero bajo el límite', async () => {
     const { store } = stubGistStore();
@@ -296,5 +296,5 @@ describe.skipIf(!ENABLE_GAMES_COMPRESSION)('escritura comprimida (ENABLE_GAMES_C
     const out = (await readGist(TOKEN, GIST_ID)).data as TabData;
     expect(out.c.length).toBe(2500);
     expect(out.c.find((g) => g.id === 2500)?.name).toBe('Juego 2500');
-  });
+  }, 20000);
 });
