@@ -5,6 +5,8 @@ import { HOURS_RANGES } from '../../core/constants/uiConfig';
 import type { TabId, ToolbarFilters } from '../../model/types/game';
 import type { TabOptions } from '../../viewmodel/toolbarFilters';
 import { renderStars } from '../../core/utils/renderStars';
+import { gradeFloorForStars } from '../../core/utils/scoreScale';
+import { useScoreScale } from '../hooks/useScoreScale';
 import { Icon } from './Icon';
 
 interface ToolbarProps {
@@ -35,6 +37,7 @@ export const Toolbar = memo(function Toolbar({
   onClearFilter,
   onClearAll,
 }: ToolbarProps) {
+  const scoreScale = useScoreScale();
   const [searchDraft, setSearchDraft] = useState(filters.search);
 
   useEffect(() => {
@@ -73,7 +76,11 @@ export const Toolbar = memo(function Toolbar({
     filters.platforms.forEach((value) =>
       items.push({ id: `platform:${value}`, label: `Plataforma: ${value}`, onRemove: () => onToggleValue('platforms', value) }),
     );
-    if (filters.score) items.push({ id: 'score', label: `Puntuación: ${filters.score}+`, onRemove: () => onClearFilter('score') });
+    if (filters.score) {
+      // El umbral se guarda en estrellas (1–5); en modo nota se muestra el suelo de su tramo (5★=90, 4★=70, …).
+      const shown = scoreScale === 'grade' ? gradeFloorForStars(Number(filters.score)) : filters.score;
+      items.push({ id: 'score', label: `Puntuación: ${shown}+`, onRemove: () => onClearFilter('score') });
+    }
     if (filters.hours) {
       const range = HOURS_RANGES.find((entry) => entry.key === filters.hours);
       items.push({ id: 'hours', label: `Horas: ${range?.label || filters.hours}`, onRemove: () => onClearFilter('hours') });
@@ -81,7 +88,7 @@ export const Toolbar = memo(function Toolbar({
     if (filters.only && config) items.push({ id: 'only', label: config.label, onRemove: () => onClearFilter('only') });
     if (filters.deck) items.push({ id: 'deck', label: 'Steam Deck', onRemove: () => onClearFilter('deck') });
     return items;
-  }, [filters, config, onClearFilter, onToggleValue]);
+  }, [filters, config, onClearFilter, onToggleValue, scoreScale]);
 
   return (
     <div className="toolbar">
@@ -163,7 +170,9 @@ export const Toolbar = memo(function Toolbar({
               <option value="">{UI_MESSAGES.toolbar.anyScore}</option>
               {options.scores.map((value) => (
                 <option key={value} value={String(value)}>
-                  {renderStars(value)} {UI_MESSAGES.toolbar.scoreOrMore(value)}
+                  {scoreScale === 'grade'
+                    ? UI_MESSAGES.toolbar.scoreOrMore(gradeFloorForStars(value))
+                    : `${renderStars(value)} ${UI_MESSAGES.toolbar.scoreOrMore(value)}`}
                 </option>
               ))}
             </select>

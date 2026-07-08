@@ -237,6 +237,8 @@ export interface UpsertReviewInput {
   rating: number;
   grade?: number | null;
   timestamp?: number;
+  /** true (por defecto): la reseña sube al principio del feed. false: solo sincroniza datos sin recolocar. */
+  bumpOrder?: boolean;
 }
 
 function getGithubAuthHeader(token: string): string {
@@ -685,16 +687,21 @@ function upsertActivityEntry(
   items: SocialActivityEntry[],
   next: Omit<SocialActivityEntry, 'id' | 'key' | 'createdAt' | 'updatedAt'>,
   timestamp: number,
+  bumpOrder = true,
 ): SocialActivityEntry[] {
   const key = buildActivityKey(next.actorProfileId, next.gameId, next.type);
   const existing = items.find((entry) => entry.key === key);
   const createdAt = existing?.createdAt || timestamp;
+  // El feed se ordena por `updatedAt`. Solo se avanza cuando cambia el CONTENIDO de la reseña (bumpOrder=true);
+  // si solo se sincronizan nota/nombre (bumpOrder=false), se conserva `updatedAt` para NO recolocar la entrada
+  // al principio del feed. Una entrada nueva siempre estrena `updatedAt` (no hay posición previa que preservar).
+  const updatedAt = existing && !bumpOrder ? existing.updatedAt : timestamp;
 
   const entry: SocialActivityEntry = {
     id: existing?.id || buildActivityKey(next.actorProfileId, next.gameId, next.type),
     key,
     createdAt,
-    updatedAt: timestamp,
+    updatedAt,
     ...next,
   };
 
@@ -725,7 +732,7 @@ export function upsertReviewActivity(data: SocialGistData, input: UpsertReviewIn
     grade: resolveGrade({ grade: input.grade ?? null, score: input.rating }),
     recommendationText: '',
     snippet: buildReviewSnippet(cleanReview),
-  }, now);
+  }, now, input.bumpOrder ?? true);
 
   return {
     ...data,

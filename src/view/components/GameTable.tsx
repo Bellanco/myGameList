@@ -2,7 +2,7 @@ import { Fragment, memo, useLayoutEffect, useMemo, useRef, useState } from 'reac
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { COMMON_ICONS, TAB_ICONS } from '../../core/constants/icons';
 import { UI_MESSAGES } from '../../core/constants/labels';
-import type { GameItem, TabId } from '../../model/types/game';
+import type { GameItem, TabId, TabSort } from '../../model/types/game';
 import type { TabAction } from '../../viewmodel/useGameListViewModel';
 import { resolveGrade } from '../../core/utils/scoreScale';
 import { Icon } from './Icon';
@@ -19,6 +19,9 @@ interface GameTableProps {
   onAddGame?: () => void;
   tabActions: TabAction[];
   readOnly?: boolean;
+  /** Orden activo de la pestaña; si se pasa junto a `onSort`, las columnas ordenables son pulsables. */
+  sort?: TabSort;
+  onSort?: (tab: TabId, column: string) => void;
   /** Id del juego recién guardado (añadido/editado): su fila destella brevemente para localizar el cambio. */
   recentlyChangedId?: number | null;
   visibility?: {
@@ -82,6 +85,17 @@ const C_COLUMN_CLASS: Record<string, string> = {
   'Puntos débiles': 'col-c-weak',
 };
 
+// Columnas ordenables: etiqueta de cabecera → clave de orden que entiende `sortGames`/`sortBy`.
+// El resto de cabeceras (Puntos fuertes/débiles, Rejugar…) no son ordenables.
+const SORT_COLUMN: Record<string, string> = {
+  Juego: 'name',
+  Año: 'years',
+  Plataformas: 'platforms',
+  Géneros: 'genres',
+  Puntuación: 'score',
+  Interés: 'score',
+};
+
 function renderBooleanBadge(type: 'replayable' | 'retry', value: boolean) {
   if (type === 'replayable') {
     const label = value ? 'Rejugar: Sí' : 'Rejugar: No';
@@ -111,6 +125,8 @@ export const GameTable = memo(function GameTable({
   onAddGame,
   tabActions,
   readOnly = false,
+  sort,
+  onSort,
   visibility,
   recentlyChangedId = null,
 }: GameTableProps) {
@@ -219,15 +235,35 @@ export const GameTable = memo(function GameTable({
         <thead>
           <tr>
             {getTableHeaders().map((header) => {
-              const tip =
-                header === 'Rejugar'
+              const sortKey = SORT_COLUMN[header];
+              const sortable = Boolean(onSort && sortKey);
+              const isSorted = sortable && sort?.col === sortKey;
+              const dir = isSorted ? (sort?.asc ? 'asc' : 'desc') : undefined;
+              const tip = sortable
+                ? UI_MESSAGES.table.sortHeaderTip(header)
+                : header === 'Rejugar'
                   ? UI_MESSAGES.table.replayHeaderTip
                   : header === 'Dar otra oportunidad'
                     ? UI_MESSAGES.table.retryHeaderTip
                     : undefined;
+              const thClass = [cCol(C_COLUMN_CLASS[header]), sortable ? 'sortable' : '', isSorted ? 'sorted' : '', dir ?? '']
+                .filter(Boolean)
+                .join(' ');
               return (
-                <th key={header} title={tip} className={cCol(C_COLUMN_CLASS[header])}>
-                  {header}
+                <th
+                  key={header}
+                  title={tip}
+                  className={thClass || undefined}
+                  aria-sort={isSorted ? (sort?.asc ? 'ascending' : 'descending') : sortable ? 'none' : undefined}
+                >
+                  {sortable ? (
+                    <button type="button" className="th-sort-btn" onClick={() => onSort?.(currentTab, sortKey)}>
+                      <span>{header}</span>
+                      <span className="th-sort-caret" aria-hidden="true" />
+                    </button>
+                  ) : (
+                    header
+                  )}
                 </th>
               );
             })}

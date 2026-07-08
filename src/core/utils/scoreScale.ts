@@ -13,8 +13,15 @@
 
 export const GRADE_MAX = 100;
 export const STARS_MAX = 5;
-/** Puntos de nota por estrella: 100 / 5 = 20 (★=20, ★★★=60, ★★★★★=100). */
+/** Puntos de nota por estrella: 100 / 5 = 20 (representa la nota "llena" de cada estrella al elegir con el picker). */
 export const GRADE_PER_STAR = GRADE_MAX / STARS_MAX;
+
+/**
+ * FUENTE ÚNICA del esquema estrellas↔nota (F2). `SCORE_BUCKET_FLOORS[n]` = nota MÍNIMA para tener n estrellas.
+ * De aquí se derivan `starsFromGrade` (tramo de una nota) y las etiquetas del filtro (`gradeFloorForStars`).
+ * Los tramos: ★=10–29, ★★=30–49, ★★★=50–69, ★★★★=70–89, ★★★★★=90–100 (0–9 = sin estrellas).
+ */
+export const SCORE_BUCKET_FLOORS: readonly number[] = [0, 10, 30, 50, 70, 90]; // índice = nº de estrellas (0..5)
 
 /** Escala de puntuación elegida por el usuario (F2). `stars` = 0–5 estrellas (defecto); `grade` = aro 0–100. */
 export type ScoreScale = 'stars' | 'grade';
@@ -36,16 +43,26 @@ export function clampGrade(value: unknown): number {
   return Math.max(0, Math.min(GRADE_MAX, numeric));
 }
 
-/** Convierte una nota fina (0–100) a estrellas (0–5) para pintar. */
+/** Convierte una nota fina (0–100) a estrellas (0–5) según los tramos de `SCORE_BUCKET_FLOORS`. */
 export function starsFromGrade(grade: unknown): number {
-  return Math.round(clampGrade(grade) / GRADE_PER_STAR);
+  const g = clampGrade(grade);
+  for (let stars = STARS_MAX; stars >= 1; stars -= 1) {
+    if (g >= SCORE_BUCKET_FLOORS[stars]) return stars;
+  }
+  return 0;
 }
 
-/** Convierte una selección de estrellas (0–5) a nota fina (0–100) para guardar. */
+/** Convierte una selección de estrellas (0–5) a nota fina (0–100) para guardar (nota "llena" del nivel: n×20). */
 export function gradeFromStars(stars: unknown): number {
   const numeric = Number(stars);
   if (!Number.isFinite(numeric)) return 0;
   return Math.max(0, Math.min(STARS_MAX, Math.round(numeric))) * GRADE_PER_STAR;
+}
+
+/** Nota MÍNIMA (suelo del tramo) para un nivel de estrellas; para etiquetar el filtro "N o más" en modo nota. */
+export function gradeFloorForStars(stars: unknown): number {
+  const n = Math.max(0, Math.min(STARS_MAX, Math.round(Number(stars) || 0)));
+  return SCORE_BUCKET_FLOORS[n];
 }
 
 /** Forma mínima de un juego para resolver su puntuación (evita acoplar el tipo `GameItem`). */

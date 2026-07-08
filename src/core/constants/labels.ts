@@ -180,6 +180,7 @@ export const UI_MESSAGES = {
     moreCount: (count: number) => `+${count}`,
     replayHeaderTip: 'Indica si el juego es rejugable',
     retryHeaderTip: 'Indica si merece otra oportunidad',
+    sortHeaderTip: (column: string) => `Ordenar por ${column.toLowerCase()}`,
   },
   detail: {
     platforms: 'Plataformas',

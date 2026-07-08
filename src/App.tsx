@@ -320,6 +320,7 @@ export default function App() {
       review: cleanReview, // audit-allow: publishReviewActivity lo convierte a snippet antes de publicar
       score: nextScore, // audit-allow: el canal social publica solo rating redondeado
       grade: nextGrade, // nota fina 0–100 (misma nombre que en el listado)
+      reviewChanged, // solo recolocar en el feed si cambió el texto de la reseña
     }).catch(() => {
       notify('warn', 'Juego guardado, pero no se pudo actualizar la actividad social de reseña.');
     });
@@ -411,6 +412,8 @@ export default function App() {
               onMigrate={vm.migrateGame}
               onAddGame={handleAddGame}
               tabActions={vm.tabActions[currentTab]}
+              sort={vm.sort[currentTab]}
+              onSort={vm.sortBy}
               recentlyChangedId={recentlyChangedId}
             />
           </>

@@ -2,8 +2,10 @@ import { describe, expect, it } from 'vitest';
 import {
   GRADE_MAX,
   GRADE_PER_STAR,
+  SCORE_BUCKET_FLOORS,
   STARS_MAX,
   clampGrade,
+  gradeFloorForStars,
   gradeFromStars,
   hueFromGrade,
   resolveGrade,
@@ -42,6 +44,32 @@ describe('scoreScale — conversión estrellas ↔ nota 0–100', () => {
     for (let s = 0; s <= STARS_MAX; s++) {
       expect(starsFromGrade(gradeFromStars(s))).toBe(s);
     }
+  });
+
+  it('los tramos (SCORE_BUCKET_FLOORS) definen 5★=90+, 4★=70+, 3★=50+, 2★=30+, 1★=10+', () => {
+    expect(SCORE_BUCKET_FLOORS).toEqual([0, 10, 30, 50, 70, 90]);
+    // Suelo de cada tramo → esa nota exacta da ese nº de estrellas.
+    expect(starsFromGrade(90)).toBe(5);
+    expect(starsFromGrade(70)).toBe(4);
+    expect(starsFromGrade(50)).toBe(3);
+    expect(starsFromGrade(30)).toBe(2);
+    expect(starsFromGrade(10)).toBe(1);
+    expect(starsFromGrade(9)).toBe(0);
+    // Justo por debajo del suelo cae al tramo anterior.
+    expect(starsFromGrade(89)).toBe(4);
+    expect(starsFromGrade(29)).toBe(1);
+  });
+
+  it('gradeFloorForStars da el suelo del tramo (para etiquetar el filtro "N o más")', () => {
+    expect(gradeFloorForStars(5)).toBe(90);
+    expect(gradeFloorForStars(4)).toBe(70);
+    expect(gradeFloorForStars(3)).toBe(50);
+    expect(gradeFloorForStars(1)).toBe(10);
+    expect(gradeFloorForStars(0)).toBe(0);
+  });
+
+  it('notas 90/96/99/100 son todas 5★ (el caso del bug de "100 o más")', () => {
+    for (const g of [90, 96, 99, 100]) expect(starsFromGrade(g)).toBe(5);
   });
 
   it('hueFromGrade va de rojo (0) a verde (~135) monótonamente', () => {
