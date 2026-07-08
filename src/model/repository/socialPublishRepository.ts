@@ -16,7 +16,7 @@ import {
 } from './gistRepository';
 
 /** Publica/actualiza la actividad social de una reseña. No-op si no hay sesión Google ni gist social configurado. */
-export async function publishReviewActivity(input: { id: number; name: string; review: string; score: number; grade?: number | null }): Promise<void> {
+export async function publishReviewActivity(input: { id: number; name: string; review: string; score: number; grade?: number | null; reviewChanged?: boolean }): Promise<void> {
   const authUser = await getCurrentSocialAuthUser();
   if (!authUser) {
     return;
@@ -51,6 +51,9 @@ export async function publishReviewActivity(input: { id: number; name: string; r
     rating: input.score,
     grade: input.grade ?? null, // nota fina 0–100 (aditiva; el espejo 0–5 va en rating)
     timestamp: now,
+    // Solo se recoloca al principio del feed si cambió el texto de la reseña. Editar solo nota/nombre sincroniza
+    // esos datos en la tarjeta social pero conserva la posición/fecha original (no cuenta como reseña nueva).
+    bumpOrder: input.reviewChanged ?? true,
   });
 
   const writeResult = await writeSocialGist(socialConfig.token, socialConfig.gistId, nextPayload);

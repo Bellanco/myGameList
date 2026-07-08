@@ -1,4 +1,4 @@
-﻿import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
+﻿import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { Icon } from '../Icon';
 import { GameTable } from '../GameTable';
 import type { SocialUiLabels } from '../../../core/constants/labels';
@@ -8,8 +8,8 @@ import { StarRating } from '../StarRating';
 import { useScoreScale } from '../../hooks/useScoreScale';
 import { resolveGrade } from '../../../core/utils/scoreScale';
 import { HubAvatar } from './HubAvatar';
-import { TAB_IDS, type GameItem, type TabId } from '../../../model/types/game';
-import { DEFAULT_SORT, sortGames } from '../../../core/utils/sortGames';
+import { TAB_IDS, type GameItem, type TabId, type TabSort } from '../../../model/types/game';
+import { DEFAULT_SORT, nextSort, sortGames } from '../../../core/utils/sortGames';
 import type { SocialSharedGame } from '../../../model/repository/gistRepository';
 import { RouletteModal } from '../roulette/RouletteModal';
 import { buildProfilePool, profileWeight } from '../../../core/roulette/roulette';
@@ -180,6 +180,11 @@ export function SocialProfileDetailScreen({
 }) {
   const scoreScale = useScoreScale();
   const [activeListTab, setActiveListTab] = useState<TabId>('c');
+  // Orden por columna de cada pestaña (arranca en el orden por defecto). Cabeceras pulsables como en el listado principal.
+  const [sortByTab, setSortByTab] = useState<Record<TabId, TabSort>>(DEFAULT_SORT);
+  const handleSort = useCallback((tab: TabId, column: string) => {
+    setSortByTab((prev) => ({ ...prev, [tab]: nextSort(prev[tab], column) }));
+  }, []);
   const [rouletteOpen, setRouletteOpen] = useState(false);
   const [expandedByTab, setExpandedByTab] = useState<Partial<Record<TabId, number | null>>>({});
   const [visibleCount, setVisibleCount] = useState(LIST_PAGE_SIZE);
@@ -308,8 +313,8 @@ export function SocialProfileDetailScreen({
       hours: typeof game.hours === 'number' ? game.hours : null,
     }));
     // Misma lógica de orden que el listado principal (fuente única en core/utils/sortGames).
-    return sortGames(mapped, DEFAULT_SORT[currentTab], currentTab);
-  }, [activeProfileDetail, currentTab]);
+    return sortGames(mapped, sortByTab[currentTab], currentTab);
+  }, [activeProfileDetail, currentTab, sortByTab]);
 
   // Al cambiar de pestaña o de perfil, volver a la primera página (15) y limpiar el filtro.
   useEffect(() => {
@@ -564,6 +569,8 @@ export function SocialProfileDetailScreen({
                     onDelete={() => undefined}
                     onMigrate={() => undefined}
                     tabActions={[]}
+                    sort={sortByTab[currentTab]}
+                    onSort={handleSort}
                     readOnly
                     visibility={{
                       showYears: false,

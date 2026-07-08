@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { TAB_ACTIONS, TAB_ORDER, VALIDATION_MESSAGES } from '../core/constants/labels';
 import { sortEs, uniqueCaseInsensitive } from '../core/utils/compare';
-import { DEFAULT_SORT, sortGames } from '../core/utils/sortGames';
+import { DEFAULT_SORT, nextSort, sortGames } from '../core/utils/sortGames';
 import { clampRating } from '../core/utils/normalize';
 import { clampGrade, gradeFromStars, resolveStars, starsFromGrade } from '../core/utils/scoreScale';
 import { mapTabDataTags, type TagCategory } from '../core/utils/tagMutations';
@@ -245,26 +245,7 @@ export function useGameListViewModel() {
   const tabActions: Record<TabId, TabAction[]> = TAB_ACTIONS;
 
   const sortBy = useCallback((tab: TabId, column: string) => {
-    setSort((prev) => {
-      const current = prev[tab];
-      if (current.col === column) {
-        return {
-          ...prev,
-          [tab]: {
-            ...current,
-            asc: !current.asc,
-          },
-        };
-      }
-
-      return {
-        ...prev,
-        [tab]: {
-          col: column,
-          asc: ['score', 'years', 'hours', 'retry', 'replayable'].includes(column) ? false : true,
-        },
-      };
-    });
+    setSort((prev) => ({ ...prev, [tab]: nextSort(prev[tab], column) }));
   }, []);
 
   // El filtrado vive en `toolbarFilters.filterGames` (puro y testeable); aquí solo aplicamos el orden,

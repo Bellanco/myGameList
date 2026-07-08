@@ -594,10 +594,13 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
     overflow: auto;
   }
   
-  .main { 
+  .main {
     flex: 1 1 auto;
     overflow: visible;
-    padding-bottom: 2rem;
+    /* La barra inferior fija (`.bottom-nav`) mide ~4.9rem; con solo 2rem el último elemento
+       de la lista quedaba oculto/no pulsable en tablet apaisada y resoluciones de escritorio
+       de este rango. Igualamos el colchón al del resto de breakpoints. */
+    padding-bottom: 6.6rem;
   }
   
   .table-wrap { 
