@@ -13,6 +13,19 @@ export const DEFAULT_SORT: Record<TabId, TabSort> = {
   p: { col: 'score', asc: false },
 };
 
+// Columnas numéricas/booleanas cuyo orden natural al activarlas es descendente (mayor primero).
+const DESC_FIRST_COLUMNS = ['score', 'years', 'hours', 'retry', 'replayable'];
+
+/**
+ * Siguiente orden al pulsar una cabecera: si es la columna activa, invierte la dirección; si es otra,
+ * la activa con su dirección natural (desc para notas/años/…; asc para texto). Fuente ÚNICA compartida
+ * por el listado principal y el perfil social para que el clic en cabecera se comporte igual en ambos.
+ */
+export function nextSort(current: TabSort, column: string): TabSort {
+  if (current.col === column) return { ...current, asc: !current.asc };
+  return { col: column, asc: !DESC_FIRST_COLUMNS.includes(column) };
+}
+
 /**
  * Ordena una lista de juegos según `sort` (columna + dirección). En la pestaña completista (c),
  * a igualdad de clave desempata por la llegada más reciente a la lista (`listedAt`/`_ts`).
