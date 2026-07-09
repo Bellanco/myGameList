@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { upsertReviewActivity, type SocialGistData } from '../../src/model/repository/gistRepository';
 
 // Regresión (bug reseña social): editar SOLO la nota/el nombre de un juego no debe recolocar la reseña al
-// principio del feed. El orden del feed va por `updatedAt`; solo se avanza cuando cambia el texto de la reseña.
+// principio del feed (orden por `updatedAt`; solo se avanza cuando cambia el texto). Además, si la reseña aún
+// no estaba publicada, cambiar solo nota/nombre NO debe estrenar una entrada nueva en el feed (opción B).
 function baseData(): SocialGistData {
   return {
     profile: { name: 'Yo' },
@@ -37,9 +38,16 @@ describe('upsertReviewActivity — orden del feed al reeditar', () => {
     expect(entry.updatedAt).toBe(9_000);
   });
 
-  it('entrada nueva: estrena updatedAt aunque bumpOrder sea false (no hay posición previa)', () => {
+  it('bumpOrder=false + reseña NO publicada: no crea entrada y devuelve los datos intactos (no-op)', () => {
     const empty = { ...baseData(), activity: [] } as SocialGistData;
     const out = upsertReviewActivity(empty, { ...input, gameId: 7, gameName: 'Hades', reviewText: 'nuevo', timestamp: 9_000, bumpOrder: false });
+    expect(out).toBe(empty); // misma referencia → publishReviewActivity se salta la reescritura del gist
+    expect(out.activity.find((a) => a.gameId === 7)).toBeUndefined();
+  });
+
+  it('bumpOrder=true + reseña nueva: sí estrena la entrada en el feed', () => {
+    const empty = { ...baseData(), activity: [] } as SocialGistData;
+    const out = upsertReviewActivity(empty, { ...input, gameId: 7, gameName: 'Hades', reviewText: 'nuevo', timestamp: 9_000, bumpOrder: true });
     const entry = out.activity.find((a) => a.gameId === 7)!;
     expect(entry.updatedAt).toBe(9_000);
   });

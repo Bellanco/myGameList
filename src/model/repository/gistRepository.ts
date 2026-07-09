@@ -691,6 +691,12 @@ function upsertActivityEntry(
 ): SocialActivityEntry[] {
   const key = buildActivityKey(next.actorProfileId, next.gameId, next.type);
   const existing = items.find((entry) => entry.key === key);
+  // Sincronización en sitio (bumpOrder=false): un cambio de solo nota/nombre actualiza una reseña YA publicada,
+  // pero NUNCA estrena una entrada en el feed. Sin entrada previa que sincronizar, es un no-op (se devuelve la
+  // misma referencia para que el llamador pueda saltarse la reescritura del gist).
+  if (!existing && !bumpOrder) {
+    return items;
+  }
   const createdAt = existing?.createdAt || timestamp;
   // El feed se ordena por `updatedAt`. Solo se avanza cuando cambia el CONTENIDO de la reseña (bumpOrder=true);
   // si solo se sincronizan nota/nombre (bumpOrder=false), se conserva `updatedAt` para NO recolocar la entrada
@@ -722,7 +728,8 @@ export function upsertReviewActivity(data: SocialGistData, input: UpsertReviewIn
     return data;
   }
 
-  const activity = upsertActivityEntry(data.activity || [], {
+  const currentActivity = data.activity || [];
+  const activity = upsertActivityEntry(currentActivity, {
     type: 'review',
     actorProfileId: input.actorProfileId,
     actorName: String(input.actorName || '').trim(),
@@ -733,6 +740,12 @@ export function upsertReviewActivity(data: SocialGistData, input: UpsertReviewIn
     recommendationText: '',
     snippet: buildReviewSnippet(cleanReview),
   }, now, input.bumpOrder ?? true);
+
+  // Sync-only sin entrada previa: upsertActivityEntry no crea nada y devuelve la misma lista. Se devuelve `data`
+  // intacto (misma referencia) para que publishReviewActivity detecte el no-op y no reescriba el gist.
+  if (activity === currentActivity) {
+    return data;
+  }
 
   return {
     ...data,
