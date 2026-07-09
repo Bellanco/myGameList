@@ -28,11 +28,11 @@
   transform: translateY(20px) scale(.99); transition: transform .25s; overflow: hidden;
 }
 .modal-ov.active .modal { transform: translateY(0) scale(1); }
-.modal-hd { padding: 1.2rem 1.5rem; border-bottom: 1px solid rgba(26,159,255,.12); display: flex; justify-content: space-between; align-items: center; gap: .75rem; background: linear-gradient(90deg, rgba(26,159,255,.05) 0%, transparent 100%); }
+.modal-hd { padding: 1.2rem 1.5rem; border-bottom: 1px solid rgba(var(--steam-rgb),.12); display: flex; justify-content: space-between; align-items: center; gap: .75rem; background: linear-gradient(90deg, rgba(var(--steam-rgb),.05) 0%, transparent 100%); }
 .modal-title { font-weight: 800; color: var(--text); font-size: 1.05rem; letter-spacing: .3px; }
 .modal-body { padding: 1.25rem; overflow-y: auto; display: flex; flex-direction: column; gap: 1rem; scrollbar-width: none; }
 .modal-body::-webkit-scrollbar { display: none; }
-.modal-ft { padding: 1.2rem 1.5rem; border-top: 1px solid rgba(26,159,255,.12); display: flex; justify-content: flex-end; gap: .6rem; flex-wrap: wrap; background: rgba(26,159,255,.02); }
+.modal-ft { padding: 1.2rem 1.5rem; border-top: 1px solid rgba(var(--steam-rgb),.12); display: flex; justify-content: flex-end; gap: .6rem; flex-wrap: wrap; background: rgba(var(--steam-rgb),.02); }
 
 /* A11y-1: FormModal como <dialog> nativo (showModal) → focus trap, restauración de foco y ::backdrop nativos.
    El <dialog> es solo el contenedor de posición a pantalla completa; el recuadro visible sigue siendo .modal. */
@@ -67,10 +67,10 @@ dialog.modal-dialog[open]::backdrop { animation: modalBackdropIn .28s ease both;
   border-radius: var(--radius-sm); padding: .78rem .85rem; width: 100%;
   transition: border-color .2s, box-shadow .2s; outline: none; min-width: 0;
 }
-.finput:focus, .ftextarea:focus { border-color: var(--steam); box-shadow: 0 0 0 3px rgba(26,159,255,.12); }
+.finput:focus, .ftextarea:focus { border-color: var(--steam); box-shadow: 0 0 0 3px rgba(var(--steam-rgb),.12); }
 .ftextarea { min-height: 128px; resize: vertical; }
-.field-error,  .has-error   { border-color: var(--danger)!important; box-shadow: 0 0 0 3px rgba(209,91,88,.15)!important; }
-.field-warning,.has-warning  { border-color: var(--warn)!important;  box-shadow: 0 0 0 3px rgba(229,177,67,.15)!important; }
+.field-error,  .has-error   { border-color: var(--danger)!important; box-shadow: 0 0 0 3px rgba(var(--danger-rgb),.15)!important; }
+.field-warning,.has-warning  { border-color: var(--warn)!important;  box-shadow: 0 0 0 3px rgba(var(--warn-rgb),.15)!important; }
 .tag-inp-wrap {
   display: flex; flex-wrap: wrap; align-items: center; gap: .45rem;
   background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-sm);
@@ -79,21 +79,21 @@ dialog.modal-dialog[open]::backdrop { animation: modalBackdropIn .28s ease both;
 .tag-inp-wrap input { background: transparent; border: none; color: var(--text); outline: none; flex: 1 1 14ch; min-width: 10ch; }
 
 /* Admin */
-.admin-description { background: rgba(26,159,255,.08); border: 1px solid rgba(26,159,255,.15); border-radius: var(--radius-md); padding: .85rem 1rem; margin-bottom: .5rem; font-size: .88rem; color: var(--text-muted); line-height: 1.5; }
+.admin-description { background: rgba(var(--steam-rgb),.08); border: 1px solid rgba(var(--steam-rgb),.15); border-radius: var(--radius-md); padding: .85rem 1rem; margin-bottom: .5rem; font-size: .88rem; color: var(--text-muted); line-height: 1.5; }
 .admin-description p { margin: 0; }
 .admin-tabs { display: flex; flex-wrap: wrap; gap: .5rem; border-bottom: 1px solid var(--border); margin-bottom: .8rem; padding-bottom: .6rem; }
 .admin-tabs .admin-tab { font-size: .85rem; padding: .5rem .85rem; border-radius: var(--radius-sm); color: var(--text-muted); transition: all .25s; }
-.admin-tabs .admin-tab:hover { background: rgba(26,159,255,.08); color: var(--text); }
-.admin-tabs .admin-tab.active { background: rgba(26,159,255,.15); color: var(--steam-hover); border-bottom: none; }
+.admin-tabs .admin-tab:hover { background: rgba(var(--steam-rgb),.08); color: var(--text); }
+.admin-tabs .admin-tab.active { background: rgba(var(--steam-rgb),.15); color: var(--steam-hover); border-bottom: none; }
 .admin-warning { display: none; padding: .85rem 1rem; border-radius: var(--radius-sm); font-size: .88rem; border-left: 3px solid transparent; animation: slideInDown .3s ease-out; }
 .admin-warning.show { display: block; }
-.admin-warning.ok   { background: rgba(103,193,141,.12); border-left-color: var(--success); color: var(--fg-green); }
-.admin-warning.warn { background: rgba(229,177,67,.12);  border-left-color: var(--warn);  color: var(--fg-amber-soft); }
-.admin-warning.err  { background: rgba(209,91,88,.12);   border-left-color: var(--danger);   color: var(--fg-red); }
+.admin-warning.ok   { background: rgba(var(--success-rgb),.12); border-left-color: var(--success); color: var(--fg-green); }
+.admin-warning.warn { background: rgba(var(--warn-rgb),.12);  border-left-color: var(--warn);  color: var(--fg-amber-soft); }
+.admin-warning.err  { background: rgba(var(--danger-rgb),.12);   border-left-color: var(--danger);   color: var(--fg-red); }
 .admin-item { display: flex; justify-content: space-between; align-items: center; gap: .75rem; background: var(--bg); padding: 1rem 1.1rem; border-radius: var(--radius-md); border: 1px solid var(--border); transition: all .25s; animation: slideIn .25s ease-out; }
-.admin-item:hover { border-color: rgba(26,159,255,.25); background: var(--surface-elevated); box-shadow: 0 2px 8px rgba(26,159,255,.1); }
+.admin-item:hover { border-color: rgba(var(--steam-rgb),.25); background: var(--surface-elevated); box-shadow: 0 2px 8px rgba(var(--steam-rgb),.1); }
 .admin-item .row-actions { display: flex; gap: .45rem; flex-wrap: nowrap; align-items: center; justify-content: flex-end; flex: 0 0 auto; }
-.admin-item.editing { border-color: rgba(26,159,255,.45); box-shadow: 0 0 0 3px rgba(26,159,255,.12), inset 0 0 0 1px rgba(26,159,255,.2); background: rgba(26,159,255,.06); }
+.admin-item.editing { border-color: rgba(var(--steam-rgb),.45); box-shadow: 0 0 0 3px rgba(var(--steam-rgb),.12), inset 0 0 0 1px rgba(var(--steam-rgb),.2); background: rgba(var(--steam-rgb),.06); }
 .admin-item.editing { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; }
 .admin-item-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .btn-icon-text { gap: .4rem; }
@@ -108,7 +108,7 @@ dialog.modal-dialog[open]::backdrop { animation: modalBackdropIn .28s ease both;
 .fab {
   position: fixed; right: 1.2rem; bottom: calc(5.7rem + env(safe-area-inset-bottom,0px));
   z-index: 110; width: 58px; height: 58px; border-radius: 50%;
-  border: 1px solid rgba(26,159,255,.28); background: linear-gradient(180deg,var(--steam),#1377c0);
+  border: 1px solid rgba(var(--steam-rgb),.28); background: linear-gradient(180deg,var(--steam),#1377c0);
   color: #fff; display: inline-flex; align-items: center; justify-content: center;
   box-shadow: 0 16px 28px rgba(0,0,0,.32); cursor: pointer; transition: transform .2s, filter .2s;
 }
@@ -426,8 +426,8 @@ body.compact-filters .filters-row.open .btn-toggle { justify-content: center; al
 }
 .sync-help-toggle:hover {
   color: var(--text);
-  border-color: rgba(26,159,255,.35);
-  background: rgba(26,159,255,.09);
+  border-color: rgba(var(--steam-rgb),.35);
+  background: rgba(var(--steam-rgb),.09);
 }
 .token-row { position:relative; display:flex; }
 .token-row .finput { padding-right:2.8rem; flex:1; }
@@ -481,9 +481,9 @@ body.compact-filters .filters-row.open .btn-toggle { justify-content: center; al
   cursor: not-allowed;
 }
 .sync-status-msg { font-size:.82rem; padding:.55rem .85rem; border-radius:var(--radius-sm); border:1px solid transparent; display:none; }
-.sync-status-msg.ok   { background:rgba(103,193,141,.1); border-color:rgba(103,193,141,.25); color:var(--fg-green-soft); display:block; }
-.sync-status-msg.err  { background:rgba(209,91,88,.1);   border-color:rgba(209,91,88,.25);  color:var(--fg-red); display:block; }
-.sync-status-msg.warn { background:rgba(229,177,67,.1);  border-color:rgba(229,177,67,.25); color:var(--fg-amber-soft); display:block; }
+.sync-status-msg.ok   { background:rgba(var(--success-rgb),.1); border-color:rgba(var(--success-rgb),.25); color:var(--fg-green-soft); display:block; }
+.sync-status-msg.err  { background:rgba(var(--danger-rgb),.1);   border-color:rgba(var(--danger-rgb),.25);  color:var(--fg-red); display:block; }
+.sync-status-msg.warn { background:rgba(var(--warn-rgb),.1);  border-color:rgba(var(--warn-rgb),.25); color:var(--fg-amber-soft); display:block; }
 /* El aviso de sync entra con un leve fade+desplazamiento en vez de aparecer de golpe. */
 .sync-status-msg.ok, .sync-status-msg.err, .sync-status-msg.warn { animation: syncMsgIn .3s ease both; }
 @keyframes syncMsgIn { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: translateY(0); } }
