@@ -3,6 +3,7 @@
   "version": "3.2.0",
   "description": "Application for managing video game lists with GitHub Gist synchronization",
   "private": true,
+  "license": "GPL-3.0-or-later",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
