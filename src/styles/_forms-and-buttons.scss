@@ -13,7 +13,7 @@
   border-radius: var(--radius-pill); padding: .55rem 1rem; min-height: 42px;
   outline: none; transition: border-color .2s, box-shadow .2s; min-width: 0;
 }
-.input-base:focus { border-color: var(--steam); box-shadow: 0 0 0 3px rgba(26,159,255,.12); }
+.input-base:focus { border-color: var(--steam); box-shadow: 0 0 0 3px rgba(var(--steam-rgb),.12); }
 /* Filtro de juegos del perfil social: campo compacto (tras .input-base para ajustar tamaño). */
 .hub-game-filter { width: 100%; min-height: 36px; padding: .4rem .85rem; font-size: .88rem; }
 .toolbar .search-input { width: 100%; padding-right: 2.7rem; }
@@ -154,9 +154,9 @@ dialog.alert-dialog[open]::backdrop { animation: alertBackdropIn .24s ease both;
 .btn-steam {
   background: linear-gradient(180deg, var(--steam), #1377c0); color: #fff;
   border-color: color-mix(in srgb, var(--steam) 70%, #000);
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.25), 0 8px 18px rgba(26,159,255,.18);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.25), 0 8px 18px rgba(var(--steam-rgb),.18);
 }
-.btn-steam:hover { background: linear-gradient(180deg, var(--steam-hover), var(--steam)); box-shadow: inset 0 1px 0 rgba(255,255,255,.3), 0 16px 26px rgba(26,159,255,.22); }
+.btn-steam:hover { background: linear-gradient(180deg, var(--steam-hover), var(--steam)); box-shadow: inset 0 1px 0 rgba(255,255,255,.3), 0 16px 26px rgba(var(--steam-rgb),.22); }
 
 /* Acento azul de la app (texto/icono/borde) sobre el cristal: navegación principal y toggles activos. */
 .btn-accent, .btn.is-active, .btn-toggle.active, .btn-toggle-deck.active {
@@ -197,14 +197,14 @@ dialog.alert-dialog[open]::backdrop { animation: alertBackdropIn .24s ease both;
 }
 .theme-toggle-btn .ui-icon { width: 1.15rem; height: 1.15rem; transition: transform .25s; }
 .theme-toggle-btn:hover .ui-icon { transform: rotate(12deg) scale(1.08); }
-.btn-toggle-deck.active { background: rgba(26,159,255,.15); color: var(--fg-sky); border-color: rgba(26,159,255,.4); }
+.btn-toggle-deck.active { background: rgba(var(--steam-rgb),.15); color: var(--fg-sky); border-color: rgba(var(--steam-rgb),.4); }
 .btn-icon {
   width: 42px; height: 42px; border-radius: 50%; background: transparent;
   border: 1px solid transparent; color: var(--text-muted); cursor: pointer;
   display: inline-flex; align-items: center; justify-content: center;
   transition: all .25s;
 }
-.btn-icon:hover { color: var(--steam); background: var(--steam-soft); border-color: rgba(26,159,255,.25); transform: translateY(-2px); box-shadow: 0 4px 12px rgba(26,159,255,.15); }
+.btn-icon:hover { color: var(--steam); background: var(--steam-soft); border-color: rgba(var(--steam-rgb),.25); transform: translateY(-2px); box-shadow: 0 4px 12px rgba(var(--steam-rgb),.15); }
 .btn-icon:active { transform: scale(.95); }
 /* Ghost: se mantiene plano y transparente (sin cristal ni inclinación 3D). */
 .btn-ghost { background: transparent; color: var(--text-muted); border: 1px solid transparent; box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; }
