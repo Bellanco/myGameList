@@ -20,15 +20,16 @@ conservando el estilo visual, el comportamiento y la compatibilidad con los dato
 
 ## Stack
 
-Dependencias principales (ver `package.json` para las versiones exactas):
+Dependencias principales (versiones declaradas en `package.json`):
 
-- `react` / `react-dom` 19
-- `react-router-dom` 7
-- `@tanstack/react-virtual` 3 (virtualización de listas)
-- `firebase` 12 (Analytics, Firestore, Authentication)
-- `zod` 4 (validación de esquemas)
+- `react` / `react-dom` ^19.2.0
+- `react-router-dom` ^7.9.5
+- `@tanstack/react-virtual` ^3.13.24 (virtualización de listas)
+- `firebase` ^12.13.0 (Analytics, Firestore, Authentication)
+- `zod` ^4.4.3 (validación de esquemas)
 
-Tooling: `vite` 8, `@vitejs/plugin-react`, `typescript` 6, `vitest` 4, `eslint` 9, `sass`.
+Tooling: `vite` ^8.0.11, `@vitejs/plugin-react` ^6.0.1, `typescript` ^6.0.3, `vitest` ^4.1.5,
+`eslint` ^9.39.4, `sass` ^1.99.0.
 
 Node.js **≥ 20** (`engines` en `package.json`).
 
