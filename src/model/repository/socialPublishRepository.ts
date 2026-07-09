@@ -56,6 +56,12 @@ export async function publishReviewActivity(input: { id: number; name: string; r
     bumpOrder: input.reviewChanged ?? true,
   });
 
+  // Sincronización de solo nota/nombre sobre una reseña que aún no estaba publicada: no hay nada que sincronizar
+  // ni que publicar, así que no se reescribe el gist (mismo patrón de no-op que unpublishReviewActivity).
+  if (nextPayload === migratedData) {
+    return;
+  }
+
   const writeResult = await writeSocialGist(socialConfig.token, socialConfig.gistId, nextPayload);
   const mainSyncConfig = getSyncConfig();
 
