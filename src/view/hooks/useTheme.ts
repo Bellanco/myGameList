@@ -6,7 +6,7 @@ export type ThemePreference = 'dark' | 'light';
 // Debe coincidir con --bg de cada tema en `_base.scss` (para la barra del navegador / status bar móvil).
 const THEME_COLOR: Record<ThemePreference, string> = {
   dark: '#1a1e24',
-  light: '#eef1f5',
+  light: '#f0e9db',
 };
 
 const LIGHT_QUERY = '(prefers-color-scheme: light)';

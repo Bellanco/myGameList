@@ -21,7 +21,7 @@
   cursor: pointer;
   transition: transform .16s ease, background .2s, border-color .2s, box-shadow .2s;
 }
-:root[data-theme="light"] .fab-roulette { color: #1c2530; }
+:root[data-theme="light"] .fab-roulette { color: var(--text); }
 .fab-roulette:hover {
   background: var(--surface-hover);
   border-color: color-mix(in srgb, var(--steam) 40%, var(--border));

@@ -153,7 +153,7 @@ tbody tr.main-row.just-changed { animation: rowFlash 1.3s ease-out; }
 @media (hover:hover) { .chip:hover { transform: translateY(-1px); filter: brightness(1.08); } }
 .chip-generic { background: rgba(232,184,32,.16); color: var(--fg-amber); border: 1px solid rgba(232,184,32,.32); }
 .chip-plat    { background: var(--chip-plat-bg); color: var(--chip-plat-fg); border: 1px solid var(--chip-plat-border); }
-.chip-genre   { background: rgba(26,159,255,.18);  color: var(--fg-sky); border: 1px solid rgba(26,159,255,.35); }
+.chip-genre   { background: rgba(var(--steam-rgb),.18);  color: var(--fg-sky); border: 1px solid rgba(var(--steam-rgb),.35); }
 .chip-pf      { background: rgba(34,197,94,.15);color: var(--fg-green); border: 1px solid rgba(34,197,94,.3); }
 .chip-pd      { background: rgba(239,68,68,.15);  color: var(--fg-red-soft); border: 1px solid rgba(239,68,68,.3); }
 .chip-deck    { background: var(--chip-deck-bg); color: var(--chip-deck-fg); border: 1px solid var(--chip-deck-border); }
@@ -287,19 +287,19 @@ tbody tr.main-row.just-changed { animation: rowFlash 1.3s ease-out; }
 :root[data-theme="light"] {
   .badge-rejugar-activo,
   .badge-opp-activo {
-    background: rgba(26,159,255,.14);
+    background: rgba(var(--steam-rgb),.14);
     color: var(--fg-sky);
-    box-shadow: inset 0 0 0 1px rgba(26,159,255,.34);
+    box-shadow: inset 0 0 0 1px rgba(var(--steam-rgb),.34);
   }
   .badge-rejugar-inactivo {
-    background: rgba(229,177,67,.18);
+    background: rgba(var(--warn-rgb),.18);
     color: var(--fg-amber);
-    box-shadow: inset 0 0 0 1px rgba(229,177,67,.42);
+    box-shadow: inset 0 0 0 1px rgba(var(--warn-rgb),.42);
   }
   .badge-opp-inactivo {
-    background: rgba(209,91,88,.16);
+    background: rgba(var(--danger-rgb),.16);
     color: var(--fg-red);
-    box-shadow: inset 0 0 0 1px rgba(209,91,88,.4);
+    box-shadow: inset 0 0 0 1px rgba(var(--danger-rgb),.4);
   }
 }
 
@@ -342,7 +342,7 @@ tbody tr.main-row.just-changed { animation: rowFlash 1.3s ease-out; }
   border: 1px solid transparent;
 }
 .rm-plat  { background: var(--chip-plat-bg); color: var(--chip-plat-fg); border-color: var(--chip-plat-border); }
-.rm-genre { background: rgba(26,159,255,.14); color: var(--fg-sky);    border-color: rgba(26,159,255,.3); }
+.rm-genre { background: rgba(var(--steam-rgb),.14); color: var(--fg-sky);    border-color: rgba(var(--steam-rgb),.3); }
 .rm-year  { background: rgba(232,184,32,.16); color: var(--fg-amber); border-color: rgba(232,184,32,.32); }
 
 /* Orden visual del meta (móvil/tablet): estrellas → año → plataforma → género.
