@@ -306,7 +306,7 @@ export default function App() {
 
     const reviewChanged = (previousGame?.review || '').trim() !== cleanReview;
     const scoreChanged = Number(previousGame?.score || 0) !== nextScore;
-    // La nota fina puede cambiar sin mover las estrellas (p. ej. 73→77 = 4★): también dispara republicación.
+    // La nota fina puede cambiar sin mover las estrellas (p. ej. 73→77 = 4★): también hay que sincronizarla.
     const gradeChanged = resolveGrade(previousGame || {}) !== nextGrade;
     const nameChanged = (previousGame?.name || '').trim() !== nextDraft.name.trim();
 
@@ -320,7 +320,9 @@ export default function App() {
       review: cleanReview, // audit-allow: publishReviewActivity lo convierte a snippet antes de publicar
       score: nextScore, // audit-allow: el canal social publica solo rating redondeado
       grade: nextGrade, // nota fina 0–100 (misma nombre que en el listado)
-      reviewChanged, // solo recolocar en el feed si cambió el texto de la reseña
+      // Solo cambiar el texto (re)publica en el feed. Cambiar solo nota/nombre sincroniza una reseña YA
+      // publicada sin recolocarla; si no había reseña publicada, publishReviewActivity es un no-op.
+      reviewChanged,
     }).catch(() => {
       notify('warn', 'Juego guardado, pero no se pudo actualizar la actividad social de reseña.');
     });
