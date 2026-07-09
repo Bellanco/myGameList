@@ -13,7 +13,7 @@
     }
     var meta = document.querySelector('meta[name="theme-color"]');
     if (meta) {
-      meta.setAttribute('content', theme === 'light' ? '#eef1f5' : '#1a1e24');
+      meta.setAttribute('content', theme === 'light' ? '#f0e9db' : '#1a1e24');
     }
   } catch (e) {
     // Sin localStorage/matchMedia: se queda el tema oscuro por defecto.

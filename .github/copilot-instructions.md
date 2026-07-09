@@ -3,8 +3,7 @@
 > **Read this first.** This file describes the app **exactly as it exists in the code today**.
 > Everything here is verified against `src/`. If a suggestion you are about to make
 > relies on a function, file, script or field, confirm it appears in this document or
-> in the actual source — **do not invent APIs**. Aspirational/future work lives in a
-> clearly separated section at the bottom and in `.github/prompts/migration/`.
+> in the actual source — **do not invent APIs**.
 
 ---
 
@@ -135,7 +134,7 @@ Deletions are tombstones in `TabData.deleted`. Merge = newest `_ts` wins, tombst
   `uid`, `email`, `displayName`, `photoURL`, `social: { gistId, gamesGistId, githubToken, etag, enabled }`, `updatedAt`.
 - Collection **`recommendations`**: `fromUid`, `fromEmail`, `fromDisplayName`, `toEmail`, `gameId`, `gameName`, `message`, `status`, timestamps.
 - Directory listing via `listSocialDirectory`; lookup via `findSocialProfileByEmail`; recommendations via `sendGameRecommendation` / `getReceivedRecommendations` / `updateRecommendationStatus`.
-- 🔐 **Known sensitive reality:** the current `profiles` doc **does** contain `email`, `uid`, `social.githubToken`, and `social.gamesGistId`. This is the live behavior. Treat it as sensitive — **never log these, never widen what is written, and flag it** if a task touches profile writes. (The "index‑only / no‑token" model is *future* design, see §10 — it is **not** implemented.)
+- 🔐 **Known sensitive reality:** the current `profiles` doc **does** contain `email`, `uid`, `social.githubToken`, and `social.gamesGistId`. This is the live behavior. Treat it as sensitive — **never log these, never widen what is written, and flag it** if a task touches profile writes. (An "index‑only / no‑token" model would be a *future* redesign — it is **not** implemented today.)
 
 > All Firestore writes go through `firebaseRepository.ts` functions — never inline `setDoc`/`updateDoc` elsewhere.
 
@@ -184,46 +183,20 @@ npm run test           # vitest run tests/unit src   (unit + colocated src tests
 npm run test:all       # vitest run  (includes integration + e2e)
 npm run test:watch     # vitest watch
 npm run test:coverage  # vitest run --coverage
-npx tsc --noEmit       # typecheck (there is NO `npm run typecheck` alias)
+npm run typecheck      # tsc --noEmit
 ```
 
 **Definition of done for a change:** `npx tsc --noEmit` ✓, `npm run validate` ✓, `npm run test` ✓ (and `npm run build` for anything structural).
 
 CI: **`.github/workflows/ci.yml`** runs build → `tsc --noEmit` → tests → coverage → validate → `npm audit`.
-There are **no** scripts named `typecheck`, `audit:privacy`, `test:rules`, `migrate:dry`, or `size`. If a prompt/agent references one, it belongs to the unimplemented future plan (§10) — do not run it.
+The scripts `migrate:dry` and `size` do not exist — do not run them.
 
 ---
 
-## 10. Planned / NOT implemented (future migration — do not treat as real)
-
-`.github/prompts/migration/` (15 numbered prompts) and `.github/agents/migration/`
-(`migrate`, `deploy-rules`, `validate-sync`, `audit-privacy`) describe a **future** redesign
-that **does not exist in the current code**. They have been **adapted to the real stack**
-(React 19, hooks + Context, raw IndexedDB, SCSS, Firebase v12, real paths under `src/model/`,
-`src/viewmodel/`, `src/view/`), so paths/stack/scripts now match reality — but the **target
-design** they implement (review/snippet split, `profileId`, index-only Firestore, gist chunking,
-`firestore.rules`, additive `_v`/`deletedAt`) is still **not built**. Use them as a roadmap for
-that transformation, never as a description of how the code works today.
-
-The future design (aspirational, NOT current) includes:
-- **review/snippet split** — public channel would store only a ≤160‑char `snippet`, never `review`.
-- **`profileId` pseudonym** (UUID v4) replacing `uid` in all public data. *(Today: `uid` is used directly.)*
-- **Firestore as index‑only** — no token/email/private stats in Firestore. *(Today: token + email ARE stored — see §5.)*
-- **Gist chunking** (`*-chunk-N.json`, size thresholds). *(Today: single file per gist.)*
-- **`firestore.rules`** + emulator tests. *(No rules file or emulator in the repo today.)*
-- Per‑item `_v` / `_modified` / `deletedAt` clocks. *(Today: a single `_ts` per item + tombstones.)*
-
-When asked to *advance* this migration, follow the relevant numbered prompt **but adapt every
-path/stack detail to the real project** (see §2–§7), and confirm before introducing new
-dependencies or restructuring storage.
-
----
-
-## 11. How the `.github/` context is organized
+## 10. How the `.github/` context is organized
 
 - `copilot-instructions.md` *(this file)* — global, always‑on context. The source of truth.
 - `instructions/*.instructions.md` — path‑scoped rules auto‑applied by `applyTo` glob (model / viewmodel / view / core / styles / tests).
 - `prompts/*.prompt.md` — task templates for real work: `new-component`, `new-feature`, `fix-bug`, `refactor`, `add-test`.
 - `prompts/remediation-plan.prompt.md` — **phased global fix plan** (security → data integrity → performance → reusability) built from a full audit of the real code; execute one sub‑phase at a time.
-- `prompts/migration/` & `agents/migration/` — the unimplemented future plan (§10).
 - `agents/{dev,debug,review}.agent.md` — working agents that reflect the real stack.
