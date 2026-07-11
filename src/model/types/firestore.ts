@@ -105,4 +105,6 @@ export interface FirestorePublicConfig {
   palette?: string;
   theme?: 'dark' | 'light';
   uppercase?: boolean;
+  /** F1 — mostrar el botón "Steam Deck" de la barra de filtros (por defecto true; false lo oculta). */
+  showSteamButton?: boolean;
 }

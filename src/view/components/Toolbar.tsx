@@ -22,6 +22,8 @@ interface ToolbarProps {
   onToggleValue: (key: 'genres' | 'platforms', value: string) => void;
   onClearFilter: (key: keyof ToolbarFilters) => void;
   onClearAll: () => void;
+  /** Visibilidad del botón "Steam Deck" (preferencia de cuenta; por defecto true). */
+  showSteamButton: boolean;
 }
 
 export const Toolbar = memo(function Toolbar({
@@ -36,6 +38,7 @@ export const Toolbar = memo(function Toolbar({
   onToggleValue,
   onClearFilter,
   onClearAll,
+  showSteamButton,
 }: ToolbarProps) {
   const scoreScale = useScoreScale();
   const [searchDraft, setSearchDraft] = useState(filters.search);
@@ -209,17 +212,19 @@ export const Toolbar = memo(function Toolbar({
           </div>
         ) : null}
 
-        <div className="filter-field filter-field-toggle">
-          <button
-            className={`btn btn-toggle btn-toggle-deck ${filters.deck ? 'active' : ''}`}
-            type="button"
-            aria-label={UI_MESSAGES.toolbar.steamDeck}
-            onClick={() => onFilterChange('deck', !filters.deck)}
-          >
-            <Icon name={COMMON_ICONS.steamDeck} />
-            <span>{UI_MESSAGES.toolbar.steamDeck}</span>
-          </button>
-        </div>
+        {showSteamButton ? (
+          <div className="filter-field filter-field-toggle">
+            <button
+              className={`btn btn-toggle btn-toggle-deck ${filters.deck ? 'active' : ''}`}
+              type="button"
+              aria-label={UI_MESSAGES.toolbar.steamDeck}
+              onClick={() => onFilterChange('deck', !filters.deck)}
+            >
+              <Icon name={COMMON_ICONS.steamDeck} />
+              <span>{UI_MESSAGES.toolbar.steamDeck}</span>
+            </button>
+          </div>
+        ) : null}
       </div>
 
       {activeFilterCount ? (
