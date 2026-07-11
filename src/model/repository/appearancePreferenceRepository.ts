@@ -7,7 +7,7 @@
 //     para que re-lean y apliquen), y cada cambio local se REPLICA a Firestore.
 // A diferencia de la escala de puntuación (solo nube), la apariencia funciona siempre en local aunque no haya sesión.
 import { getPublicConfig, setPublicConfig } from './firebaseRepository';
-import { PALETTE_KEY, THEME_KEY, UPPERCASE_KEY } from '../../core/constants/storageKeys';
+import { PALETTE_KEY, STEAM_BUTTON_KEY, THEME_KEY, UPPERCASE_KEY } from '../../core/constants/storageKeys';
 import { parsePaletteId, type PaletteId } from '../../core/constants/palettes';
 
 /** Evento que emiten la hidratación para que `useTheme`/`usePalette` re-lean localStorage y apliquen. */
@@ -35,6 +35,11 @@ export function persistUppercasePreference(on: boolean): void {
   if (currentUid) void setPublicConfig(currentUid, { uppercase: on });
 }
 
+/** Replica la visibilidad del botón de Steam Deck a la nube (best-effort; requiere sesión). */
+export function persistShowSteamButtonPreference(on: boolean): void {
+  if (currentUid) void setPublicConfig(currentUid, { showSteamButton: on });
+}
+
 /**
  * Hidrata apariencia desde Firestore al iniciar sesión: vuelca a localStorage lo que haya en la nube y avisa a
  * los hooks. Best-effort: si falla (reglas/offline/sin Firebase) se conserva lo local. No re-persiste (evita bucles).
@@ -53,6 +58,10 @@ export async function hydrateAppearance(uid: string): Promise<void> {
     }
     if (typeof cfg?.uppercase === 'boolean') {
       try { localStorage.setItem(UPPERCASE_KEY, cfg.uppercase ? 'on' : 'off'); } catch { /* sin persistencia */ }
+      changed = true;
+    }
+    if (typeof cfg?.showSteamButton === 'boolean') {
+      try { localStorage.setItem(STEAM_BUTTON_KEY, cfg.showSteamButton ? 'on' : 'off'); } catch { /* sin persistencia */ }
       changed = true;
     }
     if (changed && typeof window !== 'undefined') {

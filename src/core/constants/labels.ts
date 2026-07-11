@@ -148,6 +148,7 @@ export const UI_MESSAGES = {
     lists: 'Listados',
     social: 'Social',
     settings: 'Ajustes',
+    account: 'Cuenta',
   },
   toolbar: {
     searchPlaceholder: 'Buscar',
@@ -214,6 +215,10 @@ export const UI_MESSAGES = {
       caseAria: 'Caja del texto de interfaz',
       caseNormal: 'Normal',
       caseUpper: 'Mayúsculas',
+      steamLabel: 'Botón de Steam Deck',
+      steamAria: 'Visibilidad del botón de Steam Deck',
+      steamShow: 'Mostrar',
+      steamHide: 'Ocultar',
     },
     scoreScale: {
       title: 'Puntuación',
