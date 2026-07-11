@@ -442,7 +442,10 @@
   border-radius: var(--radius-pill);
   box-shadow: 0 14px 30px rgba(0,0,0,.28);
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  /* Una columna por botón (3 o 4 según haya sesión de "Cuenta"): siempre en UNA fila, anchos iguales.
+     Con `repeat(3, …)` fijo, el 4º botón saltaba a una segunda fila. */
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
   gap: .4rem;
   padding: .4rem;
 }
