@@ -101,4 +101,7 @@ export interface FirestorePrivateConfig {
 export interface FirestorePublicConfig {
   schemaVersion?: number;
   scoreScale?: ScoreScale;
+  /** F1 — apariencia por cuenta: id de paleta y modo claro/oscuro (aditivo). */
+  palette?: string;
+  theme?: 'dark' | 'light';
 }

@@ -1,15 +1,30 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { THEME_KEY } from '../../core/constants/storageKeys';
+import { PALETTE_KEY, THEME_KEY } from '../../core/constants/storageKeys';
+import { paletteBg, parsePaletteId } from '../../core/constants/palettes';
+import { APPEARANCE_HYDRATED_EVENT, persistThemePreference } from '../../model/repository/appearancePreferenceRepository';
 
 export type ThemePreference = 'dark' | 'light';
 
-// Debe coincidir con --bg de cada tema en `_base.scss` (para la barra del navegador / status bar móvil).
-const THEME_COLOR: Record<ThemePreference, string> = {
-  dark: '#1a1e24',
-  light: '#f0e9db',
-};
-
 const LIGHT_QUERY = '(prefers-color-scheme: light)';
+
+/** Paleta activa guardada (o la de por defecto). Se lee aquí para calcular el `theme-color`, que
+ *  depende del `--bg` de la paleta Y del tema. Se mantiene en sincronía con `usePalette`. */
+function readActivePalette() {
+  try {
+    return parsePaletteId(localStorage.getItem(PALETTE_KEY));
+  } catch {
+    return parsePaletteId(null);
+  }
+}
+
+/** Actualiza la barra del navegador / status bar móvil con el `--bg` de la paleta+tema activos.
+ *  Lo usan tanto el cambio de tema como el de paleta para que el color siempre cuadre. */
+export function applyThemeColor(theme: ThemePreference): void {
+  const meta = document.querySelector('meta[name="theme-color"]');
+  if (meta) {
+    meta.setAttribute('content', paletteBg(readActivePalette(), theme));
+  }
+}
 
 /** Tema del sistema; si no se puede detectar (sin matchMedia o sin coincidencia), por defecto OSCURO. */
 function systemDefault(): ThemePreference {
@@ -46,10 +61,7 @@ function applyTheme(theme: ThemePreference): void {
   } else {
     root.removeAttribute('data-theme');
   }
-  const meta = document.querySelector('meta[name="theme-color"]');
-  if (meta) {
-    meta.setAttribute('content', THEME_COLOR[theme]);
-  }
+  applyThemeColor(theme);
 }
 
 /** Toggle de tema (claro/oscuro) con persistencia local. Default = tema del sistema (fallback oscuro). */
@@ -60,6 +72,13 @@ export function useTheme(): { theme: ThemePreference; toggle: () => void } {
   useEffect(() => {
     applyTheme(theme);
   }, [theme]);
+
+  // La hidratación desde la nube (al iniciar sesión) vuelca a localStorage y emite este evento; re-leemos y aplicamos.
+  useEffect(() => {
+    const onHydrated = () => setTheme(readInitialPreference());
+    window.addEventListener(APPEARANCE_HYDRATED_EVENT, onHydrated);
+    return () => window.removeEventListener(APPEARANCE_HYDRATED_EVENT, onHydrated);
+  }, []);
 
   const toggle = useCallback(() => {
     // Cross-fade: marca el <html> mientras cambia el tema para fundir los colores (ver `.theme-anim` en _base.scss).
@@ -74,6 +93,7 @@ export function useTheme(): { theme: ThemePreference; toggle: () => void } {
       } catch {
         // Sin persistencia: el tema sigue aplicándose en la sesión actual.
       }
+      persistThemePreference(next); // replica a la nube si hay sesión (best-effort)
       return next;
     });
   }, []);

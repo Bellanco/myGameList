@@ -37,6 +37,19 @@ describe('firestore.rules', () => {
     });
   }
 
+  describe('publicConfig (apariencia + escala)', () => {
+    it('el dueño escribe scoreScale/palette/theme válidos; un no-dueño no', async () => {
+      await assertSucceeds(setDoc(doc(ownerDb('uid-a'), 'publicConfig', 'uid-a'), { scoreScale: 'grade', palette: 'persona', theme: 'dark' }));
+      await assertSucceeds(setDoc(doc(ownerDb('uid-a'), 'publicConfig', 'uid-a'), { theme: 'light' }));
+      await assertFails(setDoc(doc(ownerDb('uid-b'), 'publicConfig', 'uid-a'), { palette: 'persona' }));
+    });
+    it('rechaza valores inválidos y claves fuera de la allowlist', async () => {
+      await assertFails(setDoc(doc(ownerDb('uid-a'), 'publicConfig', 'uid-a'), { theme: 'neon' }));
+      await assertFails(setDoc(doc(ownerDb('uid-a'), 'publicConfig', 'uid-a'), { scoreScale: 'weird' }));
+      await assertFails(setDoc(doc(ownerDb('uid-a'), 'publicConfig', 'uid-a'), { hackField: 'x' }));
+    });
+  });
+
   describe('profiles', () => {
     it('el dueño y un autenticado pueden leer un perfil social.enabled; el anónimo no', async () => {
       await seed('profiles', 'uid-a', { uid: 'uid-a', social: { enabled: true } });

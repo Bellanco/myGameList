@@ -223,7 +223,7 @@ export function SocialFeedScreen({
                               </h3>
                             </div>
                           </header>
-                          <p>{hasValidDate ? SOCIAL_UI.feed.postedAt(itemDate) : SOCIAL_UI.feed.analyzedRecently}</p>
+                          <p className="hub-feed-date">{hasValidDate ? SOCIAL_UI.feed.postedAt(itemDate) : SOCIAL_UI.feed.analyzedRecently}</p>
                           <p className="hub-post-text"><PostText text={entry.text} sharedFilePageHint={SOCIAL_UI.feed.postSharedFileHint} /></p>
                         </article>
                       );
@@ -266,7 +266,7 @@ export function SocialFeedScreen({
                             {entry.gameName ? <span className="hub-feed-game-chip">{entry.gameName}</span> : null}
                           </div>
                         </header>
-                        <p>{analyzedAtLabel}</p>
+                        <p className="hub-feed-date">{analyzedAtLabel}</p>
                         {resolveGrade({ score: Number(entry.rating || 0), grade: entry.grade ?? null }) > 0
                           ? <ScoreDisplay game={{ score: Number(entry.rating || 0), grade: entry.grade ?? null }} />
                           : <NoScoreMedal />}

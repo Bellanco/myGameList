@@ -1,0 +1,239 @@
+/* F1 — CAPA 3 · DIRECCIÓN DE ARTE POR TEMA (skins fuertes sobre los componentes reales).
+   Cada tema debe leerse como un mundo distinto, no como el mismo recoloreado. Solo se activan con
+   `[data-palette="…"]`; el tema por defecto ("Clásico", sin atributo) no se toca. Va el ÚLTIMO en
+   `index.scss` para ganar en cascada a los partials de componentes.
+
+   MODULAR: esta capa es OPCIONAL. Un tema nuevo funciona solo con sus colores (CAPA 2 en `_base.scss`).
+   Para darle carácter propio, añade aquí un bloque `:root[data-palette="<id>"] …` con su tipografía,
+   formas, sombras y texturas — nada de otros temas se ve afectado. Receta de 4 pasos completa en
+   `src/core/constants/palettes.ts`.
+
+   ─────────────────────────────────────────────────────────────────────────────────────────────────
+   REGLAS APRENDIDAS — léelas antes de añadir un tema para no repetir los errores que ya costaron tiempo:
+
+   1. SOMBRA DE BLOQUE Y COLOR SEGÚN TEMA. Una sombra negra es INVISIBLE sobre un fondo oscuro. Regla:
+      sombra clara (`rgba(255,255,255,.92)`) en oscuro y oscura (`#151011`) en claro — mira los botones.
+      Una sombra con el color de acento (p. ej. roja) se ve en AMBOS temas y te ahorra el override doble.
+   2. `clip-path` RECORTA las sombras Y los bordes de los descendientes. No lo pongas en paneles/botones
+      que necesiten sombra de bloque o borde completo. Úsalo solo donde no haga falta sombra (chips).
+      Nota: `box-shadow: inset` y `filter: drop-shadow` SÍ siguen el `clip-path` (útil para el contorno
+      que acompaña a un corte rasgado).
+   3. FORMAS POR COMPONENTE (no mezclar): BOTONES = sesgo + borde + sombra de bloque (SIN clip-path, que
+      recortaba el borde de forma irregular). CHIPS = corte rasgado (clip-path) + sesgo + borde inset
+      (SIN sombra de bloque).
+   4. `transform: skew` EN UN CONTENEDOR ARRASTRA A LOS HIJOS (llegó a torcer la vista 3D de la ruleta).
+      Sesga solo la hoja, o contrarresta el sesgo en los hijos con `> * { transform: skewX(+Ndeg) }`.
+   5. ELEMENTOS REDONDOS (FAB): usa un desplazamiento de sombra PEQUEÑO (~2px); uno grande deja una
+      media luna que resalta demasiado en un círculo.
+   6. TEXTO LARGO EN UN "SELLO": no uses clip-path (se parte al saltar de línea). Fondo sólido + borde.
+   7. AGRUPA LAS CLASES HERMANAS con el mismo aspecto aunque tengan clase distinta (`.chip`/`.hub-friend-chip`,
+      `.fab`/`.fab-roulette`, `.chip`/`.rl-chip`) para que un cambio las afecte a todas y no se olvide ninguna.
+   8. CLASES CONDICIONALES DEL TSX: si el skin necesita estilar un estado inactivo (p. ej. el toggle de
+      Steam Deck), la clase base debe estar SIEMPRE presente en el marcado, no solo cuando está activo.
+   9. `!important` CON CRITERIO: el skin ya gana por ir el último en `index.scss`, pero los `shorthand`
+      (border, box-shadow, background) de los partials a veces obligan a usarlo. Solo donde haga falta.
+   10. CONTRASTE: al rellenar variantes de color (éxito/aviso/peligro) fija también el color de texto para
+      mantener legibilidad AA (p. ej. texto oscuro sobre relleno claro).
+
+   ORDEN RECOMENDADO DE SUBSECCIONES (plantilla; copia y adapta para el siguiente tema):
+   §1 Tipografía · §2 Fondo/textura · §3 Paneles · §4 Tabla · §5 Botones · §6 Chips · §7 Segmentos y campos
+   · §8 Insignias · §9 Puntuación · §10 Actividad social (nombres + fechas) · §11 Ruleta · §12 FAB
+   ───────────────────────────────────────────────────────────────────────────────────────────────── */
+
+
+/* ═══════════════════════════════════════════════════════════════════════════════════════════════════
+   TEMA · Corazón rebelde (Persona 5) — POP-ART: negro + rojo, cursiva, semitono, cortes y sombras
+   duras de cómic. Fuente de la identidad de color: CAPA 2 en `_base.scss`.
+   ═══════════════════════════════════════════════════════════════════════════════════════════════════ */
+
+/* ── §1 · Tipografía: Arial Black en cursiva y versalitas para titulares, etiquetas y nombres. ── */
+:root[data-palette="persona"] h2,
+:root[data-palette="persona"] h3,
+:root[data-palette="persona"] h4,
+:root[data-palette="persona"] .modal-title,
+:root[data-palette="persona"] .dialog-title,
+:root[data-palette="persona"] .rl-card-name,
+:root[data-palette="persona"] .rl-card-tag,
+:root[data-palette="persona"] .rl-item,
+:root[data-palette="persona"] .btn,
+:root[data-palette="persona"] .hub-seg-btn,
+:root[data-palette="persona"] thead th,
+:root[data-palette="persona"] .flabel,
+:root[data-palette="persona"] .row-name,
+:root[data-palette="persona"] .hub-name-link,
+:root[data-palette="persona"] .hub-detail-profile-link,
+:root[data-palette="persona"] .hub-feed-game-chip,
+:root[data-palette="persona"] .hub-review-game,
+:root[data-palette="persona"] .score-ring-num,
+:root[data-palette="persona"] .score-dial-num,
+:root[data-palette="persona"] .hub-review-medal,
+:root[data-palette="persona"] .active-filter-chip {
+  font-family: 'Arial Black', 'Arial Narrow', Impact, system-ui, sans-serif;
+  font-style: italic; text-transform: uppercase; letter-spacing: .01em;
+}
+
+/* ── §2 · Fondo: semitono pop-art (puntos de tinta rojos). ── */
+:root[data-palette="persona"] body {
+  background-image: radial-gradient(rgba(255, 31, 61, .16) 1.6px, transparent 1.8px);
+  background-size: 11px 11px;
+}
+
+/* ── §3 · Paneles: contorno negro grueso + sombra dura roja (sticker de cómic). Sombra roja → se ve
+   en ambos temas; en claro solo cambian los tonos de negro/rojo. ── */
+:root[data-palette="persona"] .toolbar,
+:root[data-palette="persona"] .table-wrap,
+:root[data-palette="persona"] .settings-card,
+:root[data-palette="persona"] .hub-feed-card,
+:root[data-palette="persona"] .modal,
+:root[data-palette="persona"] .alert-dialog { border: 3px solid #0a0a0a !important; box-shadow: 7px 7px 0 rgba(255, 31, 61, .30) !important; border-radius: 6px !important; }
+:root[data-palette="persona"][data-theme="light"] .toolbar,
+:root[data-palette="persona"][data-theme="light"] .table-wrap,
+:root[data-palette="persona"][data-theme="light"] .settings-card,
+:root[data-palette="persona"][data-theme="light"] .hub-feed-card,
+:root[data-palette="persona"][data-theme="light"] .modal,
+:root[data-palette="persona"][data-theme="light"] .alert-dialog { border-color: #151011 !important; box-shadow: 7px 7px 0 rgba(230, 0, 18, .22) !important; }
+
+/* ── §4 · Tabla: cabecera como barra negra con texto de acento. ── */
+:root[data-palette="persona"] thead th { background: #0a0a0a; color: var(--steam); }
+
+/* ── §5 · Botones (cómic, estilo v3 del artefacto): sesgados, con CONTORNO NEGRO grueso uniforme y
+   SOMBRA DURA DE BLOQUE. Sin clip-path (recortaba el borde y anulaba la sombra; ver regla 2/3). La
+   sombra es clara en oscuro y negra en claro (regla 1); el sesgo + borde + sombra dan la forma P5.
+   El texto se contra-sesga con `> *` para que quede recto (regla 4). ── */
+:root[data-palette="persona"] .btn:not(.btn-icon):not(.btn-ghost) { border: 2.5px solid #0a0a0a !important; border-radius: 0 !important; transform: skewX(-7deg); font-weight: 900; box-shadow: 5px 5px 0 rgba(255, 255, 255, .92) !important; }
+:root[data-palette="persona"] .btn:not(.btn-icon):not(.btn-ghost) > * { display: inline-block; transform: skewX(7deg); }
+:root[data-palette="persona"][data-theme="light"] .btn:not(.btn-icon):not(.btn-ghost) { border-color: #151011 !important; box-shadow: 5px 5px 0 #151011 !important; }
+/* Relleno sólido por variante → la sombra de bloque se ve en TODOS los botones, no solo el contorno.
+   Se fija el color de texto por contraste (regla 10). */
+:root[data-palette="persona"] .btn-secondary,
+:root[data-palette="persona"] .btn-toggle:not(.active) { background: var(--surface-elevated) !important; color: var(--text) !important; }
+:root[data-palette="persona"] .btn-accent,
+:root[data-palette="persona"] .btn.is-active,
+:root[data-palette="persona"] .btn-toggle.active { background: var(--steam) !important; color: #fff !important; }
+:root[data-palette="persona"] .btn-complete,
+:root[data-palette="persona"] .btn-recommend { background: var(--success) !important; color: #08130c !important; }
+:root[data-palette="persona"] .btn-inprogress { background: var(--warn) !important; color: #1a1400 !important; }
+:root[data-palette="persona"] .btn-danger,
+:root[data-palette="persona"] .btn-abandoned,
+:root[data-palette="persona"] .btn-recommend-active { background: var(--danger) !important; color: #fff !important; }
+/* Botones fantasma (p. ej. "Limpiar filtros"): limpios, sin corte/sombra/sesgo. */
+:root[data-palette="persona"] .btn-ghost { font-style: italic; text-transform: uppercase; filter: none; clip-path: none; transform: none; }
+
+/* ── §6 · Chips (plataformas, géneros, fuertes/débiles, chip "Amigos" y chips de la ruleta, agrupados
+   por regla 7): CORTE RASGADO + sesgo + contorno negro que sigue el corte (box-shadow inset). No
+   llevan sombra de bloque, por eso aquí el clip-path SÍ es correcto (regla 3). ── */
+:root[data-palette="persona"] .chip,
+:root[data-palette="persona"] .hub-friend-chip,
+:root[data-palette="persona"] .rl-chip { border: none !important; border-radius: 0; font-weight: 800; transform: skewX(-7deg); clip-path: polygon(0 0, 100% 0, 92% 100%, 8% 88%); box-shadow: inset 0 0 0 2px #0a0a0a !important; }
+
+/* ── §7 · Segmentos y campos: rectos, con contorno negro grueso; nada genérico. ── */
+:root[data-palette="persona"] .hub-seg { border: 2px solid #0a0a0a; }
+:root[data-palette="persona"] .input-base,
+:root[data-palette="persona"] .finput,
+:root[data-palette="persona"] .ftextarea,
+:root[data-palette="persona"] .search-input { border: 2px solid #0a0a0a !important; border-radius: 0 !important; }
+
+/* ── §8 · Insignias rejugar/oportunidad: planas, contorno negro, sombra dura (roja o negra según fondo). ── */
+:root[data-palette="persona"] .badge-rejugar-activo,
+:root[data-palette="persona"] .badge-opp-activo { background: var(--steam) !important; color: #fff !important; border: 2px solid #0a0a0a !important; box-shadow: 2px 2px 0 #0a0a0a !important; }
+:root[data-palette="persona"] .badge-rejugar-inactivo,
+:root[data-palette="persona"] .badge-opp-inactivo { background: #0a0a0a !important; color: #fff !important; border: 2px solid #0a0a0a !important; box-shadow: 2px 2px 0 rgba(255, 31, 61, .55) !important; }
+
+/* ── §9 · Puntuación 0–100 (aro/dial/medallón): medallón cómic con contorno negro; el número en la
+   tipografía del tema (§1), conservando el color rojo→verde de la nota. ── */
+:root[data-palette="persona"] .score-ring,
+:root[data-palette="persona"] .score-dial,
+:root[data-palette="persona"] .hub-review-medal { box-shadow: 0 0 0 2.5px #0a0a0a; }
+
+/* ── §10 · Actividad social. Nombres/títulos ya toman la tipografía del tema (§1). Las FECHAS = sellos
+   de calendario del juego (no texto suelto): la cabecera de día es la PESTAÑA de calendario roja; el
+   timestamp de cada tarjeta es un SELLO negro con lomo rojo. ── */
+/* Pestaña de calendario del grupo de día ("9 de julio"): bloque rojo angular, texto negro grueso.
+   Sombra clara en oscuro / negra en claro (regla 1). */
+:root[data-palette="persona"] .hub-feed-day-header {
+  border: 2.5px solid #0a0a0a;
+  border-radius: 0;
+  background: var(--steam);
+  padding: .28rem 1rem;
+  transform: skewX(-8deg);
+  box-shadow: 4px 4px 0 rgba(255, 255, 255, .92);
+}
+:root[data-palette="persona"][data-theme="light"] .hub-feed-day-header { box-shadow: 4px 4px 0 #151011; }
+:root[data-palette="persona"] .hub-feed-day-header h4 {
+  transform: skewX(8deg); /* contra-sesgo del texto (regla 4) */
+  font-family: 'Arial Black', 'Arial Narrow', Impact, system-ui, sans-serif;
+  font-style: italic;
+  font-weight: 900;
+  font-size: .9rem;
+  letter-spacing: .04em;
+  color: #0a0a0a;
+}
+/* Timestamp de cada actividad ("Analizado el … a las …"): sello negro, texto reventado en blanco, lomo
+   rojo a la izquierda (canto de una agenda) y sombra roja de bloque. Fondo sólido + borde, sin clip-path,
+   para que aguante en dos líneas (regla 6). Sombra roja → visible en ambos temas (regla 1). */
+:root[data-palette="persona"] .hub-feed-date,
+:root[data-palette="persona"] .hub-review-date {
+  display: inline-block;
+  align-self: flex-start;
+  padding: .22em .7em .26em .6em;
+  background: #0a0a0a;
+  border-left: .34em solid var(--steam);
+  color: #fff;
+  font-family: 'Arial Black', 'Arial Narrow', Impact, system-ui, sans-serif;
+  font-style: italic;
+  font-weight: 900;
+  font-size: .68rem;
+  line-height: 1.25;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  transform: skewX(-8deg);
+  box-shadow: 3px 3px 0 var(--steam);
+}
+
+/* ── §11 · Ruleta = tragaperras de cómic. Tambor y tarjetas como stickers negros con sombra roja de
+   bloque; visor de selección rojo grueso; nombres que giran en la tipografía del tema (§1). ── */
+/* Tambor: panel-sticker negro plano (sin gradiente ni brillo) con sombra dura roja. */
+:root[data-palette="persona"] .rl-drum {
+  border: 3px solid #0a0a0a;
+  border-radius: 0;
+  background: var(--surface-elevated);
+  box-shadow: 6px 6px 0 rgba(255, 31, 61, .32);
+}
+:root[data-palette="persona"] .rl-drum:hover { box-shadow: 8px 8px 0 rgba(255, 31, 61, .40); }
+:root[data-palette="persona"][data-theme="light"] .rl-drum { box-shadow: 6px 6px 0 rgba(230, 0, 18, .24); }
+/* Visor de selección del centro: recuadro rojo grueso con doble filo negro (mirilla de la tragaperras). */
+:root[data-palette="persona"] .rl-frame {
+  border: 3px solid var(--steam);
+  border-radius: 0;
+  box-shadow: 0 0 0 3px #0a0a0a, inset 0 0 0 1px #0a0a0a;
+}
+/* Rótulo de instrucción del tambor. */
+:root[data-palette="persona"] .rl-hint { color: var(--steam); font-style: italic; }
+/* Tarjeta fantasma (reposo) y tarjeta de resultado: stickers negros de esquinas rectas + sombra roja. */
+:root[data-palette="persona"] .rl-ghost,
+:root[data-palette="persona"] .rl-card {
+  border: 3px solid #0a0a0a;
+  border-radius: 0;
+  box-shadow: 6px 6px 0 rgba(255, 31, 61, .30);
+}
+:root[data-palette="persona"][data-theme="light"] .rl-ghost,
+:root[data-palette="persona"][data-theme="light"] .rl-card {
+  border-color: #151011;
+  box-shadow: 6px 6px 0 rgba(230, 0, 18, .22);
+}
+
+/* ── §12 · FAB redondos (añadir "+" y lanzar ruleta, agrupados por regla 7): se mantienen circulares,
+   pero con contorno negro grueso y sombra dura → chapas/pegatinas de cómic. Sombra FINA (2px) porque en
+   un círculo un desplazamiento grande deja una media luna muy marcada (regla 5); clara en oscuro / negra
+   en claro (regla 1). ── */
+:root[data-palette="persona"] .fab,
+:root[data-palette="persona"] .fab-roulette {
+  border: 2.5px solid #0a0a0a;
+  background: var(--steam);
+  color: #fff;
+  box-shadow: 2px 2px 0 rgba(255, 255, 255, .92);
+}
+:root[data-palette="persona"] .fab:hover,
+:root[data-palette="persona"] .fab-roulette:hover { background: var(--steam-hover); border-color: #0a0a0a; filter: none; }
+:root[data-palette="persona"][data-theme="light"] .fab,
+:root[data-palette="persona"][data-theme="light"] .fab-roulette { color: #fff; box-shadow: 2px 2px 0 #151011; }

@@ -1,153 +1,279 @@
-/* F1 — Tema oscuro (por defecto). Todos los colores cuelgan de estas variables; el tema claro las
-   sobrescribe en `:root[data-theme="light"]`. Los radios no dependen del tema. */
+/* F1 — Sistema de color en DOS CAPAS.
+   ─────────────────────────────────────────────────────────────────────────────
+   CAPA 1 · Base (este bloque + su gemelo claro): tokens semánticos que NO cambian
+     entre paletas. Constantes por tema y DERIVACIONES (con color-mix / rgba) a partir
+     de los tokens de identidad. Se escriben una sola vez; toda paleta las hereda.
+   CAPA 2 · Identidad (bloques `[data-palette="…"]` más abajo): lo único que define la
+     "personalidad" de cada paleta — fondos, acento, semánticos, estrellas, chip de
+     plataforma y textos del hub. Cambiar/añadir una paleta = editar solo esos ~26 tokens.
+   El tema (claro/oscuro) se elige con `data-theme`; la paleta con `data-palette`. Ambos
+   atributos van en <html>. La paleta por defecto (sin atributo) es "steam" (idéntica a la
+   histórica). Los radios no dependen ni de tema ni de paleta. */
+
+/* ══ CAPA 1 · BASE — OSCURO (por defecto) ══════════════════════════════════════ */
 :root {
-  --bg: #1a1e24;
-  --surface: #212429;
-  --surface-hover: #2a2f36;
-  --surface-elevated: #31363e;
-  --surface-soft: rgba(255,255,255,.03);
-  --border: #3d4450;
-  --text: #dcdedf;
-  --text-muted: #8f98a0;
-  --steam: #1a9fff;
-  --steam-hover: #66c0f4;
-  /* Componentes RGB de los acentos (mismo color que --steam/--success/--warn/--danger), para
-     derivar tintes translúcidos theme-aware vía rgba(var(--x-rgb), α) en los partials. */
-  --steam-rgb: 26,159,255;
-  --success-rgb: 103,193,141;
-  --warn-rgb: 229,177,67;
-  --danger-rgb: 209,91,88;
+  /* Radios y estructura (independientes de tema/paleta). */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 22px;
+  --radius-pill: 9999px;
+
+  /* Derivaciones del acento (válidas en ambos temas: cuelgan de --steam-rgb/--steam-hover). */
   --steam-soft: rgba(var(--steam-rgb),.12);
-  /* Pestañas del listado: inactivo tenue, activo azul de aplicación (T3), barra con brillo centrado (G2). */
-  --text-dim: #6b747c;
-  --tab-active: #7fb6e8;
   --tab-bar: linear-gradient(90deg, rgba(var(--steam-rgb),0), var(--steam-hover) 50%, rgba(var(--steam-rgb),0));
   --tab-bar-v: linear-gradient(180deg, rgba(var(--steam-rgb),0), var(--steam-hover) 50%, rgba(var(--steam-rgb),0));
-  --success: #67c18d;
-  --danger: #d15b58;
-  --warn: #e5b143;
+  /* Aro/insignia "sin nota": acento apagado (sigue la paleta) + su velo translúcido. */
+  --noscore: color-mix(in srgb, var(--steam), var(--text-muted) 45%);
+  --noscore-soft: rgba(var(--steam-rgb),.16);
+  /* Color del texto sobre rellenos de acento (botón primario, logo). Blanco por defecto;
+     una paleta con acento claro lo sobrescribe (p. ej. amarillo → texto casi negro). */
+  --on-accent: #fff;
 
-  /* Estrellas (puntuación) */
-  --star-empty: #3d5573;
-  --star-full: #7dd3ff;
+  /* Overlays y tintes neutros (oscuro: blanco/negro). */
+  --surface-soft: rgba(255,255,255,.03);
+  --overlay-hover: rgba(255,255,255,.05);
+  --detail-row-bg: rgba(0,0,0,.22);
+  --surface-glass: color-mix(in srgb, var(--surface), transparent 4%);
 
-  /* Acentos de texto sobre fondos translúcidos (chips/badges/botones de estado).
-     En oscuro = valores actuales (apariencia idéntica); en claro se oscurecen para contraste. */
+  /* Acentos de texto sobre fondos translúcidos (chips/badges de estado). En oscuro son
+     luminosos; --fg-sky sigue al acento de la paleta. */
   --fg-amber: #fcd34d;
   --fg-amber-soft: #f5d080;
   --fg-indigo: #c7d2fe;
-  --fg-sky: #66c0f4;
+  --fg-sky: var(--steam-hover);
   --fg-green: #86efac;
   --fg-green-soft: #84d5a8;
   --fg-red: #ff9d9a;
   --fg-red-soft: #fca5a5;
   --fg-red-pink: #ffb5b2;
 
-  /* Chip de plataforma — paleta plateada (metálica neutra), theme-aware. */
-  --chip-plat-fg: #d7dce4;
-  --chip-plat-bg: rgba(190,198,212,.13);
-  --chip-plat-border: rgba(200,208,222,.30);
-  /* Steam Deck — plateado con un toque azulado: se diferencia sutilmente del chip de plataforma. */
+  /* Steam Deck — plateado azulado, común a todas las paletas. */
   --chip-deck-fg: #c6d4ee;
   --chip-deck-bg: rgba(150,176,226,.16);
   --chip-deck-border: rgba(168,192,232,.36);
 
-  /* Overlays neutros dependientes del tema (hover fantasma, fila de detalle). */
-  --overlay-hover: rgba(255,255,255,.05);
-  --detail-row-bg: rgba(0,0,0,.22);
-  /* Superficie translúcida (barra inferior con blur). */
-  --surface-glass: rgba(33,36,41,.96);
-  /* Social hub: texto sobre tarjetas + superficies/gradientes de tarjeta. */
-  --hub-text: #e8f4ff;
-  --hub-text-muted: #9ec6e0;
-  --hub-card-bg: rgba(26,30,36,.55);
-  --hub-grad-start: rgba(49,54,62,.82);
-  --hub-grad-end: rgba(33,36,41,.92);
-  /* Relieve de los botones del hub (cristal 3D): brillo superior + sombra de profundidad. */
+  /* Superficies del hub, derivadas de fondo/superficie con alfa. */
+  --hub-card-bg: color-mix(in srgb, var(--bg), transparent 45%);
+  --hub-grad-start: color-mix(in srgb, var(--surface-elevated), transparent 18%);
+  --hub-grad-end: color-mix(in srgb, var(--surface), transparent 8%);
+  /* Relieve cristal 3D de los botones del hub. */
   --hub-btn-hi: rgba(255,255,255,.12);
   --hub-btn-hi-strong: rgba(255,255,255,.22);
   --hub-btn-depth: rgba(0,0,0,.5);
   --hub-btn-depth-soft: rgba(0,0,0,.34);
 
-  --radius-sm: 8px;
-  --radius-md: 12px;
-  --radius-lg: 22px;
-  --radius-pill: 9999px;
   --shadow: 0 10px 28px rgba(0,0,0,.38);
-  /* Luminosidad base del acento por-nota de las reseñas (rojo→verde). Cada nota le suma un ajuste
-     (--rev-ladj) para separar 3/4/5: 3 más claro, 5 el más profundo. */
+  /* Luminosidad base del acento por-nota de las reseñas (rojo→verde), por tema. */
   --acc-l: 54%;
-  /* F2 — pista (fondo) del aro de puntuación sin rellenar. */
   --score-track: rgba(255,255,255,.10);
 }
 
-/* Tema claro "arena": neutros cálidos (beige/tostado) en lugar de grises azulados, manteniendo el
-   azul Steam de marca como acento (complementario de la arena) y la semántica de color. Solo redefine
-   colores; radios y estructura no cambian. Los tintes de overlay/sombra van en marrón cálido, no en negro. */
+/* ══ CAPA 1 · BASE — CLARO ══════════════════════════════════════════════════════
+   Solo redefine lo que difiere del oscuro. En claro los tintes (overlay/sombra/pista)
+   van sobre `--tint-rgb`, un marrón/tono cálido que aporta cada paleta. */
 :root[data-theme="light"] {
-  --bg: #f0e9db;
-  --surface: #fbf8f1;
-  --surface-hover: #e9e0cf;
-  --surface-elevated: #f5f0e4;
-  --surface-soft: rgba(60,45,20,.035);
-  --border: #d9cdb8;
-  --text: #2b2721;
-  --text-muted: #6e6353;
-  --steam: #1a82e0;
-  --steam-hover: #1469bd;
-  /* Acentos RGB del tema arena: el azul es más profundo y los semánticos se oscurecen para contraste
-     sobre superficies claras. Así los tintes rgba(var(--x-rgb), α) siguen el acento claro, no el oscuro. */
-  --steam-rgb: 26,130,224;
-  --success-rgb: 31,148,87;
-  --warn-rgb: 179,121,26;
-  --danger-rgb: 192,64,43;
-  --steam-soft: rgba(var(--steam-rgb),.12);
-  --text-dim: #948872;
-  --tab-active: #2774c2;
   --tab-bar: linear-gradient(90deg, rgba(var(--steam-rgb),0), var(--steam) 50%, rgba(var(--steam-rgb),0));
   --tab-bar-v: linear-gradient(180deg, rgba(var(--steam-rgb),0), var(--steam) 50%, rgba(var(--steam-rgb),0));
-  --success: #1f9457;
-  --danger: #c0402b;
-  --warn: #b3791a;
 
-  --star-empty: #d2c6ac;
-  --star-full: #1a82e0;
+  --surface-soft: rgba(var(--tint-rgb),.035);
+  --overlay-hover: rgba(var(--tint-rgb),.05);
+  --detail-row-bg: rgba(var(--tint-rgb),.045);
 
   --fg-amber: #8a5a00;
   --fg-amber-soft: #815200;
   --fg-indigo: #4348c4;
-  --fg-sky: #0b6cb3;
   --fg-green: #1f7a4d;
   --fg-green-soft: #1f7a4d;
   --fg-red: #bd3a2b;
   --fg-red-soft: #bd3a2b;
   --fg-red-pink: #b03528;
 
-  /* Chip de plataforma — neutra cálida (taupe) en claro, en armonía con la arena. */
-  --chip-plat-fg: #6a5e49;
-  --chip-plat-bg: rgba(122,106,78,.13);
-  --chip-plat-border: rgba(122,106,78,.34);
-  /* Steam Deck — se mantiene con toque pizarra-azulado para diferenciarse del chip de plataforma. */
+  /* Steam Deck en claro — pizarra azulada, común a todas las paletas. */
   --chip-deck-fg: #455777;
   --chip-deck-bg: rgba(82,108,158,.14);
   --chip-deck-border: rgba(82,108,158,.38);
 
-  --overlay-hover: rgba(60,45,20,.05);
-  --detail-row-bg: rgba(60,45,20,.045);
-  --surface-glass: rgba(251,248,241,.96);
-  --hub-text: #2b2721;
-  --hub-text-muted: #6e6353;
-  --hub-card-bg: rgba(60,45,20,.05);
-  --hub-grad-start: rgba(245,240,228,.95);
-  --hub-grad-end: rgba(251,248,241,.9);
+  --hub-card-bg: rgba(var(--tint-rgb),.05);
+  --hub-grad-start: color-mix(in srgb, var(--surface-elevated), transparent 5%);
+  --hub-grad-end: color-mix(in srgb, var(--surface), transparent 10%);
   --hub-btn-hi: rgba(255,255,255,.9);
   --hub-btn-hi-strong: #ffffff;
-  --hub-btn-depth: rgba(60,45,20,.2);
-  --hub-btn-depth-soft: rgba(60,45,20,.1);
+  --hub-btn-depth: rgba(var(--tint-rgb),.2);
+  --hub-btn-depth-soft: rgba(var(--tint-rgb),.1);
 
-  --shadow: 0 8px 24px rgba(60,45,20,.14);
+  --shadow: 0 8px 24px rgba(var(--tint-rgb),.14);
   --acc-l: 40%;
-  --score-track: rgba(60,45,20,.12);
+  --score-track: rgba(var(--tint-rgb),.12);
+}
+
+/* ══ CAPA 2 · IDENTIDAD DE PALETA ═══════════════════════════════════════════════
+   Cada paleta define el mismo juego de ~26 tokens. Los bloques oscuros viven en
+   `:root[data-palette="x"]`; los claros añaden además `--tint-rgb`. "steam" es la
+   paleta por defecto: sus valores viven en `:root` / `:root[data-theme="light"]`
+   para que la app funcione sin ningún atributo `data-palette`. */
+
+/* ── steam (por defecto, idéntica a la histórica) ── */
+:root {
+  --bg: #1a1e24;
+  --surface: #212429;
+  --surface-hover: #2a2f36;
+  --surface-elevated: #31363e;
+  --border: #3d4450;
+  --text: #dcdedf;
+  --text-muted: #8f98a0;
+  --text-dim: #6b747c;
+  --steam: #1a9fff;
+  --steam-hover: #66c0f4;
+  --steam-rgb: 26,159,255;
+  --tab-active: #7fb6e8;
+  --success: #67c18d;
+  --success-rgb: 103,193,141;
+  --warn: #e5b143;
+  --warn-rgb: 229,177,67;
+  --danger: #d15b58;
+  --danger-rgb: 209,91,88;
+  --star-empty: #3d5573;
+  --star-full: #7dd3ff;
+  --chip-plat-fg: #d7dce4;
+  --chip-plat-bg: rgba(190,198,212,.13);
+  --chip-plat-border: rgba(200,208,222,.30);
+  --hub-text: #e8f4ff;
+  --hub-text-muted: #9ec6e0;
+}
+:root[data-theme="light"] {
+  --bg: #f0e9db;
+  --surface: #fbf8f1;
+  --surface-hover: #e9e0cf;
+  --surface-elevated: #f5f0e4;
+  --border: #d9cdb8;
+  --text: #2b2721;
+  --text-muted: #6e6353;
+  --text-dim: #948872;
+  --steam: #1a82e0;
+  --steam-hover: #1469bd;
+  --steam-rgb: 26,130,224;
+  --tab-active: #2774c2;
+  --success: #1f9457;
+  --success-rgb: 31,148,87;
+  --warn: #b3791a;
+  --warn-rgb: 179,121,26;
+  --danger: #c0402b;
+  --danger-rgb: 192,64,43;
+  --star-empty: #d2c6ac;
+  --star-full: #1a82e0;
+  --chip-plat-fg: #6a5e49;
+  --chip-plat-bg: rgba(122,106,78,.13);
+  --chip-plat-border: rgba(122,106,78,.34);
+  --hub-text: #2b2721;
+  --hub-text-muted: #6e6353;
+  --tint-rgb: 60,45,20;
+}
+
+/* ── Corazón rebelde (Persona 5) — rojo/negro/oro, pop-art ── */
+:root[data-palette="persona"] {
+  --bg: #0d0d0d;
+  --surface: #161317;
+  --surface-hover: #211c22;
+  --surface-elevated: #29242b;
+  --border: #3a2f39;
+  --text: #f4f2f5;
+  --text-muted: #a99daa;
+  --text-dim: #776d78;
+  --steam: #ff1f3d;
+  --steam-hover: #ff5566;
+  --steam-rgb: 255,31,61;
+  --tab-active: #ff6070;
+  --success: #37d98a;
+  --success-rgb: 55,217,138;
+  --warn: #ffcf33;
+  --warn-rgb: 255,207,51;
+  --danger: #ff6b3d;
+  --danger-rgb: 255,107,61;
+  --star-empty: #3a2f39;
+  --star-full: #ffcf33;
+  --chip-plat-fg: #ded6df;
+  --chip-plat-bg: rgba(210,200,212,.12);
+  --chip-plat-border: rgba(220,210,222,.28);
+  --hub-text: #fff0f2;
+  --hub-text-muted: #e0a3ac;
+  --radius-sm: 3px;
+  --radius-md: 4px;
+  --radius-lg: 8px;
+}
+:root[data-palette="persona"][data-theme="light"] {
+  --bg: #f4f1ee;
+  --surface: #ffffff;
+  --surface-hover: #ece7e2;
+  --surface-elevated: #f8f5f2;
+  --border: #ded5cc;
+  --text: #120e0e;
+  --text-muted: #5f5550;
+  --text-dim: #8a7f78;
+  --steam: #e60012;
+  --steam-hover: #b3000e;
+  --steam-rgb: 230,0,18;
+  --tab-active: #c40010;
+  --success: #1f9457;
+  --success-rgb: 31,148,87;
+  --warn: #c79200;
+  --warn-rgb: 199,146,0;
+  --danger: #d43a00;
+  --danger-rgb: 212,58,0;
+  --star-empty: #ded5cc;
+  --star-full: #c79200;
+  --chip-plat-fg: #5f5550;
+  --chip-plat-bg: rgba(95,85,80,.12);
+  --chip-plat-border: rgba(95,85,80,.3);
+  --hub-text: #120e0e;
+  --hub-text-muted: #5f5550;
+  --tint-rgb: 40,10,10;
+}
+
+/* ══ CAPA 3 · DECORATIVOS / EXPRESIVOS ═════════════════════════════════════════
+   Acentos NO semánticos (lomos de podio, avatares, badges de estado). Centralizados y
+   theme-aware. Reactividad deliberada por rol (Opción B): lo que transmite "rol"
+   (destacado/activo) sigue al acento y casa con cada paleta; las rampas de variedad
+   (lomos 1-4, avatares) son un set propio curado. Editar un color decorativo = un solo sitio. */
+:root {
+  /* Lomos de estantería: el nº0 (destacado) arranca en el acento; 1-4, rampa fija variada. */
+  --deco-shelf-0: linear-gradient(90deg, var(--steam), #7c3aed);
+  --deco-shelf-1: linear-gradient(90deg, #7c3aed, #db2777);
+  --deco-shelf-2: linear-gradient(90deg, #f59e0b, #ef4444);
+  --deco-shelf-3: linear-gradient(90deg, #10b981, #06b6d4);
+  --deco-shelf-4: linear-gradient(90deg, #ef4444, #f59e0b);
+
+  /* Avatares: rampa de 6 tonos; 0 y 5 siguen el acento, el resto usa los acentos semánticos.
+     Cuelgan de tokens theme-aware, así que no necesitan variante clara aparte. */
+  --deco-avatar-0-bg: var(--steam-soft);            --deco-avatar-0-fg: var(--steam-hover);
+  --deco-avatar-1-bg: rgba(var(--success-rgb),.18); --deco-avatar-1-fg: var(--fg-green);
+  --deco-avatar-2-bg: rgba(var(--warn-rgb),.18);    --deco-avatar-2-fg: var(--fg-amber);
+  --deco-avatar-3-bg: rgba(99,102,241,.18);         --deco-avatar-3-fg: var(--fg-indigo);
+  --deco-avatar-4-bg: rgba(var(--danger-rgb),.18);  --deco-avatar-4-fg: var(--fg-red);
+  --deco-avatar-5-bg: rgba(var(--steam-rgb),.18);   --deco-avatar-5-fg: var(--fg-sky);
+
+  /* Badges de estado (rejugar/oportunidad): metálico oscuro tintado por su rol.
+     Activo → acento (sigue la paleta); inactivo → aviso; bloqueado → peligro. */
+  --deco-badge-active: linear-gradient(135deg, color-mix(in srgb, var(--steam) 52%, #000), color-mix(in srgb, var(--steam) 74%, #000));
+  --deco-badge-active-fg: color-mix(in srgb, var(--steam) 58%, #fff);
+  --deco-badge-active-glow: 0 0 12px rgba(var(--steam-rgb),.25), 0 0 20px rgba(var(--steam-rgb),.1), inset 0 0 10px rgba(0,0,0,.15);
+  --deco-badge-idle: linear-gradient(135deg, color-mix(in srgb, var(--warn) 46%, #000), color-mix(in srgb, var(--warn) 66%, #000));
+  --deco-badge-idle-fg: color-mix(in srgb, var(--warn) 52%, #fff);
+  --deco-badge-idle-glow: 0 0 15px rgba(var(--warn-rgb),.3), inset 0 0 10px rgba(0,0,0,.2);
+  --deco-badge-locked: linear-gradient(135deg, color-mix(in srgb, var(--danger) 46%, #000), color-mix(in srgb, var(--danger) 66%, #000));
+  --deco-badge-locked-fg: color-mix(in srgb, var(--danger) 52%, #fff);
+  --deco-badge-locked-glow: 0 0 15px rgba(var(--danger-rgb),.3), inset 0 0 10px rgba(0,0,0,.2);
+}
+/* Badges en claro: planos con tinte de color e inset fino (los degradados oscuros pesan sobre claro). */
+:root[data-theme="light"] {
+  --deco-badge-active: rgba(var(--steam-rgb),.14);
+  --deco-badge-active-fg: var(--fg-sky);
+  --deco-badge-active-glow: inset 0 0 0 1px rgba(var(--steam-rgb),.34);
+  --deco-badge-idle: rgba(var(--warn-rgb),.18);
+  --deco-badge-idle-fg: var(--fg-amber);
+  --deco-badge-idle-glow: inset 0 0 0 1px rgba(var(--warn-rgb),.42);
+  --deco-badge-locked: rgba(var(--danger-rgb),.16);
+  --deco-badge-locked-fg: var(--fg-red);
+  --deco-badge-locked-glow: inset 0 0 0 1px rgba(var(--danger-rgb),.4);
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -176,8 +302,9 @@ button, input, select, textarea { font: inherit; }
 button { -webkit-tap-highlight-color: transparent; }
 .ui-icon { width: 1.05rem; height: 1.05rem; fill: currentColor; flex: 0 0 auto; }
 
-/* Cross-fade al cambiar de tema: durante el cambio se añade `.theme-anim` al <html> (~400ms) para
-   fundir colores en vez de saltar en seco. Es una clase temporal, así que no afecta a hover/scroll. */
+/* Cross-fade al cambiar de tema o paleta: durante el cambio se añade `.theme-anim` al <html>
+   (~400ms) para fundir colores en vez de saltar en seco. Es una clase temporal, así que no
+   afecta a hover/scroll. */
 :root.theme-anim,
 :root.theme-anim * {
   transition: background-color .35s ease, border-color .35s ease, color .35s ease, fill .35s ease !important;
@@ -186,4 +313,3 @@ button { -webkit-tap-highlight-color: transparent; }
   :root.theme-anim,
   :root.theme-anim * { transition: none !important; }
 }
-
