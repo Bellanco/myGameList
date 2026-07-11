@@ -163,7 +163,12 @@ export const SettingsHub = memo(function SettingsHub({
             );
           })}
         </div>
-        {!scoreScaleUid ? <p className="score-scale-locked">🔒 {scoreScaleLabels.lockedHint}</p> : null}
+        {!scoreScaleUid ? (
+          <p className="score-scale-locked">
+            <Icon name={COMMON_ICONS.lock} />
+            {scoreScaleLabels.lockedHint}
+          </p>
+        ) : null}
         <AppearanceSettings />
       </div>
 

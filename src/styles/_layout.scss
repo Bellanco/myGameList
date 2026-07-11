@@ -181,7 +181,8 @@
 .score-scale-txt b { font-size: .92rem; font-weight: 600; }
 .score-scale-txt span { color: var(--text-muted); font-size: .8rem; }
 .score-scale-sample { flex: 0 0 auto; display: inline-flex; align-items: center; }
-.score-scale-locked { color: var(--text-dim); font-size: .8rem; }
+.score-scale-locked { display: flex; align-items: center; gap: .35rem; color: var(--text-dim); font-size: .8rem; }
+.score-scale-locked .ui-icon { width: 1em; height: 1em; flex: 0 0 auto; }
 
 /* F1 — selector de apariencia (tema/paleta + claro/oscuro) dentro de "Ajustes de cuenta". */
 .settings-appearance { margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--border); }
@@ -190,7 +191,9 @@
 .settings-appearance .theme-mode-row + .settings-card-sub { margin-top: 1rem; }
 .palette-swatch { display: inline-block; width: 1.15rem; height: 1.15rem; border-radius: 50%; box-shadow: inset 0 0 0 2px rgba(255,255,255,.25); }
 .theme-mode-row { display: flex; gap: .5rem; }
-.theme-mode-row .btn { flex: 1 1 auto; justify-content: center; }
+/* `flex: 1 1 0` → ambos botones ocupan la misma mitad aunque el texto sea más largo (antes `auto` los
+   dimensionaba por contenido y quedaban de tamaños distintos). */
+.theme-mode-row .btn { flex: 1 1 0; min-width: 0; justify-content: center; }
 
 .settings-actions {
   display: flex;
