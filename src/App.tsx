@@ -18,6 +18,7 @@ import { computeTabOptions, countActiveFilters } from './viewmodel/toolbarFilter
 import { useSyncViewModel } from './viewmodel/useSyncViewModel';
 import { useScoreScaleSession } from './view/hooks/useScoreScaleSession';
 import { useAppearanceSession } from './view/hooks/useAppearanceSession';
+import { useUppercase } from './view/hooks/useUppercase';
 import { hasGithubOAuthRedirect } from './model/repository/githubOAuthRepository';
 import { buildListsPool, buildListsWeigher } from './core/roulette/roulette';
 
@@ -74,6 +75,8 @@ export default function App() {
   const scoreScaleUid = useScoreScaleSession();
   // F1: enlaza la sesión con la apariencia (paleta + claro/oscuro) → hidrata/replica en Firestore.
   useAppearanceSession();
+  // F1: aplica la preferencia de caja (mayúsculas) al <html> app-wide y reacciona a la hidratación.
+  useUppercase();
   const { filters, setFilter, toggleFilterValue, clearFilter, clearAllFilters } = useToolbarFilters();
   const {
     setExpandedId,

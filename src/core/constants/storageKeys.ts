@@ -16,3 +16,9 @@ export const THEME_KEY = 'mis-listas-theme';
 // Solo presentación (no se sincroniza). Lo lee también `public/theme-init.js` antes del primer render;
 // mantener el literal de la clave en sincronía con ese fichero.
 export const PALETTE_KEY = 'mis-listas-palette';
+
+// F1 — preferencia de CAJA del texto de interfaz (titulares, etiquetas, botones, nombres, chips…).
+// Valores: 'on' (todo en mayúsculas) | 'off' (caja normal del tema, por defecto). Se aplica vía
+// `data-uppercase="on"` en <html> y se sincroniza por cuenta. Lo lee también `public/theme-init.js`
+// antes del primer render (anti-flash); mantener el literal de la clave en sincronía con ese fichero.
+export const UPPERCASE_KEY = 'mis-listas-uppercase';

@@ -10,7 +10,8 @@
   var BG = {
     steam: { dark: '#1a1e24', light: '#f0e9db' },
     persona: { dark: '#0d0d0d', light: '#f4f1ee' },
-    lotr: { dark: '#17120b', light: '#e6d7b3' }
+    lotr: { dark: '#17120b', light: '#e6d7b3' },
+    portal: { dark: '#12171b', light: '#e7ecf0' }
   };
   try {
     var pref = localStorage.getItem('mis-listas-theme'); // 'dark' | 'light' | null
@@ -28,6 +29,11 @@
     // "steam" es la paleta por defecto (vive en :root); solo fijamos el atributo para el resto.
     if (palette !== 'steam') {
       document.documentElement.setAttribute('data-palette', palette);
+    }
+
+    // Caja del texto de interfaz: 'on' → todo en mayúsculas (data-uppercase); resto = caja normal.
+    if (localStorage.getItem('mis-listas-uppercase') === 'on') {
+      document.documentElement.setAttribute('data-uppercase', 'on');
     }
 
     var meta = document.querySelector('meta[name="theme-color"]');
