@@ -39,7 +39,7 @@ describe('firestore.rules', () => {
 
   describe('publicConfig (apariencia + escala)', () => {
     it('el dueño escribe scoreScale/palette/theme/uppercase válidos; un no-dueño no', async () => {
-      await assertSucceeds(setDoc(doc(ownerDb('uid-a'), 'publicConfig', 'uid-a'), { scoreScale: 'grade', palette: 'persona', theme: 'dark', uppercase: true }));
+      await assertSucceeds(setDoc(doc(ownerDb('uid-a'), 'publicConfig', 'uid-a'), { scoreScale: 'grade', palette: 'persona', theme: 'dark', uppercase: true, showSteamButton: false }));
       await assertSucceeds(setDoc(doc(ownerDb('uid-a'), 'publicConfig', 'uid-a'), { theme: 'light' }));
       await assertFails(setDoc(doc(ownerDb('uid-b'), 'publicConfig', 'uid-a'), { palette: 'persona' }));
     });
@@ -47,6 +47,7 @@ describe('firestore.rules', () => {
       await assertFails(setDoc(doc(ownerDb('uid-a'), 'publicConfig', 'uid-a'), { theme: 'neon' }));
       await assertFails(setDoc(doc(ownerDb('uid-a'), 'publicConfig', 'uid-a'), { scoreScale: 'weird' }));
       await assertFails(setDoc(doc(ownerDb('uid-a'), 'publicConfig', 'uid-a'), { uppercase: 'yes' }));
+      await assertFails(setDoc(doc(ownerDb('uid-a'), 'publicConfig', 'uid-a'), { showSteamButton: 'yes' }));
       await assertFails(setDoc(doc(ownerDb('uid-a'), 'publicConfig', 'uid-a'), { hackField: 'x' }));
     });
   });

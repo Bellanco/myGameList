@@ -19,6 +19,7 @@ import { useSyncViewModel } from './viewmodel/useSyncViewModel';
 import { useScoreScaleSession } from './view/hooks/useScoreScaleSession';
 import { useAppearanceSession } from './view/hooks/useAppearanceSession';
 import { useUppercase } from './view/hooks/useUppercase';
+import { useShowSteamButton } from './view/hooks/useShowSteamButton';
 import { hasGithubOAuthRedirect } from './model/repository/githubOAuthRepository';
 import { buildListsPool, buildListsWeigher } from './core/roulette/roulette';
 
@@ -26,6 +27,7 @@ const FormModal = lazy(() => import('./view/modals/FormModal').then((module) => 
 const ConfirmModal = lazy(() => import('./view/modals/ConfirmModal').then((module) => ({ default: module.ConfirmModal })));
 const SettingsHub = lazy(() => import('./view/components/SettingsHub').then((module) => ({ default: module.SettingsHub })));
 const SocialHub = lazy(() => import('./view/components/SocialHub').then((module) => ({ default: module.SocialHub })));
+const AccountHub = lazy(() => import('./view/components/AccountHub').then((module) => ({ default: module.AccountHub })));
 const RouletteModal = lazy(() => import('./view/components/roulette/RouletteModal').then((module) => ({ default: module.RouletteModal })));
 
 function getCurrentTab(pathname: string): TabId {
@@ -35,6 +37,7 @@ function getCurrentTab(pathname: string): TabId {
 function getCurrentSection(pathname: string): AppSection {
   if (pathname.startsWith('/social')) return 'social';
   if (pathname.startsWith('/ajustes')) return 'settings';
+  if (pathname.startsWith('/cuenta')) return 'account';
   return 'lists';
 }
 
@@ -61,6 +64,7 @@ export const APP_ROUTE_PATHS = [
   '/social/requests',
   '/social/user/:userId/game/:gameId/:eventType',
   '/ajustes',
+  '/cuenta',
 ] as const;
 
 export default function App() {
@@ -72,11 +76,22 @@ export default function App() {
   const vm = useGameListViewModel();
   // F2: enlaza la sesión de Google con la escala de puntuación (hidrata desde Firestore / resetea al salir);
   // devuelve el uid para gatear la opción en Ajustes. Se monta aquí para que la escala esté en toda la app.
-  const scoreScaleUid = useScoreScaleSession();
+  const { uid: scoreScaleUid, ready: authReady } = useScoreScaleSession();
   // F1: enlaza la sesión con la apariencia (paleta + claro/oscuro) → hidrata/replica en Firestore.
   useAppearanceSession();
   // F1: aplica la preferencia de caja (mayúsculas) al <html> app-wide y reacciona a la hidratación.
   useUppercase();
+  // F1: visibilidad del botón "Steam Deck" (preferencia de cuenta) → se pasa a la Toolbar.
+  const { showSteamButton } = useShowSteamButton();
+
+  // La pantalla "Cuenta" solo existe con sesión de Google (todos sus ajustes la requieren). Si se llega a
+  // `/cuenta` sin sesión (URL directa) o se cierra sesión estando allí, se redirige a la lista. Se espera a
+  // `authReady` para no expulsar a un usuario logueado durante la resolución inicial de la sesión.
+  useEffect(() => {
+    if (authReady && !scoreScaleUid && activeSection === 'account') {
+      navigate('/completados', { replace: true });
+    }
+  }, [authReady, scoreScaleUid, activeSection, navigate]);
   const { filters, setFilter, toggleFilterValue, clearFilter, clearAllFilters } = useToolbarFilters();
   const {
     setExpandedId,
@@ -262,6 +277,11 @@ export default function App() {
       return;
     }
 
+    if (section === 'account') {
+      navigate('/cuenta');
+      return;
+    }
+
     navigate('/ajustes');
   }, [navigate, setExpandedId]);
 
@@ -409,6 +429,7 @@ export default function App() {
               onToggleValue={handleToggleValue}
               onClearFilter={handleClearFilter}
               onClearAll={handleClearAllFilters}
+              showSteamButton={showSteamButton}
             />
             <GameTable
               games={list}
@@ -432,6 +453,10 @@ export default function App() {
               hasGameInLists={vm.hasGameInLists}
               moveGameToCurrentByName={vm.moveGameToCurrentByName}
             />
+          </Suspense>
+        ) : activeSection === 'account' ? (
+          <Suspense fallback={null}>
+            {scoreScaleUid ? <AccountHub scoreScaleUid={scoreScaleUid} /> : null}
           </Suspense>
         ) : (
           <Suspense fallback={null}>
@@ -458,7 +483,6 @@ export default function App() {
               lookups={vm.lookups}
               onEditTag={handleEditTag}
               onDeleteTag={handleDeleteTag}
-              scoreScaleUid={scoreScaleUid}
             />
           </Suspense>
         )}
@@ -484,7 +508,7 @@ export default function App() {
         </>
       ) : null}
 
-      <BottomNavigation currentSection={activeSection} onSectionChange={handleSectionChange} />
+      <BottomNavigation currentSection={activeSection} onSectionChange={handleSectionChange} showAccount={scoreScaleUid !== null} />
 
       <Suspense fallback={null}>
         <FormModal
