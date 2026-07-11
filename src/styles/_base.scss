@@ -366,6 +366,158 @@
   --cyber-magenta: #cc0057;
 }
 
+/* ── Trato con el diablo (Cuphead) — dibujo animado de los años 30: crema/pergamino envejecido, tinta
+   negra cálida, rojo Cuphead + azul Mugman, mostaza del contrato. Cálido y desvaído (colores de acuarela).
+   `--cup-ink` (línea de tinta), `--cup-blue` (Mugman) y `--cup-gold` (contrato) son tokens extra del skin. ── */
+:root[data-palette="cuphead"] {
+  /* OSCURO = CELULOIDE QUE SE QUEMA (pantalla de carga/transición de Cuphead): base negra CHAMUSCADA. Las
+     superficies son CASI TAN NEGRAS como el fondo (no marrones): en las escenas oscuras de Cuphead las formas
+     se definen por el CONTORNO DE TINTA crema (§3), no por rellenos claros. La vida la ponen los acentos
+     SATURADOS y los chips, no un panel marrón. `--surface-elevated` sube un poco para controles (inputs/botones). */
+  --bg: #1c1209;
+  --surface: #26170d;
+  --surface-hover: #33200f;
+  --surface-elevated: #3d2714;
+  --border: #7a5834;
+  --text: #f8edd3;
+  --text-muted: #cbb086;
+  --text-dim: #9a8058;
+  --steam: #ff4530;
+  --steam-hover: #ff6a52;
+  --steam-rgb: 255,69,48;
+  --tab-active: #ff7a5f;
+  --success: #7cc242;
+  --success-rgb: 124,194,66;
+  --warn: #f4b02e;
+  --warn-rgb: 244,176,46;
+  --danger: #ef3d2a;
+  --danger-rgb: 239,61,42;
+  --star-empty: #6e5030;
+  --star-full: #f4b02e;
+  --chip-plat-fg: #f0dcb6;
+  --chip-plat-bg: rgba(240,220,170,.15);
+  --chip-plat-border: rgba(240,220,170,.36);
+  --hub-text: #faf0d6;
+  --hub-text-muted: #d3b98d;
+  --radius-sm: 8px;
+  --radius-md: 14px;
+  --radius-lg: 22px;
+  --cup-ink: #201712;
+  --cup-blue: #3a8ee0;
+  --cup-gold: #f4b02e;
+  /* Línea de tinta rubber-hose (contornos): CREMA en oscuro (una tinta negra no se vería sobre el café),
+     tinta oscura en claro. Mismo criterio que `--pop-line` de Persona (regla 1). */
+  --cup-line: #f4e6c6;
+}
+:root[data-palette="cuphead"][data-theme="light"] {
+  /* CLARO = PERGAMINO de la cartela de Cuphead: papel cálido con matiz DORADO suave (guiño al oro de la
+     portada, pero sin el amarillo mostaza chillón, que resultaba excesivo para un fondo entero); paneles de
+     crema más neutra flotando encima como papel. Rojo/azul de acento = título rojo sobre pergamino. */
+  --bg: #eddcac;
+  --surface: #faf4de;
+  --surface-hover: #eee1bd;
+  --surface-elevated: #fefcf0;
+  --border: #d1bc84;
+  --text: #2a1d12;
+  --text-muted: #6e5638;
+  --text-dim: #937a56;
+  --steam: #d12b1f;
+  --steam-hover: #a81f16;
+  --steam-rgb: 209,43,31;
+  --tab-active: #b7241a;
+  --success: #3c7d2a;
+  --success-rgb: 60,125,42;
+  --warn: #b07d18;
+  --warn-rgb: 176,125,24;
+  --danger: #c0341f;
+  --danger-rgb: 192,52,31;
+  --star-empty: #d8c39a;
+  --star-full: #c9971b;
+  --chip-plat-fg: #6e5638;
+  --chip-plat-bg: rgba(110,86,56,.12);
+  --chip-plat-border: rgba(110,86,56,.30);
+  --hub-text: #2a1d12;
+  --hub-text-muted: #6e5638;
+  --tint-rgb: 42,29,18;
+  --cup-ink: #241812;
+  --cup-blue: #2166a8;
+  --cup-gold: #b07d18;
+  --cup-line: #241812;
+}
+
+/* ── Solo hay guerra (Warhammer 40.000) — grimdark gótico imperial: pantalla de COGITADOR verde fósforo sobre
+   negro, ornamento de ORO latón, rojo sangre de aviso. `--grim-green/gold/red` y `--grim-line` (ornamento
+   gótico: oro en oscuro / tinta en claro) son tokens extra del skin. ── */
+:root[data-palette="grimdark"] {
+  --bg: #060b08;
+  --surface: #0e1712;
+  --surface-hover: #16241b;
+  --surface-elevated: #1d2e23;
+  --border: #2f5240;
+  --text: #c9ddcb;
+  --text-muted: #7fa389;
+  --text-dim: #587664;
+  --steam: #43f558;
+  --steam-hover: #7dff8c;
+  --steam-rgb: 67,245,88;
+  --tab-active: #7dff8c;
+  --success: #58dd6b;
+  --success-rgb: 88,221,107;
+  --warn: #e0a92b;
+  --warn-rgb: 224,169,43;
+  --danger: #e63b3b;
+  --danger-rgb: 230,59,59;
+  --star-empty: #2f5240;
+  --star-full: #e0b23a;
+  --chip-plat-fg: #b6d4bb;
+  --chip-plat-bg: rgba(120,200,140,.10);
+  --chip-plat-border: rgba(120,220,150,.30);
+  --hub-text: #d6efd8;
+  --hub-text-muted: #90b89a;
+  --radius-sm: 0px;
+  --radius-md: 2px;
+  --radius-lg: 3px;
+  --grim-green: #43f558;
+  --grim-gold: #e0a92b;
+  --grim-red: #e63b3b;
+  /* Línea de ornamento gótico (molduras/bordes): ORO latón en oscuro (imperial sobre el negro), tinta en claro. */
+  --grim-line: #e0a92b;
+}
+:root[data-palette="grimdark"][data-theme="light"] {
+  /* CLARO = CÓDICE imperial: VITELA envejecida (cálida, con grano), tinta negra + oro gótico, capitulares
+     rubricadas en rojo y verde oscuro de data-slate. */
+  --bg: #e7ddc3;
+  --surface: #f3ecd7;
+  --surface-hover: #ddd2b4;
+  --surface-elevated: #f9f4e6;
+  --border: #c3b48c;
+  --text: #1b1e1a;
+  --text-muted: #565b4e;
+  --text-dim: #7c8173;
+  --steam: #136b30;
+  --steam-hover: #0d5324;
+  --steam-rgb: 19,107,48;
+  --tab-active: #0d5324;
+  --success: #1b8f45;
+  --success-rgb: 27,143,69;
+  --warn: #a3771a;
+  --warn-rgb: 163,119,26;
+  --danger: #b3261e;
+  --danger-rgb: 179,38,30;
+  --star-empty: #c9c1ab;
+  --star-full: #a3771a;
+  --chip-plat-fg: #565b4e;
+  --chip-plat-bg: rgba(80,90,70,.10);
+  --chip-plat-border: rgba(80,90,70,.28);
+  --hub-text: #1b1e1a;
+  --hub-text-muted: #565b4e;
+  --tint-rgb: 26,30,24;
+  --grim-green: #136b30;
+  --grim-gold: #9a6f14;
+  --grim-red: #b3261e;
+  --grim-line: #2a2d24;
+}
+
 /* ══ CAPA 3 · DECORATIVOS / EXPRESIVOS ═════════════════════════════════════════
    Acentos NO semánticos (lomos de podio, avatares, badges de estado). Centralizados y
    theme-aware. Reactividad deliberada por rol (Opción B): lo que transmite "rol"

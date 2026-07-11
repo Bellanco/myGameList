@@ -51,7 +51,7 @@ service cloud.firestore {
     // F2 — publicConfig: preferencias NO sensibles del dueño (escala de puntuación, y F1: apariencia
     // = paleta + modo claro/oscuro). Separada de privateConfig (token/ids). Allowlist estricta de claves.
     function publicConfigWriteIsValid() {
-      return request.resource.data.keys().hasOnly(["schemaVersion", "scoreScale", "palette", "theme", "uppercase"])
+      return request.resource.data.keys().hasOnly(["schemaVersion", "scoreScale", "palette", "theme", "uppercase", "showSteamButton"])
         && (!("scoreScale" in request.resource.data)
             || request.resource.data.scoreScale in ["stars", "grade"])
         && (!("theme" in request.resource.data)
@@ -59,7 +59,9 @@ service cloud.firestore {
         && (!("palette" in request.resource.data)
             || (request.resource.data.palette is string && request.resource.data.palette.size() <= 32))
         && (!("uppercase" in request.resource.data)
-            || request.resource.data.uppercase is bool);
+            || request.resource.data.uppercase is bool)
+        && (!("showSteamButton" in request.resource.data)
+            || request.resource.data.showSteamButton is bool);
     }
 
     // ==========================================

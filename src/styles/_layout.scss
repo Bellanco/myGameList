@@ -157,6 +157,10 @@
   line-height: 1.4;
 }
 
+/* Ajustes de cuenta: todo el cuerpo (escala + apariencia) se bloquea sin sesión de Google (atributo `inert`). */
+.settings-account-body { display: flex; flex-direction: column; gap: .8rem; }
+.settings-account-body[inert] { opacity: .55; }
+
 /* F2 — selector de escala de puntuación (estrellas / nota) en Ajustes. */
 .score-scale-choice { display: grid; gap: .6rem; }
 .score-scale-choice.is-locked { opacity: .6; }
@@ -438,7 +442,10 @@
   border-radius: var(--radius-pill);
   box-shadow: 0 14px 30px rgba(0,0,0,.28);
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  /* Una columna por botón (3 o 4 según haya sesión de "Cuenta"): siempre en UNA fila, anchos iguales.
+     Con `repeat(3, …)` fijo, el 4º botón saltaba a una segunda fila. */
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
   gap: .4rem;
   padding: .4rem;
 }

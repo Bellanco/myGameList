@@ -22,3 +22,8 @@ export const PALETTE_KEY = 'mis-listas-palette';
 // `data-uppercase="on"` en <html> y se sincroniza por cuenta. Lo lee también `public/theme-init.js`
 // antes del primer render (anti-flash); mantener el literal de la clave en sincronía con ese fichero.
 export const UPPERCASE_KEY = 'mis-listas-uppercase';
+
+// F1 — visibilidad del botón "Steam Deck" de la barra de filtros. Valores: 'on' (visible, por defecto) |
+// 'off' (oculto). Se sincroniza por cuenta (publicConfig.showSteamButton). No lo lee `theme-init.js`
+// (no necesita anti-flash: solo condiciona un botón de la toolbar, no la pintura inicial del tema).
+export const STEAM_BUTTON_KEY = 'mis-listas-steam-button';

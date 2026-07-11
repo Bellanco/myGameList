@@ -4,10 +4,11 @@ import {
   buildListsPool,
   buildProfilePool,
   buildListsWeigher,
+  curveGrade,
   curveScore,
   gameWeight,
   listsWeight,
-  NEUTRAL_SCORE,
+  NEUTRAL_GRADE,
   normalizeName,
   parseSeries,
   SEQUEL_DECAY,
@@ -81,11 +82,11 @@ describe('curve & context weighting', () => {
   });
 
   it('listsWeight multiplies the curve by the list factor (próximos > vergüenza > completista)', () => {
-    expect(listsWeight(cand('p', 2))).toBe(4 * 3);
+    expect(listsWeight(cand('p', 2))).toBe(4 * 3.5);
     expect(listsWeight(cand('v', 2))).toBe(4 * 2);
     expect(listsWeight(cand('c', 2))).toBe(4 * 1);
     // an unscored próximo still weighs (base × list factor), so próximos keep showing up
-    expect(listsWeight(cand('p', 0))).toBe(BASE_WEIGHT * 3);
+    expect(listsWeight(cand('p', 0))).toBe(BASE_WEIGHT * 3.5);
   });
 
   it('profileWeight boosts replayable, but below a score step', () => {
@@ -149,17 +150,32 @@ describe('scoreless shame list fairness', () => {
     sourceTab: tab,
   });
 
-  it('a scoreless shame game uses the neutral score instead of the tiny base', () => {
-    // vergüenza sin nota → curveScore(NEUTRAL_SCORE) × TAB(v=2) (compite, no se queda en ~2)
-    expect(listsWeight(cand('v', 0))).toBe(curveScore(NEUTRAL_SCORE) * 2);
-    // un próximo sin "interés" mantiene el peso base (1 × 3)
-    expect(listsWeight(cand('p', 0))).toBe(1 * 3);
+  it('a scoreless shame game uses the neutral grade instead of the tiny base', () => {
+    // vergüenza sin nota → curveGrade(NEUTRAL_GRADE) × TAB(v=2) (compite, no se queda en ~2)
+    expect(listsWeight(cand('v', 0))).toBeCloseTo(curveGrade(NEUTRAL_GRADE) * 2);
+    // un próximo sin "interés" mantiene el peso base (1 × 3.5)
+    expect(listsWeight(cand('p', 0))).toBe(1 * 3.5);
     // así la vergüenza no queda por detrás de una lista sin puntuar
     expect(listsWeight(cand('v', 0))).toBeGreaterThan(listsWeight(cand('p', 0)));
   });
 
-  it('a shame game with a real score still uses it', () => {
+  it('a shame game with a real score still uses it (4★ → grade 80 → 16)', () => {
     expect(listsWeight(cand('v', 4))).toBe(16 * 2);
+  });
+});
+
+describe('fine 0–100 grade weighting', () => {
+  it('curveGrade is quadratic on 0–100 (100→25, 80→16, 50→6.25, 0→base)', () => {
+    expect(curveGrade(100)).toBe(25);
+    expect(curveGrade(80)).toBe(16);
+    expect(curveGrade(50)).toBeCloseTo(6.25);
+    expect(curveGrade(0)).toBe(1);
+  });
+
+  it('weights by the fine grade, not the star bucket (95 > 91 though both are 5★)', () => {
+    const hi: RouletteCandidate = { game: game({ id: 1, name: 'Hi', grade: 95 }), sourceTab: 'p' };
+    const lo: RouletteCandidate = { game: game({ id: 2, name: 'Lo', grade: 91 }), sourceTab: 'p' };
+    expect(listsWeight(hi)).toBeGreaterThan(listsWeight(lo));
   });
 });
 
@@ -202,5 +218,15 @@ describe('series-aware ordering', () => {
     const data = tabData({ e: [g(2, 'Saga 2')], p: [g(3, 'Saga 3')] });
     const w = buildListsWeigher(data);
     expect(w(p(data.p[0]))).toBeCloseTo(listsWeight(p(data.p[0])) * SEQUEL_DECAY);
+  });
+
+  it('only penalizes when the earlier entry is also in próximos, not in the shame list', () => {
+    // Anterior en vergüenza → la secuela NO se penaliza (solo cuentan las anteriores en próximos).
+    const shame = tabData({ v: [g(1, 'Saga')], p: [g(2, 'Saga 2')] });
+    expect(buildListsWeigher(shame)(p(shame.p[0]))).toBe(listsWeight(p(shame.p[0])));
+    // Ambas en próximos → sí se penaliza la 2ª.
+    const both = tabData({ p: [g(1, 'Saga'), g(2, 'Saga 2')] });
+    const w = buildListsWeigher(both);
+    expect(w(p(both.p[1]))).toBeCloseTo(listsWeight(p(both.p[1])) * SEQUEL_DECAY);
   });
 });
