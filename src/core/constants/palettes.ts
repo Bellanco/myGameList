@@ -3,14 +3,18 @@
 // tema está aislado en `[data-palette="<id>"]` y no afecta a los demás. El tema por defecto es "steam"
 // (sin atributo `data-palette`; sus valores viven en `:root`).
 //
-// ▟ CÓMO AÑADIR UN TEMA NUEVO (4 pasos, todos aditivos):
-//   1) Aquí: añade el `id` al tipo `PaletteId` y una entrada a `PALETTES` (id, label, accent, bg.dark/light).
+// ▟ CÓMO AÑADIR UN TEMA NUEVO (aditivo; nada más que tocar: el selector de Ajustes, la persistencia local y la
+//   sync en Firestore leen automáticamente de `PALETTES`):
+//   1) Aquí: añade el `id` al tipo `PaletteId` y una entrada a `PALETTES` (id, label, accent, bg.dark/light;
+//      `accent2` opcional si el tema es de dos colores, para distinguir su muestra en el selector).
 //   2) `src/styles/_base.scss` (CAPA 2 · identidad): añade `:root[data-palette="<id>"]` (oscuro) y su gemelo
 //      `:root[data-palette="<id>"][data-theme="light"]` con los ~26 tokens; el resto se deriva solo.
 //   3) `public/theme-init.js`: añade el `--bg` del tema al mapa `BG` (anti-flash antes del primer render).
-//   4) (Opcional) `src/styles/_themes.scss` (CAPA 3 · skin): dirección de arte del tema (tipografías, formas,
-//      sombras, texturas). Si no la añades, el tema usa solo sus colores. Nada más que tocar: el selector de
-//      Ajustes, la persistencia local y la sync en Firestore leen automáticamente de `PALETTES`.
+//   4) (Opcional) `src/styles/_themes.scss` (CAPA 3 · skin): UN ÚNICO bloque `[data-palette="<id>"]` con la
+//      dirección de arte — plantilla §1–§13 en la cabecera del fichero, AUTOCONTENIDA (hover de botones y
+//      barra inferior incluidos). Si no lo añades, el tema usa solo sus colores.
+//   5) (Solo si usa fuente propia) `index.html`: añade la familia al `<link>` de Google Fonts; su .woff2 solo
+//      se descarga cuando ese tema pinta.
 
 import type { ThemePreference } from '../../view/hooks/useTheme';
 
