@@ -64,20 +64,30 @@ function applyTheme(theme: ThemePreference): void {
   applyThemeColor(theme);
 }
 
+/** Evento in-page para sincronizar TODAS las instancias de `useTheme` (p. ej. el toggle flotante y el de
+ *  Ajustes): al cambiar el tema en una, las demás re-leen y actualizan su icono/estado. */
+const THEME_CHANGED_EVENT = 'app:theme-changed';
+
 /** Toggle de tema (claro/oscuro) con persistencia local. Default = tema del sistema (fallback oscuro). */
 export function useTheme(): { theme: ThemePreference; toggle: () => void } {
   const [theme, setTheme] = useState<ThemePreference>(readInitialPreference);
+  const themeRef = useRef(theme);
   const themeAnimTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
+    themeRef.current = theme;
     applyTheme(theme);
   }, [theme]);
 
-  // La hidratación desde la nube (al iniciar sesión) vuelca a localStorage y emite este evento; re-leemos y aplicamos.
+  // Re-lee y aplica cuando el tema cambia en OTRA instancia (evento local) o al hidratar desde la nube.
   useEffect(() => {
-    const onHydrated = () => setTheme(readInitialPreference());
-    window.addEventListener(APPEARANCE_HYDRATED_EVENT, onHydrated);
-    return () => window.removeEventListener(APPEARANCE_HYDRATED_EVENT, onHydrated);
+    const sync = () => setTheme(readInitialPreference());
+    window.addEventListener(THEME_CHANGED_EVENT, sync);
+    window.addEventListener(APPEARANCE_HYDRATED_EVENT, sync);
+    return () => {
+      window.removeEventListener(THEME_CHANGED_EVENT, sync);
+      window.removeEventListener(APPEARANCE_HYDRATED_EVENT, sync);
+    };
   }, []);
 
   const toggle = useCallback(() => {
@@ -86,16 +96,17 @@ export function useTheme(): { theme: ThemePreference; toggle: () => void } {
     root.classList.add('theme-anim');
     if (themeAnimTimer.current) clearTimeout(themeAnimTimer.current);
     themeAnimTimer.current = setTimeout(() => root.classList.remove('theme-anim'), 400);
-    setTheme((current) => {
-      const next: ThemePreference = current === 'dark' ? 'light' : 'dark';
-      try {
-        localStorage.setItem(THEME_KEY, next);
-      } catch {
-        // Sin persistencia: el tema sigue aplicándose en la sesión actual.
-      }
-      persistThemePreference(next); // replica a la nube si hay sesión (best-effort)
-      return next;
-    });
+
+    const next: ThemePreference = themeRef.current === 'dark' ? 'light' : 'dark';
+    setTheme(next);
+    try {
+      localStorage.setItem(THEME_KEY, next);
+    } catch {
+      // Sin persistencia: el tema sigue aplicándose en la sesión actual.
+    }
+    persistThemePreference(next); // replica a la nube si hay sesión (best-effort)
+    // Notifica a las demás instancias de `useTheme` para que sincronicen su estado (icono luna/sol, etc.).
+    window.dispatchEvent(new Event(THEME_CHANGED_EVENT));
   }, []);
 
   return { theme, toggle };
