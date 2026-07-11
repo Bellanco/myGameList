@@ -42,10 +42,10 @@ export function gameWeight(game: GameItem): number {
 }
 
 /** Multiplicador por lista en LISTADOS: salen más los próximos, luego la vergüenza, luego completados. */
-const TAB_WEIGHT: Record<TabId, number> = { p: 3, v: 2, c: 1, e: 1 };
+const TAB_WEIGHT: Record<TabId, number> = { p: 3.5, v: 2, c: 1, e: 1 };
 
 /** Nota fina "neutra" (0–100) para la vergüenza, que no se puntúa: compite por prioridad de lista sin quedar atrás. */
-export const NEUTRAL_GRADE = 75;
+export const NEUTRAL_GRADE = 70;
 
 /**
  * Nota fina efectiva (0–100) para la ponderación por lista. Si no hay nota: la vergüenza (que no se puntúa) usa
@@ -100,22 +100,22 @@ export function parseSeries(name: string): { base: string; ordinal: number } {
 
 interface SeriesInfo {
   ownedOrdinals: Set<number>; // entregas presentes en cualquier lista
-  completedOrdinals: Set<number>; // entregas en completados (c)
+  pendingOrdinals: Set<number>; // entregas en PRÓXIMOS (p) — las que aún tienes pendientes de empezar
   hasInProgress: boolean; // alguna entrega en curso (e)
 }
 
-/** Índice de sagas a partir de TODO el catálogo (para saber qué está jugado / en curso / es tuyo). */
+/** Índice de sagas a partir de TODO el catálogo (para saber qué está en próximos / en curso / es tuyo). */
 function buildSeriesIndex(data: TabData): Map<string, SeriesInfo> {
   const index = new Map<string, SeriesInfo>();
   const add = (game: GameItem, tab: TabId) => {
     const { base, ordinal } = parseSeries(game.name);
     let info = index.get(base);
     if (!info) {
-      info = { ownedOrdinals: new Set(), completedOrdinals: new Set(), hasInProgress: false };
+      info = { ownedOrdinals: new Set(), pendingOrdinals: new Set(), hasInProgress: false };
       index.set(base, info);
     }
     info.ownedOrdinals.add(ordinal);
-    if (tab === 'c') info.completedOrdinals.add(ordinal);
+    if (tab === 'p') info.pendingOrdinals.add(ordinal);
     if (tab === 'e') info.hasInProgress = true;
   };
   for (const game of data.c) add(game, 'c');
@@ -127,8 +127,9 @@ function buildSeriesIndex(data: TabData): Map<string, SeriesInfo> {
 
 /**
  * Factor de saga para un juego: 1 si no forma serie (o solo tienes una entrega). Si hay una entrega EN CURSO,
- * suprime la saga (termina esa antes). Si no, penaliza por cada entrega ANTERIOR que tienes y no has terminado
- * (así sale primero la más temprana pendiente; las entregas que NO tienes —saltos— no penalizan).
+ * suprime la saga (termina esa antes). Si no, penaliza SOLO por cada entrega anterior que también está en
+ * PRÓXIMOS (así, con ambas pendientes, sale primero la más temprana). Si la anterior está en completados
+ * (ya jugada) o en la vergüenza, no penaliza → la secuela sube igual; y los saltos (no tenerla) tampoco cuentan.
  */
 function seriesFactor(index: Map<string, SeriesInfo>, name: string): number {
   const { base, ordinal } = parseSeries(name);
@@ -136,11 +137,11 @@ function seriesFactor(index: Map<string, SeriesInfo>, name: string): number {
   if (!info || info.ownedOrdinals.size < 2) return 1;
   if (info.hasInProgress) return SEQUEL_DECAY;
 
-  let earlierPending = 0;
-  for (const owned of info.ownedOrdinals) {
-    if (owned < ordinal && !info.completedOrdinals.has(owned)) earlierPending++;
+  let earlierInProximos = 0;
+  for (const pending of info.pendingOrdinals) {
+    if (pending < ordinal) earlierInProximos++;
   }
-  return SEQUEL_DECAY ** earlierPending;
+  return SEQUEL_DECAY ** earlierInProximos;
 }
 
 /**
