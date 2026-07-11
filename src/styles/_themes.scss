@@ -128,6 +128,20 @@
 :root[data-palette="persona"] .chip,
 :root[data-palette="persona"] .hub-friend-chip,
 :root[data-palette="persona"] .rl-chip { border: none !important; border-radius: 0; font-weight: 800; transform: skewX(-7deg); clip-path: polygon(0 0, 100% 0, 92% 100%, 8% 88%); box-shadow: inset 0 0 0 2px #0a0a0a !important; }
+/* Chip del juego en la actividad social: misma FORMA rasgada + sesgo que los chips de género, RELLENO rojo
+   sólido (el corte da la silueta), con más padding/tracking que la píldora base para que respire. */
+:root[data-palette="persona"] .hub-feed-game-chip {
+  padding: .26rem .72rem;
+  color: #fff;
+  letter-spacing: .02em;
+  font-size: .68rem;
+  line-height: 1.5;
+  background: var(--steam);
+  border: none;
+  border-radius: 0;
+  transform: skewX(-7deg);
+  clip-path: polygon(0 0, 100% 0, 92% 100%, 8% 88%);
+}
 
 /* ── §7 · Segmentos y campos (filtros, búsqueda, formulario, compositor de posts): superficies con borde
    de contenedor, así que llevan el contorno `--pop-line` visible (blanco en oscuro / oscuro en claro),
@@ -190,6 +204,20 @@
   letter-spacing: .05em;
   transform: skewX(-8deg);
   box-shadow: 3px 3px 0 var(--steam);
+}
+/* Un pelín más de aire entre los elementos de la tarjeta del feed (chip→fecha, score→reseña) para que
+   respire; mínimo. La fecha además lleva su margen (su sombra de bloque la pegaba al aro de puntuación). */
+:root[data-palette="persona"] .hub-feed-activity-item { gap: .62rem; }
+:root[data-palette="persona"] .hub-feed-date { margin-bottom: .28rem; }
+/* Texto de reseña: en el feed salía en la fuente base (genérica) chocando con el resto (Arial Black). Se
+   trata como una CITA de cómic — cursiva, algo más de peso y un lomo rojo a la izquierda — legible pero P5. */
+:root[data-palette="persona"] .hub-feed-review-text,
+:root[data-palette="persona"] .hub-review-text {
+  font-style: italic;
+  font-weight: 500;
+  border-left: 3px solid var(--steam);
+  padding-left: .7rem;
+  color: var(--text);
 }
 
 /* ── §11 · Ruleta = tragaperras de cómic. Tambor y tarjetas como stickers negros con sombra roja de
