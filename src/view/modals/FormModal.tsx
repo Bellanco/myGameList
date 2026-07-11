@@ -432,7 +432,7 @@ export function FormModal({ open, draft: initialDraft, currentTab, lookups, onCl
           <div className="frow">
             <div className="fg">
               <button
-                className={`btn btn-toggle ${draft.steamDeck ? 'active btn-toggle-deck' : ''}`}
+                className={`btn btn-toggle btn-toggle-deck ${draft.steamDeck ? 'active' : ''}`}
                 type="button"
                 aria-label={UI_MESSAGES.form.steamDeck}
                 onClick={() => setLocalDraft({ ...draft, steamDeck: !draft.steamDeck })}

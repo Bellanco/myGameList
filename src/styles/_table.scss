@@ -151,11 +151,11 @@ tbody tr.main-row.just-changed { animation: rowFlash 1.3s ease-out; }
    el .chips contenedor (flex-wrap) salta la pastilla entera a la fila siguiente. */
 .chip { padding: .22rem .64rem; border-radius: var(--radius-sm); font-size: .75rem; font-weight: 600; display: inline-flex; align-items: center; gap: .35rem; white-space: nowrap; transition: transform .15s ease, filter .15s ease; }
 @media (hover:hover) { .chip:hover { transform: translateY(-1px); filter: brightness(1.08); } }
-.chip-generic { background: rgba(232,184,32,.16); color: var(--fg-amber); border: 1px solid rgba(232,184,32,.32); }
+.chip-generic { background: rgba(var(--warn-rgb),.16); color: var(--fg-amber); border: 1px solid rgba(var(--warn-rgb),.32); }
 .chip-plat    { background: var(--chip-plat-bg); color: var(--chip-plat-fg); border: 1px solid var(--chip-plat-border); }
 .chip-genre   { background: rgba(var(--steam-rgb),.18);  color: var(--fg-sky); border: 1px solid rgba(var(--steam-rgb),.35); }
-.chip-pf      { background: rgba(34,197,94,.15);color: var(--fg-green); border: 1px solid rgba(34,197,94,.3); }
-.chip-pd      { background: rgba(239,68,68,.15);  color: var(--fg-red-soft); border: 1px solid rgba(239,68,68,.3); }
+.chip-pf      { background: rgba(var(--success-rgb),.15);color: var(--fg-green); border: 1px solid rgba(var(--success-rgb),.3); }
+.chip-pd      { background: rgba(var(--danger-rgb),.15);  color: var(--fg-red-soft); border: 1px solid rgba(var(--danger-rgb),.3); }
 .chip-deck    { background: var(--chip-deck-bg); color: var(--chip-deck-fg); border: 1px solid var(--chip-deck-border); }
 .chip-rm { background: transparent; border: none; color: inherit; cursor: pointer; opacity: .78; }
 .chip-rm:hover { opacity: 1; }
@@ -195,11 +195,11 @@ tbody tr.main-row.just-changed { animation: rowFlash 1.3s ease-out; }
 /* Sin puntuación (p. ej. reseña de un juego de la lista de la vergüenza): medallón azul suave con "¿?",
    mismo lenguaje que el medallón de reseñas (`.hub-review-entry.is-noscore`). */
 .score-ring.is-noscore {
-  background: hsl(208 34% var(--acc-l) / .16);
-  border: 2px solid hsl(208 34% var(--acc-l));
+  background: var(--noscore-soft);
+  border: 2px solid var(--noscore);
 }
 .score-ring.is-noscore::after { display: none; }
-.score-ring.is-noscore .score-ring-num { color: hsl(208 34% var(--acc-l)); }
+.score-ring.is-noscore .score-ring-num { color: var(--noscore); }
 .score-ring-num {
   position: relative; z-index: 1;
   font-weight: 800; font-variant-numeric: tabular-nums; line-height: 1;
@@ -249,58 +249,39 @@ tbody tr.main-row.just-changed { animation: rowFlash 1.3s ease-out; }
 }
 @media (hover:hover) { .star-inp button:hover { transform: scale(1.12); } }
 
-/* Rejugar - Activo (Star Azul) */
+/* Badges rejugar/oportunidad — color decorativo centralizado en `--deco-badge-*` (ver _base.scss,
+   CAPA 3). Activo → acento; inactivo → aviso; bloqueado → peligro. La variante clara vive en los
+   propios tokens, así que aquí no hace falta override por tema. */
+/* Rejugar - Activo (Star, acento) */
 .badge-rejugar-activo {
   width: 32px; height: 32px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; border: none; cursor: pointer;
-  background: linear-gradient(135deg, #465b75, #586088);
-  color: #7da3c6;
-  box-shadow: 0 0 12px rgba(88, 96, 136, 0.25), 0 0 20px rgba(70, 91, 117, 0.1), inset 0 0 10px rgba(0,0,0,0.15);
+  background: var(--deco-badge-active);
+  color: var(--deco-badge-active-fg);
+  box-shadow: var(--deco-badge-active-glow);
 }
 
-/* Rejugar - Inactivo (Stack Ambar) */
+/* Rejugar - Inactivo (Stack, aviso) */
 .badge-rejugar-inactivo {
   width: 32px; height: 32px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; border: none; cursor: default;
-  background: linear-gradient(135deg, #553d33, #6d4d3f);
-  color: #8b7a6f;
-  box-shadow: 0 0 15px rgba(139, 93, 61, 0.3), inset 0 0 10px rgba(0,0,0,0.2);
+  background: var(--deco-badge-idle);
+  color: var(--deco-badge-idle-fg);
+  box-shadow: var(--deco-badge-idle-glow);
 }
 
-/* Nueva Oportunidad - Activo (Refresh Azul) */
+/* Nueva Oportunidad - Activo (Refresh, acento) */
 .badge-opp-activo {
   width: 32px; height: 32px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; border: none; cursor: pointer;
-  background: linear-gradient(135deg, #465b75, #586088);
-  color: #c9d4e0;
-  box-shadow: 0 0 12px rgba(88, 96, 136, 0.25), 0 0 20px rgba(70, 91, 117, 0.1), inset 0 0 10px rgba(0,0,0,0.15);
+  background: var(--deco-badge-active);
+  color: var(--deco-badge-active-fg);
+  box-shadow: var(--deco-badge-active-glow);
 }
 
-/* Nueva Oportunidad - Inactivo (Lock Rojo) */
+/* Nueva Oportunidad - Inactivo (Lock, peligro) */
 .badge-opp-inactivo {
   width: 32px; height: 32px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; border: none; cursor: default;
-  background: linear-gradient(135deg, #553333, #6d3f3f);
-  color: #8b6f6f;
-  box-shadow: 0 0 15px rgba(139, 77, 77, 0.3), inset 0 0 10px rgba(0,0,0,0.2);
-}
-
-/* Tema claro: los degradados oscuros (navy/marrón) de los badges quedan como
-   círculos pesados sobre superficies claras. Versiones planas con tinte de color
-   e icono de buen contraste, manteniendo la semántica (azul activo, ámbar/rojo bloqueado). */
-:root[data-theme="light"] {
-  .badge-rejugar-activo,
-  .badge-opp-activo {
-    background: rgba(var(--steam-rgb),.14);
-    color: var(--fg-sky);
-    box-shadow: inset 0 0 0 1px rgba(var(--steam-rgb),.34);
-  }
-  .badge-rejugar-inactivo {
-    background: rgba(var(--warn-rgb),.18);
-    color: var(--fg-amber);
-    box-shadow: inset 0 0 0 1px rgba(var(--warn-rgb),.42);
-  }
-  .badge-opp-inactivo {
-    background: rgba(var(--danger-rgb),.16);
-    color: var(--fg-red);
-    box-shadow: inset 0 0 0 1px rgba(var(--danger-rgb),.4);
-  }
+  background: var(--deco-badge-locked);
+  color: var(--deco-badge-locked-fg);
+  box-shadow: var(--deco-badge-locked-glow);
 }
 
 /* Chip de desbordamiento "+N" en filas (mantiene altura de fila consistente) */
@@ -343,7 +324,7 @@ tbody tr.main-row.just-changed { animation: rowFlash 1.3s ease-out; }
 }
 .rm-plat  { background: var(--chip-plat-bg); color: var(--chip-plat-fg); border-color: var(--chip-plat-border); }
 .rm-genre { background: rgba(var(--steam-rgb),.14); color: var(--fg-sky);    border-color: rgba(var(--steam-rgb),.3); }
-.rm-year  { background: rgba(232,184,32,.16); color: var(--fg-amber); border-color: rgba(232,184,32,.32); }
+.rm-year  { background: rgba(var(--warn-rgb),.16); color: var(--fg-amber); border-color: rgba(var(--warn-rgb),.32); }
 
 /* Orden visual del meta (móvil/tablet): estrellas → año → plataforma → género.
    Es independiente de la ocultación por ancho: cada píldora aparece/desaparece según su umbral
