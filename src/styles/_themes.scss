@@ -35,9 +35,11 @@
    10. CONTRASTE: al rellenar variantes de color (éxito/aviso/peligro) fija también el color de texto para
       mantener legibilidad AA (p. ej. texto oscuro sobre relleno claro).
 
-   ORDEN RECOMENDADO DE SUBSECCIONES (plantilla; copia y adapta para el siguiente tema):
-   §1 Tipografía · §2 Fondo/textura · §3 Paneles · §4 Tabla · §5 Botones · §6 Chips · §7 Segmentos y campos
-   · §8 Insignias · §9 Puntuación · §10 Actividad social (nombres + fechas) · §11 Ruleta · §12 FAB
+   ORDEN RECOMENDADO DE SUBSECCIONES (plantilla; copia y adapta para el siguiente tema). Cada tema es un
+   ÚNICO bloque autocontenido con TODAS sus reglas (nada de bloques transversales por concern al final):
+   §1 Tipografía · §2 Fondo/textura · §3 Paneles · §4 Tabla · §5 Botones (incl. :hover/:active) · §6 Chips
+   · §7 Segmentos y campos · §8 Insignias · §9 Puntuación · §10 Actividad social (nombres + fechas)
+   · §11 Ruleta · §12 FAB · §13 Barra de navegación inferior
    ───────────────────────────────────────────────────────────────────────────────────────────────── */
 
 
@@ -121,6 +123,9 @@
 :root[data-palette="persona"] .btn-recommend-active { background: var(--danger) !important; color: #fff !important; }
 /* Botones fantasma (p. ej. "Limpiar filtros"): limpios, sin corte/sombra/sesgo. */
 :root[data-palette="persona"] .btn-ghost { font-style: italic; filter: none; clip-path: none; transform: none; }
+/* Hover: el hover base hace un giro 3D que rompe el sesgo P5; aquí se mantiene el sesgo + elevación leve. */
+:root[data-palette="persona"] .btn:not(.btn-icon):not(.btn-ghost):hover { transform: skewX(-7deg) translateY(-2px); filter: brightness(1.06); }
+:root[data-palette="persona"] .btn:not(.btn-icon):not(.btn-ghost):active { transform: skewX(-7deg); }
 
 /* ── §6 · Chips (plataformas, géneros, fuertes/débiles, chip "Amigos" y chips de la ruleta, agrupados
    por regla 7): CORTE RASGADO + sesgo + contorno negro que sigue el corte (box-shadow inset). No
@@ -128,14 +133,16 @@
 :root[data-palette="persona"] .chip,
 :root[data-palette="persona"] .hub-friend-chip,
 :root[data-palette="persona"] .rl-chip { border: none !important; border-radius: 0; font-weight: 800; transform: skewX(-7deg); clip-path: polygon(0 0, 100% 0, 92% 100%, 8% 88%); box-shadow: inset 0 0 0 2px #0a0a0a !important; }
-/* Chip del juego en la actividad social: misma FORMA rasgada + sesgo que los chips de género, RELLENO rojo
-   sólido (el corte da la silueta), con más padding/tracking que la píldora base para que respire. */
+/* Chip del juego en la actividad social: la Arial Black cursiva apretaba en la píldora base (poco aire, gris
+   de bajo contraste). Se rehace como RÓTULO recto de póster — borde rojo (visible en ambos temas), más
+   padding, tracking y line-height para que respire y case con el tema. */
 :root[data-palette="persona"] .hub-feed-game-chip {
   padding: .26rem .72rem;
   color: #fff;
   letter-spacing: .02em;
   font-size: .68rem;
   line-height: 1.5;
+  /* Misma FORMA rasgada + sesgo que los chips de género (§6), RELLENO rojo sólido (el corte da la silueta). */
   background: var(--steam);
   border: none;
   border-radius: 0;
@@ -265,6 +272,10 @@
 }
 :root[data-palette="persona"] .fab:hover,
 :root[data-palette="persona"] .fab-roulette:hover { background: var(--steam-hover); border-color: #0a0a0a; filter: none; }
+
+/* ── §13 · Barra de navegación inferior: sticker de cómic (contorno grueso + sombra roja), como los paneles (§3). ── */
+:root[data-palette="persona"] .bottom-nav-inner { border: 3px solid var(--pop-line); border-radius: 6px; background: var(--surface); box-shadow: 0 8px 20px rgba(0, 0, 0, .4), 4px 4px 0 rgba(255, 78, 100, .45); }
+:root[data-palette="persona"] .bottom-nav-ind { border-radius: 3px; }
 :root[data-palette="persona"][data-theme="light"] .fab,
 :root[data-palette="persona"][data-theme="light"] .fab-roulette { color: #fff; box-shadow: 2px 2px 0 #151011; }
 
@@ -343,6 +354,9 @@
 :root[data-palette="portal"][data-theme="light"] .btn-recommend,
 :root[data-palette="portal"][data-theme="light"] .btn-inprogress { color: #fff !important; }
 :root[data-palette="portal"] .btn-ghost { font-family: 'Oswald', system-ui, sans-serif; letter-spacing: .05em; }
+/* Hover: plano (sin el giro 3D base) — elevación leve + brillo. */
+:root[data-palette="portal"] .btn:not(.btn-icon):not(.btn-ghost):hover { transform: translateY(-2px); filter: brightness(1.06); box-shadow: 0 6px 16px rgba(0, 0, 0, .28); }
+:root[data-palette="portal"] .btn:not(.btn-icon):not(.btn-ghost):active { transform: translateY(0); }
 
 /* ── §6 · Chips: rótulos de señalética (Oswald), esquinas suaves. El COLOR por categoría lo pone la base
    (adaptado a la paleta), como en el resto de temas. El chip "Amigos" se rehace como CUBO DE COMPAÑÍA:
@@ -413,6 +427,10 @@
 :root[data-palette="portal"] .fab-roulette { background: radial-gradient(circle at 50% 42%, #ffd8a0, var(--portal-orange) 70%); border: 2px solid rgba(255, 255, 255, .35); color: #3a1c00; box-shadow: 0 0 16px rgba(255, 158, 27, .6), inset 0 0 10px rgba(255, 255, 255, .4); }
 :root[data-palette="portal"] .fab:hover { filter: none; box-shadow: 0 0 22px rgba(var(--steam-rgb), .8), inset 0 0 10px rgba(255, 255, 255, .5); }
 :root[data-palette="portal"] .fab-roulette:hover { filter: none; box-shadow: 0 0 22px rgba(255, 158, 27, .85), inset 0 0 10px rgba(255, 255, 255, .5); }
+
+/* ── §13 · Barra de navegación inferior: placa Aperture — filete cian + barra naranja superior (gel), como los paneles. ── */
+:root[data-palette="portal"] .bottom-nav-inner { border: 1px solid rgba(0, 240, 255, .35); border-top: 2px solid var(--portal-orange); border-radius: var(--radius-md); background: var(--surface); }
+:root[data-palette="portal"] .bottom-nav-ind { border-radius: var(--radius-sm); }
 
 
 /* ═══════════════════════════════════════════════════════════════════════════════════════════════════
@@ -504,6 +522,9 @@
 :root[data-palette="cyberpunk"][data-theme="light"] .btn-recommend,
 :root[data-palette="cyberpunk"][data-theme="light"] .btn-inprogress { color: #fff !important; }
 :root[data-palette="cyberpunk"] .btn-ghost { font-family: 'Rajdhani', system-ui, sans-serif; font-weight: 600; letter-spacing: .05em; }
+/* Hover: plano + glow neón cian (sin el giro 3D base). */
+:root[data-palette="cyberpunk"] .btn:not(.btn-icon):not(.btn-ghost):hover { transform: translateY(-1px); filter: brightness(1.08); box-shadow: 0 0 14px rgba(0, 240, 255, .3); }
+:root[data-palette="cyberpunk"] .btn:not(.btn-icon):not(.btn-ghost):active { transform: translateY(0); }
 
 /* ── §6 · Chips: rectos, Rajdhani; el color por categoría lo pone la base (adaptado a la paleta). ── */
 :root[data-palette="cyberpunk"] .chip,
@@ -564,32 +585,6 @@
 :root[data-palette="cyberpunk"] .fab:hover { filter: none; box-shadow: 0 0 22px rgba(252, 238, 10, .85); }
 :root[data-palette="cyberpunk"] .fab-roulette:hover { filter: none; box-shadow: 0 0 22px rgba(0, 240, 255, .85); }
 
-
-/* ═══════════════════════════════════════════════════════════════════════════════════════════════════
-   HOVER de botones por tema. El hover base hace un giro 3D (`perspective/rotateX`) pensado para el tema
-   Clásico; en los skins planos/HUD (y con el sesgo de Persona) queda raro. Aquí se sustituye por un hover
-   sobrio y coherente con cada tema (elevación leve + brillo; glow neón en Cyberpunk), respetando el sesgo. ═══ */
-:root[data-palette="persona"] .btn:not(.btn-icon):not(.btn-ghost):hover { transform: skewX(-7deg) translateY(-2px); filter: brightness(1.06); }
-:root[data-palette="persona"] .btn:not(.btn-icon):not(.btn-ghost):active { transform: skewX(-7deg); }
-
-:root[data-palette="portal"] .btn:not(.btn-icon):not(.btn-ghost):hover { transform: translateY(-2px); filter: brightness(1.06); box-shadow: 0 6px 16px rgba(0, 0, 0, .28); }
-:root[data-palette="portal"] .btn:not(.btn-icon):not(.btn-ghost):active { transform: translateY(0); }
-
-:root[data-palette="cyberpunk"] .btn:not(.btn-icon):not(.btn-ghost):hover { transform: translateY(-1px); filter: brightness(1.08); box-shadow: 0 0 14px rgba(0, 240, 255, .3); }
-:root[data-palette="cyberpunk"] .btn:not(.btn-icon):not(.btn-ghost):active { transform: translateY(0); }
-
-
-/* ═══════════════════════════════════════════════════════════════════════════════════════════════════
-   BARRA DE NAVEGACIÓN INFERIOR por tema. La base es una "pastilla de cristal" igual en todos; aquí se le
-   da a cada tema el mismo lenguaje que sus paneles (§3), y al indicador activo su radio. El color activo
-   ya sigue al acento en base. ═══════════════════════════════════════════════════════════════════════ */
-/* Persona: sticker de cómic — contorno grueso (pop-line) + sombra roja, esquinas de panel. */
-:root[data-palette="persona"] .bottom-nav-inner { border: 3px solid var(--pop-line); border-radius: 6px; background: var(--surface); box-shadow: 0 8px 20px rgba(0, 0, 0, .4), 4px 4px 0 rgba(255, 78, 100, .45); }
-:root[data-palette="persona"] .bottom-nav-ind { border-radius: 3px; }
-/* Portal: placa Aperture — filete cian + barra naranja superior (gel), como los paneles. */
-:root[data-palette="portal"] .bottom-nav-inner { border: 1px solid rgba(0, 240, 255, .35); border-top: 2px solid var(--portal-orange); border-radius: var(--radius-md); background: var(--surface); }
-:root[data-palette="portal"] .bottom-nav-ind { border-radius: var(--radius-sm); }
-/* Cyberpunk: HUD — filete cian + barra amarilla lateral, esquinas rectas. */
+/* ── §13 · Barra de navegación inferior: HUD — filete cian + barra amarilla lateral, esquinas rectas. ── */
 :root[data-palette="cyberpunk"] .bottom-nav-inner { border: 1px solid rgba(0, 240, 255, .35); border-left: 3px solid var(--cyber-yellow); border-radius: 0; background: var(--surface); }
 :root[data-palette="cyberpunk"] .bottom-nav-ind { border-radius: 0; }
-
