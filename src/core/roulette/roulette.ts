@@ -1,6 +1,6 @@
 import type { GameItem, TabData, TabId } from '../../model/types/game';
 import { clampRating } from '../utils/normalize';
-import { resolveStars } from '../utils/scoreScale';
+import { clampGrade, resolveGrade, resolveStars } from '../utils/scoreScale';
 
 /**
  * Lógica unificada de la "ruleta de juegos" (fuente única, sin React).
@@ -20,10 +20,19 @@ export interface RouletteCandidate {
 /** Peso base para juegos sin puntuación: entran al sorteo con probabilidad mínima en vez de quedar fuera. */
 export const BASE_WEIGHT = 1;
 
-/** Curva de puntuación (cuadrática): a más nota, mucho más peso. Score 0 / sin puntuar → peso base. */
+/** Curva de ESTRELLAS 0–5 (cuadrática): usada por el canal social (rating público 0–5). 0/sin puntuar → base. */
 export function curveScore(score?: number): number {
   const s = clampRating(score);
   return s > 0 ? s * s : BASE_WEIGHT;
+}
+
+/**
+ * Curva de la NOTA fina 0–100 (cuadrática, misma forma que la de estrellas: 100→25, 80→16, 50→6.25). Usa el
+ * matiz de la nota en LISTADOS. 0 / sin nota → peso base.
+ */
+export function curveGrade(grade?: number): number {
+  const g = clampGrade(grade);
+  return g > 0 ? (g * g) / 400 : BASE_WEIGHT;
 }
 
 /** Peso lineal simple (estrellas efectivas o base); ponderación por defecto de pickWeighted. */
@@ -35,22 +44,22 @@ export function gameWeight(game: GameItem): number {
 /** Multiplicador por lista en LISTADOS: salen más los próximos, luego la vergüenza, luego completados. */
 const TAB_WEIGHT: Record<TabId, number> = { p: 3, v: 2, c: 1, e: 1 };
 
-/** Nota "neutra" para listas que NO se puntúan (la vergüenza): así no quedan atrás por no tener estrellas. */
-export const NEUTRAL_SCORE = 4;
+/** Nota fina "neutra" (0–100) para la vergüenza, que no se puntúa: compite por prioridad de lista sin quedar atrás. */
+export const NEUTRAL_GRADE = 75;
 
 /**
- * Score efectivo para la ponderación por lista. Si no hay nota: la vergüenza (que no se puntúa) usa la neutra
- * para competir por prioridad de lista; el resto (próximos/completados sin nota) mantiene el peso base mínimo.
+ * Nota fina efectiva (0–100) para la ponderación por lista. Si no hay nota: la vergüenza (que no se puntúa) usa
+ * la neutra para competir por prioridad de lista; el resto (próximos/completados sin nota) → 0 (peso base mínimo).
  */
-function scoreForWeight(game: GameItem, tab: TabId): number {
-  const s = resolveStars(game);
-  if (s > 0) return s;
-  return tab === 'v' ? NEUTRAL_SCORE : 0;
+function gradeForWeight(game: GameItem, tab: TabId): number {
+  const g = resolveGrade(game);
+  if (g > 0) return g;
+  return tab === 'v' ? NEUTRAL_GRADE : 0;
 }
 
-/** Ponderación en LISTADOS: curva de puntuación × multiplicador de lista (más probable lo de próximos). */
+/** Ponderación en LISTADOS: curva de la NOTA fina (0–100) × multiplicador de lista (más probable lo de próximos). */
 export function listsWeight(candidate: RouletteCandidate): number {
-  return curveScore(scoreForWeight(candidate.game, candidate.sourceTab)) * (TAB_WEIGHT[candidate.sourceTab] ?? 1);
+  return curveGrade(gradeForWeight(candidate.game, candidate.sourceTab)) * (TAB_WEIGHT[candidate.sourceTab] ?? 1);
 }
 
 // ————— Conciencia de saga (orden dentro de una serie) —————
