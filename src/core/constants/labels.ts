@@ -210,6 +210,10 @@ export const UI_MESSAGES = {
       paletteAria: 'Paleta de color',
       paletteLabel: 'Tema',
       modeLabel: 'Modo',
+      caseLabel: 'Texto',
+      caseAria: 'Caja del texto de interfaz',
+      caseNormal: 'Normal',
+      caseUpper: 'Mayúsculas',
     },
     scoreScale: {
       title: 'Puntuación',

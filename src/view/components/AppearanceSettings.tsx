@@ -3,6 +3,7 @@ import { UI_MESSAGES } from '../../core/constants/labels';
 import { PALETTES } from '../../core/constants/palettes';
 import { usePalette } from '../hooks/usePalette';
 import { useTheme } from '../hooks/useTheme';
+import { useUppercase } from '../hooks/useUppercase';
 
 const A = UI_MESSAGES.settings.appearance;
 
@@ -13,6 +14,7 @@ const A = UI_MESSAGES.settings.appearance;
 export const AppearanceSettings = memo(function AppearanceSettings() {
   const { palette, setPalette } = usePalette();
   const { theme, toggle } = useTheme();
+  const { uppercase, setUppercase } = useUppercase();
 
   return (
     <div className="settings-appearance">
@@ -53,6 +55,26 @@ export const AppearanceSettings = memo(function AppearanceSettings() {
           onClick={() => { if (theme !== 'light') toggle(); }}
         >
           <span>{A.light}</span>
+        </button>
+      </div>
+
+      <p className="settings-card-sub">{A.caseLabel}</p>
+      <div className="theme-mode-row" role="group" aria-label={A.caseAria}>
+        <button
+          type="button"
+          className={`btn btn-toggle${!uppercase ? ' active' : ''}`}
+          aria-pressed={!uppercase}
+          onClick={() => { if (uppercase) setUppercase(false); }}
+        >
+          <span>{A.caseNormal}</span>
+        </button>
+        <button
+          type="button"
+          className={`btn btn-toggle${uppercase ? ' active' : ''}`}
+          aria-pressed={uppercase}
+          onClick={() => { if (!uppercase) setUppercase(true); }}
+        >
+          <span>{A.caseUpper}</span>
         </button>
       </div>
     </div>

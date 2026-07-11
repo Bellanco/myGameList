@@ -296,6 +296,71 @@
   --tint-rgb: 56,39,19;
 }
 
+/* ── Cámara de pruebas (Portal) — Aperture Science: azul/naranja de los portales, geles, paneles limpios.
+   `--portal-orange` y `--portal-cube` (rosa del Cubo de Compañía) son tokens extra que usa solo su skin. ── */
+:root[data-palette="portal"] {
+  --bg: #12171b;
+  --surface: #1c242b;
+  --surface-hover: #27323a;
+  --surface-elevated: #313f49;
+  --border: #3d4c57;
+  --text: #e8eff4;
+  --text-muted: #a0b2be;
+  --text-dim: #6d808d;
+  --steam: #29b6f6;
+  --steam-hover: #5cc8f7;
+  --steam-rgb: 41,182,246;
+  --tab-active: #5cc8f7;
+  --success: #46c98a;
+  --success-rgb: 70,201,138;
+  --warn: #f2c300;
+  --warn-rgb: 242,195,0;
+  --danger: #ff5140;
+  --danger-rgb: 255,81,64;
+  --star-empty: #3d4c57;
+  --star-full: #ffb02e;
+  --chip-plat-fg: #cdd9e2;
+  --chip-plat-bg: rgba(160,180,195,.12);
+  --chip-plat-border: rgba(160,180,195,.30);
+  --hub-text: #eef4f8;
+  --hub-text-muted: #a7b8c4;
+  --radius-sm: 3px;
+  --radius-md: 6px;
+  --radius-lg: 10px;
+  --portal-orange: #ff9e1b;
+  --portal-cube: #f0559c;
+}
+:root[data-palette="portal"][data-theme="light"] {
+  --bg: #e7ecf0;
+  --surface: #ffffff;
+  --surface-hover: #eef2f5;
+  --surface-elevated: #f6f9fb;
+  --border: #c3ccd4;
+  --text: #17202a;
+  --text-muted: #56636e;
+  --text-dim: #7c8a96;
+  --steam: #0091d6;
+  --steam-hover: #007bb8;
+  --steam-rgb: 0,145,214;
+  --tab-active: #007bb8;
+  --success: #2f9e57;
+  --success-rgb: 47,158,87;
+  --warn: #b07f00;
+  --warn-rgb: 176,127,0;
+  --danger: #d83a2f;
+  --danger-rgb: 216,58,47;
+  --star-empty: #c3ccd4;
+  --star-full: #e39400;
+  --chip-plat-fg: #56636e;
+  --chip-plat-bg: rgba(86,99,110,.10);
+  --chip-plat-border: rgba(86,99,110,.28);
+  --hub-text: #17202a;
+  --hub-text-muted: #56636e;
+  --tint-rgb: 20,32,42;
+  --portal-orange: #f57a00;
+  --portal-cube: #d81b7a;
+}
+
 /* ══ CAPA 3 · DECORATIVOS / EXPRESIVOS ═════════════════════════════════════════
    Acentos NO semánticos (lomos de podio, avatares, badges de estado). Centralizados y
    theme-aware. Reactividad deliberada por rol (Opción B): lo que transmite "rol"
@@ -380,3 +445,32 @@ button { -webkit-tap-highlight-color: transparent; }
   :root.theme-anim,
   :root.theme-anim * { transition: none !important; }
 }
+
+/* F1 — MODO MAYÚSCULAS (preferencia de apariencia, común a TODOS los temas). Con `data-uppercase="on"`
+   se pone en versales el texto de "chrome" de la interfaz: titulares, etiquetas, botones, nombres, chips,
+   cabeceras de tabla y textos de la ruleta. NO afecta al cuerpo/reseñas ni al texto tecleado en campos,
+   para no dañar la legibilidad. Cuando está desactivado, manda la caja propia de cada tema. */
+:root[data-uppercase="on"] h1,
+:root[data-uppercase="on"] h2,
+:root[data-uppercase="on"] h3,
+:root[data-uppercase="on"] h4,
+:root[data-uppercase="on"] .modal-title,
+:root[data-uppercase="on"] .dialog-title,
+:root[data-uppercase="on"] .btn,
+:root[data-uppercase="on"] .hub-seg-btn,
+:root[data-uppercase="on"] .tab-text-full,
+:root[data-uppercase="on"] .bottom-nav-btn,
+:root[data-uppercase="on"] thead th,
+:root[data-uppercase="on"] .flabel,
+:root[data-uppercase="on"] .row-name,
+:root[data-uppercase="on"] .chip,
+:root[data-uppercase="on"] .active-filter-chip,
+:root[data-uppercase="on"] .hub-name-link,
+:root[data-uppercase="on"] .hub-detail-profile-link,
+:root[data-uppercase="on"] .hub-feed-game-chip,
+:root[data-uppercase="on"] .hub-review-game,
+:root[data-uppercase="on"] .hub-feed-day-header h4,
+:root[data-uppercase="on"] .rl-card-name,
+:root[data-uppercase="on"] .rl-card-tag,
+:root[data-uppercase="on"] .rl-item,
+:root[data-uppercase="on"] .rl-hint { text-transform: uppercase; }
