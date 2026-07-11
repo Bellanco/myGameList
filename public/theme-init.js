@@ -9,7 +9,8 @@
   // `--bg` de cada paleta y tema (debe coincidir con _base.scss). El `theme-color` se toma de aquí.
   var BG = {
     steam: { dark: '#1a1e24', light: '#f0e9db' },
-    persona: { dark: '#0d0d0d', light: '#f4f1ee' }
+    persona: { dark: '#0d0d0d', light: '#f4f1ee' },
+    lotr: { dark: '#17120b', light: '#e6d7b3' }
   };
   try {
     var pref = localStorage.getItem('mis-listas-theme'); // 'dark' | 'light' | null

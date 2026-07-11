@@ -14,7 +14,7 @@
 
 import type { ThemePreference } from '../../view/hooks/useTheme';
 
-export type PaletteId = 'steam' | 'persona';
+export type PaletteId = 'steam' | 'persona' | 'lotr';
 
 export interface PaletteMeta {
   readonly id: PaletteId;
@@ -30,6 +30,7 @@ export const DEFAULT_PALETTE: PaletteId = 'steam';
 export const PALETTES: readonly PaletteMeta[] = [
   { id: 'steam', label: 'Clásico', accent: '#1a9fff', bg: { dark: '#1a1e24', light: '#f0e9db' } },
   { id: 'persona', label: 'Corazón rebelde', accent: '#ff1f3d', bg: { dark: '#0d0d0d', light: '#f4f1ee' } },
+  { id: 'lotr', label: 'Inscripción de fuego', accent: '#a01e1e', bg: { dark: '#17120b', light: '#e6d7b3' } },
 ];
 
 const PALETTE_IDS = new Set<string>(PALETTES.map((p) => p.id));
