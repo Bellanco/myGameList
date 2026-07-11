@@ -931,6 +931,10 @@
 :root[data-palette="grimdark"] .hub-review-medal,
 :root[data-palette="grimdark"] .hub-feed-date,
 :root[data-palette="grimdark"] .hub-review-date { font-family: 'VT323', ui-monospace, monospace; letter-spacing: .02em; }
+/* La VT323 (pixel) rinde el número pequeño para su cuerpo: se agranda un poco para que se lea mejor, pero
+   sigue INSCRITO en el círculo (base .36/.30 → .5/.42 del diámetro). */
+:root[data-palette="grimdark"] .score-ring-num { font-size: calc(var(--sz) * .5); }
+:root[data-palette="grimdark"] .score-dial-num { font-size: calc(var(--sz) * .42); }
 :root[data-palette="grimdark"] .hub-name-link,
 :root[data-palette="grimdark"] .hub-detail-profile-link { color: var(--grim-green); }
 
