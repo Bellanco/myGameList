@@ -37,7 +37,8 @@
 
    ORDEN RECOMENDADO DE SUBSECCIONES (plantilla; copia y adapta para el siguiente tema). Cada tema es un
    ÚNICO bloque autocontenido con TODAS sus reglas (nada de bloques transversales por concern al final):
-   §1 Tipografía · §2 Fondo/textura · §3 Paneles · §4 Tabla · §5 Botones (incl. :hover/:active) · §6 Chips
+   §1 Tipografía · §2 Fondo/textura · §3 Paneles · §4 Tabla · §5 Botones (incl. :hover/:active)
+   · §6 Chips (categorías + `.hub-feed-game-chip`: estilízalo o cae a la píldora genérica de base)
    · §7 Segmentos y campos · §8 Insignias · §9 Puntuación · §10 Actividad social (nombres + fechas)
    · §11 Ruleta · §12 FAB · §13 Barra de navegación inferior
    ───────────────────────────────────────────────────────────────────────────────────────────────── */
@@ -329,7 +330,14 @@
 :root[data-palette="portal"] .settings-card,
 :root[data-palette="portal"] .hub-feed-card,
 :root[data-palette="portal"] .modal,
-:root[data-palette="portal"] .alert-dialog { border: 1px solid var(--border) !important; border-top: 2px solid var(--portal-orange) !important; border-radius: var(--radius-md) !important; box-shadow: 0 6px 22px rgba(0, 0, 0, .18) !important; }
+:root[data-palette="portal"] .alert-dialog { border: 1px solid var(--border) !important; border-top: 2px solid var(--portal-orange) !important; border-radius: var(--radius-md) !important; box-shadow: inset 0 1px 0 rgba(255, 255, 255, .07), inset 0 0 46px rgba(41, 182, 246, .05), 0 8px 26px rgba(0, 0, 0, .26) !important; }
+/* En claro, placa blanca "iluminada desde arriba": filo superior claro + tenue tinte frío + sombra limpia. */
+:root[data-palette="portal"][data-theme="light"] .toolbar,
+:root[data-palette="portal"][data-theme="light"] .table-wrap,
+:root[data-palette="portal"][data-theme="light"] .settings-card,
+:root[data-palette="portal"][data-theme="light"] .hub-feed-card,
+:root[data-palette="portal"][data-theme="light"] .modal,
+:root[data-palette="portal"][data-theme="light"] .alert-dialog { box-shadow: inset 0 1px 0 rgba(255, 255, 255, .9), inset 0 0 46px rgba(41, 182, 246, .05), 0 8px 22px rgba(20, 45, 70, .12) !important; }
 
 /* ── §4 · Tabla: cabecera de señalética (Oswald) con filete NARANJA (gel), otro punto de contraste con el Clásico. ── */
 :root[data-palette="portal"] thead th { background: transparent; color: var(--text-muted); border-bottom: 2px solid var(--portal-orange); }
@@ -363,6 +371,16 @@
    placa neutra con borde y corazón rosa. ── */
 :root[data-palette="portal"] .chip,
 :root[data-palette="portal"] .rl-chip { border-radius: var(--radius-sm); box-shadow: none !important; transform: none; clip-path: none; }
+/* Chip del juego (nombre) = RÓTULO DE SEÑALÉTICA naranja (gel de propulsión), distinto del azul de los
+   géneros; recto y con el filete del cartel. NOTA: cada tema debe estilar `.hub-feed-game-chip` en su §6
+   (si no, cae a la píldora genérica de base). */
+:root[data-palette="portal"] .hub-feed-game-chip {
+  padding: .2rem .62rem;
+  border-radius: var(--radius-sm);
+  background: rgba(245, 122, 0, .1);
+  border: 1px solid var(--portal-orange);
+  color: var(--portal-orange);
+}
 :root[data-palette="portal"] .hub-friend-chip {
   background: var(--surface-elevated);
   color: var(--portal-cube);
@@ -414,7 +432,13 @@
 
 /* ── §11 · Ruleta = selector de cámara de pruebas. Tambor/tarjetas = placas; el visor de selección es un
    PORTAL AZUL LUMINOSO (elipse con halo); nombres en Oswald (§1). ── */
-:root[data-palette="portal"] .rl-drum { border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--surface); box-shadow: inset 0 0 28px rgba(0, 0, 0, .32); }
+/* Tambor = "cámara": marca de agua del LOGO DE APERTURE (anillos concéntricos) al fondo + viñeta de sala. */
+:root[data-palette="portal"] .rl-drum {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: repeating-radial-gradient(circle at 50% 46%, transparent 0 9px, rgba(41, 182, 246, .05) 9px 10px), var(--surface);
+  box-shadow: inset 0 0 34px rgba(0, 0, 0, .4);
+}
 :root[data-palette="portal"] .rl-frame { border: 2.5px solid var(--steam); border-radius: 999px; box-shadow: 0 0 16px rgba(var(--steam-rgb), .5), inset 0 0 12px rgba(var(--steam-rgb), .25); }
 :root[data-palette="portal"] .rl-hint { color: var(--steam); letter-spacing: .12em; }
 :root[data-palette="portal"] .rl-ghost,
@@ -529,6 +553,15 @@
 /* ── §6 · Chips: rectos, Rajdhani; el color por categoría lo pone la base (adaptado a la paleta). ── */
 :root[data-palette="cyberpunk"] .chip,
 :root[data-palette="cyberpunk"] .rl-chip { border-radius: 0; box-shadow: none !important; transform: none; clip-path: none; }
+/* Chip del juego (nombre) = etiqueta HUD cian, distinta del amarillo de los géneros. Recto, sin píldora
+   genérica (cada tema estiliza su `.hub-feed-game-chip` en §6). */
+:root[data-palette="cyberpunk"] .hub-feed-game-chip {
+  padding: .2rem .62rem;
+  border-radius: 0;
+  background: rgba(0, 240, 255, .08);
+  border: 1px solid var(--cyber-cyan);
+  color: var(--cyber-cyan);
+}
 :root[data-palette="cyberpunk"] .hub-friend-chip { border-radius: 0; }
 
 /* ── §7 · Segmentos y campos: HUD — recto, filete cian, foco amarillo (lo da --steam en base). ── */
