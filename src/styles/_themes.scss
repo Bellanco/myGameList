@@ -79,7 +79,7 @@
 :root[data-palette="persona"] .hub-review-medal,
 :root[data-palette="persona"] .active-filter-chip {
   font-family: 'Arial Black', 'Arial Narrow', Impact, system-ui, sans-serif;
-  font-style: italic; text-transform: uppercase; letter-spacing: .01em;
+  font-style: italic; letter-spacing: .01em;
 }
 
 /* ── §2 · Fondo: semitono pop-art (puntos de tinta rojos). ── */
@@ -88,14 +88,15 @@
   background-size: 11px 11px;
 }
 
-/* ── §3 · Paneles: contorno negro grueso + sombra dura roja (sticker de cómic). Sombra roja → se ve
-   en ambos temas; en claro solo cambian los tonos de negro/rojo. ── */
+/* ── §3 · Paneles: contorno grueso + sombra dura roja (sticker de cómic). El contorno usa `--pop-line`
+   (línea de tinta theme-aware): BLANCO en oscuro para que se vea sobre el negro, oscuro en claro. Solo los
+   paneles llevan este contorno visible; el resto de componentes mantienen su borde negro original. ── */
 :root[data-palette="persona"] .toolbar,
 :root[data-palette="persona"] .table-wrap,
 :root[data-palette="persona"] .settings-card,
 :root[data-palette="persona"] .hub-feed-card,
 :root[data-palette="persona"] .modal,
-:root[data-palette="persona"] .alert-dialog { border: 3px solid #0a0a0a !important; box-shadow: 7px 7px 0 rgba(255, 31, 61, .30) !important; border-radius: 6px !important; }
+:root[data-palette="persona"] .alert-dialog { border: 3px solid var(--pop-line) !important; box-shadow: 7px 7px 0 rgba(255, 78, 100, .5) !important; border-radius: 6px !important; }
 :root[data-palette="persona"][data-theme="light"] .toolbar,
 :root[data-palette="persona"][data-theme="light"] .table-wrap,
 :root[data-palette="persona"][data-theme="light"] .settings-card,
@@ -129,7 +130,7 @@
 :root[data-palette="persona"] .btn-abandoned,
 :root[data-palette="persona"] .btn-recommend-active { background: var(--danger) !important; color: #fff !important; }
 /* Botones fantasma (p. ej. "Limpiar filtros"): limpios, sin corte/sombra/sesgo. */
-:root[data-palette="persona"] .btn-ghost { font-style: italic; text-transform: uppercase; filter: none; clip-path: none; transform: none; }
+:root[data-palette="persona"] .btn-ghost { font-style: italic; filter: none; clip-path: none; transform: none; }
 
 /* ── §6 · Chips (plataformas, géneros, fuertes/débiles, chip "Amigos" y chips de la ruleta, agrupados
    por regla 7): CORTE RASGADO + sesgo + contorno negro que sigue el corte (box-shadow inset). No
@@ -138,12 +139,14 @@
 :root[data-palette="persona"] .hub-friend-chip,
 :root[data-palette="persona"] .rl-chip { border: none !important; border-radius: 0; font-weight: 800; transform: skewX(-7deg); clip-path: polygon(0 0, 100% 0, 92% 100%, 8% 88%); box-shadow: inset 0 0 0 2px #0a0a0a !important; }
 
-/* ── §7 · Segmentos y campos: rectos, con contorno negro grueso; nada genérico. ── */
-:root[data-palette="persona"] .hub-seg { border: 2px solid #0a0a0a; }
+/* ── §7 · Segmentos y campos (filtros, búsqueda, formulario, compositor de posts): superficies con borde
+   de contenedor, así que llevan el contorno `--pop-line` visible (blanco en oscuro / oscuro en claro),
+   igual que los paneles. Botones/chips/insignias mantienen su borde negro (tienen su propia forma). ── */
+:root[data-palette="persona"] .hub-seg { border: 2px solid var(--pop-line); }
 :root[data-palette="persona"] .input-base,
 :root[data-palette="persona"] .finput,
 :root[data-palette="persona"] .ftextarea,
-:root[data-palette="persona"] .search-input { border: 2px solid #0a0a0a !important; border-radius: 0 !important; }
+:root[data-palette="persona"] .search-input { border: 2px solid var(--pop-line) !important; border-radius: 0 !important; }
 
 /* ── §8 · Insignias rejugar/oportunidad: planas, contorno negro, sombra dura (roja o negra según fondo). ── */
 :root[data-palette="persona"] .badge-rejugar-activo,

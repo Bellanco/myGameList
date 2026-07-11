@@ -199,6 +199,9 @@
   --radius-sm: 3px;
   --radius-md: 4px;
   --radius-lg: 8px;
+  /* Línea de tinta del cómic (bordes/contornos): CLARA en oscuro (se ve sobre el negro), oscura en claro.
+     Mismo criterio que las sombras de bloque (regla 1). */
+  --pop-line: #f4f2f5;
 }
 :root[data-palette="persona"][data-theme="light"] {
   --bg: #f4f1ee;
@@ -227,6 +230,7 @@
   --hub-text: #120e0e;
   --hub-text-muted: #5f5550;
   --tint-rgb: 40,10,10;
+  --pop-line: #151011;
 }
 
 /* ── Inscripción de fuego (El Señor de los Anillos) — según los MAPAS y LIBROS de Tolkien: tinta sepia
