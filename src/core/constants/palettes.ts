@@ -14,13 +14,16 @@
 
 import type { ThemePreference } from '../../view/hooks/useTheme';
 
-export type PaletteId = 'steam' | 'persona' | 'lotr' | 'portal';
+export type PaletteId = 'steam' | 'persona' | 'portal' | 'cyberpunk';
 
 export interface PaletteMeta {
   readonly id: PaletteId;
   readonly label: string;
   /** Color de acento (para la muestra en el selector). */
   readonly accent: string;
+  /** Color secundario OPCIONAL para la muestra del selector (temas con dualidad de color, p. ej. el
+   *  azul+naranja de "Cámara de pruebas"), para distinguirlos de otros de acento parecido. */
+  readonly accent2?: string;
   /** `--bg` de cada tema; debe coincidir con `_base.scss`. */
   readonly bg: { readonly dark: string; readonly light: string };
 }
@@ -30,8 +33,8 @@ export const DEFAULT_PALETTE: PaletteId = 'steam';
 export const PALETTES: readonly PaletteMeta[] = [
   { id: 'steam', label: 'Clásico', accent: '#1a9fff', bg: { dark: '#1a1e24', light: '#f0e9db' } },
   { id: 'persona', label: 'Corazón rebelde', accent: '#ff1f3d', bg: { dark: '#0d0d0d', light: '#f4f1ee' } },
-  { id: 'lotr', label: 'Inscripción de fuego', accent: '#a01e1e', bg: { dark: '#17120b', light: '#e6d7b3' } },
-  { id: 'portal', label: 'Cámara de pruebas', accent: '#0091d6', bg: { dark: '#12171b', light: '#e7ecf0' } },
+  { id: 'portal', label: 'Cámara de pruebas', accent: '#0091d6', accent2: '#f57a00', bg: { dark: '#12171b', light: '#e7ecf0' } },
+  { id: 'cyberpunk', label: 'Sin futuro', accent: '#fcee0a', accent2: '#00f0ff', bg: { dark: '#08090d', light: '#e7eaee' } },
 ];
 
 const PALETTE_IDS = new Set<string>(PALETTES.map((p) => p.id));

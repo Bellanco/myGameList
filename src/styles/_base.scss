@@ -233,73 +233,6 @@
   --pop-line: #151011;
 }
 
-/* ── Inscripción de fuego (El Señor de los Anillos) — según los MAPAS y LIBROS de Tolkien: tinta sepia
-   sobre pergamino, ETIQUETAS EN ROJO (rojo sellalacre), uncial/imprenta antigua. No el oro del cartel
-   de las películas: el oro solo aparece en el anillo de la puntuación. ── */
-:root[data-palette="lotr"] {
-  --bg: #1c1610;
-  /* Salto amplio fondo→superficie para que los paneles FLOTEN (antes casi iguales → plano/anticuado). */
-  --surface: #362b1d;
-  --surface-hover: #443728;
-  --surface-elevated: #564634;
-  --border: #7a6340;
-  --text: #efe3c6;
-  --text-muted: #c8b98e;
-  --text-dim: #9c885d;
-  /* Rojo ILUMINADO POR FUEGO (brasa del Monte del Destino): el rojo sellalacre no llega a AA sobre el
-     negro; este ascua sí contrasta como texto/rótulo y mantiene la identidad roja del tema. */
-  --steam: #e3674d;
-  --steam-hover: #f0846b;
-  --steam-rgb: 227,103,77;
-  --tab-active: #f0846b;
-  --success: #8fae63;
-  --success-rgb: 143,174,99;
-  --warn: #d9ab48;
-  --warn-rgb: 217,171,72;
-  --danger: #d97a2e;
-  --danger-rgb: 217,122,46;
-  --star-empty: #5f4c2e;
-  --star-full: #d7b23f;
-  --chip-plat-fg: #cdbb90;
-  --chip-plat-bg: rgba(205,187,144,.12);
-  --chip-plat-border: rgba(205,187,144,.34);
-  --hub-text: #efe3c6;
-  --hub-text-muted: #cdbb90;
-  --radius-sm: 2px;
-  --radius-md: 3px;
-  --radius-lg: 6px;
-}
-/* Claro = pergamino de los MAPAS de las películas/pósters (Daniel Reeve): tan ocre envejecido + tinta
-   sepia-marrón, con el rojo de rótulo tirando a ladrillo para casar con el ocre. */
-:root[data-palette="lotr"][data-theme="light"] {
-  --bg: #ddc9a0;
-  --surface: #e9d9b8;
-  --surface-hover: #d2bd93;
-  --surface-elevated: #efe2c4;
-  --border: #ac9469;
-  --text: #382713;
-  --text-muted: #5e4a2c;
-  --text-dim: #856f4a;
-  --steam: #8a2b1e;
-  --steam-hover: #6f2015;
-  --steam-rgb: 138,43,30;
-  --tab-active: #6f2015;
-  --success: #55702f;
-  --success-rgb: 85,112,47;
-  --warn: #9a6f12;
-  --warn-rgb: 154,111,18;
-  --danger: #9c4413;
-  --danger-rgb: 156,68,19;
-  --star-empty: #ac9469;
-  --star-full: #9a7d1f;
-  --chip-plat-fg: #5e4a2c;
-  --chip-plat-bg: rgba(94,74,44,.12);
-  --chip-plat-border: rgba(94,74,44,.32);
-  --hub-text: #382713;
-  --hub-text-muted: #5e4a2c;
-  --tint-rgb: 56,39,19;
-}
-
 /* ── Cámara de pruebas (Portal) — Aperture Science: azul/naranja de los portales, geles, paneles limpios.
    `--portal-orange` y `--portal-cube` (rosa del Cubo de Compañía) son tokens extra que usa solo su skin. ── */
 :root[data-palette="portal"] {
@@ -363,6 +296,74 @@
   --tint-rgb: 20,32,42;
   --portal-orange: #f57a00;
   --portal-cube: #d81b7a;
+}
+
+/* ── Sin futuro (Cyberpunk 2077) — HUD de Night City: amarillo ácido + cian + magenta sobre
+   negro azulado, glitch de aberración cromática, marcos angulares. `--cyber-yellow/cyan/magenta` son
+   tokens extra que usa su skin (el amarillo de relleno se mantiene en ambos temas). ── */
+:root[data-palette="cyberpunk"] {
+  --bg: #08090d;
+  --surface: #101319;
+  --surface-hover: #181c25;
+  --surface-elevated: #202531;
+  --border: #333c4a;
+  --text: #eef3f7;
+  --text-muted: #99a6b4;
+  --text-dim: #63707e;
+  --steam: #fcee0a;
+  --steam-hover: #ffff45;
+  --steam-rgb: 252,238,10;
+  --tab-active: #fcee0a;
+  --success: #46e37a;
+  --success-rgb: 70,227,122;
+  --warn: #ff9e1b;
+  --warn-rgb: 255,158,27;
+  --danger: #ff2e4e;
+  --danger-rgb: 255,46,78;
+  --star-empty: #333c4a;
+  --star-full: #fcee0a;
+  --chip-plat-fg: #b9c6d3;
+  --chip-plat-bg: rgba(0,240,255,.08);
+  --chip-plat-border: rgba(0,240,255,.30);
+  --hub-text: #f2f6fa;
+  --hub-text-muted: #a6b3c1;
+  --radius-sm: 0px;
+  --radius-md: 0px;
+  --radius-lg: 2px;
+  --cyber-yellow: #fcee0a;
+  --cyber-cyan: #00f0ff;
+  --cyber-magenta: #ff2a6d;
+}
+:root[data-palette="cyberpunk"][data-theme="light"] {
+  --bg: #e7eaee;
+  --surface: #f4f6f8;
+  --surface-hover: #dde2e7;
+  --surface-elevated: #fbfcfd;
+  --border: #b7c0ca;
+  --text: #0d1319;
+  --text-muted: #4c5967;
+  --text-dim: #78848f;
+  --steam: #0089a3;
+  --steam-hover: #006f86;
+  --steam-rgb: 0,137,163;
+  --tab-active: #006f86;
+  --success: #1f9e57;
+  --success-rgb: 31,158,87;
+  --warn: #b06f00;
+  --warn-rgb: 176,111,0;
+  --danger: #d11a2e;
+  --danger-rgb: 209,26,46;
+  --star-empty: #b7c0ca;
+  --star-full: #caa500;
+  --chip-plat-fg: #4c5967;
+  --chip-plat-bg: rgba(0,137,163,.10);
+  --chip-plat-border: rgba(0,137,163,.30);
+  --hub-text: #0d1319;
+  --hub-text-muted: #4c5967;
+  --tint-rgb: 13,19,25;
+  --cyber-yellow: #f2df00;
+  --cyber-cyan: #0097b3;
+  --cyber-magenta: #cc0057;
 }
 
 /* ══ CAPA 3 · DECORATIVOS / EXPRESIVOS ═════════════════════════════════════════

@@ -10,8 +10,8 @@
   var BG = {
     steam: { dark: '#1a1e24', light: '#f0e9db' },
     persona: { dark: '#0d0d0d', light: '#f4f1ee' },
-    lotr: { dark: '#17120b', light: '#e6d7b3' },
-    portal: { dark: '#12171b', light: '#e7ecf0' }
+    portal: { dark: '#12171b', light: '#e7ecf0' },
+    cyberpunk: { dark: '#08090d', light: '#e7eaee' }
   };
   try {
     var pref = localStorage.getItem('mis-listas-theme'); // 'dark' | 'light' | null
