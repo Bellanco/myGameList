@@ -82,11 +82,11 @@ describe('curve & context weighting', () => {
   });
 
   it('listsWeight multiplies the curve by the list factor (próximos > vergüenza > completista)', () => {
-    expect(listsWeight(cand('p', 2))).toBe(4 * 3);
+    expect(listsWeight(cand('p', 2))).toBe(4 * 3.5);
     expect(listsWeight(cand('v', 2))).toBe(4 * 2);
     expect(listsWeight(cand('c', 2))).toBe(4 * 1);
     // an unscored próximo still weighs (base × list factor), so próximos keep showing up
-    expect(listsWeight(cand('p', 0))).toBe(BASE_WEIGHT * 3);
+    expect(listsWeight(cand('p', 0))).toBe(BASE_WEIGHT * 3.5);
   });
 
   it('profileWeight boosts replayable, but below a score step', () => {
@@ -153,8 +153,8 @@ describe('scoreless shame list fairness', () => {
   it('a scoreless shame game uses the neutral grade instead of the tiny base', () => {
     // vergüenza sin nota → curveGrade(NEUTRAL_GRADE) × TAB(v=2) (compite, no se queda en ~2)
     expect(listsWeight(cand('v', 0))).toBeCloseTo(curveGrade(NEUTRAL_GRADE) * 2);
-    // un próximo sin "interés" mantiene el peso base (1 × 3)
-    expect(listsWeight(cand('p', 0))).toBe(1 * 3);
+    // un próximo sin "interés" mantiene el peso base (1 × 3.5)
+    expect(listsWeight(cand('p', 0))).toBe(1 * 3.5);
     // así la vergüenza no queda por detrás de una lista sin puntuar
     expect(listsWeight(cand('v', 0))).toBeGreaterThan(listsWeight(cand('p', 0)));
   });
@@ -218,5 +218,15 @@ describe('series-aware ordering', () => {
     const data = tabData({ e: [g(2, 'Saga 2')], p: [g(3, 'Saga 3')] });
     const w = buildListsWeigher(data);
     expect(w(p(data.p[0]))).toBeCloseTo(listsWeight(p(data.p[0])) * SEQUEL_DECAY);
+  });
+
+  it('only penalizes when the earlier entry is also in próximos, not in the shame list', () => {
+    // Anterior en vergüenza → la secuela NO se penaliza (solo cuentan las anteriores en próximos).
+    const shame = tabData({ v: [g(1, 'Saga')], p: [g(2, 'Saga 2')] });
+    expect(buildListsWeigher(shame)(p(shame.p[0]))).toBe(listsWeight(p(shame.p[0])));
+    // Ambas en próximos → sí se penaliza la 2ª.
+    const both = tabData({ p: [g(1, 'Saga'), g(2, 'Saga 2')] });
+    const w = buildListsWeigher(both);
+    expect(w(p(both.p[1]))).toBeCloseTo(listsWeight(p(both.p[1])) * SEQUEL_DECAY);
   });
 });
