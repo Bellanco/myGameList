@@ -189,7 +189,35 @@
 .settings-appearance .settings-card-sub { margin: 0 0 .5rem; }
 .settings-appearance .settings-card-sub + .settings-card-sub,
 .settings-appearance .theme-mode-row + .settings-card-sub { margin-top: 1rem; }
-.palette-swatch { display: inline-block; width: 1.15rem; height: 1.15rem; border-radius: 50%; box-shadow: inset 0 0 0 2px rgba(255,255,255,.25); }
+/* Cada opción de tema es una MINI-PREVISUALIZACIÓN: tarjeta con el fondo oscuro del tema, una barra de
+   acento arriba y una esquina con el fondo claro → previsualiza los tres colores de un vistazo. Los colores
+   llegan por variables (`--sw-*`) fijadas en el botón de la opción. */
+.palette-swatch {
+  position: relative;
+  width: 3.1rem;
+  height: 1.95rem;
+  border-radius: 6px;
+  overflow: hidden;
+  background: var(--sw-dark, var(--surface-elevated));
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .16);
+  transition: transform .16s ease;
+}
+.palette-swatch::before { /* barra de acento superior: acento + color secundario si el tema es dual (p. ej. azul+naranja) */
+  content: ''; position: absolute; inset: 0 0 auto 0; height: 6px;
+  background: linear-gradient(90deg, var(--sw-accent, var(--steam)) 0 60%, var(--sw-accent2, var(--sw-accent, var(--steam))) 60% 100%);
+}
+.palette-swatch::after { /* esquina inferior derecha con el fondo claro del tema */
+  content: ''; position: absolute; right: 0; bottom: 0; width: 46%; height: 62%;
+  background: var(--sw-light, #fff); clip-path: polygon(100% 0, 100% 100%, 0 100%);
+}
+.score-scale-opt:hover:not(:disabled) .palette-swatch { transform: translateY(-1px) scale(1.04); }
+
+/* En el selector de TEMA, la opción activa se resalta con el ACENTO DEL PROPIO TEMA (no el azul genérico),
+   para que cada identidad "pegue" con su color. Ámbito acotado a Ajustes de apariencia. */
+.settings-appearance .score-scale-opt.on { border-color: var(--sw-accent); box-shadow: 0 0 0 1px var(--sw-accent), 0 6px 18px color-mix(in srgb, var(--sw-accent) 22%, transparent); }
+.settings-appearance .score-scale-opt.on .score-scale-dot { border-color: var(--sw-accent); }
+.settings-appearance .score-scale-opt.on .score-scale-dot::after { background: var(--sw-accent); }
+.settings-appearance .score-scale-opt:focus-visible { outline-color: var(--sw-accent); }
 .theme-mode-row { display: flex; gap: .5rem; }
 /* `flex: 1 1 0` → ambos botones ocupan la misma mitad aunque el texto sea más largo (antes `auto` los
    dimensionaba por contenido y quedaban de tamaños distintos). */

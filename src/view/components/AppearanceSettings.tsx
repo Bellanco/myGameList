@@ -1,4 +1,4 @@
-import { memo } from 'react';
+import { memo, type CSSProperties } from 'react';
 import { UI_MESSAGES } from '../../core/constants/labels';
 import { PALETTES } from '../../core/constants/palettes';
 import { usePalette } from '../hooks/usePalette';
@@ -27,12 +27,13 @@ export const AppearanceSettings = memo(function AppearanceSettings() {
             role="radio"
             aria-checked={palette === p.id}
             className={`score-scale-opt${palette === p.id ? ' on' : ''}`}
+            style={{ '--sw-accent': p.accent, '--sw-accent2': p.accent2 ?? p.accent, '--sw-dark': p.bg.dark, '--sw-light': p.bg.light } as CSSProperties}
             onClick={() => setPalette(p.id)}
           >
             <span className="score-scale-dot" aria-hidden="true" />
             <span className="score-scale-txt"><b>{p.label}</b></span>
             <span className="score-scale-sample" aria-hidden="true">
-              <span className="palette-swatch" style={{ background: p.accent }} />
+              <span className="palette-swatch" aria-hidden="true" />
             </span>
           </button>
         ))}
