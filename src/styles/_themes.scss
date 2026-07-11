@@ -1,3 +1,13 @@
+/* Tengwar (élfico) para el acento DECORATIVO del tema "Inscripción de fuego". Fuente OFL autoalojada
+   (Alcarin Tengwar, de Toshi Omagari) en `public/fonts/` → servida desde 'self' (permitido por la CSP).
+   Solo se usa como ornamento NO informativo; el texto legible va en Uncial/IM Fell. */
+@font-face {
+  font-family: 'Alcarin Tengwar';
+  src: url('/fonts/alcarin-tengwar.woff2') format('woff2');
+  font-weight: 400;
+  font-display: block;
+}
+
 /* F1 — CAPA 3 · DIRECCIÓN DE ARTE POR TEMA (skins fuertes sobre los componentes reales).
    Cada tema debe leerse como un mundo distinto, no como el mismo recoloreado. Solo se activan con
    `[data-palette="…"]`; el tema por defecto ("Clásico", sin atributo) no se toca. Va el ÚLTIMO en
@@ -101,7 +111,9 @@
    sombra es clara en oscuro y negra en claro (regla 1); el sesgo + borde + sombra dan la forma P5.
    El texto se contra-sesga con `> *` para que quede recto (regla 4). ── */
 :root[data-palette="persona"] .btn:not(.btn-icon):not(.btn-ghost) { border: 2.5px solid #0a0a0a !important; border-radius: 0 !important; transform: skewX(-7deg); font-weight: 900; box-shadow: 5px 5px 0 rgba(255, 255, 255, .92) !important; }
-:root[data-palette="persona"] .btn:not(.btn-icon):not(.btn-ghost) > * { display: inline-block; transform: skewX(7deg); }
+/* `:not(input)` excluye el <input type="file"> oculto de los labels-botón (p. ej. "Importar"): sin esto,
+   el contra-sesgo le forzaba `display:inline-block` y reaparecía el botón nativo "Examinar". */
+:root[data-palette="persona"] .btn:not(.btn-icon):not(.btn-ghost) > *:not(input) { display: inline-block; transform: skewX(7deg); }
 :root[data-palette="persona"][data-theme="light"] .btn:not(.btn-icon):not(.btn-ghost) { border-color: #151011 !important; box-shadow: 5px 5px 0 #151011 !important; }
 /* Relleno sólido por variante → la sombra de bloque se ve en TODOS los botones, no solo el contorno.
    Se fija el color de texto por contraste (regla 10). */
@@ -237,3 +249,181 @@
 :root[data-palette="persona"] .fab-roulette:hover { background: var(--steam-hover); border-color: #0a0a0a; filter: none; }
 :root[data-palette="persona"][data-theme="light"] .fab,
 :root[data-palette="persona"][data-theme="light"] .fab-roulette { color: #fff; box-shadow: 2px 2px 0 #151011; }
+
+
+/* ═══════════════════════════════════════════════════════════════════════════════════════════════════
+   TEMA · Inscripción de fuego (El Señor de los Anillos) — MAPAS Y LIBROS DE TOLKIEN (no el cartel de las
+   películas): tinta sepia sobre pergamino, ETIQUETAS EN ROJO, escritura uncial + imprenta antigua, cartelas
+   de mapa y sellos de lacre. SIN glow ni degradados brillantes (es papel y tinta, no magia luminosa). El oro
+   solo aparece en el anillo de la puntuación. Identidad de color: CAPA 2 en `_base.scss`. ═══════════════ */
+
+/* ── §1 · Tipografía: IM Fell English (imprenta antigua) para cuerpo, etiquetas, botones y nombres — con
+   MINÚSCULAS normales, como el tema por defecto (nada de versalitas); Uncial Antiqua (mano de mapa) solo
+   para los momentos hero. El rojo de las etiquetas se aplica a titulares y nombres (rótulos de los mapas). ── */
+:root[data-palette="lotr"] body { font-family: 'IM Fell English', Georgia, serif; }
+:root[data-palette="lotr"] h3,
+:root[data-palette="lotr"] h4,
+:root[data-palette="lotr"] .modal-title,
+:root[data-palette="lotr"] .dialog-title,
+:root[data-palette="lotr"] .rl-card-tag,
+:root[data-palette="lotr"] .rl-item,
+:root[data-palette="lotr"] .rl-hint,
+:root[data-palette="lotr"] .btn,
+:root[data-palette="lotr"] .hub-seg-btn,
+:root[data-palette="lotr"] thead th,
+:root[data-palette="lotr"] .flabel,
+:root[data-palette="lotr"] .row-name,
+:root[data-palette="lotr"] .hub-name-link,
+:root[data-palette="lotr"] .hub-detail-profile-link,
+:root[data-palette="lotr"] .hub-feed-game-chip,
+:root[data-palette="lotr"] .hub-review-game,
+:root[data-palette="lotr"] .score-ring-num,
+:root[data-palette="lotr"] .score-dial-num,
+:root[data-palette="lotr"] .hub-review-medal,
+:root[data-palette="lotr"] .chip,
+:root[data-palette="lotr"] .active-filter-chip { font-family: 'IM Fell English', Georgia, serif; letter-spacing: .03em; }
+/* Momentos hero (mano de mapa uncial): título de sección, resultado de ruleta y cabecera de día. */
+:root[data-palette="lotr"] h2,
+:root[data-palette="lotr"] .rl-card-name,
+:root[data-palette="lotr"] .hub-feed-day-header h4 { font-family: 'Uncial Antiqua', 'IM Fell English', Georgia, serif; color: var(--steam); }
+/* Rótulos en rojo, como las etiquetas de los mapas de Tolkien. */
+:root[data-palette="lotr"] .hub-name-link,
+:root[data-palette="lotr"] .hub-detail-profile-link,
+:root[data-palette="lotr"] thead th { color: var(--steam); }
+/* ACENTO TENGWAR (decorativo, NO informativo): una inscripción élfica tenue bajo los títulos de sección y
+   de modal. Glifos del Área de Uso Privado (CSUR) de Alcarin Tengwar; `font-display: block` evita el flash
+   de tofu si aún no cargó. Es ornamento: el texto legible del título va en Uncial (arriba). */
+:root[data-palette="lotr"] h2::after,
+:root[data-palette="lotr"] .modal-title::after {
+  content: "\e011\e004\e018\e00b\e015\e001\e00e\e01a\e007\e013\e005\e019";
+  display: block;
+  font-family: 'Alcarin Tengwar', serif;
+  font-size: .46em;
+  line-height: 1;
+  letter-spacing: .12em;
+  color: rgba(var(--steam-rgb), .45);
+  margin-top: .4em;
+  white-space: nowrap;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+/* ── §2 · Fondo: grano tenue de pergamino (mota cálida, sin retícula dura). ── */
+:root[data-palette="lotr"] body {
+  background-image:
+    radial-gradient(rgba(120, 90, 40, .05) 1px, transparent 1.6px),
+    radial-gradient(rgba(90, 60, 25, .04) 1px, transparent 1.6px);
+  background-size: 7px 7px, 13px 13px;
+  background-position: 0 0, 4px 6px;
+}
+
+/* ── §3 · Paneles: cartela de mapa — filete de tinta exterior + hilo rojo interior (doble regla). Sin
+   sombra brillante (regla 3: nada de glow). ── */
+:root[data-palette="lotr"] .toolbar,
+:root[data-palette="lotr"] .table-wrap,
+:root[data-palette="lotr"] .settings-card,
+:root[data-palette="lotr"] .hub-feed-card,
+:root[data-palette="lotr"] .modal,
+:root[data-palette="lotr"] .alert-dialog { border: 1px solid var(--border) !important; border-radius: var(--radius-sm) !important; box-shadow: inset 0 0 0 2px var(--surface), inset 0 0 0 3px rgba(var(--steam-rgb), .32) !important; }
+
+/* ── §4 · Tabla: cabecera como rótulos de mapa (versalitas rojas + filete de tinta). ── */
+:root[data-palette="lotr"] thead th { background: transparent; text-transform: uppercase; letter-spacing: .06em; border-bottom: 1px solid var(--border); }
+
+/* ── §5 · Botones: placas de libro/lacre. Acento = sello rojo de lacre con texto crema; variantes rellenas
+   con su color; texto crema en CLARO y oscuro en OSCURO para éxito/aviso (regla 10). Sin degradado ni glow
+   (el papel es mate). IM Fell SC solo tiene 400. ── */
+:root[data-palette="lotr"] .btn:not(.btn-icon):not(.btn-ghost) { font-weight: 400; letter-spacing: .04em; border: 1px solid var(--border); border-radius: var(--radius-sm); }
+:root[data-palette="lotr"] .btn-secondary,
+:root[data-palette="lotr"] .btn-toggle:not(.active) { background: var(--surface-elevated) !important; color: var(--text) !important; }
+:root[data-palette="lotr"] .btn-accent,
+:root[data-palette="lotr"] .btn-steam,
+:root[data-palette="lotr"] .btn.is-active,
+:root[data-palette="lotr"] .btn-toggle.active { background: var(--steam) !important; color: #1c1006 !important; border-color: color-mix(in srgb, var(--steam) 55%, #000) !important; }
+:root[data-palette="lotr"] .btn-complete,
+:root[data-palette="lotr"] .btn-recommend { background: var(--success) !important; color: #15120a !important; border-color: color-mix(in srgb, var(--success) 55%, #000) !important; }
+:root[data-palette="lotr"] .btn-inprogress { background: var(--warn) !important; color: #15120a !important; border-color: color-mix(in srgb, var(--warn) 55%, #000) !important; }
+:root[data-palette="lotr"] .btn-danger,
+:root[data-palette="lotr"] .btn-abandoned,
+:root[data-palette="lotr"] .btn-recommend-active { background: var(--danger) !important; color: #1c1006 !important; border-color: color-mix(in srgb, var(--danger) 55%, #000) !important; }
+/* En claro los rellenos son oscuros → texto crema (en oscuro son ascuas claras → texto tinta, arriba). */
+:root[data-palette="lotr"][data-theme="light"] .btn-accent,
+:root[data-palette="lotr"][data-theme="light"] .btn-steam,
+:root[data-palette="lotr"][data-theme="light"] .btn.is-active,
+:root[data-palette="lotr"][data-theme="light"] .btn-toggle.active,
+:root[data-palette="lotr"][data-theme="light"] .btn-complete,
+:root[data-palette="lotr"][data-theme="light"] .btn-recommend,
+:root[data-palette="lotr"][data-theme="light"] .btn-inprogress,
+:root[data-palette="lotr"][data-theme="light"] .btn-danger,
+:root[data-palette="lotr"][data-theme="light"] .btn-abandoned,
+:root[data-palette="lotr"][data-theme="light"] .btn-recommend-active { color: #fdf1dc !important; }
+:root[data-palette="lotr"] .btn-ghost { font-family: 'IM Fell English', Georgia, serif; letter-spacing: .04em; }
+
+/* ── §6 · Chips (agrupados, regla 7): SOLO forma y tipografía del tema. El COLOR por categoría lo pone la
+   base (género→acento, fuertes→éxito, débiles→peligro, plataforma→neutro), y esos tokens ya se adaptan a la
+   paleta → variedad temática sin monocromar. Sin corte ni sombra. ── */
+:root[data-palette="lotr"] .chip,
+:root[data-palette="lotr"] .hub-friend-chip,
+:root[data-palette="lotr"] .rl-chip { border-radius: var(--radius-sm); font-family: 'IM Fell English', Georgia, serif; letter-spacing: .02em; box-shadow: none !important; transform: none; clip-path: none; }
+
+/* ── §7 · Segmentos y campos: pergamino reglado — filete de tinta con renglón rojo inferior. ── */
+:root[data-palette="lotr"] .hub-seg { border: 1px solid var(--border); }
+:root[data-palette="lotr"] .input-base,
+:root[data-palette="lotr"] .finput,
+:root[data-palette="lotr"] .ftextarea,
+:root[data-palette="lotr"] .search-input { border: 1px solid var(--border) !important; border-bottom: 2px solid var(--steam) !important; border-radius: var(--radius-sm) !important; }
+
+/* ── §8 · Insignias rejugar/oportunidad: activa = sello de lacre rojo; inactiva = pergamino con filete rojo. ── */
+:root[data-palette="lotr"] .badge-rejugar-activo,
+:root[data-palette="lotr"] .badge-opp-activo { background: var(--steam) !important; color: #1c1006 !important; border: 1px solid color-mix(in srgb, var(--steam) 55%, #000) !important; box-shadow: none !important; }
+:root[data-palette="lotr"][data-theme="light"] .badge-rejugar-activo,
+:root[data-palette="lotr"][data-theme="light"] .badge-opp-activo { color: #f3e7c8 !important; }
+:root[data-palette="lotr"] .badge-rejugar-inactivo,
+:root[data-palette="lotr"] .badge-opp-inactivo { background: var(--surface-elevated) !important; color: var(--steam) !important; border: 1px solid var(--steam) !important; box-shadow: none !important; }
+
+/* ── §9 · Puntuación 0–100: aquí SÍ el oro — el medallón es el Anillo, un aro dorado (sin glow). ── */
+:root[data-palette="lotr"] .score-ring,
+:root[data-palette="lotr"] .score-dial,
+:root[data-palette="lotr"] .hub-review-medal { box-shadow: 0 0 0 2px #b8912f !important; }
+
+/* ── §10 · Actividad social. Nombres ya toman versalitas rojas (§1). FECHAS = rótulos de mapa: la cabecera
+   de día es un TÍTULO uncial rojo con filete inferior; el timestamp es una LÍNEA DE ANOTACIÓN en versalitas
+   con un fleurón rojo guía (regla 6: sin clip-path, aguanta dos líneas). ── */
+/* Fondo OPACO (var(--bg)) para que al quedar fija (sticky) ocluya las tarjetas que pasan por debajo; NO se
+   fija `position` para no anular el `position: sticky` de base (regla: el `::after` ya se ancla al sticky). */
+:root[data-palette="lotr"] .hub-feed-day-header { background: var(--bg) !important; border: none !important; border-radius: 0 !important; box-shadow: none !important; padding: .1rem .6rem .38rem; }
+:root[data-palette="lotr"] .hub-feed-day-header h4 { letter-spacing: .04em; }
+:root[data-palette="lotr"] .hub-feed-day-header::after { content: ''; position: absolute; left: 8%; right: 8%; bottom: 0; height: 1px; background: linear-gradient(90deg, transparent, rgba(var(--steam-rgb), .6), transparent); }
+:root[data-palette="lotr"] .hub-feed-date,
+:root[data-palette="lotr"] .hub-review-date {
+  display: inline-flex;
+  align-items: center;
+  gap: .45em;
+  background: none;
+  border: none;
+  box-shadow: none;
+  padding: 0;
+  color: var(--text-muted);
+  font-family: 'IM Fell English', Georgia, serif;
+  font-size: .74rem;
+  letter-spacing: .04em;
+  transform: none;
+}
+:root[data-palette="lotr"] .hub-feed-date::before,
+:root[data-palette="lotr"] .hub-review-date::before { content: '\2767'; color: var(--steam); font-size: .8em; }
+
+/* ── §11 · Ruleta = echar suertes sobre un mapa/pergamino. Tambor y tarjetas con cartela de tinta+rojo; el
+   visor de selección es un recuadro rojo (rótulo del elegido), sin glow; nombres en uncial (§1). ── */
+:root[data-palette="lotr"] .rl-drum { border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); box-shadow: inset 0 0 22px rgba(0, 0, 0, .4), inset 0 0 0 2px var(--surface), inset 0 0 0 3px rgba(var(--steam-rgb), .3); }
+:root[data-palette="lotr"] .rl-frame { border: 2px solid var(--steam); border-radius: var(--radius-sm); box-shadow: inset 0 0 0 2px rgba(var(--steam-rgb), .14); }
+:root[data-palette="lotr"] .rl-hint { color: var(--steam); letter-spacing: .1em; }
+:root[data-palette="lotr"] .rl-ghost,
+:root[data-palette="lotr"] .rl-card { border: 1px solid var(--border); border-radius: var(--radius-sm); box-shadow: inset 0 0 0 2px var(--surface), inset 0 0 0 3px rgba(var(--steam-rgb), .28); }
+:root[data-palette="lotr"] .rl-card-tag { color: var(--steam); }
+
+/* ── §12 · FAB redondos (agrupados, regla 7): SELLOS DE LACRE rojo — disco acuñado con bisel estampado.
+   Redondos por naturaleza (regla 5: sin desplazamiento de sombra en un círculo). ── */
+:root[data-palette="lotr"] .fab,
+:root[data-palette="lotr"] .fab-roulette { background: radial-gradient(circle at 36% 32%, #cf4436, #9e1f1f 72%); border: 1px solid #6e1414; color: #f3e7c8; box-shadow: inset 0 1px 0 rgba(255, 255, 255, .22), inset 0 -3px 5px rgba(0, 0, 0, .3), 0 3px 8px rgba(0, 0, 0, .4); }
+:root[data-palette="lotr"] .fab:hover,
+:root[data-palette="lotr"] .fab-roulette:hover { filter: none; box-shadow: inset 0 1px 0 rgba(255, 255, 255, .28), inset 0 -3px 5px rgba(0, 0, 0, .32), 0 4px 10px rgba(0, 0, 0, .48); }
+
