@@ -2,6 +2,7 @@ export function IconSprite() {
   return (
     <svg aria-hidden="true" className="svg-sprite">
       <symbol id="icon-plus" viewBox="0 0 24 24"><path d="M11 5h2v14h-2zM5 11h14v2H5z" /></symbol>
+      <symbol id="icon-check" viewBox="0 0 24 24"><path d="M9 16.17 4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.42z" /></symbol>
       <symbol id="icon-download" viewBox="0 0 24 24"><path d="M5 20h14v-2H5v2zm7-18v10.17l3.59-3.58L17 10l-5 5-5-5 1.41-1.41L11 12.17V2h1z" /></symbol>
       <symbol id="icon-upload" viewBox="0 0 24 24"><path d="M5 20h14v-2H5v2zm7-18 5 5-1.41 1.41L13 5.83V16h-2V5.83L8.41 8.41 7 7l5-5z" /></symbol>
       <symbol id="icon-save" viewBox="0 -960 960 960"><path d="M200-120q-33 0-56.5-23.5T120-200v-560q0-33 23.5-56.5T200-840h480l160 160v212q-19-8-39.5-10.5t-40.5.5v-169L647-760H200v560h240v80H200Zm0-640v560-560ZM520-40v-123l221-220q9-9 20-13t22-4q12 0 23 4.5t20 13.5l37 37q8 9 12.5 20t4.5 22q0 11-4 22.5T863-260L643-40H520Zm300-263-37-37 37 37ZM580-100h38l121-122-18-19-19-18-122 121v38Zm141-141-19-18 37 37-18-19ZM240-560h360v-160H240v160Zm240 320h4l116-115v-5q0-50-35-85t-85-35q-50 0-85 35t-35 85q0 50 35 85t85 35Z" /></symbol>

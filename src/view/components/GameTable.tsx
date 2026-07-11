@@ -29,6 +29,8 @@ interface GameTableProps {
     showReplayable?: boolean;
     showRetry?: boolean;
     showHours?: boolean;
+    /** Muestra el "Análisis" (reseña) en la fila expandida. En el perfil social se oculta: tiene pestaña propia. */
+    showReview?: boolean;
   };
 }
 
@@ -134,6 +136,7 @@ export const GameTable = memo(function GameTable({
   const showReplayable = visibility?.showReplayable ?? true;
   const showRetry = visibility?.showRetry ?? true;
   const showHours = visibility?.showHours ?? true;
+  const showReview = visibility?.showReview ?? true;
 
   // Clase de columna de Completados, solo cuando la pestaña es 'c' (las celdas plat/género/score
   // se comparten con otras pestañas, que no llevan estas clases de peso/ocultación).
@@ -444,7 +447,7 @@ export const GameTable = memo(function GameTable({
                             <div>{renderBooleanBadge('retry', Boolean(game.retry))}</div>
                           </div>
                         )}
-                        {supportsReview(currentTab) && game.review ? (
+                        {showReview && supportsReview(currentTab) && game.review ? (
                           <div className="detail-box" style={{ gridColumn: '1/-1' }}>
                             <span className="detail-label">{UI_MESSAGES.detail.review}</span>
                             <div className="detail-value">

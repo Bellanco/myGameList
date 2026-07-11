@@ -199,11 +199,21 @@ export const UI_MESSAGES = {
   },
   settings: {
     title: 'Ajustes',
+    account: {
+      title: 'Ajustes de cuenta',
+    },
     appearance: {
       groupAria: 'Tema de la aplicación',
       light: 'Claro',
       dark: 'Oscuro',
       cycleHint: 'Pulsa para cambiar a',
+      paletteAria: 'Paleta de color',
+      paletteLabel: 'Tema',
+      modeLabel: 'Modo',
+      caseLabel: 'Texto',
+      caseAria: 'Caja del texto de interfaz',
+      caseNormal: 'Normal',
+      caseUpper: 'Mayúsculas',
     },
     scoreScale: {
       title: 'Puntuación',

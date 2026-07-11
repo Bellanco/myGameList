@@ -211,7 +211,7 @@ export const Toolbar = memo(function Toolbar({
 
         <div className="filter-field filter-field-toggle">
           <button
-            className={`btn btn-toggle ${filters.deck ? 'active btn-toggle-deck' : ''}`}
+            className={`btn btn-toggle btn-toggle-deck ${filters.deck ? 'active' : ''}`}
             type="button"
             aria-label={UI_MESSAGES.toolbar.steamDeck}
             onClick={() => onFilterChange('deck', !filters.deck)}

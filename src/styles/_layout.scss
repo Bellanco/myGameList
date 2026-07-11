@@ -20,7 +20,7 @@
   padding: .34rem .8rem;
   border-radius: var(--radius-pill);
   border: 1px solid rgba(var(--steam-rgb),.25);
-  border-top-color: rgba(102,192,244,.45);
+  border-top-color: rgba(var(--steam-rgb),.45);
   background: var(--steam-soft);
   color: var(--steam-hover);
   font-size: .76rem;
@@ -181,7 +181,47 @@
 .score-scale-txt b { font-size: .92rem; font-weight: 600; }
 .score-scale-txt span { color: var(--text-muted); font-size: .8rem; }
 .score-scale-sample { flex: 0 0 auto; display: inline-flex; align-items: center; }
-.score-scale-locked { color: var(--text-dim); font-size: .8rem; }
+.score-scale-locked { display: flex; align-items: center; gap: .35rem; color: var(--text-dim); font-size: .8rem; }
+.score-scale-locked .ui-icon { width: 1em; height: 1em; flex: 0 0 auto; }
+
+/* F1 — selector de apariencia (tema/paleta + claro/oscuro) dentro de "Ajustes de cuenta". */
+.settings-appearance { margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--border); }
+.settings-appearance .settings-card-sub { margin: 0 0 .5rem; }
+.settings-appearance .settings-card-sub + .settings-card-sub,
+.settings-appearance .theme-mode-row + .settings-card-sub { margin-top: 1rem; }
+/* Cada opción de tema es una MINI-PREVISUALIZACIÓN: tarjeta con el fondo oscuro del tema, una barra de
+   acento arriba y una esquina con el fondo claro → previsualiza los tres colores de un vistazo. Los colores
+   llegan por variables (`--sw-*`) fijadas en el botón de la opción. */
+.palette-swatch {
+  position: relative;
+  width: 3.1rem;
+  height: 1.95rem;
+  border-radius: 6px;
+  overflow: hidden;
+  background: var(--sw-dark, var(--surface-elevated));
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .16);
+  transition: transform .16s ease;
+}
+.palette-swatch::before { /* barra de acento superior: acento + color secundario si el tema es dual (p. ej. azul+naranja) */
+  content: ''; position: absolute; inset: 0 0 auto 0; height: 6px;
+  background: linear-gradient(90deg, var(--sw-accent, var(--steam)) 0 60%, var(--sw-accent2, var(--sw-accent, var(--steam))) 60% 100%);
+}
+.palette-swatch::after { /* esquina inferior derecha con el fondo claro del tema */
+  content: ''; position: absolute; right: 0; bottom: 0; width: 46%; height: 62%;
+  background: var(--sw-light, #fff); clip-path: polygon(100% 0, 100% 100%, 0 100%);
+}
+.score-scale-opt:hover:not(:disabled) .palette-swatch { transform: translateY(-1px) scale(1.04); }
+
+/* En el selector de TEMA, la opción activa se resalta con el ACENTO DEL PROPIO TEMA (no el azul genérico),
+   para que cada identidad "pegue" con su color. Ámbito acotado a Ajustes de apariencia. */
+.settings-appearance .score-scale-opt.on { border-color: var(--sw-accent); box-shadow: 0 0 0 1px var(--sw-accent), 0 6px 18px color-mix(in srgb, var(--sw-accent) 22%, transparent); }
+.settings-appearance .score-scale-opt.on .score-scale-dot { border-color: var(--sw-accent); }
+.settings-appearance .score-scale-opt.on .score-scale-dot::after { background: var(--sw-accent); }
+.settings-appearance .score-scale-opt:focus-visible { outline-color: var(--sw-accent); }
+.theme-mode-row { display: flex; gap: .5rem; }
+/* `flex: 1 1 0` → ambos botones ocupan la misma mitad aunque el texto sea más largo (antes `auto` los
+   dimensionaba por contenido y quedaban de tamaños distintos). */
+.theme-mode-row .btn { flex: 1 1 0; min-width: 0; justify-content: center; }
 
 .settings-actions {
   display: flex;
@@ -582,7 +622,7 @@
   transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease;
 }
 .hub-fav-cart:hover { transform: translateY(-2px); border-color: var(--steam); box-shadow: var(--shadow); }
-.hub-fav-cart-top { height: .4rem; flex: 0 0 auto; background: linear-gradient(90deg, var(--steam), #7c3aed); }
+.hub-fav-cart-top { height: .4rem; flex: 0 0 auto; background: var(--deco-shelf-0); }
 .hub-fav-cart-title {
   padding: .55rem .65rem .65rem;
   font-size: .82rem; font-weight: 700; line-height: 1.25;
@@ -591,10 +631,10 @@
   display: -webkit-box; line-clamp: 2; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
 }
 /* Lomos de colores variados (ciclo por índice), como una estantería real. */
-.hub-fav-cart--1 .hub-fav-cart-top { background: linear-gradient(90deg, #7c3aed, #db2777); }
-.hub-fav-cart--2 .hub-fav-cart-top { background: linear-gradient(90deg, #f59e0b, #ef4444); }
-.hub-fav-cart--3 .hub-fav-cart-top { background: linear-gradient(90deg, #10b981, #06b6d4); }
-.hub-fav-cart--4 .hub-fav-cart-top { background: linear-gradient(90deg, #ef4444, #f59e0b); }
+.hub-fav-cart--1 .hub-fav-cart-top { background: var(--deco-shelf-1); }
+.hub-fav-cart--2 .hub-fav-cart-top { background: var(--deco-shelf-2); }
+.hub-fav-cart--3 .hub-fav-cart-top { background: var(--deco-shelf-3); }
+.hub-fav-cart--4 .hub-fav-cart-top { background: var(--deco-shelf-4); }
 @media (prefers-reduced-motion: reduce) {
   .hub-fav-cart { transition: none; }
   .hub-fav-cart:hover { transform: none; }
@@ -645,7 +685,7 @@
 .hub-seg-ind {
   position: absolute; top: 4px; bottom: 4px; left: 0; z-index: 0;
   border-radius: var(--radius-pill);
-  background: linear-gradient(180deg, var(--steam), #1377c0);
+  background: linear-gradient(180deg, var(--steam), color-mix(in srgb, var(--steam) 72%, #000));
   box-shadow: 0 6px 16px rgba(var(--steam-rgb),.4);
   transition: transform .32s cubic-bezier(.2,.8,.25,1), width .32s cubic-bezier(.2,.8,.25,1);
 }
@@ -756,9 +796,9 @@
   align-items: center;
   padding: .25rem .55rem;
   border-radius: 999px;
-  background: rgba(46,160,67,.16);
-  color: var(--success, #2ea043);
-  border: 1px solid rgba(46,160,67,.3);
+  background: rgba(var(--success-rgb),.16);
+  color: var(--success);
+  border: 1px solid rgba(var(--success-rgb),.3);
   font-size: .8rem;
   font-weight: 600;
 }
@@ -1633,7 +1673,7 @@ button.hub-chip.active {
   border: 2px solid var(--acc);
 }
 /* Reseña sin puntuación (lista de la vergüenza y demás): medallón "??" en azul suave (poco contraste), sin estrellas. */
-.hub-review-entry.is-noscore { --acc: hsl(208 34% var(--acc-l)); --acc-soft: hsl(208 34% var(--acc-l) / .14); }
+.hub-review-entry.is-noscore { --acc: var(--noscore); --acc-soft: var(--noscore-soft); }
 /* Estrellas de la reseña: llenas con el color de la propia nota (las vacías quedan tenues). */
 .hub-review-entry .stars .f { color: var(--acc); }
 .hub-review-entry-head {
@@ -1801,12 +1841,12 @@ button.hub-chip.active {
   line-height: 1;
   user-select: none;
 }
-.hub-avatar--0 { background: var(--steam-soft); color: var(--steam-hover); }
-.hub-avatar--1 { background: rgba(var(--success-rgb),.18); color: var(--fg-green); }
-.hub-avatar--2 { background: rgba(232,184,32,.18); color: var(--fg-amber); }
-.hub-avatar--3 { background: rgba(99,102,241,.18); color: var(--fg-indigo); }
-.hub-avatar--4 { background: rgba(var(--danger-rgb),.18); color: var(--fg-red); }
-.hub-avatar--5 { background: rgba(var(--steam-rgb),.18); color: var(--fg-sky); }
+.hub-avatar--0 { background: var(--deco-avatar-0-bg); color: var(--deco-avatar-0-fg); }
+.hub-avatar--1 { background: var(--deco-avatar-1-bg); color: var(--deco-avatar-1-fg); }
+.hub-avatar--2 { background: var(--deco-avatar-2-bg); color: var(--deco-avatar-2-fg); }
+.hub-avatar--3 { background: var(--deco-avatar-3-bg); color: var(--deco-avatar-3-fg); }
+.hub-avatar--4 { background: var(--deco-avatar-4-bg); color: var(--deco-avatar-4-fg); }
+.hub-avatar--5 { background: var(--deco-avatar-5-bg); color: var(--deco-avatar-5-fg); }
 .hub-avatar-img { object-fit: cover; background: var(--surface-hover); }
 /* Avatar grande para el hero de la página de perfil (debe ir tras .hub-avatar para ganar el tamaño). */
 .hub-avatar-lg {
@@ -2123,8 +2163,8 @@ button.hub-chip.active {
 }
 
 .hub-gateway-step.is-done .hub-gateway-step-badge {
-  color: #0f2017;
-  background: #84d5a8;
+  color: #fff;
+  background: var(--success);
   border-color: rgba(var(--success-rgb),.55);
 }
 

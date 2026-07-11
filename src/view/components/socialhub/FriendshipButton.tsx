@@ -58,7 +58,7 @@ export function FriendshipButton({
         aria-label={F.acceptAria(name)}
         onClick={onAddOrAccept}
       >
-        <Icon name="plus" />
+        <Icon name="check" />
         {F.accept}
       </button>
     );
