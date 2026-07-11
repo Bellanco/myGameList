@@ -4,10 +4,11 @@ import {
   buildListsPool,
   buildProfilePool,
   buildListsWeigher,
+  curveGrade,
   curveScore,
   gameWeight,
   listsWeight,
-  NEUTRAL_SCORE,
+  NEUTRAL_GRADE,
   normalizeName,
   parseSeries,
   SEQUEL_DECAY,
@@ -149,17 +150,32 @@ describe('scoreless shame list fairness', () => {
     sourceTab: tab,
   });
 
-  it('a scoreless shame game uses the neutral score instead of the tiny base', () => {
-    // vergüenza sin nota → curveScore(NEUTRAL_SCORE) × TAB(v=2) (compite, no se queda en ~2)
-    expect(listsWeight(cand('v', 0))).toBe(curveScore(NEUTRAL_SCORE) * 2);
+  it('a scoreless shame game uses the neutral grade instead of the tiny base', () => {
+    // vergüenza sin nota → curveGrade(NEUTRAL_GRADE) × TAB(v=2) (compite, no se queda en ~2)
+    expect(listsWeight(cand('v', 0))).toBeCloseTo(curveGrade(NEUTRAL_GRADE) * 2);
     // un próximo sin "interés" mantiene el peso base (1 × 3)
     expect(listsWeight(cand('p', 0))).toBe(1 * 3);
     // así la vergüenza no queda por detrás de una lista sin puntuar
     expect(listsWeight(cand('v', 0))).toBeGreaterThan(listsWeight(cand('p', 0)));
   });
 
-  it('a shame game with a real score still uses it', () => {
+  it('a shame game with a real score still uses it (4★ → grade 80 → 16)', () => {
     expect(listsWeight(cand('v', 4))).toBe(16 * 2);
+  });
+});
+
+describe('fine 0–100 grade weighting', () => {
+  it('curveGrade is quadratic on 0–100 (100→25, 80→16, 50→6.25, 0→base)', () => {
+    expect(curveGrade(100)).toBe(25);
+    expect(curveGrade(80)).toBe(16);
+    expect(curveGrade(50)).toBeCloseTo(6.25);
+    expect(curveGrade(0)).toBe(1);
+  });
+
+  it('weights by the fine grade, not the star bucket (95 > 91 though both are 5★)', () => {
+    const hi: RouletteCandidate = { game: game({ id: 1, name: 'Hi', grade: 95 }), sourceTab: 'p' };
+    const lo: RouletteCandidate = { game: game({ id: 2, name: 'Lo', grade: 91 }), sourceTab: 'p' };
+    expect(listsWeight(hi)).toBeGreaterThan(listsWeight(lo));
   });
 });
 
