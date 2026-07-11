@@ -577,6 +577,8 @@ export function SocialProfileDetailScreen({
                       showReplayable: !activeProfileDetail.visibility?.hideReplayable,
                       showRetry: !activeProfileDetail.visibility?.hideRetry,
                       showHours: !activeProfileDetail.visibility?.hideGameTime,
+                      // El análisis tiene su propia pestaña ("Reseñas"); no se repite en la fila expandida de Juegos.
+                      showReview: false,
                     }}
                   />
                   )}
