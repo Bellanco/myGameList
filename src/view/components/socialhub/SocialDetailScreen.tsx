@@ -95,7 +95,7 @@ export function SocialDetailScreen({
               {activeDetailEvent.gameName ? <span className="hub-feed-game-chip">{activeDetailEvent.gameName}</span> : null}
             </div>
           </header>
-          <p>{analyzedAtLabel}</p>
+          <p className="hub-feed-date">{analyzedAtLabel}</p>
           {resolveGrade({ score: Number(activeDetailEvent.rating || 0), grade: activeDetailEvent.grade ?? null }) > 0
             ? <ScoreDisplay game={{ score: Number(activeDetailEvent.rating || 0), grade: activeDetailEvent.grade ?? null }} />
             : <NoScoreMedal />}

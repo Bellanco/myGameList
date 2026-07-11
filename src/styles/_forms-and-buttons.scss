@@ -152,7 +152,7 @@ dialog.alert-dialog[open]::backdrop { animation: alertBackdropIn .24s ease both;
 
 /* Acción principal sólida (CTA fuerte): conserva el relleno azul, con relieve e inclinación. */
 .btn-steam {
-  background: linear-gradient(180deg, var(--steam), #1377c0); color: #fff;
+  background: linear-gradient(180deg, var(--steam), color-mix(in srgb, var(--steam) 72%, #000)); color: var(--on-accent);
   border-color: color-mix(in srgb, var(--steam) 70%, #000);
   box-shadow: inset 0 1px 0 rgba(255,255,255,.25), 0 8px 18px rgba(var(--steam-rgb),.18);
 }
@@ -197,6 +197,28 @@ dialog.alert-dialog[open]::backdrop { animation: alertBackdropIn .24s ease both;
 }
 .theme-toggle-btn .ui-icon { width: 1.15rem; height: 1.15rem; transition: transform .25s; }
 .theme-toggle-btn:hover .ui-icon { transform: rotate(12deg) scale(1.08); }
+
+/* F1 — selector de paleta (header): pastilla compacta con icono + <select> nativo (accesible y robusto). */
+.palette-select {
+  display: inline-flex; align-items: center; gap: .35rem;
+  height: 38px; padding: 0 .55rem;
+  color: var(--text-muted);
+  background: var(--surface-soft);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  transition: color .2s, background .2s, border-color .2s;
+}
+.palette-select:hover,
+.palette-select:focus-within { color: var(--steam); background: var(--steam-soft); border-color: var(--steam-soft); }
+.palette-select-icon { display: inline-flex; flex: 0 0 auto; }
+.palette-select-field {
+  border: 0; background: transparent; color: var(--text);
+  font-weight: 600; font-size: .82rem; margin: 0; padding: 0;
+  cursor: pointer; outline: none; max-width: 9rem;
+}
+.palette-select-field:focus-visible { outline: 2px solid var(--steam); outline-offset: 3px; border-radius: 4px; }
+/* El desplegable nativo pinta las opciones con colores del sistema; forzamos legibilidad en ambos temas. */
+.palette-select-field option { background: var(--surface); color: var(--text); }
 .btn-toggle-deck.active { background: rgba(var(--steam-rgb),.15); color: var(--fg-sky); border-color: rgba(var(--steam-rgb),.4); }
 .btn-icon {
   width: 42px; height: 42px; border-radius: 50%; background: transparent;

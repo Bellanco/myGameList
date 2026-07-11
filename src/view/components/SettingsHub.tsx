@@ -7,6 +7,7 @@ import { useScoreScale } from '../hooks/useScoreScale';
 import { Icon } from './Icon';
 import { StarRating } from './StarRating';
 import { ScoreRing } from './ScoreRing';
+import { AppearanceSettings } from './AppearanceSettings';
 
 type AdminCategoryKey = 'genres' | 'platforms' | 'strengths' | 'weaknesses';
 
@@ -135,7 +136,7 @@ export const SettingsHub = memo(function SettingsHub({
   return (
     <section className="settings-hub" aria-label={UI_MESSAGES.settings.title}>
       <div className="settings-card settings-card-score">
-        <h2>{scoreScaleLabels.title}</h2>
+        <h2>{UI_MESSAGES.settings.account.title}</h2>
         <p className="settings-card-sub">{scoreScaleLabels.subtitle}</p>
         <div className={`score-scale-choice${scoreScaleUid ? '' : ' is-locked'}`} role="radiogroup" aria-label={scoreScaleLabels.groupAria}>
           {SCORE_SCALES.map((opt) => {
@@ -162,7 +163,13 @@ export const SettingsHub = memo(function SettingsHub({
             );
           })}
         </div>
-        {!scoreScaleUid ? <p className="score-scale-locked">🔒 {scoreScaleLabels.lockedHint}</p> : null}
+        {!scoreScaleUid ? (
+          <p className="score-scale-locked">
+            <Icon name={COMMON_ICONS.lock} />
+            {scoreScaleLabels.lockedHint}
+          </p>
+        ) : null}
+        <AppearanceSettings />
       </div>
 
       <div className="settings-card settings-card-status">

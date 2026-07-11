@@ -5,7 +5,7 @@ const SCROLL_HIDE_THRESHOLD = 24;
 
 /**
  * Controles flotantes en la esquina superior derecha (diseño "headerless": sin barra ni título).
- * Solo alberga el cambio de tema; la sincronización vive en la ventana de Ajustes.
+ * Solo alberga el cambio de tema claro/oscuro; el selector de tema/paleta y la sincronización viven en Ajustes.
  * Se ocultan al hacer scroll y reaparecen al volver arriba, para no estorbar la lectura.
  */
 export const FloatingControls = memo(function FloatingControls() {

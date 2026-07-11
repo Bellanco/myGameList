@@ -17,6 +17,8 @@ import { useToolbarFilters } from './viewmodel/useToolbarFilters';
 import { computeTabOptions, countActiveFilters } from './viewmodel/toolbarFilters';
 import { useSyncViewModel } from './viewmodel/useSyncViewModel';
 import { useScoreScaleSession } from './view/hooks/useScoreScaleSession';
+import { useAppearanceSession } from './view/hooks/useAppearanceSession';
+import { useUppercase } from './view/hooks/useUppercase';
 import { hasGithubOAuthRedirect } from './model/repository/githubOAuthRepository';
 import { buildListsPool, buildListsWeigher } from './core/roulette/roulette';
 
@@ -71,6 +73,10 @@ export default function App() {
   // F2: enlaza la sesión de Google con la escala de puntuación (hidrata desde Firestore / resetea al salir);
   // devuelve el uid para gatear la opción en Ajustes. Se monta aquí para que la escala esté en toda la app.
   const scoreScaleUid = useScoreScaleSession();
+  // F1: enlaza la sesión con la apariencia (paleta + claro/oscuro) → hidrata/replica en Firestore.
+  useAppearanceSession();
+  // F1: aplica la preferencia de caja (mayúsculas) al <html> app-wide y reacciona a la hidratación.
+  useUppercase();
   const { filters, setFilter, toggleFilterValue, clearFilter, clearAllFilters } = useToolbarFilters();
   const {
     setExpandedId,

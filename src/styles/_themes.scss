@@ -1,0 +1,567 @@
+/* F1 — CAPA 3 · DIRECCIÓN DE ARTE POR TEMA (skins fuertes sobre los componentes reales).
+   Cada tema debe leerse como un mundo distinto, no como el mismo recoloreado. Solo se activan con
+   `[data-palette="…"]`; el tema por defecto ("Clásico", sin atributo) no se toca. Va el ÚLTIMO en
+   `index.scss` para ganar en cascada a los partials de componentes.
+
+   MODULAR: esta capa es OPCIONAL. Un tema nuevo funciona solo con sus colores (CAPA 2 en `_base.scss`).
+   Para darle carácter propio, añade aquí un bloque `:root[data-palette="<id>"] …` con su tipografía,
+   formas, sombras y texturas — nada de otros temas se ve afectado. Receta de 4 pasos completa en
+   `src/core/constants/palettes.ts`.
+
+   ─────────────────────────────────────────────────────────────────────────────────────────────────
+   REGLAS APRENDIDAS — léelas antes de añadir un tema para no repetir los errores que ya costaron tiempo:
+
+   1. SOMBRA DE BLOQUE Y COLOR SEGÚN TEMA. Una sombra negra es INVISIBLE sobre un fondo oscuro. Regla:
+      sombra clara (`rgba(255,255,255,.92)`) en oscuro y oscura (`#151011`) en claro — mira los botones.
+      Una sombra con el color de acento (p. ej. roja) se ve en AMBOS temas y te ahorra el override doble.
+   2. `clip-path` RECORTA las sombras Y los bordes de los descendientes. No lo pongas en paneles/botones
+      que necesiten sombra de bloque o borde completo. Úsalo solo donde no haga falta sombra (chips).
+      Nota: `box-shadow: inset` y `filter: drop-shadow` SÍ siguen el `clip-path` (útil para el contorno
+      que acompaña a un corte rasgado).
+   3. FORMAS POR COMPONENTE (no mezclar): BOTONES = sesgo + borde + sombra de bloque (SIN clip-path, que
+      recortaba el borde de forma irregular). CHIPS = corte rasgado (clip-path) + sesgo + borde inset
+      (SIN sombra de bloque).
+   4. `transform: skew` EN UN CONTENEDOR ARRASTRA A LOS HIJOS (llegó a torcer la vista 3D de la ruleta).
+      Sesga solo la hoja, o contrarresta el sesgo en los hijos con `> * { transform: skewX(+Ndeg) }`.
+   5. ELEMENTOS REDONDOS (FAB): usa un desplazamiento de sombra PEQUEÑO (~2px); uno grande deja una
+      media luna que resalta demasiado en un círculo.
+   6. TEXTO LARGO EN UN "SELLO": no uses clip-path (se parte al saltar de línea). Fondo sólido + borde.
+   7. AGRUPA LAS CLASES HERMANAS con el mismo aspecto aunque tengan clase distinta (`.chip`/`.hub-friend-chip`,
+      `.fab`/`.fab-roulette`, `.chip`/`.rl-chip`) para que un cambio las afecte a todas y no se olvide ninguna.
+   8. CLASES CONDICIONALES DEL TSX: si el skin necesita estilar un estado inactivo (p. ej. el toggle de
+      Steam Deck), la clase base debe estar SIEMPRE presente en el marcado, no solo cuando está activo.
+   9. `!important` CON CRITERIO: el skin ya gana por ir el último en `index.scss`, pero los `shorthand`
+      (border, box-shadow, background) de los partials a veces obligan a usarlo. Solo donde haga falta.
+   10. CONTRASTE: al rellenar variantes de color (éxito/aviso/peligro) fija también el color de texto para
+      mantener legibilidad AA (p. ej. texto oscuro sobre relleno claro).
+
+   ORDEN RECOMENDADO DE SUBSECCIONES (plantilla; copia y adapta para el siguiente tema):
+   §1 Tipografía · §2 Fondo/textura · §3 Paneles · §4 Tabla · §5 Botones · §6 Chips · §7 Segmentos y campos
+   · §8 Insignias · §9 Puntuación · §10 Actividad social (nombres + fechas) · §11 Ruleta · §12 FAB
+   ───────────────────────────────────────────────────────────────────────────────────────────────── */
+
+
+/* ═══════════════════════════════════════════════════════════════════════════════════════════════════
+   TEMA · Corazón rebelde (Persona 5) — POP-ART: negro + rojo, cursiva, semitono, cortes y sombras
+   duras de cómic. Fuente de la identidad de color: CAPA 2 en `_base.scss`.
+   ═══════════════════════════════════════════════════════════════════════════════════════════════════ */
+
+/* ── §1 · Tipografía: Arial Black en cursiva y versalitas para titulares, etiquetas y nombres. ── */
+:root[data-palette="persona"] h2,
+:root[data-palette="persona"] h3,
+:root[data-palette="persona"] h4,
+:root[data-palette="persona"] .modal-title,
+:root[data-palette="persona"] .dialog-title,
+:root[data-palette="persona"] .rl-card-name,
+:root[data-palette="persona"] .rl-card-tag,
+:root[data-palette="persona"] .rl-item,
+:root[data-palette="persona"] .btn,
+:root[data-palette="persona"] .hub-seg-btn,
+:root[data-palette="persona"] thead th,
+:root[data-palette="persona"] .flabel,
+:root[data-palette="persona"] .row-name,
+:root[data-palette="persona"] .hub-name-link,
+:root[data-palette="persona"] .hub-detail-profile-link,
+:root[data-palette="persona"] .hub-feed-game-chip,
+:root[data-palette="persona"] .hub-review-game,
+:root[data-palette="persona"] .score-ring-num,
+:root[data-palette="persona"] .score-dial-num,
+:root[data-palette="persona"] .hub-review-medal,
+:root[data-palette="persona"] .active-filter-chip {
+  font-family: 'Arial Black', 'Arial Narrow', Impact, system-ui, sans-serif;
+  font-style: italic; letter-spacing: .01em;
+}
+
+/* ── §2 · Fondo: semitono pop-art (puntos de tinta rojos). ── */
+:root[data-palette="persona"] body {
+  background-image: radial-gradient(rgba(255, 31, 61, .16) 1.6px, transparent 1.8px);
+  background-size: 11px 11px;
+}
+
+/* ── §3 · Paneles: contorno grueso + sombra dura roja (sticker de cómic). El contorno usa `--pop-line`
+   (línea de tinta theme-aware): BLANCO en oscuro para que se vea sobre el negro, oscuro en claro. Solo los
+   paneles llevan este contorno visible; el resto de componentes mantienen su borde negro original. ── */
+:root[data-palette="persona"] .toolbar,
+:root[data-palette="persona"] .table-wrap,
+:root[data-palette="persona"] .settings-card,
+:root[data-palette="persona"] .hub-feed-card,
+:root[data-palette="persona"] .modal,
+:root[data-palette="persona"] .alert-dialog { border: 3px solid var(--pop-line) !important; box-shadow: 7px 7px 0 rgba(255, 78, 100, .5) !important; border-radius: 6px !important; }
+:root[data-palette="persona"][data-theme="light"] .toolbar,
+:root[data-palette="persona"][data-theme="light"] .table-wrap,
+:root[data-palette="persona"][data-theme="light"] .settings-card,
+:root[data-palette="persona"][data-theme="light"] .hub-feed-card,
+:root[data-palette="persona"][data-theme="light"] .modal,
+:root[data-palette="persona"][data-theme="light"] .alert-dialog { border-color: #151011 !important; box-shadow: 7px 7px 0 rgba(230, 0, 18, .22) !important; }
+
+/* ── §4 · Tabla: cabecera como barra negra con texto de acento. ── */
+:root[data-palette="persona"] thead th { background: #0a0a0a; color: var(--steam); }
+
+/* ── §5 · Botones (cómic, estilo v3 del artefacto): sesgados, con CONTORNO NEGRO grueso uniforme y
+   SOMBRA DURA DE BLOQUE. Sin clip-path (recortaba el borde y anulaba la sombra; ver regla 2/3). La
+   sombra es clara en oscuro y negra en claro (regla 1); el sesgo + borde + sombra dan la forma P5.
+   El texto se contra-sesga con `> *` para que quede recto (regla 4). ── */
+:root[data-palette="persona"] .btn:not(.btn-icon):not(.btn-ghost) { border: 2.5px solid #0a0a0a !important; border-radius: 0 !important; transform: skewX(-7deg); font-weight: 900; box-shadow: 5px 5px 0 rgba(255, 255, 255, .92) !important; }
+/* `:not(input)` excluye el <input type="file"> oculto de los labels-botón (p. ej. "Importar"): sin esto,
+   el contra-sesgo le forzaba `display:inline-block` y reaparecía el botón nativo "Examinar". */
+:root[data-palette="persona"] .btn:not(.btn-icon):not(.btn-ghost) > *:not(input) { display: inline-block; transform: skewX(7deg); }
+:root[data-palette="persona"][data-theme="light"] .btn:not(.btn-icon):not(.btn-ghost) { border-color: #151011 !important; box-shadow: 5px 5px 0 #151011 !important; }
+/* Relleno sólido por variante → la sombra de bloque se ve en TODOS los botones, no solo el contorno.
+   Se fija el color de texto por contraste (regla 10). */
+:root[data-palette="persona"] .btn-secondary,
+:root[data-palette="persona"] .btn-toggle:not(.active) { background: var(--surface-elevated) !important; color: var(--text) !important; }
+:root[data-palette="persona"] .btn-accent,
+:root[data-palette="persona"] .btn.is-active,
+:root[data-palette="persona"] .btn-toggle.active { background: var(--steam) !important; color: #fff !important; }
+:root[data-palette="persona"] .btn-complete,
+:root[data-palette="persona"] .btn-recommend { background: var(--success) !important; color: #08130c !important; }
+:root[data-palette="persona"] .btn-inprogress { background: var(--warn) !important; color: #1a1400 !important; }
+:root[data-palette="persona"] .btn-danger,
+:root[data-palette="persona"] .btn-abandoned,
+:root[data-palette="persona"] .btn-recommend-active { background: var(--danger) !important; color: #fff !important; }
+/* Botones fantasma (p. ej. "Limpiar filtros"): limpios, sin corte/sombra/sesgo. */
+:root[data-palette="persona"] .btn-ghost { font-style: italic; filter: none; clip-path: none; transform: none; }
+
+/* ── §6 · Chips (plataformas, géneros, fuertes/débiles, chip "Amigos" y chips de la ruleta, agrupados
+   por regla 7): CORTE RASGADO + sesgo + contorno negro que sigue el corte (box-shadow inset). No
+   llevan sombra de bloque, por eso aquí el clip-path SÍ es correcto (regla 3). ── */
+:root[data-palette="persona"] .chip,
+:root[data-palette="persona"] .hub-friend-chip,
+:root[data-palette="persona"] .rl-chip { border: none !important; border-radius: 0; font-weight: 800; transform: skewX(-7deg); clip-path: polygon(0 0, 100% 0, 92% 100%, 8% 88%); box-shadow: inset 0 0 0 2px #0a0a0a !important; }
+
+/* ── §7 · Segmentos y campos (filtros, búsqueda, formulario, compositor de posts): superficies con borde
+   de contenedor, así que llevan el contorno `--pop-line` visible (blanco en oscuro / oscuro en claro),
+   igual que los paneles. Botones/chips/insignias mantienen su borde negro (tienen su propia forma). ── */
+:root[data-palette="persona"] .hub-seg { border: 2px solid var(--pop-line); }
+:root[data-palette="persona"] .input-base,
+:root[data-palette="persona"] .finput,
+:root[data-palette="persona"] .ftextarea,
+:root[data-palette="persona"] .search-input { border: 2px solid var(--pop-line) !important; border-radius: 0 !important; }
+
+/* ── §8 · Insignias rejugar/oportunidad: planas, contorno negro, sombra dura (roja o negra según fondo). ── */
+:root[data-palette="persona"] .badge-rejugar-activo,
+:root[data-palette="persona"] .badge-opp-activo { background: var(--steam) !important; color: #fff !important; border: 2px solid #0a0a0a !important; box-shadow: 2px 2px 0 #0a0a0a !important; }
+:root[data-palette="persona"] .badge-rejugar-inactivo,
+:root[data-palette="persona"] .badge-opp-inactivo { background: #0a0a0a !important; color: #fff !important; border: 2px solid #0a0a0a !important; box-shadow: 2px 2px 0 rgba(255, 31, 61, .55) !important; }
+
+/* ── §9 · Puntuación 0–100: sin aro/borde añadido (el arco de color ya es la nota). El número toma la
+   tipografía del tema (§1). ── */
+
+/* ── §10 · Actividad social. Nombres/títulos ya toman la tipografía del tema (§1). Las FECHAS = sellos
+   de calendario del juego (no texto suelto): la cabecera de día es la PESTAÑA de calendario roja; el
+   timestamp de cada tarjeta es un SELLO negro con lomo rojo. ── */
+/* Pestaña de calendario del grupo de día ("9 de julio"): bloque rojo angular, texto negro grueso.
+   Sombra clara en oscuro / negra en claro (regla 1). */
+:root[data-palette="persona"] .hub-feed-day-header {
+  border: 2.5px solid #0a0a0a;
+  border-radius: 0;
+  background: var(--steam);
+  padding: .28rem 1rem;
+  transform: skewX(-8deg);
+  box-shadow: 4px 4px 0 rgba(255, 255, 255, .92);
+}
+:root[data-palette="persona"][data-theme="light"] .hub-feed-day-header { box-shadow: 4px 4px 0 #151011; }
+:root[data-palette="persona"] .hub-feed-day-header h4 {
+  transform: skewX(8deg); /* contra-sesgo del texto (regla 4) */
+  font-family: 'Arial Black', 'Arial Narrow', Impact, system-ui, sans-serif;
+  font-style: italic;
+  font-weight: 900;
+  font-size: .9rem;
+  letter-spacing: .04em;
+  color: #0a0a0a;
+}
+/* Timestamp de cada actividad ("Analizado el … a las …"): sello negro, texto reventado en blanco, lomo
+   rojo a la izquierda (canto de una agenda) y sombra roja de bloque. Fondo sólido + borde, sin clip-path,
+   para que aguante en dos líneas (regla 6). Sombra roja → visible en ambos temas (regla 1). */
+:root[data-palette="persona"] .hub-feed-date,
+:root[data-palette="persona"] .hub-review-date {
+  display: inline-block;
+  align-self: flex-start;
+  padding: .22em .7em .26em .6em;
+  background: #0a0a0a;
+  border-left: .34em solid var(--steam);
+  color: #fff;
+  font-family: 'Arial Black', 'Arial Narrow', Impact, system-ui, sans-serif;
+  font-style: italic;
+  font-weight: 900;
+  font-size: .68rem;
+  line-height: 1.25;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  transform: skewX(-8deg);
+  box-shadow: 3px 3px 0 var(--steam);
+}
+
+/* ── §11 · Ruleta = tragaperras de cómic. Tambor y tarjetas como stickers negros con sombra roja de
+   bloque; visor de selección rojo grueso; nombres que giran en la tipografía del tema (§1). ── */
+/* Tambor: panel-sticker negro plano (sin gradiente ni brillo) con sombra dura roja. */
+:root[data-palette="persona"] .rl-drum {
+  border: 3px solid #0a0a0a;
+  border-radius: 0;
+  background: var(--surface-elevated);
+  box-shadow: 6px 6px 0 rgba(255, 31, 61, .32);
+}
+:root[data-palette="persona"] .rl-drum:hover { box-shadow: 8px 8px 0 rgba(255, 31, 61, .40); }
+:root[data-palette="persona"][data-theme="light"] .rl-drum { box-shadow: 6px 6px 0 rgba(230, 0, 18, .24); }
+/* Visor de selección del centro: recuadro rojo grueso con doble filo negro (mirilla de la tragaperras). */
+:root[data-palette="persona"] .rl-frame {
+  border: 3px solid var(--steam);
+  border-radius: 0;
+  box-shadow: 0 0 0 3px #0a0a0a, inset 0 0 0 1px #0a0a0a;
+}
+/* Rótulo de instrucción del tambor. */
+:root[data-palette="persona"] .rl-hint { color: var(--steam); font-style: italic; }
+/* Tarjeta fantasma (reposo) y tarjeta de resultado: stickers negros de esquinas rectas + sombra roja. */
+:root[data-palette="persona"] .rl-ghost,
+:root[data-palette="persona"] .rl-card {
+  border: 3px solid #0a0a0a;
+  border-radius: 0;
+  box-shadow: 6px 6px 0 rgba(255, 31, 61, .30);
+}
+:root[data-palette="persona"][data-theme="light"] .rl-ghost,
+:root[data-palette="persona"][data-theme="light"] .rl-card {
+  border-color: #151011;
+  box-shadow: 6px 6px 0 rgba(230, 0, 18, .22);
+}
+
+/* ── §12 · FAB redondos (añadir "+" y lanzar ruleta, agrupados por regla 7): se mantienen circulares,
+   pero con contorno negro grueso y sombra dura → chapas/pegatinas de cómic. Sombra FINA (2px) porque en
+   un círculo un desplazamiento grande deja una media luna muy marcada (regla 5); clara en oscuro / negra
+   en claro (regla 1). ── */
+:root[data-palette="persona"] .fab,
+:root[data-palette="persona"] .fab-roulette {
+  border: 2.5px solid #0a0a0a;
+  background: var(--steam);
+  color: #fff;
+  box-shadow: 2px 2px 0 rgba(255, 255, 255, .92);
+}
+:root[data-palette="persona"] .fab:hover,
+:root[data-palette="persona"] .fab-roulette:hover { background: var(--steam-hover); border-color: #0a0a0a; filter: none; }
+:root[data-palette="persona"][data-theme="light"] .fab,
+:root[data-palette="persona"][data-theme="light"] .fab-roulette { color: #fff; box-shadow: 2px 2px 0 #151011; }
+
+/* ═══════════════════════════════════════════════════════════════════════════════════════════════════
+   TEMA · Cámara de pruebas (Portal / Aperture Science) — cámara de pruebas limpia: paneles con juntas,
+   señalética condensada, y la DUALIDAD de portales azul/naranja como firma (los dos FAB = los dos
+   portales; el visor de la ruleta = un portal azul). Fechas en monoespaciada tipo terminal de GLaDOS.
+   Azul = acento (`--steam`); naranja = `--portal-orange`; rosa Cubo de Compañía = `--portal-cube`. ═══ */
+
+/* ── §1 · Tipografía: Oswald (señalética condensada, versales) para titulares/etiquetas/botones/nombres;
+   Saira (técnica) para el cuerpo; Share Tech Mono (terminal) para fechas y números de puntuación. ── */
+:root[data-palette="portal"] body { font-family: 'Saira', system-ui, sans-serif; }
+:root[data-palette="portal"] h2,
+:root[data-palette="portal"] h3,
+:root[data-palette="portal"] h4,
+:root[data-palette="portal"] .modal-title,
+:root[data-palette="portal"] .dialog-title,
+:root[data-palette="portal"] .rl-card-name,
+:root[data-palette="portal"] .rl-card-tag,
+:root[data-palette="portal"] .rl-item,
+:root[data-palette="portal"] .rl-hint,
+:root[data-palette="portal"] .btn,
+:root[data-palette="portal"] .hub-seg-btn,
+:root[data-palette="portal"] thead th,
+:root[data-palette="portal"] .flabel,
+:root[data-palette="portal"] .row-name,
+:root[data-palette="portal"] .hub-name-link,
+:root[data-palette="portal"] .hub-detail-profile-link,
+:root[data-palette="portal"] .hub-feed-game-chip,
+:root[data-palette="portal"] .hub-review-game,
+:root[data-palette="portal"] .active-filter-chip,
+:root[data-palette="portal"] .chip { font-family: 'Oswald', system-ui, sans-serif; letter-spacing: .04em; }
+:root[data-palette="portal"] .score-ring-num,
+:root[data-palette="portal"] .score-dial-num,
+:root[data-palette="portal"] .hub-review-medal,
+:root[data-palette="portal"] .hub-feed-date,
+:root[data-palette="portal"] .hub-review-date { font-family: 'Share Tech Mono', ui-monospace, monospace; }
+
+/* ── §2 · Fondo: rejilla tenue de paneles de sala de pruebas (juntas azuladas). ── */
+:root[data-palette="portal"] body {
+  background-image:
+    linear-gradient(rgba(41, 182, 246, .05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(41, 182, 246, .05) 1px, transparent 1px);
+  background-size: 46px 46px;
+}
+
+/* ── §3 · Paneles: placa de pared de Aperture — borde fino + BARRA NARANJA superior (gel de propulsión)
+   para diferenciarlo del Clásico (ambos azul-oscuro); la dualidad azul/naranja es la firma de Portal. ── */
+:root[data-palette="portal"] .toolbar,
+:root[data-palette="portal"] .table-wrap,
+:root[data-palette="portal"] .settings-card,
+:root[data-palette="portal"] .hub-feed-card,
+:root[data-palette="portal"] .modal,
+:root[data-palette="portal"] .alert-dialog { border: 1px solid var(--border) !important; border-top: 2px solid var(--portal-orange) !important; border-radius: var(--radius-md) !important; box-shadow: 0 6px 22px rgba(0, 0, 0, .18) !important; }
+
+/* ── §4 · Tabla: cabecera de señalética (Oswald) con filete NARANJA (gel), otro punto de contraste con el Clásico. ── */
+:root[data-palette="portal"] thead th { background: transparent; color: var(--text-muted); border-bottom: 2px solid var(--portal-orange); }
+
+/* ── §5 · Botones: señalética de Aperture — planos, esquinas suaves, versales condensadas. Acento = azul
+   portal con texto tinta oscura (legible en ambos temas). Variantes semánticas: tinta en OSCURO, blanco en
+   CLARO (regla 10). Sin sesgo ni glow. ── */
+:root[data-palette="portal"] .btn:not(.btn-icon):not(.btn-ghost) { font-weight: 600; letter-spacing: .05em; border: 1px solid var(--border); border-radius: var(--radius-sm); }
+:root[data-palette="portal"] .btn-secondary,
+:root[data-palette="portal"] .btn-toggle:not(.active) { background: var(--surface-elevated) !important; color: var(--text) !important; }
+:root[data-palette="portal"] .btn-accent,
+:root[data-palette="portal"] .btn-steam,
+:root[data-palette="portal"] .btn.is-active,
+:root[data-palette="portal"] .btn-toggle.active { background: var(--steam) !important; color: #062330 !important; border-color: color-mix(in srgb, var(--steam) 60%, #000) !important; }
+:root[data-palette="portal"] .btn-complete,
+:root[data-palette="portal"] .btn-recommend { background: var(--success) !important; color: #04140c !important; border-color: color-mix(in srgb, var(--success) 55%, #000) !important; }
+:root[data-palette="portal"] .btn-inprogress { background: var(--warn) !important; color: #1a1500 !important; border-color: color-mix(in srgb, var(--warn) 55%, #000) !important; }
+:root[data-palette="portal"] .btn-danger,
+:root[data-palette="portal"] .btn-abandoned,
+:root[data-palette="portal"] .btn-recommend-active { background: var(--danger) !important; color: #fff !important; border-color: color-mix(in srgb, var(--danger) 55%, #000) !important; }
+:root[data-palette="portal"][data-theme="light"] .btn-complete,
+:root[data-palette="portal"][data-theme="light"] .btn-recommend,
+:root[data-palette="portal"][data-theme="light"] .btn-inprogress { color: #fff !important; }
+:root[data-palette="portal"] .btn-ghost { font-family: 'Oswald', system-ui, sans-serif; letter-spacing: .05em; }
+
+/* ── §6 · Chips: rótulos de señalética (Oswald), esquinas suaves. El COLOR por categoría lo pone la base
+   (adaptado a la paleta), como en el resto de temas. El chip "Amigos" se rehace como CUBO DE COMPAÑÍA:
+   placa neutra con borde y corazón rosa. ── */
+:root[data-palette="portal"] .chip,
+:root[data-palette="portal"] .rl-chip { border-radius: var(--radius-sm); box-shadow: none !important; transform: none; clip-path: none; }
+:root[data-palette="portal"] .hub-friend-chip {
+  background: var(--surface-elevated);
+  color: var(--portal-cube);
+  border: 1px solid var(--portal-cube);
+  border-radius: var(--radius-sm);
+  font-family: 'Oswald', system-ui, sans-serif;
+  letter-spacing: .04em;
+}
+:root[data-palette="portal"] .hub-friend-chip::before { content: '\2665'; margin-right: .3em; color: var(--portal-cube); }
+
+/* ── §7 · Segmentos y campos: placa limpia con borde fino. ── */
+:root[data-palette="portal"] .hub-seg { border: 1px solid var(--border); }
+:root[data-palette="portal"] .input-base,
+:root[data-palette="portal"] .finput,
+:root[data-palette="portal"] .ftextarea,
+:root[data-palette="portal"] .search-input { border: 1px solid var(--border) !important; border-radius: var(--radius-sm) !important; }
+
+/* ── §8 · Insignias rejugar/oportunidad: piloto indicador — activa = azul con halo; inactiva = placa gris. ── */
+:root[data-palette="portal"] .badge-rejugar-activo,
+:root[data-palette="portal"] .badge-opp-activo { background: var(--steam) !important; color: #062330 !important; border: 1px solid color-mix(in srgb, var(--steam) 55%, #000) !important; box-shadow: 0 0 8px rgba(var(--steam-rgb), .45) !important; }
+:root[data-palette="portal"] .badge-rejugar-inactivo,
+:root[data-palette="portal"] .badge-opp-inactivo { background: var(--surface-elevated) !important; color: var(--text-muted) !important; border: 1px solid var(--border) !important; box-shadow: none !important; }
+
+/* ── §9 · Puntuación 0–100: sin marco de color añadido (el arco rojo→verde ya es la nota; un aro azul
+   encima quedaba mal). Se conserva el aro base; el número va en monoespaciada (§1). ── */
+
+/* ── §10 · Actividad social. FECHAS = terminal de GLaDOS: el timestamp en monoespaciada con un prompt azul
+   `>`; la cabecera de día es un rótulo de señalética con FRANJA DE PELIGRO amarillo/negro debajo. La barra
+   fija (sticky) se mantiene: fondo opaco y sin tocar `position` (regla del sticky). ── */
+:root[data-palette="portal"] .hub-feed-day-header { background: var(--bg) !important; border: none !important; border-radius: 0 !important; box-shadow: none !important; padding: .15rem .6rem .5rem; }
+:root[data-palette="portal"] .hub-feed-day-header h4 { font-family: 'Oswald', system-ui, sans-serif; font-weight: 600; letter-spacing: .08em; color: var(--text); }
+:root[data-palette="portal"] .hub-feed-day-header::after { content: ''; position: absolute; left: 8%; right: 8%; bottom: 0; height: 3px; background: repeating-linear-gradient(45deg, var(--portal-orange) 0 7px, #14181c 7px 14px); border-radius: 2px; }
+:root[data-palette="portal"] .hub-feed-date,
+:root[data-palette="portal"] .hub-review-date {
+  display: inline-flex;
+  align-items: center;
+  gap: .4em;
+  background: none;
+  border: none;
+  box-shadow: none;
+  padding: 0;
+  color: var(--text-muted);
+  font-size: .72rem;
+  letter-spacing: .02em;
+  transform: none;
+}
+:root[data-palette="portal"] .hub-feed-date::before,
+:root[data-palette="portal"] .hub-review-date::before { content: '>'; color: var(--steam); font-weight: 700; }
+
+/* ── §11 · Ruleta = selector de cámara de pruebas. Tambor/tarjetas = placas; el visor de selección es un
+   PORTAL AZUL LUMINOSO (elipse con halo); nombres en Oswald (§1). ── */
+:root[data-palette="portal"] .rl-drum { border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--surface); box-shadow: inset 0 0 28px rgba(0, 0, 0, .32); }
+:root[data-palette="portal"] .rl-frame { border: 2.5px solid var(--steam); border-radius: 999px; box-shadow: 0 0 16px rgba(var(--steam-rgb), .5), inset 0 0 12px rgba(var(--steam-rgb), .25); }
+:root[data-palette="portal"] .rl-hint { color: var(--steam); letter-spacing: .12em; }
+:root[data-palette="portal"] .rl-ghost,
+:root[data-palette="portal"] .rl-card { border: 1px solid var(--border); border-radius: var(--radius-md); box-shadow: 0 6px 22px rgba(0, 0, 0, .18); }
+:root[data-palette="portal"] .rl-card-tag { color: var(--steam); }
+
+/* ── §12 · FAB = LOS DOS PORTALES: añadir "+" = portal AZUL; ruleta = portal NARANJA. Discos con halo de
+   portal. Redondos por naturaleza (regla 5: sin desplazamiento de sombra en un círculo). ── */
+:root[data-palette="portal"] .fab { background: radial-gradient(circle at 50% 42%, #a9e4ff, var(--steam) 70%); border: 2px solid rgba(255, 255, 255, .35); color: #062330; box-shadow: 0 0 16px rgba(var(--steam-rgb), .6), inset 0 0 10px rgba(255, 255, 255, .4); }
+:root[data-palette="portal"] .fab-roulette { background: radial-gradient(circle at 50% 42%, #ffd8a0, var(--portal-orange) 70%); border: 2px solid rgba(255, 255, 255, .35); color: #3a1c00; box-shadow: 0 0 16px rgba(255, 158, 27, .6), inset 0 0 10px rgba(255, 255, 255, .4); }
+:root[data-palette="portal"] .fab:hover { filter: none; box-shadow: 0 0 22px rgba(var(--steam-rgb), .8), inset 0 0 10px rgba(255, 255, 255, .5); }
+:root[data-palette="portal"] .fab-roulette:hover { filter: none; box-shadow: 0 0 22px rgba(255, 158, 27, .85), inset 0 0 10px rgba(255, 255, 255, .5); }
+
+
+/* ═══════════════════════════════════════════════════════════════════════════════════════════════════
+   TEMA · Sin futuro (Cyberpunk 2077) — HUD de Night City: amarillo ácido + cian + magenta sobre
+   negro, marcos angulares, scanlines y GLITCH de aberración cromática (RGB split, la óptica Kiroshi). La
+   tipografía real del juego es Rajdhani; las fechas van en monoespaciada tipo terminal. No se fuerza la
+   caja (la controla el interruptor global). Identidad de color: CAPA 2 en `_base.scss`. ═══════════════ */
+
+/* ── §1 · Tipografía: Rajdhani (fuente real del HUD) para todo; Share Tech Mono (terminal) para fechas y
+   números de puntuación. Los momentos hero (título de sección, resultado de ruleta) llevan el GLITCH de
+   aberración cromática: sombras cian/magenta desplazadas. En claro se apaga (sobre fondo claro ensucia). ── */
+:root[data-palette="cyberpunk"] body { font-family: 'Rajdhani', system-ui, sans-serif; }
+:root[data-palette="cyberpunk"] h2,
+:root[data-palette="cyberpunk"] h3,
+:root[data-palette="cyberpunk"] h4,
+:root[data-palette="cyberpunk"] .modal-title,
+:root[data-palette="cyberpunk"] .dialog-title,
+:root[data-palette="cyberpunk"] .rl-card-name,
+:root[data-palette="cyberpunk"] .rl-card-tag,
+:root[data-palette="cyberpunk"] .rl-item,
+:root[data-palette="cyberpunk"] .rl-hint,
+:root[data-palette="cyberpunk"] .btn,
+:root[data-palette="cyberpunk"] .hub-seg-btn,
+:root[data-palette="cyberpunk"] thead th,
+:root[data-palette="cyberpunk"] .flabel,
+:root[data-palette="cyberpunk"] .row-name,
+:root[data-palette="cyberpunk"] .hub-name-link,
+:root[data-palette="cyberpunk"] .hub-detail-profile-link,
+:root[data-palette="cyberpunk"] .hub-feed-game-chip,
+:root[data-palette="cyberpunk"] .hub-review-game,
+:root[data-palette="cyberpunk"] .active-filter-chip,
+:root[data-palette="cyberpunk"] .chip { font-family: 'Rajdhani', system-ui, sans-serif; font-weight: 600; letter-spacing: .03em; }
+:root[data-palette="cyberpunk"] .score-ring-num,
+:root[data-palette="cyberpunk"] .score-dial-num,
+:root[data-palette="cyberpunk"] .hub-review-medal,
+:root[data-palette="cyberpunk"] .hub-feed-date,
+:root[data-palette="cyberpunk"] .hub-review-date { font-family: 'Share Tech Mono', ui-monospace, monospace; }
+/* Glitch de aberración cromática (signature) en los títulos hero: SUTIL — 1px y colores semitransparentes,
+   un matiz de fleco cian/magenta que no dobla el texto ni impide leerlo. */
+:root[data-palette="cyberpunk"] h2,
+:root[data-palette="cyberpunk"] .rl-card-name { color: var(--steam); font-weight: 700; text-shadow: -1px 0 rgba(255, 42, 109, .5), 1px 0 rgba(0, 240, 255, .5); }
+:root[data-palette="cyberpunk"][data-theme="light"] h2,
+:root[data-palette="cyberpunk"][data-theme="light"] .rl-card-name { text-shadow: none; }
+:root[data-palette="cyberpunk"] thead th,
+:root[data-palette="cyberpunk"] .hub-name-link,
+:root[data-palette="cyberpunk"] .hub-detail-profile-link { color: var(--steam); }
+
+/* ── §2 · Fondo: scanlines CRT muy tenues (líneas horizontales cian). ── */
+:root[data-palette="cyberpunk"] body {
+  background-image: repeating-linear-gradient(0deg, rgba(0, 240, 255, .035) 0 1px, transparent 1px 3px);
+}
+:root[data-palette="cyberpunk"][data-theme="light"] body {
+  background-image: repeating-linear-gradient(0deg, rgba(0, 40, 60, .04) 0 1px, transparent 1px 3px);
+}
+
+/* ── §3 · Paneles: marco HUD — esquinas rectas, filete neón cian, barra amarilla a la izquierda y halo
+   tenue. Sin clip-path en paneles grandes (recortaría contenido/sombras; regla 2/3). ── */
+:root[data-palette="cyberpunk"] .toolbar,
+:root[data-palette="cyberpunk"] .table-wrap,
+:root[data-palette="cyberpunk"] .settings-card,
+:root[data-palette="cyberpunk"] .hub-feed-card,
+:root[data-palette="cyberpunk"] .modal,
+:root[data-palette="cyberpunk"] .alert-dialog { border: 1px solid rgba(0, 240, 255, .35) !important; border-left: 3px solid var(--cyber-yellow) !important; border-radius: 0 !important; box-shadow: 0 0 18px rgba(0, 240, 255, .06), inset 0 0 0 1px rgba(0, 240, 255, .05) !important; }
+
+/* ── §4 · Tabla: cabecera HUD (Rajdhani, etiqueta amarilla, filete cian inferior). ── */
+:root[data-palette="cyberpunk"] thead th { background: transparent; letter-spacing: .06em; border-bottom: 1px solid rgba(0, 240, 255, .4); }
+
+/* ── §5 · Botones HUD: angulares (esquina cortada con clip-path — planos, sin borde/sombra recortable).
+   Acento = relleno AMARILLO con texto negro (firma de Cyberpunk), en ambos temas. Semánticos rellenos;
+   texto tinta en OSCURO y claro en CLARO (regla 10). ── */
+:root[data-palette="cyberpunk"] .btn:not(.btn-icon):not(.btn-ghost) { font-weight: 600; letter-spacing: .05em; border: 1px solid var(--border); border-radius: 0; clip-path: polygon(0 0, 100% 0, 100% calc(100% - 9px), calc(100% - 9px) 100%, 0 100%); }
+:root[data-palette="cyberpunk"] .btn-secondary,
+:root[data-palette="cyberpunk"] .btn-toggle:not(.active) { background: var(--surface-elevated) !important; color: var(--text) !important; border-color: rgba(0, 240, 255, .35) !important; }
+/* En claro el botón secundario es casi blanco sobre fondo claro: el cian tenue no se ve, así que le damos
+   un filete teal mínimo pero visible para que el botón tenga contorno. */
+:root[data-palette="cyberpunk"][data-theme="light"] .btn-secondary,
+:root[data-palette="cyberpunk"][data-theme="light"] .btn-toggle:not(.active) { border-color: rgba(0, 137, 163, .55) !important; }
+:root[data-palette="cyberpunk"] .btn-accent,
+:root[data-palette="cyberpunk"] .btn-steam,
+:root[data-palette="cyberpunk"] .btn.is-active,
+:root[data-palette="cyberpunk"] .btn-toggle.active { background: var(--cyber-yellow) !important; color: #08090d !important; border-color: var(--cyber-yellow) !important; }
+:root[data-palette="cyberpunk"] .btn-complete,
+:root[data-palette="cyberpunk"] .btn-recommend { background: var(--success) !important; color: #04140b !important; border-color: color-mix(in srgb, var(--success) 55%, #000) !important; }
+:root[data-palette="cyberpunk"] .btn-inprogress { background: var(--warn) !important; color: #1a1200 !important; border-color: color-mix(in srgb, var(--warn) 55%, #000) !important; }
+:root[data-palette="cyberpunk"] .btn-danger,
+:root[data-palette="cyberpunk"] .btn-abandoned,
+:root[data-palette="cyberpunk"] .btn-recommend-active { background: var(--danger) !important; color: #fff !important; border-color: color-mix(in srgb, var(--danger) 55%, #000) !important; }
+:root[data-palette="cyberpunk"][data-theme="light"] .btn-complete,
+:root[data-palette="cyberpunk"][data-theme="light"] .btn-recommend,
+:root[data-palette="cyberpunk"][data-theme="light"] .btn-inprogress { color: #fff !important; }
+:root[data-palette="cyberpunk"] .btn-ghost { font-family: 'Rajdhani', system-ui, sans-serif; font-weight: 600; letter-spacing: .05em; }
+
+/* ── §6 · Chips: rectos, Rajdhani; el color por categoría lo pone la base (adaptado a la paleta). ── */
+:root[data-palette="cyberpunk"] .chip,
+:root[data-palette="cyberpunk"] .rl-chip { border-radius: 0; box-shadow: none !important; transform: none; clip-path: none; }
+:root[data-palette="cyberpunk"] .hub-friend-chip { border-radius: 0; }
+
+/* ── §7 · Segmentos y campos: HUD — recto, filete cian, foco amarillo (lo da --steam en base). ── */
+:root[data-palette="cyberpunk"] .hub-seg { border: 1px solid rgba(0, 240, 255, .4); border-radius: 0; }
+:root[data-palette="cyberpunk"] .input-base,
+:root[data-palette="cyberpunk"] .finput,
+:root[data-palette="cyberpunk"] .ftextarea,
+:root[data-palette="cyberpunk"] .search-input { border: 1px solid rgba(0, 240, 255, .4) !important; border-radius: 0 !important; }
+
+/* ── §8 · Insignias: activa = amarillo neón con halo; inactiva = superficie con filete cian. ── */
+:root[data-palette="cyberpunk"] .badge-rejugar-activo,
+:root[data-palette="cyberpunk"] .badge-opp-activo { background: var(--cyber-yellow) !important; color: #08090d !important; border: 1px solid var(--cyber-yellow) !important; box-shadow: 0 0 8px rgba(252, 238, 10, .45) !important; }
+:root[data-palette="cyberpunk"] .badge-rejugar-inactivo,
+:root[data-palette="cyberpunk"] .badge-opp-inactivo { background: var(--surface-elevated) !important; color: var(--text-muted) !important; border: 1px solid rgba(0, 240, 255, .35) !important; box-shadow: none !important; }
+
+/* ── §9 · Puntuación 0–100: sin aro/borde añadido (el arco de color ya es la nota). Número en
+   monoespaciada (§1). ── */
+
+/* ── §10 · Actividad social. Nombres en Rajdhani + amarillo (§1). FECHAS = lectura de terminal: mono con
+   un prefijo cian `//`; la cabecera de día es un rótulo con filete de peligro cian. La barra fija (sticky)
+   se mantiene (fondo opaco, sin tocar `position`). ── */
+:root[data-palette="cyberpunk"] .hub-feed-day-header { background: var(--bg) !important; border: none !important; border-radius: 0 !important; box-shadow: none !important; padding: .15rem .6rem .45rem; }
+:root[data-palette="cyberpunk"] .hub-feed-day-header h4 { font-family: 'Rajdhani', system-ui, sans-serif; font-weight: 700; letter-spacing: .06em; color: var(--steam); }
+:root[data-palette="cyberpunk"] .hub-feed-day-header::after { content: ''; position: absolute; left: 8%; right: 8%; bottom: 0; height: 2px; background: linear-gradient(90deg, transparent, var(--cyber-cyan), transparent); }
+:root[data-palette="cyberpunk"] .hub-feed-date,
+:root[data-palette="cyberpunk"] .hub-review-date {
+  display: inline-flex;
+  align-items: center;
+  gap: .4em;
+  background: none;
+  border: none;
+  box-shadow: none;
+  padding: 0;
+  color: var(--text-muted);
+  font-size: .72rem;
+  letter-spacing: .02em;
+  transform: none;
+}
+:root[data-palette="cyberpunk"] .hub-feed-date::before,
+:root[data-palette="cyberpunk"] .hub-review-date::before { content: '//'; color: var(--cyber-cyan); font-weight: 700; }
+
+/* ── §11 · Ruleta = escáner HUD. Tambor/tarjetas = paneles rectos; el visor de selección es un marco
+   AMARILLO/CIAN luminoso (objetivo de escaneo); nombres en Rajdhani (§1). ── */
+:root[data-palette="cyberpunk"] .rl-drum { border: 1px solid rgba(0, 240, 255, .35); border-radius: 0; background: var(--surface); box-shadow: inset 0 0 26px rgba(0, 0, 0, .5); }
+:root[data-palette="cyberpunk"] .rl-frame { border: 2px solid var(--cyber-yellow); border-radius: 0; box-shadow: 0 0 14px rgba(252, 238, 10, .5), inset 0 0 10px rgba(0, 240, 255, .18); }
+:root[data-palette="cyberpunk"] .rl-hint { color: var(--cyber-cyan); letter-spacing: .12em; }
+:root[data-palette="cyberpunk"] .rl-ghost,
+:root[data-palette="cyberpunk"] .rl-card { border: 1px solid rgba(0, 240, 255, .35); border-left: 3px solid var(--cyber-yellow); border-radius: 0; box-shadow: 0 0 16px rgba(0, 240, 255, .06); }
+:root[data-palette="cyberpunk"] .rl-card-tag { color: var(--steam); }
+
+/* ── §12 · FAB neón: añadir "+" = AMARILLO; ruleta = CIAN. Discos con halo (redondos por naturaleza). ── */
+:root[data-palette="cyberpunk"] .fab { background: var(--cyber-yellow); border: 1px solid var(--cyber-yellow); color: #08090d; box-shadow: 0 0 16px rgba(252, 238, 10, .6); }
+:root[data-palette="cyberpunk"] .fab-roulette { background: var(--cyber-cyan); border: 1px solid var(--cyber-cyan); color: #08090d; box-shadow: 0 0 16px rgba(0, 240, 255, .6); }
+:root[data-palette="cyberpunk"] .fab:hover { filter: none; box-shadow: 0 0 22px rgba(252, 238, 10, .85); }
+:root[data-palette="cyberpunk"] .fab-roulette:hover { filter: none; box-shadow: 0 0 22px rgba(0, 240, 255, .85); }
+
+
+/* ═══════════════════════════════════════════════════════════════════════════════════════════════════
+   HOVER de botones por tema. El hover base hace un giro 3D (`perspective/rotateX`) pensado para el tema
+   Clásico; en los skins planos/HUD (y con el sesgo de Persona) queda raro. Aquí se sustituye por un hover
+   sobrio y coherente con cada tema (elevación leve + brillo; glow neón en Cyberpunk), respetando el sesgo. ═══ */
+:root[data-palette="persona"] .btn:not(.btn-icon):not(.btn-ghost):hover { transform: skewX(-7deg) translateY(-2px); filter: brightness(1.06); }
+:root[data-palette="persona"] .btn:not(.btn-icon):not(.btn-ghost):active { transform: skewX(-7deg); }
+
+:root[data-palette="portal"] .btn:not(.btn-icon):not(.btn-ghost):hover { transform: translateY(-2px); filter: brightness(1.06); box-shadow: 0 6px 16px rgba(0, 0, 0, .28); }
+:root[data-palette="portal"] .btn:not(.btn-icon):not(.btn-ghost):active { transform: translateY(0); }
+
+:root[data-palette="cyberpunk"] .btn:not(.btn-icon):not(.btn-ghost):hover { transform: translateY(-1px); filter: brightness(1.08); box-shadow: 0 0 14px rgba(0, 240, 255, .3); }
+:root[data-palette="cyberpunk"] .btn:not(.btn-icon):not(.btn-ghost):active { transform: translateY(0); }
+
+
+/* ═══════════════════════════════════════════════════════════════════════════════════════════════════
+   BARRA DE NAVEGACIÓN INFERIOR por tema. La base es una "pastilla de cristal" igual en todos; aquí se le
+   da a cada tema el mismo lenguaje que sus paneles (§3), y al indicador activo su radio. El color activo
+   ya sigue al acento en base. ═══════════════════════════════════════════════════════════════════════ */
+/* Persona: sticker de cómic — contorno grueso (pop-line) + sombra roja, esquinas de panel. */
+:root[data-palette="persona"] .bottom-nav-inner { border: 3px solid var(--pop-line); border-radius: 6px; background: var(--surface); box-shadow: 0 8px 20px rgba(0, 0, 0, .4), 4px 4px 0 rgba(255, 78, 100, .45); }
+:root[data-palette="persona"] .bottom-nav-ind { border-radius: 3px; }
+/* Portal: placa Aperture — filete cian + barra naranja superior (gel), como los paneles. */
+:root[data-palette="portal"] .bottom-nav-inner { border: 1px solid rgba(0, 240, 255, .35); border-top: 2px solid var(--portal-orange); border-radius: var(--radius-md); background: var(--surface); }
+:root[data-palette="portal"] .bottom-nav-ind { border-radius: var(--radius-sm); }
+/* Cyberpunk: HUD — filete cian + barra amarilla lateral, esquinas rectas. */
+:root[data-palette="cyberpunk"] .bottom-nav-inner { border: 1px solid rgba(0, 240, 255, .35); border-left: 3px solid var(--cyber-yellow); border-radius: 0; background: var(--surface); }
+:root[data-palette="cyberpunk"] .bottom-nav-ind { border-radius: 0; }
+

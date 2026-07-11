@@ -133,7 +133,8 @@ dialog.modal-dialog[open]::backdrop { animation: modalBackdropIn .28s ease both;
   transform: translateY(-12px);
   pointer-events: none;
 }
-.floating-controls .theme-toggle-btn {
+.floating-controls .theme-toggle-btn,
+.floating-controls .palette-select {
   background: var(--surface-glass);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);

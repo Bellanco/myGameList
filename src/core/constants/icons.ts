@@ -2,6 +2,7 @@ import type { TabId } from '../../model/types/game';
 
 export type IconName =
   | 'plus'
+  | 'check'
   | 'download'
   | 'upload'
   | 'save'
