@@ -157,6 +157,10 @@
   line-height: 1.4;
 }
 
+/* Ajustes de cuenta: todo el cuerpo (escala + apariencia) se bloquea sin sesión de Google (atributo `inert`). */
+.settings-account-body { display: flex; flex-direction: column; gap: .8rem; }
+.settings-account-body[inert] { opacity: .55; }
+
 /* F2 — selector de escala de puntuación (estrellas / nota) en Ajustes. */
 .score-scale-choice { display: grid; gap: .6rem; }
 .score-scale-choice.is-locked { opacity: .6; }
