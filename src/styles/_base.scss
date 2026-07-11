@@ -445,6 +445,79 @@
   --cup-line: #241812;
 }
 
+/* ── Solo hay guerra (Warhammer 40.000) — grimdark gótico imperial: pantalla de COGITADOR verde fósforo sobre
+   negro, ornamento de ORO latón, rojo sangre de aviso. `--grim-green/gold/red` y `--grim-line` (ornamento
+   gótico: oro en oscuro / tinta en claro) son tokens extra del skin. ── */
+:root[data-palette="grimdark"] {
+  --bg: #060b08;
+  --surface: #0e1712;
+  --surface-hover: #16241b;
+  --surface-elevated: #1d2e23;
+  --border: #2f5240;
+  --text: #c9ddcb;
+  --text-muted: #7fa389;
+  --text-dim: #587664;
+  --steam: #43f558;
+  --steam-hover: #7dff8c;
+  --steam-rgb: 67,245,88;
+  --tab-active: #7dff8c;
+  --success: #58dd6b;
+  --success-rgb: 88,221,107;
+  --warn: #e0a92b;
+  --warn-rgb: 224,169,43;
+  --danger: #e63b3b;
+  --danger-rgb: 230,59,59;
+  --star-empty: #2f5240;
+  --star-full: #e0b23a;
+  --chip-plat-fg: #b6d4bb;
+  --chip-plat-bg: rgba(120,200,140,.10);
+  --chip-plat-border: rgba(120,220,150,.30);
+  --hub-text: #d6efd8;
+  --hub-text-muted: #90b89a;
+  --radius-sm: 0px;
+  --radius-md: 2px;
+  --radius-lg: 3px;
+  --grim-green: #43f558;
+  --grim-gold: #e0a92b;
+  --grim-red: #e63b3b;
+  /* Línea de ornamento gótico (molduras/bordes): ORO latón en oscuro (imperial sobre el negro), tinta en claro. */
+  --grim-line: #e0a92b;
+}
+:root[data-palette="grimdark"][data-theme="light"] {
+  /* CLARO = CÓDICE imperial: VITELA envejecida (cálida, con grano), tinta negra + oro gótico, capitulares
+     rubricadas en rojo y verde oscuro de data-slate. */
+  --bg: #e7ddc3;
+  --surface: #f3ecd7;
+  --surface-hover: #ddd2b4;
+  --surface-elevated: #f9f4e6;
+  --border: #c3b48c;
+  --text: #1b1e1a;
+  --text-muted: #565b4e;
+  --text-dim: #7c8173;
+  --steam: #136b30;
+  --steam-hover: #0d5324;
+  --steam-rgb: 19,107,48;
+  --tab-active: #0d5324;
+  --success: #1b8f45;
+  --success-rgb: 27,143,69;
+  --warn: #a3771a;
+  --warn-rgb: 163,119,26;
+  --danger: #b3261e;
+  --danger-rgb: 179,38,30;
+  --star-empty: #c9c1ab;
+  --star-full: #a3771a;
+  --chip-plat-fg: #565b4e;
+  --chip-plat-bg: rgba(80,90,70,.10);
+  --chip-plat-border: rgba(80,90,70,.28);
+  --hub-text: #1b1e1a;
+  --hub-text-muted: #565b4e;
+  --tint-rgb: 26,30,24;
+  --grim-green: #136b30;
+  --grim-gold: #9a6f14;
+  --grim-red: #b3261e;
+  --grim-line: #2a2d24;
+}
+
 /* ══ CAPA 3 · DECORATIVOS / EXPRESIVOS ═════════════════════════════════════════
    Acentos NO semánticos (lomos de podio, avatares, badges de estado). Centralizados y
    theme-aware. Reactividad deliberada por rol (Opción B): lo que transmite "rol"

@@ -12,7 +12,8 @@
     persona: { dark: '#0d0d0d', light: '#f4f1ee' },
     portal: { dark: '#12171b', light: '#e7ecf0' },
     cyberpunk: { dark: '#08090d', light: '#e7eaee' },
-    cuphead: { dark: '#1c1209', light: '#eddcac' }
+    cuphead: { dark: '#1c1209', light: '#eddcac' },
+    grimdark: { dark: '#060b08', light: '#e4e2d4' }
   };
   try {
     var pref = localStorage.getItem('mis-listas-theme'); // 'dark' | 'light' | null
