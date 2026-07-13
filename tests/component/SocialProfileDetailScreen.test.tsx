@@ -24,6 +24,9 @@ describe('SocialProfileDetailScreen — listados', () => {
           favorites: [],
         }}
         onBack={vi.fn()}
+        showReviews={false}
+        onToggleReviews={vi.fn()}
+        onOpenReview={vi.fn()}
         status=""
         statusKind=""
       />,
@@ -46,6 +49,9 @@ describe('SocialProfileDetailScreen — listados', () => {
           favorites: [],
         }}
         onBack={vi.fn()}
+        showReviews={false}
+        onToggleReviews={vi.fn()}
+        onOpenReview={vi.fn()}
         status=""
         statusKind=""
       />,
@@ -75,6 +81,9 @@ describe('SocialProfileDetailScreen — gating por amistad', () => {
         onAddOrAcceptFriend={vi.fn()}
         onCancelFriendRequest={vi.fn()}
         onBack={vi.fn()}
+        showReviews={false}
+        onToggleReviews={vi.fn()}
+        onOpenReview={vi.fn()}
         status=""
         statusKind=""
       />,
@@ -98,6 +107,9 @@ describe('SocialProfileDetailScreen — gating por amistad', () => {
         onCancelFriendRequest={vi.fn()}
         onRemoveFriend={vi.fn()}
         onBack={vi.fn()}
+        showReviews={false}
+        onToggleReviews={vi.fn()}
+        onOpenReview={vi.fn()}
         status=""
         statusKind=""
       />,

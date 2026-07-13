@@ -17,6 +17,7 @@ import { useToolbarFilters } from './viewmodel/useToolbarFilters';
 import { computeTabOptions, countActiveFilters } from './viewmodel/toolbarFilters';
 import { useSyncViewModel } from './viewmodel/useSyncViewModel';
 import { useScoreScaleSession } from './view/hooks/useScoreScaleSession';
+import { useSocialProfileSession } from './view/hooks/useSocialProfileSession';
 import { useAppearanceSession } from './view/hooks/useAppearanceSession';
 import { useUppercase } from './view/hooks/useUppercase';
 import { useShowSteamButton } from './view/hooks/useShowSteamButton';
@@ -61,6 +62,8 @@ export const APP_ROUTE_PATHS = [
   '/social/profile',
   '/social/profiles',
   '/social/profiles/:profileId',
+  '/social/profiles/:profileId/reviews',
+  '/social/profiles/:profileId/game/:gameId/review',
   '/social/requests',
   '/social/user/:userId/game/:gameId/:eventType',
   '/ajustes',
@@ -77,6 +80,9 @@ export default function App() {
   // F2: enlaza la sesión de Google con la escala de puntuación (hidrata desde Firestore / resetea al salir);
   // devuelve el uid para gatear la opción en Ajustes. Se monta aquí para que la escala esté en toda la app.
   const { uid: scoreScaleUid, ready: authReady } = useScoreScaleSession();
+  // El botón flotante de Cuenta se muestra solo si hay PERFIL SOCIAL configurado (no basta la sesión de
+  // Google recordada). Se resuelve al abrir la web (raíz), así no hay que pasar por Social para verlo.
+  const hasSocialProfile = useSocialProfileSession();
   // F1: enlaza la sesión con la apariencia (paleta + claro/oscuro) → hidrata/replica en Firestore.
   useAppearanceSession();
   // F1: aplica la preferencia de caja (mayúsculas) al <html> app-wide y reacciona a la hidratación.
@@ -403,7 +409,11 @@ export default function App() {
   return (
     <>
       <IconSprite />
-      <FloatingControls />
+      <FloatingControls
+        activeSection={activeSection}
+        onSectionChange={handleSectionChange}
+        showAccount={hasSocialProfile}
+      />
       {activeSection === 'lists' ? <TabBar currentTab={currentTab} tabCounts={vm.tabCounts} onTabChange={handleTabChange} /> : null}
       <StatusBanner notice={vm.notice} remoteChangesApplied={syncVm.lastRemoteChangesApplied} />
       <main
@@ -508,7 +518,7 @@ export default function App() {
         </>
       ) : null}
 
-      <BottomNavigation currentSection={activeSection} onSectionChange={handleSectionChange} showAccount={scoreScaleUid !== null} />
+      <BottomNavigation currentSection={activeSection} onSectionChange={handleSectionChange} />
 
       <Suspense fallback={null}>
         <FormModal

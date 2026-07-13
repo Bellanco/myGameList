@@ -75,10 +75,14 @@
   font-style: italic; letter-spacing: .01em;
 }
 
-/* ── §2 · Fondo: semitono pop-art (puntos de tinta rojos). ── */
+/* ── §2 · Fondo: semitono pop-art (puntos de tinta rojos). En OSCURO más visibles (más contraste sobre el
+   negro); en CLARO se mantiene el valor original commiteado. ── */
 :root[data-palette="persona"] body {
-  background-image: radial-gradient(rgba(255, 31, 61, .16) 1.6px, transparent 1.8px);
+  background-image: radial-gradient(rgba(255, 31, 61, .3) 1.6px, transparent 1.8px);
   background-size: 11px 11px;
+}
+:root[data-palette="persona"][data-theme="light"] body {
+  background-image: radial-gradient(rgba(255, 31, 61, .16) 1.6px, transparent 1.8px);
 }
 
 /* ── §3 · Paneles: contorno grueso + sombra dura roja (sticker de cómic). El contorno usa `--pop-line`
@@ -88,12 +92,14 @@
 :root[data-palette="persona"] .table-wrap,
 :root[data-palette="persona"] .settings-card,
 :root[data-palette="persona"] .hub-feed-card,
+:root[data-palette="persona"] .hub-hub-card,
 :root[data-palette="persona"] .modal,
 :root[data-palette="persona"] .alert-dialog { border: 3px solid var(--pop-line) !important; box-shadow: 7px 7px 0 rgba(255, 78, 100, .5) !important; border-radius: 6px !important; }
 :root[data-palette="persona"][data-theme="light"] .toolbar,
 :root[data-palette="persona"][data-theme="light"] .table-wrap,
 :root[data-palette="persona"][data-theme="light"] .settings-card,
 :root[data-palette="persona"][data-theme="light"] .hub-feed-card,
+:root[data-palette="persona"][data-theme="light"] .hub-hub-card,
 :root[data-palette="persona"][data-theme="light"] .modal,
 :root[data-palette="persona"][data-theme="light"] .alert-dialog { border-color: #151011 !important; box-shadow: 7px 7px 0 rgba(230, 0, 18, .22) !important; }
 
@@ -277,6 +283,9 @@
 /* ── §13 · Barra de navegación inferior: sticker de cómic (contorno grueso + sombra roja), como los paneles (§3). ── */
 :root[data-palette="persona"] .bottom-nav-inner { border: 3px solid var(--pop-line); border-radius: 6px; background: var(--surface); box-shadow: 0 8px 20px rgba(0, 0, 0, .4), 4px 4px 0 rgba(255, 78, 100, .45); }
 :root[data-palette="persona"] .bottom-nav-ind { border-radius: 3px; }
+/* Favoritos publicados: mini-sticker de cómic (contorno grueso + sombra roja); lomos variados en `--deco-shelf-*`. */
+:root[data-palette="persona"] .hub-fav-cart { border: 2.5px solid var(--pop-line); border-radius: 4px; box-shadow: 4px 4px 0 rgba(255, 78, 100, .4); }
+:root[data-palette="persona"] .hub-fav-cart:hover { border-color: var(--pop-line); }
 :root[data-palette="persona"][data-theme="light"] .fab,
 :root[data-palette="persona"][data-theme="light"] .fab-roulette { color: #fff; box-shadow: 2px 2px 0 #151011; }
 
@@ -329,6 +338,7 @@
 :root[data-palette="portal"] .table-wrap,
 :root[data-palette="portal"] .settings-card,
 :root[data-palette="portal"] .hub-feed-card,
+:root[data-palette="portal"] .hub-hub-card,
 :root[data-palette="portal"] .modal,
 :root[data-palette="portal"] .alert-dialog { border: 1px solid var(--border) !important; border-top: 2px solid var(--portal-orange) !important; border-radius: var(--radius-md) !important; box-shadow: inset 0 1px 0 rgba(255, 255, 255, .07), inset 0 0 46px rgba(41, 182, 246, .05), 0 8px 26px rgba(0, 0, 0, .26) !important; }
 /* En claro, placa blanca "iluminada desde arriba": filo superior claro + tenue tinte frío + sombra limpia. */
@@ -336,6 +346,7 @@
 :root[data-palette="portal"][data-theme="light"] .table-wrap,
 :root[data-palette="portal"][data-theme="light"] .settings-card,
 :root[data-palette="portal"][data-theme="light"] .hub-feed-card,
+:root[data-palette="portal"][data-theme="light"] .hub-hub-card,
 :root[data-palette="portal"][data-theme="light"] .modal,
 :root[data-palette="portal"][data-theme="light"] .alert-dialog { box-shadow: inset 0 1px 0 rgba(255, 255, 255, .9), inset 0 0 46px rgba(41, 182, 246, .05), 0 8px 22px rgba(20, 45, 70, .12) !important; }
 
@@ -455,6 +466,8 @@
 /* ── §13 · Barra de navegación inferior: placa Aperture — filete cian + barra naranja superior (gel), como los paneles. ── */
 :root[data-palette="portal"] .bottom-nav-inner { border: 1px solid rgba(0, 240, 255, .35); border-top: 2px solid var(--portal-orange); border-radius: var(--radius-md); background: var(--surface); }
 :root[data-palette="portal"] .bottom-nav-ind { border-radius: var(--radius-sm); }
+/* Favoritos publicados: placa de Aperture — borde fino; lomos variados en `--deco-shelf-*`. */
+:root[data-palette="portal"] .hub-fav-cart { border: 1px solid var(--border); border-radius: var(--radius-sm); }
 
 
 /* ═══════════════════════════════════════════════════════════════════════════════════════════════════
@@ -498,9 +511,63 @@
 :root[data-palette="cyberpunk"] .rl-card-name { color: var(--steam); font-weight: 700; text-shadow: -1px 0 rgba(255, 42, 109, .5), 1px 0 rgba(0, 240, 255, .5); }
 :root[data-palette="cyberpunk"][data-theme="light"] h2,
 :root[data-palette="cyberpunk"][data-theme="light"] .rl-card-name { text-shadow: none; }
-:root[data-palette="cyberpunk"] thead th,
+:root[data-palette="cyberpunk"] thead th { color: var(--steam); }
+/* Enlaces "ver perfil" (nombre del feed y del detalle de actividad): AZUL ELÉCTRICO del juego (cian), no amarillo;
+   al pasar el ratón, halo neón cian. Es el color de interacción de la UI de Cyberpunk. */
 :root[data-palette="cyberpunk"] .hub-name-link,
-:root[data-palette="cyberpunk"] .hub-detail-profile-link { color: var(--steam); }
+:root[data-palette="cyberpunk"] .hub-detail-profile-link { color: var(--cyber-cyan); }
+:root[data-palette="cyberpunk"] .hub-name-link:hover,
+:root[data-palette="cyberpunk"] .hub-detail-profile-link:hover { color: var(--cyber-cyan); text-shadow: 0 0 8px rgba(0, 240, 255, .55); }
+
+/* ── §1b · GLITCH ambiental (signature del juego): aberración RGB + micro-slice con clip-path/transform. MUY sutil
+   y de vez en cuando — el corte ocupa ~1% de un ciclo largo (≈ una vez cada 11–17 s) con 3 microflashes; el resto
+   del tiempo el elemento está quieto. Las props solo se tocan EN los fotogramas del glitch (no en 0%/100%), así el
+   estado base no se pisa: la sombra estática del h2, el notch de los botones, el translateY del hover, etc. quedan
+   intactos entre destellos. Todo bajo `prefers-reduced-motion: no-preference` para respetar accesibilidad. ── */
+@media (prefers-reduced-motion: no-preference) {
+  /* CLAVE del confinamiento: cada propiedad animada (transform/clip-path/text-shadow) se ANCLA a su valor
+     "apagado" en 0%/95.4%/97.4%/100%, así el destello queda encerrado en ~2% del ciclo y el resto del tiempo el
+     elemento está idéntico a su base. El h2 conserva su aberración estática (idle text-shadow = ese valor) y no
+     se recorta (idle clip-path = inset(-3px), expandido, no recorta la sombra). */
+  @keyframes cyber-glitch-text {
+    0%, 95.4%, 97.4%, 100% { transform: none; clip-path: inset(-3px); text-shadow: -1px 0 rgba(255, 42, 109, .5), 1px 0 rgba(0, 240, 255, .5); }
+    95.6% { transform: translate(-2px, 1px); clip-path: inset(8% 0 58% 0); text-shadow: -3px 0 rgba(255, 42, 109, .9), 3px 0 rgba(0, 240, 255, .9); }
+    96.1% { transform: translate(2px, -1px); clip-path: inset(62% 0 10% 0); text-shadow: 3px 0 rgba(255, 42, 109, .85), -3px 0 rgba(0, 240, 255, .85); }
+    96.6% { transform: translate(-1px, 0); clip-path: inset(34% 0 34% 0); text-shadow: -2px 0 rgba(255, 42, 109, .8), 2px 0 rgba(0, 240, 255, .8); }
+  }
+  /* Enlaces "ver perfil": solo micro-slice + jitter (sin text-shadow, para conservar el halo cian del hover). */
+  @keyframes cyber-glitch-slice {
+    0%, 95.4%, 97.4%, 100% { transform: none; clip-path: inset(0 0 0 0); }
+    95.6% { transform: translate(-2px, 0); clip-path: inset(10% 0 60% 0); }
+    96.1% { transform: translate(2px, 0); clip-path: inset(64% 0 8% 0); }
+    96.6% { transform: translate(-1px, 0); clip-path: inset(36% 0 36% 0); }
+  }
+  @keyframes cyber-glitch-jitter {
+    0%, 94.6%, 96.2%, 100% { transform: translate(0, 0); }
+    94.8% { transform: translate(-2px, 1px); }
+    95.3% { transform: translate(2px, -1px); }
+    95.8% { transform: translate(-1px, 0); }
+  }
+  /* Los botones HUD glitchean por la CAPA de borde (::before), NO por el botón, para no pisar el translateY del
+     hover: el filete neón "se desincroniza" un instante y se recoloca. */
+  @keyframes cyber-glitch-layer {
+    0%, 96.4%, 98.2%, 100% { transform: translate(0, 0); }
+    96.6% { transform: translate(-2px, 0); }
+    97.1% { transform: translate(2px, 1px); }
+    97.6% { transform: translate(-1px, -1px); }
+  }
+  :root[data-palette="cyberpunk"] h2 { animation: cyber-glitch-text 11s ease-in-out infinite; }
+  :root[data-palette="cyberpunk"] .hub-name-link,
+  :root[data-palette="cyberpunk"] .hub-detail-profile-link { animation: cyber-glitch-slice 13s ease-in-out infinite; }
+  /* Desincroniza los enlaces repetidos del feed para que no destellen todos a la vez. */
+  :root[data-palette="cyberpunk"] .hub-name-link:nth-of-type(2n) { animation-delay: -5s; }
+  :root[data-palette="cyberpunk"] .hub-name-link:nth-of-type(3n) { animation-delay: -8.5s; }
+  :root[data-palette="cyberpunk"] .fab { animation: cyber-glitch-jitter 15s ease-in-out infinite; }
+  :root[data-palette="cyberpunk"] .fab-roulette { animation: cyber-glitch-jitter 15s ease-in-out infinite; animation-delay: -6s; }
+  :root[data-palette="cyberpunk"] .btn-secondary::before,
+  :root[data-palette="cyberpunk"] .btn-danger::before,
+  :root[data-palette="cyberpunk"] .btn-abandoned::before { animation: cyber-glitch-layer 17s ease-in-out infinite; }
+}
 
 /* ── §2 · Fondo: scanlines CRT muy tenues (líneas horizontales cian). ── */
 :root[data-palette="cyberpunk"] body {
@@ -516,6 +583,7 @@
 :root[data-palette="cyberpunk"] .table-wrap,
 :root[data-palette="cyberpunk"] .settings-card,
 :root[data-palette="cyberpunk"] .hub-feed-card,
+:root[data-palette="cyberpunk"] .hub-hub-card,
 :root[data-palette="cyberpunk"] .modal,
 :root[data-palette="cyberpunk"] .alert-dialog { border: 1px solid rgba(0, 240, 255, .35) !important; border-left: 3px solid var(--cyber-yellow) !important; border-radius: 0 !important; box-shadow: 0 0 18px rgba(0, 240, 255, .06), inset 0 0 0 1px rgba(0, 240, 255, .05) !important; }
 
@@ -526,22 +594,99 @@
    Acento = relleno AMARILLO con texto negro (firma de Cyberpunk), en ambos temas. Semánticos rellenos;
    texto tinta en OSCURO y claro en CLARO (regla 10). ── */
 :root[data-palette="cyberpunk"] .btn:not(.btn-icon):not(.btn-ghost) { font-weight: 600; letter-spacing: .05em; border: 1px solid var(--border); border-radius: 0; clip-path: polygon(0 0, 100% 0, 100% calc(100% - 9px), calc(100% - 9px) 100%, 0 100%); }
+/* La muesca (§5) usa `clip-path`, y `clip-path` recorta el `border`/`box-shadow`/`drop-shadow` del PROPIO elemento
+   (regla 2), así que la diagonal se quedaba sin filete (el borde solo se veía en los cantos rectos). Solución
+   robusta e independiente del navegador (sin sombras ni filtros): DOS capas recortadas detrás del contenido —
+   `::before` con el color del borde y `::after` con el relleno 1px más pequeño; el borde asoma 1px en TODOS los
+   cantos, incluida la diagonal, y el corte queda transparente. El botón deja de recortarse (la forma la dan los
+   pseudos) y su fondo pasa a `::after`; `isolation` acota el z-index negativo de las capas. Solo en los botones
+   cuadrados de borde cian (secundario / toggle inactivo); los rellenos definen su canto con el propio relleno.
+   `--hud-edge` centraliza el color (lo reajusta el tema claro), `--hud-cut` el polígono de la muesca (§5). */
 :root[data-palette="cyberpunk"] .btn-secondary,
-:root[data-palette="cyberpunk"] .btn-toggle:not(.active) { background: var(--surface-elevated) !important; color: var(--text) !important; border-color: rgba(0, 240, 255, .35) !important; }
-/* En claro el botón secundario es casi blanco sobre fondo claro: el cian tenue no se ve, así que le damos
-   un filete teal mínimo pero visible para que el botón tenga contorno. */
+:root[data-palette="cyberpunk"] .btn-toggle:not(.active) {
+  color: var(--text) !important;
+  background: transparent !important;
+  border-color: transparent !important;
+  clip-path: none !important;
+  position: relative;
+  isolation: isolate;
+  --hud-edge: rgba(0, 240, 255, .35);
+  --hud-cut: polygon(0 0, 100% 0, 100% calc(100% - 9px), calc(100% - 9px) 100%, 0 100%);
+}
+:root[data-palette="cyberpunk"] .btn-secondary::before,
+:root[data-palette="cyberpunk"] .btn-secondary::after,
+:root[data-palette="cyberpunk"] .btn-toggle:not(.active)::before,
+:root[data-palette="cyberpunk"] .btn-toggle:not(.active)::after,
+:root[data-palette="cyberpunk"] .btn-danger::before,
+:root[data-palette="cyberpunk"] .btn-danger::after,
+:root[data-palette="cyberpunk"] .btn-abandoned::before,
+:root[data-palette="cyberpunk"] .btn-abandoned::after,
+:root[data-palette="cyberpunk"] .btn-recommend-active::before,
+:root[data-palette="cyberpunk"] .btn-recommend-active::after {
+  content: '';
+  position: absolute;
+  clip-path: var(--hud-cut);
+  pointer-events: none;
+}
+/* Capa de borde (color del filete), a todo el box. */
+:root[data-palette="cyberpunk"] .btn-secondary::before,
+:root[data-palette="cyberpunk"] .btn-toggle:not(.active)::before,
+:root[data-palette="cyberpunk"] .btn-danger::before,
+:root[data-palette="cyberpunk"] .btn-abandoned::before,
+:root[data-palette="cyberpunk"] .btn-recommend-active::before { inset: 0; z-index: -2; background: var(--hud-edge); }
+/* Capa de relleno, 1px más pequeña → deja asomar el borde 1px en todos los cantos (incl. la diagonal).
+   `--hud-fill` permite un relleno distinto por variante (dark elevado en las cian; rojo translúcido en las danger). */
+:root[data-palette="cyberpunk"] .btn-secondary::after,
+:root[data-palette="cyberpunk"] .btn-toggle:not(.active)::after,
+:root[data-palette="cyberpunk"] .btn-danger::after,
+:root[data-palette="cyberpunk"] .btn-abandoned::after,
+:root[data-palette="cyberpunk"] .btn-recommend-active::after { inset: 1px; z-index: -1; background: var(--hud-fill, var(--surface-elevated)); }
+/* En claro el filete es teal más marcado para que se vea sobre fondo claro. */
 :root[data-palette="cyberpunk"][data-theme="light"] .btn-secondary,
-:root[data-palette="cyberpunk"][data-theme="light"] .btn-toggle:not(.active) { border-color: rgba(0, 137, 163, .55) !important; }
+:root[data-palette="cyberpunk"][data-theme="light"] .btn-toggle:not(.active) { --hud-edge: rgba(0, 137, 163, .55); }
 :root[data-palette="cyberpunk"] .btn-accent,
 :root[data-palette="cyberpunk"] .btn-steam,
 :root[data-palette="cyberpunk"] .btn.is-active,
 :root[data-palette="cyberpunk"] .btn-toggle.active { background: var(--cyber-yellow) !important; color: #08090d !important; border-color: var(--cyber-yellow) !important; }
+/* Los botones secundarios "encendidos" —toggle activo (.is-active) y de acento (.btn-accent: Ver perfil/perfiles,
+   Añadir amigo, etc.)— NO deben volverse amarillos: el relleno amarillo de §5 chocaba con la doble capa cian y
+   asomaba un triángulo por la muesca (se veía roto). Se quedan en la familia HUD pero AZUL ELÉCTRICO "encendido":
+   relleno cian tenue + filete y texto cian brillante, como los botones interactivos del juego. Van tras las reglas
+   de §5 (amarillo) para ganar por especificidad/orden. */
+:root[data-palette="cyberpunk"] .btn-secondary.is-active,
+:root[data-palette="cyberpunk"] .btn-secondary.btn-accent {
+  background: transparent !important;
+  border-color: transparent !important;
+  color: var(--cyber-cyan) !important;
+  --hud-edge: var(--cyber-cyan);
+  --hud-fill: color-mix(in srgb, var(--cyber-cyan) 16%, var(--surface));
+}
+:root[data-palette="cyberpunk"] .btn-secondary.btn-accent:hover,
+:root[data-palette="cyberpunk"] .btn-secondary.is-active:hover { box-shadow: 0 0 14px rgba(0, 240, 255, .35) !important; }
 :root[data-palette="cyberpunk"] .btn-complete,
 :root[data-palette="cyberpunk"] .btn-recommend { background: var(--success) !important; color: #04140b !important; border-color: color-mix(in srgb, var(--success) 55%, #000) !important; }
 :root[data-palette="cyberpunk"] .btn-inprogress { background: var(--warn) !important; color: #1a1200 !important; border-color: color-mix(in srgb, var(--warn) 55%, #000) !important; }
+/* Botones de peligro (cerrar sesión, abandonar, quitar recomendación): estilo HUD del juego — rojo neón
+   TRANSLÚCIDO en vez de relleno sólido. Misma técnica de doble capa que los cian (filete rojo que sigue la
+   muesca), con relleno rojo tenue (opaco equivalente sobre el fondo oscuro), texto rojo neón y un halo sutil que
+   se intensifica al pasar el ratón. `--danger`/`--danger-rgb` ya se adaptan a claro/oscuro. */
 :root[data-palette="cyberpunk"] .btn-danger,
 :root[data-palette="cyberpunk"] .btn-abandoned,
-:root[data-palette="cyberpunk"] .btn-recommend-active { background: var(--danger) !important; color: #fff !important; border-color: color-mix(in srgb, var(--danger) 55%, #000) !important; }
+:root[data-palette="cyberpunk"] .btn-recommend-active {
+  color: var(--danger) !important;
+  background: transparent !important;
+  border-color: transparent !important;
+  clip-path: none !important;
+  position: relative;
+  isolation: isolate;
+  --hud-edge: var(--danger);
+  --hud-fill: color-mix(in srgb, var(--danger) 14%, var(--surface));
+  --hud-cut: polygon(0 0, 100% 0, 100% calc(100% - 9px), calc(100% - 9px) 100%, 0 100%);
+  box-shadow: 0 0 12px rgba(var(--danger-rgb), .25) !important;
+}
+:root[data-palette="cyberpunk"] .btn-danger:hover,
+:root[data-palette="cyberpunk"] .btn-abandoned:hover,
+:root[data-palette="cyberpunk"] .btn-recommend-active:hover { box-shadow: 0 0 16px rgba(var(--danger-rgb), .5) !important; }
 :root[data-palette="cyberpunk"][data-theme="light"] .btn-complete,
 :root[data-palette="cyberpunk"][data-theme="light"] .btn-recommend,
 :root[data-palette="cyberpunk"][data-theme="light"] .btn-inprogress { color: #fff !important; }
@@ -550,9 +695,63 @@
 :root[data-palette="cyberpunk"] .btn:not(.btn-icon):not(.btn-ghost):hover { transform: translateY(-1px); filter: brightness(1.08); box-shadow: 0 0 14px rgba(0, 240, 255, .3); }
 :root[data-palette="cyberpunk"] .btn:not(.btn-icon):not(.btn-ghost):active { transform: translateY(0); }
 
-/* ── §6 · Chips: rectos, Rajdhani; el color por categoría lo pone la base (adaptado a la paleta). ── */
+/* ── §6 · Chips: rectos, Rajdhani; el color por categoría lo pone la base (adaptado a la paleta). Aquí NO se fuerza
+   `box-shadow: none` para permitir el halo neón por categoría de abajo. ── */
 :root[data-palette="cyberpunk"] .chip,
-:root[data-palette="cyberpunk"] .rl-chip { border-radius: 0; box-shadow: none !important; transform: none; clip-path: none; }
+:root[data-palette="cyberpunk"] .rl-chip { border-radius: 0; transform: none; clip-path: none; }
+/* Chips HUD con la PALETA de Cyberpunk 2077 (tríada amarillo ácido + cian + rojo carmesí, más teal y magenta neón
+   como acentos). Cada tipo fija su tono en `--chipc` y una sola regla deriva texto/borde/relleno/halo con
+   `color-mix`, así se adapta solo a claro/oscuro. Plataformas=cian, géneros=amarillo, fuertes=teal, débiles=rojo
+   carmesí, genérico/año=magenta. */
+:root[data-palette="cyberpunk"] .chip-plat    { --chipc: #00f0ff; }
+:root[data-palette="cyberpunk"] .chip-genre   { --chipc: #fcee0a; }
+:root[data-palette="cyberpunk"] .chip-pf      { --chipc: #43e8c8; }
+:root[data-palette="cyberpunk"] .chip-pd      { --chipc: #ff2b56; }
+:root[data-palette="cyberpunk"] .chip-generic { --chipc: #ff2a6d; }
+/* Tema CLARO: el fondo es claro, así que los tonos neón puros no se distinguían (y el amarillo puro es ilegible).
+   Se usan versiones OSCURAS y saturadas de cada tono para que el chip destaque y el texto se lea. */
+:root[data-palette="cyberpunk"][data-theme="light"] .chip-plat    { --chipc: #0079a3; }
+:root[data-palette="cyberpunk"][data-theme="light"] .chip-genre   { --chipc: #8a6d00; }
+:root[data-palette="cyberpunk"][data-theme="light"] .chip-pf      { --chipc: #0c8a72; }
+:root[data-palette="cyberpunk"][data-theme="light"] .chip-pd      { --chipc: #c5003c; }
+:root[data-palette="cyberpunk"][data-theme="light"] .chip-generic { --chipc: #b3005a; }
+:root[data-palette="cyberpunk"] .chip-plat,
+:root[data-palette="cyberpunk"] .chip-genre,
+:root[data-palette="cyberpunk"] .chip-pf,
+:root[data-palette="cyberpunk"] .chip-pd,
+:root[data-palette="cyberpunk"] .chip-generic {
+  color: var(--chipc);
+  background: color-mix(in srgb, var(--chipc) 15%, transparent);
+  border-color: color-mix(in srgb, var(--chipc) 60%, transparent);
+  box-shadow: 0 0 6px color-mix(in srgb, var(--chipc) 22%, transparent);
+}
+/* En claro: borde más marcado (el halo neón no aporta sobre fondo claro → se retira) para que el chip se lea bien. */
+:root[data-palette="cyberpunk"][data-theme="light"] .chip-plat,
+:root[data-palette="cyberpunk"][data-theme="light"] .chip-genre,
+:root[data-palette="cyberpunk"][data-theme="light"] .chip-pf,
+:root[data-palette="cyberpunk"][data-theme="light"] .chip-pd,
+:root[data-palette="cyberpunk"][data-theme="light"] .chip-generic {
+  background: color-mix(in srgb, var(--chipc) 13%, transparent);
+  border-color: color-mix(in srgb, var(--chipc) 75%, transparent);
+  box-shadow: none;
+}
+/* Glitch ambiental de los chips: MUY sutil (solo aberración RGB por text-shadow, sin `transform` para no pisar el
+   lift del hover), en ciclo largo (~21 s) y ESCALONADO por posición para que no destellen todos a la vez. */
+@media (prefers-reduced-motion: no-preference) {
+  @keyframes cyber-glitch-chip {
+    /* Anclado a `text-shadow: none` fuera del destello (los chips no tienen sombra base), para que la aberración
+       RGB solo aparezca ese instante y no quede un doble-contorno permanente. */
+    0%, 95.9%, 97.6%, 100% { text-shadow: none; }
+    96.2% { text-shadow: -1.5px 0 rgba(255, 42, 109, .85), 1.5px 0 rgba(0, 240, 255, .85); }
+    96.7% { text-shadow: 1.5px 0 rgba(255, 42, 109, .8), -1.5px 0 rgba(0, 240, 255, .8); }
+    97.2% { text-shadow: -1px 0 rgba(255, 42, 109, .7), 1px 0 rgba(0, 240, 255, .7); }
+  }
+  :root[data-palette="cyberpunk"] .chip { animation: cyber-glitch-chip 21s ease-in-out infinite; }
+  :root[data-palette="cyberpunk"] .chip:nth-child(5n)   { animation-delay: -4s; }
+  :root[data-palette="cyberpunk"] .chip:nth-child(5n+1) { animation-delay: -9s; }
+  :root[data-palette="cyberpunk"] .chip:nth-child(5n+2) { animation-delay: -13s; }
+  :root[data-palette="cyberpunk"] .chip:nth-child(5n+3) { animation-delay: -17s; }
+}
 /* Chip del juego (nombre) = etiqueta HUD cian, distinta del amarillo de los géneros. Recto, sin píldora
    genérica (cada tema estiliza su `.hub-feed-game-chip` en §6). */
 :root[data-palette="cyberpunk"] .hub-feed-game-chip {
@@ -621,6 +820,8 @@
 /* ── §13 · Barra de navegación inferior: HUD — filete cian + barra amarilla lateral, esquinas rectas. ── */
 :root[data-palette="cyberpunk"] .bottom-nav-inner { border: 1px solid rgba(0, 240, 255, .35); border-left: 3px solid var(--cyber-yellow); border-radius: 0; background: var(--surface); }
 :root[data-palette="cyberpunk"] .bottom-nav-ind { border-radius: 0; }
+/* Favoritos publicados: marco HUD — recto, filete cian; lomos variados en `--deco-shelf-*`. */
+:root[data-palette="cyberpunk"] .hub-fav-cart { border: 1px solid rgba(0, 240, 255, .35); border-radius: 0; }
 
 
 /* ═══════════════════════════════════════════════════════════════════════════════════════════════════
@@ -642,7 +843,7 @@
   z-index: 9998;
   /* BORDE QUE SE QUEMA: del centro limpio, una banda de RESCOLDO ámbar y luego el CARBÓN de la cinta chamuscada
      en las esquinas — como el celuloide ardiendo en el proyector. */
-  background: radial-gradient(ellipse at 50% 42%, transparent 44%, rgba(255, 138, 38, .12) 70%, rgba(10, 5, 2, .62) 100%);
+  background: radial-gradient(ellipse at 50% 42%, transparent 46%, rgba(255, 138, 38, .10) 70%, rgba(10, 5, 2, .42) 100%);
 }
 :root[data-palette="cuphead"][data-theme="light"] body::before { background: radial-gradient(ellipse at 50% 42%, transparent 52%, rgba(74, 48, 16, .24) 100%); }
 :root[data-palette="cuphead"] body::after {
@@ -651,20 +852,19 @@
   inset: -20px; /* margen para que el jitter del grano no descubra el borde */
   pointer-events: none;
   z-index: 9999;
-  opacity: .3;
+  opacity: .22;
   mix-blend-mode: soft-light;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='170' height='170'%3E%3Cfilter id='cg'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23cg)'/%3E%3C/svg%3E");
 }
-:root[data-palette="cuphead"][data-theme="light"] body::after { opacity: .3; }
+:root[data-palette="cuphead"][data-theme="light"] body::after { opacity: .2; }
+/* Parpadeo de metraje viejo: más LENTO y con menos salto (antes .5s era nervioso). */
 @media (prefers-reduced-motion: no-preference) {
-  :root[data-palette="cuphead"] body::after { animation: cup-grain .5s steps(1) infinite; }
+  :root[data-palette="cuphead"] body::after { animation: cup-grain 1.4s steps(1) infinite; }
 }
 @keyframes cup-grain {
   0% { background-position: 0 0; }
-  20% { background-position: -34px 12px; }
-  40% { background-position: 22px -26px; }
-  60% { background-position: -14px 28px; }
-  80% { background-position: 28px 18px; }
+  33% { background-position: -16px 10px; }
+  66% { background-position: 12px -14px; }
   100% { background-position: 0 0; }
 }
 
@@ -681,7 +881,7 @@
 :root[data-palette="cuphead"] .rl-hint,
 :root[data-palette="cuphead"] .score-ring-num,
 :root[data-palette="cuphead"] .score-dial-num,
-:root[data-palette="cuphead"] .hub-review-medal { font-family: 'Fredericka the Great', 'Georgia', serif; font-weight: 400; letter-spacing: .01em; }
+:root[data-palette="cuphead"] .hub-review-medal { font-family: 'Luckiest Guy', 'Arial Black', cursive; font-weight: 400; letter-spacing: .02em; }
 :root[data-palette="cuphead"] .btn,
 :root[data-palette="cuphead"] .hub-seg-btn,
 :root[data-palette="cuphead"] thead th,
@@ -695,6 +895,12 @@
 :root[data-palette="cuphead"] .rl-card-tag,
 :root[data-palette="cuphead"] .rl-item,
 :root[data-palette="cuphead"] .chip { font-family: 'Nunito', system-ui, sans-serif; font-weight: 800; letter-spacing: .01em; }
+/* Los NOMBRES de personas (perfiles/amigos) van en una fuente cartoon CON minúsculas (Titan One: hinchada y
+   redonda, estilo Luckiest Guy pero con caja baja real), no en Luckiest Guy (que los hacía parecer gritados). */
+:root[data-palette="cuphead"] .hub-feed-card-head-text h3,
+:root[data-palette="cuphead"] .hub-profile-hero-name,
+:root[data-palette="cuphead"] .hub-name-link,
+:root[data-palette="cuphead"] .hub-detail-profile-link { font-family: 'Titan One', 'Luckiest Guy', cursive; font-weight: 400; letter-spacing: .01em; }
 
 /* ── §2 · Fondo: papel envejecido con FOCO DE ESCENARIO cálido (como el iris central de las cartelas). El
    grano/viñeta los ponen los overlays de la FIRMA (arriba). ── */
@@ -716,22 +922,28 @@
 :root[data-palette="cuphead"] .table-wrap,
 :root[data-palette="cuphead"] .settings-card,
 :root[data-palette="cuphead"] .hub-feed-card,
+:root[data-palette="cuphead"] .hub-hub-card,
 :root[data-palette="cuphead"] .modal,
-:root[data-palette="cuphead"] .alert-dialog { border: 3px solid var(--cup-line) !important; border-radius: var(--radius-lg) !important; box-shadow: 5px 6px 0 rgba(0, 0, 0, .38) !important; }
+:root[data-palette="cuphead"] .alert-dialog { border: 3.5px solid var(--cup-line) !important; border-radius: var(--radius-lg) !important; box-shadow: 5px 6px 0 rgba(0, 0, 0, .38) !important; }
 :root[data-palette="cuphead"][data-theme="light"] .toolbar,
 :root[data-palette="cuphead"][data-theme="light"] .table-wrap,
 :root[data-palette="cuphead"][data-theme="light"] .settings-card,
 :root[data-palette="cuphead"][data-theme="light"] .hub-feed-card,
+:root[data-palette="cuphead"][data-theme="light"] .hub-hub-card,
 :root[data-palette="cuphead"][data-theme="light"] .modal,
 :root[data-palette="cuphead"][data-theme="light"] .alert-dialog { box-shadow: 5px 6px 0 rgba(36, 24, 18, .26) !important; }
+/* La barra lateral de nota de las reseñas (`.hub-review-entry::before`, altura completa) asomaba por las
+   esquinas al tener el radio grande de Cuphead. Recortamos SOLO la tarjeta de reseña a su radio (no la toolbar
+   ni la tabla, que tienen desplegables). La sombra dibujada es box-shadow externa, no se recorta. */
+:root[data-palette="cuphead"] .hub-feed-card { overflow: hidden; }
 
 /* ── §4 · Tabla: cabecera = RÓTULO de cartela con banda mostaza (contrato) y filete de tinta inferior. ── */
-:root[data-palette="cuphead"] thead th { background: rgba(230, 167, 44, .16); color: var(--text); border-bottom: 3px solid var(--cup-line); }
+:root[data-palette="cuphead"] thead th { background: rgba(217, 154, 31, .22); color: var(--text); border-bottom: 3.5px solid var(--cup-line); }
 
 /* ── §5 · Botones = PASTILLAS de goma (rubber-hose): totalmente redondeados (píldora), contorno de tinta y
    SOMBRA DIBUJADA de bloque; el hover REBOTA (sube y agranda la sombra), sin el giro 3D de base. Relleno
    sólido por variante con color de texto fijado por contraste (regla 10). ── */
-:root[data-palette="cuphead"] .btn:not(.btn-icon):not(.btn-ghost) { border: 2.5px solid var(--cup-line) !important; border-radius: 999px !important; font-weight: 800; box-shadow: 3px 4px 0 rgba(0, 0, 0, .38) !important; }
+:root[data-palette="cuphead"] .btn:not(.btn-icon):not(.btn-ghost) { border: 3px solid var(--cup-line) !important; border-radius: 999px !important; font-weight: 800; box-shadow: 3px 4px 0 rgba(0, 0, 0, .38) !important; }
 :root[data-palette="cuphead"][data-theme="light"] .btn:not(.btn-icon):not(.btn-ghost) { box-shadow: 3px 4px 0 rgba(36, 24, 18, .28) !important; }
 :root[data-palette="cuphead"] .btn-secondary,
 :root[data-palette="cuphead"] .btn-toggle:not(.active) { background: var(--surface-elevated) !important; color: var(--text) !important; }
@@ -756,19 +968,19 @@
    ESTRELLA (los dibujos de los 30 están llenos de estrellitas). Cada tema estiliza su `.hub-feed-game-chip`
    en §6 (si no, cae a la píldora genérica de base). ── */
 :root[data-palette="cuphead"] .chip,
-:root[data-palette="cuphead"] .rl-chip { border-radius: 999px; border: 1.5px solid var(--cup-line) !important; transform: none; clip-path: none; }
+:root[data-palette="cuphead"] .rl-chip { border-radius: 999px; border: 2px solid var(--cup-line) !important; transform: none; clip-path: none; }
 :root[data-palette="cuphead"] .hub-feed-game-chip {
   padding: .22rem .72rem;
   border-radius: 999px;
   background: var(--steam);
-  border: 2px solid var(--cup-line);
+  border: 2.5px solid var(--cup-line);
   color: #fff5ec;
   letter-spacing: .01em;
 }
 :root[data-palette="cuphead"] .hub-friend-chip {
   background: var(--surface-elevated);
   color: var(--steam);
-  border: 2px solid var(--cup-line);
+  border: 2.5px solid var(--cup-line);
   border-radius: 999px;
   font-family: 'Nunito', system-ui, sans-serif;
   font-weight: 800;
@@ -782,7 +994,7 @@
 :root[data-palette="cuphead"] .input-base,
 :root[data-palette="cuphead"] .finput,
 :root[data-palette="cuphead"] .ftextarea,
-:root[data-palette="cuphead"] .search-input { border: 2px solid var(--border) !important; border-radius: var(--radius-md) !important; }
+:root[data-palette="cuphead"] .search-input { background: var(--surface-elevated) !important; color: var(--text) !important; border: 2px solid var(--border) !important; border-radius: var(--radius-md) !important; }
 
 /* ── §8 · Insignias rejugar/oportunidad: pastillas — activa = roja con contorno de tinta; inactiva = superficie con borde. ── */
 :root[data-palette="cuphead"] .badge-rejugar-activo,
@@ -796,9 +1008,23 @@
 /* ── §10 · Actividad social. FECHAS = ENTRADA DE CINE troquelada: pastilla con borde DISCONTINUO (perforado)
    y estrellita. La cabecera de día es una CARTELA (Fredericka) con banda mostaza debajo. La reseña se trata
    como NOTA MANUSCRITA (cursiva) con filete mostaza. La barra fija (sticky) se mantiene (fondo opaco). ── */
-:root[data-palette="cuphead"] .hub-feed-day-header { background: var(--bg) !important; border: none !important; border-radius: 0 !important; box-shadow: none !important; padding: .15rem .6rem .5rem; }
-:root[data-palette="cuphead"] .hub-feed-day-header h4 { font-family: 'Fredericka the Great', 'Georgia', serif; font-weight: 400; letter-spacing: .01em; color: var(--text); }
-:root[data-palette="cuphead"] .hub-feed-day-header::after { content: ''; position: absolute; left: 8%; right: 8%; bottom: 0; height: 3px; border-radius: 3px; background: var(--cup-gold); }
+/* Cabecera de día = CARTELA/banderola: rótulo mostaza con contorno de tinta, sombra dibujada y fuente de
+   cartela (Luckiest Guy). Sticky: fondo de superficie opaco, sin tocar `position`. */
+:root[data-palette="cuphead"] .hub-feed-day-header { background: transparent !important; border: none !important; border-radius: 0 !important; box-shadow: none !important; padding: .35rem .6rem; }
+:root[data-palette="cuphead"] .hub-feed-day-header h4 {
+  display: inline-block;
+  font-family: 'Luckiest Guy', 'Arial Black', cursive;
+  font-weight: 400;
+  letter-spacing: .02em;
+  color: var(--cup-ink);
+  background: var(--cup-gold);
+  border: 2.5px solid var(--cup-ink);
+  border-radius: 6px;
+  padding: .1rem .8rem;
+}
+/* La sombra dibujada solo en CLARO: en oscuro un desplazamiento negro sobre el panel oscuro se veía como una
+   mancha rara (el fondo claro "a pelo"). El rótulo de oro con borde de tinta ya se lee solo en oscuro. */
+:root[data-palette="cuphead"][data-theme="light"] .hub-feed-day-header h4 { box-shadow: 3px 3px 0 rgba(36, 24, 18, .26); }
 :root[data-palette="cuphead"] .hub-feed-date,
 :root[data-palette="cuphead"] .hub-review-date {
   display: inline-flex;
@@ -862,7 +1088,13 @@
 /* ── §13 · Barra de navegación inferior: carta de dibujo redonda (contorno de tinta + sombra dibujada), como los paneles (§3). ── */
 :root[data-palette="cuphead"] .bottom-nav-inner { border: 3px solid var(--cup-line); border-radius: var(--radius-lg); background: var(--surface); box-shadow: 0 8px 20px rgba(0, 0, 0, .34), 4px 5px 0 rgba(0, 0, 0, .3); }
 :root[data-palette="cuphead"][data-theme="light"] .bottom-nav-inner { box-shadow: 0 8px 20px rgba(36, 24, 18, .16), 4px 5px 0 rgba(36, 24, 18, .2); }
-:root[data-palette="cuphead"] .bottom-nav-ind { border-radius: 999px; }
+/* Pastilla activa = CHAPA ROJA con contorno de tinta: el tinte rojo tenue de base (rgba .1) se perdía sobre
+   el fondo cálido oscuro. Texto/icono activo en crema para leerse sobre el rojo. */
+:root[data-palette="cuphead"] .bottom-nav-ind { border-radius: 999px; background: var(--steam); box-shadow: inset 0 0 0 2px var(--cup-line); }
+/* Favoritos publicados: carta de dibujo — contorno de tinta grueso, esquinas redondeadas; lomos variados en `--deco-shelf-*`. */
+:root[data-palette="cuphead"] .hub-fav-cart { border: 2.5px solid var(--cup-line); border-radius: var(--radius-md); }
+:root[data-palette="cuphead"] .hub-fav-cart:hover { border-color: var(--cup-line); }
+:root[data-palette="cuphead"] .bottom-nav-btn.active { color: #fff5ec; }
 
 
 /* ═══════════════════════════════════════════════════════════════════════════════════════════════════
@@ -898,7 +1130,13 @@
     url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='gp'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.7' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23gp)' opacity='0.06'/%3E%3C/svg%3E");
   background-size: auto, 200px 200px;
 }
-:root[data-palette="grimdark"][data-theme="light"] body::before { background: radial-gradient(ellipse at 50% 45%, transparent 50%, rgba(78, 52, 18, .22) 100%); }
+/* Scanlines de "monitor antiguo" también en CLARO (líneas oscuras muy tenues) + la vignette sepia. Sin brillo
+   verde de tubo (el códice claro no lo lleva); el parpadeo sigue solo en oscuro. */
+:root[data-palette="grimdark"][data-theme="light"] body::before {
+  background:
+    repeating-linear-gradient(0deg, rgba(40, 34, 12, .06) 0 1px, transparent 1px 3px),
+    radial-gradient(ellipse at 50% 45%, transparent 50%, rgba(78, 52, 18, .22) 100%);
+}
 
 /* ── §1 · Tipografía: UnifrakturCook (blackletter gótico) para las CARTELAS (titulares/modal/ruleta/día) con
    RESPLANDOR de fósforo verde; Chakra Petch (industrial) para cuerpo, botones, nombres y chips; VT323 (CRT)
@@ -946,12 +1184,14 @@
 :root[data-palette="grimdark"] .table-wrap,
 :root[data-palette="grimdark"] .settings-card,
 :root[data-palette="grimdark"] .hub-feed-card,
+:root[data-palette="grimdark"] .hub-hub-card,
 :root[data-palette="grimdark"] .modal,
 :root[data-palette="grimdark"] .alert-dialog { border: 1px solid var(--grim-gold) !important; border-radius: 0 !important; box-shadow: inset 0 0 0 3px var(--surface), inset 0 0 0 4px rgba(224, 169, 43, .4), 0 0 22px rgba(67, 245, 88, .05) !important; }
 :root[data-palette="grimdark"][data-theme="light"] .toolbar,
 :root[data-palette="grimdark"][data-theme="light"] .table-wrap,
 :root[data-palette="grimdark"][data-theme="light"] .settings-card,
 :root[data-palette="grimdark"][data-theme="light"] .hub-feed-card,
+:root[data-palette="grimdark"][data-theme="light"] .hub-hub-card,
 :root[data-palette="grimdark"][data-theme="light"] .modal,
 :root[data-palette="grimdark"][data-theme="light"] .alert-dialog { box-shadow: inset 0 0 0 3px var(--surface), inset 0 0 0 4px rgba(154, 111, 20, .5), 0 6px 16px rgba(40, 40, 30, .14) !important; }
 
@@ -1084,3 +1324,5 @@
 /* ── §13 · Barra de navegación inferior: moldura de oro con resplandor de pantalla verde, esquinas rectas. ── */
 :root[data-palette="grimdark"] .bottom-nav-inner { border: 1px solid var(--grim-gold); border-radius: 0; background: var(--surface); box-shadow: 0 0 18px rgba(67, 245, 88, .05); }
 :root[data-palette="grimdark"] .bottom-nav-ind { border-radius: 0; }
+/* Favoritos publicados: placa imperial — recta, filete de ORO; lomos variados en `--deco-shelf-*`. */
+:root[data-palette="grimdark"] .hub-fav-cart { border: 1px solid var(--grim-gold); border-radius: 0; }
