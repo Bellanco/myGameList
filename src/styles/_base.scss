@@ -202,6 +202,13 @@
   /* Línea de tinta del cómic (bordes/contornos): CLARA en oscuro (se ve sobre el negro), oscura en claro.
      Mismo criterio que las sombras de bloque (regla 1). */
   --pop-line: #f4f2f5;
+  /* Lomos de estantería (favoritos): colores SÓLIDOS en tonos de P5 (familia roja: rojo, carmesí, rojo claro,
+     rojo oscuro casi negro, rojo-naranja) — el rojo es el color del juego. */
+  --deco-shelf-0: #ff1f3d;
+  --deco-shelf-1: #e60012;
+  --deco-shelf-2: #ff5566;
+  --deco-shelf-3: #8a0008;
+  --deco-shelf-4: #ff6b3d;
 }
 :root[data-palette="persona"][data-theme="light"] {
   --bg: #f4f1ee;
@@ -266,6 +273,13 @@
   --radius-lg: 10px;
   --portal-orange: #ff9e1b;
   --portal-cube: #f0559c;
+  /* Lomos de estantería (favoritos): MEZCLA de los geles (fluidos) de Portal — azul (repulsión), naranja
+     (propulsión) y blanco (conversión). */
+  --deco-shelf-0: linear-gradient(90deg, #29b6f6, #f2f7fc);
+  --deco-shelf-1: linear-gradient(90deg, #ff9e1b, #f2f7fc);
+  --deco-shelf-2: linear-gradient(90deg, #29b6f6, #ff9e1b);
+  --deco-shelf-3: linear-gradient(90deg, #f2f7fc, #29b6f6);
+  --deco-shelf-4: linear-gradient(90deg, #ff9e1b, #29b6f6);
 }
 :root[data-palette="portal"][data-theme="light"] {
   --bg: #e7ecf0;
@@ -333,6 +347,12 @@
   --cyber-yellow: #fcee0a;
   --cyber-cyan: #00f0ff;
   --cyber-magenta: #ff2a6d;
+  /* Lomos de estantería (favoritos): rotaciones del trío neón amarillo/cian/magenta. */
+  --deco-shelf-0: linear-gradient(90deg, #fcee0a, #00f0ff);
+  --deco-shelf-1: linear-gradient(90deg, #00f0ff, #ff2a6d);
+  --deco-shelf-2: linear-gradient(90deg, #ff2a6d, #fcee0a);
+  --deco-shelf-3: linear-gradient(90deg, #fcee0a, #ff2a6d);
+  --deco-shelf-4: linear-gradient(90deg, #00f0ff, #fcee0a);
 }
 :root[data-palette="cyberpunk"][data-theme="light"] {
   --bg: #e7eaee;
@@ -408,6 +428,12 @@
   --cup-gold: #f0b429;
   /* Contorno de tinta rubber-hose: CREMA en oscuro (se ve sobre el negro), tinta en claro (regla 1). */
   --cup-line: #efe0bd;
+  /* Lomos de estantería (favoritos): colores SÓLIDOS en tonos de Cuphead (rojo, azul Mugman, oro, verde, naranja). */
+  --deco-shelf-0: #ef4326;
+  --deco-shelf-1: #3f97e0;
+  --deco-shelf-2: #f0b429;
+  --deco-shelf-3: #62c23f;
+  --deco-shelf-4: #e07b2a;
 }
 :root[data-palette="cuphead"][data-theme="light"] {
   /* CLARO = PERGAMINO de la cartela de Cuphead: papel cálido con matiz DORADO suave (guiño al oro de la
@@ -482,6 +508,13 @@
   --grim-red: #e63b3b;
   /* Línea de ornamento gótico (molduras/bordes): ORO latón en oscuro (imperial sobre el negro), tinta en claro. */
   --grim-line: #e0a92b;
+  /* Lomos de estantería (favoritos): el VERDE de cogitador con variación MUY sutil (trazas de oro latón y de
+     gris/desaturado), apenas perceptible — no un arcoíris. */
+  --deco-shelf-0: #43f558;
+  --deco-shelf-1: linear-gradient(90deg, #43f558, #8bc93f);
+  --deco-shelf-2: linear-gradient(90deg, #43f558, #74bf8e);
+  --deco-shelf-3: linear-gradient(90deg, #5ce963, #43f558);
+  --deco-shelf-4: linear-gradient(90deg, #74bf8e, #8bc93f);
 }
 :root[data-palette="grimdark"][data-theme="light"] {
   /* CLARO = CÓDICE imperial: VITELA envejecida (cálida, con grano), tinta negra + oro gótico, capitulares
