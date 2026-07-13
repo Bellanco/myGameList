@@ -1,14 +1,27 @@
 import { memo, useEffect, useState } from 'react';
+import { UI_MESSAGES } from '../../core/constants/labels';
+import { Icon } from './Icon';
 import { ThemeToggle } from './ThemeToggle';
+import type { AppSection } from './BottomNavigation';
 
 const SCROLL_HIDE_THRESHOLD = 24;
+const NAV = UI_MESSAGES.nav;
+
+interface FloatingControlsProps {
+  activeSection: AppSection;
+  onSectionChange: (section: AppSection) => void;
+  /** El botón "Cuenta" solo aparece (con transición suave) si hay sesión de Google. */
+  showAccount: boolean;
+}
 
 /**
  * Controles flotantes en la esquina superior derecha (diseño "headerless": sin barra ni título).
- * Solo alberga el cambio de tema claro/oscuro; el selector de tema/paleta y la sincronización viven en Ajustes.
- * Se ocultan al hacer scroll y reaparecen al volver arriba, para no estorbar la lectura.
+ * Alberga, con el mismo diseño y comportamiento que el cambio de tema, los accesos a Cuenta y Ajustes
+ * (antes pestañas de la barra inferior) además del interruptor claro/oscuro.
+ * El botón de Cuenta solo se muestra con sesión de Google, apareciendo y desapareciendo de forma suave.
+ * Todo el grupo se oculta al hacer scroll y reaparece al volver arriba, para no estorbar la lectura.
  */
-export const FloatingControls = memo(function FloatingControls() {
+export const FloatingControls = memo(function FloatingControls({ activeSection, onSectionChange, showAccount }: FloatingControlsProps) {
   const [hidden, setHidden] = useState(false);
 
   useEffect(() => {
@@ -38,6 +51,29 @@ export const FloatingControls = memo(function FloatingControls() {
 
   return (
     <div className={`floating-controls ${hidden ? 'is-hidden' : ''}`.trim()}>
+      {/* Cuenta va a la izquierda del grupo para que su aparición/desaparición no desplace al resto. */}
+      <button
+        type="button"
+        className={`btn-icon theme-toggle-btn floating-nav-btn floating-nav-account ${showAccount ? '' : 'is-gone'} ${activeSection === 'account' ? 'is-active' : ''}`.trim()}
+        aria-label={NAV.account}
+        title={NAV.account}
+        aria-current={activeSection === 'account' ? 'page' : undefined}
+        aria-hidden={showAccount ? undefined : true}
+        tabIndex={showAccount ? undefined : -1}
+        onClick={() => onSectionChange('account')}
+      >
+        <Icon name="bottom-account" className="ui-icon" />
+      </button>
+      <button
+        type="button"
+        className={`btn-icon theme-toggle-btn floating-nav-btn ${activeSection === 'settings' ? 'is-active' : ''}`.trim()}
+        aria-label={NAV.settings}
+        title={NAV.settings}
+        aria-current={activeSection === 'settings' ? 'page' : undefined}
+        onClick={() => onSectionChange('settings')}
+      >
+        <Icon name="bottom-settings" className="ui-icon" />
+      </button>
       <ThemeToggle />
     </div>
   );
