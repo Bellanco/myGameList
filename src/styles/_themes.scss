@@ -422,9 +422,36 @@
 /* ── §10 · Actividad social. FECHAS = terminal de GLaDOS: el timestamp en monoespaciada con un prompt azul
    `>`; la cabecera de día es un rótulo de señalética con FRANJA DE PELIGRO amarillo/negro debajo. La barra
    fija (sticky) se mantiene: fondo opaco y sin tocar `position` (regla del sticky). ── */
-:root[data-palette="portal"] .hub-feed-day-header { background: var(--bg) !important; border: none !important; border-radius: 0 !important; box-shadow: none !important; padding: .15rem .6rem .5rem; }
-:root[data-palette="portal"] .hub-feed-day-header h4 { font-family: 'Oswald', system-ui, sans-serif; font-weight: 600; letter-spacing: .08em; color: var(--text); }
-:root[data-palette="portal"] .hub-feed-day-header::after { content: ''; position: absolute; left: 8%; right: 8%; bottom: 0; height: 3px; background: repeating-linear-gradient(45deg, var(--portal-orange) 0 7px, #14181c 7px 14px); border-radius: 2px; }
+/* Separador de día = CARTEL DE CÁMARA DE PRUEBAS: placa clara rectangular (como la señalética de Aperture),
+   texto negro condensado en mayúsculas bien espaciado, y una LÍNEA INFERIOR con el rojo del LÁSER (con glow). */
+:root[data-palette="portal"] .hub-feed-day-header {
+  background: linear-gradient(180deg, #eef3f5, #dde6ea) !important;
+  border: 1px solid #b7c2c9 !important;
+  border-radius: 3px !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, .32), inset 0 1px 0 rgba(255, 255, 255, .8) !important;
+  padding: .3rem 1.05rem .44rem !important;
+}
+:root[data-palette="portal"] .hub-feed-day-header h4 { font-family: 'Oswald', system-ui, sans-serif; font-weight: 700; letter-spacing: .16em; color: #10161a; }
+:root[data-palette="portal"] .hub-feed-day-header::after {
+  content: '';
+  position: absolute;
+  left: 9%;
+  right: 9%;
+  bottom: 3px;
+  height: 2px;
+  background: var(--portal-turret);
+  box-shadow: 0 0 7px 1px color-mix(in srgb, var(--portal-turret) 80%, transparent);
+  border-radius: 1px;
+}
+/* CLARO (Aperture antigua): la placa encaja con la paleta cálida — pergamino/latón, tinta marrón; el láser
+   se mantiene rojo (algo más cálido para no chirriar sobre el crema). */
+:root[data-palette="portal"][data-theme="light"] .hub-feed-day-header {
+  background: linear-gradient(180deg, #fbf4e3, #eee0c6) !important;
+  border: 1px solid #c7b184 !important;
+  box-shadow: 0 2px 6px rgba(90, 66, 28, .18), inset 0 1px 0 rgba(255, 255, 255, .75) !important;
+}
+:root[data-palette="portal"][data-theme="light"] .hub-feed-day-header h4 { color: #3a2a18; }
+:root[data-palette="portal"][data-theme="light"] .hub-feed-day-header::after { background: #cf3a22; box-shadow: 0 0 6px 1px rgba(207, 58, 34, .55); }
 :root[data-palette="portal"] .hub-feed-date,
 :root[data-palette="portal"] .hub-review-date {
   display: inline-flex;
