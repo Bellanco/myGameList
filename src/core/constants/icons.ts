@@ -22,10 +22,13 @@ export type IconName =
   | 'eye'
   | 'eye-off'
   | 'star'
+  | 'star-olive-branches'
   | 'lock'
   | 'trophy'
   | 'play'
   | 'abandoned'
+  | 'skull'
+  | 'rocket'
   | 'checkered-flag'
   | 'bottom-lists'
   | 'bottom-settings'
@@ -45,9 +48,9 @@ export type IconName =
 
 export const TAB_ICONS: Record<TabId, IconName> = {
   c: 'trophy',
-  v: 'abandoned',
+  v: 'skull',
   e: 'play',
-  p: 'checkered-flag',
+  p: 'rocket',
 };
 
 export const COMMON_ICONS = {
@@ -67,6 +70,7 @@ export const COMMON_ICONS = {
   filterActive: 'filter-active',
   refresh: 'refresh',
   star: 'star',
+  starOliveBranches: 'star-olive-branches',
   lock: 'lock',
   repeat: 'repeat',
   undo: 'undo',

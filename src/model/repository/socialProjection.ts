@@ -135,6 +135,7 @@ function leanGameItem(game: GameItem): GameItem {
   if (Array.isArray(game.reasons) && game.reasons.length) out.reasons = game.reasons;
   if (game.replayable) out.replayable = true;
   if (game.retry) out.retry = true;
+  if (game.scored) out.scored = true; // vergüenza: puntuación activada (opt-in); se omite cuando false
   if (game._v !== undefined) out._v = game._v;
   if (game.shared) out.shared = true;
   // `listedAt` (llegada a la lista) NO se reescribe al editar; debe sobrevivir el round-trip del gist. Si se omite,

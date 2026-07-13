@@ -71,6 +71,8 @@ function normalizeGame(game: Record<string, unknown>, defaultTs: number, forceTi
       const n = Number(raw);
       return Number.isFinite(n) && n >= 0 ? n : null;
     })(),
+    // Vergüenza: puntuación activada (opt-in). Se conserva solo si es true; ausente/false no se serializa.
+    scored: game.scored ? true : undefined,
     listedAt: (() => {
       const n = Number(game.listedAt);
       if (Number.isFinite(n) && n > 0) return n;

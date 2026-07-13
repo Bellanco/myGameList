@@ -34,6 +34,22 @@ function applyPalette(palette: PaletteId): void {
   applyThemeColor(currentTheme());
 }
 
+/**
+ * Aplica al `<html>` la paleta guardada y reacciona a la hidratación de cuenta (inicio de sesión) SIN exponer
+ * selector. Se monta en la raíz (App) para que la paleta sincronizada por cuenta se aplique EN TODA la app al
+ * iniciar sesión —igual que `useUppercase`/`useShowSteamButton`—, no solo al abrir Ajustes (donde vive el
+ * selector `usePalette`). Antes, el evento de hidratación no tenía a nadie escuchando fuera de esa pantalla y
+ * la paleta de la nube no se aplicaba hasta entrar en Ajustes.
+ */
+export function useAppliedPalette(): void {
+  useEffect(() => {
+    const apply = () => applyPalette(readInitialPalette());
+    apply(); // por si localStorage cambió entre el anti-flash y el montaje
+    window.addEventListener(APPEARANCE_HYDRATED_EVENT, apply);
+    return () => window.removeEventListener(APPEARANCE_HYDRATED_EVENT, apply);
+  }, []);
+}
+
 /** Selector de paleta de color con persistencia local. Default = paleta por defecto ("steam"). */
 export function usePalette(): { palette: PaletteId; setPalette: (next: PaletteId) => void } {
   const [palette, setPaletteState] = useState<PaletteId>(readInitialPalette);
