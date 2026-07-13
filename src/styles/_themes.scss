@@ -733,6 +733,10 @@
 :root[data-palette="cuphead"][data-theme="light"] .hub-feed-card,
 :root[data-palette="cuphead"][data-theme="light"] .modal,
 :root[data-palette="cuphead"][data-theme="light"] .alert-dialog { box-shadow: 5px 6px 0 rgba(36, 24, 18, .26) !important; }
+/* La barra lateral de nota de las reseñas (`.hub-review-entry::before`, altura completa) asomaba por las
+   esquinas al tener el radio grande de Cuphead. Recortamos SOLO la tarjeta de reseña a su radio (no la toolbar
+   ni la tabla, que tienen desplegables). La sombra dibujada es box-shadow externa, no se recorta. */
+:root[data-palette="cuphead"] .hub-feed-card { overflow: hidden; }
 
 /* ── §4 · Tabla: cabecera = RÓTULO de cartela con banda mostaza (contrato) y filete de tinta inferior. ── */
 :root[data-palette="cuphead"] thead th { background: rgba(217, 154, 31, .22); color: var(--text); border-bottom: 3.5px solid var(--cup-line); }
