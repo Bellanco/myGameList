@@ -92,45 +92,6 @@ function GameCategoryTabs({
   );
 }
 
-/**
- * Texto de reseña truncado a unas líneas, con un botón suave para expandir/colapsar.
- * El botón solo aparece cuando el texto realmente desborda (medido sobre el recorte).
- */
-function ReviewText({ text, moreLabel, lessLabel }: { text: string; moreLabel: string; lessLabel: string }) {
-  const ref = useRef<HTMLParagraphElement>(null);
-  const [expanded, setExpanded] = useState(false);
-  const [canExpand, setCanExpand] = useState(false);
-
-  useEffect(() => {
-    // Medimos solo en estado recortado; una vez expandido, conservamos el botón ("Ver menos").
-    if (expanded) return;
-    const el = ref.current;
-    if (!el) return;
-    const check = () => setCanExpand(el.scrollHeight - el.clientHeight > 2);
-    check();
-    window.addEventListener('resize', check);
-    return () => window.removeEventListener('resize', check);
-  }, [text, expanded]);
-
-  return (
-    <>
-      <p ref={ref} className={`hub-feed-review-text hub-review-text ${expanded ? 'is-expanded' : ''}`.trim()}>
-        {text}
-      </p>
-      {canExpand ? (
-        <button
-          type="button"
-          className="hub-more-soft hub-review-more"
-          aria-expanded={expanded}
-          onClick={() => setExpanded((prev) => !prev)}
-        >
-          {expanded ? lessLabel : moreLabel}
-        </button>
-      ) : null}
-    </>
-  );
-}
-
 /** Pantalla de detalle de perfil social. */
 type SocialProfileDetail = {
   displayName: string;
@@ -151,6 +112,9 @@ export function SocialProfileDetailScreen({
   isOwnProfile = false,
   onEditProfile,
   onBack,
+  showReviews,
+  onToggleReviews,
+  onOpenReview,
   status,
   statusKind,
   onAddToProximos,
@@ -167,6 +131,10 @@ export function SocialProfileDetailScreen({
   isOwnProfile?: boolean;
   onEditProfile?: () => void;
   onBack: () => void;
+  // Vista de reseñas controlada por la URL (sub-ruta /reviews) para poder volver a ella desde el detalle.
+  showReviews: boolean;
+  onToggleReviews: () => void;
+  onOpenReview: (gameId: number) => void;
   status: string;
   statusKind: string;
   onAddToProximos?: (game: Partial<GameItem>) => 'added' | 'duplicate' | 'invalid';
@@ -188,7 +156,6 @@ export function SocialProfileDetailScreen({
   const [rouletteOpen, setRouletteOpen] = useState(false);
   const [expandedByTab, setExpandedByTab] = useState<Partial<Record<TabId, number | null>>>({});
   const [visibleCount, setVisibleCount] = useState(LIST_PAGE_SIZE);
-  const [showReviews, setShowReviews] = useState(false);
   const [gameQuery, setGameQuery] = useState('');
   const [reviewQuery, setReviewQuery] = useState('');
   const [reviewVisibleCount, setReviewVisibleCount] = useState(REVIEW_PAGE_SIZE);
@@ -233,9 +200,8 @@ export function SocialProfileDetailScreen({
     [activeProfileDetail],
   );
 
-  // Al cambiar de perfil, volver siempre a la vista de perfil (no arrastrar la de reseñas) y limpiar filtros.
+  // Al cambiar de perfil, limpiar filtros y cerrar la ruleta (la vista de reseñas la controla ahora la URL).
   useEffect(() => {
-    setShowReviews(false);
     setReviewQuery('');
     setRouletteOpen(false);
   }, [activeProfileDetail]);
@@ -386,7 +352,7 @@ export function SocialProfileDetailScreen({
                   className={`btn btn-secondary ${showReviews ? 'is-active' : ''}`.trim()}
                   type="button"
                   aria-pressed={showReviews}
-                  onClick={() => setShowReviews((prev) => !prev)}
+                  onClick={onToggleReviews}
                 >
                   <Icon name={showReviews ? 'grav' : 'signature'} />
                   {showReviews ? SOCIAL_UI.feed.reviewsBack : SOCIAL_UI.feed.reviewsButton}
@@ -471,6 +437,7 @@ export function SocialProfileDetailScreen({
                       const rScore = Math.max(1, Math.min(5, Math.round(rating)));
                       const reviewHue = [0, 4, 50, 82, 120, 156][rScore];
                       const reviewLAdj = [0, 0, 0, 10, 5, 0][rScore];
+                      const openThis = () => onOpenReview(review.id);
                       return (
                         <article
                           key={review.id}
@@ -478,6 +445,13 @@ export function SocialProfileDetailScreen({
                           role="listitem"
                           style={hasRating ? ({ '--rev-hue': String(reviewHue), '--rev-ladj': `${reviewLAdj}%` } as CSSProperties) : undefined}
                         >
+                          {/* Tarjeta pulsable: abre el detalle de la reseña (todo el análisis) con vuelta a esta lista. */}
+                          <button
+                            type="button"
+                            className="hub-review-open"
+                            aria-label={SOCIAL_UI.feed.reviewOpenAria(review.gameName || '')}
+                            onClick={openThis}
+                          />
                           <span className="hub-review-medal" aria-hidden="true">
                             {hasRating ? (scoreScale === 'grade' ? Math.round(resolveGrade({ grade: review.grade, score: rating })) : Math.round(rating)) : '¿?'}
                           </span>
@@ -494,11 +468,7 @@ export function SocialProfileDetailScreen({
                           </header>
                           {review.reviewText ? (
                             <div className="hub-review-body">
-                              <ReviewText
-                                text={review.reviewText}
-                                moreLabel={SOCIAL_UI.feed.reviewExpand}
-                                lessLabel={SOCIAL_UI.feed.reviewCollapse}
-                              />
+                              <p className="hub-feed-review-text hub-review-text">{review.reviewText}</p>
                             </div>
                           ) : null}
                         </article>
