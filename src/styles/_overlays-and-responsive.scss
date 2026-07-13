@@ -141,8 +141,37 @@ dialog.modal-dialog[open]::backdrop { animation: modalBackdropIn .28s ease both;
   box-shadow: 0 6px 18px rgba(0,0,0,.28);
 }
 
+/* Botones flotantes de navegación (Cuenta / Ajustes): mismo diseño que el cambio de tema; solo cambia
+   el icono. En la sección activa se resaltan con el acento (como el estado hover). */
+.floating-controls .floating-nav-btn.is-active {
+  color: var(--steam);
+  background: var(--steam-soft);
+  border-color: rgba(var(--steam-rgb),.35);
+}
+/* A diferencia del sol/luna, el engranaje y el icono de cuenta no deben GIRAR al hover (queda extraño):
+   solo un leve crecimiento como realimentación. */
+.floating-controls .floating-nav-btn:hover .ui-icon { transform: scale(1.08); }
+
+/* Cuenta aparece/desaparece de forma suave según haya perfil social configurado: colapsa su ancho y se desvanece
+   (misma sensación que el ocultado del grupo al hacer scroll). El margen negativo absorbe el `gap` del
+   flex para que el resto de botones no dejen hueco cuando no hay cuenta. */
+.floating-controls .floating-nav-account {
+  overflow: hidden;
+  transition: opacity .25s ease, transform .25s ease, width .25s ease, margin .25s ease, padding .25s ease;
+}
+.floating-controls .floating-nav-account.is-gone {
+  width: 0;
+  padding: 0;
+  margin-right: -.5rem;
+  border-width: 0;
+  opacity: 0;
+  transform: scale(.7);
+  pointer-events: none;
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .floating-controls { transition: none; }
+  .floating-controls,
+  .floating-controls .floating-nav-account { transition: none; }
 }
 
 /* Sin barra superior: Social y Ajustes dejan hueco arriba para los controles flotantes. */
