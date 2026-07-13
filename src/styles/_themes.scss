@@ -469,6 +469,38 @@
 /* Favoritos publicados: placa de Aperture — borde fino; lomos variados en `--deco-shelf-*`. */
 :root[data-palette="portal"] .hub-fav-cart { border: 1px solid var(--border); border-radius: var(--radius-sm); }
 
+/* ── §14 · CLARO = APERTURE ANTIGUA: recolorea los pocos puntos con azul/cian LITERAL (no vía `--steam`) para que
+   la zona vieja quede cálida y coherente; el resto ya se calienta solo al cambiar las variables. ── */
+:root[data-palette="portal"][data-theme="light"] .fab { background: radial-gradient(circle at 50% 42%, #ffe3b0, var(--steam) 70%); color: #2a1a08; }
+:root[data-palette="portal"][data-theme="light"] .btn-toggle.active,
+:root[data-palette="portal"][data-theme="light"] .badge-opp-activo { color: #2a1a08 !important; }
+:root[data-palette="portal"][data-theme="light"] .bottom-nav-inner { border: 1px solid var(--border); border-top: 2px solid var(--portal-orange); }
+
+/* ── §15 · TRANSICIÓN "cámara de pruebas" (firma Portal): al alternar claro/oscuro —o al entrar al tema— barre un
+   panel de Aperture (rejilla + filete de portal) que cubre un instante la pantalla, evocando la carga entre la
+   zona ANTIGUA y la MODERNA. Se engancha a `.theme-anim`, que useTheme/usePalette ponen ~400ms en el <html>.
+   Solo Portal (el selector exige `data-palette="portal"`) y respeta reduced-motion. ── */
+@media (prefers-reduced-motion: no-preference) {
+  @keyframes portal-chamber-sweep {
+    0% { transform: translateX(-108%); }
+    100% { transform: translateX(108%); }
+  }
+  :root[data-palette="portal"].theme-anim::after {
+    content: '';
+    position: fixed;
+    inset: -2px;
+    z-index: 99999;
+    pointer-events: none;
+    background-color: var(--bg);
+    background-image:
+      repeating-linear-gradient(0deg, rgba(127, 127, 127, .10) 0 1px, transparent 1px 46px),
+      repeating-linear-gradient(90deg, rgba(127, 127, 127, .10) 0 1px, transparent 1px 46px);
+    border-inline: 2px solid var(--steam);
+    box-shadow: 0 0 34px 6px rgba(var(--steam-rgb), .4);
+    animation: portal-chamber-sweep 400ms ease-in-out both;
+    will-change: transform;
+  }
+}
 
 /* ═══════════════════════════════════════════════════════════════════════════════════════════════════
    TEMA · Sin futuro (Cyberpunk 2077) — HUD de Night City: amarillo ácido + cian + magenta sobre
@@ -567,6 +599,28 @@
   :root[data-palette="cyberpunk"] .btn-secondary::before,
   :root[data-palette="cyberpunk"] .btn-danger::before,
   :root[data-palette="cyberpunk"] .btn-abandoned::before { animation: cyber-glitch-layer 17s ease-in-out infinite; }
+}
+
+/* ── §1b · GLITCH portado a otras firmas. Misma mecánica confinada que el cyberpunk (destello en ~2% de un ciclo
+   largo, resto quieto) y reutilizando los keyframes COLORLESS de slice/jitter; solo cambia la aberración de texto
+   (temática por paleta) y la intensidad. Todo bajo `prefers-reduced-motion: no-preference`. ── */
+@media (prefers-reduced-motion: no-preference) {
+  /* W40K (grimdark): corrupción de vox/pict con aberración VERDE/ORO del cogitador. Solo en OSCURO —en el códice
+     claro no hay CRT—. La sombra verde IDLE del h2 (0 0 9px …) se ancla en los fotogramas apagados para no pisar
+     el glow base. */
+  @keyframes grim-glitch-text {
+    0%, 95.4%, 97.4%, 100% { transform: none; clip-path: inset(-3px); text-shadow: 0 0 9px rgba(67, 245, 88, .45); }
+    95.6% { transform: translate(-2px, 1px); clip-path: inset(8% 0 58% 0); text-shadow: -2px 0 rgba(224, 169, 43, .9), 2px 0 rgba(67, 245, 88, .85), 0 0 9px rgba(67, 245, 88, .45); }
+    96.1% { transform: translate(2px, -1px); clip-path: inset(62% 0 10% 0); text-shadow: 2px 0 rgba(224, 169, 43, .85), -2px 0 rgba(67, 245, 88, .8), 0 0 9px rgba(67, 245, 88, .45); }
+    96.6% { transform: translate(-1px, 0); clip-path: inset(34% 0 34% 0); text-shadow: -1px 0 rgba(224, 169, 43, .8), 1px 0 rgba(67, 245, 88, .75), 0 0 9px rgba(67, 245, 88, .45); }
+  }
+  :root[data-palette="grimdark"]:not([data-theme="light"]) h2 { animation: grim-glitch-text 12s ease-in-out infinite; }
+  :root[data-palette="grimdark"]:not([data-theme="light"]) .hub-name-link,
+  :root[data-palette="grimdark"]:not([data-theme="light"]) .hub-detail-profile-link { animation: cyber-glitch-slice 14s ease-in-out infinite; }
+  :root[data-palette="grimdark"]:not([data-theme="light"]) .hub-name-link:nth-of-type(2n) { animation-delay: -5s; }
+  :root[data-palette="grimdark"]:not([data-theme="light"]) .hub-name-link:nth-of-type(3n) { animation-delay: -8.5s; }
+  :root[data-palette="grimdark"]:not([data-theme="light"]) .fab { animation: cyber-glitch-jitter 16s ease-in-out infinite; }
+  :root[data-palette="grimdark"]:not([data-theme="light"]) .fab-roulette { animation: cyber-glitch-jitter 16s ease-in-out infinite; animation-delay: -6s; }
 }
 
 /* ── §2 · Fondo: scanlines CRT muy tenues (líneas horizontales cian). ── */
