@@ -103,7 +103,7 @@ function renderBooleanBadge(type: 'replayable' | 'retry', value: boolean) {
     const label = value ? 'Rejugar: Sí' : 'Rejugar: No';
     return (
       <span className={value ? 'badge-rejugar-activo' : 'badge-rejugar-inactivo'} aria-label={label} title={label}>
-        <Icon name={value ? COMMON_ICONS.star : COMMON_ICONS.lock} />
+        <Icon name={value ? COMMON_ICONS.starOliveBranches : COMMON_ICONS.lock} />
       </span>
     );
   }

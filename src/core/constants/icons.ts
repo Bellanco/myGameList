@@ -22,6 +22,7 @@ export type IconName =
   | 'eye'
   | 'eye-off'
   | 'star'
+  | 'star-olive-branches'
   | 'lock'
   | 'trophy'
   | 'play'
@@ -67,6 +68,7 @@ export const COMMON_ICONS = {
   filterActive: 'filter-active',
   refresh: 'refresh',
   star: 'star',
+  starOliveBranches: 'star-olive-branches',
   lock: 'lock',
   repeat: 'repeat',
   undo: 'undo',
