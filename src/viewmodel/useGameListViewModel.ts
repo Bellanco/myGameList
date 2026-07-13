@@ -42,6 +42,7 @@ export interface GameDraft {
   replayable: boolean;
   retry: boolean;
   hours: number | null;
+  scored: boolean; // vergüenza: puntuación activada (check del formulario). Otras pestañas la ignoran.
   review: string;
 }
 
@@ -59,6 +60,7 @@ const EMPTY_DRAFT: GameDraft = {
   replayable: false,
   retry: false,
   hours: null,
+  scored: false,
   review: '',
 };
 
@@ -77,6 +79,7 @@ function toNormalizedDraft(game?: Partial<GameItem>): GameDraft {
     platforms: game?.platforms || [],
     review: game?.review || '',
     hours: game?.hours === null ? null : Number(game?.hours),
+    scored: Boolean(game?.scored),
   };
 }
 
@@ -339,10 +342,15 @@ export function useGameListViewModel() {
         review: safeTrim(nextDraft.review, 25000),
         // F2: la nota fina 0–100 es la FUENTE (del dial si viene; si no, derivada de las estrellas). El `score`
         // 0–5 es el ESPEJO derivado de la nota (compat con clientes antiguos y con la escala de estrellas).
+        // Vergüenza sin puntuar (check apagado) → nota y espejo a 0: la ruleta la trata como neutra y el canal
+        // social la muestra "sin puntuar". Guarda contra restos de un `grade` heredado (p. ej. tras migrar).
         ...(() => {
+          if (tab === 'v' && !nextDraft.scored) return { score: 0, grade: 0 };
           const grade = typeof nextDraft.grade === 'number' ? clampGrade(nextDraft.grade) : gradeFromStars(nextDraft.score);
           return { score: starsFromGrade(grade), grade };
         })(),
+        // El flag de puntuación solo tiene sentido en la vergüenza (opt-in); el resto de listas no lo persisten.
+        scored: tab === 'v' ? Boolean(nextDraft.scored) : undefined,
         years: [...new Set((nextDraft.years || []).map(Number).filter(Number.isFinite))].sort((a, b) => a - b),
         strengths: uniqueCaseInsensitive((nextDraft.strengths || []).map(normalizeTag).filter(Boolean)),
         weaknesses: uniqueCaseInsensitive((nextDraft.weaknesses || []).map(normalizeTag).filter(Boolean)),

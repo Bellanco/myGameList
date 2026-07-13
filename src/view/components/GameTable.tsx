@@ -403,7 +403,7 @@ export const GameTable = memo(function GameTable({
                             <div>{renderTags(game.years?.map(String) || [], 'chip-generic')}</div>
                           </div>
                         )}
-                        {currentTab === 'c' && showHours && game.hours !== null && (
+                        {(currentTab === 'c' || currentTab === 'v') && showHours && game.hours !== null && (
                           <div className="detail-box">
                             <span className="detail-label">{UI_MESSAGES.detail.playtime}</span>
                             <div>{UI_MESSAGES.detail.hoursSuffix(String(game.hours).replace('.', ','))}</div>
@@ -427,7 +427,7 @@ export const GameTable = memo(function GameTable({
                             <div>{renderTags(game.reasons, 'chip-pd')}</div>
                           </div>
                         )}
-                        {(currentTab === 'c' || currentTab === 'p') && game.score !== null && (
+                        {(currentTab === 'c' || currentTab === 'p' || (currentTab === 'v' && game.scored)) && game.score !== null && (
                           <div className="detail-box">
                             <span className="detail-label">{currentTab === 'p' ? UI_MESSAGES.detail.interest : UI_MESSAGES.detail.score}</span>
                             <div>
