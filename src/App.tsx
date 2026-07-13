@@ -61,6 +61,8 @@ export const APP_ROUTE_PATHS = [
   '/social/profile',
   '/social/profiles',
   '/social/profiles/:profileId',
+  '/social/profiles/:profileId/reviews',
+  '/social/profiles/:profileId/game/:gameId/review',
   '/social/requests',
   '/social/user/:userId/game/:gameId/:eventType',
   '/ajustes',

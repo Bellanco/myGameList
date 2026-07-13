@@ -7,6 +7,7 @@ import { Icon } from './Icon';
 import { SocialProfileScreen } from './socialhub/SocialProfileScreen';
 import { SocialDetailScreen } from './socialhub/SocialDetailScreen';
 import { SocialProfileDetailScreen } from './socialhub/SocialProfileDetailScreen';
+import { SocialProfileReviewScreen } from './socialhub/SocialProfileReviewScreen';
 import { SocialProfilesScreen } from './socialhub/SocialProfilesScreen';
 import { SocialFeedScreen } from './socialhub/SocialFeedScreen';
 import { SocialRequestsScreen } from './socialhub/SocialRequestsScreen';
@@ -85,6 +86,12 @@ const SocialHubInner = memo(function SocialHubInner({
     socialDisplayName,
     filteredSocialDirectory,
     selectedProfileDetail,
+    profileDetailId,
+    profileReviewsView,
+    activeProfileReview,
+    openProfileReviews,
+    closeProfileReviews,
+    openProfileReviewDetail,
     feedItems,
     activeDetailEvent,
     getGameItemById,
@@ -193,6 +200,7 @@ const SocialHubInner = memo(function SocialHubInner({
       );
     }
     if (activePanel === 'profile-detail') {
+      const detailId = (selectedProfileDetail as { id?: string })?.id || profileDetailId;
       return (
         <>
         <SocialProfileDetailScreen
@@ -201,6 +209,9 @@ const SocialHubInner = memo(function SocialHubInner({
           isOwnProfile={isOwnProfileDetail}
           onEditProfile={() => navigate('/social/profile')}
           onBack={() => navigate('/social')}
+          showReviews={profileReviewsView}
+          onToggleReviews={() => (profileReviewsView ? closeProfileReviews(detailId) : openProfileReviews(detailId))}
+          onOpenReview={(gameId) => openProfileReviewDetail(detailId, gameId)}
           status={status}
           statusKind={statusKind}
           onAddToProximos={onAddToProximos}
@@ -214,6 +225,18 @@ const SocialHubInner = memo(function SocialHubInner({
         />
         {removeFriendDialog}
         </>
+      );
+    }
+    if (activePanel === 'profile-review') {
+      return (
+        <SocialProfileReviewScreen
+          SOCIAL_UI={SOCIAL_UI}
+          review={activeProfileReview}
+          profileName={(selectedProfileDetail as { displayName?: string })?.displayName || ''}
+          onBack={() => openProfileReviews(profileDetailId)}
+          status={status}
+          statusKind={statusKind}
+        />
       );
     }
     if (activePanel === 'requests') {

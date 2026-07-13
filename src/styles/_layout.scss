@@ -1628,12 +1628,13 @@ button.hub-chip.active {
   transition: transform .2s ease, border-color .2s ease, box-shadow .2s ease, background .2s ease;
 }
 
-/* Reseñas del listado de juegos (detalle de perfil): ocupan todo el ancho del listado y no son clicables. */
+/* Reseñas del listado de juegos (detalle de perfil): ocupan todo el ancho del listado y son pulsables
+   (abren el detalle de la reseña con todo el análisis). */
 .hub-profile-reviews-list .hub-feed-activity-item {
   width: 100%;
   max-width: none;
   align-self: stretch;
-  cursor: default;
+  cursor: pointer;
 }
 
 /* Pantalla "Reseñas" de un perfil: layout de lectura. Título del juego prominente, fila de
@@ -1810,14 +1811,29 @@ button.hub-chip.active {
   outline-offset: 2px;
 }
 
-/* Las reseñas no son seleccionables: sin realce de hover/foco (con el acento en degradado se veía raro). */
+/* Reseñas pulsables: capa transparente que abarca toda la tarjeta y captura el click sin envolver el contenido
+   (así el título/estrellas/texto siguen siendo texto seleccionable y el foco recae en un único control). */
+.hub-review-open {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  border: 0;
+  padding: 0;
+  margin: 0;
+  background: none;
+  cursor: pointer;
+  border-radius: inherit;
+}
+.hub-review-open:focus-visible {
+  outline: 2px solid var(--acc);
+  outline-offset: 2px;
+}
+/* Realce sutil al pasar/enfocar, coherente con el resto de tarjetas pulsables del hub. */
 .hub-profile-reviews-list .hub-review-entry.is-review:hover,
-.hub-profile-reviews-list .hub-review-entry.is-review:focus-visible {
-  transform: none;
-  border-color: var(--border);
-  border-left-color: transparent;
-  box-shadow: none;
-  outline: none;
+.hub-profile-reviews-list .hub-review-entry.is-review:has(.hub-review-open:focus-visible) {
+  transform: translateY(-1px);
+  border-color: var(--acc);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, .18);
 }
 
 /* Cabecera con avatar */

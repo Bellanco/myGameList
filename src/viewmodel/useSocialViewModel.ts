@@ -23,7 +23,7 @@ import { applyProfileVisibility } from '../core/utils/profileVisibility';
 import { SOCIAL_UI } from '../core/constants/labels';
 import { MAX_SOCIAL_FAVORITES } from '../core/constants/uiConfig';
 import type { IconName } from '../core/constants/icons';
-import type { GameItem, SyncConfig, TabId } from '../model/types/game';
+import { TAB_IDS, type GameItem, type SyncConfig, type TabId } from '../model/types/game';
 import {
   acceptFriendRequest,
   clearAnalyticsUser,
@@ -65,11 +65,16 @@ const isNotFoundGistError = (error: unknown): boolean => {
   return error instanceof Error && /\b404\b/.test(error.message);
 };
 
-type SocialPanel = 'profile' | 'profiles' | 'profile-detail' | 'detail' | 'requests' | 'feed';
+type SocialPanel = 'profile' | 'profiles' | 'profile-detail' | 'profile-review' | 'detail' | 'requests' | 'feed';
 
 type SocialRouteState = {
   activePanel: SocialPanel;
   profileDetailId: string;
+  // Vista de "Reseñas" del detalle de perfil (sub-ruta /reviews). Se refleja en la URL para que, al abrir una
+  // reseña y volver atrás, se regrese a la lista de reseñas y no a la vista de favoritos del perfil.
+  profileReviewsView: boolean;
+  // Id del juego cuya reseña se muestra a pantalla completa (sub-ruta /game/:gameId/review del perfil).
+  profileReviewGameId: number;
   detailActorUid: string;
   detailGameId: number;
   detailEventType: string;
@@ -98,6 +103,8 @@ const PROFILE_EDIT_PATH = /^\/social\/profile\/?$/;
 const PROFILES_PATH = /^\/social\/profiles\/?$/;
 const REQUESTS_PATH = /^\/social\/requests\/?$/;
 const PROFILE_DETAIL_PATH = /^\/social\/profiles\/([^/]+)$/;
+const PROFILE_REVIEWS_PATH = /^\/social\/profiles\/([^/]+)\/reviews$/;
+const PROFILE_REVIEW_DETAIL_PATH = /^\/social\/profiles\/([^/]+)\/game\/(\d+)\/review$/;
 const ACTIVITY_DETAIL_PATH = /^\/social\/user\/([^/]+)\/game\/(\d+)\/(review|recommendation)$/;
 
 const getSocialRouteState = (pathname: string): SocialRouteState => {
@@ -105,11 +112,36 @@ const getSocialRouteState = (pathname: string): SocialRouteState => {
   const profilesMatch = pathname.match(PROFILES_PATH);
   const requestsMatch = pathname.match(REQUESTS_PATH);
   const profileDetailMatch = pathname.match(PROFILE_DETAIL_PATH);
+  const profileReviewsMatch = pathname.match(PROFILE_REVIEWS_PATH);
+  const profileReviewDetailMatch = pathname.match(PROFILE_REVIEW_DETAIL_PATH);
   const detailMatch = pathname.match(ACTIVITY_DETAIL_PATH);
 
+  // El id del perfil es común a las tres sub-rutas de detalle de perfil (/, /reviews, /game/:id/review).
+  const profileDetailId = profileReviewDetailMatch
+    ? decodeURIComponent(profileReviewDetailMatch[1])
+    : profileReviewsMatch
+      ? decodeURIComponent(profileReviewsMatch[1])
+      : profileDetailMatch
+        ? decodeURIComponent(profileDetailMatch[1])
+        : '';
+
   return {
-    activePanel: profileEditMatch ? 'profile' : profilesMatch ? 'profiles' : requestsMatch ? 'requests' : profileDetailMatch ? 'profile-detail' : detailMatch ? 'detail' : 'feed',
-    profileDetailId: profileDetailMatch ? decodeURIComponent(profileDetailMatch[1]) : '',
+    activePanel: profileEditMatch
+      ? 'profile'
+      : profilesMatch
+        ? 'profiles'
+        : requestsMatch
+          ? 'requests'
+          : profileReviewDetailMatch
+            ? 'profile-review'
+            : profileReviewsMatch || profileDetailMatch
+              ? 'profile-detail'
+              : detailMatch
+                ? 'detail'
+                : 'feed',
+    profileDetailId,
+    profileReviewsView: Boolean(profileReviewsMatch),
+    profileReviewGameId: profileReviewDetailMatch ? Number(profileReviewDetailMatch[2]) : 0,
     detailActorUid: detailMatch ? decodeURIComponent(detailMatch[1]) : '',
     detailGameId: detailMatch ? Number(detailMatch[2]) : 0,
     detailEventType: detailMatch ? detailMatch[3] : '',
@@ -142,7 +174,7 @@ export function useSocialViewModel() {
   const navigate = useNavigate();
 
   const routeState = useMemo(() => getSocialRouteState(location.pathname), [location.pathname]);
-  const { activePanel, profileDetailId, detailActorUid, detailGameId, detailEventType } = routeState;
+  const { activePanel, profileDetailId, profileReviewsView, profileReviewGameId, detailActorUid, detailGameId, detailEventType } = routeState;
 
   type SocialActivityFeedItem = SocialActivityEntry & {
     profileId: string;
@@ -605,7 +637,8 @@ export function useSocialViewModel() {
   }, [profileSearch, visibleSocialDirectory]);
 
   const selectedProfileDetail = useMemo(() => {
-    if (activePanel !== 'profile-detail' || !profileDetailId) {
+    // La vista de perfil, la de reseñas y el detalle de una reseña comparten el mismo perfil seleccionado.
+    if ((activePanel !== 'profile-detail' && activePanel !== 'profile-review') || !profileDetailId) {
       return null;
     }
 
@@ -636,6 +669,41 @@ export function useSocialViewModel() {
       },
     };
   }, [activePanel, authUser, foreignGamesByProfile, localState, ownProfileId, profileDetailId, socialDirectory]);
+
+  // Reseña abierta a pantalla completa desde la lista de reseñas del perfil (/social/profiles/:id/game/:gameId/review).
+  // Se busca el juego por id en los listados del perfil seleccionado (datos completos para el propio/amigos; los
+  // no-amigos no muestran reseñas). Reúne TODA la información del análisis para el detalle: nota, texto, metadatos.
+  const activeProfileReview = useMemo(() => {
+    if (activePanel !== 'profile-review' || !selectedProfileDetail || profileReviewGameId <= 0) {
+      return null;
+    }
+    const lists = selectedProfileDetail.sharedLists || {};
+    let raw: (GameItem | SocialSharedGame) | null = null;
+    for (const tab of TAB_IDS) {
+      const found = (lists[tab] || []).find((game) => Number((game as { id?: number }).id || 0) === profileReviewGameId);
+      if (found) {
+        raw = found;
+        break;
+      }
+    }
+    if (!raw) return null;
+    const game = raw as unknown as Record<string, unknown>;
+    return {
+      id: profileReviewGameId,
+      name: String(game.name || ''),
+      // Canal público index-only: para perfiles ajenos solo hay snippet/rating; para propios/amigos, review/score completos.
+      review: String(game.review || game.snippet || '').trim(),
+      score: Number(game.score || game.rating || 0),
+      grade: typeof game.grade === 'number' ? game.grade : null,
+      platforms: Array.isArray(game.platforms) ? (game.platforms as string[]) : [],
+      genres: Array.isArray(game.genres) ? (game.genres as string[]) : [],
+      strengths: Array.isArray(game.strengths) ? (game.strengths as string[]) : [],
+      weaknesses: Array.isArray(game.weaknesses) ? (game.weaknesses as string[]) : [],
+      reasons: Array.isArray(game.reasons) ? (game.reasons as string[]) : [],
+      hours: typeof game.hours === 'number' ? game.hours : null,
+      ts: typeof game._ts === 'number' ? game._ts : 0,
+    };
+  }, [activePanel, selectedProfileDetail, profileReviewGameId]);
 
   const activityFeedItems = useMemo(() => {
     // `|| []`: una entrada de caché antigua/malformada podría no traer `activity` → flatMap+sort reventaría con
@@ -849,6 +917,18 @@ export function useSocialViewModel() {
     navigate(`/social/profiles/${encodeURIComponent(profileId)}`);
   }, [navigate]);
 
+  // Reseñas del perfil: alternar entre la vista de favoritos (/social/profiles/:id) y la de reseñas
+  // (.../reviews), y abrir el detalle a pantalla completa de una reseña (.../game/:gameId/review).
+  const openProfileReviews = useCallback((profileId: string) => {
+    navigate(`/social/profiles/${encodeURIComponent(profileId)}/reviews`);
+  }, [navigate]);
+  const closeProfileReviews = useCallback((profileId: string) => {
+    navigate(`/social/profiles/${encodeURIComponent(profileId)}`);
+  }, [navigate]);
+  const openProfileReviewDetail = useCallback((profileId: string, gameId: number) => {
+    navigate(`/social/profiles/${encodeURIComponent(profileId)}/game/${gameId}/review`);
+  }, [navigate]);
+
   // Abre el DETALLE del perfil propio (vista pública con sus listados), no el editor. Si aún no existe entrada
   // propia con favoritos en el directorio, cae al editor para que el usuario complete su perfil.
   const openOwnProfileDetail = useCallback(() => {
@@ -871,8 +951,8 @@ export function useSocialViewModel() {
   // 24h en IndexedDB; sin red si está fresca) y la guarda filtrada por su visibilidad. El perfil propio no se baja
   // (ya tiene datos locales). Sin token o ante fallo de red se queda index-only (snippet del evento).
   useEffect(() => {
-    if (activePanel !== 'detail' && activePanel !== 'profile-detail') return;
-    const targetProfileId = activePanel === 'profile-detail' ? profileDetailId : activeDetailEvent?.profileId || '';
+    if (activePanel !== 'detail' && activePanel !== 'profile-detail' && activePanel !== 'profile-review') return;
+    const targetProfileId = (activePanel === 'profile-detail' || activePanel === 'profile-review') ? profileDetailId : activeDetailEvent?.profileId || '';
     if (!targetProfileId) return;
     if (isOwnProfileIdentity(targetProfileId, authUser?.uid, ownProfileId)) return;
     if (foreignGamesByProfile[targetProfileId]) return;
@@ -1824,6 +1904,12 @@ export function useSocialViewModel() {
     socialDisplayName,
     filteredSocialDirectory,
     selectedProfileDetail,
+    profileDetailId,
+    profileReviewsView,
+    activeProfileReview,
+    openProfileReviews,
+    closeProfileReviews,
+    openProfileReviewDetail,
     refreshProfileDetail,
     loadingForeignProfile,
     refreshCoolingDown,
