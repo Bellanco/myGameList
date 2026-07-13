@@ -212,6 +212,15 @@ export const GameTable = memo(function GameTable({
     count: virtualRows.length,
     getScrollElement: () => parentRef.current,
     measureElement: (element) => element.getBoundingClientRect().height,
+    // Clave ESTABLE por fila lógica (tipo + id), no por índice: al expandir/plegar el detalle se
+    // inserta/quita una fila y TODOS los índices posteriores se desplazan. Sin clave estable, el
+    // virtualizador reasigna las alturas cacheadas por índice a filas distintas (una fila normal ~50px
+    // hereda la altura de un detalle ~320px, o al revés) → el tamaño total se infla, aparecen huecos y
+    // filas inalcanzables al final. Con la clave, cada fila conserva su medida al cambiar de posición.
+    getItemKey: (index) => {
+      const row = virtualRows[index];
+      return row ? `${row.type}-${row.gameId}` : index;
+    },
     estimateSize: (index) => {
       const row = virtualRows[index];
       return row?.type === 'detail' ? 320 : 50;
