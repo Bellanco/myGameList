@@ -27,6 +27,8 @@ export type IconName =
   | 'trophy'
   | 'play'
   | 'abandoned'
+  | 'skull'
+  | 'rocket'
   | 'checkered-flag'
   | 'bottom-lists'
   | 'bottom-settings'
@@ -46,9 +48,9 @@ export type IconName =
 
 export const TAB_ICONS: Record<TabId, IconName> = {
   c: 'trophy',
-  v: 'abandoned',
+  v: 'skull',
   e: 'play',
-  p: 'checkered-flag',
+  p: 'rocket',
 };
 
 export const COMMON_ICONS = {
