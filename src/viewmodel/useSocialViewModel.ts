@@ -692,15 +692,15 @@ export function useSocialViewModel() {
       id: profileReviewGameId,
       name: String(game.name || ''),
       // Canal público index-only: para perfiles ajenos solo hay snippet/rating; para propios/amigos, review/score completos.
-      review: String(game.review || game.snippet || '').trim(),
-      score: Number(game.score || game.rating || 0),
+      review: String(game.review || game.snippet || '').trim(), // audit-allow: modelo de lectura para render del detalle (SocialHub), no es escritura a canal público
+      score: Number(game.score || game.rating || 0), // audit-allow: modelo de lectura para render del detalle (SocialHub), no es escritura a canal público
       grade: typeof game.grade === 'number' ? game.grade : null,
       platforms: Array.isArray(game.platforms) ? (game.platforms as string[]) : [],
       genres: Array.isArray(game.genres) ? (game.genres as string[]) : [],
       strengths: Array.isArray(game.strengths) ? (game.strengths as string[]) : [],
       weaknesses: Array.isArray(game.weaknesses) ? (game.weaknesses as string[]) : [],
       reasons: Array.isArray(game.reasons) ? (game.reasons as string[]) : [],
-      hours: typeof game.hours === 'number' ? game.hours : null,
+      hours: typeof game.hours === 'number' ? game.hours : null, // audit-allow: modelo de lectura para render del detalle (SocialHub), no es escritura a canal público
       ts: typeof game._ts === 'number' ? game._ts : 0,
     };
   }, [activePanel, selectedProfileDetail, profileReviewGameId]);
