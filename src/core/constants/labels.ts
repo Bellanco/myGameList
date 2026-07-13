@@ -409,7 +409,7 @@ export const SOCIAL_UI = {
     profileDetailActionsAria: 'Acciones del detalle de perfil social',
     profileDetailMissing: 'No se encontró el perfil solicitado o ya no está disponible.',
     profileFavoritesCount: (count: number) => `${count} ${count === 1 ? 'favorito' : 'favoritos'}`,
-    profileFavoritesTitle: 'Favoritos publicados',
+    profileFavoritesTitle: 'Favoritos',
     profileListsTitle: 'Juegos',
     roulettePick: 'Elige tu próximo juego',
     profileListsEmpty: 'Este perfil no ha publicado listados todavía.',

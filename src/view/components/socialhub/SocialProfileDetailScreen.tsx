@@ -394,9 +394,6 @@ export function SocialProfileDetailScreen({
           <div className="hub-profile-hero">
             <HubAvatar name={activeProfileDetail.displayName} photoURL={activeProfileDetail.photoURL} sizeClass="hub-avatar-lg" />
             <h3 className="hub-profile-hero-name">{activeProfileDetail.displayName}</h3>
-            {canSeeFullProfile ? (
-              <p className="hub-profile-hero-meta">{SOCIAL_UI.feed.profileFavoritesCount(favoriteGames.length)}</p>
-            ) : null}
           </div>
           {!canSeeFullProfile ? (
             <div className="hub-detail-metadata">
