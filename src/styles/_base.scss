@@ -240,8 +240,10 @@
   --pop-line: #151011;
 }
 
-/* ── Cámara de pruebas (Portal) — Aperture Science: azul/naranja de los portales, geles, paneles limpios.
-   `--portal-orange` y `--portal-cube` (rosa del Cubo de Compañía) son tokens extra que usa solo su skin. ── */
+/* ── Cámara de pruebas (Portal) — Aperture Science con el contraste ANTIGUA↔MODERNA del juego: el OSCURO es la
+   Aperture MODERNA (azul clínico, paneles blancos, estéril); el CLARO (más abajo) es la ANTIGUA (años 50–70,
+   cálida y vintage). Alternar claro/oscuro evoca el salto entre zonas, con una transición estilo pantalla de
+   carga (ver `.theme-anim` en _themes.scss). `--portal-orange`/`--portal-cube` son tokens extra de su skin. ── */
 :root[data-palette="portal"] {
   --bg: #12171b;
   --surface: #1c242b;
@@ -281,35 +283,38 @@
   --deco-shelf-3: linear-gradient(90deg, #f2f7fc, #29b6f6);
   --deco-shelf-4: linear-gradient(90deg, #ff9e1b, #29b6f6);
 }
+/* CLARO = APERTURE ANTIGUA (años 50–70): pergamino/pared cálida, paneles de madera, ámbar y naranja quemado,
+   verde oliva y rojo teja. El azul clínico se reserva al OSCURO (Aperture moderna). Alternar claro/oscuro
+   "viaja" entre las zonas vieja y nueva. */
 :root[data-palette="portal"][data-theme="light"] {
-  --bg: #e7ecf0;
-  --surface: #ffffff;
-  --surface-hover: #eef2f5;
-  --surface-elevated: #f6f9fb;
-  --border: #c3ccd4;
-  --text: #17202a;
-  --text-muted: #56636e;
-  --text-dim: #7c8a96;
-  --steam: #0091d6;
-  --steam-hover: #007bb8;
-  --steam-rgb: 0,145,214;
-  --tab-active: #007bb8;
-  --success: #2f9e57;
-  --success-rgb: 47,158,87;
+  --bg: #e7dabd;
+  --surface: #f2e8d1;
+  --surface-hover: #ebdfc4;
+  --surface-elevated: #f8f0dd;
+  --border: #c7b184;
+  --text: #392a18;
+  --text-muted: #6e5a3e;
+  --text-dim: #8f7a5a;
+  --steam: #b46a1a;
+  --steam-hover: #99590f;
+  --steam-rgb: 180,106,26;
+  --tab-active: #99590f;
+  --success: #6f8a2f;
+  --success-rgb: 111,138,47;
   --warn: #b07f00;
   --warn-rgb: 176,127,0;
-  --danger: #d83a2f;
-  --danger-rgb: 216,58,47;
-  --star-empty: #c3ccd4;
-  --star-full: #e39400;
-  --chip-plat-fg: #56636e;
-  --chip-plat-bg: rgba(86,99,110,.10);
-  --chip-plat-border: rgba(86,99,110,.28);
-  --hub-text: #17202a;
-  --hub-text-muted: #56636e;
-  --tint-rgb: 20,32,42;
-  --portal-orange: #f57a00;
-  --portal-cube: #d81b7a;
+  --danger: #b23b1f;
+  --danger-rgb: 178,59,31;
+  --star-empty: #cdb78c;
+  --star-full: #c87f1c;
+  --chip-plat-fg: #6e5a3e;
+  --chip-plat-bg: rgba(110,90,62,.12);
+  --chip-plat-border: rgba(110,90,62,.30);
+  --hub-text: #392a18;
+  --hub-text-muted: #6e5a3e;
+  --tint-rgb: 57,42,24;
+  --portal-orange: #c25a12;
+  --portal-cube: #b04a78;
 }
 
 /* ── Sin futuro (Cyberpunk 2077) — HUD de Night City: amarillo ácido + cian + magenta sobre
