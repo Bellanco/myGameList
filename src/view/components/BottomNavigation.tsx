@@ -8,36 +8,37 @@ export type AppSection = 'lists' | 'social' | 'settings' | 'account';
 interface BottomNavigationProps {
   currentSection: AppSection;
   onSectionChange: (section: AppSection) => void;
-  /** La pestaña "Cuenta" solo se muestra si hay sesión de Google (todos sus ajustes requieren cuenta). */
-  showAccount: boolean;
 }
 
+// Ajustes y Cuenta ya no viven aquí: son botones flotantes (ver FloatingControls). La barra inferior
+// queda con las dos secciones "de contenido".
 const NAV_ITEMS: Array<{ key: AppSection; label: string; icon: IconName }> = [
   { key: 'lists', label: UI_MESSAGES.nav.lists, icon: 'bottom-lists' },
   { key: 'social', label: UI_MESSAGES.nav.social, icon: 'bottom-hub' },
-  { key: 'settings', label: UI_MESSAGES.nav.settings, icon: 'bottom-settings' },
-  { key: 'account', label: UI_MESSAGES.nav.account, icon: 'bottom-account' },
 ];
 
 /**
  * Navegacion inferior principal al estilo BottomNavigationView.
  */
-export const BottomNavigation = memo(function BottomNavigation({ currentSection, onSectionChange, showAccount }: BottomNavigationProps) {
+export const BottomNavigation = memo(function BottomNavigation({ currentSection, onSectionChange }: BottomNavigationProps) {
   const innerRef = useRef<HTMLDivElement>(null);
   const [indicator, setIndicator] = useState<{ left: number; width: number } | null>(null);
-  const items = showAccount ? NAV_ITEMS : NAV_ITEMS.filter((item) => item.key !== 'account');
+  const items = NAV_ITEMS;
 
-  // Pastilla deslizante: mide el botón de la sección activa y coloca `.bottom-nav-ind` tras él. Depende
-  // también de `showAccount`: al aparecer/desaparecer "Cuenta" cambian las posiciones y hay que re-medir.
+  // Pastilla deslizante: mide el botón de la sección activa y coloca `.bottom-nav-ind` tras él. En las
+  // secciones flotantes (Ajustes/Cuenta) no hay botón activo aquí: la pastilla se oculta (indicator = null).
   useLayoutEffect(() => {
     const container = innerRef.current;
     const active = container?.querySelector<HTMLElement>('.bottom-nav-btn.active');
-    if (!container || !active) return;
+    if (!container || !active) {
+      setIndicator(null);
+      return;
+    }
     const update = () => setIndicator({ left: active.offsetLeft, width: active.offsetWidth });
     update();
     window.addEventListener('resize', update);
     return () => window.removeEventListener('resize', update);
-  }, [currentSection, showAccount]);
+  }, [currentSection]);
 
   return (
     <nav className="bottom-nav" aria-label={UI_MESSAGES.nav.ariaLabel}>
