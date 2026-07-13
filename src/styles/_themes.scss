@@ -646,7 +646,7 @@
   z-index: 9998;
   /* BORDE QUE SE QUEMA: del centro limpio, una banda de RESCOLDO ámbar y luego el CARBÓN de la cinta chamuscada
      en las esquinas — como el celuloide ardiendo en el proyector. */
-  background: radial-gradient(ellipse at 50% 42%, transparent 44%, rgba(255, 138, 38, .12) 70%, rgba(10, 5, 2, .62) 100%);
+  background: radial-gradient(ellipse at 50% 42%, transparent 46%, rgba(255, 138, 38, .10) 70%, rgba(10, 5, 2, .42) 100%);
 }
 :root[data-palette="cuphead"][data-theme="light"] body::before { background: radial-gradient(ellipse at 50% 42%, transparent 52%, rgba(74, 48, 16, .24) 100%); }
 :root[data-palette="cuphead"] body::after {
@@ -655,20 +655,19 @@
   inset: -20px; /* margen para que el jitter del grano no descubra el borde */
   pointer-events: none;
   z-index: 9999;
-  opacity: .3;
+  opacity: .22;
   mix-blend-mode: soft-light;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='170' height='170'%3E%3Cfilter id='cg'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23cg)'/%3E%3C/svg%3E");
 }
-:root[data-palette="cuphead"][data-theme="light"] body::after { opacity: .3; }
+:root[data-palette="cuphead"][data-theme="light"] body::after { opacity: .2; }
+/* Parpadeo de metraje viejo: más LENTO y con menos salto (antes .5s era nervioso). */
 @media (prefers-reduced-motion: no-preference) {
-  :root[data-palette="cuphead"] body::after { animation: cup-grain .5s steps(1) infinite; }
+  :root[data-palette="cuphead"] body::after { animation: cup-grain 1.4s steps(1) infinite; }
 }
 @keyframes cup-grain {
   0% { background-position: 0 0; }
-  20% { background-position: -34px 12px; }
-  40% { background-position: 22px -26px; }
-  60% { background-position: -14px 28px; }
-  80% { background-position: 28px 18px; }
+  33% { background-position: -16px 10px; }
+  66% { background-position: 12px -14px; }
   100% { background-position: 0 0; }
 }
 
@@ -685,7 +684,7 @@
 :root[data-palette="cuphead"] .rl-hint,
 :root[data-palette="cuphead"] .score-ring-num,
 :root[data-palette="cuphead"] .score-dial-num,
-:root[data-palette="cuphead"] .hub-review-medal { font-family: 'Fredericka the Great', 'Georgia', serif; font-weight: 400; letter-spacing: .01em; }
+:root[data-palette="cuphead"] .hub-review-medal { font-family: 'Luckiest Guy', 'Arial Black', cursive; font-weight: 400; letter-spacing: .02em; }
 :root[data-palette="cuphead"] .btn,
 :root[data-palette="cuphead"] .hub-seg-btn,
 :root[data-palette="cuphead"] thead th,
@@ -699,6 +698,12 @@
 :root[data-palette="cuphead"] .rl-card-tag,
 :root[data-palette="cuphead"] .rl-item,
 :root[data-palette="cuphead"] .chip { font-family: 'Nunito', system-ui, sans-serif; font-weight: 800; letter-spacing: .01em; }
+/* Los NOMBRES de personas (perfiles/amigos) van en una fuente cartoon CON minúsculas (Titan One: hinchada y
+   redonda, estilo Luckiest Guy pero con caja baja real), no en Luckiest Guy (que los hacía parecer gritados). */
+:root[data-palette="cuphead"] .hub-feed-card-head-text h3,
+:root[data-palette="cuphead"] .hub-profile-hero-name,
+:root[data-palette="cuphead"] .hub-name-link,
+:root[data-palette="cuphead"] .hub-detail-profile-link { font-family: 'Titan One', 'Luckiest Guy', cursive; font-weight: 400; letter-spacing: .01em; }
 
 /* ── §2 · Fondo: papel envejecido con FOCO DE ESCENARIO cálido (como el iris central de las cartelas). El
    grano/viñeta los ponen los overlays de la FIRMA (arriba). ── */
@@ -721,7 +726,7 @@
 :root[data-palette="cuphead"] .settings-card,
 :root[data-palette="cuphead"] .hub-feed-card,
 :root[data-palette="cuphead"] .modal,
-:root[data-palette="cuphead"] .alert-dialog { border: 3px solid var(--cup-line) !important; border-radius: var(--radius-lg) !important; box-shadow: 5px 6px 0 rgba(0, 0, 0, .38) !important; }
+:root[data-palette="cuphead"] .alert-dialog { border: 3.5px solid var(--cup-line) !important; border-radius: var(--radius-lg) !important; box-shadow: 5px 6px 0 rgba(0, 0, 0, .38) !important; }
 :root[data-palette="cuphead"][data-theme="light"] .toolbar,
 :root[data-palette="cuphead"][data-theme="light"] .table-wrap,
 :root[data-palette="cuphead"][data-theme="light"] .settings-card,
@@ -730,12 +735,12 @@
 :root[data-palette="cuphead"][data-theme="light"] .alert-dialog { box-shadow: 5px 6px 0 rgba(36, 24, 18, .26) !important; }
 
 /* ── §4 · Tabla: cabecera = RÓTULO de cartela con banda mostaza (contrato) y filete de tinta inferior. ── */
-:root[data-palette="cuphead"] thead th { background: rgba(230, 167, 44, .16); color: var(--text); border-bottom: 3px solid var(--cup-line); }
+:root[data-palette="cuphead"] thead th { background: rgba(217, 154, 31, .22); color: var(--text); border-bottom: 3.5px solid var(--cup-line); }
 
 /* ── §5 · Botones = PASTILLAS de goma (rubber-hose): totalmente redondeados (píldora), contorno de tinta y
    SOMBRA DIBUJADA de bloque; el hover REBOTA (sube y agranda la sombra), sin el giro 3D de base. Relleno
    sólido por variante con color de texto fijado por contraste (regla 10). ── */
-:root[data-palette="cuphead"] .btn:not(.btn-icon):not(.btn-ghost) { border: 2.5px solid var(--cup-line) !important; border-radius: 999px !important; font-weight: 800; box-shadow: 3px 4px 0 rgba(0, 0, 0, .38) !important; }
+:root[data-palette="cuphead"] .btn:not(.btn-icon):not(.btn-ghost) { border: 3px solid var(--cup-line) !important; border-radius: 999px !important; font-weight: 800; box-shadow: 3px 4px 0 rgba(0, 0, 0, .38) !important; }
 :root[data-palette="cuphead"][data-theme="light"] .btn:not(.btn-icon):not(.btn-ghost) { box-shadow: 3px 4px 0 rgba(36, 24, 18, .28) !important; }
 :root[data-palette="cuphead"] .btn-secondary,
 :root[data-palette="cuphead"] .btn-toggle:not(.active) { background: var(--surface-elevated) !important; color: var(--text) !important; }
@@ -760,19 +765,19 @@
    ESTRELLA (los dibujos de los 30 están llenos de estrellitas). Cada tema estiliza su `.hub-feed-game-chip`
    en §6 (si no, cae a la píldora genérica de base). ── */
 :root[data-palette="cuphead"] .chip,
-:root[data-palette="cuphead"] .rl-chip { border-radius: 999px; border: 1.5px solid var(--cup-line) !important; transform: none; clip-path: none; }
+:root[data-palette="cuphead"] .rl-chip { border-radius: 999px; border: 2px solid var(--cup-line) !important; transform: none; clip-path: none; }
 :root[data-palette="cuphead"] .hub-feed-game-chip {
   padding: .22rem .72rem;
   border-radius: 999px;
   background: var(--steam);
-  border: 2px solid var(--cup-line);
+  border: 2.5px solid var(--cup-line);
   color: #fff5ec;
   letter-spacing: .01em;
 }
 :root[data-palette="cuphead"] .hub-friend-chip {
   background: var(--surface-elevated);
   color: var(--steam);
-  border: 2px solid var(--cup-line);
+  border: 2.5px solid var(--cup-line);
   border-radius: 999px;
   font-family: 'Nunito', system-ui, sans-serif;
   font-weight: 800;
@@ -786,7 +791,7 @@
 :root[data-palette="cuphead"] .input-base,
 :root[data-palette="cuphead"] .finput,
 :root[data-palette="cuphead"] .ftextarea,
-:root[data-palette="cuphead"] .search-input { border: 2px solid var(--border) !important; border-radius: var(--radius-md) !important; }
+:root[data-palette="cuphead"] .search-input { background: var(--surface-elevated) !important; color: var(--text) !important; border: 2px solid var(--border) !important; border-radius: var(--radius-md) !important; }
 
 /* ── §8 · Insignias rejugar/oportunidad: pastillas — activa = roja con contorno de tinta; inactiva = superficie con borde. ── */
 :root[data-palette="cuphead"] .badge-rejugar-activo,
@@ -800,9 +805,23 @@
 /* ── §10 · Actividad social. FECHAS = ENTRADA DE CINE troquelada: pastilla con borde DISCONTINUO (perforado)
    y estrellita. La cabecera de día es una CARTELA (Fredericka) con banda mostaza debajo. La reseña se trata
    como NOTA MANUSCRITA (cursiva) con filete mostaza. La barra fija (sticky) se mantiene (fondo opaco). ── */
-:root[data-palette="cuphead"] .hub-feed-day-header { background: var(--bg) !important; border: none !important; border-radius: 0 !important; box-shadow: none !important; padding: .15rem .6rem .5rem; }
-:root[data-palette="cuphead"] .hub-feed-day-header h4 { font-family: 'Fredericka the Great', 'Georgia', serif; font-weight: 400; letter-spacing: .01em; color: var(--text); }
-:root[data-palette="cuphead"] .hub-feed-day-header::after { content: ''; position: absolute; left: 8%; right: 8%; bottom: 0; height: 3px; border-radius: 3px; background: var(--cup-gold); }
+/* Cabecera de día = CARTELA/banderola: rótulo mostaza con contorno de tinta, sombra dibujada y fuente de
+   cartela (Luckiest Guy). Sticky: fondo de superficie opaco, sin tocar `position`. */
+:root[data-palette="cuphead"] .hub-feed-day-header { background: transparent !important; border: none !important; border-radius: 0 !important; box-shadow: none !important; padding: .35rem .6rem; }
+:root[data-palette="cuphead"] .hub-feed-day-header h4 {
+  display: inline-block;
+  font-family: 'Luckiest Guy', 'Arial Black', cursive;
+  font-weight: 400;
+  letter-spacing: .02em;
+  color: var(--cup-ink);
+  background: var(--cup-gold);
+  border: 2.5px solid var(--cup-ink);
+  border-radius: 6px;
+  padding: .1rem .8rem;
+}
+/* La sombra dibujada solo en CLARO: en oscuro un desplazamiento negro sobre el panel oscuro se veía como una
+   mancha rara (el fondo claro "a pelo"). El rótulo de oro con borde de tinta ya se lee solo en oscuro. */
+:root[data-palette="cuphead"][data-theme="light"] .hub-feed-day-header h4 { box-shadow: 3px 3px 0 rgba(36, 24, 18, .26); }
 :root[data-palette="cuphead"] .hub-feed-date,
 :root[data-palette="cuphead"] .hub-review-date {
   display: inline-flex;
@@ -866,7 +885,10 @@
 /* ── §13 · Barra de navegación inferior: carta de dibujo redonda (contorno de tinta + sombra dibujada), como los paneles (§3). ── */
 :root[data-palette="cuphead"] .bottom-nav-inner { border: 3px solid var(--cup-line); border-radius: var(--radius-lg); background: var(--surface); box-shadow: 0 8px 20px rgba(0, 0, 0, .34), 4px 5px 0 rgba(0, 0, 0, .3); }
 :root[data-palette="cuphead"][data-theme="light"] .bottom-nav-inner { box-shadow: 0 8px 20px rgba(36, 24, 18, .16), 4px 5px 0 rgba(36, 24, 18, .2); }
-:root[data-palette="cuphead"] .bottom-nav-ind { border-radius: 999px; }
+/* Pastilla activa = CHAPA ROJA con contorno de tinta: el tinte rojo tenue de base (rgba .1) se perdía sobre
+   el fondo cálido oscuro. Texto/icono activo en crema para leerse sobre el rojo. */
+:root[data-palette="cuphead"] .bottom-nav-ind { border-radius: 999px; background: var(--steam); box-shadow: inset 0 0 0 2px var(--cup-line); }
+:root[data-palette="cuphead"] .bottom-nav-btn.active { color: #fff5ec; }
 
 
 /* ═══════════════════════════════════════════════════════════════════════════════════════════════════
