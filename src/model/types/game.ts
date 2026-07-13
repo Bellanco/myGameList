@@ -18,6 +18,8 @@ export interface GameItem {
   replayable?: boolean;
   retry?: boolean;
   hours?: number | null;
+  scored?: boolean; // opt-in: la lista de la vergüenza puede puntuarse. Si false/ausente → sin nota (grade/score
+  // quedan a 0), así la ruleta la trata como neutra y el canal social la muestra "sin puntuar".
   // Destino de la migración (aditivo, opcional para no romper datos legacy):
   _v?: number; // versión entera, incrementa en cada edición (metadato; el reloj CRDT sigue siendo _ts)
   shared?: boolean; // opt-in: este juego se proyecta al canal público (gist social / Firestore)

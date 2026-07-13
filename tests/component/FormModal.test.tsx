@@ -18,6 +18,7 @@ function makeDraft(over: Partial<GameDraft> = {}): GameDraft {
     replayable: false,
     retry: false,
     hours: null,
+    scored: false,
     review: '',
     ...over,
   };

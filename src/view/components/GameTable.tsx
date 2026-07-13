@@ -103,7 +103,7 @@ function renderBooleanBadge(type: 'replayable' | 'retry', value: boolean) {
     const label = value ? 'Rejugar: Sí' : 'Rejugar: No';
     return (
       <span className={value ? 'badge-rejugar-activo' : 'badge-rejugar-inactivo'} aria-label={label} title={label}>
-        <Icon name={value ? COMMON_ICONS.star : COMMON_ICONS.lock} />
+        <Icon name={value ? COMMON_ICONS.starOliveBranches : COMMON_ICONS.lock} />
       </span>
     );
   }
@@ -212,6 +212,15 @@ export const GameTable = memo(function GameTable({
     count: virtualRows.length,
     getScrollElement: () => parentRef.current,
     measureElement: (element) => element.getBoundingClientRect().height,
+    // Clave ESTABLE por fila lógica (tipo + id), no por índice: al expandir/plegar el detalle se
+    // inserta/quita una fila y TODOS los índices posteriores se desplazan. Sin clave estable, el
+    // virtualizador reasigna las alturas cacheadas por índice a filas distintas (una fila normal ~50px
+    // hereda la altura de un detalle ~320px, o al revés) → el tamaño total se infla, aparecen huecos y
+    // filas inalcanzables al final. Con la clave, cada fila conserva su medida al cambiar de posición.
+    getItemKey: (index) => {
+      const row = virtualRows[index];
+      return row ? `${row.type}-${row.gameId}` : index;
+    },
     estimateSize: (index) => {
       const row = virtualRows[index];
       return row?.type === 'detail' ? 320 : 50;
@@ -403,7 +412,7 @@ export const GameTable = memo(function GameTable({
                             <div>{renderTags(game.years?.map(String) || [], 'chip-generic')}</div>
                           </div>
                         )}
-                        {currentTab === 'c' && showHours && game.hours !== null && (
+                        {(currentTab === 'c' || currentTab === 'v') && showHours && game.hours !== null && (
                           <div className="detail-box">
                             <span className="detail-label">{UI_MESSAGES.detail.playtime}</span>
                             <div>{UI_MESSAGES.detail.hoursSuffix(String(game.hours).replace('.', ','))}</div>
@@ -427,7 +436,7 @@ export const GameTable = memo(function GameTable({
                             <div>{renderTags(game.reasons, 'chip-pd')}</div>
                           </div>
                         )}
-                        {(currentTab === 'c' || currentTab === 'p') && game.score !== null && (
+                        {(currentTab === 'c' || currentTab === 'p' || (currentTab === 'v' && game.scored)) && game.score !== null && (
                           <div className="detail-box">
                             <span className="detail-label">{currentTab === 'p' ? UI_MESSAGES.detail.interest : UI_MESSAGES.detail.score}</span>
                             <div>

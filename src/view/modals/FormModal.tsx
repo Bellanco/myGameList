@@ -27,7 +27,8 @@ interface FormModalProps {
 }
 
 const supportsScore = (tab: TabId) => tab === 'c' || tab === 'p';
-const supportsHours = (tab: TabId) => tab === 'c';
+// La vergüenza puede registrar horas siempre (no afecta a la ruleta); su puntuación va tras el check `scored`.
+const supportsHours = (tab: TabId) => tab === 'c' || tab === 'v';
 const supportsYears = (tab: TabId) => tab === 'c';
 const supportsReview = (tab: TabId) => tab !== 'p';
 const supportsStrengths = (tab: TabId) => tab === 'c' || tab === 'v' || tab === 'e';
@@ -192,6 +193,13 @@ export function FormModal({ open, draft: initialDraft, currentTab, lookups, onCl
       weaknesses: [...draft.weaknesses],
       reasons: [...draft.reasons],
     };
+
+    // Vergüenza con la puntuación desactivada: nota y espejo a 0 antes de emitir. Así la ruleta la trata como
+    // neutra y la actividad social la publica "sin puntuar" (misma fuente de verdad que el guardado del VM).
+    if (currentTab === 'v' && !nextDraft.scored) {
+      nextDraft.score = 0;
+      nextDraft.grade = 0;
+    }
 
     let blocked = false;
     for (const key of tagKeys) {
@@ -426,6 +434,62 @@ export function FormModal({ open, draft: initialDraft, currentTab, lookups, onCl
                   hint={UI_MESSAGES.form.enterToAddHint}
                 />
               ) : null}
+            </div>
+          ) : null}
+
+          {currentTab === 'v' ? (
+            <div className="frow">
+              <div className="fg fg-score-field">
+                <label className="flabel">{UI_MESSAGES.form.scoreLabel}</label>
+                <button
+                  type="button"
+                  className={`btn btn-toggle ${draft.scored ? 'active' : ''}`.trim()}
+                  aria-pressed={draft.scored}
+                  onClick={() =>
+                    setLocalDraft((prev) => {
+                      const scored = !prev.scored;
+                      if (!scored) return { ...prev, scored: false };
+                      // Al activar: conserva la nota si ya la había (p. ej. migrada), si no parte de 3★ ≡ nota 60.
+                      const hasScore = (typeof prev.grade === 'number' && prev.grade > 0) || prev.score > 0;
+                      return hasScore ? { ...prev, scored: true } : { ...prev, scored: true, score: 3, grade: 60 };
+                    })
+                  }
+                >
+                  <Icon name={COMMON_ICONS.star} />
+                  <span>{UI_MESSAGES.form.scoreToggle}</span>
+                </button>
+                {draft.scored ? (
+                  <div className="score-input-shell">
+                    {scoreScale === 'grade' ? (
+                      <ScoreDial
+                        value={typeof draft.grade === 'number' ? draft.grade : gradeFromStars(draft.score)}
+                        onChange={(g) => setLocalDraft({ ...draft, grade: g, score: starsFromGrade(g) })}
+                      />
+                    ) : (
+                      <StarPicker value={draft.score} onChange={(v) => setLocalDraft({ ...draft, score: v, grade: gradeFromStars(v) })} />
+                    )}
+                  </div>
+                ) : (
+                  <small className="tag-hint">{UI_MESSAGES.form.scoreToggleHint}</small>
+                )}
+              </div>
+              <div className="fg">
+                <label htmlFor="draft-hours" className="flabel">{UI_MESSAGES.form.hoursLabel}</label>
+                <input
+                  id="draft-hours"
+                  className="finput"
+                  type="number"
+                  placeholder={UI_MESSAGES.form.hoursPlaceholder}
+                  value={draft.hours ?? ''}
+                  onChange={(event) =>
+                    setLocalDraft({
+                      ...draft,
+                      hours: event.target.value ? Number(event.target.value.replace(',', '.')) : null,
+                    })
+                  }
+                />
+                <small className="tag-hint tag-hint--spacer" aria-hidden="true">{UI_MESSAGES.form.enterToAddHint}</small>
+              </div>
             </div>
           ) : null}
 

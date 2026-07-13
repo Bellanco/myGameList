@@ -120,6 +120,8 @@ export const UI_MESSAGES = {
     platformsLabel: 'Plataformas',
     platformsPlaceholder: 'Ej: PC',
     scoreLabel: 'Puntuación',
+    scoreToggle: 'Puntuar este juego',
+    scoreToggleHint: 'Activa la puntuación de este juego. Si no la activas, no cuenta en la ruleta.',
     interestLabel: 'Interés',
     yearsLabel: 'Años completado',
     yearsPlaceholder: (year: number) => `Ej: ${year}`,

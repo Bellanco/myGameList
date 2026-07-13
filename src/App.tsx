@@ -21,6 +21,7 @@ import { useSocialProfileSession } from './view/hooks/useSocialProfileSession';
 import { useAppearanceSession } from './view/hooks/useAppearanceSession';
 import { useUppercase } from './view/hooks/useUppercase';
 import { useShowSteamButton } from './view/hooks/useShowSteamButton';
+import { useAppliedPalette } from './view/hooks/usePalette';
 import { hasGithubOAuthRedirect } from './model/repository/githubOAuthRepository';
 import { buildListsPool, buildListsWeigher } from './core/roulette/roulette';
 
@@ -85,6 +86,9 @@ export default function App() {
   const hasSocialProfile = useSocialProfileSession();
   // F1: enlaza la sesión con la apariencia (paleta + claro/oscuro) → hidrata/replica en Firestore.
   useAppearanceSession();
+  // F1: aplica la paleta app-wide y reacciona a la hidratación de cuenta, para que el tema sincronizado se
+  // aplique al iniciar sesión (no solo al abrir Ajustes, donde vive el selector `usePalette`).
+  useAppliedPalette();
   // F1: aplica la preferencia de caja (mayúsculas) al <html> app-wide y reacciona a la hidratación.
   useUppercase();
   // F1: visibilidad del botón "Steam Deck" (preferencia de cuenta) → se pasa a la Toolbar.
