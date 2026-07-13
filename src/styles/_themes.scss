@@ -75,10 +75,14 @@
   font-style: italic; letter-spacing: .01em;
 }
 
-/* ── §2 · Fondo: semitono pop-art (puntos de tinta rojos). ── */
+/* ── §2 · Fondo: semitono pop-art (puntos de tinta rojos). En OSCURO más visibles (más contraste sobre el
+   negro); en CLARO se mantiene el valor original commiteado. ── */
 :root[data-palette="persona"] body {
-  background-image: radial-gradient(rgba(255, 31, 61, .16) 1.6px, transparent 1.8px);
+  background-image: radial-gradient(rgba(255, 31, 61, .3) 1.6px, transparent 1.8px);
   background-size: 11px 11px;
+}
+:root[data-palette="persona"][data-theme="light"] body {
+  background-image: radial-gradient(rgba(255, 31, 61, .16) 1.6px, transparent 1.8px);
 }
 
 /* ── §3 · Paneles: contorno grueso + sombra dura roja (sticker de cómic). El contorno usa `--pop-line`
