@@ -1,7 +1,6 @@
 import { memo } from 'react';
 import { COMMON_ICONS } from '../../core/constants/icons';
 import { UI_MESSAGES } from '../../core/constants/labels';
-import type { ImportMethod } from '../../model/types/import';
 import { SCORE_SCALES } from '../../core/utils/scoreScale';
 import { persistScoreScale } from '../../model/repository/scorePreferenceRepository';
 import { useScoreScale } from '../hooks/useScoreScale';
@@ -12,7 +11,7 @@ import { AppearanceSettings } from './AppearanceSettings';
 
 interface AccountHubProps {
   scoreScaleUid: string | null; // uid de Google (para gatear/guardar la escala); null → candado
-  onOpenIntegrations: (method: ImportMethod) => void; // navega a la pantalla del método elegido
+  onOpenIntegrations: () => void; // navega a la pantalla de Integraciones (importar de Playnite)
 }
 
 /**
@@ -31,21 +30,10 @@ export const AccountHub = memo(function AccountHub({ scoreScaleUid, onOpenIntegr
           <h2>{UI_MESSAGES.import.integrations.title}</h2>
           <p className="settings-card-note">{UI_MESSAGES.import.integrations.note}</p>
         </div>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem', alignItems: 'flex-start' }}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-            <button type="button" className="btn btn-primary" onClick={() => onOpenIntegrations('csv')}>
-              <Icon name={COMMON_ICONS.download} />
-              <span>{UI_MESSAGES.import.integrations.csv.title}</span>
-            </button>
-            <span className="settings-card-note" style={{ fontWeight: 600, textAlign: 'center' }}>
-              {UI_MESSAGES.import.integrations.recommended}
-            </span>
-          </div>
-          <button type="button" className="btn btn-primary" onClick={() => onOpenIntegrations('json')}>
-            <Icon name={COMMON_ICONS.download} />
-            <span>{UI_MESSAGES.import.integrations.jsonLib.title}</span>
-          </button>
-        </div>
+        <button type="button" className="btn btn-primary" style={{ alignSelf: 'flex-start' }} onClick={onOpenIntegrations}>
+          <Icon name={COMMON_ICONS.download} />
+          <span>{UI_MESSAGES.import.integrations.importBtn}</span>
+        </button>
       </div>
 
       <div className="settings-card settings-card-score">

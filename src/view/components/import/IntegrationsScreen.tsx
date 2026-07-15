@@ -1,7 +1,6 @@
 import type { CSSProperties } from 'react';
 import { UI_MESSAGES } from '../../../core/constants/labels';
 import { COMMON_ICONS } from '../../../core/constants/icons';
-import type { ImportMethod } from '../../../model/types/import';
 import { Icon } from '../Icon';
 
 const M = UI_MESSAGES.import.integrations;
@@ -24,12 +23,8 @@ const stepsStyle: CSSProperties = {
 };
 
 interface IntegrationsScreenProps {
-  /** Método elegido en /cuenta: determina qué apartado se muestra. */
-  method: ImportMethod;
-  /** Varios .json de "Json Library Import Export"; App parsea/mapea/inserta y avisa. */
-  onImportJsonLibrary: (files: FileList) => void;
-  /** CSV de "Library Exporter". */
-  onImportCsv: (file: File) => void;
+  /** El archivo JSON exportado por Playnite Library Exporter; App parsea/mapea/inserta y avisa. */
+  onImport: (file: File) => void;
   /** Volver a la pantalla anterior (Cuenta). */
   onBack: () => void;
   /** Nº de juegos en la bandeja (para el acceso "Ver bandeja"). */
@@ -38,13 +33,8 @@ interface IntegrationsScreenProps {
   onOpenInbox: () => void;
 }
 
-/**
- * Pantalla de un método de importación de Playnite. El método se elige en /cuenta (dos botones); aquí
- * solo se muestra el apartado correspondiente (mensaje + pasos + importación).
- */
-export function IntegrationsScreen({ method, onImportJsonLibrary, onImportCsv, onBack, inboxCount, onOpenInbox }: IntegrationsScreenProps) {
-  const cfg = method === 'json' ? M.jsonLib : M.csv;
-
+/** Pantalla de Integraciones. Única vía: importar el JSON de la extensión «Playnite Library Exporter». */
+export function IntegrationsScreen({ onImport, onBack, inboxCount, onOpenInbox }: IntegrationsScreenProps) {
   return (
     <div style={screenStyle}>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', alignItems: 'center' }}>
@@ -63,13 +53,13 @@ export function IntegrationsScreen({ method, onImportJsonLibrary, onImportCsv, o
 
       <div className="settings-card">
         <div className="settings-card-head">
-          <h2>{cfg.title}</h2>
-          <p className="settings-card-note">{cfg.desc}</p>
+          <h2>{M.title}</h2>
+          <p className="settings-card-note">{M.note}</p>
         </div>
         <div className="settings-backup-info">
           <p className="settings-card-note" style={{ fontWeight: 600 }}>{M.stepsTitle}</p>
           <ol className="settings-card-note" style={stepsStyle}>
-            {cfg.steps.map((step, i) => (
+            {M.steps.map((step, i) => (
               <li key={i}>{step}</li>
             ))}
           </ol>
@@ -77,19 +67,15 @@ export function IntegrationsScreen({ method, onImportJsonLibrary, onImportCsv, o
         <div className="settings-backup-actions" style={{ marginTop: '0.9rem' }}>
           <label className="btn btn-secondary settings-import-label">
             <Icon name={COMMON_ICONS.upload} />
-            <span>{cfg.importBtn}</span>
+            <span>{M.importBtn}</span>
             <input
               type="file"
-              accept={method === 'json' ? '.json,application/json' : '.csv,text/csv'}
-              multiple={method === 'json'}
+              accept=".json,application/json"
               className="input-hidden"
-              aria-label={cfg.importAria}
+              aria-label={M.importAria}
               onChange={(event) => {
-                const files = event.target.files;
-                if (files && files.length > 0) {
-                  if (method === 'json') onImportJsonLibrary(files);
-                  else onImportCsv(files[0]);
-                }
+                const file = event.target.files?.[0];
+                if (file) onImport(file);
                 event.currentTarget.value = '';
               }}
             />
