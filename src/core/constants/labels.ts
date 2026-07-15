@@ -145,6 +145,7 @@ export const UI_MESSAGES = {
     save: 'Guardar',
   },
   appTitle: 'Mis Listas',
+  scrollTop: 'Volver arriba',
   nav: {
     ariaLabel: 'Navegación principal',
     lists: 'Listados',
@@ -158,37 +159,18 @@ export const UI_MESSAGES = {
     back: 'Volver',
     integrations: {
       title: 'Integraciones',
-      note: 'Trae los juegos que ya tienes en otras plataformas a tu bandeja de importados. Playnite (Windows) reúne Steam, GOG, Epic, Xbox y PlayStation; elige uno de estos dos métodos.',
-      chooseTitle: 'Elige cómo exportar desde Playnite',
-      recommended: 'Recomendada',
-      stepsTitle: 'Pasos',
+      note: 'Trae los juegos que ya tienes en tus plataformas a la bandeja de importados con la extensión «Playnite Library Exporter» (Windows). Reúne Steam, GOG, Epic, EA, Ubisoft, Amazon y Battle.net. Si un juego está en varias tiendas, se juntan sus plataformas en una sola entrada.',
+      stepsTitle: 'Cómo exportar tu biblioteca',
+      steps: [
+        'En Playnite (Windows) abre el menú principal → «Complementos» → «Explorar complementos» → pestaña «Genérica».',
+        'Busca «Playnite Library Exporter», instálala y reinicia Playnite.',
+        'En el menú principal → «Playnite Library Exporter» → exporta la biblioteca (formato JSON, el de por defecto). Se crea un único archivo «.json».',
+        'Vuelve aquí, pulsa «Importar de Playnite» y selecciona ese archivo «.json».',
+      ],
+      importBtn: 'Importar de Playnite',
+      importAria: 'Seleccionar el archivo JSON exportado por Playnite Library Exporter',
       viewInbox: (n: number) => `Ver bandeja (${n})`,
-      parseError: 'No se pudo leer el fichero. Comprueba que es un export de Playnite válido.',
-      jsonLib: {
-        title: 'Json Library Import Export',
-        desc: 'Exporta tu biblioteca en varios archivos .json y súbelos todos aquí. Estructura estable, pero requiere subir varios ficheros.',
-        steps: [
-          'En Playnite (Windows) abre el menú principal → «Complementos» → «Explorar complementos» → pestaña «Genérica».',
-          'Busca «Json Library Import Export», instálala y reinicia Playnite.',
-          'En el menú principal → «Json Library Import Export» → exportar; marca al menos Juegos, Géneros, Plataformas, Fuentes y Estados, y elige una carpeta.',
-          'Vuelve aquí, pulsa el botón y selecciona a la vez TODOS los .json de esa carpeta (games.json, genres.json, platforms.json, sources.json, completionstatuses.json).',
-        ],
-        importBtn: 'Importar varios .json',
-        importAria: 'Seleccionar los ficheros JSON exportados de Playnite',
-        missingGames: 'Falta games.json. Selecciona todos los .json exportados (debe incluir games.json).',
-      },
-      csv: {
-        title: 'Library Exporter (CSV)',
-        desc: 'Exporta un único archivo CSV. Es la extensión más popular; recuerda activar las columnas indicadas.',
-        steps: [
-          'En Playnite (Windows) abre el menú principal → «Complementos» → «Explorar complementos» → pestaña «Genérica».',
-          'Busca «Library Exporter», instálala y reinicia Playnite.',
-          'En sus ajustes (Complementos → Library Exporter) activa las columnas: Nombre, Géneros, Plataformas, Fuente, Estado de finalización, Tiempo jugado y Puntuación del usuario.',
-          'Exporta a CSV desde el menú principal, vuelve aquí y pulsa el botón para seleccionar el archivo .csv.',
-        ],
-        importBtn: 'Importar CSV',
-        importAria: 'Seleccionar el CSV exportado de Playnite',
-      },
+      parseError: 'No se pudo leer el fichero. Comprueba que es el JSON exportado por «Playnite Library Exporter».',
     },
     inbox: {
       title: 'Bandeja de importados',
@@ -208,6 +190,10 @@ export const UI_MESSAGES = {
       selectRowAria: (name: string) => `Seleccionar ${name}`,
       deleteSelected: 'Eliminar seleccionados',
       selectedCount: (n: number) => `${n} seleccionado${n === 1 ? '' : 's'}`,
+      search: 'Buscar por nombre',
+      enrich: 'Actualizar en tus listas',
+      enrichHint: 'Ya lo tienes: añade género/plataforma/horas que falten al juego de tu lista.',
+      showing: (shown: number, total: number) => `Mostrando ${shown} de ${total}`,
     },
     notice: (added: number, merged: number, duplicates: number) =>
       `${added} añadido(s)` +

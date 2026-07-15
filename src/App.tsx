@@ -12,6 +12,7 @@ import { Toolbar } from './view/components/Toolbar';
 import { GameTable } from './view/components/GameTable';
 import { StatusBanner } from './view/components/StatusBanner';
 import { BottomNavigation, type AppSection } from './view/components/BottomNavigation';
+import { ScrollToTop } from './view/components/ScrollToTop';
 import { useGameListViewModel } from './viewmodel/useGameListViewModel';
 import { useToolbarFilters } from './viewmodel/useToolbarFilters';
 import { computeTabOptions, countActiveFilters } from './viewmodel/toolbarFilters';
@@ -25,10 +26,9 @@ import { useAppliedPalette } from './view/hooks/usePalette';
 import { hasGithubOAuthRedirect } from './model/repository/githubOAuthRepository';
 import { buildListsPool, buildListsWeigher, normalizeName } from './core/roulette/roulette';
 import { useImportInbox } from './viewmodel/useImportInbox';
-import { parseJsonLibraryExport } from './core/import/playniteJson';
-import { parsePlayniteCsv } from './core/import/playniteCsv';
-import { importedToPartialGame } from './core/import/staging';
-import type { ImportedGame, ImportMethod, RawExternalGame } from './model/types/import';
+import { parseLibraryExporter } from './core/import/libraryExporter';
+import { importedToPartialGame, mergeImportedIntoGame } from './core/import/staging';
+import type { ImportedGame, RawExternalGame } from './model/types/import';
 
 const FormModal = lazy(() => import('./view/modals/FormModal').then((module) => ({ default: module.FormModal })));
 const ConfirmModal = lazy(() => import('./view/modals/ConfirmModal').then((module) => ({ default: module.ConfirmModal })));
@@ -79,8 +79,6 @@ export const APP_ROUTE_PATHS = [
   '/ajustes',
   '/cuenta',
   '/integraciones',
-  '/integraciones/json',
-  '/integraciones/csv',
   '/bandeja',
 ] as const;
 
@@ -89,8 +87,6 @@ export default function App() {
   const navigate = useNavigate();
   const currentTab = getCurrentTab(location.pathname);
   const activeSection = getCurrentSection(location.pathname);
-  // Método de importación según la sub-ruta (/integraciones/csv → csv; resto → json).
-  const importMethod: ImportMethod = location.pathname === '/integraciones/csv' ? 'csv' : 'json';
 
   const vm = useGameListViewModel();
   // F2: enlaza la sesión de Google con la escala de puntuación (hidrata desde Firestore / resetea al salir);
@@ -137,9 +133,23 @@ export default function App() {
   // flotantes y cablear la graduación (clasificar → formulario → retirar de la bandeja).
   const inbox = useImportInbox();
   const graduatingIdRef = useRef<number | null>(null);
-  // Nombres ya presentes en las listas (normalizados) → para marcar duplicados al importar.
+  // Nombres ya presentes en las listas (normalizados) → para marcar duplicados al importar y en la bandeja.
   const listNames = useMemo(
     () => new Set(TAB_IDS.flatMap((tab) => vm.data[tab].map((game) => normalizeName(game.name)))),
+    [vm.data],
+  );
+  // ¿El importado ya está en alguna lista? (marca de la bandeja; O(1)).
+  const isInLists = useCallback((name: string) => listNames.has(normalizeName(name)), [listNames]);
+  // Resuelve el juego existente por nombre (para enriquecerlo). Solo al pulsar "Actualizar".
+  const findGameByName = useCallback(
+    (name: string): { tab: TabId; id: number } | null => {
+      const norm = normalizeName(name);
+      for (const tab of TAB_IDS) {
+        const game = vm.data[tab].find((g) => normalizeName(g.name) === norm);
+        if (game) return { tab, id: game.id };
+      }
+      return null;
+    },
     [vm.data],
   );
 
@@ -158,55 +168,17 @@ export default function App() {
   );
 
   // Opción A: "Json Library Import Export" → varios .json (games.json + ficheros de lookup).
-  const handleImportJsonLibrary = useCallback(
-    async (files: FileList) => {
-      const byName: Record<string, File> = {};
-      for (const file of Array.from(files)) byName[file.name.toLowerCase()] = file;
-      const gamesFile = byName['games.json'];
-      if (!gamesFile) {
-        notify('err', UI_MESSAGES.import.integrations.jsonLib.missingGames);
-        return;
-      }
-      const readJson = async (name: string): Promise<unknown> => {
-        const file = byName[name];
-        if (!file) return undefined;
-        try {
-          return JSON.parse(await file.text()) as unknown;
-        } catch {
-          return undefined;
-        }
-      };
-      let gamesJson: unknown;
-      try {
-        gamesJson = JSON.parse(await gamesFile.text()) as unknown;
-      } catch {
-        notify('err', UI_MESSAGES.import.integrations.parseError);
-        return;
-      }
-      importGames(
-        parseJsonLibraryExport({
-          games: gamesJson,
-          genres: await readJson('genres.json'),
-          platforms: await readJson('platforms.json'),
-          sources: await readJson('sources.json'),
-          completionStatuses: await readJson('completionstatuses.json'),
-        }),
-      );
-    },
-    [importGames, notify],
-  );
-
-  // Opción B: "Library Exporter" → un CSV.
-  const handleImportCsv = useCallback(
+  // Import de Playnite Library Exporter: un único fichero JSON.
+  const handleImportLibraryExporter = useCallback(
     async (file: File) => {
-      let text: string;
+      let json: unknown;
       try {
-        text = await file.text();
+        json = JSON.parse(await file.text()) as unknown;
       } catch {
         notify('err', UI_MESSAGES.import.integrations.parseError);
         return;
       }
-      importGames(parsePlayniteCsv(text));
+      importGames(parseLibraryExporter(json));
     },
     [importGames, notify],
   );
@@ -219,10 +191,23 @@ export default function App() {
     [vm],
   );
 
+  // Enriquecer: el juego ya está en tus listas → fusiona género/plataforma en el existente (form en edición).
+  const handleEnrichImport = useCallback(
+    (item: ImportedGame) => {
+      const match = findGameByName(item.name);
+      if (!match) return;
+      const game = vm.data[match.tab].find((g) => g.id === match.id);
+      if (!game) return;
+      graduatingIdRef.current = item.id;
+      vm.openImportedDraft(match.tab, { ...game, ...mergeImportedIntoGame(game, item) });
+    },
+    [findGameByName, vm],
+  );
+
   const handleDiscardImport = useCallback((id: number) => inbox.removeItem(id), [inbox]);
   const handleDiscardManyImport = useCallback((ids: number[]) => inbox.removeItems(ids), [inbox]);
   const handleClearInbox = useCallback(() => inbox.clear(), [inbox]);
-  const openIntegrations = useCallback((method: ImportMethod) => navigate(`/integraciones/${method}`), [navigate]);
+  const openIntegrations = useCallback(() => navigate('/integraciones'), [navigate]);
 
   // El sync lee el estado local vía refs (no closures del render) para que un ciclo EN VUELO vea las
   // ediciones confirmadas mientras estaba esperando la red. Con `() => vm.data` un ciclo iniciado antes
@@ -599,9 +584,7 @@ export default function App() {
         ) : activeSection === 'integrations' ? (
           <Suspense fallback={null}>
             <IntegrationsScreen
-              method={importMethod}
-              onImportJsonLibrary={handleImportJsonLibrary}
-              onImportCsv={handleImportCsv}
+              onImport={handleImportLibraryExporter}
               onBack={() => navigate('/cuenta')}
               inboxCount={inbox.count}
               onOpenInbox={() => navigate('/bandeja')}
@@ -611,7 +594,9 @@ export default function App() {
           <Suspense fallback={null}>
             <InboxScreen
               imported={inbox.imported}
+              isInLists={isInLists}
               onClassify={handleClassifyImport}
+              onEnrich={handleEnrichImport}
               onDiscard={handleDiscardImport}
               onDiscardMany={handleDiscardManyImport}
               onClear={handleClearInbox}
@@ -669,6 +654,7 @@ export default function App() {
       ) : null}
 
       <BottomNavigation currentSection={activeSection} onSectionChange={handleSectionChange} />
+      <ScrollToTop />
 
       <Suspense fallback={null}>
         <FormModal
