@@ -1,20 +1,11 @@
 import { Fragment } from 'react';
 import { TAB_IDS, type TabId } from '../../../model/types/game';
-import type { ImportedGame, ImportSource } from '../../../model/types/import';
+import type { ImportedGame } from '../../../model/types/import';
 import { TAB_TOOLTIPS, UI_MESSAGES } from '../../../core/constants/labels';
 import { COMMON_ICONS, TAB_ICONS } from '../../../core/constants/icons';
 import { Icon } from '../Icon';
 
 const M = UI_MESSAGES.import.inbox;
-
-const SOURCE_LABELS: Record<ImportSource, string> = {
-  playnite: 'Playnite',
-  steam: 'Steam',
-  gog: 'GOG',
-  xbox: 'Xbox',
-  psn: 'PlayStation',
-  egs: 'Epic',
-};
 
 interface ImportInboxTableProps {
   items: ImportedGame[];
@@ -53,12 +44,10 @@ export function ImportInboxTable({ items, selectedIds, onToggleSelect, onClassif
             <th>{M.game}</th>
             <th>{UI_MESSAGES.detail.platforms}</th>
             <th>{UI_MESSAGES.detail.genres}</th>
-            <th>{M.origin}</th>
           </tr>
         </thead>
         <tbody>
           {items.map((item, index) => {
-            const sources = item.sources.map((s) => SOURCE_LABELS[s] ?? s);
             return (
               <Fragment key={item.id}>
                 <tr className={`main-row ${index % 2 === 0 ? 'striped' : ''}`.trim()}>
@@ -80,11 +69,10 @@ export function ImportInboxTable({ items, selectedIds, onToggleSelect, onClassif
                   </td>
                   <td>{chips(item.platforms, 'chip-plat')}</td>
                   <td>{chips(item.genres, 'chip-genre')}</td>
-                  <td>{chips(sources, 'chip-generic')}</td>
                 </tr>
 
                 <tr className="detail-row open">
-                  <td colSpan={5} style={{ padding: 0 }}>
+                  <td colSpan={4} style={{ padding: 0 }}>
                     <div className="detail-content">
                       <div className="detail-actions" style={{ gridColumn: '1 / -1' }}>
                         {TAB_IDS.map((tab) => {
