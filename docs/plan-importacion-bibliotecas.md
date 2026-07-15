@@ -330,15 +330,47 @@ sin IGDB; reutiliza el import de fichero existente; y el riesgo de no-oficialida
 3. En la app: **Integraciones → Playnite**, suelta/selecciona el `.json`.
 4. Preview (duplicados avisados) → confirmar → van a la Bandeja → clasificar.
 
-## Diseño
-- `src/model/repository/import/playniteMapper.ts`: valida el JSON con `zod` (tolerante) y mapea a
-  `RawExternalGame[]` — `name`; `platforms ← [platform]` (normalizado); `genres ← genres[]`;
-  `hours ← playtime(seg)→h`; `externalIds`/`sources ← source (steam/gog/xbox/psn/egs)`;
-  `year ← releaseDate` (opcional). Entradas inválidas se descartan sin abortar todo.
+## Qué campos trae el export (confirmado contra el modelo `Game` del SDK y `playnite-json`)
+- **Título** (`Name`): siempre presente.
+- **Género/s** (`Genres`): solo si el juego los tiene en Playnite (dependen de haber descargado
+  metadatos) → **pueden venir vacíos**.
+- **Plataforma/s** (`Platforms`): normalmente presentes (las pone el plugin de la tienda).
+- Además: **origen/tienda** (`Source`), **horas** (`Playtime`, seg), **año** (`ReleaseDate`),
+  **id de proveedor** (`GameId`), y opcionalmente **carátula** (`CoverArtUrl`, según extensión).
+
+> Como género/plataforma son obligatorios en `saveDraft` y pueden faltar, el diseño lo cubre: al
+> **clasificar se abre siempre el `FormModal`**, donde el usuario completa lo que falte.
+
+## Mapeo (`playniteMapper` → `RawExternalGame`)
+`src/model/repository/import/playniteMapper.ts` valida el JSON con `zod` (tolerante; descarta
+entradas inválidas sin abortar) y mapea:
+- `name ← Name`; `genres ← Genres[]` (normalizados).
+- `hours ← Playtime` (seg→h); `externalId ← GameId`; `source`/`sources ← Source`
+  (steam/gog/xbox/psn/egs/…).
+- **El año NO se importa**: en el modelo, `years` son los **años en que se jugó** (pueden diferir
+  del de lanzamiento), así que `ReleaseDate` no se mapea; el usuario indica el año jugado al clasificar.
+- **Plataformas (regla): si la plataforma de Playnite es de PC** (`PC (Windows)/(Mac)/(Linux)`)
+  **se sustituye por la tienda de origen** (`Source`) — p. ej. un juego de PC de Steam entra con
+  plataforma **"Steam"** (no "PC"), de GOG → "GOG", de Epic → "Epic", etc. **Las plataformas de
+  consola se conservan** tal cual (PS5, Xbox Series, Switch…). Si es PC y no hay `Source`, cae a "PC".
+- **Extra 1 — `CompletionStatus` → lista destino sugerida** (`suggestedTab`): `Completed`→`c`,
+  `Abandoned`/`Dropped`→`v`, `Playing`/`Played`→`e`, `Plan to Play`/`Not Played`→`p`. Es solo una
+  **preselección** de la lista al clasificar (el usuario puede cambiarla); si no mapea, sin sugerencia.
+- **Extra 2 — `UserScore` (0–100) → nota precargada** (`grade`): precarga la nota en el `FormModal`
+  al clasificar. Si no hay `UserScore`, sin precarga (no se toca `CriticScore`/`CommunityScore`).
+- **No se importa**: descripción (HTML de la tienda, no es tu reseña), developers/publishers,
+  tags/categorías, notas de crítica/comunidad, fechas de alta/último jugado, enlaces.
+
+Estos dos extras requieren campos genéricos (agnósticos de origen) en el cimiento:
+`RawExternalGame`/`ImportedGame` con `suggestedTab?: TabId` y `grade?: number | null`; el mapper de
+Playnite los calcula, el cimiento solo los transporta, y `importedToPartialGame` precarga `grade`.
+
+## Integración
 - Reutiliza el `FileReader`/input del import de backup (`SettingsHub`), enrutando el tipo
   "Playnite" al `playniteMapper` en vez del parser de backup.
 - Salida a `addGamesToStaging(...)` → dedupe/fusión + un solo persist + resumen.
-- **Fijar y documentar aquí** la extensión de export soportada y su esquema (prerrequisito).
+- **Confirmar con el JSON de muestra real** (prerrequisito P2): los nombres exactos de las claves
+  varían por extensión (p. ej. `playnite-json` usa `Platform` singular y `Sources` como texto).
 
 ---
 
