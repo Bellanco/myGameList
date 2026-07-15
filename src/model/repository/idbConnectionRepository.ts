@@ -1,5 +1,5 @@
 const DB_NAME = 'myGameList';
-const DB_VERSION = 4;
+const DB_VERSION = 5;
 
 // Stores existentes (v2) — se conservan tal cual.
 const STORE_NAME = 'appState';
@@ -13,6 +13,10 @@ export const CHUNK_CACHE_STORE = 'chunkCache';
 export const PROFILE_CACHE_STORE = 'profileCache';
 export const CONFLICTS_STORE = 'conflicts';
 export const DELETED_STORE = 'deleted'; // tombstones (v4): id → { _ts, deletedAt }
+
+// Store añadido en v5: bandeja de importados (LOCAL, no sincronizada). Un único registro bajo la
+// clave 'latest' con el objeto ImportInbox. Sin keyPath (se escribe con clave explícita).
+export const IMPORT_INBOX_STORE = 'importInbox';
 
 let _dbPromise: Promise<IDBDatabase> | null = null;
 
@@ -68,6 +72,11 @@ function ensureStores(db: IDBDatabase): void {
   // v4
   if (!db.objectStoreNames.contains(DELETED_STORE)) {
     db.createObjectStore(DELETED_STORE, { keyPath: 'id' });
+  }
+
+  // v5 — bandeja de importados (local)
+  if (!db.objectStoreNames.contains(IMPORT_INBOX_STORE)) {
+    db.createObjectStore(IMPORT_INBOX_STORE);
   }
 }
 
