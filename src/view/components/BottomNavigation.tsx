@@ -3,7 +3,7 @@ import type { IconName } from '../../core/constants/icons';
 import { UI_MESSAGES } from '../../core/constants/labels';
 import { Icon } from './Icon';
 
-export type AppSection = 'lists' | 'social' | 'settings' | 'account';
+export type AppSection = 'lists' | 'social' | 'settings' | 'account' | 'integrations' | 'inbox';
 
 interface BottomNavigationProps {
   currentSection: AppSection;

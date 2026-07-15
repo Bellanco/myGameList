@@ -11,6 +11,7 @@ import { AppearanceSettings } from './AppearanceSettings';
 
 interface AccountHubProps {
   scoreScaleUid: string | null; // uid de Google (para gatear/guardar la escala); null → candado
+  onOpenIntegrations: () => void; // navega a la pantalla de Integraciones (importar juegos)
 }
 
 /**
@@ -18,12 +19,23 @@ interface AccountHubProps {
  * + visibilidad del botón de Steam Deck). Solo se llega aquí con sesión de Google (la pestaña inferior "Cuenta"
  * únicamente aparece con sesión; App redirige `/cuenta` a la lista si no hay cuenta).
  */
-export const AccountHub = memo(function AccountHub({ scoreScaleUid }: AccountHubProps) {
+export const AccountHub = memo(function AccountHub({ scoreScaleUid, onOpenIntegrations }: AccountHubProps) {
   const scoreScale = useScoreScale();
   const scoreScaleLabels = UI_MESSAGES.settings.scoreScale;
 
   return (
     <section className="settings-hub" aria-label={UI_MESSAGES.settings.account.title}>
+      <div className="settings-card" style={{ gridColumn: '1 / -1' }}>
+        <div className="settings-card-head">
+          <h2>{UI_MESSAGES.import.integrations.title}</h2>
+          <p className="settings-card-note">{UI_MESSAGES.import.integrations.note}</p>
+        </div>
+        <button type="button" className="btn btn-secondary" style={{ alignSelf: 'flex-start' }} onClick={onOpenIntegrations}>
+          <Icon name={COMMON_ICONS.download} />
+          <span>{UI_MESSAGES.nav.integrations}</span>
+        </button>
+      </div>
+
       <div className="settings-card settings-card-score">
         <h2>{UI_MESSAGES.settings.account.title}</h2>
         <p className="settings-card-sub">{scoreScaleLabels.subtitle}</p>
