@@ -140,6 +140,19 @@ export function removeManyFromInbox(inbox: ImportInbox, ids: number[], now: numb
 }
 
 /**
+ * Fusión para ENRIQUECER un juego que YA existe en las listas con lo aportado por el importado: une
+ * géneros y plataformas (sin duplicar) y rellena las horas si el existente no tenía. NO toca el nombre.
+ * Devuelve solo los campos a actualizar (para combinar con el juego existente y abrir el formulario).
+ */
+export function mergeImportedIntoGame(existing: GameItem, item: ImportedGame): Partial<GameItem> {
+  return {
+    genres: uniqueCaseInsensitive([...(existing.genres || []), ...item.genres]),
+    platforms: uniqueCaseInsensitive([...(existing.platforms || []), ...item.platforms]),
+    hours: (existing.hours ?? null) === null ? (item.hours ?? null) : existing.hours,
+  };
+}
+
+/**
  * Mapea un item de la bandeja a los campos de un juego para PRECARGAR el formulario al clasificar.
  * NO se copia: los campos de import (externalIds/coverUrl/sources), ni el año — `years` son los años
  * JUGADOS (no el de lanzamiento), así que el usuario los rellena en el formulario. `grade` (nota del
