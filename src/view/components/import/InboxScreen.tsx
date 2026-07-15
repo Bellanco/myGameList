@@ -1,40 +1,68 @@
-import { type CSSProperties, useMemo, useState } from 'react';
+import { type CSSProperties, useEffect, useMemo, useRef, useState } from 'react';
 import type { TabId } from '../../../model/types/game';
 import type { ImportedGame } from '../../../model/types/import';
 import { UI_MESSAGES } from '../../../core/constants/labels';
 import { COMMON_ICONS } from '../../../core/constants/icons';
+import { normalizeName } from '../../../core/roulette/roulette';
 import { Icon } from '../Icon';
 import { ImportInboxTable } from './ImportInboxTable';
 
 const M = UI_MESSAGES.import.inbox;
+const PAGE = 40; // scroll infinito: se renderizan de PAGE en PAGE
 
-const screenStyle: CSSProperties = {
-  display: 'flex',
-  flexDirection: 'column',
-  gap: '1rem',
-  width: '100%',
-  maxWidth: '72rem',
-  margin: '0 auto',
-};
-
+const screenStyle: CSSProperties = { display: 'flex', flexDirection: 'column', gap: '1rem', width: '100%', maxWidth: '72rem', margin: '0 auto' };
 const toolbarStyle: CSSProperties = { display: 'flex', flexWrap: 'wrap', gap: '0.75rem', alignItems: 'center' };
 const selectAllStyle: CSSProperties = { display: 'flex', gap: '0.4rem', alignItems: 'center', cursor: 'pointer' };
+const searchStyle: CSSProperties = {
+  width: '100%',
+  padding: '0.6rem 0.85rem',
+  borderRadius: 'var(--radius-md)',
+  border: '1px solid var(--border)',
+  background: 'var(--surface)',
+  color: 'inherit',
+};
 
 interface InboxScreenProps {
   imported: ImportedGame[];
+  isInLists: (name: string) => boolean;
   onClassify: (item: ImportedGame, tab: TabId) => void;
+  onEnrich: (item: ImportedGame) => void;
   onDiscard: (id: number) => void;
   onDiscardMany: (ids: number[]) => void;
   onClear: () => void;
   onGoIntegrations: () => void;
 }
 
-/** Pantalla de la Bandeja: mismo aspecto que los listados (ImportInboxTable) + multiselección y borrado en lote. */
-export function InboxScreen({ imported, onClassify, onDiscard, onDiscardMany, onClear, onGoIntegrations }: InboxScreenProps) {
+/** Bandeja: buscador por texto + scroll infinito (render incremental) + multiselección. */
+export function InboxScreen({ imported, isInLists, onClassify, onEnrich, onDiscard, onDiscardMany, onClear, onGoIntegrations }: InboxScreenProps) {
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [query, setQuery] = useState('');
+  const [visible, setVisible] = useState(PAGE);
+  const sentinelRef = useRef<HTMLDivElement>(null);
+
+  const filtered = useMemo(() => {
+    const q = normalizeName(query);
+    return q ? imported.filter((g) => normalizeName(g.name).includes(q)) : imported;
+  }, [imported, query]);
+
+  // Reinicia la ventana al buscar (y si mengua la lista).
+  useEffect(() => setVisible(PAGE), [query]);
+
+  const shown = filtered.slice(0, visible);
+
+  // Carga más al acercarse al final (IntersectionObserver sobre un centinela).
+  useEffect(() => {
+    const el = sentinelRef.current;
+    if (!el) return undefined;
+    const io = new IntersectionObserver((entries) => {
+      if (entries.some((e) => e.isIntersecting)) setVisible((v) => (v < filtered.length ? v + PAGE : v));
+    });
+    io.observe(el);
+    return () => io.disconnect();
+  }, [filtered.length]);
 
   const selectedCount = useMemo(() => imported.filter((g) => selectedIds.has(g.id)).length, [imported, selectedIds]);
-  const allSelected = imported.length > 0 && selectedCount === imported.length;
+  const allFilteredSelected = filtered.length > 0 && filtered.every((g) => selectedIds.has(g.id));
 
   if (imported.length === 0) {
     return (
@@ -61,7 +89,7 @@ export function InboxScreen({ imported, onClassify, onDiscard, onDiscardMany, on
       return next;
     });
 
-  const toggleAll = () => setSelectedIds(allSelected ? new Set() : new Set(imported.map((g) => g.id)));
+  const toggleAll = () => setSelectedIds(allFilteredSelected ? new Set() : new Set(filtered.map((g) => g.id)));
 
   const deleteSelected = () => {
     const ids = imported.filter((g) => selectedIds.has(g.id)).map((g) => g.id);
@@ -79,7 +107,7 @@ export function InboxScreen({ imported, onClassify, onDiscard, onDiscardMany, on
         </div>
         <div style={toolbarStyle}>
           <label style={selectAllStyle}>
-            <input type="checkbox" checked={allSelected} onChange={toggleAll} aria-label={M.selectAll} />
+            <input type="checkbox" checked={allFilteredSelected} onChange={toggleAll} aria-label={M.selectAll} />
             <span>{M.selectAll}</span>
           </label>
           {selectedCount > 0 ? <span className="settings-card-note">{M.selectedCount(selectedCount)}</span> : null}
@@ -93,15 +121,28 @@ export function InboxScreen({ imported, onClassify, onDiscard, onDiscardMany, on
             <span>{M.clear}</span>
           </button>
         </div>
+        <p className="settings-card-note" style={{ margin: 0 }}>{M.showing(shown.length, filtered.length)}</p>
       </div>
 
+      <input
+        type="search"
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        placeholder={M.search}
+        aria-label={M.search}
+        style={searchStyle}
+      />
+
       <ImportInboxTable
-        items={imported}
+        items={shown}
+        isInLists={isInLists}
         selectedIds={selectedIds}
         onToggleSelect={toggleSelect}
         onClassify={onClassify}
+        onEnrich={onEnrich}
         onDiscard={onDiscard}
       />
+      <div ref={sentinelRef} style={{ height: 1 }} aria-hidden="true" />
     </div>
   );
 }

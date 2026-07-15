@@ -7,8 +7,10 @@ import {
   removeFromInbox,
   removeManyFromInbox,
   importedToPartialGame,
+  mergeImportedIntoGame,
 } from '../../src/core/import/staging';
-import type { ImportInbox, RawExternalGame } from '../../src/model/types/import';
+import type { ImportInbox, ImportedGame, RawExternalGame } from '../../src/model/types/import';
+import type { GameItem } from '../../src/model/types/game';
 
 const NOW = 1_000_000;
 
@@ -179,6 +181,40 @@ describe('removeManyFromInbox', () => {
 
   it('ids inexistentes → misma referencia', () => {
     expect(removeManyFromInbox(inbox, [99], NOW + 1)).toBe(inbox);
+  });
+});
+
+describe('mergeImportedIntoGame — enriquecer un juego existente', () => {
+  const base = (over: Partial<GameItem> = {}): GameItem => ({
+    id: 1,
+    _ts: 1,
+    name: 'Elden Ring',
+    platforms: ['Steam'],
+    genres: ['RPG'],
+    steamDeck: false,
+    review: '',
+    ...over,
+  });
+  const item = (over: Partial<ImportedGame> = {}): ImportedGame => ({
+    id: 1,
+    name: 'Elden Ring',
+    platforms: ['GOG'],
+    genres: ['RPG', 'Aventura'],
+    sources: ['gog'],
+    importedAt: 0,
+    ...over,
+  });
+
+  it('une géneros y plataformas (arrays), sin duplicar', () => {
+    const out = mergeImportedIntoGame(base(), item());
+    expect(out.genres).toEqual(['RPG', 'Aventura']);
+    expect(out.platforms).toEqual(['Steam', 'GOG']);
+  });
+
+  it('rellena horas solo si el existente no tiene', () => {
+    expect(mergeImportedIntoGame(base({ hours: null }), item({ hours: 5 })).hours).toBe(5);
+    expect(mergeImportedIntoGame(base({ hours: 12 }), item({ hours: 5 })).hours).toBe(12); // ya tiene → no se toca
+    expect(mergeImportedIntoGame(base({ hours: 0 }), item({ hours: 5 })).hours).toBe(0); // 0 es información
   });
 });
 

@@ -9,9 +9,11 @@ const M = UI_MESSAGES.import.inbox;
 
 interface ImportInboxTableProps {
   items: ImportedGame[];
+  isInLists: (name: string) => boolean;
   selectedIds: Set<number>;
   onToggleSelect: (id: number) => void;
   onClassify: (item: ImportedGame, tab: TabId) => void;
+  onEnrich: (item: ImportedGame) => void;
   onDiscard: (id: number) => void;
 }
 
@@ -29,18 +31,18 @@ function chips(values: string[], className: string) {
 }
 
 /**
- * Tabla de la Bandeja de importados. Reutiliza las MISMAS clases visuales que `GameTable`
- * (table-wrap/main-row/detail-*) para que se vea como los demás listados. El detalle está SIEMPRE
- * abierto en todos los elementos y contiene ÚNICAMENTE los botones (clasificar + descartar).
- * No virtualiza (la bandeja es una zona de paso de tamaño modesto).
+ * Tabla de la Bandeja de importados. Reutiliza las clases visuales de `GameTable`, incluida su vista
+ * móvil: en pantallas estrechas solo se muestra la PRIMERA columna, así que el checkbox, el nombre y un
+ * `row-meta` (plataforma/género en mini-píldoras) van todos en ella. El `.table-wrap` es un contenedor
+ * `gamelist` para que el revelado progresivo del meta funcione igual que en el listado principal.
+ * El detalle está siempre abierto y contiene solo los botones (clasificar/actualizar + descartar).
  */
-export function ImportInboxTable({ items, selectedIds, onToggleSelect, onClassify, onDiscard }: ImportInboxTableProps) {
+export function ImportInboxTable({ items, isInLists, selectedIds, onToggleSelect, onClassify, onEnrich, onDiscard }: ImportInboxTableProps) {
   return (
-    <div className="table-wrap">
+    <div className="table-wrap import-inbox">
       <table>
         <thead>
           <tr>
-            <th className="col-select" aria-label={M.selectAll} />
             <th>{M.game}</th>
             <th>{UI_MESSAGES.detail.platforms}</th>
             <th>{UI_MESSAGES.detail.genres}</th>
@@ -48,48 +50,73 @@ export function ImportInboxTable({ items, selectedIds, onToggleSelect, onClassif
         </thead>
         <tbody>
           {items.map((item, index) => {
+            const existing = isInLists(item.name);
             return (
               <Fragment key={item.id}>
                 <tr className={`main-row ${index % 2 === 0 ? 'striped' : ''}`.trim()}>
-                  <td className="col-select">
-                    <input
-                      type="checkbox"
-                      checked={selectedIds.has(item.id)}
-                      aria-label={M.selectRowAria(item.name)}
-                      onChange={() => onToggleSelect(item.id)}
-                    />
-                  </td>
                   <td>
-                    <strong className="row-name">{item.name}</strong>
-                    {item.existsInLists ? (
-                      <span className="chip chip-more" title={M.existingBadge} style={{ marginLeft: '0.4rem' }}>
-                        {M.existingBadge}
+                    <div className="import-name-cell">
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.has(item.id)}
+                        aria-label={M.selectRowAria(item.name)}
+                        onChange={() => onToggleSelect(item.id)}
+                      />
+                      <span className="row-toggle-body">
+                        <span className="import-name-line">
+                          <strong className="row-name">{item.name}</strong>
+                          {existing ? (
+                            <span className="chip chip-more" title={M.existingBadge}>
+                              {M.existingBadge}
+                            </span>
+                          ) : null}
+                        </span>
+                        {/* Meta para móvil/tablet (oculto en escritorio; ahí se ven las columnas). */}
+                        <span className="row-meta" aria-hidden="true">
+                          {item.platforms.map((p) => (
+                            <span key={`p-${p}`} className="row-meta-item rm-plat">
+                              {p}
+                            </span>
+                          ))}
+                          {item.genres.map((g) => (
+                            <span key={`g-${g}`} className="row-meta-item rm-genre">
+                              {g}
+                            </span>
+                          ))}
+                        </span>
                       </span>
-                    ) : null}
+                    </div>
                   </td>
                   <td>{chips(item.platforms, 'chip-plat')}</td>
                   <td>{chips(item.genres, 'chip-genre')}</td>
                 </tr>
 
                 <tr className="detail-row open">
-                  <td colSpan={4} style={{ padding: 0 }}>
+                  <td colSpan={3} style={{ padding: 0 }}>
                     <div className="detail-content">
                       <div className="detail-actions" style={{ gridColumn: '1 / -1' }}>
-                        {TAB_IDS.map((tab) => {
-                          const suggested = item.suggestedTab === tab;
-                          return (
-                            <button
-                              key={tab}
-                              type="button"
-                              className={`btn btn-secondary ${suggested ? 'active' : ''}`.trim()}
-                              title={`${TAB_TOOLTIPS[tab]}${suggested ? ` (${M.suggested})` : ''}`}
-                              onClick={() => onClassify(item, tab)}
-                            >
-                              <Icon name={TAB_ICONS[tab]} />
-                              <span>{TAB_TOOLTIPS[tab]}</span>
-                            </button>
-                          );
-                        })}
+                        {existing ? (
+                          <button type="button" className="btn btn-secondary" title={M.enrichHint} onClick={() => onEnrich(item)}>
+                            <Icon name={COMMON_ICONS.edit} />
+                            <span>{M.enrich}</span>
+                          </button>
+                        ) : (
+                          TAB_IDS.map((tab) => {
+                            const suggested = item.suggestedTab === tab;
+                            return (
+                              <button
+                                key={tab}
+                                type="button"
+                                className={`btn btn-secondary ${suggested ? 'active' : ''}`.trim()}
+                                title={`${TAB_TOOLTIPS[tab]}${suggested ? ` (${M.suggested})` : ''}`}
+                                onClick={() => onClassify(item, tab)}
+                              >
+                                <Icon name={TAB_ICONS[tab]} />
+                                <span>{TAB_TOOLTIPS[tab]}</span>
+                              </button>
+                            );
+                          })
+                        )}
                         <button type="button" className="btn btn-danger" onClick={() => onDiscard(item.id)}>
                           <Icon name={COMMON_ICONS.trash} />
                           <span>{M.discard}</span>
