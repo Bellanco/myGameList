@@ -12,8 +12,6 @@ interface FloatingControlsProps {
   onSectionChange: (section: AppSection) => void;
   /** El botón "Cuenta" solo aparece (con transición suave) si hay sesión de Google. */
   showAccount: boolean;
-  /** Nº de juegos en la bandeja de importados; el acceso a la bandeja solo se muestra si es > 0. */
-  inboxCount: number;
 }
 
 /**
@@ -23,7 +21,7 @@ interface FloatingControlsProps {
  * El botón de Cuenta solo se muestra con sesión de Google, apareciendo y desapareciendo de forma suave.
  * Todo el grupo se oculta al hacer scroll y reaparece al volver arriba, para no estorbar la lectura.
  */
-export const FloatingControls = memo(function FloatingControls({ activeSection, onSectionChange, showAccount, inboxCount }: FloatingControlsProps) {
+export const FloatingControls = memo(function FloatingControls({ activeSection, onSectionChange, showAccount }: FloatingControlsProps) {
   const [hidden, setHidden] = useState(false);
 
   useEffect(() => {
@@ -66,19 +64,6 @@ export const FloatingControls = memo(function FloatingControls({ activeSection, 
       >
         <Icon name="bottom-account" className="ui-icon" />
       </button>
-      {inboxCount > 0 ? (
-        <button
-          type="button"
-          className={`btn-icon theme-toggle-btn floating-nav-btn floating-nav-inbox ${activeSection === 'inbox' ? 'is-active' : ''}`.trim()}
-          aria-label={`${NAV.inbox} (${inboxCount})`}
-          title={`${NAV.inbox} (${inboxCount})`}
-          aria-current={activeSection === 'inbox' ? 'page' : undefined}
-          onClick={() => onSectionChange('inbox')}
-        >
-          <Icon name="download" className="ui-icon" />
-          <span className="floating-nav-badge" aria-hidden="true">{inboxCount}</span>
-        </button>
-      ) : null}
       <button
         type="button"
         className={`btn-icon theme-toggle-btn floating-nav-btn ${activeSection === 'settings' ? 'is-active' : ''}`.trim()}

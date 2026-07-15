@@ -162,8 +162,16 @@ export const UI_MESSAGES = {
       playniteTitle: 'Playnite',
       playniteDesc:
         'Exporta tu biblioteca desde Playnite (extensión de export a JSON) y suéltala aquí. Reúne Steam, GOG, Epic, Xbox y PlayStation de una vez.',
+      stepsTitle: 'Cómo conseguir el archivo JSON (paso a paso)',
+      steps: [
+        'Abre Playnite en tu ordenador (solo Windows).',
+        'Instala una extensión que exporte la biblioteca a JSON: en Playnite, abre el menú principal → «Complementos» → «Explorar complementos» y busca una de «exportar a JSON»; pulsa Instalar y reinicia Playnite si te lo pide.',
+        'Exporta tu biblioteca: en el menú principal de Playnite, elige la opción de exportar de esa extensión. Se creará un archivo con extensión «.json» en tu equipo (fíjate en la carpeta donde lo guarda).',
+        'Vuelve a esta pantalla, pulsa «Importar JSON de Playnite» y selecciona ese archivo.',
+      ],
       importBtn: 'Importar JSON de Playnite',
       importAriaLabel: 'Seleccionar fichero JSON exportado de Playnite',
+      viewInbox: (n: number) => `Ver bandeja (${n})`,
       soonTitle: 'Próximamente',
       soon: 'Steam, Xbox, PlayStation, GOG y Epic (integración directa) llegarán como añadidos futuros.',
       parseError: 'No se pudo leer el fichero. Asegúrate de que es un export JSON de Playnite válido.',
@@ -180,6 +188,12 @@ export const UI_MESSAGES = {
       clear: 'Vaciar bandeja',
       existingBadge: 'Ya en tus listas',
       suggested: 'sugerida',
+      origin: 'Origen',
+      game: 'Juego',
+      selectAll: 'Seleccionar todo',
+      selectRowAria: (name: string) => `Seleccionar ${name}`,
+      deleteSelected: 'Eliminar seleccionados',
+      selectedCount: (n: number) => `${n} seleccionado${n === 1 ? '' : 's'}`,
     },
     notice: (added: number, merged: number, duplicates: number) =>
       `${added} añadido(s)` +

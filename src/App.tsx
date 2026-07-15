@@ -168,6 +168,7 @@ export default function App() {
   );
 
   const handleDiscardImport = useCallback((id: number) => inbox.removeItem(id), [inbox]);
+  const handleDiscardManyImport = useCallback((ids: number[]) => inbox.removeItems(ids), [inbox]);
   const handleClearInbox = useCallback(() => inbox.clear(), [inbox]);
   const openIntegrations = useCallback(() => navigate('/integraciones'), [navigate]);
 
@@ -488,7 +489,6 @@ export default function App() {
         activeSection={activeSection}
         onSectionChange={handleSectionChange}
         showAccount={hasSocialProfile}
-        inboxCount={inbox.count}
       />
       {activeSection === 'lists' ? <TabBar currentTab={currentTab} tabCounts={vm.tabCounts} onTabChange={handleTabChange} /> : null}
       <StatusBanner notice={vm.notice} remoteChangesApplied={syncVm.lastRemoteChangesApplied} />
@@ -546,7 +546,12 @@ export default function App() {
           </Suspense>
         ) : activeSection === 'integrations' ? (
           <Suspense fallback={null}>
-            <IntegrationsScreen onImportPlaynite={handlePlayniteImport} onBack={() => navigate('/cuenta')} />
+            <IntegrationsScreen
+              onImportPlaynite={handlePlayniteImport}
+              onBack={() => navigate('/cuenta')}
+              inboxCount={inbox.count}
+              onOpenInbox={() => navigate('/bandeja')}
+            />
           </Suspense>
         ) : activeSection === 'inbox' ? (
           <Suspense fallback={null}>
@@ -554,6 +559,7 @@ export default function App() {
               imported={inbox.imported}
               onClassify={handleClassifyImport}
               onDiscard={handleDiscardImport}
+              onDiscardMany={handleDiscardManyImport}
               onClear={handleClearInbox}
               onGoIntegrations={openIntegrations}
             />

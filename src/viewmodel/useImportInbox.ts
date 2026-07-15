@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { EMPTY_INBOX, addGamesToInbox, purgeStaleImports, removeFromInbox } from '../core/import/staging';
+import { EMPTY_INBOX, addGamesToInbox, purgeStaleImports, removeFromInbox, removeManyFromInbox } from '../core/import/staging';
 import { loadImportInbox, saveImportInbox } from '../model/repository/import/inboxRepository';
 import type { ImportInbox, ImportedGame, RawExternalGame, StagingSummary } from '../model/types/import';
 
@@ -11,6 +11,8 @@ export interface UseImportInbox {
   addGames: (games: RawExternalGame[], existingListNames: Set<string>) => StagingSummary;
   /** Saca una entrada de la bandeja (tras graduarla o al descartarla). */
   removeItem: (id: number) => void;
+  /** Saca varias entradas en lote (borrado múltiple). */
+  removeItems: (ids: number[]) => void;
   /** Vacía la bandeja. */
   clear: () => void;
 }
@@ -70,6 +72,14 @@ export function useImportInbox(): UseImportInbox {
     [commit],
   );
 
+  const removeItems = useCallback(
+    (ids: number[]) => {
+      const next = removeManyFromInbox(inboxRef.current, ids, Date.now());
+      if (next !== inboxRef.current) commit(next);
+    },
+    [commit],
+  );
+
   const clear = useCallback(() => {
     if (inboxRef.current.imported.length === 0) return;
     commit({ imported: [], updatedAt: Date.now() });
@@ -81,6 +91,7 @@ export function useImportInbox(): UseImportInbox {
     loading,
     addGames,
     removeItem,
+    removeItems,
     clear,
   };
 }
