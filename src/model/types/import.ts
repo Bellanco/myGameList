@@ -9,6 +9,9 @@ import type { TabId } from './game';
 // Orígenes de importación. Hoy solo se implementa 'playnite'; el resto son añadidos futuros.
 export type ImportSource = 'playnite' | 'steam' | 'xbox' | 'psn' | 'gog' | 'egs';
 
+// Método de export de Playnite elegido: 'json' (Json Library Import Export) o 'csv' (Library Exporter).
+export type ImportMethod = 'json' | 'csv';
+
 // IDs externos por origen (para dedupe/fusión en la bandeja). NO viajan al gist. Se deriva de
 // `ImportSource` para que al añadir un origen nuevo su clave quede disponible automáticamente;
 // `igdb` se añade aparte por ser fuente de metadatos, no de biblioteca.
