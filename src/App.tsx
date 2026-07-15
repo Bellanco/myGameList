@@ -1,6 +1,6 @@
 import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
-import { DIALOG_MESSAGES, ROUTE_TAB, SYNC_BADGE_TEXT, SYNC_MESSAGES, TAB_ROUTE, TAB_TITLES } from './core/constants/labels';
+import { DIALOG_MESSAGES, ROUTE_TAB, SYNC_BADGE_TEXT, SYNC_MESSAGES, TAB_ROUTE, TAB_TITLES, UI_MESSAGES } from './core/constants/labels';
 import { TAB_IDS, type TabData, type TabId } from './model/types/game';
 import { resolveGrade } from './core/utils/scoreScale';
 import { publishReviewActivity, unpublishReviewActivity } from './model/repository/socialPublishRepository';
@@ -23,7 +23,11 @@ import { useUppercase } from './view/hooks/useUppercase';
 import { useShowSteamButton } from './view/hooks/useShowSteamButton';
 import { useAppliedPalette } from './view/hooks/usePalette';
 import { hasGithubOAuthRedirect } from './model/repository/githubOAuthRepository';
-import { buildListsPool, buildListsWeigher } from './core/roulette/roulette';
+import { buildListsPool, buildListsWeigher, normalizeName } from './core/roulette/roulette';
+import { useImportInbox } from './viewmodel/useImportInbox';
+import { mapPlayniteExport } from './core/import/playnite';
+import { importedToPartialGame } from './core/import/staging';
+import type { ImportedGame } from './model/types/import';
 
 const FormModal = lazy(() => import('./view/modals/FormModal').then((module) => ({ default: module.FormModal })));
 const ConfirmModal = lazy(() => import('./view/modals/ConfirmModal').then((module) => ({ default: module.ConfirmModal })));
@@ -31,6 +35,8 @@ const SettingsHub = lazy(() => import('./view/components/SettingsHub').then((mod
 const SocialHub = lazy(() => import('./view/components/SocialHub').then((module) => ({ default: module.SocialHub })));
 const AccountHub = lazy(() => import('./view/components/AccountHub').then((module) => ({ default: module.AccountHub })));
 const RouletteModal = lazy(() => import('./view/components/roulette/RouletteModal').then((module) => ({ default: module.RouletteModal })));
+const IntegrationsScreen = lazy(() => import('./view/components/import/IntegrationsScreen').then((module) => ({ default: module.IntegrationsScreen })));
+const InboxScreen = lazy(() => import('./view/components/import/InboxScreen').then((module) => ({ default: module.InboxScreen })));
 
 function getCurrentTab(pathname: string): TabId {
   return ROUTE_TAB[pathname] || 'c';
@@ -40,6 +46,8 @@ function getCurrentSection(pathname: string): AppSection {
   if (pathname.startsWith('/social')) return 'social';
   if (pathname.startsWith('/ajustes')) return 'settings';
   if (pathname.startsWith('/cuenta')) return 'account';
+  if (pathname.startsWith('/integraciones')) return 'integrations';
+  if (pathname.startsWith('/bandeja')) return 'inbox';
   return 'lists';
 }
 
@@ -69,6 +77,8 @@ export const APP_ROUTE_PATHS = [
   '/social/user/:userId/game/:gameId/:eventType',
   '/ajustes',
   '/cuenta',
+  '/integraciones',
+  '/bandeja',
 ] as const;
 
 export default function App() {
@@ -117,6 +127,49 @@ export default function App() {
     persistFromSync,
     notify,
   } = vm;
+
+  // Bandeja de importados (local, no sincroniza). Se monta aquí para exponer su contador en los controles
+  // flotantes y cablear la graduación (clasificar → formulario → retirar de la bandeja).
+  const inbox = useImportInbox();
+  const graduatingIdRef = useRef<number | null>(null);
+  // Nombres ya presentes en las listas (normalizados) → para marcar duplicados al importar.
+  const listNames = useMemo(
+    () => new Set(TAB_IDS.flatMap((tab) => vm.data[tab].map((game) => normalizeName(game.name)))),
+    [vm.data],
+  );
+
+  const handlePlayniteImport = useCallback(
+    async (file: File) => {
+      let games: ReturnType<typeof mapPlayniteExport> = [];
+      try {
+        const text = await file.text();
+        games = mapPlayniteExport(JSON.parse(text) as unknown);
+      } catch {
+        notify('err', UI_MESSAGES.import.integrations.parseError);
+        return;
+      }
+      if (games.length === 0) {
+        notify('warn', UI_MESSAGES.import.integrations.parseError);
+        return;
+      }
+      const summary = inbox.addGames(games, listNames);
+      notify('ok', UI_MESSAGES.import.notice(summary.added, summary.merged, summary.duplicates));
+      navigate('/bandeja');
+    },
+    [inbox, listNames, navigate, notify],
+  );
+
+  const handleClassifyImport = useCallback(
+    (item: ImportedGame, tab: TabId) => {
+      graduatingIdRef.current = item.id;
+      vm.openImportedDraft(tab, importedToPartialGame(item));
+    },
+    [vm],
+  );
+
+  const handleDiscardImport = useCallback((id: number) => inbox.removeItem(id), [inbox]);
+  const handleClearInbox = useCallback(() => inbox.clear(), [inbox]);
+  const openIntegrations = useCallback(() => navigate('/integraciones'), [navigate]);
 
   // El sync lee el estado local vía refs (no closures del render) para que un ciclo EN VUELO vea las
   // ediciones confirmadas mientras estaba esperando la red. Con `() => vm.data` un ciclo iniciado antes
@@ -292,6 +345,16 @@ export default function App() {
       return;
     }
 
+    if (section === 'integrations') {
+      navigate('/integraciones');
+      return;
+    }
+
+    if (section === 'inbox') {
+      navigate('/bandeja');
+      return;
+    }
+
     navigate('/ajustes');
   }, [navigate, setExpandedId]);
 
@@ -300,6 +363,8 @@ export default function App() {
   }, [currentTab, openNewGame]);
 
   const handleCloseFormModal = useCallback(() => {
+    // Si se cancela una graduación, el importado permanece en la bandeja (no se retira).
+    graduatingIdRef.current = null;
     setFormModalOpen(false);
   }, [setFormModalOpen]);
 
@@ -321,6 +386,12 @@ export default function App() {
     const nextGrade = resolveGrade(nextDraft); // nota fina 0–100 (real si la usa, si no derivada del score)
 
     saveDraft(editingTab, nextDraft);
+
+    // Graduación desde la bandeja: si este guardado viene de clasificar un importado, se retira de la bandeja.
+    if (graduatingIdRef.current !== null) {
+      inbox.removeItem(graduatingIdRef.current);
+      graduatingIdRef.current = null;
+    }
 
     // Marca la fila guardada para el destello de localización (se limpia a los 1,4 s).
     setRecentlyChangedId(predictedId);
@@ -362,7 +433,7 @@ export default function App() {
     }).catch(() => {
       notify('warn', 'Juego guardado, pero no se pudo actualizar la actividad social de reseña.');
     });
-  }, [editingTab, notify, saveDraft, vm.data]);
+  }, [editingTab, inbox, notify, saveDraft, vm.data]);
 
   const handleEditTag = useCallback((key: 'genres' | 'platforms' | 'strengths' | 'weaknesses', oldValue: string, newValue: string) => {
     renameTagAcrossGames(key, oldValue, newValue);
@@ -417,6 +488,7 @@ export default function App() {
         activeSection={activeSection}
         onSectionChange={handleSectionChange}
         showAccount={hasSocialProfile}
+        inboxCount={inbox.count}
       />
       {activeSection === 'lists' ? <TabBar currentTab={currentTab} tabCounts={vm.tabCounts} onTabChange={handleTabChange} /> : null}
       <StatusBanner notice={vm.notice} remoteChangesApplied={syncVm.lastRemoteChangesApplied} />
@@ -470,7 +542,21 @@ export default function App() {
           </Suspense>
         ) : activeSection === 'account' ? (
           <Suspense fallback={null}>
-            {scoreScaleUid ? <AccountHub scoreScaleUid={scoreScaleUid} /> : null}
+            {scoreScaleUid ? <AccountHub scoreScaleUid={scoreScaleUid} onOpenIntegrations={openIntegrations} /> : null}
+          </Suspense>
+        ) : activeSection === 'integrations' ? (
+          <Suspense fallback={null}>
+            <IntegrationsScreen onImportPlaynite={handlePlayniteImport} onBack={() => navigate('/cuenta')} />
+          </Suspense>
+        ) : activeSection === 'inbox' ? (
+          <Suspense fallback={null}>
+            <InboxScreen
+              imported={inbox.imported}
+              onClassify={handleClassifyImport}
+              onDiscard={handleDiscardImport}
+              onClear={handleClearInbox}
+              onGoIntegrations={openIntegrations}
+            />
           </Suspense>
         ) : (
           <Suspense fallback={null}>

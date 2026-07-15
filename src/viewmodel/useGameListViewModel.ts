@@ -288,6 +288,14 @@ export function useGameListViewModel() {
     [data],
   );
 
+  // Graduación desde la bandeja de importados: abre el formulario en modo "nuevo" para `tab`, precargado
+  // con los metadatos del juego importado (sin id → se creará como GameItem nuevo al guardar).
+  const openImportedDraft = useCallback((tab: TabId, game: Partial<GameItem>) => {
+    setEditingTab(tab);
+    setDraft(toNormalizedDraft(game));
+    setFormModalOpen(true);
+  }, []);
+
   const migrateGame = useCallback(
     (sourceTab: TabId, id: number, targetTab: TabId) => {
       const source = data[sourceTab].find((item) => item.id === id);
@@ -560,6 +568,7 @@ export function useGameListViewModel() {
     sortBy,
     openNewGame,
     openEditGame,
+    openImportedDraft,
     migrateGame,
     moveGameToTab,
     moveGameToCurrentByName,

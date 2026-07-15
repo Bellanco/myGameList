@@ -151,6 +151,40 @@ export const UI_MESSAGES = {
     social: 'Social',
     settings: 'Ajustes',
     account: 'Cuenta',
+    inbox: 'Bandeja',
+    integrations: 'Integraciones',
+  },
+  import: {
+    back: 'Volver',
+    integrations: {
+      title: 'Integraciones',
+      note: 'Trae los juegos que ya tienes en otras plataformas a tu bandeja de importados.',
+      playniteTitle: 'Playnite',
+      playniteDesc:
+        'Exporta tu biblioteca desde Playnite (extensión de export a JSON) y suéltala aquí. Reúne Steam, GOG, Epic, Xbox y PlayStation de una vez.',
+      importBtn: 'Importar JSON de Playnite',
+      importAriaLabel: 'Seleccionar fichero JSON exportado de Playnite',
+      soonTitle: 'Próximamente',
+      soon: 'Steam, Xbox, PlayStation, GOG y Epic (integración directa) llegarán como añadidos futuros.',
+      parseError: 'No se pudo leer el fichero. Asegúrate de que es un export JSON de Playnite válido.',
+    },
+    inbox: {
+      title: 'Bandeja de importados',
+      note: 'Estos juegos se guardan en este equipo y caducan a los 30 días si no los clasificas.',
+      sectionNew: 'Nuevos',
+      sectionExisting: 'Ya en tus listas',
+      empty: 'No hay juegos en la bandeja. Importa desde Integraciones.',
+      goIntegrations: 'Ir a Integraciones',
+      classifyTo: 'Clasificar en',
+      discard: 'Descartar',
+      clear: 'Vaciar bandeja',
+      existingBadge: 'Ya en tus listas',
+      suggested: 'sugerida',
+    },
+    notice: (added: number, merged: number, duplicates: number) =>
+      `${added} añadido(s)` +
+      (merged ? `, ${merged} fusionado(s)` : '') +
+      (duplicates ? `, ${duplicates} duplicado(s) omitido(s)` : ''),
   },
   toolbar: {
     searchPlaceholder: 'Buscar',
