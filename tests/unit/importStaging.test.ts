@@ -5,6 +5,7 @@ import {
   addGamesToInbox,
   purgeStaleImports,
   removeFromInbox,
+  removeManyFromInbox,
   importedToPartialGame,
 } from '../../src/core/import/staging';
 import type { ImportInbox, RawExternalGame } from '../../src/model/types/import';
@@ -154,6 +155,30 @@ describe('removeFromInbox', () => {
 
   it('devuelve la misma referencia si el id no existe', () => {
     expect(removeFromInbox(inbox, 99, NOW + 1)).toBe(inbox);
+  });
+});
+
+describe('removeManyFromInbox', () => {
+  const inbox: ImportInbox = {
+    imported: [
+      { id: 1, name: 'A', platforms: [], genres: [], sources: ['playnite'], importedAt: NOW },
+      { id: 2, name: 'B', platforms: [], genres: [], sources: ['playnite'], importedAt: NOW },
+      { id: 3, name: 'C', platforms: [], genres: [], sources: ['playnite'], importedAt: NOW },
+    ],
+    updatedAt: NOW,
+  };
+
+  it('elimina varios por id en una pasada', () => {
+    const out = removeManyFromInbox(inbox, [1, 3], NOW + 1);
+    expect(out.imported.map((g) => g.id)).toEqual([2]);
+  });
+
+  it('lista vacía → misma referencia', () => {
+    expect(removeManyFromInbox(inbox, [], NOW + 1)).toBe(inbox);
+  });
+
+  it('ids inexistentes → misma referencia', () => {
+    expect(removeManyFromInbox(inbox, [99], NOW + 1)).toBe(inbox);
   });
 });
 

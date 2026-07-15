@@ -130,6 +130,15 @@ export function removeFromInbox(inbox: ImportInbox, id: number, now: number): Im
   return { imported, updatedAt: now };
 }
 
+/** Elimina varias entradas por id en una sola pasada (borrado en lote). Pura; identidad estable si no cambia. */
+export function removeManyFromInbox(inbox: ImportInbox, ids: number[], now: number): ImportInbox {
+  if (ids.length === 0) return inbox;
+  const idSet = new Set(ids);
+  const imported = inbox.imported.filter((g) => !idSet.has(g.id));
+  if (imported.length === inbox.imported.length) return inbox;
+  return { imported, updatedAt: now };
+}
+
 /**
  * Mapea un item de la bandeja a los campos de un juego para PRECARGAR el formulario al clasificar.
  * NO se copia: los campos de import (externalIds/coverUrl/sources), ni el año — `years` son los años
