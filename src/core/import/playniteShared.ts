@@ -48,27 +48,19 @@ export function mapSource(source: string): ImportSource {
   return 'playnite';
 }
 
-// Etiqueta con la que se sustituye "PC" por la tienda de origen. 'playnite' (desconocido) no sustituye.
-const SOURCE_PLATFORM_LABEL: Partial<Record<ImportSource, string>> = {
-  steam: 'Steam',
-  gog: 'GOG',
-  egs: 'Epic',
-  xbox: 'Xbox',
-  psn: 'PlayStation',
-};
-
 function isPcPlatform(name: string): boolean {
   const n = name.toLowerCase();
   return n.startsWith('pc') || n.includes('windows') || n.includes('linux') || (n.includes('mac') && n.includes('pc'));
 }
 
 /**
- * Regla de plataformas: una plataforma de PC se SUSTITUYE por la tienda de origen (Steam de PC → "Steam").
- * Las de consola se conservan. Si es PC sin tienda conocida, se conserva "PC". Si no hay plataforma pero sí
- * tienda, se usa la tienda. Deduplica sin distinguir mayúsculas.
+ * Regla de plataformas: una plataforma de PC se SUSTITUYE por la etiqueta de la tienda de origen
+ * (`storeLabel`, tal cual la reporta Playnite: "Steam", "GOG", "Epic", "EA app", "Ubisoft Connect"…).
+ * Las de consola se conservan. Si es PC sin tienda conocida (`storeLabel` vacío), se conserva "PC…".
+ * Si no hay plataforma pero sí tienda, se usa la tienda. Deduplica sin distinguir mayúsculas.
  */
-export function resolvePlatforms(rawPlatforms: string[], source: ImportSource): string[] {
-  const label = SOURCE_PLATFORM_LABEL[source];
+export function resolvePlatforms(rawPlatforms: string[], storeLabel: string): string[] {
+  const label = storeLabel.trim();
   const mapped = rawPlatforms.map((p) => (isPcPlatform(p) && label ? label : p));
   if (mapped.length === 0 && label) mapped.push(label);
   return cleanNames(mapped);
