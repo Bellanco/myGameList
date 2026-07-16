@@ -10,7 +10,7 @@ import { HubAvatar } from './HubAvatar';
 import { POST_MAX_LENGTH } from '../../../core/security/sanitize';
 
 /** Pantalla principal del feed social. */
-export function SocialFeedScreen({
+function SocialFeedScreenBase({
   SOCIAL_UI,
   socialDisplayName,
   ownPhotoURL,
@@ -296,4 +296,8 @@ export function SocialFeedScreen({
     </section>
   );
 }
+
+// Memoizada: el hub re-renderiza con cualquier cambio de estado del VM; con props estables (handlers de
+// SocialHub via useCallback + valores memoizados del VM) esta pantalla evita re-renders no relacionados.
+export const SocialFeedScreen = React.memo(SocialFeedScreenBase);
 

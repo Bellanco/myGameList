@@ -73,7 +73,8 @@ export function distributeIntoChunks<T extends { id: number }>(items: T[], thres
   let size = 0;
   let chunkIdx = 0;
   for (const item of items) {
-    const itemSize = new Blob([JSON.stringify(item)]).size;
+    // Medir con TextEncoder (mismo criterio UTF-8 que `utf8ByteLength`) en vez de crear un Blob efímero por juego.
+    const itemSize = utf8ByteLength(JSON.stringify(item));
     if (size + itemSize > thresholdBytes && buckets[current].length > 0) {
       chunkIdx += 1;
       current = `c${chunkIdx}`;

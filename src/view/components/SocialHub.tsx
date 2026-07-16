@@ -1,4 +1,4 @@
-import { memo } from 'react';
+import { memo, useCallback } from 'react';
 import { SOCIAL_UI } from '../../core/constants/labels';
 import type { GameItem } from '../../model/types/game';
 import { useSocialViewModel } from '../../viewmodel/useSocialViewModel';
@@ -126,6 +126,23 @@ const SocialHubInner = memo(function SocialHubInner({
     cancelRemoveFriend,
   } = useSocialViewModel();
 
+  // Handlers de navegación estables (misma identidad entre renders): permiten que las pantallas hoja
+  // memoizadas no se re-rendericen cuando cambia un estado no relacionado del VM (status, cooldown, drag…).
+  const goToSocial = useCallback(() => navigate('/social'), [navigate]);
+  const goToProfileEdit = useCallback(() => navigate('/social/profile'), [navigate]);
+  const goToProfiles = useCallback(() => navigate('/social/profiles'), [navigate]);
+  const goToRequests = useCallback(() => navigate('/social/requests'), [navigate]);
+  const openDirectoryProfile = useCallback(
+    (id: string) => {
+      if (id === 'profile') {
+        navigate('/social/profile');
+      } else {
+        openProfileDetail(id);
+      }
+    },
+    [navigate, openProfileDetail],
+  );
+
   // Diálogo de confirmación de "Dejar de ser amigos" (se dispara desde el detalle y desde la bandeja).
   const removeFriendDialog = (
     <ConfirmModal
@@ -168,7 +185,7 @@ const SocialHubInner = memo(function SocialHubInner({
           hasCreatedProfile={hasCreatedProfile}
           onSaveProfile={handleSaveProfile}
           onSignOut={handleSignOut}
-          onBack={() => navigate('/social')}
+          onBack={goToSocial}
           status={status}
           statusKind={statusKind}
           toggleGameInSet={toggleGameInSet}
@@ -193,7 +210,7 @@ const SocialHubInner = memo(function SocialHubInner({
           activeDetailEvent={activeDetailEvent}
           getGameItemById={getGameItemById}
           onOpenProfileDetail={openProfileDetail}
-          onBack={() => navigate('/social')}
+          onBack={goToSocial}
           status={status}
           statusKind={statusKind}
         />
@@ -207,8 +224,8 @@ const SocialHubInner = memo(function SocialHubInner({
           SOCIAL_UI={SOCIAL_UI}
           activeProfileDetail={selectedProfileDetail}
           isOwnProfile={isOwnProfileDetail}
-          onEditProfile={() => navigate('/social/profile')}
-          onBack={() => navigate('/social')}
+          onEditProfile={goToProfileEdit}
+          onBack={goToSocial}
           showReviews={profileReviewsView}
           onToggleReviews={() => (profileReviewsView ? closeProfileReviews(detailId) : openProfileReviews(detailId))}
           onOpenReview={(gameId) => openProfileReviewDetail(detailId, gameId)}
@@ -253,7 +270,7 @@ const SocialHubInner = memo(function SocialHubInner({
             onReject={handleRejectFriendRequest}
             onCancel={handleCancelFriendRequest}
             onRemove={handleRemoveFriend}
-            onBack={() => navigate('/social')}
+            onBack={goToSocial}
             status={status}
             statusKind={statusKind}
           />
@@ -269,13 +286,7 @@ const SocialHubInner = memo(function SocialHubInner({
           setProfileSearch={setProfileSearch}
           filteredSocialDirectory={filteredSocialDirectory}
           loadingDirectory={loadingDirectory}
-          openProfileDetail={(id) => {
-            if (id === 'profile') {
-              navigate('/social/profile');
-            } else {
-              openProfileDetail(id);
-            }
-          }}
+          openProfileDetail={openDirectoryProfile}
           handleProfileCardKeyDown={handleProfileCardKeyDown}
           isFeedDragging={isFeedDragging}
           feedRowRef={feedRowRef as React.RefObject<HTMLDivElement | null>}
@@ -285,7 +296,7 @@ const SocialHubInner = memo(function SocialHubInner({
           friendshipBusyUid={friendshipBusyUid}
           onAddOrAcceptFriend={handleAddOrAcceptFriend}
           onCancelFriendRequest={handleCancelFriendRequest}
-          onBack={() => navigate('/social')}
+          onBack={goToSocial}
           status={status}
           statusKind={statusKind}
         />
@@ -298,16 +309,10 @@ const SocialHubInner = memo(function SocialHubInner({
         ownPhotoURL={authUser?.photoURL || ''}
         currentSocialGistId={socialCfgGistId}
         loadingDirectory={loadingDirectory}
-        openProfileDetail={(id) => {
-          if (id === 'profile') {
-            navigate('/social/profile');
-          } else {
-            openProfileDetail(id);
-          }
-        }}
-        onOpenProfiles={() => navigate('/social/profiles')}
+        openProfileDetail={openDirectoryProfile}
+        onOpenProfiles={goToProfiles}
         onOpenOwnProfile={openOwnProfileDetail}
-        onOpenRequests={() => navigate('/social/requests')}
+        onOpenRequests={goToRequests}
         pendingIncomingCount={pendingIncomingCount}
         groupedFeedItems={groupedFeedItems}
         feedItems={feedItems}
