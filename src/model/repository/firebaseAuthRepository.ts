@@ -41,7 +41,16 @@ function getAuthRuntimeContext(): { hostname: string; projectId: string; authDom
  */
 export async function getCurrentSocialAuthUser(): Promise<SocialAuthUser | null> {
   const services = await initializeFirebaseServices();
-  if (!services?.auth.currentUser) {
+  if (!services) {
+    return null;
+  }
+
+  // La sesión persistida (browserLocalPersistence) se restaura de forma ASÍNCRONA: nada más inicializar,
+  // `currentUser` aún es null aunque haya sesión guardada. Sin esperar aquí, al recargar en /social el hub
+  // veía authUser=null y rebotaba al gateway/login. `authStateReady()` resuelve cuando el estado inicial ya
+  // se ha determinado (sesión restaurada o confirmada como ausente).
+  await services.auth.authStateReady();
+  if (!services.auth.currentUser) {
     return null;
   }
 

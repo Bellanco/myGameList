@@ -108,6 +108,7 @@ export const Toolbar = memo(function Toolbar({
             <button
               type="button"
               className="search-clear"
+              aria-label={UI_MESSAGES.toolbar.clearSearch}
               onClick={() => {
                 setSearchDraft('');
                 onClearFilter('search');
@@ -118,7 +119,13 @@ export const Toolbar = memo(function Toolbar({
           ) : null}
         </div>
         {compactFilters ? (
-          <button className="btn-icon btn-filter-toggle" type="button" onClick={onFiltersToggle}>
+          <button
+            className="btn-icon btn-filter-toggle"
+            type="button"
+            aria-label={UI_MESSAGES.toolbar.toggleFilters(filtersOpen)}
+            aria-expanded={filtersOpen}
+            onClick={onFiltersToggle}
+          >
             <Icon name={filtersOpen ? COMMON_ICONS.close : activeFilterCount ? COMMON_ICONS.filterActive : COMMON_ICONS.filter} />
           </button>
         ) : null}

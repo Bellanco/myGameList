@@ -8,7 +8,7 @@ import { FriendshipButton } from './FriendshipButton';
 import type { RelationshipState } from '../../../model/types/social';
 
 /** Pantalla de perfiles sociales (directorio), con filtro por nombre. */
-export function SocialProfilesScreen({
+function SocialProfilesScreenBase({
   SOCIAL_UI,
   profileSearch,
   setProfileSearch,
@@ -181,3 +181,6 @@ export function SocialProfilesScreen({
     </section>
   );
 }
+
+// Memoizada (ver nota en SocialFeedScreen): evita re-renders del directorio ante cambios de estado no relacionados.
+export const SocialProfilesScreen = React.memo(SocialProfilesScreenBase);

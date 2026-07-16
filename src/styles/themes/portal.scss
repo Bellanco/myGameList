@@ -1,0 +1,262 @@
+/* Fuentes propias de esta paleta (fuera de la ruta crítica; solo cargan con este skin). */
+@import url("https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Saira:wght@400;500;600&family=Share+Tech+Mono&display=swap");
+
+/* ═══════════════════════════════════════════════════════════════════════════════════════════════════
+   TEMA · Cámara de pruebas (Portal / Aperture Science) — cámara de pruebas limpia: paneles con juntas,
+   señalética condensada, y la DUALIDAD de portales azul/naranja como firma (los dos FAB = los dos
+   portales; el visor de la ruleta = un portal azul). Fechas en monoespaciada tipo terminal de GLaDOS.
+   Azul = acento (`--steam`); naranja = `--portal-orange`; rosa Cubo de Compañía = `--portal-cube`. ═══ */
+
+/* ── §1 · Tipografía: Oswald (señalética condensada, versales) para titulares/etiquetas/botones/nombres;
+   Saira (técnica) para el cuerpo; Share Tech Mono (terminal) para fechas y números de puntuación. ── */
+:root[data-palette="portal"] body { font-family: 'Saira', system-ui, sans-serif; }
+:root[data-palette="portal"] h2,
+:root[data-palette="portal"] h3,
+:root[data-palette="portal"] h4,
+:root[data-palette="portal"] .modal-title,
+:root[data-palette="portal"] .dialog-title,
+:root[data-palette="portal"] .rl-card-name,
+:root[data-palette="portal"] .rl-card-tag,
+:root[data-palette="portal"] .rl-item,
+:root[data-palette="portal"] .rl-hint,
+:root[data-palette="portal"] .btn,
+:root[data-palette="portal"] .hub-seg-btn,
+:root[data-palette="portal"] thead th,
+:root[data-palette="portal"] .flabel,
+:root[data-palette="portal"] .row-name,
+:root[data-palette="portal"] .hub-name-link,
+:root[data-palette="portal"] .hub-detail-profile-link,
+:root[data-palette="portal"] .hub-feed-game-chip,
+:root[data-palette="portal"] .hub-review-game,
+:root[data-palette="portal"] .active-filter-chip,
+:root[data-palette="portal"] .chip { font-family: 'Oswald', system-ui, sans-serif; letter-spacing: .04em; }
+:root[data-palette="portal"] .score-ring-num,
+:root[data-palette="portal"] .score-dial-num,
+:root[data-palette="portal"] .hub-review-medal,
+:root[data-palette="portal"] .hub-feed-date,
+:root[data-palette="portal"] .hub-review-date { font-family: 'Share Tech Mono', ui-monospace, monospace; }
+
+/* ── §2 · Fondo: rejilla tenue de paneles de sala de pruebas (juntas azuladas). ── */
+:root[data-palette="portal"] body {
+  background-image:
+    linear-gradient(rgba(41, 182, 246, .05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(41, 182, 246, .05) 1px, transparent 1px);
+  background-size: 46px 46px;
+}
+
+/* ── §3 · Paneles: placa de pared de Aperture — borde fino + BARRA NARANJA superior (gel de propulsión)
+   para diferenciarlo del Clásico (ambos azul-oscuro); la dualidad azul/naranja es la firma de Portal. ── */
+:root[data-palette="portal"] .toolbar,
+:root[data-palette="portal"] .table-wrap,
+:root[data-palette="portal"] .settings-card,
+:root[data-palette="portal"] .hub-feed-card,
+:root[data-palette="portal"] .hub-hub-card,
+:root[data-palette="portal"] .modal,
+:root[data-palette="portal"] .alert-dialog { border: 1px solid var(--border) !important; border-top: 2px solid var(--portal-orange) !important; border-radius: var(--radius-md) !important; box-shadow: inset 0 1px 0 rgba(255, 255, 255, .07), inset 0 0 46px rgba(41, 182, 246, .05), 0 8px 26px rgba(0, 0, 0, .26) !important; }
+/* En claro, placa blanca "iluminada desde arriba": filo superior claro + tenue tinte frío + sombra limpia. */
+:root[data-palette="portal"][data-theme="light"] .toolbar,
+:root[data-palette="portal"][data-theme="light"] .table-wrap,
+:root[data-palette="portal"][data-theme="light"] .settings-card,
+:root[data-palette="portal"][data-theme="light"] .hub-feed-card,
+:root[data-palette="portal"][data-theme="light"] .hub-hub-card,
+:root[data-palette="portal"][data-theme="light"] .modal,
+:root[data-palette="portal"][data-theme="light"] .alert-dialog { box-shadow: inset 0 1px 0 rgba(255, 255, 255, .9), inset 0 0 46px rgba(41, 182, 246, .05), 0 8px 22px rgba(20, 45, 70, .12) !important; }
+
+/* ── §4 · Tabla: cabecera de señalética (Oswald) con filete NARANJA (gel), otro punto de contraste con el Clásico. ── */
+:root[data-palette="portal"] thead th { background: transparent; color: var(--text-muted); border-bottom: 2px solid var(--portal-orange); }
+
+/* ── §5 · Botones: señalética de Aperture — planos, esquinas suaves, versales condensadas. Acento = azul
+   portal con texto tinta oscura (legible en ambos temas). Variantes semánticas: tinta en OSCURO, blanco en
+   CLARO (regla 10). Sin sesgo ni glow. ── */
+:root[data-palette="portal"] .btn:not(.btn-icon):not(.btn-ghost) { font-weight: 600; letter-spacing: .05em; border: 1px solid var(--border); border-radius: var(--radius-sm); }
+:root[data-palette="portal"] .btn-secondary,
+:root[data-palette="portal"] .btn-toggle:not(.active) { background: var(--surface-elevated) !important; color: var(--text) !important; }
+:root[data-palette="portal"] .btn-accent,
+:root[data-palette="portal"] .btn-steam,
+:root[data-palette="portal"] .btn.is-active,
+:root[data-palette="portal"] .btn-toggle.active { background: var(--steam) !important; color: #062330 !important; border-color: color-mix(in srgb, var(--steam) 60%, #000) !important; }
+:root[data-palette="portal"] .btn-complete,
+:root[data-palette="portal"] .btn-recommend { background: var(--success) !important; color: #04140c !important; border-color: color-mix(in srgb, var(--success) 55%, #000) !important; }
+:root[data-palette="portal"] .btn-inprogress { background: var(--warn) !important; color: #1a1500 !important; border-color: color-mix(in srgb, var(--warn) 55%, #000) !important; }
+/* Acciones destructivas = TORRETA: rojo del ojo/láser + halo tenue de "puntería". */
+:root[data-palette="portal"] .btn-danger,
+:root[data-palette="portal"] .btn-abandoned,
+:root[data-palette="portal"] .btn-recommend-active { background: var(--portal-turret) !important; color: #fff !important; border-color: color-mix(in srgb, var(--portal-turret) 55%, #000) !important; box-shadow: 0 0 10px color-mix(in srgb, var(--portal-turret) 40%, transparent) !important; }
+:root[data-palette="portal"][data-theme="light"] .btn-complete,
+:root[data-palette="portal"][data-theme="light"] .btn-recommend,
+:root[data-palette="portal"][data-theme="light"] .btn-inprogress { color: #fff !important; }
+:root[data-palette="portal"] .btn-ghost { font-family: 'Oswald', system-ui, sans-serif; letter-spacing: .05em; }
+/* Hover: plano (sin el giro 3D base) — elevación leve + brillo. */
+:root[data-palette="portal"] .btn:not(.btn-icon):not(.btn-ghost):hover { transform: translateY(-2px); filter: brightness(1.06); box-shadow: 0 6px 16px rgba(0, 0, 0, .28); }
+:root[data-palette="portal"] .btn:not(.btn-icon):not(.btn-ghost):active { transform: translateY(0); }
+
+/* ── §6 · Chips: rótulos de señalética (Oswald), esquinas suaves. El COLOR por categoría lo pone la base
+   (adaptado a la paleta), como en el resto de temas. El chip "Amigos" se rehace como CUBO DE COMPAÑÍA:
+   placa neutra con borde y corazón rosa. ── */
+:root[data-palette="portal"] .chip,
+:root[data-palette="portal"] .rl-chip { border-radius: var(--radius-sm); box-shadow: none !important; transform: none; clip-path: none; }
+/* Chip del juego (nombre) = RÓTULO DE SEÑALÉTICA naranja (gel de propulsión), distinto del azul de los
+   géneros; recto y con el filete del cartel. NOTA: cada tema debe estilar `.hub-feed-game-chip` en su §6
+   (si no, cae a la píldora genérica de base). */
+:root[data-palette="portal"] .hub-feed-game-chip {
+  padding: .2rem .62rem;
+  border-radius: var(--radius-sm);
+  background: rgba(245, 122, 0, .1);
+  border: 1px solid var(--portal-orange);
+  color: var(--portal-orange);
+}
+:root[data-palette="portal"] .hub-friend-chip {
+  background: var(--surface-elevated);
+  color: var(--portal-cube);
+  border: 1px solid var(--portal-cube);
+  border-radius: var(--radius-sm);
+  font-family: 'Oswald', system-ui, sans-serif;
+  letter-spacing: .04em;
+}
+:root[data-palette="portal"] .hub-friend-chip::before { content: '\2665'; margin-right: .3em; color: var(--portal-cube); }
+
+/* ── §7 · Segmentos y campos: placa limpia con borde fino. ── */
+:root[data-palette="portal"] .hub-seg { border: 1px solid var(--border); }
+:root[data-palette="portal"] .input-base,
+:root[data-palette="portal"] .finput,
+:root[data-palette="portal"] .ftextarea,
+:root[data-palette="portal"] .search-input { border: 1px solid var(--border) !important; border-radius: var(--radius-sm) !important; }
+
+/* ── §8 · Insignias rejugar/oportunidad: piloto indicador — activa = azul con halo; inactiva = placa gris. ── */
+:root[data-palette="portal"] .badge-rejugar-activo,
+:root[data-palette="portal"] .badge-opp-activo { background: var(--steam) !important; color: #062330 !important; border: 1px solid color-mix(in srgb, var(--steam) 55%, #000) !important; box-shadow: 0 0 8px rgba(var(--steam-rgb), .45) !important; }
+:root[data-palette="portal"] .badge-rejugar-inactivo,
+:root[data-palette="portal"] .badge-opp-inactivo { background: var(--surface-elevated) !important; color: var(--text-muted) !important; border: 1px solid var(--border) !important; box-shadow: none !important; }
+
+/* ── §9 · Puntuación 0–100: sin marco de color añadido (el arco rojo→verde ya es la nota; un aro azul
+   encima quedaba mal). Se conserva el aro base; el número va en monoespaciada (§1). ── */
+
+/* ── §10 · Actividad social. FECHAS = terminal de GLaDOS: el timestamp en monoespaciada con un prompt azul
+   `>`; la cabecera de día es un rótulo de señalética con FRANJA DE PELIGRO amarillo/negro debajo. La barra
+   fija (sticky) se mantiene: fondo opaco y sin tocar `position` (regla del sticky). ── */
+/* Separador de día = CARTEL DE CÁMARA DE PRUEBAS: placa clara rectangular (como la señalética de Aperture),
+   texto negro condensado en mayúsculas bien espaciado, y una LÍNEA INFERIOR con el rojo del LÁSER (con glow). */
+/* OSCURO (Aperture moderna): placa de señalética OSCURA (panel del complejo), texto claro; encaja con el tema
+   sin desentonar como una placa blanca. La línea inferior es el rojo del LÁSER de Portal (descarga térmica),
+   vivo y con haz luminoso. */
+:root[data-palette="portal"] .hub-feed-day-header {
+  background: linear-gradient(180deg, #212c37, #141b23) !important;
+  border: 1px solid #33424e !important;
+  border-radius: 3px !important;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, .42), inset 0 1px 0 rgba(255, 255, 255, .06) !important;
+  padding: .3rem 1.05rem .44rem !important;
+}
+:root[data-palette="portal"] .hub-feed-day-header h4 { font-family: 'Oswald', system-ui, sans-serif; font-weight: 700; letter-spacing: .16em; color: #e6eef4; }
+:root[data-palette="portal"] .hub-feed-day-header::after {
+  content: '';
+  position: absolute;
+  left: 9%;
+  right: 9%;
+  bottom: 3px;
+  height: 2px;
+  background: #ff2323; /* láser de Portal (descarga térmica) */
+  box-shadow: 0 0 3px rgba(255, 35, 35, 1), 0 0 9px 1px rgba(255, 35, 35, .7);
+  border-radius: 1px;
+}
+/* CLARO (Aperture antigua): la placa encaja con la paleta cálida — pergamino/latón, tinta marrón; el láser
+   se mantiene rojo (algo más cálido para no chirriar sobre el crema). */
+:root[data-palette="portal"][data-theme="light"] .hub-feed-day-header {
+  background: linear-gradient(180deg, #fbf4e3, #eee0c6) !important;
+  border: 1px solid #c7b184 !important;
+  box-shadow: 0 2px 6px rgba(90, 66, 28, .18), inset 0 1px 0 rgba(255, 255, 255, .75) !important;
+}
+:root[data-palette="portal"][data-theme="light"] .hub-feed-day-header h4 { color: #3a2a18; }
+:root[data-palette="portal"][data-theme="light"] .hub-feed-day-header::after { background: #cf3a22; box-shadow: 0 0 6px 1px rgba(207, 58, 34, .55); }
+:root[data-palette="portal"] .hub-feed-date,
+:root[data-palette="portal"] .hub-review-date {
+  display: inline-flex;
+  align-items: center;
+  gap: .4em;
+  background: none;
+  border: none;
+  box-shadow: none;
+  padding: 0;
+  color: var(--text-muted);
+  font-size: .72rem;
+  letter-spacing: .02em;
+  transform: none;
+}
+:root[data-palette="portal"] .hub-feed-date::before,
+:root[data-palette="portal"] .hub-review-date::before { content: '>'; color: var(--steam); font-weight: 700; }
+
+/* ── §11 · Ruleta = selector de cámara de pruebas. Tambor/tarjetas = placas; el visor de selección es un
+   PORTAL AZUL LUMINOSO (elipse con halo); nombres en Oswald (§1). ── */
+/* Tambor = "cámara": marca de agua del LOGO DE APERTURE (anillos concéntricos) al fondo + viñeta de sala. */
+:root[data-palette="portal"] .rl-drum {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: repeating-radial-gradient(circle at 50% 46%, transparent 0 9px, rgba(41, 182, 246, .05) 9px 10px), var(--surface);
+  box-shadow: inset 0 0 34px rgba(0, 0, 0, .4);
+}
+:root[data-palette="portal"] .rl-frame { border: 2.5px solid var(--steam); border-radius: 999px; box-shadow: 0 0 16px rgba(var(--steam-rgb), .5), inset 0 0 12px rgba(var(--steam-rgb), .25); }
+:root[data-palette="portal"] .rl-hint { color: var(--steam); letter-spacing: .12em; }
+:root[data-palette="portal"] .rl-ghost,
+:root[data-palette="portal"] .rl-card { border: 1px solid var(--border); border-radius: var(--radius-md); box-shadow: 0 6px 22px rgba(0, 0, 0, .18); }
+:root[data-palette="portal"] .rl-card-tag { color: var(--steam); }
+
+/* ── §12 · FAB = LOS DOS PORTALES: añadir "+" = portal AZUL; ruleta = portal NARANJA. Discos con halo de
+   portal. Redondos por naturaleza (regla 5: sin desplazamiento de sombra en un círculo). ── */
+:root[data-palette="portal"] .fab { background: radial-gradient(circle at 50% 42%, #a9e4ff, var(--steam) 70%); border: 2px solid rgba(255, 255, 255, .35); color: #062330; box-shadow: 0 0 16px rgba(var(--steam-rgb), .6), inset 0 0 10px rgba(255, 255, 255, .4); }
+:root[data-palette="portal"] .fab-roulette { background: radial-gradient(circle at 50% 42%, #ffd8a0, var(--portal-orange) 70%); border: 2px solid rgba(255, 255, 255, .35); color: #3a1c00; box-shadow: 0 0 16px rgba(255, 158, 27, .6), inset 0 0 10px rgba(255, 255, 255, .4); }
+:root[data-palette="portal"] .fab:hover { filter: none; box-shadow: 0 0 22px rgba(var(--steam-rgb), .8), inset 0 0 10px rgba(255, 255, 255, .5); }
+:root[data-palette="portal"] .fab-roulette:hover { filter: none; box-shadow: 0 0 22px rgba(255, 158, 27, .85), inset 0 0 10px rgba(255, 255, 255, .5); }
+
+/* ── §13 · Barra de navegación inferior: placa Aperture — filete cian + barra naranja superior (gel), como los paneles. ── */
+:root[data-palette="portal"] .bottom-nav-inner { border: 1px solid rgba(0, 240, 255, .35); border-top: 2px solid var(--portal-orange); border-radius: var(--radius-md); background: var(--surface); }
+:root[data-palette="portal"] .bottom-nav-ind { border-radius: var(--radius-sm); }
+/* Favoritos publicados: placa de Aperture — borde fino; lomos variados en `--deco-shelf-*`. */
+:root[data-palette="portal"] .hub-fav-cart { border: 1px solid var(--border); border-radius: var(--radius-sm); }
+
+/* ── §14 · CLARO = APERTURE ANTIGUA: recolorea los pocos puntos con azul/cian LITERAL (no vía `--steam`) para que
+   la zona vieja quede cálida y coherente; el resto ya se calienta solo al cambiar las variables. ── */
+:root[data-palette="portal"][data-theme="light"] .fab { background: radial-gradient(circle at 50% 42%, #ffe3b0, var(--steam) 70%); color: #2a1a08; }
+:root[data-palette="portal"][data-theme="light"] .btn-toggle.active,
+:root[data-palette="portal"][data-theme="light"] .badge-opp-activo { color: #2a1a08 !important; }
+:root[data-palette="portal"][data-theme="light"] .bottom-nav-inner { border: 1px solid var(--border); border-top: 2px solid var(--portal-orange); }
+
+/* ── §15 · Efecto FLUORESCENTE (firma Portal): botones y chips titilan como un tubo fluorescente al arrancar —el
+   parpadeo típico de las pantallas de carga de Aperture— y luego quedan estables. El destello se confina al inicio
+   de un ciclo largo y se DESINCRONIZA por posición (nth) para que parezcan tubos distintos, no un bloque. Se aplica
+   en ambas zonas (antigua/moderna); respeta reduced-motion. ── */
+@media (prefers-reduced-motion: no-preference) {
+  @keyframes portal-fluoro {
+    0%, 4%, 100% { filter: brightness(1); }
+    0.6% { filter: brightness(1.14); }
+    1.3% { filter: brightness(.82); }
+    2.1% { filter: brightness(1.08); }
+    3% { filter: brightness(.9); }
+  }
+  :root[data-palette="portal"] .btn:not(.btn-icon):not(.btn-ghost),
+  :root[data-palette="portal"] .hub-seg-btn,
+  :root[data-palette="portal"] .active-filter-chip,
+  :root[data-palette="portal"] .hub-feed-game-chip,
+  :root[data-palette="portal"] .chip { animation: portal-fluoro 17s ease-in-out infinite; }
+  /* Desincroniza por posición (tubos distintos parpadean en momentos distintos). */
+  :root[data-palette="portal"] .chip:nth-of-type(3n) { animation-delay: -4s; }
+  :root[data-palette="portal"] .chip:nth-of-type(3n+1) { animation-delay: -10s; }
+  :root[data-palette="portal"] .chip:nth-of-type(4n) { animation-delay: -14s; }
+  :root[data-palette="portal"] .hub-feed-game-chip:nth-of-type(2n) { animation-delay: -8.5s; }
+  :root[data-palette="portal"] .hub-feed-game-chip:nth-of-type(3n) { animation-delay: -13s; }
+  :root[data-palette="portal"] .btn:not(.btn-icon):not(.btn-ghost):nth-of-type(2n) { animation-delay: -7s; }
+  :root[data-palette="portal"] .btn:not(.btn-icon):not(.btn-ghost):nth-of-type(3n) { animation-delay: -12s; }
+
+  /* El CARTEL de día lleva el fluorescente ORIGINAL (más marcado y frecuente): un tubo de señal que titilea
+     de verdad, no el destello tenue del resto de componentes. */
+  @keyframes portal-fluoro-strong {
+    0%, 5.5%, 100% { filter: brightness(1); }
+    0.6% { filter: brightness(1.45); }
+    1.3% { filter: brightness(.5); }
+    2.1% { filter: brightness(1.35); }
+    2.9% { filter: brightness(.72); }
+    3.7% { filter: brightness(1.18); }
+    4.6% { filter: brightness(.9); }
+  }
+  :root[data-palette="portal"] .hub-feed-day-header { animation: portal-fluoro-strong 10s ease-in-out infinite; }
+  :root[data-palette="portal"] .hub-feed-day-header:nth-of-type(2n) { animation-delay: -3.3s; }
+  :root[data-palette="portal"] .hub-feed-day-header:nth-of-type(3n) { animation-delay: -6.6s; }
+}

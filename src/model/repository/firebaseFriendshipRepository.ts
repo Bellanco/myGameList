@@ -299,6 +299,20 @@ export async function healOwnFriendshipIdentity(myUid: string, self: FriendshipS
     snapshot.docs.map((entry) => {
       const data = entry.data() as Partial<FriendshipDoc>;
       const amRequester = data.requester === myUid;
+      // Solo escribir si algún campo denormalizado DIVERGE del valor actual (evita N writes/cuota en cada
+      // apertura de social o guardado de perfil cuando nada ha cambiado). Mismo patrón que healOwnDirectoryGist.
+      const diverges = amRequester
+        ? data.requesterName !== self.name ||
+          data.requesterPhoto !== self.photo ||
+          data.requesterSocialGistId !== self.socialGistId ||
+          data.requesterGamesGistId !== self.gamesGistId
+        : data.recipientName !== self.name ||
+          data.recipientPhoto !== self.photo ||
+          data.recipientSocialGistId !== self.socialGistId ||
+          data.recipientGamesGistId !== self.gamesGistId;
+      if (!diverges) {
+        return Promise.resolve();
+      }
       const fields = amRequester
         ? {
             requesterName: self.name,
