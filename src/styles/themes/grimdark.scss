@@ -1,0 +1,229 @@
+/* ═══════════════════════════════════════════════════════════════════════════════════════════════════
+   TEMA · Solo hay guerra (Warhammer 40.000) — GRIMDARK GÓTICO IMPERIAL: la app como una PANTALLA DE
+   COGITADOR (terminal de fósforo VERDE sobre negro) enmarcada en ORO latón gótico. Tipografía blackletter
+   (UnifrakturCook) para las cartelas, industrial (Chakra Petch) para el cuerpo y CRT (VT323) para las
+   lecturas de terminal. Rojo sangre = aviso. Identidad de color: CAPA 2 en `_base.scss`.
+   ═══════════════════════════════════════════════════════════════════════════════════════════════════ */
+
+/* ── FIRMA · Pantalla de cogitador: SCANLINES verdes en el fondo + BRILLO DE TUBO (vignette verde) fijo sobre
+   todo, con PARPADEO CRT sutil (respeta reduced-motion). En claro = pergamino de códice (sin scanlines). ── */
+/* OSCURO · el CRISTAL de la pantalla (fijo, no hace scroll): SCANLINES oscuras muy finas de monitor antiguo
+   (rayas sutiles) + brillo de tubo verde + vignette de esquinas. El parpadeo CRT solo en oscuro. */
+:root[data-palette="grimdark"] body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9998;
+  background:
+    repeating-linear-gradient(0deg, rgba(0, 0, 0, .13) 0 1px, transparent 1px 3px),
+    radial-gradient(ellipse at 50% 45%, rgba(67, 245, 88, .06), transparent 55%),
+    radial-gradient(ellipse at 50% 50%, transparent 58%, rgba(0, 0, 0, .5) 100%);
+}
+@media (prefers-reduced-motion: no-preference) {
+  :root[data-palette="grimdark"]:not([data-theme="light"]) body::before { animation: grim-flicker 5s steps(1) infinite; }
+}
+@keyframes grim-flicker { 0%, 96%, 100% { opacity: 1; } 97% { opacity: .82; } 98% { opacity: .96; } 99% { opacity: .88; } }
+/* CLARO · PÁGINA DE CÓDICE: grano de vitela en el fondo + vignette de bordes envejecidos (sin scanlines). */
+:root[data-palette="grimdark"][data-theme="light"] body {
+  background-image:
+    radial-gradient(ellipse at 50% 30%, rgba(150, 120, 70, .10), transparent 62%),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='gp'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.7' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23gp)' opacity='0.06'/%3E%3C/svg%3E");
+  background-size: auto, 200px 200px;
+}
+/* Scanlines de "monitor antiguo" también en CLARO (líneas oscuras muy tenues) + la vignette sepia. Sin brillo
+   verde de tubo (el códice claro no lo lleva); el parpadeo sigue solo en oscuro. */
+:root[data-palette="grimdark"][data-theme="light"] body::before {
+  background:
+    repeating-linear-gradient(0deg, rgba(40, 34, 12, .06) 0 1px, transparent 1px 3px),
+    radial-gradient(ellipse at 50% 45%, transparent 50%, rgba(78, 52, 18, .22) 100%);
+}
+
+/* ── §1 · Tipografía: UnifrakturCook (blackletter gótico) para las CARTELAS (titulares/modal/ruleta/día) con
+   RESPLANDOR de fósforo verde; Chakra Petch (industrial) para cuerpo, botones, nombres y chips; VT323 (CRT)
+   para las LECTURAS de terminal (fechas, notas, medalla, cabecera de tabla). El glow se apaga en claro. ── */
+:root[data-palette="grimdark"] body { font-family: 'Chakra Petch', system-ui, sans-serif; }
+:root[data-palette="grimdark"] h2,
+:root[data-palette="grimdark"] h3,
+:root[data-palette="grimdark"] h4,
+:root[data-palette="grimdark"] .modal-title,
+:root[data-palette="grimdark"] .dialog-title,
+:root[data-palette="grimdark"] .rl-card-name,
+:root[data-palette="grimdark"] .rl-hint { font-family: 'UnifrakturCook', 'Times New Roman', serif; font-weight: 700; letter-spacing: .01em; }
+:root[data-palette="grimdark"] h2,
+:root[data-palette="grimdark"] .rl-card-name { color: var(--grim-green); text-shadow: 0 0 9px rgba(67, 245, 88, .45); }
+:root[data-palette="grimdark"][data-theme="light"] h2,
+:root[data-palette="grimdark"][data-theme="light"] .rl-card-name { color: #8a2a20; text-shadow: none; }
+:root[data-palette="grimdark"] .btn,
+:root[data-palette="grimdark"] .hub-seg-btn,
+:root[data-palette="grimdark"] .flabel,
+:root[data-palette="grimdark"] .row-name,
+:root[data-palette="grimdark"] .hub-name-link,
+:root[data-palette="grimdark"] .hub-detail-profile-link,
+:root[data-palette="grimdark"] .hub-review-game,
+:root[data-palette="grimdark"] .active-filter-chip,
+:root[data-palette="grimdark"] .chip { font-family: 'Chakra Petch', system-ui, sans-serif; font-weight: 600; letter-spacing: .04em; }
+:root[data-palette="grimdark"] thead th,
+:root[data-palette="grimdark"] .hub-feed-game-chip,
+:root[data-palette="grimdark"] .score-ring-num,
+:root[data-palette="grimdark"] .score-dial-num,
+:root[data-palette="grimdark"] .hub-review-medal,
+:root[data-palette="grimdark"] .hub-feed-date,
+:root[data-palette="grimdark"] .hub-review-date { font-family: 'VT323', ui-monospace, monospace; letter-spacing: .02em; }
+/* La VT323 (pixel) rinde el número pequeño para su cuerpo: se agranda un poco para que se lea mejor, pero
+   sigue INSCRITO en el círculo (base .36/.30 → .5/.42 del diámetro). */
+:root[data-palette="grimdark"] .score-ring-num { font-size: calc(var(--sz) * .5); }
+:root[data-palette="grimdark"] .score-dial-num { font-size: calc(var(--sz) * .42); }
+:root[data-palette="grimdark"] .hub-name-link,
+:root[data-palette="grimdark"] .hub-detail-profile-link { color: var(--grim-green); }
+
+/* ── §2 · Fondo: lo pone la FIRMA (scanlines + brillo de tubo). ── */
+
+/* ── §3 · Paneles: MOLDURA IMPERIAL de oro con DOBLE FILETE (borde de oro + filete interno separado por un
+   hueco de superficie) y un tenue resplandor de pantalla verde. Esquinas rectas (gótico). ── */
+:root[data-palette="grimdark"] .toolbar,
+:root[data-palette="grimdark"] .table-wrap,
+:root[data-palette="grimdark"] .settings-card,
+:root[data-palette="grimdark"] .hub-feed-card,
+:root[data-palette="grimdark"] .hub-hub-card,
+:root[data-palette="grimdark"] .modal,
+:root[data-palette="grimdark"] .alert-dialog { border: 1px solid var(--grim-gold) !important; border-radius: 0 !important; box-shadow: inset 0 0 0 3px var(--surface), inset 0 0 0 4px rgba(224, 169, 43, .4), 0 0 22px rgba(67, 245, 88, .05) !important; }
+:root[data-palette="grimdark"][data-theme="light"] .toolbar,
+:root[data-palette="grimdark"][data-theme="light"] .table-wrap,
+:root[data-palette="grimdark"][data-theme="light"] .settings-card,
+:root[data-palette="grimdark"][data-theme="light"] .hub-feed-card,
+:root[data-palette="grimdark"][data-theme="light"] .hub-hub-card,
+:root[data-palette="grimdark"][data-theme="light"] .modal,
+:root[data-palette="grimdark"][data-theme="light"] .alert-dialog { box-shadow: inset 0 0 0 3px var(--surface), inset 0 0 0 4px rgba(154, 111, 20, .5), 0 6px 16px rgba(40, 40, 30, .14) !important; }
+
+/* ── §4 · Tabla: cabecera = LECTURA DE COGITADOR (VT323 verde, filete verde inferior). ── */
+:root[data-palette="grimdark"] thead th { background: transparent; color: var(--grim-green); border-bottom: 1px solid rgba(67, 245, 88, .4); font-size: .95rem; }
+:root[data-palette="grimdark"][data-theme="light"] thead th { color: var(--steam); border-bottom-color: rgba(21, 122, 55, .45); }
+
+/* ── §5 · Botones: sello imperial — rectos, borde de oro. Acento = COMANDO de terminal (relleno VERDE fósforo
+   con texto negro + glow), en ambos temas. Semánticos rellenos; texto tinta en OSCURO y blanco en CLARO
+   (regla 10). Sin sesgo ni giro 3D. ── */
+:root[data-palette="grimdark"] .btn:not(.btn-icon):not(.btn-ghost) { font-weight: 600; letter-spacing: .05em; border: 1px solid var(--grim-gold); border-radius: 0; }
+:root[data-palette="grimdark"] .btn-secondary,
+:root[data-palette="grimdark"] .btn-toggle:not(.active) { background: var(--surface-elevated) !important; color: var(--text) !important; }
+:root[data-palette="grimdark"] .btn-accent,
+:root[data-palette="grimdark"] .btn-steam,
+:root[data-palette="grimdark"] .btn.is-active,
+:root[data-palette="grimdark"] .btn-toggle.active { background: var(--grim-green) !important; color: #04140a !important; border-color: var(--grim-green) !important; box-shadow: 0 0 12px rgba(67, 245, 88, .4) !important; }
+:root[data-palette="grimdark"][data-theme="light"] .btn-accent,
+:root[data-palette="grimdark"][data-theme="light"] .btn-steam,
+:root[data-palette="grimdark"][data-theme="light"] .btn.is-active,
+:root[data-palette="grimdark"][data-theme="light"] .btn-toggle.active { color: #fff !important; box-shadow: none !important; }
+:root[data-palette="grimdark"] .btn-complete,
+:root[data-palette="grimdark"] .btn-recommend { background: var(--success) !important; color: #04140a !important; border-color: color-mix(in srgb, var(--success) 55%, #000) !important; }
+:root[data-palette="grimdark"] .btn-inprogress { background: var(--warn) !important; color: #1a1200 !important; border-color: color-mix(in srgb, var(--warn) 55%, #000) !important; }
+:root[data-palette="grimdark"] .btn-danger,
+:root[data-palette="grimdark"] .btn-abandoned,
+:root[data-palette="grimdark"] .btn-recommend-active { background: var(--danger) !important; color: #fff !important; border-color: color-mix(in srgb, var(--danger) 55%, #000) !important; }
+:root[data-palette="grimdark"][data-theme="light"] .btn-complete,
+:root[data-palette="grimdark"][data-theme="light"] .btn-recommend,
+:root[data-palette="grimdark"][data-theme="light"] .btn-inprogress { color: #fff !important; }
+:root[data-palette="grimdark"] .btn-ghost { font-family: 'Chakra Petch', system-ui, sans-serif; font-weight: 600; letter-spacing: .05em; }
+/* Hover: plano + glow de fósforo verde (sin el giro 3D base). */
+:root[data-palette="grimdark"] .btn:not(.btn-icon):not(.btn-ghost):hover { transform: translateY(-1px); filter: brightness(1.08); box-shadow: 0 0 14px rgba(67, 245, 88, .3); }
+:root[data-palette="grimdark"] .btn:not(.btn-icon):not(.btn-ghost):active { transform: translateY(0); }
+
+/* ── §6 · Chips: rectos, Chakra Petch; el color por categoría lo pone la base. El chip del juego = ETIQUETA
+   DE DATOS de terminal (filete + texto verde); el chip "Amigos" = placa de oro con CRUZ IMPERIAL. Cada tema
+   estiliza su `.hub-feed-game-chip` en §6 (si no, cae a la píldora genérica de base). ── */
+:root[data-palette="grimdark"] .chip,
+:root[data-palette="grimdark"] .rl-chip { border-radius: 0; box-shadow: none !important; transform: none; clip-path: none; }
+:root[data-palette="grimdark"] .hub-feed-game-chip {
+  padding: .2rem .62rem;
+  border-radius: 0;
+  background: rgba(67, 245, 88, .08);
+  border: 1px solid var(--grim-green);
+  color: var(--grim-green);
+  font-size: .95rem;
+}
+:root[data-palette="grimdark"] .hub-friend-chip {
+  background: var(--surface-elevated);
+  color: var(--grim-gold);
+  border: 1px solid var(--grim-gold);
+  border-radius: 0;
+  font-family: 'Chakra Petch', system-ui, sans-serif;
+  font-weight: 600;
+}
+:root[data-palette="grimdark"] .hub-friend-chip::before { content: '\2720'; margin-right: .34em; color: var(--grim-gold); }
+
+/* ── §7 · Segmentos y campos: entrada de TERMINAL — recta, filete verde, foco verde (lo da --steam en base). ── */
+:root[data-palette="grimdark"] .hub-seg { border: 1px solid var(--grim-gold); border-radius: 0; }
+:root[data-palette="grimdark"] .input-base,
+:root[data-palette="grimdark"] .finput,
+:root[data-palette="grimdark"] .ftextarea,
+:root[data-palette="grimdark"] .search-input { border: 1px solid rgba(67, 245, 88, .35) !important; border-radius: 0 !important; }
+:root[data-palette="grimdark"][data-theme="light"] .input-base,
+:root[data-palette="grimdark"][data-theme="light"] .finput,
+:root[data-palette="grimdark"][data-theme="light"] .ftextarea,
+:root[data-palette="grimdark"][data-theme="light"] .search-input { border-color: rgba(21, 122, 55, .45) !important; }
+
+/* ── §8 · Insignias: activa = verde fósforo con halo; inactiva = superficie con filete de oro. ── */
+:root[data-palette="grimdark"] .badge-rejugar-activo,
+:root[data-palette="grimdark"] .badge-opp-activo { background: var(--grim-green) !important; color: #04140a !important; border: 1px solid var(--grim-green) !important; box-shadow: 0 0 8px rgba(67, 245, 88, .45) !important; }
+:root[data-palette="grimdark"][data-theme="light"] .badge-rejugar-activo,
+:root[data-palette="grimdark"][data-theme="light"] .badge-opp-activo { color: #fff !important; box-shadow: none !important; }
+:root[data-palette="grimdark"] .badge-rejugar-inactivo,
+:root[data-palette="grimdark"] .badge-opp-inactivo { background: var(--surface-elevated) !important; color: var(--text-muted) !important; border: 1px solid var(--grim-gold) !important; box-shadow: none !important; }
+
+/* ── §9 · Puntuación 0–100: sin aro/borde añadido (el arco de color ya es la nota). Número en VT323 (§1). ── */
+
+/* ── §10 · Actividad social. FECHAS = timestamp de cogitador (VT323 verde con prefijo `>`); la cabecera de
+   día es una CARTELA blackletter con filete de oro debajo; la reseña = registro de servo-escriba (cursiva con
+   filete verde). La barra fija (sticky) se mantiene (fondo opaco, sin tocar `position`). ── */
+:root[data-palette="grimdark"] .hub-feed-day-header { background: var(--bg) !important; border: none !important; border-radius: 0 !important; box-shadow: none !important; padding: .15rem .6rem .5rem; }
+:root[data-palette="grimdark"] .hub-feed-day-header h4 { font-family: 'UnifrakturCook', 'Times New Roman', serif; font-weight: 700; color: var(--grim-gold); }
+:root[data-palette="grimdark"] .hub-feed-day-header::after { content: ''; position: absolute; left: 8%; right: 8%; bottom: 0; height: 2px; background: linear-gradient(90deg, transparent, var(--grim-gold), transparent); }
+:root[data-palette="grimdark"] .hub-feed-date,
+:root[data-palette="grimdark"] .hub-review-date {
+  display: inline-flex;
+  align-items: center;
+  gap: .4em;
+  background: none;
+  border: none;
+  box-shadow: none;
+  padding: 0;
+  color: var(--grim-green);
+  font-size: .95rem;
+  transform: none;
+}
+:root[data-palette="grimdark"] .hub-feed-date::before,
+:root[data-palette="grimdark"] .hub-review-date::before { content: '>'; color: var(--grim-green); font-weight: 700; }
+:root[data-palette="grimdark"] .hub-feed-review-text,
+:root[data-palette="grimdark"] .hub-review-text {
+  font-style: italic;
+  border-left: 3px solid var(--grim-green);
+  padding-left: .7rem;
+  color: var(--text);
+}
+
+/* ── §11 · Ruleta = PANTALLA DE COGITADOR. Tambor = pantalla con scanlines verdes y marco de oro; el visor de
+   selección es un marco VERDE luminoso; nombres en blackletter (§1); etiqueta en oro. ── */
+:root[data-palette="grimdark"] .rl-drum {
+  border: 1px solid var(--grim-gold);
+  border-radius: 0;
+  background: repeating-linear-gradient(0deg, rgba(67, 245, 88, .06) 0 1px, transparent 1px 3px), var(--surface);
+  box-shadow: inset 0 0 30px rgba(0, 0, 0, .6), 0 0 18px rgba(67, 245, 88, .06);
+}
+:root[data-palette="grimdark"] .rl-frame { border: 2px solid var(--grim-green); border-radius: 0; box-shadow: 0 0 14px rgba(67, 245, 88, .5), inset 0 0 10px rgba(67, 245, 88, .2); }
+:root[data-palette="grimdark"] .rl-hint { color: var(--grim-green); letter-spacing: .04em; }
+:root[data-palette="grimdark"] .rl-ghost,
+:root[data-palette="grimdark"] .rl-card { border: 1px solid var(--grim-gold); border-radius: 0; box-shadow: 0 0 16px rgba(67, 245, 88, .05); }
+:root[data-palette="grimdark"] .rl-card-tag { color: var(--grim-gold); }
+
+/* ── §12 · FAB = DUALIDAD: añadir "+" = VERDE (comando de terminal); ruleta = ORO (imperial). Discos con halo
+   (redondos por naturaleza: sin desplazamiento de sombra, regla 5). ── */
+:root[data-palette="grimdark"] .fab { background: var(--grim-green); border: 1px solid var(--grim-green); color: #04140a; box-shadow: 0 0 16px rgba(67, 245, 88, .6); }
+:root[data-palette="grimdark"] .fab-roulette { background: var(--grim-gold); border: 1px solid var(--grim-gold); color: #1a1200; box-shadow: 0 0 16px rgba(224, 169, 43, .55); }
+:root[data-palette="grimdark"] .fab:hover { filter: none; box-shadow: 0 0 22px rgba(67, 245, 88, .85); }
+:root[data-palette="grimdark"] .fab-roulette:hover { filter: none; box-shadow: 0 0 22px rgba(224, 169, 43, .8); }
+
+/* ── §13 · Barra de navegación inferior: moldura de oro con resplandor de pantalla verde, esquinas rectas. ── */
+:root[data-palette="grimdark"] .bottom-nav-inner { border: 1px solid var(--grim-gold); border-radius: 0; background: var(--surface); box-shadow: 0 0 18px rgba(67, 245, 88, .05); }
+:root[data-palette="grimdark"] .bottom-nav-ind { border-radius: 0; }
+/* Favoritos publicados: placa imperial — recta, filete de ORO; lomos variados en `--deco-shelf-*`. */
+:root[data-palette="grimdark"] .hub-fav-cart { border: 1px solid var(--grim-gold); border-radius: 0; }
