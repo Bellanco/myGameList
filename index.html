@@ -4,8 +4,43 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="theme-color" content="#1a1e24">
-    <!-- F1: aplica el tema guardado antes de pintar (evita el flash). 'self' → permitido por la CSP. -->
-    <script src="/theme-init.js"></script>
+    <!-- F1: aplica el tema/paleta guardados ANTES del primer render (evita el flash). Inline para
+         ahorrar una petición bloqueante en la ruta crítica. Al no ser 'self' externo, la CSP lo
+         admite por hash SHA-256: si tocas este bloque, recalcula el hash en `public/_headers`
+         (script-src 'sha256-...'). Mantén claves/colores en sincronía con storageKeys/palettes/_base.scss. -->
+    <script>(function () {
+  var BG = {
+    steam: { dark: '#1a1e24', light: '#f0e9db' },
+    persona: { dark: '#0d0d0d', light: '#f4f1ee' },
+    portal: { dark: '#12171b', light: '#e7ecf0' },
+    cyberpunk: { dark: '#08090d', light: '#e7eaee' },
+    cuphead: { dark: '#1c1209', light: '#eddcac' },
+    grimdark: { dark: '#060b08', light: '#e4e2d4' }
+  };
+  try {
+    var pref = localStorage.getItem('mis-listas-theme');
+    var theme = pref === 'light' ? 'light'
+      : pref === 'dark' ? 'dark'
+        : (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
+    if (theme === 'light') {
+      document.documentElement.setAttribute('data-theme', 'light');
+    }
+    var palette = localStorage.getItem('mis-listas-palette');
+    if (!BG[palette]) {
+      palette = 'steam';
+    }
+    if (palette !== 'steam') {
+      document.documentElement.setAttribute('data-palette', palette);
+    }
+    if (localStorage.getItem('mis-listas-uppercase') === 'on') {
+      document.documentElement.setAttribute('data-uppercase', 'on');
+    }
+    var meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) {
+      meta.setAttribute('content', BG[palette][theme]);
+    }
+  } catch (e) {}
+})();</script>
     <meta name="description" content="Organiza, puntúa y sincroniza tu colección de videojuegos.">
     <meta property="og:type" content="website">
     <meta property="og:site_name" content="My Game List">

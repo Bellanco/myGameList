@@ -202,6 +202,8 @@ export const UI_MESSAGES = {
   },
   toolbar: {
     searchPlaceholder: 'Buscar',
+    clearSearch: 'Limpiar búsqueda',
+    toggleFilters: (open: boolean) => (open ? 'Ocultar filtros' : 'Mostrar filtros'),
     steamDeck: 'Steam Deck',
     removeFilter: (label: string) => `Quitar filtro ${label}`,
     genre: 'Género',
