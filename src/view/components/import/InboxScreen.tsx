@@ -25,16 +25,20 @@ const searchStyle: CSSProperties = {
 interface InboxScreenProps {
   imported: ImportedGame[];
   isInLists: (name: string) => boolean;
+  /** ¿En qué lista está el juego? (para mostrarlo junto a la marca "Ya en tus listas"). null si no está. */
+  listOf: (name: string) => TabId | null;
   onClassify: (item: ImportedGame, tab: TabId) => void;
   onEnrich: (item: ImportedGame) => void;
   onDiscard: (id: number) => void;
   onDiscardMany: (ids: number[]) => void;
   onClear: () => void;
+  /** Volver a la pantalla anterior (Integraciones). */
+  onBack: () => void;
   onGoIntegrations: () => void;
 }
 
 /** Bandeja: buscador por texto + scroll infinito (render incremental) + multiselección. */
-export function InboxScreen({ imported, isInLists, onClassify, onEnrich, onDiscard, onDiscardMany, onClear, onGoIntegrations }: InboxScreenProps) {
+export function InboxScreen({ imported, isInLists, listOf, onClassify, onEnrich, onDiscard, onDiscardMany, onClear, onBack, onGoIntegrations }: InboxScreenProps) {
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [query, setQuery] = useState('');
   const [visible, setVisible] = useState(PAGE);
@@ -64,9 +68,19 @@ export function InboxScreen({ imported, isInLists, onClassify, onEnrich, onDisca
   const selectedCount = useMemo(() => imported.filter((g) => selectedIds.has(g.id)).length, [imported, selectedIds]);
   const allFilteredSelected = filtered.length > 0 && filtered.every((g) => selectedIds.has(g.id));
 
+  const backRow = (
+    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', alignItems: 'center' }}>
+      <button type="button" className="btn btn-secondary" onClick={onBack}>
+        <Icon name={COMMON_ICONS.arrowBack} />
+        <span>{UI_MESSAGES.import.back}</span>
+      </button>
+    </div>
+  );
+
   if (imported.length === 0) {
     return (
       <div style={screenStyle}>
+        {backRow}
         <div className="settings-card">
           <div className="settings-card-head">
             <h2>{M.title}</h2>
@@ -100,6 +114,7 @@ export function InboxScreen({ imported, isInLists, onClassify, onEnrich, onDisca
 
   return (
     <div style={screenStyle}>
+      {backRow}
       <div className="settings-card">
         <div className="settings-card-head">
           <h2>{M.title}</h2>
@@ -136,6 +151,7 @@ export function InboxScreen({ imported, isInLists, onClassify, onEnrich, onDisca
       <ImportInboxTable
         items={shown}
         isInLists={isInLists}
+        listOf={listOf}
         selectedIds={selectedIds}
         onToggleSelect={toggleSelect}
         onClassify={onClassify}
