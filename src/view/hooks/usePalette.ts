@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { PALETTE_KEY } from '../../core/constants/storageKeys';
 import { DEFAULT_PALETTE, parsePaletteId, type PaletteId } from '../../core/constants/palettes';
 import { applyThemeColor, type ThemePreference } from './useTheme';
+import { loadPaletteSkin } from './paletteSkin';
 import { APPEARANCE_HYDRATED_EVENT, persistPalettePreference } from '../../model/repository/appearancePreferenceRepository';
 
 /** Preferencia inicial de paleta: lo guardado (validado); si no hay nada, la paleta por defecto. */
@@ -29,6 +30,8 @@ function applyPalette(palette: PaletteId): void {
   if (palette === DEFAULT_PALETTE) {
     root.removeAttribute('data-palette');
   } else {
+    // Carga el skin (CAPA 3) de la paleta; los colores ya están en base, así que no hay flash de color.
+    loadPaletteSkin(palette);
     root.setAttribute('data-palette', palette);
   }
   applyThemeColor(currentTheme());

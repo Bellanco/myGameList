@@ -1,0 +1,274 @@
+/* Fuentes propias de esta paleta (fuera de la ruta crítica; solo cargan con este skin). */
+@import url("https://fonts.googleapis.com/css2?family=Luckiest+Guy&family=Titan+One&family=Nunito:ital,wght@0,400;0,600;0,700;0,800;0,900;1,600;1,700&display=swap");
+
+/* ═══════════════════════════════════════════════════════════════════════════════════════════════════
+   TEMA · Trato con el diablo (Cuphead) — DIBUJO ANIMADO DE LOS AÑOS 30 (rubber-hose, estilo Disney/Fleischer):
+   todo REDONDEADO y con CONTORNO DE TINTA grueso, tipografía dibujada a mano (Fredericka the Great) sobre
+   cuerpo redondo (Nunito), rojo Cuphead + azul Mugman, y — la FIRMA — un FILTRO DE PELÍCULA (grano + viñeta)
+   sobre toda la app, como el que StudioMDHR impone al juego para fingir metraje de los años 30.
+   La tinta usa `--cup-line` (theme-aware: crema en oscuro / tinta en claro, regla 1). Color: CAPA 2 en `_base.scss`.
+   ═══════════════════════════════════════════════════════════════════════════════════════════════════ */
+
+/* ── FIRMA · Filtro de película: grano animado (ruido fractal SVG, monocromo) + viñeta, en overlays fijos
+   `pointer-events:none` sobre TODO el marco (como el filtro del juego). Grano en soft-light para no reventar
+   la legibilidad; el parpadeo (jitter de posición) respeta `prefers-reduced-motion`. ── */
+:root[data-palette="cuphead"] body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9998;
+  /* BORDE QUE SE QUEMA: del centro limpio, una banda de RESCOLDO ámbar y luego el CARBÓN de la cinta chamuscada
+     en las esquinas — como el celuloide ardiendo en el proyector. */
+  background: radial-gradient(ellipse at 50% 42%, transparent 46%, rgba(255, 138, 38, .10) 70%, rgba(10, 5, 2, .42) 100%);
+}
+:root[data-palette="cuphead"][data-theme="light"] body::before { background: radial-gradient(ellipse at 50% 42%, transparent 52%, rgba(74, 48, 16, .24) 100%); }
+:root[data-palette="cuphead"] body::after {
+  content: '';
+  position: fixed;
+  inset: -20px; /* margen para que el jitter del grano no descubra el borde */
+  pointer-events: none;
+  z-index: 9999;
+  opacity: .22;
+  mix-blend-mode: soft-light;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='170' height='170'%3E%3Cfilter id='cg'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23cg)'/%3E%3C/svg%3E");
+}
+:root[data-palette="cuphead"][data-theme="light"] body::after { opacity: .2; }
+/* Parpadeo de metraje viejo: más LENTO y con menos salto (antes .5s era nervioso). */
+@media (prefers-reduced-motion: no-preference) {
+  :root[data-palette="cuphead"] body::after { animation: cup-grain 1.4s steps(1) infinite; }
+}
+@keyframes cup-grain {
+  0% { background-position: 0 0; }
+  33% { background-position: -16px 10px; }
+  66% { background-position: 12px -14px; }
+  100% { background-position: 0 0; }
+}
+
+/* ── §1 · Tipografía: Fredericka the Great (dibujada a mano, entintada) para los MOMENTOS DE CARTELA
+   (titulares, título de modal, resultado de ruleta, número de nota, medalla); Nunito (terminaciones
+   redondas = rubber-hose) para el cuerpo y las etiquetas/nombres, con peso alto para el trazo grueso. ── */
+:root[data-palette="cuphead"] body { font-family: 'Nunito', system-ui, sans-serif; }
+:root[data-palette="cuphead"] h2,
+:root[data-palette="cuphead"] h3,
+:root[data-palette="cuphead"] h4,
+:root[data-palette="cuphead"] .modal-title,
+:root[data-palette="cuphead"] .dialog-title,
+:root[data-palette="cuphead"] .rl-card-name,
+:root[data-palette="cuphead"] .rl-hint,
+:root[data-palette="cuphead"] .score-ring-num,
+:root[data-palette="cuphead"] .score-dial-num,
+:root[data-palette="cuphead"] .hub-review-medal { font-family: 'Luckiest Guy', 'Arial Black', cursive; font-weight: 400; letter-spacing: .02em; }
+:root[data-palette="cuphead"] .btn,
+:root[data-palette="cuphead"] .hub-seg-btn,
+:root[data-palette="cuphead"] thead th,
+:root[data-palette="cuphead"] .flabel,
+:root[data-palette="cuphead"] .row-name,
+:root[data-palette="cuphead"] .hub-name-link,
+:root[data-palette="cuphead"] .hub-detail-profile-link,
+:root[data-palette="cuphead"] .hub-feed-game-chip,
+:root[data-palette="cuphead"] .hub-review-game,
+:root[data-palette="cuphead"] .active-filter-chip,
+:root[data-palette="cuphead"] .rl-card-tag,
+:root[data-palette="cuphead"] .rl-item,
+:root[data-palette="cuphead"] .chip { font-family: 'Nunito', system-ui, sans-serif; font-weight: 800; letter-spacing: .01em; }
+/* Los NOMBRES de personas (perfiles/amigos) van en una fuente cartoon CON minúsculas (Titan One: hinchada y
+   redonda, estilo Luckiest Guy pero con caja baja real), no en Luckiest Guy (que los hacía parecer gritados). */
+:root[data-palette="cuphead"] .hub-feed-card-head-text h3,
+:root[data-palette="cuphead"] .hub-profile-hero-name,
+:root[data-palette="cuphead"] .hub-name-link,
+:root[data-palette="cuphead"] .hub-detail-profile-link { font-family: 'Titan One', 'Luckiest Guy', cursive; font-weight: 400; letter-spacing: .01em; }
+
+/* ── §2 · Fondo: papel envejecido con FOCO DE ESCENARIO cálido (como el iris central de las cartelas). El
+   grano/viñeta los ponen los overlays de la FIRMA (arriba). ── */
+:root[data-palette="cuphead"] body {
+  /* Resplandor del PROYECTOR quemando la cinta: charco de ORO mostaza CONCENTRADO arriba (el amarillo de la
+     portada ardiendo a través de la cinta) + rescoldo rojizo abajo, sobre el negro chamuscado del `--bg` que
+     DOMINA el resto. Concentrado (no un lavado pálido) para que se lea celuloide, no crema. Fijo al scroll. */
+  background-image:
+    radial-gradient(ellipse 78% 48% at 50% 12%, rgba(255, 184, 26, .20), transparent 52%),
+    radial-gradient(ellipse 92% 58% at 50% 120%, rgba(255, 88, 32, .10), transparent 62%);
+  background-attachment: fixed;
+}
+:root[data-palette="cuphead"][data-theme="light"] body { background-image: radial-gradient(ellipse 90% 70% at 50% 22%, rgba(255, 246, 214, .45), transparent 62%); }
+
+/* ── §3 · Paneles: CARTA DE DIBUJO — esquinas muy redondeadas, CONTORNO DE TINTA grueso (`--cup-line`) y
+   SOMBRA DIBUJADA desplazada. La sombra es oscura y se ve en AMBOS temas porque ningún fondo es casi-negro
+   (a diferencia de Persona), así que no hace falta el override doble de la regla 1. ── */
+:root[data-palette="cuphead"] .toolbar,
+:root[data-palette="cuphead"] .table-wrap,
+:root[data-palette="cuphead"] .settings-card,
+:root[data-palette="cuphead"] .hub-feed-card,
+:root[data-palette="cuphead"] .hub-hub-card,
+:root[data-palette="cuphead"] .modal,
+:root[data-palette="cuphead"] .alert-dialog { border: 3.5px solid var(--cup-line) !important; border-radius: var(--radius-lg) !important; box-shadow: 5px 6px 0 rgba(0, 0, 0, .38) !important; }
+:root[data-palette="cuphead"][data-theme="light"] .toolbar,
+:root[data-palette="cuphead"][data-theme="light"] .table-wrap,
+:root[data-palette="cuphead"][data-theme="light"] .settings-card,
+:root[data-palette="cuphead"][data-theme="light"] .hub-feed-card,
+:root[data-palette="cuphead"][data-theme="light"] .hub-hub-card,
+:root[data-palette="cuphead"][data-theme="light"] .modal,
+:root[data-palette="cuphead"][data-theme="light"] .alert-dialog { box-shadow: 5px 6px 0 rgba(36, 24, 18, .26) !important; }
+/* La barra lateral de nota de las reseñas (`.hub-review-entry::before`, altura completa) asomaba por las
+   esquinas al tener el radio grande de Cuphead. Recortamos SOLO la tarjeta de reseña a su radio (no la toolbar
+   ni la tabla, que tienen desplegables). La sombra dibujada es box-shadow externa, no se recorta. */
+:root[data-palette="cuphead"] .hub-feed-card { overflow: hidden; }
+
+/* ── §4 · Tabla: cabecera = RÓTULO de cartela con banda mostaza (contrato) y filete de tinta inferior. ── */
+:root[data-palette="cuphead"] thead th { background: rgba(217, 154, 31, .22); color: var(--text); border-bottom: 3.5px solid var(--cup-line); }
+
+/* ── §5 · Botones = PASTILLAS de goma (rubber-hose): totalmente redondeados (píldora), contorno de tinta y
+   SOMBRA DIBUJADA de bloque; el hover REBOTA (sube y agranda la sombra), sin el giro 3D de base. Relleno
+   sólido por variante con color de texto fijado por contraste (regla 10). ── */
+:root[data-palette="cuphead"] .btn:not(.btn-icon):not(.btn-ghost) { border: 3px solid var(--cup-line) !important; border-radius: 999px !important; font-weight: 800; box-shadow: 3px 4px 0 rgba(0, 0, 0, .38) !important; }
+:root[data-palette="cuphead"][data-theme="light"] .btn:not(.btn-icon):not(.btn-ghost) { box-shadow: 3px 4px 0 rgba(36, 24, 18, .28) !important; }
+:root[data-palette="cuphead"] .btn-secondary,
+:root[data-palette="cuphead"] .btn-toggle:not(.active) { background: var(--surface-elevated) !important; color: var(--text) !important; }
+:root[data-palette="cuphead"] .btn-accent,
+:root[data-palette="cuphead"] .btn-steam,
+:root[data-palette="cuphead"] .btn.is-active,
+:root[data-palette="cuphead"] .btn-toggle.active { background: var(--steam) !important; color: #fff5ec !important; }
+:root[data-palette="cuphead"] .btn-complete,
+:root[data-palette="cuphead"] .btn-recommend { background: var(--success) !important; color: #06180a !important; }
+:root[data-palette="cuphead"] .btn-inprogress { background: var(--warn) !important; color: #201712 !important; }
+:root[data-palette="cuphead"] .btn-danger,
+:root[data-palette="cuphead"] .btn-abandoned,
+:root[data-palette="cuphead"] .btn-recommend-active { background: var(--danger) !important; color: #fff5ec !important; }
+:root[data-palette="cuphead"] .btn-ghost { font-weight: 700; }
+/* Rebote de goma en hover (sin el giro 3D de base). */
+:root[data-palette="cuphead"] .btn:not(.btn-icon):not(.btn-ghost):hover { transform: translateY(-2px); filter: brightness(1.05); box-shadow: 4px 6px 0 rgba(0, 0, 0, .4) !important; }
+:root[data-palette="cuphead"][data-theme="light"] .btn:not(.btn-icon):not(.btn-ghost):hover { box-shadow: 4px 6px 0 rgba(36, 24, 18, .3) !important; }
+:root[data-palette="cuphead"] .btn:not(.btn-icon):not(.btn-ghost):active { transform: translateY(1px); box-shadow: 2px 2px 0 rgba(0, 0, 0, .34) !important; }
+
+/* ── §6 · Chips: PASTILLAS redondas con contorno de tinta fino; el color por categoría lo pone la base. El
+   chip del juego = CHAPA ROJA (Cuphead) con contorno y texto crema; el chip "Amigos" = pastilla crema con
+   ESTRELLA (los dibujos de los 30 están llenos de estrellitas). Cada tema estiliza su `.hub-feed-game-chip`
+   en §6 (si no, cae a la píldora genérica de base). ── */
+:root[data-palette="cuphead"] .chip,
+:root[data-palette="cuphead"] .rl-chip { border-radius: 999px; border: 2px solid var(--cup-line) !important; transform: none; clip-path: none; }
+:root[data-palette="cuphead"] .hub-feed-game-chip {
+  padding: .22rem .72rem;
+  border-radius: 999px;
+  background: var(--steam);
+  border: 2.5px solid var(--cup-line);
+  color: #fff5ec;
+  letter-spacing: .01em;
+}
+:root[data-palette="cuphead"] .hub-friend-chip {
+  background: var(--surface-elevated);
+  color: var(--steam);
+  border: 2.5px solid var(--cup-line);
+  border-radius: 999px;
+  font-family: 'Nunito', system-ui, sans-serif;
+  font-weight: 800;
+}
+:root[data-palette="cuphead"] .hub-friend-chip::before { content: '\2605'; margin-right: .34em; color: var(--cup-gold); }
+
+/* ── §7 · Segmentos y campos: superficies redondeadas con borde de contenedor (el contorno de tinta grueso
+   se reserva a paneles/botones/chips para no saturar). El foco lo da `--steam` en base. ── */
+:root[data-palette="cuphead"] .hub-seg { border: 2px solid var(--border); border-radius: 999px; }
+:root[data-palette="cuphead"] .hub-seg-btn { border-radius: 999px; }
+:root[data-palette="cuphead"] .input-base,
+:root[data-palette="cuphead"] .finput,
+:root[data-palette="cuphead"] .ftextarea,
+:root[data-palette="cuphead"] .search-input { background: var(--surface-elevated) !important; color: var(--text) !important; border: 2px solid var(--border) !important; border-radius: var(--radius-md) !important; }
+
+/* ── §8 · Insignias rejugar/oportunidad: pastillas — activa = roja con contorno de tinta; inactiva = superficie con borde. ── */
+:root[data-palette="cuphead"] .badge-rejugar-activo,
+:root[data-palette="cuphead"] .badge-opp-activo { background: var(--steam) !important; color: #fff5ec !important; border: 2px solid var(--cup-line) !important; border-radius: 999px !important; box-shadow: 2px 2px 0 rgba(0, 0, 0, .3) !important; }
+:root[data-palette="cuphead"] .badge-rejugar-inactivo,
+:root[data-palette="cuphead"] .badge-opp-inactivo { background: var(--surface-elevated) !important; color: var(--text-muted) !important; border: 2px solid var(--border) !important; border-radius: 999px !important; box-shadow: none !important; }
+
+/* ── §9 · Puntuación 0–100: sin aro/borde añadido (el arco de color ya es la nota). El número va en la
+   fuente de cartela (Fredericka, §1) — un número dibujado de dibujo animado. ── */
+
+/* ── §10 · Actividad social. FECHAS = ENTRADA DE CINE troquelada: pastilla con borde DISCONTINUO (perforado)
+   y estrellita. La cabecera de día es una CARTELA (Fredericka) con banda mostaza debajo. La reseña se trata
+   como NOTA MANUSCRITA (cursiva) con filete mostaza. La barra fija (sticky) se mantiene (fondo opaco). ── */
+/* Cabecera de día = CARTELA/banderola: rótulo mostaza con contorno de tinta, sombra dibujada y fuente de
+   cartela (Luckiest Guy). Sticky: fondo de superficie opaco, sin tocar `position`. */
+:root[data-palette="cuphead"] .hub-feed-day-header { background: transparent !important; border: none !important; border-radius: 0 !important; box-shadow: none !important; padding: .35rem .6rem; }
+:root[data-palette="cuphead"] .hub-feed-day-header h4 {
+  display: inline-block;
+  font-family: 'Luckiest Guy', 'Arial Black', cursive;
+  font-weight: 400;
+  letter-spacing: .02em;
+  color: var(--cup-ink);
+  background: var(--cup-gold);
+  border: 2.5px solid var(--cup-ink);
+  border-radius: 6px;
+  padding: .1rem .8rem;
+}
+/* La sombra dibujada solo en CLARO: en oscuro un desplazamiento negro sobre el panel oscuro se veía como una
+   mancha rara (el fondo claro "a pelo"). El rótulo de oro con borde de tinta ya se lee solo en oscuro. */
+:root[data-palette="cuphead"][data-theme="light"] .hub-feed-day-header h4 { box-shadow: 3px 3px 0 rgba(36, 24, 18, .26); }
+:root[data-palette="cuphead"] .hub-feed-date,
+:root[data-palette="cuphead"] .hub-review-date {
+  display: inline-flex;
+  align-items: center;
+  gap: .38em;
+  align-self: flex-start;
+  padding: .2em .72em;
+  background: var(--surface-elevated);
+  border: 2px dashed var(--cup-line);
+  border-radius: 999px;
+  color: var(--text-muted);
+  font-family: 'Nunito', system-ui, sans-serif;
+  font-weight: 700;
+  font-size: .68rem;
+  transform: none;
+  box-shadow: none;
+}
+:root[data-palette="cuphead"] .hub-feed-date::before,
+:root[data-palette="cuphead"] .hub-review-date::before { content: '\2605'; color: var(--cup-gold); }
+:root[data-palette="cuphead"] .hub-feed-activity-item { gap: .62rem; }
+:root[data-palette="cuphead"] .hub-feed-date { margin-bottom: .28rem; }
+:root[data-palette="cuphead"] .hub-feed-review-text,
+:root[data-palette="cuphead"] .hub-review-text {
+  font-style: italic;
+  font-weight: 600;
+  border-left: 3px solid var(--cup-gold);
+  padding-left: .7rem;
+  color: var(--text);
+}
+
+/* ── §11 · Ruleta = TÓMBOLA de feria de los 30. Tambor = carta redonda con contorno de tinta + foco cálido;
+   el visor de selección es un ARO ROJO grueso (diana); nombres en Fredericka (§1); etiqueta en mostaza. ── */
+:root[data-palette="cuphead"] .rl-drum {
+  border: 3px solid var(--cup-line);
+  border-radius: var(--radius-lg);
+  background: radial-gradient(ellipse at 50% 42%, rgba(230, 167, 44, .12), transparent 62%), var(--surface);
+  box-shadow: 5px 6px 0 rgba(0, 0, 0, .34);
+}
+:root[data-palette="cuphead"][data-theme="light"] .rl-drum { box-shadow: 5px 6px 0 rgba(36, 24, 18, .24); }
+:root[data-palette="cuphead"] .rl-frame { border: 3px solid var(--steam); border-radius: var(--radius-lg); box-shadow: 0 0 0 3px var(--cup-line); }
+:root[data-palette="cuphead"] .rl-hint { color: var(--steam); }
+:root[data-palette="cuphead"] .rl-ghost,
+:root[data-palette="cuphead"] .rl-card {
+  border: 3px solid var(--cup-line);
+  border-radius: var(--radius-lg);
+  box-shadow: 5px 6px 0 rgba(0, 0, 0, .32);
+}
+:root[data-palette="cuphead"][data-theme="light"] .rl-ghost,
+:root[data-palette="cuphead"][data-theme="light"] .rl-card { box-shadow: 5px 6px 0 rgba(36, 24, 18, .22); }
+:root[data-palette="cuphead"] .rl-card-tag { color: var(--cup-gold); }
+
+/* ── §12 · FAB = LA DUALIDAD Cuphead/Mugman: añadir "+" = ROJO (Cuphead); ruleta = AZUL (Mugman). Discos con
+   contorno de tinta y sombra FINA (2px) porque en un círculo un desplazamiento grande deja media luna (regla 5). ── */
+:root[data-palette="cuphead"] .fab { background: var(--steam); border: 2.5px solid var(--cup-line); color: #fff5ec; box-shadow: 2px 2px 0 rgba(0, 0, 0, .34); }
+:root[data-palette="cuphead"] .fab-roulette { background: var(--cup-blue); border: 2.5px solid var(--cup-line); color: #fff5ec; box-shadow: 2px 2px 0 rgba(0, 0, 0, .34); }
+:root[data-palette="cuphead"][data-theme="light"] .fab,
+:root[data-palette="cuphead"][data-theme="light"] .fab-roulette { box-shadow: 2px 2px 0 rgba(36, 24, 18, .26); }
+:root[data-palette="cuphead"] .fab:hover { background: var(--steam-hover); filter: none; transform: translateY(-1px); }
+:root[data-palette="cuphead"] .fab-roulette:hover { filter: brightness(1.08); transform: translateY(-1px); }
+
+/* ── §13 · Barra de navegación inferior: carta de dibujo redonda (contorno de tinta + sombra dibujada), como los paneles (§3). ── */
+:root[data-palette="cuphead"] .bottom-nav-inner { border: 3px solid var(--cup-line); border-radius: var(--radius-lg); background: var(--surface); box-shadow: 0 8px 20px rgba(0, 0, 0, .34), 4px 5px 0 rgba(0, 0, 0, .3); }
+:root[data-palette="cuphead"][data-theme="light"] .bottom-nav-inner { box-shadow: 0 8px 20px rgba(36, 24, 18, .16), 4px 5px 0 rgba(36, 24, 18, .2); }
+/* Pastilla activa = CHAPA ROJA con contorno de tinta: el tinte rojo tenue de base (rgba .1) se perdía sobre
+   el fondo cálido oscuro. Texto/icono activo en crema para leerse sobre el rojo. */
+:root[data-palette="cuphead"] .bottom-nav-ind { border-radius: 999px; background: var(--steam); box-shadow: inset 0 0 0 2px var(--cup-line); }
+/* Favoritos publicados: carta de dibujo — contorno de tinta grueso, esquinas redondeadas; lomos variados en `--deco-shelf-*`. */
+:root[data-palette="cuphead"] .hub-fav-cart { border: 2.5px solid var(--cup-line); border-radius: var(--radius-md); }
+:root[data-palette="cuphead"] .hub-fav-cart:hover { border-color: var(--cup-line); }
+:root[data-palette="cuphead"] .bottom-nav-btn.active { color: #fff5ec; }

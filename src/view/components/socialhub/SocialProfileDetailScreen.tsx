@@ -1,4 +1,4 @@
-﻿import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
+﻿import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { Icon } from '../Icon';
 import { GameTable } from '../GameTable';
 import type { SocialUiLabels } from '../../../core/constants/labels';
@@ -106,7 +106,7 @@ type SocialProfileDetail = {
   favorites?: string[];
 };
 
-export function SocialProfileDetailScreen({
+function SocialProfileDetailScreenBase({
   SOCIAL_UI,
   activeProfileDetail,
   isOwnProfile = false,
@@ -606,4 +606,8 @@ export function SocialProfileDetailScreen({
     </section>
   );
 }
+
+// Memoizada (ver nota en SocialFeedScreen): la pantalla de perfil ajeno monta un GameTable pesado; evita
+// re-renders cuando cambia un estado no relacionado del VM mientras está activa.
+export const SocialProfileDetailScreen = memo(SocialProfileDetailScreenBase);
 

@@ -1,9 +1,8 @@
 import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
-import { DIALOG_MESSAGES, ROUTE_TAB, SYNC_BADGE_TEXT, SYNC_MESSAGES, TAB_ROUTE, TAB_TITLES } from './core/constants/labels';
+import { DIALOG_MESSAGES, ROUTE_TAB, SYNC_BADGE_TEXT, SYNC_MESSAGES, TAB_ROUTE, TAB_TITLES, UI_MESSAGES } from './core/constants/labels';
 import { TAB_IDS, type TabData, type TabId } from './model/types/game';
 import { resolveGrade } from './core/utils/scoreScale';
-import { publishReviewActivity, unpublishReviewActivity } from './model/repository/socialPublishRepository';
 import { normalizeData } from './model/repository/localRepository';
 import { IconSprite } from './view/components/IconSprite';
 import { FloatingControls } from './view/components/FloatingControls';
@@ -12,6 +11,7 @@ import { Toolbar } from './view/components/Toolbar';
 import { GameTable } from './view/components/GameTable';
 import { StatusBanner } from './view/components/StatusBanner';
 import { BottomNavigation, type AppSection } from './view/components/BottomNavigation';
+import { ScrollToTop } from './view/components/ScrollToTop';
 import { useGameListViewModel } from './viewmodel/useGameListViewModel';
 import { useToolbarFilters } from './viewmodel/useToolbarFilters';
 import { computeTabOptions, countActiveFilters } from './viewmodel/toolbarFilters';
@@ -23,7 +23,11 @@ import { useUppercase } from './view/hooks/useUppercase';
 import { useShowSteamButton } from './view/hooks/useShowSteamButton';
 import { useAppliedPalette } from './view/hooks/usePalette';
 import { hasGithubOAuthRedirect } from './model/repository/githubOAuthRepository';
-import { buildListsPool, buildListsWeigher } from './core/roulette/roulette';
+import { buildListsPool, buildListsWeigher, normalizeName } from './core/roulette/roulette';
+import { useImportInbox } from './viewmodel/useImportInbox';
+import { parseLibraryExporter } from './core/import/libraryExporter';
+import { importedToPartialGame, mergeImportedIntoGame } from './core/import/staging';
+import type { ImportedGame, RawExternalGame } from './model/types/import';
 
 const FormModal = lazy(() => import('./view/modals/FormModal').then((module) => ({ default: module.FormModal })));
 const ConfirmModal = lazy(() => import('./view/modals/ConfirmModal').then((module) => ({ default: module.ConfirmModal })));
@@ -31,6 +35,8 @@ const SettingsHub = lazy(() => import('./view/components/SettingsHub').then((mod
 const SocialHub = lazy(() => import('./view/components/SocialHub').then((module) => ({ default: module.SocialHub })));
 const AccountHub = lazy(() => import('./view/components/AccountHub').then((module) => ({ default: module.AccountHub })));
 const RouletteModal = lazy(() => import('./view/components/roulette/RouletteModal').then((module) => ({ default: module.RouletteModal })));
+const IntegrationsScreen = lazy(() => import('./view/components/import/IntegrationsScreen').then((module) => ({ default: module.IntegrationsScreen })));
+const InboxScreen = lazy(() => import('./view/components/import/InboxScreen').then((module) => ({ default: module.InboxScreen })));
 
 function getCurrentTab(pathname: string): TabId {
   return ROUTE_TAB[pathname] || 'c';
@@ -40,6 +46,8 @@ function getCurrentSection(pathname: string): AppSection {
   if (pathname.startsWith('/social')) return 'social';
   if (pathname.startsWith('/ajustes')) return 'settings';
   if (pathname.startsWith('/cuenta')) return 'account';
+  if (pathname.startsWith('/integraciones')) return 'integrations';
+  if (pathname.startsWith('/bandeja')) return 'inbox';
   return 'lists';
 }
 
@@ -69,6 +77,8 @@ export const APP_ROUTE_PATHS = [
   '/social/user/:userId/game/:gameId/:eventType',
   '/ajustes',
   '/cuenta',
+  '/integraciones',
+  '/bandeja',
 ] as const;
 
 export default function App() {
@@ -117,6 +127,89 @@ export default function App() {
     persistFromSync,
     notify,
   } = vm;
+
+  // Bandeja de importados (local, no sincroniza). Se monta aquí para exponer su contador en los controles
+  // flotantes y cablear la graduación (clasificar → formulario → retirar de la bandeja).
+  const inbox = useImportInbox();
+  const graduatingIdRef = useRef<number | null>(null);
+  // Nombres ya presentes en las listas (normalizados) → para marcar duplicados al importar y en la bandeja.
+  const listNames = useMemo(
+    () => new Set(TAB_IDS.flatMap((tab) => vm.data[tab].map((game) => normalizeName(game.name)))),
+    [vm.data],
+  );
+  // ¿El importado ya está en alguna lista? (marca de la bandeja; O(1)).
+  const isInLists = useCallback((name: string) => listNames.has(normalizeName(name)), [listNames]);
+  // Resuelve el juego existente por nombre (para enriquecerlo). Solo al pulsar "Actualizar".
+  const findGameByName = useCallback(
+    (name: string): { tab: TabId; id: number } | null => {
+      const norm = normalizeName(name);
+      for (const tab of TAB_IDS) {
+        const game = vm.data[tab].find((g) => normalizeName(g.name) === norm);
+        if (game) return { tab, id: game.id };
+      }
+      return null;
+    },
+    [vm.data],
+  );
+
+  // ¿En QUÉ lista está? (para mostrarlo junto a la marca "Ya en tus listas" en la bandeja). null si no está.
+  const listOfName = useCallback((name: string): TabId | null => findGameByName(name)?.tab ?? null, [findGameByName]);
+
+  // Inserta en la bandeja el resultado de un parser y avisa; navega a la bandeja si hubo algo.
+  const importGames = useCallback(
+    (games: RawExternalGame[]) => {
+      if (games.length === 0) {
+        notify('warn', UI_MESSAGES.import.integrations.parseError);
+        return;
+      }
+      const summary = inbox.addGames(games, listNames);
+      notify('ok', UI_MESSAGES.import.notice(summary.added, summary.merged, summary.duplicates));
+      navigate('/bandeja');
+    },
+    [inbox, listNames, navigate, notify],
+  );
+
+  // Opción A: "Json Library Import Export" → varios .json (games.json + ficheros de lookup).
+  // Import de Playnite Library Exporter: un único fichero JSON.
+  const handleImportLibraryExporter = useCallback(
+    async (file: File) => {
+      let json: unknown;
+      try {
+        json = JSON.parse(await file.text()) as unknown;
+      } catch {
+        notify('err', UI_MESSAGES.import.integrations.parseError);
+        return;
+      }
+      importGames(parseLibraryExporter(json));
+    },
+    [importGames, notify],
+  );
+
+  const handleClassifyImport = useCallback(
+    (item: ImportedGame, tab: TabId) => {
+      graduatingIdRef.current = item.id;
+      vm.openImportedDraft(tab, importedToPartialGame(item));
+    },
+    [vm],
+  );
+
+  // Enriquecer: el juego ya está en tus listas → fusiona género/plataforma en el existente (form en edición).
+  const handleEnrichImport = useCallback(
+    (item: ImportedGame) => {
+      const match = findGameByName(item.name);
+      if (!match) return;
+      const game = vm.data[match.tab].find((g) => g.id === match.id);
+      if (!game) return;
+      graduatingIdRef.current = item.id;
+      vm.openImportedDraft(match.tab, { ...game, ...mergeImportedIntoGame(game, item) });
+    },
+    [findGameByName, vm],
+  );
+
+  const handleDiscardImport = useCallback((id: number) => inbox.removeItem(id), [inbox]);
+  const handleDiscardManyImport = useCallback((ids: number[]) => inbox.removeItems(ids), [inbox]);
+  const handleClearInbox = useCallback(() => inbox.clear(), [inbox]);
+  const openIntegrations = useCallback(() => navigate('/integraciones'), [navigate]);
 
   // El sync lee el estado local vía refs (no closures del render) para que un ciclo EN VUELO vea las
   // ediciones confirmadas mientras estaba esperando la red. Con `() => vm.data` un ciclo iniciado antes
@@ -292,6 +385,16 @@ export default function App() {
       return;
     }
 
+    if (section === 'integrations') {
+      navigate('/integraciones');
+      return;
+    }
+
+    if (section === 'inbox') {
+      navigate('/bandeja');
+      return;
+    }
+
     navigate('/ajustes');
   }, [navigate, setExpandedId]);
 
@@ -300,6 +403,8 @@ export default function App() {
   }, [currentTab, openNewGame]);
 
   const handleCloseFormModal = useCallback(() => {
+    // Si se cancela una graduación, el importado permanece en la bandeja (no se retira).
+    graduatingIdRef.current = null;
     setFormModalOpen(false);
   }, [setFormModalOpen]);
 
@@ -322,6 +427,12 @@ export default function App() {
 
     saveDraft(editingTab, nextDraft);
 
+    // Graduación desde la bandeja: si este guardado viene de clasificar un importado, se retira de la bandeja.
+    if (graduatingIdRef.current !== null) {
+      inbox.removeItem(graduatingIdRef.current);
+      graduatingIdRef.current = null;
+    }
+
     // Marca la fila guardada para el destello de localización (se limpia a los 1,4 s).
     setRecentlyChangedId(predictedId);
     if (flashTimer.current) clearTimeout(flashTimer.current);
@@ -333,9 +444,11 @@ export default function App() {
     if (editingTab === 'p' || !cleanReview) {
       const hadPublishedReview = (previousGame?.review || '').trim().length > 0;
       if (hadPublishedReview) {
-        void unpublishReviewActivity({ id: predictedId }).catch(() => {
-          notify('warn', 'Juego guardado, pero no se pudo actualizar la actividad social de reseña.');
-        });
+        void import('./model/repository/socialPublishRepository')
+          .then((m) => m.unpublishReviewActivity({ id: predictedId }))
+          .catch(() => {
+            notify('warn', 'Juego guardado, pero no se pudo actualizar la actividad social de reseña.');
+          });
       }
       return;
     }
@@ -350,19 +463,21 @@ export default function App() {
       return;
     }
 
-    void publishReviewActivity({
-      id: predictedId,
-      name: nextDraft.name.trim(),
-      review: cleanReview, // audit-allow: publishReviewActivity lo convierte a snippet antes de publicar
-      score: nextScore, // audit-allow: el canal social publica solo rating redondeado
-      grade: nextGrade, // nota fina 0–100 (misma nombre que en el listado)
-      // Solo cambiar el texto (re)publica en el feed. Cambiar solo nota/nombre sincroniza una reseña YA
-      // publicada sin recolocarla; si no había reseña publicada, publishReviewActivity es un no-op.
-      reviewChanged,
-    }).catch(() => {
-      notify('warn', 'Juego guardado, pero no se pudo actualizar la actividad social de reseña.');
-    });
-  }, [editingTab, notify, saveDraft, vm.data]);
+    void import('./model/repository/socialPublishRepository')
+      .then((m) => m.publishReviewActivity({
+        id: predictedId,
+        name: nextDraft.name.trim(),
+        review: cleanReview, // audit-allow: publishReviewActivity lo convierte a snippet antes de publicar
+        score: nextScore, // audit-allow: el canal social publica solo rating redondeado
+        grade: nextGrade, // nota fina 0–100 (misma nombre que en el listado)
+        // Solo cambiar el texto (re)publica en el feed. Cambiar solo nota/nombre sincroniza una reseña YA
+        // publicada sin recolocarla; si no había reseña publicada, publishReviewActivity es un no-op.
+        reviewChanged,
+      }))
+      .catch(() => {
+        notify('warn', 'Juego guardado, pero no se pudo actualizar la actividad social de reseña.');
+      });
+  }, [editingTab, inbox, notify, saveDraft, vm.data]);
 
   const handleEditTag = useCallback((key: 'genres' | 'platforms' | 'strengths' | 'weaknesses', oldValue: string, newValue: string) => {
     renameTagAcrossGames(key, oldValue, newValue);
@@ -470,7 +585,31 @@ export default function App() {
           </Suspense>
         ) : activeSection === 'account' ? (
           <Suspense fallback={null}>
-            {scoreScaleUid ? <AccountHub scoreScaleUid={scoreScaleUid} /> : null}
+            {scoreScaleUid ? <AccountHub scoreScaleUid={scoreScaleUid} onOpenIntegrations={openIntegrations} /> : null}
+          </Suspense>
+        ) : activeSection === 'integrations' ? (
+          <Suspense fallback={null}>
+            <IntegrationsScreen
+              onImport={handleImportLibraryExporter}
+              onBack={() => navigate('/cuenta')}
+              inboxCount={inbox.count}
+              onOpenInbox={() => navigate('/bandeja')}
+            />
+          </Suspense>
+        ) : activeSection === 'inbox' ? (
+          <Suspense fallback={null}>
+            <InboxScreen
+              imported={inbox.imported}
+              isInLists={isInLists}
+              listOf={listOfName}
+              onClassify={handleClassifyImport}
+              onEnrich={handleEnrichImport}
+              onDiscard={handleDiscardImport}
+              onDiscardMany={handleDiscardManyImport}
+              onClear={handleClearInbox}
+              onBack={() => navigate('/integraciones')}
+              onGoIntegrations={() => navigate('/cuenta')}
+            />
           </Suspense>
         ) : (
           <Suspense fallback={null}>
@@ -523,6 +662,7 @@ export default function App() {
       ) : null}
 
       <BottomNavigation currentSection={activeSection} onSectionChange={handleSectionChange} />
+      <ScrollToTop />
 
       <Suspense fallback={null}>
         <FormModal

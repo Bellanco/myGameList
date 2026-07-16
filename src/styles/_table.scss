@@ -157,6 +157,13 @@ tbody tr.main-row.just-changed { animation: rowFlash 1.3s ease-out; }
 .chip-pf      { background: rgba(var(--success-rgb),.15);color: var(--fg-green); border: 1px solid rgba(var(--success-rgb),.3); }
 .chip-pd      { background: rgba(var(--danger-rgb),.15);  color: var(--fg-red-soft); border: 1px solid rgba(var(--danger-rgb),.3); }
 .chip-deck    { background: var(--chip-deck-bg); color: var(--chip-deck-fg); border: 1px solid var(--chip-deck-border); }
+/* Bandeja de importados: la marca de la lista donde ya está el juego se colorea según esa lista, con los
+   mismos tokens que usan los listados (verde=completados, rojo=vergüenza, amarillo=en curso, azul=próximos).
+   Cuelgan de las variables de tema, así que respetan la paleta clara/oscura activa. */
+.chip-list-c { background: rgba(var(--success-rgb),.15); color: var(--fg-green);    border: 1px solid rgba(var(--success-rgb),.3); }
+.chip-list-v { background: rgba(var(--danger-rgb),.15);  color: var(--fg-red-soft); border: 1px solid rgba(var(--danger-rgb),.3); }
+.chip-list-e { background: rgba(var(--warn-rgb),.16);    color: var(--fg-amber);    border: 1px solid rgba(var(--warn-rgb),.32); }
+.chip-list-p { background: rgba(var(--steam-rgb),.18);   color: var(--fg-sky);      border: 1px solid rgba(var(--steam-rgb),.35); }
 .chip-rm { background: transparent; border: none; color: inherit; cursor: pointer; opacity: .78; }
 .chip-rm:hover { opacity: 1; }
 
@@ -399,4 +406,25 @@ tbody tr.detail-row.open .detail-content { animation: detailReveal .22s ease-out
 .table-empty-icon { animation: emptyFloat 3.4s ease-in-out infinite; }
 @keyframes emptyIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes emptyFloat { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+
+/* ── Bandeja de importados: la tabla es un contenedor `gamelist` para que el `row-meta` (plataforma/
+   género en mini-píldoras) se revele en la vista móvil igual que en el listado principal. ── */
+.table-wrap.import-inbox {
+  container-type: inline-size;
+  container-name: gamelist;
+}
+
+/* Primera columna: checkbox + nombre + meta (todo junto, porque en móvil solo se muestra esta columna). */
+.import-name-cell {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+}
+
+.import-name-line {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
 

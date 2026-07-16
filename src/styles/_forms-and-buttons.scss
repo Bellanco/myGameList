@@ -259,4 +259,95 @@ dialog.alert-dialog[open]::backdrop { animation: alertBackdropIn .24s ease both;
   .btn:active { transform: none; }
 }
 
+/* ── Checkbox moderno y temático (acento `--steam`, adapta a cada tema/paleta) ─────────────────
+   Se usa `:where(...)` (especificidad 0) a propósito: NO debe pisar los "switch" personalizados
+   (settings-backup-toggle / visibility-check) que ocultan su input con más especificidad. */
+:where(input[type='checkbox']) {
+  appearance: none;
+  -webkit-appearance: none;
+  box-sizing: border-box;
+  flex: none;
+  width: 1.2rem;
+  height: 1.2rem;
+  margin: 0;
+  border: 1.5px solid var(--border);
+  border-radius: 0.4rem;
+  background: var(--surface);
+  cursor: pointer;
+  display: inline-grid;
+  place-content: center;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+:where(input[type='checkbox'])::after {
+  content: '';
+  width: 0.34rem;
+  height: 0.6rem;
+  margin-top: -2px;
+  border: solid #fff;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg) scale(0);
+  transition: transform 0.12s ease;
+}
+
+:where(input[type='checkbox']:checked) {
+  background: var(--steam);
+  border-color: var(--steam);
+}
+
+:where(input[type='checkbox']:checked)::after {
+  transform: rotate(45deg) scale(1);
+}
+
+:where(input[type='checkbox']:hover) {
+  border-color: var(--steam);
+}
+
+:where(input[type='checkbox']:focus-visible) {
+  outline: 2px solid var(--steam);
+  outline-offset: 2px;
+}
+
+/* ── Botón flotante "volver arriba" (relleno con acento, temático; oculto en móvil para no estorbar) ── */
+.scroll-top-btn {
+  position: fixed;
+  left: 1.25rem;
+  /* Por ENCIMA de la bottom-nav (que es fija, a lo ancho y z-index 120): así no la solapa ni queda tapada. */
+  bottom: calc(5rem + env(safe-area-inset-bottom, 0px));
+  z-index: 130;
+  width: 2.6rem;
+  height: 2.6rem;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--steam) 35%, transparent);
+  /* Discreto: acento translúcido + difuminado del fondo para no llamar la atención. */
+  background: color-mix(in srgb, var(--steam) 40%, transparent);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  color: #fff;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2);
+  opacity: 0.45;
+  display: grid;
+  place-content: center;
+  cursor: pointer;
+  transition: opacity 0.2s ease, background 0.2s ease, filter 0.15s ease, transform 0.1s ease;
+}
+
+.scroll-top-btn:hover,
+.scroll-top-btn:focus-visible {
+  opacity: 1;
+  background: color-mix(in srgb, var(--steam) 85%, transparent);
+  filter: brightness(1.1);
+}
+
+.scroll-top-btn:active {
+  transform: translateY(1px);
+}
+
+/* El icono no debe capturar el clic (en algunos navegadores el <use> lo interceptaba). */
+.scroll-top-btn .ui-icon {
+  width: 1.35rem;
+  height: 1.35rem;
+  pointer-events: none;
+}
+
 
