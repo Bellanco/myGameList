@@ -3,7 +3,6 @@ import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-
 import { DIALOG_MESSAGES, ROUTE_TAB, SYNC_BADGE_TEXT, SYNC_MESSAGES, TAB_ROUTE, TAB_TITLES, UI_MESSAGES } from './core/constants/labels';
 import { TAB_IDS, type TabData, type TabId } from './model/types/game';
 import { resolveGrade } from './core/utils/scoreScale';
-import { publishReviewActivity, unpublishReviewActivity } from './model/repository/socialPublishRepository';
 import { normalizeData } from './model/repository/localRepository';
 import { IconSprite } from './view/components/IconSprite';
 import { FloatingControls } from './view/components/FloatingControls';
@@ -442,9 +441,11 @@ export default function App() {
     if (editingTab === 'p' || !cleanReview) {
       const hadPublishedReview = (previousGame?.review || '').trim().length > 0;
       if (hadPublishedReview) {
-        void unpublishReviewActivity({ id: predictedId }).catch(() => {
-          notify('warn', 'Juego guardado, pero no se pudo actualizar la actividad social de reseña.');
-        });
+        void import('./model/repository/socialPublishRepository')
+          .then((m) => m.unpublishReviewActivity({ id: predictedId }))
+          .catch(() => {
+            notify('warn', 'Juego guardado, pero no se pudo actualizar la actividad social de reseña.');
+          });
       }
       return;
     }
@@ -459,18 +460,20 @@ export default function App() {
       return;
     }
 
-    void publishReviewActivity({
-      id: predictedId,
-      name: nextDraft.name.trim(),
-      review: cleanReview, // audit-allow: publishReviewActivity lo convierte a snippet antes de publicar
-      score: nextScore, // audit-allow: el canal social publica solo rating redondeado
-      grade: nextGrade, // nota fina 0–100 (misma nombre que en el listado)
-      // Solo cambiar el texto (re)publica en el feed. Cambiar solo nota/nombre sincroniza una reseña YA
-      // publicada sin recolocarla; si no había reseña publicada, publishReviewActivity es un no-op.
-      reviewChanged,
-    }).catch(() => {
-      notify('warn', 'Juego guardado, pero no se pudo actualizar la actividad social de reseña.');
-    });
+    void import('./model/repository/socialPublishRepository')
+      .then((m) => m.publishReviewActivity({
+        id: predictedId,
+        name: nextDraft.name.trim(),
+        review: cleanReview, // audit-allow: publishReviewActivity lo convierte a snippet antes de publicar
+        score: nextScore, // audit-allow: el canal social publica solo rating redondeado
+        grade: nextGrade, // nota fina 0–100 (misma nombre que en el listado)
+        // Solo cambiar el texto (re)publica en el feed. Cambiar solo nota/nombre sincroniza una reseña YA
+        // publicada sin recolocarla; si no había reseña publicada, publishReviewActivity es un no-op.
+        reviewChanged,
+      }))
+      .catch(() => {
+        notify('warn', 'Juego guardado, pero no se pudo actualizar la actividad social de reseña.');
+      });
   }, [editingTab, inbox, notify, saveDraft, vm.data]);
 
   const handleEditTag = useCallback((key: 'genres' | 'platforms' | 'strengths' | 'weaknesses', oldValue: string, newValue: string) => {

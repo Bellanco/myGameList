@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { onSocialAuthChanged } from '../../model/repository/firebaseRepository';
+import { subscribeSocialAuth } from '../../model/repository/firebaseGateway';
 import { hydrateAppearance, setAppearanceUid } from '../../model/repository/appearancePreferenceRepository';
 
 /**
@@ -9,7 +9,7 @@ import { hydrateAppearance, setAppearanceUid } from '../../model/repository/appe
  */
 export function useAppearanceSession(): void {
   useEffect(() => {
-    return onSocialAuthChanged((user) => {
+    return subscribeSocialAuth((user) => {
       if (user?.uid) {
         setAppearanceUid(user.uid);
         void hydrateAppearance(user.uid);

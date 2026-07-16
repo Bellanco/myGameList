@@ -5,7 +5,7 @@
 // Store reactivo en memoria (pub/sub) para que la UI reaccione sin prop-drilling (ver hook `useScoreScale`). La
 // lectura de Firestore es ASÍNCRONA: se hidrata al iniciar sesión; hasta entonces se muestran estrellas (sin flash).
 import { DEFAULT_SCORE_SCALE, type ScoreScale } from '../../core/utils/scoreScale';
-import { getPublicConfig, setPublicConfig } from './firebaseRepository';
+import { getPublicConfig, setPublicConfig } from './firebaseGateway';
 
 let _scale: ScoreScale = DEFAULT_SCORE_SCALE;
 const listeners = new Set<() => void>();

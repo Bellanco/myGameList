@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { onSocialAuthChanged } from '../../model/repository/firebaseRepository';
+import { subscribeSocialAuth } from '../../model/repository/firebaseGateway';
 import { hydrateScoreScale, resetScoreScale } from '../../model/repository/scorePreferenceRepository';
 
 /**
@@ -16,7 +16,7 @@ export function useScoreScaleSession(): { uid: string | null; ready: boolean } {
   const [state, setState] = useState<{ uid: string | null; ready: boolean }>({ uid: null, ready: false });
 
   useEffect(() => {
-    return onSocialAuthChanged((user) => {
+    return subscribeSocialAuth((user) => {
       setState({ uid: user?.uid ?? null, ready: true });
       if (user?.uid) {
         void hydrateScoreScale(user.uid);

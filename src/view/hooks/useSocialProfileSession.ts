@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { findSocialProfileByEmail, onSocialAuthChanged } from '../../model/repository/firebaseRepository';
-import { getSocialSyncConfig } from '../../model/repository/gistRepository';
+import { findSocialProfileByEmail, subscribeSocialAuth } from '../../model/repository/firebaseGateway';
+import { getSocialSyncConfig } from '../../model/repository/gistConfigRepository';
 
 function hasLocalSocialGist(): boolean {
   return Boolean(getSocialSyncConfig()?.gistId?.trim());
@@ -20,7 +20,7 @@ export function useSocialProfileSession(): boolean {
 
   useEffect(() => {
     let cancelled = false;
-    const unsubscribe = onSocialAuthChanged((user) => {
+    const unsubscribe = subscribeSocialAuth((user) => {
       if (!user?.email) {
         if (!cancelled) setHasProfile(false);
         return;

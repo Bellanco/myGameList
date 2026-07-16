@@ -1,6 +1,6 @@
 import { Component, type ErrorInfo, type ReactNode } from 'react';
 import { APP_ERROR_UI } from '../../core/constants/labels';
-import { reportHandledError } from '../../model/repository/firebaseRepository';
+import { reportHandledError } from '../../model/repository/firebaseGateway';
 
 interface Props {
   children: ReactNode;

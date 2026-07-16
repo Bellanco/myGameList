@@ -2,7 +2,7 @@ import { TAB_IDS, type GameItem } from '../types/game';
 import type { LocalMeta } from '../types/local';
 import { getLocalMeta, patchLocalMeta, putDeletedRecord, putGameRecord } from './indexedDbRepository';
 import { loadLocalStateAsync } from './localRepository';
-import { getSyncConfig } from './gistRepository';
+import { getSyncConfig } from './gistConfigRepository';
 
 /**
  * Runner de migración one-time (Vía A: LOCAL, sin Google).
