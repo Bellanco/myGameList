@@ -10,7 +10,7 @@ import { normalizeName } from '../core/roulette/roulette';
 import { loadLocalState, loadLocalStateAsync, normalizeData, saveLocalState } from '../model/repository/localRepository';
 import { getGamesAsTabData, getLocalMeta, mirrorTabDataToGames } from '../model/repository/indexedDbRepository';
 import { markDirty } from '../model/repository/syncStateRepository';
-import { trackAnalyticsEvent } from '../model/repository/firebaseRepository';
+import { trackAnalyticsEvent } from '../model/repository/firebaseGateway';
 import { transitionTo } from '../model/repository/syncMachineRepository';
 import type { TabAction as LabelsTabAction } from '../core/constants/labels';
 import type { GameItem, StatusNotice, TabData, TabId, TabSort, ToolbarFilters } from '../model/types/game';

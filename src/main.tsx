@@ -3,7 +3,7 @@ import { createRoot } from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import App from './App';
 import { AppErrorBoundary } from './view/components/AppErrorBoundary';
-import { initializeFirebaseServices, reportHandledError } from './model/repository/firebaseRepository';
+import { initializeFirebaseServices, reportHandledError } from './model/repository/firebaseGateway';
 import { runMigration } from './model/repository/dataMigrationRepository';
 import './styles/index.scss';
 

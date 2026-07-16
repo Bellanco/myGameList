@@ -6,7 +6,7 @@
 //   - Con sesión de Google, la nube manda: al entrar se HIDRATA (se vuelca a localStorage y se avisa a los hooks
 //     para que re-lean y apliquen), y cada cambio local se REPLICA a Firestore.
 // A diferencia de la escala de puntuación (solo nube), la apariencia funciona siempre en local aunque no haya sesión.
-import { getPublicConfig, setPublicConfig } from './firebaseRepository';
+import { getPublicConfig, setPublicConfig } from './firebaseGateway';
 import { PALETTE_KEY, STEAM_BUTTON_KEY, THEME_KEY, UPPERCASE_KEY } from '../../core/constants/storageKeys';
 import { parsePaletteId, type PaletteId } from '../../core/constants/palettes';
 
