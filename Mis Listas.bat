@@ -4,7 +4,7 @@ cd /d "%~dp0"
 REM Instalar dependencias si no existen
 if not exist node_modules (
     echo [*] Instalando dependencias...
-    call npm install --legacy-peer-deps
+    call npm install
     if errorlevel 1 (
         echo [ERROR] npm install fallo. Verifica que npm este instalado.
         pause
@@ -19,7 +19,7 @@ if exist node_modules\.vite (
 )
 
 echo [*] Iniciando servidor de desarrollo (reoptimizando modulos)...
-call npm run dev -- --open --force
+call npm run dev -- --open
 if errorlevel 1 (
     echo [ERROR] npm run dev fallo. Ver errores arriba.
 )
