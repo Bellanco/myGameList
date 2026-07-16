@@ -232,21 +232,40 @@ export async function getSyncQueue(): Promise<SyncOp[]> {
 }
 
 // --- Escritura de juegos (store `games`) ---
-/** Upsert: fija `_ts`, incrementa `_v`, revive (borra tombstone) y encola un SyncOp 'upsertGame'. */
+/** Upsert: fija `_ts`, incrementa `_v`, revive (borra tombstone) y encola un SyncOp 'upsertGame'.
+ * Las tres escrituras (games/deleted/syncQueue) van en UNA transacción multi-store: atómicas y sin
+ * encadenar tres `oncomplete` sucesivos (antes eran 3 transacciones independientes). */
 export async function upsertGame(game: GameItem, tab: TabId): Promise<GameItem> {
   const next: GameItem = { ...game, _ts: Date.now(), _v: (game._v ?? 0) + 1 };
-  await putGameRecord(next, tab);
-  await removeTombstone(next.id);
-  await enqueueSyncOp({ type: 'upsertGame', payload: { id: next.id, tab } });
+  const op: SyncOp = { id: newOpId(), createdAt: Date.now(), attempts: 0, nextRetry: null, type: 'upsertGame', payload: { id: next.id, tab } };
+  const db = await openSharedDatabase();
+  await new Promise<void>((resolve, reject) => {
+    const tx = db.transaction([GAMES_STORE, DELETED_STORE, SYNC_QUEUE_STORE], 'readwrite');
+    tx.objectStore(GAMES_STORE).put({ ...next, _tab: tab });
+    tx.objectStore(DELETED_STORE).delete(next.id);
+    tx.objectStore(SYNC_QUEUE_STORE).put(op);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error || new Error('upsertGame failed'));
+    tx.onabort = () => reject(tx.error || new Error('upsertGame aborted'));
+  });
   return next;
 }
 
-/** Borrado: quita del store `games`, escribe tombstone en `deleted` y encola un SyncOp 'deleteGame'. */
+/** Borrado: quita del store `games`, escribe tombstone en `deleted` y encola un SyncOp 'deleteGame'.
+ * Las tres escrituras van en UNA transacción multi-store (antes 3 transacciones independientes). */
 export async function deleteGame(id: number): Promise<void> {
   const ts = Date.now();
-  await idbDelete(GAMES_STORE, id);
-  await putDeletedRecord({ id, _ts: ts, deletedAt: ts });
-  await enqueueSyncOp({ type: 'deleteGame', payload: { id } });
+  const op: SyncOp = { id: newOpId(), createdAt: ts, attempts: 0, nextRetry: null, type: 'deleteGame', payload: { id } };
+  const db = await openSharedDatabase();
+  await new Promise<void>((resolve, reject) => {
+    const tx = db.transaction([GAMES_STORE, DELETED_STORE, SYNC_QUEUE_STORE], 'readwrite');
+    tx.objectStore(GAMES_STORE).delete(id);
+    tx.objectStore(DELETED_STORE).put({ id, _ts: ts, deletedAt: ts });
+    tx.objectStore(SYNC_QUEUE_STORE).put(op);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error || new Error('deleteGame failed'));
+    tx.onabort = () => reject(tx.error || new Error('deleteGame aborted'));
+  });
 }
 
 /**
