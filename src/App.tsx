@@ -152,6 +152,9 @@ export default function App() {
     [vm.data],
   );
 
+  // ¿En QUÉ lista está? (para mostrarlo junto a la marca "Ya en tus listas" en la bandeja). null si no está.
+  const listOfName = useCallback((name: string): TabId | null => findGameByName(name)?.tab ?? null, [findGameByName]);
+
   // Inserta en la bandeja el resultado de un parser y avisa; navega a la bandeja si hubo algo.
   const importGames = useCallback(
     (games: RawExternalGame[]) => {
@@ -598,11 +601,13 @@ export default function App() {
             <InboxScreen
               imported={inbox.imported}
               isInLists={isInLists}
+              listOf={listOfName}
               onClassify={handleClassifyImport}
               onEnrich={handleEnrichImport}
               onDiscard={handleDiscardImport}
               onDiscardMany={handleDiscardManyImport}
               onClear={handleClearInbox}
+              onBack={() => navigate('/integraciones')}
               onGoIntegrations={() => navigate('/cuenta')}
             />
           </Suspense>

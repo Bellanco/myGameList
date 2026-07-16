@@ -1,15 +1,20 @@
 import { Fragment } from 'react';
 import { TAB_IDS, type TabId } from '../../../model/types/game';
 import type { ImportedGame } from '../../../model/types/import';
-import { TAB_TOOLTIPS, UI_MESSAGES } from '../../../core/constants/labels';
+import { TAB_TITLES, TAB_TOOLTIPS, UI_MESSAGES } from '../../../core/constants/labels';
 import { COMMON_ICONS, TAB_ICONS } from '../../../core/constants/icons';
 import { Icon } from '../Icon';
 
 const M = UI_MESSAGES.import.inbox;
 
+// Color de la píldora de "ya en tus listas" según la lista, con los mismos colores que los listados.
+const LIST_CHIP_CLASS: Record<TabId, string> = { c: 'chip-list-c', v: 'chip-list-v', e: 'chip-list-e', p: 'chip-list-p' };
+
 interface ImportInboxTableProps {
   items: ImportedGame[];
   isInLists: (name: string) => boolean;
+  /** ¿En qué lista está el juego? (para mostrarlo junto a la marca "Ya en tus listas"). null si no está. */
+  listOf: (name: string) => TabId | null;
   selectedIds: Set<number>;
   onToggleSelect: (id: number) => void;
   onClassify: (item: ImportedGame, tab: TabId) => void;
@@ -37,7 +42,7 @@ function chips(values: string[], className: string) {
  * `gamelist` para que el revelado progresivo del meta funcione igual que en el listado principal.
  * El detalle está siempre abierto y contiene solo los botones (clasificar/actualizar + descartar).
  */
-export function ImportInboxTable({ items, isInLists, selectedIds, onToggleSelect, onClassify, onEnrich, onDiscard }: ImportInboxTableProps) {
+export function ImportInboxTable({ items, isInLists, listOf, selectedIds, onToggleSelect, onClassify, onEnrich, onDiscard }: ImportInboxTableProps) {
   return (
     <div className="table-wrap import-inbox">
       <table>
@@ -51,6 +56,7 @@ export function ImportInboxTable({ items, isInLists, selectedIds, onToggleSelect
         <tbody>
           {items.map((item, index) => {
             const existing = isInLists(item.name);
+            const inListTab = existing ? listOf(item.name) : null;
             return (
               <Fragment key={item.id}>
                 <tr className={`main-row ${index % 2 === 0 ? 'striped' : ''}`.trim()}>
@@ -68,6 +74,11 @@ export function ImportInboxTable({ items, isInLists, selectedIds, onToggleSelect
                           {existing ? (
                             <span className="chip chip-more" title={M.existingBadge}>
                               {M.existingBadge}
+                            </span>
+                          ) : null}
+                          {inListTab ? (
+                            <span className={`chip ${LIST_CHIP_CLASS[inListTab]}`} title={TAB_TITLES[inListTab]}>
+                              {TAB_TOOLTIPS[inListTab]}
                             </span>
                           ) : null}
                         </span>
