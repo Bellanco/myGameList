@@ -42,13 +42,6 @@ export function IntegrationsScreen({ onImport, onBack, inboxCount, onOpenInbox }
           <Icon name={COMMON_ICONS.arrowBack} />
           <span>{UI_MESSAGES.import.back}</span>
         </button>
-        <span style={{ flex: 1 }} />
-        {inboxCount > 0 ? (
-          <button type="button" className="btn btn-secondary" onClick={onOpenInbox}>
-            <Icon name={COMMON_ICONS.download} />
-            <span>{M.viewInbox(inboxCount)}</span>
-          </button>
-        ) : null}
       </div>
 
       <div className="settings-card">
@@ -64,7 +57,13 @@ export function IntegrationsScreen({ onImport, onBack, inboxCount, onOpenInbox }
             ))}
           </ol>
         </div>
-        <div className="settings-backup-actions" style={{ marginTop: '0.9rem' }}>
+        <div className="settings-backup-actions" style={{ marginTop: '0.9rem', display: 'flex', flexWrap: 'wrap', gap: '0.5rem', alignItems: 'center' }}>
+          {inboxCount > 0 ? (
+            <button type="button" className="btn btn-secondary btn-accent" onClick={onOpenInbox}>
+              <Icon name={COMMON_ICONS.download} />
+              <span>{M.viewInbox(inboxCount)}</span>
+            </button>
+          ) : null}
           <label className="btn btn-secondary settings-import-label">
             <Icon name={COMMON_ICONS.upload} />
             <span>{M.importBtn}</span>
