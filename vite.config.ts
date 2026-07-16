@@ -12,12 +12,18 @@ export default defineConfig({
   plugins: [
     react(),
   ],
+  // Elimina console.* y debugger del bundle de producción (no afecta a dev).
+  esbuild: {
+    drop: ['console', 'debugger'],
+  },
   server: {
     port: 8000,
     open: false,
   },
   build: {
     outDir: 'dist',
+    // Target explícito y moderno: evita sorpresas si cambia el default al actualizar Vite.
+    target: 'es2022',
     sourcemap: false,
     chunkSizeWarningLimit: 600,
     rollupOptions: {

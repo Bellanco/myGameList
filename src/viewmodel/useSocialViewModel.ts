@@ -169,6 +169,19 @@ export function isOwnProfileIdentity(
   return (Boolean(uid) && entryId === uid) || (Boolean(ownProfileId) && entryId === ownProfileId);
 }
 
+const FEED_DAY_MONTH_NAMES = [
+  'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
+  'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre',
+] as const;
+
+/**
+ * Formatea la fecha como "DD de MMM". Pura y sin capturas → a nivel de módulo
+ * para que no se recree en cada render (evita invalidar el useMemo del feed).
+ */
+function formatDayHeader(date: Date): string {
+  return `${date.getDate()} de ${FEED_DAY_MONTH_NAMES[date.getMonth()]}`;
+}
+
 export function useSocialViewModel() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -817,18 +830,6 @@ export function useSocialViewModel() {
     };
   }, [activePanel, activeDetailEvent, authUser, localState, navigate, ownProfileId, socialCfgGistId]);
 
-  /**
-   * Formatea la fecha como "DD de MMM".
-   */
-  const formatDayHeader = (date: Date): string => {
-    const monthNames = [
-      'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
-      'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre',
-    ];
-
-    return `${date.getDate()} de ${monthNames[date.getMonth()]}`;
-  };
-
   const groupedFeedItems = useMemo(() => {
     type FeedItem = (typeof feedItems)[number];
     const groups: Array<{
@@ -867,7 +868,7 @@ export function useSocialViewModel() {
     });
 
     return groups;
-  }, [feedItems, feedVisibleCount, formatDayHeader]);
+  }, [feedItems, feedVisibleCount]);
 
   // Paginación del feed: ¿hay más allá de lo visible? y handler para mostrar otros 25.
   const hasMoreFeed = feedItems.length > feedVisibleCount;
