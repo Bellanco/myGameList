@@ -83,6 +83,31 @@ function toNormalizedDraft(game?: Partial<GameItem>): GameDraft {
   };
 }
 
+/**
+ * Igualdad de CONTENIDO de juegos entre dos TabData por (id, _ts) posicional. `_ts` es el marcador de
+ * versión LWW que TODA ruta de edición bumpea (saveDraft, mapTabDataTags, moveGameToTab, deleteGame vía
+ * cambio de longitud…) y que `normalizeGame` preserva; por eso detecta cualquier cambio real y NUNCA da un
+ * falso "igual". No compara `updatedAt` (siempre nuevo, no es contenido). O(n) sobre números → barato
+ * incluso cuando SÍ cambió (corta en la primera diferencia).
+ */
+function tabGamesEqual(a: TabData, b: TabData): boolean {
+  for (const tab of TAB_ORDER) {
+    const ga = a[tab] || [];
+    const gb = b[tab] || [];
+    if (ga.length !== gb.length) return false;
+    for (let i = 0; i < ga.length; i += 1) {
+      if (ga[i].id !== gb[i].id || (ga[i]._ts ?? 0) !== (gb[i]._ts ?? 0)) return false;
+    }
+  }
+  const da = a.deleted || [];
+  const db = b.deleted || [];
+  if (da.length !== db.length) return false;
+  for (let i = 0; i < da.length; i += 1) {
+    if (da[i].id !== db[i].id || (da[i]._ts ?? 0) !== (db[i]._ts ?? 0)) return false;
+  }
+  return true;
+}
+
 export function useGameListViewModel() {
   const initial = loadLocalState();
 
@@ -97,6 +122,10 @@ export function useGameListViewModel() {
   // (saveDraft/deleteGame/…). Lo leemos vía ref → `persist` y derivados quedan estables (dep []).
   const metaRef = useRef(meta);
   metaRef.current = meta;
+  // Ref al `data` actual: `persistInternal` (dep []) la usa para detectar persistencias sin cambio de
+  // contenido (típico tras un push dirty o un merge no-op) y evitar re-render + reescritura IDB redundantes.
+  const dataRef = useRef(data);
+  dataRef.current = data;
   const [sort, setSort] = useState<Record<TabId, TabSort>>(DEFAULT_SORT);
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const [notice, setNotice] = useState<StatusNotice | null>(null);
@@ -187,12 +216,20 @@ export function useGameListViewModel() {
         lastRemoteUpdatedAt: nextMeta.lastRemoteUpdatedAt,
       };
 
-      setData(normalized);
+      // Si el contenido de juegos es idéntico al actual (p. ej. el persist derivado de un push dirty, donde
+      // el local ya tenía el cambio, o un merge de sync sin novedades), evitamos el re-render de la tabla y la
+      // reescritura completa del store `games` (clear + N puts). La persistencia de meta/etag (setMeta +
+      // saveLocalState) SÍ se ejecuta siempre: el etag/lastRemoteUpdatedAt puede haber cambiado aunque los datos no.
+      const gamesUnchanged = tabGamesEqual(dataRef.current, normalized);
+
+      if (!gamesUnchanged) {
+        setData(normalized);
+        // Espejo al store `games`/`deleted` + timestamp (dual-write). Best-effort: appState sigue siendo
+        // el backup, así que un fallo aquí no afecta al guardado ni al modo offline.
+        void mirrorTabDataToGames(normalized, updatedAt).catch(() => {});
+      }
       setMeta((prev) => ({ ...prev, updatedAt }));
       saveLocalState(payload);
-      // Espejo al store `games`/`deleted` + timestamp (dual-write). Best-effort: appState sigue siendo
-      // el backup, así que un fallo aquí no afecta al guardado ni al modo offline.
-      void mirrorTabDataToGames(normalized, updatedAt).catch(() => {});
       if (markDirtyState) {
         markDirty();
         transitionTo('dirty');
