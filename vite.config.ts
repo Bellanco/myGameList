@@ -12,10 +12,6 @@ export default defineConfig({
   plugins: [
     react(),
   ],
-  // Elimina console.* y debugger del bundle de producción (no afecta a dev).
-  esbuild: {
-    drop: ['console', 'debugger'],
-  },
   server: {
     port: 8000,
     open: false,
@@ -28,6 +24,9 @@ export default defineConfig({
     chunkSizeWarningLimit: 600,
     rollupOptions: {
       output: {
+        // Minificación oxc con eliminación de console.*/debugger en producción (no afecta a dev).
+        // Vite 8 usa oxc; el drop va en las opciones de minify de rolldown (compress), no en el transform.
+        minify: { compress: { dropConsole: true, dropDebugger: true } },
         manualChunks: (id) => {
           // Vendor chunks for better caching and parallelization
           if (id.includes('node_modules/firebase/')) {
