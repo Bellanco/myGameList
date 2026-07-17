@@ -318,24 +318,23 @@ dialog.alert-dialog[open]::backdrop { animation: alertBackdropIn .24s ease both;
   width: 2.6rem;
   height: 2.6rem;
   border-radius: 999px;
-  border: 1px solid color-mix(in srgb, var(--steam) 35%, transparent);
-  /* Discreto: acento translúcido + difuminado del fondo para no llamar la atención. */
-  background: color-mix(in srgb, var(--steam) 40%, transparent);
+  /* Discreto pero SIEMPRE visible: acento translúcido con rgba (soportado en todos los navegadores; el
+     color-mix anterior lo descartaba Firefox y el botón desaparecía). El difuminado es solo una mejora. */
+  border: 1px solid rgba(var(--steam-rgb), 0.5);
+  background: rgba(var(--steam-rgb), 0.6);
   backdrop-filter: blur(6px);
   -webkit-backdrop-filter: blur(6px);
   color: #fff;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2);
-  opacity: 0.45;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.28);
   display: grid;
   place-content: center;
   cursor: pointer;
-  transition: opacity 0.2s ease, background 0.2s ease, filter 0.15s ease, transform 0.1s ease;
+  transition: background 0.2s ease, filter 0.15s ease, transform 0.1s ease;
 }
 
 .scroll-top-btn:hover,
 .scroll-top-btn:focus-visible {
-  opacity: 1;
-  background: color-mix(in srgb, var(--steam) 85%, transparent);
+  background: rgba(var(--steam-rgb), 0.95);
   filter: brightness(1.1);
 }
 
