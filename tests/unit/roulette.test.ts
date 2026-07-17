@@ -131,6 +131,17 @@ describe('buildProfilePool', () => {
     expect(pool[0].sourceTab).toBe('c');
   });
 
+  it('preserves the fine grade (0–100) so the ring is not derived from rating×20', () => {
+    const pool = buildProfilePool({
+      c: [
+        { id: 1, name: 'Con nota', rating: 5, grade: 92 },
+        { id: 2, name: 'Sin nota', rating: 4 },
+      ],
+    });
+    expect(pool[0].game.grade).toBe(92);
+    expect(pool[1].game.grade).toBeNull();
+  });
+
   it('is empty when there are no completados', () => {
     expect(buildProfilePool({ p: [{ id: 1, name: 'x' }] })).toEqual([]);
     expect(buildProfilePool(undefined)).toEqual([]);
