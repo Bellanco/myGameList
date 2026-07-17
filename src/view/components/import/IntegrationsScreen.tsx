@@ -2,6 +2,7 @@ import type { CSSProperties } from 'react';
 import { UI_MESSAGES } from '../../../core/constants/labels';
 import { COMMON_ICONS } from '../../../core/constants/icons';
 import { Icon } from '../Icon';
+import { PlayniteNote } from './PlayniteNote';
 
 const M = UI_MESSAGES.import.integrations;
 
@@ -47,7 +48,7 @@ export function IntegrationsScreen({ onImport, onBack, inboxCount, onOpenInbox }
       <div className="settings-card">
         <div className="settings-card-head">
           <h2>{M.title}</h2>
-          <p className="settings-card-note">{M.note}</p>
+          <PlayniteNote />
         </div>
         <div className="settings-backup-info">
           <p className="settings-card-note" style={{ fontWeight: 600 }}>{M.stepsTitle}</p>
