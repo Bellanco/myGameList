@@ -8,6 +8,7 @@ import { Icon } from './Icon';
 import { StarRating } from './StarRating';
 import { ScoreRing } from './ScoreRing';
 import { AppearanceSettings } from './AppearanceSettings';
+import { PlayniteNote } from './import/PlayniteNote';
 
 interface AccountHubProps {
   scoreScaleUid: string | null; // uid de Google (para gatear/guardar la escala); null → candado
@@ -28,7 +29,7 @@ export const AccountHub = memo(function AccountHub({ scoreScaleUid, onOpenIntegr
       <div className="settings-card" style={{ gridColumn: '1 / -1' }}>
         <div className="settings-card-head">
           <h2>{UI_MESSAGES.import.integrations.title}</h2>
-          <p className="settings-card-note">{UI_MESSAGES.import.integrations.note}</p>
+          <PlayniteNote />
         </div>
         <button type="button" className="btn btn-primary" style={{ alignSelf: 'flex-start' }} onClick={onOpenIntegrations}>
           <Icon name={COMMON_ICONS.download} />

@@ -172,6 +172,18 @@ export const UI_MESSAGES = {
       importAria: 'Seleccionar el archivo JSON exportado por Playnite Library Exporter',
       viewInbox: (n: number) => `Ver bandeja (${n})`,
       parseError: 'No se pudo leer el fichero. Comprueba que es el JSON exportado por «Playnite Library Exporter».',
+      consoles: {
+        psn: {
+          title: 'Añadir tus juegos de PlayStation',
+          steps: [
+            'Abre Playnite en tu PC con Windows.',
+            'Ve al menú principal (arriba a la izquierda) → «Complementos» → «Explorar complementos» y entra en la pestaña «Bibliotecas».',
+            'Busca el complemento «PlayStation library integration» (hecho por la comunidad, de Xenor), pulsa «Instalar» y, al terminar, cierra y vuelve a abrir Playnite.',
+            'Vuelve al menú principal → «Complementos» → ajustes de «PlayStation library integration» e inicia sesión con tu cuenta de PlayStation, siguiendo los pasos que te muestre.',
+            'Tus juegos de PlayStation aparecerán en Playnite. Ahora solo tienes que exportarlos con «Playnite Library Exporter» (los pasos de más arriba) e importar el archivo aquí.',
+          ],
+        },
+      },
     },
     inbox: {
       title: 'Bandeja de importados',
