@@ -195,6 +195,9 @@ export const UI_MESSAGES = {
       enrich: 'Actualizar en tus listas',
       enrichHint: 'Ya lo tienes: añade género/plataforma/horas que falten al juego de tu lista.',
       showing: (shown: number, total: number) => `Mostrando ${shown} de ${total}`,
+      copyNameAria: (name: string) => `Copiar «${name}»`,
+      copyNameSuccess: (name: string) => `«${name}» copiado`,
+      copyNameError: 'No se pudo copiar el nombre',
     },
     notice: (added: number, merged: number, duplicates: number) =>
       `${added} añadido(s)` +

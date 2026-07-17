@@ -20,6 +20,8 @@ interface ImportInboxTableProps {
   onClassify: (item: ImportedGame, tab: TabId) => void;
   onEnrich: (item: ImportedGame) => void;
   onDiscard: (id: number) => void;
+  /** Copia el nombre del juego al portapapeles (al pulsar sobre él). */
+  onCopyName: (name: string) => void;
 }
 
 function chips(values: string[], className: string) {
@@ -42,7 +44,7 @@ function chips(values: string[], className: string) {
  * `gamelist` para que el revelado progresivo del meta funcione igual que en el listado principal.
  * El detalle está siempre abierto y contiene solo los botones (clasificar/actualizar + descartar).
  */
-export function ImportInboxTable({ items, isInLists, listOf, selectedIds, onToggleSelect, onClassify, onEnrich, onDiscard }: ImportInboxTableProps) {
+export function ImportInboxTable({ items, isInLists, listOf, selectedIds, onToggleSelect, onClassify, onEnrich, onDiscard, onCopyName }: ImportInboxTableProps) {
   return (
     <div className="table-wrap import-inbox">
       <table>
@@ -70,7 +72,15 @@ export function ImportInboxTable({ items, isInLists, listOf, selectedIds, onTogg
                       />
                       <span className="row-toggle-body">
                         <span className="import-name-line">
-                          <strong className="row-name">{item.name}</strong>
+                          <button
+                            type="button"
+                            className="row-name row-name-copy"
+                            title={M.copyNameAria(item.name)}
+                            aria-label={M.copyNameAria(item.name)}
+                            onClick={() => onCopyName(item.name)}
+                          >
+                            <strong>{item.name}</strong>
+                          </button>
                           {existing ? (
                             <span className="chip chip-more" title={M.existingBadge}>
                               {M.existingBadge}
