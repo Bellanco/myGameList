@@ -218,6 +218,7 @@ export function buildProfilePool(
       steamDeck: Boolean(raw.steamDeck),
       review: String(raw.review || raw.snippet || ''),
       score: Number(raw.score || raw.rating || 0),
+      grade: typeof raw.grade === 'number' ? (raw.grade as number) : null,
     };
     return { game, sourceTab: 'c' as TabId };
   });

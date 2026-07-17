@@ -43,6 +43,15 @@ export function InboxScreen({ imported, isInLists, listOf, onClassify, onEnrich,
   const [query, setQuery] = useState('');
   const [visible, setVisible] = useState(PAGE);
   const sentinelRef = useRef<HTMLDivElement>(null);
+  // Toast flotante (posición fija): visible aunque la lista esté scrolleada, a diferencia del banner superior.
+  const [toast, setToast] = useState<string | null>(null);
+  const toastTimerRef = useRef<number | undefined>(undefined);
+  useEffect(() => () => window.clearTimeout(toastTimerRef.current), []);
+  const showToast = (message: string) => {
+    setToast(message);
+    window.clearTimeout(toastTimerRef.current);
+    toastTimerRef.current = window.setTimeout(() => setToast(null), 2200);
+  };
 
   const filtered = useMemo(() => {
     const q = normalizeName(query);
@@ -112,6 +121,15 @@ export function InboxScreen({ imported, isInLists, listOf, onClassify, onEnrich,
     setSelectedIds(new Set());
   };
 
+  const copyName = async (name: string) => {
+    try {
+      await navigator.clipboard.writeText(name);
+      showToast(M.copyNameSuccess(name));
+    } catch {
+      showToast(M.copyNameError);
+    }
+  };
+
   return (
     <div style={screenStyle}>
       {backRow}
@@ -157,8 +175,15 @@ export function InboxScreen({ imported, isInLists, listOf, onClassify, onEnrich,
         onClassify={onClassify}
         onEnrich={onEnrich}
         onDiscard={onDiscard}
+        onCopyName={copyName}
       />
       <div ref={sentinelRef} style={{ height: 1 }} aria-hidden="true" />
+
+      {toast ? (
+        <div className="inbox-toast" role="status" aria-live="polite">
+          {toast}
+        </div>
+      ) : null}
     </div>
   );
 }
