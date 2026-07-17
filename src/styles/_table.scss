@@ -428,3 +428,51 @@ tbody tr.detail-row.open .detail-content { animation: detailReveal .22s ease-out
   gap: 0.4rem;
 }
 
+/* Toast flotante de la bandeja (p. ej. "nombre copiado"): fijo abajo-centro, visible con la lista scrolleada. */
+.inbox-toast {
+  position: fixed;
+  left: 50%;
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 5rem);
+  transform: translateX(-50%);
+  z-index: 60;
+  max-width: min(92vw, 30rem);
+  padding: 0.7rem 1.1rem;
+  border-radius: var(--radius-md);
+  background: var(--surface-elevated, var(--surface));
+  color: var(--text, inherit);
+  border: 1px solid var(--border);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.28);
+  font-weight: 600;
+  text-align: center;
+  pointer-events: none;
+  animation: inbox-toast-in 0.18s ease;
+}
+
+@keyframes inbox-toast-in {
+  from { opacity: 0; transform: translate(-50%, 0.5rem); }
+  to { opacity: 1; transform: translate(-50%, 0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .inbox-toast { animation: none; }
+}
+
+/* Nombre pulsable: se copia al portapapeles. Parece texto, no botón, pero invita al clic. */
+.row-name-copy {
+  appearance: none;
+  border: 0;
+  padding: 0;
+  margin: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  transition: color .15s ease;
+
+  &:hover strong { text-decoration: underline; text-underline-offset: 2px; }
+  &:hover { color: var(--steam, currentColor); }
+  &:focus-visible { outline: 2px solid var(--steam, currentColor); outline-offset: 2px; }
+}
+
