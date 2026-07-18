@@ -111,9 +111,11 @@
    sombra es clara en oscuro y negra en claro (regla 1); el sesgo + borde + sombra dan la forma P5.
    El texto se contra-sesga con `> *` para que quede recto (regla 4). ── */
 :root[data-palette="persona"] .btn:not(.btn-icon):not(.btn-ghost) { border: 2.5px solid #0a0a0a !important; border-radius: 0 !important; transform: skewX(-7deg); font-weight: 900; box-shadow: 5px 5px 0 rgba(255, 255, 255, .92) !important; }
-/* `:not(input)` excluye el <input type="file"> oculto de los labels-botón (p. ej. "Importar"): sin esto,
-   el contra-sesgo le forzaba `display:inline-block` y reaparecía el botón nativo "Examinar". */
-:root[data-palette="persona"] .btn:not(.btn-icon):not(.btn-ghost) > *:not(input) { display: inline-block; transform: skewX(7deg); }
+/* Solo se CONTRA-SESGA el contenido; NO se toca su `display`. El icono y el label ya son flex items del
+   botón (`.btn` es `inline-flex`), así que el `transform` se aplica sin forzar `display:inline-block` —
+   forzarlo (a) resucitaba el label que el layout móvil oculta con `display:none`, descuadrando /bandeja, y
+   (b) reactivaba el <input type="file"> oculto (reaparecía el "Examinar"), de ahí el `:not(input)`. */
+:root[data-palette="persona"] .btn:not(.btn-icon):not(.btn-ghost) > *:not(input) { transform: skewX(7deg); }
 :root[data-palette="persona"][data-theme="light"] .btn:not(.btn-icon):not(.btn-ghost) { border-color: #151011 !important; box-shadow: 5px 5px 0 #151011 !important; }
 /* Relleno sólido por variante → la sombra de bloque se ve en TODOS los botones, no solo el contorno.
    Se fija el color de texto por contraste (regla 10). */
