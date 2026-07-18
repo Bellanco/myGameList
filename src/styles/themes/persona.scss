@@ -136,6 +136,19 @@
 :root[data-palette="persona"] .btn:not(.btn-icon):not(.btn-ghost):hover { transform: skewX(-7deg) translateY(-2px); filter: brightness(1.06); }
 :root[data-palette="persona"] .btn:not(.btn-icon):not(.btn-ghost):active { transform: skewX(-7deg); }
 
+/* ── §5b · Botones colapsados a SOLO-ICONO en móvil/tablet. El layout base oculta el label de los botones
+   de acción (`.detail-actions`/`.header-actions .btn span`, `.btn-icon-text span` → `display:none`) para
+   dejar cuadrados de 42px. Pero el contra-sesgo de §5 fuerza `display:inline-block` en `> *` con más
+   especificidad y RESUCITA el label, desbordando y descuadrando la rejilla (se veía en /bandeja). Se
+   re-oculta con `!important` en los MISMOS cortes que el layout base (`_overlays-and-responsive.scss`). ── */
+@media (max-width: 1100px) {
+  :root[data-palette="persona"] .detail-actions .btn span,
+  :root[data-palette="persona"] .header-actions .btn span { display: none !important; }
+}
+@media (max-width: 720px) {
+  :root[data-palette="persona"] .btn-icon-text span { display: none !important; }
+}
+
 /* ── §6 · Chips (plataformas, géneros, fuertes/débiles, chip "Amigos" y chips de la ruleta, agrupados
    por regla 7): CORTE RASGADO + sesgo + contorno negro que sigue el corte (box-shadow inset). No
    llevan sombra de bloque, por eso aquí el clip-path SÍ es correcto (regla 3). ── */
