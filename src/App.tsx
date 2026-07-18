@@ -585,13 +585,13 @@ export default function App() {
           </Suspense>
         ) : activeSection === 'account' ? (
           <Suspense fallback={null}>
-            {scoreScaleUid ? <AccountHub scoreScaleUid={scoreScaleUid} onOpenIntegrations={openIntegrations} /> : null}
+            {scoreScaleUid ? <AccountHub scoreScaleUid={scoreScaleUid} /> : null}
           </Suspense>
         ) : activeSection === 'integrations' ? (
           <Suspense fallback={null}>
             <IntegrationsScreen
               onImport={handleImportLibraryExporter}
-              onBack={() => navigate('/cuenta')}
+              onBack={() => navigate('/ajustes')}
               inboxCount={inbox.count}
               onOpenInbox={() => navigate('/bandeja')}
             />
@@ -608,7 +608,7 @@ export default function App() {
               onDiscardMany={handleDiscardManyImport}
               onClear={handleClearInbox}
               onBack={() => navigate('/integraciones')}
-              onGoIntegrations={() => navigate('/cuenta')}
+              onGoIntegrations={() => navigate('/ajustes')}
             />
           </Suspense>
         ) : (
@@ -636,6 +636,7 @@ export default function App() {
               lookups={vm.lookups}
               onEditTag={handleEditTag}
               onDeleteTag={handleDeleteTag}
+              onOpenIntegrations={openIntegrations}
             />
           </Suspense>
         )}
