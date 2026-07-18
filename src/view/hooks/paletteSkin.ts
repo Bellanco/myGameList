@@ -13,11 +13,11 @@ const SKIN_LOADERS: Partial<Record<PaletteId, () => Promise<unknown>>> = {
   persona: () => import('../../styles/themes/persona.scss'),
   portal: () => import('../../styles/themes/portal.scss'),
   cyberpunk: () => import('../../styles/themes/cyberpunk.scss'),
-  cuphead: () => import('../../styles/themes/cuphead.scss'),
   grimdark: () => Promise.all([
     import('../../styles/themes/grimdark.scss'),
     import('../../styles/themes/cyberpunk.scss'),
   ]),
+  seaofstars: () => import('../../styles/themes/seaofstars.scss'),
 };
 
 const requested = new Set<PaletteId>();
