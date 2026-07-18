@@ -21,6 +21,7 @@ import { useSocialProfileSession } from './view/hooks/useSocialProfileSession';
 import { useAppearanceSession } from './view/hooks/useAppearanceSession';
 import { useUppercase } from './view/hooks/useUppercase';
 import { useShowSteamButton } from './view/hooks/useShowSteamButton';
+import { useShootingStars } from './view/hooks/useShootingStars';
 import { useAppliedPalette } from './view/hooks/usePalette';
 import { hasGithubOAuthRedirect } from './model/repository/githubOAuthRepository';
 import { buildListsPool, buildListsWeigher, normalizeName } from './core/roulette/roulette';
@@ -91,9 +92,15 @@ export default function App() {
   // F2: enlaza la sesión de Google con la escala de puntuación (hidrata desde Firestore / resetea al salir);
   // devuelve el uid para gatear la opción en Ajustes. Se monta aquí para que la escala esté en toda la app.
   const { uid: scoreScaleUid, ready: authReady } = useScoreScaleSession();
-  // El botón flotante de Cuenta se muestra solo si hay PERFIL SOCIAL configurado (no basta la sesión de
-  // Google recordada). Se resuelve al abrir la web (raíz), así no hay que pasar por Social para verlo.
-  const hasSocialProfile = useSocialProfileSession();
+  // El botón flotante de Cuenta se muestra solo si hay PERFIL SOCIAL COMPLETO (no basta la sesión de Google ni el
+  // gist enlazado): si un favorito apunta a un juego borrado, el perfil deja de estar completo y el botón se oculta
+  // para no poder navegar a `/cuenta` hasta arreglarlo. Los ids de completados (misma fuente que los favoritos
+  // válidos) se pasan para que el gate sea reactivo al borrar juegos, sin lecturas de red.
+  const completedGameIds = useMemo(
+    () => new Set(vm.data.c.filter((game) => game.id > 0 && game.name).map((game) => game.id)),
+    [vm.data.c],
+  );
+  const hasSocialProfile = useSocialProfileSession(completedGameIds);
   // F1: enlaza la sesión con la apariencia (paleta + claro/oscuro) → hidrata/replica en Firestore.
   useAppearanceSession();
   // F1: aplica la paleta app-wide y reacciona a la hidratación de cuenta, para que el tema sincronizado se
@@ -103,6 +110,8 @@ export default function App() {
   useUppercase();
   // F1: visibilidad del botón "Steam Deck" (preferencia de cuenta) → se pasa a la Toolbar.
   const { showSteamButton } = useShowSteamButton();
+  // Estrellas fugaces aleatorias por los bordes de botones/chips (solo en la paleta "Sol y luna").
+  useShootingStars();
 
   // La pantalla "Cuenta" solo existe con sesión de Google (todos sus ajustes la requieren). Si se llega a
   // `/cuenta` sin sesión (URL directa) o se cierra sesión estando allí, se redirige a la lista. Se espera a
@@ -585,13 +594,13 @@ export default function App() {
           </Suspense>
         ) : activeSection === 'account' ? (
           <Suspense fallback={null}>
-            {scoreScaleUid ? <AccountHub scoreScaleUid={scoreScaleUid} onOpenIntegrations={openIntegrations} /> : null}
+            {scoreScaleUid ? <AccountHub scoreScaleUid={scoreScaleUid} /> : null}
           </Suspense>
         ) : activeSection === 'integrations' ? (
           <Suspense fallback={null}>
             <IntegrationsScreen
               onImport={handleImportLibraryExporter}
-              onBack={() => navigate('/cuenta')}
+              onBack={() => navigate('/ajustes')}
               inboxCount={inbox.count}
               onOpenInbox={() => navigate('/bandeja')}
             />
@@ -608,7 +617,7 @@ export default function App() {
               onDiscardMany={handleDiscardManyImport}
               onClear={handleClearInbox}
               onBack={() => navigate('/integraciones')}
-              onGoIntegrations={() => navigate('/cuenta')}
+              onGoIntegrations={() => navigate('/ajustes')}
             />
           </Suspense>
         ) : (
@@ -636,6 +645,7 @@ export default function App() {
               lookups={vm.lookups}
               onEditTag={handleEditTag}
               onDeleteTag={handleDeleteTag}
+              onOpenIntegrations={openIntegrations}
             />
           </Suspense>
         )}

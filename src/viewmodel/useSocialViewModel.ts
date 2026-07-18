@@ -1133,10 +1133,14 @@ export function useSocialViewModel() {
     const cachedProfile = await getCachedSocialProfile(socialCfgGistId);
     if (cachedProfile) {
       const cachedFavorites = cachedProfile.favorites.filter((id) => completedGameNameById.has(id));
+      // Si algún favorito guardado apunta a un juego ya borrado, el perfil deja de estar completo: hay que pasar
+      // por el editor y re-confirmar aunque quede ≥1 favorito válido (evita favoritos "fantasma" en el directorio).
+      const cachedHasStaleFavorite = cachedFavorites.length !== cachedProfile.favorites.length;
       // No confiamos en el `profileExists` cacheado (pudo escribirse con la regla antigua "solo nombre"): lo
       // recalculamos con el criterio actual (nombre Y ≥1 favorito) para que los perfiles incompletos ya guardados
       // sean redirigidos al editor sin esperar a que caduque la caché (~5 min).
-      const cachedProfileExists = Boolean(cachedProfile.name.trim()) && cachedFavorites.length > 0;
+      const cachedProfileExists =
+        Boolean(cachedProfile.name.trim()) && cachedFavorites.length > 0 && !cachedHasStaleFavorite;
       setProfileName(cachedProfile.name);
       setFavoriteGameIds(cachedFavorites);
       setHiddenTabs(getOrderedUniqueTabs(cachedProfile.hiddenTabs || []));
@@ -1195,15 +1199,18 @@ export function useSocialViewModel() {
       }
 
       const nextName = socialRead.data.profile.name || existingProfile?.displayName || authUser.displayName || authUser.email;
-      const favorites = socialRead.data.profile.favoriteGames
-        .map((entry) => entry.id)
-        .filter((id) => completedGameNameById.has(id));
+      const storedFavoriteIds = socialRead.data.profile.favoriteGames.map((entry) => entry.id);
+      const favorites = storedFavoriteIds.filter((id) => completedGameNameById.has(id));
+      // Si algún favorito guardado apunta a un juego ya borrado, el perfil deja de estar completo: hay que pasar
+      // por el editor y re-confirmar aunque quede ≥1 favorito válido (evita favoritos "fantasma" en el directorio).
+      const hasStaleFavorite = favorites.length !== storedFavoriteIds.length;
       const profileVisibility = socialRead.data.profile.visibility || defaultSocialVisibility;
       // Un perfil se considera COMPLETO (y por tanto utilizable sin pasar por el editor) solo si tiene nombre Y al
-      // menos un favorito: misma regla que aplica la visibilidad del directorio/detalle (visibleSocialDirectory,
-      // selectedProfileDetail, openProfileDetail). Así el dueño no se cuela al feed con un perfil que nadie más puede
-      // abrir. Un doc en Firestore (era previa o reconexión) NO basta si el gist no cumple ambos campos.
-      const profileExists = Boolean(socialRead.data.profile.name.trim()) && favorites.length > 0;
+      // menos un favorito válido (sin favoritos huérfanos): misma regla que aplica la visibilidad del directorio/detalle
+      // (visibleSocialDirectory, selectedProfileDetail, openProfileDetail). Así el dueño no se cuela al feed con un
+      // perfil que nadie más puede abrir. Un doc en Firestore (era previa o reconexión) NO basta si el gist no cumple.
+      const profileExists =
+        Boolean(socialRead.data.profile.name.trim()) && favorites.length > 0 && !hasStaleFavorite;
 
       setProfileName(nextName);
       setFavoriteGameIds(favorites);

@@ -2,6 +2,7 @@ import { memo, useMemo, useState } from 'react';
 import { COMMON_ICONS } from '../../core/constants/icons';
 import { UI_MESSAGES, VALIDATION_MESSAGES } from '../../core/constants/labels';
 import { Icon } from './Icon';
+import { PlayniteNote } from './import/PlayniteNote';
 
 type AdminCategoryKey = 'genres' | 'platforms' | 'strengths' | 'weaknesses';
 
@@ -33,6 +34,7 @@ interface SettingsHubProps {
   };
   onEditTag: (key: AdminCategoryKey, oldValue: string, newValue: string) => void;
   onDeleteTag: (key: AdminCategoryKey, value: string) => void;
+  onOpenIntegrations: () => void; // navega a la pantalla de Integraciones (importar de Playnite)
 }
 
 /**
@@ -61,6 +63,7 @@ export const SettingsHub = memo(function SettingsHub({
   lookups,
   onEditTag,
   onDeleteTag,
+  onOpenIntegrations,
 }: SettingsHubProps) {
   const [showToken, setShowToken] = useState(false);
   const [showConfigHelp, setShowConfigHelp] = useState(false);
@@ -125,6 +128,17 @@ export const SettingsHub = memo(function SettingsHub({
 
   return (
     <section className="settings-hub" aria-label={UI_MESSAGES.settings.title}>
+      <div className="settings-card" style={{ gridColumn: '1 / -1' }}>
+        <div className="settings-card-head">
+          <h2>{UI_MESSAGES.import.integrations.title}</h2>
+          <PlayniteNote />
+        </div>
+        <button type="button" className="btn btn-primary" style={{ alignSelf: 'flex-start' }} onClick={onOpenIntegrations}>
+          <Icon name={COMMON_ICONS.download} />
+          <span>{UI_MESSAGES.import.integrations.importBtn}</span>
+        </button>
+      </div>
+
       <div className="settings-card settings-card-status">
         <h2>{UI_MESSAGES.settings.sync.title}</h2>
         <p>
