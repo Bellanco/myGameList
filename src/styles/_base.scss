@@ -393,91 +393,6 @@
   --cyber-magenta: #cc0057;
 }
 
-/* ── Trato con el diablo (Cuphead) — dibujo animado de los años 30: crema/pergamino envejecido, tinta
-   negra cálida, rojo Cuphead + azul Mugman, mostaza del contrato. Cálido y desvaído (colores de acuarela).
-   `--cup-ink` (línea de tinta), `--cup-blue` (Mugman) y `--cup-gold` (contrato) son tokens extra del skin. ── */
-:root[data-palette="cuphead"] {
-  /* OSCURO = NOCHE DE DIBUJO ANIMADO / CASINO DEL DIABLO: superficies OSCURAS y cálidas (madera/cuero
-     envejecido a la luz del candil), texto crema, y acentos VIVOS de acuarela (bermellón, azul Mugman, ORO de
-     casino, verde hoja) que RESALTAN sobre el negro. El contorno de tinta rubber-hose se vuelve CREMA para
-     verse sobre el oscuro (regla 1, como `--pop-line` de Persona). Es un tema CLARAMENTE OSCURO. */
-  --bg: #17100a;
-  --surface: #241a11;
-  --surface-hover: #2e2216;
-  --surface-elevated: #39291a;
-  --border: #6a5030;
-  --text: #f4e7c6;
-  --text-muted: #bfa77e;
-  --text-dim: #8d7550;
-  --steam: #ef4326;
-  --steam-hover: #ff6146;
-  --steam-rgb: 239,67,38;
-  --tab-active: #ff6146;
-  --success: #62c23f;
-  --success-rgb: 98,194,63;
-  --warn: #f0b429;
-  --warn-rgb: 240,180,41;
-  --danger: #e83a1f;
-  --danger-rgb: 232,58,31;
-  --star-empty: #6a5030;
-  --star-full: #f0b429;
-  --chip-plat-fg: #e6d3ab;
-  --chip-plat-bg: rgba(240,225,185,.10);
-  --chip-plat-border: rgba(240,225,185,.34);
-  --hub-text: #f6ead0;
-  --hub-text-muted: #c8ad82;
-  --radius-sm: 8px;
-  --radius-md: 14px;
-  --radius-lg: 22px;
-  /* `--cup-ink` = tinta OSCURA para texto sobre relleno de oro (la cartela mostaza); en ambos temas. */
-  --cup-ink: #17100a;
-  --cup-blue: #3f97e0;
-  --cup-gold: #f0b429;
-  /* Contorno de tinta rubber-hose: CREMA en oscuro (se ve sobre el negro), tinta en claro (regla 1). */
-  --cup-line: #efe0bd;
-  /* Lomos de estantería (favoritos): colores SÓLIDOS en tonos de Cuphead (rojo, azul Mugman, oro, verde, naranja). */
-  --deco-shelf-0: #ef4326;
-  --deco-shelf-1: #3f97e0;
-  --deco-shelf-2: #f0b429;
-  --deco-shelf-3: #62c23f;
-  --deco-shelf-4: #e07b2a;
-}
-:root[data-palette="cuphead"][data-theme="light"] {
-  /* CLARO = PERGAMINO de la cartela de Cuphead: papel cálido con matiz DORADO suave (guiño al oro de la
-     portada, pero sin el amarillo mostaza chillón, que resultaba excesivo para un fondo entero); paneles de
-     crema más neutra flotando encima como papel. Rojo/azul de acento = título rojo sobre pergamino. */
-  --bg: #eddcac;
-  --surface: #faf4de;
-  --surface-hover: #eee1bd;
-  --surface-elevated: #fefcf0;
-  --border: #d1bc84;
-  --text: #2a1d12;
-  --text-muted: #6e5638;
-  --text-dim: #937a56;
-  --steam: #d12b1f;
-  --steam-hover: #a81f16;
-  --steam-rgb: 209,43,31;
-  --tab-active: #b7241a;
-  --success: #3c7d2a;
-  --success-rgb: 60,125,42;
-  --warn: #b07d18;
-  --warn-rgb: 176,125,24;
-  --danger: #c0341f;
-  --danger-rgb: 192,52,31;
-  --star-empty: #d8c39a;
-  --star-full: #c9971b;
-  --chip-plat-fg: #6e5638;
-  --chip-plat-bg: rgba(110,86,56,.12);
-  --chip-plat-border: rgba(110,86,56,.30);
-  --hub-text: #2a1d12;
-  --hub-text-muted: #6e5638;
-  --tint-rgb: 42,29,18;
-  --cup-ink: #241812;
-  --cup-blue: #235fb0;
-  --cup-gold: #b07d18;
-  --cup-line: #241812;
-}
-
 /* ── Solo hay guerra (Warhammer 40.000) — grimdark gótico imperial: pantalla de COGITADOR verde fósforo sobre
    negro, ornamento de ORO latón, rojo sangre de aviso. `--grim-green/gold/red` y `--grim-line` (ornamento
    gótico: oro en oscuro / tinta en claro) son tokens extra del skin. ── */
@@ -556,6 +471,92 @@
   --grim-gold: #9a6f14;
   --grim-red: #b3261e;
   --grim-line: #2a2d24;
+}
+
+/* ── Mar de estrellas (Sea of Stars) — OSCURO = NOCHE ESTRELLADA del juego: cielo ÍNDIGO-VIOLETA (no navy plano)
+   salpicado de estrellas, con una gama BIEN DIFERENCIADA por rol (un hue por rol, muestreada del key art oficial):
+   oro de sol (Zale) + turquesa de mar (Valere), verde isla (Garl), naranja/rojo, y púrpura mágico + magenta de
+   atardecer para dar variedad. `--sos-turq/purple/pink/green` y `--sos-line` son tokens extra del skin. ── */
+:root[data-palette="seaofstars"] {
+  --bg: #0e0c24;
+  --surface: #181633;
+  --surface-hover: #1f1c40;
+  --surface-elevated: #242247;
+  --border: #3c3a6e;
+  --text: #fff7d6;
+  --text-muted: #c3bce2;
+  --text-dim: #8b83b5;
+  --steam: #f5c13e;
+  --steam-hover: #ffd777;
+  --steam-rgb: 245,193,62;
+  --tab-active: #f5c13e;
+  --success: #72c24a;
+  --success-rgb: 114,194,74;
+  --warn: #f0862c;
+  --warn-rgb: 240,134,44;
+  --danger: #e4372e;
+  --danger-rgb: 228,55,46;
+  --star-empty: #3c3a6e;
+  --star-full: #2bb3c4;
+  --chip-plat-fg: #bfe9ef;
+  --chip-plat-bg: rgba(47,182,196,.16);
+  --chip-plat-border: rgba(47,182,196,.42);
+  --hub-text: #fff7d6;
+  --hub-text-muted: #9fb0d8;
+  /* Acento oro CLARO → texto tinta encima (regla del comentario de `--on-accent`). */
+  --on-accent: #0b1b3a;
+  --radius-sm: 0px;
+  --radius-md: 0px;
+  --radius-lg: 2px;
+  --sos-turq: #2bb3c4;
+  --sos-purple: #a472e8;
+  --sos-pink: #e85c9e;
+  --sos-green: #72c24a;
+  --sos-line: #fff7d6;
+  /* Lomos de estantería (favoritos): oro, turquesa, púrpura, magenta e isla verde — un hue por lomo. */
+  --deco-shelf-0: #f5c13e;
+  --deco-shelf-1: #2bb3c4;
+  --deco-shelf-2: #a472e8;
+  --deco-shelf-3: #e85c9e;
+  --deco-shelf-4: #72c24a;
+}
+:root[data-palette="seaofstars"][data-theme="light"] {
+  /* CLARO = DÍA EN EL MAR (Sea of Stars): mediodía sobre un mar TURQUESA cristalino — pixel-art SATURADO, cálido
+     y ALEGRE (no pastel apagado). Fondo de AZUL AGUA vivo y SÓLIDO, SOL dorado intenso como color PRINCIPAL y
+     turquesa de mar de secundario; verde de isla, naranja de atardecer y coral vivos como semánticos. Paleta
+     tomada del JUEGO (biomas + personajes: Zale/oro, Valere/turquesa, Garl/verde), no del menú. */
+  --bg: #a6e9ec;
+  --surface: #8ddce4;
+  --surface-hover: #7bd3dc;
+  --surface-elevated: #9ee2e8;
+  --border: #57c2cf;
+  --text: #0a2a3a;
+  --text-muted: #3a5c6b;
+  --text-dim: #3a5563;
+  --steam: #ffc01f;
+  --steam-hover: #e89a00;
+  --steam-rgb: 255,192,31;
+  --tab-active: #7a5000;
+  --success: #3fb84f;
+  --success-rgb: 63,184,79;
+  --warn: #ff8a2b;
+  --warn-rgb: 255,138,43;
+  --danger: #f0443e;
+  --danger-rgb: 240,68,62;
+  --star-empty: #79b7c2;
+  --star-full: #06788a;
+  --chip-plat-fg: #044c56;
+  --chip-plat-bg: rgba(15,181,201,.22);
+  --chip-plat-border: rgba(15,181,201,.55);
+  --hub-text: #0a2a3a;
+  --hub-text-muted: #3a5c6b;
+  --tint-rgb: 10,60,80;
+  --on-accent: #0a2a3a;
+  --sos-turq: #0fb5c9;
+  --sos-purple: #7a3fe4;
+  --sos-pink: #ff6fa5;
+  --sos-green: #3fb84f;
+  --sos-line: #0a2a3a;
 }
 
 /* ══ CAPA 3 · DECORATIVOS / EXPRESIVOS ═════════════════════════════════════════

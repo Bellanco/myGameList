@@ -152,12 +152,14 @@ dialog.modal-dialog[open]::backdrop { animation: modalBackdropIn .28s ease both;
    solo un leve crecimiento como realimentación. */
 .floating-controls .floating-nav-btn:hover .ui-icon { transform: scale(1.08); }
 
-/* Cuenta aparece/desaparece de forma suave según haya perfil social configurado: colapsa su ancho y se desvanece
-   (misma sensación que el ocultado del grupo al hacer scroll). El margen negativo absorbe el `gap` del
-   flex para que el resto de botones no dejen hueco cuando no hay cuenta. */
+/* Cuenta aparece/desaparece según haya PERFIL SOCIAL COMPLETO. Efecto de fundido PURO (solo opacidad): no se anima
+   el ancho para que no parezca que entra/sale deslizándose de lado. Como el contenedor está anclado a la derecha y
+   Cuenta es el primer botón, colapsar su ancho no desplaza al resto; ese colapso se hace instantáneo al aparecer y
+   retardado (tras el fundido) al ocultar, de modo que el hueco se gestiona sin movimiento horizontal visible. */
 .floating-controls .floating-nav-account {
   overflow: hidden;
-  transition: opacity .25s ease, transform .25s ease, width .25s ease, margin .25s ease, padding .25s ease;
+  /* Aparecer: el hueco se abre al instante y el botón GANA opacidad. */
+  transition: opacity .35s ease;
 }
 .floating-controls .floating-nav-account.is-gone {
   width: 0;
@@ -165,13 +167,15 @@ dialog.modal-dialog[open]::backdrop { animation: modalBackdropIn .28s ease both;
   margin-right: -.5rem;
   border-width: 0;
   opacity: 0;
-  transform: scale(.7);
   pointer-events: none;
+  /* Ocultar: primero PIERDE opacidad y solo DESPUÉS colapsa el hueco, para que el fundido no se corte de golpe. */
+  transition: opacity .35s ease, width 0s .35s, margin 0s .35s, padding 0s .35s, border-width 0s .35s;
 }
 
 @media (prefers-reduced-motion: reduce) {
   .floating-controls,
-  .floating-controls .floating-nav-account { transition: none; }
+  .floating-controls .floating-nav-account,
+  .floating-controls .floating-nav-account.is-gone { transition: none; }
 }
 
 /* Sin barra superior: Social y Ajustes dejan hueco arriba para los controles flotantes. */

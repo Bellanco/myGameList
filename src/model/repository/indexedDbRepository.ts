@@ -478,6 +478,25 @@ export async function getCachedSocialProfile(ownGistId: string): Promise<CachedS
   }
 }
 
+/**
+ * Lee SOLO la identidad del perfil (nombre + favoritos guardados) IGNORANDO el TTL de `getCachedSocialProfile`.
+ * Ese TTL fuerza re-lectura del gist remoto (actividad, etc.), pero los favoritos guardados no "caducan": para
+ * gatear el botón de Cuenta basta con que el registro exista en este dispositivo (se escribe al abrir Social o al
+ * guardar el perfil). Devuelve `null` solo si nunca se ha abierto Social aquí. No sustituye a `getCachedSocialProfile`.
+ */
+export async function peekCachedSocialProfileIdentity(
+  ownGistId: string,
+): Promise<{ name: string; favorites: number[] } | null> {
+  if (!ownGistId) return null;
+  try {
+    const rec = await idbGet<CachedSocialProfile>(PROFILE_CACHE_STORE, SOCIAL_PROFILE_KEY_PREFIX + ownGistId);
+    if (!rec) return null;
+    return { name: rec.name, favorites: rec.favorites };
+  } catch {
+    return null;
+  }
+}
+
 export async function putCachedSocialProfile(ownGistId: string, data: CachedSocialProfileData): Promise<void> {
   if (!ownGistId) return;
   try {
