@@ -92,9 +92,15 @@ export default function App() {
   // F2: enlaza la sesión de Google con la escala de puntuación (hidrata desde Firestore / resetea al salir);
   // devuelve el uid para gatear la opción en Ajustes. Se monta aquí para que la escala esté en toda la app.
   const { uid: scoreScaleUid, ready: authReady } = useScoreScaleSession();
-  // El botón flotante de Cuenta se muestra solo si hay PERFIL SOCIAL configurado (no basta la sesión de
-  // Google recordada). Se resuelve al abrir la web (raíz), así no hay que pasar por Social para verlo.
-  const hasSocialProfile = useSocialProfileSession();
+  // El botón flotante de Cuenta se muestra solo si hay PERFIL SOCIAL COMPLETO (no basta la sesión de Google ni el
+  // gist enlazado): si un favorito apunta a un juego borrado, el perfil deja de estar completo y el botón se oculta
+  // para no poder navegar a `/cuenta` hasta arreglarlo. Los ids de completados (misma fuente que los favoritos
+  // válidos) se pasan para que el gate sea reactivo al borrar juegos, sin lecturas de red.
+  const completedGameIds = useMemo(
+    () => new Set(vm.data.c.filter((game) => game.id > 0 && game.name).map((game) => game.id)),
+    [vm.data.c],
+  );
+  const hasSocialProfile = useSocialProfileSession(completedGameIds);
   // F1: enlaza la sesión con la apariencia (paleta + claro/oscuro) → hidrata/replica en Firestore.
   useAppearanceSession();
   // F1: aplica la paleta app-wide y reacciona a la hidratación de cuenta, para que el tema sincronizado se
