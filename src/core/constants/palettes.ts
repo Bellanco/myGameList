@@ -18,7 +18,7 @@
 
 import type { ThemePreference } from '../../view/hooks/useTheme';
 
-export type PaletteId = 'steam' | 'persona' | 'portal' | 'cyberpunk' | 'cuphead' | 'grimdark';
+export type PaletteId = 'steam' | 'persona' | 'portal' | 'cyberpunk' | 'grimdark' | 'seaofstars';
 
 export interface PaletteMeta {
   readonly id: PaletteId;
@@ -39,7 +39,7 @@ export const PALETTES: readonly PaletteMeta[] = [
   { id: 'persona', label: 'Corazón rebelde', accent: '#ff1f3d', bg: { dark: '#0d0d0d', light: '#f4f1ee' } },
   { id: 'portal', label: 'Cámara de pruebas', accent: '#0091d6', accent2: '#f57a00', bg: { dark: '#12171b', light: '#e7ecf0' } },
   { id: 'cyberpunk', label: 'Sin futuro', accent: '#fcee0a', accent2: '#00f0ff', bg: { dark: '#08090d', light: '#e7eaee' } },
-  { id: 'cuphead', label: 'Trato con el diablo', accent: '#e5342a', accent2: '#2f7fc9', bg: { dark: '#1c1209', light: '#eddcac' } },
+  { id: 'seaofstars', label: 'Sol y luna', accent: '#f5c13e', accent2: '#2bb3c4', bg: { dark: '#0e0c24', light: '#a6e9ec' } },
   { id: 'grimdark', label: 'Solo hay guerra', accent: '#43f558', accent2: '#e0a92b', bg: { dark: '#060b08', light: '#e4e2d4' } },
 ];
 

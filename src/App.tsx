@@ -21,6 +21,7 @@ import { useSocialProfileSession } from './view/hooks/useSocialProfileSession';
 import { useAppearanceSession } from './view/hooks/useAppearanceSession';
 import { useUppercase } from './view/hooks/useUppercase';
 import { useShowSteamButton } from './view/hooks/useShowSteamButton';
+import { useShootingStars } from './view/hooks/useShootingStars';
 import { useAppliedPalette } from './view/hooks/usePalette';
 import { hasGithubOAuthRedirect } from './model/repository/githubOAuthRepository';
 import { buildListsPool, buildListsWeigher, normalizeName } from './core/roulette/roulette';
@@ -103,6 +104,8 @@ export default function App() {
   useUppercase();
   // F1: visibilidad del botón "Steam Deck" (preferencia de cuenta) → se pasa a la Toolbar.
   const { showSteamButton } = useShowSteamButton();
+  // Estrellas fugaces aleatorias por los bordes de botones/chips (solo en la paleta "Sol y luna").
+  useShootingStars();
 
   // La pantalla "Cuenta" solo existe con sesión de Google (todos sus ajustes la requieren). Si se llega a
   // `/cuenta` sin sesión (URL directa) o se cierra sesión estando allí, se redirige a la lista. Se espera a
