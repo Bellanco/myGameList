@@ -230,3 +230,17 @@
 :root[data-palette="grimdark"] .bottom-nav-ind { border-radius: 0; }
 /* Favoritos publicados: placa imperial — recta, filete de ORO; lomos variados en `--deco-shelf-*`. */
 :root[data-palette="grimdark"] .hub-fav-cart { border: 1px solid var(--grim-gold); border-radius: 0; }
+
+/* ══ EFECTOS · barrido de línea de fósforo del cogitador (CRT) que recorre la pantalla. Solo OSCURO y con
+   `data-effects="on"`, bajo reduced-motion. Va en `body::after` (el ::before ya lleva scanlines+vignette). ══ */
+@media (prefers-reduced-motion: no-preference) {
+  :root[data-effects="on"][data-palette="grimdark"]:not([data-theme="light"]) body::after {
+    content: ""; position: fixed; left: 0; right: 0; top: 0; height: 34vh; pointer-events: none; z-index: 3;
+    background: linear-gradient(rgba(67,245,88,0), rgba(67,245,88,.05) 50%, rgba(67,245,88,0));
+    animation: grim-phosphor-scan 7s linear infinite;
+  }
+  @keyframes grim-phosphor-scan { 0% { transform: translateY(-120%); } 100% { transform: translateY(400%); } }
+}
+
+/* Preferencia de efectos OFF: detén el PARPADEO CRT (la textura de scanlines/vignette se conserva). */
+:root:not([data-effects="on"])[data-palette="grimdark"] body::before { animation: none !important; }

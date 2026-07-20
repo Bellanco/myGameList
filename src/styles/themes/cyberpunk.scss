@@ -378,3 +378,27 @@
 :root[data-palette="cyberpunk"] .bottom-nav-ind { border-radius: 0; }
 /* Favoritos publicados: marco HUD — recto, filete cian; lomos variados en `--deco-shelf-*`. */
 :root[data-palette="cyberpunk"] .hub-fav-cart { border: 1px solid rgba(0, 240, 255, .35); border-radius: 0; }
+
+/* ══ EFECTOS · subrayado/halo neón en enlaces al hover (se suma al glitch de firma). Solo `data-effects="on"`. ══ */
+:root[data-effects="on"][data-palette="cyberpunk"] .hub-name-link:hover,
+:root[data-effects="on"][data-palette="cyberpunk"] .hub-detail-profile-link:hover {
+  text-shadow: 0 0 8px rgba(0, 240, 255, .6);
+}
+
+/* ══ Preferencia de efectos OFF: silencia las ANIMACIONES de firma (glitch de aberración) sin tocar la
+   textura estática (scanlines, marcos HUD, glows), que es identidad del tema. Cubre cyberpunk y el glitch
+   portado a grimdark (que vive en este archivo). Aditivo: no edita las reglas de glitch existentes. ══ */
+:root:not([data-effects="on"])[data-palette="cyberpunk"] h2,
+:root:not([data-effects="on"])[data-palette="cyberpunk"] .hub-name-link,
+:root:not([data-effects="on"])[data-palette="cyberpunk"] .hub-detail-profile-link,
+:root:not([data-effects="on"])[data-palette="cyberpunk"] .fab,
+:root:not([data-effects="on"])[data-palette="cyberpunk"] .fab-roulette,
+:root:not([data-effects="on"])[data-palette="cyberpunk"] .btn-secondary::before,
+:root:not([data-effects="on"])[data-palette="cyberpunk"] .btn-danger::before,
+:root:not([data-effects="on"])[data-palette="cyberpunk"] .btn-abandoned::before,
+:root:not([data-effects="on"])[data-palette="cyberpunk"] .hub-feed-game-chip,
+:root:not([data-effects="on"])[data-palette="grimdark"] h2,
+:root:not([data-effects="on"])[data-palette="grimdark"] .hub-name-link,
+:root:not([data-effects="on"])[data-palette="grimdark"] .hub-detail-profile-link,
+:root:not([data-effects="on"])[data-palette="grimdark"] .fab,
+:root:not([data-effects="on"])[data-palette="grimdark"] .fab-roulette { animation: none !important; }
