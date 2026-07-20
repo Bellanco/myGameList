@@ -20,6 +20,7 @@ import { useScoreScaleSession } from './view/hooks/useScoreScaleSession';
 import { useSocialProfileSession } from './view/hooks/useSocialProfileSession';
 import { useAppearanceSession } from './view/hooks/useAppearanceSession';
 import { useUppercase } from './view/hooks/useUppercase';
+import { useEffects } from './view/hooks/useEffects';
 import { useShowSteamButton } from './view/hooks/useShowSteamButton';
 import { useShootingStars } from './view/hooks/useShootingStars';
 import { useAppliedPalette } from './view/hooks/usePalette';
@@ -108,6 +109,8 @@ export default function App() {
   useAppliedPalette();
   // F1: aplica la preferencia de caja (mayúsculas) al <html> app-wide y reacciona a la hidratación.
   useUppercase();
+  // F1: aplica la preferencia de efectos visuales (data-effects) al <html> app-wide y reacciona a la hidratación.
+  useEffects();
   // F1: visibilidad del botón "Steam Deck" (preferencia de cuenta) → se pasa a la Toolbar.
   const { showSteamButton } = useShowSteamButton();
   // Estrellas fugaces aleatorias por los bordes de botones/chips (solo en la paleta "Sol y luna").

@@ -673,7 +673,7 @@
 .hub-profile-sync-chip.is-synced {
   background: color-mix(in srgb, var(--success) 14%, transparent);
   border-color: color-mix(in srgb, var(--success) 40%, transparent);
-  color: var(--success);
+  color: var(--fg-green);
 }
 .hub-profile-sync-chip.is-synced .dot { background: var(--success); box-shadow: 0 0 0 3px color-mix(in srgb, var(--success) 22%, transparent); }
 
@@ -804,7 +804,7 @@
   padding: .25rem .55rem;
   border-radius: 999px;
   background: rgba(var(--success-rgb),.16);
-  color: var(--success);
+  color: var(--fg-green);
   border: 1px solid rgba(var(--success-rgb),.3);
   font-size: .8rem;
   font-weight: 600;

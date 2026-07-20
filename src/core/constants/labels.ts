@@ -287,6 +287,10 @@ export const UI_MESSAGES = {
       steamAria: 'Visibilidad del botón de Steam Deck',
       steamShow: 'Mostrar',
       steamHide: 'Ocultar',
+      effectsLabel: 'Efectos visuales',
+      effectsAria: 'Efectos visuales animados de los temas',
+      effectsOn: 'Activados',
+      effectsOff: 'Desactivados',
     },
     scoreScale: {
       title: 'Puntuación',

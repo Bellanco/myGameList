@@ -85,6 +85,7 @@ export function useShootingStars(): void {
     function start(): void {
       if (running || reduce.matches) return;
       if (root.getAttribute('data-palette') !== 'seaofstars') return;
+      if (root.getAttribute('data-effects') !== 'on') return; // respeta la preferencia de efectos
       running = true;
       schedule();
     }
@@ -104,9 +105,9 @@ export function useShootingStars(): void {
     };
 
     const obs = new MutationObserver((muts) => {
-      if (muts.some((m) => m.attributeName === 'data-palette')) restart();
+      if (muts.some((m) => m.attributeName === 'data-palette' || m.attributeName === 'data-effects')) restart();
     });
-    obs.observe(root, { attributes: true, attributeFilter: ['data-palette'] });
+    obs.observe(root, { attributes: true, attributeFilter: ['data-palette', 'data-effects'] });
     reduce.addEventListener('change', restart);
     start();
 
