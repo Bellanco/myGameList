@@ -303,3 +303,11 @@
 :root[data-palette="persona"] .hub-fav-cart:hover { border-color: var(--pop-line); }
 :root[data-palette="persona"][data-theme="light"] .fab,
 :root[data-palette="persona"][data-theme="light"] .fab-roulette { color: #fff; box-shadow: 2px 2px 0 #151011; }
+
+/* ══ EFECTOS · deriva lenta del semitono pop-art. Solo con la preferencia de efectos activa
+   (`data-effects="on"`) y bajo reduced-motion. La textura estática se mantiene siempre (es identidad);
+   solo su movimiento es "efecto". El recorrido (132px = 12 celdas de 11px) es sin costura. ══ */
+@media (prefers-reduced-motion: no-preference) {
+  :root[data-effects="on"][data-palette="persona"] body { animation: p5-halftone-drift 22s linear infinite; }
+  @keyframes p5-halftone-drift { to { background-position: 132px 66px; } }
+}

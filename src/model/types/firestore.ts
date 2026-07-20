@@ -107,4 +107,6 @@ export interface FirestorePublicConfig {
   uppercase?: boolean;
   /** F1 — mostrar el botón "Steam Deck" de la barra de filtros (por defecto true; false lo oculta). */
   showSteamButton?: boolean;
+  /** F1 — efectos visuales animados de los temas (por defecto true; false los desactiva). */
+  effects?: boolean;
 }

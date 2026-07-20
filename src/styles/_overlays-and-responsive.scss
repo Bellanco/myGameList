@@ -602,11 +602,11 @@ body.compact-filters .filters-row.open .btn-toggle { justify-content: center; al
 }
 
 .field-footer .tag-hint.has-warning {
-  color: var(--warn);
+  color: var(--fg-amber);
 }
 
 .field-footer .tag-hint.has-error {
-  color: var(--danger);
+  color: var(--fg-red);
 }
 
 .tag-hint--spacer {

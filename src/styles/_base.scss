@@ -121,7 +121,7 @@
   --border: #3d4450;
   --text: #dcdedf;
   --text-muted: #8f98a0;
-  --text-dim: #6b747c;
+  --text-dim: #7e868d;
   --steam: #1a9fff;
   --steam-hover: #66c0f4;
   --steam-rgb: 26,159,255;
@@ -148,7 +148,7 @@
   --border: #d9cdb8;
   --text: #2b2721;
   --text-muted: #6e6353;
-  --text-dim: #948872;
+  --text-dim: #776d5c;
   --steam: #1a82e0;
   --steam-hover: #1469bd;
   --steam-rgb: 26,130,224;
@@ -178,7 +178,7 @@
   --border: #3a2f39;
   --text: #f4f2f5;
   --text-muted: #a99daa;
-  --text-dim: #776d78;
+  --text-dim: #807781;
   --steam: #ff1f3d;
   --steam-hover: #ff5566;
   --steam-rgb: 255,31,61;
@@ -218,7 +218,7 @@
   --border: #ded5cc;
   --text: #120e0e;
   --text-muted: #5f5550;
-  --text-dim: #8a7f78;
+  --text-dim: #766d67;
   --steam: #e60012;
   --steam-hover: #b3000e;
   --steam-rgb: 230,0,18;
@@ -252,7 +252,7 @@
   --border: #3d4c57;
   --text: #e8eff4;
   --text-muted: #a0b2be;
-  --text-dim: #6d808d;
+  --text-dim: #718390;
   --steam: #29b6f6;
   --steam-hover: #5cc8f7;
   --steam-rgb: 41,182,246;
@@ -295,7 +295,7 @@
   --border: #c7b184;
   --text: #392a18;
   --text-muted: #6e5a3e;
-  --text-dim: #8f7a5a;
+  --text-dim: #746349;
   --steam: #b46a1a;
   --steam-hover: #99590f;
   --steam-rgb: 180,106,26;
@@ -330,7 +330,7 @@
   --border: #333c4a;
   --text: #eef3f7;
   --text-muted: #99a6b4;
-  --text-dim: #63707e;
+  --text-dim: #6d7986;
   --steam: #fcee0a;
   --steam-hover: #ffff45;
   --steam-rgb: 252,238,10;
@@ -369,7 +369,7 @@
   --border: #b7c0ca;
   --text: #0d1319;
   --text-muted: #4c5967;
-  --text-dim: #78848f;
+  --text-dim: #616b74;
   --steam: #0089a3;
   --steam-hover: #006f86;
   --steam-rgb: 0,137,163;
@@ -404,7 +404,7 @@
   --border: #2f5240;
   --text: #c9ddcb;
   --text-muted: #7fa389;
-  --text-dim: #587664;
+  --text-dim: #637f6e;
   --steam: #43f558;
   --steam-hover: #7dff8c;
   --steam-rgb: 67,245,88;
@@ -448,7 +448,7 @@
   --border: #c3b48c;
   --text: #1b1e1a;
   --text-muted: #565b4e;
-  --text-dim: #7c8173;
+  --text-dim: #63675c;
   --steam: #136b30;
   --steam-hover: #0d5324;
   --steam-rgb: 19,107,48;
@@ -672,3 +672,32 @@ button { -webkit-tap-highlight-color: transparent; }
 :root[data-uppercase="on"] .rl-card-tag,
 :root[data-uppercase="on"] .rl-item,
 :root[data-uppercase="on"] .rl-hint { text-transform: uppercase; }
+
+/* ══ EFECTOS · Clásico (steam) ═════════════════════════════════════════════════
+   Firma del tema por defecto (que hasta ahora no tenía ninguna). Cuelgan de la preferencia de efectos
+   (`data-effects="on"`) y de la paleta por defecto (sin `data-palette`). Los animados van bajo
+   `prefers-reduced-motion: no-preference`; el subrayado es una micro-afordancia de hover. */
+:root[data-effects="on"]:not([data-palette]) .hub-name-link {
+  background-image: linear-gradient(var(--steam-hover), var(--steam-hover));
+  background-repeat: no-repeat;
+  background-position: 0 100%;
+  background-size: 0% 2px;
+  transition: background-size .3s ease;
+}
+:root[data-effects="on"]:not([data-palette]) .hub-name-link:hover { background-size: 100% 2px; }
+@media (prefers-reduced-motion: no-preference) {
+  /* Barrido de brillo al pasar por el botón primario (como las cards de la tienda Steam). */
+  :root[data-effects="on"]:not([data-palette]) .btn-steam { position: relative; overflow: hidden; }
+  :root[data-effects="on"]:not([data-palette]) .btn-steam::after {
+    content: ""; position: absolute; inset: 0; pointer-events: none;
+    background: linear-gradient(115deg, transparent 42%, rgba(255,255,255,.25) 50%, transparent 58%);
+    transform: translateX(-130%); transition: transform .6s ease;
+  }
+  :root[data-effects="on"]:not([data-palette]) .btn-steam:hover::after { transform: translateX(130%); }
+  /* Halo azul pulsante en la insignia de "oportunidad" activa. */
+  :root[data-effects="on"]:not([data-palette]) .badge-opp-activo { animation: steam-opp-glow 2.6s ease-in-out infinite; }
+  @keyframes steam-opp-glow {
+    0%, 100% { box-shadow: 0 0 0 1px rgba(var(--steam-rgb),.30), 0 0 8px rgba(var(--steam-rgb),.15); }
+    50%      { box-shadow: 0 0 0 1px rgba(var(--steam-rgb),.55), 0 0 18px rgba(var(--steam-rgb),.34); }
+  }
+}

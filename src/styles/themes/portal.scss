@@ -260,3 +260,15 @@
   :root[data-palette="portal"] .hub-feed-day-header:nth-of-type(2n) { animation-delay: -3.3s; }
   :root[data-palette="portal"] .hub-feed-day-header:nth-of-type(3n) { animation-delay: -6.6s; }
 }
+
+/* ══ EFECTOS · deriva lenta de las juntas de panel de la sala de pruebas. Solo con `data-effects="on"`
+   y reduced-motion. Recorrido de 46px (una celda) sin costura; dos capas de rejilla → dos posiciones. ══ */
+@media (prefers-reduced-motion: no-preference) {
+  :root[data-effects="on"][data-palette="portal"] body { animation: portal-seam-drift 34s linear infinite; }
+  @keyframes portal-seam-drift { to { background-position: 46px 46px, 46px 46px; } }
+}
+
+/* ══ Preferencia de efectos OFF: detiene el parpadeo FLUORESCENTE de chips y cabeceras de día (portal-fluoro).
+   La identidad estática de Portal (rejilla, placas de pared, barra naranja) se conserva. ══ */
+:root:not([data-effects="on"])[data-palette="portal"] .chip,
+:root:not([data-effects="on"])[data-palette="portal"] .hub-feed-day-header { animation: none !important; }
