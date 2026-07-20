@@ -225,3 +225,12 @@
    `position: relative` que necesitan esos trazos, posicionados en absoluto dentro del componente. ── */
 :root[data-palette="seaofstars"] .btn:not(.btn-icon),
 :root[data-palette="seaofstars"] .chip { position: relative; }
+
+/* ══ EFECTOS · preferencia OFF. El titileo de estrellas de DOS CAPAS (§14) y el shimmer del titular (§13) ya
+   existían pero NO estaban gobernados por la preferencia; aquí los detenemos cuando los efectos están
+   desactivados. El campo de estrellas ESTÁTICO del fondo (§2) se conserva (es identidad), y las estrellas
+   fugaces (JS, `useShootingStars`) ya respetan `data-effects`. No añadimos titileo nuevo: el de §14 ya es el
+   propuesto. ══ */
+:root:not([data-effects="on"])[data-palette="seaofstars"] h2,
+:root:not([data-effects="on"])[data-palette="seaofstars"] body::before,
+:root:not([data-effects="on"])[data-palette="seaofstars"] body::after { animation: none !important; }

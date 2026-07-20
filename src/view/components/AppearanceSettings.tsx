@@ -5,6 +5,7 @@ import { usePalette } from '../hooks/usePalette';
 import { useTheme } from '../hooks/useTheme';
 import { useUppercase } from '../hooks/useUppercase';
 import { useShowSteamButton } from '../hooks/useShowSteamButton';
+import { useEffects } from '../hooks/useEffects';
 
 const A = UI_MESSAGES.settings.appearance;
 
@@ -17,6 +18,7 @@ export const AppearanceSettings = memo(function AppearanceSettings() {
   const { theme, toggle } = useTheme();
   const { uppercase, setUppercase } = useUppercase();
   const { showSteamButton, setShowSteamButton } = useShowSteamButton();
+  const { effects, setEffects } = useEffects();
 
   return (
     <div className="settings-appearance">
@@ -98,6 +100,26 @@ export const AppearanceSettings = memo(function AppearanceSettings() {
           onClick={() => { if (showSteamButton) setShowSteamButton(false); }}
         >
           <span>{A.steamHide}</span>
+        </button>
+      </div>
+
+      <p className="settings-card-sub">{A.effectsLabel}</p>
+      <div className="theme-mode-row" role="group" aria-label={A.effectsAria}>
+        <button
+          type="button"
+          className={`btn btn-toggle${effects ? ' active' : ''}`}
+          aria-pressed={effects}
+          onClick={() => { if (!effects) setEffects(true); }}
+        >
+          <span>{A.effectsOn}</span>
+        </button>
+        <button
+          type="button"
+          className={`btn btn-toggle${!effects ? ' active' : ''}`}
+          aria-pressed={!effects}
+          onClick={() => { if (effects) setEffects(false); }}
+        >
+          <span>{A.effectsOff}</span>
         </button>
       </div>
     </div>

@@ -4,6 +4,7 @@
 @use './table';
 @use './overlays-and-responsive';
 @use './roulette';
+@use './effects';
 // Los skins de tema (CAPA 3, `themes/*.scss`) ya NO se agrupan aquí: se cargan bajo demanda por
 // paleta desde `paletteSkin.ts` (los colores/layout de cada paleta viven en `_base.scss`, CAPA 2, que
 // sí va en el bundle base). Steam (default) no tiene skin. Ver `src/view/hooks/paletteSkin.ts`.

@@ -27,3 +27,10 @@ export const UPPERCASE_KEY = 'mis-listas-uppercase';
 // 'off' (oculto). Se sincroniza por cuenta (publicConfig.showSteamButton). No lo lee `theme-init.js`
 // (no necesita anti-flash: solo condiciona un botón de la toolbar, no la pintura inicial del tema).
 export const STEAM_BUTTON_KEY = 'mis-listas-steam-button';
+
+// F1 — efectos visuales ANIMADOS de los temas (barridos, glitch, parpadeo CRT, deriva de texturas, estrellas
+// fugaces…). Valores: 'on' (activados, por defecto) | 'off' (desactivados). Se aplica vía `data-effects="on"`
+// en <html> (los efectos CSS cuelgan de ese atributo) y se sincroniza por cuenta (publicConfig.effects). No lo
+// lee `theme-init.js`: los efectos son decorativos y, al colgar de `data-effects="on"`, en ausencia del atributo
+// (antes de montar) no se pintan → quien los desactiva nunca ve un "flash" de efectos al cargar.
+export const EFFECTS_KEY = 'mis-listas-effects';
