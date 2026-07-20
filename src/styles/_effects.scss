@@ -1,0 +1,63 @@
+/* F1 — EFECTOS DE FIRMA por INTERACCIÓN (elementos EFÍMEROS inyectados por `useSignatureEffects`).
+   Solo se crean con la paleta correspondiente activa, `data-effects="on"` y SIN `prefers-reduced-motion`
+   (el hook lo comprueba antes de inyectar), así que estas clases nunca aplican fuera de ese caso; por eso
+   las animaciones no necesitan `@media reduced-motion` aquí (además, un wipe/flash ESTÁTICO bajo
+   reduced-motion sería peor que no pintarlo). Todos son `pointer-events:none` y se autodestruyen al terminar.
+   Colores hardcodeados por tema, mismo criterio que `useShootingStars`. */
+
+/* ── Corazón rebelde · RÁFAGA de líneas de acción (manga) al pulsar un botón primario. ── */
+.fx-p5-burst {
+  position: fixed; z-index: 9997; pointer-events: none; width: 240px; height: 240px;
+  transform: translate(-50%, -50%) scale(0);
+  background: repeating-conic-gradient(from 0deg, rgba(255, 31, 61, .92) 0deg 3.5deg, transparent 3.5deg 10deg);
+  -webkit-mask: radial-gradient(circle, transparent 26%, #000 40%, #000 58%, transparent 66%);
+  mask: radial-gradient(circle, transparent 26%, #000 40%, #000 58%, transparent 66%);
+  animation: fx-p5-lines .5s ease-out;
+}
+@keyframes fx-p5-lines {
+  0%   { transform: translate(-50%, -50%) scale(0) rotate(0); opacity: .95; }
+  100% { transform: translate(-50%, -50%) scale(1) rotate(16deg); opacity: 0; }
+}
+
+/* ── Cámara de pruebas · APERTURA DE PORTAL (anillo azul→naranja) desde el punto del clic. SUTIL: anillo
+   pequeño, fino y translúcido, sin glow fuerte — un guiño discreto, no un fogonazo. ── */
+.fx-portal-ring {
+  position: fixed; z-index: 9997; pointer-events: none; width: 116px; height: 116px;
+  border-radius: 50%; border: 1.5px solid rgba(41, 182, 246, .5);
+  transform: translate(-50%, -50%) scale(0);
+  animation: fx-portal-open .5s ease-out forwards;
+}
+@keyframes fx-portal-open {
+  0%   { transform: translate(-50%, -50%) scale(0); opacity: .5; border-color: rgba(41, 182, 246, .5); }
+  60%  { opacity: .3; border-color: rgba(255, 158, 27, .38); }
+  100% { transform: translate(-50%, -50%) scale(1); opacity: 0; border-color: rgba(255, 158, 27, .28); }
+}
+
+/* ── Sol y luna · astro SOL↔LUNA que cruza el cielo al alternar claro/oscuro. ── */
+.fx-sos-orb {
+  position: fixed; top: 10vh; left: 0; z-index: 9997; pointer-events: none;
+  width: 42px; height: 42px; border-radius: 50%;
+  animation: fx-sos-arc 1.15s ease-in-out;
+}
+.fx-sos-orb.is-sun  { background: radial-gradient(circle at 35% 35%, #fff3b0, #f5c13e); box-shadow: 0 0 26px rgba(245, 193, 62, .75); }
+.fx-sos-orb.is-moon { background: radial-gradient(circle at 35% 35%, #eef2ff, #c9d4f0); box-shadow: 0 0 22px rgba(200, 215, 255, .6); }
+@keyframes fx-sos-arc {
+  0%   { transform: translate(-60px, 40px); opacity: 0; }
+  15%  { opacity: 1; }
+  50%  { transform: translate(50vw, -20px); opacity: 1; }
+  85%  { opacity: 1; }
+  100% { transform: translate(calc(100vw + 60px), 40px); opacity: 0; }
+}
+
+/* ── Solo hay guerra · BOOT-UP de fósforo (encender el cogitador) al activar la paleta. ── */
+.fx-grim-boot {
+  position: fixed; inset: 0; z-index: 9998; pointer-events: none;
+  background: #43f558; opacity: 0;
+  animation: fx-grim-bootup .5s ease-out;
+}
+@keyframes fx-grim-bootup {
+  0%   { opacity: 0; }
+  8%   { opacity: .30; }
+  30%  { opacity: .05; }
+  100% { opacity: 0; }
+}
