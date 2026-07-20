@@ -402,3 +402,23 @@
 :root:not([data-effects="on"])[data-palette="grimdark"] .hub-detail-profile-link,
 :root:not([data-effects="on"])[data-palette="grimdark"] .fab,
 :root:not([data-effects="on"])[data-palette="grimdark"] .fab-roulette { animation: none !important; }
+
+/* ══ EFECTOS · corchetes de "LOCK-ON" (óptica Kiroshi) al pasar el ratón por las tarjetas de favoritos.
+   Solo con `data-effects="on"`. `.hub-fav-cart` no usa ::before/::after (su barra superior es un hijo),
+   así que las esquinas cian van en esos pseudos. ══ */
+:root[data-effects="on"][data-palette="cyberpunk"] .hub-fav-cart { position: relative; }
+:root[data-effects="on"][data-palette="cyberpunk"] .hub-fav-cart::before,
+:root[data-effects="on"][data-palette="cyberpunk"] .hub-fav-cart::after {
+  content: ""; position: absolute; width: 14px; height: 14px; border: 2px solid #00f0ff;
+  opacity: 0; transition: opacity .2s ease, transform .2s ease; pointer-events: none;
+}
+:root[data-effects="on"][data-palette="cyberpunk"] .hub-fav-cart::before {
+  top: 5px; left: 5px; border-right: 0; border-bottom: 0; transform: translate(6px, 6px);
+}
+:root[data-effects="on"][data-palette="cyberpunk"] .hub-fav-cart::after {
+  bottom: 5px; right: 5px; border-left: 0; border-top: 0; transform: translate(-6px, -6px);
+}
+:root[data-effects="on"][data-palette="cyberpunk"] .hub-fav-cart:hover::before,
+:root[data-effects="on"][data-palette="cyberpunk"] .hub-fav-cart:hover::after {
+  opacity: 1; transform: translate(0, 0);
+}

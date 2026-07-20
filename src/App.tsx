@@ -23,6 +23,7 @@ import { useUppercase } from './view/hooks/useUppercase';
 import { useEffects } from './view/hooks/useEffects';
 import { useShowSteamButton } from './view/hooks/useShowSteamButton';
 import { useShootingStars } from './view/hooks/useShootingStars';
+import { useSignatureEffects } from './view/hooks/useSignatureEffects';
 import { useAppliedPalette } from './view/hooks/usePalette';
 import { hasGithubOAuthRedirect } from './model/repository/githubOAuthRepository';
 import { buildListsPool, buildListsWeigher, normalizeName } from './core/roulette/roulette';
@@ -115,6 +116,8 @@ export default function App() {
   const { showSteamButton } = useShowSteamButton();
   // Estrellas fugaces aleatorias por los bordes de botones/chips (solo en la paleta "Sol y luna").
   useShootingStars();
+  // Efectos de firma por interacción (wipe P5 al navegar, apertura de portal al clic, sol↔luna, boot-up 40K).
+  useSignatureEffects();
 
   // La pantalla "Cuenta" solo existe con sesión de Google (todos sus ajustes la requieren). Si se llega a
   // `/cuenta` sin sesión (URL directa) o se cierra sesión estando allí, se redirige a la lista. Se espera a
