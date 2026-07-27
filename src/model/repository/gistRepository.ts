@@ -1033,12 +1033,26 @@ async function createSocialGistWithData(token: string, data: SocialGistData, isP
   return { gistId: body.id, etag: response.headers.get('etag') };
 }
 
-async function isPublicSocialGistAccessible(gistId: string): Promise<boolean> {
+/**
+ * ¿El gist es legible SIN autenticación (es decir, público)?
+ *
+ * Tres estados a propósito: un fallo de red o un 403 por rate-limit anónimo (60 req/h por IP) NO significan "no
+ * es público". Antes se colapsaba todo a `false` y `updateGistPrivacy` respondía clonando el gist a un id nuevo:
+ * el canal social del usuario cambiaba de id por un error transitorio, dejando un duplicado huérfano y a sus
+ * amigos leyendo el gist antiguo (deriva de gist). `unknown` deja el gist como está.
+ */
+async function probePublicGistAccess(gistId: string): Promise<'public' | 'not-public' | 'unknown'> {
   try {
     await readPublicSocialGistById(gistId, null);
-    return true;
-  } catch {
-    return false;
+    return 'public';
+  } catch (error) {
+    const message = error instanceof Error ? error.message : '';
+    // 404 anónimo sobre un gist que el dueño SÍ puede leer = secreto (no público). 401/403 tampoco son
+    // veredicto: el rate-limit anónimo de GitHub responde 403.
+    if (/\b404\b/.test(message)) {
+      return 'not-public';
+    }
+    return 'unknown';
   }
 }
 
@@ -1883,9 +1897,16 @@ export async function updateGistPrivacy(token: string, gistId: string, isPublic:
   }
 
   const sourceGist = await readSocialGist(token, gistId, null);
-  const currentlyPublic = await isPublicSocialGistAccessible(gistId);
+  const access = await probePublicGistAccess(gistId);
 
-  if ((isPublic && currentlyPublic) || (!isPublic && !currentlyPublic)) {
+  // Sin veredicto claro (red caída, 403 por rate-limit anónimo) NO se migra: clonar por un error transitorio
+  // cambia el id del canal social y rompe a quien ya apuntaba al anterior. Se reintentará al siguiente guardado.
+  if (access === 'unknown') {
+    return { gistId, etag: sourceGist.etag || null };
+  }
+
+  const currentlyPublic = access === 'public';
+  if (isPublic === currentlyPublic) {
     return { gistId, etag: sourceGist.etag || null };
   }
 
