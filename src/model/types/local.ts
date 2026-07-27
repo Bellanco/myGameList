@@ -32,6 +32,9 @@ export interface LocalMeta {
   activityReconciledAt?: number;
   activityReviewCount?: number;
   pendingSocialActivity?: boolean;
+  // Último gist social ya propagado a MIS docs de amistad desde este dispositivo. Evita lanzar la query de
+  // amistades en cada publicación: solo se sanea cuando el id del gist cambia de verdad.
+  friendshipHealedForGist?: string;
 }
 
 export type SyncOpType =
