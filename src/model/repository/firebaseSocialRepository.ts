@@ -2,7 +2,7 @@
 // Extraído de firebaseRepository.ts (M2). NO importa de la fachada (sin ciclos).
 // C5: eliminados el índice público (upsertProfileIndex/upsertFeedCard) y las recomendaciones — código muerto
 // (sin consumidores) y con reglas admin-only. Ver CODE-REVIEW-IMPROVEMENTS.md (migración PII gated).
-import { collection, documentId, getDocs, limit, query, where } from 'firebase/firestore';
+import { collection, getDocs, limit, orderBy, query, where } from 'firebase/firestore';
 import {
   initializeFirebaseServices,
   isPermissionDeniedError,
@@ -22,6 +22,22 @@ const socialProfileByEmailCache = new Map<string, CachedValue<SocialProfileRefer
 const socialProfileByEmailInFlight = new Map<string, Promise<SocialProfileReference | null>>();
 const socialDirectoryCacheByLimit = new Map<number, CachedValue<SocialDirectoryEntry[]>>();
 const socialDirectoryInFlightByLimit = new Map<number, Promise<SocialDirectoryEntry[]>>();
+
+/** ¿El error es "falta el índice compuesto" (código `failed-precondition` de Firestore)? */
+function isMissingIndexError(error: unknown): boolean {
+  const code = (error as { code?: string } | null)?.code || '';
+  const message = error instanceof Error ? error.message : '';
+  return code === 'failed-precondition' || /requires an index|needs an index/i.test(message);
+}
+
+/** `updatedAt` puede venir como Timestamp de Firestore o como número (docs escritos por clientes antiguos). */
+function toMillis(value: { toMillis?: () => number } | number | undefined): number {
+  if (typeof value === 'number') {
+    return Number.isFinite(value) ? value : 0;
+  }
+  const millis = value?.toMillis?.();
+  return typeof millis === 'number' && Number.isFinite(millis) ? millis : 0;
+}
 
 function readProfileByEmailCache(email: string): SocialProfileReference | null | undefined {
   const cached = socialProfileByEmailCache.get(email);
@@ -178,21 +194,32 @@ export async function listSocialDirectory(limitCount = 12, options?: { forceRefr
   }
 
   const request = (async () => {
-    const q = query(
-      collection(services.firestore, 'profiles'),
-      where('social.enabled', '==', true),
-      where(documentId(), '!=', '_placeholder'),
-      limit(normalizedLimit),
-    );
+    // ORDEN POR USO RECIENTE. Antes se filtraba con `where(documentId(), '!=', '_placeholder')`, y una
+    // desigualdad obliga a Firestore a ordenar PRIMERO por ese campo: el directorio eran "los N perfiles con uid
+    // alfabéticamente menor", no los N más recientes, así que al pasar de N perfiles los nuevos quedaban fuera
+    // de forma arbitraria y permanente. Ese filtro no hace falta: `_placeholder` no tiene el campo
+    // `social.enabled`, así que la igualdad ya lo excluye (y con él, la regla de lectura sigue cumpliéndose).
+    // `updatedAt` está en TODOS los docs de perfil (lo escribe `ensureProfileByEmail` desde el primer guardado),
+    // condición necesaria para ordenar por él: un doc sin el campo quedaría fuera de la consulta.
+    const profiles = collection(services.firestore, 'profiles');
+    const enabled = where('social.enabled', '==', true);
 
     let snapshot;
     try {
-      snapshot = await getDocs(q);
+      snapshot = await getDocs(query(profiles, enabled, orderBy('updatedAt', 'desc'), limit(normalizedLimit)));
     } catch (error) {
       if (isPermissionDeniedError(error)) {
         throw new Error('Permisos insuficientes para leer perfiles sociales en Firestore');
       }
-      throw error;
+      // El orden por `updatedAt` necesita el índice compuesto (`firestore.indexes.json`). Si se despliega la app
+      // antes que el índice, Firestore responde `failed-precondition` y, sin esta degradación, el hub entero se
+      // quedaría sin directorio ni feed. Se reintenta sin orden: se pierde la prioridad por uso reciente (no el
+      // corte por inactividad, que sale del `updatedAt` de cada doc), pero el social sigue funcionando.
+      if (!isMissingIndexError(error)) {
+        throw error;
+      }
+      console.warn('[firebase] Falta el índice profiles(social.enabled, updatedAt desc): directorio sin ordenar por recencia');
+      snapshot = await getDocs(query(profiles, enabled, limit(normalizedLimit)));
     }
 
     const entries = snapshot.docs
@@ -203,6 +230,7 @@ export async function listSocialDirectory(limitCount = 12, options?: { forceRefr
           displayName?: string;
           photoURL?: string;
           social?: { gistId?: string; gamesGistId?: string; enabled?: boolean };
+          updatedAt?: { toMillis?: () => number } | number;
         };
 
         return {
@@ -215,9 +243,12 @@ export async function listSocialDirectory(limitCount = 12, options?: { forceRefr
           socialGistId: String(data.social?.gistId || ''),
           gamesGistId: String(data.social?.gamesGistId || ''),
           enabled: Boolean(data.social?.enabled),
+          updatedAt: toMillis(data.updatedAt),
         };
       })
-      .filter((entry) => entry.enabled && Boolean(entry.socialGistId))
+      // Guarda barata: el placeholder ya no puede salir (no tiene `social.enabled`), pero si algún día lo
+      // tuviera, no debe colarse en el directorio.
+      .filter((entry) => entry.enabled && Boolean(entry.socialGistId) && entry.id !== '_placeholder')
       .map((entry) => ({
         id: entry.id,
         uid: entry.uid,
@@ -226,6 +257,7 @@ export async function listSocialDirectory(limitCount = 12, options?: { forceRefr
         photoURL: entry.photoURL,
         socialGistId: entry.socialGistId,
         gamesGistId: entry.gamesGistId,
+        updatedAt: entry.updatedAt,
       }));
 
     saveSocialDirectoryCache(normalizedLimit, entries);

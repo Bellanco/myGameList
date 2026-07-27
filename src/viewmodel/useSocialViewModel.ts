@@ -5,25 +5,28 @@ import {
   ensureSyncConfigLoaded,
   getSocialSyncConfig,
   getSyncConfig,
+  mergeSocialGistData,
   readPublicSocialGistById,
   readSocialGist,
   remapSocialActorIds,
   saveSocialSyncConfig,
   type SocialActivityEntry,
+  type SocialGistData,
   type SocialPostEntry,
   type SocialProfileVisibility,
   type SocialSharedGame,
   updateGistPrivacy,
   writeSocialGist,
 } from '../model/repository/gistRepository';
-import { publishPost, unpublishReviewActivity } from '../model/repository/socialPublishRepository';
+import { publishPost } from '../model/repository/socialPublishRepository';
+import { reconcileReviewActivity } from '../model/repository/socialActivityReconcile';
 import { invalidateProfileGames, loadForeignProfileGames } from '../model/repository/foreignProfileRepository';
 import { getCachedSocialDirectory, getCachedSocialProfile, getLocalMeta, invalidateCachedSocialDirectory, patchLocalMeta, putCachedSocialDirectory, putCachedSocialProfile } from '../model/repository/indexedDbRepository';
 import { applyProfileVisibility } from '../core/utils/profileVisibility';
 import { SOCIAL_UI } from '../core/constants/labels';
 import { MAX_SOCIAL_FAVORITES } from '../core/constants/uiConfig';
 import type { IconName } from '../core/constants/icons';
-import { TAB_IDS, type GameItem, type SyncConfig, type TabId } from '../model/types/game';
+import { TAB_IDS, type GameItem, type SyncConfig, type TabData, type TabId } from '../model/types/game';
 import {
   acceptFriendRequest,
   clearAnalyticsUser,
@@ -40,6 +43,7 @@ import {
   sendFriendRequest,
   signInWithGoogle,
   signOutSocialUser,
+  touchOwnProfileActivity,
   updateProfilePhoto,
   type FriendshipSelfInfo,
   type SocialAuthUser,
@@ -91,9 +95,18 @@ function hasRenderableTimestamp(value: unknown): boolean {
 }
 // Cooldown mínimo entre refrescos forzados del directorio (botón "Actualizar feed").
 const FORCED_REFRESH_MIN_MS = 12_000;
-// Tope de perfiles del directorio social. Cada perfil = 1 lectura de gist social al refrescar; bajar este número
-// reduce el consumo de rate-limit a costa de mostrar menos perfiles/actividad en el feed. Tunable.
-const SOCIAL_DIRECTORY_LIMIT = 30;
+// Tope de perfiles del directorio social, ORDENADOS POR USO RECIENTE (`profiles.updatedAt`). Solo los AMIGOS
+// cuestan una lectura de gist; los demás son index-only (nombre/foto de Firestore), así que subir este número
+// cuesta lecturas de documento de Firestore, no rate-limit de GitHub. Tunable.
+const SOCIAL_DIRECTORY_LIMIT = 50;
+// Antigüedad máxima del último uso de un AMIGO para que su actividad entre en el feed. Un amigo más inactivo
+// sigue en Perfiles y en la lista de amigos, y su perfil/reseñas se abren igual (salen de su gist de JUEGOS);
+// simplemente su actividad no ocupa el feed y no se gasta una lectura de su gist social. Si no se conoce su
+// recencia (no está en el directorio) NO se corta: nunca se oculta contenido por falta de datos. Tunable.
+const FRIEND_ACTIVITY_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
+// Acotado del latido de uso: una escritura por dispositivo cada 20 h (así un uso diario siempre lo refresca).
+// Mantiene el grano de `profiles.updatedAt` en "días" en vez de convertirlo en un indicador de presencia.
+const PROFILE_TOUCH_MIN_INTERVAL_MS = 20 * 60 * 60 * 1000;
 // C3: el directorio se hidrata leyendo el gist social de cada perfil. En vez de disparar TODAS las lecturas a la
 // vez (ráfaga que puede activar los "secondary rate limits" de GitHub al crecer el directorio), se limita la
 // concurrencia. Las lecturas son baratas (caché de sesión + revalidación ETag/304), así que el coste en latencia
@@ -182,7 +195,14 @@ function formatDayHeader(date: Date): string {
   return `${date.getDate()} de ${FEED_DAY_MONTH_NAMES[date.getMonth()]}`;
 }
 
-export function useSocialViewModel() {
+export function useSocialViewModel(options?: {
+  /**
+   * Listados VIVOS de la app. La reconciliación de actividad decide con ellos qué reseñas publicar y qué
+   * entradas huérfanas retirar, así que importa que no sean una foto tomada al montar: si no llegan, se cae a
+   * `loadLocalState()` (que sí lo es) y la guarda de reloj de la reconciliación evita retiradas indebidas.
+   */
+  games?: TabData;
+}) {
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -218,6 +238,11 @@ export function useSocialViewModel() {
     // Index-only (SocialSharedGame) para perfiles ajenos; para el perfil PROPIO se repuebla con GameItem completos.
     sharedLists: Partial<Record<TabId, Array<GameItem | SocialSharedGame>>>;
     visibility: SocialProfileVisibility;
+    /**
+     * Amigo cuyo gist social NO se leyó por inactividad (corte de FRIEND_ACTIVITY_MAX_AGE_MS): su actividad no
+     * entra al feed, pero al abrir su perfil se hidrata bajo demanda para no mostrarlo a medias.
+     */
+    socialSkipped?: boolean;
   };
 
   const [socialCfgGistId, setSocialCfgGistId] = useState<string>('');
@@ -529,6 +554,29 @@ export function useSocialViewModel() {
     void healOwnDirectoryGist(authUser.uid, socialCfgGistId, socialCfgEtag);
   }, [showSocialSpace, authUser?.uid, socialCfgGistId, socialCfgEtag]);
 
+  // LATIDO DE USO RECIENTE: refresca `profiles.updatedAt`, por el que ordena el directorio y con el que el feed
+  // decide si un amigo sigue activo. Publicar ya lo refresca; esto cubre a quien entra solo a mirar. Acotado a
+  // una vez cada 20 h por dispositivo (una escritura al día como mucho, y grano diario por privacidad).
+  const profileTouchedRef = useRef(false);
+  useEffect(() => {
+    if (profileTouchedRef.current) return;
+    if (!showSocialSpace || !authUser?.uid || !socialCfgGistId) return;
+    profileTouchedRef.current = true;
+    const uid = authUser.uid;
+
+    void (async () => {
+      try {
+        const meta = await getLocalMeta();
+        const last = Number(meta?.profileTouchedAt || 0);
+        if (last && Date.now() - last < PROFILE_TOUCH_MIN_INTERVAL_MS) return;
+        await touchOwnProfileActivity(uid);
+        await patchLocalMeta({ profileTouchedAt: Date.now() });
+      } catch {
+        /* best-effort: la recencia es orden, no funcionalidad. */
+      }
+    })();
+  }, [showSocialSpace, authUser?.uid, socialCfgGistId]);
+
   // Tras un cambio de amistad (aceptar/eliminar), el conjunto de amigos cambia y con él la actividad que debe salir
   // en el feed. Se invalida la caché del directorio (feed solo-amigos) y se refresca la amistad; el efecto que
   // depende de `friendships.friends` rehidrata el directorio releyendo los gists de los amigos actuales.
@@ -782,53 +830,12 @@ export function useSocialViewModel() {
     return allGames.find((game) => game.id === gameId) || null;
   }, [authUser, foreignGamesByProfile, localState, ownProfileId]);
 
-  // Evita despublicar la misma reseña dos veces mientras la escritura está en vuelo (StrictMode / re-render).
-  const orphanUnpublishInFlightRef = useRef<Set<number>>(new Set());
-
-  // Reseña huérfana PROPIA: el dueño abre el detalle de una reseña cuyo juego ya no existe en sus listados
-  // (borrado o perdido). Sin contraparte, `getGameItemById` devuelve null y el detalle sale vacío; entonces la
-  // despublicamos del gist social para que no quede una reseña fantasma en el feed y volvemos al feed.
-  // Salvaguarda: solo si hay listados cargados (localStorage no vacío/sin hidratar), para no borrar por un
-  // estado local transitoriamente vacío. Solo actúa sobre el perfil propio y sobre eventos de tipo 'review'.
-  useEffect(() => {
-    if (activePanel !== 'detail') return;
-    const event = activeDetailEvent;
-    if (!event || event.type !== 'review') return;
-    if (!isOwnProfileIdentity(event.profileId, authUser?.uid, ownProfileId)) return;
-
-    const ownGames = [...localState.c, ...localState.v, ...localState.e, ...localState.p];
-    if (ownGames.length === 0) return; // sin listados cargados → no despublicar (evita falsos positivos)
-    if (ownGames.some((game) => game.id === event.gameId)) return; // tiene contraparte → no es huérfana
-
-    const gameId = event.gameId;
-    if (orphanUnpublishInFlightRef.current.has(gameId)) return;
-    orphanUnpublishInFlightRef.current.add(gameId);
-
-    let cancelled = false;
-    void unpublishReviewActivity({ id: gameId })
-      .then(() => {
-        if (cancelled) return;
-        // Quita la entrada propia del directorio para que desaparezca del feed sin recargar, y vuelve al feed.
-        setSocialDirectory((prev) =>
-          prev.map((entry) =>
-            entry.socialGistId === socialCfgGistId
-              ? { ...entry, activity: entry.activity.filter((a) => !(a.gameId === gameId && a.type === 'review')) }
-              : entry,
-          ),
-        );
-        navigate('/social');
-      })
-      .catch(() => {
-        /* best-effort: si falla la red se reintenta la próxima vez que se abra el detalle */
-      })
-      .finally(() => {
-        orphanUnpublishInFlightRef.current.delete(gameId);
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [activePanel, activeDetailEvent, authUser, localState, navigate, ownProfileId, socialCfgGistId]);
+  // NOTA (retirado a propósito): aquí vivía un efecto que, al abrir el detalle de una reseña PROPIA cuyo juego
+  // no aparecía en los listados, la despublicaba del gist social por considerarla huérfana. Decidía con
+  // `localState`, una foto de localStorage tomada al montar el hub: si esos listados estaban desfasados (reseña
+  // escrita en otro dispositivo con el sync de juegos aún en camino), borraba actividad VÁLIDA del feed de todos
+  // de forma permanente. La limpieza de huérfanas la hace ahora `reconcileReviewActivity`, que compara la lista
+  // completa de una vez y nunca retira una entrada más nueva que el reloj de los listados locales.
 
   const groupedFeedItems = useMemo(() => {
     type FeedItem = (typeof feedItems)[number];
@@ -985,6 +992,45 @@ export function useSocialViewModel() {
       cancelled = true;
     };
   }, [activePanel, activeDetailEvent, authUser, defaultSocialVisibility, foreignGamesByProfile, mainSyncConfig?.token, ownProfileId, profileDetailId, relationshipWith, socialDirectory]);
+
+  // Amigo inactivo (su gist social no se leyó al hidratar el directorio, para no ocupar el feed ni gastar la
+  // llamada): al ABRIR su perfil sí se lee, para que su hero no salga a medias (favoritos/visibilidad/foto).
+  // La actividad se deja fuera a propósito: el corte por inactividad es sobre el feed, no sobre su perfil.
+  useEffect(() => {
+    if (activePanel !== 'profile-detail' && activePanel !== 'profile-review') return;
+    if (!profileDetailId) return;
+    const entry = socialDirectory.find((item) => item.id === profileDetailId);
+    if (!entry?.socialSkipped || !entry.socialGistId) return;
+
+    let cancelled = false;
+    const token = getSocialSyncConfig()?.token || mainSyncConfig?.token || null;
+    void readPublicSocialGistById(entry.socialGistId, token)
+      .then((socialData) => {
+        if (cancelled) return;
+        const showsPhoto = socialData.profile.visibility?.showPhoto !== false;
+        setSocialDirectory((prev) =>
+          prev.map((item) =>
+            item.id === profileDetailId
+              ? {
+                  ...item,
+                  displayName: socialData.profile.name || item.displayName,
+                  photoURL: socialData.profile.photoURL || (showsPhoto ? item.photoURL : ''),
+                  favorites: socialData.profile.favoriteGames.map((game) => game.name).slice(0, 5),
+                  visibility: socialData.profile.visibility || defaultSocialVisibility,
+                  socialSkipped: false,
+                }
+              : item,
+          ),
+        );
+      })
+      .catch(() => {
+        /* best-effort: el perfil se queda index-only, como hasta ahora. */
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activePanel, defaultSocialVisibility, mainSyncConfig?.token, profileDetailId, socialDirectory]);
 
   // Bloque 4 — refresco manual del perfil abierto: invalida la caché de IndexedDB y relee del gist de listados.
   const refreshProfileDetail = useCallback(async () => {
@@ -1346,7 +1392,9 @@ export function useSocialViewModel() {
       // tope del directorio; los pendientes NO se sintetizan (no son amigos aún).
       const directoryUids = new Set(dirEntries.map((entry) => entry.uid));
       const friendOnlyEntries = friendships.friends
-        .filter((friend) => friend.otherSocialGistId && !directoryUids.has(friend.otherUid))
+        // No se exige `otherSocialGistId`: sin él el amigo desaparecía por completo del hub (ni perfil ni gestión).
+        // Entra igual como index-only; sin gist social simplemente no aporta actividad.
+        .filter((friend) => !directoryUids.has(friend.otherUid))
         .map((friend) => ({
           id: friend.otherUid,
           uid: friend.otherUid,
@@ -1355,6 +1403,8 @@ export function useSocialViewModel() {
           photoURL: friend.otherPhoto || '',
           socialGistId: friend.otherSocialGistId,
           gamesGistId: friend.otherGamesGistId,
+          // Amigo fuera del directorio: no hay marca de recencia. 0 = desconocida → no se le aplica el corte.
+          updatedAt: 0,
         }));
       const entries = [...dirEntries, ...friendOnlyEntries];
 
@@ -1364,12 +1414,24 @@ export function useSocialViewModel() {
         async (entry) => {
           const isOwnEntry = entry.socialGistId === socialCfgGistId;
           const isFriend = friendUids.has(entry.uid);
-          // Amigo: usa su gist social saneado desde la amistad (si difiere del del directorio, este último puede estar
-          // obsoleto). No-amigo/propio: se respeta el del directorio/config.
+          // Amigo: se prefiere su gist social saneado desde la amistad, porque el del directorio solo se
+          // reescribe al re-publicar el perfil y puede quedar anclado a un gist viejo/vacío.
           const friendSocialGistId = isFriend ? friendSocialGistByUid.get(entry.uid) : undefined;
           const effectiveSocialGistId = friendSocialGistId || entry.socialGistId;
-          if (!isOwnEntry && !isFriend) {
-            // No-amigo: index-only, sin leer su gist. Solo nombre/foto (Firestore); sin actividad/posts/favoritos.
+          // …pero la deriva puede ir en CUALQUIER dirección (publicar una reseña sanea el directorio y no los docs
+          // de amistad; abrir el hub sanea ambos), así que preferir a ciegas una de las dos fuentes deja al amigo
+          // sin actividad la mitad de las veces. Si divergen, se leen las DOS y se fusionan: una lectura extra en
+          // un caso raro a cambio de que su actividad no dependa de qué saneado corrió último.
+          const socialGistCandidates = [effectiveSocialGistId, ...(isFriend ? [entry.socialGistId] : [])]
+            .map((id) => String(id || '').trim())
+            .filter((id, index, all) => Boolean(id) && all.indexOf(id) === index);
+          // CORTE POR INACTIVIDAD: la actividad de un amigo que hace mucho que no usa la app no ocupa el feed (ni
+          // gasta una lectura de su gist). Solo se aplica si conocemos su recencia; el perfil propio nunca se corta.
+          const lastActiveAt = Number(entry.updatedAt || 0);
+          const isInactiveFriend =
+            !isOwnEntry && lastActiveAt > 0 && Date.now() - lastActiveAt > FRIEND_ACTIVITY_MAX_AGE_MS;
+          if (!isOwnEntry && (!isFriend || isInactiveFriend || socialGistCandidates.length === 0)) {
+            // Index-only, sin leer su gist. Solo nombre/foto (Firestore); sin actividad/posts/favoritos.
             return {
               id: entry.id,
               uid: entry.uid,
@@ -1381,12 +1443,34 @@ export function useSocialViewModel() {
               favorites: [],
               activity: [],
               posts: [],
+              // Marca para el detalle: es un amigo cuyo gist social NO se ha leído por inactividad. Al abrir su
+              // perfil se hidrata bajo demanda (favoritos/visibilidad/foto) para que no se vea a medias.
+              socialSkipped: isFriend && isInactiveFriend,
               sharedLists: {},
               visibility: defaultSocialVisibility,
             };
           }
           try {
-            const socialData = await readPublicSocialGistById(effectiveSocialGistId, socialConfig?.token || null);
+            // Lectura de los candidatos (normalmente uno). Con varios, se fusiona: perfil del más reciente y
+            // unión de actividad/publicaciones. Un candidato ilegible (gist borrado) no invalida al otro; si
+            // fallan todos, se propaga para caer en el `catch` de degradación index-only.
+            const reads = await Promise.allSettled(
+              socialGistCandidates.map((id) => readPublicSocialGistById(id, socialConfig?.token || null)),
+            );
+            const readable = reads
+              .map((result, index) => ({ result, gistId: socialGistCandidates[index] }))
+              .filter((item): item is { result: PromiseFulfilledResult<SocialGistData>; gistId: string } =>
+                item.result.status === 'fulfilled');
+            if (readable.length === 0) {
+              throw (reads[0] as PromiseRejectedResult | undefined)?.reason ?? new Error('Gist social ilegible');
+            }
+            const socialData = readable
+              .map((item) => item.result.value)
+              .reduce((merged, current) => mergeSocialGistData(merged, current));
+            // Id efectivo: el del payload más reciente de los legibles (el que "gana" la fusión del perfil).
+            const resolvedSocialGistId = readable
+              .reduce((best, item) => (item.result.value.updatedAt > best.result.value.updatedAt ? item : best))
+              .gistId;
             // Foto: prioridad al gist (con su visibilidad); si no la trae, se usa la del directorio de Firestore
             // (`entry.photoURL`) SIEMPRE QUE el usuario no la tenga desactivada. Esto propaga la foto de quienes
             // tienen el gist antiguo (sin photoURL) sin esperar a que reentren. Para uno mismo, fallback a la sesión.
@@ -1410,7 +1494,7 @@ export function useSocialViewModel() {
                   updatedAt,
                   profileId: entry.id,
                   profileDisplayName: socialData.profile.name || entry.displayName || 'Usuario',
-                  socialGistId: effectiveSocialGistId,
+                  socialGistId: resolvedSocialGistId,
                   photoURL: resolvedPhoto,
                 };
               })
@@ -1428,7 +1512,7 @@ export function useSocialViewModel() {
                   updatedAt,
                   profileId: entry.id,
                   profileDisplayName: socialData.profile.name || entry.displayName || 'Usuario',
-                  socialGistId: effectiveSocialGistId,
+                  socialGistId: resolvedSocialGistId,
                   photoURL: resolvedPhoto,
                 };
               })
@@ -1439,7 +1523,7 @@ export function useSocialViewModel() {
               uid: entry.uid,
               displayName: socialData.profile.name || entry.displayName || 'Usuario',
               email: entry.email,
-              socialGistId: effectiveSocialGistId,
+              socialGistId: resolvedSocialGistId,
               gamesGistId: entry.gamesGistId,
               photoURL: resolvedPhoto,
               favorites: socialData.profile.favoriteGames.map((game) => game.name).slice(0, 5),
@@ -1501,6 +1585,37 @@ export function useSocialViewModel() {
   useEffect(() => {
     void hydrateSocialDirectory();
   }, [hydrateSocialDirectory]);
+
+  // Listados con los que reconciliar: los vivos de la app si el contenedor los pasa; si no, la foto del mount.
+  const reconcileGames = options?.games ?? localState;
+
+  // RECONCILIACIÓN DE ACTIVIDAD (una vez por sesión de hub). La publicación de una reseña es un efecto colateral
+  // de guardarla y se perdía en silencio si el canal social no estaba armado en ese dispositivo, si el chunk del
+  // publicador no bajaba o si GitHub devolvía 403/5xx: el perfil mostraba la reseña (gist de juegos) y el feed
+  // no (gist social), para siempre. Esta pasada reconcilia ambos y retira huérfanas. Barata: si el recuento de
+  // reseñas no ha cambiado y el sello está fresco, no toca la red. Se hace tras `hydrateSocialDirectory` (TDZ).
+  const activityReconciledRef = useRef(false);
+  useEffect(() => {
+    if (activityReconciledRef.current) return;
+    if (!showSocialSpace || profileEditorLocked || !authUser?.uid || !socialCfgGistId) return;
+    activityReconciledRef.current = true;
+
+    let cancelled = false;
+    void reconcileReviewActivity({ games: reconcileGames })
+      .then((outcome) => {
+        if (cancelled || outcome.skipped || (outcome.added === 0 && outcome.removed === 0)) return;
+        // La reconciliación invalidó la caché del directorio: reléelo para que el cambio se vea ya, sin esperar
+        // a la próxima visita. No es un refresco forzado (no gasta el cooldown del botón "Actualizar").
+        void hydrateSocialDirectory();
+      })
+      .catch(() => {
+        /* best-effort: sin red o sin IndexedDB se reintenta en la próxima sesión (el sello no se escribió). */
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [authUser?.uid, hydrateSocialDirectory, profileEditorLocked, reconcileGames, showSocialSpace, socialCfgGistId]);
 
   // Limpia el timer del cooldown al desmontar (evita setState tras desmontar).
   useEffect(() => () => {
@@ -1675,6 +1790,16 @@ export function useSocialViewModel() {
       setHasCreatedProfile(true);
       setMustCreateProfile(false);
       setJustSavedProfile(true);
+
+      // Momento clave del usuario nuevo: acaba de completar su perfil, así que sus reseñas ANTERIORES al alta
+      // (que nunca pasaron por `publishReviewActivity`) entran ahora al feed. Forzado: ignora sello y recuento.
+      // Antes de `hydrateSocialDirectory` para que el feed ya se pinte con la actividad reconciliada.
+      try {
+        await reconcileReviewActivity({ games: reconcileGames, force: true });
+      } catch {
+        /* best-effort: no puede tumbar el guardado del perfil; se reintenta en la próxima apertura. */
+      }
+
       navigate('/social');
       void hydrateSocialDirectory();
       setFeedback('ok', SOCIAL_UI.status.profileSaved);
@@ -1697,6 +1822,7 @@ export function useSocialViewModel() {
     hydrateSocialDirectory,
     navigate,
     profileName,
+    reconcileGames,
     setFeedback,
     socialCfgEtag,
     socialCfgGistId,
