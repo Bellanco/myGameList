@@ -24,6 +24,14 @@ export interface LocalMeta {
   migrationVersion?: number; // estado de la migración one-time (>=3 = migrado)
   gamesUpdatedAt?: number; // updatedAt del último espejo al store `games` (para elegir la fuente más fresca al cargar)
   photoHealedFor?: string; // última photoURL ya propagada al gist social (evita releer/reescribir cada sesión)
+  // Reconciliación de la actividad social (reseñas publicadas en el gist social vs reseñas reales de los
+  // listados). `activityReconciledAt` es el sello de la última pasada y `activityReviewCount` el número de
+  // reseñas locales que se vio entonces: si el recuento actual difiere, hay que reconciliar aunque el sello
+  // esté fresco. `pendingSocialActivity` marca que una publicación se perdió (sin canal armado, chunk que no
+  // baja, error de GitHub) y fuerza la pasada en la próxima apertura del hub.
+  activityReconciledAt?: number;
+  activityReviewCount?: number;
+  pendingSocialActivity?: boolean;
 }
 
 export type SyncOpType =

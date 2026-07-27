@@ -5,7 +5,6 @@ import { ensureProfileByEmail, getCurrentSocialAuthUser, resolveStableProfileId 
 import { invalidateCachedSocialDirectory } from './indexedDbRepository';
 import {
   getSyncConfig,
-  getSocialSyncConfig,
   readSocialGist,
   remapSocialActorIds,
   removeReviewActivity,
@@ -14,16 +13,35 @@ import {
   upsertReviewActivity,
   writeSocialGist,
 } from './gistRepository';
+import { markPendingSocialActivity } from './socialActivityReconcile';
+import { resolveSocialChannel, type SocialChannel } from './socialChannel';
 
-/** Publica/actualiza la actividad social de una reseña. No-op si no hay sesión Google ni gist social configurado. */
+/**
+ * Arma el canal social de este dispositivo para publicar. Devuelve null si no se puede (sin sesión de Google,
+ * sin token, sin perfil publicado o gist desaparecido) y, en ese caso, deja la publicación marcada como
+ * PENDIENTE: antes se salía en silencio y la reseña no volvía a intentarse jamás, así que quedaba fuera del
+ * feed para siempre aunque el usuario estuviera dado de alta (p. ej. si escribía desde un dispositivo donde
+ * nunca había abierto el hub social). La reconciliación consume esa marca en la próxima apertura del hub.
+ */
+async function armSocialChannel(email: string | null): Promise<SocialChannel | null> {
+  const resolved = await resolveSocialChannel({ email });
+  if (resolved.status !== 'ready') {
+    await markPendingSocialActivity();
+    return null;
+  }
+  return resolved.channel;
+}
+
+/** Publica/actualiza la actividad social de una reseña. Sin canal social utilizable la deja como pendiente. */
 export async function publishReviewActivity(input: { id: number; name: string; review: string; score: number; grade?: number | null; reviewChanged?: boolean }): Promise<void> {
   const authUser = await getCurrentSocialAuthUser();
   if (!authUser) {
+    await markPendingSocialActivity();
     return;
   }
 
-  const socialConfig = getSocialSyncConfig();
-  if (!socialConfig?.token || !socialConfig.gistId) {
+  const socialConfig = await armSocialChannel(authUser.email);
+  if (!socialConfig) {
     return;
   }
 
@@ -95,11 +113,12 @@ export async function publishReviewActivity(input: { id: number; name: string; r
 export async function unpublishReviewActivity(input: { id: number }): Promise<void> {
   const authUser = await getCurrentSocialAuthUser();
   if (!authUser) {
+    await markPendingSocialActivity();
     return;
   }
 
-  const socialConfig = getSocialSyncConfig();
-  if (!socialConfig?.token || !socialConfig.gistId) {
+  const socialConfig = await armSocialChannel(authUser.email);
+  if (!socialConfig) {
     return;
   }
 
@@ -139,12 +158,12 @@ export async function unpublishReviewActivity(input: { id: number }): Promise<vo
 export async function publishPost(input: { text: string }): Promise<void> {
   const authUser = await getCurrentSocialAuthUser();
   if (!authUser) {
-    return;
+    throw new Error('Inicia sesión con Google para publicar');
   }
 
-  const socialConfig = getSocialSyncConfig();
-  if (!socialConfig?.token || !socialConfig.gistId) {
-    return;
+  const socialConfig = await armSocialChannel(authUser.email);
+  if (!socialConfig) {
+    throw new Error('No se pudo resolver tu canal social en este dispositivo');
   }
 
   const socialRead = await readSocialGist(

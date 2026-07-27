@@ -1,6 +1,6 @@
 import { memo, useCallback } from 'react';
 import { SOCIAL_UI } from '../../core/constants/labels';
-import type { GameItem } from '../../model/types/game';
+import type { GameItem, TabData } from '../../model/types/game';
 import { useSocialViewModel } from '../../viewmodel/useSocialViewModel';
 import { Icon } from './Icon';
 
@@ -32,12 +32,15 @@ interface SocialHubProps {
   hasGameInLists?: (name: string) => boolean;
   /** Ruleta (perfil social) — si ya es mío, llevarlo a "En curso". */
   moveGameToCurrentByName?: (name: string) => void;
+  /** Listados VIVOS de la app: con ellos se reconcilia la actividad social publicada (reseñas). */
+  games?: TabData;
 }
 
 const SocialHubInner = memo(function SocialHubInner({
   onAddToProximos,
   hasGameInLists,
   moveGameToCurrentByName,
+  games,
 }: SocialHubProps = {}) {
   const {
     navigate,
@@ -124,7 +127,7 @@ const SocialHubInner = memo(function SocialHubInner({
     removeFriendTarget,
     confirmRemoveFriend,
     cancelRemoveFriend,
-  } = useSocialViewModel();
+  } = useSocialViewModel({ games });
 
   // Handlers de navegación estables (misma identidad entre renders): permiten que las pantallas hoja
   // memoizadas no se re-rendericen cuando cambia un estado no relacionado del VM (status, cooldown, drag…).
