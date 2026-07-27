@@ -880,6 +880,45 @@ export function remapSocialActorIds(data: SocialGistData, uidToProfileId: Record
   return { ...data, activity };
 }
 
+/**
+ * Fusiona dos lecturas del gist social del MISMO autor. Pura.
+ *
+ * Se usa cuando las dos fuentes que apuntan al gist social de un amigo (el `otherSocialGistId` denormalizado en
+ * el doc de amistad y el `social.gistId` del directorio de Firestore) DIVERGEN: una de las dos quedó anclada a
+ * un gist viejo y no hay forma de saber cuál a ciegas. Elegir mal deja al amigo sin actividad en el feed,
+ * mientras su perfil sigue completo (sale del gist de JUEGOS), que es justo el fallo que esto evita.
+ *
+ * Criterio: el perfil (nombre/foto/favoritos/visibilidad) viene del payload con `updatedAt` MAYOR — el más
+ * reciente manda; actividad y publicaciones son la UNIÓN de ambos, deduplicadas por `key`/`id` conservando la
+ * entrada de `updatedAt` mayor. Así no se pierde nada publicado en el gist que resultó ser el antiguo.
+ */
+export function mergeSocialGistData(a: SocialGistData, b: SocialGistData): SocialGistData {
+  const newest = Number(b.updatedAt || 0) > Number(a.updatedAt || 0) ? b : a;
+
+  const activityByKey = new Map<string, SocialActivityEntry>();
+  for (const entry of [...(a.activity || []), ...(b.activity || [])]) {
+    const key = entry.key || entry.id;
+    const current = activityByKey.get(key);
+    if (!current || entry.updatedAt > current.updatedAt) {
+      activityByKey.set(key, entry);
+    }
+  }
+
+  const postsById = new Map<string, SocialPostEntry>();
+  for (const entry of [...(a.posts || []), ...(b.posts || [])]) {
+    const current = postsById.get(entry.id);
+    if (!current || entry.updatedAt > current.updatedAt) {
+      postsById.set(entry.id, entry);
+    }
+  }
+
+  return {
+    ...newest,
+    activity: [...activityByKey.values()].sort((x, y) => y.updatedAt - x.updatedAt).slice(0, 320),
+    posts: [...postsById.values()].sort((x, y) => y.updatedAt - x.updatedAt).slice(0, 100),
+  };
+}
+
 export async function whoAmI(token: string): Promise<{ login: string }> {
   if (!isValidGithubToken(token)) {
     throw new Error('Formato de token inválido');

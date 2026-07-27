@@ -1,8 +1,8 @@
 // Publicación de actividad social al guardar una reseña (M4): orquestación pura de repos, sin estado de React.
 // Extraído verbatim de App.tsx para sacar la lógica de negocio del componente. Lee el gist social, inserta/actualiza
 // la actividad (que se convierte a snippet index-only), reescribe el gist y asegura el perfil en Firestore.
-import { ensureProfileByEmail, getCurrentSocialAuthUser, resolveStableProfileId } from './firebaseRepository';
-import { invalidateCachedSocialDirectory } from './indexedDbRepository';
+import { ensureProfileByEmail, getCurrentSocialAuthUser, healOwnFriendshipIdentity, resolveStableProfileId } from './firebaseRepository';
+import { getLocalMeta, invalidateCachedSocialDirectory, patchLocalMeta } from './indexedDbRepository';
 import {
   getSyncConfig,
   readSocialGist,
@@ -30,6 +30,58 @@ async function armSocialChannel(email: string | null): Promise<SocialChannel | n
     return null;
   }
   return resolved.channel;
+}
+
+/**
+ * Propaga MI gist social a mis docs de amistad cuando su id ha cambiado desde la última propagación hecha en
+ * este dispositivo.
+ *
+ * `ensureProfileByEmail` (al final de cada publicación) actualiza el gist en el DIRECTORIO de Firestore, pero
+ * no en los docs de amistad — y el lector prefiere el gist denormalizado en la amistad. Sin esto, quien cambie
+ * de gist social y siga publicando sin abrir el hub deja a sus amigos leyendo un gist viejo: su actividad no
+ * sale en el feed aunque su perfil se vea completo (ese sale del gist de JUEGOS).
+ *
+ * PRIVACIDAD: nunca escribe el nombre real de Google. Si el nick del gist aún está vacío no sanea nada (en vez
+ * de pisar con vacío un nick bueno ya guardado): lo hará el hub al abrirse, que espera a tener el nick.
+ * Best-effort y con sello en `meta` para no lanzar la query de amistades en cada guardado de reseña.
+ */
+/**
+ * Foto que puede ir a un canal público (docs de amistad), con la MISMA semántica que el hub: si el usuario
+ * tiene la foto desactivada en el gist, cadena vacía (propaga su opt-out); si la muestra, la del gist y, si su
+ * gist es antiguo y no la lleva, la de la sesión de Google (evita pisar con vacío una foto ya guardada).
+ */
+function publicPhotoURL(data: { profile: { photoURL?: string; visibility?: { showPhoto?: boolean } } }, sessionPhoto: string | null): string {
+  if (data.profile.visibility?.showPhoto === false) {
+    return '';
+  }
+  return String(data.profile.photoURL || sessionPhoto || '');
+}
+
+async function healFriendshipGistIfChanged(input: {
+  uid: string;
+  socialGistId: string;
+  gamesGistId: string;
+  nick: string;
+  photoURL: string;
+}): Promise<void> {
+  if (!input.uid || !input.socialGistId || !input.nick) {
+    return;
+  }
+  try {
+    const meta = await getLocalMeta();
+    if (meta?.friendshipHealedForGist === input.socialGistId) {
+      return;
+    }
+    await healOwnFriendshipIdentity(input.uid, {
+      name: input.nick,
+      photo: input.photoURL,
+      socialGistId: input.socialGistId,
+      gamesGistId: input.gamesGistId,
+    });
+    await patchLocalMeta({ friendshipHealedForGist: input.socialGistId });
+  } catch {
+    // best-effort: la publicación ya está hecha; se reintentará en la siguiente o al abrir el hub.
+  }
 }
 
 /** Publica/actualiza la actividad social de una reseña. Sin canal social utilizable la deja como pendiente. */
@@ -102,6 +154,14 @@ export async function publishReviewActivity(input: { id: number; name: string; r
     githubToken: mainSyncConfig?.token || socialConfig.token, // audit-allow: ensureProfileByEmail lo cifra en privateConfig (B1)
     socialGistEtag: writeResult.etag || socialConfig.etag || null,
     preferredName: socialNick,
+  });
+
+  await healFriendshipGistIfChanged({
+    uid: authUser.uid,
+    socialGistId: socialConfig.gistId,
+    gamesGistId: mainSyncConfig?.gistId || '',
+    nick: socialNick,
+    photoURL: publicPhotoURL(socialRead.data, authUser.photoURL),
   });
 }
 
@@ -202,5 +262,13 @@ export async function publishPost(input: { text: string }): Promise<void> {
     githubToken: mainSyncConfig?.token || socialConfig.token, // audit-allow: ensureProfileByEmail lo cifra en privateConfig (B1)
     socialGistEtag: writeResult.etag || socialConfig.etag || null,
     preferredName: socialNick,
+  });
+
+  await healFriendshipGistIfChanged({
+    uid: authUser.uid,
+    socialGistId: socialConfig.gistId,
+    gamesGistId: mainSyncConfig?.gistId || '',
+    nick: socialNick,
+    photoURL: publicPhotoURL(socialRead.data, authUser.photoURL),
   });
 }

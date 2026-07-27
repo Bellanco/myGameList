@@ -238,11 +238,11 @@ describe('SocialHub (componente, post-M3)', () => {
 
     renderHub('/social');
 
-    // Sus reseñas aparecen, leyendo el gist saneado de la amistad y NO el obsoleto del directorio.
+    // Sus reseñas aparecen: el gist saneado de la amistad se lee siempre. El obsoleto del directorio también se
+    // consulta ahora (fusión) porque la deriva puede ir en la dirección contraria; ver el test de deriva.
     expect(await screen.findByText('CelesteGame')).toBeInTheDocument();
     const readGistIds = gistMocks.readPublicSocialGistById.mock.calls.map((call) => call[0]);
     expect(readGistIds).toContain('ada-social-NEW');
-    expect(readGistIds).not.toContain('ada-social-OLD');
   });
 
   it('feed: no cachea vacío si la amistad resuelve TARDE (carrera de arranque)', async () => {
@@ -371,6 +371,52 @@ describe('SocialHub (componente, post-M3)', () => {
     expect(await screen.findByText('Bob')).toBeInTheDocument();
     const readGistIds = gistMocks.readPublicSocialGistById.mock.calls.map((call) => call[0]);
     expect(readGistIds).not.toContain('bob-social');
+  });
+
+  it('deriva de gist: la actividad del amigo aparece aunque esté en el gist del directorio y no en el de la amistad', async () => {
+    // El lector prefiere el gist denormalizado en el doc de amistad, pero la deriva va en las dos direcciones
+    // (publicar una reseña sanea el directorio y no la amistad). Si el preferido es el que quedó obsoleto, antes
+    // el amigo salía sin actividad; ahora se leen los dos candidatos y se fusionan.
+    firebaseMocks.getCurrentSocialAuthUser.mockResolvedValue({ uid: 'me', email: 'me@x.com', displayName: 'Me', photoURL: null });
+    gistMocks.getSocialSyncConfig.mockReturnValue({ token: 'ghp_x', gistId: 'my-social', etag: null, lastRemoteUpdatedAt: 0 });
+    localMocks.loadLocalState.mockReturnValue({
+      c: [{ id: 1, name: 'Halo', _ts: 1, platforms: [], genres: [], steamDeck: false, review: '', score: 5, years: [], strengths: [], weaknesses: [], reasons: [], replayable: false, retry: false, hours: 0 }],
+      v: [], e: [], p: [], deleted: [], updatedAt: 0,
+    });
+    gistMocks.readSocialGist.mockResolvedValue({
+      data: {
+        profile: { name: 'Me', private: false, favoriteGames: [{ id: 1, name: 'Halo' }], visibility: { hiddenTabs: [], hideReplayable: false, hideRetry: false, hideGameTime: false, showPhoto: true }, sharedLists: {} },
+        recommendations: [], activity: [], posts: [], updatedAt: 0,
+      },
+      etag: null,
+    });
+    // Directorio: gist ACTUAL de Ada (con su reseña). Amistad: el gist VIEJO y vacío (el preferido).
+    firebaseMocks.listSocialDirectory.mockResolvedValue([
+      { id: 'friendUid', uid: 'friendUid', email: 'ada@x.com', displayName: 'Ada', photoURL: '', socialGistId: 'ada-social-actual', gamesGistId: 'ada-games' },
+    ]);
+    firebaseMocks.getMyFriendships.mockResolvedValue({
+      friends: [{ docId: 'friendUid__me', otherUid: 'friendUid', otherName: 'Ada', otherPhoto: '', otherSocialGistId: 'ada-social-viejo', otherGamesGistId: 'ada-games', state: 'friends', createdAt: 0, updatedAt: 1 }],
+      incoming: [], outgoing: [], byOtherUid: {},
+    });
+    gistMocks.readPublicSocialGistById.mockImplementation(async (gistId?: string) => {
+      if (gistId === 'ada-social-actual') {
+        return {
+          profile: { name: 'Ada', favoriteGames: [{ id: 9, name: 'Celeste' }], visibility: { hiddenTabs: [], hideReplayable: false, hideRetry: false, hideGameTime: false, showPhoto: true } },
+          activity: [{ id: 'a1', key: 'k1', type: 'review', actorProfileId: 'friendUid', actorName: 'Ada', gameId: 9, gameName: 'CelesteGame', rating: 5, recommendationText: '', snippet: 'genial', createdAt: 1000, updatedAt: 2000 }],
+          posts: [],
+          updatedAt: 2000,
+        };
+      }
+      return { profile: { name: 'Ada', favoriteGames: [], visibility: {} }, activity: [], posts: [], updatedAt: 1 };
+    });
+
+    renderHub();
+
+    expect(await screen.findByText('CelesteGame')).toBeInTheDocument();
+    // Se consultaron AMBOS candidatos (la lectura extra solo ocurre porque divergen).
+    const readGistIds = gistMocks.readPublicSocialGistById.mock.calls.map((call) => call[0]);
+    expect(readGistIds).toContain('ada-social-viejo');
+    expect(readGistIds).toContain('ada-social-actual');
   });
 
   it('abrir el detalle de una reseña PROPIA cuyo juego no está en los listados NO la despublica', async () => {

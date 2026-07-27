@@ -5,11 +5,13 @@ import {
   ensureSyncConfigLoaded,
   getSocialSyncConfig,
   getSyncConfig,
+  mergeSocialGistData,
   readPublicSocialGistById,
   readSocialGist,
   remapSocialActorIds,
   saveSocialSyncConfig,
   type SocialActivityEntry,
+  type SocialGistData,
   type SocialPostEntry,
   type SocialProfileVisibility,
   type SocialSharedGame,
@@ -1331,10 +1333,17 @@ export function useSocialViewModel(options?: {
         async (entry) => {
           const isOwnEntry = entry.socialGistId === socialCfgGistId;
           const isFriend = friendUids.has(entry.uid);
-          // Amigo: usa su gist social saneado desde la amistad (si difiere del del directorio, este último puede estar
-          // obsoleto). No-amigo/propio: se respeta el del directorio/config.
+          // Amigo: se prefiere su gist social saneado desde la amistad, porque el del directorio solo se
+          // reescribe al re-publicar el perfil y puede quedar anclado a un gist viejo/vacío.
           const friendSocialGistId = isFriend ? friendSocialGistByUid.get(entry.uid) : undefined;
           const effectiveSocialGistId = friendSocialGistId || entry.socialGistId;
+          // …pero la deriva puede ir en CUALQUIER dirección (publicar una reseña sanea el directorio y no los docs
+          // de amistad; abrir el hub sanea ambos), así que preferir a ciegas una de las dos fuentes deja al amigo
+          // sin actividad la mitad de las veces. Si divergen, se leen las DOS y se fusionan: una lectura extra en
+          // un caso raro a cambio de que su actividad no dependa de qué saneado corrió último.
+          const socialGistCandidates = [effectiveSocialGistId, ...(isFriend ? [entry.socialGistId] : [])]
+            .map((id) => String(id || '').trim())
+            .filter((id, index, all) => Boolean(id) && all.indexOf(id) === index);
           if (!isOwnEntry && !isFriend) {
             // No-amigo: index-only, sin leer su gist. Solo nombre/foto (Firestore); sin actividad/posts/favoritos.
             return {
@@ -1353,7 +1362,26 @@ export function useSocialViewModel(options?: {
             };
           }
           try {
-            const socialData = await readPublicSocialGistById(effectiveSocialGistId, socialConfig?.token || null);
+            // Lectura de los candidatos (normalmente uno). Con varios, se fusiona: perfil del más reciente y
+            // unión de actividad/publicaciones. Un candidato ilegible (gist borrado) no invalida al otro; si
+            // fallan todos, se propaga para caer en el `catch` de degradación index-only.
+            const reads = await Promise.allSettled(
+              socialGistCandidates.map((id) => readPublicSocialGistById(id, socialConfig?.token || null)),
+            );
+            const readable = reads
+              .map((result, index) => ({ result, gistId: socialGistCandidates[index] }))
+              .filter((item): item is { result: PromiseFulfilledResult<SocialGistData>; gistId: string } =>
+                item.result.status === 'fulfilled');
+            if (readable.length === 0) {
+              throw (reads[0] as PromiseRejectedResult | undefined)?.reason ?? new Error('Gist social ilegible');
+            }
+            const socialData = readable
+              .map((item) => item.result.value)
+              .reduce((merged, current) => mergeSocialGistData(merged, current));
+            // Id efectivo: el del payload más reciente de los legibles (el que "gana" la fusión del perfil).
+            const resolvedSocialGistId = readable
+              .reduce((best, item) => (item.result.value.updatedAt > best.result.value.updatedAt ? item : best))
+              .gistId;
             // Foto: prioridad al gist (con su visibilidad); si no la trae, se usa la del directorio de Firestore
             // (`entry.photoURL`) SIEMPRE QUE el usuario no la tenga desactivada. Esto propaga la foto de quienes
             // tienen el gist antiguo (sin photoURL) sin esperar a que reentren. Para uno mismo, fallback a la sesión.
@@ -1377,7 +1405,7 @@ export function useSocialViewModel(options?: {
                   updatedAt,
                   profileId: entry.id,
                   profileDisplayName: socialData.profile.name || entry.displayName || 'Usuario',
-                  socialGistId: effectiveSocialGistId,
+                  socialGistId: resolvedSocialGistId,
                   photoURL: resolvedPhoto,
                 };
               })
@@ -1395,7 +1423,7 @@ export function useSocialViewModel(options?: {
                   updatedAt,
                   profileId: entry.id,
                   profileDisplayName: socialData.profile.name || entry.displayName || 'Usuario',
-                  socialGistId: effectiveSocialGistId,
+                  socialGistId: resolvedSocialGistId,
                   photoURL: resolvedPhoto,
                 };
               })
@@ -1406,7 +1434,7 @@ export function useSocialViewModel(options?: {
               uid: entry.uid,
               displayName: socialData.profile.name || entry.displayName || 'Usuario',
               email: entry.email,
-              socialGistId: effectiveSocialGistId,
+              socialGistId: resolvedSocialGistId,
               gamesGistId: entry.gamesGistId,
               photoURL: resolvedPhoto,
               favorites: socialData.profile.favoriteGames.map((game) => game.name).slice(0, 5),

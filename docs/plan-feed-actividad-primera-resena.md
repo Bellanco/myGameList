@@ -1,13 +1,16 @@
 # Plan — reseñas que no salen en el feed de actividad (usuarios recién llegados)
 
-> **Estado:** pasos 1, 1b, 1c y 2 IMPLEMENTADOS. Pendientes: 3 (deriva de gist), 4 (tope del directorio) y
+> **Estado:** pasos 1, 1b, 1c, 2 y 3 IMPLEMENTADOS. Pendientes: 4 (tope del directorio) y
 > 5 (`updateGistPrivacy`). La Fase 0 sigue siendo útil para confirmar en los usuarios ya afectados que su
-> actividad se recupera (o si además hay deriva de gist, que es el paso 3).
+> actividad se recupera.
 >
-> Piezas nuevas: `src/model/repository/socialActivityReconcile.ts` (reconciliación + marca de pendiente) y
-> `src/model/repository/socialChannel.ts` (`resolveSocialChannel`). Tests:
-> `tests/unit/socialActivityReconcile.test.ts`, `tests/unit/socialPublishArmChannel.test.ts` y la regresión de
-> C2 en `tests/component/SocialHub.test.tsx`.
+> Piezas nuevas: `src/model/repository/socialActivityReconcile.ts` (reconciliación + marca de pendiente),
+> `src/model/repository/socialChannel.ts` (`resolveSocialChannel`) y `mergeSocialGistData` en
+> `gistRepository.ts` (fusión de los dos candidatos de gist de un amigo). Tests:
+> `tests/unit/socialActivityReconcile.test.ts`, `tests/unit/socialPublishArmChannel.test.ts`,
+> `tests/unit/socialGistMerge.test.ts` y, en `tests/component/SocialHub.test.tsx`, la regresión de C2 y la de
+> deriva de gist. Ojo: el test previo "amigo PRESENTE en el directorio con gistId obsoleto" ya no puede afirmar
+> que el gist obsoleto NO se lee — ahora se lee y se fusiona a propósito.
 
 ## Síntoma
 
@@ -237,13 +240,16 @@ En `publishReviewActivity` / `publishPost` (`socialPublishRepository.ts`):
 - `unpublishReviewActivity` se mantiene: la usa `handleSaveDraft` al vaciar una reseña (`src/App.tsx:459`),
   que sí es una señal explícita del usuario.
 
-### Paso 3 — Curar la deriva de gist en las dos direcciones (C3)
+### Paso 3 — Curar la deriva de gist en las dos direcciones (C3) — HECHO
 
 - En `hydrateSocialDirectory`: si `otherSocialGistId` y `entry.socialGistId` **difieren**, leer ambos y
   fusionar (`activity`/`posts` deduplicados por `key`/`id`; perfil el de `updatedAt` mayor). Solo cuesta una
-  lectura extra en el caso divergente, que es raro.
-- En `publishReviewActivity` y `publishPost`: llamar también a `healOwnFriendshipIdentity` (ya escribe solo si
-  hay divergencia), para que la corrección ocurra en origen sin depender de abrir el hub.
+  lectura extra en el caso divergente, que es raro. Un candidato ilegible no invalida al otro.
+- En `publishReviewActivity` y `publishPost`: llamar también a `healOwnFriendshipIdentity`, para que la
+  corrección ocurra en origen sin depender de abrir el hub. Con dos salvaguardas: sello
+  `meta.friendshipHealedForGist` para no lanzar la query de amistades en cada guardado (solo cuando el id del
+  gist cambia de verdad), y no sanear si el nick del gist está vacío, para no pisar con vacío un nick bueno
+  (eso lo hace el hub, que espera a tener el nick cargado).
 
 ### Paso 4 — Directorio: quitar el tope arbitrario (C4)
 
