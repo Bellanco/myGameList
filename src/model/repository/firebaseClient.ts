@@ -44,6 +44,12 @@ export interface SocialDirectoryEntry {
   photoURL: string;
   socialGistId: string;
   gamesGistId: string;
+  /**
+   * Última actividad conocida del perfil en ms (`profiles.updatedAt`): se refresca al publicar y, una vez al
+   * día, al abrir el hub. Ordena el directorio por uso reciente y permite que el feed no lea la actividad de
+   * quien hace mucho que no aparece. 0 si el doc no lo trae.
+   */
+  updatedAt: number;
 }
 
 export interface GameRecommendation {

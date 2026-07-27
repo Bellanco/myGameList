@@ -373,6 +373,87 @@ describe('SocialHub (componente, post-M3)', () => {
     expect(readGistIds).not.toContain('bob-social');
   });
 
+  it('corte por inactividad: la actividad de un amigo inactivo no entra al feed y no se lee su gist', async () => {
+    firebaseMocks.getCurrentSocialAuthUser.mockResolvedValue({ uid: 'me', email: 'me@x.com', displayName: 'Me', photoURL: null });
+    gistMocks.getSocialSyncConfig.mockReturnValue({ token: 'ghp_x', gistId: 'my-social', etag: null, lastRemoteUpdatedAt: 0 });
+    localMocks.loadLocalState.mockReturnValue({
+      c: [{ id: 1, name: 'Halo', _ts: 1, platforms: [], genres: [], steamDeck: false, review: '', score: 5, years: [], strengths: [], weaknesses: [], reasons: [], replayable: false, retry: false, hours: 0 }],
+      v: [], e: [], p: [], deleted: [], updatedAt: 0,
+    });
+    gistMocks.readSocialGist.mockResolvedValue({
+      data: {
+        profile: { name: 'Me', private: false, favoriteGames: [{ id: 1, name: 'Halo' }], visibility: { hiddenTabs: [], hideReplayable: false, hideRetry: false, hideGameTime: false, showPhoto: true }, sharedLists: {} },
+        recommendations: [], activity: [], posts: [], updatedAt: 0,
+      },
+      etag: null,
+    });
+    const DIA = 24 * 60 * 60 * 1000;
+    // Ada usó la app ayer; Zoe hace 200 días. Ambas son amigas.
+    firebaseMocks.listSocialDirectory.mockResolvedValue([
+      { id: 'ada', uid: 'ada', email: 'ada@x.com', displayName: 'Ada', photoURL: '', socialGistId: 'ada-social', gamesGistId: 'ada-games', updatedAt: Date.now() - DIA },
+      { id: 'zoe', uid: 'zoe', email: 'zoe@x.com', displayName: 'Zoe', photoURL: '', socialGistId: 'zoe-social', gamesGistId: 'zoe-games', updatedAt: Date.now() - 200 * DIA },
+    ]);
+    firebaseMocks.getMyFriendships.mockResolvedValue({
+      friends: [
+        { docId: 'ada__me', otherUid: 'ada', otherName: 'Ada', otherPhoto: '', otherSocialGistId: 'ada-social', otherGamesGistId: 'ada-games', state: 'friends', createdAt: 0, updatedAt: 1 },
+        { docId: 'me__zoe', otherUid: 'zoe', otherName: 'Zoe', otherPhoto: '', otherSocialGistId: 'zoe-social', otherGamesGistId: 'zoe-games', state: 'friends', createdAt: 0, updatedAt: 1 },
+      ],
+      incoming: [], outgoing: [], byOtherUid: {},
+    });
+    gistMocks.readPublicSocialGistById.mockImplementation(async (gistId?: string) => {
+      const owner = gistId === 'ada-social' ? { name: 'Ada', game: 'CelesteGame', actor: 'ada' } : { name: 'Zoe', game: 'ZoeGame', actor: 'zoe' };
+      return {
+        profile: { name: owner.name, favoriteGames: [], visibility: { hiddenTabs: [], hideReplayable: false, hideRetry: false, hideGameTime: false, showPhoto: true } },
+        activity: [{ id: `${owner.actor}1`, key: `k-${owner.actor}`, type: 'review', actorProfileId: owner.actor, actorName: owner.name, gameId: 9, gameName: owner.game, rating: 5, recommendationText: '', snippet: 'genial', createdAt: 1000, updatedAt: 2000 }],
+        posts: [],
+        updatedAt: 2000,
+      };
+    });
+
+    renderHub();
+
+    // La amiga activa sí aparece; la inactiva no, y su gist nunca se leyó (ahorro de llamadas).
+    expect(await screen.findByText('CelesteGame')).toBeInTheDocument();
+    expect(screen.queryByText('ZoeGame')).not.toBeInTheDocument();
+    const readGistIds = gistMocks.readPublicSocialGistById.mock.calls.map((call) => call[0]);
+    expect(readGistIds).toContain('ada-social');
+    expect(readGistIds).not.toContain('zoe-social');
+  });
+
+  it('corte por inactividad: al abrir el perfil del amigo inactivo sí se lee su gist social', async () => {
+    firebaseMocks.getCurrentSocialAuthUser.mockResolvedValue({ uid: 'me', email: 'me@x.com', displayName: 'Me', photoURL: null });
+    gistMocks.getSocialSyncConfig.mockReturnValue({ token: 'ghp_x', gistId: 'my-social', etag: null, lastRemoteUpdatedAt: 0 });
+    localMocks.loadLocalState.mockReturnValue({
+      c: [{ id: 1, name: 'Halo', _ts: 1, platforms: [], genres: [], steamDeck: false, review: '', score: 5, years: [], strengths: [], weaknesses: [], reasons: [], replayable: false, retry: false, hours: 0 }],
+      v: [], e: [], p: [], deleted: [], updatedAt: 0,
+    });
+    gistMocks.readSocialGist.mockResolvedValue({
+      data: {
+        profile: { name: 'Me', private: false, favoriteGames: [{ id: 1, name: 'Halo' }], visibility: { hiddenTabs: [], hideReplayable: false, hideRetry: false, hideGameTime: false, showPhoto: true }, sharedLists: {} },
+        recommendations: [], activity: [], posts: [], updatedAt: 0,
+      },
+      etag: null,
+    });
+    firebaseMocks.listSocialDirectory.mockResolvedValue([
+      { id: 'zoe', uid: 'zoe', email: 'zoe@x.com', displayName: 'Zoe', photoURL: '', socialGistId: 'zoe-social', gamesGistId: 'zoe-games', updatedAt: Date.now() - 200 * 24 * 60 * 60 * 1000 },
+    ]);
+    const zoeView = { docId: 'me__zoe', otherUid: 'zoe', otherName: 'Zoe', otherPhoto: '', otherSocialGistId: 'zoe-social', otherGamesGistId: 'zoe-games', state: 'friends', createdAt: 0, updatedAt: 1 };
+    firebaseMocks.getMyFriendships.mockResolvedValue({
+      // `byOtherUid` es lo que mira la pantalla de perfil para saber que es amiga (y mostrar su hero completo).
+      friends: [zoeView], incoming: [], outgoing: [], byOtherUid: { zoe: zoeView },
+    });
+    gistMocks.readPublicSocialGistById.mockResolvedValue({
+      profile: { name: 'Zoe', favoriteGames: [{ id: 4, name: 'Bastion' }], visibility: { hiddenTabs: [], hideReplayable: false, hideRetry: false, hideGameTime: false, showPhoto: true } },
+      activity: [], posts: [], updatedAt: 10,
+    });
+
+    renderHub('/social/profiles/zoe');
+
+    // Su hero no se queda a medias: los favoritos salen de su gist social, leído bajo demanda al abrir el perfil.
+    expect(await screen.findByText('Bastion')).toBeInTheDocument();
+    expect(gistMocks.readPublicSocialGistById.mock.calls.map((call) => call[0])).toContain('zoe-social');
+  });
+
   it('deriva de gist: la actividad del amigo aparece aunque esté en el gist del directorio y no en el de la amistad', async () => {
     // El lector prefiere el gist denormalizado en el doc de amistad, pero la deriva va en las dos direcciones
     // (publicar una reseña sanea el directorio y no la amistad). Si el preferido es el que quedó obsoleto, antes

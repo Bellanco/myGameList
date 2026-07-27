@@ -1,8 +1,12 @@
 # Plan — reseñas que no salen en el feed de actividad (usuarios recién llegados)
 
-> **Estado:** pasos 1, 1b, 1c, 2 y 3 IMPLEMENTADOS. Pendientes: 4 (tope del directorio) y
-> 5 (`updateGistPrivacy`). La Fase 0 sigue siendo útil para confirmar en los usuarios ya afectados que su
-> actividad se recupera.
+> **Estado:** TODOS los pasos implementados (1, 1b, 1c, 2, 3, 4 + 4bis y 5). La Fase 0 sigue siendo útil para
+> confirmar en los usuarios ya afectados que su actividad se recupera.
+>
+> **DESPLIEGUE:** el paso 4 necesita el índice compuesto `profiles(social.enabled ASC, updatedAt DESC)`.
+> Despliégalo ANTES o a la vez que la app: `firebase deploy --only firestore:indexes`. Si faltara, la consulta
+> degrada a "sin ordenar" (con un warning en consola) en vez de dejar el hub sin directorio, pero no habría
+> prioridad por uso reciente. No hay cambios en `firestore.rules`.
 >
 > Piezas nuevas: `src/model/repository/socialActivityReconcile.ts` (reconciliación + marca de pendiente),
 > `src/model/repository/socialChannel.ts` (`resolveSocialChannel`) y `mergeSocialGistData` en
@@ -251,19 +255,45 @@ En `publishReviewActivity` / `publishPost` (`socialPublishRepository.ts`):
   gist cambia de verdad), y no sanear si el nick del gist está vacío, para no pisar con vacío un nick bueno
   (eso lo hace el hub, que espera a tener el nick cargado).
 
-### Paso 4 — Directorio: quitar el tope arbitrario (C4)
+### Paso 4 — Directorio: quitar el tope arbitrario (C4) — HECHO
 
-- Sustituir `where(documentId(), '!=', '_placeholder')` por un filtro en cliente y ordenar por `updatedAt`
-  desc (índice compuesto `social.enabled` + `updatedAt` en `firestore.indexes.json`); subir
-  `SOCIAL_DIRECTORY_LIMIT` con criterio.
-- `friendOnlyEntries`: sintetizar al amigo **aunque no traiga `otherSocialGistId`** (index-only, sin lectura
+- Fuera `where(documentId(), '!=', '_placeholder')` y orden por `updatedAt` desc (índice compuesto en
+  `firestore.indexes.json`). El filtro no hacía falta: la igualdad sobre `social.enabled` ya excluye al
+  placeholder, que no tiene el campo. `SOCIAL_DIRECTORY_LIMIT` sube de 30 a 50: solo los amigos cuestan lectura
+  de gist, así que el coste extra son lecturas de documento de Firestore.
+- Degradación si falta el índice: se reintenta sin `orderBy` (ver aviso de despliegue arriba).
+- `friendOnlyEntries`: se sintetiza al amigo **aunque no traiga `otherSocialGistId`** (index-only, sin lectura
   de gist) para que nunca desaparezca del hub.
 
-### Paso 5 — `updateGistPrivacy` deja de clonar por fallos transitorios (C5)
+### Paso 4bis — Recencia de uso (requisito añadido) — HECHO
 
-- Distinguir "no accesible" (404 definitivo) de "no se pudo comprobar" (403/rate-limit/red): en el segundo
-  caso, no migrar y devolver el id actual.
-- Hacer la comprobación con token (no anónima) y saltarla si el gist lo creó la propia app como público.
+Que el feed no muestre reseñas de quien lleva mucho sin usar la app. Hallazgo que condiciona el diseño: **el
+feed es solo-amigos** (los no-amigos son index-only, y un amigo entra aunque caiga fuera del tope porque se
+sintetiza desde su doc de amistad), así que ordenar el directorio no basta: hace falta un corte explícito.
+
+- **Señal**: se reutiliza `profiles/{uid}.updatedAt` con un latido (`touchOwnProfileActivity`) al abrir el hub,
+  acotado a una vez cada 20 h (`meta.profileTouchedAt`). Se reutiliza y no se añade un campo nuevo por dos
+  razones: ya está en TODOS los docs (un `orderBy` sobre un campo ausente excluiría de la consulta a los
+  usuarios existentes hasta que reabrieran la app) y la allowlist de `firestore.rules` ya admite `uid` +
+  `updatedAt`, así que no hay que desplegar reglas. `updateProfilePhoto` lo estampa también ahora, porque su
+  merge podía crear un doc sin el campo.
+- PRIVACIDAD: esto convierte `updatedAt` en un "última vez visto" legible por cualquier usuario autenticado que
+  vea el perfil. El acotado diario mantiene el grano en días y no lo hace un indicador de presencia.
+- **Corte**: `FRIEND_ACTIVITY_MAX_AGE_MS` = 30 días. No se lee el gist social de un amigo cuyo perfil no se ha
+  tocado en ese plazo: su actividad no entra al feed y no gasta llamada. Si su recencia es DESCONOCIDA (amigo
+  fuera del directorio) NO se corta: nunca se oculta contenido por falta de datos.
+- El amigo inactivo sigue en Perfiles y en la lista de amigos; al ABRIR su perfil se lee su gist social bajo
+  demanda (marca `socialSkipped`) para que su hero no salga a medias, y sus reseñas siguen saliendo de su gist
+  de juegos como siempre.
+
+### Paso 5 — `updateGistPrivacy` deja de clonar por fallos transitorios (C5) — HECHO
+
+- `probePublicGistAccess` devuelve tres estados (`public` / `not-public` / `unknown`) en vez de un booleano:
+  solo un 404 anónimo es veredicto de "secreto"; 403 por rate-limit anónimo (60 req/h por IP), 401 o un fallo de
+  red son `unknown` y NO migran. Antes cualquiera de esos clonaba el gist a un id nuevo por un error transitorio,
+  dejando un duplicado huérfano y a los amigos leyendo el anterior (alimentaba C3).
+- La comprobación sigue siendo anónima a propósito: es la única forma de saber si un tercero sin el token puede
+  leerlo, que es justo lo que necesita el canal público.
 
 ### Paso 6 — Tests
 
@@ -272,11 +302,16 @@ En `publishReviewActivity` / `publishPost` (`socialPublishRepository.ts`):
   reconcilia aunque el sello esté fresco.
 - `socialPublishArmChannel.test.ts`: sin config social pero con sesión y perfil en Firestore → recupera el
   gistId y publica (hoy es un no-op silencioso); sin sesión → marca `pendingActivity` y no lanza.
-- `socialDirectoryGistDrift.test.ts`: amistad y directorio con ids distintos → la actividad aparece igual.
-- `firebaseSocialRepository`: el directorio ya no depende del orden por `documentId()`.
+- `socialGistMerge.test.ts` + regresión en `SocialHub.test.tsx`: amistad y directorio con ids distintos → la
+  actividad aparece igual.
+- `socialDirectoryRecency.test.ts`: orden por `updatedAt` sin desigualdad sobre `documentId`, `updatedAt` en ms
+  (Timestamp o número), descarte del placeholder y degradación si falta el índice.
+- `socialGistPrivacy.test.ts`: 403/red → no clona; 404 → clona.
+- `SocialHub.test.tsx`: corte por inactividad (no entra al feed ni se lee su gist) y su contrapartida (al abrir
+  el perfil sí se lee).
 - Regresión de C2: abrir el detalle de una reseña propia con listados desfasados **no** escribe en el gist.
 
 ## Orden sugerido
 
-Pasos 1 + 1b + 1c + 2 juntos: cierran las cuatro vías de pérdida de C1 y el borrado destructivo de C2, que es
-lo que explica el caso reportado. Después 3, y por último 4 y 5 (escalabilidad e higiene).
+Implementado en tres tandas: 1 + 1b + 1c + 2 (pérdida de publicaciones y borrado destructivo), luego 3 (deriva
+de gist) y por último 4 + 4bis + 5 (escalabilidad, recencia e higiene).

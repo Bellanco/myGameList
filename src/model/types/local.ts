@@ -35,6 +35,8 @@ export interface LocalMeta {
   // Último gist social ya propagado a MIS docs de amistad desde este dispositivo. Evita lanzar la query de
   // amistades en cada publicación: solo se sanea cuando el id del gist cambia de verdad.
   friendshipHealedForGist?: string;
+  // Último latido de uso enviado a `profiles.updatedAt` desde este dispositivo (acota a una escritura diaria).
+  profileTouchedAt?: number;
 }
 
 export type SyncOpType =

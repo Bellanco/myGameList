@@ -43,6 +43,7 @@ import {
   sendFriendRequest,
   signInWithGoogle,
   signOutSocialUser,
+  touchOwnProfileActivity,
   updateProfilePhoto,
   type FriendshipSelfInfo,
   type SocialAuthUser,
@@ -94,9 +95,18 @@ function hasRenderableTimestamp(value: unknown): boolean {
 }
 // Cooldown mínimo entre refrescos forzados del directorio (botón "Actualizar feed").
 const FORCED_REFRESH_MIN_MS = 12_000;
-// Tope de perfiles del directorio social. Cada perfil = 1 lectura de gist social al refrescar; bajar este número
-// reduce el consumo de rate-limit a costa de mostrar menos perfiles/actividad en el feed. Tunable.
-const SOCIAL_DIRECTORY_LIMIT = 30;
+// Tope de perfiles del directorio social, ORDENADOS POR USO RECIENTE (`profiles.updatedAt`). Solo los AMIGOS
+// cuestan una lectura de gist; los demás son index-only (nombre/foto de Firestore), así que subir este número
+// cuesta lecturas de documento de Firestore, no rate-limit de GitHub. Tunable.
+const SOCIAL_DIRECTORY_LIMIT = 50;
+// Antigüedad máxima del último uso de un AMIGO para que su actividad entre en el feed. Un amigo más inactivo
+// sigue en Perfiles y en la lista de amigos, y su perfil/reseñas se abren igual (salen de su gist de JUEGOS);
+// simplemente su actividad no ocupa el feed y no se gasta una lectura de su gist social. Si no se conoce su
+// recencia (no está en el directorio) NO se corta: nunca se oculta contenido por falta de datos. Tunable.
+const FRIEND_ACTIVITY_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
+// Acotado del latido de uso: una escritura por dispositivo cada 20 h (así un uso diario siempre lo refresca).
+// Mantiene el grano de `profiles.updatedAt` en "días" en vez de convertirlo en un indicador de presencia.
+const PROFILE_TOUCH_MIN_INTERVAL_MS = 20 * 60 * 60 * 1000;
 // C3: el directorio se hidrata leyendo el gist social de cada perfil. En vez de disparar TODAS las lecturas a la
 // vez (ráfaga que puede activar los "secondary rate limits" de GitHub al crecer el directorio), se limita la
 // concurrencia. Las lecturas son baratas (caché de sesión + revalidación ETag/304), así que el coste en latencia
@@ -228,6 +238,11 @@ export function useSocialViewModel(options?: {
     // Index-only (SocialSharedGame) para perfiles ajenos; para el perfil PROPIO se repuebla con GameItem completos.
     sharedLists: Partial<Record<TabId, Array<GameItem | SocialSharedGame>>>;
     visibility: SocialProfileVisibility;
+    /**
+     * Amigo cuyo gist social NO se leyó por inactividad (corte de FRIEND_ACTIVITY_MAX_AGE_MS): su actividad no
+     * entra al feed, pero al abrir su perfil se hidrata bajo demanda para no mostrarlo a medias.
+     */
+    socialSkipped?: boolean;
   };
 
   const [socialCfgGistId, setSocialCfgGistId] = useState<string>('');
@@ -538,6 +553,29 @@ export function useSocialViewModel(options?: {
     directoryHealedRef.current = true;
     void healOwnDirectoryGist(authUser.uid, socialCfgGistId, socialCfgEtag);
   }, [showSocialSpace, authUser?.uid, socialCfgGistId, socialCfgEtag]);
+
+  // LATIDO DE USO RECIENTE: refresca `profiles.updatedAt`, por el que ordena el directorio y con el que el feed
+  // decide si un amigo sigue activo. Publicar ya lo refresca; esto cubre a quien entra solo a mirar. Acotado a
+  // una vez cada 20 h por dispositivo (una escritura al día como mucho, y grano diario por privacidad).
+  const profileTouchedRef = useRef(false);
+  useEffect(() => {
+    if (profileTouchedRef.current) return;
+    if (!showSocialSpace || !authUser?.uid || !socialCfgGistId) return;
+    profileTouchedRef.current = true;
+    const uid = authUser.uid;
+
+    void (async () => {
+      try {
+        const meta = await getLocalMeta();
+        const last = Number(meta?.profileTouchedAt || 0);
+        if (last && Date.now() - last < PROFILE_TOUCH_MIN_INTERVAL_MS) return;
+        await touchOwnProfileActivity(uid);
+        await patchLocalMeta({ profileTouchedAt: Date.now() });
+      } catch {
+        /* best-effort: la recencia es orden, no funcionalidad. */
+      }
+    })();
+  }, [showSocialSpace, authUser?.uid, socialCfgGistId]);
 
   // Tras un cambio de amistad (aceptar/eliminar), el conjunto de amigos cambia y con él la actividad que debe salir
   // en el feed. Se invalida la caché del directorio (feed solo-amigos) y se refresca la amistad; el efecto que
@@ -955,6 +993,45 @@ export function useSocialViewModel(options?: {
     };
   }, [activePanel, activeDetailEvent, authUser, defaultSocialVisibility, foreignGamesByProfile, mainSyncConfig?.token, ownProfileId, profileDetailId, relationshipWith, socialDirectory]);
 
+  // Amigo inactivo (su gist social no se leyó al hidratar el directorio, para no ocupar el feed ni gastar la
+  // llamada): al ABRIR su perfil sí se lee, para que su hero no salga a medias (favoritos/visibilidad/foto).
+  // La actividad se deja fuera a propósito: el corte por inactividad es sobre el feed, no sobre su perfil.
+  useEffect(() => {
+    if (activePanel !== 'profile-detail' && activePanel !== 'profile-review') return;
+    if (!profileDetailId) return;
+    const entry = socialDirectory.find((item) => item.id === profileDetailId);
+    if (!entry?.socialSkipped || !entry.socialGistId) return;
+
+    let cancelled = false;
+    const token = getSocialSyncConfig()?.token || mainSyncConfig?.token || null;
+    void readPublicSocialGistById(entry.socialGistId, token)
+      .then((socialData) => {
+        if (cancelled) return;
+        const showsPhoto = socialData.profile.visibility?.showPhoto !== false;
+        setSocialDirectory((prev) =>
+          prev.map((item) =>
+            item.id === profileDetailId
+              ? {
+                  ...item,
+                  displayName: socialData.profile.name || item.displayName,
+                  photoURL: socialData.profile.photoURL || (showsPhoto ? item.photoURL : ''),
+                  favorites: socialData.profile.favoriteGames.map((game) => game.name).slice(0, 5),
+                  visibility: socialData.profile.visibility || defaultSocialVisibility,
+                  socialSkipped: false,
+                }
+              : item,
+          ),
+        );
+      })
+      .catch(() => {
+        /* best-effort: el perfil se queda index-only, como hasta ahora. */
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activePanel, defaultSocialVisibility, mainSyncConfig?.token, profileDetailId, socialDirectory]);
+
   // Bloque 4 — refresco manual del perfil abierto: invalida la caché de IndexedDB y relee del gist de listados.
   const refreshProfileDetail = useCallback(async () => {
     const profileId = profileDetailId;
@@ -1315,7 +1392,9 @@ export function useSocialViewModel(options?: {
       // tope del directorio; los pendientes NO se sintetizan (no son amigos aún).
       const directoryUids = new Set(dirEntries.map((entry) => entry.uid));
       const friendOnlyEntries = friendships.friends
-        .filter((friend) => friend.otherSocialGistId && !directoryUids.has(friend.otherUid))
+        // No se exige `otherSocialGistId`: sin él el amigo desaparecía por completo del hub (ni perfil ni gestión).
+        // Entra igual como index-only; sin gist social simplemente no aporta actividad.
+        .filter((friend) => !directoryUids.has(friend.otherUid))
         .map((friend) => ({
           id: friend.otherUid,
           uid: friend.otherUid,
@@ -1324,6 +1403,8 @@ export function useSocialViewModel(options?: {
           photoURL: friend.otherPhoto || '',
           socialGistId: friend.otherSocialGistId,
           gamesGistId: friend.otherGamesGistId,
+          // Amigo fuera del directorio: no hay marca de recencia. 0 = desconocida → no se le aplica el corte.
+          updatedAt: 0,
         }));
       const entries = [...dirEntries, ...friendOnlyEntries];
 
@@ -1344,8 +1425,13 @@ export function useSocialViewModel(options?: {
           const socialGistCandidates = [effectiveSocialGistId, ...(isFriend ? [entry.socialGistId] : [])]
             .map((id) => String(id || '').trim())
             .filter((id, index, all) => Boolean(id) && all.indexOf(id) === index);
-          if (!isOwnEntry && !isFriend) {
-            // No-amigo: index-only, sin leer su gist. Solo nombre/foto (Firestore); sin actividad/posts/favoritos.
+          // CORTE POR INACTIVIDAD: la actividad de un amigo que hace mucho que no usa la app no ocupa el feed (ni
+          // gasta una lectura de su gist). Solo se aplica si conocemos su recencia; el perfil propio nunca se corta.
+          const lastActiveAt = Number(entry.updatedAt || 0);
+          const isInactiveFriend =
+            !isOwnEntry && lastActiveAt > 0 && Date.now() - lastActiveAt > FRIEND_ACTIVITY_MAX_AGE_MS;
+          if (!isOwnEntry && (!isFriend || isInactiveFriend || socialGistCandidates.length === 0)) {
+            // Index-only, sin leer su gist. Solo nombre/foto (Firestore); sin actividad/posts/favoritos.
             return {
               id: entry.id,
               uid: entry.uid,
@@ -1357,6 +1443,9 @@ export function useSocialViewModel(options?: {
               favorites: [],
               activity: [],
               posts: [],
+              // Marca para el detalle: es un amigo cuyo gist social NO se ha leído por inactividad. Al abrir su
+              // perfil se hidrata bajo demanda (favoritos/visibilidad/foto) para que no se vea a medias.
+              socialSkipped: isFriend && isInactiveFriend,
               sharedLists: {},
               visibility: defaultSocialVisibility,
             };
