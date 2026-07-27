@@ -48,7 +48,13 @@ const gistMocks = vi.hoisted(() => ({
   buildReviewSnippet: (review: string) => (review || '').slice(0, 160),
 }));
 
-vi.mock('../../src/model/repository/gistRepository', () => gistMocks);
+// Se parte del módulo REAL y solo se sustituye lo que toca red/config: así las funciones puras del gist
+// (remapSocialActorIds, upsertReviewActivity, removeReviewActivity…) se ejercitan de verdad y un flujo que
+// escribiera el gist indebidamente llegaría hasta `writeSocialGist` (mockeado) y sería detectable.
+vi.mock('../../src/model/repository/gistRepository', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../src/model/repository/gistRepository')>()),
+  ...gistMocks,
+}));
 
 const localMocks = vi.hoisted(() => ({
   loadLocalState: vi.fn((): any => ({ c: [], v: [], e: [], p: [], deleted: [], updatedAt: 0 })),
@@ -365,5 +371,48 @@ describe('SocialHub (componente, post-M3)', () => {
     expect(await screen.findByText('Bob')).toBeInTheDocument();
     const readGistIds = gistMocks.readPublicSocialGistById.mock.calls.map((call) => call[0]);
     expect(readGistIds).not.toContain('bob-social');
+  });
+
+  it('abrir el detalle de una reseña PROPIA cuyo juego no está en los listados NO la despublica', async () => {
+    // Regresión: el hub despublicaba la reseña por "huérfana" comparándola con una foto de localStorage tomada
+    // al montar. Con listados desfasados (reseña escrita en otro dispositivo, sync de juegos aún en camino)
+    // borraba actividad válida del feed de todos, de forma permanente.
+    firebaseMocks.getCurrentSocialAuthUser.mockResolvedValue({ uid: 'me', email: 'me@x.com', displayName: 'Me', photoURL: null });
+    gistMocks.getSocialSyncConfig.mockReturnValue({ token: 'ghp_x', gistId: 'my-social', etag: null, lastRemoteUpdatedAt: 0 });
+    // Listados NO vacíos (pasaban la salvaguarda antigua) pero sin el juego 99 de la reseña.
+    localMocks.loadLocalState.mockReturnValue({
+      c: [{ id: 1, name: 'Halo', _ts: 1, platforms: [], genres: [], steamDeck: false, review: '', score: 5, years: [], strengths: [], weaknesses: [], reasons: [], replayable: false, retry: false, hours: 0 }],
+      v: [], e: [], p: [], deleted: [], updatedAt: 0,
+    });
+    const ownReview = {
+      id: 'me:99:review', key: 'me:99:review', type: 'review', actorProfileId: 'me', actorName: 'Me',
+      gameId: 99, gameName: 'Elden Ring', rating: 5, grade: 100, recommendationText: '', snippet: 'Enorme',
+      createdAt: 1_700_000_000_000, updatedAt: 1_700_000_000_000,
+    };
+    gistMocks.readSocialGist.mockResolvedValue({
+      data: {
+        profile: { name: 'Me', private: false, favoriteGames: [{ id: 1, name: 'Halo' }], visibility: { hiddenTabs: [], hideReplayable: false, hideRetry: false, hideGameTime: false, showPhoto: true }, sharedLists: {} },
+        recommendations: [], activity: [ownReview], posts: [], updatedAt: 0,
+      },
+      etag: null,
+    });
+    // El directorio incluye MI entrada, y mi gist social publica esa reseña.
+    firebaseMocks.listSocialDirectory.mockResolvedValue([
+      { id: 'me', uid: 'me', email: 'me@x.com', displayName: 'Me', photoURL: '', socialGistId: 'my-social', gamesGistId: 'my-games' },
+    ]);
+    gistMocks.readPublicSocialGistById.mockResolvedValue({
+      profile: { name: 'Me', favoriteGames: [], visibility: { showPhoto: true } },
+      activity: [ownReview],
+      posts: [],
+    });
+    firebaseMocks.getMyFriendships.mockResolvedValue({ friends: [], incoming: [], outgoing: [], byOtherUid: {} });
+
+    renderHub('/social/user/me/game/99/review');
+
+    // Se pinta el detalle de la reseña…
+    expect(await screen.findByText('Elden Ring')).toBeInTheDocument();
+    // …y no se reescribe el gist social para retirarla.
+    await waitFor(() => expect(gistMocks.readPublicSocialGistById).toHaveBeenCalled());
+    expect(gistMocks.writeSocialGist).not.toHaveBeenCalled();
   });
 });

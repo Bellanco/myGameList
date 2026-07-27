@@ -4,6 +4,7 @@ import { DIALOG_MESSAGES, ROUTE_TAB, SYNC_BADGE_TEXT, SYNC_MESSAGES, TAB_ROUTE, 
 import { TAB_IDS, type TabData, type TabId } from './model/types/game';
 import { resolveGrade } from './core/utils/scoreScale';
 import { normalizeData } from './model/repository/localRepository';
+import { patchLocalMeta } from './model/repository/indexedDbRepository';
 import { IconSprite } from './view/components/IconSprite';
 import { FloatingControls } from './view/components/FloatingControls';
 import { TabBar } from './view/components/TabBar';
@@ -31,6 +32,17 @@ import { useImportInbox } from './viewmodel/useImportInbox';
 import { parseLibraryExporter } from './core/import/libraryExporter';
 import { importedToPartialGame, mergeImportedIntoGame } from './core/import/staging';
 import type { ImportedGame, RawExternalGame } from './model/types/import';
+
+/**
+ * Marca que una publicación de actividad social se ha perdido, para que la reconciliación del hub la recupere.
+ * Se escribe aquí directamente (no vía `socialActivityReconcile`) porque el fallo que se está tratando puede
+ * ser precisamente el del import dinámico de ese módulo.
+ */
+function markPendingSocialActivityFailure(): void {
+  void patchLocalMeta({ pendingSocialActivity: true }).catch(() => {
+    /* best-effort: no puede romper el guardado del juego. */
+  });
+}
 
 const FormModal = lazy(() => import('./view/modals/FormModal').then((module) => ({ default: module.FormModal })));
 const ConfirmModal = lazy(() => import('./view/modals/ConfirmModal').then((module) => ({ default: module.ConfirmModal })));
@@ -462,7 +474,8 @@ export default function App() {
         void import('./model/repository/socialPublishRepository')
           .then((m) => m.unpublishReviewActivity({ id: predictedId }))
           .catch(() => {
-            notify('warn', 'Juego guardado, pero no se pudo actualizar la actividad social de reseña.');
+            markPendingSocialActivityFailure();
+            notify('warn', 'Juego guardado; la actividad social de reseña se actualizará al abrir el hub social.');
           });
       }
       return;
@@ -490,7 +503,11 @@ export default function App() {
         reviewChanged,
       }))
       .catch(() => {
-        notify('warn', 'Juego guardado, pero no se pudo actualizar la actividad social de reseña.');
+        // El fallo puede ser del propio import dinámico (index.html cacheado tras un despliegue, red
+        // intermitente) o de GitHub (403 por rate-limit, 5xx). En ambos casos la publicación se perdía sin
+        // rastro ni reintento: se marca como pendiente para que la reconciliación la recupere.
+        markPendingSocialActivityFailure();
+        notify('warn', 'Juego guardado; la actividad social de reseña se actualizará al abrir el hub social.');
       });
   }, [editingTab, inbox, notify, saveDraft, vm.data]);
 
@@ -596,6 +613,7 @@ export default function App() {
               onAddToProximos={vm.addGameToProximos}
               hasGameInLists={vm.hasGameInLists}
               moveGameToCurrentByName={vm.moveGameToCurrentByName}
+              games={vm.data}
             />
           </Suspense>
         ) : activeSection === 'account' ? (

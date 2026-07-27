@@ -16,14 +16,15 @@ import {
   updateGistPrivacy,
   writeSocialGist,
 } from '../model/repository/gistRepository';
-import { publishPost, unpublishReviewActivity } from '../model/repository/socialPublishRepository';
+import { publishPost } from '../model/repository/socialPublishRepository';
+import { reconcileReviewActivity } from '../model/repository/socialActivityReconcile';
 import { invalidateProfileGames, loadForeignProfileGames } from '../model/repository/foreignProfileRepository';
 import { getCachedSocialDirectory, getCachedSocialProfile, getLocalMeta, invalidateCachedSocialDirectory, patchLocalMeta, putCachedSocialDirectory, putCachedSocialProfile } from '../model/repository/indexedDbRepository';
 import { applyProfileVisibility } from '../core/utils/profileVisibility';
 import { SOCIAL_UI } from '../core/constants/labels';
 import { MAX_SOCIAL_FAVORITES } from '../core/constants/uiConfig';
 import type { IconName } from '../core/constants/icons';
-import { TAB_IDS, type GameItem, type SyncConfig, type TabId } from '../model/types/game';
+import { TAB_IDS, type GameItem, type SyncConfig, type TabData, type TabId } from '../model/types/game';
 import {
   acceptFriendRequest,
   clearAnalyticsUser,
@@ -182,7 +183,14 @@ function formatDayHeader(date: Date): string {
   return `${date.getDate()} de ${FEED_DAY_MONTH_NAMES[date.getMonth()]}`;
 }
 
-export function useSocialViewModel() {
+export function useSocialViewModel(options?: {
+  /**
+   * Listados VIVOS de la app. La reconciliación de actividad decide con ellos qué reseñas publicar y qué
+   * entradas huérfanas retirar, así que importa que no sean una foto tomada al montar: si no llegan, se cae a
+   * `loadLocalState()` (que sí lo es) y la guarda de reloj de la reconciliación evita retiradas indebidas.
+   */
+  games?: TabData;
+}) {
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -782,53 +790,12 @@ export function useSocialViewModel() {
     return allGames.find((game) => game.id === gameId) || null;
   }, [authUser, foreignGamesByProfile, localState, ownProfileId]);
 
-  // Evita despublicar la misma reseña dos veces mientras la escritura está en vuelo (StrictMode / re-render).
-  const orphanUnpublishInFlightRef = useRef<Set<number>>(new Set());
-
-  // Reseña huérfana PROPIA: el dueño abre el detalle de una reseña cuyo juego ya no existe en sus listados
-  // (borrado o perdido). Sin contraparte, `getGameItemById` devuelve null y el detalle sale vacío; entonces la
-  // despublicamos del gist social para que no quede una reseña fantasma en el feed y volvemos al feed.
-  // Salvaguarda: solo si hay listados cargados (localStorage no vacío/sin hidratar), para no borrar por un
-  // estado local transitoriamente vacío. Solo actúa sobre el perfil propio y sobre eventos de tipo 'review'.
-  useEffect(() => {
-    if (activePanel !== 'detail') return;
-    const event = activeDetailEvent;
-    if (!event || event.type !== 'review') return;
-    if (!isOwnProfileIdentity(event.profileId, authUser?.uid, ownProfileId)) return;
-
-    const ownGames = [...localState.c, ...localState.v, ...localState.e, ...localState.p];
-    if (ownGames.length === 0) return; // sin listados cargados → no despublicar (evita falsos positivos)
-    if (ownGames.some((game) => game.id === event.gameId)) return; // tiene contraparte → no es huérfana
-
-    const gameId = event.gameId;
-    if (orphanUnpublishInFlightRef.current.has(gameId)) return;
-    orphanUnpublishInFlightRef.current.add(gameId);
-
-    let cancelled = false;
-    void unpublishReviewActivity({ id: gameId })
-      .then(() => {
-        if (cancelled) return;
-        // Quita la entrada propia del directorio para que desaparezca del feed sin recargar, y vuelve al feed.
-        setSocialDirectory((prev) =>
-          prev.map((entry) =>
-            entry.socialGistId === socialCfgGistId
-              ? { ...entry, activity: entry.activity.filter((a) => !(a.gameId === gameId && a.type === 'review')) }
-              : entry,
-          ),
-        );
-        navigate('/social');
-      })
-      .catch(() => {
-        /* best-effort: si falla la red se reintenta la próxima vez que se abra el detalle */
-      })
-      .finally(() => {
-        orphanUnpublishInFlightRef.current.delete(gameId);
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [activePanel, activeDetailEvent, authUser, localState, navigate, ownProfileId, socialCfgGistId]);
+  // NOTA (retirado a propósito): aquí vivía un efecto que, al abrir el detalle de una reseña PROPIA cuyo juego
+  // no aparecía en los listados, la despublicaba del gist social por considerarla huérfana. Decidía con
+  // `localState`, una foto de localStorage tomada al montar el hub: si esos listados estaban desfasados (reseña
+  // escrita en otro dispositivo con el sync de juegos aún en camino), borraba actividad VÁLIDA del feed de todos
+  // de forma permanente. La limpieza de huérfanas la hace ahora `reconcileReviewActivity`, que compara la lista
+  // completa de una vez y nunca retira una entrada más nueva que el reloj de los listados locales.
 
   const groupedFeedItems = useMemo(() => {
     type FeedItem = (typeof feedItems)[number];
@@ -1502,6 +1469,37 @@ export function useSocialViewModel() {
     void hydrateSocialDirectory();
   }, [hydrateSocialDirectory]);
 
+  // Listados con los que reconciliar: los vivos de la app si el contenedor los pasa; si no, la foto del mount.
+  const reconcileGames = options?.games ?? localState;
+
+  // RECONCILIACIÓN DE ACTIVIDAD (una vez por sesión de hub). La publicación de una reseña es un efecto colateral
+  // de guardarla y se perdía en silencio si el canal social no estaba armado en ese dispositivo, si el chunk del
+  // publicador no bajaba o si GitHub devolvía 403/5xx: el perfil mostraba la reseña (gist de juegos) y el feed
+  // no (gist social), para siempre. Esta pasada reconcilia ambos y retira huérfanas. Barata: si el recuento de
+  // reseñas no ha cambiado y el sello está fresco, no toca la red. Se hace tras `hydrateSocialDirectory` (TDZ).
+  const activityReconciledRef = useRef(false);
+  useEffect(() => {
+    if (activityReconciledRef.current) return;
+    if (!showSocialSpace || profileEditorLocked || !authUser?.uid || !socialCfgGistId) return;
+    activityReconciledRef.current = true;
+
+    let cancelled = false;
+    void reconcileReviewActivity({ games: reconcileGames })
+      .then((outcome) => {
+        if (cancelled || outcome.skipped || (outcome.added === 0 && outcome.removed === 0)) return;
+        // La reconciliación invalidó la caché del directorio: reléelo para que el cambio se vea ya, sin esperar
+        // a la próxima visita. No es un refresco forzado (no gasta el cooldown del botón "Actualizar").
+        void hydrateSocialDirectory();
+      })
+      .catch(() => {
+        /* best-effort: sin red o sin IndexedDB se reintenta en la próxima sesión (el sello no se escribió). */
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [authUser?.uid, hydrateSocialDirectory, profileEditorLocked, reconcileGames, showSocialSpace, socialCfgGistId]);
+
   // Limpia el timer del cooldown al desmontar (evita setState tras desmontar).
   useEffect(() => () => {
     if (cooldownTimerRef.current) clearTimeout(cooldownTimerRef.current);
@@ -1675,6 +1673,16 @@ export function useSocialViewModel() {
       setHasCreatedProfile(true);
       setMustCreateProfile(false);
       setJustSavedProfile(true);
+
+      // Momento clave del usuario nuevo: acaba de completar su perfil, así que sus reseñas ANTERIORES al alta
+      // (que nunca pasaron por `publishReviewActivity`) entran ahora al feed. Forzado: ignora sello y recuento.
+      // Antes de `hydrateSocialDirectory` para que el feed ya se pinte con la actividad reconciliada.
+      try {
+        await reconcileReviewActivity({ games: reconcileGames, force: true });
+      } catch {
+        /* best-effort: no puede tumbar el guardado del perfil; se reintenta en la próxima apertura. */
+      }
+
       navigate('/social');
       void hydrateSocialDirectory();
       setFeedback('ok', SOCIAL_UI.status.profileSaved);
@@ -1697,6 +1705,7 @@ export function useSocialViewModel() {
     hydrateSocialDirectory,
     navigate,
     profileName,
+    reconcileGames,
     setFeedback,
     socialCfgEtag,
     socialCfgGistId,
