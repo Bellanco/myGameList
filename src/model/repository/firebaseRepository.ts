@@ -409,10 +409,42 @@ export async function updateProfilePhoto(uid: string, photoURL: string): Promise
   if (!services) return;
   await setDoc(
     doc(services.firestore, 'profiles', uid),
-    { uid, photoURL: photoURL || '' },
+    // `updatedAt` es obligatorio de facto: el directorio ordena por él y un doc sin el campo NO saldría en la
+    // consulta. Este merge puede crear el doc si aún no existía, así que lo estampa también aquí.
+    { uid, photoURL: photoURL || '', updatedAt: serverTimestamp() },
     { merge: true },
   );
   invalidateSocialDirectoryCache();
+}
+
+/**
+ * Latido de "uso reciente": refresca `profiles/{uid}.updatedAt`. El directorio social ordena por ese campo, de
+ * modo que se muestran (y se leen) los perfiles de quien de verdad sigue usando la app en vez de los primeros
+ * por uid. Publicar una reseña o un post ya lo refresca vía `ensureProfileByEmail`; esto cubre al usuario que
+ * entra a mirar sin publicar nada.
+ *
+ * Reutiliza `updatedAt` a propósito y no añade un campo nuevo: ya está en TODOS los docs (un `orderBy` sobre un
+ * campo ausente excluiría de la consulta a todos los usuarios existentes hasta que reabrieran la app) y la
+ * allowlist de las reglas ya lo admite junto a `uid`, así que no hace falta desplegar reglas.
+ *
+ * PRIVACIDAD: convierte `updatedAt` en un "última vez visto" legible por los usuarios autenticados que ven tu
+ * perfil. El llamador debe acotarlo (una vez al día por dispositivo) para que el grano sea diario y no un
+ * indicador de presencia. Best-effort: no lanza.
+ */
+export async function touchOwnProfileActivity(uid: string): Promise<void> {
+  if (!uid) return;
+  try {
+    const services = await initializeFirebaseServices();
+    if (!services) return;
+    const ref = doc(services.firestore, 'profiles', uid);
+    const snap = await getDoc(ref);
+    // Sin doc no se crea nada: un perfil a medias (sin `social`) no debe aparecer en el directorio. Se creará
+    // al publicar el perfil.
+    if (!snap.exists()) return;
+    await setDoc(ref, { uid, updatedAt: serverTimestamp() }, { merge: true });
+  } catch {
+    // best-effort: la recencia es una mejora de orden, no puede romper la apertura del hub.
+  }
 }
 
 /**

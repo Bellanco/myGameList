@@ -16,6 +16,25 @@ window.addEventListener('unhandledrejection', (event) => {
   void reportHandledError(event.reason, false, 'unhandledrejection');
 });
 
+// Tras un despliegue, un index.html cacheado apunta a chunks que ya no existen: cualquier `import()` diferido
+// (modales, hub social, y con él la publicación de actividad de reseña) falla en silencio hasta recargar.
+// Vite emite `vite:preloadError` en ese caso: se recarga UNA vez por pestaña (el flag evita el bucle si el
+// fallo no era de caché sino de red persistente).
+const PRELOAD_RELOAD_FLAG = 'myGameList.preloadReloaded';
+window.addEventListener('vite:preloadError', (event) => {
+  try {
+    if (sessionStorage.getItem(PRELOAD_RELOAD_FLAG)) {
+      return; // ya se recargó en esta pestaña: dejar que el error siga su curso normal
+    }
+    sessionStorage.setItem(PRELOAD_RELOAD_FLAG, '1');
+  } catch {
+    return; // sin sessionStorage no hay forma de acotar el bucle: mejor no recargar
+  }
+
+  event.preventDefault();
+  window.location.reload();
+});
+
 createRoot(document.getElementById('root') as HTMLElement).render(
   <StrictMode>
     <AppErrorBoundary>

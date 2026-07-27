@@ -880,6 +880,45 @@ export function remapSocialActorIds(data: SocialGistData, uidToProfileId: Record
   return { ...data, activity };
 }
 
+/**
+ * Fusiona dos lecturas del gist social del MISMO autor. Pura.
+ *
+ * Se usa cuando las dos fuentes que apuntan al gist social de un amigo (el `otherSocialGistId` denormalizado en
+ * el doc de amistad y el `social.gistId` del directorio de Firestore) DIVERGEN: una de las dos quedó anclada a
+ * un gist viejo y no hay forma de saber cuál a ciegas. Elegir mal deja al amigo sin actividad en el feed,
+ * mientras su perfil sigue completo (sale del gist de JUEGOS), que es justo el fallo que esto evita.
+ *
+ * Criterio: el perfil (nombre/foto/favoritos/visibilidad) viene del payload con `updatedAt` MAYOR — el más
+ * reciente manda; actividad y publicaciones son la UNIÓN de ambos, deduplicadas por `key`/`id` conservando la
+ * entrada de `updatedAt` mayor. Así no se pierde nada publicado en el gist que resultó ser el antiguo.
+ */
+export function mergeSocialGistData(a: SocialGistData, b: SocialGistData): SocialGistData {
+  const newest = Number(b.updatedAt || 0) > Number(a.updatedAt || 0) ? b : a;
+
+  const activityByKey = new Map<string, SocialActivityEntry>();
+  for (const entry of [...(a.activity || []), ...(b.activity || [])]) {
+    const key = entry.key || entry.id;
+    const current = activityByKey.get(key);
+    if (!current || entry.updatedAt > current.updatedAt) {
+      activityByKey.set(key, entry);
+    }
+  }
+
+  const postsById = new Map<string, SocialPostEntry>();
+  for (const entry of [...(a.posts || []), ...(b.posts || [])]) {
+    const current = postsById.get(entry.id);
+    if (!current || entry.updatedAt > current.updatedAt) {
+      postsById.set(entry.id, entry);
+    }
+  }
+
+  return {
+    ...newest,
+    activity: [...activityByKey.values()].sort((x, y) => y.updatedAt - x.updatedAt).slice(0, 320),
+    posts: [...postsById.values()].sort((x, y) => y.updatedAt - x.updatedAt).slice(0, 100),
+  };
+}
+
 export async function whoAmI(token: string): Promise<{ login: string }> {
   if (!isValidGithubToken(token)) {
     throw new Error('Formato de token inválido');
@@ -994,12 +1033,26 @@ async function createSocialGistWithData(token: string, data: SocialGistData, isP
   return { gistId: body.id, etag: response.headers.get('etag') };
 }
 
-async function isPublicSocialGistAccessible(gistId: string): Promise<boolean> {
+/**
+ * ¿El gist es legible SIN autenticación (es decir, público)?
+ *
+ * Tres estados a propósito: un fallo de red o un 403 por rate-limit anónimo (60 req/h por IP) NO significan "no
+ * es público". Antes se colapsaba todo a `false` y `updateGistPrivacy` respondía clonando el gist a un id nuevo:
+ * el canal social del usuario cambiaba de id por un error transitorio, dejando un duplicado huérfano y a sus
+ * amigos leyendo el gist antiguo (deriva de gist). `unknown` deja el gist como está.
+ */
+async function probePublicGistAccess(gistId: string): Promise<'public' | 'not-public' | 'unknown'> {
   try {
     await readPublicSocialGistById(gistId, null);
-    return true;
-  } catch {
-    return false;
+    return 'public';
+  } catch (error) {
+    const message = error instanceof Error ? error.message : '';
+    // 404 anónimo sobre un gist que el dueño SÍ puede leer = secreto (no público). 401/403 tampoco son
+    // veredicto: el rate-limit anónimo de GitHub responde 403.
+    if (/\b404\b/.test(message)) {
+      return 'not-public';
+    }
+    return 'unknown';
   }
 }
 
@@ -1844,9 +1897,16 @@ export async function updateGistPrivacy(token: string, gistId: string, isPublic:
   }
 
   const sourceGist = await readSocialGist(token, gistId, null);
-  const currentlyPublic = await isPublicSocialGistAccessible(gistId);
+  const access = await probePublicGistAccess(gistId);
 
-  if ((isPublic && currentlyPublic) || (!isPublic && !currentlyPublic)) {
+  // Sin veredicto claro (red caída, 403 por rate-limit anónimo) NO se migra: clonar por un error transitorio
+  // cambia el id del canal social y rompe a quien ya apuntaba al anterior. Se reintentará al siguiente guardado.
+  if (access === 'unknown') {
+    return { gistId, etag: sourceGist.etag || null };
+  }
+
+  const currentlyPublic = access === 'public';
+  if (isPublic === currentlyPublic) {
     return { gistId, etag: sourceGist.etag || null };
   }
 
