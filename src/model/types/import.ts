@@ -45,6 +45,19 @@ export interface ImportedGame {
   importedAt: number; // ms; para la caducidad (TTL 30 días)
 }
 
+// Campos OPCIONALES que el import puede trasladar a un juego al clasificarlo/actualizarlo. El nombre no
+// entra aquí: siempre se traslada (sin nombre no hay juego).
+export type ImportField = 'platforms' | 'genres' | 'hours' | 'grade';
+
+// Qué campos trasladar (uno de estos por grupo: nuevos / ya en tus listas).
+export type ImportFieldSelection = Record<ImportField, boolean>;
+
+// Los dos grupos de la preferencia: al CLASIFICAR un juego nuevo y al ACTUALIZAR uno que ya está en c/v/e/p.
+export type ImportFieldGroup = 'newGames' | 'existingGames';
+
+// Preferencia global (local, no sincroniza) de qué datos traer en cada caso. Se aplica a TODOS los juegos.
+export type ImportFieldPrefs = Record<ImportFieldGroup, ImportFieldSelection>;
+
 // Contenedor de la bandeja (un único registro local).
 export interface ImportInbox {
   imported: ImportedGame[];

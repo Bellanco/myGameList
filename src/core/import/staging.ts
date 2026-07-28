@@ -5,8 +5,17 @@
 import { normalizeName } from '../roulette/roulette';
 import { normalizeTag, safeTrim } from '../security/sanitize';
 import { uniqueCaseInsensitive } from '../utils/compare';
+import { resolveGrade } from '../utils/scoreScale';
+import { DEFAULT_IMPORT_FIELD_PREFS } from './fieldPrefs';
 import type { GameItem } from '../../model/types/game';
-import type { ImportInbox, ImportedGame, ImportSource, RawExternalGame, StagingSummary } from '../../model/types/import';
+import type {
+  ImportFieldSelection,
+  ImportInbox,
+  ImportedGame,
+  ImportSource,
+  RawExternalGame,
+  StagingSummary,
+} from '../../model/types/import';
 
 // Caducidad de la bandeja: los importados no clasificados se purgan a los 30 días.
 export const IMPORT_TTL_MS = 30 * 24 * 60 * 60 * 1000;
@@ -143,13 +152,22 @@ export function removeManyFromInbox(inbox: ImportInbox, ids: number[], now: numb
  * Fusión para ENRIQUECER un juego que YA existe en las listas con lo aportado por el importado: une
  * géneros y plataformas (sin duplicar) y rellena las horas si el existente no tenía. NO toca el nombre.
  * Devuelve solo los campos a actualizar (para combinar con el juego existente y abrir el formulario).
+ *
+ * `fields` (preferencia global "qué datos traer") decide qué campos entran: los desactivados se OMITEN del
+ * resultado, así al combinar (`{...existing, ...patch}`) el valor del juego se conserva intacto. La nota solo
+ * se propone si el juego no tiene ya una (la tuya manda sobre la del origen).
  */
-export function mergeImportedIntoGame(existing: GameItem, item: ImportedGame): Partial<GameItem> {
-  return {
-    genres: uniqueCaseInsensitive([...(existing.genres || []), ...item.genres]),
-    platforms: uniqueCaseInsensitive([...(existing.platforms || []), ...item.platforms]),
-    hours: (existing.hours ?? null) === null ? (item.hours ?? null) : existing.hours,
-  };
+export function mergeImportedIntoGame(
+  existing: GameItem,
+  item: ImportedGame,
+  fields: ImportFieldSelection = DEFAULT_IMPORT_FIELD_PREFS.existingGames,
+): Partial<GameItem> {
+  const patch: Partial<GameItem> = {};
+  if (fields.genres) patch.genres = uniqueCaseInsensitive([...(existing.genres || []), ...item.genres]);
+  if (fields.platforms) patch.platforms = uniqueCaseInsensitive([...(existing.platforms || []), ...item.platforms]);
+  if (fields.hours) patch.hours = (existing.hours ?? null) === null ? (item.hours ?? null) : existing.hours;
+  if (fields.grade && typeof item.grade === 'number' && resolveGrade(existing) === 0) patch.grade = item.grade;
+  return patch;
 }
 
 /**
@@ -157,14 +175,18 @@ export function mergeImportedIntoGame(existing: GameItem, item: ImportedGame): P
  * NO se copia: los campos de import (externalIds/coverUrl/sources), ni el año — `years` son los años
  * JUGADOS (no el de lanzamiento), así que el usuario los rellena en el formulario. `grade` (nota del
  * usuario en el origen) sí se precarga cuando viene.
+ *
+ * `fields` (preferencia global "qué datos traer") decide qué campos se precargan; los desactivados se omiten y
+ * el formulario los deja en su valor vacío. El nombre siempre viaja.
  */
-export function importedToPartialGame(item: ImportedGame): Partial<GameItem> {
-  const partial: Partial<GameItem> = {
-    name: item.name,
-    genres: [...item.genres],
-    platforms: [...item.platforms],
-    hours: item.hours ?? null,
-  };
-  if (typeof item.grade === 'number') partial.grade = item.grade;
+export function importedToPartialGame(
+  item: ImportedGame,
+  fields: ImportFieldSelection = DEFAULT_IMPORT_FIELD_PREFS.newGames,
+): Partial<GameItem> {
+  const partial: Partial<GameItem> = { name: item.name };
+  if (fields.genres) partial.genres = [...item.genres];
+  if (fields.platforms) partial.platforms = [...item.platforms];
+  if (fields.hours) partial.hours = item.hours ?? null;
+  if (fields.grade && typeof item.grade === 'number') partial.grade = item.grade;
   return partial;
 }
