@@ -1,5 +1,6 @@
 import type { IconName } from './icons';
 import { TAB_IDS, type TabId } from '../../model/types/game';
+import type { ImportField } from '../../model/types/import';
 
 export interface TabAction {
   target: TabId;
@@ -210,6 +211,23 @@ export const UI_MESSAGES = {
       copyNameAria: (name: string) => `Copiar «${name}»`,
       copyNameSuccess: (name: string) => `«${name}» copiado`,
       copyNameError: 'No se pudo copiar el nombre',
+      fields: {
+        title: 'Qué datos traer',
+        note: 'Se aplica a TODOS los juegos de la bandeja. El nombre siempre se traslada; lo que desmarques aquí no se copiará (podrás rellenarlo a mano en el formulario).',
+        toggleShow: 'Ver qué datos traer',
+        toggleHide: 'Ocultar qué datos traer',
+        newGames: 'Al clasificar un juego nuevo',
+        existingGames: 'Al actualizar uno que ya tienes',
+        existingHint: 'Las plataformas y los géneros se SUMAN a los que ya tenga el juego (no se quita nada); las horas y la nota solo se rellenan si las tienes vacías.',
+        labels: {
+          platforms: 'Plataformas',
+          genres: 'Géneros',
+          hours: 'Horas',
+          grade: 'Nota',
+        } satisfies Record<ImportField, string>,
+        fieldAria: (field: string, group: string) => `${field} — ${group}`,
+        summary: (fields: string) => (fields ? `Se traen: ${fields}.` : 'No se trae ningún dato extra.'),
+      },
     },
     notice: (added: number, merged: number, duplicates: number) =>
       `${added} añadido(s)` +

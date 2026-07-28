@@ -29,6 +29,7 @@ import { useAppliedPalette } from './view/hooks/usePalette';
 import { hasGithubOAuthRedirect } from './model/repository/githubOAuthRepository';
 import { buildListsPool, buildListsWeigher, normalizeName } from './core/roulette/roulette';
 import { useImportInbox } from './viewmodel/useImportInbox';
+import { useImportFieldPrefs } from './viewmodel/useImportFieldPrefs';
 import { parseLibraryExporter } from './core/import/libraryExporter';
 import { importedToPartialGame, mergeImportedIntoGame } from './core/import/staging';
 import type { ImportedGame, RawExternalGame } from './model/types/import';
@@ -158,6 +159,8 @@ export default function App() {
   // Bandeja de importados (local, no sincroniza). Se monta aquí para exponer su contador en los controles
   // flotantes y cablear la graduación (clasificar → formulario → retirar de la bandeja).
   const inbox = useImportInbox();
+  // Qué datos traslada el import a cada juego (global, por grupo: nuevos / ya en tus listas).
+  const importFields = useImportFieldPrefs();
   const graduatingIdRef = useRef<number | null>(null);
   // Nombres ya presentes en las listas (normalizados) → para marcar duplicados al importar y en la bandeja.
   const listNames = useMemo(
@@ -215,9 +218,9 @@ export default function App() {
   const handleClassifyImport = useCallback(
     (item: ImportedGame, tab: TabId) => {
       graduatingIdRef.current = item.id;
-      vm.openImportedDraft(tab, importedToPartialGame(item));
+      vm.openImportedDraft(tab, importedToPartialGame(item, importFields.prefs.newGames));
     },
-    [vm],
+    [importFields.prefs.newGames, vm],
   );
 
   // Enriquecer: el juego ya está en tus listas → fusiona género/plataforma en el existente (form en edición).
@@ -228,9 +231,9 @@ export default function App() {
       const game = vm.data[match.tab].find((g) => g.id === match.id);
       if (!game) return;
       graduatingIdRef.current = item.id;
-      vm.openImportedDraft(match.tab, { ...game, ...mergeImportedIntoGame(game, item) });
+      vm.openImportedDraft(match.tab, { ...game, ...mergeImportedIntoGame(game, item, importFields.prefs.existingGames) });
     },
-    [findGameByName, vm],
+    [findGameByName, importFields.prefs.existingGames, vm],
   );
 
   const handleDiscardImport = useCallback((id: number) => inbox.removeItem(id), [inbox]);
@@ -640,6 +643,8 @@ export default function App() {
               onDiscard={handleDiscardImport}
               onDiscardMany={handleDiscardManyImport}
               onClear={handleClearInbox}
+              fieldPrefs={importFields.prefs}
+              onFieldPrefChange={importFields.setField}
               onBack={() => navigate('/integraciones')}
               onGoIntegrations={() => navigate('/ajustes')}
             />
