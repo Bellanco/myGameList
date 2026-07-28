@@ -131,6 +131,24 @@ ampliarán para IGDB cuando llegue.)
 Detallada en *Parte visual / UX*: botón **"Integraciones"** en Ajustes → pantalla de Integraciones
 (de momento **solo la tarjeta de Playnite**) → **Bandeja** → clasificar a c/v/e/p.
 
+### F. "Qué datos traer" (preferencia global de la Bandeja) — *añadido posterior*
+Ajuste de la pantalla de la Bandeja que decide, **para todos los juegos**, qué campos traslada el
+import (`platforms` / `genres` / `hours` / `grade`) en **dos grupos independientes**:
+
+- **`newGames`** — al **clasificar** un juego nuevo: qué se precarga en el `FormModal`
+  (`importedToPartialGame`). Por defecto, todo.
+- **`existingGames`** — al **actualizar** uno que ya está en c/v/e/p (`mergeImportedIntoGame`): las
+  plataformas y los géneros se **suman** a los que ya tiene (nunca se quita nada) y las horas / la
+  nota solo se rellenan **si están vacías** (la nota del usuario manda sobre la del origen). Por
+  defecto, todo menos la nota.
+
+El **nombre** siempre viaja (sin él no hay juego). Un campo desactivado se **omite** del parche, así
+al combinar (`{...game, ...patch}`) el valor del juego queda intacto. Lógica pura en
+`core/import/fieldPrefs.ts` (defaults + saneado de lo guardado + `setImportField`), estado en
+`viewmodel/useImportFieldPrefs.ts` y persistencia **local** en `localStorage`
+(`IMPORT_FIELDS_KEY`, lectura síncrona → el primer clasificar ya usa la preferencia guardada; no
+se sincroniza, como la propia bandeja).
+
 ---
 
 ## Parte visual / UX (pantallas y flujos)

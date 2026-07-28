@@ -1,10 +1,11 @@
 import { type CSSProperties, useEffect, useMemo, useRef, useState } from 'react';
 import type { TabId } from '../../../model/types/game';
-import type { ImportedGame } from '../../../model/types/import';
+import type { ImportField, ImportFieldGroup, ImportFieldPrefs, ImportedGame } from '../../../model/types/import';
 import { UI_MESSAGES } from '../../../core/constants/labels';
 import { COMMON_ICONS } from '../../../core/constants/icons';
 import { normalizeName } from '../../../core/roulette/roulette';
 import { Icon } from '../Icon';
+import { ImportFieldPrefsCard } from './ImportFieldPrefsCard';
 import { ImportInboxTable } from './ImportInboxTable';
 
 const M = UI_MESSAGES.import.inbox;
@@ -32,13 +33,16 @@ interface InboxScreenProps {
   onDiscard: (id: number) => void;
   onDiscardMany: (ids: number[]) => void;
   onClear: () => void;
+  /** Preferencia global de qué datos traer (nuevos / ya en tus listas). */
+  fieldPrefs: ImportFieldPrefs;
+  onFieldPrefChange: (group: ImportFieldGroup, field: ImportField, on: boolean) => void;
   /** Volver a la pantalla anterior (Integraciones). */
   onBack: () => void;
   onGoIntegrations: () => void;
 }
 
 /** Bandeja: buscador por texto + scroll infinito (render incremental) + multiselección. */
-export function InboxScreen({ imported, isInLists, listOf, onClassify, onEnrich, onDiscard, onDiscardMany, onClear, onBack, onGoIntegrations }: InboxScreenProps) {
+export function InboxScreen({ imported, isInLists, listOf, onClassify, onEnrich, onDiscard, onDiscardMany, onClear, fieldPrefs, onFieldPrefChange, onBack, onGoIntegrations }: InboxScreenProps) {
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [query, setQuery] = useState('');
   const [visible, setVisible] = useState(PAGE);
@@ -156,6 +160,8 @@ export function InboxScreen({ imported, isInLists, listOf, onClassify, onEnrich,
         </div>
         <p className="settings-card-note" style={{ margin: 0 }}>{M.showing(shown.length, filtered.length)}</p>
       </div>
+
+      <ImportFieldPrefsCard prefs={fieldPrefs} onChange={onFieldPrefChange} />
 
       <input
         type="search"
