@@ -9,6 +9,11 @@ import {
   importedToPartialGame,
   mergeImportedIntoGame,
 } from '../../src/core/import/staging';
+import {
+  DEFAULT_IMPORT_FIELD_PREFS,
+  normalizeImportFieldPrefs,
+  setImportField,
+} from '../../src/core/import/fieldPrefs';
 import type { ImportInbox, ImportedGame, RawExternalGame } from '../../src/model/types/import';
 import type { GameItem } from '../../src/model/types/game';
 
@@ -275,5 +280,91 @@ describe('extras (suggestedTab / grade)', () => {
     );
     expect(second.inbox.imported[0].suggestedTab).toBe('e'); // faltaba → se rellena
     expect(second.inbox.imported[0].grade).toBe(70);
+  });
+});
+
+describe('preferencia "qué datos traer" (ImportFieldPrefs)', () => {
+  const existing = (over: Partial<GameItem> = {}): GameItem => ({
+    id: 1,
+    _ts: 1,
+    name: 'Elden Ring',
+    platforms: ['Steam'],
+    genres: ['RPG'],
+    steamDeck: false,
+    review: '',
+    ...over,
+  });
+  const item = (over: Partial<ImportedGame> = {}): ImportedGame => ({
+    id: 1,
+    name: 'Elden Ring',
+    platforms: ['GOG'],
+    genres: ['RPG', 'Aventura'],
+    hours: 30,
+    grade: 80,
+    sources: ['gog'],
+    importedAt: 0,
+    ...over,
+  });
+
+  it('por defecto: nuevos traen todo; existentes todo menos la nota', () => {
+    expect(DEFAULT_IMPORT_FIELD_PREFS.newGames).toEqual({ platforms: true, genres: true, hours: true, grade: true });
+    expect(DEFAULT_IMPORT_FIELD_PREFS.existingGames.grade).toBe(false);
+  });
+
+  it('al clasificar solo se precargan los campos activos (el nombre siempre)', () => {
+    const partial = importedToPartialGame(item(), { platforms: true, genres: false, hours: true, grade: false });
+    expect(partial).toEqual({ name: 'Elden Ring', platforms: ['GOG'], hours: 30 });
+  });
+
+  it('al clasificar sin ningún campo activo solo viaja el nombre', () => {
+    expect(importedToPartialGame(item(), { platforms: false, genres: false, hours: false, grade: false })).toEqual({
+      name: 'Elden Ring',
+    });
+  });
+
+  it('al actualizar, un campo desactivado se OMITE (el valor del juego se conserva al combinar)', () => {
+    const patch = mergeImportedIntoGame(existing({ hours: null }), item(), {
+      platforms: true,
+      genres: false,
+      hours: true,
+      grade: false,
+    });
+    expect(patch).toEqual({ platforms: ['Steam', 'GOG'], hours: 30 });
+    expect('genres' in patch).toBe(false);
+    expect({ ...existing(), ...patch }.genres).toEqual(['RPG']); // se conserva lo que ya había
+  });
+
+  it('al actualizar solo horas: ni géneros ni plataformas se tocan', () => {
+    const patch = mergeImportedIntoGame(existing({ hours: null }), item(), {
+      platforms: false,
+      genres: false,
+      hours: true,
+      grade: false,
+    });
+    expect(patch).toEqual({ hours: 30 });
+  });
+
+  it('al actualizar, la nota solo se propone si el juego no tiene ya una', () => {
+    const fields = { platforms: false, genres: false, hours: false, grade: true };
+    expect(mergeImportedIntoGame(existing(), item(), fields).grade).toBe(80); // sin nota → se rellena
+    expect('grade' in mergeImportedIntoGame(existing({ grade: 95 }), item(), fields)).toBe(false);
+    expect('grade' in mergeImportedIntoGame(existing({ score: 4 }), item(), fields)).toBe(false); // nota legacy
+    expect('grade' in mergeImportedIntoGame(existing(), item({ grade: null }), fields)).toBe(false); // nada que traer
+  });
+
+  it('normalizeImportFieldPrefs sanea lo guardado y cae a los valores por defecto', () => {
+    expect(normalizeImportFieldPrefs(null)).toEqual(DEFAULT_IMPORT_FIELD_PREFS);
+    expect(normalizeImportFieldPrefs('basura')).toEqual(DEFAULT_IMPORT_FIELD_PREFS);
+    const partial = normalizeImportFieldPrefs({ newGames: { genres: false, hours: 'sí' } });
+    expect(partial.newGames).toEqual({ platforms: true, genres: false, hours: true, grade: true });
+    expect(partial.existingGames).toEqual(DEFAULT_IMPORT_FIELD_PREFS.existingGames);
+  });
+
+  it('setImportField es pura y devuelve la misma referencia si no cambia nada', () => {
+    const next = setImportField(DEFAULT_IMPORT_FIELD_PREFS, 'existingGames', 'genres', false);
+    expect(next.existingGames.genres).toBe(false);
+    expect(DEFAULT_IMPORT_FIELD_PREFS.existingGames.genres).toBe(true); // no muta
+    expect(next.newGames).toBe(DEFAULT_IMPORT_FIELD_PREFS.newGames); // el otro grupo no se copia
+    expect(setImportField(next, 'existingGames', 'genres', false)).toBe(next);
   });
 });

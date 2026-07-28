@@ -34,3 +34,7 @@ export const STEAM_BUTTON_KEY = 'mis-listas-steam-button';
 // lee `theme-init.js`: los efectos son decorativos y, al colgar de `data-effects="on"`, en ausencia del atributo
 // (antes de montar) no se pintan → quien los desactiva nunca ve un "flash" de efectos al cargar.
 export const EFFECTS_KEY = 'mis-listas-effects';
+
+// Import — preferencia "qué datos traer" (plataformas/géneros/horas/nota) por grupo: juegos nuevos y juegos que
+// ya están en tus listas. JSON con la forma de `ImportFieldPrefs`. Local, no se sincroniza (como la bandeja).
+export const IMPORT_FIELDS_KEY = 'mis-listas-import-fields';
