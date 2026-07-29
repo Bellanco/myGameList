@@ -111,6 +111,13 @@ const PROFILE_TOUCH_MIN_INTERVAL_MS = 20 * 60 * 60 * 1000;
 // concurrencia. Las lecturas son baratas (caché de sesión + revalidación ETag/304), así que el coste en latencia
 // de la carga fría es pequeño y se gana robustez frente a 403 por ráfaga.
 const SOCIAL_DIRECTORY_FETCH_CONCURRENCY = 6;
+// Cuánta actividad se conserva por perfil al hidratar el directorio. El feed solo pinta las más recientes, pero la
+// pestaña Reseñas del perfil FECHA Y ORDENA cada reseña con su publicación: con un tope de 40, las reseñas por
+// debajo del corte se quedaban sin fecha publicada y caían al `_ts` del juego (que una importación sella en
+// bloque), así que el listado mostraba fechas distintas del feed. Se iguala al tope del propio gist (320).
+const SOCIAL_ACTIVITY_PER_PROFILE = 320;
+// Las publicaciones sí se quedan en el tope del feed: ninguna vista las lista por separado.
+const SOCIAL_POSTS_PER_PROFILE = 40;
 const PROFILE_EDIT_PATH = /^\/social\/profile\/?$/;
 const PROFILES_PATH = /^\/social\/profiles\/?$/;
 const REQUESTS_PATH = /^\/social\/requests\/?$/;
@@ -1480,7 +1487,7 @@ export function useSocialViewModel(options?: {
                   photoURL: resolvedPhoto,
                 };
               })
-              .slice(0, 40);
+              .slice(0, SOCIAL_ACTIVITY_PER_PROFILE);
 
             const posts = (socialData.posts || [])
               .map((postEntry) => {
@@ -1498,7 +1505,7 @@ export function useSocialViewModel(options?: {
                   photoURL: resolvedPhoto,
                 };
               })
-              .slice(0, 40);
+              .slice(0, SOCIAL_POSTS_PER_PROFILE);
 
             return {
               id: entry.id,
