@@ -103,7 +103,6 @@ type SocialProfileDetail = {
     hideGameTime?: boolean;
   };
   sharedLists?: Partial<Record<TabId, Array<GameItem | SocialSharedGame>>>;
-  favorites?: string[];
   /**
    * Actividad social publicada de este perfil. Da la FECHA DE PUBLICACIÓN de cada reseña, que es la que se ve en
    * el feed; sin ella habría que caer al `_ts` del juego (última modificación), que una importación de datos
@@ -323,8 +322,6 @@ function SocialProfileDetailScreenBase({
   const visibleGames = useMemo(() => filteredGames.slice(0, visibleCount), [filteredGames, visibleCount]);
   const hasMoreGames = filteredGames.length > visibleCount;
 
-  const favoriteGames = activeProfileDetail?.favorites || [];
-
   // ¿Hay algún listado público con juegos? (para perfiles ajenos suele estar vacío por privacidad E3).
   const hasSharedLists = useMemo(
     () => TAB_IDS.some((tab) => (activeProfileDetail?.sharedLists?.[tab]?.length || 0) > 0),
@@ -511,21 +508,6 @@ function SocialProfileDetailScreenBase({
             </div>
           ) : (
           <div className="hub-detail-metadata">
-            <div className="hub-metadata-section">
-              <strong>{SOCIAL_UI.feed.profileFavoritesTitle}</strong>
-              {favoriteGames.length > 0 ? (
-                <div className="hub-fav-shelf">
-                  {favoriteGames.map((favorite: string, i: number) => (
-                    <span key={`${favorite}-${i}`} className={`hub-fav-cart hub-fav-cart--${i % 5}`} title={favorite}>
-                      <span className="hub-fav-cart-top" aria-hidden="true" />
-                      <span className="hub-fav-cart-title">{favorite}</span>
-                    </span>
-                  ))}
-                </div>
-              ) : (
-                <p>{SOCIAL_UI.feed.noFavorites}</p>
-              )}
-            </div>
             <div className="hub-metadata-section">
               <strong>{SOCIAL_UI.feed.profileListsTitle}</strong>
               {hasSharedLists && visibleTabs.length > 0 ? (
