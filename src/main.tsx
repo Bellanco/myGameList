@@ -85,6 +85,33 @@ if (import.meta.env.DEV) {
   };
 }
 
+// Herramienta de diagnóstico SOLO EN DESARROLLO: reasigna a una fecha ancla el histórico de reseñas que se
+// publicó con un `_ts` sellado en bloque (importación / sobrescritura), dejando intactas las publicadas en su
+// día. Simulacro por defecto: `__socialFixHistoryDates({ date: '2026-05-12' })`; escribe con `apply: true`.
+if (import.meta.env.DEV) {
+  (window as unknown as {
+    __socialFixHistoryDates?: (o: { date: string; apply?: boolean }) => Promise<unknown>;
+  }).__socialFixHistoryDates = async (options: { date: string; apply?: boolean }) => {
+    const { repairUndatedHistoryDates } = await import('./model/repository/socialActivityHistory');
+    const plan = await repairUndatedHistoryDates(options);
+    if (!plan) {
+      console.warn('[social] sin sesión de Google o sin canal social en este dispositivo');
+      return null;
+    }
+    const fecha = (ms: number) => new Date(ms).toISOString().slice(0, 16).replace('T', ' ');
+    console.warn(
+      `[social] histórico ${plan.applied ? 'REASIGNADO' : '(simulacro, sin escribir)'} a ${options.date}: ` +
+        `${plan.toMove.length} entradas se mueven, ${plan.keeping.length} conservan su fecha. ` +
+        `Días sellados en bloque detectados: ${plan.bulkDays.join(', ') || 'ninguno'}`,
+    );
+    plan.keeping
+      .slice()
+      .sort((a, b) => a.date - b.date)
+      .forEach((item) => console.warn(`   conserva  ${fecha(item.date)}  ${item.gameName}`));
+    return plan;
+  };
+}
+
 const idleScheduler = (globalThis as unknown as {
   requestIdleCallback?: (callback: () => void) => number;
 }).requestIdleCallback;
