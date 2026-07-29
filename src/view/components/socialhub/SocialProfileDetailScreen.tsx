@@ -205,7 +205,8 @@ function SocialProfileDetailScreenBase({
           rating: Number(game.score || game.rating || 0),
           grade: typeof game.grade === 'number' ? game.grade : null,
           reviewText,
-          ts: publishedDateByGame.get(id) || (typeof game._ts === 'number' ? game._ts : 0),
+          // Orden de fiabilidad: fecha publicada (la del feed) → `reviewedAt` (propia de la reseña) → `_ts`.
+          ts: publishedDateByGame.get(id) || Number(game.reviewedAt || 0) || (typeof game._ts === 'number' ? game._ts : 0),
         });
       });
     });

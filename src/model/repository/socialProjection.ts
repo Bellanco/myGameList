@@ -143,6 +143,9 @@ function leanGameItem(game: GameItem): GameItem {
   // la lectura lo re-deriva del `_ts` (que SÍ sube al editar) y el juego salta de posición en Completados tras
   // sincronizar, aunque no haya cambiado de lista. Por eso se persiste explícitamente.
   if (game.listedAt !== undefined) out.listedAt = game.listedAt;
+  // Misma razón que `listedAt`: si no se persiste, el round-trip del gist la borra y la fecha de la reseña se
+  // pierde en el primer sync, que es justo lo que este campo viene a evitar.
+  if (game.reviewedAt !== undefined) out.reviewedAt = game.reviewedAt;
   return out as unknown as GameItem;
 }
 

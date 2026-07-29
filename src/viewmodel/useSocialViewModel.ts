@@ -767,9 +767,9 @@ export function useSocialViewModel(options?: {
       weaknesses: Array.isArray(game.weaknesses) ? (game.weaknesses as string[]) : [],
       reasons: Array.isArray(game.reasons) ? (game.reasons as string[]) : [],
       hours: typeof game.hours === 'number' ? game.hours : null, // audit-allow: modelo de lectura para render del detalle (SocialHub), no es escritura a canal público
-      // Fecha unificada con el feed: la de PUBLICACIÓN de la reseña y, si no está publicada, el `_ts` del juego
-      // (última modificación, que una importación de datos reescribe en bloque).
-      ts: publishedDate || (typeof game._ts === 'number' ? game._ts : 0),
+      // Fecha unificada con el feed, por orden de fiabilidad: la de PUBLICACIÓN, `reviewedAt` (propia de la
+      // reseña) y, en último lugar, el `_ts` del juego (que mueve cualquier edición).
+      ts: publishedDate || Number(game.reviewedAt || 0) || (typeof game._ts === 'number' ? game._ts : 0),
     };
   }, [activePanel, selectedProfileDetail, profileReviewGameId]);
 
