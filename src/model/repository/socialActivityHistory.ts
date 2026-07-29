@@ -124,13 +124,16 @@ export async function repairUndatedHistoryDates(options: {
   const socialRead = await readSocialGist(token, gistId, null);
   const local = loadLocalState();
 
-  // `_ts` local por juego + reparto por día, para detectar los sellos en bloque.
+  // `_ts` local por juego + reparto por día, para detectar los sellos en bloque. También se anotan los juegos
+  // que ya tienen `reviewedAt`: su fecha de reseña es fiable y su entrada no se toca, caiga donde caiga.
   const tsByGame = new Map<number, number>();
+  const conFechaPropia = new Set<number>();
   TAB_IDS.forEach((tab) => {
     (local[tab] || []).forEach((game) => {
       const ts = Number(game._ts || 0) || Number(game.listedAt || 0);
       if (game.id > 0 && ts > 0 && String(game.review || '').trim()) {
         tsByGame.set(game.id, ts);
+        if (Number(game.reviewedAt || 0) > 0) conFechaPropia.add(game.id);
       }
     });
   });
@@ -155,8 +158,9 @@ export async function repairUndatedHistoryDates(options: {
     //  2) la fecha publicada coincide (±1 h) con el `_ts` del juego, siendo ese día un sello.
     // Las publicadas en su día no cumplen ninguna: su fecha cae en un día normal, sin sello en bloque.
     const sellada =
-      isBulkDay.has(dayOf(entry.updatedAt)) ||
-      (localTs > 0 && isBulkDay.has(dayOf(localTs)) && Math.abs(entry.updatedAt - localTs) <= SAME_STAMP_TOLERANCE_MS);
+      !conFechaPropia.has(entry.gameId) &&
+      (isBulkDay.has(dayOf(entry.updatedAt)) ||
+        (localTs > 0 && isBulkDay.has(dayOf(localTs)) && Math.abs(entry.updatedAt - localTs) <= SAME_STAMP_TOLERANCE_MS));
     if (!sellada) {
       keeping.push({ gameId: entry.gameId, gameName: entry.gameName, date: entry.updatedAt });
       return entry;

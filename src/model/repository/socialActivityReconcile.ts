@@ -115,10 +115,11 @@ function collectLocalReviews(games: TabData): LocalReview[] {
         review,
         rating: Number(game.score || 0),
         grade: typeof game.grade === 'number' ? game.grade : null,
-        // Fecha de la reseña: `_ts` (última modificación, lo que muestra el listado) y, si falta, `listedAt`
-        // (llegada a la lista). Sin ninguna de las dos, el llamador cae a la del listado; nunca a "ahora" a
+        // Fecha de la reseña, por orden de fiabilidad: `reviewedAt` (la propia de la reseña, que solo mueve un
+        // cambio de texto), luego `_ts` (última modificación del juego, que mueve cualquier edición) y luego
+        // `listedAt` (llegada a la lista). Sin ninguna, el llamador cae a la del listado; nunca a "ahora" a
         // ciegas, que colocaría una reseña antigua en la cabecera del feed.
-        ts: Number(game._ts || 0) || Number(game.listedAt || 0),
+        ts: Number(game.reviewedAt || 0) || Number(game._ts || 0) || Number(game.listedAt || 0),
       };
       const current = byId.get(id);
       if (!current || candidate.ts > current.ts) {

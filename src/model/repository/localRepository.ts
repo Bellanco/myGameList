@@ -79,11 +79,17 @@ function normalizeGame(game: Record<string, unknown>, defaultTs: number, forceTi
       const ts = Number(game._ts);
       return Number.isFinite(ts) && ts > 0 ? ts : defaultTs; // legacy: aproxima con _ts
     })(),
+    // Fecha de la reseña: se preserva tal cual y NUNCA la toca `forceTimestamp` — no es un reloj de merge, es un
+    // dato del usuario. Ausente en juegos anteriores a este campo; los lectores caen a `_ts` mientras no exista.
+    reviewedAt: (() => {
+      const n = Number(game.reviewedAt);
+      return Number.isFinite(n) && n > 0 ? n : undefined;
+    })(),
   };
 }
 
 // Metadatos que NO son contenido: no deben hacer que un juego cuente como "cambiado".
-const CONTENT_KEY_IGNORED = new Set(['_ts', '_v', 'listedAt']);
+const CONTENT_KEY_IGNORED = new Set(['_ts', '_v', 'listedAt', 'reviewedAt']);
 
 /**
  * Contenido de un juego SIN sus metadatos, en forma canónica: para decidir si de verdad ha cambiado algo.
