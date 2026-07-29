@@ -1176,6 +1176,54 @@ export async function readSocialGist(token: string, gistId: string, etag: string
   }
 }
 
+/** Un gist social del usuario (el actual o uno abandonado por un clonado anterior). */
+export interface OwnSocialGist {
+  gistId: string;
+  description: string;
+  updatedAt: number;
+  isPublic: boolean;
+}
+
+/**
+ * Lista los gists SOCIALES de la cuenta del token (por nombre de fichero ancla). Sirve para encontrar gists
+ * abandonados: `updateGistPrivacy` clonaba el gist a un id nuevo, y el original —con el historial de fechas de
+ * publicación— se queda huérfano en la cuenta. Solo lectura.
+ */
+export async function listOwnSocialGists(token: string): Promise<OwnSocialGist[]> {
+  if (!isValidGithubToken(token)) {
+    throw new Error('Formato de token inválido');
+  }
+
+  const response = await githubFetch(`${GIST_API_BASE}?per_page=100`, {
+    headers: {
+      Authorization: getGithubAuthHeader(token),
+      'X-GitHub-Api-Version': '2022-11-28',
+    },
+  });
+  if (!response.ok) {
+    throw await buildGithubError(response, 'List own gists failed');
+  }
+
+  const body = (await response.json()) as Array<{
+    id?: string;
+    description?: string;
+    updated_at?: string;
+    public?: boolean;
+    files?: Record<string, unknown>;
+  }>;
+
+  return (body || [])
+    .filter((gist) => Boolean(gist.files && SOCIAL_GIST_FILENAME in gist.files))
+    .map((gist) => ({
+      gistId: String(gist.id || ''),
+      description: String(gist.description || ''),
+      updatedAt: gist.updated_at ? Date.parse(gist.updated_at) : 0,
+      isPublic: Boolean(gist.public),
+    }))
+    .filter((gist) => Boolean(gist.gistId))
+    .sort((a, b) => b.updatedAt - a.updatedAt);
+}
+
 /** Una revisión del gist social. GitHub conserva TODAS las versiones y son inmutables. */
 export interface SocialGistRevision {
   version: string;
