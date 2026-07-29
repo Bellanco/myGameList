@@ -1,10 +1,8 @@
 ﻿import { Icon } from '../Icon';
-import { SocialGameCardSelector } from '../SocialGameCardSelector';
 import { HubAvatar } from './HubAvatar';
 import type { SocialUiLabels } from '../../../core/constants/labels';
 import { HubStatus } from './HubStatus';
 import { HubBackButton } from './HubBackButton';
-import { MAX_SOCIAL_FAVORITES } from '../../../core/constants/uiConfig';
 import type { TabId } from '../../../model/types/game';
 
 /** Pantalla de edición de perfil social. */
@@ -12,10 +10,6 @@ export function SocialProfileScreen({
   SOCIAL_UI,
   profileName,
   setProfileName,
-  favoriteSearch,
-  setFavoriteSearch,
-  favoriteGameIds,
-  setFavoriteGameIds,
   completedGames,
   hydratingProfile,
   savingProfile,
@@ -25,7 +19,6 @@ export function SocialProfileScreen({
   onBack,
   status,
   statusKind,
-  toggleGameInSet,
   hiddenTabs,
   onHiddenTabsChange,
   hideReplayable,
@@ -41,10 +34,7 @@ export function SocialProfileScreen({
   SOCIAL_UI: SocialUiLabels;
   profileName: string;
   setProfileName: (v: string) => void;
-  favoriteSearch: string;
-  setFavoriteSearch: (v: string) => void;
-  favoriteGameIds: number[];
-  setFavoriteGameIds: (ids: number[]) => void;
+  /** Juegos completados del usuario. Solo se usa para exigir al menos uno antes de poder crear/guardar el perfil. */
   completedGames: Array<{ id: number; name: string }>;
   hydratingProfile: boolean;
   savingProfile: boolean;
@@ -54,7 +44,6 @@ export function SocialProfileScreen({
   onBack: () => void;
   status: string;
   statusKind: string;
-  toggleGameInSet: (id: number, current: number[], setFn: (next: number[]) => void) => void;
   hiddenTabs: TabId[];
   onHiddenTabsChange: (next: TabId[]) => void;
   hideReplayable: boolean;
@@ -79,6 +68,10 @@ export function SocialProfileScreen({
   // El botón "Atrás" solo se muestra cuando hasCreatedProfile es true: sin perfil creado, el usuario
   // debe crearlo antes de poder volver al feed.
 
+  // Sin ningún juego completado no se puede publicar perfil (nadie entra al canal social sin nada que compartir).
+  // Se avisa junto al nombre para que el botón deshabilitado no quede sin explicación.
+  const missingCompletedGames = completedGames.length === 0;
+
   return (
     <section className="hub-hub hub-screen" aria-label={SOCIAL_UI.profile.sectionAria}>
       <div className="hub-hub-card hub-screen-card hub-profile-card">
@@ -101,7 +94,7 @@ export function SocialProfileScreen({
             <button
               className="btn btn-primary"
               type="button"
-              disabled={savingProfile || hydratingProfile || !profileName.trim() || favoriteGameIds.length === 0}
+              disabled={savingProfile || hydratingProfile || !profileName.trim() || missingCompletedGames}
               onClick={onSaveProfile}
             >
               <Icon name="save" />
@@ -135,23 +128,13 @@ export function SocialProfileScreen({
                 placeholder={SOCIAL_UI.profile.namePlaceholder}
               />
             </div>
+            {missingCompletedGames ? (
+              <p className="hub-profile-requirement" role="status">{SOCIAL_UI.profile.needsCompletedGames}</p>
+            ) : null}
           </article>
-          <SocialGameCardSelector
-            step={2}
-            title={SOCIAL_UI.profile.favoritesTitle}
-            description={SOCIAL_UI.profile.favoritesDescription}
-            searchPlaceholder={SOCIAL_UI.profile.favoritesSearchPlaceholder}
-            searchValue={favoriteSearch}
-            selectedIds={favoriteGameIds}
-            options={completedGames}
-            emptyMessage={SOCIAL_UI.profile.searchEmpty}
-            maxSelected={MAX_SOCIAL_FAVORITES}
-            onSearchChange={setFavoriteSearch}
-            onToggle={(id) => toggleGameInSet(id, favoriteGameIds, setFavoriteGameIds)}
-          />
           <article className="hub-profile-block">
             <div className="hub-block-head">
-              <span className="hub-block-step">3</span>
+              <span className="hub-block-step">2</span>
               <h3>{SOCIAL_UI.profile.visibilityTitle}</h3>
             </div>
             <p>{SOCIAL_UI.profile.visibilityDescription}</p>

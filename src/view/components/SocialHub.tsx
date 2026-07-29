@@ -54,8 +54,6 @@ const SocialHubInner = memo(function SocialHubInner({
     hasCreatedProfile,
     profileName,
     setProfileName,
-    favoriteGameIds,
-    setFavoriteGameIds,
     hiddenTabs,
     setHiddenTabs,
     hideReplayable,
@@ -66,8 +64,6 @@ const SocialHubInner = memo(function SocialHubInner({
     setHideGameTime,
     showPhoto,
     setShowPhoto,
-    favoriteSearch,
-    setFavoriteSearch,
     profileSearch,
     setProfileSearch,
     composePostText,
@@ -109,7 +105,6 @@ const SocialHubInner = memo(function SocialHubInner({
     isOwnProfileDetail,
     handleActivityItemKeyDown,
     handleProfileCardKeyDown,
-    toggleGameInSet,
     handleSaveProfile,
     handleSignOut,
     primaryGatewayCta,
@@ -178,10 +173,6 @@ const SocialHubInner = memo(function SocialHubInner({
           SOCIAL_UI={SOCIAL_UI}
           profileName={profileName}
           setProfileName={setProfileName}
-          favoriteSearch={favoriteSearch}
-          setFavoriteSearch={setFavoriteSearch}
-          favoriteGameIds={favoriteGameIds}
-          setFavoriteGameIds={setFavoriteGameIds}
           completedGames={completedGames}
           hydratingProfile={hydratingProfile}
           savingProfile={savingProfile}
@@ -191,7 +182,6 @@ const SocialHubInner = memo(function SocialHubInner({
           onBack={goToSocial}
           status={status}
           statusKind={statusKind}
-          toggleGameInSet={toggleGameInSet}
           hiddenTabs={hiddenTabs}
           onHiddenTabsChange={setHiddenTabs}
           hideReplayable={hideReplayable}
