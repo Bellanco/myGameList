@@ -71,6 +71,10 @@ if (import.meta.env.DEV) {
           `más antigua ${gist.oldestDate ? fecha(gist.oldestDate) : '—'}`,
       );
     });
+    console.warn('   día        | en el gist | en el listado');
+    report.datesByDay.forEach((row) => {
+      console.warn(`   ${row.day} | ${String(row.enGist).padStart(10)} | ${String(row.enListado).padStart(13)}`);
+    });
     report.recoverable.forEach((item) => {
       console.warn(
         `   ${item.gameName}: ${fecha(item.currentUpdatedAt)} → ${fecha(item.originalUpdatedAt)} ` +
