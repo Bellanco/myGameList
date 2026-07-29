@@ -220,15 +220,35 @@ describe('reconcileReviewActivity', () => {
     const games = lists({ c: [game({ id: 7, name: 'Hollow Knight', review: 'Obra maestra', score: 5 })] });
     const store = stubGistStore(gistId, socialGist([reviewEntry(7, 'Hollow Knight', 1)]));
 
-    idbMocks.__setMeta({ activityReconciledAt: Date.now(), activityReviewCount: 1 });
+    idbMocks.__setMeta({ activityReconciledAt: Date.now(), activityReviewCount: 1, activityReconcileVersion: 2 });
     expect((await reconcileReviewActivity({ games })).skipped).toBe(true);
     expect(firebaseMocks.getCurrentSocialAuthUser).not.toHaveBeenCalled();
 
     // Una publicación perdida fuerza la pasada aunque el sello siga fresco, y la marca se limpia.
-    idbMocks.__setMeta({ activityReconciledAt: Date.now(), activityReviewCount: 1, pendingSocialActivity: true });
+    idbMocks.__setMeta({ activityReconciledAt: Date.now(), activityReviewCount: 1, activityReconcileVersion: 2, pendingSocialActivity: true });
     expect((await reconcileReviewActivity({ games })).skipped).toBe(false);
     expect(idbMocks.__getMeta()).toMatchObject({ pendingSocialActivity: false, activityReviewCount: 1 });
     expect(store.writes()).toBe(0); // ya estaba publicada: se comprueba, no se reescribe
+  });
+
+  it('el sello de una versión anterior no vale: fuerza pasada aunque esté fresco y el recuento cuadre', async () => {
+    // Es lo que permite que una corrección de la lógica alcance a los gists que tocó una versión anterior sin
+    // esperar 12 h ni pedirle nada al usuario. Aquí la entrada quedó sellada con "ahora" por la versión 1.
+    const gistId = 'aabbcc14dd11ee22';
+    armChannel(gistId);
+    const tsDelJuego = 1_500_000_000_000;
+    const store = stubGistStore(gistId, socialGist([reviewEntry(7, 'Hollow Knight', Date.now())]));
+    idbMocks.__setMeta({ activityReconciledAt: Date.now(), activityReviewCount: 1, activityReconcileVersion: 1 });
+
+    const outcome = await reconcileReviewActivity({
+      games: lists({ c: [game({ id: 7, name: 'Hollow Knight', review: 'Obra maestra', score: 5, _ts: tsDelJuego })] }),
+    });
+
+    expect(outcome.skipped).toBe(false);
+    expect(outcome.repaired).toBe(1);
+    expect(store.current().activity[0].updatedAt).toBe(tsDelJuego);
+    // Y deja sellada la versión nueva, para no repetir la pasada en la siguiente apertura.
+    expect(idbMocks.__getMeta()).toMatchObject({ activityReconcileVersion: 2 });
   });
 
   it('el sello caduca cuando el recuento de reseñas locales cambia', async () => {
