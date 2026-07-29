@@ -1603,7 +1603,8 @@ export function useSocialViewModel(options?: {
     let cancelled = false;
     void reconcileReviewActivity({ games: reconcileGames })
       .then((outcome) => {
-        if (cancelled || outcome.skipped || (outcome.added === 0 && outcome.removed === 0)) return;
+        const changed = outcome.added + outcome.removed + outcome.relinked + outcome.repaired > 0;
+        if (cancelled || outcome.skipped || !changed) return;
         // La reconciliación invalidó la caché del directorio: reléelo para que el cambio se vea ya, sin esperar
         // a la próxima visita. No es un refresco forzado (no gasta el cooldown del botón "Actualizar").
         void hydrateSocialDirectory();

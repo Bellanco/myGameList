@@ -57,12 +57,12 @@ function socialGist(activity: SocialGistData['activity'] = []): SocialGistData {
   } as unknown as SocialGistData;
 }
 
-function reviewEntry(gameId: number, gameName: string, updatedAt: number) {
+function reviewEntry(gameId: number, gameName: string, updatedAt: number, actor = 'pid-1') {
   return {
-    id: `pid-1:${gameId}:review`,
-    key: `pid-1:${gameId}:review`,
+    id: `${actor}:${gameId}:review`,
+    key: `${actor}:${gameId}:review`,
     type: 'review' as const,
-    actorProfileId: 'pid-1',
+    actorProfileId: actor,
     actorName: 'Nick',
     gameId,
     gameName,
@@ -138,7 +138,7 @@ describe('reconcileReviewActivity', () => {
       }),
     });
 
-    expect(outcome).toEqual({ added: 1, removed: 0, skipped: false });
+    expect(outcome).toMatchObject({ added: 1, removed: 0, relinked: 0, repaired: 0, skipped: false });
     expect(store.writes()).toBe(1);
 
     const published = store.current().activity;
@@ -167,7 +167,7 @@ describe('reconcileReviewActivity', () => {
     expect(store.writes()).toBe(1);
 
     const second = await reconcileReviewActivity({ games, force: true });
-    expect(second).toEqual({ added: 0, removed: 0, skipped: false });
+    expect(second).toMatchObject({ added: 0, removed: 0, relinked: 0, repaired: 0, skipped: false });
     expect(store.writes()).toBe(1);
   });
 
@@ -184,7 +184,7 @@ describe('reconcileReviewActivity', () => {
       games: lists({ c: [game({ id: 7, name: 'Hollow Knight', review: '   ' })] }),
     });
 
-    expect(outcome).toEqual({ added: 0, removed: 2, skipped: false });
+    expect(outcome).toMatchObject({ added: 0, removed: 2, skipped: false });
     expect(store.current().activity).toHaveLength(0);
   });
 
@@ -198,7 +198,7 @@ describe('reconcileReviewActivity', () => {
       games: lists({ c: [game({ id: 1, name: 'Otro', review: '' })], updatedAt: 2_000_000_000_000 }),
     });
 
-    expect(outcome).toEqual({ added: 0, removed: 0, skipped: false });
+    expect(outcome).toMatchObject({ added: 0, removed: 0, relinked: 0, repaired: 0, skipped: false });
     expect(store.writes()).toBe(0);
   });
 
@@ -246,7 +246,7 @@ describe('reconcileReviewActivity', () => {
       }),
     });
 
-    expect(outcome).toEqual({ added: 1, removed: 0, skipped: false });
+    expect(outcome).toMatchObject({ added: 1, removed: 0, relinked: 0, repaired: 0, skipped: false });
     expect(store.current().activity.map((entry) => entry.gameId).sort()).toEqual([7, 8]);
   });
 
@@ -270,6 +270,78 @@ describe('reconcileReviewActivity', () => {
     expect(store.current().activity.map((entry) => entry.gameName)).toEqual(['Nueva', 'Media']);
     // La pasada no convergió (queda 'Vieja'): sigue pendiente para continuar en la siguiente apertura.
     expect(idbMocks.__getMeta()).toMatchObject({ pendingSocialActivity: true });
+  });
+
+  it('una reseña ya publicada bajo otro profileId NO se duplica ni pierde su fecha', async () => {
+    // Regresión: `publishedGameIds` filtraba por `actorProfileId`, así que una reseña publicada con un id
+    // antiguo (uid legacy o el UUID de otro dispositivo previo al seeding de `privateConfig`) no se reconocía
+    // como publicada. Se añadía un duplicado y `dedupeActivityByGame` —que colapsa por (gameId, type)
+    // quedándose con el `updatedAt` mayor— borraba la original: la reseña "desaparecía" y volvía con otra fecha.
+    const gistId = 'aabbcc10dd11ee22';
+    armChannel(gistId);
+    const publicadaHaceMucho = 1_400_000_000_000;
+    const store = stubGistStore(gistId, socialGist([reviewEntry(7, 'Hollow Knight', publicadaHaceMucho, 'pid-VIEJO')]));
+
+    const outcome = await reconcileReviewActivity({
+      games: lists({ c: [game({ id: 7, name: 'Hollow Knight', review: 'Obra maestra', score: 5, _ts: 1_500_000_000_000 })] }),
+    });
+
+    expect(outcome.added).toBe(0); // ya estaba publicada: no se añade nada
+    expect(outcome.relinked).toBe(1); // solo se reindexa su identidad
+    const published = store.current().activity;
+    expect(published).toHaveLength(1);
+    expect(published[0]).toMatchObject({
+      gameId: 7,
+      actorProfileId: 'pid-1', // identidad convergida a la actual
+      key: 'pid-1:7:review',
+      updatedAt: publicadaHaceMucho, // …CONSERVANDO su fecha original
+      createdAt: publicadaHaceMucho,
+    });
+  });
+
+  it('devuelve a su fecha real una entrada sellada con "ahora" (daño del backfill)', async () => {
+    const gistId = 'aabbcc11dd11ee22';
+    armChannel(gistId);
+    const tsDelJuego = 1_500_000_000_000;
+    const selladaHoy = Date.now();
+    const store = stubGistStore(gistId, socialGist([reviewEntry(7, 'Hollow Knight', selladaHoy)]));
+
+    const outcome = await reconcileReviewActivity({
+      games: lists({ c: [game({ id: 7, name: 'Hollow Knight', review: 'Obra maestra', score: 5, _ts: tsDelJuego })] }),
+    });
+
+    expect(outcome.repaired).toBe(1);
+    expect(store.current().activity[0]).toMatchObject({ updatedAt: tsDelJuego, createdAt: tsDelJuego });
+  });
+
+  it('NO recoloca una reseña cuyo juego se editó DESPUÉS de publicarla', async () => {
+    // El caso legítimo inverso: `_ts` por delante de la fecha de publicación. Debe quedarse como está, para
+    // respetar que sincronizar solo nota/nombre no recoloque la tarjeta en el feed.
+    const gistId = 'aabbcc12dd11ee22';
+    armChannel(gistId);
+    const publicada = 1_500_000_000_000;
+    const store = stubGistStore(gistId, socialGist([reviewEntry(7, 'Hollow Knight', publicada)]));
+
+    const outcome = await reconcileReviewActivity({
+      games: lists({ c: [game({ id: 7, name: 'Hollow Knight', review: 'Obra maestra', score: 5, _ts: 1_600_000_000_000 })] }),
+    });
+
+    expect(outcome).toMatchObject({ added: 0, removed: 0, relinked: 0, repaired: 0 });
+    expect(store.writes()).toBe(0);
+    expect(store.current().activity[0].updatedAt).toBe(publicada);
+  });
+
+  it('sin `_ts` usa `listedAt` antes que la fecha de hoy', async () => {
+    const gistId = 'aabbcc13dd11ee22';
+    armChannel(gistId);
+    const store = stubGistStore(gistId, socialGist([]));
+    const llegada = 1_450_000_000_000;
+
+    await reconcileReviewActivity({
+      games: lists({ c: [game({ id: 7, name: 'Hollow Knight', review: 'Obra maestra', score: 5, _ts: 0, listedAt: llegada })] }),
+    });
+
+    expect(store.current().activity[0]).toMatchObject({ updatedAt: llegada, createdAt: llegada });
   });
 
   it('sin canal social armado en este dispositivo no publica ni lanza', async () => {
