@@ -166,7 +166,6 @@
 /* ── §13 · Barra inferior: caja pixelada; pastilla activa recta. ── */
 :root[data-palette="seaofstars"] .bottom-nav-inner { border: 2px solid var(--border); border-radius: 0; background: var(--surface); box-shadow: 0 0 0 3px var(--bg), 0 0 0 5px color-mix(in srgb, var(--sos-turq) 45%, var(--border)); }
 :root[data-palette="seaofstars"] .bottom-nav-ind { border-radius: 0; }
-:root[data-palette="seaofstars"] .hub-fav-cart { border-radius: 0; }
 
 /* Brillo de agua: latido MUY sutil del título hero (respeta reduced-motion). */
 @media (prefers-reduced-motion: no-preference) {

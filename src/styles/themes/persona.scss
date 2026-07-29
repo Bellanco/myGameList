@@ -298,9 +298,6 @@
 /* ── §13 · Barra de navegación inferior: sticker de cómic (contorno grueso + sombra roja), como los paneles (§3). ── */
 :root[data-palette="persona"] .bottom-nav-inner { border: 3px solid var(--pop-line); border-radius: 6px; background: var(--surface); box-shadow: 0 8px 20px rgba(0, 0, 0, .4), 4px 4px 0 rgba(255, 78, 100, .45); }
 :root[data-palette="persona"] .bottom-nav-ind { border-radius: 3px; }
-/* Favoritos publicados: mini-sticker de cómic (contorno grueso + sombra roja); lomos variados en `--deco-shelf-*`. */
-:root[data-palette="persona"] .hub-fav-cart { border: 2.5px solid var(--pop-line); border-radius: 4px; box-shadow: 4px 4px 0 rgba(255, 78, 100, .4); }
-:root[data-palette="persona"] .hub-fav-cart:hover { border-color: var(--pop-line); }
 :root[data-palette="persona"][data-theme="light"] .fab,
 :root[data-palette="persona"][data-theme="light"] .fab-roulette { color: #fff; box-shadow: 2px 2px 0 #151011; }
 
