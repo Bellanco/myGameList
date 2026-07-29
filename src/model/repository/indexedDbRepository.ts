@@ -431,7 +431,7 @@ export async function invalidateCachedSocialDirectory(ownGistId: string): Promis
 }
 
 // ---------------------------------------------------------------------------
-// Caché persistente del PERFIL PROPIO ya resuelto (nombre + favoritos + visibilidad + actividad). Reutiliza el store
+// Caché persistente del PERFIL PROPIO ya resuelto (nombre + visibilidad + actividad). Reutiliza el store
 // `profileCache` con clave reservada por gist propio (`__profile__:<ownGistId>`). TTL corto: al volver a navegar a la
 // pantalla social dentro de la ventana se sirve de IndexedDB sin releer el gist propio ni consultar Firestore. El
 // guardado del perfil invalida esta caché para reflejar los cambios. keyPath = `profileId`.
@@ -441,7 +441,6 @@ const SOCIAL_PROFILE_KEY_PREFIX = '__profile__:';
 
 export interface CachedSocialProfileData {
   name: string;
-  favorites: number[];
   hiddenTabs: TabId[];
   hideReplayable: boolean;
   hideRetry: boolean;
@@ -464,7 +463,6 @@ export async function getCachedSocialProfile(ownGistId: string): Promise<CachedS
     if (Date.now() - rec.cachedAt >= SOCIAL_PROFILE_TTL_MS) return null;
     return {
       name: rec.name,
-      favorites: rec.favorites,
       hiddenTabs: rec.hiddenTabs,
       hideReplayable: rec.hideReplayable,
       hideRetry: rec.hideRetry,
@@ -479,19 +477,19 @@ export async function getCachedSocialProfile(ownGistId: string): Promise<CachedS
 }
 
 /**
- * Lee SOLO la identidad del perfil (nombre + favoritos guardados) IGNORANDO el TTL de `getCachedSocialProfile`.
- * Ese TTL fuerza re-lectura del gist remoto (actividad, etc.), pero los favoritos guardados no "caducan": para
- * gatear el botón de Cuenta basta con que el registro exista en este dispositivo (se escribe al abrir Social o al
- * guardar el perfil). Devuelve `null` solo si nunca se ha abierto Social aquí. No sustituye a `getCachedSocialProfile`.
+ * Lee SOLO la identidad del perfil (el nombre guardado) IGNORANDO el TTL de `getCachedSocialProfile`.
+ * Ese TTL fuerza re-lectura del gist remoto (actividad, etc.), pero el nombre guardado no "caduca": para gatear el
+ * botón de Cuenta basta con que el registro exista en este dispositivo (se escribe al abrir Social o al guardar el
+ * perfil). Devuelve `null` solo si nunca se ha abierto Social aquí. No sustituye a `getCachedSocialProfile`.
  */
 export async function peekCachedSocialProfileIdentity(
   ownGistId: string,
-): Promise<{ name: string; favorites: number[] } | null> {
+): Promise<{ name: string } | null> {
   if (!ownGistId) return null;
   try {
     const rec = await idbGet<CachedSocialProfile>(PROFILE_CACHE_STORE, SOCIAL_PROFILE_KEY_PREFIX + ownGistId);
     if (!rec) return null;
-    return { name: rec.name, favorites: rec.favorites };
+    return { name: rec.name };
   } catch {
     return null;
   }
