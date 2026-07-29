@@ -31,6 +31,9 @@ export interface LocalMeta {
   // baja, error de GitHub) y fuerza la pasada en la próxima apertura del hub.
   activityReconciledAt?: number;
   activityReviewCount?: number;
+  // Versión de la lógica que escribió el sello: si sube, el sello deja de valer y se fuerza una pasada (así una
+  // corrección alcanza a los gists que tocó una versión anterior sin esperar a que caduque).
+  activityReconcileVersion?: number;
   pendingSocialActivity?: boolean;
   // Último gist social ya propagado a MIS docs de amistad desde este dispositivo. Evita lanzar la query de
   // amistades en cada publicación: solo se sanea cuando el id del gist cambia de verdad.

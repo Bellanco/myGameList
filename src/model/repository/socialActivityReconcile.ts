@@ -35,6 +35,14 @@ const DEFAULT_MAX_PUBLISHED = 60;
 // Ventana del sello: sin cambios en el recuento de reseñas y sin publicación pendiente, no se vuelve a mirar
 // el gist dentro de este plazo (la comprobación del recuento es en memoria, sin coste de red).
 const RECONCILE_TTL_MS = 12 * 60 * 60 * 1000;
+// Versión de la LÓGICA de reconciliación. El sello solo vale para la versión que lo escribió: si esta sube, la
+// siguiente apertura del hub fuerza una pasada aunque el sello esté fresco y el recuento cuadre. Es lo que
+// permite que una corrección llegue a los gists que ya tocó una versión anterior sin esperar a que caduque el
+// sello ni pedirle nada al usuario. SUBIRLA cada vez que cambie lo que la pasada escribe o repara.
+//   1 = versión inicial.
+//   2 = identidad por gameId (no por actor) + cadena de fechas `_ts`/`listedAt` + reparación de fechas selladas
+//       con "ahora" (una entrada bajo un id antiguo se duplicaba y el dedupe borraba la original).
+const RECONCILE_LOGIC_VERSION = 2;
 
 // Margen para no re-sellar fechas por diferencias de milisegundos: al guardar una reseña, `_ts` del juego y la
 // fecha de la publicación se estampan en la misma operación, con unos ms de diferencia.
@@ -77,6 +85,7 @@ async function stamp(reviewCount: number, pending = false): Promise<void> {
     await patchLocalMeta({
       activityReconciledAt: Date.now(),
       activityReviewCount: reviewCount,
+      activityReconcileVersion: RECONCILE_LOGIC_VERSION,
       pendingSocialActivity: pending,
     });
   } catch {
@@ -159,7 +168,10 @@ export async function reconcileReviewActivity(input: {
   const pending = Boolean(meta?.pendingSocialActivity);
   const stampFresh = Boolean(meta?.activityReconciledAt && Date.now() - meta.activityReconciledAt < RECONCILE_TTL_MS);
   const countMatches = meta?.activityReviewCount === localReviews.length;
-  if (!force && !pending && stampFresh && countMatches) {
+  // El sello de una versión anterior no vale: puede haber dejado el gist con entradas que esta versión sabe
+  // arreglar (identidad antigua, fechas selladas con "ahora") y que el recuento no detecta.
+  const versionMatches = meta?.activityReconcileVersion === RECONCILE_LOGIC_VERSION;
+  if (!force && !pending && stampFresh && countMatches && versionMatches) {
     return NOOP_OUTCOME;
   }
 
@@ -288,6 +300,11 @@ export async function reconcileReviewActivity(input: {
     return outcome;
   }
 
+  // Traza: la pasada solo escribe cuando de verdad cambia algo, y es lo bastante infrecuente para dejar rastro
+  // de qué hizo (diagnóstico sin tener que instrumentar nada).
+  console.warn(
+    `[social] actividad reconciliada: +${added} publicadas, -${removed} retiradas, ${relinked} reindexadas, ${repaired} fechas corregidas`,
+  );
   const writeResult = await writeSocialGist(token, gistId, { ...nextData, updatedAt: Date.now() });
   saveSocialSyncConfig({
     token,
