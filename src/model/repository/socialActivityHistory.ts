@@ -7,8 +7,10 @@
 // El historial de revisiones del gist es el ÚNICO sitio donde sobreviven las fechas de publicación reales: las
 // revisiones de un gist son inmutables y GitHub las conserva todas. Este módulo las localiza SIN ESCRIBIR NADA,
 // para poder decidir con datos si merece la pena restaurarlas.
+import { TAB_IDS } from '../types/game';
 import { getCurrentSocialAuthUser } from './firebaseRepository';
 import { listOwnSocialGists, readSocialGistAtRevision, readSocialGistHistory, readSocialGist } from './gistRepository';
+import { loadLocalState } from './localRepository';
 import { resolveSocialChannel } from './socialChannel';
 
 /** Cuántas revisiones se recorren como máximo POR GIST (1 llamada autenticada por revisión). */
@@ -54,6 +56,11 @@ export interface DateAuditReport {
   withoutOlderDate: number;
   /** Todos los gists sociales de la cuenta que se han inspeccionado (incluidos los abandonados). */
   inspected: InspectedGist[];
+  /**
+   * Reparto por día de las fechas publicadas (gist) frente a la última modificación de los juegos (`_ts`
+   * local, lo que muestra la pestaña Reseñas). Si ambas columnas coinciden, feed y listado están de acuerdo.
+   */
+  datesByDay: Array<{ day: string; enGist: number; enListado: number }>;
 }
 
 /**
@@ -183,6 +190,32 @@ export async function auditPublishedReviewDates(options?: { maxRevisions?: numbe
 
   recoverable.sort((a, b) => a.originalUpdatedAt - b.originalUpdatedAt);
 
+  // Reparto por día: fecha publicada (gist) vs `_ts` local del mismo juego. Deja ver de un vistazo si el feed y
+  // la pestaña Reseñas están mostrando lo mismo y cuántos días distintos hay de verdad.
+  const local = loadLocalState();
+  const tsByGame = new Map<number, number>();
+  TAB_IDS.forEach((tab) => {
+    (local[tab] || []).forEach((game) => {
+      const ts = Number(game._ts || 0) || Number(game.listedAt || 0);
+      if (game.id > 0 && ts > 0) tsByGame.set(game.id, ts);
+    });
+  });
+  const day = (ms: number) => new Date(ms).toISOString().slice(0, 10);
+  const byDay = new Map<string, { enGist: number; enListado: number }>();
+  const bump = (key: string, campo: 'enGist' | 'enListado') => {
+    const current = byDay.get(key) || { enGist: 0, enListado: 0 };
+    current[campo] += 1;
+    byDay.set(key, current);
+  };
+  for (const [gameId, entry] of currentByGame) {
+    bump(day(entry.updatedAt), 'enGist');
+    const ts = tsByGame.get(gameId);
+    if (ts) bump(day(ts), 'enListado');
+  }
+  const datesByDay = [...byDay.entries()]
+    .map(([d, counts]) => ({ day: d, ...counts }))
+    .sort((a, b) => a.day.localeCompare(b.day));
+
   return {
     gistId,
     totalRevisions,
@@ -191,5 +224,6 @@ export async function auditPublishedReviewDates(options?: { maxRevisions?: numbe
     recoverable,
     withoutOlderDate,
     inspected,
+    datesByDay,
   };
 }
