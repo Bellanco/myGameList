@@ -45,6 +45,32 @@ createRoot(document.getElementById('root') as HTMLElement).render(
   </StrictMode>,
 );
 
+// Herramienta de diagnóstico SOLO EN DESARROLLO: audita, sin escribir nada, qué fechas de publicación de mis
+// reseñas sobreviven en el historial de revisiones del gist social. Se lanza desde la consola con
+// `__socialDateAudit()`. Fuera de `dev` no se expone.
+if (import.meta.env.DEV) {
+  (window as unknown as { __socialDateAudit?: () => Promise<unknown> }).__socialDateAudit = async () => {
+    const { auditPublishedReviewDates } = await import('./model/repository/socialActivityHistory');
+    const report = await auditPublishedReviewDates();
+    if (!report) {
+      console.warn('[social] auditoría: sin sesión de Google o sin canal social en este dispositivo');
+      return null;
+    }
+    const fecha = (ms: number) => new Date(ms).toISOString().slice(0, 16).replace('T', ' ');
+    console.warn(
+      `[social] auditoría de fechas — gist ${report.gistId}: ${report.publishedNow} reseñas publicadas, ` +
+        `${report.scannedRevisions}/${report.totalRevisions} revisiones recorridas → ` +
+        `${report.recoverable.length} con fecha original recuperable, ${report.withoutOlderDate} sin fecha anterior`,
+    );
+    report.recoverable.forEach((item) => {
+      console.warn(
+        `   ${item.gameName}: ${fecha(item.currentUpdatedAt)} → ${fecha(item.originalUpdatedAt)} (rev ${item.fromRevision.slice(0, 8)})`,
+      );
+    });
+    return report;
+  };
+}
+
 const idleScheduler = (globalThis as unknown as {
   requestIdleCallback?: (callback: () => void) => number;
 }).requestIdleCallback;

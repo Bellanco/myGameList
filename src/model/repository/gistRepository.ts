@@ -1176,6 +1176,76 @@ export async function readSocialGist(token: string, gistId: string, etag: string
   }
 }
 
+/** Una revisión del gist social. GitHub conserva TODAS las versiones y son inmutables. */
+export interface SocialGistRevision {
+  version: string;
+  committedAt: number;
+}
+
+/**
+ * Lista las revisiones del gist social, de más reciente a más antigua. Solo lectura y sin caché: se usa para
+ * auditar/recuperar fechas de publicación que una escritura posterior sobrescribió (el historial del gist es el
+ * único sitio donde sobreviven).
+ */
+export async function readSocialGistHistory(token: string, gistId: string): Promise<SocialGistRevision[]> {
+  if (!isValidGithubToken(token)) {
+    throw new Error('Formato de token inválido');
+  }
+  if (!isValidGistId(gistId)) {
+    throw new Error('Gist ID inválido');
+  }
+
+  const response = await githubFetch(`${GIST_API_BASE}/${gistId}`, {
+    headers: {
+      Authorization: getGithubAuthHeader(token),
+      'X-GitHub-Api-Version': '2022-11-28',
+    },
+  });
+  if (!response.ok) {
+    throw await buildGithubError(response, 'Read social gist history failed');
+  }
+
+  const body = (await response.json()) as { history?: Array<{ version?: string; committed_at?: string }> };
+  return (body.history || [])
+    .map((entry) => ({
+      version: String(entry.version || ''),
+      committedAt: entry.committed_at ? Date.parse(entry.committed_at) : 0,
+    }))
+    .filter((entry) => Boolean(entry.version))
+    .sort((a, b) => b.committedAt - a.committedAt);
+}
+
+/** Lee el contenido del gist social EN una revisión concreta. Solo lectura y sin caché. */
+export async function readSocialGistAtRevision(token: string, gistId: string, version: string): Promise<SocialGistData> {
+  if (!isValidGithubToken(token)) {
+    throw new Error('Formato de token inválido');
+  }
+  if (!isValidGistId(gistId) || !/^[a-fA-F0-9]{7,}$/.test(version)) {
+    throw new Error('Revisión inválida');
+  }
+
+  const response = await githubFetch(`${GIST_API_BASE}/${gistId}/${version}`, {
+    headers: {
+      Authorization: getGithubAuthHeader(token),
+      'X-GitHub-Api-Version': '2022-11-28',
+    },
+  });
+  if (!response.ok) {
+    throw await buildGithubError(response, 'Read social gist revision failed');
+  }
+
+  const body = (await response.json()) as { files?: Record<string, { content: string }> };
+  const raw = body.files?.[SOCIAL_GIST_FILENAME]?.content;
+  if (!raw) {
+    return getEmptySocialGistData();
+  }
+  try {
+    return normalizeSocialGistData(assembleChunkedSocial(JSON.parse(raw), body.files));
+  } catch {
+    return getEmptySocialGistData();
+  }
+}
+
 export async function readPublicSocialGistById(gistId: string, token: string | null = null): Promise<SocialGistData> {
   if (!isValidGistId(gistId)) {
     throw new Error('Gist ID inválido');
