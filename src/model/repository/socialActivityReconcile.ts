@@ -66,9 +66,13 @@ export type ReconcileOutcome = {
   repaired: number;
   /** true si no se llegó a comparar nada (sin canal, sin listados o sello fresco). */
   skipped: boolean;
+  /** Por qué se saltó. `sin-listados` es reintentable: los juegos aún no estaban cargados. */
+  reason?: 'sin-listados' | 'sello-fresco' | 'sin-sesion' | 'sin-canal';
 };
 
-const NOOP_OUTCOME: ReconcileOutcome = { added: 0, removed: 0, relinked: 0, repaired: 0, skipped: true };
+function skip(reason: NonNullable<ReconcileOutcome['reason']>): ReconcileOutcome {
+  return { added: 0, removed: 0, relinked: 0, repaired: 0, skipped: true, reason };
+}
 
 /** ¿Ha cambiado algo que haya que escribir en el gist? */
 function hasChanges(outcome: ReconcileOutcome): boolean {
@@ -160,7 +164,9 @@ export async function reconcileReviewActivity(input: {
 
   const localGameIds = collectLocalGameIds(games);
   if (localGameIds.size === 0) {
-    return NOOP_OUTCOME; // listados sin hidratar: ni publicar ni (sobre todo) retirar nada
+    // Listados sin hidratar (el hub puede montarse antes de que carguen): ni publicar ni, sobre todo, retirar
+    // nada. Es reintentable — el llamador vuelve a intentarlo cuando los listados cambian.
+    return skip('sin-listados');
   }
 
   const localReviews = collectLocalReviews(games);
@@ -172,17 +178,17 @@ export async function reconcileReviewActivity(input: {
   // arreglar (identidad antigua, fechas selladas con "ahora") y que el recuento no detecta.
   const versionMatches = meta?.activityReconcileVersion === RECONCILE_LOGIC_VERSION;
   if (!force && !pending && stampFresh && countMatches && versionMatches) {
-    return NOOP_OUTCOME;
+    return skip('sello-fresco');
   }
 
   const authUser = await getCurrentSocialAuthUser();
   if (!authUser) {
-    return NOOP_OUTCOME; // sin sesión de Google en este dispositivo no hay gist propio que reconciliar
+    return skip('sin-sesion'); // sin sesión de Google en este dispositivo no hay gist propio que reconciliar
   }
 
   const resolved = await resolveSocialChannel({ email: authUser.email });
   if (resolved.status !== 'ready') {
-    return NOOP_OUTCOME;
+    return skip('sin-canal');
   }
   const { token, gistId, etag } = resolved.channel;
 
@@ -295,16 +301,18 @@ export async function reconcileReviewActivity(input: {
 
   const outcome: ReconcileOutcome = { added, removed, relinked, repaired, skipped: false };
 
+  // Traza de la pasada (una por visita al hub, y solo cuando de verdad ha comparado): permite distinguir
+  // "no cambió nada" de "no se ejecutó" sin instrumentar nada más.
+  console.warn(
+    `[social] reconciliación: ${localReviews.length} reseñas locales, ${publishedGameIds.size} publicadas` +
+      ` → +${added} nuevas, -${removed} retiradas, ${relinked} reindexadas, ${repaired} fechas corregidas`,
+  );
+
   if (!hasChanges(outcome)) {
     await stamp(localReviews.length, capped);
     return outcome;
   }
 
-  // Traza: la pasada solo escribe cuando de verdad cambia algo, y es lo bastante infrecuente para dejar rastro
-  // de qué hizo (diagnóstico sin tener que instrumentar nada).
-  console.warn(
-    `[social] actividad reconciliada: +${added} publicadas, -${removed} retiradas, ${relinked} reindexadas, ${repaired} fechas corregidas`,
-  );
   const writeResult = await writeSocialGist(token, gistId, { ...nextData, updatedAt: Date.now() });
   saveSocialSyncConfig({
     token,

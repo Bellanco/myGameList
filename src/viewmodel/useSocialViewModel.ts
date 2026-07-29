@@ -1603,6 +1603,16 @@ export function useSocialViewModel(options?: {
     let cancelled = false;
     void reconcileReviewActivity({ games: reconcileGames })
       .then((outcome) => {
+        // Listados aún sin cargar (el hub puede montarse antes): se libera el pestillo para reintentarlo cuando
+        // `reconcileGames` cambie, en vez de dar la sesión por reconciliada sin haber comparado nada.
+        if (outcome.reason === 'sin-listados') {
+          activityReconciledRef.current = false;
+          return;
+        }
+        if (outcome.reason && outcome.reason !== 'sello-fresco') {
+          console.warn(`[social] reconciliación omitida: ${outcome.reason}`);
+          return;
+        }
         const changed = outcome.added + outcome.removed + outcome.relinked + outcome.repaired > 0;
         if (cancelled || outcome.skipped || !changed) return;
         // La reconciliación invalidó la caché del directorio: reléelo para que el cambio se vea ya, sin esperar
