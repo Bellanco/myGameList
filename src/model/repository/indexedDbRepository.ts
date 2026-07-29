@@ -386,10 +386,23 @@ export async function invalidateProfileGames(profileId: string): Promise<void> {
 // ---------------------------------------------------------------------------
 const SOCIAL_DIRECTORY_TTL_MS = 30 * 60 * 1000;
 const SOCIAL_DIRECTORY_KEY_PREFIX = '__dir__:';
+/**
+ * Versión de la FORMA de las entradas cacheadas. Una caché escrita con otra versión se ignora, aunque siga
+ * dentro del TTL.
+ *
+ * Hace falta porque el TTL solo caduca por tiempo: si cambia lo que la hidratación guarda en cada entrada, el
+ * usuario sigue viendo datos con la forma vieja hasta 30 minutos y no hay forma de forzarlo desde la UI. Pasó al
+ * subir el tope de actividad por perfil de 40 a 320: la pestaña Reseñas seguía sin fecha publicada para las
+ * reseñas recortadas. SUBIRLA al cambiar campos o topes de lo que se cachea.
+ *   1 = sin versión (implícita).
+ *   2 = actividad por perfil hasta 320 entradas (antes 40).
+ */
+const SOCIAL_DIRECTORY_CACHE_VERSION = 2;
 
 interface CachedSocialDirectory<T> {
   profileId: string; // keyPath del store
   cachedAt: number;
+  version?: number;
   entries: T[];
 }
 
@@ -398,6 +411,7 @@ export async function getCachedSocialDirectory<T>(ownGistId: string): Promise<T[
   try {
     const rec = await idbGet<CachedSocialDirectory<T>>(PROFILE_CACHE_STORE, SOCIAL_DIRECTORY_KEY_PREFIX + ownGistId);
     if (!rec) return null;
+    if (rec.version !== SOCIAL_DIRECTORY_CACHE_VERSION) return null;
     if (Date.now() - rec.cachedAt >= SOCIAL_DIRECTORY_TTL_MS) return null;
     return rec.entries;
   } catch {
@@ -411,6 +425,7 @@ export async function putCachedSocialDirectory<T>(ownGistId: string, entries: T[
     await idbPut<CachedSocialDirectory<T>>(PROFILE_CACHE_STORE, {
       profileId: SOCIAL_DIRECTORY_KEY_PREFIX + ownGistId,
       cachedAt: Date.now(),
+      version: SOCIAL_DIRECTORY_CACHE_VERSION,
       entries,
     });
   } catch {
