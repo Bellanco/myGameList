@@ -112,6 +112,32 @@ if (import.meta.env.DEV) {
   };
 }
 
+// Diagnóstico SOLO EN DESARROLLO: por qué el feed y la pestaña Reseñas pueden mostrar fechas distintas.
+// Compara la fecha publicada en el gist con la de la caché del directorio (lo que sirve el hub) y las locales.
+if (import.meta.env.DEV) {
+  (window as unknown as { __socialReviewDates?: () => Promise<unknown> }).__socialReviewDates = async () => {
+    const { inspectReviewDates } = await import('./model/repository/socialActivityHistory');
+    const report = await inspectReviewDates();
+    if (!report) {
+      console.warn('[social] sin sesión de Google o sin canal social en este dispositivo');
+      return null;
+    }
+    const fecha = (ms: number) => (ms ? new Date(ms).toISOString().slice(0, 16).replace('T', ' ') : '—');
+    console.warn(
+      `[social] fechas de reseña — gist ${report.gistId}: ${report.rows.length} publicadas | ` +
+        `entrada propia en la caché del directorio: ${report.cacheEntryFound ? 'sí' : 'NO'} ` +
+        `(${report.cacheActivityCount} actividades) | discrepancias gist vs caché: ${report.mismatchesGistVsCache}`,
+    );
+    console.warn('   juego | en gist | en caché | _ts local | reviewedAt');
+    report.rows.slice(0, 12).forEach((row) => {
+      console.warn(
+        `   ${row.gameName} | ${fecha(row.enGist)} | ${fecha(row.enCache)} | ${fecha(row.ts)} | ${fecha(row.reviewedAt)}`,
+      );
+    });
+    return report;
+  };
+}
+
 const idleScheduler = (globalThis as unknown as {
   requestIdleCallback?: (callback: () => void) => number;
 }).requestIdleCallback;

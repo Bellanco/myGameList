@@ -418,6 +418,55 @@ describe('SocialHub (componente, post-M3)', () => {
     expect(screen.queryByText(/26 de julio de 2026/)).not.toBeInTheDocument();
   });
 
+  it('la pestaña Reseñas fecha con la publicación también más allá de las 40 actividades', async () => {
+    // Regresión: la hidratación del directorio recortaba la actividad a 40 por perfil (bastaba para el feed).
+    // Las reseñas por debajo de ese corte se quedaban sin fecha publicada y caían al `_ts` del juego, así que el
+    // listado mostraba fechas distintas del feed justo en el histórico.
+    firebaseMocks.getCurrentSocialAuthUser.mockResolvedValue({ uid: 'me', email: 'me@x.com', displayName: 'Me', photoURL: null });
+    firebaseMocks.resolveStableProfileId.mockResolvedValue('me');
+    gistMocks.getSocialSyncConfig.mockReturnValue({ token: 'ghp_x', gistId: 'my-social', etag: null, lastRemoteUpdatedAt: 0 });
+    const TS_IMPORT = Date.parse('2026-07-26T09:00:00.000Z');
+    const TOTAL = 45;
+    // 45 juegos con reseña, todos con el `_ts` reescrito por la importación…
+    const games = Array.from({ length: TOTAL }, (_, i) => ({
+      id: i + 1, name: `Juego ${i + 1}`, _ts: TS_IMPORT, platforms: [], genres: [], steamDeck: false,
+      review: `Reseña ${i + 1}`, score: 4, years: [], strengths: [], weaknesses: [], reasons: [],
+      replayable: false, retry: false, hours: 0,
+    }));
+    localMocks.loadLocalState.mockReturnValue({ c: games, v: [], e: [], p: [], deleted: [], updatedAt: TS_IMPORT });
+    // …y publicadas en mayo, escalonadas: las últimas quedaban fuera del corte de 40.
+    const activity = games.map((game, i) => ({
+      id: `me:${game.id}:review`, key: `me:${game.id}:review`, type: 'review', actorProfileId: 'me', actorName: 'Me',
+      gameId: game.id, gameName: game.name, rating: 4, recommendationText: '', snippet: `Reseña ${i + 1}`,
+      createdAt: Date.parse('2026-05-12T11:59:00.000Z') - i * 1000,
+      updatedAt: Date.parse('2026-05-12T11:59:00.000Z') - i * 1000,
+    }));
+    gistMocks.readSocialGist.mockResolvedValue({
+      data: {
+        profile: { name: 'Me', private: false, visibility: { hiddenTabs: [], hideReplayable: false, hideRetry: false, hideGameTime: false, showPhoto: true }, sharedLists: {} },
+        recommendations: [], activity: [], posts: [], updatedAt: 0,
+      },
+      etag: null,
+    });
+    firebaseMocks.listSocialDirectory.mockResolvedValue([
+      { id: 'me', uid: 'me', email: 'me@x.com', displayName: 'Me', photoURL: '', socialGistId: 'my-social', gamesGistId: 'my-games', updatedAt: Date.now() },
+    ]);
+    firebaseMocks.getMyFriendships.mockResolvedValue({ friends: [], incoming: [], outgoing: [], byOtherUid: {} });
+    gistMocks.readPublicSocialGistById.mockResolvedValue({
+      profile: { name: 'Me', favoriteGames: [], visibility: { showPhoto: true } },
+      activity,
+      posts: [],
+      updatedAt: Date.parse('2026-05-12T11:59:00.000Z'),
+    });
+
+    renderHub('/social/profiles/me/reviews');
+
+    // Todas las tarjetas visibles llevan su fecha publicada (mayo)…
+    expect((await screen.findAllByText(/12 de mayo de 2026/)).length).toBeGreaterThan(1);
+    // …y NINGUNA cae al `_ts` del import, ni siquiera las que quedaban por debajo del corte de 40.
+    expect(screen.queryByText(/26 de julio de 2026/)).not.toBeInTheDocument();
+  });
+
   it('corte por inactividad: la actividad de un amigo inactivo no entra al feed y no se lee su gist', async () => {
     firebaseMocks.getCurrentSocialAuthUser.mockResolvedValue({ uid: 'me', email: 'me@x.com', displayName: 'Me', photoURL: null });
     gistMocks.getSocialSyncConfig.mockReturnValue({ token: 'ghp_x', gistId: 'my-social', etag: null, lastRemoteUpdatedAt: 0 });
