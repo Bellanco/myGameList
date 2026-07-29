@@ -4,8 +4,8 @@ import { SocialProfilesScreen } from '../../src/view/components/socialhub/Social
 import { SOCIAL_UI } from '../../src/core/constants/labels';
 import type { RelationshipState } from '../../src/model/types/social';
 
-function entry(uid: string, displayName: string, favorites: string[] = []) {
-  return { id: uid, uid, displayName, photoURL: '', favorites };
+function entry(uid: string, displayName: string) {
+  return { id: uid, uid, displayName, photoURL: '' };
 }
 
 const baseProps = {
@@ -35,7 +35,7 @@ describe('SocialProfilesScreen — división amigos / no-amigos', () => {
       <SocialProfilesScreen
         {...baseProps}
         relationshipWith={relationshipWith}
-        filteredSocialDirectory={[entry('ada', 'Ada', ['Celeste']), entry('bob', 'Bob')]}
+        filteredSocialDirectory={[entry('ada', 'Ada'), entry('bob', 'Bob')]}
       />,
     );
 

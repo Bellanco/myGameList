@@ -45,6 +45,73 @@ createRoot(document.getElementById('root') as HTMLElement).render(
   </StrictMode>,
 );
 
+// Herramienta de diagnóstico SOLO EN DESARROLLO: audita, sin escribir nada, qué fechas de publicación de mis
+// reseñas sobreviven en el historial de revisiones del gist social. Se lanza desde la consola con
+// `__socialDateAudit()`. Fuera de `dev` no se expone.
+if (import.meta.env.DEV) {
+  (window as unknown as { __socialDateAudit?: (o?: { maxRevisions?: number }) => Promise<unknown> }).__socialDateAudit = async (
+    options?: { maxRevisions?: number },
+  ) => {
+    const { auditPublishedReviewDates } = await import('./model/repository/socialActivityHistory');
+    const report = await auditPublishedReviewDates(options);
+    if (!report) {
+      console.warn('[social] auditoría: sin sesión de Google o sin canal social en este dispositivo');
+      return null;
+    }
+    const fecha = (ms: number) => new Date(ms).toISOString().slice(0, 16).replace('T', ' ');
+    console.warn(
+      `[social] auditoría de fechas — gist ${report.gistId}: ${report.publishedNow} reseñas publicadas, ` +
+        `${report.scannedRevisions}/${report.totalRevisions} revisiones recorridas → ` +
+        `${report.recoverable.length} con fecha original recuperable, ${report.withoutOlderDate} sin fecha anterior`,
+    );
+    report.inspected.forEach((gist) => {
+      console.warn(
+        `   gist ${gist.gistId.slice(0, 10)}${gist.isCurrent ? ' (ACTUAL)' : ' (abandonado)'}: ` +
+          `${gist.scannedRevisions}/${gist.revisions} revisiones, ${gist.reviewEntries} reseñas vistas, ` +
+          `más antigua ${gist.oldestDate ? fecha(gist.oldestDate) : '—'}`,
+      );
+    });
+    console.warn('   día        | en el gist | en el listado');
+    report.datesByDay.forEach((row) => {
+      console.warn(`   ${row.day} | ${String(row.enGist).padStart(10)} | ${String(row.enListado).padStart(13)}`);
+    });
+    report.recoverable.forEach((item) => {
+      console.warn(
+        `   ${item.gameName}: ${fecha(item.currentUpdatedAt)} → ${fecha(item.originalUpdatedAt)} ` +
+          `(gist ${item.fromGistId.slice(0, 10)}, rev ${item.fromRevision.slice(0, 8)})`,
+      );
+    });
+    return report;
+  };
+}
+
+// Herramienta de diagnóstico SOLO EN DESARROLLO: reasigna a una fecha ancla el histórico de reseñas que se
+// publicó con un `_ts` sellado en bloque (importación / sobrescritura), dejando intactas las publicadas en su
+// día. Simulacro por defecto: `__socialFixHistoryDates({ date: '2026-05-12' })`; escribe con `apply: true`.
+if (import.meta.env.DEV) {
+  (window as unknown as {
+    __socialFixHistoryDates?: (o: { date: string; apply?: boolean }) => Promise<unknown>;
+  }).__socialFixHistoryDates = async (options: { date: string; apply?: boolean }) => {
+    const { repairUndatedHistoryDates } = await import('./model/repository/socialActivityHistory');
+    const plan = await repairUndatedHistoryDates(options);
+    if (!plan) {
+      console.warn('[social] sin sesión de Google o sin canal social en este dispositivo');
+      return null;
+    }
+    const fecha = (ms: number) => new Date(ms).toISOString().slice(0, 16).replace('T', ' ');
+    console.warn(
+      `[social] histórico ${plan.applied ? 'REASIGNADO' : '(simulacro, sin escribir)'} a ${options.date}: ` +
+        `${plan.toMove.length} entradas se mueven, ${plan.keeping.length} conservan su fecha. ` +
+        `Días sellados en bloque detectados: ${plan.bulkDays.join(', ') || 'ninguno'}`,
+    );
+    plan.keeping
+      .slice()
+      .sort((a, b) => a.date - b.date)
+      .forEach((item) => console.warn(`   conserva  ${fecha(item.date)}  ${item.gameName}`));
+    return plan;
+  };
+}
+
 const idleScheduler = (globalThis as unknown as {
   requestIdleCallback?: (callback: () => void) => number;
 }).requestIdleCallback;

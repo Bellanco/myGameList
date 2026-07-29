@@ -611,46 +611,6 @@
   gap: .7rem;
 }
 
-/* Favoritos publicados — estantería de cartuchos (opción A): mini-tarjetas con franja de color.
-   Rejilla adaptativa: cada cartucho ocupa un ancho cómodo y se reparten el espacio; en pantallas
-   estrechas caben menos columnas y se ajustan sin desbordar (min() evita overflow en móvil). */
-.hub-fav-shelf {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(10.5rem, 100%), 1fr));
-  gap: .5rem;
-  /* Cada cartucho se dimensiona a SU contenido: si uno crece (título de varias líneas), el resto
-     mantienen su altura en vez de estirarse a la fila (default `stretch`). */
-  align-items: start;
-}
-.hub-fav-cart {
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  background: var(--surface-elevated);
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease;
-}
-.hub-fav-cart:hover { transform: translateY(-2px); border-color: var(--steam); box-shadow: var(--shadow); }
-.hub-fav-cart-top { height: .4rem; flex: 0 0 auto; background: var(--deco-shelf-0); }
-.hub-fav-cart-title {
-  padding: .55rem .65rem .65rem;
-  font-size: .82rem; font-weight: 700; line-height: 1.25;
-  color: var(--hub-text);
-  /* El título se muestra completo (envuelve las líneas que necesite) — no se recorta. La tarjeta crece
-     con su contenido; el resto de cartuchos conservan su altura gracias a `align-items: start` del shelf. */
-  overflow-wrap: anywhere;
-}
-/* Lomos de colores variados (ciclo por índice), como una estantería real. */
-.hub-fav-cart--1 .hub-fav-cart-top { background: var(--deco-shelf-1); }
-.hub-fav-cart--2 .hub-fav-cart-top { background: var(--deco-shelf-2); }
-.hub-fav-cart--3 .hub-fav-cart-top { background: var(--deco-shelf-3); }
-.hub-fav-cart--4 .hub-fav-cart-top { background: var(--deco-shelf-4); }
-@media (prefers-reduced-motion: reduce) {
-  .hub-fav-cart { transition: none; }
-  .hub-fav-cart:hover { transform: none; }
-}
-
 /* ── Rediseño "Mi perfil social" (edición): pasos numerados, hero de identidad y chip de estado ── */
 .hub-block-head { display: flex; align-items: center; gap: .55rem; }
 .hub-block-head h3 { margin: 0; }
@@ -666,6 +626,16 @@
 .hub-identity-hero { display: flex; align-items: center; gap: .8rem; }
 .hub-identity-hero .hub-avatar { flex: 0 0 auto; width: 2.5rem; height: 2.5rem; font-size: 1rem; }
 .hub-identity-hero .finput { flex: 1; min-width: 0; }
+/* Requisito de alta sin cumplir (sin juegos completados): explica por qué "Guardar perfil" está deshabilitado. */
+.hub-profile-requirement {
+  margin: .6rem 0 0;
+  padding: .55rem .7rem;
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--warn) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--warn) 38%, transparent);
+  color: var(--fg-amber);
+  font-size: .82rem;
+}
 .hub-profile-sync-chip {
   margin-left: auto;
   display: inline-flex; align-items: center; gap: .4rem;
@@ -750,16 +720,6 @@
 .hub-feed-activity-list .hub-feed-activity-item:nth-child(n+6) { animation-delay: .28s; }
 @keyframes feedItemIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
-/* Tarjeta del selector de juego: barrido de brillo sutil al pasar el ratón (guiño a las cartas de Steam). */
-.hub-game-card { overflow: hidden; }
-.hub-game-card::after {
-  content: ""; position: absolute; inset: -40% -60%; pointer-events: none;
-  background: linear-gradient(105deg, transparent 40%, rgba(255,255,255,.28) 50%, transparent 60%);
-  transform: translateX(-120%);
-  transition: transform .7s cubic-bezier(.2,.8,.25,1);
-}
-.hub-game-card:hover::after { transform: translateX(120%); }
-
 /* Contador de peticiones: "pop" al volverse activo (llega una petición). */
 .hub-requests-count.is-active { animation: badgePop .45s cubic-bezier(.2,1.4,.3,1); }
 @keyframes badgePop { 0% { transform: scale(.4); } 55% { transform: scale(1.35); } 100% { transform: scale(1); } }
@@ -786,7 +746,6 @@
   .hub-feed-empty { animation: none; }
   .tab-underline, .bottom-nav-ind { transition: none; }
   .bottom-nav-btn.active .bottom-nav-icon { transform: none; }
-  .hub-game-card::after { display: none; }
 }
 
 // Botón de amistad en las tarjetas del directorio (no debe empujar el layout de la tarjeta).
@@ -1054,245 +1013,6 @@
   accent-color: var(--steam);
 }
 
-.hub-card-selector {
-  gap: .85rem;
-  min-width: 0;
-}
-
-.hub-card-selector-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: .6rem;
-  min-width: 0;
-}
-
-.hub-card-selector-head > div {
-  min-width: 0;
-}
-
-/* Contador "x / N": comunica el límite de favoritos y vira a verde al alcanzarlo. */
-.hub-card-selector-counter {
-  flex-shrink: 0;
-  display: inline-flex;
-  align-items: baseline;
-  padding: .26rem .7rem;
-  border-radius: var(--radius-pill);
-  border: 1px solid var(--border);
-  background: var(--surface-soft);
-  color: var(--hub-text-muted);
-  font-size: .82rem;
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-  letter-spacing: .02em;
-  transition: color .2s ease, border-color .2s ease, background .2s ease;
-}
-
-.hub-card-selector-counter.is-full {
-  color: var(--fg-green);
-  border-color: rgba(var(--success-rgb),.5);
-  background: rgba(var(--success-rgb),.14);
-}
-
-.hub-card-selector-search {
-  display: flex;
-  flex-direction: column;
-  gap: .35rem;
-  min-width: 0;
-}
-
-.hub-card-selector-search .finput {
-  width: 100%;
-  min-width: 0;
-}
-
-.hub-card-selector-search span {
-  color: var(--text-muted);
-  font-size: .75rem;
-  letter-spacing: .03em;
-  text-transform: uppercase;
-  font-weight: 700;
-}
-
-.hub-card-selector-empty {
-  color: var(--text-muted);
-  font-style: italic;
-}
-
-/* Rejilla adaptativa de favoritos (rediseño): las tarjetas se reparten el ancho y bajan de fila; con scroll
-   vertical si hay muchas, para no alargar el editor. */
-.hub-card-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(10.5rem, 100%), 1fr));
-  gap: .6rem;
-  padding: .2rem .15rem;
-  max-height: 22rem;
-  overflow-y: auto;
-  scrollbar-width: thin;
-}
-.hub-card-grid::-webkit-scrollbar { width: 7px; }
-.hub-card-grid::-webkit-scrollbar-thumb { background: var(--border); border-radius: var(--radius-pill); }
-
-.hub-card-row {
-  display: grid;
-  grid-auto-flow: column;
-  grid-auto-columns: minmax(10rem, 11.5rem);
-  gap: .6rem;
-  overflow-x: auto;
-  overflow-y: hidden;
-  padding: .5rem .15rem .7rem;
-  scroll-snap-type: x proximity;
-  scrollbar-width: thin;
-  cursor: grab;
-  /* Desvanecido en los bordes: pista de que hay más cards para desplazar. */
-  -webkit-mask-image: linear-gradient(to right, transparent 0, #000 1.1rem, #000 calc(100% - 1.1rem), transparent 100%);
-  mask-image: linear-gradient(to right, transparent 0, #000 1.1rem, #000 calc(100% - 1.1rem), transparent 100%);
-}
-
-.hub-card-row.is-dragging {
-  cursor: grabbing;
-  scroll-snap-type: none;
-}
-
-.hub-card-row::-webkit-scrollbar {
-  height: 7px;
-}
-
-.hub-card-row::-webkit-scrollbar-thumb {
-  background: var(--border);
-  border-radius: var(--radius-pill);
-}
-
-.hub-card-row::-webkit-scrollbar-thumb:hover {
-  background: var(--steam);
-}
-
-.hub-game-card {
-  position: relative;
-  scroll-snap-align: start;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  background: var(--surface-elevated);
-  color: var(--text);
-  min-height: 6.4rem;
-  padding: .75rem .8rem;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  gap: .5rem;
-  text-align: left;
-  font-family: inherit;
-  cursor: pointer;
-  transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease, background .18s ease;
-}
-
-.hub-game-card:hover {
-  transform: translateY(-2px);
-  border-color: var(--steam);
-  box-shadow: var(--shadow);
-}
-
-.hub-game-card:focus-visible {
-  outline: 2px solid var(--steam);
-  outline-offset: 2px;
-}
-
-/* Cupo lleno: las tarjetas no seleccionables se atenúan y no reaccionan. */
-.hub-game-card:disabled {
-  opacity: .4;
-  cursor: not-allowed;
-}
-.hub-game-card:disabled:hover {
-  transform: none;
-  border-color: var(--border);
-  box-shadow: none;
-}
-.hub-game-card:disabled::after { display: none; }
-
-/* Tonos de gris variados por posición (base = --surface-elevated): sutil, solo para distinguir vecinas. */
-.hub-game-card--1 { background: color-mix(in srgb, var(--surface-elevated) 95%, #fff); }
-.hub-game-card--2 { background: color-mix(in srgb, var(--surface-elevated) 95%, #000); }
-.hub-game-card--3 { background: color-mix(in srgb, var(--surface-elevated) 90%, #fff); }
-.hub-game-card--4 { background: color-mix(in srgb, var(--surface-elevated) 90%, #000); }
-
-.hub-game-card.is-selected {
-  border-color: rgba(var(--success-rgb),.65);
-  background: linear-gradient(155deg, rgba(var(--success-rgb),.16), var(--surface-elevated));
-  box-shadow: inset 0 0 0 1px rgba(var(--success-rgb),.4);
-}
-
-.hub-game-card.is-selected:hover {
-  border-color: rgba(var(--success-rgb),.85);
-}
-
-/* Indicador de selección en la esquina: anillo hueco cuando no está; disco verde con check cuando sí. */
-.hub-game-card-check {
-  position: absolute;
-  top: .55rem;
-  right: .55rem;
-  width: 1.25rem;
-  height: 1.25rem;
-  border-radius: 50%;
-  border: 1.5px solid var(--border);
-  background: transparent;
-  transition: background .18s ease, border-color .18s ease;
-}
-
-.hub-game-card:hover .hub-game-card-check {
-  border-color: var(--steam);
-}
-
-.hub-game-card.is-selected .hub-game-card-check {
-  border-color: var(--success);
-  background: var(--success);
-}
-
-.hub-game-card.is-selected .hub-game-card-check::after {
-  content: "";
-  position: absolute;
-  top: 47%;
-  left: 50%;
-  width: .3rem;
-  height: .58rem;
-  border: solid #fff;
-  border-width: 0 2px 2px 0;
-  transform: translate(-50%, -58%) rotate(45deg);
-}
-
-.hub-game-card.is-read-only {
-  cursor: default;
-}
-
-.hub-game-card.is-read-only:hover {
-  transform: none;
-  border-color: var(--border);
-  box-shadow: none;
-}
-
-.hub-game-card-title {
-  font-size: .92rem;
-  font-weight: 700;
-  line-height: 1.25;
-  padding-right: 1.3rem;
-  display: -webkit-box;
-  line-clamp: 2;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-
-.hub-game-card-status {
-  font-size: .72rem;
-  letter-spacing: .04em;
-  text-transform: uppercase;
-  color: var(--text-muted);
-  font-weight: 700;
-}
-
-.hub-game-card.is-selected .hub-game-card-status {
-  color: var(--fg-green);
-}
-
 .hub-hub-head {
   display: flex;
   align-items: center;
@@ -1550,21 +1270,6 @@ button.hub-chip.active {
 .hub-feed-profile-item {
   cursor: pointer;
   transition: transform .2s ease, border-color .2s ease, box-shadow .2s ease;
-}
-/* Favoritos del perfil (por defecto, p. ej. "Favoritos publicados" del detalle):
-   en línea horizontal; cuando no cabe, la pastilla salta entera (el chip ya es
-   white-space: nowrap, así que el nombre nunca se parte). */
-.hub-profile-fav-chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: .35rem;
-}
-/* En las cards del directorio de perfiles: uno por línea, cada pastilla ajustada
-   al ancho de su nombre (align-items: flex-start evita estirarla a toda la card). */
-.hub-feed-profile-item .hub-profile-fav-chips {
-  flex-direction: column;
-  flex-wrap: nowrap;
-  align-items: flex-start;
 }
 /* Botón "Mostrar más" del feed, centrado bajo la lista. */
 .hub-feed-load-more {
@@ -2440,8 +2145,7 @@ button.hub-chip.active {
   }
 }
 
-/* El editor de perfil va siempre a una columna: los tres bloques con la MISMA anchura (Favoritos solo es
-   más alto por sus filas de tarjetas). */
+/* El editor de perfil va siempre a una columna: los bloques comparten la MISMA anchura. */
 
 @media (min-width:1957px) {
   .status-banner,
@@ -2534,21 +2238,8 @@ button.hub-chip.active {
     height: 1rem;
   }
 
-  .hub-profile-card .hub-profile-block > p,
-  .hub-profile-card .hub-card-selector-head p,
-  .hub-profile-card .hub-card-selector-search span,
-  .hub-profile-card .hub-game-card-status {
+  .hub-profile-card .hub-profile-block > p {
     display: none;
-  }
-
-  .hub-profile-card .hub-game-card {
-    min-height: 4.8rem;
-  }
-
-  .hub-card-row {
-    grid-auto-columns: minmax(9.5rem, 11.2rem);
-    padding-top: .4rem;
-    padding-bottom: .6rem;
   }
 
   .hub-feed-row {

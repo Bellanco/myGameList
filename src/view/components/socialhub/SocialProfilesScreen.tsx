@@ -47,7 +47,7 @@ function SocialProfilesScreenBase({
   status: string;
   statusKind: string;
 }) {
-  // Dos listas: amigos y no-amigos. La relación sale de `relationshipWith` (los amigos ya tienen sus favoritos del gist).
+  // Dos listas: amigos y no-amigos. La relación sale de `relationshipWith`.
   const friendProfiles = filteredSocialDirectory.filter((entry) => relationshipWith(entry.uid) === 'friends');
   const otherProfiles = filteredSocialDirectory.filter((entry) => relationshipWith(entry.uid) !== 'friends');
 
@@ -66,15 +66,6 @@ function SocialProfilesScreenBase({
           <h3>{entry.displayName}</h3>
         </div>
       </header>
-      {entry.favorites.length ? (
-        <div className="hub-profile-fav-chips">
-          {entry.favorites.map((name: string, i: number) => (
-            <span key={`${name}-${i}`} className="hub-feed-game-chip">{name}</span>
-          ))}
-        </div>
-      ) : (
-        <p>{SOCIAL_UI.profiles.noFavorites}</p>
-      )}
       {/* La acción de amistad no debe abrir el detalle: se detiene la propagación del click/teclado. */}
       <div
         className="hub-card-friend-action"

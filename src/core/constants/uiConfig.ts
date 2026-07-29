@@ -1,6 +1,3 @@
-// Máximo de juegos favoritos que se pueden destacar en el perfil social.
-export const MAX_SOCIAL_FAVORITES = 5;
-
 export const HOURS_RANGES = [
   { key: '0-5', label: 'Menos de 5 horas', shortLabel: 'Menos de 5h', check: (h: number) => h > 0 && h <= 5 },
   { key: '5-10', label: 'De 5 a 10 horas', shortLabel: '5 - 10h', check: (h: number) => h > 5 && h <= 10 },

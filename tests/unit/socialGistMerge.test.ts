@@ -33,13 +33,11 @@ function gist(input: {
   updatedAt: number;
   activity?: SocialGistData['activity'];
   posts?: SocialGistData['posts'];
-  favorites?: Array<{ id: number; name: string }>;
 }): SocialGistData {
   return {
     profile: {
       name: input.name ?? 'Ada',
       private: false,
-      favoriteGames: input.favorites ?? [],
       visibility: { hiddenTabs: [], hideReplayable: false, hideRetry: false, hideGameTime: false, showPhoto: true },
       sharedLists: {},
     },
@@ -79,12 +77,11 @@ describe('mergeSocialGistData (deriva de gist social)', () => {
   });
 
   it('el perfil sale del gist con updatedAt mayor', () => {
-    const viejo = gist({ name: 'Nick viejo', updatedAt: 5_000, favorites: [{ id: 1, name: 'Celeste' }] });
-    const nuevo = gist({ name: 'Nick nuevo', updatedAt: 9_000, favorites: [{ id: 2, name: 'Hades' }] });
+    const viejo = gist({ name: 'Nick viejo', updatedAt: 5_000 });
+    const nuevo = gist({ name: 'Nick nuevo', updatedAt: 9_000 });
 
     expect(mergeSocialGistData(viejo, nuevo).profile.name).toBe('Nick nuevo');
     expect(mergeSocialGistData(nuevo, viejo).profile.name).toBe('Nick nuevo');
-    expect(mergeSocialGistData(viejo, nuevo).profile.favoriteGames).toEqual([{ id: 2, name: 'Hades' }]);
   });
 
   it('une también las publicaciones, deduplicadas por id', () => {

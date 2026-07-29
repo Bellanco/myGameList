@@ -108,9 +108,9 @@ export default function App() {
   // devuelve el uid para gatear la opción en Ajustes. Se monta aquí para que la escala esté en toda la app.
   const { uid: scoreScaleUid, ready: authReady } = useScoreScaleSession();
   // El botón flotante de Cuenta se muestra solo si hay PERFIL SOCIAL COMPLETO (no basta la sesión de Google ni el
-  // gist enlazado): si un favorito apunta a un juego borrado, el perfil deja de estar completo y el botón se oculta
-  // para no poder navegar a `/cuenta` hasta arreglarlo. Los ids de completados (misma fuente que los favoritos
-  // válidos) se pasan para que el gate sea reactivo al borrar juegos, sin lecturas de red.
+  // gist enlazado): sin ningún juego completado el perfil deja de estar completo y el botón se oculta para no poder
+  // navegar a `/cuenta` hasta arreglarlo. Los ids de completados se pasan para que el gate sea reactivo al borrar
+  // juegos, sin lecturas de red.
   const completedGameIds = useMemo(
     () => new Set(vm.data.c.filter((game) => game.id > 0 && game.name).map((game) => game.id)),
     [vm.data.c],
@@ -348,7 +348,11 @@ export default function App() {
         deleted: payload.deleted || [],
         updatedAt: Date.now(),
       };
-      const normalizedData = normalizeData(nextData, { forceTimestamp: true });
+      // `bumpChangedAgainst` en vez de `forceTimestamp`: lo importado tiene que ganar el merge frente a otros
+      // dispositivos, pero solo necesita estrenar `_ts` lo que de verdad cambia. Sellar la biblioteca entera
+      // borraba la fecha de modificación de todos los juegos (y con ella la única pista de cuándo se escribió
+      // cada reseña, que es lo que el canal social publica).
+      const normalizedData = normalizeData(nextData, { bumpChangedAgainst: vm.data });
       normalizedData.updatedAt = Date.now();
 
       persist(normalizedData);
@@ -367,7 +371,7 @@ export default function App() {
     } catch {
       notify('err', 'Archivo JSON no válido');
     }
-  }, [notify, persist, syncVm]);
+  }, [notify, persist, syncVm, vm.data]);
 
   const handleFiltersToggle = useCallback(() => {
     setFiltersOpen((prev) => !prev);

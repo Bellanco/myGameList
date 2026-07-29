@@ -8,22 +8,22 @@ function localSocialGistId(): string {
   return getSocialSyncConfig()?.gistId?.trim() || '';
 }
 
-type ProfileIdentity = { name: string; favorites: number[] };
+type ProfileIdentity = { name: string };
 
 /**
  * Indica si el usuario tiene un PERFIL SOCIAL **completo** (no solo sesión + gist): exige sesión de Google, un gist
- * social enlazado Y que el perfil sea válido con la MISMA regla que `useSocialViewModel` (nombre + ≥1 favorito, sin
- * favoritos huérfanos). El botón flotante de Cuenta se gatea con esto: si un favorito apunta a un juego borrado, el
- * perfil deja de estar completo y el botón desaparece para no poder navegar a `/cuenta` hasta arreglarlo.
+ * social enlazado Y que el perfil sea válido con la MISMA regla que `useSocialViewModel` (nombre + al menos un juego
+ * completado). El botón flotante de Cuenta se gatea con esto: si el usuario se queda sin completados, el perfil deja
+ * de estar completo y el botón desaparece para no poder navegar a `/cuenta` hasta arreglarlo.
  *
- * `completedGameIds` son los ids de la pestaña de completados (misma fuente que los favoritos válidos). La
- * completitud se recalcula cuando cambian (p. ej. al borrar un juego), así el gate es reactivo sin red.
+ * `completedGameIds` son los ids de la pestaña de completados. La completitud se recalcula cuando cambian (p. ej. al
+ * borrar el último juego), así el gate es reactivo sin red.
  *
- * Se monta en la raíz (App). La identidad (nombre + favoritos guardados) se lee de la caché persistente ignorando
- * el TTL (los favoritos no caducan) y se refresca al navegar, de modo que tras re-guardar el perfil el botón vuelve
- * a aparecer. Caso residual: dispositivo donde NUNCA se ha abierto Social → sin identidad cacheada no se puede
- * probar incompletitud sin red, así que se mantiene el comportamiento previo (mostrar el botón); el editor del hub
- * social corrige en la primera visita.
+ * Se monta en la raíz (App). La identidad (el nombre guardado) se lee de la caché persistente ignorando el TTL (el
+ * nombre no caduca) y se refresca al navegar, de modo que tras re-guardar el perfil el botón vuelve a aparecer.
+ * Caso residual: dispositivo donde NUNCA se ha abierto Social → sin identidad cacheada no se puede probar
+ * incompletitud sin red, así que se mantiene el comportamiento previo (mostrar el botón); el editor del hub social
+ * corrige en la primera visita.
  */
 export function useSocialProfileSession(completedGameIds: ReadonlySet<number>): boolean {
   const { pathname } = useLocation();
@@ -63,8 +63,8 @@ export function useSocialProfileSession(completedGameIds: ReadonlySet<number>): 
     };
   }, []);
 
-  // Identidad cacheada (nombre + favoritos). Se relee al cambiar el gist o al navegar: así, tras re-guardar el
-  // perfil (que actualiza la caché y navega), el gate refleja los favoritos nuevos sin esperar a re-autenticar.
+  // Identidad cacheada (el nombre). Se relee al cambiar el gist o al navegar: así, tras re-guardar el perfil (que
+  // actualiza la caché y navega), el gate refleja el nombre nuevo sin esperar a re-autenticar.
   useEffect(() => {
     let cancelled = false;
     if (!gistId) {
@@ -86,11 +86,6 @@ export function useSocialProfileSession(completedGameIds: ReadonlySet<number>): 
     if (identity === undefined) return false;
     // Leído sin registro (nunca se abrió Social en este dispositivo): no se puede probar incompletitud sin red.
     if (identity === null) return true;
-    const validFavorites = identity.favorites.filter((id) => completedGameIds.has(id));
-    return (
-      Boolean(identity.name.trim()) &&
-      validFavorites.length > 0 &&
-      validFavorites.length === identity.favorites.length
-    );
+    return Boolean(identity.name.trim()) && completedGameIds.size > 0;
   }, [gistId, identity, completedGameIds]);
 }

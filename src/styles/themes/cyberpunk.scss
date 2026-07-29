@@ -376,8 +376,6 @@
 /* ── §13 · Barra de navegación inferior: HUD — filete cian + barra amarilla lateral, esquinas rectas. ── */
 :root[data-palette="cyberpunk"] .bottom-nav-inner { border: 1px solid rgba(0, 240, 255, .35); border-left: 3px solid var(--cyber-yellow); border-radius: 0; background: var(--surface); }
 :root[data-palette="cyberpunk"] .bottom-nav-ind { border-radius: 0; }
-/* Favoritos publicados: marco HUD — recto, filete cian; lomos variados en `--deco-shelf-*`. */
-:root[data-palette="cyberpunk"] .hub-fav-cart { border: 1px solid rgba(0, 240, 255, .35); border-radius: 0; }
 
 /* ══ EFECTOS · subrayado/halo neón en enlaces al hover (se suma al glitch de firma). Solo `data-effects="on"`. ══ */
 :root[data-effects="on"][data-palette="cyberpunk"] .hub-name-link:hover,
@@ -403,22 +401,3 @@
 :root:not([data-effects="on"])[data-palette="grimdark"] .fab,
 :root:not([data-effects="on"])[data-palette="grimdark"] .fab-roulette { animation: none !important; }
 
-/* ══ EFECTOS · corchetes de "LOCK-ON" (óptica Kiroshi) al pasar el ratón por las tarjetas de favoritos.
-   Solo con `data-effects="on"`. `.hub-fav-cart` no usa ::before/::after (su barra superior es un hijo),
-   así que las esquinas cian van en esos pseudos. ══ */
-:root[data-effects="on"][data-palette="cyberpunk"] .hub-fav-cart { position: relative; }
-:root[data-effects="on"][data-palette="cyberpunk"] .hub-fav-cart::before,
-:root[data-effects="on"][data-palette="cyberpunk"] .hub-fav-cart::after {
-  content: ""; position: absolute; width: 14px; height: 14px; border: 2px solid #00f0ff;
-  opacity: 0; transition: opacity .2s ease, transform .2s ease; pointer-events: none;
-}
-:root[data-effects="on"][data-palette="cyberpunk"] .hub-fav-cart::before {
-  top: 5px; left: 5px; border-right: 0; border-bottom: 0; transform: translate(6px, 6px);
-}
-:root[data-effects="on"][data-palette="cyberpunk"] .hub-fav-cart::after {
-  bottom: 5px; right: 5px; border-left: 0; border-top: 0; transform: translate(-6px, -6px);
-}
-:root[data-effects="on"][data-palette="cyberpunk"] .hub-fav-cart:hover::before,
-:root[data-effects="on"][data-palette="cyberpunk"] .hub-fav-cart:hover::after {
-  opacity: 1; transform: translate(0, 0);
-}

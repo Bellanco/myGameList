@@ -185,7 +185,7 @@ describe('6.2b: lectores de identidad y remapSocialActorIds (uid→profileId en 
 
   it('remapSocialActorIds reemplaza el uid propio por su profileId y reconstruye key/id', () => {
     const data = {
-      profile: { name: '', private: false, favoriteGames: [], visibility: { hiddenTabs: [], hideReplayable: false, hideRetry: false, hideGameTime: false, showPhoto: true }, sharedLists: {} },
+      profile: { name: '', private: false, visibility: { hiddenTabs: [], hideReplayable: false, hideRetry: false, hideGameTime: false, showPhoto: true }, sharedLists: {} },
       activity: [{ id: 'my-uid:5:review', key: 'my-uid:5:review', type: 'review' as const, actorProfileId: 'my-uid', actorName: 'N', gameId: 5, gameName: 'G', rating: 5, grade: 100, recommendationText: '', snippet: 's', createdAt: 1, updatedAt: 1 }],
       updatedAt: 1,
       schemaVersion: 2,
@@ -198,7 +198,7 @@ describe('6.2b: lectores de identidad y remapSocialActorIds (uid→profileId en 
 
   it('remapSocialActorIds NO toca ids ajenos (mapa vacío) — degradación suave para otros usuarios', () => {
     const data = {
-      profile: { name: '', private: false, favoriteGames: [], visibility: { hiddenTabs: [], hideReplayable: false, hideRetry: false, hideGameTime: false, showPhoto: true }, sharedLists: {} },
+      profile: { name: '', private: false, visibility: { hiddenTabs: [], hideReplayable: false, hideRetry: false, hideGameTime: false, showPhoto: true }, sharedLists: {} },
       activity: [{ id: 'other-uid:5:review', key: 'other-uid:5:review', type: 'review' as const, actorProfileId: 'other-uid', actorName: 'N', gameId: 5, gameName: 'G', rating: 5, grade: 100, recommendationText: '', snippet: 's', createdAt: 1, updatedAt: 1 }],
       updatedAt: 1,
       schemaVersion: 2,
@@ -278,7 +278,7 @@ describe('E1: leanTabData (serialización magra)', () => {
 
 describe('F6.1: assertValidSocialGist (allowlist estricta Zod)', () => {
   const emptySocial = {
-    profile: { name: '', private: false, favoriteGames: [], visibility: { hiddenTabs: [], hideReplayable: false, hideRetry: false, hideGameTime: false, showPhoto: true }, sharedLists: {} },
+    profile: { name: '', private: false, visibility: { hiddenTabs: [], hideReplayable: false, hideRetry: false, hideGameTime: false, showPhoto: true }, sharedLists: {} },
     activity: [],
     updatedAt: 0,
     schemaVersion: 2,
@@ -286,6 +286,16 @@ describe('F6.1: assertValidSocialGist (allowlist estricta Zod)', () => {
 
   it('acepta un gist social normalizado válido', () => {
     expect(() => assertValidSocialGist(emptySocial)).not.toThrow();
+  });
+
+  it('tolera `favoriteGames` de un gist antiguo (el producto ya no publica favoritos)', () => {
+    // La normalización lo descarta al leer, así que nunca se vuelve a escribir; pero un payload legacy que aún lo
+    // lleve debe seguir validando para no romper a quien no haya reescrito su perfil todavía.
+    const legacyFavorites = {
+      ...emptySocial,
+      profile: { ...emptySocial.profile, favoriteGames: [{ id: 1, name: 'Halo' }] },
+    };
+    expect(() => assertValidSocialGist(legacyFavorites)).not.toThrow();
   });
 
   it('ST3: rechaza el array `recommendations` legacy (top-level o en profile) — ya fuera de la allowlist', () => {
