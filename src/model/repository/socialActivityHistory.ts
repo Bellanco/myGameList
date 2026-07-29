@@ -17,7 +17,7 @@ import {
   saveSocialSyncConfig,
   writeSocialGist,
 } from './gistRepository';
-import { invalidateCachedSocialDirectory } from './indexedDbRepository';
+import { getCachedSocialDirectory, invalidateCachedSocialDirectory } from './indexedDbRepository';
 import { loadLocalState } from './localRepository';
 import { resolveSocialChannel } from './socialChannel';
 
@@ -69,6 +69,73 @@ export interface DateAuditReport {
    * local, lo que muestra la pestaña Reseñas). Si ambas columnas coinciden, feed y listado están de acuerdo.
    */
   datesByDay: Array<{ day: string; enGist: number; enListado: number }>;
+}
+
+/**
+ * Sonda de diagnóstico (solo lectura): compara, reseña a reseña, la fecha publicada en el GIST con la que hay en
+ * la CACHÉ DEL DIRECTORIO (que es la que alimenta al hub: feed y pestaña Reseñas) y con las locales del juego.
+ * Sirve para saber si una discrepancia entre el feed y el listado viene de datos rancios o de la propia vista.
+ */
+export async function inspectReviewDates(): Promise<{
+  gistId: string;
+  cacheEntryFound: boolean;
+  cacheActivityCount: number;
+  rows: Array<{ gameId: number; gameName: string; enGist: number; enCache: number; ts: number; reviewedAt: number }>;
+  mismatchesGistVsCache: number;
+} | null> {
+  const authUser = await getCurrentSocialAuthUser();
+  if (!authUser) return null;
+  const resolved = await resolveSocialChannel({ email: authUser.email });
+  if (resolved.status !== 'ready') return null;
+  const { token, gistId } = resolved.channel;
+
+  const socialRead = await readSocialGist(token, gistId, null);
+  const enGist = new Map<number, { date: number; name: string }>();
+  (socialRead.data.activity || []).forEach((entry) => {
+    if (entry.type === 'review') enGist.set(entry.gameId, { date: entry.updatedAt, name: entry.gameName });
+  });
+
+  // Entrada PROPIA del directorio cacheado: es lo que el hub sirve sin releer nada.
+  type CachedEntry = { socialGistId?: string; activity?: Array<{ type: string; gameId: number; updatedAt: number }> };
+  const cached = await getCachedSocialDirectory<CachedEntry>(gistId);
+  const own = (cached || []).find((entry) => entry.socialGistId === gistId) || null;
+  const enCache = new Map<number, number>();
+  (own?.activity || []).forEach((entry) => {
+    if (entry.type === 'review') enCache.set(Number(entry.gameId), Number(entry.updatedAt));
+  });
+
+  const locales = new Map<number, { ts: number; reviewedAt: number }>();
+  const local = loadLocalState();
+  TAB_IDS.forEach((tab) => {
+    (local[tab] || []).forEach((game) => {
+      if (Number(game.id) > 0 && String(game.review || '').trim()) {
+        locales.set(Number(game.id), { ts: Number(game._ts || 0), reviewedAt: Number(game.reviewedAt || 0) });
+      }
+    });
+  });
+
+  let mismatchesGistVsCache = 0;
+  const rows = [...enGist.entries()].map(([gameId, info]) => {
+    const cacheDate = enCache.get(gameId) || 0;
+    if (cacheDate && Math.abs(cacheDate - info.date) > 1000) mismatchesGistVsCache += 1;
+    return {
+      gameId,
+      gameName: info.name,
+      enGist: info.date,
+      enCache: cacheDate,
+      ts: locales.get(gameId)?.ts || 0,
+      reviewedAt: locales.get(gameId)?.reviewedAt || 0,
+    };
+  });
+  rows.sort((a, b) => a.enGist - b.enGist);
+
+  return {
+    gistId,
+    cacheEntryFound: Boolean(own),
+    cacheActivityCount: enCache.size,
+    rows,
+    mismatchesGistVsCache,
+  };
 }
 
 /** A partir de cuántas reseñas compartiendo el MISMO día de `_ts` se considera que ese día es un sello en bloque. */
