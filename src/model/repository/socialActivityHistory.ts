@@ -149,7 +149,14 @@ export async function repairUndatedHistoryDates(options: {
   const nextActivity = (socialRead.data.activity || []).map((entry) => {
     if (entry.type !== 'review') return entry;
     const localTs = tsByGame.get(entry.gameId) || 0;
-    const sellada = localTs > 0 && isBulkDay.has(dayOf(localTs)) && Math.abs(entry.updatedAt - localTs) <= SAME_STAMP_TOLERANCE_MS;
+    // Dos formas de reconocer una fecha que viene de un sello en bloque:
+    //  1) la fecha PUBLICADA cae en un día sellado. Es la señal directa, y la que cubre a las entradas cuyo
+    //     `_ts` volvió a saltar con una importación POSTERIOR a su publicación (entrada del día 26, `_ts` del 27).
+    //  2) la fecha publicada coincide (±1 h) con el `_ts` del juego, siendo ese día un sello.
+    // Las publicadas en su día no cumplen ninguna: su fecha cae en un día normal, sin sello en bloque.
+    const sellada =
+      isBulkDay.has(dayOf(entry.updatedAt)) ||
+      (localTs > 0 && isBulkDay.has(dayOf(localTs)) && Math.abs(entry.updatedAt - localTs) <= SAME_STAMP_TOLERANCE_MS);
     if (!sellada) {
       keeping.push({ gameId: entry.gameId, gameName: entry.gameName, date: entry.updatedAt });
       return entry;
