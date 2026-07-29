@@ -21,7 +21,6 @@ describe('SocialProfileDetailScreen — listados', () => {
           displayName: 'Yo',
           visibility: { hiddenTabs: [], hideReplayable: false, hideRetry: false, hideGameTime: false },
           sharedLists: { c: [game(1, 'Halo'), game(2, 'Zelda')], v: [], e: [], p: [] },
-          favorites: [],
         }}
         onBack={vi.fn()}
         showReviews={false}
@@ -46,7 +45,6 @@ describe('SocialProfileDetailScreen — listados', () => {
           displayName: 'Yo',
           visibility: { hiddenTabs: ['p'], hideReplayable: false, hideRetry: false, hideGameTime: false },
           sharedLists: { c: [game(1, 'Halo')], v: [], e: [], p: [game(9, 'Oculto')] },
-          favorites: [],
         }}
         onBack={vi.fn()}
         showReviews={false}
@@ -69,7 +67,6 @@ describe('SocialProfileDetailScreen — gating por amistad', () => {
     displayName: 'Ada',
     visibility: { hiddenTabs: [], hideReplayable: false, hideRetry: false, hideGameTime: false },
     sharedLists: { c: [game(1, 'Halo')], v: [], e: [], p: [] },
-    favorites: ['Halo'],
   };
 
   it('no-amigo: oculta reseñas/ruleta/listados, muestra aviso y botón Añadir amigo', () => {
@@ -117,8 +114,8 @@ describe('SocialProfileDetailScreen — gating por amistad', () => {
 
     expect(screen.getByRole('button', { name: SOCIAL_UI.feed.reviewsButton })).toBeInTheDocument();
     expect(screen.getByText('Elige tu próximo juego')).toBeInTheDocument();
-    // "Halo" aparece como chip de favorito y como fila del listado → basta con que exista al menos una vez.
-    expect(screen.getAllByText('Halo').length).toBeGreaterThan(0);
+    // El listado del amigo se muestra: su juego aparece como fila.
+    expect(screen.getByText('Halo')).toBeInTheDocument();
     // Y ofrece eliminar amistad.
     expect(screen.getByLabelText(SOCIAL_UI.friendship.removeAria('Ada'))).toBeInTheDocument();
   });

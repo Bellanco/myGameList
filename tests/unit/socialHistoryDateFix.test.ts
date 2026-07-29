@@ -65,7 +65,7 @@ function reviewEntry(gameId: number, gameName: string, updatedAt: number) {
 function socialGist(activity: SocialGistData['activity']): SocialGistData {
   return {
     profile: {
-      name: 'Nick', private: false, favoriteGames: [],
+      name: 'Nick', private: false,
       visibility: { hiddenTabs: [], hideReplayable: false, hideRetry: false, hideGameTime: false, showPhoto: true },
       sharedLists: {},
     },

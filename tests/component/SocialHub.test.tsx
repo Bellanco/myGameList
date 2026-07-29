@@ -34,7 +34,7 @@ const gistMocks = vi.hoisted(() => ({
   createSocialGist: vi.fn(async () => ({ gistId: 'g', etag: null })),
   readSocialGist: vi.fn(async (): Promise<any> => ({
     data: {
-      profile: { name: '', private: false, favoriteGames: [], recommendations: [], visibility: { hiddenTabs: [], hideReplayable: false, hideRetry: false, hideGameTime: false }, sharedLists: {} },
+      profile: { name: '', private: false, recommendations: [], visibility: { hiddenTabs: [], hideReplayable: false, hideRetry: false, hideGameTime: false }, sharedLists: {} },
       recommendations: [],
       activity: [],
       updatedAt: 0,
@@ -122,14 +122,14 @@ describe('SocialHub (componente, post-M3)', () => {
   it('feed solo-amigos: muestra la actividad del amigo y NO lee el gist del no-amigo', async () => {
     firebaseMocks.getCurrentSocialAuthUser.mockResolvedValue({ uid: 'me', email: 'me@x.com', displayName: 'Me', photoURL: null });
     gistMocks.getSocialSyncConfig.mockReturnValue({ token: 'ghp_x', gistId: 'my-social', etag: null, lastRemoteUpdatedAt: 0 });
-    // Perfil propio completo (nombre + 1 favorito presente en local) → no redirige al editor.
+    // Perfil propio completo (nombre + 1 juego completado en local) → no redirige al editor.
     localMocks.loadLocalState.mockReturnValue({
       c: [{ id: 1, name: 'Halo', _ts: 1, platforms: [], genres: [], steamDeck: false, review: '', score: 5, years: [], strengths: [], weaknesses: [], reasons: [], replayable: false, retry: false, hours: 0 }],
       v: [], e: [], p: [], deleted: [], updatedAt: 0,
     });
     gistMocks.readSocialGist.mockResolvedValue({
       data: {
-        profile: { name: 'Me', private: false, favoriteGames: [{ id: 1, name: 'Halo' }], visibility: { hiddenTabs: [], hideReplayable: false, hideRetry: false, hideGameTime: false, showPhoto: true }, sharedLists: {} },
+        profile: { name: 'Me', private: false, visibility: { hiddenTabs: [], hideReplayable: false, hideRetry: false, hideGameTime: false, showPhoto: true }, sharedLists: {} },
         recommendations: [], activity: [], posts: [], updatedAt: 0,
       },
       etag: null,
@@ -145,13 +145,13 @@ describe('SocialHub (componente, post-M3)', () => {
     gistMocks.readPublicSocialGistById.mockImplementation(async (gistId?: string) => {
       if (gistId === 'ada-social') {
         return {
-          profile: { name: 'Ada', favoriteGames: [{ id: 9, name: 'Celeste' }], visibility: { hiddenTabs: [], hideReplayable: false, hideRetry: false, hideGameTime: false, showPhoto: true } },
+          profile: { name: 'Ada', visibility: { hiddenTabs: [], hideReplayable: false, hideRetry: false, hideGameTime: false, showPhoto: true } },
           activity: [{ id: 'a1', key: 'k1', type: 'review', actorProfileId: 'friendUid', actorName: 'Ada', gameId: 9, gameName: 'CelesteGame', rating: 5, recommendationText: '', snippet: 'genial', createdAt: 1000, updatedAt: 2000 }],
           posts: [],
         };
       }
       return {
-        profile: { name: 'Bob', favoriteGames: [], visibility: {} },
+        profile: { name: 'Bob', visibility: {} },
         activity: [{ id: 'b1', key: 'k2', type: 'review', actorProfileId: 'strangerUid', actorName: 'Bob', gameId: 3, gameName: 'BobGame', rating: 3, recommendationText: '', snippet: 'meh', createdAt: 1, updatedAt: 5 }],
         posts: [],
       };
@@ -177,7 +177,7 @@ describe('SocialHub (componente, post-M3)', () => {
     });
     gistMocks.readSocialGist.mockResolvedValue({
       data: {
-        profile: { name: 'Me', private: false, favoriteGames: [{ id: 1, name: 'Halo' }], visibility: { hiddenTabs: [], hideReplayable: false, hideRetry: false, hideGameTime: false, showPhoto: true }, sharedLists: {} },
+        profile: { name: 'Me', private: false, visibility: { hiddenTabs: [], hideReplayable: false, hideRetry: false, hideGameTime: false, showPhoto: true }, sharedLists: {} },
         recommendations: [], activity: [], posts: [], updatedAt: 0,
       },
       etag: null,
@@ -189,7 +189,7 @@ describe('SocialHub (componente, post-M3)', () => {
       incoming: [], outgoing: [], byOtherUid: {},
     });
     gistMocks.readPublicSocialGistById.mockImplementation(async () => ({
-      profile: { name: 'Ada', favoriteGames: [{ id: 9, name: 'Celeste' }], visibility: { hiddenTabs: [], hideReplayable: false, hideRetry: false, hideGameTime: false, showPhoto: true } },
+      profile: { name: 'Ada', visibility: { hiddenTabs: [], hideReplayable: false, hideRetry: false, hideGameTime: false, showPhoto: true } },
       activity: [{ id: 'a1', key: 'k1', type: 'review', actorProfileId: 'ada', actorName: 'Ada', gameId: 9, gameName: 'CelesteGame', rating: 5, recommendationText: '', snippet: 'genial', createdAt: 1000, updatedAt: 2000 }],
       posts: [],
     }));
@@ -211,7 +211,7 @@ describe('SocialHub (componente, post-M3)', () => {
     });
     gistMocks.readSocialGist.mockResolvedValue({
       data: {
-        profile: { name: 'Me', private: false, favoriteGames: [{ id: 1, name: 'Halo' }], visibility: { hiddenTabs: [], hideReplayable: false, hideRetry: false, hideGameTime: false, showPhoto: true }, sharedLists: {} },
+        profile: { name: 'Me', private: false, visibility: { hiddenTabs: [], hideReplayable: false, hideRetry: false, hideGameTime: false, showPhoto: true }, sharedLists: {} },
         recommendations: [], activity: [], posts: [], updatedAt: 0,
       },
       etag: null,
@@ -227,13 +227,13 @@ describe('SocialHub (componente, post-M3)', () => {
     gistMocks.readPublicSocialGistById.mockImplementation(async (gistId?: string) => {
       if (gistId === 'ada-social-NEW') {
         return {
-          profile: { name: 'Ada', favoriteGames: [], visibility: { hiddenTabs: [], hideReplayable: false, hideRetry: false, hideGameTime: false, showPhoto: true } },
+          profile: { name: 'Ada', visibility: { hiddenTabs: [], hideReplayable: false, hideRetry: false, hideGameTime: false, showPhoto: true } },
           activity: [{ id: 'a1', key: 'k1', type: 'review', actorProfileId: 'ada', actorName: 'Ada', gameId: 9, gameName: 'CelesteGame', rating: 5, recommendationText: '', snippet: 'genial', createdAt: 1000, updatedAt: 2000 }],
           posts: [],
         };
       }
       // El gist obsoleto está vacío (como el 64d4d0f… real).
-      return { profile: { name: 'Ada', favoriteGames: [], visibility: {} }, activity: [], posts: [] };
+      return { profile: { name: 'Ada', visibility: {} }, activity: [], posts: [] };
     });
 
     renderHub('/social');
@@ -254,7 +254,7 @@ describe('SocialHub (componente, post-M3)', () => {
     });
     gistMocks.readSocialGist.mockResolvedValue({
       data: {
-        profile: { name: 'Me', private: false, favoriteGames: [{ id: 1, name: 'Halo' }], visibility: { hiddenTabs: [], hideReplayable: false, hideRetry: false, hideGameTime: false, showPhoto: true }, sharedLists: {} },
+        profile: { name: 'Me', private: false, visibility: { hiddenTabs: [], hideReplayable: false, hideRetry: false, hideGameTime: false, showPhoto: true }, sharedLists: {} },
         recommendations: [], activity: [], posts: [], updatedAt: 0,
       },
       etag: null,
@@ -268,7 +268,7 @@ describe('SocialHub (componente, post-M3)', () => {
       () => new Promise((resolve) => setTimeout(() => resolve({ friends: [ada], incoming: [], outgoing: [], byOtherUid: { ada } }), 30)),
     );
     gistMocks.readPublicSocialGistById.mockResolvedValue({
-      profile: { name: 'Ada', favoriteGames: [], visibility: {} },
+      profile: { name: 'Ada', visibility: {} },
       activity: [{ id: 'a1', key: 'k1', type: 'review', actorProfileId: 'ada', actorName: 'Ada', gameId: 9, gameName: 'CelesteGame', rating: 5, recommendationText: '', snippet: 'ok', createdAt: 1000, updatedAt: 2000 }],
       posts: [],
     });
@@ -288,7 +288,7 @@ describe('SocialHub (componente, post-M3)', () => {
     });
     gistMocks.readSocialGist.mockResolvedValue({
       data: {
-        profile: { name: 'Me', private: false, favoriteGames: [{ id: 1, name: 'Halo' }], visibility: { hiddenTabs: [], hideReplayable: false, hideRetry: false, hideGameTime: false, showPhoto: true }, sharedLists: {} },
+        profile: { name: 'Me', private: false, visibility: { hiddenTabs: [], hideReplayable: false, hideRetry: false, hideGameTime: false, showPhoto: true }, sharedLists: {} },
         recommendations: [], activity: [], posts: [], updatedAt: 0,
       },
       etag: null,
@@ -299,10 +299,10 @@ describe('SocialHub (componente, post-M3)', () => {
     firebaseMocks.getMyFriendships.mockResolvedValue({ friends: [ada, bob], incoming: [], outgoing: [], byOtherUid: { ada, bob } });
     gistMocks.readPublicSocialGistById.mockImplementation(async (gistId?: string) => {
       if (gistId === 'ada-social') {
-        return { profile: { name: 'Ada', favoriteGames: [], visibility: {} }, activity: [{ id: 'a1', key: 'k1', type: 'review', actorProfileId: 'ada', actorName: 'Ada', gameId: 9, gameName: 'CelesteGame', rating: 5, recommendationText: '', snippet: 'ok', createdAt: 1000, updatedAt: 2000 }], posts: [] };
+        return { profile: { name: 'Ada', visibility: {} }, activity: [{ id: 'a1', key: 'k1', type: 'review', actorProfileId: 'ada', actorName: 'Ada', gameId: 9, gameName: 'CelesteGame', rating: 5, recommendationText: '', snippet: 'ok', createdAt: 1000, updatedAt: 2000 }], posts: [] };
       }
       // Bob: timestamp corrupto fuera del rango válido de Date (p. ej. nanosegundos).
-      return { profile: { name: 'Bob', favoriteGames: [], visibility: {} }, activity: [{ id: 'b1', key: 'k2', type: 'review', actorProfileId: 'bob', actorName: 'Bob', gameId: 3, gameName: 'BobGame', rating: 3, recommendationText: '', snippet: 'x', createdAt: 1e18, updatedAt: 1e18 }], posts: [] };
+      return { profile: { name: 'Bob', visibility: {} }, activity: [{ id: 'b1', key: 'k2', type: 'review', actorProfileId: 'bob', actorName: 'Bob', gameId: 3, gameName: 'BobGame', rating: 3, recommendationText: '', snippet: 'x', createdAt: 1e18, updatedAt: 1e18 }], posts: [] };
     });
 
     renderHub('/social');
@@ -321,12 +321,12 @@ describe('SocialHub (componente, post-M3)', () => {
     });
     gistMocks.readSocialGist.mockResolvedValue({
       data: {
-        profile: { name: 'Me', private: false, favoriteGames: [{ id: 1, name: 'Halo' }], visibility: { hiddenTabs: [], hideReplayable: false, hideRetry: false, hideGameTime: false, showPhoto: true }, sharedLists: {} },
+        profile: { name: 'Me', private: false, visibility: { hiddenTabs: [], hideReplayable: false, hideRetry: false, hideGameTime: false, showPhoto: true }, sharedLists: {} },
         recommendations: [], activity: [], posts: [], updatedAt: 0,
       },
       etag: null,
     });
-    gistMocks.readPublicSocialGistById.mockResolvedValue({ profile: { name: 'Ada', favoriteGames: [], visibility: {} }, activity: [], posts: [] });
+    gistMocks.readPublicSocialGistById.mockResolvedValue({ profile: { name: 'Ada', visibility: {} }, activity: [], posts: [] });
     firebaseMocks.listSocialDirectory.mockResolvedValue([]);
     const adaView = { docId: 'ada__me', otherUid: 'ada', otherName: 'Ada', otherPhoto: '', otherSocialGistId: 'ada-social', otherGamesGistId: 'ada-games', state: 'friends', createdAt: 0, updatedAt: 1 };
     firebaseMocks.getMyFriendships.mockResolvedValue({ friends: [adaView], incoming: [], outgoing: [], byOtherUid: { ada: adaView } });
@@ -345,7 +345,7 @@ describe('SocialHub (componente, post-M3)', () => {
     await waitFor(() => expect(firebaseMocks.deleteFriendship).toHaveBeenCalledWith({ myUid: 'me', docId: 'ada__me' }));
   });
 
-  it('directorio: muestra a los NO-amigos (favoritos vacíos) para poder enviarles petición', async () => {
+  it('directorio: muestra a los NO-amigos (sin leer su gist) para poder enviarles petición', async () => {
     firebaseMocks.getCurrentSocialAuthUser.mockResolvedValue({ uid: 'me', email: 'me@x.com', displayName: 'Me', photoURL: null });
     gistMocks.getSocialSyncConfig.mockReturnValue({ token: 'ghp_x', gistId: 'my-social', etag: null, lastRemoteUpdatedAt: 0 });
     localMocks.loadLocalState.mockReturnValue({
@@ -354,7 +354,7 @@ describe('SocialHub (componente, post-M3)', () => {
     });
     gistMocks.readSocialGist.mockResolvedValue({
       data: {
-        profile: { name: 'Me', private: false, favoriteGames: [{ id: 1, name: 'Halo' }], visibility: { hiddenTabs: [], hideReplayable: false, hideRetry: false, hideGameTime: false, showPhoto: true }, sharedLists: {} },
+        profile: { name: 'Me', private: false, visibility: { hiddenTabs: [], hideReplayable: false, hideRetry: false, hideGameTime: false, showPhoto: true }, sharedLists: {} },
         recommendations: [], activity: [], posts: [], updatedAt: 0,
       },
       etag: null,
@@ -367,7 +367,7 @@ describe('SocialHub (componente, post-M3)', () => {
 
     renderHub('/social/profiles');
 
-    // El no-amigo aparece en el directorio (aunque no tenga favoritos y no se lea su gist).
+    // El no-amigo aparece en el directorio (aunque no se lea su gist).
     expect(await screen.findByText('Bob')).toBeInTheDocument();
     const readGistIds = gistMocks.readPublicSocialGistById.mock.calls.map((call) => call[0]);
     expect(readGistIds).not.toContain('bob-social');
@@ -391,7 +391,7 @@ describe('SocialHub (componente, post-M3)', () => {
     });
     gistMocks.readSocialGist.mockResolvedValue({
       data: {
-        profile: { name: 'Me', private: false, favoriteGames: [{ id: 9, name: 'Celeste' }], visibility: { hiddenTabs: [], hideReplayable: false, hideRetry: false, hideGameTime: false, showPhoto: true }, sharedLists: {} },
+        profile: { name: 'Me', private: false, visibility: { hiddenTabs: [], hideReplayable: false, hideRetry: false, hideGameTime: false, showPhoto: true }, sharedLists: {} },
         recommendations: [], activity: [], posts: [], updatedAt: 0,
       },
       etag: null,
@@ -401,7 +401,7 @@ describe('SocialHub (componente, post-M3)', () => {
     ]);
     firebaseMocks.getMyFriendships.mockResolvedValue({ friends: [], incoming: [], outgoing: [], byOtherUid: {} });
     gistMocks.readPublicSocialGistById.mockResolvedValue({
-      profile: { name: 'Me', favoriteGames: [{ id: 9, name: 'Celeste' }], visibility: { showPhoto: true } },
+      profile: { name: 'Me', visibility: { showPhoto: true } },
       activity: [{
         id: 'me:9:review', key: 'me:9:review', type: 'review', actorProfileId: 'me', actorName: 'Me',
         gameId: 9, gameName: 'Celeste', rating: 5, recommendationText: '', snippet: 'Una maravilla',
@@ -427,7 +427,7 @@ describe('SocialHub (componente, post-M3)', () => {
     });
     gistMocks.readSocialGist.mockResolvedValue({
       data: {
-        profile: { name: 'Me', private: false, favoriteGames: [{ id: 1, name: 'Halo' }], visibility: { hiddenTabs: [], hideReplayable: false, hideRetry: false, hideGameTime: false, showPhoto: true }, sharedLists: {} },
+        profile: { name: 'Me', private: false, visibility: { hiddenTabs: [], hideReplayable: false, hideRetry: false, hideGameTime: false, showPhoto: true }, sharedLists: {} },
         recommendations: [], activity: [], posts: [], updatedAt: 0,
       },
       etag: null,
@@ -448,7 +448,7 @@ describe('SocialHub (componente, post-M3)', () => {
     gistMocks.readPublicSocialGistById.mockImplementation(async (gistId?: string) => {
       const owner = gistId === 'ada-social' ? { name: 'Ada', game: 'CelesteGame', actor: 'ada' } : { name: 'Zoe', game: 'ZoeGame', actor: 'zoe' };
       return {
-        profile: { name: owner.name, favoriteGames: [], visibility: { hiddenTabs: [], hideReplayable: false, hideRetry: false, hideGameTime: false, showPhoto: true } },
+        profile: { name: owner.name, visibility: { hiddenTabs: [], hideReplayable: false, hideRetry: false, hideGameTime: false, showPhoto: true } },
         activity: [{ id: `${owner.actor}1`, key: `k-${owner.actor}`, type: 'review', actorProfileId: owner.actor, actorName: owner.name, gameId: 9, gameName: owner.game, rating: 5, recommendationText: '', snippet: 'genial', createdAt: 1000, updatedAt: 2000 }],
         posts: [],
         updatedAt: 2000,
@@ -474,7 +474,7 @@ describe('SocialHub (componente, post-M3)', () => {
     });
     gistMocks.readSocialGist.mockResolvedValue({
       data: {
-        profile: { name: 'Me', private: false, favoriteGames: [{ id: 1, name: 'Halo' }], visibility: { hiddenTabs: [], hideReplayable: false, hideRetry: false, hideGameTime: false, showPhoto: true }, sharedLists: {} },
+        profile: { name: 'Me', private: false, visibility: { hiddenTabs: [], hideReplayable: false, hideRetry: false, hideGameTime: false, showPhoto: true }, sharedLists: {} },
         recommendations: [], activity: [], posts: [], updatedAt: 0,
       },
       etag: null,
@@ -487,15 +487,16 @@ describe('SocialHub (componente, post-M3)', () => {
       // `byOtherUid` es lo que mira la pantalla de perfil para saber que es amiga (y mostrar su hero completo).
       friends: [zoeView], incoming: [], outgoing: [], byOtherUid: { zoe: zoeView },
     });
+    // El nick del gist difiere del del directorio: así se distingue el hero YA hidratado del index-only.
     gistMocks.readPublicSocialGistById.mockResolvedValue({
-      profile: { name: 'Zoe', favoriteGames: [{ id: 4, name: 'Bastion' }], visibility: { hiddenTabs: [], hideReplayable: false, hideRetry: false, hideGameTime: false, showPhoto: true } },
+      profile: { name: 'Zoe (nick del gist)', visibility: { hiddenTabs: [], hideReplayable: false, hideRetry: false, hideGameTime: false, showPhoto: true } },
       activity: [], posts: [], updatedAt: 10,
     });
 
     renderHub('/social/profiles/zoe');
 
-    // Su hero no se queda a medias: los favoritos salen de su gist social, leído bajo demanda al abrir el perfil.
-    expect(await screen.findByText('Bastion')).toBeInTheDocument();
+    // Su hero no se queda a medias: nombre/visibilidad/foto salen de su gist social, leído bajo demanda al abrir el perfil.
+    expect(await screen.findByText('Zoe (nick del gist)')).toBeInTheDocument();
     expect(gistMocks.readPublicSocialGistById.mock.calls.map((call) => call[0])).toContain('zoe-social');
   });
 
@@ -511,7 +512,7 @@ describe('SocialHub (componente, post-M3)', () => {
     });
     gistMocks.readSocialGist.mockResolvedValue({
       data: {
-        profile: { name: 'Me', private: false, favoriteGames: [{ id: 1, name: 'Halo' }], visibility: { hiddenTabs: [], hideReplayable: false, hideRetry: false, hideGameTime: false, showPhoto: true }, sharedLists: {} },
+        profile: { name: 'Me', private: false, visibility: { hiddenTabs: [], hideReplayable: false, hideRetry: false, hideGameTime: false, showPhoto: true }, sharedLists: {} },
         recommendations: [], activity: [], posts: [], updatedAt: 0,
       },
       etag: null,
@@ -527,13 +528,13 @@ describe('SocialHub (componente, post-M3)', () => {
     gistMocks.readPublicSocialGistById.mockImplementation(async (gistId?: string) => {
       if (gistId === 'ada-social-actual') {
         return {
-          profile: { name: 'Ada', favoriteGames: [{ id: 9, name: 'Celeste' }], visibility: { hiddenTabs: [], hideReplayable: false, hideRetry: false, hideGameTime: false, showPhoto: true } },
+          profile: { name: 'Ada', visibility: { hiddenTabs: [], hideReplayable: false, hideRetry: false, hideGameTime: false, showPhoto: true } },
           activity: [{ id: 'a1', key: 'k1', type: 'review', actorProfileId: 'friendUid', actorName: 'Ada', gameId: 9, gameName: 'CelesteGame', rating: 5, recommendationText: '', snippet: 'genial', createdAt: 1000, updatedAt: 2000 }],
           posts: [],
           updatedAt: 2000,
         };
       }
-      return { profile: { name: 'Ada', favoriteGames: [], visibility: {} }, activity: [], posts: [], updatedAt: 1 };
+      return { profile: { name: 'Ada', visibility: {} }, activity: [], posts: [], updatedAt: 1 };
     });
 
     renderHub();
@@ -563,7 +564,7 @@ describe('SocialHub (componente, post-M3)', () => {
     };
     gistMocks.readSocialGist.mockResolvedValue({
       data: {
-        profile: { name: 'Me', private: false, favoriteGames: [{ id: 1, name: 'Halo' }], visibility: { hiddenTabs: [], hideReplayable: false, hideRetry: false, hideGameTime: false, showPhoto: true }, sharedLists: {} },
+        profile: { name: 'Me', private: false, visibility: { hiddenTabs: [], hideReplayable: false, hideRetry: false, hideGameTime: false, showPhoto: true }, sharedLists: {} },
         recommendations: [], activity: [ownReview], posts: [], updatedAt: 0,
       },
       etag: null,
@@ -573,7 +574,7 @@ describe('SocialHub (componente, post-M3)', () => {
       { id: 'me', uid: 'me', email: 'me@x.com', displayName: 'Me', photoURL: '', socialGistId: 'my-social', gamesGistId: 'my-games' },
     ]);
     gistMocks.readPublicSocialGistById.mockResolvedValue({
-      profile: { name: 'Me', favoriteGames: [], visibility: { showPhoto: true } },
+      profile: { name: 'Me', visibility: { showPhoto: true } },
       activity: [ownReview],
       posts: [],
     });
@@ -586,5 +587,57 @@ describe('SocialHub (componente, post-M3)', () => {
     // …y no se reescribe el gist social para retirarla.
     await waitFor(() => expect(gistMocks.readPublicSocialGistById).toHaveBeenCalled());
     expect(gistMocks.writeSocialGist).not.toHaveBeenCalled();
+  });
+});
+
+describe('SocialHub — alta de perfil: exige juegos completados', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    firebaseMocks.getCurrentSocialAuthUser.mockResolvedValue({ uid: 'me', email: 'me@x.com', displayName: 'Me', photoURL: null });
+    gistMocks.getSocialSyncConfig.mockReturnValue({ token: 'ghp_x', gistId: 'my-social', etag: null, lastRemoteUpdatedAt: 0 });
+    firebaseMocks.listSocialDirectory.mockResolvedValue([]);
+    firebaseMocks.getMyFriendships.mockResolvedValue({ friends: [], incoming: [], outgoing: [], byOtherUid: {} });
+    gistMocks.readSocialGist.mockResolvedValue({
+      data: {
+        profile: { name: 'Me', private: false, visibility: { hiddenTabs: [], hideReplayable: false, hideRetry: false, hideGameTime: false, showPhoto: true }, sharedLists: {} },
+        activity: [], posts: [], updatedAt: 0,
+      },
+      etag: null,
+    });
+  });
+
+  const completed = (id: number, name: string) => ({
+    id, name, _ts: 1, platforms: [], genres: [], steamDeck: false, review: '', score: 5,
+    years: [], strengths: [], weaknesses: [], reasons: [], replayable: false, retry: false, hours: 0,
+  });
+
+  it('sin ningún juego completado: fuerza el editor, avisa y deja "Guardar perfil" deshabilitado', async () => {
+    localMocks.loadLocalState.mockReturnValue({ c: [], v: [], e: [], p: [], deleted: [], updatedAt: 0 });
+
+    renderHub('/social');
+
+    // Aunque el gist ya trae nombre, el perfil NO está completo → se redirige al editor con el motivo a la vista.
+    expect(await screen.findByText(SOCIAL_UI.profile.needsCompletedGames)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: SOCIAL_UI.profile.save })).toBeDisabled();
+  });
+
+  it('con un juego completado: deja guardar y el gist publicado no lleva favoritos', async () => {
+    localMocks.loadLocalState.mockReturnValue({
+      c: [completed(1, 'Halo')], v: [], e: [], p: [], deleted: [], updatedAt: 0,
+    });
+
+    renderHub('/social/profile');
+
+    const save = await screen.findByRole('button', { name: SOCIAL_UI.profile.save });
+    await waitFor(() => expect(save).toBeEnabled());
+    expect(screen.queryByText(SOCIAL_UI.profile.needsCompletedGames)).not.toBeInTheDocument();
+
+    fireEvent.click(save);
+
+    await waitFor(() => expect(gistMocks.writeSocialGist).toHaveBeenCalled());
+    const [, , payload] = gistMocks.writeSocialGist.mock.calls[0] as unknown as
+      [string, string, { profile: Record<string, unknown> }];
+    expect(payload.profile.name).toBe('Me');
+    expect(payload.profile).not.toHaveProperty('favoriteGames');
   });
 });

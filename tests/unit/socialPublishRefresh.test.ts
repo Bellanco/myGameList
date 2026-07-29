@@ -10,7 +10,6 @@ function baseData(posts: SocialGistData['posts'] = []): SocialGistData {
     profile: {
       name: 'Yo',
       private: false,
-      favoriteGames: [],
       visibility: { hiddenTabs: [], hideReplayable: false, hideRetry: false, hideGameTime: false, showPhoto: true },
       sharedLists: {},
     },

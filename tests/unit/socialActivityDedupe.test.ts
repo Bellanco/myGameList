@@ -29,7 +29,7 @@ afterEach(() => {
 describe('normalización de actividad social (dedup por gameId+type)', () => {
   it('BUG 5: colapsa la reseña duplicada por identidad legacy (uid + profileId) en la más reciente', async () => {
     const raw = {
-      profile: { name: 'Ana', private: false, favoriteGames: [], visibility: {} },
+      profile: { name: 'Ana', private: false, visibility: {} },
       activity: [
         // Entrada VIEJA keyed por uid (título antiguo, updatedAt menor).
         { type: 'review', actorProfileId: 'uid-1', gameId: 5, gameName: 'Nombre Viejo', rating: 4, snippet: 'x', createdAt: 1000, updatedAt: 1000 },
@@ -47,7 +47,7 @@ describe('normalización de actividad social (dedup por gameId+type)', () => {
 
   it('BUG 4: para la misma clave conserva el título de la entrada con updatedAt mayor, no la primera del array', async () => {
     const raw = {
-      profile: { name: 'Ana', private: false, favoriteGames: [], visibility: {} },
+      profile: { name: 'Ana', private: false, visibility: {} },
       activity: [
         // La MÁS NUEVA aparece primero en el array...
         { type: 'review', actorProfileId: 'pid-1', gameId: 9, gameName: 'Título Actual', rating: 5, snippet: 'y', createdAt: 1000, updatedAt: 3000 },
@@ -65,7 +65,7 @@ describe('normalización de actividad social (dedup por gameId+type)', () => {
 
   it('no colapsa reseña y recomendación del mismo juego (distinto type)', async () => {
     const raw = {
-      profile: { name: 'Ana', private: false, favoriteGames: [], visibility: {} },
+      profile: { name: 'Ana', private: false, visibility: {} },
       activity: [
         { type: 'review', actorProfileId: 'pid-1', gameId: 7, gameName: 'Celeste', rating: 5, snippet: 'buenísimo', createdAt: 1000, updatedAt: 2000 },
         { type: 'recommendation', actorProfileId: 'pid-1', gameId: 7, gameName: 'Celeste', rating: 5, snippet: '', createdAt: 1000, updatedAt: 2000 },
