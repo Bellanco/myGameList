@@ -104,6 +104,12 @@ type SocialProfileDetail = {
   };
   sharedLists?: Partial<Record<TabId, Array<GameItem | SocialSharedGame>>>;
   favorites?: string[];
+  /**
+   * Actividad social publicada de este perfil. Da la FECHA DE PUBLICACIÓN de cada reseña, que es la que se ve en
+   * el feed; sin ella habría que caer al `_ts` del juego (última modificación), que una importación de datos
+   * reescribe en bloque y deja al listado mostrando una fecha distinta de la del feed.
+   */
+  activity?: Array<{ type: string; gameId: number; updatedAt: number }>;
 };
 
 function SocialProfileDetailScreenBase({
@@ -165,9 +171,22 @@ function SocialProfileDetailScreenBase({
   // y foto" + CTA de "Añadir amigo"; el resto queda bloqueado con un aviso.
   const canSeeFullProfile = isOwnProfile || friendshipState === 'friends';
 
-  // Reseñas tomadas del LISTADO de juegos del perfil (no del feed social): cada juego con texto de reseña en
-  // cualquiera de sus listados. Ordenadas por fecha (_ts) de más reciente a más antigua; los perfiles ajenos
-  // (index-only, sin _ts) conservan el orden del listado.
+  // Fecha de PUBLICACIÓN por juego, tomada de la actividad social del perfil: es la misma que muestra el feed.
+  // Unifica ambas vistas — antes esta pantalla usaba el `_ts` del juego (última modificación), que una
+  // importación de datos reescribe en bloque, así que feed y listado acababan mostrando fechas distintas.
+  const publishedDateByGame = useMemo(() => {
+    const map = new Map<number, number>();
+    (activeProfileDetail?.activity || []).forEach((entry) => {
+      if (entry.type !== 'review') return;
+      const date = Number(entry.updatedAt || 0);
+      if (date > 0) map.set(Number(entry.gameId), date);
+    });
+    return map;
+  }, [activeProfileDetail]);
+
+  // Reseñas tomadas del LISTADO de juegos del perfil: cada juego con texto de reseña en cualquiera de sus
+  // listados. Se fechan con su publicación en el feed y, si no está publicada, con el `_ts` del juego. Ordenadas
+  // de más reciente a más antigua; los perfiles ajenos (index-only, sin fecha) conservan el orden del listado.
   const reviews = useMemo(() => {
     const lists = activeProfileDetail?.sharedLists || {};
     const seen = new Set<number>();
@@ -186,13 +205,13 @@ function SocialProfileDetailScreenBase({
           rating: Number(game.score || game.rating || 0),
           grade: typeof game.grade === 'number' ? game.grade : null,
           reviewText,
-          ts: typeof game._ts === 'number' ? game._ts : 0,
+          ts: publishedDateByGame.get(id) || (typeof game._ts === 'number' ? game._ts : 0),
         });
       });
     });
 
     return items.sort((a, b) => b.ts - a.ts);
-  }, [activeProfileDetail]);
+  }, [activeProfileDetail, publishedDateByGame]);
 
   // Ruleta (perfil social): pool = SOLO la lista de completados de este perfil.
   const roulettePool = useMemo(

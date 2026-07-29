@@ -373,6 +373,51 @@ describe('SocialHub (componente, post-M3)', () => {
     expect(readGistIds).not.toContain('bob-social');
   });
 
+  it('la pestaña Reseñas fecha con la PUBLICACIÓN, no con el `_ts` del juego', async () => {
+    // Unificación: el feed muestra la fecha de publicación y esta pantalla mostraba el `_ts` del juego, que una
+    // importación de datos reescribe en bloque. Resultado: dos fechas distintas para la misma reseña.
+    firebaseMocks.getCurrentSocialAuthUser.mockResolvedValue({ uid: 'me', email: 'me@x.com', displayName: 'Me', photoURL: null });
+    firebaseMocks.resolveStableProfileId.mockResolvedValue('me');
+    gistMocks.getSocialSyncConfig.mockReturnValue({ token: 'ghp_x', gistId: 'my-social', etag: null, lastRemoteUpdatedAt: 0 });
+    const TS_IMPORT = Date.parse('2026-07-26T09:00:00.000Z'); // `_ts` reescrito por una importación
+    const PUBLICADA = Date.parse('2026-05-12T11:59:00.000Z'); // fecha real en el feed
+    localMocks.loadLocalState.mockReturnValue({
+      c: [{
+        id: 9, name: 'Celeste', _ts: TS_IMPORT, platforms: [], genres: [], steamDeck: false,
+        review: 'Una maravilla', score: 5, years: [], strengths: [], weaknesses: [], reasons: [],
+        replayable: false, retry: false, hours: 0,
+      }],
+      v: [], e: [], p: [], deleted: [], updatedAt: TS_IMPORT,
+    });
+    gistMocks.readSocialGist.mockResolvedValue({
+      data: {
+        profile: { name: 'Me', private: false, favoriteGames: [{ id: 9, name: 'Celeste' }], visibility: { hiddenTabs: [], hideReplayable: false, hideRetry: false, hideGameTime: false, showPhoto: true }, sharedLists: {} },
+        recommendations: [], activity: [], posts: [], updatedAt: 0,
+      },
+      etag: null,
+    });
+    firebaseMocks.listSocialDirectory.mockResolvedValue([
+      { id: 'me', uid: 'me', email: 'me@x.com', displayName: 'Me', photoURL: '', socialGistId: 'my-social', gamesGistId: 'my-games', updatedAt: Date.now() },
+    ]);
+    firebaseMocks.getMyFriendships.mockResolvedValue({ friends: [], incoming: [], outgoing: [], byOtherUid: {} });
+    gistMocks.readPublicSocialGistById.mockResolvedValue({
+      profile: { name: 'Me', favoriteGames: [{ id: 9, name: 'Celeste' }], visibility: { showPhoto: true } },
+      activity: [{
+        id: 'me:9:review', key: 'me:9:review', type: 'review', actorProfileId: 'me', actorName: 'Me',
+        gameId: 9, gameName: 'Celeste', rating: 5, recommendationText: '', snippet: 'Una maravilla',
+        createdAt: PUBLICADA, updatedAt: PUBLICADA,
+      }],
+      posts: [],
+      updatedAt: PUBLICADA,
+    });
+
+    renderHub('/social/profiles/me/reviews');
+
+    // La tarjeta de la reseña se fecha con la publicación (12 de mayo), no con el `_ts` del import (26 de julio).
+    expect(await screen.findByText(/12 de mayo de 2026/)).toBeInTheDocument();
+    expect(screen.queryByText(/26 de julio de 2026/)).not.toBeInTheDocument();
+  });
+
   it('corte por inactividad: la actividad de un amigo inactivo no entra al feed y no se lee su gist', async () => {
     firebaseMocks.getCurrentSocialAuthUser.mockResolvedValue({ uid: 'me', email: 'me@x.com', displayName: 'Me', photoURL: null });
     gistMocks.getSocialSyncConfig.mockReturnValue({ token: 'ghp_x', gistId: 'my-social', etag: null, lastRemoteUpdatedAt: 0 });
