@@ -49,9 +49,11 @@ createRoot(document.getElementById('root') as HTMLElement).render(
 // reseñas sobreviven en el historial de revisiones del gist social. Se lanza desde la consola con
 // `__socialDateAudit()`. Fuera de `dev` no se expone.
 if (import.meta.env.DEV) {
-  (window as unknown as { __socialDateAudit?: () => Promise<unknown> }).__socialDateAudit = async () => {
+  (window as unknown as { __socialDateAudit?: (o?: { maxRevisions?: number }) => Promise<unknown> }).__socialDateAudit = async (
+    options?: { maxRevisions?: number },
+  ) => {
     const { auditPublishedReviewDates } = await import('./model/repository/socialActivityHistory');
-    const report = await auditPublishedReviewDates();
+    const report = await auditPublishedReviewDates(options);
     if (!report) {
       console.warn('[social] auditoría: sin sesión de Google o sin canal social en este dispositivo');
       return null;
@@ -62,9 +64,17 @@ if (import.meta.env.DEV) {
         `${report.scannedRevisions}/${report.totalRevisions} revisiones recorridas → ` +
         `${report.recoverable.length} con fecha original recuperable, ${report.withoutOlderDate} sin fecha anterior`,
     );
+    report.inspected.forEach((gist) => {
+      console.warn(
+        `   gist ${gist.gistId.slice(0, 10)}${gist.isCurrent ? ' (ACTUAL)' : ' (abandonado)'}: ` +
+          `${gist.scannedRevisions}/${gist.revisions} revisiones, ${gist.reviewEntries} reseñas vistas, ` +
+          `más antigua ${gist.oldestDate ? fecha(gist.oldestDate) : '—'}`,
+      );
+    });
     report.recoverable.forEach((item) => {
       console.warn(
-        `   ${item.gameName}: ${fecha(item.currentUpdatedAt)} → ${fecha(item.originalUpdatedAt)} (rev ${item.fromRevision.slice(0, 8)})`,
+        `   ${item.gameName}: ${fecha(item.currentUpdatedAt)} → ${fecha(item.originalUpdatedAt)} ` +
+          `(gist ${item.fromGistId.slice(0, 10)}, rev ${item.fromRevision.slice(0, 8)})`,
       );
     });
     return report;
