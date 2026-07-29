@@ -348,7 +348,11 @@ export default function App() {
         deleted: payload.deleted || [],
         updatedAt: Date.now(),
       };
-      const normalizedData = normalizeData(nextData, { forceTimestamp: true });
+      // `bumpChangedAgainst` en vez de `forceTimestamp`: lo importado tiene que ganar el merge frente a otros
+      // dispositivos, pero solo necesita estrenar `_ts` lo que de verdad cambia. Sellar la biblioteca entera
+      // borraba la fecha de modificación de todos los juegos (y con ella la única pista de cuándo se escribió
+      // cada reseña, que es lo que el canal social publica).
+      const normalizedData = normalizeData(nextData, { bumpChangedAgainst: vm.data });
       normalizedData.updatedAt = Date.now();
 
       persist(normalizedData);
@@ -367,7 +371,7 @@ export default function App() {
     } catch {
       notify('err', 'Archivo JSON no válido');
     }
-  }, [notify, persist, syncVm]);
+  }, [notify, persist, syncVm, vm.data]);
 
   const handleFiltersToggle = useCallback(() => {
     setFiltersOpen((prev) => !prev);
