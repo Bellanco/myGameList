@@ -728,7 +728,10 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
     const lock = acquireSyncLock();
     if (!lock) return false;
     try {
-      const normalizedData = normalizeData(data, { forceTimestamp: true });
+      // Sin `forceTimestamp`: `data` YA es el estado local (su llamador acaba de decidir qué `_ts` estrena cada
+      // juego), así que volver a sellar aquí solo servía para borrar la fecha de modificación de la biblioteca
+      // entera. Para que el remoto adopte esto basta con reescribirlo completo, que es lo que hace `writeGist`.
+      const normalizedData = normalizeData(data);
       normalizedData.updatedAt = Date.now();
 
       const writeResult = await writeGist(config.token, config.gistId, normalizedData);

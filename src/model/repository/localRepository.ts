@@ -2,7 +2,7 @@ import { LOCAL_SCHEMA_VERSION, STORAGE_KEY } from '../../core/constants/storageK
 import { LEGACY_STORAGE_KEYS, localStateNeedsUpgrade } from '../migration/legacyLocalStorage';
 import { migrateData } from './migrateRepository';
 import { loadIndexedDbState, saveIndexedDbState } from './indexedDbRepository';
-import type { GameItem, StoragePayload, TabData } from '../types/game';
+import { TAB_IDS, type GameItem, type StoragePayload, type TabData, type TabId } from '../types/game';
 import { clampRating } from '../../core/utils/normalize';
 import { clampGrade } from '../../core/utils/scoreScale';
 
@@ -82,14 +82,77 @@ function normalizeGame(game: Record<string, unknown>, defaultTs: number, forceTi
   };
 }
 
-export function normalizeData(data: TabData, options?: { forceTimestamp?: boolean }): TabData {
+// Metadatos que NO son contenido: no deben hacer que un juego cuente como "cambiado".
+const CONTENT_KEY_IGNORED = new Set(['_ts', '_v', 'listedAt']);
+
+/**
+ * Contenido de un juego SIN sus metadatos, en forma canónica: para decidir si de verdad ha cambiado algo.
+ * Las claves se ordenan a propósito — `JSON.stringify` respeta el orden de inserción, así que comparar objetos
+ * construidos por caminos distintos (uno normalizado, otro recién parseado de un JSON) daría siempre distinto.
+ */
+function gameContentKey(game: GameItem): string {
+  const entries = Object.entries(game as unknown as Record<string, unknown>)
+    .filter(([key, value]) => !CONTENT_KEY_IGNORED.has(key) && value !== undefined)
+    .sort(([a], [b]) => a.localeCompare(b));
+  return JSON.stringify(entries);
+}
+
+/** Índice id → {juego, pestaña} de una referencia. La pestaña cuenta: moverse de lista ES un cambio. */
+function indexGamesById(reference: TabData): Map<number, { game: GameItem; tab: TabId }> {
+  const index = new Map<number, { game: GameItem; tab: TabId }>();
+  TAB_IDS.forEach((tab) => {
+    (reference[tab] || []).forEach((game) => {
+      if (Number(game?.id) > 0) index.set(Number(game.id), { game, tab });
+    });
+  });
+  return index;
+}
+
+export interface NormalizeDataOptions {
+  /**
+   * Sella `_ts = ahora` en TODOS los juegos y tumbas.
+   *
+   * CUIDADO: `_ts` es a la vez reloj del merge CRDT y fecha de modificación que ve el usuario, así que esto
+   * borra de un plumazo la fecha de toda la biblioteca. Se conserva para casos en los que de verdad haga falta
+   * un sello global; para importar/sobrescribir usa `bumpChangedAgainst`, que consigue el mismo efecto en el
+   * merge sin reescribir lo que no ha cambiado.
+   */
+  forceTimestamp?: boolean;
+  /**
+   * Sella `_ts = ahora` SOLO en los juegos cuyo contenido difiera de esta referencia (o que no estén en ella).
+   *
+   * Es lo que necesita una importación: que lo importado gane el merge frente a otros dispositivos, sin tocar
+   * la fecha de modificación de los juegos que llegan idénticos. Ignora `_ts`/`_v`/`listedAt` al comparar,
+   * porque son metadatos, no contenido.
+   */
+  bumpChangedAgainst?: TabData;
+}
+
+export function normalizeData(data: TabData, options?: NormalizeDataOptions): TabData {
   const ts = Date.now();
   const forceTimestamp = Boolean(options?.forceTimestamp);
+  const reference = options?.bumpChangedAgainst ? indexGamesById(options.bumpChangedAgainst) : null;
+
+  const normalizeTab = (games: unknown[] | undefined, tab: TabId): GameItem[] =>
+    (games || []).map((raw) => {
+      const game = normalizeGame(raw as Record<string, unknown>, ts, forceTimestamp);
+      if (!reference || forceTimestamp) {
+        return game;
+      }
+      const previous = reference.get(game.id);
+      // Nuevo, en otra lista o con contenido distinto → estrena `_ts` para ganar el merge. Idéntico y en la
+      // misma lista → conserva su fecha de modificación.
+      if (!previous || previous.tab !== tab || gameContentKey(previous.game) !== gameContentKey(game)) {
+        return { ...game, _ts: ts };
+      }
+      return { ...game, _ts: previous.game._ts };
+    });
+
   const normalized: TabData = {
-    c: (data.c || []).map((game) => normalizeGame(game as unknown as Record<string, unknown>, ts, forceTimestamp)),
-    v: (data.v || []).map((game) => normalizeGame(game as unknown as Record<string, unknown>, ts, forceTimestamp)),
-    e: (data.e || []).map((game) => normalizeGame(game as unknown as Record<string, unknown>, ts, forceTimestamp)),
-    p: (data.p || []).map((game) => normalizeGame(game as unknown as Record<string, unknown>, ts, forceTimestamp)),
+    c: normalizeTab(data.c, 'c'),
+    v: normalizeTab(data.v, 'v'),
+    e: normalizeTab(data.e, 'e'),
+    p: normalizeTab(data.p, 'p'),
     deleted: (data.deleted || [])
       .filter((item) => item && Number(item.id) > 0)
       .map((entry) => ({ id: Number(entry.id), _ts: forceTimestamp ? ts : Number(entry._ts) || ts })),
