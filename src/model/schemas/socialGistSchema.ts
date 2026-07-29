@@ -41,7 +41,10 @@ const visibility = z.strictObject({
 const profile = z.strictObject({
   name: z.string().max(NAME_MAX),
   private: z.boolean(),
-  favoriteGames: z.array(idName),
+  // Juegos favoritos eliminados del producto: ya no se publican. Se mantiene OPCIONAL para que un payload de un
+  // gist antiguo (que aún lo lleve) siga validando; la normalización lo descarta, así que el campo desaparece del
+  // remoto en la primera reescritura del perfil.
+  favoriteGames: z.array(idName).optional(),
   // ST3: `profile.recommendations` eliminado (código muerto). La lectura tolera gists viejos que lo lleven.
   visibility,
   // sharedLists es Partial<Record<TabId, SharedGame[]>>: claves 'c'|'v'|'e'|'p', subconjunto permitido.

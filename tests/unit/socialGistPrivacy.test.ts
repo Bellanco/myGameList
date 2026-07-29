@@ -15,7 +15,6 @@ function socialGist(): SocialGistData {
     profile: {
       name: 'Nick',
       private: false,
-      favoriteGames: [],
       visibility: { hiddenTabs: [], hideReplayable: false, hideRetry: false, hideGameTime: false, showPhoto: true },
       sharedLists: {},
     },

@@ -4,6 +4,7 @@ import { sortEs, uniqueCaseInsensitive } from '../core/utils/compare';
 import { DEFAULT_SORT, nextSort, sortGames } from '../core/utils/sortGames';
 import { clampRating } from '../core/utils/normalize';
 import { clampGrade, gradeFromStars, resolveStars, starsFromGrade } from '../core/utils/scoreScale';
+import { resolveReviewedAt } from '../core/utils/reviewDate';
 import { mapTabDataTags, type TagCategory } from '../core/utils/tagMutations';
 import { normalizeTag, safeTrim } from '../core/security/sanitize';
 import { normalizeName } from '../core/roulette/roulette';
@@ -404,6 +405,15 @@ export function useGameListViewModel() {
         retry: nextDraft.retry,
         hours: nextDraft.hours === null ? null : Number(nextDraft.hours),
         listedAt: existing ? (existing.listedAt ?? existing._ts ?? now) : now,
+        // Fecha de la RESEÑA: se estrena solo cuando cambia el texto. Editar la nota, mover de lista o importar
+        // datos no la mueven (a diferencia de `_ts`, que es el reloj del merge). Es la que publica el canal
+        // social y la que muestran el feed y la pestaña Reseñas, de ahí que tenga que sobrevivir a todo lo demás.
+        reviewedAt: resolveReviewedAt({
+          review: safeTrim(nextDraft.review, 25000),
+          previousReview: safeTrim(existing?.review ?? '', 25000),
+          previousReviewedAt: existing?.reviewedAt,
+          now,
+        }),
       };
 
       if (!base.name || !base.genres.length || !base.platforms.length) {

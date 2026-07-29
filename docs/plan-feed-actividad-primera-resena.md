@@ -213,6 +213,25 @@ Dos requisitos que salen de C1a y que **no** son opcionales:
   el de entradas publicadas, hay que reconciliar aunque el sello esté fresco (la comparación es en memoria,
   sin coste de red; solo escribe el gist si hay diferencias).
 
+### Paso 1 — corrección tras la primera pasada en real (identidad y fechas)
+
+La primera reconciliación sobre datos reales sacó a la luz dos fallos del paso 1, ambos con la misma raíz:
+
+- **`publishedGameIds` filtraba por `actorProfileId`.** Una reseña ya publicada bajo un id antiguo (el uid
+  legacy, o el UUID que generó otro dispositivo antes de que existiera `privateConfig`) no se reconocía como
+  publicada: se añadía un duplicado y `dedupeActivityByGame` —que corre en cada normalización y colapsa por
+  `(gameId, type)` quedándose con el `updatedAt` mayor— borraba la original. Efecto visible: las reseñas ya
+  publicadas DESAPARECÍAN del feed y reaparecían con otra fecha. Ahora "ya publicada" se decide por `gameId`, y
+  las entradas de reseña con otro actor se reindexan al `profileId` actual CONSERVANDO `createdAt`/`updatedAt`.
+- **Fecha de las reseñas de backfill.** `_ts` ausente o 0 caía a `Date.now()`, colocando reseñas antiguas en la
+  cabecera del feed. Orden de preferencia ahora: `_ts` (última modificación, la fecha que muestra el listado) →
+  `listedAt` (llegada a la lista) → reloj de los listados → `Date.now()`.
+- **Reparación del daño ya escrito**: si una entrada mía quedó con fecha POSTERIOR a la del juego (más de una
+  hora de diferencia, para no tocar los milisegundos del flujo normal de publicación), se devuelve a la del
+  juego. El caso legítimo inverso —editar el juego DESPUÉS de publicar, que deja `_ts` por delante— no se toca,
+  para respetar que sincronizar solo nota/nombre no recoloque la tarjeta. Es idempotente y converge a la
+  invariante "la fecha de la tarjeta es la que muestra el listado".
+
 ### Paso 1b — Que el publicador ARME el canal en vez de rendirse en silencio (C1a, C1d)
 
 En `publishReviewActivity` / `publishPost` (`socialPublishRepository.ts`):

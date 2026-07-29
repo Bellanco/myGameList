@@ -24,7 +24,6 @@ import { invalidateProfileGames, loadForeignProfileGames } from '../model/reposi
 import { getCachedSocialDirectory, getCachedSocialProfile, getLocalMeta, invalidateCachedSocialDirectory, patchLocalMeta, putCachedSocialDirectory, putCachedSocialProfile } from '../model/repository/indexedDbRepository';
 import { applyProfileVisibility } from '../core/utils/profileVisibility';
 import { SOCIAL_UI } from '../core/constants/labels';
-import { MAX_SOCIAL_FAVORITES } from '../core/constants/uiConfig';
 import type { IconName } from '../core/constants/icons';
 import { TAB_IDS, type GameItem, type SyncConfig, type TabData, type TabId } from '../model/types/game';
 import {
@@ -75,7 +74,7 @@ type SocialRouteState = {
   activePanel: SocialPanel;
   profileDetailId: string;
   // Vista de "Reseñas" del detalle de perfil (sub-ruta /reviews). Se refleja en la URL para que, al abrir una
-  // reseña y volver atrás, se regrese a la lista de reseñas y no a la vista de favoritos del perfil.
+  // reseña y volver atrás, se regrese a la lista de reseñas y no a la vista general del perfil.
   profileReviewsView: boolean;
   // Id del juego cuya reseña se muestra a pantalla completa (sub-ruta /game/:gameId/review del perfil).
   profileReviewGameId: number;
@@ -232,7 +231,6 @@ export function useSocialViewModel(options?: {
     socialGistId: string;
     gamesGistId: string;
     photoURL: string;
-    favorites: string[];
     activity: SocialActivityFeedItem[];
     posts: SocialPostFeedItem[];
     // Index-only (SocialSharedGame) para perfiles ajenos; para el perfil PROPIO se repuebla con GameItem completos.
@@ -263,13 +261,11 @@ export function useSocialViewModel(options?: {
   const [mustCreateProfile, setMustCreateProfile] = useState(false);
   const [justSavedProfile, setJustSavedProfile] = useState(false);
   const [profileName, setProfileName] = useState('');
-  const [favoriteGameIds, setFavoriteGameIds] = useState<number[]>([]);
   const [hiddenTabs, setHiddenTabs] = useState<TabId[]>([]);
   const [showPhoto, setShowPhoto] = useState(true);
   const [hideReplayable, setHideReplayable] = useState(false);
   const [hideRetry, setHideRetry] = useState(false);
   const [hideGameTime, setHideGameTime] = useState(false);
-  const [favoriteSearch, setFavoriteSearch] = useState('');
   // Filtro por nombre de la pantalla "Perfiles" (directorio social). El feed de actividad ya no se filtra.
   const [profileSearch, setProfileSearch] = useState('');
   // Paginación del feed: 25 inicial, +25 por "Mostrar más". Se reinicia al cambiar la búsqueda.
@@ -637,13 +633,10 @@ export function useSocialViewModel(options?: {
       .sort((a, b) => a.name.localeCompare(b.name, 'es'));
   }, [localState]);
 
-  const completedGameNameById = useMemo(() => {
-    const map = new Map<number, string>();
-    completedGames.forEach((game) => {
-      map.set(game.id, game.name);
-    });
-    return map;
-  }, [completedGames]);
+  // Requisito de alta: un perfil solo puede existir si el usuario tiene al menos un juego COMPLETADO. Es la única
+  // regla de completitud (junto al nombre) y se aplica idéntica en la hidratación, el guardado y el gate del botón
+  // de Cuenta (`useSocialProfileSession`); si divergieran, el usuario rebotaría entre el feed y el editor.
+  const hasCompletedGames = completedGames.length > 0;
 
   const defaultSocialVisibility: SocialProfileVisibility = useMemo(() => ({
     hiddenTabs: [],
@@ -670,10 +663,10 @@ export function useSocialViewModel(options?: {
   }, []);
 
   const visibleSocialDirectory = useMemo(() => {
-    // Directorio de descubrimiento: se muestran TODOS los perfiles publicados (el propio excluido). Ya no se filtra
-    // por `favorites.length > 0`: con el feed solo-amigos ya no leemos el gist de los no-amigos, así que su lista de
-    // favoritos viene vacía; exigirla ocultaría a todo el mundo e impediría enviarles peticiones de amistad. Los
-    // perfiles del directorio ya vienen acotados por Firestore (`social.enabled` + gist social presente).
+    // Directorio de descubrimiento: se muestran TODOS los perfiles publicados (el propio excluido). No se filtra por
+    // contenido del gist: con el feed solo-amigos no leemos el gist de los no-amigos, así que exigir cualquier dato
+    // suyo ocultaría a todo el mundo e impediría enviarles peticiones de amistad. Los perfiles del directorio ya
+    // vienen acotados por Firestore (`social.enabled` + gist social presente).
     return socialDirectory.filter((entry) => entry.socialGistId !== socialCfgGistId);
   }, [socialCfgGistId, socialDirectory]);
 
@@ -748,6 +741,11 @@ export function useSocialViewModel(options?: {
       }
     }
     if (!raw) return null;
+    const publishedDate = Number(
+      (selectedProfileDetail.activity || []).find(
+        (entry) => entry.type === 'review' && entry.gameId === profileReviewGameId,
+      )?.updatedAt || 0,
+    );
     const game = raw as unknown as Record<string, unknown>;
     return {
       id: profileReviewGameId,
@@ -762,7 +760,9 @@ export function useSocialViewModel(options?: {
       weaknesses: Array.isArray(game.weaknesses) ? (game.weaknesses as string[]) : [],
       reasons: Array.isArray(game.reasons) ? (game.reasons as string[]) : [],
       hours: typeof game.hours === 'number' ? game.hours : null, // audit-allow: modelo de lectura para render del detalle (SocialHub), no es escritura a canal público
-      ts: typeof game._ts === 'number' ? game._ts : 0,
+      // Fecha unificada con el feed, por orden de fiabilidad: la de PUBLICACIÓN, `reviewedAt` (propia de la
+      // reseña) y, en último lugar, el `_ts` del juego (que mueve cualquier edición).
+      ts: publishedDate || Number(game.reviewedAt || 0) || (typeof game._ts === 'number' ? game._ts : 0),
     };
   }, [activePanel, selectedProfileDetail, profileReviewGameId]);
 
@@ -925,7 +925,7 @@ export function useSocialViewModel(options?: {
     navigate(`/social/profiles/${encodeURIComponent(profileId)}`);
   }, [navigate]);
 
-  // Reseñas del perfil: alternar entre la vista de favoritos (/social/profiles/:id) y la de reseñas
+  // Reseñas del perfil: alternar entre la vista del perfil (/social/profiles/:id) y la de reseñas
   // (.../reviews), y abrir el detalle a pantalla completa de una reseña (.../game/:gameId/review).
   const openProfileReviews = useCallback((profileId: string) => {
     navigate(`/social/profiles/${encodeURIComponent(profileId)}/reviews`);
@@ -938,11 +938,9 @@ export function useSocialViewModel(options?: {
   }, [navigate]);
 
   // Abre el DETALLE del perfil propio (vista pública con sus listados), no el editor. Si aún no existe entrada
-  // propia con favoritos en el directorio, cae al editor para que el usuario complete su perfil.
+  // propia en el directorio, cae al editor para que el usuario complete su perfil.
   const openOwnProfileDetail = useCallback(() => {
-    const ownEntry = socialDirectory.find(
-      (entry) => entry.socialGistId === socialCfgGistId && entry.favorites.length > 0,
-    );
+    const ownEntry = socialDirectory.find((entry) => entry.socialGistId === socialCfgGistId);
     if (ownEntry) {
       navigate(`/social/profiles/${encodeURIComponent(ownEntry.id)}`);
     } else {
@@ -994,7 +992,7 @@ export function useSocialViewModel(options?: {
   }, [activePanel, activeDetailEvent, authUser, defaultSocialVisibility, foreignGamesByProfile, mainSyncConfig?.token, ownProfileId, profileDetailId, relationshipWith, socialDirectory]);
 
   // Amigo inactivo (su gist social no se leyó al hidratar el directorio, para no ocupar el feed ni gastar la
-  // llamada): al ABRIR su perfil sí se lee, para que su hero no salga a medias (favoritos/visibilidad/foto).
+  // llamada): al ABRIR su perfil sí se lee, para que su hero no salga a medias (nombre/visibilidad/foto).
   // La actividad se deja fuera a propósito: el corte por inactividad es sobre el feed, no sobre su perfil.
   useEffect(() => {
     if (activePanel !== 'profile-detail' && activePanel !== 'profile-review') return;
@@ -1015,7 +1013,6 @@ export function useSocialViewModel(options?: {
                   ...item,
                   displayName: socialData.profile.name || item.displayName,
                   photoURL: socialData.profile.photoURL || (showsPhoto ? item.photoURL : ''),
-                  favorites: socialData.profile.favoriteGames.map((game) => game.name).slice(0, 5),
                   visibility: socialData.profile.visibility || defaultSocialVisibility,
                   socialSkipped: false,
                 }
@@ -1178,17 +1175,11 @@ export function useSocialViewModel(options?: {
     // IndexedDB sin releer el gist propio ni consultar Firestore. El guardado del perfil invalida esta caché.
     const cachedProfile = await getCachedSocialProfile(socialCfgGistId);
     if (cachedProfile) {
-      const cachedFavorites = cachedProfile.favorites.filter((id) => completedGameNameById.has(id));
-      // Si algún favorito guardado apunta a un juego ya borrado, el perfil deja de estar completo: hay que pasar
-      // por el editor y re-confirmar aunque quede ≥1 favorito válido (evita favoritos "fantasma" en el directorio).
-      const cachedHasStaleFavorite = cachedFavorites.length !== cachedProfile.favorites.length;
-      // No confiamos en el `profileExists` cacheado (pudo escribirse con la regla antigua "solo nombre"): lo
-      // recalculamos con el criterio actual (nombre Y ≥1 favorito) para que los perfiles incompletos ya guardados
-      // sean redirigidos al editor sin esperar a que caduque la caché (~5 min).
-      const cachedProfileExists =
-        Boolean(cachedProfile.name.trim()) && cachedFavorites.length > 0 && !cachedHasStaleFavorite;
+      // No confiamos en el `profileExists` cacheado (pudo escribirse con una regla antigua): lo recalculamos con el
+      // criterio actual (nombre Y ≥1 juego completado) para que los perfiles incompletos ya guardados sean
+      // redirigidos al editor sin esperar a que caduque la caché (~5 min).
+      const cachedProfileExists = Boolean(cachedProfile.name.trim()) && hasCompletedGames;
       setProfileName(cachedProfile.name);
-      setFavoriteGameIds(cachedFavorites);
       setHiddenTabs(getOrderedUniqueTabs(cachedProfile.hiddenTabs || []));
       setHideReplayable(cachedProfile.hideReplayable);
       setHideRetry(cachedProfile.hideRetry);
@@ -1245,21 +1236,14 @@ export function useSocialViewModel(options?: {
       }
 
       const nextName = socialRead.data.profile.name || existingProfile?.displayName || authUser.displayName || authUser.email;
-      const storedFavoriteIds = socialRead.data.profile.favoriteGames.map((entry) => entry.id);
-      const favorites = storedFavoriteIds.filter((id) => completedGameNameById.has(id));
-      // Si algún favorito guardado apunta a un juego ya borrado, el perfil deja de estar completo: hay que pasar
-      // por el editor y re-confirmar aunque quede ≥1 favorito válido (evita favoritos "fantasma" en el directorio).
-      const hasStaleFavorite = favorites.length !== storedFavoriteIds.length;
       const profileVisibility = socialRead.data.profile.visibility || defaultSocialVisibility;
       // Un perfil se considera COMPLETO (y por tanto utilizable sin pasar por el editor) solo si tiene nombre Y al
-      // menos un favorito válido (sin favoritos huérfanos): misma regla que aplica la visibilidad del directorio/detalle
-      // (visibleSocialDirectory, selectedProfileDetail, openProfileDetail). Así el dueño no se cuela al feed con un
-      // perfil que nadie más puede abrir. Un doc en Firestore (era previa o reconexión) NO basta si el gist no cumple.
-      const profileExists =
-        Boolean(socialRead.data.profile.name.trim()) && favorites.length > 0 && !hasStaleFavorite;
+      // menos un juego completado en local: misma regla que aplica el guardado y el gate del botón de Cuenta. Así
+      // nadie entra al feed sin contenido que compartir. Un doc en Firestore (era previa o reconexión) NO basta si
+      // el gist no cumple.
+      const profileExists = Boolean(socialRead.data.profile.name.trim()) && hasCompletedGames;
 
       setProfileName(nextName);
-      setFavoriteGameIds(favorites);
       setHiddenTabs(getOrderedUniqueTabs(profileVisibility.hiddenTabs || []));
       setHideReplayable(Boolean(profileVisibility.hideReplayable));
       setHideRetry(Boolean(profileVisibility.hideRetry));
@@ -1270,7 +1254,6 @@ export function useSocialViewModel(options?: {
       // Sembrar la caché para que la próxima navegación a social no relea el gist propio dentro de la ventana de TTL.
       void putCachedSocialProfile(socialCfgGistId, {
         name: nextName,
-        favorites,
         hiddenTabs: getOrderedUniqueTabs(profileVisibility.hiddenTabs || []),
         hideReplayable: Boolean(profileVisibility.hideReplayable),
         hideRetry: Boolean(profileVisibility.hideRetry),
@@ -1310,7 +1293,7 @@ export function useSocialViewModel(options?: {
     }
   }, [
     authUser,
-    completedGameNameById,
+    hasCompletedGames,
     defaultSocialVisibility,
     getOrderedUniqueTabs,
     lockProfileEditor,
@@ -1371,7 +1354,7 @@ export function useSocialViewModel(options?: {
       const socialConfig = getSocialSyncConfig();
       // Foto propia inmediata (de la sesión Google) aunque aún no se haya re-guardado el perfil; respeta showPhoto.
       const ownPhotoURL = showPhoto && authUser?.photoURL ? authUser.photoURL : '';
-      // FEED SOLO-AMIGOS: el gist social (actividad/publicaciones/favoritos) SOLO se lee de tus amigos y del propio.
+      // FEED SOLO-AMIGOS: el gist social (actividad/publicaciones) SOLO se lee de tus amigos y del propio.
       // Los no-amigos quedan index-only (nombre/foto del directorio Firestore), sin lectura de gist → gran ahorro de
       // llamadas. Como el feed deriva su actividad de estas entradas, mostrar solo la de amigos es automático.
       const friendUids = new Set(friendships.friends.map((friend) => friend.otherUid));
@@ -1431,7 +1414,7 @@ export function useSocialViewModel(options?: {
           const isInactiveFriend =
             !isOwnEntry && lastActiveAt > 0 && Date.now() - lastActiveAt > FRIEND_ACTIVITY_MAX_AGE_MS;
           if (!isOwnEntry && (!isFriend || isInactiveFriend || socialGistCandidates.length === 0)) {
-            // Index-only, sin leer su gist. Solo nombre/foto (Firestore); sin actividad/posts/favoritos.
+            // Index-only, sin leer su gist. Solo nombre/foto (Firestore); sin actividad ni publicaciones.
             return {
               id: entry.id,
               uid: entry.uid,
@@ -1440,11 +1423,10 @@ export function useSocialViewModel(options?: {
               socialGistId: entry.socialGistId,
               gamesGistId: entry.gamesGistId,
               photoURL: entry.photoURL || '',
-              favorites: [],
               activity: [],
               posts: [],
               // Marca para el detalle: es un amigo cuyo gist social NO se ha leído por inactividad. Al abrir su
-              // perfil se hidrata bajo demanda (favoritos/visibilidad/foto) para que no se vea a medias.
+              // perfil se hidrata bajo demanda (nombre/visibilidad/foto) para que no se vea a medias.
               socialSkipped: isFriend && isInactiveFriend,
               sharedLists: {},
               visibility: defaultSocialVisibility,
@@ -1526,7 +1508,6 @@ export function useSocialViewModel(options?: {
               socialGistId: resolvedSocialGistId,
               gamesGistId: entry.gamesGistId,
               photoURL: resolvedPhoto,
-              favorites: socialData.profile.favoriteGames.map((game) => game.name).slice(0, 5),
               activity,
               posts,
               sharedLists,
@@ -1542,7 +1523,6 @@ export function useSocialViewModel(options?: {
               gamesGistId: entry.gamesGistId,
               // Gist ilegible: usamos la foto del directorio de Firestore (best-effort) para no perderla.
               photoURL: entry.photoURL || (isOwnEntry ? ownPhotoURL : ''),
-              favorites: [],
               activity: [],
               posts: [],
               sharedLists: {},
@@ -1603,7 +1583,18 @@ export function useSocialViewModel(options?: {
     let cancelled = false;
     void reconcileReviewActivity({ games: reconcileGames })
       .then((outcome) => {
-        if (cancelled || outcome.skipped || (outcome.added === 0 && outcome.removed === 0)) return;
+        // Listados aún sin cargar (el hub puede montarse antes): se libera el pestillo para reintentarlo cuando
+        // `reconcileGames` cambie, en vez de dar la sesión por reconciliada sin haber comparado nada.
+        if (outcome.reason === 'sin-listados') {
+          activityReconciledRef.current = false;
+          return;
+        }
+        if (outcome.reason && outcome.reason !== 'sello-fresco') {
+          console.warn(`[social] reconciliación omitida: ${outcome.reason}`);
+          return;
+        }
+        const changed = outcome.added + outcome.removed + outcome.relinked + outcome.repaired > 0;
+        if (cancelled || outcome.skipped || !changed) return;
         // La reconciliación invalidó la caché del directorio: reléelo para que el cambio se vea ya, sin esperar
         // a la próxima visita. No es un refresco forzado (no gasta el cooldown del botón "Actualizar").
         void hydrateSocialDirectory();
@@ -1679,20 +1670,6 @@ export function useSocialViewModel(options?: {
     }
   }, [hasMainSync, authUser, hasSocialGist, connecting, resolvingSocialGist, signingIn, handleCreateSocialGist]);
 
-  const toggleGameInSet = useCallback((id: number, current: number[], setFn: (next: number[]) => void) => {
-    if (current.includes(id)) {
-      setFn(current.filter((entry) => entry !== id));
-      return;
-    }
-
-    if (current.length >= MAX_SOCIAL_FAVORITES) {
-      setFeedback('warn', SOCIAL_UI.status.maxFavoritesReached);
-      return;
-    }
-
-    setFn([...current, id]);
-  }, [setFeedback]);
-
   const handleSaveProfile = useCallback(async () => {
     const socialConfig = getSocialSyncConfig();
     if (!authUser || !socialConfig?.token || !socialCfgGistId) {
@@ -1700,10 +1677,9 @@ export function useSocialViewModel(options?: {
       return;
     }
 
-    // Un perfil solo es válido con nombre Y al menos un favorito (coherente con la visibilidad: sin ambos, nadie
-    // más podría abrirlo). Bloquea aquí la creación del estado incompleto que dejaba al perfil invisible para todos.
-    const validFavoriteIds = favoriteGameIds.filter((id) => completedGameNameById.has(id));
-    if (!profileName.trim() || validFavoriteIds.length === 0) {
+    // Un perfil solo es válido con nombre Y al menos un juego completado: así nadie se da de alta en el canal
+    // social sin nada que compartir. Misma regla que aplican la hidratación y el gate del botón de Cuenta.
+    if (!profileName.trim() || !hasCompletedGames) {
       setFeedback('warn', SOCIAL_UI.status.profileIncomplete);
       return;
     }
@@ -1723,7 +1699,6 @@ export function useSocialViewModel(options?: {
       const profile = {
         name: profileName.trim() || authUser.displayName || authUser.email,
         private: false,
-        favoriteGames: validFavoriteIds.map((id) => ({ id, name: completedGameNameById.get(id) || `Juego ${id}` })),
         visibility,
         sharedLists: {},
         // Solo se publica la foto si el usuario la muestra (normalize la valida/descarta si no).
@@ -1777,7 +1752,6 @@ export function useSocialViewModel(options?: {
       // la caché coherente con la edición.
       void putCachedSocialProfile(finalGistId, {
         name: profile.name,
-        favorites: validFavoriteIds,
         hiddenTabs: normalizedHiddenTabs,
         hideReplayable,
         hideRetry,
@@ -1812,8 +1786,7 @@ export function useSocialViewModel(options?: {
     }
   }, [
     authUser,
-    completedGameNameById,
-    favoriteGameIds,
+    hasCompletedGames,
     getOrderedUniqueTabs,
     hiddenTabs,
     hideReplayable,
@@ -2002,8 +1975,6 @@ export function useSocialViewModel(options?: {
     hasCreatedProfile,
     profileName,
     setProfileName,
-    favoriteGameIds,
-    setFavoriteGameIds,
     hiddenTabs,
     setHiddenTabs,
     hideReplayable,
@@ -2014,8 +1985,6 @@ export function useSocialViewModel(options?: {
     setHideGameTime,
     showPhoto,
     setShowPhoto,
-    favoriteSearch,
-    setFavoriteSearch,
     profileSearch,
     setProfileSearch,
     composePostText,
@@ -2063,7 +2032,6 @@ export function useSocialViewModel(options?: {
     handleCreateSocialGist,
     handleSignInGoogle,
     hydrateSocialDirectory,
-    toggleGameInSet,
     handleSaveProfile,
     handleSignOut,
     primaryGatewayCta,

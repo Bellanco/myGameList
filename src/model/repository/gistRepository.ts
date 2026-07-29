@@ -127,7 +127,6 @@ const publicSocialGistInFlightById = new Map<string, Promise<SocialGistData>>();
 export interface SocialGistProfile {
   name: string;
   private: boolean;
-  favoriteGames: Array<{ id: number; name: string }>;
   visibility: SocialProfileVisibility;
   sharedLists: Partial<Record<TabId, SocialSharedGame[]>>;
   // F-social: foto de perfil pública. Solo se publica si visibility.showPhoto está activo (el usuario controla
@@ -394,7 +393,6 @@ function getEmptySocialGistData(): SocialGistData {
     profile: {
       name: '',
       private: false,
-      favoriteGames: [],
       visibility: {
         hiddenTabs: [],
         hideReplayable: false,
@@ -815,22 +813,6 @@ function normalizeSocialGistData(data: unknown): SocialGistData {
   const source = (data && typeof data === 'object' ? data : {}) as Partial<SocialGistData>;
   const profile = (source.profile && typeof source.profile === 'object' ? source.profile : {}) as Partial<SocialGistProfile>;
 
-  const toGames = (items: unknown): Array<{ id: number; name: string }> => {
-    if (!Array.isArray(items)) {
-      return [];
-    }
-
-    return items
-      .map((entry) => {
-        const record = (entry && typeof entry === 'object' ? entry : {}) as { id?: unknown; name?: unknown };
-        return {
-          id: Number(record.id || 0),
-          name: String(record.name || '').trim(),
-        };
-      })
-      .filter((entry) => entry.id > 0 && Boolean(entry.name));
-  };
-
   // ST3: las recomendaciones legacy (top-level y en profile) NO se incluyen en el modelo normalizado, pero se LEEN
   // del raw para fusionarlas en `activity` (sin pérdida de datos); al reescribir el gist se quedan fuera.
   const legacyRecommendations = normalizeRecommendationItems((source as { recommendations?: unknown }).recommendations);
@@ -845,7 +827,8 @@ function normalizeSocialGistData(data: unknown): SocialGistData {
     profile: {
       name: String(profile.name || '').trim(),
       private: Boolean(profile.private),
-      favoriteGames: toGames(profile.favoriteGames),
+      // `favoriteGames` de gists antiguos se descarta aquí a propósito: el producto ya no tiene favoritos, así que
+      // no vuelve a escribirse y desaparece del gist en la primera reescritura del perfil.
       visibility: normalizedVisibility,
       sharedLists: normalizeSocialSharedLists(profile.sharedLists),
       ...(photoURL ? { photoURL } : {}),
@@ -888,7 +871,7 @@ export function remapSocialActorIds(data: SocialGistData, uidToProfileId: Record
  * un gist viejo y no hay forma de saber cuál a ciegas. Elegir mal deja al amigo sin actividad en el feed,
  * mientras su perfil sigue completo (sale del gist de JUEGOS), que es justo el fallo que esto evita.
  *
- * Criterio: el perfil (nombre/foto/favoritos/visibilidad) viene del payload con `updatedAt` MAYOR — el más
+ * Criterio: el perfil (nombre/foto/visibilidad) viene del payload con `updatedAt` MAYOR — el más
  * reciente manda; actividad y publicaciones son la UNIÓN de ambos, deduplicadas por `key`/`id` conservando la
  * entrada de `updatedAt` mayor. Así no se pierde nada publicado en el gist que resultó ser el antiguo.
  */
@@ -1173,6 +1156,124 @@ export async function readSocialGist(token: string, gistId: string, etag: string
     return await request;
   } finally {
     socialGistInFlightByKey.delete(requestKey);
+  }
+}
+
+/** Un gist social del usuario (el actual o uno abandonado por un clonado anterior). */
+export interface OwnSocialGist {
+  gistId: string;
+  description: string;
+  updatedAt: number;
+  isPublic: boolean;
+}
+
+/**
+ * Lista los gists SOCIALES de la cuenta del token (por nombre de fichero ancla). Sirve para encontrar gists
+ * abandonados: `updateGistPrivacy` clonaba el gist a un id nuevo, y el original —con el historial de fechas de
+ * publicación— se queda huérfano en la cuenta. Solo lectura.
+ */
+export async function listOwnSocialGists(token: string): Promise<OwnSocialGist[]> {
+  if (!isValidGithubToken(token)) {
+    throw new Error('Formato de token inválido');
+  }
+
+  const response = await githubFetch(`${GIST_API_BASE}?per_page=100`, {
+    headers: {
+      Authorization: getGithubAuthHeader(token),
+      'X-GitHub-Api-Version': '2022-11-28',
+    },
+  });
+  if (!response.ok) {
+    throw await buildGithubError(response, 'List own gists failed');
+  }
+
+  const body = (await response.json()) as Array<{
+    id?: string;
+    description?: string;
+    updated_at?: string;
+    public?: boolean;
+    files?: Record<string, unknown>;
+  }>;
+
+  return (body || [])
+    .filter((gist) => Boolean(gist.files && SOCIAL_GIST_FILENAME in gist.files))
+    .map((gist) => ({
+      gistId: String(gist.id || ''),
+      description: String(gist.description || ''),
+      updatedAt: gist.updated_at ? Date.parse(gist.updated_at) : 0,
+      isPublic: Boolean(gist.public),
+    }))
+    .filter((gist) => Boolean(gist.gistId))
+    .sort((a, b) => b.updatedAt - a.updatedAt);
+}
+
+/** Una revisión del gist social. GitHub conserva TODAS las versiones y son inmutables. */
+export interface SocialGistRevision {
+  version: string;
+  committedAt: number;
+}
+
+/**
+ * Lista las revisiones del gist social, de más reciente a más antigua. Solo lectura y sin caché: se usa para
+ * auditar/recuperar fechas de publicación que una escritura posterior sobrescribió (el historial del gist es el
+ * único sitio donde sobreviven).
+ */
+export async function readSocialGistHistory(token: string, gistId: string): Promise<SocialGistRevision[]> {
+  if (!isValidGithubToken(token)) {
+    throw new Error('Formato de token inválido');
+  }
+  if (!isValidGistId(gistId)) {
+    throw new Error('Gist ID inválido');
+  }
+
+  const response = await githubFetch(`${GIST_API_BASE}/${gistId}`, {
+    headers: {
+      Authorization: getGithubAuthHeader(token),
+      'X-GitHub-Api-Version': '2022-11-28',
+    },
+  });
+  if (!response.ok) {
+    throw await buildGithubError(response, 'Read social gist history failed');
+  }
+
+  const body = (await response.json()) as { history?: Array<{ version?: string; committed_at?: string }> };
+  return (body.history || [])
+    .map((entry) => ({
+      version: String(entry.version || ''),
+      committedAt: entry.committed_at ? Date.parse(entry.committed_at) : 0,
+    }))
+    .filter((entry) => Boolean(entry.version))
+    .sort((a, b) => b.committedAt - a.committedAt);
+}
+
+/** Lee el contenido del gist social EN una revisión concreta. Solo lectura y sin caché. */
+export async function readSocialGistAtRevision(token: string, gistId: string, version: string): Promise<SocialGistData> {
+  if (!isValidGithubToken(token)) {
+    throw new Error('Formato de token inválido');
+  }
+  if (!isValidGistId(gistId) || !/^[a-fA-F0-9]{7,}$/.test(version)) {
+    throw new Error('Revisión inválida');
+  }
+
+  const response = await githubFetch(`${GIST_API_BASE}/${gistId}/${version}`, {
+    headers: {
+      Authorization: getGithubAuthHeader(token),
+      'X-GitHub-Api-Version': '2022-11-28',
+    },
+  });
+  if (!response.ok) {
+    throw await buildGithubError(response, 'Read social gist revision failed');
+  }
+
+  const body = (await response.json()) as { files?: Record<string, { content: string }> };
+  const raw = body.files?.[SOCIAL_GIST_FILENAME]?.content;
+  if (!raw) {
+    return getEmptySocialGistData();
+  }
+  try {
+    return normalizeSocialGistData(assembleChunkedSocial(JSON.parse(raw), body.files));
+  } catch {
+    return getEmptySocialGistData();
   }
 }
 

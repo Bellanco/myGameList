@@ -25,7 +25,7 @@ function activity(over: Partial<SocialActivityEntry>): SocialActivityEntry {
 
 function baseData(entries: SocialActivityEntry[]): SocialGistData {
   return {
-    profile: { name: 'Yo', private: false, favoriteGames: [], visibility: { hiddenTabs: [], hideReplayable: false, hideRetry: false, hideGameTime: false, showPhoto: true }, sharedLists: {} },
+    profile: { name: 'Yo', private: false, visibility: { hiddenTabs: [], hideReplayable: false, hideRetry: false, hideGameTime: false, showPhoto: true }, sharedLists: {} },
     activity: entries,
     posts: [],
     updatedAt: 1_000,

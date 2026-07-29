@@ -202,13 +202,6 @@
   /* Línea de tinta del cómic (bordes/contornos): CLARA en oscuro (se ve sobre el negro), oscura en claro.
      Mismo criterio que las sombras de bloque (regla 1). */
   --pop-line: #f4f2f5;
-  /* Lomos de estantería (favoritos): colores SÓLIDOS en tonos de P5 (familia roja: rojo, carmesí, rojo claro,
-     rojo oscuro casi negro, rojo-naranja) — el rojo es el color del juego. */
-  --deco-shelf-0: #ff1f3d;
-  --deco-shelf-1: #e60012;
-  --deco-shelf-2: #ff5566;
-  --deco-shelf-3: #8a0008;
-  --deco-shelf-4: #ff6b3d;
 }
 :root[data-palette="persona"][data-theme="light"] {
   --bg: #f4f1ee;
@@ -276,13 +269,6 @@
   --portal-orange: #ff9e1b;
   --portal-cube: #f0559c;
   --portal-turret: #ff3b30; /* ojo/láser de torreta (rojo) — acento de las acciones destructivas */
-  /* Lomos de estantería (favoritos): MEZCLA de los geles (fluidos) de Portal — azul (repulsión), naranja
-     (propulsión) y blanco (conversión). */
-  --deco-shelf-0: linear-gradient(90deg, #29b6f6, #f2f7fc);
-  --deco-shelf-1: linear-gradient(90deg, #ff9e1b, #f2f7fc);
-  --deco-shelf-2: linear-gradient(90deg, #29b6f6, #ff9e1b);
-  --deco-shelf-3: linear-gradient(90deg, #f2f7fc, #29b6f6);
-  --deco-shelf-4: linear-gradient(90deg, #ff9e1b, #29b6f6);
 }
 /* CLARO = APERTURE ANTIGUA (años 50–70): pergamino/pared cálida, paneles de madera, ámbar y naranja quemado,
    verde oliva y rojo teja. El azul clínico se reserva al OSCURO (Aperture moderna). Alternar claro/oscuro
@@ -354,12 +340,6 @@
   --cyber-yellow: #fcee0a;
   --cyber-cyan: #00f0ff;
   --cyber-magenta: #ff2a6d;
-  /* Lomos de estantería (favoritos): rotaciones del trío neón amarillo/cian/magenta. */
-  --deco-shelf-0: linear-gradient(90deg, #fcee0a, #00f0ff);
-  --deco-shelf-1: linear-gradient(90deg, #00f0ff, #ff2a6d);
-  --deco-shelf-2: linear-gradient(90deg, #ff2a6d, #fcee0a);
-  --deco-shelf-3: linear-gradient(90deg, #fcee0a, #ff2a6d);
-  --deco-shelf-4: linear-gradient(90deg, #00f0ff, #fcee0a);
 }
 :root[data-palette="cyberpunk"][data-theme="light"] {
   --bg: #e7eaee;
@@ -430,13 +410,6 @@
   --grim-red: #e63b3b;
   /* Línea de ornamento gótico (molduras/bordes): ORO latón en oscuro (imperial sobre el negro), tinta en claro. */
   --grim-line: #e0a92b;
-  /* Lomos de estantería (favoritos): el VERDE de cogitador con variación MUY sutil (trazas de oro latón y de
-     gris/desaturado), apenas perceptible — no un arcoíris. */
-  --deco-shelf-0: #43f558;
-  --deco-shelf-1: linear-gradient(90deg, #43f558, #8bc93f);
-  --deco-shelf-2: linear-gradient(90deg, #43f558, #74bf8e);
-  --deco-shelf-3: linear-gradient(90deg, #5ce963, #43f558);
-  --deco-shelf-4: linear-gradient(90deg, #74bf8e, #8bc93f);
 }
 :root[data-palette="grimdark"][data-theme="light"] {
   /* CLARO = CÓDICE imperial: VITELA envejecida (cálida, con grano), tinta negra + oro gótico, capitulares
@@ -513,12 +486,6 @@
   --sos-pink: #e85c9e;
   --sos-green: #72c24a;
   --sos-line: #fff7d6;
-  /* Lomos de estantería (favoritos): oro, turquesa, púrpura, magenta e isla verde — un hue por lomo. */
-  --deco-shelf-0: #f5c13e;
-  --deco-shelf-1: #2bb3c4;
-  --deco-shelf-2: #a472e8;
-  --deco-shelf-3: #e85c9e;
-  --deco-shelf-4: #72c24a;
 }
 :root[data-palette="seaofstars"][data-theme="light"] {
   /* CLARO = DÍA EN EL MAR (Sea of Stars): mediodía sobre un mar TURQUESA cristalino — pixel-art SATURADO, cálido
@@ -560,18 +527,11 @@
 }
 
 /* ══ CAPA 3 · DECORATIVOS / EXPRESIVOS ═════════════════════════════════════════
-   Acentos NO semánticos (lomos de podio, avatares, badges de estado). Centralizados y
-   theme-aware. Reactividad deliberada por rol (Opción B): lo que transmite "rol"
-   (destacado/activo) sigue al acento y casa con cada paleta; las rampas de variedad
-   (lomos 1-4, avatares) son un set propio curado. Editar un color decorativo = un solo sitio. */
+   Acentos NO semánticos (avatares, badges de estado). Centralizados y theme-aware.
+   Reactividad deliberada por rol (Opción B): lo que transmite "rol" (destacado/activo)
+   sigue al acento y casa con cada paleta; las rampas de variedad (avatares) son un set
+   propio curado. Editar un color decorativo = un solo sitio. */
 :root {
-  /* Lomos de estantería: el nº0 (destacado) arranca en el acento; 1-4, rampa fija variada. */
-  --deco-shelf-0: linear-gradient(90deg, var(--steam), #7c3aed);
-  --deco-shelf-1: linear-gradient(90deg, #7c3aed, #db2777);
-  --deco-shelf-2: linear-gradient(90deg, #f59e0b, #ef4444);
-  --deco-shelf-3: linear-gradient(90deg, #10b981, #06b6d4);
-  --deco-shelf-4: linear-gradient(90deg, #ef4444, #f59e0b);
-
   /* Avatares: rampa de 6 tonos; 0 y 5 siguen el acento, el resto usa los acentos semánticos.
      Cuelgan de tokens theme-aware, así que no necesitan variante clara aparte. */
   --deco-avatar-0-bg: var(--steam-soft);            --deco-avatar-0-fg: var(--steam-hover);

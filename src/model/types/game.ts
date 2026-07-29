@@ -24,6 +24,15 @@ export interface GameItem {
   _v?: number; // versión entera, incrementa en cada edición (metadato; el reloj CRDT sigue siendo _ts)
   shared?: boolean; // opt-in: este juego se proyecta al canal público (gist social / Firestore)
   listedAt?: number; // fecha de llegada a la lista actual (ms); NO se reescribe al editar
+  /**
+   * Fecha (ms) en que se escribió o reescribió el TEXTO de la reseña.
+   *
+   * Existe porque `_ts` es el reloj del merge CRDT y lo mueve cualquier edición del juego (y lo sellaba en bloque
+   * la importación de datos), así que no sirve como fecha de la reseña: es la fecha que publica el canal social y
+   * la que muestran el feed y la pestaña Reseñas. Solo la toca un cambio del texto; ni cambiar la nota, ni mover
+   * de lista, ni importar la mueven. Aditivo: un cliente antiguo la ignora al leer.
+   */
+  reviewedAt?: number;
 }
 
 export interface DeletedItem {
