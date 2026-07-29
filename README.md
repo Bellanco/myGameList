@@ -11,7 +11,7 @@ conservando el estilo visual, el comportamiento y la compatibilidad con los dato
 - **Puntuación** en estrellas (0–5) con escala opcional **0–100**, elegible en Ajustes.
 - **Sincronización CRDT** con GitHub Gist para minimizar pérdida de datos en conflictos, con
   merge por marcas de tiempo y tombstones. Compresión gzip del gist (gated).
-- **Social**: perfiles, sistema de amistades, feed de reseñas y favoritos (canal separado en Gist +
+- **Social**: perfiles, sistema de amistades y feed de reseñas (canal separado en Gist +
   Firebase Firestore/Auth).
 - **Tema claro / oscuro / automático** con paleta clara "arena" (tonos cálidos) y azul de marca;
   todos los colores son variables CSS theme-aware (`src/styles/_base.scss`).

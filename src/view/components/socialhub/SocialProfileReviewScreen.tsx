@@ -25,7 +25,7 @@ export type ProfileReview = {
 
 /**
  * Detalle de una reseña del perfil: nota, texto COMPLETO y metadatos (plataformas, géneros, puntos fuertes/débiles).
- * El botón de "volver" regresa a la lista de reseñas del perfil (no a la vista de favoritos).
+ * El botón de "volver" regresa a la lista de reseñas del perfil (no a la vista general del perfil).
  */
 export function SocialProfileReviewScreen({
   SOCIAL_UI,

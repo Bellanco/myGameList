@@ -11,6 +11,9 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
 ### Changed
 - Colores de acento centralizados en tokens `--*-rgb` theme-aware; eliminados los `rgba()` con
   valores incrustados en los partials SCSS.
+- El perfil social ya no tiene juegos favoritos: desaparecen del editor, del directorio y del
+  detalle, y dejan de publicarse en el gist. Para crear el perfil ahora basta con un nombre y al
+  menos un juego completado.
 
 ## [3.3] - 2026-07-09
 

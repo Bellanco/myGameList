@@ -209,8 +209,6 @@
 /* ── §13 · Barra de navegación inferior: placa Aperture — filete cian + barra naranja superior (gel), como los paneles. ── */
 :root[data-palette="portal"] .bottom-nav-inner { border: 1px solid rgba(0, 240, 255, .35); border-top: 2px solid var(--portal-orange); border-radius: var(--radius-md); background: var(--surface); }
 :root[data-palette="portal"] .bottom-nav-ind { border-radius: var(--radius-sm); }
-/* Favoritos publicados: placa de Aperture — borde fino; lomos variados en `--deco-shelf-*`. */
-:root[data-palette="portal"] .hub-fav-cart { border: 1px solid var(--border); border-radius: var(--radius-sm); }
 
 /* ── §14 · CLARO = APERTURE ANTIGUA: recolorea los pocos puntos con azul/cian LITERAL (no vía `--steam`) para que
    la zona vieja quede cálida y coherente; el resto ya se calienta solo al cambiar las variables. ── */

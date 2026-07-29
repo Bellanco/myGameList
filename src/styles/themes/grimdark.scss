@@ -228,8 +228,6 @@
 /* ── §13 · Barra de navegación inferior: moldura de oro con resplandor de pantalla verde, esquinas rectas. ── */
 :root[data-palette="grimdark"] .bottom-nav-inner { border: 1px solid var(--grim-gold); border-radius: 0; background: var(--surface); box-shadow: 0 0 18px rgba(67, 245, 88, .05); }
 :root[data-palette="grimdark"] .bottom-nav-ind { border-radius: 0; }
-/* Favoritos publicados: placa imperial — recta, filete de ORO; lomos variados en `--deco-shelf-*`. */
-:root[data-palette="grimdark"] .hub-fav-cart { border: 1px solid var(--grim-gold); border-radius: 0; }
 
 /* ══ EFECTOS · barrido de línea de fósforo del cogitador (CRT) que recorre la pantalla. Solo OSCURO y con
    `data-effects="on"`, bajo reduced-motion. Va en `body::after` (el ::before ya lleva scanlines+vignette). ══ */

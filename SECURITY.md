@@ -11,7 +11,7 @@ reproducción y el impacto estimado. Se responderá lo antes posible.
 
 ## Datos que maneja la app
 
-- **Local (navegador)**: listas de juegos, favoritos, configuración y preferencias en localStorage;
+- **Local (navegador)**: listas de juegos, configuración y preferencias en localStorage;
   token de GitHub (cifrado, ver abajo); clave de dispositivo en IndexedDB.
 - **GitHub Gist**: biblioteca de juegos y canal social (índice de reseñas). Recuerda que un Gist
   "público" es legible por cualquiera con el enlace; usa Gists privados para tu biblioteca.
