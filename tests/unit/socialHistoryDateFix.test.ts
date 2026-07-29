@@ -147,6 +147,33 @@ describe('repairUndatedHistoryDates', () => {
     expect(store.byGame(3).updatedAt).not.toBe(store.byGame(4).updatedAt);
   });
 
+  it('mueve la entrada sellada aunque el `_ts` del juego haya saltado a OTRO día sellado', async () => {
+    // Caso real: la primera pasada del backfill publicó con el sello del día 26; una importación posterior movió
+    // el `_ts` de esos juegos al 27. La entrada sigue en el 26 (día sellado) pero ya no coincide con su `_ts`.
+    armChannel('ffee1122aabb0005');
+    const SELLO_2 = Date.parse('2026-07-27T10:00:00.000Z');
+    const games = [
+      ...Array.from({ length: 12 }, (_, i) => game(i + 1, `Juego ${i + 1}`, SELLO)),
+      // 10 juegos con el `_ts` del segundo sello: suficientes para que ese día también se detecte.
+      ...Array.from({ length: 10 }, (_, i) => game(100 + i, `Movido ${i + 1}`, SELLO_2)),
+    ];
+    localMocks.loadLocalState.mockReturnValue({ c: games, v: [], e: [], p: [], deleted: [], updatedAt: SELLO_2 });
+
+    const store = stubGist(
+      socialGist([
+        reviewEntry(1, 'Juego 1', REAL_1), // publicada en su día → intacta
+        reviewEntry(100, 'Movido 1', SELLO), // publicada con el sello del 26, `_ts` ahora en el 27
+      ]),
+    );
+
+    const plan = await repairUndatedHistoryDates({ date: ANCLA, apply: true });
+
+    expect(plan?.bulkDays).toEqual(['2026-07-26', '2026-07-27']);
+    expect(plan?.toMove.map((item) => item.gameId)).toEqual([100]);
+    expect(new Date(store.byGame(100).updatedAt).toISOString().slice(0, 10)).toBe(ANCLA);
+    expect(store.byGame(1).updatedAt).toBe(REAL_1);
+  });
+
   it('por defecto es un simulacro: devuelve el plan sin escribir', async () => {
     const gistId = 'ffee1122aabb0002';
     armChannel(gistId);
