@@ -3,7 +3,9 @@ import type { IconName } from '../../core/constants/icons';
 import { UI_MESSAGES } from '../../core/constants/labels';
 import { Icon } from './Icon';
 
-export type AppSection = 'lists' | 'social' | 'settings' | 'account' | 'integrations' | 'inbox';
+// 'legal' NO está en NAV_ITEMS a propósito: los documentos legales se alcanzan por enlace (aviso de cookies,
+// tarjeta de cuenta, puerta del hub social), no ocupan un hueco en la barra inferior.
+export type AppSection = 'lists' | 'social' | 'settings' | 'account' | 'integrations' | 'inbox' | 'legal';
 
 interface BottomNavigationProps {
   currentSection: AppSection;

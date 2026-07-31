@@ -50,8 +50,12 @@ service cloud.firestore {
 
     // F2 — publicConfig: preferencias NO sensibles del dueño (escala de puntuación, y F1: apariencia
     // = paleta + modo claro/oscuro). Separada de privateConfig (token/ids). Allowlist estricta de claves.
+    // L4 — `consent`: aceptación de los términos/privacidad (versión + sello). Va aquí y no en el perfil público
+    // porque es dato del dueño, no del directorio, y así le sigue entre dispositivos. `effects` faltaba en la
+    // allowlist aunque el cliente ya lo escribía (`appearancePreferenceRepository`): sin él, esa preferencia se
+    // denegaba en silencio y nunca sincronizaba.
     function publicConfigWriteIsValid() {
-      return request.resource.data.keys().hasOnly(["schemaVersion", "scoreScale", "palette", "theme", "uppercase", "showSteamButton"])
+      return request.resource.data.keys().hasOnly(["schemaVersion", "scoreScale", "palette", "theme", "uppercase", "showSteamButton", "effects", "consent"])
         && (!("scoreScale" in request.resource.data)
             || request.resource.data.scoreScale in ["stars", "grade"])
         && (!("theme" in request.resource.data)
@@ -61,7 +65,14 @@ service cloud.firestore {
         && (!("uppercase" in request.resource.data)
             || request.resource.data.uppercase is bool)
         && (!("showSteamButton" in request.resource.data)
-            || request.resource.data.showSteamButton is bool);
+            || request.resource.data.showSteamButton is bool)
+        && (!("effects" in request.resource.data)
+            || request.resource.data.effects is bool)
+        && (!("consent" in request.resource.data)
+            || (request.resource.data.consent.keys().hasOnly(["version", "agreedAt"])
+                && request.resource.data.consent.version is string
+                && request.resource.data.consent.version.size() <= 32
+                && request.resource.data.consent.agreedAt is number));
     }
 
     // ==========================================
@@ -95,8 +106,10 @@ service cloud.firestore {
         )
       );
 
-      // Solo el admin puede borrar perfiles (excepto el placeholder).
-      allow delete: if !isPlaceholder(userId) && isAdmin();
+      // L3 — derecho de supresión (RGPD art. 17): el dueño puede borrar SU perfil desde la app; el admin, cualquiera
+      // (salvo el placeholder). Antes solo podía el admin, así que el borrado de cuenta era imposible sin intervención
+      // manual.
+      allow delete: if !isPlaceholder(userId) && (isAdmin() || isOwner(userId));
     }
 
     // ==========================================
@@ -105,9 +118,13 @@ service cloud.firestore {
     // El doc se identifica por el uid; nunca es legible por otros.
     // ==========================================
 
+    // L3 — el borrado se separa de create/update en las tres colecciones owner-only: en un `delete` no hay
+    // `request.resource`, así que la función de validación de esquema falla y `allow write` denegaba SIEMPRE el
+    // borrado. Sin esta separación, el usuario no puede eliminar su propia cuenta.
     match /privateConfig/{userId} {
       allow read: if isOwner(userId);
-      allow write: if isOwner(userId) && privateConfigWriteIsValid();
+      allow create, update: if isOwner(userId) && privateConfigWriteIsValid();
+      allow delete: if isOwner(userId);
     }
 
     // ==========================================
@@ -118,7 +135,8 @@ service cloud.firestore {
 
     match /publicConfig/{userId} {
       allow read: if isOwner(userId);
-      allow write: if isOwner(userId) && publicConfigWriteIsValid();
+      allow create, update: if isOwner(userId) && publicConfigWriteIsValid();
+      allow delete: if isOwner(userId);
     }
 
     // ==========================================
@@ -128,7 +146,8 @@ service cloud.firestore {
 
     match /userMap/{userId} {
       allow read: if isOwner(userId);
-      allow write: if isOwner(userId) && userMapWriteIsValid();
+      allow create, update: if isOwner(userId) && userMapWriteIsValid();
+      allow delete: if isOwner(userId);
     }
 
     // ==========================================

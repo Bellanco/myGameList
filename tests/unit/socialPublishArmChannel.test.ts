@@ -9,7 +9,7 @@ const firebaseMocks = vi.hoisted(() => ({
   getCurrentSocialAuthUser: vi.fn(async (): Promise<unknown> => ({ uid: 'uid-1', email: 'yo@example.com', displayName: 'Real Name', photoURL: null })),
   resolveStableProfileId: vi.fn(async () => 'pid-1'),
   ensureProfileByEmail: vi.fn(async () => ({})),
-  findSocialProfileByEmail: vi.fn(async (): Promise<unknown> => null),
+  resolveOwnProfile: vi.fn(async (): Promise<unknown> => null),
 }));
 vi.mock('../../src/model/repository/firebaseRepository', () => firebaseMocks);
 
@@ -79,7 +79,7 @@ beforeEach(() => {
   firebaseMocks.getCurrentSocialAuthUser.mockResolvedValue({ uid: 'uid-1', email: 'yo@example.com', displayName: 'Real Name', photoURL: null });
   firebaseMocks.resolveStableProfileId.mockResolvedValue('pid-1');
   firebaseMocks.ensureProfileByEmail.mockResolvedValue({});
-  firebaseMocks.findSocialProfileByEmail.mockResolvedValue(null);
+  firebaseMocks.resolveOwnProfile.mockResolvedValue(null);
   // Sync principal conectada (token en claro legacy: `getSyncConfig` lo sirve tal cual).
   localStorage.setItem('mis-listas-gist-config', JSON.stringify({ token: TOKEN, gistId: 'games111122223333', etag: null, lastRemoteUpdatedAt: 0 }));
 });
@@ -91,7 +91,7 @@ afterEach(() => {
 
 describe('publishReviewActivity — armado del canal social', () => {
   it('sin config social en el dispositivo, recupera el gist del perfil de Firestore y publica', async () => {
-    firebaseMocks.findSocialProfileByEmail.mockResolvedValue({
+    firebaseMocks.resolveOwnProfile.mockResolvedValue({
       id: 'uid-1', email: 'yo@example.com', displayName: 'Nick', photoURL: '',
       socialGistId: GIST_ID, gamesGistId: 'games111122223333', githubToken: '', socialEnabled: true,
     });
@@ -117,7 +117,7 @@ describe('publishReviewActivity — armado del canal social', () => {
   });
 
   it('con perfil no publicado en Firestore tampoco lanza, pero queda pendiente', async () => {
-    firebaseMocks.findSocialProfileByEmail.mockResolvedValue(null);
+    firebaseMocks.resolveOwnProfile.mockResolvedValue(null);
     const store = stubGistStore();
 
     await expect(publishReviewActivity(REVIEW)).resolves.toBeUndefined();
@@ -137,6 +137,6 @@ describe('publishReviewActivity — armado del canal social', () => {
 
     expect(store.writes()).toBe(1);
     expect(JSON.parse(localStorage.getItem('mis-listas-social-gist-config') || '{}').token).toBe(TOKEN);
-    expect(firebaseMocks.findSocialProfileByEmail).not.toHaveBeenCalled(); // ya había gistId: no hace falta Firestore
+    expect(firebaseMocks.resolveOwnProfile).not.toHaveBeenCalled(); // ya había gistId: no hace falta Firestore
   });
 });

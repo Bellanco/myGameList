@@ -23,8 +23,9 @@ export const PALETTE_KEY = 'mis-listas-palette';
 // antes del primer render (anti-flash); mantener el literal de la clave en sincronía con ese fichero.
 export const UPPERCASE_KEY = 'mis-listas-uppercase';
 
-// F1 — visibilidad del botón "Steam Deck" de la barra de filtros. Valores: 'on' (visible, por defecto) |
-// 'off' (oculto). Se sincroniza por cuenta (publicConfig.showSteamButton). No lo lee `theme-init.js`
+// F1 — visibilidad del botón "Steam Deck" de la barra de filtros. Valores: 'on' (visible) | 'off' (oculto).
+// Es opt-in: la ausencia de la clave = oculto (por defecto), así que solo se ve tras activarlo en la cuenta;
+// quien ya eligió conserva su valor. Se sincroniza por cuenta (publicConfig.showSteamButton). No lo lee `theme-init.js`
 // (no necesita anti-flash: solo condiciona un botón de la toolbar, no la pintura inicial del tema).
 export const STEAM_BUTTON_KEY = 'mis-listas-steam-button';
 
@@ -34,6 +35,11 @@ export const STEAM_BUTTON_KEY = 'mis-listas-steam-button';
 // lee `theme-init.js`: los efectos son decorativos y, al colgar de `data-effects="on"`, en ausencia del atributo
 // (antes de montar) no se pintan → quien los desactiva nunca ve un "flash" de efectos al cargar.
 export const EFFECTS_KEY = 'mis-listas-effects';
+
+// L2 — consentimiento de la analítica (GA4). Valores: 'granted' | 'denied'; ausente = aún no decidido (se
+// muestra el banner). Es una preferencia POR DISPOSITIVO/NAVEGADOR, no por cuenta: el consentimiento para
+// almacenar identificadores lo da quien usa este navegador, así que no se sincroniza a Firestore.
+export const ANALYTICS_CONSENT_KEY = 'mis-listas-analytics-consent';
 
 // Import — preferencia "qué datos traer" (plataformas/géneros/horas/nota) por grupo: juegos nuevos y juegos que
 // ya están en tus listas. JSON con la forma de `ImportFieldPrefs`. Local, no se sincroniza (como la bandeja).

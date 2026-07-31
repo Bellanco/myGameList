@@ -7,13 +7,26 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
 
 ### Added
 - **Tema claro "arena"** — paleta clara con tonos cálidos manteniendo el azul de marca.
+- **Documentos legales** (`/legal/aviso`, `/legal/privacidad`, `/legal/cookies`) accesibles desde la
+  app, con aceptación registrada por cuenta antes de activar lo social.
+- **Analítica opt-in**: Google Analytics no se inicializa hasta que se acepta en el aviso, y se
+  puede revocar desde Cuenta.
+- **Borrado de cuenta** (RGPD art. 17): elimina perfil, amistades y configuración en la nube, y
+  limpia los datos del dispositivo. Los Gists, al ser de la cuenta de GitHub del usuario, no se tocan.
 
 ### Changed
+- El perfil público deja de publicar `email` y `social.gamesGistId`: el perfil propio se resuelve por
+  uid y el gist de juegos se recupera de `privateConfig` (solo el dueño). Se purgan de los perfiles
+  existentes en su siguiente guardado.
 - Colores de acento centralizados en tokens `--*-rgb` theme-aware; eliminados los `rgba()` con
   valores incrustados en los partials SCSS.
 - El perfil social ya no tiene juegos favoritos: desaparecen del editor, del directorio y del
   detalle, y dejan de publicarse en el gist. Para crear el perfil ahora basta con un nombre y al
   menos un juego completado.
+
+### Fixed
+- La preferencia de efectos visuales no llegaba a sincronizarse: faltaba `effects` en la allowlist de
+  las reglas de `publicConfig`, que la denegaba en silencio.
 
 ## [3.3] - 2026-07-09
 

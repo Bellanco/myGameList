@@ -24,6 +24,7 @@ import { invalidateProfileGames, loadForeignProfileGames } from '../model/reposi
 import { getCachedSocialDirectory, getCachedSocialProfile, getLocalMeta, invalidateCachedSocialDirectory, patchLocalMeta, putCachedSocialDirectory, putCachedSocialProfile } from '../model/repository/indexedDbRepository';
 import { applyProfileVisibility } from '../core/utils/profileVisibility';
 import { SOCIAL_UI } from '../core/constants/labels';
+import { LEGAL_CONSENT_UI, LEGAL_VERSION } from '../core/constants/legal';
 import type { IconName } from '../core/constants/icons';
 import { TAB_IDS, type GameItem, type SyncConfig, type TabData, type TabId } from '../model/types/game';
 import {
@@ -32,12 +33,14 @@ import {
   deleteFriendship,
   ensureProfileByEmail,
   getCurrentSocialAuthUser,
-  findSocialProfileByEmail,
   getMyFriendships,
+  getPublicConfig,
+  setPublicConfig,
   healOwnDirectoryGist,
   healOwnFriendshipIdentity,
   listSocialDirectory,
   readFriendship,
+  resolveOwnProfile,
   resolveStableProfileId,
   sendFriendRequest,
   signInWithGoogle,
@@ -234,7 +237,6 @@ export function useSocialViewModel(options?: {
     id: string;
     uid: string; // uid de Firebase (para relaciones de amistad); hoy coincide con `id`, robusto ante el cutover uid→profileId
     displayName: string;
-    email: string;
     socialGistId: string;
     gamesGistId: string;
     photoURL: string;
@@ -264,6 +266,12 @@ export function useSocialViewModel(options?: {
   const [statusKind, setStatusKind] = useState<'ok' | 'warn' | 'err'>('ok');
   const [hasBlockingSocialIssue, setHasBlockingSocialIssue] = useState(false);
   const [showSocialSpace, setShowSocialSpace] = useState(false);
+  // L4 — resultado de la comprobación ANOTADO CON EL UID al que corresponde. Guardar el uid es lo que evita la
+  // carrera: entre que aparece la sesión y responde la comprobación hay renders en los que aún no se sabe nada,
+  // y sin esa marca se colaría un "adelante" que luego habría que revertir (el usuario entraría y se le sacaría).
+  // 'unknown' = la comprobación falló (offline/reglas) → se deja pasar; 'required' = hay que pedir la aceptación.
+  const [legalConsent, setLegalConsent] = useState<{ uid: string; status: 'accepted' | 'required' | 'unknown' } | null>(null);
+  const [savingConsent, setSavingConsent] = useState(false);
   const [hasCreatedProfile, setHasCreatedProfile] = useState(false);
   const [mustCreateProfile, setMustCreateProfile] = useState(false);
   const [justSavedProfile, setJustSavedProfile] = useState(false);
@@ -352,9 +360,9 @@ export function useSocialViewModel(options?: {
       const currentUser = await getCurrentSocialAuthUser();
       let resolvedGistId = socialConfig?.gistId || '';
 
-      if (!resolvedGistId && currentUser?.email && mainConfig?.token) {
+      if (!resolvedGistId && currentUser?.uid && mainConfig?.token) {
         try {
-          const profile = await findSocialProfileByEmail(currentUser.email);
+          const profile = await resolveOwnProfile(currentUser);
           const gistId = profile?.socialEnabled ? profile.socialGistId.trim() : '';
 
           if (gistId) {
@@ -411,9 +419,20 @@ export function useSocialViewModel(options?: {
   const hasMainSync = Boolean(mainSyncConfig?.token && mainSyncConfig?.gistId);
   const hasSocialGist = Boolean(socialCfgGistId);
   const hasSocialSession = Boolean(authUser);
-  const hasReadyAccess = hasSocialSession && hasSocialGist;
+  // L4 — el espacio social no se abre hasta que consta la aceptación de las condiciones/privacidad vigentes. Solo
+  // afecta a lo SOCIAL: las listas propias, la sincronización y el borrado de cuenta nunca dependen de esto.
+  // Sin sesión no hay nada que consentir (el gateway ya pide iniciarla). Con sesión, solo se abre cuando consta la
+  // comprobación DE ESE uid y no exige aceptación.
+  const legalGateOpen =
+    !authUser?.uid || (legalConsent?.uid === authUser.uid && legalConsent.status !== 'required');
+  // El espacio social ABIERTO de verdad: el estado latente (`showSocialSpace`, que fijan la hidratación inicial y
+  // el alta) filtrado por la puerta legal. Todo lo que carga o publica datos sociales cuelga de esto, así que un
+  // usuario sin la aceptación vigente no llega a leer ni escribir nada del canal social.
+  const socialSpaceOpen = showSocialSpace && legalGateOpen;
+  const hasReadyAccess = hasSocialSession && hasSocialGist && legalGateOpen;
   const profileEditorLocked = isProfileEditorLocked(mustCreateProfile, hasBlockingSocialIssue);
-  const canConnectSocialGist = hasMainSync && hasSocialSession && !hasSocialGist && !connecting && !resolvingSocialGist;
+  const canConnectSocialGist =
+    hasMainSync && hasSocialSession && !hasSocialGist && !connecting && !resolvingSocialGist && legalGateOpen;
   const canSignInGoogle = hasMainSync && !hasSocialSession && !signingIn;
 
   useEffect(() => {
@@ -424,6 +443,47 @@ export function useSocialViewModel(options?: {
     setShowSocialSpace(true);
     navigate('/social');
   }, [hasReadyAccess, showSocialSpace, navigate]);
+
+  // L4 — comprueba la aceptación registrada en `publicConfig` (owner-only, sigue al usuario entre dispositivos).
+  // Si la LECTURA falla (offline, reglas, Firebase ausente) se deja pasar: bloquear el espacio social por un fallo
+  // de red convertiría un requisito legal en una avería. Solo se exige cuando consta que no hay aceptación vigente.
+  useEffect(() => {
+    const uid = authUser?.uid;
+    if (!uid) {
+      setLegalConsent(null);
+      return;
+    }
+
+    let cancelled = false;
+    void getPublicConfig(uid)
+      .then((cfg) => {
+        if (cancelled) return;
+        setLegalConsent({ uid, status: cfg?.consent?.version === LEGAL_VERSION ? 'accepted' : 'required' });
+      })
+      .catch(() => {
+        if (!cancelled) setLegalConsent({ uid, status: 'unknown' });
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [authUser?.uid]);
+
+  const acceptLegalConsent = useCallback(async () => {
+    const uid = authUser?.uid;
+    if (!uid || savingConsent) {
+      return;
+    }
+    setSavingConsent(true);
+    try {
+      await setPublicConfig(uid, { consent: { version: LEGAL_VERSION, agreedAt: Date.now() } });
+      setLegalConsent({ uid, status: 'accepted' });
+    } catch {
+      setFeedback('err', LEGAL_CONSENT_UI.error);
+    } finally {
+      setSavingConsent(false);
+    }
+  }, [authUser?.uid, savingConsent, setFeedback]);
 
   const gatewaySteps = SOCIAL_UI.steps.map((step, index) => ({
     ...step,
@@ -442,7 +502,7 @@ export function useSocialViewModel(options?: {
 
     try {
       setResolvingSocialGist(true);
-      const existingProfile = await findSocialProfileByEmail(user.email);
+      const existingProfile = await resolveOwnProfile(user);
       const existingGistId = existingProfile?.socialEnabled ? existingProfile.socialGistId.trim() : '';
 
       if (!existingGistId) {
@@ -521,11 +581,11 @@ export function useSocialViewModel(options?: {
   }, [authUser?.uid]);
 
   useEffect(() => {
-    if (!showSocialSpace || !authUser?.uid) {
+    if (!socialSpaceOpen || !authUser?.uid) {
       return;
     }
     void refreshFriendships();
-  }, [showSocialSpace, authUser?.uid, refreshFriendships]);
+  }, [socialSpaceOpen, authUser?.uid, refreshFriendships]);
 
   // PRIVACIDAD (saneo al abrir social): una vez por sesión, cuando el nick ya está hidratado, propaga mi nick actual a
   // mis docs de amistad ya existentes (que pudieron guardar un nombre antiguo/real antes del arreglo). Se espera a que
@@ -533,7 +593,7 @@ export function useSocialViewModel(options?: {
   const friendshipHealedRef = useRef(false);
   useEffect(() => {
     if (friendshipHealedRef.current) return;
-    if (!showSocialSpace || !authUser?.uid || !socialCfgGistId) return;
+    if (!socialSpaceOpen || !authUser?.uid || !socialCfgGistId) return;
     const nick = profileName.trim();
     if (!nick) return;
     friendshipHealedRef.current = true;
@@ -543,7 +603,7 @@ export function useSocialViewModel(options?: {
       socialGistId: socialCfgGistId,
       gamesGistId: mainSyncConfig?.gistId || '',
     });
-  }, [showSocialSpace, authUser?.uid, authUser?.photoURL, socialCfgGistId, profileName, showPhoto, mainSyncConfig?.gistId]);
+  }, [socialSpaceOpen, authUser?.uid, authUser?.photoURL, socialCfgGistId, profileName, showPhoto, mainSyncConfig?.gistId]);
 
   // AUTO-HEAL del directorio (una vez por sesión): si mi `profiles/{uid}.social.gistId` quedó anclado a un gist viejo
   // (cambié de gist social sin re-publicar el perfil), lo sincroniza con el gist ACTUAL de mi sesión. Sin esto, el
@@ -552,10 +612,10 @@ export function useSocialViewModel(options?: {
   const directoryHealedRef = useRef(false);
   useEffect(() => {
     if (directoryHealedRef.current) return;
-    if (!showSocialSpace || !authUser?.uid || !socialCfgGistId) return;
+    if (!socialSpaceOpen || !authUser?.uid || !socialCfgGistId) return;
     directoryHealedRef.current = true;
     void healOwnDirectoryGist(authUser.uid, socialCfgGistId, socialCfgEtag);
-  }, [showSocialSpace, authUser?.uid, socialCfgGistId, socialCfgEtag]);
+  }, [socialSpaceOpen, authUser?.uid, socialCfgGistId, socialCfgEtag]);
 
   // LATIDO DE USO RECIENTE: refresca `profiles.updatedAt`, por el que ordena el directorio y con el que el feed
   // decide si un amigo sigue activo. Publicar ya lo refresca; esto cubre a quien entra solo a mirar. Acotado a
@@ -563,7 +623,7 @@ export function useSocialViewModel(options?: {
   const profileTouchedRef = useRef(false);
   useEffect(() => {
     if (profileTouchedRef.current) return;
-    if (!showSocialSpace || !authUser?.uid || !socialCfgGistId) return;
+    if (!socialSpaceOpen || !authUser?.uid || !socialCfgGistId) return;
     profileTouchedRef.current = true;
     const uid = authUser.uid;
 
@@ -578,7 +638,7 @@ export function useSocialViewModel(options?: {
         /* best-effort: la recencia es orden, no funcionalidad. */
       }
     })();
-  }, [showSocialSpace, authUser?.uid, socialCfgGistId]);
+  }, [socialSpaceOpen, authUser?.uid, socialCfgGistId]);
 
   // Tras un cambio de amistad (aceptar/eliminar), el conjunto de amigos cambia y con él la actividad que debe salir
   // en el feed. Se invalida la caché del directorio (feed solo-amigos) y se refresca la amistad; el efecto que
@@ -1168,7 +1228,7 @@ export function useSocialViewModel(options?: {
   }, [attachExistingSocialGist, setFeedback]);
 
   const hydrateSocialProfile = useCallback(async () => {
-    if (!showSocialSpace || !authUser || !socialCfgGistId) {
+    if (!socialSpaceOpen || !authUser || !socialCfgGistId) {
       return;
     }
 
@@ -1205,7 +1265,7 @@ export function useSocialViewModel(options?: {
 
     try {
       setHydratingProfile(true);
-      const existingProfile = await findSocialProfileByEmail(authUser.email);
+      const existingProfile = await resolveOwnProfile(authUser);
 
       const socialRead = await readSocialGist(socialConfig.token, socialCfgGistId, socialCfgEtag);
       if (!socialRead.notModified) {
@@ -1306,7 +1366,7 @@ export function useSocialViewModel(options?: {
     lockProfileEditor,
     navigate,
     setFeedback,
-    showSocialSpace,
+    socialSpaceOpen,
     socialCfgEtag,
     socialCfgGistId,
     justSavedProfile,
@@ -1327,7 +1387,7 @@ export function useSocialViewModel(options?: {
   const hydrateSocialDirectory = useCallback(async (forceRefresh = false) => {
     // `!friendshipsResolved`: NO hidratar (ni cachear) hasta conocer a los amigos. Si no, el feed solo-amigos cachearía
     // el directorio sin actividad de amigos (carrera de arranque) y quedaría en blanco hasta invalidar la caché.
-    if (!showSocialSpace || activePanel === 'profile' || profileEditorLocked || !authUser || !socialCfgGistId || !friendshipsResolved) {
+    if (!socialSpaceOpen || activePanel === 'profile' || profileEditorLocked || !authUser || !socialCfgGistId || !friendshipsResolved) {
       return;
     }
 
@@ -1374,6 +1434,14 @@ export function useSocialViewModel(options?: {
           .filter((friend) => friend.otherSocialGistId)
           .map((friend) => [friend.otherUid, friend.otherSocialGistId] as const),
       );
+      // L1: mismo razonamiento para el gist de JUEGOS. Ya no se publica en el directorio (era legible por cualquier
+      // usuario autenticado), así que para un amigo la fuente es su doc de amistad; del directorio solo puede venir
+      // el valor legacy de un perfil aún sin purgar. Un no-amigo se queda sin lista de juegos, que es lo pretendido.
+      const friendGamesGistByUid = new Map(
+        friendships.friends
+          .filter((friend) => friend.otherGamesGistId)
+          .map((friend) => [friend.otherUid, friend.otherGamesGistId] as const),
+      );
 
       // Escalabilidad (>30 amigos): el directorio de descubrimiento está capado a SOCIAL_DIRECTORY_LIMIT y solo lista
       // perfiles con `social.enabled`. Para que NINGÚN amigo desaparezca del feed / detalle / gestión por caer fuera
@@ -1388,7 +1456,6 @@ export function useSocialViewModel(options?: {
         .map((friend) => ({
           id: friend.otherUid,
           uid: friend.otherUid,
-          email: '',
           displayName: friend.otherName || 'Usuario',
           photoURL: friend.otherPhoto || '',
           socialGistId: friend.otherSocialGistId,
@@ -1408,6 +1475,8 @@ export function useSocialViewModel(options?: {
           // reescribe al re-publicar el perfil y puede quedar anclado a un gist viejo/vacío.
           const friendSocialGistId = isFriend ? friendSocialGistByUid.get(entry.uid) : undefined;
           const effectiveSocialGistId = friendSocialGistId || entry.socialGistId;
+          // Gist de juegos: la amistad manda; `entry.gamesGistId` solo trae valor en perfiles legacy sin purgar.
+          const effectiveGamesGistId = (isFriend ? friendGamesGistByUid.get(entry.uid) : undefined) || entry.gamesGistId;
           // …pero la deriva puede ir en CUALQUIER dirección (publicar una reseña sanea el directorio y no los docs
           // de amistad; abrir el hub sanea ambos), así que preferir a ciegas una de las dos fuentes deja al amigo
           // sin actividad la mitad de las veces. Si divergen, se leen las DOS y se fusionan: una lectura extra en
@@ -1426,9 +1495,8 @@ export function useSocialViewModel(options?: {
               id: entry.id,
               uid: entry.uid,
               displayName: entry.displayName || 'Usuario',
-              email: entry.email,
               socialGistId: entry.socialGistId,
-              gamesGistId: entry.gamesGistId,
+              gamesGistId: effectiveGamesGistId,
               photoURL: entry.photoURL || '',
               activity: [],
               posts: [],
@@ -1511,9 +1579,8 @@ export function useSocialViewModel(options?: {
               id: entry.id,
               uid: entry.uid,
               displayName: socialData.profile.name || entry.displayName || 'Usuario',
-              email: entry.email,
               socialGistId: resolvedSocialGistId,
-              gamesGistId: entry.gamesGistId,
+              gamesGistId: effectiveGamesGistId,
               photoURL: resolvedPhoto,
               activity,
               posts,
@@ -1525,9 +1592,8 @@ export function useSocialViewModel(options?: {
               id: entry.id,
               uid: entry.uid,
               displayName: entry.displayName || 'Usuario',
-              email: entry.email,
               socialGistId: effectiveSocialGistId,
-              gamesGistId: entry.gamesGistId,
+              gamesGistId: effectiveGamesGistId,
               // Gist ilegible: usamos la foto del directorio de Firestore (best-effort) para no perderla.
               photoURL: entry.photoURL || (isOwnEntry ? ownPhotoURL : ''),
               activity: [],
@@ -1547,7 +1613,7 @@ export function useSocialViewModel(options?: {
     } finally {
       setLoadingDirectory(false);
     }
-  }, [activePanel, authUser, defaultSocialVisibility, friendships.friends, friendshipsResolved, mainSyncConfig?.token, profileEditorLocked, setFeedback, showSocialSpace, socialCfgGistId, showPhoto]);
+  }, [activePanel, authUser, defaultSocialVisibility, friendships.friends, friendshipsResolved, mainSyncConfig?.token, profileEditorLocked, setFeedback, socialSpaceOpen, socialCfgGistId, showPhoto]);
 
   // F3 — publica una publicación de texto libre y refresca el feed (definido tras hydrateSocialDirectory para evitar TDZ).
   const handlePublishPost = useCallback(async () => {
@@ -1584,7 +1650,7 @@ export function useSocialViewModel(options?: {
   const activityReconciledRef = useRef(false);
   useEffect(() => {
     if (activityReconciledRef.current) return;
-    if (!showSocialSpace || profileEditorLocked || !authUser?.uid || !socialCfgGistId) return;
+    if (!socialSpaceOpen || profileEditorLocked || !authUser?.uid || !socialCfgGistId) return;
     activityReconciledRef.current = true;
 
     let cancelled = false;
@@ -1613,7 +1679,7 @@ export function useSocialViewModel(options?: {
     return () => {
       cancelled = true;
     };
-  }, [authUser?.uid, hydrateSocialDirectory, profileEditorLocked, reconcileGames, showSocialSpace, socialCfgGistId]);
+  }, [authUser?.uid, hydrateSocialDirectory, profileEditorLocked, reconcileGames, socialSpaceOpen, socialCfgGistId]);
 
   // Limpia el timer del cooldown al desmontar (evita setState tras desmontar).
   useEffect(() => () => {
@@ -1627,7 +1693,7 @@ export function useSocialViewModel(options?: {
   const photoHealAttemptedRef = useRef(false);
   useEffect(() => {
     if (photoHealAttemptedRef.current) return;
-    if (!showSocialSpace || !socialCfgGistId || !showPhoto) return;
+    if (!socialSpaceOpen || !socialCfgGistId || !showPhoto) return;
     const photo = authUser?.photoURL;
     if (!photo) return;
     const cfg = getSocialSyncConfig();
@@ -1668,7 +1734,7 @@ export function useSocialViewModel(options?: {
         // best-effort: no bloquea el feed; se reintenta la próxima sesión.
       }
     })();
-  }, [authUser?.photoURL, showPhoto, showSocialSpace, socialCfgGistId]);
+  }, [authUser?.photoURL, showPhoto, socialSpaceOpen, socialCfgGistId]);
 
   // Auto-crear gist social si tenemos token + Google pero no gist
   useEffect(() => {
@@ -1975,10 +2041,14 @@ export function useSocialViewModel(options?: {
     activePanel,
     socialCfgGistId,
     authUser,
+    // L4 — puerta de aceptación (solo con sesión y consentimiento no vigente).
+    legalConsentRequired: legalConsent?.status === 'required' && legalConsent.uid === authUser?.uid,
+    savingConsent,
+    acceptLegalConsent,
     loading,
     status,
     statusKind,
-    showSocialSpace,
+    showSocialSpace: socialSpaceOpen,
     hasCreatedProfile,
     profileName,
     setProfileName,
