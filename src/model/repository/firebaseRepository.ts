@@ -25,7 +25,7 @@ import {
 import type { FirestorePrivateConfig, FirestorePublicConfig } from '../types/firestore';
 
 // --- RE-EXPORTS: API pública estable (los consumidores siguen importando desde firebaseRepository) ---
-export { initializeFirebaseServices } from './firebaseClient';
+export { enableAnalyticsAfterConsent, initializeFirebaseServices } from './firebaseClient';
 export type {
   FirebaseServices,
   SocialAuthUser,

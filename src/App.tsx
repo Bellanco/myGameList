@@ -14,6 +14,7 @@ import { GameTable } from './view/components/GameTable';
 import { StatusBanner } from './view/components/StatusBanner';
 import { BottomNavigation, type AppSection } from './view/components/BottomNavigation';
 import { ScrollToTop } from './view/components/ScrollToTop';
+import { ConsentBanner } from './view/components/ConsentBanner';
 import { useGameListViewModel } from './viewmodel/useGameListViewModel';
 import { useToolbarFilters } from './viewmodel/useToolbarFilters';
 import { computeTabOptions, countActiveFilters } from './viewmodel/toolbarFilters';
@@ -723,6 +724,7 @@ export default function App() {
       ) : null}
 
       <BottomNavigation currentSection={activeSection} onSectionChange={handleSectionChange} />
+      <ConsentBanner />
       <ScrollToTop />
 
       <Suspense fallback={null}>

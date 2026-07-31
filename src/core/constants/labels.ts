@@ -289,6 +289,20 @@ export const UI_MESSAGES = {
     account: {
       title: 'Ajustes de cuenta',
     },
+    // L2 — consentimiento de la analítica: banner previo y revocación desde la cuenta.
+    analytics: {
+      title: 'Analítica',
+      subtitle: 'Estadísticas de uso anónimas (Google Analytics) para saber qué falla y qué se usa.',
+      groupAria: 'Consentimiento de analítica',
+      on: 'Activada',
+      off: 'Desactivada',
+      bannerTitle: 'Analítica opcional',
+      bannerBody: 'Esta app puede usar Google Analytics para medir el uso y detectar errores. Requiere guardar identificadores en tu navegador, así que solo se activa si lo aceptas. Puedes cambiarlo cuando quieras en Cuenta.',
+      bannerAccept: 'Aceptar',
+      bannerReject: 'Rechazar',
+      bannerMore: 'Política de cookies',
+      bannerAria: 'Consentimiento de analítica',
+    },
     // L4 — enlaces a los documentos legales.
     legal: {
       title: 'Legal',
