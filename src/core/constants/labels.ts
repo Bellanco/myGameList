@@ -325,6 +325,9 @@ export const UI_MESSAGES = {
     legal: {
       title: 'Legal',
       subtitle: 'Condiciones de uso, tratamiento de datos y cookies.',
+      back: 'Volver',
+      updated: (version: string) => `Última actualización: ${version}`,
+      contact: 'Contacto',
     },
     appearance: {
       groupAria: 'Tema de la aplicación',
