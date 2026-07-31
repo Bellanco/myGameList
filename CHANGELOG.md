@@ -7,6 +7,8 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
 
 ### Added
 - **Tema claro "arena"** — paleta clara con tonos cálidos manteniendo el azul de marca.
+- **Documentos legales** (`/legal/aviso`, `/legal/privacidad`, `/legal/cookies`) accesibles desde la
+  app, con aceptación registrada por cuenta antes de activar lo social.
 
 ### Changed
 - Colores de acento centralizados en tokens `--*-rgb` theme-aware; eliminados los `rgba()` con

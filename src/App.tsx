@@ -1,6 +1,7 @@
 import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import { DIALOG_MESSAGES, ROUTE_TAB, SYNC_BADGE_TEXT, SYNC_MESSAGES, TAB_ROUTE, TAB_TITLES, UI_MESSAGES } from './core/constants/labels';
+import { LEGAL_ROUTES, type LegalDocId } from './core/constants/legal';
 import { TAB_IDS, type TabData, type TabId } from './model/types/game';
 import { resolveGrade } from './core/utils/scoreScale';
 import { normalizeData } from './model/repository/localRepository';
@@ -53,6 +54,7 @@ const AccountHub = lazy(() => import('./view/components/AccountHub').then((modul
 const RouletteModal = lazy(() => import('./view/components/roulette/RouletteModal').then((module) => ({ default: module.RouletteModal })));
 const IntegrationsScreen = lazy(() => import('./view/components/import/IntegrationsScreen').then((module) => ({ default: module.IntegrationsScreen })));
 const InboxScreen = lazy(() => import('./view/components/import/InboxScreen').then((module) => ({ default: module.InboxScreen })));
+const LegalScreen = lazy(() => import('./view/components/LegalScreen').then((module) => ({ default: module.LegalScreen })));
 
 function getCurrentTab(pathname: string): TabId {
   return ROUTE_TAB[pathname] || 'c';
@@ -64,7 +66,14 @@ function getCurrentSection(pathname: string): AppSection {
   if (pathname.startsWith('/cuenta')) return 'account';
   if (pathname.startsWith('/integraciones')) return 'integrations';
   if (pathname.startsWith('/bandeja')) return 'inbox';
+  if (pathname.startsWith('/legal')) return 'legal';
   return 'lists';
+}
+
+/** L4 — documento legal correspondiente a la ruta (`/legal/*`). Por defecto, el aviso legal. */
+function getLegalDocId(pathname: string): LegalDocId {
+  const match = (Object.keys(LEGAL_ROUTES) as LegalDocId[]).find((id) => pathname.startsWith(LEGAL_ROUTES[id]));
+  return match || 'terms';
 }
 
 function isCompactFilters(): boolean {
@@ -95,6 +104,10 @@ export const APP_ROUTE_PATHS = [
   '/cuenta',
   '/integraciones',
   '/bandeja',
+  // L4 — documentos legales. Sin estas entradas, `<Route path="*">` las rebotaría a /completados.
+  LEGAL_ROUTES.terms,
+  LEGAL_ROUTES.privacy,
+  LEGAL_ROUTES.cookies,
 ] as const;
 
 export default function App() {
@@ -102,6 +115,7 @@ export default function App() {
   const navigate = useNavigate();
   const currentTab = getCurrentTab(location.pathname);
   const activeSection = getCurrentSection(location.pathname);
+  const legalDocId = getLegalDocId(location.pathname);
 
   const vm = useGameListViewModel();
   // F2: enlaza la sesión de Google con la escala de puntuación (hidrata desde Firestore / resetea al salir);
@@ -626,6 +640,10 @@ export default function App() {
         ) : activeSection === 'account' ? (
           <Suspense fallback={null}>
             {scoreScaleUid ? <AccountHub scoreScaleUid={scoreScaleUid} /> : null}
+          </Suspense>
+        ) : activeSection === 'legal' ? (
+          <Suspense fallback={null}>
+            <LegalScreen docId={legalDocId} />
           </Suspense>
         ) : activeSection === 'integrations' ? (
           <Suspense fallback={null}>
