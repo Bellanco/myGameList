@@ -33,6 +33,12 @@ export async function initializeFirebaseServices(): Promise<FirebaseServices | n
   return m.initializeFirebaseServices();
 }
 
+/** L2 — activa GA4 tras aceptar el aviso, sin recargar (los servicios ya están cacheados sin analítica). */
+export async function enableAnalyticsAfterConsent(): Promise<void> {
+  const m = await loadFacade();
+  return m.enableAnalyticsAfterConsent();
+}
+
 // --- Telemetría (best-effort, no bloqueante) ---
 export async function reportHandledError(error: unknown, fatal = false, context = ''): Promise<void> {
   const m = await loadFacade();

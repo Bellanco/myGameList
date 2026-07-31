@@ -35,6 +35,11 @@ export const STEAM_BUTTON_KEY = 'mis-listas-steam-button';
 // (antes de montar) no se pintan → quien los desactiva nunca ve un "flash" de efectos al cargar.
 export const EFFECTS_KEY = 'mis-listas-effects';
 
+// L2 — consentimiento de la analítica (GA4). Valores: 'granted' | 'denied'; ausente = aún no decidido (se
+// muestra el banner). Es una preferencia POR DISPOSITIVO/NAVEGADOR, no por cuenta: el consentimiento para
+// almacenar identificadores lo da quien usa este navegador, así que no se sincroniza a Firestore.
+export const ANALYTICS_CONSENT_KEY = 'mis-listas-analytics-consent';
+
 // Import — preferencia "qué datos traer" (plataformas/géneros/horas/nota) por grupo: juegos nuevos y juegos que
 // ya están en tus listas. JSON con la forma de `ImportFieldPrefs`. Local, no se sincroniza (como la bandeja).
 export const IMPORT_FIELDS_KEY = 'mis-listas-import-fields';

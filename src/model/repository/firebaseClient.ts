@@ -4,6 +4,7 @@
 import { getApp, getApps, initializeApp, type FirebaseApp } from 'firebase/app';
 import { getAuth, setPersistence, browserLocalPersistence, type Auth } from 'firebase/auth';
 import { getFirestore, type Firestore } from 'firebase/firestore';
+import { readAnalyticsConsent } from './analyticsConsentRepository';
 
 type AnalyticsModule = typeof import('firebase/analytics');
 type Analytics = ReturnType<AnalyticsModule['getAnalytics']>;
@@ -139,7 +140,13 @@ function isAnalyticsEnabledInCurrentEnv(): boolean {
     return false;
   }
 
-  return parseEnvBoolean(import.meta.env.VITE_ENABLE_ANALYTICS, true);
+  if (!parseEnvBoolean(import.meta.env.VITE_ENABLE_ANALYTICS, true)) {
+    return false;
+  }
+
+  // L2 — CONSENTIMIENTO PREVIO: GA4 escribe identificadores en el dispositivo, así que no puede inicializarse
+  // mientras el usuario no lo acepte. Sin `analytics`, toda la telemetría queda inerte.
+  return readAnalyticsConsent() === 'granted';
 }
 
 export function getFirebaseWebConfig(): FirebaseWebConfig {
@@ -231,27 +238,42 @@ async function buildFirebaseServices(): Promise<FirebaseServices | null> {
     // Keep silent: auth persistence can fail in hardened privacy modes.
   });
 
-  let analytics: Analytics | null = null;
-  const hasMeasurementId = Boolean(getFirebaseWebConfig().measurementId);
-  const analyticsEnabled = isAnalyticsEnabledInCurrentEnv();
+  return { app, auth, firestore, analytics: await startAnalytics(app) };
+}
 
-  if (hasMeasurementId && analyticsEnabled && typeof window !== 'undefined') {
-    try {
-      const analyticsModule = await getAnalyticsModule();
-      if (!analyticsModule) {
-        return { app, auth, firestore, analytics };
-      }
-
-      const supported = await analyticsModule.isSupported();
-      if (supported) {
-        analytics = analyticsModule.getAnalytics(app);
-      }
-    } catch {
-      // Keep silent: analytics is optional and should not block app bootstrap.
-    }
+/**
+ * Arranca GA4 si procede (config + entorno + CONSENTIMIENTO otorgado). Devuelve null en cualquier otro caso.
+ * Compartido por el arranque y por `enableAnalyticsAfterConsent`.
+ */
+async function startAnalytics(app: FirebaseApp): Promise<Analytics | null> {
+  if (!getFirebaseWebConfig().measurementId || !isAnalyticsEnabledInCurrentEnv() || typeof window === 'undefined') {
+    return null;
   }
 
-  return { app, auth, firestore, analytics };
+  try {
+    const analyticsModule = await getAnalyticsModule();
+    if (!analyticsModule) {
+      return null;
+    }
+
+    return (await analyticsModule.isSupported()) ? analyticsModule.getAnalytics(app) : null;
+  } catch {
+    // Keep silent: analytics is optional and should not block app bootstrap.
+    return null;
+  }
+}
+
+/**
+ * L2 — Activa la analítica cuando el usuario ACEPTA en el banner, sin recargar: los servicios ya están cacheados
+ * (se construyeron sin `analytics` porque aún no había consentimiento), así que basta con enchufárselos. Si el
+ * usuario rechaza, no hay nada que apagar: nunca llegó a inicializarse.
+ */
+export async function enableAnalyticsAfterConsent(): Promise<void> {
+  const services = await initializeFirebaseServices();
+  if (!services || services.analytics) {
+    return;
+  }
+  services.analytics = await startAnalytics(services.app);
 }
 
 /**

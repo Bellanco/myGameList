@@ -9,6 +9,8 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
 - **Tema claro "arena"** — paleta clara con tonos cálidos manteniendo el azul de marca.
 - **Documentos legales** (`/legal/aviso`, `/legal/privacidad`, `/legal/cookies`) accesibles desde la
   app, con aceptación registrada por cuenta antes de activar lo social.
+- **Analítica opt-in**: Google Analytics no se inicializa hasta que se acepta en el aviso, y se
+  puede revocar desde Cuenta.
 
 ### Changed
 - Colores de acento centralizados en tokens `--*-rgb` theme-aware; eliminados los `rgba()` con

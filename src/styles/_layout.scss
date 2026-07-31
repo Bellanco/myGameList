@@ -465,6 +465,34 @@
 .hub-gateway-consent-check { display: flex; align-items: flex-start; gap: .5rem; font-size: .88rem; cursor: pointer; }
 .hub-gateway-consent-check input { margin-top: .2rem; flex: 0 0 auto; }
 
+/* L2 — aviso de consentimiento de la analítica. Se apoya SOBRE la barra inferior (z-index mayor y desplazado por
+   encima de su altura) para no taparla: la app sigue siendo usable con el aviso en pantalla, que es justo lo que
+   permite no bloquear al usuario mientras no decide. */
+.consent-banner {
+  position: fixed;
+  left: .8rem;
+  right: .8rem;
+  bottom: calc(4.6rem + env(safe-area-inset-bottom, 0px));
+  z-index: 130;
+  margin: 0 auto;
+  max-width: 640px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: .8rem;
+  padding: .85rem 1rem;
+  background: var(--surface-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow);
+}
+
+.consent-banner-text { flex: 1 1 260px; display: grid; gap: .25rem; }
+.consent-banner-text strong { font-size: .95rem; }
+.consent-banner-text p { color: var(--text-muted); font-size: .82rem; line-height: 1.4; margin: 0; }
+.consent-banner-text a { font-size: .8rem; }
+.consent-banner-actions { display: flex; gap: .5rem; margin-left: auto; }
+
 .bottom-nav {
   position: fixed;
   left: 0;

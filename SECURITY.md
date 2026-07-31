@@ -48,6 +48,15 @@ WebCrypto nativo (AES-GCM 256). Hay **dos** mecanismos con garantías **distinta
   usados, `X-Frame-Options`, `X-Content-Type-Options`, etc.).
 - **Reglas de Firestore** *owner-only* con validación de esquema (`hasOnly`) en `profiles` y
   `privateConfig`, cubiertas por tests de emulador.
+- **Analítica con consentimiento previo**: Google Analytics no se inicializa mientras el usuario no lo
+  acepte, y la decisión es revocable desde Cuenta. El dueño puede BORRAR sus documentos (borrado de
+  cuenta): `create/update` van validados por esquema y `delete` se autoriza aparte, porque en un borrado
+  no hay documento entrante que validar.
+- **Analítica con consentimiento previo**: Google Analytics no se inicializa mientras el usuario no lo
+  acepte, y la decisión es revocable desde Cuenta.
+- **Borrado de cuenta** desde la app: elimina perfil, amistades y configuración remota, y limpia
+  localStorage e IndexedDB (incluida la clave que descifra el token). Los Gists no se tocan: son de la
+  cuenta de GitHub del usuario.
 - **Sincronización CRDT** (merge por marcas de tiempo + tombstones) para minimizar pérdida de datos.
 - **Service Worker** que solo cachea GET same-origin y excluye APIs externas (GitHub/Firebase).
 
