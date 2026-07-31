@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { SYNC_MESSAGES } from '../core/constants/labels';
-import { findSocialProfileByEmail, getCurrentSocialAuthUser, recoverGithubToken, resolveStableProfileId, setAnalyticsUser, signInWithGoogle, trackAnalyticsEvent } from '../model/repository/firebaseGateway';
+import { getCurrentSocialAuthUser, getPrivateConfig, recoverGithubToken, resolveOwnProfile, resolveStableProfileId, setAnalyticsUser, setPrivateConfig, signInWithGoogle, trackAnalyticsEvent } from '../model/repository/firebaseGateway';
 import { mergeCrdt } from '../model/repository/syncRepository';
 import { clearSyncConfig, createGist, ensureSyncConfigLoaded, findGamesGistId, getRetryAfterMs, getSyncConfig, isDeferredNetworkError, readGist, saveSyncConfig, whoAmI, writeGist } from '../model/repository/gistRepository';
 import { beginGithubOAuth, completeGithubOAuth, hasGithubOAuthRedirect, isGithubOAuthConfigured } from '../model/repository/githubOAuthRepository';
@@ -676,10 +676,21 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
       // (best-effort) para que este dispositivo NO genere un pseudónimo divergente en el primer guardado.
       await resolveStableProfileId(user.uid).catch(() => {});
 
-      const profile = await findSocialProfileByEmail(user.email);
-      const recoveredGistId = String(profile?.gamesGistId || '').trim();
+      // L1: el id del gist de juegos se recupera de `privateConfig` (owner-only). Antes salía del perfil PÚBLICO,
+      // que lo exponía a cualquier usuario autenticado. Fallback al doc público mientras queden perfiles sin
+      // purgar; cuando se usa, se re-siembra en privateConfig para no volver a depender de él.
+      const privateConfig = await getPrivateConfig(user.uid).catch(() => null);
+      let profile = null as Awaited<ReturnType<typeof resolveOwnProfile>>;
+      let recoveredGistId = String(privateConfig?.gamesGistId || '').trim();
+      if (!recoveredGistId) {
+        profile = await resolveOwnProfile(user);
+        recoveredGistId = String(profile?.gamesGistId || '').trim();
+        if (recoveredGistId) {
+          void setPrivateConfig(user.uid, { gamesGistId: recoveredGistId }).catch(() => {});
+        }
+      }
       // B1: preferir el token CIFRADO de privateConfig; fallback al campo legacy en claro (perfiles viejos).
-      const recoveredToken = (await recoverGithubToken(user.uid)) || readLegacyPlaintextToken(profile);
+      const recoveredToken = (await recoverGithubToken(user.uid)) || readLegacyPlaintextToken(profile ?? (await resolveOwnProfile(user)));
 
       if (!recoveredGistId) {
         setStatus('error');

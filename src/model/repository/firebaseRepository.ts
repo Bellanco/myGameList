@@ -14,7 +14,14 @@ import {
   type SocialAuthUser,
   type SocialProfileReference,
 } from './firebaseClient';
-import { findSocialProfileByEmail, invalidateSocialDirectoryCache, saveProfileByEmailCache } from './firebaseSocialRepository';
+import {
+  findSocialProfileByEmail,
+  getOwnProfileRef,
+  invalidateOwnProfileCache,
+  invalidateSocialDirectoryCache,
+  saveOwnProfileCache,
+  saveProfileByEmailCache,
+} from './firebaseSocialRepository';
 import type { FirestorePrivateConfig, FirestorePublicConfig } from '../types/firestore';
 
 // --- RE-EXPORTS: API pública estable (los consumidores siguen importando desde firebaseRepository) ---
@@ -32,6 +39,8 @@ export { getCurrentSocialAuthUser, onSocialAuthChanged, signInWithGoogle, signOu
 // profileId (con guarda recursiva de campos privados) queda registrada como tarea gated en CODE-REVIEW-IMPROVEMENTS.md.
 export {
   findSocialProfileByEmail,
+  getOwnProfileRef,
+  invalidateOwnProfileCache,
   listSocialDirectory,
 } from './firebaseSocialRepository';
 // Amistad (aceptación mutua): un doc por par, id canónico, denormalización de identidad. Ver firebaseFriendshipRepository.
@@ -51,6 +60,25 @@ export {
 // Aditiva — las reglas no validan un conjunto exacto de campos, así que no requiere redesplegar reglas. Permite a
 // futuras migraciones detectar la versión del documento.
 const FIRESTORE_SCHEMA_VERSION = 1;
+
+/**
+ * L1 — Resuelve el perfil PROPIO: lectura directa de `profiles/{uid}` y, solo si ahí no hay documento, fallback a
+ * la búsqueda legacy por email (perfiles antiguos cuyo id no es el uid). Es el único punto donde vive esa cadena,
+ * para que ningún consumidor tenga que conocer el detalle ni pedir el correo si no hace falta.
+ */
+export async function resolveOwnProfile(user: { uid: string; email?: string }): Promise<SocialProfileReference | null> {
+  const uid = String(user.uid || '').trim();
+  const email = String(user.email || '').trim().toLowerCase();
+
+  if (uid) {
+    const own = await getOwnProfileRef(uid);
+    if (own) {
+      return own;
+    }
+  }
+
+  return email ? findSocialProfileByEmail(email) : null;
+}
 
 /**
  * Guarda referencia mínima de perfil en Firestore.
@@ -89,18 +117,21 @@ export async function upsertProfileSocialReferences(input: {
   // escrituras al mismo doc): el borrado del token legacy y las referencias van fusionados en sus respectivos set/merge.
   const batch = writeBatch(services.firestore);
 
+  // L1: el doc público NO lleva `email` ni `social.gamesGistId` (los lee cualquier usuario autenticado). El email
+  // ya no se necesita para nada (el perfil propio se resuelve por uid) y el gist de juegos vive en `privateConfig`
+  // (abajo, en el mismo batch) y en el doc de amistad. `deleteField()` los purga de los perfiles ya existentes.
   batch.set(
     doc(services.firestore, 'profiles', input.user.uid),
     {
       schemaVersion: FIRESTORE_SCHEMA_VERSION,
       uid: input.user.uid,
       profileId,
-      email: input.user.email,
+      email: deleteField(),
       displayName: profileName,
       photoURL: input.user.photoURL,
       social: {
         gistId: input.socialGistId,
-        gamesGistId,
+        gamesGistId: deleteField(),
         etag: input.socialGistEtag,
         enabled: true,
         // Upgrade proactivo: al respaldar el token CIFRADO, borra el token en claro LEGACY del doc público.
@@ -133,19 +164,17 @@ export async function upsertProfileSocialReferences(input: {
 
   await batch.commit();
 
-  const cleanEmail = input.user.email.trim().toLowerCase();
-  if (cleanEmail) {
-    saveProfileByEmailCache(cleanEmail, {
-      id: input.user.uid,
-      email: cleanEmail,
-      displayName: profileName,
-      photoURL: String(input.user.photoURL || ''),
-      socialGistId: input.socialGistId,
-      gamesGistId: String(input.gamesGistId || ''),
-      githubToken: String(input.githubToken || ''), // audit-allow: caché en MEMORIA (no Firestore); el token va cifrado a privateConfig
-      socialEnabled: true,
-    });
-  }
+  saveOwnProfileCache(input.user.uid, {
+    id: input.user.uid,
+    profileId,
+    email: '', // ya no vive en el documento
+    displayName: profileName,
+    photoURL: String(input.user.photoURL || ''),
+    socialGistId: input.socialGistId,
+    gamesGistId: String(input.gamesGistId || ''),
+    githubToken: String(input.githubToken || ''), // audit-allow: caché en MEMORIA (no Firestore); el token va cifrado a privateConfig
+    socialEnabled: true,
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -305,9 +334,12 @@ export async function ensureProfileByEmail(input: {
     throw new Error('La cuenta de Google no tiene email válido');
   }
 
+  // L1: el perfil propio se resuelve por uid (lectura directa del doc, sin publicar el email). La búsqueda por
+  // correo queda SOLO como fallback para perfiles legacy cuyo id de documento no es el uid: sin ella se les crearía
+  // un perfil duplicado.
   let existing: SocialProfileReference | null = null;
   try {
-    existing = await findSocialProfileByEmail(cleanEmail);
+    existing = await resolveOwnProfile({ uid: input.user.uid, email: cleanEmail });
   } catch (error) {
     if (!isPermissionDeniedError(error)) {
       throw error;
@@ -322,6 +354,10 @@ export async function ensureProfileByEmail(input: {
   const githubToken = String(input.githubToken || '');
   const resolvedPhotoURL = input.photoURL !== undefined ? input.photoURL : String(input.user.photoURL || '');
   const profileId = await resolveStableProfileId(input.user.uid);
+  // El doc del dueño se identifica por su uid: solo ahí se puede purgar sin riesgo. Sobre un doc legacy con otro id
+  // no se borra nada (se migrará antes en el barrido), porque su `email` es la única forma de volver a encontrarlo.
+  const canPurgeLegacyFields = targetId === input.user.uid;
+  const hasLegacyPii = Boolean(existing && (existing.email || existing.gamesGistId));
   const shouldWriteProfile =
     !existing ||
     !existing.socialEnabled ||
@@ -330,8 +366,8 @@ export async function ensureProfileByEmail(input: {
     existing.displayName.trim() !== profileName ||
     (existing.photoURL || '') !== resolvedPhotoURL ||
     existing.socialGistId !== input.socialGistId ||
-    existing.gamesGistId !== gamesGistId ||
-    existing.githubToken !== githubToken;
+    // Perfil anterior a la purga: se reescribe una vez para retirarle el email / el id del gist de juegos.
+    (canPurgeLegacyFields && hasLegacyPii);
 
   if (shouldWriteProfile) {
     await setDoc(
@@ -340,16 +376,16 @@ export async function ensureProfileByEmail(input: {
         schemaVersion: FIRESTORE_SCHEMA_VERSION,
         uid: input.user.uid,
         profileId,
-        email: cleanEmail,
         displayName: profileName,
         photoURL: resolvedPhotoURL,
         social: {
           gistId: input.socialGistId,
-          gamesGistId,
           etag: input.socialGistEtag,
           enabled: true,
+          ...(canPurgeLegacyFields ? { gamesGistId: deleteField() } : {}),
         },
         updatedAt: serverTimestamp(),
+        ...(canPurgeLegacyFields ? { email: deleteField() } : {}),
       },
       { merge: true },
     );
@@ -374,21 +410,11 @@ export async function ensureProfileByEmail(input: {
   // B2: establecer profileId/userMap/privateConfig.
   await establishProfileIdentity(input.user.uid, profileId, gamesGistId, input.socialGistId);
 
-  saveProfileByEmailCache(cleanEmail, {
+  const written: SocialProfileReference = {
     id: targetId,
-    email: cleanEmail,
-    displayName: profileName,
-    photoURL: resolvedPhotoURL,
-    socialGistId: input.socialGistId,
-    gamesGistId,
-    githubToken,
-    socialEnabled: true,
-  });
-  invalidateSocialDirectoryCache();
-
-  return {
-    id: targetId,
-    email: cleanEmail,
+    profileId,
+    // El documento ya no lo guarda; la referencia en memoria tampoco necesita arrastrarlo.
+    email: '',
     displayName: profileName,
     photoURL: resolvedPhotoURL,
     socialGistId: input.socialGistId,
@@ -396,6 +422,15 @@ export async function ensureProfileByEmail(input: {
     githubToken,
     socialEnabled: true,
   };
+  saveOwnProfileCache(input.user.uid, written);
+  // La caché legacy por email se refresca solo si el perfil vive en un doc con otro id (ahí sigue siendo la vía de
+  // resolución hasta que el barrido lo migre).
+  if (!canPurgeLegacyFields) {
+    saveProfileByEmailCache(cleanEmail, written);
+  }
+  invalidateSocialDirectoryCache();
+
+  return written;
 }
 
 /**
@@ -414,6 +449,7 @@ export async function updateProfilePhoto(uid: string, photoURL: string): Promise
     { uid, photoURL: photoURL || '', updatedAt: serverTimestamp() },
     { merge: true },
   );
+  invalidateOwnProfileCache(uid);
   invalidateSocialDirectoryCache();
 }
 
@@ -474,6 +510,7 @@ export async function healOwnDirectoryGist(uid: string, socialGistId: string, so
     },
     { merge: true },
   );
+  invalidateOwnProfileCache(uid);
   invalidateSocialDirectoryCache();
   return true;
 }

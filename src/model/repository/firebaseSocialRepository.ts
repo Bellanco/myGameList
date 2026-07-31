@@ -1,8 +1,14 @@
-// Capa social en Firestore: directorio de perfiles y búsqueda por email (+ sus cachés).
+// Capa social en Firestore: directorio de perfiles y resolución del perfil PROPIO (+ sus cachés).
 // Extraído de firebaseRepository.ts (M2). NO importa de la fachada (sin ciclos).
 // C5: eliminados el índice público (upsertProfileIndex/upsertFeedCard) y las recomendaciones — código muerto
 // (sin consumidores) y con reglas admin-only. Ver CODE-REVIEW-IMPROVEMENTS.md (migración PII gated).
-import { collection, getDocs, limit, orderBy, query, where } from 'firebase/firestore';
+//
+// L1 (privacidad): el perfil propio se resuelve por `getDoc(profiles/{uid})`, no consultando la colección por
+// `email`. Todas las llamadas de la app eran siempre con el email del propio usuario (recuperar mi perfil en un
+// dispositivo nuevo); nadie busca a otros por correo. Leer por id permite dejar de publicar el email en un
+// documento que cualquier usuario autenticado puede leer. `findSocialProfileByEmail` se conserva SOLO como
+// fallback para perfiles legacy cuyo id de documento no es el uid.
+import { collection, doc, getDoc, getDocs, limit, orderBy, query, where } from 'firebase/firestore';
 import {
   initializeFirebaseServices,
   isPermissionDeniedError,
@@ -20,6 +26,8 @@ type CachedValue<T> = {
 
 const socialProfileByEmailCache = new Map<string, CachedValue<SocialProfileReference | null>>();
 const socialProfileByEmailInFlight = new Map<string, Promise<SocialProfileReference | null>>();
+const ownProfileCacheByUid = new Map<string, CachedValue<SocialProfileReference | null>>();
+const ownProfileInFlightByUid = new Map<string, Promise<SocialProfileReference | null>>();
 const socialDirectoryCacheByLimit = new Map<number, CachedValue<SocialDirectoryEntry[]>>();
 const socialDirectoryInFlightByLimit = new Map<number, Promise<SocialDirectoryEntry[]>>();
 
@@ -62,6 +70,117 @@ export function saveProfileByEmailCache(email: string, value: SocialProfileRefer
   });
 }
 
+function readOwnProfileCache(uid: string): SocialProfileReference | null | undefined {
+  const cached = ownProfileCacheByUid.get(uid);
+  if (!cached) {
+    return undefined;
+  }
+
+  if (cached.expiresAt <= Date.now()) {
+    ownProfileCacheByUid.delete(uid);
+    return undefined;
+  }
+
+  return cached.value;
+}
+
+/** Refresca la caché del perfil propio tras escribirlo (misma función que cumplía `saveProfileByEmailCache`). */
+export function saveOwnProfileCache(uid: string, value: SocialProfileReference | null): void {
+  ownProfileCacheByUid.set(uid, {
+    value,
+    expiresAt: Date.now() + SOCIAL_PROFILE_CACHE_TTL_MS,
+  });
+}
+
+/**
+ * Olvida el perfil propio cacheado. Lo llaman las escrituras parciales sobre `profiles/{uid}` (foto, saneado del
+ * gist) y el borrado de cuenta, para que la siguiente lectura no sirva un documento que ya no existe o cambió.
+ * Sin uid, vacía la caché entera (cambio de sesión).
+ */
+export function invalidateOwnProfileCache(uid?: string): void {
+  if (uid) {
+    ownProfileCacheByUid.delete(uid.trim());
+    return;
+  }
+  ownProfileCacheByUid.clear();
+}
+
+/** Proyección común del documento de perfil a `SocialProfileReference` (lo comparten la lectura por uid y la legacy). */
+function mapProfileReference(id: string, data: Record<string, unknown>): SocialProfileReference {
+  const social = (data.social || {}) as { gistId?: string; gamesGistId?: string; githubToken?: string; enabled?: boolean };
+  return {
+    id,
+    profileId: String(data.profileId || ''),
+    // LEGACY: los perfiles nuevos ya no publican el email. Se sigue leyendo del documento PROPIO para detectar
+    // que aún lo arrastra y borrarlo en el siguiente guardado (ver `ensureProfileByEmail`).
+    email: String(data.email || ''),
+    displayName: String(data.displayName || ''),
+    photoURL: String(data.photoURL || ''),
+    socialGistId: String(social.gistId || ''),
+    // LEGACY: el id del gist de juegos vive ahora en `privateConfig` (owner-only) y, para los amigos, en el doc de
+    // amistad. Se sigue leyendo mientras queden perfiles sin purgar.
+    gamesGistId: String(social.gamesGistId || ''),
+    githubToken: String(social.githubToken || ''), // audit-allow: LECTURA legacy en claro para recuperación (fallback); no es escritura
+    socialEnabled: Boolean(social.enabled),
+  };
+}
+
+/**
+ * Perfil PROPIO por uid (`profiles/{uid}`), que es como se identifican todos los documentos que escribe la app.
+ * Lectura directa por id: ni consulta la colección ni necesita el email publicado. Devuelve null si no existe
+ * (dispositivo nuevo sin perfil aún) o si las reglas deniegan, para que el llamador caiga a su fallback.
+ */
+export async function getOwnProfileRef(uid: string): Promise<SocialProfileReference | null> {
+  const services = await initializeFirebaseServices();
+  if (!services) {
+    throw new Error('Firebase no está configurado en este entorno');
+  }
+
+  const cleanUid = uid.trim();
+  if (!cleanUid) {
+    return null;
+  }
+
+  const cached = readOwnProfileCache(cleanUid);
+  if (cached !== undefined) {
+    return cached;
+  }
+
+  const inFlight = ownProfileInFlightByUid.get(cleanUid);
+  if (inFlight) {
+    return inFlight;
+  }
+
+  const request = (async () => {
+    let snapshot;
+    try {
+      snapshot = await getDoc(doc(services.firestore, 'profiles', cleanUid));
+    } catch (error) {
+      if (isPermissionDeniedError(error)) {
+        saveOwnProfileCache(cleanUid, null);
+        return null;
+      }
+      throw error;
+    }
+
+    if (!snapshot.exists()) {
+      saveOwnProfileCache(cleanUid, null);
+      return null;
+    }
+
+    const profile = mapProfileReference(snapshot.id, snapshot.data() as Record<string, unknown>);
+    saveOwnProfileCache(cleanUid, profile);
+    return profile;
+  })();
+
+  ownProfileInFlightByUid.set(cleanUid, request);
+  try {
+    return await request;
+  } finally {
+    ownProfileInFlightByUid.delete(cleanUid);
+  }
+}
+
 function saveSocialDirectoryCache(limitCount: number, value: SocialDirectoryEntry[]): void {
   socialDirectoryCacheByLimit.set(limitCount, {
     value,
@@ -89,8 +208,12 @@ export function invalidateSocialDirectoryCache(): void {
 }
 
 /**
- * Busca perfil social por correo para evitar duplicados y mantener mínimo en Firestore.
- * No lee ni modifica documentos placeholder que no contengan email.
+ * FALLBACK LEGACY — busca el perfil por correo. Solo debe llamarse cuando `getOwnProfileRef(uid)` no encuentra
+ * documento: cubre a los perfiles antiguos cuyo id NO es el uid (los creó una versión anterior), donde saltarse
+ * esta búsqueda crearía un perfil duplicado al usuario.
+ *
+ * Los perfiles nuevos ya no publican `email`, así que esta consulta solo puede encontrar documentos anteriores a
+ * la purga. Cuando el barrido de PII haya pasado y deje de usarse, se elimina junto con el campo de las reglas.
  */
 export async function findSocialProfileByEmail(email: string): Promise<SocialProfileReference | null> {
   const services = await initializeFirebaseServices();
@@ -139,25 +262,7 @@ export async function findSocialProfileByEmail(email: string): Promise<SocialPro
     }
 
     const docEntry = snapshot.docs[0];
-    const data = docEntry.data() as {
-      profileId?: string;
-      email?: string;
-      displayName?: string;
-      photoURL?: string;
-      social?: { gistId?: string; gamesGistId?: string; githubToken?: string; enabled?: boolean };
-    };
-
-    const profile: SocialProfileReference = {
-      id: docEntry.id,
-      profileId: String(data.profileId || ''),
-      email: String(data.email || ''),
-      displayName: String(data.displayName || ''),
-      photoURL: String(data.photoURL || ''),
-      socialGistId: String(data.social?.gistId || ''),
-      gamesGistId: String(data.social?.gamesGistId || ''),
-      githubToken: String(data.social?.githubToken || ''), // audit-allow: LECTURA legacy en claro para recuperación (fallback); no es escritura
-      socialEnabled: Boolean(data.social?.enabled),
-    };
+    const profile = mapProfileReference(docEntry.id, docEntry.data() as Record<string, unknown>);
 
     saveProfileByEmailCache(cleanEmail, profile);
     return profile;
@@ -226,7 +331,6 @@ export async function listSocialDirectory(limitCount = 12, options?: { forceRefr
       .map((entry) => {
         const data = entry.data() as {
           uid?: string;
-          email?: string;
           displayName?: string;
           photoURL?: string;
           social?: { gistId?: string; gamesGistId?: string; enabled?: boolean };
@@ -237,10 +341,12 @@ export async function listSocialDirectory(limitCount = 12, options?: { forceRefr
           id: entry.id,
           // uid explícito del doc; hoy coincide con el id, pero tras el cutover uid→profileId el id será el profileId.
           uid: String(data.uid || entry.id),
-          email: String(data.email || ''),
           displayName: String(data.displayName || ''),
           photoURL: String(data.photoURL || ''),
           socialGistId: String(data.social?.gistId || ''),
+          // LEGACY: se mantiene la lectura mientras queden perfiles sin purgar; en los nuevos llega vacío y el gist
+          // de juegos de un AMIGO se resuelve desde su doc de amistad (denormalizado). El email de otros usuarios ya
+          // no se lee NUNCA: no debe circular por el cliente.
           gamesGistId: String(data.social?.gamesGistId || ''),
           enabled: Boolean(data.social?.enabled),
           updatedAt: toMillis(data.updatedAt),
@@ -252,7 +358,6 @@ export async function listSocialDirectory(limitCount = 12, options?: { forceRefr
       .map((entry) => ({
         id: entry.id,
         uid: entry.uid,
-        email: entry.email,
         displayName: entry.displayName,
         photoURL: entry.photoURL,
         socialGistId: entry.socialGistId,
