@@ -9,7 +9,7 @@ import type { SocialGistData } from '../../src/model/repository/gistRepository';
 const firebaseMocks = vi.hoisted(() => ({
   getCurrentSocialAuthUser: vi.fn(async () => ({ uid: 'uid-1', email: 'yo@example.com', displayName: 'Real', photoURL: null })),
   resolveStableProfileId: vi.fn(async () => 'pid-1'),
-  findSocialProfileByEmail: vi.fn(async (): Promise<null> => null),
+  resolveOwnProfile: vi.fn(async (): Promise<null> => null),
 }));
 vi.mock('../../src/model/repository/firebaseRepository', () => firebaseMocks);
 

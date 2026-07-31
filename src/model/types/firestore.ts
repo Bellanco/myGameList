@@ -109,4 +109,10 @@ export interface FirestorePublicConfig {
   showSteamButton?: boolean;
   /** F1 — efectos visuales animados de los temas (por defecto true; false los desactiva). */
   effects?: boolean;
+  /**
+   * L4 — aceptación de las condiciones de uso y la política de privacidad. `version` es `LEGAL_VERSION`; si no
+   * coincide con la vigente, la puerta del hub social vuelve a pedirla. Vive aquí (owner-only) y no en el perfil
+   * público porque es un dato del dueño, y así le sigue entre dispositivos.
+   */
+  consent?: { version: string; agreedAt: number };
 }

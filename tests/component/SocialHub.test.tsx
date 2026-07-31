@@ -8,7 +8,11 @@ import { MemoryRouter } from 'react-router-dom';
 const firebaseMocks = vi.hoisted(() => ({
   getCurrentSocialAuthUser: vi.fn(),
   ensureProfileByEmail: vi.fn(async () => {}),
-  findSocialProfileByEmail: vi.fn(async () => null),
+  resolveOwnProfile: vi.fn(async () => null),
+  // L4 — puerta de aceptación. El valor por defecto (consentimiento vigente) se fija en `beforeEach`, donde ya
+  // se puede importar `LEGAL_VERSION`; los tests de la puerta lo sobrescriben con `null`.
+  getPublicConfig: vi.fn(async (): Promise<any> => null),
+  setPublicConfig: vi.fn(async () => {}),
   listSocialDirectory: vi.fn(async (): Promise<any[]> => []),
   signInWithGoogle: vi.fn(async () => null),
   signOutSocialUser: vi.fn(async () => {}),
@@ -64,6 +68,7 @@ vi.mock('../../src/model/repository/localRepository', () => localMocks);
 
 import { SocialHub } from '../../src/view/components/SocialHub';
 import { SOCIAL_UI } from '../../src/core/constants/labels';
+import { LEGAL_CONSENT_UI, LEGAL_VERSION } from '../../src/core/constants/legal';
 
 function renderHub(initialPath = '/social') {
   return render(
@@ -77,6 +82,8 @@ describe('SocialHub (componente, post-M3)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     gistMocks.getSocialSyncConfig.mockReturnValue(null);
+    // Salvo en los tests de la puerta legal, se parte de un consentimiento vigente.
+    firebaseMocks.getPublicConfig.mockResolvedValue({ consent: { version: LEGAL_VERSION, agreedAt: 1 } });
   });
 
   it('sin sesión muestra el gateway (barra de progreso de configuración)', async () => {
@@ -106,6 +113,57 @@ describe('SocialHub (componente, post-M3)', () => {
       expect(firebaseMocks.getCurrentSocialAuthUser).toHaveBeenCalled();
       expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
     });
+  });
+
+  // L4 — puerta de aceptación de condiciones. Bloquea SOLO el espacio social; nunca las listas propias.
+  it('sin consentimiento vigente NO entra al espacio social y pide la aceptación', async () => {
+    firebaseMocks.getCurrentSocialAuthUser.mockResolvedValue({ uid: 'uid-1', email: 'jaime@example.com', displayName: 'Jaime', photoURL: null });
+    firebaseMocks.getPublicConfig.mockResolvedValue(null);
+    gistMocks.getSocialSyncConfig.mockReturnValue({ token: 'ghp_x', gistId: 'social-gist', etag: null, lastRemoteUpdatedAt: 0 });
+
+    renderHub();
+
+    expect(await screen.findByText(LEGAL_CONSENT_UI.checkbox)).toBeInTheDocument();
+    // Se queda en el gateway (la barra de progreso solo existe ahí).
+    expect(screen.getByRole('progressbar')).toBeInTheDocument();
+  });
+
+  it('una versión de condiciones antigua vuelve a pedir la aceptación', async () => {
+    firebaseMocks.getCurrentSocialAuthUser.mockResolvedValue({ uid: 'uid-1', email: 'jaime@example.com', displayName: 'Jaime', photoURL: null });
+    firebaseMocks.getPublicConfig.mockResolvedValue({ consent: { version: 'version-vieja', agreedAt: 1 } });
+    gistMocks.getSocialSyncConfig.mockReturnValue({ token: 'ghp_x', gistId: 'social-gist', etag: null, lastRemoteUpdatedAt: 0 });
+
+    renderHub();
+
+    expect(await screen.findByText(LEGAL_CONSENT_UI.checkbox)).toBeInTheDocument();
+  });
+
+  it('al aceptar se registra el consentimiento y se entra al espacio social', async () => {
+    firebaseMocks.getCurrentSocialAuthUser.mockResolvedValue({ uid: 'uid-1', email: 'jaime@example.com', displayName: 'Jaime', photoURL: null });
+    firebaseMocks.getPublicConfig.mockResolvedValue(null);
+    gistMocks.getSocialSyncConfig.mockReturnValue({ token: 'ghp_x', gistId: 'social-gist', etag: null, lastRemoteUpdatedAt: 0 });
+
+    renderHub();
+
+    const checkbox = await screen.findByLabelText(LEGAL_CONSENT_UI.checkbox);
+    fireEvent.click(checkbox);
+
+    await waitFor(() => {
+      expect(firebaseMocks.setPublicConfig).toHaveBeenCalledWith('uid-1', {
+        consent: { version: LEGAL_VERSION, agreedAt: expect.any(Number) },
+      });
+    });
+    await waitFor(() => expect(screen.queryByRole('progressbar')).not.toBeInTheDocument());
+  });
+
+  it('si la comprobación del consentimiento falla (offline), no bloquea el espacio social', async () => {
+    firebaseMocks.getCurrentSocialAuthUser.mockResolvedValue({ uid: 'uid-1', email: 'jaime@example.com', displayName: 'Jaime', photoURL: null });
+    firebaseMocks.getPublicConfig.mockRejectedValue(new Error('offline'));
+    gistMocks.getSocialSyncConfig.mockReturnValue({ token: 'ghp_x', gistId: 'social-gist', etag: null, lastRemoteUpdatedAt: 0 });
+
+    renderHub();
+
+    await waitFor(() => expect(screen.queryByRole('progressbar')).not.toBeInTheDocument());
   });
 
   it('auto-heal directorio: al abrir social sincroniza mi profiles.social.gistId con el gist actual de mi sesión', async () => {

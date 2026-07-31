@@ -115,3 +115,22 @@ export function openSharedDatabase(): Promise<IDBDatabase> {
   _dbPromise = promise;
   return promise;
 }
+
+/** Nombre de la base compartida. Lo necesita el borrado de cuenta para eliminarla entera. */
+export const SHARED_DB_NAME = DB_NAME;
+
+/**
+ * Cierra la conexión compartida y olvida la promesa cacheada. Necesario antes de `deleteDatabase`: con una
+ * conexión abierta, el borrado queda "blocked" y no se completa. La siguiente llamada a `openSharedDatabase`
+ * vuelve a abrir (y a crear los stores) con normalidad.
+ */
+export async function closeSharedDatabase(): Promise<void> {
+  const pending = _dbPromise;
+  _dbPromise = null;
+  if (!pending) return;
+  try {
+    (await pending).close();
+  } catch {
+    // sin conexión viva no hay nada que cerrar
+  }
+}

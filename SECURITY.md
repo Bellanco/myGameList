@@ -17,6 +17,12 @@ reproducción y el impacto estimado. Se responderá lo antes posible.
   "público" es legible por cualquiera con el enlace; usa Gists privados para tu biblioteca.
 - **Firebase Firestore**: perfil social y configuración privada (`privateConfig/{uid}`).
 
+El documento de perfil (`profiles/{uid}`) lo puede LEER cualquier usuario autenticado —es el directorio
+social—, así que contiene solo el nick, la foto (opcional) y el id del gist social. El correo y el id del
+gist de juegos salieron de ahí: el perfil propio se resuelve leyendo el documento por uid, y el gist de
+juegos vive en `privateConfig/{uid}`, que solo lee su dueño. Los perfiles anteriores se purgan al volver a
+guardarse, y `scripts/purge-profile-pii.js` remata los inactivos.
+
 ## Medidas implementadas
 
 ### Cifrado del token de GitHub (`src/core/security/crypto.ts`)
@@ -41,7 +47,14 @@ WebCrypto nativo (AES-GCM 256). Hay **dos** mecanismos con garantías **distinta
 - **CSP y cabeceras** de seguridad en `public/_headers` (CSP por lista blanca de dominios realmente
   usados, `X-Frame-Options`, `X-Content-Type-Options`, etc.).
 - **Reglas de Firestore** *owner-only* con validación de esquema (`hasOnly`) en `profiles` y
-  `privateConfig`, cubiertas por tests de emulador.
+  `privateConfig`, cubiertas por tests de emulador. El dueño puede BORRAR sus documentos (borrado de
+  cuenta): `create/update` van validados por esquema y `delete` se autoriza aparte, porque en un borrado
+  no hay documento entrante que validar.
+- **Analítica con consentimiento previo**: Google Analytics no se inicializa mientras el usuario no lo
+  acepte, y la decisión es revocable desde Cuenta.
+- **Borrado de cuenta** desde la app: elimina perfil, amistades y configuración remota, y limpia
+  localStorage e IndexedDB (incluida la clave que descifra el token). Los Gists no se tocan: son de la
+  cuenta de GitHub del usuario.
 - **Sincronización CRDT** (merge por marcas de tiempo + tombstones) para minimizar pérdida de datos.
 - **Service Worker** que solo cachea GET same-origin y excluye APIs externas (GitHub/Firebase).
 

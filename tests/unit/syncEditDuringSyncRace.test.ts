@@ -47,7 +47,7 @@ vi.mock('../../src/model/repository/gistRepository', () => ({
 
 // Dependencias importadas pero no ejercitadas en esta ruta.
 vi.mock('../../src/model/repository/firebaseRepository', () => ({
-  findSocialProfileByEmail: vi.fn(),
+  resolveOwnProfile: vi.fn(),
   getCurrentSocialAuthUser: vi.fn(),
   recoverGithubToken: vi.fn(),
   resolveStableProfileId: vi.fn(),

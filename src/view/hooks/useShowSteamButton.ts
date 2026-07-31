@@ -5,12 +5,16 @@ import { APPEARANCE_HYDRATED_EVENT, persistShowSteamButtonPreference } from '../
 /** Evento in-page para sincronizar todas las instancias de `useShowSteamButton` (App + Cuenta). */
 const STEAM_BUTTON_CHANGED_EVENT = 'app:steam-button-changed';
 
-/** Preferencia inicial: 'off' guardado → oculto; cualquier otra cosa (incl. ausencia) → visible (por defecto). */
+/**
+ * Preferencia inicial: solo 'on' guardado → visible; cualquier otra cosa (incl. ausencia) → oculto (por defecto).
+ * El botón es opt-in: quien nunca lo eligió no lo ve, y quien ya eligió conserva su elección (el valor guardado,
+ * local o hidratado desde `publicConfig.showSteamButton`, solo existe cuando se pulsó el selector de la cuenta).
+ */
 function readInitial(): boolean {
   try {
-    return localStorage.getItem(STEAM_BUTTON_KEY) !== 'off';
+    return localStorage.getItem(STEAM_BUTTON_KEY) === 'on';
   } catch {
-    return true;
+    return false;
   }
 }
 

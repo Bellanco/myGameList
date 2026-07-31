@@ -176,6 +176,21 @@ dialog.alert-dialog[open]::backdrop { animation: alertBackdropIn .24s ease both;
 .btn-inprogress:hover { border-color: color-mix(in srgb, var(--warn) 58%, transparent); }
 .btn-abandoned { color: var(--fg-red-pink); border-color: color-mix(in srgb, var(--danger) 38%, transparent); }
 .btn-abandoned:hover { border-color: color-mix(in srgb, var(--danger) 52%, transparent); }
+
+/* L2 — botones del aviso de analítica. MISMO tamaño los dos y al mismo nivel (un clic cada uno): rechazar debe
+   costar lo mismo que aceptar o el consentimiento no es válido. La diferencia es solo de color, para que la
+   acción principal se lea de un vistazo. */
+.consent-btn { min-width: 7.5rem; justify-content: center; }
+.consent-btn-accept {
+  color: var(--fg-amber);
+  border-color: color-mix(in srgb, var(--warn) 60%, transparent);
+  background: color-mix(in srgb, var(--warn) 16%, transparent);
+  font-weight: 600;
+}
+.consent-btn-accept:hover {
+  border-color: color-mix(in srgb, var(--warn) 80%, transparent);
+  background: color-mix(in srgb, var(--warn) 26%, transparent);
+}
 .btn-recommend { color: var(--fg-green-soft); border-color: color-mix(in srgb, var(--success) 42%, transparent); }
 .btn-recommend:hover { border-color: color-mix(in srgb, var(--success) 58%, transparent); }
 .btn-recommend-active { color: var(--fg-red-soft); border-color: color-mix(in srgb, var(--danger) 45%, transparent); }

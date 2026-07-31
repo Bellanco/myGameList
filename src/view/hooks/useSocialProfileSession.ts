@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useLocation } from 'react-router-dom';
-import { findSocialProfileByEmail, subscribeSocialAuth } from '../../model/repository/firebaseGateway';
+import { resolveOwnProfile, subscribeSocialAuth } from '../../model/repository/firebaseGateway';
 import { getSocialSyncConfig } from '../../model/repository/gistConfigRepository';
 import { peekCachedSocialProfileIdentity } from '../../model/repository/indexedDbRepository';
 
@@ -36,7 +36,7 @@ export function useSocialProfileSession(completedGameIds: ReadonlySet<number>): 
   useEffect(() => {
     let cancelled = false;
     const unsubscribe = subscribeSocialAuth((user) => {
-      if (!user?.email) {
+      if (!user?.uid) {
         if (!cancelled) setGistId('');
         return;
       }
@@ -47,7 +47,7 @@ export function useSocialProfileSession(completedGameIds: ReadonlySet<number>): 
         return;
       }
 
-      void findSocialProfileByEmail(user.email)
+      void resolveOwnProfile(user)
         .then((profile) => {
           if (cancelled) return;
           setGistId(profile?.socialEnabled ? profile.socialGistId.trim() : '');

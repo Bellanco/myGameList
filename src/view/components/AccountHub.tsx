@@ -1,13 +1,17 @@
 import { memo } from 'react';
+import { Link } from 'react-router-dom';
 import { COMMON_ICONS } from '../../core/constants/icons';
 import { UI_MESSAGES } from '../../core/constants/labels';
+import { LEGAL_DOCUMENTS, LEGAL_ROUTES } from '../../core/constants/legal';
 import { SCORE_SCALES } from '../../core/utils/scoreScale';
 import { persistScoreScale } from '../../model/repository/scorePreferenceRepository';
+import { useAnalyticsConsent } from '../hooks/useAnalyticsConsent';
 import { useScoreScale } from '../hooks/useScoreScale';
 import { Icon } from './Icon';
 import { StarRating } from './StarRating';
 import { ScoreRing } from './ScoreRing';
 import { AppearanceSettings } from './AppearanceSettings';
+import { DangerZone } from './DangerZone';
 
 interface AccountHubProps {
   scoreScaleUid: string | null; // uid de Google (para gatear/guardar la escala); null → candado
@@ -21,6 +25,8 @@ interface AccountHubProps {
 export const AccountHub = memo(function AccountHub({ scoreScaleUid }: AccountHubProps) {
   const scoreScale = useScoreScale();
   const scoreScaleLabels = UI_MESSAGES.settings.scoreScale;
+  const analyticsLabels = UI_MESSAGES.settings.analytics;
+  const { consent, setConsent } = useAnalyticsConsent();
 
   return (
     <section className="settings-hub" aria-label={UI_MESSAGES.settings.account.title}>
@@ -62,6 +68,44 @@ export const AccountHub = memo(function AccountHub({ scoreScaleUid }: AccountHub
           <AppearanceSettings />
         </div>
       </div>
+
+      {/* L2 — la analítica es opt-in y revocable: esta fila es el "cambiar de idea" que promete el aviso. No se
+          bloquea con `inert` como el resto: no depende de la cuenta, sino del navegador. */}
+      <div className="settings-card">
+        <h2>{analyticsLabels.title}</h2>
+        <p className="settings-card-sub">{analyticsLabels.subtitle}</p>
+        <div className="theme-mode-row" role="group" aria-label={analyticsLabels.groupAria}>
+          <button
+            type="button"
+            className={`btn btn-toggle${consent === 'granted' ? ' active' : ''}`}
+            aria-pressed={consent === 'granted'}
+            onClick={() => setConsent('granted')}
+          >
+            <span>{analyticsLabels.on}</span>
+          </button>
+          <button
+            type="button"
+            className={`btn btn-toggle${consent === 'denied' ? ' active' : ''}`}
+            aria-pressed={consent === 'denied'}
+            onClick={() => setConsent('denied')}
+          >
+            <span>{analyticsLabels.off}</span>
+          </button>
+        </div>
+      </div>
+
+      {/* L4 — los documentos legales deben ser accesibles desde la app, no solo desde el aviso de cookies. */}
+      <div className="settings-card">
+        <h2>{UI_MESSAGES.settings.legal.title}</h2>
+        <p className="settings-card-sub">{UI_MESSAGES.settings.legal.subtitle}</p>
+        <div className="settings-legal-links">
+          <Link to={LEGAL_ROUTES.terms}>{LEGAL_DOCUMENTS.terms.title}</Link>
+          <Link to={LEGAL_ROUTES.privacy}>{LEGAL_DOCUMENTS.privacy.title}</Link>
+          <Link to={LEGAL_ROUTES.cookies}>{LEGAL_DOCUMENTS.cookies.title}</Link>
+        </div>
+      </div>
+
+      <DangerZone />
     </section>
   );
 });
