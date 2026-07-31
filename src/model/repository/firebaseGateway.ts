@@ -13,7 +13,7 @@
 // eran async (telemetría fire-and-forget, consultas de auth, hidratación post-login) salvo la
 // suscripción de auth, que replica el contrato síncrono-teardown de `onSocialAuthChanged`.
 import type { FirebaseServices, SocialAuthUser, SocialProfileReference } from './firebaseClient';
-import type { FirestorePublicConfig } from '../types/firestore';
+import type { FirestorePrivateConfig, FirestorePublicConfig } from '../types/firestore';
 
 type FacadeModule = typeof import('./firebaseRepository');
 
@@ -91,9 +91,10 @@ export function subscribeSocialAuth(callback: (user: SocialAuthUser | null) => v
 }
 
 // --- Perfil / configuración ---
-export async function findSocialProfileByEmail(email: string): Promise<SocialProfileReference | null> {
+/** L1 — perfil propio por uid (con fallback legacy por email dentro de la fachada). */
+export async function resolveOwnProfile(user: { uid: string; email?: string }): Promise<SocialProfileReference | null> {
   const m = await loadFacade();
-  return m.findSocialProfileByEmail(email);
+  return m.resolveOwnProfile(user);
 }
 
 export async function resolveStableProfileId(uid: string): Promise<string> {
@@ -104,6 +105,16 @@ export async function resolveStableProfileId(uid: string): Promise<string> {
 export async function recoverGithubToken(uid: string): Promise<string | null> {
   const m = await loadFacade();
   return m.recoverGithubToken(uid);
+}
+
+export async function getPrivateConfig(uid: string): Promise<FirestorePrivateConfig | null> {
+  const m = await loadFacade();
+  return m.getPrivateConfig(uid);
+}
+
+export async function setPrivateConfig(uid: string, config: Partial<FirestorePrivateConfig>): Promise<void> {
+  const m = await loadFacade();
+  return m.setPrivateConfig(uid, config);
 }
 
 export async function getPublicConfig(uid: string): Promise<FirestorePublicConfig | null> {

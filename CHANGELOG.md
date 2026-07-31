@@ -14,6 +14,9 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
 - El perfil social ya no tiene juegos favoritos: desaparecen del editor, del directorio y del
   detalle, y dejan de publicarse en el gist. Para crear el perfil ahora basta con un nombre y al
   menos un juego completado.
+- El perfil público deja de publicar `email` y `social.gamesGistId`: el perfil propio se resuelve por
+  uid y el gist de juegos se recupera de `privateConfig` (solo el dueño). Se purgan de los perfiles
+  existentes en su siguiente guardado.
 
 ## [3.3] - 2026-07-09
 

@@ -4,10 +4,10 @@
 // (`mis-listas-social-gist-config`, localStorage) únicamente se armaba si el usuario había abierto el hub en
 // ESE dispositivo. Un usuario dado de alta y con sesión activa que escribiera reseñas desde otro
 // dispositivo/navegador publicaba cero actividad: `publishReviewActivity` se rendía en silencio. Aquí se
-// centraliza la resolución (incluida la recuperación del gistId desde Firestore por email) para que tanto el
-// hub como los publicadores armen el canal igual.
+// centraliza la resolución (incluida la recuperación del gistId desde el perfil propio de Firestore) para que
+// tanto el hub como los publicadores armen el canal igual.
 import { ensureSyncConfigLoaded, getSocialSyncConfig, getSyncConfig, readSocialGist, saveSocialSyncConfig } from './gistRepository';
-import { findSocialProfileByEmail, getCurrentSocialAuthUser } from './firebaseRepository';
+import { getCurrentSocialAuthUser, resolveOwnProfile } from './firebaseRepository';
 
 export type SocialChannel = { token: string; gistId: string; etag: string | null };
 
@@ -31,7 +31,7 @@ function isNotFoundGistError(error: unknown): boolean {
  *   de la config principal, lo refresca: tras rotar el PAT, el token social quedaba rancio y todas las
  *   lecturas del publicador daban 401 hasta volver a pasar por el gateway del hub.
  * - Si no hay gistId pero sí sesión de Google y token principal, recupera el gist del perfil de Firestore
- *   (por email), lo valida con una lectura y guarda la config.
+ *   (por uid), lo valida con una lectura y guarda la config.
  *
  * Best-effort: cualquier fallo de Firestore/red degrada a `unavailable` sin lanzar (el llamador decide si
  * marcar la publicación como pendiente).
@@ -62,19 +62,18 @@ export async function resolveSocialChannel(options?: { email?: string | null }):
     return { status: 'ready', channel: { token, gistId, etag: socialConfig?.etag ?? null } };
   }
 
-  // Sin gist en este dispositivo: se recupera del perfil publicado en Firestore.
-  let email = String(options?.email || '').trim();
-  if (!email) {
-    const authUser = await getCurrentSocialAuthUser();
-    email = String(authUser?.email || '').trim();
-  }
-  if (!email || !mainToken) {
+  // Sin gist en este dispositivo: se recupera del perfil publicado en Firestore. Se necesita el uid (el perfil se
+  // lee por id de documento); el email solo sirve ya para el fallback legacy de perfiles antiguos.
+  const authUser = await getCurrentSocialAuthUser();
+  const uid = String(authUser?.uid || '').trim();
+  const email = String(authUser?.email || options?.email || '').trim();
+  if (!uid || !mainToken) {
     return { status: 'unavailable' };
   }
 
   let recoveredGistId = '';
   try {
-    const profile = await findSocialProfileByEmail(email);
+    const profile = await resolveOwnProfile({ uid, email });
     recoveredGistId = profile?.socialEnabled ? profile.socialGistId.trim() : '';
   } catch {
     return { status: 'unavailable' }; // Firestore caído: no se puede resolver, pero nada se rompe.

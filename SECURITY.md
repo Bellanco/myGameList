@@ -17,6 +17,12 @@ reproducción y el impacto estimado. Se responderá lo antes posible.
   "público" es legible por cualquiera con el enlace; usa Gists privados para tu biblioteca.
 - **Firebase Firestore**: perfil social y configuración privada (`privateConfig/{uid}`).
 
+El documento de perfil (`profiles/{uid}`) lo puede LEER cualquier usuario autenticado —es el directorio
+social—, así que contiene solo el nick, la foto (opcional) y el id del gist social. El correo y el id del
+gist de juegos salieron de ahí: el perfil propio se resuelve leyendo el documento por uid, y el gist de
+juegos vive en `privateConfig/{uid}`, que solo lee su dueño. Los perfiles anteriores se purgan al volver a
+guardarse, y `scripts/purge-profile-pii.js` remata los inactivos.
+
 ## Medidas implementadas
 
 ### Cifrado del token de GitHub (`src/core/security/crypto.ts`)

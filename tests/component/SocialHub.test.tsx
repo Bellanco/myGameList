@@ -8,7 +8,11 @@ import { MemoryRouter } from 'react-router-dom';
 const firebaseMocks = vi.hoisted(() => ({
   getCurrentSocialAuthUser: vi.fn(),
   ensureProfileByEmail: vi.fn(async () => {}),
-  findSocialProfileByEmail: vi.fn(async () => null),
+  resolveOwnProfile: vi.fn(async () => null),
+  // L4 — puerta de aceptación. El valor por defecto (consentimiento vigente) se fija en `beforeEach`, donde ya
+  // se puede importar `LEGAL_VERSION`; los tests de la puerta lo sobrescriben con `null`.
+  getPublicConfig: vi.fn(async (): Promise<any> => null),
+  setPublicConfig: vi.fn(async () => {}),
   listSocialDirectory: vi.fn(async (): Promise<any[]> => []),
   signInWithGoogle: vi.fn(async () => null),
   signOutSocialUser: vi.fn(async () => {}),

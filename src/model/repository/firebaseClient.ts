@@ -27,10 +27,15 @@ export interface SocialAuthUser {
 export interface SocialProfileReference {
   id: string;
   profileId?: string;
+  /**
+   * LEGACY, solo lectura del documento PROPIO: los perfiles nuevos no publican el email. Se conserva para saber
+   * que un perfil antiguo aún lo arrastra y borrarlo en el siguiente guardado. Nunca se lee de perfiles ajenos.
+   */
   email: string;
   displayName: string;
   photoURL: string;
   socialGistId: string;
+  /** LEGACY: el id canónico del gist de juegos vive en `privateConfig` (owner-only) y en el doc de amistad. */
   gamesGistId: string;
   githubToken: string;
   socialEnabled: boolean;
@@ -39,10 +44,13 @@ export interface SocialProfileReference {
 export interface SocialDirectoryEntry {
   id: string;
   uid: string; // uid de Firebase del perfil — necesario para relaciones de amistad (id del doc canónico) y robusto ante el cutover uid→profileId
-  email: string;
   displayName: string;
   photoURL: string;
   socialGistId: string;
+  /**
+   * LEGACY del documento público: vacío en los perfiles ya purgados. Para un AMIGO, la fuente buena es
+   * `friendships.{requester|recipient}GamesGistId`; para un no-amigo simplemente no hay lista de juegos.
+   */
   gamesGistId: string;
   /**
    * Última actividad conocida del perfil en ms (`profiles.updatedAt`): se refresca al publicar y, una vez al

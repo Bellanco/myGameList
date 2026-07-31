@@ -32,13 +32,13 @@ import {
   deleteFriendship,
   ensureProfileByEmail,
   getCurrentSocialAuthUser,
-  findSocialProfileByEmail,
   getMyFriendships,
   healOwnDirectoryGist,
   healOwnFriendshipIdentity,
   listSocialDirectory,
   readFriendship,
   resolveStableProfileId,
+  resolveOwnProfile,
   sendFriendRequest,
   signInWithGoogle,
   signOutSocialUser,
@@ -234,7 +234,6 @@ export function useSocialViewModel(options?: {
     id: string;
     uid: string; // uid de Firebase (para relaciones de amistad); hoy coincide con `id`, robusto ante el cutover uid→profileId
     displayName: string;
-    email: string;
     socialGistId: string;
     gamesGistId: string;
     photoURL: string;
@@ -352,9 +351,9 @@ export function useSocialViewModel(options?: {
       const currentUser = await getCurrentSocialAuthUser();
       let resolvedGistId = socialConfig?.gistId || '';
 
-      if (!resolvedGistId && currentUser?.email && mainConfig?.token) {
+      if (!resolvedGistId && currentUser?.uid && mainConfig?.token) {
         try {
-          const profile = await findSocialProfileByEmail(currentUser.email);
+          const profile = await resolveOwnProfile(currentUser);
           const gistId = profile?.socialEnabled ? profile.socialGistId.trim() : '';
 
           if (gistId) {
@@ -442,7 +441,7 @@ export function useSocialViewModel(options?: {
 
     try {
       setResolvingSocialGist(true);
-      const existingProfile = await findSocialProfileByEmail(user.email);
+      const existingProfile = await resolveOwnProfile(user);
       const existingGistId = existingProfile?.socialEnabled ? existingProfile.socialGistId.trim() : '';
 
       if (!existingGistId) {
@@ -1205,7 +1204,7 @@ export function useSocialViewModel(options?: {
 
     try {
       setHydratingProfile(true);
-      const existingProfile = await findSocialProfileByEmail(authUser.email);
+      const existingProfile = await resolveOwnProfile(authUser);
 
       const socialRead = await readSocialGist(socialConfig.token, socialCfgGistId, socialCfgEtag);
       if (!socialRead.notModified) {
@@ -1374,6 +1373,14 @@ export function useSocialViewModel(options?: {
           .filter((friend) => friend.otherSocialGistId)
           .map((friend) => [friend.otherUid, friend.otherSocialGistId] as const),
       );
+      // L1: mismo razonamiento para el gist de JUEGOS. Ya no se publica en el directorio (era legible por cualquier
+      // usuario autenticado), así que para un amigo la fuente es su doc de amistad; del directorio solo puede venir
+      // el valor legacy de un perfil aún sin purgar. Un no-amigo se queda sin lista de juegos, que es lo pretendido.
+      const friendGamesGistByUid = new Map(
+        friendships.friends
+          .filter((friend) => friend.otherGamesGistId)
+          .map((friend) => [friend.otherUid, friend.otherGamesGistId] as const),
+      );
 
       // Escalabilidad (>30 amigos): el directorio de descubrimiento está capado a SOCIAL_DIRECTORY_LIMIT y solo lista
       // perfiles con `social.enabled`. Para que NINGÚN amigo desaparezca del feed / detalle / gestión por caer fuera
@@ -1388,7 +1395,6 @@ export function useSocialViewModel(options?: {
         .map((friend) => ({
           id: friend.otherUid,
           uid: friend.otherUid,
-          email: '',
           displayName: friend.otherName || 'Usuario',
           photoURL: friend.otherPhoto || '',
           socialGistId: friend.otherSocialGistId,
@@ -1408,6 +1414,8 @@ export function useSocialViewModel(options?: {
           // reescribe al re-publicar el perfil y puede quedar anclado a un gist viejo/vacío.
           const friendSocialGistId = isFriend ? friendSocialGistByUid.get(entry.uid) : undefined;
           const effectiveSocialGistId = friendSocialGistId || entry.socialGistId;
+          // Gist de juegos: la amistad manda; `entry.gamesGistId` solo trae valor en perfiles legacy sin purgar.
+          const effectiveGamesGistId = (isFriend ? friendGamesGistByUid.get(entry.uid) : undefined) || entry.gamesGistId;
           // …pero la deriva puede ir en CUALQUIER dirección (publicar una reseña sanea el directorio y no los docs
           // de amistad; abrir el hub sanea ambos), así que preferir a ciegas una de las dos fuentes deja al amigo
           // sin actividad la mitad de las veces. Si divergen, se leen las DOS y se fusionan: una lectura extra en
@@ -1426,9 +1434,8 @@ export function useSocialViewModel(options?: {
               id: entry.id,
               uid: entry.uid,
               displayName: entry.displayName || 'Usuario',
-              email: entry.email,
               socialGistId: entry.socialGistId,
-              gamesGistId: entry.gamesGistId,
+              gamesGistId: effectiveGamesGistId,
               photoURL: entry.photoURL || '',
               activity: [],
               posts: [],
@@ -1511,9 +1518,8 @@ export function useSocialViewModel(options?: {
               id: entry.id,
               uid: entry.uid,
               displayName: socialData.profile.name || entry.displayName || 'Usuario',
-              email: entry.email,
               socialGistId: resolvedSocialGistId,
-              gamesGistId: entry.gamesGistId,
+              gamesGistId: effectiveGamesGistId,
               photoURL: resolvedPhoto,
               activity,
               posts,
@@ -1525,9 +1531,8 @@ export function useSocialViewModel(options?: {
               id: entry.id,
               uid: entry.uid,
               displayName: entry.displayName || 'Usuario',
-              email: entry.email,
               socialGistId: effectiveSocialGistId,
-              gamesGistId: entry.gamesGistId,
+              gamesGistId: effectiveGamesGistId,
               // Gist ilegible: usamos la foto del directorio de Firestore (best-effort) para no perderla.
               photoURL: entry.photoURL || (isOwnEntry ? ownPhotoURL : ''),
               activity: [],
