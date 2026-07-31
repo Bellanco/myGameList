@@ -442,6 +442,7 @@
   flex-direction: column;
   gap: .6rem;
 }
+.legal-actions { display: flex; }
 .legal-card h2 { font-size: 1rem; }
 .legal-card p { color: var(--text-muted); font-size: .88rem; line-height: 1.5; }
 
@@ -462,8 +463,32 @@
   text-align: left;
 }
 .hub-gateway-consent p { color: var(--text-muted); font-size: .85rem; line-height: 1.4; margin: 0; }
-.hub-gateway-consent-check { display: flex; align-items: flex-start; gap: .5rem; font-size: .88rem; cursor: pointer; }
-.hub-gateway-consent-check input { margin-top: .2rem; flex: 0 0 auto; }
+
+/* La casilla es la acción de la pantalla: se presenta como una fila pulsable (no un check suelto perdido en el
+   texto), con el acento del tema y área de toque cómoda en móvil. */
+.hub-gateway-consent-check {
+  display: flex;
+  align-items: center;
+  gap: .6rem;
+  margin-top: .2rem;
+  padding: .7rem .85rem;
+  background: var(--surface);
+  border: 1px solid color-mix(in srgb, var(--fg-sky) 45%, var(--border));
+  border-radius: 9px;
+  font-size: .92rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background .16s, border-color .16s;
+}
+.hub-gateway-consent-check:hover { background: var(--surface-hover); border-color: var(--fg-sky); }
+.hub-gateway-consent-check input {
+  flex: 0 0 auto;
+  width: 1.25rem;
+  height: 1.25rem;
+  accent-color: var(--fg-sky);
+  cursor: pointer;
+}
+.hub-gateway-consent-check:focus-within { outline: 2px solid var(--fg-sky); outline-offset: 2px; }
 
 /* L3 — zona de riesgo (borrado de cuenta): se marca en rojo para que no se confunda con el resto de ajustes. */
 .settings-card-danger { border-color: color-mix(in srgb, var(--danger) 45%, var(--border)); }

@@ -50,11 +50,13 @@ export const ConsentBanner = memo(function ConsentBanner() {
         <p>{A.bannerBody}</p>
         <Link to={LEGAL_ROUTES.cookies}>{A.bannerMore}</Link>
       </div>
+      {/* Los dos botones son del MISMO tamaño y están al mismo nivel (un clic cada uno): rechazar tiene que costar
+          lo mismo que aceptar, o el consentimiento no vale. El acento ámbar solo destaca la acción principal. */}
       <div className="consent-banner-actions">
-        <button type="button" className="btn btn-secondary" onClick={() => decide(false)}>
+        <button type="button" className="btn btn-secondary consent-btn" onClick={() => decide(false)}>
           {A.bannerReject}
         </button>
-        <button type="button" className="btn btn-primary" onClick={() => decide(true)}>
+        <button type="button" className="btn consent-btn consent-btn-accept" onClick={() => decide(true)}>
           {A.bannerAccept}
         </button>
       </div>
