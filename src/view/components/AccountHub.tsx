@@ -11,6 +11,7 @@ import { Icon } from './Icon';
 import { StarRating } from './StarRating';
 import { ScoreRing } from './ScoreRing';
 import { AppearanceSettings } from './AppearanceSettings';
+import { DangerZone } from './DangerZone';
 
 interface AccountHubProps {
   scoreScaleUid: string | null; // uid de Google (para gatear/guardar la escala); null → candado
@@ -103,6 +104,8 @@ export const AccountHub = memo(function AccountHub({ scoreScaleUid }: AccountHub
           <Link to={LEGAL_ROUTES.cookies}>{LEGAL_DOCUMENTS.cookies.title}</Link>
         </div>
       </div>
+
+      <DangerZone />
     </section>
   );
 });

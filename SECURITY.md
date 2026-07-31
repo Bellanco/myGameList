@@ -47,9 +47,7 @@ WebCrypto nativo (AES-GCM 256). Hay **dos** mecanismos con garantías **distinta
 - **CSP y cabeceras** de seguridad en `public/_headers` (CSP por lista blanca de dominios realmente
   usados, `X-Frame-Options`, `X-Content-Type-Options`, etc.).
 - **Reglas de Firestore** *owner-only* con validación de esquema (`hasOnly`) en `profiles` y
-  `privateConfig`, cubiertas por tests de emulador.
-- **Analítica con consentimiento previo**: Google Analytics no se inicializa mientras el usuario no lo
-  acepte, y la decisión es revocable desde Cuenta. El dueño puede BORRAR sus documentos (borrado de
+  `privateConfig`, cubiertas por tests de emulador. El dueño puede BORRAR sus documentos (borrado de
   cuenta): `create/update` van validados por esquema y `delete` se autoriza aparte, porque en un borrado
   no hay documento entrante que validar.
 - **Analítica con consentimiento previo**: Google Analytics no se inicializa mientras el usuario no lo
