@@ -422,6 +422,49 @@
   }
 }
 
+/* L4 — documentos legales. Tarjetas propias en vez de reutilizar las de Ajustes: el hub de ajustes reparte sus
+   tarjetas en dos columnas en pantallas anchas y eso desordenaría el articulado, que debe leerse de arriba abajo.
+   Ancho de lectura acotado. */
+.legal-hub {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  max-width: 70ch;
+  margin: 0 auto;
+}
+.legal-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow);
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: .6rem;
+}
+.legal-card h2 { font-size: 1rem; }
+.legal-card p { color: var(--text-muted); font-size: .88rem; line-height: 1.5; }
+
+/* L4 — enlaces a los documentos legales en Ajustes de cuenta. */
+.settings-legal-links { display: flex; flex-wrap: wrap; gap: .35rem 1rem; font-size: .88rem; }
+.legal-list { display: grid; gap: .35rem; padding-left: 1.1rem; color: var(--text-muted); font-size: .88rem; line-height: 1.4; }
+.legal-list li { list-style: disc; }
+
+/* L4 — puerta de aceptación de condiciones en el gateway social. */
+.hub-gateway-consent {
+  display: grid;
+  gap: .5rem;
+  margin: .8rem 0;
+  padding: .85rem;
+  background: var(--surface-soft);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  text-align: left;
+}
+.hub-gateway-consent p { color: var(--text-muted); font-size: .85rem; line-height: 1.4; margin: 0; }
+.hub-gateway-consent-check { display: flex; align-items: flex-start; gap: .5rem; font-size: .88rem; cursor: pointer; }
+.hub-gateway-consent-check input { margin-top: .2rem; flex: 0 0 auto; }
+
 .bottom-nav {
   position: fixed;
   left: 0;

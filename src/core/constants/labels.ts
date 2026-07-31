@@ -289,6 +289,11 @@ export const UI_MESSAGES = {
     account: {
       title: 'Ajustes de cuenta',
     },
+    // L4 — enlaces a los documentos legales.
+    legal: {
+      title: 'Legal',
+      subtitle: 'Condiciones de uso, tratamiento de datos y cookies.',
+    },
     appearance: {
       groupAria: 'Tema de la aplicación',
       light: 'Claro',

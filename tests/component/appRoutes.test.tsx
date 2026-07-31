@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { APP_ROUTE_PATHS } from '../../src/App';
+import { LEGAL_ROUTES } from '../../src/core/constants/legal';
 
 // Regresión: el `<Route path="*">` de App redirige a /completados toda ruta NO listada en APP_ROUTE_PATHS.
 // Una sub-ruta social declarada en el ViewModel pero ausente aquí (como pasó con /social/requests) rebotaría a
@@ -35,6 +36,15 @@ describe('App routes (regresión de rutas sociales)', () => {
   it('las rutas sociales dinámicas también casan', () => {
     renderAt('/social/profiles/abc');
     expect(screen.getByText('MATCH:/social/profiles/:profileId')).toBeInTheDocument();
+  });
+
+  it('L4: los documentos legales tienen ruta propia y no rebotan a /completados', () => {
+    for (const path of Object.values(LEGAL_ROUTES)) {
+      expect(APP_ROUTE_PATHS).toContain(path);
+    }
+
+    renderAt(LEGAL_ROUTES.privacy);
+    expect(screen.getByText(`MATCH:${LEGAL_ROUTES.privacy}`)).toBeInTheDocument();
   });
 
   it('una ruta desconocida sí rebota a /completados (catch-all)', () => {

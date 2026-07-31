@@ -50,6 +50,18 @@ describe('firestore.rules', () => {
       await assertFails(setDoc(doc(ownerDb('uid-a'), 'publicConfig', 'uid-a'), { showSteamButton: 'yes' }));
       await assertFails(setDoc(doc(ownerDb('uid-a'), 'publicConfig', 'uid-a'), { hackField: 'x' }));
     });
+
+    it('L2: admite `effects`, que el cliente ya escribía y la allowlist denegaba en silencio', async () => {
+      await assertSucceeds(setDoc(doc(ownerDb('uid-a'), 'publicConfig', 'uid-a'), { effects: false }));
+      await assertFails(setDoc(doc(ownerDb('uid-a'), 'publicConfig', 'uid-a'), { effects: 'off' }));
+    });
+
+    it('L4: acepta el consentimiento con forma válida y rechaza el malformado', async () => {
+      await assertSucceeds(setDoc(doc(ownerDb('uid-a'), 'publicConfig', 'uid-a'), { consent: { version: '2026-07', agreedAt: 1 } }));
+      await assertFails(setDoc(doc(ownerDb('uid-a'), 'publicConfig', 'uid-a'), { consent: { version: '2026-07' } }));
+      await assertFails(setDoc(doc(ownerDb('uid-a'), 'publicConfig', 'uid-a'), { consent: { version: 1, agreedAt: 1 } }));
+      await assertFails(setDoc(doc(ownerDb('uid-a'), 'publicConfig', 'uid-a'), { consent: { version: '2026-07', agreedAt: 1, extra: true } }));
+    });
   });
 
   describe('profiles', () => {

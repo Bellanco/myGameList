@@ -1,5 +1,7 @@
 import { memo, useCallback } from 'react';
+import { Link } from 'react-router-dom';
 import { SOCIAL_UI } from '../../core/constants/labels';
+import { LEGAL_CONSENT_UI, LEGAL_ROUTES } from '../../core/constants/legal';
 import type { GameItem, TabData } from '../../model/types/game';
 import { useSocialViewModel } from '../../viewmodel/useSocialViewModel';
 import { Icon } from './Icon';
@@ -78,6 +80,9 @@ const SocialHubInner = memo(function SocialHubInner({
     hasMainSync,
     hasSocialGist,
     hasSocialSession,
+    legalConsentRequired,
+    savingConsent,
+    acceptLegalConsent,
     gatewaySteps,
     currentStep,
     gatewayProgress,
@@ -336,6 +341,28 @@ const SocialHubInner = memo(function SocialHubInner({
         </p>
 
         <p className="hub-gateway-step-caption">{SOCIAL_UI.gateway.stepCaption(currentStep, gatewaySteps.length)}</p>
+
+        {/* L4 — puerta de aceptación: con sesión iniciada y sin conformidad vigente, no se entra ni se crea el
+            espacio social hasta marcarla. No afecta a las listas propias ni a la sincronización. */}
+        {legalConsentRequired ? (
+          <div className="hub-gateway-consent">
+            <strong>{LEGAL_CONSENT_UI.title}</strong>
+            <p>{LEGAL_CONSENT_UI.body}</p>
+            <div className="settings-legal-links">
+              <Link to={LEGAL_ROUTES.terms}>{LEGAL_CONSENT_UI.termsLink}</Link>
+              <Link to={LEGAL_ROUTES.privacy}>{LEGAL_CONSENT_UI.privacyLink}</Link>
+            </div>
+            <label className="hub-gateway-consent-check">
+              <input
+                type="checkbox"
+                checked={false}
+                disabled={savingConsent}
+                onChange={() => void acceptLegalConsent()}
+              />
+              <span>{savingConsent ? LEGAL_CONSENT_UI.pending : LEGAL_CONSENT_UI.checkbox}</span>
+            </label>
+          </div>
+        ) : null}
 
         <div className="hub-gateway-actions" aria-label={SOCIAL_UI.gateway.actionsAria}>
           {primaryGatewayCta ? (

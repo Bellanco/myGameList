@@ -50,8 +50,12 @@ service cloud.firestore {
 
     // F2 — publicConfig: preferencias NO sensibles del dueño (escala de puntuación, y F1: apariencia
     // = paleta + modo claro/oscuro). Separada de privateConfig (token/ids). Allowlist estricta de claves.
+    // L4 — `consent`: aceptación de los términos/privacidad (versión + sello). Va aquí y no en el perfil público
+    // porque es dato del dueño, no del directorio, y así le sigue entre dispositivos. `effects` faltaba en la
+    // allowlist aunque el cliente ya lo escribía (`appearancePreferenceRepository`): sin él, esa preferencia se
+    // denegaba en silencio y nunca sincronizaba.
     function publicConfigWriteIsValid() {
-      return request.resource.data.keys().hasOnly(["schemaVersion", "scoreScale", "palette", "theme", "uppercase", "showSteamButton"])
+      return request.resource.data.keys().hasOnly(["schemaVersion", "scoreScale", "palette", "theme", "uppercase", "showSteamButton", "effects", "consent"])
         && (!("scoreScale" in request.resource.data)
             || request.resource.data.scoreScale in ["stars", "grade"])
         && (!("theme" in request.resource.data)
@@ -61,7 +65,14 @@ service cloud.firestore {
         && (!("uppercase" in request.resource.data)
             || request.resource.data.uppercase is bool)
         && (!("showSteamButton" in request.resource.data)
-            || request.resource.data.showSteamButton is bool);
+            || request.resource.data.showSteamButton is bool)
+        && (!("effects" in request.resource.data)
+            || request.resource.data.effects is bool)
+        && (!("consent" in request.resource.data)
+            || (request.resource.data.consent.keys().hasOnly(["version", "agreedAt"])
+                && request.resource.data.consent.version is string
+                && request.resource.data.consent.version.size() <= 32
+                && request.resource.data.consent.agreedAt is number));
     }
 
     // ==========================================
