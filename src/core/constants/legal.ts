@@ -9,7 +9,10 @@
 
 export const LEGAL_VERSION = '2026-07';
 
-export const LEGAL_CONTACT_EMAIL = 'bellanco3@gmail.com';
+// Correo de CONTACTO publicado en los documentos. A propósito distinto del de la cuenta de administración de
+// `firestore.rules` (`isAdmin`): son la misma persona, pero separar buzones evita mezclar avisos legales y
+// solicitudes de usuarios con el correo que da acceso a la base de datos. No unificar sin querer.
+export const LEGAL_CONTACT_EMAIL = 'bellancoxv@gmail.com';
 export const LEGAL_CONTROLLER = 'Bellanco';
 
 export const LEGAL_ROUTES = {
