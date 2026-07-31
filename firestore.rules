@@ -106,8 +106,10 @@ service cloud.firestore {
         )
       );
 
-      // Solo el admin puede borrar perfiles (excepto el placeholder).
-      allow delete: if !isPlaceholder(userId) && isAdmin();
+      // L3 — derecho de supresión (RGPD art. 17): el dueño puede borrar SU perfil desde la app; el admin, cualquiera
+      // (salvo el placeholder). Antes solo podía el admin, así que el borrado de cuenta era imposible sin intervención
+      // manual.
+      allow delete: if !isPlaceholder(userId) && (isAdmin() || isOwner(userId));
     }
 
     // ==========================================
@@ -116,9 +118,13 @@ service cloud.firestore {
     // El doc se identifica por el uid; nunca es legible por otros.
     // ==========================================
 
+    // L3 — el borrado se separa de create/update en las tres colecciones owner-only: en un `delete` no hay
+    // `request.resource`, así que la función de validación de esquema falla y `allow write` denegaba SIEMPRE el
+    // borrado. Sin esta separación, el usuario no puede eliminar su propia cuenta.
     match /privateConfig/{userId} {
       allow read: if isOwner(userId);
-      allow write: if isOwner(userId) && privateConfigWriteIsValid();
+      allow create, update: if isOwner(userId) && privateConfigWriteIsValid();
+      allow delete: if isOwner(userId);
     }
 
     // ==========================================
@@ -129,7 +135,8 @@ service cloud.firestore {
 
     match /publicConfig/{userId} {
       allow read: if isOwner(userId);
-      allow write: if isOwner(userId) && publicConfigWriteIsValid();
+      allow create, update: if isOwner(userId) && publicConfigWriteIsValid();
+      allow delete: if isOwner(userId);
     }
 
     // ==========================================
@@ -139,7 +146,8 @@ service cloud.firestore {
 
     match /userMap/{userId} {
       allow read: if isOwner(userId);
-      allow write: if isOwner(userId) && userMapWriteIsValid();
+      allow create, update: if isOwner(userId) && userMapWriteIsValid();
+      allow delete: if isOwner(userId);
     }
 
     // ==========================================

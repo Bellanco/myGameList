@@ -303,6 +303,24 @@ export const UI_MESSAGES = {
       bannerMore: 'Política de cookies',
       bannerAria: 'Consentimiento de analítica',
     },
+    // L3 — borrado de cuenta (RGPD art. 17).
+    danger: {
+      title: 'Zona de riesgo',
+      deleteTitle: 'Borrar mi cuenta',
+      deleteBody: 'Elimina tu perfil social, tus amistades y la configuración guardada en la nube, y borra los datos de este dispositivo (listas locales, sesión y token). No se puede deshacer.',
+      deleteGistsNote: 'Tus Gists de GitHub NO se tocan: viven en tu cuenta de GitHub y solo tú puedes borrarlos.',
+      deleteGistsLink: 'Ver mis Gists',
+      deleteGistsUrl: 'https://gist.github.com',
+      deleteBtn: 'Borrar cuenta',
+      confirmTitle: '¿Borrar tu cuenta y los datos de este dispositivo?',
+      confirmHint: 'Escribe BORRAR para confirmar.',
+      confirmWord: 'BORRAR',
+      confirmLabel: 'Borrar definitivamente',
+      deleting: 'Borrando...',
+      deletedOk: 'Cuenta borrada. Se han eliminado tus datos de la nube y de este dispositivo.',
+      deletedPartial: 'Cuenta borrada con incidencias: algunos datos remotos no se pudieron eliminar. Vuelve a intentarlo o escribe al contacto de privacidad.',
+      deleteError: 'No se pudo completar el borrado. Revisa la conexión e inténtalo de nuevo.',
+    },
     // L4 — enlaces a los documentos legales.
     legal: {
       title: 'Legal',

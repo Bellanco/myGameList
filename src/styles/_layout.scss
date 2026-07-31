@@ -465,6 +465,24 @@
 .hub-gateway-consent-check { display: flex; align-items: flex-start; gap: .5rem; font-size: .88rem; cursor: pointer; }
 .hub-gateway-consent-check input { margin-top: .2rem; flex: 0 0 auto; }
 
+/* L3 — zona de riesgo (borrado de cuenta): se marca en rojo para que no se confunda con el resto de ajustes. */
+.settings-card-danger { border-color: color-mix(in srgb, var(--danger) 45%, var(--border)); }
+.settings-card-danger h2 { color: var(--danger); }
+.settings-danger-confirm { display: grid; gap: .3rem; margin: .6rem 0; font-size: .85rem; text-align: left; }
+.settings-danger-confirm input {
+  width: 100%;
+  padding: .45rem .6rem;
+  background: var(--surface-soft);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  font: inherit;
+}
+.settings-danger-feedback { font-size: .85rem; }
+.settings-danger-feedback.ok { color: var(--fg-sky); }
+.settings-danger-feedback.warn { color: var(--text-muted); }
+.settings-danger-feedback.err { color: var(--danger); }
+
 /* L2 — aviso de consentimiento de la analítica. Se apoya SOBRE la barra inferior (z-index mayor y desplazado por
    encima de su altura) para no taparla: la app sigue siendo usable con el aviso en pantalla, que es justo lo que
    permite no bloquear al usuario mientras no decide. */

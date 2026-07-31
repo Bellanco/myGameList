@@ -64,6 +64,32 @@ describe('firestore.rules', () => {
     });
   });
 
+  // L3 — sin estos permisos el borrado de cuenta es imposible: `allow write` con validación de esquema denegaba
+  // TODO delete (en un delete no hay `request.resource` que validar).
+  describe('L3 — borrado de cuenta por el dueño', () => {
+    it('el dueño borra sus cuatro documentos; un tercero no puede borrar ninguno', async () => {
+      await seed('profiles', 'uid-a', { uid: 'uid-a', social: { enabled: true } });
+      await seed('privateConfig', 'uid-a', { profileId: 'p' });
+      await seed('publicConfig', 'uid-a', { scoreScale: 'stars' });
+      await seed('userMap', 'uid-a', { profileId: 'p' });
+
+      await assertFails(deleteDoc(doc(ownerDb('uid-b'), 'profiles', 'uid-a')));
+      await assertFails(deleteDoc(doc(ownerDb('uid-b'), 'privateConfig', 'uid-a')));
+      await assertFails(deleteDoc(doc(ownerDb('uid-b'), 'publicConfig', 'uid-a')));
+      await assertFails(deleteDoc(doc(ownerDb('uid-b'), 'userMap', 'uid-a')));
+
+      await assertSucceeds(deleteDoc(doc(ownerDb('uid-a'), 'profiles', 'uid-a')));
+      await assertSucceeds(deleteDoc(doc(ownerDb('uid-a'), 'privateConfig', 'uid-a')));
+      await assertSucceeds(deleteDoc(doc(ownerDb('uid-a'), 'publicConfig', 'uid-a')));
+      await assertSucceeds(deleteDoc(doc(ownerDb('uid-a'), 'userMap', 'uid-a')));
+    });
+
+    it('el placeholder de perfiles sigue sin poder borrarse', async () => {
+      await seed('profiles', '_placeholder', { uid: '_placeholder' });
+      await assertFails(deleteDoc(doc(ownerDb('_placeholder'), 'profiles', '_placeholder')));
+    });
+  });
+
   describe('profiles', () => {
     it('el dueño y un autenticado pueden leer un perfil social.enabled; el anónimo no', async () => {
       await seed('profiles', 'uid-a', { uid: 'uid-a', social: { enabled: true } });
