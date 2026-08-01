@@ -37,6 +37,37 @@ export const PROFILE_TIER_FEED_TTL_MS: Record<ProfileTier, number> = {
   mithril: 12_000,
 };
 
+/**
+ * Techo ABSOLUTO de una publicación. No es un límite de producto: es la cota del saneador, para que un payload
+ * corrupto o manipulado no meta un texto desmedido en el gist ni en el render. Mithril no tiene límite de cara al
+ * usuario (ni contador ni corte al escribir), pero sigue pasando por aquí.
+ */
+export const POST_HARD_CEILING = 100_000;
+
+/**
+ * Cuánto puede publicar cada rango en el feed (noticias, enlaces, texto libre). `0` = no puede publicar.
+ *
+ * Manda el rango de quien PUBLICA, y lo aplica su propio cliente: las publicaciones viven en el gist social del
+ * usuario, que es suyo, así que esto NO es una barrera de seguridad — quien manipule su copia puede saltárselo.
+ * Es una regla de producto, igual que la cadencia del feed.
+ */
+export const PROFILE_TIER_POST_MAX_LENGTH: Record<ProfileTier, number> = {
+  bronze: 0,
+  silver: 1_000,
+  gold: 10_000,
+  mithril: POST_HARD_CEILING,
+};
+
+/** ¿Este rango puede publicar en el feed? Bronce no. */
+export function canPublishPosts(tier: ProfileTier): boolean {
+  return PROFILE_TIER_POST_MAX_LENGTH[tier] > 0;
+}
+
+/** ¿Se le enseña contador de caracteres? Mithril no: no tiene límite que mostrar. */
+export function hasPostLengthLimit(tier: ProfileTier): boolean {
+  return canPublishPosts(tier) && PROFILE_TIER_POST_MAX_LENGTH[tier] < POST_HARD_CEILING;
+}
+
 export const PROFILE_TIER_LABELS: Record<ProfileTier, string> = {
   bronze: 'Bronce',
   silver: 'Plata',

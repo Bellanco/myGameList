@@ -1781,20 +1781,42 @@ button.hub-chip.active {
   font-weight: 700;
 }
 
-/* F3 — Publicaciones (texto libre + enlaces). Compositor de UNA línea: input + botón a la derecha. */
+/* F3 — Publicaciones (texto libre + enlaces). Compositor de una línea que CRECE con el contenido: el textarea
+   arranca a la altura del campo de antes y se estira al saltar de línea o desbordar (la altura la calcula
+   `SocialFeedScreen` con `scrollHeight`). */
 .hub-post-composer {
   display: flex;
-  align-items: stretch; /* el botón se estira a la altura del input */
+  /* Centrado y no `stretch`: con el campo creciendo, estirar el botón lo convertiría en una columna enorme.
+     Centrado se queda cuadrado y a media altura del campo, sea de una línea o de varias. */
+  align-items: center;
   gap: .6rem;
 }
-.hub-post-input {
+/* SELECTOR DE DOS CLASES a propósito, no `.hub-post-input` a secas: `.ftextarea` impone `min-height: 128px`
+   (pensada para el análisis del formulario) y `resize: vertical`, y vive en `_overlays-and-responsive.scss`, que
+   se compila DESPUÉS de este fichero. Con una sola clase empatan en especificidad y gana la última: el compositor
+   nacía con la altura de un párrafo y con tirador de redimensión. Subir la especificidad lo hace independiente del
+   orden de los `@use`. */
+.hub-post-composer .hub-post-input {
   flex: 1 1 auto;
   min-width: 0;
+  /* Arranca en UNA línea; la altura real la calcula `SocialFeedScreen` con `scrollHeight`. */
+  min-height: 0;
+  resize: none;
+  overflow-y: auto;
+  /* Tope de crecimiento: a partir de aquí hace scroll interno en vez de empujar el feed fuera de la pantalla.
+     Con el cupo de oro (10.000 caracteres) el campo sería impracticable sin este límite. */
+  max-height: 11rem;
 }
-.hub-post-publish {
+/* Dos clases por el mismo motivo que el campo: `.btn` se declara después (`_forms-and-buttons.scss`) y con una
+   sola clase le ganaba el empate, así que su `padding: .55rem 1rem` anulaba el `padding: 0` de aquí y descentraba
+   el icono dentro del cuadrado. */
+.hub-post-composer .hub-post-publish {
   flex: 0 0 auto;
-  aspect-ratio: 1; /* icono solo → botón cuadrado a la altura del input */
+  aspect-ratio: 1; /* icono solo → botón cuadrado */
   padding: 0;
+  /* Altura propia: al no estirarse ya con el campo, sin esto se encogería a la de su icono. Coincide con la de
+     una línea del compositor, así que en el caso normal parecen del mismo alto. */
+  height: 2.55rem;
 }
 /* Tarjeta de post dentro del feed: mismo estilo que la reseña pero sin afordancia de clic. */
 .hub-feed-activity-item.is-post {
