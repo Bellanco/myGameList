@@ -2,6 +2,7 @@ import 'fake-indexeddb/auto';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { getCachedSocialDirectory, invalidateCachedSocialDirectory, putCachedSocialDirectory } from '../../src/model/repository/indexedDbRepository';
 import { PROFILE_CACHE_STORE, openSharedDatabase } from '../../src/model/repository/idbConnectionRepository';
+import { PROFILE_TIER_FEED_TTL_MS } from '../../src/core/constants/tiers';
 
 // La caché del directorio social solo caducaba por tiempo (30 min). Si cambia la FORMA de lo que se guarda en
 // cada entrada, el usuario seguía viendo la vieja hasta que caducara — y no hay forma de forzarlo desde la UI.
@@ -10,6 +11,8 @@ import { PROFILE_CACHE_STORE, openSharedDatabase } from '../../src/model/reposit
 
 const GIST = 'aabbcc0011223344';
 const KEY = `__dir__:${GIST}`;
+/** Versión de forma VIGENTE. Subirla aquí al subirla en `indexedDbRepository` (hoy 3: las entradas traen `tier`). */
+const CURRENT_VERSION = 3;
 
 /** Escribe un registro CRUDO en el store, para simular una caché de otra versión de la app. */
 async function writeRawRecord(record: Record<string, unknown>): Promise<void> {
@@ -45,14 +48,57 @@ describe('caché del directorio social — versión de forma', () => {
     await expect(getCachedSocialDirectory(GIST)).resolves.toBeNull();
   });
 
-  it('sigue caducando por tiempo (TTL de 30 min)', async () => {
+  // OJO al tocar `SOCIAL_DIRECTORY_CACHE_VERSION`: este registro tiene que llevar la versión VIGENTE, o el test
+  // pasaría por descarte de versión en vez de por caducidad y dejaría de comprobar el TTL.
+  it('sigue caducando por tiempo (TTL por defecto de 30 min)', async () => {
     await writeRawRecord({
       profileId: KEY,
       cachedAt: Date.now() - 31 * 60 * 1000,
-      version: 2,
+      version: CURRENT_VERSION,
       entries: [{ id: 'ada' }],
     });
 
     await expect(getCachedSocialDirectory(GIST)).resolves.toBeNull();
+  });
+
+  // El TTL lo pone el RANGO de quien mira (`PROFILE_TIER_FEED_TTL_MS`): oro ve como rancio lo que a bronce
+  // todavía le vale, y por eso rehidrata más a menudo.
+  describe('TTL por rango', () => {
+    it('una caché de 12 min: bronce la sirve, oro la descarta', async () => {
+      await writeRawRecord({
+        profileId: KEY,
+        cachedAt: Date.now() - 12 * 60 * 1000,
+        version: CURRENT_VERSION,
+        entries: [{ id: 'ada' }],
+      });
+
+      await expect(getCachedSocialDirectory(GIST, PROFILE_TIER_FEED_TTL_MS.bronze)).resolves.toEqual([{ id: 'ada' }]);
+      await expect(getCachedSocialDirectory(GIST, PROFILE_TIER_FEED_TTL_MS.gold)).resolves.toBeNull();
+    });
+
+    it('mithril descarta cualquier caché de más de 12 s, pero el suelo evita releer en cada navegación', async () => {
+      await putCachedSocialDirectory(GIST, [{ id: 'ada' }]);
+      // Recién escrita: dentro del suelo de 12 s → se sirve (feed→detalle→feed no dispara ~50 lecturas de gist).
+      await expect(getCachedSocialDirectory(GIST, PROFILE_TIER_FEED_TTL_MS.mithril)).resolves.toEqual([{ id: 'ada' }]);
+
+      await writeRawRecord({
+        profileId: KEY,
+        cachedAt: Date.now() - 13_000,
+        version: CURRENT_VERSION,
+        entries: [{ id: 'ada' }],
+      });
+      await expect(getCachedSocialDirectory(GIST, PROFILE_TIER_FEED_TTL_MS.mithril)).resolves.toBeNull();
+    });
+
+    it('sin TTL explícito se comporta como bronce (la cadencia de siempre)', async () => {
+      await writeRawRecord({
+        profileId: KEY,
+        cachedAt: Date.now() - 20 * 60 * 1000,
+        version: CURRENT_VERSION,
+        entries: [{ id: 'ada' }],
+      });
+
+      await expect(getCachedSocialDirectory(GIST)).resolves.toEqual([{ id: 'ada' }]);
+    });
   });
 });
