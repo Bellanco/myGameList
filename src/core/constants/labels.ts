@@ -592,6 +592,10 @@ export const SOCIAL_UI = {
     postPlaceholder: 'Comparte una noticia o un enlace…',
     postPublish: 'Publicar',
     postPublishing: 'Publicando...',
+    // Cupo por rango. El contador replica el de las reseñas (conteo visible + aviso solo en los umbrales).
+    postCharCount: (count: number, max: number) => `${count.toLocaleString()} / ${max.toLocaleString()} caracteres`,
+    postCharNearLimit: 'Te acercas al límite de caracteres de la publicación.',
+    postCharLimitReached: 'Has alcanzado el límite de caracteres de la publicación.',
     postSharedFileHint: 'Pega la URL directa de la imagen (clic derecho → «Copiar la URL de la imagen») para verla incrustada.',
     postedAt: (date: Date) =>
       `Publicado el ${date.toLocaleDateString('es-ES', { day: '2-digit' })} de ${date.toLocaleDateString('es-ES', { month: 'long' })} a las ${date.toLocaleTimeString('es-ES', { hour: 'numeric', minute: '2-digit' })}`,

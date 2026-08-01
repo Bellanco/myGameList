@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { isValidGistId, isValidGithubToken, isValidHttpUrl, isValidYear, normalizeTag, safePostText, safeTrim } from '../../src/core/security/sanitize';
+import { POST_MAX_LENGTH, isValidGistId, isValidGithubToken, isValidHttpUrl, isValidYear, normalizeTag, safePostText, safeTrim } from '../../src/core/security/sanitize';
 
 describe('sanitize', () => {
   it('trims and clamps safe text', () => {
@@ -38,8 +38,20 @@ describe('sanitize', () => {
     expect(isValidHttpUrl(null)).toBe(false);
   });
 
-  it('recorta y cota el texto de una publicación (post corto)', () => {
+  // La longitud de una publicación la decide el RANGO de quien publica, así que el saneador ya no impone un
+  // límite único: recibe el cupo. Sin cupo (p. ej. al LEER un post ajeno) rige el techo absoluto.
+  it('recorta el texto de una publicación y respeta el cupo recibido', () => {
     expect(safePostText('  hola  ')).toBe('hola');
-    expect(safePostText('a'.repeat(2000)).length).toBe(280);
+    expect(safePostText('a'.repeat(2000), 1_000).length).toBe(1_000);
+    expect(safePostText('a'.repeat(2000), 10_000).length).toBe(2_000);
+  });
+
+  it('un cupo de 0 (rango bronce) deja el texto vacío, que aguas abajo es un no-op', () => {
+    expect(safePostText('hola', 0)).toBe('');
+  });
+
+  it('el techo absoluto manda sobre cualquier cupo mayor o negativo', () => {
+    expect(safePostText('a'.repeat(POST_MAX_LENGTH + 500), POST_MAX_LENGTH + 500).length).toBe(POST_MAX_LENGTH);
+    expect(safePostText('hola', -10)).toBe('');
   });
 });
