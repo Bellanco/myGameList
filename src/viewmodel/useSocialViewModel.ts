@@ -429,6 +429,11 @@ export function useSocialViewModel(options?: {
   // el alta) filtrado por la puerta legal. Todo lo que carga o publica datos sociales cuelga de esto, así que un
   // usuario sin la aceptación vigente no llega a leer ni escribir nada del canal social.
   const socialSpaceOpen = showSocialSpace && legalGateOpen;
+  // La comprobación anterior es una LECTURA de Firestore: con sesión ya iniciada hay un intervalo en el que aún no
+  // consta nada de ese uid y `legalGateOpen` es false. Sin marcarlo, el hub caía al gateway durante esas décimas de
+  // segundo (paso de login/alta, con su botón de "Cerrar sesión" bajo el dedo) para volver acto seguido al espacio
+  // social. Mientras la comprobación esté en vuelo, la pantalla sigue "cargando" en vez de enseñar la puerta.
+  const legalConsentPending = Boolean(authUser?.uid) && legalConsent?.uid !== authUser?.uid;
   const hasReadyAccess = hasSocialSession && hasSocialGist && legalGateOpen;
   const profileEditorLocked = isProfileEditorLocked(mustCreateProfile, hasBlockingSocialIssue);
   const canConnectSocialGist =
@@ -2045,7 +2050,8 @@ export function useSocialViewModel(options?: {
     legalConsentRequired: legalConsent?.status === 'required' && legalConsent.uid === authUser?.uid,
     savingConsent,
     acceptLegalConsent,
-    loading,
+    // Carga = hidratación inicial + comprobación del consentimiento en vuelo (ver `legalConsentPending`).
+    loading: loading || legalConsentPending,
     status,
     statusKind,
     showSocialSpace: socialSpaceOpen,

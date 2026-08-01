@@ -156,6 +156,30 @@ describe('SocialHub (componente, post-M3)', () => {
     await waitFor(() => expect(screen.queryByRole('progressbar')).not.toBeInTheDocument());
   });
 
+  it('con sesión válida NO parpadea el gateway mientras se comprueba el consentimiento', async () => {
+    // Regresión: la comprobación del consentimiento es una lectura de Firestore (asíncrona). Entre que la
+    // hidratación resolvía la sesión y llegaba esa respuesta, el hub caía al gateway: unas décimas de segundo
+    // del paso de login/alta —con su botón de "Cerrar sesión"— en una sesión ya identificada.
+    firebaseMocks.getCurrentSocialAuthUser.mockResolvedValue({ uid: 'uid-1', email: 'jaime@example.com', displayName: 'Jaime', photoURL: null });
+    gistMocks.getSocialSyncConfig.mockReturnValue({ token: 'ghp_x', gistId: 'social-gist', etag: null, lastRemoteUpdatedAt: 0 });
+    let resolveConsent: (value: unknown) => void = () => {};
+    firebaseMocks.getPublicConfig.mockImplementation(() => new Promise((resolve) => { resolveConsent = resolve; }));
+
+    renderHub();
+
+    // La comprobación ya está en vuelo (la sesión está resuelta) y la pantalla sigue en "Cargando…":
+    // ni gateway (progressbar) ni botón de cerrar sesión al alcance del dedo.
+    await waitFor(() => expect(firebaseMocks.getPublicConfig).toHaveBeenCalledWith('uid-1'));
+    expect(screen.getByText(SOCIAL_UI.loading)).toBeInTheDocument();
+    expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: SOCIAL_UI.gateway.signOut })).not.toBeInTheDocument();
+
+    // Al responder con el consentimiento vigente se entra al espacio social sin haber pasado por el gateway.
+    resolveConsent({ consent: { version: LEGAL_VERSION, agreedAt: 1 } });
+    await waitFor(() => expect(screen.queryByText(SOCIAL_UI.loading)).not.toBeInTheDocument());
+    expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
+  });
+
   it('si la comprobación del consentimiento falla (offline), no bloquea el espacio social', async () => {
     firebaseMocks.getCurrentSocialAuthUser.mockResolvedValue({ uid: 'uid-1', email: 'jaime@example.com', displayName: 'Jaime', photoURL: null });
     firebaseMocks.getPublicConfig.mockRejectedValue(new Error('offline'));
