@@ -6,6 +6,22 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
 ## [Unreleased]
 
 ### Added
+- **Panel de administración** (`/admin`, ruta oculta sin enlace en la navegación): censo de perfiles
+  —incluidos los que tienen el social desactivado, que el directorio no muestra— con sus amistades, y
+  acciones de moderación: suspender el social, purgar los restos legacy del perfil público (email,
+  gist de juegos y token en claro) y borrar perfil + amistades. El acceso lo concede `isAdmin()` en
+  las reglas de Firestore, no el cliente. El borrado es parcial a propósito: `privateConfig`,
+  `publicConfig` y `userMap` son owner-only y sobreviven, igual que la cuenta de Google y los Gists.
+- **Auto-saneado del perfil legacy al iniciar sesión**: el navegador del propio usuario respalda el token de
+  GitHub cifrado y el id del gist de juegos en `privateConfig` (owner-only) y solo entonces los borra —junto al
+  `email`— del perfil público. Si el respaldo falla no se purga nada y se reintenta en el siguiente arranque.
+  Es el único actor que puede hacerlo: `privateConfig` no es legible ni escribible por el administrador.
+- **Rango de perfil** (`tier`): bronce por defecto, plata, oro y mithril. Lo asigna el administrador
+  desde el panel; las reglas impiden que el dueño se lo cambie. Mithril queda reservado a la cuenta
+  del administrador. Se muestra como un punto de color en la esquina de cada tarjeta del directorio
+  social, y determina cada cuánto se rehidrata el feed de QUIEN MIRA: bronce 30 min (como siempre),
+  plata 15, oro 10 y mithril al abrir (con un suelo de 12 s). Las reglas impiden que el dueño se lo
+  asigne, lo cambie o lo borre; solo puede conservarlo tal cual.
 - **Tema claro "arena"** — paleta clara con tonos cálidos manteniendo el azul de marca.
 - **Documentos legales** (`/legal/aviso`, `/legal/privacidad`, `/legal/cookies`) accesibles desde la
   app, con aceptación registrada por cuenta antes de activar lo social.

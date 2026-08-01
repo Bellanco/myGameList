@@ -19,9 +19,11 @@ import {
   getOwnProfileRef,
   invalidateOwnProfileCache,
   invalidateSocialDirectoryCache,
+  peekOwnProfileTier,
   saveOwnProfileCache,
   saveProfileByEmailCache,
 } from './firebaseSocialRepository';
+import { DEFAULT_PROFILE_TIER } from '../../core/constants/tiers';
 import type { FirestorePrivateConfig, FirestorePublicConfig } from '../types/firestore';
 
 // --- RE-EXPORTS: API pública estable (los consumidores siguen importando desde firebaseRepository) ---
@@ -172,6 +174,9 @@ export async function upsertProfileSocialReferences(input: {
     photoURL: String(input.user.photoURL || ''),
     socialGistId: input.socialGistId,
     gamesGistId: String(input.gamesGistId || ''),
+    // El rango no lo escribe este camino (lo asigna el admin): se conserva el que ya se conocía en vez de
+    // sembrar bronce, que degradaría a un usuario de rango alto mientras viva la caché.
+    tier: peekOwnProfileTier(input.user.uid),
     githubToken: String(input.githubToken || ''), // audit-allow: caché en MEMORIA (no Firestore); el token va cifrado a privateConfig
     socialEnabled: true,
   });
@@ -419,6 +424,8 @@ export async function ensureProfileByEmail(input: {
     photoURL: resolvedPhotoURL,
     socialGistId: input.socialGistId,
     gamesGistId,
+    // Este guardado no toca el rango: se conserva el del perfil que se acaba de resolver.
+    tier: existing?.tier ?? DEFAULT_PROFILE_TIER,
     githubToken,
     socialEnabled: true,
   };

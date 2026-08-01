@@ -4,6 +4,7 @@
 import { getApp, getApps, initializeApp, type FirebaseApp } from 'firebase/app';
 import { getAuth, setPersistence, browserLocalPersistence, type Auth } from 'firebase/auth';
 import { getFirestore, type Firestore } from 'firebase/firestore';
+import type { ProfileTier } from '../../core/constants/tiers';
 import { readAnalyticsConsent } from './analyticsConsentRepository';
 
 type AnalyticsModule = typeof import('firebase/analytics');
@@ -40,6 +41,8 @@ export interface SocialProfileReference {
   gamesGistId: string;
   githubToken: string;
   socialEnabled: boolean;
+  /** Rango asignado por el administrador. Determina la frescura del feed de QUIEN MIRA (ver `tiers.ts`). */
+  tier: ProfileTier;
 }
 
 export interface SocialDirectoryEntry {
@@ -59,6 +62,8 @@ export interface SocialDirectoryEntry {
    * quien hace mucho que no aparece. 0 si el doc no lo trae.
    */
   updatedAt: number;
+  /** Rango del perfil: es lo que pinta el punto de color en su tarjeta del directorio. */
+  tier: ProfileTier;
 }
 
 export interface GameRecommendation {
