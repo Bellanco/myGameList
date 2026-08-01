@@ -22,6 +22,10 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
   social, y determina cada cuánto se rehidrata el feed de QUIEN MIRA: bronce 30 min (como siempre),
   plata 15, oro 10 y mithril al abrir (con un suelo de 12 s). Las reglas impiden que el dueño se lo
   asigne, lo cambie o lo borre; solo puede conservarlo tal cual.
+- El rango decide también **quién puede publicar** en el feed y con qué extensión: bronce no publica
+  (el compositor no aparece), plata 1.000 caracteres, oro 10.000 y mithril sin límite. El compositor
+  pasa a ser un campo de una línea que crece al saltar de línea, con el mismo contador de caracteres
+  que el análisis de un juego; se publica con el botón o con Ctrl/⌘+Enter.
 - **Tema claro "arena"** — paleta clara con tonos cálidos manteniendo el azul de marca.
 - **Documentos legales** (`/legal/aviso`, `/legal/privacidad`, `/legal/cookies`) accesibles desde la
   app, con aceptación registrada por cuenta antes de activar lo social.

@@ -215,6 +215,8 @@ export interface UpsertPostInput {
   authorName: string;
   text: string;
   timestamp?: number;
+  /** Cupo de caracteres del rango de quien publica. Si se omite, rige el techo absoluto del saneador. */
+  maxLength?: number;
 }
 
 export interface UpsertRecommendationInput {
@@ -783,7 +785,9 @@ export function removeReviewActivity(
 /** F3 — añade una publicación de texto libre al gist propio (prepend). No-op si falta autor o texto. */
 export function upsertPost(data: SocialGistData, input: UpsertPostInput): SocialGistData {
   const now = input.timestamp || Date.now();
-  const text = safePostText(input.text);
+  // Con cupo 0 (rango bronce) el texto queda vacío y el `if` de abajo convierte la publicación en un no-op: el
+  // último cortafuegos por si alguien llega hasta aquí sin pasar por la comprobación de la interfaz.
+  const text = safePostText(input.text, input.maxLength);
 
   if (!input.authorProfileId || !text) {
     return data;

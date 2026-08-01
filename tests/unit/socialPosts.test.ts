@@ -34,13 +34,25 @@ describe('F3 — publicaciones del feed social', () => {
     expect(second.posts?.[0].text).toBe('Segundo'); // el más reciente primero
   });
 
-  it('upsertPost es no-op sin autor o sin texto, y cota la longitud', () => {
+  it('upsertPost es no-op sin autor o sin texto, y cota la longitud al cupo recibido', () => {
     const data = baseGist();
     expect(upsertPost(data, { authorProfileId: '', authorName: 'X', text: 'algo' }).posts).toHaveLength(0);
     expect(upsertPost(data, { authorProfileId: 'p1', authorName: 'X', text: '   ' }).posts).toHaveLength(0);
 
-    const long = upsertPost(data, { authorProfileId: 'p1', authorName: 'X', text: 'a'.repeat(2000), timestamp: 1 });
-    expect(long.posts?.[0].text.length).toBe(280);
+    // El cupo lo pasa quien publica, según su rango (plata 1.000, oro 10.000).
+    const plata = upsertPost(data, { authorProfileId: 'p1', authorName: 'X', text: 'a'.repeat(2000), timestamp: 1, maxLength: 1_000 });
+    expect(plata.posts?.[0].text.length).toBe(1_000);
+
+    const oro = upsertPost(data, { authorProfileId: 'p1', authorName: 'X', text: 'a'.repeat(2000), timestamp: 1, maxLength: 10_000 });
+    expect(oro.posts?.[0].text.length).toBe(2_000);
+  });
+
+  // Último cortafuegos del rango bronce: si una publicación llega hasta aquí con cupo 0, el texto queda vacío y
+  // `upsertPost` no añade nada. La comprobación de la interfaz es la primera barrera, no la única.
+  it('con cupo 0 (bronce) no se añade publicación alguna', () => {
+    const data = baseGist();
+    const bronce = upsertPost(data, { authorProfileId: 'p1', authorName: 'X', text: 'noticia', timestamp: 1, maxLength: 0 });
+    expect(bronce.posts).toHaveLength(0);
   });
 
   it('el schema estricto acepta gists con y sin posts, y rechaza campos extra (allowlist)', () => {
