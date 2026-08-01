@@ -1,0 +1,46 @@
+/* Rango de perfil (bronce / plata / oro / mithril).
+   Cada clase solo aporta su color de metal en `--tier`; quien la use decide la forma (punto en la tarjeta del
+   directorio, borde del selector del panel de administración, marca del resumen). Partial compartido porque lo
+   consumen dos pantallas que no se conocen entre sí. */
+/* Los cuatro se separan por TONO, LUMINOSIDAD y SATURACIÓN a la vez, no solo por tono: en un punto de medio
+   centímetro dos colores del mismo tono con distinta luminosidad se confunden. El reparto:
+     bronce  → marrón cobrizo, oscuro y poco saturado
+     plata   → gris neutro, SIN tinte azul (era lo que lo hacía indistinguible del mithril)
+     oro     → ámbar muy saturado y claro
+     mithril → cian eléctrico, el único de tono frío y el más vivo de los cuatro
+   Bronce y oro comparten familia cálida, así que se separan por luminosidad: uno oscuro, el otro brillante. */
+.tier-bronze  { --tier: #a9662a; }
+.tier-silver  { --tier: #8f9aa8; }
+.tier-gold    { --tier: #ffc107; }
+.tier-mithril { --tier: #22d3ee; }
+
+/* Contenedor del punto. Se posiciona la tarjeta de PERFIL, no `.hub-feed-card` entera: el punto solo existe en el
+   directorio y no hay por qué tocar el resto del feed. */
+.hub-feed-profile-item { position: relative; }
+
+/* Punto de rango en la esquina superior derecha de cada tarjeta de perfil del directorio. El halo lo despega del
+   fondo de la tarjeta sin necesidad de borde opaco, que en la paleta clara se veía sucio. */
+.hub-tier-dot {
+  position: absolute;
+  top: .55rem;
+  right: .55rem;
+  width: .6rem;
+  height: .6rem;
+  border-radius: 50%;
+  background: var(--tier, var(--text-dim));
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--tier, var(--text-dim)) 28%, transparent);
+  pointer-events: none; /* la tarjeta entera es clicable: el punto no debe robar el clic */
+}
+
+/* El mithril, al ser único, respira un poco: un pulso muy tenue que no distrae. Se desactiva si el usuario
+   pide menos movimiento. */
+.hub-tier-dot.tier-mithril { animation: tier-mithril-pulse 2.8s ease-in-out infinite; }
+
+@keyframes tier-mithril-pulse {
+  0%, 100% { box-shadow: 0 0 0 2px color-mix(in srgb, var(--tier) 28%, transparent); }
+  50%      { box-shadow: 0 0 0 5px color-mix(in srgb, var(--tier) 36%, transparent); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hub-tier-dot.tier-mithril { animation: none; }
+}

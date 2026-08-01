@@ -384,6 +384,8 @@ export async function invalidateProfileGames(profileId: string): Promise<void> {
 // profileId (UUID) de la caché de juegos. TTL 30 min: dentro de la ventana, la navegación (feed→detalle→feed) y los
 // re-render sirven de IndexedDB sin releer los ~N gists sociales; el refresco manual (forceRefresh) la reescribe.
 // ---------------------------------------------------------------------------
+// TTL POR DEFECTO (rango bronce). El llamador pasa el suyo según el rango de QUIEN MIRA: plata 15 min, oro 10,
+// mithril 12 s. Ver `PROFILE_TIER_FEED_TTL_MS` en core/constants/tiers.ts.
 const SOCIAL_DIRECTORY_TTL_MS = 30 * 60 * 1000;
 const SOCIAL_DIRECTORY_KEY_PREFIX = '__dir__:';
 /**
@@ -396,8 +398,9 @@ const SOCIAL_DIRECTORY_KEY_PREFIX = '__dir__:';
  * reseñas recortadas. SUBIRLA al cambiar campos o topes de lo que se cachea.
  *   1 = sin versión (implícita).
  *   2 = actividad por perfil hasta 320 entradas (antes 40).
+ *   3 = cada entrada trae `tier` (punto de rango en las tarjetas del directorio).
  */
-const SOCIAL_DIRECTORY_CACHE_VERSION = 2;
+const SOCIAL_DIRECTORY_CACHE_VERSION = 3;
 
 interface CachedSocialDirectory<T> {
   profileId: string; // keyPath del store
@@ -406,13 +409,20 @@ interface CachedSocialDirectory<T> {
   entries: T[];
 }
 
-export async function getCachedSocialDirectory<T>(ownGistId: string): Promise<T[] | null> {
+/**
+ * `ttlMs` sale del RANGO de quien mira (`PROFILE_TIER_FEED_TTL_MS`): cuanto más alto, más a menudo se releen el
+ * directorio y los gists sociales de sus amigos. Por defecto, el de bronce, que es la cadencia de siempre.
+ */
+export async function getCachedSocialDirectory<T>(
+  ownGistId: string,
+  ttlMs: number = SOCIAL_DIRECTORY_TTL_MS,
+): Promise<T[] | null> {
   if (!ownGistId) return null;
   try {
     const rec = await idbGet<CachedSocialDirectory<T>>(PROFILE_CACHE_STORE, SOCIAL_DIRECTORY_KEY_PREFIX + ownGistId);
     if (!rec) return null;
     if (rec.version !== SOCIAL_DIRECTORY_CACHE_VERSION) return null;
-    if (Date.now() - rec.cachedAt >= SOCIAL_DIRECTORY_TTL_MS) return null;
+    if (Date.now() - rec.cachedAt >= Math.max(0, ttlMs)) return null;
     return rec.entries;
   } catch {
     return null;

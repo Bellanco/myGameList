@@ -9,6 +9,7 @@
 // documento que cualquier usuario autenticado puede leer. `findSocialProfileByEmail` se conserva SOLO como
 // fallback para perfiles legacy cuyo id de documento no es el uid.
 import { collection, doc, getDoc, getDocs, limit, orderBy, query, where } from 'firebase/firestore';
+import { DEFAULT_PROFILE_TIER, normalizeTier, type ProfileTier } from '../../core/constants/tiers';
 import {
   initializeFirebaseServices,
   isPermissionDeniedError,
@@ -84,6 +85,16 @@ function readOwnProfileCache(uid: string): SocialProfileReference | null | undef
   return cached.value;
 }
 
+/**
+ * Rango que ya se conocía del perfil propio, leído de la caché en memoria (sin red). Lo usan los caminos que
+ * REESCRIBEN esa caché tras guardar el perfil: el `tier` no es suyo (lo asigna el admin y esas escrituras no lo
+ * tocan), así que sembrar bronce a ciegas degradaría a un usuario de rango alto durante la vida de la caché.
+ * Si no hay nada cacheado devuelve bronce, que es el valor por defecto real.
+ */
+export function peekOwnProfileTier(uid: string): ProfileTier {
+  return ownProfileCacheByUid.get(uid.trim())?.value?.tier || DEFAULT_PROFILE_TIER;
+}
+
 /** Refresca la caché del perfil propio tras escribirlo (misma función que cumplía `saveProfileByEmailCache`). */
 export function saveOwnProfileCache(uid: string, value: SocialProfileReference | null): void {
   ownProfileCacheByUid.set(uid, {
@@ -122,6 +133,8 @@ function mapProfileReference(id: string, data: Record<string, unknown>): SocialP
     gamesGistId: String(social.gamesGistId || ''),
     githubToken: String(social.githubToken || ''), // audit-allow: LECTURA legacy en claro para recuperación (fallback); no es escritura
     socialEnabled: Boolean(social.enabled),
+    // Rango: lo asigna el admin y el dueño no puede tocarlo. Del PROPIO perfil sale la cadencia del feed.
+    tier: normalizeTier(data.tier),
   };
 }
 
@@ -333,6 +346,7 @@ export async function listSocialDirectory(limitCount = 12, options?: { forceRefr
           uid?: string;
           displayName?: string;
           photoURL?: string;
+          tier?: string;
           social?: { gistId?: string; gamesGistId?: string; enabled?: boolean };
           updatedAt?: { toMillis?: () => number } | number;
         };
@@ -350,6 +364,7 @@ export async function listSocialDirectory(limitCount = 12, options?: { forceRefr
           gamesGistId: String(data.social?.gamesGistId || ''),
           enabled: Boolean(data.social?.enabled),
           updatedAt: toMillis(data.updatedAt),
+          tier: normalizeTier(data.tier),
         };
       })
       // Guarda barata: el placeholder ya no puede salir (no tiene `social.enabled`), pero si algún día lo
@@ -363,6 +378,7 @@ export async function listSocialDirectory(limitCount = 12, options?: { forceRefr
         socialGistId: entry.socialGistId,
         gamesGistId: entry.gamesGistId,
         updatedAt: entry.updatedAt,
+        tier: entry.tier,
       }));
 
     saveSocialDirectoryCache(normalizedLimit, entries);

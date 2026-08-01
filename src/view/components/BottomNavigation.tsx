@@ -4,8 +4,9 @@ import { UI_MESSAGES } from '../../core/constants/labels';
 import { Icon } from './Icon';
 
 // 'legal' NO está en NAV_ITEMS a propósito: los documentos legales se alcanzan por enlace (aviso de cookies,
-// tarjeta de cuenta, puerta del hub social), no ocupan un hueco en la barra inferior.
-export type AppSection = 'lists' | 'social' | 'settings' | 'account' | 'integrations' | 'inbox' | 'legal';
+// tarjeta de cuenta, puerta del hub social), no ocupan un hueco en la barra inferior. 'admin' tampoco: es una
+// ruta oculta que solo sirve al administrador (ver AdminHub) y no debe anunciarse en la interfaz de nadie.
+export type AppSection = 'lists' | 'social' | 'settings' | 'account' | 'integrations' | 'inbox' | 'legal' | 'admin';
 
 interface BottomNavigationProps {
   currentSection: AppSection;

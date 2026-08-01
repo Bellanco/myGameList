@@ -428,6 +428,93 @@ export const APP_ERROR_UI = {
   reload: 'Recargar',
 } as const;
 
+// Panel de administración (`/admin`, ruta oculta). Nada que ver con `UI_MESSAGES.settings.admin`, que es la
+// administración de ETIQUETAS de la propia biblioteca.
+export const ADMIN_PANEL_UI = {
+  sectionAria: 'Panel de administración',
+  title: 'Administración',
+  subtitle: 'Censo de usuarios con perfil social y acciones de moderación.',
+  checking: 'Comprobando permisos...',
+  loading: 'Cargando usuarios...',
+  refresh: 'Actualizar',
+  back: 'Volver a mis listas',
+  searchLabel: 'Buscar',
+  searchPlaceholder: 'Nombre o identificador',
+  empty: 'No hay ningún perfil todavía.',
+  emptyFiltered: 'Ningún perfil coincide con la búsqueda.',
+  resultCount: (count: number) => (count === 1 ? '1 usuario' : `${count} usuarios`),
+  // Aviso permanente: el panel enseña `profiles`, que no es el censo real de cuentas.
+  scopeNote: 'Solo aparece quien tiene perfil social. Quien usa la app sin crearlo no es visible desde aquí: sus documentos son owner-only y las reglas no dejan leerlos ni al administrador.',
+  // El saneado automático hace innecesaria la purga manual en cuanto el usuario vuelve a entrar. Conviene que se
+  // vea, para que la purga manual se use solo donde de verdad aporta: en quien ya no vuelve.
+  legacyNote: 'Los restos legacy se migran solos: cuando el usuario inicia sesión, su propio navegador pone a salvo el token y el id del gist en su configuración privada y limpia el perfil público. Purga a mano solo a quien lleve mucho sin entrar.',
+  truncated: (limitCount: number) => `Se alcanzó el tope de ${limitCount} perfiles: la lista puede estar incompleta.`,
+  totals: {
+    aria: 'Resumen',
+    profiles: 'Perfiles',
+    socialEnabled: 'Con social activo',
+    friendships: 'Amistades',
+    pending: 'Solicitudes pendientes',
+    legacy: 'Con restos legacy',
+  },
+  tier: {
+    column: 'Rango',
+    selectAria: (name: string) => `Rango de ${name}`,
+    // Mithril aparece deshabilitado en el resto de filas: se ve que existe y por qué no se puede dar.
+    reservedHint: 'Reservado al administrador',
+  },
+  table: {
+    aria: 'Usuarios',
+    user: 'Usuario',
+    state: 'Estado',
+    activity: 'Última actividad',
+    relations: 'Relaciones',
+    legacy: 'Legacy',
+    actions: 'Acciones',
+  },
+  noName: '(sin nombre)',
+  // Identificación de quien tiene el perfil a medias. El correo NO está: se purgó del perfil público a propósito
+  // (lo leía cualquier usuario autenticado). Para ponerle cara a un uid, la vía es la consola de Firebase Auth.
+  knownAsHint: 'según sus amigos',
+  copyUid: 'Copiar identificador',
+  copiedUid: 'Identificador copiado.',
+  enabled: 'Social activo',
+  disabled: 'Social desactivado',
+  never: 'Sin registro',
+  relations: (friends: number, pending: number) => `${friends} amistades · ${pending} pendientes`,
+  legacyNone: 'Limpio',
+  legacyEmail: 'email',
+  legacyGamesGist: 'gist de juegos',
+  legacyToken: 'token en claro',
+  legacyAria: 'Restos legacy pendientes de purga',
+  // Purga campo a campo: cada uno tiene una consecuencia distinta para su dueño y no son comparables.
+  legacyPurgeAria: (field: string, name: string) => `Purgar ${field} de ${name}`,
+  legacyEmailLocked: 'Este perfil no se identifica por el uid: su email es la única forma de que su dueño lo recupere, así que no se purga.',
+  legacyConfirm: {
+    email: (name: string) => `¿Borrar el email del perfil público de ${name}? Deja de ser legible por el resto de usuarios. Su dueño no lo nota: su perfil se localiza por el uid.`,
+    gamesGistId: (name: string) => `¿Borrar el id del gist de juegos del perfil público de ${name}? No es un secreto (es un gist público), pero es el respaldo que usa "Recuperar Gist ID": si su configuración privada no lo tiene, tendrá que reintroducirlo a mano en un dispositivo nuevo.`,
+    token: (name: string) => `¿Borrar el token de GitHub en claro de ${name}? Hoy lo puede leer cualquier usuario autenticado, así que conviene. Si aún no tiene el respaldo cifrado, la próxima vez que entre en un dispositivo nuevo tendrá que volver a conectar GitHub.`,
+  },
+  disableBtn: 'Desactivar social',
+  enableBtn: 'Activar social',
+  deleteBtn: 'Borrar perfil',
+  working: 'Trabajando...',
+  confirmDisable: (name: string) => `¿Desactivar el social de ${name}? Sale del directorio y del feed, pero conserva su perfil y sus amistades.`,
+  confirmEnable: (name: string) => `¿Reactivar el social de ${name}?`,
+  confirmDelete: (name: string) => `¿Borrar el perfil de ${name} y todas sus amistades? No se puede deshacer.`,
+  deleteScope: 'No se borran su configuración privada (token cifrado), su cuenta de Google ni sus gists de GitHub: las reglas los reservan a su dueño. Al volver a entrar se le creará un perfil nuevo.',
+  confirmCancel: 'Cancelar',
+  confirmAccept: 'Confirmar',
+  okTier: (tier: string) => `Rango cambiado a ${tier}.`,
+  tierReservedWarning: 'Mithril está reservado a la cuenta del administrador.',
+  okDisabled: 'Social desactivado.',
+  okEnabled: 'Social reactivado.',
+  okPurged: 'Campos legacy purgados.',
+  okDeleted: 'Perfil y amistades borrados.',
+  partialDeleted: 'Borrado incompleto: revisa la consola para el detalle.',
+  errorGeneric: 'No se pudo completar la acción.',
+} as const;
+
 export const SOCIAL_UI = {
   hubTitle: 'Espacio social',
   loading: 'Cargando espacio social...',

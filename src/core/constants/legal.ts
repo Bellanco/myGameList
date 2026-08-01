@@ -120,12 +120,13 @@ const PRIVACY: LegalDocument = {
       bullets: [
         'En tu dispositivo: tus listas de juegos, reseñas y preferencias (localStorage e IndexedDB), y tu token de GitHub cifrado.',
         'En tu cuenta de GitHub: la biblioteca y el canal social, en Gists que son tuyos.',
-        'En Firestore, si activas lo social: tu identificador de usuario, el nick que elijas, tu foto de perfil de Google (puedes quitarla), el identificador de tu Gist social, tus amistades y tus preferencias de la app.',
+        'En Firestore, si activas lo social: tu identificador de usuario, el nick que elijas, tu foto de perfil de Google (puedes quitarla), el identificador de tu Gist social, tus amistades, el rango de tu perfil y tus preferencias de la app.',
         'En Firestore, en un documento privado que solo tú puedes leer: los identificadores de tus Gists y tu token de GitHub cifrado.',
         'Si aceptas la analítica: eventos de uso y errores en Google Analytics, con un identificador aleatorio.',
       ],
       paragraphs: [
-        'El perfil que ven otros usuarios contiene tu nick, tu foto (si la dejas) y el identificador de tu Gist social. No contiene tu correo electrónico ni el identificador de tu biblioteca de juegos.',
+        'El perfil que ven otros usuarios contiene tu nick, tu foto (si la dejas), el identificador de tu Gist social y el rango de tu perfil. No contiene tu correo electrónico ni el identificador de tu biblioteca de juegos.',
+        'El rango (bronce, plata, oro) es una etiqueta que asigna quien administra el servicio: no la eliges tú, no puedes cambiarla y lo único que hace es variar cada cuánto la app refresca lo que ves de tus amistades.',
       ],
     },
     {

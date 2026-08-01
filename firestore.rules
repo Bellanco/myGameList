@@ -32,8 +32,30 @@ service cloud.firestore {
       return request.resource.data.uid is string
         && request.resource.data.uid == request.auth.uid
         && request.resource.data.keys().hasOnly([
-          "schemaVersion", "uid", "profileId", "email", "displayName", "photoURL", "social", "updatedAt"
-        ]);
+          "schemaVersion", "uid", "profileId", "email", "displayName", "photoURL", "social", "updatedAt", "tier"
+        ])
+        && profileTierNotSelfAssigned();
+    }
+
+    // El rango del perfil (bronce/plata/oro/mithril) lo asigna EL ADMIN desde `/admin`; el dueño no.
+    //
+    // `tier` TIENE que estar en la allowlist de arriba aunque el cliente nunca lo escriba: en un `update`,
+    // `request.resource.data` es el documento RESULTANTE completo, no solo las claves que se envían. En cuanto el
+    // admin le pusiera un tier a alguien, `hasOnly` sin "tier" denegaría todas las escrituras merge de ese usuario
+    // sobre su propio perfil (nombre, foto, gist) y le dejaría el perfil congelado.
+    //
+    // Con la clave admitida, el dueño solo puede DEJARLO EXACTAMENTE COMO ESTÁ:
+    //   - si su documento no tiene rango, tampoco puede estrenárselo;
+    //   - si lo tiene, la escritura debe conservarlo con el mismo valor.
+    // La segunda mitad importa tanto como la primera: sin ella, quitar el campo (con `deleteField()` o
+    // sobrescribiendo el documento sin él) se colaba como "no hay tier en la escritura, luego no se está
+    // asignando" y permitía autodegradarse a bronce. Escalar nunca fue posible; editarlo hacia abajo, sí.
+    // No rompe nada legítimo: TODAS las escrituras de la app sobre `profiles` son `merge`, y un merge conserva
+    // el campo sin mencionarlo. El admin se salta esta validación entera por la rama `isAdmin()`.
+    function profileTierNotSelfAssigned() {
+      return (resource == null || !("tier" in resource.data))
+        ? !("tier" in request.resource.data)
+        : ("tier" in request.resource.data && request.resource.data.tier == resource.data.tier);
     }
 
     function privateConfigWriteIsValid() {

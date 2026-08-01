@@ -47,6 +47,12 @@ describe('App routes (regresión de rutas sociales)', () => {
     expect(screen.getByText(`MATCH:${LEGAL_ROUTES.privacy}`)).toBeInTheDocument();
   });
 
+  it('/admin tiene ruta propia aunque esté oculta (sin ella, el catch-all la rebotaría)', () => {
+    expect(APP_ROUTE_PATHS).toContain('/admin');
+    renderAt('/admin');
+    expect(screen.getByText('MATCH:/admin')).toBeInTheDocument();
+  });
+
   it('una ruta desconocida sí rebota a /completados (catch-all)', () => {
     renderAt('/ruta-inexistente');
     // El Navigate del catch-all lleva a /completados, cuya ruta renderiza su marcador.

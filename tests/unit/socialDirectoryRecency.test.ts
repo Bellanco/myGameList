@@ -116,3 +116,75 @@ describe('listSocialDirectory — orden por uso reciente', () => {
     expect(entries.map((entry) => entry.id)).toEqual(['ada']);
   });
 });
+
+// El rango vive SOLO en Firestore (lo asigna el admin; el dueño no puede escribirlo). Si el directorio no lo
+// trajera, las tarjetas del hub pintarían a todo el mundo de bronce, que es justo lo que pasó al principio.
+describe('directorio social — rango del perfil', () => {
+  beforeEach(() => {
+    invalidateSocialDirectoryCache();
+    getDocsMock.mockReset();
+  });
+
+  it('trae el `tier` de cada perfil', async () => {
+    getDocsMock.mockResolvedValueOnce(
+      snapshot([
+        profileDoc('ada', ts(3_000), { tier: 'gold' }),
+        profileDoc('bob', ts(2_000), { tier: 'mithril' }),
+        profileDoc('cid', ts(1_000)), // sin campo → bronce
+      ]),
+    );
+
+    const entries = await listSocialDirectory(50);
+
+    expect(entries.map((entry) => entry.tier)).toEqual(['gold', 'mithril', 'bronze']);
+  });
+
+  it('un rango desconocido en el documento se degrada a bronce', async () => {
+    getDocsMock.mockResolvedValueOnce(snapshot([profileDoc('ada', ts(1), { tier: 'adamantium' })]));
+
+    const entries = await listSocialDirectory(50);
+
+    expect(entries[0].tier).toBe('bronze');
+  });
+});
+
+// Contraparte del test de reglas "puede escribir `social.tier`, pero es un campo que nadie lee": el allowlist de
+// las reglas solo controla las claves de PRIMER NIVEL, así que dentro de `social` el dueño escribe lo que quiera.
+// Que eso no le sirva para falsear su rango depende de que el lector use siempre el campo de primer nivel.
+describe('directorio social — el rango no se puede falsear desde el documento', () => {
+  beforeEach(() => {
+    invalidateSocialDirectoryCache();
+    getDocsMock.mockReset();
+  });
+
+  it('ignora un `social.tier` inyectado por el dueño', async () => {
+    getDocsMock.mockResolvedValueOnce(
+      snapshot([
+        {
+          id: 'ada',
+          data: {
+            uid: 'ada',
+            displayName: 'ADA',
+            photoURL: '',
+            social: { gistId: 'ada-social', enabled: true, tier: 'mithril' },
+            updatedAt: ts(1_000),
+          },
+        },
+      ]),
+    );
+
+    const entries = await listSocialDirectory(50);
+
+    expect(entries[0].tier).toBe('bronze');
+  });
+
+  it('el rango de primer nivel manda sobre cualquier `social.tier`', async () => {
+    getDocsMock.mockResolvedValueOnce(
+      snapshot([profileDoc('ada', ts(1_000), { tier: 'silver', social: { gistId: 'ada-social', enabled: true, tier: 'mithril' } })]),
+    );
+
+    const entries = await listSocialDirectory(50);
+
+    expect(entries[0].tier).toBe('silver');
+  });
+});
