@@ -25,6 +25,7 @@ import { useAppearanceSession } from './view/hooks/useAppearanceSession';
 import { useUppercase } from './view/hooks/useUppercase';
 import { useEffects } from './view/hooks/useEffects';
 import { useShowSteamButton } from './view/hooks/useShowSteamButton';
+import { useLegacyProfileHeal } from './view/hooks/useLegacyProfileHeal';
 import { useShootingStars } from './view/hooks/useShootingStars';
 import { useSignatureEffects } from './view/hooks/useSignatureEffects';
 import { useAppliedPalette } from './view/hooks/usePalette';
@@ -133,6 +134,10 @@ export default function App() {
   const hasSocialProfile = useSocialProfileSession(completedGameIds);
   // F1: enlaza la sesión con la apariencia (paleta + claro/oscuro) → hidrata/replica en Firestore.
   useAppearanceSession();
+  // Al iniciar sesión, migra y limpia los restos legacy del perfil público (email / id del gist de juegos /
+  // token en claro): primero los pone a salvo en `privateConfig` (owner-only, solo el dueño puede) y luego los
+  // borra del documento que lee cualquier usuario autenticado. Silencioso y best-effort.
+  useLegacyProfileHeal();
   // F1: aplica la paleta app-wide y reacciona a la hidratación de cuenta, para que el tema sincronizado se
   // aplique al iniciar sesión (no solo al abrir Ajustes, donde vive el selector `usePalette`).
   useAppliedPalette();
