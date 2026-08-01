@@ -72,6 +72,9 @@ const SocialHubInner = memo(function SocialHubInner({
     setComposePostText,
     publishingPost,
     handlePublishPost,
+    canPublishPosts,
+    postMaxLength,
+    showPostCounter,
     hydratingProfile,
     savingProfile,
     loadingDirectory,
@@ -322,6 +325,9 @@ const SocialHubInner = memo(function SocialHubInner({
         setComposePostText={setComposePostText}
         publishingPost={publishingPost}
         handlePublishPost={handlePublishPost}
+        canPublishPosts={canPublishPosts}
+        postMaxLength={postMaxLength}
+        showPostCounter={showPostCounter}
         status={status}
         statusKind={statusKind}
         handleSignOut={handleSignOut}

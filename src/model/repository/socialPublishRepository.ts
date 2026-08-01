@@ -215,7 +215,7 @@ export async function unpublishReviewActivity(input: { id: number }): Promise<vo
  * reseña: lee el gist, remapea identidad legacy, inserta el post, reescribe y asegura el perfil. No-op sin sesión
  * Google ni gist social configurado. Los hipervínculos se derivan del texto al renderizar (no se publican como HTML).
  */
-export async function publishPost(input: { text: string }): Promise<void> {
+export async function publishPost(input: { text: string; maxLength?: number }): Promise<void> {
   const authUser = await getCurrentSocialAuthUser();
   if (!authUser) {
     throw new Error('Inicia sesión con Google para publicar');
@@ -242,6 +242,8 @@ export async function publishPost(input: { text: string }): Promise<void> {
     authorProfileId: profileId,
     authorName: socialNick,
     text: input.text,
+    // Cupo del rango de quien publica: lo decide el llamador, que es quien conoce la sesión.
+    maxLength: input.maxLength,
     timestamp: now,
   });
 

@@ -26,7 +26,14 @@ import { applyProfileVisibility } from '../core/utils/profileVisibility';
 import { SOCIAL_UI } from '../core/constants/labels';
 import { LEGAL_CONSENT_UI, LEGAL_VERSION } from '../core/constants/legal';
 import type { IconName } from '../core/constants/icons';
-import { DEFAULT_PROFILE_TIER, PROFILE_TIER_FEED_TTL_MS, type ProfileTier } from '../core/constants/tiers';
+import {
+  DEFAULT_PROFILE_TIER,
+  PROFILE_TIER_FEED_TTL_MS,
+  PROFILE_TIER_POST_MAX_LENGTH,
+  canPublishPosts,
+  hasPostLengthLimit,
+  type ProfileTier,
+} from '../core/constants/tiers';
 import { TAB_IDS, type GameItem, type SyncConfig, type TabData, type TabId } from '../model/types/game';
 import {
   acceptFriendRequest,
@@ -1671,9 +1678,16 @@ export function useSocialViewModel(options?: {
       return;
     }
 
+    // Bronce no publica. La pantalla ni siquiera muestra el compositor; esta comprobación es la red por si se
+    // llega aquí de otra forma (estado a medio actualizar, atajo de teclado). En SILENCIO y a propósito: quien no
+    // tiene el rango no ve nada al respecto, tampoco un aviso que le recuerde lo que no puede hacer.
+    if (!canPublishPosts(ownTier)) {
+      return;
+    }
+
     try {
       setPublishingPost(true);
-      await publishPost({ text });
+      await publishPost({ text, maxLength: PROFILE_TIER_POST_MAX_LENGTH[ownTier] });
       setComposePostText('');
       await hydrateSocialDirectory(true);
       setFeedback('ok', SOCIAL_UI.status.postPublished);
@@ -1682,7 +1696,7 @@ export function useSocialViewModel(options?: {
     } finally {
       setPublishingPost(false);
     }
-  }, [composePostText, publishingPost, hydrateSocialDirectory, setFeedback]);
+  }, [composePostText, ownTier, publishingPost, hydrateSocialDirectory, setFeedback]);
 
   useEffect(() => {
     void hydrateSocialDirectory();
@@ -2115,6 +2129,11 @@ export function useSocialViewModel(options?: {
     profileSearch,
     setProfileSearch,
     composePostText,
+    // Rango propio y lo que implica al publicar: si puede, cuánto, y si hay contador que enseñar.
+    ownTier,
+    canPublishPosts: canPublishPosts(ownTier),
+    postMaxLength: PROFILE_TIER_POST_MAX_LENGTH[ownTier],
+    showPostCounter: hasPostLengthLimit(ownTier),
     setComposePostText,
     publishingPost,
     handlePublishPost,

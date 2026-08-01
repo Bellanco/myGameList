@@ -1,9 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import {
   DEFAULT_PROFILE_TIER,
+  POST_HARD_CEILING,
   PROFILE_TIERS,
   PROFILE_TIER_FEED_TTL_MS,
   PROFILE_TIER_LABELS,
+  PROFILE_TIER_POST_MAX_LENGTH,
+  canPublishPosts,
+  hasPostLengthLimit,
   normalizeTier,
 } from '../../src/core/constants/tiers';
 
@@ -36,6 +40,36 @@ describe('rangos de perfil', () => {
     PROFILE_TIERS.forEach((tier) => {
       expect(PROFILE_TIER_LABELS[tier]).toBeTruthy();
       expect(typeof PROFILE_TIER_FEED_TTL_MS[tier]).toBe('number');
+    });
+  });
+
+  describe('cupo de publicación por rango', () => {
+    it('bronce no publica; el resto sí', () => {
+      expect(canPublishPosts('bronze')).toBe(false);
+      expect(PROFILE_TIER_POST_MAX_LENGTH.bronze).toBe(0);
+      expect(canPublishPosts('silver')).toBe(true);
+      expect(canPublishPosts('gold')).toBe(true);
+      expect(canPublishPosts('mithril')).toBe(true);
+    });
+
+    it('los cupos acordados: 1.000 plata, 10.000 oro, sin límite mithril', () => {
+      expect(PROFILE_TIER_POST_MAX_LENGTH.silver).toBe(1_000);
+      expect(PROFILE_TIER_POST_MAX_LENGTH.gold).toBe(10_000);
+      // Mithril no tiene límite de producto: se queda en el techo del saneador, que solo existe para que un
+      // payload manipulado no meta un texto desmedido en el gist.
+      expect(PROFILE_TIER_POST_MAX_LENGTH.mithril).toBe(POST_HARD_CEILING);
+    });
+
+    it('solo se enseña contador a quien tiene un límite que mostrar', () => {
+      expect(hasPostLengthLimit('bronze')).toBe(false); // no publica: no hay contador que enseñar
+      expect(hasPostLengthLimit('silver')).toBe(true);
+      expect(hasPostLengthLimit('gold')).toBe(true);
+      expect(hasPostLengthLimit('mithril')).toBe(false); // sin límite → sin contador
+    });
+
+    it('cada rango publica al menos tanto como el anterior', () => {
+      const cupos = PROFILE_TIERS.map((tier) => PROFILE_TIER_POST_MAX_LENGTH[tier]);
+      expect(cupos).toEqual([...cupos].sort((a, b) => a - b));
     });
   });
 
