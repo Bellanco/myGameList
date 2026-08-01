@@ -57,12 +57,16 @@ const RouletteModal = lazy(() => import('./view/components/roulette/RouletteModa
 const IntegrationsScreen = lazy(() => import('./view/components/import/IntegrationsScreen').then((module) => ({ default: module.IntegrationsScreen })));
 const InboxScreen = lazy(() => import('./view/components/import/InboxScreen').then((module) => ({ default: module.InboxScreen })));
 const LegalScreen = lazy(() => import('./view/components/LegalScreen').then((module) => ({ default: module.LegalScreen })));
+// Panel de administración: `lazy` como el resto de hubs, así que su código (y el correo del admin) solo se
+// descarga si alguien pide `/admin`. El acceso lo deciden las reglas de Firestore, no este import.
+const AdminHub = lazy(() => import('./view/components/AdminHub').then((module) => ({ default: module.AdminHub })));
 
 function getCurrentTab(pathname: string): TabId {
   return ROUTE_TAB[pathname] || 'c';
 }
 
 function getCurrentSection(pathname: string): AppSection {
+  if (pathname.startsWith('/admin')) return 'admin';
   if (pathname.startsWith('/social')) return 'social';
   if (pathname.startsWith('/ajustes')) return 'settings';
   if (pathname.startsWith('/cuenta')) return 'account';
@@ -110,6 +114,9 @@ export const APP_ROUTE_PATHS = [
   LEGAL_ROUTES.terms,
   LEGAL_ROUTES.privacy,
   LEGAL_ROUTES.cookies,
+  // Panel de administración: ruta OCULTA (sin enlace en la navegación) y gateada por `isAdmin()` en las reglas.
+  // Debe estar aquí igualmente o el catch-all la rebotaría a /completados antes de que el hub decida nada.
+  '/admin',
 ] as const;
 
 export default function App() {
@@ -600,7 +607,9 @@ export default function App() {
             ? 'main-lists'
             : activeSection === 'social'
               ? 'main-social'
-              : 'main-settings'
+              : activeSection === 'admin'
+                ? 'main-settings main-admin'
+                : 'main-settings'
         }`.trim()}
       >
         {activeSection === 'lists' ? (
@@ -646,6 +655,10 @@ export default function App() {
         ) : activeSection === 'account' ? (
           <Suspense fallback={null}>
             {scoreScaleUid ? <AccountHub scoreScaleUid={scoreScaleUid} /> : null}
+          </Suspense>
+        ) : activeSection === 'admin' ? (
+          <Suspense fallback={null}>
+            <AdminHub />
           </Suspense>
         ) : activeSection === 'legal' ? (
           <Suspense fallback={null}>

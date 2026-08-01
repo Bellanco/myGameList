@@ -26,6 +26,7 @@ import { applyProfileVisibility } from '../core/utils/profileVisibility';
 import { SOCIAL_UI } from '../core/constants/labels';
 import { LEGAL_CONSENT_UI, LEGAL_VERSION } from '../core/constants/legal';
 import type { IconName } from '../core/constants/icons';
+import { DEFAULT_PROFILE_TIER, PROFILE_TIER_FEED_TTL_MS, type ProfileTier } from '../core/constants/tiers';
 import { TAB_IDS, type GameItem, type SyncConfig, type TabData, type TabId } from '../model/types/game';
 import {
   acceptFriendRequest,
@@ -240,6 +241,13 @@ export function useSocialViewModel(options?: {
     socialGistId: string;
     gamesGistId: string;
     photoURL: string;
+    /**
+     * Rango del perfil, para el punto de color de su tarjeta en el directorio. OBLIGATORIO a propósito: este tipo
+     * LOCAL sombrea al del repositorio, y la hidratación reconstruye cada entrada campo a campo. Al declararlo
+     * requerido, olvidarse de copiarlo en cualquiera de esas reconstrucciones es un error de compilación y no un
+     * directorio entero pintado de bronce.
+     */
+    tier: ProfileTier;
     activity: SocialActivityFeedItem[];
     posts: SocialPostFeedItem[];
     // Index-only (SocialSharedGame) para perfiles ajenos; para el perfil PROPIO se repuebla con GameItem completos.
@@ -258,6 +266,9 @@ export function useSocialViewModel(options?: {
   // P1: profileId canónico del usuario (6.2a), para detectar propiedad por identidad (no por email). Hoy el id del
   // doc de directorio es el uid; tras el cutover index-only será el profileId → comprobamos ambos (ver isOwnProfileIdentity).
   const [ownProfileId, setOwnProfileId] = useState<string | null>(null);
+  // Rango del PROPIO usuario: decide cada cuánto se rehidrata el feed (ver PROFILE_TIER_FEED_TTL_MS). Manda el de
+  // quien mira porque las lecturas de gists ajenos van con SU token y cuentan contra SU rate-limit.
+  const [ownTier, setOwnTier] = useState<ProfileTier>(DEFAULT_PROFILE_TIER);
   const [loading, setLoading] = useState(true);
   const [resolvingSocialGist, setResolvingSocialGist] = useState(false);
   const [connecting, setConnecting] = useState(false);
@@ -1389,6 +1400,28 @@ export function useSocialViewModel(options?: {
     void hydrateSocialProfile();
   }, [hydrateSocialProfile]);
 
+  // Rango propio → cadencia del feed. Una sola lectura del perfil propio (ya cacheada 60 s en memoria por
+  // `getOwnProfileRef`). Mientras no se resuelva se asume bronce; cuando llega, `hydrateSocialDirectory` cambia de
+  // identidad y vuelve a evaluar la caché con el TTL bueno, así que un mithril no se queda con datos viejos por
+  // haber entrado antes de saber su rango. Cualquier fallo deja bronce: degradar es lo seguro.
+  useEffect(() => {
+    if (!authUser?.uid) {
+      setOwnTier(DEFAULT_PROFILE_TIER);
+      return;
+    }
+    let cancelled = false;
+    void resolveOwnProfile(authUser)
+      .then((profile) => {
+        if (!cancelled) setOwnTier(profile?.tier || DEFAULT_PROFILE_TIER);
+      })
+      .catch(() => {
+        /* sin rango conocido → bronce */
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [authUser]);
+
   const hydrateSocialDirectory = useCallback(async (forceRefresh = false) => {
     // `!friendshipsResolved`: NO hidratar (ni cachear) hasta conocer a los amigos. Si no, el feed solo-amigos cachearía
     // el directorio sin actividad de amigos (carrera de arranque) y quedaría en blanco hasta invalidar la caché.
@@ -1413,7 +1446,10 @@ export function useSocialViewModel(options?: {
     } else {
       // Caché persistente: si el directorio sigue fresco (<30 min), se sirve de IndexedDB sin releer ningún gist
       // social. Evita el coste N+1 al navegar feed→detalle→feed o al re-renderizar. El refresco manual lo evita.
-      const cachedDirectory = await getCachedSocialDirectory<SocialDirectoryEntry>(socialCfgGistId);
+      const cachedDirectory = await getCachedSocialDirectory<SocialDirectoryEntry>(
+        socialCfgGistId,
+        PROFILE_TIER_FEED_TTL_MS[ownTier],
+      );
       if (cachedDirectory) {
         setSocialDirectory(cachedDirectory);
         return;
@@ -1467,6 +1503,9 @@ export function useSocialViewModel(options?: {
           gamesGistId: friend.otherGamesGistId,
           // Amigo fuera del directorio: no hay marca de recencia. 0 = desconocida → no se le aplica el corte.
           updatedAt: 0,
+          // El doc de amistad no denormaliza el rango, así que un amigo que caiga fuera del tope del directorio
+          // se pinta como bronce. Preferible a una lectura extra por amigo solo para un punto de color.
+          tier: DEFAULT_PROFILE_TIER,
         }));
       const entries = [...dirEntries, ...friendOnlyEntries];
 
@@ -1503,6 +1542,7 @@ export function useSocialViewModel(options?: {
               socialGistId: entry.socialGistId,
               gamesGistId: effectiveGamesGistId,
               photoURL: entry.photoURL || '',
+              tier: entry.tier,
               activity: [],
               posts: [],
               // Marca para el detalle: es un amigo cuyo gist social NO se ha leído por inactividad. Al abrir su
@@ -1587,6 +1627,9 @@ export function useSocialViewModel(options?: {
               socialGistId: resolvedSocialGistId,
               gamesGistId: effectiveGamesGistId,
               photoURL: resolvedPhoto,
+              // El rango sale SIEMPRE de Firestore (lo asigna el admin), nunca del gist: el gist lo controla su
+              // dueño y podría auto-otorgarse mithril editándolo a mano.
+              tier: entry.tier,
               activity,
               posts,
               sharedLists,
@@ -1601,6 +1644,7 @@ export function useSocialViewModel(options?: {
               gamesGistId: effectiveGamesGistId,
               // Gist ilegible: usamos la foto del directorio de Firestore (best-effort) para no perderla.
               photoURL: entry.photoURL || (isOwnEntry ? ownPhotoURL : ''),
+              tier: entry.tier,
               activity: [],
               posts: [],
               sharedLists: {},
@@ -1618,7 +1662,7 @@ export function useSocialViewModel(options?: {
     } finally {
       setLoadingDirectory(false);
     }
-  }, [activePanel, authUser, defaultSocialVisibility, friendships.friends, friendshipsResolved, mainSyncConfig?.token, profileEditorLocked, setFeedback, socialSpaceOpen, socialCfgGistId, showPhoto]);
+  }, [activePanel, authUser, defaultSocialVisibility, friendships.friends, friendshipsResolved, mainSyncConfig?.token, ownTier, profileEditorLocked, setFeedback, socialSpaceOpen, socialCfgGistId, showPhoto]);
 
   // F3 — publica una publicación de texto libre y refresca el feed (definido tras hydrateSocialDirectory para evitar TDZ).
   const handlePublishPost = useCallback(async () => {

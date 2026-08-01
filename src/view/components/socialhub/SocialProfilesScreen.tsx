@@ -2,6 +2,7 @@ import React from 'react';
 import { Icon } from '../Icon';
 import { HubAvatar } from './HubAvatar';
 import type { SocialUiLabels } from '../../../core/constants/labels';
+import { PROFILE_TIER_LABELS, normalizeTier } from '../../../core/constants/tiers';
 import { HubStatus } from './HubStatus';
 import { HubBackButton } from './HubBackButton';
 import { FriendshipButton } from './FriendshipButton';
@@ -60,6 +61,11 @@ function SocialProfilesScreenBase({
       onClick={() => openProfileDetail(entry.id)}
       onKeyDown={(event) => handleProfileCardKeyDown(event, entry.id)}
     >
+      {/* Punto de rango, esquina superior derecha. El color solo no informa a quien no lo distingue: el nombre
+          del rango va en `title` y, para lectores de pantalla, en un texto oculto. */}
+      <span className={`hub-tier-dot tier-${normalizeTier(entry.tier)}`} title={PROFILE_TIER_LABELS[normalizeTier(entry.tier)]}>
+        <span className="sr-only">{PROFILE_TIER_LABELS[normalizeTier(entry.tier)]}</span>
+      </span>
       <header className="hub-feed-card-head">
         <HubAvatar name={entry.displayName} photoURL={entry.photoURL} />
         <div className="hub-feed-card-head-text">
