@@ -15,6 +15,7 @@ import {
   type SocialPostEntry,
   type SocialProfileVisibility,
   type SocialSharedGame,
+  ensureSecretSocialGist,
   writeSocialGist,
 } from '../model/repository/gistRepository';
 import { publishPost } from '../model/repository/socialPublishRepository';
@@ -653,6 +654,54 @@ export function useSocialViewModel(options?: {
       gamesGistId: mainSyncConfig?.gistId || '',
     });
   }, [socialSpaceOpen, authUser?.uid, authUser?.photoURL, socialCfgGistId, profileName, showPhoto, mainSyncConfig?.gistId]);
+
+  // FASE 2 — MIGRACIÓN A CANAL SECRETO (una vez por sesión).
+  //
+  // Los canales creados antes de este cambio son gists PÚBLICOS: aparecen listados en el perfil de GitHub de su
+  // dueño y en las búsquedas. GitHub no permite cambiar la visibilidad, así que la única vía es clonar a un id
+  // nuevo, y solo puede hacerlo el propio usuario: su token es owner-only, así que esto NO se puede hacer desde
+  // el panel de administración.
+  //
+  // Tras migrar hay que repuntar las TRES referencias que quedan: la config local, `privateConfig` (owner-only, la
+  // fuente de verdad) y los documentos de amistad (por eso se rearma el saneado de amistades).
+  const secretMigrationRef = useRef(false);
+  useEffect(() => {
+    if (secretMigrationRef.current) return;
+    if (!socialSpaceOpen || !authUser?.uid || !socialCfgGistId) return;
+    const token = getSocialSyncConfig()?.token || mainSyncConfig?.token || '';
+    if (!token) return;
+    secretMigrationRef.current = true;
+
+    void ensureSecretSocialGist(token, socialCfgGistId)
+      .then((result) => {
+        // Demasiado grande para leerlo entero por la API: no se migra y se dice. Callarlo dejaría un canal
+        // público para siempre sin que nadie sepa por qué.
+        if (result.tooLarge) {
+          setFeedback('warn', SOCIAL_UI.status.socialGistTooLarge);
+          return;
+        }
+        if (!result.migrated) return;
+
+        const currentConfig = getSocialSyncConfig();
+        if (currentConfig) {
+          // ETag y sello remoto son del gist ANTERIOR: se descartan.
+          saveSocialSyncConfig({ ...currentConfig, gistId: result.gistId, etag: result.etag, lastRemoteUpdatedAt: 0 });
+        }
+        setSocialCfgGistId(result.gistId);
+        setSocialCfgEtag(result.etag);
+        void setPrivateConfig(authUser.uid, { socialGistId: result.gistId }).catch(() => {});
+        // Que el saneado de amistades vuelva a correr con el id nuevo: es de donde lo leen sus amistades.
+        friendshipHealedRef.current = false;
+        // El gist viejo sigue ahí y sigue siendo público: la app no borra gists (política declarada), así que hay
+        // que decírselo para que lo borre él si quiere retirar lo ya publicado.
+        setFeedback('warn', SOCIAL_UI.status.socialGistMigrated);
+      })
+      .catch(() => {
+        // Best-effort: si falla (red, rate-limit), se reintenta en la próxima sesión. Nada queda a medias: o se
+        // creó el gist nuevo y se repuntó todo, o no se tocó nada.
+        secretMigrationRef.current = false;
+      });
+  }, [socialSpaceOpen, authUser?.uid, socialCfgGistId, mainSyncConfig?.token, setFeedback]);
 
   // AUTO-HEAL DEL DIRECTORIO: RETIRADO. Su trabajo era mantener `profiles/{uid}.social.gistId` al día, y ese campo
   // ha dejado de publicarse (se purga en cada guardado): volver a escribirlo aquí lo resucitaría en cada apertura

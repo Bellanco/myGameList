@@ -49,6 +49,8 @@ const gistMocks = vi.hoisted(() => ({
     etag: null,
   })),
   readPublicSocialGistById: vi.fn(async (_gistId?: string): Promise<any> => ({})),
+  // Fase 2: migración del canal a gist secreto. Por defecto, nada que migrar.
+  ensureSecretSocialGist: vi.fn(async (_t?: string, gistId?: string): Promise<any> => ({ gistId, etag: null, migrated: false, previousGistId: '' })),
   writeSocialGist: vi.fn(async () => ({ etag: null })),
   saveSocialSyncConfig: vi.fn(),
   updateGistPrivacy: vi.fn(async () => ({ gistId: 'g', etag: null })),
@@ -85,6 +87,14 @@ describe('SocialHub (componente, post-M3)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     gistMocks.getSocialSyncConfig.mockReturnValue(null);
+    // `clearAllMocks` borra las llamadas pero NO las implementaciones: sin restaurar esta, un test que simule la
+    // migración del canal se la contagia a todos los siguientes (les cambiaría el gist a mitad de camino).
+    gistMocks.ensureSecretSocialGist.mockImplementation(async (_t?: string, gistId?: string) => ({
+      gistId,
+      etag: null,
+      migrated: false,
+      previousGistId: '',
+    }));
     // Salvo en los tests de la puerta legal, se parte de un consentimiento vigente.
     firebaseMocks.getPublicConfig.mockResolvedValue({ consent: { version: LEGAL_VERSION, agreedAt: 1 } });
   });
@@ -249,6 +259,42 @@ describe('SocialHub (componente, post-M3)', () => {
     expect(firebaseMocks.healOwnFriendshipIdentity.mock.calls[0][1]).toMatchObject({ socialGistId: 'social-gist' });
     // Y el directorio no se toca: el campo se está purgando, no manteniendo.
     expect(firebaseMocks.healOwnDirectoryGist).not.toHaveBeenCalled();
+  });
+
+  // FASE 2 — al abrir el hub, un canal público se migra a secreto y hay que repuntar las TRES referencias que
+  // quedan: config local, `privateConfig` y los documentos de amistad. Si alguna se queda atrás, el usuario acaba
+  // partido en dos canales, que es justo la deriva que veníamos de arreglar.
+  it('migra el canal público a secreto y repunta config local, privateConfig y amistades', async () => {
+    firebaseMocks.getCurrentSocialAuthUser.mockResolvedValue({ uid: 'uid-1', email: 'jaime@example.com', displayName: 'Jaime', photoURL: null });
+    gistMocks.getSocialSyncConfig.mockReturnValue({ token: 'ghp_x', gistId: 'gs-publico', etag: 'W/"v"', lastRemoteUpdatedAt: 5 });
+    gistMocks.ensureSecretSocialGist.mockResolvedValue({ gistId: 'gs-secreto', etag: 'W/"n"', migrated: true, previousGistId: 'gs-publico' });
+
+    renderHub();
+
+    await waitFor(() => expect(gistMocks.ensureSecretSocialGist).toHaveBeenCalled());
+    // 1) Config local con el id nuevo y SIN el etag/sello del gist anterior.
+    await waitFor(() => expect(gistMocks.saveSocialSyncConfig).toHaveBeenCalledWith(
+      expect.objectContaining({ gistId: 'gs-secreto', etag: 'W/"n"', lastRemoteUpdatedAt: 0 }),
+    ));
+    // 2) `privateConfig`, que es la fuente de verdad para el resto de sus dispositivos.
+    await waitFor(() => expect(firebaseMocks.setPrivateConfig).toHaveBeenCalledWith('uid-1', { socialGistId: 'gs-secreto' }));
+    // 3) Sus amistades, que es de donde lo leen los demás.
+    await waitFor(() => {
+      const conNuevo = firebaseMocks.healOwnFriendshipIdentity.mock.calls.some(
+        (call: unknown[]) => (call[1] as { socialGistId?: string })?.socialGistId === 'gs-secreto',
+      );
+      expect(conNuevo).toBe(true);
+    });
+  });
+
+  it('si el canal ya es secreto no toca ninguna referencia', async () => {
+    firebaseMocks.getCurrentSocialAuthUser.mockResolvedValue({ uid: 'uid-1', email: 'jaime@example.com', displayName: 'Jaime', photoURL: null });
+    gistMocks.getSocialSyncConfig.mockReturnValue({ token: 'ghp_x', gistId: 'gs-secreto', etag: null, lastRemoteUpdatedAt: 0 });
+
+    renderHub();
+
+    await waitFor(() => expect(gistMocks.ensureSecretSocialGist).toHaveBeenCalled());
+    expect(firebaseMocks.setPrivateConfig).not.toHaveBeenCalled();
   });
 
   it('feed solo-amigos: muestra la actividad del amigo y NO lee el gist del no-amigo', async () => {
