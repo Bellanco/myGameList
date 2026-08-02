@@ -14,13 +14,16 @@
 // la conformidad.
 //
 // 2026-08-02: los documentos se ponen al día con lo que la app YA hacía sin declararlo. El tratamiento no cambia;
-// lo que cambia es lo que se cuenta, y en dos puntos que afectan al usuario, así que se vuelve a pedir conformidad:
-//   (a) el rango del perfil no solo regula la frescura del feed, también QUIÉN PUEDE PUBLICAR noticias y con qué
-//       longitud. Es una restricción de los términos que estaba en el código y en ningún documento.
-//   (b) la marca de última actividad del perfil la ve cualquier usuario con sesión: es un "última vez visto" que
-//       no estaba declarado entre los datos que otros ven.
+// lo que cambia es lo que se cuenta, y se vuelve a pedir conformidad porque la marca de última actividad del perfil
+// la ve cualquier usuario con sesión —es un "última vez visto"— y no estaba declarada entre los datos que otros ven.
 // Se corrige además una contradicción: la política decía que el perfil publica el identificador del canal social
 // dos párrafos después de declarar que ya no lo publica.
+//
+// El RANGO se menciona solo como dato: qué es y quién lo asigna. Lo que hace (frescura del feed, quién puede
+// publicar noticias y con qué longitud) es funcionamiento del servicio, no una obligación de transparencia, y
+// detallarlo además chocaría con la decisión de producto de que un rango sin permiso de publicación no muestre
+// aviso alguno. Pero el dato en sí no puede omitirse: `profiles.tier` vive en un documento que lee cualquier
+// usuario autenticado (Firestore no filtra por campo) y su nombre se expone en la ficha del perfil.
 export const LEGAL_VERSION = '2026-08-02';
 
 // Correo de CONTACTO publicado en los documentos. A propósito distinto del de la cuenta de administración de
@@ -75,7 +78,6 @@ const TERMS: LegalDocument = {
       heading: 'Tu contenido',
       paragraphs: [
         'Las reseñas, publicaciones, notas y nombres que escribes son tuyos. Para poder mostrarlos a las personas con las que tienes amistad en la app, nos autorizas a almacenarlos y mostrarlos con esa única finalidad, mientras mantengas la cuenta y el contenido publicado.',
-        'Publicar reseñas está abierto a cualquier cuenta. Publicar noticias y enlaces en el espacio social depende del rango que tenga tu perfil, que asigna quien administra el servicio: el rango de partida no permite publicarlas, y los siguientes tienen un límite de longitud por publicación. Es una medida de moderación del servicio, no un servicio de pago: ni se compran los rangos ni hay forma de adquirirlos.',
         'Tu biblioteca completa y tus reseñas largas se guardan en Gists de TU cuenta de GitHub. La app los crea como Gists secretos, y «secreto» en GitHub significa NO LISTADO, no privado: no aparecen en tu perfil de GitHub ni en los buscadores, pero quien conozca el identificador de un Gist puede leerlo. La app solo comparte esos identificadores con las personas con las que tienes amistad.',
         'MEJORA DE PRIVACIDAD, y la única excepción a que la app no toque tus Gists: las versiones anteriores creaban tu canal social como Gist PÚBLICO, con lo que aparecía listado en tu perfil de GitHub y en los buscadores. Al entrar en la parte social, la app copia ese canal a un Gist no listado y RETIRA el antiguo, que es lo único que quita de circulación lo ya publicado. Solo se borra ese canal antiguo, nunca tu biblioteca, y solo después de comprobar que la copia conserva tu contenido; si la comprobación falla, no se borra nada y se te avisa.',
       ],
@@ -141,8 +143,7 @@ const PRIVACY: LegalDocument = {
         'Si aceptas la analítica: eventos de uso y errores en Google Analytics, con un identificador aleatorio.',
       ],
       paragraphs: [
-        'El perfil que ven otros usuarios contiene tu nick, tu foto (si la dejas), el rango de tu perfil y la marca de tu última actividad, con la que la app ordena el directorio y decide de quién merece la pena releer el canal. No contiene tu correo electrónico, ni el identificador de tu canal social, ni el de tu biblioteca de juegos.',
-        'El rango (bronce, plata, oro y mithril) es una etiqueta que asigna quien administra el servicio: no la eliges tú y no puedes cambiarla. Determina cada cuánto la app refresca lo que ves de tus amistades y cuánto puedes publicar en el espacio social: bronce no puede publicar noticias ni enlaces, plata y oro tienen un límite de longitud por publicación, y mithril no tiene límite. No afecta a tus reseñas, que puedes publicar con cualquier rango.',
+        'El perfil que ven otros usuarios contiene tu nick, tu foto (si la dejas), el rango de tu perfil —una etiqueta que asigna quien administra el servicio, no tú— y la marca de tu última actividad, con la que la app ordena el directorio y decide de quién merece la pena releer el canal. No contiene tu correo electrónico, ni el identificador de tu canal social, ni el de tu biblioteca de juegos.',
       ],
     },
     {
