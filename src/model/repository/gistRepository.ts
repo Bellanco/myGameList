@@ -2043,8 +2043,16 @@ export interface SecretSocialGistResult {
   gistId: string;
   etag: string | null;
   migrated: boolean;
-  /** Gist que queda ATRÁS y sigue siendo público. '' si no hubo migración. */
-  previousGistId: string;
+  /**
+   * Gists PÚBLICOS superados por la migración y que se pueden retirar sin perder nada: el que se clonó (su
+   * contenido está copiado) y los que están vacíos. Vacío si no hubo migración.
+   */
+  supersededGistIds: string[];
+  /**
+   * Gists PÚBLICOS con contenido que NO se copió (una cuenta con deriva puede tener dos canales con cosas
+   * distintas). No se tocan: borrarlos perdería lo que solo esté ahí. Se reportan para poder avisar.
+   */
+  keptPublicGistIds: string[];
   /** Entradas (actividad + publicaciones) que se copiaron: sirve para verificar el clon antes de borrar nada. */
   copiedEntries: number;
   /** No se migró por riesgo de truncado: el canal es demasiado grande para leerlo entero por la API. */
@@ -2067,7 +2075,14 @@ export interface SecretSocialGistResult {
  * no borra gists por política. El llamador debe decírselo.
  */
 export async function ensureSecretSocialGist(token: string, gistId: string): Promise<SecretSocialGistResult> {
-  const unchanged: SecretSocialGistResult = { gistId, etag: null, migrated: false, previousGistId: '', copiedEntries: 0 };
+  const unchanged: SecretSocialGistResult = {
+    gistId,
+    etag: null,
+    migrated: false,
+    supersededGistIds: [],
+    keptPublicGistIds: [],
+    copiedEntries: 0,
+  };
   if (!isValidGithubToken(token) || !isValidGistId(gistId)) {
     return unchanged;
   }
@@ -2114,11 +2129,24 @@ export async function ensureSecretSocialGist(token: string, gistId: string): Pro
   }
 
   const migration = await createSocialGistWithData(token, payload.data, false);
+
+  // QUÉ SE PUEDE RETIRAR. El clon se hace de UN gist, pero una cuenta con deriva puede tener dos públicos, y
+  // borrar el equivocado deja expuesto precisamente el que tiene las reseñas (o pierde lo que solo esté ahí).
+  //   - El clonado: su contenido está copiado → se retira.
+  //   - Los vacíos: no hay nada que perder → se retiran.
+  //   - Uno público CON contenido que no se copió → NO se toca, y se reporta para avisar.
+  const publicos = own.filter((entry) => entry.isPublic && entry.gistId !== migration.gistId);
+  const superseded = publicos
+    .filter((entry) => entry.gistId === sourceGistId || entry.sizeBytes <= EMPTY_PAYLOAD_MAX_BYTES)
+    .map((entry) => entry.gistId);
+  const kept = publicos.filter((entry) => !superseded.includes(entry.gistId)).map((entry) => entry.gistId);
+
   return {
     gistId: migration.gistId,
     etag: migration.etag,
     migrated: true,
-    previousGistId: gistId,
+    supersededGistIds: superseded,
+    keptPublicGistIds: kept,
     copiedEntries: (payload.data.activity?.length || 0) + (payload.data.posts?.length || 0),
   };
 }
