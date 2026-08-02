@@ -32,6 +32,8 @@ const firebaseMocks = vi.hoisted(() => ({
   invalidateMyFriendshipsCache: vi.fn(),
   // Latido de recencia (`profiles.updatedAt`): sin exportarlo aquí, el hub llamaría a `undefined` al montarse.
   touchOwnProfileActivityThrottled: vi.fn(async () => {}),
+  // Retirada del id que el perfil público aún anuncie: por defecto no hay nada que retirar.
+  purgeOwnPublicGistIds: vi.fn(async () => false),
 }));
 
 vi.mock('../../src/model/repository/firebaseRepository', () => firebaseMocks);
