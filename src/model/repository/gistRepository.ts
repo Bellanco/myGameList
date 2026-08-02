@@ -1181,6 +1181,8 @@ export interface OwnSocialGist {
   description: string;
   updatedAt: number;
   isPublic: boolean;
+  /** Tamaño del fichero ancla en bytes, según el listado de GitHub. */
+  sizeBytes: number;
 }
 
 /**
@@ -1208,7 +1210,7 @@ export async function listOwnSocialGists(token: string): Promise<OwnSocialGist[]
     description?: string;
     updated_at?: string;
     public?: boolean;
-    files?: Record<string, unknown>;
+    files?: Record<string, { size?: number }>;
   }>;
 
   return (body || [])
@@ -1218,6 +1220,7 @@ export async function listOwnSocialGists(token: string): Promise<OwnSocialGist[]
       description: String(gist.description || ''),
       updatedAt: gist.updated_at ? Date.parse(gist.updated_at) : 0,
       isPublic: Boolean(gist.public),
+      sizeBytes: Number(gist.files?.[SOCIAL_GIST_FILENAME]?.size || 0),
     }))
     .filter((gist) => Boolean(gist.gistId))
     .sort((a, b) => b.updatedAt - a.updatedAt);
@@ -2030,6 +2033,77 @@ export async function writeGist(token: string, gistId: string, payload: TabData)
  * @param gistId - ID del gist social original
  * @param isPublic - true para público, false para privado
  */
+/**
+ * A partir de 1 MB, GitHub trunca el contenido del fichero en las respuestas de la API. El código no maneja
+ * `truncated`/`raw_url` en ninguna parte, así que un gist así se lee como vacío. No se migra por encima de este
+ * umbral, con margen de sobra: un canal real ronda el kilobyte (los topes de actividad y publicaciones acotan su
+ * crecimiento a unos cientos de KB en el peor caso).
+ */
+const TRUNCATION_RISK_BYTES = 900_000;
+
+/** Un canal legítimamente vacío ocupa unos cientos de bytes. Por encima de esto, "vacío" huele a lectura fallida. */
+const EMPTY_PAYLOAD_MAX_BYTES = 4_000;
+
+/** Resultado de asegurar que el canal social es secreto. */
+export interface SecretSocialGistResult {
+  /** Canal tras la operación: el nuevo si hubo migración, el mismo si no. */
+  gistId: string;
+  etag: string | null;
+  migrated: boolean;
+  /** Gist que queda ATRÁS y sigue siendo público. '' si no hubo migración. */
+  previousGistId: string;
+  /** No se migró por riesgo de truncado: el canal es demasiado grande para leerlo entero por la API. */
+  tooLarge?: boolean;
+}
+
+/**
+ * Asegura que el canal social del usuario sea un gist SECRETO, migrándolo si hoy es público.
+ *
+ * GitHub no permite cambiar la visibilidad de un gist, así que migrar es CLONAR el contenido a un id nuevo. Es la
+ * misma operación que causó la deriva histórica, con dos diferencias: aquí es deliberada y una sola vez, y el id
+ * resultante se propaga a `privateConfig` y a los documentos de amistad, que son las dos únicas fuentes que
+ * quedan (el perfil público ya no lo publica).
+ *
+ * La detección NO usa una lectura anónima: según la documentación de GitHub, un gist secreto también es legible
+ * sin autenticación por quien tenga el id, así que sondear no distingue nada. Se usa el campo `public` que
+ * devuelve el propio listado de la cuenta, que es el dato real.
+ *
+ * IMPORTANTE: el gist antiguo NO se borra. Sigue en la cuenta de su dueño, público, hasta que él lo borre; la app
+ * no borra gists por política. El llamador debe decírselo.
+ */
+export async function ensureSecretSocialGist(token: string, gistId: string): Promise<SecretSocialGistResult> {
+  const unchanged: SecretSocialGistResult = { gistId, etag: null, migrated: false, previousGistId: '' };
+  if (!isValidGithubToken(token) || !isValidGistId(gistId)) {
+    return unchanged;
+  }
+
+  const own = await listOwnSocialGists(token);
+  const current = own.find((entry) => entry.gistId === gistId);
+  // Si el gist no aparece en el listado de la cuenta no se puede afirmar nada (token de otra cuenta, gist ajeno,
+  // listado incompleto): no se migra a ciegas.
+  if (!current || !current.isPublic) {
+    return unchanged;
+  }
+
+  // GUARDA DE TRUNCADO. GitHub recorta en la API los ficheros de más de 1 MB (`truncated: true`, sin contenido
+  // completo), y aquí un JSON a medias no parsea: la lectura devolvería un canal VACÍO. Clonar eso y repuntar las
+  // referencias hacia el clon sería perder el canal de vista. No se migra: se deja como está y se avisa.
+  if (current.sizeBytes >= TRUNCATION_RISK_BYTES) {
+    return { ...unchanged, tooLarge: true };
+  }
+
+  const source = await readSocialGist(token, gistId, null);
+  // Segunda red de seguridad: si el origen viene vacío pero el fichero NO lo estaba, algo se perdió al leer
+  // (truncado, parseo fallido). Clonar un vacío sobre un canal con contenido sería destruirlo de facto.
+  const sourceIsEmpty = (source.data.activity?.length || 0) === 0 && (source.data.posts?.length || 0) === 0;
+  if (sourceIsEmpty && current.sizeBytes > EMPTY_PAYLOAD_MAX_BYTES) {
+    return { ...unchanged, tooLarge: true };
+  }
+
+  const migration = await createSocialGistWithData(token, source.data, false);
+  return { gistId: migration.gistId, etag: migration.etag, migrated: true, previousGistId: gistId };
+}
+
 export async function updateGistPrivacy(token: string, gistId: string, isPublic: boolean): Promise<{ gistId: string; etag: string | null }> {
   if (!isValidGithubToken(token)) {
     throw new Error('Formato de token inválido');
