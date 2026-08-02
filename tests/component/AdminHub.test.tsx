@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { ADMIN_PANEL_UI } from '../../src/core/constants/labels';
 import { ADMIN_EMAIL } from '../../src/core/security/admin';
+import type { AdminAnomaly } from '../../src/model/types/firestore';
 
 // La sesión y el repositorio se controlan desde el test: aquí se comprueba la PUERTA y el cableado de la tabla,
 // no Firestore (eso lo cubre tests/unit/adminRepository.test.ts y las reglas en tests/integration).
@@ -24,6 +25,12 @@ const deleteUserProfileMock = vi.fn<(...args: unknown[]) => Promise<{ ok: boolea
   failures: [],
 }));
 const setUserTierMock = vi.fn<(...args: unknown[]) => Promise<void>>(async () => {});
+const unifySocialGistMock = vi.fn<(...args: unknown[]) => Promise<unknown>>(async () => ({
+  verdict: { winner: 'gs-nuevo', losers: ['gs-viejo'], reason: 'publico' },
+  applied: true,
+  friendshipsUpdated: 1,
+  failures: [] as string[],
+}));
 
 vi.mock('../../src/model/repository/firebaseAdminRepository', () => ({
   ADMIN_PROFILES_LIMIT: 300,
@@ -32,6 +39,7 @@ vi.mock('../../src/model/repository/firebaseAdminRepository', () => ({
   purgeLegacyProfileFields: (...args: unknown[]) => purgeLegacyProfileFieldsMock(...args),
   deleteUserProfile: (...args: unknown[]) => deleteUserProfileMock(...args),
   setUserTier: (...args: unknown[]) => setUserTierMock(...args),
+  unifySocialGist: (...args: unknown[]) => unifySocialGistMock(...args),
 }));
 
 import { AdminHub } from '../../src/view/components/AdminHub';
@@ -50,6 +58,17 @@ function user(overrides: Record<string, unknown> = {}) {
     updatedAt: 1_700_000_000_000,
     friends: 2,
     pending: 1,
+    pendingOut: 1,
+    pendingIn: 0,
+    profileId: 'p-ada',
+    schemaVersion: 1,
+    hasPhoto: false,
+    hasSocialEtag: true,
+    createdAt: 1_690_000_000_000,
+    estimatedFirstSeenAt: 0,
+    lastFriendshipAt: 1_695_000_000_000,
+    friendSocialGistIds: [] as string[],
+    anomalies: [] as AdminAnomaly[],
     legacy: { email: false, gamesGistId: false, token: false },
     ...overrides,
   };
@@ -65,6 +84,7 @@ function census(users: ReturnType<typeof user>[]) {
       friendships: 1,
       pending: 0,
       legacy: 0,
+      flagged: users.filter((entry) => entry.anomalies.length > 0).length,
       byTier: { bronze: users.length, silver: 0, gold: 0, mithril: 0 },
     },
   };
@@ -93,6 +113,7 @@ describe('AdminHub — puerta de acceso', () => {
     purgeLegacyProfileFieldsMock.mockClear();
     deleteUserProfileMock.mockClear();
     setUserTierMock.mockClear();
+    unifySocialGistMock.mockClear();
   });
 
   it('mientras la sesión se resuelve no decide nada (ni panel ni expulsión)', () => {
@@ -138,6 +159,7 @@ describe('AdminHub — moderación', () => {
     purgeLegacyProfileFieldsMock.mockClear();
     deleteUserProfileMock.mockClear();
     setUserTierMock.mockClear();
+    unifySocialGistMock.mockClear();
   });
 
   it('ninguna acción se ejecuta sin pasar por la confirmación', async () => {
@@ -279,6 +301,116 @@ describe('AdminHub — moderación', () => {
 
     expect(await screen.findByText(ADMIN_PANEL_UI.tierReservedWarning)).toBeInTheDocument();
     expect(setUserTierMock).not.toHaveBeenCalled();
+  });
+
+  it('pinta las señales del perfil con su explicación, y destaca las graves', async () => {
+    loadAdminCensusMock.mockResolvedValue(
+      census([user({ anomalies: ['gist-drift', 'inactive'], friendSocialGistIds: ['gs-viejo'] })]),
+    );
+    renderHub();
+    signIn(ADMIN_EMAIL);
+    await screen.findByText('Ada');
+
+    const grave = screen.getByText(ADMIN_PANEL_UI.anomalies['gist-drift'].label);
+    const leve = screen.getByText(ADMIN_PANEL_UI.anomalies.inactive.label);
+    expect(grave).toHaveAttribute('title', ADMIN_PANEL_UI.anomalies['gist-drift'].hint);
+    // La gravedad se distingue por clase, no solo por color: unas reseñas que no llegan al feed no pueden quedar
+    // al mismo nivel visual que "lleva 30 días sin entrar".
+    expect(grave.className).toContain('is-severe');
+    expect(leve.className).not.toContain('is-severe');
+  });
+
+  it('no repite los restos legacy como señal: el pie ya los muestra como botón de purga', async () => {
+    loadAdminCensusMock.mockResolvedValue(
+      census([
+        user({
+          anomalies: ['legacy-token', 'inactive'],
+          legacy: { email: false, gamesGistId: false, token: true },
+        }),
+      ]),
+    );
+    renderHub();
+    signIn(ADMIN_EMAIL);
+    await screen.findByText('Ada');
+
+    // "token en claro" sale UNA vez, y es el botón que lo purga (no una píldora informativa gemela).
+    const apariciones = screen.getAllByText(ADMIN_PANEL_UI.legacyToken);
+    expect(apariciones).toHaveLength(1);
+    expect(apariciones[0].tagName).toBe('BUTTON');
+    // La señal no legacy sí se pinta.
+    expect(screen.getByText(ADMIN_PANEL_UI.anomalies.inactive.label)).toBeInTheDocument();
+  });
+
+  it('con deriva de gist enseña LOS DOS ids y ofrece unificar', async () => {
+    loadAdminCensusMock.mockResolvedValue(
+      census([user({ socialGistId: 'gs-nuevo', friendSocialGistIds: ['gs-viejo'], anomalies: ['gist-drift'] })]),
+    );
+    renderHub();
+    signIn(ADMIN_EMAIL);
+    await screen.findByText('Ada');
+
+    // Los dos candidatos a la vista DENTRO del bloque de deriva: la decisión del árbitro tiene que ser
+    // comprobable, no un acto de fe. (El id del perfil sale además en la ficha de datos, de ahí el `within`.)
+    const bloque = screen.getByRole('group', { name: ADMIN_PANEL_UI.gist.driftTitle });
+    expect(within(bloque).getByText('gs-nuevo')).toBeInTheDocument();
+    expect(within(bloque).getByText('gs-viejo')).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: ADMIN_PANEL_UI.gist.unifyBtn }));
+    await userEvent.click(screen.getByRole('button', { name: ADMIN_PANEL_UI.confirmAccept }));
+
+    await waitFor(() => expect(unifySocialGistMock).toHaveBeenCalledTimes(1));
+    // Se le pasa la fila completa: el repositorio necesita el uid para localizar sus amistades.
+    expect(unifySocialGistMock.mock.calls[0][0]).toMatchObject({ uid: 'uid-a', socialGistId: 'gs-nuevo' });
+  });
+
+  it('sin deriva no ofrece unificar nada', async () => {
+    loadAdminCensusMock.mockResolvedValue(census([user()]));
+    renderHub();
+    signIn(ADMIN_EMAIL);
+    await screen.findByText('Ada');
+
+    expect(screen.queryByRole('button', { name: ADMIN_PANEL_UI.gist.unifyBtn })).not.toBeInTheDocument();
+  });
+
+  it('un perfil sin señales no muestra la lista de señales', async () => {
+    loadAdminCensusMock.mockResolvedValue(census([user()]));
+    renderHub();
+    signIn(ADMIN_EMAIL);
+    await screen.findByText('Ada');
+
+    expect(screen.queryByRole('list', { name: ADMIN_PANEL_UI.anomalies.aria })).not.toBeInTheDocument();
+  });
+
+  it('muestra la fecha de alta sellada cuando existe', async () => {
+    loadAdminCensusMock.mockResolvedValue(census([user({ createdAt: 1_690_000_000_000 })]));
+    renderHub();
+    signIn(ADMIN_EMAIL);
+    await screen.findByText('Ada');
+
+    expect(screen.getByText(ADMIN_PANEL_UI.field.createdAt)).toBeInTheDocument();
+    expect(screen.queryByText(ADMIN_PANEL_UI.field.createdAtEstimated)).not.toBeInTheDocument();
+  });
+
+  it('sin alta sellada la estima por su amistad más antigua y lo dice', async () => {
+    loadAdminCensusMock.mockResolvedValue(
+      census([user({ createdAt: 0, estimatedFirstSeenAt: 1_688_000_000_000 })]),
+    );
+    renderHub();
+    signIn(ADMIN_EMAIL);
+    await screen.findByText('Ada');
+
+    // Se etiqueta como estimada y se marca con `~`: no puede confundirse con un dato sellado.
+    expect(screen.getByText(ADMIN_PANEL_UI.field.createdAtEstimated)).toBeInTheDocument();
+    expect(screen.getByText(/^~ /)).toBeInTheDocument();
+  });
+
+  it('sin alta ni amistades lo admite en vez de inventar una fecha', async () => {
+    loadAdminCensusMock.mockResolvedValue(census([user({ createdAt: 0, estimatedFirstSeenAt: 0 })]));
+    renderHub();
+    signIn(ADMIN_EMAIL);
+    await screen.findByText('Ada');
+
+    expect(screen.getByText(ADMIN_PANEL_UI.field.createdAtUnknown)).toBeInTheDocument();
   });
 
   it('un fallo de permisos al cargar se muestra tal cual, sin tabla vacía silenciosa', async () => {

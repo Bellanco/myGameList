@@ -20,6 +20,13 @@ vi.mock('../../src/model/repository/firebaseFriendshipRepository', () => ({
   invalidateMyFriendshipsCache: vi.fn(),
 }));
 
+// La evidencia de cada gist candidato la aporta la capa de GitHub; aquí se simula para poder plantear cada
+// escenario (público con contenido, secreto, ilegible) sin red.
+const probeMock = vi.fn<(gistId: string) => Promise<unknown>>();
+vi.mock('../../src/model/repository/gistRepository', () => ({
+  probeSocialGistEvidence: (gistId: string) => probeMock(gistId),
+}));
+
 vi.mock('firebase/firestore', () => ({
   collection: (_fs: unknown, name: string) => ({ collection: name }),
   doc: (_fs: unknown, name: string, id: string) => ({ collection: name, id }),
@@ -40,6 +47,7 @@ import {
   purgeLegacyProfileFields,
   setUserSocialEnabled,
   setUserTier,
+  unifySocialGist,
 } from '../../src/model/repository/firebaseAdminRepository';
 
 function docOf(id: string, data: Record<string, unknown>) {
@@ -246,6 +254,47 @@ describe('firebaseAdminRepository — censo', () => {
     expect(census.users[0].tier).toBe('bronze');
   });
 
+  it('lee la fecha de alta sellada y, si no la hay, estima con la amistad más antigua', async () => {
+    respondWith(
+      [
+        docOf('con-alta', { uid: 'con-alta', createdAt: 1_000, social: { enabled: true, gistId: 'g' }, updatedAt: 5_000 }),
+        docOf('sin-alta', { uid: 'sin-alta', social: { enabled: true, gistId: 'g' }, updatedAt: 4_000 }),
+      ],
+      [
+        docOf('a1', { users: ['sin-alta', 'x'], status: 'accepted', requester: 'sin-alta', recipient: 'x', createdAt: 900, updatedAt: 2_000 }),
+        docOf('a2', { users: ['sin-alta', 'y'], status: 'accepted', requester: 'y', recipient: 'sin-alta', createdAt: 700, updatedAt: 3_000 }),
+      ],
+    );
+
+    const census = await loadAdminCensus();
+    const conAlta = census.users.find((user) => user.id === 'con-alta');
+    const sinAlta = census.users.find((user) => user.id === 'sin-alta');
+
+    expect(conAlta?.createdAt).toBe(1_000);
+    expect(conAlta?.estimatedFirstSeenAt).toBe(0);
+    // La MÁS ANTIGUA de sus amistades (700), no la primera que aparezca.
+    expect(sinAlta?.createdAt).toBe(0);
+    expect(sinAlta?.estimatedFirstSeenAt).toBe(700);
+    expect(sinAlta?.lastFriendshipAt).toBe(3_000);
+  });
+
+  it('desglosa las peticiones pendientes por quién dio el paso', async () => {
+    respondWith(
+      [docOf('a', { uid: 'a', social: { enabled: true, gistId: 'g' }, updatedAt: 1 })],
+      [
+        docOf('p1', { users: ['a', 'b'], status: 'pending', requester: 'a', recipient: 'b' }),
+        docOf('p2', { users: ['a', 'c'], status: 'pending', requester: 'a', recipient: 'c' }),
+        docOf('p3', { users: ['a', 'd'], status: 'pending', requester: 'd', recipient: 'a' }),
+      ],
+    );
+
+    const census = await loadAdminCensus();
+    // Muchas enviadas y ninguna aceptada es justo el patrón que interesa ver.
+    expect(census.users[0].pendingOut).toBe(2);
+    expect(census.users[0].pendingIn).toBe(1);
+    expect(census.users[0].friends).toBe(0);
+  });
+
   it('traduce el `permission-denied` de las reglas a un mensaje de administración', async () => {
     getDocsMock.mockRejectedValue(Object.assign(new Error('denied'), { code: 'permission-denied' }));
     await expect(loadAdminCensus()).rejects.toThrow(/Sin permisos de administrador/);
@@ -317,5 +366,270 @@ describe('firebaseAdminRepository — moderación', () => {
     expect(result.failures[0]).toMatch(/amistades/);
     // El perfil se intenta igualmente: abortar dejaría al usuario a medio borrar.
     expect(deleteDocMock).toHaveBeenCalledTimes(2);
+  });
+});
+
+// Señales de algo fuera de lugar. Es el criterio con el que el panel decide dónde hay que mirar, así que se
+// prueba aquí (en el repositorio) y no en la vista: mismo juicio para cualquiera que las pinte.
+describe('firebaseAdminRepository — señales', () => {
+  beforeEach(() => {
+    getDocsMock.mockReset();
+    updateDocMock.mockClear();
+    deleteDocMock.mockClear();
+  });
+
+  /** Perfil "sano": con nombre, pseudónimo, gist, esquema vigente y actividad reciente. */
+  function healthy(extra: Record<string, unknown> = {}, socialExtra: Record<string, unknown> = {}) {
+    return docOf('a', {
+      uid: 'a',
+      profileId: 'p-a',
+      schemaVersion: 1,
+      displayName: 'Ada',
+      updatedAt: Date.now() - 1000,
+      social: { enabled: true, gistId: 'gs-a', ...socialExtra },
+      ...extra,
+    });
+  }
+
+  async function anomaliesOf(profile: ReturnType<typeof docOf>, friendships: ReturnType<typeof docOf>[] = []) {
+    respondWith([profile], friendships);
+    const census = await loadAdminCensus();
+    return census.users[0].anomalies;
+  }
+
+  it('un perfil sano no levanta ninguna señal', async () => {
+    expect(await anomaliesOf(healthy())).toEqual([]);
+  });
+
+  it('detecta el social activado sin gist: sale del directorio y no publica nada', async () => {
+    expect(await anomaliesOf(healthy({}, { gistId: '' }))).toContain('enabled-without-gist');
+  });
+
+  it('detecta perfiles a medio crear (sin nombre, sin pseudónimo, esquema viejo)', async () => {
+    expect(await anomaliesOf(healthy({ displayName: '' }))).toContain('no-display-name');
+    expect(await anomaliesOf(healthy({ profileId: '' }))).toContain('no-profile-id');
+    expect(await anomaliesOf(healthy({ schemaVersion: 0 }))).toContain('stale-schema');
+  });
+
+  it('detecta el token en claro aparte del resto de restos legacy, por su gravedad', async () => {
+    const soloToken = await anomaliesOf(healthy({}, { githubToken: 'ghp_x' }));
+    expect(soloToken).toContain('legacy-token');
+    expect(soloToken).not.toContain('legacy-fields');
+
+    expect(await anomaliesOf(healthy({ email: 'x@y.z' }))).toContain('legacy-fields');
+  });
+
+  it('detecta fechas imposibles: actividad futura y alta posterior a la actividad', async () => {
+    const futuro = Date.now() + 60 * 60 * 1000;
+    expect(await anomaliesOf(healthy({ updatedAt: futuro }))).toContain('future-activity');
+    expect(await anomaliesOf(healthy({ createdAt: Date.now(), updatedAt: Date.now() - 60_000 })))
+      .toContain('created-after-activity');
+  });
+
+  it('distingue sin actividad de inactivo, y no marca inactivo a quien acaba de entrar', async () => {
+    expect(await anomaliesOf(healthy({ updatedAt: 0 }))).toContain('never-active');
+
+    const hace40dias = Date.now() - 40 * 24 * 60 * 60 * 1000;
+    expect(await anomaliesOf(healthy({ updatedAt: hace40dias }))).toContain('inactive');
+    expect(await anomaliesOf(healthy())).not.toContain('inactive');
+  });
+
+  it('detecta la deriva del gist social: sus amistades apuntan a otro id que el directorio', async () => {
+    const conDeriva = await anomaliesOf(healthy(), [
+      docOf('a__b', { users: ['a', 'b'], status: 'accepted', requester: 'a', recipient: 'b', requesterSocialGistId: 'gs-VIEJO' }),
+    ]);
+    // Es el fallo por el que las reseñas de alguien no llegan al feed de sus amigos.
+    expect(conDeriva).toContain('gist-drift');
+
+    const sinDeriva = await anomaliesOf(healthy(), [
+      docOf('a__b', { users: ['a', 'b'], status: 'accepted', requester: 'a', recipient: 'b', requesterSocialGistId: 'gs-a' }),
+    ]);
+    expect(sinDeriva).not.toContain('gist-drift');
+  });
+
+  it('sin amistades no se inventa deriva de gist', async () => {
+    expect(await anomaliesOf(healthy())).not.toContain('gist-drift');
+  });
+
+  it('el total de perfiles con señales cuenta perfiles, no señales', async () => {
+    respondWith(
+      [
+        healthy(),
+        docOf('b', { uid: 'b', displayName: '', social: { enabled: true }, updatedAt: 0 }), // varias señales
+      ],
+      [],
+    );
+
+    const census = await loadAdminCensus();
+    expect(census.totals.flagged).toBe(1);
+  });
+});
+
+// UNIFICACIÓN DEL CANAL SOCIAL. "Solo puede tener uno": mientras el perfil publique un gist y sus amistades otro,
+// sus reseñas no llegan al feed de sus amigos. La decisión se toma con evidencia, no a dedo.
+describe('firebaseAdminRepository — unificar el canal social', () => {
+  beforeEach(() => {
+    getDocsMock.mockReset();
+    updateDocMock.mockClear();
+    deleteDocMock.mockClear();
+    probeMock.mockReset();
+  });
+
+  /** Evidencia simulada por id de gist. */
+  function evidence(map: Record<string, { isPublic: boolean | null; contentCount: number; updatedAt: number }>) {
+    probeMock.mockImplementation(async (gistId: string) => ({ gistId, ...(map[gistId] || { isPublic: null, contentCount: 0, updatedAt: 0 }) }));
+  }
+
+  const row = (over: Partial<Parameters<typeof unifySocialGist>[0]> = {}) => ({
+    id: 'uid-a',
+    uid: 'uid-a',
+    socialGistId: 'gs-perfil',
+    friendSocialGistIds: ['gs-amistades'],
+    ...over,
+  });
+
+  it('escribe el gist PÚBLICO en el perfil y en las amistades, descartando el secreto', async () => {
+    evidence({
+      'gs-perfil': { isPublic: false, contentCount: 80, updatedAt: 9_000 }, // secreto: nadie puede leerlo
+      'gs-amistades': { isPublic: true, contentCount: 5, updatedAt: 1_000 },
+    });
+    respondWith([], [docOf('a__b', { users: ['uid-a', 'b'], requester: 'uid-a', recipient: 'b', requesterSocialGistId: 'gs-perfil' })]);
+
+    const result = await unifySocialGist(row());
+
+    expect(result.verdict).toMatchObject({ winner: 'gs-amistades', reason: 'publico' });
+    expect(result.applied).toBe(true);
+    // Perfil corregido...
+    expect(updateDocMock.mock.calls[0][1]).toEqual({ 'social.gistId': 'gs-amistades' });
+    // ...y el lado de ESTE usuario en su amistad (es el requester, así que su campo).
+    expect(result.friendshipsUpdated).toBe(1);
+    expect(updateDocMock.mock.calls[1][1]).toMatchObject({ requesterSocialGistId: 'gs-amistades' });
+  });
+
+  it('corrige el lado correcto cuando el usuario es el recipient de la amistad', async () => {
+    // El descartado va VACÍO a propósito: aquí se comprueba QUÉ lado de la amistad se escribe, no la guarda de
+    // contenido (que tiene sus propios tests más abajo).
+    evidence({ 'gs-perfil': { isPublic: true, contentCount: 10, updatedAt: 9_000 }, 'gs-amistades': { isPublic: true, contentCount: 0, updatedAt: 10 } });
+    respondWith([], [docOf('b__a', { users: ['b', 'uid-a'], requester: 'b', recipient: 'uid-a', recipientSocialGistId: 'gs-amistades' })]);
+
+    const result = await unifySocialGist(row());
+
+    expect(result.verdict.winner).toBe('gs-perfil');
+    const payloads = updateDocMock.mock.calls.map((call) => call[1]);
+    expect(payloads.some((payload) => 'recipientSocialGistId' in (payload as object))).toBe(true);
+    expect(payloads.some((payload) => 'requesterSocialGistId' in (payload as object))).toBe(false);
+  });
+
+  it('no escribe NADA si ninguno es legible sin autenticación', async () => {
+    evidence({
+      'gs-perfil': { isPublic: false, contentCount: 5, updatedAt: 1 },
+      'gs-amistades': { isPublic: false, contentCount: 5, updatedAt: 2 },
+    });
+    respondWith([], []);
+
+    const result = await unifySocialGist(row());
+
+    // Apuntar a los amigos a un gist que no pueden leer es peor que dejar la deriva.
+    expect(result.verdict.winner).toBe('');
+    expect(result.applied).toBe(false);
+    expect(updateDocMock).not.toHaveBeenCalled();
+  });
+
+  it('no escribe NADA cuando no se pudo leer ninguno (offline o rate-limit)', async () => {
+    evidence({});
+    respondWith([], []);
+
+    const result = await unifySocialGist(row());
+
+    expect(result.verdict.reason).toBe('sin-evidencia');
+    expect(updateDocMock).not.toHaveBeenCalled();
+  });
+
+  it('si ya estaba unificado no gasta ni una escritura', async () => {
+    evidence({ 'gs-unico': { isPublic: true, contentCount: 20, updatedAt: 5_000 } });
+    respondWith([], [docOf('a__b', { users: ['uid-a', 'b'], requester: 'uid-a', recipient: 'b', requesterSocialGistId: 'gs-unico' })]);
+
+    const result = await unifySocialGist(row({ socialGistId: 'gs-unico', friendSocialGistIds: ['gs-unico'] }));
+
+    expect(result.verdict.winner).toBe('gs-unico');
+    expect(result.applied).toBe(false);
+    expect(updateDocMock).not.toHaveBeenCalled();
+  });
+
+  it('sin ningún gist candidato no hay nada que unificar', async () => {
+    const result = await unifySocialGist(row({ socialGistId: '', friendSocialGistIds: [] }));
+
+    expect(result.verdict.reason).toBe('sin-candidatos');
+    expect(probeMock).not.toHaveBeenCalled();
+  });
+});
+
+// GUARDA DE CONTENIDO. Mientras hay deriva, el hub FUSIONA los dos gists de un amigo, así que su actividad se ve
+// completa. Al dejar un solo id se lee solo ese: lo que estuviera únicamente en el descartado dejaría de verse.
+// Ese caso no se decide desde el panel — fusionar exige el token del dueño — así que no se escribe nada.
+describe('firebaseAdminRepository — unificar sin perder de vista actividad', () => {
+  beforeEach(() => {
+    getDocsMock.mockReset();
+    updateDocMock.mockClear();
+    probeMock.mockReset();
+  });
+
+  const row = {
+    id: 'uid-a',
+    uid: 'uid-a',
+    socialGistId: 'gs-nuevo',
+    friendSocialGistIds: ['gs-viejo'],
+  };
+
+  it('NO escribe si el gist descartado también tiene actividad', async () => {
+    probeMock.mockImplementation(async (gistId: string) => ({
+      gistId,
+      isPublic: true,
+      contentCount: gistId === 'gs-nuevo' ? 4 : 90, // el descartado se lleva 90 reseñas
+      updatedAt: gistId === 'gs-nuevo' ? 9_000 : 1_000,
+    }));
+    respondWith([], []);
+
+    const result = await unifySocialGist(row);
+
+    expect(result.verdict.winner).toBe('gs-nuevo');
+    expect(result.blocked).toBe('contenido-en-el-perdedor');
+    expect(result.applied).toBe(false);
+    expect(updateDocMock).not.toHaveBeenCalled();
+    // La evidencia se devuelve para poder explicar la decisión en la interfaz.
+    expect(result.evidence).toHaveLength(2);
+  });
+
+  it('sí unifica cuando el descartado está VACÍO: no hay nada que perder', async () => {
+    probeMock.mockImplementation(async (gistId: string) => ({
+      gistId,
+      isPublic: true,
+      contentCount: gistId === 'gs-nuevo' ? 4 : 0,
+      updatedAt: gistId === 'gs-nuevo' ? 9_000 : 1_000,
+    }));
+    respondWith([], [docOf('a__b', { users: ['uid-a', 'b'], requester: 'uid-a', recipient: 'b', requesterSocialGistId: 'gs-viejo' })]);
+
+    const result = await unifySocialGist(row);
+
+    expect(result.blocked).toBeUndefined();
+    expect(result.applied).toBe(true);
+    expect(result.friendshipsUpdated).toBe(1);
+  });
+
+  it('un descartado SECRETO con contenido NO bloquea: sus amigos no lo estaban viendo', async () => {
+    probeMock.mockImplementation(async (gistId: string) => ({
+      gistId,
+      isPublic: gistId === 'gs-nuevo',
+      contentCount: gistId === 'gs-nuevo' ? 4 : 90, // el secreto se lleva 90, pero nadie las lee
+      updatedAt: 1_000,
+    }));
+    respondWith([], [docOf('a__b', { users: ['uid-a', 'b'], requester: 'uid-a', recipient: 'b', requesterSocialGistId: 'gs-viejo' })]);
+
+    const result = await unifySocialGist(row);
+
+    // Es el caso MÁS COMÚN: el huérfano que dejó el clonado es secreto y guarda el historial. Su actividad nunca
+    // llegó al feed (ningún token ajeno puede leerla), así que unificar no quita nada de ninguna vista.
+    expect(result.blocked).toBeUndefined();
+    expect(result.applied).toBe(true);
   });
 });

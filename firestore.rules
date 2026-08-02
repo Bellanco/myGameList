@@ -32,9 +32,26 @@ service cloud.firestore {
       return request.resource.data.uid is string
         && request.resource.data.uid == request.auth.uid
         && request.resource.data.keys().hasOnly([
-          "schemaVersion", "uid", "profileId", "email", "displayName", "photoURL", "social", "updatedAt", "tier"
+          "schemaVersion", "uid", "profileId", "email", "displayName", "photoURL", "social", "updatedAt", "tier",
+          "createdAt"
         ])
-        && profileTierNotSelfAssigned();
+        && profileTierNotSelfAssigned()
+        && profileCreatedAtIsImmutable();
+    }
+
+    // FECHA DE ALTA (`createdAt`). Se sella UNA vez, al crear el perfil, y ya no se puede tocar: si el dueño
+    // pudiera reescribirla, no serviría para nada (falsearía su antigüedad y taparía justo el comportamiento raro
+    // que el panel busca detectar). Escribirla es legítimo la primera vez porque es el propio cliente del usuario
+    // quien crea su documento; a partir de ahí queda congelada, incluso para él.
+    //
+    // Igual que con `tier`, va en la allowlist de arriba por obligación: en un `update`, `request.resource.data`
+    // es el documento RESULTANTE, así que sin la clave se denegaría toda escritura merge de un perfil que ya la
+    // tenga. Y también se exige que SIGA presente: si no, quitarla con `deleteField()` sería otra vía de borrar
+    // el rastro (la misma lección que costó descubrir con el rango).
+    function profileCreatedAtIsImmutable() {
+      return (resource == null || !("createdAt" in resource.data))
+        ? true // aún no existe: el cliente puede sellarla al crear el perfil
+        : ("createdAt" in request.resource.data && request.resource.data.createdAt == resource.data.createdAt);
     }
 
     // El rango del perfil (bronce/plata/oro/mithril) lo asigna EL ADMIN desde `/admin`; el dueño no.

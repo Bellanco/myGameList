@@ -1,6 +1,7 @@
 import type { IconName } from './icons';
 import { TAB_IDS, type TabId } from '../../model/types/game';
 import type { ImportField } from '../../model/types/import';
+import type { AdminAnomaly } from '../../model/types/firestore';
 
 export interface TabAction {
   target: TabId;
@@ -456,21 +457,111 @@ export const ADMIN_PANEL_UI = {
     friendships: 'Amistades',
     pending: 'Solicitudes pendientes',
     legacy: 'Con restos legacy',
+    flagged: 'Con señales',
   },
+  // Ficha completa del usuario: todo lo que las reglas dejan leer de su documento y de sus amistades.
+  field: {
+    createdAt: 'Alta',
+    createdAtEstimated: 'Alta (estimada)',
+    createdAtUnknown: 'Sin fecha de alta',
+    // Se dice de dónde sale la estimación para que no se confunda con un dato sellado.
+    estimatedHint: 'Estimada a partir de su amistad más antigua: los perfiles creados antes de registrar la fecha de alta no la tienen.',
+    lastActivity: 'Última actividad',
+    lastFriendship: 'Último movimiento de amistad',
+    friends: 'Amistades',
+    pendingOut: 'Peticiones enviadas',
+    pendingIn: 'Peticiones recibidas',
+    profileId: 'Pseudónimo',
+    socialGist: 'Gist social',
+    schema: 'Esquema',
+    photo: 'Foto',
+    etag: 'ETag del gist',
+    docId: 'Id del documento',
+    yes: 'Sí',
+    no: 'No',
+    none: '—',
+  },
+  // Unificación del canal social cuando un usuario acabó con dos gists en circulación.
+  gist: {
+    driftTitle: 'Gists en circulación',
+    profileGist: 'Publica en su perfil',
+    friendGist: 'Sus amistades apuntan a',
+    unifyBtn: 'Unificar canal social',
+    unifyHint: 'Comprueba cuál de los dos gists es legible públicamente y cuál tiene el contenido, y deja ese en el perfil y en todas sus amistades.',
+    confirm: (name: string) => `¿Unificar el canal social de ${name}? Se comprobará cuál de sus gists es el vivo (público y con contenido) y se escribirá ese en su perfil y en todas sus amistades. No se borra ningún gist.`,
+    unifyDone: (gistId: string, friendships: number) =>
+      `Canal unificado en ${gistId.slice(0, 8)}… (${friendships} ${friendships === 1 ? 'amistad corregida' : 'amistades corregidas'}).`,
+    unifyAlready: 'Ya estaba unificado: no había nada que corregir.',
+    unifyNoPublic: 'Ninguno de sus gists es legible sin autenticación, así que ninguno puede ser el canal vivo. Se arreglará cuando su cliente vuelva a publicar y lo haga público.',
+    unifyNoEvidence: 'No se pudo leer ninguno de sus gists (sin red o límite de peticiones de GitHub agotado). No se ha tocado nada: inténtalo más tarde.',
+    unifyPartial: 'Unificación incompleta: revisa la consola para el detalle.',
+    // La guarda que evita perder de vista reseñas: mientras hay deriva, el hub FUSIONA los dos gists de un amigo,
+    // así que unificar dejaría fuera lo que solo esté en el descartado.
+    unifyBlocked: (winner: string, loser: string) =>
+      `No se ha tocado nada: el gist descartado (${loser.slice(0, 8)}…) también tiene actividad, y ahora mismo la ves porque el hub fusiona los dos. Unificar en ${winner.slice(0, 8)}… la dejaría fuera. Fusionarlos requiere el token de su dueño, así que esto lo tiene que resolver su propio cliente al abrir el espacio social.`,
+  },
+  // Señales de algo fuera de lugar. Etiqueta corta para la píldora y explicación en el `title`.
+  anomalies: {
+    aria: 'Señales detectadas',
+    'enabled-without-gist': {
+      label: 'social sin gist',
+      hint: 'Tiene el social activado pero no publica ningún gist: no sale en el directorio ni puede publicar nada. Perfil roto.',
+    },
+    'no-display-name': {
+      label: 'sin nombre',
+      hint: 'El perfil no tiene nick: se quedó a medio crear.',
+    },
+    'no-profile-id': {
+      label: 'sin pseudónimo',
+      hint: 'Nunca se estableció su identidad pseudónima (`profileId`): sus publicaciones no se pueden atribuir con estabilidad.',
+    },
+    'foreign-doc-id': {
+      label: 'id ajeno al uid',
+      hint: 'El documento no vive en `profiles/{uid}`: es de una versión anterior. Su email es la única forma de que su dueño lo recupere, así que no se le puede purgar.',
+    },
+    'legacy-fields': {
+      label: 'restos legacy',
+      hint: 'Arrastra email o id del gist de juegos en un documento que lee cualquier usuario autenticado.',
+    },
+    'legacy-token': {
+      label: 'token en claro',
+      hint: 'Guarda un token de GitHub sin cifrar, legible por cualquier usuario autenticado. Es lo más grave que puede quedar ahí.',
+    },
+    'stale-schema': {
+      label: 'esquema antiguo',
+      hint: 'El documento se escribió con una versión anterior del esquema y no se ha vuelto a guardar.',
+    },
+    'never-active': {
+      label: 'sin actividad',
+      hint: 'No tiene marca de actividad, así que no aparecería en un directorio ordenado por uso reciente.',
+    },
+    inactive: {
+      label: 'inactivo +30 d',
+      hint: 'Más de 30 días sin aparecer: la misma ventana con la que el feed deja de leer la actividad de un amigo.',
+    },
+    'future-activity': {
+      label: 'fecha futura',
+      hint: 'Su última actividad está fechada en el futuro: reloj del dispositivo desajustado o marca manipulada.',
+    },
+    'created-after-activity': {
+      label: 'alta posterior a su actividad',
+      hint: 'La fecha de alta es posterior a su última actividad, lo que no puede pasar salvo manipulación.',
+    },
+    'gist-drift': {
+      label: 'gist divergente',
+      hint: 'El gist social que publica no coincide con el que guardan sus amistades: sus reseñas no llegan al feed de sus amigos.',
+    },
+  } satisfies { aria: string } & Record<AdminAnomaly, { label: string; hint: string }>,
   tier: {
     column: 'Rango',
     selectAria: (name: string) => `Rango de ${name}`,
     // Mithril aparece deshabilitado en el resto de filas: se ve que existe y por qué no se puede dar.
     reservedHint: 'Reservado al administrador',
   },
+  // Solo queda el nombre accesible de la lista: los encabezados de columna murieron con la tabla, que ahora es
+  // una rejilla de fichas donde cada dato lleva su propia etiqueta.
   table: {
     aria: 'Usuarios',
-    user: 'Usuario',
-    state: 'Estado',
-    activity: 'Última actividad',
-    relations: 'Relaciones',
-    legacy: 'Legacy',
-    actions: 'Acciones',
   },
   noName: '(sin nombre)',
   // Identificación de quien tiene el perfil a medias. El correo NO está: se purgó del perfil público a propósito
@@ -481,7 +572,6 @@ export const ADMIN_PANEL_UI = {
   enabled: 'Social activo',
   disabled: 'Social desactivado',
   never: 'Sin registro',
-  relations: (friends: number, pending: number) => `${friends} amistades · ${pending} pendientes`,
   legacyNone: 'Limpio',
   legacyEmail: 'email',
   legacyGamesGist: 'gist de juegos',

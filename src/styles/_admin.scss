@@ -1,9 +1,9 @@
 /* Panel de administración (`/admin`, ruta oculta). Pantalla completa e independiente del hub de ajustes.
 
-   A ANCHO COMPLETO: el resto de la app se corta en 1800px porque son textos y tarjetas, donde una línea
-   infinita se lee mal. Aquí es una tabla de datos con siete columnas: cuanto más ancho, menos scroll horizontal
-   y más filas legibles de un vistazo. Se escribe `.main.main-admin` (y no `.main-admin` a secas) para GANAR por
-   especificidad al `max-width: 1800px` de `.main`, en vez de depender del orden de los `@use` en index.scss. */
+   A ANCHO COMPLETO: el resto de la app se corta en 1800px porque son textos y tarjetas, donde una línea infinita
+   se lee mal. Aquí son fichas de datos en rejilla: cuanto más ancho, más fichas por fila y menos scroll vertical.
+   Se escribe `.main.main-admin` (y no `.main-admin` a secas) para GANAR por especificidad al `max-width: 1800px`
+   de `.main`, en vez de depender del orden de los `@use` en index.scss. */
 .main.main-admin {
   max-width: none;
   padding-left: 1rem;
@@ -11,8 +11,8 @@
 }
 
 /* Tarjeta propia, sin heredar de `.settings-hub`: aquella es una rejilla de 12 columnas que a partir de 48rem
-   reparte sus tarjetas en dos columnas (`_layout.scss`, `.settings-card:not(...)` → span 5/6), y eso partía esta
-   tabla por la mitad. Aquí solo hay una tarjeta y tiene que ocupar el ancho entero. */
+   reparte sus tarjetas en dos columnas (`_layout.scss`, `.settings-card:not(...)` → span 5/6), y eso partía el
+   panel por la mitad. Aquí solo hay una tarjeta contenedora y tiene que ocupar el ancho entero. */
 .admin-hub {
   display: block;
   width: 100%;
@@ -71,25 +71,48 @@
 .admin-feedback.warn { color: var(--text-muted); }
 .admin-feedback.err { color: var(--danger); }
 
-/* La tabla desborda a lo ancho en móvil: se hace scroll DENTRO de su contenedor, nunca en el body. */
-.admin-table-wrap { overflow-x: auto; }
-.admin-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: .86rem;
-  white-space: nowrap;
+/* REJILLA DE FICHAS, no tabla. Una tabla de doce datos por usuario obliga a scroll horizontal en tablet y es
+   ilegible en móvil (era el fallo original). Con fichas, el ancho disponible decide cuántas caben y cada una cae a
+   una columna cuando no hay sitio: nunca hay scroll lateral. */
+.admin-user-grid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  /* `auto-fill` + `minmax` reparte solo: 1 columna en móvil, 2 en tablet apaisada, 3-4 en escritorio ancho.
+     `minmax(0, …)` en la parte baja evita que un `code` largo (uid, gist) desborde la ficha. */
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 21rem), 1fr));
+  gap: .8rem;
 }
-.admin-table th,
-.admin-table td {
-  padding: .55rem .6rem;
-  border-bottom: 1px solid var(--border);
-  text-align: left;
-  vertical-align: middle;
-}
-.admin-table thead th { color: var(--text-muted); font-size: .78rem; font-weight: 600; }
-.admin-table tbody tr.is-busy { opacity: .55; }
 
-.admin-user { display: flex; align-items: center; gap: .6rem; }
+.admin-user-card {
+  display: flex;
+  flex-direction: column;
+  gap: .6rem;
+  min-width: 0;
+  padding: .8rem;
+  background: var(--surface-soft);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+.admin-user-card.is-busy { opacity: .55; }
+
+.admin-user-head {
+  display: flex;
+  align-items: center;
+  /* Con nombre largo + uid + insignia, en móvil la insignia quedaba pegada al borde. Que envuelva y caiga a la
+     línea siguiente es preferible a comprimir el nombre o rozar el margen. */
+  flex-wrap: wrap;
+  gap: .4rem .6rem;
+  min-width: 0;
+}
+/* La insignia de estado se va al extremo y el bloque de nombre absorbe el resto. */
+.admin-user-head .admin-badge { margin-left: auto; flex: 0 0 auto; }
+/* `flex: 1 1 10rem` con `min-width: 0`: el bloque de nombre puede encogerse (uid largo) pero por debajo de 10rem
+   empuja la insignia a la línea de abajo en vez de estrujarse. */
+.admin-user-head .admin-user-text { flex: 1 1 10rem; }
+
+/* Nombre arriba, uid debajo. Sin este `grid` los dos caen en la misma línea y el uid parece parte del nombre. */
 .admin-user-text { display: grid; gap: .1rem; min-width: 0; }
 .admin-user-text b { font-weight: 600; }
 .admin-known-as { font-weight: 400; font-style: normal; color: var(--text-dim); font-size: .75rem; }
@@ -102,10 +125,57 @@
   cursor: pointer;
   text-align: left;
   color: var(--text-dim);
+  min-width: 0;
 }
-.admin-uid code { font-size: .72rem; }
+.admin-uid code { font-size: .72rem; overflow-wrap: anywhere; }
 .admin-uid:hover code { color: var(--text-muted); text-decoration: underline; }
 .admin-uid:focus-visible { outline: 2px solid var(--fg-sky); outline-offset: 2px; }
+
+.admin-tier-row { display: flex; align-items: center; gap: .5rem; }
+.admin-field-label { color: var(--text-muted); font-size: .75rem; text-transform: uppercase; letter-spacing: .04em; }
+
+/* Ficha de datos: dos columnas cuando cabe, una en cuanto aprieta. */
+.admin-user-data {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(8.5rem, 1fr));
+  gap: .35rem .7rem;
+  margin: 0;
+  font-size: .8rem;
+}
+.admin-user-data > div { display: grid; gap: .05rem; min-width: 0; }
+.admin-user-data dt { color: var(--text-muted); font-size: .72rem; }
+.admin-user-data dd { margin: 0; min-width: 0; overflow-wrap: anywhere; }
+.admin-user-data code { font-size: .72rem; color: var(--text-dim); }
+
+/* Señales. Las graves llevan el color de peligro; las informativas se quedan en tono apagado para que no
+   compitan con ellas. `title` lleva la explicación de cada una. */
+.admin-anomalies { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: .3rem; }
+.admin-anomaly {
+  padding: .12rem .45rem;
+  border-radius: 999px;
+  font-size: .72rem;
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  cursor: help;
+}
+.admin-anomaly.is-severe {
+  color: var(--danger);
+  border-color: color-mix(in srgb, var(--danger) 45%, var(--border));
+  background: color-mix(in srgb, var(--danger) 10%, transparent);
+}
+
+/* Pie de la ficha: restos legacy a la izquierda, acciones a la derecha; apilado si no cabe. */
+.admin-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: .5rem;
+  margin-top: auto; /* pega el pie abajo para que las fichas de una fila queden alineadas */
+  padding-top: .5rem;
+  border-top: 1px solid var(--border);
+}
 
 .admin-badge {
   display: inline-block;
@@ -122,14 +192,14 @@
    aquí solo se consumen. El texto se deja en `--text` en vez de teñirlo: el oro sobre fondo claro y el mithril
    sobre fondo oscuro no llegan a contraste legible. */
 
-/* ANCHO FIJO. Con `width: auto` el `<select>` se dimensiona por su opción más larga, y en todas las filas que no
+/* ANCHO FIJO. Con `width: auto` el `<select>` se dimensiona por su opción más larga, y en todas las fichas que no
    son la del admin esa opción es "Mithril — Reservado al administrador": el control salía desproporcionado
    comparado con el del propio admin, que solo tiene "Mithril". El desplegable nativo sigue mostrando el texto
-   completo aunque el control cerrado sea estrecho, así que no se pierde la explicación. */
-/* El color tiene que LEERSE de un vistazo al recorrer la columna: borde de 2 px del metal, tinte de fondo al 22 %
-   (con el 14 % anterior los cuatro rangos parecían el mismo control gris) y una barra del color a la izquierda,
-   que es lo que de verdad se ve al escanear la tabla en vertical. El nombre del rango sigue en el texto del
-   propio `<select>`, así que el color nunca es la única señal. */
+   completo aunque el control cerrado sea estrecho, así que no se pierde la explicación.
+
+   El color tiene que LEERSE de un vistazo al recorrer las fichas: borde de 2 px del metal, tinte de fondo al 22 %
+   (con el 14 % anterior los cuatro rangos parecían el mismo control gris) y una barra del color a la izquierda.
+   El nombre del rango sigue en el texto del propio `<select>`, así que el color nunca es la única señal. */
 .admin-tier-select {
   width: 7.5rem;
   padding: .3rem 1.6rem .3rem .55rem;
@@ -144,6 +214,12 @@
 
 /* Marca de color en el contador de cada rango del resumen. */
 .admin-total-tier { border-left: 3px solid var(--tier, var(--border)); }
+
+/* El contador de señales solo se tiñe si hay alguna: en cero no debe pedir atención. */
+.admin-total-flagged {
+  border-color: color-mix(in srgb, var(--danger) 45%, var(--border));
+}
+.admin-total-flagged dd { color: var(--danger); }
 
 /* Cada etiqueta legacy ES el botón que la purga: purgar campo a campo evita tener que aceptar el borrado del id
    del gist (que puede costarle una reconexión a su dueño) solo para quitar el token en claro. */
@@ -164,3 +240,17 @@
 
 .admin-actions { display: flex; flex-wrap: wrap; gap: .4rem; }
 .admin-actions .btn { font-size: .78rem; padding: .35rem .6rem; }
+
+/* Bloque de deriva de gist: se enseñan los dos ids candidatos y el botón que unifica. Enmarcado en el color de
+   peligro porque es un estado roto (sus reseñas no llegan al feed de sus amigos), no un dato más de la ficha. */
+.admin-gist-drift {
+  display: grid;
+  gap: .4rem;
+  padding: .55rem .7rem;
+  border: 1px solid color-mix(in srgb, var(--danger) 40%, var(--border));
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--danger) 7%, transparent);
+}
+.admin-gist-drift .btn { justify-self: start; font-size: .78rem; padding: .35rem .6rem; }
+/* Con dos ids en la misma celda, que no se peguen. */
+.admin-gist-drift dd code { display: block; }
