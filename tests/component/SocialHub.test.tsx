@@ -27,7 +27,7 @@ const firebaseMocks = vi.hoisted(() => ({
   deleteFriendship: vi.fn(async () => {}),
   sendFriendRequest: vi.fn(async () => {}),
   readFriendship: vi.fn(async (): Promise<any> => null),
-  healOwnFriendshipIdentity: vi.fn(async () => {}),
+  healOwnFriendshipIdentity: vi.fn(async (..._args: unknown[]) => {}),
   healOwnDirectoryGist: vi.fn(async () => ({ healed: false, adoptGistId: '' })),
   invalidateMyFriendshipsCache: vi.fn(),
 }));
@@ -235,15 +235,20 @@ describe('SocialHub (componente, post-M3)', () => {
     await waitFor(() => expect(screen.queryByRole('progressbar')).not.toBeInTheDocument());
   });
 
-  it('auto-heal directorio: al abrir social sincroniza mi profiles.social.gistId con el gist actual de mi sesión', async () => {
+  // El auto-heal del DIRECTORIO se retiró: mantenía `profiles.social.gistId`, que ha dejado de publicarse.
+  // Resucitarlo en cada apertura sería justo lo contrario de lo que se busca. Lo que queda es el saneado de
+  // AMISTADES, que es donde las amistades leen ahora el canal.
+  it('al abrir social propaga mi gist a mis documentos de amistad, y NO al perfil público', async () => {
     firebaseMocks.getCurrentSocialAuthUser.mockResolvedValue({ uid: 'uid-1', email: 'jaime@example.com', displayName: 'Jaime', photoURL: null });
     gistMocks.getSocialSyncConfig.mockReturnValue({ token: 'ghp_x', gistId: 'social-gist', etag: null, lastRemoteUpdatedAt: 0 });
 
     renderHub();
 
-    // El heal se dispara una vez con mi uid y el gist ACTUAL (no hay que re-publicar el perfil a mano).
-    await waitFor(() => expect(firebaseMocks.healOwnDirectoryGist).toHaveBeenCalled());
-    expect(firebaseMocks.healOwnDirectoryGist.mock.calls[0].slice(0, 2)).toEqual(['uid-1', 'social-gist']);
+    await waitFor(() => expect(firebaseMocks.healOwnFriendshipIdentity).toHaveBeenCalled());
+    expect(firebaseMocks.healOwnFriendshipIdentity.mock.calls[0][0]).toBe('uid-1');
+    expect(firebaseMocks.healOwnFriendshipIdentity.mock.calls[0][1]).toMatchObject({ socialGistId: 'social-gist' });
+    // Y el directorio no se toca: el campo se está purgando, no manteniendo.
+    expect(firebaseMocks.healOwnDirectoryGist).not.toHaveBeenCalled();
   });
 
   it('feed solo-amigos: muestra la actividad del amigo y NO lee el gist del no-amigo', async () => {
