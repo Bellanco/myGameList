@@ -305,6 +305,7 @@ export const AdminHub = memo(function AdminHub() {
                   {user.anomalies.includes('gist-drift') ? (
                     <div className="admin-gist-drift" role="group" aria-label={A.gist.driftTitle}>
                       <span className="admin-field-label">{A.gist.driftTitle}</span>
+                      <p className="admin-card-note">{A.gist.driftHint}</p>
                       <dl className="admin-user-data">
                         <div><dt>{A.gist.profileGist}</dt><dd><code>{user.socialGistId}</code></dd></div>
                         <div>
@@ -312,17 +313,6 @@ export const AdminHub = memo(function AdminHub() {
                           <dd>{user.friendSocialGistIds.map((gistId) => <code key={gistId}>{gistId}</code>)}</dd>
                         </div>
                       </dl>
-                      <button
-                        type="button"
-                        className="btn btn-secondary"
-                        disabled={busy}
-                        title={A.gist.unifyHint}
-                        onClick={() =>
-                          setPending({ title: A.gist.confirm(name), run: () => void vm.unifyGist(user) })
-                        }
-                      >
-                        {busy ? A.working : A.gist.unifyBtn}
-                      </button>
                     </div>
                   ) : null}
 

@@ -1,5 +1,4 @@
 import { isValidGistId, isValidGithubToken, isValidHttpUrl, safePostText } from '../../core/security/sanitize';
-import type { SocialGistEvidence } from '../../core/social/gistArbitration';
 import { migrateData } from './migrateRepository';
 import { clampRating, normalizeTimestamp } from '../../core/utils/normalize';
 import { resolveGrade } from '../../core/utils/scoreScale';
@@ -987,7 +986,7 @@ export async function findGamesGistId(token: string): Promise<string> {
 /**
  * Crea el canal social como gist SECRETO.
  *
- * Antes se creaba público, y `updateGistPrivacy` se encargaba de mantenerlo así. Era innecesario: según la propia
+ * Antes se creaba público y un paso posterior se encargaba de mantenerlo así. Era innecesario: según la propia
  * documentación de GitHub, «secret gists aren't private» — quien tenga el identificador puede leerlos, con o sin
  * sesión. Es decir, un amigo siempre pudo leer un canal secreto; lo único que aportaba ser público era aparecer
  * listado en el perfil de GitHub de su dueño y en las búsquedas, que es exactamente lo que no queremos.
@@ -1030,29 +1029,6 @@ async function createSocialGistWithData(token: string, data: SocialGistData, isP
 
   const body = (await response.json()) as { id: string };
   return { gistId: body.id, etag: response.headers.get('etag') };
-}
-
-/**
- * ¿El gist es legible SIN autenticación (es decir, público)?
- *
- * Tres estados a propósito: un fallo de red o un 403 por rate-limit anónimo (60 req/h por IP) NO significan "no
- * es público". Antes se colapsaba todo a `false` y `updateGistPrivacy` respondía clonando el gist a un id nuevo:
- * el canal social del usuario cambiaba de id por un error transitorio, dejando un duplicado huérfano y a sus
- * amigos leyendo el gist antiguo (deriva de gist). `unknown` deja el gist como está.
- */
-async function probePublicGistAccess(gistId: string): Promise<'public' | 'not-public' | 'unknown'> {
-  try {
-    await readPublicSocialGistById(gistId, null);
-    return 'public';
-  } catch (error) {
-    const message = error instanceof Error ? error.message : '';
-    // 404 anónimo sobre un gist que el dueño SÍ puede leer = secreto (no público). 401/403 tampoco son
-    // veredicto: el rate-limit anónimo de GitHub responde 403.
-    if (/\b404\b/.test(message)) {
-      return 'not-public';
-    }
-    return 'unknown';
-  }
 }
 
 export async function readSocialGist(token: string, gistId: string, etag: string | null = null): Promise<{ data: SocialGistData; etag: string | null; notModified?: boolean; wasLegacy?: boolean }> {
@@ -1187,7 +1163,7 @@ export interface OwnSocialGist {
 
 /**
  * Lista los gists SOCIALES de la cuenta del token (por nombre de fichero ancla). Sirve para encontrar gists
- * abandonados: `updateGistPrivacy` clonaba el gist a un id nuevo, y el original —con el historial de fechas de
+ * abandonados: el antiguo paso de volverlo público clonaba el gist a un id nuevo, y el original —con las fechas de
  * publicación— se queda huérfano en la cuenta. Solo lectura.
  */
 export async function listOwnSocialGists(token: string): Promise<OwnSocialGist[]> {
@@ -1293,32 +1269,6 @@ export async function readSocialGistAtRevision(token: string, gistId: string, ve
     return normalizeSocialGistData(assembleChunkedSocial(JSON.parse(raw), body.files));
   } catch {
     return getEmptySocialGistData();
-  }
-}
-
-/**
- * Evidencia de un gist social candidato, obtenida SIN autenticación.
- *
- * Se puede porque el canal social TIENE que ser público para que los amigos lo lean con su propio token: el gist
- * vivo es, por definición, legible por cualquiera. Tres estados, igual que `probePublicGistAccess`: un 404 anónimo
- * significa secreto (descartable); un 403 (rate-limit anónimo) o un fallo de red NO significan nada y se traducen
- * a `null`, para no descalificar por duda — ese error de interpretación es justo el que provocó los clonados
- * indebidos que crearon la deriva.
- *
- * La usan el panel de administración (que no tiene el token del usuario) y el auto-heal del propio cliente.
- */
-export async function probeSocialGistEvidence(gistId: string): Promise<SocialGistEvidence> {
-  try {
-    const data = await readPublicSocialGistById(gistId, null);
-    return {
-      gistId,
-      isPublic: true,
-      contentCount: (data.activity?.length || 0) + (data.posts?.length || 0),
-      updatedAt: Number(data.updatedAt || 0),
-    };
-  } catch (error) {
-    const message = error instanceof Error ? error.message : '';
-    return { gistId, isPublic: /\b404\b/.test(message) ? false : null, contentCount: 0, updatedAt: 0 };
   }
 }
 
@@ -2130,57 +2080,46 @@ export async function ensureSecretSocialGist(token: string, gistId: string): Pro
     return unchanged;
   }
 
+  // DE QUÉ GIST SE CLONA. No se asume que el de la sesión sea el bueno: una cuenta con deriva histórica tiene dos
+  // canales, y el de este dispositivo puede ser el clon VACÍO que dejó el problema. Copiar ese y retirar el otro
+  // dejaría al usuario con un canal en blanco y sus reseñas fuera de la vista.
+  //
+  // Se elige por CONTENIDO (el tamaño del fichero es el mejor indicador disponible sin lecturas extra: ya viene en
+  // el listado) y, a igualdad, por recencia. El propio gist de la sesión gana los empates para no cambiar de canal
+  // sin motivo. Solo se consideran los que no arriesgan truncado.
+  const source = own
+    .filter((entry) => entry.sizeBytes < TRUNCATION_RISK_BYTES)
+    .reduce((best, entry) => {
+      if (!best) return entry;
+      if (entry.sizeBytes !== best.sizeBytes) return entry.sizeBytes > best.sizeBytes ? entry : best;
+      if (entry.updatedAt !== best.updatedAt) return entry.updatedAt > best.updatedAt ? entry : best;
+      return best.gistId === gistId ? best : entry;
+    }, undefined as OwnSocialGist | undefined);
+  const sourceGistId = source?.gistId || gistId;
+
   // GUARDA DE TRUNCADO. GitHub recorta en la API los ficheros de más de 1 MB (`truncated: true`, sin contenido
   // completo), y aquí un JSON a medias no parsea: la lectura devolvería un canal VACÍO. Clonar eso y repuntar las
   // referencias hacia el clon sería perder el canal de vista. No se migra: se deja como está y se avisa.
-  if (current.sizeBytes >= TRUNCATION_RISK_BYTES) {
+  const sourceSize = source?.sizeBytes ?? current.sizeBytes;
+  if (sourceSize >= TRUNCATION_RISK_BYTES) {
     return { ...unchanged, tooLarge: true };
   }
 
-  const source = await readSocialGist(token, gistId, null);
+  const payload = await readSocialGist(token, sourceGistId, null);
   // Segunda red de seguridad: si el origen viene vacío pero el fichero NO lo estaba, algo se perdió al leer
   // (truncado, parseo fallido). Clonar un vacío sobre un canal con contenido sería destruirlo de facto.
-  const sourceIsEmpty = (source.data.activity?.length || 0) === 0 && (source.data.posts?.length || 0) === 0;
-  if (sourceIsEmpty && current.sizeBytes > EMPTY_PAYLOAD_MAX_BYTES) {
+  const sourceIsEmpty = (payload.data.activity?.length || 0) === 0 && (payload.data.posts?.length || 0) === 0;
+  if (sourceIsEmpty && sourceSize > EMPTY_PAYLOAD_MAX_BYTES) {
     return { ...unchanged, tooLarge: true };
   }
 
-  const migration = await createSocialGistWithData(token, source.data, false);
+  const migration = await createSocialGistWithData(token, payload.data, false);
   return {
     gistId: migration.gistId,
     etag: migration.etag,
     migrated: true,
     previousGistId: gistId,
-    copiedEntries: (source.data.activity?.length || 0) + (source.data.posts?.length || 0),
+    copiedEntries: (payload.data.activity?.length || 0) + (payload.data.posts?.length || 0),
   };
 }
 
-export async function updateGistPrivacy(token: string, gistId: string, isPublic: boolean): Promise<{ gistId: string; etag: string | null }> {
-  if (!isValidGithubToken(token)) {
-    throw new Error('Formato de token inválido');
-  }
-
-  if (!isValidGistId(gistId)) {
-    throw new Error('Gist ID inválido');
-  }
-
-  const sourceGist = await readSocialGist(token, gistId, null);
-  const access = await probePublicGistAccess(gistId);
-
-  // Sin veredicto claro (red caída, 403 por rate-limit anónimo) NO se migra: clonar por un error transitorio
-  // cambia el id del canal social y rompe a quien ya apuntaba al anterior. Se reintentará al siguiente guardado.
-  if (access === 'unknown') {
-    return { gistId, etag: sourceGist.etag || null };
-  }
-
-  const currentlyPublic = access === 'public';
-  if (isPublic === currentlyPublic) {
-    return { gistId, etag: sourceGist.etag || null };
-  }
-
-  const migration = await createSocialGistWithData(token, sourceGist.data, isPublic);
-  return {
-    gistId: migration.gistId,
-    etag: migration.etag,
-  };
-}
