@@ -883,8 +883,13 @@ export function useSocialViewModel(options?: {
     // contenido del gist: con el feed solo-amigos no leemos el gist de los no-amigos, así que exigir cualquier dato
     // suyo ocultaría a todo el mundo e impediría enviarles peticiones de amistad. Los perfiles del directorio ya
     // vienen acotados por Firestore (`social.enabled` + gist social presente).
-    return socialDirectory.filter((entry) => entry.socialGistId !== socialCfgGistId);
-  }, [socialCfgGistId, socialDirectory]);
+    //
+    // La entrada propia se descarta por IDENTIDAD, no comparando gists: el perfil ya no publica su id, así que un
+    // no-amigo llega aquí con `socialGistId` vacío. Para quien todavía NO tiene canal social (`socialCfgGistId`
+    // también vacío) la comparación antigua daba igualdad con TODOS ellos y le vaciaba el directorio entero: un
+    // usuario nuevo abría el espacio social y no encontraba a nadie a quien pedir amistad.
+    return socialDirectory.filter((entry) => !isOwnProfileIdentity(entry.id, authUser?.uid, ownProfileId));
+  }, [authUser?.uid, ownProfileId, socialDirectory]);
 
   const socialDisplayName = useMemo(() => {
     const preferred = profileName.trim();
@@ -1156,13 +1161,15 @@ export function useSocialViewModel(options?: {
   // Abre el DETALLE del perfil propio (vista pública con sus listados), no el editor. Si aún no existe entrada
   // propia en el directorio, cae al editor para que el usuario complete su perfil.
   const openOwnProfileDetail = useCallback(() => {
-    const ownEntry = socialDirectory.find((entry) => entry.socialGistId === socialCfgGistId);
+    // Por identidad, no por gist. Buscando por gist, un usuario sin canal social (`socialCfgGistId` vacío) casaba
+    // con la PRIMERA entrada de id vacío —la de un desconocido— y "mi perfil" le abría el perfil de otro.
+    const ownEntry = socialDirectory.find((entry) => isOwnProfileIdentity(entry.id, authUser?.uid, ownProfileId));
     if (ownEntry) {
       navigate(`/social/profiles/${encodeURIComponent(ownEntry.id)}`);
     } else {
       navigate('/social/profile');
     }
-  }, [navigate, socialCfgGistId, socialDirectory]);
+  }, [authUser?.uid, navigate, ownProfileId, socialDirectory]);
 
   const isOwnProfileDetail = useMemo(
     () => Boolean(selectedProfileDetail) && isOwnProfileIdentity(selectedProfileDetail!.id, authUser?.uid, ownProfileId),
