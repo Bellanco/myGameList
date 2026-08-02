@@ -13,6 +13,7 @@
 // tabla. Lo mismo con el id del gist de juegos y con el token en claro legacy.
 import { collection, deleteDoc, deleteField, doc, getDocs, limit, query, updateDoc, where } from 'firebase/firestore';
 import { DEFAULT_PROFILE_TIER, normalizeTier, type ProfileTier } from '../../core/constants/tiers';
+import type { AdminAnomaly } from '../types/firestore';
 import { initializeFirebaseServices, isPermissionDeniedError } from './firebaseClient';
 import { invalidateOwnProfileCache, invalidateSocialDirectoryCache } from './firebaseSocialRepository';
 import { invalidateMyFriendshipsCache } from './firebaseFriendshipRepository';
@@ -64,7 +65,43 @@ export interface AdminUserRow {
    * Por eso `ensureProfileByEmail` tampoco lo purga en ese caso, y el panel debe respetar la misma regla.
    */
   idMatchesUid: boolean;
+
+  // --- Identidad y esquema ---
+  /** Pseudónimo canónico (`profileId`). Vacío si nunca se estableció la identidad (ver `establishProfileIdentity`). */
+  profileId: string;
+  /** Versión del esquema del documento. 0 si no la trae (anterior a que existiera). */
+  schemaVersion: number;
+  /** ¿Tiene foto publicada? Solo la presencia: la URL no aporta nada en una tabla. */
+  hasPhoto: boolean;
+  /** ¿El perfil guarda el ETag de su gist social? Su ausencia obliga a releer el gist entero. */
+  hasSocialEtag: boolean;
+
+  // --- Fechas ---
+  /** Alta sellada en el documento (`createdAt`), en ms. 0 si el perfil es anterior a que se registrara. */
+  createdAt: number;
+  /**
+   * Alta ESTIMADA para los perfiles sin `createdAt`: la fecha de su amistad más antigua, que es el rastro fechado
+   * más viejo al que llega el panel. 0 si no tiene amistades.
+   */
+  estimatedFirstSeenAt: number;
+  /** Movimiento más reciente en sus amistades, en ms. 0 si no tiene ninguna. */
+  lastFriendshipAt: number;
+
+  // --- Relaciones, desglosadas ---
+  /** Solicitudes que ÉL envió y siguen pendientes. */
+  pendingOut: number;
+  /** Solicitudes que ha RECIBIDO y siguen pendientes. */
+  pendingIn: number;
+
+  /** Señales de que algo no cuadra en este perfil. Vacío = nada que mirar. */
+  anomalies: AdminAnomaly[];
 }
+
+/** Ventana de inactividad del feed (`FRIEND_ACTIVITY_MAX_AGE_MS` en useSocialViewModel): 30 días. */
+const INACTIVITY_MS = 30 * 24 * 60 * 60 * 1000;
+
+/** Versión de esquema vigente (espejo de `FIRESTORE_SCHEMA_VERSION` en firebaseRepository). */
+const CURRENT_SCHEMA_VERSION = 1;
 
 /** Campos legacy purgables, uno a uno: cada uno tiene consecuencias distintas para su dueño. */
 export type LegacyProfileField = 'email' | 'gamesGistId' | 'token';
@@ -86,6 +123,8 @@ export interface AdminCensus {
     pending: number;
     /** Perfiles con algún resto legacy (email / gamesGistId / token en claro). */
     legacy: number;
+    /** Perfiles con al menos una señal de algo fuera de lugar. */
+    flagged: number;
     /** Reparto por rango. */
     byTier: Record<ProfileTier, number>;
   };
@@ -96,11 +135,30 @@ export interface AdminActionResult {
   failures: string[];
 }
 
+/** Lo que se sabe de un uid a partir de sus documentos de amistad. */
+interface FriendshipFacts {
+  friends: number;
+  pending: number;
+  pendingOut: number;
+  pendingIn: number;
+  name: string;
+  /** Fecha de la amistad más antigua: el rastro fechado más viejo al que llega el panel. */
+  firstAt: number;
+  /** Movimiento más reciente en sus amistades. */
+  lastAt: number;
+  /** Ids de gist social que sus amistades tienen denormalizados de él (para detectar deriva). */
+  socialGistIds: Set<string>;
+}
+
 /** Recuento de amistades por uid, en una sola lectura de la colección. */
 interface FriendshipTally {
-  byUid: Map<string, { friends: number; pending: number; name: string }>;
+  byUid: Map<string, FriendshipFacts>;
   total: number;
   pending: number;
+}
+
+function emptyFacts(): FriendshipFacts {
+  return { friends: 0, pending: 0, pendingOut: 0, pendingIn: 0, name: '', firstAt: 0, lastAt: 0, socialGistIds: new Set() };
 }
 
 function describe(error: unknown): string {
@@ -138,7 +196,7 @@ async function requireServices() {
  */
 async function tallyFriendships(firestore: import('firebase/firestore').Firestore): Promise<FriendshipTally> {
   const snapshot = await getDocs(collection(firestore, 'friendships'));
-  const byUid = new Map<string, { friends: number; pending: number; name: string }>();
+  const byUid = new Map<string, FriendshipFacts>();
   let total = 0;
   let pending = 0;
 
@@ -150,6 +208,10 @@ async function tallyFriendships(firestore: import('firebase/firestore').Firestor
       recipient?: unknown;
       requesterName?: unknown;
       recipientName?: unknown;
+      requesterSocialGistId?: unknown;
+      recipientSocialGistId?: unknown;
+      createdAt?: unknown;
+      updatedAt?: unknown;
     };
     const users = Array.isArray(data.users) ? data.users.filter((uid): uid is string => typeof uid === 'string') : [];
     if (users.length === 0) {
@@ -162,27 +224,74 @@ async function tallyFriendships(firestore: import('firebase/firestore').Firestor
       pending += 1;
     }
 
-    // Nombre denormalizado que cada parte escribió de SÍ MISMA al crear o aceptar la petición.
-    const nameOf = (uid: string): string => {
-      if (uid === data.requester) return String(data.requesterName || '');
-      if (uid === data.recipient) return String(data.recipientName || '');
-      return '';
+    const createdAt = toMillis(data.createdAt as never);
+    const updatedAt = toMillis(data.updatedAt as never);
+
+    // Campos denormalizados que cada parte escribió de SÍ MISMA al crear o aceptar la petición.
+    const sideOf = (uid: string): { name: string; socialGistId: string } => {
+      if (uid === data.requester) {
+        return { name: String(data.requesterName || ''), socialGistId: String(data.requesterSocialGistId || '') };
+      }
+      if (uid === data.recipient) {
+        return { name: String(data.recipientName || ''), socialGistId: String(data.recipientSocialGistId || '') };
+      }
+      return { name: '', socialGistId: '' };
     };
 
     users.forEach((uid) => {
-      const current = byUid.get(uid) || { friends: 0, pending: 0, name: '' };
+      const current = byUid.get(uid) || emptyFacts();
       if (accepted) {
         current.friends += 1;
       } else {
         current.pending += 1;
+        // Quién dio el paso: distinguirlo revela, por ejemplo, a quien manda peticiones en masa sin que nadie
+        // se las acepte (muchas `pendingOut` y ninguna amistad).
+        if (uid === data.requester) current.pendingOut += 1;
+        else current.pendingIn += 1;
       }
+
+      const side = sideOf(uid);
       // El primero que aparezca vale: no hay forma de saber cuál es más reciente y todos son el mismo nick.
-      current.name = current.name || nameOf(uid).trim();
+      current.name = current.name || side.name.trim();
+      if (side.socialGistId) current.socialGistIds.add(side.socialGistId);
+
+      if (createdAt > 0) current.firstAt = current.firstAt === 0 ? createdAt : Math.min(current.firstAt, createdAt);
+      current.lastAt = Math.max(current.lastAt, updatedAt, createdAt);
       byUid.set(uid, current);
     });
   });
 
   return { byUid, total, pending };
+}
+
+/**
+ * Señales de que algo no cuadra. Se calculan aquí (y no en la vista) para que sean el mismo juicio en cualquier
+ * sitio que las pinte, y para poder probarlas sin renderizar nada.
+ */
+function detectAnomalies(row: Omit<AdminUserRow, 'anomalies'>, friendGistIds: Set<string>, now: number): AdminAnomaly[] {
+  const found: AdminAnomaly[] = [];
+
+  if (row.socialEnabled && !row.socialGistId) found.push('enabled-without-gist');
+  if (!row.displayName.trim()) found.push('no-display-name');
+  if (!row.profileId) found.push('no-profile-id');
+  if (!row.idMatchesUid) found.push('foreign-doc-id');
+  if (row.legacy.token) found.push('legacy-token');
+  if (row.legacy.email || row.legacy.gamesGistId) found.push('legacy-fields');
+  if (row.schemaVersion < CURRENT_SCHEMA_VERSION) found.push('stale-schema');
+
+  if (row.updatedAt === 0) found.push('never-active');
+  else if (row.updatedAt > now) found.push('future-activity');
+  else if (now - row.updatedAt > INACTIVITY_MS) found.push('inactive');
+
+  if (row.createdAt > 0 && row.updatedAt > 0 && row.createdAt > row.updatedAt) found.push('created-after-activity');
+
+  // Deriva del gist social: sus amistades guardan un id distinto del que publica el directorio. Es el fallo por el
+  // que las reseñas de alguien no aparecen en el feed de sus amigos, y desde aquí se ve de un vistazo.
+  if (row.socialGistId && friendGistIds.size > 0 && !friendGistIds.has(row.socialGistId)) {
+    found.push('gist-drift');
+  }
+
+  return found;
 }
 
 /**
@@ -214,34 +323,50 @@ export async function loadAdminCensus(limitCount = ADMIN_PROFILES_LIMIT): Promis
     throw toAdminError(error, 'listar las amistades');
   }
 
+  // Un solo instante para todo el censo: si cada fila leyera su propio `Date.now()`, dos perfiles idénticos
+  // podrían acabar con señales distintas por unos milisegundos.
+  const now = Date.now();
+
   const users = profilesSnapshot.docs
     .filter((entry) => entry.id !== PLACEHOLDER_ID)
     .map((entry) => {
       const data = entry.data() as {
         uid?: string;
+        profileId?: string;
+        schemaVersion?: number;
         displayName?: string;
         photoURL?: string;
         email?: string;
         tier?: string;
-        social?: { gistId?: string; gamesGistId?: string; githubToken?: string; enabled?: boolean };
+        social?: { gistId?: string; etag?: string | null; gamesGistId?: string; githubToken?: string; enabled?: boolean };
         updatedAt?: { toMillis?: () => number } | number;
+        createdAt?: { toMillis?: () => number } | number;
       };
       const social = data.social || {};
       const uid = String(data.uid || entry.id);
-      const tally = friendships.byUid.get(uid) || { friends: 0, pending: 0, name: '' };
+      const facts = friendships.byUid.get(uid) || emptyFacts();
 
       return {
         id: entry.id,
         uid,
         displayName: String(data.displayName || ''),
-        knownAs: tally.name,
+        knownAs: facts.name,
         photoURL: String(data.photoURL || ''),
         socialEnabled: Boolean(social.enabled),
         socialGistId: String(social.gistId || ''),
         tier: normalizeTier(data.tier),
         updatedAt: toMillis(data.updatedAt),
-        friends: tally.friends,
-        pending: tally.pending,
+        friends: facts.friends,
+        pending: facts.pending,
+        pendingOut: facts.pendingOut,
+        pendingIn: facts.pendingIn,
+        profileId: String(data.profileId || ''),
+        schemaVersion: Number(data.schemaVersion || 0),
+        hasPhoto: Boolean(data.photoURL),
+        hasSocialEtag: Boolean(social.etag),
+        createdAt: toMillis(data.createdAt),
+        estimatedFirstSeenAt: facts.firstAt,
+        lastFriendshipAt: facts.lastAt,
         legacy: {
           email: Boolean(data.email), // audit-allow: solo se comprueba la PRESENCIA del campo legacy; el valor no sale de aquí
           gamesGistId: Boolean(social.gamesGistId), // audit-allow: presencia del campo legacy para poder purgarlo; no se escribe ni se muestra
@@ -253,6 +378,12 @@ export async function loadAdminCensus(limitCount = ADMIN_PROFILES_LIMIT): Promis
         idMatchesUid: String(data.uid || '') === entry.id,
       };
     })
+    // Las señales se calculan sobre la fila ya montada (necesitan varios de sus campos a la vez) y con un único
+    // `now`, para que todas las filas se juzguen con el mismo reloj.
+    .map((row) => ({
+      ...row,
+      anomalies: detectAnomalies(row, friendships.byUid.get(row.uid)?.socialGistIds || new Set(), now),
+    }))
     // Más recientes primero; los que no traen `updatedAt` caen al final (pero SALEN).
     .sort((a, b) => b.updatedAt - a.updatedAt || a.displayName.localeCompare(b.displayName));
 
@@ -265,6 +396,8 @@ export async function loadAdminCensus(limitCount = ADMIN_PROFILES_LIMIT): Promis
       friendships: friendships.total,
       pending: friendships.pending,
       legacy: users.filter((user) => user.legacy.email || user.legacy.gamesGistId || user.legacy.token).length,
+      /** Perfiles con al menos una señal: es el número que dice si hay que mirar algo hoy. */
+      flagged: users.filter((user) => user.anomalies.length > 0).length,
       byTier: users.reduce(
         (acc, user) => ({ ...acc, [user.tier]: acc[user.tier] + 1 }),
         { bronze: 0, silver: 0, gold: 0, mithril: 0 } as Record<ProfileTier, number>,

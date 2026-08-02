@@ -12,6 +12,12 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
   gist de juegos y token en claro) y borrar perfil + amistades. El acceso lo concede `isAdmin()` en
   las reglas de Firestore, no el cliente. El borrado es parcial a propósito: `privateConfig`,
   `publicConfig` y `userMap` son owner-only y sobreviven, igual que la cuenta de Google y los Gists.
+- **Fecha de alta del perfil** (`createdAt`): se sella al crearlo y las reglas la declaran inmutable, así que
+  ni su dueño puede reescribirla. Los perfiles anteriores no la tienen; el panel la estima con la fecha de su
+  amistad más antigua y lo marca como estimación.
+- **Ficha completa por usuario en el panel**, con todo lo que las reglas permiten leer (pseudónimo, gist social,
+  ETag, esquema, foto, fechas y desglose de amistades) y **señales** de estado fuera de lo esperado: social
+  activado sin gist, gist divergente respecto a sus amistades, fechas imposibles, restos legacy, inactividad.
 - **Auto-saneado del perfil legacy al iniciar sesión**: el navegador del propio usuario respalda el token de
   GitHub cifrado y el id del gist de juegos en `privateConfig` (owner-only) y solo entonces los borra —junto al
   `email`— del perfil público. Si el respaldo falla no se purga nada y se reintenta en el siguiente arranque.
@@ -35,6 +41,8 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
   limpia los datos del dispositivo. Los Gists, al ser de la cuenta de GitHub del usuario, no se tocan.
 
 ### Changed
+- El panel de administración pasa de tabla a rejilla de fichas: la tabla obligaba a scroll horizontal en tablet
+  apaisada y era ilegible en móvil.
 - El perfil público deja de publicar `email` y `social.gamesGistId`: el perfil propio se resuelve por
   uid y el gist de juegos se recupera de `privateConfig` (solo el dueño). Se purgan de los perfiles
   existentes en su siguiente guardado.
