@@ -56,7 +56,7 @@ import {
   sendFriendRequest,
   signInWithGoogle,
   signOutSocialUser,
-  touchOwnProfileActivity,
+  touchOwnProfileActivityThrottled,
   updateProfilePhoto,
   type FriendshipSelfInfo,
   type SocialAuthUser,
@@ -127,9 +127,6 @@ const SOCIAL_DIRECTORY_LIMIT = 50;
 // simplemente su actividad no ocupa el feed y no se gasta una lectura de su gist social. Si no se conoce su
 // recencia (no está en el directorio) NO se corta: nunca se oculta contenido por falta de datos. Tunable.
 const FRIEND_ACTIVITY_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
-// Acotado del latido de uso: una escritura por dispositivo cada 20 h (así un uso diario siempre lo refresca).
-// Mantiene el grano de `profiles.updatedAt` en "días" en vez de convertirlo en un indicador de presencia.
-const PROFILE_TOUCH_MIN_INTERVAL_MS = 20 * 60 * 60 * 1000;
 // C3: el directorio se hidrata leyendo el gist social de cada perfil. En vez de disparar TODAS las lecturas a la
 // vez (ráfaga que puede activar los "secondary rate limits" de GitHub al crecer el directorio), se limita la
 // concurrencia. Las lecturas son baratas (caché de sesión + revalidación ETag/304), así que el coste en latencia
@@ -767,8 +764,9 @@ export function useSocialViewModel(options?: {
   // documentos de amistad, que es donde ahora lo leen las amistades.
 
   // LATIDO DE USO RECIENTE: refresca `profiles.updatedAt`, por el que ordena el directorio y con el que el feed
-  // decide si un amigo sigue activo. Publicar ya lo refresca; esto cubre a quien entra solo a mirar. Acotado a
-  // una vez cada 20 h por dispositivo (una escritura al día como mucho, y grano diario por privacidad).
+  // decide si un amigo sigue activo. Cubre a quien entra solo a mirar; publicar lo refresca por su cuenta desde
+  // `ensureProfileByEmail`. El acotado (una escritura al día por dispositivo) vive en el propio repositorio, para
+  // que los dos latidos no puedan quedarse con intervalos distintos.
   const profileTouchedRef = useRef(false);
   useEffect(() => {
     if (profileTouchedRef.current) return;
@@ -776,17 +774,7 @@ export function useSocialViewModel(options?: {
     profileTouchedRef.current = true;
     const uid = authUser.uid;
 
-    void (async () => {
-      try {
-        const meta = await getLocalMeta();
-        const last = Number(meta?.profileTouchedAt || 0);
-        if (last && Date.now() - last < PROFILE_TOUCH_MIN_INTERVAL_MS) return;
-        await touchOwnProfileActivity(uid);
-        await patchLocalMeta({ profileTouchedAt: Date.now() });
-      } catch {
-        /* best-effort: la recencia es orden, no funcionalidad. */
-      }
-    })();
+    void touchOwnProfileActivityThrottled(uid);
   }, [socialSpaceOpen, authUser?.uid, socialCfgGistId]);
 
   // Tras un cambio de amistad (aceptar/eliminar), el conjunto de amigos cambia y con él la actividad que debe salir

@@ -23,8 +23,13 @@ vi.mock('../../src/model/repository/firebaseSocialRepository', () => ({
   saveProfileByEmailCache: vi.fn(),
 }));
 
+const getLocalMetaMock = vi.fn<(...a: unknown[]) => unknown>(async () => null);
+const patchLocalMetaMock = vi.fn<(...a: unknown[]) => Promise<void>>(async () => {});
+
 vi.mock('../../src/model/repository/indexedDbRepository', () => ({
   seedProfileIdFromRemote: vi.fn(async (remote: string | null) => remote || 'pid-local'),
+  getLocalMeta: (...a: unknown[]) => getLocalMetaMock(...a),
+  patchLocalMeta: (...a: unknown[]) => patchLocalMetaMock(...a),
 }));
 
 vi.mock('../../src/model/repository/gistRepository', () => ({
@@ -33,7 +38,8 @@ vi.mock('../../src/model/repository/gistRepository', () => ({
 
 vi.mock('firebase/firestore', () => ({
   doc: (_fs: unknown, collection: string, id: string) => ({ collection, id }),
-  getDoc: vi.fn(async () => ({ exists: () => false, data: () => undefined })),
+  // El latido de recencia comprueba que el doc exista antes de tocarlo.
+  getDoc: vi.fn(async () => ({ exists: () => true, data: () => ({}) })),
   setDoc: (...a: unknown[]) => setDocMock(...a),
   deleteField: () => '__del__',
   serverTimestamp: () => '__ts__',
@@ -62,8 +68,22 @@ function perfilAlDia(overrides: Record<string, unknown> = {}) {
   };
 }
 
+/** El latido de recencia también escribe en `profiles`, pero con una forma inconfundible: solo uid + updatedAt. */
+function esLatido(payload: Record<string, unknown>): boolean {
+  return Boolean(payload) && Object.keys(payload).length === 2 && 'uid' in payload && 'updatedAt' in payload;
+}
+
+/** Guardados COMPLETOS del perfil (los que el chequeo de cambios debe evitar), sin contar el latido. */
 function profileWrites() {
-  return setDocMock.mock.calls.filter((call) => (call[0] as { collection?: string })?.collection === 'profiles');
+  return setDocMock.mock.calls.filter(
+    (call) => (call[0] as { collection?: string })?.collection === 'profiles' && !esLatido(call[1] as Record<string, unknown>),
+  );
+}
+
+function touchWrites() {
+  return setDocMock.mock.calls.filter(
+    (call) => (call[0] as { collection?: string })?.collection === 'profiles' && esLatido(call[1] as Record<string, unknown>),
+  );
 }
 
 async function guardar() {
@@ -79,6 +99,9 @@ async function guardar() {
 beforeEach(() => {
   setDocMock.mockClear();
   getOwnProfileRefMock.mockReset();
+  getLocalMetaMock.mockReset();
+  getLocalMetaMock.mockResolvedValue(null); // sin latido previo: toca refrescar
+  patchLocalMetaMock.mockClear();
 });
 
 describe('ensureProfileByEmail — chequeo de cambios del perfil público', () => {
@@ -109,5 +132,31 @@ describe('ensureProfileByEmail — chequeo de cambios del perfil público', () =
     await guardar();
 
     expect(profileWrites()).toHaveLength(1);
+  });
+});
+
+// Publicar es actividad aunque el perfil no cambie. Si `updatedAt` se quedara parado, quien publica desde la ficha
+// del juego sin abrir nunca el espacio social (donde late el hub) cruzaría el corte de inactividad de 30 días y sus
+// amigos dejarían de leer su gist: sus reseñas y publicaciones se caerían de los feeds ajenos sin que él lo notara.
+describe('ensureProfileByEmail — la recencia se refresca aunque no se reescriba el perfil', () => {
+  it('refresca `updatedAt` cuando el perfil no cambia', async () => {
+    getOwnProfileRefMock.mockResolvedValue(perfilAlDia());
+
+    await guardar();
+
+    expect(profileWrites()).toHaveLength(0);
+    expect(touchWrites()).toHaveLength(1);
+    expect(patchLocalMetaMock).toHaveBeenCalled();
+  });
+
+  it('respeta el acotado: con un latido reciente no escribe nada', async () => {
+    getOwnProfileRefMock.mockResolvedValue(perfilAlDia());
+    getLocalMetaMock.mockResolvedValue({ profileTouchedAt: Date.now() - 60_000 });
+
+    await guardar();
+
+    expect(profileWrites()).toHaveLength(0);
+    expect(touchWrites()).toHaveLength(0);
+    expect(patchLocalMetaMock).not.toHaveBeenCalled();
   });
 });
