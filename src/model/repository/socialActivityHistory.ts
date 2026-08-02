@@ -282,9 +282,9 @@ export async function auditPublishedReviewDates(options?: { maxRevisions?: numbe
       .map((entry) => [entry.gameId, entry] as const),
   );
 
-  // Gists sociales a inspeccionar: el actual y los ABANDONADOS de la cuenta. `updateGistPrivacy` clonaba el
-  // gist a un id nuevo ante cualquier fallo de la comprobación de visibilidad, y el original —con el historial
-  // de fechas reales— quedaba huérfano. Un historial corto en el gist actual es la señal de que hubo clonado.
+  // Gists sociales a inspeccionar: el actual y los ABANDONADOS de la cuenta. El antiguo paso que volvía el gist
+  // público lo clonaba a un id nuevo ante cualquier fallo de la comprobación de visibilidad, y el original —con
+  // el historial de fechas reales— quedaba huérfano. Un historial corto en el gist actual delata ese clonado.
   let candidateGists = [gistId];
   try {
     const own = await listOwnSocialGists(token);

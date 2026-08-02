@@ -13,6 +13,9 @@ const firebaseMocks = vi.hoisted(() => ({
   // se puede importar `LEGAL_VERSION`; los tests de la puerta lo sobrescriben con `null`.
   getPublicConfig: vi.fn(async (): Promise<any> => null),
   setPublicConfig: vi.fn(async () => {}),
+  // Fase 0: el gist social propio se recupera de `privateConfig` (owner-only) antes que del perfil público.
+  getPrivateConfig: vi.fn(async (): Promise<any> => null),
+  setPrivateConfig: vi.fn(async () => {}),
   listSocialDirectory: vi.fn(async (): Promise<any[]> => []),
   signInWithGoogle: vi.fn(async () => null),
   signOutSocialUser: vi.fn(async () => {}),
@@ -24,9 +27,13 @@ const firebaseMocks = vi.hoisted(() => ({
   deleteFriendship: vi.fn(async () => {}),
   sendFriendRequest: vi.fn(async () => {}),
   readFriendship: vi.fn(async (): Promise<any> => null),
-  healOwnFriendshipIdentity: vi.fn(async () => {}),
-  healOwnDirectoryGist: vi.fn(async () => false),
+  healOwnFriendshipIdentity: vi.fn(async (..._args: unknown[]) => {}),
+  healOwnDirectoryGist: vi.fn(async () => ({ healed: false, adoptGistId: '' })),
   invalidateMyFriendshipsCache: vi.fn(),
+  // Latido de recencia (`profiles.updatedAt`): sin exportarlo aquí, el hub llamaría a `undefined` al montarse.
+  touchOwnProfileActivityThrottled: vi.fn(async () => {}),
+  // Retirada del id que el perfil público aún anuncie: por defecto no hay nada que retirar.
+  purgeOwnPublicGistIds: vi.fn(async () => false),
 }));
 
 vi.mock('../../src/model/repository/firebaseRepository', () => firebaseMocks);
@@ -46,6 +53,10 @@ const gistMocks = vi.hoisted(() => ({
     etag: null,
   })),
   readPublicSocialGistById: vi.fn(async (_gistId?: string): Promise<any> => ({})),
+  // Fase 2: migración del canal a gist secreto. Por defecto, nada que migrar.
+  ensureSecretSocialGist: vi.fn(async (_t?: string, gistId?: string): Promise<any> => ({ gistId, etag: null, migrated: false, supersededGistIds: [], keptPublicGistIds: [], copiedEntries: 0 })),
+  socialGistHasContent: vi.fn(async (): Promise<boolean> => true),
+  deleteGist: vi.fn(async (): Promise<boolean> => true),
   writeSocialGist: vi.fn(async () => ({ etag: null })),
   saveSocialSyncConfig: vi.fn(),
   updateGistPrivacy: vi.fn(async () => ({ gistId: 'g', etag: null })),
@@ -82,6 +93,22 @@ describe('SocialHub (componente, post-M3)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     gistMocks.getSocialSyncConfig.mockReturnValue(null);
+    // `clearAllMocks` borra las llamadas pero NO las implementaciones: sin restaurar esta, un test que simule la
+    // migración del canal se la contagia a todos los siguientes (les cambiaría el gist a mitad de camino).
+    gistMocks.ensureSecretSocialGist.mockImplementation(async (_t?: string, gistId?: string) => ({
+      gistId,
+      etag: null,
+      migrated: false,
+      supersededGistIds: [],
+      keptPublicGistIds: [],
+      copiedEntries: 0,
+    }));
+    gistMocks.socialGistHasContent.mockResolvedValue(true);
+    gistMocks.deleteGist.mockResolvedValue(true);
+    // Idem con `privateConfig`: si un test deja ahí un gist, el resto creería que otro dispositivo ya migró y
+    // adoptarían ese canal en vez de seguir su propio camino.
+    firebaseMocks.getPrivateConfig.mockResolvedValue(null);
+    firebaseMocks.setPrivateConfig.mockResolvedValue(undefined);
     // Salvo en los tests de la puerta legal, se parte de un consentimiento vigente.
     firebaseMocks.getPublicConfig.mockResolvedValue({ consent: { version: LEGAL_VERSION, agreedAt: 1 } });
   });
@@ -180,6 +207,48 @@ describe('SocialHub (componente, post-M3)', () => {
     expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
   });
 
+  // FASE 0 — el gist social propio pasa a recuperarse de `privateConfig` (owner-only, un solo escritor) en vez
+  // del perfil público, que es world-readable para cualquier usuario autenticado y va a dejar de publicarlo.
+  describe('recuperación del gist social propio', () => {
+    beforeEach(() => {
+      firebaseMocks.getCurrentSocialAuthUser.mockResolvedValue({ uid: 'uid-1', email: 'jaime@example.com', displayName: 'Jaime', photoURL: null });
+      // Sin config social local: hay que resolverlo desde la nube. Con token principal, que es la precondición.
+      gistMocks.getSocialSyncConfig.mockReturnValue(null);
+      gistMocks.getSyncConfig.mockReturnValue({ token: 'ghp_x', gistId: 'games', etag: null, lastRemoteUpdatedAt: 0 } as never);
+    });
+
+    it('`privateConfig` MANDA sobre el perfil público cuando los dos traen id', async () => {
+      firebaseMocks.getPrivateConfig.mockResolvedValue({ socialGistId: 'gs-privado' });
+      // El perfil público anuncia otro id: si ganara, el canal quedaría atado a un campo que van a ver todos.
+      firebaseMocks.resolveOwnProfile.mockResolvedValue({ socialEnabled: true, socialGistId: 'gs-publico' } as never);
+
+      renderHub();
+
+      await waitFor(() => expect(gistMocks.saveSocialSyncConfig).toHaveBeenCalled());
+      expect(gistMocks.saveSocialSyncConfig.mock.calls[0][0]).toMatchObject({ gistId: 'gs-privado' });
+    });
+
+    it('sin `privateConfig` cae al perfil público y SIEMBRA el id en su sitio', async () => {
+      firebaseMocks.getPrivateConfig.mockResolvedValue(null);
+      firebaseMocks.resolveOwnProfile.mockResolvedValue({ socialEnabled: true, socialGistId: 'gs-publico' } as never);
+
+      renderHub();
+
+      await waitFor(() => expect(firebaseMocks.setPrivateConfig).toHaveBeenCalled());
+      // Sin esta siembra, retirar el campo del perfil público dejaría a esa cuenta sin forma de recuperarlo.
+      expect(firebaseMocks.setPrivateConfig).toHaveBeenCalledWith('uid-1', { socialGistId: 'gs-publico' });
+    });
+
+    it('con el id ya en `privateConfig` no lo reescribe', async () => {
+      firebaseMocks.getPrivateConfig.mockResolvedValue({ socialGistId: 'gs-privado' });
+
+      renderHub();
+
+      await waitFor(() => expect(gistMocks.saveSocialSyncConfig).toHaveBeenCalled());
+      expect(firebaseMocks.setPrivateConfig).not.toHaveBeenCalled();
+    });
+  });
+
   it('si la comprobación del consentimiento falla (offline), no bloquea el espacio social', async () => {
     firebaseMocks.getCurrentSocialAuthUser.mockResolvedValue({ uid: 'uid-1', email: 'jaime@example.com', displayName: 'Jaime', photoURL: null });
     firebaseMocks.getPublicConfig.mockRejectedValue(new Error('offline'));
@@ -190,15 +259,156 @@ describe('SocialHub (componente, post-M3)', () => {
     await waitFor(() => expect(screen.queryByRole('progressbar')).not.toBeInTheDocument());
   });
 
-  it('auto-heal directorio: al abrir social sincroniza mi profiles.social.gistId con el gist actual de mi sesión', async () => {
+  // El auto-heal del DIRECTORIO se retiró: mantenía `profiles.social.gistId`, que ha dejado de publicarse.
+  // Resucitarlo en cada apertura sería justo lo contrario de lo que se busca. Lo que queda es el saneado de
+  // AMISTADES, que es donde las amistades leen ahora el canal.
+  it('al abrir social propaga mi gist a mis documentos de amistad, y NO al perfil público', async () => {
     firebaseMocks.getCurrentSocialAuthUser.mockResolvedValue({ uid: 'uid-1', email: 'jaime@example.com', displayName: 'Jaime', photoURL: null });
     gistMocks.getSocialSyncConfig.mockReturnValue({ token: 'ghp_x', gistId: 'social-gist', etag: null, lastRemoteUpdatedAt: 0 });
 
     renderHub();
 
-    // El heal se dispara una vez con mi uid y el gist ACTUAL (no hay que re-publicar el perfil a mano).
-    await waitFor(() => expect(firebaseMocks.healOwnDirectoryGist).toHaveBeenCalled());
-    expect(firebaseMocks.healOwnDirectoryGist.mock.calls[0].slice(0, 2)).toEqual(['uid-1', 'social-gist']);
+    await waitFor(() => expect(firebaseMocks.healOwnFriendshipIdentity).toHaveBeenCalled());
+    expect(firebaseMocks.healOwnFriendshipIdentity.mock.calls[0][0]).toBe('uid-1');
+    expect(firebaseMocks.healOwnFriendshipIdentity.mock.calls[0][1]).toMatchObject({ socialGistId: 'social-gist' });
+    // Y el directorio no se toca: el campo se está purgando, no manteniendo.
+    expect(firebaseMocks.healOwnDirectoryGist).not.toHaveBeenCalled();
+  });
+
+  // FASE 2 — al abrir el hub, un canal público se migra a secreto y hay que repuntar las TRES referencias que
+  // quedan: config local, `privateConfig` y los documentos de amistad. Si alguna se queda atrás, el usuario acaba
+  // partido en dos canales, que es justo la deriva que veníamos de arreglar.
+  it('migra el canal público a secreto y repunta config local, privateConfig y amistades', async () => {
+    firebaseMocks.getCurrentSocialAuthUser.mockResolvedValue({ uid: 'uid-1', email: 'jaime@example.com', displayName: 'Jaime', photoURL: null });
+    gistMocks.getSocialSyncConfig.mockReturnValue({ token: 'ghp_x', gistId: 'gs-publico', etag: 'W/"v"', lastRemoteUpdatedAt: 5 });
+    gistMocks.ensureSecretSocialGist.mockResolvedValue({ gistId: 'gs-secreto', etag: 'W/"n"', migrated: true, previousGistId: 'gs-publico' });
+
+    renderHub();
+
+    await waitFor(() => expect(gistMocks.ensureSecretSocialGist).toHaveBeenCalled());
+    // 1) Config local con el id nuevo y SIN el etag/sello del gist anterior.
+    await waitFor(() => expect(gistMocks.saveSocialSyncConfig).toHaveBeenCalledWith(
+      expect.objectContaining({ gistId: 'gs-secreto', etag: 'W/"n"', lastRemoteUpdatedAt: 0 }),
+    ));
+    // 2) `privateConfig`, que es la fuente de verdad para el resto de sus dispositivos.
+    await waitFor(() => expect(firebaseMocks.setPrivateConfig).toHaveBeenCalledWith('uid-1', { socialGistId: 'gs-secreto' }));
+    // 3) Sus amistades, que es de donde lo leen los demás.
+    await waitFor(() => {
+      const conNuevo = firebaseMocks.healOwnFriendshipIdentity.mock.calls.some(
+        (call: unknown[]) => (call[1] as { socialGistId?: string })?.socialGistId === 'gs-secreto',
+      );
+      expect(conNuevo).toBe(true);
+    });
+  });
+
+  // La retirada del canal antiguo es IRREVERSIBLE: solo puede ocurrir después de verificar que el clon tiene el
+  // contenido. Si se invirtiera el orden, un fallo dejaría al usuario sin canal y sin copia.
+  it('retira el canal antiguo SOLO tras verificar que el clon conserva el contenido', async () => {
+    firebaseMocks.getCurrentSocialAuthUser.mockResolvedValue({ uid: 'uid-1', email: 'jaime@example.com', displayName: 'Jaime', photoURL: null });
+    gistMocks.getSocialSyncConfig.mockReturnValue({ token: 'ghp_x', gistId: 'gs-publico', etag: null, lastRemoteUpdatedAt: 0 });
+    gistMocks.ensureSecretSocialGist.mockResolvedValue({ gistId: 'gs-secreto', etag: null, migrated: true, supersededGistIds: ['gs-publico'], keptPublicGistIds: [], copiedEntries: 3 });
+
+    renderHub();
+
+    await waitFor(() => expect(gistMocks.deleteGist).toHaveBeenCalledWith('ghp_x', 'gs-publico'));
+    // Se verificó el CLON (no el original) contra el número de entradas copiadas.
+    expect(gistMocks.socialGistHasContent).toHaveBeenCalledWith('ghp_x', 'gs-secreto', 3);
+  });
+
+  it('retira TODOS los públicos superados, no solo el de la sesión', async () => {
+    firebaseMocks.getCurrentSocialAuthUser.mockResolvedValue({ uid: 'uid-1', email: 'jaime@example.com', displayName: 'Jaime', photoURL: null });
+    gistMocks.getSocialSyncConfig.mockReturnValue({ token: 'ghp_x', gistId: 'gs-vacio', etag: null, lastRemoteUpdatedAt: 0 });
+    gistMocks.ensureSecretSocialGist.mockResolvedValue({
+      gistId: 'gs-secreto', etag: null, migrated: true,
+      supersededGistIds: ['gs-vacio', 'gs-con-resenas'], keptPublicGistIds: [], copiedEntries: 5,
+    });
+
+    renderHub();
+
+    // Con deriva hay dos públicos; dejar uno sería no haber quitado la exposición.
+    await waitFor(() => expect(gistMocks.deleteGist).toHaveBeenCalledTimes(2));
+    const borrados = gistMocks.deleteGist.mock.calls.map((call: unknown[]) => call[1]);
+    expect(borrados.sort()).toEqual(['gs-con-resenas', 'gs-vacio']);
+  });
+
+  it('si el clon no supera la verificación NO borra nada: mejor dos gists que ninguno', async () => {
+    firebaseMocks.getCurrentSocialAuthUser.mockResolvedValue({ uid: 'uid-1', email: 'jaime@example.com', displayName: 'Jaime', photoURL: null });
+    gistMocks.getSocialSyncConfig.mockReturnValue({ token: 'ghp_x', gistId: 'gs-publico', etag: null, lastRemoteUpdatedAt: 0 });
+    gistMocks.ensureSecretSocialGist.mockResolvedValue({ gistId: 'gs-secreto', etag: null, migrated: true, supersededGistIds: ['gs-publico'], keptPublicGistIds: [], copiedEntries: 3 });
+    gistMocks.socialGistHasContent.mockResolvedValue(false);
+
+    renderHub();
+
+    await waitFor(() => expect(gistMocks.socialGistHasContent).toHaveBeenCalled());
+    expect(gistMocks.deleteGist).not.toHaveBeenCalled();
+  });
+
+  // REGRESIÓN: la propia entrada del directorio se reconocía comparando su gist con el de la sesión. Al dejar de
+  // publicarse ese id, la comparación pasó a ser siempre falsa y uno dejaba de reconocerse a sí mismo: su entrada
+  // se trataba como la de un desconocido y su actividad desaparecía de su propio feed.
+  it('reconoce mi propia entrada por identidad aunque el directorio ya no publique el gist', async () => {
+    firebaseMocks.getCurrentSocialAuthUser.mockResolvedValue({ uid: 'me', email: 'me@x.com', displayName: 'Me', photoURL: null });
+    gistMocks.getSocialSyncConfig.mockReturnValue({ token: 'ghp_x', gistId: 'my-social', etag: null, lastRemoteUpdatedAt: 0 });
+    localMocks.loadLocalState.mockReturnValue({
+      c: [{ id: 1, name: 'Halo', _ts: 1, platforms: [], genres: [], steamDeck: false, review: '', score: 5, years: [], strengths: [], weaknesses: [], reasons: [], replayable: false, retry: false, hours: 0 }],
+      v: [], e: [], p: [], deleted: [], updatedAt: 1,
+    } as never);
+    // Perfil propio COMPLETO (nombre en el gist + un juego completado), o el editor se bloquea y no se hidrata.
+    gistMocks.readSocialGist.mockResolvedValue({
+      data: {
+        profile: { name: 'Me', private: false, visibility: { hiddenTabs: [], hideReplayable: false, hideRetry: false, hideGameTime: false, showPhoto: true }, sharedLists: {} },
+        recommendations: [], activity: [], posts: [], updatedAt: 1,
+      },
+      etag: null,
+    } as never);
+    // El directorio ya NO trae `socialGistId` (es lo que hace la fase 1).
+    firebaseMocks.listSocialDirectory.mockResolvedValue([
+      { id: 'me', uid: 'me', displayName: 'Me', photoURL: '', socialGistId: '', gamesGistId: '', updatedAt: 10, tier: 'bronze' },
+    ]);
+    gistMocks.readPublicSocialGistById.mockResolvedValue({
+      profile: { name: 'Me', private: false, visibility: {}, sharedLists: {} },
+      activity: [
+        {
+          id: 'me:1:review', key: 'me:1:review', type: 'review', actorProfileId: 'me', actorName: 'Me',
+          gameId: 1, gameName: 'Halo', rating: 5, grade: 100, recommendationText: '', snippet: 'Mío',
+          createdAt: 10, updatedAt: 10,
+        },
+      ],
+      posts: [], updatedAt: 10,
+    });
+
+    renderHub();
+
+    // Si no se reconociera como propia, se quedaría index-only y su reseña no se leería nunca.
+    await waitFor(() => expect(gistMocks.readPublicSocialGistById).toHaveBeenCalled());
+    expect(gistMocks.readPublicSocialGistById.mock.calls.some((call: unknown[]) => call[0] === 'my-social')).toBe(true);
+  });
+
+  // DOS DISPOSITIVOS A LA VEZ. Sin esta comprobación, cada uno clonaría por su lado y recrearían la deriva que la
+  // migración viene a eliminar. `privateConfig` es la fuente de verdad de la cuenta: si ya hay otro canal ahí, se
+  // adopta en vez de clonar.
+  it('si otro dispositivo ya migró, adopta su canal en vez de clonar otra vez', async () => {
+    firebaseMocks.getCurrentSocialAuthUser.mockResolvedValue({ uid: 'uid-1', email: 'jaime@example.com', displayName: 'Jaime', photoURL: null });
+    gistMocks.getSocialSyncConfig.mockReturnValue({ token: 'ghp_x', gistId: 'gs-viejo', etag: 'W/"v"', lastRemoteUpdatedAt: 9 });
+    firebaseMocks.getPrivateConfig.mockResolvedValue({ socialGistId: 'gs-ya-migrado' });
+
+    renderHub();
+
+    await waitFor(() => expect(gistMocks.saveSocialSyncConfig).toHaveBeenCalledWith(
+      expect.objectContaining({ gistId: 'gs-ya-migrado', etag: null }),
+    ));
+    // Y NO se clona: sería un gist huérfano más.
+    expect(gistMocks.ensureSecretSocialGist).not.toHaveBeenCalled();
+  });
+
+  it('si el canal ya es secreto no toca ninguna referencia', async () => {
+    firebaseMocks.getCurrentSocialAuthUser.mockResolvedValue({ uid: 'uid-1', email: 'jaime@example.com', displayName: 'Jaime', photoURL: null });
+    gistMocks.getSocialSyncConfig.mockReturnValue({ token: 'ghp_x', gistId: 'gs-secreto', etag: null, lastRemoteUpdatedAt: 0 });
+
+    renderHub();
+
+    await waitFor(() => expect(gistMocks.ensureSecretSocialGist).toHaveBeenCalled());
+    expect(firebaseMocks.setPrivateConfig).not.toHaveBeenCalled();
   });
 
   it('feed solo-amigos: muestra la actividad del amigo y NO lee el gist del no-amigo', async () => {
