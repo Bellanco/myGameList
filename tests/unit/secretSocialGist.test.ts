@@ -91,7 +91,7 @@ describe('ensureSecretSocialGist', () => {
 
     const result = await ensureSecretSocialGist(TOKEN, GIST_ID);
 
-    expect(result).toMatchObject({ gistId: NUEVO_ID, migrated: true, previousGistId: GIST_ID });
+    expect(result).toMatchObject({ gistId: NUEVO_ID, migrated: true, supersededGistIds: [GIST_ID], keptPublicGistIds: [] });
     expect(created?.public).toBe(false);
     // El contenido viaja entero: la actividad no se pierde en la migración.
     expect(JSON.parse(created?.content || '{}').activity).toHaveLength(1);
@@ -104,7 +104,7 @@ describe('ensureSecretSocialGist', () => {
 
     const result = await ensureSecretSocialGist(TOKEN, GIST_ID);
 
-    expect(result).toMatchObject({ gistId: GIST_ID, migrated: false, previousGistId: '' });
+    expect(result).toMatchObject({ gistId: GIST_ID, migrated: false, supersededGistIds: [] });
     expect(created).toBeNull();
   });
 
@@ -293,5 +293,42 @@ describe('ensureSecretSocialGist — elección de la fuente', () => {
 
     expect(leidos).toContain(SESION);
     expect(leidos).not.toContain(OTRO);
+  });
+});
+
+// EL CASO REAL EN PRODUCCIÓN: una cuenta con deriva tiene DOS canales públicos, y la sesión apunta al vacío.
+// Clonar del que tiene contenido pero retirar solo el de la sesión dejaría expuesto justamente el de las reseñas:
+// la migración no habría arreglado nada.
+describe('ensureSecretSocialGist — qué se retira con deriva', () => {
+  const VACIO = GIST_ID;                                   // el de la sesión
+  const CON_RESENAS = 'cafecafecafecafecafecafecafecafe';
+
+  beforeEach(() => {
+    listResponse = [ownGist(VACIO, true, 439), ownGist(CON_RESENAS, true, 40_000)];
+  });
+
+  it('retira LOS DOS públicos: el clonado y el vacío', async () => {
+    const result = await ensureSecretSocialGist(TOKEN, VACIO);
+
+    expect(result.migrated).toBe(true);
+    expect(result.supersededGistIds.sort()).toEqual([CON_RESENAS, VACIO].sort());
+    expect(result.keptPublicGistIds).toEqual([]);
+  });
+
+  it('NO retira un público con contenido que no se copió, y lo reporta', async () => {
+    const OTRO_CON_COSAS = 'beefbeefbeefbeefbeefbeefbeefbeef';
+    listResponse = [ownGist(VACIO, true, 439), ownGist(CON_RESENAS, true, 40_000), ownGist(OTRO_CON_COSAS, true, 30_000)];
+
+    const result = await ensureSecretSocialGist(TOKEN, VACIO);
+
+    // Se clona del mayor; el otro con contenido se conserva porque lo suyo NO viajó.
+    expect(result.supersededGistIds).toContain(CON_RESENAS);
+    expect(result.supersededGistIds).toContain(VACIO);
+    expect(result.keptPublicGistIds).toEqual([OTRO_CON_COSAS]);
+  });
+
+  it('nunca se incluye a sí mismo entre los retirados', async () => {
+    const result = await ensureSecretSocialGist(TOKEN, VACIO);
+    expect(result.supersededGistIds).not.toContain(result.gistId);
   });
 });

@@ -672,9 +672,30 @@ export function useSocialViewModel(options?: {
     if (!socialSpaceOpen || !authUser?.uid || !socialCfgGistId) return;
     const token = getSocialSyncConfig()?.token || mainSyncConfig?.token || '';
     if (!token) return;
+    // Se fija el usuario aquí: dentro de las funciones anidadas el estado ya no se puede estrechar a no-nulo.
+    const owner = authUser;
     secretMigrationRef.current = true;
 
-    void ensureSecretSocialGist(token, socialCfgGistId)
+    // ¿Migró ya OTRO dispositivo? `privateConfig` es la fuente de verdad de la cuenta y solo la escribe su dueño.
+    // Sin esta comprobación, dos dispositivos abriendo a la vez clonarían cada uno por su lado y recrearían la
+    // deriva que esta migración viene a eliminar. Si ya hay un canal distinto ahí, se adopta en vez de clonar.
+    void (async () => {
+      const shared = await getPrivateConfig(owner.uid).catch(() => null);
+      const sharedGistId = String(shared?.socialGistId || '').trim();
+      if (sharedGistId && sharedGistId !== socialCfgGistId) {
+        const currentConfig = getSocialSyncConfig();
+        if (currentConfig) {
+          saveSocialSyncConfig({ ...currentConfig, gistId: sharedGistId, etag: null, lastRemoteUpdatedAt: 0 });
+        }
+        setSocialCfgGistId(sharedGistId);
+        setSocialCfgEtag(null);
+        return;
+      }
+      await runSecretMigration(token);
+    })();
+
+    async function runSecretMigration(activeToken: string) {
+    return ensureSecretSocialGist(activeToken, socialCfgGistId)
       .then((result) => {
         // Demasiado grande para leerlo entero por la API: no se migra y se dice. Callarlo dejaría un canal
         // público para siempre sin que nadie sepa por qué.
@@ -691,22 +712,43 @@ export function useSocialViewModel(options?: {
         }
         setSocialCfgGistId(result.gistId);
         setSocialCfgEtag(result.etag);
-        void setPrivateConfig(authUser.uid, { socialGistId: result.gistId }).catch(() => {});
-        // Que el saneado de amistades vuelva a correr con el id nuevo: es de donde lo leen sus amistades.
-        friendshipHealedRef.current = false;
         // RETIRADA DEL GIST ANTIGUO. Es lo único que quita de circulación lo ya publicado: si se quedara, seguiría
         // siendo público e indexable para siempre. Se hace AL FINAL y con verificación previa, en este orden:
         // clonar → repuntar las tres referencias (arriba) → comprobar que el clon tiene el contenido → borrar.
         // Invertirlo dejaría al usuario apuntando a un gist inexistente si algo fallara a media faena.
         void (async () => {
+          // Las referencias se repuntan AQUÍ y se ESPERAN, antes de borrar nada. Antes se dejaba que el efecto de
+          // saneado de amistades corriera por su cuenta (rearmando su ref) mientras el borrado seguía adelante:
+          // si el borrado ganaba la carrera, un amigo que hidratara en ese hueco leía un gist ya inexistente y se
+          // quedaba sin su actividad —cacheada 30 minutos— hasta la siguiente rehidratación.
+          await setPrivateConfig(owner.uid, { socialGistId: result.gistId }).catch(() => {});
+          await healOwnFriendshipIdentity(owner.uid, {
+            name: profileName.trim(),
+            photo: showPhoto && owner.photoURL ? owner.photoURL : '',
+            socialGistId: result.gistId,
+            gamesGistId: mainSyncConfig?.gistId || '',
+          }).catch(() => {});
+          // Ya está repuntado; el efecto de saneado no tiene que repetirlo.
+          friendshipHealedRef.current = true;
+
           const copied = await socialGistHasContent(token, result.gistId, result.copiedEntries);
           if (!copied) {
             // El clon no tiene lo que debía: NO se borra el original. Mejor dos gists que ninguno.
             setFeedback('warn', SOCIAL_UI.status.socialGistMigratedKept);
             return;
           }
-          const deleted = await deleteGist(token, result.previousGistId).catch(() => false);
-          setFeedback('ok', deleted ? SOCIAL_UI.status.socialGistMigrated : SOCIAL_UI.status.socialGistMigratedKept);
+          // Se retiran TODOS los públicos superados, no solo el de la sesión: con deriva puede haber dos, y dejar
+          // el que tiene las reseñas expuesto sería no haber arreglado nada.
+          const results = await Promise.all(
+            result.supersededGistIds.map((id) => deleteGist(token, id).catch(() => false)),
+          );
+          const allDeleted = results.every(Boolean);
+          // Un público con contenido que NO se copió no se borra: se avisa para que decida su dueño.
+          if (result.keptPublicGistIds.length > 0 || !allDeleted) {
+            setFeedback('warn', SOCIAL_UI.status.socialGistMigratedKept);
+            return;
+          }
+          setFeedback('ok', SOCIAL_UI.status.socialGistMigrated);
         })();
       })
       .catch(() => {
@@ -714,7 +756,8 @@ export function useSocialViewModel(options?: {
         // creó el gist nuevo y se repuntó todo, o no se tocó nada.
         secretMigrationRef.current = false;
       });
-  }, [socialSpaceOpen, authUser?.uid, socialCfgGistId, mainSyncConfig?.token, setFeedback]);
+    }
+  }, [socialSpaceOpen, authUser?.uid, socialCfgGistId, mainSyncConfig?.token, setFeedback, profileName, showPhoto, mainSyncConfig?.gistId]);
 
   // AUTO-HEAL DEL DIRECTORIO: RETIRADO. Su trabajo era mantener `profiles/{uid}.social.gistId` al día, y ese campo
   // ha dejado de publicarse (se purga en cada guardado): volver a escribirlo aquí lo resucitaría en cada apertura
