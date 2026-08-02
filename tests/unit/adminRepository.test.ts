@@ -246,6 +246,47 @@ describe('firebaseAdminRepository — censo', () => {
     expect(census.users[0].tier).toBe('bronze');
   });
 
+  it('lee la fecha de alta sellada y, si no la hay, estima con la amistad más antigua', async () => {
+    respondWith(
+      [
+        docOf('con-alta', { uid: 'con-alta', createdAt: 1_000, social: { enabled: true, gistId: 'g' }, updatedAt: 5_000 }),
+        docOf('sin-alta', { uid: 'sin-alta', social: { enabled: true, gistId: 'g' }, updatedAt: 4_000 }),
+      ],
+      [
+        docOf('a1', { users: ['sin-alta', 'x'], status: 'accepted', requester: 'sin-alta', recipient: 'x', createdAt: 900, updatedAt: 2_000 }),
+        docOf('a2', { users: ['sin-alta', 'y'], status: 'accepted', requester: 'y', recipient: 'sin-alta', createdAt: 700, updatedAt: 3_000 }),
+      ],
+    );
+
+    const census = await loadAdminCensus();
+    const conAlta = census.users.find((user) => user.id === 'con-alta');
+    const sinAlta = census.users.find((user) => user.id === 'sin-alta');
+
+    expect(conAlta?.createdAt).toBe(1_000);
+    expect(conAlta?.estimatedFirstSeenAt).toBe(0);
+    // La MÁS ANTIGUA de sus amistades (700), no la primera que aparezca.
+    expect(sinAlta?.createdAt).toBe(0);
+    expect(sinAlta?.estimatedFirstSeenAt).toBe(700);
+    expect(sinAlta?.lastFriendshipAt).toBe(3_000);
+  });
+
+  it('desglosa las peticiones pendientes por quién dio el paso', async () => {
+    respondWith(
+      [docOf('a', { uid: 'a', social: { enabled: true, gistId: 'g' }, updatedAt: 1 })],
+      [
+        docOf('p1', { users: ['a', 'b'], status: 'pending', requester: 'a', recipient: 'b' }),
+        docOf('p2', { users: ['a', 'c'], status: 'pending', requester: 'a', recipient: 'c' }),
+        docOf('p3', { users: ['a', 'd'], status: 'pending', requester: 'd', recipient: 'a' }),
+      ],
+    );
+
+    const census = await loadAdminCensus();
+    // Muchas enviadas y ninguna aceptada es justo el patrón que interesa ver.
+    expect(census.users[0].pendingOut).toBe(2);
+    expect(census.users[0].pendingIn).toBe(1);
+    expect(census.users[0].friends).toBe(0);
+  });
+
   it('traduce el `permission-denied` de las reglas a un mensaje de administración', async () => {
     getDocsMock.mockRejectedValue(Object.assign(new Error('denied'), { code: 'permission-denied' }));
     await expect(loadAdminCensus()).rejects.toThrow(/Sin permisos de administrador/);
@@ -317,5 +358,101 @@ describe('firebaseAdminRepository — moderación', () => {
     expect(result.failures[0]).toMatch(/amistades/);
     // El perfil se intenta igualmente: abortar dejaría al usuario a medio borrar.
     expect(deleteDocMock).toHaveBeenCalledTimes(2);
+  });
+});
+
+// Señales de algo fuera de lugar. Es el criterio con el que el panel decide dónde hay que mirar, así que se
+// prueba aquí (en el repositorio) y no en la vista: mismo juicio para cualquiera que las pinte.
+describe('firebaseAdminRepository — señales', () => {
+  beforeEach(() => {
+    getDocsMock.mockReset();
+    updateDocMock.mockClear();
+    deleteDocMock.mockClear();
+  });
+
+  /** Perfil "sano": con nombre, pseudónimo, gist, esquema vigente y actividad reciente. */
+  function healthy(extra: Record<string, unknown> = {}, socialExtra: Record<string, unknown> = {}) {
+    return docOf('a', {
+      uid: 'a',
+      profileId: 'p-a',
+      schemaVersion: 1,
+      displayName: 'Ada',
+      updatedAt: Date.now() - 1000,
+      social: { enabled: true, gistId: 'gs-a', ...socialExtra },
+      ...extra,
+    });
+  }
+
+  async function anomaliesOf(profile: ReturnType<typeof docOf>, friendships: ReturnType<typeof docOf>[] = []) {
+    respondWith([profile], friendships);
+    const census = await loadAdminCensus();
+    return census.users[0].anomalies;
+  }
+
+  it('un perfil sano no levanta ninguna señal', async () => {
+    expect(await anomaliesOf(healthy())).toEqual([]);
+  });
+
+  it('detecta el social activado sin gist: sale del directorio y no publica nada', async () => {
+    expect(await anomaliesOf(healthy({}, { gistId: '' }))).toContain('enabled-without-gist');
+  });
+
+  it('detecta perfiles a medio crear (sin nombre, sin pseudónimo, esquema viejo)', async () => {
+    expect(await anomaliesOf(healthy({ displayName: '' }))).toContain('no-display-name');
+    expect(await anomaliesOf(healthy({ profileId: '' }))).toContain('no-profile-id');
+    expect(await anomaliesOf(healthy({ schemaVersion: 0 }))).toContain('stale-schema');
+  });
+
+  it('detecta el token en claro aparte del resto de restos legacy, por su gravedad', async () => {
+    const soloToken = await anomaliesOf(healthy({}, { githubToken: 'ghp_x' }));
+    expect(soloToken).toContain('legacy-token');
+    expect(soloToken).not.toContain('legacy-fields');
+
+    expect(await anomaliesOf(healthy({ email: 'x@y.z' }))).toContain('legacy-fields');
+  });
+
+  it('detecta fechas imposibles: actividad futura y alta posterior a la actividad', async () => {
+    const futuro = Date.now() + 60 * 60 * 1000;
+    expect(await anomaliesOf(healthy({ updatedAt: futuro }))).toContain('future-activity');
+    expect(await anomaliesOf(healthy({ createdAt: Date.now(), updatedAt: Date.now() - 60_000 })))
+      .toContain('created-after-activity');
+  });
+
+  it('distingue sin actividad de inactivo, y no marca inactivo a quien acaba de entrar', async () => {
+    expect(await anomaliesOf(healthy({ updatedAt: 0 }))).toContain('never-active');
+
+    const hace40dias = Date.now() - 40 * 24 * 60 * 60 * 1000;
+    expect(await anomaliesOf(healthy({ updatedAt: hace40dias }))).toContain('inactive');
+    expect(await anomaliesOf(healthy())).not.toContain('inactive');
+  });
+
+  it('detecta la deriva del gist social: sus amistades apuntan a otro id que el directorio', async () => {
+    const conDeriva = await anomaliesOf(healthy(), [
+      docOf('a__b', { users: ['a', 'b'], status: 'accepted', requester: 'a', recipient: 'b', requesterSocialGistId: 'gs-VIEJO' }),
+    ]);
+    // Es el fallo por el que las reseñas de alguien no llegan al feed de sus amigos.
+    expect(conDeriva).toContain('gist-drift');
+
+    const sinDeriva = await anomaliesOf(healthy(), [
+      docOf('a__b', { users: ['a', 'b'], status: 'accepted', requester: 'a', recipient: 'b', requesterSocialGistId: 'gs-a' }),
+    ]);
+    expect(sinDeriva).not.toContain('gist-drift');
+  });
+
+  it('sin amistades no se inventa deriva de gist', async () => {
+    expect(await anomaliesOf(healthy())).not.toContain('gist-drift');
+  });
+
+  it('el total de perfiles con señales cuenta perfiles, no señales', async () => {
+    respondWith(
+      [
+        healthy(),
+        docOf('b', { uid: 'b', displayName: '', social: { enabled: true }, updatedAt: 0 }), // varias señales
+      ],
+      [],
+    );
+
+    const census = await loadAdminCensus();
+    expect(census.totals.flagged).toBe(1);
   });
 });
