@@ -637,7 +637,23 @@ export function useSocialViewModel(options?: {
     if (directoryHealedRef.current) return;
     if (!socialSpaceOpen || !authUser?.uid || !socialCfgGistId) return;
     directoryHealedRef.current = true;
-    void healOwnDirectoryGist(authUser.uid, socialCfgGistId, socialCfgEtag);
+    void healOwnDirectoryGist(authUser.uid, socialCfgGistId, socialCfgEtag).then((result) => {
+      if (!result.adoptGistId) return;
+      // EL CANAL VIVO NO ES EL DE ESTE DISPOSITIVO. Pasa cuando aquí quedó configurado un gist que el clonado de
+      // `updateGistPrivacy` dejó huérfano. Se adopta el ganador en la configuración LOCAL: sin esto el usuario
+      // seguiría publicando en el gist perdedor y volvería a divergir en su siguiente guardado.
+      const currentConfig = getSocialSyncConfig();
+      if (currentConfig) {
+        // El ETag y el sello remoto son de OTRO gist: se descartan, o la primera lectura condicional del nuevo
+        // canal se compararía contra la huella del anterior.
+        saveSocialSyncConfig({ ...currentConfig, gistId: result.adoptGistId, etag: null, lastRemoteUpdatedAt: 0 });
+      }
+      setSocialCfgGistId(result.adoptGistId);
+      setSocialCfgEtag(null);
+      // El saneado de amistades ya corrió (o está a punto) con el gist perdedor: se le permite repetir con el
+      // ganador. Sin esto, sus amistades se quedarían apuntando al gist equivocado hasta la sesión siguiente.
+      friendshipHealedRef.current = false;
+    });
   }, [socialSpaceOpen, authUser?.uid, socialCfgGistId, socialCfgEtag]);
 
   // LATIDO DE USO RECIENTE: refresca `profiles.updatedAt`, por el que ordena el directorio y con el que el feed

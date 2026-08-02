@@ -1,4 +1,5 @@
 import { isValidGistId, isValidGithubToken, isValidHttpUrl, safePostText } from '../../core/security/sanitize';
+import type { SocialGistEvidence } from '../../core/social/gistArbitration';
 import { migrateData } from './migrateRepository';
 import { clampRating, normalizeTimestamp } from '../../core/utils/normalize';
 import { resolveGrade } from '../../core/utils/scoreScale';
@@ -1278,6 +1279,32 @@ export async function readSocialGistAtRevision(token: string, gistId: string, ve
     return normalizeSocialGistData(assembleChunkedSocial(JSON.parse(raw), body.files));
   } catch {
     return getEmptySocialGistData();
+  }
+}
+
+/**
+ * Evidencia de un gist social candidato, obtenida SIN autenticación.
+ *
+ * Se puede porque el canal social TIENE que ser público para que los amigos lo lean con su propio token: el gist
+ * vivo es, por definición, legible por cualquiera. Tres estados, igual que `probePublicGistAccess`: un 404 anónimo
+ * significa secreto (descartable); un 403 (rate-limit anónimo) o un fallo de red NO significan nada y se traducen
+ * a `null`, para no descalificar por duda — ese error de interpretación es justo el que provocó los clonados
+ * indebidos que crearon la deriva.
+ *
+ * La usan el panel de administración (que no tiene el token del usuario) y el auto-heal del propio cliente.
+ */
+export async function probeSocialGistEvidence(gistId: string): Promise<SocialGistEvidence> {
+  try {
+    const data = await readPublicSocialGistById(gistId, null);
+    return {
+      gistId,
+      isPublic: true,
+      contentCount: (data.activity?.length || 0) + (data.posts?.length || 0),
+      updatedAt: Number(data.updatedAt || 0),
+    };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : '';
+    return { gistId, isPublic: /\b404\b/.test(message) ? false : null, contentCount: 0, updatedAt: 0 };
   }
 }
 
