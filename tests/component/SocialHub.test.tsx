@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
+import type { SecretSocialGistResult } from '../../src/model/repository/gistRepository';
 
 // Mock de los repos que consume useSocialViewModel: aísla la UI de red/Firebase/IndexedDB.
 // Valida que tras M3 (extracción del viewmodel) SocialHub sigue renderizando ambas ramas sin romper.
@@ -54,7 +55,9 @@ const gistMocks = vi.hoisted(() => ({
   })),
   readPublicSocialGistById: vi.fn(async (_gistId?: string): Promise<any> => ({})),
   // Fase 2: migración del canal a gist secreto. Por defecto, nada que migrar.
-  ensureSecretSocialGist: vi.fn(async (_t?: string, gistId?: string): Promise<any> => ({ gistId, etag: null, migrated: false, supersededGistIds: [], keptPublicGistIds: [], copiedEntries: 0 })),
+  // Tipado con el contrato REAL a propósito: con `Promise<any>` un mock que se quedara atrás (le faltaba
+  // `supersededGistIds`) pasaba el typecheck y reventaba en ejecución como rechazo no capturado.
+  ensureSecretSocialGist: vi.fn(async (_t?: string, gistId?: string): Promise<SecretSocialGistResult> => ({ gistId: gistId || '', etag: null, migrated: false, supersededGistIds: [], keptPublicGistIds: [], copiedEntries: 0 })),
   socialGistHasContent: vi.fn(async (): Promise<boolean> => true),
   deleteGist: vi.fn(async (): Promise<boolean> => true),
   writeSocialGist: vi.fn(async () => ({ etag: null })),
@@ -96,7 +99,7 @@ describe('SocialHub (componente, post-M3)', () => {
     // `clearAllMocks` borra las llamadas pero NO las implementaciones: sin restaurar esta, un test que simule la
     // migración del canal se la contagia a todos los siguientes (les cambiaría el gist a mitad de camino).
     gistMocks.ensureSecretSocialGist.mockImplementation(async (_t?: string, gistId?: string) => ({
-      gistId,
+      gistId: gistId || '',
       etag: null,
       migrated: false,
       supersededGistIds: [],
@@ -281,7 +284,7 @@ describe('SocialHub (componente, post-M3)', () => {
   it('migra el canal público a secreto y repunta config local, privateConfig y amistades', async () => {
     firebaseMocks.getCurrentSocialAuthUser.mockResolvedValue({ uid: 'uid-1', email: 'jaime@example.com', displayName: 'Jaime', photoURL: null });
     gistMocks.getSocialSyncConfig.mockReturnValue({ token: 'ghp_x', gistId: 'gs-publico', etag: 'W/"v"', lastRemoteUpdatedAt: 5 });
-    gistMocks.ensureSecretSocialGist.mockResolvedValue({ gistId: 'gs-secreto', etag: 'W/"n"', migrated: true, previousGistId: 'gs-publico' });
+    gistMocks.ensureSecretSocialGist.mockResolvedValue({ gistId: 'gs-secreto', etag: 'W/"n"', migrated: true, supersededGistIds: ['gs-publico'], keptPublicGistIds: [], copiedEntries: 1 });
 
     renderHub();
 
