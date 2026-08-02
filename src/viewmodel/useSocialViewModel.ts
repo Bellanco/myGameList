@@ -42,7 +42,9 @@ import {
   ensureProfileByEmail,
   getCurrentSocialAuthUser,
   getMyFriendships,
+  getPrivateConfig,
   getPublicConfig,
+  setPrivateConfig,
   setPublicConfig,
   healOwnDirectoryGist,
   healOwnFriendshipIdentity,
@@ -74,6 +76,16 @@ const shouldRedirectToProfileEditor = (isProfileEditorLocked: boolean, activePan
 const isProfileEditorLocked = (mustCreateProfile: boolean, hasBlockingSocialIssue: boolean): boolean => {
   return mustCreateProfile || hasBlockingSocialIssue;
 };
+
+/**
+ * ¿El gist no se pudo leer por la CREDENCIAL (401/403), y no porque no exista?
+ *
+ * Hoy apenas ocurre: el canal social es un gist público y las lecturas funcionan incluso sin cabecera. Cuando
+ * pasen a ser secretos, esta será la diferencia entre "este amigo no ha publicado nada" y "tu token de GitHub ya
+ * no vale". Degradar en silencio en el segundo caso deja al usuario con un feed vacío y sin pista de por qué.
+ */
+const isGithubCredentialError = (error: unknown): boolean =>
+  error instanceof Error && /\b(401|403)\b/.test(error.message);
 
 const isNotFoundGistError = (error: unknown): boolean => {
   return error instanceof Error && /\b404\b/.test(error.message);
@@ -380,8 +392,18 @@ export function useSocialViewModel(options?: {
 
       if (!resolvedGistId && currentUser?.uid && mainConfig?.token) {
         try {
-          const profile = await resolveOwnProfile(currentUser);
-          const gistId = profile?.socialEnabled ? profile.socialGistId.trim() : '';
+          // FUENTE DEL GIST SOCIAL PROPIO, por orden de fiabilidad:
+          //   1. `privateConfig.socialGistId` — owner-only, con UN SOLO escritor (su dueño). Es el sitio donde de
+          //      verdad pertenece este dato, y hasta ahora se escribía sin que nadie lo leyera.
+          //   2. El perfil público, como respaldo LEGACY: es donde se leía antes, pero lo puede ver cualquier
+          //      usuario autenticado y va a dejar de publicarse.
+          // Se consulta `privateConfig` primero para poder retirar el campo del perfil público sin dejar a nadie
+          // sin forma de recuperar su canal en un dispositivo nuevo.
+          const privateConfig = await getPrivateConfig(currentUser.uid).catch(() => null);
+          const privateGistId = String(privateConfig?.socialGistId || '').trim();
+
+          const profile = privateGistId ? null : await resolveOwnProfile(currentUser);
+          const gistId = privateGistId || (profile?.socialEnabled ? profile.socialGistId.trim() : '');
 
           if (gistId) {
             try {
@@ -405,6 +427,12 @@ export function useSocialViewModel(options?: {
               etag: null,
               lastRemoteUpdatedAt: 0,
             });
+            // SIEMBRA: si el id vino del perfil público (perfil anterior a que `privateConfig` se poblara), se
+            // copia a su sitio. Sin esto, retirar el campo del perfil público dejaría a esas cuentas sin ninguna
+            // forma de recuperar su canal. Best-effort: no puede romper la apertura del hub.
+            if (!privateGistId) {
+              void setPrivateConfig(currentUser.uid, { socialGistId: gistId }).catch(() => {});
+            }
             resolvedGistId = gistId;
           }
         } catch {
@@ -1532,6 +1560,10 @@ export function useSocialViewModel(options?: {
         }));
       const entries = [...dirEntries, ...friendOnlyEntries];
 
+      // Lecturas que fallaron por credencial en esta hidratación. Se cuentan para avisar UNA vez al final, en vez
+      // de por cada amigo ilegible.
+      let credentialFailures = 0;
+
       const withProfiles = await mapWithConcurrency(
         entries,
         SOCIAL_DIRECTORY_FETCH_CONCURRENCY,
@@ -1658,7 +1690,12 @@ export function useSocialViewModel(options?: {
               sharedLists,
               visibility: socialData.profile.visibility || defaultSocialVisibility,
             };
-          } catch {
+          } catch (readError) {
+            // Se distingue "no se pudo leer" de "no se pudo leer POR EL TOKEN": lo segundo no es un gist vacío,
+            // es una credencial que ya no vale, y el usuario tiene que enterarse (abajo se avisa una sola vez).
+            if (isGithubCredentialError(readError)) {
+              credentialFailures += 1;
+            }
             return {
               id: entry.id,
               uid: entry.uid,
@@ -1678,6 +1715,10 @@ export function useSocialViewModel(options?: {
       );
 
       setSocialDirectory(withProfiles);
+      if (credentialFailures > 0) {
+        setFeedback('warn', SOCIAL_UI.status.socialReadUnauthorized);
+      }
+
       void putCachedSocialDirectory(socialCfgGistId, withProfiles);
     } catch (error) {
       setSocialDirectory([]);

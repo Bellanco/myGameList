@@ -367,9 +367,18 @@ export async function listSocialDirectory(limitCount = 12, options?: { forceRefr
           tier: normalizeTier(data.tier),
         };
       })
+      // NO se exige `socialGistId`. Antes se filtraba por él, y eso ata el directorio a que ese id se publique en
+      // el perfil, que es justo lo que va a dejar de pasar: el canal social de un amigo se resuelve desde el doc
+      // de amistad, y de un NO amigo no se lee gist ninguno (solo nombre y foto). Con el filtro puesto, un perfil
+      // sin id desaparecía del descubrimiento aunque estuviera perfectamente activo.
+      //
+      // Efecto colateral querido: los perfiles rotos (`social.enabled` sin gist, la señal `enabled-without-gist`
+      // del panel) pasan a verse en el directorio como index-only, en vez de ser invisibles. La hidratación ya
+      // sabe tratarlos: sin candidatos de gist, se quedan en nombre y foto.
+      //
       // Guarda barata: el placeholder ya no puede salir (no tiene `social.enabled`), pero si algún día lo
       // tuviera, no debe colarse en el directorio.
-      .filter((entry) => entry.enabled && Boolean(entry.socialGistId) && entry.id !== '_placeholder')
+      .filter((entry) => entry.enabled && entry.id !== '_placeholder')
       .map((entry) => ({
         id: entry.id,
         uid: entry.uid,

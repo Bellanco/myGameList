@@ -853,6 +853,8 @@ export const SOCIAL_UI = {
     loadProfileFailed: 'No se pudo cargar tu perfil social.',
     saveProfileFailed: 'No se pudo guardar tu perfil social.',
     profileIncomplete: 'Para guardar tu perfil necesitas un nombre y al menos un juego completado.',
+    // Fallo por credencial al leer el canal de un amigo: no es que no haya publicado, es que el token no vale.
+    socialReadUnauthorized: 'No se pudo leer la actividad de alguna de tus amistades: tu conexión con GitHub ha caducado. Vuelve a conectarla en Ajustes.',
     postPublished: 'Publicación compartida.',
     postPublishFailed: 'No se pudo compartir la publicación.',
     profileGamesRefreshFailed: 'No se pudieron actualizar los listados de este perfil.',

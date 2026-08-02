@@ -102,12 +102,32 @@ describe('listSocialDirectory — orden por uso reciente', () => {
     expect(getDocsMock).toHaveBeenCalledTimes(2);
   });
 
-  it('descarta perfiles sin gist social y el placeholder', async () => {
+  // El directorio ya NO exige `socialGistId`. Ese filtro ataba el descubrimiento a que el id se publicara en el
+  // perfil, y va a dejar de publicarse: el canal de un amigo se resuelve desde el doc de amistad, y de un no-amigo
+  // no se lee gist ninguno. Un perfil sin id entra como index-only (nombre y foto), que es todo lo que se enseña
+  // de un desconocido de todas formas.
+  it('admite perfiles sin gist social (index-only) y sigue descartando el placeholder', async () => {
     getDocsMock.mockResolvedValueOnce(
       snapshot([
         profileDoc('ada', ts(3_000)),
         { id: 'sin-gist', data: { uid: 'sin-gist', social: { enabled: true }, updatedAt: ts(9_000) } },
         { id: '_placeholder', data: { uid: '_placeholder', social: { gistId: 'x', enabled: true }, updatedAt: ts(9_000) } },
+      ]),
+    );
+
+    const entries = await listSocialDirectory(50);
+
+    // El orden lo impone el `orderBy` de la consulta, no el cliente: aquí se conserva el del snapshot. Lo que se
+    // comprueba es la PERTENENCIA (que `sin-gist` ya no se cae) y que el placeholder nunca entra.
+    expect(entries.map((entry) => entry.id)).toEqual(['ada', 'sin-gist']);
+    expect(entries.find((entry) => entry.id === 'sin-gist')?.socialGistId).toBe('');
+  });
+
+  it('un perfil con el social DESACTIVADO sigue fuera del directorio', async () => {
+    getDocsMock.mockResolvedValueOnce(
+      snapshot([
+        profileDoc('ada', ts(3_000)),
+        { id: 'apagado', data: { uid: 'apagado', social: { gistId: 'g', enabled: false }, updatedAt: ts(9_000) } },
       ]),
     );
 
