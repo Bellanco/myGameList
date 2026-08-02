@@ -401,8 +401,11 @@ describe('firebaseAdminRepository — señales', () => {
     expect(await anomaliesOf(healthy())).toEqual([]);
   });
 
-  it('detecta el social activado sin gist: sale del directorio y no publica nada', async () => {
-    expect(await anomaliesOf(healthy({}, { gistId: '' }))).toContain('enabled-without-gist');
+  // `enabled-without-gist` se retiró al dejar de publicarse el id del canal en el perfil: estaría vacío para
+  // todo el mundo y la señal se dispararía con cualquiera. Mirar sus amistades tampoco vale — alguien recién
+  // llegado no tiene ninguna y su canal está perfectamente.
+  it('un perfil sin gist en el documento ya NO se señala: es lo normal desde que el id no se publica', async () => {
+    expect(await anomaliesOf(healthy({}, { gistId: '' }))).not.toContain('enabled-without-gist');
   });
 
   it('detecta perfiles a medio crear (sin nombre, sin pseudónimo, esquema viejo)', async () => {

@@ -7,7 +7,7 @@
 // centraliza la resolución (incluida la recuperación del gistId desde el perfil propio de Firestore) para que
 // tanto el hub como los publicadores armen el canal igual.
 import { ensureSyncConfigLoaded, getSocialSyncConfig, getSyncConfig, readSocialGist, saveSocialSyncConfig } from './gistRepository';
-import { getCurrentSocialAuthUser, resolveOwnProfile } from './firebaseRepository';
+import { getCurrentSocialAuthUser, getPrivateConfig, resolveOwnProfile } from './firebaseRepository';
 
 export type SocialChannel = { token: string; gistId: string; etag: string | null };
 
@@ -73,8 +73,16 @@ export async function resolveSocialChannel(options?: { email?: string | null }):
 
   let recoveredGistId = '';
   try {
-    const profile = await resolveOwnProfile({ uid, email });
-    recoveredGistId = profile?.socialEnabled ? profile.socialGistId.trim() : '';
+    // MISMO ORDEN QUE EL HUB: primero `privateConfig` (owner-only, un solo escritor), y el perfil público solo
+    // como respaldo legacy. El id del canal ha dejado de publicarse en el perfil, así que para una cuenta nueva
+    // esta es la ÚNICA vía: sin ella, publicar desde un dispositivo sin config local dejaría de funcionar.
+    const privateConfig = await getPrivateConfig(uid).catch(() => null);
+    recoveredGistId = String(privateConfig?.socialGistId || '').trim();
+
+    if (!recoveredGistId) {
+      const profile = await resolveOwnProfile({ uid, email });
+      recoveredGistId = profile?.socialEnabled ? profile.socialGistId.trim() : '';
+    }
   } catch {
     return { status: 'unavailable' }; // Firestore caído: no se puede resolver, pero nada se rompe.
   }

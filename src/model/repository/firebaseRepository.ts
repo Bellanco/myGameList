@@ -134,7 +134,11 @@ export async function upsertProfileSocialReferences(input: {
       displayName: profileName,
       photoURL: input.user.photoURL,
       social: {
-        gistId: input.socialGistId,
+        // El id del canal social YA NO se publica: lo lee cualquier usuario autenticado, y con él se puede leer
+        // el gist entero (un gist secreto no es privado). Vive en `privateConfig` (owner-only, abajo en este mismo
+        // batch) para su dueño, y denormalizado en los documentos de amistad para sus amistades, que son los
+        // únicos que necesitan leerlo. `deleteField()` lo purga de los perfiles que ya lo llevaban.
+        gistId: deleteField(),
         gamesGistId: deleteField(),
         etag: input.socialGistEtag,
         enabled: true,
@@ -386,7 +390,9 @@ export async function ensureProfileByEmail(input: {
         displayName: profileName,
         photoURL: resolvedPhotoURL,
         social: {
-          gistId: input.socialGistId,
+          // Ver la nota de `upsertProfileSocialReferences`: el id del canal deja de publicarse y se purga de los
+          // perfiles existentes. Sus amistades lo tienen denormalizado; su dueño, en `privateConfig`.
+          gistId: deleteField(),
           etag: input.socialGistEtag,
           enabled: true,
           ...(canPurgeLegacyFields ? { gamesGistId: deleteField() } : {}),

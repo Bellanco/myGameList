@@ -15,7 +15,6 @@ import {
   type SocialPostEntry,
   type SocialProfileVisibility,
   type SocialSharedGame,
-  updateGistPrivacy,
   writeSocialGist,
 } from '../model/repository/gistRepository';
 import { publishPost } from '../model/repository/socialPublishRepository';
@@ -46,7 +45,6 @@ import {
   getPublicConfig,
   setPrivateConfig,
   setPublicConfig,
-  healOwnDirectoryGist,
   healOwnFriendshipIdentity,
   listSocialDirectory,
   readFriendship,
@@ -656,33 +654,13 @@ export function useSocialViewModel(options?: {
     });
   }, [socialSpaceOpen, authUser?.uid, authUser?.photoURL, socialCfgGistId, profileName, showPhoto, mainSyncConfig?.gistId]);
 
-  // AUTO-HEAL del directorio (una vez por sesión): si mi `profiles/{uid}.social.gistId` quedó anclado a un gist viejo
-  // (cambié de gist social sin re-publicar el perfil), lo sincroniza con el gist ACTUAL de mi sesión. Sin esto, el
-  // feed de mis amigos leería mi gist obsoleto y no vería mi actividad. Complementa al heal de amistades: corrige el
-  // problema en ORIGEN (Firestore) sin que el usuario tenga que hacer nada. Solo escribe si de verdad diverge.
-  const directoryHealedRef = useRef(false);
-  useEffect(() => {
-    if (directoryHealedRef.current) return;
-    if (!socialSpaceOpen || !authUser?.uid || !socialCfgGistId) return;
-    directoryHealedRef.current = true;
-    void healOwnDirectoryGist(authUser.uid, socialCfgGistId, socialCfgEtag).then((result) => {
-      if (!result.adoptGistId) return;
-      // EL CANAL VIVO NO ES EL DE ESTE DISPOSITIVO. Pasa cuando aquí quedó configurado un gist que el clonado de
-      // `updateGistPrivacy` dejó huérfano. Se adopta el ganador en la configuración LOCAL: sin esto el usuario
-      // seguiría publicando en el gist perdedor y volvería a divergir en su siguiente guardado.
-      const currentConfig = getSocialSyncConfig();
-      if (currentConfig) {
-        // El ETag y el sello remoto son de OTRO gist: se descartan, o la primera lectura condicional del nuevo
-        // canal se compararía contra la huella del anterior.
-        saveSocialSyncConfig({ ...currentConfig, gistId: result.adoptGistId, etag: null, lastRemoteUpdatedAt: 0 });
-      }
-      setSocialCfgGistId(result.adoptGistId);
-      setSocialCfgEtag(null);
-      // El saneado de amistades ya corrió (o está a punto) con el gist perdedor: se le permite repetir con el
-      // ganador. Sin esto, sus amistades se quedarían apuntando al gist equivocado hasta la sesión siguiente.
-      friendshipHealedRef.current = false;
-    });
-  }, [socialSpaceOpen, authUser?.uid, socialCfgGistId, socialCfgEtag]);
+  // AUTO-HEAL DEL DIRECTORIO: RETIRADO. Su trabajo era mantener `profiles/{uid}.social.gistId` al día, y ese campo
+  // ha dejado de publicarse (se purga en cada guardado): volver a escribirlo aquí lo resucitaría en cada apertura
+  // del hub, justo lo contrario de lo que se busca.
+  //
+  // Lo que sigue haciendo falta lo cubre `healOwnFriendshipIdentity`, arriba: propaga el gist de la sesión a los
+  // documentos de amistad, que es donde ahora lo leen las amistades. La función `healOwnDirectoryGist` y el
+  // árbitro quedan sin uso, pendientes de retirar en la limpieza final.
 
   // LATIDO DE USO RECIENTE: refresca `profiles.updatedAt`, por el que ordena el directorio y con el que el feed
   // decide si un amigo sigue activo. Publicar ya lo refresca; esto cubre a quien entra solo a mirar. Acotado a
@@ -1908,9 +1886,12 @@ export function useSocialViewModel(options?: {
         updatedAt: Date.now(),
       });
 
-      const privacyResult = await updateGistPrivacy(socialConfig.token, socialCfgGistId, true);
-      const finalGistId = privacyResult.gistId;
-      const finalEtag = privacyResult.etag || writeResult.etag || socialCfgEtag;
+      // Ya NO se fuerza el gist a público. GitHub no permite cambiar la visibilidad, así que aquello CLONABA el
+      // gist a un id nuevo y dejaba el original huérfano: es el origen de la deriva. Y era innecesario, porque un
+      // gist secreto lo puede leer igualmente quien tenga su identificador («secret gists aren't private»).
+      // El canal se queda con el id que ya tenía.
+      const finalGistId = socialCfgGistId;
+      const finalEtag = writeResult.etag || socialCfgEtag;
 
       await ensureProfileByEmail({
         user: authUser,

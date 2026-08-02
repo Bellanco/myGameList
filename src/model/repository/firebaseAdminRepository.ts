@@ -279,7 +279,10 @@ async function tallyFriendships(firestore: import('firebase/firestore').Firestor
 function detectAnomalies(row: Omit<AdminUserRow, 'anomalies'>, friendGistIds: Set<string>, now: number): AdminAnomaly[] {
   const found: AdminAnomaly[] = [];
 
-  if (row.socialEnabled && !row.socialGistId) found.push('enabled-without-gist');
+  // `enabled-without-gist` ya NO se emite. El id del canal dejó de publicarse en el perfil, así que está vacío
+  // para todo el mundo y la señal se dispararía con cualquiera. Tampoco se puede sustituir mirando sus amistades:
+  // alguien recién llegado y sin amigos no tiene ninguna, y no por eso su canal está roto. El panel simplemente
+  // pierde esta señal — es el precio de que el id deje de ser world-readable, y es un buen cambio.
   if (!row.displayName.trim()) found.push('no-display-name');
   if (!row.profileId) found.push('no-profile-id');
   if (!row.idMatchesUid) found.push('foreign-doc-id');

@@ -984,8 +984,19 @@ export async function findGamesGistId(token: string): Promise<string> {
   return match?.id ?? '';
 }
 
+/**
+ * Crea el canal social como gist SECRETO.
+ *
+ * Antes se creaba público, y `updateGistPrivacy` se encargaba de mantenerlo así. Era innecesario: según la propia
+ * documentación de GitHub, «secret gists aren't private» — quien tenga el identificador puede leerlos, con o sin
+ * sesión. Es decir, un amigo siempre pudo leer un canal secreto; lo único que aportaba ser público era aparecer
+ * listado en el perfil de GitHub de su dueño y en las búsquedas, que es exactamente lo que no queremos.
+ *
+ * Y de paso desaparece la causa de la deriva de gists: GitHub no deja cambiar la visibilidad, así que volverlos
+ * públicos obligaba a CLONARLOS a un id nuevo, dejando el original huérfano.
+ */
 export async function createSocialGist(token: string): Promise<{ gistId: string; etag: string | null }> {
-  return createSocialGistWithData(token, getEmptySocialGistData(), true);
+  return createSocialGistWithData(token, getEmptySocialGistData(), false);
 }
 
 async function createSocialGistWithData(token: string, data: SocialGistData, isPublic: boolean): Promise<{ gistId: string; etag: string | null }> {
