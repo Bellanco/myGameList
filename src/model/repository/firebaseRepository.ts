@@ -374,7 +374,12 @@ export async function ensureProfileByEmail(input: {
   // El doc del dueño se identifica por su uid: solo ahí se puede purgar sin riesgo. Sobre un doc legacy con otro id
   // no se borra nada (se migrará antes en el barrido), porque su `email` es la única forma de volver a encontrarlo.
   const canPurgeLegacyFields = targetId === input.user.uid;
-  const hasLegacyPii = Boolean(existing && (existing.email || existing.gamesGistId));
+  // `social.gistId` cuenta como resto legacy por purgar, NO como dato a comparar con el de la sesión: el doc ya no
+  // lo publica, así que `existing.socialGistId !== input.socialGistId` daba SIEMPRE distinto (vacío contra el id
+  // real) y el perfil se reescribía en cada apertura —una escritura de Firestore por usuario y sesión, con su
+  // `updatedAt` movido, que dejaba el chequeo de cambios sin efecto—. Tratándolo así se reescribe UNA vez, para
+  // purgarlo, y a partir de ahí el chequeo vuelve a distinguir de verdad si algo cambió.
+  const hasLegacyPii = Boolean(existing && (existing.email || existing.gamesGistId || existing.socialGistId));
   const shouldWriteProfile =
     !existing ||
     !existing.socialEnabled ||
@@ -382,8 +387,7 @@ export async function ensureProfileByEmail(input: {
     existing.id !== input.user.uid ||
     existing.displayName.trim() !== profileName ||
     (existing.photoURL || '') !== resolvedPhotoURL ||
-    existing.socialGistId !== input.socialGistId ||
-    // Perfil anterior a la purga: se reescribe una vez para retirarle el email / el id del gist de juegos.
+    // Perfil anterior a la purga: se reescribe una vez para retirarle el email / los ids de gist.
     (canPurgeLegacyFields && hasLegacyPii);
 
   // B2 — PRIMERO se guardan los ids en `privateConfig`/`userMap`, y solo DESPUÉS se purgan del perfil público.
