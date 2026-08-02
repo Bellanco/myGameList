@@ -7,7 +7,7 @@
 // consumidor cambie sus imports.
 import { deleteField, doc, getDoc, serverTimestamp, setDoc, writeBatch } from 'firebase/firestore';
 import { decryptFromString, encryptToString } from '../../core/security/crypto';
-import { seedProfileIdFromRemote } from './indexedDbRepository';
+import { getLocalMeta, patchLocalMeta, seedProfileIdFromRemote } from './indexedDbRepository';
 import {
   initializeFirebaseServices,
   isPermissionDeniedError,
@@ -24,8 +24,6 @@ import {
   saveProfileByEmailCache,
 } from './firebaseSocialRepository';
 import { DEFAULT_PROFILE_TIER } from '../../core/constants/tiers';
-import { pickLiveSocialGist } from '../../core/social/gistArbitration';
-import { probeSocialGistEvidence } from './gistRepository';
 import type { FirestorePrivateConfig, FirestorePublicConfig } from '../types/firestore';
 
 // --- RE-EXPORTS: API pública estable (los consumidores siguen importando desde firebaseRepository) ---
@@ -134,7 +132,11 @@ export async function upsertProfileSocialReferences(input: {
       displayName: profileName,
       photoURL: input.user.photoURL,
       social: {
-        gistId: input.socialGistId,
+        // El id del canal social YA NO se publica: lo lee cualquier usuario autenticado, y con él se puede leer
+        // el gist entero (un gist secreto no es privado). Vive en `privateConfig` (owner-only, abajo en este mismo
+        // batch) para su dueño, y denormalizado en los documentos de amistad para sus amistades, que son los
+        // únicos que necesitan leerlo. `deleteField()` lo purga de los perfiles que ya lo llevaban.
+        gistId: deleteField(),
         gamesGistId: deleteField(),
         etag: input.socialGistEtag,
         enabled: true,
@@ -270,7 +272,15 @@ export async function setUserMap(uid: string, profileId: string): Promise<void> 
 export async function establishProfileIdentity(uid: string, profileId: string, gamesGistId: string, socialGistId: string): Promise<void> {
   try {
     await setUserMap(uid, profileId);
-    await setPrivateConfig(uid, { profileId, gamesGistId, socialGistId });
+    // Los ids VACÍOS no se escriben. `setPrivateConfig` hace merge, así que mandar `gamesGistId: ''` no es "no
+    // tocarlo": lo BORRA. Guardar el perfil social desde un dispositivo sin la sincronización principal
+    // configurada dejaba a cero el id del gist de juegos guardado, y con él la recuperación en otros
+    // dispositivos. Solo se escribe lo que de verdad se conoce.
+    await setPrivateConfig(uid, {
+      profileId,
+      ...(gamesGistId ? { gamesGistId } : {}),
+      ...(socialGistId ? { socialGistId } : {}),
+    });
   } catch (error) {
     console.warn('[firebase] No se pudo establecer profileId/userMap:', error instanceof Error ? error.message : error);
   }
@@ -364,7 +374,12 @@ export async function ensureProfileByEmail(input: {
   // El doc del dueño se identifica por su uid: solo ahí se puede purgar sin riesgo. Sobre un doc legacy con otro id
   // no se borra nada (se migrará antes en el barrido), porque su `email` es la única forma de volver a encontrarlo.
   const canPurgeLegacyFields = targetId === input.user.uid;
-  const hasLegacyPii = Boolean(existing && (existing.email || existing.gamesGistId));
+  // `social.gistId` cuenta como resto legacy por purgar, NO como dato a comparar con el de la sesión: el doc ya no
+  // lo publica, así que `existing.socialGistId !== input.socialGistId` daba SIEMPRE distinto (vacío contra el id
+  // real) y el perfil se reescribía en cada apertura —una escritura de Firestore por usuario y sesión, con su
+  // `updatedAt` movido, que dejaba el chequeo de cambios sin efecto—. Tratándolo así se reescribe UNA vez, para
+  // purgarlo, y a partir de ahí el chequeo vuelve a distinguir de verdad si algo cambió.
+  const hasLegacyPii = Boolean(existing && (existing.email || existing.gamesGistId || existing.socialGistId));
   const shouldWriteProfile =
     !existing ||
     !existing.socialEnabled ||
@@ -372,9 +387,15 @@ export async function ensureProfileByEmail(input: {
     existing.id !== input.user.uid ||
     existing.displayName.trim() !== profileName ||
     (existing.photoURL || '') !== resolvedPhotoURL ||
-    existing.socialGistId !== input.socialGistId ||
-    // Perfil anterior a la purga: se reescribe una vez para retirarle el email / el id del gist de juegos.
+    // Perfil anterior a la purga: se reescribe una vez para retirarle el email / los ids de gist.
     (canPurgeLegacyFields && hasLegacyPii);
+
+  // B2 — PRIMERO se guardan los ids en `privateConfig`/`userMap`, y solo DESPUÉS se purgan del perfil público.
+  // El orden importa: la escritura de abajo borra `social.gistId` y `social.gamesGistId` del documento público, y
+  // este guardado es best-effort (se traga sus errores). Con el orden inverso, un fallo de red entre ambos dejaba
+  // al usuario purgado y SIN guardar: ni podía recuperar su canal social ni su gist de juegos en otro
+  // dispositivo. Guardando antes, el peor caso es tener el dato en los dos sitios, que es inofensivo.
+  await establishProfileIdentity(input.user.uid, profileId, gamesGistId, input.socialGistId);
 
   if (shouldWriteProfile) {
     await setDoc(
@@ -386,7 +407,9 @@ export async function ensureProfileByEmail(input: {
         displayName: profileName,
         photoURL: resolvedPhotoURL,
         social: {
-          gistId: input.socialGistId,
+          // Ver la nota de `upsertProfileSocialReferences`: el id del canal deja de publicarse y se purga de los
+          // perfiles existentes. Sus amistades lo tienen denormalizado; su dueño, en `privateConfig`.
+          gistId: deleteField(),
           etag: input.socialGistEtag,
           enabled: true,
           ...(canPurgeLegacyFields ? { gamesGistId: deleteField() } : {}),
@@ -401,6 +424,13 @@ export async function ensureProfileByEmail(input: {
       },
       { merge: true },
     );
+  } else {
+    // El perfil no cambia, pero publicar ES actividad y `updatedAt` es lo que la mide: con él parado, el amigo que
+    // publica desde la ficha del juego sin abrir nunca el espacio social (el latido del hub no le llega) cruzaría
+    // el corte de inactividad de 30 días y los demás dejarían de leer su gist — sus reseñas y publicaciones
+    // desaparecerían de sus feeds mientras él las sigue publicando. Acotado a una escritura al día, así que no
+    // reintroduce la reescritura por publicación que este chequeo evita.
+    await touchOwnProfileActivityThrottled(input.user.uid);
   }
 
   // B1: respaldo CIFRADO del token en privateConfig; nunca en claro en `profiles`.
@@ -418,9 +448,6 @@ export async function ensureProfileByEmail(input: {
       console.warn('[firebase] No se pudo respaldar/limpiar el token:', error instanceof Error ? error.message : error);
     }
   }
-
-  // B2: establecer profileId/userMap/privateConfig.
-  await establishProfileIdentity(input.user.uid, profileId, gamesGistId, input.socialGistId);
 
   const written: SocialProfileReference = {
     id: targetId,
@@ -498,79 +525,85 @@ export async function touchOwnProfileActivity(uid: string): Promise<void> {
 }
 
 /**
- * Resultado del saneado del canal social. Dos desenlaces distintos, y el segundo no puede resolverse aquí:
+ * Retira del perfil PÚBLICO los ids de gist que aún publique, y solo esos campos.
  *
- *  - `healed`: se corrigió el documento del directorio, que apuntaba a un gist que ya no es el vivo.
- *  - `adoptGistId`: el gist vivo NO es el de este dispositivo. Solo el llamador puede arreglarlo, porque implica
- *    reescribir la configuración local de sync (que vive en el navegador, no en Firestore). Si no lo adopta, el
- *    usuario seguiría publicando en el gist perdedor y volvería a divergir en el siguiente guardado.
+ * Hace falta aparte de `ensureProfileByEmail` porque esa función únicamente corre al PUBLICAR (reseña, publicación
+ * o guardado del perfil). Quien migró su canal a secreto y desde entonces solo ha entrado a mirar se quedaba
+ * anunciando en su perfil un gist que la propia migración había borrado: sus amigos lo leían igual —la hidratación
+ * fusiona candidatos y tolera un 404—, pero gastaban una petición muerta cada vez y el panel lo marcaba como
+ * deriva para siempre. Llamada al abrir el espacio social, se resuelve sola en la primera visita.
+ *
+ * SEGURIDAD: no sella nada, EXIGE que ya esté sellado. Solo retira el campo cuyo id ya consta en `privateConfig`
+ * (owner-only), que es de donde se recupera el canal en otro dispositivo. Comprobarlo en vez de escribirlo evita
+ * dos daños: purgar un `gamesGistId` sin respaldo desde un equipo sin la sincronización principal configurada, y
+ * pisar en `privateConfig` —la fuente de verdad de la cuenta— el canal que otro dispositivo acabe de migrar.
+ *
+ * Barata e idempotente: si el perfil ya no publica nada, no escribe. Best-effort: no lanza.
  */
-export interface GistHealResult {
-  healed: boolean;
-  /** Gist que el llamador debe adoptar como suyo, o '' si no hay nada que adoptar. */
-  adoptGistId: string;
+export async function purgeOwnPublicGistIds(input: {
+  uid: string;
+  socialGistId: string;
+  gamesGistId: string;
+}): Promise<boolean> {
+  const uid = String(input.uid || '').trim();
+  if (!uid) return false;
+  try {
+    const services = await initializeFirebaseServices();
+    if (!services) return false;
+    const ref = doc(services.firestore, 'profiles', uid);
+    const snap = await getDoc(ref);
+    if (!snap.exists()) return false;
+
+    const social = ((snap.data() as { social?: Record<string, unknown> })?.social || {}) as Record<string, unknown>;
+    if (!social.gistId && !social.gamesGistId) return false;
+
+    const saved = await getPrivateConfig(uid);
+    const savedSocial = String(saved?.socialGistId || '').trim();
+    const savedGames = String(saved?.gamesGistId || '').trim();
+    // El id social se retira solo si el respaldo coincide con el canal de esta sesión: si difieren, otro
+    // dispositivo migró y aquí no se sabe cuál manda, así que no se toca nada.
+    const purgeSocial = Boolean(social.gistId) && Boolean(savedSocial) && savedSocial === String(input.socialGistId || '').trim();
+    const purgeGames = Boolean(social.gamesGistId) && Boolean(savedGames);
+    if (!purgeSocial && !purgeGames) return false;
+
+    await setDoc(
+      ref,
+      {
+        uid,
+        social: {
+          ...(purgeSocial ? { gistId: deleteField() } : {}),
+          ...(purgeGames ? { gamesGistId: deleteField() } : {}),
+        },
+      },
+      { merge: true },
+    );
+    invalidateOwnProfileCache(uid);
+    invalidateSocialDirectoryCache();
+    return true;
+  } catch {
+    return false;
+  }
 }
 
-const NO_HEAL: GistHealResult = { healed: false, adoptGistId: '' };
+/** Cada cuánto, como mucho, se refresca la recencia desde un mismo dispositivo: una escritura al día. */
+export const PROFILE_TOUCH_MIN_INTERVAL_MS = 20 * 60 * 60 * 1000;
 
 /**
- * Auto-heal del directorio: sincroniza `profiles/{uid}.social.gistId` con el gist social ACTUAL del dueño (el de su
- * sesión). El doc del directorio solo se reescribe al re-publicar el perfil, así que puede quedar anclado a un gist
- * viejo si el usuario cambió de gist social sin volver a publicar → el feed de sus amigos leería un gist obsoleto.
- * Este heal (best-effort, análogo a `healOwnFriendshipIdentity`) lo corrige sin intervención del usuario. Escribe
- * SOLO si de verdad diverge (evita writes/invalidaciones de caché en cada apertura). Merge de `social` → preserva
- * `gamesGistId`/`enabled`/etc. Devuelve true si aplicó una corrección.
+ * `touchOwnProfileActivity` con el acotado que exige su contrato: una vez cada 20 h por dispositivo. Es el único
+ * sitio donde vive ese intervalo, para que el latido del hub y el de la publicación no puedan separarse.
+ *
+ * Best-effort de principio a fin: si IndexedDB no responde, no se refresca la recencia y no pasa nada más.
  */
-export async function healOwnDirectoryGist(
-  uid: string,
-  socialGistId: string,
-  socialGistEtag: string | null = null,
-): Promise<GistHealResult> {
-  if (!uid || !socialGistId) return NO_HEAL;
-  const services = await initializeFirebaseServices();
-  if (!services) return NO_HEAL;
-  const ref = doc(services.firestore, 'profiles', uid);
-  const snap = await getDoc(ref);
-  // Sin doc → nada que sanear (se creará al publicar el perfil). Ya coincide → no se escribe.
-  if (!snap.exists()) return NO_HEAL;
-  const data = snap.data() as { social?: { gistId?: string } };
-  const publishedGistId = String(data.social?.gistId || '');
-  if (publishedGistId === socialGistId) return NO_HEAL;
-
-  // DIVERGEN. Antes se escribía el de la sesión sin más, y eso hacía que ganara el ÚLTIMO dispositivo en abrir:
-  // uno antiguo con la configuración obsoleta reimponía su gist y devolvía al usuario a la deriva (sus reseñas
-  // nuevas dejaban de verse). Ahora se arbitra con evidencia y se escribe el ganador, que puede ser el que ya
-  // estaba publicado. Mismo árbitro que usa el panel de administración, para que los dos converjan al mismo id
-  // en vez de reescribirse mutuamente.
-  //
-  // El coste de red solo se paga en este caso raro: si los ids coinciden, la función ya ha salido arriba.
-  if (publishedGistId) {
-    const verdict = pickLiveSocialGist(await Promise.all([socialGistId, publishedGistId].map(probeSocialGistEvidence)));
-    // `sin-evidencia` (sin red, o rate-limit anónimo agotado) NO es un veredicto: se conserva el comportamiento de
-    // siempre y manda el gist de la sesión, que es la única verdad de la que dispone este dispositivo.
-    if (verdict.reason !== 'sin-evidencia') {
-      // Sin ganador (ninguno legible sin autenticación) no se toca nada: mejor la deriva que apuntar a los amigos
-      // a un gist que no pueden leer. `updateGistPrivacy` lo volverá público en el siguiente guardado.
-      if (!verdict.winner) return NO_HEAL;
-      // GANA EL PUBLICADO: este dispositivo es el que está equivocado. No basta con no escribir —si se dejara así,
-      // el usuario seguiría PUBLICANDO en el gist perdedor y volvería a divergir en el siguiente guardado. Se le
-      // pide al llamador que lo adopte en su configuración local.
-      if (verdict.winner === publishedGistId) {
-        return { healed: false, adoptGistId: publishedGistId };
-      }
-    }
+export async function touchOwnProfileActivityThrottled(uid: string): Promise<void> {
+  if (!uid) return;
+  try {
+    const meta = await getLocalMeta();
+    const last = Number(meta?.profileTouchedAt || 0);
+    if (last && Date.now() - last < PROFILE_TOUCH_MIN_INTERVAL_MS) return;
+    await touchOwnProfileActivity(uid);
+    await patchLocalMeta({ profileTouchedAt: Date.now() });
+  } catch {
+    /* best-effort: la recencia es orden, no funcionalidad. */
   }
-
-  await setDoc(
-    ref,
-    {
-      uid,
-      social: { gistId: socialGistId, ...(socialGistEtag ? { etag: socialGistEtag } : {}) },
-      updatedAt: serverTimestamp(),
-    },
-    { merge: true },
-  );
-  invalidateOwnProfileCache(uid);
-  invalidateSocialDirectoryCache();
-  return { healed: true, adoptGistId: '' };
 }
+

@@ -309,7 +309,7 @@ export const UI_MESSAGES = {
       title: 'Zona de riesgo',
       deleteTitle: 'Borrar mi cuenta',
       deleteBody: 'Elimina tu perfil social, tus amistades y la configuración guardada en la nube, y borra los datos de este dispositivo (listas locales, sesión y token). No se puede deshacer.',
-      deleteGistsNote: 'Tus Gists de GitHub NO se tocan: viven en tu cuenta de GitHub y solo tú puedes borrarlos.',
+      deleteGistsNote: 'Tus Gists de GitHub NO se tocan al borrar la cuenta: viven en tu cuenta y solo tú puedes borrarlos. (La única excepción, ajena a este borrado, es la retirada del canal social antiguo que la app migró a no listado.)',
       deleteGistsLink: 'Ver mis Gists',
       deleteGistsUrl: 'https://gist.github.com',
       deleteBtn: 'Borrar cuenta',
@@ -486,19 +486,9 @@ export const ADMIN_PANEL_UI = {
     driftTitle: 'Gists en circulación',
     profileGist: 'Publica en su perfil',
     friendGist: 'Sus amistades apuntan a',
-    unifyBtn: 'Unificar canal social',
-    unifyHint: 'Comprueba cuál de los dos gists es legible públicamente y cuál tiene el contenido, y deja ese en el perfil y en todas sus amistades.',
-    confirm: (name: string) => `¿Unificar el canal social de ${name}? Se comprobará cuál de sus gists es el vivo (público y con contenido) y se escribirá ese en su perfil y en todas sus amistades. No se borra ningún gist.`,
-    unifyDone: (gistId: string, friendships: number) =>
-      `Canal unificado en ${gistId.slice(0, 8)}… (${friendships} ${friendships === 1 ? 'amistad corregida' : 'amistades corregidas'}).`,
-    unifyAlready: 'Ya estaba unificado: no había nada que corregir.',
-    unifyNoPublic: 'Ninguno de sus gists es legible sin autenticación, así que ninguno puede ser el canal vivo. Se arreglará cuando su cliente vuelva a publicar y lo haga público.',
-    unifyNoEvidence: 'No se pudo leer ninguno de sus gists (sin red o límite de peticiones de GitHub agotado). No se ha tocado nada: inténtalo más tarde.',
-    unifyPartial: 'Unificación incompleta: revisa la consola para el detalle.',
-    // La guarda que evita perder de vista reseñas: mientras hay deriva, el hub FUSIONA los dos gists de un amigo,
-    // así que unificar dejaría fuera lo que solo esté en el descartado.
-    unifyBlocked: (winner: string, loser: string) =>
-      `No se ha tocado nada: el gist descartado (${loser.slice(0, 8)}…) también tiene actividad, y ahora mismo la ves porque el hub fusiona los dos. Unificar en ${winner.slice(0, 8)}… la dejaría fuera. Fusionarlos requiere el token de su dueño, así que esto lo tiene que resolver su propio cliente al abrir el espacio social.`,
+    // Ya no hay acción: la deriva se resuelve sola cuando su dueño abre el hub (la migración elige el canal con
+    // contenido y repunta las referencias). Aquí solo se enseña, para saber a quién le falta pasar por ahí.
+    driftHint: 'Se resuelve solo cuando esta persona abra el espacio social: su cliente elegirá el canal con contenido y actualizará sus amistades. Desde aquí no se puede hacer nada (haría falta su token de GitHub).',
   },
   // Señales de algo fuera de lugar. Etiqueta corta para la píldora y explicación en el `title`.
   anomalies: {
@@ -853,6 +843,13 @@ export const SOCIAL_UI = {
     loadProfileFailed: 'No se pudo cargar tu perfil social.',
     saveProfileFailed: 'No se pudo guardar tu perfil social.',
     profileIncomplete: 'Para guardar tu perfil necesitas un nombre y al menos un juego completado.',
+    // Fallo por credencial al leer el canal de un amigo: no es que no haya publicado, es que el token no vale.
+    socialReadUnauthorized: 'No se pudo leer la actividad de alguna de tus amistades: tu conexión con GitHub ha caducado. Vuelve a conectarla en Ajustes.',
+    // Migración del canal a gist secreto, con retirada del antiguo (ver condiciones de uso).
+    socialGistMigrated: 'Tu canal social se ha movido a un Gist no listado y se ha retirado el anterior, que era público. Tus reseñas y publicaciones siguen intactas.',
+    // El clon no pasó la verificación: se conservan LOS DOS. Mejor dos gists que ninguno.
+    socialGistMigratedKept: 'Tu canal social se ha movido a un Gist no listado, pero el anterior no se ha podido retirar y sigue siendo público. Puedes borrarlo tú en gist.github.com.',
+    socialGistTooLarge: 'Tu canal social es demasiado grande para moverlo automáticamente y sigue siendo público. Escríbenos y lo migramos a mano.',
     postPublished: 'Publicación compartida.',
     postPublishFailed: 'No se pudo compartir la publicación.',
     profileGamesRefreshFailed: 'No se pudieron actualizar los listados de este perfil.',

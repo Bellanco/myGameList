@@ -10,6 +10,8 @@ const firebaseMocks = vi.hoisted(() => ({
   resolveStableProfileId: vi.fn(async () => 'pid-1'),
   ensureProfileByEmail: vi.fn(async () => ({})),
   resolveOwnProfile: vi.fn(async (): Promise<unknown> => null),
+  // El canal se recupera primero de `privateConfig` (owner-only); el perfil público es respaldo legacy.
+  getPrivateConfig: vi.fn(async (): Promise<unknown> => null),
 }));
 vi.mock('../../src/model/repository/firebaseRepository', () => firebaseMocks);
 
@@ -80,6 +82,7 @@ beforeEach(() => {
   firebaseMocks.resolveStableProfileId.mockResolvedValue('pid-1');
   firebaseMocks.ensureProfileByEmail.mockResolvedValue({});
   firebaseMocks.resolveOwnProfile.mockResolvedValue(null);
+  firebaseMocks.getPrivateConfig.mockResolvedValue(null);
   // Sync principal conectada (token en claro legacy: `getSyncConfig` lo sirve tal cual).
   localStorage.setItem('mis-listas-gist-config', JSON.stringify({ token: TOKEN, gistId: 'games111122223333', etag: null, lastRemoteUpdatedAt: 0 }));
 });
@@ -104,6 +107,19 @@ describe('publishReviewActivity — armado del canal social', () => {
     expect(store.current().activity[0]).toMatchObject({ gameId: 7, gameName: 'Hollow Knight', actorProfileId: 'pid-1' });
     // Y deja el canal armado para las siguientes publicaciones de este dispositivo.
     expect(JSON.parse(localStorage.getItem('mis-listas-social-gist-config') || '{}')).toMatchObject({ gistId: GIST_ID, token: TOKEN });
+  });
+
+  // El id del canal ha dejado de publicarse en el perfil, así que para una cuenta nueva `privateConfig` es la
+  // ÚNICA vía: sin esto, publicar desde un dispositivo sin config local dejaría de funcionar en silencio.
+  it('recupera el gist de `privateConfig` sin tocar el perfil público', async () => {
+    firebaseMocks.getPrivateConfig.mockResolvedValue({ socialGistId: GIST_ID });
+    const store = stubGistStore();
+
+    await publishReviewActivity(REVIEW);
+
+    expect(store.writes()).toBe(1);
+    expect(firebaseMocks.resolveOwnProfile).not.toHaveBeenCalled();
+    expect(JSON.parse(localStorage.getItem('mis-listas-social-gist-config') || '{}')).toMatchObject({ gistId: GIST_ID });
   });
 
   it('sin sesión de Google marca la publicación como pendiente (antes se perdía en silencio)', async () => {

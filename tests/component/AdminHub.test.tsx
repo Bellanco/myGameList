@@ -25,12 +25,6 @@ const deleteUserProfileMock = vi.fn<(...args: unknown[]) => Promise<{ ok: boolea
   failures: [],
 }));
 const setUserTierMock = vi.fn<(...args: unknown[]) => Promise<void>>(async () => {});
-const unifySocialGistMock = vi.fn<(...args: unknown[]) => Promise<unknown>>(async () => ({
-  verdict: { winner: 'gs-nuevo', losers: ['gs-viejo'], reason: 'publico' },
-  applied: true,
-  friendshipsUpdated: 1,
-  failures: [] as string[],
-}));
 
 vi.mock('../../src/model/repository/firebaseAdminRepository', () => ({
   ADMIN_PROFILES_LIMIT: 300,
@@ -39,7 +33,6 @@ vi.mock('../../src/model/repository/firebaseAdminRepository', () => ({
   purgeLegacyProfileFields: (...args: unknown[]) => purgeLegacyProfileFieldsMock(...args),
   deleteUserProfile: (...args: unknown[]) => deleteUserProfileMock(...args),
   setUserTier: (...args: unknown[]) => setUserTierMock(...args),
-  unifySocialGist: (...args: unknown[]) => unifySocialGistMock(...args),
 }));
 
 import { AdminHub } from '../../src/view/components/AdminHub';
@@ -113,7 +106,6 @@ describe('AdminHub — puerta de acceso', () => {
     purgeLegacyProfileFieldsMock.mockClear();
     deleteUserProfileMock.mockClear();
     setUserTierMock.mockClear();
-    unifySocialGistMock.mockClear();
   });
 
   it('mientras la sesión se resuelve no decide nada (ni panel ni expulsión)', () => {
@@ -159,7 +151,6 @@ describe('AdminHub — moderación', () => {
     purgeLegacyProfileFieldsMock.mockClear();
     deleteUserProfileMock.mockClear();
     setUserTierMock.mockClear();
-    unifySocialGistMock.mockClear();
   });
 
   it('ninguna acción se ejecuta sin pasar por la confirmación', async () => {
@@ -355,21 +346,18 @@ describe('AdminHub — moderación', () => {
     expect(within(bloque).getByText('gs-nuevo')).toBeInTheDocument();
     expect(within(bloque).getByText('gs-viejo')).toBeInTheDocument();
 
-    await userEvent.click(screen.getByRole('button', { name: ADMIN_PANEL_UI.gist.unifyBtn }));
-    await userEvent.click(screen.getByRole('button', { name: ADMIN_PANEL_UI.confirmAccept }));
-
-    await waitFor(() => expect(unifySocialGistMock).toHaveBeenCalledTimes(1));
-    // Se le pasa la fila completa: el repositorio necesita el uid para localizar sus amistades.
-    expect(unifySocialGistMock.mock.calls[0][0]).toMatchObject({ uid: 'uid-a', socialGistId: 'gs-nuevo' });
+    // Ya no hay acción: la deriva se resuelve sola cuando su dueño abre el hub (su cliente elige el canal con
+    // contenido y repunta sus amistades). Desde el panel no se puede: haría falta su token de GitHub.
+    expect(within(bloque).getByText(ADMIN_PANEL_UI.gist.driftHint)).toBeInTheDocument();
   });
 
-  it('sin deriva no ofrece unificar nada', async () => {
+  it('sin deriva no se muestra el bloque de gists', async () => {
     loadAdminCensusMock.mockResolvedValue(census([user()]));
     renderHub();
     signIn(ADMIN_EMAIL);
     await screen.findByText('Ada');
 
-    expect(screen.queryByRole('button', { name: ADMIN_PANEL_UI.gist.unifyBtn })).not.toBeInTheDocument();
+    expect(screen.queryByRole('group', { name: ADMIN_PANEL_UI.gist.driftTitle })).not.toBeInTheDocument();
   });
 
   it('un perfil sin señales no muestra la lista de señales', async () => {
