@@ -251,7 +251,10 @@ function SocialFeedScreenBase({
                   {group.items.map((entry: any) => {
                     const itemDate = new Date(entry.updatedAt || '');
                     const hasValidDate = !Number.isNaN(itemDate.getTime());
-                    const ownershipClass = entry.socialGistId === currentSocialGistId ? 'is-own-activity' : 'is-external-activity';
+                    // El id vacío NO es propiedad: sin la guarda, dos ids desconocidos casaban entre sí y la
+                    // actividad ajena se pintaba como propia.
+                    const isOwnActivity = Boolean(currentSocialGistId) && entry.socialGistId === currentSocialGistId;
+                    const ownershipClass = isOwnActivity ? 'is-own-activity' : 'is-external-activity';
 
                     if (entry.kind === 'post') {
                       return (
