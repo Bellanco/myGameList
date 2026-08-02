@@ -120,6 +120,24 @@ describe('firestore.rules', () => {
       // Token en claro a nivel raíz → denegado.
       await assertFails(setDoc(doc(ownerDb('uid-a'), 'profiles', 'uid-a'), { uid: 'uid-a', social: { enabled: true }, githubToken: 'ghp_x' }));
     });
+
+    // LATIDO DE RECENCIA: corre en cada publicación y es un merge de SOLO `uid` + `updatedAt` sobre un perfil que ya
+    // tiene `tier` y `createdAt`. Es el caso que roza la trampa del `hasOnly`: en un update, `request.resource.data`
+    // es el documento RESULTANTE, así que los campos que el merge no manda siguen ahí y las guardas de
+    // inmutabilidad los ven intactos. Si esto se denegara, `profiles.updatedAt` se congelaría y los amigos
+    // acabarían tratando como inactivo a quien publica a diario.
+    it('el latido de recencia (merge de uid+updatedAt) no choca con tier ni createdAt', async () => {
+      await seed('profiles', 'uid-a', {
+        schemaVersion: 1, uid: 'uid-a', profileId: 'p', displayName: 'A', photoURL: '',
+        social: { enabled: true }, updatedAt: 1, tier: 'gold', createdAt: 1000,
+      });
+
+      await assertSucceeds(setDoc(doc(ownerDb('uid-a'), 'profiles', 'uid-a'), { uid: 'uid-a', updatedAt: 2 }, { merge: true }));
+
+      // Y el merge NO es una vía para auto-ascenderse ni para reescribir el alta.
+      await assertFails(setDoc(doc(ownerDb('uid-a'), 'profiles', 'uid-a'), { tier: 'mithril' }, { merge: true }));
+      await assertFails(setDoc(doc(ownerDb('uid-a'), 'profiles', 'uid-a'), { createdAt: 5000 }, { merge: true }));
+    });
   });
 
   describe('privateConfig (solo dueño)', () => {

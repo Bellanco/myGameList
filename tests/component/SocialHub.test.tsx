@@ -30,6 +30,8 @@ const firebaseMocks = vi.hoisted(() => ({
   healOwnFriendshipIdentity: vi.fn(async (..._args: unknown[]) => {}),
   healOwnDirectoryGist: vi.fn(async () => ({ healed: false, adoptGistId: '' })),
   invalidateMyFriendshipsCache: vi.fn(),
+  // Latido de recencia (`profiles.updatedAt`): sin exportarlo aquí, el hub llamaría a `undefined` al montarse.
+  touchOwnProfileActivityThrottled: vi.fn(async () => {}),
 }));
 
 vi.mock('../../src/model/repository/firebaseRepository', () => firebaseMocks);

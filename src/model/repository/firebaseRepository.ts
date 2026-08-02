@@ -7,7 +7,7 @@
 // consumidor cambie sus imports.
 import { deleteField, doc, getDoc, serverTimestamp, setDoc, writeBatch } from 'firebase/firestore';
 import { decryptFromString, encryptToString } from '../../core/security/crypto';
-import { seedProfileIdFromRemote } from './indexedDbRepository';
+import { getLocalMeta, patchLocalMeta, seedProfileIdFromRemote } from './indexedDbRepository';
 import {
   initializeFirebaseServices,
   isPermissionDeniedError,
@@ -424,6 +424,13 @@ export async function ensureProfileByEmail(input: {
       },
       { merge: true },
     );
+  } else {
+    // El perfil no cambia, pero publicar ES actividad y `updatedAt` es lo que la mide: con él parado, el amigo que
+    // publica desde la ficha del juego sin abrir nunca el espacio social (el latido del hub no le llega) cruzaría
+    // el corte de inactividad de 30 días y los demás dejarían de leer su gist — sus reseñas y publicaciones
+    // desaparecerían de sus feeds mientras él las sigue publicando. Acotado a una escritura al día, así que no
+    // reintroduce la reescritura por publicación que este chequeo evita.
+    await touchOwnProfileActivityThrottled(input.user.uid);
   }
 
   // B1: respaldo CIFRADO del token en privateConfig; nunca en claro en `profiles`.
@@ -514,6 +521,28 @@ export async function touchOwnProfileActivity(uid: string): Promise<void> {
     await setDoc(ref, { uid, updatedAt: serverTimestamp() }, { merge: true });
   } catch {
     // best-effort: la recencia es una mejora de orden, no puede romper la apertura del hub.
+  }
+}
+
+/** Cada cuánto, como mucho, se refresca la recencia desde un mismo dispositivo: una escritura al día. */
+export const PROFILE_TOUCH_MIN_INTERVAL_MS = 20 * 60 * 60 * 1000;
+
+/**
+ * `touchOwnProfileActivity` con el acotado que exige su contrato: una vez cada 20 h por dispositivo. Es el único
+ * sitio donde vive ese intervalo, para que el latido del hub y el de la publicación no puedan separarse.
+ *
+ * Best-effort de principio a fin: si IndexedDB no responde, no se refresca la recencia y no pasa nada más.
+ */
+export async function touchOwnProfileActivityThrottled(uid: string): Promise<void> {
+  if (!uid) return;
+  try {
+    const meta = await getLocalMeta();
+    const last = Number(meta?.profileTouchedAt || 0);
+    if (last && Date.now() - last < PROFILE_TOUCH_MIN_INTERVAL_MS) return;
+    await touchOwnProfileActivity(uid);
+    await patchLocalMeta({ profileTouchedAt: Date.now() });
+  } catch {
+    /* best-effort: la recencia es orden, no funcionalidad. */
   }
 }
 
