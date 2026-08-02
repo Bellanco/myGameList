@@ -7,10 +7,11 @@
 // `LEGAL_VERSION` sella la aceptación (`publicConfig.consent.version`): al cambiarla, la puerta del hub social
 // vuelve a pedir la conformidad. Súbela SOLO cuando cambie algo sustantivo de los términos o del tratamiento.
 
-// 2026-08: se declara que el Gist del canal social es PÚBLICO en GitHub (legible por cualquiera que conozca su
-// identificador, sin sesión en la app) y se corrige el aviso sobre los Gists, que aconsejaba usar «Gists privados»
-// — GitHub no los tiene: solo públicos y secretos, y los secretos son legibles por id. Es una categoría de
-// destinatarios que antes no constaba, así que la puerta del hub social vuelve a pedir la conformidad.
+// 2026-08: (a) el canal social pasa de Gist público a NO LISTADO, y los antiguos se migran y se retiran — la
+// única excepción a que la app no toque tus Gists, declarada en las condiciones; (b) se corrige el aviso que
+// aconsejaba usar «Gists privados», que GitHub no tiene: solo públicos y secretos, y los secretos son legibles
+// por id. Cambian los destinatarios y lo que la app hace con tus Gists, así que la puerta del hub vuelve a pedir
+// la conformidad. No se sube otra vez la versión: 2026-08 aún no se ha desplegado, así que nadie la ha aceptado.
 export const LEGAL_VERSION = '2026-08';
 
 // Correo de CONTACTO publicado en los documentos. A propósito distinto del de la cuenta de administración de
@@ -65,7 +66,8 @@ const TERMS: LegalDocument = {
       heading: 'Tu contenido',
       paragraphs: [
         'Las reseñas, publicaciones, notas y nombres que escribes son tuyos. Para poder mostrarlos a las personas con las que tienes amistad en la app, nos autorizas a almacenarlos y mostrarlos con esa única finalidad, mientras mantengas la cuenta y el contenido publicado.',
-        'Tu biblioteca completa y tus reseñas largas se guardan en Gists de TU cuenta de GitHub. La app los crea como Gists secretos, y «secreto» en GitHub significa NO LISTADO, no privado: no aparecen en tu perfil de GitHub ni en los buscadores, pero quien conozca el identificador de un Gist puede leerlo. La app solo comparte el identificador de tu biblioteca con las personas con las que tienes amistad; el de tu canal social es público (ver la política de privacidad).',
+        'Tu biblioteca completa y tus reseñas largas se guardan en Gists de TU cuenta de GitHub. La app los crea como Gists secretos, y «secreto» en GitHub significa NO LISTADO, no privado: no aparecen en tu perfil de GitHub ni en los buscadores, pero quien conozca el identificador de un Gist puede leerlo. La app solo comparte esos identificadores con las personas con las que tienes amistad.',
+        'MEJORA DE PRIVACIDAD, y la única excepción a que la app no toque tus Gists: las versiones anteriores creaban tu canal social como Gist PÚBLICO, con lo que aparecía listado en tu perfil de GitHub y en los buscadores. Al entrar en la parte social, la app copia ese canal a un Gist no listado y RETIRA el antiguo, que es lo único que quita de circulación lo ya publicado. Solo se borra ese canal antiguo, nunca tu biblioteca, y solo después de comprobar que la copia conserva tu contenido; si la comprobación falla, no se borra nada y se te avisa.',
       ],
     },
     {
@@ -124,7 +126,7 @@ const PRIVACY: LegalDocument = {
       bullets: [
         'En tu dispositivo: tus listas de juegos, reseñas y preferencias (localStorage e IndexedDB), y tu token de GitHub cifrado.',
         'En tu cuenta de GitHub: la biblioteca y el canal social, en Gists que son tuyos.',
-        'En Firestore, si activas lo social: tu identificador de usuario, el nick que elijas, tu foto de perfil de Google (puedes quitarla), el identificador de tu Gist social, tus amistades, el rango de tu perfil y tus preferencias de la app.',
+        'En Firestore, si activas lo social: tu identificador de usuario, el nick que elijas, tu foto de perfil de Google (puedes quitarla), tus amistades, el rango de tu perfil y tus preferencias de la app. El identificador de tu Gist social ya NO se publica ahí: vive en el documento privado que solo tú lees, y denormalizado en tus documentos de amistad.',
         'En Firestore, en un documento privado que solo tú puedes leer: los identificadores de tus Gists y tu token de GitHub cifrado.',
         'Si aceptas la analítica: eventos de uso y errores en Google Analytics, con un identificador aleatorio.',
       ],
@@ -147,19 +149,19 @@ const PRIVACY: LegalDocument = {
         'GitHub: alojamiento de tus Gists, en tu propia cuenta.',
         'Cloudflare: alojamiento y entrega de la web.',
         'Otros usuarios con sesión iniciada: tu nick, tu foto y tu actividad social, en los términos descritos arriba.',
-        'Cualquier persona en internet que conozca el identificador de tu Gist social: ese Gist es PÚBLICO en GitHub, y tiene que serlo para que tus amistades puedan leerlo con su propia cuenta. No hace falta tener sesión en esta app para leerlo.',
+        'Cualquier persona que conozca el identificador de tu Gist social. Ese Gist ya NO es público: la app lo crea (y migra los antiguos) como Gist no listado, así que no aparece en tu perfil de GitHub ni en los buscadores. Pero «no listado» no es «privado»: quien tenga el identificador puede leerlo sin necesidad de sesión en esta app. La app solo lo comparte con tus amistades.',
         'La persona que administra el servicio, que por necesidad técnica tiene acceso de administración a la base de datos.',
       ],
       paragraphs: [
         'Conviene entender qué hay en ese Gist público y qué no: contiene tu nick, tus preferencias de visibilidad y, por cada reseña, el nombre del juego, la nota y un fragmento de hasta 160 caracteres del texto. Tu biblioteca completa, tus reseñas enteras y tus horas de juego NO están ahí: viven en otro Gist que la app crea como secreto y cuyo identificador solo se comparte con tus amistades.',
-        'Ten en cuenta que «secreto» en GitHub no significa privado, sino no listado: quien tenga el identificador de un Gist puede leerlo aunque no aparezca en tu perfil de GitHub ni en los buscadores. Por eso el identificador de tu biblioteca dejó de publicarse en tu perfil social y solo se comparte con las personas con las que tienes amistad.',
+        'Ten en cuenta que «secreto» en GitHub no significa privado, sino no listado: quien tenga el identificador de un Gist puede leerlo aunque no aparezca en tu perfil de GitHub ni en los buscadores. Por eso ni el identificador de tu biblioteca ni el de tu canal social se publican ya en tu perfil: solo se comparten con las personas con las que tienes amistad.',
         'Estos proveedores pueden tratar los datos fuera del Espacio Económico Europeo, amparados en las cláusulas contractuales tipo o los marcos de adecuación de sus respectivos programas.',
       ],
     },
     {
       heading: 'Cuánto tiempo',
       paragraphs: [
-        'Mientras mantengas la cuenta. Cuando la borras desde la app, se eliminan tu perfil, tus amistades y tu configuración en la nube, y se limpian los datos de ese dispositivo. Tus Gists no se tocan: son tuyos y los borras desde GitHub.',
+        'Mientras mantengas la cuenta. Cuando la borras desde la app, se eliminan tu perfil, tus amistades y tu configuración en la nube, y se limpian los datos de ese dispositivo. Tus Gists no se tocan: son tuyos y los borras desde GitHub. La única excepción es la retirada del canal social antiguo descrita en las condiciones de uso, que existe para dejar de exponerlo públicamente.',
       ],
     },
     {

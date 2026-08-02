@@ -2034,6 +2034,49 @@ export async function writeGist(token: string, gistId: string, payload: TabData)
  * @param isPublic - true para público, false para privado
  */
 /**
+ * Borra un gist de la cuenta del token. Se usa para retirar el canal social ANTIGUO tras migrarlo a secreto: es
+ * lo único que quita de circulación lo que ya se publicó, porque el gist viejo seguiría siendo público e
+ * indexable para siempre.
+ *
+ * IRREVERSIBLE. El llamador debe haber verificado antes que el canal nuevo tiene el contenido, y haber repuntado
+ * ya todas las referencias: si esto se ejecutase antes, un fallo a media faena dejaría al usuario apuntando a un
+ * gist que ya no existe.
+ *
+ * Devuelve `true` si el gist quedó borrado. Un 404 también cuenta: ya no está, que es el objetivo.
+ */
+export async function deleteGist(token: string, gistId: string): Promise<boolean> {
+  if (!isValidGithubToken(token) || !isValidGistId(gistId)) {
+    return false;
+  }
+
+  const response = await githubFetch(`${GIST_API_BASE}/${gistId}`, {
+    method: 'DELETE',
+    headers: {
+      Authorization: getGithubAuthHeader(token),
+      'X-GitHub-Api-Version': '2022-11-28',
+    },
+  });
+
+  return response.ok || response.status === 404;
+}
+
+/**
+ * ¿El canal recién clonado tiene de verdad el contenido del original? Se comprueba ANTES de borrar nada: contar
+ * entradas es barato y es la diferencia entre retirar un gist ya copiado y borrar el único sitio donde estaba.
+ */
+export async function socialGistHasContent(token: string, gistId: string, expectedEntries: number): Promise<boolean> {
+  if (expectedEntries === 0) {
+    return true; // no había nada que copiar: nada que verificar
+  }
+  try {
+    const check = await readSocialGist(token, gistId, null);
+    return (check.data.activity?.length || 0) + (check.data.posts?.length || 0) >= expectedEntries;
+  } catch {
+    return false; // ante la duda, NO se borra
+  }
+}
+
+/**
  * A partir de 1 MB, GitHub trunca el contenido del fichero en las respuestas de la API. El código no maneja
  * `truncated`/`raw_url` en ninguna parte, así que un gist así se lee como vacío. No se migra por encima de este
  * umbral, con margen de sobra: un canal real ronda el kilobyte (los topes de actividad y publicaciones acotan su
@@ -2052,6 +2095,8 @@ export interface SecretSocialGistResult {
   migrated: boolean;
   /** Gist que queda ATRÁS y sigue siendo público. '' si no hubo migración. */
   previousGistId: string;
+  /** Entradas (actividad + publicaciones) que se copiaron: sirve para verificar el clon antes de borrar nada. */
+  copiedEntries: number;
   /** No se migró por riesgo de truncado: el canal es demasiado grande para leerlo entero por la API. */
   tooLarge?: boolean;
 }
@@ -2072,7 +2117,7 @@ export interface SecretSocialGistResult {
  * no borra gists por política. El llamador debe decírselo.
  */
 export async function ensureSecretSocialGist(token: string, gistId: string): Promise<SecretSocialGistResult> {
-  const unchanged: SecretSocialGistResult = { gistId, etag: null, migrated: false, previousGistId: '' };
+  const unchanged: SecretSocialGistResult = { gistId, etag: null, migrated: false, previousGistId: '', copiedEntries: 0 };
   if (!isValidGithubToken(token) || !isValidGistId(gistId)) {
     return unchanged;
   }
@@ -2101,7 +2146,13 @@ export async function ensureSecretSocialGist(token: string, gistId: string): Pro
   }
 
   const migration = await createSocialGistWithData(token, source.data, false);
-  return { gistId: migration.gistId, etag: migration.etag, migrated: true, previousGistId: gistId };
+  return {
+    gistId: migration.gistId,
+    etag: migration.etag,
+    migrated: true,
+    previousGistId: gistId,
+    copiedEntries: (source.data.activity?.length || 0) + (source.data.posts?.length || 0),
+  };
 }
 
 export async function updateGistPrivacy(token: string, gistId: string, isPublic: boolean): Promise<{ gistId: string; etag: string | null }> {

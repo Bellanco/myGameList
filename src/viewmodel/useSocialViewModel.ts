@@ -15,7 +15,9 @@ import {
   type SocialPostEntry,
   type SocialProfileVisibility,
   type SocialSharedGame,
+  deleteGist,
   ensureSecretSocialGist,
+  socialGistHasContent,
   writeSocialGist,
 } from '../model/repository/gistRepository';
 import { publishPost } from '../model/repository/socialPublishRepository';
@@ -692,9 +694,20 @@ export function useSocialViewModel(options?: {
         void setPrivateConfig(authUser.uid, { socialGistId: result.gistId }).catch(() => {});
         // Que el saneado de amistades vuelva a correr con el id nuevo: es de donde lo leen sus amistades.
         friendshipHealedRef.current = false;
-        // El gist viejo sigue ahí y sigue siendo público: la app no borra gists (política declarada), así que hay
-        // que decírselo para que lo borre él si quiere retirar lo ya publicado.
-        setFeedback('warn', SOCIAL_UI.status.socialGistMigrated);
+        // RETIRADA DEL GIST ANTIGUO. Es lo único que quita de circulación lo ya publicado: si se quedara, seguiría
+        // siendo público e indexable para siempre. Se hace AL FINAL y con verificación previa, en este orden:
+        // clonar → repuntar las tres referencias (arriba) → comprobar que el clon tiene el contenido → borrar.
+        // Invertirlo dejaría al usuario apuntando a un gist inexistente si algo fallara a media faena.
+        void (async () => {
+          const copied = await socialGistHasContent(token, result.gistId, result.copiedEntries);
+          if (!copied) {
+            // El clon no tiene lo que debía: NO se borra el original. Mejor dos gists que ninguno.
+            setFeedback('warn', SOCIAL_UI.status.socialGistMigratedKept);
+            return;
+          }
+          const deleted = await deleteGist(token, result.previousGistId).catch(() => false);
+          setFeedback('ok', deleted ? SOCIAL_UI.status.socialGistMigrated : SOCIAL_UI.status.socialGistMigratedKept);
+        })();
       })
       .catch(() => {
         // Best-effort: si falla (red, rate-limit), se reintenta en la próxima sesión. Nada queda a medias: o se
@@ -1595,12 +1608,19 @@ export function useSocialViewModel(options?: {
         entries,
         SOCIAL_DIRECTORY_FETCH_CONCURRENCY,
         async (entry) => {
-          const isOwnEntry = entry.socialGistId === socialCfgGistId;
+          // Identidad, NO gist. Antes se comparaba `entry.socialGistId === socialCfgGistId`, y al dejar de
+          // publicarse ese id en el perfil la comparación pasó a ser siempre falsa: la propia entrada dejaba de
+          // reconocerse como propia, se trataba como la de un desconocido y la actividad de uno desaparecía de su
+          // feed. `isOwnProfileIdentity` compara uid/profileId, que es lo que de verdad identifica.
+          const isOwnEntry = isOwnProfileIdentity(entry.id, authUser?.uid, ownProfileId);
           const isFriend = friendUids.has(entry.uid);
           // Amigo: se prefiere su gist social saneado desde la amistad, porque el del directorio solo se
           // reescribe al re-publicar el perfil y puede quedar anclado a un gist viejo/vacío.
           const friendSocialGistId = isFriend ? friendSocialGistByUid.get(entry.uid) : undefined;
-          const effectiveSocialGistId = friendSocialGistId || entry.socialGistId;
+          // Para la entrada PROPIA la fuente es el gist de la sesión: el directorio ya no publica el id, así que
+          // sin esto uno se quedaba sin ningún candidato que leer y su propia actividad no aparecía en su feed.
+          const ownSocialGistId = isOwnEntry ? socialCfgGistId : '';
+          const effectiveSocialGistId = ownSocialGistId || friendSocialGistId || entry.socialGistId;
           // Gist de juegos: la amistad manda; `entry.gamesGistId` solo trae valor en perfiles legacy sin purgar.
           const effectiveGamesGistId = (isFriend ? friendGamesGistByUid.get(entry.uid) : undefined) || entry.gamesGistId;
           // …pero la deriva puede ir en CUALQUIER dirección (publicar una reseña sanea el directorio y no los docs
@@ -1621,7 +1641,10 @@ export function useSocialViewModel(options?: {
               id: entry.id,
               uid: entry.uid,
               displayName: entry.displayName || 'Usuario',
-              socialGistId: entry.socialGistId,
+              // El id EFECTIVO (el del doc de amistad), no el del directorio: este último ya no se publica, y
+              // dejarlo vacío rompía la hidratación bajo demanda del perfil de un amigo inactivo, que se salta
+              // cuando no hay gist al que ir.
+              socialGistId: effectiveSocialGistId,
               gamesGistId: effectiveGamesGistId,
               photoURL: entry.photoURL || '',
               tier: entry.tier,
