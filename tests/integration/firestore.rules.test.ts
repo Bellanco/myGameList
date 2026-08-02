@@ -355,6 +355,56 @@ describe('firestore.rules', () => {
       });
     });
 
+    // FECHA DE ALTA. Es el dato con el que el panel juzga la antigüedad, así que solo vale si nadie puede
+    // reescribirla. Se sella al crear el perfil y queda congelada incluso para su dueño.
+    describe('fecha de alta (createdAt)', () => {
+      it('el dueño puede sellarla al crear su perfil', async () => {
+        await assertSucceeds(
+          setDoc(doc(ownerDb('uid-a'), 'profiles', 'uid-a'), {
+            uid: 'uid-a',
+            createdAt: 1000,
+            social: { enabled: true },
+          }),
+        );
+      });
+
+      it('una vez sellada, el dueño NO puede cambiarla ni borrarla', async () => {
+        await seed('profiles', 'uid-a', { uid: 'uid-a', createdAt: 1000, social: { enabled: true } });
+
+        await assertFails(updateDoc(doc(ownerDb('uid-a'), 'profiles', 'uid-a'), { createdAt: 5 }));
+        await assertFails(updateDoc(doc(ownerDb('uid-a'), 'profiles', 'uid-a'), { createdAt: deleteField() }));
+        // Y tampoco reescribiendo el documento entero sin ella (la vía que el rango destapó).
+        await assertFails(
+          setDoc(doc(ownerDb('uid-a'), 'profiles', 'uid-a'), { uid: 'uid-a', social: { enabled: true } }),
+        );
+      });
+
+      // REGRESIÓN de la trampa del `hasOnly`, la misma que con `tier`: sin la clave en la allowlist, en cuanto un
+      // perfil tuviera fecha de alta, TODAS las escrituras merge de su dueño quedarían denegadas.
+      it('un perfil CON fecha de alta sigue pudiendo editarse', async () => {
+        await seed('profiles', 'uid-a', { uid: 'uid-a', createdAt: 1000, displayName: 'Ada', social: { enabled: true } });
+
+        await assertSucceeds(
+          setDoc(
+            doc(ownerDb('uid-a'), 'profiles', 'uid-a'),
+            { uid: 'uid-a', displayName: 'Ada Lovelace' },
+            { merge: true },
+          ),
+        );
+      });
+
+      it('el admin tampoco la necesita tocar, pero puede (se salta la validación)', async () => {
+        await seed('profiles', 'uid-a', { uid: 'uid-a', createdAt: 1000, social: { enabled: true } });
+        await assertSucceeds(updateDoc(doc(adminDb(), 'profiles', 'uid-a'), { createdAt: 2000 }));
+      });
+
+      it('un tercero no puede sellar la fecha de otro', async () => {
+        await assertFails(
+          setDoc(doc(ownerDb('uid-b'), 'profiles', 'uid-a'), { uid: 'uid-a', createdAt: 1000 }),
+        );
+      });
+    });
+
     // LÍMITE CONOCIDO del panel, verificado a propósito: el borrado desde `/admin` es PARCIAL. Estos tres
     // documentos son owner-only y sobreviven; para borrarlos haría falta el Admin SDK en servidor.
     it('el admin NO puede leer ni borrar la configuración privada de otro usuario', async () => {

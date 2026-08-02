@@ -323,7 +323,10 @@ dialog.alert-dialog[open]::backdrop { animation: alertBackdropIn .24s ease both;
   outline-offset: 2px;
 }
 
-/* ── Botón flotante "volver arriba" (relleno con acento, temático; oculto en móvil para no estorbar) ── */
+/* ── Botón flotante "volver arriba" ─────────────────────────────────────────────
+   Modo "aparece al subir" (opción B): oculto casi siempre; el componente le pone la clase
+   `.is-visible` solo cuando el usuario empieza a hacer scroll HACIA ARRIBA (que es cuando quiere
+   volver arriba) y la quita al bajar/parar. Así no estorba la lectura ni parpadea. */
 .scroll-top-btn {
   position: fixed;
   left: 1.25rem;
@@ -333,28 +336,55 @@ dialog.alert-dialog[open]::backdrop { animation: alertBackdropIn .24s ease both;
   width: 2.6rem;
   height: 2.6rem;
   border-radius: 999px;
-  /* Discreto pero SIEMPRE visible: acento translúcido con rgba (soportado en todos los navegadores; el
-     color-mix anterior lo descartaba Firefox y el botón desaparecía). El difuminado es solo una mejora. */
+  /* Acento con rgba (soportado en TODOS los motores; el color-mix anterior lo descartaba Firefox y el
+     botón desaparecía). El difuminado del fondo es solo una mejora opcional. */
   border: 1px solid rgba(var(--steam-rgb), 0.5);
-  background: rgba(var(--steam-rgb), 0.6);
+  background: rgba(var(--steam-rgb), 0.9);
   backdrop-filter: blur(6px);
   -webkit-backdrop-filter: blur(6px);
   color: #fff;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.28);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3);
   display: grid;
   place-content: center;
   cursor: pointer;
-  transition: background 0.2s ease, filter 0.15s ease, transform 0.1s ease;
+  /* Estado por defecto: oculto e inerte (no capta el clic mientras no está visible). */
+  opacity: 0;
+  transform: translateY(8px) scale(0.92);
+  pointer-events: none;
+  transition: opacity 0.25s ease, transform 0.25s ease, background 0.2s ease, filter 0.15s ease;
+}
+
+.scroll-top-btn.is-visible {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  pointer-events: auto;
 }
 
 .scroll-top-btn:hover,
 .scroll-top-btn:focus-visible {
-  background: rgba(var(--steam-rgb), 0.95);
-  filter: brightness(1.1);
+  background: rgba(var(--steam-rgb), 1);
+  filter: brightness(1.08);
 }
 
-.scroll-top-btn:active {
-  transform: translateY(1px);
+.scroll-top-btn:focus-visible {
+  outline: 2px solid var(--steam);
+  outline-offset: 2px;
+}
+
+.scroll-top-btn.is-visible:active {
+  transform: translateY(1px) scale(1);
+}
+
+/* Sin animación de entrada si el usuario prefiere movimiento reducido: solo el fundido. */
+@media (prefers-reduced-motion: reduce) {
+  .scroll-top-btn {
+    transform: none;
+    transition: opacity 0.2s ease, background 0.2s ease;
+  }
+  .scroll-top-btn.is-visible,
+  .scroll-top-btn.is-visible:active {
+    transform: none;
+  }
 }
 
 /* El icono no debe capturar el clic (en algunos navegadores el <use> lo interceptaba). */

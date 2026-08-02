@@ -7,7 +7,11 @@
 // `LEGAL_VERSION` sella la aceptación (`publicConfig.consent.version`): al cambiarla, la puerta del hub social
 // vuelve a pedir la conformidad. Súbela SOLO cuando cambie algo sustantivo de los términos o del tratamiento.
 
-export const LEGAL_VERSION = '2026-07';
+// 2026-08: se declara que el Gist del canal social es PÚBLICO en GitHub (legible por cualquiera que conozca su
+// identificador, sin sesión en la app) y se corrige el aviso sobre los Gists, que aconsejaba usar «Gists privados»
+// — GitHub no los tiene: solo públicos y secretos, y los secretos son legibles por id. Es una categoría de
+// destinatarios que antes no constaba, así que la puerta del hub social vuelve a pedir la conformidad.
+export const LEGAL_VERSION = '2026-08';
 
 // Correo de CONTACTO publicado en los documentos. A propósito distinto del de la cuenta de administración de
 // `firestore.rules` (`isAdmin`): son la misma persona, pero separar buzones evita mezclar avisos legales y
@@ -61,7 +65,7 @@ const TERMS: LegalDocument = {
       heading: 'Tu contenido',
       paragraphs: [
         'Las reseñas, publicaciones, notas y nombres que escribes son tuyos. Para poder mostrarlos a las personas con las que tienes amistad en la app, nos autorizas a almacenarlos y mostrarlos con esa única finalidad, mientras mantengas la cuenta y el contenido publicado.',
-        'Tu biblioteca completa y tus reseñas largas se guardan en Gists de TU cuenta de GitHub. Si el Gist es público, cualquiera con el enlace puede leerlo: usa Gists privados si no quieres que sea así.',
+        'Tu biblioteca completa y tus reseñas largas se guardan en Gists de TU cuenta de GitHub. La app los crea como Gists secretos, y «secreto» en GitHub significa NO LISTADO, no privado: no aparecen en tu perfil de GitHub ni en los buscadores, pero quien conozca el identificador de un Gist puede leerlo. La app solo comparte el identificador de tu biblioteca con las personas con las que tienes amistad; el de tu canal social es público (ver la política de privacidad).',
       ],
     },
     {
@@ -143,9 +147,12 @@ const PRIVACY: LegalDocument = {
         'GitHub: alojamiento de tus Gists, en tu propia cuenta.',
         'Cloudflare: alojamiento y entrega de la web.',
         'Otros usuarios con sesión iniciada: tu nick, tu foto y tu actividad social, en los términos descritos arriba.',
+        'Cualquier persona en internet que conozca el identificador de tu Gist social: ese Gist es PÚBLICO en GitHub, y tiene que serlo para que tus amistades puedan leerlo con su propia cuenta. No hace falta tener sesión en esta app para leerlo.',
         'La persona que administra el servicio, que por necesidad técnica tiene acceso de administración a la base de datos.',
       ],
       paragraphs: [
+        'Conviene entender qué hay en ese Gist público y qué no: contiene tu nick, tus preferencias de visibilidad y, por cada reseña, el nombre del juego, la nota y un fragmento de hasta 160 caracteres del texto. Tu biblioteca completa, tus reseñas enteras y tus horas de juego NO están ahí: viven en otro Gist que la app crea como secreto y cuyo identificador solo se comparte con tus amistades.',
+        'Ten en cuenta que «secreto» en GitHub no significa privado, sino no listado: quien tenga el identificador de un Gist puede leerlo aunque no aparezca en tu perfil de GitHub ni en los buscadores. Por eso el identificador de tu biblioteca dejó de publicarse en tu perfil social y solo se comparte con las personas con las que tienes amistad.',
         'Estos proveedores pueden tratar los datos fuera del Espacio Económico Europeo, amparados en las cláusulas contractuales tipo o los marcos de adecuación de sus respectivos programas.',
       ],
     },

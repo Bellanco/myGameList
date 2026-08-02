@@ -7,6 +7,39 @@ import type { ScoreScale } from '../../core/utils/scoreScale';
  * Estado actual (a migrar): el doc real guarda email/uid/social.githubToken/social.gamesGistId.
  */
 
+/**
+ * Señales de estado o comportamiento fuera de lo esperado en un perfil, tal y como las calcula el panel de
+ * administración (`detectAnomalies`). Son OBSERVACIONES, no acusaciones: casi todas tienen explicaciones inocentes
+ * (perfil a medio crear, cliente viejo, reloj desajustado). Vive aquí, y no en el repositorio, para que las
+ * etiquetas de `labels.ts` puedan declararse exhaustivas sobre ella sin que un fichero de textos dependa de un
+ * repositorio.
+ */
+export type AdminAnomaly =
+  /** `social.enabled` pero sin gist social: sale del directorio y no publica nada. Perfil roto. */
+  | 'enabled-without-gist'
+  /** Sin nombre: perfil a medio crear. */
+  | 'no-display-name'
+  /** Sin `profileId`: la identidad pseudónima nunca se estableció. */
+  | 'no-profile-id'
+  /** El documento no se identifica por el uid (perfil legacy bajo otro id). */
+  | 'foreign-doc-id'
+  /** Arrastra restos legacy en un documento que lee cualquier usuario autenticado. */
+  | 'legacy-fields'
+  /** Token de GitHub en claro: lo más grave que puede quedar ahí. Se separa por su gravedad. */
+  | 'legacy-token'
+  /** Esquema anterior al vigente. */
+  | 'stale-schema'
+  /** Sin marca de actividad: no saldría en un directorio ordenado por recencia. */
+  | 'never-active'
+  /** Más de 30 días sin aparecer (la misma ventana con la que el feed corta la actividad). */
+  | 'inactive'
+  /** Actividad fechada en el futuro: reloj desajustado o marca manipulada. */
+  | 'future-activity'
+  /** Alta posterior a la última actividad: imposible salvo manipulación. */
+  | 'created-after-activity'
+  /** El gist social del directorio no coincide con el que guardan sus amistades: sus reseñas no llegan al feed. */
+  | 'gist-drift';
+
 /** profiles/{profileId} — index-only, identificado por el pseudónimo, NO por uid. */
 export interface ProfileIndexDoc {
   profileId: string;
