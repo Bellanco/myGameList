@@ -13,6 +13,9 @@ const firebaseMocks = vi.hoisted(() => ({
   // se puede importar `LEGAL_VERSION`; los tests de la puerta lo sobrescriben con `null`.
   getPublicConfig: vi.fn(async (): Promise<any> => null),
   setPublicConfig: vi.fn(async () => {}),
+  // Fase 0: el gist social propio se recupera de `privateConfig` (owner-only) antes que del perfil público.
+  getPrivateConfig: vi.fn(async (): Promise<any> => null),
+  setPrivateConfig: vi.fn(async () => {}),
   listSocialDirectory: vi.fn(async (): Promise<any[]> => []),
   signInWithGoogle: vi.fn(async () => null),
   signOutSocialUser: vi.fn(async () => {}),
@@ -25,7 +28,7 @@ const firebaseMocks = vi.hoisted(() => ({
   sendFriendRequest: vi.fn(async () => {}),
   readFriendship: vi.fn(async (): Promise<any> => null),
   healOwnFriendshipIdentity: vi.fn(async () => {}),
-  healOwnDirectoryGist: vi.fn(async () => false),
+  healOwnDirectoryGist: vi.fn(async () => ({ healed: false, adoptGistId: '' })),
   invalidateMyFriendshipsCache: vi.fn(),
 }));
 
@@ -178,6 +181,48 @@ describe('SocialHub (componente, post-M3)', () => {
     resolveConsent({ consent: { version: LEGAL_VERSION, agreedAt: 1 } });
     await waitFor(() => expect(screen.queryByText(SOCIAL_UI.loading)).not.toBeInTheDocument());
     expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
+  });
+
+  // FASE 0 — el gist social propio pasa a recuperarse de `privateConfig` (owner-only, un solo escritor) en vez
+  // del perfil público, que es world-readable para cualquier usuario autenticado y va a dejar de publicarlo.
+  describe('recuperación del gist social propio', () => {
+    beforeEach(() => {
+      firebaseMocks.getCurrentSocialAuthUser.mockResolvedValue({ uid: 'uid-1', email: 'jaime@example.com', displayName: 'Jaime', photoURL: null });
+      // Sin config social local: hay que resolverlo desde la nube. Con token principal, que es la precondición.
+      gistMocks.getSocialSyncConfig.mockReturnValue(null);
+      gistMocks.getSyncConfig.mockReturnValue({ token: 'ghp_x', gistId: 'games', etag: null, lastRemoteUpdatedAt: 0 } as never);
+    });
+
+    it('`privateConfig` MANDA sobre el perfil público cuando los dos traen id', async () => {
+      firebaseMocks.getPrivateConfig.mockResolvedValue({ socialGistId: 'gs-privado' });
+      // El perfil público anuncia otro id: si ganara, el canal quedaría atado a un campo que van a ver todos.
+      firebaseMocks.resolveOwnProfile.mockResolvedValue({ socialEnabled: true, socialGistId: 'gs-publico' } as never);
+
+      renderHub();
+
+      await waitFor(() => expect(gistMocks.saveSocialSyncConfig).toHaveBeenCalled());
+      expect(gistMocks.saveSocialSyncConfig.mock.calls[0][0]).toMatchObject({ gistId: 'gs-privado' });
+    });
+
+    it('sin `privateConfig` cae al perfil público y SIEMBRA el id en su sitio', async () => {
+      firebaseMocks.getPrivateConfig.mockResolvedValue(null);
+      firebaseMocks.resolveOwnProfile.mockResolvedValue({ socialEnabled: true, socialGistId: 'gs-publico' } as never);
+
+      renderHub();
+
+      await waitFor(() => expect(firebaseMocks.setPrivateConfig).toHaveBeenCalled());
+      // Sin esta siembra, retirar el campo del perfil público dejaría a esa cuenta sin forma de recuperarlo.
+      expect(firebaseMocks.setPrivateConfig).toHaveBeenCalledWith('uid-1', { socialGistId: 'gs-publico' });
+    });
+
+    it('con el id ya en `privateConfig` no lo reescribe', async () => {
+      firebaseMocks.getPrivateConfig.mockResolvedValue({ socialGistId: 'gs-privado' });
+
+      renderHub();
+
+      await waitFor(() => expect(gistMocks.saveSocialSyncConfig).toHaveBeenCalled());
+      expect(firebaseMocks.setPrivateConfig).not.toHaveBeenCalled();
+    });
   });
 
   it('si la comprobación del consentimiento falla (offline), no bloquea el espacio social', async () => {
