@@ -309,7 +309,7 @@ export const UI_MESSAGES = {
       title: 'Zona de riesgo',
       deleteTitle: 'Borrar mi cuenta',
       deleteBody: 'Elimina tu perfil social, tus amistades y la configuración guardada en la nube, y borra los datos de este dispositivo (listas locales, sesión y token). No se puede deshacer.',
-      deleteGistsNote: 'Tus Gists de GitHub NO se tocan: viven en tu cuenta de GitHub y solo tú puedes borrarlos.',
+      deleteGistsNote: 'Tus Gists de GitHub NO se tocan al borrar la cuenta: viven en tu cuenta y solo tú puedes borrarlos. (La única excepción, ajena a este borrado, es la retirada del canal social antiguo que la app migró a no listado.)',
       deleteGistsLink: 'Ver mis Gists',
       deleteGistsUrl: 'https://gist.github.com',
       deleteBtn: 'Borrar cuenta',
@@ -855,8 +855,10 @@ export const SOCIAL_UI = {
     profileIncomplete: 'Para guardar tu perfil necesitas un nombre y al menos un juego completado.',
     // Fallo por credencial al leer el canal de un amigo: no es que no haya publicado, es que el token no vale.
     socialReadUnauthorized: 'No se pudo leer la actividad de alguna de tus amistades: tu conexión con GitHub ha caducado. Vuelve a conectarla en Ajustes.',
-    // Migración del canal a gist secreto: el antiguo queda atrás y SIGUE siendo público.
-    socialGistMigrated: 'Tu canal social se ha movido a un Gist no listado. El anterior sigue en tu cuenta de GitHub y es público: si quieres retirarlo, bórralo en gist.github.com (la app no borra Gists tuyos).',
+    // Migración del canal a gist secreto, con retirada del antiguo (ver condiciones de uso).
+    socialGistMigrated: 'Tu canal social se ha movido a un Gist no listado y se ha retirado el anterior, que era público. Tus reseñas y publicaciones siguen intactas.',
+    // El clon no pasó la verificación: se conservan LOS DOS. Mejor dos gists que ninguno.
+    socialGistMigratedKept: 'Tu canal social se ha movido a un Gist no listado, pero el anterior no se ha podido retirar y sigue siendo público. Puedes borrarlo tú en gist.github.com.',
     socialGistTooLarge: 'Tu canal social es demasiado grande para moverlo automáticamente y sigue siendo público. Escríbenos y lo migramos a mano.',
     postPublished: 'Publicación compartida.',
     postPublishFailed: 'No se pudo compartir la publicación.',

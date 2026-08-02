@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { ensureSecretSocialGist } from '../../src/model/repository/gistRepository';
+import { deleteGist, ensureSecretSocialGist, socialGistHasContent } from '../../src/model/repository/gistRepository';
 
 // FASE 2 — migración del canal social a gist SECRETO.
 //
@@ -180,5 +180,56 @@ describe('ensureSecretSocialGist', () => {
     const result = await ensureSecretSocialGist(TOKEN, GIST_ID);
 
     expect(result.migrated).toBe(true);
+  });
+});
+
+// RETIRADA DEL CANAL ANTIGUO. Es lo único que quita de circulación lo ya publicado, y es irreversible: por eso
+// se verifica el clon ANTES de borrar. Un fallo aquí no deja "dos gists", deja CERO.
+describe('deleteGist y socialGistHasContent', () => {
+  it('borra el gist y da por bueno también un 404 (ya no está, que es el objetivo)', async () => {
+    const calls: Array<{ url: string; method: string }> = [];
+    vi.stubGlobal('fetch', vi.fn(async (url: string, init?: RequestInit) => {
+      calls.push({ url: String(url), method: String(init?.method || 'GET') });
+      return new Response(null, { status: calls.length === 1 ? 204 : 404 });
+    }));
+
+    expect(await deleteGist(TOKEN, GIST_ID)).toBe(true);
+    expect(await deleteGist(TOKEN, GIST_ID)).toBe(true);
+    expect(calls[0].method).toBe('DELETE');
+  });
+
+  it('no intenta borrar con token o id inválidos', async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+
+    expect(await deleteGist('no-es-token', GIST_ID)).toBe(false);
+    expect(await deleteGist(TOKEN, 'xx')).toBe(false);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('la verificación exige que el clon tenga al menos lo copiado', async () => {
+    const CLON = 'abcdef0123456789abcdef0123456789';
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(
+      JSON.stringify({ files: { [SOCIAL_FILE]: { content: JSON.stringify(payload()) } } }),
+      { status: 200, headers: { 'content-type': 'application/json' } },
+    )));
+
+    expect(await socialGistHasContent(TOKEN, CLON, 1)).toBe(true);
+    // Si esperábamos más de lo que hay, NO se da por bueno: borrar sería perder la diferencia.
+    expect(await socialGistHasContent(TOKEN, CLON, 5)).toBe(false);
+  });
+
+  it('ante un fallo de lectura NO se da por verificado', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => new Response('nope', { status: 500 })));
+
+    expect(await socialGistHasContent(TOKEN, '0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f', 3)).toBe(false);
+  });
+
+  it('sin nada que copiar, la verificación es trivialmente cierta y no gasta red', async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+
+    expect(await socialGistHasContent(TOKEN, GIST_ID, 0)).toBe(true);
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 });
