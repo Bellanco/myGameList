@@ -756,7 +756,14 @@ export function useSocialViewModel(options?: {
             return;
           }
           setFeedback('ok', SOCIAL_UI.status.socialGistMigrated);
-        })();
+        })().catch(() => {
+          // Esta cadena corre suelta (`void`), así que sin este catch cualquier fallo suyo —la verificación del
+          // clon o el borrado, que van contra la red— se convertía en un rechazo NO CAPTURADO: en el navegador
+          // acaba en la consola y en el manejador global de errores, y no en el aviso que le toca. Lo que ya está
+          // hecho no se deshace (el canal nuevo está creado y repuntado), así que el estado seguro es el mismo que
+          // cuando la verificación no convence: se conservan los dos gists y se avisa.
+          setFeedback('warn', SOCIAL_UI.status.socialGistMigratedKept);
+        });
       })
       .catch(() => {
         // Best-effort: si falla (red, rate-limit), se reintenta en la próxima sesión. Nada queda a medias: o se
