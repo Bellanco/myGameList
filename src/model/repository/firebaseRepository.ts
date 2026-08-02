@@ -272,7 +272,15 @@ export async function setUserMap(uid: string, profileId: string): Promise<void> 
 export async function establishProfileIdentity(uid: string, profileId: string, gamesGistId: string, socialGistId: string): Promise<void> {
   try {
     await setUserMap(uid, profileId);
-    await setPrivateConfig(uid, { profileId, gamesGistId, socialGistId });
+    // Los ids VACÍOS no se escriben. `setPrivateConfig` hace merge, así que mandar `gamesGistId: ''` no es "no
+    // tocarlo": lo BORRA. Guardar el perfil social desde un dispositivo sin la sincronización principal
+    // configurada dejaba a cero el id del gist de juegos guardado, y con él la recuperación en otros
+    // dispositivos. Solo se escribe lo que de verdad se conoce.
+    await setPrivateConfig(uid, {
+      profileId,
+      ...(gamesGistId ? { gamesGistId } : {}),
+      ...(socialGistId ? { socialGistId } : {}),
+    });
   } catch (error) {
     console.warn('[firebase] No se pudo establecer profileId/userMap:', error instanceof Error ? error.message : error);
   }
@@ -378,6 +386,13 @@ export async function ensureProfileByEmail(input: {
     // Perfil anterior a la purga: se reescribe una vez para retirarle el email / el id del gist de juegos.
     (canPurgeLegacyFields && hasLegacyPii);
 
+  // B2 — PRIMERO se guardan los ids en `privateConfig`/`userMap`, y solo DESPUÉS se purgan del perfil público.
+  // El orden importa: la escritura de abajo borra `social.gistId` y `social.gamesGistId` del documento público, y
+  // este guardado es best-effort (se traga sus errores). Con el orden inverso, un fallo de red entre ambos dejaba
+  // al usuario purgado y SIN guardar: ni podía recuperar su canal social ni su gist de juegos en otro
+  // dispositivo. Guardando antes, el peor caso es tener el dato en los dos sitios, que es inofensivo.
+  await establishProfileIdentity(input.user.uid, profileId, gamesGistId, input.socialGistId);
+
   if (shouldWriteProfile) {
     await setDoc(
       doc(services.firestore, 'profiles', targetId),
@@ -422,9 +437,6 @@ export async function ensureProfileByEmail(input: {
       console.warn('[firebase] No se pudo respaldar/limpiar el token:', error instanceof Error ? error.message : error);
     }
   }
-
-  // B2: establecer profileId/userMap/privateConfig.
-  await establishProfileIdentity(input.user.uid, profileId, gamesGistId, input.socialGistId);
 
   const written: SocialProfileReference = {
     id: targetId,
