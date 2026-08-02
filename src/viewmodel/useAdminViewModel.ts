@@ -18,6 +18,7 @@ import {
   purgeLegacyProfileFields,
   setUserSocialEnabled,
   setUserTier,
+  unifySocialGist,
   type AdminCensus,
   type AdminUserRow,
   type LegacyProfileField,
@@ -147,6 +148,46 @@ export function useAdminViewModel() {
     [ownUid, runAction],
   );
 
+  /**
+   * Unifica el canal social de quien acabó con dos gists en circulación. Decide con evidencia (qué gist es
+   * legible públicamente y cuál tiene el contenido), no a dedo, y escribe el ganador en su perfil y en todas sus
+   * amistades. Ver `pickLiveSocialGist`.
+   */
+  const unifyGist = useCallback(
+    (row: AdminUserRow) =>
+      runAction(row, async () => {
+        const result = await unifySocialGist(row);
+        if (result.failures.length > 0) {
+          console.warn('[admin] unificación incompleta:', result.failures);
+          return { kind: 'warn', text: ADMIN_PANEL_UI.gist.unifyPartial };
+        }
+        // Bloqueado por contenido en el perdedor: unificar haría desaparecer del feed lo que solo esté ahí.
+        if (result.blocked === 'contenido-en-el-perdedor') {
+          return {
+            kind: 'warn',
+            text: ADMIN_PANEL_UI.gist.unifyBlocked(result.verdict.winner, result.verdict.losers[0] || ''),
+          };
+        }
+        // Sin ganador no se ha escrito nada: hay que decir POR QUÉ, o parecerá que la acción no hizo nada.
+        if (!result.verdict.winner) {
+          return {
+            kind: 'warn',
+            text: result.verdict.reason === 'sin-evidencia'
+              ? ADMIN_PANEL_UI.gist.unifyNoEvidence
+              : ADMIN_PANEL_UI.gist.unifyNoPublic,
+          };
+        }
+        if (!result.applied) {
+          return { kind: 'ok', text: ADMIN_PANEL_UI.gist.unifyAlready };
+        }
+        return {
+          kind: 'ok',
+          text: ADMIN_PANEL_UI.gist.unifyDone(result.verdict.winner, result.friendshipsUpdated),
+        };
+      }),
+    [runAction],
+  );
+
   const purgeLegacy = useCallback(
     (row: AdminUserRow, field: LegacyProfileField) =>
       runAction(row, async () => {
@@ -192,6 +233,7 @@ export function useAdminViewModel() {
     busyId,
     refresh,
     changeTier,
+    unifyGist,
     toggleSocial,
     purgeLegacy,
     deleteUser,

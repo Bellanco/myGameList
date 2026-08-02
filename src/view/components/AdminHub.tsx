@@ -25,16 +25,16 @@ const DATE_FORMAT = new Intl.DateTimeFormat('es-ES', { dateStyle: 'medium', time
 const DAY_FORMAT = new Intl.DateTimeFormat('es-ES', { dateStyle: 'medium' });
 
 /**
- * Señales que no son "estado raro" sino un problema con consecuencias hoy: un token en claro que cualquiera puede
- * leer, un perfil que no publica nada, unas reseñas que no llegan al feed, o fechas imposibles. Se destacan para
- * que no se pierdan entre las informativas (esquema antiguo, inactividad).
- */
-/**
  * Señales que el pie de la ficha ya representa como botón de purga. No se pintan además como píldora informativa:
  * sería el mismo texto y el mismo color dos veces en la misma ficha. Cuentan igual para el total de señalados.
  */
 const LEGACY_ANOMALIES = new Set<AdminAnomaly>(['legacy-token', 'legacy-fields']);
 
+/**
+ * Señales que no son "estado raro" sino un problema con consecuencias hoy: un token en claro que cualquiera puede
+ * leer, un perfil que no publica nada, unas reseñas que no llegan al feed, o fechas imposibles. Se destacan para
+ * que no se pierdan entre las informativas (esquema antiguo, inactividad).
+ */
 const SEVERE_ANOMALIES = new Set<AdminAnomaly>([
   'legacy-token',
   'enabled-without-gist',
@@ -128,8 +128,9 @@ export const AdminHub = memo(function AdminHub() {
 
   const totals = vm.census?.totals;
 
-  // Tarjeta propia y NO `.settings-hub`/`.settings-card`: ese hub reparte sus tarjetas en una rejilla de dos
-  // columnas a partir de 48rem, y eso partía esta tabla por la mitad. Aquí solo hay una tabla, y va entera.
+  // Tarjeta contenedora propia y NO `.settings-hub`/`.settings-card`: ese hub reparte sus tarjetas en una rejilla
+  // de dos columnas a partir de 48rem, y eso partía el panel por la mitad. Aquí ocupa el ancho entero, y dentro va
+  // la rejilla de fichas de usuario.
   return (
     <section className="admin-hub" aria-label={A.sectionAria}>
       <div className="admin-card">
@@ -297,6 +298,33 @@ export const AdminHub = memo(function AdminHub() {
                       <div><dt>{A.field.docId}</dt><dd><code>{user.id}</code></dd></div>
                     ) : null}
                   </dl>
+
+                  {/* Deriva de gist: se enseñan LOS DOS ids (el que publica y el que ven sus amistades) para que
+                      la decisión sea comprobable, y se ofrece unificar. El árbitro decide con evidencia; el
+                      administrador no tiene que adivinar cuál es el bueno. */}
+                  {user.anomalies.includes('gist-drift') ? (
+                    <div className="admin-gist-drift" role="group" aria-label={A.gist.driftTitle}>
+                      <span className="admin-field-label">{A.gist.driftTitle}</span>
+                      <dl className="admin-user-data">
+                        <div><dt>{A.gist.profileGist}</dt><dd><code>{user.socialGistId}</code></dd></div>
+                        <div>
+                          <dt>{A.gist.friendGist}</dt>
+                          <dd>{user.friendSocialGistIds.map((gistId) => <code key={gistId}>{gistId}</code>)}</dd>
+                        </div>
+                      </dl>
+                      <button
+                        type="button"
+                        className="btn btn-secondary"
+                        disabled={busy}
+                        title={A.gist.unifyHint}
+                        onClick={() =>
+                          setPending({ title: A.gist.confirm(name), run: () => void vm.unifyGist(user) })
+                        }
+                      >
+                        {busy ? A.working : A.gist.unifyBtn}
+                      </button>
+                    </div>
+                  ) : null}
 
                   <div className="admin-card-actions">
                     {legacyTags.length === 0 ? (

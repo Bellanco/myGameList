@@ -240,3 +240,17 @@
 
 .admin-actions { display: flex; flex-wrap: wrap; gap: .4rem; }
 .admin-actions .btn { font-size: .78rem; padding: .35rem .6rem; }
+
+/* Bloque de deriva de gist: se enseñan los dos ids candidatos y el botón que unifica. Enmarcado en el color de
+   peligro porque es un estado roto (sus reseñas no llegan al feed de sus amigos), no un dato más de la ficha. */
+.admin-gist-drift {
+  display: grid;
+  gap: .4rem;
+  padding: .55rem .7rem;
+  border: 1px solid color-mix(in srgb, var(--danger) 40%, var(--border));
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--danger) 7%, transparent);
+}
+.admin-gist-drift .btn { justify-self: start; font-size: .78rem; padding: .35rem .6rem; }
+/* Con dos ids en la misma celda, que no se peguen. */
+.admin-gist-drift dd code { display: block; }

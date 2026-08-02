@@ -24,6 +24,8 @@ import {
   saveProfileByEmailCache,
 } from './firebaseSocialRepository';
 import { DEFAULT_PROFILE_TIER } from '../../core/constants/tiers';
+import { pickLiveSocialGist } from '../../core/social/gistArbitration';
+import { probeSocialGistEvidence } from './gistRepository';
 import type { FirestorePrivateConfig, FirestorePublicConfig } from '../types/firestore';
 
 // --- RE-EXPORTS: API pública estable (los consumidores siguen importando desde firebaseRepository) ---
@@ -496,6 +498,22 @@ export async function touchOwnProfileActivity(uid: string): Promise<void> {
 }
 
 /**
+ * Resultado del saneado del canal social. Dos desenlaces distintos, y el segundo no puede resolverse aquí:
+ *
+ *  - `healed`: se corrigió el documento del directorio, que apuntaba a un gist que ya no es el vivo.
+ *  - `adoptGistId`: el gist vivo NO es el de este dispositivo. Solo el llamador puede arreglarlo, porque implica
+ *    reescribir la configuración local de sync (que vive en el navegador, no en Firestore). Si no lo adopta, el
+ *    usuario seguiría publicando en el gist perdedor y volvería a divergir en el siguiente guardado.
+ */
+export interface GistHealResult {
+  healed: boolean;
+  /** Gist que el llamador debe adoptar como suyo, o '' si no hay nada que adoptar. */
+  adoptGistId: string;
+}
+
+const NO_HEAL: GistHealResult = { healed: false, adoptGistId: '' };
+
+/**
  * Auto-heal del directorio: sincroniza `profiles/{uid}.social.gistId` con el gist social ACTUAL del dueño (el de su
  * sesión). El doc del directorio solo se reescribe al re-publicar el perfil, así que puede quedar anclado a un gist
  * viejo si el usuario cambió de gist social sin volver a publicar → el feed de sus amigos leería un gist obsoleto.
@@ -503,16 +521,46 @@ export async function touchOwnProfileActivity(uid: string): Promise<void> {
  * SOLO si de verdad diverge (evita writes/invalidaciones de caché en cada apertura). Merge de `social` → preserva
  * `gamesGistId`/`enabled`/etc. Devuelve true si aplicó una corrección.
  */
-export async function healOwnDirectoryGist(uid: string, socialGistId: string, socialGistEtag: string | null = null): Promise<boolean> {
-  if (!uid || !socialGistId) return false;
+export async function healOwnDirectoryGist(
+  uid: string,
+  socialGistId: string,
+  socialGistEtag: string | null = null,
+): Promise<GistHealResult> {
+  if (!uid || !socialGistId) return NO_HEAL;
   const services = await initializeFirebaseServices();
-  if (!services) return false;
+  if (!services) return NO_HEAL;
   const ref = doc(services.firestore, 'profiles', uid);
   const snap = await getDoc(ref);
   // Sin doc → nada que sanear (se creará al publicar el perfil). Ya coincide → no se escribe.
-  if (!snap.exists()) return false;
+  if (!snap.exists()) return NO_HEAL;
   const data = snap.data() as { social?: { gistId?: string } };
-  if (String(data.social?.gistId || '') === socialGistId) return false;
+  const publishedGistId = String(data.social?.gistId || '');
+  if (publishedGistId === socialGistId) return NO_HEAL;
+
+  // DIVERGEN. Antes se escribía el de la sesión sin más, y eso hacía que ganara el ÚLTIMO dispositivo en abrir:
+  // uno antiguo con la configuración obsoleta reimponía su gist y devolvía al usuario a la deriva (sus reseñas
+  // nuevas dejaban de verse). Ahora se arbitra con evidencia y se escribe el ganador, que puede ser el que ya
+  // estaba publicado. Mismo árbitro que usa el panel de administración, para que los dos converjan al mismo id
+  // en vez de reescribirse mutuamente.
+  //
+  // El coste de red solo se paga en este caso raro: si los ids coinciden, la función ya ha salido arriba.
+  if (publishedGistId) {
+    const verdict = pickLiveSocialGist(await Promise.all([socialGistId, publishedGistId].map(probeSocialGistEvidence)));
+    // `sin-evidencia` (sin red, o rate-limit anónimo agotado) NO es un veredicto: se conserva el comportamiento de
+    // siempre y manda el gist de la sesión, que es la única verdad de la que dispone este dispositivo.
+    if (verdict.reason !== 'sin-evidencia') {
+      // Sin ganador (ninguno legible sin autenticación) no se toca nada: mejor la deriva que apuntar a los amigos
+      // a un gist que no pueden leer. `updateGistPrivacy` lo volverá público en el siguiente guardado.
+      if (!verdict.winner) return NO_HEAL;
+      // GANA EL PUBLICADO: este dispositivo es el que está equivocado. No basta con no escribir —si se dejara así,
+      // el usuario seguiría PUBLICANDO en el gist perdedor y volvería a divergir en el siguiente guardado. Se le
+      // pide al llamador que lo adopte en su configuración local.
+      if (verdict.winner === publishedGistId) {
+        return { healed: false, adoptGistId: publishedGistId };
+      }
+    }
+  }
+
   await setDoc(
     ref,
     {
@@ -524,5 +572,5 @@ export async function healOwnDirectoryGist(uid: string, socialGistId: string, so
   );
   invalidateOwnProfileCache(uid);
   invalidateSocialDirectoryCache();
-  return true;
+  return { healed: true, adoptGistId: '' };
 }

@@ -25,6 +25,12 @@ const deleteUserProfileMock = vi.fn<(...args: unknown[]) => Promise<{ ok: boolea
   failures: [],
 }));
 const setUserTierMock = vi.fn<(...args: unknown[]) => Promise<void>>(async () => {});
+const unifySocialGistMock = vi.fn<(...args: unknown[]) => Promise<unknown>>(async () => ({
+  verdict: { winner: 'gs-nuevo', losers: ['gs-viejo'], reason: 'publico' },
+  applied: true,
+  friendshipsUpdated: 1,
+  failures: [] as string[],
+}));
 
 vi.mock('../../src/model/repository/firebaseAdminRepository', () => ({
   ADMIN_PROFILES_LIMIT: 300,
@@ -33,6 +39,7 @@ vi.mock('../../src/model/repository/firebaseAdminRepository', () => ({
   purgeLegacyProfileFields: (...args: unknown[]) => purgeLegacyProfileFieldsMock(...args),
   deleteUserProfile: (...args: unknown[]) => deleteUserProfileMock(...args),
   setUserTier: (...args: unknown[]) => setUserTierMock(...args),
+  unifySocialGist: (...args: unknown[]) => unifySocialGistMock(...args),
 }));
 
 import { AdminHub } from '../../src/view/components/AdminHub';
@@ -60,6 +67,7 @@ function user(overrides: Record<string, unknown> = {}) {
     createdAt: 1_690_000_000_000,
     estimatedFirstSeenAt: 0,
     lastFriendshipAt: 1_695_000_000_000,
+    friendSocialGistIds: [] as string[],
     anomalies: [] as AdminAnomaly[],
     legacy: { email: false, gamesGistId: false, token: false },
     ...overrides,
@@ -105,6 +113,7 @@ describe('AdminHub — puerta de acceso', () => {
     purgeLegacyProfileFieldsMock.mockClear();
     deleteUserProfileMock.mockClear();
     setUserTierMock.mockClear();
+    unifySocialGistMock.mockClear();
   });
 
   it('mientras la sesión se resuelve no decide nada (ni panel ni expulsión)', () => {
@@ -150,6 +159,7 @@ describe('AdminHub — moderación', () => {
     purgeLegacyProfileFieldsMock.mockClear();
     deleteUserProfileMock.mockClear();
     setUserTierMock.mockClear();
+    unifySocialGistMock.mockClear();
   });
 
   it('ninguna acción se ejecuta sin pasar por la confirmación', async () => {
@@ -295,7 +305,7 @@ describe('AdminHub — moderación', () => {
 
   it('pinta las señales del perfil con su explicación, y destaca las graves', async () => {
     loadAdminCensusMock.mockResolvedValue(
-      census([user({ anomalies: ['gist-drift', 'inactive'] })]),
+      census([user({ anomalies: ['gist-drift', 'inactive'], friendSocialGistIds: ['gs-viejo'] })]),
     );
     renderHub();
     signIn(ADMIN_EMAIL);
@@ -329,6 +339,37 @@ describe('AdminHub — moderación', () => {
     expect(apariciones[0].tagName).toBe('BUTTON');
     // La señal no legacy sí se pinta.
     expect(screen.getByText(ADMIN_PANEL_UI.anomalies.inactive.label)).toBeInTheDocument();
+  });
+
+  it('con deriva de gist enseña LOS DOS ids y ofrece unificar', async () => {
+    loadAdminCensusMock.mockResolvedValue(
+      census([user({ socialGistId: 'gs-nuevo', friendSocialGistIds: ['gs-viejo'], anomalies: ['gist-drift'] })]),
+    );
+    renderHub();
+    signIn(ADMIN_EMAIL);
+    await screen.findByText('Ada');
+
+    // Los dos candidatos a la vista DENTRO del bloque de deriva: la decisión del árbitro tiene que ser
+    // comprobable, no un acto de fe. (El id del perfil sale además en la ficha de datos, de ahí el `within`.)
+    const bloque = screen.getByRole('group', { name: ADMIN_PANEL_UI.gist.driftTitle });
+    expect(within(bloque).getByText('gs-nuevo')).toBeInTheDocument();
+    expect(within(bloque).getByText('gs-viejo')).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: ADMIN_PANEL_UI.gist.unifyBtn }));
+    await userEvent.click(screen.getByRole('button', { name: ADMIN_PANEL_UI.confirmAccept }));
+
+    await waitFor(() => expect(unifySocialGistMock).toHaveBeenCalledTimes(1));
+    // Se le pasa la fila completa: el repositorio necesita el uid para localizar sus amistades.
+    expect(unifySocialGistMock.mock.calls[0][0]).toMatchObject({ uid: 'uid-a', socialGistId: 'gs-nuevo' });
+  });
+
+  it('sin deriva no ofrece unificar nada', async () => {
+    loadAdminCensusMock.mockResolvedValue(census([user()]));
+    renderHub();
+    signIn(ADMIN_EMAIL);
+    await screen.findByText('Ada');
+
+    expect(screen.queryByRole('button', { name: ADMIN_PANEL_UI.gist.unifyBtn })).not.toBeInTheDocument();
   });
 
   it('un perfil sin señales no muestra la lista de señales', async () => {

@@ -12,6 +12,14 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
   gist de juegos y token en claro) y borrar perfil + amistades. El acceso lo concede `isAdmin()` en
   las reglas de Firestore, no el cliente. El borrado es parcial a propósito: `privateConfig`,
   `publicConfig` y `userMap` son owner-only y sobreviven, igual que la cuenta de Google y los Gists.
+- **Unificación del canal social** cuando un usuario acabó con dos gists en circulación (el clonado de
+  `updateGistPrivacy` dejaba uno huérfano): se decide con evidencia —cuál es legible sin autenticación y cuál
+  tiene el contenido, no a dedo— y se escribe ese en su perfil y en todas sus amistades. Ejecutable desde el panel
+  sin esperar al usuario, y el auto-saneado de su propio cliente usa el MISMO árbitro, así que ambos convergen al
+  mismo id en vez de reescribirse mutuamente. Si el gist vivo no es el que tiene configurado el dispositivo, el
+  cliente lo **adopta en su configuración local**, para que el usuario deje de publicar en el descartado. No se
+  borra ningún gist, y la unificación se abstiene si el descartado es público y tiene actividad: mientras hay
+  deriva el hub fusiona los dos, así que ahí solo puede resolver bien el cliente de su dueño.
 - **Fecha de alta del perfil** (`createdAt`): se sella al crearlo y las reglas la declaran inmutable, así que
   ni su dueño puede reescribirla. Los perfiles anteriores no la tienen; el panel la estima con la fecha de su
   amistad más antigua y lo marca como estimación.
