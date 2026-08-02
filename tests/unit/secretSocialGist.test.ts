@@ -233,3 +233,65 @@ describe('deleteGist y socialGistHasContent', () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 });
+
+// DE QUÉ GIST SE CLONA. Una cuenta con deriva histórica tiene dos canales, y el que este dispositivo tiene
+// configurado puede ser el clon VACÍO. Copiar ese y retirar el otro dejaría al usuario con un canal en blanco.
+describe('ensureSecretSocialGist — elección de la fuente', () => {
+  it('clona el gist con CONTENIDO aunque la sesión apunte al vacío', async () => {
+    const CON_CONTENIDO = 'cccccccccccccccccccccccccccccccc';
+    // La sesión apunta a GIST_ID (pequeño, el clon vacío); el otro tiene mucho más.
+    listResponse = [ownGist(GIST_ID, true, 439), ownGist(CON_CONTENIDO, true, 40_000)];
+    const leidos: string[] = [];
+    vi.stubGlobal('fetch', vi.fn(async (url: string, init?: RequestInit) => {
+      const target = String(url);
+      if (target.endsWith('/gists?per_page=100')) {
+        return new Response(JSON.stringify(listResponse), { status: 200, headers: { 'content-type': 'application/json' } });
+      }
+      if (String(init?.method || 'GET').toUpperCase() === 'POST') {
+        const body = JSON.parse(String(init?.body || '{}'));
+        created = { public: body.public, content: body.files?.[SOCIAL_FILE]?.content };
+        return new Response(JSON.stringify({ id: NUEVO_ID }), { status: 201, headers: { 'content-type': 'application/json' } });
+      }
+      leidos.push(target.split('/').pop() || '');
+      return new Response(
+        JSON.stringify({ files: { [SOCIAL_FILE]: { content: JSON.stringify(payload()) } } }),
+        { status: 200, headers: { 'content-type': 'application/json' } },
+      );
+    }));
+
+    const result = await ensureSecretSocialGist(TOKEN, GIST_ID);
+
+    expect(result.migrated).toBe(true);
+    // Se leyó el gist CON contenido, no el de la sesión.
+    expect(leidos).toContain(CON_CONTENIDO);
+    expect(leidos).not.toContain(GIST_ID);
+  });
+
+  it('a igualdad, se queda con el gist de la sesión: no se cambia de canal sin motivo', async () => {
+    // Ids FRESCOS: `readSocialGist` cachea por gist, y reutilizar los de otros casos serviría desde caché sin
+    // pasar por la red, con lo que este test no observaría nada.
+    const SESION = 'eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee';
+    const OTRO = 'dddddddddddddddddddddddddddddddd';
+    listResponse = [ownGist(OTRO, true, 900), ownGist(SESION, true, 900)];
+    const leidos: string[] = [];
+    vi.stubGlobal('fetch', vi.fn(async (url: string, init?: RequestInit) => {
+      const target = String(url);
+      if (target.endsWith('/gists?per_page=100')) {
+        return new Response(JSON.stringify(listResponse), { status: 200, headers: { 'content-type': 'application/json' } });
+      }
+      if (String(init?.method || 'GET').toUpperCase() === 'POST') {
+        return new Response(JSON.stringify({ id: NUEVO_ID }), { status: 201, headers: { 'content-type': 'application/json' } });
+      }
+      leidos.push(target.split('/').pop() || '');
+      return new Response(
+        JSON.stringify({ files: { [SOCIAL_FILE]: { content: JSON.stringify(payload()) } } }),
+        { status: 200, headers: { 'content-type': 'application/json' } },
+      );
+    }));
+
+    await ensureSecretSocialGist(TOKEN, SESION);
+
+    expect(leidos).toContain(SESION);
+    expect(leidos).not.toContain(OTRO);
+  });
+});

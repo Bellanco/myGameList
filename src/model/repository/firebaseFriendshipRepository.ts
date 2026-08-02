@@ -300,7 +300,7 @@ export async function healOwnFriendshipIdentity(myUid: string, self: FriendshipS
       const data = entry.data() as Partial<FriendshipDoc>;
       const amRequester = data.requester === myUid;
       // Solo escribir si algún campo denormalizado DIVERGE del valor actual (evita N writes/cuota en cada
-      // apertura de social o guardado de perfil cuando nada ha cambiado). Mismo patrón que healOwnDirectoryGist.
+      // apertura de social o guardado de perfil cuando nada ha cambiado).
       const diverges = amRequester
         ? data.requesterName !== self.name ||
           data.requesterPhoto !== self.photo ||

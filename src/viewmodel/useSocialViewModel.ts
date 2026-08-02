@@ -721,8 +721,7 @@ export function useSocialViewModel(options?: {
   // del hub, justo lo contrario de lo que se busca.
   //
   // Lo que sigue haciendo falta lo cubre `healOwnFriendshipIdentity`, arriba: propaga el gist de la sesión a los
-  // documentos de amistad, que es donde ahora lo leen las amistades. La función `healOwnDirectoryGist` y el
-  // árbitro quedan sin uso, pendientes de retirar en la limpieza final.
+  // documentos de amistad, que es donde ahora lo leen las amistades.
 
   // LATIDO DE USO RECIENTE: refresca `profiles.updatedAt`, por el que ordena el directorio y con el que el feed
   // decide si un amigo sigue activo. Publicar ya lo refresca; esto cubre a quien entra solo a mirar. Acotado a
