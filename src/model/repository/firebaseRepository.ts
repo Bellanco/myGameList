@@ -524,6 +524,67 @@ export async function touchOwnProfileActivity(uid: string): Promise<void> {
   }
 }
 
+/**
+ * Retira del perfil PÚBLICO los ids de gist que aún publique, y solo esos campos.
+ *
+ * Hace falta aparte de `ensureProfileByEmail` porque esa función únicamente corre al PUBLICAR (reseña, publicación
+ * o guardado del perfil). Quien migró su canal a secreto y desde entonces solo ha entrado a mirar se quedaba
+ * anunciando en su perfil un gist que la propia migración había borrado: sus amigos lo leían igual —la hidratación
+ * fusiona candidatos y tolera un 404—, pero gastaban una petición muerta cada vez y el panel lo marcaba como
+ * deriva para siempre. Llamada al abrir el espacio social, se resuelve sola en la primera visita.
+ *
+ * SEGURIDAD: no sella nada, EXIGE que ya esté sellado. Solo retira el campo cuyo id ya consta en `privateConfig`
+ * (owner-only), que es de donde se recupera el canal en otro dispositivo. Comprobarlo en vez de escribirlo evita
+ * dos daños: purgar un `gamesGistId` sin respaldo desde un equipo sin la sincronización principal configurada, y
+ * pisar en `privateConfig` —la fuente de verdad de la cuenta— el canal que otro dispositivo acabe de migrar.
+ *
+ * Barata e idempotente: si el perfil ya no publica nada, no escribe. Best-effort: no lanza.
+ */
+export async function purgeOwnPublicGistIds(input: {
+  uid: string;
+  socialGistId: string;
+  gamesGistId: string;
+}): Promise<boolean> {
+  const uid = String(input.uid || '').trim();
+  if (!uid) return false;
+  try {
+    const services = await initializeFirebaseServices();
+    if (!services) return false;
+    const ref = doc(services.firestore, 'profiles', uid);
+    const snap = await getDoc(ref);
+    if (!snap.exists()) return false;
+
+    const social = ((snap.data() as { social?: Record<string, unknown> })?.social || {}) as Record<string, unknown>;
+    if (!social.gistId && !social.gamesGistId) return false;
+
+    const saved = await getPrivateConfig(uid);
+    const savedSocial = String(saved?.socialGistId || '').trim();
+    const savedGames = String(saved?.gamesGistId || '').trim();
+    // El id social se retira solo si el respaldo coincide con el canal de esta sesión: si difieren, otro
+    // dispositivo migró y aquí no se sabe cuál manda, así que no se toca nada.
+    const purgeSocial = Boolean(social.gistId) && Boolean(savedSocial) && savedSocial === String(input.socialGistId || '').trim();
+    const purgeGames = Boolean(social.gamesGistId) && Boolean(savedGames);
+    if (!purgeSocial && !purgeGames) return false;
+
+    await setDoc(
+      ref,
+      {
+        uid,
+        social: {
+          ...(purgeSocial ? { gistId: deleteField() } : {}),
+          ...(purgeGames ? { gamesGistId: deleteField() } : {}),
+        },
+      },
+      { merge: true },
+    );
+    invalidateOwnProfileCache(uid);
+    invalidateSocialDirectoryCache();
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 /** Cada cuánto, como mucho, se refresca la recencia desde un mismo dispositivo: una escritura al día. */
 export const PROFILE_TOUCH_MIN_INTERVAL_MS = 20 * 60 * 60 * 1000;
 

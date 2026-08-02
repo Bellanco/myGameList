@@ -45,6 +45,7 @@ import {
   getCurrentSocialAuthUser,
   getMyFriendships,
   getPrivateConfig,
+  purgeOwnPublicGistIds,
   getPublicConfig,
   setPrivateConfig,
   setPublicConfig,
@@ -677,6 +678,15 @@ export function useSocialViewModel(options?: {
     // Sin esta comprobación, dos dispositivos abriendo a la vez clonarían cada uno por su lado y recrearían la
     // deriva que esta migración viene a eliminar. Si ya hay un canal distinto ahí, se adopta en vez de clonar.
     void (async () => {
+      // Retirada del id que el perfil PÚBLICO aún anuncie. Va aquí, fuera de la migración, porque quien ya migró
+      // en otra sesión no vuelve a entrar en ella y se quedaba publicando un gist borrado indefinidamente: solo se
+      // limpiaba al publicar algo. Es best-effort y no escribe si no hay nada que retirar.
+      void purgeOwnPublicGistIds({
+        uid: owner.uid,
+        socialGistId: socialCfgGistId,
+        gamesGistId: mainSyncConfig?.gistId || '',
+      });
+
       const shared = await getPrivateConfig(owner.uid).catch(() => null);
       const sharedGistId = String(shared?.socialGistId || '').trim();
       if (sharedGistId && sharedGistId !== socialCfgGistId) {
