@@ -390,6 +390,11 @@ export async function ensureProfileByEmail(input: {
           ...(canPurgeLegacyFields ? { gamesGistId: deleteField() } : {}),
         },
         updatedAt: serverTimestamp(),
+        // FECHA DE ALTA: se sella SOLO al crear el perfil (`!existing`). En las reescrituras posteriores no se
+        // envía a propósito — las reglas la declaran inmutable, así que mandar un `serverTimestamp()` nuevo haría
+        // que la escritura se denegase por completo. Los perfiles anteriores a este cambio se quedan sin ella; el
+        // panel de administración lo suple con la fecha de su amistad más antigua, marcada como estimada.
+        ...(existing ? {} : { createdAt: serverTimestamp() }),
         ...(canPurgeLegacyFields ? { email: deleteField() } : {}),
       },
       { merge: true },
