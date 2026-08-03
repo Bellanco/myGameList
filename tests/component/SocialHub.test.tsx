@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import type { SecretSocialGistResult } from '../../src/model/repository/gistRepository';
+import type { SocialAuthUser, SocialProfileReference } from '../../src/model/repository/firebaseClient';
 
 // Mock de los repos que consume useSocialViewModel: aísla la UI de red/Firebase/IndexedDB.
 // Valida que tras M3 (extracción del viewmodel) SocialHub sigue renderizando ambas ramas sin romper.
@@ -9,7 +10,7 @@ import type { SecretSocialGistResult } from '../../src/model/repository/gistRepo
 const firebaseMocks = vi.hoisted(() => ({
   getCurrentSocialAuthUser: vi.fn(),
   ensureProfileByEmail: vi.fn(async () => {}),
-  resolveOwnProfile: vi.fn(async () => null),
+  resolveOwnProfile: vi.fn(async (): Promise<SocialProfileReference | null> => null),
   // L4 — puerta de aceptación. El valor por defecto (consentimiento vigente) se fija en `beforeEach`, donde ya
   // se puede importar `LEGAL_VERSION`; los tests de la puerta lo sobrescriben con `null`.
   getPublicConfig: vi.fn(async (): Promise<any> => null),
@@ -18,7 +19,7 @@ const firebaseMocks = vi.hoisted(() => ({
   getPrivateConfig: vi.fn(async (): Promise<any> => null),
   setPrivateConfig: vi.fn(async () => {}),
   listSocialDirectory: vi.fn(async (): Promise<any[]> => []),
-  signInWithGoogle: vi.fn(async () => null),
+  signInWithGoogle: vi.fn(async (): Promise<SocialAuthUser | null> => null),
   signOutSocialUser: vi.fn(async () => {}),
   resolveStableProfileId: vi.fn(async (uid: string) => uid), // P1: detección de propiedad por identidad
   updateProfilePhoto: vi.fn(async () => {}),
@@ -402,6 +403,36 @@ describe('SocialHub (componente, post-M3)', () => {
     ));
     // Y NO se clona: sería un gist huérfano más.
     expect(gistMocks.ensureSecretSocialGist).not.toHaveBeenCalled();
+  });
+
+  // Al iniciar sesión SIN configuración local (dispositivo nuevo, almacenamiento limpiado u otro origen), el canal
+  // se buscaba en `profiles.social.gistId` — el campo que la migración de privacidad purga—. Devolvía vacío siempre,
+  // y el auto-crear fabricaba un canal NUEVO Y VACÍO: historial real huérfano, editor de perfil pidiendo el alta y,
+  // al abrir el hub, el saneado de amistades repuntando a los amigos a ese gist vacío. El efecto de recuperación del
+  // montaje no cubre esto: corrió antes, sin sesión.
+  it('al iniciar sesión sin config local, recupera el canal de privateConfig y NO crea uno vacío', async () => {
+    firebaseMocks.getCurrentSocialAuthUser.mockResolvedValue(null); // al montar aún no hay sesión
+    gistMocks.getSyncConfig.mockReturnValue({ token: 'ghp_x', gistId: 'games', etag: null, lastRemoteUpdatedAt: 0 } as never);
+    gistMocks.getSocialSyncConfig.mockReturnValue(null); // ningún canal en local
+    firebaseMocks.signInWithGoogle.mockResolvedValue({ uid: 'uid-1', email: 'jaime@example.com', displayName: 'Jaime', photoURL: '' });
+    firebaseMocks.getPrivateConfig.mockResolvedValue({ socialGistId: 'gs-mio-de-siempre' });
+    // El perfil público ya está purgado: no publica ningún id.
+    firebaseMocks.resolveOwnProfile.mockResolvedValue({
+      id: 'uid-1', profileId: 'uid-1', email: '', displayName: 'Jaime', photoURL: '',
+      socialGistId: '', gamesGistId: '', githubToken: '', socialEnabled: true, tier: 'bronze',
+    });
+
+    renderHub();
+
+    const botonGoogle = await screen.findByText(SOCIAL_UI.gateway.signIn);
+    fireEvent.click(botonGoogle);
+
+    // Se adopta el canal que ya era suyo…
+    await waitFor(() => expect(gistMocks.saveSocialSyncConfig).toHaveBeenCalledWith(
+      expect.objectContaining({ gistId: 'gs-mio-de-siempre' }),
+    ));
+    // …y NO se crea ninguno: crear aquí deja su historial huérfano y a sus amigos sin su actividad.
+    expect(gistMocks.createSocialGist).not.toHaveBeenCalled();
   });
 
   it('si el canal ya es secreto no toca ninguna referencia', async () => {
