@@ -859,9 +859,21 @@ export function useSocialViewModel(options?: {
     [friendships.friends, enrichFriendRequest],
   );
 
+  // MISMA fuente que la reconciliación (`reconcileGames`, más abajo): los listados VIVOS de la app, y la foto de
+  // `localStorage` solo como respaldo cuando no llegan.
+  //
+  // Aquí estaba la causa del rebote al editor de perfil. Esto se derivaba de `localState`, que es una foto tomada
+  // al montar (lo dice el docblock del propio parámetro `games`), mientras que la app ya tenía la biblioteca en
+  // memoria. Con la foto vacía o atrasada —arranque con la sincronización en curso, hidratación desde el gist,
+  // navegación a social antes de que localStorage estuviera escrito— un perfil perfectamente dado de alta se veía
+  // sin juegos completados, se tomaba por incompleto y se redirigía al editor nada más entrar. Y `App` calculaba lo
+  // mismo con la lista VIVA (`vm.data.c`) para el botón de Cuenta, así que las dos mitades de la misma regla
+  // discrepaban: exactamente el rebote contra el que advierte el comentario de `hasCompletedGames`.
+  const liveLists = options?.games ?? localState;
+
   const completedGames = useMemo(() => {
     const map = new Map<number, string>();
-    localState.c.forEach((game) => {
+    liveLists.c.forEach((game) => {
       if (game.id > 0 && game.name) {
         map.set(game.id, game.name);
       }
@@ -870,7 +882,7 @@ export function useSocialViewModel(options?: {
     return [...map.entries()]
       .map(([id, name]) => ({ id, name }))
       .sort((a, b) => a.name.localeCompare(b.name, 'es'));
-  }, [localState]);
+  }, [liveLists]);
 
   // Requisito de alta: un perfil solo puede existir si el usuario tiene al menos un juego COMPLETADO. Es la única
   // regla de completitud (junto al nombre) y se aplica idéntica en la hidratación, el guardado y el gate del botón
@@ -882,7 +894,7 @@ export function useSocialViewModel(options?: {
   // tienes juegos completados". Confundirlos mandaba al editor a un usuario ya dado de alta, que además leía
   // "Sincronizado" nada más llegar: el diagnóstico y el mensaje se contradecían.
   const libraryPresentLocally =
-    localState.c.length > 0 || localState.v.length > 0 || localState.e.length > 0 || localState.p.length > 0;
+    liveLists.c.length > 0 || liveLists.v.length > 0 || liveLists.e.length > 0 || liveLists.p.length > 0;
   // El requisito de tener un juego completado solo se puede DAR POR INCUMPLIDO si la biblioteca está aquí para
   // comprobarlo. El guardado del perfil lo sigue exigiendo siempre (ahí el usuario está mirando sus propias listas).
   const completedGamesRequirementMet = hasCompletedGames || !libraryPresentLocally;
