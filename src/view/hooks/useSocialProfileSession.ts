@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useLocation } from 'react-router-dom';
-import { resolveOwnProfile, subscribeSocialAuth } from '../../model/repository/firebaseGateway';
+import { getPrivateConfig, resolveOwnProfile, subscribeSocialAuth } from '../../model/repository/firebaseGateway';
 import { getSocialSyncConfig } from '../../model/repository/gistConfigRepository';
 import { peekCachedSocialProfileIdentity } from '../../model/repository/indexedDbRepository';
 
@@ -47,10 +47,19 @@ export function useSocialProfileSession(completedGameIds: ReadonlySet<number>): 
         return;
       }
 
-      void resolveOwnProfile(user)
-        .then((profile) => {
-          if (cancelled) return;
-          setGistId(profile?.socialEnabled ? profile.socialGistId.trim() : '');
+      // Sin config local, el canal se recupera de `privateConfig` (owner-only) y solo después del campo LEGACY del
+      // perfil público. Leyendo solo el perfil, este respaldo dejó de funcionar en cuanto la cuenta migró —ese campo
+      // se purga—: el gate se quedaba en falso y el botón de Cuenta no aparecía nunca en un dispositivo nuevo.
+      void getPrivateConfig(user.uid)
+        .catch(() => null)
+        .then(async (privateConfig) => {
+          const saved = String(privateConfig?.socialGistId || '').trim();
+          if (saved) return saved;
+          const profile = await resolveOwnProfile(user);
+          return profile?.socialEnabled ? profile.socialGistId.trim() : '';
+        })
+        .then((resolved) => {
+          if (!cancelled) setGistId(resolved);
         })
         .catch(() => {
           if (!cancelled) setGistId('');

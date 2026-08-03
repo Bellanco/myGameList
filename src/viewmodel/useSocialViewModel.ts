@@ -552,8 +552,17 @@ export function useSocialViewModel(options?: {
 
     try {
       setResolvingSocialGist(true);
-      const existingProfile = await resolveOwnProfile(user);
-      const existingGistId = existingProfile?.socialEnabled ? existingProfile.socialGistId.trim() : '';
+      // FUENTE DEL CANAL, por orden: `privateConfig` (owner-only, un solo escritor) y solo después el campo LEGACY
+      // del perfil público. Mirando solo el perfil, esta función devolvía SIEMPRE false en cuanto la cuenta migró
+      // —ese campo se purga—, y el camino que la usa (`handleSignInGoogle`, en un navegador sin configuración local:
+      // dispositivo nuevo, almacenamiento limpiado u otro origen) caía en el auto-crear: un canal nuevo y VACÍO
+      // adoptado como propio, el historial real huérfano y el editor de perfil pidiendo el alta otra vez. Y como el
+      // saneado de amistades corre al abrir el hub, habría repuntado a los amigos a ese gist vacío, dejándoles sin
+      // la actividad de esta cuenta. Aquí NO vale el efecto de recuperación del montaje: ese ya corrió sin sesión.
+      const savedConfig = await getPrivateConfig(user.uid).catch(() => null);
+      const savedGistId = String(savedConfig?.socialGistId || '').trim();
+      const existingProfile = savedGistId ? null : await resolveOwnProfile(user);
+      const existingGistId = savedGistId || (existingProfile?.socialEnabled ? existingProfile.socialGistId.trim() : '');
 
       if (!existingGistId) {
         return false;
@@ -577,6 +586,11 @@ export function useSocialViewModel(options?: {
       });
       setSocialCfgGistId(existingGistId);
       setSocialCfgEtag(null);
+      // Si vino del campo legacy, se copia a su sitio: es lo único que evita que el siguiente dispositivo vuelva a
+      // no encontrarlo cuando ese campo quede purgado.
+      if (!savedGistId) {
+        void setPrivateConfig(user.uid, { socialGistId: existingGistId }).catch(() => {});
+      }
       setFeedback('ok', SOCIAL_UI.status.gistLinkedFromFirestore);
       return true;
     } catch (error) {
@@ -587,7 +601,11 @@ export function useSocialViewModel(options?: {
     }
   }, [mainSyncConfig, setFeedback]);
 
-  const localState = useMemo(() => loadLocalState(), []);
+  // Se relee al ABRIR el espacio social, no solo al montar. De aquí sale `hasCompletedGames`, y con la foto del
+  // montaje bastaba con que la biblioteca aún no estuviera en localStorage en ese instante (dispositivo nuevo, otro
+  // origen, o la sincronización terminando después) para que el perfil se considerase incompleto y el usuario
+  // acabara en el editor teniéndolo bien configurado. Sin refresco, el rebote no se deshacía ni al sincronizar.
+  const localState = useMemo(() => loadLocalState(), [socialSpaceOpen]);
 
   // P1: resuelve el profileId canónico del usuario actual (best-effort) para la detección de propiedad por identidad.
   useEffect(() => {
@@ -1535,11 +1553,15 @@ export function useSocialViewModel(options?: {
   ]);
 
   useEffect(() => {
-    // Force profile edit if profile doesn't exist yet
-    if (shouldRedirectToProfileEditor(profileEditorLocked, activePanel)) {
+    // Al editor SOLO por perfil incompleto (`mustCreateProfile`), no por `profileEditorLocked`: ese incluye
+    // `hasBlockingSocialIssue`, que lo enciende CUALQUIER error de nivel `err` de lo social. Un fallo de red al leer
+    // un gist acababa mandando al usuario a "crea tu perfil", que es un diagnóstico falso: su perfil está bien y lo
+    // que ha fallado es otra cosa. El bloqueo del feed no cambia —`profileEditorLocked` sigue frenando la
+    // hidratación—, lo que se retira es el secuestro de la navegación.
+    if (shouldRedirectToProfileEditor(mustCreateProfile, activePanel)) {
       navigate('/social/profile');
     }
-  }, [profileEditorLocked, activePanel, navigate]);
+  }, [mustCreateProfile, activePanel, navigate]);
 
   useEffect(() => {
     void hydrateSocialProfile();
