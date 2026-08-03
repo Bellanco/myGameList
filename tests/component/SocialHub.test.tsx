@@ -85,10 +85,10 @@ import { SocialHub } from '../../src/view/components/SocialHub';
 import { SOCIAL_UI } from '../../src/core/constants/labels';
 import { LEGAL_CONSENT_UI, LEGAL_VERSION } from '../../src/core/constants/legal';
 
-function renderHub(initialPath = '/social') {
+function renderHub(initialPath = '/social', games?: unknown) {
   return render(
     <MemoryRouter initialEntries={[initialPath]}>
-      <SocialHub />
+      <SocialHub games={games as never} />
     </MemoryRouter>,
   );
 }
@@ -460,6 +460,33 @@ describe('SocialHub (componente, post-M3)', () => {
     renderHub();
 
     // Nunca aparece el editor: ni al principio ni como rebote.
+    await waitFor(() => expect(gistMocks.readSocialGist).toHaveBeenCalled());
+    expect(screen.queryByText(SOCIAL_UI.profile.title)).not.toBeInTheDocument();
+  });
+
+  // Caso reportado: al entrar en social salta al editor de perfil estando bien configurado. La app tiene la
+  // biblioteca VIVA en memoria (`games`), pero `loadLocalState()` es una foto del montaje y puede estar vacía o
+  // atrasada (arranque con la sincronización en curso, hidratación desde el gist). La completitud del perfil se
+  // calculaba con la foto, así que se veía sin completados y redirigía. `App` la calculaba con la lista viva para el
+  // botón de Cuenta: las dos mitades de la misma regla discrepaban.
+  it('con la biblioteca VIVA pero localStorage atrasado, NO manda al editor', async () => {
+    firebaseMocks.getCurrentSocialAuthUser.mockResolvedValue({ uid: 'me', email: 'me@x.com', displayName: 'Me', photoURL: null });
+    gistMocks.getSocialSyncConfig.mockReturnValue({ token: 'ghp_x', gistId: 'my-social', etag: null, lastRemoteUpdatedAt: 0 });
+    // La foto de localStorage está ATRASADA: tiene biblioteca (un pendiente) pero aún no el juego completado.
+    const pendienteViejo = { id: 7, name: 'Pendiente', _ts: 1, platforms: [], genres: [], steamDeck: false, review: '', score: 0, years: [], strengths: [], weaknesses: [], reasons: [], replayable: false, retry: false, hours: 0 };
+    localMocks.loadLocalState.mockReturnValue({ c: [], v: [], e: [], p: [pendienteViejo], deleted: [], updatedAt: 0 });
+    gistMocks.readSocialGist.mockResolvedValue({
+      data: {
+        profile: { name: 'Me', private: false, visibility: { hiddenTabs: [], hideReplayable: false, hideRetry: false, hideGameTime: false, showPhoto: true }, sharedLists: {} },
+        recommendations: [], activity: [], posts: [], updatedAt: 0,
+      },
+      etag: null,
+    });
+
+    // …pero la app SÍ tiene el juego completado en memoria, que es lo que el usuario ve en su pantalla.
+    const juegoVivo = { id: 1, name: 'Halo', _ts: 1, platforms: [], genres: [], steamDeck: false, review: '', score: 5, years: [], strengths: [], weaknesses: [], reasons: [], replayable: false, retry: false, hours: 0 };
+    renderHub('/social', { c: [juegoVivo], v: [], e: [], p: [], deleted: [], updatedAt: 0 });
+
     await waitFor(() => expect(gistMocks.readSocialGist).toHaveBeenCalled());
     expect(screen.queryByText(SOCIAL_UI.profile.title)).not.toBeInTheDocument();
   });
