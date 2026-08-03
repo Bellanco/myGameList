@@ -877,6 +877,16 @@ export function useSocialViewModel(options?: {
   // de Cuenta (`useSocialProfileSession`); si divergieran, el usuario rebotaría entre el feed y el editor.
   const hasCompletedGames = completedGames.length > 0;
 
+  // ¿Está la biblioteca en ESTE dispositivo? Que no haya NADA en ninguna lista significa "aquí no se ha
+  // sincronizado todavía" (dispositivo nuevo, otro origen, sincronización en curso), y eso NO es lo mismo que "no
+  // tienes juegos completados". Confundirlos mandaba al editor a un usuario ya dado de alta, que además leía
+  // "Sincronizado" nada más llegar: el diagnóstico y el mensaje se contradecían.
+  const libraryPresentLocally =
+    localState.c.length > 0 || localState.v.length > 0 || localState.e.length > 0 || localState.p.length > 0;
+  // El requisito de tener un juego completado solo se puede DAR POR INCUMPLIDO si la biblioteca está aquí para
+  // comprobarlo. El guardado del perfil lo sigue exigiendo siempre (ahí el usuario está mirando sus propias listas).
+  const completedGamesRequirementMet = hasCompletedGames || !libraryPresentLocally;
+
   const defaultSocialVisibility: SocialProfileVisibility = useMemo(() => ({
     hiddenTabs: [],
     hideReplayable: false,
@@ -1433,10 +1443,11 @@ export function useSocialViewModel(options?: {
       setShowPhoto(cachedProfile.showPhoto);
       setHasCreatedProfile(cachedProfileExists);
 
-      const mustCreateCached = shouldRequireProfileCreation(cachedProfileExists, justSavedProfile);
+      const cachedProfileUsable = Boolean(cachedProfile.name.trim()) && completedGamesRequirementMet;
+      const mustCreateCached = shouldRequireProfileCreation(cachedProfileUsable, justSavedProfile);
       if (mustCreateCached) {
         lockProfileEditor();
-      } else if (cachedProfileExists) {
+      } else {
         setMustCreateProfile(false);
       }
       return;
@@ -1483,11 +1494,14 @@ export function useSocialViewModel(options?: {
 
       const nextName = socialRead.data.profile.name || existingProfile?.displayName || authUser.displayName || authUser.email;
       const profileVisibility = socialRead.data.profile.visibility || defaultSocialVisibility;
-      // Un perfil se considera COMPLETO (y por tanto utilizable sin pasar por el editor) solo si tiene nombre Y al
-      // menos un juego completado en local: misma regla que aplica el guardado y el gate del botón de Cuenta. Así
-      // nadie entra al feed sin contenido que compartir. Un doc en Firestore (era previa o reconexión) NO basta si
-      // el gist no cumple.
-      const profileExists = Boolean(socialRead.data.profile.name.trim()) && hasCompletedGames;
+      // Un perfil se considera COMPLETO (nombre Y al menos un juego completado en local) para el chip de estado y
+      // para el guardado. Pero lo que decide MANDAR AL EDITOR es solo si el perfil EXISTE, o sea si tiene nombre.
+      //
+      // Lo que cambia respecto a antes es SOLO el caso ambiguo: sin biblioteca en este dispositivo no se puede
+      // afirmar que no haya completados (ver `completedGamesRequirementMet`). Con la biblioteca presente y ningún
+      // completado, se sigue mandando al editor con el motivo a la vista, que es la regla de alta de siempre.
+      const profileHasIdentity = Boolean(socialRead.data.profile.name.trim());
+      const profileExists = profileHasIdentity && hasCompletedGames;
 
       setProfileName(nextName);
       setHiddenTabs(getOrderedUniqueTabs(profileVisibility.hiddenTabs || []));
@@ -1509,12 +1523,12 @@ export function useSocialViewModel(options?: {
         activity: socialRead.data.activity,
       });
 
-      const mustCreate = shouldRequireProfileCreation(profileExists, justSavedProfile);
+      const mustCreate = shouldRequireProfileCreation(profileHasIdentity && completedGamesRequirementMet, justSavedProfile);
 
       // Keep profile creation routing centralized to avoid navigation regressions.
       if (mustCreate) {
         lockProfileEditor();
-      } else if (profileExists) {
+      } else {
         setMustCreateProfile(false);
       }
     } catch (error) {

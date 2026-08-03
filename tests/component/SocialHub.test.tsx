@@ -435,6 +435,35 @@ describe('SocialHub (componente, post-M3)', () => {
     expect(gistMocks.createSocialGist).not.toHaveBeenCalled();
   });
 
+  // Caso reportado: "sincronizado pero se va a la edición de perfil, y ahí mismo me dice que está sincronizado".
+  // Sin juegos completados EN ESTE DISPOSITIVO (biblioteca no sincronizada aún, otro origen) el perfil se tomaba por
+  // inexistente y se mandaba al usuario al editor, que acto seguido le confirmaba "Sincronizado". Con nombre en el
+  // gist el perfil EXISTE: no se le mueve de social. Y no debe haber rebote social → editor → social.
+  it('con perfil ya dado de alta pero sin biblioteca local, NO manda al editor', async () => {
+    firebaseMocks.getCurrentSocialAuthUser.mockResolvedValue({ uid: 'me', email: 'me@x.com', displayName: 'Me', photoURL: null });
+    gistMocks.getSocialSyncConfig.mockReturnValue({ token: 'ghp_x', gistId: 'my-social', etag: null, lastRemoteUpdatedAt: 0 });
+    const conJuegos = {
+      c: [{ id: 1, name: 'Halo', _ts: 1, platforms: [], genres: [], steamDeck: false, review: '', score: 5, years: [], strengths: [], weaknesses: [], reasons: [], replayable: false, retry: false, hours: 0 }],
+      v: [], e: [], p: [], deleted: [], updatedAt: 0,
+    };
+    // Este dispositivo no tiene la biblioteca: ningún juego completado en local.
+    void conJuegos;
+    localMocks.loadLocalState.mockReturnValue({ c: [], v: [], e: [], p: [], deleted: [], updatedAt: 0 });
+    gistMocks.readSocialGist.mockResolvedValue({
+      data: {
+        profile: { name: 'Me', private: false, visibility: { hiddenTabs: [], hideReplayable: false, hideRetry: false, hideGameTime: false, showPhoto: true }, sharedLists: {} },
+        recommendations: [], activity: [], posts: [], updatedAt: 0,
+      },
+      etag: null,
+    });
+
+    renderHub();
+
+    // Nunca aparece el editor: ni al principio ni como rebote.
+    await waitFor(() => expect(gistMocks.readSocialGist).toHaveBeenCalled());
+    expect(screen.queryByText(SOCIAL_UI.profile.title)).not.toBeInTheDocument();
+  });
+
   it('si el canal ya es secreto no toca ninguna referencia', async () => {
     firebaseMocks.getCurrentSocialAuthUser.mockResolvedValue({ uid: 'uid-1', email: 'jaime@example.com', displayName: 'Jaime', photoURL: null });
     gistMocks.getSocialSyncConfig.mockReturnValue({ token: 'ghp_x', gistId: 'gs-secreto', etag: null, lastRemoteUpdatedAt: 0 });
@@ -986,8 +1015,13 @@ describe('SocialHub — alta de perfil: exige juegos completados', () => {
     years: [], strengths: [], weaknesses: [], reasons: [], replayable: false, retry: false, hours: 0,
   });
 
+  // La biblioteca SÍ está en este dispositivo (hay un pendiente), pero ningún completado: ahí la regla de alta se
+  // aplica como siempre. El caso de biblioteca ausente es distinto y se cubre aparte: entonces no se puede afirmar
+  // que no haya completados, y mandar al editor a alguien ya dado de alta era el rebote que se reportó.
   it('sin ningún juego completado: fuerza el editor, avisa y deja "Guardar perfil" deshabilitado', async () => {
-    localMocks.loadLocalState.mockReturnValue({ c: [], v: [], e: [], p: [], deleted: [], updatedAt: 0 });
+    localMocks.loadLocalState.mockReturnValue({
+      c: [], v: [], e: [], p: [completed(9, 'Pendiente')], deleted: [], updatedAt: 0,
+    });
 
     renderHub('/social');
 
