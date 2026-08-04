@@ -138,6 +138,37 @@ describe('firestore.rules', () => {
       await assertFails(setDoc(doc(ownerDb('uid-a'), 'profiles', 'uid-a'), { tier: 'mithril' }, { merge: true }));
       await assertFails(setDoc(doc(ownerDb('uid-a'), 'profiles', 'uid-a'), { createdAt: 5000 }, { merge: true }));
     });
+
+    // AUTO-SANEADO DEL ARRANQUE (`healOwnLegacyProfile`): la escritura EXACTA que hace el cliente del propio dueño
+    // sobre un perfil viejo — purga de restos legacy + pseudónimo + marca de esquema, todo de una vez, sin `updatedAt`
+    // (no es actividad) y sin `createdAt` (inmutable). Si las reglas la denegaran, esos perfiles no se arreglarían
+    // nunca y el fallo sería silencioso: el saneado se traga sus errores a propósito.
+    it('el saneado del arranque pasa las reglas sobre un perfil legacy con tier y alta selladas', async () => {
+      await seed('profiles', 'uid-a', {
+        uid: 'uid-a',
+        email: 'legacy@example.com',
+        displayName: 'A',
+        photoURL: '',
+        social: { enabled: true, gistId: 'gs', gamesGistId: 'gg', githubToken: 'ghp_legacy' },
+        updatedAt: 1,
+        tier: 'gold',
+        createdAt: 1000,
+      });
+
+      await assertSucceeds(updateDoc(doc(ownerDb('uid-a'), 'profiles', 'uid-a'), {
+        uid: 'uid-a',
+        email: deleteField(),
+        'social.gamesGistId': deleteField(),
+        'social.githubToken': deleteField(),
+        profileId: 'pid-a',
+        schemaVersion: 1,
+      }));
+
+      // Y sigue sin ser una vía para quitarse el rango de encima aprovechando el saneado.
+      await assertFails(updateDoc(doc(ownerDb('uid-a'), 'profiles', 'uid-a'), {
+        uid: 'uid-a', schemaVersion: 1, tier: deleteField(),
+      }));
+    });
   });
 
   describe('privateConfig (solo dueño)', () => {
