@@ -25,9 +25,10 @@
 //
 // Con esto, la purga manual del panel queda solo para quien no vuelve a entrar nunca.
 import { deleteField, doc, updateDoc } from 'firebase/firestore';
+import { FIRESTORE_SCHEMA_VERSION } from '../../core/constants/schema';
 import { initializeFirebaseServices } from './firebaseClient';
+import { reportHandledError } from './telemetryRepository';
 import {
-  FIRESTORE_SCHEMA_VERSION,
   backupGithubToken,
   getPrivateConfig,
   resolveStableProfileId,
@@ -46,8 +47,33 @@ export type LegacyHealStatus =
   /** No se pudo completar (sin Firebase, sin sesión útil, o falló el respaldo): se reintentará. */
   | 'deferred';
 
+/**
+ * En qué paso se quedó un saneado diferido. Sin esto, "no se pudo" era indistinguible de "no había nada que hacer"
+ * salvo leyendo la consola del usuario: el paso concreto es lo que dice si hay que mirar las reglas, la red o el
+ * cifrado, y es lo que viaja a la telemetría.
+ */
+export type LegacyHealDeferralStep =
+  /** Llamada sin uid: no hay sesión útil. */
+  | 'sin-sesion'
+  /** Firebase no está configurado en este entorno. */
+  | 'sin-firebase'
+  /** Falló la lectura del perfil propio. */
+  | 'lectura-perfil'
+  /** Falló el respaldo CIFRADO del token en claro: no se purga nada (perdería el token). */
+  | 'respaldo-token'
+  /** Falló sembrar el id del gist de juegos en `privateConfig`. */
+  | 'siembra-gist'
+  /** Falló escribir la copia canónica del pseudónimo (`userMap` / `privateConfig`). */
+  | 'identidad'
+  /** Falló la escritura del documento público (reglas, red). Lo preservado ya está a salvo. */
+  | 'escritura-publica';
+
 export interface LegacyHealResult {
   status: LegacyHealStatus;
+  /** Paso en el que se quedó, solo cuando `status` es `deferred`. */
+  deferredAt?: LegacyHealDeferralStep;
+  /** Mensaje del error que lo dejó a medias, si lo hubo. Para la traza, no para la interfaz. */
+  detail?: string;
   /** El token en claro se respaldó cifrado en `privateConfig` durante esta pasada. */
   backedUpToken: boolean;
   /** El id del gist de juegos se sembró en `privateConfig` durante esta pasada. */
@@ -72,20 +98,36 @@ function result(status: LegacyHealStatus, details: HealDetails = {}): LegacyHeal
 }
 
 /**
+ * Deja constancia de un saneado que no se pudo completar. Que sea silencioso PARA EL USUARIO (no lo ha pedido y no
+ * puede hacer nada) no significa que deba serlo para nosotros: sin esta traza, un saneado que falla para todo el
+ * mundo —una regla mal desplegada, por ejemplo— era indistinguible de uno que no hacía falta, y el único rastro era
+ * la consola de un navegador ajeno.
+ */
+function deferral(step: LegacyHealDeferralStep, error?: unknown): LegacyHealResult {
+  const detail = error === undefined ? '' : error instanceof Error ? error.message : String(error);
+  console.warn(`[saneado] diferido en «${step}»${detail ? `: ${detail}` : ''}; se reintentará`);
+  void reportHandledError(error ?? new Error(`profile-heal:${step}`), false, `profile-heal:${step}`);
+  return result('deferred', { deferredAt: step, ...(detail ? { detail } : {}) });
+}
+
+/**
  * Migra y pone al día el perfil público del usuario indicado. Idempotente y sin escrituras cuando no hay nada que
  * hacer (el caso de la inmensa mayoría): una sola lectura, además cacheada por `getOwnProfileRef`.
  *
- * Nunca lanza: cualquier fallo devuelve `deferred` y deja el documento intacto.
+ * Nunca lanza: cualquier fallo devuelve `deferred` —con el paso en el que se quedó— y deja el documento intacto.
  */
 export async function healOwnLegacyProfile(uid: string): Promise<LegacyHealResult> {
+  // Los dos casos de ENTORNO (sin sesión, sin Firebase) no se reportan: son estados normales de la app, no fallos.
   if (!uid) {
-    return result('deferred');
+    return result('deferred', { deferredAt: 'sin-sesion' });
   }
 
+  // Paso en curso, para que el `catch` de abajo sepa QUÉ falló sin envolver cada línea en su propio try.
+  let step: LegacyHealDeferralStep = 'lectura-perfil';
   try {
     const services = await initializeFirebaseServices();
     if (!services) {
-      return result('deferred');
+      return result('deferred', { deferredAt: 'sin-firebase' });
     }
 
     const profile = await getOwnProfileRef(uid);
@@ -121,12 +163,14 @@ export async function healOwnLegacyProfile(uid: string): Promise<LegacyHealResul
 
     if (legacyToken && !privateConfig?.encryptedGithubToken) {
       // Si el respaldo cifrado falla, propagar: purgar aquí le dejaría sin token en el próximo dispositivo.
+      step = 'respaldo-token';
       await backupGithubToken(uid, legacyToken);
       backedUpToken = true;
     }
 
     if (legacyGamesGistId && !String(privateConfig?.gamesGistId || '').trim()) {
       // Sin esto, borrar `social.gamesGistId` rompería el fallback de "Recuperar Gist ID" en un dispositivo nuevo.
+      step = 'siembra-gist';
       await setPrivateConfig(uid, { gamesGistId: legacyGamesGistId }); // audit-allow: destino owner-only (privateConfig), justo lo contrario de un canal público
       seededGamesGistId = true;
     }
@@ -141,6 +185,7 @@ export async function healOwnLegacyProfile(uid: string): Promise<LegacyHealResul
     // errores se propagan (→ `deferred`) y el documento público se queda como estaba.
     let establishedProfileId = '';
     if (missingProfileId) {
+      step = 'identidad';
       const profileId = await resolveStableProfileId(uid);
       if (profileId) {
         await setUserMap(uid, profileId);
@@ -161,6 +206,7 @@ export async function healOwnLegacyProfile(uid: string): Promise<LegacyHealResul
     // es lo que permite que la escritura pase la validación en esos documentos.
     // `updatedAt` NO se toca: es el latido de "última vez visto" y un saneado no es actividad del usuario.
     // `createdAt` tampoco se manda: las reglas la declaran inmutable y enviarla denegaría la escritura entera.
+    step = 'escritura-publica';
     await updateDoc(doc(services.firestore, 'profiles', uid), {
       uid,
       email: deleteField(), // audit-allow: deleteField() ELIMINA el email legacy, no lo escribe
@@ -180,8 +226,8 @@ export async function healOwnLegacyProfile(uid: string): Promise<LegacyHealResul
       stampedSchema: staleSchema,
     });
   } catch (error) {
-    // Best-effort de verdad: el usuario no ha pedido esto y no puede hacer nada al respecto. Se reintenta solo.
-    console.warn('[saneado] no se pudo migrar el perfil legacy:', error instanceof Error ? error.message : error);
-    return result('deferred');
+    // Best-effort de verdad: el usuario no ha pedido esto y no puede hacer nada al respecto. Se reintenta solo, y
+    // `deferredAt` deja dicho en qué paso se quedó (consola + telemetría) para que el fallo no sea invisible.
+    return deferral(step, error);
   }
 }

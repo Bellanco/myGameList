@@ -13,6 +13,9 @@
 // tabla. Lo mismo con el id del gist de juegos y con el token en claro legacy.
 import { collection, deleteDoc, deleteField, doc, getDocs, limit, query, updateDoc, where } from 'firebase/firestore';
 import { DEFAULT_PROFILE_TIER, normalizeTier, type ProfileTier } from '../../core/constants/tiers';
+// La versión vigente se comparte con quien la sella (`firebaseRepository` y el saneado del arranque): con un espejo
+// propio, subirla allí habría dejado de marcar aquí a los perfiles pendientes de migrar.
+import { FIRESTORE_SCHEMA_VERSION } from '../../core/constants/schema';
 import type { AdminAnomaly } from '../types/firestore';
 import { initializeFirebaseServices, isPermissionDeniedError } from './firebaseClient';
 import { invalidateOwnProfileCache, invalidateSocialDirectoryCache } from './firebaseSocialRepository';
@@ -106,8 +109,6 @@ export interface AdminUserRow {
 /** Ventana de inactividad del feed (`FRIEND_ACTIVITY_MAX_AGE_MS` en useSocialViewModel): 30 días. */
 const INACTIVITY_MS = 30 * 24 * 60 * 60 * 1000;
 
-/** Versión de esquema vigente (espejo de `FIRESTORE_SCHEMA_VERSION` en firebaseRepository). */
-const CURRENT_SCHEMA_VERSION = 1;
 
 /** Campos legacy purgables, uno a uno: cada uno tiene consecuencias distintas para su dueño. */
 export type LegacyProfileField = 'email' | 'gamesGistId' | 'token';
@@ -286,7 +287,7 @@ function detectAnomalies(row: Omit<AdminUserRow, 'anomalies'>, friendGistIds: Se
   if (!row.idMatchesUid) found.push('foreign-doc-id');
   if (row.legacy.token) found.push('legacy-token');
   if (row.legacy.email || row.legacy.gamesGistId) found.push('legacy-fields');
-  if (row.schemaVersion < CURRENT_SCHEMA_VERSION) found.push('stale-schema');
+  if (row.schemaVersion < FIRESTORE_SCHEMA_VERSION) found.push('stale-schema');
 
   if (row.updatedAt === 0) found.push('never-active');
   else if (row.updatedAt > now) found.push('future-activity');

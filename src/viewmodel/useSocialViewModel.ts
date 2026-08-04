@@ -2042,7 +2042,11 @@ export function useSocialViewModel(options?: {
       };
 
       const profile = {
-        name: profileName.trim() || authUser.displayName || authUser.email,
+        // PRIVACIDAD: el nick es LO QUE ESCRIBE EL USUARIO, y nada más. Aquí había un respaldo a
+        // `authUser.displayName || authUser.email` que publicaba su nombre real de Google —o su correo— como nombre
+        // público en el gist y en el directorio. Era inalcanzable (la guarda de arriba corta con el nick vacío) pero
+        // bastaba con relajar esa guarda para que se filtrara. Sin nick no hay perfil: es la regla, no un defecto.
+        name: profileName.trim(),
         private: false,
         visibility,
         sharedLists: {},
