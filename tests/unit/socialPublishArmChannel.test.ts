@@ -34,10 +34,10 @@ const GIST_ID = 'ddee1122aabb3344';
 const GIST_ID_ROTATION = 'ddee1122aabb9999';
 const SOCIAL_GIST_FILENAME = 'myGameList.social.json';
 
-function socialGist(): SocialGistData {
+function socialGist(name = 'Nick'): SocialGistData {
   return {
     profile: {
-      name: 'Nick',
+      name,
       private: false,
       visibility: { hiddenTabs: [], hideReplayable: false, hideRetry: false, hideGameTime: false, showPhoto: true },
       sharedLists: {},
@@ -49,9 +49,9 @@ function socialGist(): SocialGistData {
   } as unknown as SocialGistData;
 }
 
-function stubGistStore() {
+function stubGistStore(gist: SocialGistData = socialGist()) {
   const store: Record<string, { content: string }> = {
-    [SOCIAL_GIST_FILENAME]: { content: JSON.stringify(socialGist()) },
+    [SOCIAL_GIST_FILENAME]: { content: JSON.stringify(gist) },
   };
   let writes = 0;
   vi.stubGlobal('fetch', vi.fn(async (_url: string, init: RequestInit = {}) => {
@@ -120,6 +120,21 @@ describe('publishReviewActivity — armado del canal social', () => {
     expect(store.writes()).toBe(1);
     expect(firebaseMocks.resolveOwnProfile).not.toHaveBeenCalled();
     expect(JSON.parse(localStorage.getItem('mis-listas-social-gist-config') || '{}')).toMatchObject({ gistId: GIST_ID });
+  });
+
+  // Un gist sin nick no puede CREAR el perfil público: sería la anomalía `no-display-name` del panel (un perfil que
+  // sus amigos no pueden identificar), y caer al nombre real de Google o al correo está descartado por privacidad.
+  // La reseña ya escrita en el gist se conserva; el perfil llegará cuando su dueño se ponga un nick.
+  it('con el gist sin nick publica la reseña pero no toca el perfil público', async () => {
+    // Id propio: la caché en memoria de gists (`socialGistCacheById`) sobrevive al `sessionStorage.clear()` del
+    // `beforeEach`, así que reutilizar el de otro test serviría su perfil —con nick— en lugar de este.
+    firebaseMocks.getPrivateConfig.mockResolvedValue({ socialGistId: 'ddee1122aabb7777' });
+    const store = stubGistStore(socialGist(''));
+
+    await publishReviewActivity(REVIEW);
+
+    expect(store.writes()).toBe(1);
+    expect(firebaseMocks.ensureProfileByEmail).not.toHaveBeenCalled();
   });
 
   it('sin sesión de Google marca la publicación como pendiente (antes se perdía en silencio)', async () => {

@@ -11,14 +11,18 @@ const setUserMapMock = vi.fn<(...a: unknown[]) => Promise<void>>(async () => {})
 const resolveStableProfileIdMock = vi.fn<(...a: unknown[]) => Promise<string>>(async () => 'pid-nuevo');
 const updateDocMock = vi.fn<(...a: unknown[]) => Promise<void>>(async () => {});
 const invalidateOwnProfileCacheMock = vi.fn();
+const reportHandledErrorMock = vi.fn<(...a: unknown[]) => Promise<void>>(async () => {});
 
 vi.mock('../../src/model/repository/firebaseClient', () => ({
   initializeFirebaseServices: vi.fn(async () => ({ firestore: { __fs: true } })),
   isPermissionDeniedError: () => false,
 }));
 
+vi.mock('../../src/model/repository/telemetryRepository', () => ({
+  reportHandledError: (...a: unknown[]) => reportHandledErrorMock(...a),
+}));
+
 vi.mock('../../src/model/repository/firebaseRepository', () => ({
-  FIRESTORE_SCHEMA_VERSION: 1,
   getPrivateConfig: (...a: unknown[]) => getPrivateConfigMock(...a),
   setPrivateConfig: (...a: unknown[]) => setPrivateConfigMock(...a),
   backupGithubToken: (...a: unknown[]) => backupGithubTokenMock(...a),
@@ -74,6 +78,7 @@ describe('healOwnLegacyProfile', () => {
     updateDocMock.mockClear();
     updateDocMock.mockResolvedValue(undefined);
     invalidateOwnProfileCacheMock.mockClear();
+    reportHandledErrorMock.mockClear();
   });
 
   it('un perfil ya limpio no provoca NINGUNA escritura', async () => {
@@ -107,8 +112,10 @@ describe('healOwnLegacyProfile', () => {
 
     const healResult = await healOwnLegacyProfile('uid-a');
 
-    expect(healResult.status).toBe('deferred');
+    expect(healResult).toMatchObject({ status: 'deferred', deferredAt: 'respaldo-token', detail: 'offline' });
     expect(updateDocMock).not.toHaveBeenCalled();
+    // DIAGNÓSTICO: un saneado que no puede completarse deja rastro fuera de la consola del usuario.
+    expect(reportHandledErrorMock).toHaveBeenCalledWith(expect.anything(), false, 'profile-heal:respaldo-token');
   });
 
   it('si ya existe el respaldo cifrado no lo reescribe, pero sí purga el token en claro', async () => {
@@ -208,8 +215,19 @@ describe('healOwnLegacyProfile', () => {
 
     const healResult = await healOwnLegacyProfile('uid-a');
 
-    expect(healResult.status).toBe('deferred');
+    expect(healResult).toMatchObject({ status: 'deferred', deferredAt: 'identidad' });
     expect(updateDocMock).not.toHaveBeenCalled();
+    expect(reportHandledErrorMock).toHaveBeenCalledWith(expect.anything(), false, 'profile-heal:identidad');
+  });
+
+  it('si la escritura del documento público falla, lo dice y lo deja para el próximo arranque', async () => {
+    getOwnProfileRefMock.mockResolvedValue(profile({ schemaVersion: 0 }));
+    updateDocMock.mockRejectedValue(new Error('permission-denied'));
+
+    const healResult = await healOwnLegacyProfile('uid-a');
+
+    expect(healResult).toMatchObject({ status: 'deferred', deferredAt: 'escritura-publica', detail: 'permission-denied' });
+    expect(reportHandledErrorMock).toHaveBeenCalledWith(expect.anything(), false, 'profile-heal:escritura-publica');
   });
 
   it('no toca la identidad de quien ya tiene pseudónimo, aunque haya que purgarle restos', async () => {
@@ -276,8 +294,9 @@ describe('healOwnLegacyProfile', () => {
     expect(setPrivateConfigMock).not.toHaveBeenCalled();
   });
 
-  it('sin uid no hace nada', async () => {
-    expect((await healOwnLegacyProfile('')).status).toBe('deferred');
+  it('sin uid no hace nada, y no lo reporta: no hay sesión todavía, no es un fallo', async () => {
+    expect(await healOwnLegacyProfile('')).toMatchObject({ status: 'deferred', deferredAt: 'sin-sesion' });
     expect(getOwnProfileRefMock).not.toHaveBeenCalled();
+    expect(reportHandledErrorMock).not.toHaveBeenCalled();
   });
 });

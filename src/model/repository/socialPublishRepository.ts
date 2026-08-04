@@ -147,14 +147,21 @@ export async function publishReviewActivity(input: { id: number; name: string; r
   // título viejo en su feed hasta 30 min. La invalidamos para que el próximo montaje del hub relea el directorio.
   await invalidateCachedSocialDirectory(socialConfig.gistId);
 
-  await ensureProfileByEmail({
-    user: authUser,
-    socialGistId: socialConfig.gistId,
-    gamesGistId: mainSyncConfig?.gistId || '',
-    githubToken: mainSyncConfig?.token || socialConfig.token, // audit-allow: ensureProfileByEmail lo cifra en privateConfig (B1)
-    socialGistEtag: writeResult.etag || socialConfig.etag || null,
-    preferredName: socialNick,
-  });
+  // Sin nick en el gist no hay perfil público que asegurar: crear uno con el nombre vacío es la anomalía
+  // `no-display-name` del panel, y caer al nombre real de Google o al correo está descartado por privacidad. Se avisa
+  // y se sigue: lo publicado en el gist ya está, y el perfil se creará cuando su dueño se ponga un nick.
+  if (socialNick) {
+    await ensureProfileByEmail({
+      user: authUser,
+      socialGistId: socialConfig.gistId,
+      gamesGistId: mainSyncConfig?.gistId || '',
+      githubToken: mainSyncConfig?.token || socialConfig.token, // audit-allow: ensureProfileByEmail lo cifra en privateConfig (B1)
+      socialGistEtag: writeResult.etag || socialConfig.etag || null,
+      preferredName: socialNick,
+    });
+  } else {
+    console.warn('[social] el gist social no tiene nick: no se crea ni se actualiza el perfil público');
+  }
 
   await healFriendshipGistIfChanged({
     uid: authUser.uid,
@@ -257,14 +264,21 @@ export async function publishPost(input: { text: string; maxLength?: number }): 
     lastRemoteUpdatedAt: now,
   });
 
-  await ensureProfileByEmail({
-    user: authUser,
-    socialGistId: socialConfig.gistId,
-    gamesGistId: mainSyncConfig?.gistId || '',
-    githubToken: mainSyncConfig?.token || socialConfig.token, // audit-allow: ensureProfileByEmail lo cifra en privateConfig (B1)
-    socialGistEtag: writeResult.etag || socialConfig.etag || null,
-    preferredName: socialNick,
-  });
+  // Sin nick en el gist no hay perfil público que asegurar: crear uno con el nombre vacío es la anomalía
+  // `no-display-name` del panel, y caer al nombre real de Google o al correo está descartado por privacidad. Se avisa
+  // y se sigue: lo publicado en el gist ya está, y el perfil se creará cuando su dueño se ponga un nick.
+  if (socialNick) {
+    await ensureProfileByEmail({
+      user: authUser,
+      socialGistId: socialConfig.gistId,
+      gamesGistId: mainSyncConfig?.gistId || '',
+      githubToken: mainSyncConfig?.token || socialConfig.token, // audit-allow: ensureProfileByEmail lo cifra en privateConfig (B1)
+      socialGistEtag: writeResult.etag || socialConfig.etag || null,
+      preferredName: socialNick,
+    });
+  } else {
+    console.warn('[social] el gist social no tiene nick: no se crea ni se actualiza el perfil público');
+  }
 
   await healFriendshipGistIfChanged({
     uid: authUser.uid,

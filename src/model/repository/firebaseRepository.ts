@@ -24,6 +24,7 @@ import {
   saveProfileByEmailCache,
 } from './firebaseSocialRepository';
 import { DEFAULT_PROFILE_TIER } from '../../core/constants/tiers';
+import { FIRESTORE_SCHEMA_VERSION } from '../../core/constants/schema';
 import type { FirestorePrivateConfig, FirestorePublicConfig } from '../types/firestore';
 
 // --- RE-EXPORTS: API pública estable (los consumidores siguen importando desde firebaseRepository) ---
@@ -58,13 +59,9 @@ export {
   type FriendshipSelfInfo,
 } from './firebaseFriendshipRepository';
 
-// F6.3 (modernización): marca de versión de esquema en los docs de Firestore (profiles/userMap/privateConfig).
-// Aditiva — las reglas no validan un conjunto exacto de campos, así que no requiere redesplegar reglas. Permite a
-// futuras migraciones detectar la versión del documento.
-// Exportada porque el auto-saneado del arranque (`firebaseProfileHealRepository`) tiene que comparar contra ella
-// para volver a sellar los perfiles que se quedaron en una versión anterior: un espejo con su propia constante
-// derivaría en cuanto esta subiera.
-export const FIRESTORE_SCHEMA_VERSION = 1;
+// F6.3 (modernización): la marca de versión de esquema de los docs de Firestore vive en `core/constants/schema`,
+// porque la comparten quien la SELLA (este módulo y el saneado del arranque) y quien detecta los documentos
+// atrasados (el panel). Ver el comentario de la constante.
 
 /**
  * L1 — Resuelve el perfil PROPIO: lectura directa de `profiles/{uid}` y, solo si ahí no hay documento, fallback a
@@ -102,7 +99,14 @@ export async function upsertProfileSocialReferences(input: {
     throw new Error('Firebase no está configurado en este entorno');
   }
 
-  const profileName = (input.preferredName || input.user.displayName || input.user.email || '').trim();
+  // PRIVACIDAD: el nick público es el del perfil social y NADA MÁS. El respaldo que había aquí a
+  // `user.displayName || user.email` publicaba el nombre real de Google —o el correo— en un documento que lee
+  // cualquier usuario autenticado, justo lo que `ensureProfileByEmail` documenta que nunca debe pasar. Sin nick no
+  // se crea perfil (mismo criterio que la interfaz, que no deja guardar con el nombre vacío).
+  const profileName = String(input.preferredName || '').trim();
+  if (!profileName) {
+    throw new Error('No se puede publicar un perfil social sin nombre público');
+  }
   const profileId = await resolveStableProfileId(input.user.uid);
   const gamesGistId = String(input.gamesGistId || '');
 
@@ -372,6 +376,13 @@ export async function ensureProfileByEmail(input: {
   // PRIVACIDAD: el displayName público es el NICK del perfil social (`preferredName`); si no llega, se PRESERVA el
   // existente (que ya era el nick). NUNCA se cae al nombre real de Google (`input.user.displayName`) ni al email.
   const profileName = (input.preferredName || existing?.displayName || '').trim();
+  // Sin nick NO se crea perfil. Un documento con `displayName` vacío es la anomalía `no-display-name` del panel —un
+  // perfil a medio crear, imposible de identificar para sus amigos— y se creaba solo, desde cualquier publicación
+  // hecha con un gist social sin nombre. Si el perfil YA existe se respeta lo que tenga: rebautizarlo o vaciarlo no
+  // es asunto de este camino, y su dueño lo arregla desde la pantalla de perfil.
+  if (!existing && !profileName) {
+    throw new Error('No se puede crear un perfil social sin nombre público');
+  }
   const targetId = existing?.id || input.user.uid;
   const gamesGistId = String(input.gamesGistId || '');
   const githubToken = String(input.githubToken || '');
