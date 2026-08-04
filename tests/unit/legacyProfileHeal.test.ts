@@ -176,6 +176,17 @@ describe('healOwnLegacyProfile', () => {
     expect(updateDocMock.mock.calls[0][1]).toMatchObject({ uid: 'uid-a', profileId: 'pid-nuevo' });
   });
 
+  it('no reescribe la copia canónica que ya coincide: solo le falta el sello del documento público', async () => {
+    getOwnProfileRefMock.mockResolvedValue(profile({ profileId: '' }));
+    getPrivateConfigMock.mockResolvedValue({ profileId: 'pid-nuevo' });
+
+    const healResult = await healOwnLegacyProfile('uid-a');
+
+    expect(healResult).toMatchObject({ status: 'healed', establishedProfileId: true });
+    expect(setPrivateConfigMock).not.toHaveBeenCalled();
+    expect(updateDocMock.mock.calls[0][1]).toMatchObject({ profileId: 'pid-nuevo' });
+  });
+
   // El pseudónimo del doc público tiene que ser el MISMO con el que ese usuario ya publica; si no, sus reseñas
   // quedan atribuidas a dos identidades distintas. `resolveStableProfileId` es quien lo reconcilia.
   it('usa el pseudónimo que resuelve la identidad estable, no uno inventado aquí', async () => {
@@ -250,6 +261,19 @@ describe('healOwnLegacyProfile', () => {
 
     expect(healResult.status).toBe('foreign-doc');
     expect(updateDocMock).not.toHaveBeenCalled();
+  });
+
+  // La lectura del perfil propio está cacheada y `ensureProfileByEmail` guarda ahí, bajo el uid, la referencia de un
+  // perfil legacy con otro id. Escribir entonces en `profiles/{uid}` es escribir en un documento que no existe.
+  it('tampoco lo toca cuando la referencia cacheada apunta a un documento con otro id', async () => {
+    getOwnProfileRefMock.mockResolvedValue(profile({ id: 'doc-legacy', profileId: '', schemaVersion: 0 }));
+
+    const healResult = await healOwnLegacyProfile('uid-a');
+
+    expect(healResult.status).toBe('foreign-doc');
+    expect(updateDocMock).not.toHaveBeenCalled();
+    expect(setUserMapMock).not.toHaveBeenCalled();
+    expect(setPrivateConfigMock).not.toHaveBeenCalled();
   });
 
   it('sin uid no hace nada', async () => {

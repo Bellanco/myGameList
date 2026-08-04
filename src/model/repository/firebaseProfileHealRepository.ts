@@ -96,6 +96,14 @@ export async function healOwnLegacyProfile(uid: string): Promise<LegacyHealResul
       return result('foreign-doc');
     }
 
+    // La lectura de arriba está CACHEADA, y `ensureProfileByEmail` guarda en esa misma caché (indexada por uid) la
+    // referencia de un perfil legacy que vive bajo OTRO id. Sin esta comprobación, para ese usuario el saneado
+    // intentaría escribir en `profiles/{uid}`, que no existe: `updateDoc` no crea documentos, así que la escritura
+    // falla y el arreglo se queda en un reintento perpetuo. Es el mismo caso de arriba, detectado por otra vía.
+    if (profile.id !== uid) {
+      return result('foreign-doc');
+    }
+
     const legacyToken = String(profile.githubToken || '').trim(); // audit-allow: LECTURA del token legacy para ponerlo a salvo cifrado antes de borrarlo
     const legacyGamesGistId = String(profile.gamesGistId || '').trim();
     const hasLegacyEmail = Boolean(String(profile.email || '').trim());
@@ -136,9 +144,13 @@ export async function healOwnLegacyProfile(uid: string): Promise<LegacyHealResul
       const profileId = await resolveStableProfileId(uid);
       if (profileId) {
         await setUserMap(uid, profileId);
-        // Solo el pseudónimo: `setPrivateConfig` hace merge, y mandar aquí los ids de gist (que este camino no
-        // conoce) los borraría.
-        await setPrivateConfig(uid, { profileId });
+        // Si la configuración privada ya lo tiene (el caso de quien estableció su identidad pero cuyo documento
+        // público es anterior a que se publicara el pseudónimo), no se reescribe: no hay nada que preservar.
+        if (String(privateConfig?.profileId || '').trim() !== profileId) {
+          // Solo el pseudónimo: `setPrivateConfig` hace merge, y mandar aquí los ids de gist (que este camino no
+          // conoce) los borraría.
+          await setPrivateConfig(uid, { profileId });
+        }
         establishedProfileId = profileId;
       }
     }
