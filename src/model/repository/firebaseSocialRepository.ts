@@ -48,6 +48,19 @@ function toMillis(value: { toMillis?: () => number } | number | undefined): numb
   return typeof millis === 'number' && Number.isFinite(millis) ? millis : 0;
 }
 
+/**
+ * Olvida el perfil legacy cacheado por correo. Lo llama el cutover de identidad: una vez creado
+ * `profiles/{uid}`, servir la referencia del documento huérfano mandaría las escrituras al sitio equivocado
+ * durante lo que le quede de TTL. Sin correo, vacía la caché entera (cambio de sesión).
+ */
+export function invalidateProfileByEmailCache(email?: string): void {
+  if (email) {
+    socialProfileByEmailCache.delete(email.trim().toLowerCase());
+    return;
+  }
+  socialProfileByEmailCache.clear();
+}
+
 function readProfileByEmailCache(email: string): SocialProfileReference | null | undefined {
   const cached = socialProfileByEmailCache.get(email);
   if (!cached) {
@@ -343,7 +356,7 @@ export async function listSocialDirectory(limitCount = 12, options?: { forceRefr
       snapshot = await getDocs(query(profiles, enabled, limit(normalizedLimit)));
     }
 
-    const entries = snapshot.docs
+    const visible = snapshot.docs
       .map((entry) => {
         const data = entry.data() as {
           uid?: string;
@@ -381,7 +394,32 @@ export async function listSocialDirectory(limitCount = 12, options?: { forceRefr
       //
       // Guarda barata: el placeholder ya no puede salir (no tiene `social.enabled`), pero si algún día lo
       // tuviera, no debe colarse en el directorio.
-      .filter((entry) => entry.enabled && entry.id !== '_placeholder')
+      .filter((entry) => entry.enabled && entry.id !== '_placeholder');
+
+    // UN USUARIO, UNA ENTRADA. Durante el cutover de identidad (señal `foreign-doc-id`) un mismo uid tiene DOS
+    // documentos: el canónico que acaba de crear su navegador y el huérfano legacy, que solo el administrador puede
+    // retirar. Los dos traen `social.enabled`, así que sin esto la persona sale duplicada en el directorio —y en el
+    // descubrimiento— hasta que alguien pase por el panel. Gana el documento canónico (id == uid) y, si ninguno lo
+    // es, el más recientemente activo. Los perfiles legacy sin campo `uid` no colisionan: su uid cae a su propio id.
+    const canonicalByUid = new Map<string, (typeof visible)[number]>();
+    visible.forEach((entry) => {
+      const current = canonicalByUid.get(entry.uid);
+      if (!current) {
+        canonicalByUid.set(entry.uid, entry);
+        return;
+      }
+      const currentIsCanonical = current.id === current.uid;
+      const entryIsCanonical = entry.id === entry.uid;
+      if (entryIsCanonical && !currentIsCanonical) {
+        canonicalByUid.set(entry.uid, entry);
+        return;
+      }
+      if (entryIsCanonical === currentIsCanonical && entry.updatedAt > current.updatedAt) {
+        canonicalByUid.set(entry.uid, entry);
+      }
+    });
+
+    const entries = [...canonicalByUid.values()]
       .map((entry) => ({
         id: entry.id,
         uid: entry.uid,

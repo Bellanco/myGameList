@@ -12,6 +12,9 @@ const resolveStableProfileIdMock = vi.fn<(...a: unknown[]) => Promise<string>>(a
 const updateDocMock = vi.fn<(...a: unknown[]) => Promise<void>>(async () => {});
 const invalidateOwnProfileCacheMock = vi.fn();
 const reportHandledErrorMock = vi.fn<(...a: unknown[]) => Promise<void>>(async () => {});
+const setDocMock = vi.fn<(...a: unknown[]) => Promise<void>>(async () => {});
+const findSocialProfileByEmailMock = vi.fn<(...a: unknown[]) => unknown>(async () => null);
+const invalidateProfileByEmailCacheMock = vi.fn();
 
 vi.mock('../../src/model/repository/firebaseClient', () => ({
   initializeFirebaseServices: vi.fn(async () => ({ firestore: { __fs: true } })),
@@ -32,13 +35,17 @@ vi.mock('../../src/model/repository/firebaseRepository', () => ({
 
 vi.mock('../../src/model/repository/firebaseSocialRepository', () => ({
   getOwnProfileRef: (...a: unknown[]) => getOwnProfileRefMock(...a),
+  findSocialProfileByEmail: (...a: unknown[]) => findSocialProfileByEmailMock(...a),
   invalidateOwnProfileCache: (...a: unknown[]) => invalidateOwnProfileCacheMock(...a),
+  invalidateProfileByEmailCache: (...a: unknown[]) => invalidateProfileByEmailCacheMock(...a),
   invalidateSocialDirectoryCache: vi.fn(),
 }));
 
 vi.mock('firebase/firestore', () => ({
   doc: (_fs: unknown, name: string, id: string) => ({ collection: name, id }),
   updateDoc: (...a: unknown[]) => updateDocMock(...a),
+  setDoc: (...a: unknown[]) => setDocMock(...a),
+  serverTimestamp: () => '__ts__',
   deleteField: () => '__del__',
 }));
 
@@ -79,7 +86,18 @@ describe('healOwnLegacyProfile', () => {
     updateDocMock.mockResolvedValue(undefined);
     invalidateOwnProfileCacheMock.mockClear();
     reportHandledErrorMock.mockClear();
+    setDocMock.mockClear();
+    setDocMock.mockResolvedValue(undefined);
+    findSocialProfileByEmailMock.mockClear();
+    findSocialProfileByEmailMock.mockResolvedValue(null);
+    invalidateProfileByEmailCacheMock.mockClear();
   });
+
+  /** Escritura dirigida a `profiles`, que es la que crea el documento canónico del cutover. */
+  function canonicalWrite() {
+    const call = setDocMock.mock.calls.find((entry) => (entry[0] as { collection?: string })?.collection === 'profiles');
+    return call ? (call[1] as Record<string, unknown>) : null;
+  }
 
   it('un perfil ya limpio no provoca NINGUNA escritura', async () => {
     getOwnProfileRefMock.mockResolvedValue(profile());
@@ -272,26 +290,105 @@ describe('healOwnLegacyProfile', () => {
     expect((await healOwnLegacyProfile('uid-a')).stampedSchema).toBe(true);
   });
 
-  it('no toca un perfil legacy que vive bajo otro id: su email es su única vía de recuperación', async () => {
+  it('sin documento canónico y sin perfil legacy que migrar, no hace nada', async () => {
     getOwnProfileRefMock.mockResolvedValue(null); // `profiles/{uid}` no existe
 
-    const healResult = await healOwnLegacyProfile('uid-a');
+    const healResult = await healOwnLegacyProfile('uid-a', 'yo@example.com');
 
     expect(healResult.status).toBe('foreign-doc');
     expect(updateDocMock).not.toHaveBeenCalled();
+    expect(setDocMock).not.toHaveBeenCalled();
   });
 
-  // La lectura del perfil propio está cacheada y `ensureProfileByEmail` guarda ahí, bajo el uid, la referencia de un
-  // perfil legacy con otro id. Escribir entonces en `profiles/{uid}` es escribir en un documento que no existe.
-  it('tampoco lo toca cuando la referencia cacheada apunta a un documento con otro id', async () => {
-    getOwnProfileRefMock.mockResolvedValue(profile({ id: 'doc-legacy', profileId: '', schemaVersion: 0 }));
+  // --- Cutover de identidad, primera mitad (la que puede hacer el dueño) ---
 
-    const healResult = await healOwnLegacyProfile('uid-a');
+  describe('cutover de identidad', () => {
+    const legacy = (overrides: Record<string, unknown> = {}) => profile({
+      id: 'doc-legacy',
+      displayName: 'Ada',
+      email: 'yo@example.com',
+      gamesGistId: 'gg-legacy',
+      socialGistId: 'gs-legacy',
+      githubToken: 'ghp_legacy',
+      ...overrides,
+    });
 
-    expect(healResult.status).toBe('foreign-doc');
-    expect(updateDocMock).not.toHaveBeenCalled();
-    expect(setUserMapMock).not.toHaveBeenCalled();
-    expect(setPrivateConfigMock).not.toHaveBeenCalled();
+    it('crea el documento canónico LIMPIO y rescata antes lo que solo vivía en el huérfano', async () => {
+      getOwnProfileRefMock.mockResolvedValue(null);
+      findSocialProfileByEmailMock.mockResolvedValue(legacy());
+      const order: string[] = [];
+      backupGithubTokenMock.mockImplementation(async () => { order.push('token'); });
+      setPrivateConfigMock.mockImplementation(async () => { order.push('privateConfig'); });
+      setDocMock.mockImplementation(async () => { order.push('canonico'); });
+
+      const healResult = await healOwnLegacyProfile('uid-a', 'yo@example.com');
+
+      expect(healResult).toMatchObject({ status: 'migrated', backedUpToken: true, seededGamesGistId: true });
+      // RESCATAR y luego CREAR: si el rescate falla, no debe existir un documento canónico sin token ni gists.
+      expect(order[order.length - 1]).toBe('canonico');
+      expect(order).toContain('token');
+      // Los dos ids de gist van a `privateConfig` (owner-only), que es donde debían estar.
+      expect(setPrivateConfigMock).toHaveBeenCalledWith('uid-a', { gamesGistId: 'gg-legacy', socialGistId: 'gs-legacy' });
+
+      // El documento nuevo NO arrastra el email, ni los ids de gist, ni el token en claro.
+      const written = canonicalWrite();
+      expect(written).toMatchObject({ uid: 'uid-a', displayName: 'Ada', schemaVersion: 1, profileId: 'pid-nuevo' });
+      expect(written).not.toHaveProperty('email');
+      expect(written).not.toHaveProperty('tier'); // las reglas prohíben al dueño estrenarse un rango
+      expect((written?.social as Record<string, unknown>)).toEqual({ enabled: true, etag: null });
+      // `updatedAt` es obligatorio: el directorio ordena por él y excluye los documentos que no lo traen.
+      expect(written).toHaveProperty('updatedAt', '__ts__');
+
+      // Y el huérfano se queda intacto: las reglas no dejan al dueño ni borrarlo ni apagarlo.
+      expect(updateDocMock).not.toHaveBeenCalled();
+      expect(setDocMock.mock.calls.every((call) => (call[0] as { id?: string }).id !== 'doc-legacy')).toBe(true);
+      // La referencia cacheada por correo apunta al huérfano: hay que olvidarla o las escrituras irían allí.
+      expect(invalidateProfileByEmailCacheMock).toHaveBeenCalledWith('yo@example.com');
+    });
+
+    // Crear el canónico con el nombre vacío sería fabricar la anomalía `no-display-name`, y caer al nombre de Google
+    // o al correo está descartado. Ese caso lo mueve el panel tal cual.
+    it('no crea nada si el perfil legacy no tiene nick', async () => {
+      getOwnProfileRefMock.mockResolvedValue(null);
+      findSocialProfileByEmailMock.mockResolvedValue(legacy({ displayName: '' }));
+
+      const healResult = await healOwnLegacyProfile('uid-a', 'yo@example.com');
+
+      expect(healResult.status).toBe('foreign-doc');
+      expect(setDocMock).not.toHaveBeenCalled();
+    });
+
+    // La caché del perfil propio puede servir, bajo el uid, la referencia de un documento legacy con otro id
+    // (`ensureProfileByEmail` la guarda así). Ahí el cutover ya tiene la referencia en la mano.
+    it('aprovecha la referencia cacheada con otro id sin volver a buscar por correo', async () => {
+      getOwnProfileRefMock.mockResolvedValue(legacy({ profileId: '', schemaVersion: 0 }));
+
+      const healResult = await healOwnLegacyProfile('uid-a', 'yo@example.com');
+
+      expect(healResult.status).toBe('migrated');
+      expect(findSocialProfileByEmailMock).not.toHaveBeenCalled();
+      expect(canonicalWrite()).toMatchObject({ uid: 'uid-a', displayName: 'Ada' });
+    });
+
+    it('si el rescate del token falla, NO crea el documento canónico y lo dice', async () => {
+      getOwnProfileRefMock.mockResolvedValue(null);
+      findSocialProfileByEmailMock.mockResolvedValue(legacy());
+      backupGithubTokenMock.mockRejectedValue(new Error('offline'));
+
+      const healResult = await healOwnLegacyProfile('uid-a', 'yo@example.com');
+
+      expect(healResult).toMatchObject({ status: 'deferred', deferredAt: 'cutover-identidad' });
+      expect(setDocMock).not.toHaveBeenCalled();
+      expect(reportHandledErrorMock).toHaveBeenCalledWith(expect.anything(), false, 'profile-heal:cutover-identidad');
+    });
+
+    it('sin correo no se puede localizar el perfil legacy: no se inventa nada', async () => {
+      getOwnProfileRefMock.mockResolvedValue(null);
+
+      expect((await healOwnLegacyProfile('uid-a')).status).toBe('foreign-doc');
+      expect(findSocialProfileByEmailMock).not.toHaveBeenCalled();
+      expect(setDocMock).not.toHaveBeenCalled();
+    });
   });
 
   it('sin uid no hace nada, y no lo reporta: no hay sesión todavía, no es un fallo', async () => {

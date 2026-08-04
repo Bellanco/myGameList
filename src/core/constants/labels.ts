@@ -490,6 +490,22 @@ export const ADMIN_PANEL_UI = {
     // contenido y repunta las referencias). Aquí solo se enseña, para saber a quién le falta pasar por ahí.
     driftHint: 'Se resuelve solo cuando esta persona abra el espacio social: su cliente elegirá el canal con contenido y actualizará sus amistades. Desde aquí no se puede hacer nada (haría falta su token de GitHub).',
   },
+  // Cutover de identidad: mover un perfil legacy a `profiles/{uid}` y retirar el huérfano.
+  cutover: {
+    title: 'Identidad del documento',
+    hint: 'Este perfil vive bajo un id que no es el uid de su dueño, donde la app ya no lo busca y las reglas no le dejan escribir: su perfil está congelado. Migrar lo lleva a `profiles/{uid}` con todo lo que tiene (rango, alta, restos por rescatar) y borra el original, en una sola operación.',
+    // Sin el campo `uid` en el documento no hay destino posible, y el panel no puede adivinarlo.
+    unknownUid: 'El documento no dice de quién es (no tiene campo `uid`): no se puede migrar desde aquí. Se desbloquea cuando su dueño inicie sesión, porque su propio navegador crea el documento canónico.',
+    alreadyCanonical: 'Este perfil ya vive en `profiles/{uid}`: no hay nada que migrar.',
+    targetLabel: 'Se moverá a',
+    btn: 'Migrar identidad',
+    confirm: (name: string) => `¿Migrar la identidad de ${name} y borrar el documento antiguo? Sus amistades no se tocan.`,
+    okMoved: 'Identidad migrada: el perfil ya vive en su documento canónico.',
+    okMerged: (carried: string[]) =>
+      carried.length > 0
+        ? `Documento huérfano retirado. Rescatado al perfil vivo: ${carried.join(', ')}.`
+        : 'Documento huérfano retirado: el perfil vivo ya tenía todo lo que hacía falta.',
+  },
   // Señales de algo fuera de lugar. Etiqueta corta para la píldora y explicación en el `title`.
   anomalies: {
     aria: 'Señales detectadas',

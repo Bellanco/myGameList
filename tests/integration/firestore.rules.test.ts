@@ -139,6 +139,31 @@ describe('firestore.rules', () => {
       await assertFails(setDoc(doc(ownerDb('uid-a'), 'profiles', 'uid-a'), { createdAt: 5000 }, { merge: true }));
     });
 
+    // CUTOVER DE IDENTIDAD (señal `foreign-doc-id`). Reparto de poderes, que es lo que decide quién hace cada mitad:
+    // el dueño puede CREAR su documento canónico, pero no puede tocar ni retirar el huérfano (las reglas atan la
+    // escritura a `isOwner(docId)`); el administrador sí puede mover y borrar. Si esto cambiara, la migración se
+    // quedaría a medias en silencio.
+    it('el dueño crea su documento canónico pero NO puede tocar el huérfano; el admin sí', async () => {
+      await seed('profiles', 'doc-legacy', {
+        uid: 'uid-a', email: 'yo@example.com', displayName: 'Ada', photoURL: '',
+        social: { enabled: true, gistId: 'gs', githubToken: 'ghp_legacy' }, updatedAt: 1, tier: 'gold', createdAt: 1000,
+      });
+
+      // Primera mitad, la del dueño: su documento canónico, limpio y con su uid.
+      await assertSucceeds(setDoc(doc(ownerDb('uid-a'), 'profiles', 'uid-a'), {
+        schemaVersion: 1, uid: 'uid-a', profileId: 'pid-a', displayName: 'Ada', photoURL: '',
+        social: { enabled: true, etag: null }, updatedAt: 2, createdAt: 2,
+      }, { merge: true }));
+
+      // Sobre el huérfano no puede nada: ni apagarlo ni borrarlo. De ahí que el panel exista.
+      await assertFails(updateDoc(doc(ownerDb('uid-a'), 'profiles', 'doc-legacy'), { 'social.enabled': false }));
+      await assertFails(deleteDoc(doc(ownerDb('uid-a'), 'profiles', 'doc-legacy')));
+
+      // Segunda mitad, la del admin: rescatar el rango y el alta al documento vivo y retirar el huérfano.
+      await assertSucceeds(setDoc(doc(adminDb(), 'profiles', 'uid-a'), { uid: 'uid-a', tier: 'gold', createdAt: 1000 }, { merge: true }));
+      await assertSucceeds(deleteDoc(doc(adminDb(), 'profiles', 'doc-legacy')));
+    });
+
     // AUTO-SANEADO DEL ARRANQUE (`healOwnLegacyProfile`): la escritura EXACTA que hace el cliente del propio dueño
     // sobre un perfil viejo — purga de restos legacy + pseudónimo + marca de esquema, todo de una vez, sin `updatedAt`
     // (no es actividad) y sin `createdAt` (inmutable). Si las reglas la denegaran, esos perfiles no se arreglarían

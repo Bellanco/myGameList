@@ -15,6 +15,7 @@ import { ADMIN_ONLY_TIER, PROFILE_TIER_LABELS, type ProfileTier } from '../core/
 import {
   deleteUserProfile,
   loadAdminCensus,
+  migrateForeignProfileDoc,
   purgeLegacyProfileFields,
   setUserSocialEnabled,
   setUserTier,
@@ -161,6 +162,33 @@ export function useAdminViewModel() {
     [runAction],
   );
 
+  /**
+   * Cutover de identidad: lleva un perfil legacy a `profiles/{uid}` y retira el huérfano.
+   *
+   * Solo se puede si se conoce el uid de destino, y para eso el documento tiene que traer el campo `uid`. Cuando no
+   * lo trae, `AdminUserRow.uid` cae al id del propio documento (ver el censo) y no hay forma de saber de quién es:
+   * ese caso lo desbloquea su dueño al entrar, cuyo navegador crea el documento canónico.
+   */
+  const migrateIdentity = useCallback(
+    (row: AdminUserRow) =>
+      runAction(row, async () => {
+        if (row.idMatchesUid) {
+          return { kind: 'warn', text: ADMIN_PANEL_UI.cutover.alreadyCanonical };
+        }
+        if (!row.uid || row.uid === row.id) {
+          return { kind: 'warn', text: ADMIN_PANEL_UI.cutover.unknownUid };
+        }
+        const result = await migrateForeignProfileDoc(row.id, row.uid);
+        return {
+          kind: 'ok',
+          text: result.outcome === 'moved'
+            ? ADMIN_PANEL_UI.cutover.okMoved
+            : ADMIN_PANEL_UI.cutover.okMerged(result.carried),
+        };
+      }),
+    [runAction],
+  );
+
   const deleteUser = useCallback(
     (row: AdminUserRow) =>
       runAction(row, async () => {
@@ -194,6 +222,7 @@ export function useAdminViewModel() {
     changeTier,
     toggleSocial,
     purgeLegacy,
+    migrateIdentity,
     deleteUser,
   };
 }
