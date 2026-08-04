@@ -1,11 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-// Auto-saneado del perfil legacy al iniciar sesión. Lo que se verifica aquí es sobre todo el ORDEN: preservar en
-// `privateConfig` y solo entonces borrar del documento público. Si el respaldo falla, no se purga nada.
+// Auto-saneado del perfil al iniciar sesión. Lo que se verifica aquí es sobre todo el ORDEN: preservar (token
+// cifrado, id del gist, pseudónimo canónico en `privateConfig`/`userMap`) y solo entonces escribir el documento
+// público. Si algo de la preservación falla, no se toca el documento.
 const getOwnProfileRefMock = vi.fn<(...a: unknown[]) => unknown>();
 const getPrivateConfigMock = vi.fn<(...a: unknown[]) => unknown>();
 const setPrivateConfigMock = vi.fn<(...a: unknown[]) => Promise<void>>(async () => {});
 const backupGithubTokenMock = vi.fn<(...a: unknown[]) => Promise<void>>(async () => {});
+const setUserMapMock = vi.fn<(...a: unknown[]) => Promise<void>>(async () => {});
+const resolveStableProfileIdMock = vi.fn<(...a: unknown[]) => Promise<string>>(async () => 'pid-nuevo');
 const updateDocMock = vi.fn<(...a: unknown[]) => Promise<void>>(async () => {});
 const invalidateOwnProfileCacheMock = vi.fn();
 
@@ -15,9 +18,12 @@ vi.mock('../../src/model/repository/firebaseClient', () => ({
 }));
 
 vi.mock('../../src/model/repository/firebaseRepository', () => ({
+  FIRESTORE_SCHEMA_VERSION: 1,
   getPrivateConfig: (...a: unknown[]) => getPrivateConfigMock(...a),
   setPrivateConfig: (...a: unknown[]) => setPrivateConfigMock(...a),
   backupGithubToken: (...a: unknown[]) => backupGithubTokenMock(...a),
+  setUserMap: (...a: unknown[]) => setUserMapMock(...a),
+  resolveStableProfileId: (...a: unknown[]) => resolveStableProfileIdMock(...a),
 }));
 
 vi.mock('../../src/model/repository/firebaseSocialRepository', () => ({
@@ -34,9 +40,13 @@ vi.mock('firebase/firestore', () => ({
 
 import { healOwnLegacyProfile } from '../../src/model/repository/firebaseProfileHealRepository';
 
+// Perfil SANO por defecto: al día de esquema y con su identidad pseudónima establecida. Cada test estropea solo
+// lo que quiere probar.
 function profile(overrides: Record<string, unknown> = {}) {
   return {
     id: 'uid-a',
+    profileId: 'pid-a',
+    schemaVersion: 1,
     displayName: 'Ada',
     email: '',
     photoURL: '',
@@ -54,9 +64,15 @@ describe('healOwnLegacyProfile', () => {
     getPrivateConfigMock.mockReset();
     getPrivateConfigMock.mockResolvedValue(null);
     setPrivateConfigMock.mockClear();
+    setPrivateConfigMock.mockResolvedValue(undefined);
     backupGithubTokenMock.mockClear();
     backupGithubTokenMock.mockResolvedValue(undefined);
+    setUserMapMock.mockClear();
+    setUserMapMock.mockResolvedValue(undefined);
+    resolveStableProfileIdMock.mockClear();
+    resolveStableProfileIdMock.mockResolvedValue('pid-nuevo');
     updateDocMock.mockClear();
+    updateDocMock.mockResolvedValue(undefined);
     invalidateOwnProfileCacheMock.mockClear();
   });
 
@@ -130,6 +146,7 @@ describe('healOwnLegacyProfile', () => {
 
     await healOwnLegacyProfile('uid-a');
 
+    // Un perfil ya sellado y con pseudónimo no vuelve a recibir ni `schemaVersion` ni `profileId`.
     expect(updateDocMock.mock.calls[0][1]).toEqual({
       uid: 'uid-a',
       email: '__del__',
@@ -138,6 +155,92 @@ describe('healOwnLegacyProfile', () => {
     });
     // El directorio y el perfil propio cacheados ya no valen tras la purga.
     expect(invalidateOwnProfileCacheMock).toHaveBeenCalledWith('uid-a');
+  });
+
+  // --- Identidad pseudónima ausente (señal `no-profile-id` del panel) ---
+
+  it('establece la copia CANÓNICA del pseudónimo antes de sellarlo en el documento público', async () => {
+    getOwnProfileRefMock.mockResolvedValue(profile({ profileId: '' }));
+    const order: string[] = [];
+    setUserMapMock.mockImplementation(async () => { order.push('userMap'); });
+    setPrivateConfigMock.mockImplementation(async () => { order.push('privateConfig'); });
+    updateDocMock.mockImplementation(async () => { order.push('public'); });
+
+    const healResult = await healOwnLegacyProfile('uid-a');
+
+    expect(healResult).toMatchObject({ status: 'healed', establishedProfileId: true });
+    expect(order).toEqual(['userMap', 'privateConfig', 'public']);
+    expect(setUserMapMock).toHaveBeenCalledWith('uid-a', 'pid-nuevo');
+    // Solo el pseudónimo: `setPrivateConfig` hace merge y mandar ids de gist vacíos los BORRARÍA.
+    expect(setPrivateConfigMock).toHaveBeenCalledWith('uid-a', { profileId: 'pid-nuevo' });
+    expect(updateDocMock.mock.calls[0][1]).toMatchObject({ uid: 'uid-a', profileId: 'pid-nuevo' });
+  });
+
+  // El pseudónimo del doc público tiene que ser el MISMO con el que ese usuario ya publica; si no, sus reseñas
+  // quedan atribuidas a dos identidades distintas. `resolveStableProfileId` es quien lo reconcilia.
+  it('usa el pseudónimo que resuelve la identidad estable, no uno inventado aquí', async () => {
+    getOwnProfileRefMock.mockResolvedValue(profile({ profileId: '' }));
+    resolveStableProfileIdMock.mockResolvedValue('pid-remoto-canonico');
+
+    await healOwnLegacyProfile('uid-a');
+
+    expect(resolveStableProfileIdMock).toHaveBeenCalledWith('uid-a');
+    expect(setUserMapMock).toHaveBeenCalledWith('uid-a', 'pid-remoto-canonico');
+    expect(updateDocMock.mock.calls[0][1]).toMatchObject({ profileId: 'pid-remoto-canonico' });
+  });
+
+  // EL OTRO TEST QUE IMPORTA: sellar el pseudónimo en el doc público sin que la copia canónica haya aterrizado es
+  // justo la deriva que este saneado viene a evitar (el cliente lo pisaría en su siguiente guardado).
+  it('si la copia canónica del pseudónimo falla, NO escribe el documento público', async () => {
+    getOwnProfileRefMock.mockResolvedValue(profile({ profileId: '' }));
+    setUserMapMock.mockRejectedValue(new Error('permission-denied'));
+
+    const healResult = await healOwnLegacyProfile('uid-a');
+
+    expect(healResult.status).toBe('deferred');
+    expect(updateDocMock).not.toHaveBeenCalled();
+  });
+
+  it('no toca la identidad de quien ya tiene pseudónimo, aunque haya que purgarle restos', async () => {
+    getOwnProfileRefMock.mockResolvedValue(profile({ githubToken: 'ghp_legacy' }));
+
+    await healOwnLegacyProfile('uid-a');
+
+    expect(resolveStableProfileIdMock).not.toHaveBeenCalled();
+    expect(setUserMapMock).not.toHaveBeenCalled();
+    expect(updateDocMock.mock.calls[0][1]).not.toHaveProperty('profileId');
+  });
+
+  // --- Marca de esquema atrasada (señal `stale-schema` del panel) ---
+
+  it('vuelve a sellar el esquema de un perfil antiguo sin restos, en una sola escritura', async () => {
+    getOwnProfileRefMock.mockResolvedValue(profile({ schemaVersion: 0 }));
+
+    const healResult = await healOwnLegacyProfile('uid-a');
+
+    expect(healResult).toMatchObject({ status: 'healed', stampedSchema: true, establishedProfileId: false });
+    expect(updateDocMock).toHaveBeenCalledTimes(1);
+    expect(updateDocMock.mock.calls[0][1]).toMatchObject({ uid: 'uid-a', schemaVersion: 1 });
+    // No es actividad del usuario: el latido `updatedAt` no se mueve. Y `createdAt` es inmutable en las reglas.
+    expect(updateDocMock.mock.calls[0][1]).not.toHaveProperty('updatedAt');
+    expect(updateDocMock.mock.calls[0][1]).not.toHaveProperty('createdAt');
+  });
+
+  it('un perfil sin pseudónimo Y con esquema antiguo se arregla del todo en una escritura', async () => {
+    getOwnProfileRefMock.mockResolvedValue(profile({ profileId: '', schemaVersion: 0 }));
+
+    const healResult = await healOwnLegacyProfile('uid-a');
+
+    expect(healResult).toMatchObject({ status: 'healed', establishedProfileId: true, stampedSchema: true });
+    expect(updateDocMock).toHaveBeenCalledTimes(1);
+    expect(updateDocMock.mock.calls[0][1]).toMatchObject({ profileId: 'pid-nuevo', schemaVersion: 1 });
+  });
+
+  it('un documento sin marca de esquema cuenta como versión 0 y se sella', async () => {
+    // Es el caso real del `stale-schema`: perfiles anteriores a que la marca existiera, que no traen el campo.
+    getOwnProfileRefMock.mockResolvedValue(profile({ schemaVersion: undefined }));
+
+    expect((await healOwnLegacyProfile('uid-a')).stampedSchema).toBe(true);
   });
 
   it('no toca un perfil legacy que vive bajo otro id: su email es su única vía de recuperación', async () => {

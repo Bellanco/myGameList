@@ -30,6 +30,12 @@ export interface SocialProfileReference {
   id: string;
   profileId?: string;
   /**
+   * Versión del esquema con la que se escribió el documento (0 si no la trae, es decir si es anterior a que
+   * existiera la marca). Solo la rellenan las lecturas del perfil PROPIO: la usa el auto-saneado del arranque para
+   * saber si hay que volver a sellarlo sin tener que releer el documento aparte.
+   */
+  schemaVersion?: number;
+  /**
    * LEGACY, solo lectura del documento PROPIO: los perfiles nuevos no publican el email. Se conserva para saber
    * que un perfil antiguo aún lo arrastra y borrarlo en el siguiente guardado. Nunca se lee de perfiles ajenos.
    */

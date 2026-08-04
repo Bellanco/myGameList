@@ -122,6 +122,9 @@ function mapProfileReference(id: string, data: Record<string, unknown>): SocialP
   return {
     id,
     profileId: String(data.profileId || ''),
+    // 0 = documento anterior a que existiera la marca. El auto-saneado del arranque lo compara con la versión
+    // vigente para decidir si hay que volver a sellarlo.
+    schemaVersion: Number(data.schemaVersion || 0),
     // LEGACY: los perfiles nuevos ya no publican el email. Se sigue leyendo del documento PROPIO para detectar
     // que aún lo arrastra y borrarlo en el siguiente guardado (ver `ensureProfileByEmail`).
     email: String(data.email || ''),
