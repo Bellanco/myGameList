@@ -200,6 +200,9 @@ export const AdminHub = memo(function AdminHub() {
               const busy = vm.busyId === user.id;
               const legacyTags = LEGACY_FIELDS.filter((entry) => user.legacy[entry.field]);
               const visibleAnomalies = user.anomalies.filter((code) => !LEGACY_ANOMALIES.has(code));
+              // Solo se puede migrar si el documento dice de quién es: cuando no trae `uid`, el censo lo iguala al
+              // id del propio documento y no hay destino que proponer.
+              const cutoverTargetKnown = Boolean(user.uid) && user.uid !== user.id;
 
               return (
                 <li key={user.id} className={`admin-user-card${busy ? ' is-busy' : ''}`}>
@@ -313,6 +316,41 @@ export const AdminHub = memo(function AdminHub() {
                           <dd>{user.friendSocialGistIds.map((gistId) => <code key={gistId}>{gistId}</code>)}</dd>
                         </div>
                       </dl>
+                    </div>
+                  ) : null}
+
+                  {/* Cutover de identidad: el documento no vive en `profiles/{uid}`. El id actual ya sale arriba en
+                      la ficha (`Id del documento`, que solo se pinta en este caso); aquí se añade el DESTINO,
+                      porque el botón borra un documento y quien lo pulsa debe poder comprobar a dónde va. Sin uid
+                      en el documento no hay destino: el botón se bloquea con el motivo, que no es un fallo sino el
+                      turno del dueño. */}
+                  {user.anomalies.includes('foreign-doc-id') ? (
+                    <div className="admin-gist-drift" role="group" aria-label={A.cutover.title}>
+                      <span className="admin-field-label">{A.cutover.title}</span>
+                      <p className="admin-card-note">{A.cutover.hint}</p>
+                      <dl className="admin-user-data">
+                        <div>
+                          <dt>{A.cutover.targetLabel}</dt>
+                          <dd>{cutoverTargetKnown ? <code>{`profiles/${user.uid}`}</code> : A.field.none}</dd>
+                        </div>
+                      </dl>
+                      <button
+                        type="button"
+                        className="btn btn-secondary"
+                        disabled={busy || !cutoverTargetKnown}
+                        title={cutoverTargetKnown ? undefined : A.cutover.unknownUid}
+                        // Igual que en los restos legacy: el motivo del bloqueo va en el nombre accesible, porque
+                        // con `aria-label` presente el `title` no se anuncia.
+                        aria-label={cutoverTargetKnown ? A.cutover.btn : `${A.cutover.btn} — ${A.cutover.unknownUid}`}
+                        onClick={() =>
+                          setPending({
+                            title: A.cutover.confirm(name),
+                            run: () => void vm.migrateIdentity(user),
+                          })
+                        }
+                      >
+                        {busy ? A.working : A.cutover.btn}
+                      </button>
                     </div>
                   ) : null}
 

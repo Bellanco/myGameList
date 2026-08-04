@@ -11,6 +11,9 @@
 //     que el cliente lo pisaría en su siguiente guardado y sus publicaciones quedarían atribuidas a otro.
 //  3. Marca de esquema atrasada (`schemaVersion`: señal `stale-schema`). Sellarla desde el panel sería mentir: el
 //     documento seguiría con la forma vieja.
+//  4. Perfil que vive bajo un id ajeno (señal `foreign-doc-id`): la PRIMERA MITAD del cutover de identidad, que es
+//     crear el documento canónico `profiles/{uid}`. Ver `startIdentityCutover`. La segunda mitad —retirar el
+//     huérfano— es del panel, porque las reglas no dejan al dueño tocar un documento cuyo id no es su uid.
 //
 // En los tres casos el único actor capaz de hacer la migración completa es el propio dueño, y este módulo es lo que
 // ejecuta su navegador cuando entra.
@@ -24,7 +27,7 @@
 // documento.
 //
 // Con esto, la purga manual del panel queda solo para quien no vuelve a entrar nunca.
-import { deleteField, doc, updateDoc } from 'firebase/firestore';
+import { deleteField, doc, serverTimestamp, setDoc, updateDoc } from 'firebase/firestore';
 import { FIRESTORE_SCHEMA_VERSION } from '../../core/constants/schema';
 import { initializeFirebaseServices } from './firebaseClient';
 import { reportHandledError } from './telemetryRepository';
@@ -35,14 +38,22 @@ import {
   setPrivateConfig,
   setUserMap,
 } from './firebaseRepository';
-import { getOwnProfileRef, invalidateOwnProfileCache, invalidateSocialDirectoryCache } from './firebaseSocialRepository';
+import {
+  findSocialProfileByEmail,
+  getOwnProfileRef,
+  invalidateOwnProfileCache,
+  invalidateProfileByEmailCache,
+  invalidateSocialDirectoryCache,
+} from './firebaseSocialRepository';
 
 export type LegacyHealStatus =
   /** No había nada que sanear (caso normal: ningún perfil nuevo tiene restos). */
   | 'clean'
   /** Se preservó lo necesario y se puso al día el documento público. */
   | 'healed'
-  /** El perfil no vive en `profiles/{uid}` (documento legacy con otro id): no se toca. */
+  /** Primera mitad del cutover: el perfil vivía bajo otro id y se ha creado el canónico `profiles/{uid}`. */
+  | 'migrated'
+  /** El perfil no vive en `profiles/{uid}` y no se ha podido crear el canónico (no hay legacy, o no tiene nick). */
   | 'foreign-doc'
   /** No se pudo completar (sin Firebase, sin sesión útil, o falló el respaldo): se reintentará. */
   | 'deferred';
@@ -65,6 +76,8 @@ export type LegacyHealDeferralStep =
   | 'siembra-gist'
   /** Falló escribir la copia canónica del pseudónimo (`userMap` / `privateConfig`). */
   | 'identidad'
+  /** Falló la primera mitad del cutover: crear `profiles/{uid}` a partir del perfil legacy. */
+  | 'cutover-identidad'
   /** Falló la escritura del documento público (reglas, red). Lo preservado ya está a salvo. */
   | 'escritura-publica';
 
@@ -111,12 +124,115 @@ function deferral(step: LegacyHealDeferralStep, error?: unknown): LegacyHealResu
 }
 
 /**
+ * PRIMERA MITAD DEL CUTOVER DE IDENTIDAD (señal `foreign-doc-id` del panel).
+ *
+ * El perfil de este usuario es de una versión anterior y vive bajo un id que no es su uid, donde la app ya no lo
+ * busca: `resolveOwnProfile` solo lo encuentra por el `email` publicado, y las reglas no le dejan escribir ahí
+ * (`isOwner(docId)` es falso), así que su perfil está congelado. Lo que sí puede hacer su navegador es CREAR el
+ * documento canónico `profiles/{uid}`, y a partir de ese momento todo —lectura, escritura y saneado— apunta al sitio
+ * bueno. Retirar el huérfano es lo único que no puede: eso lo hace el administrador desde `/admin`.
+ *
+ * El documento nuevo nace LIMPIO: nada de `email`, ni ids de gist, ni el token en claro. Lo que había que rescatar
+ * del huérfano se copia antes a `privateConfig` (owner-only, cifrado el token), que es donde debía estar desde el
+ * principio. Ese orden importa: si el rescate falla, no se crea nada y se reintenta en el próximo arranque.
+ *
+ * No se hace nada si el perfil legacy no tiene nick: crear el canónico con el nombre vacío sería fabricar la anomalía
+ * `no-display-name` (y caer al nombre real de Google o al correo está descartado por privacidad). Ese caso se queda
+ * para el panel, que puede mover el documento tal cual.
+ */
+async function startIdentityCutover(
+  firestore: import('firebase/firestore').Firestore,
+  uid: string,
+  email: string,
+  known?: { id: string; displayName: string; photoURL: string; socialGistId: string; gamesGistId: string; githubToken: string; socialEnabled: boolean } | null,
+): Promise<LegacyHealResult> {
+  const legacy = known || (email ? await findSocialProfileByEmail(email) : null);
+  if (!legacy || legacy.id === uid) {
+    return result('foreign-doc');
+  }
+
+  if (!String(legacy.displayName || '').trim()) {
+    console.warn('[saneado] perfil legacy sin nick: el cutover lo tiene que hacer el panel, no se crea uno sin nombre');
+    return result('foreign-doc');
+  }
+
+  // ---- 1) RESCATAR a `privateConfig` lo que solo vive en el documento huérfano. ----
+  const privateConfig = await getPrivateConfig(uid).catch(() => null);
+  const legacyToken = String(legacy.githubToken || '').trim(); // audit-allow: LECTURA del token legacy del huérfano para cifrarlo en privateConfig antes de dejar de usar ese documento
+  let backedUpToken = false;
+  let seededGamesGistId = false;
+
+  if (legacyToken && !privateConfig?.encryptedGithubToken) {
+    await backupGithubToken(uid, legacyToken);
+    backedUpToken = true;
+  }
+
+  // Los dos ids de gist del huérfano: el social es su canal (sin él no podría volver a publicar desde un
+  // dispositivo nuevo) y el de juegos es el fallback de "Recuperar Gist ID". Solo se escribe lo que no esté ya.
+  const rescuedIds: Record<string, string> = {};
+  if (legacy.gamesGistId && !String(privateConfig?.gamesGistId || '').trim()) {
+    rescuedIds.gamesGistId = legacy.gamesGistId;
+    seededGamesGistId = true;
+  }
+  if (legacy.socialGistId && !String(privateConfig?.socialGistId || '').trim()) {
+    rescuedIds.socialGistId = legacy.socialGistId;
+  }
+  if (Object.keys(rescuedIds).length > 0) {
+    await setPrivateConfig(uid, rescuedIds); // audit-allow: destino owner-only (privateConfig), justo lo contrario de un canal público
+  }
+
+  // Identidad pseudónima, con su copia canónica antes que nada (mismo criterio que el saneado normal).
+  const profileId = await resolveStableProfileId(uid);
+  if (profileId) {
+    await setUserMap(uid, profileId);
+    if (String(privateConfig?.profileId || '').trim() !== profileId) {
+      await setPrivateConfig(uid, { profileId });
+    }
+  }
+
+  // ---- 2) CREAR el documento canónico. ----
+  // `merge: true` por si apareciera entre la lectura y esta escritura (dos pestañas): nunca debe pisar lo que haya.
+  // `tier` NO se escribe: las reglas prohíben al dueño estrenarse un rango, y el que tuviera el huérfano lo rescata
+  // el panel al retirarlo. `createdAt` tampoco: no se lee del huérfano, y el panel conserva la más antigua.
+  // `updatedAt` SÍ, y con la marca del servidor: el directorio ordena por ese campo y EXCLUYE de la consulta los
+  // documentos que no lo traen, así que sin él el usuario desaparecería del descubrimiento. Además es cierto: acaba
+  // de iniciar sesión.
+  await setDoc(
+    doc(firestore, 'profiles', uid),
+    {
+      schemaVersion: FIRESTORE_SCHEMA_VERSION,
+      uid,
+      ...(profileId ? { profileId } : {}),
+      displayName: legacy.displayName,
+      photoURL: legacy.photoURL,
+      social: {
+        enabled: legacy.socialEnabled,
+        etag: null,
+      },
+      updatedAt: serverTimestamp(),
+      createdAt: serverTimestamp(),
+    },
+    { merge: true },
+  );
+
+  // La referencia cacheada por correo apunta al huérfano: servirla ahora mandaría las escrituras al documento
+  // equivocado durante lo que le quede de TTL.
+  invalidateProfileByEmailCache(email);
+  invalidateOwnProfileCache(uid);
+  invalidateSocialDirectoryCache();
+
+  console.warn(`[cutover] perfil legacy «${legacy.id}» copiado a profiles/${uid}: queda retirar el huérfano desde /admin`);
+
+  return result('migrated', { backedUpToken, seededGamesGistId, establishedProfileId: Boolean(profileId), stampedSchema: true });
+}
+
+/**
  * Migra y pone al día el perfil público del usuario indicado. Idempotente y sin escrituras cuando no hay nada que
  * hacer (el caso de la inmensa mayoría): una sola lectura, además cacheada por `getOwnProfileRef`.
  *
  * Nunca lanza: cualquier fallo devuelve `deferred` —con el paso en el que se quedó— y deja el documento intacto.
  */
-export async function healOwnLegacyProfile(uid: string): Promise<LegacyHealResult> {
+export async function healOwnLegacyProfile(uid: string, email = ''): Promise<LegacyHealResult> {
   // Los dos casos de ENTORNO (sin sesión, sin Firebase) no se reportan: son estados normales de la app, no fallos.
   if (!uid) {
     return result('deferred', { deferredAt: 'sin-sesion' });
@@ -131,19 +247,21 @@ export async function healOwnLegacyProfile(uid: string): Promise<LegacyHealResul
     }
 
     const profile = await getOwnProfileRef(uid);
-    // Sin documento en `profiles/{uid}`: o no tiene perfil social (nada que sanear) o es un perfil legacy que
-    // vive bajo otro id. Ese segundo caso NO se toca desde aquí: su `email` es la única forma de volver a
-    // encontrarlo, y moverlo a `profiles/{uid}` es el cutover de identidad, no un saneado.
+    // Sin documento en `profiles/{uid}`: o no tiene perfil social (nada que sanear) o su perfil es de una versión
+    // anterior y vive bajo otro id. Lo segundo se arregla creando el documento canónico: es la primera mitad del
+    // cutover de identidad, y la única que puede hacer el dueño (retirar el huérfano es cosa del panel).
     if (!profile) {
-      return result('foreign-doc');
+      step = 'cutover-identidad';
+      return await startIdentityCutover(services.firestore, uid, email);
     }
 
     // La lectura de arriba está CACHEADA, y `ensureProfileByEmail` guarda en esa misma caché (indexada por uid) la
-    // referencia de un perfil legacy que vive bajo OTRO id. Sin esta comprobación, para ese usuario el saneado
-    // intentaría escribir en `profiles/{uid}`, que no existe: `updateDoc` no crea documentos, así que la escritura
-    // falla y el arreglo se queda en un reintento perpetuo. Es el mismo caso de arriba, detectado por otra vía.
+    // referencia de un perfil legacy que vive bajo OTRO id. Escribir entonces en `profiles/{uid}` fallaría
+    // —`updateDoc` no crea documentos—, así que es el mismo caso de arriba detectado por otra vía: el cutover, con
+    // la ventaja de que la referencia legacy ya está en la mano y no hay que volver a buscarla por correo.
     if (profile.id !== uid) {
-      return result('foreign-doc');
+      step = 'cutover-identidad';
+      return await startIdentityCutover(services.firestore, uid, email, profile);
     }
 
     const legacyToken = String(profile.githubToken || '').trim(); // audit-allow: LECTURA del token legacy para ponerlo a salvo cifrado antes de borrarlo

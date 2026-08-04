@@ -25,6 +25,9 @@ const deleteUserProfileMock = vi.fn<(...args: unknown[]) => Promise<{ ok: boolea
   failures: [],
 }));
 const setUserTierMock = vi.fn<(...args: unknown[]) => Promise<void>>(async () => {});
+const migrateForeignProfileDocMock = vi.fn<(...args: unknown[]) => Promise<{ outcome: string; carried: string[] }>>(
+  async () => ({ outcome: 'moved', carried: [] }),
+);
 
 vi.mock('../../src/model/repository/firebaseAdminRepository', () => ({
   ADMIN_PROFILES_LIMIT: 300,
@@ -33,6 +36,7 @@ vi.mock('../../src/model/repository/firebaseAdminRepository', () => ({
   purgeLegacyProfileFields: (...args: unknown[]) => purgeLegacyProfileFieldsMock(...args),
   deleteUserProfile: (...args: unknown[]) => deleteUserProfileMock(...args),
   setUserTier: (...args: unknown[]) => setUserTierMock(...args),
+  migrateForeignProfileDoc: (...args: unknown[]) => migrateForeignProfileDocMock(...args),
 }));
 
 import { AdminHub } from '../../src/view/components/AdminHub';
@@ -151,6 +155,45 @@ describe('AdminHub — moderación', () => {
     purgeLegacyProfileFieldsMock.mockClear();
     deleteUserProfileMock.mockClear();
     setUserTierMock.mockClear();
+    migrateForeignProfileDocMock.mockClear();
+    migrateForeignProfileDocMock.mockResolvedValue({ outcome: 'moved', carried: [] });
+  });
+
+  // CUTOVER DE IDENTIDAD: la acción borra un documento, así que la ficha tiene que enseñar de dónde a dónde va.
+  it('migra la identidad de un perfil que vive bajo otro id, tras confirmar', async () => {
+    loadAdminCensusMock.mockResolvedValue(
+      census([user({ id: 'doc-legacy', uid: 'uid-a', idMatchesUid: false, anomalies: ['foreign-doc-id'] })]),
+    );
+    renderHub();
+    signIn(ADMIN_EMAIL);
+    await screen.findByText('Ada');
+
+    // Los dos ids, visibles: el actual y el destino.
+    expect(screen.getByText('doc-legacy')).toBeInTheDocument();
+    expect(screen.getByText('profiles/uid-a')).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: ADMIN_PANEL_UI.cutover.btn }));
+    expect(migrateForeignProfileDocMock).not.toHaveBeenCalled();
+
+    await userEvent.click(screen.getByRole('button', { name: ADMIN_PANEL_UI.confirmAccept }));
+    await waitFor(() => expect(migrateForeignProfileDocMock).toHaveBeenCalledWith('doc-legacy', 'uid-a'));
+    expect(await screen.findByText(ADMIN_PANEL_UI.cutover.okMoved)).toBeInTheDocument();
+  });
+
+  // Sin campo `uid` en el documento, el censo iguala el uid al id: no hay destino y no se puede migrar desde aquí.
+  it('no ofrece migrar cuando el documento no dice de quién es', async () => {
+    loadAdminCensusMock.mockResolvedValue(
+      census([user({ id: 'doc-huerfano', uid: 'doc-huerfano', idMatchesUid: false, anomalies: ['foreign-doc-id'] })]),
+    );
+    renderHub();
+    signIn(ADMIN_EMAIL);
+    await screen.findByText('Ada');
+
+    const blocked = screen.getByRole('button', { name: new RegExp(ADMIN_PANEL_UI.cutover.btn) });
+    expect(blocked).toBeDisabled();
+    // El motivo va en el nombre accesible: es el turno de su dueño, no un fallo.
+    expect(blocked.getAttribute('aria-label')).toContain(ADMIN_PANEL_UI.cutover.unknownUid);
+    expect(migrateForeignProfileDocMock).not.toHaveBeenCalled();
   });
 
   it('ninguna acción se ejecuta sin pasar por la confirmación', async () => {
