@@ -61,7 +61,10 @@ export {
 // F6.3 (modernización): marca de versión de esquema en los docs de Firestore (profiles/userMap/privateConfig).
 // Aditiva — las reglas no validan un conjunto exacto de campos, así que no requiere redesplegar reglas. Permite a
 // futuras migraciones detectar la versión del documento.
-const FIRESTORE_SCHEMA_VERSION = 1;
+// Exportada porque el auto-saneado del arranque (`firebaseProfileHealRepository`) tiene que comparar contra ella
+// para volver a sellar los perfiles que se quedaron en una versión anterior: un espejo con su propia constante
+// derivaría en cuanto esta subiera.
+export const FIRESTORE_SCHEMA_VERSION = 1;
 
 /**
  * L1 — Resuelve el perfil PROPIO: lectura directa de `profiles/{uid}` y, solo si ahí no hay documento, fallback a
@@ -173,6 +176,9 @@ export async function upsertProfileSocialReferences(input: {
   saveOwnProfileCache(input.user.uid, {
     id: input.user.uid,
     profileId,
+    // El documento se acaba de escribir con la versión vigente: sin esto, el saneado del arranque leería la caché,
+    // vería 0 y volvería a sellar un perfil que ya está al día.
+    schemaVersion: FIRESTORE_SCHEMA_VERSION,
     email: '', // ya no vive en el documento
     displayName: profileName,
     photoURL: String(input.user.photoURL || ''),
@@ -452,6 +458,9 @@ export async function ensureProfileByEmail(input: {
   const written: SocialProfileReference = {
     id: targetId,
     profileId,
+    // Solo se sella si de verdad se ha reescrito el documento. Cuando el perfil no cambia no se toca su
+    // `schemaVersion`, y decir aquí que está al día le taparía el saneado del arranque durante la vida de la caché.
+    schemaVersion: shouldWriteProfile ? FIRESTORE_SCHEMA_VERSION : Number(existing?.schemaVersion || 0),
     // El documento ya no lo guarda; la referencia en memoria tampoco necesita arrastrarlo.
     email: '',
     displayName: profileName,

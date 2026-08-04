@@ -2,7 +2,9 @@ import { useEffect } from 'react';
 import { subscribeSocialAuth } from '../../model/repository/firebaseGateway';
 
 /**
- * Dispara el auto-saneado del perfil legacy al restaurar/iniciar sesión de Google.
+ * Dispara el auto-saneado del perfil al restaurar/iniciar sesión de Google: purga de restos legacy, identidad
+ * pseudónima que nunca se estableció y marca de esquema atrasada (las tres cosas que el panel de administración ve
+ * pero no puede arreglar; ver `firebaseProfileHealRepository`).
  *
  * Se monta UNA vez en App. Todo el trabajo real vive en `firebaseProfileHealRepository`, que se carga con
  * `import()` dinámico para no arrastrar el SDK de Firestore al grafo del arranque (mismo criterio que
