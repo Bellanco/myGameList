@@ -139,6 +139,28 @@ describe('firestore.rules', () => {
       await assertFails(setDoc(doc(ownerDb('uid-a'), 'profiles', 'uid-a'), { createdAt: 5000 }, { merge: true }));
     });
 
+    // BÚSQUEDA POR CORREO (`findSocialProfileByEmail`), que es como se localiza un perfil legacy y por tanto el
+    // arranque del cutover. En una CONSULTA, Firestore no evalúa la condición de la regla documento a documento:
+    // exige que la consulta garantice de antemano que todo lo que pueda devolver es legible. Como la regla solo
+    // autoriza a un autenticado sobre `social.enabled == true`, la consulta TIENE que llevar ese filtro; sin él se
+    // deniega entera, incluso cuando no devuelve nada, y el fallback legacy queda muerto sin que se note (el
+    // repositorio traduce `permission-denied` a "no hay perfil"). Si esto se rompe, los perfiles con id ajeno al uid
+    // dejan de poder migrarse solos.
+    it('la búsqueda por correo necesita el filtro `social.enabled` para pasar las reglas', async () => {
+      await seed('profiles', 'doc-legacy', { uid: 'uid-a', email: 'yo@example.com', social: { enabled: true } });
+      const db = ownerDb('uid-a');
+      const byEmail = (constraints: Parameters<typeof query>[1][]) =>
+        getDocs(query(collection(db, 'profiles'), ...constraints));
+
+      // Con el filtro: permitida, y también cuando no encuentra nada (el caso de quien no tiene perfil legacy).
+      await assertSucceeds(byEmail([where('email', '==', 'yo@example.com'), where('social.enabled', '==', true)]));
+      await assertSucceeds(byEmail([where('email', '==', 'nadie@example.com'), where('social.enabled', '==', true)]));
+
+      // Sin el filtro: denegada, aunque el documento que encontraría fuese perfectamente legible de uno en uno.
+      await assertFails(byEmail([where('email', '==', 'yo@example.com')]));
+      await assertSucceeds(getDoc(doc(db, 'profiles', 'doc-legacy')));
+    });
+
     // CUTOVER DE IDENTIDAD (señal `foreign-doc-id`). Reparto de poderes, que es lo que decide quién hace cada mitad:
     // el dueño puede CREAR su documento canónico, pero no puede tocar ni retirar el huérfano (las reglas atan la
     // escritura a `isOwner(docId)`); el administrador sí puede mover y borrar. Si esto cambiara, la migración se
@@ -657,3 +679,4 @@ describe('firestore.rules', () => {
     });
   });
 });
+
