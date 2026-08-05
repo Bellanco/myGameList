@@ -346,9 +346,20 @@ describe('healOwnLegacyProfile', () => {
       expect(invalidateProfileByEmailCacheMock).toHaveBeenCalledWith('yo@example.com');
     });
 
-    // Crear el canónico con el nombre vacío sería fabricar la anomalía `no-display-name`, y caer al nombre de Google
-    // o al correo está descartado. Ese caso lo mueve el panel tal cual.
-    it('no crea nada si el perfil legacy no tiene nick', async () => {
+    // Si el legacy no tiene nick, el nombre de la sesión de Google antes que dejar el perfil congelado. Crear el
+    // canónico sin nombre sería la anomalía `no-display-name`; no migrar es peor todavía. El correo no se usa.
+    it('usa el nombre de la sesión cuando el perfil legacy no tiene nick', async () => {
+      getOwnProfileRefMock.mockResolvedValue(null);
+      findSocialProfileByEmailMock.mockResolvedValue(legacy({ displayName: '' }));
+
+      const healResult = await healOwnLegacyProfile('uid-a', 'yo@example.com', 'Ada de Google');
+
+      expect(healResult.status).toBe('migrated');
+      expect(canonicalWrite()).toMatchObject({ displayName: 'Ada de Google' });
+      expect(canonicalWrite()?.displayName).not.toBe('yo@example.com');
+    });
+
+    it('sin nombre en ninguna parte no crea nada: eso lo mueve el panel', async () => {
       getOwnProfileRefMock.mockResolvedValue(null);
       findSocialProfileByEmailMock.mockResolvedValue(legacy({ displayName: '' }));
 

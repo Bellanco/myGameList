@@ -64,6 +64,25 @@ export {
 // atrasados (el panel). Ver el comentario de la constante.
 
 /**
+ * Nombre PÚBLICO de un perfil, por orden de preferencia: el nick del perfil social, lo que ya hubiera publicado, y
+ * como último recurso el nombre de la cuenta de Google.
+ *
+ * El CORREO no entra nunca, y es la única exclusión que importa: es el dato que el usuario no ha elegido mostrar.
+ * El nombre de Google sí, porque es un nombre —coincidir con él es lo normal, no un accidente— y porque la
+ * alternativa era peor: abortar el guardado o crear un perfil sin nombre, que es la anomalía `no-display-name` del
+ * panel (un perfil que sus amigos no pueden identificar). Se prefiere un nombre razonable a un error evitable.
+ */
+function resolvePublicName(...candidates: Array<string | undefined>): string {
+  for (const candidate of candidates) {
+    const clean = String(candidate || '').trim();
+    if (clean) {
+      return clean;
+    }
+  }
+  return '';
+}
+
+/**
  * L1 — Resuelve el perfil PROPIO: lectura directa de `profiles/{uid}` y, solo si ahí no hay documento, fallback a
  * la búsqueda legacy por email (perfiles antiguos cuyo id no es el uid). Es el único punto donde vive esa cadena,
  * para que ningún consumidor tenga que conocer el detalle ni pedir el correo si no hace falta.
@@ -99,11 +118,10 @@ export async function upsertProfileSocialReferences(input: {
     throw new Error('Firebase no está configurado en este entorno');
   }
 
-  // PRIVACIDAD: el nick público es el del perfil social y NADA MÁS. El respaldo que había aquí a
-  // `user.displayName || user.email` publicaba el nombre real de Google —o el correo— en un documento que lee
-  // cualquier usuario autenticado, justo lo que `ensureProfileByEmail` documenta que nunca debe pasar. Sin nick no
-  // se crea perfil (mismo criterio que la interfaz, que no deja guardar con el nombre vacío).
-  const profileName = String(input.preferredName || '').trim();
+  // PRIVACIDAD: el nick es el del perfil social y, si no llega, el nombre de la cuenta de Google. El CORREO nunca:
+  // es el único de los tres que el usuario no ha elegido mostrar y que no querría ver publicado. Que el nick
+  // coincida con el nombre de Google es perfectamente normal (mucha gente se pone el suyo).
+  const profileName = resolvePublicName(input.preferredName, input.user.displayName);
   if (!profileName) {
     throw new Error('No se puede publicar un perfil social sin nombre público');
   }
@@ -373,13 +391,12 @@ export async function ensureProfileByEmail(input: {
     }
   }
 
-  // PRIVACIDAD: el displayName público es el NICK del perfil social (`preferredName`); si no llega, se PRESERVA el
-  // existente (que ya era el nick). NUNCA se cae al nombre real de Google (`input.user.displayName`) ni al email.
-  const profileName = (input.preferredName || existing?.displayName || '').trim();
-  // Sin nick NO se crea perfil. Un documento con `displayName` vacío es la anomalía `no-display-name` del panel —un
-  // perfil a medio crear, imposible de identificar para sus amigos— y se creaba solo, desde cualquier publicación
-  // hecha con un gist social sin nombre. Si el perfil YA existe se respeta lo que tenga: rebautizarlo o vaciarlo no
-  // es asunto de este camino, y su dueño lo arregla desde la pantalla de perfil.
+  // PRIVACIDAD: el displayName público es el NICK del perfil social (`preferredName`); si no llega, lo que ya
+  // hubiera publicado, y en último término el nombre de la cuenta de Google. El CORREO nunca (ver `resolvePublicName`).
+  const profileName = resolvePublicName(input.preferredName, existing?.displayName, input.user.displayName);
+  // Un perfil NUEVO sin ningún nombre no se crea: sería la anomalía `no-display-name` del panel, un perfil que sus
+  // amigos no pueden identificar. Con el respaldo de arriba esto solo salta si la cuenta de Google tampoco tiene
+  // nombre, que es un caso de verdad excepcional. Si el perfil YA existe se respeta lo que tenga.
   if (!existing && !profileName) {
     throw new Error('No se puede crear un perfil social sin nombre público');
   }

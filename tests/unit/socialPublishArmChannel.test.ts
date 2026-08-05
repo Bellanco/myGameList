@@ -122,10 +122,10 @@ describe('publishReviewActivity — armado del canal social', () => {
     expect(JSON.parse(localStorage.getItem('mis-listas-social-gist-config') || '{}')).toMatchObject({ gistId: GIST_ID });
   });
 
-  // Un gist sin nick no puede CREAR el perfil público: sería la anomalía `no-display-name` del panel (un perfil que
-  // sus amigos no pueden identificar), y caer al nombre real de Google o al correo está descartado por privacidad.
-  // La reseña ya escrita en el gist se conserva; el perfil llegará cuando su dueño se ponga un nick.
-  it('con el gist sin nick publica la reseña pero no toca el perfil público', async () => {
+  // Con el gist sin nick, el perfil público se asegura igual: el nombre lo resuelve `ensureProfileByEmail`, que cae al
+  // de la cuenta de Google (nunca al correo). Saltarse el perfil dejaría a esa persona fuera del directorio, y
+  // crearlo con el nombre vacío sería la anomalía `no-display-name`: ninguna de las dos es mejor que un nombre real.
+  it('con el gist sin nick publica igual y deja que el perfil resuelva el nombre', async () => {
     // Id propio: la caché en memoria de gists (`socialGistCacheById`) sobrevive al `sessionStorage.clear()` del
     // `beforeEach`, así que reutilizar el de otro test serviría su perfil —con nick— en lugar de este.
     firebaseMocks.getPrivateConfig.mockResolvedValue({ socialGistId: 'ddee1122aabb7777' });
@@ -134,7 +134,8 @@ describe('publishReviewActivity — armado del canal social', () => {
     await publishReviewActivity(REVIEW);
 
     expect(store.writes()).toBe(1);
-    expect(firebaseMocks.ensureProfileByEmail).not.toHaveBeenCalled();
+    // Se llama con el nick vacío a propósito: la decisión del nombre vive en un solo sitio, no repartida por aquí.
+    expect(firebaseMocks.ensureProfileByEmail).toHaveBeenCalledWith(expect.objectContaining({ preferredName: '' }));
   });
 
   it('sin sesión de Google marca la publicación como pendiente (antes se perdía en silencio)', async () => {
