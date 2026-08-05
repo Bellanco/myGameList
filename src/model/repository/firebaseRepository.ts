@@ -21,9 +21,10 @@ import {
   invalidateSocialDirectoryCache,
   peekOwnProfileTier,
   saveOwnProfileCache,
-  saveProfileByEmailCache,
+  invalidateProfileByEmailCache,
 } from './firebaseSocialRepository';
 import { DEFAULT_PROFILE_TIER } from '../../core/constants/tiers';
+import { FIRESTORE_SCHEMA_VERSION } from '../../core/constants/schema';
 import type { FirestorePrivateConfig, FirestorePublicConfig } from '../types/firestore';
 
 // --- RE-EXPORTS: API pública estable (los consumidores siguen importando desde firebaseRepository) ---
@@ -58,10 +59,28 @@ export {
   type FriendshipSelfInfo,
 } from './firebaseFriendshipRepository';
 
-// F6.3 (modernización): marca de versión de esquema en los docs de Firestore (profiles/userMap/privateConfig).
-// Aditiva — las reglas no validan un conjunto exacto de campos, así que no requiere redesplegar reglas. Permite a
-// futuras migraciones detectar la versión del documento.
-const FIRESTORE_SCHEMA_VERSION = 1;
+// F6.3 (modernización): la marca de versión de esquema de los docs de Firestore vive en `core/constants/schema`,
+// porque la comparten quien la SELLA (este módulo y el saneado del arranque) y quien detecta los documentos
+// atrasados (el panel). Ver el comentario de la constante.
+
+/**
+ * Nombre PÚBLICO de un perfil, por orden de preferencia: el nick del perfil social, lo que ya hubiera publicado, y
+ * como último recurso el nombre de la cuenta de Google.
+ *
+ * El CORREO no entra nunca, y es la única exclusión que importa: es el dato que el usuario no ha elegido mostrar.
+ * El nombre de Google sí, porque es un nombre —coincidir con él es lo normal, no un accidente— y porque la
+ * alternativa era peor: abortar el guardado o crear un perfil sin nombre, que es la anomalía `no-display-name` del
+ * panel (un perfil que sus amigos no pueden identificar). Se prefiere un nombre razonable a un error evitable.
+ */
+function resolvePublicName(...candidates: Array<string | undefined>): string {
+  for (const candidate of candidates) {
+    const clean = String(candidate || '').trim();
+    if (clean) {
+      return clean;
+    }
+  }
+  return '';
+}
 
 /**
  * L1 — Resuelve el perfil PROPIO: lectura directa de `profiles/{uid}` y, solo si ahí no hay documento, fallback a
@@ -99,7 +118,13 @@ export async function upsertProfileSocialReferences(input: {
     throw new Error('Firebase no está configurado en este entorno');
   }
 
-  const profileName = (input.preferredName || input.user.displayName || input.user.email || '').trim();
+  // PRIVACIDAD: el nick es el del perfil social y, si no llega, el nombre de la cuenta de Google. El CORREO nunca:
+  // es el único de los tres que el usuario no ha elegido mostrar y que no querría ver publicado. Que el nick
+  // coincida con el nombre de Google es perfectamente normal (mucha gente se pone el suyo).
+  const profileName = resolvePublicName(input.preferredName, input.user.displayName);
+  if (!profileName) {
+    throw new Error('No se puede publicar un perfil social sin nombre público');
+  }
   const profileId = await resolveStableProfileId(input.user.uid);
   const gamesGistId = String(input.gamesGistId || '');
 
@@ -173,6 +198,9 @@ export async function upsertProfileSocialReferences(input: {
   saveOwnProfileCache(input.user.uid, {
     id: input.user.uid,
     profileId,
+    // El documento se acaba de escribir con la versión vigente: sin esto, el saneado del arranque leería la caché,
+    // vería 0 y volvería a sellar un perfil que ya está al día.
+    schemaVersion: FIRESTORE_SCHEMA_VERSION,
     email: '', // ya no vive en el documento
     displayName: profileName,
     photoURL: String(input.user.photoURL || ''),
@@ -363,28 +391,39 @@ export async function ensureProfileByEmail(input: {
     }
   }
 
-  // PRIVACIDAD: el displayName público es el NICK del perfil social (`preferredName`); si no llega, se PRESERVA el
-  // existente (que ya era el nick). NUNCA se cae al nombre real de Google (`input.user.displayName`) ni al email.
-  const profileName = (input.preferredName || existing?.displayName || '').trim();
-  const targetId = existing?.id || input.user.uid;
+  // PRIVACIDAD: el displayName público es el NICK del perfil social (`preferredName`); si no llega, lo que ya
+  // hubiera publicado, y en último término el nombre de la cuenta de Google. El CORREO nunca (ver `resolvePublicName`).
+  const profileName = resolvePublicName(input.preferredName, existing?.displayName, input.user.displayName);
+  // Un perfil NUEVO sin ningún nombre no se crea: sería la anomalía `no-display-name` del panel, un perfil que sus
+  // amigos no pueden identificar. Con el respaldo de arriba esto solo salta si la cuenta de Google tampoco tiene
+  // nombre, que es un caso de verdad excepcional. Si el perfil YA existe se respeta lo que tenga.
+  if (!existing && !profileName) {
+    throw new Error('No se puede crear un perfil social sin nombre público');
+  }
+  // EL DESTINO ES SIEMPRE `profiles/{uid}`. Cuando el perfil resuelto vive bajo otro id (legacy), escribir ALLÍ es
+  // imposible: las reglas atan la escritura a `isOwner(docId)`, así que el guardado se denegaría entero y ese usuario
+  // se quedaría sin poder tocar su perfil. Lo que se hace es crear el canónico llevándose su nick —el cutover de
+  // identidad, que aquí ocurre de paso— y dejar el huérfano para que lo retire el panel.
+  const isForeignDoc = Boolean(existing && existing.id !== input.user.uid);
+  const targetId = input.user.uid;
   const gamesGistId = String(input.gamesGistId || '');
   const githubToken = String(input.githubToken || '');
   const resolvedPhotoURL = input.photoURL !== undefined ? input.photoURL : String(input.user.photoURL || '');
   const profileId = await resolveStableProfileId(input.user.uid);
-  // El doc del dueño se identifica por su uid: solo ahí se puede purgar sin riesgo. Sobre un doc legacy con otro id
-  // no se borra nada (se migrará antes en el barrido), porque su `email` es la única forma de volver a encontrarlo.
-  const canPurgeLegacyFields = targetId === input.user.uid;
+  // Se escribe en el documento propio, así que purgar sus restos es seguro: lo que arrastre el huérfano no se toca
+  // desde aquí (no se puede), lo retira el panel.
+  const canPurgeLegacyFields = true;
   // `social.gistId` cuenta como resto legacy por purgar, NO como dato a comparar con el de la sesión: el doc ya no
   // lo publica, así que `existing.socialGistId !== input.socialGistId` daba SIEMPRE distinto (vacío contra el id
   // real) y el perfil se reescribía en cada apertura —una escritura de Firestore por usuario y sesión, con su
   // `updatedAt` movido, que dejaba el chequeo de cambios sin efecto—. Tratándolo así se reescribe UNA vez, para
   // purgarlo, y a partir de ahí el chequeo vuelve a distinguir de verdad si algo cambió.
-  const hasLegacyPii = Boolean(existing && (existing.email || existing.gamesGistId || existing.socialGistId));
+  const hasLegacyPii = Boolean(existing && !isForeignDoc && (existing.email || existing.gamesGistId || existing.socialGistId));
   const shouldWriteProfile =
     !existing ||
     !existing.socialEnabled ||
-    existing.id !== targetId ||
-    existing.id !== input.user.uid ||
+    // Perfil que vive bajo otro id: hay que crear el canónico, pase lo que pase con el resto de comparaciones.
+    isForeignDoc ||
     existing.displayName.trim() !== profileName ||
     (existing.photoURL || '') !== resolvedPhotoURL ||
     // Perfil anterior a la purga: se reescribe una vez para retirarle el email / los ids de gist.
@@ -415,11 +454,11 @@ export async function ensureProfileByEmail(input: {
           ...(canPurgeLegacyFields ? { gamesGistId: deleteField() } : {}),
         },
         updatedAt: serverTimestamp(),
-        // FECHA DE ALTA: se sella SOLO al crear el perfil (`!existing`). En las reescrituras posteriores no se
-        // envía a propósito — las reglas la declaran inmutable, así que mandar un `serverTimestamp()` nuevo haría
-        // que la escritura se denegase por completo. Los perfiles anteriores a este cambio se quedan sin ella; el
-        // panel de administración lo suple con la fecha de su amistad más antigua, marcada como estimada.
-        ...(existing ? {} : { createdAt: serverTimestamp() }),
+        // FECHA DE ALTA: se sella SOLO al CREAR el documento —o sea cuando no había perfil, y también cuando el que
+        // hay vive bajo otro id, porque el canónico nace aquí—. En las reescrituras posteriores no se envía a
+        // propósito: las reglas la declaran inmutable, así que mandar un `serverTimestamp()` nuevo haría que la
+        // escritura se denegase por completo. La antigüedad real del huérfano la rescata el panel al retirarlo.
+        ...(existing && !isForeignDoc ? {} : { createdAt: serverTimestamp() }),
         ...(canPurgeLegacyFields ? { email: deleteField() } : {}),
       },
       { merge: true },
@@ -452,6 +491,9 @@ export async function ensureProfileByEmail(input: {
   const written: SocialProfileReference = {
     id: targetId,
     profileId,
+    // Solo se sella si de verdad se ha reescrito el documento. Cuando el perfil no cambia no se toca su
+    // `schemaVersion`, y decir aquí que está al día le taparía el saneado del arranque durante la vida de la caché.
+    schemaVersion: shouldWriteProfile ? FIRESTORE_SCHEMA_VERSION : Number(existing?.schemaVersion || 0),
     // El documento ya no lo guarda; la referencia en memoria tampoco necesita arrastrarlo.
     email: '',
     displayName: profileName,
@@ -464,10 +506,11 @@ export async function ensureProfileByEmail(input: {
     socialEnabled: true,
   };
   saveOwnProfileCache(input.user.uid, written);
-  // La caché legacy por email se refresca solo si el perfil vive en un doc con otro id (ahí sigue siendo la vía de
-  // resolución hasta que el barrido lo migre).
-  if (!canPurgeLegacyFields) {
-    saveProfileByEmailCache(cleanEmail, written);
+  // Si el perfil venía de un documento con otro id, la referencia cacheada por correo apunta al huérfano y ya no
+  // vale: el canónico acaba de nacer y es el que manda. Olvidarla evita que la siguiente resolución vuelva a
+  // proponer el documento en el que este cliente no puede escribir.
+  if (isForeignDoc) {
+    invalidateProfileByEmailCache(cleanEmail);
   }
   invalidateSocialDirectoryCache();
 

@@ -34,10 +34,10 @@ const GIST_ID = 'ddee1122aabb3344';
 const GIST_ID_ROTATION = 'ddee1122aabb9999';
 const SOCIAL_GIST_FILENAME = 'myGameList.social.json';
 
-function socialGist(): SocialGistData {
+function socialGist(name = 'Nick'): SocialGistData {
   return {
     profile: {
-      name: 'Nick',
+      name,
       private: false,
       visibility: { hiddenTabs: [], hideReplayable: false, hideRetry: false, hideGameTime: false, showPhoto: true },
       sharedLists: {},
@@ -49,9 +49,9 @@ function socialGist(): SocialGistData {
   } as unknown as SocialGistData;
 }
 
-function stubGistStore() {
+function stubGistStore(gist: SocialGistData = socialGist()) {
   const store: Record<string, { content: string }> = {
-    [SOCIAL_GIST_FILENAME]: { content: JSON.stringify(socialGist()) },
+    [SOCIAL_GIST_FILENAME]: { content: JSON.stringify(gist) },
   };
   let writes = 0;
   vi.stubGlobal('fetch', vi.fn(async (_url: string, init: RequestInit = {}) => {
@@ -120,6 +120,22 @@ describe('publishReviewActivity — armado del canal social', () => {
     expect(store.writes()).toBe(1);
     expect(firebaseMocks.resolveOwnProfile).not.toHaveBeenCalled();
     expect(JSON.parse(localStorage.getItem('mis-listas-social-gist-config') || '{}')).toMatchObject({ gistId: GIST_ID });
+  });
+
+  // Con el gist sin nick, el perfil público se asegura igual: el nombre lo resuelve `ensureProfileByEmail`, que cae al
+  // de la cuenta de Google (nunca al correo). Saltarse el perfil dejaría a esa persona fuera del directorio, y
+  // crearlo con el nombre vacío sería la anomalía `no-display-name`: ninguna de las dos es mejor que un nombre real.
+  it('con el gist sin nick publica igual y deja que el perfil resuelva el nombre', async () => {
+    // Id propio: la caché en memoria de gists (`socialGistCacheById`) sobrevive al `sessionStorage.clear()` del
+    // `beforeEach`, así que reutilizar el de otro test serviría su perfil —con nick— en lugar de este.
+    firebaseMocks.getPrivateConfig.mockResolvedValue({ socialGistId: 'ddee1122aabb7777' });
+    const store = stubGistStore(socialGist(''));
+
+    await publishReviewActivity(REVIEW);
+
+    expect(store.writes()).toBe(1);
+    // Se llama con el nick vacío a propósito: la decisión del nombre vive en un solo sitio, no repartida por aquí.
+    expect(firebaseMocks.ensureProfileByEmail).toHaveBeenCalledWith(expect.objectContaining({ preferredName: '' }));
   });
 
   it('sin sesión de Google marca la publicación como pendiente (antes se perdía en silencio)', async () => {

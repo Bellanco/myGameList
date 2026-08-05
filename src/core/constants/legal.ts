@@ -138,12 +138,12 @@ const PRIVACY: LegalDocument = {
       bullets: [
         'En tu dispositivo: tus listas de juegos, reseñas y preferencias (localStorage e IndexedDB), y tu token de GitHub cifrado.',
         'En tu cuenta de GitHub: la biblioteca y el canal social, en Gists que son tuyos.',
-        'En Firestore, si activas lo social: tu identificador de usuario, el nick que elijas, tu foto de perfil de Google (puedes quitarla), tus amistades, el rango de tu perfil, la fecha de alta, la marca de tu última actividad y tus preferencias de la app. El identificador de tu Gist social ya NO se publica ahí: vive en el documento privado que solo tú lees, y denormalizado en tus documentos de amistad.',
+        'En Firestore, si activas lo social: tu identificador de usuario, el nick que elijas —y si no eliges ninguno, el nombre de tu cuenta de Google—, tu foto de perfil de Google (puedes quitarla), tus amistades, el rango de tu perfil, la fecha de alta, la marca de tu última actividad y tus preferencias de la app. El identificador de tu Gist social ya NO se publica ahí: vive en el documento privado que solo tú lees, y denormalizado en tus documentos de amistad.',
         'En Firestore, en un documento privado que solo tú puedes leer: los identificadores de tus Gists y tu token de GitHub cifrado.',
         'Si aceptas la analítica: eventos de uso y errores en Google Analytics, con un identificador aleatorio.',
       ],
       paragraphs: [
-        'El perfil que ven otros usuarios contiene tu nick, tu foto (si la dejas), el rango de tu perfil —una etiqueta que asigna quien administra el servicio, no tú— y la marca de tu última actividad, con la que la app ordena el directorio y decide de quién merece la pena releer el canal. No contiene tu correo electrónico, ni el identificador de tu canal social, ni el de tu biblioteca de juegos.',
+        'El perfil que ven otros usuarios contiene tu nick —o, si nunca pusiste uno, el nombre de tu cuenta de Google—, tu foto (si la dejas), el rango de tu perfil —una etiqueta que asigna quien administra el servicio, no tú— y la marca de tu última actividad, con la que la app ordena el directorio y decide de quién merece la pena releer el canal. No contiene tu correo electrónico, ni el identificador de tu canal social, ni el de tu biblioteca de juegos.',
       ],
     },
     {
