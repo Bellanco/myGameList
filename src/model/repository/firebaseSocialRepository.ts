@@ -48,6 +48,19 @@ function toMillis(value: { toMillis?: () => number } | number | undefined): numb
   return typeof millis === 'number' && Number.isFinite(millis) ? millis : 0;
 }
 
+/**
+ * Olvida el perfil legacy cacheado por correo. Lo llama el cutover de identidad: una vez creado
+ * `profiles/{uid}`, servir la referencia del documento huérfano mandaría las escrituras al sitio equivocado
+ * durante lo que le quede de TTL. Sin correo, vacía la caché entera (cambio de sesión).
+ */
+export function invalidateProfileByEmailCache(email?: string): void {
+  if (email) {
+    socialProfileByEmailCache.delete(email.trim().toLowerCase());
+    return;
+  }
+  socialProfileByEmailCache.clear();
+}
+
 function readProfileByEmailCache(email: string): SocialProfileReference | null | undefined {
   const cached = socialProfileByEmailCache.get(email);
   if (!cached) {
@@ -122,6 +135,9 @@ function mapProfileReference(id: string, data: Record<string, unknown>): SocialP
   return {
     id,
     profileId: String(data.profileId || ''),
+    // 0 = documento anterior a que existiera la marca. El auto-saneado del arranque lo compara con la versión
+    // vigente para decidir si hay que volver a sellarlo.
+    schemaVersion: Number(data.schemaVersion || 0),
     // LEGACY: los perfiles nuevos ya no publican el email. Se sigue leyendo del documento PROPIO para detectar
     // que aún lo arrastra y borrarlo en el siguiente guardado (ver `ensureProfileByEmail`).
     email: String(data.email || ''),
@@ -250,9 +266,20 @@ export async function findSocialProfileByEmail(email: string): Promise<SocialPro
   }
 
   const request = (async () => {
+    // `social.enabled == true` NO es un filtro de producto, es OBLIGATORIO para que la consulta pase las reglas.
+    // La regla de lectura de `profiles` autoriza a un autenticado cualquiera solo sobre documentos con
+    // `social.enabled == true`, y en una CONSULTA Firestore no evalúa la condición documento a documento: exige que
+    // la propia consulta garantice que todo lo que pueda devolver es legible, así que sin este `where` deniega la
+    // consulta ENTERA —incluso cuando no devuelve nada—. Sin él, esta búsqueda estaba muerta para todo el mundo
+    // menos el administrador: devolvía `permission-denied`, se traducía a `null` aquí abajo y parecía "no hay
+    // perfil legacy". Es lo que dejaba encallados a los perfiles con id ajeno al uid.
+    //
+    // Precio: un perfil legacy con el social DESACTIVADO deja de encontrarse. No hay alternativa desde el cliente,
+    // y esos perfiles no tienen presencia social que recuperar; el panel sí los ve y puede migrarlos.
     const q = query(
       collection(services.firestore, 'profiles'),
       where('email', '==', cleanEmail),
+      where('social.enabled', '==', true),
       limit(1),
     );
 
@@ -262,6 +289,15 @@ export async function findSocialProfileByEmail(email: string): Promise<SocialPro
     } catch (error) {
       // If rules deny reads, keep flow alive and continue with gist-only profile resolution.
       if (isPermissionDeniedError(error)) {
+        saveProfileByEmailCache(cleanEmail, null);
+        return null;
+      }
+
+      // Dos igualdades se sirven con índices de campo único (Firestore los fusiona), así que no debería hacer falta
+      // un índice compuesto. Si alguna vez lo pidiera, degradar es mejor que romper el guardado del perfil: se
+      // pierde el fallback legacy, no la sesión.
+      if (isMissingIndexError(error)) {
+        console.warn('[firebase] Falta el índice profiles(email, social.enabled): sin fallback legacy por correo');
         saveProfileByEmailCache(cleanEmail, null);
         return null;
       }
@@ -340,7 +376,7 @@ export async function listSocialDirectory(limitCount = 12, options?: { forceRefr
       snapshot = await getDocs(query(profiles, enabled, limit(normalizedLimit)));
     }
 
-    const entries = snapshot.docs
+    const visible = snapshot.docs
       .map((entry) => {
         const data = entry.data() as {
           uid?: string;
@@ -378,7 +414,32 @@ export async function listSocialDirectory(limitCount = 12, options?: { forceRefr
       //
       // Guarda barata: el placeholder ya no puede salir (no tiene `social.enabled`), pero si algún día lo
       // tuviera, no debe colarse en el directorio.
-      .filter((entry) => entry.enabled && entry.id !== '_placeholder')
+      .filter((entry) => entry.enabled && entry.id !== '_placeholder');
+
+    // UN USUARIO, UNA ENTRADA. Durante el cutover de identidad (señal `foreign-doc-id`) un mismo uid tiene DOS
+    // documentos: el canónico que acaba de crear su navegador y el huérfano legacy, que solo el administrador puede
+    // retirar. Los dos traen `social.enabled`, así que sin esto la persona sale duplicada en el directorio —y en el
+    // descubrimiento— hasta que alguien pase por el panel. Gana el documento canónico (id == uid) y, si ninguno lo
+    // es, el más recientemente activo. Los perfiles legacy sin campo `uid` no colisionan: su uid cae a su propio id.
+    const canonicalByUid = new Map<string, (typeof visible)[number]>();
+    visible.forEach((entry) => {
+      const current = canonicalByUid.get(entry.uid);
+      if (!current) {
+        canonicalByUid.set(entry.uid, entry);
+        return;
+      }
+      const currentIsCanonical = current.id === current.uid;
+      const entryIsCanonical = entry.id === entry.uid;
+      if (entryIsCanonical && !currentIsCanonical) {
+        canonicalByUid.set(entry.uid, entry);
+        return;
+      }
+      if (entryIsCanonical === currentIsCanonical && entry.updatedAt > current.updatedAt) {
+        canonicalByUid.set(entry.uid, entry);
+      }
+    });
+
+    const entries = [...canonicalByUid.values()]
       .map((entry) => ({
         id: entry.id,
         uid: entry.uid,

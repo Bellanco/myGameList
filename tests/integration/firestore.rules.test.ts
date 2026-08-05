@@ -138,6 +138,84 @@ describe('firestore.rules', () => {
       await assertFails(setDoc(doc(ownerDb('uid-a'), 'profiles', 'uid-a'), { tier: 'mithril' }, { merge: true }));
       await assertFails(setDoc(doc(ownerDb('uid-a'), 'profiles', 'uid-a'), { createdAt: 5000 }, { merge: true }));
     });
+
+    // BÚSQUEDA POR CORREO (`findSocialProfileByEmail`), que es como se localiza un perfil legacy y por tanto el
+    // arranque del cutover. En una CONSULTA, Firestore no evalúa la condición de la regla documento a documento:
+    // exige que la consulta garantice de antemano que todo lo que pueda devolver es legible. Como la regla solo
+    // autoriza a un autenticado sobre `social.enabled == true`, la consulta TIENE que llevar ese filtro; sin él se
+    // deniega entera, incluso cuando no devuelve nada, y el fallback legacy queda muerto sin que se note (el
+    // repositorio traduce `permission-denied` a "no hay perfil"). Si esto se rompe, los perfiles con id ajeno al uid
+    // dejan de poder migrarse solos.
+    it('la búsqueda por correo necesita el filtro `social.enabled` para pasar las reglas', async () => {
+      await seed('profiles', 'doc-legacy', { uid: 'uid-a', email: 'yo@example.com', social: { enabled: true } });
+      const db = ownerDb('uid-a');
+      const byEmail = (constraints: Parameters<typeof query>[1][]) =>
+        getDocs(query(collection(db, 'profiles'), ...constraints));
+
+      // Con el filtro: permitida, y también cuando no encuentra nada (el caso de quien no tiene perfil legacy).
+      await assertSucceeds(byEmail([where('email', '==', 'yo@example.com'), where('social.enabled', '==', true)]));
+      await assertSucceeds(byEmail([where('email', '==', 'nadie@example.com'), where('social.enabled', '==', true)]));
+
+      // Sin el filtro: denegada, aunque el documento que encontraría fuese perfectamente legible de uno en uno.
+      await assertFails(byEmail([where('email', '==', 'yo@example.com')]));
+      await assertSucceeds(getDoc(doc(db, 'profiles', 'doc-legacy')));
+    });
+
+    // CUTOVER DE IDENTIDAD (señal `foreign-doc-id`). Reparto de poderes, que es lo que decide quién hace cada mitad:
+    // el dueño puede CREAR su documento canónico, pero no puede tocar ni retirar el huérfano (las reglas atan la
+    // escritura a `isOwner(docId)`); el administrador sí puede mover y borrar. Si esto cambiara, la migración se
+    // quedaría a medias en silencio.
+    it('el dueño crea su documento canónico pero NO puede tocar el huérfano; el admin sí', async () => {
+      await seed('profiles', 'doc-legacy', {
+        uid: 'uid-a', email: 'yo@example.com', displayName: 'Ada', photoURL: '',
+        social: { enabled: true, gistId: 'gs', githubToken: 'ghp_legacy' }, updatedAt: 1, tier: 'gold', createdAt: 1000,
+      });
+
+      // Primera mitad, la del dueño: su documento canónico, limpio y con su uid.
+      await assertSucceeds(setDoc(doc(ownerDb('uid-a'), 'profiles', 'uid-a'), {
+        schemaVersion: 1, uid: 'uid-a', profileId: 'pid-a', displayName: 'Ada', photoURL: '',
+        social: { enabled: true, etag: null }, updatedAt: 2, createdAt: 2,
+      }, { merge: true }));
+
+      // Sobre el huérfano no puede nada: ni apagarlo ni borrarlo. De ahí que el panel exista.
+      await assertFails(updateDoc(doc(ownerDb('uid-a'), 'profiles', 'doc-legacy'), { 'social.enabled': false }));
+      await assertFails(deleteDoc(doc(ownerDb('uid-a'), 'profiles', 'doc-legacy')));
+
+      // Segunda mitad, la del admin: rescatar el rango y el alta al documento vivo y retirar el huérfano.
+      await assertSucceeds(setDoc(doc(adminDb(), 'profiles', 'uid-a'), { uid: 'uid-a', tier: 'gold', createdAt: 1000 }, { merge: true }));
+      await assertSucceeds(deleteDoc(doc(adminDb(), 'profiles', 'doc-legacy')));
+    });
+
+    // AUTO-SANEADO DEL ARRANQUE (`healOwnLegacyProfile`): la escritura EXACTA que hace el cliente del propio dueño
+    // sobre un perfil viejo — purga de restos legacy + pseudónimo + marca de esquema, todo de una vez, sin `updatedAt`
+    // (no es actividad) y sin `createdAt` (inmutable). Si las reglas la denegaran, esos perfiles no se arreglarían
+    // nunca y el fallo sería silencioso: el saneado se traga sus errores a propósito.
+    it('el saneado del arranque pasa las reglas sobre un perfil legacy con tier y alta selladas', async () => {
+      await seed('profiles', 'uid-a', {
+        uid: 'uid-a',
+        email: 'legacy@example.com',
+        displayName: 'A',
+        photoURL: '',
+        social: { enabled: true, gistId: 'gs', gamesGistId: 'gg', githubToken: 'ghp_legacy' },
+        updatedAt: 1,
+        tier: 'gold',
+        createdAt: 1000,
+      });
+
+      await assertSucceeds(updateDoc(doc(ownerDb('uid-a'), 'profiles', 'uid-a'), {
+        uid: 'uid-a',
+        email: deleteField(),
+        'social.gamesGistId': deleteField(),
+        'social.githubToken': deleteField(),
+        profileId: 'pid-a',
+        schemaVersion: 1,
+      }));
+
+      // Y sigue sin ser una vía para quitarse el rango de encima aprovechando el saneado.
+      await assertFails(updateDoc(doc(ownerDb('uid-a'), 'profiles', 'uid-a'), {
+        uid: 'uid-a', schemaVersion: 1, tier: deleteField(),
+      }));
+    });
   });
 
   describe('privateConfig (solo dueño)', () => {
@@ -601,3 +679,4 @@ describe('firestore.rules', () => {
     });
   });
 });
+

@@ -123,6 +123,38 @@ describe('listSocialDirectory — orden por uso reciente', () => {
     expect(entries.find((entry) => entry.id === 'sin-gist')?.socialGistId).toBe('');
   });
 
+  // DURANTE EL CUTOVER DE IDENTIDAD un mismo uid tiene dos documentos con el social activo: el canónico que crea su
+  // navegador y el huérfano legacy, que solo el panel puede retirar. Sin deduplicar, la persona sale dos veces en el
+  // directorio y en el descubrimiento hasta que alguien pase por ahí.
+  it('un uid con dos documentos sale UNA vez, y gana el canónico (id == uid)', async () => {
+    getDocsMock.mockResolvedValueOnce(
+      snapshot([
+        // El huérfano llega primero (más "reciente" en la consulta) y aun así pierde: el canónico es el bueno.
+        { id: 'doc-legacy', data: { uid: 'uid-a', displayName: 'Ada vieja', social: { enabled: true }, updatedAt: ts(9_000) } },
+        { id: 'uid-a', data: { uid: 'uid-a', displayName: 'Ada', social: { enabled: true }, updatedAt: ts(1_000) } },
+        profileDoc('bob', ts(500)),
+      ]),
+    );
+
+    const entries = await listSocialDirectory(50);
+
+    expect(entries.map((entry) => entry.id)).toEqual(['uid-a', 'bob']);
+    expect(entries[0].displayName).toBe('Ada');
+  });
+
+  it('si ninguno de los dos es canónico, gana el más recientemente activo', async () => {
+    getDocsMock.mockResolvedValueOnce(
+      snapshot([
+        { id: 'doc-viejo', data: { uid: 'uid-a', displayName: 'Vieja', social: { enabled: true }, updatedAt: ts(1_000) } },
+        { id: 'doc-nuevo', data: { uid: 'uid-a', displayName: 'Nueva', social: { enabled: true }, updatedAt: ts(8_000) } },
+      ]),
+    );
+
+    const entries = await listSocialDirectory(50);
+
+    expect(entries.map((entry) => entry.id)).toEqual(['doc-nuevo']);
+  });
+
   it('un perfil con el social DESACTIVADO sigue fuera del directorio', async () => {
     getDocsMock.mockResolvedValueOnce(
       snapshot([

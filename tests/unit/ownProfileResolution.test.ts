@@ -118,4 +118,19 @@ describe('findSocialProfileByEmail — fallback legacy', () => {
 
     expect(await findSocialProfileByEmail('nadie@example.com')).toBeNull();
   });
+
+  // EL FILTRO QUE NO SE PUEDE QUITAR: en una consulta, las reglas exigen que lo que se pida sea legible de
+  // antemano, y `profiles` solo lo es para un autenticado cuando `social.enabled == true`. Sin este `where` la
+  // consulta se deniega ENTERA (lo verifica tests/integration/firestore.rules.test.ts) y el fallback legacy queda
+  // muerto en silencio: `permission-denied` se traduce a "no hay perfil".
+  it('consulta filtrando también por `social.enabled`, sin lo cual las reglas la denegarían', async () => {
+    const { where } = await import('firebase/firestore');
+    (where as unknown as { mock: { calls: unknown[][] } }).mock.calls.length = 0;
+    getDocsMock.mockResolvedValueOnce({ empty: true, docs: [] });
+
+    await findSocialProfileByEmail('otro@example.com');
+
+    expect(where).toHaveBeenCalledWith('email', '==', 'otro@example.com');
+    expect(where).toHaveBeenCalledWith('social.enabled', '==', true);
+  });
 });
