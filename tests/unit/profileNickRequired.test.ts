@@ -1,11 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-// EL NICK PÚBLICO ES EL QUE ESCRIBE EL USUARIO, Y NADA MÁS.
+// EL NOMBRE PÚBLICO: nick del perfil social → lo que ya hubiera publicado → nombre de la cuenta de Google. EL CORREO
+// NUNCA.
 //
-// Los dos caminos que escriben el perfil de Firestore tenían un respaldo a `user.displayName || user.email`: sin nick,
-// publicaban el nombre real de Google —o el correo— en un documento que lee cualquier usuario autenticado. Y cuando
-// ni eso había, creaban el perfil con `displayName` vacío, que es la anomalía `no-display-name` del panel: un perfil
-// a medio crear que sus amigos no pueden identificar. Aquí se fija la regla: sin nick no se crea perfil.
+// Los dos caminos que escriben el perfil de Firestore caían a `user.displayName || user.email`, y el correo es el
+// único de los tres que su dueño no ha elegido mostrar: publicarlo en un documento que lee cualquier usuario
+// autenticado es la fuga. El nombre de Google sí vale —coincidir con él es lo normal— y evita el otro extremo: un
+// perfil con `displayName` vacío (la anomalía `no-display-name`) o un guardado abortado. Solo si no hay ningún
+// nombre en ninguna parte se rechaza crear el perfil.
 
 const setDocMock = vi.fn<(...a: unknown[]) => Promise<void>>(async () => {});
 const getDocMock = vi.fn<(...a: unknown[]) => unknown>(async () => ({ exists: () => false, data: () => undefined }));
@@ -65,13 +67,26 @@ beforeEach(() => {
   findSocialProfileByEmailMock.mockResolvedValue(null);
 });
 
-describe('ensureProfileByEmail — sin nick no se crea perfil', () => {
-  it('rechaza crear el perfil y no escribe NADA en `profiles`', async () => {
-    await expect(ensureProfileByEmail({
+describe('ensureProfileByEmail — el nombre público nunca es el correo', () => {
+  it('sin nick cae al nombre de la cuenta de Google, no al correo', async () => {
+    await ensureProfileByEmail({
       user: GOOGLE_USER,
       socialGistId: 'social-222',
       socialGistEtag: null,
-      preferredName: '   ', // solo espacios: tampoco vale
+      preferredName: '   ', // solo espacios: cuenta como vacío
+    });
+
+    expect(profileWrites()[0]).toMatchObject({ displayName: 'Nombre Real' });
+    expect(profileWrites()[0].displayName).not.toBe(GOOGLE_USER.email);
+  });
+
+  // Solo se rechaza cuando no hay NINGÚN nombre en ninguna parte: crear el perfil con el nombre vacío sería la
+  // anomalía `no-display-name`, y el correo no es una alternativa.
+  it('sin nick y sin nombre de Google no se crea perfil, y no escribe nada', async () => {
+    await expect(ensureProfileByEmail({
+      user: { ...GOOGLE_USER, displayName: '' },
+      socialGistId: 'social-222',
+      socialGistEtag: null,
     })).rejects.toThrow(/sin nombre público/);
 
     expect(profileWrites()).toHaveLength(0);
@@ -88,9 +103,9 @@ describe('ensureProfileByEmail — sin nick no se crea perfil', () => {
     expect(profileWrites()[0]).toMatchObject({ displayName: 'Nick' });
   });
 
-  // Un perfil que YA existe no es asunto de este camino: rebautizarlo o vaciarle el nombre sería peor. Su dueño lo
-  // arregla desde la pantalla de perfil, y el panel lo sigue marcando mientras tanto.
-  it('respeta un perfil existente sin nombre en vez de reventar la publicación', async () => {
+  // Un perfil que YA existe con el nombre vacío (la anomalía `no-display-name` de los que se crearon así) se arregla
+  // en el siguiente guardado con el nombre de la cuenta: mejor eso que dejarlo sin identificar para sus amigos.
+  it('rellena el nombre vacío de un perfil existente en vez de perpetuarlo', async () => {
     getOwnProfileRefMock.mockResolvedValue({
       id: 'uid-1', profileId: 'pid-1', schemaVersion: 1, email: '', displayName: '', photoURL: '',
       socialGistId: 'social-222', gamesGistId: '', githubToken: '', socialEnabled: true, tier: 'bronze',
@@ -100,18 +115,29 @@ describe('ensureProfileByEmail — sin nick no se crea perfil', () => {
       user: GOOGLE_USER,
       socialGistId: 'social-222',
       socialGistEtag: null,
-    })).resolves.toMatchObject({ displayName: '' });
+    })).resolves.toMatchObject({ displayName: 'Nombre Real' });
   });
 });
 
-describe('upsertProfileSocialReferences — sin nick no publica', () => {
-  it('lanza en vez de caer al nombre real de Google o al correo', async () => {
-    await expect(upsertProfileSocialReferences({
+describe('upsertProfileSocialReferences — mismo criterio de nombre', () => {
+  it('sin nick usa el de Google; sin ninguno de los dos, lanza y no escribe', async () => {
+    await upsertProfileSocialReferences({
       user: GOOGLE_USER,
       socialGistId: 'social-222',
       socialGistEtag: null,
-    })).rejects.toThrow(/sin nombre público/);
+    });
+    const written = batchSetMock.mock.calls
+      .map((call) => call[1] as Record<string, unknown>)
+      .find((payload) => 'displayName' in payload);
+    expect(written).toMatchObject({ displayName: 'Nombre Real' });
+    expect(written?.displayName).not.toBe(GOOGLE_USER.email);
 
+    batchSetMock.mockClear();
+    await expect(upsertProfileSocialReferences({
+      user: { ...GOOGLE_USER, displayName: '' },
+      socialGistId: 'social-222',
+      socialGistEtag: null,
+    })).rejects.toThrow(/sin nombre público/);
     expect(batchSetMock).not.toHaveBeenCalled();
   });
 

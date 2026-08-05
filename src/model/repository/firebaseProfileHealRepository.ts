@@ -136,14 +136,15 @@ function deferral(step: LegacyHealDeferralStep, error?: unknown): LegacyHealResu
  * del huérfano se copia antes a `privateConfig` (owner-only, cifrado el token), que es donde debía estar desde el
  * principio. Ese orden importa: si el rescate falla, no se crea nada y se reintenta en el próximo arranque.
  *
- * No se hace nada si el perfil legacy no tiene nick: crear el canónico con el nombre vacío sería fabricar la anomalía
- * `no-display-name` (y caer al nombre real de Google o al correo está descartado por privacidad). Ese caso se queda
- * para el panel, que puede mover el documento tal cual.
+ * El nombre del documento nuevo es el que ya tenía el legacy y, si estaba vacío, el de la cuenta de Google: crear el
+ * canónico sin nombre sería fabricar la anomalía `no-display-name`, y quedarse sin migrar por eso deja al usuario con
+ * el perfil congelado. El correo no se usa nunca como nombre. Solo si no hay ninguno de los dos se deja para el panel.
  */
 async function startIdentityCutover(
   firestore: import('firebase/firestore').Firestore,
   uid: string,
   email: string,
+  sessionName: string,
   known?: { id: string; displayName: string; photoURL: string; socialGistId: string; gamesGistId: string; githubToken: string; socialEnabled: boolean } | null,
 ): Promise<LegacyHealResult> {
   const legacy = known || (email ? await findSocialProfileByEmail(email) : null);
@@ -151,8 +152,9 @@ async function startIdentityCutover(
     return result('foreign-doc');
   }
 
-  if (!String(legacy.displayName || '').trim()) {
-    console.warn('[saneado] perfil legacy sin nick: el cutover lo tiene que hacer el panel, no se crea uno sin nombre');
+  const publicName = String(legacy.displayName || '').trim() || String(sessionName || '').trim();
+  if (!publicName) {
+    console.warn('[saneado] ni el perfil legacy ni la sesión tienen nombre: el cutover lo tiene que hacer el panel');
     return result('foreign-doc');
   }
 
@@ -203,7 +205,7 @@ async function startIdentityCutover(
       schemaVersion: FIRESTORE_SCHEMA_VERSION,
       uid,
       ...(profileId ? { profileId } : {}),
-      displayName: legacy.displayName,
+      displayName: publicName,
       photoURL: legacy.photoURL,
       social: {
         enabled: legacy.socialEnabled,
@@ -232,7 +234,7 @@ async function startIdentityCutover(
  *
  * Nunca lanza: cualquier fallo devuelve `deferred` —con el paso en el que se quedó— y deja el documento intacto.
  */
-export async function healOwnLegacyProfile(uid: string, email = ''): Promise<LegacyHealResult> {
+export async function healOwnLegacyProfile(uid: string, email = '', sessionName = ''): Promise<LegacyHealResult> {
   // Los dos casos de ENTORNO (sin sesión, sin Firebase) no se reportan: son estados normales de la app, no fallos.
   if (!uid) {
     return result('deferred', { deferredAt: 'sin-sesion' });
@@ -252,7 +254,7 @@ export async function healOwnLegacyProfile(uid: string, email = ''): Promise<Leg
     // cutover de identidad, y la única que puede hacer el dueño (retirar el huérfano es cosa del panel).
     if (!profile) {
       step = 'cutover-identidad';
-      return await startIdentityCutover(services.firestore, uid, email);
+      return await startIdentityCutover(services.firestore, uid, email, sessionName);
     }
 
     // La lectura de arriba está CACHEADA, y `ensureProfileByEmail` guarda en esa misma caché (indexada por uid) la
@@ -261,7 +263,7 @@ export async function healOwnLegacyProfile(uid: string, email = ''): Promise<Leg
     // la ventaja de que la referencia legacy ya está en la mano y no hay que volver a buscarla por correo.
     if (profile.id !== uid) {
       step = 'cutover-identidad';
-      return await startIdentityCutover(services.firestore, uid, email, profile);
+      return await startIdentityCutover(services.firestore, uid, email, sessionName, profile);
     }
 
     const legacyToken = String(profile.githubToken || '').trim(); // audit-allow: LECTURA del token legacy para ponerlo a salvo cifrado antes de borrarlo

@@ -36,6 +36,9 @@ export function useLegacyProfileHeal(): void {
       // El correo solo se usa para localizar un perfil LEGACY (los documentos actuales no lo publican): es la única
       // forma de encontrar el de quien todavía vive bajo otro id, y sin él ese cutover no se puede empezar.
       const email = String(user?.email || '');
+      // Nombre de la sesión de Google: solo se usa como ÚLTIMO recurso si el perfil legacy no tiene nick, para no
+      // crear el documento canónico sin nombre. El correo nunca se usa como nombre.
+      const sessionName = String(user?.displayName || '');
 
       const retryUnlessExhausted = (why: string) => {
         const attempts = (deferralsByUid.get(uid) || 0) + 1;
@@ -50,7 +53,7 @@ export function useLegacyProfileHeal(): void {
       };
 
       void import('../../model/repository/firebaseProfileHealRepository')
-        .then((module) => module.healOwnLegacyProfile(uid, email))
+        .then((module) => module.healOwnLegacyProfile(uid, email, sessionName))
         .then((healResult) => {
           // Si no se pudo completar (offline, reglas, fallo del respaldo), se reintenta: el documento sigue intacto.
           // El repositorio ya ha dejado la traza del paso concreto en consola y telemetría.
