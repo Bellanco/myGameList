@@ -266,9 +266,20 @@ export async function findSocialProfileByEmail(email: string): Promise<SocialPro
   }
 
   const request = (async () => {
+    // `social.enabled == true` NO es un filtro de producto, es OBLIGATORIO para que la consulta pase las reglas.
+    // La regla de lectura de `profiles` autoriza a un autenticado cualquiera solo sobre documentos con
+    // `social.enabled == true`, y en una CONSULTA Firestore no evalúa la condición documento a documento: exige que
+    // la propia consulta garantice que todo lo que pueda devolver es legible, así que sin este `where` deniega la
+    // consulta ENTERA —incluso cuando no devuelve nada—. Sin él, esta búsqueda estaba muerta para todo el mundo
+    // menos el administrador: devolvía `permission-denied`, se traducía a `null` aquí abajo y parecía "no hay
+    // perfil legacy". Es lo que dejaba encallados a los perfiles con id ajeno al uid.
+    //
+    // Precio: un perfil legacy con el social DESACTIVADO deja de encontrarse. No hay alternativa desde el cliente,
+    // y esos perfiles no tienen presencia social que recuperar; el panel sí los ve y puede migrarlos.
     const q = query(
       collection(services.firestore, 'profiles'),
       where('email', '==', cleanEmail),
+      where('social.enabled', '==', true),
       limit(1),
     );
 
@@ -278,6 +289,15 @@ export async function findSocialProfileByEmail(email: string): Promise<SocialPro
     } catch (error) {
       // If rules deny reads, keep flow alive and continue with gist-only profile resolution.
       if (isPermissionDeniedError(error)) {
+        saveProfileByEmailCache(cleanEmail, null);
+        return null;
+      }
+
+      // Dos igualdades se sirven con índices de campo único (Firestore los fusiona), así que no debería hacer falta
+      // un índice compuesto. Si alguna vez lo pidiera, degradar es mejor que romper el guardado del perfil: se
+      // pierde el fallback legacy, no la sesión.
+      if (isMissingIndexError(error)) {
+        console.warn('[firebase] Falta el índice profiles(email, social.enabled): sin fallback legacy por correo');
         saveProfileByEmailCache(cleanEmail, null);
         return null;
       }
