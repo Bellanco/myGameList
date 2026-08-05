@@ -19,6 +19,7 @@ vi.mock('../../src/model/repository/firebaseSocialRepository', () => ({
   getOwnProfileRef: vi.fn(async () => null),
   invalidateOwnProfileCache: vi.fn(),
   invalidateSocialDirectoryCache: vi.fn(),
+  invalidateProfileByEmailCache: vi.fn(),
   peekOwnProfileTier: () => 'bronze',
   saveOwnProfileCache: vi.fn(),
   saveProfileByEmailCache: vi.fn(),
@@ -42,6 +43,7 @@ vi.mock('firebase/firestore', () => ({
 }));
 
 import { ensureProfileByEmail, establishProfileIdentity } from '../../src/model/repository/firebaseRepository';
+import { findSocialProfileByEmail } from '../../src/model/repository/firebaseSocialRepository';
 
 /** Escrituras dirigidas a `privateConfig`, en orden. */
 function privateConfigWrites() {
@@ -118,5 +120,35 @@ describe('ensureProfileByEmail — orden de guardado y purga', () => {
     const social = profileWrites()[0].social as Record<string, unknown>;
     expect(social.gistId).toBe('__del__');
     expect(social.gamesGistId).toBe('__del__');
+  });
+});
+
+// EL DESTINO DE LA ESCRITURA ES SIEMPRE `profiles/{uid}`. Cuando el perfil resuelto vive bajo otro id (legacy), antes
+// se escribía EN ESE documento, y las reglas lo deniegan (`isOwner(docId)`): al guardar, ese usuario se comía un
+// `permission-denied` y no podía tocar su perfil. Ahora se le crea el canónico llevándose su nick, que es la primera
+// mitad del cutover de identidad; el huérfano lo retira el panel.
+describe('ensureProfileByEmail — perfil legacy bajo otro id', () => {
+  it('escribe en `profiles/{uid}` y no en el documento huérfano', async () => {
+    vi.mocked(findSocialProfileByEmail).mockResolvedValueOnce({
+      id: 'doc-legacy', profileId: 'pid-1', email: 'yo@example.com', displayName: 'Ada', photoURL: '',
+      socialGistId: 'social-viejo', gamesGistId: '', githubToken: '', socialEnabled: true, tier: 'bronze',
+    });
+
+    const written = await ensureProfileByEmail({
+      user: { uid: 'uid-1', email: 'yo@example.com', displayName: 'Yo', photoURL: '' },
+      socialGistId: 'social-222',
+      socialGistEtag: null,
+    });
+
+    const destinos = setDocMock.mock.calls
+      .filter((call) => (call[0] as { collection?: string })?.collection === 'profiles')
+      .map((call) => (call[0] as { id: string }).id);
+    expect(destinos).not.toContain('doc-legacy');
+    expect(destinos).toContain('uid-1');
+    expect(written.id).toBe('uid-1');
+
+    // El canónico NACE aquí, así que se sella su fecha de alta (la antigüedad real del huérfano la rescata el panel)
+    // y se lleva el nick que ya tenía: nunca el nombre real de Google ni el correo.
+    expect(profileWrites()[0]).toMatchObject({ uid: 'uid-1', displayName: 'Ada', createdAt: '__ts__' });
   });
 });

@@ -21,7 +21,7 @@ import {
   invalidateSocialDirectoryCache,
   peekOwnProfileTier,
   saveOwnProfileCache,
-  saveProfileByEmailCache,
+  invalidateProfileByEmailCache,
 } from './firebaseSocialRepository';
 import { DEFAULT_PROFILE_TIER } from '../../core/constants/tiers';
 import { FIRESTORE_SCHEMA_VERSION } from '../../core/constants/schema';
@@ -383,25 +383,30 @@ export async function ensureProfileByEmail(input: {
   if (!existing && !profileName) {
     throw new Error('No se puede crear un perfil social sin nombre público');
   }
-  const targetId = existing?.id || input.user.uid;
+  // EL DESTINO ES SIEMPRE `profiles/{uid}`. Cuando el perfil resuelto vive bajo otro id (legacy), escribir ALLÍ es
+  // imposible: las reglas atan la escritura a `isOwner(docId)`, así que el guardado se denegaría entero y ese usuario
+  // se quedaría sin poder tocar su perfil. Lo que se hace es crear el canónico llevándose su nick —el cutover de
+  // identidad, que aquí ocurre de paso— y dejar el huérfano para que lo retire el panel.
+  const isForeignDoc = Boolean(existing && existing.id !== input.user.uid);
+  const targetId = input.user.uid;
   const gamesGistId = String(input.gamesGistId || '');
   const githubToken = String(input.githubToken || '');
   const resolvedPhotoURL = input.photoURL !== undefined ? input.photoURL : String(input.user.photoURL || '');
   const profileId = await resolveStableProfileId(input.user.uid);
-  // El doc del dueño se identifica por su uid: solo ahí se puede purgar sin riesgo. Sobre un doc legacy con otro id
-  // no se borra nada (se migrará antes en el barrido), porque su `email` es la única forma de volver a encontrarlo.
-  const canPurgeLegacyFields = targetId === input.user.uid;
+  // Se escribe en el documento propio, así que purgar sus restos es seguro: lo que arrastre el huérfano no se toca
+  // desde aquí (no se puede), lo retira el panel.
+  const canPurgeLegacyFields = true;
   // `social.gistId` cuenta como resto legacy por purgar, NO como dato a comparar con el de la sesión: el doc ya no
   // lo publica, así que `existing.socialGistId !== input.socialGistId` daba SIEMPRE distinto (vacío contra el id
   // real) y el perfil se reescribía en cada apertura —una escritura de Firestore por usuario y sesión, con su
   // `updatedAt` movido, que dejaba el chequeo de cambios sin efecto—. Tratándolo así se reescribe UNA vez, para
   // purgarlo, y a partir de ahí el chequeo vuelve a distinguir de verdad si algo cambió.
-  const hasLegacyPii = Boolean(existing && (existing.email || existing.gamesGistId || existing.socialGistId));
+  const hasLegacyPii = Boolean(existing && !isForeignDoc && (existing.email || existing.gamesGistId || existing.socialGistId));
   const shouldWriteProfile =
     !existing ||
     !existing.socialEnabled ||
-    existing.id !== targetId ||
-    existing.id !== input.user.uid ||
+    // Perfil que vive bajo otro id: hay que crear el canónico, pase lo que pase con el resto de comparaciones.
+    isForeignDoc ||
     existing.displayName.trim() !== profileName ||
     (existing.photoURL || '') !== resolvedPhotoURL ||
     // Perfil anterior a la purga: se reescribe una vez para retirarle el email / los ids de gist.
@@ -432,11 +437,11 @@ export async function ensureProfileByEmail(input: {
           ...(canPurgeLegacyFields ? { gamesGistId: deleteField() } : {}),
         },
         updatedAt: serverTimestamp(),
-        // FECHA DE ALTA: se sella SOLO al crear el perfil (`!existing`). En las reescrituras posteriores no se
-        // envía a propósito — las reglas la declaran inmutable, así que mandar un `serverTimestamp()` nuevo haría
-        // que la escritura se denegase por completo. Los perfiles anteriores a este cambio se quedan sin ella; el
-        // panel de administración lo suple con la fecha de su amistad más antigua, marcada como estimada.
-        ...(existing ? {} : { createdAt: serverTimestamp() }),
+        // FECHA DE ALTA: se sella SOLO al CREAR el documento —o sea cuando no había perfil, y también cuando el que
+        // hay vive bajo otro id, porque el canónico nace aquí—. En las reescrituras posteriores no se envía a
+        // propósito: las reglas la declaran inmutable, así que mandar un `serverTimestamp()` nuevo haría que la
+        // escritura se denegase por completo. La antigüedad real del huérfano la rescata el panel al retirarlo.
+        ...(existing && !isForeignDoc ? {} : { createdAt: serverTimestamp() }),
         ...(canPurgeLegacyFields ? { email: deleteField() } : {}),
       },
       { merge: true },
@@ -484,10 +489,11 @@ export async function ensureProfileByEmail(input: {
     socialEnabled: true,
   };
   saveOwnProfileCache(input.user.uid, written);
-  // La caché legacy por email se refresca solo si el perfil vive en un doc con otro id (ahí sigue siendo la vía de
-  // resolución hasta que el barrido lo migre).
-  if (!canPurgeLegacyFields) {
-    saveProfileByEmailCache(cleanEmail, written);
+  // Si el perfil venía de un documento con otro id, la referencia cacheada por correo apunta al huérfano y ya no
+  // vale: el canónico acaba de nacer y es el que manda. Olvidarla evita que la siguiente resolución vuelva a
+  // proponer el documento en el que este cliente no puede escribir.
+  if (isForeignDoc) {
+    invalidateProfileByEmailCache(cleanEmail);
   }
   invalidateSocialDirectoryCache();
 
