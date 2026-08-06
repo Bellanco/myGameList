@@ -101,6 +101,14 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
   entradas grandes).
 
 ### Performance
+- **Tipografías servidas desde el propio origen.** La hoja de Google Fonts era una petición bloqueante a un
+  tercero en la ruta crítica, y con dos saltos (`fonts.googleapis.com` para el CSS y `fonts.gstatic.com` para
+  el `.woff2`, cada uno con su DNS y su TLS antes de poder pedir la fuente); además transmitía la IP del
+  visitante a Google en cada carga. Las 9 familias se vendorizan con `scripts/vendor-fonts.mjs` (subconjuntos
+  latin/latin-ext, todas OFL), la base va precargada y precacheada —así que también hay tipografía sin red— y
+  las de cada paleta siguen entrando con su skin, que ya cargaba en diferido. La **CSP deja de permitir Google**
+  en `style-src` y `font-src`. Verificado en Chrome: 0 peticiones a Google con la paleta por defecto y con un
+  tema activo.
 - **Firestore en su variante `lite`**: el SDK completo traía ~108 kB comprimidos de maquinaria de tiempo
   real y caché offline que esta app no usa (Firestore aquí es directorio de perfiles + grafo de amistad +
   preferencias, todo con lecturas y escrituras puntuales; los datos pesados viven en Gists e IndexedDB, y
