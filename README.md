@@ -123,6 +123,10 @@ App estática pura (React + Vite). Configuración en el repo:
   `self.__SW_BUILD_ID__` / `self.__PRECACHE_ASSETS__` los sustituye en el build el plugin
   `serviceWorkerPrecache` (`vite.config.ts`) por el identificador de build y la lista de chunks del
   arranque; sin ellos la app no arrancaría sin red, y tanto el build como `npm run validate` fallan.
+- **`public/fonts/`** — tipografías propias (generadas por `scripts/vendor-fonts.mjs`, todas OFL). No se usa
+  Google Fonts: la CSP ya no lo permite. Para actualizar una familia, se re-ejecuta el script y se commitea el
+  resultado; si cambia el nombre de la fuente base, hay que actualizar el `preload` de `index.html`
+  (`npm run validate` avisa).
 - **`wrangler.toml`** — `pages_build_output_dir = ./dist`.
 
 Ajustes en el dashboard de Cloudflare Pages:
