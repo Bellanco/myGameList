@@ -142,6 +142,21 @@ export const GameTable = memo(function GameTable({
   // se comparten con otras pestañas, que no llevan estas clases de peso/ocultación).
   const cCol = (cls: string | undefined) => (currentTab === 'c' ? cls : undefined);
 
+  // ¿Tiene este juego una nota que mostrar? En la vergüenza la puntuación es OPT-IN (el check del formulario), y
+  // los no puntuados se guardan con nota 0, así que basta con mirar la nota efectiva. Se comprueba así, y no por
+  // el flag `scored`, porque los juegos guardados ANTES de que ese flag existiera tienen nota pero no flag: con
+  // `scored` se les ocultaría una nota que sí pusieron.
+  const hasScore = (game: GameItem) => resolveGrade(game) > 0;
+
+  // La columna de puntuación de la vergüenza solo aparece si ALGÚN juego de la lista tiene nota. Como la
+  // puntuación ahí es opcional, a quien no la use una columna permanentemente vacía le sobraría; y quien sí la
+  // use la ve en cuanto puntúa el primero. Es el mismo patrón que `showYears`/`showReplayable`, pero decidido por
+  // los datos en vez de por una preferencia.
+  const showShameScore = useMemo(
+    () => currentTab === 'v' && games.some((game) => resolveGrade(game) > 0),
+    [currentTab, games],
+  );
+
   const getTableHeaders = (): string[] => {
     if (currentTab === 'c') {
       return [
@@ -162,6 +177,7 @@ export const GameTable = memo(function GameTable({
         'Géneros',
         'Puntos fuertes',
         'Puntos débiles',
+        ...(showShameScore ? ['Puntuación'] : []),
         ...(showRetry ? ['Dar otra oportunidad'] : []),
       ];
     }
@@ -172,7 +188,7 @@ export const GameTable = memo(function GameTable({
   const supportsReview = (tab: TabId) => tab !== 'p';
   const getColSpan = (tab: TabId) => {
     if (tab === 'c') return 6 + (showYears ? 1 : 0) + (showReplayable ? 1 : 0);
-    if (tab === 'v') return 5 + (showRetry ? 1 : 0);
+    if (tab === 'v') return 5 + (showShameScore ? 1 : 0) + (showRetry ? 1 : 0);
     if (tab === 'e') return 5;
     return 4;
   };
@@ -417,7 +433,10 @@ export const GameTable = memo(function GameTable({
                                 `display:none` y esto es lo único que queda, así que ocultarlo dejaba a un
                                 lector de pantalla sin la puntuación ni las plataformas. */}
                             <span className="row-meta">
-                              {(currentTab === 'c' || currentTab === 'p') && resolveGrade(game) > 0 ? (
+                              {/* En móvil este meta es la ÚNICA presentación de la nota (las columnas son
+                                  display:none), así que la vergüenza entra aquí con el mismo criterio que en su
+                                  columna: solo si el juego tiene nota. */}
+                              {(currentTab === 'c' || currentTab === 'p' || currentTab === 'v') && hasScore(game) ? (
                                 <span className="row-meta-item rm-score">
                                   <ScoreDisplay game={game} />
                                 </span>
@@ -446,6 +465,9 @@ export const GameTable = memo(function GameTable({
                       ) : null}
                       {currentTab === 'v' ? <td>{renderTags(game.reasons || [], 'chip-pd', MAX_ROW_CHIPS)}</td> : null}
                       {(currentTab === 'c' || currentTab === 'p') ? <td className={cCol('col-c-score')}><ScoreDisplay game={game} /></td> : null}
+                      {/* Vergüenza: la nota, y solo si el juego la tiene (los no puntuados dejan la celda vacía,
+                          sin estrellas a cero ni guion, que darían a entender una puntuación de 0). */}
+                      {showShameScore ? <td>{hasScore(game) ? <ScoreDisplay game={game} /> : null}</td> : null}
                       {currentTab === 'c' && showReplayable ? <td className="col-c-replay">{renderBooleanBadge('replayable', Boolean(game.replayable))}</td> : null}
                       {currentTab === 'v' && showRetry ? <td>{renderBooleanBadge('retry', Boolean(game.retry))}</td> : null}
                     </tr>
