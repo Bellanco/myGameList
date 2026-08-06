@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { readFileSync, writeFileSync } from 'node:fs';
+import { readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { defineConfig, type Plugin } from 'vite';
 import react from '@vitejs/plugin-react';
 
@@ -24,6 +24,7 @@ function serviceWorkerPrecache(): Plugin {
   const BUILD_ID_TOKEN = 'self.__SW_BUILD_ID__';
   const ASSETS_TOKEN = 'self.__PRECACHE_ASSETS__';
   let precachePaths: string[] = [];
+  let criticalFontPaths: string[] = [];
 
   return {
     name: 'service-worker-precache',
@@ -56,6 +57,20 @@ function serviceWorkerPrecache(): Plugin {
       precachePaths = [...reachable, ...css].sort().map((file) => `/${file}`);
     },
 
+    // La fuente base va aparte: vive en `public/fonts/` (no la emite el bundle, así que no aparece en `bundle`)
+    // y sin precachearla la app arrancaría sin red pero con la tipografía de sistema. Solo el subconjunto `latin`:
+    // `latin-ext` cubre caracteres que el castellano y el inglés casi nunca usan, y su `unicode-range` hace que el
+    // navegador solo lo pida si de verdad aparece uno.
+    buildStart() {
+      const fontsDir = new URL('./public/fonts/', import.meta.url);
+      criticalFontPaths = readdirSync(fontsDir)
+        .filter((name) => /^dm-sans-latin-[a-f0-9]+\.woff2$/.test(name))
+        .map((name) => `/fonts/${name}`);
+      if (criticalFontPaths.length === 0) {
+        throw new Error('[service-worker-precache] No se ha encontrado la fuente base en public/fonts/ (dm-sans-latin-*.woff2).');
+      }
+    },
+
     // `closeBundle` y no `writeBundle`: para entonces Vite ya ha copiado `public/` en `dist/`, que es donde está
     // el service worker que hay que parchear.
     closeBundle() {
@@ -74,10 +89,11 @@ function serviceWorkerPrecache(): Plugin {
         throw new Error('[service-worker-precache] La lista de assets del arranque ha salido vacía; el precache sería inútil.');
       }
 
-      const buildId = createHash('sha256').update(precachePaths.join('\n')).digest('hex').slice(0, 12);
+      const precache = [...precachePaths, ...criticalFontPaths];
+      const buildId = createHash('sha256').update(precache.join('\n')).digest('hex').slice(0, 12);
       const patched = source
         .replace(BUILD_ID_TOKEN, JSON.stringify(buildId))
-        .replace(ASSETS_TOKEN, JSON.stringify(precachePaths));
+        .replace(ASSETS_TOKEN, JSON.stringify(precache));
 
       writeFileSync(swUrl, patched);
     },

@@ -1,5 +1,7 @@
-/* Fuentes propias de esta paleta (fuera de la ruta crítica; solo cargan con este skin). */
-@import url("https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Saira:wght@400;500;600&family=Share+Tech+Mono&display=swap");
+/* Fuentes propias de esta paleta (fuera de la ruta crítica; solo cargan con este skin).
+   Servidas desde el propio origen: antes esto era un `@import url(fonts.googleapis.com)`, que en
+   runtime añadía dos saltos a dominios de terceros. Generado por `scripts/vendor-fonts.mjs`. */
+@use '../fonts/portal';
 
 /* ═══════════════════════════════════════════════════════════════════════════════════════════════════
    TEMA · Cámara de pruebas (Portal / Aperture Science) — cámara de pruebas limpia: paneles con juntas,
