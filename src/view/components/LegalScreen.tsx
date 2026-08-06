@@ -59,6 +59,15 @@ export const LegalScreen = memo(function LegalScreen({ docId }: LegalScreenProps
           {section.paragraphs?.map((paragraph) => (
             <p key={paragraph}>{paragraph}</p>
           ))}
+          {section.links ? (
+            <div className="settings-legal-links">
+              {section.links.map((link) => (
+                <a key={link.href} href={link.href} target="_blank" rel="noopener noreferrer">
+                  {link.label}
+                </a>
+              ))}
+            </div>
+          ) : null}
         </div>
       ))}
 
