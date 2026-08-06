@@ -249,6 +249,23 @@ dialog.alert-dialog[open]::backdrop { animation: alertBackdropIn .24s ease both;
 .btn-ghost:active { transform: translateY(0); }
 .sr-only { position:absolute!important; width:1px!important; height:1px!important; padding:0!important; margin:-1px!important; overflow:hidden!important; clip:rect(0,0,0,0)!important; white-space:nowrap!important; border:0!important; }
 
+/* A11y-4 — Aviso de "necesitas JavaScript" (`<noscript>` de index.html). Va con clases y no con estilos inline
+   porque en el build el CSS entra como `<link>` en el <head>, así que se aplica aunque no haya JS (en `dev` el CSS
+   sí depende del bundle, pero ahí no hay nadie mirando esto). Usa los tokens del tema: sin JS no corre el script
+   que fija `data-theme`, así que aplican los del modo oscuro por defecto. */
+.noscript-notice {
+  max-width: 34rem;
+  margin: 15vh auto;
+  padding: 1.5rem;
+  line-height: 1.6;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md, .6rem);
+}
+.noscript-notice h1 { margin: 0 0 .5rem; font-size: 1.25rem; }
+.noscript-notice p { margin: 0; }
+
 /* A11y-4 — Enlace "saltar al contenido": invisible hasta que recibe el foco, y entonces aparece arriba a la
    izquierda como un botón normal. No se usa `.sr-only` porque ese oculta con `clip` y no hay forma de
    revertirlo al enfocar; aquí se saca de la pantalla con `top` y se trae con `:focus-visible`. */
