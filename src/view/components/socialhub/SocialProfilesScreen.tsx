@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Icon } from '../Icon';
 import { HubAvatar } from './HubAvatar';
 import type { SocialUiLabels } from '../../../core/constants/labels';
@@ -7,6 +7,17 @@ import { HubStatus } from './HubStatus';
 import { HubBackButton } from './HubBackButton';
 import { FriendshipButton } from './FriendshipButton';
 import type { RelationshipState } from '../../../model/types/social';
+
+/**
+ * Cuántas FILAS se pintan de entrada en cada sección, y cuántas añade cada "mostrar más".
+ *
+ * En filas y no en un número fijo de tarjetas: la rejilla tiene de 1 a 12 columnas según el ancho, así que un tope
+ * fijo sería una pantalla razonable en escritorio y una pila interminable en un móvil de una columna. Con cuatro
+ * filas, el primer golpe de vista ocupa lo mismo en cualquier dispositivo.
+ * El precio es que en móvil cada pulsación añade solo cuatro tarjetas; se aceptó a cambio de no tener que bajar
+ * dos pantallas de scroll antes de encontrar el botón.
+ */
+const PROFILE_ROWS_PER_PAGE = 4;
 
 /** Pantalla de perfiles sociales (directorio), con filtro por nombre. */
 function SocialProfilesScreenBase({
@@ -17,10 +28,6 @@ function SocialProfilesScreenBase({
   loadingDirectory,
   openProfileDetail,
   handleProfileCardKeyDown,
-  isFeedDragging,
-  feedRowRef,
-  handleFeedRowMouseDown,
-  handleFeedRowKeyDown,
   relationshipWith,
   friendshipBusyUid,
   onAddOrAcceptFriend,
@@ -36,10 +43,6 @@ function SocialProfilesScreenBase({
   loadingDirectory: boolean;
   openProfileDetail: (id: string) => void;
   handleProfileCardKeyDown: (event: React.KeyboardEvent<HTMLElement>, id: string) => void;
-  isFeedDragging: boolean;
-  feedRowRef: React.RefObject<HTMLDivElement | null>;
-  handleFeedRowMouseDown: (event: React.MouseEvent<HTMLDivElement>) => void;
-  handleFeedRowKeyDown: (event: React.KeyboardEvent<HTMLDivElement>) => void;
   relationshipWith: (uid: string) => RelationshipState;
   friendshipBusyUid: string;
   onAddOrAcceptFriend: (uid: string) => void;
@@ -51,6 +54,47 @@ function SocialProfilesScreenBase({
   // Dos listas: amigos y no-amigos. La relación sale de `relationshipWith`.
   const friendProfiles = filteredSocialDirectory.filter((entry) => relationshipWith(entry.uid) === 'friends');
   const otherProfiles = filteredSocialDirectory.filter((entry) => relationshipWith(entry.uid) !== 'friends');
+
+  // CUÁNTAS COLUMNAS HAY DE VERDAD. Se lee del propio layout (`grid-template-columns` resuelto) y no se deduce de
+  // un breakpoint: quien decide el número de columnas es el CSS —con `auto-fill` sobre el ancho de la TARJETA del
+  // hub, no de la ventana—, y duplicar aquí esa cuenta sería una segunda fuente de verdad que se desincroniza en
+  // el primer ajuste de tamaños. Solo se usa para el tamaño de página; si fallara, la consecuencia máxima es
+  // paginar de 4 en 4 en vez de por filas completas.
+  const gridRef = useRef<HTMLDivElement | null>(null);
+  const [columnas, setColumnas] = useState(1);
+  const haySecciones = friendProfiles.length > 0 || otherProfiles.length > 0;
+
+  useLayoutEffect(() => {
+    const medir = () => {
+      const el = gridRef.current;
+      if (!el) return;
+      const tracks = getComputedStyle(el).gridTemplateColumns.split(' ').filter(Boolean).length;
+      setColumnas((prev) => (prev === tracks ? prev : Math.max(1, tracks)));
+    };
+
+    medir();
+    const observer = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(medir) : null;
+    if (gridRef.current) observer?.observe(gridRef.current);
+    window.addEventListener('resize', medir);
+    return () => {
+      observer?.disconnect();
+      window.removeEventListener('resize', medir);
+    };
+  }, [haySecciones]);
+
+  const pageSize = Math.max(1, columnas) * PROFILE_ROWS_PER_PAGE;
+
+  // Se guardan PÁGINAS y no un número de tarjetas: así, al cambiar de columnas (girar el móvil, redimensionar), lo
+  // visible se recalcula solo y se mantiene en "cuatro filas" en vez de quedarse en la cuenta de otro ancho.
+  const [friendPages, setFriendPages] = useState(1);
+  const [otherPages, setOtherPages] = useState(1);
+
+  // Al cambiar la búsqueda se vuelve a empezar: si venías de pulsar "mostrar más" varias veces, la siguiente
+  // búsqueda arrancaría ya expandida y el filtro parecería no haber hecho nada.
+  useEffect(() => {
+    setFriendPages(1);
+    setOtherPages(1);
+  }, [profileSearch]);
 
   const renderProfileCard = (entry: any) => (
     <article
@@ -91,6 +135,45 @@ function SocialProfilesScreenBase({
     </article>
   );
 
+  /** Sección con su recuento, su rejilla y su "mostrar más". Las dos comparten forma; solo cambian los datos. */
+  const renderSection = (
+    title: string,
+    perfiles: any[],
+    vacio: string,
+    pages: number,
+    verMas: () => void,
+  ) => {
+    const visibles = pages * pageSize;
+    const restantes = perfiles.length - visibles;
+    return (
+      <div className="fg">
+        <span className="flabel">
+          {title} <span className="hub-section-count">· {perfiles.length}</span>
+        </span>
+        {perfiles.length === 0 ? (
+          <p>{vacio}</p>
+        ) : (
+          <>
+            <div
+              ref={gridRef}
+              className="hub-profile-grid"
+              aria-label={SOCIAL_UI.profiles.sectionGroupAria(title, perfiles.length)}
+              role="group"
+            >
+              {perfiles.slice(0, visibles).map(renderProfileCard)}
+            </div>
+            {restantes > 0 ? (
+              <button className="hub-more-soft hub-feed-load-more" type="button" onClick={verMas}>
+                <Icon name="chevron-down" />
+                <span>{SOCIAL_UI.profiles.showMore(restantes)}</span>
+              </button>
+            ) : null}
+          </>
+        )}
+      </div>
+    );
+  };
+
   return (
     <section className="hub-hub hub-screen" aria-label={SOCIAL_UI.profiles.sectionAria}>
       <div className="hub-hub-card hub-screen-card hub-feed-card-shell">
@@ -124,7 +207,7 @@ function SocialProfilesScreenBase({
         {loadingDirectory ? (
           <div className="fg">
             <p className="sr-only">{SOCIAL_UI.profiles.loading}</p>
-            <div className="hub-feed-row" aria-hidden="true">
+            <div className="hub-profile-grid" aria-hidden="true">
               {[0, 1, 2, 3].map((i) => (
                 <article key={i} className="hub-feed-card hub-feed-profile-item hub-skeleton-card">
                   <header className="hub-feed-card-head">
@@ -142,35 +225,20 @@ function SocialProfilesScreenBase({
           <div className="fg"><p>{SOCIAL_UI.profiles.empty}</p></div>
         ) : (
           <>
-            <div className="fg">
-              <span className="flabel">{SOCIAL_UI.profiles.friendsTitle}</span>
-              {friendProfiles.length === 0 ? (
-                <p>{SOCIAL_UI.profiles.friendsEmpty}</p>
-              ) : (
-                <div className="hub-feed-row" aria-label={SOCIAL_UI.profiles.friendsTitle} role="group">
-                  {friendProfiles.map(renderProfileCard)}
-                </div>
-              )}
-            </div>
-
-            <div className="fg">
-              <span className="flabel">{SOCIAL_UI.profiles.othersTitle}</span>
-              {otherProfiles.length === 0 ? (
-                <p>{SOCIAL_UI.profiles.othersEmpty}</p>
-              ) : (
-                <div
-                  ref={feedRowRef}
-                  className={`hub-feed-row ${isFeedDragging ? 'is-dragging' : ''}`}
-                  aria-label={SOCIAL_UI.profiles.othersTitle}
-                  role="group"
-                  tabIndex={0}
-                  onMouseDown={handleFeedRowMouseDown}
-                  onKeyDown={handleFeedRowKeyDown}
-                >
-                  {otherProfiles.map(renderProfileCard)}
-                </div>
-              )}
-            </div>
+            {renderSection(
+              SOCIAL_UI.profiles.friendsTitle,
+              friendProfiles,
+              SOCIAL_UI.profiles.friendsEmpty,
+              friendPages,
+              () => setFriendPages((n) => n + 1),
+            )}
+            {renderSection(
+              SOCIAL_UI.profiles.othersTitle,
+              otherProfiles,
+              SOCIAL_UI.profiles.othersEmpty,
+              otherPages,
+              () => setOtherPages((n) => n + 1),
+            )}
           </>
         )}
         <HubStatus status={status} statusKind={statusKind} />

@@ -796,6 +796,13 @@ export const SOCIAL_UI = {
     openProfileAria: (name: string) => `Abrir perfil social de ${name}`,
     friendsTitle: 'Amigos',
     othersTitle: 'Descubrir',
+    // El recuento por sección se muestra porque con muchos amigos es la única forma de saber a qué te enfrentas
+    // antes de empezar a bajar: la rejilla, al no tener scroll propio, no da ninguna pista de su tamaño.
+    sectionLabel: (title: string, count: number) => `${title} · ${count}`,
+    sectionGroupAria: (title: string, count: number) => `${title}: ${count} perfiles`,
+    // Paginación: se muestra cuánto queda, no solo que hay más. "Mostrar más" a secas obliga a pulsar para
+    // averiguar si quedan 3 o 300.
+    showMore: (remaining: number) => `Mostrar más (quedan ${remaining})`,
     friendsEmpty: 'Aún no tienes amigos. Envía una petición desde la lista de abajo.',
     othersEmpty: 'No hay más perfiles que mostrar.',
   },
