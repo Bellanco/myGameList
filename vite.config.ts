@@ -101,7 +101,11 @@ export default defineConfig({
     outDir: 'dist',
     // Target explícito y moderno: evita sorpresas si cambia el default al actualizar Vite.
     target: 'es2022',
-    sourcemap: false,
+    // `hidden`: se emiten los .map pero SIN el comentario `sourceMappingURL`, así que el navegador no los
+    // descarga solo. Con `dropConsole` + minificación, los stacks que llegan a la telemetría venían de código
+    // ofuscado e ilegibles; ahora se pueden mapear a mano. El código es GPL y público, así que publicar los
+    // mapas no revela nada que no esté ya en el repositorio.
+    sourcemap: 'hidden',
     chunkSizeWarningLimit: 600,
     rollupOptions: {
       output: {
