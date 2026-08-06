@@ -1,5 +1,5 @@
-import { Fragment, memo, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { useVirtualizer } from '@tanstack/react-virtual';
+import { Fragment, memo, useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useVirtualizer, useWindowVirtualizer } from '@tanstack/react-virtual';
 import { COMMON_ICONS, TAB_ICONS } from '../../core/constants/icons';
 import { UI_MESSAGES } from '../../core/constants/labels';
 import type { GameItem, TabId, TabSort } from '../../model/types/game';
@@ -191,48 +191,98 @@ export const GameTable = memo(function GameTable({
 
   const parentRef = useRef<HTMLDivElement>(null);
 
-  // En móvil/tablet (≤1400px) `.table-wrap` se declara `overflow:visible`: quien scrollea es la
-  // ventana, no este contenedor. El virtualizador de elemento necesita un scroll-container propio;
-  // apuntado a un elemento no-scrollable sus medidas dependen del motor (Chromium reporta la altura
-  // completa y pinta todo; Firefox deja un spacer final que infla el contenedor). Por eso solo
-  // virtualizamos cuando `.table-wrap` es realmente scrollable; si scrollea la página, render plano.
-  const [pageScrolls, setPageScrolls] = useState(false);
+  // QUIÉN SCROLLEA DE VERDAD. Hay dos virtualizadores y no son intercambiables: el de elemento necesita un
+  // contenedor que scrollee, y apuntado a uno que no scrollea toma como viewport TODO el contenido y pinta todas
+  // las filas (justo lo que se quería evitar).
+  //
+  // Se mide, no se deduce del CSS. Antes se leía `overflow-y === 'visible'` y eso daba dos falsos negativos:
+  //  - en móvil/tablet `.table-wrap` es `overflow:visible` → se detectaba bien, pero el código renderizaba la
+  //    tabla ENTERA a propósito (sin virtualizador de ventana): las bibliotecas grandes pintaban miles de filas
+  //    precisamente en los dispositivos más lentos;
+  //  - en escritorio es `overflow-y:auto` pero SIN altura acotada (es un `flex:1 1 auto` cuyo padre no limita la
+  //    altura), así que su `clientHeight` es la tabla completa y tampoco scrollea nunca. Se detectaba como
+  //    "scrollea el contenedor" y el virtualizador de elemento se quedaba sin efecto: también pintaba todo.
+  // Resultado: la virtualización no estaba haciendo nada en ninguno de los dos casos. `scrollHeight >
+  // clientHeight` distingue el caso real y sigue valiendo si algún día se acota la altura por CSS.
+  const [pageScrolls, setPageScrolls] = useState(true);
+  // Desplazamiento del inicio de la tabla dentro del documento: el virtualizador de ventana trabaja en
+  // coordenadas de página, así que sin esto sus posiciones vendrían corridas por la altura de lo que hay encima
+  // (barra de pestañas, toolbar, filtros abiertos…).
+  const [scrollMargin, setScrollMargin] = useState(0);
   useLayoutEffect(() => {
     const update = () => {
       const el = parentRef.current;
-      if (el) setPageScrolls(getComputedStyle(el).overflowY === 'visible');
+      if (!el) return;
+      setPageScrolls(el.scrollHeight <= el.clientHeight + 1);
+      setScrollMargin(el.getBoundingClientRect().top + window.scrollY);
     };
     update();
     window.addEventListener('resize', update);
-    return () => window.removeEventListener('resize', update);
+    // La toolbar y el panel de filtros cambian de alto sin que la tabla se entere (abrir filtros, envolver
+    // chips): eso mueve el inicio de la tabla, así que hay que recalcular el margen cuando el layout cambia.
+    const observer = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(update) : null;
+    observer?.observe(document.body);
+    return () => {
+      window.removeEventListener('resize', update);
+      observer?.disconnect();
+    };
   }, []);
-  const virtualize = !pageScrolls;
 
-  const virtualizer = useVirtualizer({
-    count: virtualRows.length,
-    getScrollElement: () => parentRef.current,
-    measureElement: (element) => element.getBoundingClientRect().height,
-    // Clave ESTABLE por fila lógica (tipo + id), no por índice: al expandir/plegar el detalle se
-    // inserta/quita una fila y TODOS los índices posteriores se desplazan. Sin clave estable, el
-    // virtualizador reasigna las alturas cacheadas por índice a filas distintas (una fila normal ~50px
-    // hereda la altura de un detalle ~320px, o al revés) → el tamaño total se infla, aparecen huecos y
-    // filas inalcanzables al final. Con la clave, cada fila conserva su medida al cambiar de posición.
-    getItemKey: (index) => {
+  // Por debajo de este número de filas se pinta la tabla entera aunque scrollee la página: virtualizar tiene su
+  // propio coste (medición, spacers, re-render al scrollear) y con pocas filas no compensa. También mantiene el
+  // comportamiento exacto de siempre en listas cortas, que son la mayoría.
+  const WINDOW_VIRTUALIZE_MIN_ROWS = 120;
+
+  // Clave ESTABLE por fila lógica (tipo + id), no por índice: al expandir/plegar el detalle se inserta/quita una
+  // fila y TODOS los índices posteriores se desplazan. Sin clave estable, el virtualizador reasigna las alturas
+  // cacheadas por índice a filas distintas (una fila normal ~50px hereda la altura de un detalle ~320px, o al
+  // revés) → el tamaño total se infla, aparecen huecos y filas inalcanzables al final. Con la clave, cada fila
+  // conserva su medida al cambiar de posición. Compartida por los dos virtualizadores.
+  const getItemKey = useCallback(
+    (index: number) => {
       const row = virtualRows[index];
       return row ? `${row.type}-${row.gameId}` : index;
     },
-    estimateSize: (index) => {
-      const row = virtualRows[index];
-      return row?.type === 'detail' ? 320 : 50;
-    },
+    [virtualRows],
+  );
+  const estimateSize = useCallback(
+    (index: number) => (virtualRows[index]?.type === 'detail' ? 320 : 50),
+    [virtualRows],
+  );
+  const measureElement = useCallback((element: Element) => element.getBoundingClientRect().height, []);
+
+  const elementVirtualizer = useVirtualizer({
+    count: virtualRows.length,
+    getScrollElement: () => parentRef.current,
+    measureElement,
+    getItemKey,
+    estimateSize,
     overscan: 5,
   });
 
+  const windowVirtualizer = useWindowVirtualizer({
+    count: virtualRows.length,
+    measureElement,
+    getItemKey,
+    estimateSize,
+    scrollMargin,
+    overscan: 5,
+  });
+
+  const useWindowScroller = pageScrolls && virtualRows.length >= WINDOW_VIRTUALIZE_MIN_ROWS;
+  const virtualize = !pageScrolls || useWindowScroller;
+  const virtualizer = useWindowScroller ? windowVirtualizer : elementVirtualizer;
+  // El virtualizador de ventana devuelve posiciones ABSOLUTAS del documento; los spacers son relativos al inicio
+  // de la tabla, así que hay que descontar el margen. El de elemento ya trabaja en coordenadas del contenedor.
+  const originOffset = useWindowScroller ? scrollMargin : 0;
+
   const virtualRowEntries = virtualizer.getVirtualItems();
   const totalSize = virtualizer.getTotalSize();
-  const topSpacerHeight = virtualRowEntries.length > 0 ? virtualRowEntries[0].start : 0;
+  const topSpacerHeight = virtualRowEntries.length > 0 ? virtualRowEntries[0].start - originOffset : 0;
   const bottomSpacerHeight =
-    virtualRowEntries.length > 0 ? totalSize - virtualRowEntries[virtualRowEntries.length - 1].end : 0;
+    virtualRowEntries.length > 0 ? totalSize - (virtualRowEntries[virtualRowEntries.length - 1].end - originOffset) : 0;
+  // Red de seguridad: si el virtualizador elegido no devuelve nada habiendo filas (medidas degeneradas, entorno
+  // sin layout), se pinta todo antes que dejar la tabla vacía.
   const fallbackToFullRender =
     !virtualize || (games.length > 0 && virtualRows.length > 0 && virtualRowEntries.length === 0);
   const rowIndexesToRender = fallbackToFullRender
