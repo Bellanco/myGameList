@@ -1,5 +1,7 @@
-/* Fuentes propias de esta paleta (fuera de la ruta crítica; solo cargan con este skin). */
-@import url("https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=UnifrakturCook:wght@700&family=VT323&display=swap");
+/* Fuentes propias de esta paleta (fuera de la ruta crítica; solo cargan con este skin).
+   Servidas desde el propio origen: antes esto era un `@import url(fonts.googleapis.com)`, que en
+   runtime añadía dos saltos a dominios de terceros. Generado por `scripts/vendor-fonts.mjs`. */
+@use '../fonts/grimdark';
 
 /* ═══════════════════════════════════════════════════════════════════════════════════════════════════
    TEMA · Solo hay guerra (Warhammer 40.000) — GRIMDARK GÓTICO IMPERIAL: la app como una PANTALLA DE

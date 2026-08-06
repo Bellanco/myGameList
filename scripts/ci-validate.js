@@ -8,7 +8,11 @@ const root = path.join(__dirname, '..');
 // exactamente los que el navegador necesita para pintar la app. Es el número que decide cuánto tarda en abrirse en
 // una conexión mala, así que engordarlo debe ser una decisión consciente y no un efecto colateral de un import.
 // Si se sube, hay que subirlo aquí a mano y explicar por qué en el commit.
-const BOOT_PAYLOAD_BUDGET_KB = 200;
+//
+// Pasó de 200 a 240 al autohospedar las fuentes, y NO porque el arranque se encareciera: la fuente base (~36 kB)
+// se descargaba igual desde Google, solo que de un tercero y sin aparecer en esta cuenta. Ahora está contada, y
+// además llega antes (sin los dos saltos de red a fonts.googleapis.com + fonts.gstatic.com).
+const BOOT_PAYLOAD_BUDGET_KB = 240;
 const publicDir = path.join(root, 'public');
 const requiredFiles = [
   path.join(root, 'index.html'),
@@ -39,6 +43,54 @@ for (const file of requiredFiles) {
 const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
 if (!html.includes('type="module"') || !html.includes('/src/main.tsx')) {
   fail('index.html does not reference /src/main.tsx as module entry point');
+}
+
+// FUENTES PROPIAS. Se sirven desde `public/fonts/` para no depender de Google Fonts (dos saltos de red a un
+// tercero en la ruta crítica, y la IP del visitante enviada en cada carga). Dos cosas que se pueden romper sin
+// que nadie lo note:
+//  1) el `preload` de `index.html` lleva el nombre CON HASH de la fuente base: si se re-ejecuta
+//     `scripts/vendor-fonts.mjs` y el hash cambia, ese preload apunta a un 404 y se pierde la ventaja;
+//  2) que alguien vuelva a meter una referencia a Google Fonts, que además la CSP ya no permite (fallaría en
+//     producción, pero en silencio: el navegador cae a la fuente de sistema).
+const fontsDir = path.join(publicDir, 'fonts');
+if (!fs.existsSync(fontsDir)) {
+  fail('Falta public/fonts/. Ejecuta `node scripts/vendor-fonts.mjs`.');
+}
+const preloadMatch = html.match(/<link rel="preload" href="(\/fonts\/[^"]+)"/);
+if (!preloadMatch) {
+  fail('index.html no precarga ninguna fuente propia (se perdió el <link rel="preload"> de la fuente base).');
+}
+const preloadedFont = path.join(root, 'public', preloadMatch[1]);
+if (!fs.existsSync(preloadedFont)) {
+  fail(
+    `index.html precarga ${preloadMatch[1]}, que no existe en public/fonts/. ` +
+      'Si has regenerado las fuentes, actualiza el href del preload con el nuevo nombre.',
+  );
+}
+
+const googleFontRefs = [];
+const walkStyles = (dir) => {
+  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+    const full = path.join(dir, entry.name);
+    if (entry.isDirectory()) walkStyles(full);
+    else if (/\.(scss|css)$/.test(entry.name)) {
+      const text = fs.readFileSync(full, 'utf8');
+      // Solo cuentan las referencias REALES (un `url(...)`), no las menciones en comentarios.
+      if (/url\(["']?https:\/\/fonts\.(googleapis|gstatic)\.com/.test(text)) {
+        googleFontRefs.push(path.relative(root, full));
+      }
+    }
+  }
+};
+walkStyles(path.join(root, 'src', 'styles'));
+if (/fonts\.(googleapis|gstatic)\.com/.test(html.replace(/<!--[\s\S]*?-->/g, ''))) {
+  googleFontRefs.push('index.html');
+}
+if (googleFontRefs.length > 0) {
+  fail(
+    `Estos ficheros vuelven a cargar fuentes desde Google: ${googleFontRefs.join(', ')}. ` +
+      'La CSP ya no lo permite; vendoriza la familia con `node scripts/vendor-fonts.mjs`.',
+  );
 }
 
 // El service worker de `public/` tiene que conservar los marcadores que el build sustituye por la lista real de
