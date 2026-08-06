@@ -5,6 +5,8 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
 
 ## [Unreleased]
 
+## [3.8] - 2026-08-06
+
 ### Added
 - **Panel de administración** (`/admin`, ruta oculta sin enlace en la navegación): censo de perfiles
   —incluidos los que tienen el social desactivado, que el directorio no muestra— con sus amistades, y

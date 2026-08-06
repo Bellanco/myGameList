@@ -58,6 +58,13 @@ WebCrypto nativo (AES-GCM 256). Hay **dos** mecanismos con garantías **distinta
   podía usar su propio documento para inflar o envenenar lo que descargan y pintan los demás.
 - **Canje de OAuth restringido al propio origen**: la Pages Function que usa el `client_secret` exige que
   el `Origin` y el `redirect_uri` de la petición sean de esta app.
+- **HSTS** (`Strict-Transport-Security`, 6 meses) en `public/_headers`. Sin `includeSubDomains` ni `preload` a
+  propósito: ambos amplían el compromiso a cosas que no se pueden revertir rápido (ver el comentario del fichero).
+- **Auditoría previa al despliegue de reglas** (`npm run audit:rules`): antes de endurecer `firestore.rules` se
+  comprueba, en solo lectura, que ningún documento REAL quedaría rechazado. Los tests de emulador cubren las
+  formas conocidas; esto cubre los datos que hay. Sus predicados están cubiertos por
+  `tests/unit/auditProfileRules.test.ts`, que además verifica que los límites coinciden con los del fichero de
+  reglas: una auditoría que aprobara lo que las reglas rechazan sería peor que no tenerla.
 - **Analítica con consentimiento previo**: Google Analytics no se inicializa mientras el usuario no lo
   acepte, y la decisión es revocable desde Cuenta.
 - **Borrado de cuenta** desde la app: elimina perfil, amistades y configuración remota, y limpia
