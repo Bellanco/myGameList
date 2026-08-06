@@ -20,7 +20,7 @@ vi.mock('../../src/model/repository/firebaseFriendshipRepository', () => ({
   invalidateMyFriendshipsCache: vi.fn(),
 }));
 
-vi.mock('firebase/firestore', () => ({
+vi.mock('firebase/firestore/lite', () => ({
   collection: (_fs: unknown, name: string) => ({ collection: name }),
   doc: (_fs: unknown, name: string, id: string) => ({ collection: name, id }),
   // `query` conserva la colección de origen para que el mock de getDocs sepa a quién responde.

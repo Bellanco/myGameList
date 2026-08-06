@@ -1,7 +1,14 @@
 const fs = require('fs');
 const path = require('path');
+const zlib = require('zlib');
 
 const root = path.join(__dirname, '..');
+
+// Presupuesto de bytes del ARRANQUE (comprimido): la suma de los assets que el service worker precachea, que son
+// exactamente los que el navegador necesita para pintar la app. Es el número que decide cuánto tarda en abrirse en
+// una conexión mala, así que engordarlo debe ser una decisión consciente y no un efecto colateral de un import.
+// Si se sube, hay que subirlo aquí a mano y explicar por qué en el commit.
+const BOOT_PAYLOAD_BUDGET_KB = 200;
 const publicDir = path.join(root, 'public');
 const requiredFiles = [
   path.join(root, 'index.html'),
@@ -66,7 +73,43 @@ if (fs.existsSync(builtSw)) {
   if (!hasJs || !hasCss) {
     fail(`dist/service-worker.js precachea ${precached.length} assets sin JS y/o sin CSS: la app no arrancaría sin red.`);
   }
-  console.log(`Service worker: ${precached.length} assets del arranque en el precache.`);
+
+  const gzipBytes = precached.reduce(
+    (total, asset) => total + zlib.gzipSync(fs.readFileSync(path.join(root, 'dist', asset))).length,
+    0,
+  );
+  const gzipKb = gzipBytes / 1024;
+  console.log(
+    `Service worker: ${precached.length} assets del arranque, ${gzipKb.toFixed(1)} kB comprimidos ` +
+      `(presupuesto ${BOOT_PAYLOAD_BUDGET_KB} kB).`,
+  );
+  if (gzipKb > BOOT_PAYLOAD_BUDGET_KB) {
+    fail(
+      `El arranque pesa ${gzipKb.toFixed(1)} kB comprimidos y el presupuesto es ${BOOT_PAYLOAD_BUDGET_KB} kB. ` +
+        'Mira si lo que ha entrado en el grafo estático debería ser un import() diferido.',
+    );
+  }
+}
+
+// El SDK de Firestore se usa en su variante `lite` (ver el comentario de `firebaseClient.ts`): el completo pesa
+// ~108 kB comprimidos MÁS y su única ventaja —listeners en tiempo real y caché offline— no se usa en esta app.
+// Como basta un import descuidado para volver a arrastrarlo, se comprueba aquí.
+const fullFirestoreImports = [];
+const walk = (dir) => {
+  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+    const full = path.join(dir, entry.name);
+    if (entry.isDirectory()) walk(full);
+    else if (/\.tsx?$/.test(entry.name) && /['"]firebase\/firestore['"]/.test(fs.readFileSync(full, 'utf8'))) {
+      fullFirestoreImports.push(path.relative(root, full));
+    }
+  }
+};
+walk(path.join(root, 'src'));
+if (fullFirestoreImports.length > 0) {
+  fail(
+    `Estos ficheros importan el SDK completo de Firestore en vez de 'firebase/firestore/lite': ${fullFirestoreImports.join(', ')}. ` +
+      'Si de verdad hace falta (onSnapshot / persistencia offline), quita esta comprobación explicando por qué.',
+  );
 }
 
 console.log('CI validation passed. All required files are present.');

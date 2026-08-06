@@ -13,7 +13,7 @@ const signOutMock = vi.fn(async () => {});
 const closeSharedDatabaseMock = vi.fn(async () => {});
 const clearSyncConfigMock = vi.fn();
 
-vi.mock('firebase/firestore', () => ({
+vi.mock('firebase/firestore/lite', () => ({
   deleteDoc: (...args: unknown[]) => deleteDocMock(...(args as [])),
   doc: vi.fn((_db: unknown, path: string, id: string) => ({ path, id })),
 }));

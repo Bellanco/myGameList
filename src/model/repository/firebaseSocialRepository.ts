@@ -8,7 +8,7 @@
 // dispositivo nuevo); nadie busca a otros por correo. Leer por id permite dejar de publicar el email en un
 // documento que cualquier usuario autenticado puede leer. `findSocialProfileByEmail` se conserva SOLO como
 // fallback para perfiles legacy cuyo id de documento no es el uid.
-import { collection, doc, getDoc, getDocs, limit, orderBy, query, where } from 'firebase/firestore';
+import { collection, doc, getDoc, getDocs, limit, orderBy, query, where } from 'firebase/firestore/lite';
 import { DEFAULT_PROFILE_TIER, normalizeTier, type ProfileTier } from '../../core/constants/tiers';
 import {
   initializeFirebaseServices,
