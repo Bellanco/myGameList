@@ -15,7 +15,9 @@ conservando el estilo visual, el comportamiento y la compatibilidad con los dato
   Firebase Firestore/Auth).
 - **Tema claro / oscuro / automático** con paleta clara "arena" (tonos cálidos) y azul de marca;
   todos los colores son variables CSS theme-aware (`src/styles/_base.scss`).
-- **Offline-first / PWA**: Service Worker + `manifest.json`.
+- **Offline-first / PWA**: Service Worker + `manifest.json`. El build inyecta en el Service Worker los
+  chunks del arranque, así que la app arranca y las listas funcionan sin red; las pantallas perezosas
+  (social, panel, temas) quedan disponibles offline tras visitarlas una vez.
 - **Responsive** mobile-first (breakpoints en 1100 px y 1400 px).
 
 ## Stack
@@ -117,7 +119,10 @@ App estática pura (React + Vite). Configuración en el repo:
   `/assets/*` con cache inmutable (assets con hash); `service-worker.js` con revalidación.
 - **`public/_redirects`** — `/* /index.html 200` (fallback SPA para React Router).
 - **`public/service-worker.js`** — solo cachea GET same-origin y respuestas válidas; excluye APIs
-  externas (GitHub/Firebase) para no cachear datos sensibles.
+  externas (GitHub/Firebase) para no cachear datos sensibles. Los marcadores
+  `self.__SW_BUILD_ID__` / `self.__PRECACHE_ASSETS__` los sustituye en el build el plugin
+  `serviceWorkerPrecache` (`vite.config.ts`) por el identificador de build y la lista de chunks del
+  arranque; sin ellos la app no arrancaría sin red, y tanto el build como `npm run validate` fallan.
 - **`wrangler.toml`** — `pages_build_output_dir = ./dist`.
 
 Ajustes en el dashboard de Cloudflare Pages:
