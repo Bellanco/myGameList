@@ -100,6 +100,27 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
   paso, el paso a base64 se hace por bloques (`String.fromCharCode(...bytes)` desborda el stack con
   entradas grandes).
 
+### Performance
+- **Firestore en su variante `lite`**: el SDK completo traía ~108 kB comprimidos de maquinaria de tiempo
+  real y caché offline que esta app no usa (Firestore aquí es directorio de perfiles + grafo de amistad +
+  preferencias, todo con lecturas y escrituras puntuales; los datos pesados viven en Gists e IndexedDB, y
+  nunca se activó la persistencia offline). Chunk de firebase: **584 → 218 kB (173 → 65 kB comprimidos)**.
+  `lite` no tiene `onSnapshot`, así que `scripts/ci-validate.js` impide reintroducir el SDK completo por
+  descuido.
+- **La virtualización de la tabla de juegos ahora surte efecto.** No lo hacía en ningún caso: si scrolleaba
+  la página (móvil/tablet) se renderizaba la tabla entera a propósito, y en escritorio `.table-wrap` es
+  `overflow-y:auto` pero sin altura acotada, así que su `clientHeight` es la tabla completa y nunca
+  scrollea — el virtualizador de elemento tomaba como viewport todo el contenido y también pintaba todas
+  las filas. Ahora se mide quién scrollea de verdad en vez de deducirlo del CSS, y el caso de la ventana usa
+  `useWindowVirtualizer`. Medido en móvil con 800 juegos: **800 → 14 filas en el DOM, 33.600 → 590 nodos,
+  107 → 26 ms al reordenar**. Por debajo de 120 filas se sigue pintando todo (virtualizar no compensa).
+- Presupuesto de bytes del arranque en `npm run validate` (187 kB comprimidos hoy, tope 200): engordar la
+  carga inicial pasa a ser una decisión consciente y no el efecto colateral de un import.
+- Las etiquetas y los contadores de pestaña ya no se recalculan en cada guardado cuando lo único que cambia
+  es la meta del ciclo de sync, y se dejó de duplicar la biblioteca en memoria para recorrerla.
+- Los avatares del hub se cargan en diferido y con su hueco reservado: se pedían todos al abrir el feed y su
+  llegada desplazaba el texto de al lado.
+
 ### Changed
 - Los tests de reglas de Firestore (`npm run test:rules`) corren en CI. Eran la única barrera real del
   modelo de datos y no los comprobaba nada automáticamente.
