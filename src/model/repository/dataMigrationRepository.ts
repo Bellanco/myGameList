@@ -7,10 +7,15 @@ import { getSyncConfig } from './gistConfigRepository';
 /**
  * Runner de migración one-time (Vía A: LOCAL, sin Google).
  *
- * ⚠️ INERTE: no está cableado en el arranque; se invoca explícitamente cuando se decida cablear (paso 11),
- * y tras probar. Soporta `dryRun` (no escribe). Es **idempotente** (guardado por `migrationVersion`) y
- * **NO destructivo**: nunca borra `appState`/localStorage; solo PREPARA el store `games` (v3) en paralelo,
- * de modo que la app actual sigue funcionando contra `appState` durante toda la transición.
+ * ⚠️ SÍ está cableado: `main.tsx` lo lanza en el arranque, dentro de `requestIdleCallback`. (El comentario
+ * anterior decía que estaba inerte y llevaba tiempo sin ser verdad.) Importa saberlo porque lo convierte en un
+ * SEGUNDO escritor del store `games`, que puede solaparse con el espejo de un guardado del usuario: por eso
+ * `putGameRecord`/`putDeletedRecord` invalidan el índice del espejo incremental (ver
+ * `invalidateGamesMirrorIndex` en `indexedDbRepository`).
+ *
+ * Soporta `dryRun` (no escribe). Es **idempotente** (guardado por `migrationVersion`) y **NO destructivo**:
+ * nunca borra `appState`/localStorage; solo PREPARA el store `games` (v3) en paralelo, de modo que la app actual
+ * sigue funcionando contra `appState` durante toda la transición.
  *
  * La Vía B (Firestore/social: profileId, backup de token cifrado) vive en `firebaseRepository.ts`
  * (`backupGithubToken`, etc.) y solo aplica con sesión Google; aquí no se fuerza el login.
