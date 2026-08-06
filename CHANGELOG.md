@@ -41,6 +41,9 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
   pasa a ser un campo de una línea que crece al saltar de línea, con el mismo contador de caracteres
   que el análisis de un juego; se publica con el botón o con Ctrl/⌘+Enter.
 - **Tema claro "arena"** — paleta clara con tonos cálidos manteniendo el azul de marca.
+- **Nota en el listado de la vergüenza**: la puntuación de esa lista es opt-in y solo se veía al expandir la
+  fila; ahora tiene su columna, con la nota de los juegos que la tienen y nada en los que no. La columna aparece
+  solo si algún juego de la lista tiene nota, para no dejar una columna vacía a quien no puntúe ahí.
 - **Documentos legales** (`/legal/aviso`, `/legal/privacidad`, `/legal/cookies`) accesibles desde la
   app, con aceptación registrada por cuenta antes de activar lo social.
 - **Analítica opt-in**: Google Analytics no se inicializa hasta que se acepta en el aviso, y se
@@ -99,6 +102,27 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
   código que lo causó. Nadie usaba ese valor por defecto; ahora el secreto es obligatorio y explícito. De
   paso, el paso a base64 se hace por bloques (`String.fromCharCode(...bytes)` desborda el stack con
   entradas grandes).
+
+### Accessibility
+- **En móvil, un lector de pantalla solo oía el nombre del juego.** A ≤1400 px las celdas de datos son
+  `display:none` (fuera del árbol de accesibilidad) y el meta compacto que las sustituye estaba `aria-hidden`,
+  con el razonamiento de que "la info ya está en las columnas" —cierto en escritorio, falso en móvil—. Encima el
+  `aria-label` del botón de fila ganaba sobre el contenido, así que exponer el meta no habría bastado. Retirada
+  esa etiqueta: el nombre accesible sigue a lo que se ve en cada breakpoint, y `aria-expanded` ya anuncia el
+  estado plegado/desplegado.
+- **La puntuación no se anunciaba**: `StarRating` no tenía ninguna alternativa textual (se leía "★☆☆☆☆" carácter
+  a carácter) y los `aria-label` de `ScoreRing`/`NoScoreMedal` iban sobre un `<span>` sin rol, donde pueden
+  ignorarse. Los tres llevan `role="img"`.
+- **Las cuatro pestañas de listado se anunciaban como "1", "0", "0", "0"**: su título visible se oculta en
+  pantallas estrechas y solo quedaba el contador. Ahora tienen nombre explícito y `aria-current` para decir cuál
+  está activa, que hasta ahora era información puramente visual.
+- **Los avisos no se anunciaban**: la región viva se montaba junto con el mensaje, y una región viva solo anuncia
+  lo que cambia mientras ella existe. Ahora está siempre en el DOM.
+- Estructura que faltaba: un `<h1>` por pantalla (oculto visualmente, el diseño es headerless), enlace "saltar al
+  contenido", `<caption>` en la tabla, `scope="col"` en las cabeceras y un `<noscript>` en vez de una página en
+  blanco sin explicación.
+- Fuera el bloqueo de orientación del manifest, que impedía el apaisado en la PWA instalada (WCAG 1.3.4), y las
+  reglas de accesibilidad de ESLint pasan de `warn` a `error` con 14 reglas nuevas.
 
 ### Performance
 - **Tipografías servidas desde el propio origen.** La hoja de Google Fonts era una petición bloqueante a un
