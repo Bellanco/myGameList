@@ -258,21 +258,27 @@ export function useGameListViewModel() {
       e: data.e.length,
       p: data.p.length,
     }),
-    [data],
+    [data.c, data.v, data.e, data.p], // no `[data]`: cambia en cada guardado aunque no cambie ninguna lista
   );
 
+  // Se depende de las CUATRO listas, no del objeto `data` entero: `persist` estrena `data` en cada guardado
+  // (nuevo `updatedAt`), así que con `[data]` esto se recalculaba también cuando lo único que cambiaba era la meta
+  // (etag / lastRemoteUpdatedAt de un ciclo de sync), que no aporta ninguna etiqueta. Y se recorren las listas
+  // directamente, sin `[...c, ...v, ...e, ...p]`: esa copia duplicaba en memoria la biblioteca completa cada vez.
   const lookups = useMemo<LookupData>(() => {
     const genres = new Set<string>();
     const platforms = new Set<string>();
     const strengths = new Set<string>();
     const weaknesses = new Set<string>();
 
-    for (const game of [...data.c, ...data.v, ...data.e, ...data.p]) {
-      game.genres.forEach((value) => genres.add(value));
-      game.platforms.forEach((value) => platforms.add(value));
-      (game.strengths || []).forEach((value) => strengths.add(value));
-      (game.weaknesses || []).forEach((value) => weaknesses.add(value));
-      (game.reasons || []).forEach((value) => weaknesses.add(value));
+    for (const list of [data.c, data.v, data.e, data.p]) {
+      for (const game of list) {
+        game.genres.forEach((value) => genres.add(value));
+        game.platforms.forEach((value) => platforms.add(value));
+        (game.strengths || []).forEach((value) => strengths.add(value));
+        (game.weaknesses || []).forEach((value) => weaknesses.add(value));
+        (game.reasons || []).forEach((value) => weaknesses.add(value));
+      }
     }
 
     return {
@@ -281,7 +287,7 @@ export function useGameListViewModel() {
       strengths: [...strengths].sort(sortEs),
       weaknesses: [...weaknesses].sort(sortEs),
     };
-  }, [data]);
+  }, [data.c, data.v, data.e, data.p]);
 
   const tabActions: Record<TabId, TabAction[]> = TAB_ACTIONS;
 
