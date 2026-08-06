@@ -1,7 +1,7 @@
 import { Fragment, memo, useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useVirtualizer, useWindowVirtualizer } from '@tanstack/react-virtual';
 import { COMMON_ICONS, TAB_ICONS } from '../../core/constants/icons';
-import { UI_MESSAGES } from '../../core/constants/labels';
+import { TAB_TITLES, UI_MESSAGES } from '../../core/constants/labels';
 import type { GameItem, TabId, TabSort } from '../../model/types/game';
 import type { TabAction } from '../../viewmodel/useGameListViewModel';
 import { resolveGrade } from '../../core/utils/scoreScale';
@@ -294,6 +294,10 @@ export const GameTable = memo(function GameTable({
   return (
     <div className="table-wrap" ref={parentRef}>
       <table>
+        {/* A11y-4: la tabla no se anunciaba con ningún nombre, así que en la lista de tablas de un lector de
+            pantalla aparecía como "tabla" sin más. Con varias listas (completados, vergüenza, en curso…) el
+            nombre es lo único que las distingue. */}
+        <caption className="sr-only">{UI_MESSAGES.table.caption(TAB_TITLES[currentTab], games.length)}</caption>
         <thead>
           <tr>
             {getTableHeaders().map((header) => {
@@ -314,6 +318,10 @@ export const GameTable = memo(function GameTable({
               return (
                 <th
                   key={header}
+                  // A11y-4: `scope="col"` explícito. Sin él, la asociación celda↔cabecera depende de la
+                  // heurística del navegador, y es la que permite a un lector de pantalla decir "Plataformas: PC"
+                  // al recorrer una fila en vez de solo "PC".
+                  scope="col"
                   title={tip}
                   className={thClass || undefined}
                   aria-sort={isSorted ? (sort?.asc ? 'ascending' : 'descending') : sortable ? 'none' : undefined}
@@ -385,7 +393,15 @@ export const GameTable = memo(function GameTable({
                           className="row-toggle"
                           aria-expanded={expanded}
                           aria-controls={detailId}
-                          aria-label={UI_MESSAGES.table.rowDetailsAria(expanded, game.name)}
+                          // A11y-4: SIN `aria-label`. El nombre accesible sale del CONTENIDO del botón, y eso
+                          // importa por lo que pasa en móvil: ahí todas las celdas de datos son `display:none`
+                          // (así que no están en el árbol de accesibilidad) y el meta compacto de abajo es la
+                          // ÚNICA presentación de puntuación, plataformas, géneros y año. Como un `aria-label`
+                          // GANA sobre el contenido, con él un lector de pantalla en el móvil solo oía el nombre
+                          // del juego: el resto de la fila era invisible para él. Sin etiqueta explícita, el
+                          // nombre accesible sigue a lo que se ve en cada breakpoint (en escritorio, solo el
+                          // nombre, porque ahí el meta es el que está oculto y los datos están en sus columnas).
+                          // El estado plegado/desplegado ya lo anuncia `aria-expanded`, que es para lo que existe.
                           onClick={(event) => {
                             event.stopPropagation();
                             onExpandedChange(expanded ? null : game.id);
@@ -395,9 +411,12 @@ export const GameTable = memo(function GameTable({
                           <span className="row-toggle-body">
                             <strong className="row-name">{game.name}</strong>
                             {/* Meta compacto solo en vista colapsada (móvil/tablet); revela categorías
-                                según el ancho disponible vía container queries. aria-hidden: la info ya
-                                está en las columnas/detalle y el botón anuncia el nombre. */}
-                            <span className="row-meta" aria-hidden="true">
+                                según el ancho disponible vía container queries. A11y-4: ya NO va
+                                `aria-hidden`. Lo llevaba con el razonamiento de que "la info ya está en las
+                                columnas", que es cierto en escritorio y falso en móvil: ahí las columnas son
+                                `display:none` y esto es lo único que queda, así que ocultarlo dejaba a un
+                                lector de pantalla sin la puntuación ni las plataformas. */}
+                            <span className="row-meta">
                               {(currentTab === 'c' || currentTab === 'p') && resolveGrade(game) > 0 ? (
                                 <span className="row-meta-item rm-score">
                                   <ScoreDisplay game={game} />

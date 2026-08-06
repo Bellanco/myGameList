@@ -54,13 +54,31 @@ module.exports = [
       "react/jsx-uses-react": "off",
       "react/react-in-jsx-scope": "off",
       
-      // Accessibility rules - warn level for gradual adoption
-      "jsx-a11y/click-events-have-key-events": "warn",
-      "jsx-a11y/no-static-element-interactions": "warn",
-      "jsx-a11y/interactive-supports-focus": "warn",
-      "jsx-a11y/label-has-associated-control": "warn",
-      "jsx-a11y/anchor-is-valid": "warn",
-      "jsx-a11y/no-noninteractive-element-to-interactive-role": "warn"
+      // Accesibilidad. Estaban en "warn" para adopción gradual; ya no hay ninguna violación, así que pasan a
+      // "error": la adopción gradual solo sirve mientras queda algo que arreglar, y a partir de ahí un `warn` es
+      // una regla que no impide la regresión (nadie falla el build por un aviso).
+      "jsx-a11y/click-events-have-key-events": "error",
+      "jsx-a11y/no-static-element-interactions": "error",
+      "jsx-a11y/interactive-supports-focus": "error",
+      "jsx-a11y/label-has-associated-control": "error",
+      "jsx-a11y/anchor-is-valid": "error",
+      "jsx-a11y/no-noninteractive-element-to-interactive-role": "error",
+      // Reglas añadidas: cubren las clases de error que este repaso encontró a mano (ARIA sobre elementos que no
+      // la exponen, roles sin sus propiedades obligatorias, alternativas textuales ausentes) para que no vuelvan.
+      "jsx-a11y/alt-text": "error",
+      "jsx-a11y/aria-props": "error",
+      "jsx-a11y/aria-proptypes": "error",
+      "jsx-a11y/aria-role": "error",
+      "jsx-a11y/aria-unsupported-elements": "error",
+      "jsx-a11y/heading-has-content": "error",
+      "jsx-a11y/html-has-lang": "error",
+      "jsx-a11y/iframe-has-title": "error",
+      "jsx-a11y/no-autofocus": "error",
+      "jsx-a11y/no-redundant-roles": "error",
+      "jsx-a11y/role-has-required-aria-props": "error",
+      "jsx-a11y/role-supports-aria-props": "error",
+      "jsx-a11y/scope": "error",
+      "jsx-a11y/tabindex-no-positive": "error"
     }
   }
 ];

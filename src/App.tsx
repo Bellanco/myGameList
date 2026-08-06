@@ -76,6 +76,17 @@ function getCurrentSection(pathname: string): AppSection {
   return 'lists';
 }
 
+/**
+ * A11y-4 — Encabezado de nivel 1 de la pantalla actual. Va oculto visualmente (el diseño es "headerless" a
+ * propósito): no cambia nada de lo que se ve y le da a un lector de pantalla el encabezado que ninguna pantalla
+ * tenía. En los listados incluye la pestaña activa, que es lo que de verdad distingue una vista de otra.
+ */
+function getPageHeading(section: AppSection, currentTab: TabId): string {
+  const H = UI_MESSAGES.pageHeading;
+  if (section === 'lists') return H.lists(TAB_TITLES[currentTab]);
+  return H[section];
+}
+
 /** L4 — documento legal correspondiente a la ruta (`/legal/*`). Por defecto, el aviso legal. */
 function getLegalDocId(pathname: string): LegalDocId {
   const match = (Object.keys(LEGAL_ROUTES) as LegalDocId[]).find((id) => pathname.startsWith(LEGAL_ROUTES[id]));
@@ -594,6 +605,9 @@ export default function App() {
   return (
     <>
       <IconSprite />
+      {/* A11y-4: primer elemento enfocable de la página. Sin él, llegar al contenido con teclado obligaba a pasar
+          por los controles flotantes y la barra de pestañas en cada carga. Solo se ve al recibir el foco. */}
+      <a className="skip-link" href="#contenido">{UI_MESSAGES.skipToContent}</a>
       <FloatingControls
         activeSection={activeSection}
         onSectionChange={handleSectionChange}
@@ -602,6 +616,7 @@ export default function App() {
       {activeSection === 'lists' ? <TabBar currentTab={currentTab} tabCounts={vm.tabCounts} onTabChange={handleTabChange} /> : null}
       <StatusBanner notice={vm.notice} remoteChangesApplied={syncVm.lastRemoteChangesApplied} />
       <main
+        id="contenido"
         className={`main ${
           activeSection === 'lists'
             ? 'main-lists'
@@ -612,6 +627,7 @@ export default function App() {
                 : 'main-settings'
         }`.trim()}
       >
+        <h1 className="sr-only">{getPageHeading(activeSection, currentTab)}</h1>
         {activeSection === 'lists' ? (
           <>
             <Toolbar
