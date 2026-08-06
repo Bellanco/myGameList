@@ -114,6 +114,15 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
   las filas. Ahora se mide quién scrollea de verdad en vez de deducirlo del CSS, y el caso de la ventana usa
   `useWindowVirtualizer`. Medido en móvil con 800 juegos: **800 → 14 filas en el DOM, 33.600 → 590 nodos,
   107 → 26 ms al reordenar**. Por debajo de 120 filas se sigue pintando todo (virtualizar no compensa).
+- **El espejo del store `games` escribe solo lo que cambia.** Corría en cada guardado reemplazando el store
+  completo (`clear` + un `put` por juego), así que editar la nota de un juego costaba tantas escrituras como
+  juegos hubiera en la biblioteca. Ahora se recuerda en memoria lo espejado y se compara contra `_ts`, el
+  marcador de versión LWW que toda ruta de edición estrena. Medido con 800 juegos: del segundo guardado en
+  adelante, **800 → 1 escritura y 37 → 7 ms de transacción**; el primero de cada sesión sigue reemplazando,
+  porque el índice arranca sin saber qué hay en el store y esa es la posición segura. De paso,
+  `gamesUpdatedAt` (el sello con el que el arranque decide si ese store puede servir de recuperación) pasa a
+  escribirse en la MISMA transacción que los datos, así que ya no puede afirmar que el store está al día si
+  no lo está.
 - Presupuesto de bytes del arranque en `npm run validate` (187 kB comprimidos hoy, tope 200): engordar la
   carga inicial pasa a ser una decisión consciente y no el efecto colateral de un import.
 - Las etiquetas y los contadores de pestaña ya no se recalculan en cada guardado cuando lo único que cambia
