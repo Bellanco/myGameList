@@ -34,8 +34,16 @@ interface EncryptedData {
   salt?: string; // Base64 — presente desde v2 (salt aleatorio por mensaje)
 }
 
+// Troceado como en `core/utils/gistCompression`: `String.fromCharCode(...bytes)` pasa el array entero como
+// argumentos y desborda el stack con entradas grandes. Hoy aquí solo pasan tokens (decenas de bytes), pero el
+// límite depende del tamaño del dato cifrado, así que el fallo estaría latente esperando al primer payload gordo.
 function bytesToBase64(bytes: Uint8Array): string {
-  return btoa(String.fromCharCode(...bytes));
+  let binary = '';
+  const CHUNK = 0x8000; // 32 KiB por bloque
+  for (let i = 0; i < bytes.length; i += CHUNK) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + CHUNK));
+  }
+  return btoa(binary);
 }
 
 function base64ToBytes(b64: string): Uint8Array<ArrayBuffer> {
@@ -64,25 +72,20 @@ async function deriveKey(password: string, salt: Uint8Array<ArrayBuffer>, iterat
 }
 
 /**
- * Obtiene o genera una clave maestra para esta sesión.
- * Se basa en información del navegador para crear una clave única por dispositivo.
- * NOTA: Esto NO es una clave de usuario, es una clave de sesión local.
- */
-function getSessionSeed(): string {
-  const ua = navigator.userAgent;
-  const lang = navigator.language;
-  const tz = new Date().getTimezoneOffset().toString();
-  return `${ua}|${lang}|${tz}`;
-}
-
-/**
- * Encripta datos de forma simétrica.
- * Los datos se encriptan con AES-GCM usando una clave derivada de la sesión.
- * 
+ * Encripta datos de forma simétrica con AES-GCM y una clave derivada de `seed` por PBKDF2.
+ *
+ * `seed` es OBLIGATORIO a propósito. Antes había un valor por defecto derivado del entorno del navegador
+ * (`userAgent|language|timezoneOffset`), y era una trampa: el `userAgent` cambia con CADA actualización del
+ * navegador, así que cualquier dato cifrado con esa semilla quedaba ilegible para siempre en cuanto Chrome se
+ * actualizaba —y el fallo aparecería semanas después, lejos del código que lo causó—. Para secretos LOCALES
+ * usa `encryptWithDeviceKey` (clave aleatoria no exportable, sin este problema); para datos que deban viajar
+ * entre dispositivos, pasa un secreto estable explícito (p. ej. el uid).
+ *
  * @param plaintext - Texto a encriptar (típicamente JSON stringificado)
+ * @param seed - Secreto del que se deriva la clave. Debe ser reproducible allí donde haya que descifrar.
  * @returns Objeto con IV y ciphertext en Base64
  */
-export async function encrypt(plaintext: string, seed: string = getSessionSeed()): Promise<EncryptedData> {
+export async function encrypt(plaintext: string, seed: string): Promise<EncryptedData> {
   try {
     const salt = crypto.getRandomValues(new Uint8Array(SALT_LENGTH));
     const key = await deriveKey(seed, salt, PBKDF2_ITERATIONS_V2);
@@ -109,12 +112,13 @@ export async function encrypt(plaintext: string, seed: string = getSessionSeed()
 }
 
 /**
- * Desencripta datos encriptados.
- * 
+ * Desencripta datos producidos por `encrypt`. `seed` es el MISMO secreto que se usó al cifrar (obligatorio, por
+ * el mismo motivo explicado en `encrypt`).
+ *
  * @param encrypted - Objeto con IV y ciphertext en Base64
  * @returns Texto desencriptado
  */
-export async function decrypt(encrypted: EncryptedData, seed: string = getSessionSeed()): Promise<string> {
+export async function decrypt(encrypted: EncryptedData, seed: string): Promise<string> {
   try {
     let salt: Uint8Array<ArrayBuffer>;
     let iterations: number;
