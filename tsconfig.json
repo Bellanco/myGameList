@@ -22,5 +22,8 @@
     "jsx": "react-jsx"
   },
   "include": ["src/**/*.ts", "src/**/*.tsx", "tests/**/*.ts", "tests/**/*.tsx"],
-  "exclude": ["node_modules", "dist", "tests/e2e", "tests/integration"]
+  // `tests/e2e` ya entra: con `@playwright/test` instalado tiene tipos y su smoke no usa APIs de Node.
+  // `tests/integration` sigue fuera: `adminTags.test.ts` necesita Playwright con la forma vieja y el test de
+  // reglas usa `node:fs`, que exigiría `@types/node` (y con él cambiar los tipos globales de todo el proyecto).
+  "exclude": ["node_modules", "dist", "tests/integration"]
 }
