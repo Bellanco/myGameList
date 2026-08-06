@@ -15,6 +15,7 @@
     "test:coverage": "vitest run --coverage",
     "lint": "eslint src tests --fix",
     "audit:privacy": "node scripts/audit-privacy.js",
+    "audit:rules": "node scripts/audit-profile-rules.mjs",
     "typecheck": "tsc --noEmit",
     "test:rules": "firebase emulators:exec --only firestore \"vitest run --config vitest.rules.config.js\"",
     "emulators": "firebase emulators:start --only firestore"
