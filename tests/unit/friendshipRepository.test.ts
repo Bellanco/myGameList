@@ -12,7 +12,7 @@ vi.mock('../../src/model/repository/firebaseClient', () => ({
     Boolean(error && typeof error === 'object' && (error as { code?: string }).code === 'permission-denied'),
 }));
 
-vi.mock('firebase/firestore', () => ({
+vi.mock('firebase/firestore/lite', () => ({
   collection: vi.fn(() => ({})),
   query: vi.fn((...args: unknown[]) => args),
   where: vi.fn((...args: unknown[]) => args),

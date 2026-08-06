@@ -11,7 +11,7 @@
 // PRIVACIDAD: del `email` legacy que arrastran los perfiles antiguos solo se expone si EXISTE, nunca su valor.
 // Para purgarlo no hace falta leerlo, y no tiene sentido volver a pasear PII por el cliente para enseñarla en una
 // tabla. Lo mismo con el id del gist de juegos y con el token en claro legacy.
-import { collection, deleteDoc, deleteField, doc, getDoc, getDocs, limit, query, updateDoc, where, writeBatch } from 'firebase/firestore';
+import { collection, deleteDoc, deleteField, doc, getDoc, getDocs, limit, query, updateDoc, where, writeBatch } from 'firebase/firestore/lite';
 import { DEFAULT_PROFILE_TIER, normalizeTier, type ProfileTier } from '../../core/constants/tiers';
 // La versión vigente se comparte con quien la sella (`firebaseRepository` y el saneado del arranque): con un espejo
 // propio, subirla allí habría dejado de marcar aquí a los perfiles pendientes de migrar.
@@ -201,7 +201,7 @@ async function requireServices() {
  * Amistades agregadas por uid. Una única lectura de la colección entera: el admin las ve todas (regla `isAdmin()`),
  * y contarlas en el cliente evita N consultas (una por usuario) para un dato que es puramente informativo.
  */
-async function tallyFriendships(firestore: import('firebase/firestore').Firestore): Promise<FriendshipTally> {
+async function tallyFriendships(firestore: import('firebase/firestore/lite').Firestore): Promise<FriendshipTally> {
   const snapshot = await getDocs(collection(firestore, 'friendships'));
   const byUid = new Map<string, FriendshipFacts>();
   let total = 0;

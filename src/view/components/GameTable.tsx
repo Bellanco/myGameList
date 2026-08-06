@@ -1,7 +1,7 @@
-import { Fragment, memo, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { useVirtualizer } from '@tanstack/react-virtual';
+import { Fragment, memo, useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useVirtualizer, useWindowVirtualizer } from '@tanstack/react-virtual';
 import { COMMON_ICONS, TAB_ICONS } from '../../core/constants/icons';
-import { UI_MESSAGES } from '../../core/constants/labels';
+import { TAB_TITLES, UI_MESSAGES } from '../../core/constants/labels';
 import type { GameItem, TabId, TabSort } from '../../model/types/game';
 import type { TabAction } from '../../viewmodel/useGameListViewModel';
 import { resolveGrade } from '../../core/utils/scoreScale';
@@ -142,6 +142,21 @@ export const GameTable = memo(function GameTable({
   // se comparten con otras pestañas, que no llevan estas clases de peso/ocultación).
   const cCol = (cls: string | undefined) => (currentTab === 'c' ? cls : undefined);
 
+  // ¿Tiene este juego una nota que mostrar? En la vergüenza la puntuación es OPT-IN (el check del formulario), y
+  // los no puntuados se guardan con nota 0, así que basta con mirar la nota efectiva. Se comprueba así, y no por
+  // el flag `scored`, porque los juegos guardados ANTES de que ese flag existiera tienen nota pero no flag: con
+  // `scored` se les ocultaría una nota que sí pusieron.
+  const hasScore = (game: GameItem) => resolveGrade(game) > 0;
+
+  // La columna de puntuación de la vergüenza solo aparece si ALGÚN juego de la lista tiene nota. Como la
+  // puntuación ahí es opcional, a quien no la use una columna permanentemente vacía le sobraría; y quien sí la
+  // use la ve en cuanto puntúa el primero. Es el mismo patrón que `showYears`/`showReplayable`, pero decidido por
+  // los datos en vez de por una preferencia.
+  const showShameScore = useMemo(
+    () => currentTab === 'v' && games.some((game) => resolveGrade(game) > 0),
+    [currentTab, games],
+  );
+
   const getTableHeaders = (): string[] => {
     if (currentTab === 'c') {
       return [
@@ -162,6 +177,7 @@ export const GameTable = memo(function GameTable({
         'Géneros',
         'Puntos fuertes',
         'Puntos débiles',
+        ...(showShameScore ? ['Puntuación'] : []),
         ...(showRetry ? ['Dar otra oportunidad'] : []),
       ];
     }
@@ -172,7 +188,7 @@ export const GameTable = memo(function GameTable({
   const supportsReview = (tab: TabId) => tab !== 'p';
   const getColSpan = (tab: TabId) => {
     if (tab === 'c') return 6 + (showYears ? 1 : 0) + (showReplayable ? 1 : 0);
-    if (tab === 'v') return 5 + (showRetry ? 1 : 0);
+    if (tab === 'v') return 5 + (showShameScore ? 1 : 0) + (showRetry ? 1 : 0);
     if (tab === 'e') return 5;
     return 4;
   };
@@ -191,48 +207,98 @@ export const GameTable = memo(function GameTable({
 
   const parentRef = useRef<HTMLDivElement>(null);
 
-  // En móvil/tablet (≤1400px) `.table-wrap` se declara `overflow:visible`: quien scrollea es la
-  // ventana, no este contenedor. El virtualizador de elemento necesita un scroll-container propio;
-  // apuntado a un elemento no-scrollable sus medidas dependen del motor (Chromium reporta la altura
-  // completa y pinta todo; Firefox deja un spacer final que infla el contenedor). Por eso solo
-  // virtualizamos cuando `.table-wrap` es realmente scrollable; si scrollea la página, render plano.
-  const [pageScrolls, setPageScrolls] = useState(false);
+  // QUIÉN SCROLLEA DE VERDAD. Hay dos virtualizadores y no son intercambiables: el de elemento necesita un
+  // contenedor que scrollee, y apuntado a uno que no scrollea toma como viewport TODO el contenido y pinta todas
+  // las filas (justo lo que se quería evitar).
+  //
+  // Se mide, no se deduce del CSS. Antes se leía `overflow-y === 'visible'` y eso daba dos falsos negativos:
+  //  - en móvil/tablet `.table-wrap` es `overflow:visible` → se detectaba bien, pero el código renderizaba la
+  //    tabla ENTERA a propósito (sin virtualizador de ventana): las bibliotecas grandes pintaban miles de filas
+  //    precisamente en los dispositivos más lentos;
+  //  - en escritorio es `overflow-y:auto` pero SIN altura acotada (es un `flex:1 1 auto` cuyo padre no limita la
+  //    altura), así que su `clientHeight` es la tabla completa y tampoco scrollea nunca. Se detectaba como
+  //    "scrollea el contenedor" y el virtualizador de elemento se quedaba sin efecto: también pintaba todo.
+  // Resultado: la virtualización no estaba haciendo nada en ninguno de los dos casos. `scrollHeight >
+  // clientHeight` distingue el caso real y sigue valiendo si algún día se acota la altura por CSS.
+  const [pageScrolls, setPageScrolls] = useState(true);
+  // Desplazamiento del inicio de la tabla dentro del documento: el virtualizador de ventana trabaja en
+  // coordenadas de página, así que sin esto sus posiciones vendrían corridas por la altura de lo que hay encima
+  // (barra de pestañas, toolbar, filtros abiertos…).
+  const [scrollMargin, setScrollMargin] = useState(0);
   useLayoutEffect(() => {
     const update = () => {
       const el = parentRef.current;
-      if (el) setPageScrolls(getComputedStyle(el).overflowY === 'visible');
+      if (!el) return;
+      setPageScrolls(el.scrollHeight <= el.clientHeight + 1);
+      setScrollMargin(el.getBoundingClientRect().top + window.scrollY);
     };
     update();
     window.addEventListener('resize', update);
-    return () => window.removeEventListener('resize', update);
+    // La toolbar y el panel de filtros cambian de alto sin que la tabla se entere (abrir filtros, envolver
+    // chips): eso mueve el inicio de la tabla, así que hay que recalcular el margen cuando el layout cambia.
+    const observer = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(update) : null;
+    observer?.observe(document.body);
+    return () => {
+      window.removeEventListener('resize', update);
+      observer?.disconnect();
+    };
   }, []);
-  const virtualize = !pageScrolls;
 
-  const virtualizer = useVirtualizer({
-    count: virtualRows.length,
-    getScrollElement: () => parentRef.current,
-    measureElement: (element) => element.getBoundingClientRect().height,
-    // Clave ESTABLE por fila lógica (tipo + id), no por índice: al expandir/plegar el detalle se
-    // inserta/quita una fila y TODOS los índices posteriores se desplazan. Sin clave estable, el
-    // virtualizador reasigna las alturas cacheadas por índice a filas distintas (una fila normal ~50px
-    // hereda la altura de un detalle ~320px, o al revés) → el tamaño total se infla, aparecen huecos y
-    // filas inalcanzables al final. Con la clave, cada fila conserva su medida al cambiar de posición.
-    getItemKey: (index) => {
+  // Por debajo de este número de filas se pinta la tabla entera aunque scrollee la página: virtualizar tiene su
+  // propio coste (medición, spacers, re-render al scrollear) y con pocas filas no compensa. También mantiene el
+  // comportamiento exacto de siempre en listas cortas, que son la mayoría.
+  const WINDOW_VIRTUALIZE_MIN_ROWS = 120;
+
+  // Clave ESTABLE por fila lógica (tipo + id), no por índice: al expandir/plegar el detalle se inserta/quita una
+  // fila y TODOS los índices posteriores se desplazan. Sin clave estable, el virtualizador reasigna las alturas
+  // cacheadas por índice a filas distintas (una fila normal ~50px hereda la altura de un detalle ~320px, o al
+  // revés) → el tamaño total se infla, aparecen huecos y filas inalcanzables al final. Con la clave, cada fila
+  // conserva su medida al cambiar de posición. Compartida por los dos virtualizadores.
+  const getItemKey = useCallback(
+    (index: number) => {
       const row = virtualRows[index];
       return row ? `${row.type}-${row.gameId}` : index;
     },
-    estimateSize: (index) => {
-      const row = virtualRows[index];
-      return row?.type === 'detail' ? 320 : 50;
-    },
+    [virtualRows],
+  );
+  const estimateSize = useCallback(
+    (index: number) => (virtualRows[index]?.type === 'detail' ? 320 : 50),
+    [virtualRows],
+  );
+  const measureElement = useCallback((element: Element) => element.getBoundingClientRect().height, []);
+
+  const elementVirtualizer = useVirtualizer({
+    count: virtualRows.length,
+    getScrollElement: () => parentRef.current,
+    measureElement,
+    getItemKey,
+    estimateSize,
     overscan: 5,
   });
 
+  const windowVirtualizer = useWindowVirtualizer({
+    count: virtualRows.length,
+    measureElement,
+    getItemKey,
+    estimateSize,
+    scrollMargin,
+    overscan: 5,
+  });
+
+  const useWindowScroller = pageScrolls && virtualRows.length >= WINDOW_VIRTUALIZE_MIN_ROWS;
+  const virtualize = !pageScrolls || useWindowScroller;
+  const virtualizer = useWindowScroller ? windowVirtualizer : elementVirtualizer;
+  // El virtualizador de ventana devuelve posiciones ABSOLUTAS del documento; los spacers son relativos al inicio
+  // de la tabla, así que hay que descontar el margen. El de elemento ya trabaja en coordenadas del contenedor.
+  const originOffset = useWindowScroller ? scrollMargin : 0;
+
   const virtualRowEntries = virtualizer.getVirtualItems();
   const totalSize = virtualizer.getTotalSize();
-  const topSpacerHeight = virtualRowEntries.length > 0 ? virtualRowEntries[0].start : 0;
+  const topSpacerHeight = virtualRowEntries.length > 0 ? virtualRowEntries[0].start - originOffset : 0;
   const bottomSpacerHeight =
-    virtualRowEntries.length > 0 ? totalSize - virtualRowEntries[virtualRowEntries.length - 1].end : 0;
+    virtualRowEntries.length > 0 ? totalSize - (virtualRowEntries[virtualRowEntries.length - 1].end - originOffset) : 0;
+  // Red de seguridad: si el virtualizador elegido no devuelve nada habiendo filas (medidas degeneradas, entorno
+  // sin layout), se pinta todo antes que dejar la tabla vacía.
   const fallbackToFullRender =
     !virtualize || (games.length > 0 && virtualRows.length > 0 && virtualRowEntries.length === 0);
   const rowIndexesToRender = fallbackToFullRender
@@ -244,6 +310,10 @@ export const GameTable = memo(function GameTable({
   return (
     <div className="table-wrap" ref={parentRef}>
       <table>
+        {/* A11y-4: la tabla no se anunciaba con ningún nombre, así que en la lista de tablas de un lector de
+            pantalla aparecía como "tabla" sin más. Con varias listas (completados, vergüenza, en curso…) el
+            nombre es lo único que las distingue. */}
+        <caption className="sr-only">{UI_MESSAGES.table.caption(TAB_TITLES[currentTab], games.length)}</caption>
         <thead>
           <tr>
             {getTableHeaders().map((header) => {
@@ -264,6 +334,10 @@ export const GameTable = memo(function GameTable({
               return (
                 <th
                   key={header}
+                  // A11y-4: `scope="col"` explícito. Sin él, la asociación celda↔cabecera depende de la
+                  // heurística del navegador, y es la que permite a un lector de pantalla decir "Plataformas: PC"
+                  // al recorrer una fila en vez de solo "PC".
+                  scope="col"
                   title={tip}
                   className={thClass || undefined}
                   aria-sort={isSorted ? (sort?.asc ? 'ascending' : 'descending') : sortable ? 'none' : undefined}
@@ -335,7 +409,15 @@ export const GameTable = memo(function GameTable({
                           className="row-toggle"
                           aria-expanded={expanded}
                           aria-controls={detailId}
-                          aria-label={UI_MESSAGES.table.rowDetailsAria(expanded, game.name)}
+                          // A11y-4: SIN `aria-label`. El nombre accesible sale del CONTENIDO del botón, y eso
+                          // importa por lo que pasa en móvil: ahí todas las celdas de datos son `display:none`
+                          // (así que no están en el árbol de accesibilidad) y el meta compacto de abajo es la
+                          // ÚNICA presentación de puntuación, plataformas, géneros y año. Como un `aria-label`
+                          // GANA sobre el contenido, con él un lector de pantalla en el móvil solo oía el nombre
+                          // del juego: el resto de la fila era invisible para él. Sin etiqueta explícita, el
+                          // nombre accesible sigue a lo que se ve en cada breakpoint (en escritorio, solo el
+                          // nombre, porque ahí el meta es el que está oculto y los datos están en sus columnas).
+                          // El estado plegado/desplegado ya lo anuncia `aria-expanded`, que es para lo que existe.
                           onClick={(event) => {
                             event.stopPropagation();
                             onExpandedChange(expanded ? null : game.id);
@@ -345,10 +427,16 @@ export const GameTable = memo(function GameTable({
                           <span className="row-toggle-body">
                             <strong className="row-name">{game.name}</strong>
                             {/* Meta compacto solo en vista colapsada (móvil/tablet); revela categorías
-                                según el ancho disponible vía container queries. aria-hidden: la info ya
-                                está en las columnas/detalle y el botón anuncia el nombre. */}
-                            <span className="row-meta" aria-hidden="true">
-                              {(currentTab === 'c' || currentTab === 'p') && resolveGrade(game) > 0 ? (
+                                según el ancho disponible vía container queries. A11y-4: ya NO va
+                                `aria-hidden`. Lo llevaba con el razonamiento de que "la info ya está en las
+                                columnas", que es cierto en escritorio y falso en móvil: ahí las columnas son
+                                `display:none` y esto es lo único que queda, así que ocultarlo dejaba a un
+                                lector de pantalla sin la puntuación ni las plataformas. */}
+                            <span className="row-meta">
+                              {/* En móvil este meta es la ÚNICA presentación de la nota (las columnas son
+                                  display:none), así que la vergüenza entra aquí con el mismo criterio que en su
+                                  columna: solo si el juego tiene nota. */}
+                              {(currentTab === 'c' || currentTab === 'p' || currentTab === 'v') && hasScore(game) ? (
                                 <span className="row-meta-item rm-score">
                                   <ScoreDisplay game={game} />
                                 </span>
@@ -377,6 +465,9 @@ export const GameTable = memo(function GameTable({
                       ) : null}
                       {currentTab === 'v' ? <td>{renderTags(game.reasons || [], 'chip-pd', MAX_ROW_CHIPS)}</td> : null}
                       {(currentTab === 'c' || currentTab === 'p') ? <td className={cCol('col-c-score')}><ScoreDisplay game={game} /></td> : null}
+                      {/* Vergüenza: la nota, y solo si el juego la tiene (los no puntuados dejan la celda vacía,
+                          sin estrellas a cero ni guion, que darían a entender una puntuación de 0). */}
+                      {showShameScore ? <td>{hasScore(game) ? <ScoreDisplay game={game} /> : null}</td> : null}
                       {currentTab === 'c' && showReplayable ? <td className="col-c-replay">{renderBooleanBadge('replayable', Boolean(game.replayable))}</td> : null}
                       {currentTab === 'v' && showRetry ? <td>{renderBooleanBadge('retry', Boolean(game.retry))}</td> : null}
                     </tr>

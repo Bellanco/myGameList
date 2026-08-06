@@ -36,7 +36,7 @@ vi.mock('../../src/model/repository/gistRepository', () => ({
   probeSocialGistEvidence: vi.fn(),
 }));
 
-vi.mock('firebase/firestore', () => ({
+vi.mock('firebase/firestore/lite', () => ({
   doc: (_fs: unknown, collection: string, id: string) => ({ collection, id }),
   // El latido de recencia comprueba que el doc exista antes de tocarlo.
   getDoc: vi.fn(async () => ({ exists: () => true, data: () => ({}) })),

@@ -7,11 +7,14 @@ import {
   initializeTestEnvironment,
   type RulesTestEnvironment,
 } from '@firebase/rules-unit-testing';
-import { collection, deleteDoc, deleteField, doc, getDoc, getDocs, query, setDoc, updateDoc, where } from 'firebase/firestore';
+import { collection, deleteDoc, deleteField, doc, getDoc, getDocs, query, serverTimestamp, setDoc, updateDoc, where } from 'firebase/firestore';
 import { ADMIN_EMAIL } from '../../src/core/security/admin';
+import { PUBLIC_NAME_MAX_LENGTH } from '../../src/core/security/sanitize';
 
 // Test de integración: requiere el emulador de Firestore. Ejecutar con `npm run test:rules`.
 // Valida las reglas REALES desplegables (perfiles, privateConfig/userMap solo-dueño, admin, catch-all).
+
+const rulesSource = readFileSync(fileURLToPath(new URL('../../firestore.rules', import.meta.url)), 'utf8');
 
 describe('firestore.rules', () => {
   let env: RulesTestEnvironment;
@@ -19,9 +22,7 @@ describe('firestore.rules', () => {
   beforeAll(async () => {
     env = await initializeTestEnvironment({
       projectId: 'mygamelist-rules-test',
-      firestore: {
-        rules: readFileSync(fileURLToPath(new URL('../../firestore.rules', import.meta.url)), 'utf8'),
-      },
+      firestore: { rules: rulesSource },
     });
   });
   afterEach(async () => { await env.clearFirestore(); });
@@ -215,6 +216,93 @@ describe('firestore.rules', () => {
       await assertFails(updateDoc(doc(ownerDb('uid-a'), 'profiles', 'uid-a'), {
         uid: 'uid-a', schemaVersion: 1, tier: deleteField(),
       }));
+    });
+  });
+
+  // C7 — La allowlist de claves (`hasOnly`) impedía inventarse campos, pero no acotaba su CONTENIDO. Como
+  // `profiles` lo lee todo el directorio social, un cliente autenticado hostil podía usar su propio documento
+  // para inflar lo que descargan los demás (un `displayName` enorme) o para colar una URL `javascript:` en el
+  // `<img src>` de sus avatares. Estos tests fijan los dos lados: lo legítimo sigue pasando, el abuso no.
+  describe('C7 — contenido del perfil (tipo y tamaño)', () => {
+    const big = (n: number) => 'x'.repeat(n);
+
+    // El cliente recorta el nombre público a este límite ANTES de escribir (`resolvePublicName`). Si los dos
+    // números se separan, o el cliente escribe algo que la regla deniega (guardado de perfil roto sin
+    // explicación para el usuario) o la regla admite más de lo que el cliente considera válido.
+    it('el límite del nombre público del cliente y el de las reglas son el mismo', () => {
+      expect(PUBLIC_NAME_MAX_LENGTH).toBe(120);
+      expect(rulesSource).toContain(`request.resource.data.displayName.size() <= ${PUBLIC_NAME_MAX_LENGTH}`);
+    });
+
+    it('rechaza un displayName desmedido y acepta uno normal', async () => {
+      await assertSucceeds(setDoc(doc(ownerDb('uid-a'), 'profiles', 'uid-a'), {
+        uid: 'uid-a', displayName: 'Ada Lovelace', social: { enabled: true },
+      }));
+      await assertFails(setDoc(doc(ownerDb('uid-a'), 'profiles', 'uid-a'), {
+        uid: 'uid-a', displayName: big(121), social: { enabled: true },
+      }));
+      await assertFails(setDoc(doc(ownerDb('uid-a'), 'profiles', 'uid-a'), {
+        uid: 'uid-a', displayName: big(200_000), social: { enabled: true },
+      }));
+    });
+
+    // El único campo del perfil que acaba en un atributo de URL. Es la frontera anti-XSS del directorio.
+    it('la foto tiene que ser https (o vacía): rechaza javascript:, data: y http://', async () => {
+      const withPhoto = (photoURL: unknown) => setDoc(doc(ownerDb('uid-a'), 'profiles', 'uid-a'), {
+        uid: 'uid-a', photoURL, social: { enabled: true },
+      });
+
+      await assertSucceeds(withPhoto('https://lh3.googleusercontent.com/a/foto'));
+      await assertSucceeds(withPhoto(''));
+      await assertFails(withPhoto('javascript:alert(1)'));
+      await assertFails(withPhoto('data:text/html;base64,PHNjcmlwdD4='));
+      await assertFails(withPhoto('http://insegura.example/foto'));
+      await assertFails(withPhoto(`https://x.example/${big(512)}`));
+      await assertFails(withPhoto(42));
+    });
+
+    it('rechaza tipos equivocados en los campos de identidad y en las fechas', async () => {
+      const write = (extra: Record<string, unknown>) => setDoc(doc(ownerDb('uid-a'), 'profiles', 'uid-a'), {
+        uid: 'uid-a', social: { enabled: true }, ...extra,
+      });
+
+      await assertFails(write({ displayName: 123 }));
+      await assertFails(write({ profileId: big(129) }));
+      await assertFails(write({ schemaVersion: 'uno' }));
+      await assertFails(write({ email: big(321) }));
+      await assertFails(write({ updatedAt: 'ayer' }));
+      await assertFails(write({ social: { enabled: 'sí' } }));
+      await assertFails(write({ social: { enabled: true, etag: big(257) } }));
+      await assertFails(write({ social: { enabled: true, gistId: big(129) } }));
+    });
+
+    // Lo que NO puede pasar es que la validación nueva congele perfiles reales. `serverTimestamp()` llega a las
+    // reglas como timestamp (no como número), y los documentos legacy traen campos que las escrituras nuevas ya
+    // no mandan: si algo de esto se denegara, el auto-saneado del arranque —que existe justo para limpiarlos—
+    // dejaría de funcionar en silencio.
+    it('no rompe las escrituras reales: serverTimestamp, purga legacy y latido de recencia', async () => {
+      await assertSucceeds(setDoc(doc(ownerDb('uid-a'), 'profiles', 'uid-a'), {
+        schemaVersion: 1, uid: 'uid-a', profileId: 'pid-a', displayName: 'Ada',
+        photoURL: 'https://lh3.googleusercontent.com/a/foto',
+        social: { enabled: true, etag: null }, updatedAt: serverTimestamp(), createdAt: serverTimestamp(),
+      }));
+
+      await seed('profiles', 'uid-legacy', {
+        uid: 'uid-legacy', email: 'legacy@example.com', displayName: 'L', photoURL: '',
+        social: { enabled: true, gistId: 'gs', gamesGistId: 'gg', githubToken: 'ghp_legacy' },
+        updatedAt: 1, tier: 'gold', createdAt: 1000,
+      });
+      await assertSucceeds(updateDoc(doc(ownerDb('uid-legacy'), 'profiles', 'uid-legacy'), {
+        uid: 'uid-legacy',
+        email: deleteField(),
+        'social.gamesGistId': deleteField(),
+        'social.githubToken': deleteField(),
+        profileId: 'pid-legacy',
+        schemaVersion: 1,
+      }));
+      await assertSucceeds(setDoc(doc(ownerDb('uid-legacy'), 'profiles', 'uid-legacy'), {
+        uid: 'uid-legacy', updatedAt: serverTimestamp(),
+      }, { merge: true }));
     });
   });
 
@@ -593,6 +681,47 @@ describe('firestore.rules', () => {
 
     it('create: el requester crea la petición canónica (pending) con sus propios campos', async () => {
       await assertSucceeds(setDoc(doc(ownerDb('uid-a'), 'friendships', DOC_ID), pendingFromAtoB()));
+    });
+
+    // C7 — el nombre y la foto denormalizados los PINTA la otra parte en su bandeja de peticiones, así que una
+    // petición de amistad era un canal para meterle a un desconocido una URL `javascript:` en un `<img src>` o
+    // un nombre de cientos de KB. Se acota en el create y también en el update (aceptar / sanear).
+    it('create: rechaza una foto no-https o un nombre desmedido en los campos denormalizados', async () => {
+      await assertFails(setDoc(doc(ownerDb('uid-a'), 'friendships', DOC_ID), {
+        ...pendingFromAtoB(), requesterPhoto: 'javascript:alert(1)',
+      }));
+      await assertFails(setDoc(doc(ownerDb('uid-a'), 'friendships', DOC_ID), {
+        ...pendingFromAtoB(), requesterName: 'x'.repeat(121),
+      }));
+      await assertFails(setDoc(doc(ownerDb('uid-a'), 'friendships', DOC_ID), {
+        ...pendingFromAtoB(), requesterSocialGistId: 'x'.repeat(129),
+      }));
+      // Y la forma legítima (foto de Google) sigue pasando.
+      await assertSucceeds(setDoc(doc(ownerDb('uid-a'), 'friendships', DOC_ID), {
+        ...pendingFromAtoB(), requesterPhoto: 'https://lh3.googleusercontent.com/a/foto',
+      }));
+    });
+
+    it('accept: el recipient no puede colar una foto no-https al aceptar', async () => {
+      await seed('friendships', DOC_ID, pendingFromAtoB());
+      await assertFails(updateDoc(doc(ownerDb('uid-b'), 'friendships', DOC_ID), {
+        status: 'accepted', updatedAt: 2, recipientName: 'B',
+        recipientPhoto: 'javascript:alert(1)', recipientSocialGistId: 'gsB', recipientGamesGistId: 'ggB',
+      }));
+      await assertSucceeds(updateDoc(doc(ownerDb('uid-b'), 'friendships', DOC_ID), {
+        status: 'accepted', updatedAt: 2, recipientName: 'B',
+        recipientPhoto: 'https://lh3.googleusercontent.com/b/foto', recipientSocialGistId: 'gsB', recipientGamesGistId: 'ggB',
+      }));
+    });
+
+    // Un `null` guardado por un cliente antiguo NO puede bloquear el saneado ni la aceptación: en un update,
+    // `request.resource.data` incluye los campos de la otra parte, así que denegar el nulo dejaría esa amistad
+    // inservible para siempre. Peor el remedio que la enfermedad.
+    it('update: un campo denormalizado nulo de la otra parte no bloquea el saneado propio', async () => {
+      await seed('friendships', DOC_ID, { ...pendingFromAtoB(), status: 'accepted', recipientName: null, recipientPhoto: null });
+      await assertSucceeds(updateDoc(doc(ownerDb('uid-a'), 'friendships', DOC_ID), {
+        requesterName: 'Ada', requesterPhoto: '', updatedAt: 3,
+      }));
     });
 
     it('create: rechaza si el requester no es quien escribe', async () => {

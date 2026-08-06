@@ -1,5 +1,5 @@
 import { memo, useLayoutEffect, useRef, useState } from 'react';
-import { TAB_ORDER, TAB_TITLES, TAB_TOOLTIPS } from '../../core/constants/labels';
+import { TAB_ORDER, TAB_TITLES, TAB_TOOLTIPS, UI_MESSAGES } from '../../core/constants/labels';
 import { TAB_ICONS } from '../../core/constants/icons';
 import type { TabId } from '../../model/types/game';
 
@@ -32,6 +32,12 @@ export const TabBar = memo(function TabBar({ currentTab, tabCounts, onTabChange 
           className={`tab-btn ${currentTab === tab ? 'active' : ''}`}
           type="button"
           data-tooltip={TAB_TOOLTIPS[tab]}
+          // A11y-4: nombre explícito (el título visible se oculta en estrecho y quedaba solo el contador) y
+          // `aria-current` para decir qué lista se está viendo, que hasta ahora era información puramente visual
+          // (la clase `.active`). Cada pestaña navega a su ruta, así que "page" es el valor que corresponde; es el
+          // mismo patrón que ya usa la barra inferior.
+          aria-label={UI_MESSAGES.tabAria(TAB_TITLES[tab], tabCounts[tab])}
+          aria-current={currentTab === tab ? 'page' : undefined}
           onClick={() => onTabChange(tab)}
         >
           <svg className="tab-icon" aria-hidden="true">

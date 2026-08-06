@@ -41,7 +41,7 @@ vi.mock('../../src/model/repository/firebaseSocialRepository', () => ({
   invalidateSocialDirectoryCache: vi.fn(),
 }));
 
-vi.mock('firebase/firestore', () => ({
+vi.mock('firebase/firestore/lite', () => ({
   doc: (_fs: unknown, name: string, id: string) => ({ collection: name, id }),
   updateDoc: (...a: unknown[]) => updateDocMock(...a),
   setDoc: (...a: unknown[]) => setDocMock(...a),

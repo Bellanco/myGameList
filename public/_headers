@@ -1,5 +1,6 @@
 /*
-  Content-Security-Policy: default-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'; object-src 'none'; script-src 'self' 'sha256-u65XiyDU47Y8SJAE/q5MIyf3Vrcg7AZWhf/kbsnro6I=' https://static.cloudflareinsights.com https://www.googletagmanager.com https://apis.google.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https://lh3.googleusercontent.com https://*.googleusercontent.com https://*.githubusercontent.com https://*.steamusercontent.com https://steamuserimages-a.akamaihd.net https://*.steamstatic.com https://*.playstation.net https://*.xboxlive.com; media-src 'self' https://*.githubusercontent.com https://*.steamusercontent.com https://steamuserimages-a.akamaihd.net https://*.steamstatic.com https://*.playstation.net https://*.xboxlive.com; connect-src 'self' https://api.github.com https://firestore.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://www.googleapis.com https://firebase.googleapis.com https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com https://www.google-analytics.com; frame-src https://accounts.google.com https://*.firebaseapp.com; worker-src 'self' blob:; manifest-src 'self'; upgrade-insecure-requests
+  Content-Security-Policy: default-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'; object-src 'none'; script-src 'self' 'sha256-u65XiyDU47Y8SJAE/q5MIyf3Vrcg7AZWhf/kbsnro6I=' https://static.cloudflareinsights.com https://www.googletagmanager.com https://apis.google.com; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https://lh3.googleusercontent.com https://*.googleusercontent.com https://*.githubusercontent.com https://*.steamusercontent.com https://steamuserimages-a.akamaihd.net https://*.steamstatic.com https://*.playstation.net https://*.xboxlive.com; media-src 'self' https://*.githubusercontent.com https://*.steamusercontent.com https://steamuserimages-a.akamaihd.net https://*.steamstatic.com https://*.playstation.net https://*.xboxlive.com; connect-src 'self' https://api.github.com https://firestore.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://www.googleapis.com https://firebase.googleapis.com https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com https://www.google-analytics.com; frame-src https://accounts.google.com https://*.firebaseapp.com; worker-src 'self' blob:; manifest-src 'self'; upgrade-insecure-requests
+  Strict-Transport-Security: max-age=15552000
   X-Frame-Options: DENY
   X-Content-Type-Options: nosniff
   Referrer-Policy: strict-origin-when-cross-origin
@@ -8,12 +9,28 @@
   Cross-Origin-Resource-Policy: same-origin
   X-Robots-Tag: noindex, nofollow
 
+# Strict-Transport-Security (arriba): 6 meses. El navegador se niega a hablar http con este dominio durante ese
+# tiempo, y NO se puede revertir rápido —solo caduca—, así que el valor es conservador a propósito.
+#
+# Deliberadamente SIN `includeSubDomains` ni `preload`:
+#  - `includeSubDomains` extiende la exigencia a TODOS los subdominios, incluidos los que no sepamos que existen;
+#    si alguno sirve algo por http (un panel, un staging, un registro heredado), dejaría de ser accesible.
+#    Añádelo cuando hayas confirmado que todos los subdominios van por https.
+#  - `preload` mete el dominio en una lista que viene incrustada en los navegadores y salir de ella tarda meses.
+#    Es un compromiso mayor que este encabezado y merece decidirse aparte.
+
 # HTML entrypoint: always revalidate to deliver new deploy immediately.
 /index.html
   Cache-Control: no-cache, no-store, must-revalidate
 
 # Vite hashed assets are immutable and safe to cache for 1 year.
 /assets/*
+  Cache-Control: public, max-age=31536000, immutable
+
+# Las fuentes propias llevan el hash de su contenido en el nombre (scripts/vendor-fonts.mjs), así que una URL
+# identifica un contenido para siempre: se pueden cachear como los assets de Vite. Al servirse del propio origen
+# ya no hace falta `crossorigin` ni una conexión aparte.
+/fonts/*
   Cache-Control: public, max-age=31536000, immutable
 
 # Keep PWA shell files fresh.

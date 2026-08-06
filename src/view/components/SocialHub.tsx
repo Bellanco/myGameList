@@ -78,8 +78,6 @@ const SocialHubInner = memo(function SocialHubInner({
     hydratingProfile,
     savingProfile,
     loadingDirectory,
-    isFeedDragging,
-    feedRowRef,
     hasMainSync,
     hasSocialGist,
     hasSocialSession,
@@ -105,8 +103,6 @@ const SocialHubInner = memo(function SocialHubInner({
     groupedFeedItems,
     hasMoreFeed,
     showMoreFeed,
-    handleFeedRowMouseDown,
-    handleFeedRowKeyDown,
     openActivityDetail,
     openProfileDetail,
     openOwnProfileDetail,
@@ -289,10 +285,6 @@ const SocialHubInner = memo(function SocialHubInner({
           loadingDirectory={loadingDirectory}
           openProfileDetail={openDirectoryProfile}
           handleProfileCardKeyDown={handleProfileCardKeyDown}
-          isFeedDragging={isFeedDragging}
-          feedRowRef={feedRowRef as React.RefObject<HTMLDivElement | null>}
-          handleFeedRowMouseDown={handleFeedRowMouseDown}
-          handleFeedRowKeyDown={handleFeedRowKeyDown}
           relationshipWith={relationshipWith}
           friendshipBusyUid={friendshipBusyUid}
           onAddOrAcceptFriend={handleAddOrAcceptFriend}

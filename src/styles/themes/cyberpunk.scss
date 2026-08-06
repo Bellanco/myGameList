@@ -1,5 +1,7 @@
-/* Fuentes propias de esta paleta (fuera de la ruta crítica; solo cargan con este skin). */
-@import url("https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Share+Tech+Mono&display=swap");
+/* Fuentes propias de esta paleta (fuera de la ruta crítica; solo cargan con este skin).
+   Servidas desde el propio origen: antes esto era un `@import url(fonts.googleapis.com)`, que en
+   runtime añadía dos saltos a dominios de terceros. Generado por `scripts/vendor-fonts.mjs`. */
+@use '../fonts/cyberpunk';
 
 /* ═══════════════════════════════════════════════════════════════════════════════════════════════════
    TEMA · Sin futuro (Cyberpunk 2077) — HUD de Night City: amarillo ácido + cian + magenta sobre

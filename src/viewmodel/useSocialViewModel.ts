@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type MouseEvent as ReactMouseEvent } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
   createSocialGist,
@@ -328,11 +328,6 @@ export function useSocialViewModel(options?: {
   // Cooldown visible del botón "Actualizar": se deshabilita durante FORCED_REFRESH_MIN_MS tras un refresco forzado.
   const [refreshCoolingDown, setRefreshCoolingDown] = useState(false);
   const cooldownTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const feedRowRef = useRef<HTMLDivElement | null>(null);
-  const feedDraggingRef = useRef(false);
-  const feedStartXRef = useRef(0);
-  const feedStartScrollRef = useRef(0);
-  const [isFeedDragging, setIsFeedDragging] = useState(false);
 
   // Amistad (aceptación mutua). Todo el estado sale de UNA query `array-contains` (cacheada en el repositorio).
   const [friendships, setFriendships] = useState<MyFriendships>({ friends: [], incoming: [], outgoing: [], byOtherUid: {} });
@@ -1149,39 +1144,6 @@ export function useSocialViewModel(options?: {
     setFeedVisibleCount((count) => count + FEED_PAGE_SIZE);
   }, []);
 
-  const handleFeedRowMouseDown = useCallback((event: ReactMouseEvent<HTMLDivElement>) => {
-    if (event.button !== 0 || !feedRowRef.current) {
-      return;
-    }
-
-    // No iniciar arrastre si el click es en una tarjeta de perfil
-    const target = event.target as HTMLElement;
-    if (target.closest('.hub-feed-profile-item')) {
-      return;
-    }
-
-    feedDraggingRef.current = true;
-    feedStartXRef.current = event.clientX;
-    feedStartScrollRef.current = feedRowRef.current.scrollLeft;
-    setIsFeedDragging(true);
-  }, []);
-
-  const handleFeedRowKeyDown = useCallback((event: ReactKeyboardEvent<HTMLDivElement>) => {
-    if (!feedRowRef.current) {
-      return;
-    }
-
-    if (event.key === 'ArrowRight') {
-      feedRowRef.current.scrollLeft += 140;
-      event.preventDefault();
-    }
-
-    if (event.key === 'ArrowLeft') {
-      feedRowRef.current.scrollLeft -= 140;
-      event.preventDefault();
-    }
-  }, []);
-
   const openActivityDetail = useCallback((entry: SocialActivityFeedItem) => {
     navigate(`/social/user/${encodeURIComponent(entry.actorProfileId)}/game/${entry.gameId}/${entry.type}`);
   }, [navigate]);
@@ -1344,35 +1306,6 @@ export function useSocialViewModel(options?: {
     },
     [openProfileDetail],
   );
-
-  useEffect(() => {
-    const handleMouseMove = (event: MouseEvent) => {
-      if (!feedDraggingRef.current || !feedRowRef.current) {
-        return;
-      }
-
-      const deltaX = event.clientX - feedStartXRef.current;
-      feedRowRef.current.scrollLeft = feedStartScrollRef.current - deltaX;
-      event.preventDefault();
-    };
-
-    const handleMouseUp = () => {
-      if (!feedDraggingRef.current) {
-        return;
-      }
-
-      feedDraggingRef.current = false;
-      setIsFeedDragging(false);
-    };
-
-    window.addEventListener('mousemove', handleMouseMove, { passive: false });
-    window.addEventListener('mouseup', handleMouseUp);
-
-    return () => {
-      window.removeEventListener('mousemove', handleMouseMove);
-      window.removeEventListener('mouseup', handleMouseUp);
-    };
-  }, []);
 
   const handleCreateSocialGist = useCallback(async () => {
     if (!mainSyncConfig?.token) {
@@ -2357,8 +2290,6 @@ export function useSocialViewModel(options?: {
     hydratingProfile,
     savingProfile,
     loadingDirectory,
-    isFeedDragging,
-    feedRowRef,
     hasMainSync,
     hasSocialGist,
     hasSocialSession,
@@ -2383,8 +2314,6 @@ export function useSocialViewModel(options?: {
     groupedFeedItems,
     hasMoreFeed,
     showMoreFeed,
-    handleFeedRowMouseDown,
-    handleFeedRowKeyDown,
     openActivityDetail,
     openProfileDetail,
     openOwnProfileDetail,

@@ -44,11 +44,23 @@ export interface LegalSection {
   heading: string;
   paragraphs?: string[];
   bullets?: string[];
+  /**
+   * Enlaces externos de la sección. Existen porque cuando un documento remite a la política de un TERCERO
+   * (Google, en el inicio de sesión), el lector tiene que poder llegar hasta ella: dejar la URL como texto plano
+   * cumple de boquilla y no sirve de nada. Los `href` son constantes del código, nunca datos de usuario.
+   */
+  links?: Array<{ label: string; href: string }>;
 }
 
 export interface LegalDocument {
   id: LegalDocId;
   title: string;
+  /**
+   * Fecha de última revisión DE ESTE documento. No es lo mismo que `LEGAL_VERSION`, que es la versión que el
+   * usuario ACEPTA (condiciones + privacidad) y cuyo cambio reabre la puerta del hub social. Un documento puede
+   * aclararse sin que eso obligue a nadie a volver a aceptar nada; separarlas evita el falso dilema entre dejar
+   * una fecha desactualizada o molestar a todos los usuarios.
+   */
   updated: string;
   intro: string;
   sections: LegalSection[];
@@ -195,9 +207,14 @@ const PRIVACY: LegalDocument = {
 const COOKIES: LegalDocument = {
   id: 'cookies',
   title: 'Política de cookies y almacenamiento local',
-  updated: LEGAL_VERSION,
+  // 2026-08-06: se declara lo que ocurre al iniciar sesión con Google (carga un script suyo y Google guarda
+  // cookies propias en sus dominios), que no estaba dicho, y se precisa la entradilla: antes afirmaba que el
+  // almacenamiento local era "todo lo que guarda", sin distinguir lo que hace un tercero. No se sube
+  // `LEGAL_VERSION`: no cambia el tratamiento ni los términos que el usuario aceptó, así que no procede
+  // reabrir la puerta de aceptación a todo el mundo por una aclaración.
+  updated: '2026-08-06',
   intro:
-    'La app no usa cookies publicitarias ni de seguimiento entre sitios. Sí usa almacenamiento en tu navegador, y esto es todo lo que guarda.',
+    'La app no usa cookies publicitarias ni de seguimiento entre sitios. Si solo abres la app y usas tus listas —sin sincronizar, sin iniciar sesión y sin aceptar la analítica—, no contacta con ningún servidor ajeno ni guarda cookies: todo lo que necesita vive en tu navegador. Abajo está el detalle completo, incluido lo que ocurre cuando activas cada cosa.',
   sections: [
     {
       heading: 'Necesario (siempre activo)',
@@ -208,6 +225,23 @@ const COOKIES: LegalDocument = {
       ],
       paragraphs: [
         'Este almacenamiento es imprescindible para prestar el servicio que pides, así que no requiere consentimiento. Se elimina al borrar la cuenta o al limpiar los datos del navegador.',
+      ],
+    },
+    {
+      heading: 'Al iniciar sesión con Google (solo si lo haces)',
+      paragraphs: [
+        'El inicio de sesión lo gestiona Google, no nosotros. Cuando lo usas —para el espacio social o para recuperar tu Gist desde tu cuenta—, tu navegador carga un script de Google (apis.google.com) y Google puede guardar cookies propias en sus dominios para su control de abuso y para mantener tu sesión. Una de ellas es «_GRECAPTCHA».',
+        'Esas cookies son de Google: no las ponemos, no las leemos y no podemos dar una lista cerrada, porque quién las pone y cuáles son lo decide Google. Son necesarias para el servicio de autenticación que estás pidiendo, así que no dependen del consentimiento de analítica; lo que sí depende de ti es usar o no ese botón. Si no inicias sesión, nada de esto ocurre.',
+      ],
+      links: [
+        { label: 'Privacidad de Google', href: 'https://policies.google.com/privacy' },
+        { label: 'Cómo usa Google las cookies', href: 'https://policies.google.com/technologies/cookies' },
+      ],
+    },
+    {
+      heading: 'Sincronización con GitHub (solo si la configuras)',
+      paragraphs: [
+        'Si enlazas un Gist, la app habla con la API de GitHub (api.github.com) para leer y escribir tus listas. Es una petición a un servidor ajeno, necesaria para la sincronización que has pedido, y no guarda cookies en tu navegador: la autorización viaja en la propia petición con tu token.',
       ],
     },
     {
