@@ -34,4 +34,39 @@ if (!html.includes('type="module"') || !html.includes('/src/main.tsx')) {
   fail('index.html does not reference /src/main.tsx as module entry point');
 }
 
+// El service worker de `public/` tiene que conservar los marcadores que el build sustituye por la lista real de
+// assets del arranque (plugin `serviceWorkerPrecache` en vite.config.ts). Si alguien los renombra o los quita, el
+// build ya falla; esto lo detecta antes y con un mensaje que explica por qué existen.
+const swSource = fs.readFileSync(path.join(publicDir, 'service-worker.js'), 'utf8');
+for (const token of ['self.__SW_BUILD_ID__', 'self.__PRECACHE_ASSETS__']) {
+  if (!swSource.includes(token)) {
+    fail(
+      `public/service-worker.js ya no contiene el marcador ${token}. ` +
+        'El build lo sustituye por la lista de assets del arranque; sin él la app no arranca sin red.',
+    );
+  }
+}
+
+// Y en el build (CI compila ANTES de validar) esa sustitución tiene que haber ocurrido de verdad, con una lista
+// no vacía. Es la comprobación que impide volver al bug original —PWA que dice funcionar offline y no arranca—
+// sin que nadie se entere hasta que un usuario se queda sin red.
+const builtSw = path.join(root, 'dist', 'service-worker.js');
+if (fs.existsSync(builtSw)) {
+  const built = fs.readFileSync(builtSw, 'utf8');
+  if (built.includes('self.__PRECACHE_ASSETS__')) {
+    fail('dist/service-worker.js sigue con el marcador sin sustituir: el precache del arranque se ha quedado vacío.');
+  }
+  const match = built.match(/const PRECACHE_ASSETS = (\[[^\]]*\])/);
+  if (!match) {
+    fail('dist/service-worker.js no declara PRECACHE_ASSETS con una lista literal.');
+  }
+  const precached = JSON.parse(match[1]);
+  const hasJs = precached.some((asset) => asset.endsWith('.js'));
+  const hasCss = precached.some((asset) => asset.endsWith('.css'));
+  if (!hasJs || !hasCss) {
+    fail(`dist/service-worker.js precachea ${precached.length} assets sin JS y/o sin CSS: la app no arrancaría sin red.`);
+  }
+  console.log(`Service worker: ${precached.length} assets del arranque en el precache.`);
+}
+
 console.log('CI validation passed. All required files are present.');
