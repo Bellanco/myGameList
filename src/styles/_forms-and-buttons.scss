@@ -248,6 +248,32 @@ dialog.alert-dialog[open]::backdrop { animation: alertBackdropIn .24s ease both;
 .btn-ghost:hover { background: var(--overlay-hover); color: var(--text); border-color: var(--border); box-shadow: none; transform: translateY(-1px); }
 .btn-ghost:active { transform: translateY(0); }
 .sr-only { position:absolute!important; width:1px!important; height:1px!important; padding:0!important; margin:-1px!important; overflow:hidden!important; clip:rect(0,0,0,0)!important; white-space:nowrap!important; border:0!important; }
+
+/* A11y-4 — Enlace "saltar al contenido": invisible hasta que recibe el foco, y entonces aparece arriba a la
+   izquierda como un botón normal. No se usa `.sr-only` porque ese oculta con `clip` y no hay forma de
+   revertirlo al enfocar; aquí se saca de la pantalla con `top` y se trae con `:focus-visible`. */
+.skip-link {
+  position: fixed;
+  top: -4rem;
+  left: .75rem;
+  z-index: 1000;
+  padding: .55rem .9rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm, .4rem);
+  background: var(--surface);
+  color: var(--text);
+  font-weight: 600;
+  text-decoration: none;
+  transition: top .15s ease;
+}
+.skip-link:focus-visible {
+  top: .75rem;
+  outline: 2px solid var(--steam);
+  outline-offset: 2px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .skip-link { transition: none; }
+}
 .filter-field-hidden-label, .form-toggle-label { visibility:hidden; }
 .compact-name-cell { display:flex; align-items:center; justify-content:space-between; gap:.6rem; width:100%; }
 .compact-name-text { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
