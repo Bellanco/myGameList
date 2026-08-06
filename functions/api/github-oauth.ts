@@ -23,10 +23,16 @@ type RequestBody = {
   redirect_uri?: unknown;
 };
 
+// Un `code` de GitHub son unas decenas de caracteres. El tope solo está para no reenviar a GitHub un cuerpo
+// arbitrariamente grande que llegue por aquí.
+const MAX_CODE_LENGTH = 512;
+
 function json(data: unknown, status = 200): Response {
   return new Response(JSON.stringify(data), {
     status,
-    headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
+    // `no-store` + `Vary: Origin`: la respuesta lleva un token de usuario, así que no puede quedar en ninguna
+    // caché intermedia ni compartirse entre orígenes.
+    headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store', Vary: 'Origin' },
   });
 }
 
@@ -40,6 +46,20 @@ export async function onRequestPost(context: { request: Request; env: Env }): Pr
     return json({ error: 'OAuth no configurado en el servidor' }, 500);
   }
 
+  // Este endpoint solo debe servir a la propia app. Sin la comprobación era un canjeador de códigos abierto:
+  // cualquier página podía usarlo para convertir un `code` en un token con NUESTRO client_secret. No se responde
+  // con cabeceras CORS a propósito (el navegador ya impide leer la respuesta desde otro origen), pero eso no
+  // evita que la petición se ejecute, y el canje es de un solo uso: si otro lo gasta, el flujo del usuario
+  // legítimo falla. Comparar contra el origen de la propia petición vale para producción y para cada despliegue
+  // de vista previa sin tener que listar dominios.
+  //
+  // El navegador SIEMPRE manda `Origin` en un POST, así que exigirlo no rompe al cliente legítimo.
+  const selfOrigin = new URL(request.url).origin;
+  const origin = request.headers.get('Origin');
+  if (origin !== selfOrigin) {
+    return json({ error: 'Origen no permitido' }, 403);
+  }
+
   let body: RequestBody;
   try {
     body = (await request.json()) as RequestBody;
@@ -49,8 +69,23 @@ export async function onRequestPost(context: { request: Request; env: Env }): Pr
 
   const code = typeof body.code === 'string' ? body.code.trim() : '';
   const redirectUri = typeof body.redirect_uri === 'string' ? body.redirect_uri.trim() : '';
-  if (!code) {
+  if (!code || code.length > MAX_CODE_LENGTH) {
     return json({ error: 'Falta el parámetro code' }, 400);
+  }
+
+  // El `redirect_uri` que se reenvía a GitHub tiene que ser de esta misma app. GitHub ya lo valida contra lo
+  // registrado en la OAuth App, pero esa comprobación admite cualquier callback registrado: verificarlo aquí
+  // evita que este endpoint sirva para completar un flujo iniciado en otro sitio.
+  if (redirectUri) {
+    let parsed: URL;
+    try {
+      parsed = new URL(redirectUri);
+    } catch {
+      return json({ error: 'redirect_uri inválido' }, 400);
+    }
+    if (parsed.origin !== selfOrigin) {
+      return json({ error: 'redirect_uri no permitido' }, 403);
+    }
   }
 
   let ghResponse: Response;
