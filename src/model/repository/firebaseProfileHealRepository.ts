@@ -27,7 +27,7 @@
 // documento.
 //
 // Con esto, la purga manual del panel queda solo para quien no vuelve a entrar nunca.
-import { deleteField, doc, serverTimestamp, setDoc, updateDoc } from 'firebase/firestore';
+import { deleteField, doc, serverTimestamp, setDoc, updateDoc } from 'firebase/firestore/lite';
 import { FIRESTORE_SCHEMA_VERSION } from '../../core/constants/schema';
 import { initializeFirebaseServices } from './firebaseClient';
 import { reportHandledError } from './telemetryRepository';
@@ -141,7 +141,7 @@ function deferral(step: LegacyHealDeferralStep, error?: unknown): LegacyHealResu
  * el perfil congelado. El correo no se usa nunca como nombre. Solo si no hay ninguno de los dos se deja para el panel.
  */
 async function startIdentityCutover(
-  firestore: import('firebase/firestore').Firestore,
+  firestore: import('firebase/firestore/lite').Firestore,
   uid: string,
   email: string,
   sessionName: string,

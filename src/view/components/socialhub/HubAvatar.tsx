@@ -29,6 +29,14 @@ export function HubAvatar({
         src={photoURL}
         alt=""
         referrerPolicy="no-referrer"
+        // El feed y el directorio pintan muchos avatares a la vez, la mayoría fuera de pantalla: sin `lazy` se
+        // piden todos de golpe al abrir el hub. `decoding="async"` evita que la decodificación bloquee el hilo
+        // principal, y las dimensiones intrínsecas reservan el hueco para que el texto de al lado no salte
+        // cuando la imagen llega (el tamaño real lo sigue poniendo el CSS de `sizeClass`).
+        loading="lazy"
+        decoding="async"
+        width={40}
+        height={40}
         onError={() => setFailed(true)}
       />
     );

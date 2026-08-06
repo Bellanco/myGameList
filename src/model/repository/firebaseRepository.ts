@@ -5,8 +5,9 @@
 //  - firebaseSocialRepository: directorio, índice público, recomendaciones (+ sus cachés).
 // Este fichero conserva el NÚCLEO de perfil/identidad/token y RE-EXPORTA la API pública para que ningún
 // consumidor cambie sus imports.
-import { deleteField, doc, getDoc, serverTimestamp, setDoc, writeBatch } from 'firebase/firestore';
+import { deleteField, doc, getDoc, serverTimestamp, setDoc, writeBatch } from 'firebase/firestore/lite';
 import { decryptFromString, encryptToString } from '../../core/security/crypto';
+import { PUBLIC_NAME_MAX_LENGTH, safeTrim } from '../../core/security/sanitize';
 import { getLocalMeta, patchLocalMeta, seedProfileIdFromRemote } from './indexedDbRepository';
 import {
   initializeFirebaseServices,
@@ -71,10 +72,15 @@ export {
  * El nombre de Google sí, porque es un nombre —coincidir con él es lo normal, no un accidente— y porque la
  * alternativa era peor: abortar el guardado o crear un perfil sin nombre, que es la anomalía `no-display-name` del
  * panel (un perfil que sus amigos no pueden identificar). Se prefiere un nombre razonable a un error evitable.
+ *
+ * C7: se recorta a `PUBLIC_NAME_MAX_LENGTH`, que es el límite que las reglas exigen (`profileFieldsAreSane`). El
+ * editor del perfil ya corta el nick en 60, pero el nombre de la cuenta de Google entra por el fallback sin pasar
+ * por ningún campo de la UI: sin este recorte, un nombre de Google largo haría que la regla denegara el guardado
+ * entero del perfil, y el usuario vería un fallo que no puede explicar ni arreglar.
  */
 function resolvePublicName(...candidates: Array<string | undefined>): string {
   for (const candidate of candidates) {
-    const clean = String(candidate || '').trim();
+    const clean = safeTrim(candidate, PUBLIC_NAME_MAX_LENGTH);
     if (clean) {
       return clean;
     }

@@ -5,6 +5,8 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
 
 ## [Unreleased]
 
+## [3.8] - 2026-08-06
+
 ### Added
 - **Panel de administración** (`/admin`, ruta oculta sin enlace en la navegación): censo de perfiles
   —incluidos los que tienen el social desactivado, que el directorio no muestra— con sus amistades, y
@@ -41,6 +43,9 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
   pasa a ser un campo de una línea que crece al saltar de línea, con el mismo contador de caracteres
   que el análisis de un juego; se publica con el botón o con Ctrl/⌘+Enter.
 - **Tema claro "arena"** — paleta clara con tonos cálidos manteniendo el azul de marca.
+- **Nota en el listado de la vergüenza**: la puntuación de esa lista es opt-in y solo se veía al expandir la
+  fila; ahora tiene su columna, con la nota de los juegos que la tienen y nada en los que no. La columna aparece
+  solo si algún juego de la lista tiene nota, para no dejar una columna vacía a quien no puntúe ahí.
 - **Documentos legales** (`/legal/aviso`, `/legal/privacidad`, `/legal/cookies`) accesibles desde la
   app, con aceptación registrada por cuenta antes de activar lo social.
 - **Analítica opt-in**: Google Analytics no se inicializa hasta que se acepta en el aviso, y se
@@ -60,9 +65,125 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
   detalle, y dejan de publicarse en el gist. Para crear el perfil ahora basta con un nombre y al
   menos un juego completado.
 
+### Security
+- **La política de cookies declara las cookies de Google del inicio de sesión.** No mencionaba ninguna de
+  terceros y afirmaba que el almacenamiento local era "todo lo que guarda": al iniciar sesión, Firebase Auth
+  carga un script de `apis.google.com` y Google guarda cookies suyas (`_GRECAPTCHA` entre ellas) para su control
+  de abuso. Se citan como ejemplo, no como lista cerrada, porque las decide Google. La entradilla pasa a afirmar
+  algo más fuerte y medido —una visita sin sesión, sin sincronización y con la analítica rechazada no contacta con
+  ningún servidor ajeno ni guarda cookies—, y hay un test e2e que lo vigila. `LEGAL_VERSION` no cambia: no varía
+  el tratamiento ni los términos aceptados, así que nadie tiene que volver a aceptar; para eso la fecha de
+  "actualizado" pasa a ser propia de cada documento.
+- **Validación de tipo y tamaño del contenido del perfil público y de los campos denormalizados de
+  amistad** (C7). La allowlist de claves (`hasOnly`) impedía inventarse campos, pero no decía nada de lo
+  que se guarda dentro: un cliente autenticado hostil podía escribir en su propio documento —el que lee
+  todo el directorio social— un `displayName` de cientos de KB o un `photoURL` con `javascript:`, y lo
+  mismo en la petición de amistad que aterriza en la bandeja de otro usuario (su nombre y su foto los
+  pinta el destinatario). Ahora las reglas exigen tipo, longitud máxima y `https://` en las fotos. Cada
+  campo se valida solo si está presente, para no congelar los perfiles legacy (en un merge,
+  `request.resource.data` es el documento resultante). El nombre público se recorta en el cliente al
+  mismo límite (`PUBLIC_NAME_MAX_LENGTH`), porque el nombre de la cuenta de Google entra por el fallback
+  sin pasar por ningún campo de la UI.
+- **El canjeador de OAuth de GitHub deja de estar abierto**: `functions/api/github-oauth.ts` exige que el
+  `Origin` y el `redirect_uri` sean de la propia app. Sin eso, cualquier página podía usar el endpoint
+  —y con él nuestro `client_secret`— para canjear un `code`; como el canje es de un solo uso, gastarlo
+  rompía además el flujo del usuario legítimo.
+
 ### Fixed
+- **La PWA no arrancaba sin red**, a pesar de anunciarse como offline-first: el service worker precacheaba
+  solo `['/', '/manifest.json']` y para `/assets/*` iba a la red sin caché ni respaldo, así que offline se
+  servía el shell HTML y acto seguido fallaban todos los chunks que ese HTML referencia → pantalla en
+  blanco. Ahora hay tres estrategias por tipo de recurso (HTML con red primero y respaldo cacheado,
+  `/assets/*` con caché primero —son inmutables, llevan hash de contenido—, y el resto caché y revalida), y
+  un plugin del build inyecta en el service worker la lista real de chunks del arranque. Los chunks
+  perezosos (Firebase, hub social, panel, temas) quedan fuera del precache a propósito y se van guardando
+  al visitarlos: instalación ligera y listas disponibles offline desde el primer arranque. Verificado con
+  el servidor caído. `scripts/ci-validate.js` falla si el precache vuelve a quedarse vacío.
+- El service worker ya no llama a `skipWaiting()`: tomar el control a la fuerza y borrar la caché anterior
+  dejaba a una pestaña abierta sin los chunks del despliegue viejo, que ya no están en el servidor.
+- **`__APP_VERSION__` etiquetaba mal toda la telemetría**: `package.json` seguía en `3.2.0` con cinco
+  versiones publicadas por delante, así que ningún error de Analytics se podía correlacionar con su
+  despliegue.
 - La preferencia de efectos visuales no llegaba a sincronizarse: faltaba `effects` en la allowlist de
   las reglas de `publicConfig`, que la denegaba en silencio.
+- `encrypt`/`decrypt` ya no tienen semilla por defecto derivada del navegador
+  (`userAgent|language|timezoneOffset`): el `userAgent` cambia con cada actualización del navegador, así
+  que cualquier dato cifrado con ella habría quedado ilegible para siempre semanas después, lejos del
+  código que lo causó. Nadie usaba ese valor por defecto; ahora el secreto es obligatorio y explícito. De
+  paso, el paso a base64 se hace por bloques (`String.fromCharCode(...bytes)` desborda el stack con
+  entradas grandes).
+
+### Accessibility
+- **En móvil, un lector de pantalla solo oía el nombre del juego.** A ≤1400 px las celdas de datos son
+  `display:none` (fuera del árbol de accesibilidad) y el meta compacto que las sustituye estaba `aria-hidden`,
+  con el razonamiento de que "la info ya está en las columnas" —cierto en escritorio, falso en móvil—. Encima el
+  `aria-label` del botón de fila ganaba sobre el contenido, así que exponer el meta no habría bastado. Retirada
+  esa etiqueta: el nombre accesible sigue a lo que se ve en cada breakpoint, y `aria-expanded` ya anuncia el
+  estado plegado/desplegado.
+- **La puntuación no se anunciaba**: `StarRating` no tenía ninguna alternativa textual (se leía "★☆☆☆☆" carácter
+  a carácter) y los `aria-label` de `ScoreRing`/`NoScoreMedal` iban sobre un `<span>` sin rol, donde pueden
+  ignorarse. Los tres llevan `role="img"`.
+- **Las cuatro pestañas de listado se anunciaban como "1", "0", "0", "0"**: su título visible se oculta en
+  pantallas estrechas y solo quedaba el contador. Ahora tienen nombre explícito y `aria-current` para decir cuál
+  está activa, que hasta ahora era información puramente visual.
+- **Los avisos no se anunciaban**: la región viva se montaba junto con el mensaje, y una región viva solo anuncia
+  lo que cambia mientras ella existe. Ahora está siempre en el DOM.
+- Estructura que faltaba: un `<h1>` por pantalla (oculto visualmente, el diseño es headerless), enlace "saltar al
+  contenido", `<caption>` en la tabla, `scope="col"` en las cabeceras y un `<noscript>` en vez de una página en
+  blanco sin explicación.
+- Fuera el bloqueo de orientación del manifest, que impedía el apaisado en la PWA instalada (WCAG 1.3.4), y las
+  reglas de accesibilidad de ESLint pasan de `warn` a `error` con 14 reglas nuevas.
+
+### Performance
+- **Tipografías servidas desde el propio origen.** La hoja de Google Fonts era una petición bloqueante a un
+  tercero en la ruta crítica, y con dos saltos (`fonts.googleapis.com` para el CSS y `fonts.gstatic.com` para
+  el `.woff2`, cada uno con su DNS y su TLS antes de poder pedir la fuente); además transmitía la IP del
+  visitante a Google en cada carga. Las 9 familias se vendorizan con `scripts/vendor-fonts.mjs` (subconjuntos
+  latin/latin-ext, todas OFL), la base va precargada y precacheada —así que también hay tipografía sin red— y
+  las de cada paleta siguen entrando con su skin, que ya cargaba en diferido. La **CSP deja de permitir Google**
+  en `style-src` y `font-src`. Verificado en Chrome: 0 peticiones a Google con la paleta por defecto y con un
+  tema activo.
+- **Firestore en su variante `lite`**: el SDK completo traía ~108 kB comprimidos de maquinaria de tiempo
+  real y caché offline que esta app no usa (Firestore aquí es directorio de perfiles + grafo de amistad +
+  preferencias, todo con lecturas y escrituras puntuales; los datos pesados viven en Gists e IndexedDB, y
+  nunca se activó la persistencia offline). Chunk de firebase: **584 → 218 kB (173 → 65 kB comprimidos)**.
+  `lite` no tiene `onSnapshot`, así que `scripts/ci-validate.js` impide reintroducir el SDK completo por
+  descuido.
+- **La virtualización de la tabla de juegos ahora surte efecto.** No lo hacía en ningún caso: si scrolleaba
+  la página (móvil/tablet) se renderizaba la tabla entera a propósito, y en escritorio `.table-wrap` es
+  `overflow-y:auto` pero sin altura acotada, así que su `clientHeight` es la tabla completa y nunca
+  scrollea — el virtualizador de elemento tomaba como viewport todo el contenido y también pintaba todas
+  las filas. Ahora se mide quién scrollea de verdad en vez de deducirlo del CSS, y el caso de la ventana usa
+  `useWindowVirtualizer`. Medido en móvil con 800 juegos: **800 → 14 filas en el DOM, 33.600 → 590 nodos,
+  107 → 26 ms al reordenar**. Por debajo de 120 filas se sigue pintando todo (virtualizar no compensa).
+- **El espejo del store `games` escribe solo lo que cambia.** Corría en cada guardado reemplazando el store
+  completo (`clear` + un `put` por juego), así que editar la nota de un juego costaba tantas escrituras como
+  juegos hubiera en la biblioteca. Ahora se recuerda en memoria lo espejado y se compara contra `_ts`, el
+  marcador de versión LWW que toda ruta de edición estrena. Medido con 800 juegos: del segundo guardado en
+  adelante, **800 → 1 escritura y 37 → 7 ms de transacción**; el primero de cada sesión sigue reemplazando,
+  porque el índice arranca sin saber qué hay en el store y esa es la posición segura. De paso,
+  `gamesUpdatedAt` (el sello con el que el arranque decide si ese store puede servir de recuperación) pasa a
+  escribirse en la MISMA transacción que los datos, así que ya no puede afirmar que el store está al día si
+  no lo está.
+- Presupuesto de bytes del arranque en `npm run validate` (187 kB comprimidos hoy, tope 200): engordar la
+  carga inicial pasa a ser una decisión consciente y no el efecto colateral de un import.
+- Las etiquetas y los contadores de pestaña ya no se recalculan en cada guardado cuando lo único que cambia
+  es la meta del ciclo de sync, y se dejó de duplicar la biblioteca en memoria para recorrerla.
+- Los avatares del hub se cargan en diferido y con su hueco reservado: se pedían todos al abrir el feed y su
+  llegada desplazaba el texto de al lado.
+
+### Changed
+- **El smoke test end-to-end se reescribe y entra en CI.** El que había probaba una app imaginaria (pulsaba "Add
+  Game", rellenaba `input[name="gameName"]`, migraba arrastrando: nada de eso existe) y estaba excluido de todos
+  los runners, así que nadie lo notó. El nuevo corre contra el build servido por `vite preview` —lo único que ve
+  el grafo de chunks, la minificación y el service worker— y cubre el **arranque sin red**, que era un bug real y
+  que ningún otro test cubría.
+- Los tests de reglas de Firestore (`npm run test:rules`) corren en CI. Eran la única barrera real del
+  modelo de datos y no los comprobaba nada automáticamente.
+- Se emiten sourcemaps `hidden` en producción: con minificación y `dropConsole`, los stacks que llegaban a
+  la telemetría venían de código ofuscado e ilegibles.
+- Eliminados dos índices de Firestore de una colección `feed` que no existe (ninguna regla la permite y
+  ningún código la consulta): se pagaban sin servir para nada.
 
 ## [3.3] - 2026-07-09
 

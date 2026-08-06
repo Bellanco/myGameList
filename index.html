@@ -65,15 +65,25 @@
     <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png?v=2">
     <link rel="apple-touch-icon" href="/icon-192.png?v=2">
     <link rel="manifest" href="/manifest.json">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <!-- Solo DM Sans (tipografía base de todos los temas) en la ruta crítica. Las fuentes propias de cada
-         paleta (Rajdhani/Pixelify Sans/Baloo 2/grimdark…) las carga el skin de su paleta vía @import, así que
-         no bloquean el arranque de quien usa la paleta por defecto. Ver src/styles/themes/*.scss. -->
-    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Las fuentes se sirven desde el propio origen (`public/fonts/`, generado por scripts/vendor-fonts.mjs) y
+         se declaran en el CSS de la app, así que aquí no hay nada que enlazar. Antes había dos `preconnect` y una
+         hoja BLOQUEANTE de Google Fonts: dos saltos de red a dos dominios de terceros (DNS + TLS cada uno) antes
+         de poder pedir siquiera el .woff2, y la IP del visitante enviada a Google en cada carga.
+         DM Sans (base de todas las paletas) entra por `src/styles/index.scss`; las fuentes propias de cada paleta,
+         por su skin, que se carga bajo demanda (ver src/view/hooks/paletteSkin.ts). -->
+    <link rel="preload" href="/fonts/dm-sans-latin-468d56b6.woff2" as="font" type="font/woff2" crossorigin>
   </head>
   <body>
     <div id="root"></div>
+    <!-- A11y-4: sin JavaScript, `#root` se queda vacío y la página era un rectángulo en blanco sin explicación
+         (ni un error, ni una pista). Esto al menos dice qué pasa. La app es un SPA: no hay versión sin JS. -->
+    <noscript>
+      <div class="noscript-notice">
+        <h1>Necesitas JavaScript</h1>
+        <p>Mis Listas de juegos es una aplicación que se ejecuta en el navegador, así que necesita JavaScript
+        activado. Actívalo y vuelve a cargar la página.</p>
+      </div>
+    </noscript>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

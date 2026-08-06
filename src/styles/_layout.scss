@@ -108,6 +108,21 @@
   flex: 1 1 auto; overflow: visible;
 }
 
+/* MARGEN LATERAL FLUIDO DEL HUB SOCIAL.
+   ─────────────────────────────────────────────────────────────────────────────
+   El contenido del hub vive dentro de DOS marcos concéntricos: este y el de `.hub-hub-card`. En escritorio dan
+   aire; en un móvil de 360px se comían 73 de 390px (el 19% del ancho), y las tarjetas del directorio se quedaban
+   en el 81% de la pantalla.
+   Se interpola con `clamp()` en vez de saltar en un breakpoint: así se adapta a CUALQUIER ancho —incluidos los
+   raros (plegables, 600px, tablet en vertical)— en vez de tener un valor de móvil y otro de escritorio con un
+   escalón visible entre ambos. Llega a su tope (el valor de siempre, 1.2rem) sobre los 1100px, así que el
+   escritorio no cambia.
+   `.main.main-social` y no `.main-social`: hay reglas de `.main` dentro de media queries que, por orden de
+   aparición, ganarían a una clase sola. */
+.main.main-social {
+  padding-inline: clamp(.5rem, .1rem + 1.6vw, 1.2rem);
+}
+
 .main-lists {
   position: relative;
   /* Contenedor para el meta dinámico de las filas (revela categorías según el ancho). */
@@ -615,7 +630,12 @@
   border-radius: var(--radius-md);
   background: linear-gradient(145deg, var(--hub-grad-start), var(--hub-grad-end));
   box-shadow: var(--shadow);
-  padding: 1.25rem;
+  /* Marco INTERIOR del hub, fluido (ver la nota de `.main.main-social`): es el segundo de los dos marcos que en
+     móvil se comían el 19% del ancho. Se interpola con el viewport en vez de saltar en un breakpoint, y llega al
+     valor de siempre (1.25rem) sobre los 1270px. El mínimo no baja de .65rem porque el contenido no debe tocar el
+     borde de la tarjeta, que es lo único que la delimita. Afecta a TODAS las pantallas del hub, a propósito: el
+     problema era del contenedor, no del directorio de perfiles. */
+  padding: clamp(.65rem, .3rem + 1.2vw, 1.25rem);
   display: flex;
   flex-direction: column;
   gap: .85rem;
@@ -1266,6 +1286,48 @@ button.hub-chip.active {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
   gap: .7rem;
+}
+
+/* Rejilla del directorio de perfiles: las tarjetas ENVUELVEN en filas en vez de irse a la derecha.
+   ─────────────────────────────────────────────────────────────────────────────
+   Sustituye al carrusel horizontal (`.hub-feed-row`, abajo), que era el contenedor equivocado para una lista
+   que se explora: escondía el contenido a la derecha, no daba ninguna pista de cuántos perfiles había y
+   obligaba a arrastrar con el ratón. Medido, la tarjeta del hub tiene 71 rem de interior a 1280 px y 80 rem a
+   1440, así que caben 3 columnas de sobra: el carrusel desperdiciaba ese ancho a propósito.
+
+   SIN TOPE DE COLUMNAS, y esto se decidió midiendo. Hubo un tope de 3 columnas (acotando el ancho del
+   contenedor, que es la única forma de limitar las pistas de un `auto-fit`), pero dejaba sin usar el 20% del
+   ancho a 1440px y el 70% en 4K, con todo el hueco a un lado. Se quitó al comprobar que el tope NO protegía el
+   tamaño de las tarjetas: de eso ya se encarga el mínimo del `minmax`, así que sin tope pasan de 336px a
+   277-312px —siguen por encima del mínimo— y lo único que cambia es cuántas caben por fila. El número de
+   columnas lo decide el ancho disponible, sin `media queries`, y responde al de la TARJETA (container query) y
+   no al de la ventana, que es lo correcto porque el hub vive en un contenedor propio.
+
+   `min(100%, 17rem)` y no `17rem`: en un móvil estrecho el mínimo de 17rem desbordaría el contenedor y
+   aparecería scroll horizontal, que es justo lo que se venía a quitar.
+
+   LAS PISTAS SE ESTIRAN (`1fr` como máximo). Con un máximo fijo de 21rem, en los anchos donde no cabe otra
+   columna la fila se quedaba a medias: a 600px de ventana, una tarjeta de 336px dentro de un contenedor de 560
+   dejaba el 40% en blanco. Con `1fr` la fila se reparte entre las columnas que haya, así que en móvil y tablet
+   se aprovecha todo el ancho.
+
+   `auto-fill` y no `auto-fit`: `auto-fit` colapsa las pistas vacías y reparte su espacio entre las llenas, de
+   modo que con dos amigos en escritorio saldrían dos tarjetas enormes. `auto-fill` conserva las pistas, así que
+   pocas tarjetas mantienen el tamaño de columna y se alinean a la izquierda.
+
+   SIN PADDING HORIZONTAL: venía del carrusel, donde hacía sitio a la barra de scroll horizontal; sin scroll no
+   tiene función, y solo restaba ancho a las pistas. */
+.hub-profile-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 17rem), 1fr));
+  gap: .75rem;
+  padding: .35rem 0 .55rem;
+}
+
+/* Recuento junto al título de cada sección. */
+.hub-section-count {
+  color: var(--text-muted);
+  font-weight: 600;
 }
 
 .hub-feed-row {
@@ -2327,7 +2389,8 @@ button.hub-chip.active {
 
   .hub-hub-card {
     width: min(100%, 100%);
-    padding: 1.1rem;
+    /* El `padding: 1.1rem` que había aquí se ha retirado: lo sustituye el `clamp()` de la regla base, que cubre
+       este ancho y todos los demás sin escalón. Dejarlo ganaría por especificidad y anularía el ajuste fluido. */
   }
 
   .visibility-group {

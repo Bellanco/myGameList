@@ -15,7 +15,9 @@ conservando el estilo visual, el comportamiento y la compatibilidad con los dato
   Firebase Firestore/Auth).
 - **Tema claro / oscuro / automático** con paleta clara "arena" (tonos cálidos) y azul de marca;
   todos los colores son variables CSS theme-aware (`src/styles/_base.scss`).
-- **Offline-first / PWA**: Service Worker + `manifest.json`.
+- **Offline-first / PWA**: Service Worker + `manifest.json`. El build inyecta en el Service Worker los
+  chunks del arranque, así que la app arranca y las listas funcionan sin red; las pantallas perezosas
+  (social, panel, temas) quedan disponibles offline tras visitarlas una vez.
 - **Responsive** mobile-first (breakpoints en 1100 px y 1400 px).
 
 ## Stack
@@ -65,10 +67,12 @@ src/
 | `npm run test:watch` | Vitest en modo watch |
 | `npm run test:coverage` | Cobertura |
 | `npm run test:rules` | Tests de reglas de Firestore (emulador) |
+| `npm run test:e2e` | Smoke end-to-end (Playwright) contra el build de producción |
 | `npm run typecheck` | `tsc --noEmit` |
 | `npm run validate` | Validación CI + HTML + ESLint |
 | `npm run lint` | Autocorrecciones ESLint |
 | `npm run audit:privacy` | Auditoría de privacidad |
+| `npm run audit:rules` | Auditoría (solo lectura) de los datos de producción contra `firestore.rules` |
 
 ## Configuración de Firebase
 
@@ -117,7 +121,14 @@ App estática pura (React + Vite). Configuración en el repo:
   `/assets/*` con cache inmutable (assets con hash); `service-worker.js` con revalidación.
 - **`public/_redirects`** — `/* /index.html 200` (fallback SPA para React Router).
 - **`public/service-worker.js`** — solo cachea GET same-origin y respuestas válidas; excluye APIs
-  externas (GitHub/Firebase) para no cachear datos sensibles.
+  externas (GitHub/Firebase) para no cachear datos sensibles. Los marcadores
+  `self.__SW_BUILD_ID__` / `self.__PRECACHE_ASSETS__` los sustituye en el build el plugin
+  `serviceWorkerPrecache` (`vite.config.ts`) por el identificador de build y la lista de chunks del
+  arranque; sin ellos la app no arrancaría sin red, y tanto el build como `npm run validate` fallan.
+- **`public/fonts/`** — tipografías propias (generadas por `scripts/vendor-fonts.mjs`, todas OFL). No se usa
+  Google Fonts: la CSP ya no lo permite. Para actualizar una familia, se re-ejecuta el script y se commitea el
+  resultado; si cambia el nombre de la fuente base, hay que actualizar el `preload` de `index.html`
+  (`npm run validate` avisa).
 - **`wrangler.toml`** — `pages_build_output_dir = ./dist`.
 
 Ajustes en el dashboard de Cloudflare Pages:
@@ -126,8 +137,29 @@ Ajustes en el dashboard de Cloudflare Pages:
 - **Node.js** ≥ 20 (detectado de `engines`, sin `.nvmrc`)
 - Variables `VITE_FIREBASE_*` en Production y Preview · Auto-deploy activado
 
-Checklist post-deploy: recargar una ruta interna (`/social`, `/ajustes`) sin 404; `/assets/*` con
-cache inmutable en Network; sin bloqueos CSP en Console; login social y lectura/escritura de Gist OK.
+### Antes de desplegar
+
+1. **Subir la versión** en `package.json` y cerrar la sección `[Unreleased]` del CHANGELOG. El build hornea esa
+   versión en `__APP_VERSION__` y con ella se etiqueta toda la telemetría: si no se sube, los errores del
+   despliegue nuevo se atribuyen al anterior.
+2. **`npm run audit:rules`** contra producción (necesita `firebase-admin` y credenciales; ver la cabecera del
+   script). Solo lee. Busca perfiles o amistades reales que la validación de contenido de las reglas rechazaría:
+   si hay alguno, desplegar las reglas dejaría a su dueño sin poder guardar su perfil, y sin ver ningún error.
+3. **Desplegar reglas e índices de Firestore**, que Cloudflare Pages no toca:
+   `firebase deploy --only firestore:rules,firestore:indexes`. El despliegue de índices **borra** los que ya no
+   están en `firestore.indexes.json` y pedirá confirmación.
+4. `npm run validate && npm test && npm run test:rules && npm run test:e2e` en verde.
+
+### Checklist post-deploy
+
+- Recargar una ruta interna (`/social`, `/ajustes`) sin 404.
+- `/assets/*` y `/fonts/*` con cache inmutable en Network; sin bloqueos CSP en Console.
+- **Arranca sin red**: cargar, cortar la conexión y recargar — la app debe pintar las listas (no un rectángulo
+  en blanco). Ojo: en `localhost` el service worker se desregistra a propósito; hay que probarlo en el dominio
+  desplegado o con `preview` sobre `127.0.0.1`.
+- **Tipografías del propio origen**: ninguna petición a `fonts.googleapis.com` ni `fonts.gstatic.com`, ni con la
+  paleta por defecto ni activando un tema.
+- Login social y lectura/escritura de Gist OK.
 
 ## Licencia
 

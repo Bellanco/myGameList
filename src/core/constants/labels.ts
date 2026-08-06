@@ -148,6 +148,27 @@ export const UI_MESSAGES = {
   },
   appTitle: 'Mis Listas',
   scrollTop: 'Volver arriba',
+  // A11y-4: encabezado de nivel 1 de cada pantalla. El diseño es "headerless" a propósito (sin barra ni título
+  // visible), así que va en un `<h1 class="sr-only">`: no cambia nada de lo que se ve y da a un lector de
+  // pantalla el encabezado de la página, que no existía en ninguna. Sin él la navegación por encabezados —una de
+  // las formas habituales de recorrer una página— empezaba directamente en un h2 suelto, y Lighthouse ni podía
+  // evaluar el orden de encabezados. El resto de las vistas ya empiezan en h2, así que la jerarquía encaja.
+  pageHeading: {
+    lists: (tabTitle: string) => `Mis listas de juegos — ${tabTitle}`,
+    social: 'Social',
+    settings: 'Ajustes',
+    account: 'Cuenta',
+    integrations: 'Integraciones',
+    inbox: 'Bandeja de importados',
+    admin: 'Administración',
+    legal: 'Información legal',
+  },
+  skipToContent: 'Saltar al contenido',
+  // A11y-4: nombre accesible de cada pestaña de listado. Hace falta explícito porque el título visible
+  // (`.tab-text-full`) se oculta en pantallas estrechas: ahí dentro del botón solo quedaba el icono
+  // (`aria-hidden`) y el contador, así que las cuatro pestañas —la navegación principal de la app— se anunciaban
+  // como "1", "0", "0", "0". Incluye el título Y el contador, que son las dos cosas que se ven cuando se ven.
+  tabAria: (title: string, count: number) => `${title}: ${count} ${count === 1 ? 'juego' : 'juegos'}`,
   nav: {
     ariaLabel: 'Navegación principal',
     lists: 'Listados',
@@ -258,7 +279,13 @@ export const UI_MESSAGES = {
   table: {
     edit: 'Editar',
     delete: 'Eliminar',
-    rowDetailsAria: (expanded: boolean, name: string) => `${expanded ? 'Contraer' : 'Expandir'} detalles de ${name}`,
+    // A11y-4: nombre de la tabla (`<caption class="sr-only">`). Con cuatro listas, el título de la pestaña es lo
+    // único que las distingue en la lista de tablas de un lector de pantalla.
+    caption: (tabTitle: string, count: number) =>
+      `${tabTitle}: ${count} ${count === 1 ? 'juego' : 'juegos'}`,
+    // A11y-4: el botón de fila ya NO lleva `aria-label` (ver GameTable): su nombre accesible sale del contenido,
+    // que en móvil es la única presentación de la puntuación y las plataformas. `rowDetailsAria` queda retirado a
+    // propósito; el estado plegado/desplegado lo anuncia `aria-expanded`.
     actionAria: (label: string, name: string) => `${label} - ${name}`,
     editAria: (name: string) => `Editar - ${name}`,
     deleteAria: (name: string) => `Eliminar - ${name}`,
@@ -769,6 +796,13 @@ export const SOCIAL_UI = {
     openProfileAria: (name: string) => `Abrir perfil social de ${name}`,
     friendsTitle: 'Amigos',
     othersTitle: 'Descubrir',
+    // El recuento por sección se muestra porque con muchos amigos es la única forma de saber a qué te enfrentas
+    // antes de empezar a bajar: la rejilla, al no tener scroll propio, no da ninguna pista de su tamaño.
+    sectionLabel: (title: string, count: number) => `${title} · ${count}`,
+    sectionGroupAria: (title: string, count: number) => `${title}: ${count} perfiles`,
+    // Paginación: se muestra cuánto queda, no solo que hay más. "Mostrar más" a secas obliga a pulsar para
+    // averiguar si quedan 3 o 300.
+    showMore: (remaining: number) => `Mostrar más (quedan ${remaining})`,
     friendsEmpty: 'Aún no tienes amigos. Envía una petición desde la lista de abajo.',
     othersEmpty: 'No hay más perfiles que mostrar.',
   },

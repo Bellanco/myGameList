@@ -1,3 +1,7 @@
+// Tipografía base, servida desde el propio origen (antes era una hoja bloqueante de Google Fonts en el <head>,
+// con dos saltos de red a dos dominios de terceros). Va primero para que los `@font-face` estén declarados antes
+// que cualquier regla que use la familia. Generado por `scripts/vendor-fonts.mjs`.
+@use './fonts/dm-sans';
 @use './base';
 @use './layout';
 @use './forms-and-buttons';

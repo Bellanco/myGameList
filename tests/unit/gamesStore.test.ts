@@ -7,6 +7,7 @@ import {
   getLocalMeta,
   getOrCreateProfileId,
   getSyncQueue,
+  invalidateGamesMirrorIndex,
   mirrorTabDataToGames,
   replaceGamesStoreFromTabData,
   upsertGame,
@@ -29,6 +30,9 @@ async function resetStores(): Promise<void> {
     tx.oncomplete = () => resolve();
     tx.onerror = () => reject(tx.error);
   });
+  // Vaciar los stores por fuera hace que el índice en memoria del espejo incremental deje de reflejar lo que hay
+  // dentro. Es el mismo aviso que dan los escritores de producción (ver `invalidateGamesMirrorIndex`).
+  invalidateGamesMirrorIndex();
 }
 
 describe('games store write accessors', () => {
