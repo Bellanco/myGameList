@@ -14,7 +14,7 @@ vi.mock('../../src/model/repository/firebaseClient', () => ({
     Boolean(error && typeof error === 'object' && (error as { code?: string }).code === 'permission-denied'),
 }));
 
-vi.mock('firebase/firestore', () => ({
+vi.mock('firebase/firestore/lite', () => ({
   collection: vi.fn(() => ({})),
   doc: vi.fn((_db: unknown, path: string, id: string) => ({ path, id })),
   query: vi.fn((...args: unknown[]) => args),
@@ -124,7 +124,7 @@ describe('findSocialProfileByEmail — fallback legacy', () => {
   // consulta se deniega ENTERA (lo verifica tests/integration/firestore.rules.test.ts) y el fallback legacy queda
   // muerto en silencio: `permission-denied` se traduce a "no hay perfil".
   it('consulta filtrando también por `social.enabled`, sin lo cual las reglas la denegarían', async () => {
-    const { where } = await import('firebase/firestore');
+    const { where } = await import('firebase/firestore/lite');
     (where as unknown as { mock: { calls: unknown[][] } }).mock.calls.length = 0;
     getDocsMock.mockResolvedValueOnce({ empty: true, docs: [] });
 

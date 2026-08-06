@@ -1,9 +1,19 @@
 // Cliente Firebase compartido: init perezoso de App/Auth/Firestore/Analytics, config web, y helpers de error.
 // Responsabilidad: ser la base que importan los demás módulos firebase* (telemetry/auth/social) y la fachada.
 // Extraído de firebaseRepository.ts (M2) sin cambio de comportamiento. NO importa de los módulos que lo consumen.
+//
+// FIRESTORE EN VARIANTE `lite` (y no el SDK completo), en TODOS los módulos: el completo añade ~108 kB
+// comprimidos de maquinaria de tiempo real y caché offline que esta app no usa. Firestore aquí es un directorio
+// de perfiles + grafo de amistad + configuración por usuario, todo con lecturas y escrituras puntuales
+// (`getDoc`/`getDocs`/`setDoc`/`updateDoc`/`writeBatch`); los datos pesados viven en Gists y en IndexedDB, y el
+// modo offline se resuelve con el estado local, no con la caché de Firestore. Tampoco había caché offline antes:
+// nunca se llamó a `enableIndexedDbPersistence`, así que el cambio no quita nada que estuviera funcionando.
+//
+// CONSECUENCIA a tener presente: `lite` NO tiene `onSnapshot`. Si algún día hace falta un listener en tiempo real,
+// hay que decidirlo a propósito (y quitar la comprobación de `scripts/ci-validate.js`), no colarlo con un import.
 import { getApp, getApps, initializeApp, type FirebaseApp } from 'firebase/app';
 import { getAuth, setPersistence, browserLocalPersistence, type Auth } from 'firebase/auth';
-import { getFirestore, type Firestore } from 'firebase/firestore';
+import { getFirestore, type Firestore } from 'firebase/firestore/lite';
 import type { ProfileTier } from '../../core/constants/tiers';
 import { readAnalyticsConsent } from './analyticsConsentRepository';
 

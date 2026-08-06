@@ -27,7 +27,7 @@ vi.mock('../../src/model/repository/firebaseFriendshipRepository', () => ({
   invalidateMyFriendshipsCache: vi.fn(),
 }));
 
-vi.mock('firebase/firestore', () => ({
+vi.mock('firebase/firestore/lite', () => ({
   collection: (_fs: unknown, name: string) => ({ collection: name }),
   doc: (_fs: unknown, name: string, id: string) => ({ collection: name, id }),
   query: (base: Record<string, unknown>, ...constraints: unknown[]) => ({ ...base, constraints }),

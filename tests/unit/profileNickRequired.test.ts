@@ -37,7 +37,7 @@ vi.mock('../../src/model/repository/indexedDbRepository', () => ({
   patchLocalMeta: vi.fn(async () => {}),
 }));
 
-vi.mock('firebase/firestore', () => ({
+vi.mock('firebase/firestore/lite', () => ({
   doc: (_fs: unknown, collection: string, id: string) => ({ collection, id }),
   getDoc: (...a: unknown[]) => getDocMock(...a),
   setDoc: (...a: unknown[]) => setDocMock(...a),

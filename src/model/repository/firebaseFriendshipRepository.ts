@@ -3,7 +3,7 @@
 // Identidad SIEMPRE por uid (única verificable en reglas). Los campos de identidad van DENORMALIZADOS en el doc:
 // cada parte escribe SOLO los suyos (requester al crear, recipient al aceptar), así la lista/bandeja/feed se
 // resuelven desde el propio doc sin leer el directorio (evita el tope de SOCIAL_DIRECTORY_LIMIT y las reglas de profiles).
-import { collection, deleteDoc, doc, getDoc, getDocs, query, setDoc, updateDoc, where } from 'firebase/firestore';
+import { collection, deleteDoc, doc, getDoc, getDocs, query, setDoc, updateDoc, where } from 'firebase/firestore/lite';
 import { initializeFirebaseServices, isPermissionDeniedError } from './firebaseClient';
 import type { FriendshipDoc } from '../types/firestore';
 import type { FriendshipView, MyFriendships } from '../types/social';

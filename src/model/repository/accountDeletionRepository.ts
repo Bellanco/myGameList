@@ -10,7 +10,7 @@
 //
 // Cada paso es best-effort y se acumulan los fallos en vez de abortar: dejar la sesión abierta y los datos
 // locales intactos porque una amistad no se pudo borrar sería el peor resultado posible para el usuario.
-import { deleteDoc, doc } from 'firebase/firestore';
+import { deleteDoc, doc } from 'firebase/firestore/lite';
 import { initializeFirebaseServices } from './firebaseClient';
 import { deleteFriendship, getMyFriendships, invalidateMyFriendshipsCache } from './firebaseFriendshipRepository';
 import { invalidateOwnProfileCache, invalidateSocialDirectoryCache } from './firebaseSocialRepository';

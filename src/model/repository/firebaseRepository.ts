@@ -5,7 +5,7 @@
 //  - firebaseSocialRepository: directorio, índice público, recomendaciones (+ sus cachés).
 // Este fichero conserva el NÚCLEO de perfil/identidad/token y RE-EXPORTA la API pública para que ningún
 // consumidor cambie sus imports.
-import { deleteField, doc, getDoc, serverTimestamp, setDoc, writeBatch } from 'firebase/firestore';
+import { deleteField, doc, getDoc, serverTimestamp, setDoc, writeBatch } from 'firebase/firestore/lite';
 import { decryptFromString, encryptToString } from '../../core/security/crypto';
 import { PUBLIC_NAME_MAX_LENGTH, safeTrim } from '../../core/security/sanitize';
 import { getLocalMeta, patchLocalMeta, seedProfileIdFromRemote } from './indexedDbRepository';
