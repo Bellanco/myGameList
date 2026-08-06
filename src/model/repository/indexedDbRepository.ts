@@ -186,6 +186,9 @@ export async function seedProfileIdFromRemote(remoteProfileId: string | null | u
 type GameRecord = GameItem & { _tab: TabId };
 
 export async function putGameRecord(game: GameItem, tab: TabId): Promise<void> {
+  // Escritor ajeno al espejo (lo usa el runner de migración del arranque, que corre en idle y puede solaparse
+  // con un guardado del usuario): invalida el índice para que el siguiente espejo no dé por hecho lo que hay.
+  invalidateGamesMirrorIndex();
   await idbPut<GameRecord>(GAMES_STORE, { ...game, _tab: tab });
 }
 
@@ -210,12 +213,14 @@ export async function getGamesAsTabData(): Promise<TabData> {
 
 // --- Tombstones (store `deleted`, v4) ---
 export async function putDeletedRecord(item: DeletedItem): Promise<void> {
+  invalidateGamesMirrorIndex(); // escritor ajeno al espejo (ver `invalidateGamesMirrorIndex`)
   await idbPut<DeletedItem>(DELETED_STORE, item);
 }
 export async function getDeletedRecords(): Promise<DeletedItem[]> {
   return idbGetAll<DeletedItem>(DELETED_STORE);
 }
 export async function removeTombstone(id: number): Promise<void> {
+  invalidateGamesMirrorIndex(); // escritor ajeno al espejo (ver `invalidateGamesMirrorIndex`)
   await idbDelete(DELETED_STORE, id);
 }
 
@@ -236,6 +241,7 @@ export async function getSyncQueue(): Promise<SyncOp[]> {
  * Las tres escrituras (games/deleted/syncQueue) van en UNA transacción multi-store: atómicas y sin
  * encadenar tres `oncomplete` sucesivos (antes eran 3 transacciones independientes). */
 export async function upsertGame(game: GameItem, tab: TabId): Promise<GameItem> {
+  invalidateGamesMirrorIndex(); // escritor ajeno al espejo (ver `invalidateGamesMirrorIndex`)
   const next: GameItem = { ...game, _ts: Date.now(), _v: (game._v ?? 0) + 1 };
   const op: SyncOp = { id: newOpId(), createdAt: Date.now(), attempts: 0, nextRetry: null, type: 'upsertGame', payload: { id: next.id, tab } };
   const db = await openSharedDatabase();
@@ -254,6 +260,7 @@ export async function upsertGame(game: GameItem, tab: TabId): Promise<GameItem> 
 /** Borrado: quita del store `games`, escribe tombstone en `deleted` y encola un SyncOp 'deleteGame'.
  * Las tres escrituras van en UNA transacción multi-store (antes 3 transacciones independientes). */
 export async function deleteGame(id: number): Promise<void> {
+  invalidateGamesMirrorIndex(); // escritor ajeno al espejo (ver `invalidateGamesMirrorIndex`)
   const ts = Date.now();
   const op: SyncOp = { id: newOpId(), createdAt: ts, attempts: 0, nextRetry: null, type: 'deleteGame', payload: { id } };
   const db = await openSharedDatabase();
@@ -268,40 +275,194 @@ export async function deleteGame(id: number): Promise<void> {
   });
 }
 
+// ---------------------------------------------------------------------------
+// ESPEJO INCREMENTAL del store `games` (dual-write).
+//
+// El espejo corre en CADA guardado. Reemplazar el store entero (clear + un put por juego) significaba que
+// editar la nota de un juego costaba tantas escrituras como juegos hay en la biblioteca: con 800, 800 puts por
+// pulsar "Guardar". Ahora se escribe solo lo que cambia.
+//
+// Cómo se sabe qué cambió sin volver a leer el store (leerlo entero costaría lo mismo que escribirlo): se
+// recuerda EN MEMORIA lo espejado en esta sesión, y se compara contra `_ts`. Ese es el marcador de versión LWW
+// que TODA ruta de edición estrena, y de él ya dependen dos sitios más (`tabGamesEqual` en el view-model, para
+// decidir si hay cambios, y el merge CRDT): si `_ts` no se movió, el contenido de ese juego no cambió.
+//
+// El índice es una CACHÉ, no la verdad. Cuando no se sabe qué hay en el store —primer espejo de la sesión, un
+// error en la transacción anterior, u otro escritor (la migración del arranque, `upsertGame`)— vale `null` y la
+// siguiente pasada vuelve a reemplazarlo todo. Esa es la posición segura: reemplazar de más es lento, pero
+// escribir de menos dejaría el store divergiendo de `appState` en silencio, y `appState` es el único que puede
+// perder datos aquí (ver la nota de `gamesUpdatedAt` más abajo).
+// ---------------------------------------------------------------------------
+
+/** id → clave de versión de lo espejado (`tab:_ts:_v`). `null` = contenido del store desconocido. */
+let mirroredGames: Map<number, string> | null = null;
+/** id → `_ts` de las tumbas espejadas. `null` = desconocido. */
+let mirroredDeleted: Map<number, number> | null = null;
+
 /**
- * Espejo (dual-write): reemplaza atómicamente el contenido de `games` + `deleted` para que reflejen
- * el `TabData` dado. NO encola SyncOps (la sincronización por gist sigue operando sobre TabData/appState
- * durante la transición). Mantiene el store `games` siempre al día con cada guardado.
+ * Olvida el índice del espejo: la siguiente pasada reemplazará el store completo.
+ *
+ * Lo llama TODO el que escriba en `games`/`deleted` por su cuenta (la migración del arranque, `upsertGame`,
+ * `deleteGame`…). Sin esto, el índice afirmaría que en el store hay algo que ya no está y el espejo se saltaría
+ * escrituras necesarias.
+ */
+export function invalidateGamesMirrorIndex(): void {
+  mirroredGames = null;
+  mirroredDeleted = null;
+}
+
+type MirrorSnapshot = {
+  games: Map<number, { record: GameRecord; key: string }>;
+  deleted: Map<number, DeletedItem>;
+};
+
+/** Normaliza un `TabData` a lo que va literalmente a los stores, con su clave de versión. */
+function toMirrorSnapshot(data: TabData): MirrorSnapshot {
+  const games = new Map<number, { record: GameRecord; key: string }>();
+  for (const tab of TAB_IDS) {
+    for (const game of data[tab] || []) {
+      const id = Number(game?.id);
+      if (!(id > 0)) continue;
+      games.set(id, {
+        record: { ...game, _tab: tab },
+        key: `${tab}:${Number(game._ts) || 0}:${Number(game._v) || 0}`,
+      });
+    }
+  }
+
+  const deleted = new Map<number, DeletedItem>();
+  for (const tomb of data.deleted || []) {
+    const id = Number(tomb?.id);
+    if (!(id > 0)) continue;
+    const ts = Number(tomb._ts) || 0;
+    deleted.set(id, { id, _ts: ts, deletedAt: Number(tomb.deletedAt ?? ts) || ts });
+  }
+
+  return { games, deleted };
+}
+
+/**
+ * Encola en `tx` las escrituras que llevan `games`/`deleted` al estado de `next`. Con `previous` a `null`
+ * reemplaza (clear + todo); con un índice previo, solo la diferencia.
+ */
+function queueMirrorWrites(
+  tx: IDBTransaction,
+  next: MirrorSnapshot,
+  previous: { games: Map<number, string>; deleted: Map<number, number> } | null,
+): void {
+  const games = tx.objectStore(GAMES_STORE);
+  const deleted = tx.objectStore(DELETED_STORE);
+
+  if (!previous) {
+    games.clear();
+    deleted.clear();
+    for (const entry of next.games.values()) games.put(entry.record);
+    for (const tomb of next.deleted.values()) deleted.put(tomb);
+    return;
+  }
+
+  for (const [id, entry] of next.games) {
+    if (previous.games.get(id) !== entry.key) games.put(entry.record);
+  }
+  for (const id of previous.games.keys()) {
+    if (!next.games.has(id)) games.delete(id);
+  }
+  for (const [id, tomb] of next.deleted) {
+    if (previous.deleted.get(id) !== tomb._ts) deleted.put(tomb);
+  }
+  for (const id of previous.deleted.keys()) {
+    if (!next.deleted.has(id)) deleted.delete(id);
+  }
+}
+
+/**
+ * Reemplazo COMPLETO de `games` + `deleted` a partir de un `TabData`. NO encola SyncOps (la sincronización por
+ * gist sigue operando sobre TabData/appState durante la transición) y NO toca `gamesUpdatedAt`.
  */
 export async function replaceGamesStoreFromTabData(data: TabData): Promise<void> {
   const db = await openSharedDatabase();
+  const next = toMirrorSnapshot(data);
   return new Promise<void>((resolve, reject) => {
     const tx = db.transaction([GAMES_STORE, DELETED_STORE], 'readwrite');
-    const games = tx.objectStore(GAMES_STORE);
-    const deleted = tx.objectStore(DELETED_STORE);
-    games.clear();
-    deleted.clear();
-    for (const tab of TAB_IDS) {
-      for (const game of data[tab] || []) {
-        if (!game || !(Number(game.id) > 0)) continue;
-        games.put({ ...game, _tab: tab });
-      }
+    try {
+      queueMirrorWrites(tx, next, null); // puede lanzar en síncrono; ver la nota en `mirrorTabDataToGames`
+    } catch (error) {
+      invalidateGamesMirrorIndex();
+      try { tx.abort(); } catch { /* la transacción ya podía estar muerta */ }
+      reject(error instanceof Error ? error : new Error('replaceGamesStoreFromTabData failed'));
+      return;
     }
-    for (const tomb of data.deleted || []) {
-      if (!tomb || !(Number(tomb.id) > 0)) continue;
-      const ts = Number(tomb._ts) || 0;
-      deleted.put({ id: tomb.id, _ts: ts, deletedAt: Number(tomb.deletedAt ?? ts) || ts });
-    }
-    tx.oncomplete = () => resolve();
-    tx.onerror = () => reject(tx.error || new Error('replaceGamesStoreFromTabData failed'));
-    tx.onabort = () => reject(tx.error || new Error('replaceGamesStoreFromTabData aborted'));
+    tx.oncomplete = () => {
+      // Deja el índice sincronizado: quien reemplaza el store SABE lo que ha quedado dentro.
+      mirroredGames = new Map([...next.games].map(([id, entry]) => [id, entry.key]));
+      mirroredDeleted = new Map([...next.deleted].map(([id, tomb]) => [id, tomb._ts]));
+      resolve();
+    };
+    tx.onerror = () => {
+      invalidateGamesMirrorIndex();
+      reject(tx.error || new Error('replaceGamesStoreFromTabData failed'));
+    };
+    tx.onabort = () => {
+      invalidateGamesMirrorIndex();
+      reject(tx.error || new Error('replaceGamesStoreFromTabData aborted'));
+    };
   });
 }
 
-/** Espejo + registro del timestamp (`gamesUpdatedAt`) para poder elegir la fuente más fresca al cargar. */
+/**
+ * Espejo + sello de `gamesUpdatedAt`, que es la marca con la que el arranque decide si el store `games` está más
+ * fresco que `appState` y puede servir de recuperación.
+ *
+ * Las tres escrituras van en UNA transacción (antes eran dos: los stores y luego el patch de la meta). Además de
+ * ahorrar un viaje, cierra la ventana en la que el sello podía quedar escrito sobre un espejo a medias: un fallo
+ * ahora no deja NADA, y `gamesUpdatedAt` nunca puede afirmar que el store está al día si no lo está.
+ */
 export async function mirrorTabDataToGames(data: TabData, updatedAt: number): Promise<void> {
-  await replaceGamesStoreFromTabData(data);
-  await patchLocalMeta({ gamesUpdatedAt: updatedAt });
+  const db = await openSharedDatabase();
+  const next = toMirrorSnapshot(data);
+  const previous = mirroredGames && mirroredDeleted ? { games: mirroredGames, deleted: mirroredDeleted } : null;
+
+  return new Promise<void>((resolve, reject) => {
+    const tx = db.transaction([GAMES_STORE, DELETED_STORE, META_STORE], 'readwrite');
+
+    // Encolar puede fallar SÍNCRONAMENTE (una clave inválida da `DataError`, un valor no clonable
+    // `DataCloneError`), y entonces la transacción se quedaría a medias —con el `clear` ya encolado, por
+    // ejemplo— y aun así llegaría a `oncomplete`, que daría el índice por bueno. Eso es precisamente la
+    // desincronización silenciosa que el índice no puede permitirse: se aborta y se olvida.
+    // Encolar puede fallar SÍNCRONAMENTE (una clave inválida da `DataError`, un valor no clonable
+    // `DataCloneError`), y entonces la transacción se quedaría a medias —con el `clear` ya encolado, por
+    // ejemplo— y aun así llegaría a `oncomplete`, que daría el índice por bueno. Eso es precisamente la
+    // desincronización silenciosa que el índice no puede permitirse: se aborta y se olvida.
+    try {
+      queueMirrorWrites(tx, next, previous);
+
+      const meta = tx.objectStore(META_STORE);
+      const metaRequest = meta.get(META_KEY);
+      metaRequest.onsuccess = () => {
+        const current = (metaRequest.result as LocalMeta | undefined) ?? null;
+        meta.put({ ...(current || {}), gamesUpdatedAt: updatedAt, _key: META_KEY } as LocalMeta);
+      };
+    } catch (error) {
+      invalidateGamesMirrorIndex();
+      try { tx.abort(); } catch { /* la transacción ya podía estar muerta */ }
+      reject(error instanceof Error ? error : new Error('mirrorTabDataToGames failed'));
+      return;
+    }
+
+    tx.oncomplete = () => {
+      mirroredGames = new Map([...next.games].map(([id, entry]) => [id, entry.key]));
+      mirroredDeleted = new Map([...next.deleted].map(([id, tomb]) => [id, tomb._ts]));
+      resolve();
+    };
+    tx.onerror = () => {
+      invalidateGamesMirrorIndex();
+      reject(tx.error || new Error('mirrorTabDataToGames failed'));
+    };
+    tx.onabort = () => {
+      invalidateGamesMirrorIndex();
+      reject(tx.error || new Error('mirrorTabDataToGames aborted'));
+    };
+  });
 }
 
 // ---------------------------------------------------------------------------
