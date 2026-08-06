@@ -47,9 +47,17 @@ WebCrypto nativo (AES-GCM 256). Hay **dos** mecanismos con garantías **distinta
 - **CSP y cabeceras** de seguridad en `public/_headers` (CSP por lista blanca de dominios realmente
   usados, `X-Frame-Options`, `X-Content-Type-Options`, etc.).
 - **Reglas de Firestore** *owner-only* con validación de esquema (`hasOnly`) en `profiles` y
-  `privateConfig`, cubiertas por tests de emulador. El dueño puede BORRAR sus documentos (borrado de
-  cuenta): `create/update` van validados por esquema y `delete` se autoriza aparte, porque en un borrado
-  no hay documento entrante que validar.
+  `privateConfig`, cubiertas por tests de emulador **que corren en CI**. El dueño puede BORRAR sus
+  documentos (borrado de cuenta): `create/update` van validados por esquema y `delete` se autoriza aparte,
+  porque en un borrado no hay documento entrante que validar.
+- **Validación de contenido, no solo de claves** (C7). El `hasOnly` impide inventarse campos; aparte se
+  valida el TIPO y el TAMAÑO de lo que se guarda en ellos, en los dos documentos que lee alguien que no es
+  su autor: el perfil público (lo lee todo el directorio) y el documento de amistad (nombre y foto
+  denormalizados los pinta la otra parte). Las URLs de foto tienen que ser `https://`, que es lo que cierra
+  la vía `javascript:`/`data:` en el `<img src>` de quien mira. Sin esto, un cliente autenticado hostil
+  podía usar su propio documento para inflar o envenenar lo que descargan y pintan los demás.
+- **Canje de OAuth restringido al propio origen**: la Pages Function que usa el `client_secret` exige que
+  el `Origin` y el `redirect_uri` de la petición sean de esta app.
 - **Analítica con consentimiento previo**: Google Analytics no se inicializa mientras el usuario no lo
   acepte, y la decisión es revocable desde Cuenta.
 - **Borrado de cuenta** desde la app: elimina perfil, amistades y configuración remota, y limpia
@@ -67,5 +75,19 @@ WebCrypto nativo (AES-GCM 256). Hay **dos** mecanismos con garantías **distinta
 
 ## Mejoras futuras (no implementadas)
 
+- **Firebase App Check.** La API key web es pública por diseño, así que hoy cualquiera puede hablar con
+  Firestore fuera de la app: las reglas dicen QUIÉN puede hacer QUÉ, pero no limitan el ritmo. Sin App
+  Check, un autenticado puede recorrer el directorio entero o inundar de peticiones de amistad al coste de
+  cuota del proyecto. Requiere configuración en la consola de Firebase (reCAPTCHA Enterprise) además de
+  código.
+- **Rol de administrador por *custom claim*** en vez del correo incrustado en `firestore.rules`. Es
+  igual de seguro (el claim lo firma Firebase), no publica el correo del administrador en un repositorio
+  público y permite rotarlo sin desplegar reglas. Pendiente porque exige provisionar el claim con el Admin
+  SDK antes del cambio: hacerlo al revés deja el panel inaccesible.
+- **Allowlist de subclaves de `social`** en el perfil (`hasOnly` dentro del mapa). Hoy se validan las
+  subclaves conocidas, pero una inesperada pasa. No se ha activado porque en un merge
+  `request.resource.data` es el documento resultante: un perfil antiguo con una subclave rara quedaría
+  congelado para siempre y su dueño no podría arreglarlo (solo él o el admin escriben ahí). Necesita antes
+  una auditoría de los datos reales y, si hace falta, una purga desde el panel.
 - Cifrado end-to-end del contenido del Gist (que los datos viajen cifrados por la API de GitHub).
 - Tokens en memoria de sesión en lugar de persistencia.

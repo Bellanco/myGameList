@@ -60,9 +60,53 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
   detalle, y dejan de publicarse en el gist. Para crear el perfil ahora basta con un nombre y al
   menos un juego completado.
 
+### Security
+- **Validación de tipo y tamaño del contenido del perfil público y de los campos denormalizados de
+  amistad** (C7). La allowlist de claves (`hasOnly`) impedía inventarse campos, pero no decía nada de lo
+  que se guarda dentro: un cliente autenticado hostil podía escribir en su propio documento —el que lee
+  todo el directorio social— un `displayName` de cientos de KB o un `photoURL` con `javascript:`, y lo
+  mismo en la petición de amistad que aterriza en la bandeja de otro usuario (su nombre y su foto los
+  pinta el destinatario). Ahora las reglas exigen tipo, longitud máxima y `https://` en las fotos. Cada
+  campo se valida solo si está presente, para no congelar los perfiles legacy (en un merge,
+  `request.resource.data` es el documento resultante). El nombre público se recorta en el cliente al
+  mismo límite (`PUBLIC_NAME_MAX_LENGTH`), porque el nombre de la cuenta de Google entra por el fallback
+  sin pasar por ningún campo de la UI.
+- **El canjeador de OAuth de GitHub deja de estar abierto**: `functions/api/github-oauth.ts` exige que el
+  `Origin` y el `redirect_uri` sean de la propia app. Sin eso, cualquier página podía usar el endpoint
+  —y con él nuestro `client_secret`— para canjear un `code`; como el canje es de un solo uso, gastarlo
+  rompía además el flujo del usuario legítimo.
+
 ### Fixed
+- **La PWA no arrancaba sin red**, a pesar de anunciarse como offline-first: el service worker precacheaba
+  solo `['/', '/manifest.json']` y para `/assets/*` iba a la red sin caché ni respaldo, así que offline se
+  servía el shell HTML y acto seguido fallaban todos los chunks que ese HTML referencia → pantalla en
+  blanco. Ahora hay tres estrategias por tipo de recurso (HTML con red primero y respaldo cacheado,
+  `/assets/*` con caché primero —son inmutables, llevan hash de contenido—, y el resto caché y revalida), y
+  un plugin del build inyecta en el service worker la lista real de chunks del arranque. Los chunks
+  perezosos (Firebase, hub social, panel, temas) quedan fuera del precache a propósito y se van guardando
+  al visitarlos: instalación ligera y listas disponibles offline desde el primer arranque. Verificado con
+  el servidor caído. `scripts/ci-validate.js` falla si el precache vuelve a quedarse vacío.
+- El service worker ya no llama a `skipWaiting()`: tomar el control a la fuerza y borrar la caché anterior
+  dejaba a una pestaña abierta sin los chunks del despliegue viejo, que ya no están en el servidor.
+- **`__APP_VERSION__` etiquetaba mal toda la telemetría**: `package.json` seguía en `3.2.0` con cinco
+  versiones publicadas por delante, así que ningún error de Analytics se podía correlacionar con su
+  despliegue.
 - La preferencia de efectos visuales no llegaba a sincronizarse: faltaba `effects` en la allowlist de
   las reglas de `publicConfig`, que la denegaba en silencio.
+- `encrypt`/`decrypt` ya no tienen semilla por defecto derivada del navegador
+  (`userAgent|language|timezoneOffset`): el `userAgent` cambia con cada actualización del navegador, así
+  que cualquier dato cifrado con ella habría quedado ilegible para siempre semanas después, lejos del
+  código que lo causó. Nadie usaba ese valor por defecto; ahora el secreto es obligatorio y explícito. De
+  paso, el paso a base64 se hace por bloques (`String.fromCharCode(...bytes)` desborda el stack con
+  entradas grandes).
+
+### Changed
+- Los tests de reglas de Firestore (`npm run test:rules`) corren en CI. Eran la única barrera real del
+  modelo de datos y no los comprobaba nada automáticamente.
+- Se emiten sourcemaps `hidden` en producción: con minificación y `dropConsole`, los stacks que llegaban a
+  la telemetría venían de código ofuscado e ilegibles.
+- Eliminados dos índices de Firestore de una colección `feed` que no existe (ninguna regla la permite y
+  ningún código la consulta): se pagaban sin servir para nada.
 
 ## [3.3] - 2026-07-09
 
