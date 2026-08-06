@@ -165,6 +165,11 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
   llegada desplazaba el texto de al lado.
 
 ### Changed
+- **El smoke test end-to-end se reescribe y entra en CI.** El que había probaba una app imaginaria (pulsaba "Add
+  Game", rellenaba `input[name="gameName"]`, migraba arrastrando: nada de eso existe) y estaba excluido de todos
+  los runners, así que nadie lo notó. El nuevo corre contra el build servido por `vite preview` —lo único que ve
+  el grafo de chunks, la minificación y el service worker— y cubre el **arranque sin red**, que era un bug real y
+  que ningún otro test cubría.
 - Los tests de reglas de Firestore (`npm run test:rules`) corren en CI. Eran la única barrera real del
   modelo de datos y no los comprobaba nada automáticamente.
 - Se emiten sourcemaps `hidden` en producción: con minificación y `dropConsole`, los stacks que llegaban a

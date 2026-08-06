@@ -67,6 +67,7 @@ src/
 | `npm run test:watch` | Vitest en modo watch |
 | `npm run test:coverage` | Cobertura |
 | `npm run test:rules` | Tests de reglas de Firestore (emulador) |
+| `npm run test:e2e` | Smoke end-to-end (Playwright) contra el build de producción |
 | `npm run typecheck` | `tsc --noEmit` |
 | `npm run validate` | Validación CI + HTML + ESLint |
 | `npm run lint` | Autocorrecciones ESLint |
@@ -147,7 +148,7 @@ Ajustes en el dashboard de Cloudflare Pages:
 3. **Desplegar reglas e índices de Firestore**, que Cloudflare Pages no toca:
    `firebase deploy --only firestore:rules,firestore:indexes`. El despliegue de índices **borra** los que ya no
    están en `firestore.indexes.json` y pedirá confirmación.
-4. `npm run validate && npm test && npm run test:rules` en verde.
+4. `npm run validate && npm test && npm run test:rules && npm run test:e2e` en verde.
 
 ### Checklist post-deploy
 
