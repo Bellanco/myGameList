@@ -41,3 +41,8 @@ audit-report.json
 
 # Claude Code: compartir settings.json, ignorar config local/personal
 .claude/settings.local.json
+
+# Playwright (smoke e2e): resultados e informes son artefactos de ejecución
+/test-results/
+/playwright-report/
+/blob-report/
