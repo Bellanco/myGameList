@@ -66,6 +66,14 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
   menos un juego completado.
 
 ### Security
+- **La política de cookies declara las cookies de Google del inicio de sesión.** No mencionaba ninguna de
+  terceros y afirmaba que el almacenamiento local era "todo lo que guarda": al iniciar sesión, Firebase Auth
+  carga un script de `apis.google.com` y Google guarda cookies suyas (`_GRECAPTCHA` entre ellas) para su control
+  de abuso. Se citan como ejemplo, no como lista cerrada, porque las decide Google. La entradilla pasa a afirmar
+  algo más fuerte y medido —una visita sin sesión, sin sincronización y con la analítica rechazada no contacta con
+  ningún servidor ajeno ni guarda cookies—, y hay un test e2e que lo vigila. `LEGAL_VERSION` no cambia: no varía
+  el tratamiento ni los términos aceptados, así que nadie tiene que volver a aceptar; para eso la fecha de
+  "actualizado" pasa a ser propia de cada documento.
 - **Validación de tipo y tamaño del contenido del perfil público y de los campos denormalizados de
   amistad** (C7). La allowlist de claves (`hasOnly`) impedía inventarse campos, pero no decía nada de lo
   que se guarda dentro: un cliente autenticado hostil podía escribir en su propio documento —el que lee
