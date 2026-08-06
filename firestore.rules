@@ -36,7 +36,67 @@ service cloud.firestore {
           "createdAt"
         ])
         && profileTierNotSelfAssigned()
-        && profileCreatedAtIsImmutable();
+        && profileCreatedAtIsImmutable()
+        && profileFieldsAreSane();
+    }
+
+    // C7 — Validación de TIPO y TAMAÑO del contenido del perfil público. El `hasOnly` de arriba impedía
+    // inventarse campos, pero no decía NADA de lo que se guarda dentro de los permitidos: un cliente
+    // autenticado hostil podía escribir en SU PROPIO documento un `displayName` de cientos de KB o un
+    // `photoURL` con `javascript:`, y este documento lo lee todo el directorio social (hasta
+    // SOCIAL_DIRECTORY_LIMIT perfiles por apertura del hub). Es decir, un usuario podía inflar o envenenar
+    // lo que se descarga y se pinta en el navegador de los demás. Los límites son deliberadamente más
+    // holgados que los del cliente (el editor corta el nick en 60): aquí se trata de acotar el abuso, no de
+    // duplicar la validación de la UI.
+    //
+    // Cada campo se valida SOLO SI ESTÁ PRESENTE, y es la parte que no se puede omitir: en un `update` por
+    // merge `request.resource.data` es el documento RESULTANTE, así que los perfiles legacy llegan aquí con
+    // campos que las escrituras nuevas ya no mandan (`email`, `social.gistId`, `social.githubToken`), y
+    // exigirlos denegaría toda escritura sobre ellos —incluida la del auto-saneado que existe justo para
+    // limpiarlos—. Por el mismo motivo NO se pone un `hasOnly` sobre las claves de `social`: un documento
+    // antiguo con una subclave inesperada quedaría con el perfil congelado para siempre, y su dueño no
+    // tiene forma de arreglarlo (`profiles` solo lo escribe él o el admin). Eso exige antes una auditoría
+    // de los datos reales; está anotado como pendiente en SECURITY.md.
+    //
+    // Las fechas admiten número Y timestamp a propósito: el cliente escribe `serverTimestamp()` (que las
+    // reglas ven como timestamp) y los documentos viejos llevan milisegundos.
+    function profileFieldsAreSane() {
+      return (!("schemaVersion" in request.resource.data) || request.resource.data.schemaVersion is number)
+        && (!("profileId" in request.resource.data)
+            || (request.resource.data.profileId is string && request.resource.data.profileId.size() <= 128))
+        && (!("displayName" in request.resource.data)
+            || (request.resource.data.displayName is string && request.resource.data.displayName.size() <= 120))
+        && (!("email" in request.resource.data)
+            || (request.resource.data.email is string && request.resource.data.email.size() <= 320))
+        && profilePhotoUrlIsSafe()
+        && (!("social" in request.resource.data) || profileSocialIsSane())
+        && (!("updatedAt" in request.resource.data)
+            || request.resource.data.updatedAt is number || request.resource.data.updatedAt is timestamp)
+        && (!("createdAt" in request.resource.data)
+            || request.resource.data.createdAt is number || request.resource.data.createdAt is timestamp);
+    }
+
+    // La foto es el único campo del perfil que acaba en un atributo de URL (`<img src>`), así que aquí no
+    // basta con el tamaño: se exige `https://` explícitamente. Eso es lo que cierra la vía `javascript:` /
+    // `data:` en el navegador de quien mira el directorio. La cadena vacía se admite porque es el valor
+    // normal de quien no tiene foto de Google.
+    function profilePhotoUrlIsSafe() {
+      return !("photoURL" in request.resource.data)
+        || (request.resource.data.photoURL is string
+            && request.resource.data.photoURL.size() <= 512
+            && (request.resource.data.photoURL == "" || request.resource.data.photoURL.matches("^https://.+")));
+    }
+
+    function profileSocialIsSane() {
+      return request.resource.data.social is map
+        && (!("enabled" in request.resource.data.social) || request.resource.data.social.enabled is bool)
+        && (!("etag" in request.resource.data.social)
+            || request.resource.data.social.etag == null
+            || (request.resource.data.social.etag is string && request.resource.data.social.etag.size() <= 256))
+        && (!("gistId" in request.resource.data.social)
+            || (request.resource.data.social.gistId is string && request.resource.data.social.gistId.size() <= 128))
+        && (!("gamesGistId" in request.resource.data.social)
+            || (request.resource.data.social.gamesGistId is string && request.resource.data.social.gamesGistId.size() <= 128));
     }
 
     // FECHA DE ALTA (`createdAt`). Se sella UNA vez, al crear el perfil, y ya no se puede tocar: si el dueño
@@ -202,6 +262,36 @@ service cloud.firestore {
         return isSignedIn() && request.auth.uid in resource.data.users;
       }
 
+      // C7 — mismo agujero que en `profiles`, y por la misma razón: los campos denormalizados de cada parte
+      // (nombre, foto e ids de gist) los PINTA la otra parte —`otherPhoto` acaba en un `<img src>` del hub—,
+      // así que hay que acotar tipo y tamaño y exigir `https://` en la foto. Sin esto, quien envía una
+      // petición de amistad podía colocar una URL `javascript:` o un nombre de cientos de KB en la bandeja
+      // de otro usuario.
+      //
+      // `null` se admite explícitamente: en un update, `request.resource.data` es el documento resultante e
+      // incluye los campos de la OTRA parte, y un doc antiguo pudo guardar un nulo ahí. Denegarlo dejaría la
+      // amistad imposible de sanear o de aceptar, que es peor que el dato flojo que se pretende evitar.
+      function denormTextIsSane(value) {
+        return value == null || (value is string && value.size() <= 120);
+      }
+      function denormPhotoIsSane(value) {
+        return value == null
+          || (value is string && value.size() <= 512 && (value == "" || value.matches("^https://.+")));
+      }
+      function denormGistIdIsSane(value) {
+        return value == null || (value is string && value.size() <= 128);
+      }
+      function friendshipFieldsAreSane() {
+        return (!("requesterName" in request.resource.data) || denormTextIsSane(request.resource.data.requesterName))
+          && (!("recipientName" in request.resource.data) || denormTextIsSane(request.resource.data.recipientName))
+          && (!("requesterPhoto" in request.resource.data) || denormPhotoIsSane(request.resource.data.requesterPhoto))
+          && (!("recipientPhoto" in request.resource.data) || denormPhotoIsSane(request.resource.data.recipientPhoto))
+          && (!("requesterSocialGistId" in request.resource.data) || denormGistIdIsSane(request.resource.data.requesterSocialGistId))
+          && (!("recipientSocialGistId" in request.resource.data) || denormGistIdIsSane(request.resource.data.recipientSocialGistId))
+          && (!("requesterGamesGistId" in request.resource.data) || denormGistIdIsSane(request.resource.data.requesterGamesGistId))
+          && (!("recipientGamesGistId" in request.resource.data) || denormGistIdIsSane(request.resource.data.recipientGamesGistId));
+      }
+
       // Crear petición: solo el requester, id/orden canónico, estado pending y allowlist de sus propios campos.
       function newFriendshipIsValid() {
         return request.resource.data.keys().hasOnly([
@@ -215,7 +305,8 @@ service cloud.firestore {
           && request.resource.data.requester in request.resource.data.users
           && request.resource.data.recipient in request.resource.data.users
           && request.resource.data.recipient != request.resource.data.requester
-          && request.resource.data.status == "pending";
+          && request.resource.data.status == "pending"
+          && friendshipFieldsAreSane();
       }
 
       // Aceptar: solo el recipient, pending -> accepted, escribiendo SOLO sus campos denormalizados + updatedAt.
@@ -250,7 +341,7 @@ service cloud.firestore {
       // no tiene `users`, así que la consulta `array-contains` nunca lo devuelve.
       allow read:   if isAdmin() || (isSignedIn() && request.auth.uid in resource.data.users);
       allow create: if !isPlaceholder(docId) && (isAdmin() || newFriendshipIsValid());
-      allow update: if !isPlaceholder(docId) && (isAdmin() || (isFriendshipParticipant() && (friendshipAcceptTransition() || friendshipHealOwnFields())));
+      allow update: if !isPlaceholder(docId) && (isAdmin() || (isFriendshipParticipant() && friendshipFieldsAreSane() && (friendshipAcceptTransition() || friendshipHealOwnFields())));
       allow delete: if !isPlaceholder(docId) && (isAdmin() || isFriendshipParticipant()); // cancelar / rechazar / eliminar
     }
 

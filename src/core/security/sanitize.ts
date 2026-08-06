@@ -2,6 +2,14 @@ import { POST_HARD_CEILING } from '../constants/tiers';
 
 const MAX_TEXT_LENGTH = 5000;
 
+/**
+ * C7 — Longitud máxima del nombre PÚBLICO de un perfil (y de los nombres denormalizados en los documentos de
+ * amistad). Es el ESPEJO del límite que exige `profileFieldsAreSane()` en `firestore.rules`: si se cambia aquí,
+ * hay que cambiarlo allí (hay un test que lo comprueba). Más holgado que el `maxLength` del editor de perfil (60)
+ * porque aquí también cae el nombre de la cuenta de Google, que entra por el fallback sin pasar por la UI.
+ */
+export const PUBLIC_NAME_MAX_LENGTH = 120;
+
 export function safeTrim(input: unknown, maxLength = MAX_TEXT_LENGTH): string {
   return String(input ?? '').trim().slice(0, maxLength);
 }
