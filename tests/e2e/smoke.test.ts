@@ -74,6 +74,34 @@ test.describe('smoke del build de producción', () => {
   });
 
   /**
+   * LO QUE PROMETE LA POLÍTICA DE COOKIES, COMPROBADO.
+   *
+   * El documento afirma que si solo abres la app y usas tus listas —sin sincronizar, sin iniciar sesión y sin
+   * aceptar la analítica— no se contacta con ningún servidor ajeno ni se guarda ninguna cookie. Es una afirmación
+   * verificable, así que se verifica: si mañana entra un script de un tercero (una fuente, un CDN, un widget),
+   * falla este test en vez de que la política se quede mintiendo sin que nadie se dé cuenta.
+   *
+   * Hoy es verdad EN PARTE porque las tipografías se autohospedan: mientras venían de Google Fonts, cada visita
+   * contactaba con fonts.googleapis.com y fonts.gstatic.com.
+   */
+  test('una visita anónima no contacta con terceros ni guarda cookies', async ({ page, context }) => {
+    const ajenas: string[] = [];
+    page.on('request', (peticion) => {
+      const origen = new URL(peticion.url()).origin;
+      if (!origen.includes('127.0.0.1')) ajenas.push(`${peticion.resourceType()} ${origen}`);
+    });
+
+    await sembrarBiblioteca(page); // siembra también el consentimiento de analítica DENEGADO
+    await page.goto('/completados');
+    await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+    // Firebase arranca en `requestIdleCallback`: sin esta espera el test pasaría por no haber llegado a mirar.
+    await page.waitForTimeout(4000);
+
+    expect([...new Set(ajenas)]).toEqual([]);
+    expect(await context.cookies()).toEqual([]);
+  });
+
+  /**
    * ARRANCAR SIN RED. Era un bug real y grave: el service worker anterior decía funcionar offline, precacheaba
    * solo el HTML y pedía los chunks a la red sin respaldo, así que sin conexión se servía el shell y la app se
    * quedaba en blanco. Nada lo detectaba.
