@@ -5,6 +5,7 @@ import { LEGAL_CONSENT_UI, LEGAL_ROUTES } from '../../core/constants/legal';
 import type { GameItem, TabData } from '../../model/types/game';
 import { useSocialViewModel } from '../../viewmodel/useSocialViewModel';
 import { Icon } from './Icon';
+import { SocialHubSkeleton } from './SocialHubSkeleton';
 
 import { SocialProfileScreen } from './socialhub/SocialProfileScreen';
 import { SocialDetailScreen } from './socialhub/SocialDetailScreen';
@@ -156,18 +157,10 @@ const SocialHubInner = memo(function SocialHubInner({
     />
   );
 
+  // Mismo esqueleto que el `fallback` del `Suspense` que trae este chunk: encadenados, se ven como UNA sola
+  // escena de carga en vez de un blanco seguido de una tarjeta distinta.
   if (loading) {
-    return (
-      <section className="hub-hub hub-hub-gateway" aria-label={SOCIAL_UI.screenAria}>
-        <div className="hub-hub-card hub-hub-gateway-card">
-          <div className="hub-hub-title-wrap">
-            <Icon name="bottom-hub" className="hub-hub-icon" />
-            <h2>{SOCIAL_UI.hubTitle}</h2>
-          </div>
-          <p>{SOCIAL_UI.loading}</p>
-        </div>
-      </section>
-    );
+    return <SocialHubSkeleton />;
   }
 
   if (showSocialSpace && authUser) {

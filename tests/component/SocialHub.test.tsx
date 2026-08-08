@@ -113,6 +113,9 @@ describe('SocialHub (componente, post-M3)', () => {
     // adoptarían ese canal en vez de seguir su propio camino.
     firebaseMocks.getPrivateConfig.mockResolvedValue(null);
     firebaseMocks.setPrivateConfig.mockResolvedValue(undefined);
+    // Y con las amistades: el test que las deja COLGANDO (para observar la ventana de carga del feed) dejaría al
+    // resto sin resolverlas nunca, y sin amistades resueltas el directorio no se hidrata en ningún test posterior.
+    firebaseMocks.getMyFriendships.mockResolvedValue({ friends: [], incoming: [], outgoing: [], byOtherUid: {} });
     // Salvo en los tests de la puerta legal, se parte de un consentimiento vigente.
     firebaseMocks.getPublicConfig.mockResolvedValue({ consent: { version: LEGAL_VERSION, agreedAt: 1 } });
   });
@@ -209,6 +212,43 @@ describe('SocialHub (componente, post-M3)', () => {
     resolveConsent({ consent: { version: LEGAL_VERSION, agreedAt: 1 } });
     await waitFor(() => expect(screen.queryByText(SOCIAL_UI.loading)).not.toBeInTheDocument());
     expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
+  });
+
+  it('feed: NO enseña el vacío "no tienes amigos" mientras las amistades siguen en vuelo', async () => {
+    // Regresión del parpadeo carga → VACÍO → carga → contenido al abrir social.
+    //
+    // El feed es SOLO-AMIGOS: hasta que la query de amistades responde no se puede saber si está vacío. Pero
+    // `loadingDirectory` solo cubría la hidratación en vuelo, que no arranca hasta DESPUÉS de esa query, así que
+    // durante toda esa ventana el feed se pintaba con el directorio vacío y enseñaba su estado vacío —"Descubre
+    // perfiles y añade amigos"— a alguien que sí tiene amigos y cuyo feed simplemente estaba cargando.
+    firebaseMocks.getCurrentSocialAuthUser.mockResolvedValue({ uid: 'me', email: 'me@x.com', displayName: 'Me', photoURL: null });
+    gistMocks.getSocialSyncConfig.mockReturnValue({ token: 'ghp_x', gistId: 'my-social', etag: null, lastRemoteUpdatedAt: 0 });
+    localMocks.loadLocalState.mockReturnValue({
+      c: [{ id: 1, name: 'Halo', _ts: 1, platforms: [], genres: [], steamDeck: false, review: '', score: 5, years: [], strengths: [], weaknesses: [], reasons: [], replayable: false, retry: false, hours: 0 }],
+      v: [], e: [], p: [], deleted: [], updatedAt: 0,
+    });
+    gistMocks.readSocialGist.mockResolvedValue({
+      data: {
+        profile: { name: 'Me', private: false, visibility: { hiddenTabs: [], hideReplayable: false, hideRetry: false, hideGameTime: false, showPhoto: true }, sharedLists: {} },
+        recommendations: [], activity: [], posts: [], updatedAt: 0,
+      },
+      etag: null,
+    });
+    firebaseMocks.listSocialDirectory.mockResolvedValue([]);
+    let resolveFriendships: (value: unknown) => void = () => {};
+    firebaseMocks.getMyFriendships.mockImplementation(() => new Promise((resolve) => { resolveFriendships = resolve; }));
+
+    renderHub('/social');
+
+    // El feed ya está montado (su título está a la vista) y la query de amistades sigue sin responder: es
+    // exactamente el instante en el que se colaba el vacío.
+    expect(await screen.findByText(SOCIAL_UI.feed.title)).toBeInTheDocument();
+    await waitFor(() => expect(firebaseMocks.getMyFriendships).toHaveBeenCalled());
+    expect(screen.queryByText(SOCIAL_UI.feed.activityEmptyNoFriends)).not.toBeInTheDocument();
+
+    // Resuelta la amistad (sin amigos) y con el directorio vacío, el vacío YA es cierto y se muestra.
+    resolveFriendships({ friends: [], incoming: [], outgoing: [], byOtherUid: {} });
+    expect(await screen.findByText(SOCIAL_UI.feed.activityEmptyNoFriends)).toBeInTheDocument();
   });
 
   // FASE 0 — el gist social propio pasa a recuperarse de `privateConfig` (owner-only, un solo escritor) en vez
