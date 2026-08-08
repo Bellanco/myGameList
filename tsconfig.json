@@ -1,8 +1,11 @@
 {
   "compilerOptions": {
-    "target": "ES2020",
+    // Alineado con el `build.target` de vite.config.ts: si el compilador comprueba contra ES2020 y el bundle se
+    // emite a ES2022, el typecheck no ve APIs que en producción sí existen (y al revés, no avisaría de las que
+    // no). Un solo objetivo para las dos herramientas.
+    "target": "ES2022",
     "module": "ESNext",
-    "lib": ["ES2020", "DOM", "DOM.Iterable"],
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "allowJs": false,
     "strict": true,
     "esModuleInterop": true,
