@@ -108,6 +108,41 @@ type SocialRouteState = {
   detailEventType: string;
 };
 
+/**
+ * Identidad del autor con la que se enriquece cada elemento del feed al hidratar el directorio.
+ *
+ * Estos tipos vivían DENTRO del hook, así que las pantallas que los consumen no podían nombrarlos y tipaban sus
+ * props como `any[]` — precisamente en la vista más caliente y con más ramas del hub (actividad vs publicación).
+ * Al exportarlos, el discriminante `kind` deja de ser una convención tácita y pasa a comprobarlo el compilador.
+ */
+type SocialFeedAuthor = {
+  profileId: string;
+  profileDisplayName: string;
+  socialGistId: string;
+  photoURL: string;
+};
+
+/** Reseña/recomendación enriquecida con la identidad de su autor (para el feed). */
+export type SocialActivityFeedItem = SocialActivityEntry & SocialFeedAuthor;
+
+/** F3 — publicación enriquecida con la identidad de su autor (para el feed). */
+export type SocialPostFeedItem = SocialPostEntry & SocialFeedAuthor;
+
+/**
+ * Elemento del feed COMBINADO. `kind` es el discriminante: las publicaciones lo llevan a `'post'` y la actividad
+ * no lo lleva (declarado `kind?: undefined` para que TypeScript pueda estrechar la unión con `entry.kind === 'post'`).
+ */
+export type SocialFeedItem =
+  | (SocialActivityFeedItem & { kind?: undefined })
+  | (SocialPostFeedItem & { kind: 'post' });
+
+/** Un día del feed agrupado, tal y como lo pinta la pantalla. */
+export type SocialFeedDayGroup = {
+  dayHeader: string;
+  dayDate: Date;
+  items: SocialFeedItem[];
+};
+
 const FEED_PAGE_SIZE = 25;
 // Rango válido de JS Date en ms (±100M días). Un `updatedAt` fuera de rango (p. ej. gist de otro usuario con el
 // timestamp en micro/nanosegundos o corrupto) daría `new Date(x)` → Invalid Date, que el feed agrupado descarta.
@@ -237,21 +272,6 @@ export function useSocialViewModel(options?: {
   const routeState = useMemo(() => getSocialRouteState(location.pathname), [location.pathname]);
   const { activePanel, profileDetailId, profileReviewsView, profileReviewGameId, detailActorUid, detailGameId, detailEventType } = routeState;
 
-  type SocialActivityFeedItem = SocialActivityEntry & {
-    profileId: string;
-    profileDisplayName: string;
-    socialGistId: string;
-    photoURL: string;
-  };
-
-  // F3 — publicación enriquecida con la identidad de su autor (para el feed).
-  type SocialPostFeedItem = SocialPostEntry & {
-    profileId: string;
-    profileDisplayName: string;
-    socialGistId: string;
-    photoURL: string;
-  };
-
   type SocialDirectoryEntry = {
     id: string;
     uid: string; // uid de Firebase (para relaciones de amistad); hoy coincide con `id`, robusto ante el cutover uid→profileId
@@ -366,9 +386,25 @@ export function useSocialViewModel(options?: {
   // Confirmación de "dejar de ser amigos" (evita pulsaciones accidentales): guarda a quién se va a eliminar.
   const [removeFriendTarget, setRemoveFriendTarget] = useState<{ uid: string; name: string } | null>(null);
 
+  /**
+   * Temporizador que borra el mensaje de estado. Uno SOLO, reutilizado.
+   *
+   * Antes cada aviso creaba el suyo y nadie los cancelaba, con dos consecuencias. La visible: dos avisos seguidos
+   * se pisaban —el temporizador del PRIMERO seguía vivo y borraba el mensaje del SEGUNDO al cumplirse su plazo, así
+   * que un aviso podía durar medio segundo en vez de tres—. Y la de fondo: al salir del hub quedaban temporizadores
+   * pendientes que acababan tocando el estado de un componente ya desmontado.
+   */
+  const statusTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const setFeedback = useCallback((kind: 'ok' | 'warn' | 'err', message: string, duration?: 'short' | 'long') => {
     setStatusKind(kind);
     setStatus(message);
+
+    // El aviso anterior deja de contar en cuanto llega uno nuevo: si no, su plazo borraría este.
+    if (statusTimerRef.current) {
+      clearTimeout(statusTimerRef.current);
+      statusTimerRef.current = null;
+    }
 
     // Only hard errors should block feed access.
     if (kind === 'ok') {
@@ -384,7 +420,10 @@ export function useSocialViewModel(options?: {
     }
 
     const ms = duration === 'long' ? 6000 : 3000;
-    setTimeout(() => setStatus(''), ms);
+    statusTimerRef.current = setTimeout(() => {
+      statusTimerRef.current = null;
+      setStatus('');
+    }, ms);
   }, []);
 
   const lockProfileEditor = useCallback(() => {
@@ -2027,9 +2066,11 @@ export function useSocialViewModel(options?: {
     };
   }, [authUser?.uid, hydrateSocialDirectory, profileEditorLocked, reconcileGames, socialSpaceOpen, socialCfgGistId]);
 
-  // Limpia el timer del cooldown al desmontar (evita setState tras desmontar).
+  // Limpia los timers al desmontar (evita setState tras desmontar): el del cooldown del botón "Actualizar" y el
+  // que borra el mensaje de estado. El hub se desmonta al salir de /social, así que esto ocurre a menudo.
   useEffect(() => () => {
     if (cooldownTimerRef.current) clearTimeout(cooldownTimerRef.current);
+    if (statusTimerRef.current) clearTimeout(statusTimerRef.current);
   }, []);
 
   // Bloque 2 — propaga la foto propia a los DEMÁS: la foto solo la ven otros si está en NUESTRO gist social

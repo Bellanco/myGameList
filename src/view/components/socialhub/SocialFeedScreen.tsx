@@ -4,6 +4,11 @@ import { ScoreDisplay } from '../ScoreDisplay';
 import { NoScoreMedal } from '../NoScoreMedal';
 import { resolveGrade } from '../../../core/utils/scoreScale';
 import type { SocialUiLabels } from '../../../core/constants/labels';
+import type {
+  SocialActivityFeedItem,
+  SocialFeedDayGroup,
+  SocialFeedItem,
+} from '../../../viewmodel/useSocialViewModel';
 import { HubStatus } from './HubStatus';
 import { PostBody } from './PostText';
 import { HubAvatar } from './HubAvatar';
@@ -47,12 +52,12 @@ function SocialFeedScreenBase({
   onOpenOwnProfile: () => void;
   onOpenRequests: () => void;
   pendingIncomingCount: number;
-  groupedFeedItems: any[];
-  feedItems: any[];
+  groupedFeedItems: SocialFeedDayGroup[];
+  feedItems: SocialFeedItem[];
   hasMoreFeed: boolean;
   showMoreFeed: () => void;
-  openActivityDetail: (entry: any) => void;
-  handleActivityItemKeyDown: (event: React.KeyboardEvent<HTMLElement>, entry: any) => void;
+  openActivityDetail: (entry: SocialActivityFeedItem) => void;
+  handleActivityItemKeyDown: (event: React.KeyboardEvent<HTMLElement>, entry: SocialActivityFeedItem) => void;
   composePostText: string;
   setComposePostText: (v: string) => void;
   publishingPost: boolean;
@@ -92,8 +97,17 @@ function SocialFeedScreenBase({
         ? SOCIAL_UI.feed.postCharNearLimit
         : '';
 
+  // Cuántos elementos hay pintados ahora mismo. Es lo ÚNICO que debe rearmar el observador de abajo: cuando el lote
+  // crece y el centinela sigue en pantalla, hace falta una observación nueva para que vuelva a dispararse (el
+  // observador no reemite si el elemento ya estaba intersecando).
+  const visibleFeedCount = groupedFeedItems.reduce((total, group) => total + group.items.length, 0);
+
   // Scroll infinito: el botón "mostrar más" del final hace de centinela; cuando entra en viewport, amplía el lote
   // automáticamente (y se mantiene clicable como alternativa accesible). Sin más elementos, no se observa nada.
+  //
+  // La dependencia es el RECUENTO visible, no `groupedFeedItems`: ese array estrena identidad con cualquier cambio
+  // del directorio (y el feed se recalcula a menudo), así que el observador se destruía y se recreaba en repintados
+  // que no habían añadido ni un elemento.
   React.useEffect(() => {
     if (loadingDirectory || !hasMoreFeed) return;
     const el = feedSentinelRef.current;
@@ -108,7 +122,7 @@ function SocialFeedScreenBase({
     );
     observer.observe(el);
     return () => observer.disconnect();
-  }, [loadingDirectory, hasMoreFeed, showMoreFeed, groupedFeedItems]);
+  }, [loadingDirectory, hasMoreFeed, showMoreFeed, visibleFeedCount]);
 
   return (
     <section className="hub-hub hub-screen" aria-label={SOCIAL_UI.feed.sectionAria}>
@@ -248,7 +262,7 @@ function SocialFeedScreenBase({
                   <div className="hub-feed-day-header">
                     <h4>{group.dayHeader}</h4>
                   </div>
-                  {group.items.map((entry: any) => {
+                  {group.items.map((entry) => {
                     const itemDate = new Date(entry.updatedAt || '');
                     const hasValidDate = !Number.isNaN(itemDate.getTime());
                     // El id vacío NO es propiedad: sin la guarda, dos ids desconocidos casaban entre sí y la
