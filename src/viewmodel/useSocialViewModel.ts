@@ -7,7 +7,6 @@ import { invalidateProfileGames, loadForeignProfileGames } from '../model/reposi
 import { getCachedSocialDirectory, getCachedSocialProfile, getLocalMeta, invalidateCachedSocialDirectory, patchLocalMeta, putCachedSocialDirectory, putCachedSocialProfile } from '../model/repository/indexedDbRepository';
 import { applyProfileVisibility } from '../core/utils/profileVisibility';
 import { SOCIAL_UI } from '../core/constants/labels';
-import { LEGAL_CONSENT_UI, LEGAL_VERSION } from '../core/constants/legal';
 import type { IconName } from '../core/constants/icons';
 import {
   DEFAULT_PROFILE_TIER,
@@ -24,9 +23,7 @@ import {
   getMyFriendships,
   getPrivateConfig,
   purgeOwnPublicGistIds,
-  getPublicConfig,
   setPrivateConfig,
-  setPublicConfig,
   healOwnFriendshipIdentity,
   listSocialDirectory,
   readFriendship,
@@ -46,6 +43,8 @@ import { normalizeTimestamp as toSafeTimestamp } from '../core/utils/normalize';
 import { mapWithConcurrency } from '../core/utils/concurrency';
 import { matchSocialRoute } from './social/socialRoutes';
 import { useSocialCompose } from './social/useSocialCompose';
+import { useSocialLegalConsent } from './social/useSocialLegalConsent';
+import { DEFAULT_SOCIAL_VISIBILITY, getOrderedUniqueTabs, normalizeVisibility, useSocialProfileForm } from './social/useSocialProfileForm';
 import { useSocialFeed } from './social/socialFeed';
 // Re-exportados: las pantallas del hub los importan desde este ViewModel desde antes de la extracción.
 export type {
@@ -209,21 +208,15 @@ export function useSocialViewModel(options?: {
   const [statusKind, setStatusKind] = useState<'ok' | 'warn' | 'err'>('ok');
   const [hasBlockingSocialIssue, setHasBlockingSocialIssue] = useState(false);
   const [showSocialSpace, setShowSocialSpace] = useState(false);
-  // L4 — resultado de la comprobación ANOTADO CON EL UID al que corresponde. Guardar el uid es lo que evita la
-  // carrera: entre que aparece la sesión y responde la comprobación hay renders en los que aún no se sabe nada,
-  // y sin esa marca se colaría un "adelante" que luego habría que revertir (el usuario entraría y se le sacaría).
-  // 'unknown' = la comprobación falló (offline/reglas) → se deja pasar; 'required' = hay que pedir la aceptación.
-  const [legalConsent, setLegalConsent] = useState<{ uid: string; status: 'accepted' | 'required' | 'unknown' } | null>(null);
-  const [savingConsent, setSavingConsent] = useState(false);
   const [hasCreatedProfile, setHasCreatedProfile] = useState(false);
   const [mustCreateProfile, setMustCreateProfile] = useState(false);
   const [justSavedProfile, setJustSavedProfile] = useState(false);
-  const [profileName, setProfileName] = useState('');
-  const [hiddenTabs, setHiddenTabs] = useState<TabId[]>([]);
-  const [showPhoto, setShowPhoto] = useState(true);
-  const [hideReplayable, setHideReplayable] = useState(false);
-  const [hideRetry, setHideRetry] = useState(false);
-  const [hideGameTime, setHideGameTime] = useState(false);
+  // Estado editable del perfil (nick + visibilidad), agrupado: los seis campos viajan siempre juntos.
+  const profileForm = useSocialProfileForm();
+  const {
+    profileName, setProfileName, hiddenTabs, setHiddenTabs, showPhoto, setShowPhoto,
+    hideReplayable, setHideReplayable, hideRetry, setHideRetry, hideGameTime, setHideGameTime,
+  } = profileForm;
   // Filtro por nombre de la pantalla "Perfiles" (directorio social). El feed de actividad ya no se filtra.
   const [profileSearch, setProfileSearch] = useState('');
   const [hydratingProfile, setHydratingProfile] = useState(false);
@@ -401,21 +394,14 @@ export function useSocialViewModel(options?: {
   const hasMainSync = Boolean(mainSyncConfig?.token && mainSyncConfig?.gistId);
   const hasSocialGist = Boolean(socialCfgGistId);
   const hasSocialSession = Boolean(authUser);
-  // L4 — el espacio social no se abre hasta que consta la aceptación de las condiciones/privacidad vigentes. Solo
-  // afecta a lo SOCIAL: las listas propias, la sincronización y el borrado de cuenta nunca dependen de esto.
-  // Sin sesión no hay nada que consentir (el gateway ya pide iniciarla). Con sesión, solo se abre cuando consta la
-  // comprobación DE ESE uid y no exige aceptación.
-  const legalGateOpen =
-    !authUser?.uid || (legalConsent?.uid === authUser.uid && legalConsent.status !== 'required');
+  // L4 — el espacio social no se abre hasta que consta la aceptación de las condiciones/privacidad vigentes.
+  const legalConsent = useSocialLegalConsent(authUser?.uid, setFeedback);
+  const legalGateOpen = legalConsent.gateOpen;
   // El espacio social ABIERTO de verdad: el estado latente (`showSocialSpace`, que fijan la hidratación inicial y
   // el alta) filtrado por la puerta legal. Todo lo que carga o publica datos sociales cuelga de esto, así que un
   // usuario sin la aceptación vigente no llega a leer ni escribir nada del canal social.
   const socialSpaceOpen = showSocialSpace && legalGateOpen;
-  // La comprobación anterior es una LECTURA de Firestore: con sesión ya iniciada hay un intervalo en el que aún no
-  // consta nada de ese uid y `legalGateOpen` es false. Sin marcarlo, el hub caía al gateway durante esas décimas de
-  // segundo (paso de login/alta, con su botón de "Cerrar sesión" bajo el dedo) para volver acto seguido al espacio
-  // social. Mientras la comprobación esté en vuelo, la pantalla sigue "cargando" en vez de enseñar la puerta.
-  const legalConsentPending = Boolean(authUser?.uid) && legalConsent?.uid !== authUser?.uid;
+  const legalConsentPending = legalConsent.pending;
   const hasReadyAccess = hasSocialSession && hasSocialGist && legalGateOpen;
   const profileEditorLocked = isProfileEditorLocked(mustCreateProfile, hasBlockingSocialIssue);
   const canConnectSocialGist =
@@ -430,47 +416,6 @@ export function useSocialViewModel(options?: {
     setShowSocialSpace(true);
     navigate('/social');
   }, [hasReadyAccess, showSocialSpace, navigate]);
-
-  // L4 — comprueba la aceptación registrada en `publicConfig` (owner-only, sigue al usuario entre dispositivos).
-  // Si la LECTURA falla (offline, reglas, Firebase ausente) se deja pasar: bloquear el espacio social por un fallo
-  // de red convertiría un requisito legal en una avería. Solo se exige cuando consta que no hay aceptación vigente.
-  useEffect(() => {
-    const uid = authUser?.uid;
-    if (!uid) {
-      setLegalConsent(null);
-      return;
-    }
-
-    let cancelled = false;
-    void getPublicConfig(uid)
-      .then((cfg) => {
-        if (cancelled) return;
-        setLegalConsent({ uid, status: cfg?.consent?.version === LEGAL_VERSION ? 'accepted' : 'required' });
-      })
-      .catch(() => {
-        if (!cancelled) setLegalConsent({ uid, status: 'unknown' });
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [authUser?.uid]);
-
-  const acceptLegalConsent = useCallback(async () => {
-    const uid = authUser?.uid;
-    if (!uid || savingConsent) {
-      return;
-    }
-    setSavingConsent(true);
-    try {
-      await setPublicConfig(uid, { consent: { version: LEGAL_VERSION, agreedAt: Date.now() } });
-      setLegalConsent({ uid, status: 'accepted' });
-    } catch {
-      setFeedback('err', LEGAL_CONSENT_UI.error);
-    } finally {
-      setSavingConsent(false);
-    }
-  }, [authUser?.uid, savingConsent, setFeedback]);
 
   const gatewaySteps = SOCIAL_UI.steps.map((step, index) => ({
     ...step,
@@ -842,29 +787,7 @@ export function useSocialViewModel(options?: {
   // comprobarlo. El guardado del perfil lo sigue exigiendo siempre (ahí el usuario está mirando sus propias listas).
   const completedGamesRequirementMet = hasCompletedGames || !libraryPresentLocally;
 
-  const defaultSocialVisibility: SocialProfileVisibility = useMemo(() => ({
-    hiddenTabs: [],
-    hideReplayable: false,
-    hideRetry: false,
-    hideGameTime: false,
-    showPhoto: true,
-  }), []);
-
-  const getOrderedUniqueTabs = useCallback((tabs: TabId[]): TabId[] => {
-    const seen = new Set<TabId>();
-    const ordered: TabId[] = [];
-
-    tabs.forEach((tab) => {
-      if (seen.has(tab)) {
-        return;
-      }
-
-      seen.add(tab);
-      ordered.push(tab);
-    });
-
-    return ordered;
-  }, []);
+  const defaultSocialVisibility = DEFAULT_SOCIAL_VISIBILITY;
 
   const visibleSocialDirectory = useMemo(() => {
     // Directorio de descubrimiento: se muestran TODOS los perfiles publicados (el propio excluido). No se filtra por
@@ -1281,12 +1204,7 @@ export function useSocialViewModel(options?: {
       // criterio actual (nombre Y ≥1 juego completado) para que los perfiles incompletos ya guardados sean
       // redirigidos al editor sin esperar a que caduque la caché (~5 min).
       const cachedProfileExists = Boolean(cachedProfile.name.trim()) && hasCompletedGames;
-      setProfileName(cachedProfile.name);
-      setHiddenTabs(getOrderedUniqueTabs(cachedProfile.hiddenTabs || []));
-      setHideReplayable(cachedProfile.hideReplayable);
-      setHideRetry(cachedProfile.hideRetry);
-      setHideGameTime(cachedProfile.hideGameTime);
-      setShowPhoto(cachedProfile.showPhoto);
+      profileForm.hydrate({ name: cachedProfile.name, visibility: cachedProfile });
       setHasCreatedProfile(cachedProfileExists);
 
       const cachedProfileUsable = Boolean(cachedProfile.name.trim()) && completedGamesRequirementMet;
@@ -1349,22 +1267,14 @@ export function useSocialViewModel(options?: {
       const profileHasIdentity = Boolean(socialRead.data.profile.name.trim());
       const profileExists = profileHasIdentity && hasCompletedGames;
 
-      setProfileName(nextName);
-      setHiddenTabs(getOrderedUniqueTabs(profileVisibility.hiddenTabs || []));
-      setHideReplayable(Boolean(profileVisibility.hideReplayable));
-      setHideRetry(Boolean(profileVisibility.hideRetry));
-      setHideGameTime(Boolean(profileVisibility.hideGameTime));
-      setShowPhoto(profileVisibility.showPhoto !== false);
+      const normalizedVisibility = normalizeVisibility(profileVisibility);
+      profileForm.hydrate({ name: nextName, visibility: normalizedVisibility });
       setHasCreatedProfile(profileExists);
 
       // Sembrar la caché para que la próxima navegación a social no relea el gist propio dentro de la ventana de TTL.
       void putCachedSocialProfile(socialCfgGistId, {
         name: nextName,
-        hiddenTabs: getOrderedUniqueTabs(profileVisibility.hiddenTabs || []),
-        hideReplayable: Boolean(profileVisibility.hideReplayable),
-        hideRetry: Boolean(profileVisibility.hideRetry),
-        hideGameTime: Boolean(profileVisibility.hideGameTime),
-        showPhoto: profileVisibility.showPhoto !== false,
+        ...normalizedVisibility,
         profileExists,
         activity: socialRead.data.activity,
       });
@@ -1956,15 +1866,8 @@ export function useSocialViewModel(options?: {
 
     try {
       setSavingProfile(true);
-      const normalizedHiddenTabs = getOrderedUniqueTabs(hiddenTabs);
-
-      const visibility: SocialProfileVisibility = {
-        hiddenTabs: normalizedHiddenTabs,
-        hideReplayable,
-        hideRetry,
-        hideGameTime,
-        showPhoto,
-      };
+      const visibility = profileForm.visibility;
+      const normalizedHiddenTabs = visibility.hiddenTabs;
 
       const profile = {
         // PRIVACIDAD: el nick es LO QUE ESCRIBE EL USUARIO, y nada más. Aquí había un respaldo a
@@ -2259,9 +2162,9 @@ export function useSocialViewModel(options?: {
     socialCfgGistId,
     authUser,
     // L4 — puerta de aceptación (solo con sesión y consentimiento no vigente).
-    legalConsentRequired: legalConsent?.status === 'required' && legalConsent.uid === authUser?.uid,
-    savingConsent,
-    acceptLegalConsent,
+    legalConsentRequired: legalConsent.required,
+    savingConsent: legalConsent.saving,
+    acceptLegalConsent: legalConsent.accept,
     // Carga = hidratación inicial + comprobación del consentimiento en vuelo (ver `legalConsentPending`).
     loading: loading || legalConsentPending,
     status,
