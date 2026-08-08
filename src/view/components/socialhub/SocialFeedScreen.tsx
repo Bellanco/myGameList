@@ -5,7 +5,7 @@ import { NoScoreMedal } from '../NoScoreMedal';
 import { resolveGrade } from '../../../core/utils/scoreScale';
 import type { SocialUiLabels } from '../../../core/constants/labels';
 import { HubStatus } from './HubStatus';
-import { PostText } from './PostText';
+import { PostBody } from './PostText';
 import { HubAvatar } from './HubAvatar';
 
 /** Pantalla principal del feed social. */
@@ -281,7 +281,12 @@ function SocialFeedScreenBase({
                             </div>
                           </header>
                           <p className="hub-feed-date">{hasValidDate ? SOCIAL_UI.feed.postedAt(itemDate) : SOCIAL_UI.feed.analyzedRecently}</p>
-                          <p className="hub-post-text"><PostText text={entry.text} sharedFilePageHint={SOCIAL_UI.feed.postSharedFileHint} /></p>
+                          <PostBody
+                            text={entry.text}
+                            sharedFilePageHint={SOCIAL_UI.feed.postSharedFileHint}
+                            expandLabel={SOCIAL_UI.feed.postExpand}
+                            collapseLabel={SOCIAL_UI.feed.postCollapse}
+                          />
                         </article>
                       );
                     }

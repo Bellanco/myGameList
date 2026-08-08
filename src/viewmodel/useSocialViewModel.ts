@@ -287,6 +287,12 @@ export function useSocialViewModel(options?: {
   // Rango del PROPIO usuario: decide cada cuánto se rehidrata el feed (ver PROFILE_TIER_FEED_TTL_MS). Manda el de
   // quien mira porque las lecturas de gists ajenos van con SU token y cuentan contra SU rate-limit.
   const [ownTier, setOwnTier] = useState<ProfileTier>(DEFAULT_PROFILE_TIER);
+  /**
+   * ¿Se sabe ya el rango propio? `ownTier` arranca en bronce porque es el valor por defecto real, pero "bronce
+   * porque aún no se ha leído el perfil" y "bronce porque ese es su rango" NO son lo mismo para el directorio: el
+   * primero elegiría el TTL de caché equivocado y obligaría a rehidratarlo entero al conocerse el rango.
+   */
+  const [tierResolved, setTierResolved] = useState(false);
   const [loading, setLoading] = useState(true);
   const [resolvingSocialGist, setResolvingSocialGist] = useState(false);
   const [connecting, setConnecting] = useState(false);
@@ -1540,12 +1546,18 @@ export function useSocialViewModel(options?: {
   }, [hydrateSocialProfile]);
 
   // Rango propio → cadencia del feed. Una sola lectura del perfil propio (ya cacheada 60 s en memoria por
-  // `getOwnProfileRef`). Mientras no se resuelva se asume bronce; cuando llega, `hydrateSocialDirectory` cambia de
-  // identidad y vuelve a evaluar la caché con el TTL bueno, así que un mithril no se queda con datos viejos por
-  // haber entrado antes de saber su rango. Cualquier fallo deja bronce: degradar es lo seguro.
+  // `getOwnProfileRef`). Cualquier fallo deja bronce: degradar es lo seguro.
+  //
+  // `tierResolved` es lo que evita que el privilegio del rango llegue SIEMPRE un paso tarde. Antes se hidrataba con
+  // el bronce por defecto y, al llegar el rango de verdad, la hidratación entera se repetía: medido, un bronce
+  // hidrataba UNA vez y un plata/oro/mithril DOS —la segunda releyendo hasta ~50 gists de amigos—, y con la caché
+  // caliente esa segunda pasada tapaba con el esqueleto un feed ya pintado. Es decir, cuanto más alto el rango,
+  // peor la experiencia: justo lo contrario de lo que el rango promete. Ahora se espera a saberlo, igual que se
+  // espera a `friendshipsResolved`, y la primera evaluación de la caché ya usa el TTL que toca.
   useEffect(() => {
     if (!authUser?.uid) {
       setOwnTier(DEFAULT_PROFILE_TIER);
+      setTierResolved(false);
       return;
     }
     let cancelled = false;
@@ -1555,6 +1567,11 @@ export function useSocialViewModel(options?: {
       })
       .catch(() => {
         /* sin rango conocido → bronce */
+      })
+      .finally(() => {
+        // Resuelto SIEMPRE, también si la lectura falla: sin esto, un Firestore caído dejaría el feed sin hidratar
+        // (y con el esqueleto puesto) en vez de degradar a la cadencia de bronce, que es lo seguro.
+        if (!cancelled) setTierResolved(true);
       });
     return () => {
       cancelled = true;
@@ -1579,7 +1596,10 @@ export function useSocialViewModel(options?: {
     // Va SEPARADO de la guarda de arriba porque las dos salidas significan cosas distintas para la pantalla: las de
     // arriba son "aquí no hay directorio que cargar" (pasarela, editor de perfil) y esta es "todavía no se puede
     // saber". Solo esta última debe seguir contando como carga (ver `directoryLoading`).
-    if (!friendshipsResolved) {
+    //
+    // `!tierResolved`: el TTL de la caché del directorio SALE DEL RANGO (30 min en bronce, 60 s en mithril).
+    // Hidratar antes de saberlo evalúa la caché con el TTL de bronce y luego hay que repetirlo todo.
+    if (!friendshipsResolved || !tierResolved) {
       return;
     }
 
@@ -1843,7 +1863,7 @@ export function useSocialViewModel(options?: {
       // sin asentar mantendría el esqueleto girando para siempre.
       setDirectorySettled(true);
     }
-  }, [activePanel, authUser, defaultSocialVisibility, friendships.friends, friendshipsResolved, mainSyncConfig?.token, ownTier, profileEditorLocked, setFeedback, socialSpaceOpen, socialCfgGistId, showPhoto]);
+  }, [activePanel, authUser, defaultSocialVisibility, friendships.friends, friendshipsResolved, mainSyncConfig?.token, ownTier, tierResolved, profileEditorLocked, setFeedback, socialSpaceOpen, socialCfgGistId, showPhoto]);
 
   // F3 — publica una publicación de texto libre y refresca el feed (definido tras hydrateSocialDirectory para evitar TDZ).
   const handlePublishPost = useCallback(async () => {

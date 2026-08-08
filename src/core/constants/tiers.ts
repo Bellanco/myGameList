@@ -23,9 +23,15 @@ export const ADMIN_ONLY_TIER: ProfileTier = 'mithril';
  * Manda el rango de QUIEN MIRA, no el del perfil mirado: las lecturas de gists ajenos van con el token del
  * espectador y cuentan contra SU rate-limit, así que es su privilegio y su coste.
  *
- * Mithril es "siempre fresco al abrir" con un suelo de 12 s, que es justo lo mismo que un TTL de 12 s. El suelo
- * existe para que navegar feed→detalle→feed no dispare ~50 lecturas de gist por cada ida y vuelta; es el mismo
- * valor que el anti-spam del botón "Actualizar feed" (`FORCED_REFRESH_MIN_MS` en useSocialViewModel).
+ * EL SUELO DE MITHRIL ESTÁ ATADO AL RATE-LIMIT DE GITHUB, no al gusto. Cada hidratación real cuesta 1 consulta a
+ * Firestore MÁS hasta ~50 lecturas de gist (una por amigo), y el token tiene 5.000 peticiones/hora que además
+ * comparte con la sincronización de la biblioteca. Estuvo en 12 s: como la caché de sesión del gist público dura
+ * 45 s, el gasto real quedaba acotado a ~51 peticiones cada 45 s ≈ 4.080/hora de uso sostenido del hub, o sea al
+ * borde del límite y sin margen para el sync. Con 60 s son ~3.060/hora y quedan ~1.900 de margen; sigue siendo
+ * 10 veces más fresco que oro. Si hiciera falta más margen, este es el número que hay que subir.
+ *
+ * Ya NO coincide con el anti-spam del botón "Actualizar feed" (`FORCED_REFRESH_MIN_MS`, 12 s): son cosas
+ * distintas —el refresco automático al abrir y el manual a petición— y atarlas obligaba a moverlas juntas.
  *
  * Nota: esto lo aplica el cliente, así que es un privilegio NO exigible — quien manipule su copia puede darse la
  * cadencia que quiera. No es un problema: gastaría su propio token.
@@ -34,7 +40,7 @@ export const PROFILE_TIER_FEED_TTL_MS: Record<ProfileTier, number> = {
   bronze: 30 * 60 * 1000, // lo mismo que antes de existir los rangos
   silver: 15 * 60 * 1000,
   gold: 10 * 60 * 1000,
-  mithril: 12_000,
+  mithril: 60_000,
 };
 
 /**

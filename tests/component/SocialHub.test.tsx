@@ -116,6 +116,9 @@ describe('SocialHub (componente, post-M3)', () => {
     // Y con las amistades: el test que las deja COLGANDO (para observar la ventana de carga del feed) dejaría al
     // resto sin resolverlas nunca, y sin amistades resueltas el directorio no se hidrata en ningún test posterior.
     firebaseMocks.getMyFriendships.mockResolvedValue({ friends: [], incoming: [], outgoing: [], byOtherUid: {} });
+    // Ídem con el perfil propio, del que sale el RANGO: los tests que lo dejan colgando (para observar qué pasa
+    // antes de conocerlo) dejarían al resto sin rango resuelto, y sin rango tampoco se hidrata el directorio.
+    firebaseMocks.resolveOwnProfile.mockResolvedValue(null);
     // Salvo en los tests de la puerta legal, se parte de un consentimiento vigente.
     firebaseMocks.getPublicConfig.mockResolvedValue({ consent: { version: LEGAL_VERSION, agreedAt: 1 } });
   });
@@ -250,6 +253,47 @@ describe('SocialHub (componente, post-M3)', () => {
     resolveFriendships({ friends: [], incoming: [], outgoing: [], byOtherUid: {} });
     expect(await screen.findByText(SOCIAL_UI.feed.activityEmptyNoFriends)).toBeInTheDocument();
   });
+
+  // El TTL de la caché del directorio sale del RANGO de quien mira (30 min bronce … 12 s mithril). Si se hidrata
+  // antes de conocerlo, se evalúa la caché con el TTL de bronce y hay que repetir la hidratación entera al llegar
+  // el rango de verdad: medido, bronce hidrataba 1 vez y plata/oro/mithril 2, la segunda releyendo hasta ~50 gists
+  // de amigos y tapando con el esqueleto un feed ya pintado. El rango salía CARO en vez de privilegiado.
+  it.each(['bronze', 'silver', 'gold', 'mithril'] as const)(
+    'directorio: un %s hidrata UNA sola vez (el rango no provoca una segunda pasada)',
+    async (tier) => {
+      firebaseMocks.getCurrentSocialAuthUser.mockResolvedValue({ uid: 'me', email: 'me@x.com', displayName: 'Me', photoURL: null });
+      gistMocks.getSocialSyncConfig.mockReturnValue({ token: 'ghp_x', gistId: 'my-social', etag: null, lastRemoteUpdatedAt: 0 });
+      localMocks.loadLocalState.mockReturnValue({
+        c: [{ id: 1, name: 'Halo', _ts: 1, platforms: [], genres: [], steamDeck: false, review: '', score: 5, years: [], strengths: [], weaknesses: [], reasons: [], replayable: false, retry: false, hours: 0 }],
+        v: [], e: [], p: [], deleted: [], updatedAt: 0,
+      });
+      gistMocks.readSocialGist.mockResolvedValue({
+        data: {
+          profile: { name: 'Me', private: false, visibility: { hiddenTabs: [], hideReplayable: false, hideRetry: false, hideGameTime: false, showPhoto: true }, sharedLists: {} },
+          recommendations: [], activity: [], posts: [], updatedAt: 0,
+        },
+        etag: null,
+      });
+      firebaseMocks.listSocialDirectory.mockResolvedValue([]);
+      // El rango llega TARDE (es una lectura de Firestore), que es justo cuando se producía la segunda pasada.
+      let resolveProfile: (value: SocialProfileReference | null) => void = () => {};
+      const perfilPendiente = new Promise<SocialProfileReference | null>((resolve) => { resolveProfile = resolve; });
+      firebaseMocks.resolveOwnProfile.mockImplementation(() => perfilPendiente);
+
+      renderHub('/social');
+
+      await screen.findByText(SOCIAL_UI.feed.title);
+      // Sin rango todavía: no se ha hidratado nada (antes se hidrataba con el TTL de bronce).
+      expect(firebaseMocks.listSocialDirectory).not.toHaveBeenCalled();
+
+      resolveProfile({ tier, socialEnabled: true, socialGistId: 'my-social', displayName: 'Me' } as never);
+
+      await waitFor(() => expect(firebaseMocks.listSocialDirectory).toHaveBeenCalled());
+      // Margen para que una eventual segunda pasada llegara a contarse.
+      await waitFor(() => expect(screen.queryByText(SOCIAL_UI.feed.activityEmptyNoFriends)).toBeInTheDocument());
+      expect(firebaseMocks.listSocialDirectory).toHaveBeenCalledTimes(1);
+    },
+  );
 
   // FASE 0 — el gist social propio pasa a recuperarse de `privateConfig` (owner-only, un solo escritor) en vez
   // del perfil público, que es world-readable para cualquier usuario autenticado y va a dejar de publicarlo.
