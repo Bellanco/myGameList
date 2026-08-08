@@ -15,6 +15,7 @@ import { StatusBanner } from './view/components/StatusBanner';
 import { BottomNavigation, type AppSection } from './view/components/BottomNavigation';
 import { ScrollToTop } from './view/components/ScrollToTop';
 import { ConsentBanner } from './view/components/ConsentBanner';
+import { SocialHubSkeleton } from './view/components/SocialHubSkeleton';
 import { useGameListViewModel } from './viewmodel/useGameListViewModel';
 import { useToolbarFilters } from './viewmodel/useToolbarFilters';
 import { computeTabOptions, countActiveFilters } from './viewmodel/toolbarFilters';
@@ -660,7 +661,10 @@ export default function App() {
             />
           </>
         ) : activeSection === 'social' ? (
-          <Suspense fallback={null}>
+          // `fallback` con esqueleto, no `null`: el chunk del hub es lo primero que hay que descargar al entrar en
+          // social, y con `null` la pantalla se quedaba en BLANCO hasta que llegaba. Es el mismo esqueleto que
+          // pinta el propio hub mientras se hidrata, así que el usuario ve una sola escena de carga continua.
+          <Suspense fallback={<SocialHubSkeleton />}>
             <SocialHub
               onAddToProximos={vm.addGameToProximos}
               hasGameInLists={vm.hasGameInLists}

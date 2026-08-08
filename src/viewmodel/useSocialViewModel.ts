@@ -319,6 +319,19 @@ export function useSocialViewModel(options?: {
   const [hydratingProfile, setHydratingProfile] = useState(false);
   const [savingProfile, setSavingProfile] = useState(false);
   const [loadingDirectory, setLoadingDirectory] = useState(false);
+  /**
+   * ¿Ha terminado ya una pasada de hidratación del directorio (por caché o por red)?
+   *
+   * `loadingDirectory` solo cubre la hidratación EN VUELO, y hasta ella hay toda una ventana previa que no cubría
+   * nadie: resolver las amistades (query a Firestore, porque el feed es solo-amigos) y leer la caché de IndexedDB.
+   * Durante esa ventana el feed se pintaba con `socialDirectory` vacío y `loadingDirectory` en false, así que
+   * enseñaba su estado VACÍO —"Descubre perfiles y añade amigos"— a alguien que sí tiene amigos y cuyo feed
+   * todavía estaba cargando. De ahí la secuencia carga → vacío → carga → contenido.
+   *
+   * Esta marca distingue "el directorio está vacío" de "el directorio aún no se sabe", que es lo que la pantalla
+   * necesita para elegir entre el vacío y el esqueleto.
+   */
+  const [directorySettled, setDirectorySettled] = useState(false);
   const [socialDirectory, setSocialDirectory] = useState<SocialDirectoryEntry[]>([]);
   // Listas completas de OTROS perfiles, cargadas bajo demanda (al abrir reseña/perfil) y filtradas por su
   // visibilidad. Clave = id del perfil del directorio. Alimenta getGameItemById y selectedProfileDetail.
@@ -1548,10 +1561,25 @@ export function useSocialViewModel(options?: {
     };
   }, [authUser]);
 
+  // Cambiar de identidad (otra cuenta, otro canal social) invalida lo asentado: lo que venga es un directorio
+  // distinto, así que la pantalla tiene que volver a decir "cargando" y no el vacío del anterior. Declarado ANTES
+  // del efecto de hidratación para que, en un mismo commit, el reinicio corra primero.
+  useEffect(() => {
+    setDirectorySettled(false);
+  }, [authUser?.uid, socialCfgGistId]);
+
   const hydrateSocialDirectory = useCallback(async (forceRefresh = false) => {
+    if (!socialSpaceOpen || activePanel === 'profile' || profileEditorLocked || !authUser || !socialCfgGistId) {
+      return;
+    }
+
     // `!friendshipsResolved`: NO hidratar (ni cachear) hasta conocer a los amigos. Si no, el feed solo-amigos cachearía
     // el directorio sin actividad de amigos (carrera de arranque) y quedaría en blanco hasta invalidar la caché.
-    if (!socialSpaceOpen || activePanel === 'profile' || profileEditorLocked || !authUser || !socialCfgGistId || !friendshipsResolved) {
+    //
+    // Va SEPARADO de la guarda de arriba porque las dos salidas significan cosas distintas para la pantalla: las de
+    // arriba son "aquí no hay directorio que cargar" (pasarela, editor de perfil) y esta es "todavía no se puede
+    // saber". Solo esta última debe seguir contando como carga (ver `directoryLoading`).
+    if (!friendshipsResolved) {
       return;
     }
 
@@ -1578,6 +1606,7 @@ export function useSocialViewModel(options?: {
       );
       if (cachedDirectory) {
         setSocialDirectory(cachedDirectory);
+        setDirectorySettled(true);
         return;
       }
     }
@@ -1810,6 +1839,9 @@ export function useSocialViewModel(options?: {
       setFeedback('warn', error instanceof Error ? error.message : SOCIAL_UI.status.firestoreCheckFailed);
     } finally {
       setLoadingDirectory(false);
+      // También en el camino de error: un fallo de red deja el directorio vacío DE VERDAD (con su aviso), y dejarlo
+      // sin asentar mantendría el esqueleto girando para siempre.
+      setDirectorySettled(true);
     }
   }, [activePanel, authUser, defaultSocialVisibility, friendships.friends, friendshipsResolved, mainSyncConfig?.token, ownTier, profileEditorLocked, setFeedback, socialSpaceOpen, socialCfgGistId, showPhoto]);
 
@@ -2248,6 +2280,19 @@ export function useSocialViewModel(options?: {
     return null;
   }, [canConnectSocialGist, canSignInGoogle, connecting, handleCreateSocialGist, handleSignInGoogle, hasMainSync, navigate, resolvingSocialGist, signingIn]);
 
+  /**
+   * Lo que las pantallas deben tratar como "el directorio está cargando": la hidratación en vuelo MÁS la ventana
+   * previa que no cubría nadie (amistades + caché de IndexedDB). Sin esto, el feed y el directorio pintaban su
+   * estado vacío durante esa ventana y luego saltaban al esqueleto: carga → vacío → carga → contenido.
+   *
+   * Las condiciones replican las guardas de `hydrateSocialDirectory` que significan "aquí no hay directorio que
+   * cargar" (pasarela sin sesión/canal, editor de perfil bloqueado por un error). Sin ellas, un estado en el que la
+   * hidratación nunca llega a correr dejaría el esqueleto girando indefinidamente en lugar de mostrar el aviso.
+   */
+  const directoryLoading =
+    loadingDirectory ||
+    (!directorySettled && socialSpaceOpen && !profileEditorLocked && Boolean(authUser) && Boolean(socialCfgGistId));
+
   return {
     navigate,
     activePanel,
@@ -2289,7 +2334,9 @@ export function useSocialViewModel(options?: {
     feedItems,
     hydratingProfile,
     savingProfile,
-    loadingDirectory,
+    // Se expone el valor DERIVADO (no el `loadingDirectory` crudo): es el único que cubre la ventana completa, y
+    // así ninguna pantalla puede olvidarse de sumarle la parte que falta.
+    loadingDirectory: directoryLoading,
     hasMainSync,
     hasSocialGist,
     hasSocialSession,
