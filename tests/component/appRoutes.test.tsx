@@ -1,61 +1,54 @@
-import { describe, it, expect } from 'vitest';
-import { render, screen } from '@testing-library/react';
-import { MemoryRouter, Navigate, Route, Routes } from 'react-router-dom';
-import { APP_ROUTE_PATHS } from '../../src/App';
+import { describe, expect, it } from 'vitest';
+import { APP_ROUTES, FALLBACK_ROUTE, matchAppSection } from '../../src/core/constants/routes';
 import { LEGAL_ROUTES } from '../../src/core/constants/legal';
+import { SOCIAL_ROUTES } from '../../src/viewmodel/social/socialRoutes';
 
-// Regresión: el `<Route path="*">` de App redirige a /completados toda ruta NO listada en APP_ROUTE_PATHS.
-// Una sub-ruta social declarada en el ViewModel pero ausente aquí (como pasó con /social/requests) rebotaría a
-// completados. Este test reconstruye el matching real de App a partir de la MISMA lista exportada.
+// Regresión de rutas. Antes, App mantenía DOS listas: una cadena de ternarios elegía la pantalla y un `<Routes>`
+// aparte declaraba qué caminos eran válidos; olvidar una entrada en la segunda hacía que la pantalla rebotara a
+// /completados (le pasó a `/social/requests`). Ese test reconstruía el matching a partir de la lista exportada.
+//
+// Ahora la tabla es única y `<Routes>` se genera de ella, así que lo que hay que comprobar es otra cosa: que el
+// matcher que usa App (`matchAppSection`) mande cada camino a su sección, y sobre todo que las sub-rutas del hub
+// NO necesiten declararse aquí — las cubre el comodín `/social/*`, que es lo que elimina aquella clase de fallo.
 
-function renderAt(path: string) {
-  return render(
-    <MemoryRouter initialEntries={[path]}>
-      <Routes>
-        {APP_ROUTE_PATHS.map((p) => (
-          <Route key={p} path={p} element={<div>{`MATCH:${p}`}</div>} />
-        ))}
-        <Route path="*" element={<Navigate to="/completados" replace />} />
-      </Routes>
-    </MemoryRouter>,
-  );
-}
-
-describe('App routes (regresión de rutas sociales)', () => {
-  it('incluye todas las sub-rutas sociales que produce el ViewModel', () => {
-    for (const path of ['/social', '/social/profile', '/social/profiles', '/social/requests']) {
-      expect(APP_ROUTE_PATHS).toContain(path);
+describe('rutas de la app', () => {
+  it('cada camino de la tabla resuelve a su propia sección', () => {
+    for (const { path, section } of APP_ROUTES) {
+      // El comodín se comprueba abajo con caminos reales; `matchRoutes` no casa el patrón contra sí mismo.
+      if (path.endsWith('/*')) continue;
+      expect(matchAppSection(path), path).toBe(section);
     }
   });
 
-  it('/social/requests casa una ruta propia (no rebota a /completados)', () => {
-    renderAt('/social/requests');
-    expect(screen.getByText('MATCH:/social/requests')).toBeInTheDocument();
+  it('TODA sub-ruta social cae en la sección social sin declararla', () => {
+    // Justo la clase de fallo que costó `/social/requests`: estas rutas las produce el hub, no esta tabla.
+    const paths = [
+      '/social',
+      ...Object.values(SOCIAL_ROUTES).map((pattern) => pattern
+        .replace(':profileId', 'abc')
+        .replace(':userId', 'uid-1')
+        .replace(':gameId', '42')
+        .replace(':eventType', 'review')),
+      '/social/una-pantalla-que-todavia-no-existe',
+    ];
+
+    for (const path of paths) {
+      expect(matchAppSection(path), path).toBe('social');
+    }
   });
 
-  it('las rutas sociales dinámicas también casan', () => {
-    renderAt('/social/profiles/abc');
-    expect(screen.getByText('MATCH:/social/profiles/:profileId')).toBeInTheDocument();
-  });
-
-  it('L4: los documentos legales tienen ruta propia y no rebotan a /completados', () => {
+  it('los documentos legales tienen sección propia', () => {
     for (const path of Object.values(LEGAL_ROUTES)) {
-      expect(APP_ROUTE_PATHS).toContain(path);
+      expect(matchAppSection(path), path).toBe('legal');
     }
-
-    renderAt(LEGAL_ROUTES.privacy);
-    expect(screen.getByText(`MATCH:${LEGAL_ROUTES.privacy}`)).toBeInTheDocument();
   });
 
-  it('/admin tiene ruta propia aunque esté oculta (sin ella, el catch-all la rebotaría)', () => {
-    expect(APP_ROUTE_PATHS).toContain('/admin');
-    renderAt('/admin');
-    expect(screen.getByText('MATCH:/admin')).toBeInTheDocument();
+  it('/admin resuelve aunque esté oculta en la navegación', () => {
+    expect(matchAppSection('/admin')).toBe('admin');
   });
 
-  it('una ruta desconocida sí rebota a /completados (catch-all)', () => {
-    renderAt('/ruta-inexistente');
-    // El Navigate del catch-all lleva a /completados, cuya ruta renderiza su marcador.
-    expect(screen.getByText('MATCH:/completados')).toBeInTheDocument();
+  it('un camino desconocido cae a listados, que es a donde lo lleva el catch-all', () => {
+    expect(matchAppSection('/no-existe')).toBe('lists');
+    expect(matchAppSection(FALLBACK_ROUTE)).toBe('lists');
   });
 });

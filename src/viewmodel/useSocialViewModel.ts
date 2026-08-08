@@ -48,6 +48,7 @@ import type { FriendshipView, MyFriendships, RelationshipState } from '../model/
 import { loadLocalState } from '../model/repository/localRepository';
 import { normalizeTimestamp as toSafeTimestamp } from '../core/utils/normalize';
 import { mapWithConcurrency } from '../core/utils/concurrency';
+import { matchSocialRoute } from './social/socialRoutes';
 
 const shouldRequireProfileCreation = (profileExists: boolean, justSavedProfile: boolean): boolean => {
   return !profileExists && !justSavedProfile;
@@ -73,21 +74,6 @@ const isGithubCredentialError = (error: unknown): boolean =>
 
 const isNotFoundGistError = (error: unknown): boolean => {
   return error instanceof Error && /\b404\b/.test(error.message);
-};
-
-type SocialPanel = 'profile' | 'profiles' | 'profile-detail' | 'profile-review' | 'detail' | 'requests' | 'feed';
-
-type SocialRouteState = {
-  activePanel: SocialPanel;
-  profileDetailId: string;
-  // Vista de "Reseñas" del detalle de perfil (sub-ruta /reviews). Se refleja en la URL para que, al abrir una
-  // reseña y volver atrás, se regrese a la lista de reseñas y no a la vista general del perfil.
-  profileReviewsView: boolean;
-  // Id del juego cuya reseña se muestra a pantalla completa (sub-ruta /game/:gameId/review del perfil).
-  profileReviewGameId: number;
-  detailActorUid: string;
-  detailGameId: number;
-  detailEventType: string;
 };
 
 /**
@@ -157,54 +143,6 @@ const SOCIAL_DIRECTORY_FETCH_CONCURRENCY = 6;
 const SOCIAL_ACTIVITY_PER_PROFILE = 320;
 // Las publicaciones sí se quedan en el tope del feed: ninguna vista las lista por separado.
 const SOCIAL_POSTS_PER_PROFILE = 40;
-const PROFILE_EDIT_PATH = /^\/social\/profile\/?$/;
-const PROFILES_PATH = /^\/social\/profiles\/?$/;
-const REQUESTS_PATH = /^\/social\/requests\/?$/;
-const PROFILE_DETAIL_PATH = /^\/social\/profiles\/([^/]+)$/;
-const PROFILE_REVIEWS_PATH = /^\/social\/profiles\/([^/]+)\/reviews$/;
-const PROFILE_REVIEW_DETAIL_PATH = /^\/social\/profiles\/([^/]+)\/game\/(\d+)\/review$/;
-const ACTIVITY_DETAIL_PATH = /^\/social\/user\/([^/]+)\/game\/(\d+)\/(review|recommendation)$/;
-
-const getSocialRouteState = (pathname: string): SocialRouteState => {
-  const profileEditMatch = pathname.match(PROFILE_EDIT_PATH);
-  const profilesMatch = pathname.match(PROFILES_PATH);
-  const requestsMatch = pathname.match(REQUESTS_PATH);
-  const profileDetailMatch = pathname.match(PROFILE_DETAIL_PATH);
-  const profileReviewsMatch = pathname.match(PROFILE_REVIEWS_PATH);
-  const profileReviewDetailMatch = pathname.match(PROFILE_REVIEW_DETAIL_PATH);
-  const detailMatch = pathname.match(ACTIVITY_DETAIL_PATH);
-
-  // El id del perfil es común a las tres sub-rutas de detalle de perfil (/, /reviews, /game/:id/review).
-  const profileDetailId = profileReviewDetailMatch
-    ? decodeURIComponent(profileReviewDetailMatch[1])
-    : profileReviewsMatch
-      ? decodeURIComponent(profileReviewsMatch[1])
-      : profileDetailMatch
-        ? decodeURIComponent(profileDetailMatch[1])
-        : '';
-
-  return {
-    activePanel: profileEditMatch
-      ? 'profile'
-      : profilesMatch
-        ? 'profiles'
-        : requestsMatch
-          ? 'requests'
-          : profileReviewDetailMatch
-            ? 'profile-review'
-            : profileReviewsMatch || profileDetailMatch
-              ? 'profile-detail'
-              : detailMatch
-                ? 'detail'
-                : 'feed',
-    profileDetailId,
-    profileReviewsView: Boolean(profileReviewsMatch),
-    profileReviewGameId: profileReviewDetailMatch ? Number(profileReviewDetailMatch[2]) : 0,
-    detailActorUid: detailMatch ? decodeURIComponent(detailMatch[1]) : '',
-    detailGameId: detailMatch ? Number(detailMatch[2]) : 0,
-    detailEventType: detailMatch ? detailMatch[3] : '',
-  };
-};
 
 /**
  * ViewModel del Hub social (M3). Extraído VERBATIM de SocialHub.tsx (god component) sin cambio de
@@ -282,7 +220,7 @@ export function useSocialViewModel(options?: {
   const location = useLocation();
   const navigate = useNavigate();
 
-  const routeState = useMemo(() => getSocialRouteState(location.pathname), [location.pathname]);
+  const routeState = useMemo(() => matchSocialRoute(location.pathname), [location.pathname]);
   const { activePanel, profileDetailId, profileReviewsView, profileReviewGameId, detailActorUid, detailGameId, detailEventType } = routeState;
 
 
