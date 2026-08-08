@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor, fireEvent } from '@testing-library/react';
+import { act, render, screen, waitFor, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import type { SecretSocialGistResult } from '../../src/model/repository/gistRepository';
 import type { SocialAuthUser, SocialProfileReference } from '../../src/model/repository/firebaseClient';
@@ -1221,5 +1221,69 @@ describe('SocialHub — alta de perfil: exige juegos completados', () => {
       [string, string, { profile: Record<string, unknown> }];
     expect(payload.profile.name).toBe('Me');
     expect(payload.profile).not.toHaveProperty('favoriteGames');
+  });
+});
+
+// P3 — el mensaje de estado se borraba con un temporizador por aviso y sin cancelar el anterior, así que dos
+// avisos seguidos se pisaban: el plazo del PRIMERO borraba el texto del SEGUNDO. Con un temporizador único
+// reutilizado, cada aviso dura lo suyo.
+describe('SocialHub — el aviso de estado no lo borra el temporizador del aviso anterior', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    firebaseMocks.getPublicConfig.mockResolvedValue({ consent: { version: LEGAL_VERSION, agreedAt: 1 } });
+    firebaseMocks.getPrivateConfig.mockResolvedValue(null);
+    firebaseMocks.getMyFriendships.mockResolvedValue({ friends: [], incoming: [], outgoing: [], byOtherUid: {} });
+    firebaseMocks.resolveOwnProfile.mockResolvedValue(null);
+    gistMocks.ensureSecretSocialGist.mockImplementation(async (_t?: string, gistId?: string) => ({
+      gistId: gistId || '', etag: null, migrated: false, supersededGistIds: [], keptPublicGistIds: [], copiedEntries: 0,
+    }));
+  });
+
+  it('un segundo aviso sobrevive al plazo del primero', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      firebaseMocks.getCurrentSocialAuthUser.mockResolvedValue({ uid: 'me', email: 'me@x.com', displayName: 'Me', photoURL: null });
+      gistMocks.getSocialSyncConfig.mockReturnValue({ token: 'ghp_x', gistId: 'my-social', etag: null, lastRemoteUpdatedAt: 0 });
+      localMocks.loadLocalState.mockReturnValue({
+        c: [{ id: 1, name: 'Halo', _ts: 1, platforms: [], genres: [], steamDeck: false, review: '', score: 5, years: [], strengths: [], weaknesses: [], reasons: [], replayable: false, retry: false, hours: 0 }],
+        v: [], e: [], p: [], deleted: [], updatedAt: 0,
+      });
+      gistMocks.readSocialGist.mockResolvedValue({
+        data: {
+          profile: { name: 'Me', private: false, visibility: { hiddenTabs: [], hideReplayable: false, hideRetry: false, hideGameTime: false, showPhoto: true }, sharedLists: {} },
+          recommendations: [], activity: [], posts: [], updatedAt: 0,
+        },
+        etag: null,
+      });
+      // Dos desconocidos a los que enviar petición: cada envío produce su propio aviso "ok".
+      firebaseMocks.listSocialDirectory.mockResolvedValue([
+        { id: 'ada', uid: 'ada', displayName: 'Ada', photoURL: '', socialGistId: '', gamesGistId: '' },
+        { id: 'bob', uid: 'bob', displayName: 'Bob', photoURL: '', socialGistId: '', gamesGistId: '' },
+      ]);
+      firebaseMocks.sendFriendRequest.mockResolvedValue(undefined);
+
+      renderHub('/social/profiles');
+
+      const primero = await screen.findByRole('button', { name: SOCIAL_UI.friendship.addAria('Ada') });
+      fireEvent.click(primero);
+      expect(await screen.findByText(SOCIAL_UI.status.friendRequestSent)).toBeInTheDocument();
+
+      // A 2,5 s el primer aviso sigue vivo; su plazo (3 s) vence dentro de poco.
+      await act(async () => { await vi.advanceTimersByTimeAsync(2_500); });
+
+      const segundo = await screen.findByRole('button', { name: SOCIAL_UI.friendship.addAria('Bob') });
+      fireEvent.click(segundo);
+      await screen.findByText(SOCIAL_UI.status.friendRequestSent);
+
+      // Se cruza el instante en que vencía el plazo del PRIMER aviso (2,5 s + 1 s = 3,5 s desde el primero).
+      await act(async () => { await vi.advanceTimersByTimeAsync(1_000); });
+      expect(screen.queryByText(SOCIAL_UI.status.friendRequestSent)).toBeInTheDocument();
+
+      // Y el segundo sí se borra cuando vence EL SUYO.
+      await act(async () => { await vi.advanceTimersByTimeAsync(2_500); });
+      await waitFor(() => expect(screen.queryByText(SOCIAL_UI.status.friendRequestSent)).not.toBeInTheDocument());
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
