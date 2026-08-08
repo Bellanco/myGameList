@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent a
 import { useLocation, useNavigate } from 'react-router-dom';
 import { ensureSyncConfigLoaded, getSyncConfig } from '../model/repository/gistRepository';
 import { createSocialGist, getSocialSyncConfig, mergeSocialGistData, readPublicSocialGistById, readSocialGist, remapSocialActorIds, saveSocialSyncConfig, type SocialGistData, type SocialProfileVisibility, type SocialSharedGame, deleteGist, ensureSecretSocialGist, socialGistHasContent, writeSocialGist } from '../model/repository/socialGistRepository';
-import { publishPost } from '../model/repository/socialPublishRepository';
 import { reconcileReviewActivity } from '../model/repository/socialActivityReconcile';
 import { invalidateProfileGames, loadForeignProfileGames } from '../model/repository/foreignProfileRepository';
 import { getCachedSocialDirectory, getCachedSocialProfile, getLocalMeta, invalidateCachedSocialDirectory, patchLocalMeta, putCachedSocialDirectory, putCachedSocialProfile } from '../model/repository/indexedDbRepository';
@@ -13,9 +12,6 @@ import type { IconName } from '../core/constants/icons';
 import {
   DEFAULT_PROFILE_TIER,
   PROFILE_TIER_FEED_TTL_MS,
-  PROFILE_TIER_POST_MAX_LENGTH,
-  canPublishPosts,
-  hasPostLengthLimit,
   type ProfileTier,
 } from '../core/constants/tiers';
 import { TAB_IDS, type GameItem, type SyncConfig, type TabData, type TabId } from '../model/types/game';
@@ -49,6 +45,7 @@ import { loadLocalState } from '../model/repository/localRepository';
 import { normalizeTimestamp as toSafeTimestamp } from '../core/utils/normalize';
 import { mapWithConcurrency } from '../core/utils/concurrency';
 import { matchSocialRoute } from './social/socialRoutes';
+import { useSocialCompose } from './social/useSocialCompose';
 import { useSocialFeed } from './social/socialFeed';
 // Re-exportados: las pantallas del hub los importan desde este ViewModel desde antes de la extracción.
 export type {
@@ -229,8 +226,6 @@ export function useSocialViewModel(options?: {
   const [hideGameTime, setHideGameTime] = useState(false);
   // Filtro por nombre de la pantalla "Perfiles" (directorio social). El feed de actividad ya no se filtra.
   const [profileSearch, setProfileSearch] = useState('');
-  const [composePostText, setComposePostText] = useState('');
-  const [publishingPost, setPublishingPost] = useState(false);
   const [hydratingProfile, setHydratingProfile] = useState(false);
   const [savingProfile, setSavingProfile] = useState(false);
   const [loadingDirectory, setLoadingDirectory] = useState(false);
@@ -1801,32 +1796,22 @@ export function useSocialViewModel(options?: {
     }
   }, [runDirectoryHydration]);
 
-  // F3 — publica una publicación de texto libre y refresca el feed (definido tras hydrateSocialDirectory para evitar TDZ).
-  const handlePublishPost = useCallback(async () => {
-    const text = composePostText.trim();
-    if (!text || publishingPost) {
-      return;
-    }
-
-    // Bronce no publica. La pantalla ni siquiera muestra el compositor; esta comprobación es la red por si se
-    // llega aquí de otra forma (estado a medio actualizar, atajo de teclado). En SILENCIO y a propósito: quien no
-    // tiene el rango no ve nada al respecto, tampoco un aviso que le recuerde lo que no puede hacer.
-    if (!canPublishPosts(ownTier)) {
-      return;
-    }
-
-    try {
-      setPublishingPost(true);
-      await publishPost({ text, maxLength: PROFILE_TIER_POST_MAX_LENGTH[ownTier] });
-      setComposePostText('');
-      await hydrateSocialDirectory(true);
-      setFeedback('ok', SOCIAL_UI.status.postPublished);
-    } catch (error) {
-      setFeedback('err', error instanceof Error ? error.message : SOCIAL_UI.status.postPublishFailed);
-    } finally {
-      setPublishingPost(false);
-    }
-  }, [composePostText, ownTier, publishingPost, hydrateSocialDirectory, setFeedback]);
+  // F3 — compositor de publicaciones. Se invoca AQUÍ, y no arriba con el resto del estado, porque necesita
+  // `hydrateSocialDirectory` para refrescar el feed tras publicar; el orden de los hooks es estable entre renders,
+  // que es lo único que React exige.
+  const {
+    composePostText,
+    setComposePostText,
+    publishingPost,
+    handlePublishPost,
+    canPublishPosts: canPublish,
+    postMaxLength,
+    showPostCounter,
+  } = useSocialCompose({
+    ownTier,
+    onPublished: useCallback(() => hydrateSocialDirectory(true), [hydrateSocialDirectory]),
+    setFeedback,
+  });
 
   // Disparo automático de la hidratación. Depende de DATOS, no de la identidad del callback.
   //
@@ -2300,9 +2285,9 @@ export function useSocialViewModel(options?: {
     composePostText,
     // Rango propio y lo que implica al publicar: si puede, cuánto, y si hay contador que enseñar.
     ownTier,
-    canPublishPosts: canPublishPosts(ownTier),
-    postMaxLength: PROFILE_TIER_POST_MAX_LENGTH[ownTier],
-    showPostCounter: hasPostLengthLimit(ownTier),
+    canPublishPosts: canPublish,
+    postMaxLength,
+    showPostCounter,
     setComposePostText,
     publishingPost,
     handlePublishPost,
