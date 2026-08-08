@@ -353,7 +353,7 @@ function normalizeSocialSharedGame(value: unknown): SocialSharedGame | null {
   const snippet = buildReviewSnippet(pickLegacyReviewText(source));
   const rating = Math.round(clampRating(source.rating ?? source.score));
   // Nota fina 0–100: preserva `grade` si el gist lo trae; si no (gist de cliente antiguo), la deriva del rating ×20.
-  const grade = resolveGrade({ grade: typeof source.grade === 'number' ? source.grade : null, score: rating });
+  const grade = resolveGrade({ grade: typeof source.grade === 'number' ? source.grade : null, score: rating }); // audit-allow: 'score' es el nombre del argumento de resolveGrade, no un campo publicado; lo que se escribe es 'rating' (ya redondeado)
 
   return {
     id,
@@ -431,7 +431,7 @@ function normalizeRecommendationItems(items: unknown): SocialRecommendationEntry
         gameId,
         gameName,
         rating: clampRating(record.rating),
-        grade: resolveGrade({ grade: typeof record.grade === 'number' ? record.grade : null, score: clampRating(record.rating) }),
+        grade: resolveGrade({ grade: typeof record.grade === 'number' ? record.grade : null, score: clampRating(record.rating) }), // audit-allow: 'score' es el nombre del argumento de resolveGrade, no un campo publicado; lo que se escribe es 'rating' (ya redondeado)
         createdAt,
         updatedAt,
       } satisfies SocialRecommendationEntry;
@@ -471,7 +471,7 @@ function normalizeActivityItems(items: unknown): SocialActivityEntry[] {
         gameId,
         gameName,
         rating: clampRating(record.rating),
-        grade: resolveGrade({ grade: typeof record.grade === 'number' ? record.grade : null, score: clampRating(record.rating) }),
+        grade: resolveGrade({ grade: typeof record.grade === 'number' ? record.grade : null, score: clampRating(record.rating) }), // audit-allow: 'score' es el nombre del argumento de resolveGrade, no un campo publicado; lo que se escribe es 'rating' (ya redondeado)
         recommendationText: String(record.recommendationText || '').trim(),
         snippet: buildReviewSnippet(pickLegacyReviewText(record)),
         createdAt,
@@ -561,7 +561,7 @@ function mergeLegacyActivity(
       gameId: recommendation.gameId,
       gameName: recommendation.gameName,
       rating: recommendation.rating,
-      grade: resolveGrade({ grade: recommendation.grade ?? null, score: recommendation.rating }),
+      grade: resolveGrade({ grade: recommendation.grade ?? null, score: recommendation.rating }), // audit-allow: 'score' es el nombre del argumento de resolveGrade, no un campo publicado; lo que se escribe es 'rating' (ya redondeado)
       recommendationText: '',
       snippet: '',
       createdAt: current?.createdAt || recommendation.createdAt,
@@ -629,7 +629,7 @@ export function upsertReviewActivity(data: SocialGistData, input: UpsertReviewIn
     gameId: input.gameId,
     gameName: cleanName,
     rating: clampRating(input.rating),
-    grade: resolveGrade({ grade: input.grade ?? null, score: input.rating }),
+    grade: resolveGrade({ grade: input.grade ?? null, score: input.rating }), // audit-allow: 'score' es el nombre del argumento de resolveGrade, no un campo publicado; lo que se escribe es 'rating' (ya redondeado)
     recommendationText: '',
     snippet: buildReviewSnippet(cleanReview),
   }, now, input.bumpOrder ?? true);
