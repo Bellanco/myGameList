@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { act, render, screen, waitFor, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import type { SecretSocialGistResult } from '../../src/model/repository/gistRepository';
+import type { SecretSocialGistResult } from '../../src/model/repository/socialGistRepository';
 import type { SocialAuthUser, SocialProfileReference } from '../../src/model/repository/firebaseClient';
 
 // Mock de los repos que consume useSocialViewModel: aísla la UI de red/Firebase/IndexedDB.
@@ -70,8 +70,17 @@ const gistMocks = vi.hoisted(() => ({
 // Se parte del módulo REAL y solo se sustituye lo que toca red/config: así las funciones puras del gist
 // (remapSocialActorIds, upsertReviewActivity, removeReviewActivity…) se ejercitan de verdad y un flujo que
 // escribiera el gist indebidamente llegaría hasta `writeSocialGist` (mockeado) y sería detectable.
+//
+// Se mockean los DOS módulos con el mismo objeto desde que el canal social se separó del de juegos: el hub usa
+// `socialGistRepository` y la config de sync sigue en `gistRepository`. Cada factoría se queda solo con las
+// claves que su módulo exporta de verdad; las sobrantes del spread no las importa nadie.
 vi.mock('../../src/model/repository/gistRepository', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../../src/model/repository/gistRepository')>()),
+  ...gistMocks,
+}));
+
+vi.mock('../../src/model/repository/socialGistRepository', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../src/model/repository/socialGistRepository')>()),
   ...gistMocks,
 }));
 

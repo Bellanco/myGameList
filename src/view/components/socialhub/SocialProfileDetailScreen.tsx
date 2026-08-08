@@ -10,7 +10,7 @@ import { resolveGrade } from '../../../core/utils/scoreScale';
 import { HubAvatar } from './HubAvatar';
 import { TAB_IDS, type GameItem, type TabId, type TabSort } from '../../../model/types/game';
 import { DEFAULT_SORT, nextSort, sortGames } from '../../../core/utils/sortGames';
-import type { SocialSharedGame } from '../../../model/repository/gistRepository';
+import type { SocialSharedGame } from '../../../model/repository/socialGistRepository';
 import { RouletteModal } from '../roulette/RouletteModal';
 import { buildProfilePool, profileWeight } from '../../../core/roulette/roulette';
 import { FriendshipButton } from './FriendshipButton';

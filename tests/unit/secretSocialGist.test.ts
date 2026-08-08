@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { deleteGist, ensureSecretSocialGist, socialGistHasContent } from '../../src/model/repository/gistRepository';
+import { deleteGist, ensureSecretSocialGist, socialGistHasContent } from '../../src/model/repository/socialGistRepository';
 
 // FASE 2 — migración del canal social a gist SECRETO.
 //

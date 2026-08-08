@@ -459,3 +459,16 @@ export function assertNoSocialPrivateFields(obj: unknown, path = ''): void {
     assertNoSocialPrivateFields(value, path ? `${path}.${key}` : key);
   }
 }
+
+/** Checksum de integridad declarado dentro de un fichero de chunk ya serializado (null si no es legible).
+ *  Lo usan los dos canales para saltarse la reescritura de chunks que no han cambiado. */
+export function chunkFileChecksum(content: string | undefined): string | null {
+  if (!content) return null;
+  try {
+    const parsed = JSON.parse(content) as { integrity?: { checksum?: unknown } };
+    const c = parsed?.integrity?.checksum;
+    return typeof c === 'string' || typeof c === 'number' ? String(c) : null;
+  } catch {
+    return null;
+  }
+}

@@ -1,5 +1,5 @@
 import { TAB_IDS, type GameItem, type TabData, type TabId } from '../../model/types/game';
-import type { SocialProfileVisibility } from '../../model/repository/gistRepository';
+import type { SocialProfileVisibility } from '../../model/repository/socialGistRepository';
 
 /**
  * Bloque 6 — Filtra la lista de juegos de OTRO perfil según la visibilidad que ese usuario publicó (respeto de la

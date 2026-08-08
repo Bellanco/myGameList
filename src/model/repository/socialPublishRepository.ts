@@ -3,16 +3,8 @@
 // la actividad (que se convierte a snippet index-only), reescribe el gist y asegura el perfil en Firestore.
 import { ensureProfileByEmail, getCurrentSocialAuthUser, healOwnFriendshipIdentity, resolveStableProfileId } from './firebaseRepository';
 import { getLocalMeta, invalidateCachedSocialDirectory, patchLocalMeta } from './indexedDbRepository';
-import {
-  getSyncConfig,
-  readSocialGist,
-  remapSocialActorIds,
-  removeReviewActivity,
-  saveSocialSyncConfig,
-  upsertPost,
-  upsertReviewActivity,
-  writeSocialGist,
-} from './gistRepository';
+import { getSyncConfig } from './gistRepository';
+import { readSocialGist, remapSocialActorIds, removeReviewActivity, saveSocialSyncConfig, upsertPost, upsertReviewActivity, writeSocialGist } from './socialGistRepository';
 import { markPendingSocialActivity } from './socialActivityReconcile';
 import { resolveSocialChannel, type SocialChannel } from './socialChannel';
 

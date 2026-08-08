@@ -1,6 +1,6 @@
 import { TAB_IDS, type DeletedItem, type GameItem, type StoragePayload, type TabData, type TabId } from '../types/game';
 import type { LocalMeta, SyncOp } from '../types/local';
-import type { SocialActivityEntry } from './gistRepository';
+import type { SocialActivityEntry } from './socialGistRepository';
 import { DELETED_STORE, GAMES_STORE, META_STORE, PROFILE_CACHE_STORE, SYNC_QUEUE_STORE, openSharedDatabase } from './idbConnectionRepository';
 
 const STORE_NAME = 'appState';

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { upsertPost, type SocialGistData } from '../../src/model/repository/gistRepository';
+import { upsertPost, type SocialGistData } from '../../src/model/repository/socialGistRepository';
 import { assertValidSocialGist } from '../../src/model/schemas/socialGistSchema';
 
 function baseGist(): SocialGistData {

@@ -1,16 +1,7 @@
+import { assertNoSocialPrivateFields, buildReviewSnippet, toPublicGame } from '../../src/model/repository/socialProjection';
 import { describe, expect, it } from 'vitest';
-import {
-  assertGistSizeWithinLimit,
-  assertNoSocialPrivateFields,
-  buildGamesFiles,
-  buildGamesMainFile,
-  buildReviewSnippet,
-  distributeIntoChunks,
-  leanTabData,
-  remapSocialActorIds,
-  toPublicGame,
-  upsertReviewActivity,
-} from '../../src/model/repository/gistRepository';
+import { assertGistSizeWithinLimit, buildGamesFiles, buildGamesMainFile, distributeIntoChunks, leanTabData } from '../../src/model/repository/gistRepository';
+import { remapSocialActorIds, upsertReviewActivity } from '../../src/model/repository/socialGistRepository';
 import { assertValidSocialGist } from '../../src/model/schemas/socialGistSchema';
 import { migrateData } from '../../src/model/repository/migrateRepository';
 import { assembleChunkedGames, gamesGistNeedsRewrite, unwrapGamesFile } from '../../src/model/migration/legacyGamesFormat';
