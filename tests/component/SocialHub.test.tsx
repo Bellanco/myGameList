@@ -108,6 +108,15 @@ describe('SocialHub (componente, post-M3)', () => {
       copiedEntries: 0,
     }));
     gistMocks.socialGistHasContent.mockResolvedValue(true);
+    // Ídem con la lectura del gist del perfil: el test que la deja colgando (para que el perfil llegue DESPUÉS del
+    // directorio) se la contagiaría a los siguientes, que se quedarían sin hidratar el perfil.
+    gistMocks.readSocialGist.mockResolvedValue({
+      data: {
+        profile: { name: '', private: false, recommendations: [], visibility: { hiddenTabs: [], hideReplayable: false, hideRetry: false, hideGameTime: false }, sharedLists: {} },
+        recommendations: [], activity: [], updatedAt: 0,
+      },
+      etag: null,
+    });
     gistMocks.deleteGist.mockResolvedValue(true);
     // Idem con `privateConfig`: si un test deja ahí un gist, el resto creería que otro dispositivo ya migró y
     // adoptarían ese canal en vez de seguir su propio camino.
@@ -252,6 +261,59 @@ describe('SocialHub (componente, post-M3)', () => {
     // Resuelta la amistad (sin amigos) y con el directorio vacío, el vacío YA es cierto y se muestra.
     resolveFriendships({ friends: [], incoming: [], outgoing: [], byOtherUid: {} });
     expect(await screen.findByText(SOCIAL_UI.feed.activityEmptyNoFriends)).toBeInTheDocument();
+  });
+
+  // P1 — el disparo de la hidratación dependía de la IDENTIDAD del callback, y ese callback se recreaba con
+  // cualquiera de sus doce dependencias: `activePanel` (cambia en cada navegación del hub), `showPhoto` (lo fija
+  // la hidratación del perfil, en cada apertura) y hasta `mainSyncConfig?.token`, que ni siquiera usaba. Cada
+  // pasada relee IndexedDB y reemplaza el directorio por un array nuevo que invalida los `useMemo` del feed.
+  it('directorio: se hidrata UNA vez por apertura aunque cambie la foto y se navegue por el hub', async () => {
+    firebaseMocks.getCurrentSocialAuthUser.mockResolvedValue({ uid: 'me', email: 'me@x.com', displayName: 'Me', photoURL: 'https://x/foto.png' });
+    gistMocks.getSocialSyncConfig.mockReturnValue({ token: 'ghp_x', gistId: 'my-social', etag: null, lastRemoteUpdatedAt: 0 });
+    localMocks.loadLocalState.mockReturnValue({
+      c: [{ id: 1, name: 'Halo', _ts: 1, platforms: [], genres: [], steamDeck: false, review: '', score: 5, years: [], strengths: [], weaknesses: [], reasons: [], replayable: false, retry: false, hours: 0 }],
+      v: [], e: [], p: [], deleted: [], updatedAt: 0,
+    });
+    // El perfil se lee TARDE, a propósito: si `showPhoto` cambiara mientras el directorio aún se está hidratando,
+    // la guarda de concurrencia absorbería el disparo espurio y el test pasaría sin que las dependencias del
+    // efecto estuvieran bien. Resolviéndolo DESPUÉS, el único que puede evitar la segunda pasada es el disparo
+    // por datos. `showPhoto: false` porque el estado arranca en `true`: con `true` React descartaría el setState.
+    let resolveProfileGist: (value: unknown) => void = () => {};
+    gistMocks.readSocialGist.mockImplementation(() => new Promise((resolve) => { resolveProfileGist = resolve; }));
+    firebaseMocks.listSocialDirectory.mockResolvedValue([]);
+
+    renderHub('/social');
+
+    await waitFor(() => expect(firebaseMocks.listSocialDirectory).toHaveBeenCalled());
+    await waitFor(() => expect(screen.getByText(SOCIAL_UI.feed.activityEmptyNoFriends)).toBeInTheDocument());
+    expect(firebaseMocks.listSocialDirectory).toHaveBeenCalledTimes(1);
+
+    // Ya asentado el directorio, llega el perfil y cambia `showPhoto`. Eso NO cambia nada de lo que el directorio
+    // contiene (solo la foto propia de respaldo), así que no puede costar otra relectura de ~50 gists.
+    resolveProfileGist({
+      data: {
+        profile: { name: 'Me', private: false, visibility: { hiddenTabs: [], hideReplayable: false, hideRetry: false, hideGameTime: false, showPhoto: false }, sharedLists: {} },
+        recommendations: [], activity: [], posts: [], updatedAt: 0,
+      },
+      etag: null,
+    });
+    // Se espera a que el perfil haya ATERRIZADO de verdad en el estado, no a que su lectura esté meramente
+    // lanzada: el nick del perfil sale en el botón del avatar propio, así que verlo prueba que `setProfileName` y
+    // `setShowPhoto` ya se han aplicado. Sin esta espera el test pasaba sin comprobar nada.
+    expect(await screen.findByTitle('Me')).toBeInTheDocument();
+    // Margen para que una segunda pasada llegara a contarse: entre el disparo y la llamada hay un `await` (la
+    // lectura de la caché), así que comprobarlo en el mismo tick daría un falso verde.
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(firebaseMocks.listSocialDirectory).toHaveBeenCalledTimes(1);
+
+    // Ir a "Perfiles" y volver NO cambia nada de lo que el directorio contiene: no debe rehidratarlo.
+    fireEvent.click(screen.getByRole('button', { name: SOCIAL_UI.feed.openProfiles }));
+    await screen.findByText(SOCIAL_UI.profiles.title);
+    fireEvent.click(screen.getByRole('button', { name: SOCIAL_UI.profiles.back }));
+    await screen.findByText(SOCIAL_UI.feed.title);
+    await new Promise((resolve) => setTimeout(resolve, 50));
+
+    expect(firebaseMocks.listSocialDirectory).toHaveBeenCalledTimes(1);
   });
 
   // El TTL de la caché del directorio sale del RANGO de quien mira (30 min bronce … 12 s mithril). Si se hidrata
