@@ -4,7 +4,10 @@ import { clampRating, normalizeTimestamp } from '../../core/utils/normalize';
 import { resolveGrade } from '../../core/utils/scoreScale';
 import { assembleChunkedGames, gamesGistNeedsRewrite, gamesGistNeedsUpgradeToWrapper, unwrapGamesFile } from '../migration/legacyGamesFormat';
 import { pickLegacyActorId, pickLegacyFromId, pickLegacyReviewText, socialGistNeedsRewrite } from '../migration/legacySocialFormat';
-import { assertValidSocialGist } from '../schemas/socialGistSchema';
+// `socialGistSchema` se carga BAJO DEMANDA (ver `loadSocialGistValidator`): arrastra Zod entero —unos 220 kB de
+// fuente, con `to-json-schema` incluido, que aquí no pinta nada— y este módulo lo importa `useSyncViewModel`,
+// que es estático desde `App`. Es decir, Zod viajaba en el chunk de ARRANQUE de todo el mundo para validar algo
+// que solo ocurre al escribir el gist social.
 import { TAB_IDS, type TabData, type TabId } from '../types/game';
 import type { GamesChunkFile, GamesMainFile } from '../types/gist';
 import { githubFetch, parseRetryAfterMs } from './githubHttp';
@@ -1340,6 +1343,20 @@ export async function readPublicSocialGistById(gistId: string, token: string | n
   }
 }
 
+/**
+ * Carga perezosa del validador de esquema (Zod). Se resuelve una sola vez por sesión y el navegador cachea el
+ * chunk; el coste va sobre una operación que de todas formas es de red.
+ *
+ * Si la carga fallara (sin red, o un index.html cacheado tras un despliegue) la escritura ABORTA, que es el
+ * comportamiento correcto: es la allowlist que impide publicar en un gist PÚBLICO un campo que no debería estar.
+ * Fallar cerrado es lo seguro. La denylist de privacidad (`assertNoSocialPrivateFields`) sigue siendo síncrona y
+ * empaquetada, así que la comprobación crítica corre igual aunque esto no llegue a cargarse.
+ */
+async function loadSocialGistValidator(): Promise<(data: unknown) => void> {
+  const schemaModule = await import('../schemas/socialGistSchema');
+  return schemaModule.assertValidSocialGist;
+}
+
 export async function writeSocialGist(token: string, gistId: string, payload: SocialGistData): Promise<{ etag: string | null }> {
   if (!isValidGithubToken(token)) {
     throw new Error('Formato de token inválido');
@@ -1354,6 +1371,7 @@ export async function writeSocialGist(token: string, gistId: string, payload: So
     updatedAt: Date.now(),
   });
   assertNoSocialPrivateFields(normalized); // canal público: nunca review/reviewText/score/hours/etc. (denylist)
+  const assertValidSocialGist = await loadSocialGistValidator();
   assertValidSocialGist(normalized); // F6.1: allowlist estricta (Zod) — falla si hay cualquier campo extra/tipo inválido
 
   const headers: Record<string, string> = {

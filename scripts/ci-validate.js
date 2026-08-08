@@ -12,7 +12,12 @@ const root = path.join(__dirname, '..');
 // Pasó de 200 a 240 al autohospedar las fuentes, y NO porque el arranque se encareciera: la fuente base (~36 kB)
 // se descargaba igual desde Google, solo que de un tercero y sin aparecer en esta cuenta. Ahora está contada, y
 // además llega antes (sin los dos saltos de red a fonts.googleapis.com + fonts.gstatic.com).
-const BOOT_PAYLOAD_BUDGET_KB = 240;
+//
+// Y de 240 a 215 al sacar Zod (~19 kB comprimidos) del arranque: solo lo usa la validación de esquema al ESCRIBIR
+// el gist social, así que ahora se carga bajo demanda (ver `loadSocialGistValidator`). El presupuesto se aprieta a
+// propósito, para que volver a importarlo de forma estática desde un módulo del arranque rompa el build en vez de
+// pasar desapercibido. El margen que queda es para crecimiento normal, no para reintroducir una librería entera.
+const BOOT_PAYLOAD_BUDGET_KB = 215;
 const publicDir = path.join(root, 'public');
 const requiredFiles = [
   path.join(root, 'index.html'),

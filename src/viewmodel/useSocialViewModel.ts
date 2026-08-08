@@ -1058,15 +1058,6 @@ export function useSocialViewModel(options?: {
     };
   }, [activePanel, selectedProfileDetail, profileReviewGameId]);
 
-  const activityFeedItems = useMemo(() => {
-    // `|| []`: una entrada de caché antigua/malformada podría no traer `activity` → flatMap+sort reventaría con
-    // "undefined.updatedAt" (pantalla en blanco). Se protege el acceso.
-    return socialDirectory
-      .flatMap((entry) => entry.activity || [])
-      .sort((a, b) => b.updatedAt - a.updatedAt)
-      .slice(0, 300);
-  }, [socialDirectory]);
-
   // F3 — feed COMBINADO: reseñas/recomendaciones (actividad) + publicaciones, mezcladas y ordenadas por fecha.
   // Los posts llevan `kind:'post'` para distinguirlos al renderizar; la actividad conserva su `type`.
   const feedItems = useMemo(() => {
@@ -1081,18 +1072,38 @@ export function useSocialViewModel(options?: {
       .slice(0, 300);
   }, [socialDirectory]);
 
+  /**
+   * Evento abierto a pantalla completa desde el feed (/social/user/:uid/game/:id/:tipo).
+   *
+   * Busca DIRECTAMENTE en el directorio, en una sola pasada y sin construir nada por el camino. Antes salía de un
+   * `activityFeedItems` que aplanaba y ORDENABA toda la actividad del directorio (hasta 50 perfiles × 320 entradas)
+   * para quedarse con 300 y luego buscar una — y se recalculaba con cada cambio del directorio aunque no hubiera
+   * ningún detalle abierto, duplicando el trabajo que ya hace `feedItems`.
+   *
+   * De paso deja de estar limitado a esas 300: un evento más antiguo que el corte no se podía abrir por URL.
+   * Ante duplicados (posibles al fusionar dos gists sociales) sigue ganando el más reciente, como antes.
+   */
   const activeDetailEvent = useMemo(() => {
     if (activePanel !== 'detail' || !detailActorUid || detailGameId <= 0 || !detailEventType) {
       return null;
     }
 
-    return activityFeedItems.find(
-      (entry) =>
-        entry.actorProfileId === detailActorUid &&
-        entry.gameId === detailGameId &&
-        entry.type === detailEventType,
-    ) || null;
-  }, [activePanel, activityFeedItems, detailActorUid, detailEventType, detailGameId]);
+    let best: SocialActivityFeedItem | null = null;
+    for (const entry of socialDirectory) {
+      // `|| []`: una entrada de caché antigua/malformada podría no traer `activity`.
+      for (const activityEntry of entry.activity || []) {
+        if (
+          activityEntry.actorProfileId === detailActorUid &&
+          activityEntry.gameId === detailGameId &&
+          activityEntry.type === detailEventType &&
+          (!best || activityEntry.updatedAt > best.updatedAt)
+        ) {
+          best = activityEntry;
+        }
+      }
+    }
+    return best;
+  }, [activePanel, socialDirectory, detailActorUid, detailEventType, detailGameId]);
 
   /**
    * Obtiene un GameItem para un evento del feed. Para perfiles ajenos usa su lista bajada
