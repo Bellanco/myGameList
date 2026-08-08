@@ -136,7 +136,11 @@ export default defineConfig({
           if (id.includes('node_modules/react/') || id.includes('node_modules/react-dom/')) {
             return 'react';
           }
-          if (id.includes('node_modules/react-router-dom/')) {
+          // `react-router`, SIN el `-dom`: `react-router-dom` es una fachada que apenas tiene código propio y
+          // reexporta desde `react-router`, así que la regla anterior (`react-router-dom/`) no casaba con nada —
+          // no se emitía ningún chunk `router` y los ~363 kB de fuente de `react-router`, el módulo más grande
+          // del bundle, acababan dentro del chunk de entrada. Sin el `/` final para cubrir ambos paquetes.
+          if (id.includes('node_modules/react-router')) {
             return 'router';
           }
           if (id.includes('node_modules/@tanstack/react-virtual/')) {
