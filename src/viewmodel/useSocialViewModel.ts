@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { ensureSyncConfigLoaded, getSyncConfig } from '../model/repository/gistRepository';
-import { createSocialGist, getSocialSyncConfig, mergeSocialGistData, readPublicSocialGistById, readSocialGist, remapSocialActorIds, saveSocialSyncConfig, type SocialActivityEntry, type SocialGistData, type SocialPostEntry, type SocialProfileVisibility, type SocialSharedGame, deleteGist, ensureSecretSocialGist, socialGistHasContent, writeSocialGist } from '../model/repository/socialGistRepository';
+import { createSocialGist, getSocialSyncConfig, mergeSocialGistData, readPublicSocialGistById, readSocialGist, remapSocialActorIds, saveSocialSyncConfig, type SocialGistData, type SocialProfileVisibility, type SocialSharedGame, deleteGist, ensureSecretSocialGist, socialGistHasContent, writeSocialGist } from '../model/repository/socialGistRepository';
 import { publishPost } from '../model/repository/socialPublishRepository';
 import { reconcileReviewActivity } from '../model/repository/socialActivityReconcile';
 import { invalidateProfileGames, loadForeignProfileGames } from '../model/repository/foreignProfileRepository';
@@ -49,6 +49,15 @@ import { loadLocalState } from '../model/repository/localRepository';
 import { normalizeTimestamp as toSafeTimestamp } from '../core/utils/normalize';
 import { mapWithConcurrency } from '../core/utils/concurrency';
 import { matchSocialRoute } from './social/socialRoutes';
+import { useSocialFeed } from './social/socialFeed';
+// Re-exportados: las pantallas del hub los importan desde este ViewModel desde antes de la extracción.
+export type {
+  SocialActivityFeedItem,
+  SocialFeedDayGroup,
+  SocialFeedItem,
+  SocialPostFeedItem,
+} from './social/socialFeed';
+import type { SocialActivityFeedItem, SocialPostFeedItem } from './social/socialFeed';
 
 const shouldRequireProfileCreation = (profileExists: boolean, justSavedProfile: boolean): boolean => {
   return !profileExists && !justSavedProfile;
@@ -83,44 +92,6 @@ const isNotFoundGistError = (error: unknown): boolean => {
  * props como `any[]` — precisamente en la vista más caliente y con más ramas del hub (actividad vs publicación).
  * Al exportarlos, el discriminante `kind` deja de ser una convención tácita y pasa a comprobarlo el compilador.
  */
-type SocialFeedAuthor = {
-  profileId: string;
-  profileDisplayName: string;
-  socialGistId: string;
-  photoURL: string;
-};
-
-/** Reseña/recomendación enriquecida con la identidad de su autor (para el feed). */
-export type SocialActivityFeedItem = SocialActivityEntry & SocialFeedAuthor;
-
-/** F3 — publicación enriquecida con la identidad de su autor (para el feed). */
-export type SocialPostFeedItem = SocialPostEntry & SocialFeedAuthor;
-
-/**
- * Elemento del feed COMBINADO. `kind` es el discriminante: las publicaciones lo llevan a `'post'` y la actividad
- * no lo lleva (declarado `kind?: undefined` para que TypeScript pueda estrechar la unión con `entry.kind === 'post'`).
- */
-export type SocialFeedItem =
-  | (SocialActivityFeedItem & { kind?: undefined })
-  | (SocialPostFeedItem & { kind: 'post' });
-
-/** Un día del feed agrupado, tal y como lo pinta la pantalla. */
-export type SocialFeedDayGroup = {
-  dayHeader: string;
-  dayDate: Date;
-  items: SocialFeedItem[];
-};
-
-const FEED_PAGE_SIZE = 25;
-// Rango válido de JS Date en ms (±100M días). Un `updatedAt` fuera de rango (p. ej. gist de otro usuario con el
-// timestamp en micro/nanosegundos o corrupto) daría `new Date(x)` → Invalid Date, que el feed agrupado descarta.
-// Si esos ítems ordenan arriba y copan el corte visible, el feed quedaría EN BLANCO. Se saca del feed en origen.
-const MAX_VALID_DATE_MS = 8.64e15;
-function hasRenderableTimestamp(value: unknown): boolean {
-  const numeric = Number(value);
-  return Number.isFinite(numeric) && numeric > 0 && numeric <= MAX_VALID_DATE_MS;
-}
-// Cooldown mínimo entre refrescos forzados del directorio (botón "Actualizar feed").
 const FORCED_REFRESH_MIN_MS = 12_000;
 // Tope de perfiles del directorio social, ORDENADOS POR USO RECIENTE (`profiles.updatedAt`). Solo los AMIGOS
 // cuestan una lectura de gist; los demás son index-only (nombre/foto de Firestore), así que subir este número
@@ -165,18 +136,6 @@ export function isOwnProfileIdentity(
   return (Boolean(uid) && entryId === uid) || (Boolean(ownProfileId) && entryId === ownProfileId);
 }
 
-const FEED_DAY_MONTH_NAMES = [
-  'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
-  'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre',
-] as const;
-
-/**
- * Formatea la fecha como "DD de MMM". Pura y sin capturas → a nivel de módulo
- * para que no se recree en cada render (evita invalidar el useMemo del feed).
- */
-function formatDayHeader(date: Date): string {
-  return `${date.getDate()} de ${FEED_DAY_MONTH_NAMES[date.getMonth()]}`;
-}
 
 /**
  * Una entrada del DIRECTORIO social ya hidratada: el perfil más lo que se haya podido leer de su gist.
@@ -270,8 +229,6 @@ export function useSocialViewModel(options?: {
   const [hideGameTime, setHideGameTime] = useState(false);
   // Filtro por nombre de la pantalla "Perfiles" (directorio social). El feed de actividad ya no se filtra.
   const [profileSearch, setProfileSearch] = useState('');
-  // Paginación del feed: 25 inicial, +25 por "Mostrar más". Se reinicia al cambiar la búsqueda.
-  const [feedVisibleCount, setFeedVisibleCount] = useState(FEED_PAGE_SIZE);
   const [composePostText, setComposePostText] = useState('');
   const [publishingPost, setPublishingPost] = useState(false);
   const [hydratingProfile, setHydratingProfile] = useState(false);
@@ -1023,20 +980,6 @@ export function useSocialViewModel(options?: {
     };
   }, [activePanel, selectedProfileDetail, profileReviewGameId]);
 
-  // F3 — feed COMBINADO: reseñas/recomendaciones (actividad) + publicaciones, mezcladas y ordenadas por fecha.
-  // Los posts llevan `kind:'post'` para distinguirlos al renderizar; la actividad conserva su `type`.
-  const feedItems = useMemo(() => {
-    const activity = socialDirectory.flatMap((entry) => entry.activity || []);
-    const posts = socialDirectory.flatMap((entry) => entry.posts || []).map((post) => ({ ...post, kind: 'post' as const }));
-
-    return [...activity, ...posts]
-      // Descarta ítems con timestamp inválido/fuera de rango ANTES de ordenar y cortar: si no, ordenarían arriba,
-      // coparían el corte visible y el agrupado por día los eliminaría, dejando el feed en blanco (ver bug del 2º amigo).
-      .filter((item) => hasRenderableTimestamp(item.updatedAt))
-      .sort((a, b) => b.updatedAt - a.updatedAt)
-      .slice(0, 300);
-  }, [socialDirectory]);
-
   /**
    * Evento abierto a pantalla completa desde el feed (/social/user/:uid/game/:id/:tipo).
    *
@@ -1048,6 +991,8 @@ export function useSocialViewModel(options?: {
    * De paso deja de estar limitado a esas 300: un evento más antiguo que el corte no se podía abrir por URL.
    * Ante duplicados (posibles al fusionar dos gists sociales) sigue ganando el más reciente, como antes.
    */
+  const { feedItems, groupedFeedItems, hasMoreFeed, showMoreFeed } = useSocialFeed(socialDirectory);
+
   const activeDetailEvent = useMemo(() => {
     if (activePanel !== 'detail' || !detailActorUid || detailGameId <= 0 || !detailEventType) {
       return null;
@@ -1104,52 +1049,6 @@ export function useSocialViewModel(options?: {
   // escrita en otro dispositivo con el sync de juegos aún en camino), borraba actividad VÁLIDA del feed de todos
   // de forma permanente. La limpieza de huérfanas la hace ahora `reconcileReviewActivity`, que compara la lista
   // completa de una vez y nunca retira una entrada más nueva que el reloj de los listados locales.
-
-  const groupedFeedItems = useMemo(() => {
-    type FeedItem = (typeof feedItems)[number];
-    const groups: Array<{
-      dayHeader: string;
-      dayDate: Date;
-      items: FeedItem[];
-    }> = [];
-
-    const itemsByDay = new Map<string, FeedItem[]>();
-
-    // Solo los elementos visibles según la paginación (25, +25 con "Mostrar más").
-    feedItems.slice(0, feedVisibleCount).forEach((item) => {
-      const itemDate = new Date(toSafeTimestamp(item.updatedAt, Date.now()));
-      if (Number.isNaN(itemDate.getTime())) {
-        return;
-      }
-      const dayKey = itemDate.toISOString().split('T')[0];
-
-      if (!itemsByDay.has(dayKey)) {
-        itemsByDay.set(dayKey, []);
-      }
-
-      itemsByDay.get(dayKey)!.push(item);
-    });
-
-    const sortedDays = Array.from(itemsByDay.entries())
-      .sort((a, b) => new Date(b[0]).getTime() - new Date(a[0]).getTime());
-
-    sortedDays.forEach(([dayKey, items]) => {
-      const dayDate = new Date(dayKey);
-      groups.push({
-        dayHeader: formatDayHeader(dayDate),
-        dayDate,
-        items,
-      });
-    });
-
-    return groups;
-  }, [feedItems, feedVisibleCount]);
-
-  // Paginación del feed: ¿hay más allá de lo visible? y handler para mostrar otros 25.
-  const hasMoreFeed = feedItems.length > feedVisibleCount;
-  const showMoreFeed = useCallback(() => {
-    setFeedVisibleCount((count) => count + FEED_PAGE_SIZE);
-  }, []);
 
   const openActivityDetail = useCallback((entry: SocialActivityFeedItem) => {
     navigate(`/social/user/${encodeURIComponent(entry.actorProfileId)}/game/${entry.gameId}/${entry.type}`);
