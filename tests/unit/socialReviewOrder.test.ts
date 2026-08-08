@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { upsertReviewActivity, type SocialGistData } from '../../src/model/repository/gistRepository';
+import { upsertReviewActivity, type SocialGistData } from '../../src/model/repository/socialGistRepository';
 
 // Regresión (bug reseña social): editar SOLO la nota/el nombre de un juego no debe recolocar la reseña al
 // principio del feed (orden por `updatedAt`; solo se avanza cuando cambia el texto). Además, si la reseña aún

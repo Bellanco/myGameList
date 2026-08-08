@@ -109,15 +109,32 @@ function tabGamesEqual(a: TabData, b: TabData): boolean {
   return true;
 }
 
-export function useGameListViewModel() {
-  const initial = loadLocalState();
+/**
+ * Estado de arranque leído del almacenamiento local. Se calcula UNA vez por montaje (ver el `useState`
+ * perezoso de abajo): la lectura implica `localStorage.getItem` + `JSON.parse` + `migrateData` + una pasada de
+ * `normalizeData` dentro de `loadLocalState`, más la de aquí. Con la biblioteca entera en juego es trabajo
+ * proporcional al número de juegos, y `useState` descarta el resultado en todos los renders salvo el primero.
+ */
+function readInitialState(): { data: TabData; meta: { updatedAt: number; etag: string | null; lastRemoteUpdatedAt: number } } {
+  const payload = loadLocalState();
+  return {
+    data: normalizeData(payload),
+    meta: {
+      updatedAt: payload.updatedAt,
+      etag: payload.etag,
+      lastRemoteUpdatedAt: payload.lastRemoteUpdatedAt,
+    },
+  };
+}
 
-  const [data, setData] = useState<TabData>(normalizeData(initial));
-  const [meta, setMeta] = useState({
-    updatedAt: initial.updatedAt,
-    etag: initial.etag,
-    lastRemoteUpdatedAt: initial.lastRemoteUpdatedAt,
-  });
+export function useGameListViewModel() {
+  // Inicializador PEREZOSO (`useState(fn)`, no `useState(fn())`): sin él, cada render del hook —y este es el
+  // hook raíz, así que re-renderiza con cada filtro, fila expandida, aviso y ciclo de sync— reparseaba y
+  // renormalizaba la biblioteca completa solo para tirar el resultado.
+  const [initial] = useState(readInitialState);
+
+  const [data, setData] = useState<TabData>(initial.data);
+  const [meta, setMeta] = useState(initial.meta);
   // P1: `meta` cambia en cada `persist` (nuevo `updatedAt`). Si `persistInternal` lo cerrara por dependencia,
   // se recrearía en cada guardado y arrastraría la recreación de TODOS los callbacks que dependen de `persist`
   // (saveDraft/deleteGame/…). Lo leemos vía ref → `persist` y derivados quedan estables (dep []).

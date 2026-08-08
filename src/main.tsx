@@ -5,6 +5,7 @@ import App from './App';
 import { AppErrorBoundary } from './view/components/AppErrorBoundary';
 import { initializeFirebaseServices, reportHandledError } from './model/repository/firebaseGateway';
 import { runMigration } from './model/repository/dataMigrationRepository';
+import { runWhenIdle } from './core/utils/idle';
 import './styles/index.scss';
 
 // Red de seguridad global para errores que NO pasan por un error boundary de React (código async, promesas
@@ -138,27 +139,13 @@ if (import.meta.env.DEV) {
   };
 }
 
-const idleScheduler = (globalThis as unknown as {
-  requestIdleCallback?: (callback: () => void) => number;
-}).requestIdleCallback;
-
-function runIdleStartupTasks(): void {
+runWhenIdle(() => {
   void initializeFirebaseServices();
   // Migración local (Vía A): puebla el store `games` (v4) en idle. Es idempotente (guardada por
   // migrationVersion) y NO destructiva (appState sigue siendo la fuente de verdad), así que la app
   // funciona igual. Cualquier error queda aislado y no afecta al arranque.
   void runMigration().catch(() => {});
-}
-
-if (typeof idleScheduler === 'function') {
-  idleScheduler(() => {
-    runIdleStartupTasks();
-  });
-} else {
-  setTimeout(() => {
-    runIdleStartupTasks();
-  }, 0);
-}
+});
 
 if ('serviceWorker' in navigator) {
   const hostnameParts = location.hostname.split('.');

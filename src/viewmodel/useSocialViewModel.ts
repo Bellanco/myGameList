@@ -1,39 +1,16 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import {
-  createSocialGist,
-  ensureSyncConfigLoaded,
-  getSocialSyncConfig,
-  getSyncConfig,
-  mergeSocialGistData,
-  readPublicSocialGistById,
-  readSocialGist,
-  remapSocialActorIds,
-  saveSocialSyncConfig,
-  type SocialActivityEntry,
-  type SocialGistData,
-  type SocialPostEntry,
-  type SocialProfileVisibility,
-  type SocialSharedGame,
-  deleteGist,
-  ensureSecretSocialGist,
-  socialGistHasContent,
-  writeSocialGist,
-} from '../model/repository/gistRepository';
-import { publishPost } from '../model/repository/socialPublishRepository';
+import { ensureSyncConfigLoaded, getSyncConfig } from '../model/repository/gistRepository';
+import { createSocialGist, getSocialSyncConfig, mergeSocialGistData, readPublicSocialGistById, readSocialGist, remapSocialActorIds, saveSocialSyncConfig, type SocialGistData, type SocialProfileVisibility, type SocialSharedGame, deleteGist, ensureSecretSocialGist, socialGistHasContent, writeSocialGist } from '../model/repository/socialGistRepository';
 import { reconcileReviewActivity } from '../model/repository/socialActivityReconcile';
 import { invalidateProfileGames, loadForeignProfileGames } from '../model/repository/foreignProfileRepository';
 import { getCachedSocialDirectory, getCachedSocialProfile, getLocalMeta, invalidateCachedSocialDirectory, patchLocalMeta, putCachedSocialDirectory, putCachedSocialProfile } from '../model/repository/indexedDbRepository';
 import { applyProfileVisibility } from '../core/utils/profileVisibility';
 import { SOCIAL_UI } from '../core/constants/labels';
-import { LEGAL_CONSENT_UI, LEGAL_VERSION } from '../core/constants/legal';
 import type { IconName } from '../core/constants/icons';
 import {
   DEFAULT_PROFILE_TIER,
   PROFILE_TIER_FEED_TTL_MS,
-  PROFILE_TIER_POST_MAX_LENGTH,
-  canPublishPosts,
-  hasPostLengthLimit,
   type ProfileTier,
 } from '../core/constants/tiers';
 import { TAB_IDS, type GameItem, type SyncConfig, type TabData, type TabId } from '../model/types/game';
@@ -46,9 +23,7 @@ import {
   getMyFriendships,
   getPrivateConfig,
   purgeOwnPublicGistIds,
-  getPublicConfig,
   setPrivateConfig,
-  setPublicConfig,
   healOwnFriendshipIdentity,
   listSocialDirectory,
   readFriendship,
@@ -66,6 +41,19 @@ import type { FriendshipView, MyFriendships, RelationshipState } from '../model/
 import { loadLocalState } from '../model/repository/localRepository';
 import { normalizeTimestamp as toSafeTimestamp } from '../core/utils/normalize';
 import { mapWithConcurrency } from '../core/utils/concurrency';
+import { matchSocialRoute } from './social/socialRoutes';
+import { useSocialCompose } from './social/useSocialCompose';
+import { useSocialLegalConsent } from './social/useSocialLegalConsent';
+import { DEFAULT_SOCIAL_VISIBILITY, getOrderedUniqueTabs, normalizeVisibility, useSocialProfileForm } from './social/useSocialProfileForm';
+import { useSocialFeed } from './social/socialFeed';
+// Re-exportados: las pantallas del hub los importan desde este ViewModel desde antes de la extracción.
+export type {
+  SocialActivityFeedItem,
+  SocialFeedDayGroup,
+  SocialFeedItem,
+  SocialPostFeedItem,
+} from './social/socialFeed';
+import type { SocialActivityFeedItem, SocialPostFeedItem } from './social/socialFeed';
 
 const shouldRequireProfileCreation = (profileExists: boolean, justSavedProfile: boolean): boolean => {
   return !profileExists && !justSavedProfile;
@@ -93,31 +81,13 @@ const isNotFoundGistError = (error: unknown): boolean => {
   return error instanceof Error && /\b404\b/.test(error.message);
 };
 
-type SocialPanel = 'profile' | 'profiles' | 'profile-detail' | 'profile-review' | 'detail' | 'requests' | 'feed';
-
-type SocialRouteState = {
-  activePanel: SocialPanel;
-  profileDetailId: string;
-  // Vista de "Reseñas" del detalle de perfil (sub-ruta /reviews). Se refleja en la URL para que, al abrir una
-  // reseña y volver atrás, se regrese a la lista de reseñas y no a la vista general del perfil.
-  profileReviewsView: boolean;
-  // Id del juego cuya reseña se muestra a pantalla completa (sub-ruta /game/:gameId/review del perfil).
-  profileReviewGameId: number;
-  detailActorUid: string;
-  detailGameId: number;
-  detailEventType: string;
-};
-
-const FEED_PAGE_SIZE = 25;
-// Rango válido de JS Date en ms (±100M días). Un `updatedAt` fuera de rango (p. ej. gist de otro usuario con el
-// timestamp en micro/nanosegundos o corrupto) daría `new Date(x)` → Invalid Date, que el feed agrupado descarta.
-// Si esos ítems ordenan arriba y copan el corte visible, el feed quedaría EN BLANCO. Se saca del feed en origen.
-const MAX_VALID_DATE_MS = 8.64e15;
-function hasRenderableTimestamp(value: unknown): boolean {
-  const numeric = Number(value);
-  return Number.isFinite(numeric) && numeric > 0 && numeric <= MAX_VALID_DATE_MS;
-}
-// Cooldown mínimo entre refrescos forzados del directorio (botón "Actualizar feed").
+/**
+ * Identidad del autor con la que se enriquece cada elemento del feed al hidratar el directorio.
+ *
+ * Estos tipos vivían DENTRO del hook, así que las pantallas que los consumen no podían nombrarlos y tipaban sus
+ * props como `any[]` — precisamente en la vista más caliente y con más ramas del hub (actividad vs publicación).
+ * Al exportarlos, el discriminante `kind` deja de ser una convención tácita y pasa a comprobarlo el compilador.
+ */
 const FORCED_REFRESH_MIN_MS = 12_000;
 // Tope de perfiles del directorio social, ORDENADOS POR USO RECIENTE (`profiles.updatedAt`). Solo los AMIGOS
 // cuestan una lectura de gist; los demás son index-only (nombre/foto de Firestore), así que subir este número
@@ -140,54 +110,6 @@ const SOCIAL_DIRECTORY_FETCH_CONCURRENCY = 6;
 const SOCIAL_ACTIVITY_PER_PROFILE = 320;
 // Las publicaciones sí se quedan en el tope del feed: ninguna vista las lista por separado.
 const SOCIAL_POSTS_PER_PROFILE = 40;
-const PROFILE_EDIT_PATH = /^\/social\/profile\/?$/;
-const PROFILES_PATH = /^\/social\/profiles\/?$/;
-const REQUESTS_PATH = /^\/social\/requests\/?$/;
-const PROFILE_DETAIL_PATH = /^\/social\/profiles\/([^/]+)$/;
-const PROFILE_REVIEWS_PATH = /^\/social\/profiles\/([^/]+)\/reviews$/;
-const PROFILE_REVIEW_DETAIL_PATH = /^\/social\/profiles\/([^/]+)\/game\/(\d+)\/review$/;
-const ACTIVITY_DETAIL_PATH = /^\/social\/user\/([^/]+)\/game\/(\d+)\/(review|recommendation)$/;
-
-const getSocialRouteState = (pathname: string): SocialRouteState => {
-  const profileEditMatch = pathname.match(PROFILE_EDIT_PATH);
-  const profilesMatch = pathname.match(PROFILES_PATH);
-  const requestsMatch = pathname.match(REQUESTS_PATH);
-  const profileDetailMatch = pathname.match(PROFILE_DETAIL_PATH);
-  const profileReviewsMatch = pathname.match(PROFILE_REVIEWS_PATH);
-  const profileReviewDetailMatch = pathname.match(PROFILE_REVIEW_DETAIL_PATH);
-  const detailMatch = pathname.match(ACTIVITY_DETAIL_PATH);
-
-  // El id del perfil es común a las tres sub-rutas de detalle de perfil (/, /reviews, /game/:id/review).
-  const profileDetailId = profileReviewDetailMatch
-    ? decodeURIComponent(profileReviewDetailMatch[1])
-    : profileReviewsMatch
-      ? decodeURIComponent(profileReviewsMatch[1])
-      : profileDetailMatch
-        ? decodeURIComponent(profileDetailMatch[1])
-        : '';
-
-  return {
-    activePanel: profileEditMatch
-      ? 'profile'
-      : profilesMatch
-        ? 'profiles'
-        : requestsMatch
-          ? 'requests'
-          : profileReviewDetailMatch
-            ? 'profile-review'
-            : profileReviewsMatch || profileDetailMatch
-              ? 'profile-detail'
-              : detailMatch
-                ? 'detail'
-                : 'feed',
-    profileDetailId,
-    profileReviewsView: Boolean(profileReviewsMatch),
-    profileReviewGameId: profileReviewDetailMatch ? Number(profileReviewDetailMatch[2]) : 0,
-    detailActorUid: detailMatch ? decodeURIComponent(detailMatch[1]) : '',
-    detailGameId: detailMatch ? Number(detailMatch[2]) : 0,
-    detailEventType: detailMatch ? detailMatch[3] : '',
-  };
-};
 
 /**
  * ViewModel del Hub social (M3). Extraído VERBATIM de SocialHub.tsx (god component) sin cambio de
@@ -210,18 +132,37 @@ export function isOwnProfileIdentity(
   return (Boolean(uid) && entryId === uid) || (Boolean(ownProfileId) && entryId === ownProfileId);
 }
 
-const FEED_DAY_MONTH_NAMES = [
-  'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
-  'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre',
-] as const;
 
 /**
- * Formatea la fecha como "DD de MMM". Pura y sin capturas → a nivel de módulo
- * para que no se recree en cada render (evita invalidar el useMemo del feed).
+ * Una entrada del DIRECTORIO social ya hidratada: el perfil más lo que se haya podido leer de su gist.
+ * Exportado porque las pantallas del hub lo reciben por props; mientras vivía dentro del hook, no había forma
+ * de nombrarlo desde fuera y acababan tipadas como `any[]`.
  */
-function formatDayHeader(date: Date): string {
-  return `${date.getDate()} de ${FEED_DAY_MONTH_NAMES[date.getMonth()]}`;
-}
+export type SocialDirectoryEntry = {
+  id: string;
+  uid: string; // uid de Firebase (para relaciones de amistad); hoy coincide con `id`, robusto ante el cutover uid→profileId
+  displayName: string;
+  socialGistId: string;
+  gamesGistId: string;
+  photoURL: string;
+  /**
+   * Rango del perfil, para el punto de color de su tarjeta en el directorio. OBLIGATORIO a propósito: este tipo
+   * LOCAL sombrea al del repositorio, y la hidratación reconstruye cada entrada campo a campo. Al declararlo
+   * requerido, olvidarse de copiarlo en cualquiera de esas reconstrucciones es un error de compilación y no un
+   * directorio entero pintado de bronce.
+   */
+  tier: ProfileTier;
+  activity: SocialActivityFeedItem[];
+  posts: SocialPostFeedItem[];
+  // Index-only (SocialSharedGame) para perfiles ajenos; para el perfil PROPIO se repuebla con GameItem completos.
+  sharedLists: Partial<Record<TabId, Array<GameItem | SocialSharedGame>>>;
+  visibility: SocialProfileVisibility;
+  /**
+   * Amigo cuyo gist social NO se leyó por inactividad (corte de FRIEND_ACTIVITY_MAX_AGE_MS): su actividad no
+   * entra al feed, pero al abrir su perfil se hidrata bajo demanda para no mostrarlo a medias.
+   */
+  socialSkipped?: boolean;
+};
 
 export function useSocialViewModel(options?: {
   /**
@@ -234,49 +175,9 @@ export function useSocialViewModel(options?: {
   const location = useLocation();
   const navigate = useNavigate();
 
-  const routeState = useMemo(() => getSocialRouteState(location.pathname), [location.pathname]);
+  const routeState = useMemo(() => matchSocialRoute(location.pathname), [location.pathname]);
   const { activePanel, profileDetailId, profileReviewsView, profileReviewGameId, detailActorUid, detailGameId, detailEventType } = routeState;
 
-  type SocialActivityFeedItem = SocialActivityEntry & {
-    profileId: string;
-    profileDisplayName: string;
-    socialGistId: string;
-    photoURL: string;
-  };
-
-  // F3 — publicación enriquecida con la identidad de su autor (para el feed).
-  type SocialPostFeedItem = SocialPostEntry & {
-    profileId: string;
-    profileDisplayName: string;
-    socialGistId: string;
-    photoURL: string;
-  };
-
-  type SocialDirectoryEntry = {
-    id: string;
-    uid: string; // uid de Firebase (para relaciones de amistad); hoy coincide con `id`, robusto ante el cutover uid→profileId
-    displayName: string;
-    socialGistId: string;
-    gamesGistId: string;
-    photoURL: string;
-    /**
-     * Rango del perfil, para el punto de color de su tarjeta en el directorio. OBLIGATORIO a propósito: este tipo
-     * LOCAL sombrea al del repositorio, y la hidratación reconstruye cada entrada campo a campo. Al declararlo
-     * requerido, olvidarse de copiarlo en cualquiera de esas reconstrucciones es un error de compilación y no un
-     * directorio entero pintado de bronce.
-     */
-    tier: ProfileTier;
-    activity: SocialActivityFeedItem[];
-    posts: SocialPostFeedItem[];
-    // Index-only (SocialSharedGame) para perfiles ajenos; para el perfil PROPIO se repuebla con GameItem completos.
-    sharedLists: Partial<Record<TabId, Array<GameItem | SocialSharedGame>>>;
-    visibility: SocialProfileVisibility;
-    /**
-     * Amigo cuyo gist social NO se leyó por inactividad (corte de FRIEND_ACTIVITY_MAX_AGE_MS): su actividad no
-     * entra al feed, pero al abrir su perfil se hidrata bajo demanda para no mostrarlo a medias.
-     */
-    socialSkipped?: boolean;
-  };
 
   const [socialCfgGistId, setSocialCfgGistId] = useState<string>('');
   const [socialCfgEtag, setSocialCfgEtag] = useState<string | null>(null);
@@ -284,9 +185,21 @@ export function useSocialViewModel(options?: {
   // P1: profileId canónico del usuario (6.2a), para detectar propiedad por identidad (no por email). Hoy el id del
   // doc de directorio es el uid; tras el cutover index-only será el profileId → comprobamos ambos (ver isOwnProfileIdentity).
   const [ownProfileId, setOwnProfileId] = useState<string | null>(null);
+  /**
+   * ¿Se ha intentado ya resolver el `ownProfileId`? Igual que con el rango, "todavía no se sabe" y "no tiene" NO
+   * son lo mismo: la hidratación del directorio decide con él cuál es la entrada PROPIA, y por tanto si lee el
+   * gist social de uno mismo. Hidratar antes de saberlo deja la propia actividad fuera del feed.
+   */
+  const [ownProfileIdResolved, setOwnProfileIdResolved] = useState(false);
   // Rango del PROPIO usuario: decide cada cuánto se rehidrata el feed (ver PROFILE_TIER_FEED_TTL_MS). Manda el de
   // quien mira porque las lecturas de gists ajenos van con SU token y cuentan contra SU rate-limit.
   const [ownTier, setOwnTier] = useState<ProfileTier>(DEFAULT_PROFILE_TIER);
+  /**
+   * ¿Se sabe ya el rango propio? `ownTier` arranca en bronce porque es el valor por defecto real, pero "bronce
+   * porque aún no se ha leído el perfil" y "bronce porque ese es su rango" NO son lo mismo para el directorio: el
+   * primero elegiría el TTL de caché equivocado y obligaría a rehidratarlo entero al conocerse el rango.
+   */
+  const [tierResolved, setTierResolved] = useState(false);
   const [loading, setLoading] = useState(true);
   const [resolvingSocialGist, setResolvingSocialGist] = useState(false);
   const [connecting, setConnecting] = useState(false);
@@ -295,30 +208,33 @@ export function useSocialViewModel(options?: {
   const [statusKind, setStatusKind] = useState<'ok' | 'warn' | 'err'>('ok');
   const [hasBlockingSocialIssue, setHasBlockingSocialIssue] = useState(false);
   const [showSocialSpace, setShowSocialSpace] = useState(false);
-  // L4 — resultado de la comprobación ANOTADO CON EL UID al que corresponde. Guardar el uid es lo que evita la
-  // carrera: entre que aparece la sesión y responde la comprobación hay renders en los que aún no se sabe nada,
-  // y sin esa marca se colaría un "adelante" que luego habría que revertir (el usuario entraría y se le sacaría).
-  // 'unknown' = la comprobación falló (offline/reglas) → se deja pasar; 'required' = hay que pedir la aceptación.
-  const [legalConsent, setLegalConsent] = useState<{ uid: string; status: 'accepted' | 'required' | 'unknown' } | null>(null);
-  const [savingConsent, setSavingConsent] = useState(false);
   const [hasCreatedProfile, setHasCreatedProfile] = useState(false);
   const [mustCreateProfile, setMustCreateProfile] = useState(false);
   const [justSavedProfile, setJustSavedProfile] = useState(false);
-  const [profileName, setProfileName] = useState('');
-  const [hiddenTabs, setHiddenTabs] = useState<TabId[]>([]);
-  const [showPhoto, setShowPhoto] = useState(true);
-  const [hideReplayable, setHideReplayable] = useState(false);
-  const [hideRetry, setHideRetry] = useState(false);
-  const [hideGameTime, setHideGameTime] = useState(false);
+  // Estado editable del perfil (nick + visibilidad), agrupado: los seis campos viajan siempre juntos.
+  const profileForm = useSocialProfileForm();
+  const {
+    profileName, setProfileName, hiddenTabs, setHiddenTabs, showPhoto, setShowPhoto,
+    hideReplayable, setHideReplayable, hideRetry, setHideRetry, hideGameTime, setHideGameTime,
+  } = profileForm;
   // Filtro por nombre de la pantalla "Perfiles" (directorio social). El feed de actividad ya no se filtra.
   const [profileSearch, setProfileSearch] = useState('');
-  // Paginación del feed: 25 inicial, +25 por "Mostrar más". Se reinicia al cambiar la búsqueda.
-  const [feedVisibleCount, setFeedVisibleCount] = useState(FEED_PAGE_SIZE);
-  const [composePostText, setComposePostText] = useState('');
-  const [publishingPost, setPublishingPost] = useState(false);
   const [hydratingProfile, setHydratingProfile] = useState(false);
   const [savingProfile, setSavingProfile] = useState(false);
   const [loadingDirectory, setLoadingDirectory] = useState(false);
+  /**
+   * ¿Ha terminado ya una pasada de hidratación del directorio (por caché o por red)?
+   *
+   * `loadingDirectory` solo cubre la hidratación EN VUELO, y hasta ella hay toda una ventana previa que no cubría
+   * nadie: resolver las amistades (query a Firestore, porque el feed es solo-amigos) y leer la caché de IndexedDB.
+   * Durante esa ventana el feed se pintaba con `socialDirectory` vacío y `loadingDirectory` en false, así que
+   * enseñaba su estado VACÍO —"Descubre perfiles y añade amigos"— a alguien que sí tiene amigos y cuyo feed
+   * todavía estaba cargando. De ahí la secuencia carga → vacío → carga → contenido.
+   *
+   * Esta marca distingue "el directorio está vacío" de "el directorio aún no se sabe", que es lo que la pantalla
+   * necesita para elegir entre el vacío y el esqueleto.
+   */
+  const [directorySettled, setDirectorySettled] = useState(false);
   const [socialDirectory, setSocialDirectory] = useState<SocialDirectoryEntry[]>([]);
   // Listas completas de OTROS perfiles, cargadas bajo demanda (al abrir reseña/perfil) y filtradas por su
   // visibilidad. Clave = id del perfil del directorio. Alimenta getGameItemById y selectedProfileDetail.
@@ -341,9 +257,25 @@ export function useSocialViewModel(options?: {
   // Confirmación de "dejar de ser amigos" (evita pulsaciones accidentales): guarda a quién se va a eliminar.
   const [removeFriendTarget, setRemoveFriendTarget] = useState<{ uid: string; name: string } | null>(null);
 
+  /**
+   * Temporizador que borra el mensaje de estado. Uno SOLO, reutilizado.
+   *
+   * Antes cada aviso creaba el suyo y nadie los cancelaba, con dos consecuencias. La visible: dos avisos seguidos
+   * se pisaban —el temporizador del PRIMERO seguía vivo y borraba el mensaje del SEGUNDO al cumplirse su plazo, así
+   * que un aviso podía durar medio segundo en vez de tres—. Y la de fondo: al salir del hub quedaban temporizadores
+   * pendientes que acababan tocando el estado de un componente ya desmontado.
+   */
+  const statusTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const setFeedback = useCallback((kind: 'ok' | 'warn' | 'err', message: string, duration?: 'short' | 'long') => {
     setStatusKind(kind);
     setStatus(message);
+
+    // El aviso anterior deja de contar en cuanto llega uno nuevo: si no, su plazo borraría este.
+    if (statusTimerRef.current) {
+      clearTimeout(statusTimerRef.current);
+      statusTimerRef.current = null;
+    }
 
     // Only hard errors should block feed access.
     if (kind === 'ok') {
@@ -359,7 +291,10 @@ export function useSocialViewModel(options?: {
     }
 
     const ms = duration === 'long' ? 6000 : 3000;
-    setTimeout(() => setStatus(''), ms);
+    statusTimerRef.current = setTimeout(() => {
+      statusTimerRef.current = null;
+      setStatus('');
+    }, ms);
   }, []);
 
   const lockProfileEditor = useCallback(() => {
@@ -459,21 +394,14 @@ export function useSocialViewModel(options?: {
   const hasMainSync = Boolean(mainSyncConfig?.token && mainSyncConfig?.gistId);
   const hasSocialGist = Boolean(socialCfgGistId);
   const hasSocialSession = Boolean(authUser);
-  // L4 — el espacio social no se abre hasta que consta la aceptación de las condiciones/privacidad vigentes. Solo
-  // afecta a lo SOCIAL: las listas propias, la sincronización y el borrado de cuenta nunca dependen de esto.
-  // Sin sesión no hay nada que consentir (el gateway ya pide iniciarla). Con sesión, solo se abre cuando consta la
-  // comprobación DE ESE uid y no exige aceptación.
-  const legalGateOpen =
-    !authUser?.uid || (legalConsent?.uid === authUser.uid && legalConsent.status !== 'required');
+  // L4 — el espacio social no se abre hasta que consta la aceptación de las condiciones/privacidad vigentes.
+  const legalConsent = useSocialLegalConsent(authUser?.uid, setFeedback);
+  const legalGateOpen = legalConsent.gateOpen;
   // El espacio social ABIERTO de verdad: el estado latente (`showSocialSpace`, que fijan la hidratación inicial y
   // el alta) filtrado por la puerta legal. Todo lo que carga o publica datos sociales cuelga de esto, así que un
   // usuario sin la aceptación vigente no llega a leer ni escribir nada del canal social.
   const socialSpaceOpen = showSocialSpace && legalGateOpen;
-  // La comprobación anterior es una LECTURA de Firestore: con sesión ya iniciada hay un intervalo en el que aún no
-  // consta nada de ese uid y `legalGateOpen` es false. Sin marcarlo, el hub caía al gateway durante esas décimas de
-  // segundo (paso de login/alta, con su botón de "Cerrar sesión" bajo el dedo) para volver acto seguido al espacio
-  // social. Mientras la comprobación esté en vuelo, la pantalla sigue "cargando" en vez de enseñar la puerta.
-  const legalConsentPending = Boolean(authUser?.uid) && legalConsent?.uid !== authUser?.uid;
+  const legalConsentPending = legalConsent.pending;
   const hasReadyAccess = hasSocialSession && hasSocialGist && legalGateOpen;
   const profileEditorLocked = isProfileEditorLocked(mustCreateProfile, hasBlockingSocialIssue);
   const canConnectSocialGist =
@@ -488,47 +416,6 @@ export function useSocialViewModel(options?: {
     setShowSocialSpace(true);
     navigate('/social');
   }, [hasReadyAccess, showSocialSpace, navigate]);
-
-  // L4 — comprueba la aceptación registrada en `publicConfig` (owner-only, sigue al usuario entre dispositivos).
-  // Si la LECTURA falla (offline, reglas, Firebase ausente) se deja pasar: bloquear el espacio social por un fallo
-  // de red convertiría un requisito legal en una avería. Solo se exige cuando consta que no hay aceptación vigente.
-  useEffect(() => {
-    const uid = authUser?.uid;
-    if (!uid) {
-      setLegalConsent(null);
-      return;
-    }
-
-    let cancelled = false;
-    void getPublicConfig(uid)
-      .then((cfg) => {
-        if (cancelled) return;
-        setLegalConsent({ uid, status: cfg?.consent?.version === LEGAL_VERSION ? 'accepted' : 'required' });
-      })
-      .catch(() => {
-        if (!cancelled) setLegalConsent({ uid, status: 'unknown' });
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [authUser?.uid]);
-
-  const acceptLegalConsent = useCallback(async () => {
-    const uid = authUser?.uid;
-    if (!uid || savingConsent) {
-      return;
-    }
-    setSavingConsent(true);
-    try {
-      await setPublicConfig(uid, { consent: { version: LEGAL_VERSION, agreedAt: Date.now() } });
-      setLegalConsent({ uid, status: 'accepted' });
-    } catch {
-      setFeedback('err', LEGAL_CONSENT_UI.error);
-    } finally {
-      setSavingConsent(false);
-    }
-  }, [authUser?.uid, savingConsent, setFeedback]);
 
   const gatewaySteps = SOCIAL_UI.steps.map((step, index) => ({
     ...step,
@@ -607,6 +494,7 @@ export function useSocialViewModel(options?: {
     const uid = authUser?.uid;
     if (!uid) {
       setOwnProfileId(null);
+      setOwnProfileIdResolved(false);
       return;
     }
     let cancelled = false;
@@ -616,6 +504,11 @@ export function useSocialViewModel(options?: {
       })
       .catch(() => {
         /* Firestore caído → la propiedad cae a comparar por uid (entry.id === uid hoy). */
+      })
+      .finally(() => {
+        // Resuelto SIEMPRE, también si falla: sin profileId la propiedad se decide por uid, que es el
+        // comportamiento degradado de siempre. Lo que no puede pasar es quedarse esperando para siempre.
+        if (!cancelled) setOwnProfileIdResolved(true);
       });
     return () => {
       cancelled = true;
@@ -894,29 +787,7 @@ export function useSocialViewModel(options?: {
   // comprobarlo. El guardado del perfil lo sigue exigiendo siempre (ahí el usuario está mirando sus propias listas).
   const completedGamesRequirementMet = hasCompletedGames || !libraryPresentLocally;
 
-  const defaultSocialVisibility: SocialProfileVisibility = useMemo(() => ({
-    hiddenTabs: [],
-    hideReplayable: false,
-    hideRetry: false,
-    hideGameTime: false,
-    showPhoto: true,
-  }), []);
-
-  const getOrderedUniqueTabs = useCallback((tabs: TabId[]): TabId[] => {
-    const seen = new Set<TabId>();
-    const ordered: TabId[] = [];
-
-    tabs.forEach((tab) => {
-      if (seen.has(tab)) {
-        return;
-      }
-
-      seen.add(tab);
-      ordered.push(tab);
-    });
-
-    return ordered;
-  }, []);
+  const defaultSocialVisibility = DEFAULT_SOCIAL_VISIBILITY;
 
   const visibleSocialDirectory = useMemo(() => {
     // Directorio de descubrimiento: se muestran TODOS los perfiles publicados (el propio excluido). No se filtra por
@@ -1027,41 +898,40 @@ export function useSocialViewModel(options?: {
     };
   }, [activePanel, selectedProfileDetail, profileReviewGameId]);
 
-  const activityFeedItems = useMemo(() => {
-    // `|| []`: una entrada de caché antigua/malformada podría no traer `activity` → flatMap+sort reventaría con
-    // "undefined.updatedAt" (pantalla en blanco). Se protege el acceso.
-    return socialDirectory
-      .flatMap((entry) => entry.activity || [])
-      .sort((a, b) => b.updatedAt - a.updatedAt)
-      .slice(0, 300);
-  }, [socialDirectory]);
-
-  // F3 — feed COMBINADO: reseñas/recomendaciones (actividad) + publicaciones, mezcladas y ordenadas por fecha.
-  // Los posts llevan `kind:'post'` para distinguirlos al renderizar; la actividad conserva su `type`.
-  const feedItems = useMemo(() => {
-    const activity = socialDirectory.flatMap((entry) => entry.activity || []);
-    const posts = socialDirectory.flatMap((entry) => entry.posts || []).map((post) => ({ ...post, kind: 'post' as const }));
-
-    return [...activity, ...posts]
-      // Descarta ítems con timestamp inválido/fuera de rango ANTES de ordenar y cortar: si no, ordenarían arriba,
-      // coparían el corte visible y el agrupado por día los eliminaría, dejando el feed en blanco (ver bug del 2º amigo).
-      .filter((item) => hasRenderableTimestamp(item.updatedAt))
-      .sort((a, b) => b.updatedAt - a.updatedAt)
-      .slice(0, 300);
-  }, [socialDirectory]);
+  /**
+   * Evento abierto a pantalla completa desde el feed (/social/user/:uid/game/:id/:tipo).
+   *
+   * Busca DIRECTAMENTE en el directorio, en una sola pasada y sin construir nada por el camino. Antes salía de un
+   * `activityFeedItems` que aplanaba y ORDENABA toda la actividad del directorio (hasta 50 perfiles × 320 entradas)
+   * para quedarse con 300 y luego buscar una — y se recalculaba con cada cambio del directorio aunque no hubiera
+   * ningún detalle abierto, duplicando el trabajo que ya hace `feedItems`.
+   *
+   * De paso deja de estar limitado a esas 300: un evento más antiguo que el corte no se podía abrir por URL.
+   * Ante duplicados (posibles al fusionar dos gists sociales) sigue ganando el más reciente, como antes.
+   */
+  const { feedItems, groupedFeedItems, hasMoreFeed, showMoreFeed } = useSocialFeed(socialDirectory);
 
   const activeDetailEvent = useMemo(() => {
     if (activePanel !== 'detail' || !detailActorUid || detailGameId <= 0 || !detailEventType) {
       return null;
     }
 
-    return activityFeedItems.find(
-      (entry) =>
-        entry.actorProfileId === detailActorUid &&
-        entry.gameId === detailGameId &&
-        entry.type === detailEventType,
-    ) || null;
-  }, [activePanel, activityFeedItems, detailActorUid, detailEventType, detailGameId]);
+    let best: SocialActivityFeedItem | null = null;
+    for (const entry of socialDirectory) {
+      // `|| []`: una entrada de caché antigua/malformada podría no traer `activity`.
+      for (const activityEntry of entry.activity || []) {
+        if (
+          activityEntry.actorProfileId === detailActorUid &&
+          activityEntry.gameId === detailGameId &&
+          activityEntry.type === detailEventType &&
+          (!best || activityEntry.updatedAt > best.updatedAt)
+        ) {
+          best = activityEntry;
+        }
+      }
+    }
+    return best;
+  }, [activePanel, socialDirectory, detailActorUid, detailEventType, detailGameId]);
 
   /**
    * Obtiene un GameItem para un evento del feed. Para perfiles ajenos usa su lista bajada
@@ -1097,52 +967,6 @@ export function useSocialViewModel(options?: {
   // escrita en otro dispositivo con el sync de juegos aún en camino), borraba actividad VÁLIDA del feed de todos
   // de forma permanente. La limpieza de huérfanas la hace ahora `reconcileReviewActivity`, que compara la lista
   // completa de una vez y nunca retira una entrada más nueva que el reloj de los listados locales.
-
-  const groupedFeedItems = useMemo(() => {
-    type FeedItem = (typeof feedItems)[number];
-    const groups: Array<{
-      dayHeader: string;
-      dayDate: Date;
-      items: FeedItem[];
-    }> = [];
-
-    const itemsByDay = new Map<string, FeedItem[]>();
-
-    // Solo los elementos visibles según la paginación (25, +25 con "Mostrar más").
-    feedItems.slice(0, feedVisibleCount).forEach((item) => {
-      const itemDate = new Date(toSafeTimestamp(item.updatedAt, Date.now()));
-      if (Number.isNaN(itemDate.getTime())) {
-        return;
-      }
-      const dayKey = itemDate.toISOString().split('T')[0];
-
-      if (!itemsByDay.has(dayKey)) {
-        itemsByDay.set(dayKey, []);
-      }
-
-      itemsByDay.get(dayKey)!.push(item);
-    });
-
-    const sortedDays = Array.from(itemsByDay.entries())
-      .sort((a, b) => new Date(b[0]).getTime() - new Date(a[0]).getTime());
-
-    sortedDays.forEach(([dayKey, items]) => {
-      const dayDate = new Date(dayKey);
-      groups.push({
-        dayHeader: formatDayHeader(dayDate),
-        dayDate,
-        items,
-      });
-    });
-
-    return groups;
-  }, [feedItems, feedVisibleCount]);
-
-  // Paginación del feed: ¿hay más allá de lo visible? y handler para mostrar otros 25.
-  const hasMoreFeed = feedItems.length > feedVisibleCount;
-  const showMoreFeed = useCallback(() => {
-    setFeedVisibleCount((count) => count + FEED_PAGE_SIZE);
-  }, []);
 
   const openActivityDetail = useCallback((entry: SocialActivityFeedItem) => {
     navigate(`/social/user/${encodeURIComponent(entry.actorProfileId)}/game/${entry.gameId}/${entry.type}`);
@@ -1380,12 +1204,7 @@ export function useSocialViewModel(options?: {
       // criterio actual (nombre Y ≥1 juego completado) para que los perfiles incompletos ya guardados sean
       // redirigidos al editor sin esperar a que caduque la caché (~5 min).
       const cachedProfileExists = Boolean(cachedProfile.name.trim()) && hasCompletedGames;
-      setProfileName(cachedProfile.name);
-      setHiddenTabs(getOrderedUniqueTabs(cachedProfile.hiddenTabs || []));
-      setHideReplayable(cachedProfile.hideReplayable);
-      setHideRetry(cachedProfile.hideRetry);
-      setHideGameTime(cachedProfile.hideGameTime);
-      setShowPhoto(cachedProfile.showPhoto);
+      profileForm.hydrate({ name: cachedProfile.name, visibility: cachedProfile });
       setHasCreatedProfile(cachedProfileExists);
 
       const cachedProfileUsable = Boolean(cachedProfile.name.trim()) && completedGamesRequirementMet;
@@ -1448,22 +1267,14 @@ export function useSocialViewModel(options?: {
       const profileHasIdentity = Boolean(socialRead.data.profile.name.trim());
       const profileExists = profileHasIdentity && hasCompletedGames;
 
-      setProfileName(nextName);
-      setHiddenTabs(getOrderedUniqueTabs(profileVisibility.hiddenTabs || []));
-      setHideReplayable(Boolean(profileVisibility.hideReplayable));
-      setHideRetry(Boolean(profileVisibility.hideRetry));
-      setHideGameTime(Boolean(profileVisibility.hideGameTime));
-      setShowPhoto(profileVisibility.showPhoto !== false);
+      const normalizedVisibility = normalizeVisibility(profileVisibility);
+      profileForm.hydrate({ name: nextName, visibility: normalizedVisibility });
       setHasCreatedProfile(profileExists);
 
       // Sembrar la caché para que la próxima navegación a social no relea el gist propio dentro de la ventana de TTL.
       void putCachedSocialProfile(socialCfgGistId, {
         name: nextName,
-        hiddenTabs: getOrderedUniqueTabs(profileVisibility.hiddenTabs || []),
-        hideReplayable: Boolean(profileVisibility.hideReplayable),
-        hideRetry: Boolean(profileVisibility.hideRetry),
-        hideGameTime: Boolean(profileVisibility.hideGameTime),
-        showPhoto: profileVisibility.showPhoto !== false,
+        ...normalizedVisibility,
         profileExists,
         activity: socialRead.data.activity,
       });
@@ -1527,12 +1338,18 @@ export function useSocialViewModel(options?: {
   }, [hydrateSocialProfile]);
 
   // Rango propio → cadencia del feed. Una sola lectura del perfil propio (ya cacheada 60 s en memoria por
-  // `getOwnProfileRef`). Mientras no se resuelva se asume bronce; cuando llega, `hydrateSocialDirectory` cambia de
-  // identidad y vuelve a evaluar la caché con el TTL bueno, así que un mithril no se queda con datos viejos por
-  // haber entrado antes de saber su rango. Cualquier fallo deja bronce: degradar es lo seguro.
+  // `getOwnProfileRef`). Cualquier fallo deja bronce: degradar es lo seguro.
+  //
+  // `tierResolved` es lo que evita que el privilegio del rango llegue SIEMPRE un paso tarde. Antes se hidrataba con
+  // el bronce por defecto y, al llegar el rango de verdad, la hidratación entera se repetía: medido, un bronce
+  // hidrataba UNA vez y un plata/oro/mithril DOS —la segunda releyendo hasta ~50 gists de amigos—, y con la caché
+  // caliente esa segunda pasada tapaba con el esqueleto un feed ya pintado. Es decir, cuanto más alto el rango,
+  // peor la experiencia: justo lo contrario de lo que el rango promete. Ahora se espera a saberlo, igual que se
+  // espera a `friendshipsResolved`, y la primera evaluación de la caché ya usa el TTL que toca.
   useEffect(() => {
     if (!authUser?.uid) {
       setOwnTier(DEFAULT_PROFILE_TIER);
+      setTierResolved(false);
       return;
     }
     let cancelled = false;
@@ -1542,16 +1359,51 @@ export function useSocialViewModel(options?: {
       })
       .catch(() => {
         /* sin rango conocido → bronce */
+      })
+      .finally(() => {
+        // Resuelto SIEMPRE, también si la lectura falla: sin esto, un Firestore caído dejaría el feed sin hidratar
+        // (y con el esqueleto puesto) en vez de degradar a la cadencia de bronce, que es lo seguro.
+        if (!cancelled) setTierResolved(true);
       });
     return () => {
       cancelled = true;
     };
   }, [authUser]);
 
-  const hydrateSocialDirectory = useCallback(async (forceRefresh = false) => {
-    // `!friendshipsResolved`: NO hidratar (ni cachear) hasta conocer a los amigos. Si no, el feed solo-amigos cachearía
-    // el directorio sin actividad de amigos (carrera de arranque) y quedaría en blanco hasta invalidar la caché.
-    if (!socialSpaceOpen || activePanel === 'profile' || profileEditorLocked || !authUser || !socialCfgGistId || !friendshipsResolved) {
+  // Cambiar de identidad (otra cuenta, otro canal social) invalida lo asentado: lo que venga es un directorio
+  // distinto, así que la pantalla tiene que volver a decir "cargando" y no el vacío del anterior. Declarado ANTES
+  // del efecto de hidratación para que, en un mismo commit, el reinicio corra primero.
+  useEffect(() => {
+    setDirectorySettled(false);
+  }, [authUser?.uid, socialCfgGistId]);
+
+  /**
+   * ¿Toca cargar directorio en la pantalla actual? Se extrae a un BOOLEANO en vez de mirar `activePanel` porque
+   * el disparo automático depende de él: con el panel entero, navegar feed→perfiles→feed rehidrataba el directorio
+   * en cada salto (lectura de IndexedDB + array nuevo + recálculo completo del feed) sin que hubiera cambiado
+   * absolutamente nada de lo que el directorio contiene. Así solo cambia al entrar o salir del editor de perfil.
+   */
+  const directoryPanelAllows = socialSpaceOpen && activePanel !== 'profile' && !profileEditorLocked;
+  /** Las tres resoluciones asíncronas que la hidratación necesita conocer antes de empezar (ver más abajo). */
+  const directoryInputsReady = friendshipsResolved && tierResolved && ownProfileIdResolved;
+
+  const runDirectoryHydration = useCallback(async (forceRefresh: boolean) => {
+    if (!directoryPanelAllows || !authUser || !socialCfgGistId) {
+      return;
+    }
+
+    // TODO lo que la hidratación necesita saber ANTES de empezar. Las tres cosas se resuelven de forma asíncrona y
+    // ninguna admite un valor provisional:
+    //   - amigos: el feed es solo-amigos; hidratar sin conocerlos CACHEARÍA a los amigos como index-only (sin
+    //     actividad) y el feed quedaría en blanco hasta invalidar la caché;
+    //   - rango: de él sale el TTL con el que se evalúa la caché (30 min en bronce, 60 s en mithril);
+    //   - profileId propio: con él se decide cuál es la entrada PROPIA y, por tanto, si se lee el gist social de
+    //     uno mismo. Sin él, la propia actividad se queda fuera del propio feed.
+    //
+    // Va SEPARADO de la guarda de arriba porque las dos salidas significan cosas distintas para la pantalla: la de
+    // arriba es "aquí no hay directorio que cargar" (pasarela, editor de perfil) y esta es "todavía no se puede
+    // saber". Solo esta última debe seguir contando como carga (ver `directoryLoading`).
+    if (!directoryInputsReady) {
       return;
     }
 
@@ -1570,14 +1422,20 @@ export function useSocialViewModel(options?: {
       if (cooldownTimerRef.current) clearTimeout(cooldownTimerRef.current);
       cooldownTimerRef.current = setTimeout(() => setRefreshCoolingDown(false), FORCED_REFRESH_MIN_MS);
     } else {
-      // Caché persistente: si el directorio sigue fresco (<30 min), se sirve de IndexedDB sin releer ningún gist
-      // social. Evita el coste N+1 al navegar feed→detalle→feed o al re-renderizar. El refresco manual lo evita.
+      // Caché persistente: si el directorio sigue fresco (el TTL lo pone el rango), se sirve de IndexedDB sin releer
+      // ningún gist social. Evita el coste N+1 al navegar feed→detalle→feed o al re-renderizar.
+      //
+      // El `catch` no es decorativo: esta lectura vive FUERA del try/catch de más abajo, así que un IndexedDB roto
+      // (modo privado, cuota, base corrupta) hacía que la función entera rechazara antes de asentar el directorio
+      // —y con el esqueleto atado a ese asentamiento, la pantalla se quedaba cargando para siempre—. Sin caché
+      // utilizable lo correcto es seguir por la vía de red, que es justo lo que hace tratarla como un fallo.
       const cachedDirectory = await getCachedSocialDirectory<SocialDirectoryEntry>(
         socialCfgGistId,
         PROFILE_TIER_FEED_TTL_MS[ownTier],
-      );
+      ).catch(() => null);
       if (cachedDirectory) {
         setSocialDirectory(cachedDirectory);
+        setDirectorySettled(true);
         return;
       }
     }
@@ -1810,39 +1668,81 @@ export function useSocialViewModel(options?: {
       setFeedback('warn', error instanceof Error ? error.message : SOCIAL_UI.status.firestoreCheckFailed);
     } finally {
       setLoadingDirectory(false);
+      // También en el camino de error: un fallo de red deja el directorio vacío DE VERDAD (con su aviso), y dejarlo
+      // sin asentar mantendría el esqueleto girando para siempre.
+      setDirectorySettled(true);
     }
-  }, [activePanel, authUser, defaultSocialVisibility, friendships.friends, friendshipsResolved, mainSyncConfig?.token, ownTier, profileEditorLocked, setFeedback, socialSpaceOpen, socialCfgGistId, showPhoto]);
+    // `mainSyncConfig?.token` ESTUVO aquí y no lo usa nadie en el cuerpo (el token sale de `getSocialSyncConfig()`
+    // en el momento de leer): lo único que hacía era rehidratar el directorio entero cuando la configuración de
+    // sync terminaba de descifrarse. Se retira.
+  }, [directoryPanelAllows, directoryInputsReady, authUser, ownProfileId, defaultSocialVisibility, friendships.friends, ownTier, setFeedback, socialCfgGistId, showPhoto]);
 
-  // F3 — publica una publicación de texto libre y refresca el feed (definido tras hydrateSocialDirectory para evitar TDZ).
-  const handlePublishPost = useCallback(async () => {
-    const text = composePostText.trim();
-    if (!text || publishingPost) {
-      return;
+  /**
+   * Pasada en vuelo, para que dos disparos no se solapen.
+   *
+   * Podían solaparse de verdad: al guardar el perfil se navega al feed Y se llama a la hidratación a mano, y la
+   * reconciliación de actividad dispara otra al terminar. Dos pasadas simultáneas son ~50 lecturas de gist por
+   * duplicado (las deduplica la caché de sesión del repositorio, pero no el trabajo de CPU ni la reescritura de la
+   * caché de IndexedDB) y, sobre todo, la que acaba primero apaga el esqueleto mientras la otra sigue corriendo.
+   */
+  const directoryHydrationRef = useRef<Promise<void> | null>(null);
+
+  const hydrateSocialDirectory = useCallback(async (forceRefresh = false) => {
+    const pending = directoryHydrationRef.current;
+    // Un refresco FORZADO (botón "Actualizar") sí quiere una pasada nueva: su anti-spam ya lo acota aparte.
+    if (pending && !forceRefresh) {
+      return pending;
     }
 
-    // Bronce no publica. La pantalla ni siquiera muestra el compositor; esta comprobación es la red por si se
-    // llega aquí de otra forma (estado a medio actualizar, atajo de teclado). En SILENCIO y a propósito: quien no
-    // tiene el rango no ve nada al respecto, tampoco un aviso que le recuerde lo que no puede hacer.
-    if (!canPublishPosts(ownTier)) {
-      return;
-    }
-
+    const run = runDirectoryHydration(forceRefresh);
+    directoryHydrationRef.current = run;
     try {
-      setPublishingPost(true);
-      await publishPost({ text, maxLength: PROFILE_TIER_POST_MAX_LENGTH[ownTier] });
-      setComposePostText('');
-      await hydrateSocialDirectory(true);
-      setFeedback('ok', SOCIAL_UI.status.postPublished);
-    } catch (error) {
-      setFeedback('err', error instanceof Error ? error.message : SOCIAL_UI.status.postPublishFailed);
+      await run;
     } finally {
-      setPublishingPost(false);
+      // Solo se limpia si sigue siendo LA pasada en curso: un forzado posterior pudo relevarla.
+      if (directoryHydrationRef.current === run) {
+        directoryHydrationRef.current = null;
+      }
     }
-  }, [composePostText, ownTier, publishingPost, hydrateSocialDirectory, setFeedback]);
+  }, [runDirectoryHydration]);
 
+  // F3 — compositor de publicaciones. Se invoca AQUÍ, y no arriba con el resto del estado, porque necesita
+  // `hydrateSocialDirectory` para refrescar el feed tras publicar; el orden de los hooks es estable entre renders,
+  // que es lo único que React exige.
+  const {
+    composePostText,
+    setComposePostText,
+    publishingPost,
+    handlePublishPost,
+    canPublishPosts: canPublish,
+    postMaxLength,
+    showPostCounter,
+  } = useSocialCompose({
+    ownTier,
+    onPublished: useCallback(() => hydrateSocialDirectory(true), [hydrateSocialDirectory]),
+    setFeedback,
+  });
+
+  // Disparo automático de la hidratación. Depende de DATOS, no de la identidad del callback.
+  //
+  // Antes era `[hydrateSocialDirectory]`, y ese callback se recreaba con cualquiera de sus doce dependencias: entre
+  // ellas `activePanel` (cambia en cada navegación del hub), `showPhoto` (lo fija la hidratación del PERFIL, en
+  // cada apertura) y `mainSyncConfig?.token` (que ni siquiera se usaba). Resultado: tres o cuatro hidrataciones por
+  // apertura, cada una releyendo IndexedDB y reemplazando el directorio por un array nuevo que invalidaba los
+  // `useMemo` del feed entero. Aquí se listan solo las cosas que de verdad cambian LO QUE EL DIRECTORIO CONTIENE.
+  const hydrateSocialDirectoryRef = useRef(hydrateSocialDirectory);
+  hydrateSocialDirectoryRef.current = hydrateSocialDirectory;
   useEffect(() => {
-    void hydrateSocialDirectory();
-  }, [hydrateSocialDirectory]);
+    void hydrateSocialDirectoryRef.current();
+  }, [
+    directoryPanelAllows,
+    directoryInputsReady,
+    authUser?.uid,
+    socialCfgGistId,
+    friendships.friends,
+    ownTier,
+    ownProfileId,
+  ]);
 
   // Listados con los que reconciliar: los vivos de la app si el contenedor los pasa; si no, la foto del mount.
   const reconcileGames = options?.games ?? localState;
@@ -1886,9 +1786,11 @@ export function useSocialViewModel(options?: {
     };
   }, [authUser?.uid, hydrateSocialDirectory, profileEditorLocked, reconcileGames, socialSpaceOpen, socialCfgGistId]);
 
-  // Limpia el timer del cooldown al desmontar (evita setState tras desmontar).
+  // Limpia los timers al desmontar (evita setState tras desmontar): el del cooldown del botón "Actualizar" y el
+  // que borra el mensaje de estado. El hub se desmonta al salir de /social, así que esto ocurre a menudo.
   useEffect(() => () => {
     if (cooldownTimerRef.current) clearTimeout(cooldownTimerRef.current);
+    if (statusTimerRef.current) clearTimeout(statusTimerRef.current);
   }, []);
 
   // Bloque 2 — propaga la foto propia a los DEMÁS: la foto solo la ven otros si está en NUESTRO gist social
@@ -1964,15 +1866,8 @@ export function useSocialViewModel(options?: {
 
     try {
       setSavingProfile(true);
-      const normalizedHiddenTabs = getOrderedUniqueTabs(hiddenTabs);
-
-      const visibility: SocialProfileVisibility = {
-        hiddenTabs: normalizedHiddenTabs,
-        hideReplayable,
-        hideRetry,
-        hideGameTime,
-        showPhoto,
-      };
+      const visibility = profileForm.visibility;
+      const normalizedHiddenTabs = visibility.hiddenTabs;
 
       const profile = {
         // PRIVACIDAD: el nick es LO QUE ESCRIBE EL USUARIO, y nada más. Aquí había un respaldo a
@@ -2248,15 +2143,28 @@ export function useSocialViewModel(options?: {
     return null;
   }, [canConnectSocialGist, canSignInGoogle, connecting, handleCreateSocialGist, handleSignInGoogle, hasMainSync, navigate, resolvingSocialGist, signingIn]);
 
+  /**
+   * Lo que las pantallas deben tratar como "el directorio está cargando": la hidratación en vuelo MÁS la ventana
+   * previa que no cubría nadie (amistades + caché de IndexedDB). Sin esto, el feed y el directorio pintaban su
+   * estado vacío durante esa ventana y luego saltaban al esqueleto: carga → vacío → carga → contenido.
+   *
+   * Las condiciones replican las guardas de `hydrateSocialDirectory` que significan "aquí no hay directorio que
+   * cargar" (pasarela sin sesión/canal, editor de perfil bloqueado por un error). Sin ellas, un estado en el que la
+   * hidratación nunca llega a correr dejaría el esqueleto girando indefinidamente en lugar de mostrar el aviso.
+   */
+  const directoryLoading =
+    loadingDirectory ||
+    (!directorySettled && socialSpaceOpen && !profileEditorLocked && Boolean(authUser) && Boolean(socialCfgGistId));
+
   return {
     navigate,
     activePanel,
     socialCfgGistId,
     authUser,
     // L4 — puerta de aceptación (solo con sesión y consentimiento no vigente).
-    legalConsentRequired: legalConsent?.status === 'required' && legalConsent.uid === authUser?.uid,
-    savingConsent,
-    acceptLegalConsent,
+    legalConsentRequired: legalConsent.required,
+    savingConsent: legalConsent.saving,
+    acceptLegalConsent: legalConsent.accept,
     // Carga = hidratación inicial + comprobación del consentimiento en vuelo (ver `legalConsentPending`).
     loading: loading || legalConsentPending,
     status,
@@ -2280,16 +2188,18 @@ export function useSocialViewModel(options?: {
     composePostText,
     // Rango propio y lo que implica al publicar: si puede, cuánto, y si hay contador que enseñar.
     ownTier,
-    canPublishPosts: canPublishPosts(ownTier),
-    postMaxLength: PROFILE_TIER_POST_MAX_LENGTH[ownTier],
-    showPostCounter: hasPostLengthLimit(ownTier),
+    canPublishPosts: canPublish,
+    postMaxLength,
+    showPostCounter,
     setComposePostText,
     publishingPost,
     handlePublishPost,
     feedItems,
     hydratingProfile,
     savingProfile,
-    loadingDirectory,
+    // Se expone el valor DERIVADO (no el `loadingDirectory` crudo): es el único que cubre la ventana completa, y
+    // así ninguna pantalla puede olvidarse de sumarle la parte que falta.
+    loadingDirectory: directoryLoading,
     hasMainSync,
     hasSocialGist,
     hasSocialSession,

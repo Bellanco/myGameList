@@ -24,9 +24,14 @@ const INFO_FIELDS = ['uid', 'email', 'gamesGistId'];
 
 // Almacenamiento privado local: maneja datos completos legítimamente (incluido el token).
 const PRIVATE_STORAGE = /(localRepository|indexedDbRepository|idbConnectionRepository|migrateRepository|syncRepository|syncStateRepository|syncMachineRepository)\.ts$/;
-// gistRepository contiene el gist de juegos PRIVADO (datos completos legítimos); el path social está
-// protegido en runtime por assertNoSocialPrivateFields, que el análisis estático no puede aislar por fichero.
-const GAMES_GIST = /gistRepository\.ts$/;
+// gistRepository contiene el gist de juegos PRIVADO: maneja datos completos de juego legítimamente.
+//
+// La exención es SOLO para él. Antes cubría de rebote el canal social, porque ambos compartían fichero y el
+// análisis estático no podía separarlos; al mudarse el social a `socialGistRepository.ts` esa exención dejó de
+// alcanzarle, y se deja así A PROPÓSITO: el canal social publica a un gist que lee cualquiera, así que es justo
+// donde un campo privado escapado tiene que saltar. Los falsos positivos puntuales se marcan con `audit-allow`.
+// Ojo: el patrón NO debe casar `socialGistRepository.ts` (de ahí el `[/\\]`, que exige separador de ruta antes).
+const GAMES_GIST = /[/\\]gistRepository\.ts$/;
 // Los ficheros de tipos solo DEFINEN campos, no los escriben.
 const TYPE_FILE = /[/\\]model[/\\]types[/\\]/;
 // Indicios de que un fichero ESCRIBE a un canal público.
@@ -100,7 +105,7 @@ const B_PATTERNS = [
   { pattern: /\bsnippet\s*[:=]/, file: /ViewModel\.ts$/, message: 'snippet computado en un ViewModel (debe estar en toPublicGame)' },
   { pattern: /fetch\(['"]https:\/\/api\.github/, notFile: /gistRepository/, message: 'API de Gist fuera de gistRepository' },
   { pattern: /\b(setDoc|updateDoc|addDoc)\b/, notFile: /firebase\w*Repository/, message: 'escritura a Firestore fuera de los repositorios firebase' },
-  { pattern: /localStorage\.setItem/, notFile: /(localRepository|syncStateRepository|gistRepository|gistConfigRepository)/, message: 'localStorage fuera de los repositorios designados' },
+  { pattern: /localStorage\.setItem/, notFile: /(localRepository|syncStateRepository|gistRepository|gistConfigRepository|preferenceStore)/, message: 'localStorage fuera de los repositorios designados' },
   { pattern: /console\.log[^\n]*\b(token|uid)\b/i, message: 'posible fuga de token/uid en console.log' },
 ];
 

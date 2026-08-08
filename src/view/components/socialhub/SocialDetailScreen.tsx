@@ -5,6 +5,8 @@ import { resolveGrade } from '../../../core/utils/scoreScale';
 import { MetaSection } from '../MetaSection';
 import { HubAvatar } from './HubAvatar';
 import type { SocialUiLabels } from '../../../core/constants/labels';
+import type { GameItem } from '../../../model/types/game';
+import type { SocialActivityFeedItem } from '../../../viewmodel/useSocialViewModel';
 import { HubStatus } from './HubStatus';
 import { HubBackButton } from './HubBackButton';
 
@@ -19,8 +21,16 @@ export function SocialDetailScreen({
   statusKind
 }: {
   SOCIAL_UI: SocialUiLabels;
-  activeDetailEvent: any;
-  getGameItemById: (profileId: string, id: number) => any;
+  /**
+   * Solo los campos que esta pantalla PINTA, no la entrada del feed entera: es un componente presentacional y
+   * declarar de más la ataría a cambios del modelo que no le afectan (y obligaría a las pruebas a fabricar
+   * objetos completos para renderizar una tarjeta).
+   */
+  activeDetailEvent: Pick<
+    SocialActivityFeedItem,
+    'gameId' | 'gameName' | 'grade' | 'photoURL' | 'profileDisplayName' | 'profileId' | 'rating' | 'snippet' | 'updatedAt'
+  > | null;
+  getGameItemById: (profileId: string, id: number) => GameItem | null;
   onOpenProfileDetail: (id: string) => void;
   onBack: () => void;
   status: string;

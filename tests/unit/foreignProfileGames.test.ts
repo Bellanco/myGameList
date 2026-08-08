@@ -12,7 +12,7 @@ import { loadForeignProfileGames } from '../../src/model/repository/foreignProfi
 import { applyProfileVisibility } from '../../src/core/utils/profileVisibility';
 import { PROFILE_CACHE_STORE, openSharedDatabase } from '../../src/model/repository/idbConnectionRepository';
 import type { GameItem, TabData } from '../../src/model/types/game';
-import type { SocialProfileVisibility } from '../../src/model/repository/gistRepository';
+import type { SocialProfileVisibility } from '../../src/model/repository/socialGistRepository';
 
 const TOKEN = 'ghp_0123456789abcdefghij';
 const GIST_ID = 'abc12345';

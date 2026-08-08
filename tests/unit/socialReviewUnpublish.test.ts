@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { removeReviewActivity, type SocialActivityEntry, type SocialGistData } from '../../src/model/repository/gistRepository';
+import { removeReviewActivity, type SocialActivityEntry, type SocialGistData } from '../../src/model/repository/socialGistRepository';
 
 function activity(over: Partial<SocialActivityEntry>): SocialActivityEntry {
   const actorProfileId = over.actorProfileId ?? 'me';

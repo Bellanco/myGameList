@@ -28,12 +28,22 @@ describe('rangos de perfil', () => {
     expect(new Set(ttls).size).toBe(PROFILE_TIERS.length); // sin empates: cada rango se nota
   });
 
-  it('las cadencias acordadas: 30 / 15 / 10 min y mithril con suelo de 12 s', () => {
+  it('las cadencias acordadas: 30 / 15 / 10 min y mithril con suelo de 60 s', () => {
     expect(PROFILE_TIER_FEED_TTL_MS.silver).toBe(15 * 60 * 1000);
     expect(PROFILE_TIER_FEED_TTL_MS.gold).toBe(10 * 60 * 1000);
-    // "Siempre fresco al abrir" con suelo de 12 s es exactamente un TTL de 12 s. El suelo evita que navegar
-    // feed→detalle→feed dispare ~50 lecturas de gist por cada ida y vuelta.
-    expect(PROFILE_TIER_FEED_TTL_MS.mithril).toBe(12_000);
+    // El suelo de mithril lo fija el RATE-LIMIT de GitHub, no el gusto: cada hidratación son ~51 peticiones
+    // (1 Firestore + hasta 50 gists de amigos) contra un cupo de 5.000/hora que se comparte con el sync de la
+    // biblioteca. A 60 s son ~3.060/hora en uso sostenido; a los 12 s de antes eran ~4.080, al borde del límite.
+    expect(PROFILE_TIER_FEED_TTL_MS.mithril).toBe(60_000);
+  });
+
+  it('el suelo de mithril deja margen de rate-limit para el sync de la biblioteca', () => {
+    // Guarda de diseño: cambiar el suelo sin recalcular esto es lo que devolvería al usuario al borde del límite.
+    const PETICIONES_POR_HIDRATACION = 1 + 50; // 1 consulta a Firestore + hasta 50 gists de amigos
+    const CUPO_GITHUB_POR_HORA = 5_000;
+    const hidratacionesPorHora = 3_600_000 / PROFILE_TIER_FEED_TTL_MS.mithril;
+    const peticionesPorHora = hidratacionesPorHora * PETICIONES_POR_HIDRATACION;
+    expect(peticionesPorHora).toBeLessThan(CUPO_GITHUB_POR_HORA * 0.7); // ≥30 % de margen para el sync
   });
 
   it('todos los rangos tienen etiqueta y TTL: añadir uno sin cablearlo rompe aquí', () => {
