@@ -5,6 +5,54 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
 
 ## [Unreleased]
 
+### Performance
+- **El estado de arranque de las listas se lee una vez por montaje, no en cada render.** `loadLocalState()`
+  estaba en el cuerpo del hook raíz y `normalizeData()` como argumento de `useState` (no como inicializador
+  perezoso), así que la biblioteca entera se releía de `localStorage`, se parseaba y se normalizaba —dos veces—
+  en cada render: cada filtro, cada fila expandida, cada aviso y cada ciclo de sync. El coste era proporcional
+  al número de juegos y el resultado se descartaba. Con test de regresión que cuenta lecturas.
+- **Los modales dejan de descargarse en el render inicial.** `FormModal`, `ConfirmModal` y `RouletteModal` se
+  declaraban `lazy` pero se renderizaban siempre (con `open={false}`), así que React arrancaba su `import()` en
+  el primer render y sus chunks competían con la ruta crítica. Ahora se montan en su primera apertura y se
+  precargan en idle, de modo que abrir sigue siendo instantáneo. No se desmontan al cerrar: el `<dialog>` tiene
+  que seguir vivo para que `close()` restaure el foco (A11y-1).
+- **El canal social sale del chunk de arranque.** `gistRepository` mezclaba el gist de juegos y el social en un
+  único módulo de 2.171 líneas, y como el de juegos lo importa `useSyncViewModel` —estático desde App—, los
+  ~54 kB de fuente del social viajaban en el arranque de todo el mundo, abriera o no el hub. Separado en
+  `socialGistRepository` (+ `githubGistApi` para lo común), ahora solo lo descarga quien entra en social.
+
+### Changed
+- **Una sola tabla de rutas.** Había dos listas que mantener en sincronía: una cadena de ternarios sobre el
+  `pathname` elegía la pantalla, y un `<Routes>` aparte —con todos sus `element={null}`— declaraba qué caminos
+  eran válidos; olvidar una entrada en la segunda hacía que la pantalla rebotara a `/completados`, como le pasó
+  a `/social/requests`. Ahora `<Routes>` se genera de `APP_ROUTES` y la sección activa sale del mismo matcher.
+  Las sub-rutas del hub las cubre `/social/*`, así que **añadir una pantalla social ya no obliga a tocar App**.
+- **Las sub-rutas del hub se resuelven con `matchPath`**, no con siete expresiones regulares escritas a mano.
+  De paso, el descodificado de parámetros deja de poder lanzar: `decodeURIComponent('%zz')` reventaba el render
+  del hub ante una URL manipulada.
+- **Las cinco preferencias de apariencia** (tema, paleta, caja, efectos, botón de Steam Deck) pasan a un único
+  store sobre `useSyncExternalStore`. Eran cinco hooks copiados y cinco funciones de repositorio idénticas salvo
+  el nombre del campo, sincronizadas por cuatro eventos distintos de `window`. Cierra además el agujero del
+  patrón anterior: la suscripción vivía en un `useEffect`, así que un cambio ocurrido entre el primer render y
+  el montaje —la hidratación desde la nube— podía perderse.
+- **`useSocialViewModel` baja de 2.544 a 2.257 líneas**: salen a `viewmodel/social/` el enrutado, el feed, el
+  compositor de publicaciones, el consentimiento legal y el formulario de perfil. La visibilidad del perfil se
+  normalizaba campo a campo en seis sitios; ahora una sola vez.
+- El `target` del compilador se alinea con el del build (ES2022): comprobar contra ES2020 y emitir a ES2022
+  dejaba fuera del typecheck APIs que en producción sí existen.
+
+### Fixed
+- **Un `hiddenTabs` que no fuera una lista tumbaba la hidratación del perfil social.** La comprobación era
+  `hiddenTabs || []`, que da por bueno cualquier valor truthy: un `"c"` —gist editado a mano, formato antiguo—
+  pasaba el filtro y reventaba en el `forEach`. Alcanzable solo por caminos que no pasan por el saneado del
+  lector del gist, pero el normalizador ya no depende de que alguien haya limpiado antes.
+
+### Tests
+- Primeras pruebas del **flujo de publicación** (no tenía ninguna: los tests del hub no llegaban a
+  `handlePublishPost`) y de la **normalización de visibilidad del perfil**. Entre ellas queda fijado que un fallo
+  al publicar **no borra el texto escrito**.
+- Nuevas pruebas del matcher de rutas sociales y de la tabla de rutas de la app.
+
 ## [3.8] - 2026-08-06
 
 ### Added

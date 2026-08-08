@@ -76,18 +76,32 @@ describe('caché del directorio social — versión de forma', () => {
       await expect(getCachedSocialDirectory(GIST, PROFILE_TIER_FEED_TTL_MS.gold)).resolves.toBeNull();
     });
 
-    it('mithril descarta cualquier caché de más de 12 s, pero el suelo evita releer en cada navegación', async () => {
-      await putCachedSocialDirectory(GIST, [{ id: 'ada' }]);
-      // Recién escrita: dentro del suelo de 12 s → se sirve (feed→detalle→feed no dispara ~50 lecturas de gist).
-      await expect(getCachedSocialDirectory(GIST, PROFILE_TIER_FEED_TTL_MS.mithril)).resolves.toEqual([{ id: 'ada' }]);
+    it('mithril descarta la caché pasado su suelo, pero dentro de él no relee en cada navegación', async () => {
+      // Los márgenes se derivan del propio suelo, no de un número escrito a mano: así, cuando el suelo se mueva
+      // (lo fija el rate-limit de GitHub, ver tiers.ts), este test siga comprobando lo que dice comprobar.
+      const suelo = PROFILE_TIER_FEED_TTL_MS.mithril;
 
+      await putCachedSocialDirectory(GIST, [{ id: 'ada' }]);
+      // Recién escrita: dentro del suelo → se sirve (feed→detalle→feed no dispara ~50 lecturas de gist).
+      await expect(getCachedSocialDirectory(GIST, suelo)).resolves.toEqual([{ id: 'ada' }]);
+
+      // Justo por debajo del suelo: todavía se sirve.
       await writeRawRecord({
         profileId: KEY,
-        cachedAt: Date.now() - 13_000,
+        cachedAt: Date.now() - Math.round(suelo * 0.5),
         version: CURRENT_VERSION,
         entries: [{ id: 'ada' }],
       });
-      await expect(getCachedSocialDirectory(GIST, PROFILE_TIER_FEED_TTL_MS.mithril)).resolves.toBeNull();
+      await expect(getCachedSocialDirectory(GIST, suelo)).resolves.toEqual([{ id: 'ada' }]);
+
+      // Pasado el suelo: se descarta y toca rehidratar.
+      await writeRawRecord({
+        profileId: KEY,
+        cachedAt: Date.now() - (suelo + 1_000),
+        version: CURRENT_VERSION,
+        entries: [{ id: 'ada' }],
+      });
+      await expect(getCachedSocialDirectory(GIST, suelo)).resolves.toBeNull();
     });
 
     it('sin TTL explícito se comporta como bronce (la cadencia de siempre)', async () => {

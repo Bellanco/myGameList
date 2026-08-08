@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { GameItem, TabData } from '../../src/model/types/game';
-import type { SocialGistData } from '../../src/model/repository/gistRepository';
+import type { SocialGistData } from '../../src/model/repository/socialGistRepository';
 
 // Firebase: sesión de Google + profileId estable. La reconciliación no debe tocar Firestore para nada más.
 const firebaseMocks = vi.hoisted(() => ({

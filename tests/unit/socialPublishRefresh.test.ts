@@ -1,5 +1,13 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { readPublicSocialGistById, writeSocialGist, type SocialGistData } from '../../src/model/repository/gistRepository';
+
+// Espía que CONSERVA la validación real: solo permite comprobar que se invoca (y forzar un rechazo en un test).
+const schemaSpy = vi.hoisted(() => ({ assertValidSocialGist: vi.fn() }));
+vi.mock('../../src/model/schemas/socialGistSchema', async (importOriginal) => {
+  const original = await importOriginal<typeof import('../../src/model/schemas/socialGistSchema')>();
+  schemaSpy.assertValidSocialGist.mockImplementation(original.assertValidSocialGist);
+  return { ...original, assertValidSocialGist: schemaSpy.assertValidSocialGist };
+});
+import { readPublicSocialGistById, writeSocialGist, type SocialGistData } from '../../src/model/repository/socialGistRepository';
 
 const TOKEN = 'ghp_0123456789abcdefghij';
 const GIST_ID = 'abcdef99';
@@ -28,10 +36,12 @@ function post(text: string, ts: number) {
 function stubGistStore(initialFiles: Record<string, { content: string }>) {
   const store: Record<string, { content: string }> = { ...initialFiles };
   let getCount = 0;
+  let patchCount = 0;
   const fetchMock = vi.fn(async (_url: string, init: RequestInit = {}) => {
     const method = (init.method || 'GET').toUpperCase();
     const headers = { etag: `W/"etag-${Date.now()}"` };
     if (method === 'PATCH') {
+      patchCount += 1;
       const body = JSON.parse(String(init.body)) as { files: Record<string, { content: string } | null> };
       for (const [name, file] of Object.entries(body.files)) {
         if (file === null) delete store[name];
@@ -43,7 +53,7 @@ function stubGistStore(initialFiles: Record<string, { content: string }>) {
     return new Response(JSON.stringify({ files: store }), { status: 200, headers });
   });
   vi.stubGlobal('fetch', fetchMock);
-  return { getCount: () => getCount };
+  return { getCount: () => getCount, patchCount: () => patchCount };
 }
 
 afterEach(() => {
@@ -70,5 +80,43 @@ describe('refresco tras publicar — la caché pública se actualiza al escribir
 
     // Y lo sirve desde la caché refrescada por la escritura: no hizo un GET extra para el paso 3.
     expect(store.getCount()).toBe(1);
+  });
+});
+
+// P2 — la validación de esquema (Zod) ya NO viaja en el chunk de arranque: `writeSocialGist` la carga bajo
+// demanda con `await import()`. Aquí se comprueba que sigue EJECUTÁNDOSE en la ruta de escritura; si ese import se
+// rompiera o alguien retirara la llamada, el gist PÚBLICO pasaría a subirse sin su allowlist y nadie se enteraría.
+//
+// Se comprueba la INVOCACIÓN y no un payload inválido a propósito: `normalizeSocialGistData` corre antes y
+// reconstruye el objeto campo a campo, así que ya descarta lo desconocido. Esta validación es la segunda línea
+// —la que cubre un fallo de esa normalización—, y por definición no se puede provocar desde fuera con un
+// payload normal. Lo comprobable, y lo que de verdad importa, es que se sigue ejecutando.
+describe('validación de esquema del gist social (cargada bajo demanda)', () => {
+  it('escribe con normalidad un payload válido', async () => {
+    stubGistStore({ [SOCIAL_GIST_FILENAME]: { content: JSON.stringify(baseData([])) } });
+    await expect(writeSocialGist(TOKEN, GIST_ID, baseData([post('hola', 1000)]))).resolves.toBeDefined();
+  });
+
+  it('el validador SE EJECUTA al escribir, pese a cargarse de forma diferida', async () => {
+    stubGistStore({ [SOCIAL_GIST_FILENAME]: { content: JSON.stringify(baseData([])) } });
+    schemaSpy.assertValidSocialGist.mockClear();
+
+    await writeSocialGist(TOKEN, GIST_ID, baseData([post('hola', 1000)]));
+
+    expect(schemaSpy.assertValidSocialGist).toHaveBeenCalled();
+    // Y recibe el payload YA normalizado que se va a subir, no el de entrada.
+    const validado = schemaSpy.assertValidSocialGist.mock.calls[0][0] as { posts?: unknown[] };
+    expect(validado.posts).toHaveLength(1);
+  });
+
+  it('si el validador rechaza, la escritura ABORTA (falla cerrado, no sube el gist)', async () => {
+    const store = stubGistStore({ [SOCIAL_GIST_FILENAME]: { content: JSON.stringify(baseData([])) } });
+    schemaSpy.assertValidSocialGist.mockImplementationOnce(() => {
+      throw new Error('Gist social inválido (schema): prueba');
+    });
+
+    await expect(writeSocialGist(TOKEN, GIST_ID, baseData([post('hola', 1000)]))).rejects.toThrow(/schema/);
+    // No llegó a tocar GitHub: fallar cerrado significa no publicar nada.
+    expect(store.patchCount()).toBe(0);
   });
 });

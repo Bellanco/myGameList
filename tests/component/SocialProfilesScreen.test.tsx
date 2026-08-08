@@ -2,12 +2,15 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { SocialProfilesScreen } from '../../src/view/components/socialhub/SocialProfilesScreen';
+import type { ProfileTier } from '../../src/core/constants/tiers';
 import { SOCIAL_UI } from '../../src/core/constants/labels';
 import { PROFILE_TIER_LABELS } from '../../src/core/constants/tiers';
 import type { RelationshipState } from '../../src/model/types/social';
 
-function entry(uid: string, displayName: string) {
-  return { id: uid, uid, displayName, photoURL: '' };
+// `tier` va explícito: el modelo lo declara OBLIGATORIO justamente para que olvidarlo sea un error de
+// compilación y no un directorio entero pintado de bronce por descuido.
+function entry(uid: string, displayName: string, tier: ProfileTier = 'bronze') {
+  return { id: uid, uid, displayName, photoURL: '', tier };
 }
 
 const baseProps = {
@@ -88,7 +91,9 @@ describe('SocialProfilesScreen — división amigos / no-amigos', () => {
         <SocialProfilesScreen
           {...baseProps}
           relationshipWith={() => 'none'}
-          filteredSocialDirectory={[{ ...entry('ada', 'Ada'), tier: 'adamantium' }]}
+          // Rango inventado: el `as` es la prueba. Simula un documento con un valor que el tipo no admite
+          // (dato viejo o manipulado) para comprobar que `normalizeTier` lo degrada a bronce en vez de romper.
+          filteredSocialDirectory={[{ ...entry('ada', 'Ada'), tier: 'adamantium' as ProfileTier }]}
         />,
       );
 

@@ -72,8 +72,15 @@ export function useSocialProfileSession(completedGameIds: ReadonlySet<number>): 
     };
   }, []);
 
-  // Identidad cacheada (el nombre). Se relee al cambiar el gist o al navegar: así, tras re-guardar el perfil (que
-  // actualiza la caché y navega), el gate refleja el nombre nuevo sin esperar a re-autenticar.
+  // Identidad cacheada (el nombre). Se relee al cambiar el gist o al navegar DENTRO de lo social: así, tras
+  // re-guardar el perfil (que actualiza la caché y navega), el gate refleja el nombre nuevo sin esperar a
+  // re-autenticar.
+  //
+  // El disparo se acota a las rutas sociales a propósito. Este hook se monta en la raíz (App), así que con el
+  // `pathname` entero se abría IndexedDB en CADA navegación de la app —incluido cambiar de pestaña de listados,
+  // que es lo que más se hace— para releer un dato que solo puede cambiar desde el editor de perfil. Dentro de
+  // `/social` se conservan todos los disparos de antes, que es donde el dato se escribe.
+  const socialPathname = pathname.startsWith('/social') ? pathname : '';
   useEffect(() => {
     let cancelled = false;
     if (!gistId) {
@@ -87,7 +94,7 @@ export function useSocialProfileSession(completedGameIds: ReadonlySet<number>): 
     return () => {
       cancelled = true;
     };
-  }, [gistId, pathname]);
+  }, [gistId, socialPathname]);
 
   return useMemo(() => {
     if (!gistId) return false;

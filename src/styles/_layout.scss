@@ -1892,6 +1892,34 @@ button.hub-chip.active {
   line-height: 1.45;
   color: var(--text);
 }
+/* Recorte de publicaciones largas (el cupo por rango llega a 100.000 caracteres). Mismo mecanismo que el de las
+   reseñas (`.hub-feed-review-text`), con más líneas porque una publicación es el contenido principal de su
+   tarjeta, no un extracto. Lo despliega el botón de al lado; `PostBody` decide si hace falta midiendo el
+   desbordamiento real, así que aquí no hay nada que condicionar. */
+.hub-post-text.is-clamped {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  line-clamp: 8;
+  -webkit-line-clamp: 8;
+  overflow: hidden;
+}
+.hub-post-more {
+  align-self: flex-start;
+  margin-top: .3rem;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--steam-hover);
+  font: inherit;
+  font-size: .82rem;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: underline;
+}
+.hub-post-more:hover,
+.hub-post-more:focus-visible {
+  color: var(--text);
+}
 .hub-post-text a {
   color: var(--steam-hover);
   text-decoration: underline;

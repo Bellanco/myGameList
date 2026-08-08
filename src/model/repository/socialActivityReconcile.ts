@@ -15,15 +15,7 @@
 import type { TabData } from '../types/game';
 import { TAB_IDS } from '../types/game';
 import { getCurrentSocialAuthUser, resolveStableProfileId } from './firebaseRepository';
-import {
-  readSocialGist,
-  remapSocialActorIds,
-  removeReviewActivity,
-  saveSocialSyncConfig,
-  upsertReviewActivity,
-  writeSocialGist,
-  type SocialGistData,
-} from './gistRepository';
+import { readSocialGist, remapSocialActorIds, removeReviewActivity, saveSocialSyncConfig, upsertReviewActivity, writeSocialGist, type SocialGistData } from './socialGistRepository';
 import { getLocalMeta, invalidateCachedSocialDirectory, patchLocalMeta } from './indexedDbRepository';
 import { resolveSocialChannel } from './socialChannel';
 

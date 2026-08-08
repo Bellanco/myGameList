@@ -720,6 +720,10 @@ export const SOCIAL_UI = {
     postCharNearLimit: 'Te acercas al límite de caracteres de la publicación.',
     postCharLimitReached: 'Has alcanzado el límite de caracteres de la publicación.',
     postSharedFileHint: 'Pega la URL directa de la imagen (clic derecho → «Copiar la URL de la imagen») para verla incrustada.',
+    // Recorte de publicaciones largas en el feed: el cupo por rango llega a 100.000 caracteres, y sin recorte una
+    // sola publicación ocupa el feed entero. Nada se pierde: se despliega en la propia tarjeta.
+    postExpand: 'Ver más',
+    postCollapse: 'Ver menos',
     postedAt: (date: Date) =>
       `Publicado el ${date.toLocaleDateString('es-ES', { day: '2-digit' })} de ${date.toLocaleDateString('es-ES', { month: 'long' })} a las ${date.toLocaleTimeString('es-ES', { hour: 'numeric', minute: '2-digit' })}`,
     loading: 'Cargando actividad...',

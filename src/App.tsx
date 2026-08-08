@@ -1,4 +1,4 @@
-import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import { DIALOG_MESSAGES, ROUTE_TAB, SYNC_BADGE_TEXT, SYNC_MESSAGES, TAB_ROUTE, TAB_TITLES, UI_MESSAGES } from './core/constants/labels';
 import { LEGAL_ROUTES, type LegalDocId } from './core/constants/legal';
@@ -12,9 +12,11 @@ import { TabBar } from './view/components/TabBar';
 import { Toolbar } from './view/components/Toolbar';
 import { GameTable } from './view/components/GameTable';
 import { StatusBanner } from './view/components/StatusBanner';
-import { BottomNavigation, type AppSection } from './view/components/BottomNavigation';
+import { BottomNavigation } from './view/components/BottomNavigation';
+import { APP_ROUTES, FALLBACK_ROUTE, matchAppSection, type AppSection } from './core/constants/routes';
 import { ScrollToTop } from './view/components/ScrollToTop';
 import { ConsentBanner } from './view/components/ConsentBanner';
+import { SocialHubSkeleton } from './view/components/SocialHubSkeleton';
 import { useGameListViewModel } from './viewmodel/useGameListViewModel';
 import { useToolbarFilters } from './viewmodel/useToolbarFilters';
 import { computeTabOptions, countActiveFilters } from './viewmodel/toolbarFilters';
@@ -33,6 +35,8 @@ import { hasGithubOAuthRedirect } from './model/repository/githubOAuthRepository
 import { buildListsPool, buildListsWeigher, normalizeName } from './core/roulette/roulette';
 import { useImportInbox } from './viewmodel/useImportInbox';
 import { useImportFieldPrefs } from './viewmodel/useImportFieldPrefs';
+import { useMountedOnceOpen } from './view/modals/useMountedOnceOpen';
+import { runWhenIdle } from './core/utils/idle';
 import { parseLibraryExporter } from './core/import/libraryExporter';
 import { importedToPartialGame, mergeImportedIntoGame } from './core/import/staging';
 import type { ImportedGame, RawExternalGame } from './model/types/import';
@@ -48,12 +52,19 @@ function markPendingSocialActivityFailure(): void {
   });
 }
 
-const FormModal = lazy(() => import('./view/modals/FormModal').then((module) => ({ default: module.FormModal })));
-const ConfirmModal = lazy(() => import('./view/modals/ConfirmModal').then((module) => ({ default: module.ConfirmModal })));
+// Los tres modales se montan solo tras su primera apertura (ver `useMountedOnceOpen`), así que sus chunks ya no
+// entran en el arranque. Para que abrir siga siendo instantáneo, se precargan en idle: `import()` es idempotente
+// —devuelve el módulo ya cacheado—, de modo que cuando `lazy` lo pida el trabajo estará hecho.
+const importFormModal = () => import('./view/modals/FormModal');
+const importConfirmModal = () => import('./view/modals/ConfirmModal');
+const importRouletteModal = () => import('./view/components/roulette/RouletteModal');
+
+const FormModal = lazy(() => importFormModal().then((module) => ({ default: module.FormModal })));
+const ConfirmModal = lazy(() => importConfirmModal().then((module) => ({ default: module.ConfirmModal })));
 const SettingsHub = lazy(() => import('./view/components/SettingsHub').then((module) => ({ default: module.SettingsHub })));
 const SocialHub = lazy(() => import('./view/components/SocialHub').then((module) => ({ default: module.SocialHub })));
 const AccountHub = lazy(() => import('./view/components/AccountHub').then((module) => ({ default: module.AccountHub })));
-const RouletteModal = lazy(() => import('./view/components/roulette/RouletteModal').then((module) => ({ default: module.RouletteModal })));
+const RouletteModal = lazy(() => importRouletteModal().then((module) => ({ default: module.RouletteModal })));
 const IntegrationsScreen = lazy(() => import('./view/components/import/IntegrationsScreen').then((module) => ({ default: module.IntegrationsScreen })));
 const InboxScreen = lazy(() => import('./view/components/import/InboxScreen').then((module) => ({ default: module.InboxScreen })));
 const LegalScreen = lazy(() => import('./view/components/LegalScreen').then((module) => ({ default: module.LegalScreen })));
@@ -65,16 +76,6 @@ function getCurrentTab(pathname: string): TabId {
   return ROUTE_TAB[pathname] || 'c';
 }
 
-function getCurrentSection(pathname: string): AppSection {
-  if (pathname.startsWith('/admin')) return 'admin';
-  if (pathname.startsWith('/social')) return 'social';
-  if (pathname.startsWith('/ajustes')) return 'settings';
-  if (pathname.startsWith('/cuenta')) return 'account';
-  if (pathname.startsWith('/integraciones')) return 'integrations';
-  if (pathname.startsWith('/bandeja')) return 'inbox';
-  if (pathname.startsWith('/legal')) return 'legal';
-  return 'lists';
-}
 
 /**
  * A11y-4 — Encabezado de nivel 1 de la pantalla actual. Va oculto visualmente (el diseño es "headerless" a
@@ -101,40 +102,12 @@ function isCompactTable(): boolean {
   return window.innerWidth <= 1100;
 }
 
-// Rutas VÁLIDAS de la app. El `<Route path="*">` redirige a /completados cualquier ruta no listada aquí, así que
-// TODA pantalla nueva (incl. las sub-rutas sociales de useSocialViewModel) debe añadirse a esta lista o quedará
-// inaccesible (rebotaría a completados). Exportada para el test de regresión de rutas.
-export const APP_ROUTE_PATHS = [
-  '/completados',
-  '/visitados',
-  '/en-curso',
-  '/proximos',
-  '/social',
-  '/social/profile',
-  '/social/profiles',
-  '/social/profiles/:profileId',
-  '/social/profiles/:profileId/reviews',
-  '/social/profiles/:profileId/game/:gameId/review',
-  '/social/requests',
-  '/social/user/:userId/game/:gameId/:eventType',
-  '/ajustes',
-  '/cuenta',
-  '/integraciones',
-  '/bandeja',
-  // L4 — documentos legales. Sin estas entradas, `<Route path="*">` las rebotaría a /completados.
-  LEGAL_ROUTES.terms,
-  LEGAL_ROUTES.privacy,
-  LEGAL_ROUTES.cookies,
-  // Panel de administración: ruta OCULTA (sin enlace en la navegación) y gateada por `isAdmin()` en las reglas.
-  // Debe estar aquí igualmente o el catch-all la rebotaría a /completados antes de que el hub decida nada.
-  '/admin',
-] as const;
 
 export default function App() {
   const location = useLocation();
   const navigate = useNavigate();
   const currentTab = getCurrentTab(location.pathname);
-  const activeSection = getCurrentSection(location.pathname);
+  const activeSection = matchAppSection(location.pathname);
   const legalDocId = getLegalDocId(location.pathname);
 
   const vm = useGameListViewModel();
@@ -600,7 +573,154 @@ export default function App() {
 
 
 
+  // Los modales entran en el árbol al abrirse por primera vez y ya no salen (el `<dialog>` debe seguir montado
+  // para que su cierre restaure el foco). Así sus chunks quedan fuera del render inicial.
+  const formModalMounted = useMountedOnceOpen(vm.formModalOpen);
+  const confirmModalMounted = useMountedOnceOpen(!!vm.confirmState);
+  const rouletteMounted = useMountedOnceOpen(rouletteOpen);
+
+  // Precarga en idle, ya pintada la pantalla: cuando el usuario abra un modal su módulo estará en caché y no
+  // habrá que esperar a la red (el `fallback` de Suspense es `null`, así que una espera se vería como un clic
+  // que no hace nada).
+  useEffect(() => runWhenIdle(() => {
+    void importFormModal();
+    void importConfirmModal();
+    void importRouletteModal();
+  }), []);
+
   const syncBadgeText = SYNC_BADGE_TEXT[syncVm.status] || SYNC_BADGE_TEXT.idle;
+
+  /**
+   * Pantalla de cada sección. Las cuatro rutas de listados comparten elemento a propósito: la pestaña activa se
+   * deriva del pathname ({@link getCurrentTab}), no de rutas distintas.
+   */
+  const sectionScreens: Record<AppSection, ReactNode> = {
+    lists: (
+
+      <>
+        <Toolbar
+          currentTab={currentTab}
+          filters={tabFilter}
+          options={tabOptions}
+          activeFilterCount={activeFilterCount}
+          compactFilters={compactFilters}
+          filtersOpen={filtersOpen}
+          onFiltersToggle={handleFiltersToggle}
+          onFilterChange={handleFilterChange}
+          onToggleValue={handleToggleValue}
+          onClearFilter={handleClearFilter}
+          onClearAll={handleClearAllFilters}
+          showSteamButton={showSteamButton}
+        />
+        <GameTable
+          games={list}
+          currentTab={currentTab}
+          expandedId={vm.expandedId}
+          onExpandedChange={setExpandedId}
+          onEdit={vm.openEditGame}
+          onDelete={vm.deleteGame}
+          onMigrate={vm.migrateGame}
+          onAddGame={handleAddGame}
+          tabActions={vm.tabActions[currentTab]}
+          sort={vm.sort[currentTab]}
+          onSort={vm.sortBy}
+          recentlyChangedId={recentlyChangedId}
+        />
+      </>
+    ),
+    social: (
+
+      // `fallback` con esqueleto, no `null`: el chunk del hub es lo primero que hay que descargar al entrar en
+      // social, y con `null` la pantalla se quedaba en BLANCO hasta que llegaba. Es el mismo esqueleto que
+      // pinta el propio hub mientras se hidrata, así que el usuario ve una sola escena de carga continua.
+      <Suspense fallback={<SocialHubSkeleton />}>
+        <SocialHub
+          onAddToProximos={vm.addGameToProximos}
+          hasGameInLists={vm.hasGameInLists}
+          moveGameToCurrentByName={vm.moveGameToCurrentByName}
+          games={vm.data}
+        />
+      </Suspense>
+    ),
+    account: (
+
+      <Suspense fallback={null}>
+        {scoreScaleUid ? <AccountHub scoreScaleUid={scoreScaleUid} /> : null}
+      </Suspense>
+    ),
+    admin: (
+
+      <Suspense fallback={null}>
+        <AdminHub />
+      </Suspense>
+    ),
+    legal: (
+
+      <Suspense fallback={null}>
+        <LegalScreen docId={legalDocId} />
+      </Suspense>
+    ),
+    integrations: (
+
+      <Suspense fallback={null}>
+        <IntegrationsScreen
+          onImport={handleImportLibraryExporter}
+          onBack={() => navigate('/ajustes')}
+          inboxCount={inbox.count}
+          onOpenInbox={() => navigate('/bandeja')}
+        />
+      </Suspense>
+    ),
+    inbox: (
+
+      <Suspense fallback={null}>
+        <InboxScreen
+          imported={inbox.imported}
+          isInLists={isInLists}
+          listOf={listOfName}
+          onClassify={handleClassifyImport}
+          onEnrich={handleEnrichImport}
+          onDiscard={handleDiscardImport}
+          onDiscardMany={handleDiscardManyImport}
+          onClear={handleClearInbox}
+          fieldPrefs={importFields.prefs}
+          onFieldPrefChange={importFields.setField}
+          onBack={() => navigate('/integraciones')}
+          onGoIntegrations={() => navigate('/ajustes')}
+        />
+      </Suspense>
+    ),
+    settings: (
+
+      <Suspense fallback={null}>
+        <SettingsHub
+          syncStatus={syncBadgeText}
+          hasSyncConfig={syncVm.hasConfig}
+          connectedGistId={syncVm.connectedGistId || syncVm.currentConfig?.gistId || ''}
+          token={syncVm.token}
+          gistId={syncVm.gistId}
+          syncError={syncVm.statusMessage}
+          recoveringGistId={syncVm.recoveringGistId}
+          githubOAuthEnabled={syncVm.githubOAuthEnabled}
+          githubLoggingIn={syncVm.githubLoggingIn}
+          onGithubLogin={syncVm.beginGithubLogin}
+          onTokenChange={syncVm.setToken}
+          onGistIdChange={syncVm.setGistId}
+          onConnectSync={syncVm.connectSync}
+          onSyncNow={syncVm.syncNow}
+          onDisconnectSync={syncVm.disconnectSync}
+          onCopyGistId={handleCopyGistId}
+          onRecoverGistId={handleRecoverGistId}
+          onExport={exportData}
+          onImport={importData}
+          lookups={vm.lookups}
+          onEditTag={handleEditTag}
+          onDeleteTag={handleDeleteTag}
+          onOpenIntegrations={openIntegrations}
+        />
+      </Suspense>
+    ),
+  };
 
   return (
     <>
@@ -628,113 +748,12 @@ export default function App() {
         }`.trim()}
       >
         <h1 className="sr-only">{getPageHeading(activeSection, currentTab)}</h1>
-        {activeSection === 'lists' ? (
-          <>
-            <Toolbar
-              currentTab={currentTab}
-              filters={tabFilter}
-              options={tabOptions}
-              activeFilterCount={activeFilterCount}
-              compactFilters={compactFilters}
-              filtersOpen={filtersOpen}
-              onFiltersToggle={handleFiltersToggle}
-              onFilterChange={handleFilterChange}
-              onToggleValue={handleToggleValue}
-              onClearFilter={handleClearFilter}
-              onClearAll={handleClearAllFilters}
-              showSteamButton={showSteamButton}
-            />
-            <GameTable
-              games={list}
-              currentTab={currentTab}
-              expandedId={vm.expandedId}
-              onExpandedChange={setExpandedId}
-              onEdit={vm.openEditGame}
-              onDelete={vm.deleteGame}
-              onMigrate={vm.migrateGame}
-              onAddGame={handleAddGame}
-              tabActions={vm.tabActions[currentTab]}
-              sort={vm.sort[currentTab]}
-              onSort={vm.sortBy}
-              recentlyChangedId={recentlyChangedId}
-            />
-          </>
-        ) : activeSection === 'social' ? (
-          <Suspense fallback={null}>
-            <SocialHub
-              onAddToProximos={vm.addGameToProximos}
-              hasGameInLists={vm.hasGameInLists}
-              moveGameToCurrentByName={vm.moveGameToCurrentByName}
-              games={vm.data}
-            />
-          </Suspense>
-        ) : activeSection === 'account' ? (
-          <Suspense fallback={null}>
-            {scoreScaleUid ? <AccountHub scoreScaleUid={scoreScaleUid} /> : null}
-          </Suspense>
-        ) : activeSection === 'admin' ? (
-          <Suspense fallback={null}>
-            <AdminHub />
-          </Suspense>
-        ) : activeSection === 'legal' ? (
-          <Suspense fallback={null}>
-            <LegalScreen docId={legalDocId} />
-          </Suspense>
-        ) : activeSection === 'integrations' ? (
-          <Suspense fallback={null}>
-            <IntegrationsScreen
-              onImport={handleImportLibraryExporter}
-              onBack={() => navigate('/ajustes')}
-              inboxCount={inbox.count}
-              onOpenInbox={() => navigate('/bandeja')}
-            />
-          </Suspense>
-        ) : activeSection === 'inbox' ? (
-          <Suspense fallback={null}>
-            <InboxScreen
-              imported={inbox.imported}
-              isInLists={isInLists}
-              listOf={listOfName}
-              onClassify={handleClassifyImport}
-              onEnrich={handleEnrichImport}
-              onDiscard={handleDiscardImport}
-              onDiscardMany={handleDiscardManyImport}
-              onClear={handleClearInbox}
-              fieldPrefs={importFields.prefs}
-              onFieldPrefChange={importFields.setField}
-              onBack={() => navigate('/integraciones')}
-              onGoIntegrations={() => navigate('/ajustes')}
-            />
-          </Suspense>
-        ) : (
-          <Suspense fallback={null}>
-            <SettingsHub
-              syncStatus={syncBadgeText}
-              hasSyncConfig={syncVm.hasConfig}
-              connectedGistId={syncVm.connectedGistId || syncVm.currentConfig?.gistId || ''}
-              token={syncVm.token}
-              gistId={syncVm.gistId}
-              syncError={syncVm.statusMessage}
-              recoveringGistId={syncVm.recoveringGistId}
-              githubOAuthEnabled={syncVm.githubOAuthEnabled}
-              githubLoggingIn={syncVm.githubLoggingIn}
-              onGithubLogin={syncVm.beginGithubLogin}
-              onTokenChange={syncVm.setToken}
-              onGistIdChange={syncVm.setGistId}
-              onConnectSync={syncVm.connectSync}
-              onSyncNow={syncVm.syncNow}
-              onDisconnectSync={syncVm.disconnectSync}
-              onCopyGistId={handleCopyGistId}
-              onRecoverGistId={handleRecoverGistId}
-              onExport={exportData}
-              onImport={importData}
-              lookups={vm.lookups}
-              onEditTag={handleEditTag}
-              onDeleteTag={handleDeleteTag}
-              onOpenIntegrations={openIntegrations}
-            />
-          </Suspense>
-        )}
+        <Routes>
+          {APP_ROUTES.map(({ path, section }) => (
+            <Route key={path} path={path} element={sectionScreens[section]} />
+          ))}
+          <Route path="*" element={<Navigate to={FALLBACK_ROUTE} replace />} />
+        </Routes>
       </main>
 
       {activeSection === 'lists' ? (
@@ -762,40 +781,46 @@ export default function App() {
       <ScrollToTop />
 
       <Suspense fallback={null}>
-        <FormModal
-          open={vm.formModalOpen}
-          draft={vm.draft}
-          currentTab={vm.editingTab}
-          lookups={vm.lookups}
-          onClose={handleCloseFormModal}
-          onSave={handleSaveDraft}
-          onNotice={vm.notify}
-        />
+        {formModalMounted ? (
+          <FormModal
+            open={vm.formModalOpen}
+            draft={vm.draft}
+            currentTab={vm.editingTab}
+            lookups={vm.lookups}
+            onClose={handleCloseFormModal}
+            onSave={handleSaveDraft}
+            onNotice={vm.notify}
+          />
+        ) : null}
 
-        <ConfirmModal
-          open={!!vm.confirmState}
-          title={vm.confirmState?.title || ''}
-          onCancel={handleConfirmCancel}
-          onConfirm={handleConfirmDelete}
-        />
+        {confirmModalMounted ? (
+          <ConfirmModal
+            open={!!vm.confirmState}
+            title={vm.confirmState?.title || ''}
+            onCancel={handleConfirmCancel}
+            onConfirm={handleConfirmDelete}
+          />
+        ) : null}
 
-        <RouletteModal
-          open={rouletteOpen}
-          onClose={() => setRouletteOpen(false)}
-          title="Elige tu próximo juego"
-          candidates={roulettePool}
-          weight={rouletteWeight}
-          tag={(candidate) => TAB_TITLES[candidate.sourceTab]}
-          action={() => ({
-            btnClass: 'btn-complete',
-            icon: 'play',
-            label: 'Pasa a "En curso"',
-            doneLabel: '✓ En curso',
-            onAct: (candidate) => {
-              vm.moveGameToTab(candidate.sourceTab, candidate.game.id, 'e');
-            },
-          })}
-        />
+        {rouletteMounted ? (
+          <RouletteModal
+            open={rouletteOpen}
+            onClose={() => setRouletteOpen(false)}
+            title="Elige tu próximo juego"
+            candidates={roulettePool}
+            weight={rouletteWeight}
+            tag={(candidate) => TAB_TITLES[candidate.sourceTab]}
+            action={() => ({
+              btnClass: 'btn-complete',
+              icon: 'play',
+              label: 'Pasa a "En curso"',
+              doneLabel: '✓ En curso',
+              onAct: (candidate) => {
+                vm.moveGameToTab(candidate.sourceTab, candidate.game.id, 'e');
+              },
+            })}
+          />
+        ) : null}
       </Suspense>
 
       <datalist id="dl-genres">
@@ -819,12 +844,6 @@ export default function App() {
         ))}
       </datalist>
 
-      <Routes>
-        {APP_ROUTE_PATHS.map((path) => (
-          <Route key={path} path={path} element={null} />
-        ))}
-        <Route path="*" element={<Navigate to="/completados" replace />} />
-      </Routes>
     </>
   );
 }

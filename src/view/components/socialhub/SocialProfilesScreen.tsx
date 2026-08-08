@@ -7,6 +7,10 @@ import { HubStatus } from './HubStatus';
 import { HubBackButton } from './HubBackButton';
 import { FriendshipButton } from './FriendshipButton';
 import type { RelationshipState } from '../../../model/types/social';
+import type { SocialDirectoryEntry } from '../../../viewmodel/useSocialViewModel';
+
+/** Lo que esta pantalla necesita de una entrada del directorio: identidad, nombre, foto y rango. Nada más. */
+type DirectoryCard = Pick<SocialDirectoryEntry, 'id' | 'uid' | 'displayName' | 'photoURL' | 'tier'>;
 
 /**
  * Cuántas FILAS se pintan de entrada en cada sección, y cuántas añade cada "mostrar más".
@@ -39,7 +43,7 @@ function SocialProfilesScreenBase({
   SOCIAL_UI: SocialUiLabels;
   profileSearch: string;
   setProfileSearch: (v: string) => void;
-  filteredSocialDirectory: any[];
+  filteredSocialDirectory: DirectoryCard[];
   loadingDirectory: boolean;
   openProfileDetail: (id: string) => void;
   handleProfileCardKeyDown: (event: React.KeyboardEvent<HTMLElement>, id: string) => void;
@@ -96,7 +100,7 @@ function SocialProfilesScreenBase({
     setOtherPages(1);
   }, [profileSearch]);
 
-  const renderProfileCard = (entry: any) => (
+  const renderProfileCard = (entry: DirectoryCard) => (
     <article
       key={entry.id}
       className="hub-feed-card hub-feed-profile-item"
@@ -138,7 +142,7 @@ function SocialProfilesScreenBase({
   /** Sección con su recuento, su rejilla y su "mostrar más". Las dos comparten forma; solo cambian los datos. */
   const renderSection = (
     title: string,
-    perfiles: any[],
+    perfiles: DirectoryCard[],
     vacio: string,
     pages: number,
     verMas: () => void,

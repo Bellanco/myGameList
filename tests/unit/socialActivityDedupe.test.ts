@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { readSocialGist } from '../../src/model/repository/gistRepository';
+import { readSocialGist } from '../../src/model/repository/socialGistRepository';
 
 // BUG 4/5: la actividad social se normaliza al leer (y al escribir). Dentro de UN gist (un único actor) el par
 // (gameId, type) identifica una sola reseña, así que:

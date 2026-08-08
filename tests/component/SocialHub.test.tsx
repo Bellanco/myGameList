@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor, fireEvent } from '@testing-library/react';
+import { act, render, screen, waitFor, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import type { SecretSocialGistResult } from '../../src/model/repository/gistRepository';
+import type { SecretSocialGistResult } from '../../src/model/repository/socialGistRepository';
 import type { SocialAuthUser, SocialProfileReference } from '../../src/model/repository/firebaseClient';
 
 // Mock de los repos que consume useSocialViewModel: aísla la UI de red/Firebase/IndexedDB.
@@ -70,8 +70,17 @@ const gistMocks = vi.hoisted(() => ({
 // Se parte del módulo REAL y solo se sustituye lo que toca red/config: así las funciones puras del gist
 // (remapSocialActorIds, upsertReviewActivity, removeReviewActivity…) se ejercitan de verdad y un flujo que
 // escribiera el gist indebidamente llegaría hasta `writeSocialGist` (mockeado) y sería detectable.
+//
+// Se mockean los DOS módulos con el mismo objeto desde que el canal social se separó del de juegos: el hub usa
+// `socialGistRepository` y la config de sync sigue en `gistRepository`. Cada factoría se queda solo con las
+// claves que su módulo exporta de verdad; las sobrantes del spread no las importa nadie.
 vi.mock('../../src/model/repository/gistRepository', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../../src/model/repository/gistRepository')>()),
+  ...gistMocks,
+}));
+
+vi.mock('../../src/model/repository/socialGistRepository', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../src/model/repository/socialGistRepository')>()),
   ...gistMocks,
 }));
 
@@ -108,11 +117,26 @@ describe('SocialHub (componente, post-M3)', () => {
       copiedEntries: 0,
     }));
     gistMocks.socialGistHasContent.mockResolvedValue(true);
+    // Ídem con la lectura del gist del perfil: el test que la deja colgando (para que el perfil llegue DESPUÉS del
+    // directorio) se la contagiaría a los siguientes, que se quedarían sin hidratar el perfil.
+    gistMocks.readSocialGist.mockResolvedValue({
+      data: {
+        profile: { name: '', private: false, recommendations: [], visibility: { hiddenTabs: [], hideReplayable: false, hideRetry: false, hideGameTime: false }, sharedLists: {} },
+        recommendations: [], activity: [], updatedAt: 0,
+      },
+      etag: null,
+    });
     gistMocks.deleteGist.mockResolvedValue(true);
     // Idem con `privateConfig`: si un test deja ahí un gist, el resto creería que otro dispositivo ya migró y
     // adoptarían ese canal en vez de seguir su propio camino.
     firebaseMocks.getPrivateConfig.mockResolvedValue(null);
     firebaseMocks.setPrivateConfig.mockResolvedValue(undefined);
+    // Y con las amistades: el test que las deja COLGANDO (para observar la ventana de carga del feed) dejaría al
+    // resto sin resolverlas nunca, y sin amistades resueltas el directorio no se hidrata en ningún test posterior.
+    firebaseMocks.getMyFriendships.mockResolvedValue({ friends: [], incoming: [], outgoing: [], byOtherUid: {} });
+    // Ídem con el perfil propio, del que sale el RANGO: los tests que lo dejan colgando (para observar qué pasa
+    // antes de conocerlo) dejarían al resto sin rango resuelto, y sin rango tampoco se hidrata el directorio.
+    firebaseMocks.resolveOwnProfile.mockResolvedValue(null);
     // Salvo en los tests de la puerta legal, se parte de un consentimiento vigente.
     firebaseMocks.getPublicConfig.mockResolvedValue({ consent: { version: LEGAL_VERSION, agreedAt: 1 } });
   });
@@ -210,6 +234,137 @@ describe('SocialHub (componente, post-M3)', () => {
     await waitFor(() => expect(screen.queryByText(SOCIAL_UI.loading)).not.toBeInTheDocument());
     expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
   });
+
+  it('feed: NO enseña el vacío "no tienes amigos" mientras las amistades siguen en vuelo', async () => {
+    // Regresión del parpadeo carga → VACÍO → carga → contenido al abrir social.
+    //
+    // El feed es SOLO-AMIGOS: hasta que la query de amistades responde no se puede saber si está vacío. Pero
+    // `loadingDirectory` solo cubría la hidratación en vuelo, que no arranca hasta DESPUÉS de esa query, así que
+    // durante toda esa ventana el feed se pintaba con el directorio vacío y enseñaba su estado vacío —"Descubre
+    // perfiles y añade amigos"— a alguien que sí tiene amigos y cuyo feed simplemente estaba cargando.
+    firebaseMocks.getCurrentSocialAuthUser.mockResolvedValue({ uid: 'me', email: 'me@x.com', displayName: 'Me', photoURL: null });
+    gistMocks.getSocialSyncConfig.mockReturnValue({ token: 'ghp_x', gistId: 'my-social', etag: null, lastRemoteUpdatedAt: 0 });
+    localMocks.loadLocalState.mockReturnValue({
+      c: [{ id: 1, name: 'Halo', _ts: 1, platforms: [], genres: [], steamDeck: false, review: '', score: 5, years: [], strengths: [], weaknesses: [], reasons: [], replayable: false, retry: false, hours: 0 }],
+      v: [], e: [], p: [], deleted: [], updatedAt: 0,
+    });
+    gistMocks.readSocialGist.mockResolvedValue({
+      data: {
+        profile: { name: 'Me', private: false, visibility: { hiddenTabs: [], hideReplayable: false, hideRetry: false, hideGameTime: false, showPhoto: true }, sharedLists: {} },
+        recommendations: [], activity: [], posts: [], updatedAt: 0,
+      },
+      etag: null,
+    });
+    firebaseMocks.listSocialDirectory.mockResolvedValue([]);
+    let resolveFriendships: (value: unknown) => void = () => {};
+    firebaseMocks.getMyFriendships.mockImplementation(() => new Promise((resolve) => { resolveFriendships = resolve; }));
+
+    renderHub('/social');
+
+    // El feed ya está montado (su título está a la vista) y la query de amistades sigue sin responder: es
+    // exactamente el instante en el que se colaba el vacío.
+    expect(await screen.findByText(SOCIAL_UI.feed.title)).toBeInTheDocument();
+    await waitFor(() => expect(firebaseMocks.getMyFriendships).toHaveBeenCalled());
+    expect(screen.queryByText(SOCIAL_UI.feed.activityEmptyNoFriends)).not.toBeInTheDocument();
+
+    // Resuelta la amistad (sin amigos) y con el directorio vacío, el vacío YA es cierto y se muestra.
+    resolveFriendships({ friends: [], incoming: [], outgoing: [], byOtherUid: {} });
+    expect(await screen.findByText(SOCIAL_UI.feed.activityEmptyNoFriends)).toBeInTheDocument();
+  });
+
+  // P1 — el disparo de la hidratación dependía de la IDENTIDAD del callback, y ese callback se recreaba con
+  // cualquiera de sus doce dependencias: `activePanel` (cambia en cada navegación del hub), `showPhoto` (lo fija
+  // la hidratación del perfil, en cada apertura) y hasta `mainSyncConfig?.token`, que ni siquiera usaba. Cada
+  // pasada relee IndexedDB y reemplaza el directorio por un array nuevo que invalida los `useMemo` del feed.
+  it('directorio: se hidrata UNA vez por apertura aunque cambie la foto y se navegue por el hub', async () => {
+    firebaseMocks.getCurrentSocialAuthUser.mockResolvedValue({ uid: 'me', email: 'me@x.com', displayName: 'Me', photoURL: 'https://x/foto.png' });
+    gistMocks.getSocialSyncConfig.mockReturnValue({ token: 'ghp_x', gistId: 'my-social', etag: null, lastRemoteUpdatedAt: 0 });
+    localMocks.loadLocalState.mockReturnValue({
+      c: [{ id: 1, name: 'Halo', _ts: 1, platforms: [], genres: [], steamDeck: false, review: '', score: 5, years: [], strengths: [], weaknesses: [], reasons: [], replayable: false, retry: false, hours: 0 }],
+      v: [], e: [], p: [], deleted: [], updatedAt: 0,
+    });
+    // El perfil se lee TARDE, a propósito: si `showPhoto` cambiara mientras el directorio aún se está hidratando,
+    // la guarda de concurrencia absorbería el disparo espurio y el test pasaría sin que las dependencias del
+    // efecto estuvieran bien. Resolviéndolo DESPUÉS, el único que puede evitar la segunda pasada es el disparo
+    // por datos. `showPhoto: false` porque el estado arranca en `true`: con `true` React descartaría el setState.
+    let resolveProfileGist: (value: unknown) => void = () => {};
+    gistMocks.readSocialGist.mockImplementation(() => new Promise((resolve) => { resolveProfileGist = resolve; }));
+    firebaseMocks.listSocialDirectory.mockResolvedValue([]);
+
+    renderHub('/social');
+
+    await waitFor(() => expect(firebaseMocks.listSocialDirectory).toHaveBeenCalled());
+    await waitFor(() => expect(screen.getByText(SOCIAL_UI.feed.activityEmptyNoFriends)).toBeInTheDocument());
+    expect(firebaseMocks.listSocialDirectory).toHaveBeenCalledTimes(1);
+
+    // Ya asentado el directorio, llega el perfil y cambia `showPhoto`. Eso NO cambia nada de lo que el directorio
+    // contiene (solo la foto propia de respaldo), así que no puede costar otra relectura de ~50 gists.
+    resolveProfileGist({
+      data: {
+        profile: { name: 'Me', private: false, visibility: { hiddenTabs: [], hideReplayable: false, hideRetry: false, hideGameTime: false, showPhoto: false }, sharedLists: {} },
+        recommendations: [], activity: [], posts: [], updatedAt: 0,
+      },
+      etag: null,
+    });
+    // Se espera a que el perfil haya ATERRIZADO de verdad en el estado, no a que su lectura esté meramente
+    // lanzada: el nick del perfil sale en el botón del avatar propio, así que verlo prueba que `setProfileName` y
+    // `setShowPhoto` ya se han aplicado. Sin esta espera el test pasaba sin comprobar nada.
+    expect(await screen.findByTitle('Me')).toBeInTheDocument();
+    // Margen para que una segunda pasada llegara a contarse: entre el disparo y la llamada hay un `await` (la
+    // lectura de la caché), así que comprobarlo en el mismo tick daría un falso verde.
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(firebaseMocks.listSocialDirectory).toHaveBeenCalledTimes(1);
+
+    // Ir a "Perfiles" y volver NO cambia nada de lo que el directorio contiene: no debe rehidratarlo.
+    fireEvent.click(screen.getByRole('button', { name: SOCIAL_UI.feed.openProfiles }));
+    await screen.findByText(SOCIAL_UI.profiles.title);
+    fireEvent.click(screen.getByRole('button', { name: SOCIAL_UI.profiles.back }));
+    await screen.findByText(SOCIAL_UI.feed.title);
+    await new Promise((resolve) => setTimeout(resolve, 50));
+
+    expect(firebaseMocks.listSocialDirectory).toHaveBeenCalledTimes(1);
+  });
+
+  // El TTL de la caché del directorio sale del RANGO de quien mira (30 min bronce … 12 s mithril). Si se hidrata
+  // antes de conocerlo, se evalúa la caché con el TTL de bronce y hay que repetir la hidratación entera al llegar
+  // el rango de verdad: medido, bronce hidrataba 1 vez y plata/oro/mithril 2, la segunda releyendo hasta ~50 gists
+  // de amigos y tapando con el esqueleto un feed ya pintado. El rango salía CARO en vez de privilegiado.
+  it.each(['bronze', 'silver', 'gold', 'mithril'] as const)(
+    'directorio: un %s hidrata UNA sola vez (el rango no provoca una segunda pasada)',
+    async (tier) => {
+      firebaseMocks.getCurrentSocialAuthUser.mockResolvedValue({ uid: 'me', email: 'me@x.com', displayName: 'Me', photoURL: null });
+      gistMocks.getSocialSyncConfig.mockReturnValue({ token: 'ghp_x', gistId: 'my-social', etag: null, lastRemoteUpdatedAt: 0 });
+      localMocks.loadLocalState.mockReturnValue({
+        c: [{ id: 1, name: 'Halo', _ts: 1, platforms: [], genres: [], steamDeck: false, review: '', score: 5, years: [], strengths: [], weaknesses: [], reasons: [], replayable: false, retry: false, hours: 0 }],
+        v: [], e: [], p: [], deleted: [], updatedAt: 0,
+      });
+      gistMocks.readSocialGist.mockResolvedValue({
+        data: {
+          profile: { name: 'Me', private: false, visibility: { hiddenTabs: [], hideReplayable: false, hideRetry: false, hideGameTime: false, showPhoto: true }, sharedLists: {} },
+          recommendations: [], activity: [], posts: [], updatedAt: 0,
+        },
+        etag: null,
+      });
+      firebaseMocks.listSocialDirectory.mockResolvedValue([]);
+      // El rango llega TARDE (es una lectura de Firestore), que es justo cuando se producía la segunda pasada.
+      let resolveProfile: (value: SocialProfileReference | null) => void = () => {};
+      const perfilPendiente = new Promise<SocialProfileReference | null>((resolve) => { resolveProfile = resolve; });
+      firebaseMocks.resolveOwnProfile.mockImplementation(() => perfilPendiente);
+
+      renderHub('/social');
+
+      await screen.findByText(SOCIAL_UI.feed.title);
+      // Sin rango todavía: no se ha hidratado nada (antes se hidrataba con el TTL de bronce).
+      expect(firebaseMocks.listSocialDirectory).not.toHaveBeenCalled();
+
+      resolveProfile({ tier, socialEnabled: true, socialGistId: 'my-social', displayName: 'Me' } as never);
+
+      await waitFor(() => expect(firebaseMocks.listSocialDirectory).toHaveBeenCalled());
+      // Margen para que una eventual segunda pasada llegara a contarse.
+      await waitFor(() => expect(screen.queryByText(SOCIAL_UI.feed.activityEmptyNoFriends)).toBeInTheDocument());
+      expect(firebaseMocks.listSocialDirectory).toHaveBeenCalledTimes(1);
+    },
+  );
 
   // FASE 0 — el gist social propio pasa a recuperarse de `privateConfig` (owner-only, un solo escritor) en vez
   // del perfil público, que es world-readable para cualquier usuario autenticado y va a dejar de publicarlo.
@@ -1075,5 +1230,69 @@ describe('SocialHub — alta de perfil: exige juegos completados', () => {
       [string, string, { profile: Record<string, unknown> }];
     expect(payload.profile.name).toBe('Me');
     expect(payload.profile).not.toHaveProperty('favoriteGames');
+  });
+});
+
+// P3 — el mensaje de estado se borraba con un temporizador por aviso y sin cancelar el anterior, así que dos
+// avisos seguidos se pisaban: el plazo del PRIMERO borraba el texto del SEGUNDO. Con un temporizador único
+// reutilizado, cada aviso dura lo suyo.
+describe('SocialHub — el aviso de estado no lo borra el temporizador del aviso anterior', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    firebaseMocks.getPublicConfig.mockResolvedValue({ consent: { version: LEGAL_VERSION, agreedAt: 1 } });
+    firebaseMocks.getPrivateConfig.mockResolvedValue(null);
+    firebaseMocks.getMyFriendships.mockResolvedValue({ friends: [], incoming: [], outgoing: [], byOtherUid: {} });
+    firebaseMocks.resolveOwnProfile.mockResolvedValue(null);
+    gistMocks.ensureSecretSocialGist.mockImplementation(async (_t?: string, gistId?: string) => ({
+      gistId: gistId || '', etag: null, migrated: false, supersededGistIds: [], keptPublicGistIds: [], copiedEntries: 0,
+    }));
+  });
+
+  it('un segundo aviso sobrevive al plazo del primero', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      firebaseMocks.getCurrentSocialAuthUser.mockResolvedValue({ uid: 'me', email: 'me@x.com', displayName: 'Me', photoURL: null });
+      gistMocks.getSocialSyncConfig.mockReturnValue({ token: 'ghp_x', gistId: 'my-social', etag: null, lastRemoteUpdatedAt: 0 });
+      localMocks.loadLocalState.mockReturnValue({
+        c: [{ id: 1, name: 'Halo', _ts: 1, platforms: [], genres: [], steamDeck: false, review: '', score: 5, years: [], strengths: [], weaknesses: [], reasons: [], replayable: false, retry: false, hours: 0 }],
+        v: [], e: [], p: [], deleted: [], updatedAt: 0,
+      });
+      gistMocks.readSocialGist.mockResolvedValue({
+        data: {
+          profile: { name: 'Me', private: false, visibility: { hiddenTabs: [], hideReplayable: false, hideRetry: false, hideGameTime: false, showPhoto: true }, sharedLists: {} },
+          recommendations: [], activity: [], posts: [], updatedAt: 0,
+        },
+        etag: null,
+      });
+      // Dos desconocidos a los que enviar petición: cada envío produce su propio aviso "ok".
+      firebaseMocks.listSocialDirectory.mockResolvedValue([
+        { id: 'ada', uid: 'ada', displayName: 'Ada', photoURL: '', socialGistId: '', gamesGistId: '' },
+        { id: 'bob', uid: 'bob', displayName: 'Bob', photoURL: '', socialGistId: '', gamesGistId: '' },
+      ]);
+      firebaseMocks.sendFriendRequest.mockResolvedValue(undefined);
+
+      renderHub('/social/profiles');
+
+      const primero = await screen.findByRole('button', { name: SOCIAL_UI.friendship.addAria('Ada') });
+      fireEvent.click(primero);
+      expect(await screen.findByText(SOCIAL_UI.status.friendRequestSent)).toBeInTheDocument();
+
+      // A 2,5 s el primer aviso sigue vivo; su plazo (3 s) vence dentro de poco.
+      await act(async () => { await vi.advanceTimersByTimeAsync(2_500); });
+
+      const segundo = await screen.findByRole('button', { name: SOCIAL_UI.friendship.addAria('Bob') });
+      fireEvent.click(segundo);
+      await screen.findByText(SOCIAL_UI.status.friendRequestSent);
+
+      // Se cruza el instante en que vencía el plazo del PRIMER aviso (2,5 s + 1 s = 3,5 s desde el primero).
+      await act(async () => { await vi.advanceTimersByTimeAsync(1_000); });
+      expect(screen.queryByText(SOCIAL_UI.status.friendRequestSent)).toBeInTheDocument();
+
+      // Y el segundo sí se borra cuando vence EL SUYO.
+      await act(async () => { await vi.advanceTimersByTimeAsync(2_500); });
+      await waitFor(() => expect(screen.queryByText(SOCIAL_UI.status.friendRequestSent)).not.toBeInTheDocument());
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
