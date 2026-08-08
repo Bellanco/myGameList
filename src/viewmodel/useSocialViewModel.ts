@@ -284,6 +284,12 @@ export function useSocialViewModel(options?: {
   // P1: profileId canónico del usuario (6.2a), para detectar propiedad por identidad (no por email). Hoy el id del
   // doc de directorio es el uid; tras el cutover index-only será el profileId → comprobamos ambos (ver isOwnProfileIdentity).
   const [ownProfileId, setOwnProfileId] = useState<string | null>(null);
+  /**
+   * ¿Se ha intentado ya resolver el `ownProfileId`? Igual que con el rango, "todavía no se sabe" y "no tiene" NO
+   * son lo mismo: la hidratación del directorio decide con él cuál es la entrada PROPIA, y por tanto si lee el
+   * gist social de uno mismo. Hidratar antes de saberlo deja la propia actividad fuera del feed.
+   */
+  const [ownProfileIdResolved, setOwnProfileIdResolved] = useState(false);
   // Rango del PROPIO usuario: decide cada cuánto se rehidrata el feed (ver PROFILE_TIER_FEED_TTL_MS). Manda el de
   // quien mira porque las lecturas de gists ajenos van con SU token y cuentan contra SU rate-limit.
   const [ownTier, setOwnTier] = useState<ProfileTier>(DEFAULT_PROFILE_TIER);
@@ -626,6 +632,7 @@ export function useSocialViewModel(options?: {
     const uid = authUser?.uid;
     if (!uid) {
       setOwnProfileId(null);
+      setOwnProfileIdResolved(false);
       return;
     }
     let cancelled = false;
@@ -635,6 +642,11 @@ export function useSocialViewModel(options?: {
       })
       .catch(() => {
         /* Firestore caído → la propiedad cae a comparar por uid (entry.id === uid hoy). */
+      })
+      .finally(() => {
+        // Resuelto SIEMPRE, también si falla: sin profileId la propiedad se decide por uid, que es el
+        // comportamiento degradado de siempre. Lo que no puede pasar es quedarse esperando para siempre.
+        if (!cancelled) setOwnProfileIdResolved(true);
       });
     return () => {
       cancelled = true;
@@ -1585,21 +1597,33 @@ export function useSocialViewModel(options?: {
     setDirectorySettled(false);
   }, [authUser?.uid, socialCfgGistId]);
 
-  const hydrateSocialDirectory = useCallback(async (forceRefresh = false) => {
-    if (!socialSpaceOpen || activePanel === 'profile' || profileEditorLocked || !authUser || !socialCfgGistId) {
+  /**
+   * ¿Toca cargar directorio en la pantalla actual? Se extrae a un BOOLEANO en vez de mirar `activePanel` porque
+   * el disparo automático depende de él: con el panel entero, navegar feed→perfiles→feed rehidrataba el directorio
+   * en cada salto (lectura de IndexedDB + array nuevo + recálculo completo del feed) sin que hubiera cambiado
+   * absolutamente nada de lo que el directorio contiene. Así solo cambia al entrar o salir del editor de perfil.
+   */
+  const directoryPanelAllows = socialSpaceOpen && activePanel !== 'profile' && !profileEditorLocked;
+  /** Las tres resoluciones asíncronas que la hidratación necesita conocer antes de empezar (ver más abajo). */
+  const directoryInputsReady = friendshipsResolved && tierResolved && ownProfileIdResolved;
+
+  const runDirectoryHydration = useCallback(async (forceRefresh: boolean) => {
+    if (!directoryPanelAllows || !authUser || !socialCfgGistId) {
       return;
     }
 
-    // `!friendshipsResolved`: NO hidratar (ni cachear) hasta conocer a los amigos. Si no, el feed solo-amigos cachearía
-    // el directorio sin actividad de amigos (carrera de arranque) y quedaría en blanco hasta invalidar la caché.
+    // TODO lo que la hidratación necesita saber ANTES de empezar. Las tres cosas se resuelven de forma asíncrona y
+    // ninguna admite un valor provisional:
+    //   - amigos: el feed es solo-amigos; hidratar sin conocerlos CACHEARÍA a los amigos como index-only (sin
+    //     actividad) y el feed quedaría en blanco hasta invalidar la caché;
+    //   - rango: de él sale el TTL con el que se evalúa la caché (30 min en bronce, 60 s en mithril);
+    //   - profileId propio: con él se decide cuál es la entrada PROPIA y, por tanto, si se lee el gist social de
+    //     uno mismo. Sin él, la propia actividad se queda fuera del propio feed.
     //
-    // Va SEPARADO de la guarda de arriba porque las dos salidas significan cosas distintas para la pantalla: las de
-    // arriba son "aquí no hay directorio que cargar" (pasarela, editor de perfil) y esta es "todavía no se puede
+    // Va SEPARADO de la guarda de arriba porque las dos salidas significan cosas distintas para la pantalla: la de
+    // arriba es "aquí no hay directorio que cargar" (pasarela, editor de perfil) y esta es "todavía no se puede
     // saber". Solo esta última debe seguir contando como carga (ver `directoryLoading`).
-    //
-    // `!tierResolved`: el TTL de la caché del directorio SALE DEL RANGO (30 min en bronce, 60 s en mithril).
-    // Hidratar antes de saberlo evalúa la caché con el TTL de bronce y luego hay que repetirlo todo.
-    if (!friendshipsResolved || !tierResolved) {
+    if (!directoryInputsReady) {
       return;
     }
 
@@ -1618,12 +1642,17 @@ export function useSocialViewModel(options?: {
       if (cooldownTimerRef.current) clearTimeout(cooldownTimerRef.current);
       cooldownTimerRef.current = setTimeout(() => setRefreshCoolingDown(false), FORCED_REFRESH_MIN_MS);
     } else {
-      // Caché persistente: si el directorio sigue fresco (<30 min), se sirve de IndexedDB sin releer ningún gist
-      // social. Evita el coste N+1 al navegar feed→detalle→feed o al re-renderizar. El refresco manual lo evita.
+      // Caché persistente: si el directorio sigue fresco (el TTL lo pone el rango), se sirve de IndexedDB sin releer
+      // ningún gist social. Evita el coste N+1 al navegar feed→detalle→feed o al re-renderizar.
+      //
+      // El `catch` no es decorativo: esta lectura vive FUERA del try/catch de más abajo, así que un IndexedDB roto
+      // (modo privado, cuota, base corrupta) hacía que la función entera rechazara antes de asentar el directorio
+      // —y con el esqueleto atado a ese asentamiento, la pantalla se quedaba cargando para siempre—. Sin caché
+      // utilizable lo correcto es seguir por la vía de red, que es justo lo que hace tratarla como un fallo.
       const cachedDirectory = await getCachedSocialDirectory<SocialDirectoryEntry>(
         socialCfgGistId,
         PROFILE_TIER_FEED_TTL_MS[ownTier],
-      );
+      ).catch(() => null);
       if (cachedDirectory) {
         setSocialDirectory(cachedDirectory);
         setDirectorySettled(true);
@@ -1863,7 +1892,39 @@ export function useSocialViewModel(options?: {
       // sin asentar mantendría el esqueleto girando para siempre.
       setDirectorySettled(true);
     }
-  }, [activePanel, authUser, defaultSocialVisibility, friendships.friends, friendshipsResolved, mainSyncConfig?.token, ownTier, tierResolved, profileEditorLocked, setFeedback, socialSpaceOpen, socialCfgGistId, showPhoto]);
+    // `mainSyncConfig?.token` ESTUVO aquí y no lo usa nadie en el cuerpo (el token sale de `getSocialSyncConfig()`
+    // en el momento de leer): lo único que hacía era rehidratar el directorio entero cuando la configuración de
+    // sync terminaba de descifrarse. Se retira.
+  }, [directoryPanelAllows, directoryInputsReady, authUser, ownProfileId, defaultSocialVisibility, friendships.friends, ownTier, setFeedback, socialCfgGistId, showPhoto]);
+
+  /**
+   * Pasada en vuelo, para que dos disparos no se solapen.
+   *
+   * Podían solaparse de verdad: al guardar el perfil se navega al feed Y se llama a la hidratación a mano, y la
+   * reconciliación de actividad dispara otra al terminar. Dos pasadas simultáneas son ~50 lecturas de gist por
+   * duplicado (las deduplica la caché de sesión del repositorio, pero no el trabajo de CPU ni la reescritura de la
+   * caché de IndexedDB) y, sobre todo, la que acaba primero apaga el esqueleto mientras la otra sigue corriendo.
+   */
+  const directoryHydrationRef = useRef<Promise<void> | null>(null);
+
+  const hydrateSocialDirectory = useCallback(async (forceRefresh = false) => {
+    const pending = directoryHydrationRef.current;
+    // Un refresco FORZADO (botón "Actualizar") sí quiere una pasada nueva: su anti-spam ya lo acota aparte.
+    if (pending && !forceRefresh) {
+      return pending;
+    }
+
+    const run = runDirectoryHydration(forceRefresh);
+    directoryHydrationRef.current = run;
+    try {
+      await run;
+    } finally {
+      // Solo se limpia si sigue siendo LA pasada en curso: un forzado posterior pudo relevarla.
+      if (directoryHydrationRef.current === run) {
+        directoryHydrationRef.current = null;
+      }
+    }
+  }, [runDirectoryHydration]);
 
   // F3 — publica una publicación de texto libre y refresca el feed (definido tras hydrateSocialDirectory para evitar TDZ).
   const handlePublishPost = useCallback(async () => {
@@ -1892,9 +1953,26 @@ export function useSocialViewModel(options?: {
     }
   }, [composePostText, ownTier, publishingPost, hydrateSocialDirectory, setFeedback]);
 
+  // Disparo automático de la hidratación. Depende de DATOS, no de la identidad del callback.
+  //
+  // Antes era `[hydrateSocialDirectory]`, y ese callback se recreaba con cualquiera de sus doce dependencias: entre
+  // ellas `activePanel` (cambia en cada navegación del hub), `showPhoto` (lo fija la hidratación del PERFIL, en
+  // cada apertura) y `mainSyncConfig?.token` (que ni siquiera se usaba). Resultado: tres o cuatro hidrataciones por
+  // apertura, cada una releyendo IndexedDB y reemplazando el directorio por un array nuevo que invalidaba los
+  // `useMemo` del feed entero. Aquí se listan solo las cosas que de verdad cambian LO QUE EL DIRECTORIO CONTIENE.
+  const hydrateSocialDirectoryRef = useRef(hydrateSocialDirectory);
+  hydrateSocialDirectoryRef.current = hydrateSocialDirectory;
   useEffect(() => {
-    void hydrateSocialDirectory();
-  }, [hydrateSocialDirectory]);
+    void hydrateSocialDirectoryRef.current();
+  }, [
+    directoryPanelAllows,
+    directoryInputsReady,
+    authUser?.uid,
+    socialCfgGistId,
+    friendships.friends,
+    ownTier,
+    ownProfileId,
+  ]);
 
   // Listados con los que reconciliar: los vivos de la app si el contenedor los pasa; si no, la foto del mount.
   const reconcileGames = options?.games ?? localState;
