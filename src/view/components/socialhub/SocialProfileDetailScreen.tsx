@@ -111,6 +111,16 @@ type SocialProfileDetail = {
   activity?: Array<{ type: string; gameId: number; updatedAt: number }>;
 };
 
+/**
+ * Un juego de una lista compartida, leído a la defensiva. La lista mezcla dos formas según de quién sea el
+ * perfil: `GameItem` completo (el propio) o `SocialSharedGame` index-only (ajeno, solo snippet/rating). Como
+ * cada campo existe en una rama u otra, se declaran todos opcionales y de tipo `unknown` en vez de castear a
+ * `any`: los nombres de campo siguen comprobados (una errata no compila) y el valor obliga a pasar por el
+ * `String(...)`/`Number(...)`/`Array.isArray(...)` que el código ya hacía. No vale intersecar los dos tipos:
+ * chocan en `grade` (`number | null` frente a `number`) y ningún juego real encajaría.
+ */
+type SharedListGame = Partial<Record<keyof GameItem | keyof SocialSharedGame, unknown>>;
+
 function SocialProfileDetailScreenBase({
   SOCIAL_UI,
   activeProfileDetail,
@@ -192,7 +202,7 @@ function SocialProfileDetailScreenBase({
     const items: { id: number; gameName: string; rating: number; grade: number | null; reviewText: string; ts: number }[] = [];
 
     TAB_IDS.forEach((tab) => {
-      (lists[tab] || []).forEach((game: any) => {
+      (lists[tab] || []).forEach((game: SharedListGame) => {
         const reviewText = String(game.review || game.snippet || '').trim();
         if (!reviewText) return;
         const id = Number(game.id || 0);
@@ -274,7 +284,7 @@ function SocialProfileDetailScreenBase({
 
   const currentGames: GameItem[] = useMemo(() => {
     const sharedGames = activeProfileDetail?.sharedLists?.[currentTab] || [];
-    const mapped: GameItem[] = sharedGames.map((game: any) => ({
+    const mapped: GameItem[] = sharedGames.map((game: SharedListGame) => ({
       id: Number(game.id || 0),
       _ts: typeof game._ts === 'number' ? game._ts : 0,
       name: String(game.name || ''),

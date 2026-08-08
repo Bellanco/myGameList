@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { SocialDetailScreen } from '../../src/view/components/socialhub/SocialDetailScreen';
+import type { GameItem } from '../../src/model/types/game';
 import { SOCIAL_UI } from '../../src/core/constants/labels';
 
 const baseEvent = {
@@ -12,10 +13,13 @@ const baseEvent = {
   rating: 5,
   updatedAt: Date.UTC(2026, 0, 15, 10, 0),
   snippet: 'Snippet corto truncado…',
+  grade: 100,
+  photoURL: '',
 };
 
 const fullGame = {
   id: 5,
+  _ts: Date.UTC(2026, 0, 15, 10, 0),
   name: 'The Witcher 3',
   review: 'Reseña COMPLETA con muchos detalles que superan los 160 caracteres del snippet social, incluyendo análisis del combate, la historia y el mundo abierto, mucho más allá del resumen.',
   platforms: ['PC', 'PS5'],
@@ -31,7 +35,7 @@ const fullGame = {
   score: 5,
 };
 
-function renderDetail(getGameItemById: (profileId: string, id: number) => unknown) {
+function renderDetail(getGameItemById: (profileId: string, id: number) => GameItem | null) {
   render(
     <SocialDetailScreen
       SOCIAL_UI={SOCIAL_UI}
