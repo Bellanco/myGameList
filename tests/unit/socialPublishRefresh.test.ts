@@ -7,7 +7,7 @@ vi.mock('../../src/model/schemas/socialGistSchema', async (importOriginal) => {
   schemaSpy.assertValidSocialGist.mockImplementation(original.assertValidSocialGist);
   return { ...original, assertValidSocialGist: schemaSpy.assertValidSocialGist };
 });
-import { readPublicSocialGistById, writeSocialGist, type SocialGistData } from '../../src/model/repository/gistRepository';
+import { readPublicSocialGistById, writeSocialGist, type SocialGistData } from '../../src/model/repository/socialGistRepository';
 
 const TOKEN = 'ghp_0123456789abcdefghij';
 const GIST_ID = 'abcdef99';

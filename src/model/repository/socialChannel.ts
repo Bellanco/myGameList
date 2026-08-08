@@ -6,7 +6,8 @@
 // dispositivo/navegador publicaba cero actividad: `publishReviewActivity` se rendía en silencio. Aquí se
 // centraliza la resolución (incluida la recuperación del gistId desde el perfil propio de Firestore) para que
 // tanto el hub como los publicadores armen el canal igual.
-import { ensureSyncConfigLoaded, getSocialSyncConfig, getSyncConfig, readSocialGist, saveSocialSyncConfig } from './gistRepository';
+import { ensureSyncConfigLoaded, getSyncConfig } from './gistRepository';
+import { getSocialSyncConfig, readSocialGist, saveSocialSyncConfig } from './socialGistRepository';
 import { getCurrentSocialAuthUser, getPrivateConfig, resolveOwnProfile } from './firebaseRepository';
 
 export type SocialChannel = { token: string; gistId: string; etag: string | null };

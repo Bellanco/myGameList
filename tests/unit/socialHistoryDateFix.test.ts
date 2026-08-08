@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { GameItem, TabData } from '../../src/model/types/game';
-import type { SocialGistData } from '../../src/model/repository/gistRepository';
+import type { SocialGistData } from '../../src/model/repository/socialGistRepository';
 
 // Escenario real: `normalizeData({ forceTimestamp: true })` (importar JSON / sobrescribir remoto) puso `_ts` de
 // TODA la biblioteca en un mismo día, así que las reseñas que el backfill publicó con ese `_ts` llevan una fecha

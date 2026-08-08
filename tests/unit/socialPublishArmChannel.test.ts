@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { SocialGistData } from '../../src/model/repository/gistRepository';
+import type { SocialGistData } from '../../src/model/repository/socialGistRepository';
 
 // Antes, `publishReviewActivity` se rendía en silencio si este dispositivo no tenía config social en
 // localStorage (solo la armaba el hub al abrirse). Un usuario dado de alta y con sesión que escribiera reseñas

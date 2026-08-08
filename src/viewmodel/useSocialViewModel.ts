@@ -1,25 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import {
-  createSocialGist,
-  ensureSyncConfigLoaded,
-  getSocialSyncConfig,
-  getSyncConfig,
-  mergeSocialGistData,
-  readPublicSocialGistById,
-  readSocialGist,
-  remapSocialActorIds,
-  saveSocialSyncConfig,
-  type SocialActivityEntry,
-  type SocialGistData,
-  type SocialPostEntry,
-  type SocialProfileVisibility,
-  type SocialSharedGame,
-  deleteGist,
-  ensureSecretSocialGist,
-  socialGistHasContent,
-  writeSocialGist,
-} from '../model/repository/gistRepository';
+import { ensureSyncConfigLoaded, getSyncConfig } from '../model/repository/gistRepository';
+import { createSocialGist, getSocialSyncConfig, mergeSocialGistData, readPublicSocialGistById, readSocialGist, remapSocialActorIds, saveSocialSyncConfig, type SocialActivityEntry, type SocialGistData, type SocialPostEntry, type SocialProfileVisibility, type SocialSharedGame, deleteGist, ensureSecretSocialGist, socialGistHasContent, writeSocialGist } from '../model/repository/socialGistRepository';
 import { publishPost } from '../model/repository/socialPublishRepository';
 import { reconcileReviewActivity } from '../model/repository/socialActivityReconcile';
 import { invalidateProfileGames, loadForeignProfileGames } from '../model/repository/foreignProfileRepository';

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { mergeSocialGistData, type SocialGistData } from '../../src/model/repository/gistRepository';
+import { mergeSocialGistData, type SocialGistData } from '../../src/model/repository/socialGistRepository';
 
 // Deriva de gist social: las dos fuentes que apuntan al gist de un amigo (el `otherSocialGistId` del doc de
 // amistad y el `social.gistId` del directorio) pueden divergir, y la deriva va en cualquier dirección — publicar

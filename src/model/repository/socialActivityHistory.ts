@@ -9,14 +9,7 @@
 // para poder decidir con datos si merece la pena restaurarlas.
 import { TAB_IDS } from '../types/game';
 import { getCurrentSocialAuthUser } from './firebaseRepository';
-import {
-  listOwnSocialGists,
-  readSocialGist,
-  readSocialGistAtRevision,
-  readSocialGistHistory,
-  saveSocialSyncConfig,
-  writeSocialGist,
-} from './gistRepository';
+import { listOwnSocialGists, readSocialGist, readSocialGistAtRevision, readSocialGistHistory, saveSocialSyncConfig, writeSocialGist } from './socialGistRepository';
 import { getCachedSocialDirectory, invalidateCachedSocialDirectory } from './indexedDbRepository';
 import { loadLocalState } from './localRepository';
 import { resolveSocialChannel } from './socialChannel';
