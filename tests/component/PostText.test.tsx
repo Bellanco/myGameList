@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import { PostText } from '../../src/view/components/socialhub/PostText';
+import userEvent from '@testing-library/user-event';
+import { PostBody, PostText } from '../../src/view/components/socialhub/PostText';
 
 describe('PostText (linkify seguro)', () => {
   it('convierte URLs http/https en enlaces con rel y target seguros', () => {
@@ -60,5 +61,69 @@ describe('PostText (linkify seguro)', () => {
   it('un enlace normal NO muestra el aviso de URL directa', () => {
     const { container } = render(<PostText text="https://example.com/noticia" sharedFilePageHint="Pega la URL directa" />);
     expect(container.querySelector('.hub-post-hint')).toBeNull();
+  });
+});
+
+describe('PostBody (recorte de publicaciones largas)', () => {
+  // El cupo de caracteres lo decide el RANGO del autor (plata 1.000, oro 10.000, mithril 100.000). Sin recorte,
+  // una sola publicación de rango alto ocupaba el feed entero. El recorte no puede esconder contenido: el botón
+  // tiene que aparecer siempre que de verdad sobre texto, y desplegarlo tiene que enseñarlo todo.
+  function medirComo(scrollHeight: number, clientHeight: number) {
+    const proto = window.HTMLElement.prototype;
+    const original = {
+      scroll: Object.getOwnPropertyDescriptor(proto, 'scrollHeight'),
+      client: Object.getOwnPropertyDescriptor(proto, 'clientHeight'),
+    };
+    Object.defineProperty(proto, 'scrollHeight', { configurable: true, get: () => scrollHeight });
+    Object.defineProperty(proto, 'clientHeight', { configurable: true, get: () => clientHeight });
+    return () => {
+      if (original.scroll) Object.defineProperty(proto, 'scrollHeight', original.scroll);
+      if (original.client) Object.defineProperty(proto, 'clientHeight', original.client);
+    };
+  }
+
+  it('sin desbordamiento no se ofrece "Ver más"', () => {
+    const restaurar = medirComo(100, 100);
+    try {
+      render(<PostBody text="Un post corto" expandLabel="Ver más" collapseLabel="Ver menos" />);
+      expect(screen.queryByRole('button')).not.toBeInTheDocument();
+      // La clase de recorte SÍ sigue puesta a propósito: sobre un texto que cabe no hace nada, y es lo que permite
+      // volver a medir si la ventana se estrecha. Retirarla dejaría el elemento sin recorte y la medida diría
+      // para siempre "no sobra nada", con lo que esas líneas se perderían sin botón que las recupere.
+    } finally {
+      restaurar();
+    }
+  });
+
+  it('con desbordamiento recorta, ofrece "Ver más" y al desplegar muestra el texto entero', async () => {
+    const restaurar = medirComo(900, 200);
+    try {
+      const largo = 'palabra '.repeat(2000);
+      const { container } = render(<PostBody text={largo} expandLabel="Ver más" collapseLabel="Ver menos" />);
+
+      const parrafo = container.querySelector('.hub-post-text');
+      expect(parrafo).toHaveClass('is-clamped');
+      // El texto COMPLETO está siempre en el DOM: el recorte es visual, nunca una pérdida de contenido.
+      expect(parrafo?.textContent).toContain(largo.trim());
+
+      const boton = screen.getByRole('button', { name: 'Ver más' });
+      expect(boton).toHaveAttribute('aria-expanded', 'false');
+
+      await userEvent.click(boton);
+      expect(container.querySelector('.hub-post-text')).not.toHaveClass('is-clamped');
+      expect(screen.getByRole('button', { name: 'Ver menos' })).toHaveAttribute('aria-expanded', 'true');
+    } finally {
+      restaurar();
+    }
+  });
+
+  it('un texto corto CON MUCHOS SALTOS DE LÍNEA también se recorta (por eso se mide, no se cuentan caracteres)', () => {
+    const restaurar = medirComo(900, 200);
+    try {
+      render(<PostBody text={'a\n'.repeat(40)} expandLabel="Ver más" collapseLabel="Ver menos" />);
+      expect(screen.getByRole('button', { name: 'Ver más' })).toBeInTheDocument();
+    } finally {
+      restaurar();
+    }
   });
 });
