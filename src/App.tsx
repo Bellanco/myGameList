@@ -34,6 +34,8 @@ import { hasGithubOAuthRedirect } from './model/repository/githubOAuthRepository
 import { buildListsPool, buildListsWeigher, normalizeName } from './core/roulette/roulette';
 import { useImportInbox } from './viewmodel/useImportInbox';
 import { useImportFieldPrefs } from './viewmodel/useImportFieldPrefs';
+import { useMountedOnceOpen } from './view/modals/useMountedOnceOpen';
+import { runWhenIdle } from './core/utils/idle';
 import { parseLibraryExporter } from './core/import/libraryExporter';
 import { importedToPartialGame, mergeImportedIntoGame } from './core/import/staging';
 import type { ImportedGame, RawExternalGame } from './model/types/import';
@@ -49,12 +51,19 @@ function markPendingSocialActivityFailure(): void {
   });
 }
 
-const FormModal = lazy(() => import('./view/modals/FormModal').then((module) => ({ default: module.FormModal })));
-const ConfirmModal = lazy(() => import('./view/modals/ConfirmModal').then((module) => ({ default: module.ConfirmModal })));
+// Los tres modales se montan solo tras su primera apertura (ver `useMountedOnceOpen`), así que sus chunks ya no
+// entran en el arranque. Para que abrir siga siendo instantáneo, se precargan en idle: `import()` es idempotente
+// —devuelve el módulo ya cacheado—, de modo que cuando `lazy` lo pida el trabajo estará hecho.
+const importFormModal = () => import('./view/modals/FormModal');
+const importConfirmModal = () => import('./view/modals/ConfirmModal');
+const importRouletteModal = () => import('./view/components/roulette/RouletteModal');
+
+const FormModal = lazy(() => importFormModal().then((module) => ({ default: module.FormModal })));
+const ConfirmModal = lazy(() => importConfirmModal().then((module) => ({ default: module.ConfirmModal })));
 const SettingsHub = lazy(() => import('./view/components/SettingsHub').then((module) => ({ default: module.SettingsHub })));
 const SocialHub = lazy(() => import('./view/components/SocialHub').then((module) => ({ default: module.SocialHub })));
 const AccountHub = lazy(() => import('./view/components/AccountHub').then((module) => ({ default: module.AccountHub })));
-const RouletteModal = lazy(() => import('./view/components/roulette/RouletteModal').then((module) => ({ default: module.RouletteModal })));
+const RouletteModal = lazy(() => importRouletteModal().then((module) => ({ default: module.RouletteModal })));
 const IntegrationsScreen = lazy(() => import('./view/components/import/IntegrationsScreen').then((module) => ({ default: module.IntegrationsScreen })));
 const InboxScreen = lazy(() => import('./view/components/import/InboxScreen').then((module) => ({ default: module.InboxScreen })));
 const LegalScreen = lazy(() => import('./view/components/LegalScreen').then((module) => ({ default: module.LegalScreen })));
@@ -601,6 +610,21 @@ export default function App() {
 
 
 
+  // Los modales entran en el árbol al abrirse por primera vez y ya no salen (el `<dialog>` debe seguir montado
+  // para que su cierre restaure el foco). Así sus chunks quedan fuera del render inicial.
+  const formModalMounted = useMountedOnceOpen(vm.formModalOpen);
+  const confirmModalMounted = useMountedOnceOpen(!!vm.confirmState);
+  const rouletteMounted = useMountedOnceOpen(rouletteOpen);
+
+  // Precarga en idle, ya pintada la pantalla: cuando el usuario abra un modal su módulo estará en caché y no
+  // habrá que esperar a la red (el `fallback` de Suspense es `null`, así que una espera se vería como un clic
+  // que no hace nada).
+  useEffect(() => runWhenIdle(() => {
+    void importFormModal();
+    void importConfirmModal();
+    void importRouletteModal();
+  }), []);
+
   const syncBadgeText = SYNC_BADGE_TEXT[syncVm.status] || SYNC_BADGE_TEXT.idle;
 
   return (
@@ -766,40 +790,46 @@ export default function App() {
       <ScrollToTop />
 
       <Suspense fallback={null}>
-        <FormModal
-          open={vm.formModalOpen}
-          draft={vm.draft}
-          currentTab={vm.editingTab}
-          lookups={vm.lookups}
-          onClose={handleCloseFormModal}
-          onSave={handleSaveDraft}
-          onNotice={vm.notify}
-        />
+        {formModalMounted ? (
+          <FormModal
+            open={vm.formModalOpen}
+            draft={vm.draft}
+            currentTab={vm.editingTab}
+            lookups={vm.lookups}
+            onClose={handleCloseFormModal}
+            onSave={handleSaveDraft}
+            onNotice={vm.notify}
+          />
+        ) : null}
 
-        <ConfirmModal
-          open={!!vm.confirmState}
-          title={vm.confirmState?.title || ''}
-          onCancel={handleConfirmCancel}
-          onConfirm={handleConfirmDelete}
-        />
+        {confirmModalMounted ? (
+          <ConfirmModal
+            open={!!vm.confirmState}
+            title={vm.confirmState?.title || ''}
+            onCancel={handleConfirmCancel}
+            onConfirm={handleConfirmDelete}
+          />
+        ) : null}
 
-        <RouletteModal
-          open={rouletteOpen}
-          onClose={() => setRouletteOpen(false)}
-          title="Elige tu próximo juego"
-          candidates={roulettePool}
-          weight={rouletteWeight}
-          tag={(candidate) => TAB_TITLES[candidate.sourceTab]}
-          action={() => ({
-            btnClass: 'btn-complete',
-            icon: 'play',
-            label: 'Pasa a "En curso"',
-            doneLabel: '✓ En curso',
-            onAct: (candidate) => {
-              vm.moveGameToTab(candidate.sourceTab, candidate.game.id, 'e');
-            },
-          })}
-        />
+        {rouletteMounted ? (
+          <RouletteModal
+            open={rouletteOpen}
+            onClose={() => setRouletteOpen(false)}
+            title="Elige tu próximo juego"
+            candidates={roulettePool}
+            weight={rouletteWeight}
+            tag={(candidate) => TAB_TITLES[candidate.sourceTab]}
+            action={() => ({
+              btnClass: 'btn-complete',
+              icon: 'play',
+              label: 'Pasa a "En curso"',
+              doneLabel: '✓ En curso',
+              onAct: (candidate) => {
+                vm.moveGameToTab(candidate.sourceTab, candidate.game.id, 'e');
+              },
+            })}
+          />
+        ) : null}
       </Suspense>
 
       <datalist id="dl-genres">
