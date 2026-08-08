@@ -240,6 +240,37 @@ function formatDayHeader(date: Date): string {
   return `${date.getDate()} de ${FEED_DAY_MONTH_NAMES[date.getMonth()]}`;
 }
 
+/**
+ * Una entrada del DIRECTORIO social ya hidratada: el perfil más lo que se haya podido leer de su gist.
+ * Exportado porque las pantallas del hub lo reciben por props; mientras vivía dentro del hook, no había forma
+ * de nombrarlo desde fuera y acababan tipadas como `any[]`.
+ */
+export type SocialDirectoryEntry = {
+  id: string;
+  uid: string; // uid de Firebase (para relaciones de amistad); hoy coincide con `id`, robusto ante el cutover uid→profileId
+  displayName: string;
+  socialGistId: string;
+  gamesGistId: string;
+  photoURL: string;
+  /**
+   * Rango del perfil, para el punto de color de su tarjeta en el directorio. OBLIGATORIO a propósito: este tipo
+   * LOCAL sombrea al del repositorio, y la hidratación reconstruye cada entrada campo a campo. Al declararlo
+   * requerido, olvidarse de copiarlo en cualquiera de esas reconstrucciones es un error de compilación y no un
+   * directorio entero pintado de bronce.
+   */
+  tier: ProfileTier;
+  activity: SocialActivityFeedItem[];
+  posts: SocialPostFeedItem[];
+  // Index-only (SocialSharedGame) para perfiles ajenos; para el perfil PROPIO se repuebla con GameItem completos.
+  sharedLists: Partial<Record<TabId, Array<GameItem | SocialSharedGame>>>;
+  visibility: SocialProfileVisibility;
+  /**
+   * Amigo cuyo gist social NO se leyó por inactividad (corte de FRIEND_ACTIVITY_MAX_AGE_MS): su actividad no
+   * entra al feed, pero al abrir su perfil se hidrata bajo demanda para no mostrarlo a medias.
+   */
+  socialSkipped?: boolean;
+};
+
 export function useSocialViewModel(options?: {
   /**
    * Listados VIVOS de la app. La reconciliación de actividad decide con ellos qué reseñas publicar y qué
@@ -254,31 +285,6 @@ export function useSocialViewModel(options?: {
   const routeState = useMemo(() => getSocialRouteState(location.pathname), [location.pathname]);
   const { activePanel, profileDetailId, profileReviewsView, profileReviewGameId, detailActorUid, detailGameId, detailEventType } = routeState;
 
-  type SocialDirectoryEntry = {
-    id: string;
-    uid: string; // uid de Firebase (para relaciones de amistad); hoy coincide con `id`, robusto ante el cutover uid→profileId
-    displayName: string;
-    socialGistId: string;
-    gamesGistId: string;
-    photoURL: string;
-    /**
-     * Rango del perfil, para el punto de color de su tarjeta en el directorio. OBLIGATORIO a propósito: este tipo
-     * LOCAL sombrea al del repositorio, y la hidratación reconstruye cada entrada campo a campo. Al declararlo
-     * requerido, olvidarse de copiarlo en cualquiera de esas reconstrucciones es un error de compilación y no un
-     * directorio entero pintado de bronce.
-     */
-    tier: ProfileTier;
-    activity: SocialActivityFeedItem[];
-    posts: SocialPostFeedItem[];
-    // Index-only (SocialSharedGame) para perfiles ajenos; para el perfil PROPIO se repuebla con GameItem completos.
-    sharedLists: Partial<Record<TabId, Array<GameItem | SocialSharedGame>>>;
-    visibility: SocialProfileVisibility;
-    /**
-     * Amigo cuyo gist social NO se leyó por inactividad (corte de FRIEND_ACTIVITY_MAX_AGE_MS): su actividad no
-     * entra al feed, pero al abrir su perfil se hidrata bajo demanda para no mostrarlo a medias.
-     */
-    socialSkipped?: boolean;
-  };
 
   const [socialCfgGistId, setSocialCfgGistId] = useState<string>('');
   const [socialCfgEtag, setSocialCfgEtag] = useState<string | null>(null);
