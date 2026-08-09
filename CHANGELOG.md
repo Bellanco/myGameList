@@ -18,8 +18,13 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
     completados sin año van a un cajón propio en vez de desaparecer del gráfico.
   - Accesibilidad: los gráficos densos exponen sus datos en una tabla `sr-only` en vez de en una etiqueta
     kilométrica, y el aro de completados se anuncia con su reparto.
-  - Pendiente: la **evolución real del backlog** necesita un histórico que hoy no existe (`listedAt` se
-    reescribe al mover de lista), así que queda para una segunda fase con instantáneas mensuales locales.
+- **Registro del histórico del backlog**: una instantánea mensual con el tamaño de cada lista, guardada en el
+  meta local de IndexedDB. Entra ya, sin pantalla que la pinte, porque es lo único de este trabajo que **no se
+  puede recuperar a posteriori**: `listedAt` se reescribe al mover un juego de lista, así que la serie solo
+  puede construirse hacia delante y cada mes sin registrar es un punto perdido para siempre. Local y por
+  dispositivo (no sube al gist ni a Firestore), en idle, un punto por mes que se actualiza al último estado
+  observado, con tope de 120 meses. No estampa una biblioteca vacía: al arrancar podría no estar hidratada aún.
+  - Pendiente: el **gráfico** de evolución, cuando la serie tenga puntos que enseñar.
 
 ### Performance
 - **El estado de arranque de las listas se lee una vez por montaje, no en cada render.** `loadLocalState()`
