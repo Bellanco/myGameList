@@ -23,6 +23,7 @@ const LISTS: Partial<Record<TabId, SocialSharedGame[]>> = {
     shared({ id: 2, name: 'Dos', grade: 60, genres: ['Acción'], years: [2023] }),
   ],
   v: [shared({ id: 3, name: 'Tres', grade: 30, genres: ['Terror'] })],
+  p: [shared({ id: 4, name: 'Cuatro', grade: 0, genres: ['Puzles'] })],
 };
 
 const heading = (name: string) => screen.queryByRole('heading', { name });
@@ -41,12 +42,31 @@ describe('FriendStats · lo que ve cada rango', () => {
     expect(screen.getByText(L.friend.tierMore)).toBeInTheDocument();
   });
 
-  it('oro añade las notas y el ratio, y ya no se le avisa de que le falta rango', () => {
+  it('oro añade las notas y el ratio, pero no llega a las listas', () => {
     render(<FriendStats sharedLists={LISTS} viewerTier="gold" viewerHiddenTabs={[]} />);
 
     expect(heading(L.grades.title)).toBeInTheDocument();
     expect(heading(L.ratio.title)).toBeInTheDocument();
+    expect(heading(L.shame.title)).not.toBeInTheDocument();
+    expect(heading(L.wishlist.title)).not.toBeInTheDocument();
+    expect(screen.getByText(L.friend.tierMore)).toBeInTheDocument();
+  });
+
+  it('mithril lo ve todo: también sus abandonos y su lista de próximos, y ya no le falta nada', () => {
+    render(<FriendStats sharedLists={LISTS} viewerTier="mithril" viewerHiddenTabs={[]} />);
+
+    expect(heading(L.shame.title)).toBeInTheDocument();
+    expect(heading(L.wishlist.title)).toBeInTheDocument();
     expect(screen.queryByText(L.friend.tierMore)).not.toBeInTheDocument();
+  });
+
+  it('de los abandonos ajenos no se enseña lo que no viaja: ni horas ni razones', () => {
+    render(<FriendStats sharedLists={LISTS} viewerTier="mithril" viewerHiddenTabs={[]} />);
+
+    expect(screen.queryByText(L.shame.hours)).not.toBeInTheDocument();
+    expect(screen.queryByText(L.shame.retry)).not.toBeInTheDocument();
+    expect(screen.queryByText(L.shame.reasons)).not.toBeInTheDocument();
+    expect(screen.queryByText(L.shame.recent)).not.toBeInTheDocument();
   });
 
   it('solo mithril puede cambiar de periodo', () => {
@@ -76,7 +96,7 @@ describe('FriendStats · reciprocidad', () => {
     // Sin los abandonados, las cifras cuentan solo los dos completados. Se busca dentro de las cifras
     // destacadas: "Juegos" también rotula cosas del gráfico anual.
     const tiles = within(document.querySelector('.stats-tiles') as HTMLElement);
-    expect(tiles.getByText(L.tiles.games).closest('.stat-tile')).toHaveTextContent('2');
+    expect(tiles.getByText(L.tiles.games).closest('.stat-tile')).toHaveTextContent('3');
   });
 
   it('quien lo esconde todo se queda sin panel', () => {

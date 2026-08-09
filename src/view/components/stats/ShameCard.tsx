@@ -19,7 +19,20 @@ const L = UI_MESSAGES.stats.shame;
  * Las razones van en nube de etiquetas y el índice de abandono en barras de porcentaje —no de recuento—, para
  * que el apartado no sea otra tanda de barras iguales a las de arriba.
  */
-export const ShameCard = memo(function ShameCard({ shame, scale }: { shame: ShameSummary; scale: ScoreScale }) {
+export const ShameCard = memo(function ShameCard({
+  shame,
+  scale,
+  publicOnly = false,
+}: {
+  shame: ShameSummary;
+  scale: ScoreScale;
+  /**
+   * Vista de un PERFIL AJENO: fuera lo que el canal social no publica —horas, la marca de "merece otra
+   * oportunidad", las razones de abandono y las fechas de los últimos en caer—. Enseñarlo con ceros y huecos
+   * haría creer que ese amigo no anota nada, cuando lo que pasa es que eso no viaja.
+   */
+  publicOnly?: boolean;
+}) {
   if (shame.total === 0) {
     return <p className="stats-empty">{L.empty}</p>;
   }
@@ -30,7 +43,7 @@ export const ShameCard = memo(function ShameCard({ shame, scale }: { shame: Sham
     <>
       <div className="stats-tiles">
         <StatTile label={L.total} value={<CountUp value={shame.total} />} />
-        <StatTile label={L.hours} value={<CountUp value={shame.hours} format={formatHours} />} unit="h" />
+        {publicOnly ? null : <StatTile label={L.hours} value={<CountUp value={shame.hours} format={formatHours} />} unit="h" />}
         {shame.scored > 0 ? (
           <StatTile
             label={L.avgGrade}
@@ -39,7 +52,7 @@ export const ShameCard = memo(function ShameCard({ shame, scale }: { shame: Sham
             hint={UI_MESSAGES.stats.tiles.avgGradeHint(shame.scored)}
           />
         ) : null}
-        <StatTile label={L.retry} value={<CountUp value={shame.retry} />} />
+        {publicOnly ? null : <StatTile label={L.retry} value={<CountUp value={shame.retry} />} />}
       </div>
 
       <section>
@@ -58,16 +71,18 @@ export const ShameCard = memo(function ShameCard({ shame, scale }: { shame: Sham
         )}
       </section>
 
-      <div className="stats-split">
-        <section>
-          <h3>{L.reasons}</h3>
-          {shame.reasons.length ? <TagChips tags={shame.reasons} tone="danger" /> : <p className="stats-empty">{L.noReasons}</p>}
-        </section>
-        <section>
-          <h3>{L.recent}</h3>
-          <GameRefList games={shame.recent} meta="hours" />
-        </section>
-      </div>
+      {publicOnly ? null : (
+        <div className="stats-split">
+          <section>
+            <h3>{L.reasons}</h3>
+            {shame.reasons.length ? <TagChips tags={shame.reasons} tone="danger" /> : <p className="stats-empty">{L.noReasons}</p>}
+          </section>
+          <section>
+            <h3>{L.recent}</h3>
+            <GameRefList games={shame.recent} meta="hours" />
+          </section>
+        </div>
+      )}
     </>
   );
 });

@@ -15,7 +15,16 @@ const L = UI_MESSAGES.stats.wishlist;
  * Apartado de la lista de próximos. También es de "General": un juego que aún no has jugado no pertenece a
  * ningún año. Su nota NO se mezcla con las valoraciones: ahí el campo es el interés previo.
  */
-export const WishlistCard = memo(function WishlistCard({ wishlist, scale }: { wishlist: WishlistSummary; scale: ScoreScale }) {
+export const WishlistCard = memo(function WishlistCard({
+  wishlist,
+  scale,
+  publicOnly = false,
+}: {
+  wishlist: WishlistSummary;
+  scale: ScoreScale;
+  /** Vista de un perfil ajeno: la fecha de llegada a la lista no viaja, así que no hay línea de tiempo. */
+  publicOnly?: boolean;
+}) {
   if (wishlist.total === 0) {
     return <p className="stats-empty">{L.empty}</p>;
   }
@@ -50,10 +59,12 @@ export const WishlistCard = memo(function WishlistCard({ wishlist, scale }: { wi
 
       {/* Una sola línea de tiempo en lugar de dos rankings: enseña a la vez quién lleva años esperando y quién
           acaba de entrar, que es lo que antes contaban "los que más esperan" y "los últimos en llegar". */}
-      <section>
-        <h3>{L.oldest}</h3>
-        <WaitingTimeline games={wishlist.games} />
-      </section>
+      {publicOnly ? null : (
+        <section>
+          <h3>{L.oldest}</h3>
+          <WaitingTimeline games={wishlist.games} />
+        </section>
+      )}
     </>
   );
 });
