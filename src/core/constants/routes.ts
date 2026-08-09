@@ -11,7 +11,7 @@ import { matchRoutes } from 'react-router-dom';
 import { LEGAL_ROUTES } from './legal';
 
 /** Zona de la app; decide la navegación inferior, el encabezado y el cromo alrededor del contenido. */
-export type AppSection = 'lists' | 'social' | 'settings' | 'account' | 'integrations' | 'inbox' | 'legal' | 'admin';
+export type AppSection = 'lists' | 'social' | 'stats' | 'settings' | 'account' | 'integrations' | 'inbox' | 'legal' | 'admin';
 
 export const APP_ROUTES: ReadonlyArray<{ path: string; section: AppSection }> = [
   { path: '/completados', section: 'lists' },
@@ -22,6 +22,9 @@ export const APP_ROUTES: ReadonlyArray<{ path: string; section: AppSection }> = 
   // hub con `matchSocialRoute`. Declararlas aquí una a una era la causa de la clase de fallo descrita arriba:
   // añadir una pantalla social obligaba a tocar este fichero o la ruta quedaba inaccesible.
   { path: '/social/*', section: 'social' },
+  // Panel de estadísticas. La ruta se llamó `/perfil` cuando la pestaña tenía ese nombre; la sección es `stats`
+  // para no confundirla con el PERFIL SOCIAL, que es la ficha pública y vive en `/social/profile`.
+  { path: '/perfil', section: 'stats' },
   { path: '/ajustes', section: 'settings' },
   { path: '/cuenta', section: 'account' },
   { path: '/integraciones', section: 'integrations' },

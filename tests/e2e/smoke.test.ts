@@ -1,4 +1,5 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test } from '@playwright/test';
+import { JUEGOS, sembrarBiblioteca } from './seed';
 
 /**
  * Smoke test sobre el BUILD DE PRODUCCIÓN: ¿arranca la app y se puede usar?
@@ -15,29 +16,6 @@ import { expect, test, type Page } from '@playwright/test';
  * rellenaba `input[name="gameName"]` y migraba juegos arrastrándolos. Nada de eso existe —la UI está en español y
  * migrar es por botones—, así que habría fallado en el primer clic. Estaba excluido de todos los runners.)
  */
-
-const JUEGOS = [
-  { id: 1, name: 'Hollow Knight', grade: 96, score: 5 },
-  { id: 2, name: 'Celeste', grade: 88, score: 4 },
-  { id: 3, name: 'Hades', grade: 92, score: 5 },
-];
-
-/** Siembra la biblioteca ANTES de que cargue la app (la clave la fija `core/constants/storageKeys`). */
-async function sembrarBiblioteca(page: Page): Promise<void> {
-  await page.addInitScript((juegos) => {
-    const now = Date.now();
-    const c = juegos.map((j) => ({
-      ...j, _ts: now, listedAt: now, genres: ['Acción'], platforms: ['PC'], steamDeck: false,
-      years: [2024], strengths: ['Ritmo'], weaknesses: [], reasons: [], replayable: true, retry: false,
-      hours: 20, review: 'Reseña de prueba.',
-    }));
-    localStorage.setItem('mis-listas-v12-unified', JSON.stringify({
-      c, v: [], e: [], p: [], deleted: [], updatedAt: now, schemaVersion: 1,
-    }));
-    // Decidido el consentimiento para que el banner no tape la interfaz durante el test.
-    localStorage.setItem('mis-listas-analytics-consent', 'denied');
-  }, JUEGOS);
-}
 
 test.describe('smoke del build de producción', () => {
   test('arranca, pinta la lista y responde a la interacción', async ({ page }) => {

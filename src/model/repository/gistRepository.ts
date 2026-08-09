@@ -2,6 +2,7 @@
 // contra GitHub. El canal SOCIAL vive en `socialGistRepository`; lo común a ambos, en `githubGistApi`.
 import { isValidGistId, isValidGithubToken } from '../../core/security/sanitize';
 import { migrateData } from './migrateRepository';
+import { normalizeData } from './localRepository';
 import { assembleChunkedGames, gamesGistNeedsRewrite, gamesGistNeedsUpgradeToWrapper, unwrapGamesFile } from '../migration/legacyGamesFormat';
 import type { TabData } from '../types/game';
 import type { GamesChunkFile, GamesMainFile } from '../types/gist';
@@ -355,6 +356,39 @@ async function decodeFilesMap(
   return out;
 }
 
+/**
+ * Carga PEREZOSA del validador de esquema (Zod), igual que hace el canal social. Zod pesa ~19 kB comprimidos y
+ * este módulo SÍ entra en el arranque (lo importa `useSyncViewModel`), así que un import estático se comería de
+ * golpe el presupuesto de bytes que vigila `scripts/ci-validate.js`. Aquí el coste va sobre una operación que ya
+ * es de red, y el chunk queda cacheado tras el primer sync.
+ */
+async function loadGamesGistSchema(): Promise<typeof import('../schemas/gamesGistSchema')> {
+  return import('../schemas/gamesGistSchema');
+}
+
+/** Escritura: falla cerrado. Si el validador no se puede cargar, NO se publica (ver writeGist). */
+async function assertValidGamesGistLazy(data: unknown): Promise<void> {
+  const { assertValidGamesGist } = await loadGamesGistSchema();
+  assertValidGamesGist(data);
+}
+
+/**
+ * Lectura: falla ABIERTO. Diagnostica y avisa, pero jamás interrumpe una sincronización — ni por un remoto
+ * malformado ni porque el propio validador no haya podido cargarse (sin red, o un index.html cacheado tras un
+ * despliegue). Que la app arranque y sincronice pesa más que enterarse.
+ */
+async function inspectGamesGistLazy(data: unknown): Promise<void> {
+  try {
+    const { inspectGamesGist } = await loadGamesGistSchema();
+    const report = inspectGamesGist(data);
+    if (!report.valid) {
+      console.warn(`[sync] el gist de juegos no cumple el esquema (${report.issueCount} problemas): ${report.summary}`);
+    }
+  } catch {
+    /* best-effort puro: el diagnóstico nunca puede tumbar una lectura. */
+  }
+}
+
 async function buildGistReadResponse(
   body: { files?: Record<string, { content: string } | undefined> },
   etag: string | null,
@@ -393,8 +427,11 @@ async function buildGistReadResponse(
   // Fase B: chunks de overflow en OTROS gists (`gistId` ≠ null) → fetch + merge (lanza si la lectura es incompleta).
   const assembled = await mergeOverflowGistChunks(sameGist, token);
 
+  const data = migrateData(unwrapGamesFile(assembled));
+  await inspectGamesGistLazy(data);
+
   return {
-    data: migrateData(unwrapGamesFile(assembled)),
+    data,
     etag,
     wasLegacy: gamesGistWasLegacy(parsed, anchorWasCompressed),
   };
@@ -630,8 +667,18 @@ export async function writeGist(token: string, gistId: string, payload: TabData)
     throw new Error('Gist ID inválido');
   }
 
-  // E1: serialización magra (omite opcionales vacíos) + guarda de tamaño por fichero.
-  const lean = leanTabData(payload);
+  // NORMALIZAR ANTES DE VALIDAR, y no es un detalle: la ruta de recuperación de conflicto escribe el resultado
+  // de `mergeCrdt` entre lo local y lo REMOTO, y el remoto solo ha pasado por `migrateData`, que traduce formas
+  // legacy pero NO coacciona tipos (su `deleted`, de hecho, es un cast a pelo). Sin este paso, un gist con un
+  // `hours: "20"` o un `id: "3"` —editado a mano, o escrito por un cliente viejo— haría saltar la validación de
+  // abajo y, al fallar cerrado, dejaría a ese usuario SIN PODER SINCRONIZAR. Normalizar primero convierte ese
+  // caso en lo que debe ser (un dato saneado que sí se publica) y deja el aborto para la corrupción de verdad,
+  // la que la normalización no puede arreglar. Es idempotente: sobre datos ya normalizados no cambia nada.
+  const lean = leanTabData(normalizeData(payload));
+  // Última comprobación antes de publicar: si lo que íbamos a subir está corrupto, el gist remoto se queda como
+  // está. El gist es la fuente de la que beben los demás dispositivos, así que una escritura mala se propaga;
+  // una escritura abortada, no. Falla cerrado A PROPÓSITO, y solo por tipos (ver `gamesGistSchema`).
+  await assertValidGamesGistLazy(lean);
   const headers: Record<string, string> = {
     Authorization: getGithubAuthHeader(token),
     'Content-Type': 'application/json',

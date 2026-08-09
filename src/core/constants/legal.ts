@@ -212,7 +212,13 @@ const COOKIES: LegalDocument = {
   // almacenamiento local era "todo lo que guarda", sin distinguir lo que hace un tercero. No se sube
   // `LEGAL_VERSION`: no cambia el tratamiento ni los términos que el usuario aceptó, así que no procede
   // reabrir la puerta de aceptación a todo el mundo por una aclaración.
-  updated: '2026-08-06',
+  //
+  // 2026-08-10: App Check. Se nombran los dominios de reCAPTCHA (www.google.com, www.gstatic.com) y para qué
+  // sirve. Sigue siendo una PRECISIÓN y no un tratamiento nuevo: el párrafo ya declaraba scripts de Google y la
+  // cookie «_GRECAPTCHA» al iniciar sesión, y reCAPTCHA solo se carga con sesión iniciada —nunca en una visita
+  // anónima—, así que la promesa de la entradilla sigue siendo cierta palabra por palabra. Por eso tampoco se
+  // sube `LEGAL_VERSION`; si prefieres reabrir la aceptación, es súbirla y ya.
+  updated: '2026-08-10',
   intro:
     'La app no usa cookies publicitarias ni de seguimiento entre sitios. Si solo abres la app y usas tus listas —sin sincronizar, sin iniciar sesión y sin aceptar la analítica—, no contacta con ningún servidor ajeno ni guarda cookies: todo lo que necesita vive en tu navegador. Abajo está el detalle completo, incluido lo que ocurre cuando activas cada cosa.',
   sections: [
@@ -230,7 +236,7 @@ const COOKIES: LegalDocument = {
     {
       heading: 'Al iniciar sesión con Google (solo si lo haces)',
       paragraphs: [
-        'El inicio de sesión lo gestiona Google, no nosotros. Cuando lo usas —para el espacio social o para recuperar tu Gist desde tu cuenta—, tu navegador carga un script de Google (apis.google.com) y Google puede guardar cookies propias en sus dominios para su control de abuso y para mantener tu sesión. Una de ellas es «_GRECAPTCHA».',
+        'El inicio de sesión lo gestiona Google, no nosotros. Cuando lo usas —para el espacio social o para recuperar tu Gist desde tu cuenta—, tu navegador carga scripts de Google (apis.google.com para la identificación, y www.google.com y www.gstatic.com para reCAPTCHA, que comprueba que las peticiones vienen de la app de verdad y no de un programa que suplanta a la app). Google puede guardar cookies propias en sus dominios para ese control de abuso y para mantener tu sesión. Una de ellas es «_GRECAPTCHA».',
         'Esas cookies son de Google: no las ponemos, no las leemos y no podemos dar una lista cerrada, porque quién las pone y cuáles son lo decide Google. Son necesarias para el servicio de autenticación que estás pidiendo, así que no dependen del consentimiento de analítica; lo que sí depende de ti es usar o no ese botón. Si no inicias sesión, nada de esto ocurre.',
       ],
       links: [

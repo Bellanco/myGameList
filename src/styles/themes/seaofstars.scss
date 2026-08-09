@@ -96,6 +96,7 @@
 :root[data-palette="seaofstars"] .toolbar,
 :root[data-palette="seaofstars"] .table-wrap,
 :root[data-palette="seaofstars"] .settings-card,
+:root[data-palette="seaofstars"] .stats-card,
 :root[data-palette="seaofstars"] .hub-feed-card,
 :root[data-palette="seaofstars"] .hub-hub-card,
 :root[data-palette="seaofstars"] .modal,
@@ -235,3 +236,51 @@
 :root:not([data-effects="on"])[data-palette="seaofstars"] h2,
 :root:not([data-effects="on"])[data-palette="seaofstars"] body::before,
 :root:not([data-effects="on"])[data-palette="seaofstars"] body::after { animation: none !important; }
+
+/* ── §12 · Panel "Perfil": pixel-art. La rampa de los repartos va del TURQUESA del agua al PÚRPURA del cielo
+   nocturno, y todo lo redondo se vuelve CUADRADO: en un tema de píxeles, un círculo perfecto es lo único que
+   canta. Las tarjetas ya traen el marco doble de caja de diálogo de §3. ── */
+:root[data-palette="seaofstars"] .stats-hub {
+  --chart-from: var(--sos-turq);
+  --chart-to: var(--sos-purple);
+  /* El rosa del atardecer para "en curso": el ámbar chocaba con el oro del acento. */
+  --stats-e: var(--sos-pink);
+}
+
+/* Nada de círculos: los puntos son píxeles. */
+:root[data-palette="seaofstars"] .beeswarm-dot,
+:root[data-palette="seaofstars"] .timeline-dot,
+:root[data-palette="seaofstars"] .dumbbell-dot,
+:root[data-palette="seaofstars"] .ratio-dot,
+:root[data-palette="seaofstars"] .donut-key,
+:root[data-palette="seaofstars"] .dot-matrix-dots i,
+:root[data-palette="seaofstars"] .stats-legend-dot { border-radius: 0; }
+
+:root[data-palette="seaofstars"] .genre-radar-dot { rx: 0; }
+/* Los anillos, con el corte recto: un extremo redondeado desentona en un tema de píxeles. (El cuadro de
+   mandos ya va por segmentos rectos, así que no necesita regla propia.) */
+:root[data-palette="seaofstars"] .donut-seg { stroke-linecap: butt; }
+
+/* Nada de curvas suavizadas ni esquinas: el rosetón se dibuja a canto vivo y las filas y barras son cajas. */
+:root[data-palette="seaofstars"] .burst-piece path { shape-rendering: crispEdges; }
+:root[data-palette="seaofstars"] .shine-rows li,
+:root[data-palette="seaofstars"] .shine-fill,
+:root[data-palette="seaofstars"] .top-chip-bar,
+:root[data-palette="seaofstars"] .top-chip-bar i { border-radius: 0; }
+
+/* Campo de estrellas tenue detrás de los lienzos de datos, como el cielo del juego. */
+:root[data-palette="seaofstars"] .backlog-canvas,
+:root[data-palette="seaofstars"] .beeswarm-canvas {
+  background-image:
+    radial-gradient(1px 1px at 12% 22%, rgba(255, 247, 214, .5) 50%, transparent 50%),
+    radial-gradient(1px 1px at 47% 68%, rgba(255, 247, 214, .38) 50%, transparent 50%),
+    radial-gradient(1px 1px at 78% 34%, rgba(255, 247, 214, .45) 50%, transparent 50%),
+    radial-gradient(1px 1px at 63% 12%, rgba(255, 247, 214, .3) 50%, transparent 50%),
+    radial-gradient(1px 1px at 28% 82%, rgba(255, 247, 214, .35) 50%, transparent 50%);
+}
+:root[data-palette="seaofstars"][data-theme="light"] .backlog-canvas,
+:root[data-palette="seaofstars"][data-theme="light"] .beeswarm-canvas { background-image: none; }
+
+/* El marco de la figura de géneros, con el filete claro del tema. */
+:root[data-palette="seaofstars"] .polar-ring,
+:root[data-palette="seaofstars"] .genre-radar-ring { stroke: color-mix(in srgb, var(--sos-line) 30%, transparent); }

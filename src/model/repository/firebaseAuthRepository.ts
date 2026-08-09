@@ -7,6 +7,10 @@ import {
   initializeFirebaseServices,
   type SocialAuthUser,
 } from './firebaseClient';
+// Único punto de enganche de App Check en toda la app (ver `appCheckRepository`: lleva escrito cómo quitarlo).
+// Va aquí y no en `firebaseClient` porque el criterio es "hay sesión", no "hay servicios": el arranque en idle
+// construye servicios para todo el mundo, y ahí NO debe cargarse reCAPTCHA.
+import { ensureAppCheck } from './appCheckRepository';
 
 function toSocialAuthUser(user: { uid: string; displayName: string | null; email: string | null; photoURL: string | null }): SocialAuthUser {
   return {
@@ -71,6 +75,12 @@ export function onSocialAuthChanged(callback: (user: SocialAuthUser | null) => v
       return;
     }
     unsubscribe = onAuthStateChanged(services.auth, (user) => {
+      // Sesión RESTAURADA (el usuario ya estaba dentro de una visita anterior): también hay que atestiguar, y
+      // antes de que el hub empiece a leer Firestore. Solo con `user`: si es null seguimos siendo un visitante
+      // anónimo y no se carga nada de Google.
+      if (user) {
+        void ensureAppCheck(services.app);
+      }
       callback(user ? toSocialAuthUser(user) : null);
     });
   });
@@ -92,6 +102,10 @@ export async function signInWithGoogle(): Promise<SocialAuthUser> {
   if (!services) {
     throw new Error('Firebase no está configurado en este entorno');
   }
+
+  // Antes del popup: el usuario ya ha decidido identificarse, así que a partir de aquí toda petición a Firebase
+  // debe ir atestiguada. `await` porque el propio inicio de sesión ya es una petición que la exigencia filtrará.
+  await ensureAppCheck(services.app);
 
   const provider = new GoogleAuthProvider();
   provider.setCustomParameters({ prompt: 'select_account' });
