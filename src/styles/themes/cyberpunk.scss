@@ -405,14 +405,16 @@
 :root:not([data-effects="on"])[data-palette="grimdark"] .fab-roulette { animation: none !important; }
 
 
-/* ── §13 · Panel "Perfil": HUD de Night City. La rampa de los repartos va del AMARILLO ácido al MAGENTA
-   —los dos neones del tema— y todo lo que es trazo o punto lleva su halo de neón. Los lienzos van rayados con
-   las scanlines del visor. Las tarjetas ya traen el marco cian con filete amarillo de §3. ── */
+/* ── §13 · Panel "Perfil": HUD de Night City. La rampa de los repartos va del CIAN al MAGENTA y pasa por los
+   azules y violetas del anuncio de neón; el amarillo ácido se queda donde ya estaba —marcos, títulos, filetes—,
+   que es como lo usa el juego: como tinta de interfaz, no como color de datos. Mezclando amarillo con magenta
+   el degradado caía en naranjas de atardecer, que no son de Night City. Todo lo que es trazo o punto lleva su
+   halo de neón y los lienzos van rayados con las scanlines del visor. ── */
 :root[data-palette="cyberpunk"] .stats-hub {
-  --chart-from: var(--cyber-yellow);
+  --chart-from: var(--cyber-cyan);
   --chart-to: var(--cyber-magenta);
-  /* "En curso" pasa al cian: es el tercer neón del tema y separa mejor las bandas del área. */
-  --stats-e: var(--cyber-cyan);
+  /* "En curso" pasa al amarillo ácido: es el tercer neón del tema y separa las bandas del área. */
+  --stats-e: var(--cyber-yellow);
 }
 
 /* Neón: halo en trazos y puntos. En claro se apaga, que sobre fondo claro solo ensucia (regla del tema). */
