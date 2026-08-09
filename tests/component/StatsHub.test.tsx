@@ -135,7 +135,7 @@ describe('StatsHub · periodos', () => {
 
     expect(screen.getByRole('heading', { name: L.year.gamesTitle(2023) })).toBeInTheDocument();
     // "Uno" se completó en 2023; "Dos" es de 2024 y no debe aparecer.
-    const listado = document.querySelector('.game-ref-list');
+    const listado = document.querySelector('.game-cards');
     expect(listado).toHaveTextContent('Uno');
     expect(listado).not.toHaveTextContent('Dos');
     // Y la lista de la vergüenza se queda en General.

@@ -1857,6 +1857,74 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* ---- El año en cajas ------------------------------------------------------------------------------------ */
+
+/* La rejilla se llena sola: una columna en un móvil, cuatro o cinco en un monitor, sin un solo breakpoint.
+   Cuarenta juegos que ocupaban cuarenta renglones caben ahora en una cuarta parte de alto. */
+.game-cards {
+  display: grid;
+  /* 13,5rem da para un título largo con su nota en la misma línea; por debajo, los nombres se recortaban a la
+     mitad. A partir de ahí la rejilla añade columnas sola —una en el móvil, cinco o seis en un monitor—. */
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 13.5rem), 1fr));
+  gap: .3rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* Sin contorno y con el color en el CANTO: es lo que la separa de las fichas del top, que llevan borde, número
+   al fondo y barra al pie. El filo se tiñe con la nota —el mismo tono que el aro y el enjambre—, así que la
+   rejilla entera enseña de un vistazo cómo cae el año. */
+.game-cards li {
+  position: relative;
+  display: flex;
+  align-items: center;
+  /* La nota se descuelga a una segunda línea cuando la caja va estrecha: en un móvil eso deja el nombre
+     entero en vez de recortarlo a la mitad, y sigue ocupando menos que una fila por juego. */
+  flex-wrap: wrap;
+  gap: .1rem .5rem;
+  padding: .3rem .55rem .3rem .7rem;
+  border-radius: 4px;
+  background: var(--surface-soft);
+  border-left: 3px solid hsl(var(--dot-hue, 135) 58% var(--acc-l));
+  min-width: 0;
+  font-size: .86rem;
+  animation: slide-in .4s cubic-bezier(.22, 1, .36, 1) both;
+  /* El escalonado se corta pronto: con cuarenta cajas, un retardo por posición dejaba media rejilla en blanco
+     durante un segundo largo. */
+  animation-delay: calc(min(var(--i, 0), 12) * 30ms);
+  transition: background .15s ease, transform .15s ease;
+}
+
+.game-cards li:hover {
+  background: var(--surface-elevated);
+  transform: translateX(2px);
+}
+
+.game-cards .game-card-pos {
+  flex: 0 0 auto;
+  min-width: 1.4rem;
+  font-size: .72rem;
+  font-weight: 700;
+  color: var(--stats-ink-2);
+  font-variant-numeric: tabular-nums;
+}
+
+/* El nombre pide poco y estira: así el título y su nota comparten renglón siempre que quepan, y solo cuando el
+   nombre es de verdad largo se descuelga la nota a una segunda línea en vez de recortarlo. */
+.game-cards .game-card-name {
+  flex: 1 1 4rem;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* La nota, a escala de apoyo: manda el nombre. El aro se encoge por su PROPIA variable, que es de la que
+   cuelga el cuerpo de su número. */
+.game-cards .stars { font-size: .68rem; margin-left: auto; }
+.game-cards .score-ring { --sz: 1.55rem; margin-left: auto; }
+
 
 /* ---- Interacción -------------------------------------------------------------------------------------- */
 

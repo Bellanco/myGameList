@@ -15,11 +15,11 @@ interface BottomNavigationProps {
 }
 
 // Ajustes y Cuenta ya no viven aquí: son botones flotantes (ver FloatingControls). La barra inferior
-// queda con las secciones "de contenido": los listados, el panel "Perfil" (estadísticas) y el hub social.
+// queda con las secciones "de contenido": los listados, el hub social y las estadísticas propias.
 const NAV_ITEMS: Array<{ key: AppSection; label: string; icon: IconName }> = [
   { key: 'lists', label: UI_MESSAGES.nav.lists, icon: 'bottom-lists' },
-  { key: 'stats', label: UI_MESSAGES.nav.stats, icon: 'bottom-stats' },
   { key: 'social', label: UI_MESSAGES.nav.social, icon: 'bottom-hub' },
+  { key: 'stats', label: UI_MESSAGES.nav.stats, icon: 'bottom-stats' },
 ];
 
 /**
