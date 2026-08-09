@@ -418,15 +418,20 @@
 /* Neón: halo en trazos y puntos. En claro se apaga, que sobre fondo claro solo ensucia (regla del tema). */
 :root[data-palette="cyberpunk"] .backlog-line,
 :root[data-palette="cyberpunk"] .genre-radar-shape,
-:root[data-palette="cyberpunk"] .polar-sector { filter: drop-shadow(0 0 4px currentColor); }
+:root[data-palette="cyberpunk"] .polar-sector,
+:root[data-palette="cyberpunk"] .radial-value,
+:root[data-palette="cyberpunk"] .donut-seg { filter: drop-shadow(0 0 4px currentColor); }
 
 :root[data-palette="cyberpunk"] .beeswarm-dot,
 :root[data-palette="cyberpunk"] .timeline-dot,
-:root[data-palette="cyberpunk"] .dumbbell-dot { box-shadow: 0 0 6px currentColor, 0 0 2px #fff; }
+:root[data-palette="cyberpunk"] .dumbbell-dot,
+:root[data-palette="cyberpunk"] .lolli-dot { box-shadow: 0 0 6px currentColor, 0 0 2px #fff; }
 
 :root[data-palette="cyberpunk"][data-theme="light"] .backlog-line,
 :root[data-palette="cyberpunk"][data-theme="light"] .genre-radar-shape,
-:root[data-palette="cyberpunk"][data-theme="light"] .polar-sector { filter: none; }
+:root[data-palette="cyberpunk"][data-theme="light"] .polar-sector,
+:root[data-palette="cyberpunk"][data-theme="light"] .radial-value,
+:root[data-palette="cyberpunk"][data-theme="light"] .donut-seg { filter: none; }
 
 /* Scanlines del visor sobre los lienzos de datos. */
 :root[data-palette="cyberpunk"] .backlog-canvas::after,
