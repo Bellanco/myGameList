@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { render, screen, within } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { StatsHub } from '../../src/view/components/stats/StatsHub';
 import { UI_MESSAGES } from '../../src/core/constants/labels';
@@ -74,10 +74,11 @@ describe('StatsHub', () => {
 
     // Hay dos tablas alternativas en la pantalla (año a año y evolución): se pide la del gráfico anual.
     const rows = within(screen.getByRole('table', { name: L.years.chartAria(L.years.metricGames) })).getAllByRole('row');
-    // Cabecera + 2023 + 2024.
+    // Cabecera + 2024 + 2023: la serie va del más reciente al más antiguo.
     expect(rows).toHaveLength(3);
-    expect(rows[1]).toHaveTextContent('2023');
-    expect(rows[1]).toHaveTextContent('30');
+    expect(rows[1]).toHaveTextContent('2024');
+    expect(rows[2]).toHaveTextContent('2023');
+    expect(rows[2]).toHaveTextContent('30');
   });
 
   it('cambia el gráfico anual de juegos a horas', async () => {
@@ -207,10 +208,13 @@ describe('StatsHub · listas sin año', () => {
 });
 
 describe('StatsHub · evolución del backlog', () => {
+  // El modo ya no se anuncia con un texto al pie (se retiró la nota de la aproximación), así que se comprueba
+  // por `data-mode`, que es el marcador que existe justamente para poder distinguirlos.
   it('enseña la curva derivada mientras el histórico real no tenga puntos suficientes', async () => {
     render(<StatsHub games={SAMPLE} />);
 
-    expect(await screen.findByText(L.backlog.derivedNote)).toBeInTheDocument();
+    await waitFor(() => expect(document.querySelector('.backlog')).toHaveAttribute('data-mode', 'derived'));
+    expect(screen.queryByText(L.backlog.realNote)).not.toBeInTheDocument();
   });
 
   it('el histórico real sustituye a la aproximación en cuanto hay dos meses registrados', async () => {
@@ -221,7 +225,7 @@ describe('StatsHub · evolución del backlog', () => {
     render(<StatsHub games={SAMPLE} />);
 
     expect(await screen.findByText(L.backlog.realNote)).toBeInTheDocument();
-    expect(screen.queryByText(L.backlog.derivedNote)).not.toBeInTheDocument();
+    expect(document.querySelector('.backlog')).toHaveAttribute('data-mode', 'real');
     history = [];
   });
 });

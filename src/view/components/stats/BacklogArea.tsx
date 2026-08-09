@@ -115,7 +115,9 @@ export const BacklogArea = memo(function BacklogArea({ points, mode }: BacklogAr
     .filter((tick) => tick.index >= 0 && tick.index < series.length);
 
   return (
-    <div className="backlog">
+    // `data-mode` no se ve, pero deja el modo OBSERVABLE: antes lo delataba la nota al pie, y al retirarla no
+    // quedaba forma de distinguir el histórico real de la aproximación ni en una prueba ni depurando a mano.
+    <div className="backlog" data-mode={mode}>
       <ul className="stats-legend">
         {SERIES.map((tab) => (
           <li key={tab}>
@@ -232,7 +234,9 @@ export const BacklogArea = memo(function BacklogArea({ points, mode }: BacklogAr
         </table>
       </div>
 
-      <p className="stats-note">{mode === 'real' ? L.realNote : L.derivedNote}</p>
+      {/* Solo en modo "real": el histórico registrado sí merece una nota que diga desde cuándo existe. El modo
+          derivado ya no la lleva. */}
+      {mode === 'real' ? <p className="stats-note">{L.realNote}</p> : null}
     </div>
   );
 });

@@ -402,7 +402,10 @@ export function computeStats(data: TabData): StatsSummary {
     }
   }
 
-  const years = [...yearBuckets.values()].sort((a, b) => (a.year as number) - (b.year as number));
+  // Del más reciente al más antiguo: lo que interesa mirar primero es el año en curso, no aquel en el que
+  // empezaste. Mismo criterio que los años de la ficha de un juego y que `byYear`.
+  const years = [...yearBuckets.values()].sort((a, b) => (b.year as number) - (a.year as number));
+  // El cajón "sin año" va SIEMPRE al final: no es un año, así que no compite en la ordenación.
   if (noYear) years.push(noYear);
 
   const decided = counts.c + counts.v;

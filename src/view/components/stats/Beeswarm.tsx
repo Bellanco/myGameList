@@ -203,8 +203,6 @@ export const Beeswarm = memo(function Beeswarm({ games, scale, average }: Beeswa
           </tbody>
         </table>
       </div>
-
-      <p className="stats-note">{L.swarmHint(games.length, best.game.name)}</p>
     </div>
   );
 });
