@@ -32,6 +32,11 @@
   --chart-from: var(--steam);
   --chart-to: var(--warn);
 
+  /* TINTA SECUNDARIA del panel. El gris de la app se queda en 3,5:1 sobre la tarjeta —suficiente para un
+     párrafo, corto para el tamaño al que aquí se escribe: rótulos de eje, cuentas, pies de figura—, así que
+     dentro del panel se acerca al color de texto hasta pasar el 4,5:1 sin dejar de leerse como secundario. */
+  --stats-ink-2: color-mix(in oklch, var(--text-muted) 45%, var(--text));
+
   display: grid;
   grid-template-columns: repeat(12, minmax(0, 1fr));
   gap: 1rem;
@@ -72,12 +77,12 @@
   font-size: .82rem;
   text-transform: uppercase;
   letter-spacing: .05em;
-  color: var(--text-muted);
+  color: var(--stats-ink-2);
 }
 
 .stats-card-sub {
   margin: 0;
-  color: var(--text-muted);
+  color: var(--stats-ink-2);
   font-size: .88rem;
   line-height: 1.4;
 }
@@ -173,7 +178,7 @@
   font-size: .72rem;
   text-transform: uppercase;
   letter-spacing: .05em;
-  color: var(--text-muted);
+  color: var(--stats-ink-2);
 }
 
 /* Figuras PROPORCIONALES: los dígitos de ancho fijo son para columnas que se alinean (ejes, tablas); en una
@@ -188,7 +193,7 @@
 .stat-tile-unit {
   font-size: .85rem;
   font-weight: 500;
-  color: var(--text-muted);
+  color: var(--stats-ink-2);
   margin-left: .15rem;
 }
 
@@ -204,7 +209,7 @@
 
 .stat-tile-hint {
   font-size: .75rem;
-  color: var(--text-muted);
+  color: var(--stats-ink-2);
 }
 
 /* ---- Gráfico anual ----------------------------------------------------------------------------------- */
@@ -241,7 +246,7 @@
   font-size: .76rem;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
-  color: var(--text-muted);
+  color: var(--stats-ink-2);
 }
 
 .year-col-track {
@@ -275,7 +280,7 @@
 
 .year-col-label {
   font-size: .72rem;
-  color: var(--text-muted);
+  color: var(--stats-ink-2);
   white-space: nowrap;
 }
 
@@ -289,7 +294,7 @@
   padding: 0;
   list-style: none;
   font-size: .78rem;
-  color: var(--text-muted);
+  color: var(--stats-ink-2);
 }
 
 .stats-legend li {
@@ -336,7 +341,7 @@
   top: var(--y, 0%);
   transform: translateY(-50%);
   font-size: .7rem;
-  color: var(--text-muted);
+  color: var(--stats-ink-2);
   font-variant-numeric: tabular-nums;
 }
 
@@ -462,7 +467,7 @@
   display: flex;
   align-items: center;
   gap: .35rem;
-  color: var(--text-muted);
+  color: var(--stats-ink-2);
 }
 
 .backlog-tip b {
@@ -482,7 +487,7 @@
   top: 0;
   transform: translateX(-50%);
   font-size: .7rem;
-  color: var(--text-muted);
+  color: var(--stats-ink-2);
   white-space: nowrap;
 }
 
@@ -553,7 +558,7 @@
   left: .3rem;
   font-size: .68rem;
   font-weight: 500;
-  color: var(--text-muted);
+  color: var(--stats-ink-2);
 }
 
 /* La media, marcada con una guía llena y su cifra: es la referencia contra la que se lee todo lo demás. */
@@ -570,7 +575,7 @@
   top: -.1rem;
   left: .3rem;
   font-size: .7rem;
-  color: var(--text-muted);
+  color: var(--stats-ink-2);
   font-variant-numeric: tabular-nums;
 }
 
@@ -607,7 +612,7 @@
   text-overflow: ellipsis;
   white-space: nowrap;
   font-size: .7rem;
-  color: var(--text-muted);
+  color: var(--stats-ink-2);
   pointer-events: none;
   animation: fade-in .5s ease-out .7s both;
 }
@@ -638,7 +643,7 @@
   position: absolute;
   transform: translateX(-50%);
   font-size: .7rem;
-  color: var(--text-muted);
+  color: var(--stats-ink-2);
   white-space: nowrap;
 }
 
@@ -691,7 +696,7 @@
   animation: fade-in .5s ease-out .4s both;
 }
 
-.polar-label-num { fill: var(--text-muted); font-weight: 500; }
+.polar-label-num { fill: var(--stats-ink-2); font-weight: 500; }
 
 /* ---- Mancuernas (terminados frente a abandonados) ------------------------------------------------------ */
 
@@ -773,14 +778,15 @@
   bottom: calc(100% + 3px);
   transform: translateX(-50%);
   font-size: .66rem;
-  color: var(--text-muted);
+  color: var(--stats-ink-2);
   font-variant-numeric: tabular-nums;
 }
 
 .dumbbell-rate {
   font-size: .78rem;
   font-weight: 600;
-  color: var(--stats-v);
+  /* Mismo motivo que los deltas de "Dónde brillas": el rojo puro a este cuerpo no llega al 4,5:1 en claro. */
+  color: color-mix(in oklch, var(--stats-v) 62%, var(--text));
   font-variant-numeric: tabular-nums;
 }
 
@@ -857,7 +863,7 @@
   min-width: 1rem;
   font-size: .72rem;
   font-weight: 700;
-  color: var(--text-dim);
+  color: var(--stats-ink-2);
   font-variant-numeric: tabular-nums;
 }
 
@@ -913,7 +919,7 @@
   left: .25rem;
   font-size: .68rem;
   font-weight: 500;
-  color: var(--text-muted);
+  color: var(--stats-ink-2);
 }
 
 /* Los puntos se reparten en carriles a ambos lados del eje: las altas del mismo día no se tapan. */
@@ -944,7 +950,7 @@
   display: flex;
   justify-content: space-between;
   font-size: .72rem;
-  color: var(--text-muted);
+  color: var(--stats-ink-2);
 }
 
 .timeline-list {
@@ -974,7 +980,7 @@
 .timeline-since {
   flex: 0 0 auto;
   font-size: .74rem;
-  color: var(--text-muted);
+  color: var(--stats-ink-2);
 }
 
 /* ---- Figura de géneros (hexágono) --------------------------------------------------------------------- */
@@ -1054,7 +1060,7 @@
 }
 
 .genre-radar-label-num {
-  fill: var(--text-muted);
+  fill: var(--stats-ink-2);
   font-weight: 500;
 }
 
@@ -1121,7 +1127,7 @@
 }
 
 .gauge-number {
-  fill: var(--text-muted);
+  fill: var(--stats-ink-2);
   font-size: 10px;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
@@ -1181,7 +1187,7 @@
 
 .gauge-sub-label {
   font-size: .74rem;
-  color: var(--text-muted);
+  color: var(--stats-ink-2);
 }
 
 /* Pie del bloque: la frase del juego que le da nombre a lo que se está mirando. */
@@ -1189,7 +1195,7 @@
   margin: 0;
   font-size: .78rem;
   font-style: italic;
-  color: var(--text-muted);
+  color: var(--stats-ink-2);
   text-align: center;
   max-width: 24rem;
 }
@@ -1205,7 +1211,7 @@
 
 .gauge-hero-unit {
   font-size: 20px;
-  fill: var(--text-muted);
+  fill: var(--stats-ink-2);
 }
 
 .ratio-legend {
@@ -1224,7 +1230,7 @@
   font-size: .85rem;
 }
 
-.ratio-legend-label { color: var(--text-muted); }
+.ratio-legend-label { color: var(--stats-ink-2); }
 
 .ratio-dot {
   width: .7rem;
@@ -1309,9 +1315,12 @@
   text-transform: uppercase;
 }
 
-.podium-step.is-gold .podium-medal { color: var(--medal-gold); }
-.podium-step.is-silver .podium-medal { color: var(--medal-silver); }
-.podium-step.is-bronze .podium-medal { color: var(--medal-bronze); }
+/* El metal, mezclado con el color de texto: el ámbar puro sobre la tarjeta clara se queda en 3,2:1 y esto es
+   un rótulo de diez píxeles. La mezcla lo oscurece en claro y lo aclara en oscuro, y sigue leyéndose como oro,
+   plata o bronce. */
+.podium-step.is-gold .podium-medal { color: color-mix(in oklch, var(--medal-gold) 55%, var(--text)); }
+.podium-step.is-silver .podium-medal { color: color-mix(in oklch, var(--medal-silver) 55%, var(--text)); }
+.podium-step.is-bronze .podium-medal { color: color-mix(in oklch, var(--medal-bronze) 55%, var(--text)); }
 
 .podium-name {
   position: relative;
@@ -1328,17 +1337,19 @@
   flex-wrap: wrap;
   gap: .5rem;
   font-size: .76rem;
-  color: var(--text-muted);
+  color: var(--stats-ink-2);
 }
 
-/* Marca de rejugado: entre dos notas iguales, volver a un juego es lo que decide el puesto, así que se ve. */
+/* Marca de rejugado: entre dos notas iguales, volver a un juego es lo que decide el puesto, así que se ve.
+   Va en pastilla tenue y no en bloque de acento sólido: con el acento relleno, el texto se quedaba en 2,8:1
+   sobre el azul claro del tema oscuro. */
 .podium-replays {
   font-size: .72rem;
   font-weight: 700;
   padding: .05rem .3rem;
   border-radius: var(--radius-pill);
-  color: var(--on-accent);
-  background: var(--steam);
+  color: color-mix(in oklch, var(--steam) 55%, var(--text));
+  background: color-mix(in srgb, var(--steam) 18%, transparent);
 }
 
 /* El resto del top, con la misma receta: puesto al fondo y una barra de nota al pie. Puestas en rejilla, las
@@ -1376,9 +1387,11 @@
   font-weight: 800;
   line-height: 1;
   letter-spacing: -.04em;
-  color: var(--text-muted);
+  color: var(--text);
   font-variant-numeric: tabular-nums;
-  opacity: .16;
+  /* A .16 el número era una sombra: y es la única vía VISUAL al puesto de cada ficha, así que tiene que
+     leerse (por encima de 3:1, que es el mínimo para una cifra de este cuerpo). */
+  opacity: .55;
   pointer-events: none;
 }
 
@@ -1481,7 +1494,17 @@
   animation: fade-in .5s ease-out .45s both;
 }
 
-.burst-label.is-inside { fill: var(--on-accent); }
+/* El rótulo que va DENTRO de la pieza no puede fiarse de un color fijo: las piezas recorren toda la rampa del
+   tema y lo que se lee sobre el magenta oscuro desaparece sobre el cian claro (en Sin futuro, con el texto
+   blanco de su modo claro, se quedaba en 2,8:1). Con un contorno pintado por debajo del relleno, el rótulo
+   mantiene su contraste sobre cualquier color de la rampa, en cualquier tema. */
+.burst-label.is-inside {
+  fill: #fff;
+  stroke: rgba(0, 0, 0, .62);
+  stroke-width: 3px;
+  stroke-linejoin: round;
+  paint-order: stroke fill;
+}
 .burst-num { font-weight: 800; }
 
 /* ---- Anillo repartido con el total dentro ---------------------------------------------------------------- */
@@ -1529,7 +1552,7 @@
 }
 
 .donut-share-center b { font-size: 1.5rem; font-weight: 700; }
-.donut-share-center small { font-size: .68rem; color: var(--text-muted); }
+.donut-share-center small { font-size: .68rem; color: var(--stats-ink-2); }
 
 .donut-legend {
   display: flex;
@@ -1569,7 +1592,7 @@
 }
 
 .donut-legend b { font-variant-numeric: tabular-nums; }
-.donut-legend small { color: var(--text-muted); font-size: .72rem; font-variant-numeric: tabular-nums; }
+.donut-legend small { color: var(--stats-ink-2); font-size: .72rem; font-variant-numeric: tabular-nums; }
 
 /* ---- Dónde brillas: filas con la barra al fondo --------------------------------------------------------- */
 
@@ -1644,7 +1667,7 @@
 .shine-count {
   position: relative;
   font-size: .72rem;
-  color: var(--text-dim);
+  color: var(--stats-ink-2);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
@@ -1669,13 +1692,16 @@
   border-radius: var(--radius-pill);
 }
 
+/* El verde y el rojo puros sobre su propia pastilla se quedan en 3:1 en el tema claro, y esto es una cifra de
+   once píxeles: se mezclan con el color de texto, que los oscurece en claro y los aclara en oscuro sin que
+   dejen de leerse como "por encima" y "por debajo". */
 .shine-value em.is-over {
-  color: var(--stats-c);
+  color: color-mix(in oklch, var(--stats-c) 62%, var(--text));
   background: color-mix(in srgb, var(--stats-c) 16%, transparent);
 }
 
 .shine-value em.is-under {
-  color: var(--stats-v);
+  color: color-mix(in oklch, var(--stats-v) 62%, var(--text));
   background: color-mix(in srgb, var(--stats-v) 16%, transparent);
 }
 
@@ -1697,7 +1723,7 @@
   height: 1.1rem;
   margin: .25rem 0 0;
   font-size: .7rem;
-  color: var(--text-muted);
+  color: var(--stats-ink-2);
 }
 
 .shine-note span {
@@ -1754,7 +1780,7 @@
 .dot-matrix-dots em {
   font-size: .7rem;
   font-style: normal;
-  color: var(--text-muted);
+  color: var(--stats-ink-2);
 }
 
 .dot-matrix-num {
@@ -1768,7 +1794,7 @@
   flex-wrap: wrap;
   gap: .3rem 1.4rem;
   font-size: .82rem;
-  color: var(--text-muted);
+  color: var(--stats-ink-2);
 }
 
 .top-figures b {
@@ -1807,7 +1833,7 @@
   min-width: 1.35rem;
   font-size: .74rem;
   font-weight: 700;
-  color: var(--text-dim);
+  color: var(--stats-ink-2);
   font-variant-numeric: tabular-nums;
   text-align: right;
 }
@@ -1823,7 +1849,7 @@
 .game-ref-meta {
   flex: 0 0 auto;
   font-size: .76rem;
-  color: var(--text-muted);
+  color: var(--stats-ink-2);
   font-variant-numeric: tabular-nums;
 }
 
@@ -1887,7 +1913,7 @@
 .stats-empty,
 .stats-note {
   font-size: .8rem;
-  color: var(--text-muted);
+  color: var(--stats-ink-2);
   margin: 0;
   line-height: 1.4;
 }
