@@ -5,6 +5,7 @@ import { loadIndexedDbState, saveIndexedDbState } from './indexedDbRepository';
 import { TAB_IDS, type GameItem, type StoragePayload, type TabData, type TabId } from '../types/game';
 import { clampRating } from '../../core/utils/normalize';
 import { clampGrade } from '../../core/utils/scoreScale';
+import { runWhenIdle } from '../../core/utils/idle';
 
 const EMPTY_DATA: TabData = { c: [], v: [], e: [], p: [], deleted: [], updatedAt: 0 };
 
@@ -185,6 +186,12 @@ export function normalizeData(data: TabData, options?: NormalizeDataOptions): Ta
 }
 
 export function loadLocalState(): StoragePayload {
+  // Lo pendiente de volcar es MÁS NUEVO que lo que hay en disco: servirlo desde memoria hace que la escritura
+  // diferida sea invisible para el lector (ver la nota de `saveLocalState`).
+  if (pendingState) {
+    return pendingState;
+  }
+
   for (const key of [STORAGE_KEY, ...LEGACY_STORAGE_KEYS]) {
     try {
       const raw = localStorage.getItem(key);
@@ -218,6 +225,11 @@ export function loadLocalState(): StoragePayload {
 
 /** Lee y parsea el RAW de localStorage (clave actual) para el detector de auto-upgrade (sin normalizar). */
 function readRawLocalStorage(): unknown {
+  // Mismo motivo que en `loadLocalState`: si hay algo pendiente, ESE es el estado actual. Además ya viene
+  // estampado con `schemaVersion`, así que el detector no lo confundirá con un formato viejo.
+  if (pendingState) {
+    return pendingState;
+  }
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     return raw ? (JSON.parse(raw) as unknown) : null;
@@ -264,16 +276,91 @@ export async function loadLocalStateAsync(): Promise<{ payload: StoragePayload; 
   return { payload: indexedState.updatedAt > localPayload.updatedAt ? indexedState : localPayload, wasLegacy };
 }
 
+/* ── Escritura diferida a localStorage ───────────────────────────────────────────────────────────────────────
+ *
+ * EL PROBLEMA: `saveLocalState` corre en CADA edición y en cada persistencia del ciclo de sync, y hacía
+ * `JSON.stringify` de la BIBLIOTECA ENTERA seguido de un `setItem` — las dos cosas síncronas y en el hilo
+ * principal, con un coste proporcional al número de juegos. Es decir, el usuario pagaba la serialización
+ * completa de su colección en el mismo fotograma en el que pulsaba "Guardar".
+ *
+ * LA SOLUCIÓN: IndexedDB se sigue escribiendo INMEDIATAMENTE (es asíncrono y no bloquea), y la copia de
+ * localStorage se aplaza a un hueco ocioso. Varias ediciones seguidas se funden en una sola escritura.
+ *
+ * LAS DOS TRAMPAS, Y CÓMO SE CIERRAN:
+ *
+ *  1) Perder la última edición al cerrar la pestaña. Se vuelca de forma SÍNCRONA en `pagehide` y en
+ *     `visibilitychange` a oculto (este último es el que sí dispara de forma fiable en móvil). `setItem` es
+ *     síncrono, así que es seguro hacerlo ahí.
+ *
+ *  2) Que alguien lea localStorage y vea el estado viejo. Se evita sirviendo el pendiente desde memoria: los
+ *     lectores (`loadLocalState`, el detector de formato legacy) consultan primero `pendingState`. Para todo
+ *     el que lea a través de este módulo, el aplazamiento es INVISIBLE — que es justo lo que hace que este
+ *     cambio no toque la semántica de arranque ni la precedencia entre localStorage e IndexedDB.
+ */
+let pendingState: StoragePayload | null = null;
+let cancelScheduledFlush: (() => void) | null = null;
+let flushListenersAttached = false;
+
+let quotaWarningShown = false;
+
+function writeToLocalStorageNow(payload: StoragePayload): void {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+  } catch (error) {
+    // Cuota u otro fallo de almacenamiento: IndexedDB ya tiene el dato y `loadLocalStateAsync` prefiere el más
+    // reciente por `updatedAt`, así que el estado sobrevive igualmente y la app sigue funcionando.
+    //
+    // Pero AVISAR una vez importa: hasta ahora esto se tragaba en silencio, así que una biblioteca que hubiera
+    // rebasado el tope de ~5 MB del origen habría dejado de escribir esta copia sin que nadie se enterara nunca.
+    // Que degrade bien no quita que haya que poder diagnosticarlo.
+    if (!quotaWarningShown) {
+      quotaWarningShown = true;
+      const motivo = error instanceof Error ? error.name || error.message : 'desconocido';
+      console.warn(
+        `[estado local] no se pudo escribir la copia de localStorage (${motivo}). ` +
+          'IndexedDB conserva el estado y la app sigue funcionando; suele significar que la biblioteca ha superado el tope del navegador.',
+      );
+    }
+  }
+}
+
+/** Vuelca YA lo que quede pendiente. Idempotente: sin nada pendiente no hace nada. */
+export function flushLocalState(): void {
+  cancelScheduledFlush?.();
+  cancelScheduledFlush = null;
+  if (pendingState) {
+    const payload = pendingState;
+    pendingState = null;
+    writeToLocalStorageNow(payload);
+  }
+}
+
+/** Se enganchan una sola vez y solo cuando de verdad hay algo que guardar (importar el módulo no debe tener efectos). */
+function attachFlushListeners(): void {
+  if (flushListenersAttached || typeof window === 'undefined') {
+    return;
+  }
+  flushListenersAttached = true;
+  window.addEventListener('pagehide', flushLocalState);
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') {
+      flushLocalState();
+    }
+  });
+}
+
 export function saveLocalState(payload: StoragePayload): void {
   // Estampa la versión del esquema: marca el estado como "nuevo" para que el auto-upgrade no se repita.
   const stamped: StoragePayload = { ...payload, schemaVersion: LOCAL_SCHEMA_VERSION };
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(stamped));
-  } catch {
-    // Ignore quota/storage errors and rely on IndexedDB fallback.
-  }
 
+  // IndexedDB, inmediato: es la copia que de verdad aguanta el crecimiento de la biblioteca (sin el tope de
+  // ~5 MB del origen) y su escritura no bloquea el hilo principal.
   void saveIndexedDbState(stamped);
+
+  pendingState = stamped;
+  attachFlushListeners();
+  cancelScheduledFlush?.();
+  cancelScheduledFlush = runWhenIdle(flushLocalState);
 }
 
 export function parseImportedData(rawText: string): TabData {
