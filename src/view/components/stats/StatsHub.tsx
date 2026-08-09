@@ -7,12 +7,13 @@ import { YearChart } from './YearChart';
 import { YearPanel } from './YearPanel';
 import { GenreRadar } from './GenreRadar';
 import { GradeHistogram } from './GradeHistogram';
-import { BacklogChart } from './BacklogChart';
-import { TagBars } from './TagBars';
+import { BacklogArea } from './BacklogArea';
+import { Treemap } from './Treemap';
 import { RatioDonut } from './RatioDonut';
 import { ShameCard } from './ShameCard';
 import { WishlistCard } from './WishlistCard';
-import { formatCount, formatDecimal, formatHours } from './format';
+import { CountUp } from './CountUp';
+import { formatDecimal, formatHours } from './format';
 import type { TabData } from '../../../model/types/game';
 // La hoja del panel se importa AQUÍ y no desde `index.scss`: como el hub entra por `lazy()`, Vite emite su CSS
 // en el mismo chunk perezoso y el arranque no carga ni un byte de estilos de esta pantalla.
@@ -60,18 +61,18 @@ export const StatsHub = memo(function StatsHub({ games }: { games: TabData }) {
             <div className="stats-tiles">
               <StatTile
                 label={L.tiles.games}
-                value={formatCount(stats.totalGames)}
+                value={<CountUp value={stats.totalGames} />}
                 hint={L.tiles.gamesHint(counts.e, counts.p)}
               />
               <StatTile
                 label={L.tiles.hours}
-                value={formatHours(stats.totalHours)}
+                value={<CountUp value={stats.totalHours} format={formatHours} />}
                 unit="h"
                 hint={L.tiles.hoursHint(formatHours(stats.completedHours))}
               />
               <StatTile
                 label={L.tiles.avgGrade}
-                value={stats.scored.count ? formatDecimal(avgInScale) : L.tiles.noData}
+                value={stats.scored.count ? <CountUp value={avgInScale} format={formatDecimal} /> : L.tiles.noData}
                 unit={stats.scored.count ? (scale === 'grade' ? L.tiles.outOf100 : L.tiles.outOf5) : undefined}
                 hint={stats.scored.count ? L.tiles.avgGradeHint(stats.scored.count) : undefined}
               />
@@ -106,7 +107,7 @@ export const StatsHub = memo(function StatsHub({ games }: { games: TabData }) {
             {/* En cuanto el histórico real tiene puntos suficientes, sustituye a la curva derivada; hasta
                 entonces se enseña la aproximación, dicha como tal en el pie del gráfico. */}
             <p className="stats-card-sub">{vm.hasRealHistory ? L.backlog.realSubtitle : L.backlog.derivedSubtitle}</p>
-            <BacklogChart
+            <BacklogArea
               points={vm.hasRealHistory ? vm.history : stats.arrivals}
               mode={vm.hasRealHistory ? 'real' : 'derived'}
             />
@@ -121,7 +122,7 @@ export const StatsHub = memo(function StatsHub({ games }: { games: TabData }) {
           <div className="stats-card stats-card-half">
             <h2>{L.genres.title}</h2>
             <p className="stats-card-sub">{L.genres.subtitle}</p>
-            <TagBars tags={stats.genres} />
+            <Treemap tags={stats.genres} />
           </div>
 
           <div className="stats-card">

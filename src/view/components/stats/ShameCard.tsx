@@ -2,9 +2,11 @@ import { memo, type CSSProperties } from 'react';
 import { UI_MESSAGES } from '../../../core/constants/labels';
 import { ABANDON_RATE_MIN } from '../../../core/stats/computeStats';
 import { StatTile } from './StatTile';
+import { CountUp } from './CountUp';
 import { TagBars } from './TagBars';
+import { TagChips } from './TagChips';
 import { GameRefList } from './GameRefList';
-import { formatCount, formatDecimal, formatHours, formatPercent } from './format';
+import { formatDecimal, formatHours, formatPercent } from './format';
 import type { ShameSummary } from '../../../core/stats/types';
 import type { ScoreScale } from '../../../core/utils/scoreScale';
 
@@ -13,6 +15,9 @@ const L = UI_MESSAGES.stats.shame;
 /**
  * Apartado de la lista de la vergüenza. Vive solo en "General": los abandonos no llevan año (el formulario no
  * pide "Años completado" fuera de completados), así que no se pueden repartir por pestaña.
+ *
+ * Las razones van en nube de etiquetas y el índice de abandono en barras de porcentaje —no de recuento—, para
+ * que el apartado no sea otra tanda de barras iguales a las de arriba.
  */
 export const ShameCard = memo(function ShameCard({ shame, scale }: { shame: ShameSummary; scale: ScoreScale }) {
   if (shame.total === 0) {
@@ -24,23 +29,23 @@ export const ShameCard = memo(function ShameCard({ shame, scale }: { shame: Sham
   return (
     <>
       <div className="stats-tiles">
-        <StatTile label={L.total} value={formatCount(shame.total)} />
-        <StatTile label={L.hours} value={formatHours(shame.hours)} unit="h" />
+        <StatTile label={L.total} value={<CountUp value={shame.total} />} />
+        <StatTile label={L.hours} value={<CountUp value={shame.hours} format={formatHours} />} unit="h" />
         {shame.scored > 0 ? (
           <StatTile
             label={L.avgGrade}
-            value={formatDecimal(avgInScale)}
+            value={<CountUp value={avgInScale} format={formatDecimal} />}
             unit={scale === 'grade' ? UI_MESSAGES.stats.tiles.outOf100 : UI_MESSAGES.stats.tiles.outOf5}
             hint={UI_MESSAGES.stats.tiles.avgGradeHint(shame.scored)}
           />
         ) : null}
-        <StatTile label={L.retry} value={formatCount(shame.retry)} />
+        <StatTile label={L.retry} value={<CountUp value={shame.retry} />} />
       </div>
 
       <div className="stats-split">
         <section>
           <h3>{L.reasons}</h3>
-          {shame.reasons.length ? <TagBars tags={shame.reasons} limit={6} /> : <p className="stats-empty">{L.noReasons}</p>}
+          {shame.reasons.length ? <TagChips tags={shame.reasons} tone="danger" /> : <p className="stats-empty">{L.noReasons}</p>}
         </section>
         <section>
           <h3>{L.genres}</h3>
@@ -51,14 +56,12 @@ export const ShameCard = memo(function ShameCard({ shame, scale }: { shame: Sham
       {shame.abandonRate.length ? (
         <section>
           <h3>{L.rate}</h3>
-          <ul className="stats-bars">
-            {shame.abandonRate.map((entry) => (
-              <li className="stats-bar-row" key={entry.tag}>
-                <span className="stats-bar-label" title={entry.tag}>{entry.tag}</span>
-                <span className="stats-bar-track">
-                  <span className="stats-bar-fill is-danger" style={{ '--bar-width': `${entry.percent}%` } as CSSProperties} />
-                </span>
-                <span className="stats-bar-value">{L.rateValue(formatPercent(entry.percent), entry.abandoned, entry.decided)}</span>
+          <ul className="rate-list">
+            {shame.abandonRate.map((entry, index) => (
+              <li key={entry.tag} style={{ '--i': index, '--rate': `${entry.percent}%` } as CSSProperties}>
+                <span className="rate-tag" title={entry.tag}>{entry.tag}</span>
+                <span className="rate-track"><span className="rate-fill" /></span>
+                <span className="rate-value">{L.rateValue(formatPercent(entry.percent), entry.abandoned, entry.decided)}</span>
               </li>
             ))}
           </ul>

@@ -39,6 +39,26 @@ if (typeof globalThis.IntersectionObserver === 'undefined') {
   globalThis.IntersectionObserver = IntersectionObserverStub as unknown as typeof IntersectionObserver;
 }
 
+// jsdom responde `matches: false` a todo, así que los componentes que consultan `prefers-reduced-motion` se
+// comportan como si el usuario quisiera animación: el panel de estadísticas contaría sus cifras desde cero con
+// `requestAnimationFrame` y una aserción síncrona leería un valor intermedio. Se fuerza la preferencia de MENOS
+// movimiento, que es la variante determinista: los componentes pintan su estado final desde el primer render.
+const realMatchMedia = window.matchMedia?.bind(window);
+window.matchMedia = ((query: string) => {
+  const matches = query.includes('prefers-reduced-motion');
+  const list = realMatchMedia?.(query);
+  return list ? Object.create(list, { matches: { value: matches } }) : {
+    matches,
+    media: query,
+    onchange: null,
+    addEventListener() {},
+    removeEventListener() {},
+    addListener() {},
+    removeListener() {},
+    dispatchEvent: () => false,
+  };
+}) as typeof window.matchMedia;
+
 afterEach(() => {
   cleanup();
 });

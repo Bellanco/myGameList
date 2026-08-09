@@ -14,8 +14,12 @@ interface GradeHistogramProps {
 }
 
 /**
- * Histograma de notas, una fila por tramo. Cada barra se colorea con el MISMO tono rojo→verde que el aro de
- * puntuación (`hueFromGrade`), así que el gradiente del panel y el de la tabla dicen lo mismo.
+ * Histograma de notas en COLUMNAS, que es la forma canónica de un histograma: el eje de la nota va de peor a
+ * mejor de izquierda a derecha y la altura es la frecuencia, así que la silueta se lee como una distribución.
+ * En barras horizontales había que reconstruir ese orden leyendo etiquetas.
+ *
+ * Cada columna lleva el tono rojo→verde del aro de puntuación (`hueFromGrade`), así que el color dice la nota
+ * en todo el panel y no solo aquí.
  */
 export const GradeHistogram = memo(function GradeHistogram({ grades, scale }: GradeHistogramProps) {
   const total = grades.reduce((sum, bucket) => sum + bucket.count, 0);
@@ -26,28 +30,29 @@ export const GradeHistogram = memo(function GradeHistogram({ grades, scale }: Gr
   const max = grades.reduce((top, bucket) => Math.max(top, bucket.count), 0);
 
   return (
-    <ul className="stats-bars" aria-label={L.chartAria}>
-      {/* De más nota a menos: se lee como un ranking, con lo mejor arriba. */}
-      {[...grades].reverse().map((bucket) => {
+    <div className="grade-chart">
+      {grades.map((bucket, index) => {
         const label = scale === 'grade' ? L.gradeLabel(bucket.floor, bucket.ceiling) : L.starsLabel(bucket.stars);
         // Tono del PUNTO MEDIO del tramo: el suelo del tramo de 5★ es 90 y pintarlo con ese tono dejaría el
         // mejor tramo más apagado que la nota que representa.
         const hue = hueFromGrade((bucket.floor + bucket.ceiling) / 2);
         return (
-          <li className="stats-bar-row" key={bucket.stars}>
-            <span className="stats-bar-label">{label}</span>
-            <span className="stats-bar-track">
-              <span
-                className="stats-bar-fill"
-                style={{ '--bar-width': `${max > 0 ? (bucket.count / max) * 100 : 0}%`, '--bar-hue': String(hue) } as CSSProperties}
-              />
+          <div
+            className="grade-col"
+            key={bucket.stars}
+            style={{ '--i': index, '--bar-hue': String(hue) } as CSSProperties}
+          >
+            <span className="grade-col-value" aria-hidden="true">{formatCount(bucket.count)}</span>
+            <div className="grade-col-track">
+              <div className="grade-col-bar" style={{ '--bar-height': `${max > 0 ? (bucket.count / max) * 100 : 0}%` } as CSSProperties} />
+            </div>
+            <span className="grade-col-label" aria-hidden="true">
+              {scale === 'grade' ? label : '★'.repeat(bucket.stars)}
             </span>
-            {/* El número se oculta al lector y se anuncia con su unidad ("12 juegos"), para no leer "12 12". */}
-            <span className="stats-bar-value" aria-hidden="true">{formatCount(bucket.count)}</span>
-            <span className="sr-only">{L.countLabel(bucket.count)}</span>
-          </li>
+            <span className="sr-only">{`${label}: ${L.countLabel(bucket.count)}`}</span>
+          </div>
         );
       })}
-    </ul>
+    </div>
   );
 });

@@ -1,11 +1,12 @@
 import { memo } from 'react';
 import { UI_MESSAGES } from '../../../core/constants/labels';
 import { StatTile } from './StatTile';
+import { CountUp } from './CountUp';
 import { GenreRadar } from './GenreRadar';
 import { GradeHistogram } from './GradeHistogram';
 import { TagBars } from './TagBars';
 import { GameRefList } from './GameRefList';
-import { formatCount, formatDecimal, formatHours } from './format';
+import { formatDecimal, formatHours } from './format';
 import type { YearSummary } from '../../../core/stats/types';
 import type { ScoreScale } from '../../../core/utils/scoreScale';
 
@@ -22,12 +23,12 @@ export const YearPanel = memo(function YearPanel({ summary, scale }: { summary: 
     <>
       <div className="stats-card stats-card-tiles">
         <div className="stats-tiles">
-          <StatTile label={L.year.completed} value={formatCount(summary.completed)} />
-          <StatTile label={L.year.hours} value={formatHours(summary.hours)} unit="h" />
+          <StatTile label={L.year.completed} value={<CountUp value={summary.completed} />} />
+          <StatTile label={L.year.hours} value={<CountUp value={summary.hours} format={formatHours} />} unit="h" />
           {summary.scored > 0 ? (
             <StatTile
               label={L.year.avgGrade}
-              value={formatDecimal(avgInScale)}
+              value={<CountUp value={avgInScale} format={formatDecimal} />}
               unit={scale === 'grade' ? L.tiles.outOf100 : L.tiles.outOf5}
               hint={L.tiles.avgGradeHint(summary.scored)}
             />
@@ -36,7 +37,16 @@ export const YearPanel = memo(function YearPanel({ summary, scale }: { summary: 
             <StatTile
               label={L.year.best}
               value={<span className="stat-tile-text">{summary.best.name}</span>}
-              hint={summary.longest && summary.longest.hours > 0 ? L.tiles.longestHint(formatHours(summary.longest.hours)) : undefined}
+              // Las horas son las SUYAS: antes se colaban aquí las del juego más largo del año, que casi nunca
+              // es el mismo y hacía que la tarjeta dijera una cosa y mostrara otra.
+              hint={summary.best.hours > 0 ? L.tiles.longestHint(formatHours(summary.best.hours)) : undefined}
+            />
+          ) : null}
+          {summary.longest && summary.longest.id !== summary.best?.id ? (
+            <StatTile
+              label={L.tiles.longest}
+              value={<span className="stat-tile-text">{summary.longest.name}</span>}
+              hint={L.tiles.longestHint(formatHours(summary.longest.hours))}
             />
           ) : null}
         </div>

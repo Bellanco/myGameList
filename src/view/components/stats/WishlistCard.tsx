@@ -2,9 +2,12 @@ import { memo } from 'react';
 import { UI_MESSAGES } from '../../../core/constants/labels';
 import { STATS_SHORTLIST } from '../../../core/stats/computeStats';
 import { StatTile } from './StatTile';
+import { CountUp } from './CountUp';
+import { TagChips } from './TagChips';
 import { TagBars } from './TagBars';
+import { WaitingList } from './WaitingList';
 import { GameRefList } from './GameRefList';
-import { formatCount, formatDecimal } from './format';
+import { formatDecimal } from './format';
 import type { WishlistSummary } from '../../../core/stats/types';
 import type { ScoreScale } from '../../../core/utils/scoreScale';
 
@@ -24,22 +27,22 @@ export const WishlistCard = memo(function WishlistCard({ wishlist, scale }: { wi
   return (
     <>
       <div className="stats-tiles">
-        <StatTile label={L.total} value={formatCount(wishlist.total)} />
+        <StatTile label={L.total} value={<CountUp value={wishlist.total} />} />
         {wishlist.interest.count > 0 ? (
           <StatTile
             label={L.interest}
-            value={formatDecimal(avgInScale)}
+            value={<CountUp value={avgInScale} format={formatDecimal} />}
             unit={scale === 'grade' ? UI_MESSAGES.stats.tiles.outOf100 : UI_MESSAGES.stats.tiles.outOf5}
             hint={L.interestHint(wishlist.interest.count)}
           />
         ) : null}
-        {wishlist.deck > 0 ? <StatTile label={L.deck} value={formatCount(wishlist.deck)} /> : null}
+        {wishlist.deck > 0 ? <StatTile label={L.deck} value={<CountUp value={wishlist.deck} />} /> : null}
       </div>
 
       <div className="stats-split">
         <section>
           <h3>{L.genres}</h3>
-          <TagBars tags={wishlist.genres} limit={6} />
+          <TagChips tags={wishlist.genres} />
         </section>
         <section>
           <h3>{L.platforms}</h3>
@@ -47,20 +50,19 @@ export const WishlistCard = memo(function WishlistCard({ wishlist, scale }: { wi
         </section>
       </div>
 
-      <div className="stats-split">
+      <section>
+        <h3>{L.oldest}</h3>
+        <WaitingList games={wishlist.oldest} reference={wishlist.recent[0]?.at ?? 0} />
+      </section>
+
+      {/* Con una lista corta, "los últimos en llegar" serían los mismos juegos en orden inverso: enseñar dos
+          veces lo mismo hace parecer que hay más información de la que hay. */}
+      {wishlist.total > STATS_SHORTLIST ? (
         <section>
-          <h3>{L.oldest}</h3>
-          <GameRefList games={wishlist.oldest} meta="since" />
+          <h3>{L.recent}</h3>
+          <GameRefList games={wishlist.recent} meta="since" />
         </section>
-        {/* Con una lista corta, "los últimos en llegar" serían los mismos juegos en orden inverso: enseñar dos
-            veces lo mismo hace parecer que hay más información de la que hay. */}
-        {wishlist.total > STATS_SHORTLIST ? (
-          <section>
-            <h3>{L.recent}</h3>
-            <GameRefList games={wishlist.recent} meta="since" />
-          </section>
-        ) : null}
-      </div>
+      ) : null}
     </>
   );
 });

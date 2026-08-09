@@ -206,6 +206,10 @@
   background: linear-gradient(180deg, var(--steam) 0%, rgba(var(--steam-rgb), .5) 100%);
   box-shadow: 0 0 12px rgba(var(--steam-rgb), .25);
   transition: height .3s cubic-bezier(.22, 1, .36, 1);
+  /* Crece desde la base en cascada, igual que el histograma de notas. */
+  transform-origin: bottom center;
+  animation: grow-up .7s cubic-bezier(.22, 1, .36, 1) both;
+  animation-delay: calc(var(--i, 0) * 45ms);
 }
 
 /* El cajón "sin año" no es un año más: se pinta apagado y rayado para que no se lea como parte de la serie. */
@@ -221,7 +225,7 @@
   white-space: nowrap;
 }
 
-/* ---- Evolución del backlog (columnas apiladas por mes) ------------------------------------------------ */
+/* ---- Evolución del backlog (área apilada acumulada) ---------------------------------------------------- */
 
 .stats-legend {
   display: flex;
@@ -244,6 +248,7 @@
   width: .6rem;
   height: .6rem;
   border-radius: 3px;
+  flex: 0 0 auto;
 }
 
 .stats-legend-dot.is-c { background: var(--stats-c); }
@@ -251,61 +256,286 @@
 .stats-legend-dot.is-e { background: var(--stats-e); }
 .stats-legend-dot.is-p { background: var(--stats-p); }
 
-.month-chart {
+.backlog {
   display: flex;
-  align-items: flex-end;
-  gap: .25rem;
-  overflow-x: auto;
-  padding-bottom: .2rem;
-}
-
-.month-col {
-  display: flex;
-  flex: 1 1 1.4rem;
   flex-direction: column;
-  align-items: center;
-  gap: .3rem;
-  min-width: 1.4rem;
-  max-width: 3rem;
+  gap: .6rem;
 }
 
-.month-col-track {
-  display: flex;
-  align-items: flex-end;
+/* El lienzo se estira a lo ancho y a una altura FIJA; los ejes son HTML alrededor. Con los rótulos dentro del
+   SVG, estirarlo agrandaba los años y engordaba los trazos. */
+.backlog-plot {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: .5rem;
+}
+
+.backlog-yaxis {
+  position: relative;
+  width: 2.2rem;
+  height: 13rem;
+}
+
+.backlog-ytick {
+  position: absolute;
+  right: 0;
+  top: var(--y, 0%);
+  transform: translateY(-50%);
+  font-size: .7rem;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.backlog-canvas {
+  position: relative;
+  height: 13rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.backlog-gridline {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: var(--y, 0%);
+  border-top: 1px dashed var(--border);
+  opacity: .55;
+}
+
+.backlog-svg {
+  position: absolute;
+  inset: 0;
   width: 100%;
-  height: 7.5rem;
-  border-radius: 5px;
-  background: var(--score-track);
-}
-
-.month-col-stack {
-  display: flex;
-  flex-direction: column-reverse;
-  width: 100%;
-  border-radius: 5px;
-  overflow: hidden;
-  transition: height .3s cubic-bezier(.22, 1, .36, 1);
-}
-
-.month-col-seg {
+  height: 100%;
   display: block;
-  height: var(--seg, 0%);
-  width: 100%;
 }
 
-.month-col-seg.is-c { background: var(--stats-c); }
-.month-col-seg.is-v { background: var(--stats-v); }
-.month-col-seg.is-e { background: var(--stats-e); }
-.month-col-seg.is-p { background: var(--stats-p); }
+.backlog-line {
+  fill: none;
+  stroke-width: 2;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
 
-.month-col-label {
-  font-size: .66rem;
+.backlog-line.is-c { stroke: var(--stats-c); }
+.backlog-line.is-v { stroke: var(--stats-v); }
+.backlog-line.is-e { stroke: var(--stats-e); }
+.backlog-line.is-p { stroke: var(--stats-p); }
+
+.backlog-stop-top.is-c { stop-color: var(--stats-c); stop-opacity: .5; }
+.backlog-stop-bottom.is-c { stop-color: var(--stats-c); stop-opacity: .1; }
+.backlog-stop-top.is-v { stop-color: var(--stats-v); stop-opacity: .5; }
+.backlog-stop-bottom.is-v { stop-color: var(--stats-v); stop-opacity: .1; }
+.backlog-stop-top.is-e { stop-color: var(--stats-e); stop-opacity: .5; }
+.backlog-stop-bottom.is-e { stop-color: var(--stats-e); stop-opacity: .1; }
+.backlog-stop-top.is-p { stop-color: var(--stats-p); stop-opacity: .5; }
+.backlog-stop-bottom.is-p { stop-color: var(--stats-p); stop-opacity: .1; }
+
+/* Barrido de entrada: el área se descubre de izquierda a derecha, en el sentido en que se lee el tiempo. */
+.backlog-reveal {
+  transform-origin: left center;
+  animation: backlog-sweep 1.1s cubic-bezier(.22, 1, .36, 1) both;
+}
+
+@keyframes backlog-sweep {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+
+/* Los puntos van en HTML: dentro del SVG estirado se deformarían en óvalos. */
+.backlog-dot {
+  position: absolute;
+  width: .5rem;
+  height: .5rem;
+  margin: -.25rem 0 0 -.25rem;
+  border-radius: 50%;
+  border: 2px solid var(--surface);
+  animation: pop-in .4s cubic-bezier(.34, 1.36, .64, 1) both;
+  animation-delay: .6s;
+}
+
+.backlog-dot.is-c { background: var(--stats-c); }
+.backlog-dot.is-v { background: var(--stats-v); }
+.backlog-dot.is-e { background: var(--stats-e); }
+.backlog-dot.is-p { background: var(--stats-p); }
+
+/* Zonas de paso del ratón: una franja por mes, con su desglose. Solo CSS, sin estado ni escuchas. */
+.backlog-hits {
+  position: absolute;
+  inset: 0;
+  display: flex;
+}
+
+.backlog-hit {
+  position: relative;
+  flex: 1 1 0;
+}
+
+.backlog-hit:hover { background: var(--overlay-hover); }
+
+.backlog-tip {
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% - 2rem);
+  z-index: 2;
+  display: grid;
+  gap: .15rem;
+  min-width: 9.5rem;
+  padding: .5rem .6rem;
+  border-radius: var(--stats-radius);
+  background: var(--surface-elevated);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
+  font-size: .74rem;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity .12s ease;
+}
+
+.backlog-tip.is-left { left: auto; right: 50%; }
+
+.backlog-hit:hover .backlog-tip {
+  opacity: 1;
+  visibility: visible;
+}
+
+.backlog-tip strong {
+  font-size: .78rem;
+  margin-bottom: .1rem;
+}
+
+.backlog-tip span {
+  display: flex;
+  align-items: center;
+  gap: .35rem;
+  color: var(--text-muted);
+}
+
+.backlog-tip b {
+  margin-left: auto;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+.backlog-xaxis {
+  position: relative;
+  height: 1rem;
+  margin-left: 2.7rem;
+}
+
+.backlog-xtick {
+  position: absolute;
+  top: 0;
+  transform: translateX(-50%);
+  font-size: .7rem;
   color: var(--text-muted);
   white-space: nowrap;
 }
 
-/* Se reserva el hueco de las etiquetas que no se pintan: si no, las columnas rotuladas quedarían más altas. */
-.month-col-label.is-hidden { visibility: hidden; }
+/* El primero y el último se pegan al borde para que no se salgan del lienzo. */
+.backlog-xtick:first-child { transform: none; }
+.backlog-xtick:last-child { transform: translateX(-100%); }
+
+/* ---- Histograma de notas (columnas) ------------------------------------------------------------------- */
+
+/* El histograma ESTIRA para llenar la tarjeta: al compartir fila con el mosaico —bastante más alto—, con una
+   altura fija quedaba un socavón de espacio muerto bajo las columnas. */
+.grade-chart {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: .4rem;
+  flex: 1;
+  min-height: 9rem;
+}
+
+.grade-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: .3rem;
+  min-width: 0;
+}
+
+.grade-col-value {
+  font-size: .8rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.grade-col-track {
+  display: flex;
+  align-items: flex-end;
+  width: 100%;
+  flex: 1;
+  min-height: 5rem;
+  border-radius: 7px;
+  background: var(--score-track);
+}
+
+.grade-col-bar {
+  width: 100%;
+  height: var(--bar-height, 0%);
+  border-radius: 7px;
+  background: linear-gradient(180deg,
+    hsl(var(--bar-hue, 135) 62% calc(var(--acc-l) + 8%)),
+    hsl(var(--bar-hue, 135) 58% var(--acc-l)));
+  /* La columna crece desde su base con un retardo por posición: la distribución se "dibuja" de peor a mejor. */
+  transform-origin: bottom center;
+  animation: grow-up .7s cubic-bezier(.22, 1, .36, 1) both;
+  animation-delay: calc(var(--i, 0) * 70ms);
+}
+
+@keyframes grow-up {
+  from { transform: scaleY(0); }
+  to { transform: scaleY(1); }
+}
+
+.grade-col-label {
+  font-size: .72rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+  letter-spacing: -.04em;
+}
+
+/* ---- Mosaico de géneros -------------------------------------------------------------------------------- */
+
+.treemap {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+/* La intensidad sigue al PUESTO en el ranking, no al valor: con géneros casi empatados (55, 50, 50, 48…) una
+   rampa por valor los pintaba a todos del mismo color y el mosaico perdía toda jerarquía. Por puesto siempre
+   hay gradación, y el orden que expresa es real. */
+.treemap-cell rect {
+  fill: color-mix(in srgb, var(--steam) calc(88% - var(--i, 0) * 9%), var(--surface));
+  stroke: var(--surface);
+  stroke-width: 1;
+}
+
+.treemap-cell {
+  transform-origin: center;
+  animation: pop-in .55s cubic-bezier(.22, 1, .36, 1) both;
+  animation-delay: calc(var(--i, 0) * 60ms);
+}
+
+@keyframes pop-in {
+  from { opacity: 0; transform: scale(.86); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.treemap-name {
+  fill: var(--on-accent);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.treemap-num {
+  fill: var(--on-accent);
+  font-size: 12px;
+  opacity: .8;
+}
 
 /* ---- Barras horizontales (notas, géneros, razones) ---------------------------------------------------- */
 
@@ -318,9 +548,11 @@
   list-style: none;
 }
 
+/* Ancho acotado: en una tarjeta a ancho completo, una barra de mil píxeles para "11 de 44" no se lee mejor,
+   solo obliga a barrer la pantalla de lado a lado. */
 .stats-bar-row {
   display: grid;
-  grid-template-columns: minmax(4.5rem, 7rem) 1fr auto;
+  grid-template-columns: minmax(4.5rem, 7rem) minmax(0, 26rem) auto;
   align-items: center;
   gap: .6rem;
 }
@@ -348,6 +580,15 @@
      la nota, no decora. */
   background: linear-gradient(90deg, hsl(var(--bar-hue, 135) 58% var(--acc-l)) 0%, hsl(var(--bar-hue, 135) 62% calc(var(--acc-l) + 8%)) 100%);
   transition: width .3s cubic-bezier(.22, 1, .36, 1);
+  /* Se despliega desde la izquierda con un retardo por fila: el ranking se lee en el orden en que se pinta. */
+  transform-origin: left center;
+  animation: grow-right .65s cubic-bezier(.22, 1, .36, 1) both;
+  animation-delay: calc(var(--i, 0) * 60ms);
+}
+
+@keyframes grow-right {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
 }
 
 .stats-bar-fill.is-accent {
@@ -408,12 +649,38 @@
   stroke: var(--steam);
   stroke-width: 2;
   stroke-linejoin: round;
+  /* La figura crece desde el centro girando un poco: es el gesto que pedía "que se cargue con efecto". */
+  transform-origin: center;
+  animation: radar-bloom .9s cubic-bezier(.34, 1.36, .64, 1) both;
+}
+
+@keyframes radar-bloom {
+  from { opacity: 0; transform: scale(.15) rotate(-25deg); }
+  to { opacity: 1; transform: scale(1) rotate(0); }
+}
+
+/* La telaraña aparece antes que la figura, para que esta crezca "sobre" algo. */
+.genre-radar-ring,
+.genre-radar-spoke {
+  animation: fade-in .5s ease-out both;
+}
+
+.genre-radar-label {
+  animation: fade-in .5s ease-out .55s both;
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 .genre-radar-dot {
   fill: var(--steam);
   stroke: var(--surface);
   stroke-width: 1.5;
+  transform-origin: center;
+  animation: pop-in .4s cubic-bezier(.34, 1.36, .64, 1) both;
+  animation-delay: .75s;
 }
 
 .genre-radar-label {
@@ -440,22 +707,40 @@
   position: relative;
   display: grid;
   place-items: center;
-  width: 7.5rem;
-  height: 7.5rem;
-  border-radius: 50%;
-  /* Un solo elemento: el sector de completados va en `conic-gradient` y el agujero lo hace el ::after. */
-  background: conic-gradient(var(--stats-c) calc(var(--ratio-pct, 0) * 1%), var(--stats-v) 0);
+  width: 8rem;
+  height: 8rem;
 }
 
-.ratio-donut::after {
-  content: "";
+.ratio-donut svg {
   position: absolute;
-  inset: 15px;
-  border-radius: 50%;
-  background: var(--surface);
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  /* Empieza a las doce y avanza en el sentido del reloj. */
+  transform: rotate(-90deg);
 }
 
-/* Por encima del agujero (`::after`), que al ser el último hijo se pinta después y si no lo taparía. */
+.ratio-track {
+  fill: none;
+  stroke: var(--stats-v);
+  opacity: .35;
+}
+
+/* El arco se dibuja animando `stroke-dashoffset`, que sí es interpolable (un ángulo de `conic-gradient` no lo
+   es sin `@property`). Extremos redondeados: es lo que le da el aire de aro y no de porción de tarta. */
+.ratio-arc {
+  fill: none;
+  stroke: var(--stats-c);
+  stroke-linecap: round;
+  stroke-dashoffset: var(--arc-length);
+  animation: arc-sweep 1.1s cubic-bezier(.22, 1, .36, 1) both;
+}
+
+@keyframes arc-sweep {
+  from { stroke-dashoffset: var(--arc-length); }
+  to { stroke-dashoffset: var(--arc-offset); }
+}
+
 .ratio-donut-num {
   position: relative;
   z-index: 1;
@@ -552,8 +837,176 @@
 
 .stats-note { font-style: italic; }
 
+
+/* ---- Nube de etiquetas (razones de abandono, géneros deseados) ----------------------------------------- */
+
+.tag-chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: .4rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* Una sola variable (`--weight`, 0–1) mueve cuerpo, relleno y fondo a la vez: la píldora crece entera y no
+   solo su texto, que es lo que hace legible una nube de etiquetas. */
+.tag-chip {
+  display: inline-flex;
+  align-items: baseline;
+  gap: .35rem;
+  padding: calc(.2rem + var(--weight) * .16rem) calc(.5rem + var(--weight) * .3rem);
+  border-radius: var(--radius-pill);
+  font-size: calc(.74rem + var(--weight) * .34rem);
+  line-height: 1.2;
+  background: color-mix(in srgb, var(--steam) calc(14% + var(--weight) * 26%), transparent);
+  border: 1px solid color-mix(in srgb, var(--steam) calc(25% + var(--weight) * 35%), transparent);
+  animation: pop-in .5s cubic-bezier(.34, 1.36, .64, 1) both;
+  animation-delay: calc(var(--i, 0) * 45ms);
+}
+
+.tag-chips.is-danger .tag-chip {
+  background: color-mix(in srgb, var(--danger) calc(12% + var(--weight) * 24%), transparent);
+  border-color: color-mix(in srgb, var(--danger) calc(22% + var(--weight) * 32%), transparent);
+}
+
+.tag-chip-num {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  opacity: .75;
+  font-size: .78em;
+}
+
+/* ---- Índice de abandono -------------------------------------------------------------------------------- */
+
+.rate-list {
+  display: flex;
+  flex-direction: column;
+  gap: .5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.rate-list li {
+  display: grid;
+  grid-template-columns: minmax(4.5rem, 8rem) minmax(0, 26rem) auto;
+  align-items: center;
+  gap: .6rem;
+  font-size: .82rem;
+}
+
+.rate-tag {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Escala fija 0–100%: la barra dice la PROPORCIÓN, no el recuento, así que no se normaliza contra el máximo
+   (si no, un 30% se vería lleno solo por ser el mayor de la lista). */
+.rate-track {
+  position: relative;
+  height: .55rem;
+  border-radius: var(--radius-pill);
+  background: var(--score-track);
+  overflow: hidden;
+}
+
+.rate-fill {
+  display: block;
+  width: var(--rate, 0%);
+  height: 100%;
+  border-radius: var(--radius-pill);
+  background: linear-gradient(90deg, var(--fg-amber), var(--danger));
+  transform-origin: left center;
+  animation: grow-right .65s cubic-bezier(.22, 1, .36, 1) both;
+  animation-delay: calc(var(--i, 0) * 60ms);
+}
+
+.rate-value {
+  font-size: .76rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* ---- Los que más llevan esperando ---------------------------------------------------------------------- */
+
+.waiting-list {
+  display: flex;
+  flex-direction: column;
+  gap: .45rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.waiting-list li {
+  display: grid;
+  grid-template-columns: minmax(6rem, 22rem) minmax(3rem, 8rem) auto;
+  justify-content: start;
+  align-items: center;
+  gap: .6rem;
+  font-size: .84rem;
+}
+
+.waiting-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.waiting-bar {
+  height: .45rem;
+  border-radius: var(--radius-pill);
+  background: var(--score-track);
+  overflow: hidden;
+}
+
+.waiting-fill {
+  display: block;
+  width: var(--wait, 0%);
+  height: 100%;
+  border-radius: var(--radius-pill);
+  background: linear-gradient(90deg, rgba(var(--steam-rgb), .45), var(--steam));
+  transform-origin: left center;
+  animation: grow-right .65s cubic-bezier(.22, 1, .36, 1) both;
+  animation-delay: calc(var(--i, 0) * 60ms);
+}
+
+.waiting-since {
+  font-size: .74rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+/* ---- Entrada de la pantalla ---------------------------------------------------------------------------- */
+
+/* Las tarjetas suben y aparecen en cascada al entrar en el panel. El retardo se reparte por posición hasta la
+   octava: más allá el usuario ya ha tenido que desplazarse y la animación no aporta. */
+.stats-hub > * {
+  animation: card-in .5s cubic-bezier(.22, 1, .36, 1) both;
+}
+
+@for $i from 1 through 8 {
+  .stats-hub > *:nth-child(#{$i}) { animation-delay: #{($i - 1) * 55}ms; }
+}
+
+@keyframes card-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: none; }
+}
+
+
 @media (prefers-reduced-motion: reduce) {
-  .year-col-bar,
-  .month-col-stack,
-  .stats-bar-fill { transition: none; }
+  /* Quien pide menos movimiento ve el estado final directamente: ni cascadas, ni barridos, ni conteo (de eso
+     se encarga `useCountUp`, que además evita el trabajo en JS). */
+  .stats-hub > *,
+  .stats-hub *::before,
+  .stats-hub * {
+    animation: none !important;
+    transition: none !important;
+  }
 }
