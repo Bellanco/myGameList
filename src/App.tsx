@@ -63,6 +63,9 @@ const FormModal = lazy(() => importFormModal().then((module) => ({ default: modu
 const ConfirmModal = lazy(() => importConfirmModal().then((module) => ({ default: module.ConfirmModal })));
 const SettingsHub = lazy(() => import('./view/components/SettingsHub').then((module) => ({ default: module.SettingsHub })));
 const SocialHub = lazy(() => import('./view/components/SocialHub').then((module) => ({ default: module.SocialHub })));
+// Panel "Perfil" (estadísticas). Perezoso como el resto de hubs: su código y su hoja de estilos solo se
+// descargan al entrar en la pestaña, así que no pesan en el arranque de los listados.
+const StatsHub = lazy(() => import('./view/components/stats/StatsHub').then((module) => ({ default: module.StatsHub })));
 const AccountHub = lazy(() => import('./view/components/AccountHub').then((module) => ({ default: module.AccountHub })));
 const RouletteModal = lazy(() => importRouletteModal().then((module) => ({ default: module.RouletteModal })));
 const IntegrationsScreen = lazy(() => import('./view/components/import/IntegrationsScreen').then((module) => ({ default: module.IntegrationsScreen })));
@@ -425,6 +428,11 @@ export default function App() {
       return;
     }
 
+    if (section === 'stats') {
+      navigate('/perfil');
+      return;
+    }
+
     if (section === 'account') {
       navigate('/cuenta');
       return;
@@ -640,6 +648,12 @@ export default function App() {
           moveGameToCurrentByName={vm.moveGameToCurrentByName}
           games={vm.data}
         />
+      </Suspense>
+    ),
+    stats: (
+
+      <Suspense fallback={null}>
+        <StatsHub games={vm.data} />
       </Suspense>
     ),
     account: (

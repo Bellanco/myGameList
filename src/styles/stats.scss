@@ -1,0 +1,313 @@
+// Panel "Perfil" (estadísticas). Hoja SIN guion bajo y fuera de `index.scss` a propósito: la importa
+// `StatsHub.tsx`, que entra por `lazy()`, así que Vite la emite en ese chunk perezoso y no pesa en el arranque
+// (mismo criterio que los skins de tema, ver `paletteSkin.ts`).
+//
+// Todo el color sale de las variables de la paleta activa (CAPA 2, `_base.scss`): el panel se ve correcto en
+// los cinco temas y en claro/oscuro sin una sola regla por tema.
+
+/* Rejilla y tarjetas PROPIAS, en vez de reutilizar `.settings-hub`/`.settings-card`: aquellas reparten sus
+   tarjetas en dos columnas con reglas repartidas por varios breakpoints de `_layout.scss`, y heredarlas ataba el
+   reparto de este panel —qué ocupa fila entera y qué media— a decisiones de la pantalla de Ajustes. El aspecto de
+   la tarjeta es el mismo; lo que no se hereda es su rejilla. */
+.stats-hub {
+  --stats-bar-radius: 6px;
+
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.stats-card {
+  grid-column: span 12;
+  display: flex;
+  flex-direction: column;
+  gap: .8rem;
+  padding: 1rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow);
+  min-width: 0;
+}
+
+.stats-card h2 { font-size: 1rem; }
+
+.stats-card-sub {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: .88rem;
+  line-height: 1.4;
+}
+
+/* En pantallas anchas, notas y ratio comparten fila; el resumen, el gráfico anual y los géneros ocupan fila
+   entera (son los que necesitan el ancho). */
+@media (min-width: 62rem) {
+  .stats-card-half { grid-column: span 6; }
+}
+
+/* ---- Cifras destacadas ------------------------------------------------------------------------------- */
+
+.stats-tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(9.5rem, 1fr));
+  gap: .8rem;
+}
+
+.stat-tile {
+  display: flex;
+  flex-direction: column;
+  gap: .15rem;
+  padding: .7rem .8rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface-elevated);
+  min-width: 0;
+}
+
+.stat-tile-label {
+  font-size: .74rem;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  color: var(--text-muted);
+}
+
+.stat-tile-value {
+  font-size: 1.7rem;
+  line-height: 1.1;
+  font-weight: 700;
+  min-width: 0;
+}
+
+.stat-tile-unit {
+  font-size: .9rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  margin-left: .15rem;
+}
+
+/* Valor que es TEXTO (el nombre del juego más largo): no puede competir en tamaño con las cifras ni desbordar
+   la tarjeta, así que baja de cuerpo y se recorta con puntos suspensivos. */
+.stat-tile-text {
+  display: block;
+  font-size: 1rem;
+  line-height: 1.3;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.stat-tile-hint {
+  font-size: .76rem;
+  color: var(--text-muted);
+}
+
+/* ---- Gráfico anual ----------------------------------------------------------------------------------- */
+
+.stats-metric-switch {
+  display: flex;
+  gap: .4rem;
+  flex-wrap: wrap;
+}
+
+/* Scroll horizontal propio: con veinte años en pantalla estrecha las columnas quedarían de un píxel. */
+.year-chart {
+  display: flex;
+  align-items: flex-end;
+  gap: .5rem;
+  overflow-x: auto;
+  padding-bottom: .2rem;
+  min-height: 11rem;
+}
+
+/* Las columnas crecen para repartirse el ancho, pero con tope: sin él, media docena de años en una tarjeta
+   ancha daban barras de doscientos píxeles que ya no se leen como una serie. */
+.year-col {
+  display: flex;
+  flex: 1 1 2.4rem;
+  flex-direction: column;
+  align-items: center;
+  gap: .3rem;
+  min-width: 2.4rem;
+  max-width: 4.5rem;
+}
+
+.year-col-value {
+  font-size: .76rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.year-col-track {
+  display: flex;
+  align-items: flex-end;
+  width: 100%;
+  height: 8rem;
+  border-radius: var(--stats-bar-radius);
+  background: var(--score-track);
+}
+
+.year-col-bar {
+  width: 100%;
+  height: var(--bar-height, 0%);
+  border-radius: var(--stats-bar-radius);
+  background: linear-gradient(180deg, var(--steam) 0%, rgba(var(--steam-rgb), .55) 100%);
+  transition: height .25s ease;
+}
+
+/* El cajón "sin año" no es un año más: se pinta apagado y rayado para que no se lea como parte de la serie. */
+.year-col-bar.is-undated {
+  background: repeating-linear-gradient(
+    135deg,
+    var(--text-dim) 0 4px,
+    transparent 4px 8px
+  );
+  opacity: .7;
+}
+
+.year-col-label {
+  font-size: .72rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+/* ---- Barras horizontales (notas y géneros) ------------------------------------------------------------ */
+
+.stats-bars {
+  display: flex;
+  flex-direction: column;
+  gap: .45rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.stats-bar-row {
+  display: grid;
+  grid-template-columns: minmax(4.5rem, 7rem) 1fr auto;
+  align-items: center;
+  gap: .6rem;
+}
+
+.stats-bar-label {
+  font-size: .82rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.stats-bar-track {
+  height: .85rem;
+  border-radius: var(--stats-bar-radius);
+  background: var(--score-track);
+  overflow: hidden;
+}
+
+.stats-bar-fill {
+  display: block;
+  width: var(--bar-width, 0%);
+  height: 100%;
+  border-radius: var(--stats-bar-radius);
+  /* Mismo tono rojo→verde y la misma luminosidad por tema (--acc-l) que el aro de puntuación: el color dice
+     la nota, no decora. */
+  background: hsl(var(--bar-hue, 135) 58% var(--acc-l));
+  transition: width .25s ease;
+}
+
+.stats-bar-fill.is-accent { background: var(--steam); }
+
+.stats-bar-value {
+  display: flex;
+  align-items: baseline;
+  gap: .35rem;
+  font-size: .82rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.stats-bar-value small {
+  font-size: .72rem;
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
+/* ---- Completados vs abandonados ----------------------------------------------------------------------- */
+
+.ratio-block {
+  display: flex;
+  align-items: center;
+  gap: 1.2rem;
+  flex-wrap: wrap;
+}
+
+.ratio-donut {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 7rem;
+  height: 7rem;
+  border-radius: 50%;
+  /* Un solo elemento: el sector de completados va en `conic-gradient` y el agujero lo hace el ::after. */
+  background: conic-gradient(
+    var(--success) calc(var(--ratio-pct, 0) * 1%),
+    var(--danger) 0
+  );
+}
+
+.ratio-donut::after {
+  content: "";
+  position: absolute;
+  inset: 14px;
+  border-radius: 50%;
+  background: var(--surface);
+}
+
+/* Por encima del agujero (`::after`), que al ser el último hijo se pinta después y si no lo taparía. */
+.ratio-donut-num {
+  position: relative;
+  z-index: 1;
+  font-size: 1.35rem;
+  font-weight: 700;
+}
+
+.ratio-legend {
+  display: flex;
+  flex-direction: column;
+  gap: .4rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ratio-legend li {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  font-size: .85rem;
+}
+
+.ratio-legend-label { color: var(--text-muted); }
+
+.ratio-dot {
+  width: .7rem;
+  height: .7rem;
+  border-radius: 50%;
+}
+
+.ratio-dot.is-completed { background: var(--success); }
+.ratio-dot.is-abandoned { background: var(--danger); }
+
+/* ---- Textos auxiliares -------------------------------------------------------------------------------- */
+
+.stats-empty,
+.stats-note {
+  font-size: .82rem;
+  color: var(--text-muted);
+  margin: 0;
+}
+
+.stats-note { font-style: italic; }
+
+@media (prefers-reduced-motion: reduce) {
+  .year-col-bar,
+  .stats-bar-fill { transition: none; }
+}
