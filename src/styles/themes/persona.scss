@@ -335,6 +335,14 @@
 :root[data-palette="persona"] .timeline-dot,
 :root[data-palette="persona"] .dumbbell-dot { box-shadow: 0 0 0 1.5px var(--pop-line); }
 
+/* El relleno de "Dónde brillas" no acaba en vertical: se corta en diagonal, como los paneles de viñeta del
+   juego, y el dial y sus contadores llevan el filo de tinta de todo el tema. */
+:root[data-palette="persona"] .shine-fill { clip-path: polygon(0 0, 100% 0, calc(100% - 10px) 100%, 0 100%); }
+:root[data-palette="persona"] .gauge-seg.is-on,
+:root[data-palette="persona"] .gauge-sub-seg.is-on { filter: drop-shadow(0 0 0 var(--pop-line)); stroke-linecap: butt; }
+:root[data-palette="persona"] .top-chip-bar,
+:root[data-palette="persona"] .shine-rows li { border-radius: 2px; }
+
 /* Las cifras destacadas, en cursiva pop y con la caja sesgada del tema. */
 :root[data-palette="persona"] .stat-tile-value { font-style: italic; letter-spacing: -.02em; }
 :root[data-palette="persona"] .stat-tile:hover { transform: translateY(-2px) skewX(-1.5deg); }

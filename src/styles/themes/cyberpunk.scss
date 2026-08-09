@@ -429,6 +429,10 @@
 :root[data-palette="cyberpunk"] .timeline-dot,
 :root[data-palette="cyberpunk"] .dumbbell-dot { box-shadow: 0 0 6px currentColor, 0 0 2px #fff; }
 
+/* Cada barra de "Dónde brillas" termina en un filo encendido, como el borde de una ventana del HUD. */
+:root[data-palette="cyberpunk"] .shine-fill { box-shadow: inset -2px 0 0 var(--cyber-cyan); }
+:root[data-palette="cyberpunk"][data-theme="light"] .shine-fill { box-shadow: inset -2px 0 0 color-mix(in srgb, var(--cyber-magenta) 60%, transparent); }
+
 :root[data-palette="cyberpunk"][data-theme="light"] .backlog-line,
 :root[data-palette="cyberpunk"][data-theme="light"] .genre-radar-shape,
 :root[data-palette="cyberpunk"][data-theme="light"] .polar-sector,
