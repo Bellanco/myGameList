@@ -39,6 +39,7 @@ export const Lollipop = memo(function Lollipop({ rows, average, scale, limit = 6
           <li key={row.tag} style={{ '--i': index } as CSSProperties}>
             <span className="lolli-tag" title={row.tag}>{row.tag}</span>
             <span className="lolli-track">
+              <span className="lolli-rail" />
               <span className="lolli-avg" style={{ left: `${at(average)}%` } as CSSProperties} />
               <span
                 className="lolli-stem"
@@ -48,7 +49,17 @@ export const Lollipop = memo(function Lollipop({ rows, average, scale, limit = 6
               </span>
             </span>
             <span className="lolli-value">
-              {scale === 'grade' ? Math.round(row.avgGrade) : formatDecimal(row.avgGrade / 20)}
+              <b>{scale === 'grade' ? Math.round(row.avgGrade) : formatDecimal(row.avgGrade / 20)}</b>
+              {/* La diferencia contra tu media es la lectura que importa: "84" no dice nada; "+6 sobre tu
+                  media" sí. Se calla cuando la diferencia es despreciable, para no pintar ruido. */}
+              {Math.abs(row.avgGrade - average) >= 1 ? (
+                <em className={row.avgGrade >= average ? 'is-over' : 'is-under'}>
+                  {row.avgGrade >= average ? '+' : '−'}
+                  {scale === 'grade'
+                    ? Math.round(Math.abs(row.avgGrade - average))
+                    : formatDecimal(Math.abs(row.avgGrade - average) / 20)}
+                </em>
+              ) : null}
               <small>{L.genreCount(row.games)}</small>
             </span>
           </li>

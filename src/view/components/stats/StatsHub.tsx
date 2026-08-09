@@ -88,7 +88,7 @@ export const StatsHub = memo(function StatsHub({ games }: { games: TabData }) {
           <div className="stats-card">
             <h2>{L.top.title}</h2>
             <p className="stats-card-sub">{L.top.subtitle}</p>
-            <TopGames top={stats.top} scale={scale} />
+            <TopGames top={stats.top} scale={scale} average={stats.scored.avgGrade} />
           </div>
 
           <div className="stats-card">

@@ -75,13 +75,15 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
     umbral, no como rejilla), rellenos de área más velados, separación de 2 px entre porciones, cifras
     proporcionales en las tarjetas destacadas (los dígitos de ancho fijo son para columnas que se alinean) y
     diana de 24 px alrededor de cada punto, que señalar un círculo de nueve píxeles era imposible.
-  - **Gofre** (una celda por juego) para los géneros de tus mejores: con diez juegos, contar celdas es contar
-    juegos, y eso ni una barra ni un porcentaje lo dan.
-  - **Barra repartida al 100%** para saber dónde juegas tus favoritos: compara cada plataforma con el todo, no
-    con la mayor.
-  - **Piruletas** para tu nota media por género, con la guía de tu media global: sin ella, un "84" no dice si
-    es mucho o poco PARA TI. La escala llega a la nota máxima en vez de recortarse al rango de los datos, que
-    convertiría cuatro medias parecidas en diferencias abismales.
+  - **Barras radiales** (un anillo por género, con la vuelta que da proporcional a su peso) para los géneros de
+    tus mejores: es la variación del rosetón —misma familia circular, lectura distinta— y no sufre su problema
+    con pocos valores, que es que tres sectores se ven como una tarta rota.
+  - **Anillo repartido con el total en el centro** para saber dónde juegas tus favoritos: compara cada
+    plataforma con el todo y deja el hueco central para la cifra que da contexto.
+  - **Piruletas** para tu nota media por género, con el carril completo, la guía de tu media global y la
+    diferencia contra ella: un "84" no dice si es mucho o poco PARA TI; un "+6 sobre tu media", sí. La escala
+    llega a la nota máxima en vez de recortarse al rango de los datos, que convertiría cuatro medias parecidas
+    en diferencias abismales.
   - **Matriz de puntos** para las plataformas de tu lista de próximos: un recuento que se cuenta con el dedo y
     funciona igual con tres juegos que con cuarenta.
   - El resto del top pasa a **fichas en rejilla**: doce filas ocupaban media pantalla para decir lo mismo.

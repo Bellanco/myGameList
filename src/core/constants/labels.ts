@@ -261,7 +261,7 @@ export const UI_MESSAGES = {
       byGenre: 'Dónde brillas',
       byGenreHint: (min: number) => `Nota media por género, con al menos ${min} juegos puntuados.`,
       genreCount: (count: number) => `${count} juegos`,
-      others: 'Otros',
+      donutCenter: 'mejores',
       yourAverage: 'tu media',
       replays: (times: number) => `×${times}`,
       replaysTitle: (times: number) => `Completado ${times} veces`,

@@ -1279,106 +1279,171 @@
   gap: .35rem;
 }
 
-/* Las estrellas de la ficha, a escala reducida: son un apoyo, no el dato principal. */
+/* Las estrellas de la ficha, a escala reducida: son un apoyo, no el dato principal. El aro se encoge por su
+   PROPIA variable (`--sz`), que es de la que cuelga el cuerpo del número: forzando `width`/`font-size` por
+   fuera, la cifra se quedaba del tamaño original y se pegaba al borde del círculo. */
 .top-chip-meta .stars { font-size: .72rem; }
-.top-chip-meta .score-ring { width: 1.6rem; height: 1.6rem; font-size: .6rem; }
+.top-chip-meta .score-ring { --sz: 1.75rem; }
 
-/* ---- Gofre: una celda por juego ------------------------------------------------------------------------ */
+/* ---- Barras radiales: un anillo por etiqueta ----------------------------------------------------------- */
 
-.waffle {
+/* Variación del rosetón: allí cada categoría es un sector del mismo ángulo y compite por radio; aquí cada una
+   tiene su propia órbita y lo que se compara es cuánto avanza en ella. */
+.radial {
   display: flex;
-  flex-direction: column;
-  gap: .6rem;
+  align-items: center;
+  gap: 1.1rem;
+  flex-wrap: wrap;
 }
 
-.waffle-grid {
-  display: grid;
-  grid-template-columns: repeat(5, minmax(0, 2.2rem));
+.radial-svg {
+  width: min(11rem, 45%);
+  height: auto;
+  flex: 0 0 auto;
+}
+
+.radial-track {
+  fill: none;
+  stroke: var(--score-track);
+  stroke-linecap: round;
+}
+
+.radial-value {
+  fill: none;
+  stroke: color-mix(in oklch, var(--chart-to) calc(var(--i, 0) * 18%), var(--chart-from));
+  stroke-linecap: round;
+  /* El anillo se dibuja girando desde su inicio, como una aguja que da la vuelta. */
+  transform-origin: center;
+  animation: radial-sweep .8s cubic-bezier(.22, 1, .36, 1) both;
+  animation-delay: calc(var(--i, 0) * 90ms);
+}
+
+@keyframes radial-sweep {
+  from { opacity: 0; transform: rotate(-70deg) scale(.9); }
+  to { opacity: 1; transform: rotate(0) scale(1); }
+}
+
+/* Ancho acotado: sin tope, la lista se estiraba hasta el borde de la tarjeta y la cifra acababa a un palmo
+   del nombre al que pertenece. */
+.radial-legend {
+  display: flex;
+  flex-direction: column;
   gap: .3rem;
   margin: 0;
   padding: 0;
   list-style: none;
+  font-size: .82rem;
+  flex: 0 1 13rem;
+  min-width: 8rem;
 }
 
-.waffle-cell {
-  aspect-ratio: 1;
-  border-radius: 5px;
-  background: color-mix(in oklch, var(--chart-to) calc(var(--i, 0) * 18%), var(--chart-from));
-  animation: pop-in .4s cubic-bezier(.34, 1.36, .64, 1) both;
-  animation-delay: calc(var(--n, 0) * 45ms);
-  transition: transform .15s ease;
-}
-
-.waffle-cell:hover { transform: scale(1.12); }
-.waffle-cell.is-other { background: var(--text-dim); opacity: .55; }
-
-.waffle-legend,
-.share-legend {
-  display: flex;
-  flex-wrap: wrap;
-  gap: .3rem .9rem;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  font-size: .78rem;
-  color: var(--text-muted);
-}
-
-.waffle-legend li,
-.share-legend li {
+.radial-legend li {
   display: flex;
   align-items: center;
-  gap: .35rem;
+  gap: .5rem;
+  animation: slide-in .45s cubic-bezier(.22, 1, .36, 1) both;
+  animation-delay: calc(var(--i, 0) * 60ms);
 }
 
-.waffle-legend b,
-.share-legend b {
-  color: var(--text);
-  font-variant-numeric: tabular-nums;
-}
-
-.waffle-key,
-.share-key {
-  width: .65rem;
-  height: .65rem;
+.radial-key {
+  width: .7rem;
+  height: .7rem;
+  flex: 0 0 auto;
   border-radius: 3px;
   background: color-mix(in oklch, var(--chart-to) calc(var(--i, 0) * 18%), var(--chart-from));
 }
 
-.waffle-key.is-other { background: var(--text-dim); opacity: .55; }
-
-/* ---- Barra repartida al 100% --------------------------------------------------------------------------- */
-
-.share {
-  display: flex;
-  flex-direction: column;
-  gap: .55rem;
-}
-
-/* El hueco entre segmentos es del color del fondo: separa sin añadir la tinta de un borde. */
-.share-bar {
-  display: flex;
-  gap: 2px;
-  height: 1.6rem;
-  border-radius: var(--stats-radius);
+.radial-tag {
+  flex: 1 1 auto;
+  min-width: 0;
   overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.share-seg {
+.radial-legend b { font-variant-numeric: tabular-nums; }
+
+/* ---- Anillo repartido con el total dentro ---------------------------------------------------------------- */
+
+.donut-share {
+  display: flex;
+  align-items: center;
+  gap: 1.1rem;
+  flex-wrap: wrap;
+}
+
+.donut-share-fig {
+  position: relative;
   display: grid;
   place-items: center;
-  min-width: 0;
-  background: color-mix(in oklch, var(--chart-to) calc(var(--i, 0) * 20%), var(--chart-from));
-  transform-origin: left center;
-  animation: grow-right .6s cubic-bezier(.22, 1, .36, 1) both;
-  animation-delay: calc(var(--i, 0) * 70ms);
+  width: min(9.5rem, 42%);
+  flex: 0 0 auto;
 }
 
-.share-seg b {
-  font-size: .7rem;
-  font-weight: 700;
-  color: var(--on-accent);
+.donut-share-fig svg {
+  width: 100%;
+  height: auto;
+  /* Empieza a las doce y avanza en el sentido del reloj. */
+  transform: rotate(-90deg);
 }
+
+.donut-seg {
+  fill: none;
+  stroke: color-mix(in oklch, var(--chart-to) calc(var(--i, 0) * 20%), var(--chart-from));
+  animation: fade-in .5s ease-out both;
+  animation-delay: calc(var(--i, 0) * 90ms);
+}
+
+.donut-share-center {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  line-height: 1.05;
+}
+
+.donut-share-center b { font-size: 1.5rem; font-weight: 700; }
+.donut-share-center small { font-size: .68rem; color: var(--text-muted); }
+
+.donut-legend {
+  display: flex;
+  flex-direction: column;
+  gap: .3rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: .82rem;
+  flex: 0 1 14rem;
+  min-width: 8rem;
+}
+
+.donut-legend li {
+  display: flex;
+  align-items: baseline;
+  gap: .45rem;
+  animation: slide-in .45s cubic-bezier(.22, 1, .36, 1) both;
+  animation-delay: calc(var(--i, 0) * 60ms);
+}
+
+.donut-key {
+  width: .7rem;
+  height: .7rem;
+  flex: 0 0 auto;
+  align-self: center;
+  border-radius: 3px;
+  background: color-mix(in oklch, var(--chart-to) calc(var(--i, 0) * 20%), var(--chart-from));
+}
+
+.donut-tag {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.donut-legend b { font-variant-numeric: tabular-nums; }
+.donut-legend small { color: var(--text-muted); font-size: .72rem; font-variant-numeric: tabular-nums; }
 
 /* ---- Piruletas ------------------------------------------------------------------------------------------ */
 
@@ -1399,7 +1464,7 @@
 
 .lolli-rows li {
   display: grid;
-  grid-template-columns: minmax(4.5rem, 8rem) minmax(0, 24rem) auto;
+  grid-template-columns: minmax(4.5rem, 8rem) minmax(0, 22rem) auto;
   align-items: center;
   gap: .7rem;
   font-size: .82rem;
@@ -1416,6 +1481,18 @@
   height: 1rem;
 }
 
+/* El carril completo, visible: sin él, el tallo flotaba y no se veía cuánto quedaba hasta el máximo. */
+.lolli-rail {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 4px;
+  margin-top: -2px;
+  border-radius: var(--radius-pill);
+  background: var(--score-track);
+}
+
 /* La guía de tu media global: sin ella, un "84" no dice si es mucho o poco PARA TI. */
 .lolli-avg {
   position: absolute;
@@ -1430,10 +1507,10 @@
   position: absolute;
   top: 50%;
   left: 0;
-  height: 2px;
-  margin-top: -1px;
+  height: 4px;
+  margin-top: -2px;
   border-radius: var(--radius-pill);
-  background: color-mix(in srgb, hsl(var(--dot-hue, 135) 58% var(--acc-l)) 45%, transparent);
+  background: linear-gradient(90deg, color-mix(in srgb, hsl(var(--dot-hue, 135) 58% var(--acc-l)) 25%, transparent), hsl(var(--dot-hue, 135) 58% var(--acc-l)));
   transform-origin: left center;
   animation: grow-right .6s cubic-bezier(.22, 1, .36, 1) both;
   animation-delay: calc(var(--i, 0) * 60ms);
@@ -1443,9 +1520,9 @@
   position: absolute;
   right: 0;
   top: 50%;
-  width: .7rem;
-  height: .7rem;
-  margin: -.35rem -.35rem 0 0;
+  width: .85rem;
+  height: .85rem;
+  margin: -.425rem -.425rem 0 0;
   border-radius: 50%;
   background: hsl(var(--dot-hue, 135) 58% var(--acc-l));
   border: 2px solid var(--surface);
@@ -1455,9 +1532,29 @@
   display: flex;
   align-items: baseline;
   gap: .35rem;
-  font-weight: 700;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
+}
+
+.lolli-value b { font-weight: 700; }
+
+/* La diferencia contra tu media, que es la lectura que importa: verde si estás por encima, rojo si no. */
+.lolli-value em {
+  font-style: normal;
+  font-size: .72rem;
+  font-weight: 700;
+  padding: .05rem .3rem;
+  border-radius: var(--radius-pill);
+}
+
+.lolli-value em.is-over {
+  color: var(--stats-c);
+  background: color-mix(in srgb, var(--stats-c) 16%, transparent);
+}
+
+.lolli-value em.is-under {
+  color: var(--stats-v);
+  background: color-mix(in srgb, var(--stats-v) 16%, transparent);
 }
 
 .lolli-value small {
@@ -1469,7 +1566,7 @@
 /* Mismas columnas que las filas: así el eje cae siempre bajo el carril, mida lo que mida la etiqueta. */
 .lolli-axis {
   display: grid;
-  grid-template-columns: minmax(4.5rem, 8rem) minmax(0, 24rem) auto;
+  grid-template-columns: minmax(4.5rem, 8rem) minmax(0, 22rem) auto;
   gap: .7rem;
   font-size: .7rem;
   color: var(--text-muted);

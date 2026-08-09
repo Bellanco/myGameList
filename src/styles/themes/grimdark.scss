@@ -259,7 +259,8 @@
 :root[data-palette="grimdark"] .backlog-line,
 :root[data-palette="grimdark"] .genre-radar-shape { filter: drop-shadow(0 0 5px rgba(67, 245, 88, .5)); }
 :root[data-palette="grimdark"] .beeswarm-dot,
-:root[data-palette="grimdark"] .timeline-dot { box-shadow: 0 0 6px rgba(67, 245, 88, .45); }
+:root[data-palette="grimdark"] .timeline-dot,
+:root[data-palette="grimdark"] .lolli-dot { box-shadow: 0 0 6px rgba(67, 245, 88, .45); }
 :root[data-palette="grimdark"][data-theme="light"] .backlog-line,
 :root[data-palette="grimdark"][data-theme="light"] .genre-radar-shape { filter: none; }
 :root[data-palette="grimdark"][data-theme="light"] .beeswarm-dot,
@@ -274,6 +275,11 @@
 :root[data-palette="grimdark"] .dumbbell-num,
 :root[data-palette="grimdark"] .dumbbell-rate,
 :root[data-palette="grimdark"] .tag-ranking-num,
+:root[data-palette="grimdark"] .lolli-value,
+:root[data-palette="grimdark"] .lolli-axis,
+:root[data-palette="grimdark"] .donut-share-center b,
+:root[data-palette="grimdark"] .radial-legend b,
+:root[data-palette="grimdark"] .donut-legend b,
 :root[data-palette="grimdark"] .year-col-value { font-family: 'VT323', ui-monospace, monospace; font-size: 1.08em; }
 
 /* Filete dorado bajo el rótulo de cada bloque: la cartela del códice. */

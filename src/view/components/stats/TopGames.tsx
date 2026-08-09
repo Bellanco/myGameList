@@ -2,8 +2,8 @@ import { memo, type CSSProperties } from 'react';
 import { UI_MESSAGES } from '../../../core/constants/labels';
 import { GENRE_GRADE_MIN } from '../../../core/stats/computeStats';
 import { ScoreDisplay } from '../ScoreDisplay';
-import { Waffle } from './Waffle';
-import { StackedShare } from './StackedShare';
+import { RadialBars } from './RadialBars';
+import { DonutShare } from './DonutShare';
 import { Lollipop } from './Lollipop';
 import { formatDecimal, formatHours } from './format';
 import type { TopSummary } from '../../../core/stats/types';
@@ -22,7 +22,18 @@ const MEDALS = ['gold', 'silver', 'bronze'];
  * al lado del reparto general responde a una pregunta que ninguno de los dos contesta solo: si lo que más te
  * gusta es lo que más juegas.
  */
-export const TopGames = memo(function TopGames({ top, scale }: { top: TopSummary; scale: ScoreScale }) {
+interface TopGamesProps {
+  top: TopSummary;
+  scale: ScoreScale;
+  /**
+   * Nota media de TODO el ámbito (la biblioteca, o el año), que es contra la que se comparan los géneros.
+   * Compararlos contra la media del top sería absurdo: ningún género podría superar a la élite que lo forma,
+   * y todas las diferencias saldrían en negativo.
+   */
+  average: number;
+}
+
+export const TopGames = memo(function TopGames({ top, scale, average }: TopGamesProps) {
   if (top.sample === 0) {
     return <p className="stats-empty">{L.empty}</p>;
   }
@@ -84,18 +95,18 @@ export const TopGames = memo(function TopGames({ top, scale }: { top: TopSummary
       <div className="stats-split">
         <section>
           <h3>{L.genres(top.sample)}</h3>
-          <Waffle top={top} />
+          <RadialBars tags={top.genres} />
         </section>
         <section>
           <h3>{L.platforms}</h3>
-          <StackedShare tags={top.platforms} />
+          <DonutShare tags={top.platforms} total={top.sample} label={L.donutCenter} />
         </section>
       </div>
 
       {top.byGenre.length ? (
         <section>
           <h3>{L.byGenre}</h3>
-          <Lollipop rows={top.byGenre} average={top.avgGrade} scale={scale} />
+          <Lollipop rows={top.byGenre} average={average} scale={scale} />
           <p className="stats-note">{L.byGenreHint(GENRE_GRADE_MIN)}</p>
         </section>
       ) : null}
