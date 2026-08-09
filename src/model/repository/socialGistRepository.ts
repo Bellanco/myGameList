@@ -85,6 +85,12 @@ export interface SocialSharedGame {
   rating: number;
   grade: number; // nota fina 0–100 (normalize la deriva del rating si el gist no la trae)
   snippet: string;
+  /**
+   * Años en que lo completó. La proyección pública YA los escribía (`toPublicGame`) y esta lectura los tiraba;
+   * conservarlos es lo que permite el "año a año" y la marca de rejugado en el panel de un amigo, sin publicar
+   * ni un dato nuevo.
+   */
+  years?: number[];
 }
 
 export type SocialActivityType = 'recommendation' | 'review';
@@ -330,6 +336,12 @@ function normalizeSocialVisibility(value: unknown): SocialProfileVisibility {
   };
 }
 
+/** Cota de los años compartidos: ni antes de que existieran los videojuegos ni más de un siglo por delante. */
+const MIN_SHARED_YEAR = 1970;
+const MAX_SHARED_YEAR = 2100;
+/** Un mismo juego no puede acumular más rejugadas que esto en el canal público. */
+const MAX_SHARED_YEARS = 24;
+
 function normalizeSocialSharedGame(value: unknown): SocialSharedGame | null {
   const source = (value && typeof value === 'object' ? value : {}) as Record<string, unknown>;
   const id = Number(source.id || 0);
@@ -355,6 +367,15 @@ function normalizeSocialSharedGame(value: unknown): SocialSharedGame | null {
   // Nota fina 0–100: preserva `grade` si el gist lo trae; si no (gist de cliente antiguo), la deriva del rating ×20.
   const grade = resolveGrade({ grade: typeof source.grade === 'number' ? source.grade : null, score: rating }); // audit-allow: 'score' es el nombre del argumento de resolveGrade, no un campo publicado; lo que se escribe es 'rating' (ya redondeado)
 
+  // Años saneados: enteros dentro de un rango con sentido, sin repetidos y acotados en número. Un gist
+  // manipulado no puede meter aquí un año absurdo que luego abriría una pestaña por cada uno.
+  const years = Array.isArray(source.years)
+    ? [...new Set(source.years.map((entry) => Math.trunc(Number(entry))))]
+      .filter((year) => Number.isFinite(year) && year >= MIN_SHARED_YEAR && year <= MAX_SHARED_YEAR)
+      .sort((a, b) => a - b)
+      .slice(0, MAX_SHARED_YEARS)
+    : [];
+
   return {
     id,
     name,
@@ -363,6 +384,7 @@ function normalizeSocialSharedGame(value: unknown): SocialSharedGame | null {
     rating,
     grade,
     snippet,
+    ...(years.length ? { years } : {}),
   };
 }
 

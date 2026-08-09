@@ -83,13 +83,13 @@ export function IconSprite() {
           <path d="M5.5 19.2c0-3.6 2.9-5.8 6.5-5.8s6.5 2.2 6.5 5.8" />
         </g>
       </symbol>
-      {/* Pestaña "Perfil": barras, no una silueta — la silueta ya es `bottom-account` y esta pantalla son
-          estadísticas. */}
+      {/* Pestaña "Estadísticas": una tarta con su porción destacada. No una silueta —esa ya es
+          `bottom-account`— ni barras, que se confundían con el icono de las listas. El sector separado se
+          dibuja como una porción entera (dos radios y su arco) desplazada, no como un trozo recortado. */}
       <symbol id="icon-bottom-stats" viewBox="0 0 24 24">
         <g fill="currentColor">
-          <rect x="3.2" y="12.4" width="4.4" height="8.4" rx="1.4" />
-          <rect x="9.8" y="7.6" width="4.4" height="13.2" rx="1.4" />
-          <rect x="16.4" y="3.2" width="4.4" height="17.6" rx="1.4" />
+          <path d="M11.1 3.15a8.85 8.85 0 1 0 9.4 12.05l-8.2-3.4a1 1 0 0 1-.6-.92z" opacity=".55" />
+          <path d="M13.6 2.4a1 1 0 0 0-1.2.98v7.02a1 1 0 0 0 .62.92l6.5 2.7a1 1 0 0 0 1.34-.6 9.2 9.2 0 0 0-7.26-11.02z" />
         </g>
       </symbol>
       <symbol id="icon-logout" viewBox="0 -960 960 960">
