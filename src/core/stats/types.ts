@@ -41,6 +41,8 @@ export interface GameRef {
   /** Las MISMAS referencias del juego original (no copias): el agregado del top las recorre. */
   genres: string[];
   platforms: string[];
+  /** Cuántas veces lo has completado (años registrados). 1 en el caso normal; 0 si no es un completado. */
+  replays: number;
 }
 
 /**
@@ -61,6 +63,13 @@ export interface TopSummary {
   cutoff: number;
   genres: TagBucket[];
   platforms: TagBucket[];
+  /**
+   * Nota media POR GÉNERO sobre todos los juegos puntuados del ámbito (no solo los del top), con un mínimo de
+   * juegos para que la media signifique algo. De mayor a menor: es el ranking de lo que de verdad te gusta.
+   */
+  byGenre: Array<{ tag: string; games: number; avgGrade: number }>;
+  /** El top completo, de mejor a peor: el podio son los tres primeros. */
+  ranked: GameRef[];
 }
 
 /** Entradas a cada lista en un mes, derivadas de `listedAt`. `m` es `AAAA-MM`. */

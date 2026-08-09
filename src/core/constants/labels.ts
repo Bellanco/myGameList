@@ -187,7 +187,8 @@ export const UI_MESSAGES = {
   stats: {
     subtitle: 'Tu biblioteca en números, calculada en este dispositivo a partir de tus listas.',
     empty: {
-      title: 'Todavía no hay nada que contar',
+      // The Legend of Zelda: «es peligroso ir solo».
+      title: 'Es peligroso ir solo',
       body: 'Añade juegos a tus listas y aquí aparecerán tus horas, tus notas y tus géneros.',
     },
     tiles: {
@@ -240,7 +241,8 @@ export const UI_MESSAGES = {
     },
     ratio: {
       title: 'Completados y abandonados',
-      subtitle: 'De los juegos que ya has cerrado, cuántos terminaste.',
+      // Portal (uno de los temas): «la tarta es mentira».
+      subtitle: 'La tarta no es mentira: de los juegos que ya has cerrado, cuántos terminaste.',
       empty: 'Aún no has completado ni abandonado ningún juego.',
       completed: 'Completados',
       abandoned: 'Abandonados',
@@ -251,15 +253,21 @@ export const UI_MESSAGES = {
     top: {
       title: 'Lo mejor de tu biblioteca',
       titleYear: (year: number) => `Lo mejor de ${year}`,
-      subtitle: 'Tu podio y en qué se parecen los juegos que más te gustan.',
+      // Persona 5 (uno de los temas): «te robaré el corazón».
+      subtitle: 'Los que te robaron el corazón: tu podio y en qué se parecen.',
       empty: 'Todavía no has puntuado ningún juego.',
+      ranked: 'El resto de tu top',
+      byGenre: 'Dónde brillas',
+      byGenreHint: (min: number) => `Nota media por género, con al menos ${min} juegos puntuados.`,
+      genreCount: (count: number) => `${count} juegos`,
+      replays: (times: number) => `×${times}`,
+      replaysTitle: (times: number) => `Completado ${times} veces`,
       hours: (hours: string) => `${hours} h`,
       avgGrade: (count: number) => ` de nota media en tus ${count} mejores`,
       avgHours: ' de media, cada uno',
       cutoff: ' es el listón para entrar',
       genres: (count: number) => `Géneros de tus ${count} mejores`,
       platforms: 'Dónde los juegas',
-      note: (size: number) => `El agregado toma tus ${size} mejores; el reparto general está más arriba, para comparar.`,
     },
     // Pestañas General / año. Solo se listan los años con juegos completados.
     scope: {
@@ -269,7 +277,7 @@ export const UI_MESSAGES = {
     },
     radar: {
       title: 'Tus géneros',
-      subtitle: 'Los que más juegos te ocupan, con su peso relativo.',
+      subtitle: 'Elige tu arma: los géneros que más juegos te ocupan, con su peso relativo.',
       subtitleYear: (year: number) => `Los géneros que más completaste en ${year}.`,
       empty: 'Añade géneros a tus juegos para ver esta figura.',
       /** Con menos de tres géneros la figura no se sostiene y se cae al ranking en barras. */
@@ -279,7 +287,8 @@ export const UI_MESSAGES = {
     },
     backlog: {
       title: 'Evolución del backlog',
-      derivedSubtitle: 'Cómo ha ido creciendo lo que hoy tienes en cada lista, mes a mes.',
+      // Cyberpunk 2077 (uno de los temas): «despierta, samurái».
+      derivedSubtitle: 'Despierta, samurái: así ha ido creciendo lo que hoy tienes en cada lista.',
       derivedNote: 'Aproximación: cuenta la fecha de entrada a la lista ACTUAL, así que al mover un juego de lista su fecha se actualiza y la curva se recoloca. No es un histórico.',
       realSubtitle: 'Tamaño de cada lista al cierre de cada mes, según lo registrado en este dispositivo.',
       realNote: 'Histórico real, registrado mes a mes en este dispositivo desde que la función existe.',
@@ -290,8 +299,9 @@ export const UI_MESSAGES = {
     },
     shame: {
       title: 'Lista de la vergüenza',
-      subtitle: 'Qué dejas a medias, por qué y cuánto te ha costado.',
-      empty: 'No has abandonado ningún juego. Por ahora.',
+      // Skyrim: «antes era un aventurero como tú, hasta que me clavaron una flecha en la rodilla».
+      subtitle: 'Antes eras un aventurero como ellos: qué dejas a medias, por qué y cuánto te ha costado.',
+      empty: 'Ni una flecha en la rodilla: no has abandonado ningún juego. Por ahora.',
       total: 'Abandonados',
       hours: 'Horas invertidas',
       avgGrade: 'Nota media',
@@ -301,12 +311,13 @@ export const UI_MESSAGES = {
       genres: 'Géneros que más abandonas',
       rate: 'Terminados frente a abandonados, por género',
       legendCompleted: 'Terminados',
-      legendAbandoned: 'Dejados',
+      legendAbandoned: 'Abandonados',
       recent: 'Los últimos en caer',
     },
     wishlist: {
       title: 'Lo que te espera',
-      subtitle: 'Tu lista de próximos: qué has ido añadiendo y desde cuándo.',
+      // Super Mario Bros.: «nuestra princesa está en otro castillo».
+      subtitle: 'Tu princesa siempre está en otro castillo: qué has ido añadiendo y desde cuándo.',
       empty: 'No tienes nada en la lista de próximos.',
       total: 'En próximos',
       interest: 'Interés medio',
@@ -324,7 +335,8 @@ export const UI_MESSAGES = {
       avgGrade: 'Nota media',
       best: 'El mejor del año',
       gamesTitle: (year: number) => `Todo lo que completaste en ${year}`,
-      gamesSubtitle: 'De mejor a peor nota.',
+      // Halo: «terminemos esta pelea».
+      gamesSubtitle: 'Terminemos esta pelea: de mejor a peor nota.',
       noHours: 'sin horas anotadas',
     },
   },
