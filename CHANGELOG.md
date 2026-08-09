@@ -75,10 +75,20 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
     umbral, no como rejilla), rellenos de área más velados, separación de 2 px entre porciones, cifras
     proporcionales en las tarjetas destacadas (los dígitos de ancho fijo son para columnas que se alinean) y
     diana de 24 px alrededor de cada punto, que señalar un círculo de nueve píxeles era imposible.
-- **"Lo mejor de tu biblioteca", en general y en cada año**: el podio de tus tres primeros y —lo que ninguna
-  lista de favoritos cuenta— **en qué se parecen** los diez mejores: qué géneros se repiten, dónde los juegas,
-  cuánto duran de media y qué nota hace de listón para entrar. Puesto al lado del reparto general responde a
-  una pregunta que ninguno de los dos contesta solo: si lo que más te gusta es lo que más juegas.
+  - Los rótulos largos de las figuras circulares se parten en **dos líneas** por el espacio más equilibrado en
+    vez de recortarse: "Aventura gráfica" perdía justo la parte que la distinguía de "Aventura".
+- **"Lo mejor de tu biblioteca", en general y en cada año**: el podio de tus tres primeros, el resto del top
+  hasta quince títulos y —lo que ninguna lista de favoritos cuenta— **en qué se parecen** los diez mejores: qué
+  géneros se repiten, dónde los juegas, cuánto duran de media y qué nota hace de listón para entrar. Puesto al
+  lado del reparto general responde a una pregunta que ninguno de los dos contesta solo: si lo que más te gusta
+  es lo que más juegas. Incluye **"dónde brillas"**: tu nota media por género, que no siempre coincide con el
+  género que más juegas.
+  - El puesto lo desempatan las **rejugadas**: entre dos notas iguales sube el que volviste a jugar, porque
+    volver a un juego es el voto más sincero que existe. La marca «×2» lo dice en el listado.
+- **Guiños a frases icónicas del videojuego** en los textos del panel, empezando por los juegos que dan nombre
+  a los temas de la app: la tarta que no es mentira (Portal), despertar samurái (Cyberpunk 2077), los que te
+  robaron el corazón (Persona 5), la flecha en la rodilla de la lista de la vergüenza (Skyrim), la princesa que
+  está en otro castillo (Super Mario Bros.), lo peligroso de ir solo (Zelda) y terminar esta pelea (Halo).
 - **Cada tema viste el panel con su propio lenguaje.** Las tarjetas entran en la receta de tarjeta que ya tenía
   cada skin (tinta de cómic en Corazón rebelde, filo naranja en Cámara de pruebas, marco cian y filete amarillo
   en Sin futuro, moldura dorada en Solo hay guerra, marco doble pixelado en Mar de estrellas), y cada uno añade

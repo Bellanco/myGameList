@@ -1,6 +1,7 @@
 import { memo, type CSSProperties } from 'react';
 import { UI_MESSAGES } from '../../../core/constants/labels';
 import { TagRanking } from './TagRanking';
+import { labelLines } from './labelLines';
 import type { TagBucket } from '../../../core/stats/types';
 
 const L = UI_MESSAGES.stats.genres;
@@ -29,10 +30,6 @@ function sectorPath(from: number, to: number, radius: number): string {
   const b = polar(to, radius);
   const large = to - from > 180 ? 1 : 0;
   return `M ${CENTER} ${CENTER} L ${a.x.toFixed(1)} ${a.y.toFixed(1)} A ${radius} ${radius} 0 ${large} 1 ${b.x.toFixed(1)} ${b.y.toFixed(1)} Z`;
-}
-
-function shorten(tag: string): string {
-  return tag.length > 13 ? `${tag.slice(0, 12)}…` : tag;
 }
 
 /**
@@ -90,10 +87,16 @@ export const PolarRose = memo(function PolarRose({ tags }: { tags: TagBucket[] }
           const at = polar(mid, LABEL_R);
           const dx = at.x - CENTER;
           const anchor = Math.abs(dx) < 8 ? 'middle' : dx > 0 ? 'start' : 'end';
+          const lines = labelLines(tag.tag);
           return (
             <text key={tag.tag} className="polar-label" x={at.x} y={at.y} textAnchor={anchor} dominantBaseline="middle">
-              {shorten(tag.tag)}
-              <tspan className="polar-label-num" dx="4">{tag.games}</tspan>
+              {lines.map((line, row) => (
+                <tspan key={line} x={at.x} dy={row === 0 ? (lines.length > 1 ? '-0.5em' : '0') : '1.1em'}>
+                  {line}
+                  {/* La cifra va pegada a la ÚLTIMA línea, para que no se separe del nombre al partirlo. */}
+                  {row === lines.length - 1 ? <tspan className="polar-label-num" dx="4">{tag.games}</tspan> : null}
+                </tspan>
+              ))}
             </text>
           );
         })}

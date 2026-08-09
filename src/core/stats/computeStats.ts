@@ -50,6 +50,10 @@ export const STATS_SHORTLIST = 5;
  * signifiquen algo y bastante poco como para que sigan siendo tus favoritos y no media biblioteca.
  */
 export const STATS_TOP_SIZE = 10;
+/** Cuántos títulos se listan en el ranking general (el podio son los tres primeros de esta lista). */
+export const STATS_TOP_LIST = 15;
+/** Juegos puntuados que necesita un género para que su nota media entre en el ranking. */
+export const GENRE_GRADE_MIN = 3;
 /** Cuántos suben al podio. */
 const PODIUM = 3;
 
@@ -98,12 +102,18 @@ function toRef(game: GameItem): GameRef {
     // Se reutilizan las MISMAS arrays del juego (no se copian): el panel solo las lee.
     genres: game.genres || [],
     platforms: game.platforms || [],
+    replays: (game.years || []).length,
   };
 }
 
-/** De mejor a peor nota; a igualdad, el más largo primero; a igualdad, alfabético (orden estable). */
+/**
+ * De mejor a peor nota; a igualdad manda haberlo REJUGADO, luego las horas y por último el alfabeto.
+ *
+ * El desempate por rejugadas es lo que distingue "le puse un 10" de "le puse un 10 y volví": volver a un juego
+ * es el voto más sincero que existe, y entre dos notas iguales coloca arriba al que de verdad te atrapó.
+ */
 function byRank(a: GameRef, b: GameRef): number {
-  return b.grade - a.grade || b.hours - a.hours || sortEs(a.name, b.name);
+  return b.grade - a.grade || b.replays - a.replays || b.hours - a.hours || sortEs(a.name, b.name);
 }
 
 /**
@@ -112,10 +122,25 @@ function byRank(a: GameRef, b: GameRef): number {
  * Los géneros y las plataformas se cuentan SOLO dentro de ese top, que es justo lo que lo hace interesante:
  * comparado con el reparto general, enseña si lo que más te gusta coincide con lo que más juegas.
  */
-function topSummary(games: GameRef[], limit = STATS_TOP_SIZE): TopSummary {
-  const ranked = games.filter((game) => game.grade > 0).sort(byRank).slice(0, limit);
+function topSummary(games: GameRef[], listSize = STATS_TOP_LIST, limit = STATS_TOP_SIZE): TopSummary {
+  const scored = games.filter((game) => game.grade > 0).sort(byRank);
+  const ranked = scored.slice(0, limit);
   if (ranked.length === 0) {
-    return { podium: [], sample: 0, avgGrade: 0, avgHours: 0, cutoff: 0, genres: [], platforms: [] };
+    return { podium: [], sample: 0, avgGrade: 0, avgHours: 0, cutoff: 0, genres: [], platforms: [], byGenre: [], ranked: [] };
+  }
+
+  // Nota media por género sobre TODO lo puntuado del ámbito, no solo sobre el top: la pregunta es con qué
+  // género puntúas más alto, y para eso hacen falta también los que no llegaron a la élite.
+  const perGenre = new Map<string, { sum: number; games: number }>();
+  for (const game of scored) {
+    for (const genre of game.genres) {
+      const key = genre.trim();
+      if (!key) continue;
+      const entry = perGenre.get(key) || { sum: 0, games: 0 };
+      entry.sum += game.grade;
+      entry.games += 1;
+      perGenre.set(key, entry);
+    }
   }
 
   const genres = new Map<string, TagBucket>();
@@ -136,6 +161,11 @@ function topSummary(games: GameRef[], limit = STATS_TOP_SIZE): TopSummary {
 
   return {
     podium: ranked.slice(0, PODIUM),
+    ranked: scored.slice(0, listSize),
+    byGenre: [...perGenre.entries()]
+      .filter(([, entry]) => entry.games >= GENRE_GRADE_MIN)
+      .map(([tag, entry]) => ({ tag, games: entry.games, avgGrade: entry.sum / entry.games }))
+      .sort((a, b) => b.avgGrade - a.avgGrade || b.games - a.games || sortEs(a.tag, b.tag)),
     sample: ranked.length,
     avgGrade: gradeSum / ranked.length,
     // Media SOLO sobre los que tienen horas: contar como cero a los que no las anotaron hundiría el dato.
@@ -226,7 +256,7 @@ function closeYear(acc: YearAccumulator): YearSummary {
     grades: acc.grades,
     best: games[0]?.grade > 0 ? games[0] : null,
     longest,
-    top: topSummary(games),
+    top: topSummary(games, PODIUM),
     games,
   };
 }

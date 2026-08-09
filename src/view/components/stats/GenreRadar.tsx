@@ -1,6 +1,7 @@
 import { memo, useId } from 'react';
 import { UI_MESSAGES } from '../../../core/constants/labels';
 import { TagRanking } from './TagRanking';
+import { labelLines } from './labelLines';
 import type { TagBucket } from '../../../core/stats/types';
 
 const L = UI_MESSAGES.stats.radar;
@@ -15,8 +16,6 @@ const CENTER = SIZE / 2;
 const RADIUS = 82;
 const LABEL_RADIUS = RADIUS + 22;
 const RINGS = [0.25, 0.5, 0.75, 1];
-/** Etiquetas largas ("Aventura gráfica point and click") romperían la figura: se recortan. */
-const LABEL_MAX = 14;
 
 interface Point {
   x: number;
@@ -31,10 +30,6 @@ function vertex(index: number, total: number, ratio: number, radius = RADIUS): P
 
 function polygon(points: Point[]): string {
   return points.map((point) => `${point.x.toFixed(1)},${point.y.toFixed(1)}`).join(' ');
-}
-
-function shorten(tag: string): string {
-  return tag.length > LABEL_MAX ? `${tag.slice(0, LABEL_MAX - 1)}…` : tag;
 }
 
 /**
@@ -114,8 +109,12 @@ export const GenreRadar = memo(function GenreRadar({ tags }: { tags: TagBucket[]
               textAnchor={anchor}
               dominantBaseline="middle"
             >
-              {shorten(tag.tag)}
-              <tspan className="genre-radar-label-num" dx="4">{tag.games}</tspan>
+              {labelLines(tag.tag).map((line, row, all) => (
+                <tspan key={line} x={label.x} dy={row === 0 ? (all.length > 1 ? '-0.5em' : '0') : '1.1em'}>
+                  {line}
+                  {row === all.length - 1 ? <tspan className="genre-radar-label-num" dx="4">{tag.games}</tspan> : null}
+                </tspan>
+              ))}
             </text>
           );
         })}

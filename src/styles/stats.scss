@@ -1218,6 +1218,94 @@
   color: var(--text-muted);
 }
 
+/* Marca de rejugado: entre dos notas iguales, volver a un juego es lo que decide el puesto, así que se ve. */
+.podium-replays {
+  font-size: .72rem;
+  font-weight: 700;
+  padding: .05rem .3rem;
+  border-radius: var(--radius-pill);
+  color: var(--on-accent);
+  background: var(--steam);
+}
+
+/* El resto del top: mismo ranking, sin la ceremonia del podio. */
+.top-rest {
+  display: flex;
+  flex-direction: column;
+  gap: .1rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.top-rest li {
+  display: flex;
+  align-items: center;
+  gap: .6rem;
+  padding: .3rem .45rem;
+  border-radius: 6px;
+  font-size: .86rem;
+  animation: slide-in .45s cubic-bezier(.22, 1, .36, 1) both;
+  animation-delay: calc(var(--i, 0) * 40ms);
+}
+
+.top-rest li:nth-child(odd) { background: var(--surface-soft); }
+
+.top-rest-pos {
+  min-width: 1.2rem;
+  font-size: .72rem;
+  font-weight: 700;
+  color: var(--text-dim);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.top-rest-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Nota media por género: qué te gusta MÁS, que no siempre es lo que más juegas. */
+.genre-grades {
+  display: flex;
+  flex-direction: column;
+  gap: .1rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.genre-grades li {
+  display: flex;
+  align-items: center;
+  gap: .6rem;
+  padding: .3rem .45rem;
+  border-radius: 6px;
+  font-size: .86rem;
+  animation: slide-in .45s cubic-bezier(.22, 1, .36, 1) both;
+  animation-delay: calc(var(--i, 0) * 40ms);
+}
+
+.genre-grades li:nth-child(odd) { background: var(--surface-soft); }
+
+.genre-grades-tag {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.genre-grades-count {
+  flex: 0 0 auto;
+  font-size: .74rem;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
 /* Cifras del retrato: número grande y su lectura al lado, en una línea que se parte sola. */
 .top-figures {
   display: flex;
