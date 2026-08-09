@@ -1,4 +1,5 @@
 const tsParser = require('@typescript-eslint/parser');
+const tsPlugin = require('@typescript-eslint/eslint-plugin');
 const jsxA11yPlugin = require('eslint-plugin-jsx-a11y');
 const reactPlugin = require('eslint-plugin-react');
 const reactHooksPlugin = require('eslint-plugin-react-hooks');
@@ -90,6 +91,43 @@ module.exports = [
       "jsx-a11y/role-supports-aria-props": "error",
       "jsx-a11y/scope": "error",
       "jsx-a11y/tabindex-no-positive": "error"
+    }
+  },
+
+  /**
+   * CAPA TIPADA — solo `src/model` y `src/viewmodel`.
+   *
+   * Qué añade: hasta aquí había parser de TypeScript pero NINGUNA regla de TypeScript, así que ESLint entendía
+   * la sintaxis y no comprobaba nada del sistema de tipos. Las cuatro reglas de abajo son las que de verdad
+   * importan en este código, y todas van del mismo fallo: una promesa que nadie espera. En la capa de datos eso
+   * no da un error visible —da un dato viejo, un guardado que no llegó o un merge contra un estado que ya
+   * cambió—, que es exactamente la familia de bugs de sincronización que más caro ha salido en este proyecto.
+   *
+   * `void promesa` SIGUE SIENDO VÁLIDO: `no-floating-promises` acepta el operador `void` como marca explícita de
+   * "esto es best-effort a propósito", que es justo el patrón que ya usa el código. Lo que caza es la llamada
+   * async que alguien olvidó marcar de una forma o de otra.
+   *
+   * Por qué NO se aplica a todo `src/`: el análisis con tipos obliga a ESLint a construir el programa entero y
+   * el lint pasa de segundos a decenas de segundos. Estas dos carpetas son donde vive el riesgo (el resto es
+   * vista y constantes), así que el reparto coste/beneficio está aquí.
+   */
+  {
+    files: ["src/model/**/*.ts", "src/viewmodel/**/*.{ts,tsx}"],
+    languageOptions: {
+      parser: tsParser,
+      parserOptions: {
+        projectService: true,
+        tsconfigRootDir: __dirname
+      }
+    },
+    plugins: {
+      '@typescript-eslint': tsPlugin
+    },
+    rules: {
+      "@typescript-eslint/no-floating-promises": "error",
+      "@typescript-eslint/no-misused-promises": "error",
+      "@typescript-eslint/await-thenable": "error",
+      "@typescript-eslint/require-await": "error"
     }
   }
 ];
