@@ -72,6 +72,12 @@ function metaValue(values?: string[]) {
   );
 }
 
+/* Años del juego para pintar: siempre del más reciente al más antiguo, para que al truncar
+   (`MAX_ROW_CHIPS`) o al mostrar solo el primero en el meta compacto salga el último completado. */
+function yearsDesc(years?: number[]) {
+  return [...(years || [])].sort((a, b) => b - a).map(String);
+}
+
 const MAX_ROW_CHIPS = 3;
 
 // Clase por columna en Completados (c): controla ancho por importancia y permite ocultar
@@ -448,13 +454,13 @@ export const GameTable = memo(function GameTable({
                                 <span className="row-meta-item rm-genre">{metaValue(game.genres)}</span>
                               ) : null}
                               {currentTab === 'c' && showYears && game.years?.length ? (
-                                <span className="row-meta-item rm-year">{metaValue(game.years.map(String))}</span>
+                                <span className="row-meta-item rm-year">{metaValue(yearsDesc(game.years))}</span>
                               ) : null}
                             </span>
                           </span>
                         </button>
                       </td>
-                      {currentTab === 'c' && showYears ? <td className="col-c-year">{renderTags(game.years?.map(String) || [], 'chip-generic', MAX_ROW_CHIPS)}</td> : null}
+                      {currentTab === 'c' && showYears ? <td className="col-c-year">{renderTags(yearsDesc(game.years), 'chip-generic', MAX_ROW_CHIPS)}</td> : null}
                       <td className={cCol('col-c-plat')}>{renderTags(game.platforms, 'chip-plat', MAX_ROW_CHIPS)}</td>
                       <td className={cCol('col-c-genre')}>{renderTags(game.genres, 'chip-genre', MAX_ROW_CHIPS)}</td>
                       {(currentTab === 'c' || currentTab === 'v' || currentTab === 'e') ? (
@@ -500,7 +506,7 @@ export const GameTable = memo(function GameTable({
                         {currentTab === 'c' && showYears && game.years && game.years.length > 0 && (
                           <div className="detail-box">
                             <span className="detail-label">{UI_MESSAGES.detail.yearsCompleted}</span>
-                            <div>{renderTags(game.years?.map(String) || [], 'chip-generic')}</div>
+                            <div>{renderTags(yearsDesc(game.years), 'chip-generic')}</div>
                           </div>
                         )}
                         {(currentTab === 'c' || currentTab === 'v') && showHours && game.hours !== null && (
