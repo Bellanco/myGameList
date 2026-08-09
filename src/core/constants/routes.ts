@@ -22,7 +22,7 @@ export const APP_ROUTES: ReadonlyArray<{ path: string; section: AppSection }> = 
   // hub con `matchSocialRoute`. Declararlas aquí una a una era la causa de la clase de fallo descrita arriba:
   // añadir una pantalla social obligaba a tocar este fichero o la ruta quedaba inaccesible.
   { path: '/social/*', section: 'social' },
-  // Panel de estadísticas. La pestaña inferior se llama "Perfil" (y de ahí la ruta), pero la sección es `stats`
+  // Panel de estadísticas. La ruta se llamó `/perfil` cuando la pestaña tenía ese nombre; la sección es `stats`
   // para no confundirla con el PERFIL SOCIAL, que es la ficha pública y vive en `/social/profile`.
   { path: '/perfil', section: 'stats' },
   { path: '/ajustes', section: 'settings' },

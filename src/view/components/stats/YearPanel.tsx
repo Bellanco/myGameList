@@ -5,7 +5,7 @@ import { CountUp } from './CountUp';
 import { GenreRadar } from './GenreRadar';
 import { Beeswarm } from './Beeswarm';
 import { TagRanking } from './TagRanking';
-import { GameRefList } from './GameRefList';
+import { GameCards } from './GameCards';
 import { TopGames } from './TopGames';
 import { formatDecimal, formatHours } from './format';
 import type { YearSummary } from '../../../core/stats/types';
@@ -83,7 +83,7 @@ export const YearPanel = memo(function YearPanel({ summary, scale }: { summary: 
       <div className="stats-card">
         <h2>{L.year.gamesTitle(summary.year)}</h2>
         <p className="stats-card-sub">{L.year.gamesSubtitle}</p>
-        <GameRefList games={summary.games} ranked />
+        <GameCards games={summary.games} ranked />
       </div>
     </>
   );
