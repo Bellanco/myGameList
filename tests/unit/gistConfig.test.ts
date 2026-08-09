@@ -10,6 +10,24 @@ async function freshModule() {
   return import('../../src/model/repository/gistConfigRepository');
 }
 
+/**
+ * Espera a que el cifrado EN SEGUNDO PLANO haya escrito el `encToken`.
+ *
+ * Antes había un `setTimeout(30)` fijo, y eso convertía la prueba en una apuesta: el cifrado es AES-GCM con una
+ * clave de dispositivo no exportable, así que su duración depende de lo cargada que esté la máquina. En una
+ * suite completa —o en CI— 30 ms no bastan y el test fallaba sin que nada estuviera roto, que es la peor clase
+ * de test: el que te enseña a ignorarlo. Ahora se sondea hasta que la condición se cumple.
+ */
+async function esperarTokenCifrado(): Promise<string> {
+  return vi.waitFor(() => {
+    const raw = localStorage.getItem(GIST_CFG_KEY) || '';
+    if (!raw.includes('encToken')) {
+      throw new Error('el cifrado en segundo plano todavía no ha escrito el encToken');
+    }
+    return raw;
+  }, { timeout: 5000, interval: 10 });
+}
+
 describe('gistConfigRepository (C4) — token cifrado en reposo', () => {
   beforeEach(() => {
     localStorage.clear();
@@ -18,9 +36,7 @@ describe('gistConfigRepository (C4) — token cifrado en reposo', () => {
   it('saveSyncConfig NO guarda el token en claro y lo deja accesible en memoria', async () => {
     const mod = await freshModule();
     mod.saveSyncConfig({ token: 'ghp_secreto', gistId: 'gid', etag: 'e1', lastRemoteUpdatedAt: 5 });
-    await new Promise((r) => setTimeout(r, 30)); // espera el cifrado en segundo plano
-
-    const raw = localStorage.getItem(GIST_CFG_KEY) || '';
+    const raw = await esperarTokenCifrado();
     expect(raw).not.toContain('ghp_secreto');
     expect(raw).toContain('encToken');
     expect(mod.getSyncConfig()?.token).toBe('ghp_secreto');
@@ -29,7 +45,7 @@ describe('gistConfigRepository (C4) — token cifrado en reposo', () => {
   it('hidrata el token cifrado en una nueva sesión (reimport del módulo)', async () => {
     const first = await freshModule();
     first.saveSyncConfig({ token: 'ghp_persistido', gistId: 'gid2', etag: null, lastRemoteUpdatedAt: 0 });
-    await new Promise((r) => setTimeout(r, 30));
+    await esperarTokenCifrado();
 
     // Nueva sesión: módulo reimportado (caché de token vacía), mismo localStorage/IndexedDB.
     const next = await freshModule();
