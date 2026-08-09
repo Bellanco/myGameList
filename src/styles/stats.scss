@@ -10,6 +10,10 @@
 /* Rejilla y tarjetas PROPIAS, en vez de reutilizar `.settings-hub`/`.settings-card`: aquellas reparten sus
    tarjetas en dos columnas con reglas repartidas por varios breakpoints de `_layout.scss`, y heredarlas ataba el
    reparto de este panel —qué ocupa fila entera y qué media— a decisiones de la pantalla de Ajustes. */
+/* Red de seguridad: ningún gráfico puede empujar el ancho de la página. Los que necesitan desplazamiento
+   (el gráfico anual, el selector de años) lo llevan en su propio contenedor. */
+.stats-hub { max-width: 100%; }
+
 .stats-hub {
   --stats-radius: 8px;
   --stats-c: var(--success);
@@ -476,12 +480,49 @@
     color-mix(in srgb, hsl(135 58% var(--acc-l)) 10%, transparent));
 }
 
+/* Silueta de densidad: un velo por detrás, nunca una mancha. Sin `fill` explícito el SVG la pintaba negra y
+   tapaba el fondo y los propios puntos. */
+.beeswarm-density {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.beeswarm-density path {
+  fill: color-mix(in srgb, var(--steam) 16%, transparent);
+  stroke: color-mix(in srgb, var(--steam) 30%, transparent);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+  animation: fade-in .8s ease-out .2s both;
+}
+
 .beeswarm-guide {
   position: absolute;
   top: 0;
   bottom: 0;
   border-left: 1px dashed var(--border);
   opacity: .5;
+}
+
+/* La mediana —la nota que parte la biblioteca en dos mitades— va con guía punteada y su rótulo abajo, para no
+   chocar con el de la media, que va arriba. Juntas cuentan si la distribución está sesgada: cuando la media
+   queda por debajo de la mediana, es que unos pocos juegos muy bajos tiran de ella. */
+.beeswarm-median {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border-left: 2px dashed var(--text-dim);
+  opacity: .75;
+}
+
+.beeswarm-median b {
+  position: absolute;
+  bottom: -.1rem;
+  left: .3rem;
+  font-size: .68rem;
+  font-weight: 500;
+  color: var(--text-muted);
 }
 
 /* La media, marcada con una guía llena y su cifra: es la referencia contra la que se lee todo lo demás. */
@@ -619,14 +660,15 @@
 .dumbbell-track {
   position: relative;
   height: 1.5rem;
-  padding: 0 1.2rem;
+  /* El margen para que los extremos no se salgan lo pone el cálculo de posiciones (`INSET`), no un padding:
+     los porcentajes de un hijo absoluto se resuelven contra la caja de relleno y el padding no los movía. */
 }
 
 .dumbbell-track::before {
   content: "";
   position: absolute;
-  left: 1.2rem;
-  right: 1.2rem;
+  left: 0;
+  right: 0;
   top: 50%;
   border-top: 1px dashed var(--border);
 }
@@ -674,6 +716,46 @@
   font-weight: 600;
   color: var(--stats-v);
   font-variant-numeric: tabular-nums;
+}
+
+/* ---- Nube de etiquetas (razones de abandono) ----------------------------------------------------------- */
+
+.tag-chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: .4rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* Una sola variable (`--weight`, 0–1) mueve cuerpo, relleno y fondo a la vez: la píldora crece entera y no
+   solo su texto, que es lo que hace legible una nube de etiquetas. */
+.tag-chip {
+  display: inline-flex;
+  align-items: baseline;
+  gap: .35rem;
+  padding: calc(.2rem + var(--weight) * .16rem) calc(.5rem + var(--weight) * .3rem);
+  border-radius: var(--radius-pill);
+  font-size: calc(.74rem + var(--weight) * .34rem);
+  line-height: 1.2;
+  background: color-mix(in srgb, var(--steam) calc(14% + var(--weight) * 26%), transparent);
+  border: 1px solid color-mix(in srgb, var(--steam) calc(25% + var(--weight) * 35%), transparent);
+  animation: pop-in .5s cubic-bezier(.34, 1.36, .64, 1) both;
+  animation-delay: calc(var(--i, 0) * 45ms);
+}
+
+.tag-chips.is-danger .tag-chip {
+  background: color-mix(in srgb, var(--danger) calc(12% + var(--weight) * 24%), transparent);
+  border-color: color-mix(in srgb, var(--danger) calc(22% + var(--weight) * 32%), transparent);
+}
+
+.tag-chip-num {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  opacity: .75;
+  font-size: .78em;
 }
 
 /* ---- Ranking en texto ---------------------------------------------------------------------------------- */
@@ -736,7 +818,7 @@
 
 .timeline-track {
   position: relative;
-  height: 5.5rem;
+  height: 6.5rem;
 }
 
 .timeline-axis {
@@ -767,10 +849,10 @@
   color: var(--text-muted);
 }
 
-/* Los puntos se reparten en cuatro carriles alrededor del eje: las altas del mismo mes no se tapan. */
+/* Los puntos se reparten en carriles a ambos lados del eje: las altas del mismo día no se tapan. */
 .timeline-dot {
   position: absolute;
-  top: calc(50% + (var(--lane, 0) - 1.5) * .85rem);
+  top: calc(50% + var(--lane, 0) * .8rem);
   width: .55rem;
   height: .55rem;
   margin: -.275rem 0 0 -.275rem;
@@ -909,57 +991,60 @@
 
 /* ---- Completados vs abandonados ----------------------------------------------------------------------- */
 
+/* La tarta se queda en el centro de su tarjeta y crece con ella: al compartir fila con el hexágono, una
+   figura pequeña en la esquina dejaba la mitad de la tarjeta vacía. */
 .ratio-block {
   display: flex;
   align-items: center;
-  gap: 1.2rem;
+  justify-content: center;
+  gap: 1.6rem;
   flex-wrap: wrap;
+  flex: 1;
 }
 
-.ratio-donut {
-  position: relative;
-  display: grid;
-  place-items: center;
-  width: 8rem;
-  height: 8rem;
+.ratio-pie {
+  width: min(13rem, 55%);
+  flex: 0 0 auto;
 }
 
-.ratio-donut svg {
-  position: absolute;
-  inset: 0;
+.ratio-pie svg {
   width: 100%;
-  height: 100%;
-  /* Empieza a las doce y avanza en el sentido del reloj. */
-  transform: rotate(-90deg);
+  height: auto;
+  overflow: visible;
+  /* Sombra propia bajo la figura: la despega de la tarjeta sin necesidad de un borde. */
+  filter: drop-shadow(0 6px 14px rgba(0, 0, 0, .28));
 }
 
-.ratio-track {
-  fill: none;
-  stroke: var(--stats-v);
-  opacity: .35;
+.pie-slice path {
+  stroke: var(--surface);
+  stroke-width: 1.5;
+  stroke-linejoin: round;
 }
 
-/* El arco se dibuja animando `stroke-dashoffset`, que sí es interpolable (un ángulo de `conic-gradient` no lo
-   es sin `@property`). Extremos redondeados: es lo que le da el aire de aro y no de porción de tarta. */
-.ratio-arc {
-  fill: none;
-  stroke: var(--stats-c);
-  stroke-linecap: round;
-  stroke-dashoffset: var(--arc-length);
-  animation: arc-sweep 1.1s cubic-bezier(.22, 1, .36, 1) both;
+.pie-slice.is-c path { fill: var(--stats-c); }
+.pie-slice.is-v path { fill: var(--stats-v); }
+
+/* Cada porción entra girando desde el centro y se separa un poco al pasar el ratón. */
+.pie-slice {
+  transform-origin: center;
+  animation: pie-in .7s cubic-bezier(.34, 1.36, .64, 1) both;
+  animation-delay: calc(var(--i, 0) * 110ms);
+  transition: transform .18s ease;
 }
 
-@keyframes arc-sweep {
-  from { stroke-dashoffset: var(--arc-length); }
-  to { stroke-dashoffset: var(--arc-offset); }
+.pie-slice:hover { transform: translate(var(--tx, 0), var(--ty, 0)); }
+
+@keyframes pie-in {
+  from { opacity: 0; transform: scale(.25) rotate(-40deg); }
+  to { opacity: 1; transform: scale(1) rotate(0); }
 }
 
-.ratio-donut-num {
-  position: relative;
-  z-index: 1;
-  font-size: 1.5rem;
+.pie-num {
+  fill: var(--on-accent);
+  font-size: 20px;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
+  pointer-events: none;
 }
 
 .ratio-legend {

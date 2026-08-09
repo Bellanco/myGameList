@@ -56,11 +56,19 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
     Dice a la vez el volumen y la proporción, y sustituye a los dos gráficos que hacían falta antes.
   - **Línea de tiempo** para la lista de próximos: un punto por juego en su fecha de alta. Reemplaza a "los que
     más llevan esperando" y a "los últimos en llegar", y además enseña las rachas y los parones.
-  - **Rankings en texto** (puesto, etiqueta y cifra) donde una barra no añadía nada al número: razones de
-    abandono y plataformas.
+  - **Tarta** para completados frente a abandonados: dos categorías que suman el total, que es de las pocas
+    veces en que una tarta es la forma correcta. Las porciones se separan al pasar el ratón y el color sale de
+    los tokens de la paleta, así que se adapta sola a cada tema.
+  - **Nube de etiquetas** para las razones de abandono y **ranking en texto** (puesto, etiqueta y cifra) para
+    las plataformas, donde una barra no añadía nada al número.
   - Se mantienen el hexágono, el aro, el área acumulada y las columnas del gráfico anual.
   - Las formas que necesitan un mínimo de datos caen a un ranking en texto cuando no lo tienen: el hexágono por
     debajo de tres ejes y el rosetón por debajo de tres sectores (dos mitades no son una figura).
+  - El enjambre lleva además **silueta de densidad** detrás y las guías de **media y mediana**: con la
+    biblioteca entera los puntos se tocan y la silueta es lo único que sigue diciendo dónde está el grueso.
+- **Los ejes de tiempo se adaptan al periodo.** La escala la elige el propio recorrido de los datos (días,
+  quincenas, meses o años salteados), así que el dibujo ocupa el ancho tanto si han pasado tres meses como si
+  han pasado trece años. Antes un eje fijo en años dejaba los periodos cortos sin una sola referencia.
 - **Efectos de entrada**: el hexágono crece desde el centro, las columnas y barras se despliegan en cascada, el
   aro se rellena girando y las cifras cuentan hacia arriba. Todo se apaga con `prefers-reduced-motion` (y el
   conteo ni siquiera se calcula).
@@ -82,6 +90,11 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
   suyas, y el más largo del año tiene su propia tarjeta cuando no coinciden.
 - **El índice de abandono dejaba media tarjeta vacía**: la barra se acotaba a un ancho máximo y el resto de la
   fila quedaba en blanco. Las mancuernas ocupan el ancho completo.
+- **Las mancuernas podían salirse de la pantalla y forzar scroll horizontal**: los porcentajes de un hijo
+  absoluto se resuelven contra la caja de relleno, así que el padding del carril no apartaba los extremos. El
+  margen lo pone ahora el cálculo de posiciones.
+- **La línea de tiempo amontonaba los juegos que entraron el mismo día** (lo típico tras una importación):
+  repartía por el índice, no por choque. Ahora cada punto sube o baja hasta encontrar hueco libre.
 
 ### Performance
 - **El estado de arranque de las listas se lee una vez por montaje, no en cada render.** `loadLocalState()`

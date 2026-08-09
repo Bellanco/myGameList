@@ -1,7 +1,8 @@
 import { memo, useId, type CSSProperties } from 'react';
 import { UI_MESSAGES } from '../../../core/constants/labels';
 import { CUMULATIVE_WINDOW, accumulate, fillMonthGaps } from '../../../core/stats/months';
-import { formatCount, formatMonthLabel } from './format';
+import { timeTicks } from '../../../core/stats/timeAxis';
+import { formatCount, formatMonthLabel, formatTick } from './format';
 import type { ArrivalPoint } from '../../../core/stats/types';
 import type { TabId } from '../../../model/types/game';
 
@@ -10,8 +11,10 @@ const L = UI_MESSAGES.stats.backlog;
 /** Orden de apilado, de abajo arriba: lo ya cerrado primero y lo que aún espera arriba. */
 const SERIES: TabId[] = ['c', 'v', 'e', 'p'];
 
-/** Por debajo de esta cantidad de meses se rotula mes a mes y se marcan los puntos; por encima, años. */
+/** Por debajo de esta cantidad de meses se marcan los puntos uno a uno. */
 const SHORT_SERIES = 15;
+/** Marcas del eje: las que caben sin apelmazarse en un lienzo ancho. */
+const MAX_TICKS = 8;
 /** Series cortas: sin suavizado. Una curva entre tres puntos se inventa una forma que el dato no tiene. */
 const SMOOTH_FROM = 6;
 
@@ -98,12 +101,18 @@ export const BacklogArea = memo(function BacklogArea({ points, mode }: BacklogAr
     stacks.push([...running]);
   }
 
-  // Rótulos del eje: mes a mes en series cortas; el año, en las largas.
-  const ticks = showDots
-    ? series.map((point, index) => ({ index, label: formatMonthLabel(point.m) }))
-    : series
-      .map((point, index) => ({ index, label: point.m.slice(0, 4) }))
-      .filter((tick, index, all) => index === 0 || tick.label !== all[index - 1].label);
+  // El eje se adapta al recorrido: con tres meses rotula meses y con trece años, años salteados. La escala la
+  // elige `timeTicks` a partir del periodo real, así que el dibujo ocupa el ancho tanto si ha pasado poco como
+  // si ha pasado mucho. Cada marca se traduce al índice de su mes, que es la unidad en la que está la serie.
+  const monthStart = (key: string) => new Date(Number(key.slice(0, 4)), Number(key.slice(5, 7)) - 1, 1);
+  const first = monthStart(series[0].m);
+  const monthIndex = (at: number) => {
+    const date = new Date(at);
+    return (date.getFullYear() - first.getFullYear()) * 12 + (date.getMonth() - first.getMonth());
+  };
+  const ticks = timeTicks(first.getTime(), monthStart(series[series.length - 1].m).getTime(), MAX_TICKS, 'month')
+    .map((tick) => ({ index: monthIndex(tick.at), label: formatTick(tick.at, tick.unit) }))
+    .filter((tick) => tick.index >= 0 && tick.index < series.length);
 
   return (
     <div className="backlog">

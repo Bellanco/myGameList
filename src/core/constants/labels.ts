@@ -226,7 +226,8 @@ export const UI_MESSAGES = {
       gradeLabel: (floor: number, ceiling: number) => `${floor}–${ceiling}`,
       countLabel: (count: number) => `${count} ${count === 1 ? 'juego' : 'juegos'}`,
       chartAria: 'Distribución de notas',
-      swarmHint: (count: number) => `Cada punto es uno de tus ${count} juegos puntuados.`,
+      swarmHint: (count: number, best: string) => `Cada punto es uno de tus ${count} juegos puntuados. El más alto: ${best}.`,
+      median: 'mediana',
     },
     genres: {
       title: 'Géneros más jugados',

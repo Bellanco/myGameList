@@ -4,6 +4,7 @@ import { ABANDON_RATE_MIN } from '../../../core/stats/computeStats';
 import { StatTile } from './StatTile';
 import { CountUp } from './CountUp';
 import { TagRanking } from './TagRanking';
+import { TagChips } from './TagChips';
 import { Dumbbell } from './Dumbbell';
 import { GameRefList } from './GameRefList';
 import { formatDecimal, formatHours } from './format';
@@ -62,7 +63,7 @@ export const ShameCard = memo(function ShameCard({ shame, scale }: { shame: Sham
       <div className="stats-split">
         <section>
           <h3>{L.reasons}</h3>
-          {shame.reasons.length ? <TagRanking tags={shame.reasons} /> : <p className="stats-empty">{L.noReasons}</p>}
+          {shame.reasons.length ? <TagChips tags={shame.reasons} tone="danger" /> : <p className="stats-empty">{L.noReasons}</p>}
         </section>
         <section>
           <h3>{L.recent}</h3>
