@@ -5,6 +5,22 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
 
 ## [Unreleased]
 
+### Added
+- **Panel "Perfil" (`/perfil`), nueva pestaña de la barra inferior**: la biblioteca en números —juegos, horas,
+  nota media y partida más larga, año a año (con conmutador juegos/horas), distribución de notas, ratio de
+  completados frente a abandonados y géneros más jugados. Todo es **derivado y de solo lectura**: se calcula en
+  el dispositivo a partir de las listas que ya están en memoria (`core/stats/computeStats`, una única pasada
+  O(n) memoizada), sin campos nuevos en `GameItem`, sin escribir en el gist y sin publicar nada al canal social.
+  El hub y su hoja de estilos entran por `lazy()`, así que no pesan en el arranque.
+  - Reglas que fija el cálculo: "Próximos" no cuenta como jugado (ni horas, ni géneros, ni su nota, que ahí es
+    el **interés** previo y no una valoración); "En curso" no puntúa; las horas de un juego completado varias
+    veces cuentan enteras en el **último** año (repartirlas inventaría un dato que nadie registró); los
+    completados sin año van a un cajón propio en vez de desaparecer del gráfico.
+  - Accesibilidad: los gráficos densos exponen sus datos en una tabla `sr-only` en vez de en una etiqueta
+    kilométrica, y el aro de completados se anuncia con su reparto.
+  - Pendiente: la **evolución real del backlog** necesita un histórico que hoy no existe (`listedAt` se
+    reescribe al mover de lista), así que queda para una segunda fase con instantáneas mensuales locales.
+
 ### Performance
 - **El estado de arranque de las listas se lee una vez por montaje, no en cada render.** `loadLocalState()`
   estaba en el cuerpo del hook raíz y `normalizeData()` como argumento de `useState` (no como inicializador

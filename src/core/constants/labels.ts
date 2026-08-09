@@ -162,6 +162,7 @@ export const UI_MESSAGES = {
     inbox: 'Bandeja de importados',
     admin: 'Administración',
     legal: 'Información legal',
+    stats: 'Perfil: estadísticas de mis listas',
   },
   skipToContent: 'Saltar al contenido',
   // A11y-4: nombre accesible de cada pestaña de listado. Hace falta explícito porque el título visible
@@ -177,6 +178,72 @@ export const UI_MESSAGES = {
     account: 'Cuenta',
     inbox: 'Bandeja',
     integrations: 'Integraciones',
+    // La pestaña se llama "Perfil" de cara al usuario; por dentro la sección es `stats` (el panel de
+    // estadísticas). No confundir con el PERFIL SOCIAL (`/social/profile`), que es la ficha pública.
+    stats: 'Perfil',
+  },
+  // Panel "Perfil": estadísticas derivadas de las listas. Todo se calcula en el dispositivo (ver
+  // `core/stats/computeStats`); no se guarda ni se publica nada.
+  stats: {
+    subtitle: 'Tu biblioteca en números, calculada en este dispositivo a partir de tus listas.',
+    empty: {
+      title: 'Todavía no hay nada que contar',
+      body: 'Añade juegos a tus listas y aquí aparecerán tus horas, tus notas y tus géneros.',
+    },
+    tiles: {
+      games: 'Juegos',
+      gamesHint: (playing: number, upcoming: number) => `${playing} en curso · ${upcoming} en próximos`,
+      hours: 'Horas jugadas',
+      hoursHint: (completed: string) => `${completed} h en juegos completados`,
+      avgGrade: 'Nota media',
+      avgGradeHint: (count: number) => `sobre ${count} ${count === 1 ? 'juego puntuado' : 'juegos puntuados'}`,
+      // Sufijo de la nota media según la escala de la cuenta (estrellas o nota fina).
+      outOf5: '/5',
+      outOf100: '/100',
+      longest: 'Tu partida más larga',
+      longestHint: (hours: string) => `${hours} h`,
+      noData: '—',
+    },
+    years: {
+      title: 'Año a año',
+      subtitle: 'Juegos completados por año. Las horas de un juego cuentan en el último año en que lo completaste.',
+      metricAria: 'Métrica del gráfico anual',
+      metricGames: 'Juegos',
+      metricHours: 'Horas',
+      noYear: 'Sin año',
+      noYearHint: 'Completados a los que no les registraste año.',
+      empty: 'Marca algún juego como completado para ver tu evolución por años.',
+      colYear: 'Año',
+      colGames: 'Completados',
+      colHours: 'Horas',
+      chartAria: (metric: string) => `Gráfico de ${metric} por año`,
+    },
+    grades: {
+      title: 'Distribución de notas',
+      subtitle: 'Cómo repartes tus puntuaciones entre los juegos completados y los abandonados que puntuaste.',
+      empty: 'Todavía no has puntuado ningún juego.',
+      starsLabel: (stars: number) => `${stars} ${stars === 1 ? 'estrella' : 'estrellas'}`,
+      gradeLabel: (floor: number, ceiling: number) => `${floor}–${ceiling}`,
+      countLabel: (count: number) => `${count} ${count === 1 ? 'juego' : 'juegos'}`,
+      chartAria: 'Histograma de notas',
+    },
+    genres: {
+      title: 'Géneros más jugados',
+      subtitle: 'Cuenta completados, abandonados y en curso. Un juego con varios géneros suma en todos.',
+      empty: 'Añade géneros a tus juegos para ver este reparto.',
+      games: (count: number) => `${count} ${count === 1 ? 'juego' : 'juegos'}`,
+      hours: (hours: string) => `${hours} h`,
+      chartAria: 'Géneros por número de juegos',
+    },
+    ratio: {
+      title: 'Completados y abandonados',
+      subtitle: 'De los juegos que ya has cerrado, cuántos terminaste.',
+      empty: 'Aún no has completado ni abandonado ningún juego.',
+      completed: 'Completados',
+      abandoned: 'Abandonados',
+      donutAria: (percent: number, completed: number, abandoned: number) =>
+        `${percent}% completados: ${completed} completados frente a ${abandoned} abandonados`,
+    },
   },
   import: {
     back: 'Volver',
