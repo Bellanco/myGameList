@@ -2,6 +2,7 @@
 // contra GitHub. El canal SOCIAL vive en `socialGistRepository`; lo común a ambos, en `githubGistApi`.
 import { isValidGistId, isValidGithubToken } from '../../core/security/sanitize';
 import { migrateData } from './migrateRepository';
+import { normalizeData } from './localRepository';
 import { assembleChunkedGames, gamesGistNeedsRewrite, gamesGistNeedsUpgradeToWrapper, unwrapGamesFile } from '../migration/legacyGamesFormat';
 import type { TabData } from '../types/game';
 import type { GamesChunkFile, GamesMainFile } from '../types/gist';
@@ -666,8 +667,14 @@ export async function writeGist(token: string, gistId: string, payload: TabData)
     throw new Error('Gist ID inválido');
   }
 
-  // E1: serialización magra (omite opcionales vacíos) + guarda de tamaño por fichero.
-  const lean = leanTabData(payload);
+  // NORMALIZAR ANTES DE VALIDAR, y no es un detalle: la ruta de recuperación de conflicto escribe el resultado
+  // de `mergeCrdt` entre lo local y lo REMOTO, y el remoto solo ha pasado por `migrateData`, que traduce formas
+  // legacy pero NO coacciona tipos (su `deleted`, de hecho, es un cast a pelo). Sin este paso, un gist con un
+  // `hours: "20"` o un `id: "3"` —editado a mano, o escrito por un cliente viejo— haría saltar la validación de
+  // abajo y, al fallar cerrado, dejaría a ese usuario SIN PODER SINCRONIZAR. Normalizar primero convierte ese
+  // caso en lo que debe ser (un dato saneado que sí se publica) y deja el aborto para la corrupción de verdad,
+  // la que la normalización no puede arreglar. Es idempotente: sobre datos ya normalizados no cambia nada.
+  const lean = leanTabData(normalizeData(payload));
   // Última comprobación antes de publicar: si lo que íbamos a subir está corrupto, el gist remoto se queda como
   // está. El gist es la fuente de la que beben los demás dispositivos, así que una escritura mala se propaga;
   // una escritura abortada, no. Falla cerrado A PROPÓSITO, y solo por tipos (ver `gamesGistSchema`).

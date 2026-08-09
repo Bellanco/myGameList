@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { assertValidGamesGist, inspectGamesGist } from '../../src/model/schemas/gamesGistSchema';
 import { leanTabData } from '../../src/model/repository/socialProjection';
+import { normalizeData } from '../../src/model/repository/localRepository';
 import type { GameItem, TabData } from '../../src/model/types/game';
 
 function game(over: Partial<GameItem> = {}): GameItem {
@@ -86,5 +87,30 @@ describe('gamesGistSchema — lectura (falla abierto)', () => {
     const report = inspectGamesGist({ ...tabData(), c: muchos });
     expect(report.issueCount).toBe(40);
     expect(report.summary).toContain('y 35 más');
+  });
+});
+
+/**
+ * REGRESIÓN DE RELEASE. La validación de escritura falla cerrado, así que hay que garantizar que NUNCA se
+ * dispara contra datos que solo están "sucios" y son recuperables: la ruta de recuperación de conflicto escribe
+ * el merge entre lo local y lo REMOTO, y el remoto solo pasa por `migrateData`, que no coacciona tipos. Si un
+ * gist con `hours: "20"` bloqueara la escritura, ese usuario se quedaría sin poder sincronizar.
+ *
+ * Lo que fija este test es el contrato de `writeGist`: normalizar y DESPUÉS validar.
+ */
+describe('gamesGistSchema — datos remotos sucios no pueden bloquear el sync', () => {
+  it('normalizing first turns a dirty remote into something publishable', () => {
+    const sucio = {
+      c: [{ id: '7', _ts: '1700000000000', name: 42, platforms: 'PC', genres: null, hours: '20', score: '5' }],
+      v: [], e: [], p: [],
+      deleted: [{ id: '3' }],
+      updatedAt: '1700000000000',
+    } as unknown as TabData;
+
+    // Tal cual, la validación lo rechaza (es su trabajo).
+    expect(() => assertValidGamesGist(leanTabData(sucio))).toThrow(/schema/);
+
+    // Pasado por la normalización —que es lo que hace `writeGist`— se publica sin problema.
+    expect(() => assertValidGamesGist(leanTabData(normalizeData(sucio)))).not.toThrow();
   });
 });
