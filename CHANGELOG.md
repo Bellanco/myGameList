@@ -75,11 +75,14 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
     umbral, no como rejilla), rellenos de área más velados, separación de 2 px entre porciones, cifras
     proporcionales en las tarjetas destacadas (los dígitos de ancho fijo son para columnas que se alinean) y
     diana de 24 px alrededor de cada punto, que señalar un círculo de nueve píxeles era imposible.
-  - **Barras radiales** (un anillo por género, con la vuelta que da proporcional a su peso) para los géneros de
-    tus mejores: es la variación del rosetón —misma familia circular, lectura distinta— y no sufre su problema
-    con pocos valores, que es que tres sectores se ven como una tarta rota. Llevan una guía a media vuelta y la
-    cifra dentro del arco cuando cabe: sin referencia común, dos arcos de radios distintos con el mismo ángulo
-    parecen medir cosas distintas, porque el de fuera recorre más camino.
+  - **Barras radiales en media luna, con el nombre escrito sobre cada anillo**, para los géneros de tus
+    mejores: es la variación del rosetón —misma familia circular, lectura distinta— y no sufre su problema con
+    pocos valores, que es que tres sectores se ven como una tarta rota. El rótulo curvado resuelve lo único que
+    fallaba: en unos anillos de colores parecidos la identidad dependía de casar color con leyenda, y así no hay
+    nada que casar. Va dentro del arco cuando cabe y pasada la punta cuando no, siempre centrado en la parte
+    alta del semicírculo, que es donde el texto queda derecho —con una vuelta de tres cuartos se leía cabeza
+    abajo al cruzar la mitad inferior—. Y una guía a media vuelta, porque sin referencia común dos arcos de
+    radios distintos con el mismo ángulo parecen medir cosas distintas.
   - **Anillo repartido con el total en el centro** para saber dónde juegas tus favoritos: compara cada
     plataforma con el todo y deja el hueco central para la cifra que da contexto.
   - **Piruletas** para tu nota media por género, con el carril completo, la guía de tu media global y la
@@ -123,6 +126,11 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
 - **Efectos de entrada**: el hexágono crece desde el centro, las columnas y barras se despliegan en cascada, el
   aro se rellena girando y las cifras cuentan hacia arriba. Todo se apaga con `prefers-reduced-motion` (y el
   conteo ni siquiera se calcula).
+  - Las tarjetas se destapan **al llegar a ellas**, no todas al montar: el panel es más alto que la pantalla y
+    media se "cargaba" sin que nadie la viera. Sus gráficos esperan con ellas, en pausa al 0%. La marca que lo
+    activa la pone el JavaScript, así que sin él —o con menos movimiento pedido— todo queda visible desde el
+    primer pintado, y un barrido por posición destapa lo que un salto de scroll (la tecla Fin, un ancla, la
+    posición restaurada al recargar) haga cruzar la pantalla entre dos fotogramas sin que el observador lo vea.
 - **Las horas salen de los rankings de etiquetas.** La columna de la derecha cambiaba de ancho fila a fila
   ("9" frente a "9 · 677 h") y descolocaba las barras. Las horas siguen donde de verdad se leen: las cifras
   destacadas y el gráfico anual.

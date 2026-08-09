@@ -269,7 +269,6 @@ export const UI_MESSAGES = {
       avgHours: ' de media, cada uno',
       cutoff: ' es el listón para entrar',
       genres: 'Tus mejores géneros',
-      genresHint: (count: number) => `Cada anillo es un género; la vuelta que da es cuántos de tus ${count} mejores lo son.`,
       platforms: 'Dónde los juegas',
     },
     // Pestañas General / año. Solo se listan los años con juegos completados.

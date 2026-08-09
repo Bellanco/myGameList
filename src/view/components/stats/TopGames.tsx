@@ -100,7 +100,6 @@ export const TopGames = memo(function TopGames({ top, scale, average, showRest =
         <section>
           <h3>{L.genres}</h3>
           <RadialBars tags={top.genres} total={top.sample} />
-          <p className="stats-note">{L.genresHint(top.sample)}</p>
         </section>
         <section>
           <h3>{L.platforms}</h3>

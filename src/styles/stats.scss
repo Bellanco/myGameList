@@ -1303,18 +1303,17 @@
 /* ---- Barras radiales: un anillo por etiqueta ----------------------------------------------------------- */
 
 /* Variación del rosetón: allí cada categoría es un sector del mismo ángulo y compite por radio; aquí cada una
-   tiene su propia órbita y lo que se compara es cuánto avanza en ella. */
+   tiene su propia órbita y lo que se compara es cuánto avanza en ella. El nombre va escrito sobre el anillo,
+   así que no hace falta leyenda que casar. */
 .radial {
   display: flex;
-  align-items: center;
-  gap: 1.1rem;
-  flex-wrap: wrap;
+  justify-content: center;
 }
 
 .radial-svg {
-  width: min(11rem, 45%);
+  width: 100%;
+  max-width: 20rem;
   height: auto;
-  flex: 0 0 auto;
 }
 
 /* Referencia común a media vuelta: es lo que permite comparar anillos de radios distintos. */
@@ -1324,73 +1323,38 @@
   opacity: .6;
 }
 
-.radial-num {
-  fill: var(--on-accent);
-  font-size: 10px;
-  font-weight: 700;
-  pointer-events: none;
-}
-
 .radial-track {
   fill: none;
   stroke: var(--score-track);
   stroke-linecap: round;
 }
 
+/* La rampa se reparte de extremo a extremo entre los anillos que haya: con incrementos fijos, cinco anillos se
+   quedaban en el primer tercio del degradado y salían casi del mismo color. */
 .radial-value {
   fill: none;
-  stroke: color-mix(in oklch, var(--chart-to) calc(var(--i, 0) * 18%), var(--chart-from));
+  stroke: color-mix(in oklch, var(--chart-to) calc(var(--i, 0) / max(calc(var(--n, 2) - 1), 1) * 100%), var(--chart-from));
   stroke-linecap: round;
-  /* El anillo se dibuja girando desde su inicio, como una aguja que da la vuelta. */
-  transform-origin: center;
+  /* El arco se descubre desde su origen (las nueve en punto), como una aguja que sube. */
+  transform-origin: 50% 89%;
   animation: radial-sweep .8s cubic-bezier(.22, 1, .36, 1) both;
   animation-delay: calc(var(--i, 0) * 90ms);
 }
 
 @keyframes radial-sweep {
-  from { opacity: 0; transform: rotate(-70deg) scale(.9); }
-  to { opacity: 1; transform: rotate(0) scale(1); }
+  from { opacity: 0; transform: rotate(-40deg); }
+  to { opacity: 1; transform: rotate(0); }
 }
 
-/* Ancho acotado: sin tope, la lista se estiraba hasta el borde de la tarjeta y la cifra acababa a un palmo
-   del nombre al que pertenece. */
-.radial-legend {
-  display: flex;
-  flex-direction: column;
-  gap: .3rem;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  font-size: .82rem;
-  flex: 0 1 13rem;
-  min-width: 8rem;
+/* El rótulo curvado. Dentro del arco va sobre el relleno; fuera, sobre el carril vacío. */
+.radial-label {
+  font-size: 10.5px;
+  font-weight: 600;
+  fill: var(--text-muted);
+  animation: fade-in .5s ease-out .45s both;
 }
 
-.radial-legend li {
-  display: flex;
-  align-items: center;
-  gap: .5rem;
-  animation: slide-in .45s cubic-bezier(.22, 1, .36, 1) both;
-  animation-delay: calc(var(--i, 0) * 60ms);
-}
-
-.radial-key {
-  width: .7rem;
-  height: .7rem;
-  flex: 0 0 auto;
-  border-radius: 3px;
-  background: color-mix(in oklch, var(--chart-to) calc(var(--i, 0) * 18%), var(--chart-from));
-}
-
-.radial-tag {
-  flex: 1 1 auto;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.radial-legend b { font-variant-numeric: tabular-nums; }
+.radial-label.is-inside { fill: var(--on-accent); }
 
 /* ---- Anillo repartido con el total dentro ---------------------------------------------------------------- */
 
@@ -1807,14 +1771,27 @@
 
 /* ---- Entrada de la pantalla ---------------------------------------------------------------------------- */
 
-/* Las tarjetas suben y aparecen en cascada al entrar en el panel. El retardo se reparte por posición hasta la
-   octava: más allá el usuario ya ha tenido que desplazarse y la animación no aporta. */
-.stats-hub > * {
-  animation: card-in .5s cubic-bezier(.22, 1, .36, 1) both;
+/* Las tarjetas se destapan AL LLEGAR A ELLAS, no todas al montar: el panel es más alto que la pantalla y media
+   se "cargaba" sin que nadie la viera. La marca `is-watching` la pone el hook (ver `useRevealOnScroll`), así
+   que sin JavaScript —o con menos movimiento pedido— todo queda visible desde el primer pintado. */
+.stats-hub.is-watching > *:not(.is-in) {
+  opacity: 0;
+  transform: translateY(14px);
 }
 
-@for $i from 1 through 8 {
-  .stats-hub > *:nth-child(#{$i}) { animation-delay: #{($i - 1) * 55}ms; }
+/* Y sus gráficos esperan con ella: en pausa al 0%, arrancan cuando la tarjeta entra. */
+.stats-hub.is-watching > *:not(.is-in) * {
+  animation-play-state: paused !important;
+}
+
+.stats-hub.is-watching > *.is-in {
+  animation: card-in .55s cubic-bezier(.22, 1, .36, 1) both;
+}
+
+/* Las primeras entran escalonadas: en el primer pantallazo se ve la cascada, y de ahí en adelante cada tarjeta
+   tiene su propio momento al aparecer. */
+@for $i from 1 through 4 {
+  .stats-hub.is-watching > *:nth-child(#{$i}).is-in { animation-delay: #{($i - 1) * 70}ms; }
 }
 
 @keyframes card-in {
