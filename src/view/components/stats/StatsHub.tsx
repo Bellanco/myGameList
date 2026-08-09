@@ -1,4 +1,4 @@
-import { memo } from 'react';
+import { memo, useRef } from 'react';
 import { UI_MESSAGES } from '../../../core/constants/labels';
 import { useStatsViewModel } from '../../../viewmodel/useStatsViewModel';
 import { StatTile } from './StatTile';
@@ -11,6 +11,7 @@ import { BacklogArea } from './BacklogArea';
 import { PolarRose } from './PolarRose';
 import { RatioPie } from './RatioPie';
 import { TopGames } from './TopGames';
+import { useRevealOnScroll } from './useRevealOnScroll';
 import { ShameCard } from './ShameCard';
 import { WishlistCard } from './WishlistCard';
 import { CountUp } from './CountUp';
@@ -33,6 +34,10 @@ const L = UI_MESSAGES.stats;
 export const StatsHub = memo(function StatsHub({ games }: { games: TabData }) {
   const vm = useStatsViewModel(games);
   const { stats, scale, scope, yearSummary } = vm;
+  // Las tarjetas se destapan al llegar a ellas. Se rearma al cambiar de periodo, porque las de la pestaña
+  // nueva son otros elementos y entran sin haberse visto nunca.
+  const hub = useRef<HTMLElement>(null);
+  useRevealOnScroll(hub, scope);
 
   if (vm.isEmpty) {
     return (
@@ -50,7 +55,7 @@ export const StatsHub = memo(function StatsHub({ games }: { games: TabData }) {
   const avgInScale = scale === 'grade' ? stats.scored.avgGrade : stats.scored.avgGrade / 20;
 
   return (
-    <section className="stats-hub" aria-label={UI_MESSAGES.nav.stats}>
+    <section className="stats-hub" aria-label={UI_MESSAGES.nav.stats} ref={hub}>
       <ScopeTabs scope={scope} years={vm.availableYears} onChange={vm.setScope} />
 
       {yearSummary ? (
