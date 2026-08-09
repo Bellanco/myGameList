@@ -24,7 +24,27 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
   puede construirse hacia delante y cada mes sin registrar es un punto perdido para siempre. Local y por
   dispositivo (no sube al gist ni a Firestore), en idle, un punto por mes que se actualiza al último estado
   observado, con tope de 120 meses. No estampa una biblioteca vacía: al arrancar podría no estar hidratada aún.
-  - Pendiente: el **gráfico** de evolución, cuando la serie tenga puntos que enseñar.
+  - El **gráfico** de evolución ya está: mientras la serie no tenga dos puntos, la tarjeta enseña la curva
+    derivada de `listedAt` (y lo dice al pie); en cuanto los tiene, el histórico real la sustituye solo.
+- **El panel se reparte en "General" y una pestaña por año.** Los años los pone el contenido —solo aquellos en
+  los que completaste algo—, así que nunca se ofrece una pestaña que lleve a una pantalla vacía. Cada año
+  resume sus completados: cifras, figura de géneros, distribución de notas, plataformas y el listado completo
+  ordenado por nota. Los abandonados y los próximos **no llevan año** (el formulario solo pide "Años
+  completado" en completados), así que viven en "General" y la pestaña de año lo dice explícitamente.
+- **Figura de géneros al estilo del "Resumen del año" de Steam**: un hexágono con tus seis géneros principales,
+  en SVG a mano (treinta líneas de trigonometría, cero dependencias). Con menos de tres géneros no hay figura
+  posible y cae al reparto en barras en vez de dibujar un segmento.
+- **Apartado de la lista de la vergüenza**: horas invertidas, nota media, cuántos merecen otra oportunidad, las
+  razones de abandono más repetidas (el campo `reasons`, que solo existe en esa lista), los géneros que más
+  abandonas, un **índice de abandono por género** —solo con géneros que tengan al menos tres juegos ya
+  decididos, porque un 100% sobre uno no dice nada— y los últimos en caer.
+- **Apartado de la lista de próximos**: cuántos son, el interés medio (que NO se mezcla con las valoraciones:
+  en esa lista el campo es el interés previo), los compatibles con Deck, los géneros y plataformas que más
+  esperas y **los que llevan más tiempo esperando**.
+- **Gráficos rediseñados**: color semántico fijo por lista en todo el panel (completados verde, abandonados
+  rojo, en curso ámbar, próximos acento), degradados y curvas de entrada suaves, cebra en los listados largos y
+  rejilla propia. Todo con las variables de la paleta activa, así que funciona en los cinco temas y en claro y
+  oscuro sin una sola regla por tema; las animaciones se apagan con `prefers-reduced-motion`.
 
 ### Performance
 - **El estado de arranque de las listas se lee una vez por montaje, no en cada render.** `loadLocalState()`
