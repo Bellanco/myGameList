@@ -2,7 +2,9 @@ import { memo, type CSSProperties } from 'react';
 import { UI_MESSAGES } from '../../../core/constants/labels';
 import { GENRE_GRADE_MIN } from '../../../core/stats/computeStats';
 import { ScoreDisplay } from '../ScoreDisplay';
-import { TagRanking } from './TagRanking';
+import { Waffle } from './Waffle';
+import { StackedShare } from './StackedShare';
+import { Lollipop } from './Lollipop';
 import { formatDecimal, formatHours } from './format';
 import type { TopSummary } from '../../../core/stats/types';
 import type { ScoreScale } from '../../../core/utils/scoreScale';
@@ -56,18 +58,23 @@ export const TopGames = memo(function TopGames({ top, scale }: { top: TopSummary
         <span><b>{formatDecimal(cutoffInScale)}</b>{L.cutoff}</span>
       </div>
 
+      {/* El resto del top en fichas: doce filas ocupaban media pantalla para decir lo mismo. */}
       {rest.length ? (
         <section>
           <h3>{L.ranked}</h3>
-          <ol className="top-rest">
+          <ol className="top-chips">
             {rest.map((game, index) => (
               <li key={game.id} style={{ '--i': index } as CSSProperties}>
-                <span className="top-rest-pos" aria-hidden="true">{index + top.podium.length + 1}</span>
-                <span className="top-rest-name" title={game.name}>{game.name}</span>
-                {game.replays > 1 ? (
-                  <b className="podium-replays" title={L.replaysTitle(game.replays)}>{L.replays(game.replays)}</b>
-                ) : null}
-                <ScoreDisplay game={{ grade: game.grade }} />
+                <span className="top-chip-pos" aria-hidden="true">{index + top.podium.length + 1}</span>
+                <span className="top-chip-body">
+                  <span className="top-chip-name" title={game.name}>{game.name}</span>
+                  <span className="top-chip-meta">
+                    <ScoreDisplay game={{ grade: game.grade }} />
+                    {game.replays > 1 ? (
+                      <b className="podium-replays" title={L.replaysTitle(game.replays)}>{L.replays(game.replays)}</b>
+                    ) : null}
+                  </span>
+                </span>
               </li>
             ))}
           </ol>
@@ -77,26 +84,18 @@ export const TopGames = memo(function TopGames({ top, scale }: { top: TopSummary
       <div className="stats-split">
         <section>
           <h3>{L.genres(top.sample)}</h3>
-          <TagRanking tags={top.genres} limit={5} />
+          <Waffle top={top} />
         </section>
         <section>
           <h3>{L.platforms}</h3>
-          <TagRanking tags={top.platforms} limit={5} />
+          <StackedShare tags={top.platforms} />
         </section>
       </div>
 
       {top.byGenre.length ? (
         <section>
           <h3>{L.byGenre}</h3>
-          <ol className="genre-grades">
-            {top.byGenre.slice(0, 6).map((entry, index) => (
-              <li key={entry.tag} style={{ '--i': index } as CSSProperties}>
-                <span className="genre-grades-tag" title={entry.tag}>{entry.tag}</span>
-                <ScoreDisplay game={{ grade: entry.avgGrade }} />
-                <span className="genre-grades-count">{L.genreCount(entry.games)}</span>
-              </li>
-            ))}
-          </ol>
+          <Lollipop rows={top.byGenre} average={top.avgGrade} scale={scale} />
           <p className="stats-note">{L.byGenreHint(GENRE_GRADE_MIN)}</p>
         </section>
       ) : null}

@@ -1228,81 +1228,319 @@
   background: var(--steam);
 }
 
-/* El resto del top: mismo ranking, sin la ceremonia del podio. */
-.top-rest {
-  display: flex;
-  flex-direction: column;
-  gap: .1rem;
+/* El resto del top, en fichas: doce filas ocupaban media pantalla para decir lo mismo. */
+.top-chips {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr));
+  gap: .4rem;
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
-.top-rest li {
+.top-chips li {
   display: flex;
   align-items: center;
-  gap: .6rem;
-  padding: .3rem .45rem;
-  border-radius: 6px;
-  font-size: .86rem;
-  animation: slide-in .45s cubic-bezier(.22, 1, .36, 1) both;
-  animation-delay: calc(var(--i, 0) * 40ms);
+  gap: .5rem;
+  padding: .4rem .55rem;
+  border: 1px solid var(--border);
+  border-radius: var(--stats-radius);
+  background: var(--surface-soft);
+  min-width: 0;
+  animation: pop-in .4s cubic-bezier(.34, 1.36, .64, 1) both;
+  animation-delay: calc(var(--i, 0) * 35ms);
 }
 
-.top-rest li:nth-child(odd) { background: var(--surface-soft); }
-
-.top-rest-pos {
-  min-width: 1.2rem;
+.top-chip-pos {
+  flex: 0 0 auto;
   font-size: .72rem;
   font-weight: 700;
   color: var(--text-dim);
   font-variant-numeric: tabular-nums;
-  text-align: right;
 }
 
-.top-rest-name {
-  flex: 1 1 auto;
+.top-chip-body {
+  display: flex;
+  flex-direction: column;
+  gap: .1rem;
   min-width: 0;
+}
+
+.top-chip-name {
+  font-size: .82rem;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-/* Nota media por género: qué te gusta MÁS, que no siempre es lo que más juegas. */
-.genre-grades {
+.top-chip-meta {
+  display: flex;
+  align-items: center;
+  gap: .35rem;
+}
+
+/* Las estrellas de la ficha, a escala reducida: son un apoyo, no el dato principal. */
+.top-chip-meta .stars { font-size: .72rem; }
+.top-chip-meta .score-ring { width: 1.6rem; height: 1.6rem; font-size: .6rem; }
+
+/* ---- Gofre: una celda por juego ------------------------------------------------------------------------ */
+
+.waffle {
   display: flex;
   flex-direction: column;
-  gap: .1rem;
+  gap: .6rem;
+}
+
+.waffle-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 2.2rem));
+  gap: .3rem;
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
-.genre-grades li {
-  display: flex;
-  align-items: center;
-  gap: .6rem;
-  padding: .3rem .45rem;
-  border-radius: 6px;
-  font-size: .86rem;
-  animation: slide-in .45s cubic-bezier(.22, 1, .36, 1) both;
-  animation-delay: calc(var(--i, 0) * 40ms);
+.waffle-cell {
+  aspect-ratio: 1;
+  border-radius: 5px;
+  background: color-mix(in oklch, var(--chart-to) calc(var(--i, 0) * 18%), var(--chart-from));
+  animation: pop-in .4s cubic-bezier(.34, 1.36, .64, 1) both;
+  animation-delay: calc(var(--n, 0) * 45ms);
+  transition: transform .15s ease;
 }
 
-.genre-grades li:nth-child(odd) { background: var(--surface-soft); }
+.waffle-cell:hover { transform: scale(1.12); }
+.waffle-cell.is-other { background: var(--text-dim); opacity: .55; }
 
-.genre-grades-tag {
-  flex: 1 1 auto;
+.waffle-legend,
+.share-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .3rem .9rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: .78rem;
+  color: var(--text-muted);
+}
+
+.waffle-legend li,
+.share-legend li {
+  display: flex;
+  align-items: center;
+  gap: .35rem;
+}
+
+.waffle-legend b,
+.share-legend b {
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+.waffle-key,
+.share-key {
+  width: .65rem;
+  height: .65rem;
+  border-radius: 3px;
+  background: color-mix(in oklch, var(--chart-to) calc(var(--i, 0) * 18%), var(--chart-from));
+}
+
+.waffle-key.is-other { background: var(--text-dim); opacity: .55; }
+
+/* ---- Barra repartida al 100% --------------------------------------------------------------------------- */
+
+.share {
+  display: flex;
+  flex-direction: column;
+  gap: .55rem;
+}
+
+/* El hueco entre segmentos es del color del fondo: separa sin añadir la tinta de un borde. */
+.share-bar {
+  display: flex;
+  gap: 2px;
+  height: 1.6rem;
+  border-radius: var(--stats-radius);
+  overflow: hidden;
+}
+
+.share-seg {
+  display: grid;
+  place-items: center;
   min-width: 0;
+  background: color-mix(in oklch, var(--chart-to) calc(var(--i, 0) * 20%), var(--chart-from));
+  transform-origin: left center;
+  animation: grow-right .6s cubic-bezier(.22, 1, .36, 1) both;
+  animation-delay: calc(var(--i, 0) * 70ms);
+}
+
+.share-seg b {
+  font-size: .7rem;
+  font-weight: 700;
+  color: var(--on-accent);
+}
+
+/* ---- Piruletas ------------------------------------------------------------------------------------------ */
+
+.lolli {
+  display: flex;
+  flex-direction: column;
+  gap: .3rem;
+}
+
+.lolli-rows {
+  display: flex;
+  flex-direction: column;
+  gap: .45rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.lolli-rows li {
+  display: grid;
+  grid-template-columns: minmax(4.5rem, 8rem) minmax(0, 24rem) auto;
+  align-items: center;
+  gap: .7rem;
+  font-size: .82rem;
+}
+
+.lolli-tag {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.genre-grades-count {
-  flex: 0 0 auto;
-  font-size: .74rem;
+.lolli-track {
+  position: relative;
+  height: 1rem;
+}
+
+/* La guía de tu media global: sin ella, un "84" no dice si es mucho o poco PARA TI. */
+.lolli-avg {
+  position: absolute;
+  top: -.1rem;
+  bottom: -.1rem;
+  border-left: 1px solid var(--text-muted);
+  opacity: .5;
+}
+
+/* El tallo pesa una fracción de lo que pesaría una barra: el ojo va al punto, que es donde está el dato. */
+.lolli-stem {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  height: 2px;
+  margin-top: -1px;
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, hsl(var(--dot-hue, 135) 58% var(--acc-l)) 45%, transparent);
+  transform-origin: left center;
+  animation: grow-right .6s cubic-bezier(.22, 1, .36, 1) both;
+  animation-delay: calc(var(--i, 0) * 60ms);
+}
+
+.lolli-dot {
+  position: absolute;
+  right: 0;
+  top: 50%;
+  width: .7rem;
+  height: .7rem;
+  margin: -.35rem -.35rem 0 0;
+  border-radius: 50%;
+  background: hsl(var(--dot-hue, 135) 58% var(--acc-l));
+  border: 2px solid var(--surface);
+}
+
+.lolli-value {
+  display: flex;
+  align-items: baseline;
+  gap: .35rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.lolli-value small {
+  font-size: .7rem;
+  font-weight: 500;
   color: var(--text-muted);
+}
+
+/* Mismas columnas que las filas: así el eje cae siempre bajo el carril, mida lo que mida la etiqueta. */
+.lolli-axis {
+  display: grid;
+  grid-template-columns: minmax(4.5rem, 8rem) minmax(0, 24rem) auto;
+  gap: .7rem;
+  font-size: .7rem;
+  color: var(--text-muted);
+}
+
+.lolli-axis-line {
+  position: relative;
+  height: 1rem;
+}
+
+.lolli-axis-line > span {
+  position: absolute;
+  transform: translateX(-50%);
+  white-space: nowrap;
+}
+
+.lolli-axis-line > span:first-child { transform: none; }
+.lolli-axis-avg { font-style: italic; }
+
+/* ---- Matriz de puntos ----------------------------------------------------------------------------------- */
+
+.dot-matrix {
+  display: flex;
+  flex-direction: column;
+  gap: .5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* La columna de puntos no se estira: con `1fr` la cifra se iba al borde derecho de la tarjeta y quedaba a
+   medio metro de los puntos que resume. */
+.dot-matrix li {
+  display: grid;
+  grid-template-columns: minmax(4.5rem, 8rem) minmax(0, 18rem) auto;
+  justify-content: start;
+  align-items: center;
+  gap: .7rem;
+  font-size: .82rem;
+}
+
+.dot-matrix-tag {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dot-matrix-dots {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: .25rem;
+}
+
+.dot-matrix-dots i {
+  width: .55rem;
+  height: .55rem;
+  border-radius: 50%;
+  background: color-mix(in oklch, var(--chart-to) calc(var(--i, 0) * 18%), var(--chart-from));
+  animation: pop-in .35s cubic-bezier(.34, 1.36, .64, 1) both;
+  animation-delay: calc(var(--i, 0) * 60ms + var(--d, 0) * 18ms);
+}
+
+.dot-matrix-dots em {
+  font-size: .7rem;
+  font-style: normal;
+  color: var(--text-muted);
+}
+
+.dot-matrix-num {
+  font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
 

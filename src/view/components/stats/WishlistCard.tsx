@@ -3,7 +3,7 @@ import { UI_MESSAGES } from '../../../core/constants/labels';
 import { StatTile } from './StatTile';
 import { CountUp } from './CountUp';
 import { PolarRose } from './PolarRose';
-import { TagRanking } from './TagRanking';
+import { DotMatrix } from './DotMatrix';
 import { WaitingTimeline } from './WaitingTimeline';
 import { formatDecimal } from './format';
 import type { WishlistSummary } from '../../../core/stats/types';
@@ -44,7 +44,7 @@ export const WishlistCard = memo(function WishlistCard({ wishlist, scale }: { wi
         </section>
         <section>
           <h3>{L.platforms}</h3>
-          <TagRanking tags={wishlist.platforms} />
+          <DotMatrix tags={wishlist.platforms} />
         </section>
       </div>
 

@@ -185,7 +185,8 @@ export const UI_MESSAGES = {
   // Panel de estadísticas derivadas de las listas. Todo se calcula en el dispositivo (ver
   // `core/stats/computeStats`); no se guarda ni se publica nada.
   stats: {
-    subtitle: 'Tu biblioteca en números, calculada en este dispositivo a partir de tus listas.',
+    // The Witcher 3: «el destino es solo la mitad; la otra mitad somos nosotros».
+    subtitle: 'El destino es solo la mitad: la otra mitad son tus listas, y esto es lo que cuentan.',
     empty: {
       // The Legend of Zelda: «es peligroso ir solo».
       title: 'Es peligroso ir solo',
@@ -260,6 +261,8 @@ export const UI_MESSAGES = {
       byGenre: 'Dónde brillas',
       byGenreHint: (min: number) => `Nota media por género, con al menos ${min} juegos puntuados.`,
       genreCount: (count: number) => `${count} juegos`,
+      others: 'Otros',
+      yourAverage: 'tu media',
       replays: (times: number) => `×${times}`,
       replaysTitle: (times: number) => `Completado ${times} veces`,
       hours: (hours: string) => `${hours} h`,
