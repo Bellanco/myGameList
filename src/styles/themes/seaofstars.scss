@@ -257,10 +257,9 @@
 :root[data-palette="seaofstars"] .stats-legend-dot { border-radius: 0; }
 
 :root[data-palette="seaofstars"] .genre-radar-dot { rx: 0; }
-/* Los anillos, con el corte recto: un extremo redondeado desentona en un tema de píxeles. */
-:root[data-palette="seaofstars"] .gauge-track,
-:root[data-palette="seaofstars"] .gauge-value,
-:root[data-palette="seaofstars"] .gauge-redline { stroke-linecap: butt; }
+/* Los anillos, con el corte recto: un extremo redondeado desentona en un tema de píxeles. (El cuadro de
+   mandos ya va por segmentos rectos, así que no necesita regla propia.) */
+:root[data-palette="seaofstars"] .donut-seg { stroke-linecap: butt; }
 
 /* Campo de estrellas tenue detrás de los lienzos de datos, como el cielo del juego. */
 :root[data-palette="seaofstars"] .backlog-canvas,

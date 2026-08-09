@@ -97,6 +97,25 @@
   .stats-split { grid-template-columns: 1fr 1fr; }
 }
 
+/* Las dos figuras del par comparten CAJA: cada sección estira su gráfico hasta el mismo alto y lo centra en él.
+   Con alturas libres, el rosetón sacaba una cabeza al anillo, cada uno se apoyaba en un sitio distinto y la fila
+   se veía descuadrada aunque las dos tarjetas midieran lo mismo. */
+.stats-split > section {
+  display: flex;
+  flex-direction: column;
+  gap: .5rem;
+  min-width: 0;
+}
+
+.stats-split > section > .burst,
+.stats-split > section > .donut-share {
+  flex: 1;
+  align-content: center;
+  align-items: center;
+  justify-content: center;
+  min-height: 15.5rem;
+}
+
 /* ---- Gestos compartidos -------------------------------------------------------------------------------- */
 
 /* Los tres movimientos que usan varios gráficos, en un solo sitio: crecer desde la base (columnas), desplegarse
@@ -1042,8 +1061,8 @@
 /* ---- Completados vs abandonados: cuadro de mandos ------------------------------------------------------ */
 
 /* Un dial de coche en lugar de una tarta de dos porciones. Con dos categorías no hay reparto que descubrir:
-   hay un valor sobre una escala, y eso es exactamente lo que una aguja sabe contar. El cuadrante abre 240° y
-   deja abajo el hueco de la lectura digital, así que la aguja nunca tapa la cifra. */
+   hay un valor sobre una escala. El cuadrante abre 240° y se enciende por SEGMENTOS —que además de comparar se
+   cuentan— y deja abajo el hueco donde vive la cifra. */
 .gauge {
   display: flex;
   flex-direction: column;
@@ -1065,38 +1084,29 @@
   overflow: visible;
 }
 
-.gauge-track {
+/* Cada segmento toma su color de la rampa según dónde cae en el recorrido, así que el dial va del acento frío
+   al cálido conforme sube. Apagado se queda en el carril; apagado dentro de la zona de honor guarda un rescoldo
+   rojo, porque si no el tramo bueno solo se vería cuando ya lo has alcanzado. */
+.gauge-seg {
   fill: none;
   stroke: var(--score-track);
-  stroke-width: 14;
-  stroke-linecap: round;
+  stroke-width: 16;
+  stroke-linecap: butt;
 }
 
-/* El arco de valor se descubre desde el cero como el barrido de encendido de un salpicadero. Va con
-   `pathLength="1"` desde el componente, así que el trazo se mide en fracciones y no hace falta su longitud. */
-.gauge-value {
-  fill: none;
-  stroke-width: 14;
-  stroke-linecap: round;
-  animation: gauge-fill 1s cubic-bezier(.22, 1, .36, 1) both;
+.gauge-seg.is-red { stroke: color-mix(in oklch, var(--danger) 28%, transparent); }
+
+.gauge-seg.is-on {
+  stroke: color-mix(in oklch, var(--chart-to) calc(var(--i, 0) / max(calc(var(--n, 2) - 1), 1) * 100%), var(--chart-from));
+  animation: seg-on .3s ease-out both;
+  animation-delay: calc(var(--i, 0) * 22ms);
 }
 
-@keyframes gauge-fill {
-  from { stroke-dasharray: 0 1; }
-  to { stroke-dasharray: 1 0; }
-}
+.gauge-seg.is-on.is-red { stroke: var(--danger); }
 
-.gauge-stop-from { stop-color: var(--chart-from); }
-.gauge-stop-to { stop-color: var(--chart-to); }
-
-/* La zona roja del cuentavueltas, que aquí marca el tramo al que se aspira. */
-.gauge-redline {
-  fill: none;
-  stroke: var(--danger);
-  stroke-width: 5;
-  stroke-linecap: round;
-  opacity: .75;
-  animation: fade-in .5s ease-out .5s both;
+@keyframes seg-on {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 .gauge-tick {
@@ -1117,80 +1127,85 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* La aguja se dibuja en el cero y su posición final la da el `transform` de la regla base, no la animación:
-   con menos movimiento la animación se apaga y la aguja tiene que seguir marcando tu porcentaje. El eje del
-   giro lo pasa el componente en `--cx`/`--cy`, para que no haya que copiar aquí sus coordenadas. */
-.gauge-needle {
-  fill: var(--danger);
-  transform-box: view-box;
-  transform-origin: var(--cx, 50%) var(--cy, 50%);
-  transform: rotate(var(--deg, 0deg));
-  animation: needle-sweep 1.1s cubic-bezier(.34, 1.2, .64, 1) both;
-}
-
-@keyframes needle-sweep {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(var(--deg, 0deg)); }
-}
-
-.gauge-cap {
-  fill: var(--surface);
-  stroke: var(--danger);
-  stroke-width: 3;
-}
-
-/* La lectura digital, en el hueco que deja el cuadrante. */
-.gauge-read {
-  position: absolute;
-  left: 50%;
-  bottom: 0;
-  transform: translateX(-50%);
+/* Los dos contadores que forman la cifra grande, con el mismo material que el dial: anillo segmentado, la
+   cuenta dentro y el nombre debajo. Sustituyen a la leyenda de puntos, que decía lo mismo sin enseñar el peso
+   de cada uno. */
+.gauge-subs {
+  display: flex;
+  justify-content: center;
+  gap: 1.6rem;
   margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.gauge-subs li {
   display: flex;
   flex-direction: column;
   align-items: center;
-  line-height: 1.02;
-  pointer-events: none;
+  gap: .25rem;
 }
 
-.gauge-read b {
-  font-size: 2rem;
+.gauge-sub-fig {
+  width: 4.6rem;
+  display: block;
+}
+
+.gauge-sub-fig svg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.gauge-sub-seg {
+  fill: none;
+  stroke: var(--score-track);
+  stroke-width: 7;
+  stroke-linecap: butt;
+}
+
+.gauge-subs li.is-c .gauge-sub-seg.is-on { stroke: var(--stats-c); }
+.gauge-subs li.is-v .gauge-sub-seg.is-on { stroke: var(--stats-v); }
+
+.gauge-sub-seg.is-on {
+  animation: seg-on .3s ease-out both;
+  animation-delay: calc(var(--i, 0) * 35ms);
+}
+
+.gauge-sub-num {
+  fill: var(--text);
+  font-size: 17px;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
 
-.gauge-read span {
+.gauge-sub-label {
   font-size: .74rem;
   color: var(--text-muted);
+}
+
+/* Pie del bloque: la frase del juego que le da nombre a lo que se está mirando. */
+.gauge-quote {
+  margin: 0;
+  font-size: .78rem;
+  font-style: italic;
+  color: var(--text-muted);
   text-align: center;
-  max-width: 11rem;
+  max-width: 24rem;
 }
 
-/* El barrido del morro: decorativo, y lo primero que se apaga con menos movimiento. */
-.gauge-scan {
-  position: relative;
-  width: min(20rem, 100%);
-  height: 6px;
-  border-radius: var(--radius-pill);
-  background: color-mix(in oklch, var(--danger) 16%, transparent);
-  overflow: hidden;
+/* La cifra, dentro del propio instrumento: en el hueco que deja el cuadrante, como la lectura de un
+   cuentakilómetros. */
+.gauge-hero {
+  fill: var(--text);
+  font-size: 34px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
 }
 
-.gauge-scan::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  left: 33%;
-  width: 34%;
-  border-radius: inherit;
-  background: linear-gradient(90deg, transparent, var(--danger), transparent);
-  animation: kitt-scan 2.6s ease-in-out infinite alternate;
-}
-
-@keyframes kitt-scan {
-  from { left: -34%; }
-  to { left: 100%; }
+.gauge-hero-unit {
+  font-size: 20px;
+  fill: var(--text-muted);
 }
 
 .ratio-legend {
@@ -1421,10 +1436,11 @@
 }
 
 /* La figura manda en su bloque: es la que responde de un vistazo, y a 22rem se quedaba pequeña dentro de la
-   tarjeta con demasiado aire alrededor. */
+   tarjeta con demasiado aire alrededor. El tope de 24rem la deja del mismo porte que el anillo de al lado,
+   que es con quien comparte fila. */
 .burst-svg {
   width: 100%;
-  max-width: 27rem;
+  max-width: 24rem;
   height: auto;
 }
 
@@ -1480,11 +1496,13 @@
   flex-wrap: wrap;
 }
 
+/* El anillo crece hasta emparejarse con el rosetón de la sección hermana: a 9,5rem se quedaba en un botón al
+   lado de una figura del doble de porte. */
 .donut-share-fig {
   position: relative;
   display: grid;
   place-items: center;
-  width: min(9.5rem, 42%);
+  width: min(12rem, 46%);
   flex: 0 0 auto;
 }
 

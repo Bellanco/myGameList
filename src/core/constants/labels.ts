@@ -247,7 +247,8 @@ export const UI_MESSAGES = {
       empty: 'Aún no has completado ni abandonado ningún juego.',
       completed: 'Completados',
       abandoned: 'Abandonados',
-      heroLabel: 'de lo que cierras, lo terminas',
+      // Cuphead, cuyo subtítulo es «Don't Deal with the Devil»: el juego va de contratos que hay que cerrar.
+      quote: 'No hagas tratos con el diablo: estos son los contratos que cierras.',
       gaugeAria: (percent: number, completed: number, abandoned: number) =>
         `${percent}% completados: ${completed} completados frente a ${abandoned} abandonados`,
     },
