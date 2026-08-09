@@ -396,7 +396,12 @@ function SocialProfileDetailScreenBase({
                   className={`btn btn-secondary ${showReviews ? 'is-active' : ''}`.trim()}
                   type="button"
                   aria-pressed={showReviews}
-                  onClick={onToggleReviews}
+                  onClick={() => {
+                    // Las tres vistas del perfil —listas, reseñas y estadísticas— son excluyentes: abrir una
+                    // devuelve la otra a su estado de reposo.
+                    setShowStats(false);
+                    onToggleReviews();
+                  }}
                 >
                   <Icon name={showReviews ? 'grav' : 'signature'} />
                   {showReviews ? SOCIAL_UI.feed.reviewsBack : SOCIAL_UI.feed.reviewsButton}

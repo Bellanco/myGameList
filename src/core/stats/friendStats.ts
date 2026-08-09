@@ -12,23 +12,29 @@ import type { SocialSharedGame } from '../../model/repository/socialGistReposito
  */
 
 /** Bloques del panel que pueden verse de otra persona. El backlog no está: es un histórico local del aparato. */
-export type FriendStatsBlock = 'top' | 'years' | 'radar' | 'genres' | 'grades' | 'ratio';
+export type FriendStatsBlock = 'top' | 'years' | 'radar' | 'genres' | 'grades' | 'ratio' | 'shame' | 'wishlist';
 
 /**
  * QUÉ VE CADA RANGO. Manda el rango de QUIEN MIRA.
  *
  * Bronce se queda en los cuatro bloques de retrato —quién es en su biblioteca y qué juega—; plata y oro ven
- * además cómo puntúa y cuánto termina; mithril, todo eso y, por su cuenta, el desglose por años.
+ * además cómo puntúa y cuánto termina; mithril lo ve TODO lo que el canal social permite montar: también sus
+ * abandonos y su lista de próximos, y por su cuenta el desglose por años.
  *
  * Es una regla de PRODUCTO y la aplica el cliente, como la cadencia del feed o el límite de publicación: quien
  * manipule su copia puede saltársela, y lo único que conseguiría es ver datos que su amigo ya le ha publicado.
  */
+const GENERAL_BLOCKS: readonly FriendStatsBlock[] = ['top', 'years', 'radar', 'genres', 'grades', 'ratio'];
+
 const TIER_BLOCKS: Record<ProfileTier, readonly FriendStatsBlock[]> = {
   bronze: ['top', 'years', 'radar', 'genres'],
-  silver: ['top', 'years', 'radar', 'genres', 'grades', 'ratio'],
-  gold: ['top', 'years', 'radar', 'genres', 'grades', 'ratio'],
-  mithril: ['top', 'years', 'radar', 'genres', 'grades', 'ratio'],
+  silver: GENERAL_BLOCKS,
+  gold: GENERAL_BLOCKS,
+  mithril: [...GENERAL_BLOCKS, 'shame', 'wishlist'],
 };
+
+/** Cuántos bloques da el rango más alto: sirve para saber si al que mira le queda algo por desbloquear. */
+export const FRIEND_STATS_MAX_BLOCKS = TIER_BLOCKS.mithril.length;
 
 export function friendStatsBlocks(tier: ProfileTier): readonly FriendStatsBlock[] {
   return TIER_BLOCKS[tier] || TIER_BLOCKS.bronze;

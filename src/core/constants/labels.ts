@@ -339,7 +339,7 @@ export const UI_MESSAGES = {
       title: 'Sus estadísticas',
       /** Botón de la fila de acciones del perfil, entre "Reseñas" y la ruleta. */
       button: 'Estadísticas',
-      buttonBack: 'Ver sus listas',
+      buttonBack: 'Ver perfil',
       subtitle: 'Salen de lo que comparte contigo: sus listas, sus notas y sus géneros.',
       empty: 'No comparte ninguna lista, así que no hay nada que resumir.',
       /** Reciprocidad: lo que escondes de tus listas, no lo ves de las suyas. */

@@ -1,7 +1,13 @@
 import { memo, useMemo, useRef, useState } from 'react';
 import { UI_MESSAGES } from '../../../core/constants/labels';
 import { computeStats } from '../../../core/stats/computeStats';
-import { friendStatsBlocks, friendStatsHasYearTabs, friendVisibleTabs, toFriendTabData } from '../../../core/stats/friendStats';
+import {
+  FRIEND_STATS_MAX_BLOCKS,
+  friendStatsBlocks,
+  friendStatsHasYearTabs,
+  friendVisibleTabs,
+  toFriendTabData,
+} from '../../../core/stats/friendStats';
 import { useScoreScale } from '../../hooks/useScoreScale';
 import { StatTile } from './StatTile';
 import { CountUp } from './CountUp';
@@ -12,6 +18,8 @@ import { PolarRose } from './PolarRose';
 import { Beeswarm } from './Beeswarm';
 import { SpeedGauge } from './SpeedGauge';
 import { TopGames } from './TopGames';
+import { ShameCard } from './ShameCard';
+import { WishlistCard } from './WishlistCard';
 import { GameCards } from './GameCards';
 import { useRevealOnScroll } from './useRevealOnScroll';
 import { formatDecimal } from './format';
@@ -182,8 +190,22 @@ export const FriendStats = memo(function FriendStats({ sharedLists, viewerTier, 
             </div>
           ) : null}
 
+          {blocks.includes('shame') && stats.shame.total > 0 ? (
+            <div className="stats-card">
+              <h2>{L.shame.title}</h2>
+              <ShameCard shame={stats.shame} scale={scale} publicOnly />
+            </div>
+          ) : null}
+
+          {blocks.includes('wishlist') && stats.wishlist.total > 0 ? (
+            <div className="stats-card">
+              <h2>{L.wishlist.title}</h2>
+              <WishlistCard wishlist={stats.wishlist} scale={scale} publicOnly />
+            </div>
+          ) : null}
+
           {/* Al que no llega su rango se le dice, en vez de dejar que se pregunte si su amigo no tiene más. */}
-          {blocks.length < 6 ? <p className="stats-note">{L.friend.tierMore}</p> : null}
+          {blocks.length < FRIEND_STATS_MAX_BLOCKS ? <p className="stats-note">{L.friend.tierMore}</p> : null}
         </>
       )}
     </section>
