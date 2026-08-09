@@ -334,6 +334,22 @@ export const UI_MESSAGES = {
       recent: 'Los últimos en llegar',
       waitingSince: (since: string) => `desde ${since}`,
     },
+    /** Panel de estadísticas de OTRA persona, dentro de su perfil del hub social. */
+    friend: {
+      title: 'Sus estadísticas',
+      /** Botón de la fila de acciones del perfil, entre "Reseñas" y la ruleta. */
+      button: 'Estadísticas',
+      buttonBack: 'Ver sus listas',
+      subtitle: 'Salen de lo que comparte contigo: sus listas, sus notas y sus géneros.',
+      empty: 'No comparte ninguna lista, así que no hay nada que resumir.',
+      /** Reciprocidad: lo que escondes de tus listas, no lo ves de las suyas. */
+      blockedAll: 'Escondes todas tus listas, así que no puedes ver las de nadie. Enséñalas en tu perfil y volverán estas cifras.',
+      blocked: (lists: string) => `Falta ${lists}: lo escondes en tu perfil, así que tampoco lo ves aquí.`,
+      /** Lo que el rango del que mira no alcanza a ver. */
+      tierMore: 'Tu rango llega hasta aquí. Con uno más alto verías también cómo puntúa y cuánto termina.',
+      noHours: 'Las horas no viajan por el canal social: son privadas y aquí no se enseñan.',
+      scopeGeneral: 'General',
+    },
     year: {
       completed: 'Completados',
       hours: 'Horas',

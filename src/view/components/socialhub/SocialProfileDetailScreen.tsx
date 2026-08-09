@@ -1,7 +1,7 @@
 ﻿import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { Icon } from '../Icon';
 import { GameTable } from '../GameTable';
-import type { SocialUiLabels } from '../../../core/constants/labels';
+import { UI_MESSAGES, type SocialUiLabels } from '../../../core/constants/labels';
 import { HubStatus } from './HubStatus';
 import { HubBackButton } from './HubBackButton';
 import { StarRating } from '../StarRating';
@@ -14,6 +14,9 @@ import type { SocialSharedGame } from '../../../model/repository/socialGistRepos
 import { RouletteModal } from '../roulette/RouletteModal';
 import { buildProfilePool, profileWeight } from '../../../core/roulette/roulette';
 import { FriendshipButton } from './FriendshipButton';
+import { FriendStats } from '../stats/FriendStats';
+import type { ProfileTier } from '../../../core/constants/tiers';
+import { DEFAULT_PROFILE_TIER } from '../../../core/constants/tiers';
 import type { RelationshipState } from '../../../model/types/social';
 
 // Paginación de los juegos del perfil: se muestran de 15 en 15 para evitar scroll excesivo al abrir el detalle.
@@ -22,6 +25,11 @@ const LIST_PAGE_SIZE = 15;
 // Paginación de las reseñas: lote inicial pequeño y se amplía por scroll infinito (centinela al final) para no
 // renderizar todo de golpe ni dejar un scroll interminable. El filtro reinicia el lote.
 const REVIEW_PAGE_SIZE = 8;
+
+/** Rótulos de la vista de estadísticas dentro del perfil ajeno. */
+const FRIEND_STATS_TITLE = UI_MESSAGES.stats.friend.title;
+const FRIEND_STATS_BUTTON = UI_MESSAGES.stats.friend.button;
+const FRIEND_STATS_BACK = UI_MESSAGES.stats.friend.buttonBack;
 
 const TAB_LABELS = {
   c: 'profileListTabCompleted',
@@ -140,6 +148,8 @@ function SocialProfileDetailScreenBase({
   onAddOrAcceptFriend,
   onCancelFriendRequest,
   onRemoveFriend,
+  viewerTier = DEFAULT_PROFILE_TIER,
+  viewerHiddenTabs = [],
 }: {
   SOCIAL_UI: SocialUiLabels;
   activeProfileDetail: SocialProfileDetail | null;
@@ -157,6 +167,10 @@ function SocialProfileDetailScreenBase({
   moveGameToCurrentByName?: (name: string) => void;
   friendshipState?: RelationshipState;
   friendshipBusy?: boolean;
+  /** Rango de quien mira: decide cuánto enseña el panel de estadísticas del perfil. */
+  viewerTier?: ProfileTier;
+  /** Listas que quien mira esconde en su propio perfil: lo que esconde, tampoco lo ve aquí. */
+  viewerHiddenTabs?: TabId[];
   onAddOrAcceptFriend?: () => void;
   onCancelFriendRequest?: () => void;
   onRemoveFriend?: () => void;
@@ -169,6 +183,9 @@ function SocialProfileDetailScreenBase({
     setSortByTab((prev) => ({ ...prev, [tab]: nextSort(prev[tab], column) }));
   }, []);
   const [rouletteOpen, setRouletteOpen] = useState(false);
+  // Tercera vista del perfil, junto a las listas y las reseñas. Estado local y no sub-ruta: no hay nada dentro
+  // a lo que enlazar (las reseñas sí abren una concreta), y así volver del perfil no arrastra un nivel más.
+  const [showStats, setShowStats] = useState(false);
   const [expandedByTab, setExpandedByTab] = useState<Partial<Record<TabId, number | null>>>({});
   const [visibleCount, setVisibleCount] = useState(LIST_PAGE_SIZE);
   const [gameQuery, setGameQuery] = useState('');
@@ -384,6 +401,21 @@ function SocialProfileDetailScreenBase({
                   <Icon name={showReviews ? 'grav' : 'signature'} />
                   {showReviews ? SOCIAL_UI.feed.reviewsBack : SOCIAL_UI.feed.reviewsButton}
                 </button>
+                {!isOwnProfile && hasSharedLists ? (
+                  <button
+                    className={`btn btn-secondary ${showStats ? 'is-active' : ''}`.trim()}
+                    type="button"
+                    aria-pressed={showStats}
+                    onClick={() => {
+                      // Las tres vistas son excluyentes: entrar en una apaga la otra.
+                      if (showReviews) onToggleReviews();
+                      setShowStats((open) => !open);
+                    }}
+                  >
+                    <Icon name="bottom-stats" />
+                    {showStats ? FRIEND_STATS_BACK : FRIEND_STATS_BUTTON}
+                  </button>
+                ) : null}
                 <button
                   className="btn btn-secondary"
                   type="button"
@@ -516,6 +548,19 @@ function SocialProfileDetailScreenBase({
                 )}
               </div>
             </div>
+          ) : showStats ? (
+            /* Sus estadísticas, calculadas con lo que ya comparte. No en el perfil propio: ese panel tiene su
+               pestaña en la barra inferior y con los datos completos, no con la proyección pública. */
+            <div className="hub-detail-metadata">
+              <div className="hub-metadata-section">
+                <strong>{FRIEND_STATS_TITLE}</strong>
+                <FriendStats
+                  sharedLists={activeProfileDetail.sharedLists as Partial<Record<TabId, SocialSharedGame[]>>}
+                  viewerTier={viewerTier}
+                  viewerHiddenTabs={viewerHiddenTabs}
+                />
+              </div>
+            </div>
           ) : (
           <div className="hub-detail-metadata">
             <div className="hub-metadata-section">
@@ -577,6 +622,7 @@ function SocialProfileDetailScreenBase({
                 <p>{SOCIAL_UI.feed.profileListsEmpty}</p>
               )}
             </div>
+
           </div>
           )}
         </article>

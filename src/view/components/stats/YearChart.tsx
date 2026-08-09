@@ -10,6 +10,11 @@ interface YearChartProps {
   years: YearBucket[];
   metric: YearMetric;
   onMetricChange: (metric: YearMetric) => void;
+  /**
+   * ¿Se puede cambiar de métrica? En el panel de un amigo no: las horas no viajan por el canal social, así que
+   * el conmutador solo llevaría a un gráfico vacío.
+   */
+  switchable?: boolean;
 }
 
 function valueOf(bucket: YearBucket, metric: YearMetric): number {
@@ -23,7 +28,7 @@ function valueOf(bucket: YearBucket, metric: YearMetric): number {
  * A11y: la gráfica va `aria-hidden` y los datos se exponen en una tabla `sr-only`. Una etiqueta única para
  * veinte barras sería impracticable de escuchar, y la tabla se recorre celda a celda como cualquier otra.
  */
-export const YearChart = memo(function YearChart({ years, metric, onMetricChange }: YearChartProps) {
+export const YearChart = memo(function YearChart({ years, metric, onMetricChange, switchable = true }: YearChartProps) {
   if (years.length === 0) {
     return <p className="stats-empty">{L.empty}</p>;
   }
@@ -34,6 +39,7 @@ export const YearChart = memo(function YearChart({ years, metric, onMetricChange
 
   return (
     <>
+      {switchable ? (
       <div className="stats-metric-switch" role="group" aria-label={L.metricAria}>
         <button
           type="button"
@@ -52,6 +58,7 @@ export const YearChart = memo(function YearChart({ years, metric, onMetricChange
           <span>{L.metricHours}</span>
         </button>
       </div>
+      ) : null}
 
       <div className="year-chart" aria-hidden="true">
         {years.map((bucket, index) => {
