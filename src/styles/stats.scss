@@ -1390,7 +1390,7 @@
 
 .top-chip-bar {
   position: relative;
-  height: 4px;
+  height: 3px;
   margin-top: .1rem;
   border-radius: var(--radius-pill);
   background: var(--score-track);
@@ -1420,9 +1420,11 @@
   justify-content: center;
 }
 
+/* La figura manda en su bloque: es la que responde de un vistazo, y a 22rem se quedaba pequeña dentro de la
+   tarjeta con demasiado aire alrededor. */
 .burst-svg {
   width: 100%;
-  max-width: 22rem;
+  max-width: 27rem;
   height: auto;
 }
 
@@ -1468,9 +1470,12 @@
 
 /* ---- Anillo repartido con el total dentro ---------------------------------------------------------------- */
 
+/* Anillo y leyenda van CENTRADOS como un bloque: alineados al principio, el anillo se pegaba al filo izquierdo
+   de la tarjeta y todo el conjunto se leía descolgado hacia un lado. */
 .donut-share {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 1.1rem;
   flex-wrap: wrap;
 }
@@ -1554,9 +1559,14 @@
    nombre del género la fila entera sin perder la magnitud, porque el fondo llega justo hasta donde llega la
    nota. La escala arranca en cero y termina en la nota máxima: recortarla al rango de los datos convertiría
    cuatro medias parecidas en diferencias abismales que no existen. */
+/* Ancho de lectura: en un monitor, una fila de dos mil píxeles deja el nombre en una punta y la nota en la
+   otra, y la barra deja de compararse con la vista. */
 .shine {
   display: flex;
   flex-direction: column;
+  width: 100%;
+  max-width: 48rem;
+  margin-inline: auto;
 }
 
 .shine-rows {

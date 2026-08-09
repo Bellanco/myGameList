@@ -9,10 +9,11 @@ const L = UI_MESSAGES.stats.genres;
 const MAX_PIECES = 5;
 
 const WIDTH = 380;
-const HEIGHT = 300;
+const HEIGHT = 288;
 const CX = WIDTH / 2;
-const CY = HEIGHT / 2;
-const MAX_R = 94;
+const CY = 142;
+/** Radio de la pieza mayor. Manda sobre el lienzo: lo que sobra a los lados es sitio para los rótulos de fuera. */
+const MAX_R = 106;
 /** Hueco entre porciones, en grados. */
 const GAP = 6;
 /** Cuánto se separa cada pieza del centro, en unidades del lienzo. */
