@@ -5,6 +5,7 @@
   "private": true,
   "license": "GPL-3.0-or-later",
   "scripts": {
+    "prepare": "git config core.hooksPath .githooks || true",
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
@@ -14,6 +15,8 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "lint": "eslint src tests --fix",
+    "format": "prettier --write \"src/**/*.{ts,tsx}\" \"tests/**/*.{ts,tsx}\"",
+    "format:check": "prettier --check \"src/**/*.{ts,tsx}\" \"tests/**/*.{ts,tsx}\"",
     "audit:privacy": "node scripts/audit-privacy.js",
     "audit:rules": "node scripts/audit-profile-rules.mjs",
     "typecheck": "tsc --noEmit",
@@ -33,6 +36,7 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.12.1",
     "@firebase/rules-unit-testing": "^5.0.1",
     "@playwright/test": "^1.62.1",
     "@testing-library/dom": "^10.4.1",
@@ -47,10 +51,12 @@
     "eslint": "^9.39.4",
     "eslint-plugin-jsx-a11y": "^6.10.2",
     "eslint-plugin-react": "^7.37.5",
+    "eslint-plugin-react-hooks": "^7.1.1",
     "fake-indexeddb": "^6.2.5",
     "firebase-tools": "^15.22.0",
     "html-validate": "^10.13.1",
     "jsdom": "^29.0.2",
+    "prettier": "^3.9.6",
     "sass": "^1.99.0",
     "typescript": "^6.0.3",
     "vite": "^8.0.11",
