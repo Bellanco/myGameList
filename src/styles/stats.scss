@@ -16,10 +16,21 @@
 
 .stats-hub {
   --stats-radius: 8px;
+
+  /* COLOR SEMÁNTICO por lista: el mismo en todo el panel, para que leyenda, tarta, área y línea de tiempo
+     digan lo mismo sin releer la leyenda. Sale de tokens de PALETA (no de los `--fg-*`, que son constantes de
+     la capa base e iguales en todos los temas), así que cada tema lo tiñe con su verde, su rojo y su ámbar. */
   --stats-c: var(--success);
   --stats-v: var(--danger);
-  --stats-e: var(--fg-amber);
+  --stats-e: var(--warn);
   --stats-p: var(--steam);
+
+  /* RAMPA SECUENCIAL para los repartos por etiqueta (rosetón, hexágono). Dos tonos del tema entre los que se
+     interpola por puesto: con un solo tono, diez géneros casi empatados salían todos del mismo color. Cada
+     skin la redefine con su dualidad propia —los dos portales, rojo y oro, amarillo y magenta…— en
+     `styles/themes/*.scss`; aquí queda el valor por defecto. */
+  --chart-from: var(--steam);
+  --chart-to: var(--warn);
 
   display: grid;
   grid-template-columns: repeat(12, minmax(0, 1fr));
@@ -490,8 +501,8 @@
 }
 
 .beeswarm-density path {
-  fill: color-mix(in srgb, var(--steam) 16%, transparent);
-  stroke: color-mix(in srgb, var(--steam) 30%, transparent);
+  fill: color-mix(in srgb, var(--steam) 5%, transparent);
+  stroke: color-mix(in srgb, var(--steam) 9%, transparent);
   stroke-width: 1;
   vector-effect: non-scaling-stroke;
   animation: fade-in .8s ease-out .2s both;
@@ -606,9 +617,13 @@
   opacity: .6;
 }
 
-/* El tono sigue al PUESTO: con géneros casi empatados, una rampa por valor los pintaba todos igual. */
+/* El tono sigue al PUESTO y recorre la rampa del tema: con géneros casi empatados, una rampa por valor los
+   pintaba todos del mismo color. */
 .polar-sector {
-  fill: color-mix(in srgb, var(--steam) calc(90% - var(--i, 0) * 7%), var(--surface));
+  /* Interpolación en OKLCH y no en oklab: al mezclar dos tonos opuestos —el azul y el naranja de los dos
+     portales, por ejemplo—, un espacio rectangular atraviesa el gris y los sectores centrales salían
+     apagados. En OKLCH el recorrido es por el círculo de tono, así que la rampa mantiene el color vivo. */
+  fill: color-mix(in oklch, var(--chart-to) calc(var(--i, 0) * 11%), var(--chart-from));
   stroke: var(--surface);
   stroke-width: 1;
   transform-origin: center;
@@ -701,10 +716,12 @@
 .dumbbell-dot.is-completed { background: var(--stats-c); }
 .dumbbell-dot.is-abandoned { background: var(--stats-v); }
 
+/* La cifra despega del punto: el punto tiene borde, y algún tema le añade además un contorno de tinta o un
+   halo de neón, así que pegada al 100% quedaba montada encima de ese anillo. */
 .dumbbell-num {
   position: absolute;
   left: 50%;
-  bottom: 100%;
+  bottom: calc(100% + 3px);
   transform: translateX(-50%);
   font-size: .66rem;
   color: var(--text-muted);
@@ -937,11 +954,13 @@
   opacity: .5;
 }
 
-.genre-radar-stop-top { stop-color: var(--steam); stop-opacity: .55; }
-.genre-radar-stop-bottom { stop-color: var(--steam); stop-opacity: .18; }
+/* La figura se rellena con la rampa del tema, de un extremo al otro: el hexágono deja de ser un manchón de un
+   solo color y comparte el lenguaje cromático del rosetón. */
+.genre-radar-stop-top { stop-color: var(--chart-from); stop-opacity: .6; }
+.genre-radar-stop-bottom { stop-color: var(--chart-to); stop-opacity: .22; }
 
 .genre-radar-shape {
-  stroke: var(--steam);
+  stroke: var(--chart-from);
   stroke-width: 2;
   stroke-linejoin: round;
   /* La figura crece desde el centro girando un poco: es el gesto que pedía "que se cargue con efecto". */
@@ -1121,6 +1140,61 @@
   font-size: .76rem;
   color: var(--text-muted);
   font-variant-numeric: tabular-nums;
+}
+
+
+/* ---- Interacción -------------------------------------------------------------------------------------- */
+
+/* Los gráficos responden al ratón: cada elemento se destaca al señalarlo, que es lo que invita a explorarlos
+   (y a descubrir que llevan `title` con el dato exacto). */
+.polar-sector,
+.beeswarm-dot,
+.timeline-dot {
+  transition: filter .15s ease, transform .15s ease;
+}
+
+.polar-sector:hover {
+  filter: brightness(1.18) saturate(1.1);
+}
+
+.beeswarm-dot:hover,
+.timeline-dot:hover {
+  transform: scale(1.9);
+  z-index: 2;
+  filter: brightness(1.2);
+}
+
+.dumbbell li,
+.tag-ranking li,
+.game-ref-list li,
+.timeline-list li {
+  transition: background .15s ease;
+}
+
+.dumbbell li:hover,
+.tag-ranking li:hover,
+.game-ref-list li:hover,
+.timeline-list li:hover {
+  background: var(--overlay-hover);
+}
+
+.tag-chip {
+  transition: transform .15s ease, filter .15s ease;
+}
+
+.tag-chip:hover {
+  transform: translateY(-2px);
+  filter: brightness(1.12);
+}
+
+/* Las cifras destacadas se elevan un punto al señalarlas: acompaña sin distraer. */
+.stat-tile {
+  transition: transform .18s ease, border-color .18s ease;
+}
+
+.stat-tile:hover {
+  transform: translateY(-2px);
+  border-color: color-mix(in srgb, var(--steam) 45%, var(--border));
 }
 
 /* ---- Textos auxiliares -------------------------------------------------------------------------------- */

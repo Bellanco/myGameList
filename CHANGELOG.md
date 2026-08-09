@@ -66,6 +66,18 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
     debajo de tres ejes y el rosetón por debajo de tres sectores (dos mitades no son una figura).
   - El enjambre lleva además **silueta de densidad** detrás y las guías de **media y mediana**: con la
     biblioteca entera los puntos se tocan y la silueta es lo único que sigue diciendo dónde está el grueso.
+- **Cada tema viste el panel con su propio lenguaje.** Las tarjetas entran en la receta de tarjeta que ya tenía
+  cada skin (tinta de cómic en Corazón rebelde, filo naranja en Cámara de pruebas, marco cian y filete amarillo
+  en Sin futuro, moldura dorada en Solo hay guerra, marco doble pixelado en Mar de estrellas), y cada uno añade
+  su firma: cifras en cursiva pop, monoespaciada de terminal, neón con scanlines, fósforo verde con VT323 o
+  puntos cuadrados sobre un campo de estrellas.
+- **Los repartos usan la DUALIDAD de color de cada tema.** El rosetón y el hexágono recorren una rampa entre dos
+  tonos de la paleta —los dos portales, rojo y oro, amarillo y magenta, fósforo y oro, agua y noche— en vez de
+  ser un degradado de un solo color. La interpolación va en OKLCH y no en un espacio rectangular: mezclando dos
+  tonos opuestos, el camino recto atraviesa el gris y los sectores centrales salían apagados.
+- **Los gráficos responden al ratón**: sectores que se avivan, puntos que crecen, filas que se resaltan y
+  tarjetas de cifra que se elevan. Es lo que invita a explorarlos y a descubrir que llevan el dato exacto en el
+  `title`.
 - **Los ejes de tiempo se adaptan al periodo.** La escala la elige el propio recorrido de los datos (días,
   quincenas, meses o años salteados), así que el dibujo ocupa el ancho tanto si han pasado tres meses como si
   han pasado trece años. Antes un eje fijo en años dejaba los periodos cortos sin una sola referencia.
