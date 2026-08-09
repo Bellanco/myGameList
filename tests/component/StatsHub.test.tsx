@@ -96,13 +96,14 @@ describe('StatsHub', () => {
   });
 
   it('etiqueta el histograma según la escala de la cuenta', () => {
+    // El tramo se rotula con estrellas (o con el rango de nota) y su nombre completo va en el texto accesible.
     const { unmount } = render(<StatsHub games={SAMPLE} />);
-    expect(screen.getByText(L.grades.starsLabel(5))).toBeInTheDocument();
+    expect(screen.getByText(new RegExp(`^${L.grades.starsLabel(5)}:`))).toBeInTheDocument();
     unmount();
 
     scale = 'grade';
     render(<StatsHub games={SAMPLE} />);
-    expect(screen.getByText(L.grades.gradeLabel(90, 100))).toBeInTheDocument();
+    expect(screen.getByText(new RegExp(`^${L.grades.gradeLabel(90, 100)}:`))).toBeInTheDocument();
     scale = 'stars';
   });
 
@@ -167,8 +168,10 @@ describe('StatsHub · figura de géneros', () => {
   it('con menos de tres géneros cae al reparto en barras en vez de dibujar un segmento', () => {
     render(<StatsHub games={tabData({ c: [game({ id: 1, name: 'Solo', genres: ['RPG'], years: [2024] })] })} />);
 
-    expect(screen.getByText(L.radar.tooFew)).toBeInTheDocument();
-    expect(screen.queryByRole('img', { name: /RPG/ })).not.toBeInTheDocument();
+    // Se mira DENTRO de su tarjeta: el mosaico de "Géneros más jugados" también es una imagen que nombra RPG.
+    const card = screen.getByRole('heading', { name: L.radar.title }).closest('.stats-card') as HTMLElement;
+    expect(within(card).getByText(L.radar.tooFew)).toBeInTheDocument();
+    expect(within(card).queryByRole('img')).not.toBeInTheDocument();
   });
 });
 

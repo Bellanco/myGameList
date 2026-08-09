@@ -54,12 +54,12 @@ export const YearChart = memo(function YearChart({ years, metric, onMetricChange
       </div>
 
       <div className="year-chart" aria-hidden="true">
-        {years.map((bucket) => {
+        {years.map((bucket, index) => {
           const value = valueOf(bucket, metric);
           const height = max > 0 ? Math.max((value / max) * 100, value > 0 ? 4 : 0) : 0;
           const label = bucket.year === null ? L.noYear : String(bucket.year);
           return (
-            <div className="year-col" key={label}>
+            <div className="year-col" key={label} style={{ '--i': index } as CSSProperties}>
               <span className="year-col-value">{metric === 'hours' ? formatHours(value) : formatCount(value)}</span>
               <div className="year-col-track">
                 <div
@@ -73,7 +73,11 @@ export const YearChart = memo(function YearChart({ years, metric, onMetricChange
         })}
       </div>
 
-      <table className="sr-only">
+      {/* La alternativa textual va envuelta en un `div.sr-only`: la clase sobre la propia `<table>` no la oculta
+          —en una tabla, `height` es un MÍNIMO y `overflow` no la recorta—, así que con series largas la tabla
+          crecía de verdad y añadía miles de píxeles de scroll invisible a la página. */}
+      <div className="sr-only">
+        <table>
         <caption>{L.chartAria(metric === 'hours' ? L.metricHours : L.metricGames)}</caption>
         <thead>
           <tr>
@@ -91,7 +95,8 @@ export const YearChart = memo(function YearChart({ years, metric, onMetricChange
             </tr>
           ))}
         </tbody>
-      </table>
+        </table>
+      </div>
 
       {years.some((bucket) => bucket.year === null) ? <p className="stats-note">{L.noYearHint}</p> : null}
     </>

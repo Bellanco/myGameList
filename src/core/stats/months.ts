@@ -5,6 +5,9 @@ import type { ArrivalPoint } from './types';
 /** Cuántos meses se representan como mucho. Dos años entran en pantalla y siguen siendo legibles. */
 export const MONTH_WINDOW = 24;
 
+/** Ventana de la curva acumulada: veinte años. Un área aguanta esa densidad; unas columnas, no. */
+export const CUMULATIVE_WINDOW = 240;
+
 /** Descompone `AAAA-MM`; devuelve null si no tiene esa forma. */
 function parseMonth(key: string): { year: number; month: number } | null {
   const match = /^(\d{4})-(\d{2})$/.exec(key);
@@ -49,4 +52,26 @@ export function fillMonthGaps(points: ArrivalPoint[], window = MONTH_WINDOW): Ar
   }
 
   return filled.slice(-window);
+}
+
+/**
+ * Convierte altas por mes en TOTALES acumulados: cada punto pasa a ser cuántos juegos de los que hoy están en
+ * esa lista habían llegado ya en ese momento.
+ *
+ * Es la diferencia entre un serrucho y una evolución. Las altas mensuales de una biblioteca real son números
+ * pequeños y erráticos (0, 3, 0, 1…), y dibujarlas como área daba una sierra que no decía nada; acumuladas
+ * describen justo lo que la tarjeta promete: cómo ha ido creciendo cada lista.
+ */
+export function accumulate(points: ArrivalPoint[]): ArrivalPoint[] {
+  let c = 0;
+  let v = 0;
+  let e = 0;
+  let p = 0;
+  return points.map((point) => {
+    c += point.c;
+    v += point.v;
+    e += point.e;
+    p += point.p;
+    return { m: point.m, c, v, e, p };
+  });
 }

@@ -45,6 +45,29 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
   rojo, en curso ámbar, próximos acento), degradados y curvas de entrada suaves, cebra en los listados largos y
   rejilla propia. Todo con las variables de la paleta activa, así que funciona en los cinco temas y en claro y
   oscuro sin una sola regla por tema; las animaciones se apagan con `prefers-reduced-motion`.
+- **Cada gráfico usa la forma que le corresponde**, en vez de repetir barras horizontales por todo el panel:
+  columnas para el histograma de notas (que es como se lee una distribución), mosaico proporcional para los
+  géneros, hexágono para el reparto, aro para el ratio, área para la evolución y nubes de etiquetas para las
+  razones de abandono y los géneros deseados.
+- **Efectos de entrada**: el hexágono crece desde el centro, las columnas y barras se despliegan en cascada, el
+  aro se rellena girando y las cifras cuentan hacia arriba. Todo se apaga con `prefers-reduced-motion` (y el
+  conteo ni siquiera se calcula).
+- **Las horas salen de los rankings de etiquetas.** La columna de la derecha cambiaba de ancho fila a fila
+  ("9" frente a "9 · 677 h") y descolocaba las barras. Las horas siguen donde de verdad se leen: las cifras
+  destacadas y el gráfico anual.
+
+### Fixed
+- **La evolución del backlog dibujaba altas por mes, no una evolución.** Los ingresos mensuales de una
+  biblioteca real son números pequeños y erráticos, así que el área salía como una sierra ilegible. Ahora la
+  serie es **acumulada**: describe cómo ha ido creciendo cada lista y termina en el tamaño de hoy. Además el
+  lienzo se estira y los ejes son HTML por fuera —con todo dentro del SVG, estirarlo agrandaba los años y
+  engordaba los trazos—, y con pocos meses no se suaviza la curva y se marcan los puntos, para que tres datos
+  parezcan tres datos y no una curva inventada.
+- **La tabla alternativa de los gráficos añadía miles de píxeles de scroll invisible.** `.sr-only` no oculta
+  una `<table>`: en una tabla `height` es un MÍNIMO y `overflow` no la recorta. Con una serie larga (156 meses)
+  la página crecía de 3.700 a 9.400 px. Ahora la tabla va envuelta en un `div.sr-only`.
+- **"El mejor del año" mostraba las horas del juego más largo**, que casi nunca es el mismo. Ahora enseña las
+  suyas, y el más largo del año tiene su propia tarjeta cuando no coinciden.
 
 ### Performance
 - **El estado de arranque de las listas se lee una vez por montaje, no en cada render.** `loadLocalState()`

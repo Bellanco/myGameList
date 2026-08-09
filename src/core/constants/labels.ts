@@ -232,7 +232,6 @@ export const UI_MESSAGES = {
       subtitle: 'Cuenta completados, abandonados y en curso. Un juego con varios géneros suma en todos.',
       empty: 'Añade géneros a tus juegos para ver este reparto.',
       games: (count: number) => `${count} ${count === 1 ? 'juego' : 'juegos'}`,
-      hours: (hours: string) => `· ${hours} h`,
       chartAria: 'Géneros por número de juegos',
     },
     ratio: {
@@ -262,9 +261,9 @@ export const UI_MESSAGES = {
     },
     backlog: {
       title: 'Evolución del backlog',
-      derivedSubtitle: 'Cuándo llegó a cada lista lo que hoy tienes en ella, mes a mes.',
-      derivedNote: 'Aproximación: es la fecha de entrada a la lista actual, no un histórico. Al mover un juego de lista, su fecha se actualiza.',
-      realSubtitle: 'Tamaño de cada lista al final de cada mes, según lo registrado en este dispositivo.',
+      derivedSubtitle: 'Cómo ha ido creciendo lo que hoy tienes en cada lista, mes a mes.',
+      derivedNote: 'Aproximación: cuenta la fecha de entrada a la lista ACTUAL, así que al mover un juego de lista su fecha se actualiza y la curva se recoloca. No es un histórico.',
+      realSubtitle: 'Tamaño de cada lista al cierre de cada mes, según lo registrado en este dispositivo.',
       realNote: 'Histórico real, registrado mes a mes en este dispositivo desde que la función existe.',
       empty: 'Todavía no hay meses que representar.',
       lists: { c: 'Completados', v: 'Abandonados', e: 'En curso', p: 'Próximos' },

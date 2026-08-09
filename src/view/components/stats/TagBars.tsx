@@ -1,7 +1,7 @@
 import { memo, type CSSProperties } from 'react';
 import { UI_MESSAGES } from '../../../core/constants/labels';
 import type { TagBucket } from '../../../core/stats/types';
-import { formatCount, formatHours } from './format';
+import { formatCount } from './format';
 
 const L = UI_MESSAGES.stats.genres;
 
@@ -11,7 +11,13 @@ interface TagBarsProps {
   limit?: number;
 }
 
-/** Ranking horizontal de etiquetas (géneros): barra por nº de juegos, con las horas como dato secundario. */
+/**
+ * Ranking horizontal de etiquetas: una barra por el NÚMERO de juegos y nada más.
+ *
+ * Las horas estaban aquí y se han quitado: la columna de la derecha crecía o menguaba según la etiqueta ("9" o
+ * "9 · 677 h") y descolocaba el ancho de la barra fila a fila. Las horas siguen estando donde de verdad se
+ * leen, que son las cifras destacadas y el gráfico anual.
+ */
 export const TagBars = memo(function TagBars({ tags, limit = 8 }: TagBarsProps) {
   if (tags.length === 0) {
     return <p className="stats-empty">{L.empty}</p>;
@@ -22,8 +28,8 @@ export const TagBars = memo(function TagBars({ tags, limit = 8 }: TagBarsProps) 
 
   return (
     <ul className="stats-bars" aria-label={L.chartAria}>
-      {top.map((bucket) => (
-        <li className="stats-bar-row" key={bucket.tag}>
+      {top.map((bucket, index) => (
+        <li className="stats-bar-row" key={bucket.tag} style={{ '--i': index } as CSSProperties}>
           <span className="stats-bar-label" title={bucket.tag}>{bucket.tag}</span>
           <span className="stats-bar-track">
             <span
@@ -31,14 +37,8 @@ export const TagBars = memo(function TagBars({ tags, limit = 8 }: TagBarsProps) 
               style={{ '--bar-width': `${max > 0 ? (bucket.games / max) * 100 : 0}%` } as CSSProperties}
             />
           </span>
-          <span className="stats-bar-value" aria-hidden="true">
-            {formatCount(bucket.games)}
-            {bucket.hours > 0 ? <small>{L.hours(formatHours(bucket.hours))}</small> : null}
-          </span>
-          <span className="sr-only">
-            {L.games(bucket.games)}
-            {bucket.hours > 0 ? `, ${L.hours(formatHours(bucket.hours))}` : ''}
-          </span>
+          <span className="stats-bar-value" aria-hidden="true">{formatCount(bucket.games)}</span>
+          <span className="sr-only">{L.games(bucket.games)}</span>
         </li>
       ))}
     </ul>

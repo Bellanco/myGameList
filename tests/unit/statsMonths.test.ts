@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { MONTH_WINDOW, fillMonthGaps, nextMonth } from '../../src/core/stats/months';
+import { MONTH_WINDOW, accumulate, fillMonthGaps, nextMonth } from '../../src/core/stats/months';
 import type { ArrivalPoint } from '../../src/core/stats/types';
 
 function point(m: string, c = 0): ArrivalPoint {
@@ -40,5 +40,27 @@ describe('fillMonthGaps', () => {
   it('descarta claves que no son meses y tolera la lista vacía', () => {
     expect(fillMonthGaps([])).toEqual([]);
     expect(fillMonthGaps([point('2026-13'), point('vacío')])).toEqual([]);
+  });
+});
+
+describe('accumulate', () => {
+  it('convierte altas por mes en totales acumulados', () => {
+    // Es la diferencia entre un serrucho y una evolución: las altas sueltas de una biblioteca real son
+    // números pequeños y erráticos; acumuladas describen cómo ha crecido cada lista.
+    const acumulado = accumulate([
+      { m: '2026-01', c: 2, v: 0, e: 1, p: 3 },
+      { m: '2026-02', c: 0, v: 1, e: 0, p: 0 },
+      { m: '2026-03', c: 3, v: 0, e: 0, p: 1 },
+    ]);
+
+    expect(acumulado).toEqual([
+      { m: '2026-01', c: 2, v: 0, e: 1, p: 3 },
+      { m: '2026-02', c: 2, v: 1, e: 1, p: 3 },
+      { m: '2026-03', c: 5, v: 1, e: 1, p: 4 },
+    ]);
+  });
+
+  it('nunca decrece y tolera la serie vacía', () => {
+    expect(accumulate([])).toEqual([]);
   });
 });

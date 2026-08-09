@@ -271,3 +271,20 @@ describe('computeStats · próximos', () => {
     expect(stats.wishlist.deck).toBe(1);
   });
 });
+
+describe('computeStats · el mejor del año', () => {
+  it('lo decide la nota; a igualdad, las horas', () => {
+    const stats = computeStats(tabData({
+      c: [
+        game({ id: 1, name: 'Empatado corto', grade: 90, hours: 10, years: [2025] }),
+        game({ id: 2, name: 'Empatado largo', grade: 90, hours: 80, years: [2025] }),
+        game({ id: 3, name: 'Peor pero larguísimo', grade: 60, hours: 200, years: [2025] }),
+      ],
+    }));
+
+    const y2025 = stats.byYear[0];
+    expect(y2025.best?.name).toBe('Empatado largo');
+    // Y el más largo del año es otro juego distinto: son dos preguntas diferentes.
+    expect(y2025.longest?.name).toBe('Peor pero larguísimo');
+  });
+});
