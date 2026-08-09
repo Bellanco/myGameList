@@ -37,6 +37,33 @@ export function isAppCheckConfigured(): boolean {
 let appCheckPromise: Promise<void> | null = null;
 
 /**
+ * Token de DEPURACIÓN, solo en desarrollo. Sin esto no se puede probar App Check fuera del dominio de
+ * producción: reCAPTCHA solo emite tokens para los dominios dados de alta en su consola, así que en `localhost`
+ * —y en las previews de Cloudflare— la atestación fallaría siempre y no habría forma de distinguir "está roto"
+ * de "no aplica aquí".
+ *
+ * Uso: pon `VITE_APPCHECK_DEBUG_TOKEN=true` en tu `.env` local, abre la app e inicia sesión; el SDK imprime en
+ * consola un token con forma de UUID. Ese token se registra en la consola de Firebase (App Check → Apps → menú
+ * de la app → "Administrar tokens de depuración") y a partir de ahí ese navegador queda atestiguado. También
+ * admite pegar directamente un token ya registrado en vez de `true`.
+ *
+ * `import.meta.env.DEV` es una constante que Vite sustituye en build: en producción esta rama se elimina entera
+ * del bundle, así que es IMPOSIBLE que un token de depuración llegue a un despliegue real.
+ */
+function applyDebugTokenInDev(): void {
+  if (!import.meta.env.DEV) {
+    return;
+  }
+  const debug = String(import.meta.env.VITE_APPCHECK_DEBUG_TOKEN || '').trim();
+  if (!debug) {
+    return;
+  }
+  // El SDK lee esta propiedad global; hay que fijarla ANTES de `initializeAppCheck`.
+  (globalThis as unknown as { FIREBASE_APPCHECK_DEBUG_TOKEN?: string | boolean }).FIREBASE_APPCHECK_DEBUG_TOKEN =
+    debug === 'true' ? true : debug;
+}
+
+/**
  * Inicializa App Check UNA sola vez por sesión. Idempotente: se puede llamar desde varios sitios sin coordinar.
  *
  * CUÁNDO SE LLAMA, Y POR QUÉ IMPORTA: solo cuando hay sesión de Google (al iniciarla o al restaurarla). NO en el
@@ -61,6 +88,7 @@ export async function ensureAppCheck(app: FirebaseApp): Promise<void> {
   if (!appCheckPromise) {
     appCheckPromise = (async () => {
       try {
+        applyDebugTokenInDev();
         // Import dinámico: `firebase/app-check` y el script de reCAPTCHA quedan fuera del chunk de arranque y
         // fuera incluso del chunk de Firebase, así que solo lo descarga quien inicia sesión.
         const { initializeAppCheck, ReCaptchaV3Provider } = await import('firebase/app-check');
