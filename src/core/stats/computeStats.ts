@@ -126,7 +126,7 @@ function topSummary(games: GameRef[], listSize = STATS_TOP_LIST, limit = STATS_T
   const scored = games.filter((game) => game.grade > 0).sort(byRank);
   const ranked = scored.slice(0, limit);
   if (ranked.length === 0) {
-    return { podium: [], sample: 0, avgGrade: 0, avgHours: 0, cutoff: 0, genres: [], platforms: [], byGenre: [], ranked: [] };
+    return { podium: [], sample: 0, avgGrade: 0, avgHours: 0, cutoff: 0, genres: [], platforms: [], byGenre: [], ranked: [], waffle: [] };
   }
 
   // Nota media por género sobre TODO lo puntuado del ámbito, no solo sobre el top: la pregunta es con qué
@@ -159,9 +159,20 @@ function topSummary(games: GameRef[], listSize = STATS_TOP_LIST, limit = STATS_T
     for (const platform of game.platforms) addTag(platforms, platform, game.hours);
   }
 
+  // Peso de cada género DENTRO del top, para elegir con cuál se representa cada juego en el gofre.
+  const weight = new Map([...genres.values()].map((bucket) => [bucket.tag, bucket.games]));
+  const waffle = ranked.map((game) => {
+    const tag = game.genres
+      .map((genre) => genre.trim())
+      .filter(Boolean)
+      .sort((a, b) => (weight.get(b) ?? 0) - (weight.get(a) ?? 0) || sortEs(a, b))[0];
+    return { id: game.id, name: game.name, tag: tag || '' };
+  });
+
   return {
     podium: ranked.slice(0, PODIUM),
     ranked: scored.slice(0, listSize),
+    waffle,
     byGenre: [...perGenre.entries()]
       .filter(([, entry]) => entry.games >= GENRE_GRADE_MIN)
       .map(([tag, entry]) => ({ tag, games: entry.games, avgGrade: entry.sum / entry.games }))

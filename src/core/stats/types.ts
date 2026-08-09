@@ -70,6 +70,12 @@ export interface TopSummary {
   byGenre: Array<{ tag: string; games: number; avgGrade: number }>;
   /** El top completo, de mejor a peor: el podio son los tres primeros. */
   ranked: GameRef[];
+  /**
+   * Una celda por juego del top, con el género que lo representa: es el gofre del reparto por género. A cada
+   * juego se le asigna el más repetido DE LOS SUYOS dentro del top, de modo que las celdas se agrupan por lo
+   * que de verdad domina tu élite y no por el orden en que escribiste las etiquetas.
+   */
+  waffle: Array<{ id: number; name: string; tag: string }>;
 }
 
 /** Entradas a cada lista en un mes, derivadas de `listedAt`. `m` es `AAAA-MM`. */
