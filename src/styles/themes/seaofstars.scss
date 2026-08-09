@@ -261,6 +261,13 @@
    mandos ya va por segmentos rectos, así que no necesita regla propia.) */
 :root[data-palette="seaofstars"] .donut-seg { stroke-linecap: butt; }
 
+/* Nada de curvas suavizadas ni esquinas: el rosetón se dibuja a canto vivo y las filas y barras son cajas. */
+:root[data-palette="seaofstars"] .burst-piece path { shape-rendering: crispEdges; }
+:root[data-palette="seaofstars"] .shine-rows li,
+:root[data-palette="seaofstars"] .shine-fill,
+:root[data-palette="seaofstars"] .top-chip-bar,
+:root[data-palette="seaofstars"] .top-chip-bar i { border-radius: 0; }
+
 /* Campo de estrellas tenue detrás de los lienzos de datos, como el cielo del juego. */
 :root[data-palette="seaofstars"] .backlog-canvas,
 :root[data-palette="seaofstars"] .beeswarm-canvas {

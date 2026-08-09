@@ -27,8 +27,12 @@
 
   /* RAMPA SECUENCIAL para los repartos por etiqueta (rosetón, hexágono). Dos tonos del tema entre los que se
      interpola por puesto: con un solo tono, diez géneros casi empatados salían todos del mismo color. Cada
-     skin la redefine con su dualidad propia —los dos portales, rojo y oro, amarillo y magenta…— en
-     `styles/themes/*.scss`; aquí queda el valor por defecto. */
+     skin la redefine con su dualidad propia —los dos portales, rojo y oro, cian y magenta…— en
+     `styles/themes/*.scss`; aquí queda el valor por defecto.
+
+     Las mezclas que usan esta rampa acotan SIEMPRE el porcentaje con `clamp(0%, …, 100%)`, y no es adorno:
+     Chrome recorta por su cuenta los porcentajes que se salen, pero Firefox devuelve un color TRANSPARENTE, y
+     con una lista más larga de lo previsto las últimas piezas desaparecían del gráfico. */
   --chart-from: var(--steam);
   --chart-to: var(--warn);
 
@@ -676,7 +680,7 @@
   /* Interpolación en OKLCH y no en oklab: al mezclar dos tonos opuestos —el azul y el naranja de los dos
      portales, por ejemplo—, un espacio rectangular atraviesa el gris y los sectores centrales salían
      apagados. En OKLCH el recorrido es por el círculo de tono, así que la rampa mantiene el color vivo. */
-  fill: color-mix(in oklch, var(--chart-to) calc(var(--i, 0) * 11%), var(--chart-from));
+  fill: color-mix(in oklch, var(--chart-to) clamp(0%, var(--i, 0) * 11%, 100%), var(--chart-from));
   stroke: var(--surface);
   stroke-width: 1;
   transform-origin: center;
@@ -1103,7 +1107,7 @@
 .gauge-seg.is-red { stroke: color-mix(in oklch, var(--danger) 28%, transparent); }
 
 .gauge-seg.is-on {
-  stroke: color-mix(in oklch, var(--chart-to) calc(var(--i, 0) / max(calc(var(--n, 2) - 1), 1) * 100%), var(--chart-from));
+  stroke: color-mix(in oklch, var(--chart-to) clamp(0%, var(--i, 0) / max(calc(var(--n, 2) - 1), 1) * 100%, 100%), var(--chart-from));
   animation: seg-on .3s ease-out both;
   animation-delay: calc(var(--i, 0) * 22ms);
 }
@@ -1468,7 +1472,7 @@
    quedaban en el primer tercio del degradado y salían casi del mismo color. El desplazamiento final vive en el
    `transform` base, no en la animación, para que con menos movimiento las piezas sigan separadas. */
 .burst-piece {
-  fill: color-mix(in oklch, var(--chart-to) calc(var(--i, 0) / max(calc(var(--n, 2) - 1), 1) * 100%), var(--chart-from));
+  fill: color-mix(in oklch, var(--chart-to) clamp(0%, var(--i, 0) / max(calc(var(--n, 2) - 1), 1) * 100%, 100%), var(--chart-from));
   transform-box: view-box;
   transform-origin: center;
   transform: translate(var(--dx, 0), var(--dy, 0));
@@ -1538,7 +1542,7 @@
 
 .donut-seg {
   fill: none;
-  stroke: color-mix(in oklch, var(--chart-to) calc(var(--i, 0) * 20%), var(--chart-from));
+  stroke: color-mix(in oklch, var(--chart-to) clamp(0%, var(--i, 0) * 20%, 100%), var(--chart-from));
   animation: fade-in .5s ease-out both;
   animation-delay: calc(var(--i, 0) * 90ms);
 }
@@ -1580,7 +1584,7 @@
   flex: 0 0 auto;
   align-self: center;
   border-radius: 3px;
-  background: color-mix(in oklch, var(--chart-to) calc(var(--i, 0) * 20%), var(--chart-from));
+  background: color-mix(in oklch, var(--chart-to) clamp(0%, var(--i, 0) * 20%, 100%), var(--chart-from));
 }
 
 .donut-tag {
@@ -1649,7 +1653,7 @@
 .shine-fill {
   position: absolute;
   inset: 0 auto 0 0;
-  background: color-mix(in oklch, var(--chart-to) calc(var(--i, 0) / max(calc(var(--n, 2) - 1), 1) * 100%), var(--chart-from));
+  background: color-mix(in oklch, var(--chart-to) clamp(0%, var(--i, 0) / max(calc(var(--n, 2) - 1), 1) * 100%, 100%), var(--chart-from));
   opacity: .3;
   transform-origin: left center;
   animation: grow-right .7s cubic-bezier(.22, 1, .36, 1) both;
@@ -1772,7 +1776,7 @@
   width: .55rem;
   height: .55rem;
   border-radius: 50%;
-  background: color-mix(in oklch, var(--chart-to) calc(var(--i, 0) * 18%), var(--chart-from));
+  background: color-mix(in oklch, var(--chart-to) clamp(0%, var(--i, 0) * 18%, 100%), var(--chart-from));
   animation: pop-in .35s cubic-bezier(.34, 1.36, .64, 1) both;
   animation-delay: calc(var(--i, 0) * 60ms + var(--d, 0) * 18ms);
 }
