@@ -1039,80 +1039,158 @@
   font-weight: 500;
 }
 
-/* ---- Completados vs abandonados ----------------------------------------------------------------------- */
+/* ---- Completados vs abandonados: cuadro de mandos ------------------------------------------------------ */
 
-/* La tarta se queda en el centro de su tarjeta y crece con ella: al compartir fila con el hexágono, una
-   figura pequeña en la esquina dejaba la mitad de la tarjeta vacía. */
-.ratio-block {
+/* Un dial de coche en lugar de una tarta de dos porciones. Con dos categorías no hay reparto que descubrir:
+   hay un valor sobre una escala, y eso es exactamente lo que una aguja sabe contar. El cuadrante abre 240° y
+   deja abajo el hueco de la lectura digital, así que la aguja nunca tapa la cifra. */
+.gauge {
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 1.6rem;
-  flex-wrap: wrap;
+  gap: .7rem;
   flex: 1;
 }
 
-.ratio-pie {
-  width: min(13rem, 55%);
-  flex: 0 0 auto;
+.gauge-fig {
+  position: relative;
+  width: min(20rem, 100%);
 }
 
-.ratio-pie svg {
+.gauge-fig svg {
   width: 100%;
   height: auto;
+  display: block;
   overflow: visible;
-  /* Sombra propia bajo la figura: la despega de la tarjeta sin necesidad de un borde. */
-  filter: drop-shadow(0 6px 14px rgba(0, 0, 0, .28));
 }
 
-.pie-slice path {
-  stroke: var(--surface);
+.gauge-track {
+  fill: none;
+  stroke: var(--score-track);
+  stroke-width: 14;
+  stroke-linecap: round;
+}
+
+/* El arco de valor se descubre desde el cero como el barrido de encendido de un salpicadero. Va con
+   `pathLength="1"` desde el componente, así que el trazo se mide en fracciones y no hace falta su longitud. */
+.gauge-value {
+  fill: none;
+  stroke-width: 14;
+  stroke-linecap: round;
+  animation: gauge-fill 1s cubic-bezier(.22, 1, .36, 1) both;
+}
+
+@keyframes gauge-fill {
+  from { stroke-dasharray: 0 1; }
+  to { stroke-dasharray: 1 0; }
+}
+
+.gauge-stop-from { stop-color: var(--chart-from); }
+.gauge-stop-to { stop-color: var(--chart-to); }
+
+/* La zona roja del cuentavueltas, que aquí marca el tramo al que se aspira. */
+.gauge-redline {
+  fill: none;
+  stroke: var(--danger);
+  stroke-width: 5;
+  stroke-linecap: round;
+  opacity: .75;
+  animation: fade-in .5s ease-out .5s both;
+}
+
+.gauge-tick {
+  stroke: var(--text-dim);
+  stroke-width: 1;
+  opacity: .45;
+}
+
+.gauge-tick.is-major {
   stroke-width: 2;
-  stroke-linejoin: round;
+  opacity: .85;
 }
 
-.pie-slice.is-c path { fill: var(--stats-c); }
-.pie-slice.is-v path { fill: var(--stats-v); }
-
-/* Cada porción entra girando desde el centro y se separa un poco al pasar el ratón. */
-.pie-slice {
-  transform-origin: center;
-  animation: pie-in .7s cubic-bezier(.34, 1.36, .64, 1) both;
-  animation-delay: calc(var(--i, 0) * 110ms);
-  transition: transform .18s ease;
+.gauge-number {
+  fill: var(--text-muted);
+  font-size: 10px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
 }
 
-.pie-slice:hover { transform: translate(var(--tx, 0), var(--ty, 0)); }
-
-@keyframes pie-in {
-  from { opacity: 0; transform: scale(.25) rotate(-40deg); }
-  to { opacity: 1; transform: scale(1) rotate(0); }
+/* La aguja se dibuja en el cero y su posición final la da el `transform` de la regla base, no la animación:
+   con menos movimiento la animación se apaga y la aguja tiene que seguir marcando tu porcentaje. El eje del
+   giro lo pasa el componente en `--cx`/`--cy`, para que no haya que copiar aquí sus coordenadas. */
+.gauge-needle {
+  fill: var(--danger);
+  transform-box: view-box;
+  transform-origin: var(--cx, 50%) var(--cy, 50%);
+  transform: rotate(var(--deg, 0deg));
+  animation: needle-sweep 1.1s cubic-bezier(.34, 1.2, .64, 1) both;
 }
 
-/* La lectura: cifra protagonista y leyenda debajo. El número es lo que responde la pregunta; la tarta solo
-   enseña la proporción de un vistazo. */
-.ratio-read {
-  display: flex;
-  flex-direction: column;
-  gap: .7rem;
+@keyframes needle-sweep {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(var(--deg, 0deg)); }
 }
 
-.ratio-hero {
-  display: flex;
-  flex-direction: column;
+.gauge-cap {
+  fill: var(--surface);
+  stroke: var(--danger);
+  stroke-width: 3;
+}
+
+/* La lectura digital, en el hueco que deja el cuadrante. */
+.gauge-read {
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  transform: translateX(-50%);
   margin: 0;
-  line-height: 1.05;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  line-height: 1.02;
+  pointer-events: none;
 }
 
-.ratio-hero b {
-  font-size: 2.6rem;
+.gauge-read b {
+  font-size: 2rem;
   font-weight: 700;
+  font-variant-numeric: tabular-nums;
 }
 
-.ratio-hero span {
-  font-size: .8rem;
+.gauge-read span {
+  font-size: .74rem;
   color: var(--text-muted);
-  max-width: 12rem;
+  text-align: center;
+  max-width: 11rem;
+}
+
+/* El barrido del morro: decorativo, y lo primero que se apaga con menos movimiento. */
+.gauge-scan {
+  position: relative;
+  width: min(20rem, 100%);
+  height: 6px;
+  border-radius: var(--radius-pill);
+  background: color-mix(in oklch, var(--danger) 16%, transparent);
+  overflow: hidden;
+}
+
+.gauge-scan::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 33%;
+  width: 34%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, transparent, var(--danger), transparent);
+  animation: kitt-scan 2.6s ease-in-out infinite alternate;
+}
+
+@keyframes kitt-scan {
+  from { left: -34%; }
+  to { left: 100%; }
 }
 
 .ratio-legend {
@@ -1145,7 +1223,8 @@
 
 /* ---- Podio de los mejores ------------------------------------------------------------------------------ */
 
-/* Tres valores no necesitan ejes: el podio son CIFRAS DESTACADAS, con el metal del puesto como única jerarquía. */
+/* Tres valores no necesitan ejes: el podio son CIFRAS DESTACADAS. El puesto va de marca de agua al fondo de su
+   tarjeta, así que da la jerarquía sin quitarle ni un milímetro al nombre, que es lo que se viene a leer. */
 .podium {
   display: grid;
   grid-template-columns: 1fr;
@@ -1156,16 +1235,15 @@
 }
 
 @media (min-width: 46rem) {
-  .podium { grid-template-columns: repeat(3, 1fr); align-items: end; }
-  /* El primero, más alto: el podio se lee antes por la forma que por el número. */
-  .podium-step.is-gold { padding-block: 1.1rem; }
-  .podium-step.is-silver { padding-block: .85rem; }
+  .podium { grid-template-columns: repeat(3, 1fr); }
 }
 
 .podium-step {
+  position: relative;
+  overflow: hidden;
   display: flex;
-  align-items: center;
-  gap: .6rem;
+  flex-direction: column;
+  gap: .2rem;
   padding: .7rem .8rem;
   border: 1px solid var(--border);
   border-radius: var(--stats-radius);
@@ -1184,41 +1262,44 @@
   --medal-bronze: color-mix(in oklch, var(--warn) 55%, var(--danger));
 }
 
-/* El metal va en el filo y en el número, no en el fondo: un bloque dorado se comería el nombre del juego. */
+/* El metal va en el filo, en el rótulo y en el número del fondo: un bloque dorado se comería el nombre. */
 .podium-step.is-gold { border-color: color-mix(in srgb, var(--medal-gold) 60%, var(--border)); }
 .podium-step.is-silver { border-color: color-mix(in srgb, var(--medal-silver) 45%, var(--border)); }
 .podium-step.is-bronze { border-color: color-mix(in srgb, var(--medal-bronze) 45%, var(--border)); }
 
-.podium-pos {
-  flex: 0 0 auto;
-  width: 1.7rem;
-  height: 1.7rem;
-  display: grid;
-  place-items: center;
-  border-radius: 50%;
-  font-size: .85rem;
+.podium-ghost {
+  position: absolute;
+  right: -.2rem;
+  bottom: -1.4rem;
+  font-size: 4.6rem;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -.04em;
+  font-variant-numeric: tabular-nums;
+  opacity: .18;
+  pointer-events: none;
+  animation: fade-in .6s ease-out .2s both;
+}
+
+.podium-step.is-gold .podium-ghost { color: var(--medal-gold); }
+.podium-step.is-silver .podium-ghost { color: var(--medal-silver); }
+.podium-step.is-bronze .podium-ghost { color: var(--medal-bronze); }
+
+/* El metal, dicho con palabras: quien no distinga los tonos sigue sabiendo cuál es el primero. */
+.podium-medal {
+  position: relative;
+  font-size: .66rem;
   font-weight: 700;
-  color: var(--on-accent);
+  letter-spacing: .12em;
+  text-transform: uppercase;
 }
 
-.podium-step.is-gold .podium-pos {
-  background: linear-gradient(160deg, color-mix(in srgb, var(--medal-gold) 75%, #fff), var(--medal-gold));
-}
-.podium-step.is-silver .podium-pos {
-  background: linear-gradient(160deg, color-mix(in srgb, var(--medal-silver) 60%, #fff), var(--medal-silver));
-}
-.podium-step.is-bronze .podium-pos {
-  background: linear-gradient(160deg, color-mix(in srgb, var(--medal-bronze) 70%, #fff), var(--medal-bronze));
-}
-
-.podium-body {
-  display: flex;
-  flex-direction: column;
-  gap: .2rem;
-  min-width: 0;
-}
+.podium-step.is-gold .podium-medal { color: var(--medal-gold); }
+.podium-step.is-silver .podium-medal { color: var(--medal-silver); }
+.podium-step.is-bronze .podium-medal { color: var(--medal-bronze); }
 
 .podium-name {
+  position: relative;
   font-weight: 600;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1226,8 +1307,10 @@
 }
 
 .podium-meta {
+  position: relative;
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: .5rem;
   font-size: .76rem;
   color: var(--text-muted);
@@ -1243,7 +1326,8 @@
   background: var(--steam);
 }
 
-/* El resto del top, en fichas: doce filas ocupaban media pantalla para decir lo mismo. */
+/* El resto del top, con la misma receta: puesto al fondo y una barra de nota al pie. Puestas en rejilla, las
+   barras dejan ver de un golpe cómo caen las notas del cuarto al quince. */
 .top-chips {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr));
@@ -1254,10 +1338,12 @@
 }
 
 .top-chips li {
+  position: relative;
+  overflow: hidden;
   display: flex;
-  align-items: center;
-  gap: .5rem;
-  padding: .4rem .55rem;
+  flex-direction: column;
+  gap: .15rem;
+  padding: .45rem .55rem .5rem;
   border: 1px solid var(--border);
   border-radius: var(--stats-radius);
   background: var(--surface-soft);
@@ -1266,22 +1352,23 @@
   animation-delay: calc(var(--i, 0) * 35ms);
 }
 
-.top-chip-pos {
-  flex: 0 0 auto;
-  font-size: .72rem;
-  font-weight: 700;
-  color: var(--text-dim);
+/* Justo encima de la barra: hundido más abajo, el número la cruzaba y salía cortado por el filo de la ficha. */
+.top-chip-ghost {
+  position: absolute;
+  right: .2rem;
+  bottom: .45rem;
+  font-size: 2.1rem;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -.04em;
+  color: var(--text-muted);
   font-variant-numeric: tabular-nums;
-}
-
-.top-chip-body {
-  display: flex;
-  flex-direction: column;
-  gap: .1rem;
-  min-width: 0;
+  opacity: .16;
+  pointer-events: none;
 }
 
 .top-chip-name {
+  position: relative;
   font-size: .82rem;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1289,6 +1376,7 @@
 }
 
 .top-chip-meta {
+  position: relative;
   display: flex;
   align-items: center;
   gap: .35rem;
@@ -1300,61 +1388,83 @@
 .top-chip-meta .stars { font-size: .72rem; }
 .top-chip-meta .score-ring { --sz: 1.75rem; }
 
-/* ---- Barras radiales: un anillo por etiqueta ----------------------------------------------------------- */
+.top-chip-bar {
+  position: relative;
+  height: 4px;
+  margin-top: .1rem;
+  border-radius: var(--radius-pill);
+  background: var(--score-track);
+  overflow: hidden;
+}
 
-/* Variación del rosetón: allí cada categoría es un sector del mismo ángulo y compite por radio; aquí cada una
-   tiene su propia órbita y lo que se compara es cuánto avanza en ella. El nombre va escrito sobre el anillo,
-   así que no hace falta leyenda que casar. */
-.radial {
+/* El color de la barra sale de la NOTA, con el mismo tono que usan el aro y el enjambre: así una fila del
+   top se reconoce igual esté donde esté del panel. */
+.top-chip-bar i {
+  display: block;
+  height: 100%;
+  border-radius: var(--radius-pill);
+  background: hsl(var(--dot-hue, 135) 58% var(--acc-l));
+  transform-origin: left center;
+  animation: grow-right .5s cubic-bezier(.22, 1, .36, 1) both;
+  animation-delay: calc(var(--i, 0) * 35ms);
+}
+
+/* ---- Rosetón abierto: una pieza por etiqueta ----------------------------------------------------------- */
+
+/* El mismo reparto que el rosetón de la biblioteca —igual ángulo, lo que crece es el radio—, pero con las
+   piezas separadas del centro y el nombre escrito dentro. Separarlas evita que este bloque se confunda con
+   aquel, que está unas tarjetas más abajo, y el nombre dentro quita de en medio la leyenda que había que casar
+   cuando cinco géneros compartían una gama parecida. */
+.burst {
   display: flex;
   justify-content: center;
 }
 
-.radial-svg {
+.burst-svg {
   width: 100%;
-  max-width: 20rem;
+  max-width: 22rem;
   height: auto;
 }
 
-/* Referencia común a media vuelta: es lo que permite comparar anillos de radios distintos. */
-.radial-guide {
+.burst-ring {
+  fill: none;
+  stroke: var(--border);
+  stroke-dasharray: 2 4;
+  opacity: .7;
+}
+
+/* La rampa se reparte de extremo a extremo entre las piezas que haya: con incrementos fijos, cinco géneros se
+   quedaban en el primer tercio del degradado y salían casi del mismo color. El desplazamiento final vive en el
+   `transform` base, no en la animación, para que con menos movimiento las piezas sigan separadas. */
+.burst-piece {
+  fill: color-mix(in oklch, var(--chart-to) calc(var(--i, 0) / max(calc(var(--n, 2) - 1), 1) * 100%), var(--chart-from));
+  transform-box: view-box;
+  transform-origin: center;
+  transform: translate(var(--dx, 0), var(--dy, 0));
+  animation: burst-out .6s cubic-bezier(.22, 1, .36, 1) both;
+  animation-delay: calc(var(--i, 0) * 80ms);
+}
+
+@keyframes burst-out {
+  from { opacity: 0; transform: translate(0, 0) scale(.55); }
+  to { opacity: 1; transform: translate(var(--dx, 0), var(--dy, 0)) scale(1); }
+}
+
+/* Hilo que ata el rótulo de fuera con su pieza, para las porciones pequeñas donde el nombre no cabe dentro. */
+.burst-lead {
   stroke: var(--border);
   stroke-width: 1;
-  opacity: .6;
 }
 
-.radial-track {
-  fill: none;
-  stroke: var(--score-track);
-  stroke-linecap: round;
-}
-
-/* La rampa se reparte de extremo a extremo entre los anillos que haya: con incrementos fijos, cinco anillos se
-   quedaban en el primer tercio del degradado y salían casi del mismo color. */
-.radial-value {
-  fill: none;
-  stroke: color-mix(in oklch, var(--chart-to) calc(var(--i, 0) / max(calc(var(--n, 2) - 1), 1) * 100%), var(--chart-from));
-  stroke-linecap: round;
-  /* El arco se descubre desde su origen (las nueve en punto), como una aguja que sube. */
-  transform-origin: 50% 89%;
-  animation: radial-sweep .8s cubic-bezier(.22, 1, .36, 1) both;
-  animation-delay: calc(var(--i, 0) * 90ms);
-}
-
-@keyframes radial-sweep {
-  from { opacity: 0; transform: rotate(-40deg); }
-  to { opacity: 1; transform: rotate(0); }
-}
-
-/* El rótulo curvado. Dentro del arco va sobre el relleno; fuera, sobre el carril vacío. */
-.radial-label {
+.burst-label {
   font-size: 10.5px;
   font-weight: 600;
-  fill: var(--text-muted);
+  fill: var(--text);
   animation: fade-in .5s ease-out .45s both;
 }
 
-.radial-label.is-inside { fill: var(--on-accent); }
+.burst-label.is-inside { fill: var(--on-accent); }
+.burst-num { font-weight: 800; }
 
 /* ---- Anillo repartido con el total dentro ---------------------------------------------------------------- */
 
@@ -1438,92 +1548,81 @@
 .donut-legend b { font-variant-numeric: tabular-nums; }
 .donut-legend small { color: var(--text-muted); font-size: .72rem; font-variant-numeric: tabular-nums; }
 
-/* ---- Piruletas ------------------------------------------------------------------------------------------ */
+/* ---- Dónde brillas: filas con la barra al fondo --------------------------------------------------------- */
 
-.lolli {
+/* El relleno vive DETRÁS del texto en vez de ocupar una columna propia. En una pantalla de móvil eso le da al
+   nombre del género la fila entera sin perder la magnitud, porque el fondo llega justo hasta donde llega la
+   nota. La escala arranca en cero y termina en la nota máxima: recortarla al rango de los datos convertiría
+   cuatro medias parecidas en diferencias abismales que no existen. */
+.shine {
   display: flex;
   flex-direction: column;
-  gap: .3rem;
 }
 
-.lolli-rows {
+.shine-rows {
+  position: relative;
   display: flex;
   flex-direction: column;
-  gap: .45rem;
+  gap: 3px;
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
-/* La columna del nombre da para "Aventura gráfica" sin recortar: con 8rem se comía justo la palabra que
-   distingue un género de otro. */
-.lolli-rows li {
+.shine-rows li {
+  position: relative;
   display: grid;
-  grid-template-columns: minmax(7rem, 11rem) minmax(0, 20rem) auto;
+  grid-template-columns: 1fr auto auto;
   align-items: center;
-  gap: .7rem;
-  font-size: .82rem;
+  gap: .5rem;
+  padding: .55rem .6rem;
+  border-radius: var(--stats-radius);
+  background: var(--surface-soft);
+  overflow: hidden;
+  font-size: .85rem;
+  animation: slide-in .5s cubic-bezier(.22, 1, .36, 1) both;
+  animation-delay: calc(var(--i, 0) * 70ms);
 }
 
-.lolli-tag {
+/* Los cinco tramos de estrella, marcados sobre la fila entera y no sobre el relleno: son la referencia fija
+   contra la que se lee cada barra. */
+.shine-rows li::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(90deg, transparent 0 calc(20% - 1px), var(--surface) calc(20% - 1px) 20%);
+  opacity: .3;
+  pointer-events: none;
+}
+
+.shine-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  background: color-mix(in oklch, var(--chart-to) calc(var(--i, 0) / max(calc(var(--n, 2) - 1), 1) * 100%), var(--chart-from));
+  opacity: .3;
+  transform-origin: left center;
+  animation: grow-right .7s cubic-bezier(.22, 1, .36, 1) both;
+  animation-delay: calc(var(--i, 0) * 70ms);
+}
+
+.shine-tag {
+  position: relative;
+  font-weight: 600;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.lolli-track {
+.shine-count {
   position: relative;
-  height: 1rem;
+  font-size: .72rem;
+  color: var(--text-dim);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 
-/* El carril completo, visible: sin él, el tallo flotaba y no se veía cuánto quedaba hasta el máximo. */
-.lolli-rail {
-  position: absolute;
-  top: 50%;
-  left: 0;
-  right: 0;
-  height: 4px;
-  margin-top: -2px;
-  border-radius: var(--radius-pill);
-  background: var(--score-track);
-}
-
-/* La guía de tu media global: sin ella, un "84" no dice si es mucho o poco PARA TI. */
-.lolli-avg {
-  position: absolute;
-  top: -.1rem;
-  bottom: -.1rem;
-  border-left: 1px solid var(--text-muted);
-  opacity: .5;
-}
-
-/* El tallo pesa una fracción de lo que pesaría una barra: el ojo va al punto, que es donde está el dato. */
-.lolli-stem {
-  position: absolute;
-  top: 50%;
-  left: 0;
-  height: 4px;
-  margin-top: -2px;
-  border-radius: var(--radius-pill);
-  background: linear-gradient(90deg, color-mix(in srgb, hsl(var(--dot-hue, 135) 58% var(--acc-l)) 25%, transparent), hsl(var(--dot-hue, 135) 58% var(--acc-l)));
-  transform-origin: left center;
-  animation: grow-right .6s cubic-bezier(.22, 1, .36, 1) both;
-  animation-delay: calc(var(--i, 0) * 60ms);
-}
-
-.lolli-dot {
-  position: absolute;
-  right: 0;
-  top: 50%;
-  width: .85rem;
-  height: .85rem;
-  margin: -.425rem -.425rem 0 0;
-  border-radius: 50%;
-  background: hsl(var(--dot-hue, 135) 58% var(--acc-l));
-  border: 2px solid var(--surface);
-}
-
-.lolli-value {
+.shine-value {
+  position: relative;
   display: flex;
   align-items: baseline;
   gap: .35rem;
@@ -1531,10 +1630,10 @@
   white-space: nowrap;
 }
 
-.lolli-value b { font-weight: 700; }
+.shine-value b { font-weight: 700; }
 
 /* La diferencia contra tu media, que es la lectura que importa: verde si estás por encima, rojo si no. */
-.lolli-value em {
+.shine-value em {
   font-style: normal;
   font-size: .72rem;
   font-weight: 700;
@@ -1542,44 +1641,43 @@
   border-radius: var(--radius-pill);
 }
 
-.lolli-value em.is-over {
+.shine-value em.is-over {
   color: var(--stats-c);
   background: color-mix(in srgb, var(--stats-c) 16%, transparent);
 }
 
-.lolli-value em.is-under {
+.shine-value em.is-under {
   color: var(--stats-v);
   background: color-mix(in srgb, var(--stats-v) 16%, transparent);
 }
 
-.lolli-value small {
-  font-size: .7rem;
-  font-weight: 500;
-  color: var(--text-muted);
+/* La guía de tu media global cruza TODAS las filas: sin ella, un "84" no dice si es mucho o poco PARA TI. */
+.shine-avg {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  margin-left: -1px;
+  background: var(--text-muted);
+  opacity: .55;
+  pointer-events: none;
+  animation: fade-in .5s ease-out .5s both;
 }
 
-/* Mismas columnas que las filas: así el eje cae siempre bajo el carril, mida lo que mida la etiqueta. */
-.lolli-axis {
-  display: grid;
-  grid-template-columns: minmax(7rem, 11rem) minmax(0, 20rem) auto;
-  gap: .7rem;
-  font-size: .7rem;
-  color: var(--text-muted);
-}
-
-.lolli-axis-line {
+.shine-note {
   position: relative;
-  height: 1rem;
+  height: 1.1rem;
+  margin: .25rem 0 0;
+  font-size: .7rem;
+  color: var(--text-muted);
 }
 
-.lolli-axis-line > span {
+.shine-note span {
   position: absolute;
   transform: translateX(-50%);
   white-space: nowrap;
+  font-style: italic;
 }
-
-.lolli-axis-line > span:first-child { transform: none; }
-.lolli-axis-avg { font-style: italic; }
 
 /* ---- Matriz de puntos ----------------------------------------------------------------------------------- */
 

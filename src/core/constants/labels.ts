@@ -248,7 +248,7 @@ export const UI_MESSAGES = {
       completed: 'Completados',
       abandoned: 'Abandonados',
       heroLabel: 'de lo que cierras, lo terminas',
-      donutAria: (percent: number, completed: number, abandoned: number) =>
+      gaugeAria: (percent: number, completed: number, abandoned: number) =>
         `${percent}% completados: ${completed} completados frente a ${abandoned} abandonados`,
     },
     top: {
@@ -257,6 +257,8 @@ export const UI_MESSAGES = {
       // Persona 5 (uno de los temas): «te robaré el corazón».
       subtitle: 'Los que te robaron el corazón: tu podio y en qué se parecen.',
       empty: 'Todavía no has puntuado ningún juego.',
+      /** El metal de cada puesto, dicho con palabras: el color solo no puede ser el único que lo cuente. */
+      medals: ['Oro', 'Plata', 'Bronce'],
       ranked: 'El resto de tu top',
       byGenre: 'Dónde brillas',
       genreCount: (count: number) => `${count} juegos`,

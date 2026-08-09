@@ -9,7 +9,7 @@ import { GenreRadar } from './GenreRadar';
 import { Beeswarm } from './Beeswarm';
 import { BacklogArea } from './BacklogArea';
 import { PolarRose } from './PolarRose';
-import { RatioPie } from './RatioPie';
+import { SpeedGauge } from './SpeedGauge';
 import { TopGames } from './TopGames';
 import { useRevealOnScroll } from './useRevealOnScroll';
 import { ShameCard } from './ShameCard';
@@ -111,7 +111,7 @@ export const StatsHub = memo(function StatsHub({ games }: { games: TabData }) {
           <div className="stats-card stats-card-half">
             <h2>{L.ratio.title}</h2>
             <p className="stats-card-sub">{L.ratio.subtitle}</p>
-            <RatioPie ratio={stats.completionRatio} />
+            <SpeedGauge ratio={stats.completionRatio} />
           </div>
 
           <div className="stats-card">
