@@ -29,6 +29,7 @@ import { useEffects } from './view/hooks/useEffects';
 import { useShowSteamButton } from './view/hooks/useShowSteamButton';
 import { useLegacyProfileHeal } from './view/hooks/useLegacyProfileHeal';
 import { useShootingStars } from './view/hooks/useShootingStars';
+import { useBacklogSnapshot } from './view/hooks/useBacklogSnapshot';
 import { useSignatureEffects } from './view/hooks/useSignatureEffects';
 import { useAppliedPalette } from './view/hooks/usePalette';
 import { hasGithubOAuthRedirect } from './model/repository/githubOAuthRepository';
@@ -141,6 +142,10 @@ export default function App() {
   useEffects();
   // F1: visibilidad del botón "Steam Deck" (preferencia de cuenta) → se pasa a la Toolbar.
   const { showSteamButton } = useShowSteamButton();
+  // Histórico del backlog: anota una vez al mes el tamaño de cada lista. Va aquí y no en el panel "Perfil"
+  // porque la serie debe acumularse se visite o no esa pantalla; sin este registro no hay forma de saber cómo
+  // evoluciona el backlog (`listedAt` se reescribe al mover de lista). Local, silencioso y en idle.
+  useBacklogSnapshot(vm.data);
   // Estrellas fugaces aleatorias por los bordes de botones/chips (solo en la paleta "Sol y luna").
   useShootingStars();
   // Efectos de firma por interacción (wipe P5 al navegar, apertura de portal al clic, sol↔luna, boot-up 40K).
