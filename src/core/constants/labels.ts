@@ -230,7 +230,6 @@ export const UI_MESSAGES = {
       chartAria: 'Distribución de notas',
       bandColumn: 'Tramo',
       countColumn: 'Juegos',
-      swarmHint: (count: number, best: string) => `Cada punto es uno de tus ${count} juegos puntuados. El más alto: ${best}.`,
       median: 'mediana',
     },
     genres: {
@@ -294,7 +293,6 @@ export const UI_MESSAGES = {
       title: 'Evolución del backlog',
       // Cyberpunk 2077 (uno de los temas): «despierta, samurái».
       derivedSubtitle: 'Despierta, samurái: así ha ido creciendo lo que hoy tienes en cada lista.',
-      derivedNote: 'Aproximación: cuenta la fecha de entrada a la lista ACTUAL, así que al mover un juego de lista su fecha se actualiza y la curva se recoloca. No es un histórico.',
       realSubtitle: 'Tamaño de cada lista al cierre de cada mes, según lo registrado en este dispositivo.',
       realNote: 'Histórico real, registrado mes a mes en este dispositivo desde que la función existe.',
       empty: 'Todavía no hay meses que representar.',
