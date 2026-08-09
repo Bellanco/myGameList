@@ -1,6 +1,6 @@
 import { memo, type CSSProperties } from 'react';
 import { UI_MESSAGES } from '../../../core/constants/labels';
-import { GRADE_MAX, hueFromGrade, starsFromGrade } from '../../../core/utils/scoreScale';
+import { GRADE_MAX, SCORE_BUCKET_FLOORS, STARS_MAX, hueFromGrade, starsFromGrade } from '../../../core/utils/scoreScale';
 import { formatDecimal } from './format';
 import type { GameRef } from '../../../core/stats/types';
 import type { ScoreScale } from '../../../core/utils/scoreScale';
@@ -109,8 +109,25 @@ export const Beeswarm = memo(function Beeswarm({ games, scale, average }: Beeswa
   // Los carriles se comprimen si el enjambre es alto, para no salirse del lienzo.
   const lane = Math.min(LANE, 42 / spread);
   const marks = scale === 'grade' ? [0, 25, 50, 75, 100] : [20, 40, 60, 80, 100];
+  // Reparto por tramo para la tabla alternativa (el mismo esquema de estrellas que el resto de la app).
+  const bands = Array.from({ length: STARS_MAX }, (_unused, index) => {
+    const stars = index + 1;
+    return {
+      stars,
+      floor: SCORE_BUCKET_FLOORS[stars],
+      ceiling: stars === STARS_MAX ? GRADE_MAX : SCORE_BUCKET_FLOORS[stars + 1] - 1,
+      count: games.filter((game) => starsFromGrade(game.grade) === stars).length,
+    };
+  });
   const mid = median(games);
-  const best = games.reduce((top, game) => (game.grade > top.grade ? game : top), games[0]);
+  // Los dos extremos se rotulan con su nombre. Es la única etiqueta directa del gráfico: poner el nombre en
+  // cada punto sería ilegible, y son justo los dos que se buscan al mirar una distribución.
+  const best = dots[dots.length - 1];
+  const worst = dots[0];
+  const labelled = games.length > 2 ? [
+    { dot: worst, side: 'start' as const },
+    { dot: best, side: 'end' as const },
+  ] : [];
 
   return (
     <div className="beeswarm">
@@ -131,6 +148,16 @@ export const Beeswarm = memo(function Beeswarm({ games, scale, average }: Beeswa
         <span className="beeswarm-average" style={{ left: `${average}%` } as CSSProperties}>
           <b>{scale === 'grade' ? Math.round(average) : formatDecimal(average / 20)}</b>
         </span>
+
+        {labelled.map(({ dot, side }) => (
+          <span
+            key={`tag-${dot.game.id}`}
+            className={`beeswarm-tag is-${side}`}
+            style={{ left: `${dot.x}%`, top: `calc(50% + ${dot.lane * lane}%)` } as CSSProperties}
+          >
+            {dot.game.name}
+          </span>
+        ))}
 
         {dots.map((dot, index) => (
           <span
@@ -155,7 +182,29 @@ export const Beeswarm = memo(function Beeswarm({ games, scale, average }: Beeswa
         ))}
       </div>
 
-      <p className="stats-note">{L.swarmHint(games.length, best.name)}</p>
+      {/* Alternativa textual: el reparto por tramo, que es lo que el enjambre enseña de un vistazo. Sin ella,
+          el dato exacto de cada punto solo estaría en su `title`, y un tooltip nunca puede ser la única vía. */}
+      <div className="sr-only">
+        <table>
+          <caption>{L.chartAria}</caption>
+          <thead>
+            <tr>
+              <th scope="col">{L.bandColumn}</th>
+              <th scope="col">{L.countColumn}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {bands.map((band) => (
+              <tr key={band.stars}>
+                <th scope="row">{scale === 'grade' ? L.gradeLabel(band.floor, band.ceiling) : L.starsLabel(band.stars)}</th>
+                <td>{band.count}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <p className="stats-note">{L.swarmHint(games.length, best.game.name)}</p>
     </div>
   );
 });

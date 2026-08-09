@@ -162,7 +162,7 @@ export const UI_MESSAGES = {
     inbox: 'Bandeja de importados',
     admin: 'Administración',
     legal: 'Información legal',
-    stats: 'Perfil: estadísticas de mis listas',
+    stats: 'Estadísticas de mis listas',
   },
   skipToContent: 'Saltar al contenido',
   // A11y-4: nombre accesible de cada pestaña de listado. Hace falta explícito porque el título visible
@@ -178,11 +178,11 @@ export const UI_MESSAGES = {
     account: 'Cuenta',
     inbox: 'Bandeja',
     integrations: 'Integraciones',
-    // La pestaña se llama "Perfil" de cara al usuario; por dentro la sección es `stats` (el panel de
-    // estadísticas). No confundir con el PERFIL SOCIAL (`/social/profile`), que es la ficha pública.
-    stats: 'Perfil',
+    // La pestaña se llama "Estadísticas": son las de las listas propias. La ruta sigue siendo `/perfil` y la
+    // sección `stats`. No confundir con el PERFIL SOCIAL (`/social/profile`), que es la ficha pública.
+    stats: 'Estadísticas',
   },
-  // Panel "Perfil": estadísticas derivadas de las listas. Todo se calcula en el dispositivo (ver
+  // Panel de estadísticas derivadas de las listas. Todo se calcula en el dispositivo (ver
   // `core/stats/computeStats`); no se guarda ni se publica nada.
   stats: {
     subtitle: 'Tu biblioteca en números, calculada en este dispositivo a partir de tus listas.',
@@ -226,6 +226,8 @@ export const UI_MESSAGES = {
       gradeLabel: (floor: number, ceiling: number) => `${floor}–${ceiling}`,
       countLabel: (count: number) => `${count} ${count === 1 ? 'juego' : 'juegos'}`,
       chartAria: 'Distribución de notas',
+      bandColumn: 'Tramo',
+      countColumn: 'Juegos',
       swarmHint: (count: number, best: string) => `Cada punto es uno de tus ${count} juegos puntuados. El más alto: ${best}.`,
       median: 'mediana',
     },
@@ -242,8 +244,22 @@ export const UI_MESSAGES = {
       empty: 'Aún no has completado ni abandonado ningún juego.',
       completed: 'Completados',
       abandoned: 'Abandonados',
+      heroLabel: 'de lo que cierras, lo terminas',
       donutAria: (percent: number, completed: number, abandoned: number) =>
         `${percent}% completados: ${completed} completados frente a ${abandoned} abandonados`,
+    },
+    top: {
+      title: 'Lo mejor de tu biblioteca',
+      titleYear: (year: number) => `Lo mejor de ${year}`,
+      subtitle: 'Tu podio y en qué se parecen los juegos que más te gustan.',
+      empty: 'Todavía no has puntuado ningún juego.',
+      hours: (hours: string) => `${hours} h`,
+      avgGrade: (count: number) => ` de nota media en tus ${count} mejores`,
+      avgHours: ' de media, cada uno',
+      cutoff: ' es el listón para entrar',
+      genres: (count: number) => `Géneros de tus ${count} mejores`,
+      platforms: 'Dónde los juegas',
+      note: (size: number) => `El agregado toma tus ${size} mejores; el reparto general está más arriba, para comparar.`,
     },
     // Pestañas General / año. Solo se listan los años con juegos completados.
     scope: {
@@ -284,7 +300,6 @@ export const UI_MESSAGES = {
       noReasons: 'No has anotado razones de abandono.',
       genres: 'Géneros que más abandonas',
       rate: 'Terminados frente a abandonados, por género',
-      rateHint: (min: number) => `Solo géneros con al menos ${min} juegos ya decididos. El porcentaje es lo que dejas.`,
       legendCompleted: 'Terminados',
       legendAbandoned: 'Dejados',
       recent: 'Los últimos en caer',

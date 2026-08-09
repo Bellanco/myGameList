@@ -64,8 +64,21 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
   - Se mantienen el hexágono, el aro, el área acumulada y las columnas del gráfico anual.
   - Las formas que necesitan un mínimo de datos caen a un ranking en texto cuando no lo tienen: el hexágono por
     debajo de tres ejes y el rosetón por debajo de tres sectores (dos mitades no son una figura).
-  - El enjambre lleva además **silueta de densidad** detrás y las guías de **media y mediana**: con la
-    biblioteca entera los puntos se tocan y la silueta es lo único que sigue diciendo dónde está el grueso.
+  - El enjambre lleva además **silueta de densidad** detrás, las guías de **media y mediana** y el nombre de
+    los dos extremos: con la biblioteca entera los puntos se tocan y la silueta es lo único que sigue diciendo
+    dónde está el grueso. Su reparto por tramo va también en la tabla alternativa, para que el dato exacto
+    nunca dependa solo de pasar el ratón.
+  - Completados frente a abandonados pasa a **cifra protagonista con la tarta de apoyo**: con dos categorías el
+    número ES el gráfico, y los porcentajes salen de dentro de las porciones, donde repetían esa misma cifra y
+    en un reparto desigual no cabían sin recortarse.
+  - Repaso a los detalles de trazado: rejillas y ejes en hairline **sólida** (una rejilla punteada se lee como
+    umbral, no como rejilla), rellenos de área más velados, separación de 2 px entre porciones, cifras
+    proporcionales en las tarjetas destacadas (los dígitos de ancho fijo son para columnas que se alinean) y
+    diana de 24 px alrededor de cada punto, que señalar un círculo de nueve píxeles era imposible.
+- **"Lo mejor de tu biblioteca", en general y en cada año**: el podio de tus tres primeros y —lo que ninguna
+  lista de favoritos cuenta— **en qué se parecen** los diez mejores: qué géneros se repiten, dónde los juegas,
+  cuánto duran de media y qué nota hace de listón para entrar. Puesto al lado del reparto general responde a
+  una pregunta que ninguno de los dos contesta solo: si lo que más te gusta es lo que más juegas.
 - **Cada tema viste el panel con su propio lenguaje.** Las tarjetas entran en la receta de tarjeta que ya tenía
   cada skin (tinta de cómic en Corazón rebelde, filo naranja en Cámara de pruebas, marco cian y filete amarillo
   en Sin futuro, moldura dorada en Solo hay guerra, marco doble pixelado en Mar de estrellas), y cada uno añade

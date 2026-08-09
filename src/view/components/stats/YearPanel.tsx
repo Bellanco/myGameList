@@ -6,6 +6,7 @@ import { GenreRadar } from './GenreRadar';
 import { Beeswarm } from './Beeswarm';
 import { TagRanking } from './TagRanking';
 import { GameRefList } from './GameRefList';
+import { TopGames } from './TopGames';
 import { formatDecimal, formatHours } from './format';
 import type { YearSummary } from '../../../core/stats/types';
 import type { ScoreScale } from '../../../core/utils/scoreScale';
@@ -51,6 +52,14 @@ export const YearPanel = memo(function YearPanel({ summary, scale }: { summary: 
           ) : null}
         </div>
       </div>
+
+      {summary.top.sample > 0 ? (
+        <div className="stats-card">
+          <h2>{L.top.titleYear(summary.year)}</h2>
+          <p className="stats-card-sub">{L.top.subtitle}</p>
+          <TopGames top={summary.top} scale={scale} />
+        </div>
+      ) : null}
 
       <div className="stats-card stats-card-half">
         <h2>{L.radar.title}</h2>

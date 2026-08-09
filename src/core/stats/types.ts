@@ -38,6 +38,29 @@ export interface GameRef {
   hours: number;
   /** Fecha de llegada a la lista actual (`listedAt`). */
   at: number;
+  /** Las MISMAS referencias del juego original (no copias): el agregado del top las recorre. */
+  genres: string[];
+  platforms: string[];
+}
+
+/**
+ * Retrato de tus mejores juegos: el podio y en qué se parecen entre sí.
+ *
+ * La pregunta que responde no es "cuál es el mejor" —eso ya lo dice una cifra— sino "qué tienen en común los
+ * que más te gustan": qué géneros se repiten, cuánto duran y en qué plataforma los juegas.
+ */
+export interface TopSummary {
+  /** Los tres primeros, de mejor a peor nota. */
+  podium: GameRef[];
+  /** Cuántos juegos entran en el agregado (el top N, o menos si no hay tantos). */
+  sample: number;
+  avgGrade: number;
+  /** Media de horas de los del top que tienen horas anotadas; 0 si ninguno las tiene. */
+  avgHours: number;
+  /** Nota mínima para entrar en el top: el listón de tu élite. */
+  cutoff: number;
+  genres: TagBucket[];
+  platforms: TagBucket[];
 }
 
 /** Entradas a cada lista en un mes, derivadas de `listedAt`. `m` es `AAAA-MM`. */
@@ -62,6 +85,8 @@ export interface YearSummary {
   /** Mejor valorado y más largo del año. */
   best: GameRef | null;
   longest: GameRef | null;
+  /** Retrato de los mejores del año. */
+  top: TopSummary;
   /** Los juegos del año, de mejor a peor nota. */
   games: GameRef[];
 }
@@ -130,6 +155,8 @@ export interface StatsSummary {
   platforms: TagBucket[];
   /** El juego con más horas de las listas jugadas; null si nadie tiene horas. */
   longest: GameRef | null;
+  /** Retrato de tus mejores juegos de siempre. */
+  top: TopSummary;
   shame: ShameSummary;
   wishlist: WishlistSummary;
 }
