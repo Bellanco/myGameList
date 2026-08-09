@@ -1,6 +1,7 @@
 const tsParser = require('@typescript-eslint/parser');
 const jsxA11yPlugin = require('eslint-plugin-jsx-a11y');
 const reactPlugin = require('eslint-plugin-react');
+const reactHooksPlugin = require('eslint-plugin-react-hooks');
 
 module.exports = [
   {
@@ -35,7 +36,8 @@ module.exports = [
     },
     plugins: {
       react: reactPlugin,
-      'jsx-a11y': jsxA11yPlugin
+      'jsx-a11y': jsxA11yPlugin,
+      'react-hooks': reactHooksPlugin
     },
     settings: {
       react: {
@@ -53,6 +55,15 @@ module.exports = [
       // React rules
       "react/jsx-uses-react": "off",
       "react/react-in-jsx-scope": "off",
+
+      // Hooks. Con 158 `useCallback`, 72 `useEffect` y 47 `useMemo` escritos a mano, NADA comprobaba las listas
+      // de dependencias, y esa es justo la clase de fallo que más caro ha salido aquí: el bug del hub social que
+      // llevaba a Ajustes con un 401 era un `useMemo` con dependencias `[]` leyendo una configuración que se
+      // resuelve de forma asíncrona. `rules-of-hooks` va en "error" (un hook llamado bajo condición es siempre un
+      // fallo); `exhaustive-deps` en "warn" porque hay omisiones deliberadas —efectos de arranque, suscripciones
+      // de una sola vez— que se revisan una a una y no deben tumbar el build mientras tanto.
+      "react-hooks/rules-of-hooks": "error",
+      "react-hooks/exhaustive-deps": "warn",
       
       // Accesibilidad. Estaban en "warn" para adopción gradual; ya no hay ninguna violación, así que pasan a
       // "error": la adopción gradual solo sirve mientras queda algo que arreglar, y a partir de ahí un `warn` es
