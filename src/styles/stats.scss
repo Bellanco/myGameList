@@ -82,6 +82,25 @@
   .stats-split { grid-template-columns: 1fr 1fr; }
 }
 
+/* ---- Gestos compartidos -------------------------------------------------------------------------------- */
+
+/* Los tres movimientos que usan varios gráficos, en un solo sitio: crecer desde la base (columnas), desplegarse
+   desde la izquierda (varillas y ejes) y aparecer con un pequeño rebote (puntos). */
+@keyframes grow-up {
+  from { transform: scaleY(0); }
+  to { transform: scaleY(1); }
+}
+
+@keyframes grow-right {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+
+@keyframes pop-in {
+  from { opacity: 0; transform: scale(.6); }
+  to { opacity: 1; transform: scale(1); }
+}
+
 /* ---- Selector de periodo ------------------------------------------------------------------------------ */
 
 /* Con muchos años la fila se desplaza en horizontal en vez de romperse en varias líneas: así el conmutador
@@ -436,182 +455,376 @@
 .backlog-xtick:first-child { transform: none; }
 .backlog-xtick:last-child { transform: translateX(-100%); }
 
-/* ---- Histograma de notas (columnas) ------------------------------------------------------------------- */
+/* ---- Distribución de notas (enjambre de puntos) -------------------------------------------------------- */
 
-/* El histograma ESTIRA para llenar la tarjeta: al compartir fila con el mosaico —bastante más alto—, con una
-   altura fija quedaba un socavón de espacio muerto bajo las columnas. */
-.grade-chart {
-  display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  gap: .4rem;
-  flex: 1;
-  min-height: 9rem;
-}
-
-.grade-col {
+/* El enjambre estira para llenar la tarjeta: al compartir fila con el rosetón —más alto—, con una altura fija
+   quedaba un socavón de espacio muerto debajo. */
+.beeswarm {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: .3rem;
-  min-width: 0;
-}
-
-.grade-col-value {
-  font-size: .8rem;
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-}
-
-.grade-col-track {
-  display: flex;
-  align-items: flex-end;
-  width: 100%;
+  gap: .4rem;
   flex: 1;
-  min-height: 5rem;
-  border-radius: 7px;
-  background: var(--score-track);
 }
 
-.grade-col-bar {
-  width: 100%;
-  height: var(--bar-height, 0%);
-  border-radius: 7px;
-  background: linear-gradient(180deg,
-    hsl(var(--bar-hue, 135) 62% calc(var(--acc-l) + 8%)),
-    hsl(var(--bar-hue, 135) 58% var(--acc-l)));
-  /* La columna crece desde su base con un retardo por posición: la distribución se "dibuja" de peor a mejor. */
-  transform-origin: bottom center;
-  animation: grow-up .7s cubic-bezier(.22, 1, .36, 1) both;
-  animation-delay: calc(var(--i, 0) * 70ms);
+.beeswarm-canvas {
+  position: relative;
+  flex: 1;
+  min-height: 9rem;
+  border-radius: var(--stats-radius);
+  background: linear-gradient(90deg,
+    color-mix(in srgb, hsl(0 58% var(--acc-l)) 10%, transparent),
+    color-mix(in srgb, hsl(135 58% var(--acc-l)) 10%, transparent));
 }
 
-@keyframes grow-up {
-  from { transform: scaleY(0); }
-  to { transform: scaleY(1); }
+.beeswarm-guide {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border-left: 1px dashed var(--border);
+  opacity: .5;
 }
 
-.grade-col-label {
-  font-size: .72rem;
-  color: var(--text-muted);
-  white-space: nowrap;
-  letter-spacing: -.04em;
-}
-
-/* ---- Mosaico de géneros -------------------------------------------------------------------------------- */
-
-.treemap {
-  width: 100%;
-  height: auto;
-  display: block;
-}
-
-/* La intensidad sigue al PUESTO en el ranking, no al valor: con géneros casi empatados (55, 50, 50, 48…) una
-   rampa por valor los pintaba a todos del mismo color y el mosaico perdía toda jerarquía. Por puesto siempre
-   hay gradación, y el orden que expresa es real. */
-.treemap-cell rect {
-  fill: color-mix(in srgb, var(--steam) calc(88% - var(--i, 0) * 9%), var(--surface));
-  stroke: var(--surface);
-  stroke-width: 1;
-}
-
-.treemap-cell {
-  transform-origin: center;
-  animation: pop-in .55s cubic-bezier(.22, 1, .36, 1) both;
-  animation-delay: calc(var(--i, 0) * 60ms);
-}
-
-@keyframes pop-in {
-  from { opacity: 0; transform: scale(.86); }
-  to { opacity: 1; transform: scale(1); }
-}
-
-.treemap-name {
-  fill: var(--on-accent);
-  font-size: 13px;
-  font-weight: 700;
-}
-
-.treemap-num {
-  fill: var(--on-accent);
-  font-size: 12px;
+/* La media, marcada con una guía llena y su cifra: es la referencia contra la que se lee todo lo demás. */
+.beeswarm-average {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border-left: 2px solid var(--text-muted);
   opacity: .8;
 }
 
-/* ---- Barras horizontales (notas, géneros, razones) ---------------------------------------------------- */
+.beeswarm-average b {
+  position: absolute;
+  top: -.1rem;
+  left: .3rem;
+  font-size: .7rem;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
 
-.stats-bars {
+/* Un punto por juego. En HTML y no en SVG: sobre un lienzo que se estira, dentro del SVG saldrían ovalados. */
+.beeswarm-dot {
+  position: absolute;
+  width: .55rem;
+  height: .55rem;
+  margin: -.275rem 0 0 -.275rem;
+  border-radius: 50%;
+  background: hsl(var(--dot-hue, 135) 62% var(--acc-l));
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--surface) 60%, transparent);
+  animation: pop-in .45s cubic-bezier(.34, 1.36, .64, 1) both;
+  animation-delay: calc(var(--i, 0) * 14ms);
+}
+
+/* Con muchos juegos los puntos encogen para que el enjambre siga respirando; con muy pocos crecen, porque
+   media docena de puntos diminutos dejaba el lienzo desierto. */
+.beeswarm-canvas.is-dense .beeswarm-dot {
+  width: .4rem;
+  height: .4rem;
+  margin: -.2rem 0 0 -.2rem;
+}
+
+.beeswarm-canvas.is-sparse .beeswarm-dot {
+  width: .9rem;
+  height: .9rem;
+  margin: -.45rem 0 0 -.45rem;
+}
+
+.beeswarm-axis {
+  position: relative;
+  height: 1rem;
+}
+
+.beeswarm-axis span {
+  position: absolute;
+  transform: translateX(-50%);
+  font-size: .7rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.beeswarm-axis span:first-child { transform: none; }
+.beeswarm-axis span:last-child { transform: translateX(-100%); }
+
+/* ---- Rosetón polar (reparto de etiquetas) -------------------------------------------------------------- */
+
+.polar-rose {
+  display: flex;
+  justify-content: center;
+}
+
+.polar-rose svg {
+  width: 100%;
+  max-width: 22rem;
+  height: auto;
+  overflow: visible;
+}
+
+.polar-ring {
+  fill: none;
+  stroke: var(--border);
+  opacity: .6;
+}
+
+/* El tono sigue al PUESTO: con géneros casi empatados, una rampa por valor los pintaba todos igual. */
+.polar-sector {
+  fill: color-mix(in srgb, var(--steam) calc(90% - var(--i, 0) * 7%), var(--surface));
+  stroke: var(--surface);
+  stroke-width: 1;
+  transform-origin: center;
+  animation: rose-bloom .6s cubic-bezier(.34, 1.36, .64, 1) both;
+  animation-delay: calc(var(--i, 0) * 55ms);
+}
+
+@keyframes rose-bloom {
+  from { opacity: 0; transform: scale(.2) rotate(-12deg); }
+  to { opacity: 1; transform: scale(1) rotate(0); }
+}
+
+.polar-label {
+  fill: var(--text);
+  font-size: 10px;
+  font-weight: 600;
+  animation: fade-in .5s ease-out .4s both;
+}
+
+.polar-label-num { fill: var(--text-muted); font-weight: 500; }
+
+/* ---- Mancuernas (terminados frente a abandonados) ------------------------------------------------------ */
+
+.dumbbell {
   display: flex;
   flex-direction: column;
-  gap: .45rem;
-  margin: 0;
+  gap: .55rem;
+  margin: 0 0 .6rem;
   padding: 0;
   list-style: none;
 }
 
-/* Ancho acotado: en una tarjeta a ancho completo, una barra de mil píxeles para "11 de 44" no se lee mejor,
-   solo obliga a barrer la pantalla de lado a lado. */
-.stats-bar-row {
+.dumbbell li {
   display: grid;
-  grid-template-columns: minmax(4.5rem, 7rem) minmax(0, 26rem) auto;
+  grid-template-columns: minmax(4.5rem, 8rem) 1fr auto;
   align-items: center;
-  gap: .6rem;
+  gap: .8rem;
+  font-size: .82rem;
 }
 
-.stats-bar-label {
-  font-size: .82rem;
+.dumbbell-tag {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.stats-bar-track {
-  height: .8rem;
-  border-radius: var(--stats-radius);
-  background: var(--score-track);
-  overflow: hidden;
+/* El eje común arranca a la izquierda y llega al máximo de terminados: los géneros se comparan entre sí sin
+   tener que leer los números. */
+.dumbbell-track {
+  position: relative;
+  height: 1.5rem;
+  padding: 0 1.2rem;
 }
 
-.stats-bar-fill {
-  display: block;
-  width: var(--bar-width, 0%);
-  height: 100%;
-  border-radius: var(--stats-radius);
-  /* Mismo tono rojo→verde y la misma luminosidad por tema (--acc-l) que el aro de puntuación: el color dice
-     la nota, no decora. */
-  background: linear-gradient(90deg, hsl(var(--bar-hue, 135) 58% var(--acc-l)) 0%, hsl(var(--bar-hue, 135) 62% calc(var(--acc-l) + 8%)) 100%);
-  transition: width .3s cubic-bezier(.22, 1, .36, 1);
-  /* Se despliega desde la izquierda con un retardo por fila: el ranking se lee en el orden en que se pinta. */
+.dumbbell-track::before {
+  content: "";
+  position: absolute;
+  left: 1.2rem;
+  right: 1.2rem;
+  top: 50%;
+  border-top: 1px dashed var(--border);
+}
+
+/* La varilla entre los dos puntos: cuanto más larga, más desequilibrio entre acabar y dejar. */
+.dumbbell-bar {
+  position: absolute;
+  top: 50%;
+  height: 3px;
+  margin-top: -1.5px;
+  border-radius: var(--radius-pill);
+  background: linear-gradient(90deg, var(--stats-v), var(--stats-c));
   transform-origin: left center;
-  animation: grow-right .65s cubic-bezier(.22, 1, .36, 1) both;
-  animation-delay: calc(var(--i, 0) * 60ms);
+  animation: grow-right .6s cubic-bezier(.22, 1, .36, 1) both;
+  animation-delay: calc(var(--i, 0) * 70ms);
 }
 
-@keyframes grow-right {
-  from { transform: scaleX(0); }
-  to { transform: scaleX(1); }
+.dumbbell-dot {
+  position: absolute;
+  top: 50%;
+  width: .85rem;
+  height: .85rem;
+  margin: -.425rem 0 0 -.425rem;
+  border-radius: 50%;
+  border: 2px solid var(--surface);
+  animation: pop-in .45s cubic-bezier(.34, 1.36, .64, 1) both;
+  animation-delay: calc(var(--i, 0) * 70ms + 120ms);
 }
 
-.stats-bar-fill.is-accent {
-  background: linear-gradient(90deg, var(--steam), var(--steam-hover));
+.dumbbell-dot.is-completed { background: var(--stats-c); }
+.dumbbell-dot.is-abandoned { background: var(--stats-v); }
+
+.dumbbell-num {
+  position: absolute;
+  left: 50%;
+  bottom: 100%;
+  transform: translateX(-50%);
+  font-size: .66rem;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
 }
 
-.stats-bar-fill.is-danger {
-  background: linear-gradient(90deg, rgba(var(--danger-rgb), .75), var(--danger));
+.dumbbell-rate {
+  font-size: .78rem;
+  font-weight: 600;
+  color: var(--stats-v);
+  font-variant-numeric: tabular-nums;
 }
 
-.stats-bar-value {
+/* ---- Ranking en texto ---------------------------------------------------------------------------------- */
+
+.tag-ranking {
+  display: flex;
+  flex-direction: column;
+  gap: .1rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tag-ranking li {
   display: flex;
   align-items: baseline;
-  gap: .35rem;
-  font-size: .82rem;
-  font-weight: 600;
+  gap: .6rem;
+  padding: .3rem .45rem;
+  border-radius: 6px;
+  font-size: .86rem;
+  animation: slide-in .45s cubic-bezier(.22, 1, .36, 1) both;
+  animation-delay: calc(var(--i, 0) * 45ms);
+}
+
+.tag-ranking li:nth-child(odd) { background: var(--surface-soft); }
+
+@keyframes slide-in {
+  from { opacity: 0; transform: translateX(-6px); }
+  to { opacity: 1; transform: none; }
+}
+
+.tag-ranking-pos {
+  min-width: 1rem;
+  font-size: .72rem;
+  font-weight: 700;
+  color: var(--text-dim);
   font-variant-numeric: tabular-nums;
+}
+
+.tag-ranking-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.stats-bar-value small {
-  font-size: .72rem;
+.tag-ranking-num {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---- Línea de tiempo de la lista de próximos ------------------------------------------------------------ */
+
+.timeline {
+  display: flex;
+  flex-direction: column;
+  gap: .5rem;
+}
+
+.timeline-track {
+  position: relative;
+  height: 5.5rem;
+}
+
+.timeline-axis {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 2px;
+  border-radius: var(--radius-pill);
+  background: linear-gradient(90deg, color-mix(in srgb, var(--steam) 25%, transparent), var(--steam));
+  transform-origin: left center;
+  animation: grow-right .8s cubic-bezier(.22, 1, .36, 1) both;
+}
+
+.timeline-year {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border-left: 1px dashed var(--border);
+}
+
+.timeline-year b {
+  position: absolute;
+  top: 0;
+  left: .25rem;
+  font-size: .68rem;
   font-weight: 500;
+  color: var(--text-muted);
+}
+
+/* Los puntos se reparten en cuatro carriles alrededor del eje: las altas del mismo mes no se tapan. */
+.timeline-dot {
+  position: absolute;
+  top: calc(50% + (var(--lane, 0) - 1.5) * .85rem);
+  width: .55rem;
+  height: .55rem;
+  margin: -.275rem 0 0 -.275rem;
+  border-radius: 50%;
+  background: var(--steam);
+  opacity: .75;
+  animation: pop-in .4s cubic-bezier(.34, 1.36, .64, 1) both;
+  animation-delay: calc(var(--i, 0) * 22ms);
+}
+
+/* Los más antiguos, que son los que la tarjeta nombra debajo, van marcados. */
+.timeline-dot.is-old {
+  width: .8rem;
+  height: .8rem;
+  margin: -.4rem 0 0 -.4rem;
+  opacity: 1;
+  border: 2px solid var(--surface);
+  box-shadow: 0 0 0 2px var(--steam);
+}
+
+.timeline-ends {
+  display: flex;
+  justify-content: space-between;
+  font-size: .72rem;
+  color: var(--text-muted);
+}
+
+.timeline-list {
+  display: flex;
+  flex-direction: column;
+  gap: .2rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: .84rem;
+}
+
+.timeline-list li {
+  display: flex;
+  align-items: baseline;
+  gap: .6rem;
+}
+
+.timeline-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.timeline-since {
+  flex: 0 0 auto;
+  font-size: .74rem;
   color: var(--text-muted);
 }
 
@@ -837,150 +1050,6 @@
 
 .stats-note { font-style: italic; }
 
-
-/* ---- Nube de etiquetas (razones de abandono, géneros deseados) ----------------------------------------- */
-
-.tag-chips {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: .4rem;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-/* Una sola variable (`--weight`, 0–1) mueve cuerpo, relleno y fondo a la vez: la píldora crece entera y no
-   solo su texto, que es lo que hace legible una nube de etiquetas. */
-.tag-chip {
-  display: inline-flex;
-  align-items: baseline;
-  gap: .35rem;
-  padding: calc(.2rem + var(--weight) * .16rem) calc(.5rem + var(--weight) * .3rem);
-  border-radius: var(--radius-pill);
-  font-size: calc(.74rem + var(--weight) * .34rem);
-  line-height: 1.2;
-  background: color-mix(in srgb, var(--steam) calc(14% + var(--weight) * 26%), transparent);
-  border: 1px solid color-mix(in srgb, var(--steam) calc(25% + var(--weight) * 35%), transparent);
-  animation: pop-in .5s cubic-bezier(.34, 1.36, .64, 1) both;
-  animation-delay: calc(var(--i, 0) * 45ms);
-}
-
-.tag-chips.is-danger .tag-chip {
-  background: color-mix(in srgb, var(--danger) calc(12% + var(--weight) * 24%), transparent);
-  border-color: color-mix(in srgb, var(--danger) calc(22% + var(--weight) * 32%), transparent);
-}
-
-.tag-chip-num {
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-  opacity: .75;
-  font-size: .78em;
-}
-
-/* ---- Índice de abandono -------------------------------------------------------------------------------- */
-
-.rate-list {
-  display: flex;
-  flex-direction: column;
-  gap: .5rem;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.rate-list li {
-  display: grid;
-  grid-template-columns: minmax(4.5rem, 8rem) minmax(0, 26rem) auto;
-  align-items: center;
-  gap: .6rem;
-  font-size: .82rem;
-}
-
-.rate-tag {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-/* Escala fija 0–100%: la barra dice la PROPORCIÓN, no el recuento, así que no se normaliza contra el máximo
-   (si no, un 30% se vería lleno solo por ser el mayor de la lista). */
-.rate-track {
-  position: relative;
-  height: .55rem;
-  border-radius: var(--radius-pill);
-  background: var(--score-track);
-  overflow: hidden;
-}
-
-.rate-fill {
-  display: block;
-  width: var(--rate, 0%);
-  height: 100%;
-  border-radius: var(--radius-pill);
-  background: linear-gradient(90deg, var(--fg-amber), var(--danger));
-  transform-origin: left center;
-  animation: grow-right .65s cubic-bezier(.22, 1, .36, 1) both;
-  animation-delay: calc(var(--i, 0) * 60ms);
-}
-
-.rate-value {
-  font-size: .76rem;
-  font-weight: 600;
-  color: var(--text-muted);
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-}
-
-/* ---- Los que más llevan esperando ---------------------------------------------------------------------- */
-
-.waiting-list {
-  display: flex;
-  flex-direction: column;
-  gap: .45rem;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.waiting-list li {
-  display: grid;
-  grid-template-columns: minmax(6rem, 22rem) minmax(3rem, 8rem) auto;
-  justify-content: start;
-  align-items: center;
-  gap: .6rem;
-  font-size: .84rem;
-}
-
-.waiting-name {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.waiting-bar {
-  height: .45rem;
-  border-radius: var(--radius-pill);
-  background: var(--score-track);
-  overflow: hidden;
-}
-
-.waiting-fill {
-  display: block;
-  width: var(--wait, 0%);
-  height: 100%;
-  border-radius: var(--radius-pill);
-  background: linear-gradient(90deg, rgba(var(--steam-rgb), .45), var(--steam));
-  transform-origin: left center;
-  animation: grow-right .65s cubic-bezier(.22, 1, .36, 1) both;
-  animation-delay: calc(var(--i, 0) * 60ms);
-}
-
-.waiting-since {
-  font-size: .74rem;
-  color: var(--text-muted);
-  white-space: nowrap;
-}
 
 /* ---- Entrada de la pantalla ---------------------------------------------------------------------------- */
 

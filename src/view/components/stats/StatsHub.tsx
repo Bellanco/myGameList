@@ -6,9 +6,9 @@ import { ScopeTabs } from './ScopeTabs';
 import { YearChart } from './YearChart';
 import { YearPanel } from './YearPanel';
 import { GenreRadar } from './GenreRadar';
-import { GradeHistogram } from './GradeHistogram';
+import { Beeswarm } from './Beeswarm';
 import { BacklogArea } from './BacklogArea';
-import { Treemap } from './Treemap';
+import { PolarRose } from './PolarRose';
 import { RatioDonut } from './RatioDonut';
 import { ShameCard } from './ShameCard';
 import { WishlistCard } from './WishlistCard';
@@ -116,13 +116,13 @@ export const StatsHub = memo(function StatsHub({ games }: { games: TabData }) {
           <div className="stats-card stats-card-half">
             <h2>{L.grades.title}</h2>
             <p className="stats-card-sub">{L.grades.subtitle}</p>
-            <GradeHistogram grades={stats.grades} scale={scale} />
+            <Beeswarm games={stats.scored.games} scale={scale} average={stats.scored.avgGrade} />
           </div>
 
           <div className="stats-card stats-card-half">
             <h2>{L.genres.title}</h2>
             <p className="stats-card-sub">{L.genres.subtitle}</p>
-            <Treemap tags={stats.genres} />
+            <PolarRose tags={stats.genres} />
           </div>
 
           <div className="stats-card">

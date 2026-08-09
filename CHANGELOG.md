@@ -30,25 +30,37 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
   los que completaste algo—, así que nunca se ofrece una pestaña que lleve a una pantalla vacía. Cada año
   resume sus completados: cifras, figura de géneros, distribución de notas, plataformas y el listado completo
   ordenado por nota. Los abandonados y los próximos **no llevan año** (el formulario solo pide "Años
-  completado" en completados), así que viven en "General" y la pestaña de año lo dice explícitamente.
+  completado" en completados), así que viven en "General".
 - **Figura de géneros al estilo del "Resumen del año" de Steam**: un hexágono con tus seis géneros principales,
   en SVG a mano (treinta líneas de trigonometría, cero dependencias). Con menos de tres géneros no hay figura
-  posible y cae al reparto en barras en vez de dibujar un segmento.
-- **Apartado de la lista de la vergüenza**: horas invertidas, nota media, cuántos merecen otra oportunidad, las
-  razones de abandono más repetidas (el campo `reasons`, que solo existe en esa lista), los géneros que más
-  abandonas, un **índice de abandono por género** —solo con géneros que tengan al menos tres juegos ya
-  decididos, porque un 100% sobre uno no dice nada— y los últimos en caer.
+  posible y cae al ranking en texto en vez de dibujar un segmento.
+- **Apartado de la lista de la vergüenza**: horas invertidas, nota media, cuántos merecen otra oportunidad, el
+  **desenlace por género** —solo con géneros que tengan al menos tres juegos ya decididos, porque un 100% sobre
+  uno no dice nada—, las razones de abandono más repetidas (el campo `reasons`, que solo existe en esa lista) y
+  los últimos en caer.
 - **Apartado de la lista de próximos**: cuántos son, el interés medio (que NO se mezcla con las valoraciones:
   en esa lista el campo es el interés previo), los compatibles con Deck, los géneros y plataformas que más
-  esperas y **los que llevan más tiempo esperando**.
+  esperas y **cuándo llegó cada uno**.
 - **Gráficos rediseñados**: color semántico fijo por lista en todo el panel (completados verde, abandonados
   rojo, en curso ámbar, próximos acento), degradados y curvas de entrada suaves, cebra en los listados largos y
   rejilla propia. Todo con las variables de la paleta activa, así que funciona en los cinco temas y en claro y
   oscuro sin una sola regla por tema; las animaciones se apagan con `prefers-reduced-motion`.
 - **Cada gráfico usa la forma que le corresponde**, en vez de repetir barras horizontales por todo el panel:
-  columnas para el histograma de notas (que es como se lee una distribución), mosaico proporcional para los
-  géneros, hexágono para el reparto, aro para el ratio, área para la evolución y nubes de etiquetas para las
-  razones de abandono y los géneros deseados.
+  - **Enjambre de puntos** para la distribución de notas: un punto por juego sobre el eje 0–100, con la media
+    marcada. Enseña dónde se agolpan las notas, qué huecos hay y qué juegos se salen —cosas que cinco columnas
+    de un histograma esconden—. Los puntos crecen si hay pocos y encogen a partir de 120.
+  - **Rosetón polar** para el reparto de géneros. El radio va con la raíz cuadrada del valor, no con el valor:
+    el área de un sector crece con el cuadrado del radio, así que a escala lineal la figura exageraría las
+    diferencias.
+  - **Mancuernas** para el desenlace por género: dos puntos unidos —terminados y dejados— sobre un eje común.
+    Dice a la vez el volumen y la proporción, y sustituye a los dos gráficos que hacían falta antes.
+  - **Línea de tiempo** para la lista de próximos: un punto por juego en su fecha de alta. Reemplaza a "los que
+    más llevan esperando" y a "los últimos en llegar", y además enseña las rachas y los parones.
+  - **Rankings en texto** (puesto, etiqueta y cifra) donde una barra no añadía nada al número: razones de
+    abandono y plataformas.
+  - Se mantienen el hexágono, el aro, el área acumulada y las columnas del gráfico anual.
+  - Las formas que necesitan un mínimo de datos caen a un ranking en texto cuando no lo tienen: el hexágono por
+    debajo de tres ejes y el rosetón por debajo de tres sectores (dos mitades no son una figura).
 - **Efectos de entrada**: el hexágono crece desde el centro, las columnas y barras se despliegan en cascada, el
   aro se rellena girando y las cifras cuentan hacia arriba. Todo se apaga con `prefers-reduced-motion` (y el
   conteo ni siquiera se calcula).
@@ -68,6 +80,8 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
   la página crecía de 3.700 a 9.400 px. Ahora la tabla va envuelta en un `div.sr-only`.
 - **"El mejor del año" mostraba las horas del juego más largo**, que casi nunca es el mismo. Ahora enseña las
   suyas, y el más largo del año tiene su propia tarjeta cuando no coinciden.
+- **El índice de abandono dejaba media tarjeta vacía**: la barra se acotaba a un ancho máximo y el resto de la
+  fila quedaba en blanco. Las mancuernas ocupan el ancho completo.
 
 ### Performance
 - **El estado de arranque de las listas se lee una vez por montaje, no en cada render.** `loadLocalState()`

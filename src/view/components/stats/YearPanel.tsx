@@ -3,8 +3,8 @@ import { UI_MESSAGES } from '../../../core/constants/labels';
 import { StatTile } from './StatTile';
 import { CountUp } from './CountUp';
 import { GenreRadar } from './GenreRadar';
-import { GradeHistogram } from './GradeHistogram';
-import { TagBars } from './TagBars';
+import { Beeswarm } from './Beeswarm';
+import { TagRanking } from './TagRanking';
 import { GameRefList } from './GameRefList';
 import { formatDecimal, formatHours } from './format';
 import type { YearSummary } from '../../../core/stats/types';
@@ -50,7 +50,6 @@ export const YearPanel = memo(function YearPanel({ summary, scale }: { summary: 
             />
           ) : null}
         </div>
-        <p className="stats-note">{L.year.note}</p>
       </div>
 
       <div className="stats-card stats-card-half">
@@ -62,13 +61,13 @@ export const YearPanel = memo(function YearPanel({ summary, scale }: { summary: 
       <div className="stats-card stats-card-half">
         <h2>{L.grades.title}</h2>
         <p className="stats-card-sub">{L.grades.subtitle}</p>
-        <GradeHistogram grades={summary.grades} scale={scale} />
+        <Beeswarm games={summary.games.filter((game) => game.grade > 0)} scale={scale} average={summary.avgGrade} />
       </div>
 
       {summary.platforms.length ? (
         <div className="stats-card">
           <h2>{L.wishlist.platforms}</h2>
-          <TagBars tags={summary.platforms} limit={8} />
+          <TagRanking tags={summary.platforms} limit={8} />
         </div>
       ) : null}
 
