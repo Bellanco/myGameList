@@ -10,6 +10,7 @@ import { Beeswarm } from './Beeswarm';
 import { BacklogArea } from './BacklogArea';
 import { PolarRose } from './PolarRose';
 import { RatioPie } from './RatioPie';
+import { TopGames } from './TopGames';
 import { ShameCard } from './ShameCard';
 import { WishlistCard } from './WishlistCard';
 import { CountUp } from './CountUp';
@@ -82,6 +83,12 @@ export const StatsHub = memo(function StatsHub({ games }: { games: TabData }) {
                 hint={stats.longest ? L.tiles.longestHint(formatHours(stats.longest.hours)) : undefined}
               />
             </div>
+          </div>
+
+          <div className="stats-card">
+            <h2>{L.top.title}</h2>
+            <p className="stats-card-sub">{L.top.subtitle}</p>
+            <TopGames top={stats.top} scale={scale} />
           </div>
 
           <div className="stats-card">

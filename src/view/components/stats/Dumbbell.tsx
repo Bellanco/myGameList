@@ -16,7 +16,10 @@ const L = UI_MESSAGES.stats.shame;
 export const Dumbbell = memo(function Dumbbell({ rows }: { rows: ShameSummary['abandonRate'] }) {
   if (rows.length === 0) return null;
 
-  const max = Math.max(...rows.map((row) => row.completed), 1);
+  // El eje lo fijan LAS DOS series, no solo los terminados: con un género que se deja más veces de las que se
+  // acaba (5 abandonos frente a 2 finales), el máximo salía de la serie equivocada y su punto se colocaba en el
+  // 138% —fuera del carril, fuera de la tarjeta y con scroll horizontal en toda la vista—.
+  const max = Math.max(...rows.flatMap((row) => [row.completed, row.abandoned]), 1);
   // Margen a los lados: el punto tiene diámetro y su cifra va centrada encima, así que un valor colocado en el
   // 100% exacto se salía del carril —y con él, de la tarjeta y de la pantalla, forzando scroll horizontal.
   const INSET = 6;

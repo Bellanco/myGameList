@@ -1,6 +1,5 @@
 import { memo } from 'react';
 import { UI_MESSAGES } from '../../../core/constants/labels';
-import { ABANDON_RATE_MIN } from '../../../core/stats/computeStats';
 import { StatTile } from './StatTile';
 import { CountUp } from './CountUp';
 import { TagRanking } from './TagRanking';
@@ -50,7 +49,6 @@ export const ShameCard = memo(function ShameCard({ shame, scale }: { shame: Sham
           <>
             <h3>{L.rate}</h3>
             <Dumbbell rows={shame.abandonRate} />
-            <p className="stats-note">{L.rateHint(ABANDON_RATE_MIN)}</p>
           </>
         ) : (
           <>
