@@ -1,4 +1,4 @@
-import { memo, useId, type CSSProperties } from 'react';
+import { memo, type CSSProperties } from 'react';
 import { UI_MESSAGES } from '../../../core/constants/labels';
 import { CountUp } from './CountUp';
 import { formatCount, formatPercent } from './format';
@@ -9,66 +9,93 @@ const L = UI_MESSAGES.stats.ratio;
 const WIDTH = 280;
 const HEIGHT = 212;
 const CX = WIDTH / 2;
-/** El eje va alto: lo que queda por debajo de las puntas del cuadrante es el hueco de la lectura digital. */
+/** El eje va alto: lo que queda por debajo de las puntas del cuadrante es el hueco de la lectura. */
 const CY = 118;
 const R = 100;
 /**
  * CUADRANTE DE COMPETICIÓN: el dial arranca abajo a la izquierda y barre 240° hasta abajo a la derecha, que es
- * la apertura de un tacómetro de coche. El hueco de 120° que queda abajo es donde va la lectura digital, así
- * que la aguja nunca la tapa por mucho que suba.
+ * la apertura de un tacómetro de coche. El hueco de 120° que queda abajo es donde va la cifra.
  */
 const START = 240;
 const SWEEP = 240;
-/** Marca mayor cada 10 puntos y menor cada 5, con número cada 20: más números y el dial se emborrona. */
+/** Segmentos del dial. Cuarenta salen a dos puntos y medio cada uno: se cuentan con el dedo sin emborronarse. */
+const SEGMENTS = 40;
+/** Hueco entre segmentos, en grados. */
+const SEG_GAP = 1.2;
+/** Marca mayor cada 10 puntos y menor cada 5, con número cada 20. */
 const MAJOR = 10;
 const MINOR = 5;
 const NUMBERED = 20;
 /** A partir de aquí el dial entra en su tramo bueno, marcado como la zona roja de un cuentavueltas. */
 const REDLINE = 80;
 
-function polar(angleDeg: number, radius: number): { x: number; y: number } {
+/** Contadores pequeños: mismo lenguaje de segmentos, en anillo completo. */
+const SUB_SIZE = 78;
+const SUB_R = 32;
+const SUB_SEGMENTS = 20;
+const SUB_GAP = 3;
+
+function polar(cx: number, cy: number, angleDeg: number, radius: number): { x: number; y: number } {
   const angle = ((angleDeg - 90) * Math.PI) / 180;
-  return { x: CX + Math.cos(angle) * radius, y: CY + Math.sin(angle) * radius };
+  return { x: cx + Math.cos(angle) * radius, y: cy + Math.sin(angle) * radius };
 }
 
-function point(angleDeg: number, radius: number): string {
-  const at = polar(angleDeg, radius);
+function point(cx: number, cy: number, angleDeg: number, radius: number): string {
+  const at = polar(cx, cy, angleDeg, radius);
   return `${at.x.toFixed(1)} ${at.y.toFixed(1)}`;
 }
 
-/** Arco entre dos porcentajes del dial, al radio dado. */
-function arc(fromPercent: number, toPercent: number, radius: number): string {
-  const from = START + (fromPercent / 100) * SWEEP;
-  const to = START + (toPercent / 100) * SWEEP;
-  const large = to - from > 180 ? 1 : 0;
-  return `M ${point(from, radius)} A ${radius} ${radius} 0 ${large} 1 ${point(to, radius)}`;
+function arc(cx: number, cy: number, fromDeg: number, toDeg: number, radius: number): string {
+  const large = toDeg - fromDeg > 180 ? 1 : 0;
+  return `M ${point(cx, cy, fromDeg, radius)} A ${radius} ${radius} 0 ${large} 1 ${point(cx, cy, toDeg, radius)}`;
+}
+
+/** Anillo segmentado: devuelve un tramo por segmento, sabiendo cuáles quedan encendidos. */
+function segments(
+  count: number,
+  lit: number,
+  geometry: { cx: number; cy: number; start: number; sweep: number; radius: number; gap: number },
+): Array<{ d: string; on: boolean; index: number }> {
+  const { cx, cy, start, sweep, radius, gap } = geometry;
+  return Array.from({ length: count }, (_unused, index) => {
+    const from = start + (index / count) * sweep + gap / 2;
+    const to = start + ((index + 1) / count) * sweep - gap / 2;
+    return { d: arc(cx, cy, from, to, radius), on: index < lit, index };
+  });
 }
 
 /**
- * Completados frente a abandonados, leído como un CUADRO DE MANDOS de coche: dial graduado, zona roja al final
- * y aguja que sube desde cero hasta tu porcentaje.
+ * Completados frente a abandonados, leído como un CUADRO DE MANDOS: un dial de segmentos que se encienden hasta
+ * tu marca y dos contadores pequeños, del mismo material, para las dos cuentas que lo forman.
  *
  * Sustituye a la tarta de dos porciones, que no decía nada que no dijera ya la cifra: con dos categorías no hay
- * reparto que descubrir, hay una aguja que marca un valor sobre una escala. El dial añade justo lo que faltaba
- * —dónde cae ese número dentro de todo el recorrido posible— y da al bloque una figura que no se repite en
- * ninguna otra tarjeta del panel.
+ * reparto que descubrir, hay un valor sobre una escala. Los segmentos añaden lo que un arco liso no da —se
+ * cuentan— y los últimos ocho marcan el tramo al que se aspira, encendidos o no.
  *
  * Todo el color sale de los tokens del tema, así que el mismo cuadro se pinta en ámbar de terminal, en neón o
  * en tinta de cómic sin tocar una línea.
  */
 export const SpeedGauge = memo(function SpeedGauge({ ratio }: { ratio: StatsSummary['completionRatio'] }) {
-  const gradientId = useId();
   const { completed, abandoned } = ratio;
+  const total = completed + abandoned;
 
-  if (completed + abandoned === 0) {
+  if (total === 0) {
     return <p className="stats-empty">{L.empty}</p>;
   }
 
   const percent = formatPercent(ratio.percent);
+  const lit = Math.round((percent / 100) * SEGMENTS);
+  const bars = segments(SEGMENTS, lit, { cx: CX, cy: CY, start: START, sweep: SWEEP, radius: R, gap: SEG_GAP });
+
   const ticks: Array<{ at: number; major: boolean; numbered: boolean }> = [];
   for (let value = 0; value <= 100; value += MINOR) {
     ticks.push({ at: value, major: value % MAJOR === 0, numbered: value % NUMBERED === 0 });
   }
+
+  const counters = [
+    { key: 'c', value: completed, label: L.completed },
+    { key: 'v', value: abandoned, label: L.abandoned },
+  ];
 
   return (
     <div className="gauge">
@@ -77,24 +104,21 @@ export const SpeedGauge = memo(function SpeedGauge({ ratio }: { ratio: StatsSumm
           viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
           role="img"
           aria-label={L.gaugeAria(percent, completed, abandoned)}
-          style={{ '--deg': `${(percent / 100) * SWEEP}deg`, '--cx': `${CX}px`, '--cy': `${CY}px` } as CSSProperties}
+          style={{ '--n': SEGMENTS } as CSSProperties}
         >
-          <defs>
-            <linearGradient id={gradientId} x1="0" y1="1" x2="1" y2="0">
-              <stop offset="0%" className="gauge-stop-from" />
-              <stop offset="100%" className="gauge-stop-to" />
-            </linearGradient>
-          </defs>
-
-          <path className="gauge-track" d={arc(0, 100, R)} />
-          {/* La zona roja del cuentavueltas, que aquí marca el tramo al que se aspira. */}
-          <path className="gauge-redline" d={arc(REDLINE, 100, R + 11)} />
+          {bars.map((bar) => (
+            <path
+              key={bar.index}
+              className={`gauge-seg${bar.on ? ' is-on' : ''}${(bar.index / SEGMENTS) * 100 >= REDLINE ? ' is-red' : ''}`}
+              d={bar.d}
+              style={{ '--i': bar.index } as CSSProperties}
+            />
+          ))}
 
           {ticks.map((tick) => {
             const deg = START + (tick.at / 100) * SWEEP;
-            const inner = tick.major ? R - 20 : R - 14;
-            const from = polar(deg, inner);
-            const to = polar(deg, R - 9);
+            const from = polar(CX, CY, deg, tick.major ? R - 26 : R - 20);
+            const to = polar(CX, CY, deg, R - 15);
             return (
               <line
                 key={tick.at}
@@ -108,48 +132,60 @@ export const SpeedGauge = memo(function SpeedGauge({ ratio }: { ratio: StatsSumm
           })}
 
           {ticks.filter((tick) => tick.numbered).map((tick) => {
-            const at = polar(START + (tick.at / 100) * SWEEP, R - 34);
+            const at = polar(CX, CY, START + (tick.at / 100) * SWEEP, R - 40);
             return (
-              <text key={tick.at} className="gauge-number" x={at.x.toFixed(1)} y={at.y.toFixed(1)} textAnchor="middle" dominantBaseline="central">
+              <text
+                key={tick.at}
+                className="gauge-number"
+                x={at.x.toFixed(1)}
+                y={at.y.toFixed(1)}
+                textAnchor="middle"
+                dominantBaseline="central"
+              >
                 {tick.at}
               </text>
             );
           })}
-
-          {/* `pathLength` a 1: el trazo se mide en fracciones, y así el CSS puede descubrirlo sin saber cuánto
-              mide realmente el arco. */}
-          <path className="gauge-value" d={arc(0, Math.max(percent, 0.5), R)} pathLength={1} stroke={`url(#${gradientId})`} />
-
-          {/* La aguja se dibuja en el cero y llega a su marca girando: el barrido de encendido de un salpicadero. */}
-          <g className="gauge-needle">
-            <polygon
-              points={`${point(START, R - 26)}, ${point(START - 90, 4.5)}, ${point(START + 180, 16)}, ${point(START + 90, 4.5)}`}
-            />
-          </g>
-          <circle className="gauge-cap" cx={CX} cy={CY} r="7" />
+          {/* La cifra vive DENTRO del instrumento, en el hueco que deja el cuadrante, como la lectura de un
+              cuentakilómetros: es parte del dial, no un rótulo pegado debajo. */}
+          <text className="gauge-hero" x={CX} y={HEIGHT - 10} textAnchor="middle">
+            <CountUp value={percent} />
+            <tspan className="gauge-hero-unit">%</tspan>
+          </text>
         </svg>
-
-        <p className="gauge-read">
-          <b><CountUp value={percent} />%</b>
-          <span>{L.heroLabel}</span>
-        </p>
       </div>
 
-      {/* El barrido rojo del morro: puro guiño de salpicadero, decorativo y silenciado con menos movimiento. */}
-      <span className="gauge-scan" aria-hidden="true" />
-
-      <ul className="ratio-legend">
-        <li>
-          <span className="ratio-dot is-completed" aria-hidden="true" />
-          <span className="ratio-legend-label">{L.completed}</span>
-          <b>{formatCount(completed)}</b>
-        </li>
-        <li>
-          <span className="ratio-dot is-abandoned" aria-hidden="true" />
-          <span className="ratio-legend-label">{L.abandoned}</span>
-          <b>{formatCount(abandoned)}</b>
-        </li>
+      {/* Los dos contadores que forman la cifra grande, con el mismo material que el dial. */}
+      <ul className="gauge-subs">
+        {counters.map((counter) => {
+          const share = counter.value / total;
+          const subLit = Math.max(Math.round(share * SUB_SEGMENTS), 1);
+          const half = SUB_SIZE / 2;
+          return (
+            <li key={counter.key} className={`is-${counter.key}`}>
+              <span className="gauge-sub-fig">
+                <svg viewBox={`0 0 ${SUB_SIZE} ${SUB_SIZE}`} aria-hidden="true" style={{ '--n': SUB_SEGMENTS } as CSSProperties}>
+                  {segments(SUB_SEGMENTS, subLit, { cx: half, cy: half, start: 0, sweep: 360, radius: SUB_R, gap: SUB_GAP })
+                    .map((bar) => (
+                      <path
+                        key={bar.index}
+                        className={`gauge-sub-seg${bar.on ? ' is-on' : ''}`}
+                        d={bar.d}
+                        style={{ '--i': bar.index } as CSSProperties}
+                      />
+                    ))}
+                  <text className="gauge-sub-num" x={half} y={half} textAnchor="middle" dominantBaseline="central">
+                    {formatCount(counter.value)}
+                  </text>
+                </svg>
+              </span>
+              <span className="gauge-sub-label">{counter.label}</span>
+            </li>
+          );
+        })}
       </ul>
+
+      <p className="gauge-quote">{L.quote}</p>
     </div>
   );
 });

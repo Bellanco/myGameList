@@ -421,7 +421,7 @@
 :root[data-palette="cyberpunk"] .backlog-line,
 :root[data-palette="cyberpunk"] .genre-radar-shape,
 :root[data-palette="cyberpunk"] .polar-sector,
-:root[data-palette="cyberpunk"] .gauge-value,
+:root[data-palette="cyberpunk"] .gauge-seg.is-on,
 :root[data-palette="cyberpunk"] .burst-piece,
 :root[data-palette="cyberpunk"] .donut-seg { filter: drop-shadow(0 0 4px currentColor); }
 
@@ -432,7 +432,7 @@
 :root[data-palette="cyberpunk"][data-theme="light"] .backlog-line,
 :root[data-palette="cyberpunk"][data-theme="light"] .genre-radar-shape,
 :root[data-palette="cyberpunk"][data-theme="light"] .polar-sector,
-:root[data-palette="cyberpunk"][data-theme="light"] .gauge-value,
+:root[data-palette="cyberpunk"][data-theme="light"] .gauge-seg.is-on,
 :root[data-palette="cyberpunk"][data-theme="light"] .burst-piece,
 :root[data-palette="cyberpunk"][data-theme="light"] .donut-seg { filter: none; }
 

@@ -284,7 +284,7 @@
 /* La lectura del cuadro de mandos y los números del dial cambian de TIPOGRAFÍA, no de cuerpo: el `1.08em` de
    arriba es relativo al padre, así que aplicado a la cifra grande le borraba sus 2rem y la dejaba en un
    susurro, y a los números del dial (10px de lienzo) los inflaba hasta pisarse. */
-:root[data-palette="grimdark"] .gauge-read b,
+:root[data-palette="grimdark"] .gauge-hero,
 :root[data-palette="grimdark"] .gauge-number { font-family: 'VT323', ui-monospace, monospace; }
 
 /* Filete dorado bajo el rótulo de cada bloque: la cartela del códice. */
