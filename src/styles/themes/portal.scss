@@ -51,6 +51,7 @@
 :root[data-palette="portal"] .toolbar,
 :root[data-palette="portal"] .table-wrap,
 :root[data-palette="portal"] .settings-card,
+:root[data-palette="portal"] .stats-card,
 :root[data-palette="portal"] .hub-feed-card,
 :root[data-palette="portal"] .hub-hub-card,
 :root[data-palette="portal"] .modal,
@@ -59,6 +60,7 @@
 :root[data-palette="portal"][data-theme="light"] .toolbar,
 :root[data-palette="portal"][data-theme="light"] .table-wrap,
 :root[data-palette="portal"][data-theme="light"] .settings-card,
+:root[data-palette="portal"][data-theme="light"] .stats-card,
 :root[data-palette="portal"][data-theme="light"] .hub-feed-card,
 :root[data-palette="portal"][data-theme="light"] .hub-hub-card,
 :root[data-palette="portal"][data-theme="light"] .modal,
@@ -272,3 +274,35 @@
    La identidad estática de Portal (rejilla, placas de pared, barra naranja) se conserva. ══ */
 :root:not([data-effects="on"])[data-palette="portal"] .chip,
 :root:not([data-effects="on"])[data-palette="portal"] .hub-feed-day-header { animation: none !important; }
+
+/* ── §12 · Panel "Perfil": cámara de pruebas. La rampa de los repartos recorre los DOS PORTALES —azul a
+   naranja—, que es la firma del tema; los números van en la monoespaciada de terminal de GLaDOS, y los
+   lienzos llevan la retícula fina de una placa de prueba. Las tarjetas ya traen el filo naranja de §3. ── */
+:root[data-palette="portal"] .stats-hub {
+  --chart-from: var(--steam);
+  --chart-to: var(--portal-orange);
+}
+
+/* Lecturas técnicas: todas las cifras del panel en Share Tech Mono, como las fechas y las puntuaciones. */
+:root[data-palette="portal"] .stat-tile-value,
+:root[data-palette="portal"] .beeswarm-axis,
+:root[data-palette="portal"] .backlog-ytick,
+:root[data-palette="portal"] .backlog-xtick,
+:root[data-palette="portal"] .timeline-year b,
+:root[data-palette="portal"] .dumbbell-num,
+:root[data-palette="portal"] .dumbbell-rate,
+:root[data-palette="portal"] .tag-ranking-num,
+:root[data-palette="portal"] .year-col-value { font-family: 'Share Tech Mono', ui-monospace, monospace; }
+
+/* Retícula de placa de prueba bajo los lienzos que la admiten (muy tenue, solo insinuada). */
+:root[data-palette="portal"] .backlog-canvas,
+:root[data-palette="portal"] .beeswarm-canvas {
+  background-image:
+    linear-gradient(to right, rgba(41, 182, 246, .07) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(41, 182, 246, .07) 1px, transparent 1px);
+  background-size: 28px 28px;
+}
+
+/* El aro de la figura de géneros, como una mira de calibración. */
+:root[data-palette="portal"] .polar-ring,
+:root[data-palette="portal"] .genre-radar-ring { stroke-dasharray: 3 4; }
