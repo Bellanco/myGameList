@@ -1,0 +1,8 @@
+dist/
+coverage/
+node_modules/
+test-results/
+playwright-report/
+# Generados por scripts/vendor-fonts.mjs: se reescriben enteros, formatearlos a mano no sirve de nada.
+src/styles/fonts/
+public/fonts/
