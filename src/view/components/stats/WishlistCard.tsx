@@ -1,12 +1,10 @@
 import { memo } from 'react';
 import { UI_MESSAGES } from '../../../core/constants/labels';
-import { STATS_SHORTLIST } from '../../../core/stats/computeStats';
 import { StatTile } from './StatTile';
 import { CountUp } from './CountUp';
-import { TagChips } from './TagChips';
-import { TagBars } from './TagBars';
-import { WaitingList } from './WaitingList';
-import { GameRefList } from './GameRefList';
+import { PolarRose } from './PolarRose';
+import { TagRanking } from './TagRanking';
+import { WaitingTimeline } from './WaitingTimeline';
 import { formatDecimal } from './format';
 import type { WishlistSummary } from '../../../core/stats/types';
 import type { ScoreScale } from '../../../core/utils/scoreScale';
@@ -42,27 +40,20 @@ export const WishlistCard = memo(function WishlistCard({ wishlist, scale }: { wi
       <div className="stats-split">
         <section>
           <h3>{L.genres}</h3>
-          <TagChips tags={wishlist.genres} />
+          <PolarRose tags={wishlist.genres} />
         </section>
         <section>
           <h3>{L.platforms}</h3>
-          <TagBars tags={wishlist.platforms} limit={6} />
+          <TagRanking tags={wishlist.platforms} />
         </section>
       </div>
 
+      {/* Una sola línea de tiempo en lugar de dos rankings: enseña a la vez quién lleva años esperando y quién
+          acaba de entrar, que es lo que antes contaban "los que más esperan" y "los últimos en llegar". */}
       <section>
         <h3>{L.oldest}</h3>
-        <WaitingList games={wishlist.oldest} reference={wishlist.recent[0]?.at ?? 0} />
+        <WaitingTimeline games={wishlist.games} />
       </section>
-
-      {/* Con una lista corta, "los últimos en llegar" serían los mismos juegos en orden inverso: enseñar dos
-          veces lo mismo hace parecer que hay más información de la que hay. */}
-      {wishlist.total > STATS_SHORTLIST ? (
-        <section>
-          <h3>{L.recent}</h3>
-          <GameRefList games={wishlist.recent} meta="since" />
-        </section>
-      ) : null}
     </>
   );
 });

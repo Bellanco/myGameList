@@ -200,7 +200,7 @@ export function computeStats(data: TabData): StatsSummary {
   let totalHours = 0;
   let completedHours = 0;
   let gradeSum = 0;
-  let scoredCount = 0;
+  const scoredGames: GameRef[] = [];
   let longest: GameRef | null = null;
   let shameHours = 0;
   let shameScored = 0;
@@ -240,7 +240,7 @@ export function computeStats(data: TabData): StatsSummary {
 
       if (scores && hasScore(game)) {
         gradeSum += ref.grade;
-        scoredCount += 1;
+        scoredGames.push(ref);
         // `starsFromGrade` devuelve 1–5 aquí: la nota es > 0 por `hasScore`, así que nunca cae en el tramo 0.
         grades[starsFromGrade(ref.grade) - 1].count += 1;
       }
@@ -333,6 +333,7 @@ export function computeStats(data: TabData): StatsSummary {
     abandonRate: [...outcomes.entries()]
       .map(([tag, outcome]) => ({
         tag,
+        completed: outcome.completed,
         abandoned: outcome.abandoned,
         decided: outcome.completed + outcome.abandoned,
         percent: (outcome.abandoned / (outcome.completed + outcome.abandoned)) * 100,
@@ -355,6 +356,7 @@ export function computeStats(data: TabData): StatsSummary {
     recent: wishGames.slice().sort(byRecent).slice(0, STATS_SHORTLIST),
     // Los que llevan más tiempo esperando: el dato que de verdad describe un backlog.
     oldest: wishGames.slice().sort((a, b) => a.at - b.at || sortEs(a.name, b.name)).slice(0, STATS_SHORTLIST),
+    games: wishGames.slice().sort((a, b) => a.at - b.at || sortEs(a.name, b.name)),
   };
 
   return {
@@ -363,8 +365,9 @@ export function computeStats(data: TabData): StatsSummary {
     totalHours,
     completedHours,
     scored: {
-      count: scoredCount,
-      avgGrade: scoredCount ? gradeSum / scoredCount : 0,
+      count: scoredGames.length,
+      avgGrade: scoredGames.length ? gradeSum / scoredGames.length : 0,
+      games: scoredGames,
     },
     completionRatio: {
       completed: counts.c,

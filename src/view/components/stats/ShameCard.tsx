@@ -1,12 +1,12 @@
-import { memo, type CSSProperties } from 'react';
+import { memo } from 'react';
 import { UI_MESSAGES } from '../../../core/constants/labels';
 import { ABANDON_RATE_MIN } from '../../../core/stats/computeStats';
 import { StatTile } from './StatTile';
 import { CountUp } from './CountUp';
-import { TagBars } from './TagBars';
-import { TagChips } from './TagChips';
+import { TagRanking } from './TagRanking';
+import { Dumbbell } from './Dumbbell';
 import { GameRefList } from './GameRefList';
-import { formatDecimal, formatHours, formatPercent } from './format';
+import { formatDecimal, formatHours } from './format';
 import type { ShameSummary } from '../../../core/stats/types';
 import type { ScoreScale } from '../../../core/utils/scoreScale';
 
@@ -42,37 +42,33 @@ export const ShameCard = memo(function ShameCard({ shame, scale }: { shame: Sham
         <StatTile label={L.retry} value={<CountUp value={shame.retry} />} />
       </div>
 
+      <section>
+        {/* Sin géneros con recorrido suficiente no hay mancuernas que dibujar (dos juegos no son una
+            tendencia): en ese caso se enseña al menos qué géneros aparecen entre los abandonos. */}
+        {shame.abandonRate.length ? (
+          <>
+            <h3>{L.rate}</h3>
+            <Dumbbell rows={shame.abandonRate} />
+            <p className="stats-note">{L.rateHint(ABANDON_RATE_MIN)}</p>
+          </>
+        ) : (
+          <>
+            <h3>{L.genres}</h3>
+            <TagRanking tags={shame.genres} />
+          </>
+        )}
+      </section>
+
       <div className="stats-split">
         <section>
           <h3>{L.reasons}</h3>
-          {shame.reasons.length ? <TagChips tags={shame.reasons} tone="danger" /> : <p className="stats-empty">{L.noReasons}</p>}
+          {shame.reasons.length ? <TagRanking tags={shame.reasons} /> : <p className="stats-empty">{L.noReasons}</p>}
         </section>
         <section>
-          <h3>{L.genres}</h3>
-          <TagBars tags={shame.genres} limit={6} />
+          <h3>{L.recent}</h3>
+          <GameRefList games={shame.recent} meta="hours" />
         </section>
       </div>
-
-      {shame.abandonRate.length ? (
-        <section>
-          <h3>{L.rate}</h3>
-          <ul className="rate-list">
-            {shame.abandonRate.map((entry, index) => (
-              <li key={entry.tag} style={{ '--i': index, '--rate': `${entry.percent}%` } as CSSProperties}>
-                <span className="rate-tag" title={entry.tag}>{entry.tag}</span>
-                <span className="rate-track"><span className="rate-fill" /></span>
-                <span className="rate-value">{L.rateValue(formatPercent(entry.percent), entry.abandoned, entry.decided)}</span>
-              </li>
-            ))}
-          </ul>
-          <p className="stats-note">{L.rateHint(ABANDON_RATE_MIN)}</p>
-        </section>
-      ) : null}
-
-      <section>
-        <h3>{L.recent}</h3>
-        <GameRefList games={shame.recent} meta="hours" />
-      </section>
     </>
   );
 });

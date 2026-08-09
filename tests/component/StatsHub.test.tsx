@@ -95,15 +95,16 @@ describe('StatsHub', () => {
     expect(document.querySelector('.year-chart')).toHaveTextContent('30');
   });
 
-  it('etiqueta el histograma según la escala de la cuenta', () => {
-    // El tramo se rotula con estrellas (o con el rango de nota) y su nombre completo va en el texto accesible.
+  it('rotula el eje de la distribución según la escala de la cuenta', () => {
     const { unmount } = render(<StatsHub games={SAMPLE} />);
-    expect(screen.getByText(new RegExp(`^${L.grades.starsLabel(5)}:`))).toBeInTheDocument();
+    const eje = () => document.querySelector('.beeswarm-axis') as HTMLElement;
+    expect(eje()).toHaveTextContent('★★★★★');
     unmount();
 
     scale = 'grade';
     render(<StatsHub games={SAMPLE} />);
-    expect(screen.getByText(new RegExp(`^${L.grades.gradeLabel(90, 100)}:`))).toBeInTheDocument();
+    expect(eje()).toHaveTextContent('75');
+    expect(eje()).not.toHaveTextContent('★');
     scale = 'stars';
   });
 
@@ -127,15 +128,14 @@ describe('StatsHub · periodos', () => {
     expect(screen.queryByRole('button', { name: L.scope.yearAria(2022) })).not.toBeInTheDocument();
   });
 
-  it('al elegir un año enseña solo lo de ese año y avisa de que abandonados y próximos no llevan año', async () => {
+  it('al elegir un año enseña solo lo de ese año, y las listas sin año se quedan en General', async () => {
     render(<StatsHub games={SAMPLE} />);
 
     await userEvent.click(screen.getByRole('button', { name: L.scope.yearAria(2023) }));
 
     expect(screen.getByRole('heading', { name: L.year.gamesTitle(2023) })).toBeInTheDocument();
-    expect(screen.getByText(L.year.note)).toBeInTheDocument();
     // "Uno" se completó en 2023; "Dos" es de 2024 y no debe aparecer.
-    const listado = screen.getByRole('list', { name: '' }) ? document.querySelector('.game-ref-list') : null;
+    const listado = document.querySelector('.game-ref-list');
     expect(listado).toHaveTextContent('Uno');
     expect(listado).not.toHaveTextContent('Dos');
     // Y la lista de la vergüenza se queda en General.
@@ -187,7 +187,9 @@ describe('StatsHub · listas sin año', () => {
 
     const card = screen.getByRole('heading', { name: L.shame.title }).closest('.stats-card') as HTMLElement;
     expect(within(card).getByText('Repetitivo')).toBeInTheDocument();
-    expect(within(card).getByText(L.shame.rateValue(50, 2, 4))).toBeInTheDocument();
+    // Mancuernas: RPG con 2 terminados y 2 dejados → 50% de abandono.
+    expect(within(card).getByRole('heading', { name: L.shame.rate })).toBeInTheDocument();
+    expect(within(card).getByText('50%')).toBeInTheDocument();
     expect(within(card).getByText('Dejado')).toBeInTheDocument();
   });
 

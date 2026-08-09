@@ -79,8 +79,11 @@ export interface ShameSummary {
   reasons: TagBucket[];
   /** Últimos abandonos, por fecha de llegada a la lista. */
   recent: GameRef[];
-  /** Proporción de abandono por género, solo con géneros que tengan recorrido suficiente. */
-  abandonRate: Array<{ tag: string; abandoned: number; decided: number; percent: number }>;
+  /**
+   * Desenlace por género: cuántos terminaste y cuántos dejaste. Solo géneros con recorrido suficiente, porque
+   * un 100% de abandono sobre un único juego no dice nada.
+   */
+  abandonRate: Array<{ tag: string; completed: number; abandoned: number; decided: number; percent: number }>;
 }
 
 /** Lista de próximos: qué te espera y desde cuándo. */
@@ -95,6 +98,8 @@ export interface WishlistSummary {
   /** Últimos en llegar y los que llevan más tiempo esperando. */
   recent: GameRef[];
   oldest: GameRef[];
+  /** TODOS los próximos, del más antiguo al más reciente: es lo que dibuja la línea de tiempo. */
+  games: GameRef[];
 }
 
 export interface StatsSummary {
@@ -105,8 +110,11 @@ export interface StatsSummary {
   totalHours: number;
   /** Horas solo de completados; es la suma de `years[].hours` y lo que representa el gráfico anual. */
   completedHours: number;
-  /** Juegos con nota efectiva y su media (0–100). Ver qué listas puntúan en `computeStats`. */
-  scored: { count: number; avgGrade: number };
+  /**
+   * Juegos con nota efectiva y su media (0–100). `games` lleva cada juego puntuado uno a uno, porque el
+   * enjambre de la distribución dibuja un punto por juego y no un total por tramo.
+   */
+  scored: { count: number; avgGrade: number; games: GameRef[] };
   /** Completados frente a abandonados. `percent` es 0–100 y vale 0 si no hay ninguno de los dos. */
   completionRatio: { completed: number; abandoned: number; percent: number };
   /** Años ascendentes; el cajón "sin año" (`year: null`), si existe, va al final. */

@@ -31,7 +31,7 @@ describe('computeStats', () => {
     expect(stats.totalGames).toBe(0);
     expect(stats.totalHours).toBe(0);
     expect(stats.years).toEqual([]);
-    expect(stats.scored).toEqual({ count: 0, avgGrade: 0 });
+    expect(stats.scored).toEqual({ count: 0, avgGrade: 0, games: [] });
     expect(stats.completionRatio.percent).toBe(0);
     expect(stats.longest).toBeNull();
     expect(stats.grades.every((bucket) => bucket.count === 0)).toBe(true);
@@ -243,7 +243,7 @@ describe('computeStats · lista de la vergüenza', () => {
 
   it('calcula el índice de abandono solo con géneros que tengan recorrido', () => {
     // RPG: 2 completados + 2 abandonados = 50%. Shooter solo tiene 1 decidido → fuera.
-    expect(stats.shame.abandonRate).toEqual([{ tag: 'RPG', abandoned: 2, decided: 4, percent: 50 }]);
+    expect(stats.shame.abandonRate).toEqual([{ tag: 'RPG', completed: 2, abandoned: 2, decided: 4, percent: 50 }]);
   });
 
   it('ordena los últimos abandonos por fecha de llegada a la lista', () => {

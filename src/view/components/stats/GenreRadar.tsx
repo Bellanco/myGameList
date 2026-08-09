@@ -1,6 +1,6 @@
 import { memo, useId } from 'react';
 import { UI_MESSAGES } from '../../../core/constants/labels';
-import { TagBars } from './TagBars';
+import { TagRanking } from './TagRanking';
 import type { TagBucket } from '../../../core/stats/types';
 
 const L = UI_MESSAGES.stats.radar;
@@ -56,7 +56,7 @@ export const GenreRadar = memo(function GenreRadar({ tags }: { tags: TagBucket[]
     return (
       <>
         <p className="stats-note">{L.tooFew}</p>
-        <TagBars tags={tags} limit={MIN_AXES} />
+        <TagRanking tags={tags} limit={MIN_AXES} />
       </>
     );
   }
