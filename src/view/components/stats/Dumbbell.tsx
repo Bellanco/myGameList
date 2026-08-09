@@ -17,7 +17,10 @@ export const Dumbbell = memo(function Dumbbell({ rows }: { rows: ShameSummary['a
   if (rows.length === 0) return null;
 
   const max = Math.max(...rows.map((row) => row.completed), 1);
-  const at = (value: number) => (value / max) * 100;
+  // Margen a los lados: el punto tiene diámetro y su cifra va centrada encima, así que un valor colocado en el
+  // 100% exacto se salía del carril —y con él, de la tarjeta y de la pantalla, forzando scroll horizontal.
+  const INSET = 6;
+  const at = (value: number) => INSET + (value / max) * (100 - INSET * 2);
 
   return (
     <>

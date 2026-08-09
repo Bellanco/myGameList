@@ -42,6 +42,16 @@ export function formatMonthYear(ms: number): string {
   return MONTH_YEAR.format(new Date(ms)).replace('.', '');
 }
 
+const DAY_MONTH = new Intl.DateTimeFormat('es-ES', { day: 'numeric', month: 'short' });
+
+/** Rótulo de una marca del eje temporal, según su granularidad: "3 mar", "mar 25" o "2025". */
+export function formatTick(at: number, unit: 'day' | 'month' | 'year'): string {
+  const date = new Date(at);
+  if (unit === 'year') return String(date.getFullYear());
+  if (unit === 'month') return `${MONTH_SHORT.format(date).replace('.', '')} ${String(date.getFullYear()).slice(2)}`;
+  return DAY_MONTH.format(date).replace('.', '');
+}
+
 /** Porcentaje entero, para el aro de completados. */
 export function formatPercent(value: number): number {
   return Math.round(Number.isFinite(value) ? value : 0);
