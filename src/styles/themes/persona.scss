@@ -91,6 +91,7 @@
 :root[data-palette="persona"] .toolbar,
 :root[data-palette="persona"] .table-wrap,
 :root[data-palette="persona"] .settings-card,
+:root[data-palette="persona"] .stats-card,
 :root[data-palette="persona"] .hub-feed-card,
 :root[data-palette="persona"] .hub-hub-card,
 :root[data-palette="persona"] .modal,
@@ -98,6 +99,7 @@
 :root[data-palette="persona"][data-theme="light"] .toolbar,
 :root[data-palette="persona"][data-theme="light"] .table-wrap,
 :root[data-palette="persona"][data-theme="light"] .settings-card,
+:root[data-palette="persona"][data-theme="light"] .stats-card,
 :root[data-palette="persona"][data-theme="light"] .hub-feed-card,
 :root[data-palette="persona"][data-theme="light"] .hub-hub-card,
 :root[data-palette="persona"][data-theme="light"] .modal,
@@ -308,3 +310,39 @@
   :root[data-effects="on"][data-palette="persona"] body { animation: p5-halftone-drift 22s linear infinite; }
   @keyframes p5-halftone-drift { to { background-position: 132px 66px; } }
 }
+
+/* ── §14 · Panel "Perfil": pop-art. La rampa de los repartos va del ROJO rebelde al ORO del As de picas —la
+   dualidad del tema—, y los gráficos heredan la línea de tinta: contorno negro grueso en los puntos y en las
+   porciones, como una viñeta. Las tarjetas ya llevan el borde de tinta y la sombra de bloque de §3. ── */
+:root[data-palette="persona"] .stats-hub {
+  --chart-from: var(--steam);
+  --chart-to: var(--warn);
+}
+
+/* La barrita del título es un bloque sesgado, no un filete recto: el gesto del tema. */
+:root[data-palette="persona"] .stats-card h2::before {
+  transform: skewX(-12deg);
+  width: 5px;
+}
+
+/* Contorno de tinta en todo lo que es una figura recortada. */
+:root[data-palette="persona"] .polar-sector,
+:root[data-palette="persona"] .burst-piece path,
+:root[data-palette="persona"] .genre-radar-shape { stroke: var(--pop-line); stroke-width: 2.5; }
+:root[data-palette="persona"] .donut-seg { stroke-linecap: butt; }
+
+:root[data-palette="persona"] .beeswarm-dot,
+:root[data-palette="persona"] .timeline-dot,
+:root[data-palette="persona"] .dumbbell-dot { box-shadow: 0 0 0 1.5px var(--pop-line); }
+
+/* El relleno de "Dónde brillas" no acaba en vertical: se corta en diagonal, como los paneles de viñeta del
+   juego, y el dial y sus contadores llevan el filo de tinta de todo el tema. */
+:root[data-palette="persona"] .shine-fill { clip-path: polygon(0 0, 100% 0, calc(100% - 10px) 100%, 0 100%); }
+:root[data-palette="persona"] .gauge-seg.is-on,
+:root[data-palette="persona"] .gauge-sub-seg.is-on { filter: drop-shadow(0 0 0 var(--pop-line)); stroke-linecap: butt; }
+:root[data-palette="persona"] .top-chip-bar,
+:root[data-palette="persona"] .shine-rows li { border-radius: 2px; }
+
+/* Las cifras destacadas, en cursiva pop y con la caja sesgada del tema. */
+:root[data-palette="persona"] .stat-tile-value { font-style: italic; letter-spacing: -.02em; }
+:root[data-palette="persona"] .stat-tile:hover { transform: translateY(-2px) skewX(-1.5deg); }

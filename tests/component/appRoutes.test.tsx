@@ -43,6 +43,13 @@ describe('rutas de la app', () => {
     }
   });
 
+  it('/perfil es el panel de estadísticas, no el perfil social', () => {
+    // La pestaña inferior se llama "Perfil" y la ficha pública vive en `/social/profile`: son dos pantallas
+    // distintas y ninguna debe robarle la ruta a la otra.
+    expect(matchAppSection('/perfil')).toBe('stats');
+    expect(matchAppSection(SOCIAL_ROUTES.profileEdit)).toBe('social');
+  });
+
   it('/admin resuelve aunque esté oculta en la navegación', () => {
     expect(matchAppSection('/admin')).toBe('admin');
   });

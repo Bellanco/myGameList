@@ -1,0 +1,22 @@
+#!/bin/sh
+# Red de seguridad ANTES de publicar, no después.
+#
+# Por qué existe: `tsc` y los tests solo corrían en CI, así que era posible empujar a `develop` código que no
+# compila y enterarse veinte minutos más tarde. Esto lo adelanta a los segundos previos al push.
+#
+# Deliberadamente en pre-PUSH y no en pre-commit: un commit es barato y frecuente —y a veces se quiere guardar
+# trabajo a medias—; un push es lo que ve el resto del mundo. Bloquear cada commit molesta más de lo que aporta.
+#
+# Para saltárselo puntualmente (rama de pruebas, WIP consciente): `git push --no-verify`.
+set -e
+
+echo "pre-push · comprobando tipos…"
+npm run typecheck
+
+echo "pre-push · linter…"
+npx eslint src tests
+
+echo "pre-push · pruebas…"
+npm test
+
+echo "pre-push · todo en verde."

@@ -59,6 +59,8 @@ const SocialHubInner = memo(function SocialHubInner({
     setProfileName,
     hiddenTabs,
     setHiddenTabs,
+    // Rango propio: decide cuánto se ve del panel de estadísticas de un amigo.
+    ownTier,
     hideReplayable,
     setHideReplayable,
     hideRetry,
@@ -229,6 +231,8 @@ const SocialHubInner = memo(function SocialHubInner({
           onAddOrAcceptFriend={() => handleAddOrAcceptFriend((selectedProfileDetail as { uid?: string }).uid || '')}
           onCancelFriendRequest={() => handleCancelFriendRequest((selectedProfileDetail as { uid?: string }).uid || '')}
           onRemoveFriend={() => handleRemoveFriend((selectedProfileDetail as { uid?: string }).uid || '')}
+          viewerTier={ownTier}
+          viewerHiddenTabs={hiddenTabs}
         />
         {removeFriendDialog}
         </>

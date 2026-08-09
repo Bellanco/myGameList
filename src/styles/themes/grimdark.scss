@@ -89,6 +89,7 @@
 :root[data-palette="grimdark"] .toolbar,
 :root[data-palette="grimdark"] .table-wrap,
 :root[data-palette="grimdark"] .settings-card,
+:root[data-palette="grimdark"] .stats-card,
 :root[data-palette="grimdark"] .hub-feed-card,
 :root[data-palette="grimdark"] .hub-hub-card,
 :root[data-palette="grimdark"] .modal,
@@ -96,6 +97,7 @@
 :root[data-palette="grimdark"][data-theme="light"] .toolbar,
 :root[data-palette="grimdark"][data-theme="light"] .table-wrap,
 :root[data-palette="grimdark"][data-theme="light"] .settings-card,
+:root[data-palette="grimdark"][data-theme="light"] .stats-card,
 :root[data-palette="grimdark"][data-theme="light"] .hub-feed-card,
 :root[data-palette="grimdark"][data-theme="light"] .hub-hub-card,
 :root[data-palette="grimdark"][data-theme="light"] .modal,
@@ -244,3 +246,56 @@
 
 /* Preferencia de efectos OFF: detén el PARPADEO CRT (la textura de scanlines/vignette se conserva). */
 :root:not([data-effects="on"])[data-palette="grimdark"] body::before { animation: none !important; }
+
+/* ── §12 · Panel "Perfil": lectura de cogitador. La rampa de los repartos va del FÓSFORO VERDE al ORO
+   imperial, los datos brillan como un tubo de rayos catódicos y las cifras se leen en VT323, igual que el
+   resto de lecturas de terminal. Las tarjetas ya traen la moldura dorada de §3. ── */
+:root[data-palette="grimdark"] .stats-hub {
+  --chart-from: var(--grim-green);
+  --chart-to: var(--grim-gold);
+}
+
+/* Fósforo: el trazo de los datos emite, como la pantalla. En claro (pergamino) se apaga. */
+:root[data-palette="grimdark"] .backlog-line,
+:root[data-palette="grimdark"] .genre-radar-shape { filter: drop-shadow(0 0 5px rgba(67, 245, 88, .5)); }
+:root[data-palette="grimdark"] .beeswarm-dot,
+:root[data-palette="grimdark"] .timeline-dot { box-shadow: 0 0 6px rgba(67, 245, 88, .45); }
+/* Las piezas nuevas también emiten: el cuadro de mandos y el rosetón, como cualquier trazo de esta pantalla. */
+:root[data-palette="grimdark"] .gauge-seg.is-on,
+:root[data-palette="grimdark"] .gauge-sub-seg.is-on,
+:root[data-palette="grimdark"] .burst-piece { filter: drop-shadow(0 0 4px currentColor); }
+:root[data-palette="grimdark"][data-theme="light"] .gauge-seg.is-on,
+:root[data-palette="grimdark"][data-theme="light"] .gauge-sub-seg.is-on,
+:root[data-palette="grimdark"][data-theme="light"] .burst-piece { filter: none; }
+:root[data-palette="grimdark"][data-theme="light"] .backlog-line,
+:root[data-palette="grimdark"][data-theme="light"] .genre-radar-shape { filter: none; }
+:root[data-palette="grimdark"][data-theme="light"] .beeswarm-dot,
+:root[data-palette="grimdark"][data-theme="light"] .timeline-dot { box-shadow: none; }
+
+/* Lecturas de terminal: las cifras del panel en VT323, como las puntuaciones y las fechas. */
+:root[data-palette="grimdark"] .stat-tile-value,
+:root[data-palette="grimdark"] .beeswarm-axis,
+:root[data-palette="grimdark"] .backlog-ytick,
+:root[data-palette="grimdark"] .backlog-xtick,
+:root[data-palette="grimdark"] .timeline-year b,
+:root[data-palette="grimdark"] .dumbbell-num,
+:root[data-palette="grimdark"] .dumbbell-rate,
+:root[data-palette="grimdark"] .tag-ranking-num,
+:root[data-palette="grimdark"] .shine-value,
+:root[data-palette="grimdark"] .shine-count,
+:root[data-palette="grimdark"] .donut-share-center b,
+:root[data-palette="grimdark"] .burst-num,
+:root[data-palette="grimdark"] .donut-legend b,
+:root[data-palette="grimdark"] .year-col-value { font-family: 'VT323', ui-monospace, monospace; font-size: 1.08em; }
+
+/* La lectura del cuadro de mandos y los números del dial cambian de TIPOGRAFÍA, no de cuerpo: el `1.08em` de
+   arriba es relativo al padre, así que aplicado a la cifra grande le borraba sus 2rem y la dejaba en un
+   susurro, y a los números del dial (10px de lienzo) los inflaba hasta pisarse. */
+:root[data-palette="grimdark"] .gauge-hero,
+:root[data-palette="grimdark"] .gauge-number { font-family: 'VT323', ui-monospace, monospace; }
+
+/* Filete dorado bajo el rótulo de cada bloque: la cartela del códice. */
+:root[data-palette="grimdark"] .stats-card h3 {
+  border-bottom: 1px solid rgba(224, 169, 43, .35);
+  padding-bottom: .3rem;
+}

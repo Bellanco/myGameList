@@ -9,7 +9,9 @@ on:
     types: [ published ]
 
 env:
-  NODE_VERSION: '20'
+  # Node 20 salió de soporte en abril de 2026: el CI corría sobre un runtime sin parches de seguridad. La 22 es
+  # además el mínimo que exige html-validate 11 (`engines`), así que las dos cosas se mueven a la vez.
+  NODE_VERSION: '22'
 
 jobs:
   test-and-validate:

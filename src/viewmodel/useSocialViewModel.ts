@@ -301,7 +301,7 @@ export function useSocialViewModel(options?: {
     setMustCreateProfile(true);
 
     if (activePanel !== 'profile') {
-      navigate('/social/profile');
+      void navigate('/social/profile');
     }
   }, [activePanel, navigate]);
 
@@ -414,7 +414,7 @@ export function useSocialViewModel(options?: {
     }
 
     setShowSocialSpace(true);
-    navigate('/social');
+    void navigate('/social');
   }, [hasReadyAccess, showSocialSpace, navigate]);
 
   const gatewaySteps = SOCIAL_UI.steps.map((step, index) => ({
@@ -969,24 +969,24 @@ export function useSocialViewModel(options?: {
   // completa de una vez y nunca retira una entrada más nueva que el reloj de los listados locales.
 
   const openActivityDetail = useCallback((entry: SocialActivityFeedItem) => {
-    navigate(`/social/user/${encodeURIComponent(entry.actorProfileId)}/game/${entry.gameId}/${entry.type}`);
+    void navigate(`/social/user/${encodeURIComponent(entry.actorProfileId)}/game/${entry.gameId}/${entry.type}`);
   }, [navigate]);
 
   const openProfileDetail = useCallback((profileId: string) => {
     // Cualquier perfil del directorio se puede abrir (para no-amigos: hero + "Añadir amigo").
-    navigate(`/social/profiles/${encodeURIComponent(profileId)}`);
+    void navigate(`/social/profiles/${encodeURIComponent(profileId)}`);
   }, [navigate]);
 
   // Reseñas del perfil: alternar entre la vista del perfil (/social/profiles/:id) y la de reseñas
   // (.../reviews), y abrir el detalle a pantalla completa de una reseña (.../game/:gameId/review).
   const openProfileReviews = useCallback((profileId: string) => {
-    navigate(`/social/profiles/${encodeURIComponent(profileId)}/reviews`);
+    void navigate(`/social/profiles/${encodeURIComponent(profileId)}/reviews`);
   }, [navigate]);
   const closeProfileReviews = useCallback((profileId: string) => {
-    navigate(`/social/profiles/${encodeURIComponent(profileId)}`);
+    void navigate(`/social/profiles/${encodeURIComponent(profileId)}`);
   }, [navigate]);
   const openProfileReviewDetail = useCallback((profileId: string, gameId: number) => {
-    navigate(`/social/profiles/${encodeURIComponent(profileId)}/game/${gameId}/review`);
+    void navigate(`/social/profiles/${encodeURIComponent(profileId)}/game/${gameId}/review`);
   }, [navigate]);
 
   // Abre el DETALLE del perfil propio (vista pública con sus listados), no el editor. Si aún no existe entrada
@@ -996,9 +996,9 @@ export function useSocialViewModel(options?: {
     // con la PRIMERA entrada de id vacío —la de un desconocido— y "mi perfil" le abría el perfil de otro.
     const ownEntry = socialDirectory.find((entry) => isOwnProfileIdentity(entry.id, authUser?.uid, ownProfileId));
     if (ownEntry) {
-      navigate(`/social/profiles/${encodeURIComponent(ownEntry.id)}`);
+      void navigate(`/social/profiles/${encodeURIComponent(ownEntry.id)}`);
     } else {
-      navigate('/social/profile');
+      void navigate('/social/profile');
     }
   }, [authUser?.uid, navigate, ownProfileId, socialDirectory]);
 
@@ -1329,7 +1329,7 @@ export function useSocialViewModel(options?: {
     // que ha fallado es otra cosa. El bloqueo del feed no cambia —`profileEditorLocked` sigue frenando la
     // hidratación—, lo que se retira es el secuestro de la navegación.
     if (shouldRedirectToProfileEditor(mustCreateProfile, activePanel)) {
-      navigate('/social/profile');
+      void navigate('/social/profile');
     }
   }, [mustCreateProfile, activePanel, navigate]);
 
@@ -1954,7 +1954,7 @@ export function useSocialViewModel(options?: {
         /* best-effort: no puede tumbar el guardado del perfil; se reintenta en la próxima apertura. */
       }
 
-      navigate('/social');
+      void navigate('/social');
       void hydrateSocialDirectory();
       setFeedback('ok', SOCIAL_UI.status.profileSaved);
 
@@ -2106,7 +2106,9 @@ export function useSocialViewModel(options?: {
       return {
         icon: 'gear',
         label: SOCIAL_UI.gateway.connectSync,
-        action: () => navigate('/ajustes'),
+        // El contrato del CTA es `() => void`; `navigate` devuelve promesa, así que la flecha la propagaba y el
+        // consumidor creía tener un manejador síncrono. Llaves + `void`: la intención queda escrita y el tipo cuadra.
+        action: () => { void navigate('/ajustes'); },
         disabled: false,
       } satisfies GatewayCta;
     }

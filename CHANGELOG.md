@@ -5,6 +5,210 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
 
 ## [Unreleased]
 
+### Security
+- **App Check (reCAPTCHA v3) contra el abuso de la cuota de Firebase.** La clave web es pública por diseño, así
+  que cualquier autenticado podía recorrer el directorio de perfiles o inundar de peticiones de amistad desde
+  fuera de la app. Se inicializa **solo cuando hay sesión de Google** (al iniciarla o al restaurarla), nunca en
+  el arranque: hacerlo en el arranque habría cargado un script de Google en cada visita anónima y habría vuelto
+  falsa la promesa de la política de cookies. Todo el proveedor vive en un único módulo desmontable
+  (`appCheckRepository`) y se apaga vaciando `VITE_RECAPTCHA_SITE_KEY`, sin tocar código. Queda **registrado
+  pero sin aplicar** hasta que las métricas confirmen que los tokens se verifican.
+- **Validación de esquema del gist de JUEGOS** (Zod, en carga diferida como el social). Al escribir falla
+  cerrado, pero **solo por tipos** y después de normalizar: un campo aditivo nuevo no puede dejar a nadie sin
+  sincronizar, y un remoto con tipos sucios se sanea en vez de bloquear. Al leer solo diagnostica: descartar
+  entradas ante un esquema demasiado estrecho se llevaría juegos buenos, y en un dispositivo recién instalado no
+  habría copia local con la que recuperarlos.
+
+### Fixed
+- **Insignias mudas para un lector de pantalla.** "Rejugar" y "Otra oportunidad" eran un `<span>` con
+  `aria-label`; un span sin rol es `generic` y ARIA prohíbe nombrarlo, así que la etiqueta se descartaba y esas
+  celdas no anunciaban nada. Lo destapó la auditoría con axe sobre el render, que es lo único que puede verlo:
+  el linter lee JSX estático y el rol resulta al pintar.
+- **Contraste insuficiente en la pestaña inactiva** en cinco de las seis paletas oscuras (entre 4,00 y 4,28
+  sobre el 4,5 que exige la AA). Corregido subiendo solo la luminosidad de `--text-dim`, con el tono y la
+  saturación de cada identidad intactos; `seaofstars` ya cumplía.
+- **Los años de un juego se muestran del más reciente al más antiguo.** Con más de tres, el truncado de la fila
+  dejaba ver los tres más viejos justo cuando lo interesante es el último.
+
+### Performance
+- **La copia en `localStorage` sale del hilo crítico.** Se escribía la biblioteca entera —`JSON.stringify` más
+  `setItem`, ambos síncronos— en cada edición y en cada persistencia del ciclo de sync. Ahora IndexedDB se
+  escribe inmediato y la copia de `localStorage` se aplaza a un hueco ocioso, fundiendo las ráfagas en una sola
+  escritura. Con volcado síncrono en `pagehide`/`visibilitychange` para no perder la última edición, y los
+  lectores servidos desde memoria mientras está pendiente, así que el aplazamiento es invisible y **la
+  precedencia de arranque entre almacenes no cambia**. Además, un fallo de cuota ya no se traga en silencio.
+
+### Tests
+- **Auditoría de accesibilidad sobre el render** (`@axe-core/playwright`): 6 paletas × 2 temas sobre la lista
+  con una fila desplegada. De 1 a 15 recorridos end-to-end.
+- Pruebas del esquema del gist de juegos, del módulo de App Check y de la escritura diferida del estado local.
+
+### Changed
+- **El linter ya vigila lo que más caro ha salido.** `eslint-plugin-react-hooks` (`rules-of-hooks` no encontró
+  ni un error; quedan 14 avisos de `exhaustive-deps` por revisar) y cuatro reglas **tipadas** sobre `model` y
+  `viewmodel`: `no-floating-promises`, `no-misused-promises`, `await-thenable` y `require-await`. Destaparon 12
+  promesas sueltas, todas de `navigate()`, que en react-router 7 devuelve promesa.
+- **Node 22 en CI y en `engines`**: la 20 salió de soporte en abril de 2026, así que el CI corría sobre un
+  runtime sin parches. Es además el mínimo de html-validate 11.
+- Once dependencias al día dentro de rango, más jest-dom 7 y html-validate 11. **TypeScript 7 y ESLint 10 se
+  quedan fuera a propósito**: `@typescript-eslint` exige `typescript <6.1.0`, y `eslint-plugin-react`/`jsx-a11y`
+  aún no aceptan ESLint 10. Subirlos rompería el análisis tipado recién puesto.
+- **La pestaña "Perfil" pasa a llamarse "Estadísticas"** y se mueve a la derecha del todo. La ruta sigue siendo
+  `/perfil`.
+- Red de seguridad en `pre-push` (tipos, linter y pruebas) versionada en `.githooks/`, activada sola con
+  `npm install`. Prettier queda configurado pero **sin aplicar**: el barrido tocaría 168 de 294 ficheros y
+  merece su propio commit.
+
+### Added
+- **Panel "Perfil" (`/perfil`), nueva pestaña de la barra inferior**: la biblioteca en números —juegos, horas,
+  nota media y partida más larga, año a año (con conmutador juegos/horas), distribución de notas, ratio de
+  completados frente a abandonados y géneros más jugados. Todo es **derivado y de solo lectura**: se calcula en
+  el dispositivo a partir de las listas que ya están en memoria (`core/stats/computeStats`, una única pasada
+  O(n) memoizada), sin campos nuevos en `GameItem`, sin escribir en el gist y sin publicar nada al canal social.
+  El hub y su hoja de estilos entran por `lazy()`, así que no pesan en el arranque.
+  - Reglas que fija el cálculo: "Próximos" no cuenta como jugado (ni horas, ni géneros, ni su nota, que ahí es
+    el **interés** previo y no una valoración); "En curso" no puntúa; las horas de un juego completado varias
+    veces cuentan enteras en el **último** año (repartirlas inventaría un dato que nadie registró); los
+    completados sin año van a un cajón propio en vez de desaparecer del gráfico.
+  - Accesibilidad: los gráficos densos exponen sus datos en una tabla `sr-only` en vez de en una etiqueta
+    kilométrica, y el aro de completados se anuncia con su reparto.
+- **Registro del histórico del backlog**: una instantánea mensual con el tamaño de cada lista, guardada en el
+  meta local de IndexedDB. Entra ya, sin pantalla que la pinte, porque es lo único de este trabajo que **no se
+  puede recuperar a posteriori**: `listedAt` se reescribe al mover un juego de lista, así que la serie solo
+  puede construirse hacia delante y cada mes sin registrar es un punto perdido para siempre. Local y por
+  dispositivo (no sube al gist ni a Firestore), en idle, un punto por mes que se actualiza al último estado
+  observado, con tope de 120 meses. No estampa una biblioteca vacía: al arrancar podría no estar hidratada aún.
+  - El **gráfico** de evolución ya está: mientras la serie no tenga dos puntos, la tarjeta enseña la curva
+    derivada de `listedAt` (y lo dice al pie); en cuanto los tiene, el histórico real la sustituye solo.
+- **El panel se reparte en "General" y una pestaña por año.** Los años los pone el contenido —solo aquellos en
+  los que completaste algo—, así que nunca se ofrece una pestaña que lleve a una pantalla vacía. Cada año
+  resume sus completados: cifras, figura de géneros, distribución de notas, plataformas y el listado completo
+  ordenado por nota. Los abandonados y los próximos **no llevan año** (el formulario solo pide "Años
+  completado" en completados), así que viven en "General".
+- **Figura de géneros al estilo del "Resumen del año" de Steam**: un hexágono con tus seis géneros principales,
+  en SVG a mano (treinta líneas de trigonometría, cero dependencias). Con menos de tres géneros no hay figura
+  posible y cae al ranking en texto en vez de dibujar un segmento.
+- **Apartado de la lista de la vergüenza**: horas invertidas, nota media, cuántos merecen otra oportunidad, el
+  **desenlace por género** —solo con géneros que tengan al menos tres juegos ya decididos, porque un 100% sobre
+  uno no dice nada—, las razones de abandono más repetidas (el campo `reasons`, que solo existe en esa lista) y
+  los últimos en caer.
+- **Apartado de la lista de próximos**: cuántos son, el interés medio (que NO se mezcla con las valoraciones:
+  en esa lista el campo es el interés previo), los compatibles con Deck, los géneros y plataformas que más
+  esperas y **cuándo llegó cada uno**.
+- **Gráficos rediseñados**: color semántico fijo por lista en todo el panel (completados verde, abandonados
+  rojo, en curso ámbar, próximos acento), degradados y curvas de entrada suaves, cebra en los listados largos y
+  rejilla propia. Todo con las variables de la paleta activa, así que funciona en los cinco temas y en claro y
+  oscuro sin una sola regla por tema; las animaciones se apagan con `prefers-reduced-motion`.
+- **Cada gráfico usa la forma que le corresponde**, en vez de repetir barras horizontales por todo el panel:
+  - **Enjambre de puntos** para la distribución de notas: un punto por juego sobre el eje 0–100, con la media
+    marcada. Enseña dónde se agolpan las notas, qué huecos hay y qué juegos se salen —cosas que cinco columnas
+    de un histograma esconden—. Los puntos crecen si hay pocos y encogen a partir de 120.
+  - **Rosetón polar** para el reparto de géneros. El radio va con la raíz cuadrada del valor, no con el valor:
+    el área de un sector crece con el cuadrado del radio, así que a escala lineal la figura exageraría las
+    diferencias.
+  - **Mancuernas** para el desenlace por género: dos puntos unidos —terminados y dejados— sobre un eje común.
+    Dice a la vez el volumen y la proporción, y sustituye a los dos gráficos que hacían falta antes.
+  - **Línea de tiempo** para la lista de próximos: un punto por juego en su fecha de alta. Reemplaza a "los que
+    más llevan esperando" y a "los últimos en llegar", y además enseña las rachas y los parones.
+  - **Tarta** para completados frente a abandonados: dos categorías que suman el total, que es de las pocas
+    veces en que una tarta es la forma correcta. Las porciones se separan al pasar el ratón y el color sale de
+    los tokens de la paleta, así que se adapta sola a cada tema.
+  - **Nube de etiquetas** para las razones de abandono y **ranking en texto** (puesto, etiqueta y cifra) para
+    las plataformas, donde una barra no añadía nada al número.
+  - Se mantienen el hexágono, el aro, el área acumulada y las columnas del gráfico anual.
+  - Las formas que necesitan un mínimo de datos caen a un ranking en texto cuando no lo tienen: el hexágono por
+    debajo de tres ejes y el rosetón por debajo de tres sectores (dos mitades no son una figura).
+  - El enjambre lleva además **silueta de densidad** detrás, las guías de **media y mediana** y el nombre de
+    los dos extremos: con la biblioteca entera los puntos se tocan y la silueta es lo único que sigue diciendo
+    dónde está el grueso. Su reparto por tramo va también en la tabla alternativa, para que el dato exacto
+    nunca dependa solo de pasar el ratón.
+  - Completados frente a abandonados pasa a **cifra protagonista con la tarta de apoyo**: con dos categorías el
+    número ES el gráfico, y los porcentajes salen de dentro de las porciones, donde repetían esa misma cifra y
+    en un reparto desigual no cabían sin recortarse.
+  - Repaso a los detalles de trazado: rejillas y ejes en hairline **sólida** (una rejilla punteada se lee como
+    umbral, no como rejilla), rellenos de área más velados, separación de 2 px entre porciones, cifras
+    proporcionales en las tarjetas destacadas (los dígitos de ancho fijo son para columnas que se alinean) y
+    diana de 24 px alrededor de cada punto, que señalar un círculo de nueve píxeles era imposible.
+  - **Barras radiales en media luna, con el nombre escrito sobre cada anillo**, para los géneros de tus
+    mejores: es la variación del rosetón —misma familia circular, lectura distinta— y no sufre su problema con
+    pocos valores, que es que tres sectores se ven como una tarta rota. El rótulo curvado resuelve lo único que
+    fallaba: en unos anillos de colores parecidos la identidad dependía de casar color con leyenda, y así no hay
+    nada que casar. Va dentro del arco cuando cabe y pasada la punta cuando no, siempre centrado en la parte
+    alta del semicírculo, que es donde el texto queda derecho —con una vuelta de tres cuartos se leía cabeza
+    abajo al cruzar la mitad inferior—. Y una guía a media vuelta, porque sin referencia común dos arcos de
+    radios distintos con el mismo ángulo parecen medir cosas distintas.
+  - **Anillo repartido con el total en el centro** para saber dónde juegas tus favoritos: compara cada
+    plataforma con el todo y deja el hueco central para la cifra que da contexto.
+  - **Piruletas** para tu nota media por género, con el carril completo, la guía de tu media global y la
+    diferencia contra ella: un "84" no dice si es mucho o poco PARA TI; un "+6 sobre tu media", sí. La escala
+    llega a la nota máxima en vez de recortarse al rango de los datos, que convertiría cuatro medias parecidas
+    en diferencias abismales.
+  - **Matriz de puntos** para las plataformas de tu lista de próximos: un recuento que se cuenta con el dedo y
+    funciona igual con tres juegos que con cuarenta.
+  - El resto del top pasa a **fichas en rejilla**: doce filas ocupaban media pantalla para decir lo mismo.
+  - Los rótulos largos de las figuras circulares se parten en **dos líneas** por el espacio más equilibrado en
+    vez de recortarse: "Aventura gráfica" perdía justo la parte que la distinguía de "Aventura".
+- **"Lo mejor de tu biblioteca", en general y en cada año**: el podio de tus tres primeros, el resto del top
+  hasta quince títulos y —lo que ninguna lista de favoritos cuenta— **en qué se parecen esos mismos quince**:
+  qué géneros se repiten, dónde los juegas, cuánto duran de media y qué nota hace de listón para entrar. La
+  muestra del agregado y la lista son el mismo conjunto a propósito: si la pantalla enseña quince títulos, los
+  géneros y las plataformas tienen que ser los de esos quince y no los de un subconjunto que nadie ve. Puesto al
+  lado del reparto general responde a una pregunta que ninguno de los dos contesta solo: si lo que más te gusta
+  es lo que más juegas. Incluye **"dónde brillas"**: tu nota media por género, que no siempre coincide con el
+  género que más juegas.
+  - El puesto lo desempatan las **rejugadas**: entre dos notas iguales sube el que volviste a jugar, porque
+    volver a un juego es el voto más sincero que existe. La marca «×2» lo dice en el listado.
+- **Guiños a frases icónicas del videojuego** en los textos del panel, empezando por los juegos que dan nombre
+  a los temas de la app: la tarta que no es mentira (Portal), despertar samurái (Cyberpunk 2077), los que te
+  robaron el corazón (Persona 5), la flecha en la rodilla de la lista de la vergüenza (Skyrim), la princesa que
+  está en otro castillo (Super Mario Bros.), lo peligroso de ir solo (Zelda) y terminar esta pelea (Halo).
+- **Cada tema viste el panel con su propio lenguaje.** Las tarjetas entran en la receta de tarjeta que ya tenía
+  cada skin (tinta de cómic en Corazón rebelde, filo naranja en Cámara de pruebas, marco cian y filete amarillo
+  en Sin futuro, moldura dorada en Solo hay guerra, marco doble pixelado en Mar de estrellas), y cada uno añade
+  su firma: cifras en cursiva pop, monoespaciada de terminal, neón con scanlines, fósforo verde con VT323 o
+  puntos cuadrados sobre un campo de estrellas.
+- **Los repartos usan la DUALIDAD de color de cada tema.** El rosetón y el hexágono recorren una rampa entre dos
+  tonos de la paleta —los dos portales, rojo y oro, amarillo y magenta, fósforo y oro, agua y noche— en vez de
+  ser un degradado de un solo color. La interpolación va en OKLCH y no en un espacio rectangular: mezclando dos
+  tonos opuestos, el camino recto atraviesa el gris y los sectores centrales salían apagados.
+- **Los gráficos responden al ratón**: sectores que se avivan, puntos que crecen, filas que se resaltan y
+  tarjetas de cifra que se elevan. Es lo que invita a explorarlos y a descubrir que llevan el dato exacto en el
+  `title`.
+- **Los ejes de tiempo se adaptan al periodo.** La escala la elige el propio recorrido de los datos (días,
+  quincenas, meses o años salteados), así que el dibujo ocupa el ancho tanto si han pasado tres meses como si
+  han pasado trece años. Antes un eje fijo en años dejaba los periodos cortos sin una sola referencia.
+- **Efectos de entrada**: el hexágono crece desde el centro, las columnas y barras se despliegan en cascada, el
+  aro se rellena girando y las cifras cuentan hacia arriba. Todo se apaga con `prefers-reduced-motion` (y el
+  conteo ni siquiera se calcula).
+  - Las tarjetas se destapan **al llegar a ellas**, no todas al montar: el panel es más alto que la pantalla y
+    media se "cargaba" sin que nadie la viera. Sus gráficos esperan con ellas, en pausa al 0%. La marca que lo
+    activa la pone el JavaScript, así que sin él —o con menos movimiento pedido— todo queda visible desde el
+    primer pintado, y un barrido por posición destapa lo que un salto de scroll (la tecla Fin, un ancla, la
+    posición restaurada al recargar) haga cruzar la pantalla entre dos fotogramas sin que el observador lo vea.
+- **Las horas salen de los rankings de etiquetas.** La columna de la derecha cambiaba de ancho fila a fila
+  ("9" frente a "9 · 677 h") y descolocaba las barras. Las horas siguen donde de verdad se leen: las cifras
+  destacadas y el gráfico anual.
+
+### Fixed
+- **La evolución del backlog dibujaba altas por mes, no una evolución.** Los ingresos mensuales de una
+  biblioteca real son números pequeños y erráticos, así que el área salía como una sierra ilegible. Ahora la
+  serie es **acumulada**: describe cómo ha ido creciendo cada lista y termina en el tamaño de hoy. Además el
+  lienzo se estira y los ejes son HTML por fuera —con todo dentro del SVG, estirarlo agrandaba los años y
+  engordaba los trazos—, y con pocos meses no se suaviza la curva y se marcan los puntos, para que tres datos
+  parezcan tres datos y no una curva inventada.
+- **La tabla alternativa de los gráficos añadía miles de píxeles de scroll invisible.** `.sr-only` no oculta
+  una `<table>`: en una tabla `height` es un MÍNIMO y `overflow` no la recorta. Con una serie larga (156 meses)
+  la página crecía de 3.700 a 9.400 px. Ahora la tabla va envuelta en un `div.sr-only`.
+- **"El mejor del año" mostraba las horas del juego más largo**, que casi nunca es el mismo. Ahora enseña las
+  suyas, y el más largo del año tiene su propia tarjeta cuando no coinciden.
+- **El índice de abandono dejaba media tarjeta vacía**: la barra se acotaba a un ancho máximo y el resto de la
+  fila quedaba en blanco. Las mancuernas ocupan el ancho completo.
+- **Las mancuernas podían salirse de la pantalla y forzar scroll horizontal**: los porcentajes de un hijo
+  absoluto se resuelven contra la caja de relleno, así que el padding del carril no apartaba los extremos. El
+  margen lo pone ahora el cálculo de posiciones.
+- **La línea de tiempo amontonaba los juegos que entraron el mismo día** (lo típico tras una importación):
+  repartía por el índice, no por choque. Ahora cada punto sube o baja hasta encontrar hueco libre.
+
 ### Performance
 - **El estado de arranque de las listas se lee una vez por montaje, no en cada render.** `loadLocalState()`
   estaba en el cuerpo del hook raíz y `normalizeData()` como argumento de `useState` (no como inicializador

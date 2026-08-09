@@ -137,6 +137,7 @@
 :root[data-palette="cyberpunk"] .toolbar,
 :root[data-palette="cyberpunk"] .table-wrap,
 :root[data-palette="cyberpunk"] .settings-card,
+:root[data-palette="cyberpunk"] .stats-card,
 :root[data-palette="cyberpunk"] .hub-feed-card,
 :root[data-palette="cyberpunk"] .hub-hub-card,
 :root[data-palette="cyberpunk"] .modal,
@@ -403,3 +404,54 @@
 :root:not([data-effects="on"])[data-palette="grimdark"] .fab,
 :root:not([data-effects="on"])[data-palette="grimdark"] .fab-roulette { animation: none !important; }
 
+
+/* ── §13 · Panel "Perfil": HUD de Night City. La rampa de los repartos va del CIAN al MAGENTA y pasa por los
+   azules y violetas del anuncio de neón; el amarillo ácido se queda donde ya estaba —marcos, títulos, filetes—,
+   que es como lo usa el juego: como tinta de interfaz, no como color de datos. Mezclando amarillo con magenta
+   el degradado caía en naranjas de atardecer, que no son de Night City. Todo lo que es trazo o punto lleva su
+   halo de neón y los lienzos van rayados con las scanlines del visor. ── */
+:root[data-palette="cyberpunk"] .stats-hub {
+  --chart-from: var(--cyber-cyan);
+  --chart-to: var(--cyber-magenta);
+  /* "En curso" pasa al amarillo ácido: es el tercer neón del tema y separa las bandas del área. */
+  --stats-e: var(--cyber-yellow);
+}
+
+/* Neón: halo en trazos y puntos. En claro se apaga, que sobre fondo claro solo ensucia (regla del tema). */
+:root[data-palette="cyberpunk"] .backlog-line,
+:root[data-palette="cyberpunk"] .genre-radar-shape,
+:root[data-palette="cyberpunk"] .polar-sector,
+:root[data-palette="cyberpunk"] .gauge-seg.is-on,
+:root[data-palette="cyberpunk"] .burst-piece,
+:root[data-palette="cyberpunk"] .donut-seg { filter: drop-shadow(0 0 4px currentColor); }
+
+:root[data-palette="cyberpunk"] .beeswarm-dot,
+:root[data-palette="cyberpunk"] .timeline-dot,
+:root[data-palette="cyberpunk"] .dumbbell-dot { box-shadow: 0 0 6px currentColor, 0 0 2px #fff; }
+
+/* Cada barra de "Dónde brillas" termina en un filo encendido, como el borde de una ventana del HUD. */
+:root[data-palette="cyberpunk"] .shine-fill { box-shadow: inset -2px 0 0 var(--cyber-cyan); }
+:root[data-palette="cyberpunk"][data-theme="light"] .shine-fill { box-shadow: inset -2px 0 0 color-mix(in srgb, var(--cyber-magenta) 60%, transparent); }
+
+:root[data-palette="cyberpunk"][data-theme="light"] .backlog-line,
+:root[data-palette="cyberpunk"][data-theme="light"] .genre-radar-shape,
+:root[data-palette="cyberpunk"][data-theme="light"] .polar-sector,
+:root[data-palette="cyberpunk"][data-theme="light"] .gauge-seg.is-on,
+:root[data-palette="cyberpunk"][data-theme="light"] .burst-piece,
+:root[data-palette="cyberpunk"][data-theme="light"] .donut-seg { filter: none; }
+
+/* Scanlines del visor sobre los lienzos de datos. */
+:root[data-palette="cyberpunk"] .backlog-canvas::after,
+:root[data-palette="cyberpunk"] .beeswarm-canvas::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(to bottom, rgba(0, 240, 255, .05) 0 1px, transparent 1px 3px);
+}
+
+/* Las cifras destacadas, con la aberración cromática del HUD. */
+:root[data-palette="cyberpunk"] .stat-tile-value {
+  text-shadow: 1px 0 0 rgba(255, 42, 109, .55), -1px 0 0 rgba(0, 240, 255, .55);
+}
+:root[data-palette="cyberpunk"][data-theme="light"] .stat-tile-value { text-shadow: none; }

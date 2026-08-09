@@ -51,6 +51,7 @@
 :root[data-palette="portal"] .toolbar,
 :root[data-palette="portal"] .table-wrap,
 :root[data-palette="portal"] .settings-card,
+:root[data-palette="portal"] .stats-card,
 :root[data-palette="portal"] .hub-feed-card,
 :root[data-palette="portal"] .hub-hub-card,
 :root[data-palette="portal"] .modal,
@@ -59,6 +60,7 @@
 :root[data-palette="portal"][data-theme="light"] .toolbar,
 :root[data-palette="portal"][data-theme="light"] .table-wrap,
 :root[data-palette="portal"][data-theme="light"] .settings-card,
+:root[data-palette="portal"][data-theme="light"] .stats-card,
 :root[data-palette="portal"][data-theme="light"] .hub-feed-card,
 :root[data-palette="portal"][data-theme="light"] .hub-hub-card,
 :root[data-palette="portal"][data-theme="light"] .modal,
@@ -272,3 +274,146 @@
    La identidad estática de Portal (rejilla, placas de pared, barra naranja) se conserva. ══ */
 :root:not([data-effects="on"])[data-palette="portal"] .chip,
 :root:not([data-effects="on"])[data-palette="portal"] .hub-feed-day-header { animation: none !important; }
+
+/* ── §12 · Panel "Perfil": cámara de pruebas. La rampa de los repartos recorre los DOS PORTALES —azul a
+   naranja—, que es la firma del tema; los números van en la monoespaciada de terminal de GLaDOS, y los
+   lienzos llevan la retícula fina de una placa de prueba. Las tarjetas ya traen el filo naranja de §3. ── */
+:root[data-palette="portal"] .stats-hub {
+  --chart-from: var(--steam);
+  --chart-to: var(--portal-orange);
+}
+
+/* Lecturas técnicas: todas las cifras del panel en Share Tech Mono, como las fechas y las puntuaciones. */
+:root[data-palette="portal"] .stat-tile-value,
+:root[data-palette="portal"] .beeswarm-axis,
+:root[data-palette="portal"] .backlog-ytick,
+:root[data-palette="portal"] .backlog-xtick,
+:root[data-palette="portal"] .timeline-year b,
+:root[data-palette="portal"] .dumbbell-num,
+:root[data-palette="portal"] .dumbbell-rate,
+:root[data-palette="portal"] .tag-ranking-num,
+:root[data-palette="portal"] .shine-value,
+:root[data-palette="portal"] .shine-count,
+:root[data-palette="portal"] .gauge-hero,
+:root[data-palette="portal"] .gauge-number,
+:root[data-palette="portal"] .donut-share-center b,
+:root[data-palette="portal"] .burst-num,
+:root[data-palette="portal"] .donut-legend b,
+:root[data-palette="portal"] .year-col-value { font-family: 'Share Tech Mono', ui-monospace, monospace; }
+
+/* Retícula de placa de prueba bajo los lienzos que la admiten (muy tenue, solo insinuada). */
+:root[data-palette="portal"] .backlog-canvas {
+  background-image:
+    linear-gradient(to right, rgba(41, 182, 246, .07) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(41, 182, 246, .07) 1px, transparent 1px);
+  background-size: 28px 28px;
+}
+
+/* ── §12b · «Distribución de notas» = LOS DOS PORTALES ─────────────────────────────────────────────────────
+   Es el gráfico donde el tema puede decir más, porque tiene un eje entero que recorrer: la nota más baja sale
+   AZUL (el portal 1, el gel de repulsión) y la más alta NARANJA (el portal 2, el gel de propulsión), que es la
+   dualidad de la que va el juego. Sustituye al rojo→verde de semáforo, que aquí sonaba a otra franquicia. La
+   media va marcada con el haz azul de la rejilla de emancipación y la mediana con el filo naranja. ── */
+:root[data-palette="portal"] .beeswarm-canvas {
+  background-image:
+    linear-gradient(to right, rgba(41, 182, 246, .07) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(41, 182, 246, .07) 1px, transparent 1px),
+    linear-gradient(90deg,
+      color-mix(in srgb, var(--steam) 16%, transparent),
+      transparent 46%, transparent 54%,
+      color-mix(in srgb, var(--portal-orange) 16%, transparent));
+  background-size: 28px 28px, 28px 28px, 100% 100%;
+}
+
+/* DOS PORTALES Y NADA MÁS: por debajo de la mitad de la escala el punto es azul, por encima es naranja, sin
+   tonos intermedios. Interpolar entre los dos habría pasado por verdes y amarillos, que son de otro juego; y
+   aquí el color puede permitirse ser binario porque la nota exacta ya la da la POSICIÓN en el eje.
+   El corte se consigue con el recorte de `color-mix`: al multiplicar por mil, cualquier nota por debajo del
+   centro da un porcentaje negativo (que se recorta a 0 = azul) y cualquiera por encima se pasa de 100
+   (recortado = naranja). `--dot-hue` va de 0 a 135, así que el centro está en 67,5. */
+:root[data-palette="portal"] .beeswarm-dot {
+  --portal-gel: color-mix(in oklch, var(--portal-orange) clamp(0%, (var(--dot-hue, 135) - 67.5) * 1000%, 100%), var(--steam));
+
+  background: var(--portal-gel);
+  box-shadow: 0 0 7px var(--portal-gel), 0 0 0 1px rgba(255, 255, 255, .3);
+}
+
+:root[data-palette="portal"] .beeswarm-average {
+  border-left-color: var(--steam);
+  opacity: 1;
+  box-shadow: 0 0 10px rgba(var(--steam-rgb), .55);
+}
+
+:root[data-palette="portal"] .beeswarm-median {
+  border-left-color: var(--portal-orange);
+  opacity: .9;
+}
+
+:root[data-palette="portal"] .beeswarm-density path {
+  fill: color-mix(in srgb, var(--portal-orange) 7%, transparent);
+  stroke: color-mix(in srgb, var(--steam) 24%, transparent);
+}
+
+/* En claro (la Aperture antigua, de moqueta y madera) los halos se apagan: sobre fondo claro solo ensucian. */
+:root[data-palette="portal"][data-theme="light"] .beeswarm-dot { box-shadow: 0 0 0 1px rgba(0, 0, 0, .18); }
+:root[data-palette="portal"][data-theme="light"] .beeswarm-average { box-shadow: none; }
+
+/* ── §12c · El resto del panel, con el acabado de una cámara de pruebas: las piezas de color se separan con la
+   JUNTA CLARA de las placas de Aperture y los trazos vivos llevan el resplandor del portal. ── */
+:root[data-palette="portal"] .burst-piece path,
+:root[data-palette="portal"] .polar-sector {
+  stroke: rgba(255, 255, 255, .3);
+  stroke-width: 1.5;
+  stroke-linejoin: round;
+}
+
+:root[data-palette="portal"] .gauge-seg.is-on,
+:root[data-palette="portal"] .gauge-sub-seg.is-on { filter: drop-shadow(0 0 3px currentColor); }
+
+/* ── §12d · La rampa, interpolada en OKLAB en vez de OKLCH. Es un detalle de una palabra con mucha
+   consecuencia: OKLCH va del azul al naranja girando el TONO, así que se pasa por turquesas, verdes y
+   amarillos —el degradado de otro juego—; OKLAB cruza por el centro y el punto medio es el GRIS CLARO de las
+   placas de Aperture. Los dos portales en los extremos y la pared blanca entre medias. ── */
+:root[data-palette="portal"] .polar-sector {
+  fill: color-mix(in oklab, var(--chart-to) clamp(0%, var(--i, 0) * 11%, 100%), var(--chart-from));
+}
+
+:root[data-palette="portal"] .gauge-seg.is-on {
+  stroke: color-mix(in oklab, var(--chart-to) clamp(0%, var(--i, 0) / max(calc(var(--n, 2) - 1), 1) * 100%, 100%), var(--chart-from));
+}
+
+:root[data-palette="portal"] .burst-piece {
+  fill: color-mix(in oklab, var(--chart-to) clamp(0%, var(--i, 0) / max(calc(var(--n, 2) - 1), 1) * 100%, 100%), var(--chart-from));
+}
+
+:root[data-palette="portal"] .donut-seg {
+  stroke: color-mix(in oklab, var(--chart-to) clamp(0%, var(--i, 0) * 20%, 100%), var(--chart-from));
+}
+
+:root[data-palette="portal"] .donut-key {
+  background: color-mix(in oklab, var(--chart-to) clamp(0%, var(--i, 0) * 20%, 100%), var(--chart-from));
+}
+
+:root[data-palette="portal"] .shine-fill {
+  background: color-mix(in oklab, var(--chart-to) clamp(0%, var(--i, 0) / max(calc(var(--n, 2) - 1), 1) * 100%, 100%), var(--chart-from));
+}
+
+:root[data-palette="portal"] .dot-matrix-dots i {
+  background: color-mix(in oklab, var(--chart-to) clamp(0%, var(--i, 0) * 18%, 100%), var(--chart-from));
+}
+
+/* Cada fila de "Dónde brillas" arranca con el filete naranja de las placas, como los rótulos del tema. */
+:root[data-palette="portal"] .shine-rows li {
+  border-left: 2px solid color-mix(in srgb, var(--portal-orange) 55%, transparent);
+  border-radius: 0 var(--stats-radius) var(--stats-radius) 0;
+}
+
+:root[data-palette="portal"][data-theme="light"] .burst-piece path,
+:root[data-palette="portal"][data-theme="light"] .polar-sector { stroke: rgba(255, 255, 255, .65); }
+
+:root[data-palette="portal"][data-theme="light"] .gauge-seg.is-on,
+:root[data-palette="portal"][data-theme="light"] .gauge-sub-seg.is-on { filter: none; }
+
+/* El aro de la figura de géneros, como una mira de calibración. */
+:root[data-palette="portal"] .polar-ring,
+:root[data-palette="portal"] .genre-radar-ring { stroke-dasharray: 3 4; }

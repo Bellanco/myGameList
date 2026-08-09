@@ -162,6 +162,7 @@ export const UI_MESSAGES = {
     inbox: 'Bandeja de importados',
     admin: 'Administración',
     legal: 'Información legal',
+    stats: 'Estadísticas de mis listas',
   },
   skipToContent: 'Saltar al contenido',
   // A11y-4: nombre accesible de cada pestaña de listado. Hace falta explícito porque el título visible
@@ -177,6 +178,188 @@ export const UI_MESSAGES = {
     account: 'Cuenta',
     inbox: 'Bandeja',
     integrations: 'Integraciones',
+    // La pestaña se llama "Estadísticas": son las de las listas propias. La ruta sigue siendo `/perfil` y la
+    // sección `stats`. No confundir con el PERFIL SOCIAL (`/social/profile`), que es la ficha pública.
+    stats: 'Estadísticas',
+  },
+  // Panel de estadísticas derivadas de las listas. Todo se calcula en el dispositivo (ver
+  // `core/stats/computeStats`); no se guarda ni se publica nada.
+  stats: {
+    // The Witcher 3: «el destino es solo la mitad; la otra mitad somos nosotros».
+    subtitle: 'El destino es solo la mitad: la otra mitad son tus listas, y esto es lo que cuentan.',
+    empty: {
+      // The Legend of Zelda: «es peligroso ir solo».
+      title: 'Es peligroso ir solo',
+      body: 'Añade juegos a tus listas y aquí aparecerán tus horas, tus notas y tus géneros.',
+    },
+    tiles: {
+      games: 'Juegos',
+      gamesHint: (playing: number, upcoming: number) => `${playing} en curso · ${upcoming} en próximos`,
+      hours: 'Horas jugadas',
+      hoursHint: (completed: string) => `${completed} h en juegos completados`,
+      avgGrade: 'Nota media',
+      avgGradeHint: (count: number) => `sobre ${count} ${count === 1 ? 'juego puntuado' : 'juegos puntuados'}`,
+      // Sufijo de la nota media según la escala de la cuenta (estrellas o nota fina).
+      outOf5: '/5',
+      outOf100: '/100',
+      longest: 'Tu partida más larga',
+      longestHint: (hours: string) => `${hours} h`,
+      noData: '—',
+    },
+    years: {
+      title: 'Año a año',
+      subtitle: 'Juegos completados por año. Las horas de un juego cuentan en el último año en que lo completaste.',
+      metricAria: 'Métrica del gráfico anual',
+      metricGames: 'Juegos',
+      metricHours: 'Horas',
+      noYear: 'Sin año',
+      noYearHint: 'Completados a los que no les registraste año.',
+      empty: 'Marca algún juego como completado para ver tu evolución por años.',
+      colYear: 'Año',
+      colGames: 'Completados',
+      colHours: 'Horas',
+      chartAria: (metric: string) => `Gráfico de ${metric} por año`,
+    },
+    grades: {
+      title: 'Distribución de notas',
+      subtitle: 'Cómo repartes tus puntuaciones entre los juegos completados y los abandonados que puntuaste.',
+      empty: 'Todavía no has puntuado ningún juego.',
+      starsLabel: (stars: number) => `${stars} ${stars === 1 ? 'estrella' : 'estrellas'}`,
+      gradeLabel: (floor: number, ceiling: number) => `${floor}–${ceiling}`,
+      countLabel: (count: number) => `${count} ${count === 1 ? 'juego' : 'juegos'}`,
+      chartAria: 'Distribución de notas',
+      bandColumn: 'Tramo',
+      countColumn: 'Juegos',
+      swarmHint: (count: number, best: string) => `Cada punto es uno de tus ${count} juegos puntuados. El más alto: ${best}.`,
+      median: 'mediana',
+    },
+    genres: {
+      title: 'Géneros más jugados',
+      subtitle: 'Cuenta completados, abandonados y en curso. Un juego con varios géneros suma en todos.',
+      empty: 'Añade géneros a tus juegos para ver este reparto.',
+      games: (count: number) => `${count} ${count === 1 ? 'juego' : 'juegos'}`,
+      chartAria: 'Géneros por número de juegos',
+    },
+    ratio: {
+      title: 'Completados y abandonados',
+      // Portal (uno de los temas): «la tarta es mentira».
+      subtitle: 'La tarta no es mentira: de los juegos que ya has cerrado, cuántos terminaste.',
+      empty: 'Aún no has completado ni abandonado ningún juego.',
+      completed: 'Completados',
+      abandoned: 'Abandonados',
+      // Cuphead, cuyo subtítulo es «Don't Deal with the Devil»: el juego va de contratos que hay que cerrar.
+      quote: 'No hagas tratos con el diablo: estos son los contratos que cierras.',
+      gaugeAria: (percent: number, completed: number, abandoned: number) =>
+        `${percent}% completados: ${completed} completados frente a ${abandoned} abandonados`,
+    },
+    top: {
+      title: 'Lo mejor de tu biblioteca',
+      titleYear: (year: number) => `Lo mejor de ${year}`,
+      // Persona 5 (uno de los temas): «te robaré el corazón».
+      subtitle: 'Los que te robaron el corazón: tu podio y en qué se parecen.',
+      empty: 'Todavía no has puntuado ningún juego.',
+      /** El metal de cada puesto, dicho con palabras: el color solo no puede ser el único que lo cuente. */
+      medals: ['Oro', 'Plata', 'Bronce'],
+      ranked: 'El resto de tu top',
+      byGenre: 'Dónde brillas',
+      genreCount: (count: number) => `${count} juegos`,
+      donutCenter: 'mejores',
+      yourAverage: 'tu media',
+      replays: (times: number) => `×${times}`,
+      replaysTitle: (times: number) => `Completado ${times} veces`,
+      hours: (hours: string) => `${hours} h`,
+      avgGrade: (count: number) => ` de nota media en tus ${count} mejores`,
+      avgHours: ' de media, cada uno',
+      cutoff: ' es el listón para entrar',
+      genres: 'Tus mejores géneros',
+      platforms: 'Dónde los juegas',
+    },
+    // Pestañas General / año. Solo se listan los años con juegos completados.
+    scope: {
+      groupAria: 'Periodo de las estadísticas',
+      general: 'General',
+      yearAria: (year: number) => `Resumen de ${year}`,
+    },
+    radar: {
+      title: 'Tus géneros',
+      subtitle: 'Elige tu arma: los géneros que más juegos te ocupan, con su peso relativo.',
+      subtitleYear: (year: number) => `Los géneros que más completaste en ${year}.`,
+      empty: 'Añade géneros a tus juegos para ver esta figura.',
+      /** Con menos de tres géneros la figura no se sostiene y se cae al ranking en barras. */
+      tooFew: 'Con menos de tres géneros no hay figura que dibujar; aquí va el reparto.',
+      aria: (parts: string) => `Figura de géneros: ${parts}`,
+      axisValue: (tag: string, games: number) => `${tag}: ${games}`,
+    },
+    backlog: {
+      title: 'Evolución del backlog',
+      // Cyberpunk 2077 (uno de los temas): «despierta, samurái».
+      derivedSubtitle: 'Despierta, samurái: así ha ido creciendo lo que hoy tienes en cada lista.',
+      derivedNote: 'Aproximación: cuenta la fecha de entrada a la lista ACTUAL, así que al mover un juego de lista su fecha se actualiza y la curva se recoloca. No es un histórico.',
+      realSubtitle: 'Tamaño de cada lista al cierre de cada mes, según lo registrado en este dispositivo.',
+      realNote: 'Histórico real, registrado mes a mes en este dispositivo desde que la función existe.',
+      empty: 'Todavía no hay meses que representar.',
+      lists: { c: 'Completados', v: 'Abandonados', e: 'En curso', p: 'Próximos' },
+      colMonth: 'Mes',
+      tableAria: 'Datos por mes',
+    },
+    shame: {
+      title: 'Lista de la vergüenza',
+      // Skyrim: «antes era un aventurero como tú, hasta que me clavaron una flecha en la rodilla».
+      subtitle: 'Antes eras un aventurero como ellos: qué dejas a medias, por qué y cuánto te ha costado.',
+      empty: 'Ni una flecha en la rodilla: no has abandonado ningún juego. Por ahora.',
+      total: 'Abandonados',
+      hours: 'Horas invertidas',
+      avgGrade: 'Nota media',
+      retry: 'Merecen otra oportunidad',
+      reasons: 'Por qué los dejas',
+      noReasons: 'No has anotado razones de abandono.',
+      genres: 'Géneros que más abandonas',
+      rate: 'Terminados frente a abandonados, por género',
+      legendCompleted: 'Terminados',
+      legendAbandoned: 'Abandonados',
+      recent: 'Los últimos en caer',
+    },
+    wishlist: {
+      title: 'Lo que te espera',
+      // Super Mario Bros.: «nuestra princesa está en otro castillo».
+      subtitle: 'Tu princesa siempre está en otro castillo: qué has ido añadiendo y desde cuándo.',
+      empty: 'No tienes nada en la lista de próximos.',
+      total: 'En próximos',
+      interest: 'Interés medio',
+      interestHint: (count: number) => `sobre ${count} con interés anotado`,
+      deck: 'Compatibles con Deck',
+      genres: 'Géneros que más te apetecen',
+      platforms: 'Plataformas',
+      oldest: 'Cuándo llegó cada uno',
+      recent: 'Los últimos en llegar',
+      waitingSince: (since: string) => `desde ${since}`,
+    },
+    /** Panel de estadísticas de OTRA persona, dentro de su perfil del hub social. */
+    friend: {
+      title: 'Sus estadísticas',
+      /** Botón de la fila de acciones del perfil, entre "Reseñas" y la ruleta. */
+      button: 'Estadísticas',
+      buttonBack: 'Ver perfil',
+      subtitle: 'Salen de lo que comparte contigo: sus listas, sus notas y sus géneros.',
+      empty: 'No comparte ninguna lista, así que no hay nada que resumir.',
+      /** Reciprocidad: lo que escondes de tus listas, no lo ves de las suyas. */
+      blockedAll: 'Escondes todas tus listas, así que no puedes ver las de nadie. Enséñalas en tu perfil y volverán estas cifras.',
+      blocked: (lists: string) => `Falta ${lists}: lo escondes en tu perfil, así que tampoco lo ves aquí.`,
+      /** Lo que el rango del que mira no alcanza a ver. */
+      tierMore: 'Tu rango llega hasta aquí. Con uno más alto verías también cómo puntúa y cuánto termina.',
+      noHours: 'Las horas no viajan por el canal social: son privadas y aquí no se enseñan.',
+      scopeGeneral: 'General',
+    },
+    year: {
+      completed: 'Completados',
+      hours: 'Horas',
+      avgGrade: 'Nota media',
+      best: 'El mejor del año',
+      gamesTitle: (year: number) => `Todo lo que completaste en ${year}`,
+      // Halo: «terminemos esta pelea».
+      gamesSubtitle: 'Terminemos esta pelea: de mejor a peor nota.',
+      noHours: 'sin horas anotadas',
+    },
   },
   import: {
     back: 'Volver',

@@ -40,6 +40,21 @@ export interface LocalMeta {
   friendshipHealedForGist?: string;
   // Último latido de uso enviado a `profiles.updatedAt` desde este dispositivo (acota a una escritura diaria).
   profileTouchedAt?: number;
+  // Histórico del backlog: una instantánea por mes con el tamaño de cada lista. Es la ÚNICA forma de saber cómo
+  // evoluciona el backlog —`listedAt` se reescribe al mover de lista, así que no se puede reconstruir a
+  // posteriori— y por eso se registra desde ya aunque el gráfico llegue después. Local y por dispositivo: no
+  // sube al gist ni a Firestore. Ver `statsSnapshotRepository`.
+  backlogHistory?: BacklogSnapshot[];
+}
+
+/** Tamaño de cada lista (c/v/e/p) en un mes concreto. Claves cortas: se guardan muchas y no se leen a mano. */
+export interface BacklogSnapshot {
+  /** Mes `AAAA-MM` en la hora local del dispositivo. */
+  m: string;
+  c: number;
+  v: number;
+  e: number;
+  p: number;
 }
 
 export type SyncOpType =
