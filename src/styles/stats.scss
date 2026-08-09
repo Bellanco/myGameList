@@ -1175,10 +1175,19 @@
   animation-delay: calc(var(--i, 0) * 90ms);
 }
 
+/* Los metales salen de la PALETA, no de tres hexadecimales fijos: el oro es el ámbar del tema (que en Solo hay
+   guerra ya ES oro imperial y en Sin futuro, ámbar de neón), la plata su gris de texto y el bronce la mezcla de
+   ámbar y rojo. Así el podio se tiñe con cada tema en vez de meter tres colores ajenos a él. */
+.podium-step {
+  --medal-gold: var(--warn);
+  --medal-silver: var(--text-muted);
+  --medal-bronze: color-mix(in oklch, var(--warn) 55%, var(--danger));
+}
+
 /* El metal va en el filo y en el número, no en el fondo: un bloque dorado se comería el nombre del juego. */
-.podium-step.is-gold { border-color: color-mix(in srgb, #e3b341 60%, var(--border)); }
-.podium-step.is-silver { border-color: color-mix(in srgb, #c2ccd6 45%, var(--border)); }
-.podium-step.is-bronze { border-color: color-mix(in srgb, #c98a4b 45%, var(--border)); }
+.podium-step.is-gold { border-color: color-mix(in srgb, var(--medal-gold) 60%, var(--border)); }
+.podium-step.is-silver { border-color: color-mix(in srgb, var(--medal-silver) 45%, var(--border)); }
+.podium-step.is-bronze { border-color: color-mix(in srgb, var(--medal-bronze) 45%, var(--border)); }
 
 .podium-pos {
   flex: 0 0 auto;
@@ -1192,9 +1201,15 @@
   color: var(--on-accent);
 }
 
-.podium-step.is-gold .podium-pos { background: linear-gradient(160deg, #f0cf6b, #d09b25); }
-.podium-step.is-silver .podium-pos { background: linear-gradient(160deg, #dfe6ee, #a7b3c0); }
-.podium-step.is-bronze .podium-pos { background: linear-gradient(160deg, #e0a86e, #b06f33); }
+.podium-step.is-gold .podium-pos {
+  background: linear-gradient(160deg, color-mix(in srgb, var(--medal-gold) 75%, #fff), var(--medal-gold));
+}
+.podium-step.is-silver .podium-pos {
+  background: linear-gradient(160deg, color-mix(in srgb, var(--medal-silver) 60%, #fff), var(--medal-silver));
+}
+.podium-step.is-bronze .podium-pos {
+  background: linear-gradient(160deg, color-mix(in srgb, var(--medal-bronze) 70%, #fff), var(--medal-bronze));
+}
 
 .podium-body {
   display: flex;
@@ -1300,6 +1315,20 @@
   width: min(11rem, 45%);
   height: auto;
   flex: 0 0 auto;
+}
+
+/* Referencia común a media vuelta: es lo que permite comparar anillos de radios distintos. */
+.radial-guide {
+  stroke: var(--border);
+  stroke-width: 1;
+  opacity: .6;
+}
+
+.radial-num {
+  fill: var(--on-accent);
+  font-size: 10px;
+  font-weight: 700;
+  pointer-events: none;
 }
 
 .radial-track {
@@ -1462,9 +1491,11 @@
   list-style: none;
 }
 
+/* La columna del nombre da para "Aventura gráfica" sin recortar: con 8rem se comía justo la palabra que
+   distingue un género de otro. */
 .lolli-rows li {
   display: grid;
-  grid-template-columns: minmax(4.5rem, 8rem) minmax(0, 22rem) auto;
+  grid-template-columns: minmax(7rem, 11rem) minmax(0, 20rem) auto;
   align-items: center;
   gap: .7rem;
   font-size: .82rem;
@@ -1566,7 +1597,7 @@
 /* Mismas columnas que las filas: así el eje cae siempre bajo el carril, mida lo que mida la etiqueta. */
 .lolli-axis {
   display: grid;
-  grid-template-columns: minmax(4.5rem, 8rem) minmax(0, 22rem) auto;
+  grid-template-columns: minmax(7rem, 11rem) minmax(0, 20rem) auto;
   gap: .7rem;
   font-size: .7rem;
   color: var(--text-muted);

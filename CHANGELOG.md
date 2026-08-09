@@ -77,7 +77,9 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
     diana de 24 px alrededor de cada punto, que señalar un círculo de nueve píxeles era imposible.
   - **Barras radiales** (un anillo por género, con la vuelta que da proporcional a su peso) para los géneros de
     tus mejores: es la variación del rosetón —misma familia circular, lectura distinta— y no sufre su problema
-    con pocos valores, que es que tres sectores se ven como una tarta rota.
+    con pocos valores, que es que tres sectores se ven como una tarta rota. Llevan una guía a media vuelta y la
+    cifra dentro del arco cuando cabe: sin referencia común, dos arcos de radios distintos con el mismo ángulo
+    parecen medir cosas distintas, porque el de fuera recorre más camino.
   - **Anillo repartido con el total en el centro** para saber dónde juegas tus favoritos: compara cada
     plataforma con el todo y deja el hueco central para la cifra que da contexto.
   - **Piruletas** para tu nota media por género, con el carril completo, la guía de tu media global y la
@@ -90,8 +92,10 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
   - Los rótulos largos de las figuras circulares se parten en **dos líneas** por el espacio más equilibrado en
     vez de recortarse: "Aventura gráfica" perdía justo la parte que la distinguía de "Aventura".
 - **"Lo mejor de tu biblioteca", en general y en cada año**: el podio de tus tres primeros, el resto del top
-  hasta quince títulos y —lo que ninguna lista de favoritos cuenta— **en qué se parecen** los diez mejores: qué
-  géneros se repiten, dónde los juegas, cuánto duran de media y qué nota hace de listón para entrar. Puesto al
+  hasta quince títulos y —lo que ninguna lista de favoritos cuenta— **en qué se parecen esos mismos quince**:
+  qué géneros se repiten, dónde los juegas, cuánto duran de media y qué nota hace de listón para entrar. La
+  muestra del agregado y la lista son el mismo conjunto a propósito: si la pantalla enseña quince títulos, los
+  géneros y las plataformas tienen que ser los de esos quince y no los de un subconjunto que nadie ve. Puesto al
   lado del reparto general responde a una pregunta que ninguno de los dos contesta solo: si lo que más te gusta
   es lo que más juegas. Incluye **"dónde brillas"**: tu nota media por género, que no siempre coincide con el
   género que más juegas.
