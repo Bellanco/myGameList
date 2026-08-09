@@ -104,11 +104,16 @@ const SORT_COLUMN: Record<string, string> = {
   Interés: 'score',
 };
 
+// `role="img"` NO es decorativo aquí, es lo que hace que la insignia se anuncie. Un `<span>` sin rol es
+// `generic`, y ARIA PROHÍBE ponerle nombre: el `aria-label` se descartaba y estas celdas —la única
+// presentación de "rejugar" y "otra oportunidad"— quedaban mudas para un lector de pantalla, con el icono
+// `aria-hidden` dentro y nada más. Lo destapó la auditoría con axe sobre el render (`tests/e2e/a11y.test.ts`);
+// el linter no puede verlo porque depende del rol que resulta al pintar, no del JSX.
 function renderBooleanBadge(type: 'replayable' | 'retry', value: boolean) {
   if (type === 'replayable') {
     const label = value ? 'Rejugar: Sí' : 'Rejugar: No';
     return (
-      <span className={value ? 'badge-rejugar-activo' : 'badge-rejugar-inactivo'} aria-label={label} title={label}>
+      <span className={value ? 'badge-rejugar-activo' : 'badge-rejugar-inactivo'} role="img" aria-label={label} title={label}>
         <Icon name={value ? COMMON_ICONS.starOliveBranches : COMMON_ICONS.lock} />
       </span>
     );
@@ -116,7 +121,7 @@ function renderBooleanBadge(type: 'replayable' | 'retry', value: boolean) {
 
   const label = value ? 'Dar otra oportunidad: Sí' : 'Dar otra oportunidad: No';
   return (
-    <span className={value ? 'badge-opp-activo' : 'badge-opp-inactivo'} aria-label={label} title={label}>
+    <span className={value ? 'badge-opp-activo' : 'badge-opp-inactivo'} role="img" aria-label={label} title={label}>
       <Icon name={value ? COMMON_ICONS.refresh : COMMON_ICONS.lock} />
     </span>
   );
