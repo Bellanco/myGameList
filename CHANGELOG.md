@@ -5,6 +5,60 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
 
 ## [Unreleased]
 
+### Security
+- **App Check (reCAPTCHA v3) contra el abuso de la cuota de Firebase.** La clave web es pública por diseño, así
+  que cualquier autenticado podía recorrer el directorio de perfiles o inundar de peticiones de amistad desde
+  fuera de la app. Se inicializa **solo cuando hay sesión de Google** (al iniciarla o al restaurarla), nunca en
+  el arranque: hacerlo en el arranque habría cargado un script de Google en cada visita anónima y habría vuelto
+  falsa la promesa de la política de cookies. Todo el proveedor vive en un único módulo desmontable
+  (`appCheckRepository`) y se apaga vaciando `VITE_RECAPTCHA_SITE_KEY`, sin tocar código. Queda **registrado
+  pero sin aplicar** hasta que las métricas confirmen que los tokens se verifican.
+- **Validación de esquema del gist de JUEGOS** (Zod, en carga diferida como el social). Al escribir falla
+  cerrado, pero **solo por tipos** y después de normalizar: un campo aditivo nuevo no puede dejar a nadie sin
+  sincronizar, y un remoto con tipos sucios se sanea en vez de bloquear. Al leer solo diagnostica: descartar
+  entradas ante un esquema demasiado estrecho se llevaría juegos buenos, y en un dispositivo recién instalado no
+  habría copia local con la que recuperarlos.
+
+### Fixed
+- **Insignias mudas para un lector de pantalla.** "Rejugar" y "Otra oportunidad" eran un `<span>` con
+  `aria-label`; un span sin rol es `generic` y ARIA prohíbe nombrarlo, así que la etiqueta se descartaba y esas
+  celdas no anunciaban nada. Lo destapó la auditoría con axe sobre el render, que es lo único que puede verlo:
+  el linter lee JSX estático y el rol resulta al pintar.
+- **Contraste insuficiente en la pestaña inactiva** en cinco de las seis paletas oscuras (entre 4,00 y 4,28
+  sobre el 4,5 que exige la AA). Corregido subiendo solo la luminosidad de `--text-dim`, con el tono y la
+  saturación de cada identidad intactos; `seaofstars` ya cumplía.
+- **Los años de un juego se muestran del más reciente al más antiguo.** Con más de tres, el truncado de la fila
+  dejaba ver los tres más viejos justo cuando lo interesante es el último.
+
+### Performance
+- **La copia en `localStorage` sale del hilo crítico.** Se escribía la biblioteca entera —`JSON.stringify` más
+  `setItem`, ambos síncronos— en cada edición y en cada persistencia del ciclo de sync. Ahora IndexedDB se
+  escribe inmediato y la copia de `localStorage` se aplaza a un hueco ocioso, fundiendo las ráfagas en una sola
+  escritura. Con volcado síncrono en `pagehide`/`visibilitychange` para no perder la última edición, y los
+  lectores servidos desde memoria mientras está pendiente, así que el aplazamiento es invisible y **la
+  precedencia de arranque entre almacenes no cambia**. Además, un fallo de cuota ya no se traga en silencio.
+
+### Tests
+- **Auditoría de accesibilidad sobre el render** (`@axe-core/playwright`): 6 paletas × 2 temas sobre la lista
+  con una fila desplegada. De 1 a 15 recorridos end-to-end.
+- Pruebas del esquema del gist de juegos, del módulo de App Check y de la escritura diferida del estado local.
+
+### Changed
+- **El linter ya vigila lo que más caro ha salido.** `eslint-plugin-react-hooks` (`rules-of-hooks` no encontró
+  ni un error; quedan 14 avisos de `exhaustive-deps` por revisar) y cuatro reglas **tipadas** sobre `model` y
+  `viewmodel`: `no-floating-promises`, `no-misused-promises`, `await-thenable` y `require-await`. Destaparon 12
+  promesas sueltas, todas de `navigate()`, que en react-router 7 devuelve promesa.
+- **Node 22 en CI y en `engines`**: la 20 salió de soporte en abril de 2026, así que el CI corría sobre un
+  runtime sin parches. Es además el mínimo de html-validate 11.
+- Once dependencias al día dentro de rango, más jest-dom 7 y html-validate 11. **TypeScript 7 y ESLint 10 se
+  quedan fuera a propósito**: `@typescript-eslint` exige `typescript <6.1.0`, y `eslint-plugin-react`/`jsx-a11y`
+  aún no aceptan ESLint 10. Subirlos rompería el análisis tipado recién puesto.
+- **La pestaña "Perfil" pasa a llamarse "Estadísticas"** y se mueve a la derecha del todo. La ruta sigue siendo
+  `/perfil`.
+- Red de seguridad en `pre-push` (tipos, linter y pruebas) versionada en `.githooks/`, activada sola con
+  `npm install`. Prettier queda configurado pero **sin aplicar**: el barrido tocaría 168 de 294 ficheros y
+  merece su propio commit.
+
 ### Added
 - **Panel "Perfil" (`/perfil`), nueva pestaña de la barra inferior**: la biblioteca en números —juegos, horas,
   nota media y partida más larga, año a año (con conmutador juegos/horas), distribución de notas, ratio de
