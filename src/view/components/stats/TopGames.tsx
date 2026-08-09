@@ -1,10 +1,11 @@
 import { memo, type CSSProperties } from 'react';
 import { UI_MESSAGES } from '../../../core/constants/labels';
 import { ScoreDisplay } from '../ScoreDisplay';
-import { RadialBars } from './RadialBars';
+import { ExplodedRose } from './ExplodedRose';
 import { DonutShare } from './DonutShare';
-import { Lollipop } from './Lollipop';
+import { ShineRows } from './ShineRows';
 import { formatDecimal, formatHours } from './format';
+import { GRADE_MAX, hueFromGrade } from '../../../core/utils/scoreScale';
 import type { TopSummary } from '../../../core/stats/types';
 import type { ScoreScale } from '../../../core/utils/scoreScale';
 
@@ -49,19 +50,20 @@ export const TopGames = memo(function TopGames({ top, scale, average, showRest =
 
   return (
     <>
+      {/* El puesto va de MARCA DE AGUA al fondo de su tarjeta: da la jerarquía del podio sin robarle sitio al
+          nombre, que es lo que se viene a leer. El metal lo dice además con palabras, para no depender del color. */}
       <ol className="podium">
         {top.podium.map((game, index) => (
           <li key={game.id} className={`podium-step is-${MEDALS[index]}`} style={{ '--i': index } as CSSProperties}>
-            <span className="podium-pos" aria-hidden="true">{index + 1}</span>
-            <span className="podium-body">
-              <span className="podium-name" title={game.name}>{game.name}</span>
-              <span className="podium-meta">
-                <ScoreDisplay game={{ grade: game.grade }} />
-                {game.replays > 1 ? (
-                  <b className="podium-replays" title={L.replaysTitle(game.replays)}>{L.replays(game.replays)}</b>
-                ) : null}
-                {game.hours > 0 ? <small>{L.hours(formatHours(game.hours))}</small> : null}
-              </span>
+            <span className="podium-ghost" aria-hidden="true">{index + 1}</span>
+            <span className="podium-medal">{L.medals[index]}</span>
+            <span className="podium-name" title={game.name}>{game.name}</span>
+            <span className="podium-meta">
+              <ScoreDisplay game={{ grade: game.grade }} />
+              {game.replays > 1 ? (
+                <b className="podium-replays" title={L.replaysTitle(game.replays)}>{L.replays(game.replays)}</b>
+              ) : null}
+              {game.hours > 0 ? <small>{L.hours(formatHours(game.hours))}</small> : null}
             </span>
           </li>
         ))}
@@ -77,18 +79,21 @@ export const TopGames = memo(function TopGames({ top, scale, average, showRest =
       {showRest && rest.length ? (
         <section>
           <h3>{L.ranked}</h3>
+          {/* Misma receta que el podio —puesto al fondo— y una barra de nota al pie: puestas en rejilla, las
+              barras dejan ver de un vistazo cómo caen las notas del cuarto al quince. */}
           <ol className="top-chips">
             {rest.map((game, index) => (
               <li key={game.id} style={{ '--i': index } as CSSProperties}>
-                <span className="top-chip-pos" aria-hidden="true">{index + top.podium.length + 1}</span>
-                <span className="top-chip-body">
-                  <span className="top-chip-name" title={game.name}>{game.name}</span>
-                  <span className="top-chip-meta">
-                    <ScoreDisplay game={{ grade: game.grade }} />
-                    {game.replays > 1 ? (
-                      <b className="podium-replays" title={L.replaysTitle(game.replays)}>{L.replays(game.replays)}</b>
-                    ) : null}
-                  </span>
+                <span className="top-chip-ghost" aria-hidden="true">{index + top.podium.length + 1}</span>
+                <span className="top-chip-name" title={game.name}>{game.name}</span>
+                <span className="top-chip-meta">
+                  <ScoreDisplay game={{ grade: game.grade }} />
+                  {game.replays > 1 ? (
+                    <b className="podium-replays" title={L.replaysTitle(game.replays)}>{L.replays(game.replays)}</b>
+                  ) : null}
+                </span>
+                <span className="top-chip-bar" aria-hidden="true">
+                  <i style={{ width: `${(game.grade / GRADE_MAX) * 100}%`, '--dot-hue': String(hueFromGrade(game.grade)) } as CSSProperties} />
                 </span>
               </li>
             ))}
@@ -99,7 +104,7 @@ export const TopGames = memo(function TopGames({ top, scale, average, showRest =
       <div className="stats-split">
         <section>
           <h3>{L.genres}</h3>
-          <RadialBars tags={top.genres} total={top.sample} />
+          <ExplodedRose tags={top.genres} total={top.sample} />
         </section>
         <section>
           <h3>{L.platforms}</h3>
@@ -110,7 +115,7 @@ export const TopGames = memo(function TopGames({ top, scale, average, showRest =
       {top.byGenre.length ? (
         <section>
           <h3>{L.byGenre}</h3>
-          <Lollipop rows={top.byGenre} average={average} scale={scale} />
+          <ShineRows rows={top.byGenre} average={average} scale={scale} />
         </section>
       ) : null}
     </>

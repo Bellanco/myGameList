@@ -108,10 +108,10 @@ describe('StatsHub', () => {
     scale = 'stars';
   });
 
-  it('describe el aro de completados con su reparto', () => {
+  it('describe el cuadro de completados con su reparto', () => {
     render(<StatsHub games={SAMPLE} />);
 
-    expect(screen.getByRole('img', { name: L.ratio.donutAria(67, 2, 1) })).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: L.ratio.gaugeAria(67, 2, 1) })).toBeInTheDocument();
   });
 });
 
