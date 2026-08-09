@@ -59,9 +59,10 @@ describe('computeStats', () => {
       ],
     }));
 
+    // Del más reciente al más antiguo (ver `computeStats`): el año en curso es lo primero que se quiere mirar.
     expect(stats.years).toEqual([
-      { year: 2019, completed: 1, hours: 10 },
       { year: 2023, completed: 1, hours: 100 },
+      { year: 2019, completed: 1, hours: 10 },
     ]);
     // El total del gráfico sigue cuadrando con las horas de completados: no se pierde ni se duplica nada.
     expect(stats.years.reduce((sum, bucket) => sum + bucket.hours, 0)).toBe(stats.completedHours);

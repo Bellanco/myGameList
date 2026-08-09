@@ -1,5 +1,5 @@
 /*
-  Content-Security-Policy: default-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'; object-src 'none'; script-src 'self' 'sha256-u65XiyDU47Y8SJAE/q5MIyf3Vrcg7AZWhf/kbsnro6I=' https://static.cloudflareinsights.com https://www.googletagmanager.com https://apis.google.com https://www.google.com https://www.gstatic.com; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https://lh3.googleusercontent.com https://*.googleusercontent.com https://*.githubusercontent.com https://*.steamusercontent.com https://steamuserimages-a.akamaihd.net https://*.steamstatic.com https://*.playstation.net https://*.xboxlive.com; media-src 'self' https://*.githubusercontent.com https://*.steamusercontent.com https://steamuserimages-a.akamaihd.net https://*.steamstatic.com https://*.playstation.net https://*.xboxlive.com; connect-src 'self' https://api.github.com https://firestore.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://www.googleapis.com https://firebase.googleapis.com https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com https://www.google-analytics.com; frame-src https://accounts.google.com https://*.firebaseapp.com https://www.google.com; worker-src 'self' blob:; manifest-src 'self'; upgrade-insecure-requests
+  Content-Security-Policy: default-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'; object-src 'none'; script-src 'self' 'sha256-u65XiyDU47Y8SJAE/q5MIyf3Vrcg7AZWhf/kbsnro6I=' https://static.cloudflareinsights.com https://www.googletagmanager.com https://apis.google.com https://www.google.com https://www.gstatic.com; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https://lh3.googleusercontent.com https://*.googleusercontent.com https://*.githubusercontent.com https://*.steamusercontent.com https://steamuserimages-a.akamaihd.net https://*.steamstatic.com https://*.playstation.net https://*.xboxlive.com; media-src 'self' https://*.githubusercontent.com https://*.steamusercontent.com https://steamuserimages-a.akamaihd.net https://*.steamstatic.com https://*.playstation.net https://*.xboxlive.com; connect-src 'self' https://www.google.com https://api.github.com https://firestore.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://www.googleapis.com https://firebase.googleapis.com https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com https://www.google-analytics.com; frame-src https://accounts.google.com https://*.firebaseapp.com https://www.google.com; worker-src 'self' blob:; manifest-src 'self'; upgrade-insecure-requests
   Strict-Transport-Security: max-age=15552000
   X-Frame-Options: DENY
   X-Content-Type-Options: nosniff
@@ -11,8 +11,11 @@
 
 # reCAPTCHA (App Check): `www.google.com` + `www.gstatic.com` en `script-src` y `www.google.com` en `frame-src`.
 # Sin estas tres entradas el script no carga, App Check no consigue token y —una vez activada la exigencia en la
-# consola— TODA petición a Firestore responde 403. `connect-src` no hace falta tocarlo: el endpoint
-# `firebaseappcheck.googleapis.com` ya entra por el comodín `https://*.googleapis.com`.
+# consola— TODA petición a Firestore responde 403.
+# `connect-src` necesita ADEMÁS `www.google.com`: reCAPTCHA no solo carga su script, también hace XHR a
+# `https://www.google.com/recaptcha/api2/…` (p. ej. `/clr`). En la primera pasada se dio por bueno que
+# bastaba el comodín `*.googleapis.com` —que solo cubre el canje de App Check en
+# `firebaseappcheck.googleapis.com`— y en producción salieron cuatro violaciones de CSP seguidas.
 # Se pueden borrar las tres a la vez el día que se retire App Check (ver `model/repository/appCheckRepository`).
 # Ojo: NO implican ninguna petición por sí solas. reCAPTCHA solo se carga cuando hay sesión de Google iniciada.
 
