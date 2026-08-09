@@ -259,7 +259,6 @@ export const UI_MESSAGES = {
       empty: 'Todavía no has puntuado ningún juego.',
       ranked: 'El resto de tu top',
       byGenre: 'Dónde brillas',
-      byGenreHint: (min: number) => `Nota media por género, con al menos ${min} juegos puntuados.`,
       genreCount: (count: number) => `${count} juegos`,
       donutCenter: 'mejores',
       yourAverage: 'tu media',
@@ -269,7 +268,8 @@ export const UI_MESSAGES = {
       avgGrade: (count: number) => ` de nota media en tus ${count} mejores`,
       avgHours: ' de media, cada uno',
       cutoff: ' es el listón para entrar',
-      genres: (count: number) => `Géneros de tus ${count} mejores`,
+      genres: 'Tus mejores géneros',
+      genresHint: (count: number) => `Cada anillo es un género; la vuelta que da es cuántos de tus ${count} mejores lo son.`,
       platforms: 'Dónde los juegas',
     },
     // Pestañas General / año. Solo se listan los años con juegos completados.

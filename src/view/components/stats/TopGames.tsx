@@ -1,6 +1,5 @@
 import { memo, type CSSProperties } from 'react';
 import { UI_MESSAGES } from '../../../core/constants/labels';
-import { GENRE_GRADE_MIN } from '../../../core/stats/computeStats';
 import { ScoreDisplay } from '../ScoreDisplay';
 import { RadialBars } from './RadialBars';
 import { DonutShare } from './DonutShare';
@@ -31,9 +30,14 @@ interface TopGamesProps {
    * y todas las diferencias saldrían en negativo.
    */
   average: number;
+  /**
+   * Si se listan las fichas del resto del top. En la pestaña de un año se apaga: justo debajo va el listado
+   * completo de ese año, y repetir sus doce primeros sería decir dos veces lo mismo.
+   */
+  showRest?: boolean;
 }
 
-export const TopGames = memo(function TopGames({ top, scale, average }: TopGamesProps) {
+export const TopGames = memo(function TopGames({ top, scale, average, showRest = true }: TopGamesProps) {
   if (top.sample === 0) {
     return <p className="stats-empty">{L.empty}</p>;
   }
@@ -70,7 +74,7 @@ export const TopGames = memo(function TopGames({ top, scale, average }: TopGames
       </div>
 
       {/* El resto del top en fichas: doce filas ocupaban media pantalla para decir lo mismo. */}
-      {rest.length ? (
+      {showRest && rest.length ? (
         <section>
           <h3>{L.ranked}</h3>
           <ol className="top-chips">
@@ -94,8 +98,9 @@ export const TopGames = memo(function TopGames({ top, scale, average }: TopGames
 
       <div className="stats-split">
         <section>
-          <h3>{L.genres(top.sample)}</h3>
-          <RadialBars tags={top.genres} />
+          <h3>{L.genres}</h3>
+          <RadialBars tags={top.genres} total={top.sample} />
+          <p className="stats-note">{L.genresHint(top.sample)}</p>
         </section>
         <section>
           <h3>{L.platforms}</h3>
@@ -107,7 +112,6 @@ export const TopGames = memo(function TopGames({ top, scale, average }: TopGames
         <section>
           <h3>{L.byGenre}</h3>
           <Lollipop rows={top.byGenre} average={average} scale={scale} />
-          <p className="stats-note">{L.byGenreHint(GENRE_GRADE_MIN)}</p>
         </section>
       ) : null}
     </>

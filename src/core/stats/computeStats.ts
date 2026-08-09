@@ -46,12 +46,11 @@ export const ABANDON_RATE_MIN = 3;
 export const STATS_SHORTLIST = 5;
 
 /**
- * Cuántos juegos forman "tu élite" en el retrato del top. Diez es suficiente para que los géneros repetidos
- * signifiquen algo y bastante poco como para que sigan siendo tus favoritos y no media biblioteca.
+ * Cuántos juegos forman "tu élite": los que se listan Y los que alimentan el agregado. Es un solo número a
+ * propósito — si la pantalla enseña quince títulos, los géneros y las plataformas tienen que ser los de esos
+ * quince, no los de un subconjunto que nadie ve.
  */
-export const STATS_TOP_SIZE = 10;
-/** Cuántos títulos se listan en el ranking general (el podio son los tres primeros de esta lista). */
-export const STATS_TOP_LIST = 15;
+export const STATS_TOP_SIZE = 15;
 /** Juegos puntuados que necesita un género para que su nota media entre en el ranking. */
 export const GENRE_GRADE_MIN = 3;
 /** Cuántos suben al podio. */
@@ -122,7 +121,7 @@ function byRank(a: GameRef, b: GameRef): number {
  * Los géneros y las plataformas se cuentan SOLO dentro de ese top, que es justo lo que lo hace interesante:
  * comparado con el reparto general, enseña si lo que más te gusta coincide con lo que más juegas.
  */
-function topSummary(games: GameRef[], listSize = STATS_TOP_LIST, limit = STATS_TOP_SIZE): TopSummary {
+function topSummary(games: GameRef[], limit = STATS_TOP_SIZE): TopSummary {
   const scored = games.filter((game) => game.grade > 0).sort(byRank);
   const ranked = scored.slice(0, limit);
   if (ranked.length === 0) {
@@ -161,7 +160,7 @@ function topSummary(games: GameRef[], listSize = STATS_TOP_LIST, limit = STATS_T
 
   return {
     podium: ranked.slice(0, PODIUM),
-    ranked: scored.slice(0, listSize),
+    ranked,
     byGenre: [...perGenre.entries()]
       .filter(([, entry]) => entry.games >= GENRE_GRADE_MIN)
       .map(([tag, entry]) => ({ tag, games: entry.games, avgGrade: entry.sum / entry.games }))
@@ -256,7 +255,7 @@ function closeYear(acc: YearAccumulator): YearSummary {
     grades: acc.grades,
     best: games[0]?.grade > 0 ? games[0] : null,
     longest,
-    top: topSummary(games, PODIUM),
+    top: topSummary(games),
     games,
   };
 }
