@@ -3,14 +3,19 @@
 // (mismo criterio que los skins de tema, ver `paletteSkin.ts`).
 //
 // Todo el color sale de las variables de la paleta activa (CAPA 2, `_base.scss`): el panel se ve correcto en
-// los cinco temas y en claro/oscuro sin una sola regla por tema.
+// los cinco temas y en claro/oscuro sin una sola regla por tema. En particular, cada lista tiene un color
+// SEMÁNTICO fijo en todo el panel —completados verde, abandonados rojo, en curso ámbar, próximos acento— para
+// que leyenda, barras apiladas y aro digan lo mismo sin tener que releer la leyenda en cada gráfico.
 
 /* Rejilla y tarjetas PROPIAS, en vez de reutilizar `.settings-hub`/`.settings-card`: aquellas reparten sus
    tarjetas en dos columnas con reglas repartidas por varios breakpoints de `_layout.scss`, y heredarlas ataba el
-   reparto de este panel —qué ocupa fila entera y qué media— a decisiones de la pantalla de Ajustes. El aspecto de
-   la tarjeta es el mismo; lo que no se hereda es su rejilla. */
+   reparto de este panel —qué ocupa fila entera y qué media— a decisiones de la pantalla de Ajustes. */
 .stats-hub {
-  --stats-bar-radius: 6px;
+  --stats-radius: 8px;
+  --stats-c: var(--success);
+  --stats-v: var(--danger);
+  --stats-e: var(--fg-amber);
+  --stats-p: var(--steam);
 
   display: grid;
   grid-template-columns: repeat(12, minmax(0, 1fr));
@@ -21,16 +26,39 @@
   grid-column: span 12;
   display: flex;
   flex-direction: column;
-  gap: .8rem;
-  padding: 1rem;
-  background: var(--surface);
+  gap: .85rem;
+  padding: 1.1rem 1.15rem;
+  /* Degradado muy leve en lugar de un plano: da profundidad sin inventar un color que la paleta no tenga. */
+  background: linear-gradient(160deg, var(--surface-elevated), var(--surface) 70%);
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
   box-shadow: var(--shadow);
   min-width: 0;
 }
 
-.stats-card h2 { font-size: 1rem; }
+/* Barrita de acento delante del título: ancla la vista al empezar cada bloque. */
+.stats-card h2 {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  font-size: 1rem;
+}
+
+.stats-card h2::before {
+  content: "";
+  width: 3px;
+  height: 1em;
+  border-radius: 2px;
+  background: var(--steam);
+}
+
+.stats-card h3 {
+  margin: 0 0 .5rem;
+  font-size: .82rem;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  color: var(--text-muted);
+}
 
 .stats-card-sub {
   margin: 0;
@@ -39,54 +67,78 @@
   line-height: 1.4;
 }
 
-/* En pantallas anchas, notas y ratio comparten fila; el resumen, el gráfico anual y los géneros ocupan fila
-   entera (son los que necesitan el ancho). */
 @media (min-width: 62rem) {
   .stats-card-half { grid-column: span 6; }
 }
+
+/* Dos columnas dentro de una tarjeta (razones + géneros, oldest + recent). */
+.stats-split {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+}
+
+@media (min-width: 46rem) {
+  .stats-split { grid-template-columns: 1fr 1fr; }
+}
+
+/* ---- Selector de periodo ------------------------------------------------------------------------------ */
+
+/* Con muchos años la fila se desplaza en horizontal en vez de romperse en varias líneas: así el conmutador
+   ocupa siempre lo mismo y "General" queda a la vista. */
+.scope-tabs {
+  grid-column: span 12;
+  display: flex;
+  gap: .4rem;
+  overflow-x: auto;
+  padding-bottom: .15rem;
+  scrollbar-width: thin;
+}
+
+.scope-tabs .btn-toggle { flex: 0 0 auto; }
 
 /* ---- Cifras destacadas ------------------------------------------------------------------------------- */
 
 .stats-tiles {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(9.5rem, 1fr));
-  gap: .8rem;
+  gap: .7rem;
 }
 
 .stat-tile {
   display: flex;
   flex-direction: column;
   gap: .15rem;
-  padding: .7rem .8rem;
+  padding: .75rem .85rem;
   border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  background: var(--surface-elevated);
+  border-radius: var(--stats-radius);
+  background: var(--surface-soft);
   min-width: 0;
 }
 
 .stat-tile-label {
-  font-size: .74rem;
+  font-size: .72rem;
   text-transform: uppercase;
-  letter-spacing: .04em;
+  letter-spacing: .05em;
   color: var(--text-muted);
 }
 
 .stat-tile-value {
-  font-size: 1.7rem;
+  font-size: 1.75rem;
   line-height: 1.1;
   font-weight: 700;
+  font-variant-numeric: tabular-nums;
   min-width: 0;
 }
 
 .stat-tile-unit {
-  font-size: .9rem;
+  font-size: .85rem;
   font-weight: 500;
   color: var(--text-muted);
   margin-left: .15rem;
 }
 
-/* Valor que es TEXTO (el nombre del juego más largo): no puede competir en tamaño con las cifras ni desbordar
-   la tarjeta, así que baja de cuerpo y se recorta con puntos suspensivos. */
+/* Valor que es TEXTO (el nombre de un juego): no puede competir en tamaño con las cifras ni desbordar. */
 .stat-tile-text {
   display: block;
   font-size: 1rem;
@@ -97,7 +149,7 @@
 }
 
 .stat-tile-hint {
-  font-size: .76rem;
+  font-size: .75rem;
   color: var(--text-muted);
 }
 
@@ -134,6 +186,7 @@
 .year-col-value {
   font-size: .76rem;
   font-weight: 600;
+  font-variant-numeric: tabular-nums;
   color: var(--text-muted);
 }
 
@@ -142,25 +195,23 @@
   align-items: flex-end;
   width: 100%;
   height: 8rem;
-  border-radius: var(--stats-bar-radius);
+  border-radius: var(--stats-radius);
   background: var(--score-track);
 }
 
 .year-col-bar {
   width: 100%;
   height: var(--bar-height, 0%);
-  border-radius: var(--stats-bar-radius);
-  background: linear-gradient(180deg, var(--steam) 0%, rgba(var(--steam-rgb), .55) 100%);
-  transition: height .25s ease;
+  border-radius: var(--stats-radius);
+  background: linear-gradient(180deg, var(--steam) 0%, rgba(var(--steam-rgb), .5) 100%);
+  box-shadow: 0 0 12px rgba(var(--steam-rgb), .25);
+  transition: height .3s cubic-bezier(.22, 1, .36, 1);
 }
 
 /* El cajón "sin año" no es un año más: se pinta apagado y rayado para que no se lea como parte de la serie. */
 .year-col-bar.is-undated {
-  background: repeating-linear-gradient(
-    135deg,
-    var(--text-dim) 0 4px,
-    transparent 4px 8px
-  );
+  background: repeating-linear-gradient(135deg, var(--text-dim) 0 4px, transparent 4px 8px);
+  box-shadow: none;
   opacity: .7;
 }
 
@@ -170,7 +221,93 @@
   white-space: nowrap;
 }
 
-/* ---- Barras horizontales (notas y géneros) ------------------------------------------------------------ */
+/* ---- Evolución del backlog (columnas apiladas por mes) ------------------------------------------------ */
+
+.stats-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .35rem .9rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: .78rem;
+  color: var(--text-muted);
+}
+
+.stats-legend li {
+  display: flex;
+  align-items: center;
+  gap: .35rem;
+}
+
+.stats-legend-dot {
+  width: .6rem;
+  height: .6rem;
+  border-radius: 3px;
+}
+
+.stats-legend-dot.is-c { background: var(--stats-c); }
+.stats-legend-dot.is-v { background: var(--stats-v); }
+.stats-legend-dot.is-e { background: var(--stats-e); }
+.stats-legend-dot.is-p { background: var(--stats-p); }
+
+.month-chart {
+  display: flex;
+  align-items: flex-end;
+  gap: .25rem;
+  overflow-x: auto;
+  padding-bottom: .2rem;
+}
+
+.month-col {
+  display: flex;
+  flex: 1 1 1.4rem;
+  flex-direction: column;
+  align-items: center;
+  gap: .3rem;
+  min-width: 1.4rem;
+  max-width: 3rem;
+}
+
+.month-col-track {
+  display: flex;
+  align-items: flex-end;
+  width: 100%;
+  height: 7.5rem;
+  border-radius: 5px;
+  background: var(--score-track);
+}
+
+.month-col-stack {
+  display: flex;
+  flex-direction: column-reverse;
+  width: 100%;
+  border-radius: 5px;
+  overflow: hidden;
+  transition: height .3s cubic-bezier(.22, 1, .36, 1);
+}
+
+.month-col-seg {
+  display: block;
+  height: var(--seg, 0%);
+  width: 100%;
+}
+
+.month-col-seg.is-c { background: var(--stats-c); }
+.month-col-seg.is-v { background: var(--stats-v); }
+.month-col-seg.is-e { background: var(--stats-e); }
+.month-col-seg.is-p { background: var(--stats-p); }
+
+.month-col-label {
+  font-size: .66rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+/* Se reserva el hueco de las etiquetas que no se pintan: si no, las columnas rotuladas quedarían más altas. */
+.month-col-label.is-hidden { visibility: hidden; }
+
+/* ---- Barras horizontales (notas, géneros, razones) ---------------------------------------------------- */
 
 .stats-bars {
   display: flex;
@@ -196,8 +333,8 @@
 }
 
 .stats-bar-track {
-  height: .85rem;
-  border-radius: var(--stats-bar-radius);
+  height: .8rem;
+  border-radius: var(--stats-radius);
   background: var(--score-track);
   overflow: hidden;
 }
@@ -206,14 +343,20 @@
   display: block;
   width: var(--bar-width, 0%);
   height: 100%;
-  border-radius: var(--stats-bar-radius);
+  border-radius: var(--stats-radius);
   /* Mismo tono rojo→verde y la misma luminosidad por tema (--acc-l) que el aro de puntuación: el color dice
      la nota, no decora. */
-  background: hsl(var(--bar-hue, 135) 58% var(--acc-l));
-  transition: width .25s ease;
+  background: linear-gradient(90deg, hsl(var(--bar-hue, 135) 58% var(--acc-l)) 0%, hsl(var(--bar-hue, 135) 62% calc(var(--acc-l) + 8%)) 100%);
+  transition: width .3s cubic-bezier(.22, 1, .36, 1);
 }
 
-.stats-bar-fill.is-accent { background: var(--steam); }
+.stats-bar-fill.is-accent {
+  background: linear-gradient(90deg, var(--steam), var(--steam-hover));
+}
+
+.stats-bar-fill.is-danger {
+  background: linear-gradient(90deg, rgba(var(--danger-rgb), .75), var(--danger));
+}
 
 .stats-bar-value {
   display: flex;
@@ -222,12 +365,66 @@
   font-size: .82rem;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 
 .stats-bar-value small {
   font-size: .72rem;
   font-weight: 500;
   color: var(--text-muted);
+}
+
+/* ---- Figura de géneros (hexágono) --------------------------------------------------------------------- */
+
+.genre-radar {
+  display: flex;
+  justify-content: center;
+}
+
+.genre-radar-svg {
+  width: 100%;
+  max-width: 20rem;
+  height: auto;
+  overflow: visible;
+}
+
+.genre-radar-ring {
+  fill: none;
+  stroke: var(--border);
+  stroke-width: 1;
+  opacity: .7;
+}
+
+.genre-radar-spoke {
+  stroke: var(--border);
+  stroke-width: 1;
+  opacity: .5;
+}
+
+.genre-radar-stop-top { stop-color: var(--steam); stop-opacity: .55; }
+.genre-radar-stop-bottom { stop-color: var(--steam); stop-opacity: .18; }
+
+.genre-radar-shape {
+  stroke: var(--steam);
+  stroke-width: 2;
+  stroke-linejoin: round;
+}
+
+.genre-radar-dot {
+  fill: var(--steam);
+  stroke: var(--surface);
+  stroke-width: 1.5;
+}
+
+.genre-radar-label {
+  fill: var(--text);
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.genre-radar-label-num {
+  fill: var(--text-muted);
+  font-weight: 500;
 }
 
 /* ---- Completados vs abandonados ----------------------------------------------------------------------- */
@@ -243,20 +440,17 @@
   position: relative;
   display: grid;
   place-items: center;
-  width: 7rem;
-  height: 7rem;
+  width: 7.5rem;
+  height: 7.5rem;
   border-radius: 50%;
   /* Un solo elemento: el sector de completados va en `conic-gradient` y el agujero lo hace el ::after. */
-  background: conic-gradient(
-    var(--success) calc(var(--ratio-pct, 0) * 1%),
-    var(--danger) 0
-  );
+  background: conic-gradient(var(--stats-c) calc(var(--ratio-pct, 0) * 1%), var(--stats-v) 0);
 }
 
 .ratio-donut::after {
   content: "";
   position: absolute;
-  inset: 14px;
+  inset: 15px;
   border-radius: 50%;
   background: var(--surface);
 }
@@ -265,14 +459,15 @@
 .ratio-donut-num {
   position: relative;
   z-index: 1;
-  font-size: 1.35rem;
+  font-size: 1.5rem;
   font-weight: 700;
+  font-variant-numeric: tabular-nums;
 }
 
 .ratio-legend {
   display: flex;
   flex-direction: column;
-  gap: .4rem;
+  gap: .45rem;
   margin: 0;
   padding: 0;
   list-style: none;
@@ -293,21 +488,72 @@
   border-radius: 50%;
 }
 
-.ratio-dot.is-completed { background: var(--success); }
-.ratio-dot.is-abandoned { background: var(--danger); }
+.ratio-dot.is-completed { background: var(--stats-c); }
+.ratio-dot.is-abandoned { background: var(--stats-v); }
+
+/* ---- Listados de juegos -------------------------------------------------------------------------------- */
+
+.game-ref-list {
+  display: flex;
+  flex-direction: column;
+  gap: .2rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: game-rank;
+}
+
+.game-ref-list li {
+  display: flex;
+  align-items: center;
+  gap: .6rem;
+  padding: .35rem .5rem;
+  border-radius: 6px;
+  font-size: .86rem;
+}
+
+/* Cebra suave: con quince juegos seguidos, la vista necesita un raíl al que agarrarse. */
+.game-ref-list li:nth-child(odd) { background: var(--surface-soft); }
+
+.game-ref-rank {
+  flex: 0 0 auto;
+  min-width: 1.35rem;
+  font-size: .74rem;
+  font-weight: 700;
+  color: var(--text-dim);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.game-ref-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.game-ref-meta {
+  flex: 0 0 auto;
+  font-size: .76rem;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
 
 /* ---- Textos auxiliares -------------------------------------------------------------------------------- */
 
 .stats-empty,
 .stats-note {
-  font-size: .82rem;
+  font-size: .8rem;
   color: var(--text-muted);
   margin: 0;
+  line-height: 1.4;
 }
 
 .stats-note { font-style: italic; }
 
 @media (prefers-reduced-motion: reduce) {
   .year-col-bar,
+  .month-col-stack,
   .stats-bar-fill { transition: none; }
 }

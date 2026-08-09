@@ -25,6 +25,23 @@ export function formatDecimal(value: number): string {
   return AVERAGE.format(Number.isFinite(value) ? value : 0);
 }
 
+const MONTH_SHORT = new Intl.DateTimeFormat('es-ES', { month: 'short' });
+const MONTH_YEAR = new Intl.DateTimeFormat('es-ES', { month: 'short', year: 'numeric' });
+
+/** Etiqueta corta de un mes `AAAA-MM` para el eje del gráfico ("ene 24"). */
+export function formatMonthLabel(key: string): string {
+  const match = /^(\d{4})-(\d{2})$/.exec(key);
+  if (!match) return key;
+  const date = new Date(Number(match[1]), Number(match[2]) - 1, 1);
+  return `${MONTH_SHORT.format(date).replace('.', '')} ${match[1].slice(2)}`;
+}
+
+/** Mes y año de una marca de tiempo ("may 2024"); vacío si no hay fecha utilizable. */
+export function formatMonthYear(ms: number): string {
+  if (!Number.isFinite(ms) || ms <= 0) return '';
+  return MONTH_YEAR.format(new Date(ms)).replace('.', '');
+}
+
 /** Porcentaje entero, para el aro de completados. */
 export function formatPercent(value: number): number {
   return Math.round(Number.isFinite(value) ? value : 0);

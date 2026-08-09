@@ -1,5 +1,6 @@
-// Formas del resumen de estadísticas (panel "Perfil"). Todo es DERIVADO de las listas: no hay ningún campo
-// nuevo en `GameItem`, nada se persiste y nada se publica al canal social. Ver `computeStats`.
+// Formas del resumen de estadísticas (panel "Perfil"). Todo es DERIVADO de las listas que ya están en memoria:
+// no hay ningún campo nuevo en `GameItem`, nada se persiste, nada se publica y NO se hace una sola consulta de
+// red — la fuente es el gist de juegos que la app ya tiene cargado. Ver `computeStats`.
 import type { TabId } from '../../model/types/game';
 
 /** Un punto del eje temporal. `year: null` = juegos completados a los que no se les registró año. */
@@ -11,7 +12,7 @@ export interface YearBucket {
   hours: number;
 }
 
-/** Una etiqueta (género o plataforma) con su peso en la biblioteca. */
+/** Una etiqueta (género, plataforma o razón de abandono) con su peso. */
 export interface TagBucket {
   tag: string;
   games: number;
@@ -28,6 +29,74 @@ export interface GradeBucket {
   count: number;
 }
 
+/** Referencia ligera a un juego, para rankings y listados del panel. */
+export interface GameRef {
+  id: number;
+  name: string;
+  /** Nota efectiva 0–100. En "Próximos" no es una valoración, sino el INTERÉS previo. */
+  grade: number;
+  hours: number;
+  /** Fecha de llegada a la lista actual (`listedAt`). */
+  at: number;
+}
+
+/** Entradas a cada lista en un mes, derivadas de `listedAt`. `m` es `AAAA-MM`. */
+export interface ArrivalPoint {
+  m: string;
+  c: number;
+  v: number;
+  e: number;
+  p: number;
+}
+
+/** Resumen completo de un año concreto: es lo que pinta la pestaña de ese año. */
+export interface YearSummary {
+  year: number;
+  completed: number;
+  hours: number;
+  scored: number;
+  avgGrade: number;
+  genres: TagBucket[];
+  platforms: TagBucket[];
+  grades: GradeBucket[];
+  /** Mejor valorado y más largo del año. */
+  best: GameRef | null;
+  longest: GameRef | null;
+  /** Los juegos del año, de mejor a peor nota. */
+  games: GameRef[];
+}
+
+/** Lista de la vergüenza: qué abandonas, por qué y cuánto te cuesta. */
+export interface ShameSummary {
+  total: number;
+  hours: number;
+  scored: number;
+  avgGrade: number;
+  /** Marcados como "dar otra oportunidad". */
+  retry: number;
+  genres: TagBucket[];
+  /** Razones de abandono más repetidas (campo `reasons`, exclusivo de esta lista). */
+  reasons: TagBucket[];
+  /** Últimos abandonos, por fecha de llegada a la lista. */
+  recent: GameRef[];
+  /** Proporción de abandono por género, solo con géneros que tengan recorrido suficiente. */
+  abandonRate: Array<{ tag: string; abandoned: number; decided: number; percent: number }>;
+}
+
+/** Lista de próximos: qué te espera y desde cuándo. */
+export interface WishlistSummary {
+  total: number;
+  genres: TagBucket[];
+  platforms: TagBucket[];
+  /** La nota de esta lista es el INTERÉS previo, no una valoración. */
+  interest: { count: number; avgGrade: number };
+  /** Compatibles con Steam Deck. */
+  deck: number;
+  /** Últimos en llegar y los que llevan más tiempo esperando. */
+  recent: GameRef[];
+  oldest: GameRef[];
+}
+
 export interface StatsSummary {
   /** Juegos por lista (c/v/e/p), ya descontados los registros sin nombre. */
   counts: Record<TabId, number>;
@@ -42,11 +111,17 @@ export interface StatsSummary {
   completionRatio: { completed: number; abandoned: number; percent: number };
   /** Años ascendentes; el cajón "sin año" (`year: null`), si existe, va al final. */
   years: YearBucket[];
+  /** Resumen por año, de más reciente a más antiguo. Solo años con juegos completados. */
+  byYear: YearSummary[];
+  /** Entradas por mes a cada lista, ascendente. */
+  arrivals: ArrivalPoint[];
   /** Tramos 1–5 estrellas, en orden ascendente. */
   grades: GradeBucket[];
   /** Ordenados de más a menos juegos (desempate por horas y luego alfabético). */
   genres: TagBucket[];
   platforms: TagBucket[];
   /** El juego con más horas de las listas jugadas; null si nadie tiene horas. */
-  longest: { name: string; hours: number } | null;
+  longest: GameRef | null;
+  shame: ShameSummary;
+  wishlist: WishlistSummary;
 }

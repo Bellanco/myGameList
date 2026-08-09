@@ -140,7 +140,7 @@ describe('computeStats', () => {
       p: [game({ id: 3, name: 'Deseado con horas importadas', hours: 500 })],
     }));
 
-    expect(stats.longest).toEqual({ name: 'Larguísimo', hours: 200 });
+    expect(stats.longest).toMatchObject({ id: 2, name: 'Larguísimo', hours: 200 });
   });
 
   it('ignora las filas sin nombre y las horas mal formadas', () => {
@@ -155,5 +155,119 @@ describe('computeStats', () => {
     expect(stats.counts.c).toBe(2);
     expect(stats.totalHours).toBe(0);
     expect(stats.longest).toBeNull();
+  });
+});
+
+// ── Resumen por año, entradas por mes y los dos apartados de listas sin año ──────────────────────────────
+
+describe('computeStats · resumen por año', () => {
+  const stats = computeStats(tabData({
+    c: [
+      game({ id: 1, name: 'Alto', hours: 40, grade: 95, genres: ['RPG'], platforms: ['PC'], years: [2024] }),
+      game({ id: 2, name: 'Bajo', hours: 5, grade: 40, genres: ['Puzles'], platforms: ['Switch'], years: [2024] }),
+      game({ id: 3, name: 'Otro año', hours: 10, grade: 80, genres: ['RPG'], years: [2023] }),
+      game({ id: 4, name: 'Sin año', hours: 3, grade: 70, genres: ['RPG'] }),
+    ],
+  }));
+
+  it('solo lista los años con juegos completados, del más reciente al más antiguo', () => {
+    expect(stats.byYear.map((year) => year.year)).toEqual([2024, 2023]);
+  });
+
+  it('resume cada año con sus propios juegos, géneros y notas', () => {
+    const y2024 = stats.byYear[0];
+
+    expect(y2024.completed).toBe(2);
+    expect(y2024.hours).toBe(45);
+    expect(y2024.avgGrade).toBe(67.5);
+    // Empatados a un juego: manda el que más horas acumula.
+    expect(y2024.genres.map((tag) => tag.tag)).toEqual(['RPG', 'Puzles']);
+    expect(y2024.platforms.map((tag) => tag.tag)).toEqual(['PC', 'Switch']);
+    expect(y2024.grades.find((bucket) => bucket.stars === 5)?.count).toBe(1);
+  });
+
+  it('ordena los juegos del año de mejor a peor nota y destaca el mejor y el más largo', () => {
+    const y2024 = stats.byYear[0];
+
+    expect(y2024.games.map((entry) => entry.name)).toEqual(['Alto', 'Bajo']);
+    expect(y2024.best?.name).toBe('Alto');
+    expect(y2024.longest?.name).toBe('Alto');
+  });
+
+  it('el juego sin año no entra en ninguna pestaña de año', () => {
+    expect(stats.byYear.flatMap((year) => year.games).map((entry) => entry.name)).not.toContain('Sin año');
+  });
+});
+
+describe('computeStats · entradas por mes', () => {
+  it('agrupa por el mes de `listedAt` y separa por lista', () => {
+    const enero = new Date(2026, 0, 10).getTime();
+    const febrero = new Date(2026, 1, 3).getTime();
+
+    const stats = computeStats(tabData({
+      c: [game({ id: 1, name: 'A', listedAt: enero }), game({ id: 2, name: 'B', listedAt: febrero })],
+      p: [game({ id: 3, name: 'C', listedAt: febrero })],
+    }));
+
+    expect(stats.arrivals).toEqual([
+      { m: '2026-01', c: 1, v: 0, e: 0, p: 0 },
+      { m: '2026-02', c: 1, v: 0, e: 0, p: 1 },
+    ]);
+  });
+});
+
+describe('computeStats · lista de la vergüenza', () => {
+  const stats = computeStats(tabData({
+    c: [
+      game({ id: 1, name: 'RPG acabado', genres: ['RPG'] }),
+      game({ id: 2, name: 'Otro RPG', genres: ['RPG'] }),
+      game({ id: 3, name: 'Shooter acabado', genres: ['Shooter'] }),
+    ],
+    v: [
+      game({ id: 10, name: 'Dejado 1', hours: 6, grade: 40, genres: ['RPG'], reasons: ['Falta de tiempo'], retry: true, listedAt: 200 }),
+      game({ id: 11, name: 'Dejado 2', hours: 2, genres: ['RPG'], reasons: ['Falta de tiempo', 'Repetitivo'], listedAt: 300 }),
+    ],
+  }));
+
+  it('resume horas, notas y los que merecen otra oportunidad', () => {
+    expect(stats.shame.total).toBe(2);
+    expect(stats.shame.hours).toBe(8);
+    expect(stats.shame.scored).toBe(1);
+    expect(stats.shame.avgGrade).toBe(40);
+    expect(stats.shame.retry).toBe(1);
+  });
+
+  it('cuenta las razones de abandono, que solo existen en esta lista', () => {
+    expect(stats.shame.reasons[0]).toMatchObject({ tag: 'Falta de tiempo', games: 2 });
+  });
+
+  it('calcula el índice de abandono solo con géneros que tengan recorrido', () => {
+    // RPG: 2 completados + 2 abandonados = 50%. Shooter solo tiene 1 decidido → fuera.
+    expect(stats.shame.abandonRate).toEqual([{ tag: 'RPG', abandoned: 2, decided: 4, percent: 50 }]);
+  });
+
+  it('ordena los últimos abandonos por fecha de llegada a la lista', () => {
+    expect(stats.shame.recent.map((entry) => entry.name)).toEqual(['Dejado 2', 'Dejado 1']);
+  });
+});
+
+describe('computeStats · próximos', () => {
+  const stats = computeStats(tabData({
+    p: [
+      game({ id: 1, name: 'Viejo deseo', genres: ['RPG'], platforms: ['PC'], grade: 80, listedAt: 100 }),
+      game({ id: 2, name: 'Recién llegado', genres: ['RPG'], steamDeck: true, listedAt: 900 }),
+    ],
+  }));
+
+  it('resume el interés previo aparte, sin mezclarlo con las valoraciones', () => {
+    expect(stats.wishlist.interest).toEqual({ count: 1, avgGrade: 80 });
+    // Y esa nota no cuenta como valoración en el resumen general.
+    expect(stats.scored.count).toBe(0);
+  });
+
+  it('distingue los que más esperan de los últimos en llegar', () => {
+    expect(stats.wishlist.oldest[0].name).toBe('Viejo deseo');
+    expect(stats.wishlist.recent[0].name).toBe('Recién llegado');
+    expect(stats.wishlist.deck).toBe(1);
   });
 });

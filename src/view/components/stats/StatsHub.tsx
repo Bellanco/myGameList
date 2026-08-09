@@ -2,10 +2,16 @@ import { memo } from 'react';
 import { UI_MESSAGES } from '../../../core/constants/labels';
 import { useStatsViewModel } from '../../../viewmodel/useStatsViewModel';
 import { StatTile } from './StatTile';
+import { ScopeTabs } from './ScopeTabs';
 import { YearChart } from './YearChart';
+import { YearPanel } from './YearPanel';
+import { GenreRadar } from './GenreRadar';
 import { GradeHistogram } from './GradeHistogram';
+import { BacklogChart } from './BacklogChart';
 import { TagBars } from './TagBars';
 import { RatioDonut } from './RatioDonut';
+import { ShameCard } from './ShameCard';
+import { WishlistCard } from './WishlistCard';
 import { formatCount, formatDecimal, formatHours } from './format';
 import type { TabData } from '../../../model/types/game';
 // La hoja del panel se importa AQUÍ y no desde `index.scss`: como el hub entra por `lazy()`, Vite emite su CSS
@@ -15,13 +21,18 @@ import '../../../styles/stats.scss';
 const L = UI_MESSAGES.stats;
 
 /**
- * Panel "Perfil": la biblioteca en números. Todo lo que se ve aquí es DERIVADO de las listas que ya están en
- * memoria (ver `core/stats/computeStats`): no lee de red, no escribe nada y no publica nada al canal social.
+ * Panel "Perfil": la biblioteca en números, con una vista general y una pestaña por año.
+ *
+ * Todo lo que se ve aquí es DERIVADO de las listas que ya están en memoria (ver `core/stats/computeStats`), es
+ * decir, del gist de juegos que la app ya tiene cargado: ni una consulta de red, ni un gist nuevo, ni una
+ * escritura. La única lectura extra es el histórico mensual del backlog, que vive en el meta local porque no se
+ * puede deducir de los datos.
  */
 export const StatsHub = memo(function StatsHub({ games }: { games: TabData }) {
-  const { stats, scale, yearMetric, setYearMetric, isEmpty } = useStatsViewModel(games);
+  const vm = useStatsViewModel(games);
+  const { stats, scale, scope, yearSummary } = vm;
 
-  if (isEmpty) {
+  if (vm.isEmpty) {
     return (
       <section className="stats-hub" aria-label={UI_MESSAGES.nav.stats}>
         <div className="stats-card">
@@ -38,57 +49,94 @@ export const StatsHub = memo(function StatsHub({ games }: { games: TabData }) {
 
   return (
     <section className="stats-hub" aria-label={UI_MESSAGES.nav.stats}>
-      <div className="stats-card stats-card-tiles">
-        <p className="stats-card-sub">{L.subtitle}</p>
-        <div className="stats-tiles">
-          <StatTile
-            label={L.tiles.games}
-            value={formatCount(stats.totalGames)}
-            hint={L.tiles.gamesHint(counts.e, counts.p)}
-          />
-          <StatTile
-            label={L.tiles.hours}
-            value={formatHours(stats.totalHours)}
-            unit="h"
-            hint={L.tiles.hoursHint(formatHours(stats.completedHours))}
-          />
-          <StatTile
-            label={L.tiles.avgGrade}
-            value={stats.scored.count ? formatDecimal(avgInScale) : L.tiles.noData}
-            unit={stats.scored.count ? (scale === 'grade' ? L.tiles.outOf100 : L.tiles.outOf5) : undefined}
-            hint={stats.scored.count ? L.tiles.avgGradeHint(stats.scored.count) : undefined}
-          />
-          <StatTile
-            label={L.tiles.longest}
-            value={<span className="stat-tile-text">{stats.longest ? stats.longest.name : L.tiles.noData}</span>}
-            hint={stats.longest ? L.tiles.longestHint(formatHours(stats.longest.hours)) : undefined}
-          />
-        </div>
-      </div>
+      <ScopeTabs scope={scope} years={vm.availableYears} onChange={vm.setScope} />
 
-      <div className="stats-card">
-        <h2>{L.years.title}</h2>
-        <p className="stats-card-sub">{L.years.subtitle}</p>
-        <YearChart years={stats.years} metric={yearMetric} onMetricChange={setYearMetric} />
-      </div>
+      {yearSummary ? (
+        <YearPanel summary={yearSummary} scale={scale} />
+      ) : (
+        <>
+          <div className="stats-card stats-card-tiles">
+            <p className="stats-card-sub">{L.subtitle}</p>
+            <div className="stats-tiles">
+              <StatTile
+                label={L.tiles.games}
+                value={formatCount(stats.totalGames)}
+                hint={L.tiles.gamesHint(counts.e, counts.p)}
+              />
+              <StatTile
+                label={L.tiles.hours}
+                value={formatHours(stats.totalHours)}
+                unit="h"
+                hint={L.tiles.hoursHint(formatHours(stats.completedHours))}
+              />
+              <StatTile
+                label={L.tiles.avgGrade}
+                value={stats.scored.count ? formatDecimal(avgInScale) : L.tiles.noData}
+                unit={stats.scored.count ? (scale === 'grade' ? L.tiles.outOf100 : L.tiles.outOf5) : undefined}
+                hint={stats.scored.count ? L.tiles.avgGradeHint(stats.scored.count) : undefined}
+              />
+              <StatTile
+                label={L.tiles.longest}
+                value={<span className="stat-tile-text">{stats.longest ? stats.longest.name : L.tiles.noData}</span>}
+                hint={stats.longest ? L.tiles.longestHint(formatHours(stats.longest.hours)) : undefined}
+              />
+            </div>
+          </div>
 
-      <div className="stats-card stats-card-half">
-        <h2>{L.grades.title}</h2>
-        <p className="stats-card-sub">{L.grades.subtitle}</p>
-        <GradeHistogram grades={stats.grades} scale={scale} />
-      </div>
+          <div className="stats-card">
+            <h2>{L.years.title}</h2>
+            <p className="stats-card-sub">{L.years.subtitle}</p>
+            <YearChart years={stats.years} metric={vm.yearMetric} onMetricChange={vm.setYearMetric} />
+          </div>
 
-      <div className="stats-card stats-card-half">
-        <h2>{L.ratio.title}</h2>
-        <p className="stats-card-sub">{L.ratio.subtitle}</p>
-        <RatioDonut ratio={stats.completionRatio} />
-      </div>
+          <div className="stats-card stats-card-half">
+            <h2>{L.radar.title}</h2>
+            <p className="stats-card-sub">{L.radar.subtitle}</p>
+            <GenreRadar tags={stats.genres} />
+          </div>
 
-      <div className="stats-card">
-        <h2>{L.genres.title}</h2>
-        <p className="stats-card-sub">{L.genres.subtitle}</p>
-        <TagBars tags={stats.genres} />
-      </div>
+          <div className="stats-card stats-card-half">
+            <h2>{L.ratio.title}</h2>
+            <p className="stats-card-sub">{L.ratio.subtitle}</p>
+            <RatioDonut ratio={stats.completionRatio} />
+          </div>
+
+          <div className="stats-card">
+            <h2>{L.backlog.title}</h2>
+            {/* En cuanto el histórico real tiene puntos suficientes, sustituye a la curva derivada; hasta
+                entonces se enseña la aproximación, dicha como tal en el pie del gráfico. */}
+            <p className="stats-card-sub">{vm.hasRealHistory ? L.backlog.realSubtitle : L.backlog.derivedSubtitle}</p>
+            <BacklogChart
+              points={vm.hasRealHistory ? vm.history : stats.arrivals}
+              mode={vm.hasRealHistory ? 'real' : 'derived'}
+            />
+          </div>
+
+          <div className="stats-card stats-card-half">
+            <h2>{L.grades.title}</h2>
+            <p className="stats-card-sub">{L.grades.subtitle}</p>
+            <GradeHistogram grades={stats.grades} scale={scale} />
+          </div>
+
+          <div className="stats-card stats-card-half">
+            <h2>{L.genres.title}</h2>
+            <p className="stats-card-sub">{L.genres.subtitle}</p>
+            <TagBars tags={stats.genres} />
+          </div>
+
+          <div className="stats-card">
+            <h2>{L.shame.title}</h2>
+            <p className="stats-card-sub">{L.shame.subtitle}</p>
+            <ShameCard shame={stats.shame} scale={scale} />
+          </div>
+
+          <div className="stats-card">
+            <h2>{L.wishlist.title}</h2>
+            <p className="stats-card-sub">{L.wishlist.subtitle}</p>
+            <WishlistCard wishlist={stats.wishlist} scale={scale} />
+          </div>
+        </>
+      )}
     </section>
   );
 });
