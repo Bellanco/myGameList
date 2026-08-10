@@ -208,6 +208,8 @@ export const UI_MESSAGES = {
     },
     years: {
       title: 'Año a año',
+      // Imperivm (Roma) con el refrán de siempre: una curva histórica es justo eso, obra de muchos años.
+      subtitle: 'Roma no se construyó en un día: cómo has avanzado año a año.',
       metricAria: 'Métrica del gráfico anual',
       metricGames: 'Juegos',
       metricHours: 'Horas',
@@ -238,7 +240,9 @@ export const UI_MESSAGES = {
     },
     grades: {
       title: 'Distribución de notas',
-      subtitle: 'Cómo repartes tus puntuaciones entre los juegos completados y los abandonados que puntuaste.',
+      // The Witcher III: Geralt siempre acaba eligiendo el mal menor, que es lo que hace una escala de notas.
+      // Entran los completados y también los abandonados que puntuaste.
+      subtitle: 'Entre el mal menor y la obra maestra: ahí se reparten tus notas.',
       empty: 'Todavía no has puntuado ningún juego.',
       starsLabel: (stars: number) => `${stars} ${stars === 1 ? 'estrella' : 'estrellas'}`,
       gradeLabel: (floor: number, ceiling: number) => `${floor}–${ceiling}`,
@@ -282,6 +286,8 @@ export const UI_MESSAGES = {
       yourAverage: 'tu media',
       replays: (times: number) => `×${times}`,
       replaysTitle: (times: number) => `Completado ${times} veces`,
+      /** En la pestaña de un año la cuenta va HASTA ese año, así que lo dice en vez de sugerir que es el total. */
+      replaysTitleYear: (times: number, year: number) => `Completado ${times} veces hasta ${year}`,
       hours: (hours: string) => `${hours} h`,
       avgGrade: (count: number) => ` de nota media en tus ${count} mejores`,
       avgHours: ' de media, cada uno',
@@ -361,8 +367,8 @@ export const UI_MESSAGES = {
       tileHint: (percent: number) => `${percent}% de lo que has cerrado`,
       tileAction: 'Ver todas tus reseñas',
       title: 'Qué destacas y qué te chirría',
-      // The Witcher III: Geralt vive de contratos y de leer bien a la gente antes de aceptarlos.
-      subtitle: 'De los puntos fuertes y débiles que anotas al reseñar.',
+      // The Witcher III: ningún contrato se acepta sin leer antes el bestiario y saber por dónde flaquea.
+      subtitle: 'Todo monstruo tiene su punto débil: tú los anotas al reseñar.',
       strengths: 'Lo que más celebras',
       weaknesses: 'Lo que más te chirría',
       traitsEmpty: 'Anota puntos fuertes y débiles en tus reseñas y aquí verás cuáles repites.',
@@ -373,6 +379,11 @@ export const UI_MESSAGES = {
       // Cuphead otra vez no; esta es de The Witcher III, donde cada contrato acaba con Geralt anotando lo suyo.
       screenSubtitle: 'Todo lo que has escrito, de mejor a peor nota.',
       screenEmpty: 'Todavía no has escrito ninguna reseña.',
+      /**
+       * Aviso cuando la reseña es de un juego que no te has pasado (abandonado, en curso o pendiente).
+       * The Witcher III otra vez: Geralt cobra al CERRAR el contrato, y este se quedó abierto.
+       */
+      unfinished: 'Contrato sin cerrar',
       backToStats: 'Volver a las estadísticas',
       /** Nombre del autor en el detalle de una reseña propia. */
       mine: 'Tus reseñas',

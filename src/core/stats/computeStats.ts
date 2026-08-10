@@ -488,7 +488,7 @@ export function computeStats(data: TabData): StatsSummary {
           // `completionYears`), y así la suma de los años sigue cuadrando con las horas de la biblioteca.
           const lastYear = years[years.length - 1];
 
-          for (const year of years) {
+          for (const [pass, year] of years.entries()) {
             const yearHours = year === lastYear ? hours : 0;
 
             const bucket = yearBuckets.get(year) || emptyYearBucket(year);
@@ -499,7 +499,11 @@ export function computeStats(data: TabData): StatsSummary {
             // columna de 2024 no pueden discrepar, tampoco con los rejugados.
             const acc = yearSummaries.get(year) || newYearAccumulator(year);
             acc.hours += yearHours;
-            acc.games.push(ref);
+            // En la pestaña de un año, las rejugadas se cuentan HASTA ese año: como `years` viene ordenado de
+            // antiguo a reciente, la posición en la lista ES el número de pasada (2018 → 1, 2019 → 2…). Enseñar
+            // el total en 2018 sería contar partidas que en 2018 no habían ocurrido. Solo se clona el ref de los
+            // rejugados: el caso normal (un año) sigue compartiendo el mismo objeto que el resto del panel.
+            acc.games.push(years.length > 1 ? { ...ref, replays: pass + 1 } : ref);
             for (const genre of game.genres || []) addTag(acc.genres, genre, yearHours);
             for (const platform of game.platforms || []) addTag(acc.platforms, platform, yearHours);
             if (scoredGame) {

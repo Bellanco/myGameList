@@ -42,13 +42,19 @@ interface TopGamesProps {
    * lo dicen con un filo lateral; las que no, se quedan como estaban.
    */
   onOpenReview?: (gameId: number) => void;
+  /**
+   * Año del ámbito, si se está viendo uno. Solo cambia el aviso de las rejugadas: ahí la cuenta llega hasta ese
+   * año, no es el total de la biblioteca, y el rótulo lo dice.
+   */
+  year?: number;
 }
 
-export const TopGames = memo(function TopGames({ top, scale, average, showRest = true, onOpenReview }: TopGamesProps) {
+export const TopGames = memo(function TopGames({ top, scale, average, showRest = true, onOpenReview, year }: TopGamesProps) {
   if (top.sample === 0) {
     return <p className="stats-empty">{L.empty}</p>;
   }
 
+  const replaysTitle = (times: number) => (year ? L.replaysTitleYear(times, year) : L.replaysTitle(times));
   const avgInScale = scale === 'grade' ? top.avgGrade : top.avgGrade / 20;
   const cutoffInScale = scale === 'grade' ? top.cutoff : top.cutoff / 20;
   // El podio ya enseña a los tres primeros: la lista recoge desde el cuarto.
@@ -83,7 +89,7 @@ export const TopGames = memo(function TopGames({ top, scale, average, showRest =
             <span className="podium-meta">
               <ScoreDisplay game={{ grade: game.grade }} />
               {game.replays > 1 ? (
-                <b className="podium-replays" title={L.replaysTitle(game.replays)}>{L.replays(game.replays)}</b>
+                <b className="podium-replays" title={replaysTitle(game.replays)}>{L.replays(game.replays)}</b>
               ) : null}
               {game.hours > 0 ? <small>{L.hours(formatHours(game.hours))}</small> : null}
             </span>
@@ -129,7 +135,7 @@ export const TopGames = memo(function TopGames({ top, scale, average, showRest =
                 <span className="top-chip-meta">
                   <ScoreDisplay game={{ grade: game.grade }} />
                   {game.replays > 1 ? (
-                    <b className="podium-replays" title={L.replaysTitle(game.replays)}>{L.replays(game.replays)}</b>
+                    <b className="podium-replays" title={replaysTitle(game.replays)}>{L.replays(game.replays)}</b>
                   ) : null}
                 </span>
                 <span className="top-chip-bar" aria-hidden="true">
