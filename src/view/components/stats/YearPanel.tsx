@@ -57,7 +57,7 @@ export const YearPanel = memo(function YearPanel({ summary, scale }: { summary: 
         <div className="stats-card">
           <h2>{L.top.titleYear(summary.year)}</h2>
           <p className="stats-card-sub">{L.top.subtitle}</p>
-          <TopGames top={summary.top} scale={scale} average={summary.avgGrade} showRest={false} />
+          <TopGames top={summary.top} scale={scale} average={summary.avgGrade} showRest={false} year={summary.year} />
         </div>
       ) : null}
 

@@ -65,7 +65,12 @@ export interface GameRef {
   /** Las MISMAS referencias del juego original (no copias): el agregado del top las recorre. */
   genres: string[];
   platforms: string[];
-  /** Cuántas veces lo has completado (años registrados). 1 en el caso normal; 0 si no es un completado. */
+  /**
+   * Cuántas veces lo has completado (años registrados). 1 en el caso normal; 0 si no es un completado.
+   *
+   * En el resumen de UN año es la cuenta hasta ese año inclusive, no el total: en la pestaña del año de la
+   * primera vuelta vale 1 (y la ficha no dice nada), en la siguiente 2… Ver `computeStats`.
+   */
   replays: number;
   /** ¿Tiene reseña escrita? Es lo que decide si la ficha se marca y se puede abrir. */
   hasReview: boolean;
