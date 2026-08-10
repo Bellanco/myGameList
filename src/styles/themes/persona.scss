@@ -126,6 +126,10 @@
 :root[data-palette="persona"] .btn-accent,
 :root[data-palette="persona"] .btn.is-active,
 :root[data-palette="persona"] .btn-toggle.active { background: var(--steam) !important; color: #fff !important; }
+/* "General" del panel: aquí el contorno es negro por decreto del tema, así que el principal se distingue por la
+   SOMBRA DE BLOQUE, en rojo rebelde en vez de blanca. El relleno rojo sigue siendo del elegido. */
+:root[data-palette="persona"] .scope-tabs > .btn-toggle:first-child:not(.active),
+:root[data-palette="persona"][data-theme="light"] .scope-tabs > .btn-toggle:first-child:not(.active) { box-shadow: 5px 5px 0 var(--steam) !important; }
 :root[data-palette="persona"] .btn-complete,
 :root[data-palette="persona"] .btn-recommend { background: var(--success) !important; color: #08130c !important; }
 :root[data-palette="persona"] .btn-inprogress { background: var(--warn) !important; color: #1a1400 !important; }

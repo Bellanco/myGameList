@@ -51,7 +51,9 @@ export const ScopeTabs = memo(function ScopeTabs({ scope, years, onChange }: Sco
       if (!sizes.current && buttons.length > 1) {
         const style = getComputedStyle(node);
         sizes.current = {
-          general: buttons[0].offsetWidth,
+          // "General" lleva un hueco propio a su derecha (se distingue del resto), y `offsetWidth` no cuenta
+          // márgenes: sin sumarlo, el cálculo creería que hay más sitio para años del que hay.
+          general: buttons[0].offsetWidth + (parseFloat(getComputedStyle(buttons[0]).marginInlineEnd) || 0),
           // El más ancho de los años medidos: todos son de cuatro cifras, así que basta con uno.
           year: Math.max(...buttons.slice(1).map((button) => button.offsetWidth)),
           more: node.querySelector<HTMLElement>('.scope-more-btn')?.offsetWidth || 0,

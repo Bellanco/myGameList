@@ -117,6 +117,9 @@
 :root[data-palette="grimdark"] .btn-steam,
 :root[data-palette="grimdark"] .btn.is-active,
 :root[data-palette="grimdark"] .btn-toggle.active { background: var(--grim-green) !important; color: #04140a !important; border-color: var(--grim-green) !important; box-shadow: 0 0 12px rgba(67, 245, 88, .4) !important; }
+/* "General" del panel: el sello imperial es de oro, así que el principal se marca tirando ese filete hacia el
+   verde de cogitador. Ni relleno ni glow —eso es del comando activo—, solo el borde. */
+:root[data-palette="grimdark"] .scope-tabs > .btn-toggle:first-child:not(.active) { border-color: color-mix(in srgb, var(--grim-green) 55%, var(--grim-gold)); }
 :root[data-palette="grimdark"][data-theme="light"] .btn-accent,
 :root[data-palette="grimdark"][data-theme="light"] .btn-steam,
 :root[data-palette="grimdark"][data-theme="light"] .btn.is-active,

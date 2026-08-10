@@ -181,6 +181,17 @@
 
 .scope-tabs .btn-toggle { flex: 0 0 auto; }
 
+/* "General" no es un año más: es la vista por defecto y el marco del que salen los años. Se distingue con un
+   hueco propio que lo separa de la tira, el texto sin atenuar y el borde a medio camino entre el de un año
+   (16% del acento) y el del elegido (55%): se nota que manda sin parecer que está pulsado.
+   `--steam` es el acento de CADA paleta, así que el filete acompaña al tema sin listarlos uno a uno; los que
+   pintan sus toggles a su manera ajustan `--scope-lead-edge` en su propio fichero (ver themes/cyberpunk). */
+.scope-tabs > .btn-toggle:first-child { margin-inline-end: .3rem; }
+.scope-tabs > .btn-toggle:first-child:not(.active) {
+  color: var(--text);
+  border-color: var(--scope-lead-edge, color-mix(in srgb, var(--steam) 40%, var(--border)));
+}
+
 /* ---- "Más años": el resto del historial, en un desplegable ---------------------------------------------- */
 
 .scope-more { position: relative; }
