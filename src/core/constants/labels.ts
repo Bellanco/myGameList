@@ -282,6 +282,8 @@ export const UI_MESSAGES = {
       yourAverage: 'tu media',
       replays: (times: number) => `×${times}`,
       replaysTitle: (times: number) => `Completado ${times} veces`,
+      /** En la pestaña de un año la cuenta va HASTA ese año, así que lo dice en vez de sugerir que es el total. */
+      replaysTitleYear: (times: number, year: number) => `Completado ${times} veces hasta ${year}`,
       hours: (hours: string) => `${hours} h`,
       avgGrade: (count: number) => ` de nota media en tus ${count} mejores`,
       avgHours: ' de media, cada uno',

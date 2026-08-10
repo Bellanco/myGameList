@@ -77,6 +77,21 @@ describe('computeStats', () => {
     ]);
   });
 
+  it('cuenta las rejugadas HASTA el año que se mira, no el total', () => {
+    const stats = computeStats(tabData({
+      c: [game({ id: 1, name: 'Rejugado', grade: 90, hours: 30, years: [2018, 2019, 2020] })],
+    }));
+
+    // La ficha del año enseña "×N" solo cuando N > 1: en 2018 es la primera vuelta y no dice nada.
+    expect(stats.byYear.map((year) => [year.year, year.games[0].replays])).toEqual([
+      [2020, 3],
+      [2019, 2],
+      [2018, 1],
+    ]);
+    // Fuera de un año concreto (el podio general) sigue siendo el total de veces que lo has completado.
+    expect(stats.top.ranked[0].replays).toBe(3);
+  });
+
   it('ignora los años repetidos de un mismo juego', () => {
     const stats = computeStats(tabData({
       c: [game({ id: 1, name: 'Duplicado', hours: 8, years: [2022, 2022] })],
