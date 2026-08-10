@@ -200,6 +200,11 @@
 /* En claro el filete es teal más marcado para que se vea sobre fondo claro. */
 :root[data-palette="cyberpunk"][data-theme="light"] .btn-secondary,
 :root[data-palette="cyberpunk"][data-theme="light"] .btn-toggle:not(.active) { --hud-edge: rgba(0, 137, 163, .55); }
+/* "General" del panel: aquí el borde del toggle es transparente (el filete lo pintan las capas HUD), así que
+   destacar el principal se hace subiendo el propio filete y no con `border-color`. Va tras las reglas de §5
+   para ganarlas por orden, y el activo sigue siendo el relleno amarillo. */
+:root[data-palette="cyberpunk"] .scope-tabs > .btn-toggle:first-child:not(.active) { --hud-edge: rgba(0, 240, 255, .8); }
+:root[data-palette="cyberpunk"][data-theme="light"] .scope-tabs > .btn-toggle:first-child:not(.active) { --hud-edge: rgba(0, 137, 163, .95); }
 :root[data-palette="cyberpunk"] .btn-accent,
 :root[data-palette="cyberpunk"] .btn-steam,
 :root[data-palette="cyberpunk"] .btn.is-active,
