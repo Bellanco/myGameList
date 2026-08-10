@@ -289,3 +289,68 @@ describe('computeStats · el mejor del año', () => {
     expect(y2025.longest?.name).toBe('Peor pero larguísimo');
   });
 });
+
+// ── Lo que escribes: reseñas, citas y puntos fuertes/débiles ────────────────────────────────────────────
+
+describe('computeStats · reseñas', () => {
+  it('cuenta las reseñas y su cobertura sobre lo que has cerrado', () => {
+    const stats = computeStats(tabData({
+      c: [
+        game({ id: 1, name: 'Uno', grade: 90, review: 'Una reseña con cuerpo suficiente para citarse entera.' }),
+        game({ id: 2, name: 'Dos', grade: 60 }),
+      ],
+      v: [game({ id: 3, name: 'Tres', review: 'Lo dejé por la mitad y no me arrepiento en absoluto.' })],
+      // En curso cuenta como reseña escrita, pero NO como juego cerrado: la cobertura mide lo cerrado.
+      e: [game({ id: 4, name: 'Cuatro', review: 'Voy por la mitad y ya sé que va a estar en mi top del año.' })],
+    }));
+
+    expect(stats.reviews.count).toBe(3);
+    expect(stats.reviews.closed).toBe(3);
+    expect(stats.reviews.coverage).toBeCloseTo((2 / 3) * 100, 5);
+  });
+
+  it('una reseña de dos letras cuenta, pero no se cita', () => {
+    const stats = computeStats(tabData({
+      c: [game({ id: 1, name: 'Uno', grade: 90, review: 'x' })],
+    }));
+    const [ref] = stats.reviews.games;
+
+    expect(stats.reviews.count).toBe(1);
+    expect(ref.hasReview).toBe(true);
+    // El panel no enseña "x" como si fuera una cita.
+    expect(ref.quote).toBe('');
+  });
+
+  it('la cita corta por el punto y no a mitad de palabra', () => {
+    const largo = `${'Primera frase que ya es larga de por sí y sirve de cita. '}${'Segunda frase que sobra. '.repeat(20)}`;
+    const stats = computeStats(tabData({ c: [game({ id: 1, name: 'Uno', grade: 90, review: largo })] }));
+    const [ref] = stats.reviews.games;
+
+    expect(ref.quote.endsWith('.')).toBe(true);
+    expect(ref.quote.length).toBeLessThanOrEqual(220);
+    expect(ref.quote).toContain('Primera frase');
+  });
+
+  it('agrega puntos fuertes y débiles aunque el texto esté vacío', () => {
+    const stats = computeStats(tabData({
+      c: [
+        game({ id: 1, name: 'Uno', grade: 90, strengths: ['Historia', 'Banda sonora'], weaknesses: ['Bugs'] }),
+        game({ id: 2, name: 'Dos', grade: 70, strengths: ['Historia'], weaknesses: ['Bugs', 'Cámara'] }),
+      ],
+    }));
+
+    expect(stats.reviews.strengths[0]).toMatchObject({ tag: 'Historia', games: 2 });
+    expect(stats.reviews.weaknesses[0]).toMatchObject({ tag: 'Bugs', games: 2 });
+  });
+
+  it('los juegos reseñados salen de mejor a peor nota', () => {
+    const stats = computeStats(tabData({
+      c: [
+        game({ id: 1, name: 'Flojo', grade: 40, review: 'Reseña con longitud suficiente para contar como cita.' }),
+        game({ id: 2, name: 'Bueno', grade: 95, review: 'Otra reseña con longitud más que suficiente para citarse.' }),
+      ],
+    }));
+
+    expect(stats.reviews.games.map((ref) => ref.name)).toEqual(['Bueno', 'Flojo']);
+  });
+});

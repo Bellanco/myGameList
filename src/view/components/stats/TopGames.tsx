@@ -10,6 +10,7 @@ import type { TopSummary } from '../../../core/stats/types';
 import type { ScoreScale } from '../../../core/utils/scoreScale';
 
 const L = UI_MESSAGES.stats.top;
+const REVIEWS = UI_MESSAGES.stats.reviews;
 
 /** Metal de cada puesto del podio. El oro, la plata y el bronce se leen sin explicación. */
 const MEDALS = ['gold', 'silver', 'bronze'];
@@ -36,9 +37,14 @@ interface TopGamesProps {
    * completo de ese año, y repetir sus doce primeros sería decir dos veces lo mismo.
    */
   showRest?: boolean;
+  /**
+   * Abre la reseña de un juego. Cuando se pasa, las fichas y el podio que TIENEN reseña se vuelven pulsables y
+   * lo dicen con un filo lateral; las que no, se quedan como estaban.
+   */
+  onOpenReview?: (gameId: number) => void;
 }
 
-export const TopGames = memo(function TopGames({ top, scale, average, showRest = true }: TopGamesProps) {
+export const TopGames = memo(function TopGames({ top, scale, average, showRest = true, onOpenReview }: TopGamesProps) {
   if (top.sample === 0) {
     return <p className="stats-empty">{L.empty}</p>;
   }
@@ -54,8 +60,24 @@ export const TopGames = memo(function TopGames({ top, scale, average, showRest =
           nombre, que es lo que se viene a leer. El metal lo dice además con palabras, para no depender del color. */}
       <ol className="podium">
         {top.podium.map((game, index) => (
-          <li key={game.id} className={`podium-step is-${MEDALS[index]}`} style={{ '--i': index } as CSSProperties}>
+          <li
+            key={game.id}
+            className={`podium-step is-${MEDALS[index]}${game.hasReview ? ' has-review' : ''}`}
+            style={{ '--i': index } as CSSProperties}
+          >
             <span className="podium-ghost" aria-hidden="true">{index + 1}</span>
+            {/* Con reseña, la tarjeta entera abre: no todos los del podio tienen una, y los que la tienen no
+                siempre dan para una cita (una reseña de dos letras no se enseña, pero se puede leer). */}
+            {game.hasReview && onOpenReview ? (
+              <button
+                type="button"
+                className="top-chip-open"
+                title={REVIEWS.openTitle(game.name)}
+                onClick={() => onOpenReview(game.id)}
+              >
+                <span className="sr-only">{REVIEWS.openTitle(game.name)}</span>
+              </button>
+            ) : null}
             <span className="podium-medal">{L.medals[index]}</span>
             <span className="podium-name" title={game.name}>{game.name}</span>
             <span className="podium-meta">
@@ -65,6 +87,8 @@ export const TopGames = memo(function TopGames({ top, scale, average, showRest =
               ) : null}
               {game.hours > 0 ? <small>{L.hours(formatHours(game.hours))}</small> : null}
             </span>
+            {/* Tus propias palabras sobre el juego, si las escribiste: no todos los del podio están reseñados. */}
+            {game.quote ? <p className="podium-quote">{game.quote}</p> : null}
           </li>
         ))}
       </ol>
@@ -83,8 +107,24 @@ export const TopGames = memo(function TopGames({ top, scale, average, showRest =
               barras dejan ver de un vistazo cómo caen las notas del cuarto al quince. */}
           <ol className="top-chips">
             {rest.map((game, index) => (
-              <li key={game.id} style={{ '--i': index } as CSSProperties}>
+              <li
+                key={game.id}
+                className={game.hasReview ? 'has-review' : undefined}
+                style={{ '--i': index } as CSSProperties}
+              >
                 <span className="top-chip-ghost" aria-hidden="true">{index + top.podium.length + 1}</span>
+                {/* El botón cubre la ficha entera en vez de colgar el clic de la fila: así el objetivo es la
+                    tarjeta —que sí llega al tamaño mínimo— y el teclado lo alcanza como a cualquier control. */}
+                {game.hasReview && onOpenReview ? (
+                  <button
+                    type="button"
+                    className="top-chip-open"
+                    title={REVIEWS.openTitle(game.name)}
+                    onClick={() => onOpenReview(game.id)}
+                  >
+                    <span className="sr-only">{REVIEWS.openTitle(game.name)}</span>
+                  </button>
+                ) : null}
                 <span className="top-chip-name" title={game.name}>{game.name}</span>
                 <span className="top-chip-meta">
                   <ScoreDisplay game={{ grade: game.grade }} />

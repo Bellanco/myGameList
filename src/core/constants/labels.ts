@@ -332,6 +332,28 @@ export const UI_MESSAGES = {
       recent: 'Los últimos en llegar',
       waitingSince: (since: string) => `desde ${since}`,
     },
+    /** Lo que escribes: la cifra de reseñas, el bloque de puntos fuertes y débiles y las citas del podio. */
+    reviews: {
+      tile: 'Reseñas',
+      tileHint: (percent: number) => `${percent}% de lo que has cerrado`,
+      tileAction: 'Ver todas tus reseñas',
+      title: 'Qué destacas y qué te chirría',
+      // The Witcher III: Geralt vive de contratos y de leer bien a la gente antes de aceptarlos.
+      subtitle: 'De los puntos fuertes y débiles que anotas al reseñar.',
+      strengths: 'Lo que más celebras',
+      weaknesses: 'Lo que más te chirría',
+      traitsEmpty: 'Anota puntos fuertes y débiles en tus reseñas y aquí verás cuáles repites.',
+      /** Aviso de que una ficha lleva reseña y se puede abrir. */
+      openTitle: (name: string) => `Leer tu reseña de ${name}`,
+      /** Pantalla con todas tus reseñas, dentro del panel. */
+      screenTitle: 'Tus reseñas',
+      // Cuphead otra vez no; esta es de The Witcher III, donde cada contrato acaba con Geralt anotando lo suyo.
+      screenSubtitle: 'Todo lo que has escrito, de mejor a peor nota.',
+      screenEmpty: 'Todavía no has escrito ninguna reseña.',
+      backToStats: 'Volver a las estadísticas',
+      /** Nombre del autor en el detalle de una reseña propia. */
+      mine: 'Tus reseñas',
+    },
     /** Panel de estadísticas de OTRA persona, dentro de su perfil del hub social. */
     friend: {
       title: 'Sus estadísticas',

@@ -43,6 +43,16 @@ export interface GameRef {
   platforms: string[];
   /** Cuántas veces lo has completado (años registrados). 1 en el caso normal; 0 si no es un completado. */
   replays: number;
+  /** ¿Tiene reseña escrita? Es lo que decide si la ficha se marca y se puede abrir. */
+  hasReview: boolean;
+  /**
+   * Primeras líneas de tu reseña, para citarla. Es un RECORTE: el panel enseña una cita, nunca el texto entero
+   * —para eso está la pantalla de reseñas—, y guardar el review completo por juego inflaría el resumen.
+   *
+   * Queda VACÍA cuando la reseña es demasiado corta para citarse (un "x" de recordatorio no es una cita); el
+   * juego sigue contando como reseñado, que es cosa de `hasReview`.
+   */
+  quote: string;
 }
 
 /**
@@ -136,6 +146,23 @@ export interface WishlistSummary {
   games: GameRef[];
 }
 
+/** Lo que escribes: cuántas reseñas, qué parte de lo cerrado cubren y qué destacas al escribirlas. */
+export interface ReviewSummary {
+  /** Juegos con reseña escrita, de cualquier lista. */
+  count: number;
+  /** Juegos ya cerrados (completados + abandonados): la base contra la que se mide la cobertura. */
+  closed: number;
+  /**
+   * Porcentaje de lo cerrado que has llegado a comentar. Numerador y denominador miran lo mismo —solo
+   * completados y abandonados—: con las reseñas de lo que estás jugando dentro, podía pasar del 100%.
+   */
+  coverage: number;
+  strengths: TagBucket[];
+  weaknesses: TagBucket[];
+  /** Los juegos reseñados, de mejor a peor nota: es el listado de la pantalla de reseñas. */
+  games: GameRef[];
+}
+
 export interface StatsSummary {
   /** Juegos por lista (c/v/e/p), ya descontados los registros sin nombre. */
   counts: Record<TabId, number>;
@@ -166,6 +193,8 @@ export interface StatsSummary {
   longest: GameRef | null;
   /** Retrato de tus mejores juegos de siempre. */
   top: TopSummary;
+  /** Lo que escribes: cuántas reseñas y qué destacas en ellas. */
+  reviews: ReviewSummary;
   shame: ShameSummary;
   wishlist: WishlistSummary;
 }

@@ -1,6 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+// El panel enlaza a la pantalla de reseñas del hub social, así que necesita un router alrededor.
+import { MemoryRouter } from 'react-router-dom';
 import { StatsHub } from '../../src/view/components/stats/StatsHub';
 import { UI_MESSAGES } from '../../src/core/constants/labels';
 import type { GameItem, TabData } from '../../src/model/types/game';
@@ -48,14 +50,14 @@ const SAMPLE = tabData({
 
 describe('StatsHub', () => {
   it('sin juegos muestra el estado vacío en vez de una pantalla de ceros', () => {
-    render(<StatsHub games={tabData()} />);
+    render(<StatsHub games={tabData()} />, { wrapper: MemoryRouter });
 
     expect(screen.getByRole('heading', { name: L.empty.title })).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: L.years.title })).not.toBeInTheDocument();
   });
 
   it('pinta las cifras destacadas de la biblioteca', () => {
-    render(<StatsHub games={SAMPLE} />);
+    render(<StatsHub games={SAMPLE} />, { wrapper: MemoryRouter });
 
     // Se busca DENTRO de las cifras destacadas: "Juegos" es además la etiqueta del selector de métrica del
     // gráfico anual, así que a nivel de pantalla el texto está repetido a propósito.
@@ -70,7 +72,7 @@ describe('StatsHub', () => {
   });
 
   it('ofrece los datos anuales como tabla, no solo como barras', () => {
-    render(<StatsHub games={SAMPLE} />);
+    render(<StatsHub games={SAMPLE} />, { wrapper: MemoryRouter });
 
     // Hay dos tablas alternativas en la pantalla (año a año y evolución): se pide la del gráfico anual.
     const rows = within(screen.getByRole('table', { name: L.years.chartAria(L.years.metricGames) })).getAllByRole('row');
@@ -82,7 +84,7 @@ describe('StatsHub', () => {
   });
 
   it('cambia el gráfico anual de juegos a horas', async () => {
-    render(<StatsHub games={SAMPLE} />);
+    render(<StatsHub games={SAMPLE} />, { wrapper: MemoryRouter });
 
     const games = screen.getByRole('button', { name: L.years.metricGames });
     const hours = screen.getByRole('button', { name: L.years.metricHours });
@@ -97,20 +99,20 @@ describe('StatsHub', () => {
   });
 
   it('rotula el eje de la distribución según la escala de la cuenta', () => {
-    const { unmount } = render(<StatsHub games={SAMPLE} />);
+    const { unmount } = render(<StatsHub games={SAMPLE} />, { wrapper: MemoryRouter });
     const eje = () => document.querySelector('.beeswarm-axis') as HTMLElement;
     expect(eje()).toHaveTextContent('★★★★★');
     unmount();
 
     scale = 'grade';
-    render(<StatsHub games={SAMPLE} />);
+    render(<StatsHub games={SAMPLE} />, { wrapper: MemoryRouter });
     expect(eje()).toHaveTextContent('75');
     expect(eje()).not.toHaveTextContent('★');
     scale = 'stars';
   });
 
   it('describe el cuadro de completados con su reparto', () => {
-    render(<StatsHub games={SAMPLE} />);
+    render(<StatsHub games={SAMPLE} />, { wrapper: MemoryRouter });
 
     expect(screen.getByRole('img', { name: L.ratio.gaugeAria(67, 2, 1) })).toBeInTheDocument();
   });
@@ -120,7 +122,7 @@ describe('StatsHub', () => {
 
 describe('StatsHub · periodos', () => {
   it('ofrece General y solo los años en los que completaste algo', () => {
-    render(<StatsHub games={SAMPLE} />);
+    render(<StatsHub games={SAMPLE} />, { wrapper: MemoryRouter });
 
     expect(screen.getByRole('button', { name: L.scope.general })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: L.scope.yearAria(2023) })).toBeInTheDocument();
@@ -130,7 +132,7 @@ describe('StatsHub · periodos', () => {
   });
 
   it('al elegir un año enseña solo lo de ese año, y las listas sin año se quedan en General', async () => {
-    render(<StatsHub games={SAMPLE} />);
+    render(<StatsHub games={SAMPLE} />, { wrapper: MemoryRouter });
 
     await userEvent.click(screen.getByRole('button', { name: L.scope.yearAria(2023) }));
 
@@ -144,7 +146,7 @@ describe('StatsHub · periodos', () => {
   });
 
   it('vuelve a General', async () => {
-    render(<StatsHub games={SAMPLE} />);
+    render(<StatsHub games={SAMPLE} />, { wrapper: MemoryRouter });
 
     await userEvent.click(screen.getByRole('button', { name: L.scope.yearAria(2024) }));
     await userEvent.click(screen.getByRole('button', { name: L.scope.general }));
@@ -161,13 +163,13 @@ describe('StatsHub · figura de géneros', () => {
         game({ id: 2, name: 'B', genres: ['RPG', 'Puzles'], years: [2024] }),
         game({ id: 3, name: 'C', genres: ['Plataformas'], years: [2024] }),
       ],
-    })} />);
+    })} />, { wrapper: MemoryRouter });
 
     expect(screen.getByRole('img', { name: /RPG: 2/ })).toBeInTheDocument();
   });
 
   it('con menos de tres géneros cae al reparto en barras en vez de dibujar un segmento', () => {
-    render(<StatsHub games={tabData({ c: [game({ id: 1, name: 'Solo', genres: ['RPG'], years: [2024] })] })} />);
+    render(<StatsHub games={tabData({ c: [game({ id: 1, name: 'Solo', genres: ['RPG'], years: [2024] })] })} />, { wrapper: MemoryRouter });
 
     // Se mira DENTRO de su tarjeta: el mosaico de "Géneros más jugados" también es una imagen que nombra RPG.
     const card = screen.getByRole('heading', { name: L.radar.title }).closest('.stats-card') as HTMLElement;
@@ -184,7 +186,7 @@ describe('StatsHub · listas sin año', () => {
         game({ id: 3, name: 'Dejado', hours: 5, genres: ['RPG'], reasons: ['Repetitivo'], retry: true }),
         game({ id: 4, name: 'Dejado 2', genres: ['RPG'], reasons: ['Repetitivo'] }),
       ],
-    })} />);
+    })} />, { wrapper: MemoryRouter });
 
     const card = screen.getByRole('heading', { name: L.shame.title }).closest('.stats-card') as HTMLElement;
     expect(within(card).getByText('Repetitivo')).toBeInTheDocument();
@@ -197,7 +199,7 @@ describe('StatsHub · listas sin año', () => {
   it('resume los próximos separando el interés de las valoraciones', () => {
     render(<StatsHub games={tabData({
       p: [game({ id: 1, name: 'Deseado', genres: ['RPG'], grade: 80, listedAt: 1000 })],
-    })} />);
+    })} />, { wrapper: MemoryRouter });
 
     const card = screen.getByRole('heading', { name: L.wishlist.title }).closest('.stats-card') as HTMLElement;
     expect(within(card).getByText(L.wishlist.interest)).toBeInTheDocument();
@@ -211,7 +213,7 @@ describe('StatsHub · evolución del backlog', () => {
   // El modo ya no se anuncia con un texto al pie (se retiró la nota de la aproximación), así que se comprueba
   // por `data-mode`, que es el marcador que existe justamente para poder distinguirlos.
   it('enseña la curva derivada mientras el histórico real no tenga puntos suficientes', async () => {
-    render(<StatsHub games={SAMPLE} />);
+    render(<StatsHub games={SAMPLE} />, { wrapper: MemoryRouter });
 
     await waitFor(() => expect(document.querySelector('.backlog')).toHaveAttribute('data-mode', 'derived'));
     expect(screen.queryByText(L.backlog.realNote)).not.toBeInTheDocument();
@@ -222,7 +224,7 @@ describe('StatsHub · evolución del backlog', () => {
       { m: '2026-01', c: 1, v: 0, e: 0, p: 2 },
       { m: '2026-02', c: 2, v: 1, e: 0, p: 2 },
     ];
-    render(<StatsHub games={SAMPLE} />);
+    render(<StatsHub games={SAMPLE} />, { wrapper: MemoryRouter });
 
     expect(await screen.findByText(L.backlog.realNote)).toBeInTheDocument();
     expect(document.querySelector('.backlog')).toHaveAttribute('data-mode', 'real');

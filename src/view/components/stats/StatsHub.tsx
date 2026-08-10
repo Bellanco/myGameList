@@ -1,4 +1,5 @@
-import { memo, useRef } from 'react';
+import { memo, useCallback, useRef } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { UI_MESSAGES } from '../../../core/constants/labels';
 import { useStatsViewModel } from '../../../viewmodel/useStatsViewModel';
 import { StatTile } from './StatTile';
@@ -11,6 +12,8 @@ import { BacklogArea } from './BacklogArea';
 import { PolarRose } from './PolarRose';
 import { SpeedGauge } from './SpeedGauge';
 import { TopGames } from './TopGames';
+import { ReviewTraits } from './ReviewTraits';
+import { StatsReviews } from './StatsReviews';
 import { useRevealOnScroll } from './useRevealOnScroll';
 import { ShameCard } from './ShameCard';
 import { WishlistCard } from './WishlistCard';
@@ -24,6 +27,22 @@ import '../../../styles/stats.scss';
 const L = UI_MESSAGES.stats;
 
 /**
+ * Tus reseñas viven en una sub-ruta del panel. La PANTALLA no es nueva: reutiliza la lista y el detalle del hub
+ * social (ver `StatsReviews`); lo que cambia es la ruta y de dónde salen los datos. Enlazar directamente al hub
+ * las habría dejado detrás de su asistente de configuración para quien no tenga espacio social montado, y una
+ * reseña propia no depende de eso.
+ */
+const PANEL_ROUTE = '/perfil';
+const REVIEWS_ROUTE = '/perfil/resenas';
+const reviewRoute = (gameId: number) => `/perfil/resenas/${gameId}`;
+
+/** Id del juego cuya reseña se abre, leído de la ruta; 0 = el listado. */
+function reviewIdFrom(pathname: string): number {
+  const match = /^\/perfil\/resenas\/(\d+)$/.exec(pathname);
+  return match ? Number(match[1]) : 0;
+}
+
+/**
  * Panel "Perfil": la biblioteca en números, con una vista general y una pestaña por año.
  *
  * Todo lo que se ve aquí es DERIVADO de las listas que ya están en memoria (ver `core/stats/computeStats`), es
@@ -34,10 +53,28 @@ const L = UI_MESSAGES.stats;
 export const StatsHub = memo(function StatsHub({ games }: { games: TabData }) {
   const vm = useStatsViewModel(games);
   const { stats, scale, scope, yearSummary } = vm;
+  const navigate = useNavigate();
+  const location = useLocation();
+  const openReviews = useCallback(() => { void navigate(REVIEWS_ROUTE); }, [navigate]);
+  const openReview = useCallback((gameId: number) => { void navigate(reviewRoute(gameId)); }, [navigate]);
+  const backToPanel = useCallback(() => { void navigate(PANEL_ROUTE); }, [navigate]);
+  const onReviewsRoute = location.pathname.startsWith(REVIEWS_ROUTE);
   // Las tarjetas se destapan al llegar a ellas. Se rearma al cambiar de periodo, porque las de la pestaña
   // nueva son otros elementos y entran sin haberse visto nunca.
   const hub = useRef<HTMLElement>(null);
   useRevealOnScroll(hub, scope);
+
+  if (onReviewsRoute) {
+    return (
+      <StatsReviews
+        games={games}
+        gameId={reviewIdFrom(location.pathname)}
+        onBack={backToPanel}
+        onOpenReview={openReview}
+        onBackToList={openReviews}
+      />
+    );
+  }
 
   if (vm.isEmpty) {
     return (
@@ -87,13 +124,23 @@ export const StatsHub = memo(function StatsHub({ games }: { games: TabData }) {
                 value={<span className="stat-tile-text">{stats.longest ? stats.longest.name : L.tiles.noData}</span>}
                 hint={stats.longest ? L.tiles.longestHint(formatHours(stats.longest.hours)) : undefined}
               />
+              {stats.reviews.count > 0 ? (
+                <StatTile
+                  label={L.reviews.tile}
+                  value={<CountUp value={stats.reviews.count} />}
+                  hint={L.reviews.tileHint(Math.round(stats.reviews.coverage))}
+                  progress={stats.reviews.coverage}
+                  onClick={openReviews}
+                  actionLabel={L.reviews.tileAction}
+                />
+              ) : null}
             </div>
           </div>
 
           <div className="stats-card">
             <h2>{L.top.title}</h2>
             <p className="stats-card-sub">{L.top.subtitle}</p>
-            <TopGames top={stats.top} scale={scale} average={stats.scored.avgGrade} />
+            <TopGames top={stats.top} scale={scale} average={stats.scored.avgGrade} onOpenReview={openReview} />
           </div>
 
           <div className="stats-card">
@@ -136,6 +183,14 @@ export const StatsHub = memo(function StatsHub({ games }: { games: TabData }) {
             <p className="stats-card-sub">{L.genres.subtitle}</p>
             <PolarRose tags={stats.genres} />
           </div>
+
+          {stats.reviews.strengths.length || stats.reviews.weaknesses.length ? (
+            <div className="stats-card">
+              <h2>{L.reviews.title}</h2>
+              <p className="stats-card-sub">{L.reviews.subtitle}</p>
+              <ReviewTraits strengths={stats.reviews.strengths} weaknesses={stats.reviews.weaknesses} />
+            </div>
+          ) : null}
 
           <div className="stats-card">
             <h2>{L.shame.title}</h2>

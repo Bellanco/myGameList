@@ -1,5 +1,5 @@
 import { memo, useCallback } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { SOCIAL_UI } from '../../core/constants/labels';
 import { LEGAL_CONSENT_UI, LEGAL_ROUTES } from '../../core/constants/legal';
 import type { GameItem, TabData } from '../../model/types/game';
@@ -133,7 +133,14 @@ const SocialHubInner = memo(function SocialHubInner({
 
   // Handlers de navegación estables (misma identidad entre renders): permiten que las pantallas hoja
   // memoizadas no se re-rendericen cuando cambia un estado no relacionado del VM (status, cooldown, drag…).
-  const goToSocial = useCallback(() => navigate('/social'), [navigate]);
+  /**
+   * "Volver" del hub. Normalmente lleva al feed, pero si se ha llegado desde otra pantalla —el panel de
+   * estadísticas enlaza a tus reseñas, que viven aquí— se respeta ese origen: quien viene de las estadísticas
+   * espera volver a las estadísticas, no aparecer en el feed social.
+   */
+  const location = useLocation();
+  const backTo = (location.state as { backTo?: string } | null)?.backTo;
+  const goToSocial = useCallback(() => navigate(backTo || '/social'), [navigate, backTo]);
   const goToProfileEdit = useCallback(() => navigate('/social/profile'), [navigate]);
   const goToProfiles = useCallback(() => navigate('/social/profiles'), [navigate]);
   const goToRequests = useCallback(() => navigate('/social/requests'), [navigate]);

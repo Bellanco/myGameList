@@ -216,6 +216,46 @@
   color: var(--stats-ink-2);
 }
 
+/* Barra de cobertura: solo en la cifra que ES una parte de un todo (las reseñas sobre lo que has cerrado).
+   Crece al entrar como el resto de barras del panel. */
+.stat-tile-bar {
+  height: 4px;
+  margin-top: .35rem;
+  border-radius: 2px;
+  background: var(--score-track);
+  overflow: hidden;
+}
+
+.stat-tile-bar i {
+  display: block;
+  width: var(--pct, 0%);
+  height: 100%;
+  border-radius: 2px;
+  background: var(--steam);
+  transform-origin: left center;
+  animation: grow-right .7s cubic-bezier(.22, 1, .36, 1) both;
+}
+
+/* La tarjeta que lleva a alguna parte se comporta como un control: hereda el aspecto de las demás y solo se
+   distingue al señalarla y al recibir el foco, que es cuando importa. */
+.stat-tile.is-link {
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color .15s ease, transform .15s ease;
+}
+
+.stat-tile.is-link:hover {
+  border-color: color-mix(in oklch, var(--steam) 55%, var(--border));
+  transform: translateY(-1px);
+}
+
+.stat-tile.is-link:focus-visible {
+  outline: 2px solid var(--steam);
+  outline-offset: 2px;
+}
+
 /* ---- Gráfico anual ----------------------------------------------------------------------------------- */
 
 .stats-metric-switch {
@@ -1356,6 +1396,33 @@
   background: color-mix(in srgb, var(--steam) 18%, transparent);
 }
 
+/* Tu cita sobre el juego. Recortada a tres líneas: en el podio manda el nombre, y la reseña entera tiene su
+   propia pantalla, a un toque de aquí. */
+.podium-quote {
+  position: relative;
+  margin: .15rem 0 0;
+  padding-left: .5rem;
+  border-left: 2px solid color-mix(in oklch, var(--steam) 45%, transparent);
+  font-size: .78rem;
+  font-style: italic;
+  color: var(--stats-ink-2);
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* La tarjeta del podio con reseña se abre entera, igual que las fichas del resto del top: el filo lateral es
+   la señal y el botón invisible de encima, el objetivo. */
+.podium-step.has-review {
+  border-left-width: 3px;
+  cursor: pointer;
+  transition: background .15s ease;
+}
+
+.podium-step.has-review:hover { background: var(--surface-elevated); }
+.podium-step.has-review:hover .podium-quote { color: var(--text); }
+
 /* El resto del top, con la misma receta: puesto al fondo y una barra de nota al pie. Puestas en rejilla, las
    barras dejan ver de un golpe cómo caen las notas del cuarto al quince. */
 .top-chips {
@@ -1398,6 +1465,33 @@
   opacity: .55;
   pointer-events: none;
 }
+
+/* Matiz de que esa ficha lleva reseña y se puede abrir: un filo lateral, nada más. Con un icono o una pastilla,
+   doce fichas seguidas se llenaban de adornos y el nombre dejaba de ser lo primero. */
+.top-chips li.has-review {
+  border-left: 2px solid color-mix(in oklch, var(--steam) 55%, transparent);
+  cursor: pointer;
+  transition: border-color .15s ease, background .15s ease;
+}
+
+.top-chips li.has-review:hover {
+  border-left-color: var(--steam);
+  background: var(--surface-elevated);
+}
+
+/* El botón cubre la ficha entera: así el objetivo es la tarjeta —que sí llega al tamaño mínimo— y no un icono
+   de doce píxeles, y el teclado la alcanza como a cualquier otro control. */
+.top-chip-open {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  padding: 0;
+  background: none;
+  cursor: pointer;
+  z-index: 1;
+}
+
+.top-chip-open:focus-visible { outline: 2px solid var(--steam); outline-offset: -2px; border-radius: var(--stats-radius); }
 
 .top-chip-name {
   position: relative;
@@ -1856,6 +1950,86 @@
   color: var(--stats-ink-2);
   font-variant-numeric: tabular-nums;
 }
+
+/* ---- Qué destacas y qué te chirría --------------------------------------------------------------------- */
+
+/* Pirámide de población: las dos caras sobre la MISMA escala, así que se ve de un vistazo si celebras más de lo
+   que criticas. El nombre va fuera de la barra; dentro, cualquier etiqueta corta se salía de su relleno. */
+.traits { display: flex; flex-direction: column; gap: .5rem; }
+
+.traits-heads {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.2rem;
+  margin: 0;
+  font-size: .72rem;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  color: var(--stats-ink-2);
+}
+
+.traits-heads span:first-child { text-align: right; }
+
+.traits-rows {
+  display: flex;
+  flex-direction: column;
+  gap: .45rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.traits-rows li {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.2rem;
+  animation: slide-in .45s cubic-bezier(.22, 1, .36, 1) both;
+  animation-delay: calc(var(--i, 0) * 50ms);
+}
+
+.traits-side {
+  display: flex;
+  flex-direction: column;
+  gap: .2rem;
+  min-width: 0;
+}
+
+.traits-side.is-good { align-items: flex-end; text-align: right; }
+
+.traits-name {
+  font-size: .8rem;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.traits-name b { margin-left: .3rem; font-variant-numeric: tabular-nums; }
+.is-good .traits-name b { color: color-mix(in oklch, var(--stats-c) 62%, var(--text)); }
+.is-bad .traits-name b { color: color-mix(in oklch, var(--stats-v) 62%, var(--text)); }
+
+.traits-bar {
+  position: relative;
+  width: 100%;
+  height: 10px;
+  border-radius: 3px;
+  background: var(--surface-soft);
+}
+
+.traits-bar i {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: var(--pct, 0%);
+  border-radius: 3px;
+  transform-origin: inherit;
+  animation: grow-right .6s cubic-bezier(.22, 1, .36, 1) both;
+  animation-delay: calc(var(--i, 0) * 50ms);
+}
+
+/* Cada lado crece desde su propio filo, hacia el centro de la figura. */
+.is-good .traits-bar i { right: 0; background: color-mix(in oklch, var(--stats-c) 72%, transparent); transform-origin: right center; }
+.is-bad .traits-bar i { left: 0; background: color-mix(in oklch, var(--stats-v) 72%, transparent); transform-origin: left center; }
 
 /* ---- El año en cajas ------------------------------------------------------------------------------------ */
 
