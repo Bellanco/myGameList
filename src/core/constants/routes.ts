@@ -24,6 +24,9 @@ export const APP_ROUTES: ReadonlyArray<{ path: string; section: AppSection }> = 
   { path: '/social/*', section: 'social' },
   // Panel de estadísticas. La ruta se llamó `/perfil` cuando la pestaña tenía ese nombre; la sección es `stats`
   // para no confundirla con el PERFIL SOCIAL, que es la ficha pública y vive en `/social/profile`.
+  // Comodín: el panel resuelve por su cuenta la sub-ruta de tus reseñas (listado y detalle), igual que hace el
+  // hub social con las suyas.
+  { path: '/perfil/*', section: 'stats' },
   { path: '/perfil', section: 'stats' },
   { path: '/ajustes', section: 'settings' },
   { path: '/cuenta', section: 'account' },

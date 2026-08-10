@@ -64,13 +64,13 @@ export const YearPanel = memo(function YearPanel({ summary, scale }: { summary: 
       <div className="stats-card stats-card-half">
         <h2>{L.radar.title}</h2>
         <p className="stats-card-sub">{L.radar.subtitleYear(summary.year)}</p>
-        <GenreRadar tags={summary.genres} />
+        <GenreRadar tags={summary.genreAffinity} />
       </div>
 
       <div className="stats-card stats-card-half">
         <h2>{L.grades.title}</h2>
         <p className="stats-card-sub">{L.grades.subtitle}</p>
-        <Beeswarm games={summary.games.filter((game) => game.grade > 0)} scale={scale} average={summary.avgGrade} />
+        <Beeswarm games={summary.games.filter((game) => game.grade > 0)} scale={scale} />
       </div>
 
       {summary.platforms.length ? (

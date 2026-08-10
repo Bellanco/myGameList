@@ -1,12 +1,9 @@
-﻿import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
+﻿import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Icon } from '../Icon';
 import { GameTable } from '../GameTable';
 import { UI_MESSAGES, type SocialUiLabels } from '../../../core/constants/labels';
 import { HubStatus } from './HubStatus';
 import { HubBackButton } from './HubBackButton';
-import { StarRating } from '../StarRating';
-import { useScoreScale } from '../../hooks/useScoreScale';
-import { resolveGrade } from '../../../core/utils/scoreScale';
 import { HubAvatar } from './HubAvatar';
 import { TAB_IDS, type GameItem, type TabId, type TabSort } from '../../../model/types/game';
 import { DEFAULT_SORT, nextSort, sortGames } from '../../../core/utils/sortGames';
@@ -14,6 +11,7 @@ import type { SocialSharedGame } from '../../../model/repository/socialGistRepos
 import { RouletteModal } from '../roulette/RouletteModal';
 import { buildProfilePool, profileWeight } from '../../../core/roulette/roulette';
 import { FriendshipButton } from './FriendshipButton';
+import { ProfileReviewsList } from './ProfileReviewsList';
 import { FriendStats } from '../stats/FriendStats';
 import type { ProfileTier } from '../../../core/constants/tiers';
 import { DEFAULT_PROFILE_TIER } from '../../../core/constants/tiers';
@@ -22,9 +20,6 @@ import type { RelationshipState } from '../../../model/types/social';
 // Paginación de los juegos del perfil: se muestran de 15 en 15 para evitar scroll excesivo al abrir el detalle.
 const LIST_PAGE_SIZE = 15;
 
-// Paginación de las reseñas: lote inicial pequeño y se amplía por scroll infinito (centinela al final) para no
-// renderizar todo de golpe ni dejar un scroll interminable. El filtro reinicia el lote.
-const REVIEW_PAGE_SIZE = 8;
 
 /** Rótulos de la vista de estadísticas dentro del perfil ajeno. */
 const FRIEND_STATS_TITLE = UI_MESSAGES.stats.friend.title;
@@ -175,7 +170,6 @@ function SocialProfileDetailScreenBase({
   onCancelFriendRequest?: () => void;
   onRemoveFriend?: () => void;
 }) {
-  const scoreScale = useScoreScale();
   const [activeListTab, setActiveListTab] = useState<TabId>('c');
   // Orden por columna de cada pestaña (arranca en el orden por defecto). Cabeceras pulsables como en el listado principal.
   const [sortByTab, setSortByTab] = useState<Record<TabId, TabSort>>(DEFAULT_SORT);
@@ -189,9 +183,6 @@ function SocialProfileDetailScreenBase({
   const [expandedByTab, setExpandedByTab] = useState<Partial<Record<TabId, number | null>>>({});
   const [visibleCount, setVisibleCount] = useState(LIST_PAGE_SIZE);
   const [gameQuery, setGameQuery] = useState('');
-  const [reviewQuery, setReviewQuery] = useState('');
-  const [reviewVisibleCount, setReviewVisibleCount] = useState(REVIEW_PAGE_SIZE);
-  const reviewSentinelRef = useRef<HTMLButtonElement>(null);
 
   // Amistad: solo el perfil propio o el de un amigo muestra reseñas, ruleta y listados. Para no-amigos, "solo nombre
   // y foto" + CTA de "Añadir amigo"; el resto queda bloqueado con un aviso.
@@ -248,45 +239,10 @@ function SocialProfileDetailScreenBase({
 
   // Al cambiar de perfil, limpiar filtros y cerrar la ruleta (la vista de reseñas la controla ahora la URL).
   useEffect(() => {
-    setReviewQuery('');
     setRouletteOpen(false);
   }, [activeProfileDetail]);
 
-  // Filtro de reseñas por título del juego (insensible a mayúsculas), automático al escribir.
-  const filteredReviews = useMemo(() => {
-    const q = reviewQuery.trim().toLowerCase();
-    if (!q) return reviews;
-    return reviews.filter((review) => review.gameName.toLowerCase().includes(q));
-  }, [reviews, reviewQuery]);
 
-  // Reinicia la paginación de reseñas al filtrar o al (re)entrar en la vista de reseñas.
-  useEffect(() => {
-    setReviewVisibleCount(REVIEW_PAGE_SIZE);
-  }, [reviewQuery, showReviews]);
-
-  const visibleReviews = useMemo(
-    () => filteredReviews.slice(0, reviewVisibleCount),
-    [filteredReviews, reviewVisibleCount],
-  );
-  const hasMoreReviews = filteredReviews.length > reviewVisibleCount;
-
-  // Scroll infinito: el botón "mostrar más" del final hace de centinela; cuando entra en viewport, amplía el lote
-  // automáticamente (y se mantiene clicable como alternativa accesible). Sin más reseñas, no se observa nada.
-  useEffect(() => {
-    if (!showReviews || !hasMoreReviews) return;
-    const el = reviewSentinelRef.current;
-    if (!el) return;
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0]?.isIntersecting) {
-          setReviewVisibleCount((prev) => prev + REVIEW_PAGE_SIZE);
-        }
-      },
-      { rootMargin: '200px' },
-    );
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, [showReviews, hasMoreReviews, filteredReviews]);
 
   const visibleTabs = useMemo(() => {
     if (!activeProfileDetail?.visibility) {
@@ -470,87 +426,11 @@ function SocialProfileDetailScreenBase({
             <div className="hub-detail-metadata">
               <div className="hub-metadata-section">
                 <strong>{SOCIAL_UI.feed.reviewsTitle}</strong>
-                {reviews.length === 0 ? (
-                  <p>{SOCIAL_UI.feed.reviewsEmptyProfile}</p>
-                ) : (
-                  <>
-                  <input
-                    type="text"
-                    className="input-base hub-game-filter"
-                    value={reviewQuery}
-                    onChange={(event) => setReviewQuery(event.target.value)}
-                    placeholder={SOCIAL_UI.feed.gameFilterPlaceholder}
-                    aria-label={SOCIAL_UI.feed.gameFilterPlaceholder}
-                  />
-                  {filteredReviews.length === 0 ? (
-                    <p className="hub-game-filter-empty">{SOCIAL_UI.feed.gameFilterEmpty}</p>
-                  ) : (
-                  <div className="hub-feed-activity-list hub-profile-reviews-list" role="list" aria-label={SOCIAL_UI.feed.reviewsTitle}>
-                    {visibleReviews.map((review) => {
-                      const rating = Number(review.rating || 0);
-                      // Reseña sin puntuación (p. ej. juegos de la lista de la vergüenza): medallón azul con
-                      // un icono en vez del número y sin estrellas.
-                      const hasRating = rating > 0;
-                      const itemDate = new Date(review.ts || 0);
-                      const hasValidDate = review.ts > 0 && !Number.isNaN(itemDate.getTime());
-                      // Color por nota: 1=rojo, 2=amarillo; 3/4/5 bien separados en tono (lima→verde→esmeralda)
-                      // y en luminosidad (3 más claro, 5 el más profundo) para distinguirlos de un vistazo.
-                      const rScore = Math.max(1, Math.min(5, Math.round(rating)));
-                      const reviewHue = [0, 4, 50, 82, 120, 156][rScore];
-                      const reviewLAdj = [0, 0, 0, 10, 5, 0][rScore];
-                      const openThis = () => onOpenReview(review.id);
-                      return (
-                        <article
-                          key={review.id}
-                          className={`hub-feed-card hub-feed-activity-item is-review hub-review-entry ${hasRating ? '' : 'is-noscore'}`.trim()}
-                          role="listitem"
-                          style={hasRating ? ({ '--rev-hue': String(reviewHue), '--rev-ladj': `${reviewLAdj}%` } as CSSProperties) : undefined}
-                        >
-                          {/* Tarjeta pulsable: abre el detalle de la reseña (todo el análisis) con vuelta a esta lista. */}
-                          <button
-                            type="button"
-                            className="hub-review-open"
-                            aria-label={SOCIAL_UI.feed.reviewOpenAria(review.gameName || '')}
-                            onClick={openThis}
-                          />
-                          <span className="hub-review-medal" aria-hidden="true">
-                            {hasRating ? (scoreScale === 'grade' ? Math.round(resolveGrade({ grade: review.grade, score: rating })) : Math.round(rating)) : '¿?'}
-                          </span>
-                          <header className="hub-review-entry-head">
-                            {review.gameName ? <h4 className="hub-review-game">{review.gameName}</h4> : null}
-                            <div className="hub-review-meta">
-                              {hasRating && scoreScale !== 'grade' ? <StarRating value={rating} /> : null}
-                              {hasValidDate ? (
-                                <span className="hub-review-date">
-                                  {itemDate.toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })}
-                                </span>
-                              ) : null}
-                            </div>
-                          </header>
-                          {review.reviewText ? (
-                            <div className="hub-review-body">
-                              <p className="hub-feed-review-text hub-review-text">{review.reviewText}</p>
-                            </div>
-                          ) : null}
-                        </article>
-                      );
-                    })}
-                  </div>
-                  )}
-                  {hasMoreReviews ? (
-                    <button
-                      ref={reviewSentinelRef}
-                      className="hub-more-soft hub-feed-load-more"
-                      type="button"
-                      aria-label={SOCIAL_UI.feed.feedLoadMore}
-                      title={SOCIAL_UI.feed.feedLoadMore}
-                      onClick={() => setReviewVisibleCount((prev) => prev + REVIEW_PAGE_SIZE)}
-                    >
-                      <Icon name="chevron-down" />
-                    </button>
-                  ) : null}
-                  </>
-                )}
+                <ProfileReviewsList
+                  SOCIAL_UI={SOCIAL_UI}
+                  reviews={reviews}
+                  onOpenReview={onOpenReview}
+                />
               </div>
             </div>
           ) : showStats ? (

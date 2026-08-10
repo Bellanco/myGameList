@@ -2,7 +2,8 @@ import { memo, useId } from 'react';
 import { UI_MESSAGES } from '../../../core/constants/labels';
 import { TagRanking } from './TagRanking';
 import { labelLines } from './labelLines';
-import type { TagBucket } from '../../../core/stats/types';
+import { formatDecimal } from './format';
+import type { GenreAffinity } from '../../../core/stats/types';
 
 const L = UI_MESSAGES.stats.radar;
 
@@ -36,10 +37,15 @@ function polygon(points: Point[]): string {
  * Figura de géneros al estilo del "Resumen del año" de Steam: un hexágono cuyos vértices son tus seis géneros
  * principales y cuya silueta dice de un vistazo hacia dónde tiras.
  *
+ * Lo que mide cada eje es la AFINIDAD, no el número de juegos: cada juego cuenta por la nota que le pusiste
+ * (ver `affinityOf` en `computeStats`), así que un género de muchos juegos regulares puede quedar por detrás
+ * de otro más pequeño que te encantó. El recuento puro ya lo dibuja el rosetón de "Géneros más jugados"; si
+ * este hexágono contara lo mismo, serían dos formas distintas diciendo lo mismo.
+ *
  * SVG a mano y no una librería: son treinta líneas de trigonometría, hereda los colores del tema por variables
  * CSS y no añade un solo kilobyte de dependencia al bundle.
  */
-export const GenreRadar = memo(function GenreRadar({ tags }: { tags: TagBucket[] }) {
+export const GenreRadar = memo(function GenreRadar({ tags }: { tags: GenreAffinity[] }) {
   const gradientId = useId();
 
   if (tags.length === 0) {
@@ -51,17 +57,17 @@ export const GenreRadar = memo(function GenreRadar({ tags }: { tags: TagBucket[]
     return (
       <>
         <p className="stats-note">{L.tooFew}</p>
-        <TagRanking tags={tags} limit={MIN_AXES} />
+        <TagRanking tags={tags.map((tag) => ({ tag: tag.tag, games: tag.games, hours: 0 }))} limit={MIN_AXES} />
       </>
     );
   }
 
   const axes = tags.slice(0, MAX_AXES);
   const total = axes.length;
-  const max = axes[0].games || 1;
+  const max = axes[0].weight || 1;
   // Suelo del 12%: la escala es lineal (el área dice la verdad), pero un género con un solo juego frente a
   // uno con veinte quedaría pegado al centro y su vértice desaparecería de la figura.
-  const shape = axes.map((tag, index) => vertex(index, total, Math.max(tag.games / max, 0.12)));
+  const shape = axes.map((tag, index) => vertex(index, total, Math.max(tag.weight / max, 0.12)));
 
   return (
     <div className="genre-radar">
@@ -69,7 +75,7 @@ export const GenreRadar = memo(function GenreRadar({ tags }: { tags: TagBucket[]
         viewBox={`0 0 ${SIZE} ${SIZE}`}
         className="genre-radar-svg"
         role="img"
-        aria-label={L.aria(axes.map((tag) => L.axisValue(tag.tag, tag.games)).join(', '))}
+        aria-label={L.aria(axes.map((tag) => L.axisValue(tag.tag, formatDecimal(tag.weight), tag.games, tag.avgGrade)).join(', '))}
       >
         <defs>
           <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
@@ -109,10 +115,12 @@ export const GenreRadar = memo(function GenreRadar({ tags }: { tags: TagBucket[]
               textAnchor={anchor}
               dominantBaseline="middle"
             >
+              {/* Solo el nombre del género: la cifra de afinidad no es una cantidad que nadie vaya a comparar
+                  —lo que se lee es la FORMA de la figura—, y quitándola cabe un cuerpo de letra mayor. El dato
+                  numérico sigue en el `aria-label`, para quien no ve la silueta. */}
               {labelLines(tag.tag).map((line, row, all) => (
                 <tspan key={line} x={label.x} dy={row === 0 ? (all.length > 1 ? '-0.5em' : '0') : '1.1em'}>
                   {line}
-                  {row === all.length - 1 ? <tspan className="genre-radar-label-num" dx="4">{tag.games}</tspan> : null}
                 </tspan>
               ))}
             </text>
