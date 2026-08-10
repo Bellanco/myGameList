@@ -184,8 +184,6 @@ export const SpeedGauge = memo(function SpeedGauge({ ratio }: { ratio: StatsSumm
           );
         })}
       </ul>
-
-      <p className="gauge-quote">{L.quote}</p>
     </div>
   );
 });

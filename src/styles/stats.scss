@@ -36,6 +36,24 @@
   --chart-from: var(--steam);
   --chart-to: var(--warn);
 
+  /* RAMPA DE NOTA: los colores con los que el panel habla de puntuaciones. Son EXACTAMENTE los de la rueda de
+     puntuar (`.score-ring`, `.score-dial`): `hsl(tono 58% var(--acc-l))` con el tono que reparte
+     `hueFromGrade`, de 0 (rojo) a 135 (verde). No es una rampa decorativa del panel: una nota tiene que verse
+     del mismo color aquí y en la ficha del juego, y por eso NINGÚN tema la reescribe.
+     Los tres pasos son el centro de cada grupo de la tira: 1–2★, 3★ y 4–5★. */
+  /* Un paso por estrella, sobre el mismo semáforo rojo→verde de la rueda de puntuar. El TONO solo no basta:
+     los cinco niveles caben en 135° y los dos verdes salían calcados en una barra de dos centímetros, así que
+     cada peldaño mueve además la luz y la saturación. De abajo arriba: rojo, naranja, ámbar, verde de monte y
+     verde encendido —cinco colores que se nombran distinto, que es la prueba de que se distinguen—. */
+  --grade-1: hsl(6 65% calc(var(--acc-l) - 4%));
+  --grade-2: hsl(28 72% calc(var(--acc-l) - 1%));
+  --grade-3: hsl(50 70% calc(var(--acc-l) + 1%));
+  --grade-4: hsl(96 45% calc(var(--acc-l) - 10%));
+  --grade-5: hsl(142 62% calc(var(--acc-l) + 3%));
+  /* Extremos del eje del enjambre (nota 0 y nota 100), para el velo del lienzo. */
+  --grade-floor: hsl(0 58% var(--acc-l));
+  --grade-ceiling: hsl(135 58% var(--acc-l));
+
   /* TINTA SECUNDARIA del panel. El gris de la app se queda en 3,5:1 sobre la tarjeta —suficiente para un
      párrafo, corto para el tamaño al que aquí se escribe: rótulos de eje, cuentas, pies de figura—, así que
      dentro del panel se acerca al color de texto hasta pasar el 4,5:1 sin dejar de leerse como secundario. */
@@ -148,16 +166,60 @@
 
 /* Con muchos años la fila se desplaza en horizontal en vez de romperse en varias líneas: así el conmutador
    ocupa siempre lo mismo y "General" queda a la vista. */
+/* Sin desplazamiento horizontal: los años que no caben viven en el menú "Más años" (ver `ScopeTabs`), así que
+   la barra se envuelve en dos líneas como mucho y nunca esconde nada fuera de la vista. */
 .scope-tabs {
   grid-column: span 12;
   display: flex;
+  flex-wrap: wrap;
   gap: .4rem;
-  overflow-x: auto;
-  padding-bottom: .15rem;
-  scrollbar-width: thin;
+  /* Por encima de las tarjetas: cada una anima con `transform` y crea su propio contexto de apilamiento, así
+     que el desplegable de años se dibujaba DEBAJO de la primera tarjeta. */
+  position: relative;
+  z-index: 5;
 }
 
 .scope-tabs .btn-toggle { flex: 0 0 auto; }
+
+/* ---- "Más años": el resto del historial, en un desplegable ---------------------------------------------- */
+
+.scope-more { position: relative; }
+
+.scope-more-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: .4rem;
+}
+
+.scope-more-count {
+  padding: 0 .35rem;
+  border-radius: var(--radius-pill);
+  background: var(--score-track);
+  font-size: .72rem;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Rejilla de años: con veinte años, una lista en columna obliga a desplazar el propio menú. */
+.scope-more-panel {
+  position: absolute;
+  z-index: 30;
+  top: calc(100% + .35rem);
+  left: 0;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(3.6rem, 1fr));
+  gap: .3rem;
+  padding: .5rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface-elevated);
+  box-shadow: var(--shadow);
+  animation: fade-in .16s ease-out both;
+}
+
+/* Pegado al borde derecho cuando el botón está a la derecha del todo (pantallas estrechas). */
+@media (max-width: 34rem) {
+  .scope-more-panel { left: auto; right: 0; grid-template-columns: repeat(3, minmax(3.6rem, 1fr)); }
+}
 
 /* ---- Cifras destacadas ------------------------------------------------------------------------------- */
 
@@ -216,6 +278,46 @@
   color: var(--stats-ink-2);
 }
 
+/* Barra de cobertura: solo en la cifra que ES una parte de un todo (las reseñas sobre lo que has cerrado).
+   Crece al entrar como el resto de barras del panel. */
+.stat-tile-bar {
+  height: 4px;
+  margin-top: .35rem;
+  border-radius: 2px;
+  background: var(--score-track);
+  overflow: hidden;
+}
+
+.stat-tile-bar i {
+  display: block;
+  width: var(--pct, 0%);
+  height: 100%;
+  border-radius: 2px;
+  background: var(--steam);
+  transform-origin: left center;
+  animation: grow-right .7s cubic-bezier(.22, 1, .36, 1) both;
+}
+
+/* La tarjeta que lleva a alguna parte se comporta como un control: hereda el aspecto de las demás y solo se
+   distingue al señalarla y al recibir el foco, que es cuando importa. */
+.stat-tile.is-link {
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color .15s ease, transform .15s ease;
+}
+
+.stat-tile.is-link:hover {
+  border-color: color-mix(in oklch, var(--steam) 55%, var(--border));
+  transform: translateY(-1px);
+}
+
+.stat-tile.is-link:focus-visible {
+  outline: 2px solid var(--steam);
+  outline-offset: 2px;
+}
+
 /* ---- Gráfico anual ----------------------------------------------------------------------------------- */
 
 .stats-metric-switch {
@@ -224,68 +326,281 @@
   flex-wrap: wrap;
 }
 
-/* Scroll horizontal propio: con veinte años en pantalla estrecha las columnas quedarían de un píxel. */
-.year-chart {
+/* Curva de la serie + tira de calidad. Sin scroll horizontal: veinte años caben en el ancho de la tarjeta
+   porque la serie es una línea, no veinte columnas. La escala vive a la izquierda (3 rem reservados) y todo lo
+   demás —curva, puntos, eje y tira— comparte esa misma caja para que las tres piezas queden alineadas. */
+.year-trend {
   display: flex;
-  align-items: flex-end;
-  gap: .5rem;
-  overflow-x: auto;
-  padding-bottom: .2rem;
-  min-height: 11rem;
-}
-
-/* Las columnas crecen para repartirse el ancho, pero con tope: sin él, media docena de años en una tarjeta
-   ancha daban barras de doscientos píxeles que ya no se leen como una serie. */
-.year-col {
-  display: flex;
-  flex: 1 1 2.4rem;
   flex-direction: column;
-  align-items: center;
-  gap: .3rem;
-  min-width: 2.4rem;
-  max-width: 4.5rem;
+  gap: .5rem;
+  /* Calle izquierda para la escala y margen derecho para que el último año —punto, etiqueta y su barra— no se
+     pegue al filo de la tarjeta. Los cuatro elementos (curva, eje, tira y pie) comparten las dos medidas, que
+     es lo que los mantiene alineados entre sí. */
+  --year-gutter: 2.6rem;
+  --year-edge: 1.1rem;
 }
 
-.year-col-value {
-  font-size: .76rem;
+.year-trend-canvas {
+  position: relative;
+  height: 13rem;
+  padding-left: var(--year-gutter);
+  padding-right: var(--year-edge);
+}
+
+.year-trend-plot {
+  position: absolute;
+  inset: 0 var(--year-edge) 0 var(--year-gutter);
+}
+
+/* El barrido de entrada va en el LIENZO, no en cada trazo. Aplicado al `<path>` de la línea, el `clip-path`
+   se resuelve contra la caja de la GEOMETRÍA, y el grosor del trazo se pinta medio por fuera de ella: en el
+   punto más alto de la serie la línea quedaba cortada por la mitad —o desaparecía— justo donde más se mira. */
+.year-trend-plot svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  animation: year-area-in 1s cubic-bezier(.4, 0, .2, 1) both;
+}
+
+/* La escala en HTML y no en `<text>`: el SVG se estira sin conservar la proporción, y ahí dentro las cifras
+   saldrían aplastadas. */
+.year-trend-scale span {
+  position: absolute;
+  left: 0;
+  width: calc(var(--year-gutter) - .45rem);
+  transform: translateY(-50%);
+  text-align: right;
+  font-size: .68rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-muted);
+}
+
+/* La unidad, en una línea aparte y más pequeña: acompaña a la cifra sin robarle sitio a la calle. */
+.year-trend-scale em {
+  display: block;
+  font-style: normal;
+  font-size: .58rem;
+  letter-spacing: .04em;
+  text-transform: lowercase;
+  opacity: .85;
+}
+
+.year-grid line {
+  stroke: var(--border);
+  stroke-width: 1;
+  opacity: .55;
+  vector-effect: non-scaling-stroke;
+}
+
+.year-line {
+  fill: none;
+  stroke: var(--steam);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+}
+
+/* El degradado NO baja hasta cero: el relleno se mide contra la caja del lienzo, no contra la curva, así que
+   en los años bajos el tramo de justo debajo de la línea caía en la parte transparente y parecía que la mancha
+   se despegaba del trazo. Con un suelo de .08 el área acompaña a la línea en todo el recorrido. */
+.year-fill-top { stop-color: var(--steam); stop-opacity: .42; }
+.year-fill-bottom { stop-color: var(--steam); stop-opacity: .08; }
+
+.year-node {
+  position: absolute;
+  width: .45rem;
+  height: .45rem;
+  margin: -.225rem 0 0 -.225rem;
+  border-radius: 50%;
+  background: var(--steam);
+  box-shadow: 0 0 0 2px var(--surface);
+  animation: pop-in .45s cubic-bezier(.34, 1.36, .64, 1) both;
+  animation-delay: calc(.35s + var(--i, 0) * 45ms);
+}
+
+/* El punto como atajo: al pasarle el ratón crece y se enciende, para que se note que abre ese año. */
+.year-node.is-link {
+  padding: 0;
+  border: 0;
+  cursor: pointer;
+  transition: transform .12s ease-out, box-shadow .12s ease-out;
+}
+
+.year-node.is-link::after {
+  content: "";
+  position: absolute;
+  inset: -10px;
+  border-radius: 50%;
+}
+
+.year-node.is-link:hover {
+  transform: scale(1.6);
+  box-shadow: 0 0 0 2px var(--surface), 0 0 10px rgba(var(--steam-rgb), .6);
+}
+
+/* El año récord, con el aro abierto: es el único punto que se rotula, así que se distingue también por forma. */
+.year-node.is-peak {
+  width: .75rem;
+  height: .75rem;
+  margin: -.375rem 0 0 -.375rem;
+  background: var(--surface);
+  border: 2.5px solid var(--steam);
+}
+
+/* Cifra de cada año, JUSTO ENCIMA de su punto. Al lado del punto se cruzaba con la propia curva y había tramos
+   donde la línea desaparecía detrás del rótulo. */
+.year-value {
+  position: absolute;
+  transform: translate(-50%, -100%);
+  margin-top: -.5rem;
+  font-size: .7rem;
   font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  color: var(--stats-ink-2);
+  pointer-events: none;
+  animation: fade-in .4s ease-out both;
+  animation-delay: calc(.5s + var(--i, 0) * 45ms);
+}
+
+/* El récord, en la píldora del acento: es el único valor que hay que encontrar sin buscarlo. */
+.year-value.is-peak {
+  margin-top: -.65rem;
+  padding: .1rem .45rem;
+  border-radius: var(--radius-pill);
+  background: var(--steam);
+  color: var(--on-accent);
+  font-weight: 700;
+}
+
+/* En pantalla estrecha las cifras se pisarían: se quedan las alternas y, siempre, la del récord. */
+@media (max-width: 34rem) {
+  .year-value:nth-of-type(2n):not(.is-peak) { display: none; }
+}
+
+.year-axis {
+  position: relative;
+  height: 1.1rem;
+  margin-inline: var(--year-gutter) var(--year-edge);
+  font-size: .72rem;
   font-variant-numeric: tabular-nums;
   color: var(--stats-ink-2);
 }
 
-.year-col-track {
-  display: flex;
-  align-items: flex-end;
-  width: 100%;
-  height: 8rem;
-  border-radius: var(--stats-radius);
-  background: var(--score-track);
-}
-
-.year-col-bar {
-  width: 100%;
-  height: var(--bar-height, 0%);
-  border-radius: var(--stats-radius);
-  background: linear-gradient(180deg, var(--steam) 0%, rgba(var(--steam-rgb), .5) 100%);
-  box-shadow: 0 0 12px rgba(var(--steam-rgb), .25);
-  transition: height .3s cubic-bezier(.22, 1, .36, 1);
-  /* Crece desde la base en cascada, igual que el histograma de notas. */
-  transform-origin: bottom center;
-  animation: grow-up .7s cubic-bezier(.22, 1, .36, 1) both;
-  animation-delay: calc(var(--i, 0) * 45ms);
-}
-
-/* El cajón "sin año" no es un año más: se pinta apagado y rayado para que no se lea como parte de la serie. */
-.year-col-bar.is-undated {
-  background: repeating-linear-gradient(135deg, var(--text-dim) 0 4px, transparent 4px 8px);
-  box-shadow: none;
-  opacity: .7;
-}
-
-.year-col-label {
-  font-size: .72rem;
-  color: var(--stats-ink-2);
+.year-axis span {
+  position: absolute;
+  transform: translateX(-50%);
   white-space: nowrap;
+}
+
+/* En pantalla estrecha se cae una de cada dos etiquetas: el componente ya deja ocho como mucho, pero ocho años
+   de cuatro cifras no caben en 320 px. */
+@media (max-width: 34rem) {
+  .year-axis span:nth-child(2n) { display: none; }
+}
+
+/* ---- Tira de calidad (el reparto por nota de cada año, bajo la curva) ---------------------------------- */
+
+/* Cada columna se centra en la MISMA x que su punto de la curva, no en celdas de ancho igual: así las dos
+   figuras se leen juntas sin buscar la correspondencia. */
+.year-strip {
+  position: relative;
+  height: 2.6rem;
+  margin-inline: var(--year-gutter) var(--year-edge);
+}
+
+/* REGLETA, no pila de capas: los cinco niveles van pegados dentro de una cápsula estrecha, separados por un
+   hilo del color de la tarjeta. Con las piezas sueltas y esquinas redondeadas cada año parecía un sándwich de
+   tres pisos; así se lee lo que es: una escala de nota que se llena de rojo a verde. */
+.year-strip-col {
+  --shift: -50%;
+
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  transform: translateX(var(--shift));
+  display: flex;
+  flex-direction: column;
+  /* CUADRADA: es una barra de un gráfico de barras, un año al lado de otro. Con la cápsula redondeada parecía
+     un indicador suelto y no una serie. */
+  border-radius: 2px;
+  overflow: hidden;
+  background: var(--score-track);
+  transform-origin: bottom center;
+  /* Keyframes PROPIOS y no el `grow-up` de las barras: aquel anima `transform` a secas y, al terminar, se
+     quedaba mandando sobre la regla de arriba —adiós al desplazamiento— y descolocaba media columna. */
+  animation: year-strip-in .55s cubic-bezier(.22, 1, .36, 1) both;
+  animation-delay: calc(.5s + var(--i, 0) * 40ms);
+}
+
+/* Los cinco niveles usan la RAMPA DE NOTA del panel (`--grade-*`), la misma de la rueda de puntuar: aquí el
+   color habla de la puntuación, no de si el juego se terminó.
+   Sin tramas: con cinco niveles en una barra de dos centímetros, el rayado era ruido —y además hacía parecer
+   "malo" lo que solo es bajo—. La distinción no depende solo del color: los niveles van SIEMPRE en el mismo
+   orden (5★ arriba, 1★ abajo), y cada trozo dice lo suyo al pasar por encima. */
+.year-strip-seg {
+  min-height: 3px;
+  background: var(--grade-5);
+  /* El hilo de separación es del color de la TARJETA, no un borde de color: mantiene la columna como una sola
+     pieza y a la vez deja ver dónde acaba un nivel y empieza el siguiente. */
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--surface) 70%, transparent);
+}
+
+.year-strip-seg:first-child { box-shadow: none; }
+.year-strip-seg.is-s4 { background: var(--grade-4); }
+.year-strip-seg.is-s3 { background: var(--grade-3); }
+.year-strip-seg.is-s2 { background: var(--grade-2); }
+.year-strip-seg.is-s1 { background: var(--grade-1); }
+
+/* Al señalar una barra se resalta entera, no cada trozo: lo que se compara es el año. */
+.year-strip-col:hover { outline: 2px solid color-mix(in srgb, var(--text) 45%, transparent); outline-offset: 1px; }
+
+.year-strip-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: .2rem 1rem;
+  margin-inline: var(--year-gutter) var(--year-edge);
+}
+
+/* Escala de color de la tira: los cinco pasos en una regleta, con sus extremos rotulados en la escala de la
+   cuenta. En BANDAS y no en degradado continuo, porque los niveles son discretos: lo que se ve aquí es
+   exactamente lo que se apila en cada barra. */
+.year-scale {
+  display: flex;
+  align-items: center;
+  gap: .35rem;
+  margin: 0;
+  font-size: .72rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--stats-ink-2);
+}
+
+.year-scale-ramp {
+  width: 4.5rem;
+  height: .6rem;
+  border-radius: 2px;
+  background: linear-gradient(90deg,
+    var(--grade-1) 0 20%,
+    var(--grade-2) 20% 40%,
+    var(--grade-3) 40% 60%,
+    var(--grade-4) 60% 80%,
+    var(--grade-5) 80% 100%);
+}
+
+/* El área se descubre de izquierda a derecha, por delante de la línea que la dibuja. */
+@keyframes year-area-in {
+  from { opacity: 0; clip-path: inset(0 100% 0 0); }
+  to { opacity: 1; clip-path: inset(0 0 0 0); }
+}
+
+@keyframes year-strip-in {
+  from { opacity: 0; transform: translateX(var(--shift)) scaleY(.12); }
+  to { opacity: 1; transform: translateX(var(--shift)) scaleY(1); }
 }
 
 /* ---- Evolución del backlog (área apilada acumulada) ---------------------------------------------------- */
@@ -516,8 +831,8 @@
   min-height: 9rem;
   border-radius: var(--stats-radius);
   background: linear-gradient(90deg,
-    color-mix(in srgb, hsl(0 58% var(--acc-l)) 10%, transparent),
-    color-mix(in srgb, hsl(135 58% var(--acc-l)) 10%, transparent));
+    color-mix(in srgb, var(--grade-floor) 10%, transparent),
+    color-mix(in srgb, var(--grade-ceiling) 10%, transparent));
 }
 
 /* Silueta de densidad: un velo por detrás, nunca una mancha. Sin `fill` explícito el SVG la pintaba negra y
@@ -563,24 +878,6 @@
   font-size: .68rem;
   font-weight: 500;
   color: var(--stats-ink-2);
-}
-
-/* La media, marcada con una guía llena y su cifra: es la referencia contra la que se lee todo lo demás. */
-.beeswarm-average {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  border-left: 2px solid var(--text-muted);
-  opacity: .8;
-}
-
-.beeswarm-average b {
-  position: absolute;
-  top: -.1rem;
-  left: .3rem;
-  font-size: .7rem;
-  color: var(--stats-ink-2);
-  font-variant-numeric: tabular-nums;
 }
 
 /* Un punto por juego. En HTML y no en SVG: sobre un lienzo que se estira, dentro del SVG saldrían ovalados. */
@@ -989,9 +1286,13 @@
 
 /* ---- Figura de géneros (hexágono) --------------------------------------------------------------------- */
 
+/* La figura centrada y su pie debajo, no al lado: en columna, el `stats-note` explica la cifra de las puntas
+   justo donde se acaba de leer. */
 .genre-radar {
   display: flex;
-  justify-content: center;
+  flex-direction: column;
+  align-items: center;
+  gap: .5rem;
 }
 
 .genre-radar-svg {
@@ -1057,15 +1358,11 @@
   animation-delay: .75s;
 }
 
+/* Sin la cifra al lado, el nombre del género puede crecer: es lo único que hay que leer en la punta. */
 .genre-radar-label {
   fill: var(--text);
-  font-size: 10px;
+  font-size: 11.5px;
   font-weight: 600;
-}
-
-.genre-radar-label-num {
-  fill: var(--stats-ink-2);
-  font-weight: 500;
 }
 
 /* ---- Completados vs abandonados: cuadro de mandos ------------------------------------------------------ */
@@ -1195,15 +1492,6 @@
 }
 
 /* Pie del bloque: la frase del juego que le da nombre a lo que se está mirando. */
-.gauge-quote {
-  margin: 0;
-  font-size: .78rem;
-  font-style: italic;
-  color: var(--stats-ink-2);
-  text-align: center;
-  max-width: 24rem;
-}
-
 /* La cifra, dentro del propio instrumento: en el hueco que deja el cuadrante, como la lectura de un
    cuentakilómetros. */
 .gauge-hero {
@@ -1356,6 +1644,48 @@
   background: color-mix(in srgb, var(--steam) 18%, transparent);
 }
 
+/* Tu cita sobre el juego. Recortada a tres líneas: en el podio manda el nombre, y la reseña entera tiene su
+   propia pantalla, a un toque de aquí. */
+/* DOS líneas de texto en el hueco de TRES: recortar a tres dejaba la tarjeta apretada de arriba abajo, y bajar
+   a dos sin más hacía saltar la altura del podio según quién tuviera reseña larga. Con el alto reservado, las
+   tres tarjetas miden lo mismo, el texto respira y lo que sobra se corta con puntos suspensivos. */
+.podium-quote {
+  --quote-line: 1.35;
+
+  position: relative;
+  margin: .15rem 0 0;
+  padding-left: .5rem;
+  border-left: 2px solid color-mix(in oklch, var(--steam) 45%, transparent);
+  font-size: .78rem;
+  font-style: italic;
+  line-height: var(--quote-line);
+  color: var(--stats-ink-2);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  /* El hueco de la tercera línea se reserva con MARGEN. Con `min-height` el navegador encuentra sitio para una
+     línea más y se salta el recorte; con relleno tampoco vale, porque en una caja `-webkit-box` el texto se
+     pinta sobre el propio relleno. El margen no es área de pintado, así que el recorte se respeta y la tarjeta
+     conserva el alto que tenía con tres líneas. */
+  max-height: calc(var(--quote-line) * 2em);
+  margin-bottom: calc(var(--quote-line) * 1em);
+  /* Sitio para el número de agua de la esquina: sin esto, el final de la cita —y sus puntos suspensivos—
+     acababa por debajo del "1". */
+  padding-right: 2.4rem;
+}
+
+/* La tarjeta del podio con reseña se abre entera, igual que las fichas del resto del top: el filo lateral es
+   la señal y el botón invisible de encima, el objetivo. */
+.podium-step.has-review {
+  border-left-width: 3px;
+  cursor: pointer;
+  transition: background .15s ease;
+}
+
+.podium-step.has-review:hover { background: var(--surface-elevated); }
+.podium-step.has-review:hover .podium-quote { color: var(--text); }
+
 /* El resto del top, con la misma receta: puesto al fondo y una barra de nota al pie. Puestas en rejilla, las
    barras dejan ver de un golpe cómo caen las notas del cuarto al quince. */
 .top-chips {
@@ -1398,6 +1728,33 @@
   opacity: .55;
   pointer-events: none;
 }
+
+/* Matiz de que esa ficha lleva reseña y se puede abrir: un filo lateral, nada más. Con un icono o una pastilla,
+   doce fichas seguidas se llenaban de adornos y el nombre dejaba de ser lo primero. */
+.top-chips li.has-review {
+  border-left: 2px solid color-mix(in oklch, var(--steam) 55%, transparent);
+  cursor: pointer;
+  transition: border-color .15s ease, background .15s ease;
+}
+
+.top-chips li.has-review:hover {
+  border-left-color: var(--steam);
+  background: var(--surface-elevated);
+}
+
+/* El botón cubre la ficha entera: así el objetivo es la tarjeta —que sí llega al tamaño mínimo— y no un icono
+   de doce píxeles, y el teclado la alcanza como a cualquier otro control. */
+.top-chip-open {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  padding: 0;
+  background: none;
+  cursor: pointer;
+  z-index: 1;
+}
+
+.top-chip-open:focus-visible { outline: 2px solid var(--steam); outline-offset: -2px; border-radius: var(--stats-radius); }
 
 .top-chip-name {
   position: relative;
@@ -1856,6 +2213,86 @@
   color: var(--stats-ink-2);
   font-variant-numeric: tabular-nums;
 }
+
+/* ---- Qué destacas y qué te chirría --------------------------------------------------------------------- */
+
+/* Pirámide de población: las dos caras sobre la MISMA escala, así que se ve de un vistazo si celebras más de lo
+   que criticas. El nombre va fuera de la barra; dentro, cualquier etiqueta corta se salía de su relleno. */
+.traits { display: flex; flex-direction: column; gap: .5rem; }
+
+.traits-heads {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.2rem;
+  margin: 0;
+  font-size: .72rem;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  color: var(--stats-ink-2);
+}
+
+.traits-heads span:first-child { text-align: right; }
+
+.traits-rows {
+  display: flex;
+  flex-direction: column;
+  gap: .45rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.traits-rows li {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.2rem;
+  animation: slide-in .45s cubic-bezier(.22, 1, .36, 1) both;
+  animation-delay: calc(var(--i, 0) * 50ms);
+}
+
+.traits-side {
+  display: flex;
+  flex-direction: column;
+  gap: .2rem;
+  min-width: 0;
+}
+
+.traits-side.is-good { align-items: flex-end; text-align: right; }
+
+.traits-name {
+  font-size: .8rem;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.traits-name b { margin-left: .3rem; font-variant-numeric: tabular-nums; }
+.is-good .traits-name b { color: color-mix(in oklch, var(--stats-c) 62%, var(--text)); }
+.is-bad .traits-name b { color: color-mix(in oklch, var(--stats-v) 62%, var(--text)); }
+
+.traits-bar {
+  position: relative;
+  width: 100%;
+  height: 10px;
+  border-radius: 3px;
+  background: var(--surface-soft);
+}
+
+.traits-bar i {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: var(--pct, 0%);
+  border-radius: 3px;
+  transform-origin: inherit;
+  animation: grow-right .6s cubic-bezier(.22, 1, .36, 1) both;
+  animation-delay: calc(var(--i, 0) * 50ms);
+}
+
+/* Cada lado crece desde su propio filo, hacia el centro de la figura. */
+.is-good .traits-bar i { right: 0; background: color-mix(in oklch, var(--stats-c) 72%, transparent); transform-origin: right center; }
+.is-bad .traits-bar i { left: 0; background: color-mix(in oklch, var(--stats-v) 72%, transparent); transform-origin: left center; }
 
 /* ---- El año en cajas ------------------------------------------------------------------------------------ */
 

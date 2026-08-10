@@ -32,6 +32,7 @@ export function SocialProfileReviewScreen({
   review,
   profileName,
   onBack,
+  backLabel,
   status,
   statusKind,
 }: {
@@ -39,6 +40,8 @@ export function SocialProfileReviewScreen({
   review: ProfileReview | null;
   profileName: string;
   onBack: () => void;
+  /** Rótulo del botón de volver. Por defecto, la lista de reseñas; el panel de estadísticas pasa el suyo. */
+  backLabel?: string;
   status: string;
   statusKind: string;
 }) {
@@ -53,7 +56,7 @@ export function SocialProfileReviewScreen({
       </header>
       <div className="hub-screen-actions hub-screen-actions-split" aria-label={SOCIAL_UI.feed.detailActionsAria}>
         <div className="hub-screen-actions-left">
-          <HubBackButton onBack={onBack} label={SOCIAL_UI.feed.reviewsBackToList} />
+          <HubBackButton onBack={onBack} label={backLabel || SOCIAL_UI.feed.reviewsBackToList} />
         </div>
       </div>
     </>

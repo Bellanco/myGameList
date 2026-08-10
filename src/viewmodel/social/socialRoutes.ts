@@ -57,6 +57,13 @@ function decodeParam(raw: string | undefined): string {
   }
 }
 
+/**
+ * Alias del PERFIL PROPIO en la URL. El panel de estadísticas enlaza a tus reseñas —que ya viven en el hub
+ * social— y ahí fuera no se conoce el pseudónimo público, que se resuelve al hidratar el directorio. Con este
+ * comodín el enlace se puede escribir sin saberlo: `/social/profiles/me/reviews`.
+ */
+export const OWN_PROFILE_ALIAS = 'me';
+
 /** Id numérico de un parámetro de ruta; 0 (que ninguna pantalla considera válido) si no lo es. */
 function toGameId(raw: string | undefined): number {
   const id = Number(raw);

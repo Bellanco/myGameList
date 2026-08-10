@@ -319,6 +319,26 @@
   --chart-to: var(--warn);
 }
 
+/* La rampa de nota (`--grade-*`) no se toca: es la de la rueda de puntuar y es igual en todos los temas. Lo
+   que sí es de aquí es el filo de tinta y el sesgo de las cajas. */
+
+/* Todo lo recortado lleva contorno de tinta, también las piezas del gráfico anual, y las cajas van a canto
+   casi vivo: en una viñeta no hay pastillas. */
+:root[data-palette="persona"] .year-node { box-shadow: 0 0 0 1.5px var(--pop-line); }
+
+/* La barra de cada año, con el filo de tinta de las viñetas y el corte en diagonal de "Dónde brillas". */
+:root[data-palette="persona"] .year-strip-col {
+  border-radius: 0;
+  box-shadow: 0 0 0 1.5px var(--pop-line);
+  clip-path: polygon(0 0, 100% 0, 100% calc(100% - 5px), calc(100% - 5px) 100%, 0 100%);
+}
+
+/* Y sus piezas se separan con la línea de tinta, no con el color de la tarjeta. */
+:root[data-palette="persona"] .year-strip-seg { box-shadow: inset 0 1.5px 0 var(--pop-line); }
+:root[data-palette="persona"] .year-scale-ramp { border-radius: 0; box-shadow: 0 0 0 1.5px var(--pop-line); }
+:root[data-palette="persona"] .year-peak { border-radius: 2px; transform: translateY(-50%) skewX(-8deg); }
+:root[data-palette="persona"] .year-peak.is-left { transform: translate(-100%, -50%) skewX(-8deg); }
+
 /* La barrita del título es un bloque sesgado, no un filete recto: el gesto del tema. */
 :root[data-palette="persona"] .stats-card h2::before {
   transform: skewX(-12deg);

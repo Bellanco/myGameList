@@ -5,8 +5,11 @@ import type { GameItem, TabData } from '../../src/model/types/game';
 // Reglas que fija este test (son decisiones de producto, no detalles de implementación):
 //  - "Próximos" no cuenta como jugado: ni horas, ni géneros, ni su nota (ahí el campo es el INTERÉS previo).
 //  - "En curso" no puntúa: no tiene campo de nota, solo arrastraría la de un paso anterior.
-//  - Las horas de un juego completado varias veces cuentan enteras en el ÚLTIMO año (no se reparten).
+//  - Un juego completado varias veces cuenta en CADA uno de sus años; sus horas, enteras en el ÚLTIMO
+//    (no se reparten ni se duplican).
 //  - Los completados sin año caen en un cajón aparte en vez de desaparecer del gráfico.
+//  - Cada año lleva el reparto por nota de sus completados (4–5★, 3★, 1–2★ y sin nota), que es lo que pinta
+//    la tira de calidad del gráfico anual.
 
 function game(overrides: Partial<GameItem> & { name: string }): GameItem {
   return {
@@ -51,7 +54,7 @@ describe('computeStats', () => {
     expect(stats.counts).toEqual({ c: 1, v: 1, e: 1, p: 1 });
   });
 
-  it('atribuye las horas de un rejugado al último año, sin repartirlas', () => {
+  it('cuenta un rejugado en todos sus años y atribuye las horas al último', () => {
     const stats = computeStats(tabData({
       c: [
         game({ id: 1, name: 'Rejugado', hours: 100, years: [2019, 2023] }),
@@ -60,12 +63,75 @@ describe('computeStats', () => {
     }));
 
     // Del más reciente al más antiguo (ver `computeStats`): el año en curso es lo primero que se quiere mirar.
-    expect(stats.years).toEqual([
-      { year: 2023, completed: 1, hours: 100 },
-      { year: 2019, completed: 1, hours: 10 },
+    expect(stats.years.map((bucket) => [bucket.year, bucket.completed, bucket.hours])).toEqual([
+      [2023, 1, 100],
+      // 2019 tiene los dos juegos, pero del rejugado solo cuenta la pasada: sus horas están en 2023.
+      [2019, 2, 10],
     ]);
     // El total del gráfico sigue cuadrando con las horas de completados: no se pierde ni se duplica nada.
     expect(stats.years.reduce((sum, bucket) => sum + bucket.hours, 0)).toBe(stats.completedHours);
+    // Y la pestaña del año dice lo mismo que la columna: el rejugado sale en los dos años.
+    expect(stats.byYear.map((year) => [year.year, year.games.map((entry) => entry.name)])).toEqual([
+      [2023, ['Rejugado']],
+      [2019, ['Rejugado', 'De 2019']],
+    ]);
+  });
+
+  it('ignora los años repetidos de un mismo juego', () => {
+    const stats = computeStats(tabData({
+      c: [game({ id: 1, name: 'Duplicado', hours: 8, years: [2022, 2022] })],
+    }));
+
+    expect(stats.years.map((bucket) => [bucket.year, bucket.completed, bucket.hours])).toEqual([[2022, 1, 8]]);
+  });
+
+  it('reparte los completados de cada año por estrellas, una a una', () => {
+    const stats = computeStats(tabData({
+      c: [
+        game({ id: 1, name: 'Redondo', grade: 95, years: [2024] }),
+        game({ id: 2, name: 'Notable', grade: 80, years: [2024] }),
+        game({ id: 3, name: 'Justito', grade: 55, years: [2024] }),
+        game({ id: 4, name: 'Flojo', grade: 25, years: [2024] }),
+        game({ id: 5, name: 'Sin nota', years: [2024] }),
+      ],
+    }));
+
+    // Un cajón por estrella (1★ … 5★): el 4★ y el 5★ ya no comparten tramo.
+    expect(stats.years[0]).toMatchObject({ year: 2024, completed: 5, stars: [1, 0, 1, 1, 1], unscored: 1 });
+  });
+
+  it('pondera los géneros por nota: un género pequeño y bueno pesa más que uno grande y flojo', () => {
+    const stats = computeStats(tabData({
+      c: [
+        game({ id: 1, name: 'Joya', genres: ['Metroidvania'], grade: 100, years: [2024] }),
+        game({ id: 2, name: 'Regular 1', genres: ['Shooter'], grade: 20, years: [2024] }),
+        game({ id: 3, name: 'Regular 2', genres: ['Shooter'], grade: 20, years: [2024] }),
+        game({ id: 4, name: 'Regular 3', genres: ['Shooter'], grade: 20, years: [2024] }),
+      ],
+    }));
+
+    // Por cantidad manda Shooter (3 juegos); por afinidad, Metroidvania (uno, pero de 100).
+    expect(stats.genres[0].tag).toBe('Shooter');
+    // El peso es exponencial —cada estrella menos vale la mitad—, así que un 5★ (1) se come a tres 1★ (0,0625
+    // cada uno). Con un peso lineal, los tres flojos habrían ganado.
+    expect(stats.genreAffinity.map((entry) => [entry.tag, entry.weight])).toEqual([
+      ['Metroidvania', 1],
+      ['Shooter', 0.1875],
+    ]);
+  });
+
+  it('los juegos sin nota pesan como la media de la biblioteca, no como un cero', () => {
+    const stats = computeStats(tabData({
+      c: [
+        game({ id: 1, name: 'Puntuado', genres: ['RPG'], grade: 80, years: [2024] }),
+        game({ id: 2, name: 'Sin nota', genres: ['Aventura'], years: [2024] }),
+      ],
+    }));
+
+    const adventure = stats.genreAffinity.find((entry) => entry.tag === 'Aventura');
+    // La media de la biblioteca es 80 (4★), que en la escala exponencial pesa 0,5: el juego sin nota vale eso
+    // y no cero, igual que el que sí tiene un 80.
+    expect(adventure).toMatchObject({ games: 1, scored: 0, avgGrade: 0, weight: 0.5 });
   });
 
   it('manda los completados sin año a un cajón propio, al final de la serie', () => {
@@ -77,7 +143,7 @@ describe('computeStats', () => {
     }));
 
     expect(stats.years.map((bucket) => bucket.year)).toEqual([2021, null]);
-    expect(stats.years[1]).toEqual({ year: null, completed: 1, hours: 4 });
+    expect(stats.years[1]).toMatchObject({ year: null, completed: 1, hours: 4, unscored: 1 });
   });
 
   it('puntúa completados y abandonados con nota, pero no próximos ni en curso', () => {
@@ -287,5 +353,70 @@ describe('computeStats · el mejor del año', () => {
     expect(y2025.best?.name).toBe('Empatado largo');
     // Y el más largo del año es otro juego distinto: son dos preguntas diferentes.
     expect(y2025.longest?.name).toBe('Peor pero larguísimo');
+  });
+});
+
+// ── Lo que escribes: reseñas, citas y puntos fuertes/débiles ────────────────────────────────────────────
+
+describe('computeStats · reseñas', () => {
+  it('cuenta las reseñas y su cobertura sobre lo que has cerrado', () => {
+    const stats = computeStats(tabData({
+      c: [
+        game({ id: 1, name: 'Uno', grade: 90, review: 'Una reseña con cuerpo suficiente para citarse entera.' }),
+        game({ id: 2, name: 'Dos', grade: 60 }),
+      ],
+      v: [game({ id: 3, name: 'Tres', review: 'Lo dejé por la mitad y no me arrepiento en absoluto.' })],
+      // En curso cuenta como reseña escrita, pero NO como juego cerrado: la cobertura mide lo cerrado.
+      e: [game({ id: 4, name: 'Cuatro', review: 'Voy por la mitad y ya sé que va a estar en mi top del año.' })],
+    }));
+
+    expect(stats.reviews.count).toBe(3);
+    expect(stats.reviews.closed).toBe(3);
+    expect(stats.reviews.coverage).toBeCloseTo((2 / 3) * 100, 5);
+  });
+
+  it('una reseña de dos letras cuenta, pero no se cita', () => {
+    const stats = computeStats(tabData({
+      c: [game({ id: 1, name: 'Uno', grade: 90, review: 'x' })],
+    }));
+    const [ref] = stats.reviews.games;
+
+    expect(stats.reviews.count).toBe(1);
+    expect(ref.hasReview).toBe(true);
+    // El panel no enseña "x" como si fuera una cita.
+    expect(ref.quote).toBe('');
+  });
+
+  it('la cita corta por el punto y no a mitad de palabra', () => {
+    const largo = `${'Primera frase que ya es larga de por sí y sirve de cita. '}${'Segunda frase que sobra. '.repeat(20)}`;
+    const stats = computeStats(tabData({ c: [game({ id: 1, name: 'Uno', grade: 90, review: largo })] }));
+    const [ref] = stats.reviews.games;
+
+    expect(ref.quote.endsWith('.')).toBe(true);
+    expect(ref.quote.length).toBeLessThanOrEqual(220);
+    expect(ref.quote).toContain('Primera frase');
+  });
+
+  it('agrega puntos fuertes y débiles aunque el texto esté vacío', () => {
+    const stats = computeStats(tabData({
+      c: [
+        game({ id: 1, name: 'Uno', grade: 90, strengths: ['Historia', 'Banda sonora'], weaknesses: ['Bugs'] }),
+        game({ id: 2, name: 'Dos', grade: 70, strengths: ['Historia'], weaknesses: ['Bugs', 'Cámara'] }),
+      ],
+    }));
+
+    expect(stats.reviews.strengths[0]).toMatchObject({ tag: 'Historia', games: 2 });
+    expect(stats.reviews.weaknesses[0]).toMatchObject({ tag: 'Bugs', games: 2 });
+  });
+
+  it('los juegos reseñados salen de mejor a peor nota', () => {
+    const stats = computeStats(tabData({
+      c: [
+        game({ id: 1, name: 'Flojo', grade: 40, review: 'Reseña con longitud suficiente para contar como cita.' }),
+        game({ id: 2, name: 'Bueno', grade: 95, review: 'Otra reseña con longitud más que suficiente para citarse.' }),
+      ],
+    }));
+
+    expect(stats.reviews.games.map((ref) => ref.name)).toEqual(['Bueno', 'Flojo']);
   });
 });
