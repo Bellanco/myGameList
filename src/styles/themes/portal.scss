@@ -75,6 +75,9 @@
 :root[data-palette="portal"] .btn:not(.btn-icon):not(.btn-ghost) { font-weight: 600; letter-spacing: .05em; border: 1px solid var(--border); border-radius: var(--radius-sm); }
 :root[data-palette="portal"] .btn-secondary,
 :root[data-palette="portal"] .btn-toggle:not(.active) { background: var(--surface-elevated) !important; color: var(--text) !important; }
+/* "General" del panel: señalética de Aperture, así que el principal se señala con el filete azul portal a media
+   intensidad. El relleno azul sigue siendo del elegido. */
+:root[data-palette="portal"] .scope-tabs > .btn-toggle:first-child:not(.active) { border-color: color-mix(in srgb, var(--steam) 45%, var(--border)); }
 :root[data-palette="portal"] .btn-accent,
 :root[data-palette="portal"] .btn-steam,
 :root[data-palette="portal"] .btn.is-active,
