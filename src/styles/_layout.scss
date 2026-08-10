@@ -1600,6 +1600,14 @@ button.hub-chip.active {
   color: var(--hub-text-muted);
   letter-spacing: .02em;
 }
+/* Aviso de "juego sin pasar", en el hueco de la fecha (tus reseñas del panel no la enseñan: esa fecha es la de
+   publicación del canal social). Ámbar del tema tirado al naranja, para no confundirlo con un aviso amarillo. */
+.hub-review-unfinished {
+  font-size: .72rem;
+  font-weight: 700;
+  letter-spacing: .02em;
+  color: color-mix(in srgb, var(--warn), var(--danger) 40%);
+}
 /* Texto + botón "ver más" ocupan las dos columnas (a lo ancho de la tarjeta). */
 .hub-review-body {
   grid-area: body;

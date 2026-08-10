@@ -10,27 +10,37 @@ import { TAB_IDS, type GameItem, type TabData } from '../../../model/types/game'
 const L = UI_MESSAGES.stats.reviews;
 
 /** Tus reseñas, tomadas de las listas en memoria: cualquiera con texto, esté en la lista que esté. */
-function collectReviews(games: TabData): Array<ReviewEntry & { game: GameItem }> {
-  const items: Array<ReviewEntry & { game: GameItem }> = [];
+function collectReviews(games: TabData): Array<ReviewEntry & { game: GameItem; effectiveGrade: number }> {
+  const items: Array<ReviewEntry & { game: GameItem; effectiveGrade: number }> = [];
 
   for (const tab of TAB_IDS) {
     for (const game of games[tab] || []) {
       const reviewText = String(game.review || '').trim();
       if (!reviewText || !game?.name?.trim()) continue;
+      const effectiveGrade = resolveGrade(game);
       items.push({
         id: game.id,
         gameName: game.name.trim(),
-        rating: starsFromGrade(resolveGrade(game)),
+        rating: starsFromGrade(effectiveGrade),
         grade: typeof game.grade === 'number' ? game.grade : null,
+        // Todo lo que no está en la lista del completista es un juego que NO te has pasado (abandonado, en
+        // curso o pendiente), y eso cambia cómo se lee la nota: la lista lo avisa.
+        unfinished: tab !== 'c',
         reviewText,
         ts: Number(game._ts) || 0,
         game,
+        effectiveGrade,
       });
     }
   }
 
   // De mejor a peor nota, que es como se leen en el panel; a igualdad, por nombre para que el orden sea estable.
-  return items.sort((a, b) => (b.grade ?? 0) - (a.grade ?? 0) || a.gameName.localeCompare(b.gameName, 'es'));
+  //
+  // Ordena por la nota EFECTIVA (`resolveGrade`), no por el campo `grade`: quien puntuó antes de la escala fina
+  // solo tiene `score` 0–5 y su `grade` viene a null. Ordenar por el campo crudo mandaba esas reseñas al fondo
+  // aunque el medallón las pintara con un 100, así que dos juegos con la misma nota acababan en extremos
+  // opuestos de la lista.
+  return items.sort((a, b) => b.effectiveGrade - a.effectiveGrade || a.gameName.localeCompare(b.gameName, 'es'));
 }
 
 interface StatsReviewsProps {
@@ -114,6 +124,8 @@ export const StatsReviews = memo(function StatsReviews({ games, gameId, onBack, 
                 reviews={reviews}
                 onOpenReview={onOpenReview}
                 emptyLabel={L.screenEmpty}
+                unfinishedLabel={L.unfinished}
+                showDate={false}
               />
             </div>
           </div>
