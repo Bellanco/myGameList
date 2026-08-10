@@ -1,7 +1,6 @@
 import { memo, type CSSProperties } from 'react';
 import { UI_MESSAGES } from '../../../core/constants/labels';
 import { GRADE_MAX, SCORE_BUCKET_FLOORS, STARS_MAX, hueFromGrade, starsFromGrade } from '../../../core/utils/scoreScale';
-import { formatDecimal } from './format';
 import type { GameRef } from '../../../core/stats/types';
 import type { ScoreScale } from '../../../core/utils/scoreScale';
 
@@ -22,8 +21,6 @@ const BINS = 22;
 interface BeeswarmProps {
   games: GameRef[];
   scale: ScoreScale;
-  /** Media de las notas (0–100), que se marca con una guía vertical. */
-  average: number;
 }
 
 interface Dot {
@@ -99,7 +96,7 @@ function median(games: GameRef[]): number {
  * Los puntos son HTML y no SVG: al ir posicionados en porcentajes sobre un lienzo que se estira, dentro de un
  * SVG se deformarían en óvalos.
  */
-export const Beeswarm = memo(function Beeswarm({ games, scale, average }: BeeswarmProps) {
+export const Beeswarm = memo(function Beeswarm({ games, scale }: BeeswarmProps) {
   if (games.length === 0) {
     return <p className="stats-empty">{L.empty}</p>;
   }
@@ -142,11 +139,12 @@ export const Beeswarm = memo(function Beeswarm({ games, scale, average }: Beeswa
           <path d={densityPath(games)} />
         </svg>
 
+        {/* Una sola referencia, la MEDIANA: la nota que parte la biblioteca en dos mitades. La media iba con
+            otra guía a un palmo de esta y, salvo distribuciones muy sesgadas, las dos líneas caían casi
+            encima —dos trazos verticales que había que distinguir para leer lo mismo—. La media sigue a la
+            vista en su tarjeta de cifras. */}
         <span className="beeswarm-median" style={{ left: `${mid}%` } as CSSProperties}>
           <b>{L.median}</b>
-        </span>
-        <span className="beeswarm-average" style={{ left: `${average}%` } as CSSProperties}>
-          <b>{scale === 'grade' ? Math.round(average) : formatDecimal(average / 20)}</b>
         </span>
 
         {labelled.map(({ dot, side }) => (

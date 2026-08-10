@@ -208,17 +208,33 @@ export const UI_MESSAGES = {
     },
     years: {
       title: 'Año a año',
-      subtitle: 'Juegos completados por año. Las horas de un juego cuentan en el último año en que lo completaste.',
       metricAria: 'Métrica del gráfico anual',
       metricGames: 'Juegos',
       metricHours: 'Horas',
       noYear: 'Sin año',
       noYearHint: 'Completados a los que no les registraste año.',
+      // El cajón "sin año" no cabe en una serie temporal: se saca del gráfico y se dice aparte.
+      noYearChip: (value: string, metric: string) => `Sin año: ${value} ${metric}`,
       empty: 'Marca algún juego como completado para ver tu evolución por años.',
       colYear: 'Año',
       colGames: 'Completados',
       colHours: 'Horas',
       chartAria: (metric: string) => `Gráfico de ${metric} por año`,
+      peak: (year: number, value: string, metric: string) => `Tu récord: ${year} con ${value} ${metric}`,
+      // Tira de calidad: el reparto por nota de los completados de cada año, bajo la curva.
+      quality: {
+        stars: (count: number) => '★'.repeat(count),
+        unscored: 'Sin nota',
+        /**
+         * Extremos de la escala de color que acompaña a la tira. Van en la ESCALA DE LA CUENTA: quien puntúa
+         * sobre 100 no debería ver estrellas en ninguna parte del panel.
+         */
+        low: (grade: boolean) => (grade ? '0' : '1★'),
+        high: (grade: boolean) => (grade ? '100' : '5★'),
+        /** Título de cada trozo de la barra al pasar por encima. */
+        cell: (year: string, band: string, count: number, total: number) =>
+          `${year}, ${band}: ${count} de ${total}`,
+      },
     },
     grades: {
       title: 'Distribución de notas',
@@ -234,20 +250,20 @@ export const UI_MESSAGES = {
     },
     genres: {
       title: 'Géneros más jugados',
-      subtitle: 'Cuenta completados, abandonados y en curso. Un juego con varios géneros suma en todos.',
+      // Portal (uno de los temas): «la tarta es mentira». Va aquí, que es donde hay una tarta de verdad.
+      subtitle: 'La tarta no es mentira: cada juego suma en todos sus géneros.',
       empty: 'Añade géneros a tus juegos para ver este reparto.',
       games: (count: number) => `${count} ${count === 1 ? 'juego' : 'juegos'}`,
       chartAria: 'Géneros por número de juegos',
     },
     ratio: {
       title: 'Completados y abandonados',
-      // Portal (uno de los temas): «la tarta es mentira».
-      subtitle: 'La tarta no es mentira: de los juegos que ya has cerrado, cuántos terminaste.',
+      // Cuphead, cuyo subtítulo es «Don't Deal with the Devil»: el juego va de contratos que hay que cerrar.
+      // Va arriba, como en el resto de bloques: este era el único que además llevaba una cita al pie.
+      subtitle: 'No hagas tratos con el diablo: estos son los contratos que cierras.',
       empty: 'Aún no has completado ni abandonado ningún juego.',
       completed: 'Completados',
       abandoned: 'Abandonados',
-      // Cuphead, cuyo subtítulo es «Don't Deal with the Devil»: el juego va de contratos que hay que cerrar.
-      quote: 'No hagas tratos con el diablo: estos son los contratos que cierras.',
       gaugeAria: (percent: number, completed: number, abandoned: number) =>
         `${percent}% completados: ${completed} completados frente a ${abandoned} abandonados`,
     },
@@ -278,16 +294,23 @@ export const UI_MESSAGES = {
       groupAria: 'Periodo de las estadísticas',
       general: 'General',
       yearAria: (year: number) => `Resumen de ${year}`,
+      // Con muchos años en la barra, los recientes se quedan a la vista y el resto entra en este menú: así el
+      // selector no crece ni obliga a desplazar la cabecera a lo ancho.
+      more: 'Más años',
+      moreAria: (count: number) => `Ver los otros ${count} años`,
     },
     radar: {
       title: 'Tus géneros',
-      subtitle: 'Elige tu arma: los géneros que más juegos te ocupan, con su peso relativo.',
-      subtitleYear: (year: number) => `Los géneros que más completaste en ${year}.`,
+      // No es el ranking por cantidad —ese es el rosetón de "Géneros más jugados"—: aquí manda la nota, y un
+      // juegazo pesa más que un puñado de juegos correctos.
+      subtitle: 'Elige tu arma: no gana el género que más juegas, sino el que más juegazos te ha dado.',
+      subtitleYear: (year: number) => `Elige tu arma: los géneros que mejor te trataron en ${year}.`,
       empty: 'Añade géneros a tus juegos para ver esta figura.',
       /** Con menos de tres géneros la figura no se sostiene y se cae al ranking en barras. */
       tooFew: 'Con menos de tres géneros no hay figura que dibujar; aquí va el reparto.',
-      aria: (parts: string) => `Figura de géneros: ${parts}`,
-      axisValue: (tag: string, games: number) => `${tag}: ${games}`,
+      aria: (parts: string) => `Figura de géneros por afinidad: ${parts}`,
+      axisValue: (tag: string, weight: string, games: number, avgGrade: number) =>
+        `${tag}: afinidad ${weight} con ${games} ${games === 1 ? 'juego' : 'juegos'}${avgGrade > 0 ? ` y nota media ${Math.round(avgGrade)}` : ''}`,
     },
     backlog: {
       title: 'Evolución del backlog',

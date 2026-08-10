@@ -247,6 +247,32 @@
   --stats-e: var(--sos-pink);
 }
 
+/* La rampa de nota (`--grade-*`) se queda: es la de la rueda de puntuar, común a todos los temas. Lo del tema
+   es la FORMA —aquí no hay círculos— y el cielo de fondo. */
+
+/* Pixel-art también en el gráfico anual: nada de círculos ni de esquinas redondeadas. */
+:root[data-palette="seaofstars"] .year-node { border-radius: 0; }
+
+/* La barra del año, a canto vivo y con el filete claro del tema: una caja de diálogo en pequeño. */
+:root[data-palette="seaofstars"] .year-strip-col {
+  border-radius: 0;
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--sos-line) 45%, transparent);
+}
+
+:root[data-palette="seaofstars"] .year-scale-ramp { border-radius: 0; }
+:root[data-palette="seaofstars"] .year-peak { border-radius: 0; }
+
+/* Campo de estrellas tenue también bajo la serie, como en los demás lienzos de datos. */
+:root[data-palette="seaofstars"] .year-trend-plot {
+  background-image:
+    radial-gradient(1px 1px at 18% 26%, rgba(255, 247, 214, .45) 50%, transparent 50%),
+    radial-gradient(1px 1px at 52% 62%, rgba(255, 247, 214, .34) 50%, transparent 50%),
+    radial-gradient(1px 1px at 81% 30%, rgba(255, 247, 214, .4) 50%, transparent 50%),
+    radial-gradient(1px 1px at 68% 14%, rgba(255, 247, 214, .28) 50%, transparent 50%);
+}
+
+:root[data-palette="seaofstars"][data-theme="light"] .year-trend-plot { background-image: none; }
+
 /* Nada de círculos: los puntos son píxeles. */
 :root[data-palette="seaofstars"] .beeswarm-dot,
 :root[data-palette="seaofstars"] .timeline-dot,

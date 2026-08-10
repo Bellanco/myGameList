@@ -6,10 +6,17 @@ import type { TabId } from '../../model/types/game';
 /** Un punto del eje temporal. `year: null` = juegos completados a los que no se les registró año. */
 export interface YearBucket {
   year: number | null;
-  /** Juegos completados atribuidos a ese año. */
+  /** Juegos completados atribuidos a ese año (un rejugado cuenta en CADA año que registraste). */
   completed: number;
   /** Horas de esos juegos (ver la regla de atribución en `computeStats`). */
   hours: number;
+  /**
+   * Reparto por nota de esos completados, para la tira de calidad del gráfico anual: cinco posiciones, de 1★ a
+   * 5★. Va aquí y no se recalcula en la vista porque la vista no tiene los juegos del año, solo el cubo.
+   */
+  stars: number[];
+  /** Completados de ese año a los que no pusiste nota. */
+  unscored: number;
 }
 
 /** Una etiqueta (género, plataforma o razón de abandono) con su peso. */
@@ -17,6 +24,23 @@ export interface TagBucket {
   tag: string;
   games: number;
   hours: number;
+}
+
+/**
+ * Un género con su AFINIDAD: cuánto pesa en tu biblioteca contando también lo que te gustó, no solo cuántos
+ * juegos tiene. Es lo que dibuja la figura de "Tus géneros" —el ranking por cantidad ya lo cuenta el rosetón
+ * de "Géneros más jugados"—, y por eso los dos gráficos ya no dicen lo mismo con dos formas distintas.
+ */
+export interface GenreAffinity {
+  tag: string;
+  /** Juegos del género, para poder decir de cuántos sale la cifra. */
+  games: number;
+  /** De esos, cuántos tienen nota. */
+  scored: number;
+  /** Nota media (0–100) de los puntuados; 0 si no hay ninguno. */
+  avgGrade: number;
+  /** Suma ponderada: cada juego aporta su nota sobre 100 (ver `computeStats`). */
+  weight: number;
 }
 
 /** Un tramo del histograma de notas; se corresponde 1:1 con los tramos de `SCORE_BUCKET_FLOORS`. */
@@ -99,6 +123,8 @@ export interface YearSummary {
   scored: number;
   avgGrade: number;
   genres: TagBucket[];
+  /** Los géneros del año por afinidad, para la figura de la pestaña del año. */
+  genreAffinity: GenreAffinity[];
   platforms: TagBucket[];
   grades: GradeBucket[];
   /** Mejor valorado y más largo del año. */
@@ -188,6 +214,8 @@ export interface StatsSummary {
   grades: GradeBucket[];
   /** Ordenados de más a menos juegos (desempate por horas y luego alfabético). */
   genres: TagBucket[];
+  /** Los mismos géneros, ordenados por AFINIDAD (cantidad ponderada por nota). Para la figura del hexágono. */
+  genreAffinity: GenreAffinity[];
   platforms: TagBucket[];
   /** El juego con más horas de las listas jugadas; null si nadie tiene horas. */
   longest: GameRef | null;

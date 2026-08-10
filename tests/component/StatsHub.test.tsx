@@ -94,8 +94,8 @@ describe('StatsHub', () => {
 
     expect(hours).toHaveAttribute('aria-pressed', 'true');
     expect(games).toHaveAttribute('aria-pressed', 'false');
-    // Con la métrica de horas, la columna de 2023 pasa de "1" (juego) a "30" (horas).
-    expect(document.querySelector('.year-chart')).toHaveTextContent('30');
+    // Con la métrica de horas, la escala del gráfico pasa de "1" (juego) a "30" (horas).
+    expect(document.querySelector('.year-trend')).toHaveTextContent('30');
   });
 
   it('rotula el eje de la distribución según la escala de la cuenta', () => {
@@ -155,17 +155,51 @@ describe('StatsHub · periodos', () => {
   });
 });
 
+describe('StatsHub · selector de periodo con muchos años', () => {
+  /** Ocho años completados: dos más de los que caben en la barra, así que el resto va al menú. */
+  const OCHO_ANYOS = tabData({
+    c: [2026, 2025, 2024, 2023, 2022, 2021, 2020, 2019].map((year, index) => (
+      game({ id: index + 1, name: `Juego ${year}`, grade: 80, years: [year] })
+    )),
+  });
+
+  it('deja a la vista los años recientes y guarda el resto tras "Más años"', async () => {
+    render(<StatsHub games={OCHO_ANYOS} />, { wrapper: MemoryRouter });
+
+    // Los seis últimos, en la barra; 2020 y 2019 solo aparecen al abrir el menú.
+    expect(screen.getByRole('button', { name: L.scope.yearAria(2021) })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: L.scope.yearAria(2019) })).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: L.scope.moreAria(2) }));
+
+    const antiguo = screen.getByRole('button', { name: L.scope.yearAria(2019) });
+    await userEvent.click(antiguo);
+
+    // Al elegirlo, el año se queda anclado en la barra aunque sea de los antiguos, y el menú se cierra.
+    expect(screen.getByRole('button', { name: L.scope.yearAria(2019) })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: L.scope.moreAria(1) })).toHaveAttribute('aria-expanded', 'false');
+  });
+});
+
 describe('StatsHub · figura de géneros', () => {
-  it('dibuja el hexágono con los géneros y sus cuentas', () => {
+  it('ordena el hexágono por afinidad y no por número de juegos', () => {
     render(<StatsHub games={tabData({
       c: [
-        game({ id: 1, name: 'A', genres: ['RPG', 'Acción'], years: [2024] }),
-        game({ id: 2, name: 'B', genres: ['RPG', 'Puzles'], years: [2024] }),
-        game({ id: 3, name: 'C', genres: ['Plataformas'], years: [2024] }),
+        // Dos juegos flojos de RPG frente a uno excelente de Acción: manda la nota, no la cuenta.
+        game({ id: 1, name: 'A', genres: ['RPG'], grade: 20, years: [2024] }),
+        game({ id: 2, name: 'B', genres: ['RPG'], grade: 20, years: [2024] }),
+        game({ id: 3, name: 'C', genres: ['Acción'], grade: 100, years: [2024] }),
+        game({ id: 4, name: 'D', genres: ['Puzles'], grade: 60, years: [2024] }),
       ],
     })} />, { wrapper: MemoryRouter });
 
-    expect(screen.getByRole('img', { name: /RPG: 2/ })).toBeInTheDocument();
+    const figure = screen.getByRole('img', { name: /Figura de géneros por afinidad/ });
+    const label = figure.getAttribute('aria-label') || '';
+    expect(label).toContain('Acción: afinidad 1');
+    // Peso exponencial: dos juegos de 1★ suman 0,125, que redondeado a una decimal es 0,1.
+    expect(label).toContain('RPG: afinidad 0,1 con 2 juegos y nota media 20');
+    // Acción (un juego de 100) va por delante de RPG (dos de 20).
+    expect(label.indexOf('Acción')).toBeLessThan(label.indexOf('RPG'));
   });
 
   it('con menos de tres géneros cae al reparto en barras en vez de dibujar un segmento', () => {
