@@ -373,6 +373,11 @@ export const UI_MESSAGES = {
       // Cuphead otra vez no; esta es de The Witcher III, donde cada contrato acaba con Geralt anotando lo suyo.
       screenSubtitle: 'Todo lo que has escrito, de mejor a peor nota.',
       screenEmpty: 'Todavía no has escrito ninguna reseña.',
+      /**
+       * Aviso cuando la reseña es de un juego que no te has pasado (abandonado, en curso o pendiente).
+       * The Witcher III otra vez: Geralt cobra al CERRAR el contrato, y este se quedó abierto.
+       */
+      unfinished: 'Contrato sin cerrar',
       backToStats: 'Volver a las estadísticas',
       /** Nombre del autor en el detalle de una reseña propia. */
       mine: 'Tus reseñas',

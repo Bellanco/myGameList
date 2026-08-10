@@ -16,6 +16,8 @@ export interface ReviewEntry {
   grade: number | null;
   reviewText: string;
   ts: number;
+  /** Reseña de un juego SIN pasar (abandonado, en curso o pendiente); la lista lo avisa con `unfinishedLabel`. */
+  unfinished?: boolean;
 }
 
 interface ProfileReviewsListProps {
@@ -24,6 +26,16 @@ interface ProfileReviewsListProps {
   onOpenReview: (gameId: number) => void;
   /** Texto cuando el perfil no tiene ninguna reseña. */
   emptyLabel?: string;
+  /**
+   * Rótulo del aviso de "juego sin pasar", que ocupa el hueco de la fecha. Lo pone quien monta la lista porque
+   * solo ahí se sabe si el estado de las listas está disponible: por el canal social no llega.
+   */
+  unfinishedLabel?: string;
+  /**
+   * ¿Enseñar la fecha de la reseña? Sí en el perfil social, donde es la fecha de publicación del canal. En TUS
+   * reseñas del panel no: ahí el sello de tiempo es el de la ficha, no el de cuándo escribiste, así que sobra.
+   */
+  showDate?: boolean;
 }
 
 /**
@@ -38,6 +50,8 @@ export const ProfileReviewsList = memo(function ProfileReviewsList({
   reviews,
   onOpenReview,
   emptyLabel,
+  unfinishedLabel,
+  showDate = true,
 }: ProfileReviewsListProps) {
   const scoreScale = useScoreScale();
   const [query, setQuery] = useState('');
@@ -97,6 +111,7 @@ export const ProfileReviewsList = memo(function ProfileReviewsList({
             // Reseña sin puntuación (p. ej. juegos de la lista de la vergüenza): medallón con un icono en vez
             // del número y sin estrellas.
             const hasRating = rating > 0;
+            const unfinished = Boolean(review.unfinished);
             const itemDate = new Date(review.ts || 0);
             const hasValidDate = review.ts > 0 && !Number.isNaN(itemDate.getTime());
             // Color por nota: 1=rojo, 2=amarillo; 3/4/5 bien separados en tono y en luminosidad.
@@ -124,10 +139,15 @@ export const ProfileReviewsList = memo(function ProfileReviewsList({
                   {review.gameName ? <h4 className="hub-review-game">{review.gameName}</h4> : null}
                   <div className="hub-review-meta">
                     {hasRating && scoreScale !== 'grade' ? <StarRating value={rating} /> : null}
-                    {hasValidDate ? (
+                    {showDate && hasValidDate ? (
                       <span className="hub-review-date">
                         {itemDate.toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })}
                       </span>
+                    ) : null}
+                    {/* Sin fecha, ese hueco lo ocupa el estado del juego: solo se dice cuando NO te lo has pasado
+                        (que es lo que matiza la nota); de lo terminado no hace falta decir nada. */}
+                    {!showDate && unfinished && unfinishedLabel ? (
+                      <span className="hub-review-unfinished">{unfinishedLabel}</span>
                     ) : null}
                   </div>
                 </header>
