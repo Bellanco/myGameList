@@ -39,8 +39,10 @@ interface StatsReviewsProps {
   gameId: number;
   onBack: () => void;
   onOpenReview: (gameId: number) => void;
-  /** Volver de una reseña concreta a la lista. */
+  /** Volver de una reseña concreta a donde se abrió. */
   onBackToList: () => void;
+  /** ¿Ese "donde se abrió" es el panel? Cambia solo el rótulo del botón, para no prometer otra pantalla. */
+  backToPanel?: boolean;
 }
 
 /**
@@ -54,7 +56,7 @@ interface StatsReviewsProps {
  * Va por ruta propia y no enlazando al hub social porque tus reseñas son tuyas: enlazar allí las habría dejado
  * detrás del asistente de configuración del espacio social para quien no lo tenga montado.
  */
-export const StatsReviews = memo(function StatsReviews({ games, gameId, onBack, onOpenReview, onBackToList }: StatsReviewsProps) {
+export const StatsReviews = memo(function StatsReviews({ games, gameId, onBack, onOpenReview, onBackToList, backToPanel = false }: StatsReviewsProps) {
   const reviews = useMemo(() => collectReviews(games), [games]);
   const open = gameId > 0 ? reviews.find((entry) => entry.id === gameId) : undefined;
 
@@ -79,6 +81,7 @@ export const StatsReviews = memo(function StatsReviews({ games, gameId, onBack, 
         }}
         profileName={L.mine}
         onBack={onBackToList}
+        backLabel={backToPanel ? L.backToStats : undefined}
         status=""
         statusKind=""
       />
