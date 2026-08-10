@@ -208,6 +208,8 @@ export const UI_MESSAGES = {
     },
     years: {
       title: 'Año a año',
+      // Imperivm (Roma) con el refrán de siempre: una curva histórica es justo eso, obra de muchos años.
+      subtitle: 'Roma no se construyó en un día: cómo has avanzado año a año.',
       metricAria: 'Métrica del gráfico anual',
       metricGames: 'Juegos',
       metricHours: 'Horas',
@@ -238,7 +240,9 @@ export const UI_MESSAGES = {
     },
     grades: {
       title: 'Distribución de notas',
-      subtitle: 'Cómo repartes tus puntuaciones entre los juegos completados y los abandonados que puntuaste.',
+      // The Witcher III: Geralt siempre acaba eligiendo el mal menor, que es lo que hace una escala de notas.
+      // Entran los completados y también los abandonados que puntuaste.
+      subtitle: 'Entre el mal menor y la obra maestra: ahí se reparten tus notas.',
       empty: 'Todavía no has puntuado ningún juego.',
       starsLabel: (stars: number) => `${stars} ${stars === 1 ? 'estrella' : 'estrellas'}`,
       gradeLabel: (floor: number, ceiling: number) => `${floor}–${ceiling}`,
@@ -363,8 +367,8 @@ export const UI_MESSAGES = {
       tileHint: (percent: number) => `${percent}% de lo que has cerrado`,
       tileAction: 'Ver todas tus reseñas',
       title: 'Qué destacas y qué te chirría',
-      // The Witcher III: Geralt vive de contratos y de leer bien a la gente antes de aceptarlos.
-      subtitle: 'De los puntos fuertes y débiles que anotas al reseñar.',
+      // The Witcher III: ningún contrato se acepta sin leer antes el bestiario y saber por dónde flaquea.
+      subtitle: 'Todo monstruo tiene su punto débil: tú los anotas al reseñar.',
       strengths: 'Lo que más celebras',
       weaknesses: 'Lo que más te chirría',
       traitsEmpty: 'Anota puntos fuertes y débiles en tus reseñas y aquí verás cuáles repites.',
