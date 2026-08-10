@@ -14,6 +14,7 @@ import type {
   ArrivalPoint,
   TopSummary,
   GameRef,
+  GenreAffinity,
   GradeBucket,
   ShameSummary,
   StatsSummary,
@@ -77,17 +78,22 @@ function gameHours(game: GameItem): number {
 }
 
 /**
- * Año al que se atribuye un juego completado: el ÚLTIMO de sus años.
+ * TODOS los años en los que se completó el juego, de menor a mayor y sin repetidos.
  *
- * `years` ("Años completado") es multivalor porque un juego puede completarse varias veces, y `hours` es el
- * total del juego, no el de cada pasada. Repartir ese total entre los años inventaría un dato que nadie ha
- * registrado, así que se cuenta entero en la última pasada, que es la que el usuario recuerda como "el año que
- * lo jugué". Devuelve null si no hay ningún año (juegos importados o completados antes de que el campo se
- * rellenara), y esos caen en el cajón "sin año" en vez de desaparecer del gráfico.
+ * `years` ("Años completado") es multivalor porque un juego puede completarse varias veces, y el panel cuenta
+ * cada pasada en SU año: quien terminó Cuphead en 2018, 2020 y 2022 lo jugó los tres años, y verlo solo en el
+ * último borraba dos de las tres veces que pasó. Devuelve la lista vacía si no hay ningún año (juegos
+ * importados o completados antes de que el campo se rellenara), y esos caen en el cajón "sin año" en vez de
+ * desaparecer del gráfico.
+ *
+ * Las HORAS son otra cosa: `hours` es el total del juego, no el de cada pasada, así que repartirlo entre los
+ * años inventaría un dato que nadie ha registrado y sumarlo entero en cada uno multiplicaría las horas de la
+ * biblioteca. Se atribuyen enteras al ÚLTIMO año —el que se recuerda como "el año que lo jugué"— y en los
+ * demás el juego suma como completado con cero horas. Así la suma de los años sigue cuadrando con el total.
  */
-function attributionYear(game: GameItem): number | null {
+function completionYears(game: GameItem): number[] {
   const years = (game.years || []).map(Number).filter((year) => Number.isFinite(year));
-  return years.length ? Math.max(...years) : null;
+  return [...new Set(years)].sort((a, b) => a - b);
 }
 
 /** Mes `AAAA-MM` de una marca de tiempo, en el calendario local (el que usa quien mira el gráfico). */
@@ -237,6 +243,81 @@ function emptyGradeBuckets(): GradeBucket[] {
   });
 }
 
+/**
+ * Peso de un juego en la afinidad, en escala EXPONENCIAL: cada estrella que baja vale la MITAD que la anterior.
+ *
+ *   5★ → 1     4★ → 0,5     3★ → 0,25     2★ → 0,125     1★ → 0,0625
+ *
+ * Con un peso lineal (la nota partida por 100) tres juegos del montón adelantaban a uno excelente, que es justo
+ * lo contrario de lo que dice esta figura: un juegazo pesa más que un montón de juegos correctos. La curva es
+ * continua, así que con la escala 0–100 un 85 pesa algo más que un 80 sin saltos por tramos.
+ */
+const GRADE_PER_HALVING = GRADE_MAX / STARS_MAX;
+function gradeWeight(grade: number): number {
+  return 2 ** ((Math.min(grade, GRADE_MAX) - GRADE_MAX) / GRADE_PER_HALVING);
+}
+
+/**
+ * AFINIDAD por género: cuánto pesa cada género contando también qué notas le pusiste.
+ *
+ * Cada juego aporta el peso EXPONENCIAL de su nota (ver `gradeWeight`), así que un género de veinte juegos
+ * regulares puede pesar menos que uno de tres que te encantaron. Es lo que distingue esta figura del rosetón de
+ * "Géneros más jugados", que cuenta cabezas y ya está.
+ *
+ * Los juegos SIN nota no valen cero: pesan como la media de la biblioteca (`fallback`). Contarlos a cero
+ * hundiría a quien puntúa poco —y a los géneros donde se puntúa menos— por no haber escrito un número, que es
+ * una ausencia de dato, no una opinión mala.
+ */
+function affinityOf(games: GameRef[], fallback: number): GenreAffinity[] {
+  const perGenre = new Map<string, { games: number; scored: number; gradeSum: number; weight: number }>();
+
+  for (const game of games) {
+    for (const genre of game.genres) {
+      const key = genre.trim();
+      if (!key) continue;
+      const entry = perGenre.get(key) || { games: 0, scored: 0, gradeSum: 0, weight: 0 };
+      entry.games += 1;
+      if (game.grade > 0) {
+        entry.scored += 1;
+        entry.gradeSum += game.grade;
+        entry.weight += gradeWeight(game.grade);
+      } else {
+        entry.weight += gradeWeight(fallback);
+      }
+      perGenre.set(key, entry);
+    }
+  }
+
+  return [...perGenre.entries()]
+    .map(([tag, entry]) => ({
+      tag,
+      games: entry.games,
+      scored: entry.scored,
+      avgGrade: entry.scored ? entry.gradeSum / entry.scored : 0,
+      weight: entry.weight,
+    }))
+    .sort((a, b) => b.weight - a.weight || b.games - a.games || sortEs(a.tag, b.tag));
+}
+
+/** Cubo de un año recién estrenado: sin juegos, sin horas y sin reparto de notas. */
+function emptyYearBucket(year: number | null): YearBucket {
+  return { year, completed: 0, hours: 0, stars: new Array<number>(STARS_MAX).fill(0), unscored: 0 };
+}
+
+/**
+ * Añade un completado a su año: la cuenta, sus horas y la estrella que le pusiste.
+ *
+ * El reparto va por los CINCO niveles y no por grupos (4–5★, 3★…): un 5★ y un 4★ no son lo mismo, y la tira
+ * del gráfico anual los pinta por separado. `stars` en 0 significa completado sin puntuar, que no es un nivel
+ * bajo sino ausencia de nota, y por eso tiene su propio contador.
+ */
+function countInYear(bucket: YearBucket, hours: number, stars: number): void {
+  bucket.completed += 1;
+  bucket.hours += hours;
+  if (stars >= 1) bucket.stars[stars - 1] += 1;
+  else bucket.unscored += 1;
+}
+
 /** Acumulador mutable de un año mientras dura la pasada; se convierte en `YearSummary` al cerrar. */
 interface YearAccumulator {
   year: number;
@@ -262,21 +343,25 @@ function newYearAccumulator(year: number): YearAccumulator {
   };
 }
 
-function closeYear(acc: YearAccumulator): YearSummary {
+function closeYear(acc: YearAccumulator, libraryAvg: number): YearSummary {
   // De mejor a peor nota; a igualdad, el más largo primero (así el listado del año se lee como un ranking).
   const games = acc.games.slice().sort(byRank);
   const longest = acc.games.reduce<GameRef | null>(
     (top, game) => (game.hours > 0 && (!top || game.hours > top.hours) ? game : top),
     null,
   );
+  const yearAvg = acc.scored ? acc.gradeSum / acc.scored : 0;
 
   return {
     year: acc.year,
     completed: acc.games.length,
     hours: acc.hours,
     scored: acc.scored,
-    avgGrade: acc.scored ? acc.gradeSum / acc.scored : 0,
+    avgGrade: yearAvg,
     genres: sortedTags(acc.genres),
+    // Los sin nota de un año pesan como la media de ESE año si la hay; si no puntuaste nada, como la de la
+    // biblioteca. Así un año sin notas no aplana su figura a cero.
+    genreAffinity: affinityOf(acc.games, yearAvg || libraryAvg),
     platforms: sortedTags(acc.platforms),
     grades: acc.grades,
     best: games[0]?.grade > 0 ? games[0] : null,
@@ -314,6 +399,8 @@ export function computeStats(data: TabData): StatsSummary {
   let completedHours = 0;
   let gradeSum = 0;
   const scoredGames: GameRef[] = [];
+  /** Refs de las listas JUGADAS (completados, abandonados y en curso): la base de la afinidad por género. */
+  const playedGames: GameRef[] = [];
   let longest: GameRef | null = null;
   let shameHours = 0;
   let shameScored = 0;
@@ -361,6 +448,7 @@ export function computeStats(data: TabData): StatsSummary {
 
       if (played) {
         totalHours += hours;
+        playedGames.push(ref);
         for (const genre of game.genres || []) addTag(genres, genre, hours);
         for (const platform of game.platforms || []) addTag(platforms, platform, hours);
         if (hours > 0 && (!longest || hours > longest.hours)) longest = ref;
@@ -388,31 +476,39 @@ export function computeStats(data: TabData): StatsSummary {
 
       if (tab === 'c') {
         completedHours += hours;
-        const year = attributionYear(game);
+        const years = completionYears(game);
+        const scoredGame = hasScore(game);
+        const stars = scoredGame ? starsFromGrade(ref.grade) : 0;
 
-        if (year === null) {
-          noYear = noYear || { year: null, completed: 0, hours: 0 };
-          noYear.completed += 1;
-          noYear.hours += hours;
+        if (!years.length) {
+          noYear = noYear || emptyYearBucket(null);
+          countInYear(noYear, hours, stars);
         } else {
-          const bucket = yearBuckets.get(year) || { year, completed: 0, hours: 0 };
-          bucket.completed += 1;
-          bucket.hours += hours;
-          yearBuckets.set(year, bucket);
+          // Las horas van enteras en la última pasada; las demás suman el juego con cero horas (ver
+          // `completionYears`), y así la suma de los años sigue cuadrando con las horas de la biblioteca.
+          const lastYear = years[years.length - 1];
 
-          // Resumen del año: mismo juego, mismo año de atribución. Así la pestaña de 2024 y la columna de
-          // 2024 del gráfico anual no pueden discrepar.
-          const acc = yearSummaries.get(year) || newYearAccumulator(year);
-          acc.hours += hours;
-          acc.games.push(ref);
-          for (const genre of game.genres || []) addTag(acc.genres, genre, hours);
-          for (const platform of game.platforms || []) addTag(acc.platforms, platform, hours);
-          if (hasScore(game)) {
-            acc.scored += 1;
-            acc.gradeSum += ref.grade;
-            acc.grades[starsFromGrade(ref.grade) - 1].count += 1;
+          for (const year of years) {
+            const yearHours = year === lastYear ? hours : 0;
+
+            const bucket = yearBuckets.get(year) || emptyYearBucket(year);
+            countInYear(bucket, yearHours, stars);
+            yearBuckets.set(year, bucket);
+
+            // Resumen del año: mismos juegos y mismos años que el gráfico. Así la pestaña de 2024 y la
+            // columna de 2024 no pueden discrepar, tampoco con los rejugados.
+            const acc = yearSummaries.get(year) || newYearAccumulator(year);
+            acc.hours += yearHours;
+            acc.games.push(ref);
+            for (const genre of game.genres || []) addTag(acc.genres, genre, yearHours);
+            for (const platform of game.platforms || []) addTag(acc.platforms, platform, yearHours);
+            if (scoredGame) {
+              acc.scored += 1;
+              acc.gradeSum += ref.grade;
+              acc.grades[stars - 1].count += 1;
+            }
+            yearSummaries.set(year, acc);
           }
-          yearSummaries.set(year, acc);
         }
       }
 
@@ -490,6 +586,9 @@ export function computeStats(data: TabData): StatsSummary {
     games: wishGames.slice().sort((a, b) => a.at - b.at || sortEs(a.name, b.name)),
   };
 
+  // Media de la biblioteca: es la referencia con la que pesan los juegos sin nota en la afinidad por género.
+  const libraryAvg = scoredGames.length ? gradeSum / scoredGames.length : 0;
+
   return {
     counts,
     totalGames: counts.c + counts.v + counts.e + counts.p,
@@ -497,7 +596,7 @@ export function computeStats(data: TabData): StatsSummary {
     completedHours,
     scored: {
       count: scoredGames.length,
-      avgGrade: scoredGames.length ? gradeSum / scoredGames.length : 0,
+      avgGrade: libraryAvg,
       games: scoredGames,
     },
     completionRatio: {
@@ -506,10 +605,11 @@ export function computeStats(data: TabData): StatsSummary {
       percent: decided ? (counts.c / decided) * 100 : 0,
     },
     years,
-    byYear: [...yearSummaries.values()].sort((a, b) => b.year - a.year).map(closeYear),
+    byYear: [...yearSummaries.values()].sort((a, b) => b.year - a.year).map((acc) => closeYear(acc, libraryAvg)),
     arrivals: [...arrivals.values()].sort((a, b) => sortEs(a.m, b.m)),
     grades,
     genres: sortedTags(genres),
+    genreAffinity: affinityOf(playedGames, libraryAvg),
     platforms: sortedTags(platforms),
     longest,
     reviews: {

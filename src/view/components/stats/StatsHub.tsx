@@ -78,6 +78,16 @@ export const StatsHub = memo(function StatsHub({ games }: { games: TabData }) {
   const hub = useRef<HTMLElement>(null);
   useRevealOnScroll(hub, scope);
 
+  /**
+   * Abrir un año desde la curva: además de cambiar de periodo, sube al principio del panel. Sin esto, el clic
+   * dejaba al usuario a media página de un panel que ya es otro, con el selector —la pista de dónde está— tres
+   * pantallas más arriba. El selector de arriba no lo necesita: quien lo usa ya está mirándolo.
+   */
+  const openYearFromChart = useCallback((year: number) => {
+    vm.setScope(year);
+    hub.current?.scrollIntoView({ block: 'start' });
+  }, [vm]);
+
   if (onReviewsRoute) {
     return (
       <StatsReviews
@@ -160,14 +170,20 @@ export const StatsHub = memo(function StatsHub({ games }: { games: TabData }) {
 
           <div className="stats-card">
             <h2>{L.years.title}</h2>
-            <p className="stats-card-sub">{L.years.subtitle}</p>
-            <YearChart years={stats.years} metric={vm.yearMetric} onMetricChange={vm.setYearMetric} />
+            {/* Pinchar un año de la curva abre su resumen: el mismo destino que el selector de arriba. */}
+            <YearChart
+              years={stats.years}
+              metric={vm.yearMetric}
+              onMetricChange={vm.setYearMetric}
+              onSelectYear={openYearFromChart}
+              scale={scale}
+            />
           </div>
 
           <div className="stats-card stats-card-half">
             <h2>{L.radar.title}</h2>
             <p className="stats-card-sub">{L.radar.subtitle}</p>
-            <GenreRadar tags={stats.genres} />
+            <GenreRadar tags={stats.genreAffinity} />
           </div>
 
           <div className="stats-card stats-card-half">
@@ -190,7 +206,7 @@ export const StatsHub = memo(function StatsHub({ games }: { games: TabData }) {
           <div className="stats-card stats-card-half">
             <h2>{L.grades.title}</h2>
             <p className="stats-card-sub">{L.grades.subtitle}</p>
-            <Beeswarm games={stats.scored.games} scale={scale} average={stats.scored.avgGrade} />
+            <Beeswarm games={stats.scored.games} scale={scale} />
           </div>
 
           <div className="stats-card stats-card-half">

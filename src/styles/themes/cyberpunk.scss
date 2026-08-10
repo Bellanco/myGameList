@@ -417,6 +417,33 @@
   --stats-e: var(--cyber-yellow);
 }
 
+/* NOTA: la rampa de nota (`--grade-*`) NO se toca aquí ni en ningún otro tema. Es la de la rueda de puntuar, y
+   un 4★ tiene que verse del mismo color en la ficha del juego y en el panel. El tema pone lo suyo en el
+   ACABADO —neón, scanlines, tipografía—, no en el significado del color. */
+
+/* La serie anual, con el neón del HUD y sus scanlines sobre el lienzo. */
+:root[data-palette="cyberpunk"] .year-line { filter: drop-shadow(0 0 5px currentColor); }
+:root[data-palette="cyberpunk"] .year-node { box-shadow: 0 0 0 2px var(--surface), 0 0 6px var(--cyber-cyan); }
+:root[data-palette="cyberpunk"] .year-trend-plot::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(to bottom, rgba(0, 240, 255, .05) 0 1px, transparent 1px 3px);
+}
+
+/* Las barras del reparto, encendidas como el resto del HUD y con el filo cian de una ventana del visor. */
+:root[data-palette="cyberpunk"] .year-strip-col {
+  border-radius: 0;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--cyber-cyan) 35%, transparent);
+}
+
+:root[data-palette="cyberpunk"] .year-strip-seg { filter: saturate(1.15) brightness(1.05); }
+
+:root[data-palette="cyberpunk"][data-theme="light"] .year-line { filter: none; }
+:root[data-palette="cyberpunk"][data-theme="light"] .year-node { box-shadow: 0 0 0 2px var(--surface); }
+:root[data-palette="cyberpunk"][data-theme="light"] .year-strip-seg { filter: none; }
+
 /* Neón: halo en trazos y puntos. En claro se apaga, que sobre fondo claro solo ensucia (regla del tema). */
 :root[data-palette="cyberpunk"] .backlog-line,
 :root[data-palette="cyberpunk"] .genre-radar-shape,

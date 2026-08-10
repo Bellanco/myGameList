@@ -116,12 +116,12 @@ export const FriendStats = memo(function FriendStats({ sharedLists, viewerTier, 
 
           <div className="stats-card stats-card-half">
             <h2>{L.radar.title}</h2>
-            <GenreRadar tags={yearSummary.genres} />
+            <GenreRadar tags={yearSummary.genreAffinity} />
           </div>
 
           <div className="stats-card stats-card-half">
             <h2>{L.grades.title}</h2>
-            <Beeswarm games={yearSummary.games.filter((game) => game.grade > 0)} scale={scale} average={yearSummary.avgGrade} />
+            <Beeswarm games={yearSummary.games.filter((game) => game.grade > 0)} scale={scale} />
           </div>
 
           <div className="stats-card">
@@ -158,14 +158,14 @@ export const FriendStats = memo(function FriendStats({ sharedLists, viewerTier, 
             <div className="stats-card">
               <h2>{L.years.title}</h2>
               {/* Sin conmutador de métrica: las horas no viajan por el canal social, así que solo hay juegos. */}
-              <YearChart years={stats.years} metric="games" onMetricChange={() => {}} switchable={false} />
+              <YearChart years={stats.years} metric="games" onMetricChange={() => {}} switchable={false} scale={scale} />
             </div>
           ) : null}
 
           {blocks.includes('radar') ? (
             <div className="stats-card stats-card-half">
               <h2>{L.radar.title}</h2>
-              <GenreRadar tags={stats.genres} />
+              <GenreRadar tags={stats.genreAffinity} />
             </div>
           ) : null}
 
@@ -179,7 +179,7 @@ export const FriendStats = memo(function FriendStats({ sharedLists, viewerTier, 
           {blocks.includes('grades') && stats.scored.count > 0 ? (
             <div className="stats-card stats-card-half">
               <h2>{L.grades.title}</h2>
-              <Beeswarm games={stats.scored.games} scale={scale} average={stats.scored.avgGrade} />
+              <Beeswarm games={stats.scored.games} scale={scale} />
             </div>
           ) : null}
 
