@@ -1398,18 +1398,33 @@
 
 /* Tu cita sobre el juego. Recortada a tres líneas: en el podio manda el nombre, y la reseña entera tiene su
    propia pantalla, a un toque de aquí. */
+/* DOS líneas de texto en el hueco de TRES: recortar a tres dejaba la tarjeta apretada de arriba abajo, y bajar
+   a dos sin más hacía saltar la altura del podio según quién tuviera reseña larga. Con el alto reservado, las
+   tres tarjetas miden lo mismo, el texto respira y lo que sobra se corta con puntos suspensivos. */
 .podium-quote {
+  --quote-line: 1.35;
+
   position: relative;
   margin: .15rem 0 0;
   padding-left: .5rem;
   border-left: 2px solid color-mix(in oklch, var(--steam) 45%, transparent);
   font-size: .78rem;
   font-style: italic;
+  line-height: var(--quote-line);
   color: var(--stats-ink-2);
   display: -webkit-box;
-  -webkit-line-clamp: 3;
+  -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
+  /* El hueco de la tercera línea se reserva con MARGEN. Con `min-height` el navegador encuentra sitio para una
+     línea más y se salta el recorte; con relleno tampoco vale, porque en una caja `-webkit-box` el texto se
+     pinta sobre el propio relleno. El margen no es área de pintado, así que el recorte se respeta y la tarjeta
+     conserva el alto que tenía con tres líneas. */
+  max-height: calc(var(--quote-line) * 2em);
+  margin-bottom: calc(var(--quote-line) * 1em);
+  /* Sitio para el número de agua de la esquina: sin esto, el final de la cita —y sus puntos suspensivos—
+     acababa por debajo del "1". */
+  padding-right: 2.4rem;
 }
 
 /* La tarjeta del podio con reseña se abre entera, igual que las fichas del resto del top: el filo lateral es

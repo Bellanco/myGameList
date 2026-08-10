@@ -56,8 +56,22 @@ export const StatsHub = memo(function StatsHub({ games }: { games: TabData }) {
   const navigate = useNavigate();
   const location = useLocation();
   const openReviews = useCallback(() => { void navigate(REVIEWS_ROUTE); }, [navigate]);
-  const openReview = useCallback((gameId: number) => { void navigate(reviewRoute(gameId)); }, [navigate]);
+  /**
+   * Abrir una reseña recuerda DE DÓNDE se vino: quien la abre desde el podio o desde una ficha del top espera
+   * volver al panel, y quien la abre desde el listado, al listado. El origen viaja en el estado de la ruta, así
+   * que el atrás del navegador y el botón de la pantalla llevan al mismo sitio.
+   */
+  const openReviewFrom = useCallback(
+    (gameId: number, backTo: string) => { void navigate(reviewRoute(gameId), { state: { backTo } }); },
+    [navigate],
+  );
+  const openReviewFromPanel = useCallback((gameId: number) => openReviewFrom(gameId, PANEL_ROUTE), [openReviewFrom]);
+  const openReviewFromList = useCallback((gameId: number) => openReviewFrom(gameId, REVIEWS_ROUTE), [openReviewFrom]);
   const backToPanel = useCallback(() => { void navigate(PANEL_ROUTE); }, [navigate]);
+  const backFromReview = useCallback(() => {
+    const from = (location.state as { backTo?: string } | null)?.backTo;
+    void navigate(from === PANEL_ROUTE ? PANEL_ROUTE : REVIEWS_ROUTE);
+  }, [navigate, location.state]);
   const onReviewsRoute = location.pathname.startsWith(REVIEWS_ROUTE);
   // Las tarjetas se destapan al llegar a ellas. Se rearma al cambiar de periodo, porque las de la pestaña
   // nueva son otros elementos y entran sin haberse visto nunca.
@@ -70,8 +84,9 @@ export const StatsHub = memo(function StatsHub({ games }: { games: TabData }) {
         games={games}
         gameId={reviewIdFrom(location.pathname)}
         onBack={backToPanel}
-        onOpenReview={openReview}
-        onBackToList={openReviews}
+        onOpenReview={openReviewFromList}
+        onBackToList={backFromReview}
+        backToPanel={(location.state as { backTo?: string } | null)?.backTo === PANEL_ROUTE}
       />
     );
   }
@@ -140,7 +155,7 @@ export const StatsHub = memo(function StatsHub({ games }: { games: TabData }) {
           <div className="stats-card">
             <h2>{L.top.title}</h2>
             <p className="stats-card-sub">{L.top.subtitle}</p>
-            <TopGames top={stats.top} scale={scale} average={stats.scored.avgGrade} onOpenReview={openReview} />
+            <TopGames top={stats.top} scale={scale} average={stats.scored.avgGrade} onOpenReview={openReviewFromPanel} />
           </div>
 
           <div className="stats-card">
