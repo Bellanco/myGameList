@@ -53,6 +53,11 @@ export const STATS_SHORTLIST = 5;
 export const STATS_TOP_SIZE = 15;
 /** Juegos puntuados que necesita un género para que su nota media entre en el ranking. */
 export const GENRE_GRADE_MIN = 3;
+/** Largo de la cita del panel y mínimo por debajo del cual no merece la pena buscar un corte limpio. */
+const QUOTE_MAX = 220;
+const QUOTE_MIN = 60;
+/** Por debajo de esto no hay cita que enseñar: una reseña de dos letras es una nota para uno mismo. */
+const QUOTE_WORTH = 24;
 /** Cuántos suben al podio. */
 const PODIUM = 3;
 
@@ -91,6 +96,25 @@ function monthOf(ms: number): string {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
 }
 
+/**
+ * Cita para el panel: la primera frase de la reseña, y si es muy larga, un recorte con puntos suspensivos.
+ *
+ * Se corta por el PUNTO y no por el número de caracteres a secas porque una cita partida a mitad de palabra en
+ * el podio se lee como un error, no como una cita. El texto entero vive en el juego, y la pantalla de reseñas
+ * lo saca de ahí: guardarlo en el resumen lo duplicaría entero en memoria para enseñar dos líneas.
+ */
+function quoteFrom(review: unknown): string {
+  const text = String(review || '').trim().replace(/\s+/g, ' ');
+  if (text.length < QUOTE_WORTH) return '';
+  if (text.length <= QUOTE_MAX) return text;
+
+  const stop = text.slice(0, QUOTE_MAX).lastIndexOf('. ');
+  if (stop > QUOTE_MIN) return text.slice(0, stop + 1);
+
+  const space = text.slice(0, QUOTE_MAX).lastIndexOf(' ');
+  return `${text.slice(0, space > QUOTE_MIN ? space : QUOTE_MAX).trimEnd()}…`;
+}
+
 function toRef(game: GameItem): GameRef {
   return {
     id: game.id,
@@ -102,6 +126,8 @@ function toRef(game: GameItem): GameRef {
     genres: game.genres || [],
     platforms: game.platforms || [],
     replays: (game.years || []).length,
+    hasReview: String(game.review || '').trim().length > 0,
+    quote: quoteFrom(game.review),
   };
 }
 
@@ -293,6 +319,10 @@ export function computeStats(data: TabData): StatsSummary {
   let shameScored = 0;
   let shameGradeSum = 0;
   let shameRetry = 0;
+  const strengths = new Map<string, TagBucket>();
+  const weaknesses = new Map<string, TagBucket>();
+  const reviewed: GameRef[] = [];
+  let reviewedClosed = 0;
   let wishInterestCount = 0;
   let wishInterestSum = 0;
   let wishDeck = 0;
@@ -308,6 +338,17 @@ export function computeStats(data: TabData): StatsSummary {
 
       const ref = toRef(game);
       const hours = played ? ref.hours : 0;
+
+      // Lo que escribes. Los puntos fuertes y débiles se cuentan aunque el texto esté vacío: son etiquetas del
+      // juego, no del texto, y quien las marca sin escribir también está diciendo qué valora.
+      if (ref.hasReview) {
+        reviewed.push(ref);
+        // La cobertura solo mira lo CERRADO: contando también las reseñas de lo que estás jugando, el
+        // porcentaje podía pasar del 100% (más reseñas que juegos terminados o dejados).
+        if (tab === 'c' || tab === 'v') reviewedClosed += 1;
+      }
+      for (const point of game.strengths || []) addTag(strengths, point, hours);
+      for (const point of game.weaknesses || []) addTag(weaknesses, point, hours);
 
       // Entradas por mes: `listedAt` es la fecha de llegada a la lista ACTUAL y `normalizeGame` garantiza que
       // siempre tenga valor (cae a `_ts` en los juegos anteriores al campo, que es una aproximación).
@@ -471,6 +512,14 @@ export function computeStats(data: TabData): StatsSummary {
     genres: sortedTags(genres),
     platforms: sortedTags(platforms),
     longest,
+    reviews: {
+      count: reviewed.length,
+      closed: counts.c + counts.v,
+      coverage: counts.c + counts.v > 0 ? (reviewedClosed / (counts.c + counts.v)) * 100 : 0,
+      strengths: sortedTags(strengths),
+      weaknesses: sortedTags(weaknesses),
+      games: reviewed.sort(byRank),
+    },
     top: topSummary(scoredGames),
     shame,
     wishlist,

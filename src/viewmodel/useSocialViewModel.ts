@@ -41,7 +41,7 @@ import type { FriendshipView, MyFriendships, RelationshipState } from '../model/
 import { loadLocalState } from '../model/repository/localRepository';
 import { normalizeTimestamp as toSafeTimestamp } from '../core/utils/normalize';
 import { mapWithConcurrency } from '../core/utils/concurrency';
-import { matchSocialRoute } from './social/socialRoutes';
+import { matchSocialRoute, OWN_PROFILE_ALIAS } from './social/socialRoutes';
 import { useSocialCompose } from './social/useSocialCompose';
 import { useSocialLegalConsent } from './social/useSocialLegalConsent';
 import { DEFAULT_SOCIAL_VISIBILITY, getOrderedUniqueTabs, normalizeVisibility, useSocialProfileForm } from './social/useSocialProfileForm';
@@ -828,7 +828,11 @@ export function useSocialViewModel(options?: {
       return null;
     }
 
-    const entry = socialDirectory.find((item) => item.id === profileDetailId) || null;
+    // `me` en la URL significa "mi perfil": lo usa el panel de estadísticas para enlazar a tus reseñas sin
+    // conocer tu pseudónimo público, que solo se resuelve aquí dentro.
+    const entry = (profileDetailId === OWN_PROFILE_ALIAS
+      ? socialDirectory.find((item) => isOwnProfileIdentity(item.id, authUser?.uid, ownProfileId))
+      : socialDirectory.find((item) => item.id === profileDetailId)) || null;
     // Se puede abrir el detalle de cualquier perfil del directorio (para no-amigos: hero + "Añadir amigo").
     if (!entry) return null;
 
