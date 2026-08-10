@@ -170,6 +170,7 @@ export const StatsHub = memo(function StatsHub({ games }: { games: TabData }) {
 
           <div className="stats-card">
             <h2>{L.years.title}</h2>
+            <p className="stats-card-sub">{L.years.subtitle}</p>
             {/* Pinchar un año de la curva abre su resumen: el mismo destino que el selector de arriba. */}
             <YearChart
               years={stats.years}
