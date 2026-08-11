@@ -1,6 +1,7 @@
 import { Component, useEffect, useState, type ErrorInfo, type ReactNode } from 'react';
 import { Icon } from '../Icon';
 import { SOCIAL_UI } from '../../../core/constants/labels';
+import { parsePaletteId } from '../../../core/constants/palettes';
 import { reportHandledError } from '../../../model/repository/firebaseRepository';
 
 // Cooldown de reintento: 15 min. Un fallo de render del hub social muestra el fallback; el reintento NO es inmediato
@@ -21,31 +22,33 @@ function SocialErrorFallback({ canRetryAt, onRetry }: { canRetryAt: number; onRe
     if (canRetry) {
       return;
     }
-    // Solo mientras hay cuenta atrás: refresca cada segundo para actualizar los minutos restantes y habilitar el botón.
-    const id = window.setInterval(() => setNow(Date.now()), 1000);
-    return () => window.clearInterval(id);
-  }, [canRetry]);
-
-  const remainingMin = Math.max(1, Math.ceil(remainingMs / 60000));
+    // Un ÚNICO despertador al instante exacto en que expira la espera, en vez de un tic cada segundo: ya no hay
+    // cuenta atrás que repintar, y lo único que queda por hacer es habilitar el botón cuando toque.
+    const id = window.setTimeout(() => setNow(Date.now()), remainingMs);
+    return () => window.clearTimeout(id);
+  }, [canRetry, remainingMs]);
 
   return (
-    <section className="hub-hub hub-screen" aria-label={SOCIAL_UI.errorBoundary.sectionAria}>
-      <div className="hub-hub-card hub-screen-card">
-        <div className="hub-hub-title-wrap">
-          <Icon name="bottom-hub" className="hub-hub-icon" />
-          <h2>{SOCIAL_UI.errorBoundary.title}</h2>
-        </div>
-        <p>{SOCIAL_UI.errorBoundary.body}</p>
-        <div className="hub-screen-actions">
+    <section className="hub-hub hub-screen error-screen" aria-label={SOCIAL_UI.errorBoundary.sectionAria}>
+      {/* Sin tarjeta, igual que la pantalla raíz: el aviso se apoya en el fondo de la sección. */}
+      <div className="error-plain error-plain-inline">
+        {/* La paleta se lee del <html> (la fija el script anti-flash de `index.html`), igual que en el boundary
+            raíz, así no hay que enhebrar la preferencia por props hasta aquí. */}
+        <h2 className="error-lead">
+          {SOCIAL_UI.errorBoundary.titleByPalette[parsePaletteId(document.documentElement.dataset.palette)]}
+        </h2>
+        <p className="error-hint">{SOCIAL_UI.errorBoundary.body}</p>
+        <div className="error-actions">
           <button
-            className="btn btn-primary"
+            className="btn btn-ghost error-ghost"
             type="button"
             onClick={onRetry}
             disabled={!canRetry}
             aria-disabled={!canRetry}
+            aria-label={canRetry ? undefined : SOCIAL_UI.errorBoundary.retryBlockedAria}
           >
             <Icon name="refresh" />
-            {canRetry ? SOCIAL_UI.errorBoundary.retry : SOCIAL_UI.errorBoundary.retryIn(remainingMin)}
+            {SOCIAL_UI.errorBoundary.retry}
           </button>
         </div>
       </div>

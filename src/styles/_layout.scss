@@ -2530,35 +2530,143 @@ button.hub-chip.active {
 
 
 
-// Fallback del error boundary RAÍZ (AppErrorBoundary): pantalla centrada con tarjeta y botón de recarga.
+/* ── Pantallas de error ────────────────────────────────────────────────────────────────────────────
+   Las dos (boundary RAÍZ y del hub social) comparten armazón: `.error-card` sobre `.hub-hub-card`.
+   Que la tarjeta sea la del hub no es un atajo, es EL punto: los skins de paleta (CAPA 3) visten
+   `.hub-hub-card`, así que una tarjeta propia —como la `.app-error-card` que había aquí— no la conocía
+   ninguna paleta y la pantalla de error salía en la caja gris de la base mientras el resto de la app
+   iba vestido de Persona, Portal o Grimdark. Lo demás cuelga de tokens de rol (`--danger`/`--warn`),
+   que cada paleta ya redefine, así que ninguna necesita override.
+   Fallback del error boundary RAÍZ: además centra a pantalla completa (sustituye a toda la app). */
 .app-error {
+  position: relative;
+  overflow: hidden;
   min-height: 100vh;
   min-height: 100dvh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  display: grid;
+  place-items: center;
   padding: 1.5rem;
   background: var(--bg);
   color: var(--text);
 }
 
-.app-error-card {
-  max-width: 30rem;
-  width: 100%;
+/* La pantalla raíz va SIN tarjeta: el aviso se apoya en el fondo de la app con un halo del acento detrás,
+   en vez de en un recuadro que recuerda a un diálogo del sistema. Sigue vestida por la paleta —fondo,
+   tipografía, halo y botón salen de sus tokens y de su skin—, solo que sin marco. */
+.app-error::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(58% 46% at 50% 42%, rgba(var(--steam-rgb), .09), rgba(var(--steam-rgb), 0) 70%);
+  pointer-events: none;
+}
+
+/* En claro, ese mismo azul al 9% sobre un fondo crema se lee como una mancha gris. Se queda en un velo
+   apenas perceptible, lo justo para que el centro no sea papel plano. */
+:root[data-theme='light'] .app-error::before {
+  background: radial-gradient(58% 46% at 50% 42%, rgba(var(--steam-rgb), .045), rgba(var(--steam-rgb), 0) 72%);
+}
+
+.error-plain {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  gap: .55rem;
   text-align: center;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: .75rem;
-  padding: 2rem 1.75rem;
+  max-width: 32rem;
+}
 
-  h1 {
-    margin: 0 0 .75rem;
-    font-size: 1.35rem;
-  }
+.error-plain-inline {
+  margin-inline: auto;
+}
 
-  p {
-    margin: 0 0 1.5rem;
-    color: var(--text-dim);
-    line-height: 1.5;
-  }
+/* La del hub social vive DENTRO de la app, así que no puede tirar de `place-items` sobre el alto de la
+   ventana como la raíz: se centra en el hueco que dejan la cabecera y la barra inferior, que es justo lo que
+   `.main` ya reserva con sus rellenos (10rem entre los dos). Así queda en el centro de la pantalla igual que
+   la otra, en vez de pegada arriba. */
+.hub-hub.error-screen {
+  min-height: calc(100dvh - 10rem);
+  align-content: center;
+  justify-items: center;
+}
+
+/* Dos pesos, no un párrafo: primero QUÉ ha pasado, con cuerpo grande, y debajo QUÉ hacer, atenuado. */
+.error-lead {
+  margin: 0;
+  max-width: 24ch;
+  font-size: clamp(1.3rem, 1.1rem + 1.1vw, 1.75rem);
+  font-weight: 700;
+  letter-spacing: -.015em;
+  line-height: 1.25;
+  color: var(--text);
+}
+
+.error-hint {
+  margin: 0;
+  max-width: 34ch;
+  color: var(--text-muted);
+  line-height: 1.6;
+}
+
+/* Acción discreta: el fantasma del sistema, con el contorno insinuado para que se lea como botón y no como
+   texto suelto. No compite con el mensaje. */
+.error-plain .error-actions {
+  margin-top: 1.35rem;
+}
+
+/* Dos clases y no una: `.btn-ghost` deja el borde transparente y se carga después que esta hoja, así que con
+   un solo nivel de especificidad el contorno no llegaba a verse y la acción parecía texto suelto. */
+.error-plain .error-ghost {
+  border-color: var(--border);
+  font-weight: 600;
+  padding-inline: 1.5rem;
+}
+
+.error-plain .error-ghost:hover {
+  border-color: color-mix(in srgb, var(--steam) 45%, var(--border));
+}
+
+.error-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .6rem;
+  justify-content: center;
+  margin-top: .25rem;
+}
+
+.error-actions .btn {
+  min-height: 2.7rem;
+  padding-inline: 1.4rem;
+}
+
+/* Espera del reintento: el botón se apaga de verdad (antes quedaba idéntico al activo, solo que sin
+   responder) y renuncia al relieve del hover, que invitaba a pulsar algo que no hace nada. */
+.error-actions .btn:disabled,
+.error-actions .btn:disabled:hover {
+  opacity: .45;
+  cursor: not-allowed;
+  transform: none;
+  border-color: var(--border);
+}
+
+/* Por qué está apagado el botón, sin cuenta atrás. Va aún más tenue que la línea de acción. */
+.error-note {
+  margin: .35rem 0 0;
+  font-size: .8rem;
+  color: var(--text-dim);
+  max-width: 42ch;
+}
+
+/* La pantalla aparece de golpe tras el fallo; el fundido suaviza ese salto. */
+.error-plain {
+  animation: errorIn .26s ease-out both;
+}
+
+@keyframes errorIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .error-plain { animation: none; }
 }
