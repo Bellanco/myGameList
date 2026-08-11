@@ -296,14 +296,12 @@ body.compact-filters .filters-row.open .btn-toggle { justify-content: center; al
     width: 100%;
   }
 
-  tbody tr.detail-row.open {
-    display: block;
-    width: 100%;
-  }
-
+  /* El detalle sigue siendo FILA y CELDA de tabla de verdad: con `display: block` la celda deja de ser
+     celda, su `colspan` se ignora y la caja anónima que la envuelve ocupa UNA sola columna. Al virtualizar,
+     los espaciadores declaran `colspan` y crean tantas columnas como en escritorio (la cabecera colapsada
+     ya solo declara una), así que el detalle se quedaba en 1/8 del ancho: bloques solapados y la reseña
+     partida letra a letra. Como celda, el `colspan` vuelve a abarcar la fila entera. */
   tbody tr.detail-row td {
-    display: block;
-    width: 100%;
     padding: 0;
     border: none;
   }
@@ -380,9 +378,18 @@ body.compact-filters .filters-row.open .btn-toggle { justify-content: center; al
   thead th:not(:first-child) { display: none!important; }
   tbody tr.main-row td:not(:first-child) { display: none!important; }
   tbody tr.main-row td:first-child { width: 100%; }
-  tbody tr.detail-row.open { display: block; width: 100%; }
-  tbody tr.detail-row td { display: block; width: 100%; padding: 0; border: none; }
-  .detail-content { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .7rem; padding: .9rem .85rem 1rem; }
+  /* Ver la nota del bloque anterior: la celda del detalle NO puede pasar a `display: block` o pierde su
+     `colspan` y se queda en el ancho de una columna. */
+  tbody tr.detail-row td { padding: 0; border: none; }
+  /* Móvil estrecho: una sola columna. Con dos columnas rígidas quedaban a ~155 px, donde las etiquetas
+     largas («Años en los que se completó») se partían en dos líneas y desalineaban su valor respecto al
+     bloque de al lado. `auto-fit` recupera las dos columnas en cuanto hay ancho para ellas (tablet). */
+  .detail-content {
+    grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+    align-items: start;
+    gap: .7rem;
+    padding: .9rem .85rem 1rem;
+  }
   .detail-value { padding: .65rem .75rem; }
   .detail-actions {
     justify-content: stretch;

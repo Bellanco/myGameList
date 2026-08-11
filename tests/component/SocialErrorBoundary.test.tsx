@@ -41,16 +41,20 @@ describe('SocialErrorBoundary', () => {
       </SocialErrorBoundary>,
     );
 
-    // Se ve el aviso, no el contenido, y el botón está deshabilitado con la cuenta atrás (15 min).
-    expect(screen.getByText(SOCIAL_UI.errorBoundary.title)).toBeInTheDocument();
+    // Se ve el aviso, no el contenido, y el botón está deshabilitado. El texto del botón NO cambia (nada de
+    // cuenta atrás): la espera se explica en una nota aparte, sin cifras.
+    expect(screen.getByText(SOCIAL_UI.errorBoundary.titleByPalette.steam)).toBeInTheDocument();
     const btn = screen.getByRole('button');
     expect(btn).toBeDisabled();
-    expect(btn).toHaveTextContent(SOCIAL_UI.errorBoundary.retryIn(15));
+    expect(btn).toHaveTextContent(SOCIAL_UI.errorBoundary.retry);
+    expect(btn).toHaveAttribute('aria-label', SOCIAL_UI.errorBoundary.retryBlockedAria);
+    // Ni cuenta atrás en el botón ni nota al pie: la espera no se cuenta en pantalla.
+    expect(screen.queryByText(/\d+\s*min/)).not.toBeInTheDocument();
 
     // Aunque se pulse, no reintenta (guardia dura): sigue el fallback.
     control.crash = false; // aunque el hijo ya no fallaría, el cooldown impide el reintento.
     fireEvent.click(btn);
-    expect(screen.getByText(SOCIAL_UI.errorBoundary.title)).toBeInTheDocument();
+    expect(screen.getByText(SOCIAL_UI.errorBoundary.titleByPalette.steam)).toBeInTheDocument();
     expect(screen.queryByText('contenido recuperado')).not.toBeInTheDocument();
   });
 
@@ -61,7 +65,7 @@ describe('SocialErrorBoundary', () => {
       </SocialErrorBoundary>,
     );
 
-    // Avanza el cooldown completo: la cuenta atrás habilita el botón.
+    // La espera sigue siendo de 15 min: el despertador la agota y habilita el botón, y la nota desaparece.
     act(() => {
       vi.advanceTimersByTime(15 * 60 * 1000);
     });
@@ -69,6 +73,7 @@ describe('SocialErrorBoundary', () => {
     const btn = screen.getByRole('button');
     expect(btn).toBeEnabled();
     expect(btn).toHaveTextContent(SOCIAL_UI.errorBoundary.retry);
+    expect(btn).not.toHaveAttribute('aria-label');
 
     // El hijo ya no falla → al reintentar se recupera el contenido.
     control.crash = false;
