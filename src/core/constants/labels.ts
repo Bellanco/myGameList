@@ -1,4 +1,5 @@
 import type { IconName } from './icons';
+import type { PaletteId } from './palettes';
 import { TAB_IDS, type TabId } from '../../model/types/game';
 import type { ImportField } from '../../model/types/import';
 import type { AdminAnomaly } from '../../model/types/firestore';
@@ -685,11 +686,34 @@ export const UI_MESSAGES = {
   },
 } as const;
 
+// Cada tema cuenta el fallo en su propio idioma, igual que los bloques de estadísticas (la tarta de Portal en
+// «Géneros más jugados», los contratos de Cuphead en «Completados y abandonados», el corazón robado de Persona
+// en el podio): el guiño va INTEGRADO en la frase, sin comillas ni atribución, y la línea de debajo dice
+// siempre qué hacer. El tema por defecto se queda con el de Portal, que es el que mejor describe un error.
+const APP_ERROR_LEAD: Record<PaletteId, string> = {
+  steam: 'Esto no estaba en las pruebas.',
+  // Persona 5: los Palacios se desmoronan en cuanto les robas el Tesoro.
+  persona: 'El Palacio se ha derrumbado.',
+  // Portal: «sigues vivo» es con lo que GLaDOS cierra las pruebas, así que aquí le toca a la página no estarlo.
+  portal: 'Sigues vivo. La página no.',
+  // Cyberpunk 2077: en Night City todo pasa por un implante, y todo implante acaba fallando.
+  cyberpunk: 'Fallo en el implante.',
+  // Warhammer 40.000: el Omnissiah es la deidad máquina del Adeptus Mechanicus, a la que se le reza para que
+  // los aparatos funcionen.
+  grimdark: 'El Omnissiah no responde.',
+  // Sea of Stars: los Hijos del Solsticio y el eclipse que se lo traga todo.
+  seaofstars: 'El eclipse se lo ha tragado.',
+};
+
 // Pantalla de reemplazo del error boundary RAÍZ (fallo de render que tumbaría toda la app).
 export const APP_ERROR_UI = {
   sectionAria: 'Error de la aplicación',
+  // Sin titular visible: el mensaje se reparte en dos líneas con distinto peso (qué ha pasado / qué hacer),
+  // que es lo que da jerarquía a la pantalla ahora que no hay título ni icono. `title` se conserva para
+  // lectores de pantalla, como encabezado de la página.
   title: 'Algo ha ido mal',
-  body: 'La aplicación ha encontrado un error inesperado. Vuelve a cargar la página para continuar; tus datos están a salvo.',
+  leadByPalette: APP_ERROR_LEAD,
+  hint: 'Vuelve a cargar la página para continuar.',
   reload: 'Recargar',
 } as const;
 
@@ -875,17 +899,39 @@ export const ADMIN_PANEL_UI = {
   errorGeneric: 'No se pudo completar la acción.',
 } as const;
 
+// Igual que `APP_ERROR_LEAD`, pero para el hub social: lo que ha caído es la parte de GENTE (amistades, feed,
+// reseñas compartidas), así que cada tema lo cuenta con su forma de quedarse sin compañía o sin comunicación.
+const SOCIAL_ERROR_LEAD: Record<PaletteId, string> = {
+  // Las salas de espera del multijugador, que es lo más social que tiene un cliente de juegos.
+  steam: 'La sala se ha quedado vacía.',
+  // Persona 5: los Confidentes son los vínculos que cultivas, y se llevan por teléfono.
+  persona: 'Tus Confidentes no cogen el teléfono.',
+  // Portal: el Cubo de Compañía, la única compañía que dan las pruebas.
+  portal: 'El Cubo de Compañía no ha venido.',
+  // Cyberpunk 2077: sin red no hay Night City, y todo pasa por la red.
+  cyberpunk: 'Night City se ha quedado sin red.',
+  // Warhammer 40.000: los astrópatas son quienes llevan los mensajes entre mundos.
+  grimdark: 'El astrópata ha perdido la señal.',
+  // Sea of Stars: acampar con el grupo es donde el viaje se vuelve compañía.
+  seaofstars: 'Nadie ha llegado al campamento.',
+};
+
 export const SOCIAL_UI = {
   hubTitle: 'Espacio social',
   loading: 'Cargando espacio social...',
   screenAria: 'Social',
   errorBoundary: {
     sectionAria: 'Error del espacio social',
-    title: 'No se pudo mostrar el espacio social',
-    body: 'Ha ocurrido un problema al cargar esta sección. El resto de la aplicación sigue disponible.',
+    // Mismo formato que la pantalla raíz: el guiño del tema en grande —aquí sobre lo que ha caído, que es la
+    // parte de gente— y debajo, atenuado, lo que de verdad hay que saber. El titular SÍ se ve y sigue siendo
+    // un encabezado de sección de verdad; el contexto («error del espacio social») lo da el `aria-label`.
+    titleByPalette: SOCIAL_ERROR_LEAD,
+    body: 'El resto de la aplicación sigue disponible.',
     retry: 'Reintentar',
-    // El reintento está limitado (1 cada 15 min) para no reintentar de forma indiscriminada ante un fallo persistente.
-    retryIn: (minutes: number) => `Podrás reintentar en ${minutes} min`,
+    // El reintento sigue limitado (1 cada 15 min) para no reintentar de forma indiscriminada ante un fallo
+    // persistente, pero la espera no se cuenta en pantalla: ni cuenta atrás en el botón ni nota al pie, que
+    // solo transmiten castigo. El botón se apaga, y quien use lector de pantalla lo oye por este `aria-label`.
+    retryBlockedAria: 'Reintentar (no disponible todavía)',
   },
   cardSelector: {
     searchLabel: 'Buscar',
