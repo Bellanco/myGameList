@@ -30,6 +30,7 @@ const localMocks = vi.hoisted(() => ({
 }));
 vi.mock('../../src/model/repository/localRepository', () => localMocks);
 
+import { localDayKey } from '../../src/core/utils/dateTime';
 import { repairUndatedHistoryDates } from '../../src/model/repository/socialActivityHistory';
 import { reconcileReviewActivity } from '../../src/model/repository/socialActivityReconcile';
 
@@ -101,7 +102,10 @@ function bibliotecaConSello(): TabData {
   return { c: games, v: [], e: [], p: [], deleted: [], updatedAt: SELLO };
 }
 
+// El reparto por día y la fecha ancla se calculan en el calendario LOCAL (igual que los titula el feed), así que
+// la zona se fija aquí: sin esto, el resultado dependería del huso de la máquina que corre el test.
 beforeEach(() => {
+  vi.stubEnv('TZ', 'Europe/Madrid');
   idbMocks.__setMeta(null);
   localStorage.clear();
   sessionStorage.clear();
@@ -109,6 +113,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  vi.unstubAllEnvs();
   vi.unstubAllGlobals();
   vi.clearAllMocks();
 });
@@ -140,8 +145,8 @@ describe('repairUndatedHistoryDates', () => {
     expect(store.byGame(1).updatedAt).toBe(REAL_1);
     expect(store.byGame(2).updatedAt).toBe(REAL_2);
     // El histórico, al día ancla (y `createdAt` con él, para no quedar por delante de `updatedAt`).
-    expect(new Date(store.byGame(3).updatedAt).toISOString().slice(0, 10)).toBe(ANCLA);
-    expect(new Date(store.byGame(4).updatedAt).toISOString().slice(0, 10)).toBe(ANCLA);
+    expect(localDayKey(store.byGame(3).updatedAt)).toBe(ANCLA);
+    expect(localDayKey(store.byGame(4).updatedAt)).toBe(ANCLA);
     expect(store.byGame(3).createdAt).toBe(store.byGame(3).updatedAt);
     // Fechas distintas entre sí → orden estable dentro del día.
     expect(store.byGame(3).updatedAt).not.toBe(store.byGame(4).updatedAt);
@@ -170,7 +175,7 @@ describe('repairUndatedHistoryDates', () => {
 
     expect(plan?.bulkDays).toEqual(['2026-07-26', '2026-07-27']);
     expect(plan?.toMove.map((item) => item.gameId)).toEqual([100]);
-    expect(new Date(store.byGame(100).updatedAt).toISOString().slice(0, 10)).toBe(ANCLA);
+    expect(localDayKey(store.byGame(100).updatedAt)).toBe(ANCLA);
     expect(store.byGame(1).updatedAt).toBe(REAL_1);
   });
 
