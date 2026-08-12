@@ -115,7 +115,7 @@ function SocialProfilesScreenBase({
         <span className="sr-only">{PROFILE_TIER_LABELS[normalizeTier(entry.tier)]}</span>
       </span>
       <header className="hub-feed-card-head">
-        <HubAvatar name={entry.displayName} photoURL={entry.photoURL} />
+        <HubAvatar photoURL={entry.photoURL} />
         <div className="hub-feed-card-head-text">
           <h3>{entry.displayName}</h3>
         </div>

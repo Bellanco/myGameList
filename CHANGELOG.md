@@ -44,6 +44,54 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
 - Pruebas del esquema del gist de juegos, del módulo de App Check y de la escritura diferida del estado local.
 
 ### Changed
+- **Un solo panel de estadísticas para tu perfil y para el de otra persona.** Había dos pantallas montando las
+  mismas piezas (`StatsHub` y `FriendStats`), y la ajena se quedaba atrás en todo lo que no fuera el cálculo: sin
+  subtítulos, con el resumen de año reescrito a mano —sin el ranking de plataformas ni el listado completo— y
+  hablando en segunda persona de la biblioteca de otro («Lo mejor de **tu** biblioteca» en el perfil de un
+  amigo). Ahora las dos son envolturas de `StatsPanel` con tres ejes de variación: qué bloques deja ver tu rango,
+  con qué datos se calcula y **de quién se habla** (los textos con voz tienen su versión en tercera persona, con
+  los guiños intactos, y viajan por contexto porque viven dentro de las piezas). Las reglas de rango y de
+  reciprocidad no cambian: bronce sigue en los cuatro bloques de retrato, plata y oro suman notas y ratio, y lo
+  que escondes de tus listas sigue sin verse de las ajenas.
+- **La administración ve de sus amistades lo mismo que ve de sí misma.** El panel de un amigo se calculaba
+  siempre con la proyección pública, aunque el hub ya tuviera en memoria los juegos completos de su gist de
+  listados. Para mithril pasa a usarlos: horas, evolución del backlog, razones de abandono y su lista de próximos
+  con las fechas. Y las ocultaciones de su dueño dejan de aplicarle —las listas escondidas y las marcas de
+  «rejugable» y «merece otra oportunidad»—, **salvo el tiempo de juego**, que se respeta frente a todo el mundo.
+  Queda declarado en la política de privacidad, en un párrafo escrito en tono tranquilo (es un dato, no una
+  advertencia), y por eso sube `LEGAL_VERSION`: la puerta del hub vuelve a pedir la conformidad. Para el resto de rangos no cambia nada: el rango dice a qué datos hay derecho, y tener el dato
+  cargado no autoriza a pintarlo. Sus **reseñas** siguen fuera del panel en todos los casos (tienen su propio
+  apartado en el perfil), y si el gist de listados no llegó, ni la administración pinta el panel completo: se
+  queda en la proyección pública en vez de enseñar ceros.
+- **Las figuras del panel se pueden tocar, todas con el mismo gesto.** Eran estampas con, como mucho, un `title` del
+  sistema: tarda un segundo en salir y en una pantalla táctil no existe. Ahora se señalan con el ratón, con el dedo o
+  con el tabulador, la parte señalada manda, las demás se apartan y un pie cuenta **lo que el dibujo no puede
+  pintar**. Una pieza por figura, y en cada una lo que faltaba:
+  - **Dónde los juegas** (anillo): el centro pasa a contar la parte señalada en vez del total, y la leyenda son
+    botones de verdad. El radio se calcula con el grosor ampliado, que es lo que hacía que el anillo apareciera
+    cortado justo en el segmento que se estaba mirando.
+  - **Tus mejores géneros** (rosetón abierto): la porción se abre más y el pie da su parte exacta, «Acción · 6
+    juegos · 40%» — los radios comparan bien entre ellos, pero nadie mide a ojo una fracción.
+  - **Tus géneros** (hexágono): el radio del eje se enciende y el pie suelta la afinidad, los juegos y la nota
+    media, que **solo existían en el `aria-label`**: quien veía la figura tenía la forma y ningún número.
+  - **Géneros más jugados** (rosetón polar): añade las **horas** del grupo, que el radio no cuenta.
+  - **Completados y abandonados**: los dos contadores son botones y al señalarlos dicen su **porcentaje**, el puente
+    que faltaba entre las dos cifras y el dial grande.
+  - **Dónde brillas**, **Plataformas** (matriz de puntos): la fila se aísla de las demás, que es lo que permite
+    leerla contra la guía de la media sin cinco barras al lado compitiendo.
+  - **Distribución de notas** y **Cuándo llegó cada uno**: el punto señalado dice de qué juego es. Estos dos NO
+    entran en el recorrido del teclado —hay un punto por juego, serían cientos—; su dato tiene su salida en la tabla
+    y en la lista de cada bloque.
+
+  El gesto vive en un solo sitio (`useChartFocus` + `ChartDetail`), no repetido ocho veces. Un toque **fija** la
+  selección, para las pantallas donde no existe «pasar por encima»: señalado y fijado son estados distintos, porque
+  en táctil el toque llega después de su propio `pointerenter` y con uno solo el gesto se leía como «suéltala».
+  `aria-pressed` cuenta lo fijado, no lo que persigue el ratón, y las figuras con controles dentro pasan de
+  `role="img"` a `role="group"` (con `img`, un lector de pantalla se salta el contenido).
+- **La evolución del backlog se apila en el orden del recorrido**: próximos al ras del eje, encima en curso, luego
+  abandonados y completados coronando el área. Con los completados abajo, lo que más crece empujaba a todo lo demás
+  hacia arriba y la banda de próximos flotaba en lo alto sin apoyarse en nada. La leyenda y la tabla no se invierten:
+  siguen en el orden canónico de la app, que es el de las bandas leídas de arriba abajo.
 - **El linter ya vigila lo que más caro ha salido.** `eslint-plugin-react-hooks` (`rules-of-hooks` no encontró
   ni un error; quedan 14 avisos de `exhaustive-deps` por revisar) y cuatro reglas **tipadas** sobre `model` y
   `viewmodel`: `no-floating-promises`, `no-misused-promises`, `await-thenable` y `require-await`. Destaparon 12

@@ -1,5 +1,5 @@
 import { memo } from 'react';
-import { UI_MESSAGES } from '../../../core/constants/labels';
+import { useStatsLabels } from './statsVoice';
 import { StatTile } from './StatTile';
 import { CountUp } from './CountUp';
 import { TagRanking } from './TagRanking';
@@ -9,8 +9,6 @@ import { GameRefList } from './GameRefList';
 import { formatDecimal, formatHours } from './format';
 import type { ShameSummary } from '../../../core/stats/types';
 import type { ScoreScale } from '../../../core/utils/scoreScale';
-
-const L = UI_MESSAGES.stats.shame;
 
 /**
  * Apartado de la lista de la vergüenza. Vive solo en "General": los abandonos no llevan año (el formulario no
@@ -27,12 +25,16 @@ export const ShameCard = memo(function ShameCard({
   shame: ShameSummary;
   scale: ScoreScale;
   /**
-   * Vista de un PERFIL AJENO: fuera lo que el canal social no publica —horas, la marca de "merece otra
-   * oportunidad", las razones de abandono y las fechas de los últimos en caer—. Enseñarlo con ceros y huecos
-   * haría creer que ese amigo no anota nada, cuando lo que pasa es que eso no viaja.
+   * El resumen se ha calculado con la PROYECCIÓN PÚBLICA (ver `friendStatsData`): fuera lo que ese canal no
+   * publica —horas, la marca de "merece otra oportunidad", las razones de abandono y las fechas de los últimos en
+   * caer—. Enseñarlo con ceros y huecos haría creer que ese amigo no anota nada, cuando lo que pasa es que eso no
+   * ha llegado.
    */
   publicOnly?: boolean;
 }) {
+  const labels = useStatsLabels();
+  const L = labels.shame;
+  const TILES = labels.tiles;
   if (shame.total === 0) {
     return <p className="stats-empty">{L.empty}</p>;
   }
@@ -43,13 +45,17 @@ export const ShameCard = memo(function ShameCard({
     <>
       <div className="stats-tiles">
         <StatTile label={L.total} value={<CountUp value={shame.total} />} />
-        {publicOnly ? null : <StatTile label={L.hours} value={<CountUp value={shame.hours} format={formatHours} />} unit="h" />}
+        {/* Sin horas no hay cifra de tiempo: pasa con la proyección pública y también con quien oculta su tiempo
+            de juego, y en los dos casos un "0 h" se leería como un dato en vez de como una ausencia. */}
+        {publicOnly || shame.hours === 0 ? null : (
+          <StatTile label={L.hours} value={<CountUp value={shame.hours} format={formatHours} />} unit="h" />
+        )}
         {shame.scored > 0 ? (
           <StatTile
             label={L.avgGrade}
             value={<CountUp value={avgInScale} format={formatDecimal} />}
-            unit={scale === 'grade' ? UI_MESSAGES.stats.tiles.outOf100 : UI_MESSAGES.stats.tiles.outOf5}
-            hint={UI_MESSAGES.stats.tiles.avgGradeHint(shame.scored)}
+            unit={scale === 'grade' ? TILES.outOf100 : TILES.outOf5}
+            hint={TILES.avgGradeHint(shame.scored)}
           />
         ) : null}
         {publicOnly ? null : <StatTile label={L.retry} value={<CountUp value={shame.retry} />} />}
@@ -79,7 +85,7 @@ export const ShameCard = memo(function ShameCard({
           </section>
           <section>
             <h3>{L.recent}</h3>
-            <GameRefList games={shame.recent} meta="hours" />
+            <GameRefList games={shame.recent} meta={shame.hours > 0 ? 'hours' : 'grade'} />
           </section>
         </div>
       )}

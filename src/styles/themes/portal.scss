@@ -422,3 +422,10 @@
 /* El aro de la figura de géneros, como una mira de calibración. */
 :root[data-palette="portal"] .polar-ring,
 :root[data-palette="portal"] .genre-radar-ring { stroke-dasharray: 3 4; }
+
+/* ── §N · AVATAR SIN FOTO: trazo FINO y limpio, el de la señalética de la cámara de pruebas (los carteles
+   de Aperture son línea delgada y uniforme). ── */
+:root[data-palette="portal"] {
+  --deco-avatar-stroke: 1.4;
+  --deco-avatar-cap: round;
+}

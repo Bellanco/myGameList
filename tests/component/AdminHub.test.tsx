@@ -28,6 +28,16 @@ const setUserTierMock = vi.fn<(...args: unknown[]) => Promise<void>>(async () =>
 const migrateForeignProfileDocMock = vi.fn<(...args: unknown[]) => Promise<{ outcome: string; carried: string[] }>>(
   async () => ({ outcome: 'moved', carried: [] }),
 );
+type SweepResult = { ok: boolean; failures: string[]; touched: number; scanned: number };
+const healUserFriendshipIdentityMock = vi.fn<(...args: unknown[]) => Promise<SweepResult>>(async () => ({
+  ok: true, failures: [], touched: 2, scanned: 2,
+}));
+const purgeFossilFriendshipRequestsMock = vi.fn<(...args: unknown[]) => Promise<SweepResult>>(async () => ({
+  ok: true, failures: [], touched: 3, scanned: 3,
+}));
+const setUserDisplayNameMock = vi.fn<(...args: unknown[]) => Promise<SweepResult>>(async () => ({
+  ok: true, failures: [], touched: 2, scanned: 2,
+}));
 
 vi.mock('../../src/model/repository/firebaseAdminRepository', () => ({
   ADMIN_PROFILES_LIMIT: 300,
@@ -37,6 +47,9 @@ vi.mock('../../src/model/repository/firebaseAdminRepository', () => ({
   deleteUserProfile: (...args: unknown[]) => deleteUserProfileMock(...args),
   setUserTier: (...args: unknown[]) => setUserTierMock(...args),
   migrateForeignProfileDoc: (...args: unknown[]) => migrateForeignProfileDocMock(...args),
+  healUserFriendshipIdentity: (...args: unknown[]) => healUserFriendshipIdentityMock(...args),
+  purgeFossilFriendshipRequests: (...args: unknown[]) => purgeFossilFriendshipRequestsMock(...args),
+  setUserDisplayName: (...args: unknown[]) => setUserDisplayNameMock(...args),
 }));
 
 import { AdminHub } from '../../src/view/components/AdminHub';
@@ -47,6 +60,8 @@ function user(overrides: Record<string, unknown> = {}) {
     uid: 'uid-a',
     displayName: 'Ada',
     knownAs: '',
+    friendKnownNames: [] as string[],
+    friendKnownPhotos: [] as string[],
     photoURL: '',
     socialEnabled: true,
     socialGistId: 'g1',
@@ -65,6 +80,10 @@ function user(overrides: Record<string, unknown> = {}) {
     estimatedFirstSeenAt: 0,
     lastFriendshipAt: 1_695_000_000_000,
     friendSocialGistIds: [] as string[],
+    friendGamesGistIds: [] as string[],
+    stalePendingOut: 0,
+    fossilPendingOut: 0,
+    canonicalTwinFound: false,
     anomalies: [] as AdminAnomaly[],
     legacy: { email: false, gamesGistId: false, token: false },
     ...overrides,
@@ -444,6 +463,74 @@ describe('AdminHub — moderación', () => {
     expect(screen.getByText(ADMIN_PANEL_UI.field.createdAtUnknown)).toBeInTheDocument();
   });
 
+  // El id del canal dejó de publicarse en el perfil (se purga al guardar), así que ese campo está vacío para
+  // cualquier perfil al día: pintarlo siempre enseñaba un "—" que se leía como un dato que faltaba. El canal de
+  // alguien se ve ahora por lo que guardan sus amistades, y eso sí se pinta siempre.
+  it('el gist del perfil solo aparece si de verdad lo arrastra, y el de sus amistades siempre', async () => {
+    loadAdminCensusMock.mockResolvedValue(census([user({ socialGistId: '', friendSocialGistIds: ['gs-vivo'] })]));
+    renderHub();
+    signIn(ADMIN_EMAIL);
+    await screen.findByText('Ada');
+
+    expect(screen.queryByText(ADMIN_PANEL_UI.field.socialGist)).not.toBeInTheDocument();
+    expect(screen.getByText(ADMIN_PANEL_UI.field.friendGists)).toBeInTheDocument();
+    expect(screen.getByText('gs-vivo')).toBeInTheDocument();
+  });
+
+  it('un perfil que aún publica el id legacy sí lo muestra', async () => {
+    loadAdminCensusMock.mockResolvedValue(census([user({ socialGistId: 'gs-legacy' })]));
+    renderHub();
+    signIn(ADMIN_EMAIL);
+    await screen.findByText('Ada');
+
+    expect(screen.getByText(ADMIN_PANEL_UI.field.socialGist)).toBeInTheDocument();
+    expect(screen.getByText('gs-legacy')).toBeInTheDocument();
+  });
+
+  // Cuando los nombres no coinciden se enseñan LOS DOS, etiquetados por origen. El panel no puede saber cuál es el
+  // vigente (el nick vive en el gist del usuario, que no puede leer), y afirmarlo llevaba a propagar el equivocado.
+  it('enseña los dos nombres cuando no coinciden, y ninguno cuando están de acuerdo', async () => {
+    loadAdminCensusMock.mockResolvedValue(census([user({ friendKnownNames: ['Ada Vieja'], anomalies: ['friend-name-mismatch'] })]));
+    renderHub();
+    signIn(ADMIN_EMAIL);
+    await screen.findAllByText('Ada');
+
+    expect(screen.getByText(ADMIN_PANEL_UI.field.profileNameSource)).toBeInTheDocument();
+    expect(screen.getByText(ADMIN_PANEL_UI.field.staleFriendNames)).toBeInTheDocument();
+    expect(screen.getByText('Ada Vieja')).toBeInTheDocument();
+    // Y se avisa de que propagar escribiría el del perfil, que puede ser el rancio.
+    expect(screen.getByText(ADMIN_PANEL_UI.field.nameMismatchHint)).toBeInTheDocument();
+
+    loadAdminCensusMock.mockResolvedValue(census([user({ friendKnownNames: ['Ada'] })]));
+    await userEvent.click(screen.getByRole('button', { name: new RegExp(ADMIN_PANEL_UI.refresh) }));
+    await waitFor(() => {
+      expect(screen.queryByText(ADMIN_PANEL_UI.field.staleFriendNames)).not.toBeInTheDocument();
+      expect(screen.queryByText(ADMIN_PANEL_UI.field.profileNameSource)).not.toBeInTheDocument();
+    });
+  });
+
+  // Se busca por lo que identifica la ficha en pantalla: a quien no tiene nick lo identifica el nombre que le dan
+  // sus amigos, y antes escribir ese nombre no encontraba nada.
+  it('el buscador encuentra por el nombre de sus amistades y por el pseudónimo', async () => {
+    loadAdminCensusMock.mockResolvedValue(
+      census([user({ displayName: '', knownAs: 'Ada la del gist', friendKnownNames: ['Ada la del gist'] })]),
+    );
+    renderHub();
+    signIn(ADMIN_EMAIL);
+    await screen.findByText('Ada la del gist');
+
+    const search = screen.getByRole('textbox', { name: ADMIN_PANEL_UI.searchLabel });
+
+    fireEvent.change(search, { target: { value: 'la del gist' } });
+    expect(screen.getByText('Ada la del gist')).toBeInTheDocument();
+
+    fireEvent.change(search, { target: { value: 'p-ada' } });
+    expect(screen.getByText('Ada la del gist')).toBeInTheDocument();
+
+    fireEvent.change(search, { target: { value: 'nadie' } });
+    expect(screen.queryByText('Ada la del gist')).not.toBeInTheDocument();
+  });
+
   it('un fallo de permisos al cargar se muestra tal cual, sin tabla vacía silenciosa', async () => {
     loadAdminCensusMock.mockRejectedValue(new Error('Sin permisos de administrador para listar los perfiles.'));
     renderHub();
@@ -453,5 +540,158 @@ describe('AdminHub — moderación', () => {
     // Y NO se afirma además que no haya usuarios: la lista está vacía porque falló la lectura, no porque el
     // servicio esté vacío. Decir las dos cosas a la vez desinforma sobre el estado real.
     expect(screen.queryByText(ADMIN_PANEL_UI.empty)).not.toBeInTheDocument();
+  });
+});
+
+describe('AdminHub — identidad denormalizada y solicitudes fosilizadas', () => {
+  beforeEach(() => {
+    loadAdminCensusMock.mockReset();
+    loadAdminCensusMock.mockResolvedValue(census([user()]));
+    healUserFriendshipIdentityMock.mockClear();
+    healUserFriendshipIdentityMock.mockResolvedValue({ ok: true, failures: [], touched: 2, scanned: 2 });
+    purgeFossilFriendshipRequestsMock.mockClear();
+    purgeFossilFriendshipRequestsMock.mockResolvedValue({ ok: true, failures: [], touched: 3, scanned: 3 });
+    setUserDisplayNameMock.mockClear();
+    setUserDisplayNameMock.mockResolvedValue({ ok: true, failures: [], touched: 2, scanned: 2 });
+  });
+
+  // El bloque solo aparece cuando hay algo que propagar: es una escritura sobre documentos de dos personas.
+  it('ofrece propagar la identidad, diciendo en la confirmación qué nombre va a escribir', async () => {
+    loadAdminCensusMock.mockResolvedValue(
+      census([user({ friendKnownNames: ['Ada Vieja'], anomalies: ['friend-name-mismatch'] })]),
+    );
+    renderHub();
+    signIn(ADMIN_EMAIL);
+    await screen.findAllByText('Ada');
+
+    await userEvent.click(screen.getByRole('button', { name: ADMIN_PANEL_UI.healIdentity.btn }));
+    // Pasa por confirmación, como el resto de acciones que escriben, y el nombre exacto va en el texto: si el del
+    // perfil fuera el rancio, esta es la última oportunidad de no propagarlo.
+    expect(healUserFriendshipIdentityMock).not.toHaveBeenCalled();
+    expect(screen.getByText(ADMIN_PANEL_UI.healIdentity.confirmWithName('Ada', 'Ada'))).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: ADMIN_PANEL_UI.confirmAccept }));
+
+    expect(healUserFriendshipIdentityMock).toHaveBeenCalledWith('uid-a', { name: 'Ada', photoURL: '' });
+    expect(await screen.findByText(ADMIN_PANEL_UI.healIdentity.ok(2))).toBeInTheDocument();
+  });
+
+  it('también lo ofrece cuando lo que está rancio es la foto', async () => {
+    loadAdminCensusMock.mockResolvedValue(
+      census([user({ photoURL: 'https://f/nueva.png', friendKnownPhotos: ['https://f/vieja.png'] })]),
+    );
+    renderHub();
+    signIn(ADMIN_EMAIL);
+    await screen.findByText('Ada');
+
+    expect(screen.getByText(ADMIN_PANEL_UI.field.friendPhotoStale)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: ADMIN_PANEL_UI.healIdentity.btn })).toBeInTheDocument();
+  });
+
+  it('con la identidad al día no se ofrece propagar nada', async () => {
+    loadAdminCensusMock.mockResolvedValue(census([user({ friendKnownNames: ['Ada'], friendKnownPhotos: [''] })]));
+    renderHub();
+    signIn(ADMIN_EMAIL);
+    await screen.findByText('Ada');
+
+    expect(screen.queryByRole('button', { name: ADMIN_PANEL_UI.healIdentity.btn })).not.toBeInTheDocument();
+    expect(screen.getByText(ADMIN_PANEL_UI.field.friendPhotoFresh)).toBeInTheDocument();
+  });
+
+  // La señal avisa a los 90 días; el botón de purga espera a los 180. Con solo señal, no hay botón.
+  it('avisa de las solicitudes rancias sin ofrecer purga hasta los 180 días', async () => {
+    loadAdminCensusMock.mockResolvedValue(
+      census([user({ stalePendingOut: 2, fossilPendingOut: 0, anomalies: ['stale-pending-out'] })]),
+    );
+    renderHub();
+    signIn(ADMIN_EMAIL);
+    await screen.findByText('Ada');
+
+    expect(screen.getByText(ADMIN_PANEL_UI.field.stalePendingDetail(2, 0))).toBeInTheDocument();
+    expect(screen.queryByText(ADMIN_PANEL_UI.fossil.title)).not.toBeInTheDocument();
+  });
+
+  it('purga las fosilizadas tras confirmar, diciendo cuántas son', async () => {
+    loadAdminCensusMock.mockResolvedValue(
+      census([user({ stalePendingOut: 3, fossilPendingOut: 3, anomalies: ['stale-pending-out'] })]),
+    );
+    renderHub();
+    signIn(ADMIN_EMAIL);
+    await screen.findByText('Ada');
+
+    await userEvent.click(screen.getByRole('button', { name: ADMIN_PANEL_UI.fossil.btn(3) }));
+    expect(purgeFossilFriendshipRequestsMock).not.toHaveBeenCalled();
+    await userEvent.click(screen.getByRole('button', { name: ADMIN_PANEL_UI.confirmAccept }));
+
+    expect(purgeFossilFriendshipRequestsMock).toHaveBeenCalledWith('uid-a');
+    expect(await screen.findByText(ADMIN_PANEL_UI.fossil.ok(3))).toBeInTheDocument();
+  });
+
+  // Mover y fusionar no tienen las mismas consecuencias: hay que saber cuál toca ANTES de pulsar.
+  it('dice si el cutover moverá el documento o lo fusionará con el canónico', async () => {
+    loadAdminCensusMock.mockResolvedValue(
+      census([user({ id: 'doc-legacy', uid: 'uid-a', idMatchesUid: false, canonicalTwinFound: true, anomalies: ['foreign-doc-id'] })]),
+    );
+    renderHub();
+    signIn(ADMIN_EMAIL);
+    await screen.findByText('Ada');
+
+    expect(screen.getByText(ADMIN_PANEL_UI.cutover.outcomeMerge)).toBeInTheDocument();
+
+    loadAdminCensusMock.mockResolvedValue(
+      census([user({ id: 'doc-legacy', uid: 'uid-a', idMatchesUid: false, canonicalTwinFound: false, anomalies: ['foreign-doc-id'] })]),
+    );
+    await userEvent.click(screen.getByRole('button', { name: new RegExp(ADMIN_PANEL_UI.refresh) }));
+    expect(await screen.findByText(ADMIN_PANEL_UI.cutover.outcomeMove)).toBeInTheDocument();
+  });
+
+  // DESEMPATE A MANO: el panel no sabe cuál es el nick vigente (vive en el gist del usuario), así que ofrece los dos
+  // con su origen y deja decidir a quien mira.
+  it('ofrece los dos nombres en circulación, etiquetados por origen', async () => {
+    loadAdminCensusMock.mockResolvedValue(
+      census([user({ displayName: 'Ada', friendKnownNames: ['Ada Vieja'], anomalies: ['friend-name-mismatch'] })]),
+    );
+    renderHub();
+    signIn(ADMIN_EMAIL);
+    await screen.findAllByText('Ada');
+
+    expect(screen.getByRole('button', { name: ADMIN_PANEL_UI.chooseName.btnAria('Ada', 'Ada') })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: ADMIN_PANEL_UI.chooseName.btnAria('Ada Vieja', 'Ada') })).toBeInTheDocument();
+  });
+
+  it('fija el nombre elegido en el perfil y en sus amistades, tras confirmar', async () => {
+    loadAdminCensusMock.mockResolvedValue(
+      census([user({ displayName: 'Ada', photoURL: 'https://f/a.png', friendKnownNames: ['Ada Nueva'], anomalies: ['friend-name-mismatch'] })]),
+    );
+    renderHub();
+    signIn(ADMIN_EMAIL);
+    await screen.findAllByText('Ada');
+
+    // Se elige el de las amistades, que es el caso reportado: el perfil se quedó con el viejo.
+    await userEvent.click(screen.getByRole('button', { name: ADMIN_PANEL_UI.chooseName.btnAria('Ada Nueva', 'Ada') }));
+    expect(setUserDisplayNameMock).not.toHaveBeenCalled();
+    await userEvent.click(screen.getByRole('button', { name: ADMIN_PANEL_UI.confirmAccept }));
+
+    // La foto del perfil viaja con el nombre: el saneado escribe los dos campos y omitirla la borraría.
+    expect(setUserDisplayNameMock).toHaveBeenCalledWith('uid-a', 'uid-a', 'Ada Nueva', 'https://f/a.png');
+    expect(await screen.findByText(ADMIN_PANEL_UI.chooseName.ok('Ada Nueva', 2))).toBeInTheDocument();
+  });
+
+  it('con los nombres de acuerdo no se ofrece elegir', async () => {
+    loadAdminCensusMock.mockResolvedValue(census([user({ friendKnownNames: ['Ada'] })]));
+    renderHub();
+    signIn(ADMIN_EMAIL);
+    await screen.findByText('Ada');
+
+    expect(screen.queryByText(ADMIN_PANEL_UI.chooseName.title)).not.toBeInTheDocument();
+  });
+
+  it('enseña el gist de juegos que conocen sus amistades', async () => {
+    loadAdminCensusMock.mockResolvedValue(census([user({ friendGamesGistIds: ['gj-1'] })]));
+    renderHub();
+    signIn(ADMIN_EMAIL);
+    await screen.findByText('Ada');
+
+    expect(screen.getByText(ADMIN_PANEL_UI.field.friendGamesGists)).toBeInTheDocument();
+    expect(screen.getByText('gj-1')).toBeInTheDocument();
   });
 });

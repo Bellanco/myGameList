@@ -1,9 +1,10 @@
 import { memo, type CSSProperties } from 'react';
-import { UI_MESSAGES } from '../../../core/constants/labels';
+import { useStatsLabels } from './statsVoice';
+import { useChartFocus } from './useChartFocus';
+import { ChartDetail, ChartDetailHint } from './ChartDetail';
 import { labelLines } from './labelLines';
+import { formatPercent } from './format';
 import type { TagBucket } from '../../../core/stats/types';
-
-const L = UI_MESSAGES.stats.genres;
 
 /** Piezas que se dibujan. Con más, la figura se cierra y deja de leerse como un conjunto de trozos sueltos. */
 const MAX_PIECES = 5;
@@ -45,6 +46,11 @@ function point(angleDeg: number, radius: number): string {
  *
  * El radio va con la raíz cuadrada del valor: el área de un sector crece con el cuadrado del radio, así que a
  * escala lineal un género con el doble de juegos ocuparía cuatro veces más superficie.
+ *
+ * SE PUEDE TOCAR: cada porción se señala con el ratón, con el dedo o con el tabulador, y al hacerlo se abre un poco
+ * más, las demás se apartan y el pie de la figura dice su parte exacta —«Acción · 6 juegos · 40%»—. El porcentaje
+ * es justo lo que un rosetón no puede pintar: los radios comparan bien entre ellos, pero nadie mide a ojo qué
+ * fracción del conjunto es una porción. Las piezas son botones, así que el recorrido no depende de tener ratón.
  */
 export const ExplodedRose = memo(function ExplodedRose({
   tags,
@@ -52,10 +58,12 @@ export const ExplodedRose = memo(function ExplodedRose({
   limit = MAX_PIECES,
 }: {
   tags: TagBucket[];
-  /** Tamaño del conjunto que se reparte; solo se usa para el texto accesible. */
+  /** Tamaño del conjunto que se reparte: el texto accesible y el porcentaje del pie salen de aquí. */
   total?: number;
   limit?: number;
 }) {
+  const L = useStatsLabels().genres;
+  const focus = useChartFocus();
   if (tags.length === 0) {
     return <p className="stats-empty">{L.empty}</p>;
   }
@@ -63,13 +71,19 @@ export const ExplodedRose = memo(function ExplodedRose({
   const pieces = tags.slice(0, limit);
   const step = 360 / pieces.length;
   const max = pieces[0].games || 1;
+  // El reparto se mide contra el conjunto que se está resumiendo (el top), no contra la suma de las porciones
+  // dibujadas: un juego cuenta en todos sus géneros, así que esa suma pasa del 100% y el porcentaje mentiría.
+  const whole = total || pieces.reduce((acc, tag) => acc + tag.games, 0);
+  const shown = pieces.find((tag) => tag.tag === focus.active) || null;
 
   return (
     <div className="burst">
       <svg
         viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
         className="burst-svg"
-        role="img"
+        // `group` y no `img`: dentro hay controles, y `img` haría que un lector de pantalla se saltara su
+        // contenido. El resumen completo sigue anunciándose aquí, y cada porción se anuncia como su botón.
+        role="group"
         aria-label={`${L.chartAria}${total ? ` (${total})` : ''}: ${pieces.map((tag) => `${tag.tag} ${tag.games}`).join(', ')}`}
         style={{ '--n': pieces.length } as CSSProperties}
       >
@@ -102,9 +116,14 @@ export const ExplodedRose = memo(function ExplodedRose({
           const tip = polar(mid, radius + 2);
           const lead = polar(mid, radius + 11);
 
+          const percent = whole > 0 ? (tag.games / whole) * 100 : 0;
+
           return (
             <g key={tag.tag} style={{ '--i': index, '--dx': `${dx.toFixed(1)}px`, '--dy': `${dy.toFixed(1)}px` } as CSSProperties}>
-              <g className="burst-piece">
+              <g
+                className={`burst-piece${focus.stateOf(tag.tag)}`}
+                {...focus.controlProps(tag.tag, `${tag.tag}: ${L.games(tag.games)}, ${formatPercent(percent)}%`)}
+              >
                 <path d={`M ${CX} ${CY} L ${point(from, radius)} A ${radius} ${radius} 0 0 1 ${point(to, radius)} Z`}>
                   <title>{`${tag.tag}: ${tag.games}`}</title>
                 </path>
@@ -137,6 +156,18 @@ export const ExplodedRose = memo(function ExplodedRose({
           );
         })}
       </svg>
+
+      <ChartDetail>
+        {shown ? (
+          <>
+            <b>{shown.tag}</b>
+            <span>{L.games(shown.games)}</span>
+            <span>{formatPercent(whole > 0 ? (shown.games / whole) * 100 : 0)}%</span>
+          </>
+        ) : (
+          <ChartDetailHint>{L.games(whole)}</ChartDetailHint>
+        )}
+      </ChartDetail>
     </div>
   );
 });

@@ -6,6 +6,7 @@ import { reconcileReviewActivity } from '../model/repository/socialActivityRecon
 import { invalidateProfileGames, loadForeignProfileGames } from '../model/repository/foreignProfileRepository';
 import { getCachedSocialDirectory, getCachedSocialProfile, getLocalMeta, invalidateCachedSocialDirectory, patchLocalMeta, putCachedSocialDirectory, putCachedSocialProfile } from '../model/repository/indexedDbRepository';
 import { applyProfileVisibility } from '../core/utils/profileVisibility';
+import { photoForViewer, resolveViewer, withVisiblePhotos } from '../core/social/photoVisibility';
 import { SOCIAL_UI } from '../core/constants/labels';
 import type { IconName } from '../core/constants/icons';
 import {
@@ -19,6 +20,7 @@ import {
   clearAnalyticsUser,
   deleteFriendship,
   ensureProfileByEmail,
+  repairProfileDisplayName,
   getCurrentSocialAuthUser,
   getMyFriendships,
   getPrivateConfig,
@@ -235,7 +237,9 @@ export function useSocialViewModel(options?: {
    * necesita para elegir entre el vacío y el esqueleto.
    */
   const [directorySettled, setDirectorySettled] = useState(false);
-  const [socialDirectory, setSocialDirectory] = useState<SocialDirectoryEntry[]>([]);
+  // Directorio CRUDO, tal y como lo deja la hidratación (y como se cachea en IndexedDB). Lo que consume la pantalla
+  // es `socialDirectory`, unas líneas más abajo: el mismo directorio con la política de fotos ya aplicada.
+  const [rawSocialDirectory, setSocialDirectory] = useState<SocialDirectoryEntry[]>([]);
   // Listas completas de OTROS perfiles, cargadas bajo demanda (al abrir reseña/perfil) y filtradas por su
   // visibilidad. Clave = id del perfil del directorio. Alimenta getGameItemById y selectedProfileDetail.
   const [foreignGamesByProfile, setForeignGamesByProfile] = useState<Record<string, Record<TabId, GameItem[]>>>({});
@@ -716,6 +720,52 @@ export function useSocialViewModel(options?: {
     return friendships.byOtherUid[otherUid]?.state ?? 'none';
   }, [friendships]);
 
+  // RECIPROCIDAD DE LA FOTO (ver core/social/photoVisibility): quien esconde la suya no ve la de nadie, y la de los
+  // demás solo se ve con amistad aceptada. Mithril queda exento.
+  //
+  // Se aplica AQUÍ, sobre el directorio ya hidratado, y no al hidratarlo: la hidratación cachea su resultado en
+  // IndexedDB con el TTL del rango, así que sellar la política ahí dejaba el ajuste sin efecto hasta que la caché
+  // caducara —el usuario esconde su foto, guarda, y sigue viendo las caras de los demás—. Derivándolo, el cambio se
+  // ve en el mismo render y la caché conserva el dato crudo.
+  // `resolveViewer` y no `showPhoto` a secas: quien lleva el interruptor activado pero no tiene foto en su cuenta de
+  // Google no publica ninguna, así que tampoco ve las de los demás. Ver la nota del ajuste, que lo explica en su sitio.
+  const photoViewer = useMemo(
+    () => resolveViewer({ showPhoto, ownPhotoURL: authUser?.photoURL, tier: ownTier }),
+    [showPhoto, authUser?.photoURL, ownTier],
+  );
+
+  /**
+   * EL AJUSTE SE APAGA SOLO cuando la cuenta no tiene foto.
+   *
+   * No basta con pintar el interruptor apagado: el perfil de los usuarios que ya existen guarda `showPhoto: true`, y
+   * ese dato dejaría de describir la realidad —dice que muestra una foto que nadie ve—. Apagando el ESTADO, el
+   * siguiente guardado del perfil lo deja coherente en el gist sin forzar ninguna escritura extra ahora.
+   *
+   * Y al revés: si más adelante añade una foto a su cuenta, esto no la vuelve a encender. El interruptor se
+   * desbloquea apagado y activarlo es su decisión, que es lo que un ajuste debe ser.
+   *
+   * Solo actúa con sesión resuelta: sin `authUser` no se sabe si hay foto o no, y apagarlo por no saber sería
+   * cambiarle el ajuste a ciegas.
+   */
+  useEffect(() => {
+    if (!authUser?.uid) return;
+    if (authUser.photoURL) return;
+    if (showPhoto) setShowPhoto(false);
+  }, [authUser?.uid, authUser?.photoURL, showPhoto, setShowPhoto]);
+  const friendUidSet = useMemo(
+    () => new Set(friendships.friends.map((friend) => friend.otherUid)),
+    [friendships.friends],
+  );
+  const socialDirectory = useMemo(
+    () =>
+      withVisiblePhotos(rawSocialDirectory, {
+        viewer: photoViewer,
+        friendUids: friendUidSet,
+        isOwnEntry: (entry) => isOwnProfileIdentity(entry.id, authUser?.uid, ownProfileId),
+      }) as SocialDirectoryEntry[],
+    [rawSocialDirectory, photoViewer, friendUidSet, authUser?.uid, ownProfileId],
+  );
+
   const pendingIncomingCount = friendships.incoming.length;
 
   // Vista de solicitud para la bandeja: enriquece nombre/foto desde el directorio cuando el doc no los trae aún
@@ -728,9 +778,17 @@ export function useSocialViewModel(options?: {
       // PRIVACIDAD: el nombre sale SOLO del nick denormalizado en el doc de amistad (`otherName`). NO se cae al
       // `displayName` del directorio (Firestore), que puede ser el nombre real; si no hay nick, "Usuario".
       name: view.otherName || SOCIAL_UI.requests.unknownUser,
-      photo: view.otherPhoto || dir?.photoURL || '',
+      // La foto pasa por la misma política que el directorio. Consecuencia buscada: en la BANDEJA, la cara de quien
+      // te manda una solicitud no se ve —todavía no hay amistad—, igual que no se ve la suya en el directorio de
+      // descubrimiento del que salió. El nick sigue ahí, que es lo que identifica la petición.
+      photo: photoForViewer({
+        photoURL: view.otherPhoto || dir?.photoURL || '',
+        isOwn: false,
+        isFriend: friendUidSet.has(view.otherUid),
+        viewer: photoViewer,
+      }),
     };
-  }, [socialDirectory]);
+  }, [socialDirectory, friendUidSet, photoViewer]);
 
   const incomingRequests = useMemo(
     () => friendships.incoming.map(enrichFriendRequest),
@@ -1032,7 +1090,9 @@ export function useSocialViewModel(options?: {
     loadForeignProfileGames({ profileId: targetProfileId, gamesGistId: entry.gamesGistId, token })
       .then((games) => {
         if (cancelled || !games) return;
-        const visible = applyProfileVisibility(games, entry.visibility || defaultSocialVisibility);
+        // El rango de QUIEN MIRA entra en el filtro: la cuenta de administración ve las listas y las marcas que
+        // el dueño esconde, pero no sus horas (ver `applyProfileVisibility`).
+        const visible = applyProfileVisibility(games, entry.visibility || defaultSocialVisibility, ownTier);
         setForeignGamesByProfile((prev) => ({ ...prev, [targetProfileId]: visible }));
       })
       .catch(() => {
@@ -1047,7 +1107,7 @@ export function useSocialViewModel(options?: {
     return () => {
       cancelled = true;
     };
-  }, [activePanel, activeDetailEvent, authUser, defaultSocialVisibility, foreignGamesByProfile, mainSyncConfig?.token, ownProfileId, profileDetailId, relationshipWith, socialDirectory]);
+  }, [activePanel, activeDetailEvent, authUser, defaultSocialVisibility, foreignGamesByProfile, mainSyncConfig?.token, ownProfileId, ownTier, profileDetailId, relationshipWith, socialDirectory]);
 
   // Amigo inactivo (su gist social no se leyó al hidratar el directorio, para no ocupar el feed ni gastar la
   // llamada): al ABRIR su perfil sí se lee, para que su hero no salga a medias (nombre/visibilidad/foto).
@@ -1099,7 +1159,7 @@ export function useSocialViewModel(options?: {
       const token = getSocialSyncConfig()?.token || mainSyncConfig?.token || null;
       const games = await loadForeignProfileGames({ profileId, gamesGistId: entry.gamesGistId, token, forceRefresh: true });
       if (games) {
-        const visible = applyProfileVisibility(games, entry.visibility || defaultSocialVisibility);
+        const visible = applyProfileVisibility(games, entry.visibility || defaultSocialVisibility, ownTier);
         setForeignGamesByProfile((prev) => ({ ...prev, [profileId]: visible }));
       } else {
         setFeedback('warn', SOCIAL_UI.status.profileGamesRefreshFailed);
@@ -1109,7 +1169,7 @@ export function useSocialViewModel(options?: {
     } finally {
       setLoadingForeignProfile(false);
     }
-  }, [authUser, defaultSocialVisibility, mainSyncConfig?.token, ownProfileId, profileDetailId, relationshipWith, setFeedback, socialDirectory]);
+  }, [authUser, defaultSocialVisibility, mainSyncConfig?.token, ownProfileId, ownTier, profileDetailId, relationshipWith, setFeedback, socialDirectory]);
 
   const handleActivityItemKeyDown = useCallback(
     (event: ReactKeyboardEvent<HTMLElement>, entry: SocialActivityFeedItem) => {
@@ -1340,6 +1400,31 @@ export function useSocialViewModel(options?: {
   useEffect(() => {
     void hydrateSocialProfile();
   }, [hydrateSocialProfile]);
+
+  /**
+   * REPARA LA RÉPLICA DEL NICK, una vez por sesión, al abrir el espacio social.
+   *
+   * El guardado del perfil escribe el gist y DESPUÉS replica el nombre en `profiles/{uid}`; si eso segundo falla, el
+   * feed sigue enseñando el nombre nuevo (lo lee del gist) y el directorio y el panel de administración se quedan con
+   * el viejo para siempre, porque nada lo reintentaba. Aquí se compara con lo que el perfil ya hidratado dice y se
+   * reescribe solo si difieren, igual que hace el saneado de las amistades unas líneas más arriba.
+   *
+   * Se espera a `profileName` (viene del gist, que es la fuente del nick) y a que haya canal configurado: sin eso, o
+   * no se sabe cuál es el nombre bueno o no hay perfil que reparar.
+   */
+  const nameRepairedRef = useRef(false);
+  useEffect(() => {
+    if (nameRepairedRef.current) return;
+    if (!socialSpaceOpen || !authUser?.uid || !socialCfgGistId) return;
+    const nick = profileName.trim();
+    if (!nick) return;
+    nameRepairedRef.current = true;
+    // Silenciosa cuando funciona: solo escribe si de verdad había desacuerdo, y no hay nada que contarle al usuario
+    // (su nombre es el que él puso). Si falla, se avisa por consola y se reintenta en la próxima sesión.
+    void repairProfileDisplayName(authUser.uid, nick).catch((error) => {
+      console.warn('[social] no se pudo reparar el nombre del perfil:', error instanceof Error ? error.message : error);
+    });
+  }, [socialSpaceOpen, authUser?.uid, socialCfgGistId, profileName]);
 
   // Rango propio → cadencia del feed. Una sola lectura del perfil propio (ya cacheada 60 s en memoria por
   // `getOwnProfileRef`). Cualquier fallo deja bronce: degradar es lo seguro.
@@ -1870,7 +1955,14 @@ export function useSocialViewModel(options?: {
 
     try {
       setSavingProfile(true);
-      const visibility = profileForm.visibility;
+      // SIN FOTO EN LA CUENTA, `showPhoto` SE GUARDA EN FALSE. No se confía en que el efecto que apaga el estado haya
+      // corrido ya: la hidratación del perfil llega por red y devuelve el `showPhoto: true` del gist, así que entre
+      // esa respuesta y el apagado hay una ventana en la que un guardado rápido habría vuelto a escribir el "sí".
+      // Aquí la decisión es de una sola línea y no depende de ningún orden.
+      const visibility = {
+        ...profileForm.visibility,
+        showPhoto: profileForm.visibility.showPhoto && Boolean(authUser.photoURL),
+      };
       const normalizedHiddenTabs = visibility.hiddenTabs;
 
       const profile = {
@@ -1940,7 +2032,9 @@ export function useSocialViewModel(options?: {
         hideReplayable,
         hideRetry,
         hideGameTime,
-        showPhoto,
+        // El MISMO valor que se acaba de escribir en el gist, no el del formulario: si la caché guardara el "sí"
+        // que el gist ya no tiene, la siguiente apertura del hub hidrataría el ajuste con el dato viejo.
+        showPhoto: visibility.showPhoto,
         profileExists: true,
         activity: currentGistData.activity,
       });

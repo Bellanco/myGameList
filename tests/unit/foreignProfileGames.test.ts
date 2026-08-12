@@ -149,6 +149,30 @@ describe('applyProfileVisibility', () => {
     expect(out.c[0].replayable).toBe(true);
     expect(out.c[0].strengths).toContain('Atmósfera');
   });
+
+  it('la cuenta de administración ve las listas y las marcas escondidas', () => {
+    const out = applyProfileVisibility(
+      makeTabData([makeGame()]),
+      fullVisibility({ hiddenTabs: ['c'], hideReplayable: true, hideRetry: true }),
+      'mithril',
+    );
+    expect(out.c).toHaveLength(1);
+    expect(out.c[0].replayable).toBe(true);
+  });
+
+  it('pero las horas se le esconden igual: es el único ajuste que vale contra todos', () => {
+    const out = applyProfileVisibility(makeTabData([makeGame()]), fullVisibility({ hideGameTime: true }), 'mithril');
+    expect(out.c[0].hours).toBeNull();
+  });
+
+  it('el resto de rangos no tienen excepción ninguna', () => {
+    const out = applyProfileVisibility(
+      makeTabData([makeGame()]),
+      fullVisibility({ hiddenTabs: ['c'], hideReplayable: true }),
+      'gold',
+    );
+    expect(out.c).toHaveLength(0);
+  });
 });
 
 describe('caché de perfiles ajenos (profileCache, TTL 1 día)', () => {

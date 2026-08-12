@@ -142,7 +142,7 @@ function SocialFeedScreenBase({
             title={socialDisplayName || SOCIAL_UI.feed.openOwnProfile}
             onClick={onOpenOwnProfile}
           >
-            <HubAvatar name={socialDisplayName} photoURL={ownPhotoURL} />
+            <HubAvatar photoURL={ownPhotoURL} />
           </button>
         </header>
         <div className="hub-screen-actions hub-screen-actions-split" aria-label={SOCIAL_UI.feed.actionsAria}>
@@ -284,7 +284,7 @@ function SocialFeedScreenBase({
                               aria-label={SOCIAL_UI.feed.openProfileAria(entry.profileDisplayName || entry.authorName)}
                               onClick={() => openProfileDetail(entry.profileId)}
                             >
-                              <HubAvatar name={entry.profileDisplayName || entry.authorName} photoURL={entry.photoURL} />
+                              <HubAvatar photoURL={entry.photoURL} />
                             </button>
                             <div className="hub-feed-card-head-text">
                               <h3>
@@ -327,7 +327,7 @@ function SocialFeedScreenBase({
                             aria-label={SOCIAL_UI.feed.openProfileAria(entry.profileDisplayName)}
                             onClick={(event) => { event.stopPropagation(); openProfileDetail(entry.profileId); }}
                           >
-                            <HubAvatar name={entry.profileDisplayName} photoURL={entry.photoURL} />
+                            <HubAvatar photoURL={entry.photoURL} />
                           </button>
                           <div className="hub-feed-card-head-text">
                             <h3>

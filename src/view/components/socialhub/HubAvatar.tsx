@@ -1,17 +1,20 @@
 import { useEffect, useState } from 'react';
-import { avatarInitial, avatarTone } from './avatar';
 
 /**
- * Avatar del hub social: muestra la foto (`photoURL`) y, si la imagen falla al cargar (p. ej. una URL de Google
- * caducada/rotada), conmuta automáticamente al avatar de inicial con color determinista. Renderiza SOLO el
- * `<img>`/`<span>`; el envoltorio clicable (botón) lo pone cada llamador.
+ * Avatar del hub social: muestra la foto (`photoURL`) y, si no hay o la imagen falla al cargar (p. ej. una URL de
+ * Google caducada/rotada), cae a la SILUETA de persona a trazo. Renderiza SOLO el `<img>`/`<span>`; el envoltorio
+ * clicable (botón) lo pone cada llamador.
+ *
+ * La silueta es la MISMA para todo el mundo. Antes era la inicial del nick sobre uno de seis tonos elegido por hash
+ * del nombre, y eso tenía dos problemas: dos de los seis tonos eran el mismo azul (así que había menos variedad de
+ * la que parecía) y el color de alguien cambiaba al cambiarse el nick. Una figura única no promete una identidad que
+ * no puede sostener; quien identifica es el nombre, que va al lado. El tono lo pone ahora la PALETA activa
+ * (`--deco-avatar-*`), no la persona.
  */
 export function HubAvatar({
-  name,
   photoURL,
   sizeClass = '',
 }: {
-  name: string;
   photoURL?: string;
   sizeClass?: string;
 }) {
@@ -43,8 +46,10 @@ export function HubAvatar({
   }
 
   return (
-    <span className={`hub-avatar ${sizeClass} hub-avatar--${avatarTone(name)}`.trim()} aria-hidden="true">
-      {avatarInitial(name)}
+    <span className={`hub-avatar hub-avatar-blank ${sizeClass}`.trim()} aria-hidden="true">
+      <svg className="hub-avatar-icon" aria-hidden="true">
+        <use href="#icon-person" />
+      </svg>
     </span>
   );
 }

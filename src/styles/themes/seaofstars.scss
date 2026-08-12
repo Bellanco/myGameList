@@ -310,3 +310,21 @@
 /* El marco de la figura de géneros, con el filete claro del tema. */
 :root[data-palette="seaofstars"] .polar-ring,
 :root[data-palette="seaofstars"] .genre-radar-ring { stroke: color-mix(in srgb, var(--sos-line) 30%, transparent); }
+
+/* ── §N · AVATAR SIN FOTO: en un tema de PÍXEL el trazo no puede ir redondeado ni suavizado. Remate recto,
+   grosor de "dos píxeles" y `crispEdges` para que la silueta se dibuje con el borde duro del pixel-art. ── */
+:root[data-palette="seaofstars"] {
+  --deco-avatar-stroke: 2;
+  --deco-avatar-cap: butt;
+}
+:root[data-palette="seaofstars"] .hub-avatar-icon { shape-rendering: crispEdges; }
+
+/* En CLARO la superficie de este tema es turquesa saturado, y sobre ella un disco y un trazo dorados —el acento—
+   se pierden: el avatar pequeño casi desaparecía. Se pasa al color de LÍNEA del propio tema (`--sos-line`, el azul
+   noche que ya usan sus bordes y su radar), que es el que aquí tiene contraste. */
+:root[data-palette="seaofstars"][data-theme="light"] {
+  --deco-avatar-line: var(--sos-line);
+  --deco-avatar-ring: color-mix(in srgb, var(--sos-line) 40%, transparent);
+  --deco-avatar-bg: linear-gradient(155deg, color-mix(in srgb, var(--sos-line) 14%, transparent), color-mix(in srgb, var(--sos-line) 5%, transparent));
+  --deco-avatar-glow: none;
+}

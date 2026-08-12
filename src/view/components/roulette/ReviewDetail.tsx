@@ -25,7 +25,7 @@ export function ReviewDetail({ game, author }: ReviewDetailProps) {
     <div className="rl-review">
       <article className="hub-feed-card hub-feed-card-detail rl-review-card">
         <header className="hub-feed-card-head">
-          {author ? <HubAvatar name={author.name} photoURL={author.photoURL} /> : null}
+          {author ? <HubAvatar photoURL={author.photoURL} /> : null}
           <div className="hub-feed-card-head-text">
             <h3>{author ? author.name : game.name}</h3>
             {author && game.name ? <span className="hub-feed-game-chip">{game.name}</span> : null}

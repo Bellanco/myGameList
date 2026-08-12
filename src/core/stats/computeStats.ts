@@ -7,6 +7,7 @@
 //
 // REGLA DE ORO: esto solo LEE, y lee lo que la app ya tiene en memoria (el gist de juegos). No hay campos
 // nuevos en `GameItem`, no se escribe en el gist, no se proyecta al canal social y no se consulta la red.
+import { localMonthKey } from '../utils/dateTime';
 import { SCORE_BUCKET_FLOORS, STARS_MAX, GRADE_MAX, resolveGrade, starsFromGrade } from '../utils/scoreScale';
 import { sortEs } from '../utils/compare';
 import { TAB_IDS, type GameItem, type TabData, type TabId } from '../../model/types/game';
@@ -98,8 +99,7 @@ function completionYears(game: GameItem): number[] {
 
 /** Mes `AAAA-MM` de una marca de tiempo, en el calendario local (el que usa quien mira el gráfico). */
 function monthOf(ms: number): string {
-  const date = new Date(ms);
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+  return localMonthKey(ms);
 }
 
 /**

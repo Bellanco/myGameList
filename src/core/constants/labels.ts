@@ -686,6 +686,34 @@ export const UI_MESSAGES = {
   },
 } as const;
 
+/**
+ * MISMA PANTALLA, OTRA VOZ. El panel de estadísticas es UNO SOLO y se pinta tanto en tu perfil como en el de otra
+ * persona, así que los textos con voz («tu biblioteca», «tu media») tienen su versión en tercera persona. Viven
+ * FUERA de este módulo, en `statsOtherLabels`: `labels.ts` entra en el arranque y esos rótulos solo hacen falta
+ * dentro del panel, que se carga en diferido.
+ */
+
+/**
+ * El mismo árbol de textos, pero con los literales ENSANCHADOS a `string`. `UI_MESSAGES` va `as const` —lo que
+ * está bien para el resto de la app—, y sin esto la voz ajena no podría escribir «Lo mejor de su biblioteca»
+ * donde el tipo exige exactamente «Lo mejor de tu biblioteca». Los arrays se quedan de solo lectura para que las
+ * dos voces encajen en el mismo tipo.
+ */
+type WidenText<T> = T extends (...args: infer A) => infer R
+  ? (...args: A) => WidenText<R>
+  : T extends string
+    ? string
+    : T extends number
+      ? number
+      : T extends boolean
+        ? boolean
+        : T extends readonly (infer U)[]
+          ? readonly WidenText<U>[]
+          : { [K in keyof T]: WidenText<T[K]> };
+
+/** Textos del panel de estadísticas, en cualquiera de sus dos voces (ver `STATS_LABELS_OTHER`). */
+export type StatsLabels = WidenText<typeof UI_MESSAGES.stats>;
+
 // Cada tema cuenta el fallo en su propio idioma, igual que los bloques de estadísticas (la tarta de Portal en
 // «Géneros más jugados», los contratos de Cuphead en «Completados y abandonados», el corazón robado de Persona
 // en el podio): el guiño va INTEGRADO en la frase, sin comillas ni atribución, y la línea de debajo dice
@@ -760,7 +788,29 @@ export const ADMIN_PANEL_UI = {
     pendingOut: 'Peticiones enviadas',
     pendingIn: 'Peticiones recibidas',
     profileId: 'Pseudónimo',
-    socialGist: 'Gist social',
+    // El id que publica su PERFIL. Solo se pinta cuando existe: las escrituras actuales lo purgan, así que en un
+    // perfil al día está vacío y enseñar "—" para todo el mundo hacía pensar que faltaba un dato.
+    socialGist: 'Gist social (resto legacy)',
+    // Los ids que sus AMISTADES tienen denormalizados de él. Desde que el perfil no publica el suyo, este es el
+    // único rastro del canal de alguien al que llega el panel, y antes solo se veía si saltaba la señal de deriva.
+    friendGists: 'Canal según sus amistades',
+    /** El gist de JUEGOS denormalizado: con lo que un amigo carga sus listas compartidas. */
+    friendGamesGists: 'Listas según sus amistades',
+    /**
+     * Los dos nombres cuando no coinciden. Se etiquetan por ORIGEN y no por antigüedad: el panel no puede saber cuál
+     * es el vigente (ese dato vive en el gist del usuario), y afirmarlo llevaba a propagar el equivocado.
+     */
+    staleFriendNames: 'Nombre que le ven sus amigos',
+    profileNameSource: 'Nombre en su perfil (Firestore)',
+    nameMismatchHint: 'No coinciden. El que vale es el de su gist social, que este panel no puede leer: si su último guardado falló a medias, el rancio es el del perfil.',
+    /** Estado de la foto denormalizada. No se pinta la URL: ocupa una línea entera y no dice nada de un vistazo. */
+    friendPhoto: 'Foto que le ven sus amigos',
+    friendPhotoStale: 'Desactualizada',
+    friendPhotoFresh: 'Al día',
+    /** Solicitudes suyas que llevan mucho esperando, con el detalle de cuántas son ya purgables. */
+    stalePending: 'Solicitudes sin respuesta',
+    stalePendingDetail: (stale: number, fossil: number) =>
+      fossil > 0 ? `${stale} (+90 d), ${fossil} purgables (+180 d)` : `${stale} (+90 d)`,
     schema: 'Esquema',
     photo: 'Foto',
     etag: 'ETag del gist',
@@ -774,9 +824,58 @@ export const ADMIN_PANEL_UI = {
     driftTitle: 'Gists en circulación',
     profileGist: 'Publica en su perfil',
     friendGist: 'Sus amistades apuntan a',
+    /** El perfil ya no publica el id: lo normal desde la purga, y aquí hay que decirlo para que no parezca un hueco. */
+    profileGistPurged: 'ya no lo publica (purgado)',
     // Ya no hay acción: la deriva se resuelve sola cuando su dueño abre el hub (la migración elige el canal con
     // contenido y repunta las referencias). Aquí solo se enseña, para saber a quién le falta pasar por ahí.
     driftHint: 'Se resuelve solo cuando esta persona abra el espacio social: su cliente elegirá el canal con contenido y actualizará sus amistades. Desde aquí no se puede hacer nada (haría falta su token de GitHub).',
+  },
+  // Reparación de la identidad denormalizada en las amistades: es la única vía que no depende de que su dueño abra
+  // el espacio social. Los ids de gist NO se tocan (haría falta su token para saber cuál es el bueno).
+  healIdentity: {
+    title: 'Identidad en sus amistades',
+    hint: 'Sus amigos le ven con el nombre y la foto que se guardaron al hacerse amigos. Su propio cliente los refresca al abrir el espacio social, al guardar el perfil o al publicar, así que quien solo usa sus listas los arrastra indefinidamente. Desde aquí se propagan su nick y su foto actuales; los ids de gist no se tocan.',
+    btn: 'Propagar nombre y foto',
+    // Sin nick ni nombre conocido no hay nada que propagar, y escribir un vacío borraría a sus amigos la única
+    // forma de reconocerle.
+    noName: 'Este perfil no tiene nombre que propagar: ni nick propio ni nombre guardado por sus amistades.',
+    confirm: (name: string) => `¿Propagar el nombre y la foto actuales de ${name} a sus documentos de amistad? Solo se escriben los que estén desactualizados.`,
+    // Con el nombre a la vista: es lo que de verdad se va a escribir en los documentos de amistad, y si el perfil
+    // llevaba el rancio esta es la última oportunidad de no propagarlo.
+    confirmWithName: (name: string, willWrite: string) =>
+      `¿Escribir «${willWrite}» como nombre de ${name} en sus documentos de amistad? Es el nombre que guarda su perfil; si el vigente fuera otro, esto lo sustituiría en la lista de sus amigos.`,
+    ok: (touched: number) =>
+      touched === 0
+        ? 'Sus amistades ya estaban al día: no se ha escrito nada.'
+        : `Identidad propagada a ${touched} amistad(es).`,
+    partial: 'Propagación incompleta: revisa la consola para el detalle.',
+  },
+  // Desempate del nombre cuando el perfil y las amistades no coinciden. El administrador ve los dos valores y
+  // decide; el panel no puede decidirlo por él (el nick vigente vive en el gist del usuario).
+  chooseName: {
+    title: 'Qué nombre es el correcto',
+    hint: 'El perfil y sus amistades no dicen lo mismo, y desde aquí no se puede saber cuál es el vigente: el nick lo escribe su dueño en su gist social, que este panel no lee. Elige uno y se escribirá en su perfil y en sus amistades. Si el gist dice otra cosa, su propio cliente volverá a imponerlo al abrir el espacio social —el nombre es suyo—, así que esto sirve sobre todo para dejar el directorio coherente y para quien ya no vuelve.',
+    btn: (name: string) => `Usar «${name}»`,
+    btnAria: (name: string, user: string) => `Usar «${name}» como nombre de ${user}`,
+    current: 'en su perfil',
+    fromFriends: 'según sus amistades',
+    confirm: (user: string, name: string) =>
+      `¿Fijar «${name}» como nombre de ${user}? Se escribe en su perfil y en sus documentos de amistad.`,
+    ok: (name: string, touched: number) =>
+      touched > 0
+        ? `Nombre fijado en «${name}» (perfil + ${touched} amistad(es)).`
+        : `Nombre fijado en «${name}» en su perfil; sus amistades ya estaban de acuerdo.`,
+    partial: 'No se pudo fijar el nombre del todo: revisa la consola para el detalle.',
+  },
+  // Purga de solicitudes fosilizadas (enviadas por él, pendientes, +180 días).
+  fossil: {
+    title: 'Solicitudes fosilizadas',
+    hint: 'Solicitudes que envió y que nadie ha aceptado en más de 180 días. Borrarlas las retira también de la bandeja de quien las recibió, y cualquiera de los dos puede volver a enviarlas. No se tocan las amistades aceptadas, ni las que él ha recibido (esas salen en la ficha de quien las mandó), ni las que no tienen fecha.',
+    btn: (count: number) => `Purgar ${count} solicitud(es)`,
+    confirm: (name: string, count: number) =>
+      `¿Borrar ${count} solicitud(es) que ${name} envió y llevan más de 180 días sin aceptar? Desaparecen también de la bandeja de sus destinatarios.`,
+    ok: (touched: number) => `${touched} solicitud(es) fosilizada(s) borrada(s).`,
+    partial: 'Purga incompleta: revisa la consola para el detalle.',
   },
   // Cutover de identidad: mover un perfil legacy a `profiles/{uid}` y retirar el huérfano.
   cutover: {
@@ -786,6 +885,12 @@ export const ADMIN_PANEL_UI = {
     unknownUid: 'El documento no dice de quién es (no tiene campo `uid`): no se puede migrar desde aquí. Se desbloquea cuando su dueño inicie sesión, porque su propio navegador crea el documento canónico.',
     alreadyCanonical: 'Este perfil ya vive en `profiles/{uid}`: no hay nada que migrar.',
     targetLabel: 'Se moverá a',
+    // Qué va a pasar de verdad al pulsar: son dos operaciones distintas y hasta ahora no se sabía cuál tocaba.
+    outcomeLabel: 'Qué hará',
+    outcomeMove: 'MOVER el documento entero (no hay perfil canónico todavía) y borrar este.',
+    outcomeMerge: 'FUSIONAR: ya existe su perfil canónico y manda el vivo. Solo se le rescata lo que le falte (rango, alta más antigua, restos por cifrar) y este se borra.',
+    // Con el censo recortado, no haber visto el gemelo no prueba que no exista.
+    outcomeUnknown: 'No se puede anticipar: el censo viene recortado, así que puede existir un perfil canónico que no se ha listado.',
     btn: 'Migrar identidad',
     confirm: (name: string) => `¿Migrar la identidad de ${name} y borrar el documento antiguo? Sus amistades no se tocan.`,
     okMoved: 'Identidad migrada: el perfil ya vive en su documento canónico.',
@@ -797,13 +902,13 @@ export const ADMIN_PANEL_UI = {
   // Señales de algo fuera de lugar. Etiqueta corta para la píldora y explicación en el `title`.
   anomalies: {
     aria: 'Señales detectadas',
-    'enabled-without-gist': {
-      label: 'social sin gist',
-      hint: 'Tiene el social activado pero no publica ningún gist: no sale en el directorio ni puede publicar nada. Perfil roto.',
-    },
     'no-display-name': {
       label: 'sin nombre',
       hint: 'El perfil no tiene nick: se quedó a medio crear.',
+    },
+    'friend-name-mismatch': {
+      label: 'nombre sin coincidir',
+      hint: 'El nombre de su perfil y el que guardan sus amistades no coinciden, y desde aquí no se sabe cuál es el vigente: el nick lo escribe en su gist social (de donde lo lee el feed) y este panel solo ve la copia de Firestore. Si su último guardado escribió el gist y falló al replicar, el viejo es el del perfil.',
     },
     'no-profile-id': {
       label: 'sin pseudónimo',
@@ -843,7 +948,15 @@ export const ADMIN_PANEL_UI = {
     },
     'gist-drift': {
       label: 'gist divergente',
-      hint: 'El gist social que publica no coincide con el que guardan sus amistades: sus reseñas no llegan al feed de sus amigos.',
+      hint: 'Hay más de un gist social suyo en circulación: sus amistades no apuntan todas al mismo (o su perfil aún publica otro). Quien tenga el abandonado no ve sus reseñas en el feed.',
+    },
+    'games-gist-drift': {
+      label: 'listas divergentes',
+      hint: 'Sus amistades no coinciden en su gist de juegos: quien tenga el abandonado no puede ver sus listas compartidas. Es un canal distinto del social, así que puede fallar por separado.',
+    },
+    'stale-pending-out': {
+      label: 'solicitudes sin respuesta',
+      hint: 'Envió solicitudes que llevan más de 90 días pendientes. A partir de los 180 días se pueden purgar desde su ficha.',
     },
   } satisfies { aria: string } & Record<AdminAnomaly, { label: string; hint: string }>,
   tier: {
@@ -1162,6 +1275,9 @@ export const SOCIAL_UI = {
     hideGameTimeField: 'Tiempo jugado',
     photoSectionTitle: 'Foto de perfil',
     showPhotoField: 'Mostrar mi foto de perfil',
+    // Por qué el interruptor está apagado y bloqueado. Una línea: el estado del interruptor ya dice lo demás, y la
+    // consecuencia (nadie le ve la cara, y por reciprocidad él tampoco) no necesita explicarse aquí.
+    photoMissingInGoogle: 'Tu cuenta no tiene foto.',
   },
   status: {
     needMainSync: 'Activa la sincronización principal para continuar.',

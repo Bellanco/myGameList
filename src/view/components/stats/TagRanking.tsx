@@ -1,9 +1,7 @@
 import { memo, type CSSProperties } from 'react';
-import { UI_MESSAGES } from '../../../core/constants/labels';
+import { useStatsLabels } from './statsVoice';
 import { formatCount } from './format';
 import type { TagBucket } from '../../../core/stats/types';
-
-const L = UI_MESSAGES.stats.genres;
 
 interface TagRankingProps {
   tags: TagBucket[];
@@ -18,6 +16,7 @@ interface TagRankingProps {
  * formas. Aquí la jerarquía la marcan el orden y el peso tipográfico.
  */
 export const TagRanking = memo(function TagRanking({ tags, limit = 6 }: TagRankingProps) {
+  const L = useStatsLabels().genres;
   if (tags.length === 0) {
     return <p className="stats-empty">{L.empty}</p>;
   }

@@ -1,11 +1,11 @@
 import { memo, useId } from 'react';
-import { UI_MESSAGES } from '../../../core/constants/labels';
+import { useStatsLabels } from './statsVoice';
+import { useChartFocus } from './useChartFocus';
+import { ChartDetail, ChartDetailHint } from './ChartDetail';
 import { TagRanking } from './TagRanking';
 import { labelLines } from './labelLines';
 import { formatDecimal } from './format';
 import type { GenreAffinity } from '../../../core/stats/types';
-
-const L = UI_MESSAGES.stats.radar;
 
 /** Ejes de la figura. Seis como mucho —de ahí el hexágono—; con menos géneros sale un pentágono, cuadrado o triángulo. */
 const MAX_AXES = 6;
@@ -44,8 +44,14 @@ function polygon(points: Point[]): string {
  *
  * SVG a mano y no una librería: son treinta líneas de trigonometría, hereda los colores del tema por variables
  * CSS y no añade un solo kilobyte de dependencia al bundle.
+ *
+ * SE PUEDE TOCAR: cada eje se señala con el ratón, el dedo o el tabulador, y el pie dice entonces lo que la silueta
+ * no puede decir —su afinidad, cuántos juegos la sostienen y con qué nota media—. Ese dato existía únicamente en el
+ * `aria-label`: quien ve la figura tenía la forma, y el número solo lo oía un lector de pantalla.
  */
 export const GenreRadar = memo(function GenreRadar({ tags }: { tags: GenreAffinity[] }) {
+  const L = useStatsLabels().radar;
+  const focus = useChartFocus();
   const gradientId = useId();
 
   if (tags.length === 0) {
@@ -68,13 +74,16 @@ export const GenreRadar = memo(function GenreRadar({ tags }: { tags: GenreAffini
   // Suelo del 12%: la escala es lineal (el área dice la verdad), pero un género con un solo juego frente a
   // uno con veinte quedaría pegado al centro y su vértice desaparecería de la figura.
   const shape = axes.map((tag, index) => vertex(index, total, Math.max(tag.weight / max, 0.12)));
+  const shown = axes.find((tag) => tag.tag === focus.active) || null;
 
   return (
     <div className="genre-radar">
       <svg
         viewBox={`0 0 ${SIZE} ${SIZE}`}
         className="genre-radar-svg"
-        role="img"
+        // `group` y no `img`: dentro hay un control por eje, y con `img` un lector de pantalla se saltaría su
+        // contenido. El resumen entero se sigue anunciando aquí.
+        role="group"
         aria-label={L.aria(axes.map((tag) => L.axisValue(tag.tag, formatDecimal(tag.weight), tag.games, tag.avgGrade)).join(', '))}
       >
         <defs>
@@ -98,9 +107,23 @@ export const GenreRadar = memo(function GenreRadar({ tags }: { tags: GenreAffini
         })}
 
         <polygon className="genre-radar-shape" points={polygon(shape)} fill={`url(#${gradientId})`} />
-        {shape.map((point, index) => (
-          <circle key={axes[index].tag} className="genre-radar-dot" cx={point.x} cy={point.y} r="3.4" />
-        ))}
+
+        {/* Un objetivo por eje: el vértice se ve, pero apuntar a un círculo de 3,4 unidades es imposible con el
+            dedo, así que lo que se señala es un disco transparente mucho mayor centrado en él. */}
+        {shape.map((point, index) => {
+          const tag = axes[index];
+          return (
+            <g
+              key={tag.tag}
+              className={`genre-radar-axis${focus.stateOf(tag.tag)}`}
+              {...focus.controlProps(tag.tag, L.axisValue(tag.tag, formatDecimal(tag.weight), tag.games, tag.avgGrade))}
+            >
+              <line className="genre-radar-reach" x1={CENTER} y1={CENTER} x2={point.x} y2={point.y} />
+              <circle className="genre-radar-dot" cx={point.x} cy={point.y} r="3.4" />
+              <circle className="genre-radar-hit" cx={point.x} cy={point.y} r="14" />
+            </g>
+          );
+        })}
 
         {axes.map((tag, index) => {
           const label = vertex(index, total, 1, LABEL_RADIUS);
@@ -127,6 +150,19 @@ export const GenreRadar = memo(function GenreRadar({ tags }: { tags: GenreAffini
           );
         })}
       </svg>
+
+      {/* En reposo el pie habla del eje que MANDA (el primero, que es el de más afinidad): es el que la silueta
+          ya está señalando con su punta, así que la frase de descanso no es un relleno. El texto sale entero de
+          `axisValue`, el mismo que describe la figura para quien no la ve. */}
+      <ChartDetail>
+        {shown ? (
+          <span>{L.axisValue(shown.tag, formatDecimal(shown.weight), shown.games, shown.avgGrade)}</span>
+        ) : (
+          <ChartDetailHint>
+            {L.axisValue(axes[0].tag, formatDecimal(axes[0].weight), axes[0].games, axes[0].avgGrade)}
+          </ChartDetailHint>
+        )}
+      </ChartDetail>
     </div>
   );
 });
