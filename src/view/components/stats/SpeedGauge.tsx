@@ -1,10 +1,8 @@
 import { memo, type CSSProperties } from 'react';
-import { UI_MESSAGES } from '../../../core/constants/labels';
+import { useStatsLabels } from './statsVoice';
 import { CountUp } from './CountUp';
 import { formatCount, formatPercent } from './format';
 import type { StatsSummary } from '../../../core/stats/types';
-
-const L = UI_MESSAGES.stats.ratio;
 
 const WIDTH = 280;
 const HEIGHT = 212;
@@ -76,6 +74,7 @@ function segments(
  * en tinta de cómic sin tocar una línea.
  */
 export const SpeedGauge = memo(function SpeedGauge({ ratio }: { ratio: StatsSummary['completionRatio'] }) {
+  const L = useStatsLabels().ratio;
   const { completed, abandoned } = ratio;
   const total = completed + abandoned;
 

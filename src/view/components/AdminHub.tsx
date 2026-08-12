@@ -327,8 +327,13 @@ export const AdminHub = memo(function AdminHub() {
                     </div>
                     {/* Solo cuando alguno de sus amigos le ve con otro nombre: en el caso normal repetir el nick
                         que ya está arriba no aporta nada. */}
+                    {/* Los DOS nombres, etiquetados por origen. Antes solo se pintaba el de las amistades como "el
+                        viejo", y eso era afirmar lo que el panel no puede saber: el nick vigente vive en su gist. */}
                     {staleNames.length > 0 ? (
-                      <div><dt>{A.field.staleFriendNames}</dt><dd>{staleNames.join(', ')}</dd></div>
+                      <>
+                        <div><dt>{A.field.profileNameSource}</dt><dd>{user.displayName.trim()}</dd></div>
+                        <div><dt>{A.field.staleFriendNames}</dt><dd>{staleNames.join(', ')}</dd></div>
+                      </>
                     ) : null}
                     {/* Solo se dice si está al día o no: la URL ocuparía una línea entera para no informar de nada
                         que no se vea ya en el avatar. Y solo con amistades: sin ellas no hay foto que comparar. */}
@@ -382,13 +387,19 @@ export const AdminHub = memo(function AdminHub() {
                     <div className="admin-gist-drift" role="group" aria-label={A.healIdentity.title}>
                       <span className="admin-field-label">{A.healIdentity.title}</span>
                       <p className="admin-card-note">{A.healIdentity.hint}</p>
+                      {/* Aviso cuando los nombres no coinciden: propagar escribe el del PERFIL, que puede ser el
+                          viejo. Sin esto, el botón deshacía en las amistades un nombre que ya era el correcto. */}
+                      {staleNames.length > 0 ? (
+                        <p className="admin-warning">{A.field.nameMismatchHint}</p>
+                      ) : null}
                       <button
                         type="button"
                         className="btn btn-secondary"
                         disabled={busy}
                         onClick={() =>
                           setPending({
-                            title: A.healIdentity.confirm(name),
+                            // La confirmación dice el nombre EXACTO que se va a escribir, no solo a quién.
+                            title: A.healIdentity.confirmWithName(name, user.displayName.trim() || user.knownAs.trim()),
                             run: () => void vm.healIdentity(user),
                           })
                         }

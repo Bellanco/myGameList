@@ -468,8 +468,9 @@ describe('firebaseAdminRepository — señales', () => {
     expect(await anomaliesOf(healthy())).not.toContain('gist-drift');
   });
 
-  // Nick rancio: el doc de amistad guarda el nombre del momento de la petición y nadie lo reescribe cuando su dueño
-  // se cambia el nick. Sus amigos siguen viéndole con el viejo.
+  // DESACUERDO de nombre, sin decidir quién lo tiene rancio: puede ser el doc de amistad (que guarda el nombre del
+  // momento de la petición) o el PERFIL (si el guardado escribió el gist y falló al replicar en Firestore, y el
+  // saneado de amistades propagó luego el nick del gist). El panel no puede distinguirlo: el nick vive en el gist.
   it('detecta que sus amistades le guardan un nombre distinto del que publica', async () => {
     const conNombreViejo = await anomaliesOf(healthy(), [
       docOf('a__b', {
@@ -477,7 +478,7 @@ describe('firebaseAdminRepository — señales', () => {
         requesterName: 'Ada Vieja', requesterSocialGistId: 'gs-a',
       }),
     ]);
-    expect(conNombreViejo).toContain('stale-friend-name');
+    expect(conNombreViejo).toContain('friend-name-mismatch');
   });
 
   it('el mismo nombre en sus amistades no se señala, y sin nick publicado tampoco', async () => {
@@ -487,7 +488,7 @@ describe('firebaseAdminRepository — señales', () => {
         requesterName: 'Ada', requesterSocialGistId: 'gs-a',
       }),
     ]);
-    expect(alDia).not.toContain('stale-friend-name');
+    expect(alDia).not.toContain('friend-name-mismatch');
 
     // Sin `displayName` no hay con qué comparar: de eso avisa `no-display-name`, no esta señal.
     const sinNick = await anomaliesOf(healthy({ displayName: '' }), [
@@ -496,7 +497,7 @@ describe('firebaseAdminRepository — señales', () => {
         requesterName: 'Ada Vieja', requesterSocialGistId: 'gs-a',
       }),
     ]);
-    expect(sinNick).not.toContain('stale-friend-name');
+    expect(sinNick).not.toContain('friend-name-mismatch');
   });
 
   it('recoge todos los nombres que sus amistades le guardan, no solo el primero', async () => {

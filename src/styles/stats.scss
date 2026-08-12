@@ -1817,6 +1817,8 @@
    cuando cinco géneros compartían una gama parecida. */
 .burst {
   display: flex;
+  flex-direction: column;
+  align-items: center;
   justify-content: center;
 }
 
@@ -1846,7 +1848,52 @@
   transform: translate(var(--dx, 0), var(--dy, 0));
   animation: burst-out .6s cubic-bezier(.22, 1, .36, 1) both;
   animation-delay: calc(var(--i, 0) * 80ms);
+  cursor: pointer;
+  transition: filter .15s ease, opacity .15s ease, translate .15s ease;
 }
+
+/* La porción señalada se abre UN POCO más y se ilumina; las otras se apartan sin llegar a borrarse, porque su
+   rótulo se sigue leyendo y la comparación entre radios es media figura. El desplazamiento extra va en `translate`
+   —propiedad aparte— para no pisar el `transform` que coloca la pieza ni el fotograma final de su entrada. */
+.burst-piece.is-active {
+  filter: brightness(1.16) saturate(1.08);
+  translate: calc(var(--dx, 0) * .55) calc(var(--dy, 0) * .55);
+}
+
+.burst-piece.is-dim { opacity: .42; }
+
+/* El foco se marca EN la pieza y no con un `outline` del grupo: en un SVG el rectángulo del contorno abarca toda
+   la caja del grupo y se dibujaba como un marco enorme alrededor de media figura. */
+.burst-piece:focus-visible {
+  outline: none;
+  filter: brightness(1.16) saturate(1.08);
+}
+
+.burst-piece:focus-visible path {
+  stroke: var(--text);
+  stroke-width: 2.5;
+  paint-order: stroke fill;
+}
+
+/* Pie del reparto: lo que la figura no puede pintar (el porcentaje) y el ancla que evita el salto de alto. */
+.burst-detail {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: .5rem;
+  margin: .1rem 0 0;
+  min-height: 1.35rem;
+  font-size: .82rem;
+  color: var(--stats-ink-2);
+  font-variant-numeric: tabular-nums;
+}
+
+.burst-detail b {
+  color: var(--text);
+  font-weight: 700;
+}
+
+.burst-detail-hint { opacity: .8; }
 
 @keyframes burst-out {
   from { opacity: 0; transform: translate(0, 0) scale(.55); }
@@ -1913,7 +1960,18 @@
   stroke: color-mix(in oklch, var(--chart-to) clamp(0%, var(--i, 0) * 20%, 100%), var(--chart-from));
   animation: fade-in .5s ease-out both;
   animation-delay: calc(var(--i, 0) * 90ms);
+  cursor: pointer;
+  transition: opacity .15s ease, filter .15s ease, stroke-width .15s ease;
 }
+
+/* El segmento señalado engorda hacia dentro y hacia fuera del anillo y se ilumina; el resto se apaga para que la
+   comparación con el todo no se pierda del todo (siguen ahí, solo dejan de competir por la mirada). */
+.donut-seg.is-active {
+  stroke-width: 27;
+  filter: brightness(1.14) saturate(1.06);
+}
+
+.donut-seg.is-dim { opacity: .35; }
 
 .donut-share-center {
   position: absolute;
@@ -1939,11 +1997,37 @@
 }
 
 .donut-legend li {
+  animation: slide-in .45s cubic-bezier(.22, 1, .36, 1) both;
+  animation-delay: calc(var(--i, 0) * 60ms);
+}
+
+/* La fila de la leyenda ES el control del anillo: un botón de verdad, para que el reparto se recorra con el
+   tabulador igual que con el ratón. Se despoja de la apariencia de botón —aquí no hay nada que «pulsar», solo algo
+   que señalar— y se queda con el realce del fondo y el alto mínimo que exige un objetivo táctil. */
+.donut-legend-row {
   display: flex;
   align-items: baseline;
   gap: .45rem;
-  animation: slide-in .45s cubic-bezier(.22, 1, .36, 1) both;
-  animation-delay: calc(var(--i, 0) * 60ms);
+  width: 100%;
+  min-height: 1.6rem;
+  padding: .15rem .3rem;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color .15s ease, opacity .15s ease;
+}
+
+.donut-legend-row:hover,
+.donut-legend-row.is-active { background: var(--overlay-hover); }
+.donut-legend-row.is-dim { opacity: .55; }
+
+.donut-legend-row:focus-visible {
+  outline: 2px solid var(--steam);
+  outline-offset: -2px;
 }
 
 .donut-key {

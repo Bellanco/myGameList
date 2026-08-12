@@ -111,6 +111,39 @@ export interface TopSummary {
   ranked: GameRef[];
 }
 
+/**
+ * Los bloques del panel de estadísticas. UNA sola pantalla lo pinta (`StatsPanel`) tanto en tu perfil como en el
+ * de otra persona, y esta es la lista de piezas que puede montar; el orden en que van lo decide la pantalla.
+ *
+ * Existe como tipo de dominio porque quien recorta la lista no es la vista: en un perfil ajeno la recorta el
+ * RANGO de quien mira (ver `friendStatsBlocks`), y esa es una regla de producto, no de pintado.
+ */
+export type StatsBlock =
+  | 'top'
+  | 'years'
+  | 'radar'
+  | 'ratio'
+  | 'backlog'
+  | 'grades'
+  | 'genres'
+  | 'reviews'
+  | 'shame'
+  | 'wishlist';
+
+/** El panel completo: lo que ves de TI mismo, sin recortar nada. */
+export const OWN_STATS_BLOCKS: readonly StatsBlock[] = [
+  'top',
+  'years',
+  'radar',
+  'ratio',
+  'backlog',
+  'grades',
+  'genres',
+  'reviews',
+  'shame',
+  'wishlist',
+];
+
 /** Entradas a cada lista en un mes, derivadas de `listedAt`. `m` es `AAAA-MM`. */
 export interface ArrivalPoint {
   m: string;

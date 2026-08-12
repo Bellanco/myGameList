@@ -44,6 +44,25 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
 - Pruebas del esquema del gist de juegos, del módulo de App Check y de la escritura diferida del estado local.
 
 ### Changed
+- **Un solo panel de estadísticas para tu perfil y para el de otra persona.** Había dos pantallas montando las
+  mismas piezas (`StatsHub` y `FriendStats`), y la ajena se quedaba atrás en todo lo que no fuera el cálculo: sin
+  subtítulos, con el resumen de año reescrito a mano —sin el ranking de plataformas ni el listado completo— y
+  hablando en segunda persona de la biblioteca de otro («Lo mejor de **tu** biblioteca» en el perfil de un
+  amigo). Ahora las dos son envolturas de `StatsPanel` con tres ejes de variación: qué bloques deja ver tu rango,
+  con qué datos se calcula y **de quién se habla** (los textos con voz tienen su versión en tercera persona, con
+  los guiños intactos, y viajan por contexto porque viven dentro de las piezas). Las reglas de rango y de
+  reciprocidad no cambian: bronce sigue en los cuatro bloques de retrato, plata y oro suman notas y ratio, y lo
+  que escondes de tus listas sigue sin verse de las ajenas.
+- **La administración ve de sus amistades lo mismo que ve de sí misma.** El panel de un amigo se calculaba
+  siempre con la proyección pública, aunque el hub ya tuviera en memoria los juegos completos de su gist de
+  listados. Para mithril pasa a usarlos: horas, evolución del backlog, razones de abandono y su lista de próximos
+  con las fechas. Y las ocultaciones de su dueño dejan de aplicarle —las listas escondidas y las marcas de
+  «rejugable» y «merece otra oportunidad»—, **salvo el tiempo de juego**, que se respeta frente a todo el mundo.
+  Queda declarado en la política de privacidad, en un párrafo escrito en tono tranquilo (es un dato, no una
+  advertencia), y por eso sube `LEGAL_VERSION`: la puerta del hub vuelve a pedir la conformidad. Para el resto de rangos no cambia nada: el rango dice a qué datos hay derecho, y tener el dato
+  cargado no autoriza a pintarlo. Sus **reseñas** siguen fuera del panel en todos los casos (tienen su propio
+  apartado en el perfil), y si el gist de listados no llegó, ni la administración pinta el panel completo: se
+  queda en la proyección pública en vez de enseñar ceros.
 - **El linter ya vigila lo que más caro ha salido.** `eslint-plugin-react-hooks` (`rules-of-hooks` no encontró
   ni un error; quedan 14 avisos de `exhaustive-deps` por revisar) y cuatro reglas **tipadas** sobre `model` y
   `viewmodel`: `no-floating-promises`, `no-misused-promises`, `await-thenable` y `require-await`. Destaparon 12

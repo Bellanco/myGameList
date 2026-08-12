@@ -1,5 +1,4 @@
 import { memo } from 'react';
-import { UI_MESSAGES } from '../../../core/constants/labels';
 import { StatTile } from './StatTile';
 import { CountUp } from './CountUp';
 import { GenreRadar } from './GenreRadar';
@@ -7,25 +6,40 @@ import { Beeswarm } from './Beeswarm';
 import { TagRanking } from './TagRanking';
 import { GameCards } from './GameCards';
 import { TopGames } from './TopGames';
+import { useStatsLabels } from './statsVoice';
 import { formatDecimal, formatHours } from './format';
 import type { YearSummary } from '../../../core/stats/types';
 import type { ScoreScale } from '../../../core/utils/scoreScale';
 
-const L = UI_MESSAGES.stats;
-
 /**
  * Resumen de un año: solo COMPLETADOS. Los abandonados y los próximos no llevan año —el formulario únicamente
  * pide "Años completado" en completados—, así que su sitio es "General" y aquí se dice en el pie.
+ *
+ * Es el mismo resumen en tu perfil y en el de otra persona (ver `StatsPanel`): lo único que cambia es la voz de
+ * los textos y, con `full` a false, las piezas de tiempo, que sin horas no tienen nada que decir.
  */
-export const YearPanel = memo(function YearPanel({ summary, scale }: { summary: YearSummary; scale: ScoreScale }) {
+export const YearPanel = memo(function YearPanel({
+  summary,
+  scale,
+  full = true,
+}: {
+  summary: YearSummary;
+  scale: ScoreScale;
+  /** ¿Hay datos privados (horas)? Con la proyección pública el año se cuenta sin tiempo de juego. */
+  full?: boolean;
+}) {
+  const L = useStatsLabels();
   const avgInScale = scale === 'grade' ? summary.avgGrade : summary.avgGrade / 20;
+  const hasHours = full && summary.hours > 0;
 
   return (
     <>
       <div className="stats-card stats-card-tiles">
         <div className="stats-tiles">
           <StatTile label={L.year.completed} value={<CountUp value={summary.completed} />} />
-          <StatTile label={L.year.hours} value={<CountUp value={summary.hours} format={formatHours} />} unit="h" />
+          {hasHours ? (
+            <StatTile label={L.year.hours} value={<CountUp value={summary.hours} format={formatHours} />} unit="h" />
+          ) : null}
           {summary.scored > 0 ? (
             <StatTile
               label={L.year.avgGrade}
@@ -43,7 +57,7 @@ export const YearPanel = memo(function YearPanel({ summary, scale }: { summary: 
               hint={summary.best.hours > 0 ? L.tiles.longestHint(formatHours(summary.best.hours)) : undefined}
             />
           ) : null}
-          {summary.longest && summary.longest.id !== summary.best?.id ? (
+          {hasHours && summary.longest && summary.longest.id !== summary.best?.id ? (
             <StatTile
               label={L.tiles.longest}
               value={<span className="stat-tile-text">{summary.longest.name}</span>}

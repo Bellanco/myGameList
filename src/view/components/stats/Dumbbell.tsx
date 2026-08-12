@@ -1,9 +1,7 @@
 import { memo, type CSSProperties } from 'react';
-import { UI_MESSAGES } from '../../../core/constants/labels';
+import { useStatsLabels } from './statsVoice';
 import { formatCount, formatPercent } from './format';
 import type { ShameSummary } from '../../../core/stats/types';
-
-const L = UI_MESSAGES.stats.shame;
 
 /**
  * Mancuernas: por cada género, dos puntos unidos por una varilla —los que terminaste y los que dejaste— sobre
@@ -14,6 +12,7 @@ const L = UI_MESSAGES.stats.shame;
  * comparan entre sí sin tener que leer los números.
  */
 export const Dumbbell = memo(function Dumbbell({ rows }: { rows: ShameSummary['abandonRate'] }) {
+  const L = useStatsLabels().shame;
   if (rows.length === 0) return null;
 
   // El eje lo fijan LAS DOS series, no solo los terminados: con un género que se deja más veces de las que se

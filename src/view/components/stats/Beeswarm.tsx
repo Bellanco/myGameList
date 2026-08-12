@@ -1,10 +1,8 @@
 import { memo, type CSSProperties } from 'react';
-import { UI_MESSAGES } from '../../../core/constants/labels';
+import { useStatsLabels } from './statsVoice';
 import { GRADE_MAX, SCORE_BUCKET_FLOORS, STARS_MAX, hueFromGrade, starsFromGrade } from '../../../core/utils/scoreScale';
 import type { GameRef } from '../../../core/stats/types';
 import type { ScoreScale } from '../../../core/utils/scoreScale';
-
-const L = UI_MESSAGES.stats.grades;
 
 /** Ancho de la celda de agrupación, en % del eje: puntos más cercanos que esto se apilan en vez de solaparse. */
 const CELL = 2.2;
@@ -97,6 +95,7 @@ function median(games: GameRef[]): number {
  * SVG se deformarían en óvalos.
  */
 export const Beeswarm = memo(function Beeswarm({ games, scale }: BeeswarmProps) {
+  const L = useStatsLabels().grades;
   if (games.length === 0) {
     return <p className="stats-empty">{L.empty}</p>;
   }

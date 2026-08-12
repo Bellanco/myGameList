@@ -1089,7 +1089,9 @@ export function useSocialViewModel(options?: {
     loadForeignProfileGames({ profileId: targetProfileId, gamesGistId: entry.gamesGistId, token })
       .then((games) => {
         if (cancelled || !games) return;
-        const visible = applyProfileVisibility(games, entry.visibility || defaultSocialVisibility);
+        // El rango de QUIEN MIRA entra en el filtro: la cuenta de administración ve las listas y las marcas que
+        // el dueño esconde, pero no sus horas (ver `applyProfileVisibility`).
+        const visible = applyProfileVisibility(games, entry.visibility || defaultSocialVisibility, ownTier);
         setForeignGamesByProfile((prev) => ({ ...prev, [targetProfileId]: visible }));
       })
       .catch(() => {
@@ -1104,7 +1106,7 @@ export function useSocialViewModel(options?: {
     return () => {
       cancelled = true;
     };
-  }, [activePanel, activeDetailEvent, authUser, defaultSocialVisibility, foreignGamesByProfile, mainSyncConfig?.token, ownProfileId, profileDetailId, relationshipWith, socialDirectory]);
+  }, [activePanel, activeDetailEvent, authUser, defaultSocialVisibility, foreignGamesByProfile, mainSyncConfig?.token, ownProfileId, ownTier, profileDetailId, relationshipWith, socialDirectory]);
 
   // Amigo inactivo (su gist social no se leyó al hidratar el directorio, para no ocupar el feed ni gastar la
   // llamada): al ABRIR su perfil sí se lee, para que su hero no salga a medias (nombre/visibilidad/foto).
@@ -1156,7 +1158,7 @@ export function useSocialViewModel(options?: {
       const token = getSocialSyncConfig()?.token || mainSyncConfig?.token || null;
       const games = await loadForeignProfileGames({ profileId, gamesGistId: entry.gamesGistId, token, forceRefresh: true });
       if (games) {
-        const visible = applyProfileVisibility(games, entry.visibility || defaultSocialVisibility);
+        const visible = applyProfileVisibility(games, entry.visibility || defaultSocialVisibility, ownTier);
         setForeignGamesByProfile((prev) => ({ ...prev, [profileId]: visible }));
       } else {
         setFeedback('warn', SOCIAL_UI.status.profileGamesRefreshFailed);
@@ -1166,7 +1168,7 @@ export function useSocialViewModel(options?: {
     } finally {
       setLoadingForeignProfile(false);
     }
-  }, [authUser, defaultSocialVisibility, mainSyncConfig?.token, ownProfileId, profileDetailId, relationshipWith, setFeedback, socialDirectory]);
+  }, [authUser, defaultSocialVisibility, mainSyncConfig?.token, ownProfileId, ownTier, profileDetailId, relationshipWith, setFeedback, socialDirectory]);
 
   const handleActivityItemKeyDown = useCallback(
     (event: ReactKeyboardEvent<HTMLElement>, entry: SocialActivityFeedItem) => {
