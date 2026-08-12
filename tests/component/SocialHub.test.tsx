@@ -1312,7 +1312,9 @@ describe('SocialHub — reciprocidad de la foto', () => {
     gistMocks.ensureSecretSocialGist.mockImplementation(async (_t?: string, gistId?: string) => ({
       gistId: gistId || '', etag: null, migrated: false, supersededGistIds: [], keptPublicGistIds: [], copiedEntries: 0,
     }));
-    firebaseMocks.getCurrentSocialAuthUser.mockResolvedValue({ uid: 'me', email: 'me@x.com', displayName: 'Me', photoURL: null });
+    // Con foto en la cuenta: el caso de quien de verdad muestra la suya. Sin ella, la reciprocidad se aplicaría
+    // igual que a quien la esconde (hay un test para eso), y todos los escenarios de este bloque cambiarían.
+    firebaseMocks.getCurrentSocialAuthUser.mockResolvedValue({ uid: 'me', email: 'me@x.com', displayName: 'Me', photoURL: 'https://f/me.png' });
     firebaseMocks.getPrivateConfig.mockResolvedValue(null);
     firebaseMocks.setPrivateConfig.mockResolvedValue(undefined);
     firebaseMocks.getPublicConfig.mockResolvedValue({ consent: { version: LEGAL_VERSION, agreedAt: 1 } });
@@ -1381,6 +1383,46 @@ describe('SocialHub — reciprocidad de la foto', () => {
       expect(fotosPintadas()).not.toContain(ADA_FOTO);
       expect(fotosPintadas()).not.toContain(BOB_FOTO);
     });
+  });
+
+  // El interruptor dice que sí, pero la cuenta de Google no tiene foto: no publica ninguna, así que la reciprocidad
+  // le aplica igual que a quien la esconde a propósito. `photoURL: null` es lo que devuelve Google en ese caso.
+  it('con el interruptor activado pero SIN foto en Google no ve las de los demás', async () => {
+    firebaseMocks.getCurrentSocialAuthUser.mockResolvedValue({ uid: 'me', email: 'me@x.com', displayName: 'Me', photoURL: null });
+    ownProfile(true);
+    renderHub('/social/profiles');
+
+    await screen.findByText('Ada');
+    await waitFor(() => expect(gistMocks.readPublicSocialGistById).toHaveBeenCalled());
+    await waitFor(() => {
+      expect(fotosPintadas()).not.toContain(ADA_FOTO);
+      expect(fotosPintadas()).not.toContain(BOB_FOTO);
+    });
+  });
+
+  // El ajuste guardado tiene que describir la realidad: un perfil que dice "muestro mi foto" y no tiene ninguna
+  // miente. Se apaga el estado en cuanto se sabe, así que el siguiente guardado del perfil lo deja coherente en el
+  // gist —sin forzar ninguna escritura extra al abrir— y, si más adelante añade una foto, activarlo vuelve a ser
+  // decisión suya.
+  it('sin foto en la cuenta, el ajuste guardado pasa a false al guardar el perfil', async () => {
+    firebaseMocks.getCurrentSocialAuthUser.mockResolvedValue({ uid: 'me', email: 'me@x.com', displayName: 'Me', photoURL: null });
+    ownProfile(true); // el perfil que ya existe llega con `showPhoto: true`
+    renderHub('/social/profile');
+
+    // El interruptor del ajuste, apagado y bloqueado.
+    const toggle = await screen.findByLabelText(SOCIAL_UI.profile.showPhotoField) as HTMLInputElement;
+    await waitFor(() => expect(toggle.checked).toBe(false));
+    expect(toggle.disabled).toBe(true);
+    expect(screen.getByText(SOCIAL_UI.profile.photoMissingInGoogle)).toBeInTheDocument();
+
+    // Y lo que se escribe en el gist al guardar ya va apagado.
+    fireEvent.click(screen.getByRole('button', { name: new RegExp(SOCIAL_UI.profile.save) }));
+    await waitFor(() => expect(gistMocks.writeSocialGist).toHaveBeenCalled());
+    const ultimaEscritura = gistMocks.writeSocialGist.mock.calls.at(-1) as unknown as [unknown, unknown, { profile: { visibility: { showPhoto: boolean }; photoURL?: string } }];
+    const payload = ultimaEscritura[2];
+    expect(payload.profile.visibility.showPhoto).toBe(false);
+    // Y no se publica ninguna foto, claro.
+    expect(payload.profile.photoURL).toBeUndefined();
   });
 
   it('mithril está exento: ve las dos aunque esconda la suya', async () => {

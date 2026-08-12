@@ -18,11 +18,36 @@
 // permiso de verdad exigiría que las reglas supieran quién es amigo de quién, y eso es otra migración.
 import { ADMIN_ONLY_TIER, type ProfileTier } from '../constants/tiers';
 
-/** Quién mira: su rango y si publica su propia foto. */
+/** Quién mira: su rango y si los demás le ven la cara. */
 export interface PhotoViewer {
-  /** ¿El que mira tiene su foto visible para los demás (`visibility.showPhoto`)? */
+  /** ¿Los demás le ven la cara? Lo resuelve `resolveViewer`: querer mostrarla NO basta, hay que tenerla. */
   showsOwnPhoto: boolean;
   tier: ProfileTier;
+}
+
+/**
+ * Traduce los ajustes de alguien a lo que de verdad aporta al canal.
+ *
+ * EL INTERRUPTOR NO BASTA. `showPhoto` dice qué quiere el usuario; `ownPhotoURL` dice qué tiene. Quien lo lleva
+ * activado pero no tiene foto en su cuenta de Google no publica ninguna: sus amigos le ven la silueta genérica igual
+ * que a quien la esconde a propósito. Tratar ese caso como "sí muestra" le daría las caras de los demás sin poner la
+ * suya, que es exactamente el trato que la reciprocidad deshace. Da igual el motivo —cuenta sin foto, foto retirada
+ * en Google—: lo que cuenta es lo que los demás ven.
+ *
+ * Lo que esta función NO puede saber: si la URL existe pero está caducada o rota. Eso solo se descubre al intentar
+ * cargarla, y lo resuelve `HubAvatar` cayendo a la silueta.
+ */
+export function resolveViewer(input: {
+  /** El interruptor "Mostrar mi foto de perfil". */
+  showPhoto: boolean;
+  /** La foto que de verdad tiene para publicar (la de su sesión de Google). */
+  ownPhotoURL: string | null | undefined;
+  tier: ProfileTier;
+}): PhotoViewer {
+  return {
+    showsOwnPhoto: input.showPhoto && Boolean(String(input.ownPhotoURL || '').trim()),
+    tier: input.tier,
+  };
 }
 
 /**

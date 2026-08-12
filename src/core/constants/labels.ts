@@ -1221,6 +1221,9 @@ export const SOCIAL_UI = {
     hideGameTimeField: 'Tiempo jugado',
     photoSectionTitle: 'Foto de perfil',
     showPhotoField: 'Mostrar mi foto de perfil',
+    // Por qué el interruptor está apagado y bloqueado. Una línea: el estado del interruptor ya dice lo demás, y la
+    // consecuencia (nadie le ve la cara, y por reciprocidad él tampoco) no necesita explicarse aquí.
+    photoMissingInGoogle: 'Tu cuenta no tiene foto.',
   },
   status: {
     needMainSync: 'Activa la sincronización principal para continuar.',
