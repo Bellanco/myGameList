@@ -7,6 +7,7 @@
 // El historial de revisiones del gist es el ÚNICO sitio donde sobreviven las fechas de publicación reales: las
 // revisiones de un gist son inmutables y GitHub las conserva todas. Este módulo las localiza SIN ESCRIBIR NADA,
 // para poder decidir con datos si merece la pena restaurarlas.
+import { localDayKey, noonOfLocalDay } from '../../core/utils/dateTime';
 import { TAB_IDS } from '../types/game';
 import { getCurrentSocialAuthUser } from './firebaseRepository';
 import { listOwnSocialGists, readSocialGist, readSocialGistAtRevision, readSocialGistHistory, saveSocialSyncConfig, writeSocialGist } from './socialGistRepository';
@@ -147,9 +148,12 @@ export interface HistoryDateFixPlan {
   applied: boolean;
 }
 
-/** Fecha ancla a mediodía UTC: así el día no baila con la zona horaria al renderizar. */
+/**
+ * Fecha ancla a mediodía LOCAL: el día lo escribe el usuario mirando SU calendario, y el mediodía deja doce horas
+ * de margen a cada lado para que la entrada siga cayendo en ese día al renderizarla.
+ */
 function anchorFromDay(day: string): number {
-  const parsed = Date.parse(`${day}T12:00:00.000Z`);
+  const parsed = noonOfLocalDay(day);
   if (!Number.isFinite(parsed)) {
     throw new Error(`Fecha ancla inválida: ${day} (formato AAAA-MM-DD)`);
   }
@@ -197,7 +201,9 @@ export async function repairUndatedHistoryDates(options: {
       }
     });
   });
-  const dayOf = (ms: number) => new Date(ms).toISOString().slice(0, 10);
+  // Día local, igual que el feed: un sello en bloque a las 09:00 de Madrid es un solo día para el usuario, y
+  // agrupándolo en UTC las importaciones nocturnas se repartían entre dos días y ninguno llegaba al umbral.
+  const dayOf = (ms: number) => localDayKey(ms);
   const perDay = new Map<string, number>();
   tsByGame.forEach((ts) => perDay.set(dayOf(ts), (perDay.get(dayOf(ts)) || 0) + 1));
   const bulkDays = [...perDay.entries()]
@@ -386,7 +392,9 @@ export async function auditPublishedReviewDates(options?: { maxRevisions?: numbe
       if (game.id > 0 && ts > 0) tsByGame.set(game.id, ts);
     });
   });
-  const day = (ms: number) => new Date(ms).toISOString().slice(0, 10);
+  // Reparto por día LOCAL: esta tabla se compara con lo que muestran el feed y la pestaña Reseñas, que titulan en
+  // la zona del dispositivo. En UTC, las dos columnas podían discrepar solo por el huso y no por los datos.
+  const day = (ms: number) => localDayKey(ms);
   const byDay = new Map<string, { enGist: number; enListado: number }>();
   const bump = (key: string, campo: 'enGist' | 'enListado') => {
     const current = byDay.get(key) || { enGist: 0, enListado: 0 };

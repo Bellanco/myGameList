@@ -9,6 +9,7 @@
 // ALCANCE: local y por dispositivo. Vive en el meta de IndexedDB (que nunca sube), no toca el gist, no entra en
 // el merge CRDT y no se proyecta al canal social. Consecuencia asumida: quien use dos dispositivos tendrá dos
 // series parciales, cada una con los meses en que usó ese dispositivo.
+import { localMonthKey } from '../../core/utils/dateTime';
 import { getLocalMeta, patchLocalMeta } from './indexedDbRepository';
 import type { BacklogSnapshot } from '../types/local';
 import type { GameItem, TabData } from '../types/game';
@@ -19,10 +20,11 @@ export const BACKLOG_HISTORY_LIMIT = 120;
 /**
  * Mes `AAAA-MM` de una marca de tiempo, en la hora LOCAL del dispositivo (no UTC): el usuario piensa en meses
  * de su calendario, y en UTC una instantánea del 31 a las 23:00 caería en el mes siguiente.
+ *
+ * La cuenta vive en `core/utils/dateTime`; se reexporta con este nombre porque es el que usan la serie y su test.
  */
 export function monthKey(now: number): string {
-  const date = new Date(now);
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+  return localMonthKey(now);
 }
 
 /** Instantánea (sin fecha) del tamaño de las cuatro listas. Ignora los registros sin nombre, como el panel. */
