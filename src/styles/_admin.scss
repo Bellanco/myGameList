@@ -254,3 +254,17 @@
 .admin-gist-drift .btn { justify-self: start; font-size: .78rem; padding: .35rem .6rem; }
 /* Con dos ids en la misma celda, que no se peguen. */
 .admin-gist-drift dd code { display: block; }
+
+/* Desempate del nombre: los candidatos en circulación, cada uno con su origen. Va DENTRO del bloque de identidad, así
+   que se distingue con un fondo neutro en vez de repetir el tinte de peligro del contenedor. */
+.admin-name-choice {
+  display: grid;
+  gap: .35rem;
+  padding: .5rem .6rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--surface) 60%, transparent);
+}
+/* Los botones son de longitud muy dispar (llevan el nombre dentro): en fila y con salto, no estirados. */
+.admin-name-choice .admin-actions { flex-wrap: wrap; }
+.admin-name-choice .btn { font-size: .78rem; padding: .35rem .6rem; }

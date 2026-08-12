@@ -19,6 +19,7 @@ import {
   migrateForeignProfileDoc,
   purgeFossilFriendshipRequests,
   purgeLegacyProfileFields,
+  setUserDisplayName,
   setUserSocialEnabled,
   setUserTier,
   type AdminCensus,
@@ -220,6 +221,30 @@ export function useAdminViewModel() {
     [runAction],
   );
 
+  /**
+   * Fija cuál de los nombres en circulación es el bueno: lo escribe en el perfil y lo propaga a sus amistades.
+   *
+   * Es el desempate del administrador, que ve los dos valores. Su alcance tiene un límite que conviene recordar: el
+   * nick vive en el gist del usuario, así que si el gist dice otra cosa, su cliente volverá a imponerlo al abrir el
+   * espacio social. Sirve para dejar el directorio coherente y para quien ya no vuelve.
+   */
+  const chooseDisplayName = useCallback(
+    (row: AdminUserRow, name: string) =>
+      runAction(row, async () => {
+        const clean = name.trim();
+        if (!clean) {
+          return { kind: 'warn', text: ADMIN_PANEL_UI.healIdentity.noName };
+        }
+        const result = await setUserDisplayName(row.id, row.uid, clean, row.photoURL);
+        if (!result.ok) {
+          console.warn('[admin] no se pudo fijar el nombre:', result.failures);
+          return { kind: 'warn', text: ADMIN_PANEL_UI.chooseName.partial };
+        }
+        return { kind: 'ok', text: ADMIN_PANEL_UI.chooseName.ok(clean, result.touched) };
+      }),
+    [runAction],
+  );
+
   /** Borra sus solicitudes enviadas que llevan más de 180 días pendientes. */
   const purgeFossilRequests = useCallback(
     (row: AdminUserRow) =>
@@ -269,6 +294,7 @@ export function useAdminViewModel() {
     purgeLegacy,
     migrateIdentity,
     healIdentity,
+    chooseDisplayName,
     purgeFossilRequests,
     deleteUser,
   };

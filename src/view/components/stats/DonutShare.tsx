@@ -1,4 +1,5 @@
-import { memo, useState, type CSSProperties } from 'react';
+import { memo, type CSSProperties } from 'react';
+import { useChartFocus } from './useChartFocus';
 import { formatCount, formatPercent } from './format';
 import type { TagBucket } from '../../../core/stats/types';
 
@@ -8,7 +9,13 @@ const MAX_KEYS = 5;
 const SIZE = 160;
 const CENTER = SIZE / 2;
 const STROKE = 22;
-const RADIUS = (SIZE - STROKE) / 2;
+/**
+ * Grosor del segmento señalado. Está aquí y no solo en la hoja de estilos porque el RADIO se calcula con él: el
+ * trazo crece hacia los dos lados de la circunferencia, así que con el radio ajustado al grosor normal la parte
+ * ampliada se salía del `viewBox` y el anillo aparecía cortado justo en el segmento que se estaba mirando.
+ */
+const STROKE_ACTIVE = 27;
+const RADIUS = (SIZE - STROKE_ACTIVE) / 2;
 const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
 /** Hueco entre segmentos, en unidades de trazo: separa sin pintar un borde. */
 const GAP = 3;
@@ -34,8 +41,7 @@ interface DonutShareProps {
  * teclado; el hueco entre los dos mundos —señalar con el ratón, fijar con un toque— lo cubre el mismo estado.
  */
 export const DonutShare = memo(function DonutShare({ tags, total, label }: DonutShareProps) {
-  /** Parte señalada (por puntero, foco o toque). `null` = ninguna, y el centro vuelve al total. */
-  const [active, setActive] = useState<string | null>(null);
+  const focus = useChartFocus();
   const sum = tags.reduce((acc, tag) => acc + tag.games, 0);
   if (sum === 0) return null;
 
@@ -51,10 +57,7 @@ export const DonutShare = memo(function DonutShare({ tags, total, label }: Donut
     return { ...part, at, length: Math.max(length - GAP, 1), percent: (part.games / sum) * 100 };
   });
 
-  const shown = drawn.find((part) => part.tag === active) || null;
-  /** Un toque fija la parte (o la suelta): en una pantalla sin ratón no hay «pasar por encima». */
-  const toggle = (tag: string) => setActive((current) => (current === tag ? null : tag));
-  const stateClass = (tag: string) => (!active ? '' : tag === active ? ' is-active' : ' is-dim');
+  const shown = drawn.find((part) => part.tag === focus.active) || null;
 
   return (
     <div className="donut-share">
@@ -65,7 +68,7 @@ export const DonutShare = memo(function DonutShare({ tags, total, label }: Donut
           {drawn.map((part, index) => (
             <circle
               key={part.tag}
-              className={`donut-seg${stateClass(part.tag)}`}
+              className={`donut-seg${focus.stateOf(part.tag)}`}
               cx={CENTER}
               cy={CENTER}
               r={RADIUS}
@@ -73,8 +76,7 @@ export const DonutShare = memo(function DonutShare({ tags, total, label }: Donut
               strokeDasharray={`${part.length} ${CIRCUMFERENCE - part.length}`}
               strokeDashoffset={-part.at}
               style={{ '--i': index } as CSSProperties}
-              onPointerEnter={() => setActive(part.tag)}
-              onPointerLeave={() => setActive(null)}
+              {...focus.hoverProps(part.tag)}
             >
               <title>{`${part.tag}: ${part.games} (${formatPercent(part.percent)}%)`}</title>
             </circle>
@@ -93,13 +95,8 @@ export const DonutShare = memo(function DonutShare({ tags, total, label }: Donut
           <li key={part.tag} style={{ '--i': index } as CSSProperties}>
             <button
               type="button"
-              className={`donut-legend-row${stateClass(part.tag)}`}
-              aria-pressed={part.tag === active}
-              onClick={() => toggle(part.tag)}
-              onPointerEnter={() => setActive(part.tag)}
-              onPointerLeave={() => setActive(null)}
-              onFocus={() => setActive(part.tag)}
-              onBlur={() => setActive(null)}
+              className={`donut-legend-row${focus.stateOf(part.tag)}`}
+              {...focus.buttonProps(part.tag)}
             >
               <span className="donut-key" aria-hidden="true" />
               <span className="donut-tag" title={part.tag}>{part.tag}</span>

@@ -1,5 +1,6 @@
 import { memo, type CSSProperties } from 'react';
 import { useStatsLabels } from './statsVoice';
+import { useChartFocus } from './useChartFocus';
 import { CountUp } from './CountUp';
 import { formatCount, formatPercent } from './format';
 import type { StatsSummary } from '../../../core/stats/types';
@@ -72,9 +73,14 @@ function segments(
  *
  * Todo el color sale de los tokens del tema, así que el mismo cuadro se pinta en ámbar de terminal, en neón o
  * en tinta de cómic sin tocar una línea.
+ *
+ * SE PUEDE TOCAR: los dos contadores son botones. Al señalar uno, su anillo se ilumina, el otro se aparta y su
+ * cifra se acompaña del PORCENTAJE que representa —«24 · 67%»—, que es el puente entre los contadores y el dial
+ * grande: hasta ahora había que dividir a mano para saber de dónde salía esa cifra.
  */
 export const SpeedGauge = memo(function SpeedGauge({ ratio }: { ratio: StatsSummary['completionRatio'] }) {
   const L = useStatsLabels().ratio;
+  const focus = useChartFocus();
   const { completed, abandoned } = ratio;
   const total = completed + abandoned;
 
@@ -160,8 +166,14 @@ export const SpeedGauge = memo(function SpeedGauge({ ratio }: { ratio: StatsSumm
           const share = counter.value / total;
           const subLit = Math.max(Math.round(share * SUB_SEGMENTS), 1);
           const half = SUB_SIZE / 2;
+          const share100 = formatPercent((counter.value / total) * 100);
           return (
-            <li key={counter.key} className={`is-${counter.key}`}>
+            <li key={counter.key} className={`is-${counter.key}${focus.stateOf(counter.key)}`}>
+              <button
+                type="button"
+                className="gauge-sub"
+                {...focus.buttonProps(counter.key)}
+              >
               <span className="gauge-sub-fig">
                 <svg viewBox={`0 0 ${SUB_SIZE} ${SUB_SIZE}`} aria-hidden="true" style={{ '--n': SUB_SEGMENTS } as CSSProperties}>
                   {segments(SUB_SEGMENTS, subLit, { cx: half, cy: half, start: 0, sweep: 360, radius: SUB_R, gap: SUB_GAP })
@@ -179,6 +191,10 @@ export const SpeedGauge = memo(function SpeedGauge({ ratio }: { ratio: StatsSumm
                 </svg>
               </span>
               <span className="gauge-sub-label">{counter.label}</span>
+              {/* El porcentaje solo aparece en el contador señalado: en reposo, las dos cifras y el dial ya
+                  cuentan la historia, y tres números por contador sería un panel de instrumentos de más. */}
+              <span className="gauge-sub-share">{focus.active === counter.key ? `${share100}%` : ''}</span>
+              </button>
             </li>
           );
         })}

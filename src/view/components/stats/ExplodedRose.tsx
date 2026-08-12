@@ -1,5 +1,7 @@
-import { memo, useState, type CSSProperties, type KeyboardEvent } from 'react';
+import { memo, type CSSProperties } from 'react';
 import { useStatsLabels } from './statsVoice';
+import { useChartFocus } from './useChartFocus';
+import { ChartDetail, ChartDetailHint } from './ChartDetail';
 import { labelLines } from './labelLines';
 import { formatPercent } from './format';
 import type { TagBucket } from '../../../core/stats/types';
@@ -61,8 +63,7 @@ export const ExplodedRose = memo(function ExplodedRose({
   limit?: number;
 }) {
   const L = useStatsLabels().genres;
-  /** Porción señalada (puntero, foco o toque). `null` = ninguna, y el pie vuelve al total. */
-  const [active, setActive] = useState<string | null>(null);
+  const focus = useChartFocus();
   if (tags.length === 0) {
     return <p className="stats-empty">{L.empty}</p>;
   }
@@ -73,14 +74,7 @@ export const ExplodedRose = memo(function ExplodedRose({
   // El reparto se mide contra el conjunto que se está resumiendo (el top), no contra la suma de las porciones
   // dibujadas: un juego cuenta en todos sus géneros, así que esa suma pasa del 100% y el porcentaje mentiría.
   const whole = total || pieces.reduce((acc, tag) => acc + tag.games, 0);
-  const shown = pieces.find((tag) => tag.tag === active) || null;
-  /** Un toque fija la porción (o la suelta): en una pantalla sin ratón no hay «pasar por encima». */
-  const toggle = (tag: string) => setActive((current) => (current === tag ? null : tag));
-  const onKey = (event: KeyboardEvent<SVGGElement>, tag: string) => {
-    if (event.key !== 'Enter' && event.key !== ' ') return;
-    event.preventDefault();
-    toggle(tag);
-  };
+  const shown = pieces.find((tag) => tag.tag === focus.active) || null;
 
   return (
     <div className="burst">
@@ -123,22 +117,12 @@ export const ExplodedRose = memo(function ExplodedRose({
           const lead = polar(mid, radius + 11);
 
           const percent = whole > 0 ? (tag.games / whole) * 100 : 0;
-          const state = !active ? '' : tag.tag === active ? ' is-active' : ' is-dim';
 
           return (
             <g key={tag.tag} style={{ '--i': index, '--dx': `${dx.toFixed(1)}px`, '--dy': `${dy.toFixed(1)}px` } as CSSProperties}>
               <g
-                className={`burst-piece${state}`}
-                role="button"
-                tabIndex={0}
-                aria-pressed={tag.tag === active}
-                aria-label={`${tag.tag}: ${L.games(tag.games)}, ${formatPercent(percent)}%`}
-                onClick={() => toggle(tag.tag)}
-                onKeyDown={(event) => onKey(event, tag.tag)}
-                onPointerEnter={() => setActive(tag.tag)}
-                onPointerLeave={() => setActive(null)}
-                onFocus={() => setActive(tag.tag)}
-                onBlur={() => setActive(null)}
+                className={`burst-piece${focus.stateOf(tag.tag)}`}
+                {...focus.controlProps(tag.tag, `${tag.tag}: ${L.games(tag.games)}, ${formatPercent(percent)}%`)}
               >
                 <path d={`M ${CX} ${CY} L ${point(from, radius)} A ${radius} ${radius} 0 0 1 ${point(to, radius)} Z`}>
                   <title>{`${tag.tag}: ${tag.games}`}</title>
@@ -173,10 +157,7 @@ export const ExplodedRose = memo(function ExplodedRose({
         })}
       </svg>
 
-      {/* Pie del reparto. Está SIEMPRE, con el total cuando no hay nada señalado: si apareciera y desapareciera,
-          la tarjeta daría un salto cada vez que el ratón cruza una porción. `aria-live` no hace falta —cada
-          porción ya se anuncia con su parte al enfocarla—, así que aquí solo hay refuerzo visual. */}
-      <p className="burst-detail" aria-hidden="true">
+      <ChartDetail>
         {shown ? (
           <>
             <b>{shown.tag}</b>
@@ -184,9 +165,9 @@ export const ExplodedRose = memo(function ExplodedRose({
             <span>{formatPercent(whole > 0 ? (shown.games / whole) * 100 : 0)}%</span>
           </>
         ) : (
-          <span className="burst-detail-hint">{L.games(whole)}</span>
+          <ChartDetailHint>{L.games(whole)}</ChartDetailHint>
         )}
-      </p>
+      </ChartDetail>
     </div>
   );
 });

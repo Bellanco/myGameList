@@ -964,8 +964,11 @@
 
 /* ---- Rosetón polar (reparto de etiquetas) -------------------------------------------------------------- */
 
+/* En columna, para que el pie del reparto (`chart-detail`) quede debajo de la figura y no a su lado. */
 .polar-rose {
   display: flex;
+  flex-direction: column;
+  align-items: center;
   justify-content: center;
 }
 
@@ -1364,9 +1367,40 @@
   fill: var(--steam);
   stroke: var(--surface);
   stroke-width: 1.5;
+  transform-box: fill-box;
   transform-origin: center;
   animation: pop-in .4s cubic-bezier(.34, 1.36, .64, 1) both;
   animation-delay: .75s;
+  transition: scale .15s ease, opacity .15s ease;
+}
+
+/* Cada eje es un objetivo. El vértice se ve, pero apuntar a un círculo de 3,4 unidades con el dedo es imposible:
+   el objetivo real es un disco transparente de 14 centrado en él (`genre-radar-hit`), que es lo que hace que la
+   figura se pueda recorrer en un móvil. */
+.genre-radar-axis { cursor: pointer; }
+.genre-radar-hit { fill: transparent; }
+
+/* El radio del eje señalado se enciende de punta a punta: es la magnitud que se está leyendo, y sin él solo se
+   destacaría un punto suelto en el borde de la silueta. */
+.genre-radar-reach {
+  stroke: var(--steam);
+  stroke-width: 2;
+  opacity: 0;
+  transition: opacity .15s ease;
+}
+
+.genre-radar-axis.is-active .genre-radar-reach { opacity: .85; }
+.genre-radar-axis.is-active .genre-radar-dot { scale: 1.55; }
+.genre-radar-axis.is-dim .genre-radar-dot { opacity: .4; }
+
+.genre-radar-axis:focus-visible {
+  outline: none;
+}
+
+.genre-radar-axis:focus-visible .genre-radar-dot {
+  stroke: var(--text);
+  stroke-width: 2.5;
+  scale: 1.55;
 }
 
 /* Sin la cifra al lado, el nombre del género puede crecer: es lo único que hay que leer en la punta. */
@@ -1458,10 +1492,46 @@
 }
 
 .gauge-subs li {
+  transition: opacity .15s ease;
+}
+
+/* El contador entero es el control: figura, rótulo y porcentaje. Se despoja de la apariencia de botón —lo que se
+   hace aquí es señalar, no accionar— y conserva el foco visible y el realce del fondo. */
+.gauge-sub {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: .25rem;
+  padding: .3rem .45rem;
+  border: 0;
+  border-radius: var(--stats-radius);
+  background: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  transition: background-color .15s ease, scale .15s ease;
+}
+
+.gauge-subs li.is-active .gauge-sub {
+  background: var(--overlay-hover);
+  scale: 1.04;
+}
+
+.gauge-subs li.is-dim { opacity: .45; }
+
+.gauge-sub:focus-visible {
+  outline: 2px solid var(--steam);
+  outline-offset: -2px;
+}
+
+/* Hueco reservado SIEMPRE: si el porcentaje apareciera al señalar, los dos contadores darían un salto de alto
+   cada vez que el puntero pasa por encima de uno. */
+.gauge-sub-share {
+  min-height: 1rem;
+  font-size: .72rem;
+  font-weight: 700;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
 }
 
 .gauge-sub-fig {
@@ -1875,11 +1945,14 @@
   paint-order: stroke fill;
 }
 
-/* Pie del reparto: lo que la figura no puede pintar (el porcentaje) y el ancla que evita el salto de alto. */
-.burst-detail {
+/* Pie de CUALQUIER figura (ver `ChartDetail`): lo que el dibujo no puede pintar —el porcentaje, la nota media, el
+   nombre completo de un punto— y el ancla de alto que evita que la tarjeta salte al cruzar el puntero. Vive aquí,
+   con el rosetón, porque fue la primera figura en necesitarlo; lo usan todas. */
+.chart-detail {
   display: flex;
   align-items: baseline;
   justify-content: center;
+  flex-wrap: wrap;
   gap: .5rem;
   margin: .1rem 0 0;
   min-height: 1.35rem;
@@ -1888,12 +1961,12 @@
   font-variant-numeric: tabular-nums;
 }
 
-.burst-detail b {
+.chart-detail b {
   color: var(--text);
   font-weight: 700;
 }
 
-.burst-detail-hint { opacity: .8; }
+.chart-detail-hint { opacity: .8; }
 
 @keyframes burst-out {
   from { opacity: 0; transform: translate(0, 0) scale(.55); }
@@ -1965,7 +2038,8 @@
 }
 
 /* El segmento señalado engorda hacia dentro y hacia fuera del anillo y se ilumina; el resto se apaga para que la
-   comparación con el todo no se pierda del todo (siguen ahí, solo dejan de competir por la mirada). */
+   comparación con el todo no se pierda del todo (siguen ahí, solo dejan de competir por la mirada). El grosor
+   ampliado es el mismo `STROKE_ACTIVE` con el que `DonutShare` calcula el radio, para que quepa en el lienzo. */
 .donut-seg.is-active {
   stroke-width: 27;
   filter: brightness(1.14) saturate(1.06);
@@ -2078,18 +2152,45 @@
 
 .shine-rows li {
   position: relative;
-  display: grid;
-  grid-template-columns: 1fr auto auto;
-  align-items: center;
-  gap: .5rem;
-  padding: .55rem .6rem;
   border-radius: var(--stats-radius);
   background: var(--surface-soft);
   overflow: hidden;
   font-size: .85rem;
   animation: slide-in .5s cubic-bezier(.22, 1, .36, 1) both;
   animation-delay: calc(var(--i, 0) * 70ms);
+  transition: opacity .15s ease, background-color .15s ease;
 }
+
+/* La fila ENTERA es el control: el objetivo tiene el ancho de la tarjeta, así que se acierta con el dedo a la
+   primera. La rejilla de tres columnas vive aquí y no en el `li`, que se queda con el fondo, el redondeo y la
+   barra de relleno (que va por debajo del botón, no dentro). */
+.shine-row {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  align-items: center;
+  gap: .5rem;
+  width: 100%;
+  padding: .55rem .6rem;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.shine-row:focus-visible {
+  outline: 2px solid var(--steam);
+  outline-offset: -2px;
+  border-radius: var(--stats-radius);
+}
+
+/* Señalada: sube el fondo y el relleno gana cuerpo, para poder leerla contra la guía de la media sin que las
+   otras cinco barras compitan. Las demás se apartan sin desaparecer: la comparación sigue siendo el objetivo. */
+.shine-rows li.is-active { background: var(--surface-elevated); }
+.shine-rows li.is-active .shine-fill { opacity: .5; }
+.shine-rows li.is-dim { opacity: .5; }
 
 /* Los cinco tramos de estrella, marcados sobre la fila entera y no sobre el relleno: son la referencia fija
    contra la que se lee cada barra. */
@@ -2203,12 +2304,36 @@
 /* La columna de puntos no se estira: con `1fr` la cifra se iba al borde derecho de la tarjeta y quedaba a
    medio metro de los puntos que resume. */
 .dot-matrix li {
+  font-size: .82rem;
+  transition: opacity .15s ease;
+}
+
+/* La fila entera es el control; la rejilla pasa al botón, que se despoja de su apariencia y conserva el foco. */
+.dot-matrix-row {
   display: grid;
   grid-template-columns: minmax(4.5rem, 8rem) minmax(0, 18rem) auto;
   justify-content: start;
   align-items: center;
   gap: .7rem;
-  font-size: .82rem;
+  width: 100%;
+  min-height: 1.6rem;
+  padding: .1rem .3rem;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color .15s ease;
+}
+
+.dot-matrix li.is-active .dot-matrix-row { background: var(--overlay-hover); }
+.dot-matrix li.is-dim { opacity: .5; }
+
+.dot-matrix-row:focus-visible {
+  outline: 2px solid var(--steam);
+  outline-offset: -2px;
 }
 
 .dot-matrix-tag {
@@ -2468,16 +2593,38 @@
   transition: filter .15s ease, transform .15s ease;
 }
 
-.polar-sector:hover {
+.polar-sector:hover,
+.polar-sector.is-active {
   filter: brightness(1.18) saturate(1.1);
 }
 
+/* Los sectores son controles: se recorren con el tabulador y se fijan con un toque (ver `useChartFocus`). */
+.polar-sector {
+  cursor: pointer;
+  transition: filter .15s ease, opacity .15s ease;
+}
+
+.polar-sector.is-dim { opacity: .4; }
+
+.polar-sector:focus-visible {
+  outline: none;
+  stroke: var(--text);
+  stroke-width: 2;
+  paint-order: stroke fill;
+}
+
 .beeswarm-dot:hover,
-.timeline-dot:hover {
+.beeswarm-dot.is-active,
+.timeline-dot:hover,
+.timeline-dot.is-active {
   transform: scale(1.9);
   z-index: 2;
   filter: brightness(1.2);
 }
+
+/* En un enjambre saturado, apagar el resto es lo único que deja ver DÓNDE está el punto que se está leyendo. */
+.beeswarm-dot.is-dim,
+.timeline-dot.is-dim { opacity: .3; }
 
 .dumbbell li,
 .tag-ranking li,

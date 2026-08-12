@@ -41,6 +41,7 @@ import {
   loadAdminCensus,
   purgeFossilFriendshipRequests,
   purgeLegacyProfileFields,
+  setUserDisplayName,
   setUserSocialEnabled,
   setUserTier,
 } from '../../src/model/repository/firebaseAdminRepository';
@@ -747,5 +748,47 @@ describe('purgeFossilFriendshipRequests', () => {
 
     expect(result.ok).toBe(false);
     expect(result.touched).toBe(0);
+  });
+});
+
+describe('setUserDisplayName', () => {
+  beforeEach(() => {
+    getDocsMock.mockReset();
+    updateDocMock.mockClear();
+    deleteDocMock.mockClear();
+  });
+
+  it('escribe el nombre en el perfil y lo propaga a sus amistades', async () => {
+    getDocsMock.mockResolvedValue(snapshotOf([
+      docOf('a__b', { users: ['a', 'b'], requester: 'a', recipient: 'b', requesterName: 'Ada Vieja', requesterPhoto: '' }),
+    ]));
+
+    const result = await setUserDisplayName('a', 'a', 'Ada Nueva', 'https://f/a.png');
+
+    expect(result.ok).toBe(true);
+    const escrituras = updateDocMock.mock.calls.map(([ref, fields]) => [(ref as { collection: string }).collection, fields]);
+    // Primero el perfil…
+    expect(escrituras[0]).toEqual(['profiles', { displayName: 'Ada Nueva' }]);
+    // …y después la amistad, con la foto del perfil (omitirla borraría la que sus amigos ya tenían).
+    expect(escrituras[1][0]).toBe('friendships');
+    expect(escrituras[1][1]).toMatchObject({ requesterName: 'Ada Nueva', requesterPhoto: 'https://f/a.png' });
+  });
+
+  it('si el perfil no se puede escribir NO propaga a las amistades', async () => {
+    // Propagar un nombre que el perfil no tiene dejaría las dos copias en desacuerdo otra vez, solo al revés.
+    updateDocMock.mockRejectedValueOnce(Object.assign(new Error('denied'), { code: 'permission-denied' }));
+    getDocsMock.mockResolvedValue(snapshotOf([]));
+
+    const result = await setUserDisplayName('a', 'a', 'Ada Nueva', '');
+
+    expect(result.ok).toBe(false);
+    expect(result.failures[0]).toMatch(/administrador/);
+    expect(getDocsMock).not.toHaveBeenCalled();
+  });
+
+  it('rechaza un nombre vacío y el placeholder', async () => {
+    expect((await setUserDisplayName('a', 'a', '   ', '')).ok).toBe(false);
+    expect((await setUserDisplayName('_placeholder', 'a', 'X', '')).ok).toBe(false);
+    expect(updateDocMock).not.toHaveBeenCalled();
   });
 });

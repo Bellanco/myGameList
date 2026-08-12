@@ -392,6 +392,38 @@ export const AdminHub = memo(function AdminHub() {
                       {staleNames.length > 0 ? (
                         <p className="admin-warning">{A.field.nameMismatchHint}</p>
                       ) : null}
+                      {/* DESEMPATE A MANO: los nombres en circulación, cada uno con su origen, para elegir el bueno.
+                          El panel no puede saberlo (el nick vive en el gist), pero quien mira sí puede decidirlo. */}
+                      {staleNames.length > 0 ? (
+                        <div className="admin-name-choice" role="group" aria-label={A.chooseName.title}>
+                          <span className="admin-field-label">{A.chooseName.title}</span>
+                          <p className="admin-card-note">{A.chooseName.hint}</p>
+                          <div className="admin-actions">
+                            {[
+                              { value: user.displayName.trim(), origin: A.chooseName.current },
+                              ...staleNames.map((known) => ({ value: known, origin: A.chooseName.fromFriends })),
+                            ]
+                              .filter((option) => option.value)
+                              .map((option) => (
+                                <button
+                                  key={`${option.origin}-${option.value}`}
+                                  type="button"
+                                  className="btn btn-secondary"
+                                  disabled={busy}
+                                  aria-label={A.chooseName.btnAria(option.value, name)}
+                                  onClick={() =>
+                                    setPending({
+                                      title: A.chooseName.confirm(name, option.value),
+                                      run: () => void vm.chooseDisplayName(user, option.value),
+                                    })
+                                  }
+                                >
+                                  {`${A.chooseName.btn(option.value)} — ${option.origin}`}
+                                </button>
+                              ))}
+                          </div>
+                        </div>
+                      ) : null}
                       <button
                         type="button"
                         className="btn btn-secondary"

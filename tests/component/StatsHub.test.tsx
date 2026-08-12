@@ -193,7 +193,9 @@ describe('StatsHub · figura de géneros', () => {
       ],
     })} />, { wrapper: MemoryRouter });
 
-    const figure = screen.getByRole('img', { name: /Figura de géneros por afinidad/ });
+    // La figura es un `group` y no un `img`: cada eje es un control que se puede señalar y fijar, y con `img` un
+    // lector de pantalla se saltaría su contenido. El resumen sigue siendo el nombre accesible del grupo.
+    const figure = screen.getByRole('group', { name: /Figura de géneros por afinidad/ });
     const label = figure.getAttribute('aria-label') || '';
     expect(label).toContain('Acción: afinidad 1');
     // Peso exponencial: dos juegos de 1★ suman 0,125, que redondeado a una decimal es 0,1.
@@ -243,6 +245,81 @@ describe('StatsHub · listas sin año', () => {
   });
 });
 
+describe('StatsHub · el resto de figuras también se pueden señalar', () => {
+  const RICH = tabData({
+    c: [
+      game({ id: 1, name: 'Uno', grade: 90, hours: 30, genres: ['RPG'], platforms: ['PC'], years: [2024] }),
+      game({ id: 2, name: 'Dos', grade: 60, hours: 10, genres: ['Acción'], platforms: ['PC'], years: [2024] }),
+      game({ id: 3, name: 'Tres', grade: 40, hours: 4, genres: ['Puzles'], platforms: ['Switch'], years: [2023] }),
+    ],
+    v: [game({ id: 4, name: 'Cuatro', grade: 20, hours: 2, genres: ['Terror'] })],
+  });
+
+  /** El pie de una figura concreta, que es donde cada una cuenta el dato de la parte señalada. */
+  const detailIn = (selector: string) => document.querySelector(`${selector} .chart-detail`) as HTMLElement;
+
+  it('el hexágono de géneros suelta el dato que solo estaba en su texto accesible', async () => {
+    render(<StatsHub games={RICH} />, { wrapper: MemoryRouter });
+
+    const radar = document.querySelector('.genre-radar') as HTMLElement;
+    // En reposo habla del eje que manda, que es el de más afinidad (RPG, con el 90).
+    expect(detailIn('.genre-radar')).toHaveTextContent('RPG');
+
+    const puzles = within(radar).getByRole('button', { name: /^Puzles/ });
+    await userEvent.click(puzles);
+
+    expect(puzles).toHaveAttribute('aria-pressed', 'true');
+    // Afinidad, juegos y nota media: lo que la silueta no puede decir.
+    expect(detailIn('.genre-radar')).toHaveTextContent('Puzles');
+    expect(detailIn('.genre-radar')).toHaveTextContent('nota media 40');
+  });
+
+  it('el rosetón de géneros más jugados añade las horas, que el radio no cuenta', async () => {
+    render(<StatsHub games={RICH} />, { wrapper: MemoryRouter });
+
+    const rose = document.querySelector('.polar-rose') as HTMLElement;
+    const rpg = within(rose).getByRole('button', { name: /^RPG/ });
+    await userEvent.click(rpg);
+
+    expect(detailIn('.polar-rose')).toHaveTextContent('RPG');
+    expect(detailIn('.polar-rose')).toHaveTextContent('30 h');
+  });
+
+  it('los contadores del cuadro de mandos dicen su porcentaje al señalarlos', async () => {
+    render(<StatsHub games={RICH} />, { wrapper: MemoryRouter });
+
+    const completados = screen.getByRole('button', { name: L.ratio.completed });
+    expect(completados).toHaveTextContent(L.ratio.completed);
+    // En reposo no hay porcentaje: tres cifras por contador serían un panel de instrumentos de más.
+    expect(completados).not.toHaveTextContent('%');
+
+    await userEvent.click(completados);
+
+    // Tres completados de cuatro decididos: 75%.
+    expect(completados).toHaveAttribute('aria-pressed', 'true');
+    expect(completados).toHaveTextContent('75%');
+    expect(document.querySelector('.gauge-subs li.is-dim')).toBeInTheDocument();
+  });
+
+  it('las filas de "Dónde brillas" se aíslan para poder compararlas con la media', async () => {
+    render(<StatsHub games={tabData({
+      // Tres juegos por género: el mínimo para que un género entre en el ranking de notas.
+      c: ['RPG', 'Acción'].flatMap((genre, at) => [0, 1, 2].map((n) => (
+        game({ id: at * 10 + n, name: `${genre} ${n}`, grade: 60 + at * 20, genres: [genre], years: [2024] })
+      ))),
+    })} />, { wrapper: MemoryRouter });
+
+    // Dentro de las filas: el mismo género es señalable en las otras figuras de la pantalla.
+    const row = within(document.querySelector('.shine-rows') as HTMLElement).getByRole('button', { name: /^RPG/ });
+    await userEvent.click(row);
+
+    expect(row).toHaveAttribute('aria-pressed', 'true');
+    expect(row.closest('li')).toHaveClass('is-active');
+    // Y la otra fila se aparta, que es justo lo que permite leer una sola contra la guía de la media.
+    expect(document.querySelector('.shine-rows li.is-dim')).toBeInTheDocument();
+  });
+});
+
 describe('StatsHub · evolución del backlog', () => {
   // El modo ya no se anuncia con un texto al pie (se retiró la nota de la aproximación), así que se comprueba
   // por `data-mode`, que es el marcador que existe justamente para poder distinguirlos.
@@ -251,6 +328,24 @@ describe('StatsHub · evolución del backlog', () => {
 
     await waitFor(() => expect(document.querySelector('.backlog')).toHaveAttribute('data-mode', 'derived'));
     expect(screen.queryByText(L.backlog.realNote)).not.toBeInTheDocument();
+  });
+
+  it('apila las listas del recorrido: próximos abajo y completados coronando el área', async () => {
+    render(<StatsHub games={SAMPLE} />, { wrapper: MemoryRouter });
+
+    await waitFor(() => expect(document.querySelector('.backlog')).toBeInTheDocument());
+    // El primer relleno del grupo es la banda que se apoya en el eje, y el último la que corona.
+    const bands = [...document.querySelectorAll('.backlog-fill')].map((band) => band.getAttribute('class'));
+    expect(bands).toEqual(['backlog-fill is-p', 'backlog-fill is-e', 'backlog-fill is-v', 'backlog-fill is-c']);
+
+    // La leyenda NO se invierte: va en el orden canónico de la app, que es además el de las bandas de arriba abajo.
+    const legend = [...document.querySelectorAll('.stats-legend .stats-legend-dot')].map((dot) => dot.getAttribute('class'));
+    expect(legend).toEqual([
+      'stats-legend-dot is-c',
+      'stats-legend-dot is-v',
+      'stats-legend-dot is-e',
+      'stats-legend-dot is-p',
+    ]);
   });
 
   it('el histórico real sustituye a la aproximación en cuanto hay dos meses registrados', async () => {
@@ -297,20 +392,25 @@ describe('StatsHub · figuras interactivas del podio', () => {
     // Y el resto de segmentos se apartan en vez de competir por la mirada.
     expect(document.querySelectorAll('.donut-seg.is-dim').length).toBeGreaterThan(0);
 
+    // Soltarla deja de fijarla; el centro no vuelve al total hasta que el puntero se va, porque mientras siga
+    // encima lo que se está señalando sigue siendo "PC".
     await userEvent.click(pc);
     expect(pc).toHaveAttribute('aria-pressed', 'false');
+    await userEvent.unhover(pc);
     expect(center).toHaveTextContent(L.top.donutCenter);
   });
 
   it('el rosetón de géneros dice la parte exacta de la porción señalada, y se alcanza con el teclado', async () => {
     render(<StatsHub games={TOP} />, { wrapper: MemoryRouter });
 
-    const detail = document.querySelector('.burst-detail') as HTMLElement;
+    // El pie del reparto es el mismo componente en todas las figuras (`ChartDetail`); aquí solo hay uno.
+    const detail = document.querySelector('.burst .chart-detail') as HTMLElement;
     // El pie está siempre (si apareciera al señalar, la tarjeta daría un salto): sin nada, el total.
     expect(detail).toHaveTextContent(L.genres.games(4));
 
-    // Las porciones son botones: se activan con Intro, no solo con el ratón.
-    const rpg = screen.getByRole('button', { name: /^RPG/ });
+    // Las porciones son botones: se activan con Intro, no solo con el ratón. Se busca DENTRO del rosetón abierto:
+    // el mismo género es señalable en otras tres figuras de la pantalla (el hexágono, el rosetón polar…).
+    const rpg = within(document.querySelector('.burst') as HTMLElement).getByRole('button', { name: /^RPG/ });
     rpg.focus();
     await userEvent.keyboard('{Enter}');
 

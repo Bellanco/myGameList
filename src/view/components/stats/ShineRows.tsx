@@ -1,5 +1,6 @@
 import { memo, type CSSProperties } from 'react';
 import { useStatsLabels } from './statsVoice';
+import { useChartFocus } from './useChartFocus';
 import { GRADE_MAX } from '../../../core/utils/scoreScale';
 import { formatDecimal } from './format';
 import type { ScoreScale } from '../../../core/utils/scoreScale';
@@ -25,9 +26,15 @@ interface ShineRowsProps {
  *
  * Encima del relleno van marcados los cinco tramos de estrella y, cruzando todas las filas, la guía de tu media
  * global: son las dos referencias que convierten un porcentaje en una lectura.
+ *
+ * SE PUEDE TOCAR: al señalar una fila, esa fila se destaca y las demás se apartan. No hay dato nuevo que enseñar
+ * —la fila ya lleva su nota y su diferencia—, y justo por eso lo que faltaba era poder AISLARLA: seis rellenos que
+ * se cruzan con la misma guía vertical se comparan mucho mejor de uno en uno. Cada fila es un botón, así que la
+ * comparación también se hace con el tabulador y con el dedo, no solo con el ratón.
  */
 export const ShineRows = memo(function ShineRows({ rows, average, scale, limit = 6 }: ShineRowsProps) {
   const L = useStatsLabels().top;
+  const focus = useChartFocus();
   if (rows.length === 0) return null;
 
   const shown = rows.slice(0, limit);
@@ -40,20 +47,28 @@ export const ShineRows = memo(function ShineRows({ rows, average, scale, limit =
         {shown.map((row, index) => {
           const delta = row.avgGrade - average;
           return (
-            <li key={row.tag} style={{ '--i': index } as CSSProperties}>
+            <li key={row.tag} className={focus.stateOf(row.tag).trim()} style={{ '--i': index } as CSSProperties}>
+              {/* Toda la fila es el control: es lo que se quiere señalar, y un objetivo del ancho de la tarjeta se
+                  acierta con el dedo a la primera. La barra del fondo va por debajo del botón, no dentro. */}
               <span className="shine-fill" style={{ width: `${at(row.avgGrade)}%` }} aria-hidden="true" />
-              <span className="shine-tag" title={row.tag}>{row.tag}</span>
-              <span className="shine-count">{L.genreCount(row.games)}</span>
-              <span className="shine-value">
-                <b>{inScale(row.avgGrade)}</b>
-                {/* La diferencia contra tu media es la lectura que importa: "84" no dice nada; "+6" sí. */}
-                {Math.abs(delta) >= NOISE ? (
-                  <em className={delta >= 0 ? 'is-over' : 'is-under'}>
-                    {delta >= 0 ? '+' : '−'}
-                    {inScale(Math.abs(delta))}
-                  </em>
-                ) : null}
-              </span>
+              <button
+                type="button"
+                className="shine-row"
+                {...focus.buttonProps(row.tag)}
+              >
+                <span className="shine-tag" title={row.tag}>{row.tag}</span>
+                <span className="shine-count">{L.genreCount(row.games)}</span>
+                <span className="shine-value">
+                  <b>{inScale(row.avgGrade)}</b>
+                  {/* La diferencia contra tu media es la lectura que importa: "84" no dice nada; "+6" sí. */}
+                  {Math.abs(delta) >= NOISE ? (
+                    <em className={delta >= 0 ? 'is-over' : 'is-under'}>
+                      {delta >= 0 ? '+' : '−'}
+                      {inScale(Math.abs(delta))}
+                    </em>
+                  ) : null}
+                </span>
+              </button>
             </li>
           );
         })}

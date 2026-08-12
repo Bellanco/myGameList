@@ -651,6 +651,56 @@ export async function healUserFriendshipIdentity(
 }
 
 /**
+ * Fija el nombre público de un usuario: lo escribe en su perfil Y lo propaga a sus documentos de amistad, para que
+ * las dos copias que el panel puede alcanzar queden de acuerdo.
+ *
+ * PARA QUÉ SIRVE Y HASTA DÓNDE LLEGA, sin adornos. Cuando el perfil y las amistades discrepan, el panel no puede
+ * saber cuál es el nick vigente: ese dato vive en el GIST social del usuario y leerlo exige su token. Esta acción es
+ * el desempate a mano del administrador, que sí ve los dos valores y puede decidir.
+ *
+ * Lo que NO puede hacer: escribir en su gist. Así que si el gist dice otra cosa, su propio cliente volverá a imponer
+ * el del gist en cuanto abra el espacio social (`repairProfileDisplayName`), y hará bien: el nick es del usuario, no
+ * del administrador. Esto vale para dejar el directorio coherente ahora y, sobre todo, para quien ya no vuelve.
+ */
+export async function setUserDisplayName(
+  profileDocId: string,
+  uid: string,
+  displayName: string,
+  /** Foto que conserva el perfil. Va con el nombre porque el saneado escribe los dos campos en la misma escritura;
+   *  omitirla borraría la foto que sus amigos ya tenían. */
+  photoURL: string,
+): Promise<AdminFriendshipSweepResult> {
+  const cleanId = String(profileDocId || '').trim();
+  const cleanName = String(displayName || '').trim();
+  if (!cleanId || cleanId === PLACEHOLDER_ID) {
+    return { ok: false, failures: ['Identificador de perfil no válido'], touched: 0, scanned: 0 };
+  }
+  if (!cleanName) {
+    return { ok: false, failures: ['No se indicó ningún nombre'], touched: 0, scanned: 0 };
+  }
+
+  const services = await requireServices();
+  const failures: string[] = [];
+
+  try {
+    await updateDoc(doc(services.firestore, 'profiles', cleanId), { displayName: cleanName });
+  } catch (error) {
+    // Si el perfil no se puede escribir, no se sigue: propagar a las amistades un nombre que el perfil no tiene
+    // dejaría las dos copias en desacuerdo otra vez, solo al revés.
+    return { ok: false, failures: [describe(toAdminError(error, 'escribir el nombre del perfil'))], touched: 0, scanned: 0 };
+  }
+
+  invalidateOwnProfileCache(cleanId);
+  invalidateSocialDirectoryCache();
+
+  // La foto va tal cual está en el perfil: esta acción es del NOMBRE, y el saneado escribe los dos campos juntos
+  // porque es una sola escritura por documento.
+  const sweep = await healUserFriendshipIdentity(uid, { name: cleanName, photoURL });
+  failures.push(...sweep.failures);
+  return { ok: failures.length === 0, failures, touched: sweep.touched, scanned: sweep.scanned };
+}
+
+/**
  * Borra las solicitudes de amistad que ESE usuario envió, siguen pendientes y llevan más de `FOSSIL_PENDING_MS`
  * (180 días) sin que nadie las acepte.
  *

@@ -850,6 +850,23 @@ export const ADMIN_PANEL_UI = {
         : `Identidad propagada a ${touched} amistad(es).`,
     partial: 'Propagación incompleta: revisa la consola para el detalle.',
   },
+  // Desempate del nombre cuando el perfil y las amistades no coinciden. El administrador ve los dos valores y
+  // decide; el panel no puede decidirlo por él (el nick vigente vive en el gist del usuario).
+  chooseName: {
+    title: 'Qué nombre es el correcto',
+    hint: 'El perfil y sus amistades no dicen lo mismo, y desde aquí no se puede saber cuál es el vigente: el nick lo escribe su dueño en su gist social, que este panel no lee. Elige uno y se escribirá en su perfil y en sus amistades. Si el gist dice otra cosa, su propio cliente volverá a imponerlo al abrir el espacio social —el nombre es suyo—, así que esto sirve sobre todo para dejar el directorio coherente y para quien ya no vuelve.',
+    btn: (name: string) => `Usar «${name}»`,
+    btnAria: (name: string, user: string) => `Usar «${name}» como nombre de ${user}`,
+    current: 'en su perfil',
+    fromFriends: 'según sus amistades',
+    confirm: (user: string, name: string) =>
+      `¿Fijar «${name}» como nombre de ${user}? Se escribe en su perfil y en sus documentos de amistad.`,
+    ok: (name: string, touched: number) =>
+      touched > 0
+        ? `Nombre fijado en «${name}» (perfil + ${touched} amistad(es)).`
+        : `Nombre fijado en «${name}» en su perfil; sus amistades ya estaban de acuerdo.`,
+    partial: 'No se pudo fijar el nombre del todo: revisa la consola para el detalle.',
+  },
   // Purga de solicitudes fosilizadas (enviadas por él, pendientes, +180 días).
   fossil: {
     title: 'Solicitudes fosilizadas',
