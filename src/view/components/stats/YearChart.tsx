@@ -1,11 +1,10 @@
 import { memo, useId, type CSSProperties } from 'react';
 import { UI_MESSAGES } from '../../../core/constants/labels';
+import { useStatsLabels } from './statsVoice';
 import type { YearBucket } from '../../../core/stats/types';
 import type { YearMetric } from '../../../viewmodel/useStatsViewModel';
 import type { ScoreScale } from '../../../core/utils/scoreScale';
 import { formatCount, formatHours } from './format';
-
-const L = UI_MESSAGES.stats.years;
 
 /** Cuántas etiquetas de año caben en el eje sin apelotonarse (en pantalla estrecha, el CSS aún quita la mitad). */
 const AXIS_LABELS = 8;
@@ -47,7 +46,9 @@ function valueOf(bucket: YearBucket, metric: YearMetric): number {
  */
 const BANDS = [5, 4, 3, 2, 1].map((stars) => ({
   key: `s${stars}`,
-  label: L.quality.stars(stars),
+  // Las estrellas de la tira no tienen voz —son una escala, no una frase—, así que este rótulo no depende de si
+  // el panel habla de ti o de otra persona y puede quedarse a nivel de módulo.
+  label: UI_MESSAGES.stats.years.quality.stars(stars),
   of: (bucket: YearBucket) => bucket.stars[stars - 1],
 }));
 
@@ -79,6 +80,7 @@ function curveThrough(points: Array<{ x: number; y: number }>): string {
  * (`useRevealOnScroll` la mantiene en pausa hasta que se llega a ella) y desaparece con `prefers-reduced-motion`.
  */
 export const YearChart = memo(function YearChart({ years, metric, onMetricChange, switchable = true, onSelectYear, scale = 'stars' }: YearChartProps) {
+  const L = useStatsLabels().years;
   const grade = scale === 'grade';
   // Un id por instancia: el degradado del área es un `<defs>` y en el panel de un amigo hay otro gráfico igual.
   const fillId = useId();

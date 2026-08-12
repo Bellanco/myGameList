@@ -24,7 +24,12 @@
 // detallarlo además chocaría con la decisión de producto de que un rango sin permiso de publicación no muestre
 // aviso alguno. Pero el dato en sí no puede omitirse: `profiles.tier` vive en un documento que lee cualquier
 // usuario autenticado (Firestore no filtra por campo) y su nombre se expone en la ficha del perfil.
-export const LEGAL_VERSION = '2026-08-02';
+// 2026-08-12: se declara el alcance de la cuenta de administración sobre los ajustes de visibilidad. El panel de
+// estadísticas pasa a ser UNO para tu perfil y para el de otra persona, y con él la administración ve de sus
+// amistades lo mismo que ve de sí misma, incluidas las listas escondidas y las marcas de «rejugable» y «merece otra
+// oportunidad»; el tiempo de juego queda fuera de la excepción. El tono del párrafo es a propósito tranquilo: es un
+// dato que hay que dar, no una advertencia. Cambia lo que otros ven de ti, así que se vuelve a pedir conformidad.
+export const LEGAL_VERSION = '2026-08-12';
 
 // Correo de CONTACTO publicado en los documentos. A propósito distinto del de la cuenta de administración de
 // `firestore.rules` (`isAdmin`): son la misma persona, pero separar buzones evita mezclar avisos legales y
@@ -176,6 +181,7 @@ const PRIVACY: LegalDocument = {
         'La persona que administra el servicio, que por necesidad técnica tiene acceso de administración a la base de datos: puede consultar los perfiles, asignar el rango, desactivar la parte social de un perfil y eliminarlo. No puede leer el documento privado donde se guardan tu token cifrado y los identificadores de tus Gists, que solo lee su dueño.',
       ],
       paragraphs: [
+        'Tus ajustes de visibilidad —esconder una lista, la marca de «rejugable» o la de «merece otra oportunidad»— valen para todas tus amistades. La cuenta desde la que se administra el servicio es la única excepción, porque el mantenimiento y el soporte se hacen desde ella: en los perfiles de sus amistades ve las listas completas. Tus horas de juego quedan fuera de esa excepción: si eliges ocultarlas, no las ve nadie.',
         'Conviene entender qué hay en tu canal social y qué no: contiene tu nick, tus preferencias de visibilidad y, por cada reseña, el nombre del juego, la nota y un fragmento de hasta 160 caracteres del texto. Tu biblioteca completa, tus reseñas enteras y tus horas de juego NO están ahí: viven en otro Gist que la app crea como secreto y cuyo identificador solo se comparte con tus amistades.',
         'Ten en cuenta que «secreto» en GitHub no significa privado, sino no listado: quien tenga el identificador de un Gist puede leerlo aunque no aparezca en tu perfil de GitHub ni en los buscadores. Por eso ni el identificador de tu biblioteca ni el de tu canal social se publican ya en tu perfil: solo se comparten con las personas con las que tienes amistad.',
         'Estos proveedores pueden tratar los datos fuera del Espacio Económico Europeo, amparados en las cláusulas contractuales tipo o los marcos de adecuación de sus respectivos programas.',

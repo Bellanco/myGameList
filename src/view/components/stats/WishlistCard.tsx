@@ -1,5 +1,5 @@
 import { memo } from 'react';
-import { UI_MESSAGES } from '../../../core/constants/labels';
+import { useStatsLabels } from './statsVoice';
 import { StatTile } from './StatTile';
 import { CountUp } from './CountUp';
 import { PolarRose } from './PolarRose';
@@ -8,8 +8,6 @@ import { WaitingTimeline } from './WaitingTimeline';
 import { formatDecimal } from './format';
 import type { WishlistSummary } from '../../../core/stats/types';
 import type { ScoreScale } from '../../../core/utils/scoreScale';
-
-const L = UI_MESSAGES.stats.wishlist;
 
 /**
  * Apartado de la lista de próximos. También es de "General": un juego que aún no has jugado no pertenece a
@@ -22,9 +20,15 @@ export const WishlistCard = memo(function WishlistCard({
 }: {
   wishlist: WishlistSummary;
   scale: ScoreScale;
-  /** Vista de un perfil ajeno: la fecha de llegada a la lista no viaja, así que no hay línea de tiempo. */
+  /**
+   * Calculado con la proyección pública: la fecha de llegada a la lista no viaja por ese canal, así que no hay
+   * línea de tiempo que dibujar (ver `friendStatsData`).
+   */
   publicOnly?: boolean;
 }) {
+  const labels = useStatsLabels();
+  const L = labels.wishlist;
+  const TILES = labels.tiles;
   if (wishlist.total === 0) {
     return <p className="stats-empty">{L.empty}</p>;
   }
@@ -39,7 +43,7 @@ export const WishlistCard = memo(function WishlistCard({
           <StatTile
             label={L.interest}
             value={<CountUp value={avgInScale} format={formatDecimal} />}
-            unit={scale === 'grade' ? UI_MESSAGES.stats.tiles.outOf100 : UI_MESSAGES.stats.tiles.outOf5}
+            unit={scale === 'grade' ? TILES.outOf100 : TILES.outOf5}
             hint={L.interestHint(wishlist.interest.count)}
           />
         ) : null}

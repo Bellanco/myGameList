@@ -116,10 +116,9 @@ describe('mergeCrdt', () => {
  * Phase 0 — characterization & known-bug tests for the CRDT merge.
  *
  * These pin down the risky paths flagged in the remediation audit. Some assert
- * the CURRENT (buggy) behavior so a later fix surfaces here; the genuine bugs that
- * are fixable INSIDE mergeCrdt are written with `it.fails` — they pass today
- * (because the correct assertion fails) and will START failing once Phase 2 fixes
- * them, which is the signal to flip `it.fails` → `it`.
+ * the CURRENT behavior of bugs whose fix lives OUTSIDE mergeCrdt (marked CHAR), so a later fix surfaces here.
+ * The bugs that were fixable inside mergeCrdt (H1, H2) are fixed: their tests now assert the correct behavior
+ * directly, so no `it.fails` markers are left in this file.
  */
 describe('mergeCrdt — Phase 0 risky paths', () => {
   // ---- Correct behavior that already holds (regression guards) ----
@@ -224,15 +223,76 @@ describe('mergeCrdt — Phase 0 risky paths', () => {
     expect(result.localNeedsUpdate).toBe(true);
   });
 
-  it.fails('BUG (H2): an edit-vs-delete tie must preserve the tombstone', () => {
-    // Delete (_ts=100) races an edit (_ts=100). `maxDelTs > maxItemTs` is strict, so the
-    // tombstone is dropped and a later independent delete has nothing to merge against.
+  // ---- H2 (fixed): an edit-vs-delete tie keeps the tombstone ----
+
+  it('H2 (was BUG): an edit-vs-delete tie preserves the tombstone and drops the live copy', () => {
+    // Delete (_ts=100) races an edit (_ts=100). The comparison used to be strict, so the tombstone was dropped and
+    // the edit survived; the deleting device then had nothing to merge against and the game came back to life.
     const local = empty();
     local.c.push(mkGame({ id: 1, _ts: 100, name: 'Edited' }));
     const remote = empty();
     remote.deleted.push({ id: 1, _ts: 100 });
 
     const result = mergeCrdt(local, 100, remote, 100);
-    expect(result.merged.deleted.some((d) => d.id === 1)).toBe(true); // FAILS today
+    expect(result.merged.deleted.some((d) => d.id === 1)).toBe(true);
+    // And the game must NOT stay in the lists: a tombstone next to a live copy is not a state, it's a bug.
+    expect(result.merged.c).toHaveLength(0);
+    // The side that still holds the live copy has to rewrite, or it keeps showing a deleted game.
+    expect(result.localNeedsUpdate).toBe(true);
+  });
+
+  it('H2: the tie resolves the SAME way whichever side is local (no ping-pong between devices)', () => {
+    // The loop the bug caused: device A resurrects what B deleted, B deletes again, A resurrects... Both views of
+    // the same pair must agree, and that is what closes it.
+    const withEdit = () => {
+      const d = empty();
+      d.c.push(mkGame({ id: 1, _ts: 100, name: 'Edited' }));
+      return d;
+    };
+    const withDelete = () => {
+      const d = empty();
+      d.deleted.push({ id: 1, _ts: 100 });
+      return d;
+    };
+
+    const fromEditor = mergeCrdt(withEdit(), 100, withDelete(), 100);
+    const fromDeleter = mergeCrdt(withDelete(), 100, withEdit(), 100);
+
+    expect(fromEditor.merged.c).toHaveLength(0);
+    expect(fromDeleter.merged.c).toHaveLength(0);
+    expect(fromEditor.merged.deleted).toEqual(fromDeleter.merged.deleted);
+  });
+
+  it('H2: merging the result again is stable — the tombstone is not lost on the second pass', () => {
+    // The real damage was here: with the tombstone gone, a later independent delete had nothing to merge against.
+    //
+    // Timestamps must be RECENT: once there is no live copy left, E1 purges tombstones older than the retention
+    // window, so a 1970-era `_ts` (like the other tests use) would be dropped for a different, legitimate reason
+    // and this test would pass or fail for the wrong one.
+    const ahora = Date.now();
+    const local = empty();
+    local.c.push(mkGame({ id: 1, _ts: ahora, name: 'Edited' }));
+    const remote = empty();
+    remote.deleted.push({ id: 1, _ts: ahora });
+
+    const first = mergeCrdt(local, ahora, remote, ahora);
+    const second = mergeCrdt(first.merged, first.merged.updatedAt, remote, ahora);
+
+    expect(second.merged.deleted.some((d) => d.id === 1)).toBe(true);
+    expect(second.merged.c).toHaveLength(0);
+    // Nothing left to reconcile once both sides carry the same tombstone and no live copy.
+    expect(second.localNeedsUpdate).toBe(false);
+  });
+
+  it('H2: a strictly newer edit still wins over an older delete (the tie rule is only for ties)', () => {
+    // Guard against over-correcting: `>=` must not swallow legitimate resurrections.
+    const local = empty();
+    local.c.push(mkGame({ id: 1, _ts: 101, name: 'Edited after the delete' }));
+    const remote = empty();
+    remote.deleted.push({ id: 1, _ts: 100 });
+
+    const result = mergeCrdt(local, 101, remote, 100);
+    expect(result.merged.c).toHaveLength(1);
+    expect(result.merged.deleted).toHaveLength(0);
   });
 });

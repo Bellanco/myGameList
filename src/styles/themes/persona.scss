@@ -370,3 +370,10 @@
 /* Las cifras destacadas, en cursiva pop y con la caja sesgada del tema. */
 :root[data-palette="persona"] .stat-tile-value { font-style: italic; letter-spacing: -.02em; }
 :root[data-palette="persona"] .stat-tile:hover { transform: translateY(-2px) skewX(-1.5deg); }
+
+/* ── AVATAR SIN FOTO: trazo GRUESO y redondeado, como el entintado de una viñeta. Es la misma mano que
+   firma los chips y los botones de este tema. ── */
+:root[data-palette="persona"] {
+  --deco-avatar-stroke: 2.4;
+  --deco-avatar-cap: round;
+}

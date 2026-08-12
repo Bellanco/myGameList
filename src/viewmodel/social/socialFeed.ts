@@ -5,6 +5,7 @@
 // de mover porque no hace E/S ni toca la sincronización — todo lo que produce sale del directorio ya hidratado
 // más su propio contador de paginación.
 import { useCallback, useMemo, useState } from 'react';
+import { localDayKey, startOfLocalDay } from '../../core/utils/dateTime';
 import { normalizeTimestamp as toSafeTimestamp } from '../../core/utils/normalize';
 import type { SocialActivityEntry, SocialPostEntry } from '../../model/repository/socialGistRepository';
 
@@ -38,6 +39,7 @@ export type SocialFeedItem =
 /** Un día del feed agrupado, tal y como lo pinta la pantalla. */
 export type SocialFeedDayGroup = {
   dayHeader: string;
+  /** Medianoche LOCAL del día del grupo (el día se decide en la zona del dispositivo, no en UTC). */
   dayDate: Date;
   items: SocialFeedItem[];
 };
@@ -68,6 +70,9 @@ const FEED_DAY_MONTH_NAMES = [
 /**
  * Formatea la fecha como "DD de MMM". Pura y sin capturas → a nivel de módulo
  * para que no se recree en cada render (evita invalidar el useMemo del feed).
+ *
+ * Lee la fecha con los getters LOCALES, así que el día que recibe tiene que venir también en local: por eso el
+ * agrupado usa `localDayKey`/`startOfLocalDay` y no `toISOString()`.
  */
 function formatDayHeader(date: Date): string {
   return `${date.getDate()} de ${FEED_DAY_MONTH_NAMES[date.getMonth()]}`;
@@ -105,10 +110,13 @@ export function useSocialFeed(directory: ReadonlyArray<FeedSource>): {
     // Solo los elementos visibles según la paginación (25, +25 con "Mostrar más").
     feedItems.slice(0, feedVisibleCount).forEach((item) => {
       const itemDate = new Date(toSafeTimestamp(item.updatedAt, Date.now()));
-      if (Number.isNaN(itemDate.getTime())) {
+      // Día en el calendario de QUIEN MIRA, no en Greenwich: una reseña de las 00:06 en UTC+2 es del día
+      // anterior en UTC, y agrupada así aparecía bajo la cabecera de ayer mientras su tarjeta —que sí formatea
+      // en local— mostraba la fecha de hoy.
+      const dayKey = localDayKey(itemDate);
+      if (!dayKey) {
         return;
       }
-      const dayKey = itemDate.toISOString().split('T')[0];
 
       if (!itemsByDay.has(dayKey)) {
         itemsByDay.set(dayKey, []);
@@ -117,11 +125,12 @@ export function useSocialFeed(directory: ReadonlyArray<FeedSource>): {
       itemsByDay.get(dayKey)!.push(item);
     });
 
-    const sortedDays = Array.from(itemsByDay.entries())
-      .sort((a, b) => new Date(b[0]).getTime() - new Date(a[0]).getTime());
+    // `AAAA-MM-DD` ordena igual alfabética que cronológicamente: comparar el texto evita construir Dates y, sobre
+    // todo, evita volver a parsear la clave corta (que la especificación interpreta como medianoche UTC).
+    const sortedDays = Array.from(itemsByDay.entries()).sort((a, b) => b[0].localeCompare(a[0]));
 
     sortedDays.forEach(([dayKey, items]) => {
-      const dayDate = new Date(dayKey);
+      const dayDate = startOfLocalDay(dayKey);
       groups.push({ dayHeader: formatDayHeader(dayDate), dayDate, items });
     });
 

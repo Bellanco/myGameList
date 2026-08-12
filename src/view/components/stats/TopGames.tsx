@@ -1,5 +1,5 @@
 import { memo, type CSSProperties } from 'react';
-import { UI_MESSAGES } from '../../../core/constants/labels';
+import { useStatsLabels } from './statsVoice';
 import { ScoreDisplay } from '../ScoreDisplay';
 import { ExplodedRose } from './ExplodedRose';
 import { DonutShare } from './DonutShare';
@@ -8,9 +8,6 @@ import { formatDecimal, formatHours } from './format';
 import { GRADE_MAX, hueFromGrade } from '../../../core/utils/scoreScale';
 import type { TopSummary } from '../../../core/stats/types';
 import type { ScoreScale } from '../../../core/utils/scoreScale';
-
-const L = UI_MESSAGES.stats.top;
-const REVIEWS = UI_MESSAGES.stats.reviews;
 
 /** Metal de cada puesto del podio. El oro, la plata y el bronce se leen sin explicación. */
 const MEDALS = ['gold', 'silver', 'bronze'];
@@ -50,6 +47,9 @@ interface TopGamesProps {
 }
 
 export const TopGames = memo(function TopGames({ top, scale, average, showRest = true, onOpenReview, year }: TopGamesProps) {
+  const labels = useStatsLabels();
+  const L = labels.top;
+  const REVIEWS = labels.reviews;
   if (top.sample === 0) {
     return <p className="stats-empty">{L.empty}</p>;
   }

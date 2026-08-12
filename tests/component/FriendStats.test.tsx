@@ -2,8 +2,9 @@ import { describe, expect, it, vi } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
 import { FriendStats } from '../../src/view/components/stats/FriendStats';
 import { UI_MESSAGES } from '../../src/core/constants/labels';
+import { STATS_LABELS_OTHER } from '../../src/core/constants/statsOtherLabels';
 import type { SocialSharedGame } from '../../src/model/repository/socialGistRepository';
-import type { TabId } from '../../src/model/types/game';
+import type { GameItem, TabId } from '../../src/model/types/game';
 
 // Misma razón que en StatsHub: la escala vive en un store hidratado desde Firestore y aquí solo se pinta.
 vi.mock('../../src/model/repository/scorePreferenceRepository', () => ({
@@ -11,10 +12,19 @@ vi.mock('../../src/model/repository/scorePreferenceRepository', () => ({
   subscribeScoreScale: () => () => {},
 }));
 
-const L = UI_MESSAGES.stats;
+// El panel del amigo es el MISMO que el propio, pero hablando de otra persona: los rótulos que se comprueban aquí
+// son los de la voz ajena («Lo mejor de su biblioteca»), no los de la propia.
+const L = STATS_LABELS_OTHER;
+/** Textos sin voz (nombres de lista, escalas), que son los mismos en los dos paneles. */
+const OWN = UI_MESSAGES.stats;
 
 function shared(overrides: Partial<SocialSharedGame> & { id: number; name: string }): SocialSharedGame {
   return { platforms: ['PC'], genres: ['RPG'], rating: 4, grade: 80, snippet: '', ...overrides };
+}
+
+/** Un juego del gist de LISTADOS: lo que llega al abrir el perfil de una amistad, con sus campos privados. */
+function full(overrides: Partial<GameItem> & { id: number; name: string }): GameItem {
+  return { _ts: 1, platforms: ['PC'], genres: ['RPG'], steamDeck: false, review: '', grade: 80, ...overrides };
 }
 
 const LISTS: Partial<Record<TabId, SocialSharedGame[]>> = {
@@ -24,6 +34,17 @@ const LISTS: Partial<Record<TabId, SocialSharedGame[]>> = {
   ],
   v: [shared({ id: 3, name: 'Tres', grade: 30, genres: ['Terror'] })],
   p: [shared({ id: 4, name: 'Cuatro', grade: 0, genres: ['Puzles'] })],
+};
+
+/** Las mismas listas, pero como llegan del gist de listados de una amistad: con horas, razones y fechas. */
+const ENERO = new Date(2026, 0, 12).getTime();
+const FULL_LISTS: Partial<Record<TabId, GameItem[]>> = {
+  c: [
+    full({ id: 1, name: 'Uno', grade: 90, years: [2024], hours: 30, listedAt: ENERO, review: 'Un juegazo de los que no se olvidan, con un final a la altura.' }),
+    full({ id: 2, name: 'Dos', grade: 60, genres: ['Acción'], years: [2023], hours: 10, listedAt: ENERO }),
+  ],
+  v: [full({ id: 3, name: 'Tres', grade: 30, genres: ['Terror'], hours: 4, retry: true, reasons: ['Se hace repetitivo'], listedAt: ENERO })],
+  p: [full({ id: 4, name: 'Cuatro', grade: 0, genres: ['Puzles'], listedAt: ENERO })],
 };
 
 const heading = (name: string) => screen.queryByRole('heading', { name });
@@ -60,13 +81,25 @@ describe('FriendStats · lo que ve cada rango', () => {
     expect(screen.queryByText(L.friend.tierMore)).not.toBeInTheDocument();
   });
 
-  it('de los abandonos ajenos no se enseña lo que no viaja: ni horas ni razones', () => {
+  it('habla de la otra persona, no de quien mira', () => {
+    render(<FriendStats sharedLists={LISTS} viewerTier="gold" viewerHiddenTabs={[]} />);
+
+    // El panel es el mismo, pero no dice «tu biblioteca» de la biblioteca de otro.
+    expect(heading('Lo mejor de su biblioteca')).toBeInTheDocument();
+    expect(heading(OWN.top.title)).not.toBeInTheDocument();
+    expect(heading(OWN.radar.title)).not.toBeInTheDocument();
+    // Y trae los subtítulos de cada bloque, igual que el panel propio.
+    expect(screen.getByText(L.top.subtitle)).toBeInTheDocument();
+  });
+
+  it('con solo la proyección pública no se enseña lo que no viaja: ni horas ni razones', () => {
     render(<FriendStats sharedLists={LISTS} viewerTier="mithril" viewerHiddenTabs={[]} />);
 
     expect(screen.queryByText(L.shame.hours)).not.toBeInTheDocument();
     expect(screen.queryByText(L.shame.retry)).not.toBeInTheDocument();
     expect(screen.queryByText(L.shame.reasons)).not.toBeInTheDocument();
     expect(screen.queryByText(L.shame.recent)).not.toBeInTheDocument();
+    expect(screen.queryByText(L.tiles.hours)).not.toBeInTheDocument();
   });
 
   it('solo mithril puede cambiar de periodo', () => {
@@ -79,12 +112,59 @@ describe('FriendStats · lo que ve cada rango', () => {
     // Los años salen de lo publicado: el canal social sí trae `years`.
     expect(screen.getByRole('button', { name: L.scope.yearAria(2024) })).toBeInTheDocument();
   });
+});
 
-  it('no enseña horas por ninguna parte: no viajan por el canal social', () => {
+// ── Datos completos: solo para la administración, y solo si el gist de listados ha llegado ──────────────────
+
+describe('FriendStats · con los juegos completos del amigo', () => {
+  it('mithril ve el panel entero: horas, abandonos con razones y evolución del backlog', () => {
+    render(<FriendStats sharedLists={FULL_LISTS} viewerTier="mithril" viewerHiddenTabs={[]} />);
+
+    const tiles = within(document.querySelector('.stats-tiles') as HTMLElement);
+    expect(tiles.getByText(L.tiles.hours).closest('.stat-tile')).toHaveTextContent('44');
+    expect(tiles.getByText(L.tiles.longest).closest('.stat-tile')).toHaveTextContent('Uno');
+    expect(heading(L.backlog.title)).toBeInTheDocument();
+    expect(screen.getByText(L.shame.reasons)).toBeInTheDocument();
+    expect(screen.getByText(L.shame.retry)).toBeInTheDocument();
+  });
+
+  it('sus reseñas no se pintan aquí: tienen su propio apartado en el perfil', () => {
+    render(<FriendStats sharedLists={FULL_LISTS} viewerTier="mithril" viewerHiddenTabs={[]} />);
+
+    expect(screen.queryByText(L.reviews.tile)).not.toBeInTheDocument();
+    expect(heading(L.reviews.title)).not.toBeInTheDocument();
+    expect(document.querySelector('.podium-quote')).toBeNull();
+  });
+
+  it('el rango no basta: sin gist de listados, mithril se queda en la proyección pública', () => {
     render(<FriendStats sharedLists={LISTS} viewerTier="mithril" viewerHiddenTabs={[]} />);
 
+    // Ni un cero disfrazado de dato en las piezas que dependen de los campos privados.
     expect(screen.queryByText(L.tiles.hours)).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: L.years.metricHours })).not.toBeInTheDocument();
+    expect(heading(L.backlog.title)).not.toBeInTheDocument();
+  });
+
+  it('quien no es administración no ve las horas aunque los juegos completos estén cargados', () => {
+    render(<FriendStats sharedLists={FULL_LISTS} viewerTier="gold" viewerHiddenTabs={[]} />);
+
+    expect(screen.queryByText(L.tiles.hours)).not.toBeInTheDocument();
+    expect(heading(L.backlog.title)).not.toBeInTheDocument();
+    expect(heading(L.shame.title)).not.toBeInTheDocument();
+  });
+
+  it('sin horas (las esconde) el resto del panel completo sigue en pie', () => {
+    // `applyProfileVisibility` ya las ha puesto a null antes de llegar: es lo único que se respeta frente a mithril.
+    const sinHoras = {
+      c: FULL_LISTS.c!.map((game) => ({ ...game, hours: null })),
+      v: FULL_LISTS.v!.map((game) => ({ ...game, hours: null })),
+    };
+    render(<FriendStats sharedLists={sinHoras} viewerTier="mithril" viewerHiddenTabs={[]} />);
+
+    expect(screen.queryByText(L.tiles.hours)).not.toBeInTheDocument();
+    expect(screen.queryByText(L.shame.hours)).not.toBeInTheDocument();
+    // Pero las razones de abandono y la marca de otra oportunidad sí las ve.
+    expect(screen.getByText(L.shame.reasons)).toBeInTheDocument();
+    expect(screen.getByText(L.shame.retry)).toBeInTheDocument();
   });
 });
 
@@ -92,7 +172,7 @@ describe('FriendStats · reciprocidad', () => {
   it('quien esconde una lista deja de verla, y se le dice', () => {
     render(<FriendStats sharedLists={LISTS} viewerTier="gold" viewerHiddenTabs={['v']} />);
 
-    expect(screen.getByText(L.friend.blocked(L.backlog.lists.v.toLowerCase()))).toBeInTheDocument();
+    expect(screen.getByText(L.friend.blocked(OWN.backlog.lists.v.toLowerCase()))).toBeInTheDocument();
     // Sin los abandonados, las cifras cuentan solo los dos completados. Se busca dentro de las cifras
     // destacadas: "Juegos" también rotula cosas del gráfico anual.
     const tiles = within(document.querySelector('.stats-tiles') as HTMLElement);

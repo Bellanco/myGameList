@@ -539,14 +539,23 @@
    sigue al acento y casa con cada paleta; las rampas de variedad (avatares) son un set
    propio curado. Editar un color decorativo = un solo sitio. */
 :root {
-  /* Avatares: rampa de 6 tonos; 0 y 5 siguen el acento, el resto usa los acentos semánticos.
-     Cuelgan de tokens theme-aware, así que no necesitan variante clara aparte. */
-  --deco-avatar-0-bg: var(--steam-soft);            --deco-avatar-0-fg: var(--steam-hover);
-  --deco-avatar-1-bg: rgba(var(--success-rgb),.18); --deco-avatar-1-fg: var(--fg-green);
-  --deco-avatar-2-bg: rgba(var(--warn-rgb),.18);    --deco-avatar-2-fg: var(--fg-amber);
-  --deco-avatar-3-bg: rgba(99,102,241,.18);         --deco-avatar-3-fg: var(--fg-indigo);
-  --deco-avatar-4-bg: rgba(var(--danger-rgb),.18);  --deco-avatar-4-fg: var(--fg-red);
-  --deco-avatar-5-bg: rgba(var(--steam-rgb),.18);   --deco-avatar-5-fg: var(--fg-sky);
+  /* AVATAR SIN FOTO: una silueta de persona a trazo, la MISMA para todo el mundo.
+     Sustituye a la rampa de 6 tonos por inicial: dos de esos seis tonos eran el mismo azul y el color de alguien
+     cambiaba al cambiarse el nick, así que prometía una identidad que no sostenía. Ahora el tono lo pone la paleta.
+     Todo cuelga del acento (`--steam*`, que cada paleta redefine), de modo que las cinco paletas y el modo claro se
+     visten solos; cada skin ajusta el TRAZO, que es donde se le nota la mano. */
+  --deco-avatar-bg: linear-gradient(155deg, rgba(var(--steam-rgb),.20), rgba(var(--steam-rgb),.07));
+  /* Trazo: el acento, subido hacia el color de texto para que no se apague sobre el disco tintado. `--text` y no
+     `--fg` (que no existe en este proyecto): un `var()` inexistente invalida el `color-mix` entero y el trazo caería
+     al color heredado, gris y sin teñir. */
+  --deco-avatar-line: color-mix(in srgb, var(--steam) 74%, var(--text));
+  --deco-avatar-ring: rgba(var(--steam-rgb),.34);
+  /* Grosor del trazo, en unidades del viewBox (24): escala con el avatar, así que vale para 2,1 rem y 4,5 rem. */
+  --deco-avatar-stroke: 1.6;
+  --deco-avatar-cap: round;
+  /* Halo, solo con los efectos encendidos. Mismo criterio que los badges de estado: teñido por el acento. Bajo a
+     propósito: esto se repite hasta 25 veces en una pantalla de feed, y a más intensidad se lee como neón. */
+  --deco-avatar-glow: 0 0 10px -3px rgba(var(--steam-rgb),.40);
 
   /* Badges de estado (rejugar/oportunidad): metálico oscuro tintado por su rol.
      Activo → acento (sigue la paleta); inactivo → aviso; bloqueado → peligro. */
