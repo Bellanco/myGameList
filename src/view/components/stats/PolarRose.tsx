@@ -1,10 +1,8 @@
 import { memo, type CSSProperties } from 'react';
-import { UI_MESSAGES } from '../../../core/constants/labels';
+import { useStatsLabels } from './statsVoice';
 import { TagRanking } from './TagRanking';
 import { labelLines } from './labelLines';
 import type { TagBucket } from '../../../core/stats/types';
-
-const L = UI_MESSAGES.stats.genres;
 
 /** Sectores del rosetón. Con más de diez, los rótulos se pisan y deja de leerse. */
 const MAX_SECTORS = 10;
@@ -41,6 +39,7 @@ function sectorPath(from: number, to: number, radius: number): string {
  * figura exageraría las diferencias. Con la raíz, el área sí es proporcional al dato.
  */
 export const PolarRose = memo(function PolarRose({ tags }: { tags: TagBucket[] }) {
+  const L = useStatsLabels().genres;
   if (tags.length === 0) {
     return <p className="stats-empty">{L.empty}</p>;
   }

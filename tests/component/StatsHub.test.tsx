@@ -265,3 +265,60 @@ describe('StatsHub · evolución del backlog', () => {
     history = [];
   });
 });
+
+// ── Las dos figuras del podio se pueden tocar ───────────────────────────────────────────────────────────────
+
+describe('StatsHub · figuras interactivas del podio', () => {
+  /** Un top con géneros y plataformas repartidos, que es lo que alimenta el rosetón y el anillo. */
+  const TOP = tabData({
+    c: [
+      game({ id: 1, name: 'Uno', grade: 90, genres: ['RPG'], platforms: ['PC'], years: [2024] }),
+      game({ id: 2, name: 'Dos', grade: 80, genres: ['RPG'], platforms: ['PC'], years: [2024] }),
+      game({ id: 3, name: 'Tres', grade: 70, genres: ['Acción'], platforms: ['Switch'], years: [2024] }),
+      game({ id: 4, name: 'Cuatro', grade: 60, genres: ['Puzles'], platforms: ['PS5'], years: [2024] }),
+    ],
+  });
+
+  it('el anillo de plataformas cuenta la parte señalada en su centro, y vuelve al total al soltarla', async () => {
+    render(<StatsHub games={TOP} />, { wrapper: MemoryRouter });
+
+    const center = document.querySelector('.donut-share-center') as HTMLElement;
+    // Sin nada señalado, el centro lleva el tamaño del top y su rótulo.
+    expect(center).toHaveTextContent('4');
+    expect(center).toHaveTextContent(L.top.donutCenter);
+
+    const pc = screen.getByRole('button', { name: /^PC/ });
+    await userEvent.click(pc);
+
+    // Señalada "PC": el centro pasa a contar SUS juegos y a rotularse con su nombre.
+    expect(pc).toHaveAttribute('aria-pressed', 'true');
+    expect(center).toHaveTextContent('2');
+    expect(center).toHaveTextContent('PC');
+    // Y el resto de segmentos se apartan en vez de competir por la mirada.
+    expect(document.querySelectorAll('.donut-seg.is-dim').length).toBeGreaterThan(0);
+
+    await userEvent.click(pc);
+    expect(pc).toHaveAttribute('aria-pressed', 'false');
+    expect(center).toHaveTextContent(L.top.donutCenter);
+  });
+
+  it('el rosetón de géneros dice la parte exacta de la porción señalada, y se alcanza con el teclado', async () => {
+    render(<StatsHub games={TOP} />, { wrapper: MemoryRouter });
+
+    const detail = document.querySelector('.burst-detail') as HTMLElement;
+    // El pie está siempre (si apareciera al señalar, la tarjeta daría un salto): sin nada, el total.
+    expect(detail).toHaveTextContent(L.genres.games(4));
+
+    // Las porciones son botones: se activan con Intro, no solo con el ratón.
+    const rpg = screen.getByRole('button', { name: /^RPG/ });
+    rpg.focus();
+    await userEvent.keyboard('{Enter}');
+
+    expect(rpg).toHaveAttribute('aria-pressed', 'true');
+    // Dos de los cuatro juegos del top son RPG: su parte es el 50%.
+    expect(detail).toHaveTextContent('RPG');
+    expect(detail).toHaveTextContent(L.genres.games(2));
+    expect(detail).toHaveTextContent('50%');
+    expect(document.querySelectorAll('.burst-piece.is-dim').length).toBeGreaterThan(0);
+  });
+});

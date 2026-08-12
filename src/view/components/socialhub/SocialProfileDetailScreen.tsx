@@ -14,7 +14,7 @@ import { FriendshipButton } from './FriendshipButton';
 import { ProfileReviewsList } from './ProfileReviewsList';
 import { FriendStats } from '../stats/FriendStats';
 import type { ProfileTier } from '../../../core/constants/tiers';
-import { DEFAULT_PROFILE_TIER } from '../../../core/constants/tiers';
+import { ADMIN_ONLY_TIER, DEFAULT_PROFILE_TIER } from '../../../core/constants/tiers';
 import type { RelationshipState } from '../../../model/types/social';
 
 // Paginación de los juegos del perfil: se muestran de 15 en 15 para evitar scroll excesivo al abrir el detalle.
@@ -244,14 +244,17 @@ function SocialProfileDetailScreenBase({
 
 
 
+  // Las listas que el dueño esconde no se enseñan… salvo a la cuenta de administración, que las ve (y que ya las
+  // recibe: el filtro de arriba —`applyProfileVisibility`— la exceptúa igual). Su tiempo de juego es lo único que
+  // sigue oculto para todos.
   const visibleTabs = useMemo(() => {
-    if (!activeProfileDetail?.visibility) {
+    if (!activeProfileDetail?.visibility || viewerTier === ADMIN_ONLY_TIER) {
       return [...TAB_IDS];
     }
 
     const hidden = new Set(activeProfileDetail.visibility.hiddenTabs || []);
     return TAB_IDS.filter((tab) => !hidden.has(tab));
-  }, [activeProfileDetail]);
+  }, [activeProfileDetail, viewerTier]);
 
   const currentTab = visibleTabs.includes(activeListTab) ? activeListTab : visibleTabs[0] || 'c';
 
@@ -440,7 +443,7 @@ function SocialProfileDetailScreenBase({
               <div className="hub-metadata-section">
                 <strong>{FRIEND_STATS_TITLE}</strong>
                 <FriendStats
-                  sharedLists={activeProfileDetail.sharedLists as Partial<Record<TabId, SocialSharedGame[]>>}
+                  sharedLists={activeProfileDetail.sharedLists || {}}
                   viewerTier={viewerTier}
                   viewerHiddenTabs={viewerHiddenTabs}
                 />

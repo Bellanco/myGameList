@@ -46,7 +46,7 @@ export interface AdminUserRow {
    *
    * Con más de uno, o con uno distinto de su `displayName` actual, sus amigos le ven con un nick viejo: el doc de
    * amistad se escribió en el momento de la petición y no se reescribe al cambiar de nombre. Es el dato que
-   * sostiene la señal `stale-friend-name`, y sin recogerlos todos no se puede comparar (`knownAs` se queda con el
+   * sostiene la señal `friend-name-mismatch`, y sin recogerlos todos no se puede comparar (`knownAs` se queda con el
    * primero que aparece, que no tiene por qué ser el vigente).
    */
   friendKnownNames: string[];
@@ -376,14 +376,16 @@ async function tallyFriendships(
 function detectAnomalies(row: Omit<AdminUserRow, 'anomalies'>, friendGistIds: Set<string>, now: number): AdminAnomaly[] {
   const found: AdminAnomaly[] = [];
 
-  // Nick rancio en sus amistades: el doc de amistad guarda el nombre del momento de la petición y NADIE lo
-  // reescribe cuando su dueño se cambia el nick, así que sus amigos siguen viéndole con el viejo en la lista de
-  // amigos y en la bandeja. Se compara contra los nombres denormalizados, no contra `knownAs` (que es solo el
-  // primero que apareció). Solo con `displayName` presente: sin nick no hay nada con lo que comparar, y de eso ya
-  // avisa `no-display-name`.
+  // DESACUERDO DE NOMBRE entre el perfil y sus amistades. Los dos pueden ser el rancio:
+  //   · las amistades, si cambió el nick y sus docs se quedaron con el del momento de la petición;
+  //   · el PERFIL, si el guardado escribió su gist (de donde el feed lee el nick) y falló al replicar en Firestore;
+  //     el saneado de amistades, que propaga el nick del gist, dejaría entonces a las amistades al día y al perfil no.
+  // Desde aquí no se puede distinguir —haría falta leer su gist, y eso exige su token—, así que la señal solo dice
+  // que no coinciden. Se compara contra los nombres denormalizados y no contra `knownAs` (que es solo el primero que
+  // apareció). Sin `displayName` no hay nada que comparar, y de eso ya avisa `no-display-name`.
   const currentName = row.displayName.trim();
   if (currentName && row.friendKnownNames.some((name) => name !== currentName)) {
-    found.push('stale-friend-name');
+    found.push('friend-name-mismatch');
   }
 
   // `enabled-without-gist` ya NO se emite. El id del canal dejó de publicarse en el perfil, así que está vacío

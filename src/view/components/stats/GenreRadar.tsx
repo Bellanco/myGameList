@@ -1,11 +1,9 @@
 import { memo, useId } from 'react';
-import { UI_MESSAGES } from '../../../core/constants/labels';
+import { useStatsLabels } from './statsVoice';
 import { TagRanking } from './TagRanking';
 import { labelLines } from './labelLines';
 import { formatDecimal } from './format';
 import type { GenreAffinity } from '../../../core/stats/types';
-
-const L = UI_MESSAGES.stats.radar;
 
 /** Ejes de la figura. Seis como mucho —de ahí el hexágono—; con menos géneros sale un pentágono, cuadrado o triángulo. */
 const MAX_AXES = 6;
@@ -46,6 +44,7 @@ function polygon(points: Point[]): string {
  * CSS y no añade un solo kilobyte de dependencia al bundle.
  */
 export const GenreRadar = memo(function GenreRadar({ tags }: { tags: GenreAffinity[] }) {
+  const L = useStatsLabels().radar;
   const gradientId = useId();
 
   if (tags.length === 0) {

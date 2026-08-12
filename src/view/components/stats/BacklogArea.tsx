@@ -1,15 +1,26 @@
 import { memo, useId, type CSSProperties } from 'react';
-import { UI_MESSAGES } from '../../../core/constants/labels';
+import { useStatsLabels } from './statsVoice';
 import { CUMULATIVE_WINDOW, accumulate, fillMonthGaps } from '../../../core/stats/months';
 import { timeTicks } from '../../../core/stats/timeAxis';
 import { formatCount, formatMonthLabel, formatTick } from './format';
 import type { ArrivalPoint } from '../../../core/stats/types';
 import type { TabId } from '../../../model/types/game';
 
-const L = UI_MESSAGES.stats.backlog;
-
-/** Orden de apilado, de abajo arriba: lo ya cerrado primero y lo que aún espera arriba. */
+/**
+ * Orden de LECTURA (leyenda, tabla y desglose del mes): el canónico de la app, que además coincide con el orden en
+ * que se ven las bandas de arriba abajo.
+ */
 const SERIES: TabId[] = ['c', 'v', 'e', 'p'];
+
+/**
+ * Orden de APILADO, de abajo arriba: próximos al ras del eje, encima en curso, luego abandonados y completados
+ * coronando el área.
+ *
+ * Va al revés de la lectura a propósito: el área cuenta un recorrido, y el recorrido empieza en la lista de deseos
+ * y acaba en los terminados. Con los completados abajo, lo que se ha cerrado —que es lo que más crece— empujaba
+ * hacia arriba a todo lo demás, y la banda de próximos flotaba en lo alto del gráfico sin apoyarse en nada.
+ */
+const STACK_ORDER: TabId[] = ['p', 'e', 'v', 'c'];
 
 /** Por debajo de esta cantidad de meses se marcan los puntos uno a uno. */
 const SHORT_SERIES = 15;
@@ -71,6 +82,7 @@ function niceStep(max: number, lines: number): number {
  * que tres datos parezcan tres datos y no una curva inventada.
  */
 export const BacklogArea = memo(function BacklogArea({ points, mode }: BacklogAreaProps) {
+  const L = useStatsLabels().backlog;
   const gradientId = useId();
   // El histórico real ya son tamaños absolutos; la curva derivada son altas y hay que acumularlas.
   const filled = fillMonthGaps(points, CUMULATIVE_WINDOW);
@@ -96,7 +108,7 @@ export const BacklogArea = memo(function BacklogArea({ points, mode }: BacklogAr
   // Fronteras acumuladas: cada banda va entre la suma de las anteriores y la suma incluyéndola.
   const stacks: number[][] = [];
   let running = series.map(() => 0);
-  for (const tab of SERIES) {
+  for (const tab of STACK_ORDER) {
     running = running.map((value, index) => value + series[index][tab]);
     stacks.push([...running]);
   }
@@ -143,7 +155,7 @@ export const BacklogArea = memo(function BacklogArea({ points, mode }: BacklogAr
 
           <svg className="backlog-svg" viewBox="0 0 100 100" preserveAspectRatio="none">
             <defs>
-              {SERIES.map((tab) => (
+              {STACK_ORDER.map((tab) => (
                 <linearGradient key={tab} id={`${gradientId}-${tab}`} x1="0" y1="0" x2="0" y2="1">
                   <stop offset="0%" className={`backlog-stop-top is-${tab}`} />
                   <stop offset="100%" className={`backlog-stop-bottom is-${tab}`} />
@@ -152,7 +164,7 @@ export const BacklogArea = memo(function BacklogArea({ points, mode }: BacklogAr
             </defs>
 
             <g className="backlog-reveal">
-              {SERIES.map((tab, layer) => {
+              {STACK_ORDER.map((tab, layer) => {
                 const upper = stacks[layer].map((value, index) => ({ x: x(index), y: y(value) }));
                 const lower = layer === 0
                   ? series.map((_unused, index) => ({ x: x(index), y: y(0) }))
@@ -172,7 +184,7 @@ export const BacklogArea = memo(function BacklogArea({ points, mode }: BacklogAr
 
           {/* Los puntos van en HTML y no en el SVG: dentro se deformarían en óvalos al estirar el lienzo. */}
           {showDots ? series.map((point, index) => (
-            SERIES.map((tab, layer) => (
+            STACK_ORDER.map((tab, layer) => (
               point[tab] > 0 ? (
                 <span
                   key={`${point.m}-${tab}`}

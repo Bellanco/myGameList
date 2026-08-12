@@ -686,6 +686,34 @@ export const UI_MESSAGES = {
   },
 } as const;
 
+/**
+ * MISMA PANTALLA, OTRA VOZ. El panel de estadísticas es UNO SOLO y se pinta tanto en tu perfil como en el de otra
+ * persona, así que los textos con voz («tu biblioteca», «tu media») tienen su versión en tercera persona. Viven
+ * FUERA de este módulo, en `statsOtherLabels`: `labels.ts` entra en el arranque y esos rótulos solo hacen falta
+ * dentro del panel, que se carga en diferido.
+ */
+
+/**
+ * El mismo árbol de textos, pero con los literales ENSANCHADOS a `string`. `UI_MESSAGES` va `as const` —lo que
+ * está bien para el resto de la app—, y sin esto la voz ajena no podría escribir «Lo mejor de su biblioteca»
+ * donde el tipo exige exactamente «Lo mejor de tu biblioteca». Los arrays se quedan de solo lectura para que las
+ * dos voces encajen en el mismo tipo.
+ */
+type WidenText<T> = T extends (...args: infer A) => infer R
+  ? (...args: A) => WidenText<R>
+  : T extends string
+    ? string
+    : T extends number
+      ? number
+      : T extends boolean
+        ? boolean
+        : T extends readonly (infer U)[]
+          ? readonly WidenText<U>[]
+          : { [K in keyof T]: WidenText<T[K]> };
+
+/** Textos del panel de estadísticas, en cualquiera de sus dos voces (ver `STATS_LABELS_OTHER`). */
+export type StatsLabels = WidenText<typeof UI_MESSAGES.stats>;
+
 // Cada tema cuenta el fallo en su propio idioma, igual que los bloques de estadísticas (la tarta de Portal en
 // «Géneros más jugados», los contratos de Cuphead en «Completados y abandonados», el corazón robado de Persona
 // en el podio): el guiño va INTEGRADO en la frase, sin comillas ni atribución, y la línea de debajo dice
@@ -768,8 +796,13 @@ export const ADMIN_PANEL_UI = {
     friendGists: 'Canal según sus amistades',
     /** El gist de JUEGOS denormalizado: con lo que un amigo carga sus listas compartidas. */
     friendGamesGists: 'Listas según sus amistades',
-    /** Nombres que sus amistades le guardan, cuando alguno no es el nick que publica ahora. */
+    /**
+     * Los dos nombres cuando no coinciden. Se etiquetan por ORIGEN y no por antigüedad: el panel no puede saber cuál
+     * es el vigente (ese dato vive en el gist del usuario), y afirmarlo llevaba a propagar el equivocado.
+     */
     staleFriendNames: 'Nombre que le ven sus amigos',
+    profileNameSource: 'Nombre en su perfil (Firestore)',
+    nameMismatchHint: 'No coinciden. El que vale es el de su gist social, que este panel no puede leer: si su último guardado falló a medias, el rancio es el del perfil.',
     /** Estado de la foto denormalizada. No se pinta la URL: ocupa una línea entera y no dice nada de un vistazo. */
     friendPhoto: 'Foto que le ven sus amigos',
     friendPhotoStale: 'Desactualizada',
@@ -807,6 +840,10 @@ export const ADMIN_PANEL_UI = {
     // forma de reconocerle.
     noName: 'Este perfil no tiene nombre que propagar: ni nick propio ni nombre guardado por sus amistades.',
     confirm: (name: string) => `¿Propagar el nombre y la foto actuales de ${name} a sus documentos de amistad? Solo se escriben los que estén desactualizados.`,
+    // Con el nombre a la vista: es lo que de verdad se va a escribir en los documentos de amistad, y si el perfil
+    // llevaba el rancio esta es la última oportunidad de no propagarlo.
+    confirmWithName: (name: string, willWrite: string) =>
+      `¿Escribir «${willWrite}» como nombre de ${name} en sus documentos de amistad? Es el nombre que guarda su perfil; si el vigente fuera otro, esto lo sustituiría en la lista de sus amigos.`,
     ok: (touched: number) =>
       touched === 0
         ? 'Sus amistades ya estaban al día: no se ha escrito nada.'
@@ -852,9 +889,9 @@ export const ADMIN_PANEL_UI = {
       label: 'sin nombre',
       hint: 'El perfil no tiene nick: se quedó a medio crear.',
     },
-    'stale-friend-name': {
-      label: 'nombre viejo en sus amistades',
-      hint: 'Sus amistades le guardan un nombre distinto del que publica ahora: se cambió el nick y los documentos de amistad conservan el anterior, que es el que le ven sus amigos. Se arregla solo cuando su cliente vuelva a sanear sus amistades.',
+    'friend-name-mismatch': {
+      label: 'nombre sin coincidir',
+      hint: 'El nombre de su perfil y el que guardan sus amistades no coinciden, y desde aquí no se sabe cuál es el vigente: el nick lo escribe en su gist social (de donde lo lee el feed) y este panel solo ve la copia de Firestore. Si su último guardado escribió el gist y falló al replicar, el viejo es el del perfil.',
     },
     'no-profile-id': {
       label: 'sin pseudónimo',

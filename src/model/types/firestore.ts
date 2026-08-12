@@ -18,10 +18,13 @@ export type AdminAnomaly =
   /** Sin nombre: perfil a medio crear. */
   | 'no-display-name'
   /**
-   * Sus amistades le guardan un nombre distinto del que publica ahora: cambió de nick y los docs de amistad
-   * conservan el viejo, que es el que ven sus amigos en la lista y en la bandeja de solicitudes.
+   * El nombre del perfil y el que guardan sus amistades NO coinciden.
+   *
+   * Sin decir cuál de los dos es el viejo, porque no se puede saber desde aquí: el nick lo escribe su dueño en su
+   * GIST social —que es de donde lo lee el feed— y `profiles.displayName` es solo una copia. Si el guardado del
+   * perfil escribió el gist y falló al replicar en Firestore, el rancio es el del perfil, no el de las amistades.
    */
-  | 'stale-friend-name'
+  | 'friend-name-mismatch'
   /** Sin `profileId`: la identidad pseudónima nunca se estableció. */
   | 'no-profile-id'
   /** El documento no se identifica por el uid (perfil legacy bajo otro id). */

@@ -1,9 +1,7 @@
 import { memo, type CSSProperties } from 'react';
-import { UI_MESSAGES } from '../../../core/constants/labels';
+import { useStatsLabels } from './statsVoice';
 import { formatCount } from './format';
 import type { TagBucket } from '../../../core/stats/types';
-
-const L = UI_MESSAGES.stats.wishlist;
 
 /** Tope de puntos dibujados por fila; a partir de ahí se resume, porque contar cien puntos no lo hace nadie. */
 const MAX_DOTS = 24;
@@ -16,6 +14,7 @@ const MAX_DOTS = 24;
  * dibujan los primeros y se remata con "+N", que es honesto y ocupa lo mismo.
  */
 export const DotMatrix = memo(function DotMatrix({ tags, limit = 6 }: { tags: TagBucket[]; limit?: number }) {
+  const L = useStatsLabels().wishlist;
   if (tags.length === 0) {
     return <p className="stats-empty">{L.empty}</p>;
   }

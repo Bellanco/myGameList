@@ -1,10 +1,8 @@
 import { memo, type CSSProperties } from 'react';
-import { UI_MESSAGES } from '../../../core/constants/labels';
+import { useStatsLabels } from './statsVoice';
 import { GRADE_MAX } from '../../../core/utils/scoreScale';
 import { formatDecimal } from './format';
 import type { ScoreScale } from '../../../core/utils/scoreScale';
-
-const L = UI_MESSAGES.stats.top;
 
 /** Diferencia mínima contra tu media para que merezca la pena escribirla; por debajo es ruido. */
 const NOISE = 1;
@@ -29,6 +27,7 @@ interface ShineRowsProps {
  * global: son las dos referencias que convierten un porcentaje en una lectura.
  */
 export const ShineRows = memo(function ShineRows({ rows, average, scale, limit = 6 }: ShineRowsProps) {
+  const L = useStatsLabels().top;
   if (rows.length === 0) return null;
 
   const shown = rows.slice(0, limit);

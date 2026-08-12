@@ -1,10 +1,8 @@
 import { memo, type CSSProperties } from 'react';
-import { UI_MESSAGES } from '../../../core/constants/labels';
+import { useStatsLabels } from './statsVoice';
 import { timeTicks } from '../../../core/stats/timeAxis';
 import { formatMonthYear, formatTick } from './format';
 import type { GameRef } from '../../../core/stats/types';
-
-const L = UI_MESSAGES.stats.wishlist;
 
 /** Cuántos de los más antiguos se rotulan. Etiquetarlos todos convertiría la línea en un muro de texto. */
 const LABELLED = 3;
@@ -53,6 +51,7 @@ function place(games: GameRef[], span: number, oldest: number): Placed[] {
  * eje temporal en el que las posiciones no significan nada engaña más de lo que informa.
  */
 export const WaitingTimeline = memo(function WaitingTimeline({ games }: { games: GameRef[] }) {
+  const L = useStatsLabels().wishlist;
   const dated = games.filter((game) => game.at > 0);
   if (dated.length === 0) {
     return <p className="stats-empty">{L.empty}</p>;

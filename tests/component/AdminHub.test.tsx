@@ -483,20 +483,26 @@ describe('AdminHub — moderación', () => {
     expect(screen.getByText('gs-legacy')).toBeInTheDocument();
   });
 
-  it('enseña el nombre viejo que le ven sus amigos, y no lo repite cuando está al día', async () => {
-    loadAdminCensusMock.mockResolvedValue(census([user({ friendKnownNames: ['Ada Vieja'], anomalies: ['stale-friend-name'] })]));
+  // Cuando los nombres no coinciden se enseñan LOS DOS, etiquetados por origen. El panel no puede saber cuál es el
+  // vigente (el nick vive en el gist del usuario, que no puede leer), y afirmarlo llevaba a propagar el equivocado.
+  it('enseña los dos nombres cuando no coinciden, y ninguno cuando están de acuerdo', async () => {
+    loadAdminCensusMock.mockResolvedValue(census([user({ friendKnownNames: ['Ada Vieja'], anomalies: ['friend-name-mismatch'] })]));
     renderHub();
     signIn(ADMIN_EMAIL);
-    await screen.findByText('Ada');
+    await screen.findAllByText('Ada');
 
+    expect(screen.getByText(ADMIN_PANEL_UI.field.profileNameSource)).toBeInTheDocument();
     expect(screen.getByText(ADMIN_PANEL_UI.field.staleFriendNames)).toBeInTheDocument();
     expect(screen.getByText('Ada Vieja')).toBeInTheDocument();
+    // Y se avisa de que propagar escribiría el del perfil, que puede ser el rancio.
+    expect(screen.getByText(ADMIN_PANEL_UI.field.nameMismatchHint)).toBeInTheDocument();
 
     loadAdminCensusMock.mockResolvedValue(census([user({ friendKnownNames: ['Ada'] })]));
     await userEvent.click(screen.getByRole('button', { name: new RegExp(ADMIN_PANEL_UI.refresh) }));
-    await waitFor(() =>
-      expect(screen.queryByText(ADMIN_PANEL_UI.field.staleFriendNames)).not.toBeInTheDocument(),
-    );
+    await waitFor(() => {
+      expect(screen.queryByText(ADMIN_PANEL_UI.field.staleFriendNames)).not.toBeInTheDocument();
+      expect(screen.queryByText(ADMIN_PANEL_UI.field.profileNameSource)).not.toBeInTheDocument();
+    });
   });
 
   // Se busca por lo que identifica la ficha en pantalla: a quien no tiene nick lo identifica el nombre que le dan
@@ -544,17 +550,19 @@ describe('AdminHub — identidad denormalizada y solicitudes fosilizadas', () =>
   });
 
   // El bloque solo aparece cuando hay algo que propagar: es una escritura sobre documentos de dos personas.
-  it('ofrece propagar la identidad cuando sus amistades le guardan un nombre viejo', async () => {
+  it('ofrece propagar la identidad, diciendo en la confirmación qué nombre va a escribir', async () => {
     loadAdminCensusMock.mockResolvedValue(
-      census([user({ friendKnownNames: ['Ada Vieja'], anomalies: ['stale-friend-name'] })]),
+      census([user({ friendKnownNames: ['Ada Vieja'], anomalies: ['friend-name-mismatch'] })]),
     );
     renderHub();
     signIn(ADMIN_EMAIL);
-    await screen.findByText('Ada');
+    await screen.findAllByText('Ada');
 
     await userEvent.click(screen.getByRole('button', { name: ADMIN_PANEL_UI.healIdentity.btn }));
-    // Pasa por confirmación, como el resto de acciones que escriben.
+    // Pasa por confirmación, como el resto de acciones que escriben, y el nombre exacto va en el texto: si el del
+    // perfil fuera el rancio, esta es la última oportunidad de no propagarlo.
     expect(healUserFriendshipIdentityMock).not.toHaveBeenCalled();
+    expect(screen.getByText(ADMIN_PANEL_UI.healIdentity.confirmWithName('Ada', 'Ada'))).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: ADMIN_PANEL_UI.confirmAccept }));
 
     expect(healUserFriendshipIdentityMock).toHaveBeenCalledWith('uid-a', { name: 'Ada', photoURL: '' });
