@@ -14,8 +14,10 @@ import { subscribeSocialAuth } from '../model/repository/firebaseGateway';
 import { ADMIN_ONLY_TIER, PROFILE_TIER_LABELS, type ProfileTier } from '../core/constants/tiers';
 import {
   deleteUserProfile,
+  healUserFriendshipIdentity,
   loadAdminCensus,
   migrateForeignProfileDoc,
+  purgeFossilFriendshipRequests,
   purgeLegacyProfileFields,
   setUserSocialEnabled,
   setUserTier,
@@ -33,8 +35,15 @@ function matchesSearch(user: AdminUserRow, term: string): boolean {
     return true;
   }
   const needle = term.trim().toLowerCase();
+  // Se busca por TODO lo que identifica una fila en la pantalla, no solo por el nick del perfil: a quien lo tiene
+  // vacío la ficha lo identifica con el nombre que le dan sus amigos, y sin eso aquí era imposible encontrarlo
+  // escribiendo el nombre que se está leyendo. El pseudónimo entra por lo mismo: es lo que aparece en el gist y en
+  // las entradas del feed, así que es el término con el que se llega desde un dato publicado.
   return (
     user.displayName.toLowerCase().includes(needle) ||
+    user.knownAs.toLowerCase().includes(needle) ||
+    user.friendKnownNames.some((known) => known.toLowerCase().includes(needle)) ||
+    user.profileId.toLowerCase().includes(needle) ||
     user.uid.toLowerCase().includes(needle) ||
     user.id.toLowerCase().includes(needle)
   );
@@ -189,6 +198,42 @@ export function useAdminViewModel() {
     [runAction],
   );
 
+  /**
+   * Propaga el nick y la foto del perfil a sus documentos de amistad. El nombre que se propaga es el que la ficha
+   * usa para identificarle: si el perfil no tiene nick, el respaldo es el que ya guardan sus amistades, y propagar un
+   * vacío les borraría la única forma de reconocerle (el mismo cuidado que tiene el saneado del propio cliente).
+   */
+  const healIdentity = useCallback(
+    (row: AdminUserRow) =>
+      runAction(row, async () => {
+        const name = row.displayName.trim() || row.knownAs.trim();
+        if (!name) {
+          return { kind: 'warn', text: ADMIN_PANEL_UI.healIdentity.noName };
+        }
+        const result = await healUserFriendshipIdentity(row.uid, { name, photoURL: row.photoURL });
+        if (!result.ok) {
+          console.warn('[admin] propagación incompleta:', result.failures);
+          return { kind: 'warn', text: ADMIN_PANEL_UI.healIdentity.partial };
+        }
+        return { kind: 'ok', text: ADMIN_PANEL_UI.healIdentity.ok(result.touched) };
+      }),
+    [runAction],
+  );
+
+  /** Borra sus solicitudes enviadas que llevan más de 180 días pendientes. */
+  const purgeFossilRequests = useCallback(
+    (row: AdminUserRow) =>
+      runAction(row, async () => {
+        const result = await purgeFossilFriendshipRequests(row.uid);
+        if (!result.ok) {
+          console.warn('[admin] purga incompleta:', result.failures);
+          return { kind: 'warn', text: ADMIN_PANEL_UI.fossil.partial };
+        }
+        return { kind: 'ok', text: ADMIN_PANEL_UI.fossil.ok(result.touched) };
+      }),
+    [runAction],
+  );
+
   const deleteUser = useCallback(
     (row: AdminUserRow) =>
       runAction(row, async () => {
@@ -223,6 +268,8 @@ export function useAdminViewModel() {
     toggleSocial,
     purgeLegacy,
     migrateIdentity,
+    healIdentity,
+    purgeFossilRequests,
     deleteUser,
   };
 }

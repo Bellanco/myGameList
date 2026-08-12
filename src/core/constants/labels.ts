@@ -760,7 +760,24 @@ export const ADMIN_PANEL_UI = {
     pendingOut: 'Peticiones enviadas',
     pendingIn: 'Peticiones recibidas',
     profileId: 'Pseudónimo',
-    socialGist: 'Gist social',
+    // El id que publica su PERFIL. Solo se pinta cuando existe: las escrituras actuales lo purgan, así que en un
+    // perfil al día está vacío y enseñar "—" para todo el mundo hacía pensar que faltaba un dato.
+    socialGist: 'Gist social (resto legacy)',
+    // Los ids que sus AMISTADES tienen denormalizados de él. Desde que el perfil no publica el suyo, este es el
+    // único rastro del canal de alguien al que llega el panel, y antes solo se veía si saltaba la señal de deriva.
+    friendGists: 'Canal según sus amistades',
+    /** El gist de JUEGOS denormalizado: con lo que un amigo carga sus listas compartidas. */
+    friendGamesGists: 'Listas según sus amistades',
+    /** Nombres que sus amistades le guardan, cuando alguno no es el nick que publica ahora. */
+    staleFriendNames: 'Nombre que le ven sus amigos',
+    /** Estado de la foto denormalizada. No se pinta la URL: ocupa una línea entera y no dice nada de un vistazo. */
+    friendPhoto: 'Foto que le ven sus amigos',
+    friendPhotoStale: 'Desactualizada',
+    friendPhotoFresh: 'Al día',
+    /** Solicitudes suyas que llevan mucho esperando, con el detalle de cuántas son ya purgables. */
+    stalePending: 'Solicitudes sin respuesta',
+    stalePendingDetail: (stale: number, fossil: number) =>
+      fossil > 0 ? `${stale} (+90 d), ${fossil} purgables (+180 d)` : `${stale} (+90 d)`,
     schema: 'Esquema',
     photo: 'Foto',
     etag: 'ETag del gist',
@@ -774,9 +791,37 @@ export const ADMIN_PANEL_UI = {
     driftTitle: 'Gists en circulación',
     profileGist: 'Publica en su perfil',
     friendGist: 'Sus amistades apuntan a',
+    /** El perfil ya no publica el id: lo normal desde la purga, y aquí hay que decirlo para que no parezca un hueco. */
+    profileGistPurged: 'ya no lo publica (purgado)',
     // Ya no hay acción: la deriva se resuelve sola cuando su dueño abre el hub (la migración elige el canal con
     // contenido y repunta las referencias). Aquí solo se enseña, para saber a quién le falta pasar por ahí.
     driftHint: 'Se resuelve solo cuando esta persona abra el espacio social: su cliente elegirá el canal con contenido y actualizará sus amistades. Desde aquí no se puede hacer nada (haría falta su token de GitHub).',
+  },
+  // Reparación de la identidad denormalizada en las amistades: es la única vía que no depende de que su dueño abra
+  // el espacio social. Los ids de gist NO se tocan (haría falta su token para saber cuál es el bueno).
+  healIdentity: {
+    title: 'Identidad en sus amistades',
+    hint: 'Sus amigos le ven con el nombre y la foto que se guardaron al hacerse amigos. Su propio cliente los refresca al abrir el espacio social, al guardar el perfil o al publicar, así que quien solo usa sus listas los arrastra indefinidamente. Desde aquí se propagan su nick y su foto actuales; los ids de gist no se tocan.',
+    btn: 'Propagar nombre y foto',
+    // Sin nick ni nombre conocido no hay nada que propagar, y escribir un vacío borraría a sus amigos la única
+    // forma de reconocerle.
+    noName: 'Este perfil no tiene nombre que propagar: ni nick propio ni nombre guardado por sus amistades.',
+    confirm: (name: string) => `¿Propagar el nombre y la foto actuales de ${name} a sus documentos de amistad? Solo se escriben los que estén desactualizados.`,
+    ok: (touched: number) =>
+      touched === 0
+        ? 'Sus amistades ya estaban al día: no se ha escrito nada.'
+        : `Identidad propagada a ${touched} amistad(es).`,
+    partial: 'Propagación incompleta: revisa la consola para el detalle.',
+  },
+  // Purga de solicitudes fosilizadas (enviadas por él, pendientes, +180 días).
+  fossil: {
+    title: 'Solicitudes fosilizadas',
+    hint: 'Solicitudes que envió y que nadie ha aceptado en más de 180 días. Borrarlas las retira también de la bandeja de quien las recibió, y cualquiera de los dos puede volver a enviarlas. No se tocan las amistades aceptadas, ni las que él ha recibido (esas salen en la ficha de quien las mandó), ni las que no tienen fecha.',
+    btn: (count: number) => `Purgar ${count} solicitud(es)`,
+    confirm: (name: string, count: number) =>
+      `¿Borrar ${count} solicitud(es) que ${name} envió y llevan más de 180 días sin aceptar? Desaparecen también de la bandeja de sus destinatarios.`,
+    ok: (touched: number) => `${touched} solicitud(es) fosilizada(s) borrada(s).`,
+    partial: 'Purga incompleta: revisa la consola para el detalle.',
   },
   // Cutover de identidad: mover un perfil legacy a `profiles/{uid}` y retirar el huérfano.
   cutover: {
@@ -786,6 +831,12 @@ export const ADMIN_PANEL_UI = {
     unknownUid: 'El documento no dice de quién es (no tiene campo `uid`): no se puede migrar desde aquí. Se desbloquea cuando su dueño inicie sesión, porque su propio navegador crea el documento canónico.',
     alreadyCanonical: 'Este perfil ya vive en `profiles/{uid}`: no hay nada que migrar.',
     targetLabel: 'Se moverá a',
+    // Qué va a pasar de verdad al pulsar: son dos operaciones distintas y hasta ahora no se sabía cuál tocaba.
+    outcomeLabel: 'Qué hará',
+    outcomeMove: 'MOVER el documento entero (no hay perfil canónico todavía) y borrar este.',
+    outcomeMerge: 'FUSIONAR: ya existe su perfil canónico y manda el vivo. Solo se le rescata lo que le falte (rango, alta más antigua, restos por cifrar) y este se borra.',
+    // Con el censo recortado, no haber visto el gemelo no prueba que no exista.
+    outcomeUnknown: 'No se puede anticipar: el censo viene recortado, así que puede existir un perfil canónico que no se ha listado.',
     btn: 'Migrar identidad',
     confirm: (name: string) => `¿Migrar la identidad de ${name} y borrar el documento antiguo? Sus amistades no se tocan.`,
     okMoved: 'Identidad migrada: el perfil ya vive en su documento canónico.',
@@ -797,13 +848,13 @@ export const ADMIN_PANEL_UI = {
   // Señales de algo fuera de lugar. Etiqueta corta para la píldora y explicación en el `title`.
   anomalies: {
     aria: 'Señales detectadas',
-    'enabled-without-gist': {
-      label: 'social sin gist',
-      hint: 'Tiene el social activado pero no publica ningún gist: no sale en el directorio ni puede publicar nada. Perfil roto.',
-    },
     'no-display-name': {
       label: 'sin nombre',
       hint: 'El perfil no tiene nick: se quedó a medio crear.',
+    },
+    'stale-friend-name': {
+      label: 'nombre viejo en sus amistades',
+      hint: 'Sus amistades le guardan un nombre distinto del que publica ahora: se cambió el nick y los documentos de amistad conservan el anterior, que es el que le ven sus amigos. Se arregla solo cuando su cliente vuelva a sanear sus amistades.',
     },
     'no-profile-id': {
       label: 'sin pseudónimo',
@@ -843,7 +894,15 @@ export const ADMIN_PANEL_UI = {
     },
     'gist-drift': {
       label: 'gist divergente',
-      hint: 'El gist social que publica no coincide con el que guardan sus amistades: sus reseñas no llegan al feed de sus amigos.',
+      hint: 'Hay más de un gist social suyo en circulación: sus amistades no apuntan todas al mismo (o su perfil aún publica otro). Quien tenga el abandonado no ve sus reseñas en el feed.',
+    },
+    'games-gist-drift': {
+      label: 'listas divergentes',
+      hint: 'Sus amistades no coinciden en su gist de juegos: quien tenga el abandonado no puede ver sus listas compartidas. Es un canal distinto del social, así que puede fallar por separado.',
+    },
+    'stale-pending-out': {
+      label: 'solicitudes sin respuesta',
+      hint: 'Envió solicitudes que llevan más de 90 días pendientes. A partir de los 180 días se pueden purgar desde su ficha.',
     },
   } satisfies { aria: string } & Record<AdminAnomaly, { label: string; hint: string }>,
   tier: {
