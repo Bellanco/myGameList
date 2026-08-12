@@ -20,6 +20,7 @@ import {
   clearAnalyticsUser,
   deleteFriendship,
   ensureProfileByEmail,
+  repairProfileDisplayName,
   getCurrentSocialAuthUser,
   getMyFriendships,
   getPrivateConfig,
@@ -1399,6 +1400,31 @@ export function useSocialViewModel(options?: {
   useEffect(() => {
     void hydrateSocialProfile();
   }, [hydrateSocialProfile]);
+
+  /**
+   * REPARA LA RÉPLICA DEL NICK, una vez por sesión, al abrir el espacio social.
+   *
+   * El guardado del perfil escribe el gist y DESPUÉS replica el nombre en `profiles/{uid}`; si eso segundo falla, el
+   * feed sigue enseñando el nombre nuevo (lo lee del gist) y el directorio y el panel de administración se quedan con
+   * el viejo para siempre, porque nada lo reintentaba. Aquí se compara con lo que el perfil ya hidratado dice y se
+   * reescribe solo si difieren, igual que hace el saneado de las amistades unas líneas más arriba.
+   *
+   * Se espera a `profileName` (viene del gist, que es la fuente del nick) y a que haya canal configurado: sin eso, o
+   * no se sabe cuál es el nombre bueno o no hay perfil que reparar.
+   */
+  const nameRepairedRef = useRef(false);
+  useEffect(() => {
+    if (nameRepairedRef.current) return;
+    if (!socialSpaceOpen || !authUser?.uid || !socialCfgGistId) return;
+    const nick = profileName.trim();
+    if (!nick) return;
+    nameRepairedRef.current = true;
+    // Silenciosa cuando funciona: solo escribe si de verdad había desacuerdo, y no hay nada que contarle al usuario
+    // (su nombre es el que él puso). Si falla, se avisa por consola y se reintenta en la próxima sesión.
+    void repairProfileDisplayName(authUser.uid, nick).catch((error) => {
+      console.warn('[social] no se pudo reparar el nombre del perfil:', error instanceof Error ? error.message : error);
+    });
+  }, [socialSpaceOpen, authUser?.uid, socialCfgGistId, profileName]);
 
   // Rango propio → cadencia del feed. Una sola lectura del perfil propio (ya cacheada 60 s en memoria por
   // `getOwnProfileRef`). Cualquier fallo deja bronce: degradar es lo seguro.

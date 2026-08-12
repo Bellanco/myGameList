@@ -36,6 +36,9 @@ const firebaseMocks = vi.hoisted(() => ({
   touchOwnProfileActivityThrottled: vi.fn(async () => {}),
   // Retirada del id que el perfil público aún anuncie: por defecto no hay nada que retirar.
   purgeOwnPublicGistIds: vi.fn(async () => false),
+  // Reparación de la réplica del nick en `profiles`: por defecto no hace falta (las dos copias coinciden). Sin
+  // exportarla aquí, el hub llamaría a `undefined` al abrirse y caería en su error boundary.
+  repairProfileDisplayName: vi.fn(async () => false),
 }));
 
 vi.mock('../../src/model/repository/firebaseRepository', () => firebaseMocks);

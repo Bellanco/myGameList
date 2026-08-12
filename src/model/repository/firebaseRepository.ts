@@ -524,6 +524,45 @@ export async function ensureProfileByEmail(input: {
 }
 
 /**
+ * REPARA LA RÉPLICA DEL NICK en `profiles/{uid}` cuando se quedó atrás respecto al gist.
+ *
+ * El nick lo escribe su dueño en su GIST social, y `profiles.displayName` es la copia que leen el directorio y el
+ * panel de administración. Al guardar el perfil se escribe primero el gist y después se replica aquí, así que un
+ * fallo en medio —red, permisos, la pestaña que se cierra— deja las dos fuentes en desacuerdo: el feed enseña el
+ * nombre nuevo (lee el gist) y el resto el viejo, indefinidamente, porque nada volvía a intentarlo.
+ *
+ * Esto lo cierra: el cliente compara al abrir el hub y solo escribe si de verdad difieren. No es un `ensureProfileByEmail`
+ * completo a propósito —no toca identidad, ni ids, ni purga nada—, para que reparar una copia no arrastre el resto
+ * del guardado.
+ *
+ * Devuelve `true` si ha reescrito. Best-effort: no lanza si Firebase no está configurado.
+ */
+export async function repairProfileDisplayName(uid: string, nick: string): Promise<boolean> {
+  const cleanUid = String(uid || '').trim();
+  const cleanNick = safeTrim(nick, PUBLIC_NAME_MAX_LENGTH);
+  // Sin nick no se repara NADA: escribir vacío borraría el nombre público de quien tiene el perfil bien.
+  if (!cleanUid || !cleanNick) return false;
+
+  const services = await initializeFirebaseServices();
+  if (!services) return false;
+
+  const existing = await resolveOwnProfile({ uid: cleanUid });
+  // Solo el documento CANÓNICO: sobre uno que vive bajo otro id las reglas no dejan escribir al dueño, y ese caso
+  // lo retira el panel con el cutover de identidad.
+  if (!existing || existing.id !== cleanUid) return false;
+  if (existing.displayName.trim() === cleanNick) return false;
+
+  await setDoc(
+    doc(services.firestore, 'profiles', cleanUid),
+    { uid: cleanUid, displayName: cleanNick, updatedAt: serverTimestamp() },
+    { merge: true },
+  );
+  invalidateOwnProfileCache(cleanUid);
+  invalidateSocialDirectoryCache();
+  return true;
+}
+
+/**
  * Actualización ligera de la foto del doc público de perfil (la lee el directorio social). Cumple las reglas:
  * incluye `uid` y solo toca `photoURL`. `''` borra la foto (opt-out). El doc del dueño vive en `profiles/{uid}`.
  * Best-effort: no lanza si Firebase no está configurado.
