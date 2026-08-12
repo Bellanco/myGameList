@@ -45,7 +45,9 @@ export type IconName =
   | 'chevron-up'
   | 'signature'
   | 'grav'
-  | 'bell';
+  | 'bell'
+  /** Silueta de persona a TRAZO: el avatar de quien no muestra foto. Ver `HubAvatar`. */
+  | 'person';
 
 export const TAB_ICONS: Record<TabId, IconName> = {
   c: 'trophy',

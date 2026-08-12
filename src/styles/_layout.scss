@@ -1757,12 +1757,30 @@ button.hub-chip.active {
   line-height: 1;
   user-select: none;
 }
-.hub-avatar--0 { background: var(--deco-avatar-0-bg); color: var(--deco-avatar-0-fg); }
-.hub-avatar--1 { background: var(--deco-avatar-1-bg); color: var(--deco-avatar-1-fg); }
-.hub-avatar--2 { background: var(--deco-avatar-2-bg); color: var(--deco-avatar-2-fg); }
-.hub-avatar--3 { background: var(--deco-avatar-3-bg); color: var(--deco-avatar-3-fg); }
-.hub-avatar--4 { background: var(--deco-avatar-4-bg); color: var(--deco-avatar-4-fg); }
-.hub-avatar--5 { background: var(--deco-avatar-5-bg); color: var(--deco-avatar-5-fg); }
+/* Avatar sin foto: disco tintado por el acento de la paleta + silueta a trazo. Los tokens viven en la CAPA 3 de
+   `_base.scss`; aquí solo se montan. El anillo va como sombra INSET y no como `border`, para que no reste espacio
+   al contenido ni descuadre la altura de las filas del feed. */
+.hub-avatar-blank {
+  background: var(--deco-avatar-bg);
+  color: var(--deco-avatar-line);
+  box-shadow: inset 0 0 0 1px var(--deco-avatar-ring);
+}
+:root[data-effects="on"] .hub-avatar-blank {
+  box-shadow: inset 0 0 0 1px var(--deco-avatar-ring), var(--deco-avatar-glow);
+}
+.hub-avatar-icon {
+  width: 62%;
+  height: 62%;
+  fill: none;
+  stroke: currentColor;
+  /* `stroke-width` es heredable en SVG, así que llega al contenido del `<use>` sin tocar el sprite. */
+  stroke-width: var(--deco-avatar-stroke);
+  stroke-linecap: var(--deco-avatar-cap);
+  stroke-linejoin: var(--deco-avatar-cap);
+  /* La silueta se apoya en el borde inferior del disco (los hombros se cortan, como en una foto de carnet), así que
+     se baja un pelo para que el aire quede arriba y no partido en dos. */
+  margin-block-start: 8%;
+}
 .hub-avatar-img { object-fit: cover; background: var(--surface-hover); }
 /* Avatar grande para el hero de la página de perfil (debe ir tras .hub-avatar para ganar el tamaño). */
 .hub-avatar-lg {

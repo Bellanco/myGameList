@@ -320,3 +320,11 @@
   border-bottom: 1px solid rgba(224, 169, 43, .35);
   padding-bottom: .3rem;
 }
+
+/* ── §N · AVATAR SIN FOTO: trazo GRUESO y de remate recto — un grabado de placa imperial, no un icono
+   redondeado. Sin halo: en el cogitador la luz la da el fósforo del texto, no los adornos. ── */
+:root[data-palette="grimdark"] {
+  --deco-avatar-stroke: 2.2;
+  --deco-avatar-cap: butt;
+  --deco-avatar-glow: none;
+}
