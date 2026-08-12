@@ -125,7 +125,18 @@ export function mergeCrdt(
     const maxRemoteTs = remoteItem?._ts || 0;
     const maxItemTs = Math.max(maxLocalTs, maxRemoteTs);
 
-    if (maxDelTs > 0 && maxDelTs > maxItemTs) {
+    // EN EMPATE GANA LA LÁPIDA (`>=`, antes `>`). Un borrado y una edición sellados en el MISMO milisegundo son
+    // frecuentes de verdad: la app estampa `_ts` en bloque al importar y al sobrescribir el remoto, así que dos
+    // dispositivos pueden llegar con el mismo reloj para el mismo juego. Con la comparación estricta, ese empate
+    // descartaba la lápida y dejaba viva la edición, y el daño no era perder el borrado una vez: al desaparecer el
+    // registro, el dispositivo que borró no tenía NADA contra qué fusionar, así que el juego le reaparecía en la
+    // siguiente pasada y volvía a borrarlo, en bucle.
+    //
+    // Se elige que gane el borrado, y no la edición, porque los dos errores no cuestan lo mismo: una edición perdida
+    // se vuelve a escribir en un segundo, mientras que un juego que resucita solo es la clase de fallo que hace
+    // desconfiar de la sincronización entera. Es además la regla habitual en un LWW con lápidas ("delete wins"),
+    // determinista y simétrica: ambos dispositivos deciden lo mismo sin mirar cuál de los dos es "local".
+    if (maxDelTs > 0 && maxDelTs >= maxItemTs) {
       // E1: purga de tombstones antiguos. Solo si NO hay copia viva en ningún lado (maxItemTs === 0) y el borrado
       // es anterior a la ventana de retención: se descarta y se marca needsUpdate para que ambos lados lo suelten.
       if (maxItemTs === 0 && maxDelTs < now - TOMBSTONE_RETENTION_MS) {
@@ -137,8 +148,11 @@ export function mergeCrdt(
       // deleted differs from local/remote states
       const ldt = localDeleted.get(id) || 0;
       const rdt = remoteDeleted.get(id) || 0;
-      if (ldt !== maxDelTs) localNeedsUpdate = true;
-      if (rdt !== maxDelTs) remoteNeedsUpdate = true;
+      // Se marca también al lado que conserva el juego VIVO aunque su lápida ya coincida: es el estado en el que
+      // deja al lado editor un empate como el de arriba, y sin marcarlo se quedaría con el juego en pantalla
+      // mientras el merge dice que está borrado. Convergente: en cuanto reescriba, deja de tener copia viva.
+      if (ldt !== maxDelTs || localMap.has(id)) localNeedsUpdate = true;
+      if (rdt !== maxDelTs || remoteMap.has(id)) remoteNeedsUpdate = true;
       continue;
     }
 
