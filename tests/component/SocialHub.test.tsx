@@ -1296,3 +1296,105 @@ describe('SocialHub — el aviso de estado no lo borra el temporizador del aviso
     }
   });
 });
+
+// RECIPROCIDAD DE LA FOTO (core/social/photoVisibility): quien esconde la suya no ve la de nadie, y la de los demás
+// solo se ve con amistad aceptada. Mithril queda exento. Estos tests comprueban que la política llega hasta el DOM;
+// la política en sí se prueba a fondo en tests/unit/photoVisibility.test.ts.
+describe('SocialHub — reciprocidad de la foto', () => {
+  const ADA_FOTO = 'https://f/ada.png';
+  const BOB_FOTO = 'https://f/bob.png';
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    gistMocks.getSocialSyncConfig.mockReturnValue({ token: 'ghp_x', gistId: 'my-social', etag: null, lastRemoteUpdatedAt: 0 });
+    gistMocks.socialGistHasContent.mockResolvedValue(true);
+    gistMocks.deleteGist.mockResolvedValue(true);
+    gistMocks.ensureSecretSocialGist.mockImplementation(async (_t?: string, gistId?: string) => ({
+      gistId: gistId || '', etag: null, migrated: false, supersededGistIds: [], keptPublicGistIds: [], copiedEntries: 0,
+    }));
+    firebaseMocks.getCurrentSocialAuthUser.mockResolvedValue({ uid: 'me', email: 'me@x.com', displayName: 'Me', photoURL: null });
+    firebaseMocks.getPrivateConfig.mockResolvedValue(null);
+    firebaseMocks.setPrivateConfig.mockResolvedValue(undefined);
+    firebaseMocks.getPublicConfig.mockResolvedValue({ consent: { version: LEGAL_VERSION, agreedAt: 1 } });
+    firebaseMocks.resolveOwnProfile.mockResolvedValue(null);
+    localMocks.loadLocalState.mockReturnValue({
+      c: [{ id: 1, name: 'Halo', _ts: 1, platforms: [], genres: [], steamDeck: false, review: '', score: 5, years: [], strengths: [], weaknesses: [], reasons: [], replayable: false, retry: false, hours: 0 }],
+      v: [], e: [], p: [], deleted: [], updatedAt: 0,
+    });
+    // Ada es amiga y publica su foto; Bob está en el directorio pero no es amigo.
+    firebaseMocks.listSocialDirectory.mockResolvedValue([
+      { id: 'friendUid', uid: 'friendUid', email: 'ada@x.com', displayName: 'Ada', photoURL: ADA_FOTO, socialGistId: 'ada-social', gamesGistId: '' },
+      { id: 'strangerUid', uid: 'strangerUid', email: 'bob@x.com', displayName: 'Bob', photoURL: BOB_FOTO, socialGistId: 'bob-social', gamesGistId: '' },
+    ]);
+    firebaseMocks.getMyFriendships.mockResolvedValue({
+      friends: [{ docId: 'friendUid__me', otherUid: 'friendUid', otherName: 'Ada', otherPhoto: ADA_FOTO, otherSocialGistId: 'ada-social', otherGamesGistId: '', state: 'friends', createdAt: 0, updatedAt: 1 }],
+      incoming: [], outgoing: [], byOtherUid: {},
+    });
+    gistMocks.readPublicSocialGistById.mockResolvedValue({
+      profile: { name: 'Ada', photoURL: ADA_FOTO, visibility: { hiddenTabs: [], hideReplayable: false, hideRetry: false, hideGameTime: false, showPhoto: true } },
+      activity: [], posts: [],
+    });
+  });
+
+  /** Perfil propio: `showPhoto` es lo que decide si ve las fotos ajenas. */
+  function ownProfile(showPhoto: boolean) {
+    gistMocks.readSocialGist.mockResolvedValue({
+      data: {
+        profile: {
+          name: 'Me', private: false,
+          visibility: { hiddenTabs: [], hideReplayable: false, hideRetry: false, hideGameTime: false, showPhoto },
+          sharedLists: {},
+        },
+        recommendations: [], activity: [], posts: [], updatedAt: 0,
+      },
+      etag: null,
+    });
+  }
+
+  /** URLs de las fotos que de verdad se están pintando. */
+  function fotosPintadas(): string[] {
+    return [...document.querySelectorAll('img.hub-avatar-img')].map((img) => img.getAttribute('src') || '');
+  }
+
+  it('mostrando la propia: se ve la foto de la amiga y NO la del desconocido', async () => {
+    ownProfile(true);
+    renderHub('/social/profiles');
+
+    await screen.findByText('Ada');
+    await screen.findByText('Bob');
+
+    await waitFor(() => expect(fotosPintadas()).toContain(ADA_FOTO));
+    // Bob sale en el directorio (se puede buscar y agregar), pero con su inicial en vez de su cara.
+    expect(fotosPintadas()).not.toContain(BOB_FOTO);
+  });
+
+  it('escondiendo la propia: no se ve ninguna, ni la de la amiga', async () => {
+    ownProfile(false);
+    renderHub('/social/profiles');
+
+    await screen.findByText('Ada');
+    await screen.findByText('Bob');
+
+    // Se espera a que el directorio esté hidratado del todo antes de afirmar la ausencia.
+    await waitFor(() => expect(gistMocks.readPublicSocialGistById).toHaveBeenCalled());
+    await waitFor(() => {
+      expect(fotosPintadas()).not.toContain(ADA_FOTO);
+      expect(fotosPintadas()).not.toContain(BOB_FOTO);
+    });
+  });
+
+  it('mithril está exento: ve las dos aunque esconda la suya', async () => {
+    ownProfile(false);
+    firebaseMocks.resolveOwnProfile.mockResolvedValue({
+      id: 'me', profileId: 'p-me', displayName: 'Me', email: '', photoURL: '',
+      socialGistId: 'my-social', gamesGistId: '', tier: 'mithril', socialEnabled: true, schemaVersion: 1, githubToken: '',
+    });
+    renderHub('/social/profiles');
+
+    await screen.findByText('Ada');
+    await screen.findByText('Bob');
+
+    await waitFor(() => expect(fotosPintadas()).toContain(ADA_FOTO));
+    await waitFor(() => expect(fotosPintadas()).toContain(BOB_FOTO));
+  });
+});
