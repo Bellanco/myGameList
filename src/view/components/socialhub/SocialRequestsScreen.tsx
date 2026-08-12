@@ -78,7 +78,7 @@ export function SocialRequestsScreen({
               {incomingRequests.map((request) => (
                 <article key={request.docId} className={`hub-feed-card hub-feed-activity-item hub-request-item ${busyUid === request.otherUid ? 'is-busy' : ''}`.trim()} role="listitem">
                   <header className="hub-feed-card-head">
-                    <HubAvatar name={request.name} photoURL={request.photo} />
+                    <HubAvatar photoURL={request.photo} />
                     <div className="hub-feed-card-head-text">
                       <h3>{request.name}</h3>
                     </div>
@@ -120,7 +120,7 @@ export function SocialRequestsScreen({
               {outgoingRequests.map((request) => (
                 <article key={request.docId} className={`hub-feed-card hub-feed-activity-item hub-request-item ${busyUid === request.otherUid ? 'is-busy' : ''}`.trim()} role="listitem">
                   <header className="hub-feed-card-head">
-                    <HubAvatar name={request.name} photoURL={request.photo} />
+                    <HubAvatar photoURL={request.photo} />
                     <div className="hub-feed-card-head-text">
                       <h3>{request.name}</h3>
                     </div>
@@ -152,7 +152,7 @@ export function SocialRequestsScreen({
               {friendsList.map((friend) => (
                 <article key={friend.docId} className={`hub-feed-card hub-feed-activity-item hub-request-item ${busyUid === friend.otherUid ? 'is-busy' : ''}`.trim()} role="listitem">
                   <header className="hub-feed-card-head">
-                    <HubAvatar name={friend.name} photoURL={friend.photo} />
+                    <HubAvatar photoURL={friend.photo} />
                     <div className="hub-feed-card-head-text">
                       <h3>{friend.name}</h3>
                     </div>

@@ -487,3 +487,10 @@
   text-shadow: 1px 0 0 rgba(255, 42, 109, .55), -1px 0 0 rgba(0, 240, 255, .55);
 }
 :root[data-palette="cyberpunk"][data-theme="light"] .stat-tile-value { text-shadow: none; }
+
+/* ── §N · AVATAR SIN FOTO: trazo FINO y de remate recto, como una silueta vectorizada por la óptica Kiroshi.
+   El color ya lo pone el acento de la paleta (amarillo ácido); aquí solo se ajusta la mano del dibujo. ── */
+:root[data-palette="cyberpunk"] {
+  --deco-avatar-stroke: 1.3;
+  --deco-avatar-cap: butt;
+}

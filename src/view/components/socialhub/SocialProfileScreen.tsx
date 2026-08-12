@@ -117,7 +117,7 @@ export function SocialProfileScreen({
             <p>{SOCIAL_UI.profile.identityDescription}</p>
             <label className="flabel" htmlFor="hub-profile-name">{SOCIAL_UI.profile.nameLabel}</label>
             <div className="hub-identity-hero">
-              <HubAvatar name={profileName || 'Usuario'} photoURL={showPhoto !== false ? ownPhotoURL : undefined} />
+              <HubAvatar photoURL={showPhoto !== false ? ownPhotoURL : undefined} />
               <input
                 id="hub-profile-name"
                 className="finput"

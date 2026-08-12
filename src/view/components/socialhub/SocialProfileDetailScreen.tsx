@@ -412,7 +412,7 @@ function SocialProfileDetailScreenBase({
         </div>
         <article className="hub-feed-card hub-feed-card-detail">
           <div className="hub-profile-hero">
-            <HubAvatar name={activeProfileDetail.displayName} photoURL={activeProfileDetail.photoURL} sizeClass="hub-avatar-lg" />
+            <HubAvatar photoURL={activeProfileDetail.photoURL} sizeClass="hub-avatar-lg" />
             <h3 className="hub-profile-hero-name">{activeProfileDetail.displayName}</h3>
           </div>
           {!canSeeFullProfile ? (

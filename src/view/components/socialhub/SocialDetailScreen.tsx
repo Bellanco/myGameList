@@ -89,7 +89,7 @@ export function SocialDetailScreen({
               aria-label={SOCIAL_UI.feed.openProfileAria(activeDetailEvent.profileDisplayName)}
               onClick={() => onOpenProfileDetail(activeDetailEvent.profileId)}
             >
-              <HubAvatar name={activeDetailEvent.profileDisplayName} photoURL={activeDetailEvent.photoURL} />
+              <HubAvatar photoURL={activeDetailEvent.photoURL} />
             </button>
             <div className="hub-feed-card-head-text">
               <h3>

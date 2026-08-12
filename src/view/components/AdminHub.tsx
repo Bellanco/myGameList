@@ -216,7 +216,7 @@ export const AdminHub = memo(function AdminHub() {
               return (
                 <li key={user.id} className={`admin-user-card${busy ? ' is-busy' : ''}`}>
                   <header className="admin-user-head">
-                    <HubAvatar name={name} photoURL={user.photoURL} />
+                    <HubAvatar photoURL={user.photoURL} />
                     <span className="admin-user-text">
                       <b>
                         {name}
