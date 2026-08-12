@@ -6,6 +6,7 @@ import { reconcileReviewActivity } from '../model/repository/socialActivityRecon
 import { invalidateProfileGames, loadForeignProfileGames } from '../model/repository/foreignProfileRepository';
 import { getCachedSocialDirectory, getCachedSocialProfile, getLocalMeta, invalidateCachedSocialDirectory, patchLocalMeta, putCachedSocialDirectory, putCachedSocialProfile } from '../model/repository/indexedDbRepository';
 import { applyProfileVisibility } from '../core/utils/profileVisibility';
+import { photoForViewer, withVisiblePhotos } from '../core/social/photoVisibility';
 import { SOCIAL_UI } from '../core/constants/labels';
 import type { IconName } from '../core/constants/icons';
 import {
@@ -235,7 +236,9 @@ export function useSocialViewModel(options?: {
    * necesita para elegir entre el vacío y el esqueleto.
    */
   const [directorySettled, setDirectorySettled] = useState(false);
-  const [socialDirectory, setSocialDirectory] = useState<SocialDirectoryEntry[]>([]);
+  // Directorio CRUDO, tal y como lo deja la hidratación (y como se cachea en IndexedDB). Lo que consume la pantalla
+  // es `socialDirectory`, unas líneas más abajo: el mismo directorio con la política de fotos ya aplicada.
+  const [rawSocialDirectory, setSocialDirectory] = useState<SocialDirectoryEntry[]>([]);
   // Listas completas de OTROS perfiles, cargadas bajo demanda (al abrir reseña/perfil) y filtradas por su
   // visibilidad. Clave = id del perfil del directorio. Alimenta getGameItemById y selectedProfileDetail.
   const [foreignGamesByProfile, setForeignGamesByProfile] = useState<Record<string, Record<TabId, GameItem[]>>>({});
@@ -716,6 +719,29 @@ export function useSocialViewModel(options?: {
     return friendships.byOtherUid[otherUid]?.state ?? 'none';
   }, [friendships]);
 
+  // RECIPROCIDAD DE LA FOTO (ver core/social/photoVisibility): quien esconde la suya no ve la de nadie, y la de los
+  // demás solo se ve con amistad aceptada. Mithril queda exento.
+  //
+  // Se aplica AQUÍ, sobre el directorio ya hidratado, y no al hidratarlo: la hidratación cachea su resultado en
+  // IndexedDB con el TTL del rango, así que sellar la política ahí dejaba el ajuste sin efecto hasta que la caché
+  // caducara —el usuario esconde su foto, guarda, y sigue viendo las caras de los demás—. Derivándolo, el cambio se
+  // ve en el mismo render y la caché conserva el dato crudo.
+  const photoViewer = useMemo(() => ({ showsOwnPhoto: showPhoto, tier: ownTier }), [showPhoto, ownTier]);
+
+  const friendUidSet = useMemo(
+    () => new Set(friendships.friends.map((friend) => friend.otherUid)),
+    [friendships.friends],
+  );
+  const socialDirectory = useMemo(
+    () =>
+      withVisiblePhotos(rawSocialDirectory, {
+        viewer: photoViewer,
+        friendUids: friendUidSet,
+        isOwnEntry: (entry) => isOwnProfileIdentity(entry.id, authUser?.uid, ownProfileId),
+      }) as SocialDirectoryEntry[],
+    [rawSocialDirectory, photoViewer, friendUidSet, authUser?.uid, ownProfileId],
+  );
+
   const pendingIncomingCount = friendships.incoming.length;
 
   // Vista de solicitud para la bandeja: enriquece nombre/foto desde el directorio cuando el doc no los trae aún
@@ -728,9 +754,17 @@ export function useSocialViewModel(options?: {
       // PRIVACIDAD: el nombre sale SOLO del nick denormalizado en el doc de amistad (`otherName`). NO se cae al
       // `displayName` del directorio (Firestore), que puede ser el nombre real; si no hay nick, "Usuario".
       name: view.otherName || SOCIAL_UI.requests.unknownUser,
-      photo: view.otherPhoto || dir?.photoURL || '',
+      // La foto pasa por la misma política que el directorio. Consecuencia buscada: en la BANDEJA, la cara de quien
+      // te manda una solicitud no se ve —todavía no hay amistad—, igual que no se ve la suya en el directorio de
+      // descubrimiento del que salió. El nick sigue ahí, que es lo que identifica la petición.
+      photo: photoForViewer({
+        photoURL: view.otherPhoto || dir?.photoURL || '',
+        isOwn: false,
+        isFriend: friendUidSet.has(view.otherUid),
+        viewer: photoViewer,
+      }),
     };
-  }, [socialDirectory]);
+  }, [socialDirectory, friendUidSet, photoViewer]);
 
   const incomingRequests = useMemo(
     () => friendships.incoming.map(enrichFriendRequest),
