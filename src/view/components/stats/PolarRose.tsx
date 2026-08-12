@@ -1,7 +1,10 @@
 import { memo, type CSSProperties } from 'react';
 import { useStatsLabels } from './statsVoice';
+import { useChartFocus } from './useChartFocus';
+import { ChartDetail, ChartDetailHint } from './ChartDetail';
 import { TagRanking } from './TagRanking';
 import { labelLines } from './labelLines';
+import { formatHours } from './format';
 import type { TagBucket } from '../../../core/stats/types';
 
 /** Sectores del rosetón. Con más de diez, los rótulos se pisan y deja de leerse. */
@@ -37,9 +40,14 @@ function sectorPath(from: number, to: number, radius: number): string {
  * El radio va con la raíz cuadrada del valor, no con el valor: el área de un sector crece con el cuadrado del
  * radio, así que a escala lineal un género con el doble de juegos ocuparía cuatro veces más superficie y la
  * figura exageraría las diferencias. Con la raíz, el área sí es proporcional al dato.
+ *
+ * SE PUEDE TOCAR: cada sector se señala con el ratón, el dedo o el tabulador; el señalado se ilumina, los demás se
+ * apartan y el pie añade las HORAS de ese grupo, que en la figura no aparecen por ninguna parte (el radio cuenta
+ * juegos). Antes solo había un `title` del sistema, que en una pantalla táctil no existe.
  */
 export const PolarRose = memo(function PolarRose({ tags }: { tags: TagBucket[] }) {
   const L = useStatsLabels().genres;
+  const focus = useChartFocus();
   if (tags.length === 0) {
     return <p className="stats-empty">{L.empty}</p>;
   }
@@ -53,12 +61,16 @@ export const PolarRose = memo(function PolarRose({ tags }: { tags: TagBucket[] }
   const sectors = tags.slice(0, MAX_SECTORS);
   const step = 360 / sectors.length;
   const max = sectors[0].games || 1;
+  const shown = sectors.find((tag) => tag.tag === focus.active) || null;
+  /** Nombre, juegos y —si el ámbito las tiene— las horas: lo que el radio no puede contar. */
+  const detailOf = (tag: TagBucket) => `${L.games(tag.games)}${tag.hours > 0 ? ` · ${formatHours(tag.hours)} h` : ''}`;
 
   return (
     <div className="polar-rose">
       <svg
         viewBox={`0 0 ${SIZE} ${SIZE}`}
-        role="img"
+        // `group` y no `img`: cada sector es un control, y con `img` el lector de pantalla se saltaría el interior.
+        role="group"
         aria-label={`${L.chartAria}: ${sectors.map((tag) => `${tag.tag} ${tag.games}`).join(', ')}`}
       >
         {RINGS.map((ring) => (
@@ -72,9 +84,10 @@ export const PolarRose = memo(function PolarRose({ tags }: { tags: TagBucket[] }
           return (
             <path
               key={tag.tag}
-              className="polar-sector"
+              className={`polar-sector${focus.stateOf(tag.tag)}`}
               d={sectorPath(from, to, radius)}
               style={{ '--i': index } as CSSProperties}
+              {...focus.controlProps(tag.tag, `${tag.tag}: ${detailOf(tag)}`)}
             >
               <title>{`${tag.tag}: ${tag.games}`}</title>
             </path>
@@ -100,6 +113,20 @@ export const PolarRose = memo(function PolarRose({ tags }: { tags: TagBucket[] }
           );
         })}
       </svg>
+
+      {/* En reposo, el grupo que manda: el primer sector es el mayor, así que la frase de descanso dice algo. */}
+      <ChartDetail>
+        {shown ? (
+          <>
+            <b>{shown.tag}</b>
+            <span>{detailOf(shown)}</span>
+          </>
+        ) : (
+          <ChartDetailHint>
+            <b>{sectors[0].tag}</b> {detailOf(sectors[0])}
+          </ChartDetailHint>
+        )}
+      </ChartDetail>
     </div>
   );
 });

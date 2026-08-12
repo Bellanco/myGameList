@@ -1,5 +1,7 @@
 import { memo, type CSSProperties } from 'react';
 import { useStatsLabels } from './statsVoice';
+import { useChartFocus } from './useChartFocus';
+import { ChartDetail, ChartDetailHint } from './ChartDetail';
 import { GRADE_MAX, SCORE_BUCKET_FLOORS, STARS_MAX, hueFromGrade, starsFromGrade } from '../../../core/utils/scoreScale';
 import type { GameRef } from '../../../core/stats/types';
 import type { ScoreScale } from '../../../core/utils/scoreScale';
@@ -96,6 +98,7 @@ function median(games: GameRef[]): number {
  */
 export const Beeswarm = memo(function Beeswarm({ games, scale }: BeeswarmProps) {
   const L = useStatsLabels().grades;
+  const focus = useChartFocus();
   if (games.length === 0) {
     return <p className="stats-empty">{L.empty}</p>;
   }
@@ -120,6 +123,7 @@ export const Beeswarm = memo(function Beeswarm({ games, scale }: BeeswarmProps) 
   // cada punto sería ilegible, y son justo los dos que se buscan al mirar una distribución.
   const best = dots[dots.length - 1];
   const worst = dots[0];
+  const shownDot = dots.find((dot) => String(dot.game.id) === focus.active) || null;
   const labelled = games.length > 2 ? [
     { dot: worst, side: 'start' as const },
     { dot: best, side: 'end' as const },
@@ -156,10 +160,13 @@ export const Beeswarm = memo(function Beeswarm({ games, scale }: BeeswarmProps) 
           </span>
         ))}
 
+        {/* Los puntos se señalan con el puntero pero NO entran en el recorrido del teclado: aquí hay uno por
+            juego —cientos en una biblioteca de verdad—, y meterlos en el tabulador convertiría la figura en una
+            trampa. Su dato tiene la salida que le corresponde: la tabla por tramos de más abajo. */}
         {dots.map((dot, index) => (
           <span
             key={dot.game.id}
-            className="beeswarm-dot"
+            className={`beeswarm-dot${focus.stateOf(String(dot.game.id))}`}
             title={`${dot.game.name}: ${Math.round(dot.game.grade)}`}
             style={{
               left: `${dot.x}%`,
@@ -167,9 +174,24 @@ export const Beeswarm = memo(function Beeswarm({ games, scale }: BeeswarmProps) 
               '--dot-hue': String(hueFromGrade(dot.game.grade)),
               '--i': index % 40,
             } as CSSProperties}
+            {...focus.hoverProps(String(dot.game.id))}
           />
         ))}
       </div>
+
+      {/* Qué juego es cada punto. El `title` del sistema lo decía, pero tarda un segundo en salir y en una
+          pantalla táctil no existe; y con el enjambre saturado, acertar dos veces el mismo punto para volver a
+          leerlo es imposible. */}
+      <ChartDetail>
+        {shownDot ? (
+          <>
+            <b>{shownDot.game.name}</b>
+            <span>{scale === 'grade' ? Math.round(shownDot.game.grade) : `${'★'.repeat(starsFromGrade(shownDot.game.grade))}`}</span>
+          </>
+        ) : (
+          <ChartDetailHint>{L.countLabel(games.length)}</ChartDetailHint>
+        )}
+      </ChartDetail>
 
       <div className="beeswarm-axis" aria-hidden="true">
         {marks.map((mark) => (

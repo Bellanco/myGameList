@@ -1,5 +1,7 @@
 import { memo, type CSSProperties } from 'react';
 import { useStatsLabels } from './statsVoice';
+import { useChartFocus } from './useChartFocus';
+import { ChartDetail, ChartDetailHint } from './ChartDetail';
 import { timeTicks } from '../../../core/stats/timeAxis';
 import { formatMonthYear, formatTick } from './format';
 import type { GameRef } from '../../../core/stats/types';
@@ -52,6 +54,7 @@ function place(games: GameRef[], span: number, oldest: number): Placed[] {
  */
 export const WaitingTimeline = memo(function WaitingTimeline({ games }: { games: GameRef[] }) {
   const L = useStatsLabels().wishlist;
+  const focus = useChartFocus();
   const dated = games.filter((game) => game.at > 0);
   if (dated.length === 0) {
     return <p className="stats-empty">{L.empty}</p>;
@@ -66,6 +69,7 @@ export const WaitingTimeline = memo(function WaitingTimeline({ games }: { games:
   // El eje se adapta al recorrido: días si las altas caben en una semana, meses si caben en un par de años y
   // años cuando la lista lleva media década. Así el dibujo ocupa siempre el ancho y transmite el periodo real.
   const ticks = timeTicks(oldest, newest).map((tick) => ({ ...tick, left: ((tick.at - oldest) / span) * 100 }));
+  const shown = dated.find((game) => String(game.id) === focus.active) || null;
 
   return (
     <div className="timeline">
@@ -78,12 +82,15 @@ export const WaitingTimeline = memo(function WaitingTimeline({ games }: { games:
               </span>
             ))}
             <span className="timeline-axis" />
+            {/* Igual que en el enjambre de notas: se señalan con el puntero pero no entran en el recorrido del
+                teclado —hay un punto por juego en espera—, y su dato tiene su salida en la lista de abajo. */}
             {placed.map((dot, index) => (
               <span
                 key={dot.game.id}
-                className={`timeline-dot${index < LABELLED ? ' is-old' : ''}`}
+                className={`timeline-dot${index < LABELLED ? ' is-old' : ''}${focus.stateOf(String(dot.game.id))}`}
                 title={`${dot.game.name} · ${formatMonthYear(dot.game.at)}`}
                 style={{ left: `${dot.x}%`, '--lane': dot.lane, '--i': Math.min(index, 30) } as CSSProperties}
+                {...focus.hoverProps(String(dot.game.id))}
               />
             ))}
           </div>
@@ -92,6 +99,19 @@ export const WaitingTimeline = memo(function WaitingTimeline({ games }: { games:
             <span>{formatMonthYear(oldest)}</span>
             <span>{formatMonthYear(newest)}</span>
           </div>
+
+          {/* Qué juego es cada punto: en la línea solo llevan nombre los tres más antiguos, así que del resto no
+              había forma de saberlo sin esperar al `title` del sistema (que en táctil no llega nunca). */}
+          <ChartDetail>
+            {shown ? (
+              <>
+                <b>{shown.name}</b>
+                <span>{L.waitingSince(formatMonthYear(shown.at))}</span>
+              </>
+            ) : (
+              <ChartDetailHint>{L.oldest}</ChartDetailHint>
+            )}
+          </ChartDetail>
         </>
       )}
 

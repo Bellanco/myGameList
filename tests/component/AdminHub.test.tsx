@@ -35,6 +35,9 @@ const healUserFriendshipIdentityMock = vi.fn<(...args: unknown[]) => Promise<Swe
 const purgeFossilFriendshipRequestsMock = vi.fn<(...args: unknown[]) => Promise<SweepResult>>(async () => ({
   ok: true, failures: [], touched: 3, scanned: 3,
 }));
+const setUserDisplayNameMock = vi.fn<(...args: unknown[]) => Promise<SweepResult>>(async () => ({
+  ok: true, failures: [], touched: 2, scanned: 2,
+}));
 
 vi.mock('../../src/model/repository/firebaseAdminRepository', () => ({
   ADMIN_PROFILES_LIMIT: 300,
@@ -46,6 +49,7 @@ vi.mock('../../src/model/repository/firebaseAdminRepository', () => ({
   migrateForeignProfileDoc: (...args: unknown[]) => migrateForeignProfileDocMock(...args),
   healUserFriendshipIdentity: (...args: unknown[]) => healUserFriendshipIdentityMock(...args),
   purgeFossilFriendshipRequests: (...args: unknown[]) => purgeFossilFriendshipRequestsMock(...args),
+  setUserDisplayName: (...args: unknown[]) => setUserDisplayNameMock(...args),
 }));
 
 import { AdminHub } from '../../src/view/components/AdminHub';
@@ -547,6 +551,8 @@ describe('AdminHub — identidad denormalizada y solicitudes fosilizadas', () =>
     healUserFriendshipIdentityMock.mockResolvedValue({ ok: true, failures: [], touched: 2, scanned: 2 });
     purgeFossilFriendshipRequestsMock.mockClear();
     purgeFossilFriendshipRequestsMock.mockResolvedValue({ ok: true, failures: [], touched: 3, scanned: 3 });
+    setUserDisplayNameMock.mockClear();
+    setUserDisplayNameMock.mockResolvedValue({ ok: true, failures: [], touched: 2, scanned: 2 });
   });
 
   // El bloque solo aparece cuando hay algo que propagar: es una escritura sobre documentos de dos personas.
@@ -636,6 +642,47 @@ describe('AdminHub — identidad denormalizada y solicitudes fosilizadas', () =>
     );
     await userEvent.click(screen.getByRole('button', { name: new RegExp(ADMIN_PANEL_UI.refresh) }));
     expect(await screen.findByText(ADMIN_PANEL_UI.cutover.outcomeMove)).toBeInTheDocument();
+  });
+
+  // DESEMPATE A MANO: el panel no sabe cuál es el nick vigente (vive en el gist del usuario), así que ofrece los dos
+  // con su origen y deja decidir a quien mira.
+  it('ofrece los dos nombres en circulación, etiquetados por origen', async () => {
+    loadAdminCensusMock.mockResolvedValue(
+      census([user({ displayName: 'Ada', friendKnownNames: ['Ada Vieja'], anomalies: ['friend-name-mismatch'] })]),
+    );
+    renderHub();
+    signIn(ADMIN_EMAIL);
+    await screen.findAllByText('Ada');
+
+    expect(screen.getByRole('button', { name: ADMIN_PANEL_UI.chooseName.btnAria('Ada', 'Ada') })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: ADMIN_PANEL_UI.chooseName.btnAria('Ada Vieja', 'Ada') })).toBeInTheDocument();
+  });
+
+  it('fija el nombre elegido en el perfil y en sus amistades, tras confirmar', async () => {
+    loadAdminCensusMock.mockResolvedValue(
+      census([user({ displayName: 'Ada', photoURL: 'https://f/a.png', friendKnownNames: ['Ada Nueva'], anomalies: ['friend-name-mismatch'] })]),
+    );
+    renderHub();
+    signIn(ADMIN_EMAIL);
+    await screen.findAllByText('Ada');
+
+    // Se elige el de las amistades, que es el caso reportado: el perfil se quedó con el viejo.
+    await userEvent.click(screen.getByRole('button', { name: ADMIN_PANEL_UI.chooseName.btnAria('Ada Nueva', 'Ada') }));
+    expect(setUserDisplayNameMock).not.toHaveBeenCalled();
+    await userEvent.click(screen.getByRole('button', { name: ADMIN_PANEL_UI.confirmAccept }));
+
+    // La foto del perfil viaja con el nombre: el saneado escribe los dos campos y omitirla la borraría.
+    expect(setUserDisplayNameMock).toHaveBeenCalledWith('uid-a', 'uid-a', 'Ada Nueva', 'https://f/a.png');
+    expect(await screen.findByText(ADMIN_PANEL_UI.chooseName.ok('Ada Nueva', 2))).toBeInTheDocument();
+  });
+
+  it('con los nombres de acuerdo no se ofrece elegir', async () => {
+    loadAdminCensusMock.mockResolvedValue(census([user({ friendKnownNames: ['Ada'] })]));
+    renderHub();
+    signIn(ADMIN_EMAIL);
+    await screen.findByText('Ada');
+
+    expect(screen.queryByText(ADMIN_PANEL_UI.chooseName.title)).not.toBeInTheDocument();
   });
 
   it('enseña el gist de juegos que conocen sus amistades', async () => {
