@@ -6,7 +6,7 @@ import { reconcileReviewActivity } from '../model/repository/socialActivityRecon
 import { invalidateProfileGames, loadForeignProfileGames } from '../model/repository/foreignProfileRepository';
 import { getCachedSocialDirectory, getCachedSocialProfile, getLocalMeta, invalidateCachedSocialDirectory, patchLocalMeta, putCachedSocialDirectory, putCachedSocialProfile } from '../model/repository/indexedDbRepository';
 import { applyProfileVisibility } from '../core/utils/profileVisibility';
-import { photoForViewer, withVisiblePhotos } from '../core/social/photoVisibility';
+import { photoForViewer, resolveViewer, withVisiblePhotos } from '../core/social/photoVisibility';
 import { SOCIAL_UI } from '../core/constants/labels';
 import type { IconName } from '../core/constants/icons';
 import {
@@ -726,8 +726,31 @@ export function useSocialViewModel(options?: {
   // IndexedDB con el TTL del rango, así que sellar la política ahí dejaba el ajuste sin efecto hasta que la caché
   // caducara —el usuario esconde su foto, guarda, y sigue viendo las caras de los demás—. Derivándolo, el cambio se
   // ve en el mismo render y la caché conserva el dato crudo.
-  const photoViewer = useMemo(() => ({ showsOwnPhoto: showPhoto, tier: ownTier }), [showPhoto, ownTier]);
+  // `resolveViewer` y no `showPhoto` a secas: quien lleva el interruptor activado pero no tiene foto en su cuenta de
+  // Google no publica ninguna, así que tampoco ve las de los demás. Ver la nota del ajuste, que lo explica en su sitio.
+  const photoViewer = useMemo(
+    () => resolveViewer({ showPhoto, ownPhotoURL: authUser?.photoURL, tier: ownTier }),
+    [showPhoto, authUser?.photoURL, ownTier],
+  );
 
+  /**
+   * EL AJUSTE SE APAGA SOLO cuando la cuenta no tiene foto.
+   *
+   * No basta con pintar el interruptor apagado: el perfil de los usuarios que ya existen guarda `showPhoto: true`, y
+   * ese dato dejaría de describir la realidad —dice que muestra una foto que nadie ve—. Apagando el ESTADO, el
+   * siguiente guardado del perfil lo deja coherente en el gist sin forzar ninguna escritura extra ahora.
+   *
+   * Y al revés: si más adelante añade una foto a su cuenta, esto no la vuelve a encender. El interruptor se
+   * desbloquea apagado y activarlo es su decisión, que es lo que un ajuste debe ser.
+   *
+   * Solo actúa con sesión resuelta: sin `authUser` no se sabe si hay foto o no, y apagarlo por no saber sería
+   * cambiarle el ajuste a ciegas.
+   */
+  useEffect(() => {
+    if (!authUser?.uid) return;
+    if (authUser.photoURL) return;
+    if (showPhoto) setShowPhoto(false);
+  }, [authUser?.uid, authUser?.photoURL, showPhoto, setShowPhoto]);
   const friendUidSet = useMemo(
     () => new Set(friendships.friends.map((friend) => friend.otherUid)),
     [friendships.friends],
@@ -1904,7 +1927,14 @@ export function useSocialViewModel(options?: {
 
     try {
       setSavingProfile(true);
-      const visibility = profileForm.visibility;
+      // SIN FOTO EN LA CUENTA, `showPhoto` SE GUARDA EN FALSE. No se confía en que el efecto que apaga el estado haya
+      // corrido ya: la hidratación del perfil llega por red y devuelve el `showPhoto: true` del gist, así que entre
+      // esa respuesta y el apagado hay una ventana en la que un guardado rápido habría vuelto a escribir el "sí".
+      // Aquí la decisión es de una sola línea y no depende de ningún orden.
+      const visibility = {
+        ...profileForm.visibility,
+        showPhoto: profileForm.visibility.showPhoto && Boolean(authUser.photoURL),
+      };
       const normalizedHiddenTabs = visibility.hiddenTabs;
 
       const profile = {
@@ -1974,7 +2004,9 @@ export function useSocialViewModel(options?: {
         hideReplayable,
         hideRetry,
         hideGameTime,
-        showPhoto,
+        // El MISMO valor que se acaba de escribir en el gist, no el del formulario: si la caché guardara el "sí"
+        // que el gist ya no tiene, la siguiente apertura del hub hidrataría el ajuste con el dato viejo.
+        showPhoto: visibility.showPhoto,
         profileExists: true,
         activity: currentGistData.activity,
       });

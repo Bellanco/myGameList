@@ -1,13 +1,39 @@
 // Reciprocidad de la foto: quien esconde la suya no ve la de nadie, y la de los demás solo se ve con amistad
 // aceptada. Mithril (la cuenta de administración) queda exento de las dos reglas.
 import { describe, expect, it } from 'vitest';
-import { canSeeOtherPhotos, isPhotoRuleExempt, photoForViewer, withVisiblePhotos } from '../../src/core/social/photoVisibility';
+import { canSeeOtherPhotos, isPhotoRuleExempt, photoForViewer, resolveViewer, withVisiblePhotos } from '../../src/core/social/photoVisibility';
 
 const FOTO = 'https://f/ada.png';
 
 const conFoto = { showsOwnPhoto: true, tier: 'bronze' as const };
 const sinFoto = { showsOwnPhoto: false, tier: 'bronze' as const };
 const mithril = { showsOwnPhoto: false, tier: 'mithril' as const };
+
+describe('resolveViewer', () => {
+  // El interruptor dice lo que QUIERE; la foto de la cuenta dice lo que TIENE. Solo cuenta lo segundo, porque es lo
+  // que los demás ven: quien lleva el "sí" activado y no tiene foto en Google no publica ninguna.
+  it('querer mostrar la foto no basta: hay que tenerla', () => {
+    expect(resolveViewer({ showPhoto: true, ownPhotoURL: FOTO, tier: 'bronze' }).showsOwnPhoto).toBe(true);
+    expect(resolveViewer({ showPhoto: true, ownPhotoURL: '', tier: 'bronze' }).showsOwnPhoto).toBe(false);
+    expect(resolveViewer({ showPhoto: true, ownPhotoURL: null, tier: 'bronze' }).showsOwnPhoto).toBe(false);
+    expect(resolveViewer({ showPhoto: true, ownPhotoURL: undefined, tier: 'bronze' }).showsOwnPhoto).toBe(false);
+    expect(resolveViewer({ showPhoto: true, ownPhotoURL: '   ', tier: 'bronze' }).showsOwnPhoto).toBe(false);
+  });
+
+  it('tener foto no sirve si la ha escondido', () => {
+    expect(resolveViewer({ showPhoto: false, ownPhotoURL: FOTO, tier: 'bronze' }).showsOwnPhoto).toBe(false);
+  });
+
+  it('conserva el rango, que es lo que exime de la regla', () => {
+    expect(resolveViewer({ showPhoto: false, ownPhotoURL: '', tier: 'mithril' }).tier).toBe('mithril');
+  });
+
+  it('quien lo tiene activado SIN foto queda igual que quien la esconde: no ve las de los demás', () => {
+    const sinFotoEnGoogle = resolveViewer({ showPhoto: true, ownPhotoURL: '', tier: 'bronze' });
+    expect(canSeeOtherPhotos(sinFotoEnGoogle)).toBe(false);
+    expect(photoForViewer({ photoURL: FOTO, isOwn: false, isFriend: true, viewer: sinFotoEnGoogle })).toBe('');
+  });
+});
 
 describe('canSeeOtherPhotos', () => {
   it('quien publica su foto ve las ajenas; quien la esconde, no', () => {

@@ -1076,6 +1076,14 @@
   background-color: var(--overlay-hover);
 }
 
+/* Interruptor sin nada que encender (p. ej. mostrar la foto cuando la cuenta no tiene ninguna): se ve apagado y no
+   responde. Se atenúa la fila entera —etiqueta incluida— para que no parezca que el clic no ha funcionado. */
+.visibility-check:has(input:disabled) {
+  cursor: not-allowed;
+  opacity: .55;
+}
+.visibility-check:has(input:disabled):hover { background-color: transparent; }
+
 .visibility-check input {
   position: absolute;
   opacity: 0;

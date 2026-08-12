@@ -56,6 +56,9 @@ export function SocialProfileScreen({
   setShowPhoto?: (value: boolean) => void;
   ownPhotoURL?: string;
 }) {
+  /** ¿Hay foto en la cuenta de Google? Es lo que decide si el interruptor tiene algo que encender. */
+  const hasOwnPhoto = Boolean(String(ownPhotoURL || '').trim());
+
   const toggleHiddenTab = (tab: TabId) => {
     if (hiddenTabs.includes(tab)) {
       onHiddenTabsChange(hiddenTabs.filter((item) => item !== tab));
@@ -229,11 +232,16 @@ export function SocialProfileScreen({
               <div className="visibility-section">
                 <span className="visibility-label">{SOCIAL_UI.profile.photoSectionTitle}</span>
                 <div className="visibility-group">
+                  {/* SIN FOTO EN LA CUENTA, EL INTERRUPTOR VA APAGADO Y BLOQUEADO. No hay nada que mostrar, así que
+                      dejarlo encendido prometía una foto que nadie ve —y con la reciprocidad, además, le habría hecho
+                      creer que sí aporta la suya—. Vale para los perfiles YA EXISTENTES que lo tengan activado: lo
+                      que manda es lo que hay ahora en la cuenta, no lo que se guardó entonces. */}
                   <label className="visibility-check" htmlFor="hub-show-photo">
                     <input
                       id="hub-show-photo"
                       type="checkbox"
-                      checked={showPhoto !== false}
+                      checked={showPhoto !== false && hasOwnPhoto}
+                      disabled={!hasOwnPhoto}
                       onChange={(event) => setShowPhoto?.(event.target.checked)}
                     />
                     <span className="visibility-toggle-track" aria-hidden="true">
@@ -242,6 +250,9 @@ export function SocialProfileScreen({
                     <span>{SOCIAL_UI.profile.showPhotoField}</span>
                   </label>
                 </div>
+                {!hasOwnPhoto ? (
+                  <p className="hub-profile-requirement" role="status">{SOCIAL_UI.profile.photoMissingInGoogle}</p>
+                ) : null}
               </div>
             ) : null}
           </article>
