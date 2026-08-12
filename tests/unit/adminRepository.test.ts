@@ -35,8 +35,11 @@ vi.mock('firebase/firestore/lite', () => ({
 
 import {
   ADMIN_PROFILES_LIMIT,
+  FOSSIL_PENDING_MS,
   deleteUserProfile,
+  healUserFriendshipIdentity,
   loadAdminCensus,
+  purgeFossilFriendshipRequests,
   purgeLegacyProfileFields,
   setUserSocialEnabled,
   setUserTier,
@@ -393,11 +396,11 @@ describe('firebaseAdminRepository — señales', () => {
     expect(await anomaliesOf(healthy())).toEqual([]);
   });
 
-  // `enabled-without-gist` se retiró al dejar de publicarse el id del canal en el perfil: estaría vacío para
-  // todo el mundo y la señal se dispararía con cualquiera. Mirar sus amistades tampoco vale — alguien recién
-  // llegado no tiene ninguna y su canal está perfectamente.
-  it('un perfil sin gist en el documento ya NO se señala: es lo normal desde que el id no se publica', async () => {
-    expect(await anomaliesOf(healthy({}, { gistId: '' }))).not.toContain('enabled-without-gist');
+  // La señal `enabled-without-gist` se retiró del todo (ya no está ni en el tipo) al dejar de publicarse el id del
+  // canal en el perfil: estaría vacío para todo el mundo y se dispararía con cualquiera. Mirar sus amistades
+  // tampoco valía — alguien recién llegado no tiene ninguna y su canal está perfectamente.
+  it('un perfil sin gist en el documento no levanta NINGUNA señal: es lo normal desde que el id no se publica', async () => {
+    expect(await anomaliesOf(healthy({}, { gistId: '' }))).toEqual([]);
   });
 
   it('detecta perfiles a medio crear (sin nombre, sin pseudónimo, esquema viejo)', async () => {
@@ -442,8 +445,74 @@ describe('firebaseAdminRepository — señales', () => {
     expect(sinDeriva).not.toContain('gist-drift');
   });
 
+  // El caso que la comprobación original NO veía y que es el único observable hoy: el perfil ya no publica su id
+  // (se purga), así que la deriva solo se nota en que sus amistades no se ponen de acuerdo entre ellas. Quien tenga
+  // el canal abandonado no ve sus reseñas.
+  it('detecta la deriva aunque el perfil no publique ningún gist: basta que sus amistades discrepen', async () => {
+    const conDeriva = await anomaliesOf(healthy({}, { gistId: '' }), [
+      docOf('a__b', { users: ['a', 'b'], status: 'accepted', requester: 'a', recipient: 'b', requesterSocialGistId: 'gs-NUEVO' }),
+      docOf('a__c', { users: ['a', 'c'], status: 'accepted', requester: 'a', recipient: 'c', requesterSocialGistId: 'gs-VIEJO' }),
+    ]);
+    expect(conDeriva).toContain('gist-drift');
+  });
+
+  it('varias amistades de acuerdo en el mismo gist no son deriva', async () => {
+    const sinDeriva = await anomaliesOf(healthy({}, { gistId: '' }), [
+      docOf('a__b', { users: ['a', 'b'], status: 'accepted', requester: 'a', recipient: 'b', requesterSocialGistId: 'gs-a' }),
+      docOf('a__c', { users: ['a', 'c'], status: 'accepted', requester: 'a', recipient: 'c', requesterSocialGistId: 'gs-a' }),
+    ]);
+    expect(sinDeriva).toEqual([]);
+  });
+
   it('sin amistades no se inventa deriva de gist', async () => {
     expect(await anomaliesOf(healthy())).not.toContain('gist-drift');
+  });
+
+  // Nick rancio: el doc de amistad guarda el nombre del momento de la petición y nadie lo reescribe cuando su dueño
+  // se cambia el nick. Sus amigos siguen viéndole con el viejo.
+  it('detecta que sus amistades le guardan un nombre distinto del que publica', async () => {
+    const conNombreViejo = await anomaliesOf(healthy(), [
+      docOf('a__b', {
+        users: ['a', 'b'], status: 'accepted', requester: 'a', recipient: 'b',
+        requesterName: 'Ada Vieja', requesterSocialGistId: 'gs-a',
+      }),
+    ]);
+    expect(conNombreViejo).toContain('stale-friend-name');
+  });
+
+  it('el mismo nombre en sus amistades no se señala, y sin nick publicado tampoco', async () => {
+    const alDia = await anomaliesOf(healthy(), [
+      docOf('a__b', {
+        users: ['a', 'b'], status: 'accepted', requester: 'a', recipient: 'b',
+        requesterName: 'Ada', requesterSocialGistId: 'gs-a',
+      }),
+    ]);
+    expect(alDia).not.toContain('stale-friend-name');
+
+    // Sin `displayName` no hay con qué comparar: de eso avisa `no-display-name`, no esta señal.
+    const sinNick = await anomaliesOf(healthy({ displayName: '' }), [
+      docOf('a__b', {
+        users: ['a', 'b'], status: 'accepted', requester: 'a', recipient: 'b',
+        requesterName: 'Ada Vieja', requesterSocialGistId: 'gs-a',
+      }),
+    ]);
+    expect(sinNick).not.toContain('stale-friend-name');
+  });
+
+  it('recoge todos los nombres que sus amistades le guardan, no solo el primero', async () => {
+    respondWith([healthy()], [
+      docOf('a__b', {
+        users: ['a', 'b'], status: 'accepted', requester: 'a', recipient: 'b',
+        requesterName: 'Ada Vieja', requesterSocialGistId: 'gs-a',
+      }),
+      docOf('a__c', {
+        users: ['a', 'c'], status: 'accepted', requester: 'a', recipient: 'c',
+        requesterName: 'Ada', requesterSocialGistId: 'gs-a',
+      }),
+    ]);
+
+    const census = await loadAdminCensus();
+    expect([...census.users[0].friendKnownNames].sort()).toEqual(['Ada', 'Ada Vieja']);
   });
 
   it('el total de perfiles con señales cuenta perfiles, no señales', async () => {
@@ -457,5 +526,225 @@ describe('firebaseAdminRepository — señales', () => {
 
     const census = await loadAdminCensus();
     expect(census.totals.flagged).toBe(1);
+  });
+});
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+describe('firebaseAdminRepository — canal de listas y solicitudes fosilizadas', () => {
+  beforeEach(() => {
+    getDocsMock.mockReset();
+    updateDocMock.mockClear();
+    deleteDocMock.mockClear();
+  });
+
+  function profile(extra: Record<string, unknown> = {}) {
+    return docOf('a', {
+      uid: 'a', profileId: 'p-a', schemaVersion: 1, displayName: 'Ada',
+      updatedAt: Date.now() - 1000, social: { enabled: true }, ...extra,
+    });
+  }
+
+  /** Amistad aceptada de `a` con otro, con los campos denormalizados que se quieran. */
+  function friendship(id: string, other: string, extra: Record<string, unknown> = {}) {
+    return docOf(id, {
+      users: ['a', other], status: 'accepted', requester: 'a', recipient: other,
+      requesterName: 'Ada', ...extra,
+    });
+  }
+
+  it('recoge el gist de JUEGOS que sus amistades tienen denormalizado', async () => {
+    respondWith([profile()], [friendship('a__b', 'b', { requesterGamesGistId: 'gj-1' })]);
+
+    const census = await loadAdminCensus();
+    expect(census.users[0].friendGamesGistIds).toEqual(['gj-1']);
+  });
+
+  // Es la avería por la que sus amigos no pueden abrir sus listas compartidas, y es independiente del canal social.
+  it('señala la deriva del gist de juegos cuando sus amistades no coinciden', async () => {
+    respondWith([profile()], [
+      friendship('a__b', 'b', { requesterGamesGistId: 'gj-1' }),
+      friendship('a__c', 'c', { requesterGamesGistId: 'gj-VIEJO' }),
+    ]);
+
+    const census = await loadAdminCensus();
+    expect(census.users[0].anomalies).toContain('games-gist-drift');
+  });
+
+  it('no tener gist de juegos NO es señal: es lo normal sin sincronización de listas', async () => {
+    respondWith([profile()], [friendship('a__b', 'b'), friendship('a__c', 'c')]);
+
+    const census = await loadAdminCensus();
+    expect(census.users[0].anomalies).not.toContain('games-gist-drift');
+    expect(census.users[0].friendGamesGistIds).toEqual([]);
+  });
+
+  it('cuenta las solicitudes enviadas que llevan mucho esperando, con el corte de purga aparte', async () => {
+    const now = Date.now();
+    respondWith([profile()], [
+      // pendiente reciente: no cuenta para ninguno de los dos umbrales
+      docOf('a__b', { users: ['a', 'b'], status: 'pending', requester: 'a', recipient: 'b', createdAt: now - 10 * DAY_MS }),
+      // +90 días: cuenta como rancia, todavía no purgable
+      docOf('a__c', { users: ['a', 'c'], status: 'pending', requester: 'a', recipient: 'c', createdAt: now - 100 * DAY_MS }),
+      // +180 días: rancia Y purgable
+      docOf('a__d', { users: ['a', 'd'], status: 'pending', requester: 'a', recipient: 'd', createdAt: now - 200 * DAY_MS }),
+      // recibida y antigua: no es suya, no se le cuenta
+      docOf('e__a', { users: ['a', 'e'], status: 'pending', requester: 'e', recipient: 'a', createdAt: now - 300 * DAY_MS }),
+    ]);
+
+    const census = await loadAdminCensus();
+    expect(census.users[0].stalePendingOut).toBe(2);
+    expect(census.users[0].fossilPendingOut).toBe(1);
+    expect(census.users[0].anomalies).toContain('stale-pending-out');
+  });
+
+  it('una solicitud sin fecha no se cuenta como antigua: no hay antigüedad que demostrar', async () => {
+    respondWith([profile()], [
+      docOf('a__b', { users: ['a', 'b'], status: 'pending', requester: 'a', recipient: 'b' }),
+    ]);
+
+    const census = await loadAdminCensus();
+    expect(census.users[0].stalePendingOut).toBe(0);
+    expect(census.users[0].anomalies).not.toContain('stale-pending-out');
+  });
+
+  it('avisa de si el cutover fusionará o moverá, según exista ya el documento canónico', async () => {
+    // Huérfano cuyo dueño YA tiene su documento canónico: el cutover fusionará.
+    respondWith([
+      docOf('legacy-1', { uid: 'a', displayName: 'Ada', social: { enabled: true }, updatedAt: 2 }),
+      docOf('a', { uid: 'a', displayName: 'Ada', social: { enabled: true }, updatedAt: 1 }),
+    ], []);
+    let census = await loadAdminCensus();
+    expect(census.users.find((row) => row.id === 'legacy-1')?.canonicalTwinFound).toBe(true);
+    // El canónico no es gemelo de sí mismo.
+    expect(census.users.find((row) => row.id === 'a')?.canonicalTwinFound).toBe(false);
+
+    // Huérfano sin canónico: se moverá entero.
+    respondWith([docOf('legacy-2', { uid: 'z', displayName: 'Zoe', social: { enabled: true }, updatedAt: 1 })], []);
+    census = await loadAdminCensus();
+    expect(census.users[0].canonicalTwinFound).toBe(false);
+  });
+});
+
+describe('healUserFriendshipIdentity', () => {
+  beforeEach(() => {
+    getDocsMock.mockReset();
+    updateDocMock.mockClear();
+    deleteDocMock.mockClear();
+  });
+
+  it('propaga el nombre y la foto al lado correcto de cada amistad', async () => {
+    getDocsMock.mockResolvedValue(snapshotOf([
+      docOf('a__b', { users: ['a', 'b'], requester: 'a', recipient: 'b', requesterName: 'Ada Vieja', requesterPhoto: '' }),
+      docOf('c__a', { users: ['a', 'c'], requester: 'c', recipient: 'a', recipientName: 'Ada Vieja', recipientPhoto: '' }),
+    ]));
+
+    const result = await healUserFriendshipIdentity('a', { name: 'Ada', photoURL: 'https://f/a.png' });
+
+    expect(result.ok).toBe(true);
+    expect(result.touched).toBe(2);
+    // Como requester escribe SUS campos; como recipient, los suyos. Nunca los del otro lado.
+    const written = updateDocMock.mock.calls.map(([, fields]) => fields as Record<string, unknown>);
+    expect(written[0]).toMatchObject({ requesterName: 'Ada', requesterPhoto: 'https://f/a.png' });
+    expect(written[1]).toMatchObject({ recipientName: 'Ada', recipientPhoto: 'https://f/a.png' });
+    expect(written.some((fields) => 'recipientName' in fields && 'requesterName' in fields)).toBe(false);
+  });
+
+  it('no escribe lo que ya está al día (una pulsación no gasta una escritura por amistad)', async () => {
+    getDocsMock.mockResolvedValue(snapshotOf([
+      docOf('a__b', { users: ['a', 'b'], requester: 'a', recipient: 'b', requesterName: 'Ada', requesterPhoto: 'https://f/a.png' }),
+    ]));
+
+    const result = await healUserFriendshipIdentity('a', { name: 'Ada', photoURL: 'https://f/a.png' });
+
+    expect(updateDocMock).not.toHaveBeenCalled();
+    expect(result.touched).toBe(0);
+    expect(result.ok).toBe(true);
+  });
+
+  // Los ids de gist se quedan fuera a propósito: para saber cuál de los que circulan es el bueno hay que leer los
+  // gists, y eso exige el token de su dueño.
+  it('NO toca los ids de gist', async () => {
+    getDocsMock.mockResolvedValue(snapshotOf([
+      docOf('a__b', {
+        users: ['a', 'b'], requester: 'a', recipient: 'b', requesterName: 'Ada Vieja',
+        requesterSocialGistId: 'gs-1', requesterGamesGistId: 'gj-1',
+      }),
+    ]));
+
+    await healUserFriendshipIdentity('a', { name: 'Ada', photoURL: '' });
+
+    const [, fields] = updateDocMock.mock.calls[0] as [unknown, Record<string, unknown>];
+    expect(Object.keys(fields).sort()).toEqual(['requesterName', 'requesterPhoto', 'updatedAt']);
+  });
+
+  it('un fallo por documento no aborta el resto y se reporta', async () => {
+    getDocsMock.mockResolvedValue(snapshotOf([
+      docOf('a__b', { users: ['a', 'b'], requester: 'a', recipient: 'b', requesterName: 'X' }),
+      docOf('a__c', { users: ['a', 'c'], requester: 'a', recipient: 'c', requesterName: 'X' }),
+    ]));
+    updateDocMock.mockRejectedValueOnce(new Error('offline'));
+
+    const result = await healUserFriendshipIdentity('a', { name: 'Ada', photoURL: '' });
+
+    expect(result.ok).toBe(false);
+    expect(result.failures).toHaveLength(1);
+    expect(result.touched).toBe(1);
+  });
+
+  it('sin uid no hace nada', async () => {
+    const result = await healUserFriendshipIdentity('', { name: 'Ada', photoURL: '' });
+    expect(result.ok).toBe(false);
+    expect(getDocsMock).not.toHaveBeenCalled();
+  });
+});
+
+describe('purgeFossilFriendshipRequests', () => {
+  beforeEach(() => {
+    getDocsMock.mockReset();
+    updateDocMock.mockClear();
+    deleteDocMock.mockClear();
+  });
+
+  const NOW = 1_800_000_000_000;
+
+  it('borra solo las que ÉL envió, siguen pendientes y pasan de 180 días', async () => {
+    getDocsMock.mockResolvedValue(snapshotOf([
+      docOf('vieja-suya', { users: ['a', 'b'], status: 'pending', requester: 'a', createdAt: NOW - FOSSIL_PENDING_MS - 1 }),
+      docOf('reciente-suya', { users: ['a', 'c'], status: 'pending', requester: 'a', createdAt: NOW - 10 * DAY_MS }),
+      docOf('vieja-recibida', { users: ['a', 'd'], status: 'pending', requester: 'd', createdAt: NOW - 400 * DAY_MS }),
+      docOf('amistad-vieja', { users: ['a', 'e'], status: 'accepted', requester: 'a', createdAt: NOW - 400 * DAY_MS }),
+      docOf('sin-fecha', { users: ['a', 'f'], status: 'pending', requester: 'a' }),
+    ]));
+
+    const result = await purgeFossilFriendshipRequests('a', NOW);
+
+    expect(result.ok).toBe(true);
+    expect(result.touched).toBe(1);
+    expect(deleteDocMock).toHaveBeenCalledTimes(1);
+    expect((deleteDocMock.mock.calls[0][0] as { id: string }).id).toBe('vieja-suya');
+  });
+
+  it('justo en el umbral no se borra: hace falta PASAR de los 180 días', async () => {
+    getDocsMock.mockResolvedValue(snapshotOf([
+      docOf('en-el-limite', { users: ['a', 'b'], status: 'pending', requester: 'a', createdAt: NOW - FOSSIL_PENDING_MS }),
+    ]));
+
+    const result = await purgeFossilFriendshipRequests('a', NOW);
+
+    expect(deleteDocMock).not.toHaveBeenCalled();
+    expect(result.touched).toBe(0);
+  });
+
+  it('un fallo de borrado se reporta sin dar la purga por buena', async () => {
+    getDocsMock.mockResolvedValue(snapshotOf([
+      docOf('vieja', { users: ['a', 'b'], status: 'pending', requester: 'a', createdAt: NOW - 400 * DAY_MS }),
+    ]));
+    deleteDocMock.mockRejectedValueOnce(new Error('offline'));
+
+    const result = await purgeFossilFriendshipRequests('a', NOW);
+
+    expect(result.ok).toBe(false);
+    expect(result.touched).toBe(0);
   });
 });

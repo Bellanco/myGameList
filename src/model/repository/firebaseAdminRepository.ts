@@ -41,6 +41,20 @@ export interface AdminUserRow {
    * momento de la petición y ahí sigue. Vacío si no tiene amistades. No es PII nueva: es el mismo nick público.
    */
   knownAs: string;
+  /**
+   * TODOS los nombres distintos que sus amistades tienen denormalizados de él.
+   *
+   * Con más de uno, o con uno distinto de su `displayName` actual, sus amigos le ven con un nick viejo: el doc de
+   * amistad se escribió en el momento de la petición y no se reescribe al cambiar de nombre. Es el dato que
+   * sostiene la señal `stale-friend-name`, y sin recogerlos todos no se puede comparar (`knownAs` se queda con el
+   * primero que aparece, que no tiene por qué ser el vigente).
+   */
+  friendKnownNames: string[];
+  /**
+   * Fotos distintas que sus amistades tienen denormalizadas de él. Igual que el nombre, se quedan con la del
+   * momento de la petición. Solo importa si alguna difiere de su `photoURL` actual: es lo que le ven sus amigos.
+   */
+  friendKnownPhotos: string[];
   photoURL: string;
   socialEnabled: boolean;
   socialGistId: string;
@@ -102,12 +116,48 @@ export interface AdminUserRow {
    */
   friendSocialGistIds: string[];
 
+  /**
+   * Ids del gist de JUEGOS que sus amistades tienen denormalizados de él. Es con lo que un amigo carga sus listas
+   * compartidas (`loadForeignProfileGames`), un canal distinto del social y con su propia deriva posible.
+   *
+   * Vacío es NORMAL y no es señal de nada: significa que no tiene la sincronización de listas configurada, algo
+   * perfectamente legítimo en quien usa el social sin sincronizar sus juegos.
+   */
+  friendGamesGistIds: string[];
+
+  /** Solicitudes que él envió y llevan más de 90 días sin que nadie las acepte. */
+  stalePendingOut: number;
+  /** De esas, las que superan los 180 días: las que el panel puede purgar. */
+  fossilPendingOut: number;
+
+  /**
+   * ¿Se ha visto en el censo otro documento cuyo id sea su uid?
+   *
+   * Solo tiene sentido en las filas con `foreign-doc-id`, y es lo que decide qué hará el cutover: con gemelo
+   * canónico el huérfano se FUSIONA (solo se rescata lo que le falte al vivo); sin él, el documento se MUEVE
+   * entero. Sale del propio censo, así que no cuesta ninguna lectura extra — pero si el censo viene truncado,
+   * la ausencia de gemelo no es concluyente.
+   */
+  canonicalTwinFound: boolean;
+
   /** Señales de que algo no cuadra en este perfil. Vacío = nada que mirar. */
   anomalies: AdminAnomaly[];
 }
 
 /** Ventana de inactividad del feed (`FRIEND_ACTIVITY_MAX_AGE_MS` en useSocialViewModel): 30 días. */
 const INACTIVITY_MS = 30 * 24 * 60 * 60 * 1000;
+
+/**
+ * A partir de cuándo una solicitud ENVIADA y nunca aceptada se considera fosilizada. Son dos umbrales distintos a
+ * propósito, y el orden importa:
+ *
+ * - `STALE_PENDING_MS` (90 días) solo AVISA (señal `stale-pending-out`). A los tres meses ya no es una petición
+ *   reciente que el otro no haya visto todavía: o no le interesa o no vuelve.
+ * - `FOSSIL_PENDING_MS` (180 días) es el que habilita la purga. El doble de margen antes de BORRAR algo de dos
+ *   personas: la señal es reversible (desaparece si la aceptan) y el borrado no.
+ */
+const STALE_PENDING_MS = 90 * 24 * 60 * 60 * 1000;
+export const FOSSIL_PENDING_MS = 180 * 24 * 60 * 60 * 1000;
 
 
 /** Campos legacy purgables, uno a uno: cada uno tiene consecuencias distintas para su dueño. */
@@ -149,12 +199,22 @@ interface FriendshipFacts {
   pendingOut: number;
   pendingIn: number;
   name: string;
+  /** Todos los nombres distintos que sus amistades guardan de él (para detectar el nick rancio). */
+  names: Set<string>;
+  /** Todas las fotos distintas que sus amistades guardan de él. */
+  photos: Set<string>;
   /** Fecha de la amistad más antigua: el rastro fechado más viejo al que llega el panel. */
   firstAt: number;
   /** Movimiento más reciente en sus amistades. */
   lastAt: number;
   /** Ids de gist social que sus amistades tienen denormalizados de él (para detectar deriva). */
   socialGistIds: Set<string>;
+  /** Ids del gist de JUEGOS que sus amistades tienen denormalizados de él (listas compartidas). */
+  gamesGistIds: Set<string>;
+  /** Solicitudes suyas pendientes con más de 90 días. */
+  stalePendingOut: number;
+  /** Solicitudes suyas pendientes con más de 180 días (purgables). */
+  fossilPendingOut: number;
 }
 
 /** Recuento de amistades por uid, en una sola lectura de la colección. */
@@ -165,7 +225,13 @@ interface FriendshipTally {
 }
 
 function emptyFacts(): FriendshipFacts {
-  return { friends: 0, pending: 0, pendingOut: 0, pendingIn: 0, name: '', firstAt: 0, lastAt: 0, socialGistIds: new Set() };
+  return {
+    friends: 0, pending: 0, pendingOut: 0, pendingIn: 0,
+    name: '', names: new Set(), photos: new Set(),
+    firstAt: 0, lastAt: 0,
+    socialGistIds: new Set(), gamesGistIds: new Set(),
+    stalePendingOut: 0, fossilPendingOut: 0,
+  };
 }
 
 function describe(error: unknown): string {
@@ -201,7 +267,10 @@ async function requireServices() {
  * Amistades agregadas por uid. Una única lectura de la colección entera: el admin las ve todas (regla `isAdmin()`),
  * y contarlas en el cliente evita N consultas (una por usuario) para un dato que es puramente informativo.
  */
-async function tallyFriendships(firestore: import('firebase/firestore/lite').Firestore): Promise<FriendshipTally> {
+async function tallyFriendships(
+  firestore: import('firebase/firestore/lite').Firestore,
+  now: number,
+): Promise<FriendshipTally> {
   const snapshot = await getDocs(collection(firestore, 'friendships'));
   const byUid = new Map<string, FriendshipFacts>();
   let total = 0;
@@ -215,8 +284,12 @@ async function tallyFriendships(firestore: import('firebase/firestore/lite').Fir
       recipient?: unknown;
       requesterName?: unknown;
       recipientName?: unknown;
+      requesterPhoto?: unknown;
+      recipientPhoto?: unknown;
       requesterSocialGistId?: unknown;
       recipientSocialGistId?: unknown;
+      requesterGamesGistId?: unknown;
+      recipientGamesGistId?: unknown;
       createdAt?: unknown;
       updatedAt?: unknown;
     };
@@ -235,14 +308,24 @@ async function tallyFriendships(firestore: import('firebase/firestore/lite').Fir
     const updatedAt = toMillis(data.updatedAt as never);
 
     // Campos denormalizados que cada parte escribió de SÍ MISMA al crear o aceptar la petición.
-    const sideOf = (uid: string): { name: string; socialGistId: string } => {
+    const sideOf = (uid: string): { name: string; photo: string; socialGistId: string; gamesGistId: string } => {
       if (uid === data.requester) {
-        return { name: String(data.requesterName || ''), socialGistId: String(data.requesterSocialGistId || '') };
+        return {
+          name: String(data.requesterName || ''),
+          photo: String(data.requesterPhoto || ''),
+          socialGistId: String(data.requesterSocialGistId || ''),
+          gamesGistId: String(data.requesterGamesGistId || ''),
+        };
       }
       if (uid === data.recipient) {
-        return { name: String(data.recipientName || ''), socialGistId: String(data.recipientSocialGistId || '') };
+        return {
+          name: String(data.recipientName || ''),
+          photo: String(data.recipientPhoto || ''),
+          socialGistId: String(data.recipientSocialGistId || ''),
+          gamesGistId: String(data.recipientGamesGistId || ''),
+        };
       }
-      return { name: '', socialGistId: '' };
+      return { name: '', photo: '', socialGistId: '', gamesGistId: '' };
     };
 
     users.forEach((uid) => {
@@ -253,14 +336,29 @@ async function tallyFriendships(firestore: import('firebase/firestore/lite').Fir
         current.pending += 1;
         // Quién dio el paso: distinguirlo revela, por ejemplo, a quien manda peticiones en masa sin que nadie
         // se las acepte (muchas `pendingOut` y ninguna amistad).
-        if (uid === data.requester) current.pendingOut += 1;
-        else current.pendingIn += 1;
+        if (uid === data.requester) {
+          current.pendingOut += 1;
+          // Antigüedad de la petición: se mide con `createdAt`, no con `updatedAt`, porque lo que interesa es
+          // cuánto lleva ESPERANDO. Sin fecha no se cuenta: un doc antiguo sin `createdAt` no es prueba de nada, y
+          // el umbral de purga no puede apoyarse en una suposición.
+          const age = createdAt > 0 ? now - createdAt : 0;
+          if (age > STALE_PENDING_MS) current.stalePendingOut += 1;
+          if (age > FOSSIL_PENDING_MS) current.fossilPendingOut += 1;
+        } else {
+          current.pendingIn += 1;
+        }
       }
 
       const side = sideOf(uid);
-      // El primero que aparezca vale: no hay forma de saber cuál es más reciente y todos son el mismo nick.
+      // El primero que aparezca vale para IDENTIFICAR (todos son el mismo nick en el momento de la petición); la
+      // colección entera es la que permite ver si alguno se quedó atrás.
       current.name = current.name || side.name.trim();
+      if (side.name.trim()) current.names.add(side.name.trim());
+      // La foto se añade SIEMPRE, incluida la cadena vacía: "sin foto" es un valor legítimo y comparable. Filtrar
+      // los vacíos escondería justo el caso de quien tiene foto en su perfil y sus amigos le siguen viendo sin ella.
+      current.photos.add(side.photo);
       if (side.socialGistId) current.socialGistIds.add(side.socialGistId);
+      if (side.gamesGistId) current.gamesGistIds.add(side.gamesGistId);
 
       if (createdAt > 0) current.firstAt = current.firstAt === 0 ? createdAt : Math.min(current.firstAt, createdAt);
       current.lastAt = Math.max(current.lastAt, updatedAt, createdAt);
@@ -277,6 +375,16 @@ async function tallyFriendships(firestore: import('firebase/firestore/lite').Fir
  */
 function detectAnomalies(row: Omit<AdminUserRow, 'anomalies'>, friendGistIds: Set<string>, now: number): AdminAnomaly[] {
   const found: AdminAnomaly[] = [];
+
+  // Nick rancio en sus amistades: el doc de amistad guarda el nombre del momento de la petición y NADIE lo
+  // reescribe cuando su dueño se cambia el nick, así que sus amigos siguen viéndole con el viejo en la lista de
+  // amigos y en la bandeja. Se compara contra los nombres denormalizados, no contra `knownAs` (que es solo el
+  // primero que apareció). Solo con `displayName` presente: sin nick no hay nada con lo que comparar, y de eso ya
+  // avisa `no-display-name`.
+  const currentName = row.displayName.trim();
+  if (currentName && row.friendKnownNames.some((name) => name !== currentName)) {
+    found.push('stale-friend-name');
+  }
 
   // `enabled-without-gist` ya NO se emite. El id del canal dejó de publicarse en el perfil, así que está vacío
   // para todo el mundo y la señal se dispararía con cualquiera. Tampoco se puede sustituir mirando sus amistades:
@@ -295,10 +403,34 @@ function detectAnomalies(row: Omit<AdminUserRow, 'anomalies'>, friendGistIds: Se
 
   if (row.createdAt > 0 && row.updatedAt > 0 && row.createdAt > row.updatedAt) found.push('created-after-activity');
 
-  // Deriva del gist social: sus amistades guardan un id distinto del que publica el directorio. Es el fallo por el
-  // que las reseñas de alguien no aparecen en el feed de sus amigos, y desde aquí se ve de un vistazo.
-  if (row.socialGistId && friendGistIds.size > 0 && !friendGistIds.has(row.socialGistId)) {
+  // DERIVA DEL CANAL SOCIAL: el fallo por el que las reseñas de alguien no aparecen en el feed de sus amigos.
+  //
+  // La comprobación original —comparar el gist que publica su perfil con el que guardan sus amistades— quedó MUERTA
+  // al dejar de publicarse `social.gistId`: el campo está vacío para todo el mundo, así que la condición no se
+  // cumplía nunca y la señal no volvió a saltar. La deriva, en cambio, sigue existiendo.
+  //
+  // Lo que sí es observable hoy son los ids denormalizados en `friendships`. Dos casos, y ambos significan que
+  // alguien está leyendo un canal abandonado:
+  //   1. sus amistades no se ponen de acuerdo entre ellas (más de un id distinto);
+  //   2. su perfil TODAVÍA publica un id (resto legacy sin purgar) que no es el que guardan sus amistades.
+  // Un solo id compartido por todos, o ninguna amistad, no es deriva: es lo normal.
+  const friendGistDisagreement = friendGistIds.size > 1;
+  const profileGistDisagrees = Boolean(row.socialGistId) && friendGistIds.size > 0 && !friendGistIds.has(row.socialGistId);
+  if (friendGistDisagreement || profileGistDisagrees) {
     found.push('gist-drift');
+  }
+
+  // DERIVA DEL GIST DE JUEGOS: canal distinto del social y avería distinta —lo que no se ve son sus LISTAS
+  // compartidas, no sus reseñas—. Solo cuenta la discrepancia entre sus amistades: que esté vacío es lo normal en
+  // quien no tiene la sincronización de listas configurada, y señalarlo sería un falso positivo constante.
+  if (row.friendGamesGistIds.length > 1) {
+    found.push('games-gist-drift');
+  }
+
+  // Peticiones que envió y nadie aceptó en 90 días. Informativa: puede ser alguien que se apuntó, mandó unas
+  // cuantas y no volvió, y también es lo que distingue a quien las manda en masa.
+  if (row.stalePendingOut > 0) {
+    found.push('stale-pending-out');
   }
 
   return found;
@@ -326,16 +458,21 @@ export async function loadAdminCensus(limitCount = ADMIN_PROFILES_LIMIT): Promis
     throw toAdminError(error, 'listar los perfiles');
   }
 
+  // Un solo instante para todo el censo: si cada fila leyera su propio `Date.now()`, dos perfiles idénticos
+  // podrían acabar con señales distintas por unos milisegundos. Se toma ANTES del recuento porque la antigüedad de
+  // las solicitudes pendientes se mide ahí con el mismo reloj.
+  const now = Date.now();
+
   let friendships: FriendshipTally;
   try {
-    friendships = await tallyFriendships(services.firestore);
+    friendships = await tallyFriendships(services.firestore, now);
   } catch (error) {
     throw toAdminError(error, 'listar las amistades');
   }
 
-  // Un solo instante para todo el censo: si cada fila leyera su propio `Date.now()`, dos perfiles idénticos
-  // podrían acabar con señales distintas por unos milisegundos.
-  const now = Date.now();
+  // Ids de documento presentes en el censo: es lo que permite saber si un perfil huérfano tiene ya su gemelo
+  // canónico en `profiles/{uid}` y, por tanto, si el cutover fusionará o moverá.
+  const docIds = new Set(profilesSnapshot.docs.map((entry) => entry.id));
 
   const users = profilesSnapshot.docs
     .filter((entry) => entry.id !== PLACEHOLDER_ID)
@@ -361,6 +498,8 @@ export async function loadAdminCensus(limitCount = ADMIN_PROFILES_LIMIT): Promis
         uid,
         displayName: String(data.displayName || ''),
         knownAs: facts.name,
+        friendKnownNames: [...facts.names],
+        friendKnownPhotos: [...facts.photos],
         photoURL: String(data.photoURL || ''),
         socialEnabled: Boolean(social.enabled),
         socialGistId: String(social.gistId || ''),
@@ -378,6 +517,11 @@ export async function loadAdminCensus(limitCount = ADMIN_PROFILES_LIMIT): Promis
         estimatedFirstSeenAt: facts.firstAt,
         lastFriendshipAt: facts.lastAt,
         friendSocialGistIds: [...facts.socialGistIds],
+        friendGamesGistIds: [...facts.gamesGistIds],
+        stalePendingOut: facts.stalePendingOut,
+        fossilPendingOut: facts.fossilPendingOut,
+        // Un documento no es gemelo de sí mismo: solo cuenta si el destino del cutover es OTRO documento del censo.
+        canonicalTwinFound: uid !== entry.id && docIds.has(uid),
         legacy: {
           email: Boolean(data.email), // audit-allow: solo se comprueba la PRESENCIA del campo legacy; el valor no sale de aquí
           gamesGistId: Boolean(social.gamesGistId), // audit-allow: presencia del campo legacy para poder purgarlo; no se escribe ni se muestra
@@ -415,6 +559,155 @@ export async function loadAdminCensus(limitCount = ADMIN_PROFILES_LIMIT): Promis
       ),
     },
   };
+}
+
+/** Cuántos documentos ha tocado una acción que recorre las amistades de alguien. */
+export interface AdminFriendshipSweepResult extends AdminActionResult {
+  /** Documentos de amistad efectivamente escritos o borrados. */
+  touched: number;
+  /** Documentos que se han mirado (los de ese uid). */
+  scanned: number;
+}
+
+/**
+ * Propaga la identidad PÚBLICA de un usuario (su nick y su foto de perfil) a sus documentos de amistad.
+ *
+ * POR QUÉ HACE FALTA DESDE AQUÍ. Los campos `requesterName`/`recipientName` (y sus fotos) están denormalizados: se
+ * escriben en el momento de la petición y nadie los reescribe al cambiar de nick. El propio cliente los sanea
+ * (`healOwnFriendshipIdentity`), pero solo cuando su dueño ABRE EL ESPACIO SOCIAL con el canal ya configurado, o al
+ * guardar el perfil, o al publicar. Quien entra a usar sus listas y no pasa por el hub arrastra el nombre viejo para
+ * siempre, y es el que ven sus amigos en su lista y en su bandeja. Esta es la única vía que no depende de él.
+ *
+ * Lo que NO toca, y es deliberado: los ids de gist (`*SocialGistId`, `*GamesGistId`). Para saber cuál de los que
+ * circulan es el bueno hay que leer los gists, y eso exige el token de GitHub de su dueño, que es owner-only. El
+ * panel enseña la deriva; resolverla sigue siendo cosa de su cliente.
+ *
+ * Las reglas lo permiten por la rama `isAdmin()` de `allow update` en `friendships`, que se salta
+ * `friendshipHealOwnFields` (esa función solo deja tocar los campos del PROPIO lado, y aquí se escriben los de otro).
+ *
+ * Best-effort acumulativo, igual que el borrado: no aborta al primer fallo y reporta lo que no pudo.
+ */
+export async function healUserFriendshipIdentity(
+  uid: string,
+  identity: { name: string; photoURL: string },
+): Promise<AdminFriendshipSweepResult> {
+  const cleanUid = String(uid || '').trim();
+  if (!cleanUid) {
+    return { ok: false, failures: ['No se conoce el uid del usuario'], touched: 0, scanned: 0 };
+  }
+
+  const services = await requireServices();
+  const name = identity.name.trim();
+  const photo = String(identity.photoURL || '');
+
+  let snapshot;
+  try {
+    snapshot = await getDocs(
+      query(collection(services.firestore, 'friendships'), where('users', 'array-contains', cleanUid)),
+    );
+  } catch (error) {
+    return { ok: false, failures: [describe(toAdminError(error, 'listar sus amistades'))], touched: 0, scanned: 0 };
+  }
+
+  const failures: string[] = [];
+  let touched = 0;
+
+  // Solo se escribe lo que DIVERGE (mismo criterio que el saneado del propio cliente): sin ese filtro, cada pulsación
+  // gastaría una escritura por amistad para dejar los documentos exactamente como estaban.
+  const writes = snapshot.docs.flatMap((entry) => {
+    const data = entry.data() as Partial<import('../types/firestore').FriendshipDoc>;
+    const amRequester = data.requester === cleanUid;
+    const isRecipient = data.recipient === cleanUid;
+    if (!amRequester && !isRecipient) {
+      return []; // aparece en `users` pero no es ninguno de los dos lados: documento inconsistente, no se toca
+    }
+
+    const currentName = amRequester ? data.requesterName : data.recipientName;
+    const currentPhoto = amRequester ? data.requesterPhoto : data.recipientPhoto;
+    if (currentName === name && currentPhoto === photo) {
+      return [];
+    }
+
+    const fields = amRequester
+      ? { requesterName: name, requesterPhoto: photo, updatedAt: Date.now() }
+      : { recipientName: name, recipientPhoto: photo, updatedAt: Date.now() };
+    return [updateDoc(entry.ref, fields)];
+  });
+
+  const results = await Promise.allSettled(writes);
+  results.forEach((result) => {
+    if (result.status === 'rejected') {
+      failures.push(describe(toAdminError(result.reason, 'actualizar una amistad')));
+    } else {
+      touched += 1;
+    }
+  });
+
+  invalidateMyFriendshipsCache();
+
+  return { ok: failures.length === 0, failures, touched, scanned: snapshot.size };
+}
+
+/**
+ * Borra las solicitudes de amistad que ESE usuario envió, siguen pendientes y llevan más de `FOSSIL_PENDING_MS`
+ * (180 días) sin que nadie las acepte.
+ *
+ * Qué se borra y qué no:
+ * - solo `status: 'pending'`. Una amistad aceptada no caduca por vieja que sea.
+ * - solo las que él ENVIÓ (`requester === uid`). Las que ha recibido son la bandeja de otro y no le corresponde
+ *   limpiarlas desde su ficha: aparecerán en la ficha de quien las mandó.
+ * - solo con `createdAt` fechado. Sin fecha no hay antigüedad demostrable, y no se borra por sospecha.
+ *
+ * Borrar la petición la retira también de la bandeja del destinatario, que es justo el objetivo: dejan de ocupar
+ * sitio en los dos lados. Los dos interesados pueden volver a enviarla cuando quieran.
+ *
+ * El filtro por estado y fecha se hace en el cliente (la consulta solo pide `array-contains`) para no exigir un
+ * índice compuesto nuevo por una operación de mantenimiento que se ejecuta a mano.
+ */
+export async function purgeFossilFriendshipRequests(
+  uid: string,
+  now: number = Date.now(),
+): Promise<AdminFriendshipSweepResult> {
+  const cleanUid = String(uid || '').trim();
+  if (!cleanUid) {
+    return { ok: false, failures: ['No se conoce el uid del usuario'], touched: 0, scanned: 0 };
+  }
+
+  const services = await requireServices();
+
+  let snapshot;
+  try {
+    snapshot = await getDocs(
+      query(collection(services.firestore, 'friendships'), where('users', 'array-contains', cleanUid)),
+    );
+  } catch (error) {
+    return { ok: false, failures: [describe(toAdminError(error, 'listar sus amistades'))], touched: 0, scanned: 0 };
+  }
+
+  const fossils = snapshot.docs.filter((entry) => {
+    const data = entry.data() as Partial<import('../types/firestore').FriendshipDoc>;
+    if (data.status !== 'pending' || data.requester !== cleanUid) {
+      return false;
+    }
+    const createdAt = toMillis(data.createdAt as never);
+    return createdAt > 0 && now - createdAt > FOSSIL_PENDING_MS;
+  });
+
+  const failures: string[] = [];
+  let touched = 0;
+
+  const results = await Promise.allSettled(fossils.map((entry) => deleteDoc(entry.ref)));
+  results.forEach((result) => {
+    if (result.status === 'rejected') {
+      failures.push(describe(toAdminError(result.reason, 'borrar una solicitud')));
+    } else {
+      touched += 1;
+    }
+  });
+
+  invalidateMyFriendshipsCache();
+
+  return { ok: failures.length === 0, failures, touched, scanned: fossils.length };
 }
 
 /**

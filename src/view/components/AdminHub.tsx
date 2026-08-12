@@ -37,7 +37,6 @@ const LEGACY_ANOMALIES = new Set<AdminAnomaly>(['legacy-token', 'legacy-fields']
  */
 const SEVERE_ANOMALIES = new Set<AdminAnomaly>([
   'legacy-token',
-  'enabled-without-gist',
   'gist-drift',
   'future-activity',
   'created-after-activity',
@@ -203,6 +202,16 @@ export const AdminHub = memo(function AdminHub() {
               // Solo se puede migrar si el documento dice de quién es: cuando no trae `uid`, el censo lo iguala al
               // id del propio documento y no hay destino que proponer.
               const cutoverTargetKnown = Boolean(user.uid) && user.uid !== user.id;
+              // Nombres que sus amistades guardan y que ya no son el que publica: es lo que le ven sus amigos. Sin
+              // nick publicado no hay con qué comparar, y el nombre de sus amigos ya identifica la ficha arriba.
+              const staleNames = user.displayName.trim()
+                ? user.friendKnownNames.filter((known) => known !== user.displayName.trim())
+                : [];
+              // La foto denormalizada se queda rancia por la misma vía que el nombre. Una foto vacía en sus amistades
+              // cuando el perfil sí tiene una también cuenta: sus amigos le ven sin foto.
+              const photoIsStale = user.friendKnownPhotos.some((known) => known !== user.photoURL);
+              // El botón de propagar solo aparece cuando hay algo que propagar de verdad.
+              const identityIsStale = staleNames.length > 0 || photoIsStale;
 
               return (
                 <li key={user.id} className={`admin-user-card${busy ? ' is-busy' : ''}`}>
@@ -292,7 +301,49 @@ export const AdminHub = memo(function AdminHub() {
                     <div><dt>{A.field.pendingIn}</dt><dd>{user.pendingIn}</dd></div>
                     <div><dt>{A.field.lastFriendship}</dt><dd>{formatActivity(user.lastFriendshipAt)}</dd></div>
                     <div><dt>{A.field.profileId}</dt><dd><code>{user.profileId || A.field.none}</code></dd></div>
-                    <div><dt>{A.field.socialGist}</dt><dd><code>{user.socialGistId || A.field.none}</code></dd></div>
+                    {/* El id del canal ya no se publica en el perfil, así que este campo solo existe como resto
+                        legacy: pintarlo siempre enseñaba un "—" a todo el mundo. El canal de alguien se ve ahora
+                        por lo que guardan sus amistades, que es el dato de abajo. */}
+                    {user.socialGistId ? (
+                      <div><dt>{A.field.socialGist}</dt><dd><code>{user.socialGistId}</code></dd></div>
+                    ) : null}
+                    <div>
+                      <dt>{A.field.friendGists}</dt>
+                      <dd>
+                        {user.friendSocialGistIds.length > 0
+                          ? user.friendSocialGistIds.map((gistId) => <code key={gistId}>{gistId}</code>)
+                          : A.field.none}
+                      </dd>
+                    </div>
+                    {/* El otro canal: con este id un amigo carga sus LISTAS compartidas. Vacío no es un fallo —
+                        significa que no tiene la sincronización de listas configurada—, así que no lleva señal. */}
+                    <div>
+                      <dt>{A.field.friendGamesGists}</dt>
+                      <dd>
+                        {user.friendGamesGistIds.length > 0
+                          ? user.friendGamesGistIds.map((gistId) => <code key={gistId}>{gistId}</code>)
+                          : A.field.none}
+                      </dd>
+                    </div>
+                    {/* Solo cuando alguno de sus amigos le ve con otro nombre: en el caso normal repetir el nick
+                        que ya está arriba no aporta nada. */}
+                    {staleNames.length > 0 ? (
+                      <div><dt>{A.field.staleFriendNames}</dt><dd>{staleNames.join(', ')}</dd></div>
+                    ) : null}
+                    {/* Solo se dice si está al día o no: la URL ocuparía una línea entera para no informar de nada
+                        que no se vea ya en el avatar. Y solo con amistades: sin ellas no hay foto que comparar. */}
+                    {user.friendKnownPhotos.length > 0 ? (
+                      <div>
+                        <dt>{A.field.friendPhoto}</dt>
+                        <dd>{photoIsStale ? A.field.friendPhotoStale : A.field.friendPhotoFresh}</dd>
+                      </div>
+                    ) : null}
+                    {user.stalePendingOut > 0 ? (
+                      <div>
+                        <dt>{A.field.stalePending}</dt>
+                        <dd>{A.field.stalePendingDetail(user.stalePendingOut, user.fossilPendingOut)}</dd>
+                      </div>
+                    ) : null}
                     <div><dt>{A.field.etag}</dt><dd>{user.hasSocialEtag ? A.field.yes : A.field.no}</dd></div>
                     <div><dt>{A.field.photo}</dt><dd>{user.hasPhoto ? A.field.yes : A.field.no}</dd></div>
                     <div><dt>{A.field.schema}</dt><dd>{user.schemaVersion || A.field.none}</dd></div>
@@ -310,12 +361,62 @@ export const AdminHub = memo(function AdminHub() {
                       <span className="admin-field-label">{A.gist.driftTitle}</span>
                       <p className="admin-card-note">{A.gist.driftHint}</p>
                       <dl className="admin-user-data">
-                        <div><dt>{A.gist.profileGist}</dt><dd><code>{user.socialGistId}</code></dd></div>
+                        <div>
+                          <dt>{A.gist.profileGist}</dt>
+                          {/* Lo habitual desde la purga: el perfil ya no publica id y la deriva se ve entre las
+                              propias amistades. Decirlo evita leer el hueco como un dato que no se pudo cargar. */}
+                          <dd>{user.socialGistId ? <code>{user.socialGistId}</code> : A.gist.profileGistPurged}</dd>
+                        </div>
                         <div>
                           <dt>{A.gist.friendGist}</dt>
                           <dd>{user.friendSocialGistIds.map((gistId) => <code key={gistId}>{gistId}</code>)}</dd>
                         </div>
                       </dl>
+                    </div>
+                  ) : null}
+
+                  {/* Identidad denormalizada rancia: sus amigos le ven con el nombre (o la foto) de cuando se
+                      hicieron amigos. Su cliente lo arregla solo al abrir el espacio social, guardar el perfil o
+                      publicar; quien no pasa por ahí lo arrastra, y esta es la única vía que no depende de él. */}
+                  {identityIsStale ? (
+                    <div className="admin-gist-drift" role="group" aria-label={A.healIdentity.title}>
+                      <span className="admin-field-label">{A.healIdentity.title}</span>
+                      <p className="admin-card-note">{A.healIdentity.hint}</p>
+                      <button
+                        type="button"
+                        className="btn btn-secondary"
+                        disabled={busy}
+                        onClick={() =>
+                          setPending({
+                            title: A.healIdentity.confirm(name),
+                            run: () => void vm.healIdentity(user),
+                          })
+                        }
+                      >
+                        {busy ? A.working : A.healIdentity.btn}
+                      </button>
+                    </div>
+                  ) : null}
+
+                  {/* Solicitudes que envió y nadie aceptó en 180 días. El botón solo aparece cuando de verdad hay
+                      alguna purgable: la señal avisa a los 90 días, pero borrar espera al doble de margen. */}
+                  {user.fossilPendingOut > 0 ? (
+                    <div className="admin-gist-drift" role="group" aria-label={A.fossil.title}>
+                      <span className="admin-field-label">{A.fossil.title}</span>
+                      <p className="admin-card-note">{A.fossil.hint}</p>
+                      <button
+                        type="button"
+                        className="btn btn-danger"
+                        disabled={busy}
+                        onClick={() =>
+                          setPending({
+                            title: A.fossil.confirm(name, user.fossilPendingOut),
+                            run: () => void vm.purgeFossilRequests(user),
+                          })
+                        }
+                      >
+                        {busy ? A.working : A.fossil.btn(user.fossilPendingOut)}
+                      </button>
                     </div>
                   ) : null}
 
@@ -333,6 +434,21 @@ export const AdminHub = memo(function AdminHub() {
                           <dt>{A.cutover.targetLabel}</dt>
                           <dd>{cutoverTargetKnown ? <code>{`profiles/${user.uid}`}</code> : A.field.none}</dd>
                         </div>
+                        {/* Mover y fusionar no son la misma operación y no tienen las mismas consecuencias: quien
+                            pulsa el botón debe saber cuál de las dos va a ocurrir ANTES de pulsarlo. Sale del censo
+                            ya cargado, pero si viene recortado la ausencia de gemelo no prueba nada. */}
+                        {cutoverTargetKnown ? (
+                          <div>
+                            <dt>{A.cutover.outcomeLabel}</dt>
+                            <dd>
+                              {user.canonicalTwinFound
+                                ? A.cutover.outcomeMerge
+                                : vm.census?.truncated
+                                  ? A.cutover.outcomeUnknown
+                                  : A.cutover.outcomeMove}
+                            </dd>
+                          </div>
+                        ) : null}
                       </dl>
                       <button
                         type="button"

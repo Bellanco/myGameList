@@ -15,10 +15,13 @@ import type { ScoreScale } from '../../core/utils/scoreScale';
  * repositorio.
  */
 export type AdminAnomaly =
-  /** `social.enabled` pero sin gist social: sale del directorio y no publica nada. Perfil roto. */
-  | 'enabled-without-gist'
   /** Sin nombre: perfil a medio crear. */
   | 'no-display-name'
+  /**
+   * Sus amistades le guardan un nombre distinto del que publica ahora: cambió de nick y los docs de amistad
+   * conservan el viejo, que es el que ven sus amigos en la lista y en la bandeja de solicitudes.
+   */
+  | 'stale-friend-name'
   /** Sin `profileId`: la identidad pseudónima nunca se estableció. */
   | 'no-profile-id'
   /** El documento no se identifica por el uid (perfil legacy bajo otro id). */
@@ -37,8 +40,18 @@ export type AdminAnomaly =
   | 'future-activity'
   /** Alta posterior a la última actividad: imposible salvo manipulación. */
   | 'created-after-activity'
-  /** El gist social del directorio no coincide con el que guardan sus amistades: sus reseñas no llegan al feed. */
-  | 'gist-drift';
+  /**
+   * Hay más de un gist social suyo en circulación (sus amistades no apuntan todas al mismo, o su perfil aún
+   * publica uno distinto): quien lea el abandonado no verá sus reseñas en el feed.
+   */
+  | 'gist-drift'
+  /**
+   * Sus amistades no coinciden en su gist de JUEGOS: quien tenga el abandonado no puede ver sus listas
+   * compartidas. Canal distinto del social, y avería distinta.
+   */
+  | 'games-gist-drift'
+  /** Envió solicitudes que llevan más de 90 días pendientes: nadie se las ha aceptado. */
+  | 'stale-pending-out';
 
 /** profiles/{profileId} — index-only, identificado por el pseudónimo, NO por uid. */
 export interface ProfileIndexDoc {
