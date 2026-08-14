@@ -299,6 +299,41 @@
   overflow: hidden;
 }
 
+/* ZONA sobre la escala completa, con la media marcada en su centro. Para las cifras que dicen «dónde, y
+   alrededor de qué» en vez de «cuánto de un todo»: la pista es la escala entera —sin ella no se vería que la
+   zona ocupa un tercio o la mitad— y la marca es la referencia que la ordena. */
+.stat-tile-band {
+  position: relative;
+  display: block;
+  /* Un pelo más alta que la barra de progreso: tiene que caber una marca dentro sin que tape la banda. */
+  height: 5px;
+  margin-top: auto;
+  border-radius: 999px;
+  background: var(--surface-hover);
+  overflow: hidden;
+}
+
+.stat-tile-band i {
+  position: absolute;
+  inset-block: 0;
+  left: var(--from, 0%);
+  width: calc(var(--to, 100%) - var(--from, 0%));
+  border-radius: 999px;
+  background: var(--steam);
+}
+
+/* La marca no se recorta con `overflow` del contenedor: se dibuja dentro, del color del texto para que se lea
+   sobre la banda y sobre la pista por igual. */
+.stat-tile-band b {
+  position: absolute;
+  inset-block: 0;
+  left: var(--mark, 50%);
+  width: 2px;
+  transform: translateX(-1px);
+  background: var(--text);
+  opacity: .85;
+}
+
 .stat-tile-bar i {
   display: block;
   width: var(--pct, 0%);
@@ -839,11 +874,18 @@
 .beeswarm-canvas {
   position: relative;
   flex: 1;
-  min-height: 9rem;
+  /* A ancho completo el enjambre se estira a lo largo, y con poco alto los puntos de un mismo tramo se apilan
+     en una columna larga y fina. Con sitio de sobra, la nube se reparte y se lee como lo que es. */
+  min-height: 26rem;
   border-radius: var(--stats-radius);
+  /* Fondo con la RAMPA DEL TEMA (`--chart-from` → `--chart-to`), no con el semáforo rojo→verde de las notas:
+     ahí el color competía con el de los propios puntos, que ya llevan la nota. Aquí solo tiene que decir hacia
+     dónde crece la escala, así que va muy diluido —lo justo para orientar— y con un borde de la paleta que
+     encierre el lienzo. Cada skin lo tiñe con su identidad sin una regla por tema. */
   background: linear-gradient(90deg,
-    color-mix(in srgb, var(--grade-floor) 10%, transparent),
-    color-mix(in srgb, var(--grade-ceiling) 10%, transparent));
+    color-mix(in oklch, var(--chart-from) 7%, transparent),
+    color-mix(in oklch, var(--chart-to) 7%, transparent));
+  border: 1px solid color-mix(in oklch, var(--border) 60%, transparent);
 }
 
 /* Silueta de densidad: un velo por detrás, nunca una mancha. Sin `fill` explícito el SVG la pintaba negra y
@@ -1661,11 +1703,15 @@
 .podium-step.is-silver { border-color: color-mix(in srgb, var(--medal-silver) 45%, var(--border)); }
 .podium-step.is-bronze { border-color: color-mix(in srgb, var(--medal-bronze) 45%, var(--border)); }
 
+/* La cifra se apoya en la esquina inferior derecha y cabe ENTERA: antes asomaba por debajo del borde
+   (`bottom: -1.4rem`) y, con el `overflow: hidden` de la tarjeta, se le comía el tercio de abajo — un «1» sin
+   pie y un «3» partido. Se sube dentro y se ajusta el cuerpo para que quepa sin empujar al texto, que la
+   sobrevuela: el número es un fondo, no una columna. */
 .podium-ghost {
   position: absolute;
-  right: -.2rem;
-  bottom: -1.4rem;
-  font-size: 4.6rem;
+  right: .1rem;
+  bottom: -.1rem;
+  font-size: 4rem;
   font-weight: 800;
   line-height: 1;
   letter-spacing: -.04em;
@@ -2713,3 +2759,390 @@
     transition: none !important;
   }
 }
+
+
+/* ═══════════════════════════════════════════════════════════════════════════════════════════════════
+   EVOLUCIÓN DEL GUSTO · bump chart (`GenreBump`)
+
+   UN COLOR POR GÉNERO, de la rampa del tema (`--chart-from` → `--chart-to`) repartido por su puesto final.
+   Es la misma rampa del rosetón y del hexágono, así que cada paleta lo tiñe con su identidad —los dos
+   portales, rojo y oro; cian y magenta…— sin una sola regla por tema. La mezcla acota el porcentaje con
+   `clamp()` a propósito: Chrome recorta solo, pero Firefox devuelve TRANSPARENTE al salirse, y una lista más
+   larga de lo previsto haría desaparecer líneas enteras.
+
+   Cada línea lleva además su nombre a los dos lados, así que la identidad nunca depende solo del color.
+   ═══════════════════════════════════════════════════════════════════════════════════════════════════ */
+.genre-bump { display: flex; flex-direction: column; gap: .5rem; }
+
+/* El lienzo se desplaza si no cabe (muchos años); la tarjeta nunca empuja el ancho de la página. */
+.genre-bump-canvas { overflow-x: auto; overflow-y: hidden; max-width: 100%; }
+/* Suelo de ancho: siete líneas, doce años y un nombre de género a la derecha no caben en un móvil, y dejar que
+   el SVG se encoja al contenedor reducía los rótulos a cuatro píxeles. Por debajo de este ancho el lienzo se
+   desplaza dentro de su caja —el mismo trato que el gráfico anual y el selector de años—, y la página nunca se
+   mueve de lado. */
+.genre-bump-svg { height: auto; min-width: min(44rem, 190vw); width: 100%; overflow: visible; }
+
+.genre-bump-grid { stroke: var(--border); stroke-width: 1; opacity: .5; }
+.genre-bump-year,
+.genre-bump-tag { fill: var(--stats-ink-2); font-size: 11px; }
+.genre-bump-year { font-variant-numeric: tabular-nums; }
+.genre-bump-tag { font-weight: 600; }
+
+/* Banda de los que se caen de la tabla: hundida y rotulada, para que se lea como un sitio aparte y no como
+   un puesto más. */
+.genre-bump-out { fill: var(--surface-hover); opacity: .55; }
+/* Contorno del color de la tarjeta bajo el texto: el rótulo cae dentro del área y las líneas le pasan por
+   encima; sin él se lee a trozos. */
+.genre-bump-out-label {
+  fill: var(--text-muted);
+  font-size: 10px;
+  font-style: italic;
+  paint-order: stroke;
+  stroke: var(--surface);
+  stroke-width: 4;
+  stroke-linejoin: round;
+}
+/* Rótulo flotante: para el género que no está en ninguno de los dos extremos y no tiene sitio a los lados. */
+.genre-bump-tag.is-floating { font-size: 10px; paint-order: stroke; stroke: var(--surface); stroke-width: 3.5; stroke-linejoin: round; }
+
+.genre-bump-line { cursor: pointer; }
+.genre-bump-line:focus-visible { outline: none; }
+.genre-bump-line:focus-visible .genre-bump-path { stroke-width: 3.6; }
+
+.genre-bump-path {
+  fill: none;
+  stroke: color-mix(in oklch, var(--chart-to) clamp(0%, var(--i, 0) / max(calc(var(--n, 2) - 1), 1) * 100%, 100%), var(--chart-from));
+  stroke-width: 2.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: stroke-width .15s;
+}
+/* Tramo que cruza la banda de descartados: discontinuo y más fino. Recto y sólido se leía como un puesto
+   sostenido durante años, que es justo lo contrario de lo que dice. */
+.genre-bump-path.is-out {
+  stroke-dasharray: 5 5;
+  stroke-width: 1.8;
+  opacity: .5;
+}
+
+/* Objetivo invisible y ancho: apuntar a un trazo de 2,6 px con el dedo es imposible. */
+.genre-bump-hit { fill: none; stroke: transparent; stroke-width: 20; }
+
+.genre-bump-dot {
+  fill: color-mix(in oklch, var(--chart-to) clamp(0%, var(--i, 0) / max(calc(var(--n, 2) - 1), 1) * 100%, 100%), var(--chart-from));
+  stroke: var(--surface);
+  stroke-width: 2;
+}
+/* Punto en la banda de fuera: hueco. No es un puesto, así que no se pinta macizo como los demás. */
+.genre-bump-dot.is-out {
+  fill: var(--surface);
+  stroke: color-mix(in oklch, var(--chart-to) clamp(0%, var(--i, 0) / max(calc(var(--n, 2) - 1), 1) * 100%, 100%), var(--chart-from));
+  stroke-width: 2.5;
+  r: 4;
+}
+
+.genre-bump-line.is-active .genre-bump-path { stroke-width: 3.6; }
+.genre-bump-line.is-active .genre-bump-tag { fill: var(--text); }
+.genre-bump-line.is-dim { opacity: .22; }
+
+@media (prefers-reduced-motion: no-preference) {
+  /* La línea se dibuja de izquierda a derecha al aparecer: el gesto cuenta lo mismo que el gráfico, que es
+     el paso del tiempo. */
+  .genre-bump-path:not(.is-out) {
+    stroke-dasharray: 1400;
+    stroke-dashoffset: 1400;
+    animation: bump-draw 1.2s ease-out both;
+    animation-delay: calc(var(--i, 0) * 60ms);
+  }
+  /* El discontinuo se desvanece en vez de dibujarse: animar su `dashoffset` le borraría los guiones. */
+  .genre-bump-path.is-out { animation: bump-dot .6s ease-out both; animation-delay: calc(.6s + var(--i, 0) * 60ms); }
+  .genre-bump-dot { animation: bump-dot .3s ease-out both; animation-delay: calc(.5s + var(--i, 0) * 60ms); }
+}
+@keyframes bump-draw { to { stroke-dashoffset: 0; } }
+@keyframes bump-dot { from { opacity: 0; } }
+
+
+/* ═══════════════════════════════════════════════════════════════════════════════════════════════════
+   NOTAS POR AÑO · ridgeline (`GradeRidge`)
+   Cada cresta se normaliza contra SU año, no contra el más prolífico: lo que se compara es la forma.
+   ═══════════════════════════════════════════════════════════════════════════════════════════════════ */
+.grade-ridge { display: flex; flex-direction: column; gap: .4rem; }
+.grade-ridge-svg { width: 100%; height: auto; overflow: visible; }
+
+.grade-ridge-base { stroke: var(--border); stroke-width: 1; opacity: .6; }
+/* Relleno con la rampa de NOTA (la misma de la rueda de puntuar), no con un tono plano: la silueta se tiñe de
+   rojo a verde según dónde caigan las notas, así que el color dice lo mismo que la posición. */
+.grade-ridge-area { opacity: .3; }
+.grade-ridge-stop-1 { stop-color: var(--grade-1); stop-opacity: .85; }
+.grade-ridge-stop-2 { stop-color: var(--grade-2); stop-opacity: .85; }
+.grade-ridge-stop-3 { stop-color: var(--grade-3); stop-opacity: .85; }
+.grade-ridge-stop-4 { stop-color: var(--grade-4); stop-opacity: .85; }
+.grade-ridge-stop-5 { stop-color: var(--grade-5); stop-opacity: .9; }
+.grade-ridge-line {
+  fill: none;
+  stroke: var(--stats-ink-2);
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  opacity: .55;
+}
+@media (prefers-reduced-motion: no-preference) {
+  /* Las crestas se levantan una tras otra, de arriba abajo: el mismo gesto de cascada del resto del panel. */
+  .grade-ridge-row { animation: ridge-rise .5s cubic-bezier(.34, 1.2, .64, 1) both; animation-delay: calc(var(--i, 0) * 60ms); }
+}
+@keyframes ridge-rise { from { opacity: 0; transform: translateY(6px); } }
+.grade-ridge-year { fill: var(--stats-ink-2); font-size: 11.5px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.grade-ridge-value { fill: var(--stats-ink-2); font-size: 11px; font-weight: 600; font-variant-numeric: tabular-nums; }
+/* El recuento va bajo la media, en un cuerpo menor: es el respaldo de esa cifra, no otra cifra. */
+.grade-ridge-count,
+.grade-ridge-axis { fill: var(--text-muted); font-size: 9.5px; font-variant-numeric: tabular-nums; }
+.grade-ridge-hit { fill: transparent; cursor: pointer; }
+
+.grade-ridge-row { transition: opacity .15s; }
+.grade-ridge-row:focus-visible { outline: none; }
+.grade-ridge-row:focus-visible .grade-ridge-line,
+.grade-ridge-row.is-active .grade-ridge-line { stroke-width: 2.4; opacity: 1; }
+.grade-ridge-row.is-active .grade-ridge-area { opacity: .6; }
+.grade-ridge-row.is-active .grade-ridge-value { fill: var(--text); }
+.grade-ridge-row.is-dim { opacity: .4; }
+
+
+/* ═══════════════════════════════════════════════════════════════════════════════════════════════════
+   CONSTANCIA · mapa de calor por SEMANAS (`WeekStreak`)
+
+   Un cuadro por semana y no por día: una lista de juegos no se toca a diario, así que el mapa diario
+   clásico saldría casi entero en blanco y haría parecer inactivo a quien no lo está. Cuatro niveles de
+   intensidad discretos (no una rampa continua) porque lo que se lee aquí es el PATRÓN —dónde hay racha y
+   dónde hueco—, y los saltos se distinguen mejor que un degradado fino.
+   ═══════════════════════════════════════════════════════════════════════════════════════════════════ */
+.week-heat { display: flex; flex-direction: column; gap: .6rem; }
+.week-heat-canvas { overflow-x: auto; overflow-y: hidden; max-width: 100%; }
+.week-heat-svg { width: 100%; height: auto; max-width: 26rem; }
+
+.week-heat-row { fill: var(--text-muted); font-size: 10.5px; }
+.week-heat-cell { cursor: pointer; }
+.week-heat-cell rect { transition: opacity .15s; }
+.week-heat-cell:focus-visible { outline: none; }
+.week-heat-cell:focus-visible rect { stroke: var(--text); stroke-width: 2; }
+.week-heat-cell.is-active rect { stroke: var(--text); stroke-width: 2; }
+.week-heat-cell.is-dim rect { opacity: .45; }
+
+/* Rampa de intensidad: la misma mezcla en el mapa y en su leyenda, para que la leyenda no mienta. El nivel 0
+   es la superficie hundida —un hueco tiene que verse como hueco, no como un azul muy claro—. */
+.week-heat-cell.is-l0 rect,
+.week-heat-key.is-l0 { background: var(--surface-hover); fill: var(--surface-hover); }
+.week-heat-cell.is-l1 rect,
+.week-heat-key.is-l1 { background: color-mix(in oklch, var(--steam) 28%, var(--surface)); fill: color-mix(in oklch, var(--steam) 28%, var(--surface)); }
+.week-heat-cell.is-l2 rect,
+.week-heat-key.is-l2 { background: color-mix(in oklch, var(--steam) 50%, var(--surface)); fill: color-mix(in oklch, var(--steam) 50%, var(--surface)); }
+.week-heat-cell.is-l3 rect,
+.week-heat-key.is-l3 { background: color-mix(in oklch, var(--steam) 72%, var(--surface)); fill: color-mix(in oklch, var(--steam) 72%, var(--surface)); }
+.week-heat-cell.is-l4 rect,
+.week-heat-key.is-l4 { background: var(--steam); fill: var(--steam); }
+
+.week-heat-scale { display: flex; align-items: center; gap: .3rem; font-size: .74rem; color: var(--text-muted); }
+.week-heat-key { width: .8rem; height: .8rem; border-radius: 3px; display: inline-block; }
+.week-heat-scale span:last-child { margin-left: .2rem; }
+.week-heat-scale span:first-child { margin-right: .2rem; }
+
+.week-heat-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(7rem, 1fr)); gap: .5rem; margin: 0; }
+.week-heat-stats div {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: .45rem .6rem;
+  background: var(--surface);
+}
+.week-heat-stats dt { font-size: .72rem; color: var(--text-muted); }
+.week-heat-stats dd { margin: 0; font-weight: 650; font-variant-numeric: tabular-nums; }
+
+
+/* ═══════════════════════════════════════════════════════════════════════════════════════════════════
+   NOTAS POR AÑO · ridgeline (`GradeRidge`)
+   Cada cresta se normaliza contra SU año, no contra el más prolífico: lo que se compara es la forma.
+   ═══════════════════════════════════════════════════════════════════════════════════════════════════ */
+.grade-ridge { display: flex; flex-direction: column; gap: .4rem; }
+.grade-ridge-svg { width: 100%; height: auto; overflow: visible; }
+
+.grade-ridge-base { stroke: var(--border); stroke-width: 1; opacity: .6; }
+/* Relleno con la rampa de NOTA (la misma de la rueda de puntuar), no con un tono plano: la silueta se tiñe de
+   rojo a verde según dónde caigan las notas, así que el color dice lo mismo que la posición. */
+.grade-ridge-area { opacity: .3; }
+.grade-ridge-stop-1 { stop-color: var(--grade-1); stop-opacity: .85; }
+.grade-ridge-stop-2 { stop-color: var(--grade-2); stop-opacity: .85; }
+.grade-ridge-stop-3 { stop-color: var(--grade-3); stop-opacity: .85; }
+.grade-ridge-stop-4 { stop-color: var(--grade-4); stop-opacity: .85; }
+.grade-ridge-stop-5 { stop-color: var(--grade-5); stop-opacity: .9; }
+.grade-ridge-line {
+  fill: none;
+  stroke: var(--stats-ink-2);
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  opacity: .55;
+}
+@media (prefers-reduced-motion: no-preference) {
+  /* Las crestas se levantan una tras otra, de arriba abajo: el mismo gesto de cascada del resto del panel. */
+  .grade-ridge-row { animation: ridge-rise .5s cubic-bezier(.34, 1.2, .64, 1) both; animation-delay: calc(var(--i, 0) * 60ms); }
+}
+@keyframes ridge-rise { from { opacity: 0; transform: translateY(6px); } }
+.grade-ridge-year { fill: var(--stats-ink-2); font-size: 11.5px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.grade-ridge-value { fill: var(--stats-ink-2); font-size: 11px; font-weight: 600; font-variant-numeric: tabular-nums; }
+/* El recuento va bajo la media, en un cuerpo menor: es el respaldo de esa cifra, no otra cifra. */
+.grade-ridge-count,
+.grade-ridge-axis { fill: var(--text-muted); font-size: 9.5px; font-variant-numeric: tabular-nums; }
+.grade-ridge-hit { fill: transparent; cursor: pointer; }
+
+.grade-ridge-row { transition: opacity .15s; }
+.grade-ridge-row:focus-visible { outline: none; }
+.grade-ridge-row:focus-visible .grade-ridge-line,
+.grade-ridge-row.is-active .grade-ridge-line { stroke-width: 2.4; opacity: 1; }
+.grade-ridge-row.is-active .grade-ridge-area { opacity: .6; }
+.grade-ridge-row.is-active .grade-ridge-value { fill: var(--text); }
+.grade-ridge-row.is-dim { opacity: .4; }
+
+
+/* ═══════════════════════════════════════════════════════════════════════════════════════════════════
+   CONSTANCIA · mapa de calor por SEMANAS (`WeekStreak`)
+
+   Un cuadro por semana y no por día: una lista de juegos no se toca a diario, así que el mapa diario
+   clásico saldría casi entero en blanco y haría parecer inactivo a quien no lo está. Cuatro niveles de
+   intensidad discretos (no una rampa continua) porque lo que se lee aquí es el PATRÓN —dónde hay racha y
+   dónde hueco—, y los saltos se distinguen mejor que un degradado fino.
+   ═══════════════════════════════════════════════════════════════════════════════════════════════════ */
+.week-heat { display: flex; flex-direction: column; gap: .6rem; }
+.week-heat-canvas { overflow-x: auto; overflow-y: hidden; max-width: 100%; }
+.week-heat-svg { width: 100%; height: auto; max-width: 26rem; }
+
+.week-heat-row { fill: var(--text-muted); font-size: 10.5px; }
+.week-heat-cell { cursor: pointer; }
+.week-heat-cell rect { transition: opacity .15s; }
+.week-heat-cell:focus-visible { outline: none; }
+.week-heat-cell:focus-visible rect { stroke: var(--text); stroke-width: 2; }
+.week-heat-cell.is-active rect { stroke: var(--text); stroke-width: 2; }
+.week-heat-cell.is-dim rect { opacity: .45; }
+
+/* Rampa de intensidad: la misma mezcla en el mapa y en su leyenda, para que la leyenda no mienta. El nivel 0
+   es la superficie hundida —un hueco tiene que verse como hueco, no como un azul muy claro—. */
+.week-heat-cell.is-l0 rect,
+.week-heat-key.is-l0 { background: var(--surface-hover); fill: var(--surface-hover); }
+.week-heat-cell.is-l1 rect,
+.week-heat-key.is-l1 { background: color-mix(in oklch, var(--steam) 28%, var(--surface)); fill: color-mix(in oklch, var(--steam) 28%, var(--surface)); }
+.week-heat-cell.is-l2 rect,
+.week-heat-key.is-l2 { background: color-mix(in oklch, var(--steam) 50%, var(--surface)); fill: color-mix(in oklch, var(--steam) 50%, var(--surface)); }
+.week-heat-cell.is-l3 rect,
+.week-heat-key.is-l3 { background: color-mix(in oklch, var(--steam) 72%, var(--surface)); fill: color-mix(in oklch, var(--steam) 72%, var(--surface)); }
+.week-heat-cell.is-l4 rect,
+.week-heat-key.is-l4 { background: var(--steam); fill: var(--steam); }
+
+.week-heat-scale { display: flex; align-items: center; gap: .3rem; font-size: .74rem; color: var(--text-muted); }
+.week-heat-key { width: .8rem; height: .8rem; border-radius: 3px; display: inline-block; }
+.week-heat-scale span:last-child { margin-left: .2rem; }
+.week-heat-scale span:first-child { margin-right: .2rem; }
+
+.week-heat-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(7rem, 1fr)); gap: .5rem; margin: 0; }
+.week-heat-stats div {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: .45rem .6rem;
+  background: var(--surface);
+}
+.week-heat-stats dt { font-size: .72rem; color: var(--text-muted); }
+.week-heat-stats dd { margin: 0; font-weight: 650; font-variant-numeric: tabular-nums; }
+
+
+/* ═══════════════════════════════════════════════════════════════════════════════════════════════════
+   FORMATO TARJETA · compartido por «A cuáles vuelves» y «Tu exigencia»
+
+   La misma anatomía que las tarjetas de cifra de la cabecera del panel: rótulo pequeño, CIFRA grande, pista
+   debajo y, al pie, un gráfico discreto que la respalda. Se lee el número primero y el dibujo después —que es
+   el orden en que se mira una cifra— y las dos piezas comparten forma porque responden a la misma clase de
+   pregunta: cómo se reparte un todo.
+   ═══════════════════════════════════════════════════════════════════════════════════════════════════ */
+.stat-card-lead { display: flex; flex-direction: column; gap: .1rem; }
+.stat-card-label { font-size: .76rem; color: var(--text-muted); }
+.stat-card-value {
+  font-size: 2.4rem;
+  font-weight: 650;
+  line-height: 1.05;
+  letter-spacing: -.03em;
+  /* Cifra grande: figuras proporcionales. `tabular-nums` da a cada dígito el ancho de un cero y a este cuerpo
+     se ve suelta; se reserva para las columnas de números, donde sí hay que alinear. */
+}
+.stat-card-value small { font-size: 1rem; font-weight: 500; color: var(--text-muted); margin-left: .2rem; letter-spacing: 0; }
+.stat-card-hint { font-size: .78rem; color: var(--text-muted); }
+/* El gráfico va al PIE y separado por una línea: es el apoyo de la cifra, no el protagonista. */
+.stat-card-figure {
+  margin-top: .2rem;
+  padding-top: .7rem;
+  border-top: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: .45rem;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════════════════════════════
+   A CUÁLES VUELVES (`ReplayShare`)
+   Tres tramos: haber vuelto es un hecho, querer volver es una intención, y el resto es el resto.
+   ═══════════════════════════════════════════════════════════════════════════════════════════════════ */
+.replay-share { display: flex; flex-direction: column; gap: .6rem; }
+
+.replay-share-lead { margin: 0; display: flex; align-items: baseline; gap: .45rem; }
+.replay-share-lead strong { font-size: 2rem; font-weight: 650; letter-spacing: -.02em; line-height: 1; }
+.replay-share-lead span { color: var(--text-muted); font-size: .85rem; }
+
+/* `height: auto` y no una altura fija: con altura fija el SVG conserva su relación de aspecto, se escala a lo
+   alto y se queda centrado con dos huecos a los lados en vez de ocupar la tarjeta. */
+.replay-share-svg { width: 100%; height: auto; }
+.replay-share-part rect { transition: opacity .15s; }
+.replay-share-part.is-replayed rect { fill: var(--success); }
+.replay-share-part.is-will rect { fill: var(--steam); }
+.replay-share-part.is-once rect { fill: var(--border); }
+.replay-share-part { cursor: pointer; }
+.replay-share-part:focus-visible { outline: none; }
+.replay-share-part:focus-visible rect,
+.replay-share-part.is-active rect { filter: brightness(1.2); }
+.replay-share-part.is-dim rect { opacity: .35; }
+
+.replay-share-legend { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: .35rem 1rem; }
+.replay-share-legend li { display: inline-flex; align-items: center; gap: .4rem; font-size: .82rem; color: var(--text-muted); }
+.replay-share-legend b { color: var(--text); font-variant-numeric: tabular-nums; }
+.replay-share-key { width: .65rem; height: .65rem; border-radius: 3px; background: var(--border); }
+.replay-share-legend .is-replayed .replay-share-key { background: var(--success); }
+.replay-share-legend .is-will .replay-share-key { background: var(--steam); }
+
+.replay-share-block { display: flex; flex-direction: column; gap: .35rem; }
+.replay-share-block h3 { margin: 0; font-size: .82rem; font-weight: 600; color: var(--stats-ink-2); }
+
+
+/* ═══════════════════════════════════════════════════════════════════════════════════════════════════
+   EXIGENCIA (`DemandMeter`)
+
+   Mismo lenguaje visual que «A cuáles vuelves»: las dos responden a cómo se reparte un todo, y compartir la
+   forma hace que el panel se lea como una pantalla y no como una colección de gráficos sueltos. La pista es
+   la escala de notas COMPLETA; encima, tu zona habitual iluminada y la media marcada.
+   ═══════════════════════════════════════════════════════════════════════════════════════════════════ */
+.demand-meter { display: flex; flex-direction: column; gap: .6rem; }
+
+.demand-meter-svg { width: 100%; height: auto; overflow: visible; }
+.demand-meter-track { fill: var(--surface-hover); }
+.demand-meter-zone { cursor: pointer; }
+.demand-meter-zone rect { transition: opacity .15s; }
+.demand-meter-zone.is-low rect { fill: color-mix(in oklch, var(--danger) 55%, var(--surface)); }
+.demand-meter-zone.is-band rect { fill: var(--steam); }
+.demand-meter-zone.is-high rect { fill: color-mix(in oklch, var(--success) 65%, var(--surface)); }
+.demand-meter-zone:focus-visible { outline: none; }
+.demand-meter-zone:focus-visible rect,
+.demand-meter-zone.is-active rect { filter: brightness(1.2); }
+.demand-meter-zone.is-dim rect { opacity: .35; }
+
+.demand-meter-avg { stroke: var(--text); stroke-width: 2.5; stroke-linecap: round; }
+
+.demand-meter-legend { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: .35rem 1rem; }
+.demand-meter-legend li { display: inline-flex; align-items: center; gap: .4rem; font-size: .82rem; color: var(--text-muted); }
+.demand-meter-legend b { color: var(--text); font-variant-numeric: tabular-nums; }
+.demand-meter-key { width: .65rem; height: .65rem; border-radius: 3px; background: var(--steam); }
+.demand-meter-legend .is-range .demand-meter-key { background: linear-gradient(90deg, color-mix(in oklch, var(--danger) 55%, var(--surface)), color-mix(in oklch, var(--success) 65%, var(--surface))); }
+/* La media no es una zona sino una marca: su clave es una línea, como en el gráfico. */
+.demand-meter-legend .is-avg .demand-meter-key { width: .2rem; height: .8rem; border-radius: 2px; background: var(--text); }
+
+.demand-meter-verdict { margin: 0; font-size: .88rem; color: var(--text); }
