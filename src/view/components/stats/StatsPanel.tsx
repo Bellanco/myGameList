@@ -188,7 +188,10 @@ export const StatsPanel = memo(function StatsPanel({
                 hint={stats.longest ? L.tiles.longestHint(formatHours(stats.longest.hours)) : undefined}
               />
             ) : null}
-            {has('replay') && (own || stats.replay.total > 0) ? (
+            {/* «Volverías a jugar» suma dos cosas y una de ellas, `replayable`, es PRIVADA: no viaja por el canal
+                social. Con la proyección pública el porcentaje saldría contando solo los ya rejugados y se leería
+                como el total, así que con datos incompletos no se monta —el mismo criterio que apaga las horas—. */}
+            {has('replay') && full && (own || stats.replay.total > 0) ? (
               <StatTile
                 label={L.replay.tile}
                 value={<CountUp value={replayPercent} />}

@@ -68,6 +68,9 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
     puntos; si puntúa con estrellas, las tres en estrellas. Y los nombres largos de género (`Estrategia en tiempo
     real`) caben enteros en la evolución del gusto: el espacio de los rótulos se calcula con el más largo en vez
     de fijarse, que era lo que los cortaba a media palabra.
+  - «Volverías a jugar» no se monta en un perfil ajeno sin datos completos: suma los ya rejugados y los marcados
+    como «rejugar», y esa marca es privada, así que con la proyección pública el porcentaje contaría solo la mitad
+    y se leería como el total.
   - En un perfil ajeno, la evolución del gusto entra ya en **bronce** (es el mismo retrato contado en el tiempo,
     y sale de `genres` y `years`, que el canal social ya publica); las dos piezas de notas llegan con **plata**;
     la rejugabilidad se queda en administración, porque `replayable` es privado.
@@ -93,9 +96,12 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
     mismo día. En ambos casos se deja el hueco: un dato ausente la vista lo enseña como ausente, mientras que uno
     inventado se lee como bueno. La exclusión solo frena la siembra; un sello que la app vio ocurrir no se
     descarta nunca.
-  - **Privados**: no salen por el canal social (entran en `SOCIAL_PRIVATE_FIELDS` y la guarda los rechaza). Un
-    registro de cuándo mueves cada juego describe tus **hábitos** —a qué horas usas la app, qué días juegas—, y
-    eso es más de lo que nadie consiente al compartir una lista. Lo temporal que se publica sigue siendo `years`.
+  - **Privados por las dos puertas**: ni el canal social los publica (entran en `SOCIAL_PRIVATE_FIELDS`, y sobre
+    esa denylist hay además una allowlist estricta que rechaza cualquier campo extra), ni el gist de LISTADOS los
+    deja pasar —una amistad lo baja para ver tu perfil, y ahí los juegos van completos—: el filtro de visibilidad,
+    donde ya se recortan horas y marcas, los quita para cualquier rango y sin ajuste que los rescate. Un registro
+    de cuándo mueves cada juego describe tus **hábitos** —a qué horas usas la app, qué días juegas—, y eso es más
+    de lo que nadie consiente al compartir una lista. Lo temporal que se publica sigue siendo `years`.
   - Coste medido sobre una biblioteca real de 228 juegos: **228 bytes** en el gist ya comprimido (un byte por
     juego). En plano son 4,5 KB, pero gzip deduplica los nombres de campo repetidos y se los come casi enteros.
 

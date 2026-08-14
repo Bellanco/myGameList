@@ -24,6 +24,16 @@ export function applyProfileVisibility(
     if (visibility.hideGameTime) next.hours = null;
     if (!isAdmin && visibility.hideReplayable) next.replayable = false;
     if (!isAdmin && visibility.hideRetry) next.retry = false;
+    /**
+     * Los sellos automáticos se caen SIEMPRE, para cualquier rango y sin ajuste que los rescate.
+     *
+     * No son un dato del juego sino un registro de cuándo su dueño lo movió de lista y cuándo le cambió la nota:
+     * a qué horas usa la app y qué días juega. El canal social ya los tiene prohibidos, pero el gist de LISTADOS
+     * —que una amistad sí baja para ver su perfil— los llevaba, y ese es el mismo dato por otra puerta. Aquí, que
+     * es donde se recorta lo que no debe verse de otra persona, se van.
+     */
+    delete next.enteredAt;
+    delete next.gradedAt;
     return next;
   };
   const out = { c: [], v: [], e: [], p: [] } as Record<TabId, GameItem[]>;
