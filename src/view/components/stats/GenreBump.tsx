@@ -210,7 +210,6 @@ export const GenreBump = memo(function GenreBump({ ranks }: { ranks: GenreRanks 
 
   return (
     <div className="genre-bump">
-      <p className="stats-note">{L.windowHint(ranks.window)}</p>
       <div className="genre-bump-canvas">
         <svg
           viewBox={`0 0 ${width} ${height}`}

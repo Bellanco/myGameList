@@ -351,10 +351,8 @@ export const UI_MESSAGES = {
     genreRanks: {
       title: 'Cómo cambia tu gusto',
       // Skyrim: «solías ser un aventurero como yo, hasta que…». Aquí se ve qué dejaste de jugar por el camino.
-      subtitle: 'Tú también fuiste un aventurero: mira qué géneros suben y cuáles se te caen del podio.',
+      subtitle: 'Tú también fuiste un aventurero: qué géneros terminas más y cuáles se te caen del podio.',
       empty: 'Con unos cuantos años de partidas terminadas, aquí verás hacia dónde se mueve tu gusto.',
-      /** El puesto se saca de varios años a la vez; hay que decirlo o el eje engaña. */
-      windowHint: (window: number) => `Cada punto acumula ${window} años, para que un solo juego no mueva el puesto.`,
       rankAria: (tag: string, year: number, rank: number, games: number) =>
         `${tag}: ${rank}.º en ${year} con ${games} ${games === 1 ? 'juego' : 'juegos'}`,
       chartAria: 'Puesto de cada género por año',
@@ -371,7 +369,7 @@ export const UI_MESSAGES = {
     activity: {
       title: 'Tu constancia',
       // Animal Crossing va de aparecer cada día; aquí basta con aparecer cada semana.
-      subtitle: 'No hace falta jugar a diario: esto cuenta las semanas en las que pasó algo.',
+      subtitle: 'Aquí no se mide cuánto juegas, sino cada cuánto vuelves a tus listas.',
       empty: 'En cuanto muevas juegos entre listas o escribas reseñas, aquí aparecerá tu ritmo.',
       /** Por qué la unidad es la semana y no el día. */
       why: 'Por semanas, no por días: una lista de juegos no se toca a diario, y un calendario diario sería casi todo huecos.',
