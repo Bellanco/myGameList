@@ -5,6 +5,100 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
 
 ## [Unreleased]
 
+### Added
+- **Cinco bloques nuevos en el panel «Perfil»**, todos derivados de lo que ya está en memoria (misma pasada
+  única de `computeStats`, sin campos nuevos y sin una consulta de red):
+  - **Cómo cambia tu gusto** — un *bump chart* con el puesto de cada género año a año. Era la única pregunta que
+    el panel no respondía: todo lo demás retrata la biblioteca de HOY, y esto cuenta que el gusto se mueve. El eje
+    es el PUESTO y no la cantidad, porque comparar cosechas desiguales —veinticuatro juegos un año, siete al
+    siguiente— haría parecer un desplome de todos los géneros a la vez lo que solo fue un año flojo. Cada punto
+    acumula tres años (con uno suelto, el puesto lo mueve un único título) y los años cuya ventana no reúne cinco
+    juegos no se dibujan, en vez de sacar un ranking del azar de una temporada. Compiten **siete** géneros, los
+    suficientes para que aparezcan los que entran y salen, con **un color cada uno** de la rampa del tema (la
+    misma del rosetón y del hexágono, así que cada paleta los tiñe con su identidad sin una regla por tema).
+  - Y los que se caen de la tabla tienen **su propia banda al pie**, rotulada y separada, a la que baja la línea
+    el año en que el género no tiene ni un juego. Dibujarle un puesto mentiría —no estaba— y partir la línea
+    perdía el recorrido: desaparecía sin decir a dónde. Es el mismo criterio con el que el gráfico anual manda
+    los completados sin año a un chip propio en vez de inventarles uno. Ese tramo va **discontinuo y sin curva**
+    (recto y sólido se leía como un puesto sostenido, que es justo lo contrario), el punto en la banda es hueco,
+    y el recorrido («sube del 5.º al 1.º») se mide entre el primer año en que aparece y el último.
+  - Los **nombres van solo a la derecha**: a la izquierda repetían los mismos siete rótulos, doblaban el ruido de
+    una figura que ya tiene siete trazos cruzándose y se apilaban ilegibles cuando varios géneros compartían la
+    banda del pie. Ese margen lo ocupa ahora el rótulo de la banda. Y el suavizado **acota sus tiradores** al
+    tramo: sin eso, tras varios años en el mismo puesto la curva se pasaba de largo al saltar y dibujaba una
+    panza que insinuaba un puesto por el que nunca se pasó.
+  - **Cuánto vuelves y cuánto exiges**, como cifras destacadas de la cabecera, con el mismo tamaño y diseño que
+    las que ya había: «volverías a jugar el 52%» (con su barra, porque es una parte de un todo) y «tu exigencia,
+    ±0,9★». Empezaron siendo dos tarjetas con gráfico propio, pero decían en media pantalla lo que cabe en una
+    cifra, y el panel ya tiene bastantes formas. Las dos llevan su barra al pie, como las demás cifras que son
+    parte de un todo. La de la exigencia no es una barra de progreso, sino la **zona sobre la escala completa con
+    tu media marcada en su centro**: esa cifra no dice «cuánto de un todo» sino «dónde, y alrededor de qué», y una
+    barra que crece desde cero no puede decir ni dónde empieza la zona ni qué la ordena. El signo va pegado al
+    número: una desviación sin él se lee como una nota, que es justo lo que no es.
+  - **Tu constancia** — un mapa de calor donde cada cuadro es una **semana, no un día**: una lista de juegos no
+    se toca a diario, así que el mapa diario clásico saldría casi entero en blanco y haría parecer inactivo a
+    quien lleva años cuidando su biblioteca. Cuenta solo fechas que la app registra sola (`enteredAt`,
+    `reviewedAt`), nunca `_ts` —que lo sella en bloque una importación y enseñaría una única semana frenética—.
+    Cuatro niveles de intensidad discretos y no una rampa continua, porque lo que se lee aquí es el patrón (dónde
+    hay racha y dónde hueco). La serie tiene **cota dura de dos años**: incluye las semanas vacías —son el dato,
+    una racha se ve porque a su lado hay blancos—, así que sin tope crecería con la antigüedad de la biblioteca y
+    quien lleve diez años apuntando arrastraría más de quinientos puntos en cada recálculo para enseñar los
+    últimos cincuenta y dos. Es un bloque **solo propio**: esas fechas son privadas y no viajan por el canal
+    social.
+  - **A cuáles vuelves** — el reparto de los completados entre los que ya has rejugado, los que te apetece
+    repetir y los de una sola vez. Volver a un juego es el desempate que el panel ya usaba en su ranking, y ese
+    dato no se enseñaba en ninguna parte: `replayable` solo lo miraba la ruleta. Haber vuelto es un hecho y
+    querer volver una intención, así que van en tramos distintos y un juego ya rejugado no cuenta además como
+    intención (si no, el reparto pasaría del 100%).
+  - **Tu exigencia** — la desviación típica de tus notas sobre la escala completa, con tu zona habitual
+    iluminada y la media marcada. La media sola no distingue a quien pone un 70 a todo de quien reparte 30 y 95,
+    y son dos formas opuestas de valorar; lo que las separa es la anchura de esa zona. Comparte forma con «A
+    cuáles vuelves» a propósito: las dos responden a cómo se reparte un todo, y usar el mismo lenguaje visual
+    hace que el panel se lea como una pantalla y no como una colección de gráficos sueltos. El número va con su
+    lectura en palabras, porque un «±18,4» no le dice nada a nadie hasta que se traduce.
+  - **La distribución de notas pasa a ocupar el ancho completo** y dobla su altura: a lo ancho y con poco alto,
+    los puntos de un mismo tramo se apilaban en una columna larga y fina. Su fondo deja de usar el semáforo
+    rojo→verde de las notas —competía con el color de los propios puntos, que ya llevan la nota— y pasa a la
+    rampa del tema, muy diluida y con un borde de la paleta: lo justo para orientar hacia dónde crece la escala,
+    y teñido por cada skin sin una regla por tema.
+  - Queda **fuera del panel, terminado y a la espera**, un *ridgeline* del reparto de notas por año
+    (`GradeRidge`): el panel ya tiene tres formas hablando de notas —el enjambre, la tira del gráfico anual y la
+    cifra de exigencia— y esa era la cuarta. Se conserva entero porque la decisión es de encuadre, no de calidad.
+  - **Una sola escala por pieza**: si la cuenta puntúa sobre 100, el eje, la media y la frase de tendencia van en
+    puntos; si puntúa con estrellas, las tres en estrellas. Y los nombres largos de género (`Estrategia en tiempo
+    real`) caben enteros en la evolución del gusto: el espacio de los rótulos se calcula con el más largo en vez
+    de fijarse, que era lo que los cortaba a media palabra.
+  - En un perfil ajeno, la evolución del gusto entra ya en **bronce** (es el mismo retrato contado en el tiempo,
+    y sale de `genres` y `years`, que el canal social ya publica); las dos piezas de notas llegan con **plata**;
+    la rejugabilidad se queda en administración, porque `replayable` es privado.
+- **Sellos automáticos de la vida de un juego (`enteredAt`, `gradedAt`)**: cuándo entró en cada lista y cuándo
+  cambió su nota. **Nadie los teclea** —el formulario no crece ni un campo—: los escribe la propia transición,
+  por los tres caminos que puede tomar un juego (el formulario, el movimiento directo de la ruleta y el alta
+  desde el perfil de otra persona). Es lo que `listedAt` no podía ser: esa fecha marca la llegada a la lista
+  **actual** y se reescribe al mover el juego, así que al terminar algo se borraba la fecha en que se añadió a
+  Próximos, y con ella la única respuesta a *cuánto tiempo llevaba esperando* —la pregunta central de una lista
+  de pendientes—. Cada lista tiene ahora su marca y ninguna pisa a la anterior.
+  - Es la **PRIMERA** entrada a cada lista, a propósito: un valor que no se reescribe no ensucia el merge y hace
+    que dos dispositivos converjan al mismo número. Volver a una lista de la que se salió (una rejugada) ya lo
+    cuenta `years`, que es multivalor justo para eso.
+  - **Aditivos y opcionales**, como `reviewedAt`: un cliente antiguo que lea el gist los ignora. Y como el merge
+    es LWW del objeto de juego entero, uno que **escriba** puede borrarlos; por eso `normalizeGame` vuelve a
+    sembrar el sello de la lista actual desde `listedAt` en cada carga y el dato se **auto-repara**. Lo único que
+    no vuelve es el paso por listas anteriores, que no se inventa.
+  - Esa misma siembra es la migración: quien actualice no estrena la versión con el historial vacío. Con dos
+    fuentes excluidas a propósito, y por el mismo motivo: **`years`**, porque de ahí solo sale el año y un sello
+    con día y hora fabricados se leería como exacto en un calendario; y las **fechas selladas en bloque** —las
+    que comparten ocho juegos o más al milisegundo, imposible a mano y típico de una importación—, que no son la
+    llegada de nada. En una biblioteca importada, sembrar de ahí diría que las doscientas partidas entraron el
+    mismo día. En ambos casos se deja el hueco: un dato ausente la vista lo enseña como ausente, mientras que uno
+    inventado se lee como bueno. La exclusión solo frena la siembra; un sello que la app vio ocurrir no se
+    descarta nunca.
+  - **Privados**: no salen por el canal social (entran en `SOCIAL_PRIVATE_FIELDS` y la guarda los rechaza). Un
+    registro de cuándo mueves cada juego describe tus **hábitos** —a qué horas usas la app, qué días juegas—, y
+    eso es más de lo que nadie consiente al compartir una lista. Lo temporal que se publica sigue siendo `years`.
+  - Coste medido sobre una biblioteca real de 228 juegos: **228 bytes** en el gist ya comprimido (un byte por
+    juego). En plano son 4,5 KB, pero gzip deduplica los nombres de campo repetidos y se los come casi enteros.
+
 ### Security
 - **App Check (reCAPTCHA v3) contra el abuso de la cuota de Firebase.** La clave web es pública por diseño, así
   que cualquier autenticado podía recorrer el directorio de perfiles o inundar de peticiones de amistad desde
@@ -20,6 +114,12 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
   habría copia local con la que recuperarlos.
 
 ### Fixed
+- **Mover un juego de lista estrenaba la fecha de su reseña.** `reviewedAt` existe para no depender de `_ts`
+  —que lo mueve cualquier edición— y su contrato es que solo la toca un cambio del **texto**: ni la nota, ni un
+  cambio de lista, ni una importación. Pero al guardar se buscaba el estado anterior **solo en la lista de
+  destino**, así que en una migración no había con qué comparar, el texto previo se leía como vacío y la reseña
+  se re-fechaba en cada movimiento. Al pasar a Completados algo reseñado hace años, el feed y la pestaña de
+  reseñas lo anunciaban como recién escrito.
 - **Insignias mudas para un lector de pantalla.** "Rejugar" y "Otra oportunidad" eran un `<span>` con
   `aria-label`; un span sin rol es `generic` y ARIA prohíbe nombrarlo, así que la etiqueta se descartaba y esas
   celdas no anunciaban nada. Lo destapó la auditoría con axe sobre el render, que es lo único que puede verlo:
@@ -42,6 +142,9 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
 - **Auditoría de accesibilidad sobre el render** (`@axe-core/playwright`): 6 paletas × 2 temas sobre la lista
   con una fila desplegada. De 1 a 15 recorridos end-to-end.
 - Pruebas del esquema del gist de juegos, del módulo de App Check y de la escritura diferida del estado local.
+- **Sellos automáticos**: 25 pruebas entre las funciones puras (un sello no se reescribe, la nota no se re-fecha
+  al reescribir la reseña) y el recorrido real de un juego por las listas sobre el view-model, más el round-trip
+  por el gist —escribir v4 comprimido, leer y normalizar— y la garantía de que no salen por el canal social.
 
 ### Changed
 - **Un solo panel de estadísticas para tu perfil y para el de otra persona.** Había dos pantallas montando las
