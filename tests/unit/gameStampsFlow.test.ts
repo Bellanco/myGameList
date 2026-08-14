@@ -124,4 +124,29 @@ describe('sellos a lo largo de la vida de un juego', () => {
     });
     expect(byName(result.current.data.c, 'Disco Elysium').reviewedAt).toBe(playing.reviewedAt);
   });
+
+  // Regresión: `_ts` es a la vez el reloj del merge y la huella con la que se decide si un guardado cambió algo
+  // (`tabGamesEqual` compara por `(id, _ts)`). Con el reloj clavado en el mismo milisegundo —dos guardados muy
+  // seguidos—, la segunda edición salía con la misma huella y se descartaba sin decir nada.
+  it('una segunda edición en el mismo milisegundo no se pierde', async () => {
+    const fixed = 1_800_000_000_000;
+    const clock = vi.spyOn(Date, 'now').mockReturnValue(fixed);
+    try {
+      const { result } = renderHook(() => useGameListViewModel());
+      await act(async () => { result.current.saveDraft('p', draftFor('Tunic')); });
+      const created = byName(result.current.data.p, 'Tunic');
+      expect(created._ts).toBe(fixed);
+
+      await act(async () => {
+        result.current.saveDraft('p', draftFor('Tunic', { id: created.id, review: 'Un puzle precioso' }));
+      });
+
+      const edited = byName(result.current.data.p, 'Tunic');
+      expect(edited.review).toBe('Un puzle precioso');
+      // La versión avanza sobre la anterior en vez de repetirla: el merge sigue sabiendo cuál es la nueva.
+      expect(edited._ts).toBe(fixed + 1);
+    } finally {
+      clock.mockRestore();
+    }
+  });
 });

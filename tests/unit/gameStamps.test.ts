@@ -2,7 +2,7 @@
 // Lo que se protege aquí es que sean ESTABLES (un sello no se reescribe), que sobrevivan al round-trip del gist,
 // que se auto-reparen frente a un cliente antiguo y que no salgan nunca por el canal social.
 import { describe, expect, it } from 'vitest';
-import { resolveGradedAt, stampEntry } from '../../src/core/utils/gameStamps';
+import { nextVersion, resolveGradedAt, stampEntry } from '../../src/core/utils/gameStamps';
 import { normalizeData } from '../../src/model/repository/localRepository';
 import { assertNoSocialPrivateFields, leanTabData, toPublicGame } from '../../src/model/repository/socialProjection';
 import { assertValidGamesGist } from '../../src/model/schemas/gamesGistSchema';
@@ -160,5 +160,26 @@ describe('los sellos NO salen por el canal social', () => {
   it('la guarda de privacidad los rechaza si alguien los cuela', () => {
     expect(() => assertNoSocialPrivateFields({ games: [{ id: 1, enteredAt: { c: 1 } }] })).toThrow(/enteredAt/);
     expect(() => assertNoSocialPrivateFields({ games: [{ id: 1, gradedAt: 1 }] })).toThrow(/gradedAt/);
+  });
+});
+
+// `_ts` es a la vez el reloj del merge y la huella con la que se decide si un guardado cambió algo: dos versiones
+// del mismo juego no pueden compartirla o la segunda edición se descarta en silencio.
+describe('nextVersion', () => {
+  it('usa el reloj cuando ya ha avanzado', () => {
+    expect(nextVersion(NOW - 5, NOW)).toBe(NOW);
+  });
+
+  it('avanza sobre la anterior cuando el reloj no se ha movido', () => {
+    expect(nextVersion(NOW, NOW)).toBe(NOW + 1);
+  });
+
+  it('nunca retrocede aunque el reloj sí lo haga (cambio de hora, ajuste del sistema)', () => {
+    expect(nextVersion(NOW + 60_000, NOW)).toBe(NOW + 60_001);
+  });
+
+  it('un juego sin marca previa estrena la del reloj', () => {
+    expect(nextVersion(undefined, NOW)).toBe(NOW);
+    expect(nextVersion(Number.NaN, NOW)).toBe(NOW);
   });
 });

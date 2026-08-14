@@ -486,7 +486,9 @@ export default function App() {
     const nextScore = Number(nextDraft.score || 0);
     const nextGrade = resolveGrade(nextDraft); // nota fina 0–100 (real si la usa, si no derivada del score)
 
-    saveDraft(editingTab, nextDraft);
+    // Si una validación corta el guardado (campos obligatorios, nombre ya en las listas) no hay nada que
+    // encadenar: ni retirar el importado de la bandeja, ni destellar la fila, ni tocar el canal social.
+    if (!saveDraft(editingTab, nextDraft)) return;
 
     // Graduación desde la bandeja: si este guardado viene de clasificar un importado, se retira de la bandeja.
     if (graduatingIdRef.current !== null) {
@@ -809,6 +811,7 @@ export default function App() {
             draft={vm.draft}
             currentTab={vm.editingTab}
             lookups={vm.lookups}
+            findDuplicate={vm.findGameByName}
             onClose={handleCloseFormModal}
             onSave={handleSaveDraft}
             onNotice={vm.notify}

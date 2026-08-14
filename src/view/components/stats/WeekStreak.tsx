@@ -2,6 +2,7 @@ import { memo } from 'react';
 import { useStatsLabels } from './statsVoice';
 import { useChartFocus } from './useChartFocus';
 import { ChartDetail, ChartDetailHint } from './ChartDetail';
+import { localWeekKey } from '../../../core/utils/dateTime';
 import type { ActivitySummary, WeekActivity } from '../../../core/stats/types';
 
 /** Semanas que se enseñan: un año redondo, repartido en cuatro filas de trece (un trimestre por fila). */
@@ -32,6 +33,27 @@ function mondayOf(key: string): Date {
 const MONTH = new Intl.DateTimeFormat('es-ES', { month: 'short' });
 const DAY_MONTH = new Intl.DateTimeFormat('es-ES', { day: 'numeric', month: 'short' });
 
+/**
+ * Las claves de las 52 semanas que ocupa el mapa: el último año redondo, terminando SIEMPRE en la semana en
+ * curso.
+ *
+ * La serie que llega (`activity.weeks`) va de la primera semana con apuntes a la última, así que por sí sola el
+ * mapa terminaba en el último apunte: quien llevara un mes sin tocar sus listas veía una rejilla que se cerraba
+ * en abril y cuatro filas de longitudes distintas según su historial. Fijar la ventana al calendario deja las
+ * cuatro filas de trece siempre completas y devuelve al hueco su significado —«aquí no volviste»—, que es
+ * justamente lo que un mapa de constancia tiene que poder decir.
+ */
+function windowWeeks(): string[] {
+  const monday = new Date();
+  monday.setHours(12, 0, 0, 0); // mediodía: ningún cambio de horario de verano puede mover el día
+  monday.setDate(monday.getDate() - ((monday.getDay() + 6) % 7));
+  return Array.from({ length: WEEKS }, (_unused, index) => {
+    const week = new Date(monday);
+    week.setDate(monday.getDate() - (WEEKS - 1 - index) * 7);
+    return localWeekKey(week);
+  });
+}
+
 /** Rótulo de una celda: la semana por su lunes ("12 may"), que es más legible que su número ISO. */
 function weekLabel(key: string): string {
   const monday = mondayOf(key);
@@ -61,7 +83,12 @@ export const WeekStreak = memo(function WeekStreak({ activity }: { activity: Act
     return <p className="stats-empty">{L.empty}</p>;
   }
 
-  const weeks = activity.weeks.slice(-WEEKS);
+  // Las semanas del último año, rellenando con vacías las que no tienen apuntes (incluidas las posteriores al
+  // último): el mapa cubre siempre el mismo periodo, lo haya vivido la biblioteca o no.
+  const byKey = new Map(activity.weeks.map((week) => [week.w, week]));
+  const weeks: WeekActivity[] = windowWeeks().map(
+    (key) => byKey.get(key) || { w: key, reviews: 0, moves: 0, total: 0 },
+  );
   const rows = Math.ceil(weeks.length / COLUMNS);
   const width = LABEL + COLUMNS * (CELL + GAP);
   const height = TOP + rows * (CELL + GAP) + 6;
@@ -72,6 +99,20 @@ export const WeekStreak = memo(function WeekStreak({ activity }: { activity: Act
 
   const shown = weeks.find((week) => week.w === focus.active) || null;
   const active = weeks.filter((week) => week.total > 0).length;
+  /**
+   * La racha viva se cuenta sobre la ventana, no sobre la serie: `activity.currentStreak` se mide desde la última
+   * semana CON apuntes, así que seguía diciendo «racha viva: 5 semanas» meses después del último. Ahora que el
+   * mapa llega hasta hoy, esa cifra contradecía a la vista.
+   *
+   * La semana en curso, si todavía está vacía, no rompe nada: acaba de empezar y quedan días para anotar algo.
+   */
+  const liveStreak = (() => {
+    let index = weeks.length - 1;
+    if (weeks[index].total === 0) index -= 1;
+    let streak = 0;
+    for (; index >= 0 && weeks[index].total > 0; index -= 1) streak += 1;
+    return streak;
+  })();
   const detailOf = (week: WeekActivity) =>
     week.total === 0
       ? L.weekAria(weekLabel(week.w), 0)
@@ -130,7 +171,7 @@ export const WeekStreak = memo(function WeekStreak({ activity }: { activity: Act
         </div>
         <div>
           <dt>{L.current}</dt>
-          <dd>{L.weeks(activity.currentStreak)}</dd>
+          <dd>{L.weeks(liveStreak)}</dd>
         </div>
       </dl>
 
@@ -138,9 +179,7 @@ export const WeekStreak = memo(function WeekStreak({ activity }: { activity: Act
         {shown ? (
           <span>{detailOf(shown)}</span>
         ) : (
-          <ChartDetailHint>
-            {activity.busiest ? L.busiest(weekLabel(activity.busiest.w), activity.busiest.total) : L.hint}
-          </ChartDetailHint>
+          <ChartDetailHint>{L.hint}</ChartDetailHint>
         )}
       </ChartDetail>
     </div>

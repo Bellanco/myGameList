@@ -85,3 +85,22 @@ export function carryStamps(incoming: TabData, current: TabData): TabData {
 
   return { ...incoming, c: merge(incoming.c), v: merge(incoming.v), e: merge(incoming.e), p: merge(incoming.p) };
 }
+
+/**
+ * Marca de versión de un juego que ya existía: `now`, salvo que la anterior sea igual o posterior, en cuyo caso
+ * avanza un milisegundo sobre ella.
+ *
+ * `_ts` es el reloj del merge LWW, pero además es la huella con la que la app decide si un guardado cambió algo
+ * (ver `tabGamesEqual`, que compara por `(id, _ts)` para no re-renderizar ni reescribir el store sin motivo). Con
+ * `_ts = Date.now()` a secas, dos guardados del MISMO juego dentro del mismo milisegundo salían con la misma
+ * huella y el segundo se descartaba en silencio: la edición se perdía sin aviso. Por la interfaz hace falta abrir
+ * el formulario y escribir entre uno y otro, así que no se alcanza a mano, pero sí desde una automatización o un
+ * test —y una edición que desaparece sin decir nada no puede depender de lo rápido que vaya la máquina—.
+ *
+ * De paso cubre el reloj que retrocede (cambio de horario, ajuste NTP): la versión de un juego nunca baja, que es
+ * lo que el merge por «gana el más nuevo» necesita para no resucitar una copia vieja.
+ */
+export function nextVersion(previousTs: number | undefined, now: number): number {
+  const previous = Number(previousTs);
+  return Number.isFinite(previous) && previous >= now ? previous + 1 : now;
+}
