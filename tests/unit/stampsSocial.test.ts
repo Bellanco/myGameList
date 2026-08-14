@@ -125,3 +125,40 @@ describe('el panel de otra persona', () => {
     expect(data.c[0].gradedAt).toBeUndefined();
   });
 });
+
+describe('el hub social y la ruleta', () => {
+  it('la ruleta no depende de los sellos: su pool sale de `replayable` y `retry`', async () => {
+    const { buildListsPool } = await import('../../src/core/roulette/roulette');
+    const withStamps = tabData({
+      c: [game({ id: 1, replayable: true, grade: 90, score: 5, years: [2024] })],
+      v: [game({ id: 2, retry: true, grade: 40, score: 2 })],
+    });
+    const withoutStamps = tabData({
+      c: [{ ...game({ id: 1, replayable: true, grade: 90, score: 5, years: [2024] }), enteredAt: undefined, gradedAt: undefined }],
+      v: [{ ...game({ id: 2, retry: true, grade: 40, score: 2 }), enteredAt: undefined, gradedAt: undefined }],
+    });
+    // El mismo pool con sellos y sin ellos: los campos nuevos no cambian a qué juega la ruleta.
+    expect(buildListsPool(withStamps).map((entry) => entry.game.id)).toEqual(
+      buildListsPool(withoutStamps).map((entry) => entry.game.id),
+    );
+  });
+
+  it('un juego añadido desde el perfil de otra persona nace con su sello de próximos', () => {
+    // La ruleta social ofrece «añadir a mis próximos»: ese alta también tiene que quedar fechada, porque es el
+    // principio de la historia de ese juego en la biblioteca de quien lo añade.
+    const now = 1_800_000_000_000;
+    const added: GameItem = {
+      id: 9,
+      _ts: now,
+      name: 'Prestado',
+      platforms: ['Steam'],
+      genres: ['RPG'],
+      steamDeck: false,
+      review: '',
+      listedAt: now,
+      enteredAt: { p: now },
+    };
+    const stats = computeStats(tabData({ p: [added] }));
+    expect(stats.activity.active).toBe(1);
+  });
+});
