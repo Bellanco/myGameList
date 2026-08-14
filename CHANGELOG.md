@@ -98,8 +98,10 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
     descarta nunca.
   - **Privados por las dos puertas**: ni el canal social los publica (entran en `SOCIAL_PRIVATE_FIELDS`, y sobre
     esa denylist hay además una allowlist estricta que rechaza cualquier campo extra), ni el gist de LISTADOS los
-    deja pasar —una amistad lo baja para ver tu perfil, y ahí los juegos van completos—: el filtro de visibilidad,
-    donde ya se recortan horas y marcas, los quita para cualquier rango y sin ajuste que los rescate. Un registro
+    deja pasar —una amistad lo baja para ver tu perfil, y ahí los juegos van completos—: se descartan en la
+    LECTURA del gist ajeno, antes de que la caché de perfiles los guarde en el aparato de quien mira, y el filtro
+    de visibilidad los vuelve a quitar después como red de seguridad, para cualquier rango y sin ajuste que los
+    rescate. Un registro
     de cuándo mueves cada juego describe tus **hábitos** —a qué horas usas la app, qué días juegas—, y eso es más
     de lo que nadie consiente al compartir una lista. Lo temporal que se publica sigue siendo `years`.
   - Coste medido sobre una biblioteca real de 228 juegos: **228 bytes** en el gist ya comprimido (un byte por
