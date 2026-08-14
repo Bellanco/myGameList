@@ -33,6 +33,32 @@ export interface GameItem {
    * de lista, ni importar la mueven. Aditivo: un cliente antiguo la ignora al leer.
    */
   reviewedAt?: number;
+  /**
+   * Cuándo entró el juego en cada lista, la PRIMERA vez (ms). Nadie lo teclea: lo sella la propia transición.
+   *
+   * Es lo que `listedAt` no puede ser. `listedAt` marca la llegada a la lista ACTUAL y se REESCRIBE al mover el
+   * juego, así que al terminar algo se borra la fecha en que se añadió a Próximos: hoy no hay forma de saber
+   * cuánto tiempo pasó un juego esperando, que es la pregunta central de una lista de pendientes. Aquí cada lista
+   * tiene su sello y ninguno pisa al anterior.
+   *
+   * PRIMERA entrada y no la última, a propósito: es un sello ESTABLE. Un valor que no se reescribe no genera
+   * churn en el merge y hace que dos dispositivos converjan al mismo número; las vueltas siguientes al mismo
+   * listado (una rejugada) ya las cuenta `years`, que es multivalor justo para eso.
+   *
+   * Aditivo y auto-reparable: un cliente antiguo que edite el juego se lleva por delante estos sellos (el merge
+   * es LWW del objeto entero), pero `normalizeGame` vuelve a sembrar el de la lista actual desde `listedAt` en la
+   * siguiente carga. Lo único que no se recupera es el paso por listas anteriores.
+   */
+  enteredAt?: Partial<Record<TabId, number>>;
+  /**
+   * Fecha (ms) del último cambio de NOTA. Autorrellenada, igual que `reviewedAt` y por el mismo motivo: `_ts` lo
+   * mueve cualquier edición, así que no sirve para saber cuándo cambiaste de opinión sobre un juego.
+   *
+   * Solo la mueve un `grade` distinto del anterior: ni reescribir la reseña, ni mover de lista, ni importar.
+   * Ausente en los juegos anteriores al campo — no se puede deducir, y sembrarla con `_ts` sería inventarse una
+   * fecha (los lectores caen a `_ts` mientras no exista, que es aproximar sin fingir precisión).
+   */
+  gradedAt?: number;
 }
 
 export interface DeletedItem {

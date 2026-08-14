@@ -5,6 +5,7 @@ import { DEFAULT_SORT, nextSort, sortGames } from '../core/utils/sortGames';
 import { clampRating } from '../core/utils/normalize';
 import { clampGrade, gradeFromStars, resolveStars, starsFromGrade } from '../core/utils/scoreScale';
 import { resolveReviewedAt } from '../core/utils/reviewDate';
+import { resolveGradedAt, stampEntry } from '../core/utils/gameStamps';
 import { mapTabDataTags, type TagCategory } from '../core/utils/tagMutations';
 import { normalizeTag, safeTrim } from '../core/security/sanitize';
 import { normalizeName } from '../core/roulette/roulette';
@@ -401,6 +402,21 @@ export function useGameListViewModel() {
       const now = Date.now();
       const id = nextDraft.id || Math.max(0, ...TAB_ORDER.flatMap((key) => data[key].map((item) => item.id))) + 1;
       const existing = data[tab].find((item) => item.id === id);
+      /**
+       * El juego TAL Y COMO ESTABA, esté donde esté: el de esta lista o, si esto es una migración, el de la lista
+       * de origen (que aún no se ha borrado de `data`).
+       *
+       * `existing` solo mira la lista destino y por eso no vale para los metadatos que deben sobrevivir a un
+       * cambio de lista: al mover un juego con reseña, `existing` era `undefined`, el texto anterior se leía como
+       * vacío y `reviewedAt` se estrenaba en cada movimiento —justo lo que ese campo existe para evitar—.
+       * `listedAt` sigue mirando `existing` a propósito: esa fecha SÍ se estrena al cambiar de lista, es su
+       * definición.
+       */
+      const previous =
+        existing ??
+        (nextDraft.sourceTab && nextDraft.sourceId
+          ? data[nextDraft.sourceTab].find((item) => item.id === nextDraft.sourceId)
+          : undefined);
       const base: GameItem = {
         id,
         _ts: now,
@@ -433,11 +449,17 @@ export function useGameListViewModel() {
         // social y la que muestran el feed y la pestaña Reseñas, de ahí que tenga que sobrevivir a todo lo demás.
         reviewedAt: resolveReviewedAt({
           review: safeTrim(nextDraft.review, 25000),
-          previousReview: safeTrim(existing?.review ?? '', 25000),
-          previousReviewedAt: existing?.reviewedAt,
+          previousReview: safeTrim(previous?.review ?? '', 25000),
+          previousReviewedAt: previous?.reviewedAt,
           now,
         }),
       };
+
+      // Sellos automáticos: el usuario no los teclea, los deja al guardar. Van DESPUÉS del objeto base porque
+      // `gradedAt` necesita la nota ya resuelta (el bloque de arriba decide entre el dial, las estrellas y el
+      // caso "sin puntuar" de la vergüenza), no la del borrador.
+      base.enteredAt = stampEntry(previous?.enteredAt, tab, now);
+      base.gradedAt = resolveGradedAt({ grade: base.grade, previousGrade: previous?.grade, previousGradedAt: previous?.gradedAt, now });
 
       if (!base.name || !base.genres.length || !base.platforms.length) {
         notify('warn', 'Revisa los campos obligatorios antes de guardar.');
@@ -533,7 +555,9 @@ export function useGameListViewModel() {
       if (!source) return;
 
       const now = Date.now();
-      const moved: GameItem = { ...source, _ts: now, listedAt: now };
+      // `listedAt` se estrena (llegada a la lista nueva) y el sello de entrada se apila sin pisar los anteriores:
+      // este camino no pasa por el formulario, así que es el único sitio donde registrar el movimiento.
+      const moved: GameItem = { ...source, _ts: now, listedAt: now, enteredAt: stampEntry(source.enteredAt, targetTab, now) };
       // Próximos → en curso: las estrellas de "interés" no son puntuación del juego (resetea espejo y nota fina).
       if (sourceTab === 'p' && targetTab === 'e') {
         moved.score = 0;
@@ -588,6 +612,8 @@ export function useGameListViewModel() {
         review: safeTrim(game.review || '', 25000),
         score: clampRating(game.score),
         listedAt: now,
+        // Alta directa desde el perfil de otra persona: entra en próximos ahora, y de ahí arranca su historia.
+        enteredAt: { p: now },
       };
       persist({ ...data, p: [...data.p, newGame] });
       notify('ok', `"${name}" añadido a próximos`);

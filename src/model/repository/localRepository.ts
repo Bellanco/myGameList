@@ -43,7 +43,85 @@ function toList(value: unknown): string[] {
     .filter(Boolean);
 }
 
-function normalizeGame(game: Record<string, unknown>, defaultTs: number, forceTimestamp: boolean): GameItem {
+/** Marca de tiempo utilizable (ms > 0) o `undefined`. Para los sellos que no se pueden inventar. */
+function timestampOrUndefined(value: unknown): number | undefined {
+  const n = Number(value);
+  return Number.isFinite(n) && n > 0 ? n : undefined;
+}
+
+/**
+ * Cuántos juegos han de compartir el MISMO milisegundo para que esa fecha se considere un SELLADO EN BLOQUE y no
+ * una llegada real. Ocho es imposible de alcanzar guardando juegos a mano —haría falta pulsar guardar ocho veces
+ * en el mismo milisegundo— y queda muy por debajo de cualquier importación, que sella la biblioteca entera.
+ */
+const BULK_STAMP_MIN = 8;
+
+/**
+ * Las fechas que NO describen una llegada: las que comparten decenas de juegos porque se estamparon de golpe.
+ *
+ * `listedAt` cae a `_ts` en los juegos anteriores a ese campo, y `_ts` lo sella en bloque una importación o un
+ * `forceTimestamp`. En una biblioteca importada eso deja a TODOS los juegos con el mismo milisegundo: sembrar el
+ * sello de entrada desde ahí diría que las 228 partidas llegaron el mismo día, y un calendario o un "tiempo en
+ * cola" construidos sobre eso no estarían aproximando, estarían mintiendo.
+ */
+function bulkStampedDates(data: TabData): Set<number> {
+  const seen = new Map<number, number>();
+  for (const tab of TAB_IDS) {
+    for (const game of data[tab] || []) {
+      const raw = game as unknown as Record<string, unknown>;
+      const stamp = Number(raw.listedAt) || Number(raw._ts) || 0;
+      if (stamp > 0) seen.set(stamp, (seen.get(stamp) || 0) + 1);
+    }
+  }
+  const bulk = new Set<number>();
+  for (const [stamp, count] of seen) if (count >= BULK_STAMP_MIN) bulk.add(stamp);
+  return bulk;
+}
+
+/**
+ * Sellos de entrada a cada lista, saneados y con el de la lista ACTUAL sembrado desde `listedAt`.
+ *
+ * La siembra no es solo cosa de la migración inicial: es una REPARACIÓN permanente. El merge es LWW del objeto
+ * de juego entero (ver `mergeCrdt`), así que un dispositivo con una versión anterior a este campo puede ganar un
+ * merge y borrar los sellos; al volver a cargar aquí, el de la lista actual se recompone desde `listedAt`, que es
+ * exactamente la misma fecha. Lo que no se recupera es el paso por listas anteriores, y por eso no se inventa.
+ *
+ * Dos fuentes quedan EXCLUIDAS a propósito, y por el mismo motivo:
+ *  - `years`, porque de ahí solo sale el año y un sello con día y hora fabricados se leería como exacto.
+ *  - las fechas selladas en bloque (ver `bulkStampedDates`), que no son la llegada de nada.
+ * En ambos casos se deja el hueco: un dato ausente lo enseña la vista como ausente, mientras que uno inventado se
+ * lee como bueno.
+ */
+function normalizeEnteredAt(
+  raw: unknown,
+  tab: TabId,
+  listedAt: number,
+  bulkDates: Set<number>,
+): Partial<Record<TabId, number>> {
+  const source = raw && typeof raw === 'object' ? (raw as Record<string, unknown>) : {};
+  const out: Partial<Record<TabId, number>> = {};
+  for (const key of TAB_IDS) {
+    const stamp = timestampOrUndefined(source[key]);
+    if (stamp) out[key] = stamp;
+  }
+  if (!out[tab] && listedAt > 0 && !bulkDates.has(listedAt)) out[tab] = listedAt;
+  return out;
+}
+
+function normalizeGame(
+  game: Record<string, unknown>,
+  defaultTs: number,
+  forceTimestamp: boolean,
+  tab: TabId,
+  bulkDates: Set<number>,
+): GameItem {
+  const listedAt = (() => {
+    const n = Number(game.listedAt);
+    if (Number.isFinite(n) && n > 0) return n;
+    const ts = Number(game._ts);
+    return Number.isFinite(ts) && ts > 0 ? ts : defaultTs; // legacy: aproxima con _ts
+  })();
+
   return {
     id: Number(game.id || 0),
     _ts: forceTimestamp
@@ -74,23 +152,23 @@ function normalizeGame(game: Record<string, unknown>, defaultTs: number, forceTi
     })(),
     // Vergüenza: puntuación activada (opt-in). Se conserva solo si es true; ausente/false no se serializa.
     scored: game.scored ? true : undefined,
-    listedAt: (() => {
-      const n = Number(game.listedAt);
-      if (Number.isFinite(n) && n > 0) return n;
-      const ts = Number(game._ts);
-      return Number.isFinite(ts) && ts > 0 ? ts : defaultTs; // legacy: aproxima con _ts
-    })(),
+    listedAt,
     // Fecha de la reseña: se preserva tal cual y NUNCA la toca `forceTimestamp` — no es un reloj de merge, es un
     // dato del usuario. Ausente en juegos anteriores a este campo; los lectores caen a `_ts` mientras no exista.
-    reviewedAt: (() => {
-      const n = Number(game.reviewedAt);
-      return Number.isFinite(n) && n > 0 ? n : undefined;
-    })(),
+    reviewedAt: timestampOrUndefined(game.reviewedAt),
+    // Sellos de entrada por lista y fecha del último cambio de nota: los rellenan las propias transiciones, no el
+    // usuario. Tampoco los toca `forceTimestamp`, por lo mismo que a `reviewedAt`: no son relojes de merge.
+    enteredAt: normalizeEnteredAt(game.enteredAt, tab, listedAt, bulkDates),
+    gradedAt: timestampOrUndefined(game.gradedAt),
   };
 }
 
 // Metadatos que NO son contenido: no deben hacer que un juego cuente como "cambiado".
-const CONTENT_KEY_IGNORED = new Set(['_ts', '_v', 'listedAt', 'reviewedAt']);
+//
+// `enteredAt` entra en la lista porque su siembra es automática: sin esto, la primera carga tras actualizar vería
+// un sello nuevo en CADA juego, los daría todos por modificados y una importación los sellaría todos con `_ts` de
+// ahora — justo lo que `bumpChangedAgainst` existe para evitar.
+const CONTENT_KEY_IGNORED = new Set(['_ts', '_v', 'listedAt', 'reviewedAt', 'enteredAt', 'gradedAt']);
 
 /**
  * Contenido de un juego SIN sus metadatos, en forma canónica: para decidir si de verdad ha cambiado algo.
@@ -139,10 +217,13 @@ export function normalizeData(data: TabData, options?: NormalizeDataOptions): Ta
   const ts = Date.now();
   const forceTimestamp = Boolean(options?.forceTimestamp);
   const reference = options?.bumpChangedAgainst ? indexGamesById(options.bumpChangedAgainst) : null;
+  // Se calcula UNA vez sobre la biblioteca entera: distinguir una llegada real de un sellado en bloque exige ver
+  // el conjunto, y un juego por separado no puede saberlo.
+  const bulkDates = bulkStampedDates(data);
 
   const normalizeTab = (games: unknown[] | undefined, tab: TabId): GameItem[] =>
     (games || []).map((raw) => {
-      const game = normalizeGame(raw as Record<string, unknown>, ts, forceTimestamp);
+      const game = normalizeGame(raw as Record<string, unknown>, ts, forceTimestamp, tab, bulkDates);
       if (!reference || forceTimestamp) {
         return game;
       }
