@@ -275,13 +275,33 @@
 }
 
 /* Valor que es TEXTO (el nombre de un juego): no puede competir en tamaño con las cifras ni desbordar. */
+/* El valor de esta tarjeta es un TÍTULO, no una cifra, así que se le deja envolver: en una sola línea, «Football
+   Manager 2018» se quedaba en «Football Manag…» y el dato que la tarjeta viene a dar es justo el nombre. Dos
+   líneas cubren de sobra los títulos reales; a partir de ahí el recorte vuelve, pero ya con el nombre entero en
+   el `title`. `balance` reparte las dos líneas en vez de dejar una palabra suelta abajo, y `anywhere` evita que
+   un título sin espacios se salga de la tarjeta. */
 .stat-tile-text {
-  display: block;
-  font-size: 1rem;
-  line-height: 1.3;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  font-size: 1rem;
+  line-height: 1.25;
+  white-space: normal;
+  text-wrap: balance;
+  overflow-wrap: anywhere;
+}
+
+/* Título largo: una línea más y un cuerpo algo menor. Con dos líneas a cuerpo normal caben unos treinta y cinco
+   caracteres, y un «The Legend of Zelda: Breath of the Wild» se quedaba a medias — que es justo el dato que esta
+   tarjeta viene a dar. Se cambia el tamaño y no el ancho de la tarjeta porque las siete van en la misma rejilla:
+   estirar una encoge a las demás. */
+.stat-tile-text.is-long {
+  font-size: .88rem;
+  line-height: 1.3;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
 }
 
 .stat-tile-hint {
