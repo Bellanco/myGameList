@@ -167,13 +167,14 @@ function quoteFrom(review: unknown): string {
   return `${text.slice(0, space > QUOTE_MIN ? space : QUOTE_MAX).trimEnd()}…`;
 }
 
-function toRef(game: GameItem): GameRef {
+function toRef(game: GameItem, list: TabId): GameRef {
   return {
     id: game.id,
     name: game.name.trim(),
     grade: resolveGrade(game),
     hours: gameHours(game),
     at: Number(game.listedAt) || Number(game._ts) || 0,
+    list,
     // Se reutilizan las MISMAS arrays del juego (no se copian): el panel solo las lee.
     genres: game.genres || [],
     platforms: game.platforms || [],
@@ -658,7 +659,7 @@ export function computeStats(data: TabData): StatsSummary {
       if (!game?.name?.trim()) continue;
       counts[tab] += 1;
 
-      const ref = toRef(game);
+      const ref = toRef(game, tab);
       const hours = played ? ref.hours : 0;
 
       // Lo que escribes. Los puntos fuertes y débiles se cuentan aunque el texto esté vacío: son etiquetas del

@@ -1,8 +1,9 @@
-import { memo, type CSSProperties } from 'react';
+import { memo, useState, type CSSProperties } from 'react';
 import { useStatsLabels } from './statsVoice';
 import { useChartFocus } from './useChartFocus';
 import { ChartDetail, ChartDetailHint } from './ChartDetail';
 import { GRADE_MAX, SCORE_BUCKET_FLOORS, STARS_MAX, hueFromGrade, starsFromGrade } from '../../../core/utils/scoreScale';
+import type { TabId } from '../../../model/types/game';
 import type { GameRef } from '../../../core/stats/types';
 import type { ScoreScale } from '../../../core/utils/scoreScale';
 
@@ -63,11 +64,17 @@ function densityPath(games: GameRef[]): string {
     const index = Math.min(Math.floor((game.grade / GRADE_MAX) * BINS), BINS - 1);
     bins[index] += 1;
   }
-  const peak = Math.max(...bins, 1);
-  // Media móvil de tres: suaviza el escalonado del histograma sin desplazar los máximos.
-  const smooth = bins.map((value, index) => (value + (bins[index - 1] ?? value) + (bins[index + 1] ?? value)) / 3 / peak);
+  // Núcleo de CINCO tramos (1-2-3-2-1) en vez de la media de tres: con tres, la silueta llegaba al pico con
+  // hombros —un escalón a cada lado de la cima— y contra el borde del lienzo se veía el filo recto. Con cinco
+  // baja en pendiente larga, que es lo que se espera de un velo de densidad. Los máximos no se mueven: el
+  // núcleo es simétrico.
+  const at = (index: number) => bins[Math.max(0, Math.min(BINS - 1, index))];
+  const smooth = bins.map((_unused, index) =>
+    (at(index - 2) + 2 * at(index - 1) + 3 * at(index) + 2 * at(index + 1) + at(index + 2)) / 9);
+  const peak = Math.max(...smooth, 1);
 
-  const top = smooth.map((value, index) => ({ x: ((index + 0.5) / BINS) * 100, y: 50 - value * 38 }));
+  // Amplitud un punto por debajo de la de antes: al suavizar más, la cima baja y el velo ganaba aire de sobra.
+  const top = smooth.map((value, index) => ({ x: ((index + 0.5) / BINS) * 100, y: 50 - (value / peak) * 36 }));
   const bottom = [...top].reverse().map((point) => ({ x: point.x, y: 100 - point.y }));
   const curve = (points: Array<{ x: number; y: number }>, first: boolean) => {
     let d = `${first ? 'M' : 'L'} ${points[0].x.toFixed(1)} ${points[0].y.toFixed(1)}`;
@@ -99,11 +106,21 @@ function median(games: GameRef[]): number {
 export const Beeswarm = memo(function Beeswarm({ games, scale }: BeeswarmProps) {
   const L = useStatsLabels().grades;
   const focus = useChartFocus();
+  // Qué listas entran. Se guarda la lista OCULTA y no la visible: así "ninguna oculta" es el estado inicial y
+  // el gráfico nunca puede quedarse sin puntos, que es la regla del filtro.
+  const [hiddenList, setHiddenList] = useState<TabId | null>(null);
   if (games.length === 0) {
     return <p className="stats-empty">{L.empty}</p>;
   }
 
-  const dots = swarm(games);
+  const completed = games.filter((game) => game.list === 'c');
+  const abandoned = games.filter((game) => game.list === 'v');
+  // El filtro solo se ofrece si hay notas en las dos listas: con una sola, los botones no podrían hacer nada.
+  const canFilter = completed.length > 0 && abandoned.length > 0;
+  const hidden = canFilter ? hiddenList : null;
+  const shown = hidden === 'c' ? abandoned : hidden === 'v' ? completed : games;
+
+  const dots = swarm(shown);
   const spread = Math.max(...dots.map((dot) => Math.abs(dot.lane)), 1);
   // Los carriles se comprimen si el enjambre es alto, para no salirse del lienzo.
   const lane = Math.min(LANE, 42 / spread);
@@ -115,23 +132,52 @@ export const Beeswarm = memo(function Beeswarm({ games, scale }: BeeswarmProps) 
       stars,
       floor: SCORE_BUCKET_FLOORS[stars],
       ceiling: stars === STARS_MAX ? GRADE_MAX : SCORE_BUCKET_FLOORS[stars + 1] - 1,
-      count: games.filter((game) => starsFromGrade(game.grade) === stars).length,
+      count: shown.filter((game) => starsFromGrade(game.grade) === stars).length,
     };
   });
-  const mid = median(games);
+  const mid = median(shown);
   // Los dos extremos se rotulan con su nombre. Es la única etiqueta directa del gráfico: poner el nombre en
   // cada punto sería ilegible, y son justo los dos que se buscan al mirar una distribución.
   const best = dots[dots.length - 1];
   const worst = dots[0];
   const shownDot = dots.find((dot) => String(dot.game.id) === focus.active) || null;
-  const labelled = games.length > 2 ? [
+  const labelled = shown.length > 2 ? [
     { dot: worst, side: 'start' as const },
     { dot: best, side: 'end' as const },
   ] : [];
 
+  /**
+   * Un botón por lista. El que está solo NO se puede apagar —queda deshabilitado— porque un reparto de notas
+   * sin notas no dice nada; es la misma idea que las pestañas de año, que solo ofrecen años con contenido.
+   */
+  const listButton = (list: TabId, label: string, count: number) => {
+    const on = hidden !== list;
+    return (
+      <button
+        type="button"
+        className={`btn btn-toggle${on ? ' active' : ''}`}
+        aria-pressed={on}
+        // Solo queda esta encendida: apagarla dejaría el gráfico vacío.
+        disabled={on && hidden !== null}
+        title={on && hidden !== null ? L.lists.onlyOne : undefined}
+        onClick={() => setHiddenList(on ? list : null)}
+      >
+        <span>{label}</span>
+        <span className="beeswarm-list-count">{count}</span>
+      </button>
+    );
+  };
+
   return (
     <div className="beeswarm">
-      <div className={`beeswarm-canvas${games.length >= DENSE_FROM ? ' is-dense' : ''}${games.length <= SPARSE_UP_TO ? ' is-sparse' : ''}`}>
+      {canFilter ? (
+        <div className="beeswarm-lists" role="group" aria-label={L.lists.aria}>
+          {listButton('c', L.lists.completed, completed.length)}
+          {listButton('v', L.lists.abandoned, abandoned.length)}
+        </div>
+      ) : null}
+
+      <div className={`beeswarm-canvas${shown.length >= DENSE_FROM ? ' is-dense' : ''}${shown.length <= SPARSE_UP_TO ? ' is-sparse' : ''}`}>
         {marks.map((mark) => (
           <span key={mark} className="beeswarm-guide" style={{ left: `${mark}%` } as CSSProperties} />
         ))}
@@ -139,7 +185,7 @@ export const Beeswarm = memo(function Beeswarm({ games, scale }: BeeswarmProps) 
         {/* La silueta va detrás de los puntos: con la biblioteca entera, el enjambre se satura y es lo único
             que sigue diciendo dónde está el grueso. */}
         <svg className="beeswarm-density" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
-          <path d={densityPath(games)} />
+          <path d={densityPath(shown)} />
         </svg>
 
         {/* Una sola referencia, la MEDIANA: la nota que parte la biblioteca en dos mitades. La media iba con
@@ -147,7 +193,9 @@ export const Beeswarm = memo(function Beeswarm({ games, scale }: BeeswarmProps) 
             encima —dos trazos verticales que había que distinguir para leer lo mismo—. La media sigue a la
             vista en su tarjeta de cifras. */}
         <span className="beeswarm-median" style={{ left: `${mid}%` } as CSSProperties}>
-          <b>{L.median}</b>
+          {/* El valor va CON el rótulo: una línea vertical sin cifra obliga a estimarla contra el eje, y el
+              dato ya está calculado. Se dice en la escala de la cuenta, como el resto del panel. */}
+          <b>{L.median(scale === 'grade' ? String(Math.round(mid)) : '★'.repeat(starsFromGrade(mid)))}</b>
         </span>
 
         {labelled.map(({ dot, side }) => (
@@ -189,7 +237,7 @@ export const Beeswarm = memo(function Beeswarm({ games, scale }: BeeswarmProps) 
             <span>{scale === 'grade' ? Math.round(shownDot.game.grade) : `${'★'.repeat(starsFromGrade(shownDot.game.grade))}`}</span>
           </>
         ) : (
-          <ChartDetailHint>{L.countLabel(games.length)}</ChartDetailHint>
+          <ChartDetailHint>{L.countLabel(shown.length)}</ChartDetailHint>
         )}
       </ChartDetail>
 

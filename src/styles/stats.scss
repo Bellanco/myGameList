@@ -72,10 +72,24 @@
   padding: 1.1rem 1.15rem;
   /* Degradado muy leve en lugar de un plano: da profundidad sin inventar un color que la paleta no tenga. */
   background: linear-gradient(160deg, var(--surface-elevated), var(--surface) 70%);
-  border: 1px solid var(--border);
+  /* Canto disuelto y sombra FINA, en lugar del marco entero y de `--shadow` (0 10px 28px .38): con las
+     tarjetas en rejilla, una campana de tres centímetros por tarjeta dejaba un halo negro en cada junta. Un
+     píxel de apoyo, una campana corta con desplazamiento negativo y un brillo de un píxel arriba que hace el
+     relieve sin dibujar un contorno. La sombra global del resto de la app no se toca. */
+  border: 1px solid color-mix(in srgb, var(--border) 40%, transparent);
   border-radius: var(--radius-md);
-  box-shadow: var(--shadow);
+  box-shadow:
+    0 1px 1px -.5px color-mix(in srgb, #000 22%, transparent),
+    0 4px 10px -7px color-mix(in srgb, #000 45%, transparent),
+    inset 0 1px 0 rgba(255, 255, 255, .05);
   min-width: 0;
+}
+
+:root[data-theme="light"] .stats-card {
+  box-shadow:
+    0 1px 1px -.5px color-mix(in srgb, var(--text) 12%, transparent),
+    0 4px 10px -7px color-mix(in srgb, var(--text) 30%, transparent),
+    inset 0 1px 0 rgba(255, 255, 255, .65);
 }
 
 /* Barrita de acento delante del título: ancla la vista al empezar cada bloque. */
@@ -899,21 +913,83 @@
   flex: 1;
 }
 
+/* MANDOS DEL ACABADO. El enjambre se dibuja UNA vez y cada paleta lo afina desde aquí: canto, trama, forma del
+   punto, tinta de la mediana, tipografía del eje. Los valores de este bloque son los de la paleta por defecto
+   (steam), que hace de base neutra; los skins solo redefinen su columna en `styles/themes/*.scss` y NINGUNA
+   regla de este archivo lleva el nombre de un tema.
+
+   Lo que NO se parametriza: el color de la nota. Un 4★ tiene que verse igual aquí que en la ficha del juego,
+   así que la rampa rojo→verde de la rueda de puntuar es la misma en las seis paletas. */
+.stats-hub {
+  --bee-radius: var(--radius-md);        /* canto del lienzo: sale del radio del skin */
+  --bee-clip: none;                      /* recorte de esquina (chaflán del HUD) */
+  --bee-frame: 0 0 0 0 transparent;      /* junta, moldura o contorno propio del tema */
+  --bee-cast: 0 0 0 0 transparent;       /* sombra DURA desplazada, sin desenfoque: el trazo de cómic */
+  --bee-edge: 30%;                       /* cuánto queda del borde del skin en el canto del lienzo */
+  --bee-grid: none;                      /* trama del fondo: retícula, scanlines, campo de estrellas */
+  --bee-grid-size: auto;                 /* un tamaño por capa de `--bee-grid`, contando el velo del final */
+  --bee-veil: color-mix(in srgb, var(--steam) 6%, transparent);
+  --bee-render: auto;                    /* `crispEdges` donde el tema no admite curvas suavizadas */
+  --bee-dot-radius: 50%;
+  --bee-dot-shape: none;                 /* recorte del punto: hexágono, octógono… */
+  --bee-dot-scale: 1;                    /* factor sobre el tamaño del punto */
+  --bee-dot-ring: 0 0 0 1px color-mix(in srgb, var(--surface) 70%, transparent);
+  --bee-dot-filter: none;                /* halo que SÍ sigue al recorte (`box-shadow` no lo hace) */
+  --bee-median-ink: var(--text);
+  --bee-median-glow: none;
+  --bee-chip-radius: var(--radius-pill);
+  --bee-chip-skew: skewX(0deg);          /* se concatena a un `translate`: aquí `none` no sería válido */
+  --bee-axis-font: inherit;
+  --bee-axis-size: .7rem;
+}
+
+/* Filtro por lista. Botones de la app (`.btn-toggle`) y no un control propio: así cada skin los viste con su
+   identidad —el sesgo de Persona, la señalética de Aperture— sin una sola regla por tema aquí. */
+.beeswarm-lists {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .4rem;
+}
+
+.beeswarm-lists .btn { padding: .3rem .6rem; font-size: .78rem; }
+
+/* La cuenta de cada lista, dentro del propio botón: sin ella, apagar una lista es una apuesta a ciegas. */
+.beeswarm-list-count {
+  margin-left: .35rem;
+  font-variant-numeric: tabular-nums;
+  opacity: .75;
+}
+
+/* El botón de la única lista encendida no se puede apagar; se dice con el aspecto, no solo con el atributo. */
+.beeswarm-lists .btn:disabled {
+  cursor: default;
+  opacity: 1;
+}
+
 .beeswarm-canvas {
   position: relative;
   flex: 1;
   /* A ancho completo el enjambre se estira a lo largo, y con poco alto los puntos de un mismo tramo se apilan
      en una columna larga y fina. Con sitio de sobra, la nube se reparte y se lee como lo que es. */
   min-height: 26rem;
-  border-radius: var(--stats-radius);
-  /* Fondo con la RAMPA DEL TEMA (`--chart-from` → `--chart-to`), no con el semáforo rojo→verde de las notas:
-     ahí el color competía con el de los propios puntos, que ya llevan la nota. Aquí solo tiene que decir hacia
-     dónde crece la escala, así que va muy diluido —lo justo para orientar— y con un borde de la paleta que
-     encierre el lienzo. Cada skin lo tiñe con su identidad sin una regla por tema. */
-  background: linear-gradient(90deg,
-    color-mix(in oklch, var(--chart-from) 7%, transparent),
-    color-mix(in oklch, var(--chart-to) 7%, transparent));
-  border: 1px solid color-mix(in oklch, var(--border) 60%, transparent);
+  border-radius: var(--bee-radius);
+  clip-path: var(--bee-clip);
+  /* El lienzo se HUNDE un punto por debajo de la tarjeta en vez de encerrarse en un marco de un píxel: el
+     canto deja de ser una línea que compite con los datos. Encima, la trama del tema (si la tiene) y un velo
+     del acento que solo dice hacia dónde crece la escala. */
+  background-color: color-mix(in srgb, var(--bg) 72%, var(--surface));
+  background-image: var(--bee-grid),
+    radial-gradient(130% 100% at 50% 118%, color-mix(in srgb, var(--steam) 6%, transparent), transparent 62%);
+  background-size: var(--bee-grid-size), auto;
+  box-shadow: var(--bee-cast), var(--bee-frame),
+    inset 0 1px 2px color-mix(in srgb, #000 14%, transparent),
+    inset 0 0 0 1px color-mix(in srgb, var(--border) var(--bee-edge), transparent);
+}
+
+:root[data-theme="light"] .beeswarm-canvas {
+  box-shadow: var(--bee-cast), var(--bee-frame),
+    inset 0 1px 2px color-mix(in srgb, var(--text) 6%, transparent),
+    inset 0 0 0 1px color-mix(in srgb, var(--border) var(--bee-edge), transparent);
 }
 
 /* Silueta de densidad: un velo por detrás, nunca una mancha. Sin `fill` explícito el SVG la pintaba negra y
@@ -923,41 +999,59 @@
   inset: 0;
   width: 100%;
   height: 100%;
+  /* Se desvanece por los dos cantos: ahí es donde la curva llegaba al borde del lienzo y se veía el corte. */
+  mask-image: linear-gradient(90deg, transparent, #000 7%, #000 93%, transparent);
 }
 
+/* Sin contorno: el trazo obligaba a distinguir un filo que no aporta nada —la silueta ya es una superficie— y
+   en las paletas donde relleno y trazo eran de tonos distintos (la naranja sobre azul de la cámara) el borde
+   se leía antes que la forma. */
 .beeswarm-density path {
-  fill: color-mix(in srgb, var(--steam) 5%, transparent);
-  stroke: color-mix(in srgb, var(--steam) 9%, transparent);
-  stroke-width: 1;
-  vector-effect: non-scaling-stroke;
+  fill: var(--bee-veil);
+  shape-rendering: var(--bee-render);
   animation: fade-in .8s ease-out .2s both;
 }
 
+/* Las guías se desvanecen por arriba y por abajo en lugar de cruzar el lienzo de canto a canto: marcan la
+   vertical del 25, el 50 y el 75 sin dibujar una reja delante de los datos. */
 .beeswarm-guide {
   position: absolute;
   top: 0;
   bottom: 0;
-  border-left: 1px solid var(--border);
-  opacity: .45;
+  width: 1px;
+  background: linear-gradient(180deg, transparent, var(--border) 20%, var(--border) 80%, transparent);
+  opacity: .3;
 }
 
-/* La mediana —la nota que parte la biblioteca en dos mitades— va con guía punteada y su rótulo abajo, para no
-   chocar con el de la media, que va arriba. Juntas cuentan si la distribución está sesgada: cuando la media
-   queda por debajo de la mediana, es que unos pocos juegos muy bajos tiran de ella. */
+/* La mediana —la nota que parte la biblioteca en dos mitades— con su valor en una pastilla centrada en la
+   línea. Antes el rótulo iba suelto en el canto inferior y sin cifra: había que estimarla contra el eje. */
+/* La línea va al 50 % de su tinta —no el rótulo, que es donde está el dato—: a pleno color competía con los
+   puntos, y aquí quien manda es el enjambre. La traslucidez se aplica AQUÍ y no en cada `--bee-median-ink`
+   para que ningún tema se la pueda saltar sin querer. */
 .beeswarm-median {
   position: absolute;
   top: 0;
   bottom: 0;
-  border-left: 2px dashed var(--text-dim);
-  opacity: .75;
+  width: 2px;
+  background: color-mix(in srgb, var(--bee-median-ink) 50%, transparent);
+  box-shadow: var(--bee-median-glow);
 }
 
+/* Al PIE de su línea y centrado en ella: arriba caía sobre la zona ancha del enjambre y tapaba puntos, que es
+   justo lo que la figura tiene que enseñar. Abajo el lienzo está casi siempre vacío. */
 .beeswarm-median b {
   position: absolute;
-  bottom: -.1rem;
-  left: .3rem;
-  font-size: .68rem;
-  font-weight: 500;
+  bottom: .4rem;
+  left: 50%;
+  transform: translateX(-50%) var(--bee-chip-skew);
+  padding: .16rem .45rem;
+  border-radius: var(--bee-chip-radius);
+  border: 1px solid color-mix(in srgb, var(--border) 45%, transparent);
+  background: color-mix(in srgb, var(--surface) 85%, transparent);
+  font-size: .64rem;
+  font-weight: 700;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
   color: var(--stats-ink-2);
 }
 
@@ -972,16 +1066,27 @@
   border-radius: 50%;
 }
 
+/* El punto es una CAJA transparente y el color vive en su `::before`. Suena rebuscado, pero es lo que permite
+   darle forma con `clip-path` sin recortar de paso la diana del `::after` —un recorte se aplica también a los
+   hijos— ni el halo, que en los temas con forma se pinta con `filter` por el mismo motivo. */
 .beeswarm-dot {
   position: absolute;
-  width: .55rem;
-  height: .55rem;
-  margin: -.275rem 0 0 -.275rem;
-  border-radius: 50%;
-  background: hsl(var(--dot-hue, 135) 62% var(--acc-l));
-  box-shadow: 0 0 0 1px color-mix(in srgb, var(--surface) 60%, transparent);
+  width: calc(.55rem * var(--bee-dot-scale));
+  height: calc(.55rem * var(--bee-dot-scale));
+  margin: calc(-.275rem * var(--bee-dot-scale)) 0 0 calc(-.275rem * var(--bee-dot-scale));
   animation: pop-in .45s cubic-bezier(.34, 1.36, .64, 1) both;
   animation-delay: calc(var(--i, 0) * 14ms);
+}
+
+.beeswarm-dot::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: var(--bee-dot-radius);
+  clip-path: var(--bee-dot-shape);
+  background: hsl(var(--dot-hue, 135) 62% var(--acc-l));
+  box-shadow: var(--bee-dot-ring);
+  filter: var(--bee-dot-filter);
 }
 
 /* Etiqueta directa de los dos extremos: el peor y el mejor. Se apoya en el punto y se aparta hacia dentro para
@@ -1005,15 +1110,15 @@
 /* Con muchos juegos los puntos encogen para que el enjambre siga respirando; con muy pocos crecen, porque
    media docena de puntos diminutos dejaba el lienzo desierto. */
 .beeswarm-canvas.is-dense .beeswarm-dot {
-  width: .4rem;
-  height: .4rem;
-  margin: -.2rem 0 0 -.2rem;
+  width: calc(.4rem * var(--bee-dot-scale));
+  height: calc(.4rem * var(--bee-dot-scale));
+  margin: calc(-.2rem * var(--bee-dot-scale)) 0 0 calc(-.2rem * var(--bee-dot-scale));
 }
 
 .beeswarm-canvas.is-sparse .beeswarm-dot {
-  width: .9rem;
-  height: .9rem;
-  margin: -.45rem 0 0 -.45rem;
+  width: calc(.9rem * var(--bee-dot-scale));
+  height: calc(.9rem * var(--bee-dot-scale));
+  margin: calc(-.45rem * var(--bee-dot-scale)) 0 0 calc(-.45rem * var(--bee-dot-scale));
 }
 
 .beeswarm-axis {
@@ -1024,13 +1129,29 @@
 .beeswarm-axis span {
   position: absolute;
   transform: translateX(-50%);
-  font-size: .7rem;
+  font-family: var(--bee-axis-font);
+  font-size: var(--bee-axis-size);
   color: var(--stats-ink-2);
   white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Micro-marca sobre cada cifra: ahora que las guías se desvanecen, es lo que ata el número a su vertical. */
+.beeswarm-axis span::before {
+  content: "";
+  position: absolute;
+  top: -.42rem;
+  left: 50%;
+  width: 1px;
+  height: .3rem;
+  background: var(--border);
+  opacity: .5;
 }
 
 .beeswarm-axis span:first-child { transform: none; }
 .beeswarm-axis span:last-child { transform: translateX(-100%); }
+.beeswarm-axis span:first-child::before { left: 0; }
+.beeswarm-axis span:last-child::before { left: auto; right: 0; }
 
 /* ---- Rosetón polar (reparto de etiquetas) -------------------------------------------------------------- */
 

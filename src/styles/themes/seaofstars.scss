@@ -274,7 +274,6 @@
 :root[data-palette="seaofstars"][data-theme="light"] .year-trend-plot { background-image: none; }
 
 /* Nada de círculos: los puntos son píxeles. */
-:root[data-palette="seaofstars"] .beeswarm-dot,
 :root[data-palette="seaofstars"] .timeline-dot,
 :root[data-palette="seaofstars"] .dumbbell-dot,
 :root[data-palette="seaofstars"] .ratio-dot,
@@ -295,8 +294,7 @@
 :root[data-palette="seaofstars"] .top-chip-bar i { border-radius: 0; }
 
 /* Campo de estrellas tenue detrás de los lienzos de datos, como el cielo del juego. */
-:root[data-palette="seaofstars"] .backlog-canvas,
-:root[data-palette="seaofstars"] .beeswarm-canvas {
+:root[data-palette="seaofstars"] .backlog-canvas {
   background-image:
     radial-gradient(1px 1px at 12% 22%, rgba(255, 247, 214, .5) 50%, transparent 50%),
     radial-gradient(1px 1px at 47% 68%, rgba(255, 247, 214, .38) 50%, transparent 50%),
@@ -304,8 +302,36 @@
     radial-gradient(1px 1px at 63% 12%, rgba(255, 247, 214, .3) 50%, transparent 50%),
     radial-gradient(1px 1px at 28% 82%, rgba(255, 247, 214, .35) 50%, transparent 50%);
 }
-:root[data-palette="seaofstars"][data-theme="light"] .backlog-canvas,
-:root[data-palette="seaofstars"][data-theme="light"] .beeswarm-canvas { background-image: none; }
+:root[data-palette="seaofstars"][data-theme="light"] .backlog-canvas { background-image: none; }
+
+/* ── El enjambre de notas, en PÍXEL. Los puntos son cuadrados y van un 15 % más pequeños: a igual medida, un
+   cuadrado pesa más que un círculo —ocupa las esquinas— y con la biblioteca entera el enjambre se empastaba.
+   La silueta se dibuja a canto vivo, porque una curva antialiasada desentona en un tema de píxeles, y el
+   campo de estrellas entra por el mando de trama para no pisar el velo del lienzo. ── */
+:root[data-palette="seaofstars"] .stats-hub {
+  --bee-radius: 0;
+  --bee-edge: 20%;
+  --bee-frame: inset 0 0 0 1px color-mix(in srgb, var(--sos-line) 12%, transparent);
+  --bee-chip-radius: 0;
+  --bee-render: crispEdges;
+  --bee-dot-radius: 0;
+  --bee-dot-scale: .85;
+  --bee-dot-ring: 0 0 0 1px color-mix(in srgb, var(--surface) 60%, transparent);
+  --bee-median-ink: var(--sos-line);
+  --bee-veil: color-mix(in srgb, var(--sos-turq) 8%, transparent);
+  --bee-grid:
+    radial-gradient(1px 1px at 12% 22%, rgba(255, 247, 214, .5) 50%, transparent 50%),
+    radial-gradient(1px 1px at 47% 68%, rgba(255, 247, 214, .38) 50%, transparent 50%),
+    radial-gradient(1px 1px at 78% 34%, rgba(255, 247, 214, .45) 50%, transparent 50%),
+    radial-gradient(1px 1px at 63% 12%, rgba(255, 247, 214, .3) 50%, transparent 50%),
+    radial-gradient(1px 1px at 28% 82%, rgba(255, 247, 214, .35) 50%, transparent 50%);
+}
+
+/* De día no hay estrellas; el filete de la cartela sube un punto para que el lienzo siga acotado. */
+:root[data-palette="seaofstars"][data-theme="light"] .stats-hub {
+  --bee-grid: none;
+  --bee-frame: inset 0 0 0 1px color-mix(in srgb, var(--sos-line) 18%, transparent);
+}
 
 /* El marco de la figura de géneros, con el filete claro del tema. */
 :root[data-palette="seaofstars"] .polar-ring,
