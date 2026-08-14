@@ -220,7 +220,12 @@
 /* ── §14 · CLARO = APERTURE ANTIGUA: recolorea los pocos puntos con azul/cian LITERAL (no vía `--steam`) para que
    la zona vieja quede cálida y coherente; el resto ya se calienta solo al cambiar las variables. ── */
 :root[data-palette="portal"][data-theme="light"] .fab { background: radial-gradient(circle at 50% 42%, #ffe3b0, var(--steam) 70%); color: #2a1a08; }
-:root[data-palette="portal"][data-theme="light"] .btn-toggle.active,
+/* El fondo del activo se aclara un punto: el marrón de Aperture sobre el ámbar puro se queda en 4,01:1, y este
+   es el rótulo que dice qué pestaña está abierta. Con la mezcla pasa de 5:1 sin salirse de la gama cálida. */
+:root[data-palette="portal"][data-theme="light"] .btn-toggle.active {
+  background: color-mix(in srgb, var(--steam) 85%, #fff) !important;
+  color: #2a1a08 !important;
+}
 :root[data-palette="portal"][data-theme="light"] .badge-opp-activo { color: #2a1a08 !important; }
 :root[data-palette="portal"][data-theme="light"] .bottom-nav-inner { border: 1px solid var(--border); border-top: 2px solid var(--portal-orange); }
 

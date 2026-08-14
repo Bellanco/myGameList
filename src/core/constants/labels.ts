@@ -367,30 +367,6 @@ export const UI_MESSAGES = {
       moveFlat: (tag: string, rank: number) => `${tag} se mantiene en el ${rank}.º puesto`,
       hint: 'Señala un género para seguir su línea.',
     },
-    /** Cómo se reparten las notas de cada año: la silueta que dice si te has vuelto más duro. */
-    ridge: {
-      title: '¿Puntúas más duro con los años?',
-      // The Legend of Zelda: el listón que hay que superar para abrir la siguiente puerta. Aquí el listón lo
-      // pones tú, y la figura enseña si lo has ido subiendo.
-      subtitle: 'Cada año pone su listón: mira si el tuyo ha subido, ha bajado o sigue donde estaba.',
-      empty: 'Puntúa juegos de varios años y aquí verás si te has vuelto más exigente.',
-      /** Unidad del eje cuando la cuenta puntúa sobre 100 (con estrellas, la unidad es el propio símbolo). */
-      points: 'pts',
-      games: (count: number) => `${count} ${count === 1 ? 'juego' : 'juegos'}`,
-      /** Rótulo de la cifra destacada: de qué año es el listón que encabeza la tarjeta. */
-      latest: (year: number) => `Tu listón en ${year}`,
-      yearAria: (year: number, avg: string, count: number) =>
-        `${year}: nota media ${avg} sobre ${count} ${count === 1 ? 'juego puntuado' : 'juegos puntuados'}`,
-      barAria: (year: number, stars: number, count: number) =>
-        `${year}, ${stars} ${stars === 1 ? 'estrella' : 'estrellas'}: ${count} ${count === 1 ? 'juego' : 'juegos'}`,
-      chartAria: 'Reparto de notas por año',
-      /** Comparación entre el primer año con notas y el último. */
-      /** La magnitud llega YA formateada con su unidad (estrellas o puntos), para no mezclar escalas. */
-      trendUp: (amount: string) => `Puntúas ${amount} más alto que al principio.`,
-      trendDown: (amount: string) => `Puntúas ${amount} más bajo que al principio.`,
-      trendFlat: 'Puntúas prácticamente igual que al principio.',
-      hint: 'Señala un año para ver su reparto.',
-    },
     /** Constancia semanal, a partir de las fechas que la app registra sola. */
     activity: {
       title: 'Tu constancia',
