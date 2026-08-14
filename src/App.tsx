@@ -39,6 +39,7 @@ import { useImportFieldPrefs } from './viewmodel/useImportFieldPrefs';
 import { useMountedOnceOpen } from './view/modals/useMountedOnceOpen';
 import { runWhenIdle } from './core/utils/idle';
 import { parseLibraryExporter } from './core/import/libraryExporter';
+import { carryStamps } from './core/utils/gameStamps';
 import { importedToPartialGame, mergeImportedIntoGame } from './core/import/staging';
 import type { ImportedGame, RawExternalGame } from './model/types/import';
 
@@ -371,7 +372,9 @@ export default function App() {
       // dispositivos, pero solo necesita estrenar `_ts` lo que de verdad cambia. Sellar la biblioteca entera
       // borraba la fecha de modificación de todos los juegos (y con ella la única pista de cuándo se escribió
       // cada reseña, que es lo que el canal social publica).
-      const normalizedData = normalizeData(nextData, { bumpChangedAgainst: vm.data });
+      // Los sellos automáticos que ya estuvieran aquí sobreviven si el fichero no los trae: un respaldo anterior
+      // a ellos (o de otra herramienta) no puede aportarlos, así que tampoco tiene por qué llevárselos.
+      const normalizedData = normalizeData(carryStamps(nextData, vm.data), { bumpChangedAgainst: vm.data });
       normalizedData.updatedAt = Date.now();
 
       persist(normalizedData);

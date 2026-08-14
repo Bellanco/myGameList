@@ -5,7 +5,7 @@
  *
  * Funciones PURAS —sin reloj propio ni estado—: el `now` entra por parámetro, como en `resolveReviewedAt`.
  */
-import { TAB_IDS, type TabId } from '../../model/types/game';
+import { TAB_IDS, type GameItem, type TabData, type TabId } from '../../model/types/game';
 
 /** Sellos de entrada por lista. Ver `GameItem.enteredAt`. */
 export type EntryStamps = Partial<Record<TabId, number>>;
@@ -50,4 +50,38 @@ export function resolveGradedAt(input: {
   if (grade !== previous) return input.now;
 
   return input.previousGradedAt;
+}
+
+/**
+ * Conserva los sellos que ya tenía la biblioteca cuando lo que entra no los trae.
+ *
+ * Para IMPORTAR un respaldo. Un fichero exportado por esta app los lleva y manda él; uno anterior a los sellos
+ * —o de otra herramienta— no, y sin esto restaurar una copia de seguridad borraría el historial de listas de
+ * golpe. Es información que solo existe en este aparato: el respaldo no puede aportarla, así que no tiene por
+ * qué llevársela.
+ *
+ * Solo rellena huecos: si el fichero trae sellos, los suyos ganan (es lo que se está restaurando). El emparejado
+ * es por `id`, igual que el resto de la importación.
+ */
+export function carryStamps(incoming: TabData, current: TabData): TabData {
+  const known = new Map<number, GameItem>();
+  for (const tab of TAB_IDS) {
+    for (const game of current[tab] || []) if (Number(game?.id) > 0) known.set(Number(game.id), game);
+  }
+  if (known.size === 0) return incoming;
+
+  const merge = (games: GameItem[] | undefined): GameItem[] =>
+    (games || []).map((game) => {
+      const previous = known.get(Number(game?.id));
+      if (!previous) return game;
+      const hasStamps = game.enteredAt && Object.keys(game.enteredAt).length > 0;
+      if (hasStamps && game.gradedAt !== undefined) return game;
+      return {
+        ...game,
+        enteredAt: hasStamps ? game.enteredAt : previous.enteredAt,
+        gradedAt: game.gradedAt ?? previous.gradedAt,
+      };
+    });
+
+  return { ...incoming, c: merge(incoming.c), v: merge(incoming.v), e: merge(incoming.e), p: merge(incoming.p) };
 }

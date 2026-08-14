@@ -104,6 +104,10 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
     rescate. Un registro
     de cuándo mueves cada juego describe tus **hábitos** —a qué horas usas la app, qué días juegas—, y eso es más
     de lo que nadie consiente al compartir una lista. Lo temporal que se publica sigue siendo `years`.
+  - **Restaurar un respaldo no se los lleva por delante**: un fichero exportado por esta app los trae y manda él,
+    pero uno anterior a los sellos —o de otra herramienta— no puede aportarlos, así que tampoco tiene por qué
+    borrarlos. La importación conserva los que ya hubiera aquí y solo rellena huecos. La fusión con un juego que
+    ya está en la biblioteca nunca los tocó: aporta un parche de campos del juego, no el juego entero.
   - Coste medido sobre una biblioteca real de 228 juegos: **228 bytes** en el gist ya comprimido (un byte por
     juego). En plano son 4,5 KB, pero gzip deduplica los nombres de campo repetidos y se los come casi enteros.
 
