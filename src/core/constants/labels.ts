@@ -78,6 +78,7 @@ export const VALIDATION_MESSAGES = {
   yearInvalid: 'El año debe tener exactamente 4 dígitos. Pulsa Guardar de nuevo para ignorarlo.',
   fieldsInvalid: 'Revisa los campos marcados antes de guardar.',
   tagExists: 'Ya existe. Pulsa Guardar otra vez para fusionar.',
+  duplicateName: (name: string, list: string) => `Ya tienes "${name}" en ${list}.`,
   tagMerged: 'Fusionado correctamente',
   tagUpdated: 'Actualizado correctamente',
   scoreRequired: 'Selecciona una puntuación',
@@ -339,6 +340,10 @@ export const UI_MESSAGES = {
       hours: 'Horas invertidas',
       avgGrade: 'Nota media',
       retry: 'Merecen otra oportunidad',
+      /** Como cifra destacada de la cabecera: en una línea, para que case con «Volverías a jugar» al lado. */
+      retryTile: 'Otra oportunidad',
+      /** Pista bajo la cifra grande: de dónde sale ese porcentaje. */
+      retryHint: (retry: number, total: number) => `${retry} de tus ${total} abandonados merecen otra oportunidad`,
       reasons: 'Por qué los dejas',
       noReasons: 'No has anotado razones de abandono.',
       genres: 'Géneros que más abandonas',
@@ -381,7 +386,6 @@ export const UI_MESSAGES = {
       best: 'Mejor racha',
       current: 'Racha viva',
       weeks: (count: number) => `${count} ${count === 1 ? 'semana' : 'semanas'}`,
-      busiest: (week: string, total: number) => `Tu semana más movida: ${week}, con ${total} apuntes.`,
       /** Qué pasó esa semana, desglosado. Se omite lo que esté a cero: «3 movimientos y 0 reseñas» sobra. */
       detail: (moves: number, reviews: number) =>
         [
@@ -438,6 +442,9 @@ export const UI_MESSAGES = {
       zoneLow: 'Cuando algo te decepciona',
       zoneHigh: 'Cuando algo te encanta',
       points: 'pts',
+      // La unidad va en palabra y no en símbolo: un «±0,9 ★» se lee como una nota de una estrella, no como la
+      // anchura de una desviación. «pts» hace ese mismo papel en la escala sobre 100.
+      stars: 'estrellas',
       /** Lectura en palabras de la desviación: es lo que convierte un número en un rasgo. */
       verdictFlat: 'Puntúas parejo: casi todo cae cerca de tu media.',
       verdictBalanced: 'Repartes con criterio: distingues sin irte a los extremos.',

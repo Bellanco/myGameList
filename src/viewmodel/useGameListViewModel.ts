@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { TAB_ACTIONS, TAB_ORDER, VALIDATION_MESSAGES } from '../core/constants/labels';
+import { TAB_ACTIONS, TAB_ORDER, TAB_TOOLTIPS, VALIDATION_MESSAGES } from '../core/constants/labels';
 import { sortEs, uniqueCaseInsensitive } from '../core/utils/compare';
 import { DEFAULT_SORT, nextSort, sortGames } from '../core/utils/sortGames';
 import { clampRating } from '../core/utils/normalize';
 import { clampGrade, gradeFromStars, resolveStars, starsFromGrade } from '../core/utils/scoreScale';
 import { resolveReviewedAt } from '../core/utils/reviewDate';
-import { resolveGradedAt, stampEntry } from '../core/utils/gameStamps';
+import { nextVersion, resolveGradedAt, stampEntry } from '../core/utils/gameStamps';
 import { mapTabDataTags, type TagCategory } from '../core/utils/tagMutations';
 import { normalizeTag, safeTrim } from '../core/security/sanitize';
 import { normalizeName } from '../core/roulette/roulette';
@@ -397,8 +397,31 @@ export function useGameListViewModel() {
     [data],
   );
 
+  /**
+   * ¿Ya existe un juego con este nombre en alguna de mis listas? Devuelve DÓNDE está y con qué grafía, para
+   * poder avisar ("ya lo tienes en Completados") en lugar de dejar crear el duplicado.
+   *
+   * Se compara por nombre normalizado (mismo criterio que la importación y la ruleta): los ids son locales y no
+   * son comparables entre perfiles ni contra un importado. `ignoreId` excluye el propio juego, que es lo que
+   * distingue "estoy editando o moviendo este juego" de "estoy creando otro con el mismo nombre".
+   */
+  const findGameByName = useCallback(
+    (name: string, ignoreId?: number): { tab: TabId; game: GameItem } | null => {
+      const norm = normalizeName(name);
+      if (!norm) return null;
+      for (const tab of TAB_ORDER) {
+        const game = data[tab].find((item) => item.id !== ignoreId && normalizeName(item.name) === norm);
+        if (game) return { tab, game };
+      }
+      return null;
+    },
+    [data],
+  );
+
+  // Devuelve si el guardado se ha llegado a hacer: quien llama encadena efectos (destello de fila, publicación
+  // de la reseña en el canal social) que no deben dispararse cuando una validación ha cortado el guardado.
   const saveDraft = useCallback(
-    (tab: TabId, nextDraft: GameDraft) => {
+    (tab: TabId, nextDraft: GameDraft): boolean => {
       const now = Date.now();
       const id = nextDraft.id || Math.max(0, ...TAB_ORDER.flatMap((key) => data[key].map((item) => item.id))) + 1;
       const existing = data[tab].find((item) => item.id === id);
@@ -419,7 +442,9 @@ export function useGameListViewModel() {
           : undefined);
       const base: GameItem = {
         id,
-        _ts: now,
+        // Nunca la misma marca que el guardado anterior de este juego: es la huella con la que se decide si el
+        // guardado cambió algo, y repetirla descartaba la edición en silencio (ver `nextVersion`).
+        _ts: nextVersion(previous?._ts, now),
         name: safeTrim(nextDraft.name, 120),
         genres: uniqueCaseInsensitive(nextDraft.genres.map(normalizeTag).filter(Boolean)),
         platforms: uniqueCaseInsensitive(nextDraft.platforms.map(normalizeTag).filter(Boolean)),
@@ -463,12 +488,21 @@ export function useGameListViewModel() {
 
       if (!base.name || !base.genres.length || !base.platforms.length) {
         notify('warn', 'Revisa los campos obligatorios antes de guardar.');
-        return;
+        return false;
       }
 
       if (tab === 'c' && !base.years?.length) {
         notify('warn', 'Debes añadir al menos un año para completados.');
-        return;
+        return false;
+      }
+
+      // Último cortafuegos contra el duplicado: el formulario ya avisa mientras se escribe, pero el alta también
+      // llega desde la graduación de un importado y desde ahí no hay aviso previo. Se ignora el propio id para
+      // no bloquear ni la edición del juego ni su cambio de lista (ambos conservan el id).
+      const duplicate = findGameByName(base.name, id);
+      if (duplicate) {
+        notify('warn', VALIDATION_MESSAGES.duplicateName(duplicate.game.name, TAB_TOOLTIPS[duplicate.tab]));
+        return false;
       }
 
       const nextData: TabData = {
@@ -487,8 +521,9 @@ export function useGameListViewModel() {
       setDraft(EMPTY_DRAFT);
       notify('ok', 'Juego guardado correctamente');
       void trackAnalyticsEvent('game_saved', { tab, is_edit: Boolean(existing), has_review: Boolean(base.review) });
+      return true;
     },
-    [data, notify, persist],
+    [data, findGameByName, notify, persist],
   );
 
   const deleteGame = useCallback(
@@ -557,7 +592,12 @@ export function useGameListViewModel() {
       const now = Date.now();
       // `listedAt` se estrena (llegada a la lista nueva) y el sello de entrada se apila sin pisar los anteriores:
       // este camino no pasa por el formulario, así que es el único sitio donde registrar el movimiento.
-      const moved: GameItem = { ...source, _ts: now, listedAt: now, enteredAt: stampEntry(source.enteredAt, targetTab, now) };
+      const moved: GameItem = {
+        ...source,
+        _ts: nextVersion(source._ts, now),
+        listedAt: now,
+        enteredAt: stampEntry(source.enteredAt, targetTab, now),
+      };
       // Próximos → en curso: las estrellas de "interés" no son puntuación del juego (resetea espejo y nota fina).
       if (sourceTab === 'p' && targetTab === 'e') {
         moved.score = 0;
@@ -576,16 +616,8 @@ export function useGameListViewModel() {
     [data, persist, notify],
   );
 
-  // Ruleta (perfil social) — ¿ya tengo este juego en alguna de mis listas? Se compara por nombre normalizado
-  // porque los IDs son locales por usuario y no son comparables entre perfiles.
-  const hasGameInLists = useCallback(
-    (name: string) => {
-      const norm = normalizeName(name);
-      if (!norm) return false;
-      return TAB_ORDER.some((tab) => data[tab].some((game) => normalizeName(game.name) === norm));
-    },
-    [data],
-  );
+  // Ruleta (perfil social) — ¿ya tengo este juego en alguna de mis listas?
+  const hasGameInLists = useCallback((name: string) => findGameByName(name) !== null, [findGameByName]);
 
   // Ruleta (perfil social) — añadir un juego ajeno a MI lista de próximos, evitando duplicados.
   const addGameToProximos = useCallback(
@@ -670,6 +702,7 @@ export function useGameListViewModel() {
     moveGameToCurrentByName,
     addGameToProximos,
     hasGameInLists,
+    findGameByName,
     saveDraft,
     deleteGame,
     removeTagAcrossGames,

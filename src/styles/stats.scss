@@ -309,11 +309,19 @@
   color: var(--stats-ink-2);
 }
 
+/* Con la barra pegada al pie, la pista se queda sin su aire cuando la tarjeta va justa de alto: se lo damos
+   aquí, que es donde se sabe que debajo viene una barra. */
+.stat-tile-hint:has(+ .stat-tile-bar) {
+  padding-bottom: .2rem;
+}
+
 /* Barra de cobertura: solo en la cifra que ES una parte de un todo (las reseñas sobre lo que has cerrado).
    Crece al entrar como el resto de barras del panel. */
 .stat-tile-bar {
   height: 4px;
-  margin-top: .35rem;
+  /* Al pie de la tarjeta, igual que la banda: en una misma fila, dos tarjetas con pistas de distinto número de
+     líneas dejaban sus barras a alturas distintas y la fila se leía torcida. */
+  margin-top: auto;
   border-radius: 2px;
   background: var(--score-track);
   overflow: hidden;
@@ -2892,7 +2900,10 @@
    ═══════════════════════════════════════════════════════════════════════════════════════════════════ */
 .week-heat { display: flex; flex-direction: column; gap: .6rem; }
 .week-heat-canvas { overflow-x: auto; overflow-y: hidden; max-width: 100%; }
-.week-heat-svg { width: 100%; height: auto; max-width: 26rem; }
+/* Sin tope de ancho: el mapa se queda con TODO el que le da su tarjeta. Con el antiguo `max-width` de 26rem, las
+   celdas se quedaban en un cuadradito arrinconado a la izquierda mientras media tarjeta quedaba en blanco; la
+   rejilla es lo que hay que mirar aquí, así que se le deja crecer con el contenedor. */
+.week-heat-svg { width: 100%; height: auto; }
 
 .week-heat-row { fill: var(--text-muted); font-size: 10.5px; }
 .week-heat-cell { cursor: pointer; }
@@ -2941,7 +2952,10 @@
    ═══════════════════════════════════════════════════════════════════════════════════════════════════ */
 .week-heat { display: flex; flex-direction: column; gap: .6rem; }
 .week-heat-canvas { overflow-x: auto; overflow-y: hidden; max-width: 100%; }
-.week-heat-svg { width: 100%; height: auto; max-width: 26rem; }
+/* Sin tope de ancho: el mapa se queda con TODO el que le da su tarjeta. Con el antiguo `max-width` de 26rem, las
+   celdas se quedaban en un cuadradito arrinconado a la izquierda mientras media tarjeta quedaba en blanco; la
+   rejilla es lo que hay que mirar aquí, así que se le deja crecer con el contenedor. */
+.week-heat-svg { width: 100%; height: auto; }
 
 .week-heat-row { fill: var(--text-muted); font-size: 10.5px; }
 .week-heat-cell { cursor: pointer; }

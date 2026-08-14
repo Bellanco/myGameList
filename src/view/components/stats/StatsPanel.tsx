@@ -147,6 +147,7 @@ export const StatsPanel = memo(function StatsPanel({
     const replayPercent = stats.replay.total
       ? Math.round(((stats.replay.replayed + stats.replay.willReplay) / stats.replay.total) * 100)
       : 0;
+    const retryPercent = stats.shame.total ? Math.round((stats.shame.retry / stats.shame.total) * 100) : 0;
     const deviationInScale = scale === 'grade' ? stats.demand.deviation : stats.demand.deviation / 20;
 
     return (
@@ -200,13 +201,25 @@ export const StatsPanel = memo(function StatsPanel({
                 progress={replayPercent}
               />
             ) : null}
+            {/* La cara B de «Volverías a jugar»: de lo que dejaste a medias, a qué le darías otra oportunidad.
+                `retry` es igual de PRIVADA que `replayable` —no viaja por el canal social—, así que se monta con
+                el mismo criterio: solo con los datos completos. */}
+            {has('shame') && full && (own || stats.shame.retry > 0) ? (
+              <StatTile
+                label={L.shame.retryTile}
+                value={<CountUp value={retryPercent} />}
+                unit="%"
+                hint={L.shame.retryHint(stats.shame.retry, stats.shame.total)}
+                progress={retryPercent}
+              />
+            ) : null}
             {has('demand') && (own || stats.demand.count > 0) ? (
               <StatTile
                 label={L.demand.tile}
                 // El ± va pegado a la cifra: una desviación sin signo se lee como una nota («tu exigencia es
                 // 0,9»), que es justo lo que no es.
                 value={<>±<CountUp value={deviationInScale} format={formatDecimal} /></>}
-                unit={scale === 'grade' ? L.demand.points : '★'}
+                unit={scale === 'grade' ? L.demand.points : L.demand.stars}
                 hint={L.demand.tileHint(inScale(stats.demand.low), inScale(stats.demand.high))}
                 // No una barra de progreso, sino la ZONA sobre la escala completa con tu media marcada en su
                 // centro: la exigencia es la anchura de esa zona, y una barra que crece desde cero no puede
