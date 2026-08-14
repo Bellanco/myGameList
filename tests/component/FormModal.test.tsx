@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { FormModal } from '../../src/view/modals/FormModal';
+import type { GameItem } from '../../src/model/types/game';
 import type { GameDraft } from '../../src/viewmodel/useGameListViewModel';
 
 function makeDraft(over: Partial<GameDraft> = {}): GameDraft {
@@ -38,6 +39,7 @@ describe('FormModal — draft local (P3)', () => {
         draft={makeDraft({ id: 1, name: '', genres: ['RPG'], platforms: ['PC'], score: 5, years: [2024] })}
         currentTab="c"
         lookups={{ genres: [], platforms: [], strengths: [], weaknesses: [] }}
+        findDuplicate={() => null}
         onClose={onClose}
         onSave={onSave}
         onNotice={onNotice}
@@ -62,6 +64,7 @@ describe('FormModal — draft local (P3)', () => {
         draft={makeDraft({ id: 1, name: 'Old', genres: ['RPG'], platforms: ['PC'], score: 5, years: [2024] })}
         currentTab="c"
         lookups={{ genres: [], platforms: [], strengths: [], weaknesses: [] }}
+        findDuplicate={() => null}
         onClose={vi.fn()}
         onSave={onSave}
         onNotice={vi.fn()}
@@ -78,6 +81,75 @@ describe('FormModal — draft local (P3)', () => {
   });
 });
 
+// Duplicados: un nombre que ya está en cualquier lista no puede volver a darse de alta. El aviso sale mientras se
+// escribe (antes de rellenar el resto del formulario) y Guardar no llega a emitir el borrador.
+describe('FormModal — nombre repetido', () => {
+  const existing = { id: 7, _ts: 0, name: 'Halo Infinite', genres: [], platforms: [], steamDeck: false, review: '', score: 0 } as GameItem;
+
+  /** Simula el buscador real del view-model: compara sin distinguir mayúsculas y respeta el `ignoreId`. */
+  const findDuplicate = (name: string, ignoreId?: number) =>
+    name.trim().toLowerCase() === 'halo infinite' && ignoreId !== existing.id ? { tab: 'c' as const, game: existing } : null;
+
+  function renderNewGame(onSave = vi.fn(), onNotice = vi.fn()) {
+    render(
+      <FormModal
+        open
+        draft={makeDraft({ genres: ['RPG'], platforms: ['PC'], score: 5, years: [2024] })}
+        currentTab="c"
+        lookups={{ genres: [], platforms: [], strengths: [], weaknesses: [] }}
+        findDuplicate={findDuplicate}
+        onClose={vi.fn()}
+        onSave={onSave}
+        onNotice={onNotice}
+      />,
+    );
+    return { onSave, onNotice, nameInput: screen.getByPlaceholderText('Ej: The Witcher 3') };
+  }
+
+  it('avisa mientras se escribe un nombre que ya está en las listas', async () => {
+    const user = userEvent.setup();
+    const { nameInput } = renderNewGame();
+
+    await user.type(nameInput, 'halo infinite'); // otra grafía: la comparación no distingue mayúsculas
+
+    expect(screen.getByRole('alert')).toHaveTextContent('Ya tienes "Halo Infinite" en Completados.');
+    expect(nameInput).toHaveAttribute('aria-invalid', 'true');
+  });
+
+  it('no guarda el duplicado y avisa al pulsar Guardar', async () => {
+    const user = userEvent.setup();
+    const { onSave, onNotice, nameInput } = renderNewGame();
+
+    await user.type(nameInput, 'Halo Infinite');
+    await user.click(screen.getByRole('button', { name: 'Guardar' }));
+
+    expect(onSave).not.toHaveBeenCalled();
+    expect(onNotice).toHaveBeenCalledWith('warn', 'Ya tienes "Halo Infinite" en Completados.');
+  });
+
+  it('editar el propio juego con su mismo nombre sí guarda (no se compara consigo mismo)', async () => {
+    const user = userEvent.setup();
+    const onSave = vi.fn();
+
+    render(
+      <FormModal
+        open
+        draft={makeDraft({ id: existing.id, name: 'Halo Infinite', genres: ['RPG'], platforms: ['PC'], score: 5, years: [2024] })}
+        currentTab="c"
+        lookups={{ genres: [], platforms: [], strengths: [], weaknesses: [] }}
+        findDuplicate={findDuplicate}
+        onClose={vi.fn()}
+        onSave={onSave}
+        onNotice={vi.fn()}
+      />,
+    );
+
+    expect(screen.queryByRole('alert')).toBeNull();
+    await user.click(screen.getByRole('button', { name: 'Guardar' }));
+    expect(onSave).toHaveBeenCalledTimes(1);
+  });
+});
+
 // A11y-1: <dialog> nativo en modo modal (showModal) → Esc cierra (evento `cancel`) y click en backdrop cierra.
 describe('FormModal — native dialog (A11y-1)', () => {
   function renderModal(onClose = vi.fn()) {
@@ -87,6 +159,7 @@ describe('FormModal — native dialog (A11y-1)', () => {
         draft={makeDraft({ id: 1, genres: ['RPG'], platforms: ['PC'], score: 5, years: [2024] })}
         currentTab="c"
         lookups={{ genres: [], platforms: [], strengths: [], weaknesses: [] }}
+        findDuplicate={() => null}
         onClose={onClose}
         onSave={vi.fn()}
         onNotice={vi.fn()}

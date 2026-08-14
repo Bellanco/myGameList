@@ -8,6 +8,8 @@ import { GenreRadar } from './GenreRadar';
 import { Beeswarm } from './Beeswarm';
 import { BacklogArea } from './BacklogArea';
 import { PolarRose } from './PolarRose';
+import { GenreBump } from './GenreBump';
+import { WeekStreak } from './WeekStreak';
 import { SpeedGauge } from './SpeedGauge';
 import { TopGames } from './TopGames';
 import { ReviewTraits } from './ReviewTraits';
@@ -20,6 +22,12 @@ import { formatDecimal, formatHours } from './format';
 import type { ArrivalPoint, StatsBlock, StatsSummary, YearSummary } from '../../../core/stats/types';
 import type { ScoreScale } from '../../../core/utils/scoreScale';
 import type { StatsScope, YearMetric } from '../../../viewmodel/useStatsViewModel';
+
+/**
+ * A partir de este largo, el nombre del juego más largo se pinta en cuerpo menor y con una línea más.
+ * Veintidós caracteres son los que caben en dos líneas a cuerpo normal en la tarjeta más estrecha de la fila.
+ */
+const LONG_TITLE = 22;
 
 export interface StatsPanelProps {
   /** Resumen ya calculado (`computeStats`), sea de tu biblioteca o de la de otra persona. */
@@ -135,6 +143,12 @@ export const StatsPanel = memo(function StatsPanel({
     const { counts } = stats;
     // La nota media se muestra en la escala que use la cuenta: sobre 100 (nota fina) o sobre 5 (estrellas).
     const avgInScale = scale === 'grade' ? stats.scored.avgGrade : stats.scored.avgGrade / 20;
+    const inScale = (grade: number) => formatDecimal(scale === 'grade' ? grade : grade / 20);
+    const replayPercent = stats.replay.total
+      ? Math.round(((stats.replay.replayed + stats.replay.willReplay) / stats.replay.total) * 100)
+      : 0;
+    const retryPercent = stats.shame.total ? Math.round((stats.shame.retry / stats.shame.total) * 100) : 0;
+    const deviationInScale = scale === 'grade' ? stats.demand.deviation : stats.demand.deviation / 20;
 
     return (
       <>
@@ -164,8 +178,53 @@ export const StatsPanel = memo(function StatsPanel({
             {own || (hasHours && stats.longest) ? (
               <StatTile
                 label={L.tiles.longest}
-                value={<span className="stat-tile-text">{stats.longest ? stats.longest.name : L.tiles.noData}</span>}
+                value={
+                  <span
+                    className={`stat-tile-text${(stats.longest?.name.length ?? 0) > LONG_TITLE ? ' is-long' : ''}`}
+                    title={stats.longest?.name}
+                  >
+                    {stats.longest ? stats.longest.name : L.tiles.noData}
+                  </span>
+                }
                 hint={stats.longest ? L.tiles.longestHint(formatHours(stats.longest.hours)) : undefined}
+              />
+            ) : null}
+            {/* «Volverías a jugar» suma dos cosas y una de ellas, `replayable`, es PRIVADA: no viaja por el canal
+                social. Con la proyección pública el porcentaje saldría contando solo los ya rejugados y se leería
+                como el total, así que con datos incompletos no se monta —el mismo criterio que apaga las horas—. */}
+            {has('replay') && full && (own || stats.replay.total > 0) ? (
+              <StatTile
+                label={L.replay.tile}
+                value={<CountUp value={replayPercent} />}
+                unit="%"
+                hint={L.replay.leadHint(stats.replay.replayed + stats.replay.willReplay, stats.replay.total)}
+                progress={replayPercent}
+              />
+            ) : null}
+            {/* La cara B de «Volverías a jugar»: de lo que dejaste a medias, a qué le darías otra oportunidad.
+                `retry` es igual de PRIVADA que `replayable` —no viaja por el canal social—, así que se monta con
+                el mismo criterio: solo con los datos completos. */}
+            {has('shame') && full && (own || stats.shame.retry > 0) ? (
+              <StatTile
+                label={L.shame.retryTile}
+                value={<CountUp value={retryPercent} />}
+                unit="%"
+                hint={L.shame.retryHint(stats.shame.retry, stats.shame.total)}
+                progress={retryPercent}
+              />
+            ) : null}
+            {has('demand') && (own || stats.demand.count > 0) ? (
+              <StatTile
+                label={L.demand.tile}
+                // El ± va pegado a la cifra: una desviación sin signo se lee como una nota («tu exigencia es
+                // 0,9»), que es justo lo que no es.
+                value={<>±<CountUp value={deviationInScale} format={formatDecimal} /></>}
+                unit={scale === 'grade' ? L.demand.points : L.demand.stars}
+                hint={L.demand.tileHint(inScale(stats.demand.low), inScale(stats.demand.high))}
+                // No una barra de progreso, sino la ZONA sobre la escala completa con tu media marcada en su
+                // centro: la exigencia es la anchura de esa zona, y una barra que crece desde cero no puede
+                // decir ni dónde empieza ni alrededor de qué se ordena.
+                band={{ from: stats.demand.low, to: stats.demand.high, mark: stats.demand.avgGrade }}
               />
             ) : null}
             {has('reviews') && stats.reviews.count > 0 && onOpenReviews ? (
@@ -212,6 +271,14 @@ export const StatsPanel = memo(function StatsPanel({
           </div>
         ) : null}
 
+        {has('genreRanks') && (own || stats.genreRanks.series.length > 0) ? (
+          <div className="stats-card">
+            <h2>{L.genreRanks.title}</h2>
+            <p className="stats-card-sub">{L.genreRanks.subtitle}</p>
+            <GenreBump ranks={stats.genreRanks} />
+          </div>
+        ) : null}
+
         {has('radar') ? (
           <div className="stats-card stats-card-half">
             <h2>{L.radar.title}</h2>
@@ -241,18 +308,36 @@ export const StatsPanel = memo(function StatsPanel({
         ) : null}
 
         {has('grades') && (own || stats.scored.count > 0) ? (
-          <div className="stats-card stats-card-half">
+          <div className="stats-card">
             <h2>{L.grades.title}</h2>
             <p className="stats-card-sub">{L.grades.subtitle}</p>
             <Beeswarm games={stats.scored.games} scale={scale} />
           </div>
         ) : null}
 
+
+
+
+
+
+
+
         {has('genres') ? (
           <div className="stats-card stats-card-half">
             <h2>{L.genres.title}</h2>
             <p className="stats-card-sub">{L.genres.subtitle}</p>
             <PolarRose tags={stats.genres} />
+          </div>
+        ) : null}
+
+
+        {/* La constancia sale de fechas PRIVADAS (`enteredAt`, `reviewedAt`) que no viajan por el canal social:
+            solo se monta con los datos completos, es decir, en tu propio panel. */}
+        {has('activity') && full && (own || stats.activity.active > 0) ? (
+          <div className="stats-card stats-card-half">
+            <h2>{L.activity.title}</h2>
+            <p className="stats-card-sub">{L.activity.subtitle}</p>
+            <WeekStreak activity={stats.activity} />
           </div>
         ) : null}
 

@@ -457,9 +457,32 @@
 :root[data-palette="cyberpunk"] .burst-piece,
 :root[data-palette="cyberpunk"] .donut-seg { filter: drop-shadow(0 0 4px currentColor); }
 
-:root[data-palette="cyberpunk"] .beeswarm-dot,
 :root[data-palette="cyberpunk"] .timeline-dot,
 :root[data-palette="cyberpunk"] .dumbbell-dot { box-shadow: 0 0 6px currentColor, 0 0 2px #fff; }
+
+/* ── El enjambre, como una ventana del HUD: chaflán en dos esquinas y CADA JUEGO en una celda HEXAGONAL. El
+   halo va con `filter` y no con `box-shadow` porque una sombra normal no sigue al recorte: saldría un halo
+   redondo alrededor de un hexágono. En claro se apaga, como el resto de neones del tema. ── */
+:root[data-palette="cyberpunk"] .stats-hub {
+  --bee-radius: 0;
+  --bee-clip: polygon(14px 0, 100% 0, 100% calc(100% - 14px), calc(100% - 14px) 100%, 0 100%, 0 14px);
+  --bee-edge: 18%;
+  --bee-frame: inset 0 0 0 1px color-mix(in srgb, var(--cyber-cyan) 14%, transparent);
+  --bee-chip-radius: 0;
+  --bee-dot-radius: 0;
+  --bee-dot-shape: polygon(25% 0, 75% 0, 100% 50%, 75% 100%, 25% 100%, 0 50%);
+  --bee-dot-ring: inset 0 0 0 1px rgba(255, 255, 255, .35);
+  --bee-dot-filter: drop-shadow(0 0 3px hsl(var(--dot-hue, 135) 85% 58% / .75));
+  --bee-median-ink: var(--cyber-cyan);
+  --bee-median-glow: 0 0 10px color-mix(in srgb, var(--cyber-cyan) 26%, transparent);
+  --bee-veil: color-mix(in srgb, var(--cyber-cyan) 6%, transparent);
+}
+
+:root[data-palette="cyberpunk"][data-theme="light"] .stats-hub {
+  --bee-dot-ring: inset 0 0 0 1px color-mix(in srgb, var(--text) 22%, transparent);
+  --bee-dot-filter: none;
+  --bee-median-glow: none;
+}
 
 /* Cada barra de "Dónde brillas" termina en un filo encendido, como el borde de una ventana del HUD. */
 :root[data-palette="cyberpunk"] .shine-fill { box-shadow: inset -2px 0 0 var(--cyber-cyan); }

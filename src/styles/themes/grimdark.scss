@@ -277,8 +277,33 @@
 /* Fósforo: el trazo de los datos emite, como la pantalla. En claro (pergamino) se apaga. */
 :root[data-palette="grimdark"] .backlog-line,
 :root[data-palette="grimdark"] .genre-radar-shape { filter: drop-shadow(0 0 5px rgba(67, 245, 88, .5)); }
-:root[data-palette="grimdark"] .beeswarm-dot,
 :root[data-palette="grimdark"] .timeline-dot { box-shadow: 0 0 6px rgba(67, 245, 88, .45); }
+
+/* ── El enjambre, como una cartela del códice: el lienzo va sin borde de paleta y con DOBLE FILETE de oro, y
+   cada juego es un OCTÓGONO —la figura recortada de las cartelas—. El fósforo se pinta con `filter`, que es
+   lo único que sigue al recorte, y corto: con un halo de tres píxeles el contorno se emborronaba y el
+   octógono volvía a parecer un círculo. ── */
+:root[data-palette="grimdark"] .stats-hub {
+  --bee-radius: 0;
+  --bee-edge: 0%;
+  --bee-frame:
+    inset 0 0 0 1px color-mix(in srgb, var(--grim-line) 26%, transparent),
+    inset 0 0 0 4px transparent,
+    inset 0 0 0 5px color-mix(in srgb, var(--grim-line) 13%, transparent);
+  --bee-chip-radius: 0;
+  --bee-axis-size: .82rem;
+  --bee-dot-radius: 0;
+  --bee-dot-shape: polygon(30% 0, 70% 0, 100% 30%, 100% 70%, 70% 100%, 30% 100%, 0 70%, 0 30%);
+  --bee-dot-ring: inset 0 0 0 1px color-mix(in srgb, var(--grim-line) 42%, transparent);
+  --bee-dot-filter: drop-shadow(0 0 2px color-mix(in srgb, var(--grim-green) 45%, transparent));
+  --bee-median-ink: var(--grim-gold);
+  --bee-veil: color-mix(in srgb, var(--grim-green) 5%, transparent);
+}
+
+:root[data-palette="grimdark"][data-theme="light"] .stats-hub {
+  --bee-dot-ring: inset 0 0 0 1px color-mix(in srgb, var(--grim-line) 45%, transparent);
+  --bee-dot-filter: none;
+}
 /* Las piezas nuevas también emiten: el cuadro de mandos y el rosetón, como cualquier trazo de esta pantalla. */
 :root[data-palette="grimdark"] .gauge-seg.is-on,
 :root[data-palette="grimdark"] .gauge-sub-seg.is-on,
@@ -288,7 +313,6 @@
 :root[data-palette="grimdark"][data-theme="light"] .burst-piece { filter: none; }
 :root[data-palette="grimdark"][data-theme="light"] .backlog-line,
 :root[data-palette="grimdark"][data-theme="light"] .genre-radar-shape { filter: none; }
-:root[data-palette="grimdark"][data-theme="light"] .beeswarm-dot,
 :root[data-palette="grimdark"][data-theme="light"] .timeline-dot { box-shadow: none; }
 
 /* Lecturas de terminal: las cifras del panel en VT323, como las puntuaciones y las fechas. */

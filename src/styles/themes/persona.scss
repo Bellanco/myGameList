@@ -125,7 +125,13 @@
 :root[data-palette="persona"] .btn-toggle:not(.active) { background: var(--surface-elevated) !important; color: var(--text) !important; }
 :root[data-palette="persona"] .btn-accent,
 :root[data-palette="persona"] .btn.is-active,
-:root[data-palette="persona"] .btn-toggle.active { background: var(--steam) !important; color: #fff !important; }
+/* El fondo del activo va un punto más oscuro que `--steam` a secas: el blanco sobre el rojo puro se queda en
+   3,81:1 y este es el rótulo que dice qué pestaña está abierta. Con la mezcla sube a 5,06:1 y sigue siendo el
+   mismo rojo de la paleta. */
+:root[data-palette="persona"] .btn-toggle.active {
+  background: color-mix(in srgb, var(--steam) 85%, #000) !important;
+  color: #fff !important;
+}
 /* "General" del panel: aquí el contorno es negro por decreto del tema, así que el principal se distingue por la
    SOMBRA DE BLOQUE, en rojo rebelde en vez de blanca. El relleno rojo sigue siendo del elegido. */
 :root[data-palette="persona"] .scope-tabs > .btn-toggle:first-child:not(.active),
@@ -355,9 +361,30 @@
 :root[data-palette="persona"] .genre-radar-shape { stroke: var(--pop-line); stroke-width: 2.5; }
 :root[data-palette="persona"] .donut-seg { stroke-linecap: butt; }
 
-:root[data-palette="persona"] .beeswarm-dot,
 :root[data-palette="persona"] .timeline-dot,
 :root[data-palette="persona"] .dumbbell-dot { box-shadow: 0 0 0 1.5px var(--pop-line); }
+
+/* ── El enjambre de notas, DIBUJADO. El lienzo no lleva marco de un píxel ni sombra difuminada: lleva contorno
+   de tinta y la SOMBRA DURA desplazada de los botones del tema (`5px 5px 0`), aquí más fina y en rojo. El
+   contorno es NEGRO en oscuro —igual que el `border` de `.btn`, que también va en negro sobre el fondo
+   oscuro—: una línea blanca alrededor del lienzo se leía como un tubo encendido, no como tinta. En claro la
+   tinta es la del resto del tema y el rojo se queda, que es lo que impide que el bloque se lave. ── */
+:root[data-palette="persona"] .stats-hub {
+  --bee-radius: 2px;
+  --bee-edge: 0%;
+  --bee-frame: inset 0 0 0 1px rgba(0, 0, 0, .85);
+  --bee-cast: 3px 3px 0 rgba(255, 31, 61, .45);
+  --bee-dot-ring: 0 0 0 1px var(--pop-line);
+  --bee-median-ink: var(--pop-line);
+  --bee-veil: color-mix(in srgb, var(--steam) 7%, transparent);
+  --bee-chip-radius: 2px;
+  --bee-chip-skew: skewX(-8deg);
+}
+
+:root[data-palette="persona"][data-theme="light"] .stats-hub {
+  --bee-frame: inset 0 0 0 1px color-mix(in srgb, var(--pop-line) 85%, transparent);
+  --bee-cast: 3px 3px 0 rgba(230, 0, 18, .26);
+}
 
 /* El relleno de "Dónde brillas" no acaba en vertical: se corta en diagonal, como los paneles de viñeta del
    juego, y el dial y sus contadores llevan el filo de tinta de todo el tema. */

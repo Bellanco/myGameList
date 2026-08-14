@@ -85,3 +85,31 @@ export function localMonthKey(value: number | Date): string {
   }
   return `${date.getFullYear()}-${pad2(date.getMonth() + 1)}`;
 }
+
+/**
+ * Semana ISO-8601 `AAAA-Www` a la que pertenece el instante, en el calendario del dispositivo.
+ *
+ * ISO y no "semanas desde enero" porque es la definición que ya usa el calendario de media Europa: la semana
+ * empieza en LUNES y la número 1 es la que contiene el primer jueves del año. Eso resuelve solo el caso raro —los
+ * días de finales de diciembre pertenecen a la semana 1 del año siguiente, y los de primeros de enero a la 52 o
+ * 53 del anterior—, que si se apaña a ojo deja una semana coja al principio de cada año en cualquier serie.
+ *
+ * Devuelve `''` si el instante no es válido, como el resto de claves de este módulo.
+ */
+export function localWeekKey(value: number | Date): string {
+  const date = toDate(value);
+  if (Number.isNaN(date.getTime())) {
+    return '';
+  }
+  // Se trabaja sobre una copia a mediodía: así ningún cambio de horario de verano puede mover el día.
+  const anchor = new Date(date.getFullYear(), date.getMonth(), date.getDate(), 12);
+  // Al jueves de esta semana (lunes = 0): el año de ESE jueves es, por definición, el año ISO de la semana.
+  const weekday = (anchor.getDay() + 6) % 7;
+  anchor.setDate(anchor.getDate() - weekday + 3);
+  const isoYear = anchor.getFullYear();
+  // Jueves de la semana 1 del año ISO: el 4 de enero siempre cae en ella.
+  const firstThursday = new Date(isoYear, 0, 4, 12);
+  firstThursday.setDate(firstThursday.getDate() - ((firstThursday.getDay() + 6) % 7) + 3);
+  const week = 1 + Math.round((anchor.getTime() - firstThursday.getTime()) / (7 * 24 * 60 * 60 * 1000));
+  return `${isoYear}-W${pad2(week)}`;
+}

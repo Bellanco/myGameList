@@ -6,8 +6,8 @@ import type { GameRef } from '../../../core/stats/types';
 
 interface GameRefListProps {
   games: GameRef[];
-  /** Qué se muestra a la derecha de cada juego. */
-  meta?: 'grade' | 'hours' | 'since';
+  /** Qué se muestra a la derecha de cada juego. `replays` = cuántas veces se ha terminado. */
+  meta?: 'grade' | 'hours' | 'since' | 'replays';
   /** Numera las filas (para los rankings del año). */
   ranked?: boolean;
 }
@@ -33,6 +33,7 @@ export const GameRefList = memo(function GameRefList({ games, meta = 'grade', ra
           {meta === 'since' && game.at > 0 ? (
             <span className="game-ref-meta">{L.wishlist.waitingSince(formatMonthYear(game.at))}</span>
           ) : null}
+          {meta === 'replays' ? <span className="game-ref-meta">{L.replay.runs(game.replays)}</span> : null}
         </li>
       ))}
     </ol>

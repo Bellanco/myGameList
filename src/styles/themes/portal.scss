@@ -220,7 +220,12 @@
 /* ── §14 · CLARO = APERTURE ANTIGUA: recolorea los pocos puntos con azul/cian LITERAL (no vía `--steam`) para que
    la zona vieja quede cálida y coherente; el resto ya se calienta solo al cambiar las variables. ── */
 :root[data-palette="portal"][data-theme="light"] .fab { background: radial-gradient(circle at 50% 42%, #ffe3b0, var(--steam) 70%); color: #2a1a08; }
-:root[data-palette="portal"][data-theme="light"] .btn-toggle.active,
+/* El fondo del activo se aclara un punto: el marrón de Aperture sobre el ámbar puro se queda en 4,01:1, y este
+   es el rótulo que dice qué pestaña está abierta. Con la mezcla pasa de 5:1 sin salirse de la gama cálida. */
+:root[data-palette="portal"][data-theme="light"] .btn-toggle.active {
+  background: color-mix(in srgb, var(--steam) 85%, #fff) !important;
+  color: #2a1a08 !important;
+}
 :root[data-palette="portal"][data-theme="light"] .badge-opp-activo { color: #2a1a08 !important; }
 :root[data-palette="portal"][data-theme="light"] .bottom-nav-inner { border: 1px solid var(--border); border-top: 2px solid var(--portal-orange); }
 
@@ -335,33 +340,39 @@
    paletas, porque un 4★ tiene que verse del mismo color en la ficha del juego y aquí. Lo que sí es de Aperture
    es el ACABADO: la retícula de placa de prueba bajo el lienzo, el halo del gel en cada punto, y las dos guías
    —la media con el haz azul de la rejilla de emancipación y la mediana con el filo naranja—. ── */
-:root[data-palette="portal"] .beeswarm-canvas {
-  background-image:
-    linear-gradient(to right, rgba(41, 182, 246, .07) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(41, 182, 246, .07) 1px, transparent 1px);
-  background-size: 28px 28px, 28px 28px;
+:root[data-palette="portal"] .stats-hub {
+  /* CANTO RECTO Y ENTERO. Aquí el lienzo no se disuelve como en el resto de paletas: en la cámara de pruebas
+     es una PLACA, y una placa tiene su marco. El borde se queda al 100 % del token y encima va la junta, que
+     en OSCURO es NEGRA —una junta clara sobre el azul clínico se leía como una luz encendida, y lo que
+     separa dos paneles es una sombra, no un foco—. */
+  --bee-radius: 2px;
+  --bee-edge: 100%;
+  --bee-frame: inset 1px 1px 0 rgba(0, 0, 0, .38);
+  --bee-chip-radius: 0;
+  /* La tipografía del eje ya la pone la regla de «lecturas técnicas» de más arriba: `--bee-axis-font` vale
+     `inherit` por defecto, así que el rótulo la hereda sin declararla dos veces. */
+  /* Retícula de placa de prueba, muy insinuada. */
+  --bee-grid:
+    linear-gradient(to right, rgba(41, 182, 246, .05) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(41, 182, 246, .05) 1px, transparent 1px);
+  --bee-grid-size: 28px 28px, 28px 28px, auto;
+  /* Filo SÓLIDO en el punto, no halo difuso: el mismo canto limpio del panel a escala de nueve píxeles. */
+  --bee-dot-ring: 0 0 0 1px rgba(0, 0, 0, .5);
+  --bee-median-ink: var(--portal-orange);
+  --bee-median-glow: 0 0 8px color-mix(in srgb, var(--portal-orange) 22%, transparent);
+  --bee-veil: color-mix(in srgb, var(--portal-orange) 5%, transparent);
 }
 
-/* El halo sale del propio color de la nota (`currentColor` no vale aquí: el punto pinta con `background`). */
-:root[data-palette="portal"] .beeswarm-dot {
-  box-shadow: 0 0 7px hsl(var(--dot-hue, 135) 58% var(--acc-l)), 0 0 0 1px rgba(255, 255, 255, .3);
+/* En claro (la Aperture antigua, de moqueta y madera) la junta vuelve a ser clara —ahí sí separa placas— y
+   los halos se apagan: sobre fondo claro solo ensucian. */
+:root[data-palette="portal"][data-theme="light"] .stats-hub {
+  --bee-frame: inset 1px 1px 0 rgba(255, 255, 255, .6);
+  --bee-grid:
+    linear-gradient(to right, rgba(110, 90, 62, .07) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(110, 90, 62, .07) 1px, transparent 1px);
+  --bee-dot-ring: 0 0 0 1px rgba(0, 0, 0, .22);
+  --bee-median-glow: none;
 }
-
-/* La única guía del gráfico —la mediana— lleva el filo naranja del portal 2, encendido. */
-:root[data-palette="portal"] .beeswarm-median {
-  border-left-color: var(--portal-orange);
-  opacity: 1;
-  box-shadow: 0 0 10px color-mix(in srgb, var(--portal-orange) 55%, transparent);
-}
-
-:root[data-palette="portal"] .beeswarm-density path {
-  fill: color-mix(in srgb, var(--portal-orange) 7%, transparent);
-  stroke: color-mix(in srgb, var(--steam) 24%, transparent);
-}
-
-/* En claro (la Aperture antigua, de moqueta y madera) los halos se apagan: sobre fondo claro solo ensucian. */
-:root[data-palette="portal"][data-theme="light"] .beeswarm-dot { box-shadow: 0 0 0 1px rgba(0, 0, 0, .18); }
-:root[data-palette="portal"][data-theme="light"] .beeswarm-median { box-shadow: none; }
 
 /* ── §12c · El resto del panel, con el acabado de una cámara de pruebas: las piezas de color se separan con la
    JUNTA CLARA de las placas de Aperture y los trazos vivos llevan el resplandor del portal. ── */

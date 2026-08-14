@@ -78,6 +78,7 @@ export const VALIDATION_MESSAGES = {
   yearInvalid: 'El año debe tener exactamente 4 dígitos. Pulsa Guardar de nuevo para ignorarlo.',
   fieldsInvalid: 'Revisa los campos marcados antes de guardar.',
   tagExists: 'Ya existe. Pulsa Guardar otra vez para fusionar.',
+  duplicateName: (name: string, list: string) => `Ya tienes "${name}" en ${list}.`,
   tagMerged: 'Fusionado correctamente',
   tagUpdated: 'Actualizado correctamente',
   scoreRequired: 'Selecciona una puntuación',
@@ -251,7 +252,19 @@ export const UI_MESSAGES = {
       chartAria: 'Distribución de notas',
       bandColumn: 'Tramo',
       countColumn: 'Juegos',
-      median: 'mediana',
+      /**
+       * Filtro por lista. Solo aparece cuando hay notas en las DOS listas, y nunca deja el gráfico vacío: el
+       * botón de la única lista encendida se queda deshabilitado en vez de apagarla.
+       */
+      lists: {
+        aria: 'Qué listas entran en el reparto',
+        completed: 'Completados',
+        abandoned: 'Abandonados',
+        /** Aviso al lector de pantalla en el botón que ya no se puede apagar. */
+        onlyOne: 'No puedes quitar la única lista que queda',
+      },
+      /** Rótulo de la guía de la mediana, con su valor: la línea sola no decía en qué nota cae. */
+      median: (value: string) => `mediana ${value}`,
     },
     genres: {
       title: 'Géneros más jugados',
@@ -339,6 +352,10 @@ export const UI_MESSAGES = {
       hours: 'Horas invertidas',
       avgGrade: 'Nota media',
       retry: 'Merecen otra oportunidad',
+      /** Como cifra destacada de la cabecera: en una línea, para que case con «Volverías a jugar» al lado. */
+      retryTile: 'Otra oportunidad',
+      /** Pista bajo la cifra grande: de dónde sale ese porcentaje. */
+      retryHint: (retry: number, total: number) => `${retry} de tus ${total} abandonados merecen otra oportunidad`,
       reasons: 'Por qué los dejas',
       noReasons: 'No has anotado razones de abandono.',
       genres: 'Géneros que más abandonas',
@@ -346,6 +363,108 @@ export const UI_MESSAGES = {
       legendCompleted: 'Terminados',
       legendAbandoned: 'Abandonados',
       recent: 'Los últimos en caer',
+    },
+    /** Evolución del gusto: el puesto de cada género, año a año, en ventana móvil. */
+    genreRanks: {
+      title: 'Cómo cambia tu gusto',
+      // Skyrim: «solías ser un aventurero como yo, hasta que…». Aquí se ve qué dejaste de jugar por el camino.
+      subtitle: 'Tú también fuiste un aventurero: qué géneros terminas más y cuáles se te caen del podio.',
+      empty: 'Con unos cuantos años de partidas terminadas, aquí verás hacia dónde se mueve tu gusto.',
+      rankAria: (tag: string, year: number, rank: number, games: number) =>
+        `${tag}: ${rank}.º en ${year} con ${games} ${games === 1 ? 'juego' : 'juegos'}`,
+      chartAria: 'Puesto de cada género por año',
+      /** La banda del pie: dónde va un género que ese año no tiene ni un juego terminado. */
+      outOfChart: 'Fuera de la tabla',
+      outAria: (tag: string, year: number) => `${tag}: sin juegos terminados en ${year}`,
+      /** Resumen del recorrido de un género entre el primer año y el último. */
+      moveUp: (tag: string, from: number, to: number) => `${tag} sube del ${from}.º al ${to}.º puesto`,
+      moveDown: (tag: string, from: number, to: number) => `${tag} baja del ${from}.º al ${to}.º puesto`,
+      moveFlat: (tag: string, rank: number) => `${tag} se mantiene en el ${rank}.º puesto`,
+      hint: 'Señala un género para seguir su línea.',
+    },
+    /** Constancia semanal, a partir de las fechas que la app registra sola. */
+    activity: {
+      title: 'Tu constancia',
+      // Animal Crossing va de aparecer cada día; aquí basta con aparecer cada semana.
+      subtitle: 'Aquí no se mide cuánto juegas, sino cada cuánto vuelves a tus listas.',
+      empty: 'En cuanto muevas juegos entre listas o escribas reseñas, aquí aparecerá tu ritmo.',
+      /** Por qué la unidad es la semana y no el día. */
+      why: 'Por semanas, no por días: una lista de juegos no se toca a diario, y un calendario diario sería casi todo huecos.',
+      weekAria: (week: string, total: number) =>
+        total === 0 ? `${week}: sin actividad` : `${week}: ${total} ${total === 1 ? 'apunte' : 'apuntes'}`,
+      chartAria: 'Semanas con actividad',
+      active: 'Semanas activas',
+      activeHint: (active: number, total: number) => `${active} de las últimas ${total}`,
+      best: 'Mejor racha',
+      current: 'Racha viva',
+      weeks: (count: number) => `${count} ${count === 1 ? 'semana' : 'semanas'}`,
+      /** Qué pasó esa semana, desglosado. Se omite lo que esté a cero: «3 movimientos y 0 reseñas» sobra. */
+      detail: (moves: number, reviews: number) =>
+        [
+          moves > 0 ? `${moves} ${moves === 1 ? 'movimiento' : 'movimientos'}` : '',
+          reviews > 0 ? `${reviews} ${reviews === 1 ? 'reseña' : 'reseñas'}` : '',
+        ]
+          .filter(Boolean)
+          .join(' · '),
+      less: 'menos',
+      more: 'más',
+      hint: 'Señala una semana para ver qué pasó.',
+    },
+    /** A cuáles vuelves: el voto más sincero que existe. */
+    replay: {
+      /** Como cifra destacada de la cabecera: el rótulo tiene que caber en una tarjeta pequeña. */
+      tile: 'Volverías a jugar',
+      title: 'A cuáles vuelves',
+      // Portal: el pastel. Volver a un juego que ya te sabes es la promesa que sí se cumple.
+      subtitle: 'Este pastel no es mentira: los juegos a los que de verdad vuelves.',
+      empty: 'Marca "rejugar" o añade otro año a un juego terminado y aquí verás a cuáles vuelves.',
+      replayed: 'Ya has vuelto',
+      willReplay: 'Volverías',
+      once: 'Una vez y ya',
+      replayedHint: (runs: number) => `${runs} ${runs === 1 ? 'vuelta' : 'vueltas'} extra en total`,
+      /** Porcentaje de completados a los que has vuelto o volverías. */
+      rate: 'De tus completados',
+      rateHint: (percent: number) => `${percent}% te apetece repetirlos`,
+      /** Pista bajo la cifra grande: de dónde sale ese porcentaje. */
+      leadHint: (back: number, total: number) => `${back} de tus ${total} completados merecen otra vuelta`,
+      genres: 'Géneros que más repites',
+      genreValue: (back: number, games: number) => `${back} de ${games}`,
+      most: 'Los que más veces has terminado',
+      runs: (count: number) => `${count} ${count === 1 ? 'vez' : 'veces'}`,
+      chartAria: (replayed: number, willReplay: number, once: number) =>
+        `${replayed} rejugados, ${willReplay} que volverías a jugar y ${once} de una sola vez`,
+      hint: 'Señala una parte para ver su cuenta.',
+    },
+    /** Exigencia: cuánto se separan tus notas de tu propia media. */
+    demand: {
+      tile: 'Tu exigencia',
+      /** Pista de la cifra destacada: la banda en la que cae la mayoría de tus notas. */
+      tileHint: (low: string, high: string) => `la mayoría de tus notas caen entre ${low} y ${high}`,
+      title: 'Tu exigencia',
+      // Dark Souls otra vez no: esta es de Sekiro, donde la nota justa es la que duele.
+      subtitle: 'Ni indulgente ni implacable: dónde caen tus notas alrededor de tu media.',
+      empty: 'Puntúa algunos juegos y aquí verás si repartes notas parecidas o vas a los extremos.',
+      deviation: 'Desviación',
+      deviationHint: 'es lo que se aparta de tu media una nota tuya cualquiera',
+      band: 'Tu zona habitual',
+      bandHint: (inBand: number, count: number, percent: number) =>
+        `${inBand} de tus ${count} notas caen en tu zona habitual (${percent}%).`,
+      range: 'De la más baja a la más alta',
+      /** Los extremos de la escala, fuera de la zona habitual: hasta dónde llegas cuando algo te marca. */
+      zoneLow: 'Cuando algo te decepciona',
+      zoneHigh: 'Cuando algo te encanta',
+      points: 'pts',
+      // La unidad va en palabra y no en símbolo: un «±0,9 ★» se lee como una nota de una estrella, no como la
+      // anchura de una desviación. «pts» hace ese mismo papel en la escala sobre 100.
+      stars: 'estrellas',
+      /** Lectura en palabras de la desviación: es lo que convierte un número en un rasgo. */
+      verdictFlat: 'Puntúas parejo: casi todo cae cerca de tu media.',
+      verdictBalanced: 'Repartes con criterio: distingues sin irte a los extremos.',
+      verdictHarsh: 'Puntúas a los extremos: o te encanta o no lo perdonas.',
+      average: 'Tu media',
+      chartAria: (avg: string, deviation: string, low: string, high: string) =>
+        `Nota media ${avg}, desviación ${deviation}; la mayoría de tus notas caen entre ${low} y ${high}`,
+      hint: 'Señala un tramo para ver cuántos juegos tiene.',
     },
     wishlist: {
       title: 'Lo que te espera',

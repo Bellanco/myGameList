@@ -62,6 +62,12 @@ export interface GameRef {
   hours: number;
   /** Fecha de llegada a la lista actual (`listedAt`). */
   at: number;
+  /**
+   * Lista de la que sale la referencia. La necesita el enjambre de notas para separar lo que TERMINASTE de lo
+   * que DEJASTE: son dos cosas distintas —una nota de abandono cuenta por qué lo soltaste— y mezcladas en un
+   * mismo reparto tiran de la mediana hacia abajo sin decir por qué.
+   */
+  list: TabId;
   /** Las MISMAS referencias del juego original (no copias): el agregado del top las recorre. */
   genres: string[];
   platforms: string[];
@@ -128,17 +134,27 @@ export type StatsBlock =
   | 'genres'
   | 'reviews'
   | 'shame'
-  | 'wishlist';
+  | 'wishlist'
+  | 'genreRanks'
+  | 'activity'
+  | 'replay'
+  | 'demand';
 
 /** El panel completo: lo que ves de TI mismo, sin recortar nada. */
 export const OWN_STATS_BLOCKS: readonly StatsBlock[] = [
   'top',
   'years',
+  'genreRanks',
   'radar',
   'ratio',
   'backlog',
   'grades',
+  // `replay` y `demand` ya no montan tarjeta: viven como cifras destacadas en la cabecera del panel. Siguen en
+  // la lista porque es ella la que decide si el espectador puede verlas.
+  'demand',
   'genres',
+  'replay',
+  'activity',
   'reviews',
   'shame',
   'wishlist',
@@ -151,6 +167,114 @@ export interface ArrivalPoint {
   v: number;
   e: number;
   p: number;
+}
+
+/**
+ * Puesto de un género en un año: lo que dibuja la evolución del gusto.
+ *
+ * El puesto sale de una VENTANA MÓVIL de varios años (ver `GENRE_RANK_WINDOW`), no del año suelto. Con ocho o
+ * veinte juegos terminados al año, un solo título mueve un género tres puestos y la figura se vuelve ruido; la
+ * ventana enseña la tendencia, que es lo que este gráfico viene a contar.
+ */
+export interface GenreRankPoint {
+  year: number;
+  /** 1 = el género más terminado de la ventana. */
+  rank: number;
+  /** Juegos de ese género en la ventana que acaba en `year`. */
+  games: number;
+}
+
+export interface GenreRankSeries {
+  tag: string;
+  /** Un punto por año, en el mismo orden que `GenreRanks.years`. */
+  points: GenreRankPoint[];
+}
+
+export interface GenreRanks {
+  /** Años con puesto calculable (los primeros de la biblioteca se van en llenar la ventana). */
+  years: number[];
+  /** Cuántos años acumula cada punto. */
+  window: number;
+  /** Un género por serie, ordenados por su puesto en el ÚLTIMO año: así la leyenda se lee de arriba abajo. */
+  series: GenreRankSeries[];
+}
+
+/**
+ * Una semana con actividad fechada. `w` es la clave ISO `AAAA-Www` (ver `localWeekKey`).
+ *
+ * POR SEMANAS Y NO POR DÍAS: una lista de juegos no se toca a diario —se anota lo que se termina, y eso pasa
+ * cada pocos días—, así que un calendario diario sería casi todo huecos y haría parecer inactivo a quien no lo
+ * está. La semana es la unidad en la que esta afición tiene ritmo.
+ */
+export interface WeekActivity {
+  w: string;
+  /** Reseñas escritas o reescritas (`reviewedAt`). */
+  reviews: number;
+  /** Entradas a una lista (`enteredAt`): lo que has empezado, terminado, dejado o apuntado. */
+  moves: number;
+  total: number;
+}
+
+/**
+ * Constancia: la serie semanal completa, sin huecos, desde la primera semana con actividad hasta la última.
+ *
+ * Las semanas VACÍAS van incluidas a propósito: son el dato: una racha se ve porque a su lado hay semanas en
+ * blanco. Rellenarlas aquí (y no en la vista) mantiene el calendario del dispositivo en un único sitio.
+ */
+export interface ActivitySummary {
+  weeks: WeekActivity[];
+  /** Semanas con algo de actividad, sobre el total del periodo. */
+  active: number;
+  /** Racha más larga de semanas seguidas con actividad, y la que sigue viva al final de la serie. */
+  bestStreak: number;
+  currentStreak: number;
+  /** Semana más movida. Null si no hay ni una con actividad. */
+  busiest: WeekActivity | null;
+}
+
+/**
+ * Rejugabilidad: lo que de verdad dice que un juego te gustó.
+ *
+ * Son dos cosas distintas y por eso se cuentan aparte: haber VUELTO (varios años registrados en `years`) es un
+ * hecho; querer volver (`replayable`) es una intención. Un juego que ya rejugaste no vuelve a contar como
+ * intención aunque siga marcado, o se contaría dos veces en el mismo reparto.
+ */
+export interface ReplaySummary {
+  /** Completados: el total sobre el que se reparte todo lo demás. */
+  total: number;
+  replayed: number;
+  willReplay: number;
+  /** Ni rejugados ni marcados: la mayoría, normalmente. */
+  once: number;
+  /** Cuántas vueltas suman los rejugados (años registrados por encima de la primera). */
+  extraRuns: number;
+  /** Los géneros que más repites, por porcentaje de vuelta (rejugados + marcados) sobre sus completados. */
+  byGenre: Array<{ tag: string; games: number; back: number; percent: number }>;
+  /** Los que has terminado más veces, de más a menos vueltas. */
+  most: GameRef[];
+}
+
+/**
+ * Exigencia al puntuar: no la nota media, sino cuánto se SEPARA de ella lo que pones.
+ *
+ * La media sola no distingue a quien pone 70 a todo de quien reparte 30 y 95 a partes iguales, y son dos formas
+ * opuestas de valorar. La desviación típica es lo que las separa.
+ */
+export interface DemandSummary {
+  count: number;
+  avgGrade: number;
+  /** Desviación típica poblacional (se mide la biblioteca entera, no una muestra de ella). */
+  deviation: number;
+  /** La banda «normal»: media ± una desviación, acotada a la escala. */
+  low: number;
+  high: number;
+  /** Cuántas notas caen dentro de esa banda. */
+  inBand: number;
+  /** La nota más baja y la más alta que has puesto. */
+  min: number;
+  max: number;
+  /** Reparto por tramos, el mismo que el histograma (`grades`), para dibujar la banda encima. */
+  grades: GradeBucket[];
 }
 
 /** Resumen completo de un año concreto: es lo que pinta la pestaña de ese año. */
@@ -263,4 +387,12 @@ export interface StatsSummary {
   reviews: ReviewSummary;
   shame: ShameSummary;
   wishlist: WishlistSummary;
+  /** Cómo cambia tu gusto: el puesto de cada género, año a año. */
+  genreRanks: GenreRanks;
+  /** Constancia semanal, a partir de las fechas que la app registra sola. */
+  activity: ActivitySummary;
+  /** A cuáles vuelves. */
+  replay: ReplaySummary;
+  /** Cómo de duro puntúas. */
+  demand: DemandSummary;
 }

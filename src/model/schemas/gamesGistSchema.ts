@@ -47,6 +47,12 @@ const gameItem = z.object({
   shared: z.boolean().optional(),
   listedAt: z.number().optional(),
   reviewedAt: z.number().optional(),
+  // Sellos automáticos. `enteredAt` se valida por clave de lista (no `record`) para que un juego con basura
+  // dentro —una clave que no es una lista— se detecte aquí y no llegue al gist.
+  enteredAt: z
+    .object({ c: z.number().optional(), v: z.number().optional(), e: z.number().optional(), p: z.number().optional() })
+    .optional(),
+  gradedAt: z.number().optional(),
 });
 
 /** Lápida de borrado: el reloj `_ts` es lo que decide el merge, así que es obligatorio. */
