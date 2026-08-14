@@ -146,6 +146,10 @@ function leanGameItem(game: GameItem): GameItem {
   // Misma razón que `listedAt`: si no se persiste, el round-trip del gist la borra y la fecha de la reseña se
   // pierde en el primer sync, que es justo lo que este campo viene a evitar.
   if (game.reviewedAt !== undefined) out.reviewedAt = game.reviewedAt;
+  // Sellos automáticos (entrada por lista y último cambio de nota): mismo motivo que los dos de arriba. El de
+  // entrada se omite cuando está vacío, como el resto de opcionales, para no escribir un `{}` por juego.
+  if (game.enteredAt && Object.keys(game.enteredAt).length > 0) out.enteredAt = game.enteredAt;
+  if (game.gradedAt !== undefined) out.gradedAt = game.gradedAt;
   return out as unknown as GameItem;
 }
 
@@ -445,7 +449,11 @@ export function assembleChunkedSocial(
 
 // `grade` ya NO es privado: la nota fina 0–100 se publica a propósito (misma nombre que en el listado). El espejo
 // 0–5 sigue en `rating`; el `score` local se mantiene privado (el canal usa `rating`).
-const SOCIAL_PRIVATE_FIELDS = ['review', 'reviewText', 'score', 'hours', 'steamDeck', 'retry', 'replayable'];
+// `enteredAt`/`gradedAt` son privados y no por descuido: un registro de cuándo mueves cada juego de lista o
+// cambias una nota describe tus HÁBITOS (a qué horas usas la app, qué días juegas), que es más de lo que nadie
+// consiente al compartir una lista. El canal social publica `years` —el año en que terminaste algo— y ahí acaba
+// lo temporal que se publica.
+const SOCIAL_PRIVATE_FIELDS = ['review', 'reviewText', 'score', 'hours', 'steamDeck', 'retry', 'replayable', 'enteredAt', 'gradedAt'];
 
 /** Guarda de privacidad: lanza si algún campo privado aparece en lo que se escribirá al gist social. */
 export function assertNoSocialPrivateFields(obj: unknown, path = ''): void {

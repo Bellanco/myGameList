@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
-import { FILTER_BOOL, UI_MESSAGES, VALIDATION_MESSAGES } from '../../core/constants/labels';
+import { FILTER_BOOL, TAB_TOOLTIPS, UI_MESSAGES, VALIDATION_MESSAGES } from '../../core/constants/labels';
 import { COMMON_ICONS } from '../../core/constants/icons';
-import type { TabId } from '../../model/types/game';
+import type { GameItem, TabId } from '../../model/types/game';
 import type { GameDraft } from '../../viewmodel/useGameListViewModel';
 import { Icon } from '../components/Icon';
 import { StarPicker } from '../components/StarPicker';
@@ -21,6 +21,8 @@ interface FormModalProps {
     strengths: string[];
     weaknesses: string[];
   };
+  /** Busca un juego ya guardado con ese nombre en cualquier lista, ignorando el id del que se está editando. */
+  findDuplicate: (name: string, ignoreId?: number) => { tab: TabId; game: GameItem } | null;
   onClose: () => void;
   onSave: (draft: GameDraft) => void;
   onNotice: (kind: 'ok' | 'warn' | 'err', message: string) => void;
@@ -84,7 +86,7 @@ function isValidYearValue(value: string): boolean {
   return year > 0 && year <= new Date().getFullYear();
 }
 
-export function FormModal({ open, draft: initialDraft, currentTab, lookups, onClose, onSave, onNotice }: FormModalProps) {
+export function FormModal({ open, draft: initialDraft, currentTab, lookups, findDuplicate, onClose, onSave, onNotice }: FormModalProps) {
   const boolField = getTabBoolField(currentTab);
   const scoreScale = useScoreScale();
   // P3: el borrador vive LOCAL al modal y solo se emite en `onSave`. Antes cada pulsación llamaba a `onDraftChange`
@@ -101,6 +103,15 @@ export function FormModal({ open, draft: initialDraft, currentTab, lookups, onCl
   // A11y-3: mensaje anunciado por SR solo en umbrales (texto constante por banda → no se reanuncia por tecla).
   const reviewLiveMessage =
     reviewProgress >= 100 ? UI_MESSAGES.form.charLimitReached : reviewProgress >= 90 ? UI_MESSAGES.form.charNearLimit : '';
+
+  /**
+   * Juego ya guardado con este mismo nombre (en cualquier lista, ignorando el que se está editando). Se calcula
+   * mientras se escribe para avisar antes de rellenar el resto del formulario, no solo al pulsar Guardar.
+   */
+  const duplicate = useMemo(() => findDuplicate(draft.name, draft.id), [findDuplicate, draft.name, draft.id]);
+  const duplicateMessage = duplicate
+    ? VALIDATION_MESSAGES.duplicateName(duplicate.game.name, TAB_TOOLTIPS[duplicate.tab])
+    : '';
 
   useEffect(() => {
     // Re-seedea el borrador local desde la prop al abrir o cambiar de juego/pestaña (la prop solo cambia entonces).
@@ -229,6 +240,15 @@ export function FormModal({ open, draft: initialDraft, currentTab, lookups, onCl
 
     if (blocked) return;
 
+    // El duplicado corta el guardado antes que el resto de validaciones: no tiene sentido pedir que se completen
+    // los campos obligatorios de un juego que ya está en las listas.
+    const duplicateOnSave = findDuplicate(nextDraft.name, nextDraft.id);
+    if (duplicateOnSave) {
+      setFieldErrors({ name: true });
+      onNotice('warn', VALIDATION_MESSAGES.duplicateName(duplicateOnSave.game.name, TAB_TOOLTIPS[duplicateOnSave.tab]));
+      return;
+    }
+
     const errors: FieldErrorMap = {};
     if (!nextDraft.name.trim()) errors.name = true;
     if (!nextDraft.genres.length) errors.genres = true;
@@ -276,15 +296,23 @@ export function FormModal({ open, draft: initialDraft, currentTab, lookups, onCl
               <label htmlFor="draft-name" className="flabel">{UI_MESSAGES.form.nameLabel}</label>
               <input
                 id="draft-name"
-                className={`finput ${fieldErrors.name ? 'has-error' : ''}`.trim()}
+                className={`finput ${fieldErrors.name || duplicate ? 'has-error' : ''}`.trim()}
                 value={draft.name}
                 placeholder={UI_MESSAGES.form.namePlaceholder}
+                aria-invalid={duplicate ? true : undefined}
+                aria-describedby={duplicate ? 'draft-name-duplicate' : undefined}
                 onChange={(event) => {
                   setFieldErrors((prev) => ({ ...prev, name: false }));
                   setLocalDraft({ ...draft, name: event.target.value });
                 }}
               />
-              <small className="tag-hint tag-hint--spacer" aria-hidden="true">{UI_MESSAGES.form.enterToAddHint}</small>
+              {duplicate ? (
+                <small id="draft-name-duplicate" className="tag-hint" style={{ color: 'var(--danger)' }} role="alert">
+                  {duplicateMessage}
+                </small>
+              ) : (
+                <small className="tag-hint tag-hint--spacer" aria-hidden="true">{UI_MESSAGES.form.enterToAddHint}</small>
+              )}
             </div>
             <TagInput
               label={UI_MESSAGES.form.genresLabel}

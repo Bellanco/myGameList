@@ -11,6 +11,14 @@ interface StatTileProps {
    * sobre lo que has cerrado—: en una cifra absoluta, una barra al 100% no significaría nada.
    */
   progress?: number;
+  /**
+   * Tramo destacado sobre la escala completa, con una marca en su centro. Para las cifras que no son «cuánto de
+   * un todo» sino «DÓNDE, y alrededor de qué»: la exigencia es la anchura de una zona, y una barra que crece
+   * desde cero no puede decir eso —ni dónde empieza la zona ni dónde cae la media que la centra—.
+   *
+   * Los tres valores son porcentajes 0–100 de la escala que se esté pintando.
+   */
+  band?: { from: number; to: number; mark: number };
   /** Convierte la tarjeta en un enlace a otra pantalla del panel. */
   onClick?: () => void;
   /** Texto accesible de ese enlace; obligatorio si hay `onClick`, porque el rótulo solo dice la métrica. */
@@ -18,7 +26,8 @@ interface StatTileProps {
 }
 
 /** Cifra grande con su etiqueta. La unidad y la pista van en menor peso para que el número sea lo que se lee. */
-export const StatTile = memo(function StatTile({ label, value, hint, unit, progress, onClick, actionLabel }: StatTileProps) {
+export const StatTile = memo(function StatTile({ label, value, hint, unit, progress, band, onClick, actionLabel }: StatTileProps) {
+  const pct = (value: number) => `${Math.max(0, Math.min(value, 100))}%`;
   const body = (
     <>
       <span className="stat-tile-label">{label}</span>
@@ -29,7 +38,21 @@ export const StatTile = memo(function StatTile({ label, value, hint, unit, progr
       {hint ? <span className="stat-tile-hint">{hint}</span> : null}
       {typeof progress === 'number' ? (
         <span className="stat-tile-bar" aria-hidden="true">
-          <i style={{ '--pct': `${Math.max(0, Math.min(progress, 100))}%` } as CSSProperties} />
+          <i style={{ '--pct': pct(progress) } as CSSProperties} />
+        </span>
+      ) : null}
+      {band ? (
+        <span
+          className="stat-tile-band"
+          aria-hidden="true"
+          style={{
+            '--from': pct(band.from),
+            '--to': pct(band.to),
+            '--mark': pct(band.mark),
+          } as CSSProperties}
+        >
+          <i />
+          <b />
         </span>
       ) : null}
     </>

@@ -1,3 +1,4 @@
+import { nextVersion } from './gameStamps';
 import type { GameItem, TabData, TabId } from '../../model/types/game';
 
 export type TagCategory = 'genres' | 'platforms' | 'strengths' | 'weaknesses';
@@ -31,7 +32,9 @@ export function mapTabDataTags(
 ): TabData {
   const mapGames = (games: GameItem[], tab: TabId): GameItem[] =>
     games.map((game) => {
-      const next: GameItem = { ...game, _ts: ts };
+      // `nextVersion` y no `ts` a secas: renombrar una etiqueta justo después de guardar un juego caía en el
+      // mismo milisegundo y la reescritura se descartaba por tener la misma huella (ver `nextVersion`).
+      const next: GameItem = { ...game, _ts: nextVersion(game._ts, ts) };
       const field = tagFieldForTab(tab, category);
       if (!field) return next;
       const transformed = transform((game[field] as string[] | undefined) || []);

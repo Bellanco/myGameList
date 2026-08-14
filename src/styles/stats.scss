@@ -72,10 +72,24 @@
   padding: 1.1rem 1.15rem;
   /* Degradado muy leve en lugar de un plano: da profundidad sin inventar un color que la paleta no tenga. */
   background: linear-gradient(160deg, var(--surface-elevated), var(--surface) 70%);
-  border: 1px solid var(--border);
+  /* Canto disuelto y sombra FINA, en lugar del marco entero y de `--shadow` (0 10px 28px .38): con las
+     tarjetas en rejilla, una campana de tres centímetros por tarjeta dejaba un halo negro en cada junta. Un
+     píxel de apoyo, una campana corta con desplazamiento negativo y un brillo de un píxel arriba que hace el
+     relieve sin dibujar un contorno. La sombra global del resto de la app no se toca. */
+  border: 1px solid color-mix(in srgb, var(--border) 40%, transparent);
   border-radius: var(--radius-md);
-  box-shadow: var(--shadow);
+  box-shadow:
+    0 1px 1px -.5px color-mix(in srgb, #000 22%, transparent),
+    0 4px 10px -7px color-mix(in srgb, #000 45%, transparent),
+    inset 0 1px 0 rgba(255, 255, 255, .05);
   min-width: 0;
+}
+
+:root[data-theme="light"] .stats-card {
+  box-shadow:
+    0 1px 1px -.5px color-mix(in srgb, var(--text) 12%, transparent),
+    0 4px 10px -7px color-mix(in srgb, var(--text) 30%, transparent),
+    inset 0 1px 0 rgba(255, 255, 255, .65);
 }
 
 /* Barrita de acento delante del título: ancla la vista al empezar cada bloque. */
@@ -275,13 +289,33 @@
 }
 
 /* Valor que es TEXTO (el nombre de un juego): no puede competir en tamaño con las cifras ni desbordar. */
+/* El valor de esta tarjeta es un TÍTULO, no una cifra, así que se le deja envolver: en una sola línea, «Football
+   Manager 2018» se quedaba en «Football Manag…» y el dato que la tarjeta viene a dar es justo el nombre. Dos
+   líneas cubren de sobra los títulos reales; a partir de ahí el recorte vuelve, pero ya con el nombre entero en
+   el `title`. `balance` reparte las dos líneas en vez de dejar una palabra suelta abajo, y `anywhere` evita que
+   un título sin espacios se salga de la tarjeta. */
 .stat-tile-text {
-  display: block;
-  font-size: 1rem;
-  line-height: 1.3;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  font-size: 1rem;
+  line-height: 1.25;
+  white-space: normal;
+  text-wrap: balance;
+  overflow-wrap: anywhere;
+}
+
+/* Título largo: una línea más y un cuerpo algo menor. Con dos líneas a cuerpo normal caben unos treinta y cinco
+   caracteres, y un «The Legend of Zelda: Breath of the Wild» se quedaba a medias — que es justo el dato que esta
+   tarjeta viene a dar. Se cambia el tamaño y no el ancho de la tarjeta porque las siete van en la misma rejilla:
+   estirar una encoge a las demás. */
+.stat-tile-text.is-long {
+  font-size: .88rem;
+  line-height: 1.3;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
 }
 
 .stat-tile-hint {
@@ -289,14 +323,57 @@
   color: var(--stats-ink-2);
 }
 
+/* Con la barra pegada al pie, la pista se queda sin su aire cuando la tarjeta va justa de alto: se lo damos
+   aquí, que es donde se sabe que debajo viene una barra. */
+.stat-tile-hint:has(+ .stat-tile-bar) {
+  padding-bottom: .2rem;
+}
+
 /* Barra de cobertura: solo en la cifra que ES una parte de un todo (las reseñas sobre lo que has cerrado).
    Crece al entrar como el resto de barras del panel. */
 .stat-tile-bar {
   height: 4px;
-  margin-top: .35rem;
+  /* Al pie de la tarjeta, igual que la banda: en una misma fila, dos tarjetas con pistas de distinto número de
+     líneas dejaban sus barras a alturas distintas y la fila se leía torcida. */
+  margin-top: auto;
   border-radius: 2px;
   background: var(--score-track);
   overflow: hidden;
+}
+
+/* ZONA sobre la escala completa, con la media marcada en su centro. Para las cifras que dicen «dónde, y
+   alrededor de qué» en vez de «cuánto de un todo»: la pista es la escala entera —sin ella no se vería que la
+   zona ocupa un tercio o la mitad— y la marca es la referencia que la ordena. */
+.stat-tile-band {
+  position: relative;
+  display: block;
+  /* Un pelo más alta que la barra de progreso: tiene que caber una marca dentro sin que tape la banda. */
+  height: 5px;
+  margin-top: auto;
+  border-radius: 999px;
+  background: var(--surface-hover);
+  overflow: hidden;
+}
+
+.stat-tile-band i {
+  position: absolute;
+  inset-block: 0;
+  left: var(--from, 0%);
+  width: calc(var(--to, 100%) - var(--from, 0%));
+  border-radius: 999px;
+  background: var(--steam);
+}
+
+/* La marca no se recorta con `overflow` del contenedor: se dibuja dentro, del color del texto para que se lea
+   sobre la banda y sobre la pista por igual. */
+.stat-tile-band b {
+  position: absolute;
+  inset-block: 0;
+  left: var(--mark, 50%);
+  width: 2px;
+  transform: translateX(-1px);
+  background: var(--text);
+  opacity: .85;
 }
 
 .stat-tile-bar i {
@@ -836,14 +913,83 @@
   flex: 1;
 }
 
+/* MANDOS DEL ACABADO. El enjambre se dibuja UNA vez y cada paleta lo afina desde aquí: canto, trama, forma del
+   punto, tinta de la mediana, tipografía del eje. Los valores de este bloque son los de la paleta por defecto
+   (steam), que hace de base neutra; los skins solo redefinen su columna en `styles/themes/*.scss` y NINGUNA
+   regla de este archivo lleva el nombre de un tema.
+
+   Lo que NO se parametriza: el color de la nota. Un 4★ tiene que verse igual aquí que en la ficha del juego,
+   así que la rampa rojo→verde de la rueda de puntuar es la misma en las seis paletas. */
+.stats-hub {
+  --bee-radius: var(--radius-md);        /* canto del lienzo: sale del radio del skin */
+  --bee-clip: none;                      /* recorte de esquina (chaflán del HUD) */
+  --bee-frame: 0 0 0 0 transparent;      /* junta, moldura o contorno propio del tema */
+  --bee-cast: 0 0 0 0 transparent;       /* sombra DURA desplazada, sin desenfoque: el trazo de cómic */
+  --bee-edge: 30%;                       /* cuánto queda del borde del skin en el canto del lienzo */
+  --bee-grid: none;                      /* trama del fondo: retícula, scanlines, campo de estrellas */
+  --bee-grid-size: auto;                 /* un tamaño por capa de `--bee-grid`, contando el velo del final */
+  --bee-veil: color-mix(in srgb, var(--steam) 6%, transparent);
+  --bee-render: auto;                    /* `crispEdges` donde el tema no admite curvas suavizadas */
+  --bee-dot-radius: 50%;
+  --bee-dot-shape: none;                 /* recorte del punto: hexágono, octógono… */
+  --bee-dot-scale: 1;                    /* factor sobre el tamaño del punto */
+  --bee-dot-ring: 0 0 0 1px color-mix(in srgb, var(--surface) 70%, transparent);
+  --bee-dot-filter: none;                /* halo que SÍ sigue al recorte (`box-shadow` no lo hace) */
+  --bee-median-ink: var(--text);
+  --bee-median-glow: none;
+  --bee-chip-radius: var(--radius-pill);
+  --bee-chip-skew: skewX(0deg);          /* se concatena a un `translate`: aquí `none` no sería válido */
+  --bee-axis-font: inherit;
+  --bee-axis-size: .7rem;
+}
+
+/* Filtro por lista. Botones de la app (`.btn-toggle`) y no un control propio: así cada skin los viste con su
+   identidad —el sesgo de Persona, la señalética de Aperture— sin una sola regla por tema aquí. */
+.beeswarm-lists {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .4rem;
+}
+
+.beeswarm-lists .btn { padding: .3rem .6rem; font-size: .78rem; }
+
+/* La cuenta de cada lista, dentro del propio botón: sin ella, apagar una lista es una apuesta a ciegas. */
+.beeswarm-list-count {
+  margin-left: .35rem;
+  font-variant-numeric: tabular-nums;
+  opacity: .75;
+}
+
+/* El botón de la única lista encendida no se puede apagar; se dice con el aspecto, no solo con el atributo. */
+.beeswarm-lists .btn:disabled {
+  cursor: default;
+  opacity: 1;
+}
+
 .beeswarm-canvas {
   position: relative;
   flex: 1;
-  min-height: 9rem;
-  border-radius: var(--stats-radius);
-  background: linear-gradient(90deg,
-    color-mix(in srgb, var(--grade-floor) 10%, transparent),
-    color-mix(in srgb, var(--grade-ceiling) 10%, transparent));
+  /* A ancho completo el enjambre se estira a lo largo, y con poco alto los puntos de un mismo tramo se apilan
+     en una columna larga y fina. Con sitio de sobra, la nube se reparte y se lee como lo que es. */
+  min-height: 26rem;
+  border-radius: var(--bee-radius);
+  clip-path: var(--bee-clip);
+  /* El lienzo se HUNDE un punto por debajo de la tarjeta en vez de encerrarse en un marco de un píxel: el
+     canto deja de ser una línea que compite con los datos. Encima, la trama del tema (si la tiene) y un velo
+     del acento que solo dice hacia dónde crece la escala. */
+  background-color: color-mix(in srgb, var(--bg) 72%, var(--surface));
+  background-image: var(--bee-grid),
+    radial-gradient(130% 100% at 50% 118%, color-mix(in srgb, var(--steam) 6%, transparent), transparent 62%);
+  background-size: var(--bee-grid-size), auto;
+  box-shadow: var(--bee-cast), var(--bee-frame),
+    inset 0 1px 2px color-mix(in srgb, #000 14%, transparent),
+    inset 0 0 0 1px color-mix(in srgb, var(--border) var(--bee-edge), transparent);
+}
+
+:root[data-theme="light"] .beeswarm-canvas {
+  box-shadow: var(--bee-cast), var(--bee-frame),
+    inset 0 1px 2px color-mix(in srgb, var(--text) 6%, transparent),
+    inset 0 0 0 1px color-mix(in srgb, var(--border) var(--bee-edge), transparent);
 }
 
 /* Silueta de densidad: un velo por detrás, nunca una mancha. Sin `fill` explícito el SVG la pintaba negra y
@@ -853,41 +999,59 @@
   inset: 0;
   width: 100%;
   height: 100%;
+  /* Se desvanece por los dos cantos: ahí es donde la curva llegaba al borde del lienzo y se veía el corte. */
+  mask-image: linear-gradient(90deg, transparent, #000 7%, #000 93%, transparent);
 }
 
+/* Sin contorno: el trazo obligaba a distinguir un filo que no aporta nada —la silueta ya es una superficie— y
+   en las paletas donde relleno y trazo eran de tonos distintos (la naranja sobre azul de la cámara) el borde
+   se leía antes que la forma. */
 .beeswarm-density path {
-  fill: color-mix(in srgb, var(--steam) 5%, transparent);
-  stroke: color-mix(in srgb, var(--steam) 9%, transparent);
-  stroke-width: 1;
-  vector-effect: non-scaling-stroke;
+  fill: var(--bee-veil);
+  shape-rendering: var(--bee-render);
   animation: fade-in .8s ease-out .2s both;
 }
 
+/* Las guías se desvanecen por arriba y por abajo en lugar de cruzar el lienzo de canto a canto: marcan la
+   vertical del 25, el 50 y el 75 sin dibujar una reja delante de los datos. */
 .beeswarm-guide {
   position: absolute;
   top: 0;
   bottom: 0;
-  border-left: 1px solid var(--border);
-  opacity: .45;
+  width: 1px;
+  background: linear-gradient(180deg, transparent, var(--border) 20%, var(--border) 80%, transparent);
+  opacity: .3;
 }
 
-/* La mediana —la nota que parte la biblioteca en dos mitades— va con guía punteada y su rótulo abajo, para no
-   chocar con el de la media, que va arriba. Juntas cuentan si la distribución está sesgada: cuando la media
-   queda por debajo de la mediana, es que unos pocos juegos muy bajos tiran de ella. */
+/* La mediana —la nota que parte la biblioteca en dos mitades— con su valor en una pastilla centrada en la
+   línea. Antes el rótulo iba suelto en el canto inferior y sin cifra: había que estimarla contra el eje. */
+/* La línea va al 50 % de su tinta —no el rótulo, que es donde está el dato—: a pleno color competía con los
+   puntos, y aquí quien manda es el enjambre. La traslucidez se aplica AQUÍ y no en cada `--bee-median-ink`
+   para que ningún tema se la pueda saltar sin querer. */
 .beeswarm-median {
   position: absolute;
   top: 0;
   bottom: 0;
-  border-left: 2px dashed var(--text-dim);
-  opacity: .75;
+  width: 2px;
+  background: color-mix(in srgb, var(--bee-median-ink) 50%, transparent);
+  box-shadow: var(--bee-median-glow);
 }
 
+/* Al PIE de su línea y centrado en ella: arriba caía sobre la zona ancha del enjambre y tapaba puntos, que es
+   justo lo que la figura tiene que enseñar. Abajo el lienzo está casi siempre vacío. */
 .beeswarm-median b {
   position: absolute;
-  bottom: -.1rem;
-  left: .3rem;
-  font-size: .68rem;
-  font-weight: 500;
+  bottom: .4rem;
+  left: 50%;
+  transform: translateX(-50%) var(--bee-chip-skew);
+  padding: .16rem .45rem;
+  border-radius: var(--bee-chip-radius);
+  border: 1px solid color-mix(in srgb, var(--border) 45%, transparent);
+  background: color-mix(in srgb, var(--surface) 85%, transparent);
+  font-size: .64rem;
+  font-weight: 700;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
   color: var(--stats-ink-2);
 }
 
@@ -902,16 +1066,27 @@
   border-radius: 50%;
 }
 
+/* El punto es una CAJA transparente y el color vive en su `::before`. Suena rebuscado, pero es lo que permite
+   darle forma con `clip-path` sin recortar de paso la diana del `::after` —un recorte se aplica también a los
+   hijos— ni el halo, que en los temas con forma se pinta con `filter` por el mismo motivo. */
 .beeswarm-dot {
   position: absolute;
-  width: .55rem;
-  height: .55rem;
-  margin: -.275rem 0 0 -.275rem;
-  border-radius: 50%;
-  background: hsl(var(--dot-hue, 135) 62% var(--acc-l));
-  box-shadow: 0 0 0 1px color-mix(in srgb, var(--surface) 60%, transparent);
+  width: calc(.55rem * var(--bee-dot-scale));
+  height: calc(.55rem * var(--bee-dot-scale));
+  margin: calc(-.275rem * var(--bee-dot-scale)) 0 0 calc(-.275rem * var(--bee-dot-scale));
   animation: pop-in .45s cubic-bezier(.34, 1.36, .64, 1) both;
   animation-delay: calc(var(--i, 0) * 14ms);
+}
+
+.beeswarm-dot::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: var(--bee-dot-radius);
+  clip-path: var(--bee-dot-shape);
+  background: hsl(var(--dot-hue, 135) 62% var(--acc-l));
+  box-shadow: var(--bee-dot-ring);
+  filter: var(--bee-dot-filter);
 }
 
 /* Etiqueta directa de los dos extremos: el peor y el mejor. Se apoya en el punto y se aparta hacia dentro para
@@ -935,15 +1110,15 @@
 /* Con muchos juegos los puntos encogen para que el enjambre siga respirando; con muy pocos crecen, porque
    media docena de puntos diminutos dejaba el lienzo desierto. */
 .beeswarm-canvas.is-dense .beeswarm-dot {
-  width: .4rem;
-  height: .4rem;
-  margin: -.2rem 0 0 -.2rem;
+  width: calc(.4rem * var(--bee-dot-scale));
+  height: calc(.4rem * var(--bee-dot-scale));
+  margin: calc(-.2rem * var(--bee-dot-scale)) 0 0 calc(-.2rem * var(--bee-dot-scale));
 }
 
 .beeswarm-canvas.is-sparse .beeswarm-dot {
-  width: .9rem;
-  height: .9rem;
-  margin: -.45rem 0 0 -.45rem;
+  width: calc(.9rem * var(--bee-dot-scale));
+  height: calc(.9rem * var(--bee-dot-scale));
+  margin: calc(-.45rem * var(--bee-dot-scale)) 0 0 calc(-.45rem * var(--bee-dot-scale));
 }
 
 .beeswarm-axis {
@@ -954,13 +1129,29 @@
 .beeswarm-axis span {
   position: absolute;
   transform: translateX(-50%);
-  font-size: .7rem;
+  font-family: var(--bee-axis-font);
+  font-size: var(--bee-axis-size);
   color: var(--stats-ink-2);
   white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Micro-marca sobre cada cifra: ahora que las guías se desvanecen, es lo que ata el número a su vertical. */
+.beeswarm-axis span::before {
+  content: "";
+  position: absolute;
+  top: -.42rem;
+  left: 50%;
+  width: 1px;
+  height: .3rem;
+  background: var(--border);
+  opacity: .5;
 }
 
 .beeswarm-axis span:first-child { transform: none; }
 .beeswarm-axis span:last-child { transform: translateX(-100%); }
+.beeswarm-axis span:first-child::before { left: 0; }
+.beeswarm-axis span:last-child::before { left: auto; right: 0; }
 
 /* ---- Rosetón polar (reparto de etiquetas) -------------------------------------------------------------- */
 
@@ -1661,11 +1852,15 @@
 .podium-step.is-silver { border-color: color-mix(in srgb, var(--medal-silver) 45%, var(--border)); }
 .podium-step.is-bronze { border-color: color-mix(in srgb, var(--medal-bronze) 45%, var(--border)); }
 
+/* La cifra se apoya en la esquina inferior derecha y cabe ENTERA: antes asomaba por debajo del borde
+   (`bottom: -1.4rem`) y, con el `overflow: hidden` de la tarjeta, se le comía el tercio de abajo — un «1» sin
+   pie y un «3» partido. Se sube dentro y se ajusta el cuerpo para que quepa sin empujar al texto, que la
+   sobrevuela: el número es un fondo, no una columna. */
 .podium-ghost {
   position: absolute;
-  right: -.2rem;
-  bottom: -1.4rem;
-  font-size: 4.6rem;
+  right: .1rem;
+  bottom: -.1rem;
+  font-size: 4rem;
   font-weight: 800;
   line-height: 1;
   letter-spacing: -.04em;
@@ -2713,3 +2908,306 @@
     transition: none !important;
   }
 }
+
+
+/* ═══════════════════════════════════════════════════════════════════════════════════════════════════
+   EVOLUCIÓN DEL GUSTO · bump chart (`GenreBump`)
+
+   UN COLOR POR GÉNERO, de la rampa del tema (`--chart-from` → `--chart-to`) repartido por su puesto final.
+   Es la misma rampa del rosetón y del hexágono, así que cada paleta lo tiñe con su identidad —los dos
+   portales, rojo y oro; cian y magenta…— sin una sola regla por tema. La mezcla acota el porcentaje con
+   `clamp()` a propósito: Chrome recorta solo, pero Firefox devuelve TRANSPARENTE al salirse, y una lista más
+   larga de lo previsto haría desaparecer líneas enteras.
+
+   Cada línea lleva además su nombre a los dos lados, así que la identidad nunca depende solo del color.
+   ═══════════════════════════════════════════════════════════════════════════════════════════════════ */
+.genre-bump { display: flex; flex-direction: column; gap: .5rem; }
+
+/* El lienzo se desplaza si no cabe (muchos años); la tarjeta nunca empuja el ancho de la página. */
+.genre-bump-canvas { overflow-x: auto; overflow-y: hidden; max-width: 100%; }
+/* Suelo de ancho: siete líneas, doce años y un nombre de género a la derecha no caben en un móvil, y dejar que
+   el SVG se encoja al contenedor reducía los rótulos a cuatro píxeles. Por debajo de este ancho el lienzo se
+   desplaza dentro de su caja —el mismo trato que el gráfico anual y el selector de años—, y la página nunca se
+   mueve de lado. */
+.genre-bump-svg { height: auto; min-width: min(44rem, 190vw); width: 100%; overflow: visible; }
+
+.genre-bump-grid { stroke: var(--border); stroke-width: 1; opacity: .5; }
+.genre-bump-year,
+.genre-bump-tag { fill: var(--stats-ink-2); font-size: 11px; }
+.genre-bump-year { font-variant-numeric: tabular-nums; }
+.genre-bump-tag { font-weight: 600; }
+
+/* Banda de los que se caen de la tabla: hundida y rotulada, para que se lea como un sitio aparte y no como
+   un puesto más. */
+.genre-bump-out { fill: var(--surface-hover); opacity: .55; }
+/* Contorno del color de la tarjeta bajo el texto: el rótulo cae dentro del área y las líneas le pasan por
+   encima; sin él se lee a trozos. */
+.genre-bump-out-label {
+  fill: var(--text-muted);
+  font-size: 10px;
+  font-style: italic;
+  paint-order: stroke;
+  stroke: var(--surface);
+  stroke-width: 4;
+  stroke-linejoin: round;
+}
+/* Rótulo flotante: para el género que no está en ninguno de los dos extremos y no tiene sitio a los lados. */
+.genre-bump-tag.is-floating { font-size: 10px; paint-order: stroke; stroke: var(--surface); stroke-width: 3.5; stroke-linejoin: round; }
+
+.genre-bump-line { cursor: pointer; }
+.genre-bump-line:focus-visible { outline: none; }
+.genre-bump-line:focus-visible .genre-bump-path { stroke-width: 3.6; }
+
+.genre-bump-path {
+  fill: none;
+  stroke: color-mix(in oklch, var(--chart-to) clamp(0%, var(--i, 0) / max(calc(var(--n, 2) - 1), 1) * 100%, 100%), var(--chart-from));
+  stroke-width: 2.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: stroke-width .15s;
+}
+/* Tramo que cruza la banda de descartados: discontinuo y más fino. Recto y sólido se leía como un puesto
+   sostenido durante años, que es justo lo contrario de lo que dice. */
+.genre-bump-path.is-out {
+  stroke-dasharray: 5 5;
+  stroke-width: 1.8;
+  opacity: .5;
+}
+
+/* Objetivo invisible y ancho: apuntar a un trazo de 2,6 px con el dedo es imposible. */
+.genre-bump-hit { fill: none; stroke: transparent; stroke-width: 20; }
+
+.genre-bump-dot {
+  fill: color-mix(in oklch, var(--chart-to) clamp(0%, var(--i, 0) / max(calc(var(--n, 2) - 1), 1) * 100%, 100%), var(--chart-from));
+  stroke: var(--surface);
+  stroke-width: 2;
+}
+/* Punto en la banda de fuera: hueco. No es un puesto, así que no se pinta macizo como los demás. */
+.genre-bump-dot.is-out {
+  fill: var(--surface);
+  stroke: color-mix(in oklch, var(--chart-to) clamp(0%, var(--i, 0) / max(calc(var(--n, 2) - 1), 1) * 100%, 100%), var(--chart-from));
+  stroke-width: 2.5;
+  r: 4;
+}
+
+.genre-bump-line.is-active .genre-bump-path { stroke-width: 3.6; }
+.genre-bump-line.is-active .genre-bump-tag { fill: var(--text); }
+.genre-bump-line.is-dim { opacity: .22; }
+
+@media (prefers-reduced-motion: no-preference) {
+  /* La línea se dibuja de izquierda a derecha al aparecer: el gesto cuenta lo mismo que el gráfico, que es
+     el paso del tiempo. */
+  .genre-bump-path:not(.is-out) {
+    stroke-dasharray: 1400;
+    stroke-dashoffset: 1400;
+    animation: bump-draw 1.2s ease-out both;
+    animation-delay: calc(var(--i, 0) * 60ms);
+  }
+  /* El discontinuo se desvanece en vez de dibujarse: animar su `dashoffset` le borraría los guiones. */
+  .genre-bump-path.is-out { animation: bump-dot .6s ease-out both; animation-delay: calc(.6s + var(--i, 0) * 60ms); }
+  .genre-bump-dot { animation: bump-dot .3s ease-out both; animation-delay: calc(.5s + var(--i, 0) * 60ms); }
+}
+@keyframes bump-draw { to { stroke-dashoffset: 0; } }
+@keyframes bump-dot { from { opacity: 0; } }
+
+
+/* ═══════════════════════════════════════════════════════════════════════════════════════════════════
+   CONSTANCIA · mapa de calor por SEMANAS (`WeekStreak`)
+
+   Un cuadro por semana y no por día: una lista de juegos no se toca a diario, así que el mapa diario
+   clásico saldría casi entero en blanco y haría parecer inactivo a quien no lo está. Cuatro niveles de
+   intensidad discretos (no una rampa continua) porque lo que se lee aquí es el PATRÓN —dónde hay racha y
+   dónde hueco—, y los saltos se distinguen mejor que un degradado fino.
+   ═══════════════════════════════════════════════════════════════════════════════════════════════════ */
+.week-heat { display: flex; flex-direction: column; gap: .6rem; }
+.week-heat-canvas { overflow-x: auto; overflow-y: hidden; max-width: 100%; }
+/* Sin tope de ancho: el mapa se queda con TODO el que le da su tarjeta. Con el antiguo `max-width` de 26rem, las
+   celdas se quedaban en un cuadradito arrinconado a la izquierda mientras media tarjeta quedaba en blanco; la
+   rejilla es lo que hay que mirar aquí, así que se le deja crecer con el contenedor. */
+.week-heat-svg { width: 100%; height: auto; }
+
+.week-heat-row { fill: var(--text-muted); font-size: 10.5px; }
+.week-heat-cell { cursor: pointer; }
+.week-heat-cell rect { transition: opacity .15s; }
+.week-heat-cell:focus-visible { outline: none; }
+.week-heat-cell:focus-visible rect { stroke: var(--text); stroke-width: 2; }
+.week-heat-cell.is-active rect { stroke: var(--text); stroke-width: 2; }
+.week-heat-cell.is-dim rect { opacity: .45; }
+
+/* Rampa de intensidad: la misma mezcla en el mapa y en su leyenda, para que la leyenda no mienta. El nivel 0
+   es la superficie hundida —un hueco tiene que verse como hueco, no como un azul muy claro—. */
+.week-heat-cell.is-l0 rect,
+.week-heat-key.is-l0 { background: var(--surface-hover); fill: var(--surface-hover); }
+.week-heat-cell.is-l1 rect,
+.week-heat-key.is-l1 { background: color-mix(in oklch, var(--steam) 28%, var(--surface)); fill: color-mix(in oklch, var(--steam) 28%, var(--surface)); }
+.week-heat-cell.is-l2 rect,
+.week-heat-key.is-l2 { background: color-mix(in oklch, var(--steam) 50%, var(--surface)); fill: color-mix(in oklch, var(--steam) 50%, var(--surface)); }
+.week-heat-cell.is-l3 rect,
+.week-heat-key.is-l3 { background: color-mix(in oklch, var(--steam) 72%, var(--surface)); fill: color-mix(in oklch, var(--steam) 72%, var(--surface)); }
+.week-heat-cell.is-l4 rect,
+.week-heat-key.is-l4 { background: var(--steam); fill: var(--steam); }
+
+.week-heat-scale { display: flex; align-items: center; gap: .3rem; font-size: .74rem; color: var(--text-muted); }
+.week-heat-key { width: .8rem; height: .8rem; border-radius: 3px; display: inline-block; }
+.week-heat-scale span:last-child { margin-left: .2rem; }
+.week-heat-scale span:first-child { margin-right: .2rem; }
+
+.week-heat-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(7rem, 1fr)); gap: .5rem; margin: 0; }
+.week-heat-stats div {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: .45rem .6rem;
+  background: var(--surface);
+}
+.week-heat-stats dt { font-size: .72rem; color: var(--text-muted); }
+.week-heat-stats dd { margin: 0; font-weight: 650; font-variant-numeric: tabular-nums; }
+
+
+/* ═══════════════════════════════════════════════════════════════════════════════════════════════════
+   CONSTANCIA · mapa de calor por SEMANAS (`WeekStreak`)
+
+   Un cuadro por semana y no por día: una lista de juegos no se toca a diario, así que el mapa diario
+   clásico saldría casi entero en blanco y haría parecer inactivo a quien no lo está. Cuatro niveles de
+   intensidad discretos (no una rampa continua) porque lo que se lee aquí es el PATRÓN —dónde hay racha y
+   dónde hueco—, y los saltos se distinguen mejor que un degradado fino.
+   ═══════════════════════════════════════════════════════════════════════════════════════════════════ */
+.week-heat { display: flex; flex-direction: column; gap: .6rem; }
+.week-heat-canvas { overflow-x: auto; overflow-y: hidden; max-width: 100%; }
+/* Sin tope de ancho: el mapa se queda con TODO el que le da su tarjeta. Con el antiguo `max-width` de 26rem, las
+   celdas se quedaban en un cuadradito arrinconado a la izquierda mientras media tarjeta quedaba en blanco; la
+   rejilla es lo que hay que mirar aquí, así que se le deja crecer con el contenedor. */
+.week-heat-svg { width: 100%; height: auto; }
+
+.week-heat-row { fill: var(--text-muted); font-size: 10.5px; }
+.week-heat-cell { cursor: pointer; }
+.week-heat-cell rect { transition: opacity .15s; }
+.week-heat-cell:focus-visible { outline: none; }
+.week-heat-cell:focus-visible rect { stroke: var(--text); stroke-width: 2; }
+.week-heat-cell.is-active rect { stroke: var(--text); stroke-width: 2; }
+.week-heat-cell.is-dim rect { opacity: .45; }
+
+/* Rampa de intensidad: la misma mezcla en el mapa y en su leyenda, para que la leyenda no mienta. El nivel 0
+   es la superficie hundida —un hueco tiene que verse como hueco, no como un azul muy claro—. */
+.week-heat-cell.is-l0 rect,
+.week-heat-key.is-l0 { background: var(--surface-hover); fill: var(--surface-hover); }
+.week-heat-cell.is-l1 rect,
+.week-heat-key.is-l1 { background: color-mix(in oklch, var(--steam) 28%, var(--surface)); fill: color-mix(in oklch, var(--steam) 28%, var(--surface)); }
+.week-heat-cell.is-l2 rect,
+.week-heat-key.is-l2 { background: color-mix(in oklch, var(--steam) 50%, var(--surface)); fill: color-mix(in oklch, var(--steam) 50%, var(--surface)); }
+.week-heat-cell.is-l3 rect,
+.week-heat-key.is-l3 { background: color-mix(in oklch, var(--steam) 72%, var(--surface)); fill: color-mix(in oklch, var(--steam) 72%, var(--surface)); }
+.week-heat-cell.is-l4 rect,
+.week-heat-key.is-l4 { background: var(--steam); fill: var(--steam); }
+
+.week-heat-scale { display: flex; align-items: center; gap: .3rem; font-size: .74rem; color: var(--text-muted); }
+.week-heat-key { width: .8rem; height: .8rem; border-radius: 3px; display: inline-block; }
+.week-heat-scale span:last-child { margin-left: .2rem; }
+.week-heat-scale span:first-child { margin-right: .2rem; }
+
+.week-heat-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(7rem, 1fr)); gap: .5rem; margin: 0; }
+.week-heat-stats div {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: .45rem .6rem;
+  background: var(--surface);
+}
+.week-heat-stats dt { font-size: .72rem; color: var(--text-muted); }
+.week-heat-stats dd { margin: 0; font-weight: 650; font-variant-numeric: tabular-nums; }
+
+
+/* ═══════════════════════════════════════════════════════════════════════════════════════════════════
+   FORMATO TARJETA · compartido por «A cuáles vuelves» y «Tu exigencia»
+
+   La misma anatomía que las tarjetas de cifra de la cabecera del panel: rótulo pequeño, CIFRA grande, pista
+   debajo y, al pie, un gráfico discreto que la respalda. Se lee el número primero y el dibujo después —que es
+   el orden en que se mira una cifra— y las dos piezas comparten forma porque responden a la misma clase de
+   pregunta: cómo se reparte un todo.
+   ═══════════════════════════════════════════════════════════════════════════════════════════════════ */
+.stat-card-lead { display: flex; flex-direction: column; gap: .1rem; }
+.stat-card-label { font-size: .76rem; color: var(--text-muted); }
+.stat-card-value {
+  font-size: 2.4rem;
+  font-weight: 650;
+  line-height: 1.05;
+  letter-spacing: -.03em;
+  /* Cifra grande: figuras proporcionales. `tabular-nums` da a cada dígito el ancho de un cero y a este cuerpo
+     se ve suelta; se reserva para las columnas de números, donde sí hay que alinear. */
+}
+.stat-card-value small { font-size: 1rem; font-weight: 500; color: var(--text-muted); margin-left: .2rem; letter-spacing: 0; }
+.stat-card-hint { font-size: .78rem; color: var(--text-muted); }
+/* El gráfico va al PIE y separado por una línea: es el apoyo de la cifra, no el protagonista. */
+.stat-card-figure {
+  margin-top: .2rem;
+  padding-top: .7rem;
+  border-top: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: .45rem;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════════════════════════════
+   A CUÁLES VUELVES (`ReplayShare`)
+   Tres tramos: haber vuelto es un hecho, querer volver es una intención, y el resto es el resto.
+   ═══════════════════════════════════════════════════════════════════════════════════════════════════ */
+.replay-share { display: flex; flex-direction: column; gap: .6rem; }
+
+.replay-share-lead { margin: 0; display: flex; align-items: baseline; gap: .45rem; }
+.replay-share-lead strong { font-size: 2rem; font-weight: 650; letter-spacing: -.02em; line-height: 1; }
+.replay-share-lead span { color: var(--text-muted); font-size: .85rem; }
+
+/* `height: auto` y no una altura fija: con altura fija el SVG conserva su relación de aspecto, se escala a lo
+   alto y se queda centrado con dos huecos a los lados en vez de ocupar la tarjeta. */
+.replay-share-svg { width: 100%; height: auto; }
+.replay-share-part rect { transition: opacity .15s; }
+.replay-share-part.is-replayed rect { fill: var(--success); }
+.replay-share-part.is-will rect { fill: var(--steam); }
+.replay-share-part.is-once rect { fill: var(--border); }
+.replay-share-part { cursor: pointer; }
+.replay-share-part:focus-visible { outline: none; }
+.replay-share-part:focus-visible rect,
+.replay-share-part.is-active rect { filter: brightness(1.2); }
+.replay-share-part.is-dim rect { opacity: .35; }
+
+.replay-share-legend { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: .35rem 1rem; }
+.replay-share-legend li { display: inline-flex; align-items: center; gap: .4rem; font-size: .82rem; color: var(--text-muted); }
+.replay-share-legend b { color: var(--text); font-variant-numeric: tabular-nums; }
+.replay-share-key { width: .65rem; height: .65rem; border-radius: 3px; background: var(--border); }
+.replay-share-legend .is-replayed .replay-share-key { background: var(--success); }
+.replay-share-legend .is-will .replay-share-key { background: var(--steam); }
+
+.replay-share-block { display: flex; flex-direction: column; gap: .35rem; }
+.replay-share-block h3 { margin: 0; font-size: .82rem; font-weight: 600; color: var(--stats-ink-2); }
+
+
+/* ═══════════════════════════════════════════════════════════════════════════════════════════════════
+   EXIGENCIA (`DemandMeter`)
+
+   Mismo lenguaje visual que «A cuáles vuelves»: las dos responden a cómo se reparte un todo, y compartir la
+   forma hace que el panel se lea como una pantalla y no como una colección de gráficos sueltos. La pista es
+   la escala de notas COMPLETA; encima, tu zona habitual iluminada y la media marcada.
+   ═══════════════════════════════════════════════════════════════════════════════════════════════════ */
+.demand-meter { display: flex; flex-direction: column; gap: .6rem; }
+
+.demand-meter-svg { width: 100%; height: auto; overflow: visible; }
+.demand-meter-track { fill: var(--surface-hover); }
+.demand-meter-zone { cursor: pointer; }
+.demand-meter-zone rect { transition: opacity .15s; }
+.demand-meter-zone.is-low rect { fill: color-mix(in oklch, var(--danger) 55%, var(--surface)); }
+.demand-meter-zone.is-band rect { fill: var(--steam); }
+.demand-meter-zone.is-high rect { fill: color-mix(in oklch, var(--success) 65%, var(--surface)); }
+.demand-meter-zone:focus-visible { outline: none; }
+.demand-meter-zone:focus-visible rect,
+.demand-meter-zone.is-active rect { filter: brightness(1.2); }
+.demand-meter-zone.is-dim rect { opacity: .35; }
+
+.demand-meter-avg { stroke: var(--text); stroke-width: 2.5; stroke-linecap: round; }
+
+.demand-meter-legend { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: .35rem 1rem; }
+.demand-meter-legend li { display: inline-flex; align-items: center; gap: .4rem; font-size: .82rem; color: var(--text-muted); }
+.demand-meter-legend b { color: var(--text); font-variant-numeric: tabular-nums; }
+.demand-meter-key { width: .65rem; height: .65rem; border-radius: 3px; background: var(--steam); }
+.demand-meter-legend .is-range .demand-meter-key { background: linear-gradient(90deg, color-mix(in oklch, var(--danger) 55%, var(--surface)), color-mix(in oklch, var(--success) 65%, var(--surface))); }
+/* La media no es una zona sino una marca: su clave es una línea, como en el gráfico. */
+.demand-meter-legend .is-avg .demand-meter-key { width: .2rem; height: .8rem; border-radius: 2px; background: var(--text); }
+
+.demand-meter-verdict { margin: 0; font-size: .88rem; color: var(--text); }

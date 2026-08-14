@@ -7,12 +7,17 @@
 //
 // REGLA DE ORO: esto solo LEE, y lee lo que la app ya tiene en memoria (el gist de juegos). No hay campos
 // nuevos en `GameItem`, no se escribe en el gist, no se proyecta al canal social y no se consulta la red.
-import { localMonthKey } from '../utils/dateTime';
+import { localMonthKey, localWeekKey } from '../utils/dateTime';
 import { SCORE_BUCKET_FLOORS, STARS_MAX, GRADE_MAX, resolveGrade, starsFromGrade } from '../utils/scoreScale';
 import { sortEs } from '../utils/compare';
 import { TAB_IDS, type GameItem, type TabData, type TabId } from '../../model/types/game';
 import type {
+  ActivitySummary,
   ArrivalPoint,
+  DemandSummary,
+  GenreRanks,
+  GenreRankSeries,
+  WeekActivity,
   TopSummary,
   GameRef,
   GenreAffinity,
@@ -43,6 +48,47 @@ const SCORED_TABS: readonly TabId[] = ['c', 'v'];
 
 /** Cuántos juegos decididos (completados + abandonados) necesita un género para entrar en el índice de abandono. */
 export const ABANDON_RATE_MIN = 3;
+
+/**
+ * Años que acumula cada punto de la evolución del gusto.
+ *
+ * Con los ocho o veinte juegos que se terminan en un año, el puesto de un género lo mueve un solo título y la
+ * figura se convierte en un garabato. Tres años es la ventana más corta que ya enseña una tendencia.
+ */
+export const GENRE_RANK_WINDOW = 3;
+
+/**
+ * Cuántos géneros compiten en esa evolución.
+ *
+ * Siete es el punto en que la tabla ya incluye a los que entran y salen —no solo a los cuatro de siempre— sin
+ * que las líneas se conviertan en una maraña. Un género puede estar en el top general y faltar en algún año: ahí
+ * su punto vale cero y la vista PARTE la línea, en vez de dibujarle un puesto de relleno.
+ */
+export const GENRE_RANK_SIZE = 7;
+
+/**
+ * Completados que ha de reunir la ventana para que su puesto se dibuje.
+ *
+ * Sin este mínimo, la serie arranca en el primer año en que se terminó algo: los años sueltos del principio de
+ * una biblioteca —uno o dos juegos— salen con un ranking completo, y un género "primero" porque es el único que
+ * hay se lee igual que uno primero entre veinte. Cinco es el suelo por debajo del cual el puesto lo decide el
+ * azar de qué se jugó esa temporada.
+ */
+export const GENRE_RANK_MIN_GAMES = 5;
+
+/** Completados que necesita un género para que su porcentaje de rejugado signifique algo. */
+export const REPLAY_GENRE_MIN = 4;
+
+/**
+ * Semanas que conserva la serie de constancia: dos años.
+ *
+ * Es una COTA DURA, no un recorte de la vista. La serie incluye las semanas vacías —son el dato: una racha se ve
+ * porque a su lado hay blancos—, así que sin tope crecería con la antigüedad de la biblioteca: quien lleve diez
+ * años apuntando arrastraría más de quinientos puntos en cada recálculo del panel para enseñar los últimos
+ * cincuenta y dos. Dos años dan margen para que la vista escoja su ventana y para comparar con el año anterior,
+ * y dejan la serie en un tamaño fijo pase lo que pase.
+ */
+export const ACTIVITY_WEEKS_LIMIT = 104;
 
 /** Cuántos juegos se listan en los rankings cortos (últimos abandonos, próximos que más esperan…). */
 export const STATS_SHORTLIST = 5;
@@ -121,13 +167,14 @@ function quoteFrom(review: unknown): string {
   return `${text.slice(0, space > QUOTE_MIN ? space : QUOTE_MAX).trimEnd()}…`;
 }
 
-function toRef(game: GameItem): GameRef {
+function toRef(game: GameItem, list: TabId): GameRef {
   return {
     id: game.id,
     name: game.name.trim(),
     grade: resolveGrade(game),
     hours: gameHours(game),
     at: Number(game.listedAt) || Number(game._ts) || 0,
+    list,
     // Se reutilizan las MISMAS arrays del juego (no se copian): el panel solo las lee.
     genres: game.genres || [],
     platforms: game.platforms || [],
@@ -299,6 +346,184 @@ function affinityOf(games: GameRef[], fallback: number): GenreAffinity[] {
     .sort((a, b) => b.weight - a.weight || b.games - a.games || sortEs(a.tag, b.tag));
 }
 
+/**
+ * Evolución del gusto: qué puesto ocupa cada género en cada año, sobre una ventana móvil.
+ *
+ * Entra por parámetro lo ya acumulado por año (`perYear`), no los juegos: el recuento de géneros por año lo hace
+ * la pasada principal, y repetirlo aquí sería recorrer la biblioteca dos veces para lo mismo.
+ *
+ * Los años que no llegan a llenar la ventana se descartan en vez de calcularse con menos: un puesto sacado de un
+ * solo año no es comparable con otro sacado de tres, y ponerlos en la misma línea haría creer que el gusto se
+ * movió cuando lo que cambió fue la forma de contar.
+ */
+function genreRanksOf(perYear: Map<number, Map<string, number>>, window = GENRE_RANK_WINDOW): GenreRanks {
+  /** Juegos que reúne la ventana que acaba en ese año (contando cada género, que es lo que se rankea). */
+  const windowSize = (year: number): number => {
+    let total = 0;
+    for (let back = 0; back < window; back += 1) {
+      for (const count of (perYear.get(year - back) || new Map()).values()) total += count;
+    }
+    return total;
+  };
+
+  // Solo los años cuya ventana tiene recorrido suficiente. No se recorta "los primeros N" a ciegas: una
+  // biblioteca con huecos (nada terminado entre 2006 y 2011) no tiene años consecutivos, y ahí ese recorte
+  // dejaría fuera años buenos y colaría años de un solo juego.
+  const years = [...perYear.keys()].sort((a, b) => a - b).filter((year) => windowSize(year) >= GENRE_RANK_MIN_GAMES);
+  if (years.length === 0) {
+    return { years: [], window, series: [] };
+  }
+
+  // Los géneros que compiten: los más terminados de toda la historia. Un ranking entre los que de verdad pesan.
+  const totals = new Map<string, number>();
+  for (const row of perYear.values()) {
+    for (const [tag, count] of row) totals.set(tag, (totals.get(tag) || 0) + count);
+  }
+  const top = [...totals.entries()]
+    .sort((a, b) => b[1] - a[1] || sortEs(a[0], b[0]))
+    .slice(0, GENRE_RANK_SIZE)
+    .map(([tag]) => tag);
+
+  const series = new Map<string, GenreRankSeries>(top.map((tag) => [tag, { tag, points: [] }]));
+  for (const year of years) {
+    const counted = top.map((tag) => {
+      let games = 0;
+      for (let back = 0; back < window; back += 1) games += perYear.get(year - back)?.get(tag) || 0;
+      return { tag, games };
+    });
+    // A igualdad de juegos, el alfabeto: sin desempate estable, dos géneros empatados se intercambiarían el
+    // puesto de un año a otro y el gráfico enseñaría un cruce donde no ha pasado nada.
+    counted.sort((a, b) => b.games - a.games || sortEs(a.tag, b.tag));
+    counted.forEach((entry, index) => {
+      series.get(entry.tag)?.points.push({ year, rank: index + 1, games: entry.games });
+    });
+  }
+
+  const last = years.length - 1;
+  return {
+    years,
+    window,
+    series: [...series.values()].sort((a, b) => a.points[last].rank - b.points[last].rank),
+  };
+}
+
+/**
+ * Constancia semanal a partir de las fechas que la app registra SOLA: las reseñas (`reviewedAt`) y las entradas
+ * a cada lista (`enteredAt`).
+ *
+ * No entra `gradedAt`: casi siempre cae en el mismo guardado que una entrada o una reseña, y contarlo sumaría dos
+ * veces el mismo rato delante de la pantalla.
+ *
+ * Tampoco entra `_ts`. Es el reloj del merge y lo mueve una importación entera, así que una biblioteca importada
+ * enseñaría una única semana frenética y ninguna más: exactamente la mentira que estos sellos vienen a evitar.
+ */
+function activityOf(
+  events: Array<{ w: string; kind: 'review' | 'move' }>,
+  limit = ACTIVITY_WEEKS_LIMIT,
+): ActivitySummary {
+  const empty: ActivitySummary = { weeks: [], active: 0, bestStreak: 0, currentStreak: 0, busiest: null };
+  if (events.length === 0) return empty;
+
+  const byWeek = new Map<string, WeekActivity>();
+  for (const event of events) {
+    if (!event.w) continue;
+    const week = byWeek.get(event.w) || { w: event.w, reviews: 0, moves: 0, total: 0 };
+    if (event.kind === 'review') week.reviews += 1;
+    else week.moves += 1;
+    week.total += 1;
+    byWeek.set(event.w, week);
+  }
+  if (byWeek.size === 0) return empty;
+
+  // La serie va de la primera semana con actividad a la última, con los huecos DENTRO: una racha se ve porque a
+  // su lado hay semanas en blanco, así que las vacías son parte del dato, no una ausencia de dato.
+  const keys = [...byWeek.keys()].sort();
+  const all: WeekActivity[] = [];
+  for (const key of weekRange(keys[0], keys[keys.length - 1])) {
+    all.push(byWeek.get(key) || { w: key, reviews: 0, moves: 0, total: 0 });
+  }
+  // Cota dura por la COLA: lo que interesa es el ritmo reciente, y una biblioteca de diez años no debe arrastrar
+  // media década de semanas vacías en cada recálculo.
+  const weeks = all.slice(-limit);
+
+  let bestStreak = 0;
+  let running = 0;
+  for (const week of weeks) {
+    running = week.total > 0 ? running + 1 : 0;
+    if (running > bestStreak) bestStreak = running;
+  }
+
+  return {
+    weeks,
+    active: weeks.filter((week) => week.total > 0).length,
+    bestStreak,
+    // La racha viva se mide desde el final: es la que el usuario puede alargar esta semana.
+    currentStreak: running,
+    busiest: weeks.reduce<WeekActivity | null>((top, week) => (!top || week.total > top.total ? week : top), null),
+  };
+}
+
+/** Todas las claves de semana ISO entre dos, ambas incluidas. Trabaja en fechas, no en aritmética de cadenas. */
+function weekRange(from: string, to: string): string[] {
+  const out: string[] = [];
+  const cursor = mondayOfWeekKey(from);
+  const end = mondayOfWeekKey(to);
+  if (Number.isNaN(cursor.getTime()) || Number.isNaN(end.getTime())) return [from];
+  // Cota dura: una biblioteca con una fecha corrupta muy lejana no puede colgar la pestaña generando semanas.
+  for (let guard = 0; cursor <= end && guard < 5200; guard += 1) {
+    out.push(localWeekKey(cursor));
+    cursor.setDate(cursor.getDate() + 7);
+  }
+  return out;
+}
+
+/** Lunes (a mediodía) de la semana ISO `AAAA-Www`. Inversa de `localWeekKey`. */
+function mondayOfWeekKey(key: string): Date {
+  const match = /^(\d{4})-W(\d{2})$/.exec(key);
+  if (!match) return new Date(NaN);
+  const [year, week] = [Number(match[1]), Number(match[2])];
+  // El 4 de enero cae siempre en la semana 1; desde su lunes se avanzan las semanas que falten.
+  const jan4 = new Date(year, 0, 4, 12);
+  const monday = new Date(jan4);
+  monday.setDate(jan4.getDate() - ((jan4.getDay() + 6) % 7) + (week - 1) * 7);
+  return monday;
+}
+
+/**
+ * Cuánto se separan tus notas de tu propia media. Población completa, no muestra: se está describiendo TU
+ * biblioteca entera, no infiriendo la de nadie a partir de un trozo.
+ */
+function demandOf(games: GameRef[], avgGrade: number, grades: GradeBucket[]): DemandSummary {
+  const empty: DemandSummary = {
+    count: 0, avgGrade: 0, deviation: 0, low: 0, high: 0, inBand: 0, min: 0, max: 0, grades,
+  };
+  if (games.length === 0) return empty;
+
+  let squares = 0;
+  let min = GRADE_MAX;
+  let max = 0;
+  for (const game of games) {
+    squares += (game.grade - avgGrade) ** 2;
+    if (game.grade < min) min = game.grade;
+    if (game.grade > max) max = game.grade;
+  }
+  const deviation = Math.sqrt(squares / games.length);
+  const low = Math.max(0, avgGrade - deviation);
+  const high = Math.min(GRADE_MAX, avgGrade + deviation);
+
+  return {
+    count: games.length,
+    avgGrade,
+    deviation,
+    low,
+    high,
+    inBand: games.filter((game) => game.grade >= low && game.grade <= high).length,
+    min,
+    max,
+    grades,
+  };
+}
+
 /** Cubo de un año recién estrenado: sin juegos, sin horas y sin reparto de notas. */
 function emptyYearBucket(year: number | null): YearBucket {
   return { year, completed: 0, hours: 0, stars: new Array<number>(STARS_MAX).fill(0), unscored: 0 };
@@ -394,6 +619,17 @@ export function computeStats(data: TabData): StatsSummary {
   const wishPlatforms = new Map<string, TagBucket>();
   const wishGames: GameRef[] = [];
 
+  // Géneros terminados por año: alimenta la evolución del gusto sin una segunda pasada.
+  const genresPerYear = new Map<number, Map<string, number>>();
+  // Eventos fechados por la propia app, para la constancia semanal.
+  const activityEvents: Array<{ w: string; kind: 'review' | 'move' }> = [];
+  // Rejugabilidad (solo completados).
+  const replayGenres = new Map<string, { games: number; back: number }>();
+  const replayedGames: GameRef[] = [];
+  let replayed = 0;
+  let willReplay = 0;
+  let extraRuns = 0;
+
   let noYear: YearBucket | null = null;
   let totalHours = 0;
   let completedHours = 0;
@@ -423,7 +659,7 @@ export function computeStats(data: TabData): StatsSummary {
       if (!game?.name?.trim()) continue;
       counts[tab] += 1;
 
-      const ref = toRef(game);
+      const ref = toRef(game, tab);
       const hours = played ? ref.hours : 0;
 
       // Lo que escribes. Los puntos fuertes y débiles se cuentan aunque el texto esté vacío: son etiquetas del
@@ -436,6 +672,13 @@ export function computeStats(data: TabData): StatsSummary {
       }
       for (const point of game.strengths || []) addTag(strengths, point, hours);
       for (const point of game.weaknesses || []) addTag(weaknesses, point, hours);
+
+      // Constancia: los sellos que la app escribe sola. Un juego apuntado, empezado y terminado deja tres marcas
+      // en tres semanas distintas, que es justo lo que se quiere ver.
+      if (game.reviewedAt) activityEvents.push({ w: localWeekKey(game.reviewedAt), kind: 'review' });
+      for (const stamp of Object.values(game.enteredAt || {})) {
+        if (Number(stamp) > 0) activityEvents.push({ w: localWeekKey(Number(stamp)), kind: 'move' });
+      }
 
       // Entradas por mes: `listedAt` es la fecha de llegada a la lista ACTUAL y `normalizeGame` garantiza que
       // siempre tenga valor (cae a `_ts` en los juegos anteriores al campo, que es una aproximación).
@@ -480,6 +723,26 @@ export function computeStats(data: TabData): StatsSummary {
         const scoredGame = hasScore(game);
         const stars = scoredGame ? starsFromGrade(ref.grade) : 0;
 
+        // ¿Vuelves a este juego? Haber vuelto es un HECHO (varios años registrados); querer volver es una
+        // intención (`replayable`). Un juego ya rejugado no cuenta además como intención: es el mismo juego, y
+        // sumarlo en los dos montones haría que el reparto pasara del 100%.
+        const back = years.length > 1;
+        if (back) {
+          replayed += 1;
+          extraRuns += years.length - 1;
+          replayedGames.push(ref);
+        } else if (game.replayable) {
+          willReplay += 1;
+        }
+        for (const genre of game.genres || []) {
+          const key = genre.trim();
+          if (!key) continue;
+          const entry = replayGenres.get(key) || { games: 0, back: 0 };
+          entry.games += 1;
+          if (back || game.replayable) entry.back += 1;
+          replayGenres.set(key, entry);
+        }
+
         if (!years.length) {
           noYear = noYear || emptyYearBucket(null);
           countInYear(noYear, hours, stars);
@@ -490,6 +753,15 @@ export function computeStats(data: TabData): StatsSummary {
 
           for (const [pass, year] of years.entries()) {
             const yearHours = year === lastYear ? hours : 0;
+
+            // Géneros terminados en ESE año, para la evolución del gusto. Una rejugada cuenta en su año, igual
+            // que cuenta como completado: volver a un género en 2026 dice tanto de tu gusto como estrenarlo.
+            const perYear = genresPerYear.get(year) || new Map<string, number>();
+            for (const genre of game.genres || []) {
+              const key = genre.trim();
+              if (key) perYear.set(key, (perYear.get(key) || 0) + 1);
+            }
+            genresPerYear.set(year, perYear);
 
             const bucket = yearBuckets.get(year) || emptyYearBucket(year);
             countInYear(bucket, yearHours, stars);
@@ -627,5 +899,22 @@ export function computeStats(data: TabData): StatsSummary {
     top: topSummary(scoredGames),
     shame,
     wishlist,
+    genreRanks: genreRanksOf(genresPerYear),
+    activity: activityOf(activityEvents),
+    replay: {
+      total: counts.c,
+      replayed,
+      willReplay,
+      once: Math.max(0, counts.c - replayed - willReplay),
+      extraRuns,
+      byGenre: [...replayGenres.entries()]
+        .filter(([, entry]) => entry.games >= REPLAY_GENRE_MIN && entry.back > 0)
+        .map(([tag, entry]) => ({ tag, games: entry.games, back: entry.back, percent: (entry.back / entry.games) * 100 }))
+        .sort((a, b) => b.percent - a.percent || b.games - a.games || sortEs(a.tag, b.tag))
+        .slice(0, STATS_SHORTLIST),
+      // De más vueltas a menos; a igualdad, el ranking de siempre (nota, horas, alfabeto).
+      most: replayedGames.sort((a, b) => b.replays - a.replays || byRank(a, b)).slice(0, STATS_SHORTLIST),
+    },
+    demand: demandOf(scoredGames, libraryAvg, grades),
   };
 }

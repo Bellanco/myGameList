@@ -19,9 +19,14 @@ describe('friendStats · qué ve cada rango', () => {
   it('bronce se queda en el retrato: nada de notas ni de ratio', () => {
     const blocks = friendStatsBlocks('bronze');
 
-    expect(blocks).toEqual(['top', 'years', 'radar', 'genres']);
+    // La evolución del gusto entra en el retrato: es la misma pregunta que el resto de este rango —qué juega—
+    // contada en el tiempo, y sale de `genres` y `years`, que el canal social ya publica.
+    expect(blocks).toEqual(['top', 'years', 'radar', 'genres', 'genreRanks']);
     expect(blocks).not.toContain('grades');
     expect(blocks).not.toContain('ratio');
+    // Cómo puntúa sigue siendo cosa de plata en adelante, también en sus dos formas nuevas.
+    expect(blocks).not.toContain('ridge');
+    expect(blocks).not.toContain('demand');
   });
 
   it('plata y oro ven lo mismo: todo lo que se puede calcular del canal social', () => {

@@ -4,7 +4,7 @@ import { isValidGistId, isValidGithubToken } from '../../core/security/sanitize'
 import { migrateData } from './migrateRepository';
 import { normalizeData } from './localRepository';
 import { assembleChunkedGames, gamesGistNeedsRewrite, gamesGistNeedsUpgradeToWrapper, unwrapGamesFile } from '../migration/legacyGamesFormat';
-import type { TabData } from '../types/game';
+import type { GameItem, TabData } from '../types/game';
 import type { GamesChunkFile, GamesMainFile } from '../types/gist';
 import { githubFetch } from './githubHttp';
 import { GIST_API_BASE, buildGithubError, getGithubAuthHeader } from './githubGistApi';
@@ -539,7 +539,32 @@ export async function readForeignGamesGist(
 
   const body = (await response.json()) as { files?: Record<string, { content: string } | undefined> };
   const result = await buildGistReadResponse(body, response.headers.get('etag'), readerToken);
-  return { data: result.data as TabData, etag: response.headers.get('etag') || null };
+  return { data: stripForeignStamps(result.data as TabData), etag: response.headers.get('etag') || null };
+}
+
+/**
+ * Quita de un listado AJENO los sellos automáticos de su dueño (`enteredAt`, `gradedAt`).
+ *
+ * Se hace en la LECTURA, y no más adelante, porque lo que se lee aquí se guarda en la caché de perfiles ajenos
+ * (`putCachedProfileGames`): filtrarlo solo al pintar dejaría el registro de a qué horas usa la app otra persona
+ * escrito en el IndexedDB de quien la mira. El filtro de visibilidad sigue quitándolos después, como red de
+ * seguridad para cualquier otro camino.
+ *
+ * Su dueño no puede evitar que estén en su gist —es su propio almacén—, así que la decisión de no propagarlos es
+ * de quien lee.
+ */
+function stripForeignStamps(data: TabData | null): TabData | null {
+  if (!data) return data;
+  const clean = (games: GameItem[] | undefined): GameItem[] =>
+    (games || []).map((game) => {
+      if (!game?.enteredAt && game?.gradedAt === undefined) return game;
+      const next = { ...game } as Partial<GameItem>;
+      delete next.enteredAt;
+      delete next.gradedAt;
+      return next as GameItem;
+    });
+
+  return { ...data, c: clean(data.c), v: clean(data.v), e: clean(data.e), p: clean(data.p) };
 }
 
 /**
