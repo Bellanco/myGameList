@@ -93,15 +93,6 @@ export const STATS_LABELS_OTHER: StatsLabels = {
     empty: 'No tiene años suficientes para ver hacia dónde se mueve su gusto.',
     hint: 'Señala un género para seguir su línea.',
   },
-  ridge: {
-    ...STATS_OWN.ridge,
-    title: '¿Puntúa más duro con los años?',
-    subtitle: 'Cada año pone su listón: mira si el suyo ha subido, ha bajado o sigue donde estaba.',
-    empty: 'No ha puntuado juegos de años suficientes.',
-    trendUp: (amount: string) => `Puntúa ${amount} más alto que al principio.`,
-    trendDown: (amount: string) => `Puntúa ${amount} más bajo que al principio.`,
-    trendFlat: 'Puntúa prácticamente igual que al principio.',
-  },
   replay: {
     ...STATS_OWN.replay,
     tile: 'Volvería a jugar',

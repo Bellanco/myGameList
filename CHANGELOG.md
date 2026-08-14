@@ -61,9 +61,9 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
     rojo→verde de las notas —competía con el color de los propios puntos, que ya llevan la nota— y pasa a la
     rampa del tema, muy diluida y con un borde de la paleta: lo justo para orientar hacia dónde crece la escala,
     y teñido por cada skin sin una regla por tema.
-  - Queda **fuera del panel, terminado y a la espera**, un *ridgeline* del reparto de notas por año
-    (`GradeRidge`): el panel ya tiene tres formas hablando de notas —el enjambre, la tira del gráfico anual y la
-    cifra de exigencia— y esa era la cuarta. Se conserva entero porque la decisión es de encuadre, no de calidad.
+  - Se descartó un *ridgeline* del reparto de notas por año: el panel ya tiene tres formas hablando de notas —el
+    enjambre, la tira del gráfico anual y la cifra de exigencia— y esa era la cuarta. Estaba terminado y probado,
+    así que si algún día se quiere recuperar, vive en el commit `b24da5a` (`GradeRidge.tsx`).
   - **Una sola escala por pieza**: si la cuenta puntúa sobre 100, el eje, la media y la frase de tendencia van en
     puntos; si puntúa con estrellas, las tres en estrellas. Y los nombres largos de género (`Estrategia en tiempo
     real`) caben enteros en la evolución del gusto: el espacio de los rótulos se calcula con el más largo en vez
@@ -126,6 +126,11 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
   habría copia local con la que recuperarlos.
 
 ### Fixed
+- **Contraste insuficiente en la pestaña ACTIVA del selector de periodo** en dos paletas: el blanco sobre el rojo
+  de Persona en oscuro se quedaba en 3,81:1 y el marrón sobre el ámbar de Portal en claro, en 4,01:1 —ambos bajo
+  el 4,5 que exige la AA, y es el rótulo que dice qué pestaña está abierta—. Se corrige oscureciendo y aclarando
+  el fondo un punto, sin salirse de la gama de cada tema. Lo destapó la auditoría de accesibilidad al extenderse
+  al panel: hasta ahora solo recorría la lista.
 - **Mover un juego de lista estrenaba la fecha de su reseña.** `reviewedAt` existe para no depender de `_ts`
   —que lo mueve cualquier edición— y su contrato es que solo la toca un cambio del **texto**: ni la nota, ni un
   cambio de lista, ni una importación. Pero al guardar se buscaba el estado anterior **solo en la lista de
@@ -152,7 +157,10 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
 
 ### Tests
 - **Auditoría de accesibilidad sobre el render** (`@axe-core/playwright`): 6 paletas × 2 temas sobre la lista
-  con una fila desplegada. De 1 a 15 recorridos end-to-end.
+  con una fila desplegada **y sobre el panel de estadísticas**, que es donde está el color propio de la app
+  —rampas de nota, mapas de calor, bandas— y donde hay controles dentro de SVG. Con una biblioteca amplia,
+  porque con tres juegos casi todos sus bloques enseñan su estado vacío y auditar una pantalla vacía no audita
+  nada. De 1 a 27 recorridos end-to-end.
 - Pruebas del esquema del gist de juegos, del módulo de App Check y de la escritura diferida del estado local.
 - **Sellos automáticos**: 25 pruebas entre las funciones puras (un sello no se reescribe, la nota no se re-fecha
   al reescribir la reseña) y el recorrido real de un juego por las listas sobre el view-model, más el round-trip

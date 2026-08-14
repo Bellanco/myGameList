@@ -2883,51 +2883,6 @@
 
 
 /* ═══════════════════════════════════════════════════════════════════════════════════════════════════
-   NOTAS POR AÑO · ridgeline (`GradeRidge`)
-   Cada cresta se normaliza contra SU año, no contra el más prolífico: lo que se compara es la forma.
-   ═══════════════════════════════════════════════════════════════════════════════════════════════════ */
-.grade-ridge { display: flex; flex-direction: column; gap: .4rem; }
-.grade-ridge-svg { width: 100%; height: auto; overflow: visible; }
-
-.grade-ridge-base { stroke: var(--border); stroke-width: 1; opacity: .6; }
-/* Relleno con la rampa de NOTA (la misma de la rueda de puntuar), no con un tono plano: la silueta se tiñe de
-   rojo a verde según dónde caigan las notas, así que el color dice lo mismo que la posición. */
-.grade-ridge-area { opacity: .3; }
-.grade-ridge-stop-1 { stop-color: var(--grade-1); stop-opacity: .85; }
-.grade-ridge-stop-2 { stop-color: var(--grade-2); stop-opacity: .85; }
-.grade-ridge-stop-3 { stop-color: var(--grade-3); stop-opacity: .85; }
-.grade-ridge-stop-4 { stop-color: var(--grade-4); stop-opacity: .85; }
-.grade-ridge-stop-5 { stop-color: var(--grade-5); stop-opacity: .9; }
-.grade-ridge-line {
-  fill: none;
-  stroke: var(--stats-ink-2);
-  stroke-width: 1.6;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  opacity: .55;
-}
-@media (prefers-reduced-motion: no-preference) {
-  /* Las crestas se levantan una tras otra, de arriba abajo: el mismo gesto de cascada del resto del panel. */
-  .grade-ridge-row { animation: ridge-rise .5s cubic-bezier(.34, 1.2, .64, 1) both; animation-delay: calc(var(--i, 0) * 60ms); }
-}
-@keyframes ridge-rise { from { opacity: 0; transform: translateY(6px); } }
-.grade-ridge-year { fill: var(--stats-ink-2); font-size: 11.5px; font-weight: 600; font-variant-numeric: tabular-nums; }
-.grade-ridge-value { fill: var(--stats-ink-2); font-size: 11px; font-weight: 600; font-variant-numeric: tabular-nums; }
-/* El recuento va bajo la media, en un cuerpo menor: es el respaldo de esa cifra, no otra cifra. */
-.grade-ridge-count,
-.grade-ridge-axis { fill: var(--text-muted); font-size: 9.5px; font-variant-numeric: tabular-nums; }
-.grade-ridge-hit { fill: transparent; cursor: pointer; }
-
-.grade-ridge-row { transition: opacity .15s; }
-.grade-ridge-row:focus-visible { outline: none; }
-.grade-ridge-row:focus-visible .grade-ridge-line,
-.grade-ridge-row.is-active .grade-ridge-line { stroke-width: 2.4; opacity: 1; }
-.grade-ridge-row.is-active .grade-ridge-area { opacity: .6; }
-.grade-ridge-row.is-active .grade-ridge-value { fill: var(--text); }
-.grade-ridge-row.is-dim { opacity: .4; }
-
-
-/* ═══════════════════════════════════════════════════════════════════════════════════════════════════
    CONSTANCIA · mapa de calor por SEMANAS (`WeekStreak`)
 
    Un cuadro por semana y no por día: una lista de juegos no se toca a diario, así que el mapa diario
@@ -2974,51 +2929,6 @@
 }
 .week-heat-stats dt { font-size: .72rem; color: var(--text-muted); }
 .week-heat-stats dd { margin: 0; font-weight: 650; font-variant-numeric: tabular-nums; }
-
-
-/* ═══════════════════════════════════════════════════════════════════════════════════════════════════
-   NOTAS POR AÑO · ridgeline (`GradeRidge`)
-   Cada cresta se normaliza contra SU año, no contra el más prolífico: lo que se compara es la forma.
-   ═══════════════════════════════════════════════════════════════════════════════════════════════════ */
-.grade-ridge { display: flex; flex-direction: column; gap: .4rem; }
-.grade-ridge-svg { width: 100%; height: auto; overflow: visible; }
-
-.grade-ridge-base { stroke: var(--border); stroke-width: 1; opacity: .6; }
-/* Relleno con la rampa de NOTA (la misma de la rueda de puntuar), no con un tono plano: la silueta se tiñe de
-   rojo a verde según dónde caigan las notas, así que el color dice lo mismo que la posición. */
-.grade-ridge-area { opacity: .3; }
-.grade-ridge-stop-1 { stop-color: var(--grade-1); stop-opacity: .85; }
-.grade-ridge-stop-2 { stop-color: var(--grade-2); stop-opacity: .85; }
-.grade-ridge-stop-3 { stop-color: var(--grade-3); stop-opacity: .85; }
-.grade-ridge-stop-4 { stop-color: var(--grade-4); stop-opacity: .85; }
-.grade-ridge-stop-5 { stop-color: var(--grade-5); stop-opacity: .9; }
-.grade-ridge-line {
-  fill: none;
-  stroke: var(--stats-ink-2);
-  stroke-width: 1.6;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  opacity: .55;
-}
-@media (prefers-reduced-motion: no-preference) {
-  /* Las crestas se levantan una tras otra, de arriba abajo: el mismo gesto de cascada del resto del panel. */
-  .grade-ridge-row { animation: ridge-rise .5s cubic-bezier(.34, 1.2, .64, 1) both; animation-delay: calc(var(--i, 0) * 60ms); }
-}
-@keyframes ridge-rise { from { opacity: 0; transform: translateY(6px); } }
-.grade-ridge-year { fill: var(--stats-ink-2); font-size: 11.5px; font-weight: 600; font-variant-numeric: tabular-nums; }
-.grade-ridge-value { fill: var(--stats-ink-2); font-size: 11px; font-weight: 600; font-variant-numeric: tabular-nums; }
-/* El recuento va bajo la media, en un cuerpo menor: es el respaldo de esa cifra, no otra cifra. */
-.grade-ridge-count,
-.grade-ridge-axis { fill: var(--text-muted); font-size: 9.5px; font-variant-numeric: tabular-nums; }
-.grade-ridge-hit { fill: transparent; cursor: pointer; }
-
-.grade-ridge-row { transition: opacity .15s; }
-.grade-ridge-row:focus-visible { outline: none; }
-.grade-ridge-row:focus-visible .grade-ridge-line,
-.grade-ridge-row.is-active .grade-ridge-line { stroke-width: 2.4; opacity: 1; }
-.grade-ridge-row.is-active .grade-ridge-area { opacity: .6; }
-.grade-ridge-row.is-active .grade-ridge-value { fill: var(--text); }
-.grade-ridge-row.is-dim { opacity: .4; }
 
 
 /* ═══════════════════════════════════════════════════════════════════════════════════════════════════

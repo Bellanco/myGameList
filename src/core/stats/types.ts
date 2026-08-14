@@ -130,7 +130,6 @@ export type StatsBlock =
   | 'shame'
   | 'wishlist'
   | 'genreRanks'
-  | 'ridge'
   | 'activity'
   | 'replay'
   | 'demand';
