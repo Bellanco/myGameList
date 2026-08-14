@@ -23,6 +23,12 @@ import type { ArrivalPoint, StatsBlock, StatsSummary, YearSummary } from '../../
 import type { ScoreScale } from '../../../core/utils/scoreScale';
 import type { StatsScope, YearMetric } from '../../../viewmodel/useStatsViewModel';
 
+/**
+ * A partir de este largo, el nombre del juego más largo se pinta en cuerpo menor y con una línea más.
+ * Veintidós caracteres son los que caben en dos líneas a cuerpo normal en la tarjeta más estrecha de la fila.
+ */
+const LONG_TITLE = 22;
+
 export interface StatsPanelProps {
   /** Resumen ya calculado (`computeStats`), sea de tu biblioteca o de la de otra persona. */
   stats: StatsSummary;
@@ -171,7 +177,14 @@ export const StatsPanel = memo(function StatsPanel({
             {own || (hasHours && stats.longest) ? (
               <StatTile
                 label={L.tiles.longest}
-                value={<span className="stat-tile-text">{stats.longest ? stats.longest.name : L.tiles.noData}</span>}
+                value={
+                  <span
+                    className={`stat-tile-text${(stats.longest?.name.length ?? 0) > LONG_TITLE ? ' is-long' : ''}`}
+                    title={stats.longest?.name}
+                  >
+                    {stats.longest ? stats.longest.name : L.tiles.noData}
+                  </span>
+                }
                 hint={stats.longest ? L.tiles.longestHint(formatHours(stats.longest.hours)) : undefined}
               />
             ) : null}
