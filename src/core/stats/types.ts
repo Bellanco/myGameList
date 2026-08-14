@@ -62,6 +62,12 @@ export interface GameRef {
   hours: number;
   /** Fecha de llegada a la lista actual (`listedAt`). */
   at: number;
+  /**
+   * Lista de la que sale la referencia. La necesita el enjambre de notas para separar lo que TERMINASTE de lo
+   * que DEJASTE: son dos cosas distintas —una nota de abandono cuenta por qué lo soltaste— y mezcladas en un
+   * mismo reparto tiran de la mediana hacia abajo sin decir por qué.
+   */
+  list: TabId;
   /** Las MISMAS referencias del juego original (no copias): el agregado del top las recorre. */
   genres: string[];
   platforms: string[];

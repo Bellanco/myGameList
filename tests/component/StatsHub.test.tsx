@@ -111,6 +111,34 @@ describe('StatsHub', () => {
     scale = 'stars';
   });
 
+  it('filtra el reparto de notas por lista y nunca lo deja vacío', async () => {
+    const user = userEvent.setup();
+    // Muestra propia: el abandonado del SAMPLE no tiene nota, y sin notas en las DOS listas el filtro no sale.
+    const data = tabData({
+      c: [
+        game({ id: 1, name: 'Uno', grade: 90, listedAt: ENERO }),
+        game({ id: 2, name: 'Dos', grade: 60, listedAt: ENERO }),
+      ],
+      v: [game({ id: 3, name: 'Tres', grade: 20, listedAt: FEBRERO })],
+    });
+    render(<StatsHub games={data} />, { wrapper: MemoryRouter });
+
+    const dots = () => document.querySelectorAll('.beeswarm-dot');
+    const grupo = screen.getByRole('group', { name: L.grades.lists.aria });
+    const completados = within(grupo).getByRole('button', { name: new RegExp(L.grades.lists.completed) });
+    const abandonados = within(grupo).getByRole('button', { name: new RegExp(L.grades.lists.abandoned) });
+    expect(dots()).toHaveLength(3);
+
+    await user.click(abandonados);
+    expect(dots()).toHaveLength(2);
+    // Con una sola lista encendida, esa ya no se puede apagar: el gráfico nunca se queda sin puntos.
+    expect(completados).toBeDisabled();
+
+    await user.click(abandonados);
+    expect(dots()).toHaveLength(3);
+    expect(completados).toBeEnabled();
+  });
+
   it('describe el cuadro de completados con su reparto', () => {
     render(<StatsHub games={SAMPLE} />, { wrapper: MemoryRouter });
 

@@ -252,7 +252,19 @@ export const UI_MESSAGES = {
       chartAria: 'Distribución de notas',
       bandColumn: 'Tramo',
       countColumn: 'Juegos',
-      median: 'mediana',
+      /**
+       * Filtro por lista. Solo aparece cuando hay notas en las DOS listas, y nunca deja el gráfico vacío: el
+       * botón de la única lista encendida se queda deshabilitado en vez de apagarla.
+       */
+      lists: {
+        aria: 'Qué listas entran en el reparto',
+        completed: 'Completados',
+        abandoned: 'Abandonados',
+        /** Aviso al lector de pantalla en el botón que ya no se puede apagar. */
+        onlyOne: 'No puedes quitar la única lista que queda',
+      },
+      /** Rótulo de la guía de la mediana, con su valor: la línea sola no decía en qué nota cae. */
+      median: (value: string) => `mediana ${value}`,
     },
     genres: {
       title: 'Géneros más jugados',
