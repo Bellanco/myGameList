@@ -24,7 +24,12 @@ import type { SocialSharedGame } from '../../model/repository/socialGistReposito
  * aquí nunca se pinta, ver arriba). El backlog solo sale con datos completos, porque se deriva de la fecha de
  * llegada a la lista y la proyección pública no la publica.
  */
-export type FriendStatsBlock = Exclude<StatsBlock, 'reviews'>;
+/**
+ * La CONSTANCIA queda fuera igual que las reseñas, y por un motivo más fuerte: se calcula con `enteredAt` y
+ * `reviewedAt`, dos sellos privados que no viajan por el canal social (ver `SOCIAL_PRIVATE_FIELDS`). Aunque un
+ * rango los tuviera permitidos, el dato no llega, y montar el bloque solo enseñaría un vacío.
+ */
+export type FriendStatsBlock = Exclude<StatsBlock, 'reviews' | 'activity'>;
 
 /**
  * QUÉ VE CADA RANGO. Manda el rango de QUIEN MIRA.
@@ -35,13 +40,26 @@ export type FriendStatsBlock = Exclude<StatsBlock, 'reviews'>;
  * Es una regla de PRODUCTO y la aplica el cliente, como la cadencia del feed o el límite de publicación: quien
  * manipule su copia puede saltársela, y lo único que conseguiría es ver datos que su amigo ya le ha publicado.
  */
-const GENERAL_BLOCKS: readonly FriendStatsBlock[] = ['top', 'years', 'radar', 'genres', 'grades', 'ratio'];
+const GENERAL_BLOCKS: readonly FriendStatsBlock[] = [
+  'top',
+  'years',
+  'radar',
+  'genres',
+  'grades',
+  'ratio',
+  // Cómo se mueve su gusto y cómo reparte las notas: los dos salen de `genres`, `grade` y `years`, que el canal
+  // social YA publica, así que no destapan nada que su dueño no haya compartido.
+  'genreRanks',
+  'demand',
+];
 
 /** El panel entero: lo que ve la administración, y el orden en que se pinta lo decide `StatsPanel`. */
-const ALL_BLOCKS: readonly FriendStatsBlock[] = [...GENERAL_BLOCKS, 'backlog', 'shame', 'wishlist'];
+const ALL_BLOCKS: readonly FriendStatsBlock[] = [...GENERAL_BLOCKS, 'backlog', 'shame', 'wishlist', 'replay'];
 
 const TIER_BLOCKS: Record<ProfileTier, readonly FriendStatsBlock[]> = {
-  bronze: ['top', 'years', 'radar', 'genres'],
+  // Bronce se queda en el retrato: quién es en su biblioteca y qué juega. La evolución del gusto entra aquí
+  // porque es la misma pregunta contada en el tiempo, no un dato más fino.
+  bronze: ['top', 'years', 'radar', 'genres', 'genreRanks'],
   silver: GENERAL_BLOCKS,
   gold: GENERAL_BLOCKS,
   mithril: ALL_BLOCKS,

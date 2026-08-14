@@ -8,6 +8,8 @@ import { GenreRadar } from './GenreRadar';
 import { Beeswarm } from './Beeswarm';
 import { BacklogArea } from './BacklogArea';
 import { PolarRose } from './PolarRose';
+import { GenreBump } from './GenreBump';
+import { WeekStreak } from './WeekStreak';
 import { SpeedGauge } from './SpeedGauge';
 import { TopGames } from './TopGames';
 import { ReviewTraits } from './ReviewTraits';
@@ -135,6 +137,11 @@ export const StatsPanel = memo(function StatsPanel({
     const { counts } = stats;
     // La nota media se muestra en la escala que use la cuenta: sobre 100 (nota fina) o sobre 5 (estrellas).
     const avgInScale = scale === 'grade' ? stats.scored.avgGrade : stats.scored.avgGrade / 20;
+    const inScale = (grade: number) => formatDecimal(scale === 'grade' ? grade : grade / 20);
+    const replayPercent = stats.replay.total
+      ? Math.round(((stats.replay.replayed + stats.replay.willReplay) / stats.replay.total) * 100)
+      : 0;
+    const deviationInScale = scale === 'grade' ? stats.demand.deviation : stats.demand.deviation / 20;
 
     return (
       <>
@@ -166,6 +173,29 @@ export const StatsPanel = memo(function StatsPanel({
                 label={L.tiles.longest}
                 value={<span className="stat-tile-text">{stats.longest ? stats.longest.name : L.tiles.noData}</span>}
                 hint={stats.longest ? L.tiles.longestHint(formatHours(stats.longest.hours)) : undefined}
+              />
+            ) : null}
+            {has('replay') && (own || stats.replay.total > 0) ? (
+              <StatTile
+                label={L.replay.tile}
+                value={<CountUp value={replayPercent} />}
+                unit="%"
+                hint={L.replay.leadHint(stats.replay.replayed + stats.replay.willReplay, stats.replay.total)}
+                progress={replayPercent}
+              />
+            ) : null}
+            {has('demand') && (own || stats.demand.count > 0) ? (
+              <StatTile
+                label={L.demand.tile}
+                // El ± va pegado a la cifra: una desviación sin signo se lee como una nota («tu exigencia es
+                // 0,9»), que es justo lo que no es.
+                value={<>±<CountUp value={deviationInScale} format={formatDecimal} /></>}
+                unit={scale === 'grade' ? L.demand.points : '★'}
+                hint={L.demand.tileHint(inScale(stats.demand.low), inScale(stats.demand.high))}
+                // No una barra de progreso, sino la ZONA sobre la escala completa con tu media marcada en su
+                // centro: la exigencia es la anchura de esa zona, y una barra que crece desde cero no puede
+                // decir ni dónde empieza ni alrededor de qué se ordena.
+                band={{ from: stats.demand.low, to: stats.demand.high, mark: stats.demand.avgGrade }}
               />
             ) : null}
             {has('reviews') && stats.reviews.count > 0 && onOpenReviews ? (
@@ -212,6 +242,14 @@ export const StatsPanel = memo(function StatsPanel({
           </div>
         ) : null}
 
+        {has('genreRanks') && (own || stats.genreRanks.series.length > 0) ? (
+          <div className="stats-card">
+            <h2>{L.genreRanks.title}</h2>
+            <p className="stats-card-sub">{L.genreRanks.subtitle}</p>
+            <GenreBump ranks={stats.genreRanks} />
+          </div>
+        ) : null}
+
         {has('radar') ? (
           <div className="stats-card stats-card-half">
             <h2>{L.radar.title}</h2>
@@ -241,18 +279,36 @@ export const StatsPanel = memo(function StatsPanel({
         ) : null}
 
         {has('grades') && (own || stats.scored.count > 0) ? (
-          <div className="stats-card stats-card-half">
+          <div className="stats-card">
             <h2>{L.grades.title}</h2>
             <p className="stats-card-sub">{L.grades.subtitle}</p>
             <Beeswarm games={stats.scored.games} scale={scale} />
           </div>
         ) : null}
 
+
+
+
+
+
+
+
         {has('genres') ? (
           <div className="stats-card stats-card-half">
             <h2>{L.genres.title}</h2>
             <p className="stats-card-sub">{L.genres.subtitle}</p>
             <PolarRose tags={stats.genres} />
+          </div>
+        ) : null}
+
+
+        {/* La constancia sale de fechas PRIVADAS (`enteredAt`, `reviewedAt`) que no viajan por el canal social:
+            solo se monta con los datos completos, es decir, en tu propio panel. */}
+        {has('activity') && full && (own || stats.activity.active > 0) ? (
+          <div className="stats-card stats-card-half">
+            <h2>{L.activity.title}</h2>
+            <p className="stats-card-sub">{L.activity.subtitle}</p>
+            <WeekStreak activity={stats.activity} />
           </div>
         ) : null}
 
