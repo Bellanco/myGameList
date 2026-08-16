@@ -33,6 +33,12 @@ export async function onRequestPost(context: { request: Request; env: Env }): Pr
     return fail(403, 'No puedes compartir reseñas', { banned: true, reason: status.ban.reason || '' });
   }
 
+  // Sin nick no se publica. El nick sale del perfil social, que es también de donde sale el rango: si no está,
+  // el artículo saldría firmado por nadie y con la cuota mínima, y es mejor decirlo que publicar algo a medias.
+  if (!status.nick) {
+    return fail(409, 'Necesitas tener tu espacio social creado para compartir', { needsProfile: true });
+  }
+
   // ¿Ya tenía compartida ESTA reseña? Entonces se renueva sobre el mismo token: ni gasta cuota ni deja muerto el
   // enlace que ya circula por ahí.
   const existing = status.active.find((row) => row.meta?.gameId === draft.gameId) || null;
@@ -62,6 +68,7 @@ export async function onRequestPost(context: { request: Request; env: Env }): Pr
       kv: context.env.SHARES,
       uid: caller.user.uid,
       draft,
+      nick: status.nick,
       quota: status.quota,
       now,
       existingToken: existing?.token || null,

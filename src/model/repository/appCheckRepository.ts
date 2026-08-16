@@ -22,6 +22,7 @@
 //   proyecto de Google Cloud con facturación para dar exactamente el mismo resultado a esta escala.
 // ─────────────────────────────────────────────────────────────────────────────────────────────────────────────
 import type { FirebaseApp } from 'firebase/app';
+import type { AppCheck } from 'firebase/app-check';
 
 /** Clave de SITIO de reCAPTCHA: pública, viaja en el bundle igual que el client_id de GitHub. La clave SECRETA
  *  no vive aquí ni en el repositorio: se pega una sola vez en la consola de Firebase. */
@@ -35,6 +36,8 @@ export function isAppCheckConfigured(): boolean {
 }
 
 let appCheckPromise: Promise<void> | null = null;
+/** Instancia viva de App Check, para poder pedirle un token (ver `getAppCheckToken`). */
+let appCheckInstance: AppCheck | null = null;
 
 /**
  * Token de DEPURACIÓN, solo en desarrollo. Sin esto no se puede probar App Check fuera del dominio de
@@ -92,7 +95,9 @@ export async function ensureAppCheck(app: FirebaseApp): Promise<void> {
         // Import dinámico: `firebase/app-check` y el script de reCAPTCHA quedan fuera del chunk de arranque y
         // fuera incluso del chunk de Firebase, así que solo lo descarga quien inicia sesión.
         const { initializeAppCheck, ReCaptchaV3Provider } = await import('firebase/app-check');
-        initializeAppCheck(app, {
+        // Se guarda la instancia para poder pedirle un token después (`getAppCheckToken`). Antes se descartaba
+        // porque nadie la necesitaba: el SDK la adjunta solo a las llamadas a Firestore.
+        appCheckInstance = initializeAppCheck(app, {
           provider: new ReCaptchaV3Provider(siteKey),
           isTokenAutoRefreshEnabled: true,
         });
@@ -105,7 +110,34 @@ export async function ensureAppCheck(app: FirebaseApp): Promise<void> {
   return appCheckPromise;
 }
 
+/**
+ * Token de atestación para una petición NUESTRA, no del SDK de Firebase.
+ *
+ * Lo necesita el cliente de enlaces compartidos: sus peticiones van a una Pages Function, que reenvía este token
+ * a Firestore para leer el rango del usuario con sus propios permisos. Sin esto, con la exigencia de App Check
+ * activada, esa lectura fallaría y todo el mundo parecería bronce.
+ *
+ * Falla ABIERTO, igual que el resto del módulo: sin clave, sin instancia o sin red devuelve `null` y quien llama
+ * manda la petición igual. Nunca impide usar la app.
+ */
+export async function getAppCheckToken(): Promise<string | null> {
+  if (!getRecaptchaSiteKey()) {
+    return null;
+  }
+  await appCheckPromise;
+  if (!appCheckInstance) {
+    return null;
+  }
+  try {
+    const { getToken } = await import('firebase/app-check');
+    return (await getToken(appCheckInstance)).token;
+  } catch {
+    return null;
+  }
+}
+
 /** Solo para pruebas: olvida la inicialización memoizada. */
 export function resetAppCheckForTests(): void {
   appCheckPromise = null;
+  appCheckInstance = null;
 }

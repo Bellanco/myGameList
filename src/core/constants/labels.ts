@@ -1442,3 +1442,46 @@ export const SOCIAL_UI = {
 
 /** Tipo de los textos de la UI social; usar en los componentes en lugar de `any`. */
 export type SocialUiLabels = typeof SOCIAL_UI;
+
+/**
+ * Compartir una reseña con enlace público (ver docs/plan-compartir-resenas.md).
+ *
+ * El tono importa aquí más que en otras pantallas: se está sacando a internet un texto que hasta ahora vivía en
+ * los Gists del usuario. Los textos dicen con todas las letras qué se publica, qué no, cuánto dura y que se
+ * puede retirar — y "Dejar de compartir" nunca se llama "Borrar", porque retirar un enlace no recoge las copias
+ * que ya circulen.
+ */
+export const SHARE_UI = {
+  action: 'Compartir',
+  actionAria: 'Compartir esta reseña con un enlace público',
+  shared: 'Compartida',
+  dialogTitle: 'Compartir esta reseña',
+  consentTitle: 'Vas a publicar esta reseña en internet',
+  consentPublished: 'Se publica: el juego, tu nota, el texto completo de la reseña, sus plataformas, géneros y puntos fuertes y débiles, tu nick y la fecha.',
+  consentPrivate: 'No se publica: tu correo, tu identificador, tus Gists, tus horas de juego, tu foto ni el resto de tu biblioteca.',
+  consentDuration: (days: number, maxActive: number) =>
+    `Tu rango te permite ${maxActive} ${maxActive === 1 ? 'enlace activo' : 'enlaces activos'}, y cada uno dura ${days} ${days === 1 ? 'día' : 'días'}.`,
+  consentRevocable: 'Puedes retirarlo cuando quieras desde Ajustes. Eso lo deja inaccesible, pero no recoge las copias que ya se hayan compartido.',
+  consentAccept: 'He leído lo anterior y quiero publicarla',
+  confirm: 'Publicar enlace',
+  cancel: 'Cancelar',
+  publishing: 'Publicando…',
+  copyLink: 'Copiar enlace',
+  copied: 'Enlace copiado',
+  revoke: 'Dejar de compartir',
+  revoking: 'Retirando…',
+  revoked: 'El enlace ya no está disponible',
+  renewed: 'Enlace actualizado con la reseña de ahora.',
+  screenTitle: 'Reseñas compartidas',
+  screenSubtitle: 'Enlaces públicos que has creado. Caducan solos; puedes retirarlos antes.',
+  screenEmpty: 'No has compartido ninguna reseña todavía.',
+  counter: (active: number, max: number) => `${active} de ${max} ${max === 1 ? 'enlace activo' : 'enlaces activos'}`,
+  expiresIn: (days: number) => (days <= 0 ? 'Caduca hoy' : `Caduca en ${days} ${days === 1 ? 'día' : 'días'}`),
+  bannedTitle: 'No puedes compartir reseñas',
+  bannedReason: (reason: string) => (reason ? `Motivo: ${reason}` : 'La administración ha retirado esta posibilidad de tu cuenta.'),
+  quotaReached: (max: number) => `Tienes ${max} de ${max} enlaces activos.`,
+  quotaHint: 'Retira uno o espera a que caduque el más antiguo.',
+  needsSession: 'Necesitas iniciar sesión con Google para compartir.',
+  needsProfile: 'Necesitas tener tu espacio social creado: de ahí salen tu nick y tu rango.',
+  failed: 'No se ha podido compartir. Inténtalo de nuevo.',
+} as const;
