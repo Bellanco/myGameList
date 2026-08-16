@@ -64,4 +64,6 @@ export interface MySharesResponse {
   shares: SharedReviewIndexEntry[];
   quota: ShareQuota;
   ban: ShareBan | null;
+  /** Nick con el que se firmaría la reseña. Lo decide el servidor; el cliente solo lo enseña. */
+  nick: string;
 }

@@ -681,7 +681,7 @@ export default function App() {
     account: (
 
       <Suspense fallback={null}>
-        {scoreScaleUid ? <AccountHub scoreScaleUid={scoreScaleUid} /> : null}
+        {scoreScaleUid ? <AccountHub scoreScaleUid={scoreScaleUid} hasSocialProfile={hasSocialProfile} /> : null}
       </Suspense>
     ),
     admin: (
@@ -739,7 +739,6 @@ export default function App() {
 
       <Suspense fallback={null}>
         <SettingsHub
-          hasSocialProfile={hasSocialProfile}
           syncStatus={syncBadgeText}
           hasSyncConfig={syncVm.hasConfig}
           connectedGistId={syncVm.connectedGistId || syncVm.currentConfig?.gistId || ''}

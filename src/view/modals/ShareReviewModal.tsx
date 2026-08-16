@@ -18,6 +18,8 @@ export const ShareReviewModal = memo(function ShareReviewModal({
   open,
   gameName,
   quota,
+  nick,
+  nickIsAccountName,
   publishing,
   error,
   publishedUrl,
@@ -28,6 +30,10 @@ export const ShareReviewModal = memo(function ShareReviewModal({
   open: boolean;
   gameName: string;
   quota: ShareQuota | null;
+  /** Nick con el que el servidor firmará la reseña, para poder verlo ANTES de publicar. */
+  nick: string;
+  /** Ese nick es el nombre de la cuenta de Google: se avisa, porque casi nadie lo elegiría a propósito. */
+  nickIsAccountName: boolean;
   publishing: boolean;
   error: string;
   /** URL ya publicada; mientras sea vacía, el diálogo está en modo "confirmar". */
@@ -97,6 +103,12 @@ export const ShareReviewModal = memo(function ShareReviewModal({
                 </div>
               )}
               {quota ? <p className="share-dialog-note">{SHARE_UI.consentDuration(quota.ttlDays, quota.maxActive)}</p> : null}
+              {nick ? (
+                <p className={`share-dialog-note${nickIsAccountName ? ' share-dialog-warn' : ''}`}>
+                  {SHARE_UI.signedAs(nick)}
+                  {nickIsAccountName ? ` ${SHARE_UI.signedAsAccountName}` : ''}
+                </p>
+              ) : null}
               {consentGiven ? null : (
                 <label className="share-dialog-accept">
                   <input type="checkbox" checked={accepted} onChange={(event) => setAccepted(event.target.checked)} />
