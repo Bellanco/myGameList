@@ -570,8 +570,19 @@ Si alguna no convence, se cambia aquí y en el código:
    *Validado* con `npx wrangler pages functions build` (compila sin avisos). La configuración de
    `[env.production]` solo se valida de verdad en el primer despliegue: `pages deploy` no tiene `--dry-run`.
 
-3. **Bot Fight Mode** ⏳ — comprobar en el panel de Cloudflare que no bloquea a `Twitterbot` /
-   `facebookexternalhit`. Si lo hace, la previsualización seguirá sin salir aunque `robots.txt` la permita.
+3. **Bot Fight Mode** ✅ — **no aplica**, y conviene saber por qué antes de volver a preocuparse: ese ajuste se
+   configura por ZONA (un dominio propio añadido a Cloudflare), y `mygamelist.pages.dev` no es una zona del
+   proyecto, así que el interruptor ni existe aquí. Comprobado además contra el dominio real: `Twitterbot`,
+   `facebookexternalhit`, `WhatsApp` y `Discordbot` reciben **200**.
+
+   *Vuelve a ser relevante el día que se ponga dominio propio*, porque al añadirlo como zona puede venir
+   activado. La comprobación es una línea:
+
+   ```sh
+   curl -s -o /dev/null -w "%{http_code}\n" -A "Twitterbot/1.0" https://TU-DOMINIO/r/algun-token
+   ```
+
+   200 = bien; 403 o 503 = el borde está bloqueando al agente y la tarjeta saldrá vacía.
 4. **App Check** — no bloquea el diseño (§3); saber si la exigencia está activada solo sirve para interpretar
    los errores en desarrollo.
 5. **Wrangler no está en las dependencias** del proyecto: hoy se invoca con `npx wrangler` (4.123.0 al escribir
