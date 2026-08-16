@@ -1,5 +1,6 @@
-import { describe, it, expect } from 'vitest';
-import { assertValidSharedReview, parseSharedReview } from '../../src/model/schemas/shareSchema';
+import { describe, it, expect, vi } from 'vitest';
+import { assertValidSharedReview } from '../../src/model/schemas/shareSchema';
+import { readSharedReview } from '../../src/model/repository/publicShareRepository';
 import type { SharedReview } from '../../src/model/types/share';
 
 function article(over: Partial<SharedReview> = {}): SharedReview {
@@ -101,15 +102,35 @@ describe('shareSchema — cotas y tipos', () => {
   });
 });
 
-describe('shareSchema — lectura de la página pública', () => {
-  it('returns the article when it validates', () => {
-    expect(parseSharedReview(article())?.gameName).toBe('Hollow Knight');
+describe('lectura de la página pública', () => {
+  const responder = (body: unknown, ok = true) =>
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok, json: async () => body }));
+
+  it('returns the article when it is a version this screen can paint', async () => {
+    responder(article());
+    expect((await readSharedReview('TOKEN1234567890abcd'))?.gameName).toBe('Hollow Knight');
   });
 
-  // Un artículo corrupto no debe romperle la página a un visitante: se le enseña lo mismo que si hubiera caducado.
-  it('returns null instead of throwing for anything invalid', () => {
-    expect(parseSharedReview({ nope: true })).toBeNull();
-    expect(parseSharedReview(null)).toBeNull();
-    expect(parseSharedReview('{}')).toBeNull();
+  // Un artículo corrupto, vacío o de una versión futura no puede romperle la página a un visitante: se le enseña
+  // lo mismo que si el enlace hubiera caducado.
+  it('returns null for anything it cannot paint', async () => {
+    for (const cuerpo of [null, {}, 'texto', { ...article(), v: 2 }]) {
+      responder(cuerpo);
+      expect(await readSharedReview('TOKEN1234567890abcd')).toBeNull();
+    }
+  });
+
+  it('returns null when the request fails', async () => {
+    responder({ error: 'no' }, false);
+    expect(await readSharedReview('TOKEN1234567890abcd')).toBeNull();
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('sin red')));
+    expect(await readSharedReview('TOKEN1234567890abcd')).toBeNull();
+  });
+
+  it('does not even ask without a token', async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+    expect(await readSharedReview('')).toBeNull();
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 });

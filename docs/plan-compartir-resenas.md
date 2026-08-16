@@ -378,7 +378,8 @@ URL real, y comprobar que `site:` en Google sigue sin devolver nada del dominio.
 - `model/types/share.ts`: `SharedReview`, `SharedReviewIndexEntry`, `ShareBan` y `MySharesResponse`.
 - `model/schemas/shareSchema.ts`: Zod `strictObject` con cotas + `assertNoShareForbiddenFields` (denylist
   explícita con los campos privados, los de identidad y la foto). `assertValidSharedReview` lanza al publicar;
-  `parseSharedReview` devuelve `null` al leer, para que un artículo corrupto no rompa la página del visitante.
+  la lectura pública NO usa Zod: `publicShareRepository` comprueba que el artículo es de la versión que la
+  pantalla sabe pintar y devuelve `null` si no, para no arrastrar la librería a un chunk que se quiere mínimo.
 - `tests/unit/shareQuota.test.ts` y `tests/unit/shareSchema.test.ts`: **28 casos**, incluidos los que fijan
   decisiones de producto (bronce comparte aunque no publique; el override manda en absoluto y se recorta al
   techo; un valor corrupto degrada al rango).
