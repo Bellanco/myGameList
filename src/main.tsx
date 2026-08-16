@@ -7,6 +7,7 @@ import { initializeFirebaseServices, reportHandledError } from './model/reposito
 import { readPublicShareToken } from './model/repository/publicShareRepository';
 import { runMigration } from './model/repository/dataMigrationRepository';
 import { runWhenIdle } from './core/utils/idle';
+import { registerServiceWorker } from './core/utils/appUpdate';
 import { SOCIAL_GIST_CFG_KEY, STORAGE_KEY } from './core/constants/storageKeys';
 import './styles/index.scss';
 
@@ -194,18 +195,8 @@ function bootApp(): void {
     void runMigration().catch(() => {});
   });
 
-  if ('serviceWorker' in navigator) {
-    const hostnameParts = location.hostname.split('.');
-    const isCloudflarePreview = location.hostname.endsWith('.pages.dev') && hostnameParts.length > 3;
-
-    if (location.hostname === 'localhost' || isCloudflarePreview) {
-      navigator.serviceWorker.getRegistrations().then((registrations) => {
-        registrations.forEach((registration) => registration.unregister());
-      });
-    } else {
-      navigator.serviceWorker.register('/service-worker.js').catch(() => {
-        // Keep silent: service worker is optional for local fallback scenarios.
-      });
-    }
-  }
+  // Registro del service worker Y vigilancia de versiones nuevas: antes esto era solo un `register()`, y una
+  // pestaña abierta podía quedarse días con el bundle viejo porque nadie volvía a mirar `/service-worker.js`
+  // (ver `core/utils/appUpdate`).
+  registerServiceWorker();
 }
