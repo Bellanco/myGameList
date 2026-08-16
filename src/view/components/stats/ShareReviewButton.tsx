@@ -20,6 +20,7 @@ export const ShareReviewButton = memo(function ShareReviewButton({ game, reviewT
   const [open, setOpen] = useState(false);
   const [publishedUrl, setPublishedUrl] = useState('');
   const [renewed, setRenewed] = useState(false);
+  const [publishedExpiresAt, setPublishedExpiresAt] = useState(0);
 
   useEffect(() => {
     void vm.refresh();
@@ -61,12 +62,28 @@ export const ShareReviewButton = memo(function ShareReviewButton({ game, reviewT
     if (published) {
       setPublishedUrl(published.url);
       setRenewed(published.renewed);
+      setPublishedExpiresAt(published.expiresAt);
     }
   }, [game, reviewText, vm]);
+
+  /**
+   * Abre el diálogo. Si la reseña YA está compartida, entra directamente en la vista del enlace: se enseña el que
+   * existe, no una pantalla de "publicar" que haría pensar que se va a crear otro. Renovar es entonces una opción
+   * más, no el camino por defecto.
+   */
+  const openDialog = useCallback(() => {
+    const current = vm.shareOf(game.id);
+    setPublishedUrl(current ? `${window.location.origin}/r/${current.token}` : '');
+    setPublishedExpiresAt(current?.expiresAt || 0);
+    setRenewed(false);
+    setOpen(true);
+  }, [game.id, vm]);
 
   const close = useCallback(() => {
     setOpen(false);
     setPublishedUrl('');
+    setPublishedExpiresAt(0);
+    setRenewed(false);
     vm.clearError();
   }, [vm]);
 
@@ -86,7 +103,7 @@ export const ShareReviewButton = memo(function ShareReviewButton({ game, reviewT
 
   return (
     <>
-      <button className="btn btn-secondary" type="button" onClick={() => setOpen(true)} aria-label={SHARE_UI.actionAria}>
+      <button className="btn btn-secondary" type="button" onClick={openDialog} aria-label={SHARE_UI.actionAria}>
         <Icon name="share-nodes" />
         <span>{existing ? SHARE_UI.shared : SHARE_UI.action}</span>
       </button>
@@ -102,8 +119,12 @@ export const ShareReviewButton = memo(function ShareReviewButton({ game, reviewT
         errorHint={quotaHint}
         publishedUrl={publishedUrl}
         renewed={renewed}
+        expiresAt={publishedExpiresAt}
         onCancel={close}
         onConfirm={confirm}
+        // Renovar es el MISMO camino que publicar: el servidor reescribe sobre el token que ya existe. Solo se
+        // ofrece cuando hay algo que renovar.
+        onRenew={existing ? () => void confirm() : undefined}
       />
     </>
   );

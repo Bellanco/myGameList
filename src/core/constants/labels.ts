@@ -1481,6 +1481,10 @@ export const SHARE_UI = {
   copyLink: 'Copiar enlace',
   copied: 'Enlace copiado',
   shareNative: 'Compartir',
+  // Renovar rehace el MISMO enlace con el texto de ahora y le devuelve su duración completa. No crea otro, así
+  // que el que ya circula por ahí sigue funcionando y no se gasta cuota.
+  renew: 'Renovar enlace',
+  renewing: 'Renovando…',
   accept: 'Aceptar',
   revoke: 'Dejar de compartir',
   revoking: 'Retirando…',
