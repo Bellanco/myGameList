@@ -374,7 +374,7 @@ Está avisado en la cabecera del módulo.
 **Verificación:** `npm test` (111 ficheros, 1081 casos), `npm run typecheck` y `npm run validate` en verde. El
 presupuesto de arranque no se mueve (210,3 kB de 215): los módulos nuevos todavía no los importa nadie.
 
-### Paso 3 — Pages Functions (~2 días)
+### Paso 3 — Pages Functions · **HECHO** (falta `FIREBASE_PROJECT_ID`)
 
 ```
 functions/_lib/firebaseAuth.ts   verificación de ID token (JWKS + RS256, caché en KV)
@@ -392,13 +392,35 @@ functions/r/[token].ts           SSR de la página pública
 
 - `wrangler.toml`: binding del namespace KV (`SHARES`) y vars `ADMIN_EMAIL`, `FIREBASE_PROJECT_ID`. El
   `client_id` de GitHub que ya está ahí es el precedente de cómo se documentan estas variables.
-- Tests con Vitest sobre los helpers puros (escapado, cuota, caducidad) y prueba manual con
-  `npx wrangler pages dev`.
+- `tests/unit/shareFunctions.test.ts`: 14 casos sobre los ayudantes puros. Lo que necesita KV o HTMLRewriter se
+  probó con `wrangler pages dev` de verdad, no con simulacros: imitar el almacén no habría demostrado nada.
 
-**Aceptación:** crear, listar, retirar y abrir un enlace funcionan en local; un texto con `"` y `<script>` sale
-escapado en las metaetiquetas; superar la cuota devuelve 429 con el mensaje de §4; un usuario vetado recibe 403
-con el motivo y la purga retira sus enlaces sin dejar claves huérfanas; con override activo mandan sus valores
-sobre los del rango, y un override desmedido queda recortado al techo de mithril.
+**Decisiones tomadas al implementar:**
+
+- **El import desde `src/` funciona** (verificado): la Function usa `resolveShareQuota` y el esquema Zod del
+  proyecto, así que no hay una segunda copia de las cuotas ni de la allowlist. El bundle son 596 kB sin
+  comprimir, Zod incluido — muy por debajo del límite de Workers.
+- **Renovar en vez de duplicar:** volver a compartir la misma reseña reescribe sobre el mismo token con nueva
+  caducidad. No gasta cuota y, sobre todo, el enlace que ya circula sigue vivo en vez de morir mientras otro
+  nuevo da vueltas en paralelo.
+- **`/r/:token` responde siempre con el shell**, también si el enlace no existe o caducó. Un 404 dejaría al
+  visitante en la página de error de Cloudflare, que no explica nada; así lo explica la propia app.
+- **El escapado lo hace HTMLRewriter**, que es un parser de verdad, no reemplazos de cadena. La limpieza de
+  ángulos que hay encima es de PRESENTACIÓN y solo quita lo que tiene forma de etiqueta: borrarlos todos habría
+  destrozado texto legítimo como «se mata en <3 minutos» o «dura 5 < 10 horas».
+- **El contador diario no es atómico** (KV no tiene incremento). Aceptable a propósito: la cuota de producto se
+  calcula contando enlaces vivos, que sí es exacta; el diario es un freno anti-abuso donde fallar por uno no
+  cambia nada.
+
+**Verificado con `wrangler pages dev` + KV local:** artículo inexistente → 404 con mensaje único (no distingue
+caducado de retirado de inexistente); endpoints autenticados sin configuración → 500 explícito antes de mirar el
+token; `/r/:token` con un artículo sembrado → reescribe `<title>`, `og:title`, `og:description`,
+`og:type: article` y `og:url`, con las comillas del nombre del juego escapadas a `&quot;` y sin rastro de la
+etiqueta `<script>` incrustada en el texto de prueba.
+
+**Lo único que falta para que funcione:** `FIREBASE_PROJECT_ID` está vacío en `wrangler.toml`. Sin él, los
+endpoints autenticados devuelven un 500 explícito («no está configurada en este entorno»), que es el
+comportamiento buscado: un fallo de configuración no debe disfrazarse de problema de sesión.
 
 ### Paso 4 — Cliente: publicar y gestionar (~1,5 días)
 

@@ -42,7 +42,11 @@
   } catch (e) {}
 })();</script>
     <meta name="description" content="Organiza, puntúa y sincroniza tu colección de videojuegos.">
+    <!-- `og:type` y `og:url` los reescribe la Function de `/r/:token` para las reseñas compartidas (pasan a
+         `article` y a la URL del enlace). Tienen que existir aquí porque HTMLRewriter solo modifica etiquetas
+         presentes: no puede inventarse una que no esté en el shell. -->
     <meta property="og:type" content="website">
+    <meta property="og:url" content="https://mygamelist.pages.dev/">
     <meta property="og:site_name" content="My Game List">
     <meta property="og:title" content="My Game List">
     <meta property="og:description" content="Organiza, puntúa y sincroniza tu colección de videojuegos.">

@@ -20,6 +20,11 @@ pages_build_output_dir = "./dist"
 # El gemelo de build (VITE_GITHUB_CLIENT_ID) está en .env.production.
 [vars]
 GITHUB_CLIENT_ID = "Ov23ctq0mTkYHf9zqfGB"
+# Identificador del proyecto de Firebase (público: es el mismo que VITE_FIREBASE_PROJECT_ID del build). Con él se
+# valida la audiencia y el emisor del ID token, así que SIN ESTO los endpoints de compartir responden 500.
+FIREBASE_PROJECT_ID = ""
+# Mismo criterio de administrador que `firestore.rules` (isAdmin). Se lee de aquí para no repetir el literal.
+ADMIN_EMAIL = "bellanco3@gmail.com"
 
 # Reseñas compartidas con enlace público (ver docs/plan-compartir-resenas.md). En local se usa el namespace de
 # vista previa a propósito: así una prueba nunca escribe en los datos que están sirviendo enlaces reales.
@@ -29,6 +34,11 @@ id = "b59825792b514cca94c77ab12463340a" # mygamelist-shares-preview
 
 [env.preview.vars]
 GITHUB_CLIENT_ID = "Ov23ctq0mTkYHf9zqfGB"
+# Identificador del proyecto de Firebase (público: es el mismo que VITE_FIREBASE_PROJECT_ID del build). Con él se
+# valida la audiencia y el emisor del ID token, así que SIN ESTO los endpoints de compartir responden 500.
+FIREBASE_PROJECT_ID = ""
+# Mismo criterio de administrador que `firestore.rules` (isAdmin). Se lee de aquí para no repetir el literal.
+ADMIN_EMAIL = "bellanco3@gmail.com"
 
 [[env.preview.kv_namespaces]]
 binding = "SHARES"
@@ -36,6 +46,11 @@ id = "b59825792b514cca94c77ab12463340a" # mygamelist-shares-preview
 
 [env.production.vars]
 GITHUB_CLIENT_ID = "Ov23ctq0mTkYHf9zqfGB"
+# Identificador del proyecto de Firebase (público: es el mismo que VITE_FIREBASE_PROJECT_ID del build). Con él se
+# valida la audiencia y el emisor del ID token, así que SIN ESTO los endpoints de compartir responden 500.
+FIREBASE_PROJECT_ID = ""
+# Mismo criterio de administrador que `firestore.rules` (isAdmin). Se lee de aquí para no repetir el literal.
+ADMIN_EMAIL = "bellanco3@gmail.com"
 
 [[env.production.kv_namespaces]]
 binding = "SHARES"
