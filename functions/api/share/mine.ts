@@ -25,6 +25,10 @@ export async function onRequestGet(context: { request: Request; env: Env }): Pro
       .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0)),
     quota: status.quota,
     ban: status.ban,
+    // El nick con el que se FIRMARÍA la reseña. Se envía para que el diálogo pueda enseñarlo antes de publicar:
+    // `profiles.displayName` cae al nombre de la cuenta de Google cuando su dueño nunca eligió nick, y eso no
+    // puede descubrirse cuando la reseña ya está en internet.
+    nick: status.nick,
     // El rango se envía para poder decir "esto es lo que da tu rango" en la pantalla de gestión, no para que el
     // cliente calcule nada: la cuota ya viene resuelta.
     tier: status.tier,

@@ -4,6 +4,7 @@
 // pintarlos. Si este hook empezara a calcular cuántos enlaces caben, habría dos verdades y la del navegador es
 // manipulable.
 import { useCallback, useMemo, useState } from 'react';
+import { getCurrentSocialAuthUser } from '../model/repository/firebaseGateway';
 import { listMyShares, publishShare, removeShare, type PublishedShare, type ShareError } from '../model/repository/shareRepository';
 import type { ShareBan, SharedReviewIndexEntry } from '../model/types/share';
 import type { ShareQuota } from '../core/constants/tiers';
@@ -12,6 +13,16 @@ export interface ShareViewModel {
   shares: SharedReviewIndexEntry[];
   quota: ShareQuota | null;
   ban: ShareBan | null;
+  /** Nick con el que el SERVIDOR firmará la reseña. Se enseña antes de publicar. */
+  nick: string;
+  /**
+   * Ese nick es, literalmente, el nombre de la cuenta de Google.
+   *
+   * Pasa cuando su dueño nunca eligió nick: `profiles.displayName` cae al nombre de la cuenta (ver
+   * `resolvePublicName` en firebaseRepository). Dentro de la app eso ya lo ven sus amistades, pero publicarlo en
+   * una página abierta a cualquiera es otra cosa, así que se avisa ANTES y no después.
+   */
+  nickIsAccountName: boolean;
   loading: boolean;
   busyToken: string | null;
   error: string;
@@ -29,6 +40,8 @@ export function useShareViewModel(): ShareViewModel {
   const [shares, setShares] = useState<SharedReviewIndexEntry[]>([]);
   const [quota, setQuota] = useState<ShareQuota | null>(null);
   const [ban, setBan] = useState<ShareBan | null>(null);
+  const [nick, setNick] = useState('');
+  const [nickIsAccountName, setNickIsAccountName] = useState(false);
   const [loading, setLoading] = useState(false);
   const [busyToken, setBusyToken] = useState<string | null>(null);
   const [error, setError] = useState('');
@@ -52,6 +65,12 @@ export function useShareViewModel(): ShareViewModel {
       setShares(data.shares || []);
       setQuota(data.quota || null);
       setBan(data.ban || null);
+      setNick(data.nick || '');
+      // La comparación se hace AQUÍ y no en el servidor: el nombre de la cuenta de Google es un dato de la
+      // sesión del navegador, y la Function no tiene por qué conocerlo ni guardarlo.
+      const authUser = await getCurrentSocialAuthUser().catch(() => null);
+      const accountName = String(authUser?.displayName || '').trim();
+      setNickIsAccountName(Boolean(accountName) && accountName === String(data.nick || '').trim());
       clearError();
     } catch (problem) {
       fail(problem);
@@ -108,5 +127,9 @@ export function useShareViewModel(): ShareViewModel {
 
   const shareOf = useCallback((gameId: number) => byGame.get(gameId) || null, [byGame]);
 
-  return { shares, quota, ban, loading, busyToken, error, errorDetails, refresh, share, revoke, shareOf, clearError };
+  return {
+    shares, quota, ban, nick, nickIsAccountName,
+    loading, busyToken, error, errorDetails,
+    refresh, share, revoke, shareOf, clearError,
+  };
 }
