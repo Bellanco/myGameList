@@ -46,14 +46,19 @@
     <meta property="og:site_name" content="My Game List">
     <meta property="og:title" content="My Game List">
     <meta property="og:description" content="Organiza, puntúa y sincroniza tu colección de videojuegos.">
-    <meta property="og:image" content="/share-card.svg">
-    <meta property="og:image:type" content="image/svg+xml">
+    <!-- La tarjeta es JPEG, no SVG: X, WhatsApp, Facebook y LinkedIn no renderizan SVG en og:image (aceptan
+         PNG, JPEG, WebP y GIF), así que la previsualización salía vacía en todas ellas. El .jpg lo genera
+         `scripts/build-share-card.mjs` a partir de `public/share-card.svg`, que sigue siendo la fuente editable. -->
+    <meta property="og:image" content="/share-card.jpg">
+    <meta property="og:image:type" content="image/jpeg">
     <meta property="og:image:width" content="1200">
     <meta property="og:image:height" content="630">
+    <meta property="og:image:alt" content="My Game List — organiza, puntúa y sincroniza tu colección de videojuegos">
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="My Game List">
     <meta name="twitter:description" content="Organiza, puntúa y sincroniza tu colección de videojuegos.">
-    <meta name="twitter:image" content="/share-card.svg">
+    <meta name="twitter:image" content="/share-card.jpg">
+    <meta name="twitter:image:alt" content="My Game List — organiza, puntúa y sincroniza tu colección de videojuegos">
     <title>Mis Listas de juegos</title>
     <!-- Iconos como archivos reales (no data: URI): así Firefox y Chromium los usan de forma
          fiable en pestaña, marcadores, historial y página de inicio, en escritorio y móvil.
