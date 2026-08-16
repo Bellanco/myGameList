@@ -5,6 +5,24 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
 
 ## [Unreleased]
 
+### Fixed
+- **El avatar por defecto de Google se colaba como si fuera una foto.** Quien no sube foto a su cuenta no se queda
+  sin `photoURL`: Google le genera un monograma —su inicial sobre un círculo de color— y lo sirve desde el mismo
+  sitio y con el mismo formato de URL que una foto real, así que por la URL no se distinguen. Eso rompía dos cosas
+  a la vez: en el hub se pintaba ese monograma en lugar de la silueta de la aplicación —justo la inicial-sobre-color
+  que se decidió no hacer—, y como "tener URL" contaba como tener foto, esas cuentas podían encender **Mostrar mi
+  foto de perfil** y ver las caras de sus amigos sin aportar la suya, que es el trato que la reciprocidad deshace.
+  Ahora se reconocen mirando la imagen: una foto subida se sirve como JPEG y el monograma siempre como PNG diminuto
+  de color plano, así que basta el formato para descartar las fotos reales sin decodificar nada, y el recuento de
+  colores resuelve el resto. Con el monograma, el interruptor queda apagado y bloqueado —con un aviso que explica
+  que esa imagen no es una foto, en vez del "tu cuenta no tiene foto" que sonaría a error a quien sí ve una— y esa
+  URL deja de publicarse. Ante cualquier duda —red caída, formato inesperado— la foto se da por buena: quitarle la
+  cara a quien sí la tiene es peor error que dejar pasar un monograma.
+  - **Se retira también la que ya estaba publicada**, sin migración ni esperar a nadie: al pintar, porque esas URLs
+    viven en los canales de mucha gente y en los documentos de amistad, y en el propio canal, que se sanea al abrir
+    el hub. Un PNG pequeño y de color plano subido a propósito como foto —un logo, un dibujo liso— se marcaría como
+    genérico; es el falso positivo asumido, y se arregla subiendo una foto.
+
 ## [1.0.0] - 2026-08-16
 
 > Renumerado a 1.0.0. La numeración anterior (3.x) venía de las primeras versiones de la app y ya no decía nada
