@@ -509,31 +509,24 @@ Si alguna no convence, se cambia aquí y en el código:
    *Consecuencia asumida:* un enlace compartido es inmutable. Si algún día la app se muda a un dominio propio,
    los `/r/…` ya pegados en un chat seguirán apuntando aquí y solo vivirán mientras `pages.dev` responda. Si esa
    mudanza llega, hay que dejar una redirección permanente de `/r/*`, no retirar el dominio sin más.
-2. **Namespace de KV** ⏳ — lo crea el administrador desde el panel (Workers & Pages → KV). Hacen falta dos, uno
-   de producción y otro de vista previa, y sus ids para el binding:
+2. **Namespace de KV** ✅ — creados `mygamelist-shares` (producción) y `mygamelist-shares-preview`, y declarados
+   en `wrangler.toml` con el binding `SHARES`. En **desarrollo local se usa el de vista previa** a propósito: una
+   prueba nunca debe escribir en los datos que están sirviendo enlaces reales.
 
-   ```toml
-   # wrangler.toml — NO añadir hasta tener los ids: un binding con id vacío rompe el despliegue de Pages.
-   #
-   # OJO: en PAGES no se usa `preview_id` (eso es de Workers). Pages solo admite dos entornos, `preview` y
-   # `production`, y cada uno declara su propio binding. El bloque de nivel superior es el que vale además para
-   # el desarrollo local.
-   [[kv_namespaces]]
-   binding = "SHARES"
-   id = "<id del namespace de vista previa>"      # nivel superior = local
+   Dos cosas que costaron un rato y conviene no volver a descubrir:
 
-   [[env.preview.kv_namespaces]]
-   binding = "SHARES"
-   id = "<id del namespace de vista previa>"
+   - **En Pages no existe `preview_id`** (eso es de Workers). Hay dos entornos, `preview` y `production`, y cada
+     uno declara su propio binding.
+   - **`vars` y `kv_namespaces` son claves NO HEREDABLES.** En cuanto se declara una para un entorno, *todas* las
+     no heredables deben declararse en ese entorno. Por eso `GITHUB_CLIENT_ID` aparece repetido en los tres
+     bloques: si se dejara solo arriba, funcionaría en local y **el despliegue fallaría al validar**. Está
+     avisado en el propio `wrangler.toml` para que nadie lo "limpie".
 
-   [[env.production.kv_namespaces]]
-   binding = "SHARES"
-   id = "<id del namespace de producción>"
-   ```
+   **El panel ya no manda.** Con `pages_build_output_dir` presente, los bindings configurados en
+   *Settings → Bindings* no se aplican: todo tiene que estar en el fichero.
 
-   **Este `wrangler.toml` es la fuente de verdad.** Desde que lleva `pages_build_output_dir` —y ya lo lleva—,
-   los bindings configurados en el panel del proyecto **no se aplican**. Configurar el binding en
-   *Settings → Bindings* no serviría de nada y despistaría al depurar: tiene que estar en el fichero.
+   *Validado* con `npx wrangler pages functions build` (compila sin avisos). La configuración de
+   `[env.production]` solo se valida de verdad en el primer despliegue: `pages deploy` no tiene `--dry-run`.
 
 3. **Bot Fight Mode** ⏳ — comprobar en el panel de Cloudflare que no bloquea a `Twitterbot` /
    `facebookexternalhit`. Si lo hace, la previsualización seguirá sin salir aunque `robots.txt` la permita.
