@@ -1,6 +1,7 @@
 import { memo, useEffect, useState } from 'react';
 import { useNativeDialog } from './useNativeDialog';
 import { SHARE_UI } from '../../core/constants/labels';
+import { Icon } from '../components/Icon';
 import { grantShareConsent, hasShareConsent } from '../../model/repository/shareConsentRepository';
 import type { ShareQuota } from '../../core/constants/tiers';
 
@@ -62,6 +63,24 @@ export const ShareReviewModal = memo(function ShareReviewModal({
     onConfirm();
   };
 
+  /**
+   * Hoja de compartir del sistema. Es la vía correcta para llevar el enlace a cualquier red: la lista de destinos
+   * la pone el dispositivo, así que funciona con las que el usuario tenga instaladas sin que aquí haya que
+   * enumerar ninguna ni mantener enlaces de intención por servicio.
+   *
+   * No existe en todos los navegadores de escritorio (Firefox, por ejemplo). Cuando falta, el botón no se pinta:
+   * el enlace y su botón de copiar siguen ahí, que es lo que de verdad hace falta.
+   */
+  const canShareNatively = typeof navigator !== 'undefined' && typeof navigator.share === 'function';
+
+  const shareNatively = async () => {
+    try {
+      await navigator.share({ title: gameName, url: publishedUrl });
+    } catch {
+      // Cancelar la hoja de compartir lanza: no es un error que haya que contarle a nadie.
+    }
+  };
+
   const copy = async () => {
     try {
       await navigator.clipboard.writeText(publishedUrl);
@@ -82,13 +101,31 @@ export const ShareReviewModal = memo(function ShareReviewModal({
           {publishedUrl ? (
             <>
               {renewed ? <p className="share-dialog-note">{SHARE_UI.renewed}</p> : null}
-              <p className="share-dialog-url">{publishedUrl}</p>
-              <div className="dialog-actions">
-                <button className="btn btn-secondary" type="button" onClick={onCancel}>
-                  {SHARE_UI.cancel}
+              {/* El enlace con su botón de copiar DENTRO, al final, como en cualquier caja de compartir de la
+                  web: el gesto está donde está el dato, en vez de en un botón al pie que hay que buscar. */}
+              <div className="share-dialog-url">
+                <span className="share-dialog-url-text">{publishedUrl}</span>
+                <button
+                  className="share-dialog-copy"
+                  type="button"
+                  aria-label={SHARE_UI.copyLink}
+                  title={SHARE_UI.copyLink}
+                  onClick={copy}
+                >
+                  <Icon name="content-copy" />
                 </button>
-                <button className="btn btn-primary" type="button" onClick={copy}>
-                  {copied ? SHARE_UI.copied : SHARE_UI.copyLink}
+              </div>
+              {/* Aviso en vivo para quien no ve el cambio del icono (lectores de pantalla). */}
+              <p className="share-dialog-note" role="status">{copied ? SHARE_UI.copied : ''}</p>
+              <div className="dialog-actions">
+                {canShareNatively ? (
+                  <button className="btn btn-secondary" type="button" onClick={shareNatively}>
+                    <Icon name="share-nodes" />
+                    <span>{SHARE_UI.shareNative}</span>
+                  </button>
+                ) : null}
+                <button className="btn btn-primary" type="button" onClick={onCancel}>
+                  {SHARE_UI.accept}
                 </button>
               </div>
             </>

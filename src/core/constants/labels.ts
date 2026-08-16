@@ -1479,6 +1479,8 @@ export const SHARE_UI = {
   publishing: 'Publicando…',
   copyLink: 'Copiar enlace',
   copied: 'Enlace copiado',
+  shareNative: 'Compartir',
+  accept: 'Aceptar',
   revoke: 'Dejar de compartir',
   revoking: 'Retirando…',
   revoked: 'El enlace ya no está disponible',
