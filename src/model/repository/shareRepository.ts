@@ -106,17 +106,7 @@ export async function removeShare(token: string): Promise<void> {
   await parse(response);
 }
 
-/** El artículo público. Sin sesión: lo usa la página que ve quien abre el enlace. */
-export async function readSharedReview(token: string): Promise<SharedReview | null> {
-  try {
-    const response = await fetch(`${API_BASE}/${encodeURIComponent(token)}`);
-    if (!response.ok) {
-      return null;
-    }
-    return (await response.json()) as SharedReview;
-  } catch {
-    return null;
-  }
-}
+// La LECTURA del artículo vive en `publicShareRepository.ts`, no aquí: la usa la página pública, que no debe
+// arrastrar Firebase por importar este módulo.
 
 export type { SharedReviewIndexEntry };

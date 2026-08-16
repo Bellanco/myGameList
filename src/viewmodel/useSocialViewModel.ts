@@ -1069,6 +1069,16 @@ export function useSocialViewModel(options?: {
     [selectedProfileDetail, authUser, ownProfileId],
   );
 
+  /**
+   * ¿La actividad abierta en el detalle es MÍA? Lo usa la pantalla para ofrecer compartir la reseña con un
+   * enlace público, que solo tiene sentido sobre lo propio. Misma comprobación de identidad que el perfil, para
+   * que no haya dos criterios de "esto es mío".
+   */
+  const isOwnDetailEvent = useMemo(
+    () => isOwnProfileIdentity(activeDetailEvent?.profileId, authUser?.uid, ownProfileId),
+    [activeDetailEvent, authUser, ownProfileId],
+  );
+
   // Bloque 3/4 — al abrir el detalle de una reseña o un perfil AJENO, baja su lista completa de juegos (cache-first
   // 24h en IndexedDB; sin red si está fresca) y la guarda filtrada por su visibilidad. El perfil propio no se baja
   // (ya tiene datos locales). Sin token o ante fallo de red se queda index-only (snippet del evento).
@@ -2328,6 +2338,7 @@ export function useSocialViewModel(options?: {
     openProfileDetail,
     openOwnProfileDetail,
     isOwnProfileDetail,
+    isOwnDetailEvent,
     handleActivityItemKeyDown,
     handleProfileCardKeyDown,
     handleCreateSocialGist,

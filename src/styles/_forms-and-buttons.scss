@@ -146,6 +146,28 @@ dialog.alert-dialog[open]::backdrop { animation: alertBackdropIn .24s ease both;
   opacity: 0.9;
 }
 
+/* Página pública de una reseña compartida, en modo artículo (visitante sin la app).
+   No hay cromo, así que la pantalla tiene que respirar por su cuenta: se centra y se le da aire arriba, porque
+   sin barra superior el contenido quedaría pegado al borde. */
+.share-public {
+  max-width: 52rem;
+  margin: 0 auto;
+  padding: clamp(1rem, 4vw, 2.5rem) 1rem;
+}
+.share-public-notice {
+  margin: 1rem 0 0;
+  font-size: 0.85rem;
+  opacity: 0.75;
+}
+.share-public-cta {
+  margin: 1.25rem 0 0;
+  text-align: center;
+
+  a {
+    font-weight: 600;
+  }
+}
+
 /* Name with stars */
 .name-with-stars {
   display: flex;
