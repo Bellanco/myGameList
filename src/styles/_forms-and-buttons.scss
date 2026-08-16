@@ -33,7 +33,15 @@
   color: var(--text);
   padding: 0;
   box-shadow: var(--shadow);
-  max-width: 320px;
+  /* El techo del ancho se mide contra el viewport y sustituye al del <dialog> nativo (`100% - 6px - 2em`), que
+     en pantalla estrecha deja la caja más angosta de lo pedido y estira el texto en una columna larguísima. */
+  width: fit-content;
+  max-width: min(320px, calc(100vw - 1.5rem));
+  /* La caja nunca pasa del alto útil: si el contenido no cabe, hace scroll DENTRO. Sin esto, con el diálogo
+     centrado por `transform`, lo que sobra se sale por arriba y queda inalcanzable. */
+  max-height: calc(100vh - 1.5rem);
+  max-height: calc(100dvh - 1.5rem);
+  overflow: hidden;
   position: fixed;
   top: 50%;
   left: 50%;
@@ -45,7 +53,8 @@
 }
 /* Entrada del diálogo de confirmación: como <dialog> nativo se monta ya en [open], usamos animación
    (no transición) para que se vea al aparecer. */
-dialog.alert-dialog[open] { animation: alertDialogIn .24s cubic-bezier(.2,.9,.3,1.05) both; }
+/* El `display` va en `[open]` a propósito: puesto en la clase taparía el `display:none` del diálogo cerrado. */
+dialog.alert-dialog[open] { display: flex; flex-direction: column; animation: alertDialogIn .24s cubic-bezier(.2,.9,.3,1.05) both; }
 dialog.alert-dialog[open]::backdrop { animation: alertBackdropIn .24s ease both; }
 @keyframes alertDialogIn {
   from { opacity: 0; transform: translate(-50%, -46%) scale(.97); }
@@ -62,6 +71,9 @@ dialog.alert-dialog[open]::backdrop { animation: alertBackdropIn .24s ease both;
   flex-direction: column;
   gap: 1rem;
   padding: 1.5rem;
+  /* El scroll vive aquí, no en la ventana: la caja ya está limitada en alto por `.alert-dialog`. */
+  overflow-y: auto;
+  min-height: 0;
 }
 .dialog-title {
   font-size: 1.1rem;
@@ -81,7 +93,25 @@ dialog.alert-dialog[open]::backdrop { animation: alertBackdropIn .24s ease both;
    un aviso que hay que poder leer entero, la casilla de aceptación y el enlace ya publicado.
    Es más ancho que un confirm porque aquí SÍ hay que leer: se está publicando algo en internet. */
 .share-dialog {
-  max-width: min(34rem, 92vw);
+  width: min(34rem, calc(100vw - 1.5rem));
+  max-width: none;
+}
+/* En móvil el aviso se lee en una columna corta: se aprieta el marco y se baja algo el cuerpo para que quepa
+   más texto por pantalla, en vez de dejar una caja alta y estrecha que hay que recorrer entera. */
+@media (max-width: 480px) {
+  .share-dialog .dialog-content {
+    gap: 0.75rem;
+    padding: 1.1rem;
+  }
+  .share-dialog-consent {
+    padding: 0.65rem 0.75rem;
+    font-size: 0.86rem;
+    gap: 0.4rem;
+  }
+  .share-dialog-note,
+  .share-dialog-accept {
+    font-size: 0.86rem;
+  }
 }
 .share-dialog-game {
   font-weight: 600;
