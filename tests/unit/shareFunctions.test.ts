@@ -5,6 +5,7 @@
 // forma del token, clave del contador diario— sí se puede probar aquí. Lo que necesita KV o HTMLRewriter se
 // prueba con `wrangler pages dev`, no con mocks: simular el almacén no demostraría nada.
 import { describe, it, expect } from 'vitest';
+import { JWKS_URL } from '../../functions/_lib/firebaseAuth';
 import { shareDescription, shareTitle } from '../../functions/_lib/html';
 import { isValidToken, newToken } from '../../functions/_lib/http';
 import { dailyQuotaKey, ownerKey, shareKey, userShareKey } from '../../functions/_lib/keys';
@@ -76,6 +77,16 @@ describe('tokens de enlace', () => {
     for (const bad of ['', 'corto', '../../etc/passwd', 'con espacio', 'a'.repeat(65), 'token:con:dospuntos']) {
       expect(isValidToken(bad)).toBe(false);
     }
+  });
+});
+
+describe('claves públicas de Google', () => {
+  // La ruta es `/jwk/` en SINGULAR. El plural `/jwks/` —que es como se llama el formato, y por eso invita al
+  // error— devuelve un 404 en HTML: la verificación fallaría siempre y TODOS los usuarios verían un 401, que
+  // parece un problema de sesión y no de configuración. Esta prueba está para que nadie lo "arregle".
+  it('points at the singular /jwk/ endpoint', () => {
+    expect(JWKS_URL).toBe('https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com');
+    expect(JWKS_URL).not.toContain('/jwks/');
   });
 });
 
