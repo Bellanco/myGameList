@@ -182,9 +182,26 @@ export const PROFILE_TIER_SHARE_MAX_ACTIVE: Record<ProfileTier, number> = {
   bronze: 5, silver: 10, gold: 15, mithril: 50,
 };
 
-/** Techo diario de CREACIONES, anti-abuso. No es la cuota de producto: es la cota del saneador. */
-export const SHARE_MAX_CREATIONS_PER_DAY = 20;
+/**
+ * Techo de CREACIONES al día: el mismo número que sus enlaces activos. «Al día puedes crear tantos como puedes
+ * tener a la vez». Frena el ciclo crear-y-retirar sin una segunda tabla de cifras que mantener, y va atado a la
+ * cuota RESUELTA, así que un recorte individual recorta también el ritmo.
+ */
+export function shareDailyLimit(quota: ShareQuota): number {
+  return quota.maxActive;
+}
 ```
+
+**Techo diario, y por qué es el mismo número.** Al día se pueden crear tantos enlaces como se pueden tener vivos
+(5, 10, 15, 50). Salió de contrastar las cuotas con los límites reales de KV: publicar cuesta **4 escrituras**
+(artículo, propietario, índice y contador) y el plan gratuito da **1.000 al día**, o sea ~250 publicaciones
+diarias en todo el sistema. Con el techo suelto de 20 que había antes, **trece personas** en su tope agotaban el
+día —siete si se dedicaban a crear y retirar—, y las publicaciones legítimas de los demás empezaban a fallar. Con
+la regla actual harían falta ~50 usuarios de bronce a la vez, que es un problema de éxito y no de diseño.
+
+Lo que NO cuesta escrituras es la duración ni el número de enlaces vivos: eso solo ocupa almacenamiento, y con
+~2,5 KB por enlace caben unos 400.000 en el 1 GB del plan gratuito. Por eso los tramos de duración pueden ser
+generosos sin consecuencias.
 
 **Asimetría deliberada con los posts:** bronce **no** puede publicar en el feed
 (`PROFILE_TIER_POST_MAX_LENGTH.bronze = 0`) pero **sí** puede compartir 5 enlaces. No es una incoherencia:
