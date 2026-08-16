@@ -575,9 +575,10 @@ dialog.alert-dialog[open]::backdrop { animation: alertBackdropIn .24s ease both;
 
 
 
-/* Aviso dentro del diálogo de compartir: el nick con el que se firmará es el nombre de la cuenta de Google.
-   No bloquea —es una decisión de su dueño—, pero tiene que verse antes de publicar, no después. */
+/* Aviso dentro del diálogo de compartir: el nombre con el que se firmará no lo eligió su dueño.
+   Va en el color de ATENCIÓN, no en el de peligro: no hay nada roto ni arriesgado, solo algo que conviene mirar
+   antes de publicar. */
 .share-dialog-warn {
-  color: var(--danger, #d33);
+  color: var(--warn, #b8860b);
   opacity: 1;
 }
