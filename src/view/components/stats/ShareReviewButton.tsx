@@ -28,6 +28,20 @@ export const ShareReviewButton = memo(function ShareReviewButton({ game, reviewT
   }, []);
 
   const existing = vm.shareOf(game.id);
+
+  /**
+   * Consejo cuando el error es "no te quedan enlaces". El servidor manda la cuota y cuándo caduca el más antiguo;
+   * aquí se traduce a lo que el usuario puede HACER, que es lo que convierte el error en algo útil.
+   */
+  const quotaHint = (() => {
+    const max = Number((vm.errorDetails.quota as { maxActive?: number } | undefined)?.maxActive || 0);
+    if (!max) {
+      return '';
+    }
+    const oldest = Number(vm.errorDetails.oldestExpiresAt || 0);
+    const days = oldest > 0 ? Math.max(0, Math.ceil((oldest - Date.now()) / 86_400_000)) : 0;
+    return `${SHARE_UI.quotaReached(max)} ${SHARE_UI.quotaHint(days)}`;
+  })();
   // Días que le quedan al enlace, redondeados hacia arriba: "caduca en 1 día" mientras quede algo de ese día.
   const daysLeft = existing ? Math.ceil((existing.expiresAt - Date.now()) / 86_400_000) : 0;
 
@@ -79,6 +93,7 @@ export const ShareReviewButton = memo(function ShareReviewButton({ game, reviewT
         nickIsAccountName={vm.nickIsAccountName}
         publishing={vm.loading}
         error={vm.error}
+        errorHint={quotaHint}
         publishedUrl={publishedUrl}
         renewed={renewed}
         onCancel={close}

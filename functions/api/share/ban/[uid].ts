@@ -11,7 +11,7 @@
 import { requireAdmin } from '../../../_lib/context';
 import { fail, json, readJson } from '../../../_lib/http';
 import { banKey, type Env } from '../../../_lib/keys';
-import { listActiveShares, readBan } from '../../../_lib/quota';
+import { listActiveShares } from '../../../_lib/quota';
 import { removeShare } from '../../../_lib/shares';
 
 const REASON_MAX = 500;
@@ -57,14 +57,4 @@ export async function onRequestDelete(context: { request: Request; env: Env; par
 
   await context.env.SHARES.delete(banKey(uid));
   return json({ banned: false });
-}
-
-/** GET para que el panel pueda consultar el estado sin tener que deducirlo de una lista. */
-export async function onRequestGet(context: { request: Request; env: Env; params: { uid: string } }): Promise<Response> {
-  const caller = await requireAdmin(context.request, context.env);
-  if (caller instanceof Response) {
-    return caller;
-  }
-  const uid = String(context.params.uid || '').trim();
-  return json({ ban: uid ? await readBan(context.env.SHARES, uid) : null });
 }

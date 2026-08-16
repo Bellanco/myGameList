@@ -903,11 +903,9 @@ export const ADMIN_PANEL_UI = {
     // Se dice de dónde sale la estimación para que no se confunda con un dato sellado.
     estimatedHint: 'Estimada a partir de su amistad más antigua: los perfiles creados antes de registrar la fecha de alta no la tienen.',
     lastActivity: 'Última actividad',
-    lastFriendship: 'Último movimiento de amistad',
     friends: 'Amistades',
     pendingOut: 'Peticiones enviadas',
     pendingIn: 'Peticiones recibidas',
-    profileId: 'Pseudónimo',
     // El id que publica su PERFIL. Solo se pinta cuando existe: las escrituras actuales lo purgan, así que en un
     // perfil al día está vacío y enseñar "—" para todo el mundo hacía pensar que faltaba un dato.
     socialGist: 'Gist social (resto legacy)',
@@ -1486,7 +1484,6 @@ export const SHARE_UI = {
   accept: 'Aceptar',
   revoke: 'Dejar de compartir',
   revoking: 'Retirando…',
-  revoked: 'El enlace ya no está disponible',
   renewed: 'Enlace actualizado con la reseña de ahora.',
   screenTitle: 'Reseñas compartidas',
   screenSubtitle: 'Enlaces públicos que has creado. Caducan solos; puedes retirarlos antes.',
@@ -1495,8 +1492,13 @@ export const SHARE_UI = {
   expiresIn: (days: number) => (days <= 0 ? 'Caduca hoy' : `Caduca en ${days} ${days === 1 ? 'día' : 'días'}`),
   bannedTitle: 'No puedes compartir reseñas',
   bannedReason: (reason: string) => (reason ? `Motivo: ${reason}` : 'La administración ha retirado esta posibilidad de tu cuenta.'),
+  // El servidor dice QUÉ pasa y adjunta los datos; estos dos dicen QUÉ HACER, que es lo que convierte un error
+  // en algo accionable. Solo se pintan cuando la respuesta trae el detalle de la cuota.
   quotaReached: (max: number) => `Tienes ${max} de ${max} enlaces activos.`,
-  quotaHint: 'Retira uno o espera a que caduque el más antiguo.',
+  quotaHint: (days: number) =>
+    days > 0
+      ? `Retira uno o espera ${days} ${days === 1 ? 'día' : 'días'} a que caduque el más antiguo.`
+      : 'Retira uno o espera a que caduque el más antiguo.',
   // Página pública: la lee alguien que puede no conocer la app ni tener cuenta. Nada de jerga interna, y el
   // aviso deja claro que esto lo publica una persona y puede dejar de estar.
   publicAria: 'Reseña compartida',
@@ -1505,9 +1507,6 @@ export const SHARE_UI = {
   publicGoneBody: 'Puede haber caducado o haberlo retirado quien lo compartió.',
   publicCta: 'Ir a la página principal',
   publicNavAria: 'Navegación',
-  needsSession: 'Necesitas iniciar sesión con Google para compartir.',
-  needsProfile: 'Necesitas tener tu espacio social creado: de ahí sale el nick con el que se firma la reseña.',
-  failed: 'No se ha podido compartir. Inténtalo de nuevo.',
 } as const;
 
 /** Moderación de enlaces compartidos, dentro de la ficha de cada usuario en `/admin` (ver §6 del plan). */
