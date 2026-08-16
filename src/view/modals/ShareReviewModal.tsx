@@ -23,6 +23,7 @@ export const ShareReviewModal = memo(function ShareReviewModal({
   nickIsAccountName,
   publishing,
   error,
+  errorHint,
   publishedUrl,
   renewed,
   onCancel,
@@ -37,6 +38,8 @@ export const ShareReviewModal = memo(function ShareReviewModal({
   nickIsAccountName: boolean;
   publishing: boolean;
   error: string;
+  /** Qué puede hacer el usuario ante ese error (p. ej. sin enlaces libres). Vacío cuando no aplica. */
+  errorHint: string;
   /** URL ya publicada; mientras sea vacía, el diálogo está en modo "confirmar". */
   publishedUrl: string;
   renewed: boolean;
@@ -152,7 +155,12 @@ export const ShareReviewModal = memo(function ShareReviewModal({
                   <span>{SHARE_UI.consentAccept}</span>
                 </label>
               )}
-              {error ? <p className="share-dialog-error">{error}</p> : null}
+              {error ? (
+                <p className="share-dialog-error">
+                  {error}
+                  {errorHint ? ` ${errorHint}` : ''}
+                </p>
+              ) : null}
               <div className="dialog-actions">
                 <button className="btn btn-secondary" type="button" onClick={onCancel}>
                   {SHARE_UI.cancel}

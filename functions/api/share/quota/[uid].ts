@@ -11,7 +11,6 @@
 import { requireAdmin } from '../../../_lib/context';
 import { fail, json, readJson } from '../../../_lib/http';
 import { overrideKey, type Env } from '../../../_lib/keys';
-import { readOverride } from '../../../_lib/quota';
 
 const REASON_MAX = 500;
 
@@ -64,13 +63,4 @@ export async function onRequestDelete(context: { request: Request; env: Env; par
 
   await context.env.SHARES.delete(overrideKey(uid));
   return json({ override: null });
-}
-
-export async function onRequestGet(context: { request: Request; env: Env; params: { uid: string } }): Promise<Response> {
-  const caller = await requireAdmin(context.request, context.env);
-  if (caller instanceof Response) {
-    return caller;
-  }
-  const uid = String(context.params.uid || '').trim();
-  return json({ override: uid ? await readOverride(context.env.SHARES, uid) : null });
 }
