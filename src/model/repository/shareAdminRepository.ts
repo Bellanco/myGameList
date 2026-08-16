@@ -49,6 +49,8 @@ async function call(path: string, init: RequestInit = {}): Promise<Record<string
 /** Censo de enlaces, paginado por cursor. `uid` filtra por autor, que es lo que se usa al atender un aviso. */
 export async function listAllShares(options: { cursor?: string; uid?: string } = {}): Promise<{
   shares: AdminShareRow[];
+  /** Identificadores de los usuarios vetados. Viene con el censo para no preguntar uno a uno. */
+  bans: string[];
   cursor: string | null;
   complete: boolean;
 }> {
@@ -63,6 +65,7 @@ export async function listAllShares(options: { cursor?: string; uid?: string } =
   const body = await call(`/all${query ? `?${query}` : ''}`);
   return {
     shares: (body.shares as AdminShareRow[]) || [],
+    bans: (body.bans as string[]) || [],
     cursor: (body.cursor as string | null) ?? null,
     complete: Boolean(body.complete),
   };

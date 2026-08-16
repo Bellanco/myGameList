@@ -24,6 +24,11 @@ export async function onRequestGet(context: { request: Request; env: Env }): Pro
 
   const page = await context.env.SHARES.list<ShareIndexMetadata>({ prefix, cursor, limit: PAGE_SIZE });
 
+  // Los vetos viajan con el censo (una sola pasada por el prefijo `ban:`) en vez de consultarse usuario a
+  // usuario: el panel pinta decenas de fichas y preguntar por cada una serían decenas de peticiones para
+  // un dato que cabe en una lista de identificadores.
+  const bans = await context.env.SHARES.list({ prefix: 'ban:', limit: 1_000 });
+
   const shares = page.keys.map((key) => {
     // `user:{uid}:{token}` — el uid puede contener cualquier cosa menos ':', así que se parte por el ÚLTIMO.
     const rest = key.name.slice('user:'.length);
@@ -37,6 +42,7 @@ export async function onRequestGet(context: { request: Request; env: Env }): Pro
 
   return json({
     shares: shares.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0)),
+    bans: bans.keys.map((key) => key.name.slice('ban:'.length)),
     cursor: page.list_complete ? null : page.cursor,
     complete: page.list_complete,
   });

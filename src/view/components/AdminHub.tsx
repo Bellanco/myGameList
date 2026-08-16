@@ -15,7 +15,17 @@ import {
 import type { AdminAnomaly } from '../../model/types/firestore';
 import { useAdminViewModel } from '../../viewmodel/useAdminViewModel';
 import { ConfirmModal } from '../modals/ConfirmModal';
-import { AdminSharesSection } from './AdminSharesSection';
+import { AdminUserShares, type ShareActionRequest } from './AdminUserShares';
+import { ADMIN_SHARES_UI } from '../../core/constants/labels';
+import {
+  adminRemoveShare,
+  banUser,
+  clearQuotaOverride,
+  listAllShares,
+  setQuotaOverride,
+  unbanUser,
+  type AdminShareRow,
+} from '../../model/repository/shareAdminRepository';
 import { HubAvatar } from './socialhub/HubAvatar';
 import { Icon } from './Icon';
 
@@ -85,6 +95,10 @@ export const AdminHub = memo(function AdminHub() {
   const navigate = useNavigate();
   const vm = useAdminViewModel();
   const [pending, setPending] = useState<PendingAction>(null);
+  // Los enlaces de TODOS se piden una vez y se agrupan por usuario: el panel pinta decenas de fichas y una
+  // petición por ficha sería absurda para un dato que cabe en una sola respuesta.
+  const [sharesByUser, setSharesByUser] = useState<Record<string, AdminShareRow[]>>({});
+  const [bannedUsers, setBannedUsers] = useState<Set<string>>(new Set());
   const [notice, setNotice] = useState('');
   const noticeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -104,6 +118,37 @@ export const AdminHub = memo(function AdminHub() {
       // Sin permiso de portapapeles no hay nada que decir: el uid está a la vista y se puede seleccionar.
     }
   }, []);
+
+  const loadShares = useCallback(async () => {
+    try {
+      const page = await listAllShares();
+      const grouped: Record<string, AdminShareRow[]> = {};
+      for (const row of page.shares) {
+        (grouped[row.uid] ||= []).push(row);
+      }
+      setSharesByUser(grouped);
+      setBannedUsers(new Set(page.bans));
+    } catch {
+      // Sin enlaces que enseñar, el resto del panel sigue siendo útil: no se rompe la pantalla por esto.
+    }
+  }, []);
+
+  useEffect(() => {
+    void loadShares();
+  }, [loadShares]);
+
+  /** Acciones de moderación de enlaces: ejecutan, avisan y recargan. La confirmación la pone quien llama. */
+  const runShareAction = useCallback(
+    async (action: () => Promise<string>) => {
+      try {
+        setNotice(await action());
+      } catch {
+        setNotice(ADMIN_SHARES_UI.failed);
+      }
+      await loadShares();
+    },
+    [loadShares],
+  );
 
   const closeConfirm = useCallback(() => setPending(null), []);
   const acceptConfirm = useCallback(() => {
@@ -283,6 +328,40 @@ export const AdminHub = memo(function AdminHub() {
                     </ul>
                   ) : null}
 
+                  {/* Enlaces compartidos de ESTE usuario, plegados. La moderación vive en su ficha porque la
+                      pregunta siempre es "¿qué ha publicado esta persona?", no "¿qué enlaces hay en total". */}
+                  <AdminUserShares
+                    uid={user.uid}
+                    shares={sharesByUser[user.uid] || []}
+                    banned={bannedUsers.has(user.uid)}
+                    onConfirm={(request: ShareActionRequest) => setPending({ title: request.title, run: () => void request.run() })}
+                    onRemove={(token) => runShareAction(async () => {
+                      await adminRemoveShare(token);
+                      return ADMIN_SHARES_UI.removed;
+                    })}
+                    onBan={(uid, options) => runShareAction(async () => {
+                      const purged = await banUser(uid, options);
+                      return ADMIN_SHARES_UI.banned(purged);
+                    })}
+                    onUnban={(uid) => runShareAction(async () => {
+                      await unbanUser(uid);
+                      return ADMIN_SHARES_UI.unbanned;
+                    })}
+                    onQuota={(uid, values) => runShareAction(async () => {
+                      if (values.maxActive <= 0 && values.ttlDays <= 0) {
+                        // Los dos campos a cero se leen como "quítale el ajuste": el endpoint rechaza un ajuste
+                        // vacío, así que se traduce a lo que el administrador quiere decir.
+                        await clearQuotaOverride(uid);
+                        return ADMIN_SHARES_UI.quotaCleared;
+                      }
+                      await setQuotaOverride(uid, {
+                        ...(values.maxActive > 0 ? { maxActive: values.maxActive } : {}),
+                        ...(values.ttlDays > 0 ? { ttlDays: values.ttlDays } : {}),
+                      });
+                      return ADMIN_SHARES_UI.quotaSet;
+                    })}
+                  />
+
                   {/* Ficha completa: todo lo que las reglas dejan leer. `dl` y no tabla, para que en móvil
                       caiga a una columna sin scroll horizontal. */}
                   <dl className="admin-user-data">
@@ -300,8 +379,6 @@ export const AdminHub = memo(function AdminHub() {
                     <div><dt>{A.field.friends}</dt><dd>{user.friends}</dd></div>
                     <div><dt>{A.field.pendingOut}</dt><dd>{user.pendingOut}</dd></div>
                     <div><dt>{A.field.pendingIn}</dt><dd>{user.pendingIn}</dd></div>
-                    <div><dt>{A.field.lastFriendship}</dt><dd>{formatActivity(user.lastFriendshipAt)}</dd></div>
-                    <div><dt>{A.field.profileId}</dt><dd><code>{user.profileId || A.field.none}</code></dd></div>
                     {/* El id del canal ya no se publica en el perfil, así que este campo solo existe como resto
                         legacy: pintarlo siempre enseñaba un "—" a todo el mundo. El canal de alguien se ve ahora
                         por lo que guardan sus amistades, que es el dato de abajo. */}
@@ -586,8 +663,6 @@ export const AdminHub = memo(function AdminHub() {
           </ul>
         )}
       </div>
-
-      <AdminSharesSection />
 
       <ConfirmModal
         open={pending !== null}
