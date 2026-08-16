@@ -165,6 +165,7 @@ export const UI_MESSAGES = {
     admin: 'Administración',
     legal: 'Información legal',
     stats: 'Estadísticas de mis listas',
+    'shared-review': 'Reseña compartida',
   },
   skipToContent: 'Saltar al contenido',
   // A11y-4: nombre accesible de cada pestaña de listado. Hace falta explícito porque el título visible
@@ -1481,6 +1482,14 @@ export const SHARE_UI = {
   bannedReason: (reason: string) => (reason ? `Motivo: ${reason}` : 'La administración ha retirado esta posibilidad de tu cuenta.'),
   quotaReached: (max: number) => `Tienes ${max} de ${max} enlaces activos.`,
   quotaHint: 'Retira uno o espera a que caduque el más antiguo.',
+  // Página pública: la lee alguien que puede no conocer la app ni tener cuenta. Nada de jerga interna, y el
+  // aviso deja claro que esto lo publica una persona y puede dejar de estar.
+  publicAria: 'Reseña compartida',
+  publicLoading: 'Cargando la reseña…',
+  publicGoneTitle: 'Este enlace ya no está disponible',
+  publicGoneBody: 'Puede haber caducado o haberlo retirado quien lo compartió.',
+  publicNotice: 'Reseña publicada por su autor. Puede dejar de estar disponible en cualquier momento.',
+  publicCta: 'Descubre My Game List',
   needsSession: 'Necesitas iniciar sesión con Google para compartir.',
   needsProfile: 'Necesitas tener tu espacio social creado: de ahí salen tu nick y tu rango.',
   failed: 'No se ha podido compartir. Inténtalo de nuevo.',

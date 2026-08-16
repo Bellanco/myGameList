@@ -11,7 +11,7 @@ import { matchRoutes } from 'react-router-dom';
 import { LEGAL_ROUTES } from './legal';
 
 /** Zona de la app; decide la navegación inferior, el encabezado y el cromo alrededor del contenido. */
-export type AppSection = 'lists' | 'social' | 'stats' | 'settings' | 'account' | 'integrations' | 'inbox' | 'legal' | 'admin';
+export type AppSection = 'lists' | 'social' | 'stats' | 'settings' | 'account' | 'integrations' | 'inbox' | 'legal' | 'admin' | 'shared-review';
 
 export const APP_ROUTES: ReadonlyArray<{ path: string; section: AppSection }> = [
   { path: '/completados', section: 'lists' },
@@ -37,6 +37,10 @@ export const APP_ROUTES: ReadonlyArray<{ path: string; section: AppSection }> = 
   { path: LEGAL_ROUTES.cookies, section: 'legal' },
   // Ruta OCULTA (sin enlace en la navegación); quien decide el acceso son las reglas de Firestore, no esta tabla.
   { path: '/admin', section: 'admin' },
+  // Reseña compartida con enlace público. Quien NO tiene la app en este navegador ni llega aquí: `main.tsx` monta
+  // una pantalla suelta antes del enrutador (modo artículo). Esta entrada es para quien SÍ la tiene, y sin ella
+  // el enlace rebotaría a `FALLBACK_ROUTE` — que es exactamente el fallo que documenta la nota de arriba.
+  { path: '/r/:token', section: 'shared-review' },
 ];
 
 /** Ruta a la que rebota cualquier cosa no listada arriba. */

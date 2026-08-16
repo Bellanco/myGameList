@@ -110,6 +110,7 @@ const SocialHubInner = memo(function SocialHubInner({
     openProfileDetail,
     openOwnProfileDetail,
     isOwnProfileDetail,
+    isOwnDetailEvent,
     handleActivityItemKeyDown,
     handleProfileCardKeyDown,
     handleSaveProfile,
@@ -212,6 +213,7 @@ const SocialHubInner = memo(function SocialHubInner({
           onBack={goToSocial}
           status={status}
           statusKind={statusKind}
+          shareable={isOwnDetailEvent}
         />
       );
     }
