@@ -1,7 +1,7 @@
 // POST /api/share — publica (o renueva) el enlace público de una reseña.
 //
-// Orden de comprobaciones, y no es intercambiable: sesión → veto → cuota diaria → cuota de enlaces activos. El
-// veto va antes que la cuota porque a quien está vetado no se le dice "te quedan 3 enlaces".
+// Orden de comprobaciones, y no es intercambiable: sesión → veto → perfil (de ahí sale el nick) → cuota diaria →
+// enlaces activos. El veto va antes que todo lo demás porque a quien está vetado no se le dice "te quedan 3".
 //
 // La CADUCIDAD la pone el servidor a partir del rango del usuario y su ajuste individual. Si viniera del cliente,
 // la cuota dejaría de ser una barrera y sería una sugerencia.

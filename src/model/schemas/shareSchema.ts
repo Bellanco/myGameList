@@ -6,9 +6,9 @@
 // sesión y sin ser su amigo. Un campo de más colado por un bug aguas arriba (el `hours` que el componente de
 // detalle sí recibe, un `uid` arrastrado del perfil, la foto) sería una fuga, no una molestia. Falla cerrado.
 //
-// Se valida DOS VECES: en el cliente antes de enviar y en la Pages Function antes de guardar. La segunda es la
-// que cuenta —el cliente es manipulable—, pero la primera convierte un bug nuestro en un error inmediato en
-// desarrollo en vez de en una fuga en producción.
+// QUIÉN LO USA: la Pages Function, antes de escribir en KV. El cliente NO valida antes de enviar, y es a
+// propósito: sería una comprobación redundante —el servidor rechaza igual— a cambio de arrastrar Zod al flujo de
+// compartir. La validación que cuenta es la del servidor, porque el cliente es manipulable.
 //
 // OJO CON EL ARRANQUE: Zod NO forma parte del bundle de arranque (ver `BOOT_PAYLOAD_BUDGET_KB` en
 // scripts/ci-validate.js y el `loadSocialGistValidator` del canal social). Este módulo se carga BAJO DEMANDA, al
@@ -87,12 +87,6 @@ export function assertValidSharedReview(data: unknown): void {
   }
 }
 
-/**
- * Lectura tolerante para la página pública: devuelve el artículo o `null` si no valida. Aquí NO se lanza porque
- * un artículo corrupto o de una versión futura no debe romper la página de un visitante: se le enseña el mismo
- * mensaje que si el enlace hubiera caducado.
- */
-export function parseSharedReview(data: unknown): z.infer<typeof sharedReviewSchema> | null {
-  const result = sharedReviewSchema.safeParse(data);
-  return result.success ? result.data : null;
-}
+// NO hay aquí una función de LECTURA tolerante, y es deliberado: la página pública comprueba por su cuenta que
+// el artículo es de la versión que sabe pintar (`publicShareRepository`), sin arrastrar Zod a un chunk que se
+// quiere mínimo. Este módulo es solo para ESCRIBIR, que es donde la validación tiene consecuencias.

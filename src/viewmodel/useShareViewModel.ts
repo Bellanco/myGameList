@@ -13,6 +13,13 @@ export interface ShareViewModel {
   shares: SharedReviewIndexEntry[];
   quota: ShareQuota | null;
   ban: ShareBan | null;
+  /**
+   * ¿Hay sesión de Google en este navegador? `null` mientras no se sabe.
+   *
+   * Sin sesión no hay nada que pedir ni que ofrecer: compartir exige identidad. Se comprueba ANTES de llamar a la
+   * API para no gastar una petición que solo puede acabar en 401, y para no enseñar un botón que fallaría.
+   */
+  available: boolean | null;
   /** Nick con el que el SERVIDOR firmará la reseña. Se enseña antes de publicar. */
   nick: string;
   /**
@@ -40,6 +47,7 @@ export function useShareViewModel(): ShareViewModel {
   const [shares, setShares] = useState<SharedReviewIndexEntry[]>([]);
   const [quota, setQuota] = useState<ShareQuota | null>(null);
   const [ban, setBan] = useState<ShareBan | null>(null);
+  const [available, setAvailable] = useState<boolean | null>(null);
   const [nick, setNick] = useState('');
   const [nickIsAccountName, setNickIsAccountName] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -61,6 +69,14 @@ export function useShareViewModel(): ShareViewModel {
   const refresh = useCallback(async () => {
     setLoading(true);
     try {
+      const authUser = await getCurrentSocialAuthUser().catch(() => null);
+      if (!authUser) {
+        setAvailable(false);
+        clearError();
+        return;
+      }
+      setAvailable(true);
+
       const data = await listMyShares();
       setShares(data.shares || []);
       setQuota(data.quota || null);
@@ -68,8 +84,7 @@ export function useShareViewModel(): ShareViewModel {
       setNick(data.nick || '');
       // La comparación se hace AQUÍ y no en el servidor: el nombre de la cuenta de Google es un dato de la
       // sesión del navegador, y la Function no tiene por qué conocerlo ni guardarlo.
-      const authUser = await getCurrentSocialAuthUser().catch(() => null);
-      const accountName = String(authUser?.displayName || '').trim();
+      const accountName = String(authUser.displayName || '').trim();
       setNickIsAccountName(Boolean(accountName) && accountName === String(data.nick || '').trim());
       clearError();
     } catch (problem) {
@@ -128,7 +143,7 @@ export function useShareViewModel(): ShareViewModel {
   const shareOf = useCallback((gameId: number) => byGame.get(gameId) || null, [byGame]);
 
   return {
-    shares, quota, ban, nick, nickIsAccountName,
+    shares, quota, ban, available, nick, nickIsAccountName,
     loading, busyToken, error, errorDetails,
     refresh, share, revoke, shareOf, clearError,
   };

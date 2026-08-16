@@ -70,6 +70,12 @@ export const ShareReviewButton = memo(function ShareReviewButton({ game, reviewT
     vm.clearError();
   }, [vm]);
 
+  // Sin sesión de Google no se ofrece: publicar exige identidad y el botón solo llevaría a un error. Mientras no
+  // se sabe (`null`) tampoco se pinta, para no enseñarlo y quitarlo medio segundo después.
+  if (vm.available !== true) {
+    return null;
+  }
+
   if (vm.ban) {
     return (
       <span className="hub-feed-game-chip share-banned" title={SHARE_UI.bannedReason(vm.ban.reason || '')}>

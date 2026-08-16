@@ -17,7 +17,14 @@ export async function readSharedReview(token: string): Promise<SharedReview | nu
     if (!response.ok) {
       return null;
     }
-    return (await response.json()) as SharedReview;
+    const body = (await response.json()) as Partial<SharedReview> | null;
+    // Comprobación mínima, sin Zod a propósito: meter el esquema aquí arrastraría la librería entera al chunk de
+    // una página que se quiere mínima. Basta con confirmar que es un objeto de la versión que esta pantalla sabe
+    // pintar; lo demás lo toleran los componentes (`MetaSection` ya ignora listas ausentes).
+    if (!body || typeof body !== 'object' || body.v !== 1) {
+      return null;
+    }
+    return body as SharedReview;
   } catch {
     return null;
   }
