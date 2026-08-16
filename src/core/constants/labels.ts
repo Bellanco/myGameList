@@ -1460,8 +1460,14 @@ export const SHARE_UI = {
   consentTitle: 'Vas a publicar esta reseña en internet',
   consentPublished: 'Se publica: el juego, tu nota, el texto completo de la reseña, sus plataformas, géneros y puntos fuertes y débiles, tu nick y la fecha.',
   consentPrivate: 'No se publica: tu correo, tu identificador, tus Gists, tus horas de juego, tu foto ni el resto de tu biblioteca.',
-  consentDuration: (days: number, maxActive: number) =>
-    `Tu rango te permite ${maxActive} ${maxActive === 1 ? 'enlace activo' : 'enlaces activos'}, y cada uno dura ${days} ${days === 1 ? 'día' : 'días'}.`,
+  // Los números salen del rango del perfil, pero al usuario se le dicen sin nombrarlo: lo que necesita saber es
+  // cuántos enlaces puede tener y cuánto duran, no de dónde salen esas cifras.
+  consentDuration: (days: number, maxActive: number) => {
+    const duracion = `${days} ${days === 1 ? 'día' : 'días'}`;
+    return maxActive === 1
+      ? `Puedes tener 1 enlace activo a la vez, y dura ${duracion}.`
+      : `Puedes tener ${maxActive} enlaces activos a la vez, y cada uno dura ${duracion}.`;
+  },
   consentRevocable: 'Puedes retirarlo cuando quieras desde Ajustes. Eso lo deja inaccesible, pero no recoge las copias que ya se hayan compartido.',
   consentAccept: 'He leído lo anterior y quiero publicarla',
   signedAs: (nick: string) => `Se publicará firmada como «${nick}».`,
@@ -1494,7 +1500,7 @@ export const SHARE_UI = {
   publicCta: 'Ir a la página principal',
   publicNavAria: 'Navegación',
   needsSession: 'Necesitas iniciar sesión con Google para compartir.',
-  needsProfile: 'Necesitas tener tu espacio social creado: de ahí salen tu nick y tu rango.',
+  needsProfile: 'Necesitas tener tu espacio social creado: de ahí sale el nick con el que se firma la reseña.',
   failed: 'No se ha podido compartir. Inténtalo de nuevo.',
 } as const;
 
