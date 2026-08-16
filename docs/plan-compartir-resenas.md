@@ -396,7 +396,7 @@ Está avisado en la cabecera del módulo.
 **Verificación:** `npm test` (111 ficheros, 1081 casos), `npm run typecheck` y `npm run validate` en verde. El
 presupuesto de arranque no se mueve (210,3 kB de 215): los módulos nuevos todavía no los importa nadie.
 
-### Paso 3 — Pages Functions · **HECHO** (falta `FIREBASE_PROJECT_ID`)
+### Paso 3 — Pages Functions · **HECHO**
 
 ```
 functions/_lib/firebaseAuth.ts   verificación de ID token (JWKS + RS256, caché en KV)
@@ -440,7 +440,7 @@ token; `/r/:token` con un artículo sembrado → reescribe `<title>`, `og:title`
 `og:type: article` y `og:url`, con las comillas del nombre del juego escapadas a `&quot;` y sin rastro de la
 etiqueta `<script>` incrustada en el texto de prueba.
 
-**Configuración completa.** `FIREBASE_PROJECT_ID = "mylists-f7313"`, tomado del fallback público de
+**Configuración completa y verificada en un despliegue real.** `FIREBASE_PROJECT_ID = "mylists-f7313"`, tomado del fallback público de
 `firebaseClient.ts:139-147`: como en Cloudflare no hay variables `VITE_FIREBASE_*`, el build usa ese fallback, así
 que es el proyecto real. Si algún día se definen esas variables en el panel, hay que sincronizar este valor.
 
@@ -498,7 +498,7 @@ Firebase (verificable en la pestaña de red).
   mismas dos vistas. La ficha muestra la cuota efectiva y el valor de rango del que viene.
 - Sube a ~1,5 días con el veto y el ajuste incluidos.
 
-### Paso 7 — Legal, supresión y cierre · **HECHO** (falta QA en clientes reales)
+### Paso 7 — Legal, supresión y cierre · **HECHO** (falta la QA de tarjetas en clientes reales)
 
 - `legal.ts` + `LEGAL_VERSION`.
 - `accountDeletionRepository.ts`: retirada de enlaces antes de borrar el perfil.
@@ -533,7 +533,7 @@ Firebase (verificable en la pestaña de red).
 | Enumeración de tokens | Token aleatorio de 128 bits, nunca derivado de `uid` o `gameId` |
 | Fuga de identidad | El artículo no lleva uid, email ni gistId; el índice va en clave aparte; esquema Zod como garantía positiva |
 | Campo privado colado (`hours`) | `hours: null` explícito + denylist en el esquema |
-| Bots de preview bloqueados en el borde | Verificar Bot Fight Mode *(por confirmar)* |
+| Bots de preview bloqueados en el borde | Bot Fight Mode no aplica en `pages.dev` (§12.3); revisar al pasar a dominio propio |
 | Supresión incompleta | El borrado de cuenta retira los enlaces antes de borrar el perfil |
 
 ---
@@ -560,6 +560,20 @@ Si alguna no convence, se cambia aquí y en el código:
    excepción ni motivo. Es la opción discreta y evita convertir un número en una conversación. *La alternativa
    sería enseñar el motivo cuando el ajuste es a la baja, por transparencia; se descarta porque un recorte
    silencioso ya se nota (el contador baja) y quien quiera saber por qué preguntará.*
+
+## 11 bis. Estado del despliegue
+
+**Vista previa viva y funcionando**: `https://develop.mygamelist.pages.dev` sirve ya esta rama, y sus Functions
+responden con **404 «Este enlace ya no está disponible»** y **401 «Falta la sesión»** — no con el 500 de
+«no está configurada», que es lo que saldría si faltara el binding `SHARES` o `FIREBASE_PROJECT_ID`. Es decir:
+el bloque `[env.preview]` del `wrangler.toml` **valida en un despliegue de verdad**, con su namespace de vista
+previa, que era la incógnita que quedaba de la configuración.
+
+Producción (`mygamelist.pages.dev`) sigue en la versión anterior: su `og:image` todavía apunta al SVG.
+
+**Lo que se puede probar ya en la vista previa, sin tocar producción:** publicar un enlace con una cuenta real
+de principio a fin, la pantalla de gestión en Cuenta, la moderación en `/admin` y la página pública `/r/:token`.
+Los datos van al KV de vista previa, así que nada de esto ensucia el de producción.
 
 ## 12. Confirmaciones
 
