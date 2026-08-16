@@ -2,8 +2,41 @@ name = "mygamelist"
 compatibility_date = "2026-05-10"
 pages_build_output_dir = "./dist"
 
+# ─────────────────────────────────────────────────────────────────────────────────────────────────────────────
+# ESTE FICHERO ES LA FUENTE DE VERDAD. Desde que lleva `pages_build_output_dir`, lo que se configure en el panel
+# de Cloudflare (Settings → Bindings, variables) NO se aplica: todo tiene que estar aquí.
+#
+# POR QUÉ ESTÁ TODO REPETIDO TRES VECES (no es un descuido, no lo "limpies"): `vars` y `kv_namespaces` son claves
+# NO HEREDABLES en Pages. En cuanto una sola de ellas se declara para un entorno (`[[env.production.kv_namespaces]]`),
+# TODAS las no heredables deben declararse en ESE entorno. Si se dejara `GITHUB_CLIENT_ID` solo en el bloque de
+# nivel superior, funcionaría en local y el despliegue fallaría al validar.
+#
+# Qué aplica dónde: el bloque de nivel superior manda en DESARROLLO LOCAL; `[env.preview]` en los despliegues de
+# vista previa (cualquier rama que no sea la de producción); `[env.production]` en producción.
+# ─────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
 # Runtime de las Pages Functions. client_id PÚBLICO de la GitHub OAuth App (aparece en el bundle, no es secreto).
 # El secret NO va aquí: se pone cifrado con `npx wrangler pages secret put GITHUB_CLIENT_SECRET`.
 # El gemelo de build (VITE_GITHUB_CLIENT_ID) está en .env.production.
 [vars]
 GITHUB_CLIENT_ID = "Ov23ctq0mTkYHf9zqfGB"
+
+# Reseñas compartidas con enlace público (ver docs/plan-compartir-resenas.md). En local se usa el namespace de
+# vista previa a propósito: así una prueba nunca escribe en los datos que están sirviendo enlaces reales.
+[[kv_namespaces]]
+binding = "SHARES"
+id = "b59825792b514cca94c77ab12463340a" # mygamelist-shares-preview
+
+[env.preview.vars]
+GITHUB_CLIENT_ID = "Ov23ctq0mTkYHf9zqfGB"
+
+[[env.preview.kv_namespaces]]
+binding = "SHARES"
+id = "b59825792b514cca94c77ab12463340a" # mygamelist-shares-preview
+
+[env.production.vars]
+GITHUB_CLIENT_ID = "Ov23ctq0mTkYHf9zqfGB"
+
+[[env.production.kv_namespaces]]
+binding = "SHARES"
+id = "6b6aa270bab144dcb1430190c831fcbc" # mygamelist-shares
