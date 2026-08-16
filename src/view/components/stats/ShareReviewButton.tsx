@@ -67,7 +67,7 @@ export const ShareReviewButton = memo(function ShareReviewButton({ game, reviewT
   return (
     <>
       <button className="btn btn-secondary" type="button" onClick={() => setOpen(true)} aria-label={SHARE_UI.actionAria}>
-        <Icon name="upload" />
+        <Icon name="share-nodes" />
         <span>{existing ? SHARE_UI.shared : SHARE_UI.action}</span>
       </button>
       {existing ? <span className="share-expiry">{SHARE_UI.expiresIn(daysLeft)}</span> : null}
