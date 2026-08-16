@@ -35,6 +35,7 @@ export function SocialProfileReviewScreen({
   backLabel,
   status,
   statusKind,
+  actions = null,
 }: {
   SOCIAL_UI: SocialUiLabels;
   review: ProfileReview | null;
@@ -44,6 +45,14 @@ export function SocialProfileReviewScreen({
   backLabel?: string;
   status: string;
   statusKind: string;
+  /**
+   * Acciones propias de quien usa esta pantalla, a la derecha del botón de volver.
+   *
+   * Existe para el botón de COMPARTIR, que solo tiene sentido sobre una reseña PROPIA: esta pantalla la reutilizan
+   * el hub social (donde la reseña es de otra persona y no hay nada que compartir) y el panel de estadísticas
+   * (donde es tuya). En vez de meter aquí un `esMía`, cada sitio pasa lo que le corresponde.
+   */
+  actions?: React.ReactNode;
 }) {
   const header = (
     <>
@@ -58,6 +67,7 @@ export function SocialProfileReviewScreen({
         <div className="hub-screen-actions-left">
           <HubBackButton onBack={onBack} label={backLabel || SOCIAL_UI.feed.reviewsBackToList} />
         </div>
+        {actions ? <div className="hub-screen-actions-right">{actions}</div> : null}
       </div>
     </>
   );

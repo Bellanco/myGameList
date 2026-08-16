@@ -1,9 +1,17 @@
 import { useEffect, useState } from 'react';
+import { useGenericPhoto } from '../../hooks/useGenericPhoto';
 
 /**
  * Avatar del hub social: muestra la foto (`photoURL`) y, si no hay o la imagen falla al cargar (p. ej. una URL de
  * Google caducada/rotada), cae a la SILUETA de persona a trazo. Renderiza SOLO el `<img>`/`<span>`; el envoltorio
  * clicable (botón) lo pone cada llamador.
+ *
+ * TAMBIÉN CAE A LA SILUETA CON EL AVATAR GENÉRICO DE GOOGLE (el monograma de la inicial sobre un círculo de color;
+ * ver `core/social/googlePhoto`). Se descarta AQUÍ, al pintar, y no solo en el origen, porque esas URLs ya están
+ * publicadas en los canales de mucha gente y en los documentos de amistad: filtrarlas en el render las retira de
+ * golpe —feed, directorio, solicitudes, panel de administración— sin esperar a que cada usuario reabra la app ni
+ * migrar nada. Que el monograma no se pinte es justo el motivo de que la silueta sea única: la inicial sobre color
+ * es lo que esta pantalla decidió NO hacer.
  *
  * La silueta es la MISMA para todo el mundo. Antes era la inicial del nick sobre uno de seis tonos elegido por hash
  * del nombre, y eso tenía dos problemas: dos de los seis tonos eran el mismo azul (así que había menos variedad de
@@ -19,13 +27,14 @@ export function HubAvatar({
   sizeClass?: string;
 }) {
   const [failed, setFailed] = useState(false);
+  const generic = useGenericPhoto(photoURL);
 
   // Si cambia la URL (otro perfil, refresco), se reintenta cargar la imagen.
   useEffect(() => {
     setFailed(false);
   }, [photoURL]);
 
-  if (photoURL && !failed) {
+  if (photoURL && !failed && !generic) {
     return (
       <img
         className={`hub-avatar hub-avatar-img ${sizeClass}`.trim()}

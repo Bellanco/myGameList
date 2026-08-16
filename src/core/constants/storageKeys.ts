@@ -44,3 +44,9 @@ export const ANALYTICS_CONSENT_KEY = 'mis-listas-analytics-consent';
 // Import — preferencia "qué datos traer" (plataformas/géneros/horas/nota) por grupo: juegos nuevos y juegos que
 // ya están en tus listas. JSON con la forma de `ImportFieldPrefs`. Local, no se sincroniza (como la bandeja).
 export const IMPORT_FIELDS_KEY = 'mis-listas-import-fields';
+
+// Compartir reseñas — marca de que YA se leyó y aceptó el aviso de publicación (valor: la versión legal
+// aceptada). Publicar una reseña la saca de tus Gists y la pone en internet, así que el aviso se enseña ENTERO
+// la primera vez; luego basta con el resumen. Se guarda la versión y no un simple `true` a propósito: si cambia
+// lo que se publica, `LEGAL_VERSION` cambia y el aviso vuelve a mostrarse completo.
+export const SHARE_CONSENT_KEY = 'mis-listas-share-consent';

@@ -42,18 +42,30 @@
   } catch (e) {}
 })();</script>
     <meta name="description" content="Organiza, puntúa y sincroniza tu colección de videojuegos.">
+    <!-- `og:type` y `og:url` los reescribe la Function de `/r/:token` para las reseñas compartidas (pasan a
+         `article` y a la URL del enlace). Tienen que existir aquí porque HTMLRewriter solo modifica etiquetas
+         presentes: no puede inventarse una que no esté en el shell. -->
     <meta property="og:type" content="website">
+    <meta property="og:url" content="https://mygamelist.pages.dev/">
     <meta property="og:site_name" content="My Game List">
     <meta property="og:title" content="My Game List">
     <meta property="og:description" content="Organiza, puntúa y sincroniza tu colección de videojuegos.">
-    <meta property="og:image" content="/share-card.svg">
-    <meta property="og:image:type" content="image/svg+xml">
+    <!-- La tarjeta es JPEG, no SVG: X, WhatsApp, Facebook y LinkedIn no renderizan SVG en og:image (aceptan
+         PNG, JPEG, WebP y GIF), así que la previsualización salía vacía en todas ellas. El .jpg lo genera
+         `scripts/build-share-card.mjs` a partir de `public/share-card.svg`, que sigue siendo la fuente editable.
+         La URL es ABSOLUTA porque es lo que pide Open Graph (los agentes actuales resuelven las relativas, pero
+         no todos lo garantizan). En los despliegues de vista previa apuntará a la imagen de producción, que es
+         justo lo que se quiere: la tarjeta no cambia entre entornos. -->
+    <meta property="og:image" content="https://mygamelist.pages.dev/share-card.jpg">
+    <meta property="og:image:type" content="image/jpeg">
     <meta property="og:image:width" content="1200">
     <meta property="og:image:height" content="630">
+    <meta property="og:image:alt" content="My Game List — organiza, puntúa y sincroniza tu colección de videojuegos">
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="My Game List">
     <meta name="twitter:description" content="Organiza, puntúa y sincroniza tu colección de videojuegos.">
-    <meta name="twitter:image" content="/share-card.svg">
+    <meta name="twitter:image" content="https://mygamelist.pages.dev/share-card.jpg">
+    <meta name="twitter:image:alt" content="My Game List — organiza, puntúa y sincroniza tu colección de videojuegos">
     <title>Mis Listas de juegos</title>
     <!-- Iconos como archivos reales (no data: URI): así Firefox y Chromium los usan de forma
          fiable en pestaña, marcadores, historial y página de inicio, en escritorio y móvil.

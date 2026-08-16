@@ -8,6 +8,7 @@ import { persistScoreScale } from '../../model/repository/scorePreferenceReposit
 import { useAnalyticsConsent } from '../hooks/useAnalyticsConsent';
 import { useScoreScale } from '../hooks/useScoreScale';
 import { Icon } from './Icon';
+import { SharedReviewsCard } from './SharedReviewsCard';
 import { StarRating } from './StarRating';
 import { ScoreRing } from './ScoreRing';
 import { AppearanceSettings } from './AppearanceSettings';
@@ -15,6 +16,8 @@ import { DangerZone } from './DangerZone';
 
 interface AccountHubProps {
   scoreScaleUid: string | null; // uid de Google (para gatear/guardar la escala); null → candado
+  /** ¿Tiene espacio social? De ahí salen el nick y el rango, así que sin él no hay enlaces que gestionar. */
+  hasSocialProfile: boolean;
 }
 
 /**
@@ -22,7 +25,7 @@ interface AccountHubProps {
  * + visibilidad del botón de Steam Deck). Solo se llega aquí con sesión de Google (la pestaña inferior "Cuenta"
  * únicamente aparece con sesión; App redirige `/cuenta` a la lista si no hay cuenta).
  */
-export const AccountHub = memo(function AccountHub({ scoreScaleUid }: AccountHubProps) {
+export const AccountHub = memo(function AccountHub({ scoreScaleUid, hasSocialProfile }: AccountHubProps) {
   const scoreScale = useScoreScale();
   const scoreScaleLabels = UI_MESSAGES.settings.scoreScale;
   const analyticsLabels = UI_MESSAGES.settings.analytics;
@@ -104,6 +107,11 @@ export const AccountHub = memo(function AccountHub({ scoreScaleUid }: AccountHub
           <Link to={LEGAL_ROUTES.cookies}>{LEGAL_DOCUMENTS.cookies.title}</Link>
         </div>
       </div>
+
+      {/* Los enlaces públicos van en CUENTA y no en Ajustes: no son una preferencia de la app, son contenido tuyo
+          publicado en internet. Y van los últimos, justo antes de la zona de riesgo, porque retirar un enlace es
+          lo más cercano a esas acciones que hay en esta pantalla. */}
+      <SharedReviewsCard enabled={hasSocialProfile} />
 
       <DangerZone />
     </section>

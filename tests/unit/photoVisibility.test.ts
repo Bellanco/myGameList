@@ -33,6 +33,31 @@ describe('resolveViewer', () => {
     expect(canSeeOtherPhotos(sinFotoEnGoogle)).toBe(false);
     expect(photoForViewer({ photoURL: FOTO, isOwn: false, isFriend: true, viewer: sinFotoEnGoogle })).toBe('');
   });
+
+  // El agujero que tapa `googlePhoto`: Google no deja a nadie sin `photoURL` —a quien no sube foto le genera un
+  // monograma con su inicial—, así que "tener URL" no basta para pasar por "tener cara".
+  it('el avatar genérico de Google no cuenta como foto', () => {
+    const conMonograma = resolveViewer({ showPhoto: true, ownPhotoURL: FOTO, ownPhotoIsGeneric: true, tier: 'bronze' });
+    expect(conMonograma.showsOwnPhoto).toBe(false);
+    expect(canSeeOtherPhotos(conMonograma)).toBe(false);
+    expect(photoForViewer({ photoURL: FOTO, isOwn: false, isFriend: true, viewer: conMonograma })).toBe('');
+  });
+
+  // El veredicto llega por red. Mientras no está, manda lo de siempre: pintar la foto. Dura lo que una respuesta ya
+  // cacheada, y el otro lado del error —quitarle la cara a quien sí la tiene— es peor.
+  it('sin veredicto todavía, la foto se da por real', () => {
+    expect(resolveViewer({ showPhoto: true, ownPhotoURL: FOTO, tier: 'bronze' }).showsOwnPhoto).toBe(true);
+    expect(resolveViewer({ showPhoto: true, ownPhotoURL: FOTO, ownPhotoIsGeneric: undefined, tier: 'bronze' }).showsOwnPhoto).toBe(true);
+    expect(resolveViewer({ showPhoto: true, ownPhotoURL: FOTO, ownPhotoIsGeneric: false, tier: 'bronze' }).showsOwnPhoto).toBe(true);
+  });
+
+  // Mithril (la administración) queda exento de la RECIPROCIDAD, no de esto: sigue sin aportar foto, pero su rango le
+  // deja ver las de los demás igualmente.
+  it('el monograma tampoco quita el rango', () => {
+    const admin = resolveViewer({ showPhoto: true, ownPhotoURL: FOTO, ownPhotoIsGeneric: true, tier: 'mithril' });
+    expect(admin.showsOwnPhoto).toBe(false);
+    expect(canSeeOtherPhotos(admin)).toBe(true);
+  });
 });
 
 describe('canSeeOtherPhotos', () => {

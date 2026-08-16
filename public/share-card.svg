@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" role="img" aria-labelledby="title desc">
   <title id="title">My Game List</title>
-  <desc id="desc">Organiza tu coleccion de videojuegos y sincronizala con GitHub Gist.</desc>
+  <desc id="desc">Organiza tu colección de videojuegos y sincronízala con GitHub Gist.</desc>
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0%" stop-color="#0f172a"/>
@@ -25,7 +25,12 @@
   <text x="90" y="340" fill="#ffffff" font-family="DM Sans, Segoe UI, Arial, sans-serif" font-size="84" font-weight="800">
     My Game List
   </text>
-  <text x="90" y="420" fill="#e2e8f0" font-family="DM Sans, Segoe UI, Arial, sans-serif" font-size="42" font-weight="500">
-    Organiza, puntua y sincroniza tu coleccion de videojuegos
+  <!-- Dos líneas a propósito: en una sola, con DM Sans a 42px, el texto se salía del lienzo por la derecha (no se
+       veía mientras los metadatos apuntaban al SVG, porque nadie lo rasterizaba). -->
+  <text x="90" y="418" fill="#e2e8f0" font-family="DM Sans, Segoe UI, Arial, sans-serif" font-size="42" font-weight="500">
+    Organiza, puntúa y sincroniza
+  </text>
+  <text x="90" y="476" fill="#e2e8f0" font-family="DM Sans, Segoe UI, Arial, sans-serif" font-size="42" font-weight="500">
+    tu colección de videojuegos
   </text>
 </svg>
