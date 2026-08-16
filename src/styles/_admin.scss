@@ -268,3 +268,70 @@
 /* Los botones son de longitud muy dispar (llevan el nombre dentro): en fila y con salto, no estirados. */
 .admin-name-choice .admin-actions { flex-wrap: wrap; }
 .admin-name-choice .btn { font-size: .78rem; padding: .35rem .6rem; }
+
+/* Enlaces compartidos (moderación). Misma lógica de fila que el censo de usuarios: identidad y fechas a la
+   izquierda, acciones a la derecha, y en pantalla estrecha las acciones caen debajo en vez de apretar el texto. */
+.admin-shares {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-top: 1.5rem;
+}
+.admin-shares-head p {
+  margin: 0.25rem 0 0;
+  font-size: 0.92rem;
+  opacity: 0.85;
+}
+.admin-shares-filter {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+
+  input {
+    flex: 1 1 16rem;
+  }
+}
+.admin-shares-notice {
+  margin: 0;
+  font-weight: 600;
+}
+.admin-shares-error {
+  margin: 0;
+  color: var(--danger, #d33);
+}
+.admin-shares-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+.admin-shares-item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  padding: 0.6rem 0.75rem;
+  border-radius: var(--radius, 8px);
+  background: var(--surface-2, rgba(127, 127, 127, 0.1));
+}
+.admin-shares-item-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  font-size: 0.9rem;
+}
+/* El identificador es un dato técnico: se lee cuando hace falta, no compite con el nombre del juego. */
+.admin-shares-uid {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.78rem;
+  opacity: 0.7;
+  overflow-wrap: anywhere;
+}
+.admin-shares-item-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}

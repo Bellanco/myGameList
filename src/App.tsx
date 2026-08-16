@@ -739,6 +739,7 @@ export default function App() {
 
       <Suspense fallback={null}>
         <SettingsHub
+          hasSocialProfile={hasSocialProfile}
           syncStatus={syncBadgeText}
           hasSyncConfig={syncVm.hasConfig}
           connectedGistId={syncVm.connectedGistId || syncVm.currentConfig?.gistId || ''}

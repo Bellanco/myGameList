@@ -78,7 +78,17 @@ async function deleteRemoteData(uid: string, failures: string[]): Promise<void> 
     failures.push(`amistades: ${describe(error)}`);
   }
 
-  // 2) Documentos propios. En paralelo: son independientes entre sí y ninguno depende del anterior.
+  // 2) Enlaces públicos de reseñas. VAN ANTES que el borrado del perfil: una vez borrado, la Function ya no
+  //    puede leer el rango ni la identidad, y las reseñas se quedarían publicadas hasta caducar solas. Es la
+  //    parte del derecho de supresión que más se nota, porque es lo único que estaba a la vista de cualquiera.
+  try {
+    const { removeAllMyShares } = await import('./shareRepository');
+    await removeAllMyShares();
+  } catch (error) {
+    failures.push(`enlaces compartidos: ${describe(error)}`);
+  }
+
+  // 3) Documentos propios. En paralelo: son independientes entre sí y ninguno depende del anterior.
   const docResults = await Promise.allSettled(
     OWNED_COLLECTIONS.map((collectionName) => deleteDoc(doc(services.firestore, collectionName, uid))),
   );

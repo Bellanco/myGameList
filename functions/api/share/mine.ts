@@ -7,7 +7,8 @@
 import { requireUser } from '../../_lib/context';
 import { json } from '../../_lib/http';
 import type { Env } from '../../_lib/keys';
-import { readShareStatus } from '../../_lib/quota';
+import { listActiveShares, readShareStatus } from '../../_lib/quota';
+import { removeShare } from '../../_lib/shares';
 
 export async function onRequestGet(context: { request: Request; env: Env }): Promise<Response> {
   const caller = await requireUser(context.request, context.env);
@@ -28,4 +29,26 @@ export async function onRequestGet(context: { request: Request; env: Env }): Pro
     // cliente calcule nada: la cuota ya viene resuelta.
     tier: status.tier,
   });
+}
+
+/**
+ * DELETE /api/share/mine — retira TODOS mis enlaces de una vez. Lo llama el borrado de cuenta.
+ *
+ * Sin esto, el derecho de supresión quedaría incompleto: alguien podría borrar su cuenta y sus reseñas seguirían
+ * publicadas hasta caducar.
+ *
+ * OJO CON LO QUE **NO** BORRA: ni el veto (`ban:{uid}`) ni el ajuste de cuota. Es deliberado — si los borrase,
+ * cualquiera podría quitarse un veto llamando a este endpoint, sin borrar nada. Quedan como residuo de un uid
+ * que ya no existe y el administrador puede limpiarlos desde `/admin`.
+ */
+export async function onRequestDelete(context: { request: Request; env: Env }): Promise<Response> {
+  const caller = await requireUser(context.request, context.env);
+  if (caller instanceof Response) {
+    return caller;
+  }
+
+  const rows = await listActiveShares(context.env.SHARES, caller.user.uid);
+  await Promise.all(rows.map((row) => removeShare(context.env.SHARES, caller.user.uid, row.token)));
+
+  return json({ removed: rows.length });
 }
