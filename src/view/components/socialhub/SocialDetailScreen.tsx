@@ -9,6 +9,7 @@ import type { GameItem } from '../../../model/types/game';
 import type { SocialActivityFeedItem } from '../../../viewmodel/useSocialViewModel';
 import { HubStatus } from './HubStatus';
 import { HubBackButton } from './HubBackButton';
+import { ShareReviewButton } from '../stats/ShareReviewButton';
 
 /** Pantalla de detalle de actividad social. */
 export function SocialDetailScreen({
@@ -18,7 +19,8 @@ export function SocialDetailScreen({
   onOpenProfileDetail,
   onBack,
   status,
-  statusKind
+  statusKind,
+  shareable = false
 }: {
   SOCIAL_UI: SocialUiLabels;
   /**
@@ -35,6 +37,11 @@ export function SocialDetailScreen({
   onBack: () => void;
   status: string;
   statusKind: string;
+  /**
+   * ¿Es MÍA esta reseña? Entonces se ofrece compartirla con un enlace público. Lo decide el hub con la identidad
+   * del viewmodel, no esta pantalla: aquí solo se pinta lo que corresponda.
+   */
+  shareable?: boolean;
 }) {
   if (!activeDetailEvent) {
     return (
@@ -80,6 +87,11 @@ export function SocialDetailScreen({
           <div className="hub-screen-actions-left">
             <HubBackButton onBack={onBack} label={SOCIAL_UI.feed.backToFeed} />
           </div>
+          {shareable && gameItem && reviewText ? (
+            <div className="hub-screen-actions-right">
+              <ShareReviewButton game={gameItem} reviewText={reviewText} />
+            </div>
+          ) : null}
         </div>
         <article className="hub-feed-card hub-feed-card-detail">
           <header className="hub-feed-card-head">

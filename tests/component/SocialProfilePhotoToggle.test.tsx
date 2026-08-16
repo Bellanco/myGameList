@@ -9,7 +9,12 @@ import userEvent from '@testing-library/user-event';
 import { SOCIAL_UI } from '../../src/core/constants/labels';
 import { SocialProfileScreen } from '../../src/view/components/socialhub/SocialProfileScreen';
 
-function renderScreen(over: { showPhoto?: boolean; ownPhotoURL?: string; setShowPhoto?: (v: boolean) => void } = {}) {
+function renderScreen(over: {
+  showPhoto?: boolean;
+  ownPhotoURL?: string;
+  ownPhotoIsGeneric?: boolean;
+  setShowPhoto?: (v: boolean) => void;
+} = {}) {
   return render(
     <SocialProfileScreen
       SOCIAL_UI={SOCIAL_UI}
@@ -35,6 +40,7 @@ function renderScreen(over: { showPhoto?: boolean; ownPhotoURL?: string; setShow
       showPhoto={over.showPhoto ?? true}
       setShowPhoto={over.setShowPhoto ?? (() => {})}
       ownPhotoURL={over.ownPhotoURL}
+      ownPhotoIsGeneric={over.ownPhotoIsGeneric}
     />,
   );
 }
@@ -83,5 +89,39 @@ describe('interruptor de la foto de perfil', () => {
 
   it('el aviso es una sola línea: el estado del interruptor ya dice el resto', () => {
     expect(SOCIAL_UI.profile.photoMissingInGoogle).toBe('Tu cuenta no tiene foto.');
+  });
+
+  // EL AVATAR GENÉRICO DE GOOGLE (el monograma con la inicial) no es una foto: hay URL, y carga, pero no es la cara
+  // de nadie. Sin esto se podía encender el interruptor y ver las de los amigos aportando un dibujo automático.
+  describe('cuando la foto es el avatar genérico de Google', () => {
+    it('bloquea el interruptor igual que no tener foto', () => {
+      renderScreen({ showPhoto: true, ownPhotoURL: 'https://lh3.googleusercontent.com/a/ACg8ocJ=s96-c', ownPhotoIsGeneric: true });
+
+      expect(toggle().checked).toBe(false);
+      expect(toggle().disabled).toBe(true);
+    });
+
+    // Decirle "tu cuenta no tiene foto" a quien SÍ ve una imagen en su cuenta sonaría a error de la app.
+    it('el aviso explica que esa imagen no es una foto', () => {
+      renderScreen({ showPhoto: true, ownPhotoURL: 'https://lh3.googleusercontent.com/a/ACg8ocJ=s96-c', ownPhotoIsGeneric: true });
+
+      expect(screen.getByText(SOCIAL_UI.profile.photoIsGoogleDefault)).toBeInTheDocument();
+      expect(screen.queryByText(SOCIAL_UI.profile.photoMissingInGoogle)).not.toBeInTheDocument();
+    });
+
+    it('sin ninguna URL sigue diciendo lo que decía', () => {
+      renderScreen({ showPhoto: true, ownPhotoURL: '', ownPhotoIsGeneric: true });
+
+      expect(screen.getByText(SOCIAL_UI.profile.photoMissingInGoogle)).toBeInTheDocument();
+      expect(screen.queryByText(SOCIAL_UI.profile.photoIsGoogleDefault)).not.toBeInTheDocument();
+    });
+
+    // El veredicto llega por red: hasta que llega, todo sigue como estaba.
+    it('mientras no se sabe, la foto vale', () => {
+      renderScreen({ showPhoto: true, ownPhotoURL: 'https://f/ada.png', ownPhotoIsGeneric: undefined });
+
+      expect(toggle().checked).toBe(true);
+      expect(toggle().disabled).toBe(false);
+    });
   });
 });

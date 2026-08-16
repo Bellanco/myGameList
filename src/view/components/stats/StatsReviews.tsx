@@ -4,6 +4,7 @@ import { Icon } from '../Icon';
 import { HubBackButton } from '../socialhub/HubBackButton';
 import { ProfileReviewsList, type ReviewEntry } from '../socialhub/ProfileReviewsList';
 import { SocialProfileReviewScreen } from '../socialhub/SocialProfileReviewScreen';
+import { ShareReviewButton } from './ShareReviewButton';
 import { resolveGrade, starsFromGrade } from '../../../core/utils/scoreScale';
 import { TAB_IDS, type GameItem, type TabData } from '../../../model/types/game';
 
@@ -94,6 +95,9 @@ export const StatsReviews = memo(function StatsReviews({ games, gameId, onBack, 
         backLabel={backToPanel ? L.backToStats : undefined}
         status=""
         statusKind=""
+        // El botón de compartir solo aparece aquí, sobre TUS reseñas. La misma pantalla se usa en el hub social
+        // para las de otras personas, y allí no se pasa nada.
+        actions={<ShareReviewButton game={game} reviewText={open.reviewText} />}
       />
     );
   }

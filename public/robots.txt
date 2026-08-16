@@ -1,18 +1,51 @@
 # robots.txt - Aplicación Privada en CloudFlare
-# Esta es una aplicación SPA privada sin contenido público.
+# Esta es una aplicación SPA privada sin contenido público indexable.
 # No permitir rastreo general de bots.
 
 User-agent: *
 Disallow: /
+Crawl-delay: 0
 
-# Explícitamente bloquear bots sociales
+# ─────────────────────────────────────────────────────────────────────────────────────────────────────────────
+# EXCEPCIÓN: /r/ — reseñas que un usuario decide compartir con un enlace público.
+#
+# PREVISUALIZAR NO ES INDEXAR, y son cosas distintas que se controlan en sitios distintos:
+#  - INDEXAR (aparecer en buscadores) lo sigue impidiendo el `Disallow: /` de arriba, que aplica a Googlebot y
+#    compañía, MÁS el `X-Robots-Tag: noindex, nofollow` de `public/_headers`, que cubre todo el dominio.
+#  - PREVISUALIZAR (que al pegar el enlace en un chat salga el título y la imagen) lo hacen estos agentes, que
+#    consultan este mismo fichero. Mientras estuvieron bloqueados por nombre, compartir un enlace de la app
+#    producía un enlace pelado en X, WhatsApp, Facebook y LinkedIn.
+#
+# Solo se les abre `/r/`: el resto de la aplicación les sigue cerrado. Telegram, Discord y Signal no consultan
+# robots.txt, así que no necesitan bloque propio.
+# ─────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
 User-agent: facebookexternalhit
+Allow: /r/
+Disallow: /
+
+User-agent: WhatsApp
+Allow: /r/
 Disallow: /
 
 User-agent: Twitterbot
+Allow: /r/
 Disallow: /
 
 User-agent: LinkedInBot
+Allow: /r/
+Disallow: /
+
+User-agent: Slackbot
+Allow: /r/
+Disallow: /
+
+User-agent: Slackbot-LinkExpanding
+Allow: /r/
+Disallow: /
+
+User-agent: Discordbot
+Allow: /r/
 Disallow: /
 
 # Bloquear bots maliciosos y de reconocimiento conocidos
@@ -28,15 +61,13 @@ Disallow: /
 User-agent: DotBot
 Disallow: /
 
-# Configuración general: sin rastreo, sin demora (CloudFlare cachea la página)
-User-agent: *
-Disallow: /
-Crawl-delay: 0
-
 # Nota sobre CloudFlare:
 # CloudFlare puede hacer caché de páginas independientemente de robots.txt.
 # Para cambiar comportamiento de caché, usar Page Rules de CloudFlare.
 # robots.txt solo afecta crawlers externos (no CloudFlare).
+# Ojo: Bot Fight Mode (Cloudflare) puede bloquear a estos agentes por su cuenta, y entonces la previsualización
+# no aparecerá aunque este fichero la permita. Hoy NO aplica: ese ajuste es por zona y el sitio se sirve desde
+# mygamelist.pages.dev, que no es una zona del proyecto. Al pasar a dominio propio, comprobarlo.
 
 # No incluir sitemap: aplicación privada, no indexable públicamente
 # Sitemap: https://ejemplo.com/sitemap.xml

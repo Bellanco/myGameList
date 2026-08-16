@@ -1,6 +1,6 @@
 {
   "name": "mygamelist",
-  "version": "3.8.0",
+  "version": "1.0.0",
   "description": "Application for managing video game lists with GitHub Gist synchronization",
   "private": true,
   "license": "GPL-3.0-or-later",
@@ -17,6 +17,7 @@
     "lint": "eslint src tests --fix",
     "format": "prettier --write \"src/**/*.{ts,tsx}\" \"tests/**/*.{ts,tsx}\"",
     "format:check": "prettier --check \"src/**/*.{ts,tsx}\" \"tests/**/*.{ts,tsx}\"",
+    "build:share-card": "node scripts/build-share-card.mjs",
     "audit:privacy": "node scripts/audit-privacy.js",
     "audit:rules": "node scripts/audit-profile-rules.mjs",
     "typecheck": "tsc --noEmit",

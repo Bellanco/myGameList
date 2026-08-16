@@ -5,6 +5,85 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
 
 ## [Unreleased]
 
+### Fixed
+- **El avatar por defecto de Google se colaba como si fuera una foto.** Quien no sube foto a su cuenta no se queda
+  sin `photoURL`: Google le genera un monograma —su inicial sobre un círculo de color— y lo sirve desde el mismo
+  sitio y con el mismo formato de URL que una foto real, así que por la URL no se distinguen. Eso rompía dos cosas
+  a la vez: en el hub se pintaba ese monograma en lugar de la silueta de la aplicación —justo la inicial-sobre-color
+  que se decidió no hacer—, y como "tener URL" contaba como tener foto, esas cuentas podían encender **Mostrar mi
+  foto de perfil** y ver las caras de sus amigos sin aportar la suya, que es el trato que la reciprocidad deshace.
+  Ahora se reconocen mirando la imagen: una foto subida se sirve como JPEG y el monograma siempre como PNG diminuto
+  de color plano, así que basta el formato para descartar las fotos reales sin decodificar nada, y el recuento de
+  colores resuelve el resto. Con el monograma, el interruptor queda apagado y bloqueado —con un aviso que explica
+  que esa imagen no es una foto, en vez del "tu cuenta no tiene foto" que sonaría a error a quien sí ve una— y esa
+  URL deja de publicarse. Ante cualquier duda —red caída, formato inesperado— la foto se da por buena: quitarle la
+  cara a quien sí la tiene es peor error que dejar pasar un monograma.
+  - **Se retira también la que ya estaba publicada**, sin migración ni esperar a nadie: al pintar, porque esas URLs
+    viven en los canales de mucha gente y en los documentos de amistad, y en el propio canal, que se sanea al abrir
+    el hub. Un PNG pequeño y de color plano subido a propósito como foto —un logo, un dibujo liso— se marcaría como
+    genérico; es el falso positivo asumido, y se arregla subiendo una foto.
+
+## [1.0.0] - 2026-08-16
+
+> Renumerado a 1.0.0. La numeración anterior (3.x) venía de las primeras versiones de la app y ya no decía nada
+> sobre su madurez: se reinicia aquí, con la parte social asentada y la primera funcionalidad que publica
+> contenido fuera de la aplicación.
+
+### Added
+- **Compartir una reseña con enlace público.** Hasta ahora el texto completo de una reseña NUNCA salía del ámbito
+  privado —el canal social publica un fragmento de 160 caracteres—, y esta es la única puerta por la que sale, con
+  tres condiciones: la abre su dueño reseña a reseña, caduca sola y se puede retirar.
+  - **Ni un byte en los Gists.** El artículo vive en Cloudflare KV, no en el canal social ni en la biblioteca. El
+    motivo no es de gusto: el gist social lo descargan todos tus amigos en cada hidratación del feed, así que cada
+    KB añadido se multiplica por amigos y por refrescos contra las 5.000 peticiones/hora que se comparten con la
+    sincronización. Publicar un enlace no gasta ninguna.
+  - **Lo que se publica y lo que no.** Juego, nota, texto completo, plataformas, géneros, puntos fuertes y débiles,
+    nick y fecha. Nunca el correo, el identificador, los identificadores de Gist, las horas de juego, la foto de
+    perfil ni el resto de la biblioteca. Lo garantizan un esquema Zod de allowlist estricta y una lista de campos
+    prohibidos, validados en el navegador y **otra vez** en el servidor, que es la que cuenta.
+  - **La foto de perfil no viaja en el artículo**, y no por cómo se pinta: ocultarla al renderizar no serviría de
+    nada porque el JSON llegaría igual al navegador de un desconocido.
+  - **El nick lo pone el servidor**, leído del perfil con el token de quien publica: nadie puede firmar una reseña
+    con el nombre de otra persona. Y el diálogo lo enseña antes de publicar, para que nadie descubra con qué nombre
+    ha firmado cuando la reseña ya está en internet.
+  - **Cuántos y cuánto duran**, según el rango del perfil: bronce 5 enlaces de 7 días, plata 10 de 10 días, oro 15
+    de 14 y mithril 50 de 90. No es un cupo que se gaste: caducan solos y retirar uno libera el hueco al instante.
+    A diferencia de los límites de publicación en el feed, esta cuota la aplica el **servidor**, porque lo que
+    gobierna es almacenamiento del servicio y no un recurso del usuario.
+  - **Volver a compartir la misma reseña la actualiza** sobre el mismo enlace, sin gastar cuota: así el que ya
+    circula por un chat sigue vivo en vez de morir mientras otro nuevo da vueltas en paralelo.
+  - **Página pública** en `/r/:token`, legible sin cuenta. Para quien no tiene la aplicación en ese navegador se
+    monta sola, sin hub social, sin Firebase, sin analítica y sin instalar nada: sin cabecera, sin volver atrás, con
+    el nombre del autor como texto plano —su perfil no es público— y una barra inferior con una única salida a la
+    página principal.
+  - **Previsualización en redes sociales**: una Pages Function reescribe el título y las etiquetas Open Graph con
+    el juego, la nota y el arranque del texto. La sustitución la hace un parser de verdad (HTMLRewriter), que es lo
+    que impide que el texto de un usuario inyecte marcado en los metadatos.
+  - **Gestión en Cuenta**: los enlaces activos con su caducidad, el contador y «Dejar de compartir» —que se llama
+    así y no «Borrar» porque retirar un enlace lo deja inaccesible, pero no recoge las copias que ya circulen.
+  - **Moderación en `/admin`**, dentro de la ficha de cada usuario: sus enlaces, retirar cualquiera, vetarle la
+    posibilidad de compartir (con o sin retirar lo ya publicado) y ajustarle la cuota por encima o por debajo de su
+    rango. Todo con confirmación previa, como el resto del panel.
+  - **Borrar la cuenta retira los enlaces** antes de borrar el perfil. Sin eso, el derecho de supresión quedaba
+    incompleto: las reseñas seguirían siendo públicas hasta caducar.
+
+### Changed
+- **Los textos legales declaran el enlace público**: qué se publica, qué no, cuánto dura, que la copia es una foto
+  del momento, que el destinatario pasa a ser cualquiera con el enlace, y que retirarlo no recoge lo ya compartido.
+  Sube `LEGAL_VERSION`, así que la puerta del hub vuelve a pedir la conformidad.
+- **Los enlaces compartidos se gestionan en «Cuenta»**, no en «Ajustes»: no son una preferencia de la aplicación,
+  son contenido tuyo publicado en internet.
+- El icono de compartir es el `share` de Material Symbols, la misma familia que el resto del catálogo.
+
+### Fixed
+- **La previsualización al compartir cualquier enlace de la aplicación estaba rota desde siempre**, por dos motivos
+  a la vez: `og:image` apuntaba a un SVG —formato que ni X, ni WhatsApp, ni Facebook, ni LinkedIn renderizan— y
+  `robots.txt` bloqueaba por nombre a los agentes que generan esas tarjetas. Ahora la imagen es un JPEG generado
+  desde el mismo SVG (que sigue siendo la fuente editable) y esos agentes tienen permiso **solo** en `/r/`, sin
+  abrir el resto del sitio ni permitir que nada se indexe.
+- El subtítulo de la tarjeta de previsualización se salía del lienzo con la tipografía real; no se veía porque
+  nadie la rasterizaba.
+
 ### Added
 - **Cinco bloques nuevos en el panel «Perfil»**, todos derivados de lo que ya está en memoria (misma pasada
   única de `computeStats`, sin campos nuevos y sin una consulta de red):

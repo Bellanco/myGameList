@@ -71,6 +71,7 @@ const StatsHub = lazy(() => import('./view/components/stats/StatsHub').then((mod
 const AccountHub = lazy(() => import('./view/components/AccountHub').then((module) => ({ default: module.AccountHub })));
 const RouletteModal = lazy(() => importRouletteModal().then((module) => ({ default: module.RouletteModal })));
 const IntegrationsScreen = lazy(() => import('./view/components/import/IntegrationsScreen').then((module) => ({ default: module.IntegrationsScreen })));
+const PublicReviewScreen = lazy(() => import('./view/components/PublicReviewScreen').then((module) => ({ default: module.PublicReviewScreen })));
 const InboxScreen = lazy(() => import('./view/components/import/InboxScreen').then((module) => ({ default: module.InboxScreen })));
 const LegalScreen = lazy(() => import('./view/components/LegalScreen').then((module) => ({ default: module.LegalScreen })));
 // Panel de administración: `lazy` como el resto de hubs, así que su código (y el correo del admin) solo se
@@ -91,6 +92,17 @@ function getPageHeading(section: AppSection, currentTab: TabId): string {
   const H = UI_MESSAGES.pageHeading;
   if (section === 'lists') return H.lists(TAB_TITLES[currentTab]);
   return H[section];
+}
+
+/**
+ * Reseña compartida (`/r/:token`) vista por alguien que tiene la app en este navegador.
+ *
+ * El token se saca del `pathname` en lugar de con `useParams` porque esta pantalla se monta desde el mapa de
+ * secciones, que no está dentro del `<Route>` que lo captura.
+ */
+function SharedReviewRoute(): ReactNode {
+  const location = useLocation();
+  return <PublicReviewScreen token={location.pathname.replace(/^\/r\//, '').replace(/\/$/, '')} />;
 }
 
 /** L4 — documento legal correspondiente a la ruta (`/legal/*`). Por defecto, el aviso legal. */
@@ -669,13 +681,22 @@ export default function App() {
     account: (
 
       <Suspense fallback={null}>
-        {scoreScaleUid ? <AccountHub scoreScaleUid={scoreScaleUid} /> : null}
+        {scoreScaleUid ? <AccountHub scoreScaleUid={scoreScaleUid} hasSocialProfile={hasSocialProfile} /> : null}
       </Suspense>
     ),
     admin: (
 
       <Suspense fallback={null}>
         <AdminHub />
+      </Suspense>
+    ),
+    // Reseña compartida abierta por alguien que SÍ tiene la app aquí: se ve dentro del cromo de siempre, con su
+    // navegación. Quien no la tiene ni llega a este punto — `main.tsx` monta la pantalla suelta antes del
+    // enrutador, sin cromo y sin ninguna salida más que el enlace a la app.
+    'shared-review': (
+
+      <Suspense fallback={null}>
+        <SharedReviewRoute />
       </Suspense>
     ),
     legal: (

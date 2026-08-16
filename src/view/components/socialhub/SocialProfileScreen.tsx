@@ -30,6 +30,7 @@ export function SocialProfileScreen({
   showPhoto,
   setShowPhoto,
   ownPhotoURL,
+  ownPhotoIsGeneric,
 }: {
   SOCIAL_UI: SocialUiLabels;
   profileName: string;
@@ -55,9 +56,17 @@ export function SocialProfileScreen({
   showPhoto?: boolean;
   setShowPhoto?: (value: boolean) => void;
   ownPhotoURL?: string;
+  /** ¿Esa foto es el avatar genérico de Google (el monograma)? Ver `core/social/googlePhoto`. */
+  ownPhotoIsGeneric?: boolean;
 }) {
-  /** ¿Hay foto en la cuenta de Google? Es lo que decide si el interruptor tiene algo que encender. */
-  const hasOwnPhoto = Boolean(String(ownPhotoURL || '').trim());
+  /**
+   * ¿Hay foto en la cuenta de Google? Es lo que decide si el interruptor tiene algo que encender.
+   *
+   * El monograma que Google genera para las cuentas sin foto NO cuenta: es una URL válida y una imagen que carga,
+   * pero no es la cara de nadie. Dejarlo pasar era lo que permitía encender el interruptor sin aportar nada.
+   */
+  const hasPhotoURL = Boolean(String(ownPhotoURL || '').trim());
+  const hasOwnPhoto = hasPhotoURL && !ownPhotoIsGeneric;
 
   const toggleHiddenTab = (tab: TabId) => {
     if (hiddenTabs.includes(tab)) {
@@ -251,7 +260,14 @@ export function SocialProfileScreen({
                   </label>
                 </div>
                 {!hasOwnPhoto ? (
-                  <p className="hub-profile-requirement" role="status">{SOCIAL_UI.profile.photoMissingInGoogle}</p>
+                  <p className="hub-profile-requirement" role="status">
+                    {/* Dos motivos distintos para el mismo bloqueo, y al usuario le importa cuál es el suyo: quien no
+                        tiene nada en la cuenta ve "no tienes foto"; a quien tiene el monograma de Google eso le
+                        sonaría a error de la app, porque él SÍ ve una imagen. */}
+                    {hasPhotoURL
+                      ? SOCIAL_UI.profile.photoIsGoogleDefault
+                      : SOCIAL_UI.profile.photoMissingInGoogle}
+                  </p>
                 ) : null}
               </div>
             ) : null}

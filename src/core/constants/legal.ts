@@ -7,6 +7,14 @@
 // `LEGAL_VERSION` sella la aceptación (`publicConfig.consent.version`): al cambiarla, la puerta del hub social
 // vuelve a pedir la conformidad. Súbela SOLO cuando cambie algo sustantivo de los términos o del tratamiento.
 
+// 2026-08-16: COMPARTIR UNA RESEÑA CON ENLACE PÚBLICO. Es el cambio más sustantivo desde que existe la parte
+// social, y por eso vuelve a pedirse la conformidad: hasta ahora el texto completo de una reseña NUNCA salía del
+// ámbito privado —el canal social publica un fragmento de 160 caracteres— y ahora el usuario puede publicar una
+// reseña concreta en una página abierta a cualquiera. Es siempre una acción suya, reseña a reseña, con caducidad
+// según su rango y revocable. Aparece un destinatario nuevo (cualquiera con el enlace), un lugar nuevo donde se
+// guardan datos (Cloudflare, mientras el enlace viva) y una salvedad que hay que decir sin adornos: retirar un
+// enlace lo deja inaccesible, pero no recoge las copias que ya circulen.
+//
 // 2026-08: (a) el canal social pasa de Gist público a NO LISTADO, y los antiguos se migran y se retiran — la
 // única excepción a que la app no toque tus Gists, declarada en las condiciones; (b) se corrige el aviso que
 // aconsejaba usar «Gists privados», que GitHub no tiene: solo públicos y secretos, y los secretos son legibles
@@ -29,7 +37,7 @@
 // amistades lo mismo que ve de sí misma, incluidas las listas escondidas y las marcas de «rejugable» y «merece otra
 // oportunidad»; el tiempo de juego queda fuera de la excepción. El tono del párrafo es a propósito tranquilo: es un
 // dato que hay que dar, no una advertencia. Cambia lo que otros ven de ti, así que se vuelve a pedir conformidad.
-export const LEGAL_VERSION = '2026-08-12';
+export const LEGAL_VERSION = '2026-08-16';
 
 // Correo de CONTACTO publicado en los documentos. A propósito distinto del de la cuenta de administración de
 // `firestore.rules` (`isAdmin`): son la misma persona, pero separar buzones evita mezclar avisos legales y
@@ -96,6 +104,8 @@ const TERMS: LegalDocument = {
       paragraphs: [
         'Las reseñas, publicaciones, notas y nombres que escribes son tuyos. Para poder mostrarlos a las personas con las que tienes amistad en la app, nos autorizas a almacenarlos y mostrarlos con esa única finalidad, mientras mantengas la cuenta y el contenido publicado.',
         'Tu biblioteca completa y tus reseñas largas se guardan en Gists de TU cuenta de GitHub. La app los crea como Gists secretos, y «secreto» en GitHub significa NO LISTADO, no privado: no aparecen en tu perfil de GitHub ni en los buscadores, pero quien conozca el identificador de un Gist puede leerlo. La app solo comparte esos identificadores con las personas con las que tienes amistad.',
+        'COMPARTIR UNA RESEÑA CON ENLACE PÚBLICO: puedes publicar una reseña concreta en una página abierta a cualquiera, la tenga o no cuenta en la app. Es una acción tuya y para esa reseña: se publica el juego, tu nota, el TEXTO COMPLETO, las plataformas, los géneros, los puntos fuertes y débiles, tu nick y la fecha; no se publica tu correo, tu identificador, los identificadores de tus Gists, tus horas de juego, tu foto ni el resto de tu biblioteca. El enlace caduca solo —según tu rango, entre 7 y 90 días— y puedes retirarlo antes desde Ajustes. Retirarlo lo deja inaccesible, pero NO recoge las copias que ya se hayan compartido ni las previsualizaciones que otras plataformas hayan guardado.',
+        'La copia que se publica es una FOTO del momento: si editas la reseña después, el enlace sigue mostrando lo que se publicó hasta que vuelvas a compartirla. Quien administra el servicio puede retirar un enlace y, si hay abuso, impedirte crear otros.',
         'MEJORA DE PRIVACIDAD, y la única excepción a que la app no toque tus Gists: las versiones anteriores creaban tu canal social como Gist PÚBLICO, con lo que aparecía listado en tu perfil de GitHub y en los buscadores. Al entrar en la parte social, la app copia ese canal a un Gist no listado y RETIRA el antiguo, que es lo único que quita de circulación lo ya publicado. Solo se borra ese canal antiguo, nunca tu biblioteca, y solo después de comprobar que la copia conserva tu contenido; si la comprobación falla, no se borra nada y se te avisa.',
       ],
     },
@@ -157,6 +167,7 @@ const PRIVACY: LegalDocument = {
         'En tu cuenta de GitHub: la biblioteca y el canal social, en Gists que son tuyos.',
         'En Firestore, si activas lo social: tu identificador de usuario, el nick que elijas —y si no eliges ninguno, el nombre de tu cuenta de Google—, tu foto de perfil de Google (puedes quitarla), tus amistades, el rango de tu perfil, la fecha de alta, la marca de tu última actividad y tus preferencias de la app. El identificador de tu Gist social ya NO se publica ahí: vive en el documento privado que solo tú lees, y denormalizado en tus documentos de amistad.',
         'En Firestore, en un documento privado que solo tú puedes leer: los identificadores de tus Gists y tu token de GitHub cifrado.',
+        'En Cloudflare, si compartes una reseña con enlace público: una copia de esa reseña (juego, nota, texto, metadatos, tu nick y las fechas) mientras el enlace siga vivo. Caduca sola y se borra al retirarla o al eliminar tu cuenta. No lleva tu correo, tu identificador ni los de tus Gists.',
         'Si aceptas la analítica: eventos de uso y errores en Google Analytics, con un identificador aleatorio.',
       ],
       paragraphs: [
@@ -178,6 +189,7 @@ const PRIVACY: LegalDocument = {
         'Cloudflare: alojamiento y entrega de la web.',
         'Otros usuarios con sesión iniciada: tu nick, tu foto, tu rango, cuándo estuviste activo por última vez y tu actividad social, en los términos descritos arriba.',
         'Cualquier persona que conozca el identificador de tu Gist social. Ese Gist ya NO es público: la app lo crea (y migra los antiguos) como Gist no listado, así que no aparece en tu perfil de GitHub ni en los buscadores. Pero «no listado» no es «privado»: quien tenga el identificador puede leerlo sin necesidad de sesión en esta app. La app solo lo comparte con tus amistades.',
+        'CUALQUIERA, si compartes una reseña con enlace público: esa reseña concreta queda accesible en internet para quien tenga el enlace, sin necesidad de cuenta, hasta que caduque o la retires. Es siempre una acción tuya, reseña a reseña.',
         'La persona que administra el servicio, que por necesidad técnica tiene acceso de administración a la base de datos: puede consultar los perfiles, asignar el rango, desactivar la parte social de un perfil y eliminarlo. No puede leer el documento privado donde se guardan tu token cifrado y los identificadores de tus Gists, que solo lee su dueño.',
       ],
       paragraphs: [
@@ -190,7 +202,7 @@ const PRIVACY: LegalDocument = {
     {
       heading: 'Cuánto tiempo',
       paragraphs: [
-        'Mientras mantengas la cuenta. Cuando la borras desde la app, se eliminan tu perfil, tus amistades y tu configuración en la nube, y se limpian los datos de ese dispositivo. Tus Gists no se tocan: son tuyos y los borras desde GitHub. La única excepción es la retirada del canal social antiguo descrita en las condiciones de uso, que existe para dejar de exponerlo públicamente.',
+        'Mientras mantengas la cuenta. Cuando la borras desde la app, se eliminan tu perfil, tus amistades, tu configuración en la nube y los enlaces públicos de reseñas que tuvieras activos, y se limpian los datos de ese dispositivo. Tus Gists no se tocan: son tuyos y los borras desde GitHub. La única excepción es la retirada del canal social antiguo descrita en las condiciones de uso, que existe para dejar de exponerlo públicamente.',
       ],
     },
     {

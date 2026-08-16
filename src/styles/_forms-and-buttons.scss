@@ -76,6 +76,170 @@ dialog.alert-dialog[open]::backdrop { animation: alertBackdropIn .24s ease both;
   flex: 1;
 }
 
+/* Compartir una reseña con enlace público.
+   Hereda del diálogo de confirmación (mismo marco, mismo ritmo de botones) y solo añade lo que este necesita:
+   un aviso que hay que poder leer entero, la casilla de aceptación y el enlace ya publicado.
+   Es más ancho que un confirm porque aquí SÍ hay que leer: se está publicando algo en internet. */
+.share-dialog {
+  max-width: min(34rem, 92vw);
+}
+.share-dialog-game {
+  font-weight: 600;
+  margin: 0;
+}
+.share-dialog-consent {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.75rem 0.9rem;
+  border-radius: var(--radius, 8px);
+  background: var(--surface-2, rgba(127, 127, 127, 0.12));
+  font-size: 0.92rem;
+  line-height: 1.45;
+
+  p {
+    margin: 0;
+  }
+}
+.share-dialog-consent-title {
+  font-weight: 600;
+}
+.share-dialog-note {
+  margin: 0;
+  font-size: 0.9rem;
+  opacity: 0.85;
+}
+.share-dialog-accept {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.55rem;
+  font-size: 0.92rem;
+  cursor: pointer;
+
+  input {
+    margin-top: 0.15rem;
+    flex: 0 0 auto;
+  }
+}
+.share-dialog-error {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--danger, #d33);
+}
+/* Caja del enlace publicado, con el botón de copiar DENTRO y al final: el gesto vive donde está el dato.
+   La URL se parte por donde haga falta (no cabe entera en móvil) y el botón no se encoge nunca. */
+.share-dialog-url {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.5rem 0.5rem 0.75rem;
+  border-radius: var(--radius, 8px);
+  background: var(--surface-2, rgba(127, 127, 127, 0.12));
+  border: 1px solid var(--border);
+}
+.share-dialog-url-text {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.85rem;
+  overflow-wrap: anywhere;
+}
+.share-dialog-copy {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.2rem;
+  height: 2.2rem;
+  border: none;
+  border-radius: var(--radius, 8px);
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: background-color 0.15s, color 0.15s;
+
+  &:hover,
+  &:focus-visible {
+    background: var(--overlay-hover, rgba(127, 127, 127, 0.16));
+    color: var(--text);
+  }
+}
+/* Distintivo junto al botón de compartir, en el detalle de tu reseña. */
+.share-expiry {
+  font-size: 0.82rem;
+  opacity: 0.8;
+  align-self: center;
+}
+.share-banned {
+  opacity: 0.9;
+}
+
+/* Tarjeta de Ajustes con los enlaces compartidos. Cada fila es "qué compartiste" + "qué puedes hacer con ello",
+   y en pantalla estrecha las acciones bajan bajo el texto en vez de apretarlo. */
+.settings-shares-counter {
+  margin: 0;
+  font-weight: 600;
+}
+.settings-shares-empty,
+.settings-shares-error {
+  margin: 0;
+  font-size: 0.92rem;
+}
+.settings-shares-error {
+  color: var(--danger, #d33);
+}
+.settings-shares-banned {
+  padding: 0.75rem 0.9rem;
+  border-radius: var(--radius, 8px);
+  background: var(--surface-2, rgba(127, 127, 127, 0.12));
+
+  p {
+    margin: 0;
+  }
+}
+.settings-shares-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+.settings-shares-item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  padding: 0.6rem 0.75rem;
+  border-radius: var(--radius, 8px);
+  background: var(--surface-2, rgba(127, 127, 127, 0.1));
+}
+.settings-shares-item-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  font-size: 0.92rem;
+}
+.settings-shares-item-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+/* Barra inferior de la página pública de una reseña compartida (modo artículo).
+   Todo lo demás —ancho, márgenes, hueco para la barra— sale del `<main class="main">` de siempre: la página se
+   monta dentro del mismo contenedor que usa la app, así que no necesita medidas propias que puedan divergir. */
+.share-public-nav {
+  .bottom-nav-inner {
+    max-width: 22rem;
+  }
+
+  .bottom-nav-btn {
+    text-decoration: none;
+    color: var(--steam-hover);
+  }
+}
+
 /* Name with stars */
 .name-with-stars {
   display: flex;
@@ -438,3 +602,11 @@ dialog.alert-dialog[open]::backdrop { animation: alertBackdropIn .24s ease both;
 }
 
 
+
+/* Aviso dentro del diálogo de compartir: el nombre con el que se firmará no lo eligió su dueño.
+   Va en el color de ATENCIÓN, no en el de peligro: no hay nada roto ni arriesgado, solo algo que conviene mirar
+   antes de publicar. */
+.share-dialog-warn {
+  color: var(--warn, #b8860b);
+  opacity: 1;
+}

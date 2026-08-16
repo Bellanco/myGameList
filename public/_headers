@@ -52,3 +52,16 @@
 
 /robots.txt
   Cache-Control: public, max-age=86400, must-revalidate
+
+# La tarjeta de previsualización la generan las redes sociales una vez y la cachean por su cuenta; aquí basta con
+# un día, que es lo que tarda en propagarse un rediseño de `share-card.svg` (ver scripts/build-share-card.mjs).
+/share-card.jpg
+  Cache-Control: public, max-age=86400, must-revalidate
+
+# Reseñas compartidas con enlace público. Caché CORTA a propósito: el autor puede retirar un enlace en cualquier
+# momento y el borde no debe seguir sirviéndolo. Un minuto es suficiente para absorber la ráfaga de un enlace
+# recién publicado en un grupo, y bastante poco para que retirarlo se note enseguida.
+# El `X-Robots-Tag: noindex, nofollow` de la regla global sigue aplicándose aquí: estas páginas se previsualizan
+# (ver public/robots.txt), pero no se indexan.
+/r/*
+  Cache-Control: public, max-age=60

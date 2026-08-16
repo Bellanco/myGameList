@@ -268,3 +268,90 @@
 /* Los botones son de longitud muy dispar (llevan el nombre dentro): en fila y con salto, no estirados. */
 .admin-name-choice .admin-actions { flex-wrap: wrap; }
 .admin-name-choice .btn { font-size: .78rem; padding: .35rem .6rem; }
+
+/* Enlaces compartidos DENTRO de la ficha de un usuario. Plegado por defecto: la mayoría de las fichas no tiene
+   ninguno, y abrirlos todos convertiría el censo en un muro. */
+.admin-user-shares {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--border);
+}
+.admin-user-shares-head {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+.admin-user-banned {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--danger, #d33);
+}
+.admin-user-shares-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+.admin-user-shares-empty {
+  margin: 0;
+  font-size: 0.9rem;
+  opacity: 0.8;
+}
+.admin-user-shares-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+
+  li {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    padding: 0.5rem 0.65rem;
+    border-radius: var(--radius, 8px);
+    background: var(--overlay-hover, rgba(127, 127, 127, 0.1));
+  }
+}
+.admin-user-shares-item-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  font-size: 0.88rem;
+}
+.admin-user-shares-item-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+/* Los dos formularios (veto y cuota) comparten forma: etiqueta encima del campo y el botón al final de la fila. */
+.admin-user-shares-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.5rem;
+
+  label {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    font-size: 0.82rem;
+    flex: 1 1 12rem;
+  }
+
+  input[type='number'] {
+    max-width: 9rem;
+  }
+}
+.admin-user-shares-check {
+  flex-direction: row !important;
+  align-items: center;
+  gap: 0.4rem !important;
+  flex: 0 0 auto !important;
+}

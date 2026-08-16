@@ -69,6 +69,7 @@ const SocialHubInner = memo(function SocialHubInner({
     setHideGameTime,
     showPhoto,
     setShowPhoto,
+    ownPhotoIsGeneric,
     profileSearch,
     setProfileSearch,
     composePostText,
@@ -110,6 +111,7 @@ const SocialHubInner = memo(function SocialHubInner({
     openProfileDetail,
     openOwnProfileDetail,
     isOwnProfileDetail,
+    isOwnDetailEvent,
     handleActivityItemKeyDown,
     handleProfileCardKeyDown,
     handleSaveProfile,
@@ -199,6 +201,7 @@ const SocialHubInner = memo(function SocialHubInner({
           showPhoto={showPhoto}
           setShowPhoto={setShowPhoto}
           ownPhotoURL={authUser?.photoURL || ''}
+          ownPhotoIsGeneric={ownPhotoIsGeneric}
         />
       );
     }
@@ -212,6 +215,7 @@ const SocialHubInner = memo(function SocialHubInner({
           onBack={goToSocial}
           status={status}
           statusKind={statusKind}
+          shareable={isOwnDetailEvent}
         />
       );
     }
