@@ -1,8 +1,7 @@
 import { memo, useEffect, useState } from 'react';
 import { useNativeDialog } from './useNativeDialog';
 import { SHARE_UI } from '../../core/constants/labels';
-import { LEGAL_VERSION } from '../../core/constants/legal';
-import { SHARE_CONSENT_KEY } from '../../core/constants/storageKeys';
+import { grantShareConsent, hasShareConsent } from '../../model/repository/shareConsentRepository';
 import type { ShareQuota } from '../../core/constants/tiers';
 
 /**
@@ -41,7 +40,7 @@ export const ShareReviewModal = memo(function ShareReviewModal({
   const [accepted, setAccepted] = useState(false);
   const [copied, setCopied] = useState(false);
 
-  const consentGiven = readConsent() === LEGAL_VERSION;
+  const consentGiven = hasShareConsent();
 
   useEffect(() => {
     if (open) {
@@ -52,7 +51,7 @@ export const ShareReviewModal = memo(function ShareReviewModal({
 
   const confirm = () => {
     if (!consentGiven) {
-      writeConsent();
+      grantShareConsent();
     }
     onConfirm();
   };
@@ -125,20 +124,3 @@ export const ShareReviewModal = memo(function ShareReviewModal({
     </dialog>
   );
 });
-
-function readConsent(): string {
-  try {
-    return localStorage.getItem(SHARE_CONSENT_KEY) || '';
-  } catch {
-    return '';
-  }
-}
-
-function writeConsent(): void {
-  try {
-    localStorage.setItem(SHARE_CONSENT_KEY, LEGAL_VERSION);
-  } catch {
-    // Sin almacenamiento (modo privado estricto): se volverá a pedir el consentimiento la próxima vez, que es
-    // el lado seguro por el que fallar.
-  }
-}
