@@ -9,8 +9,14 @@
 // esas comprobaciones el token sería falsificable, así que no hay atajos "de desarrollo" en este fichero.
 import type { KVNamespace } from './keys';
 
-/** Claves públicas con las que Google firma los ID tokens de Firebase Auth. */
-const JWKS_URL = 'https://www.googleapis.com/service_accounts/v1/jwks/securetoken@system.gserviceaccount.com';
+/**
+ * Claves públicas con las que Google firma los ID tokens de Firebase Auth.
+ *
+ * OJO CON EL NOMBRE: la ruta es `/jwk/`, en SINGULAR. La forma en plural (`/jwks/`, que es como se llama el
+ * formato) devuelve un 404 en HTML, y como el fallo es cerrado el síntoma sería desconcertante: todos los
+ * usuarios recibirían 401 y parecería un problema de sesión. Comprobado a mano contra el endpoint real.
+ */
+export const JWKS_URL = 'https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com';
 const JWKS_CACHE_KEY = 'jwks:securetoken';
 const JWKS_CACHE_TTL_SECONDS = 3_600; // Google rota las claves cada pocas horas; una hora es prudente y barata.
 
@@ -33,10 +39,12 @@ interface Jwk {
   kty?: string;
 }
 
-function base64UrlToBytes(value: string): Uint8Array {
+// El `ArrayBuffer` explícito no es adorno: `new Uint8Array(n)` se tipa como `Uint8Array<ArrayBufferLike>`, que
+// TypeScript no acepta donde WebCrypto pide un `BufferSource` (podría ser un `SharedArrayBuffer`).
+function base64UrlToBytes(value: string): Uint8Array<ArrayBuffer> {
   const padded = value.replace(/-/g, '+').replace(/_/g, '/').padEnd(Math.ceil(value.length / 4) * 4, '=');
   const binary = atob(padded);
-  const bytes = new Uint8Array(binary.length);
+  const bytes = new Uint8Array(new ArrayBuffer(binary.length));
   for (let i = 0; i < binary.length; i += 1) {
     bytes[i] = binary.charCodeAt(i);
   }
@@ -61,8 +69,13 @@ async function loadJwks(kv: KVNamespace): Promise<Jwk[]> {
   if (!response.ok) {
     throw new Error('No se pudieron leer las claves públicas de Google');
   }
-  const body = (await response.json()) as { keys?: Jwk[] };
-  const keys = body.keys || [];
+  const body = (await response.json().catch(() => null)) as { keys?: Jwk[] } | null;
+  const keys = body?.keys || [];
+  if (keys.length === 0) {
+    // Sin claves no se puede verificar nada, y cachear una respuesta vacía dejaría la sesión rota una hora
+    // entera aunque el endpoint se recuperase al minuto siguiente.
+    throw new Error('Las claves públicas de Google llegaron vacías');
+  }
   await kv.put(JWKS_CACHE_KEY, JSON.stringify({ keys }), { expirationTtl: JWKS_CACHE_TTL_SECONDS });
   return keys;
 }

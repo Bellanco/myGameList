@@ -418,9 +418,24 @@ token; `/r/:token` con un artículo sembrado → reescribe `<title>`, `og:title`
 `og:type: article` y `og:url`, con las comillas del nombre del juego escapadas a `&quot;` y sin rastro de la
 etiqueta `<script>` incrustada en el texto de prueba.
 
-**Lo único que falta para que funcione:** `FIREBASE_PROJECT_ID` está vacío en `wrangler.toml`. Sin él, los
-endpoints autenticados devuelven un 500 explícito («no está configurada en este entorno»), que es el
-comportamiento buscado: un fallo de configuración no debe disfrazarse de problema de sesión.
+**Configuración completa.** `FIREBASE_PROJECT_ID = "mylists-f7313"`, tomado del fallback público de
+`firebaseClient.ts:139-147`: como en Cloudflare no hay variables `VITE_FIREBASE_*`, el build usa ese fallback, así
+que es el proyecto real. Si algún día se definen esas variables en el panel, hay que sincronizar este valor.
+
+**Un fallo que solo apareció al comprobar la configuración de verdad:** la URL de las claves públicas de Google
+es `/service_accounts/v1/jwk/` en **singular**. El código pedía `/jwks/` —que es como se llama el formato, y por
+eso invita al error— y eso devuelve un 404 en HTML. El fallo era cerrado, pero habría dejado la funcionalidad
+inservible con un síntoma engañoso: **401 para todos los usuarios**, que parece un problema de sesión y no de
+configuración. Hay una prueba que fija la URL para que nadie la "corrija", y `loadJwks` ahora rechaza una
+respuesta vacía en vez de cachearla una hora.
+
+**Verificado con el `projectId` ya puesto:** sin cabecera → 401 «Falta la sesión»; con un token inventado o con
+un JWT bien formado pero de otro firmante → 401 «Sesión no válida»; y la caché `jwks:securetoken` aparece en el
+KV local con las claves reales de Google, que es la prueba de que la descarga funciona.
+
+**Efecto secundario bueno:** como `tests/unit/shareFunctions.test.ts` importa de `functions/_lib`, esos módulos
+entran ahora en `npm run typecheck` aunque `functions/` siga fuera del tsconfig. Ya destapó un error de tipos
+real en la llamada a WebCrypto.
 
 ### Paso 4 — Cliente: publicar y gestionar (~1,5 días)
 
