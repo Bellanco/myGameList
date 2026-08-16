@@ -126,15 +126,43 @@ dialog.alert-dialog[open]::backdrop { animation: alertBackdropIn .24s ease both;
   font-size: 0.9rem;
   color: var(--danger, #d33);
 }
-/* El enlace se parte por donde haga falta: una URL no cabe entera en móvil y no debe desbordar el diálogo. */
+/* Caja del enlace publicado, con el botón de copiar DENTRO y al final: el gesto vive donde está el dato.
+   La URL se parte por donde haga falta (no cabe entera en móvil) y el botón no se encoge nunca. */
 .share-dialog-url {
-  margin: 0;
-  padding: 0.6rem 0.75rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.5rem 0.5rem 0.75rem;
   border-radius: var(--radius, 8px);
   background: var(--surface-2, rgba(127, 127, 127, 0.12));
+  border: 1px solid var(--border);
+}
+.share-dialog-url-text {
+  flex: 1 1 auto;
+  min-width: 0;
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 0.85rem;
   overflow-wrap: anywhere;
+}
+.share-dialog-copy {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.2rem;
+  height: 2.2rem;
+  border: none;
+  border-radius: var(--radius, 8px);
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: background-color 0.15s, color 0.15s;
+
+  &:hover,
+  &:focus-visible {
+    background: var(--overlay-hover, rgba(127, 127, 127, 0.16));
+    color: var(--text);
+  }
 }
 /* Distintivo junto al botón de compartir, en el detalle de tu reseña. */
 .share-expiry {

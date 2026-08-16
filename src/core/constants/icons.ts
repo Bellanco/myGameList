@@ -49,7 +49,9 @@ export type IconName =
   /** Silueta de persona a TRAZO: el avatar de quien no muestra foto. Ver `HubAvatar`. */
   | 'person'
   /** Nodos conectados: compartir una reseña con enlace público. */
-  | 'share-nodes';
+  | 'share-nodes'
+  /** Dos hojas superpuestas: copiar al portapapeles. */
+  | 'content-copy';
 
 export const TAB_ICONS: Record<TabId, IconName> = {
   c: 'trophy',
@@ -84,4 +86,5 @@ export const COMMON_ICONS = {
   syncCopy: 'sync-copy',
   googleRecover: 'google-recover',
   share: 'share-nodes',
+  copy: 'content-copy',
 } as const;
