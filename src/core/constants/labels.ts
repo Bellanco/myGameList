@@ -1471,8 +1471,9 @@ export const SHARE_UI = {
   consentRevocable: 'Puedes retirarlo cuando quieras desde Ajustes. Eso lo deja inaccesible, pero no recoge las copias que ya se hayan compartido.',
   consentAccept: 'He leído lo anterior y quiero publicarla',
   signedAs: (nick: string) => `Se publicará firmada como «${nick}».`,
-  // El caso que hay que cazar ANTES de publicar: quien nunca eligió nick lleva el nombre de su cuenta de Google.
-  signedAsAccountName: 'Ese es el nombre de tu cuenta de Google. Si prefieres otro, elige un nick en tu perfil social antes de publicar.',
+  // Se enseña cuando el nombre con el que se firmaría no lo eligió su dueño (ver `nickIsAccountName`). El texto
+  // NO nombra de dónde sale ese nombre: lo que importa es que se revise y se pueda cambiar antes de publicar.
+  signedAsAccountName: 'Si prefieres otro, cambia tu nombre en tu perfil social antes de publicar.',
   confirm: 'Publicar enlace',
   cancel: 'Cancelar',
   publishing: 'Publicando…',
