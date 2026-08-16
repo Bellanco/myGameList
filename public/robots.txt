@@ -65,8 +65,9 @@ Disallow: /
 # CloudFlare puede hacer caché de páginas independientemente de robots.txt.
 # Para cambiar comportamiento de caché, usar Page Rules de CloudFlare.
 # robots.txt solo afecta crawlers externos (no CloudFlare).
-# Ojo: si Bot Fight Mode está activo, puede bloquear a estos agentes por su cuenta y la previsualización
-# seguirá sin aparecer aunque este fichero la permita.
+# Ojo: Bot Fight Mode (Cloudflare) puede bloquear a estos agentes por su cuenta, y entonces la previsualización
+# no aparecerá aunque este fichero la permita. Hoy NO aplica: ese ajuste es por zona y el sitio se sirve desde
+# mygamelist.pages.dev, que no es una zona del proyecto. Al pasar a dominio propio, comprobarlo.
 
 # No incluir sitemap: aplicación privada, no indexable públicamente
 # Sitemap: https://ejemplo.com/sitemap.xml
