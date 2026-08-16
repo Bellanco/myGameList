@@ -30,6 +30,18 @@
 #    Es un compromiso mayor que este encabezado y merece decidirse aparte.
 
 # HTML entrypoint: always revalidate to deliver new deploy immediately.
+#
+# Las DOS reglas hacen falta y no son la misma: `_headers` casa por ruta literal, así que `/index.html` no cubre
+# `/`, que es por donde entra todo el mundo. Sin la primera, la raíz se servía con el `max-age=0, must-revalidate`
+# por defecto de Pages. En frescura da igual —ambas revalidan siempre— pero el HTML es el único documento que
+# cambia sin cambiar de URL y de él cuelgan los nombres de todos los chunks: conviene que su cacheo sea una
+# decisión escrita y no la que herede el proveedor.
+#
+# `no-store` y no solo `no-cache` porque un shell obsoleto no es una molestia estética: referencia chunks que ya
+# no están en el servidor y deja la app sin arrancar (ver `functions/_lib/staleAsset.ts`).
+/
+  Cache-Control: no-cache, no-store, must-revalidate
+
 /index.html
   Cache-Control: no-cache, no-store, must-revalidate
 

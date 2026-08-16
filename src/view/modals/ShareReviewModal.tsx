@@ -1,4 +1,5 @@
 import { memo, useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useNativeDialog } from './useNativeDialog';
 import { SHARE_UI } from '../../core/constants/labels';
 import { Icon } from '../components/Icon';
@@ -94,7 +95,15 @@ export const ShareReviewModal = memo(function ShareReviewModal({
     }
   };
 
-  return (
+  /**
+   * El diálogo cuelga de <body>, no de donde vive el botón que lo abre.
+   *
+   * Ese botón se monta en la barra de acciones del detalle (`.hub-screen-actions`), que en móvil aprieta sus
+   * botones a 44×44 con `font-size: 0` para dejarlos en icono. Como el diálogo era hermano suyo, la regla
+   * alcanzaba también a los botones DE DENTRO y salían como dos cajas vacías. Colgarlo del body lo deja fuera
+   * del alcance de cualquier estilo pensado para esa barra, ahora y en adelante.
+   */
+  return createPortal(
     <dialog ref={dialogRef} className="alert-dialog share-dialog" aria-label={SHARE_UI.dialogTitle}>
       {open ? (
         <div className="dialog-content">
@@ -178,6 +187,7 @@ export const ShareReviewModal = memo(function ShareReviewModal({
           )}
         </div>
       ) : null}
-    </dialog>
+    </dialog>,
+    document.body,
   );
 });
