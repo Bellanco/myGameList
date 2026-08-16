@@ -49,3 +49,7 @@ audit-report.json
 /test-results/
 /playwright-report/
 /blob-report/
+
+# Copia local completa del proyecto. Se ignora para que no pueda colarse en un commit con un `git add .`:
+# son ~5 MB que duplican ficheros ya versionados (src, functions, reglas de Firestore, CLAUDE.md).
+/base/
