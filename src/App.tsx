@@ -12,6 +12,7 @@ import { TabBar } from './view/components/TabBar';
 import { Toolbar } from './view/components/Toolbar';
 import { GameTable } from './view/components/GameTable';
 import { StatusBanner } from './view/components/StatusBanner';
+import { UpdateNotice } from './view/components/UpdateNotice';
 import { BottomNavigation } from './view/components/BottomNavigation';
 import { APP_ROUTES, FALLBACK_ROUTE, matchAppSection, type AppSection } from './core/constants/routes';
 import { ScrollToTop } from './view/components/ScrollToTop';
@@ -780,6 +781,7 @@ export default function App() {
       />
       {activeSection === 'lists' ? <TabBar currentTab={currentTab} tabCounts={vm.tabCounts} onTabChange={handleTabChange} /> : null}
       <StatusBanner notice={vm.notice} remoteChangesApplied={syncVm.lastRemoteChangesApplied} />
+      <UpdateNotice />
       <main
         id="contenido"
         className={`main ${

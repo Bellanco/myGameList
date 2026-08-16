@@ -6,6 +6,22 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
 ## [Unreleased]
 
 ### Fixed
+- **Había que hacer Ctrl+Shift+R para ver una versión nueva.** El service worker ya se relevaba solo
+  (`skipWaiting()`), y el HTML se sirve con `no-store`: en cuanto el navegador VUELVE A MIRAR
+  `/service-worker.js`, la versión nueva entra sola. El agujero estaba en ese "vuelve a mirar": el navegador solo
+  lo comprueba en una navegación de verdad —o, por su cuenta, cada 24 horas— y esta app es un SPA, donde moverse
+  entre secciones no genera ninguna navegación. Una pestaña abierta, o una PWA instalada en móvil (que no se
+  cierra nunca del todo), podía pasar días ejecutando el bundle anterior; volver desde la bfcache tampoco ayudaba,
+  porque restaura el documento tal cual, con el JavaScript viejo dentro. Por eso el único gesto que funcionaba era
+  el recargado forzado, que es lo único que salta a la vez el service worker y la caché HTTP. Ahora la app
+  pregunta ella por versiones nuevas cuando el usuario vuelve a ella (foco, pestaña visible, restauración de
+  bfcache, recuperación de red) y, si no vuelve, cada cuarto de hora.
+  - **Cómo se aplica**, sin interrumpir y sin perder nada: con la app en segundo plano y nada a medias, se recarga
+    sola —el usuario vuelve y ya está en la versión nueva, sin haber visto un parpadeo—. Con la app en primer
+    plano NO se recarga nunca sola: eso perdería el scroll, los filtros y lo que se esté escribiendo, así que se
+    enseña un aviso con un botón y decide el usuario. Con un modal abierto (una reseña a medio escribir vive solo
+    en el DOM) o con cambios locales sin subir, tampoco: se espera. Si el aviso llega en primer plano y el usuario
+    lo ignora, la recarga se hace sola en cuanto deja la app.
 - **El avatar por defecto de Google se colaba como si fuera una foto.** Quien no sube foto a su cuenta no se queda
   sin `photoURL`: Google le genera un monograma —su inicial sobre un círculo de color— y lo sirve desde el mismo
   sitio y con el mismo formato de URL que una foto real, así que por la URL no se distinguen. Eso rompía dos cosas

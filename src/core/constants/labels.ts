@@ -185,6 +185,14 @@ export const UI_MESSAGES = {
     // sección `stats`. No confundir con el PERFIL SOCIAL (`/social/profile`), que es la ficha pública.
     stats: 'Estadísticas',
   },
+  // Aviso de versión nueva. Solo aparece cuando NO se ha podido recargar sola (ver `useAppUpdate`), así que el
+  // texto asume que el usuario está delante y a medio hacer algo: dice qué pasa y deja la decisión en su mano.
+  update: {
+    title: 'Hay una nueva versión',
+    body: 'Recarga para verla. Tu información no se perderá.',
+    action: 'Recargar',
+    announce: 'Hay una nueva versión de la aplicación. Recarga para verla.',
+  },
   // Panel de estadísticas derivadas de las listas. Todo se calcula en el dispositivo (ver
   // `core/stats/computeStats`); no se guarda ni se publica nada.
   stats: {

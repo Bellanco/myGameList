@@ -44,6 +44,20 @@
 .status-banner .warn { border-left-color: var(--warn); }
 .status-banner .err  { border-left-color: var(--danger); }
 
+/* Aviso de versión nueva: mismo lenguaje que el de estado (misma franja, misma tarjeta, mismo acento verde) más
+   el botón de recargar. La forma la sigue poniendo cada tema por sus tokens (--surface, --border, --radius-md). */
+.update-notice { max-width: 1800px; margin: .9rem auto 0; padding: 0 1.2rem; flex: 0 0 auto; width: 100%; }
+.update-notice-card {
+  display: flex; align-items: center; flex-wrap: wrap; gap: .8rem;
+  border: 1px solid var(--border); border-left: 4px solid var(--success);
+  background: var(--surface); border-radius: var(--radius-md);
+  padding: .8rem 1rem; box-shadow: var(--shadow); font-size: .92rem;
+}
+.update-notice-text { flex: 1 1 240px; display: grid; gap: .2rem; }
+.update-notice-text strong { font-size: .95rem; }
+.update-notice-text span { color: var(--text-muted); font-size: .82rem; line-height: 1.4; }
+.update-notice-card .btn { margin-left: auto; }
+
 /* Tabs */
 .tabs {
   position: relative;
@@ -825,7 +839,8 @@
    Todas con su guarda `prefers-reduced-motion` al final de este bloque. */
 
 /* Aviso de estado: entra con un leve fade+desplazamiento al aparecer (antes surgía de golpe). */
-.status-banner > div { animation: statusBannerIn .3s ease both; }
+.status-banner > div,
+.update-notice-card { animation: statusBannerIn .3s ease both; }
 @keyframes statusBannerIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
 
 /* Pestañas: subrayado que se desliza bajo la activa (posición y ancho los fija TabBar por JS). */
@@ -874,6 +889,7 @@
 
 @media (prefers-reduced-motion: reduce) {
   .status-banner > div,
+  .update-notice-card,
   .hub-feed-activity-item,
   .hub-requests-count.is-active,
   .hub-friend-chip,
@@ -2409,6 +2425,7 @@ button.hub-chip.active {
 
 @media (min-width:1957px) {
   .status-banner,
+  .update-notice,
   .main {
     max-width: 92vw;
   }
