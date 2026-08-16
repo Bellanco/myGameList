@@ -5,7 +5,14 @@ import { shareExpiresAt, type ShareQuota } from '../../src/core/constants/tiers'
 import { newToken } from './http';
 import { ownerKey, shareKey, userShareKey, type KVNamespace, type ShareIndexMetadata } from './keys';
 
-/** Lo que el cliente propone publicar. La caducidad y la versión NO vienen de aquí: las pone el servidor. */
+/**
+ * Lo que el cliente propone publicar.
+ *
+ * Fíjate en lo que NO está: ni `authorNick`, ni `createdAt`, ni `expiresAt`, ni la versión. Todo eso lo pone el
+ * servidor. El nick sale del perfil de Firestore leído con el token de quien publica, así que nadie puede firmar
+ * una reseña con el nombre de otro; y la caducidad sale de su rango, así que la cuota es una barrera y no una
+ * sugerencia.
+ */
 export interface ShareDraft {
   gameId: number;
   gameName: string;
@@ -16,7 +23,6 @@ export interface ShareDraft {
   genres: string[];
   strengths: string[];
   weaknesses: string[];
-  authorNick: string;
   reviewedAt: number;
 }
 
@@ -46,7 +52,6 @@ export function draftFromBody(body: Record<string, unknown>): ShareDraft | null 
     genres: list(body.genres),
     strengths: list(body.strengths),
     weaknesses: list(body.weaknesses),
-    authorNick: typeof body.authorNick === 'string' ? body.authorNick : '',
     reviewedAt: Number(body.reviewedAt) || 0,
   };
 }
@@ -68,11 +73,12 @@ export async function publishShare(input: {
   kv: KVNamespace;
   uid: string;
   draft: ShareDraft;
+  nick: string;
   quota: ShareQuota;
   now: number;
   existingToken?: string | null;
 }): Promise<PublishResult> {
-  const { kv, uid, draft, quota, now } = input;
+  const { kv, uid, draft, nick, quota, now } = input;
   const token = input.existingToken || newToken();
   const expiresAt = shareExpiresAt(quota, now);
 
@@ -87,7 +93,7 @@ export async function publishShare(input: {
     genres: draft.genres,
     strengths: draft.strengths,
     weaknesses: draft.weaknesses,
-    authorNick: draft.authorNick,
+    authorNick: nick,
     reviewedAt: draft.reviewedAt,
     createdAt: now,
     expiresAt,

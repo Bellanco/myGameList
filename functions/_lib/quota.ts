@@ -26,6 +26,7 @@ export interface ShareBan {
 /** Estado completo de un usuario frente a la funcionalidad: qué puede hacer y cuánto le queda. */
 export interface ShareStatus {
   tier: ProfileTier;
+  nick: string;
   quota: ShareQuota;
   ban: ShareBan | null;
   active: ShareRow[];
@@ -41,14 +42,21 @@ export async function readOverride(kv: KVNamespace, uid: string): Promise<ShareQ
   return raw && typeof raw === 'object' ? raw : null;
 }
 
+export interface ProfileFacts {
+  tier: ProfileTier;
+  /** Nick público. Lo decide EL SERVIDOR, no el cliente: nadie puede publicar firmando con otro nombre. */
+  nick: string;
+}
+
 /**
- * Rango del usuario, leído de su propio documento de perfil con SU ID token (y su token de App Check si lo trae).
+ * Rango y nick del usuario, leídos de su propio documento de perfil con SU ID token (y su token de App Check si
+ * lo trae).
  *
  * ASÍ NO HACE FALTA CUENTA DE SERVICIO: la lectura va con los permisos del dueño, que las reglas ya permiten
  * (`isOwner`), y reenviar la atestación de App Check hace que funcione esté o no exigida en la consola. Si algo
- * falla —perfil aún sin crear, red, reglas— se degrada a bronce: nunca se promociona por un error.
+ * falla —perfil aún sin crear, red, reglas— se degrada a bronce y nick vacío: nunca se promociona por un error.
  */
-export async function readTier(user: AuthUser, projectId: string, appCheckToken: string | null): Promise<ProfileTier> {
+export async function readProfileFacts(user: AuthUser, projectId: string, appCheckToken: string | null): Promise<ProfileFacts> {
   const url = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/profiles/${user.uid}`;
   const headers: Record<string, string> = { Authorization: `Bearer ${user.idToken}` };
   if (appCheckToken) {
@@ -57,12 +65,17 @@ export async function readTier(user: AuthUser, projectId: string, appCheckToken:
   try {
     const response = await fetch(url, { headers });
     if (!response.ok) {
-      return DEFAULT_PROFILE_TIER;
+      return { tier: DEFAULT_PROFILE_TIER, nick: '' };
     }
-    const body = (await response.json()) as { fields?: { tier?: { stringValue?: string } } };
-    return normalizeTier(body.fields?.tier?.stringValue);
+    const body = (await response.json()) as {
+      fields?: { tier?: { stringValue?: string }; displayName?: { stringValue?: string } };
+    };
+    return {
+      tier: normalizeTier(body.fields?.tier?.stringValue),
+      nick: String(body.fields?.displayName?.stringValue || '').trim(),
+    };
   } catch {
-    return DEFAULT_PROFILE_TIER;
+    return { tier: DEFAULT_PROFILE_TIER, nick: '' };
   }
 }
 
@@ -94,13 +107,13 @@ export async function readShareStatus(
   projectId: string,
   appCheckToken: string | null,
 ): Promise<ShareStatus> {
-  const [ban, override, tier, active] = await Promise.all([
+  const [ban, override, profile, active] = await Promise.all([
     readBan(env.SHARES, user.uid),
     readOverride(env.SHARES, user.uid),
-    readTier(user, projectId, appCheckToken),
+    readProfileFacts(user, projectId, appCheckToken),
     listActiveShares(env.SHARES, user.uid),
   ]);
-  return { tier, quota: resolveShareQuota(tier, override), ban, active };
+  return { tier: profile.tier, nick: profile.nick, quota: resolveShareQuota(profile.tier, override), ban, active };
 }
 
 /**

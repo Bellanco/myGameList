@@ -76,6 +76,76 @@ dialog.alert-dialog[open]::backdrop { animation: alertBackdropIn .24s ease both;
   flex: 1;
 }
 
+/* Compartir una reseña con enlace público.
+   Hereda del diálogo de confirmación (mismo marco, mismo ritmo de botones) y solo añade lo que este necesita:
+   un aviso que hay que poder leer entero, la casilla de aceptación y el enlace ya publicado.
+   Es más ancho que un confirm porque aquí SÍ hay que leer: se está publicando algo en internet. */
+.share-dialog {
+  max-width: min(34rem, 92vw);
+}
+.share-dialog-game {
+  font-weight: 600;
+  margin: 0;
+}
+.share-dialog-consent {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.75rem 0.9rem;
+  border-radius: var(--radius, 8px);
+  background: var(--surface-2, rgba(127, 127, 127, 0.12));
+  font-size: 0.92rem;
+  line-height: 1.45;
+
+  p {
+    margin: 0;
+  }
+}
+.share-dialog-consent-title {
+  font-weight: 600;
+}
+.share-dialog-note {
+  margin: 0;
+  font-size: 0.9rem;
+  opacity: 0.85;
+}
+.share-dialog-accept {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.55rem;
+  font-size: 0.92rem;
+  cursor: pointer;
+
+  input {
+    margin-top: 0.15rem;
+    flex: 0 0 auto;
+  }
+}
+.share-dialog-error {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--danger, #d33);
+}
+/* El enlace se parte por donde haga falta: una URL no cabe entera en móvil y no debe desbordar el diálogo. */
+.share-dialog-url {
+  margin: 0;
+  padding: 0.6rem 0.75rem;
+  border-radius: var(--radius, 8px);
+  background: var(--surface-2, rgba(127, 127, 127, 0.12));
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.85rem;
+  overflow-wrap: anywhere;
+}
+/* Distintivo junto al botón de compartir, en el detalle de tu reseña. */
+.share-expiry {
+  font-size: 0.82rem;
+  opacity: 0.8;
+  align-self: center;
+}
+.share-banned {
+  opacity: 0.9;
+}
+
 /* Name with stars */
 .name-with-stars {
   display: flex;
