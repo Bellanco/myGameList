@@ -198,20 +198,9 @@ dialog.alert-dialog[open]::backdrop { animation: alertBackdropIn .24s ease both;
   gap: 0.5rem;
 }
 
-/* Página pública de una reseña compartida, en modo artículo (visitante sin la app).
-   No hay cromo, así que la pantalla tiene que respirar por su cuenta: se centra y se le da aire arriba, porque
-   sin barra superior el contenido quedaría pegado al borde. */
-.share-public {
-  max-width: 52rem;
-  margin: 0 auto;
-  padding: clamp(1rem, 4vw, 2.5rem) 1rem;
-}
-/* Barra inferior de la página pública: hereda todo el aspecto de `.bottom-nav` de la app y solo ajusta lo que
-   cambia por llevar UNA entrada y ser un enlace en vez de un botón.
-   El hueco inferior del contenedor evita que la barra —que va fija— tape el final de la reseña. */
-.share-public {
-  padding-bottom: 6rem;
-}
+/* Barra inferior de la página pública de una reseña compartida (modo artículo).
+   Todo lo demás —ancho, márgenes, hueco para la barra— sale del `<main class="main">` de siempre: la página se
+   monta dentro del mismo contenedor que usa la app, así que no necesita medidas propias que puedan divergir. */
 .share-public-nav {
   .bottom-nav-inner {
     max-width: 22rem;
