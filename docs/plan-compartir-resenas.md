@@ -502,10 +502,28 @@ Si alguna no convence, se cambia aquí y en el código:
    sería enseñar el motivo cuando el ajuste es a la baja, por transparencia; se descarta porque un recorte
    silencioso ya se nota (el contador baja) y quien quiera saber por qué preguntará.*
 
-## 12. Por confirmar antes del paso 3
+## 12. Confirmaciones
 
-1. **Dominio definitivo** de producción para los enlaces (`/r/:token` debe ser corto y estable).
-2. ¿Está **Bot Fight Mode** activo en Cloudflare y bloqueando a `Twitterbot` / `facebookexternalhit`?
-3. Namespace de KV a crear en la cuenta de Cloudflare (nombre y entorno de preview).
-4. La exigencia de **App Check** ya no bloquea el diseño (§3), pero conviene saber si está activada para
-   interpretar los errores en desarrollo.
+1. **Dominio: `mygamelist.pages.dev`** ✅ — confirmado y en producción (responde 200 y sirve el
+   `X-Robots-Tag: noindex, nofollow`). Los enlaces serán `https://mygamelist.pages.dev/r/{token}`.
+   *Consecuencia asumida:* un enlace compartido es inmutable. Si algún día la app se muda a un dominio propio,
+   los `/r/…` ya pegados en un chat seguirán apuntando aquí y solo vivirán mientras `pages.dev` responda. Si esa
+   mudanza llega, hay que dejar una redirección permanente de `/r/*`, no retirar el dominio sin más.
+2. **Namespace de KV** ⏳ — lo crea el administrador desde el panel (Workers & Pages → KV). Hacen falta dos, uno
+   de producción y otro de vista previa, y sus ids para el binding:
+
+   ```toml
+   # wrangler.toml — NO añadir hasta tener los ids: un binding con id vacío rompe el despliegue de Pages.
+   [[kv_namespaces]]
+   binding = "SHARES"
+   id = "<id del namespace de producción>"
+   preview_id = "<id del namespace de vista previa>"
+   ```
+
+3. **Bot Fight Mode** ⏳ — comprobar en el panel de Cloudflare que no bloquea a `Twitterbot` /
+   `facebookexternalhit`. Si lo hace, la previsualización seguirá sin salir aunque `robots.txt` la permita.
+4. **App Check** — no bloquea el diseño (§3); saber si la exigencia está activada solo sirve para interpretar
+   los errores en desarrollo.
+5. **Wrangler no está en las dependencias** del proyecto: hoy se invoca con `npx wrangler` (4.123.0 al escribir
+   esto). Si el paso 3 acaba usándolo a diario, conviene fijarlo como `devDependency` para que todos usen la
+   misma versión.
