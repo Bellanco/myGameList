@@ -373,7 +373,7 @@ URL real, y comprobar que `site:` en Google sigue sin devolver nada del dominio.
 ### Paso 2 — Modelo, esquema y constantes · **HECHO**
 
 - `core/constants/tiers.ts`: `PROFILE_TIER_SHARE_TTL_DAYS`, `PROFILE_TIER_SHARE_MAX_ACTIVE`,
-  `SHARE_MAX_CREATIONS_PER_DAY`, los dos techos, y `resolveShareQuota` / `shareExpiresAt`. La resolución vive
+  `shareDailyLimit`, los dos techos, y `resolveShareQuota` / `shareExpiresAt`. La resolución vive
   aquí, junto a los números, para que cliente y Worker usen la misma y no haya dos verdades.
 - `model/types/share.ts`: `SharedReview`, `SharedReviewIndexEntry`, `ShareBan` y `MySharesResponse`.
 - `model/schemas/shareSchema.ts`: Zod `strictObject` con cotas + `assertNoShareForbiddenFields` (denylist
