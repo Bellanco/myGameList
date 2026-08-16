@@ -12,6 +12,7 @@ const deleteFriendshipMock = vi.fn(async () => {});
 const signOutMock = vi.fn(async () => {});
 const closeSharedDatabaseMock = vi.fn(async () => {});
 const clearSyncConfigMock = vi.fn();
+const removeAllMySharesMock = vi.fn(async () => 0);
 
 vi.mock('firebase/firestore/lite', () => ({
   deleteDoc: (...args: unknown[]) => deleteDocMock(...(args as [])),
@@ -42,6 +43,10 @@ vi.mock('../../src/model/repository/idbConnectionRepository', () => ({
   SHARED_DB_NAME: 'myGameList',
 }));
 
+vi.mock('../../src/model/repository/shareRepository', () => ({
+  removeAllMyShares: (...args: unknown[]) => removeAllMySharesMock(...(args as [])),
+}));
+
 vi.mock('../../src/model/repository/gistConfigRepository', () => ({
   clearSyncConfig: (...args: unknown[]) => clearSyncConfigMock(...(args as [])),
 }));
@@ -55,6 +60,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   deletedDatabases.length = 0;
   localStorage.clear();
+  removeAllMySharesMock.mockResolvedValue(0);
   getMyFriendshipsMock.mockResolvedValue({ friends: [], incoming: [], outgoing: [], byOtherUid: {} });
   deleteDocMock.mockResolvedValue(undefined);
 
@@ -88,6 +94,9 @@ describe('deleteOwnAccount', () => {
     const result = await deleteOwnAccount('uid-1');
 
     expect(result.remoteComplete).toBe(true);
+    // Los enlaces públicos se retiran ANTES de borrar el perfil: después, la Function ya no podría resolver
+    // identidad ni rango, y las reseñas se quedarían publicadas hasta caducar solas.
+    expect(removeAllMySharesMock).toHaveBeenCalled();
     expect(deleteFriendshipMock).toHaveBeenCalledTimes(3);
     expect(deleteDocMock).toHaveBeenCalledTimes(4);
     expect(signOutMock).toHaveBeenCalled();
@@ -134,5 +143,20 @@ describe('deleteOwnAccount', () => {
     expect(deleteDocMock).not.toHaveBeenCalled();
     expect(localStorage.getItem(STORAGE_KEY)).toBeNull();
     expect(deletedDatabases).toEqual(['myGameList']);
+  });
+});
+
+describe('deleteOwnAccount — enlaces públicos', () => {
+  // Que la supresión falle en silencio aquí sería lo más grave de todo el flujo: las reseñas del usuario
+  // seguirían siendo visibles para cualquiera con el enlace. Tiene que reportarse.
+  it('reports a failure when the public links could not be withdrawn', async () => {
+    removeAllMySharesMock.mockRejectedValueOnce(new Error('sin red'));
+
+    const result = await deleteOwnAccount('uid-1');
+
+    expect(result.remoteComplete).toBe(false);
+    expect(result.failures.join(' ')).toMatch(/enlaces compartidos/i);
+    // Y aun así el resto del borrado sigue adelante: un fallo parcial no aborta la limpieza.
+    expect(signOutMock).toHaveBeenCalled();
   });
 });

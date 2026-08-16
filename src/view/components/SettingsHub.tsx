@@ -3,10 +3,13 @@ import { COMMON_ICONS } from '../../core/constants/icons';
 import { UI_MESSAGES, VALIDATION_MESSAGES } from '../../core/constants/labels';
 import { Icon } from './Icon';
 import { PlayniteNote } from './import/PlayniteNote';
+import { SharedReviewsCard } from './SharedReviewsCard';
 
 type AdminCategoryKey = 'genres' | 'platforms' | 'strengths' | 'weaknesses';
 
 interface SettingsHubProps {
+  /** ¿Tiene espacio social? De ahí salen el nick y el rango, así que sin él no hay enlaces que gestionar. */
+  hasSocialProfile: boolean;
   syncStatus: string;
   hasSyncConfig: boolean;
   connectedGistId: string;
@@ -41,6 +44,7 @@ interface SettingsHubProps {
  * Hub de ajustes con acciones de mantenimiento y sincronizacion.
  */
 export const SettingsHub = memo(function SettingsHub({
+  hasSocialProfile,
   syncStatus,
   hasSyncConfig,
   connectedGistId,
@@ -306,6 +310,8 @@ export const SettingsHub = memo(function SettingsHub({
           </div>
         )}
       </div>
+
+      <SharedReviewsCard enabled={hasSocialProfile} />
 
       <div className="settings-card settings-card-backup">
         <div className="settings-card-head">

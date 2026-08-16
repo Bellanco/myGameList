@@ -307,8 +307,13 @@ para tumbar un enlace sin desplegar código.
    *«Borrar»*.
 4. **`accountDeletionRepository.ts`** limpia hoy `profiles`, `privateConfig`, `publicConfig` y `userMap`
    (`OWNED_COLLECTIONS`). Debe **retirar además todos los enlaces del usuario** (prefijo `user:{uid}:`, con sus
-   `share:` y `owner:` correspondientes) y borrar su `ban:{uid}` y su `quota:override:{uid}` si los tuviera,
-   antes de borrar el perfil. Sin
+   `share:` y `owner:` correspondientes), antes de borrar el perfil.
+
+   **CAMBIO respecto a lo planeado:** el veto (`ban:{uid}`) y el ajuste de cuota **NO** se borran ahí. Se planeó
+   así, pero al implementarlo se vio el agujero: la purga la pide el propio usuario con su token, de modo que
+   borrar el veto desde ese camino permitiría quitárselo llamando al endpoint sin borrar nada. Quedan como
+   residuo de un uid que ya no existirá —dos claves diminutas, sin datos personales más allá del identificador—
+   y los limpia el administrador. Sin
    lo primero, el derecho de supresión queda incompleto: sus reseñas seguirían públicas. Lo segundo no abre
    ninguna puerta —quien se borra la cuenta y vuelve estrena `uid` de todos modos— y evita conservar un dato
    asociado a una persona que ya no existe en el sistema.
@@ -437,7 +442,7 @@ KV local con las claves reales de Google, que es la prueba de que la descarga fu
 entran ahora en `npm run typecheck` aunque `functions/` siga fuera del tsconfig. Ya destapó un error de tipos
 real en la llamada a WebCrypto.
 
-### Paso 4 — Cliente: publicar y gestionar (~1,5 días)
+### Paso 4 — Cliente: publicar y gestionar · **HECHO**
 
 - `model/repository/shareRepository.ts`: `createShare`, `deleteShare`, `listMyShares`. Adjunta ID token + token
   de App Check.
@@ -453,7 +458,7 @@ real en la llamada a WebCrypto.
     misma explicación (nunca un error genérico).
 - Textos en `core/constants/labels.ts` (`SHARE_UI`), como el resto de la app.
 
-### Paso 5 — Página pública y navegación cerrada (~1 día)
+### Paso 5 — Página pública y navegación cerrada · **HECHO**
 
 - `view/components/PublicReviewScreen.tsx`: envuelve `SocialProfileReviewScreen` con `hours: null`, sin enlaces
   de navegación y con el CTA único.
@@ -465,7 +470,7 @@ real en la llamada a WebCrypto.
 **Aceptación:** con el `localStorage` vacío, la página no monta ningún enlace de navegación ni carga chunk de
 Firebase (verificable en la pestaña de red).
 
-### Paso 6 — Moderación en `/admin` (~0,5 día)
+### Paso 6 — Moderación en `/admin` · **HECHO**
 
 - Repositorio y sección nueva en `AdminHub` + `useAdminViewModel`: censo paginado, filtro por autor, retirada
   con `ConfirmModal`.
@@ -476,7 +481,7 @@ Firebase (verificable en la pestaña de red).
   mismas dos vistas. La ficha muestra la cuota efectiva y el valor de rango del que viene.
 - Sube a ~1,5 días con el veto y el ajuste incluidos.
 
-### Paso 7 — Legal, supresión y cierre (~1 día)
+### Paso 7 — Legal, supresión y cierre · **HECHO** (falta QA en clientes reales)
 
 - `legal.ts` + `LEGAL_VERSION`.
 - `accountDeletionRepository.ts`: retirada de enlaces antes de borrar el perfil.

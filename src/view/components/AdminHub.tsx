@@ -15,6 +15,7 @@ import {
 import type { AdminAnomaly } from '../../model/types/firestore';
 import { useAdminViewModel } from '../../viewmodel/useAdminViewModel';
 import { ConfirmModal } from '../modals/ConfirmModal';
+import { AdminSharesSection } from './AdminSharesSection';
 import { HubAvatar } from './socialhub/HubAvatar';
 import { Icon } from './Icon';
 
@@ -585,6 +586,8 @@ export const AdminHub = memo(function AdminHub() {
           </ul>
         )}
       </div>
+
+      <AdminSharesSection />
 
       <ConfirmModal
         open={pending !== null}

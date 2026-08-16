@@ -146,6 +146,58 @@ dialog.alert-dialog[open]::backdrop { animation: alertBackdropIn .24s ease both;
   opacity: 0.9;
 }
 
+/* Tarjeta de Ajustes con los enlaces compartidos. Cada fila es "qué compartiste" + "qué puedes hacer con ello",
+   y en pantalla estrecha las acciones bajan bajo el texto en vez de apretarlo. */
+.settings-shares-counter {
+  margin: 0;
+  font-weight: 600;
+}
+.settings-shares-empty,
+.settings-shares-error {
+  margin: 0;
+  font-size: 0.92rem;
+}
+.settings-shares-error {
+  color: var(--danger, #d33);
+}
+.settings-shares-banned {
+  padding: 0.75rem 0.9rem;
+  border-radius: var(--radius, 8px);
+  background: var(--surface-2, rgba(127, 127, 127, 0.12));
+
+  p {
+    margin: 0;
+  }
+}
+.settings-shares-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+.settings-shares-item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  padding: 0.6rem 0.75rem;
+  border-radius: var(--radius, 8px);
+  background: var(--surface-2, rgba(127, 127, 127, 0.1));
+}
+.settings-shares-item-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  font-size: 0.92rem;
+}
+.settings-shares-item-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
 /* Página pública de una reseña compartida, en modo artículo (visitante sin la app).
    No hay cromo, así que la pantalla tiene que respirar por su cuenta: se centra y se le da aire arriba, porque
    sin barra superior el contenido quedaría pegado al borde. */

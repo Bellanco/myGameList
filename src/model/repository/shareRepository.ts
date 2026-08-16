@@ -106,6 +106,18 @@ export async function removeShare(token: string): Promise<void> {
   await parse(response);
 }
 
+/**
+ * Retira TODOS mis enlaces. Lo llama el borrado de cuenta, antes de borrar el perfil.
+ *
+ * No toca el veto ni el ajuste de cuota: si los borrase, bastaría con llamar aquí para quitarse un veto. Esos
+ * dos quedan como residuo de un uid que ya no existirá, y los limpia el administrador.
+ */
+export async function removeAllMyShares(): Promise<number> {
+  const response = await fetch(`${API_BASE}/mine`, { method: 'DELETE', headers: await authHeaders() });
+  const body = await parse(response);
+  return Number(body.removed) || 0;
+}
+
 // La LECTURA del artículo vive en `publicShareRepository.ts`, no aquí: la usa la página pública, que no debe
 // arrastrar Firebase por importar este módulo.
 
