@@ -206,17 +206,20 @@ dialog.alert-dialog[open]::backdrop { animation: alertBackdropIn .24s ease both;
   margin: 0 auto;
   padding: clamp(1rem, 4vw, 2.5rem) 1rem;
 }
-.share-public-notice {
-  margin: 1rem 0 0;
-  font-size: 0.85rem;
-  opacity: 0.75;
+/* Barra inferior de la página pública: hereda todo el aspecto de `.bottom-nav` de la app y solo ajusta lo que
+   cambia por llevar UNA entrada y ser un enlace en vez de un botón.
+   El hueco inferior del contenedor evita que la barra —que va fija— tape el final de la reseña. */
+.share-public {
+  padding-bottom: 6rem;
 }
-.share-public-cta {
-  margin: 1.25rem 0 0;
-  text-align: center;
+.share-public-nav {
+  .bottom-nav-inner {
+    max-width: 22rem;
+  }
 
-  a {
-    font-weight: 600;
+  .bottom-nav-btn {
+    text-decoration: none;
+    color: var(--steam-hover);
   }
 }
 
