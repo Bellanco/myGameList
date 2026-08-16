@@ -27,8 +27,10 @@ export const ShareReviewModal = memo(function ShareReviewModal({
   errorHint,
   publishedUrl,
   renewed,
+  expiresAt,
   onCancel,
   onConfirm,
+  onRenew,
 }: {
   open: boolean;
   gameName: string;
@@ -44,8 +46,17 @@ export const ShareReviewModal = memo(function ShareReviewModal({
   /** URL ya publicada; mientras sea vacía, el diálogo está en modo "confirmar". */
   publishedUrl: string;
   renewed: boolean;
+  /** Cuándo deja de estar accesible el enlace que se está enseñando. 0 = no se sabe. */
+  expiresAt: number;
   onCancel: () => void;
   onConfirm: () => void;
+  /**
+   * Rehace el enlace con el texto de AHORA y le da otra vez su duración completa, sobre el mismo token.
+   *
+   * Solo se pasa cuando la reseña YA estaba compartida. Es lo que evita que quien corrige una errata acabe con
+   * dos enlaces —uno muerto circulando por un chat y otro nuevo— y no gasta cuota, porque no crea nada.
+   */
+  onRenew?: () => void;
 }) {
   const dialogRef = useNativeDialog(open, onCancel);
   const [accepted, setAccepted] = useState(false);
@@ -113,6 +124,9 @@ export const ShareReviewModal = memo(function ShareReviewModal({
           {publishedUrl ? (
             <>
               {renewed ? <p className="share-dialog-note">{SHARE_UI.renewed}</p> : null}
+              {!renewed && expiresAt > 0 ? (
+                <p className="share-dialog-note">{SHARE_UI.expiresIn(Math.ceil((expiresAt - Date.now()) / 86_400_000))}</p>
+              ) : null}
               {/* El enlace con su botón de copiar DENTRO, al final, como en cualquier caja de compartir de la
                   web: el gesto está donde está el dato, en vez de en un botón al pie que hay que buscar. */}
               <div className="share-dialog-url">
@@ -129,7 +143,18 @@ export const ShareReviewModal = memo(function ShareReviewModal({
               </div>
               {/* Aviso en vivo para quien no ve el cambio del icono (lectores de pantalla). */}
               <p className="share-dialog-note" role="status">{copied ? SHARE_UI.copied : ''}</p>
+              {error ? (
+                <p className="share-dialog-error">
+                  {error}
+                  {errorHint ? ` ${errorHint}` : ''}
+                </p>
+              ) : null}
               <div className="dialog-actions">
+                {onRenew ? (
+                  <button className="btn btn-secondary" type="button" disabled={publishing} onClick={onRenew}>
+                    {publishing ? SHARE_UI.renewing : SHARE_UI.renew}
+                  </button>
+                ) : null}
                 {canShareNatively ? (
                   <button className="btn btn-secondary" type="button" onClick={shareNatively}>
                     <Icon name="share-nodes" />
