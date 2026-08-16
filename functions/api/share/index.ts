@@ -8,7 +8,7 @@
 import { requireUser } from '../../_lib/context';
 import { fail, json, readJson } from '../../_lib/http';
 import type { Env } from '../../_lib/keys';
-import { SHARE_MAX_CREATIONS_PER_DAY, bumpDailyCount, readDailyCount, readShareStatus } from '../../_lib/quota';
+import { bumpDailyCount, readDailyCount, readShareStatus, shareDailyLimit } from '../../_lib/quota';
 import { draftFromBody, publishShare } from '../../_lib/shares';
 
 export async function onRequestPost(context: { request: Request; env: Env }): Promise<Response> {
@@ -44,9 +44,12 @@ export async function onRequestPost(context: { request: Request; env: Env }): Pr
   const existing = status.active.find((row) => row.meta?.gameId === draft.gameId) || null;
 
   if (!existing) {
+    // El techo del día es el mismo número que sus enlaces activos (ver `shareDailyLimit`): frena el ciclo de
+    // crear y retirar sin castigar a quien simplemente comparte lo que le toca.
+    const dailyLimit = shareDailyLimit(status.quota);
     const daily = await readDailyCount(context.env.SHARES, caller.user.uid, now);
-    if (daily >= SHARE_MAX_CREATIONS_PER_DAY) {
-      return fail(429, 'Has compartido demasiadas reseñas hoy. Inténtalo mañana.', { dailyLimit: SHARE_MAX_CREATIONS_PER_DAY });
+    if (daily >= dailyLimit) {
+      return fail(429, 'Has compartido demasiadas reseñas hoy. Inténtalo mañana.', { dailyLimit });
     }
     if (status.active.length >= status.quota.maxActive) {
       // El mensaje dice QUÉ HACER, no solo que no. `oldestExpiresAt` deja al cliente calcular "dentro de 2 días".

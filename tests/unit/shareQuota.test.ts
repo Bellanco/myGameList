@@ -6,6 +6,7 @@ import {
   SHARE_MAX_ACTIVE_CEILING,
   SHARE_TTL_DAYS_CEILING,
   resolveShareQuota,
+  shareDailyLimit,
   shareExpiresAt,
 } from '../../src/core/constants/tiers';
 
@@ -83,5 +84,26 @@ describe('cuota de compartir — caducidad', () => {
   it('uses the override duration when there is one', () => {
     const now = 1_700_000_000_000;
     expect(shareExpiresAt(resolveShareQuota('bronze', { ttlDays: 30 }), now)).toBe(now + 30 * 86_400_000);
+  });
+});
+
+describe('cuota de compartir — techo diario', () => {
+  // La regla en una frase: al día puedes crear tantos como puedes tener a la vez. Si alguien la sustituye por una
+  // tabla de cifras sueltas, esto se pone rojo y hay que justificarlo.
+  it('matches the number of active links of the tier', () => {
+    for (const tier of PROFILE_TIERS) {
+      expect(shareDailyLimit(resolveShareQuota(tier))).toBe(PROFILE_TIER_SHARE_MAX_ACTIVE[tier]);
+    }
+  });
+
+  // Lo que de verdad protege: quien tiene la cuota recortada no puede saltarse el recorte creando y retirando
+  // todo el día, porque su ritmo baja con ella.
+  it('follows an individual quota adjustment, up and down', () => {
+    expect(shareDailyLimit(resolveShareQuota('gold', { maxActive: 3 }))).toBe(3);
+    expect(shareDailyLimit(resolveShareQuota('bronze', { maxActive: 12 }))).toBe(12);
+  });
+
+  it('never exceeds the ceiling', () => {
+    expect(shareDailyLimit(resolveShareQuota('bronze', { maxActive: 10_000 }))).toBe(SHARE_MAX_ACTIVE_CEILING);
   });
 });

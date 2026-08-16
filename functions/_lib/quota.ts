@@ -7,7 +7,7 @@
 // Orden de resolución, y no es intercambiable: veto → ajuste individual → rango → techos.
 import {
   DEFAULT_PROFILE_TIER,
-  SHARE_MAX_CREATIONS_PER_DAY,
+  shareDailyLimit,
   normalizeTier,
   resolveShareQuota,
   type ProfileTier,
@@ -134,4 +134,4 @@ export async function readDailyCount(kv: KVNamespace, uid: string, now: number):
   return Number((await kv.get(dailyQuotaKey(uid, now))) || 0);
 }
 
-export { SHARE_MAX_CREATIONS_PER_DAY };
+export { shareDailyLimit };

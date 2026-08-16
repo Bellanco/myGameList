@@ -117,11 +117,6 @@ export const PROFILE_TIER_SHARE_MAX_ACTIVE: Record<ProfileTier, number> = {
   mithril: 50,
 };
 
-/**
- * Techo diario de CREACIONES. No es la cuota de producto —esa es la de arriba—, sino la cota del saneador: aunque
- * alguien tenga 50 huecos, crear y retirar en bucle para publicar cientos de páginas al día no es uso normal.
- */
-export const SHARE_MAX_CREATIONS_PER_DAY = 20;
 
 /** Techos absolutos: ningún ajuste individual puede superar lo que da el rango más alto. */
 export const SHARE_TTL_DAYS_CEILING = PROFILE_TIER_SHARE_TTL_DAYS.mithril;
@@ -177,4 +172,19 @@ export function shareExpiresAt(quota: ShareQuota, now: number): number {
 export function normalizeTier(value: unknown): ProfileTier {
   const candidate = String(value || '').trim().toLowerCase();
   return (PROFILE_TIERS as readonly string[]).includes(candidate) ? (candidate as ProfileTier) : DEFAULT_PROFILE_TIER;
+}
+
+/**
+ * Techo de CREACIONES al día: el mismo número que los enlaces activos que le tocan.
+ *
+ * La regla se dice en una frase —«al día puedes crear tantos como puedes tener a la vez»— y por eso no hay una
+ * segunda tabla de cifras que mantener en sincronía con la de arriba. Frena el único abuso que importa, que no
+ * es publicar mucho sino el ciclo crear-y-retirar: quien lo intente agota su día en tantos intentos como huecos
+ * tiene, en vez de disponer de una cifra suelta mucho mayor.
+ *
+ * Va atado a la cuota RESUELTA, así que un ajuste individual lo arrastra: a quien se le recorta el número de
+ * enlaces se le recorta también el ritmo, y no puede saltarse el recorte creando y retirando todo el día.
+ */
+export function shareDailyLimit(quota: ShareQuota): number {
+  return quota.maxActive;
 }
