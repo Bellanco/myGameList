@@ -348,14 +348,31 @@ el dominio definitivo (§12.1), y entonces se pone absoluta.
 **Verificación que requiere despliegue:** el validador de tarjetas de X y el depurador de OG de Facebook sobre una
 URL real, y comprobar que `site:` en Google sigue sin devolver nada del dominio.
 
-### Paso 2 — Modelo, esquema y constantes (~0,5 día)
+### Paso 2 — Modelo, esquema y constantes · **HECHO**
 
-- `core/constants/tiers.ts`: las tres constantes de §4 con sus comentarios (incluida la asimetría con los posts).
-- `model/types/share.ts`: `SharedReview` y `SharedReviewIndexEntry`.
-- `model/schemas/shareSchema.ts`: Zod **strictObject** con cotas de longitud, al estilo de `socialGistSchema.ts`.
-  Es la garantía positiva de que no se cuela `uid`, `email`, `gistId`, `hours`, `steamDeck`, `retry` ni
-  `replayable`. Se valida **en el cliente antes de enviar y en la Function antes de guardar**.
-- Tests unitarios del esquema: campo extra → falla; `hours` → falla; texto sobredimensionado → falla.
+- `core/constants/tiers.ts`: `PROFILE_TIER_SHARE_TTL_DAYS`, `PROFILE_TIER_SHARE_MAX_ACTIVE`,
+  `SHARE_MAX_CREATIONS_PER_DAY`, los dos techos, y `resolveShareQuota` / `shareExpiresAt`. La resolución vive
+  aquí, junto a los números, para que cliente y Worker usen la misma y no haya dos verdades.
+- `model/types/share.ts`: `SharedReview`, `SharedReviewIndexEntry`, `ShareBan` y `MySharesResponse`.
+- `model/schemas/shareSchema.ts`: Zod `strictObject` con cotas + `assertNoShareForbiddenFields` (denylist
+  explícita con los campos privados, los de identidad y la foto). `assertValidSharedReview` lanza al publicar;
+  `parseSharedReview` devuelve `null` al leer, para que un artículo corrupto no rompa la página del visitante.
+- `tests/unit/shareQuota.test.ts` y `tests/unit/shareSchema.test.ts`: **28 casos**, incluidos los que fijan
+  decisiones de producto (bronce comparte aunque no publique; el override manda en absoluto y se recorta al
+  techo; un valor corrupto degrada al rango).
+
+**Decisión de implementación:** la resolución de cuota **no se duplica** en el Worker. `tiers.ts` no tiene
+dependencias (ni React, ni DOM, ni otros módulos), así que la Function puede importarlo por ruta relativa aunque
+`functions/` quede fuera del tsconfig del proyecto. Queda anotado en el propio fichero. **Comprobar en el paso 3
+con `wrangler pages dev`**; si el build de Functions no lo resolviera, la alternativa es copiar las constantes
+allí con nota de sincronía, como ya se hace entre `storageKeys.ts` y `public/theme-init.js`.
+
+**Pendiente para el paso 4:** Zod está fuera del bundle de arranque a propósito (`BOOT_PAYLOAD_BUDGET_KB`), así
+que `shareSchema.ts` debe cargarse **bajo demanda**, como hace el canal social con `loadSocialGistValidator`.
+Está avisado en la cabecera del módulo.
+
+**Verificación:** `npm test` (111 ficheros, 1081 casos), `npm run typecheck` y `npm run validate` en verde. El
+presupuesto de arranque no se mueve (210,3 kB de 215): los módulos nuevos todavía no los importa nadie.
 
 ### Paso 3 — Pages Functions (~2 días)
 
