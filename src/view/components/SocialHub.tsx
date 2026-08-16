@@ -69,6 +69,7 @@ const SocialHubInner = memo(function SocialHubInner({
     setHideGameTime,
     showPhoto,
     setShowPhoto,
+    ownPhotoIsGeneric,
     profileSearch,
     setProfileSearch,
     composePostText,
@@ -200,6 +201,7 @@ const SocialHubInner = memo(function SocialHubInner({
           showPhoto={showPhoto}
           setShowPhoto={setShowPhoto}
           ownPhotoURL={authUser?.photoURL || ''}
+          ownPhotoIsGeneric={ownPhotoIsGeneric}
         />
       );
     }

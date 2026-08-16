@@ -34,6 +34,15 @@ export interface PhotoViewer {
  * suya, que es exactamente el trato que la reciprocidad deshace. Da igual el motivo —cuenta sin foto, foto retirada
  * en Google—: lo que cuenta es lo que los demás ven.
  *
+ * TENER URL TAMPOCO BASTA. Google no deja a nadie sin `photoURL`: a quien no sube foto le genera un monograma —su
+ * inicial sobre un círculo de color— con una URL idéntica en forma a la de una foto de verdad. Eso convertía a esas
+ * cuentas en el agujero de la reciprocidad: pasaban por "tiene foto", encendían el interruptor y veían las caras de
+ * sus amigos aportando un dibujo automático. Reconocerlo exige mirar la imagen, así que el veredicto se calcula
+ * fuera (`core/social/googlePhoto`) y entra aquí ya resuelto, en `ownPhotoIsGeneric`.
+ *
+ * Mientras ese veredicto no está (llega por red), `undefined` cuenta como foto real: es el estado de siempre y dura
+ * lo que tarda una respuesta cacheada.
+ *
  * Lo que esta función NO puede saber: si la URL existe pero está caducada o rota. Eso solo se descubre al intentar
  * cargarla, y lo resuelve `HubAvatar` cayendo a la silueta.
  */
@@ -42,10 +51,13 @@ export function resolveViewer(input: {
   showPhoto: boolean;
   /** La foto que de verdad tiene para publicar (la de su sesión de Google). */
   ownPhotoURL: string | null | undefined;
+  /** ¿Esa URL es el avatar genérico de Google? `undefined` = aún sin resolver, cuenta como foto real. */
+  ownPhotoIsGeneric?: boolean;
   tier: ProfileTier;
 }): PhotoViewer {
   return {
-    showsOwnPhoto: input.showPhoto && Boolean(String(input.ownPhotoURL || '').trim()),
+    showsOwnPhoto:
+      input.showPhoto && Boolean(String(input.ownPhotoURL || '').trim()) && !input.ownPhotoIsGeneric,
     tier: input.tier,
   };
 }

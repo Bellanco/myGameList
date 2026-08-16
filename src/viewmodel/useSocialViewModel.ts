@@ -7,6 +7,7 @@ import { invalidateProfileGames, loadForeignProfileGames } from '../model/reposi
 import { getCachedSocialDirectory, getCachedSocialProfile, getLocalMeta, invalidateCachedSocialDirectory, patchLocalMeta, putCachedSocialDirectory, putCachedSocialProfile } from '../model/repository/indexedDbRepository';
 import { applyProfileVisibility } from '../core/utils/profileVisibility';
 import { photoForViewer, resolveViewer, withVisiblePhotos } from '../core/social/photoVisibility';
+import { useGenericPhoto } from '../view/hooks/useGenericPhoto';
 import { SOCIAL_UI } from '../core/constants/labels';
 import type { IconName } from '../core/constants/icons';
 import {
@@ -184,6 +185,12 @@ export function useSocialViewModel(options?: {
   const [socialCfgGistId, setSocialCfgGistId] = useState<string>('');
   const [socialCfgEtag, setSocialCfgEtag] = useState<string | null>(null);
   const [authUser, setAuthUser] = useState<SocialAuthUser | null>(null);
+  /**
+   * ¿La foto de la sesión es el avatar GENÉRICO de Google —el monograma con la inicial— y no una foto de verdad?
+   * (ver `core/social/googlePhoto`). Google no deja a nadie sin `photoURL`, así que sin esto una cuenta sin foto
+   * pasaba por tenerla: publicaba el monograma y, por la reciprocidad, veía las caras de sus amigos sin poner la suya.
+   */
+  const ownPhotoIsGeneric = useGenericPhoto(authUser?.photoURL);
   // P1: profileId canónico del usuario (6.2a), para detectar propiedad por identidad (no por email). Hoy el id del
   // doc de directorio es el uid; tras el cutover index-only será el profileId → comprobamos ambos (ver isOwnProfileIdentity).
   const [ownProfileId, setOwnProfileId] = useState<string | null>(null);
@@ -219,6 +226,19 @@ export function useSocialViewModel(options?: {
     profileName, setProfileName, hiddenTabs, setHiddenTabs, showPhoto, setShowPhoto,
     hideReplayable, setHideReplayable, hideRetry, setHideRetry, hideGameTime, setHideGameTime,
   } = profileForm;
+  /**
+   * La foto propia que SE PUEDE PUBLICAR, ya filtrada por las dos condiciones: que el usuario quiera mostrarla
+   * (`showPhoto`) y que sea una foto de verdad (no el monograma de Google). Se deriva una vez y la usan TODOS los
+   * puntos que la sacan al mundo —el saneo de amistades, la migración de canal, el guardado del perfil, la entrada
+   * propia del directorio— para que ninguno pueda quedarse con la regla a medias.
+   */
+  const ownPublishablePhoto = showPhoto && !ownPhotoIsGeneric ? authUser?.photoURL || '' : '';
+  /**
+   * ¿Hay una foto de sesión cuyo veredicto TODAVÍA no ha llegado? Lo miran los saneos que corren una sola vez por
+   * sesión y se arman con una ref: publicar antes de saberlo dejaría la URL genérica sellada en los canales, y no
+   * habría otra pasada hasta la próxima sesión. Esperar cuesta una respuesta de red ya cacheada.
+   */
+  const ownPhotoVerdictPending = Boolean(authUser?.photoURL) && ownPhotoIsGeneric === undefined;
   // Filtro por nombre de la pantalla "Perfiles" (directorio social). El feed de actividad ya no se filtra.
   const [profileSearch, setProfileSearch] = useState('');
   const [hydratingProfile, setHydratingProfile] = useState(false);
@@ -556,14 +576,17 @@ export function useSocialViewModel(options?: {
     if (!socialSpaceOpen || !authUser?.uid || !socialCfgGistId) return;
     const nick = profileName.trim();
     if (!nick) return;
+    // Igual que se espera al nick para no sanear con vacío, se espera al veredicto de la foto para no sellar el
+    // avatar genérico de Google en los documentos de amistad, que es donde va denormalizado y donde más se ve.
+    if (ownPhotoVerdictPending) return;
     friendshipHealedRef.current = true;
     void healOwnFriendshipIdentity(authUser.uid, {
       name: nick,
-      photo: showPhoto && authUser.photoURL ? authUser.photoURL : '',
+      photo: ownPublishablePhoto,
       socialGistId: socialCfgGistId,
       gamesGistId: mainSyncConfig?.gistId || '',
     });
-  }, [socialSpaceOpen, authUser?.uid, authUser?.photoURL, socialCfgGistId, profileName, showPhoto, mainSyncConfig?.gistId]);
+  }, [socialSpaceOpen, authUser?.uid, ownPublishablePhoto, ownPhotoVerdictPending, socialCfgGistId, profileName, mainSyncConfig?.gistId]);
 
   // FASE 2 — MIGRACIÓN A CANAL SECRETO (una vez por sesión).
   //
@@ -641,7 +664,7 @@ export function useSocialViewModel(options?: {
           await setPrivateConfig(owner.uid, { socialGistId: result.gistId }).catch(() => {});
           await healOwnFriendshipIdentity(owner.uid, {
             name: profileName.trim(),
-            photo: showPhoto && owner.photoURL ? owner.photoURL : '',
+            photo: ownPublishablePhoto,
             socialGistId: result.gistId,
             gamesGistId: mainSyncConfig?.gistId || '',
           }).catch(() => {});
@@ -681,7 +704,7 @@ export function useSocialViewModel(options?: {
         secretMigrationRef.current = false;
       });
     }
-  }, [socialSpaceOpen, authUser?.uid, socialCfgGistId, mainSyncConfig?.token, setFeedback, profileName, showPhoto, mainSyncConfig?.gistId]);
+  }, [socialSpaceOpen, authUser?.uid, socialCfgGistId, mainSyncConfig?.token, setFeedback, profileName, ownPublishablePhoto, mainSyncConfig?.gistId]);
 
   // AUTO-HEAL DEL DIRECTORIO: RETIRADO. Su trabajo era mantener `profiles/{uid}.social.gistId` al día, y ese campo
   // ha dejado de publicarse (se purga en cada guardado): volver a escribirlo aquí lo resucitaría en cada apertura
@@ -730,12 +753,13 @@ export function useSocialViewModel(options?: {
   // `resolveViewer` y no `showPhoto` a secas: quien lleva el interruptor activado pero no tiene foto en su cuenta de
   // Google no publica ninguna, así que tampoco ve las de los demás. Ver la nota del ajuste, que lo explica en su sitio.
   const photoViewer = useMemo(
-    () => resolveViewer({ showPhoto, ownPhotoURL: authUser?.photoURL, tier: ownTier }),
-    [showPhoto, authUser?.photoURL, ownTier],
+    () => resolveViewer({ showPhoto, ownPhotoURL: authUser?.photoURL, ownPhotoIsGeneric, tier: ownTier }),
+    [showPhoto, authUser?.photoURL, ownPhotoIsGeneric, ownTier],
   );
 
   /**
-   * EL AJUSTE SE APAGA SOLO cuando la cuenta no tiene foto.
+   * EL AJUSTE SE APAGA SOLO cuando la cuenta no tiene foto —o cuando lo que tiene es el avatar genérico de Google,
+   * que a estos efectos es lo mismo: una imagen que no es la cara de nadie.
    *
    * No basta con pintar el interruptor apagado: el perfil de los usuarios que ya existen guarda `showPhoto: true`, y
    * ese dato dejaría de describir la realidad —dice que muestra una foto que nadie ve—. Apagando el ESTADO, el
@@ -749,9 +773,9 @@ export function useSocialViewModel(options?: {
    */
   useEffect(() => {
     if (!authUser?.uid) return;
-    if (authUser.photoURL) return;
+    if (authUser.photoURL && !ownPhotoIsGeneric) return;
     if (showPhoto) setShowPhoto(false);
-  }, [authUser?.uid, authUser?.photoURL, showPhoto, setShowPhoto]);
+  }, [authUser?.uid, authUser?.photoURL, ownPhotoIsGeneric, showPhoto, setShowPhoto]);
   const friendUidSet = useMemo(
     () => new Set(friendships.friends.map((friend) => friend.otherUid)),
     [friendships.friends],
@@ -1543,8 +1567,9 @@ export function useSocialViewModel(options?: {
       setLoadingDirectory(true);
       const dirEntries = await listSocialDirectory(SOCIAL_DIRECTORY_LIMIT, { forceRefresh });
       const socialConfig = getSocialSyncConfig();
-      // Foto propia inmediata (de la sesión Google) aunque aún no se haya re-guardado el perfil; respeta showPhoto.
-      const ownPhotoURL = showPhoto && authUser?.photoURL ? authUser.photoURL : '';
+      // Foto propia inmediata (de la sesión Google) aunque aún no se haya re-guardado el perfil; respeta showPhoto y
+      // descarta el avatar genérico de Google.
+      const ownPhotoURL = ownPublishablePhoto;
       // FEED SOLO-AMIGOS: el gist social (actividad/publicaciones) SOLO se lee de tus amigos y del propio.
       // Los no-amigos quedan index-only (nombre/foto del directorio Firestore), sin lectura de gist → gran ahorro de
       // llamadas. Como el feed deriva su actividad de estas entradas, mostrar solo la de amigos es automático.
@@ -1774,7 +1799,7 @@ export function useSocialViewModel(options?: {
     // `mainSyncConfig?.token` ESTUVO aquí y no lo usa nadie en el cuerpo (el token sale de `getSocialSyncConfig()`
     // en el momento de leer): lo único que hacía era rehidratar el directorio entero cuando la configuración de
     // sync terminaba de descifrarse. Se retira.
-  }, [directoryPanelAllows, directoryInputsReady, authUser, ownProfileId, defaultSocialVisibility, friendships.friends, ownTier, setFeedback, socialCfgGistId, showPhoto]);
+  }, [directoryPanelAllows, directoryInputsReady, authUser, ownProfileId, defaultSocialVisibility, friendships.friends, ownTier, setFeedback, socialCfgGistId, ownPublishablePhoto]);
 
   /**
    * Pasada en vuelo, para que dos disparos no se solapen.
@@ -1892,55 +1917,73 @@ export function useSocialViewModel(options?: {
     if (statusTimerRef.current) clearTimeout(statusTimerRef.current);
   }, []);
 
-  // Bloque 2 — propaga la foto propia a los DEMÁS: la foto solo la ven otros si está en NUESTRO gist social
-  // público. Gists creados antes del soporte de foto (o sin re-guardar el perfil) no la llevan, así que nadie veía
-  // la de nadie. Aquí, una vez por sesión, si tenemos foto de Google y `showPhoto`, la escribimos en el gist si
-  // falta o difiere. Best-effort: si falla, se reintenta en la próxima sesión.
+  // Bloque 2 — pone al día la foto propia EN LOS CANALES PÚBLICOS, en los dos sentidos.
+  //
+  // PROPAGAR: la foto solo la ven otros si está en NUESTRO gist social público. Gists creados antes del soporte de
+  // foto (o sin re-guardar el perfil) no la llevan, así que nadie veía la de nadie.
+  //
+  // RETIRAR: si lo que la cuenta tiene es el avatar GENÉRICO de Google, hay que quitarlo de donde ya se publicó. Es
+  // la única vía de saneado: esas URLs se escribieron cuando "tener URL" contaba como tener foto, y ni el gist ni el
+  // doc de directorio se reescriben solos. Filtrarlo al pintar (`HubAvatar`) quita el síntoma en NUESTRA pantalla;
+  // esto lo quita del dato, que es lo que leen los demás.
+  //
+  // Una vez por sesión y best-effort: si falla, se reintenta en la próxima.
   const photoHealAttemptedRef = useRef(false);
   useEffect(() => {
     if (photoHealAttemptedRef.current) return;
-    if (!socialSpaceOpen || !socialCfgGistId || !showPhoto) return;
-    const photo = authUser?.photoURL;
-    if (!photo) return;
+    if (!socialSpaceOpen || !socialCfgGistId) return;
+    const sessionPhoto = authUser?.photoURL || '';
+    if (!sessionPhoto) return;
+    // Sin veredicto no se toca nada: publicar ahora sellaría la genérica y armaría la ref, y no habría otra pasada.
+    if (ownPhotoVerdictPending) return;
+    // Lo que debe quedar publicado: la foto de la sesión, o nada si es el avatar genérico.
+    const target = ownPhotoIsGeneric ? '' : sessionPhoto;
+    // Con la foto apagada a propósito no hay nada que propagar. Pero una genérica ya publicada SÍ se retira: el
+    // opt-out protege lo que el usuario decidió mostrar, no una imagen que nunca fue suya.
+    if (!showPhoto && target) return;
     const cfg = getSocialSyncConfig();
     if (!cfg?.token) return;
     photoHealAttemptedRef.current = true;
 
     void (async () => {
       try {
-        // 2b — idempotencia entre sesiones: si ya propagamos esta misma foto, no releemos ni reescribimos el gist.
+        // 2b — idempotencia entre sesiones: si ya dejamos el canal en este estado, no releemos ni reescribimos el
+        // gist. Vale para los dos sentidos: `''` marca "ya retirada".
         const meta = await getLocalMeta();
-        if (meta?.photoHealedFor === photo) return;
+        if (meta?.photoHealedFor === target) return;
 
         const current = await readSocialGist(cfg.token, socialCfgGistId, null);
         const data = current.data;
         if (!data) return;
         // El gist es la fuente de verdad: si el usuario tiene la foto desactivada, NO la republicamos (evita revertir
-        // su opt-out por una carrera con la hidratación del perfil, que arranca con showPhoto=true por defecto).
-        if (data.profile.visibility?.showPhoto === false) return;
+        // su opt-out por una carrera con la hidratación del perfil, que arranca con showPhoto=true por defecto). La
+        // retirada de una genérica no se frena aquí: quitarla nunca va contra lo que el usuario quiso.
+        if (data.profile.visibility?.showPhoto === false && target) return;
 
-        if (data.profile.photoURL !== photo) {
+        if ((data.profile.photoURL || '') !== target) {
           await writeSocialGist(cfg.token, socialCfgGistId, {
-            profile: { ...data.profile, photoURL: photo },
+            // `photoURL: ''` no se publica: el saneado del gist descarta lo que no sea una URL válida, así que el
+            // campo desaparece del canal en vez de quedarse vacío.
+            profile: { ...data.profile, photoURL: target },
             activity: data.activity,
             posts: data.posts,
             updatedAt: Date.now(),
           });
           // 2a — sin re-hidratación completa (~30 lecturas). La foto propia ya se ve por el fallback de sesión; solo
           // parcheamos la entrada propia del directorio en memoria por si acaso, y la del directorio cacheado.
-          setSocialDirectory((prev) => prev.map((e) => (e.socialGistId === socialCfgGistId ? { ...e, photoURL: photo } : e)));
+          setSocialDirectory((prev) => prev.map((e) => (e.socialGistId === socialCfgGistId ? { ...e, photoURL: target } : e)));
         }
-        // Propaga también la foto al doc público de Firestore (la lee el directorio), para que la vean los demás
-        // sin depender de que cada uno reabra la app y re-publique su gist. Best-effort.
+        // Propaga (o borra) también la foto en el doc público de Firestore (la lee el directorio), para que los demás
+        // lo vean sin depender de que cada uno reabra la app y re-publique su gist. Best-effort.
         if (authUser?.uid) {
-          await updateProfilePhoto(authUser.uid, photo);
+          await updateProfilePhoto(authUser.uid, target);
         }
-        await patchLocalMeta({ photoHealedFor: photo });
+        await patchLocalMeta({ photoHealedFor: target });
       } catch {
         // best-effort: no bloquea el feed; se reintenta la próxima sesión.
       }
     })();
-  }, [authUser?.photoURL, showPhoto, socialSpaceOpen, socialCfgGistId]);
+  }, [authUser?.uid, authUser?.photoURL, ownPhotoIsGeneric, ownPhotoVerdictPending, showPhoto, socialSpaceOpen, socialCfgGistId]);
 
   // Auto-crear gist social si tenemos token + Google pero no gist
   useEffect(() => {
@@ -1968,10 +2011,11 @@ export function useSocialViewModel(options?: {
       // SIN FOTO EN LA CUENTA, `showPhoto` SE GUARDA EN FALSE. No se confía en que el efecto que apaga el estado haya
       // corrido ya: la hidratación del perfil llega por red y devuelve el `showPhoto: true` del gist, así que entre
       // esa respuesta y el apagado hay una ventana en la que un guardado rápido habría vuelto a escribir el "sí".
-      // Aquí la decisión es de una sola línea y no depende de ningún orden.
+      // Aquí la decisión es de una sola línea y no depende de ningún orden. "Sin foto" incluye el avatar genérico de
+      // Google: tener URL no es tener cara.
       const visibility = {
         ...profileForm.visibility,
-        showPhoto: profileForm.visibility.showPhoto && Boolean(authUser.photoURL),
+        showPhoto: profileForm.visibility.showPhoto && Boolean(authUser.photoURL) && !ownPhotoIsGeneric,
       };
       const normalizedHiddenTabs = visibility.hiddenTabs;
 
@@ -1984,8 +2028,8 @@ export function useSocialViewModel(options?: {
         private: false,
         visibility,
         sharedLists: {},
-        // Solo se publica la foto si el usuario la muestra (normalize la valida/descarta si no).
-        ...(showPhoto && authUser.photoURL ? { photoURL: authUser.photoURL } : {}),
+        // Solo se publica la foto si el usuario la muestra Y es una foto de verdad (normalize la valida/descarta si no).
+        ...(ownPublishablePhoto ? { photoURL: ownPublishablePhoto } : {}),
       };
 
       const currentGistResult = await readSocialGist(socialConfig.token, socialCfgGistId, null);
@@ -2012,8 +2056,9 @@ export function useSocialViewModel(options?: {
         githubToken: mainSyncConfig?.token || socialConfig.token, // audit-allow: ensureProfileByEmail lo cifra en privateConfig (B1)
         socialGistEtag: finalEtag,
         preferredName: profile.name,
-        // Publica la foto en el doc público (la lee el directorio); '' la borra si el usuario desactiva la foto.
-        photoURL: showPhoto && authUser.photoURL ? authUser.photoURL : '',
+        // Publica la foto en el doc público (la lee el directorio); '' la borra si el usuario desactiva la foto o si
+        // lo que tiene es el avatar genérico de Google.
+        photoURL: ownPublishablePhoto,
       });
 
       saveSocialSyncConfig({
@@ -2029,7 +2074,7 @@ export function useSocialViewModel(options?: {
       // nombre antiguo/real). Best-effort: no bloquea el guardado del perfil.
       void healOwnFriendshipIdentity(authUser.uid, {
         name: profile.name,
-        photo: showPhoto && authUser.photoURL ? authUser.photoURL : '',
+        photo: ownPublishablePhoto,
         socialGistId: finalGistId,
         gamesGistId: mainSyncConfig?.gistId || '',
       });
@@ -2087,6 +2132,10 @@ export function useSocialViewModel(options?: {
     setFeedback,
     socialCfgEtag,
     socialCfgGistId,
+    // El guardado decide con ellos si publica la foto y si deja `showPhoto` activado: leerlos de un render anterior
+    // escribiría en el gist una decisión que ya no es la vigente.
+    ownPhotoIsGeneric,
+    ownPublishablePhoto,
   ]);
 
   const handleSignOut = useCallback(async () => {
@@ -2103,10 +2152,10 @@ export function useSocialViewModel(options?: {
   // placeholder) en lugar de filtrar el nombre real.
   const buildFriendshipSelfInfo = useCallback((): FriendshipSelfInfo => ({
     name: profileName.trim(),
-    photo: showPhoto && authUser?.photoURL ? authUser.photoURL : '',
+    photo: ownPublishablePhoto,
     socialGistId: socialCfgGistId,
     gamesGistId: mainSyncConfig?.gistId || '',
-  }), [authUser?.photoURL, mainSyncConfig?.gistId, showPhoto, profileName, socialCfgGistId]);
+  }), [ownPublishablePhoto, mainSyncConfig?.gistId, profileName, socialCfgGistId]);
 
   // "Añadir amigo" o "Aceptar": según el estado actual. Si no hay relación, envía petición; si el otro ya me pidió,
   // acepta. Maneja la carrera de petición simultánea (el doc canónico ya existe) releyendo y aceptando si procede.
@@ -2293,6 +2342,9 @@ export function useSocialViewModel(options?: {
     setHideGameTime,
     showPhoto,
     setShowPhoto,
+    // Para que la pantalla del perfil pueda decir POR QUÉ el interruptor está bloqueado: no es lo mismo no tener
+    // foto que tener la que Google genera sola.
+    ownPhotoIsGeneric,
     profileSearch,
     setProfileSearch,
     composePostText,

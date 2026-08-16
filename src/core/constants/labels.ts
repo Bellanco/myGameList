@@ -1398,6 +1398,9 @@ export const SOCIAL_UI = {
     // Por qué el interruptor está apagado y bloqueado. Una línea: el estado del interruptor ya dice lo demás, y la
     // consecuencia (nadie le ve la cara, y por reciprocidad él tampoco) no necesita explicarse aquí.
     photoMissingInGoogle: 'Tu cuenta no tiene foto.',
+    // El caso de quien NUNCA subió una: Google le pone su inicial en un círculo de color. La cuenta tiene imagen,
+    // así que decirle "no tienes foto" sonaría a error de la app; lo que hay que decirle es que eso no es una foto.
+    photoIsGoogleDefault: 'La imagen de tu cuenta es la inicial que genera Google, no una foto.',
   },
   status: {
     needMainSync: 'Activa la sincronización principal para continuar.',
