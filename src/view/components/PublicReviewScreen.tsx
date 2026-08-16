@@ -68,25 +68,40 @@ export const PublicReviewScreen = memo(function PublicReviewScreen({ token, stan
     </nav>
   );
 
+  /**
+   * Marco de la página. En modo artículo se envuelve en el MISMO `<main class="main">` que usa la app, en vez de
+   * darle un ancho propio: así el contenido mide y respira exactamente igual con sesión y sin ella. Imitarlo con
+   * un `max-width` a medida era justo lo que hacía que la reseña se viera más estrecha para quien llegaba de
+   * fuera. La barra va fuera del `<main>`, como en la app.
+   */
+  const frame = (content: React.ReactNode) =>
+    standalone ? (
+      <>
+        <main className="main main-settings">{content}</main>
+        {bottomNav}
+      </>
+    ) : (
+      content
+    );
+
   if (state === 'loading') {
-    return (
-      <section className={`hub-hub hub-screen${standalone ? ' share-public' : ''}`} aria-label={SHARE_UI.publicAria}>
+    return frame(
+      <section className="hub-hub hub-screen" aria-label={SHARE_UI.publicAria}>
         <div className="hub-hub-card hub-screen-card hub-feed-card-shell">
           <p>{SHARE_UI.publicLoading}</p>
         </div>
-      </section>
+      </section>,
     );
   }
 
   if (state === 'gone' || !review) {
-    return (
-      <section className={`hub-hub hub-screen${standalone ? ' share-public' : ''}`} aria-label={SHARE_UI.publicAria}>
+    return frame(
+      <section className="hub-hub hub-screen" aria-label={SHARE_UI.publicAria}>
         <div className="hub-hub-card hub-screen-card hub-feed-card-shell">
           <h2>{SHARE_UI.publicGoneTitle}</h2>
           <p>{SHARE_UI.publicGoneBody}</p>
         </div>
-        {standalone ? bottomNav : null}
-      </section>
+      </section>,
     );
   }
 
@@ -94,8 +109,8 @@ export const PublicReviewScreen = memo(function PublicReviewScreen({ token, stan
   const reviewedAt = new Date(review.reviewedAt || 0);
   const hasValidDate = (review.reviewedAt || 0) > 0 && !Number.isNaN(reviewedAt.getTime());
 
-  return (
-    <section className={`hub-hub hub-screen${standalone ? ' share-public' : ''}`} aria-label={SHARE_UI.publicAria}>
+  return frame(
+    <section className="hub-hub hub-screen" aria-label={SHARE_UI.publicAria}>
       <div className="hub-hub-card hub-screen-card hub-feed-card-shell">
         <article className="hub-feed-card hub-feed-card-detail">
           <div className="hub-feed-card-head-text">
@@ -117,7 +132,6 @@ export const PublicReviewScreen = memo(function PublicReviewScreen({ token, stan
         </article>
 
       </div>
-      {standalone ? bottomNav : null}
-    </section>
+    </section>,
   );
 });
