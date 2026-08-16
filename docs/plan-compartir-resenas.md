@@ -514,11 +514,26 @@ Si alguna no convence, se cambia aquí y en el código:
 
    ```toml
    # wrangler.toml — NO añadir hasta tener los ids: un binding con id vacío rompe el despliegue de Pages.
+   #
+   # OJO: en PAGES no se usa `preview_id` (eso es de Workers). Pages solo admite dos entornos, `preview` y
+   # `production`, y cada uno declara su propio binding. El bloque de nivel superior es el que vale además para
+   # el desarrollo local.
    [[kv_namespaces]]
    binding = "SHARES"
+   id = "<id del namespace de vista previa>"      # nivel superior = local
+
+   [[env.preview.kv_namespaces]]
+   binding = "SHARES"
+   id = "<id del namespace de vista previa>"
+
+   [[env.production.kv_namespaces]]
+   binding = "SHARES"
    id = "<id del namespace de producción>"
-   preview_id = "<id del namespace de vista previa>"
    ```
+
+   **Este `wrangler.toml` es la fuente de verdad.** Desde que lleva `pages_build_output_dir` —y ya lo lleva—,
+   los bindings configurados en el panel del proyecto **no se aplican**. Configurar el binding en
+   *Settings → Bindings* no serviría de nada y despistaría al depurar: tiene que estar en el fichero.
 
 3. **Bot Fight Mode** ⏳ — comprobar en el panel de Cloudflare que no bloquea a `Twitterbot` /
    `facebookexternalhit`. Si lo hace, la previsualización seguirá sin salir aunque `robots.txt` la permita.
