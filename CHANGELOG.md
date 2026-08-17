@@ -15,7 +15,9 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
   - **Sin sesión de Google el botón desaparecía sin decir nada.** Publicar exige identidad, así que el botón no
     puede estar; pero quitarlo en silencio deja a la persona buscando algo que no existe y sin nada que hacer al
     respecto. Ahora se dice qué falta y dónde se resuelve. Mientras aún no se sabe si hay sesión no se pinta nada,
-    para no enseñarlo y quitarlo medio segundo después.
+    para no enseñarlo y quitarlo medio segundo después. El aviso lo ve solo quien YA usa el espacio social en ese
+    navegador —se sabe por la config local de su gist social, que sobrevive a que la sesión se caiga—: a quien
+    nunca lo ha abierto no se le habla en su panel de reseñas de algo que no ha pedido.
 - **Había que hacer Ctrl+Shift+R para ver una versión nueva.** El service worker ya se relevaba solo
   (`skipWaiting()`), y el HTML se sirve con `no-store`: en cuanto el navegador VUELVE A MIRAR
   `/service-worker.js`, la versión nueva entra sola. El agujero estaba en ese "vuelve a mirar": el navegador solo
