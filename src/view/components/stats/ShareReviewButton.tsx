@@ -8,8 +8,9 @@ import type { GameItem } from '../../../model/types/game';
 /**
  * Botón "Compartir" del detalle de TU reseña, con su diálogo.
  *
- * Se monta solo en el panel de estadísticas (`StatsReviews`), nunca en el hub social: allí la reseña es de otra
- * persona y no hay nada que compartir. Trae su propio estado en vez de subirlo al panel porque nadie más lo
+ * Se monta donde la reseña abierta es TUYA: el panel de estadísticas (`StatsReviews`) y, en el hub social, el
+ * detalle de tu propia actividad y el de tus reseñas vistas desde tu perfil. Sobre una reseña ajena no aparece:
+ * no hay nada propio que publicar. Trae su propio estado en vez de subirlo a quien lo monta porque nadie más lo
  * necesita, y así el resto de la app no carga con esto.
  *
  * El estado del enlace se pide al abrir el detalle, no al arrancar la app: quien nunca comparte no hace ni una
@@ -87,10 +88,25 @@ export const ShareReviewButton = memo(function ShareReviewButton({ game, reviewT
     vm.clearError();
   }, [vm]);
 
-  // Sin sesión de Google no se ofrece: publicar exige identidad y el botón solo llevaría a un error. Mientras no
-  // se sabe (`null`) tampoco se pinta, para no enseñarlo y quitarlo medio segundo después.
-  if (vm.available !== true) {
+  // Mientras no se sabe si hay sesión (`null`) no se pinta nada: enseñar el botón y quitarlo medio segundo
+  // después es peor que esperar.
+  if (vm.available === null) {
     return null;
+  }
+
+  // Sin sesión de Google no se ofrece el botón: publicar exige identidad y solo llevaría a un error. Pero
+  // desaparecer en silencio dejaba al usuario buscando un botón que no está —el síntoma que se reportó—, así que
+  // se dice qué falta. Mismo tratamiento visual que el veto: un distintivo, no un botón que no lleva a nada.
+  //
+  // Solo a quien YA usa el espacio social en este navegador (`hasSocialSpace`). Quien nunca lo ha abierto no está
+  // echando en falta ningún botón: para esa persona el aviso sería ruido en su panel de reseñas sobre algo que no
+  // ha pedido, así que sigue sin ver nada.
+  if (vm.available === false) {
+    return vm.hasSocialSpace ? (
+      <span className="hub-feed-game-chip share-unavailable" title={SHARE_UI.signInRequiredHint}>
+        {SHARE_UI.signInRequired}
+      </span>
+    ) : null;
   }
 
   if (vm.ban) {

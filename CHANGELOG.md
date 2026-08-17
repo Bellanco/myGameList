@@ -6,6 +6,18 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
 ## [Unreleased]
 
 ### Fixed
+- **"No me sale el botón de compartir".** Dos agujeros distintos, ninguno relacionado con el rango del perfil
+  (bronce puede compartir: tiene 5 enlaces de 7 días, y ni el cliente ni la Function miran el rango para eso).
+  - **Desde tus reseñas del perfil social no se podía compartir.** El botón estaba en el panel de estadísticas y
+    en el detalle de tu propia actividad del feed, pero no al abrir una reseña desde **Mi perfil → Reseñas**, que
+    es el camino natural para quien quiere publicar la suya: era la misma pantalla, sin sus acciones. Ahora se
+    ofrece también ahí. Sobre una reseña ajena sigue sin aparecer: no hay nada propio que publicar.
+  - **Sin sesión de Google el botón desaparecía sin decir nada.** Publicar exige identidad, así que el botón no
+    puede estar; pero quitarlo en silencio deja a la persona buscando algo que no existe y sin nada que hacer al
+    respecto. Ahora se dice qué falta y dónde se resuelve. Mientras aún no se sabe si hay sesión no se pinta nada,
+    para no enseñarlo y quitarlo medio segundo después. El aviso lo ve solo quien YA usa el espacio social en ese
+    navegador —se sabe por la config local de su gist social, que sobrevive a que la sesión se caiga—: a quien
+    nunca lo ha abierto no se le habla en su panel de reseñas de algo que no ha pedido.
 - **Había que hacer Ctrl+Shift+R para ver una versión nueva.** El service worker ya se relevaba solo
   (`skipWaiting()`), y el HTML se sirve con `no-store`: en cuanto el navegador VUELVE A MIRAR
   `/service-worker.js`, la versión nueva entra sola. El agujero estaba en ese "vuelve a mirar": el navegador solo

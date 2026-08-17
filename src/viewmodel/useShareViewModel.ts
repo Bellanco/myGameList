@@ -5,6 +5,7 @@
 // manipulable.
 import { useCallback, useMemo, useState } from 'react';
 import { getCurrentSocialAuthUser } from '../model/repository/firebaseGateway';
+import { getSocialSyncConfig } from '../model/repository/gistConfigRepository';
 import { listMyShares, publishShare, removeShare, type PublishedShare, type ShareError } from '../model/repository/shareRepository';
 import type { ShareBan, SharedReviewIndexEntry } from '../model/types/share';
 import type { ShareQuota } from '../core/constants/tiers';
@@ -20,6 +21,17 @@ export interface ShareViewModel {
    * API para no gastar una petición que solo puede acabar en 401, y para no enseñar un botón que fallaría.
    */
   available: boolean | null;
+  /**
+   * ¿Este navegador ha tocado alguna vez el espacio social? Se mira por la config LOCAL del gist social, que vive
+   * en el dispositivo y por tanto sobrevive a que la sesión de Google se caiga: es lo que distingue "se te ha
+   * caído la sesión" (a quien conviene avisar de que falta entrar) de "nunca has abierto el espacio social" (a
+   * quien el aviso solo le hablaría de algo que no ha pedido).
+   *
+   * En un dispositivo NUEVO de alguien que sí usa lo social no hay config local hasta que entra con Google, así
+   * que allí tampoco se avisa. Es el lado correcto por el que fallar: sin sesión no hay forma de saberlo sin red,
+   * y en cuanto entra aparece el botón de verdad, no el aviso.
+   */
+  hasSocialSpace: boolean;
   /** Nick con el que el SERVIDOR firmará la reseña. Se enseña antes de publicar. */
   nick: string;
   /**
@@ -48,6 +60,7 @@ export function useShareViewModel(): ShareViewModel {
   const [quota, setQuota] = useState<ShareQuota | null>(null);
   const [ban, setBan] = useState<ShareBan | null>(null);
   const [available, setAvailable] = useState<boolean | null>(null);
+  const [hasSocialSpace, setHasSocialSpace] = useState(false);
   const [nick, setNick] = useState('');
   const [nickIsAccountName, setNickIsAccountName] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -69,6 +82,10 @@ export function useShareViewModel(): ShareViewModel {
   const refresh = useCallback(async () => {
     setLoading(true);
     try {
+      // Lectura local y sincrónica: el id del gist social no está cifrado, así que no hay que esperar a la
+      // hidratación del token (`ensureSyncConfigLoaded`), que es lo único asíncrono de esa config.
+      setHasSocialSpace(Boolean(getSocialSyncConfig()?.gistId?.trim()));
+
       const authUser = await getCurrentSocialAuthUser().catch(() => null);
       if (!authUser) {
         setAvailable(false);
@@ -143,7 +160,7 @@ export function useShareViewModel(): ShareViewModel {
   const shareOf = useCallback((gameId: number) => byGame.get(gameId) || null, [byGame]);
 
   return {
-    shares, quota, ban, available, nick, nickIsAccountName,
+    shares, quota, ban, available, hasSocialSpace, nick, nickIsAccountName,
     loading, busyToken, error, errorDetails,
     refresh, share, revoke, shareOf, clearError,
   };

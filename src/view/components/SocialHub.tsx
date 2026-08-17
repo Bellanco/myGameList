@@ -14,6 +14,7 @@ import { SocialProfileReviewScreen } from './socialhub/SocialProfileReviewScreen
 import { SocialProfilesScreen } from './socialhub/SocialProfilesScreen';
 import { SocialFeedScreen } from './socialhub/SocialFeedScreen';
 import { SocialRequestsScreen } from './socialhub/SocialRequestsScreen';
+import { ShareReviewButton } from './stats/ShareReviewButton';
 import { HubStatus } from './socialhub/HubStatus';
 import { ConfirmModal } from '../modals/ConfirmModal';
 import { SocialErrorBoundary } from './socialhub/SocialErrorBoundary';
@@ -250,6 +251,15 @@ const SocialHubInner = memo(function SocialHubInner({
       );
     }
     if (activePanel === 'profile-review') {
+      // Compartir TU reseña también desde aquí. Este es el camino natural para quien quiere publicar la suya (Mi
+      // perfil → Reseñas → abrirla), y el botón solo estaba en el detalle del feed y en el panel de estadísticas:
+      // quien entraba por aquí no encontraba nada y no tenía forma de saber que existía en otro sitio. Sobre una
+      // reseña AJENA no se ofrece —no hay nada propio que publicar—, igual que en el detalle del feed.
+      const reviewProfileId = (selectedProfileDetail as { id?: string })?.id || profileDetailId;
+      const ownReviewGame =
+        isOwnProfileDetail && activeProfileReview ? getGameItemById(reviewProfileId, activeProfileReview.id) : null;
+      // Texto completo del juego local; el de la reseña abierta es el respaldo (viene de esos mismos listados).
+      const ownReviewText = String(ownReviewGame?.review || activeProfileReview?.review || '').trim();
       return (
         <SocialProfileReviewScreen
           SOCIAL_UI={SOCIAL_UI}
@@ -258,6 +268,9 @@ const SocialHubInner = memo(function SocialHubInner({
           onBack={() => openProfileReviews(profileDetailId)}
           status={status}
           statusKind={statusKind}
+          actions={
+            ownReviewGame && ownReviewText ? <ShareReviewButton game={ownReviewGame} reviewText={ownReviewText} /> : null
+          }
         />
       );
     }
