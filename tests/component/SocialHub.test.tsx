@@ -101,6 +101,7 @@ const shareMocks = vi.hoisted(() => ({
     quota: { maxActive: 5, ttlDays: 7 },
     ban: null,
     available: true,
+    hasSocialSpace: true,
     nick: 'Me',
     nickIsAccountName: false,
     loading: false,

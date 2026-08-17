@@ -33,6 +33,7 @@ function withViewModel(overrides: Partial<ShareViewModel>) {
     quota: { maxActive: 5, ttlDays: 7 },
     ban: null,
     available: true,
+    hasSocialSpace: true,
     nick: 'Me',
     nickIsAccountName: false,
     loading: false,
@@ -60,14 +61,23 @@ describe('ShareReviewButton — cuando no se puede compartir', () => {
     vi.clearAllMocks();
   });
 
-  it('sin sesión de Google explica qué falta en vez de desaparecer', () => {
-    withViewModel({ available: false });
+  it('a quien usa el espacio social y no tiene sesión le explica qué falta en vez de desaparecer', () => {
+    withViewModel({ available: false, hasSocialSpace: true });
     render(<ShareReviewButton game={game} reviewText="Enorme de principio a fin" />);
 
     expect(screen.getByText(SHARE_UI.signInRequired)).toBeInTheDocument();
     expect(screen.getByTitle(SHARE_UI.signInRequiredHint)).toBeInTheDocument();
     // Y no se ofrece un botón que solo llevaría a un 401.
     expect(screen.queryByRole('button', { name: SHARE_UI.actionAria })).not.toBeInTheDocument();
+  });
+
+  it('a quien nunca ha abierto el espacio social no le dice nada', () => {
+    // Esa persona no echa en falta ningún botón: el aviso sería ruido en su panel de reseñas sobre algo que no ha
+    // pedido. Sin espacio social en este navegador, el componente sigue callado.
+    withViewModel({ available: false, hasSocialSpace: false });
+    const { container } = render(<ShareReviewButton game={game} reviewText="Enorme de principio a fin" />);
+
+    expect(container).toBeEmptyDOMElement();
   });
 
   it('mientras no se sabe si hay sesión no pinta nada', () => {

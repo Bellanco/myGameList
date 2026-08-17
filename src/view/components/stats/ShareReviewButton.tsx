@@ -97,12 +97,16 @@ export const ShareReviewButton = memo(function ShareReviewButton({ game, reviewT
   // Sin sesión de Google no se ofrece el botón: publicar exige identidad y solo llevaría a un error. Pero
   // desaparecer en silencio dejaba al usuario buscando un botón que no está —el síntoma que se reportó—, así que
   // se dice qué falta. Mismo tratamiento visual que el veto: un distintivo, no un botón que no lleva a nada.
+  //
+  // Solo a quien YA usa el espacio social en este navegador (`hasSocialSpace`). Quien nunca lo ha abierto no está
+  // echando en falta ningún botón: para esa persona el aviso sería ruido en su panel de reseñas sobre algo que no
+  // ha pedido, así que sigue sin ver nada.
   if (vm.available === false) {
-    return (
+    return vm.hasSocialSpace ? (
       <span className="hub-feed-game-chip share-unavailable" title={SHARE_UI.signInRequiredHint}>
         {SHARE_UI.signInRequired}
       </span>
-    );
+    ) : null;
   }
 
   if (vm.ban) {
