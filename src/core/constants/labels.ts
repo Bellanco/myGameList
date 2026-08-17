@@ -1504,6 +1504,10 @@ export const SHARE_UI = {
   expiresIn: (days: number) => (days <= 0 ? 'Caduca hoy' : `Caduca en ${days} ${days === 1 ? 'día' : 'días'}`),
   bannedTitle: 'No puedes compartir reseñas',
   bannedReason: (reason: string) => (reason ? `Motivo: ${reason}` : 'La administración ha retirado esta posibilidad de tu cuenta.'),
+  // Sin sesión de Google no se puede ofrecer el botón (publicar exige identidad), pero antes se quitaba sin decir
+  // nada y quien lo buscaba no tenía forma de saber por qué no estaba. Se dice qué falta y dónde se resuelve.
+  signInRequired: 'Entra con Google para compartir',
+  signInRequiredHint: 'El enlace lleva tu nombre, así que primero tienes que entrar con Google. Puedes hacerlo en el Espacio social.',
   // El servidor dice QUÉ pasa y adjunta los datos; estos dos dicen QUÉ HACER, que es lo que convierte un error
   // en algo accionable. Solo se pintan cuando la respuesta trae el detalle de la cuota.
   quotaReached: (max: number) => `Tienes ${max} de ${max} enlaces activos.`,
