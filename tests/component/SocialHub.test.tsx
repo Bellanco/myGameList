@@ -93,8 +93,32 @@ const localMocks = vi.hoisted(() => ({
 
 vi.mock('../../src/model/repository/localRepository', () => localMocks);
 
+// El botón de compartir trae su propio view-model, que habla con `/api/share` y con Firebase. Aquí interesa DÓNDE
+// se ofrece el botón, no su estado interno: se le da una sesión válida y ningún enlace previo.
+const shareMocks = vi.hoisted(() => ({
+  useShareViewModel: vi.fn(() => ({
+    shares: [],
+    quota: { maxActive: 5, ttlDays: 7 },
+    ban: null,
+    available: true,
+    nick: 'Me',
+    nickIsAccountName: false,
+    loading: false,
+    busyToken: null,
+    error: '',
+    errorDetails: {},
+    refresh: vi.fn(async () => {}),
+    share: vi.fn(async () => null),
+    revoke: vi.fn(async () => false),
+    shareOf: () => null,
+    clearError: vi.fn(),
+  })),
+}));
+
+vi.mock('../../src/viewmodel/useShareViewModel', () => shareMocks);
+
 import { SocialHub } from '../../src/view/components/SocialHub';
-import { SOCIAL_UI } from '../../src/core/constants/labels';
+import { SHARE_UI, SOCIAL_UI } from '../../src/core/constants/labels';
 import { LEGAL_CONSENT_UI, LEGAL_VERSION } from '../../src/core/constants/legal';
 
 function renderHub(initialPath = '/social', games?: unknown) {
@@ -1176,6 +1200,77 @@ describe('SocialHub (componente, post-M3)', () => {
     // …y no se reescribe el gist social para retirarla.
     await waitFor(() => expect(gistMocks.readPublicSocialGistById).toHaveBeenCalled());
     expect(gistMocks.writeSocialGist).not.toHaveBeenCalled();
+  });
+
+  it('mi perfil → reseñas → abrir una: se ofrece compartirla', async () => {
+    // Regresión de producto: el botón de compartir solo estaba en el detalle del feed y en el panel de
+    // estadísticas. Este es el camino natural para quien quiere publicar SU reseña, y aquí no había nada, así que
+    // parecía que la funcionalidad no existía para su cuenta.
+    firebaseMocks.getCurrentSocialAuthUser.mockResolvedValue({ uid: 'me', email: 'me@x.com', displayName: 'Me', photoURL: null });
+    gistMocks.getSocialSyncConfig.mockReturnValue({ token: 'ghp_x', gistId: 'my-social', etag: null, lastRemoteUpdatedAt: 0 });
+    // La reseña vive en los listados locales: de ahí saca el hub las listas del perfil PROPIO.
+    localMocks.loadLocalState.mockReturnValue({
+      c: [{
+        id: 99, name: 'Elden Ring', _ts: 1, platforms: [], genres: [], steamDeck: false,
+        review: 'Enorme de principio a fin', score: 5, years: [], strengths: [], weaknesses: [], reasons: [],
+        replayable: false, retry: false, hours: 0,
+      }],
+      v: [], e: [], p: [], deleted: [], updatedAt: 0,
+    });
+    gistMocks.readSocialGist.mockResolvedValue({
+      data: {
+        profile: { name: 'Me', private: false, visibility: { hiddenTabs: [], hideReplayable: false, hideRetry: false, hideGameTime: false, showPhoto: true }, sharedLists: {} },
+        recommendations: [], activity: [], posts: [], updatedAt: 0,
+      },
+      etag: null,
+    });
+    firebaseMocks.listSocialDirectory.mockResolvedValue([
+      { id: 'me', uid: 'me', email: 'me@x.com', displayName: 'Me', photoURL: '', socialGistId: 'my-social', gamesGistId: 'my-games' },
+    ]);
+    firebaseMocks.getMyFriendships.mockResolvedValue({ friends: [], incoming: [], outgoing: [], byOtherUid: {} });
+
+    renderHub('/social/profiles/me/game/99/review');
+
+    expect(await screen.findByText('Enorme de principio a fin')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: SHARE_UI.actionAria })).toBeInTheDocument();
+  });
+
+  it('la reseña de otra persona no ofrece compartir', async () => {
+    // Solo lo propio se puede publicar. El gating es la identidad del perfil abierto, no el rango ni la amistad.
+    firebaseMocks.getCurrentSocialAuthUser.mockResolvedValue({ uid: 'me', email: 'me@x.com', displayName: 'Me', photoURL: null });
+    gistMocks.getSocialSyncConfig.mockReturnValue({ token: 'ghp_x', gistId: 'my-social', etag: null, lastRemoteUpdatedAt: 0 });
+    localMocks.loadLocalState.mockReturnValue({
+      c: [{
+        id: 99, name: 'Elden Ring', _ts: 1, platforms: [], genres: [], steamDeck: false,
+        review: 'Enorme de principio a fin', score: 5, years: [], strengths: [], weaknesses: [], reasons: [],
+        replayable: false, retry: false, hours: 0,
+      }],
+      v: [], e: [], p: [], deleted: [], updatedAt: 0,
+    });
+    gistMocks.readSocialGist.mockResolvedValue({
+      data: {
+        profile: { name: 'Me', private: false, visibility: { hiddenTabs: [], hideReplayable: false, hideRetry: false, hideGameTime: false, showPhoto: true }, sharedLists: {} },
+        recommendations: [], activity: [], posts: [], updatedAt: 0,
+      },
+      etag: null,
+    });
+    const ada = { id: 'ada', uid: 'ada', email: 'ada@x.com', displayName: 'Ada', photoURL: '', socialGistId: 'ada-social', gamesGistId: 'ada-games' };
+    firebaseMocks.listSocialDirectory.mockResolvedValue([ada]);
+    const adaView = { docId: 'ada__me', otherUid: 'ada', otherName: 'Ada', otherPhoto: '', otherSocialGistId: 'ada-social', otherGamesGistId: 'ada-games', state: 'friends', createdAt: 0, updatedAt: 1 };
+    firebaseMocks.getMyFriendships.mockResolvedValue({ friends: [adaView], incoming: [], outgoing: [], byOtherUid: { ada: adaView } });
+    gistMocks.readPublicSocialGistById.mockResolvedValue({
+      profile: { name: 'Ada', visibility: { hiddenTabs: [], hideReplayable: false, hideRetry: false, hideGameTime: false, showPhoto: true } },
+      activity: [{ id: 'ada1', key: 'k-ada', type: 'review', actorProfileId: 'ada', actorName: 'Ada', gameId: 99, gameName: 'Elden Ring', rating: 5, recommendationText: '', snippet: 'genial', createdAt: 1000, updatedAt: 2000 }],
+      posts: [],
+      updatedAt: 2000,
+    });
+
+    renderHub('/social/profiles/ada/game/99/review');
+
+    // La pantalla se pinta (aunque sea index-only: sin su lista de juegos no hay texto completo)…
+    expect(await screen.findByText(SOCIAL_UI.feed.reviewDetailTitle)).toBeInTheDocument();
+    // …y no se ofrece publicar lo que no es suyo.
+    expect(screen.queryByRole('button', { name: SHARE_UI.actionAria })).not.toBeInTheDocument();
   });
 });
 

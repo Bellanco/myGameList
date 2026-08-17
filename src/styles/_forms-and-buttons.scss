@@ -200,7 +200,8 @@ dialog.alert-dialog[open]::backdrop { animation: alertBackdropIn .24s ease both;
   opacity: 0.8;
   align-self: center;
 }
-.share-banned {
+.share-banned,
+.share-unavailable {
   opacity: 0.9;
 }
 
