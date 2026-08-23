@@ -9,6 +9,9 @@ import {
   shareDailyLimit,
   shareExpiresAt,
 } from '../../src/core/constants/tiers';
+// El tope del ajuste individual vive en el lado del servidor: es una regla sobre quién puede GUARDAR qué, no
+// sobre cómo se resuelve lo ya guardado, y se prueba junto al resto de la cuota porque es la misma decisión.
+import { overrideExceedsTier } from '../../functions/_lib/quota';
 
 describe('cuota de compartir — valores por rango', () => {
   it('gives every tier a positive quota', () => {
@@ -105,5 +108,53 @@ describe('cuota de compartir — techo diario', () => {
 
   it('never exceeds the ceiling', () => {
     expect(shareDailyLimit(resolveShareQuota('bronze', { maxActive: 10_000 }))).toBe(SHARE_MAX_ACTIVE_CEILING);
+  });
+});
+
+// EL AJUSTE INDIVIDUAL SOLO RECORTA. `resolveShareQuota` acepta cualquier cifra hasta el techo absoluto (es su
+// trabajo: resolver lo que hay guardado), así que el filtro de quién puede GUARDAR qué vive aparte, en el
+// endpoint del panel. Sin él, el ajuste era una segunda vía para conceder privilegios sin tocar el rango.
+describe('cuota de compartir — tope del ajuste individual', () => {
+  it('deja pasar el ajuste que cabe en la categoría', () => {
+    expect(overrideExceedsTier('bronze', { maxActive: 3, ttlDays: 5 })).toBeNull();
+    // Exactamente el máximo también cabe: el tope es inclusivo.
+    expect(overrideExceedsTier('bronze', {
+      maxActive: PROFILE_TIER_SHARE_MAX_ACTIVE.bronze,
+      ttlDays: PROFILE_TIER_SHARE_TTL_DAYS.bronze,
+    })).toBeNull();
+  });
+
+  it('rechaza pasarse, y dice en qué campo y cuál es el tope', () => {
+    expect(overrideExceedsTier('bronze', { maxActive: 6 })).toEqual({
+      field: 'maxActive', ceiling: PROFILE_TIER_SHARE_MAX_ACTIVE.bronze,
+    });
+    expect(overrideExceedsTier('bronze', { ttlDays: 30 })).toEqual({
+      field: 'ttlDays', ceiling: PROFILE_TIER_SHARE_TTL_DAYS.bronze,
+    });
+  });
+
+  // Lo que un bronce con el ajuste conseguía antes de existir esto: la cuota de mithril entera.
+  it('un bronce no puede llevarse la cuota de mithril por la puerta de atrás', () => {
+    expect(overrideExceedsTier('bronze', {
+      maxActive: PROFILE_TIER_SHARE_MAX_ACTIVE.mithril,
+      ttlDays: PROFILE_TIER_SHARE_TTL_DAYS.mithril,
+    })).not.toBeNull();
+    // Y a mithril, esas mismas cifras sí le corresponden.
+    expect(overrideExceedsTier('mithril', {
+      maxActive: PROFILE_TIER_SHARE_MAX_ACTIVE.mithril,
+      ttlDays: PROFILE_TIER_SHARE_TTL_DAYS.mithril,
+    })).toBeNull();
+  });
+
+  it('un campo ausente no se mira: el ajuste es parcial por diseño', () => {
+    expect(overrideExceedsTier('bronze', {})).toBeNull();
+    expect(overrideExceedsTier('bronze', { ttlDays: 3 })).toBeNull();
+  });
+
+  it('vale para todos los rangos, sin una tabla de cifras propia', () => {
+    for (const tier of PROFILE_TIERS) {
+      expect(overrideExceedsTier(tier, { maxActive: PROFILE_TIER_SHARE_MAX_ACTIVE[tier] })).toBeNull();
+      expect(overrideExceedsTier(tier, { maxActive: PROFILE_TIER_SHARE_MAX_ACTIVE[tier] + 1 })).not.toBeNull();
+    }
   });
 });

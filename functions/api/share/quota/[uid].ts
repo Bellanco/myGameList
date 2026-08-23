@@ -8,9 +8,15 @@
 // Los dos campos son opcionales e independientes: se puede recortar el número de enlaces sin tocar su duración.
 // Los valores son ABSOLUTOS y mandan sobre el rango mientras existan; el recorte al techo lo hace
 // `resolveShareQuota`, que es la única que resuelve cuota en todo el sistema.
+//
+// EL AJUSTE NO PUEDE PASAR DEL MÁXIMO DE SU CATEGORÍA. El ajuste individual sirve para RECORTAR lo que alguien
+// comparte sin tocarle la frescura de su feed; para darle más está el rango, que es lo que el rango significa. Se
+// comprueba aquí y no solo en el panel: un límite que solo vive en la interfaz no es un límite.
 import { requireAdmin } from '../../../_lib/context';
 import { fail, json, readJson } from '../../../_lib/http';
+import { overrideExceedsTier, tryReadProfileFacts } from '../../../_lib/quota';
 import { overrideKey, type Env } from '../../../_lib/keys';
+import { PROFILE_TIER_LABELS } from '../../../../src/core/constants/tiers';
 
 const REASON_MAX = 500;
 
@@ -39,6 +45,17 @@ export async function onRequestPost(context: { request: Request; env: Env; param
     return fail(400, 'Indica al menos un valor, o borra el ajuste');
   }
 
+  // El rango del USUARIO AJUSTADO, leído con el token del administrador (las reglas se lo permiten con
+  // `isAdmin()`). Cuando no se puede leer —perfil sin crear, red, reglas— no se rechaza nada: se sigue como antes
+  // y el techo absoluto de `resolveShareQuota` hace de última red. Confundir un fallo de lectura con un bronce
+  // rechazaría el ajuste legítimo de alguien que es oro.
+  const target = await tryReadProfileFacts(caller.user, caller.projectId, caller.appCheckToken, uid);
+  const excess = target ? overrideExceedsTier(target.tier, { maxActive, ttlDays }) : null;
+  if (target && excess) { // `target` se repite para que TypeScript lo sepa vivo dentro del mensaje
+    const unidad = excess.field === 'maxActive' ? 'enlaces activos' : 'días de duración';
+    return fail(400, `${PROFILE_TIER_LABELS[target.tier]} llega a ${excess.ceiling} ${unidad}: para darle más, súbele el rango`);
+  }
+
   const override = {
     ...(maxActive !== undefined ? { maxActive } : {}),
     ...(ttlDays !== undefined ? { ttlDays } : {}),
@@ -46,7 +63,12 @@ export async function onRequestPost(context: { request: Request; env: Env; param
     setAt: Date.now(),
     by: caller.user.email || 'admin',
   };
-  await context.env.SHARES.put(overrideKey(uid), JSON.stringify(override));
+  // Las dos cifras van TAMBIÉN en la metadata de la clave: así el censo de `/api/share/all` las trae con su
+  // `list()`, sin una lectura por usuario, y el panel puede precargar los campos de cuota con lo que hay puesto.
+  // El valor completo sigue en el cuerpo (motivo, quién y cuándo), que el censo no necesita.
+  await context.env.SHARES.put(overrideKey(uid), JSON.stringify(override), {
+    metadata: { maxActive, ttlDays },
+  });
 
   return json({ override });
 }
