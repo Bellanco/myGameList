@@ -2,8 +2,13 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
-import { ADMIN_PANEL_UI } from '../../src/core/constants/labels';
+import { ADMIN_PANEL_UI, ADMIN_SHARES_UI } from '../../src/core/constants/labels';
 import { ADMIN_EMAIL } from '../../src/core/security/admin';
+import {
+  PROFILE_TIER_LABELS,
+  PROFILE_TIER_SHARE_MAX_ACTIVE,
+  PROFILE_TIER_SHARE_TTL_DAYS,
+} from '../../src/core/constants/tiers';
 import type { AdminAnomaly } from '../../src/model/types/firestore';
 
 // La sesión y el repositorio se controlan desde el test: aquí se comprueba la PUERTA y el cableado de la tabla,
@@ -51,6 +56,28 @@ vi.mock('../../src/model/repository/firebaseAdminRepository', () => ({
   purgeFossilFriendshipRequests: (...args: unknown[]) => purgeFossilFriendshipRequestsMock(...args),
   setUserDisplayName: (...args: unknown[]) => setUserDisplayNameMock(...args),
 }));
+
+// Los enlaces compartidos son otra fuente (el Worker, no Firestore) y se piden al montar el panel. Se controlan
+// desde aquí para poder comprobar la cuota que enseña cada ficha; sin el mock, el `fetch` real fallaría y la
+// sección quedaría siempre vacía.
+const listAllSharesMock = vi.fn<(...args: unknown[]) => Promise<unknown>>(async () => ({
+  shares: [], bans: [], overrides: {}, cursor: null, complete: true,
+}));
+const setQuotaOverrideMock = vi.fn<(...args: unknown[]) => Promise<void>>(async () => {});
+const clearQuotaOverrideMock = vi.fn<(...args: unknown[]) => Promise<void>>(async () => {});
+
+vi.mock('../../src/model/repository/shareAdminRepository', () => ({
+  listAllShares: (...args: unknown[]) => listAllSharesMock(...args),
+  adminRemoveShare: vi.fn(async () => {}),
+  banUser: vi.fn(async () => 0),
+  unbanUser: vi.fn(async () => {}),
+  setQuotaOverride: (...args: unknown[]) => setQuotaOverrideMock(...args),
+  clearQuotaOverride: (...args: unknown[]) => clearQuotaOverrideMock(...args),
+}));
+
+// jsdom no trae portapapeles: el botón de copiar el uid lo necesita para poder comprobarse.
+const writeTextMock = vi.fn(async () => {});
+Object.defineProperty(navigator, 'clipboard', { value: { writeText: writeTextMock }, configurable: true });
 
 import { AdminHub } from '../../src/view/components/AdminHub';
 
@@ -178,7 +205,9 @@ describe('AdminHub — moderación', () => {
     migrateForeignProfileDocMock.mockResolvedValue({ outcome: 'moved', carried: [] });
   });
 
-  // CUTOVER DE IDENTIDAD: la acción borra un documento, así que la ficha tiene que enseñar de dónde a dónde va.
+  // CUTOVER DE IDENTIDAD: la acción borra un documento, así que la ficha tiene que decir a dónde va y qué hará.
+  // Los IDS ya no se pintan: el destino es siempre el documento canónico, y con el id delante no se comprobaba
+  // nada que no diga esa frase. Lo que sí decide —mover o fusionar— sigue a la vista.
   it('migra la identidad de un perfil que vive bajo otro id, tras confirmar', async () => {
     loadAdminCensusMock.mockResolvedValue(
       census([user({ id: 'doc-legacy', uid: 'uid-a', idMatchesUid: false, anomalies: ['foreign-doc-id'] })]),
@@ -187,9 +216,10 @@ describe('AdminHub — moderación', () => {
     signIn(ADMIN_EMAIL);
     await screen.findByText('Ada');
 
-    // Los dos ids, visibles: el actual y el destino.
-    expect(screen.getByText('doc-legacy')).toBeInTheDocument();
-    expect(screen.getByText('profiles/uid-a')).toBeInTheDocument();
+    expect(screen.getByText(ADMIN_PANEL_UI.cutover.targetCanonical)).toBeInTheDocument();
+    expect(screen.getByText(ADMIN_PANEL_UI.cutover.outcomeMove)).toBeInTheDocument();
+    expect(screen.queryByText('doc-legacy')).not.toBeInTheDocument();
+    expect(screen.queryByText('profiles/uid-a')).not.toBeInTheDocument();
 
     await userEvent.click(screen.getByRole('button', { name: ADMIN_PANEL_UI.cutover.btn }));
     expect(migrateForeignProfileDocMock).not.toHaveBeenCalled();
@@ -307,13 +337,19 @@ describe('AdminHub — moderación', () => {
     expect(screen.queryByText(ADMIN_PANEL_UI.noName)).not.toBeInTheDocument();
   });
 
-  it('sin nombre por ningún lado queda el uid, copiable para buscarlo en Firebase Auth', async () => {
+  // El uid ya no se pinta (no se puede hacer nada con él en esta pantalla), pero se sigue pudiendo COPIAR: es la
+  // única forma de cruzar una ficha con Firebase Auth, que es donde vive el correo.
+  it('sin nombre por ningún lado, el identificador sigue siendo copiable aunque no se vea', async () => {
     loadAdminCensusMock.mockResolvedValue(census([user({ displayName: '', knownAs: '' })]));
     renderHub();
     signIn(ADMIN_EMAIL);
 
     expect(await screen.findByText(ADMIN_PANEL_UI.noName, { exact: false })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: `${ADMIN_PANEL_UI.copyUid}: uid-a` })).toBeInTheDocument();
+    expect(screen.queryByText('uid-a')).not.toBeInTheDocument();
+
+    const copiar = screen.getByRole('button', { name: ADMIN_PANEL_UI.copyUidAria(ADMIN_PANEL_UI.noName) });
+    await userEvent.click(copiar);
+    expect(writeTextMock).toHaveBeenCalledWith('uid-a');
   });
 
   it('cambiar el rango es directo, sin modal: es reversible y no destruye nada', async () => {
@@ -394,19 +430,22 @@ describe('AdminHub — moderación', () => {
     expect(screen.getByText(ADMIN_PANEL_UI.anomalies.inactive.label)).toBeInTheDocument();
   });
 
-  it('con deriva de gist enseña LOS DOS ids y ofrece unificar', async () => {
+  it('con deriva de gist dice de dónde sale, sin enseñar los ids', async () => {
     loadAdminCensusMock.mockResolvedValue(
-      census([user({ socialGistId: 'gs-nuevo', friendSocialGistIds: ['gs-viejo'], anomalies: ['gist-drift'] })]),
+      census([user({ socialGistId: 'gs-nuevo', friendSocialGistIds: ['gs-viejo', 'gs-otro'], anomalies: ['gist-drift'] })]),
     );
     renderHub();
     signIn(ADMIN_EMAIL);
     await screen.findByText('Ada');
 
-    // Los dos candidatos a la vista DENTRO del bloque de deriva: la decisión del árbitro tiene que ser
-    // comprobable, no un acto de fe. (El id del perfil sale además en la ficha de datos, de ahí el `within`.)
+    // Los ids no se pintan: no hay nada que se pueda hacer con ellos desde aquí. Lo que se dice es DÓNDE está la
+    // divergencia —su perfil arrastra uno propio, y sus amistades no coinciden entre ellas—, que es lo único que
+    // cambia la lectura de la ficha.
     const bloque = screen.getByRole('group', { name: ADMIN_PANEL_UI.gist.driftTitle });
-    expect(within(bloque).getByText('gs-nuevo')).toBeInTheDocument();
-    expect(within(bloque).getByText('gs-viejo')).toBeInTheDocument();
+    expect(within(bloque).getByText(ADMIN_PANEL_UI.gist.profileGistOwn)).toBeInTheDocument();
+    expect(within(bloque).getByText(ADMIN_PANEL_UI.field.channelMany(2))).toBeInTheDocument();
+    expect(screen.queryByText('gs-nuevo')).not.toBeInTheDocument();
+    expect(screen.queryByText('gs-viejo')).not.toBeInTheDocument();
 
     // Ya no hay acción: la deriva se resuelve sola cuando su dueño abre el hub (su cliente elige el canal con
     // contenido y repunta sus amistades). Desde el panel no se puede: haría falta su token de GitHub.
@@ -474,17 +513,20 @@ describe('AdminHub — moderación', () => {
 
     expect(screen.queryByText(ADMIN_PANEL_UI.field.socialGist)).not.toBeInTheDocument();
     expect(screen.getByText(ADMIN_PANEL_UI.field.friendGists)).toBeInTheDocument();
-    expect(screen.getByText('gs-vivo')).toBeInTheDocument();
+    // El estado del canal, no su id: con uno solo está sano, y el identificador no permitía hacer nada.
+    expect(screen.getByText(ADMIN_PANEL_UI.field.channelSingle)).toBeInTheDocument();
+    expect(screen.queryByText('gs-vivo')).not.toBeInTheDocument();
   });
 
-  it('un perfil que aún publica el id legacy sí lo muestra', async () => {
+  it('un perfil que aún publica el id legacy lo dice, sin enseñarlo', async () => {
     loadAdminCensusMock.mockResolvedValue(census([user({ socialGistId: 'gs-legacy' })]));
     renderHub();
     signIn(ADMIN_EMAIL);
     await screen.findByText('Ada');
 
     expect(screen.getByText(ADMIN_PANEL_UI.field.socialGist)).toBeInTheDocument();
-    expect(screen.getByText('gs-legacy')).toBeInTheDocument();
+    expect(screen.getByText(ADMIN_PANEL_UI.field.socialGistPresent)).toBeInTheDocument();
+    expect(screen.queryByText('gs-legacy')).not.toBeInTheDocument();
   });
 
   // Cuando los nombres no coinciden se enseñan LOS DOS, etiquetados por origen. El panel no puede saber cuál es el
@@ -685,13 +727,289 @@ describe('AdminHub — identidad denormalizada y solicitudes fosilizadas', () =>
     expect(screen.queryByText(ADMIN_PANEL_UI.chooseName.title)).not.toBeInTheDocument();
   });
 
-  it('enseña el gist de juegos que conocen sus amistades', async () => {
+  it('dice el estado del canal de listas, y que no tenerlo no es un fallo', async () => {
     loadAdminCensusMock.mockResolvedValue(census([user({ friendGamesGistIds: ['gj-1'] })]));
-    renderHub();
+    const { unmount } = renderHub();
     signIn(ADMIN_EMAIL);
     await screen.findByText('Ada');
 
     expect(screen.getByText(ADMIN_PANEL_UI.field.friendGamesGists)).toBeInTheDocument();
-    expect(screen.getByText('gj-1')).toBeInTheDocument();
+    expect(screen.getByText(ADMIN_PANEL_UI.field.channelSingle)).toBeInTheDocument();
+    expect(screen.queryByText('gj-1')).not.toBeInTheDocument();
+
+    // Sin canal de listas el hueco se explica: es quien usa el social sin sincronizar sus juegos, no una avería.
+    unmount();
+    loadAdminCensusMock.mockResolvedValue(census([user({ friendGamesGistIds: [] })]));
+    renderHub();
+    signIn(ADMIN_EMAIL);
+    await screen.findByText('Ada');
+    expect(screen.getByText(ADMIN_PANEL_UI.field.listsNone)).toBeInTheDocument();
+  });
+
+  // TRES ESTADOS PARA LA FOTO, no un sí/no. El interruptor real vive en el gist del usuario y este panel no lo
+  // lee: el estado se deduce de si publica foto y de si sus amistades guardan una suya.
+  describe('estado de la foto', () => {
+    it('publica foto: activada', async () => {
+      loadAdminCensusMock.mockResolvedValue(census([user({ hasPhoto: true, photoURL: 'https://x/y.png' })]));
+      renderHub();
+      signIn(ADMIN_EMAIL);
+      await screen.findByText('Ada');
+
+      expect(screen.getByText(ADMIN_PANEL_UI.field.photoOn)).toBeInTheDocument();
+    });
+
+    it('no publica pero sus amigos guardan una suya: la ha ocultado', async () => {
+      loadAdminCensusMock.mockResolvedValue(
+        census([user({ hasPhoto: false, photoURL: '', friendKnownPhotos: ['https://x/vieja.png'] })]),
+      );
+      renderHub();
+      signIn(ADMIN_EMAIL);
+      await screen.findByText('Ada');
+
+      expect(screen.getByText(ADMIN_PANEL_UI.field.photoHidden)).toBeInTheDocument();
+    });
+
+    // Con amistades, que ninguna guarde foto suya SÍ dice algo: no publicó ninguna desde que se hicieron amigos.
+    it('tiene amistades y ninguna guarda foto suya: desactivada', async () => {
+      loadAdminCensusMock.mockResolvedValue(
+        census([user({ hasPhoto: false, photoURL: '', friendKnownPhotos: [], friends: 2 })]),
+      );
+      renderHub();
+      signIn(ADMIN_EMAIL);
+      await screen.findByText('Ada');
+
+      expect(screen.getByText(ADMIN_PANEL_UI.field.photoOff)).toBeInTheDocument();
+    });
+
+    // El único caso que el panel NO puede saber, y por eso no lo afirma: sin nadie que guarde una foto suya de
+    // antes, quien apagó el interruptor se ve igual que quien nunca tuvo foto en su cuenta.
+    it('sin foto y sin amistades con las que comparar: no se afirma nada', async () => {
+      loadAdminCensusMock.mockResolvedValue(
+        census([user({
+          hasPhoto: false, photoURL: '', friendKnownPhotos: [], friends: 0, pending: 0, pendingOut: 0, pendingIn: 0,
+        })]),
+      );
+      renderHub();
+      signIn(ADMIN_EMAIL);
+      await screen.findByText('Ada');
+
+      expect(screen.getByText(ADMIN_PANEL_UI.field.photoUnknown)).toBeInTheDocument();
+      expect(screen.queryByText(ADMIN_PANEL_UI.field.photoOff)).not.toBeInTheDocument();
+    });
+  });
+});
+
+// CUOTA DE ENLACES COMPARTIDOS. Los campos llegan con lo que el usuario tiene AHORA (su rango, ya resuelto con su
+// ajuste individual si lo tiene) en vez de a cero, y no dejan pasar del máximo de su rango: para dar más, se le
+// sube el rango, que es lo que el rango significa.
+describe('AdminHub — cuota de enlaces compartidos', () => {
+  beforeEach(() => {
+    loadAdminCensusMock.mockReset();
+    loadAdminCensusMock.mockResolvedValue(census([user()]));
+    listAllSharesMock.mockReset();
+    listAllSharesMock.mockResolvedValue({ shares: [], bans: [], overrides: {}, cursor: null, complete: true });
+    setQuotaOverrideMock.mockClear();
+    clearQuotaOverrideMock.mockClear();
+  });
+
+  /**
+   * Despliega el bloque de enlaces de la única ficha en pantalla. El propio rótulo del desplegable lleva la cuota
+   * («0 de 5»), así que hay que decirle cuál se espera: es el extremo del filtro, no un detalle del helper.
+   */
+  async function abrirEnlaces(maxActive: number = PROFILE_TIER_SHARE_MAX_ACTIVE.bronze) {
+    renderHub();
+    signIn(ADMIN_EMAIL);
+    await screen.findByText('Ada');
+    await userEvent.click(await screen.findByRole('button', { name: ADMIN_SHARES_UI.toggle(0, maxActive) }));
+  }
+
+  it('sin ajuste individual, los campos traen la cuota del rango y el tope es el suyo', async () => {
+    await abrirEnlaces();
+
+    // Bronce: 5 enlaces activos, 7 días.
+    const enlaces = screen.getByLabelText(new RegExp(ADMIN_SHARES_UI.quotaMaxLabel));
+    const dias = screen.getByLabelText(new RegExp(ADMIN_SHARES_UI.quotaDaysLabel));
+    expect(enlaces).toHaveValue(PROFILE_TIER_SHARE_MAX_ACTIVE.bronze);
+    expect(dias).toHaveValue(PROFILE_TIER_SHARE_TTL_DAYS.bronze);
+    expect(enlaces).toHaveAttribute('max', String(PROFILE_TIER_SHARE_MAX_ACTIVE.bronze));
+    expect(dias).toHaveAttribute('max', String(PROFILE_TIER_SHARE_TTL_DAYS.bronze));
+
+    // Sin ajuste no hay nada que quitar: el botón de volver al rango no existe.
+    expect(screen.getByText(ADMIN_SHARES_UI.quotaFromTier(PROFILE_TIER_LABELS.bronze))).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: ADMIN_SHARES_UI.quotaClear })).not.toBeInTheDocument();
+  });
+
+  it('con ajuste individual enseña el ajuste, no la cuota del rango, y ofrece retirarlo', async () => {
+    listAllSharesMock.mockResolvedValue({
+      shares: [], bans: [], overrides: { 'uid-a': { maxActive: 2, ttlDays: 3 } }, cursor: null, complete: true,
+    });
+    await abrirEnlaces(2);
+
+    expect(screen.getByLabelText(new RegExp(ADMIN_SHARES_UI.quotaMaxLabel))).toHaveValue(2);
+    expect(screen.getByLabelText(new RegExp(ADMIN_SHARES_UI.quotaDaysLabel))).toHaveValue(3);
+    expect(screen.getByText(ADMIN_SHARES_UI.quotaFromOverride)).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: ADMIN_SHARES_UI.quotaClear }));
+    await userEvent.click(screen.getByRole('button', { name: ADMIN_PANEL_UI.confirmAccept }));
+    await waitFor(() => expect(clearQuotaOverrideMock).toHaveBeenCalledWith('uid-a'));
+  });
+
+  it('aplica los dos valores como cifras absolutas, tras confirmar', async () => {
+    await abrirEnlaces();
+
+    const enlaces = screen.getByLabelText(new RegExp(ADMIN_SHARES_UI.quotaMaxLabel));
+    await userEvent.clear(enlaces);
+    await userEvent.type(enlaces, '3');
+
+    await userEvent.click(screen.getByRole('button', { name: ADMIN_SHARES_UI.quota }));
+    expect(setQuotaOverrideMock).not.toHaveBeenCalled();
+
+    await userEvent.click(screen.getByRole('button', { name: ADMIN_PANEL_UI.confirmAccept }));
+    // Los DOS campos viajan, aunque solo se tocara uno: son valores absolutos, no un delta.
+    await waitFor(() => expect(setQuotaOverrideMock).toHaveBeenCalledWith('uid-a', { maxActive: 3, ttlDays: 7 }));
+  });
+
+  it('no deja pasar del máximo del rango: lo dice y bloquea el botón', async () => {
+    await abrirEnlaces();
+
+    const enlaces = screen.getByLabelText(new RegExp(ADMIN_SHARES_UI.quotaMaxLabel));
+    await userEvent.clear(enlaces);
+    await userEvent.type(enlaces, '40');
+
+    expect(
+      screen.getByText(ADMIN_SHARES_UI.quotaOverLimit(PROFILE_TIER_SHARE_MAX_ACTIVE.bronze, PROFILE_TIER_LABELS.bronze)),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: ADMIN_SHARES_UI.quota })).toBeDisabled();
+  });
+
+  it('un campo vacío tampoco se aplica: el servidor lo descartaría sin decir nada', async () => {
+    await abrirEnlaces();
+
+    await userEvent.clear(screen.getByLabelText(new RegExp(ADMIN_SHARES_UI.quotaDaysLabel)));
+    expect(screen.getByRole('button', { name: ADMIN_SHARES_UI.quota })).toBeDisabled();
+  });
+});
+
+// Lo que se ve SIN desplegar nada: el resumen de arriba y el rótulo de cada ficha. Son los números que deciden si
+// hay que abrir algo, así que tienen que estar bien o no sirven para nada.
+describe('AdminHub — resumen y filtros', () => {
+  beforeEach(() => {
+    loadAdminCensusMock.mockReset();
+    loadAdminCensusMock.mockResolvedValue(census([user()]));
+    listAllSharesMock.mockReset();
+    listAllSharesMock.mockResolvedValue({ shares: [], bans: [], overrides: {}, cursor: null, complete: true });
+  });
+
+  function share(overrides: Record<string, unknown> = {}) {
+    return {
+      uid: 'uid-a', token: 't1', gameId: 1, gameName: 'Juego',
+      createdAt: 1_700_000_000_000, expiresAt: 1_800_000_000_000, ...overrides,
+    };
+  }
+
+  it('el rótulo de la ficha dice cuántos enlaces tiene DE cuántos puede', async () => {
+    listAllSharesMock.mockResolvedValue({
+      shares: [share(), share({ token: 't2' })], bans: [], overrides: {}, cursor: null, complete: true,
+    });
+    renderHub();
+    signIn(ADMIN_EMAIL);
+    await screen.findByText('Ada');
+
+    expect(
+      await screen.findByRole('button', { name: ADMIN_SHARES_UI.toggle(2, PROFILE_TIER_SHARE_MAX_ACTIVE.bronze) }),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(ADMIN_SHARES_UI.full)).not.toBeInTheDocument();
+  });
+
+  it('con el cupo agotado lo dice sin tener que desplegar', async () => {
+    listAllSharesMock.mockResolvedValue({
+      shares: Array.from({ length: PROFILE_TIER_SHARE_MAX_ACTIVE.bronze }, (_, i) => share({ token: `t${i}` })),
+      bans: [], overrides: {}, cursor: null, complete: true,
+    });
+    renderHub();
+    signIn(ADMIN_EMAIL);
+    await screen.findByText('Ada');
+
+    expect(await screen.findByText(ADMIN_SHARES_UI.full)).toBeInTheDocument();
+  });
+
+  it('el resumen suma los enlaces y los vetados', async () => {
+    listAllSharesMock.mockResolvedValue({
+      shares: [share(), share({ token: 't2' })], bans: ['uid-a'], overrides: {}, cursor: null, complete: true,
+    });
+    renderHub();
+    signIn(ADMIN_EMAIL);
+    await screen.findByText('Ada');
+
+    const enlaces = await screen.findByText(ADMIN_PANEL_UI.totals.activeShares);
+    expect(enlaces.parentElement).toHaveTextContent('2');
+    expect(screen.getByText(ADMIN_PANEL_UI.totals.banned).parentElement).toHaveTextContent('1');
+  });
+
+  // Un cero cuando la respuesta no llegó afirmaría que no hay ningún enlace ni ningún veto, que es justo lo que
+  // el panel no sabe en ese momento.
+  it('si el censo de enlaces falla, sus dos totales no se pintan', async () => {
+    listAllSharesMock.mockRejectedValue(new Error('sin red'));
+    renderHub();
+    signIn(ADMIN_EMAIL);
+    await screen.findByText('Ada');
+
+    expect(screen.queryByText(ADMIN_PANEL_UI.totals.activeShares)).not.toBeInTheDocument();
+    expect(screen.queryByText(ADMIN_PANEL_UI.totals.banned)).not.toBeInTheDocument();
+    // El resto del panel sigue en pie: un fallo del Worker no puede tumbar el censo de Firestore.
+    expect(screen.getByText(ADMIN_PANEL_UI.totals.profiles)).toBeInTheDocument();
+  });
+
+  it('con más enlaces de los listados, el total lleva un "+" y lo explica', async () => {
+    listAllSharesMock.mockResolvedValue({
+      shares: [share()], bans: [], overrides: {}, cursor: 'c1', complete: false,
+    });
+    renderHub();
+    signIn(ADMIN_EMAIL);
+    await screen.findByText('Ada');
+
+    const parcial = await screen.findByText(ADMIN_PANEL_UI.totals.partialCount(1));
+    expect(parcial).toHaveAttribute('title', ADMIN_PANEL_UI.totals.partialHint);
+  });
+
+  it('el filtro de señales deja solo los perfiles que hay que mirar', async () => {
+    loadAdminCensusMock.mockResolvedValue(
+      census([user(), user({ id: 'uid-b', uid: 'uid-b', displayName: 'Bob', anomalies: ['inactive'] })]),
+    );
+    renderHub();
+    signIn(ADMIN_EMAIL);
+    await screen.findByText('Ada');
+
+    await userEvent.click(screen.getByLabelText(ADMIN_PANEL_UI.onlyFlaggedLabel));
+    expect(screen.getByText('Bob')).toBeInTheDocument();
+    expect(screen.queryByText('Ada')).not.toBeInTheDocument();
+    expect(screen.getByText(ADMIN_PANEL_UI.resultCount(1))).toBeInTheDocument();
+  });
+
+  // Lista vacía con el filtro puesto es una BUENA noticia, no un "no se encontró nada".
+  it('sin ninguna señal, el filtro lo dice con sus palabras', async () => {
+    loadAdminCensusMock.mockResolvedValue(census([user()]));
+    renderHub();
+    signIn(ADMIN_EMAIL);
+    await screen.findByText('Ada');
+
+    await userEvent.click(screen.getByLabelText(ADMIN_PANEL_UI.onlyFlaggedLabel));
+    expect(screen.getByText(ADMIN_PANEL_UI.emptyFlagged)).toBeInTheDocument();
+    expect(screen.queryByText(ADMIN_PANEL_UI.emptyFiltered)).not.toBeInTheDocument();
+  });
+
+  it('el filtro se combina con la búsqueda, y entonces el vacío es el de la búsqueda', async () => {
+    loadAdminCensusMock.mockResolvedValue(
+      census([user(), user({ id: 'uid-b', uid: 'uid-b', displayName: 'Bob', anomalies: ['inactive'] })]),
+    );
+    renderHub();
+    signIn(ADMIN_EMAIL);
+    await screen.findByText('Ada');
+
+    await userEvent.click(screen.getByLabelText(ADMIN_PANEL_UI.onlyFlaggedLabel));
+    fireEvent.change(screen.getByLabelText(ADMIN_PANEL_UI.searchLabel), { target: { value: 'Zoe' } });
+
+    // Ada no tiene señales y Bob no es Zoe: no queda nadie, pero por la búsqueda, no por el filtro.
+    expect(screen.getByText(ADMIN_PANEL_UI.emptyFiltered)).toBeInTheDocument();
   });
 });

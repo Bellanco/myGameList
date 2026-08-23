@@ -80,6 +80,19 @@ const post = z.strictObject({
   updatedAt: z.number(),
 });
 
+/**
+ * F4 — mensaje de LISTA (proyección de los sellos `enteredAt`; ver `core/social/moveActivity`). Allowlist estricta
+ * de cuatro campos: no lleva actor (el gist es de un autor), ni nota, ni texto. Que el schema sea tan corto no es
+ * un descuido, es la garantía de que por esta puerta no se cuela nada más del sello que la fecha.
+ */
+const move = z.strictObject({
+  id: z.string().max(64),
+  gameId: z.number(),
+  gameName: z.string().max(NAME_MAX),
+  tab: tabId,
+  at: z.number(),
+});
+
 // A6 (gated): índice de chunking del gist social. Aditivo y opcional → un ancla con overflow de `sharedLists`
 // (gistId null = mismo gist) valida; los gists planos sin chunking siguen validando igual.
 const chunkRef = z.strictObject({
@@ -100,6 +113,8 @@ export const socialGistSchema = z.strictObject({
   activity: z.array(activity),
   // F3 (aditivo, Opción B): opcional → gists sin posts siguen validando; clientes viejos ignoran el campo en lectura.
   posts: z.array(post).optional(),
+  // F4 (aditivo, mismo patrón): opcional → los gists anteriores a los mensajes de lista siguen validando.
+  moves: z.array(move).optional(),
   updatedAt: z.number(),
   schemaVersion: z.number(), // 6.2b: 2 = identidad por profileId
   // A6 (gated): presente solo cuando la escritura multi-fichero está activa y hay overflow de sharedLists.

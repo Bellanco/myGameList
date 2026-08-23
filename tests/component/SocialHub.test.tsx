@@ -119,7 +119,8 @@ const shareMocks = vi.hoisted(() => ({
 vi.mock('../../src/viewmodel/useShareViewModel', () => shareMocks);
 
 import { SocialHub } from '../../src/view/components/SocialHub';
-import { SHARE_UI, SOCIAL_UI } from '../../src/core/constants/labels';
+import { SHARE_UI } from '../../src/core/constants/labels';
+import { SOCIAL_UI } from '../../src/core/constants/socialLabels';
 import { LEGAL_CONSENT_UI, LEGAL_VERSION } from '../../src/core/constants/legal';
 
 function renderHub(initialPath = '/social', games?: unknown) {
@@ -1537,5 +1538,31 @@ describe('SocialHub — reciprocidad de la foto', () => {
 
     await waitFor(() => expect(fotosPintadas()).toContain(ADA_FOTO));
     await waitFor(() => expect(fotosPintadas()).toContain(BOB_FOTO));
+  });
+
+  /**
+   * SIN CONEXIÓN. Antes, un fallo de red al hidratar el directorio salía tal cual en el pie de la pantalla
+   * (`network offline`, «Failed to fetch»), en inglés y sin decir nada útil. Ahora se cuenta como falta de
+   * conexión: aviso persistente con el titular del tema, mensaje de estado propio y —esto importa— nivel `warn`,
+   * que NO enciende el bloqueo del espacio social (`err` lo hacía, así que quedarse sin red además lo cerraba).
+   *
+   * `navigator.onLine` se deja en `true` a propósito: es el caso del wifi conectado sin salida a internet, donde
+   * el navegador dice que hay red. Si el aviso dependiera solo de esa señal, aquí no aparecería.
+   */
+  it('un fallo de red al hidratar el directorio se cuenta como falta de conexión, no en crudo', async () => {
+    firebaseMocks.getCurrentSocialAuthUser.mockResolvedValue({ uid: 'me', email: 'me@x.com', displayName: 'Me', photoURL: null });
+    gistMocks.getSocialSyncConfig.mockReturnValue({ token: 'ghp_x', gistId: 'my-social', etag: null, lastRemoteUpdatedAt: 0 });
+    ownProfile(false);
+    const fallo = Object.assign(new Error('network offline'), { deferred: true });
+    firebaseMocks.listSocialDirectory.mockRejectedValue(fallo);
+
+    renderHub('/social');
+
+    // El aviso persistente, con el titular del tema por defecto.
+    const aviso = await screen.findByLabelText(SOCIAL_UI.offline.sectionAria);
+    expect(aviso.textContent).toContain(SOCIAL_UI.offline.leadByPalette.steam);
+    // Y el mensaje de estado es el de la aplicación, no el del error.
+    expect(await screen.findByText(SOCIAL_UI.status.offline)).toBeInTheDocument();
+    expect(screen.queryByText('network offline')).not.toBeInTheDocument();
   });
 });

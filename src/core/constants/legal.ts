@@ -37,7 +37,15 @@
 // amistades lo mismo que ve de sí misma, incluidas las listas escondidas y las marcas de «rejugable» y «merece otra
 // oportunidad»; el tiempo de juego queda fuera de la excepción. El tono del párrafo es a propósito tranquilo: es un
 // dato que hay que dar, no una advertencia. Cambia lo que otros ven de ti, así que se vuelve a pedir conformidad.
-export const LEGAL_VERSION = '2026-08-16';
+// 2026-08-22: ACTIVIDAD DE LISTAS. El canal social empieza a publicar, además de las reseñas, un aviso por cada
+// vez que un juego entra en una de tus listas —«empezó», «terminó», «dejó», «apuntó»— con su fecha y su hora.
+// Hay que decirlo y hay que reabrir la aceptación, porque es un dato NUEVO sobre ti que ven tus amistades y de una
+// naturaleza distinta a la de una reseña: una reseña la escribes, esto lo registra la app sola al usarla. Se acota
+// a lo que el feed necesita —solo la primera entrada a cada lista, nunca las listas que tengas ocultas— y el
+// registro interno del que sale (a qué hora mueves cada juego, cuándo cambias una nota) sigue sin salir del
+// dispositivo. El ajuste del perfil que filtra estos avisos NO se menciona: solo cambia lo que ves tú, no lo que
+// se publica, así que no es una obligación de transparencia sino funcionamiento del servicio.
+export const LEGAL_VERSION = '2026-08-22';
 
 // Correo de CONTACTO publicado en los documentos. A propósito distinto del de la cuenta de administración de
 // `firestore.rules` (`isAdmin`): son la misma persona, pero separar buzones evita mezclar avisos legales y
@@ -103,6 +111,7 @@ const TERMS: LegalDocument = {
       heading: 'Tu contenido',
       paragraphs: [
         'Las reseñas, publicaciones, notas y nombres que escribes son tuyos. Para poder mostrarlos a las personas con las que tienes amistad en la app, nos autorizas a almacenarlos y mostrarlos con esa única finalidad, mientras mantengas la cuenta y el contenido publicado.',
+        'Además de lo que escribes, la parte social publica tu ACTIVIDAD DE LISTAS: cuando un juego entra por primera vez en una de tus listas, tus amistades ven que lo has empezado, terminado, dejado o apuntado, con la fecha y la hora. Esto no lo escribes tú, lo registra la app al usarla; se detalla en la política de privacidad y no se publica de las listas que tengas ocultas.',
         'Tu biblioteca completa y tus reseñas largas se guardan en Gists de TU cuenta de GitHub. La app los crea como Gists secretos, y «secreto» en GitHub significa NO LISTADO, no privado: no aparecen en tu perfil de GitHub ni en los buscadores, pero quien conozca el identificador de un Gist puede leerlo. La app solo comparte esos identificadores con las personas con las que tienes amistad.',
         'COMPARTIR UNA RESEÑA CON ENLACE PÚBLICO: puedes publicar una reseña concreta en una página abierta a cualquiera, la tenga o no cuenta en la app. Es una acción tuya y para esa reseña: se publica el juego, tu nota, el TEXTO COMPLETO, las plataformas, los géneros, los puntos fuertes y débiles, tu nick y la fecha; no se publica tu correo, tu identificador, los identificadores de tus Gists, tus horas de juego, tu foto ni el resto de tu biblioteca. El enlace caduca solo —según tu rango, entre 7 y 90 días— y puedes retirarlo antes desde Ajustes. Retirarlo lo deja inaccesible, pero NO recoge las copias que ya se hayan compartido ni las previsualizaciones que otras plataformas hayan guardado.',
         'La copia que se publica es una FOTO del momento: si editas la reseña después, el enlace sigue mostrando lo que se publicó hasta que vuelvas a compartirla. Quien administra el servicio puede retirar un enlace y, si hay abuso, impedirte crear otros.',
@@ -193,8 +202,9 @@ const PRIVACY: LegalDocument = {
         'La persona que administra el servicio, que por necesidad técnica tiene acceso de administración a la base de datos: puede consultar los perfiles, asignar el rango, desactivar la parte social de un perfil y eliminarlo. No puede leer el documento privado donde se guardan tu token cifrado y los identificadores de tus Gists, que solo lee su dueño.',
       ],
       paragraphs: [
-        'Tus ajustes de visibilidad —esconder una lista, la marca de «rejugable» o la de «merece otra oportunidad»— valen para todas tus amistades. La cuenta desde la que se administra el servicio es la única excepción, porque el mantenimiento y el soporte se hacen desde ella: en los perfiles de sus amistades ve las listas completas. Tus horas de juego quedan fuera de esa excepción: si eliges ocultarlas, no las ve nadie.',
-        'Conviene entender qué hay en tu canal social y qué no: contiene tu nick, tus preferencias de visibilidad y, por cada reseña, el nombre del juego, la nota y un fragmento de hasta 160 caracteres del texto. Tu biblioteca completa, tus reseñas enteras y tus horas de juego NO están ahí: viven en otro Gist que la app crea como secreto y cuyo identificador solo se comparte con tus amistades.',
+        'Tus ajustes de visibilidad —esconder una lista, la marca de «rejugable» o la de «merece otra oportunidad»— valen para todas tus amistades. Esconder una lista esconde también su actividad: de una lista oculta no se publica ningún aviso de entrada. La cuenta desde la que se administra el servicio es la única excepción, porque el mantenimiento y el soporte se hacen desde ella: en los perfiles de sus amistades ve las listas completas. Tus horas de juego quedan fuera de esa excepción: si eliges ocultarlas, no las ve nadie.',
+        'Conviene entender qué hay en tu canal social y qué no: contiene tu nick, tus preferencias de visibilidad y, por cada reseña, el nombre del juego, la nota y un fragmento de hasta 160 caracteres del texto. Lleva además tu actividad de listas: por cada juego, en qué lista entró y la fecha y la hora en que lo hizo, para que tus amistades vean en su actividad que has empezado, terminado, dejado o apuntado algo. Tu biblioteca completa, tus reseñas enteras y tus horas de juego NO están ahí: viven en otro Gist que la app crea como secreto y cuyo identificador solo se comparte con tus amistades.',
+        'De esa actividad de listas se publica solo la PRIMERA vez que un juego entra en cada lista, y nunca la de las listas que tengas ocultas. El registro interno del que sale —a qué hora mueves cada juego, cuándo cambias una nota— no se publica ni sale de tu dispositivo, ni lo ve la cuenta desde la que se administra el servicio.',
         'Ten en cuenta que «secreto» en GitHub no significa privado, sino no listado: quien tenga el identificador de un Gist puede leerlo aunque no aparezca en tu perfil de GitHub ni en los buscadores. Por eso ni el identificador de tu biblioteca ni el de tu canal social se publican ya en tu perfil: solo se comparten con las personas con las que tienes amistad.',
         'Estos proveedores pueden tratar los datos fuera del Espacio Económico Europeo, amparados en las cláusulas contractuales tipo o los marcos de adecuación de sus respectivos programas.',
       ],
@@ -301,7 +311,10 @@ export const LEGAL_DOCUMENTS: Record<LegalDocId, LegalDocument> = {
 /** Textos de la puerta de aceptación previa al espacio social. */
 export const LEGAL_CONSENT_UI = {
   title: 'Antes de continuar',
-  body: 'La parte social publica tu nick, tu foto y tu actividad a las personas con las que tengas amistad. Para activarla necesitamos que aceptes las condiciones de uso y la política de privacidad.',
+  // La actividad se detalla un poco —«reseñas y movimientos de listas»— porque es lo que más gente lee de todo el
+  // aparato legal, y lo segundo es nuevo: quien lo acepte tiene que saber que la app va a contar sola cuándo
+  // empieza o termina un juego, no solo lo que él escriba.
+  body: 'La parte social publica tu nick, tu foto y tu actividad —tus reseñas y los movimientos de tus listas, con su fecha— a las personas con las que tengas amistad. Para activarla necesitamos que aceptes las condiciones de uso y la política de privacidad.',
   checkbox: 'He leído y acepto las condiciones de uso y la política de privacidad',
   termsLink: 'Condiciones de uso',
   privacyLink: 'Política de privacidad',

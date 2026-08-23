@@ -1,6 +1,6 @@
 import { memo, useCallback } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { SOCIAL_UI } from '../../core/constants/labels';
+import { SOCIAL_UI } from '../../core/constants/socialLabels';
 import { LEGAL_CONSENT_UI, LEGAL_ROUTES } from '../../core/constants/legal';
 import type { GameItem, TabData } from '../../model/types/game';
 import { useSocialViewModel } from '../../viewmodel/useSocialViewModel';
@@ -18,6 +18,7 @@ import { ShareReviewButton } from './stats/ShareReviewButton';
 import { HubStatus } from './socialhub/HubStatus';
 import { ConfirmModal } from '../modals/ConfirmModal';
 import { SocialErrorBoundary } from './socialhub/SocialErrorBoundary';
+import { HubOfflineNotice } from './socialhub/HubOfflineNotice';
 
 /**
  * Hub social - Fase 1.
@@ -54,6 +55,8 @@ const SocialHubInner = memo(function SocialHubInner({
     loading,
     status,
     statusKind,
+    offline,
+    offlineHasCachedData,
     showSocialSpace,
     hasCreatedProfile,
     profileName,
@@ -109,6 +112,7 @@ const SocialHubInner = memo(function SocialHubInner({
     hasMoreFeed,
     showMoreFeed,
     openActivityDetail,
+    openMoveReview,
     openProfileDetail,
     openOwnProfileDetail,
     isOwnProfileDetail,
@@ -333,6 +337,7 @@ const SocialHubInner = memo(function SocialHubInner({
         hasMoreFeed={hasMoreFeed}
         showMoreFeed={showMoreFeed}
         openActivityDetail={openActivityDetail}
+        openMoveReview={openMoveReview}
         handleActivityItemKeyDown={handleActivityItemKeyDown}
         composePostText={composePostText}
         setComposePostText={setComposePostText}
@@ -344,6 +349,8 @@ const SocialHubInner = memo(function SocialHubInner({
         status={status}
         statusKind={statusKind}
         handleSignOut={handleSignOut}
+        offline={offline}
+        offlineHasCachedData={offlineHasCachedData}
       />
     );
   }
@@ -358,6 +365,9 @@ const SocialHubInner = memo(function SocialHubInner({
         <p className="hub-gateway-lead">
           {SOCIAL_UI.gateway.lead}
         </p>
+        {/* La pasarela son tres pasos que TODOS necesitan red (Google, Firestore, GitHub): sin conexión no se puede
+            completar ninguno, así que se dice antes de que el usuario pulse y espere a un timeout. */}
+        {offline ? <HubOfflineNotice hasCachedData={false} /> : null}
 
         <p className="hub-gateway-step-caption">{SOCIAL_UI.gateway.stepCaption(currentStep, gatewaySteps.length)}</p>
 

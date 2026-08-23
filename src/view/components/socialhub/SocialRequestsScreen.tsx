@@ -1,6 +1,6 @@
 import { Icon } from '../Icon';
 import { HubAvatar } from './HubAvatar';
-import type { SocialUiLabels } from '../../../core/constants/labels';
+import type { SocialUiLabels } from '../../../core/constants/socialLabels';
 import { HubStatus } from './HubStatus';
 import { HubBackButton } from './HubBackButton';
 

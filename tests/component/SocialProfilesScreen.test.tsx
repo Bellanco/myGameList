@@ -3,7 +3,7 @@ import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { SocialProfilesScreen } from '../../src/view/components/socialhub/SocialProfilesScreen';
 import type { ProfileTier } from '../../src/core/constants/tiers';
-import { SOCIAL_UI } from '../../src/core/constants/labels';
+import { SOCIAL_UI } from '../../src/core/constants/socialLabels';
 import { PROFILE_TIER_LABELS } from '../../src/core/constants/tiers';
 import type { RelationshipState } from '../../src/model/types/social';
 

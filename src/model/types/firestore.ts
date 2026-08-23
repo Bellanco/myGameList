@@ -159,6 +159,13 @@ export interface FirestorePublicConfig {
   /** F1 — efectos visuales animados de los temas (por defecto true; false los desactiva). */
   effects?: boolean;
   /**
+   * F4 — de qué listas ve su dueño los mensajes de actividad, como letras en orden canónico ('cevp' = todas,
+   * '' = ninguna). Ajuste de LECTURA: no cambia lo que se publica ni lo que ven los demás. Vive aquí (owner-only)
+   * y no en el perfil público por lo mismo que el consentimiento: es dato del dueño, y así le sigue entre
+   * dispositivos.
+   */
+  feedMoveTabs?: string;
+  /**
    * L4 — aceptación de las condiciones de uso y la política de privacidad. `version` es `LEGAL_VERSION`; si no
    * coincide con la vigente, la puerta del hub social vuelve a pedirla. Vive aquí (owner-only) y no en el perfil
    * público porque es un dato del dueño, y así le sigue entre dispositivos.

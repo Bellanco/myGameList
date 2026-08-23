@@ -9,7 +9,7 @@ const publishPost = vi.hoisted(() => vi.fn(async () => {}));
 vi.mock('../../src/model/repository/socialPublishRepository', () => ({ publishPost }));
 
 const { useSocialCompose } = await import('../../src/viewmodel/social/useSocialCompose');
-const { SOCIAL_UI } = await import('../../src/core/constants/labels');
+const { SOCIAL_UI } = await import('../../src/core/constants/socialLabels');
 const { PROFILE_TIER_POST_MAX_LENGTH } = await import('../../src/core/constants/tiers');
 
 function setup(tier: 'bronze' | 'silver' | 'gold' | 'mithril' = 'silver') {

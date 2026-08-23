@@ -50,6 +50,12 @@ export async function listAllShares(options: { cursor?: string; uid?: string } =
   shares: AdminShareRow[];
   /** Identificadores de los usuarios vetados. Viene con el censo para no preguntar uno a uno. */
   bans: string[];
+  /**
+   * Ajustes individuales de cuota por uid. Viene con el censo por lo mismo que los vetos: el panel precarga los
+   * campos de cuota de cada ficha con lo que el usuario tiene puesto, y preguntarlo ficha a ficha serían decenas
+   * de peticiones. Quien no aparece aquí sigue la cuota de su rango.
+   */
+  overrides: Record<string, ShareQuotaOverride>;
   cursor: string | null;
   complete: boolean;
 }> {
@@ -65,6 +71,7 @@ export async function listAllShares(options: { cursor?: string; uid?: string } =
   return {
     shares: (body.shares as AdminShareRow[]) || [],
     bans: (body.bans as string[]) || [],
+    overrides: (body.overrides as Record<string, ShareQuotaOverride>) || {},
     cursor: (body.cursor as string | null) ?? null,
     complete: Boolean(body.complete),
   };

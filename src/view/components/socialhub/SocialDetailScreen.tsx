@@ -4,7 +4,7 @@ import { NoScoreMedal } from '../NoScoreMedal';
 import { resolveGrade } from '../../../core/utils/scoreScale';
 import { MetaSection } from '../MetaSection';
 import { HubAvatar } from './HubAvatar';
-import type { SocialUiLabels } from '../../../core/constants/labels';
+import type { SocialUiLabels } from '../../../core/constants/socialLabels';
 import type { GameItem } from '../../../model/types/game';
 import type { SocialActivityFeedItem } from '../../../viewmodel/useSocialViewModel';
 import { HubStatus } from './HubStatus';
