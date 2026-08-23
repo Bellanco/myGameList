@@ -517,3 +517,17 @@
   --deco-avatar-stroke: 1.3;
   --deco-avatar-cap: butt;
 }
+/* ── F4 · Movimiento de lista: entrada de registro, no aviso.
+   La paleta marca toda tarjeta del feed con el filete AMARILLO a la izquierda (el color de alerta del HUD). Un
+   movimiento es una línea de log: se le quita el amarillo y se queda con el cian tenue del resto del marco, sin
+   el halo. ── */
+:root[data-palette="cyberpunk"] .hub-feed-activity-item.is-move {
+  border-left-color: rgba(0, 240, 255, .35) !important;
+  box-shadow: none !important;
+}
+/* La hora, en la monoespaciada de la paleta y con el mismo prefijo de dato que usan sus fechas. */
+:root[data-palette="cyberpunk"] .hub-feed-move-hour {
+  font-family: 'Share Tech Mono', ui-monospace, monospace;
+  letter-spacing: .02em;
+}
+:root[data-palette="cyberpunk"] .hub-feed-move-hour::before { content: '// '; color: var(--cyber-cyan); font-weight: 700; }

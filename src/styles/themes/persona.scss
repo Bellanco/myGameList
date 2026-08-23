@@ -404,3 +404,17 @@
   --deco-avatar-stroke: 2.4;
   --deco-avatar-cap: round;
 }
+/* ── F4 · Movimiento de lista: una viñeta pequeña, no un panel.
+   La paleta impone a TODA tarjeta del feed el marco de cómic (3 px + sombra dura de 7 px) con `!important`, que
+   es justo lo que no debe llevar el mensaje más callado del feed: con ese marco, un «empezó Silksong» pesaba lo
+   mismo que una reseña. Aquí se rebaja a su versión pequeña —filete de 2 px y sombra de 3— para que siga siendo
+   Persona sin reclamar el turno. ── */
+:root[data-palette="persona"] .hub-feed-activity-item.is-move {
+  border-width: 2px !important;
+  box-shadow: 3px 3px 0 rgba(255, 78, 100, .28) !important;
+}
+:root[data-palette="persona"][data-theme="light"] .hub-feed-activity-item.is-move {
+  box-shadow: 3px 3px 0 rgba(230, 0, 18, .14) !important;
+}
+/* El renglón en la tipografía de la paleta, sin el tratamiento de titular que llevan los nombres del feed. */
+:root[data-palette="persona"] .hub-feed-move-line { letter-spacing: .01em; }

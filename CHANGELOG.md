@@ -5,6 +5,104 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
 
 ## [Unreleased]
 
+### Added
+- **Actividad de listas en el feed social.** Al feed llegan, además de las reseñas y las publicaciones, los
+  movimientos: cuando un juego entra por primera vez en una lista, tus amistades ven que lo has **apuntado,
+  empezado, terminado o dejado**, con su fecha y su hora.
+  - **Es una proyección, no un registro de eventos.** Sale del sello `enteredAt` de cada juego (la primera entrada
+    a cada lista, que nunca se reescribe), así que la misma biblioteca produce siempre los mismos mensajes con las
+    mismas fechas. No hay cola que se pueda perder ni duplicar, publicar dos veces no crea nada nuevo, y el
+    historial de quien ya tenía los sellos entra solo — sin tener que volver a mover ningún juego. Su contrapartida
+    declarada: volver a una lista de la que se salió no genera un mensaje nuevo.
+  - **Sin una sola petición de más.** Mover un juego no escribe en GitHub. Los mensajes viajan a rebufo de la
+    primera escritura del canal que ocurra por otro motivo (guardar una reseña, publicar una noticia) y, si no
+    ocurre ninguna, los recoge la reconciliación al abrir el hub. Ahí es también donde se retiran los de un juego
+    borrado, con la misma guarda de reloj que protege a las reseñas huérfanas: una biblioteca a medio sincronizar no
+    puede vaciar el canal.
+  - **Array propio en el canal, y no entradas de actividad.** Una entrada de reseña arrastra once campos (~240
+    bytes) donde un movimiento necesita cuatro (~80), y `activity` tiene un cupo de 320 que los movimientos le
+    habrían robado a las reseñas —en el gist, al hidratar el directorio y en la pestaña Reseñas—. Con array propio,
+    cupo propio (400 mensajes, ~36 KB) y ni una reseña desplazada.
+  - **Lo que se publica y lo que no.** El juego, la lista y el instante. El campo `enteredAt` sigue PROHIBIDO en el
+    canal social y se sigue borrando de los listados que baja una amistad: lo que se publica es la primera entrada a
+    cada lista, nunca el historial completo de movimientos. **De una lista oculta no se publica nada**, para no
+    contar por otra puerta lo que el ajuste de visibilidad esconde. Está declarado en la política de privacidad, y
+    por eso se vuelve a pedir la conformidad.
+  - **Elige qué movimientos ves tú.** En *Editar mi perfil* hay un bloque nuevo, aparte del de visibilidad, para
+    decidir de qué listas quieres ver movimientos en tu actividad. Es un ajuste de LECTURA: no cambia lo que se
+    publica ni lo que ven los demás, se aplica al instante sin pulsar «Guardar» y te sigue entre dispositivos. El
+    filtro se aplica sobre lo que ya está cargado, así que encender una lista no cuesta ninguna lectura de red.
+  - **Un renglón, no una tarjeta.** El mensaje es la burbuja más callada del feed y eso está medido: 43 px de alto
+    frente a los 195 de una reseña, con **el mismo ancho que ella** — el feed es una columna de burbujas alineadas y
+    una que mida distinto a cada línea rompe esa rejilla, así que lo que lo hace ligero es su altura y su color, no
+    su anchura. El lomo de color queda reservado a lo que alguien ESCRIBIÓ (reseñas y publicaciones); el movimiento lo
+    lleva en el gris del borde. No repite el día que ya dice la cabecera del grupo: solo la hora, con la fecha
+    completa al pasar el ratón. Y la tarjeta no es pulsable —no hay pantalla de «movimiento» que abrir—: de ella
+    llevan a algún sitio el autor y, **cuando de verdad hay un análisis detrás**, el nombre del juego, que abre el
+    detalle social de ese análisis y se distingue con el acento del tema rebajado hacia el gris del texto. Sin
+    análisis, ese nombre es texto y no promete un gesto que no puede cumplir. El enlace viaja con el
+    `actorProfileId` del gist —el identificador con el que el detalle resuelve—, y no con el de la entrada del
+    directorio, que para una amistad es su uid de Firebase: son dos identificadores de la misma persona y con el
+    segundo el enlace abría una pantalla vacía.
+  - **Jugar, no catalogar.** Un juego que se terminó hace años y se mete hoy en la biblioteca no anuncia nada. El
+    sello de Completados dice cuándo el juego llegó a esa lista EN LA APLICACIÓN, no cuándo se terminó: quien
+    cataloga su historial estampaba sellos de hoy y el feed de sus amistades leía «terminó tal cosa» como si acabara
+    de pasar. Ahora el mensaje de Completados exige que el año que dice el propio juego coincida con el del sello, y
+    una rejugada cuenta (ese campo es multivalor). Sin año no se anuncia: el mensaje afirma una fecha y sin ella no
+    hay forma de sostenerla. Apuntar o empezar algo viejo sí es actividad de hoy, así que el filtro es solo para
+    Completados.
+  - **Y limpia lo que ya se había publicado.** Filtrar la proyección no bastaba: los mensajes que ya estaban en el
+    canal se quedaban ahí, porque la retirada solo alcanzaba a los juegos AUSENTES de la biblioteca. Ahora, con el
+    juego delante, manda la biblioteca: si sus sellos y sus años no producen ese mensaje, se retira. Ocurre sola en
+    la siguiente apertura del espacio social, sin pedir nada al usuario ni esperar a que caduque ningún sello.
+  - **Cada tema lo cuenta a su manera.** Las seis paletas imponen su propio marco a las tarjetas del feed, así que
+    la versión callada del mensaje se escribe en el idioma de cada una: en *Corazón rebelde* la viñeta de cómic se
+    reduce a su tamaño pequeño (filete de 2 px, sombra de 3); en *Cámara de pruebas* se le retira el filete naranja
+    y queda placa lisa; en *Sin futuro* pierde el filete amarillo de alerta y se queda en el cian del registro, con
+    la hora en monoespaciada y su `//`; en *Solo hay guerra* pierde el doble filete dorado de documento oficial y la
+    hora sale en la pixelada con su `>`; en *Sol y luna* se queda el recuadro sin el doble aro turquesa.
+
+- **La aplicación abre sin conexión y el espacio social lo cuenta con sus palabras.** Arrancar sin red ya
+  funcionaba (el service worker sirve el shell y los chunks del arranque desde su caché), pero en cuanto se
+  entraba en el espacio social salía el error de la librería que fallara primero: `network offline`,
+  `Failed to fetch` o «Failed to get document because the client is offline», en inglés y sin decir qué hacer.
+  - **Aviso propio, con el guiño de cada tema.** Sin conexión aparece un aviso persistente —no un mensaje que se
+    borra a los tres segundos, porque la condición dura hasta que vuelve la red— con el titular del tema («No hay
+    conexión con el servidor», «No hay cobertura para llamar a tus Confidentes», «La Disformidad se ha tragado la
+    señal»…) y, debajo, lo único que importa: que lo que se ve es lo último guardado en este dispositivo y que se
+    actualizará solo. El feed vacío sin red ya no culpa a la falta de amigos ni ofrece «descubrir perfiles», que
+    ahí no puede funcionar.
+  - **Y ABRE de verdad: el feed y el perfil se sirven de la caché aunque haya caducado.** El TTL de las cachés del
+    directorio y del perfil propio (30 min y 5 min) solo tiene sentido si hay a dónde ir a por algo más nuevo: sin
+    red la alternativa era un espacio social vacío con un error. Ahora, sin conexión, se sirve lo guardado; si la
+    lectura falla estando el navegador convencido de que hay red, se rescata igual en vez de vaciar la pantalla. La
+    versión de FORMA de la caché sigue invalidando, que eso no es rancio, es ilegible.
+  - **Dos señales para saber que no hay red, porque ninguna basta sola.** `navigator.onLine` detecta el modo avión
+    o el cable fuera antes de intentar nada, pero da por buena una wifi conectada sin salida a internet; el fallo
+    de la propia operación cubre justo ese caso. El aviso se enciende con cualquiera de las dos y se apaga con la
+    primera lectura que vuelve a funcionar, y al recuperar la conexión el feed y el perfil se rehidratan solos, sin
+    recargar.
+  - **Un fallo de red ya no CIERRA el espacio social.** Se contaba como error duro, y eso encendía el bloqueo que
+    frena la hidratación del feed y deja el editor de perfil cerrado: quedarse sin conexión, además de dejar sin
+    datos nuevos, echaba al usuario de la sección. Ahora es un aviso, no un bloqueo. Publicar sin red tampoco se
+    intenta: se dice que no se ha enviado y el texto se queda intacto en el compositor.
+  - **Entrar sin red donde nunca se había entrado.** Si el chunk de una sección no está en la caché todavía, su
+    descarga falla y antes se veía «algo ha ido mal / vuelve a cargar» —ni era verdad ni servía de nada: recargar
+    volvía a fallar y se entraba en bucle—. Ahora se reconoce como falta de conexión, se dice que esa parte
+    necesita red y que las listas siguen funcionando, y la acción lleva a las listas en lugar de recargar. Por el
+    mismo motivo, sin red ya no se auto-recarga la página al fallar un `import()`: no traería el chunk y tiraba el
+    estado de la pantalla.
+
+### Performance
+- **El arranque adelgaza 2,6 kB comprimidos (214,3 → 211,7) sacando del chunk inicial los textos del espacio
+  social.** Los 8 kB de `SOCIAL_UI` viajaban en la primera carga de TODO el mundo —incluido quien nunca abre el
+  hub— porque vivían en `labels.ts`, que importa media aplicación. El único cordón que los ataba ahí era el
+  esqueleto del `Suspense` (`SocialHubSkeleton`, que por definición tiene que estar cargado antes que el hub) y
+  las TRES cadenas que leía de ellos: título, aviso de carga y nombre accesible. Ahora esas tres viven en
+  `core/constants/socialShell` (unos cien bytes, y `SOCIAL_UI` las toma de ahí, así que no se duplican) y el resto
+  se ha mudado a `core/constants/socialLabels`, que se descarga con el hub. Se descubrió al añadir la actividad de
+  listas: sus textos empujaron el arranque por encima del presupuesto de `ci-validate`, y la causa no eran ellos.
+
 ### Fixed
 - **"No me sale el botón de compartir".** Dos agujeros distintos, ninguno relacionado con el rango del perfil
   (bronce puede compartir: tiene 5 enlaces de 7 días, y ni el cliente ni la Function miran el rango para eso).

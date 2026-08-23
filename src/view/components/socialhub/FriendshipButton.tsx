@@ -1,6 +1,6 @@
 import { Icon } from '../Icon';
 import type { RelationshipState } from '../../../model/types/social';
-import type { SocialUiLabels } from '../../../core/constants/labels';
+import type { SocialUiLabels } from '../../../core/constants/socialLabels';
 
 /**
  * Botón de relación de amistad, reutilizado en las tarjetas del directorio y en el detalle de perfil.

@@ -9,6 +9,13 @@
 // Lo común a los dos canales (base de la API, cabecera de auth, formateo de errores, borrado de gists) vive en
 // `githubGistApi`.
 import { isValidGistId, isValidGithubToken, isValidHttpUrl, safePostText } from '../../core/security/sanitize';
+import {
+  MOVE_ACTIVITY_MAX,
+  buildMoveId,
+  isPublishableTimestamp,
+  sortMoveEntries,
+  type SocialMoveEntry,
+} from '../../core/social/moveActivity';
 import { clampRating, normalizeTimestamp } from '../../core/utils/normalize';
 import { resolveGrade } from '../../core/utils/scoreScale';
 import { pickLegacyActorId, pickLegacyFromId, pickLegacyReviewText, socialGistNeedsRewrite } from '../migration/legacySocialFormat';
@@ -133,6 +140,13 @@ export interface SocialPostEntry {
   updatedAt: number;
 }
 
+/**
+ * F4 — mensaje de LISTA («empezó», «terminó», «dejó», «apuntó»). El tipo y la proyección viven en
+ * `core/social/moveActivity` (capa pura); se re-exporta para que el resto del canal siga importando el modelo del
+ * gist de un único sitio.
+ */
+export type { SocialMoveEntry };
+
 export interface SocialGistData {
   profile: SocialGistProfile;
   // ST3: el array `recommendations` top-level era código muerto (sin writer; siempre []). Se elimina del modelo.
@@ -142,6 +156,14 @@ export interface SocialGistData {
   // F3 (aditivo, Opción B): publicaciones de texto libre. La lectura vieja lo ignora; un cliente NUEVO lo preserva
   // en el round-trip (normalizeSocialGistData). Opcional en el schema → no rompe gists sin posts.
   posts?: SocialPostEntry[];
+  /**
+   * F4 (aditivo, mismo patrón que `posts`): mensajes de lista, PROYECTADOS de los sellos `enteredAt` locales
+   * (ver `core/social/moveActivity`). Array propio y no entradas de `activity` por dos razones que se miden: una
+   * entrada de actividad arrastra once campos (~240 bytes) donde esto necesita cuatro (~80), y `activity` tiene
+   * un cupo de 320 que los mensajes le robarían a las reseñas —en el gist, en la hidratación del directorio y en
+   * la pestaña Reseñas—. Con array propio, cupo propio y ni una reseña desplazada.
+   */
+  moves?: SocialMoveEntry[];
   updatedAt: number;
   schemaVersion?: number; // 6.2b: 2 = identidad por profileId (uid fuera del canal público)
 }
@@ -305,6 +327,7 @@ function getEmptySocialGistData(): SocialGistData {
     },
     activity: [],
     posts: [],
+    moves: [],
     updatedAt: Date.now(),
   };
 }
@@ -537,6 +560,91 @@ function normalizePostItems(items: unknown): SocialPostEntry[] {
 }
 
 /**
+ * F4 — sanea los mensajes de lista que llegan de un gist (propio o ajeno). Mismo criterio que el resto del canal:
+ * lo que no valida se DESCARTA en vez de arreglarse a medias, porque un mensaje con fecha inventada ensucia el
+ * feed de todo el mundo y no hay forma de distinguirlo después.
+ *
+ * `at` no cae al reloj de ahora si viene mal (a diferencia de `normalizeTimestamp`, que es lo correcto para una
+ * reseña que sí existe): un mensaje sin fecha creíble no es un mensaje, y sellarlo con «ahora» lo pondría en la
+ * cabecera del feed de sus amistades como si acabara de pasar.
+ */
+function normalizeMoveItems(items: unknown): SocialMoveEntry[] {
+  if (!Array.isArray(items)) {
+    return [];
+  }
+
+  // Por (juego, lista) se conserva el mensaje MÁS ANTIGUO: la identidad es la clave, no la fecha, y el sello del
+  // que sale es «la primera entrada». Si un gist trae dos, el nuevo es una re-siembra peor que la original.
+  const byId = new Map<string, SocialMoveEntry>();
+
+  for (const item of items) {
+    const record = (item && typeof item === 'object' ? item : {}) as Record<string, unknown>;
+    const gameId = Number(record.gameId || 0);
+    const gameName = String(record.gameName || '').trim().slice(0, 500);
+    const tab = normalizeTabId(record.tab);
+    const at = Number(record.at);
+
+    if (gameId <= 0 || !gameName || !tab || !isPublishableTimestamp(at)) {
+      continue;
+    }
+
+    const id = buildMoveId(gameId, tab);
+    const current = byId.get(id);
+    if (!current || at < current.at) {
+      byId.set(id, { id, gameId, gameName, tab, at });
+    }
+  }
+
+  return sortMoveEntries([...byId.values()]).slice(0, MOVE_ACTIVITY_MAX);
+}
+
+/**
+ * F4 — pone los mensajes del gist de acuerdo con la biblioteca: reemplazo completo, no upsert.
+ *
+ * Es lo que corresponde a una PROYECCIÓN. Los mensajes no son eventos que alguien acumule, son la lectura de los
+ * sellos locales, así que el conjunto derivado es la verdad entera: un juego borrado o una lista que pasó a
+ * oculta desaparecen sin necesitar una pasada aparte que salga a cazar huérfanos.
+ *
+ * Con una excepción, y es la que justifica que esto no sea una asignación: si un mensaje ya publicado tiene fecha
+ * ANTERIOR a la derivada, gana la publicada. Un cliente antiguo que edite el juego se lleva por delante los
+ * sellos (el merge es LWW del objeto entero) y `normalizeGame` los vuelve a sembrar desde `listedAt`, que es una
+ * aproximación posterior; sin esta guarda, la fecha real que ya estaba publicada se perdería en la siguiente
+ * publicación y el mensaje saltaría de día en el feed.
+ *
+ * Devuelve la MISMA referencia si no hay nada que cambiar, para que el llamador pueda saltarse la reescritura del
+ * gist (mismo contrato que `upsertReviewActivity` / `removeReviewActivity`).
+ */
+export function syncMoveActivity(data: SocialGistData, derived: SocialMoveEntry[], timestamp?: number): SocialGistData {
+  const current = data.moves || [];
+  const publishedById = new Map(current.map((entry) => [entry.id, entry] as const));
+
+  const next = sortMoveEntries(
+    derived.map((entry) => {
+      const published = publishedById.get(entry.id);
+      return published && published.at < entry.at ? { ...entry, at: published.at } : entry;
+    }),
+  ).slice(0, MOVE_ACTIVITY_MAX);
+
+  const unchanged =
+    next.length === current.length &&
+    next.every((entry, index) => {
+      const before = current[index];
+      return (
+        before &&
+        before.id === entry.id &&
+        before.at === entry.at &&
+        before.tab === entry.tab &&
+        before.gameName === entry.gameName
+      );
+    });
+  if (unchanged) {
+    return data;
+  }
+
+  return { ...data, moves: next, updatedAt: timestamp || Date.now() };
+}
+
+/**
  * Colapsa entradas de actividad duplicadas por `(gameId, type)` conservando la de `updatedAt` MAYOR. Dentro de UN
  * gist social (un único actor) el par `(gameId, type)` identifica una sola reseña/recomendación, así que las dos
  * entradas que puede dejar la transición de identidad uid→profileId (claves DISTINTAS, mismo juego) se funden en la
@@ -754,6 +862,9 @@ function normalizeSocialGistData(data: unknown): SocialGistData {
     },
     activity: normalizeActivityItems(source.activity),
     posts: normalizePostItems(source.posts),
+    // F4: se preserva en el round-trip igual que `posts`. Un gist sin mensajes queda con el array vacío, que el
+    // schema acepta y no ocupa nada.
+    moves: normalizeMoveItems(source.moves),
     updatedAt: Number(source.updatedAt || Date.now()),
     schemaVersion: SOCIAL_GIST_SCHEMA_VERSION,
   };
@@ -814,10 +925,22 @@ export function mergeSocialGistData(a: SocialGistData, b: SocialGistData): Socia
     }
   }
 
+  // F4: unión por clave (juego, lista) conservando el mensaje MÁS ANTIGUO. Al contrario que en la actividad, aquí
+  // «más nuevo gana» sería la respuesta equivocada: el sello del que sale el mensaje es la PRIMERA entrada, así que
+  // entre dos fechas para el mismo (juego, lista) la antigua es la real y la otra una re-siembra.
+  const movesById = new Map<string, SocialMoveEntry>();
+  for (const entry of [...(a.moves || []), ...(b.moves || [])]) {
+    const current = movesById.get(entry.id);
+    if (!current || entry.at < current.at) {
+      movesById.set(entry.id, entry);
+    }
+  }
+
   return {
     ...newest,
     activity: [...activityByKey.values()].sort((x, y) => y.updatedAt - x.updatedAt).slice(0, 320),
     posts: [...postsById.values()].sort((x, y) => y.updatedAt - x.updatedAt).slice(0, 100),
+    moves: sortMoveEntries([...movesById.values()]).slice(0, MOVE_ACTIVITY_MAX),
   };
 }
 

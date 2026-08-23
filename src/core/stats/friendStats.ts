@@ -26,8 +26,13 @@ import type { SocialSharedGame } from '../../model/repository/socialGistReposito
  */
 /**
  * La CONSTANCIA queda fuera igual que las reseñas, y por un motivo más fuerte: se calcula con `enteredAt` y
- * `reviewedAt`, dos sellos privados que no viajan por el canal social (ver `SOCIAL_PRIVATE_FIELDS`). Aunque un
- * rango los tuviera permitidos, el dato no llega, y montar el bloque solo enseñaría un vacío.
+ * `reviewedAt`, dos sellos privados cuyos CAMPOS no viajan por el canal social (ver `SOCIAL_PRIVATE_FIELDS`).
+ * Aunque un rango los tuviera permitidos, el dato no llega, y montar el bloque solo enseñaría un vacío.
+ *
+ * F4 no cambia esto. El canal publica ahora la actividad de listas, pero es una proyección con recortes por
+ * diseño —solo la PRIMERA entrada a cada lista, nunca las ocultas, y con cupo— así que reconstruir con ella un
+ * mapa de constancia daría un dibujo incompleto que se leería como inactividad. Un hueco falso es peor que un
+ * bloque ausente.
  */
 export type FriendStatsBlock = Exclude<StatsBlock, 'reviews' | 'activity'>;
 

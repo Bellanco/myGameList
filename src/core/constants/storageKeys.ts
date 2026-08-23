@@ -36,6 +36,17 @@ export const STEAM_BUTTON_KEY = 'mis-listas-steam-button';
 // (antes de montar) no se pintan → quien los desactiva nunca ve un "flash" de efectos al cargar.
 export const EFFECTS_KEY = 'mis-listas-effects';
 
+// F4 — de qué listas quiero VER los mensajes de actividad («empezó», «terminó», «dejó», «apuntó») en mi feed.
+// Valor: las letras de las listas visibles en orden canónico, p. ej. 'cevp' (todas, por defecto) o '' (ninguna).
+//
+// Es una cadena y no una lista a propósito: `PreferenceStore.get()` alimenta un `useSyncExternalStore`, que
+// compara por `Object.is`, y devolver un array nuevo en cada lectura provocaría un bucle de renders.
+//
+// Y es un ajuste de LECTURA, no de privacidad: no decide qué se publica —eso lo deciden las listas ocultas del
+// perfil—, solo qué ve su dueño. Por eso se sincroniza por cuenta (publicConfig.feedMoveTabs), para que le siga
+// entre dispositivos, y no viaja en el gist social, que es un canal público donde no tiene nada que hacer.
+export const FEED_MOVE_TABS_KEY = 'mis-listas-feed-move-tabs';
+
 // L2 — consentimiento de la analítica (GA4). Valores: 'granted' | 'denied'; ausente = aún no decidido (se
 // muestra el banner). Es una preferencia POR DISPOSITIVO/NAVEGADOR, no por cuenta: el consentimiento para
 // almacenar identificadores lo da quien usa este navegador, así que no se sincroniza a Firestore.

@@ -58,6 +58,15 @@ describe('firestore.rules', () => {
       await assertFails(setDoc(doc(ownerDb('uid-a'), 'publicConfig', 'uid-a'), { effects: 'off' }));
     });
 
+    it('F4: admite `feedMoveTabs` (filtro de movimientos del feed) y rechaza lo que no sea una cadena corta', async () => {
+      await assertSucceeds(setDoc(doc(ownerDb('uid-a'), 'publicConfig', 'uid-a'), { feedMoveTabs: 'cvep' }));
+      // «Ninguna» es una elección legítima, no la ausencia de valor.
+      await assertSucceeds(setDoc(doc(ownerDb('uid-a'), 'publicConfig', 'uid-a'), { feedMoveTabs: '' }));
+      await assertFails(setDoc(doc(ownerDb('uid-a'), 'publicConfig', 'uid-a'), { feedMoveTabs: ['c', 'v'] }));
+      // Es una preferencia, no un sitio donde guardar texto: hay cuatro listas y ese es el tope.
+      await assertFails(setDoc(doc(ownerDb('uid-a'), 'publicConfig', 'uid-a'), { feedMoveTabs: 'cvepcvep' }));
+    });
+
     it('L4: acepta el consentimiento con forma válida y rechaza el malformado', async () => {
       await assertSucceeds(setDoc(doc(ownerDb('uid-a'), 'publicConfig', 'uid-a'), { consent: { version: '2026-07', agreedAt: 1 } }));
       await assertFails(setDoc(doc(ownerDb('uid-a'), 'publicConfig', 'uid-a'), { consent: { version: '2026-07' } }));

@@ -1,10 +1,12 @@
 // Publicación de actividad social al guardar una reseña (M4): orquestación pura de repos, sin estado de React.
 // Extraído verbatim de App.tsx para sacar la lógica de negocio del componente. Lee el gist social, inserta/actualiza
 // la actividad (que se convierte a snippet index-only), reescribe el gist y asegura el perfil en Firestore.
+import { deriveMoveActivity, reconcileMoveActivity } from '../../core/social/moveActivity';
 import { ensureProfileByEmail, getCurrentSocialAuthUser, healOwnFriendshipIdentity, resolveStableProfileId } from './firebaseRepository';
 import { getLocalMeta, invalidateCachedSocialDirectory, patchLocalMeta } from './indexedDbRepository';
 import { getSyncConfig } from './gistRepository';
-import { readSocialGist, remapSocialActorIds, removeReviewActivity, saveSocialSyncConfig, upsertPost, upsertReviewActivity, writeSocialGist } from './socialGistRepository';
+import { loadLocalState } from './localRepository';
+import { readSocialGist, remapSocialActorIds, removeReviewActivity, saveSocialSyncConfig, syncMoveActivity, upsertPost, upsertReviewActivity, writeSocialGist, type SocialGistData } from './socialGistRepository';
 import { markPendingSocialActivity } from './socialActivityReconcile';
 import { resolveSocialChannel, type SocialChannel } from './socialChannel';
 
@@ -47,6 +49,41 @@ function publicPhotoURL(data: { profile: { photoURL?: string; visibility?: { sho
     return '';
   }
   return String(data.profile.photoURL || sessionPhoto || '');
+}
+
+/**
+ * F4 — mete al payload que ya se iba a escribir los mensajes de lista que falten (ver `core/social/moveActivity`).
+ *
+ * A REBUFO, y esa es toda la idea: mover un juego de lista no pide su propia escritura contra GitHub —serían un
+ * GET y un PATCH por cada «he empezado esto»—, sino que viaja gratis en la primera escritura del canal que ocurra
+ * por otro motivo (una reseña, una publicación) o en la reconciliación al abrir el hub. Los mensajes son una
+ * proyección idempotente de los sellos, así que da igual cuántas veces se pase por aquí y en qué orden.
+ *
+ * Solo ALTAS: `localUpdatedAt: 0` desactiva la retirada de huérfanos. Guardar una reseña no es el momento de
+ * auditar el canal —eso lo hace la reconciliación, que sí sabe si los listados son autoridad—, pero las listas
+ * OCULTAS sí se respetan aquí, porque para eso no hace falta auditar nada.
+ *
+ * Los listados se leen de localStorage y no se reciben por parámetro a propósito: el estado que la pantalla tiene
+ * en memoria es el del render ANTERIOR al guardado, así que el sello del juego que se acaba de mover todavía no
+ * está en él. `saveLocalState` es sincrónica y ya ha corrido cuando esto se ejecuta.
+ */
+function withMoveActivity(data: SocialGistData, timestamp: number): SocialGistData {
+  try {
+    const games = loadLocalState();
+    const hiddenTabs = data.profile.visibility?.hiddenTabs || [];
+    const target = reconcileMoveActivity({
+      derived: deriveMoveActivity(games, { hiddenTabs }),
+      published: data.moves || [],
+      knownGameIds: new Set<number>(),
+      hiddenTabs,
+      localUpdatedAt: 0,
+    });
+    return syncMoveActivity(data, target, timestamp);
+  } catch {
+    // Los mensajes son un extra del payload: si los listados locales no se pueden leer, se publica lo que se
+    // venía a publicar y la reconciliación los pone al día en la próxima apertura del hub.
+    return data;
+  }
 }
 
 async function healFriendshipGistIfChanged(input: {
@@ -104,7 +141,7 @@ export async function publishReviewActivity(input: { id: number; name: string; r
   // PRIVACIDAD: el nombre público en la actividad es el NICK del perfil social (del gist), NUNCA el nombre real de Google.
   const socialNick = String(socialRead.data.profile.name || '').trim();
   const now = Date.now();
-  const nextPayload = upsertReviewActivity(migratedData, {
+  const withReview = upsertReviewActivity(migratedData, {
     actorProfileId: profileId,
     actorName: socialNick,
     gameId: input.id,
@@ -118,8 +155,13 @@ export async function publishReviewActivity(input: { id: number; name: string; r
     bumpOrder: input.reviewChanged ?? true,
   });
 
+  // F4: los mensajes de lista pendientes viajan en esta misma escritura (no piden la suya).
+  const nextPayload = withMoveActivity(withReview, now);
+
   // Sincronización de solo nota/nombre sobre una reseña que aún no estaba publicada: no hay nada que sincronizar
-  // ni que publicar, así que no se reescribe el gist (mismo patrón de no-op que unpublishReviewActivity).
+  // ni que publicar, así que no se reescribe el gist (mismo patrón de no-op que unpublishReviewActivity). La
+  // comparación es contra `migratedData` —no contra `withReview`— para que un mensaje de lista nuevo cuente como
+  // motivo suficiente para escribir aunque la reseña no haya cambiado nada.
   if (nextPayload === migratedData) {
     return;
   }
@@ -234,14 +276,17 @@ export async function publishPost(input: { text: string; maxLength?: number }): 
   // PRIVACIDAD: el nombre público del post es el NICK del perfil social (del gist), NUNCA el nombre real de Google.
   const socialNick = String(socialRead.data.profile.name || '').trim();
   const now = Date.now();
-  const nextPayload = upsertPost(migratedData, {
-    authorProfileId: profileId,
-    authorName: socialNick,
-    text: input.text,
-    // Cupo del rango de quien publica: lo decide el llamador, que es quien conoce la sesión.
-    maxLength: input.maxLength,
-    timestamp: now,
-  });
+  const nextPayload = withMoveActivity(
+    upsertPost(migratedData, {
+      authorProfileId: profileId,
+      authorName: socialNick,
+      text: input.text,
+      // Cupo del rango de quien publica: lo decide el llamador, que es quien conoce la sesión.
+      maxLength: input.maxLength,
+      timestamp: now,
+    }),
+    now, // F4: los mensajes de lista pendientes se suben con la publicación, sin escritura propia.
+  );
 
   const writeResult = await writeSocialGist(socialConfig.token, socialConfig.gistId, nextPayload);
   const mainSyncConfig = getSyncConfig();

@@ -4,11 +4,13 @@ import { ensureSyncConfigLoaded, getSyncConfig } from '../model/repository/gistR
 import { createSocialGist, getSocialSyncConfig, mergeSocialGistData, readPublicSocialGistById, readSocialGist, remapSocialActorIds, saveSocialSyncConfig, type SocialGistData, type SocialProfileVisibility, type SocialSharedGame, deleteGist, ensureSecretSocialGist, socialGistHasContent, writeSocialGist } from '../model/repository/socialGistRepository';
 import { reconcileReviewActivity } from '../model/repository/socialActivityReconcile';
 import { invalidateProfileGames, loadForeignProfileGames } from '../model/repository/foreignProfileRepository';
-import { getCachedSocialDirectory, getCachedSocialProfile, getLocalMeta, invalidateCachedSocialDirectory, patchLocalMeta, putCachedSocialDirectory, putCachedSocialProfile } from '../model/repository/indexedDbRepository';
+import { getCachedSocialDirectory, getCachedSocialProfile, getLocalMeta, invalidateCachedSocialDirectory, patchLocalMeta, putCachedSocialDirectory, putCachedSocialProfile, type CachedSocialProfileData } from '../model/repository/indexedDbRepository';
 import { applyProfileVisibility } from '../core/utils/profileVisibility';
+import { isNetworkFailure, isOffline } from '../core/utils/network';
+import { useOnlineStatus } from '../view/hooks/useOnlineStatus';
 import { photoForViewer, resolveViewer, withVisiblePhotos } from '../core/social/photoVisibility';
 import { useGenericPhoto } from '../view/hooks/useGenericPhoto';
-import { SOCIAL_UI } from '../core/constants/labels';
+import { SOCIAL_UI } from '../core/constants/socialLabels';
 import type { IconName } from '../core/constants/icons';
 import {
   DEFAULT_PROFILE_TIER,
@@ -48,15 +50,17 @@ import { matchSocialRoute, OWN_PROFILE_ALIAS } from './social/socialRoutes';
 import { useSocialCompose } from './social/useSocialCompose';
 import { useSocialLegalConsent } from './social/useSocialLegalConsent';
 import { DEFAULT_SOCIAL_VISIBILITY, getOrderedUniqueTabs, normalizeVisibility, useSocialProfileForm } from './social/useSocialProfileForm';
+import { reviewActorsByGame } from '../core/social/moveActivity';
 import { useSocialFeed } from './social/socialFeed';
 // Re-exportados: las pantallas del hub los importan desde este ViewModel desde antes de la extracción.
 export type {
   SocialActivityFeedItem,
   SocialFeedDayGroup,
   SocialFeedItem,
+  SocialMoveFeedItem,
   SocialPostFeedItem,
 } from './social/socialFeed';
-import type { SocialActivityFeedItem, SocialPostFeedItem } from './social/socialFeed';
+import type { SocialActivityFeedItem, SocialMoveFeedItem, SocialPostFeedItem } from './social/socialFeed';
 
 const shouldRequireProfileCreation = (profileExists: boolean, justSavedProfile: boolean): boolean => {
   return !profileExists && !justSavedProfile;
@@ -113,6 +117,10 @@ const SOCIAL_DIRECTORY_FETCH_CONCURRENCY = 6;
 const SOCIAL_ACTIVITY_PER_PROFILE = 320;
 // Las publicaciones sí se quedan en el tope del feed: ninguna vista las lista por separado.
 const SOCIAL_POSTS_PER_PROFILE = 40;
+// F4 — mensajes de lista por perfil. Más alto que las publicaciones porque son varios por juego y el filtro de
+// quien mira puede dejar visible solo una lista: cortar corto dejaría esa lista casi vacía. Y más bajo que la
+// actividad porque ninguna vista los lista aparte del feed.
+const SOCIAL_MOVES_PER_PROFILE = 120;
 
 /**
  * ViewModel del Hub social (M3). Extraído VERBATIM de SocialHub.tsx (god component) sin cambio de
@@ -157,6 +165,8 @@ export type SocialDirectoryEntry = {
   tier: ProfileTier;
   activity: SocialActivityFeedItem[];
   posts: SocialPostFeedItem[];
+  /** F4 — mensajes de lista del perfil, ya enriquecidos con su identidad. */
+  moves: SocialMoveFeedItem[];
   // Index-only (SocialSharedGame) para perfiles ajenos; para el perfil PROPIO se repuebla con GameItem completos.
   sharedLists: Partial<Record<TabId, Array<GameItem | SocialSharedGame>>>;
   visibility: SocialProfileVisibility;
@@ -177,6 +187,14 @@ export function useSocialViewModel(options?: {
 }) {
   const location = useLocation();
   const navigate = useNavigate();
+
+  /**
+   * ¿Hay conexión? El espacio social vive de la red (Firestore para el directorio y las amistades, gists para la
+   * actividad), así que sin ella solo puede mostrar lo que quedó guardado en este dispositivo. Se expone a la
+   * interfaz para poder DECIRLO —un aviso persistente con las palabras de la aplicación— en lugar de dejar que el
+   * usuario deduzca lo que pasa a partir del error de red de la librería que lo lanzó.
+   */
+  const online = useOnlineStatus();
 
   const routeState = useMemo(() => matchSocialRoute(location.pathname), [location.pathname]);
   const { activePanel, profileDetailId, profileReviewsView, profileReviewGameId, detailActorUid, detailGameId, detailEventType } = routeState;
@@ -216,6 +234,14 @@ export function useSocialViewModel(options?: {
   const [status, setStatus] = useState('');
   const [statusKind, setStatusKind] = useState<'ok' | 'warn' | 'err'>('ok');
   const [hasBlockingSocialIssue, setHasBlockingSocialIssue] = useState(false);
+  /**
+   * ¿Ha fallado la RED en la última operación del espacio social?
+   *
+   * No basta con `navigator.onLine`: dice que hay red en cuanto hay interfaz levantada, así que un wifi sin salida
+   * o un portal cautivo pasan por conexión buena y el usuario se quedaba con un error de red sin explicación. Este
+   * indicador lo enciende el propio fallo (`reportFailure`) y lo apaga la primera operación que vuelve a funcionar.
+   */
+  const [networkFailure, setNetworkFailure] = useState(false);
   const [showSocialSpace, setShowSocialSpace] = useState(false);
   const [hasCreatedProfile, setHasCreatedProfile] = useState(false);
   const [mustCreateProfile, setMustCreateProfile] = useState(false);
@@ -320,6 +346,25 @@ export function useSocialViewModel(options?: {
       setStatus('');
     }, ms);
   }, []);
+
+  /**
+   * Traduce un fallo a un aviso para el usuario. Un fallo de RED no es un error del que haya que hacer nada, así
+   * que se cuenta con el mensaje de "sin conexión" y en tono `warn`: en tono `err` encendería
+   * `hasBlockingSocialIssue`, que frena la hidratación del feed y bloquea el editor de perfil —o sea, quedarse sin
+   * red dejaba el espacio social cerrado además de sin datos nuevos—.
+   *
+   * Lo demás mantiene el comportamiento de siempre (el mensaje del error, que en un 401/403/404 sí dice algo útil,
+   * con el texto de la aplicación como respaldo).
+   */
+  const reportFailure = useCallback((error: unknown, fallback: string, kind: 'err' | 'warn' = 'err') => {
+    if (isNetworkFailure(error) || isOffline()) {
+      setNetworkFailure(true);
+      setFeedback('warn', SOCIAL_UI.status.offline, 'long');
+      return;
+    }
+    setNetworkFailure(false);
+    setFeedback(kind, error instanceof Error ? error.message : fallback);
+  }, [setFeedback]);
 
   const lockProfileEditor = useCallback(() => {
     setMustCreateProfile(true);
@@ -500,12 +545,12 @@ export function useSocialViewModel(options?: {
       setFeedback('ok', SOCIAL_UI.status.gistLinkedFromFirestore);
       return true;
     } catch (error) {
-      setFeedback('err', error instanceof Error ? error.message : SOCIAL_UI.status.firestoreCheckFailed);
+      reportFailure(error, SOCIAL_UI.status.firestoreCheckFailed);
       return false;
     } finally {
       setResolvingSocialGist(false);
     }
-  }, [mainSyncConfig, setFeedback]);
+  }, [mainSyncConfig, reportFailure, setFeedback]);
 
   // Se relee al ABRIR el espacio social, no solo al montar. De aquí sale `hasCompletedGames`, y con la foto del
   // montaje bastaba con que la biblioteca aún no estuviera en localStorage en ese instante (dispositivo nuevo, otro
@@ -1058,6 +1103,19 @@ export function useSocialViewModel(options?: {
     void navigate(`/social/user/${encodeURIComponent(entry.actorProfileId)}/game/${entry.gameId}/${entry.type}`);
   }, [navigate]);
 
+  /**
+   * F4 — abre el análisis del autor sobre ese juego desde el nombre del juego de un movimiento. Misma ruta que
+   * `openActivityDetail`, con el tipo fijo a `review`: es el único destino que un movimiento puede tener (no hay
+   * pantalla de «movimiento», y no la necesita).
+   *
+   * `actorProfileId` es el pseudónimo que lleva la entrada de actividad DEL GIST, y el nombre del parámetro lo
+   * dice a propósito: `activeDetailEvent` resuelve el detalle comparando con ese campo, así que pasar aquí el id
+   * de la entrada del directorio —que para una amistad es su uid de Firebase— abría una pantalla vacía.
+   */
+  const openMoveReview = useCallback((actorProfileId: string, gameId: number) => {
+    void navigate(`/social/user/${encodeURIComponent(actorProfileId)}/game/${gameId}/review`);
+  }, [navigate]);
+
   const openProfileDetail = useCallback((profileId: string) => {
     // Cualquier perfil del directorio se puede abrir (para no-amigos: hero + "Añadir amigo").
     void navigate(`/social/profiles/${encodeURIComponent(profileId)}`);
@@ -1199,11 +1257,11 @@ export function useSocialViewModel(options?: {
         setFeedback('warn', SOCIAL_UI.status.profileGamesRefreshFailed);
       }
     } catch (error) {
-      setFeedback('warn', error instanceof Error ? error.message : SOCIAL_UI.status.profileGamesRefreshFailed);
+      reportFailure(error, SOCIAL_UI.status.profileGamesRefreshFailed, 'warn');
     } finally {
       setLoadingForeignProfile(false);
     }
-  }, [authUser, defaultSocialVisibility, mainSyncConfig?.token, ownProfileId, ownTier, profileDetailId, relationshipWith, setFeedback, socialDirectory]);
+  }, [authUser, defaultSocialVisibility, mainSyncConfig?.token, ownProfileId, ownTier, profileDetailId, relationshipWith, reportFailure, setFeedback, socialDirectory]);
 
   const handleActivityItemKeyDown = useCallback(
     (event: ReactKeyboardEvent<HTMLElement>, entry: SocialActivityFeedItem) => {
@@ -1258,11 +1316,11 @@ export function useSocialViewModel(options?: {
       setSocialCfgEtag(created.etag);
       setFeedback('ok', SOCIAL_UI.status.gistNotFoundCreated);
     } catch (error) {
-      setFeedback('err', error instanceof Error ? error.message : SOCIAL_UI.status.createGistFailed);
+      reportFailure(error, SOCIAL_UI.status.createGistFailed);
     } finally {
       setConnecting(false);
     }
-  }, [attachExistingSocialGist, authUser, mainSyncConfig, setFeedback]);
+  }, [attachExistingSocialGist, authUser, mainSyncConfig, reportFailure, setFeedback]);
 
   const handleSignInGoogle = useCallback(async () => {
     try {
@@ -1277,11 +1335,11 @@ export function useSocialViewModel(options?: {
         // No hacer nada aquí; el useEffect automático manejará la creación del gist
       }
     } catch (error) {
-      setFeedback('err', error instanceof Error ? error.message : SOCIAL_UI.status.signInFailed);
+      reportFailure(error, SOCIAL_UI.status.signInFailed);
     } finally {
       setSigningIn(false);
     }
-  }, [attachExistingSocialGist, setFeedback]);
+  }, [attachExistingSocialGist, reportFailure, setFeedback]);
 
   const hydrateSocialProfile = useCallback(async () => {
     if (!socialSpaceOpen || !authUser || !socialCfgGistId) {
@@ -1294,24 +1352,33 @@ export function useSocialViewModel(options?: {
       return;
     }
 
-    // Caché persistente del perfil propio: al volver a la pantalla social dentro de la ventana (<5 min) se sirve de
-    // IndexedDB sin releer el gist propio ni consultar Firestore. El guardado del perfil invalida esta caché.
-    const cachedProfile = await getCachedSocialProfile(socialCfgGistId);
-    if (cachedProfile) {
+    /**
+     * Aplica un perfil ya guardado en este dispositivo. Extraído porque se usa en DOS caminos: el normal (caché
+     * dentro de su ventana) y el de rescate (la lectura del gist falla por red → mejor el perfil de hace un rato
+     * que mandar al usuario al editor como si no tuviera perfil).
+     */
+    const applyCachedProfile = (cached: CachedSocialProfileData) => {
       // No confiamos en el `profileExists` cacheado (pudo escribirse con una regla antigua): lo recalculamos con el
       // criterio actual (nombre Y ≥1 juego completado) para que los perfiles incompletos ya guardados sean
       // redirigidos al editor sin esperar a que caduque la caché (~5 min).
-      const cachedProfileExists = Boolean(cachedProfile.name.trim()) && hasCompletedGames;
-      profileForm.hydrate({ name: cachedProfile.name, visibility: cachedProfile });
+      const cachedProfileExists = Boolean(cached.name.trim()) && hasCompletedGames;
+      profileForm.hydrate({ name: cached.name, visibility: cached });
       setHasCreatedProfile(cachedProfileExists);
 
-      const cachedProfileUsable = Boolean(cachedProfile.name.trim()) && completedGamesRequirementMet;
+      const cachedProfileUsable = Boolean(cached.name.trim()) && completedGamesRequirementMet;
       const mustCreateCached = shouldRequireProfileCreation(cachedProfileUsable, justSavedProfile);
       if (mustCreateCached) {
         lockProfileEditor();
       } else {
         setMustCreateProfile(false);
       }
+    };
+
+    // Caché persistente del perfil propio: al volver a la pantalla social dentro de la ventana (<5 min) se sirve de
+    // IndexedDB sin releer el gist propio ni consultar Firestore. El guardado del perfil invalida esta caché.
+    const cachedProfile = await getCachedSocialProfile(socialCfgGistId);
+    if (cachedProfile) {
+      applyCachedProfile(cachedProfile);
       return;
     }
 
@@ -1401,7 +1468,15 @@ export function useSocialViewModel(options?: {
         return;
       }
 
-      setFeedback('err', error instanceof Error ? error.message : SOCIAL_UI.status.loadProfileFailed);
+      // Fallo de RED: se rescata el perfil guardado aunque su ventana haya expirado. Sin esto, quedarse sin
+      // conexión con la caché caducada equivalía a no tener perfil —y el editor se cerraba encima con un aviso.
+      if (isNetworkFailure(error) || isOffline()) {
+        const stale = await getCachedSocialProfile(socialCfgGistId, { allowExpired: true }).catch(() => null);
+        if (stale) {
+          applyCachedProfile(stale);
+        }
+      }
+      reportFailure(error, SOCIAL_UI.status.loadProfileFailed);
     } finally {
       setHydratingProfile(false);
     }
@@ -1412,6 +1487,7 @@ export function useSocialViewModel(options?: {
     getOrderedUniqueTabs,
     lockProfileEditor,
     navigate,
+    reportFailure,
     setFeedback,
     socialSpaceOpen,
     socialCfgEtag,
@@ -1527,6 +1603,13 @@ export function useSocialViewModel(options?: {
     // arriba es "aquí no hay directorio que cargar" (pasarela, editor de perfil) y esta es "todavía no se puede
     // saber". Solo esta última debe seguir contando como carga (ver `directoryLoading`).
     if (!directoryInputsReady) {
+      return;
+    }
+
+    // SIN RED, un refresco forzado no puede traer nada: lo único que haría es tirar la caché de sesión, fallar en
+    // la primera lectura y dejar el feed vacío con un error. Se avisa y se conserva lo que ya está en pantalla.
+    if (forceRefresh && isOffline()) {
+      setFeedback('warn', SOCIAL_UI.status.offline, 'long');
       return;
     }
 
@@ -1667,6 +1750,7 @@ export function useSocialViewModel(options?: {
               tier: entry.tier,
               activity: [],
               posts: [],
+              moves: [],
               // Marca para el detalle: es un amigo cuyo gist social NO se ha leído por inactividad. Al abrir su
               // perfil se hidrata bajo demanda (nombre/visibilidad/foto) para que no se vea a medias.
               socialSkipped: isFriend && isInactiveFriend,
@@ -1742,6 +1826,29 @@ export function useSocialViewModel(options?: {
               })
               .slice(0, SOCIAL_POSTS_PER_PROFILE);
 
+            // F4 — mensajes de lista. Se enriquecen con la identidad del autor como la actividad, y su `at` se
+            // copia a `updatedAt` para que el feed pueda mezclarlos sin saber de qué campo sale la fecha de cada
+            // tipo. NO se filtran aquí por la preferencia de quien mira: el directorio se cachea 30 minutos, así
+            // que guardarlo filtrado obligaría a releer todos los gists al encender una lista.
+            //
+            // `reviewActorId` sale de cruzarlos con la actividad de ESTE perfil, que acabamos de leer del mismo
+            // gist: es lo que permite que el nombre del juego ofrezca el gesto de abrir solo cuando hay algo que
+            // abrir, sin una lectura más y sin averiguarlo al pulsar. Y es el `actorProfileId` del gist, no el id
+            // de esta entrada del directorio: son identificadores distintos de la misma persona y el detalle
+            // resuelve por el primero (ver `reviewActorsByGame`).
+            const reviewActors = reviewActorsByGame(socialData.activity);
+            const moves = (socialData.moves || [])
+              .map((moveEntry) => ({
+                ...moveEntry,
+                updatedAt: toSafeTimestamp(moveEntry.at, Date.now()),
+                reviewActorId: reviewActors.get(moveEntry.gameId),
+                profileId: entry.id,
+                profileDisplayName: socialData.profile.name || entry.displayName || 'Usuario',
+                socialGistId: resolvedSocialGistId,
+                photoURL: resolvedPhoto,
+              }))
+              .slice(0, SOCIAL_MOVES_PER_PROFILE);
+
             return {
               id: entry.id,
               uid: entry.uid,
@@ -1754,6 +1861,7 @@ export function useSocialViewModel(options?: {
               tier: entry.tier,
               activity,
               posts,
+              moves,
               sharedLists,
               visibility: socialData.profile.visibility || defaultSocialVisibility,
             };
@@ -1774,6 +1882,7 @@ export function useSocialViewModel(options?: {
               tier: entry.tier,
               activity: [],
               posts: [],
+              moves: [],
               sharedLists: {},
               visibility: defaultSocialVisibility,
             };
@@ -1782,14 +1891,29 @@ export function useSocialViewModel(options?: {
       );
 
       setSocialDirectory(withProfiles);
+      // La red ha respondido: se retira el aviso de falta de conexión (que pudo encenderlo un fallo anterior con
+      // `navigator.onLine` diciendo que había red).
+      setNetworkFailure(false);
       if (credentialFailures > 0) {
         setFeedback('warn', SOCIAL_UI.status.socialReadUnauthorized);
       }
 
       void putCachedSocialDirectory(socialCfgGistId, withProfiles);
     } catch (error) {
-      setSocialDirectory([]);
-      setFeedback('warn', error instanceof Error ? error.message : SOCIAL_UI.status.firestoreCheckFailed);
+      if (isNetworkFailure(error) || isOffline()) {
+        // Fallo de RED: en vez de vaciar el feed, se rescata la caché AUNQUE HAYA CADUCADO. Es el mismo criterio
+        // que aplica `getCachedSocialDirectory` cuando el navegador admite estar sin red, y hace falta aquí porque
+        // `navigator.onLine` puede decir que la hay (wifi sin salida) y entonces el TTL sí la habría descartado.
+        // Con caché o sin ella, lo que NO se hace es cambiar "esto es de hace un rato" por "aquí no hay nada".
+        const stale = await getCachedSocialDirectory<SocialDirectoryEntry>(socialCfgGistId, 0, { allowExpired: true })
+          .catch(() => null);
+        if (stale && stale.length > 0) {
+          setSocialDirectory(stale);
+        }
+      } else {
+        setSocialDirectory([]);
+      }
+      reportFailure(error, SOCIAL_UI.status.firestoreCheckFailed, 'warn');
     } finally {
       setLoadingDirectory(false);
       // También en el camino de error: un fallo de red deja el directorio vacío DE VERDAD (con su aviso), y dejarlo
@@ -1799,7 +1923,7 @@ export function useSocialViewModel(options?: {
     // `mainSyncConfig?.token` ESTUVO aquí y no lo usa nadie en el cuerpo (el token sale de `getSocialSyncConfig()`
     // en el momento de leer): lo único que hacía era rehidratar el directorio entero cuando la configuración de
     // sync terminaba de descifrarse. Se retira.
-  }, [directoryPanelAllows, directoryInputsReady, authUser, ownProfileId, defaultSocialVisibility, friendships.friends, ownTier, setFeedback, socialCfgGistId, ownPublishablePhoto]);
+  }, [directoryPanelAllows, directoryInputsReady, authUser, ownProfileId, defaultSocialVisibility, friendships.friends, ownTier, reportFailure, setFeedback, socialCfgGistId, ownPublishablePhoto]);
 
   /**
    * Pasada en vuelo, para que dos disparos no se solapen.
@@ -1867,6 +1991,33 @@ export function useSocialViewModel(options?: {
     ownTier,
     ownProfileId,
   ]);
+
+  /**
+   * VUELVE LA RED: se rehidrata sin que el usuario tenga que recargar.
+   *
+   * Hace falta un disparo propio porque mientras no había conexión el feed se sirvió de la caché IGNORANDO su TTL
+   * (ver `getCachedSocialDirectory`), y ninguna de las dependencias de arriba cambia al reconectar: sin esto, el
+   * espacio social se quedaría mostrando lo de antes hasta navegar a otra pantalla y volver.
+   *
+   * No se fuerza el refresco: una pasada normal ya reevalúa el TTL, que es lo que toca ahora que sí hay a dónde ir
+   * a por algo más nuevo. Y se guarda si ANTES estábamos sin red, para no hidratar de más en el primer render.
+   */
+  const wasOfflineRef = useRef(!online);
+  const hydrateSocialProfileRef = useRef(hydrateSocialProfile);
+  hydrateSocialProfileRef.current = hydrateSocialProfile;
+  useEffect(() => {
+    if (!online) {
+      wasOfflineRef.current = true;
+      return;
+    }
+    if (!wasOfflineRef.current) {
+      return;
+    }
+    wasOfflineRef.current = false;
+    setNetworkFailure(false);
+    void hydrateSocialProfileRef.current();
+    void hydrateSocialDirectoryRef.current();
+  }, [online]);
 
   // Listados con los que reconciliar: los vivos de la app si el contenedor los pasa; si no, la foto del mount.
   const reconcileGames = options?.games ?? localState;
@@ -2113,7 +2264,7 @@ export function useSocialViewModel(options?: {
 
       setTimeout(() => setJustSavedProfile(false), 1000);
     } catch (error) {
-      setFeedback('err', error instanceof Error ? error.message : SOCIAL_UI.status.saveProfileFailed);
+      reportFailure(error, SOCIAL_UI.status.saveProfileFailed);
     } finally {
       setSavingProfile(false);
     }
@@ -2129,6 +2280,7 @@ export function useSocialViewModel(options?: {
     navigate,
     profileName,
     reconcileGames,
+    reportFailure,
     setFeedback,
     socialCfgEtag,
     socialCfgGistId,
@@ -2199,11 +2351,11 @@ export function useSocialViewModel(options?: {
         throw error;
       }
     } catch (error) {
-      setFeedback('err', error instanceof Error ? error.message : SOCIAL_UI.status.friendActionFailed);
+      reportFailure(error, SOCIAL_UI.status.friendActionFailed);
     } finally {
       setFriendshipBusyUid('');
     }
-  }, [authUser?.uid, buildFriendshipSelfInfo, friendships, refreshAfterFriendshipChange, relationshipWith, setFeedback]);
+  }, [authUser?.uid, buildFriendshipSelfInfo, friendships, refreshAfterFriendshipChange, relationshipWith, reportFailure, setFeedback]);
 
   // Borra el doc de amistad (cancelar enviada / rechazar recibida / eliminar amistad), con mensaje específico.
   const deleteRelationship = useCallback(async (otherUid: string, successMsg: string) => {
@@ -2218,11 +2370,11 @@ export function useSocialViewModel(options?: {
       await refreshAfterFriendshipChange();
       setFeedback('ok', successMsg);
     } catch (error) {
-      setFeedback('err', error instanceof Error ? error.message : SOCIAL_UI.status.friendActionFailed);
+      reportFailure(error, SOCIAL_UI.status.friendActionFailed);
     } finally {
       setFriendshipBusyUid('');
     }
-  }, [authUser?.uid, friendships, refreshAfterFriendshipChange, setFeedback]);
+  }, [authUser?.uid, friendships, refreshAfterFriendshipChange, reportFailure, setFeedback]);
 
   const handleCancelFriendRequest = useCallback(
     (otherUid: string) => deleteRelationship(otherUid, SOCIAL_UI.status.friendRequestCanceled),
@@ -2320,6 +2472,20 @@ export function useSocialViewModel(options?: {
     activePanel,
     socialCfgGistId,
     authUser,
+    /**
+     * Sin conexión: la pantalla lo dice con sus palabras en vez de dejar salir el error de red de turno.
+     *
+     * Dos señales, porque ninguna basta sola: lo que dice el navegador (`navigator.onLine`, que detecta el modo
+     * avión o el cable fuera antes de intentar nada) y lo que ha pasado de verdad (`networkFailure`, que es lo
+     * único que ve un wifi conectado sin salida a internet).
+     */
+    offline: !online || networkFailure,
+    /**
+     * ¿Hay algo guardado que mostrar mientras no hay red? Separa los dos mensajes del aviso: "esto es lo último
+     * que se guardó" (hay caché) y "aquí todavía no hay nada" (nunca se abrió el espacio social en este
+     * dispositivo). Decirle lo primero a quien no ve nada sería mentirle.
+     */
+    offlineHasCachedData: socialDirectory.length > 0,
     // L4 — puerta de aceptación (solo con sesión y consentimiento no vigente).
     legalConsentRequired: legalConsent.required,
     savingConsent: legalConsent.saving,
@@ -2387,6 +2553,7 @@ export function useSocialViewModel(options?: {
     hasMoreFeed,
     showMoreFeed,
     openActivityDetail,
+    openMoveReview,
     openProfileDetail,
     openOwnProfileDetail,
     isOwnProfileDetail,

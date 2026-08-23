@@ -7,7 +7,7 @@ vi.mock('../../src/model/repository/firebaseRepository', () => ({
 }));
 
 import { SocialErrorBoundary } from '../../src/view/components/socialhub/SocialErrorBoundary';
-import { SOCIAL_UI } from '../../src/core/constants/labels';
+import { SOCIAL_UI } from '../../src/core/constants/socialLabels';
 
 // Componente hijo que lanza según un flag mutable (para simular recuperación tras el reintento).
 const control = { crash: true };

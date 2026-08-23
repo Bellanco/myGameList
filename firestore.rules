@@ -154,7 +154,7 @@ service cloud.firestore {
     // allowlist aunque el cliente ya lo escribía (`appearancePreferenceRepository`): sin él, esa preferencia se
     // denegaba en silencio y nunca sincronizaba.
     function publicConfigWriteIsValid() {
-      return request.resource.data.keys().hasOnly(["schemaVersion", "scoreScale", "palette", "theme", "uppercase", "showSteamButton", "effects", "consent"])
+      return request.resource.data.keys().hasOnly(["schemaVersion", "scoreScale", "palette", "theme", "uppercase", "showSteamButton", "effects", "consent", "feedMoveTabs"])
         && (!("scoreScale" in request.resource.data)
             || request.resource.data.scoreScale in ["stars", "grade"])
         && (!("theme" in request.resource.data)
@@ -167,6 +167,10 @@ service cloud.firestore {
             || request.resource.data.showSteamButton is bool)
         && (!("effects" in request.resource.data)
             || request.resource.data.effects is bool)
+        // F4 — listas de las que su dueño ve los mensajes de actividad: letras de lista ('cevp'), nunca más de
+        // cuatro. Se acota el tamaño como en `palette`: es una preferencia, no un sitio donde guardar texto.
+        && (!("feedMoveTabs" in request.resource.data)
+            || (request.resource.data.feedMoveTabs is string && request.resource.data.feedMoveTabs.size() <= 4))
         && (!("consent" in request.resource.data)
             || (request.resource.data.consent.keys().hasOnly(["version", "agreedAt"])
                 && request.resource.data.consent.version is string

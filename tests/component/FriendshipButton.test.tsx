@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { FriendshipButton } from '../../src/view/components/socialhub/FriendshipButton';
-import { SOCIAL_UI } from '../../src/core/constants/labels';
+import { SOCIAL_UI } from '../../src/core/constants/socialLabels';
 
 const base = {
   SOCIAL_UI,

@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { SocialProfileDetailScreen } from '../../src/view/components/socialhub/SocialProfileDetailScreen';
-import { SOCIAL_UI } from '../../src/core/constants/labels';
+import { SOCIAL_UI } from '../../src/core/constants/socialLabels';
 
 function game(id: number, name: string) {
   return {
