@@ -112,13 +112,16 @@
    SOMBRA DURA DE BLOQUE. Sin clip-path (recortaba el borde y anulaba la sombra; ver regla 2/3). La
    sombra es clara en oscuro y negra en claro (regla 1); el sesgo + borde + sombra dan la forma P5.
    El texto se contra-sesga con `> *` para que quede recto (regla 4). ── */
-:root[data-palette="persona"] .btn:not(.btn-icon):not(.btn-ghost) { border: 2.5px solid #0a0a0a !important; border-radius: 0 !important; transform: skewX(-7deg); font-weight: 900; box-shadow: 5px 5px 0 rgba(255, 255, 255, .92) !important; }
+/* El GROSOR del filete de tinta y el TIRO de la sombra dura van por token (`--btn-ink`, `--btn-cast`): en una
+   pieza de 28 px, 2,5 px de tinta y 5 px de sombra pesan como un panel entero. Los valores por defecto son los
+   de siempre, así que ningún botón del tema cambia. */
+:root[data-palette="persona"] .btn:not(.btn-icon):not(.btn-ghost) { border: var(--btn-ink, 2.5px) solid #0a0a0a !important; border-radius: 0 !important; transform: skewX(-7deg); font-weight: 900; box-shadow: var(--btn-cast, 5px) var(--btn-cast, 5px) 0 rgba(255, 255, 255, .92) !important; }
 /* Solo se CONTRA-SESGA el contenido; NO se toca su `display`. El icono y el label ya son flex items del
    botón (`.btn` es `inline-flex`), así que el `transform` se aplica sin forzar `display:inline-block` —
    forzarlo (a) resucitaba el label que el layout móvil oculta con `display:none`, descuadrando /bandeja, y
    (b) reactivaba el <input type="file"> oculto (reaparecía el "Examinar"), de ahí el `:not(input)`. */
 :root[data-palette="persona"] .btn:not(.btn-icon):not(.btn-ghost) > *:not(input) { transform: skewX(7deg); }
-:root[data-palette="persona"][data-theme="light"] .btn:not(.btn-icon):not(.btn-ghost) { border-color: #151011 !important; box-shadow: 5px 5px 0 #151011 !important; }
+:root[data-palette="persona"][data-theme="light"] .btn:not(.btn-icon):not(.btn-ghost) { border-color: #151011 !important; box-shadow: var(--btn-cast, 5px) var(--btn-cast, 5px) 0 #151011 !important; }
 /* Relleno sólido por variante → la sombra de bloque se ve en TODOS los botones, no solo el contorno.
    Se fija el color de texto por contraste (regla 10). */
 :root[data-palette="persona"] .btn-secondary,
@@ -396,7 +399,7 @@
 
 /* Las cifras destacadas, en cursiva pop y con la caja sesgada del tema. */
 :root[data-palette="persona"] .stat-tile-value { font-style: italic; letter-spacing: -.02em; }
-:root[data-palette="persona"] .stat-tile:hover { transform: translateY(-2px) skewX(-1.5deg); }
+:root[data-palette="persona"] .stat-tile.is-link:hover { transform: translateY(-2px) skewX(-1.5deg); }
 
 /* ── AVATAR SIN FOTO: trazo GRUESO y redondeado, como el entintado de una viñeta. Es la misma mano que
    firma los chips y los botones de este tema. ── */

@@ -25,7 +25,9 @@ export function useShootingStars(): void {
 
     // Botones y chips VISIBLES (con tamaño y dentro del viewport).
     const eligible = (): HTMLElement[] =>
-      Array.from(document.querySelectorAll<HTMLElement>('.btn:not(.btn-icon), .chip')).filter((el) => {
+      // `.stat-tile-go` queda fuera: es un botón de 28 px (la marca de destino del panel), y un trazo de doce
+      // píxeles dentro de esa caja no se lee como una estrella fugaz, sino como un parpadeo del icono.
+      Array.from(document.querySelectorAll<HTMLElement>('.btn:not(.btn-icon):not(.stat-tile-go), .chip')).filter((el) => {
         if (el.offsetParent === null) return false;
         const r = el.getBoundingClientRect();
         return r.width > 24 && r.height > 12 && r.bottom > 0 && r.top < window.innerHeight;

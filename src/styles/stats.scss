@@ -386,19 +386,95 @@
   animation: grow-right .7s cubic-bezier(.22, 1, .36, 1) both;
 }
 
-/* La tarjeta que lleva a alguna parte se comporta como un control: hereda el aspecto de las demás y solo se
-   distingue al señalarla y al recibir el foco, que es cuando importa. */
+/* ── La tarjeta que LLEVA A ALGUNA PARTE ────────────────────────────────────────────────────────────────
+   Antes heredaba el aspecto de las demás y solo se distinguía al señalarla, que es tanto como no distinguirse:
+   en táctil no hay puntero, y en el escritorio hay que barrer la rejilla con el ratón para descubrir que una de
+   las ocho es un control. Ahora se separa EN REPOSO con tres gestos —canto teñido, cara elevada y una marca de
+   destino en la esquina— y ninguno de los tres es nuevo: el tinte es el que ya salía al señalarla, la cara es la
+   de los controles del resto de la app y la flecha es la del sprite.
+
+   La anatomía no se toca: sigue siendo etiqueta, cifra, pista y barra de cobertura, del mismo tamaño y en el
+   mismo sitio de la rejilla.
+
+   El reparto con las paletas: la FORMA de la marca la pone el botón de cada skin (lleva la clase `btn`, ver
+   más abajo) y el COLOR entra por un token, `--tile-go-tint`, que cada paleta redefine en su propio fichero
+   (ver `themes/*.scss`). Aquí no hay ni un selector con nombre de tema, y una paleta nueva hereda el gesto
+   neutro sin tocar nada. ── */
 .stat-tile.is-link {
+  /* TINTE DE IDENTIFICACIÓN: el color con el que cada paleta dice "aquí se actúa". Por defecto es su acento,
+     y las que tienen un color propio para eso lo cambian en su skin —el naranja del gel de Portal, el oro del
+     códice de Grimdark— con una línea. Tiñe el canto de la tarjeta y el relleno de la marca; la FORMA sigue
+     siendo la del botón del tema, que esta hoja no toca. */
+  --tile-go-tint: var(--steam);
+
+  position: relative;
   font: inherit;
   color: inherit;
   text-align: left;
   cursor: pointer;
-  transition: border-color .15s ease, transform .15s ease;
+  /* Canto y cara: un paso adelante respecto al resto de la rejilla, sin salir de la familia. El tinte del
+     canto es el mismo que ya usaba al señalarla, adelantado al reposo. */
+  border-color: color-mix(in oklch, var(--tile-go-tint) 45%, var(--border));
+  background: var(--surface-elevated);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, .1);
+  transition: border-color .16s ease, transform .16s ease;
 }
 
-.stat-tile.is-link:hover {
-  border-color: color-mix(in oklch, var(--steam) 55%, var(--border));
-  transform: translateY(-1px);
+/* La etiqueta no se mete por debajo de la marca: "Reseñas" es corto, pero el hueco se reserva igual. */
+.stat-tile.is-link .stat-tile-label { padding-inline-end: 1.6rem; }
+
+/* ── La marca de destino: EL BOTÓN DE LA PALETA, en pequeño ─────────────────────────────────────────────
+   No lleva diseño propio: lleva la clase `btn`, así que se pinta con el botón que cada skin ya tiene
+   preparado —el chaflán del HUD en Cyberpunk, el sesgo con filete de tinta y sombra dura en Persona, el
+   canto de oro en Grimdark, la placa de la cámara en Portal, el canto vivo de Sea of Stars— y aquí no hay
+   ni un selector con nombre de tema.
+
+   Lo único que pone esta hoja es la ESCALA. Y las tres medidas que un botón no puede encoger solo —la
+   muesca del chaflán, el grosor del filete de tinta y el tiro de la sombra dura— se piden por token a los
+   skins, que las exponen con su valor de siempre por defecto (`--btn-notch`, `--btn-ink`, `--btn-cast`).
+   Sin eso, una muesca de 9 px se comía un tercio de la marca y la sombra de 5 px la sacaba de la tarjeta. ── */
+
+/* La POSICIÓN vive en un hueco con clase propia, no en la marca. Es deliberado: la marca es un `.btn`, y los
+   skins también estilan `.btn` —Sea of Stars le da `position: relative` a todo botón para colgarle sus estrellas
+   fugaces—; con la posición ahí dentro, cuál de las dos hojas gana dependía de cuál se cargara última y la marca
+   se caía al pie de la tarjeta en cuanto el skin llegaba después. Separadas, no hay carrera que perder. */
+.stat-tile-go-slot {
+  position: absolute;
+  top: .45rem;
+  right: .45rem;
+  display: inline-flex;
+  line-height: 0;
+}
+
+.stat-tile-go {
+  --btn-notch: 5px;
+  --btn-ink: 1.5px;
+  --btn-cast: 2px;
+
+  box-sizing: border-box;
+  width: 1.75rem;
+  height: 1.75rem;
+  min-width: 0;
+  padding: 0;
+  gap: 0;
+  /* Color: el tinte de la paleta, en la flecha y en un relleno suave. Es lo que hace que la marca se lea como
+     "el sitio al que ir" y no como un adorno gris. El `background` sustituye al cristal del botón a propósito:
+     a 28 px, un degradado no se ve, y un relleno teñido sí. */
+  color: var(--tile-go-tint);
+  background: color-mix(in srgb, var(--tile-go-tint) 15%, transparent);
+}
+
+/* El icono, un punto por debajo del estándar: la marca mide 28 px y un botón del header, 38. */
+.stat-tile-go .ui-icon { width: .82rem; height: .82rem; }
+
+.stat-tile.is-link:hover { border-color: color-mix(in oklch, var(--tile-go-tint) 78%, var(--border)); }
+
+/* Al señalar o enfocar la tarjeta, el relleno de la marca sube de tono: la misma respuesta que da un botón al
+   recibir el puntero. El giro 3D del botón no se copia —la tarjeta ya se eleva, y dos movimientos encajados se
+   leen como un temblor—. */
+.stat-tile.is-link:hover .stat-tile-go,
+.stat-tile.is-link:focus-visible .stat-tile-go {
+  background: color-mix(in srgb, var(--tile-go-tint) 30%, transparent);
 }
 
 .stat-tile.is-link:focus-visible {
@@ -2844,14 +2920,16 @@
   filter: brightness(1.12);
 }
 
-/* Las cifras destacadas se elevan un punto al señalarlas: acompaña sin distraer. */
+/* La cifra que LLEVA A ALGUNA PARTE se eleva un punto al señalarla: acompaña sin distraer.
+   Antes se elevaban las ocho, y ahí estaba media avería: mientras toda la rejilla responde igual al puntero,
+   ninguna señal en reposo se lee como "esta es distinta" —el gesto dejaba de significar "aquí se pulsa" para
+   significar "esto es una tarjeta"—. El dato que no lleva a ningún sitio se queda quieto, que es lo que es. */
 .stat-tile {
   transition: transform .18s ease, border-color .18s ease;
 }
 
-.stat-tile:hover {
+.stat-tile.is-link:hover {
   transform: translateY(-2px);
-  border-color: color-mix(in srgb, var(--steam) 45%, var(--border));
 }
 
 /* ---- Textos auxiliares -------------------------------------------------------------------------------- */

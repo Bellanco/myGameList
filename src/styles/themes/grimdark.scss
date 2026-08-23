@@ -345,6 +345,10 @@
   padding-bottom: .3rem;
 }
 
+/* El tinte de la tarjeta que lleva a otra pantalla: el ORO del códice, el mismo del sello de sus botones. El
+   fósforo verde es la tinta de los datos, no la de los mandos. */
+:root[data-palette="grimdark"] .stat-tile.is-link { --tile-go-tint: var(--grim-gold); }
+
 /* ── §N · AVATAR SIN FOTO: trazo GRUESO y de remate recto — un grabado de placa imperial, no un icono
    redondeado. Sin halo: en el cogitador la luz la da el fósforo del texto, no los adornos. ── */
 :root[data-palette="grimdark"] {
