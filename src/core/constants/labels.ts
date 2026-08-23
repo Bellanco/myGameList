@@ -910,8 +910,13 @@ export const ADMIN_PANEL_UI = {
   back: 'Volver a mis listas',
   searchLabel: 'Buscar',
   searchPlaceholder: 'Nombre o identificador',
+  // Filtro de atención. Se nombra por lo que deja ver, no por lo que esconde: al abrir el panel la pregunta es
+  // "¿hay algo que mirar hoy?", y con el censo creciendo eso era un barrido visual de todas las fichas.
+  onlyFlaggedLabel: 'Solo perfiles con señales',
   empty: 'No hay ningún perfil todavía.',
   emptyFiltered: 'Ningún perfil coincide con la búsqueda.',
+  /** Con el filtro puesto y nada que enseñar, la respuesta no es "no hay perfiles" sino "no hay nada que mirar". */
+  emptyFlagged: 'Ningún perfil tiene señales: no hay nada que revisar.',
   resultCount: (count: number) => (count === 1 ? '1 usuario' : `${count} usuarios`),
   // Aviso permanente: el panel enseña `profiles`, que no es el censo real de cuentas.
   scopeNote: 'Solo aparece quien tiene perfil social. Quien usa la app sin crearlo no es visible desde aquí: sus documentos son owner-only y las reglas no dejan leerlos ni al administrador.',
@@ -927,6 +932,13 @@ export const ADMIN_PANEL_UI = {
     pending: 'Solicitudes pendientes',
     legacy: 'Con restos legacy',
     flagged: 'Con señales',
+    // Los dos que NO salen del censo de Firestore sino del Worker de enlaces. Solo se pintan si esa respuesta
+    // llegó: enseñar un cero cuando no se ha podido leer sería afirmar que no hay ninguno.
+    activeShares: 'Enlaces activos',
+    banned: 'Vetados para compartir',
+    /** El censo de enlaces viene paginado y el panel pide una página: si hay más, el número lleva un "+". */
+    partialCount: (count: number) => `${count}+`,
+    partialHint: 'Solo se ha listado la primera página de enlaces: puede haber más.',
   },
   // Ficha completa del usuario: todo lo que las reglas dejan leer de su documento y de sus amistades.
   field: {
@@ -940,13 +952,24 @@ export const ADMIN_PANEL_UI = {
     pendingOut: 'Peticiones enviadas',
     pendingIn: 'Peticiones recibidas',
     // El id que publica su PERFIL. Solo se pinta cuando existe: las escrituras actuales lo purgan, así que en un
-    // perfil al día está vacío y enseñar "—" para todo el mundo hacía pensar que faltaba un dato.
+    // perfil al día está vacío y enseñar "—" para todo el mundo hacía pensar que faltaba un dato. El id EN SÍ no
+    // se enseña: no se puede hacer nada con él desde aquí, y una ficha llena de cadenas de 32 caracteres esconde
+    // los datos que sí se leen. Lo que importa es que lo siga publicando.
     socialGist: 'Gist social (resto legacy)',
-    // Los ids que sus AMISTADES tienen denormalizados de él. Desde que el perfil no publica el suyo, este es el
-    // único rastro del canal de alguien al que llega el panel, y antes solo se veía si saltaba la señal de deriva.
-    friendGists: 'Canal según sus amistades',
+    socialGistPresent: 'Lo sigue publicando',
+    // Estado del canal SOCIAL según lo que guardan sus amistades. Antes se listaban los ids; no servían para nada
+    // —el panel no puede abrir un gist ajeno— y lo único accionable es cuántos hay: con más de uno hay deriva.
+    friendGists: 'Canal social',
     /** El gist de JUEGOS denormalizado: con lo que un amigo carga sus listas compartidas. */
-    friendGamesGists: 'Listas según sus amistades',
+    friendGamesGists: 'Listas compartidas',
+    /** Un solo canal en circulación: el caso sano. */
+    channelSingle: 'Un solo canal',
+    /** Más de uno: es exactamente la señal `gist-drift` / `games-gist-drift`, dicha con el número. */
+    channelMany: (count: number) => `${count} canales distintos`,
+    /** Sin amistades no hay nada denormalizado que mirar. No es un fallo. */
+    channelNone: 'Ninguna amistad lo guarda',
+    /** Vacío en el canal de LISTAS es lo normal en quien usa el social sin sincronizar sus juegos. */
+    listsNone: 'Sin sincronización de listas',
     /**
      * Los dos nombres cuando no coinciden. Se etiquetan por ORIGEN y no por antigüedad: el panel no puede saber cuál
      * es el vigente (ese dato vive en el gist del usuario), y afirmarlo llevaba a propagar el equivocado.
@@ -963,9 +986,29 @@ export const ADMIN_PANEL_UI = {
     stalePendingDetail: (stale: number, fossil: number) =>
       fossil > 0 ? `${stale} (+90 d), ${fossil} purgables (+180 d)` : `${stale} (+90 d)`,
     schema: 'Esquema',
+    /**
+     * Estado de la foto, en tres valores en vez de un sí/no.
+     *
+     * El interruptor de verdad (`showPhoto`) vive en el GIST del usuario y este panel no lo lee, así que el estado
+     * se DEDUCE de dos hechos que sí ve: si su perfil publica `photoURL` y si sus amistades guardan alguna foto
+     * suya. Que tuviera una y ya no la publique solo puede venir del opt-out, y eso es "oculta"; no haber tenido
+     * nunca ninguna es "desactivada". La deducción tiene su punto ciego y se dice en el `title`.
+     */
     photo: 'Foto',
+    photoOn: 'Activada',
+    photoHidden: 'Oculta',
+    photoOff: 'Desactivada',
+    /**
+     * Sin amistades no hay con qué comparar, así que no se afirma nada: era el único de los cuatro casos en los
+     * que el panel podía equivocarse, porque quien apagó el interruptor antes de hacer amigos se ve exactamente
+     * igual que quien nunca tuvo foto. Decir "sin datos" cuesta lo mismo que decir una cosa que puede ser falsa.
+     */
+    photoUnknown: 'Sin datos',
+    photoOnHint: 'Su perfil publica foto: es la que ven sus amistades y la que sale en el feed.',
+    photoHiddenHint: 'Su perfil no publica foto, pero sus amistades guardan una suya de antes: la ha ocultado con el interruptor de su perfil social.',
+    photoOffHint: 'No publica foto y ninguna de sus amistades guarda una suya: no llegó a publicarla desde que se hicieron amigos. O su cuenta de Google no tiene foto, o la lleva apagada desde entonces.',
+    photoUnknownHint: 'No publica foto y no tiene amistades con las que comparar, así que desde aquí no se puede saber si la ha ocultado o si nunca ha tenido: el interruptor vive en su gist social y este panel no lo lee.',
     etag: 'ETag del gist',
-    docId: 'Id del documento',
     yes: 'Sí',
     no: 'No',
     none: '—',
@@ -975,6 +1018,8 @@ export const ADMIN_PANEL_UI = {
     driftTitle: 'Gists en circulación',
     profileGist: 'Publica en su perfil',
     friendGist: 'Sus amistades apuntan a',
+    /** Su perfil arrastra un id propio. Sin enseñarlo: no hay nada que hacer con él desde aquí. */
+    profileGistOwn: 'un canal propio (resto legacy)',
     /** El perfil ya no publica el id: lo normal desde la purga, y aquí hay que decirlo para que no parezca un hueco. */
     profileGistPurged: 'ya no lo publica (purgado)',
     // Ya no hay acción: la deriva se resuelve sola cuando su dueño abre el hub (la migración elige el canal con
@@ -1036,6 +1081,8 @@ export const ADMIN_PANEL_UI = {
     unknownUid: 'El documento no dice de quién es (no tiene campo `uid`): no se puede migrar desde aquí. Se desbloquea cuando su dueño inicie sesión, porque su propio navegador crea el documento canónico.',
     alreadyCanonical: 'Este perfil ya vive en `profiles/{uid}`: no hay nada que migrar.',
     targetLabel: 'Se moverá a',
+    /** El destino, sin el id: es siempre `profiles/{uid}` y el uid no aporta nada que se pueda comprobar aquí. */
+    targetCanonical: 'Su documento canónico',
     // Qué va a pasar de verdad al pulsar: son dos operaciones distintas y hasta ahora no se sabía cuál tocaba.
     outcomeLabel: 'Qué hará',
     outcomeMove: 'MOVER el documento entero (no hay perfil canónico todavía) y borrar este.',
@@ -1125,7 +1172,11 @@ export const ADMIN_PANEL_UI = {
   // Identificación de quien tiene el perfil a medias. El correo NO está: se purgó del perfil público a propósito
   // (lo leía cualquier usuario autenticado). Para ponerle cara a un uid, la vía es la consola de Firebase Auth.
   knownAsHint: 'según sus amigos',
+  // El uid ya NO se pinta: es una cadena de 28 caracteres con la que no se puede hacer nada en esta pantalla, y
+  // repetida en cada ficha tapaba los datos que sí se leen. El botón se queda porque es la única vía para cruzar
+  // una ficha con Firebase Auth, que es donde vive el correo. Copiar sigue copiando el uid entero.
   copyUid: 'Copiar identificador',
+  copyUidAria: (name: string) => `Copiar el identificador de ${name}`,
   copiedUid: 'Identificador copiado.',
   enabled: 'Social activo',
   disabled: 'Social desactivado',
@@ -1238,7 +1289,11 @@ export const SHARE_UI = {
 
 /** Moderación de enlaces compartidos, dentro de la ficha de cada usuario en `/admin` (ver §6 del plan). */
 export const ADMIN_SHARES_UI = {
-  toggle: (count: number) => (count === 1 ? 'Enlace compartido (1)' : `Enlaces compartidos (${count})`),
+  // Con la cuota al lado: la pregunta al mirar esta sección no es cuántos tiene, sino si le queda sitio. Antes
+  // había que desplegar, contarlos y acordarse de qué da su rango.
+  toggle: (active: number, max: number) => `Enlaces compartidos (${active} de ${max})`,
+  /** Sin hueco libre. No es un problema —la cuota funciona—, pero explica que no pueda compartir nada más. */
+  full: 'Sin cupo libre',
   bannedBadge: 'Vetado para compartir',
   empty: 'No tiene enlaces activos.',
   open: 'Ver la página',
@@ -1248,14 +1303,26 @@ export const ADMIN_SHARES_UI = {
   purgeLabel: 'Retirar también sus enlaces activos',
   ban: 'Vetar para compartir',
   unban: 'Levantar el veto',
-  quotaMaxLabel: 'Enlaces activos (0 = sin cambio)',
-  quotaDaysLabel: 'Días de duración (0 = sin cambio)',
+  // Cuota individual. Los campos llegan CON la cuota que el usuario tiene ahora mismo, no a cero: a cero no se
+  // podía saber qué se estaba cambiando ni desde qué valor, y "0 = sin cambio" obligaba a recordar una convención
+  // para no tocar el otro campo. Ahora se edita lo que hay, y para quitar el ajuste hay un botón que lo dice.
+  quotaTitle: 'Cuota de enlaces',
+  quotaMaxLabel: 'Reseñas compartidas a la vez',
+  quotaDaysLabel: 'Días de duración',
+  /** Tope del campo: el que da SU rango. Para darle más, se le sube el rango — que es lo que significa el rango. */
+  quotaCeiling: (max: number, tier: string) => `Máx. ${max} (${tier})`,
+  quotaFromTier: (tier: string) => `Es la cuota de su rango (${tier}).`,
+  quotaFromOverride: 'Tiene un ajuste individual: no sigue la cuota de su rango.',
+  quotaOverLimit: (max: number, tier: string) => `El máximo de ${tier} es ${max}: para darle más, súbele el rango.`,
+  quotaClear: 'Volver a la cuota de su rango',
   quota: 'Aplicar cuota',
   confirmRemove: (gameName: string) => `Retirar el enlace de «${gameName}»`,
   confirmBan: 'Vetar a este usuario (sus enlaces actuales seguirán activos)',
   confirmBanPurge: 'Vetar a este usuario Y retirar todos sus enlaces',
   confirmUnban: 'Levantar el veto de este usuario',
-  confirmQuota: 'Ajustar la cuota de enlaces de este usuario',
+  // Con los valores a la vista: es lo que se va a escribir, y el campo venía relleno con otra cosa.
+  confirmQuota: (maxActive: number, ttlDays: number) =>
+    `Dejar la cuota de este usuario en ${maxActive} ${maxActive === 1 ? 'reseña compartida' : 'reseñas compartidas'} a la vez y ${ttlDays} ${ttlDays === 1 ? 'día' : 'días'} de duración`,
   confirmQuotaClear: 'Devolver a este usuario la cuota de su rango',
   removed: 'Enlace retirado.',
   banned: (purged: number) => (purged > 0 ? `Usuario vetado y ${purged} enlace(s) retirado(s).` : 'Usuario vetado.'),

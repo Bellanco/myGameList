@@ -63,6 +63,17 @@
 }
 .admin-search { display: grid; gap: .25rem; flex: 1 1 14rem; min-width: 0; font-size: .85rem; }
 .admin-search span { color: var(--text-muted); }
+/* El filtro va pegado a la búsqueda (recortan la misma lista) y antes del recuento, que es su resultado. */
+.admin-only-flagged {
+  display: flex;
+  align-items: center;
+  gap: .35rem;
+  font-size: .85rem;
+  color: var(--text-muted);
+  cursor: pointer;
+  flex: 0 0 auto;
+  padding-bottom: .35rem; /* alinea con la base del campo de búsqueda, que lleva etiqueta encima */
+}
 .admin-result-count { margin: 0 auto 0 0; color: var(--text-muted); font-size: .85rem; }
 
 .admin-warning { color: var(--text-muted); font-size: .85rem; }
@@ -80,7 +91,7 @@
   padding: 0;
   display: grid;
   /* `auto-fill` + `minmax` reparte solo: 1 columna en móvil, 2 en tablet apaisada, 3-4 en escritorio ancho.
-     `minmax(0, …)` en la parte baja evita que un `code` largo (uid, gist) desborde la ficha. */
+     `min(100%, …)` en la parte baja evita que un nombre largo sin espacios desborde la ficha. */
   grid-template-columns: repeat(auto-fill, minmax(min(100%, 21rem), 1fr));
   gap: .8rem;
 }
@@ -100,24 +111,26 @@
 .admin-user-head {
   display: flex;
   align-items: center;
-  /* Con nombre largo + uid + insignia, en móvil la insignia quedaba pegada al borde. Que envuelva y caiga a la
-     línea siguiente es preferible a comprimir el nombre o rozar el margen. */
+  /* Con nombre largo + botón de copiar + insignia, en móvil la insignia quedaba pegada al borde. Que envuelva y
+     caiga a la línea siguiente es preferible a comprimir el nombre o rozar el margen. */
   flex-wrap: wrap;
   gap: .4rem .6rem;
   min-width: 0;
 }
 /* La insignia de estado se va al extremo y el bloque de nombre absorbe el resto. */
 .admin-user-head .admin-badge { margin-left: auto; flex: 0 0 auto; }
-/* `flex: 1 1 10rem` con `min-width: 0`: el bloque de nombre puede encogerse (uid largo) pero por debajo de 10rem
-   empuja la insignia a la línea de abajo en vez de estrujarse. */
+/* `flex: 1 1 10rem` con `min-width: 0`: el bloque de nombre puede encogerse (nombre largo) pero por debajo de
+   10rem empuja la insignia a la línea de abajo en vez de estrujarse. */
 .admin-user-head .admin-user-text { flex: 1 1 10rem; }
 
-/* Nombre arriba, uid debajo. Sin este `grid` los dos caen en la misma línea y el uid parece parte del nombre. */
+/* Nombre arriba, acción de copiar debajo. Sin este `grid` las dos caen en la misma línea y el botón parece parte
+   del nombre. */
 .admin-user-text { display: grid; gap: .1rem; min-width: 0; }
 .admin-user-text b { font-weight: 600; }
 .admin-known-as { font-weight: 400; font-style: normal; color: var(--text-dim); font-size: .75rem; }
 
-/* El uid es un botón (copia al portapapeles) pero no debe parecerlo: se mantiene como texto tenue. */
+/* Copiar el uid es un botón (copia al portapapeles) pero no debe parecerlo: se mantiene como texto tenue bajo el
+   nombre. Desde que el identificador ya no se pinta, lo que se lee aquí es la acción, no el dato. */
 .admin-uid {
   background: none;
   border: 0;
@@ -126,10 +139,22 @@
   text-align: left;
   color: var(--text-dim);
   min-width: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: .25rem;
+  font-size: .72rem;
+  justify-self: start;
 }
-.admin-uid code { font-size: .72rem; overflow-wrap: anywhere; }
-.admin-uid:hover code { color: var(--text-muted); text-decoration: underline; }
+.admin-uid svg { width: .85em; height: .85em; flex: 0 0 auto; }
+.admin-uid:hover { color: var(--text-muted); text-decoration: underline; }
 .admin-uid:focus-visible { outline: 2px solid var(--fg-sky); outline-offset: 2px; }
+
+/* Estado de la foto. Solo se destaca "oculta": es el único de los tres que dice que hay una decisión del usuario
+   detrás, y leerlo como "no tiene" era justo el malentendido que este campo viene a deshacer. */
+.admin-photo-state.is-hidden { color: var(--text-muted); font-style: italic; }
+.admin-photo-state.is-off,
+/* "Sin datos" no es un estado suyo sino un límite del panel: se apaga igual que un hueco. */
+.admin-photo-state.is-unknown { color: var(--text-dim); }
 
 .admin-tier-row { display: flex; align-items: center; gap: .5rem; }
 .admin-field-label { color: var(--text-muted); font-size: .75rem; text-transform: uppercase; letter-spacing: .04em; }
@@ -145,7 +170,6 @@
 .admin-user-data > div { display: grid; gap: .05rem; min-width: 0; }
 .admin-user-data dt { color: var(--text-muted); font-size: .72rem; }
 .admin-user-data dd { margin: 0; min-width: 0; overflow-wrap: anywhere; }
-.admin-user-data code { font-size: .72rem; color: var(--text-dim); }
 
 /* Señales. Las graves llevan el color de peligro; las informativas se quedan en tono apagado para que no
    compitan con ellas. `title` lleva la explicación de cada una. */
@@ -290,6 +314,9 @@
   font-weight: 600;
   color: var(--danger, #d33);
 }
+/* Cupo agotado. En tono apagado y no en rojo: la cuota haciendo su trabajo no es una incidencia, solo explica
+   que esa persona no pueda compartir más. */
+.admin-user-full { font-size: 0.82rem; color: var(--text-muted); }
 .admin-user-shares-body {
   display: flex;
   flex-direction: column;
@@ -348,6 +375,18 @@
   input[type='number'] {
     max-width: 9rem;
   }
+}
+/* Bloque de cuota. Comparte la fila de campos con el resto de formularios, pero su título, su nota de origen y
+   el aviso de tope ocupan la fila entera: son texto que explica los dos campos, no un campo más al lado. */
+.admin-user-quota {
+  > .admin-field-label,
+  > .admin-card-note,
+  > .admin-warning {
+    flex: 1 1 100%;
+    margin: 0;
+  }
+
+  label small { color: var(--text-dim); font-size: .72rem; }
 }
 .admin-user-shares-check {
   flex-direction: row !important;
