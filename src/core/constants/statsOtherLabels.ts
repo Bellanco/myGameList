@@ -124,8 +124,9 @@ export const STATS_LABELS_OTHER: StatsLabels = {
     verdictBalanced: 'Reparte con criterio: distingue sin irse a los extremos.',
     verdictHarsh: 'Puntúa a los extremos: o le encanta o no lo perdona.',
   },
-  // `activity` no se redefine: la constancia sale de fechas PRIVADAS (`enteredAt`, `reviewedAt`) que no viajan
-  // por el canal social, así que este bloque nunca se monta en el panel de otra persona.
+  // `activity` no se redefine: la constancia sale de fechas PRIVADAS (`enteredAt`, `reviewedAt`) cuyos campos no
+  // viajan por el canal social, así que este bloque nunca se monta en el panel de otra persona. La actividad de
+  // listas que F4 sí publica no sirve para esto: es una proyección recortada (ver `friendStats`).
   year: {
     ...STATS_OWN.year,
     gamesTitle: (year: number) => `Todo lo que completó en ${year}`,

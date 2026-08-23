@@ -3,7 +3,7 @@ import { Icon } from '../Icon';
 import { ScoreDisplay } from '../ScoreDisplay';
 import { NoScoreMedal } from '../NoScoreMedal';
 import { resolveGrade } from '../../../core/utils/scoreScale';
-import type { SocialUiLabels } from '../../../core/constants/labels';
+import type { SocialUiLabels } from '../../../core/constants/socialLabels';
 import type {
   SocialActivityFeedItem,
   SocialFeedDayGroup,
@@ -12,6 +12,7 @@ import type {
 import { HubStatus } from './HubStatus';
 import { PostBody } from './PostText';
 import { HubAvatar } from './HubAvatar';
+import { HubOfflineNotice } from './HubOfflineNotice';
 
 /** Pantalla principal del feed social. */
 function SocialFeedScreenBase({
@@ -30,6 +31,7 @@ function SocialFeedScreenBase({
   hasMoreFeed,
   showMoreFeed,
   openActivityDetail,
+  openMoveReview,
   handleActivityItemKeyDown,
   composePostText,
   setComposePostText,
@@ -40,7 +42,9 @@ function SocialFeedScreenBase({
   showPostCounter,
   status,
   statusKind,
-  handleSignOut
+  handleSignOut,
+  offline,
+  offlineHasCachedData
 }: {
   SOCIAL_UI: SocialUiLabels;
   socialDisplayName: string;
@@ -57,6 +61,11 @@ function SocialFeedScreenBase({
   hasMoreFeed: boolean;
   showMoreFeed: () => void;
   openActivityDetail: (entry: SocialActivityFeedItem) => void;
+  /**
+   * F4 — abre el análisis del autor sobre ese juego desde el nombre del juego de un movimiento. El primer
+   * argumento es el `actorProfileId` de la reseña (el del gist), NO el id de la entrada del directorio.
+   */
+  openMoveReview: (actorProfileId: string, gameId: number) => void;
   handleActivityItemKeyDown: (event: React.KeyboardEvent<HTMLElement>, entry: SocialActivityFeedItem) => void;
   composePostText: string;
   setComposePostText: (v: string) => void;
@@ -70,6 +79,10 @@ function SocialFeedScreenBase({
   status: string;
   statusKind: string;
   handleSignOut: () => void;
+  /** Sin conexión: se avisa arriba y el estado vacío deja de culpar a la falta de amigos. */
+  offline: boolean;
+  /** ¿Hay algo guardado que enseñar mientras no hay red? Decide cuál de los dos avisos toca. */
+  offlineHasCachedData: boolean;
 }) {
   const feedSentinelRef = React.useRef<HTMLButtonElement>(null);
   const composerRef = React.useRef<HTMLTextAreaElement>(null);
@@ -173,6 +186,9 @@ function SocialFeedScreenBase({
             </button>
           </div>
         </div>
+        {/* Encima de todo lo que depende de la red (compositor y actividad), porque explica por qué nada de eso
+            se va a mover hasta que vuelva la conexión. */}
+        {offline ? <HubOfflineNotice hasCachedData={offlineHasCachedData} /> : null}
         {/* Sin rango para publicar (bronce), el bloque entero desaparece: ni compositor ni título ni explicación.
             Se oculta también el `flabel` porque este `fg` solo contiene el compositor; dejarlo sería un
             encabezado presidiendo un hueco vacío. Las publicaciones ajenas se siguen leyendo en el feed. */}
@@ -246,7 +262,14 @@ function SocialFeedScreenBase({
               ))}
             </div>
           ) : null}
-          {!loadingDirectory && feedItems.length === 0 ? (
+          {/* Vacío SIN red: no es que no tengas amigos, es que no se ha podido leer nada. Mandar a "descubrir
+              perfiles" aquí sería un diagnóstico falso y además un botón que no puede funcionar. */}
+          {!loadingDirectory && feedItems.length === 0 && offline ? (
+            <div className="hub-feed-empty">
+              <p>{SOCIAL_UI.offline.bodyEmpty}</p>
+            </div>
+          ) : null}
+          {!loadingDirectory && feedItems.length === 0 && !offline ? (
             <div className="hub-feed-empty">
               <p>{SOCIAL_UI.feed.activityEmptyNoFriends}</p>
               <button className="btn btn-secondary btn-accent" type="button" onClick={onOpenProfiles}>
@@ -301,6 +324,66 @@ function SocialFeedScreenBase({
                             expandLabel={SOCIAL_UI.feed.postExpand}
                             collapseLabel={SOCIAL_UI.feed.postCollapse}
                           />
+                        </article>
+                      );
+                    }
+
+                    // F4 — MOVIMIENTO DE LISTA. Una línea y se acaba: quién, qué hizo, con qué juego y a qué
+                    // hora. La tarjeta NO es pulsable —no hay pantalla de «movimiento» que abrir— y de ella solo
+                    // llevan a algún sitio dos cosas: el autor (su perfil) y, cuando de verdad existe, el nombre
+                    // del juego (el análisis de ese autor sobre él).
+                    //
+                    // La hora usa su propia clase y no `hub-feed-date`: varias paletas convierten esa clase en
+                    // una cápsula o le cuelgan un prefijo («//», «>»), y aquí tiene que ser un dato al final del
+                    // renglón. El día no se repite: lo dice la cabecera del grupo, y la fecha entera está en el
+                    // `title`.
+                    if (entry.kind === 'move') {
+                      const nombreAutor = entry.profileDisplayName || 'Usuario';
+                      const fechaCompleta = hasValidDate ? SOCIAL_UI.feed.movedAt(itemDate) : SOCIAL_UI.feed.moveRecently;
+                      return (
+                        <article
+                          key={`${entry.socialGistId}:${entry.id}`}
+                          className={`hub-feed-card hub-feed-activity-item is-move ${ownershipClass}`}
+                          role="listitem"
+                        >
+                          <button
+                            className="hub-avatar-link"
+                            type="button"
+                            aria-label={SOCIAL_UI.feed.openProfileAria(nombreAutor)}
+                            onClick={() => openProfileDetail(entry.profileId)}
+                          >
+                            <HubAvatar photoURL={entry.photoURL} sizeClass="hub-avatar-xs" />
+                          </button>
+                          <p className="hub-feed-move-line">
+                            <button
+                              className="hub-name-link hub-feed-move-who"
+                              type="button"
+                              onClick={() => openProfileDetail(entry.profileId)}
+                            >
+                              {nombreAutor}
+                            </button>
+                            {' '}
+                            <span className="hub-feed-move-verb">{SOCIAL_UI.feed.moveHeadline[entry.tab]}</span>
+                            {' '}
+                            {entry.reviewActorId ? (
+                              <button
+                                className="hub-feed-move-game"
+                                type="button"
+                                aria-label={SOCIAL_UI.feed.openMoveReviewAria(nombreAutor, entry.gameName)}
+                                // El actor de la RESEÑA, no el id de la entrada del directorio: el detalle resuelve
+                                // por `actorProfileId` y con el otro id no encontraba nada.
+                                onClick={() => openMoveReview(entry.reviewActorId as string, entry.gameId)}
+                              >
+                                {entry.gameName}
+                              </button>
+                            ) : (
+                              <span className="hub-feed-move-game is-plain">{entry.gameName}</span>
+                            )}
+                            {' '}
+                            <span className="hub-feed-move-hour" title={fechaCompleta}>
+                              {hasValidDate ? SOCIAL_UI.feed.movedAtHour(itemDate) : SOCIAL_UI.feed.moveRecently}
+                            </span>
+                          </p>
                         </article>
                       );
                     }

@@ -149,7 +149,10 @@
 /* ── §5 · Botones HUD: angulares (esquina cortada con clip-path — planos, sin borde/sombra recortable).
    Acento = relleno AMARILLO con texto negro (firma de Cyberpunk), en ambos temas. Semánticos rellenos;
    texto tinta en OSCURO y claro en CLARO (regla 10). ── */
-:root[data-palette="cyberpunk"] .btn:not(.btn-icon):not(.btn-ghost) { font-weight: 600; letter-spacing: .05em; border: 1px solid var(--border); border-radius: 0; clip-path: polygon(0 0, 100% 0, 100% calc(100% - 9px), calc(100% - 9px) 100%, 0 100%); }
+/* La MUESCA del chaflán va por token (`--btn-notch`) y no en duro: un botón pequeño necesita una muesca
+   pequeña —a 9 px se comería un tercio de una marca de 28 px—, y así la pide quien la necesite sin que este
+   fichero sepa nada de esa pieza. El valor por defecto es el de siempre. */
+:root[data-palette="cyberpunk"] .btn:not(.btn-icon):not(.btn-ghost) { font-weight: 600; letter-spacing: .05em; border: 1px solid var(--border); border-radius: 0; clip-path: polygon(0 0, 100% 0, 100% calc(100% - var(--btn-notch, 9px)), calc(100% - var(--btn-notch, 9px)) 100%, 0 100%); }
 /* La muesca (§5) usa `clip-path`, y `clip-path` recorta el `border`/`box-shadow`/`drop-shadow` del PROPIO elemento
    (regla 2), así que la diagonal se quedaba sin filete (el borde solo se veía en los cantos rectos). Solución
    robusta e independiente del navegador (sin sombras ni filtros): DOS capas recortadas detrás del contenido —
@@ -511,9 +514,31 @@
 }
 :root[data-palette="cyberpunk"][data-theme="light"] .stat-tile-value { text-shadow: none; }
 
+/* La marca de la tarjeta que lleva a otra pantalla, encendida como el resto del HUD: su forma ya es la del
+   botón del tema (chaflán incluido), así que aquí solo se le pone el neón. En claro se apaga, como todos. */
+:root[data-palette="cyberpunk"] .stat-tile-go {
+  filter: drop-shadow(0 0 3px color-mix(in srgb, var(--cyber-yellow) 55%, transparent));
+}
+
+:root[data-palette="cyberpunk"][data-theme="light"] .stat-tile-go { filter: none; }
+
 /* ── §N · AVATAR SIN FOTO: trazo FINO y de remate recto, como una silueta vectorizada por la óptica Kiroshi.
    El color ya lo pone el acento de la paleta (amarillo ácido); aquí solo se ajusta la mano del dibujo. ── */
 :root[data-palette="cyberpunk"] {
   --deco-avatar-stroke: 1.3;
   --deco-avatar-cap: butt;
 }
+/* ── F4 · Movimiento de lista: entrada de registro, no aviso.
+   La paleta marca toda tarjeta del feed con el filete AMARILLO a la izquierda (el color de alerta del HUD). Un
+   movimiento es una línea de log: se le quita el amarillo y se queda con el cian tenue del resto del marco, sin
+   el halo. ── */
+:root[data-palette="cyberpunk"] .hub-feed-activity-item.is-move {
+  border-left-color: rgba(0, 240, 255, .35) !important;
+  box-shadow: none !important;
+}
+/* La hora, en la monoespaciada de la paleta y con el mismo prefijo de dato que usan sus fechas. */
+:root[data-palette="cyberpunk"] .hub-feed-move-hour {
+  font-family: 'Share Tech Mono', ui-monospace, monospace;
+  letter-spacing: .02em;
+}
+:root[data-palette="cyberpunk"] .hub-feed-move-hour::before { content: '// '; color: var(--cyber-cyan); font-weight: 700; }

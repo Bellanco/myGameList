@@ -861,6 +861,24 @@ const APP_ERROR_LEAD: Record<PaletteId, string> = {
   seaofstars: 'El eclipse se lo ha tragado.',
 };
 
+// SIN CONEXIÓN, contado por el boundary RAÍZ. Es un caso real y distinto de una avería: al entrar sin red en una
+// sección que este dispositivo todavía no había visitado, su chunk no está en la caché del service worker, el
+// `import()` falla y el árbol cae. Decir "algo ha ido mal / vuelve a cargar" ahí es engañoso —no hay nada roto y
+// recargar no lo va a arreglar—, así que cada tema lo cuenta como lo que es: falta de comunicación.
+const APP_OFFLINE_LEAD: Record<PaletteId, string> = {
+  steam: 'No hay conexión con el servidor.',
+  // Persona 5: sin señal no hay entrada al Metaverso.
+  persona: 'Sin señal para entrar al Metaverso.',
+  // Portal: un portal necesita sus dos extremos.
+  portal: 'Falta el otro extremo del portal.',
+  // Cyberpunk 2077: todo pasa por el enlace a la red.
+  cyberpunk: 'Te has quedado sin enlace a la red.',
+  // Warhammer 40.000: los mensajes viajan por la Disformidad, y la Disformidad se los traga.
+  grimdark: 'La Disformidad se ha tragado la señal.',
+  // Sea of Stars: el camino sigue estando, pero ahora mismo no se puede pasar.
+  seaofstars: 'El camino está cortado.',
+};
+
 // Pantalla de reemplazo del error boundary RAÍZ (fallo de render que tumbaría toda la app).
 export const APP_ERROR_UI = {
   sectionAria: 'Error de la aplicación',
@@ -871,6 +889,13 @@ export const APP_ERROR_UI = {
   leadByPalette: APP_ERROR_LEAD,
   hint: 'Vuelve a cargar la página para continuar.',
   reload: 'Recargar',
+  // Variante para cuando lo que ha fallado es la RED (ver `APP_OFFLINE_LEAD`).
+  offlineTitle: 'Sin conexión',
+  offlineLeadByPalette: APP_OFFLINE_LEAD,
+  offlineHint: 'Esta parte de la aplicación necesita conexión y todavía no está guardada en este dispositivo. Tus listas siguen funcionando.',
+  // La salida del callejón: recargar en la ruta que ha fallado volvería a fallar (el chunk sigue sin poder bajar),
+  // así que sin red la acción es IR A LAS LISTAS, que sí funcionan sin conexión.
+  offlineAction: 'Volver a mis listas',
 } as const;
 
 // Panel de administración (`/admin`, ruta oculta). Nada que ver con `UI_MESSAGES.settings.admin`, que es la
@@ -885,8 +910,13 @@ export const ADMIN_PANEL_UI = {
   back: 'Volver a mis listas',
   searchLabel: 'Buscar',
   searchPlaceholder: 'Nombre o identificador',
+  // Filtro de atención. Se nombra por lo que deja ver, no por lo que esconde: al abrir el panel la pregunta es
+  // "¿hay algo que mirar hoy?", y con el censo creciendo eso era un barrido visual de todas las fichas.
+  onlyFlaggedLabel: 'Solo perfiles con señales',
   empty: 'No hay ningún perfil todavía.',
   emptyFiltered: 'Ningún perfil coincide con la búsqueda.',
+  /** Con el filtro puesto y nada que enseñar, la respuesta no es "no hay perfiles" sino "no hay nada que mirar". */
+  emptyFlagged: 'Ningún perfil tiene señales: no hay nada que revisar.',
   resultCount: (count: number) => (count === 1 ? '1 usuario' : `${count} usuarios`),
   // Aviso permanente: el panel enseña `profiles`, que no es el censo real de cuentas.
   scopeNote: 'Solo aparece quien tiene perfil social. Quien usa la app sin crearlo no es visible desde aquí: sus documentos son owner-only y las reglas no dejan leerlos ni al administrador.',
@@ -902,6 +932,13 @@ export const ADMIN_PANEL_UI = {
     pending: 'Solicitudes pendientes',
     legacy: 'Con restos legacy',
     flagged: 'Con señales',
+    // Los dos que NO salen del censo de Firestore sino del Worker de enlaces. Solo se pintan si esa respuesta
+    // llegó: enseñar un cero cuando no se ha podido leer sería afirmar que no hay ninguno.
+    activeShares: 'Enlaces activos',
+    banned: 'Vetados para compartir',
+    /** El censo de enlaces viene paginado y el panel pide una página: si hay más, el número lleva un "+". */
+    partialCount: (count: number) => `${count}+`,
+    partialHint: 'Solo se ha listado la primera página de enlaces: puede haber más.',
   },
   // Ficha completa del usuario: todo lo que las reglas dejan leer de su documento y de sus amistades.
   field: {
@@ -915,13 +952,24 @@ export const ADMIN_PANEL_UI = {
     pendingOut: 'Peticiones enviadas',
     pendingIn: 'Peticiones recibidas',
     // El id que publica su PERFIL. Solo se pinta cuando existe: las escrituras actuales lo purgan, así que en un
-    // perfil al día está vacío y enseñar "—" para todo el mundo hacía pensar que faltaba un dato.
+    // perfil al día está vacío y enseñar "—" para todo el mundo hacía pensar que faltaba un dato. El id EN SÍ no
+    // se enseña: no se puede hacer nada con él desde aquí, y una ficha llena de cadenas de 32 caracteres esconde
+    // los datos que sí se leen. Lo que importa es que lo siga publicando.
     socialGist: 'Gist social (resto legacy)',
-    // Los ids que sus AMISTADES tienen denormalizados de él. Desde que el perfil no publica el suyo, este es el
-    // único rastro del canal de alguien al que llega el panel, y antes solo se veía si saltaba la señal de deriva.
-    friendGists: 'Canal según sus amistades',
+    socialGistPresent: 'Lo sigue publicando',
+    // Estado del canal SOCIAL según lo que guardan sus amistades. Antes se listaban los ids; no servían para nada
+    // —el panel no puede abrir un gist ajeno— y lo único accionable es cuántos hay: con más de uno hay deriva.
+    friendGists: 'Canal social',
     /** El gist de JUEGOS denormalizado: con lo que un amigo carga sus listas compartidas. */
-    friendGamesGists: 'Listas según sus amistades',
+    friendGamesGists: 'Listas compartidas',
+    /** Un solo canal en circulación: el caso sano. */
+    channelSingle: 'Un solo canal',
+    /** Más de uno: es exactamente la señal `gist-drift` / `games-gist-drift`, dicha con el número. */
+    channelMany: (count: number) => `${count} canales distintos`,
+    /** Sin amistades no hay nada denormalizado que mirar. No es un fallo. */
+    channelNone: 'Ninguna amistad lo guarda',
+    /** Vacío en el canal de LISTAS es lo normal en quien usa el social sin sincronizar sus juegos. */
+    listsNone: 'Sin sincronización de listas',
     /**
      * Los dos nombres cuando no coinciden. Se etiquetan por ORIGEN y no por antigüedad: el panel no puede saber cuál
      * es el vigente (ese dato vive en el gist del usuario), y afirmarlo llevaba a propagar el equivocado.
@@ -938,9 +986,29 @@ export const ADMIN_PANEL_UI = {
     stalePendingDetail: (stale: number, fossil: number) =>
       fossil > 0 ? `${stale} (+90 d), ${fossil} purgables (+180 d)` : `${stale} (+90 d)`,
     schema: 'Esquema',
+    /**
+     * Estado de la foto, en tres valores en vez de un sí/no.
+     *
+     * El interruptor de verdad (`showPhoto`) vive en el GIST del usuario y este panel no lo lee, así que el estado
+     * se DEDUCE de dos hechos que sí ve: si su perfil publica `photoURL` y si sus amistades guardan alguna foto
+     * suya. Que tuviera una y ya no la publique solo puede venir del opt-out, y eso es "oculta"; no haber tenido
+     * nunca ninguna es "desactivada". La deducción tiene su punto ciego y se dice en el `title`.
+     */
     photo: 'Foto',
+    photoOn: 'Activada',
+    photoHidden: 'Oculta',
+    photoOff: 'Desactivada',
+    /**
+     * Sin amistades no hay con qué comparar, así que no se afirma nada: era el único de los cuatro casos en los
+     * que el panel podía equivocarse, porque quien apagó el interruptor antes de hacer amigos se ve exactamente
+     * igual que quien nunca tuvo foto. Decir "sin datos" cuesta lo mismo que decir una cosa que puede ser falsa.
+     */
+    photoUnknown: 'Sin datos',
+    photoOnHint: 'Su perfil publica foto: es la que ven sus amistades y la que sale en el feed.',
+    photoHiddenHint: 'Su perfil no publica foto, pero sus amistades guardan una suya de antes: la ha ocultado con el interruptor de su perfil social.',
+    photoOffHint: 'No publica foto y ninguna de sus amistades guarda una suya: no llegó a publicarla desde que se hicieron amigos. O su cuenta de Google no tiene foto, o la lleva apagada desde entonces.',
+    photoUnknownHint: 'No publica foto y no tiene amistades con las que comparar, así que desde aquí no se puede saber si la ha ocultado o si nunca ha tenido: el interruptor vive en su gist social y este panel no lo lee.',
     etag: 'ETag del gist',
-    docId: 'Id del documento',
     yes: 'Sí',
     no: 'No',
     none: '—',
@@ -950,6 +1018,8 @@ export const ADMIN_PANEL_UI = {
     driftTitle: 'Gists en circulación',
     profileGist: 'Publica en su perfil',
     friendGist: 'Sus amistades apuntan a',
+    /** Su perfil arrastra un id propio. Sin enseñarlo: no hay nada que hacer con él desde aquí. */
+    profileGistOwn: 'un canal propio (resto legacy)',
     /** El perfil ya no publica el id: lo normal desde la purga, y aquí hay que decirlo para que no parezca un hueco. */
     profileGistPurged: 'ya no lo publica (purgado)',
     // Ya no hay acción: la deriva se resuelve sola cuando su dueño abre el hub (la migración elige el canal con
@@ -1011,6 +1081,8 @@ export const ADMIN_PANEL_UI = {
     unknownUid: 'El documento no dice de quién es (no tiene campo `uid`): no se puede migrar desde aquí. Se desbloquea cuando su dueño inicie sesión, porque su propio navegador crea el documento canónico.',
     alreadyCanonical: 'Este perfil ya vive en `profiles/{uid}`: no hay nada que migrar.',
     targetLabel: 'Se moverá a',
+    /** El destino, sin el id: es siempre `profiles/{uid}` y el uid no aporta nada que se pueda comprobar aquí. */
+    targetCanonical: 'Su documento canónico',
     // Qué va a pasar de verdad al pulsar: son dos operaciones distintas y hasta ahora no se sabía cuál tocaba.
     outcomeLabel: 'Qué hará',
     outcomeMove: 'MOVER el documento entero (no hay perfil canónico todavía) y borrar este.',
@@ -1100,7 +1172,11 @@ export const ADMIN_PANEL_UI = {
   // Identificación de quien tiene el perfil a medias. El correo NO está: se purgó del perfil público a propósito
   // (lo leía cualquier usuario autenticado). Para ponerle cara a un uid, la vía es la consola de Firebase Auth.
   knownAsHint: 'según sus amigos',
+  // El uid ya NO se pinta: es una cadena de 28 caracteres con la que no se puede hacer nada en esta pantalla, y
+  // repetida en cada ficha tapaba los datos que sí se leen. El botón se queda porque es la única vía para cruzar
+  // una ficha con Firebase Auth, que es donde vive el correo. Copiar sigue copiando el uid entero.
   copyUid: 'Copiar identificador',
+  copyUidAria: (name: string) => `Copiar el identificador de ${name}`,
   copiedUid: 'Identificador copiado.',
   enabled: 'Social activo',
   disabled: 'Social desactivado',
@@ -1138,320 +1214,6 @@ export const ADMIN_PANEL_UI = {
   errorGeneric: 'No se pudo completar la acción.',
 } as const;
 
-// Igual que `APP_ERROR_LEAD`, pero para el hub social: lo que ha caído es la parte de GENTE (amistades, feed,
-// reseñas compartidas), así que cada tema lo cuenta con su forma de quedarse sin compañía o sin comunicación.
-const SOCIAL_ERROR_LEAD: Record<PaletteId, string> = {
-  // Las salas de espera del multijugador, que es lo más social que tiene un cliente de juegos.
-  steam: 'La sala se ha quedado vacía.',
-  // Persona 5: los Confidentes son los vínculos que cultivas, y se llevan por teléfono.
-  persona: 'Tus Confidentes no cogen el teléfono.',
-  // Portal: el Cubo de Compañía, la única compañía que dan las pruebas.
-  portal: 'El Cubo de Compañía no ha venido.',
-  // Cyberpunk 2077: sin red no hay Night City, y todo pasa por la red.
-  cyberpunk: 'Night City se ha quedado sin red.',
-  // Warhammer 40.000: los astrópatas son quienes llevan los mensajes entre mundos.
-  grimdark: 'El astrópata ha perdido la señal.',
-  // Sea of Stars: acampar con el grupo es donde el viaje se vuelve compañía.
-  seaofstars: 'Nadie ha llegado al campamento.',
-};
-
-export const SOCIAL_UI = {
-  hubTitle: 'Espacio social',
-  loading: 'Cargando espacio social...',
-  screenAria: 'Social',
-  errorBoundary: {
-    sectionAria: 'Error del espacio social',
-    // Mismo formato que la pantalla raíz: el guiño del tema en grande —aquí sobre lo que ha caído, que es la
-    // parte de gente— y debajo, atenuado, lo que de verdad hay que saber. El titular SÍ se ve y sigue siendo
-    // un encabezado de sección de verdad; el contexto («error del espacio social») lo da el `aria-label`.
-    titleByPalette: SOCIAL_ERROR_LEAD,
-    body: 'El resto de la aplicación sigue disponible.',
-    retry: 'Reintentar',
-    // El reintento sigue limitado (1 cada 15 min) para no reintentar de forma indiscriminada ante un fallo
-    // persistente, pero la espera no se cuenta en pantalla: ni cuenta atrás en el botón ni nota al pie, que
-    // solo transmiten castigo. El botón se apaga, y quien use lector de pantalla lo oye por este `aria-label`.
-    retryBlockedAria: 'Reintentar (no disponible todavía)',
-  },
-  cardSelector: {
-    searchLabel: 'Buscar',
-    searchAria: (title: string) => `${title} buscador`,
-    cardsAria: (title: string) => `${title} cards`,
-  },
-  gateway: {
-    actionsAria: 'Acciones principales social',
-    progressAria: 'Progreso de configuración social',
-    stepsAria: 'Pasos de configuración social',
-    stateAria: 'Estado de configuración social',
-    flowAria: 'Flujo social',
-    lead: 'Configura tu espacio social en tres pasos: conecta GitHub, valida con Google y crea tu espacio social.',
-    stepCaption: (current: number, total: number) => `Paso actual: ${current} de ${total}`,
-    progress: (value: number) => `${value}% completado`,
-    connectSync: 'Ir a Sincronización',
-    signIn: 'Continuar con Google',
-    signingIn: 'Validando identidad...',
-    resolveProfile: 'Comprobando perfil social...',
-    createGist: 'Crear espacio social',
-    creatingGist: 'Creando espacio social...',
-    enterSocial: 'Entrar a la actividad',
-    signOut: 'Cerrar sesión',
-    syncRequired: 'Activa primero la sincronización principal con GitHub para habilitar el espacio social.',
-    signInRequired: 'Tu sincronización principal está activa. Continúa con Google para validar tu perfil social.',
-    gistRequired: 'Se ha verificado Firestore. Si no existe gist social asociado, crea un espacio social nuevo.',
-    gistReadySignIn: 'Ya tienes gist social enlazado. Inicia sesión con Google para acceder a la actividad.',
-    gistMissing: 'Aún no hay gist social enlazado.',
-    detailsSummary: 'Ver estado técnico',
-    stateSync: 'Sincronización',
-    stateGist: 'Espacio social',
-    stateSession: 'Sesión Google',
-    stateConnected: 'Conectada a GitHub',
-    stateNotConnected: 'No conectada',
-    stateLinked: 'Enlazado',
-    stateNotLinked: 'No enlazado',
-    stateActive: 'Activa',
-    stateNotStarted: 'No iniciada',
-    flow: ['1. GitHub', '2. Google', '3. Espacio social', '4. Actividad'],
-  },
-  feed: {
-    sectionAria: 'Social',
-    title: 'Actividad social',
-    subtitle: 'Descubre perfiles públicos, análisis y recomendaciones destacadas de otros jugadores.',
-    actionsAria: 'Acciones de la actividad',
-    activityListAria: 'Actividad social',
-    toolbarAria: 'Búsqueda y filtros de la actividad',
-    feedRowAria: 'Actividad social',
-    profile: 'Editar mi perfil',
-    openProfiles: 'Ver perfiles',
-    openOwnProfile: 'Ver mi perfil',
-    openRequests: 'Solicitudes',
-    openRequestsAria: (count: number) =>
-      count > 0 ? `Solicitudes de amistad, ${count} pendiente${count === 1 ? '' : 's'}` : 'Solicitudes de amistad',
-    refresh: 'Actualizar',
-    refreshing: 'Actualizando...',
-    signOut: 'Cerrar sesión',
-    statsProfiles: 'Perfiles visibles',
-    statsActivities: 'Eventos de actividad',
-    sectionTitle: 'Actividad de perfiles',
-    activityTitle: 'Actividad',
-    postsTitle: 'Publicaciones',
-    postComposerLabel: 'Comparte una noticia o un enlace',
-    postPlaceholder: 'Comparte una noticia o un enlace…',
-    postPublish: 'Publicar',
-    postPublishing: 'Publicando...',
-    // Cupo por rango. El contador replica el de las reseñas (conteo visible + aviso solo en los umbrales).
-    postCharCount: (count: number, max: number) => `${count.toLocaleString()} / ${max.toLocaleString()} caracteres`,
-    postCharNearLimit: 'Te acercas al límite de caracteres de la publicación.',
-    postCharLimitReached: 'Has alcanzado el límite de caracteres de la publicación.',
-    postSharedFileHint: 'Pega la URL directa de la imagen (clic derecho → «Copiar la URL de la imagen») para verla incrustada.',
-    // Recorte de publicaciones largas en el feed: el cupo por rango llega a 100.000 caracteres, y sin recorte una
-    // sola publicación ocupa el feed entero. Nada se pierde: se despliega en la propia tarjeta.
-    postExpand: 'Ver más',
-    postCollapse: 'Ver menos',
-    postedAt: (date: Date) =>
-      `Publicado el ${date.toLocaleDateString('es-ES', { day: '2-digit' })} de ${date.toLocaleDateString('es-ES', { month: 'long' })} a las ${date.toLocaleTimeString('es-ES', { hour: 'numeric', minute: '2-digit' })}`,
-    loading: 'Cargando actividad...',
-    empty: 'No hay perfiles visibles todavía o faltan permisos de lectura en Firestore.',
-    activityEmpty: 'Aún no hay actividad de análisis para mostrar.',
-    activityEmptyNoFriends: 'Tu feed muestra la actividad de tus amigos. Descubre perfiles y añade amigos para empezar a ver sus análisis y publicaciones.',
-    discoverFriends: 'Descubre y añade amigos',
-    openActivityAria: (name: string, gameName: string) => `Abrir detalle de actividad de ${name} sobre ${gameName}`,
-    openProfileAria: (name: string) => `Abrir perfil social de ${name}`,
-    analyzedRecently: 'Analizado recientemente',
-    feedLoadMore: 'Mostrar más',
-    analyzedAt: (date: Date) =>
-      `Analizado el ${date.toLocaleDateString('es-ES', { day: '2-digit' })} de ${date.toLocaleDateString('es-ES', { month: 'long' })} a las ${date.toLocaleTimeString('es-ES', { hour: 'numeric', minute: '2-digit' })}`,
-    reviewHeadline: (gameName: string) => `Analizó ${gameName}`,
-    reviewEmpty: 'Sin comentario adicional en el análisis.',
-    showMore: 'Más',
-    viewDetail: 'Ver detalle',
-    detailTitle: 'Detalle de actividad social',
-    detailSubtitle: 'Contenido completo del análisis seleccionado.',
-    detailActionsAria: 'Acciones del detalle social',
-    detailMissing: 'No se encontró la actividad solicitada o ya no está disponible.',
-    metadataPlatforms: 'Plataformas:',
-    metadataGenres: 'Géneros:',
-    metadataStrengths: 'Puntos fuertes:',
-    metadataWeaknesses: 'Puntos débiles:',
-    profileDetailTitle: 'Detalle de perfil social',
-    profileDetailSubtitle: 'Vista pública del perfil seleccionado.',
-    profileDetailActionsAria: 'Acciones del detalle de perfil social',
-    profileDetailMissing: 'No se encontró el perfil solicitado o ya no está disponible.',
-    profileListsTitle: 'Juegos',
-    roulettePick: 'Elige tu próximo juego',
-    profileListsEmpty: 'Este perfil no ha publicado listados todavía.',
-    profileFriendsOnly: 'Hazte amigo de este jugador para ver sus reseñas, listados y recomendaciones.',
-    profileFriendsOnlyTitle: 'Perfil de amigos',
-    gameFilterPlaceholder: 'Filtrar por título…',
-    gameFilterEmpty: 'Ningún juego coincide con la búsqueda.',
-    profileDetailRefresh: 'Actualizar listados',
-    profileDetailRefreshing: 'Actualizando…',
-    reviewsButton: 'Reseñas',
-    reviewsBack: 'Ver perfil',
-    reviewsTitle: 'Reseñas',
-    reviewsEmptyProfile: 'Este perfil no ha publicado reseñas todavía.',
-    reviewExpand: 'Ver más',
-    reviewCollapse: 'Ver menos',
-    reviewOpenAria: (gameName: string) => `Abrir la reseña de ${gameName}`,
-    reviewDetailTitle: 'Reseña',
-    reviewDetailSubtitle: 'Análisis completo de este juego.',
-    reviewsBackToList: 'Volver a las reseñas',
-    profileListTabCompleted: 'Completados',
-    profileListTabVisited: 'Abandonados',
-    profileListTabPlaying: 'En curso',
-    profileListTabPlanned: 'Próximos',
-    backToFeed: 'Volver a la actividad',
-    searchLabel: 'Buscar perfiles',
-    searchPlaceholder: 'Buscar por nombre, email o juego',
-    filterAll: 'Todos',
-    resultCount: (count: number) => `${count} perfiles visibles`,
-  },
-  profiles: {
-    sectionAria: 'Perfiles sociales',
-    title: 'Perfiles',
-    subtitle: 'Descubre perfiles públicos de otros jugadores.',
-    actionsAria: 'Acciones de la pantalla de perfiles',
-    toolbarAria: 'Filtro de perfiles por nombre',
-    rowAria: 'Perfiles públicos',
-    back: 'Volver a la actividad',
-    refresh: 'Actualizar',
-    refreshing: 'Actualizando...',
-    searchLabel: 'Buscar por nombre',
-    searchPlaceholder: 'Filtrar perfiles por nombre',
-    resultCount: (count: number) => `${count} perfiles visibles`,
-    loading: 'Cargando perfiles...',
-    empty: 'No hay perfiles visibles todavía o faltan permisos de lectura en Firestore.',
-    openProfileAria: (name: string) => `Abrir perfil social de ${name}`,
-    friendsTitle: 'Amigos',
-    othersTitle: 'Descubrir',
-    // El recuento por sección se muestra porque con muchos amigos es la única forma de saber a qué te enfrentas
-    // antes de empezar a bajar: la rejilla, al no tener scroll propio, no da ninguna pista de su tamaño.
-    sectionLabel: (title: string, count: number) => `${title} · ${count}`,
-    sectionGroupAria: (title: string, count: number) => `${title}: ${count} perfiles`,
-    // Paginación: se muestra cuánto queda, no solo que hay más. "Mostrar más" a secas obliga a pulsar para
-    // averiguar si quedan 3 o 300.
-    showMore: (remaining: number) => `Mostrar más (quedan ${remaining})`,
-    friendsEmpty: 'Aún no tienes amigos. Envía una petición desde la lista de abajo.',
-    othersEmpty: 'No hay más perfiles que mostrar.',
-  },
-  requests: {
-    sectionAria: 'Solicitudes de amistad',
-    title: 'Solicitudes de amistad',
-    subtitle: 'Gestiona las peticiones que recibes y las que has enviado.',
-    actionsAria: 'Acciones de solicitudes de amistad',
-    back: 'Volver a la actividad',
-    incomingTitle: 'Recibidas',
-    outgoingTitle: 'Enviadas',
-    friendsTitle: 'Amigos',
-    incomingEmpty: 'No tienes peticiones de amistad pendientes.',
-    outgoingEmpty: 'No has enviado peticiones pendientes.',
-    friendsEmpty: 'Aún no tienes amigos. Envía peticiones desde Perfiles.',
-    loading: 'Cargando solicitudes...',
-    accept: 'Aceptar',
-    reject: 'Rechazar',
-    cancel: 'Cancelar',
-    remove: 'Dejar de ser amigos',
-    acceptAria: (name: string) => `Aceptar la petición de ${name}`,
-    rejectAria: (name: string) => `Rechazar la petición de ${name}`,
-    cancelAria: (name: string) => `Cancelar la petición enviada a ${name}`,
-    removeAria: (name: string) => `Dejar de ser amigo de ${name}`,
-    unknownUser: 'Usuario',
-  },
-  friendship: {
-    add: 'Añadir amigo',
-    accept: 'Aceptar',
-    pending: 'Pendiente',
-    friends: 'Amigos',
-    remove: 'Dejar de ser amigos',
-    addAria: (name: string) => `Enviar petición de amistad a ${name}`,
-    acceptAria: (name: string) => `Aceptar la petición de ${name}`,
-    cancelAria: (name: string) => `Cancelar la petición enviada a ${name}`,
-    removeAria: (name: string) => `Dejar de ser amigo de ${name}`,
-    removeConfirmTitle: (name: string) => `¿Dejar de ser amigo de ${name}?`,
-    removeConfirmAction: 'Dejar de ser amigos',
-  },
-  profile: {
-    sectionAria: 'Social',
-    actionsAria: 'Acciones del perfil social',
-    title: 'Mi perfil social',
-    subtitle: 'Define tu identidad pública y mantén tu perfil sincronizado.',
-    toFeed: 'Ir a la actividad',
-    save: 'Guardar perfil',
-    saving: 'Guardando perfil...',
-    signOut: 'Cerrar sesión',
-    statusSynced: 'Sincronizado',
-    statusUnpublished: 'Sin publicar',
-    identityTitle: 'Identidad visible',
-    identityDescription: 'Este nombre se mostrará en la actividad social y en análisis compartidos.',
-    nameLabel: 'Nombre social',
-    namePlaceholder: 'Escribe tu nombre visible',
-    needsCompletedGames: 'Necesitas al menos un juego completado en tus listas para poder crear tu perfil social.',
-    privacyTitle: 'Privacidad',
-    privacyLabel: 'Perfil privado',
-    privacyPrivate: 'Tu perfil es privado. Solo usuarios autorizados podrán verlo.',
-    privacyPublic: 'Tu perfil es público. Otros usuarios podrán encontrarte por email.',
-    hydrating: 'Cargando datos de perfil desde gist social...',
-    visibilityTitle: 'Visibilidad del perfil',
-    visibilityDescription: 'Configura qué partes de tus listados se comparten públicamente en el detalle social.',
-    hideListSectionTitle: 'Ocultar listados',
-    hideVisitedList: 'Ocultar lista de abandonados',
-    hidePlayingList: 'Ocultar lista de en curso',
-    hidePlannedList: 'Ocultar lista de próximos',
-    hideFieldSectionTitle: 'Ocultar campos',
-    hideReplayableField: 'Rejugar',
-    hideRetryField: 'Dar otra oportunidad',
-    hideGameTimeField: 'Tiempo jugado',
-    photoSectionTitle: 'Foto de perfil',
-    showPhotoField: 'Mostrar mi foto de perfil',
-    // Por qué el interruptor está apagado y bloqueado. Una línea: el estado del interruptor ya dice lo demás, y la
-    // consecuencia (nadie le ve la cara, y por reciprocidad él tampoco) no necesita explicarse aquí.
-    photoMissingInGoogle: 'Tu cuenta no tiene foto.',
-    // El caso de quien NUNCA subió una: Google le pone su inicial en un círculo de color. La cuenta tiene imagen,
-    // así que decirle "no tienes foto" sonaría a error de la app; lo que hay que decirle es que eso no es una foto.
-    photoIsGoogleDefault: 'La imagen de tu cuenta es la inicial que genera Google, no una foto.',
-  },
-  status: {
-    needMainSync: 'Activa la sincronización principal para continuar.',
-    needGoogleBeforeCreate: 'Inicia sesión con Google para continuar.',
-    gistLinkedFromFirestore: 'Tu espacio social quedó vinculado automáticamente.',
-    gistNotFoundCreated: 'Tu espacio social se creó correctamente.',
-    signInAndLinked: 'Sesión iniciada correctamente.',
-    profileMissing: 'Completa tu perfil para empezar en la actividad social.',
-    profileSaved: 'Perfil social guardado correctamente.',
-    signOut: 'Sesión social cerrada.',
-    invalidSaveContext: 'No se pudo guardar ahora mismo. Inténtalo de nuevo.',
-    missingSocialToken: 'No se pudo cargar tu espacio social. Vuelve a intentarlo.',
-    firestoreCheckFailed: 'No se pudo verificar tu perfil social.',
-    createGistFailed: 'No se pudo crear tu espacio social.',
-    signInFailed: 'No se pudo iniciar sesión con Google.',
-    loadProfileFailed: 'No se pudo cargar tu perfil social.',
-    saveProfileFailed: 'No se pudo guardar tu perfil social.',
-    profileIncomplete: 'Para guardar tu perfil necesitas un nombre y al menos un juego completado.',
-    // Fallo por credencial al leer el canal de un amigo: no es que no haya publicado, es que el token no vale.
-    socialReadUnauthorized: 'No se pudo leer la actividad de alguna de tus amistades: tu conexión con GitHub ha caducado. Vuelve a conectarla en Ajustes.',
-    // Migración del canal a gist secreto, con retirada del antiguo (ver condiciones de uso).
-    socialGistMigrated: 'Tu canal social se ha movido a un Gist no listado y se ha retirado el anterior, que era público. Tus reseñas y publicaciones siguen intactas.',
-    // El clon no pasó la verificación: se conservan LOS DOS. Mejor dos gists que ninguno.
-    socialGistMigratedKept: 'Tu canal social se ha movido a un Gist no listado, pero el anterior no se ha podido retirar y sigue siendo público. Puedes borrarlo tú en gist.github.com.',
-    socialGistTooLarge: 'Tu canal social es demasiado grande para moverlo automáticamente y sigue siendo público. Escríbenos y lo migramos a mano.',
-    postPublished: 'Publicación compartida.',
-    postPublishFailed: 'No se pudo compartir la publicación.',
-    profileGamesRefreshFailed: 'No se pudieron actualizar los listados de este perfil.',
-    refreshThrottled: 'Espera unos segundos antes de volver a actualizar.',
-    friendRequestSent: 'Petición de amistad enviada.',
-    friendRequestAccepted: 'Ahora sois amigos.',
-    friendRequestCanceled: 'Petición cancelada.',
-    friendRequestRejected: 'Petición rechazada.',
-    friendRemoved: 'Amistad eliminada.',
-    friendActionFailed: 'No se pudo completar la acción. Inténtalo de nuevo.',
-  },
-  steps: [
-    { id: 'sync', title: 'GitHub', subtitle: 'Conectar' },
-    { id: 'google', title: 'Google', subtitle: 'Validar' },
-    { id: 'gist', title: 'Espacio social', subtitle: 'Crear' },
-  ],
-} as const;
-
-/** Tipo de los textos de la UI social; usar en los componentes en lugar de `any`. */
-export type SocialUiLabels = typeof SOCIAL_UI;
 
 /**
  * Compartir una reseña con enlace público (ver docs/plan-compartir-resenas.md).
@@ -1527,7 +1289,11 @@ export const SHARE_UI = {
 
 /** Moderación de enlaces compartidos, dentro de la ficha de cada usuario en `/admin` (ver §6 del plan). */
 export const ADMIN_SHARES_UI = {
-  toggle: (count: number) => (count === 1 ? 'Enlace compartido (1)' : `Enlaces compartidos (${count})`),
+  // Con la cuota al lado: la pregunta al mirar esta sección no es cuántos tiene, sino si le queda sitio. Antes
+  // había que desplegar, contarlos y acordarse de qué da su rango.
+  toggle: (active: number, max: number) => `Enlaces compartidos (${active} de ${max})`,
+  /** Sin hueco libre. No es un problema —la cuota funciona—, pero explica que no pueda compartir nada más. */
+  full: 'Sin cupo libre',
   bannedBadge: 'Vetado para compartir',
   empty: 'No tiene enlaces activos.',
   open: 'Ver la página',
@@ -1537,14 +1303,26 @@ export const ADMIN_SHARES_UI = {
   purgeLabel: 'Retirar también sus enlaces activos',
   ban: 'Vetar para compartir',
   unban: 'Levantar el veto',
-  quotaMaxLabel: 'Enlaces activos (0 = sin cambio)',
-  quotaDaysLabel: 'Días de duración (0 = sin cambio)',
+  // Cuota individual. Los campos llegan CON la cuota que el usuario tiene ahora mismo, no a cero: a cero no se
+  // podía saber qué se estaba cambiando ni desde qué valor, y "0 = sin cambio" obligaba a recordar una convención
+  // para no tocar el otro campo. Ahora se edita lo que hay, y para quitar el ajuste hay un botón que lo dice.
+  quotaTitle: 'Cuota de enlaces',
+  quotaMaxLabel: 'Reseñas compartidas a la vez',
+  quotaDaysLabel: 'Días de duración',
+  /** Tope del campo: el que da SU rango. Para darle más, se le sube el rango — que es lo que significa el rango. */
+  quotaCeiling: (max: number, tier: string) => `Máx. ${max} (${tier})`,
+  quotaFromTier: (tier: string) => `Es la cuota de su rango (${tier}).`,
+  quotaFromOverride: 'Tiene un ajuste individual: no sigue la cuota de su rango.',
+  quotaOverLimit: (max: number, tier: string) => `El máximo de ${tier} es ${max}: para darle más, súbele el rango.`,
+  quotaClear: 'Volver a la cuota de su rango',
   quota: 'Aplicar cuota',
   confirmRemove: (gameName: string) => `Retirar el enlace de «${gameName}»`,
   confirmBan: 'Vetar a este usuario (sus enlaces actuales seguirán activos)',
   confirmBanPurge: 'Vetar a este usuario Y retirar todos sus enlaces',
   confirmUnban: 'Levantar el veto de este usuario',
-  confirmQuota: 'Ajustar la cuota de enlaces de este usuario',
+  // Con los valores a la vista: es lo que se va a escribir, y el campo venía relleno con otra cosa.
+  confirmQuota: (maxActive: number, ttlDays: number) =>
+    `Dejar la cuota de este usuario en ${maxActive} ${maxActive === 1 ? 'reseña compartida' : 'reseñas compartidas'} a la vez y ${ttlDays} ${ttlDays === 1 ? 'día' : 'días'} de duración`,
   confirmQuotaClear: 'Devolver a este usuario la cuota de su rango',
   removed: 'Enlace retirado.',
   banned: (purged: number) => (purged > 0 ? `Usuario vetado y ${purged} enlace(s) retirado(s).` : 'Usuario vetado.'),

@@ -331,8 +331,9 @@ export const StatsPanel = memo(function StatsPanel({
         ) : null}
 
 
-        {/* La constancia sale de fechas PRIVADAS (`enteredAt`, `reviewedAt`) que no viajan por el canal social:
-            solo se monta con los datos completos, es decir, en tu propio panel. */}
+        {/* La constancia sale de fechas PRIVADAS (`enteredAt`, `reviewedAt`) cuyos campos no viajan por el canal
+            social: solo se monta con los datos completos, es decir, en tu propio panel. Los movimientos que el
+            canal publica desde F4 no bastan (proyección recortada, ver `friendStats`). */}
         {has('activity') && full && (own || stats.activity.active > 0) ? (
           <div className="stats-card stats-card-half">
             <h2>{L.activity.title}</h2>

@@ -1,7 +1,8 @@
 ﻿import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Icon } from '../Icon';
 import { GameTable } from '../GameTable';
-import { UI_MESSAGES, type SocialUiLabels } from '../../../core/constants/labels';
+import { UI_MESSAGES } from '../../../core/constants/labels';
+import { type SocialUiLabels } from '../../../core/constants/socialLabels';
 import { HubStatus } from './HubStatus';
 import { HubBackButton } from './HubBackButton';
 import { HubAvatar } from './HubAvatar';

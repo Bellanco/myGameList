@@ -31,6 +31,10 @@ export function applyProfileVisibility(
      * a qué horas usa la app y qué días juega. El canal social ya los tiene prohibidos, pero el gist de LISTADOS
      * —que una amistad sí baja para ver su perfil— los llevaba, y ese es el mismo dato por otra puerta. Aquí, que
      * es donde se recorta lo que no debe verse de otra persona, se van.
+     *
+     * Y siguen yéndose después de F4, que publica la actividad de listas: lo que se publica allí es una
+     * proyección acotada y declarada (la primera entrada a cada lista, nunca las ocultas), no el registro
+     * completo. Dejar pasar el campo aquí daría el historial entero, que es otra cosa.
      */
     delete next.enteredAt;
     delete next.gradedAt;

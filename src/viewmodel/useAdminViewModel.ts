@@ -60,6 +60,9 @@ export function useAdminViewModel() {
   const [error, setError] = useState('');
   const [status, setStatus] = useState<AdminStatus>(null);
   const [search, setSearch] = useState('');
+  // Filtro de atención: deja solo los perfiles con alguna señal. El censo crece y la búsqueda por texto no sirve
+  // para la pregunta que se hace al abrir el panel, que no es "¿dónde está fulano?" sino "¿hay algo que mirar hoy?".
+  const [onlyFlagged, setOnlyFlagged] = useState(false);
   const [busyId, setBusyId] = useState('');
   const mountedRef = useRef(true);
 
@@ -273,8 +276,11 @@ export function useAdminViewModel() {
   );
 
   const users = useMemo(
-    () => (census?.users || []).filter((user) => matchesSearch(user, search)),
-    [census, search],
+    () =>
+      (census?.users || []).filter(
+        (user) => matchesSearch(user, search) && (!onlyFlagged || user.anomalies.length > 0),
+      ),
+    [census, search, onlyFlagged],
   );
 
   return {
@@ -287,6 +293,8 @@ export function useAdminViewModel() {
     status,
     search,
     setSearch,
+    onlyFlagged,
+    setOnlyFlagged,
     busyId,
     refresh,
     changeTier,

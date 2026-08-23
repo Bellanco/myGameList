@@ -2,6 +2,7 @@ import { TAB_IDS, type DeletedItem, type GameItem, type StoragePayload, type Tab
 import type { LocalMeta, SyncOp } from '../types/local';
 import type { SocialActivityEntry } from './socialGistRepository';
 import { DELETED_STORE, GAMES_STORE, META_STORE, PROFILE_CACHE_STORE, SYNC_QUEUE_STORE, openSharedDatabase } from './idbConnectionRepository';
+import { isOffline } from '../../core/utils/network';
 
 const STORE_NAME = 'appState';
 const STATE_KEY = 'latest';
@@ -560,8 +561,10 @@ const SOCIAL_DIRECTORY_KEY_PREFIX = '__dir__:';
  *   1 = sin versión (implícita).
  *   2 = actividad por perfil hasta 320 entradas (antes 40).
  *   3 = cada entrada trae `tier` (punto de rango en las tarjetas del directorio).
+ *   4 = F4: cada entrada trae `moves` (mensajes de lista). Sin subirla, quien tuviera caché fresca no vería
+ *       ningún movimiento hasta 30 minutos después, y sin forma de forzarlo desde la interfaz.
  */
-const SOCIAL_DIRECTORY_CACHE_VERSION = 3;
+const SOCIAL_DIRECTORY_CACHE_VERSION = 4;
 
 interface CachedSocialDirectory<T> {
   profileId: string; // keyPath del store
@@ -577,13 +580,20 @@ interface CachedSocialDirectory<T> {
 export async function getCachedSocialDirectory<T>(
   ownGistId: string,
   ttlMs: number = SOCIAL_DIRECTORY_TTL_MS,
+  options?: { allowExpired?: boolean },
 ): Promise<T[] | null> {
   if (!ownGistId) return null;
   try {
     const rec = await idbGet<CachedSocialDirectory<T>>(PROFILE_CACHE_STORE, SOCIAL_DIRECTORY_KEY_PREFIX + ownGistId);
     if (!rec) return null;
     if (rec.version !== SOCIAL_DIRECTORY_CACHE_VERSION) return null;
-    if (Date.now() - rec.cachedAt >= Math.max(0, ttlMs)) return null;
+    // SIN RED el TTL no se aplica: caducar la caché solo tiene sentido si hay a dónde ir a por algo más nuevo.
+    // Offline, la alternativa a servir el directorio de hace una hora es un feed vacío con un error de red, así
+    // que se sirve lo que haya y la interfaz avisa de que es lo último guardado (`SOCIAL_UI.offline`). La versión
+    // de FORMA de arriba sigue invalidando: eso no es rancio, es ilegible.
+    // `allowExpired` es la otra mitad de lo mismo: `navigator.onLine` puede decir que hay red y no haberla (wifi
+    // sin salida, portal cautivo), y en ese caso quien se come el fallo es el llamador, que pide la caché igual.
+    if (!options?.allowExpired && !isOffline() && Date.now() - rec.cachedAt >= Math.max(0, ttlMs)) return null;
     return rec.entries;
   } catch {
     return null;
@@ -641,12 +651,17 @@ interface CachedSocialProfile extends CachedSocialProfileData {
   cachedAt: number;
 }
 
-export async function getCachedSocialProfile(ownGistId: string): Promise<CachedSocialProfileData | null> {
+export async function getCachedSocialProfile(
+  ownGistId: string,
+  options?: { allowExpired?: boolean },
+): Promise<CachedSocialProfileData | null> {
   if (!ownGistId) return null;
   try {
     const rec = await idbGet<CachedSocialProfile>(PROFILE_CACHE_STORE, SOCIAL_PROFILE_KEY_PREFIX + ownGistId);
     if (!rec) return null;
-    if (Date.now() - rec.cachedAt >= SOCIAL_PROFILE_TTL_MS) return null;
+    // Mismo criterio que el directorio: sin red, la caché caducada es lo único que hay, y con ella el espacio
+    // social ABRE (perfil, visibilidad y actividad propia) en lugar de fallar al leer el gist.
+    if (!options?.allowExpired && !isOffline() && Date.now() - rec.cachedAt >= SOCIAL_PROFILE_TTL_MS) return null;
     return {
       name: rec.name,
       hiddenTabs: rec.hiddenTabs,

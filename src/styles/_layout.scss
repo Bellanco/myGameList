@@ -751,6 +751,30 @@
   margin-top: .4rem;
 }
 
+// Aviso de SIN CONEXIÓN del espacio social. Mismo lenguaje que el requisito de alta del perfil
+// (`.hub-profile-requirement`): banda ámbar de aviso, borde fino y dos líneas con distinto peso —el guiño del tema
+// y, debajo, qué está pasando—. No es un error, así que no toma el rojo; y la forma (radio, color, tipografía) sale
+// de las variables, que es lo que cada tema redefine.
+.hub-offline {
+  margin: 0;
+  padding: .6rem .75rem;
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--warn) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--warn) 34%, transparent);
+}
+.hub-offline-lead {
+  margin: 0;
+  display: flex; align-items: center; gap: .45rem;
+  font-weight: 700;
+  color: var(--fg-amber);
+}
+.hub-offline-lead .ui-icon { flex: 0 0 auto; }
+.hub-offline-body {
+  margin: .25rem 0 0;
+  font-size: .82rem;
+  color: var(--text-muted);
+}
+
 // Estado vacío del feed (sin amigos): mensaje + CTA para descubrir perfiles.
 .hub-feed-empty {
   display: flex;
@@ -1708,6 +1732,77 @@ button.hub-chip.active {
 .hub-feed-activity-item.is-review { border-left-color: var(--steam); }
 .hub-feed-activity-item.is-recommendation { border-left-color: var(--success); }
 .hub-feed-activity-item.is-post { border-left-color: var(--text-muted); cursor: default; }
+/* F4 — MOVIMIENTO DE LISTA: la tarjeta más callada del feed, y a propósito.
+   Un renglón —quién, qué hizo, con qué juego, a qué hora— en una burbuja que conserva la silueta de las demás
+   pero renuncia a todo lo que reclama atención: el lomo va en el gris del borde (el color queda reservado a lo
+   que alguien ESCRIBIÓ, reseñas y publicaciones), no hay realce al pasar por encima y el aire se aprieta. Lo que
+   la distingue de una reseña no es el color, es cuánto ocupa. */
+.hub-feed-activity-item.is-move {
+  border-left-color: var(--border);
+  cursor: default;
+  flex-direction: row;
+  align-items: center;
+  gap: .5rem;
+  padding: .5rem .75rem;
+  /* El ancho lo hereda de `.hub-feed-activity-item`: el MISMO que las reseñas y las publicaciones. Se probó que
+     abrazara el texto (`fit-content`) y quedaba descartado: el feed es una columna de burbujas alineadas, y una
+     que mide distinto a cada línea rompe esa rejilla. Lo que hace ligero a este mensaje es su altura y su color,
+     no su anchura. */
+}
+
+/* El renglón. Un `p` con elementos EN LÍNEA, no una fila de flex: así el texto fluye y parte por donde tenga que
+   partir en una pantalla estrecha, en vez de empujar la hora fuera de la burbuja. */
+.hub-feed-move-line {
+  flex: 1 1 auto;
+  min-width: 0;
+  margin: 0;
+  font-size: .84rem;
+  line-height: 1.35;
+  color: var(--text-muted);
+}
+/* Autor: el mismo azul de enlace que en el resto del feed, un punto menos de cuerpo. */
+.hub-feed-move-who { font-weight: 700; color: var(--steam-hover); }
+.hub-feed-move-verb { color: var(--text-muted); }
+
+/* NOMBRE DEL JUEGO. Es lo único de la tarjeta que puede llevar a algún sitio, así que se distingue por COLOR y
+   peso —no por cápsula ni subrayado permanente, que es justo lo que hacía que gritara—. El subrayado aparece al
+   pasar por encima, que es donde hace falta la promesa de «esto se pulsa». */
+.hub-feed-move-game {
+  display: inline;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-weight: 600;
+  /* El acento de la paleta, rebajado hacia el gris del texto: así el enlace lleva el MATIZ del tema —azul en el
+     clásico, rojo en Persona, verde en Grimdark— sin el brillo pleno del acento, que es lo que gritaba. Se mezcla
+     y no se usa `--hub-text-muted` porque en varias paletas ese token y `--text-muted` son casi el mismo gris, y
+     entonces el nombre pulsable y el que no lo es se volvían indistinguibles. */
+  color: color-mix(in srgb, var(--steam) 62%, var(--text-muted));
+  cursor: pointer;
+  text-align: left;
+  text-underline-offset: .18em;
+}
+.hub-feed-move-game:hover { color: var(--steam-hover); text-decoration: underline; }
+.hub-feed-move-game:focus-visible {
+  outline: 2px solid var(--steam);
+  outline-offset: 2px;
+  border-radius: .2rem;
+}
+/* Sin reseña detrás no hay nada que abrir: el nombre se queda en el color del propio renglón y se distingue solo
+   por el peso. Antes iba en `--text` (casi blanco) y acababa BRILLANDO MÁS que el que sí es enlace, que es
+   exactamente la señal contraria a la que hay que dar. */
+.hub-feed-move-game.is-plain { color: var(--text-muted); cursor: default; }
+.hub-feed-move-game.is-plain:hover { color: var(--text-muted); text-decoration: none; }
+
+/* La hora, al final del renglón. Clase propia y NO `hub-feed-date`: varias paletas convierten esa clase en una
+   cápsula o le cuelgan un prefijo («//», «>»), y aquí tiene que ser el dato más pequeño de la línea. */
+.hub-feed-move-hour {
+  font-size: .72rem;
+  color: var(--text-dim);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
 
 /* "Tuyo" = a la derecha, con leve tinte; ajeno = a la izquierda, superficie plana */
 .hub-feed-activity-item.is-own-activity {
@@ -1715,8 +1810,10 @@ button.hub-chip.active {
   background: var(--steam-soft);
 }
 
-.hub-feed-activity-item:not(.is-post):hover,
-.hub-feed-activity-item:not(.is-post):focus-visible {
+/* El realce de "esto se puede pulsar" queda para lo que de verdad abre algo: ni las publicaciones ni los
+   movimientos de lista llevan a ninguna parte. */
+.hub-feed-activity-item:not(.is-post):not(.is-move):hover,
+.hub-feed-activity-item:not(.is-post):not(.is-move):focus-visible {
   transform: translateY(-1px);
   border-color: var(--steam);
   border-left-color: var(--steam);
@@ -1811,6 +1908,12 @@ button.hub-chip.active {
   width: 4.5rem;
   height: 4.5rem;
   font-size: 1.6rem;
+}
+/* F4 — el avatar del renglón de movimiento: presente para saber de quién es, sin ser el protagonista. */
+.hub-avatar-xs {
+  width: 1.45rem;
+  height: 1.45rem;
+  font-size: .62rem;
 }
 
 /* social/profiles — hero de página de perfil: avatar grande + nombre + recuento, centrado. */

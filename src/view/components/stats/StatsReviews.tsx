@@ -1,5 +1,6 @@
 import { memo, useMemo } from 'react';
-import { SOCIAL_UI, UI_MESSAGES } from '../../../core/constants/labels';
+import { UI_MESSAGES } from '../../../core/constants/labels';
+import { SOCIAL_UI } from '../../../core/constants/socialLabels';
 import { Icon } from '../Icon';
 import { HubBackButton } from '../socialhub/HubBackButton';
 import { ProfileReviewsList, type ReviewEntry } from '../socialhub/ProfileReviewsList';

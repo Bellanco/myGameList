@@ -123,6 +123,14 @@ export const steamButtonPreference = createPreferenceStore<boolean>({
   fromCloud: onOff.fromCloud,
 });
 
+/**
+ * F4 — «de qué listas veo los movimientos». Se declara en `model/repository/feedMovePreference` y se re-exporta
+ * AQUÍ a propósito: esta re-exportación es lo que la registra en el arranque, y `hydratePreferencesFromCloud` solo
+ * hidrata lo ya declarado (la sesión de Google puede iniciarse sin abrir nunca el hub). El hub, en cambio, importa
+ * el módulo pequeño y no este, para no arrastrar las preferencias de apariencia a su chunk.
+ */
+export { feedMoveTabsPreference } from '../../model/repository/feedMovePreference';
+
 function toggleRootFlag(attribute: string, on: boolean): void {
   const root = document.documentElement;
   if (on) {

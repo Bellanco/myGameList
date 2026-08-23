@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { SocialRequestsScreen } from '../../src/view/components/socialhub/SocialRequestsScreen';
-import { SOCIAL_UI } from '../../src/core/constants/labels';
+import { SOCIAL_UI } from '../../src/core/constants/socialLabels';
 
 const baseProps = {
   SOCIAL_UI,

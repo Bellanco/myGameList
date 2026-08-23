@@ -345,6 +345,10 @@
   padding-bottom: .3rem;
 }
 
+/* El tinte de la tarjeta que lleva a otra pantalla: el ORO del códice, el mismo del sello de sus botones. El
+   fósforo verde es la tinta de los datos, no la de los mandos. */
+:root[data-palette="grimdark"] .stat-tile.is-link { --tile-go-tint: var(--grim-gold); }
+
 /* ── §N · AVATAR SIN FOTO: trazo GRUESO y de remate recto — un grabado de placa imperial, no un icono
    redondeado. Sin halo: en el cogitador la luz la da el fósforo del texto, no los adornos. ── */
 :root[data-palette="grimdark"] {
@@ -352,3 +356,20 @@
   --deco-avatar-cap: butt;
   --deco-avatar-glow: none;
 }
+/* ── F4 · Movimiento de lista: anotación de cogitador.
+   Toda tarjeta del feed lleva aquí el marco dorado con doble filete interior, que es el sello de documento
+   oficial. Una anotación de máquina no lo tiene: filete simple, sin oro, sin halo. ── */
+:root[data-palette="grimdark"] .hub-feed-activity-item.is-move {
+  border-color: var(--border) !important;
+  box-shadow: inset 0 0 0 2px var(--surface) !important;
+}
+:root[data-palette="grimdark"][data-theme="light"] .hub-feed-activity-item.is-move {
+  box-shadow: inset 0 0 0 2px var(--surface), 0 3px 10px rgba(40, 40, 30, .1) !important;
+}
+/* La hora en la pixelada de la paleta, con su cursor de terminal: el dato lo canta la máquina. */
+:root[data-palette="grimdark"] .hub-feed-move-hour {
+  font-family: 'VT323', ui-monospace, monospace;
+  font-size: .88rem;
+  color: var(--grim-green);
+}
+:root[data-palette="grimdark"] .hub-feed-move-hour::before { content: '> '; font-weight: 700; }

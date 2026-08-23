@@ -1,9 +1,11 @@
 ﻿import { Icon } from '../Icon';
 import { HubAvatar } from './HubAvatar';
-import type { SocialUiLabels } from '../../../core/constants/labels';
+import { TAB_TOOLTIPS } from '../../../core/constants/labels';
+import { type SocialUiLabels } from '../../../core/constants/socialLabels';
 import { HubStatus } from './HubStatus';
 import { HubBackButton } from './HubBackButton';
-import type { TabId } from '../../../model/types/game';
+import { TAB_IDS, type TabId } from '../../../model/types/game';
+import { useFeedMoveTabs } from '../../hooks/useFeedMoveTabs';
 
 /** Pantalla de edición de perfil social. */
 export function SocialProfileScreen({
@@ -67,6 +69,13 @@ export function SocialProfileScreen({
    */
   const hasPhotoURL = Boolean(String(ownPhotoURL || '').trim());
   const hasOwnPhoto = hasPhotoURL && !ownPhotoIsGeneric;
+
+  /**
+   * F4 — filtro de los movimientos que ve QUIEN MIRA. No entra por props ni pasa por el guardado del perfil, a
+   * propósito: no es un dato del perfil publicado, es una preferencia de este usuario (local, con réplica en su
+   * `publicConfig`), así que se lee y se escribe aquí mismo y surte efecto sin pulsar «Guardar».
+   */
+  const { moveTabs: visibleMoveTabs, toggleMoveTab } = useFeedMoveTabs();
 
   const toggleHiddenTab = (tab: TabId) => {
     if (hiddenTabs.includes(tab)) {
@@ -271,6 +280,39 @@ export function SocialProfileScreen({
                 ) : null}
               </div>
             ) : null}
+          </article>
+          {/* BLOQUE APARTE, y no una sección más del de visibilidad: aquí no se esconde nada a nadie. Lo de arriba
+              decide qué ven los demás; esto, qué ve quien lo está tocando. Mezclarlos invitaría a creer que
+              apagando estos interruptores se deja de publicar, que es exactamente lo contrario de lo que pasa. */}
+          <article className="hub-profile-block">
+            <div className="hub-block-head">
+              <span className="hub-block-step">3</span>
+              <h3>{SOCIAL_UI.profile.moveFeedTitle}</h3>
+            </div>
+            <p>{SOCIAL_UI.profile.moveFeedDescription}</p>
+
+            <div className="visibility-section">
+              <span className="visibility-label">{SOCIAL_UI.profile.moveFeedSectionTitle}</span>
+              <div className="visibility-group">
+                {TAB_IDS.map((tab) => (
+                  <label className="visibility-check" htmlFor={`hub-move-feed-${tab}`} key={tab}>
+                    <input
+                      id={`hub-move-feed-${tab}`}
+                      type="checkbox"
+                      checked={visibleMoveTabs.includes(tab)}
+                      onChange={() => toggleMoveTab(tab)}
+                    />
+                    <span className="visibility-toggle-track" aria-hidden="true">
+                      <span className="visibility-toggle-thumb" />
+                    </span>
+                    <span>{TAB_TOOLTIPS[tab]}</span>
+                  </label>
+                ))}
+              </div>
+              {visibleMoveTabs.length === 0 ? (
+                <p className="hub-profile-requirement" role="status">{SOCIAL_UI.profile.moveFeedAllOff}</p>
+              ) : null}
+            </div>
           </article>
           {hydratingProfile ? <p>{SOCIAL_UI.profile.hydrating}</p> : null}
         </div>

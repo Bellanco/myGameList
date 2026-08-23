@@ -5,7 +5,9 @@ import {
   ADMIN_ONLY_TIER,
   PROFILE_TIERS,
   PROFILE_TIER_LABELS,
+  resolveShareQuota,
   type ProfileTier,
+  type ShareQuotaOverride,
 } from '../../core/constants/tiers';
 import {
   ADMIN_PROFILES_LIMIT,
@@ -84,6 +86,53 @@ function displayNameOf(user: AdminUserRow): string {
 }
 
 /**
+ * Cuántos canales suyos hay en circulación, dicho en palabras. Sustituye a la lista de ids: con uno está sano,
+ * con más de uno hay deriva (y entonces la ficha ya trae el bloque que la explica), y los identificadores en sí
+ * no permiten hacer nada desde esta pantalla.
+ */
+function describeChannels(count: number, emptyLabel: string): string {
+  if (count === 0) {
+    return emptyLabel;
+  }
+  return count === 1 ? A.field.channelSingle : A.field.channelMany(count);
+}
+
+/**
+ * Estado de la foto, DEDUCIDO de lo que el panel puede ver.
+ *
+ * El interruptor de verdad (`showPhoto`) vive en el gist social del usuario, que estas reglas no dejan leer. Lo
+ * que sí se ve son dos hechos: si su perfil publica `photoURL` (es lo que el opt-out borra, ver
+ * `updateProfilePhoto`) y qué guardan sus amistades denormalizado de él.
+ *
+ *   - publica foto                                        → activada
+ *   - no publica, pero sus amigos guardan una suya        → la tuvo y la quitó: oculta
+ *   - no publica y sus amigos tampoco tienen ninguna suya → desactivada
+ *   - no publica y NO TIENE AMISTADES                     → sin datos
+ *
+ * El cuarto caso es el que no se puede afirmar y por eso no se afirma: sin nadie que guarde una foto suya de
+ * antes, quien apagó el interruptor se ve exactamente igual que quien nunca tuvo foto en su cuenta de Google.
+ * Llamarlo "desactivada" sería inventarse el motivo; el `title` de cada estado explica de dónde sale.
+ */
+function describePhoto(user: AdminUserRow): {
+  label: string;
+  hint: string;
+  kind: 'on' | 'hidden' | 'off' | 'unknown';
+} {
+  if (user.hasPhoto) {
+    return { label: A.field.photoOn, hint: A.field.photoOnHint, kind: 'on' };
+  }
+  if (user.friendKnownPhotos.some((known) => known.trim())) {
+    return { label: A.field.photoHidden, hint: A.field.photoHiddenHint, kind: 'hidden' };
+  }
+  // Con amistades, que ninguna guarde foto suya SÍ dice algo: no publicó ninguna desde que se hicieron amigos.
+  // El testigo son las amistades, no las fotos: `friendKnownPhotos` puede venir vacío de un amigo sin foto suya.
+  if (user.friends > 0 || user.pendingOut > 0 || user.pendingIn > 0) {
+    return { label: A.field.photoOff, hint: A.field.photoOffHint, kind: 'off' };
+  }
+  return { label: A.field.photoUnknown, hint: A.field.photoUnknownHint, kind: 'unknown' };
+}
+
+/**
  * Panel de administración (`/admin`, sin enlace en la navegación).
  *
  * Enseña el censo de perfiles sociales y permite tres cosas: suspender el social de alguien, purgarle los restos
@@ -99,6 +148,12 @@ export const AdminHub = memo(function AdminHub() {
   // petición por ficha sería absurda para un dato que cabe en una sola respuesta.
   const [sharesByUser, setSharesByUser] = useState<Record<string, AdminShareRow[]>>({});
   const [bannedUsers, setBannedUsers] = useState<Set<string>>(new Set());
+  // Ajustes individuales de cuota, por uid. Vienen en la misma respuesta que los enlaces y son lo que permite
+  // enseñar en cada ficha la cuota REAL de esa persona, y no la que le tocaría por su rango.
+  const [overridesByUser, setOverridesByUser] = useState<Record<string, ShareQuotaOverride>>({});
+  // Estado de ESA respuesta (la del Worker, no la del censo de Firestore): si no llegó, sus totales no se pintan
+  // —un cero sin datos afirmaría que no hay ningún enlace ni ningún veto—, y si vino paginada se dice.
+  const [sharesSummary, setSharesSummary] = useState<{ total: number; complete: boolean } | null>(null);
   const [notice, setNotice] = useState('');
   const noticeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -128,6 +183,8 @@ export const AdminHub = memo(function AdminHub() {
       }
       setSharesByUser(grouped);
       setBannedUsers(new Set(page.bans));
+      setOverridesByUser(page.overrides);
+      setSharesSummary({ total: page.shares.length, complete: page.complete });
     } catch {
       // Sin enlaces que enseñar, el resto del panel sigue siendo útil: no se rompe la pantalla por esto.
     }
@@ -194,6 +251,20 @@ export const AdminHub = memo(function AdminHub() {
             <div className={totals.flagged > 0 ? 'admin-total-flagged' : undefined}>
               <dt>{A.totals.flagged}</dt><dd>{totals.flagged}</dd>
             </div>
+            {/* Los dos del Worker de enlaces, solo si su respuesta llegó. */}
+            {sharesSummary ? (
+              <>
+                <div>
+                  <dt>{A.totals.activeShares}</dt>
+                  <dd title={sharesSummary.complete ? undefined : A.totals.partialHint}>
+                    {sharesSummary.complete ? sharesSummary.total : A.totals.partialCount(sharesSummary.total)}
+                  </dd>
+                </div>
+                <div className={bannedUsers.size > 0 ? 'admin-total-flagged' : undefined}>
+                  <dt>{A.totals.banned}</dt><dd>{bannedUsers.size}</dd>
+                </div>
+              </>
+            ) : null}
             {PROFILE_TIERS.map((tier) => (
               <div key={tier} className={`admin-total-tier tier-${tier}`}>
                 <dt>{PROFILE_TIER_LABELS[tier]}</dt>
@@ -213,6 +284,16 @@ export const AdminHub = memo(function AdminHub() {
               placeholder={A.searchPlaceholder}
               onChange={(event) => vm.setSearch(event.target.value)}
             />
+          </label>
+          {/* El filtro que responde a "¿hay algo que mirar hoy?". Va junto a la búsqueda porque los dos recortan
+              la misma lista, y el recuento de al lado dice cuánto queda tras aplicarlos. */}
+          <label className="admin-only-flagged">
+            <input
+              type="checkbox"
+              checked={vm.onlyFlagged}
+              onChange={(event) => vm.setOnlyFlagged(event.target.checked)}
+            />
+            <span>{A.onlyFlaggedLabel}</span>
           </label>
           <p className="admin-result-count">{A.resultCount(vm.users.length)}</p>
           <button type="button" className="btn btn-secondary" onClick={() => void vm.refresh()} disabled={vm.loading}>
@@ -237,7 +318,15 @@ export const AdminHub = memo(function AdminHub() {
           // pudo leer, y afirmar que no hay usuarios sería mentir sobre el estado del servicio.
           null
         ) : vm.users.length === 0 ? (
-          <p>{vm.census?.users.length ? A.emptyFiltered : A.empty}</p>
+          // Con el filtro de señales puesto, la lista vacía es una BUENA noticia y no un "no se encontró nada":
+          // decirlo con el texto de la búsqueda hacía dudar de si el censo se había cargado.
+          <p>
+            {!vm.census?.users.length
+              ? A.empty
+              : vm.onlyFlagged && !vm.search.trim()
+                ? A.emptyFlagged
+                : A.emptyFiltered}
+          </p>
         ) : (
           <ul className="admin-user-grid" aria-label={A.table.aria}>
             {vm.users.map((user) => {
@@ -258,6 +347,12 @@ export const AdminHub = memo(function AdminHub() {
               const photoIsStale = user.friendKnownPhotos.some((known) => known !== user.photoURL);
               // El botón de propagar solo aparece cuando hay algo que propagar de verdad.
               const identityIsStale = staleNames.length > 0 || photoIsStale;
+              // Cuota REAL de esta persona: su rango, ya resuelto con su ajuste individual si lo tiene. Es la
+              // misma función que aplica el servidor, así que la ficha no puede decir una cifra y el Worker otra.
+              const override = overridesByUser[user.uid];
+              const hasQuotaOverride = Boolean(override && (override.maxActive || override.ttlDays));
+              const quota = resolveShareQuota(user.tier, override);
+              const photoState = describePhoto(user);
 
               return (
                 <li key={user.id} className={`admin-user-card${busy ? ' is-busy' : ''}`}>
@@ -271,16 +366,18 @@ export const AdminHub = memo(function AdminHub() {
                           <em className="admin-known-as"> · {A.knownAsHint}</em>
                         ) : null}
                       </b>
-                      {/* El uid es la única identidad que queda en el cliente: se copia de un clic para
-                          buscarla en Firebase Auth, que es donde vive el correo. */}
+                      {/* El uid es la única identidad que queda en el cliente y sigue haciendo falta para
+                          buscar a alguien en Firebase Auth, que es donde vive el correo. Se COPIA, pero ya no se
+                          pinta: enseñado en cada ficha era una cadena ilegible que tapaba los datos que sí se
+                          leen, y no hay nada que se pueda hacer con él en esta pantalla. */}
                       <button
                         type="button"
                         className="admin-uid"
-                        title={A.copyUid}
-                        aria-label={`${A.copyUid}: ${user.uid}`}
+                        aria-label={A.copyUidAria(name)}
                         onClick={() => void copyUid(user.uid)}
                       >
-                        <code>{user.uid}</code>
+                        <Icon name="content-copy" />
+                        <span>{A.copyUid}</span>
                       </button>
                     </span>
                     <span className={`admin-badge ${user.socialEnabled ? 'on' : 'off'}`}>
@@ -334,6 +431,9 @@ export const AdminHub = memo(function AdminHub() {
                     uid={user.uid}
                     shares={sharesByUser[user.uid] || []}
                     banned={bannedUsers.has(user.uid)}
+                    tier={user.tier}
+                    quota={quota}
+                    hasOverride={hasQuotaOverride}
                     onConfirm={(request: ShareActionRequest) => setPending({ title: request.title, run: () => void request.run() })}
                     onRemove={(token) => runShareAction(async () => {
                       await adminRemoveShare(token);
@@ -348,17 +448,14 @@ export const AdminHub = memo(function AdminHub() {
                       return ADMIN_SHARES_UI.unbanned;
                     })}
                     onQuota={(uid, values) => runShareAction(async () => {
-                      if (values.maxActive <= 0 && values.ttlDays <= 0) {
-                        // Los dos campos a cero se leen como "quítale el ajuste": el endpoint rechaza un ajuste
-                        // vacío, así que se traduce a lo que el administrador quiere decir.
-                        await clearQuotaOverride(uid);
-                        return ADMIN_SHARES_UI.quotaCleared;
-                      }
-                      await setQuotaOverride(uid, {
-                        ...(values.maxActive > 0 ? { maxActive: values.maxActive } : {}),
-                        ...(values.ttlDays > 0 ? { ttlDays: values.ttlDays } : {}),
-                      });
+                      // Los dos valores son ABSOLUTOS y van siempre juntos: el formulario los trae rellenos, así
+                      // que "no tocar este campo" ya no necesita ninguna convención — se deja como está.
+                      await setQuotaOverride(uid, values);
                       return ADMIN_SHARES_UI.quotaSet;
+                    })}
+                    onQuotaClear={(uid) => runShareAction(async () => {
+                      await clearQuotaOverride(uid);
+                      return ADMIN_SHARES_UI.quotaCleared;
                     })}
                   />
 
@@ -381,27 +478,22 @@ export const AdminHub = memo(function AdminHub() {
                     <div><dt>{A.field.pendingIn}</dt><dd>{user.pendingIn}</dd></div>
                     {/* El id del canal ya no se publica en el perfil, así que este campo solo existe como resto
                         legacy: pintarlo siempre enseñaba un "—" a todo el mundo. El canal de alguien se ve ahora
-                        por lo que guardan sus amistades, que es el dato de abajo. */}
+                        por lo que guardan sus amistades, que es el dato de abajo. El id EN SÍ no se enseña: no se
+                        puede abrir un gist ajeno desde aquí, y lo accionable es que lo siga publicando. */}
                     {user.socialGistId ? (
-                      <div><dt>{A.field.socialGist}</dt><dd><code>{user.socialGistId}</code></dd></div>
+                      <div><dt>{A.field.socialGist}</dt><dd>{A.field.socialGistPresent}</dd></div>
                     ) : null}
+                    {/* Cuántos canales suyos hay en circulación, no cuáles: con más de uno hay deriva (y ahí sí
+                        aparece el bloque que lo explica); con uno, está sano. La lista de ids no decidía nada. */}
                     <div>
                       <dt>{A.field.friendGists}</dt>
-                      <dd>
-                        {user.friendSocialGistIds.length > 0
-                          ? user.friendSocialGistIds.map((gistId) => <code key={gistId}>{gistId}</code>)
-                          : A.field.none}
-                      </dd>
+                      <dd>{describeChannels(user.friendSocialGistIds.length, A.field.channelNone)}</dd>
                     </div>
-                    {/* El otro canal: con este id un amigo carga sus LISTAS compartidas. Vacío no es un fallo —
+                    {/* El otro canal: con él un amigo carga sus LISTAS compartidas. Vacío no es un fallo —
                         significa que no tiene la sincronización de listas configurada—, así que no lleva señal. */}
                     <div>
                       <dt>{A.field.friendGamesGists}</dt>
-                      <dd>
-                        {user.friendGamesGistIds.length > 0
-                          ? user.friendGamesGistIds.map((gistId) => <code key={gistId}>{gistId}</code>)
-                          : A.field.none}
-                      </dd>
+                      <dd>{describeChannels(user.friendGamesGistIds.length, A.field.listsNone)}</dd>
                     </div>
                     {/* Solo cuando alguno de sus amigos le ve con otro nombre: en el caso normal repetir el nick
                         que ya está arriba no aporta nada. */}
@@ -428,17 +520,20 @@ export const AdminHub = memo(function AdminHub() {
                       </div>
                     ) : null}
                     <div><dt>{A.field.etag}</dt><dd>{user.hasSocialEtag ? A.field.yes : A.field.no}</dd></div>
-                    <div><dt>{A.field.photo}</dt><dd>{user.hasPhoto ? A.field.yes : A.field.no}</dd></div>
+                    {/* Tres estados en vez de un sí/no: "no" se leía como "no tiene", cuando lo más frecuente es
+                        que la haya ocultado. Cuál de los tres es y por qué, en el `title`. */}
+                    <div>
+                      <dt>{A.field.photo}</dt>
+                      <dd className={`admin-photo-state is-${photoState.kind}`} title={photoState.hint}>
+                        {photoState.label}
+                      </dd>
+                    </div>
                     <div><dt>{A.field.schema}</dt><dd>{user.schemaVersion || A.field.none}</dd></div>
-                    {/* Solo si difiere del uid: en el caso normal repetirlo no aporta nada. */}
-                    {!user.idMatchesUid ? (
-                      <div><dt>{A.field.docId}</dt><dd><code>{user.id}</code></dd></div>
-                    ) : null}
                   </dl>
 
-                  {/* Deriva de gist: se enseñan LOS DOS ids (el que publica y el que ven sus amistades) para que
-                      la decisión sea comprobable, y se ofrece unificar. El árbitro decide con evidencia; el
-                      administrador no tiene que adivinar cuál es el bueno. */}
+                  {/* Deriva de gist: DE DÓNDE sale (su perfil, sus amistades, o las dos) y cuántos canales hay.
+                      Los ids no se enseñan porque no hay nada que decidir con ellos: la deriva la resuelve su
+                      dueño al abrir el hub, y desde aquí no hay acción posible ni con id ni sin él. */}
                   {user.anomalies.includes('gist-drift') ? (
                     <div className="admin-gist-drift" role="group" aria-label={A.gist.driftTitle}>
                       <span className="admin-field-label">{A.gist.driftTitle}</span>
@@ -448,11 +543,11 @@ export const AdminHub = memo(function AdminHub() {
                           <dt>{A.gist.profileGist}</dt>
                           {/* Lo habitual desde la purga: el perfil ya no publica id y la deriva se ve entre las
                               propias amistades. Decirlo evita leer el hueco como un dato que no se pudo cargar. */}
-                          <dd>{user.socialGistId ? <code>{user.socialGistId}</code> : A.gist.profileGistPurged}</dd>
+                          <dd>{user.socialGistId ? A.gist.profileGistOwn : A.gist.profileGistPurged}</dd>
                         </div>
                         <div>
                           <dt>{A.gist.friendGist}</dt>
-                          <dd>{user.friendSocialGistIds.map((gistId) => <code key={gistId}>{gistId}</code>)}</dd>
+                          <dd>{describeChannels(user.friendSocialGistIds.length, A.field.channelNone)}</dd>
                         </div>
                       </dl>
                     </div>
@@ -541,11 +636,10 @@ export const AdminHub = memo(function AdminHub() {
                     </div>
                   ) : null}
 
-                  {/* Cutover de identidad: el documento no vive en `profiles/{uid}`. El id actual ya sale arriba en
-                      la ficha (`Id del documento`, que solo se pinta en este caso); aquí se añade el DESTINO,
-                      porque el botón borra un documento y quien lo pulsa debe poder comprobar a dónde va. Sin uid
-                      en el documento no hay destino: el botón se bloquea con el motivo, que no es un fallo sino el
-                      turno del dueño. */}
+                  {/* Cutover de identidad: el documento no vive en `profiles/{uid}`. Lo que hace falta saber antes
+                      de pulsar no son los ids —da igual cuál sea el actual: el destino es siempre el canónico—,
+                      sino si hay destino y qué va a pasar con lo que hay allí. Sin uid en el documento no hay
+                      destino: el botón se bloquea con el motivo, que no es un fallo sino el turno del dueño. */}
                   {user.anomalies.includes('foreign-doc-id') ? (
                     <div className="admin-gist-drift" role="group" aria-label={A.cutover.title}>
                       <span className="admin-field-label">{A.cutover.title}</span>
@@ -553,7 +647,9 @@ export const AdminHub = memo(function AdminHub() {
                       <dl className="admin-user-data">
                         <div>
                           <dt>{A.cutover.targetLabel}</dt>
-                          <dd>{cutoverTargetKnown ? <code>{`profiles/${user.uid}`}</code> : A.field.none}</dd>
+                          {/* El destino es siempre `profiles/{uid}`: enseñar el id no daba nada que comprobar
+                              que no diga ya "su documento canónico". Lo que decide es la línea de abajo. */}
+                          <dd>{cutoverTargetKnown ? A.cutover.targetCanonical : A.field.none}</dd>
                         </div>
                         {/* Mover y fusionar no son la misma operación y no tienen las mismas consecuencias: quien
                             pulsa el botón debe saber cuál de las dos va a ocurrir ANTES de pulsarlo. Sale del censo
