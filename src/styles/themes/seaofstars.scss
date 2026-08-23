@@ -337,6 +337,10 @@
 :root[data-palette="seaofstars"] .polar-ring,
 :root[data-palette="seaofstars"] .genre-radar-ring { stroke: color-mix(in srgb, var(--sos-line) 30%, transparent); }
 
+/* De día la superficie de este tema es turquesa saturado y el acento dorado se pierde encima —el mismo problema
+   que tenía su avatar pequeño—: el tinte pasa al AZUL NOCHE, que es el color que aquí tiene contraste. */
+:root[data-palette="seaofstars"][data-theme="light"] .stat-tile.is-link { --tile-go-tint: var(--sos-line); }
+
 /* ── §N · AVATAR SIN FOTO: en un tema de PÍXEL el trazo no puede ir redondeado ni suavizado. Remate recto,
    grosor de "dos píxeles" y `crispEdges` para que la silueta se dibuje con el borde duro del pixel-art. ── */
 :root[data-palette="seaofstars"] {

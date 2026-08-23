@@ -149,7 +149,10 @@
 /* ── §5 · Botones HUD: angulares (esquina cortada con clip-path — planos, sin borde/sombra recortable).
    Acento = relleno AMARILLO con texto negro (firma de Cyberpunk), en ambos temas. Semánticos rellenos;
    texto tinta en OSCURO y claro en CLARO (regla 10). ── */
-:root[data-palette="cyberpunk"] .btn:not(.btn-icon):not(.btn-ghost) { font-weight: 600; letter-spacing: .05em; border: 1px solid var(--border); border-radius: 0; clip-path: polygon(0 0, 100% 0, 100% calc(100% - 9px), calc(100% - 9px) 100%, 0 100%); }
+/* La MUESCA del chaflán va por token (`--btn-notch`) y no en duro: un botón pequeño necesita una muesca
+   pequeña —a 9 px se comería un tercio de una marca de 28 px—, y así la pide quien la necesite sin que este
+   fichero sepa nada de esa pieza. El valor por defecto es el de siempre. */
+:root[data-palette="cyberpunk"] .btn:not(.btn-icon):not(.btn-ghost) { font-weight: 600; letter-spacing: .05em; border: 1px solid var(--border); border-radius: 0; clip-path: polygon(0 0, 100% 0, 100% calc(100% - var(--btn-notch, 9px)), calc(100% - var(--btn-notch, 9px)) 100%, 0 100%); }
 /* La muesca (§5) usa `clip-path`, y `clip-path` recorta el `border`/`box-shadow`/`drop-shadow` del PROPIO elemento
    (regla 2), así que la diagonal se quedaba sin filete (el borde solo se veía en los cantos rectos). Solución
    robusta e independiente del navegador (sin sombras ni filtros): DOS capas recortadas detrás del contenido —
@@ -510,6 +513,14 @@
   text-shadow: 1px 0 0 rgba(255, 42, 109, .55), -1px 0 0 rgba(0, 240, 255, .55);
 }
 :root[data-palette="cyberpunk"][data-theme="light"] .stat-tile-value { text-shadow: none; }
+
+/* La marca de la tarjeta que lleva a otra pantalla, encendida como el resto del HUD: su forma ya es la del
+   botón del tema (chaflán incluido), así que aquí solo se le pone el neón. En claro se apaga, como todos. */
+:root[data-palette="cyberpunk"] .stat-tile-go {
+  filter: drop-shadow(0 0 3px color-mix(in srgb, var(--cyber-yellow) 55%, transparent));
+}
+
+:root[data-palette="cyberpunk"][data-theme="light"] .stat-tile-go { filter: none; }
 
 /* ── §N · AVATAR SIN FOTO: trazo FINO y de remate recto, como una silueta vectorizada por la óptica Kiroshi.
    El color ya lo pone el acento de la paleta (amarillo ácido); aquí solo se ajusta la mano del dibujo. ── */

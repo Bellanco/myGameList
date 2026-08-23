@@ -434,6 +434,10 @@
 :root[data-palette="portal"] .polar-ring,
 :root[data-palette="portal"] .genre-radar-ring { stroke-dasharray: 3 4; }
 
+/* El tinte de "aquí se actúa" de la tarjeta que lleva a otra pantalla: el NARANJA DEL GEL, que es con el que
+   este tema marca eso mismo en los filetes de sus tarjetas y en sus filas. El azul se queda para los datos. */
+:root[data-palette="portal"] .stat-tile.is-link { --tile-go-tint: var(--portal-orange); }
+
 /* ── §N · AVATAR SIN FOTO: trazo FINO y limpio, el de la señalética de la cámara de pruebas (los carteles
    de Aperture son línea delgada y uniforme). ── */
 :root[data-palette="portal"] {
