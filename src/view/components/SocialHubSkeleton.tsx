@@ -1,11 +1,11 @@
-import { SOCIAL_UI } from '../../core/constants/labels';
+import { SOCIAL_SHELL } from '../../core/constants/socialShell';
 import { Icon } from './Icon';
 
 /**
  * Esqueleto de carga del hub social.
  *
  * Vive FUERA de `SocialHub` (que es `lazy`) a propósito: es el `fallback` del `Suspense` que espera a su chunk, así
- * que tiene que estar ya en el arranque. Es diminuto y solo usa piezas que la app ya carga (`Icon`, `SOCIAL_UI`).
+ * que tiene que estar ya en el arranque. Es diminuto y solo usa piezas que la app ya carga (`Icon`, `SOCIAL_SHELL`).
  *
  * Reutiliza el MISMO armazón que el feed (`hub-screen` + `hub-feed-card-shell`) y las mismas tarjetas de esqueleto
  * que `SocialFeedScreen`/`SocialProfilesScreen`, para que la transición de "cargando" a la pantalla real no mueva
@@ -14,16 +14,16 @@ import { Icon } from './Icon';
  */
 export function SocialHubSkeleton() {
   return (
-    <section className="hub-hub hub-screen" aria-label={SOCIAL_UI.screenAria}>
+    <section className="hub-hub hub-screen" aria-label={SOCIAL_SHELL.screenAria}>
       <div className="hub-hub-card hub-screen-card hub-feed-card-shell">
         <header className="hub-screen-header">
           <div className="hub-hub-title-wrap">
             <Icon name="bottom-hub" className="hub-hub-icon" />
-            <h2>{SOCIAL_UI.hubTitle}</h2>
+            <h2>{SOCIAL_SHELL.hubTitle}</h2>
           </div>
           {/* El esqueleto es decorativo (`aria-hidden`), así que la carga se anuncia por aquí o un lector de
               pantalla se quedaría sin saber que hay algo en camino. */}
-          <p className="sr-only" role="status">{SOCIAL_UI.loading}</p>
+          <p className="sr-only" role="status">{SOCIAL_SHELL.loading}</p>
         </header>
         {/* Misma anidación que el bloque de actividad del feed (`.fg > .hub-feed-activity-list`): así el salto de
             este esqueleto a la pantalla real no mueve ni el espaciado ni la posición de las tarjetas. */}

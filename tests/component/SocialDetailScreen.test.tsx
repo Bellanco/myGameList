@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { SocialDetailScreen } from '../../src/view/components/socialhub/SocialDetailScreen';
 import type { GameItem } from '../../src/model/types/game';
-import { SOCIAL_UI } from '../../src/core/constants/labels';
+import { SOCIAL_UI } from '../../src/core/constants/socialLabels';
 
 const baseEvent = {
   profileId: 'p1',

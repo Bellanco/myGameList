@@ -3,7 +3,7 @@ import { Icon } from '../Icon';
 import { StarRating } from '../StarRating';
 import { useScoreScale } from '../../hooks/useScoreScale';
 import { resolveGrade } from '../../../core/utils/scoreScale';
-import type { SocialUiLabels } from '../../../core/constants/labels';
+import type { SocialUiLabels } from '../../../core/constants/socialLabels';
 
 /** Lote inicial; se amplía por scroll infinito para no pintar cien reseñas de golpe. */
 const REVIEW_PAGE_SIZE = 8;

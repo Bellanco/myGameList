@@ -1,5 +1,6 @@
 import { memo, useEffect, useState } from 'react';
-import { SHARE_UI, SOCIAL_UI } from '../../core/constants/labels';
+import { SHARE_UI } from '../../core/constants/labels';
+import { SOCIAL_UI } from '../../core/constants/socialLabels';
 import { MetaSection } from './MetaSection';
 import { NoScoreMedal } from './NoScoreMedal';
 import { ScoreDisplay } from './ScoreDisplay';

@@ -1,8 +1,10 @@
 // Los sellos automáticos frente al CANAL SOCIAL y al panel de otra persona.
 //
 // Dos preguntas distintas y las dos importan:
-//  1. Que `enteredAt`/`gradedAt` no salgan de este aparato. Son un registro de cuándo mueves cada juego y a qué
-//     hora usas la app: describe hábitos, no una lista de juegos.
+//  1. Que los CAMPOS `enteredAt`/`gradedAt` no salgan de este aparato. Son un registro de cuándo mueves cada juego
+//     y a qué hora usas la app: describe hábitos, no una lista de juegos. Desde F4 el canal publica una
+//     PROYECCIÓN de `enteredAt` —la primera entrada a cada lista, con su fecha, y nunca de una lista oculta— pero
+//     el campo sigue prohibido: lo que estos tests fijan es esa frontera, no que no se publique nada temporal.
 //  2. Que el panel de un amigo no enseñe como completo un dato que llega a medias, ahora que hay dos cifras
 //     nuevas en la cabecera.
 import { describe, expect, it } from 'vitest';

@@ -8,6 +8,7 @@ import { readPublicShareToken } from './model/repository/publicShareRepository';
 import { runMigration } from './model/repository/dataMigrationRepository';
 import { runWhenIdle } from './core/utils/idle';
 import { registerServiceWorker } from './core/utils/appUpdate';
+import { isOffline } from './core/utils/network';
 import { SOCIAL_GIST_CFG_KEY, STORAGE_KEY } from './core/constants/storageKeys';
 import './styles/index.scss';
 
@@ -71,6 +72,13 @@ function bootApp(): void {
   // fallo no era de caché sino de red persistente).
   const PRELOAD_RELOAD_FLAG = 'myGameList.preloadReloaded';
   window.addEventListener('vite:preloadError', (event) => {
+    // SIN RED no se recarga: el chunk no falló por un despliegue nuevo, sino porque no hay conexión y todavía no
+    // estaba en la caché del service worker. Recargar no lo traería —y además tira el estado de la pantalla y la
+    // navegación en curso—, así que se deja que el error siga su camino hasta el boundary, que sabe contarlo como
+    // falta de conexión (ver `SocialErrorBoundary`).
+    if (isOffline()) {
+      return;
+    }
     try {
       if (sessionStorage.getItem(PRELOAD_RELOAD_FLAG)) {
         return; // ya se recargó en esta pestaña: dejar que el error siga su curso normal

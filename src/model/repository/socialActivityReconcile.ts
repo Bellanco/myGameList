@@ -12,10 +12,11 @@
 // También retira las entradas huérfanas (juego borrado o reseña vaciada), que antes intentaba adivinar un
 // efecto del hub con una foto de localStorage tomada al montar: si esa foto estaba desfasada, despublicaba
 // reseñas válidas.
+import { deriveMoveActivity, reconcileMoveActivity } from '../../core/social/moveActivity';
 import type { TabData } from '../types/game';
 import { TAB_IDS } from '../types/game';
 import { getCurrentSocialAuthUser, resolveStableProfileId } from './firebaseRepository';
-import { readSocialGist, remapSocialActorIds, removeReviewActivity, saveSocialSyncConfig, upsertReviewActivity, writeSocialGist, type SocialGistData } from './socialGistRepository';
+import { readSocialGist, remapSocialActorIds, removeReviewActivity, saveSocialSyncConfig, syncMoveActivity, upsertReviewActivity, writeSocialGist, type SocialGistData } from './socialGistRepository';
 import { getLocalMeta, invalidateCachedSocialDirectory, patchLocalMeta } from './indexedDbRepository';
 import { resolveSocialChannel } from './socialChannel';
 
@@ -34,7 +35,13 @@ const RECONCILE_TTL_MS = 12 * 60 * 60 * 1000;
 //   1 = versión inicial.
 //   2 = identidad por gameId (no por actor) + cadena de fechas `_ts`/`listedAt` + reparación de fechas selladas
 //       con "ahora" (una entrada bajo un id antiguo se duplicaba y el dedupe borraba la original).
-const RECONCILE_LOGIC_VERSION = 2;
+//   3 = F4: además de las reseñas, se proyectan los mensajes de lista (`moves`) desde los sellos `enteredAt`.
+//       Es lo que hace que la actividad de lista llegue a los gists que ya existen sin pedirle nada al usuario.
+//   4 = F4: se RETIRAN los mensajes que la biblioteca local desmiente teniendo el juego delante. Lo que había
+//       publicado antes del filtro de «jugar, no catalogar» —un «terminó tal cosa» de un juego que en realidad se
+//       pasó hace años— se quedaba para siempre: la regla anterior solo retiraba mensajes de juegos AUSENTES. Sube
+//       la versión para que la limpieza alcance a los gists que ya tocó la 3, sin esperar a que caduque el sello.
+export const RECONCILE_LOGIC_VERSION = 4;
 
 // Margen para no re-sellar fechas por diferencias de milisegundos: al guardar una reseña, `_ts` del juego y la
 // fecha de la publicación se estampan en la misma operación, con unos ms de diferencia.
@@ -56,6 +63,8 @@ export type ReconcileOutcome = {
   relinked: number;
   /** Entradas cuya fecha publicada era POSTERIOR a la del juego y se ha devuelto a la real. */
   repaired: number;
+  /** F4: mensajes de lista publicados tras la pasada (0 si el canal no cambió). */
+  moves: number;
   /** true si no se llegó a comparar nada (sin canal, sin listados o sello fresco). */
   skipped: boolean;
   /** Por qué se saltó. `sin-listados` es reintentable: los juegos aún no estaban cargados. */
@@ -63,12 +72,18 @@ export type ReconcileOutcome = {
 };
 
 function skip(reason: NonNullable<ReconcileOutcome['reason']>): ReconcileOutcome {
-  return { added: 0, removed: 0, relinked: 0, repaired: 0, skipped: true, reason };
+  return { added: 0, removed: 0, relinked: 0, repaired: 0, moves: 0, skipped: true, reason };
 }
 
-/** ¿Ha cambiado algo que haya que escribir en el gist? */
-function hasChanges(outcome: ReconcileOutcome): boolean {
-  return outcome.added > 0 || outcome.removed > 0 || outcome.relinked > 0 || outcome.repaired > 0;
+/**
+ * ¿Ha cambiado algo que haya que escribir en el gist?
+ *
+ * `moves` NO entra en la cuenta: es el recuento de mensajes que quedan publicados, no de cambios (una pasada sin
+ * novedades lo deja en el mismo número que ya había). Que los mensajes cambiaron se sabe por otra vía, la única
+ * fiable: que `syncMoveActivity` devolviera un objeto distinto.
+ */
+function hasChanges(outcome: ReconcileOutcome, movesChanged = false): boolean {
+  return movesChanged || outcome.added > 0 || outcome.removed > 0 || outcome.relinked > 0 || outcome.repaired > 0;
 }
 
 /**
@@ -76,11 +91,15 @@ function hasChanges(outcome: ReconcileOutcome): boolean {
  * `pending` se mantiene en true cuando la pasada NO convergió (tope `max` alcanzado): así la siguiente
  * apertura del hub continúa publicando el resto en vez de darse por satisfecha con el recuento.
  */
-async function stamp(reviewCount: number, pending = false): Promise<void> {
+async function stamp(reviewCount: number, moveCount: number, pending = false): Promise<void> {
   try {
     await patchLocalMeta({
       activityReconciledAt: Date.now(),
       activityReviewCount: reviewCount,
+      // F4: el recuento de MENSAJES va aparte del de reseñas, y no es contabilidad de adorno: mover un juego de
+      // lista no cambia el número de reseñas, así que sin esto el sello fresco daba la pasada por hecha y la
+      // actividad de lista no subía hasta doce horas después.
+      activityMoveCount: moveCount,
       activityReconcileVersion: RECONCILE_LOGIC_VERSION,
       pendingSocialActivity: pending,
     });
@@ -138,7 +157,8 @@ function collectLocalGameIds(games: TabData): Set<number> {
 }
 
 /**
- * Sincroniza `activity[]` con las reseñas de `games`. Devuelve cuántas entradas se añadieron/retiraron.
+ * Sincroniza `activity[]` con las reseñas de `games` y `moves[]` con sus sellos de lista. Devuelve cuántas
+ * entradas se añadieron/retiraron y cuántos mensajes de lista quedan publicados.
  *
  * `games` debe ser el estado VIVO de los listados (no una foto tomada al montar una pantalla): la retirada de
  * huérfanas se decide con él. Aun así se aplican dos guardas contra el borrado indebido: no se hace nada si
@@ -166,7 +186,11 @@ export async function reconcileReviewActivity(input: {
   const meta = await getLocalMeta();
   const pending = Boolean(meta?.pendingSocialActivity);
   const stampFresh = Boolean(meta?.activityReconciledAt && Date.now() - meta.activityReconciledAt < RECONCILE_TTL_MS);
-  const countMatches = meta?.activityReviewCount === localReviews.length;
+  // F4: el recuento de mensajes de lista se compara igual que el de reseñas, y con las listas ocultas del gist
+  // todavía sin leer. Se cuenta sin filtro a propósito: es un número LOCAL para detectar movimientos (barato, sin
+  // red), no lo que se va a publicar. Esconder una lista mueve el recuento y fuerza una pasada, que es lo suyo.
+  const localMoveCount = deriveMoveActivity(games).length;
+  const countMatches = meta?.activityReviewCount === localReviews.length && meta?.activityMoveCount === localMoveCount;
   // El sello de una versión anterior no vale: puede haber dejado el gist con entradas que esta versión sabe
   // arreglar (identidad antigua, fechas selladas con "ahora") y que el recuento no detecta.
   const versionMatches = meta?.activityReconcileVersion === RECONCILE_LOGIC_VERSION;
@@ -292,17 +316,35 @@ export async function reconcileReviewActivity(input: {
     }
   }
 
-  const outcome: ReconcileOutcome = { added, removed, relinked, repaired, skipped: false };
+  // F4 — MENSAJES DE LISTA. Proyección de los sellos `enteredAt` (ver `core/social/moveActivity`), no una cola de
+  // eventos: se recalcula entera en cada pasada, así que el histórico de quien ya tenía los sellos entra solo y no
+  // hay nada que se pueda quedar a medias. Las listas que el usuario esconde no publican mensaje.
+  const hiddenTabs = baseData.profile.visibility?.hiddenTabs || [];
+  const targetMoves = reconcileMoveActivity({
+    derived: deriveMoveActivity(games, { hiddenTabs }),
+    published: baseData.moves || [],
+    knownGameIds: localGameIds,
+    hiddenTabs,
+    // El reloj de los listados es lo que da (o quita) autoridad para retirar un mensaje huérfano, igual que en
+    // las reseñas: con unos listados más viejos que el mensaje, no se retira nada.
+    localUpdatedAt,
+  });
+  const withMoves = syncMoveActivity(nextData, targetMoves, Date.now());
+  const movesChanged = withMoves !== nextData;
+  nextData = withMoves;
+
+  const outcome: ReconcileOutcome = { added, removed, relinked, repaired, moves: nextData.moves?.length || 0, skipped: false };
 
   // Traza de la pasada (una por visita al hub, y solo cuando de verdad ha comparado): permite distinguir
   // "no cambió nada" de "no se ejecutó" sin instrumentar nada más.
   console.warn(
     `[social] reconciliación: ${localReviews.length} reseñas locales, ${publishedGameIds.size} publicadas` +
-      ` → +${added} nuevas, -${removed} retiradas, ${relinked} reindexadas, ${repaired} fechas corregidas`,
+      ` → +${added} nuevas, -${removed} retiradas, ${relinked} reindexadas, ${repaired} fechas corregidas` +
+      `; mensajes de lista: ${outcome.moves} publicados${movesChanged ? ' (actualizados)' : ''}`,
   );
 
-  if (!hasChanges(outcome)) {
-    await stamp(localReviews.length, capped);
+  if (!hasChanges(outcome, movesChanged)) {
+    await stamp(localReviews.length, localMoveCount, capped);
     return outcome;
   }
 
@@ -316,7 +358,7 @@ export async function reconcileReviewActivity(input: {
   // El feed sirve el directorio desde IndexedDB (TTL 30 min): sin invalidar, el propio autor no vería su
   // actividad recién reconciliada hasta que caducara.
   await invalidateCachedSocialDirectory(gistId);
-  await stamp(localReviews.length, capped);
+  await stamp(localReviews.length, localMoveCount, capped);
 
   return outcome;
 }

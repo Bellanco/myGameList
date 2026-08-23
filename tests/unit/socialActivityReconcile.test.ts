@@ -23,14 +23,16 @@ const idbMocks = vi.hoisted(() => {
 });
 vi.mock('../../src/model/repository/indexedDbRepository', () => idbMocks);
 
-import { reconcileReviewActivity } from '../../src/model/repository/socialActivityReconcile';
+import { RECONCILE_LOGIC_VERSION, reconcileReviewActivity } from '../../src/model/repository/socialActivityReconcile';
 
 const TOKEN = 'ghp_0123456789abcdefghij';
 const SOCIAL_GIST_FILENAME = 'myGameList.social.json';
+/** Año del sello de completado que usan los tests de F4: `years` tiene que incluirlo para que el mensaje salga. */
+const ANIO_C = new Date(1_700_000_000_000).getFullYear();
 
 function game(input: Partial<GameItem> & { id: number; name: string }): GameItem {
   return {
-    platforms: [], genres: [], steamDeck: false, review: '', score: 0, years: [],
+    platforms: [], genres: [], steamDeck: false, review: '', score: 0, years: [ANIO_C],
     strengths: [], weaknesses: [], reasons: [], replayable: false, retry: false, hours: 0,
     _ts: 1_700_000_000_000,
     ...input,
@@ -219,12 +221,12 @@ describe('reconcileReviewActivity', () => {
     const games = lists({ c: [game({ id: 7, name: 'Hollow Knight', review: 'Obra maestra', score: 5 })] });
     const store = stubGistStore(gistId, socialGist([reviewEntry(7, 'Hollow Knight', 1)]));
 
-    idbMocks.__setMeta({ activityReconciledAt: Date.now(), activityReviewCount: 1, activityReconcileVersion: 2 });
+    idbMocks.__setMeta({ activityReconciledAt: Date.now(), activityReviewCount: 1, activityMoveCount: 0, activityReconcileVersion: RECONCILE_LOGIC_VERSION });
     expect((await reconcileReviewActivity({ games })).skipped).toBe(true);
     expect(firebaseMocks.getCurrentSocialAuthUser).not.toHaveBeenCalled();
 
     // Una publicación perdida fuerza la pasada aunque el sello siga fresco, y la marca se limpia.
-    idbMocks.__setMeta({ activityReconciledAt: Date.now(), activityReviewCount: 1, activityReconcileVersion: 2, pendingSocialActivity: true });
+    idbMocks.__setMeta({ activityReconciledAt: Date.now(), activityReviewCount: 1, activityMoveCount: 0, activityReconcileVersion: RECONCILE_LOGIC_VERSION, pendingSocialActivity: true });
     expect((await reconcileReviewActivity({ games })).skipped).toBe(false);
     expect(idbMocks.__getMeta()).toMatchObject({ pendingSocialActivity: false, activityReviewCount: 1 });
     expect(store.writes()).toBe(0); // ya estaba publicada: se comprueba, no se reescribe
@@ -247,7 +249,7 @@ describe('reconcileReviewActivity', () => {
     expect(outcome.repaired).toBe(1);
     expect(store.current().activity[0].updatedAt).toBe(tsDelJuego);
     // Y deja sellada la versión nueva, para no repetir la pasada en la siguiente apertura.
-    expect(idbMocks.__getMeta()).toMatchObject({ activityReconcileVersion: 2 });
+    expect(idbMocks.__getMeta()).toMatchObject({ activityReconcileVersion: RECONCILE_LOGIC_VERSION });
   });
 
   it('el sello caduca cuando el recuento de reseñas locales cambia', async () => {
@@ -374,5 +376,149 @@ describe('reconcileReviewActivity', () => {
 
     expect(outcome.skipped).toBe(true);
     expect(store.writes()).toBe(0);
+  });
+  // ── F4: mensajes de lista ────────────────────────────────────────────────────────────────────────────────
+  //
+  // La pasada es la vía por la que la actividad de lista llega a los gists que YA existen: nadie tiene que
+  // volver a mover sus juegos para estrenarla, basta con que los sellos estén ahí.
+
+  it('publica los mensajes de lista de los sellos existentes, sin necesidad de mover nada', async () => {
+    const gistId = 'aabbcc20dd11ee22';
+    armChannel(gistId);
+    const store = stubGistStore(gistId, socialGist([]));
+
+    await reconcileReviewActivity({
+      games: lists({
+        c: [game({ id: 7, name: 'Hollow Knight', review: 'Obra maestra', score: 5, enteredAt: { p: 1_600_000_000_000, e: 1_650_000_000_000, c: 1_700_000_000_000 } })],
+      }),
+    });
+
+    const moves = store.current().moves || [];
+    expect(moves.map((entry) => entry.tab)).toEqual(['c', 'e', 'p']);
+    expect(moves.every((entry) => entry.gameId === 7 && entry.gameName === 'Hollow Knight')).toBe(true);
+    // El sello guarda el recuento de mensajes, que es lo que detecta un movimiento en la próxima apertura.
+    expect(idbMocks.__getMeta()).toMatchObject({ activityMoveCount: 3 });
+  });
+
+  it('no publica mensajes de las listas que su dueño esconde', async () => {
+    const gistId = 'aabbcc21dd11ee22';
+    armChannel(gistId);
+    const conVerguenzaOculta = socialGist([]);
+    conVerguenzaOculta.profile.visibility.hiddenTabs = ['v'];
+    const store = stubGistStore(gistId, conVerguenzaOculta);
+
+    await reconcileReviewActivity({
+      games: lists({ c: [game({ id: 7, name: 'Hollow Knight', review: 'Obra', score: 4, enteredAt: { v: 1_600_000_000_000, c: 1_700_000_000_000 } })] }),
+    });
+
+    expect((store.current().moves || []).map((entry) => entry.tab)).toEqual(['c']);
+  });
+
+  it('un movimiento de lista caduca el sello aunque el recuento de reseñas no cambie', async () => {
+    // Es la razón de ser de `activityMoveCount`: mover un juego no toca el número de reseñas, así que sin ese
+    // número la pasada se daba por hecha y la actividad de lista no subía hasta 12 h después.
+    const gistId = 'aabbcc22dd11ee22';
+    armChannel(gistId);
+    const store = stubGistStore(gistId, socialGist([reviewEntry(7, 'Hollow Knight', 1_700_000_000_000)]));
+    const juego = { id: 7, name: 'Hollow Knight', review: 'Obra maestra', score: 5, _ts: 1_700_000_000_000 };
+
+    // Sello coherente con UN mensaje publicado (el juego solo había entrado en 'e').
+    idbMocks.__setMeta({ activityReconciledAt: Date.now(), activityReviewCount: 1, activityMoveCount: 1, activityReconcileVersion: RECONCILE_LOGIC_VERSION });
+    const conMovimiento = lists({ c: [game({ ...juego, enteredAt: { e: 1_650_000_000_000, c: 1_700_000_000_000 } })] });
+
+    const outcome = await reconcileReviewActivity({ games: conMovimiento });
+
+    expect(outcome.skipped).toBe(false);
+    expect(outcome.moves).toBe(2);
+    expect(store.writes()).toBe(1);
+  });
+
+  it('es idempotente: la segunda pasada con los mismos sellos no reescribe el gist', async () => {
+    const gistId = 'aabbcc23dd11ee22';
+    armChannel(gistId);
+    const store = stubGistStore(gistId, socialGist([reviewEntry(7, 'Hollow Knight', 1_700_000_000_000)]));
+    const games = lists({
+      c: [game({ id: 7, name: 'Hollow Knight', review: 'Obra maestra', score: 5, _ts: 1_700_000_000_000, enteredAt: { c: 1_700_000_000_000 } })],
+    });
+
+    await reconcileReviewActivity({ games, force: true });
+    expect(store.writes()).toBe(1);
+
+    await reconcileReviewActivity({ games, force: true });
+    expect(store.writes()).toBe(1); // nada nuevo que decir: no se toca el gist
+  });
+
+  it('retira el mensaje de un juego borrado, pero no el que es más nuevo que los listados', async () => {
+    const gistId = 'aabbcc24dd11ee22';
+    armChannel(gistId);
+    const conMensajes = socialGist([]);
+    conMensajes.moves = [
+      // Juego que ya no existe y mensaje ANTERIOR al reloj de los listados: se retira.
+      { id: '9:c', gameId: 9, gameName: 'Borrado', tab: 'c', at: 1_600_000_000_000 },
+      // Juego que tampoco está aquí, pero el mensaje es POSTERIOR: lo publicó otro dispositivo y sus juegos aún
+      // no han llegado. No se toca.
+      { id: '10:e', gameId: 10, gameName: 'De otro aparato', tab: 'e', at: 2_100_000_000_000 },
+    ];
+    const store = stubGistStore(gistId, conMensajes);
+
+    await reconcileReviewActivity({
+      games: lists({ c: [game({ id: 7, name: 'Hollow Knight', review: 'Obra', score: 4, enteredAt: { c: 1_700_000_000_000 } })] }),
+    });
+
+    const ids = (store.current().moves || []).map((entry) => entry.id);
+    expect(ids).toContain('7:c');
+    expect(ids).toContain('10:e');
+    expect(ids).not.toContain('9:c');
+  });
+
+  it('LIMPIA los mensajes que la biblioteca desmiente: el «terminó» de un juego pasado hace años', async () => {
+    // El caso que se vio probando: el gist traía mensajes publicados ANTES del filtro de «jugar, no catalogar».
+    // El juego sigue en la biblioteca (no es huérfano), así que la regla vieja los conservaba para siempre.
+    const gistId = 'aabbcc26dd11ee22';
+    armChannel(gistId);
+    const conMensajesViejos = socialGist([]);
+    conMensajesViejos.moves = [
+      // Publicado cuando se catalogó: el sello es reciente, pero el juego se pasó en 2019.
+      { id: '40:c', gameId: 40, gameName: 'Un clásico', tab: 'c', at: 1_700_000_000_000 },
+      // Este sí corresponde: terminado en el año de su sello.
+      { id: '41:c', gameId: 41, gameName: 'De este año', tab: 'c', at: 1_700_000_000_000 },
+    ];
+    const store = stubGistStore(gistId, conMensajesViejos);
+
+    const outcome = await reconcileReviewActivity({
+      games: lists({
+        c: [
+          game({ id: 40, name: 'Un clásico', review: 'Sigue bueno', score: 5, years: [2019], enteredAt: { c: 1_700_000_000_000 } }),
+          game({ id: 41, name: 'De este año', review: 'Recién', score: 4, years: [ANIO_C], enteredAt: { c: 1_700_000_000_000 } }),
+        ],
+      }),
+    });
+
+    expect(outcome.skipped).toBe(false);
+    const ids = (store.current().moves || []).map((entry) => entry.id);
+    expect(ids).not.toContain('40:c'); // se retira: la biblioteca dice que eso no se terminó ese año
+    expect(ids).toContain('41:c'); // se queda: coincide con su año
+  });
+
+  it('los mensajes no desplazan a las reseñas: cada canal tiene su cupo', async () => {
+    const gistId = 'aabbcc25dd11ee22';
+    armChannel(gistId);
+    const store = stubGistStore(gistId, socialGist([]));
+    // 120 juegos con reseña y tres sellos cada uno: 360 mensajes candidatos, muy por encima del cupo de 320 que
+    // tiene la ACTIVIDAD. Si compartieran array, las reseñas se quedarían fuera.
+    const juegos = Array.from({ length: 120 }, (_, index) => game({
+      id: index + 1,
+      name: `Juego ${index + 1}`,
+      review: 'Reseña',
+      score: 4,
+      _ts: 1_700_000_000_000 + index,
+      enteredAt: { p: 1_600_000_000_000 + index, e: 1_650_000_000_000 + index, c: 1_700_000_000_000 + index },
+    }));
+
+    await reconcileReviewActivity({ games: lists({ c: juegos }), max: 120 });
+
+    const written = store.current();
+    expect(written.activity.filter((entry) => entry.type === 'review')).toHaveLength(120);
+    expect((written.moves || []).length).toBeGreaterThan(300);
   });
 });

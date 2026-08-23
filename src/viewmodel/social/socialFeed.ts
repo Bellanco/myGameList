@@ -7,7 +7,8 @@
 import { useCallback, useMemo, useState } from 'react';
 import { localDayKey, startOfLocalDay } from '../../core/utils/dateTime';
 import { normalizeTimestamp as toSafeTimestamp } from '../../core/utils/normalize';
-import type { SocialActivityEntry, SocialPostEntry } from '../../model/repository/socialGistRepository';
+import type { SocialActivityEntry, SocialMoveEntry, SocialPostEntry } from '../../model/repository/socialGistRepository';
+import { useFeedMoveTabs } from '../../view/hooks/useFeedMoveTabs';
 
 /**
  * Identidad del autor con la que se enriquece cada elemento al hidratar el directorio.
@@ -29,12 +30,36 @@ export type SocialActivityFeedItem = SocialActivityEntry & SocialFeedAuthor;
 export type SocialPostFeedItem = SocialPostEntry & SocialFeedAuthor;
 
 /**
+ * F4 — mensaje de lista enriquecido con la identidad de su autor.
+ *
+ * Lleva `updatedAt` además de su `at` para poder mezclarse con lo demás sin que cada consumidor tenga que
+ * saber de qué campo sale la fecha de cada tipo. Es una copia, no una fecha nueva: el orden del feed y el
+ * agrupado por día leen `updatedAt` y punto.
+ */
+export type SocialMoveFeedItem = SocialMoveEntry & SocialFeedAuthor & {
+  updatedAt: number;
+  /**
+   * `actorProfileId` de la reseña de ese juego, si su autor la tiene publicada; `undefined` si no. Es a la vez el
+   * «¿hay algo que abrir?» y el identificador con el que se abre.
+   *
+   * Tiene que ser ESE y no el `profileId` de la entrada del directorio: el detalle de una reseña se resuelve
+   * comparando con el `actorProfileId` del gist, y para una amistad el id del directorio es su uid de Firebase.
+   * Con el identificador equivocado el enlace llevaba a una pantalla que no encontraba nada.
+   *
+   * Se resuelve al hidratar cruzando con la actividad del mismo gist —que ya está cargada—, así que no cuesta
+   * ninguna lectura extra.
+   */
+  reviewActorId?: string;
+};
+
+/**
  * Elemento del feed COMBINADO. `kind` es el discriminante: las publicaciones lo llevan a `'post'` y la actividad
  * no lo lleva (declarado `kind?: undefined` para que TypeScript pueda estrechar la unión con `entry.kind === 'post'`).
  */
 export type SocialFeedItem =
   | (SocialActivityFeedItem & { kind?: undefined })
-  | (SocialPostFeedItem & { kind: 'post' });
+  | (SocialPostFeedItem & { kind: 'post' })
+  | (SocialMoveFeedItem & { kind: 'move' });
 
 /** Un día del feed agrupado, tal y como lo pinta la pantalla. */
 export type SocialFeedDayGroup = {
@@ -45,7 +70,7 @@ export type SocialFeedDayGroup = {
 };
 
 /** Lo único que el feed necesita de una entrada del directorio. */
-type FeedSource = { activity?: SocialActivityFeedItem[]; posts?: SocialPostFeedItem[] };
+type FeedSource = { activity?: SocialActivityFeedItem[]; posts?: SocialPostFeedItem[]; moves?: SocialMoveFeedItem[] };
 
 const FEED_PAGE_SIZE = 25;
 
@@ -91,17 +116,31 @@ export function useSocialFeed(directory: ReadonlyArray<FeedSource>): {
   // Paginación: 25 inicial, +25 por "Mostrar más".
   const [feedVisibleCount, setFeedVisibleCount] = useState(FEED_PAGE_SIZE);
 
+  // F4 — de qué listas quiere ver los movimientos QUIEN MIRA. El valor es la cadena canónica ('cvep'), que es un
+  // primitivo estable y por tanto una dependencia honesta de este `useMemo`: cambiar el filtro recalcula la mezcla
+  // y nada más —ni una lectura de red, ni una rehidratación del directorio—.
+  const { moveTabsValue } = useFeedMoveTabs();
+
   const feedItems = useMemo<SocialFeedItem[]>(() => {
     const activity = directory.flatMap((entry) => entry.activity || []);
     const posts = directory.flatMap((entry) => entry.posts || []).map((post) => ({ ...post, kind: 'post' as const }));
+    // El filtro se aplica AQUÍ, sobre lo que el directorio ya tiene cargado, y no al hidratarlo: así encender una
+    // lista que estaba apagada es instantáneo y no obliga a releer el gist social de nadie.
+    const visibleTabs = new Set(moveTabsValue.split(''));
+    const moves = visibleTabs.size === 0
+      ? []
+      : directory
+        .flatMap((entry) => entry.moves || [])
+        .filter((move) => visibleTabs.has(move.tab))
+        .map((move) => ({ ...move, kind: 'move' as const }));
 
-    return [...activity, ...posts]
+    return [...activity, ...posts, ...moves]
       // Descarta ítems con timestamp inválido/fuera de rango ANTES de ordenar y cortar: si no, ordenarían arriba,
       // coparían el corte visible y el agrupado por día los eliminaría, dejando el feed en blanco (ver bug del 2º amigo).
       .filter((item) => hasRenderableTimestamp(item.updatedAt))
       .sort((a, b) => b.updatedAt - a.updatedAt)
       .slice(0, FEED_MAX_ITEMS);
-  }, [directory]);
+  }, [directory, moveTabsValue]);
 
   const groupedFeedItems = useMemo<SocialFeedDayGroup[]>(() => {
     const groups: SocialFeedDayGroup[] = [];

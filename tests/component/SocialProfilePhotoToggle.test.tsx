@@ -6,7 +6,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { SOCIAL_UI } from '../../src/core/constants/labels';
+import { SOCIAL_UI } from '../../src/core/constants/socialLabels';
 import { SocialProfileScreen } from '../../src/view/components/socialhub/SocialProfileScreen';
 
 function renderScreen(over: {

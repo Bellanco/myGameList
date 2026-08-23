@@ -3,7 +3,7 @@ import { ScoreDisplay } from '../ScoreDisplay';
 import { NoScoreMedal } from '../NoScoreMedal';
 import { resolveGrade } from '../../../core/utils/scoreScale';
 import { MetaSection } from '../MetaSection';
-import type { SocialUiLabels } from '../../../core/constants/labels';
+import type { SocialUiLabels } from '../../../core/constants/socialLabels';
 import { HubStatus } from './HubStatus';
 import { HubBackButton } from './HubBackButton';
 

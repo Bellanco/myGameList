@@ -354,3 +354,12 @@
   --deco-avatar-bg: linear-gradient(155deg, color-mix(in srgb, var(--sos-line) 14%, transparent), color-mix(in srgb, var(--sos-line) 5%, transparent));
   --deco-avatar-glow: none;
 }
+/* ── F4 · Movimiento de lista: recuadro sin halo.
+   La paleta rodea toda tarjeta del feed con un doble aro turquesa (el marco de diálogo del juego). El movimiento
+   se queda con el recuadro pixelado a secas: mismo mundo, un paso atrás. ── */
+:root[data-palette="seaofstars"] .hub-feed-activity-item.is-move {
+  border-width: 1px !important;
+  box-shadow: 0 0 0 2px var(--bg) !important;
+}
+/* El renglón, en la pixelada de los diálogos y algo más grande para que se lea a ese cuerpo. */
+:root[data-palette="seaofstars"] .hub-feed-move-line { font-size: .9rem; }

@@ -5,9 +5,10 @@
 // es que, al publicar, hay que refrescar el feed — de ahí `onPublished`, en vez de que el hook conozca la
 // hidratación del directorio.
 import { useCallback, useState } from 'react';
-import { SOCIAL_UI } from '../../core/constants/labels';
+import { SOCIAL_UI } from '../../core/constants/socialLabels';
 import { PROFILE_TIER_POST_MAX_LENGTH, canPublishPosts, hasPostLengthLimit, type ProfileTier } from '../../core/constants/tiers';
 import { publishPost } from '../../model/repository/socialPublishRepository';
+import { isNetworkFailure, isOffline } from '../../core/utils/network';
 
 type Feedback = (kind: 'ok' | 'warn' | 'err', message: string, duration?: 'short' | 'long') => void;
 
@@ -46,6 +47,13 @@ export function useSocialCompose(options: {
       return;
     }
 
+    // Sin red no se intenta: publicar es una escritura en el gist social, así que lo único que se conseguiría es
+    // esperar al timeout para acabar en el mismo aviso. El texto se queda intacto en el compositor.
+    if (isOffline()) {
+      setFeedback('warn', SOCIAL_UI.status.postPublishOffline, 'long');
+      return;
+    }
+
     try {
       setPublishingPost(true);
       await publishPost({ text, maxLength: PROFILE_TIER_POST_MAX_LENGTH[ownTier] });
@@ -53,7 +61,11 @@ export function useSocialCompose(options: {
       await onPublished();
       setFeedback('ok', SOCIAL_UI.status.postPublished);
     } catch (error) {
-      setFeedback('err', error instanceof Error ? error.message : SOCIAL_UI.status.postPublishFailed);
+      if (isNetworkFailure(error)) {
+        setFeedback('warn', SOCIAL_UI.status.postPublishOffline, 'long');
+      } else {
+        setFeedback('err', error instanceof Error ? error.message : SOCIAL_UI.status.postPublishFailed);
+      }
     } finally {
       setPublishingPost(false);
     }

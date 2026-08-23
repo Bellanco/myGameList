@@ -31,6 +31,10 @@ export interface LocalMeta {
   // baja, error de GitHub) y fuerza la pasada en la próxima apertura del hub.
   activityReconciledAt?: number;
   activityReviewCount?: number;
+  // F4: mensajes de lista publicados en la última pasada. Va aparte del recuento de reseñas porque mover un juego
+  // de lista no cambia cuántas reseñas hay: sin este número, el sello fresco daba la pasada por hecha y la
+  // actividad de lista se quedaba sin subir.
+  activityMoveCount?: number;
   // Versión de la lógica que escribió el sello: si sube, el sello deja de valer y se fuerza una pasada (así una
   // corrección alcanza a los gists que tocó una versión anterior sin esperar a que caduque).
   activityReconcileVersion?: number;
