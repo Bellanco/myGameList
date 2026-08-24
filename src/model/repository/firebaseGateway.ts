@@ -22,9 +22,31 @@ let facadePromise: Promise<FacadeModule> | null = null;
 /** Carga (una vez) la fachada de Firebase. El propio SDK queda en un chunk perezoso. */
 function loadFacade(): Promise<FacadeModule> {
   if (!facadePromise) {
-    facadePromise = import('./firebaseRepository');
+    // El RECHAZO no se cachea: si el chunk no se pudo bajar (sin red, o un despliegue que rotó los hashes con la
+    // pestaña abierta), la siguiente llamada vuelve a intentarlo en vez de heredar el fallo el resto de la sesión.
+    facadePromise = import('./firebaseRepository').catch((error: unknown) => {
+      facadePromise = null;
+      throw error;
+    });
   }
   return facadePromise;
+}
+
+/**
+ * Envoltorio de los caminos BEST-EFFORT (telemetría): ni la carga del chunk ni el envío pueden propagar el fallo,
+ * porque sus llamantes invocan con `void` y no hay nadie detrás para capturarlo.
+ *
+ * Sin esto, un chunk que no baja se convierte en un `unhandledrejection`, y el gancho global de `main.tsx` lo
+ * atiende con `reportHandledError` —que vuelve por aquí y vuelve a rechazar—, realimentando el fallo. En los tests
+ * pasaba la otra cara: la carga que `void trackAnalyticsEvent(...)` deja en vuelo al acabar el test rechaza cuando
+ * el entorno ya está desmontado, y esos rechazos tumbaban la suite en CI con todos los tests en verde.
+ */
+async function bestEffort(send: (facade: FacadeModule) => Promise<void>): Promise<void> {
+  try {
+    await send(await loadFacade());
+  } catch {
+    // Telemetría: si no se puede informar, no se informa.
+  }
 }
 
 // --- Arranque / servicios ---
@@ -33,34 +55,32 @@ export async function initializeFirebaseServices(): Promise<FirebaseServices | n
   return m.initializeFirebaseServices();
 }
 
-/** L2 — activa GA4 tras aceptar el aviso, sin recargar (los servicios ya están cacheados sin analítica). */
+/**
+ * L2 — activa GA4 tras aceptar el aviso, sin recargar (los servicios ya están cacheados sin analítica). Best-effort
+ * como el resto de la analítica: sus dos llamantes (banner y hook de consentimiento) invocan con `void`.
+ */
 export async function enableAnalyticsAfterConsent(): Promise<void> {
-  const m = await loadFacade();
-  return m.enableAnalyticsAfterConsent();
+  await bestEffort((m) => m.enableAnalyticsAfterConsent());
 }
 
-// --- Telemetría (best-effort, no bloqueante) ---
+// --- Telemetría (best-effort, no bloqueante: nunca rechaza, ver `bestEffort`) ---
 export async function reportHandledError(error: unknown, fatal = false, context = ''): Promise<void> {
-  const m = await loadFacade();
-  return m.reportHandledError(error, fatal, context);
+  await bestEffort((m) => m.reportHandledError(error, fatal, context));
 }
 
 export async function trackAnalyticsEvent(
   eventName: string,
   params: Record<string, string | number | boolean> = {},
 ): Promise<void> {
-  const m = await loadFacade();
-  return m.trackAnalyticsEvent(eventName, params);
+  await bestEffort((m) => m.trackAnalyticsEvent(eventName, params));
 }
 
 export async function setAnalyticsUser(uid: string): Promise<void> {
-  const m = await loadFacade();
-  return m.setAnalyticsUser(uid);
+  await bestEffort((m) => m.setAnalyticsUser(uid));
 }
 
 export async function clearAnalyticsUser(): Promise<void> {
-  const m = await loadFacade();
-  return m.clearAnalyticsUser();
+  await bestEffort((m) => m.clearAnalyticsUser());
 }
 
 // --- Auth ---
