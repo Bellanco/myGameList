@@ -15,6 +15,14 @@ vi.mock('../../src/model/repository/indexedDbRepository', () => ({
   patchLocalMeta: async () => {},
 }));
 
+// La telemetría, fuera: `saveDraft`/`moveGameToTab` la disparan con `void`, y dejar que cargue de verdad el chunk
+// perezoso de Firebase solo consigue que la carga siga en vuelo cuando el test ya ha acabado (en CI, con el
+// entorno ya desmontado, ese import rechazaba y tumbaba la suite). Del gateway se conserva todo lo demás.
+vi.mock('../../src/model/repository/firebaseGateway', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../src/model/repository/firebaseGateway')>()),
+  trackAnalyticsEvent: async () => {},
+}));
+
 const { useGameListViewModel } = await import('../../src/viewmodel/useGameListViewModel');
 const { flushLocalState } = await import('../../src/model/repository/localRepository');
 type GameDraft = import('../../src/viewmodel/useGameListViewModel').GameDraft;
