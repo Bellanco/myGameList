@@ -79,8 +79,11 @@ describe('renglón de movimiento de lista', () => {
     renderFeed([move({ tab: 'c' })]);
 
     const card = screen.getByRole('listitem');
-    // Un solo renglón, en este orden y sin nada más.
-    expect(card.textContent?.replace(/\s+/g, ' ').trim()).toBe('Ada terminó Hollow Knight 18:42');
+    // Un solo renglón, en este orden y sin nada más. La hora se compone con el mismo formateador que la vista: si se
+    // escribe a mano, el test solo pasa en la zona horaria de quien lo escribió (en CI, que va en UTC, fallaba).
+    expect(card.textContent?.replace(/\s+/g, ' ').trim()).toBe(
+      `Ada terminó Hollow Knight ${SOCIAL_UI.feed.movedAtHour(new Date(AT))}`,
+    );
   });
 
   it('la hora sustituye a la fecha completa, que queda al pasar el ratón', () => {
