@@ -17,6 +17,7 @@ import { invalidateOwnProfileCache, invalidateSocialDirectoryCache } from './fir
 import { signOutSocialUser } from './firebaseAuthRepository';
 import { closeSharedDatabase, SHARED_DB_NAME } from './idbConnectionRepository';
 import { clearSyncConfig } from './gistConfigRepository';
+import { DEVICE_KEY_DB_NAME } from '../../core/security/crypto';
 import {
   GIST_CFG_KEY,
   IMPORT_FIELDS_KEY,
@@ -113,10 +114,32 @@ async function wipeLocalData(): Promise<void> {
   clearSyncConfig(); // limpia además el token en memoria del módulo de config
   removeLocal([STORAGE_KEY, GIST_CFG_KEY, SOCIAL_GIST_CFG_KEY, IMPORT_FIELDS_KEY]);
 
-  // La base contiene juegos, tombstones, cola de sync, cachés sociales y la clave AES no exportable con la que se
-  // descifra el token: se borra entera, no store a store.
+  // La base contiene juegos, tombstones, cola de sync y cachés sociales: se borra entera, no store a store.
   await closeSharedDatabase();
-  await deleteSharedDatabase();
+  await deleteDatabase(SHARED_DB_NAME);
+
+  // La clave AES no exportable vive en SU PROPIA base (`mygamelist-secure`, ver `core/security/crypto`), así que
+  // borrar la de arriba NO se la llevaba: quedaba una clave huérfana en el dispositivo después de borrar la
+  // cuenta. Sin el ciphertext no descifra nada, pero el derecho de supresión se cumple o no se cumple.
+  await deleteDatabase(DEVICE_KEY_DB_NAME);
+
+  // Cache Storage (service worker). El shell y los `/assets/*` son públicos y se volverían a descargar, pero
+  // hasta ahora se borraba todo MENOS esto, y una caché de respuestas de `/api/*` sobrevivía al borrado. Ya no se
+  // guardan (ver `public/service-worker.js`), y esto remata lo que dejaron las versiones anteriores.
+  await deleteAllCaches();
+}
+
+/** Borra todas las cachés del origen. Best-effort: sin Cache Storage (o sin permiso) no hay nada que limpiar. */
+async function deleteAllCaches(): Promise<void> {
+  if (typeof caches === 'undefined') {
+    return;
+  }
+  try {
+    const names = await caches.keys();
+    await Promise.all(names.map((name) => caches.delete(name)));
+  } catch {
+    // no bloqueante: el resto del borrado ya se ha hecho
+  }
 }
 
 function removeLocal(keys: string[]): void {
@@ -129,7 +152,7 @@ function removeLocal(keys: string[]): void {
   });
 }
 
-function deleteSharedDatabase(): Promise<void> {
+function deleteDatabase(name: string): Promise<void> {
   if (typeof window === 'undefined' || typeof window.indexedDB === 'undefined') {
     return Promise.resolve();
   }
@@ -137,7 +160,7 @@ function deleteSharedDatabase(): Promise<void> {
   return new Promise<void>((resolve) => {
     let request: IDBOpenDBRequest;
     try {
-      request = window.indexedDB.deleteDatabase(SHARED_DB_NAME);
+      request = window.indexedDB.deleteDatabase(name);
     } catch {
       resolve();
       return;

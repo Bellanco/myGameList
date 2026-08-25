@@ -1,5 +1,6 @@
-import { memo, useEffect, useState } from 'react';
+import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import { SHARE_UI } from '../../core/constants/labels';
+import { copyText } from '../../core/utils/clipboard';
 import { Icon } from './Icon';
 import { ConfirmModal } from '../modals/ConfirmModal';
 import { useShareViewModel } from '../../viewmodel/useShareViewModel';
@@ -23,6 +24,29 @@ function daysLeft(expiresAt: number): number {
 export const SharedReviewsCard = memo(function SharedReviewsCard({ enabled }: { enabled: boolean }) {
   const vm = useShareViewModel();
   const [pending, setPending] = useState<{ token: string; gameName: string } | null>(null);
+  // Token cuyo enlace se acaba de copiar: el botón lo dice y se retira solo. Es un acuse de un gesto, no un
+  // estado de la pantalla, y dejarlo fijo hace dudar de a qué enlace se refiere tras el segundo clic.
+  const [copiedToken, setCopiedToken] = useState<string | null>(null);
+  const copiedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => () => {
+    if (copiedTimerRef.current) clearTimeout(copiedTimerRef.current);
+  }, []);
+
+  /**
+   * Antes esto era `void navigator.clipboard?.writeText(...)` a pelo. Dos fallos en una línea: sin `catch`, el
+   * rechazo (permiso denegado, contexto no seguro) subía como `unhandledrejection` y la red global de `main.tsx`
+   * lo reportaba a telemetría como error de la app; y era el único de los botones de copiar de la aplicación que
+   * no acusaba nada, así que el usuario no sabía si había funcionado.
+   */
+  const copyLink = useCallback(async (token: string) => {
+    if (!(await copyText(`${window.location.origin}/r/${token}`))) {
+      return;
+    }
+    setCopiedToken(token);
+    if (copiedTimerRef.current) clearTimeout(copiedTimerRef.current);
+    copiedTimerRef.current = setTimeout(() => setCopiedToken(null), 2500);
+  }, []);
 
   useEffect(() => {
     if (enabled) {
@@ -70,10 +94,10 @@ export const SharedReviewsCard = memo(function SharedReviewsCard({ enabled }: { 
                 <button
                   className="btn btn-secondary"
                   type="button"
-                  onClick={() => void navigator.clipboard?.writeText(`${window.location.origin}/r/${entry.token}`)}
+                  onClick={() => void copyLink(entry.token)}
                 >
                   <Icon name="sync-copy" />
-                  <span>{SHARE_UI.copyLink}</span>
+                  <span>{copiedToken === entry.token ? SHARE_UI.copied : SHARE_UI.copyLink}</span>
                 </button>
                 <button
                   className="btn btn-danger"

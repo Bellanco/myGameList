@@ -388,7 +388,7 @@ export const GameTable = memo(function GameTable({
             <>
               {topSpacerHeight > 0 && !fallbackToFullRender ? (
                 <tr aria-hidden="true">
-                  <td colSpan={getColSpan(currentTab)} style={{ height: `${topSpacerHeight}px`, padding: 0, border: 0 }} />
+                  <td colSpan={getColSpan(currentTab)} className="table-spacer" style={{ height: `${topSpacerHeight}px` }} />
                 </tr>
               ) : null}
               {rowIndexesToRender.map((rowIndex) => {
@@ -489,7 +489,7 @@ export const GameTable = memo(function GameTable({
 
                 return (
                   <tr key={`detail-${game.id}`} id={`game-detail-${game.id}`} data-index={rowIndex} ref={virtualize ? virtualizer.measureElement : undefined} className="detail-row open">
-                    <td colSpan={getColSpan(currentTab)} style={{ padding: 0 }}>
+                    <td colSpan={getColSpan(currentTab)}>
                       <div className="detail-content">
                         <div className="detail-box">
                           <span className="detail-label">{UI_MESSAGES.detail.platforms}</span>
@@ -559,7 +559,7 @@ export const GameTable = memo(function GameTable({
                           </div>
                         )}
                         {showReview && supportsReview(currentTab) && game.review ? (
-                          <div className="detail-box" style={{ gridColumn: '1/-1' }}>
+                          <div className="detail-box is-wide">
                             <span className="detail-label">{UI_MESSAGES.detail.review}</span>
                             <div className="detail-value">
                               {reviewLines.map((line, i) => (
@@ -624,7 +624,7 @@ export const GameTable = memo(function GameTable({
               })}
               {bottomSpacerHeight > 0 && !fallbackToFullRender ? (
                 <tr aria-hidden="true">
-                  <td colSpan={getColSpan(currentTab)} style={{ height: `${bottomSpacerHeight}px`, padding: 0, border: 0 }} />
+                  <td colSpan={getColSpan(currentTab)} className="table-spacer" style={{ height: `${bottomSpacerHeight}px` }} />
                 </tr>
               ) : null}
             </>

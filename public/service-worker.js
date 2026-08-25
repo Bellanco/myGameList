@@ -17,6 +17,9 @@
  *    Esta es la regla que hace que la app arranque de verdad sin red.
  *  - Resto de GET del mismo origen (iconos, manifest) → CACHÉ Y REVALIDA en segundo plano.
  *
+ * FUERA DE LA CACHÉ, SIEMPRE: `/api/*` (nuestras Pages Functions). Son respuestas por usuario y revocables; el
+ * porqué en detalle está en el handler `fetch`, que es donde se descarta.
+ *
  * PRECACHE: `PRECACHE_ASSETS` lo inyecta el build (plugin `serviceWorkerPrecache` de `vite.config.ts`) con los
  * chunks del ARRANQUE — el entry y lo que importa de forma estática, más su CSS. A propósito NO lleva los chunks
  * perezosos (Firebase, hub social, panel de administración, temas): son la mayor parte del peso y no hacen falta
@@ -235,6 +238,19 @@ self.addEventListener('fetch', (event) => {
 
   const url = new URL(request.url);
   if (url.origin !== self.location.origin || isDevRequest(url)) {
+    return;
+  }
+
+  // NUESTRA propia API (`/api/*`, las Pages Functions) queda fuera de la caché igual que las externas, y por un
+  // motivo que la comprobación de origen de arriba NO cubre: es del mismo origen, así que sin esto caía en
+  // `handleStaleWhileRevalidate`. Y ahí no valen las cabeceras: la Cache API guarda lo que se le mande, ignorando
+  // el `Cache-Control: no-store` que estas respuestas ya traen, y `cache.match()` casa SOLO por URL —no hay
+  // `Vary: Authorization`—, así que una entrada servía para cualquier sesión. En la práctica se quedaban
+  // guardados `/api/share/mine` (mis enlaces, mi cuota, mi veto con su motivo) y `/api/share/all` (el censo del
+  // panel), y de ahí salían tres problemas: sobrevivían a cerrar sesión y a borrar la cuenta, en un navegador
+  // compartido el siguiente usuario veía en el primer pintado la lista del anterior, y un enlace retirado se
+  // seguía sirviendo desde la caché local —justo lo que el `max-age=60` corto pretendía evitar—.
+  if (url.pathname === '/api' || url.pathname.startsWith('/api/')) {
     return;
   }
 

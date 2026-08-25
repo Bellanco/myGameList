@@ -4,6 +4,10 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 //  - se borran las amistades (aceptadas y pendientes) y los cuatro documentos propios;
 //  - un fallo parcial NO aborta el resto: la sesión se cierra y el dispositivo se limpia igualmente, y el
 //    resultado lo reporta para poder avisar al usuario;
+//  - se borran LAS DOS bases de IndexedDB: la de datos y la de la clave de dispositivo (`mygamelist-secure`,
+//    ver `core/security/crypto`). Están separadas a propósito, así que borrar la primera no se lleva la segunda
+//    y quedaba una clave huérfana tras borrar la cuenta;
+//  - se limpia la Cache Storage del service worker;
 //  - los Gists no se tocan (no hay ninguna llamada a GitHub aquí, por diseño).
 
 const deleteDocMock = vi.fn(async () => {});
@@ -55,6 +59,7 @@ import { deleteOwnAccount } from '../../src/model/repository/accountDeletionRepo
 import { ANALYTICS_CONSENT_KEY, GIST_CFG_KEY, SOCIAL_GIST_CFG_KEY, STORAGE_KEY } from '../../src/core/constants/storageKeys';
 
 const deletedDatabases: string[] = [];
+const deletedCaches: string[] = [];
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -63,6 +68,19 @@ beforeEach(() => {
   removeAllMySharesMock.mockResolvedValue(0);
   getMyFriendshipsMock.mockResolvedValue({ friends: [], incoming: [], outgoing: [], byOtherUid: {} });
   deleteDocMock.mockResolvedValue(undefined);
+
+  // jsdom no implementa Cache Storage: doble mínimo para comprobar que el borrado se la lleva.
+  deletedCaches.length = 0;
+  Object.defineProperty(globalThis, 'caches', {
+    configurable: true,
+    value: {
+      keys: async () => ['mygamelist-abc', 'mygamelist-def'],
+      delete: async (name: string) => {
+        deletedCaches.push(name);
+        return true;
+      },
+    },
+  });
 
   // jsdom no implementa deleteDatabase de forma útil: se sustituye por un doble que resuelve al momento.
   Object.defineProperty(window, 'indexedDB', {
@@ -104,7 +122,10 @@ describe('deleteOwnAccount', () => {
     expect(localStorage.getItem(STORAGE_KEY)).toBeNull();
     expect(localStorage.getItem(GIST_CFG_KEY)).toBeNull();
     expect(localStorage.getItem(SOCIAL_GIST_CFG_KEY)).toBeNull();
-    expect(deletedDatabases).toEqual(['myGameList']);
+    expect(deletedDatabases).toEqual(['myGameList', 'mygamelist-secure']);
+    // La Cache Storage del service worker también se limpia: el shell y los assets son públicos y se vuelven a
+    // descargar, pero las versiones anteriores del SW llegaron a guardar ahí respuestas de `/api/*`.
+    expect(deletedCaches).toEqual(['mygamelist-abc', 'mygamelist-def']);
     // La decisión sobre la analítica es una preferencia de privacidad del NAVEGADOR: no se resetea, porque volver
     // a preguntar a quien acaba de rechazarla sería lo contrario de respetarla.
     expect(localStorage.getItem(ANALYTICS_CONSENT_KEY)).toBe('denied');
@@ -121,7 +142,7 @@ describe('deleteOwnAccount', () => {
     expect(deleteDocMock).toHaveBeenCalledTimes(4); // los otros tres se intentan igualmente
     expect(signOutMock).toHaveBeenCalled();
     expect(localStorage.getItem(STORAGE_KEY)).toBeNull();
-    expect(deletedDatabases).toEqual(['myGameList']);
+    expect(deletedDatabases).toEqual(['myGameList', 'mygamelist-secure']);
   });
 
   it('si la lectura de amistades falla, sigue con el borrado de documentos y lo reporta', async () => {
@@ -142,7 +163,7 @@ describe('deleteOwnAccount', () => {
     expect(result.remoteComplete).toBe(true);
     expect(deleteDocMock).not.toHaveBeenCalled();
     expect(localStorage.getItem(STORAGE_KEY)).toBeNull();
-    expect(deletedDatabases).toEqual(['myGameList']);
+    expect(deletedDatabases).toEqual(['myGameList', 'mygamelist-secure']);
   });
 });
 

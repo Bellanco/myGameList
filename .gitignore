@@ -42,6 +42,10 @@ logs
 # Privacy audit report (generated)
 audit-report.json
 
+# Respaldo de `scripts/purge-profile-pii.js`: contiene los tokens y los ids de gist que se van a borrar de
+# `profiles`. Es material sensible y de un solo uso; nunca puede acabar en un commit.
+profile-legacy-backup-*.json
+
 # Claude Code: compartir settings.json, ignorar config local/personal
 .claude/settings.local.json
 

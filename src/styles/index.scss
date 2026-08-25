@@ -7,9 +7,9 @@
 @use './forms-and-buttons';
 @use './table';
 @use './overlays-and-responsive';
+// Solo el BOTÓN LANZADOR de la ruleta; el modal viaja en su chunk perezoso (ver `_roulette.scss`).
 @use './roulette';
 @use './tiers';
-@use './admin';
 @use './effects';
 // Los skins de tema (CAPA 3, `themes/*.scss`) ya NO se agrupan aquí: se cargan bajo demanda por
 // paleta desde `paletteSkin.ts` (los colores/layout de cada paleta viven en `_base.scss`, CAPA 2, que

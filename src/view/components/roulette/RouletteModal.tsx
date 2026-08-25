@@ -8,6 +8,10 @@ import type { GameItem } from '../../../model/types/game';
 import { pickWeighted, type RouletteCandidate } from '../../../core/roulette/roulette';
 import { resolveGrade, resolveStars, STARS_MAX } from '../../../core/utils/scoreScale';
 import { useScoreScale } from '../../hooks/useScoreScale';
+// La hoja del MODAL se importa AQUÍ y no desde `index.scss`: como el modal entra por `lazy()`, Vite emite su CSS
+// en el mismo chunk perezoso. El botón lanzador se queda en `_roulette.scss`, que sí va en el arranque: lo pinta
+// `App` desde el primer render.
+import '../../../styles/roulette-modal.scss';
 
 /** Acción inferior de la tarjeta-resultado, resuelta para el juego elegido. */
 export interface RouletteResolvedAction {

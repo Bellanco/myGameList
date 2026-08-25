@@ -418,10 +418,20 @@ export function useGameListViewModel() {
     [data],
   );
 
-  // Devuelve si el guardado se ha llegado a hacer: quien llama encadena efectos (destello de fila, publicación
-  // de la reseña en el canal social) que no deben dispararse cuando una validación ha cortado el guardado.
+  /**
+   * Devuelve QUÉ HA HECHO el guardado —el id del juego y cómo estaba antes—, o `null` si una validación lo ha
+   * cortado.
+   *
+   * El `null` es lo que evita encadenar efectos (destello de fila, publicación de la reseña en el canal social)
+   * sobre un guardado que no ha ocurrido. Los dos datos existen porque esos mismos efectos los necesitan, y
+   * porque recalcularlos fuera fue exactamente el defecto: mientras esto devolvía un booleano, `App`
+   * reimplementaba la regla de asignación de id de más abajo para adivinar el primero, y buscaba el segundo
+   * recorriendo las cuatro listas por su cuenta. Dos copias de reglas que aquí ya están resueltas, y la copia era
+   * la que decidía sobre qué juego publicaba el canal social: cuando dejaran de coincidir, la reseña se colgaría
+   * de otro juego sin error ni rastro.
+   */
   const saveDraft = useCallback(
-    (tab: TabId, nextDraft: GameDraft): boolean => {
+    (tab: TabId, nextDraft: GameDraft): { id: number; previous: GameItem | undefined } | null => {
       const now = Date.now();
       const id = nextDraft.id || Math.max(0, ...TAB_ORDER.flatMap((key) => data[key].map((item) => item.id))) + 1;
       const existing = data[tab].find((item) => item.id === id);
@@ -488,12 +498,12 @@ export function useGameListViewModel() {
 
       if (!base.name || !base.genres.length || !base.platforms.length) {
         notify('warn', 'Revisa los campos obligatorios antes de guardar.');
-        return false;
+        return null;
       }
 
       if (tab === 'c' && !base.years?.length) {
         notify('warn', 'Debes añadir al menos un año para completados.');
-        return false;
+        return null;
       }
 
       // Último cortafuegos contra el duplicado: el formulario ya avisa mientras se escribe, pero el alta también
@@ -502,7 +512,7 @@ export function useGameListViewModel() {
       const duplicate = findGameByName(base.name, id);
       if (duplicate) {
         notify('warn', VALIDATION_MESSAGES.duplicateName(duplicate.game.name, TAB_TOOLTIPS[duplicate.tab]));
-        return false;
+        return null;
       }
 
       const nextData: TabData = {
@@ -521,7 +531,7 @@ export function useGameListViewModel() {
       setDraft(EMPTY_DRAFT);
       notify('ok', 'Juego guardado correctamente');
       void trackAnalyticsEvent('game_saved', { tab, is_edit: Boolean(existing), has_review: Boolean(base.review) });
-      return true;
+      return { id: base.id, previous };
     },
     [data, findGameByName, notify, persist],
   );
