@@ -35,7 +35,7 @@ import type {
  * géneros, juego más largo): es una lista de deseos, y contarla inflaría cada indicador con juegos que no se
  * han tocado.
  */
-export const PLAYED_TABS: readonly TabId[] = ['c', 'v', 'e'];
+const PLAYED_TABS: readonly TabId[] = ['c', 'v', 'e'];
 
 /**
  * Listas cuya nota es una VALORACIÓN de lo jugado, que es lo único que tiene sentido en el histograma:
@@ -47,7 +47,7 @@ export const PLAYED_TABS: readonly TabId[] = ['c', 'v', 'e'];
 const SCORED_TABS: readonly TabId[] = ['c', 'v'];
 
 /** Cuántos juegos decididos (completados + abandonados) necesita un género para entrar en el índice de abandono. */
-export const ABANDON_RATE_MIN = 3;
+const ABANDON_RATE_MIN = 3;
 
 /**
  * Años que acumula cada punto de la evolución del gusto.
@@ -64,7 +64,7 @@ export const GENRE_RANK_WINDOW = 3;
  * que las líneas se conviertan en una maraña. Un género puede estar en el top general y faltar en algún año: ahí
  * su punto vale cero y la vista PARTE la línea, en vez de dibujarle un puesto de relleno.
  */
-export const GENRE_RANK_SIZE = 7;
+const GENRE_RANK_SIZE = 7;
 
 /**
  * Completados que ha de reunir la ventana para que su puesto se dibuje.
@@ -77,7 +77,7 @@ export const GENRE_RANK_SIZE = 7;
 export const GENRE_RANK_MIN_GAMES = 5;
 
 /** Completados que necesita un género para que su porcentaje de rejugado signifique algo. */
-export const REPLAY_GENRE_MIN = 4;
+const REPLAY_GENRE_MIN = 4;
 
 /**
  * Semanas que conserva la serie de constancia: dos años.
@@ -91,16 +91,16 @@ export const REPLAY_GENRE_MIN = 4;
 export const ACTIVITY_WEEKS_LIMIT = 104;
 
 /** Cuántos juegos se listan en los rankings cortos (últimos abandonos, próximos que más esperan…). */
-export const STATS_SHORTLIST = 5;
+const STATS_SHORTLIST = 5;
 
 /**
  * Cuántos juegos forman "tu élite": los que se listan Y los que alimentan el agregado. Es un solo número a
  * propósito — si la pantalla enseña quince títulos, los géneros y las plataformas tienen que ser los de esos
  * quince, no los de un subconjunto que nadie ve.
  */
-export const STATS_TOP_SIZE = 15;
+const STATS_TOP_SIZE = 15;
 /** Juegos puntuados que necesita un género para que su nota media entre en el ranking. */
-export const GENRE_GRADE_MIN = 3;
+const GENRE_GRADE_MIN = 3;
 /** Largo de la cita del panel y mínimo por debajo del cual no merece la pena buscar un corte limpio. */
 const QUOTE_MAX = 220;
 const QUOTE_MIN = 60;
