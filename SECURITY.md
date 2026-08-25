@@ -18,10 +18,18 @@ reproducción y el impacto estimado. Se responderá lo antes posible.
 - **Firebase Firestore**: perfil social y configuración privada (`privateConfig/{uid}`).
 
 El documento de perfil (`profiles/{uid}`) lo puede LEER cualquier usuario autenticado —es el directorio
-social—, así que contiene solo el nick, la foto (opcional) y el id del gist social. El correo y el id del
-gist de juegos salieron de ahí: el perfil propio se resuelve leyendo el documento por uid, y el gist de
-juegos vive en `privateConfig/{uid}`, que solo lee su dueño. Los perfiles anteriores se purgan al volver a
-guardarse, y `scripts/purge-profile-pii.js` remata los inactivos.
+social—, así que contiene solo el nick, la foto (opcional) y el rango. El correo, el id del gist social y el
+del gist de juegos salieron de ahí: el perfil propio se resuelve leyendo el documento por uid, y los ids
+viven en `privateConfig/{uid}`, que solo lee su dueño (y, para las amistades, denormalizados en el documento
+de amistad, que solo leen las dos partes).
+
+**Restos legacy.** Los perfiles creados antes de ese cambio arrastran esos campos, y algunos además el PAT de
+GitHub **en claro** en `social.githubToken`. Como el documento es de lectura pública para cualquier
+autenticado, eso es un secreto expuesto, no una molestia. Hay dos vías de purga y hacen falta las dos:
+el cliente del propio usuario lo pone a salvo cifrado en `privateConfig` y lo borra al iniciar sesión
+(`firebaseProfileHealRepository`), lo que cubre a quien vuelve; y `scripts/purge-profile-pii.js` remata a los
+inactivos —token e ids incluidos, con respaldo local previo porque para algunos es la única copia que queda—.
+El contador `legacy` del panel `/admin` dice cuántos quedan.
 
 ## Medidas implementadas
 
@@ -33,7 +41,10 @@ WebCrypto nativo (AES-GCM 256). Hay **dos** mecanismos con garantías **distinta
   aleatoria **no exportable** guardada en IndexedDB; ni el propio JS puede leer el material de la
   clave. El token nunca se guarda en claro y hay migración automática del token en claro legacy.
   Protege ante copia/volcado del localStorage; **no** protege ante un XSS ya ejecutándose en el
-  origen (que podría usar la clave).
+  origen (que podría usar la clave). Aplica a **los dos canales** (juegos y social): el token social
+  es una copia del mismo PAT, así que dejarlo en claro anulaba el cifrado del otro — el mismo secreto
+  quedaba legible en la clave de al lado. Se corrigió en `gistConfigRepository`, que cifra y descifra
+  ambos con el mismo mecanismo.
 - **Token en Firestore (`privateConfig`) — ofuscación, no confidencialidad.** Se "cifra" con una
   clave derivada del `uid` (PBKDF2, salt aleatorio + 600k iteraciones). Como el `uid` es público, la
   **protección real es la regla owner-only de Firestore**, no el cifrado; este es defensa en
@@ -65,11 +76,23 @@ WebCrypto nativo (AES-GCM 256). Hay **dos** mecanismos con garantías **distinta
   formas conocidas; esto cubre los datos que hay. Sus predicados están cubiertos por
   `tests/unit/auditProfileRules.test.ts`, que además verifica que los límites coinciden con los del fichero de
   reglas: una auditoría que aprobara lo que las reglas rechazan sería peor que no tenerla.
+- **Firebase App Check** (`src/model/repository/appCheckRepository.ts`), con reCAPTCHA v3. La API key web es
+  pública por diseño, así que sin esto cualquiera puede hablar con Firestore desde fuera de la app: las reglas
+  dicen QUIÉN puede hacer QUÉ, pero no limitan el ritmo. Está integrado en el código y la clave de sitio va en
+  el build (`VITE_RECAPTCHA_SITE_KEY`); **que la atestación sea EXIGIDA es un ajuste de la consola de
+  Firebase**, no del repositorio, y hasta activarlo ahí App Check informa pero no bloquea. Se apaga por
+  completo vaciando la variable, sin tocar código.
 - **Analítica con consentimiento previo**: Google Analytics no se inicializa mientras el usuario no lo
   acepte, y la decisión es revocable desde Cuenta.
 - **Borrado de cuenta** desde la app: elimina perfil, amistades y configuración remota, y limpia
-  localStorage e IndexedDB (incluida la clave que descifra el token). Los Gists no se tocan: son de la
-  cuenta de GitHub del usuario.
+  localStorage, **las dos** bases de IndexedDB (la de datos y `mygamelist-secure`, donde vive la clave
+  que descifra el token) y la Cache Storage del service worker. Las dos últimas se añadieron al
+  detectar que sobrevivían al borrado: la base de la clave está aparte a propósito, así que borrar la
+  de datos no se la llevaba. Los Gists no se tocan: son de la cuenta de GitHub del usuario.
+- **El service worker no cachea `/api/*`.** La Cache Storage guarda lo que se le mande, ignorando el
+  `Cache-Control: no-store` de la respuesta, y casa las entradas solo por URL (no hay
+  `Vary: Authorization`), así que una respuesta por usuario servía para cualquier sesión. Las
+  respuestas de las Pages Functions se descartan en el handler `fetch`, con las externas.
 - **Sincronización CRDT** (merge por marcas de tiempo + tombstones) para minimizar pérdida de datos.
 - **Service Worker** que solo cachea GET same-origin y excluye APIs externas (GitHub/Firebase).
 
@@ -82,11 +105,6 @@ WebCrypto nativo (AES-GCM 256). Hay **dos** mecanismos con garantías **distinta
 
 ## Mejoras futuras (no implementadas)
 
-- **Firebase App Check.** La API key web es pública por diseño, así que hoy cualquiera puede hablar con
-  Firestore fuera de la app: las reglas dicen QUIÉN puede hacer QUÉ, pero no limitan el ritmo. Sin App
-  Check, un autenticado puede recorrer el directorio entero o inundar de peticiones de amistad al coste de
-  cuota del proyecto. Requiere configuración en la consola de Firebase (reCAPTCHA Enterprise) además de
-  código.
 - **Rol de administrador por *custom claim*** en vez del correo incrustado en `firestore.rules`. Es
   igual de seguro (el claim lo firma Firebase), no publica el correo del administrador en un repositorio
   público y permite rotarlo sin desplegar reglas. Pendiente porque exige provisionar el claim con el Admin
