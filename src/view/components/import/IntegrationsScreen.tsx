@@ -1,27 +1,10 @@
-import type { CSSProperties } from 'react';
 import { UI_MESSAGES } from '../../../core/constants/labels';
 import { COMMON_ICONS } from '../../../core/constants/icons';
 import { Icon } from '../Icon';
 import { PlayniteNote } from './PlayniteNote';
+import '../../../styles/import.scss';
 
 const M = UI_MESSAGES.import.integrations;
-
-const screenStyle: CSSProperties = {
-  display: 'flex',
-  flexDirection: 'column',
-  gap: '1rem',
-  width: '100%',
-  maxWidth: '72rem',
-  margin: '0 auto',
-};
-
-const stepsStyle: CSSProperties = {
-  margin: '0.25rem 0 0',
-  paddingLeft: '1.25rem',
-  display: 'flex',
-  flexDirection: 'column',
-  gap: '0.35rem',
-};
 
 interface IntegrationsScreenProps {
   /** El archivo JSON exportado por Playnite Library Exporter; App parsea/mapea/inserta y avisa. */
@@ -37,8 +20,8 @@ interface IntegrationsScreenProps {
 /** Pantalla de Integraciones. Única vía: importar el JSON de la extensión «Playnite Library Exporter». */
 export function IntegrationsScreen({ onImport, onBack, inboxCount, onOpenInbox }: IntegrationsScreenProps) {
   return (
-    <div style={screenStyle}>
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', alignItems: 'center' }}>
+    <div className="import-screen">
+      <div className="import-actions">
         <button type="button" className="btn btn-secondary" onClick={onBack}>
           <Icon name={COMMON_ICONS.arrowBack} />
           <span>{UI_MESSAGES.import.back}</span>
@@ -51,14 +34,14 @@ export function IntegrationsScreen({ onImport, onBack, inboxCount, onOpenInbox }
           <PlayniteNote />
         </div>
         <div className="settings-backup-info">
-          <p className="settings-card-note" style={{ fontWeight: 600 }}>{M.stepsTitle}</p>
-          <ol className="settings-card-note" style={stepsStyle}>
+          <p className="settings-card-note import-steps-title">{M.stepsTitle}</p>
+          <ol className="settings-card-note import-steps">
             {M.steps.map((step, i) => (
               <li key={i}>{step}</li>
             ))}
           </ol>
         </div>
-        <div className="settings-backup-actions" style={{ marginTop: '0.9rem', display: 'flex', flexWrap: 'wrap', gap: '0.5rem', alignItems: 'center' }}>
+        <div className="settings-backup-actions import-integrations-actions">
           {inboxCount > 0 ? (
             <button type="button" className="btn btn-secondary btn-accent" onClick={onOpenInbox}>
               <Icon name={COMMON_ICONS.download} />

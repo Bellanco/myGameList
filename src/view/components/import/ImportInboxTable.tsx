@@ -113,9 +113,9 @@ export function ImportInboxTable({ items, isInLists, listOf, selectedIds, onTogg
                 </tr>
 
                 <tr className="detail-row open">
-                  <td colSpan={3} style={{ padding: 0 }}>
+                  <td colSpan={3}>
                     <div className="detail-content">
-                      <div className="detail-actions" style={{ gridColumn: '1 / -1' }}>
+                      <div className="detail-actions">
                         {existing ? (
                           <button type="button" className="btn btn-secondary" title={M.enrichHint} onClick={() => onEnrich(item)}>
                             <Icon name={COMMON_ICONS.edit} />

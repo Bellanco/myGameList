@@ -1,0 +1,150 @@
+// Flujo de IMPORTACIÓN (Integraciones, bandeja, preferencias de campos y la guía de Playnite).
+//
+// Hoja SIN guion bajo y fuera de `index.scss` a propósito: la importan los componentes del flujo, que entran por
+// `lazy()`, así que Vite la emite en sus chunks perezosos (mismo criterio que `stats.scss`, `admin.scss` y
+// `roulette-modal.scss`).
+//
+// POR QUÉ EXISTE: estas cuatro pantallas se escribieron con el layout en objetos `CSSProperties` inline —28 en
+// total— mientras el resto de la aplicación lo pone en clases. Eso traía tres problemas:
+//
+//  1. DUPLICACIÓN. `screenStyle` estaba copiado byte a byte en `InboxScreen` y en `IntegrationsScreen`, y
+//     `stepsStyle` estaba copiado CON DERIVA entre `IntegrationsScreen` (margen .25rem, sangría 1.25rem) y
+//     `PlayniteNote` (.35rem, 1.2rem): dos listas del mismo flujo con espaciados distintos por accidente. Aquí
+//     hay un solo `.import-steps` y una sola sangría.
+//  2. REGLAS QUE NO HACÍAN NADA. `_base.scss` aplica un reset global `* { margin: 0; padding: 0 }`, así que todos
+//     los `margin: 0` y `padding: 0` inline eran ruido; y el bloque de acciones de Integraciones redeclaraba
+//     `display/flex-wrap/align-items` que ya le daba su propia clase `.settings-backup-actions`.
+//  3. NINGÚN TEMA PODÍA TOCARLAS. Un estilo inline gana a cualquier selector, así que los skins de paleta
+//     (`themes/*.scss`) no podían dar forma a estas pantallas —justo lo contrario del criterio del proyecto, donde
+//     la forma la pone cada tema—. Ahora son clases y se pueden alcanzar.
+
+/* Marco de pantalla del flujo: columna centrada con el mismo ancho útil en Integraciones y en la bandeja. */
+.import-screen {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  width: 100%;
+  max-width: 72rem;
+  margin: 0 auto;
+}
+
+/* Fila de acciones de cabecera (el botón "Volver"). Envuelve porque en móvil puede caer más de un botón. */
+.import-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* Acción suelta dentro de una tarjeta: no debe estirarse al ancho de la columna flex que la contiene. */
+.import-card-action {
+  align-self: flex-start;
+}
+
+/* Lista de pasos numerados, ÚNICA para las dos guías (ver el punto 1 de la cabecera). */
+.import-steps {
+  margin: 0.35rem 0 0;
+  padding-left: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+/* Panel plegable de la guía de consola dentro de la nota de Integraciones. */
+.import-guide {
+  margin-top: 0.6rem;
+  padding: 0.75rem 0.9rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+}
+
+/* Título de una lista de pasos. Unificado a 600 —el peso de énfasis que usa el resto de la aplicación, y el
+   mismo que la leyenda de las preferencias de campos— porque estaba en 600 en Integraciones y en 700 en la guía
+   de consola: dos títulos del mismo tipo, en el mismo flujo, con pesos distintos por accidente. */
+.import-steps-title {
+  font-weight: 600;
+}
+
+/* La palabra del texto que despliega la guía: es un `<button>` pero tiene que leerse como un enlace dentro del
+   párrafo, así que se le quita todo el aspecto de botón y hereda la tipografía del texto que lo rodea. */
+.import-guide-link {
+  background: none;
+  border: 0;
+  font: inherit;
+  font-weight: 600;
+  color: var(--steam);
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+/* Barra de herramientas de la bandeja: seleccionar todo, recuento y acciones destructivas al otro extremo. */
+.import-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+/* Empuja al extremo derecho lo que venga después (las acciones). Al envolver en móvil se anula solo. */
+.import-toolbar-spacer {
+  flex: 1;
+}
+
+/* Casilla con su etiqueta al lado: toda la etiqueta es zona de clic. */
+.import-check {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+}
+
+/* Buscador de la bandeja: ocupa el ancho y hereda el color del texto (el `type="search"` de algunos
+   navegadores lo fija por su cuenta). */
+.import-search {
+  width: 100%;
+  padding: 0.6rem 0.85rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  color: inherit;
+}
+
+/* Preferencias de campos: dos grupos que caen a una columna en cuanto no caben. */
+.import-fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+  gap: 1rem;
+}
+
+/* El `<fieldset>` se usa por semántica (agrupa las casillas de un grupo), no por su marco. */
+.import-fields-set {
+  border: 0;
+}
+
+.import-fields-legend {
+  font-weight: 600;
+}
+
+.import-fields-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+/* Nota al pie de un grupo, separada de la última casilla. */
+.import-fields-hint {
+  margin-top: 0.5rem;
+}
+
+/* Centinela del scroll infinito: no se ve, pero necesita alto para que el IntersectionObserver lo cruce. */
+.import-sentinel {
+  height: 1px;
+}
+
+/* Las acciones de Integraciones van algo separadas de los pasos que las explican. El resto del layout de la
+   fila ya lo pone `.settings-backup-actions` (`_layout.scss`), que antes se redeclaraba inline. */
+.settings-backup-actions.import-integrations-actions {
+  margin-top: 0.9rem;
+}

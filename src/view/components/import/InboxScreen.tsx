@@ -1,27 +1,17 @@
-import { type CSSProperties, useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { TabId } from '../../../model/types/game';
 import type { ImportField, ImportFieldGroup, ImportFieldPrefs, ImportedGame } from '../../../model/types/import';
 import { UI_MESSAGES } from '../../../core/constants/labels';
 import { COMMON_ICONS } from '../../../core/constants/icons';
 import { normalizeName } from '../../../core/roulette/roulette';
+import { copyText } from '../../../core/utils/clipboard';
 import { Icon } from '../Icon';
 import { ImportFieldPrefsCard } from './ImportFieldPrefsCard';
 import { ImportInboxTable } from './ImportInboxTable';
+import '../../../styles/import.scss';
 
 const M = UI_MESSAGES.import.inbox;
 const PAGE = 40; // scroll infinito: se renderizan de PAGE en PAGE
-
-const screenStyle: CSSProperties = { display: 'flex', flexDirection: 'column', gap: '1rem', width: '100%', maxWidth: '72rem', margin: '0 auto' };
-const toolbarStyle: CSSProperties = { display: 'flex', flexWrap: 'wrap', gap: '0.75rem', alignItems: 'center' };
-const selectAllStyle: CSSProperties = { display: 'flex', gap: '0.4rem', alignItems: 'center', cursor: 'pointer' };
-const searchStyle: CSSProperties = {
-  width: '100%',
-  padding: '0.6rem 0.85rem',
-  borderRadius: 'var(--radius-md)',
-  border: '1px solid var(--border)',
-  background: 'var(--surface)',
-  color: 'inherit',
-};
 
 interface InboxScreenProps {
   imported: ImportedGame[];
@@ -82,7 +72,7 @@ export function InboxScreen({ imported, isInLists, listOf, onClassify, onEnrich,
   const allFilteredSelected = filtered.length > 0 && filtered.every((g) => selectedIds.has(g.id));
 
   const backRow = (
-    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', alignItems: 'center' }}>
+    <div className="import-actions">
       <button type="button" className="btn btn-secondary" onClick={onBack}>
         <Icon name={COMMON_ICONS.arrowBack} />
         <span>{UI_MESSAGES.import.back}</span>
@@ -92,14 +82,14 @@ export function InboxScreen({ imported, isInLists, listOf, onClassify, onEnrich,
 
   if (imported.length === 0) {
     return (
-      <div style={screenStyle}>
+      <div className="import-screen">
         {backRow}
         <div className="settings-card">
           <div className="settings-card-head">
             <h2>{M.title}</h2>
             <p className="settings-card-note">{M.empty}</p>
           </div>
-          <button type="button" className="btn btn-secondary" style={{ alignSelf: 'flex-start' }} onClick={onGoIntegrations}>
+          <button type="button" className="btn btn-secondary import-card-action" onClick={onGoIntegrations}>
             <Icon name={COMMON_ICONS.upload} />
             <span>{M.goIntegrations}</span>
           </button>
@@ -126,29 +116,24 @@ export function InboxScreen({ imported, isInLists, listOf, onClassify, onEnrich,
   };
 
   const copyName = async (name: string) => {
-    try {
-      await navigator.clipboard.writeText(name);
-      showToast(M.copyNameSuccess(name));
-    } catch {
-      showToast(M.copyNameError);
-    }
+    showToast((await copyText(name)) ? M.copyNameSuccess(name) : M.copyNameError);
   };
 
   return (
-    <div style={screenStyle}>
+    <div className="import-screen">
       {backRow}
       <div className="settings-card">
         <div className="settings-card-head">
           <h2>{M.title}</h2>
           <p className="settings-card-note">{M.note}</p>
         </div>
-        <div style={toolbarStyle}>
-          <label style={selectAllStyle}>
+        <div className="import-toolbar">
+          <label className="import-check">
             <input type="checkbox" checked={allFilteredSelected} onChange={toggleAll} aria-label={M.selectAll} />
             <span>{M.selectAll}</span>
           </label>
           {selectedCount > 0 ? <span className="settings-card-note">{M.selectedCount(selectedCount)}</span> : null}
-          <span style={{ flex: 1 }} />
+          <span className="import-toolbar-spacer" />
           <button type="button" className="btn btn-danger" onClick={deleteSelected} disabled={selectedCount === 0}>
             <Icon name={COMMON_ICONS.trash} />
             <span>{M.deleteSelected}</span>
@@ -158,7 +143,7 @@ export function InboxScreen({ imported, isInLists, listOf, onClassify, onEnrich,
             <span>{M.clear}</span>
           </button>
         </div>
-        <p className="settings-card-note" style={{ margin: 0 }}>{M.showing(shown.length, filtered.length)}</p>
+        <p className="settings-card-note">{M.showing(shown.length, filtered.length)}</p>
       </div>
 
       <ImportFieldPrefsCard prefs={fieldPrefs} onChange={onFieldPrefChange} />
@@ -169,7 +154,7 @@ export function InboxScreen({ imported, isInLists, listOf, onClassify, onEnrich,
         onChange={(e) => setQuery(e.target.value)}
         placeholder={M.search}
         aria-label={M.search}
-        style={searchStyle}
+        className="import-search"
       />
 
       <ImportInboxTable
@@ -183,7 +168,7 @@ export function InboxScreen({ imported, isInLists, listOf, onClassify, onEnrich,
         onDiscard={onDiscard}
         onCopyName={copyName}
       />
-      <div ref={sentinelRef} style={{ height: 1 }} aria-hidden="true" />
+      <div ref={sentinelRef} className="import-sentinel" aria-hidden="true" />
 
       {toast ? (
         <div className="inbox-toast" role="status" aria-live="polite">
