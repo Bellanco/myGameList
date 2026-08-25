@@ -30,6 +30,9 @@ import {
 } from '../../model/repository/shareAdminRepository';
 import { HubAvatar } from './socialhub/HubAvatar';
 import { Icon } from './Icon';
+// La hoja del panel se importa AQUÍ y no desde `index.scss`: como el panel entra por `lazy()`, Vite emite su CSS
+// en el mismo chunk perezoso y el arranque no carga ni un byte de estilos de esta pantalla (igual que `stats.scss`).
+import '../../styles/admin.scss';
 
 const A = ADMIN_PANEL_UI;
 
