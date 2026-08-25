@@ -299,17 +299,32 @@ export async function healOwnFriendshipIdentity(myUid: string, self: FriendshipS
     snapshot.docs.map((entry) => {
       const data = entry.data() as Partial<FriendshipDoc>;
       const amRequester = data.requester === myUid;
+      /**
+       * Un id VACÍO no borra el que ya consta: conserva el guardado.
+       *
+       * Mismo criterio que `establishProfileIdentity` y por el mismo motivo, solo que aquí el daño es ajeno. Varios
+       * llamantes pasan `gamesGistId: mainSyncConfig?.gistId || ''`, así que un `''` no significa "este usuario ya
+       * no tiene gist de juegos": significa "en este dispositivo, en este instante, no sé cuál es" —la
+       * configuración se hidrata de forma asíncrona, y basta guardar el perfil antes de que llegue—. Y estos
+       * campos son de donde MIS AMIGOS sacan mi lista de juegos: escribir el vacío se la dejaba en blanco a todos
+       * ellos hasta el siguiente guardado con la configuración ya cargada. Borrar de verdad un canal es un gesto
+       * explícito con respaldo comprobado (ver `purgeOwnPublicGistIds`), nunca el efecto colateral de no saberlo.
+       */
+      const keepKnown = (next: string, stored: string | undefined): string => next || str(stored);
+      const socialGistId = keepKnown(self.socialGistId, amRequester ? data.requesterSocialGistId : data.recipientSocialGistId);
+      const gamesGistId = keepKnown(self.gamesGistId, amRequester ? data.requesterGamesGistId : data.recipientGamesGistId);
+
       // Solo escribir si algún campo denormalizado DIVERGE del valor actual (evita N writes/cuota en cada
       // apertura de social o guardado de perfil cuando nada ha cambiado).
       const diverges = amRequester
         ? data.requesterName !== self.name ||
           data.requesterPhoto !== self.photo ||
-          data.requesterSocialGistId !== self.socialGistId ||
-          data.requesterGamesGistId !== self.gamesGistId
+          data.requesterSocialGistId !== socialGistId ||
+          data.requesterGamesGistId !== gamesGistId
         : data.recipientName !== self.name ||
           data.recipientPhoto !== self.photo ||
-          data.recipientSocialGistId !== self.socialGistId ||
-          data.recipientGamesGistId !== self.gamesGistId;
+          data.recipientSocialGistId !== socialGistId ||
+          data.recipientGamesGistId !== gamesGistId;
       if (!diverges) {
         return Promise.resolve();
       }
@@ -317,15 +332,15 @@ export async function healOwnFriendshipIdentity(myUid: string, self: FriendshipS
         ? {
             requesterName: self.name,
             requesterPhoto: self.photo,
-            requesterSocialGistId: self.socialGistId,
-            requesterGamesGistId: self.gamesGistId,
+            requesterSocialGistId: socialGistId,
+            requesterGamesGistId: gamesGistId,
             updatedAt: now,
           }
         : {
             recipientName: self.name,
             recipientPhoto: self.photo,
-            recipientSocialGistId: self.socialGistId,
-            recipientGamesGistId: self.gamesGistId,
+            recipientSocialGistId: socialGistId,
+            recipientGamesGistId: gamesGistId,
             updatedAt: now,
           };
       return updateDoc(doc(services.firestore, 'friendships', entry.id), fields).catch(() => {
