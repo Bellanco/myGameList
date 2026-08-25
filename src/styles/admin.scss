@@ -72,11 +72,28 @@
 }
 .admin-result-count { margin: 0 auto 0 0; color: var(--text-muted); font-size: .85rem; }
 
-/* ACOTADA al panel: escrita sin acotar, esta regla pisaba también el aviso del gestor de etiquetas de AJUSTES
-   (misma clase, base en `_overlays-and-responsive.scss`), que nada tiene que ver con este panel. Mientras la hoja
-   viajaba en el arranque el efecto era invisible; al salir del arranque, ese aviso cambiaría de tamaño según si
-   el chunk del panel se había cargado o no. Acotarla lo deja determinista. */
-.admin-hub .admin-warning { color: var(--text-muted); font-size: .85rem; }
+/* AVISOS DEL PANEL: son NOTAS DE TEXTO, no el cartel del gestor de etiquetas.
+   ─────────────────────────────────────────────────────────────────────────────
+   Comparten nombre de clase con un cartel que vive en `_overlays-and-responsive.scss` y que nace OCULTO
+   (`display: none`) porque allí se enseña y se esconde con `.show` según haya algo que contar. El panel los pinta
+   condicionalmente desde el JSX —si no hay nada que decir, no hay nodo— así que nunca añade `.show`... y por eso
+   los tres avisos del panel NO SE VEÍAN: el aviso de censo recortado, la pista de nombre que no coincide y el
+   tope de cuota de un usuario. Se escribían en el DOM y el navegador no pintaba ninguno.
+   Aquí se recupera el `display` y se retira de una vez el resto del disfraz de cartel (relleno, filete lateral y
+   animación de entrada): lo que el panel quiere es una línea de texto atenuada bajo el dato que comenta, que es
+   justo lo que ya pedían el color y el tamaño de abajo, y lo que da por hecho el `margin: 0` de la fila de cuota.
+
+   Y va ACOTADA al panel: sin acotar pisaba también el cartel de AJUSTES, que nada tiene que ver con esto.
+   Mientras la hoja viajaba en el arranque el efecto era invisible; al salir del arranque, ese cartel cambiaría de
+   aspecto según si el chunk del panel se había cargado o no. Acotarla lo deja determinista. */
+.admin-hub .admin-warning {
+  display: block;
+  padding: 0;
+  border-left: 0;
+  animation: none;
+  color: var(--text-muted);
+  font-size: .85rem;
+}
 .admin-feedback { font-size: .85rem; }
 .admin-feedback.ok { color: var(--fg-sky); }
 .admin-feedback.warn { color: var(--text-muted); }
