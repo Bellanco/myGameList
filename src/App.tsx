@@ -4,6 +4,7 @@ import { DIALOG_MESSAGES, ROUTE_TAB, SYNC_BADGE_TEXT, SYNC_MESSAGES, TAB_ROUTE, 
 import { LEGAL_ROUTES, type LegalDocId } from './core/constants/legal';
 import { TAB_IDS, type TabData, type TabId } from './model/types/game';
 import { resolveGrade } from './core/utils/scoreScale';
+import { copyText } from './core/utils/clipboard';
 import { normalizeData } from './model/repository/localRepository';
 import { patchLocalMeta } from './model/repository/indexedDbRepository';
 import { IconSprite } from './view/components/IconSprite';
@@ -580,12 +581,8 @@ export default function App() {
       return;
     }
 
-    try {
-      await navigator.clipboard.writeText(currentGistId);
-      notify('ok', SYNC_MESSAGES.copySuccess);
-    } catch {
-      notify('err', SYNC_MESSAGES.copyError);
-    }
+    const copied = await copyText(currentGistId);
+    notify(copied ? 'ok' : 'err', copied ? SYNC_MESSAGES.copySuccess : SYNC_MESSAGES.copyError);
   }, [notify, syncVm.connectedGistId, syncVm.currentConfig?.gistId, syncVm.gistId]);
 
   const handleRecoverGistId = useCallback(() => {
