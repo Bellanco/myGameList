@@ -38,7 +38,7 @@ function isNotFoundGistError(error: unknown): boolean {
  * marcar la publicación como pendiente).
  */
 export async function resolveSocialChannel(options?: { email?: string | null }): Promise<SocialChannelResult> {
-  await ensureSyncConfigLoaded(); // C4: el token principal se descifra de forma asíncrona
+  await ensureSyncConfigLoaded(); // C4: los tokens (principal Y social) se descifran de forma asíncrona
   const mainConfig = getSyncConfig();
   const socialConfig = getSocialSyncConfig();
   const mainToken = String(mainConfig?.token || '').trim();
