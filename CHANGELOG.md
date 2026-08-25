@@ -5,6 +5,16 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
 
 ## [Unreleased]
 
+## [1.0.6] - 2026-08-25
+
+> Esta sección era `[Unreleased]` y se cierra aquí. Las versiones 1.0.1–1.0.5 nunca tuvieron sección propia, así
+> que lo que hay debajo es **todo lo acumulado desde 1.0.0**: parte se desplegó ya en esas versiones intermedias y
+> parte llega con esta. Está todo presente en 1.0.6; no todo se estrena en 1.0.6.
+>
+> Y es la primera versión en la que `package.json` dice la verdad: llevaba `1.0.0` desde el principio, así que la
+> telemetría etiquetaba como 1.0.0 los errores de las seis releases anteriores (ver `__APP_VERSION__` en
+> `vite.config.ts`).
+
 ### Added
 - **Actividad de listas en el feed social.** Al feed llegan, además de las reseñas y las publicaciones, los
   movimientos: cuando un juego entra por primera vez en una lista, tus amistades ven que lo has **apuntado,
@@ -94,6 +104,10 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
     estado de la pantalla.
 
 ### Performance
+- **El arranque adelgaza otros 1,8 kB comprimidos (213,1 → 211,3) sacando del CSS inicial las hojas de dos
+  pantallas que ya entraban por `lazy()`**: el panel de administración y el modal de la ruleta. Eran ~24 kB sin
+  comprimir que descargaba todo el mundo para dos pantallas que casi nadie abre. El margen del presupuesto pasa de
+  0,9 kB —donde el siguiente `import` rompía el build— a 3,7 kB.
 - **El arranque adelgaza 2,6 kB comprimidos (214,3 → 211,7) sacando del chunk inicial los textos del espacio
   social.** Los 8 kB de `SOCIAL_UI` viajaban en la primera carga de TODO el mundo —incluido quien nunca abre el
   hub— porque vivían en `labels.ts`, que importa media aplicación. El único cordón que los ataba ahí era el
@@ -104,6 +118,20 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
   listas: sus textos empujaron el arranque por encima del presupuesto de `ci-validate`, y la causa no eran ellos.
 
 ### Fixed
+- **La reseña se publicaba sobre un id adivinado.** `App` reimplementaba la regla de alta del ViewModel
+  (`max(ids) + 1`) para saber sobre qué juego publicar en el canal social. Mientras las dos copias coincidieran no
+  se notaba; en cuanto dejaran de coincidir, la reseña se colgaría de otro juego sin error ni rastro. Ahora el
+  guardado devuelve el id real —y el estado previo del juego—, y nadie los recalcula.
+- **El editor de perfil dejaba de exigir un juego completado.** Abrir el espacio social antes de que llegara la
+  biblioteca fijaba la vía indulgente («aquí no hay biblioteca, no puedo afirmar que no tengas completados») y ahí
+  se quedaba: al llegar la biblioteca con juegos y ningún completado, el callback no se recreaba.
+- **Tres avisos del panel de administración no se veían.** Comparten clase con el cartel del gestor de etiquetas,
+  que nace `display: none` y se enseña con `.show`; el panel los pinta condicionalmente y nunca añade esa clase, así
+  que el aviso de censo recortado, la pista de nombre que no coincide y el tope de cuota se escribían en el DOM sin
+  pintarse.
+- **Copiar el enlace de una reseña compartida no acusaba nada, y ensuciaba la telemetría.** El botón lanzaba la
+  copia sin capturar el rechazo, así que un permiso denegado subía como `unhandledrejection` y se reportaba como
+  error de la aplicación. Ahora dice «Enlace copiado» y el fallo se trata como lo que es.
 - **"No me sale el botón de compartir".** Dos agujeros distintos, ninguno relacionado con el rango del perfil
   (bronce puede compartir: tiene 5 enlaces de 7 días, y ni el cliente ni la Function miran el rango para eso).
   - **Desde tus reseñas del perfil social no se podía compartir.** El botón estaba en el panel de estadísticas y
@@ -148,6 +176,64 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
     viven en los canales de mucha gente y en los documentos de amistad, y en el propio canal, que se sanea al abrir
     el hub. Un PNG pequeño y de color plano subido a propósito como foto —un logo, un dibujo liso— se marcaría como
     genérico; es el falso positivo asumido, y se arregla subiendo una foto.
+
+### Changed
+
+- **La decisión de publicar reseña y su efecto salen de `App`.** La decisión (qué publicar, qué retirar, qué no
+  tocar) es pura y vive en `core/social/reviewPublication`; el efecto, en `viewmodel/applyReviewPublication`. Un
+  componente no debe importar repositorios, y `App` lo hacía dos veces.
+- **El layout de las pantallas de importación pasa a clases.** Eran 28 objetos de estilo inline mientras el resto
+  de la aplicación usa clases: había reglas duplicadas byte a byte entre dos pantallas, otras copiadas con deriva
+  (espaciados distintos por accidente), varias que no hacían nada —el reset global ya las aplicaba— y ninguna que
+  los temas pudieran alcanzar, porque un estilo inline gana a cualquier selector.
+- Copiar al portapapeles se unifica en `core/utils/clipboard` (había cinco copias del mismo `try/catch`), el
+  utillaje de diagnóstico de fechas sale de `main.tsx` a un módulo aparte (95 de sus 210 líneas eran depuración) y
+  se retira código muerto: dos helpers de Playnite huérfanos desde que se consolidaron las vías de importación, y
+  varias constantes que se exportaban sin que nadie las usara fuera de su fichero.
+- **La auditoría de seguridad de CI ya significa algo.** Auditaba todas las dependencias con
+  `continue-on-error: true`, así que nunca bloqueaba: los seis avisos `moderate` de la cadena de `firebase-tools`
+  la dejaban en rojo permanente y un aviso real en una dependencia de producción se habría perdido entre ellos.
+  Ahora hay dos pasos: uno bloqueante sobre `--omit=dev` (lo que de verdad se despliega, hoy limpio) y otro
+  informativo sobre las de desarrollo.
+
+### Tests
+
+- La decisión de publicar reseña y su efecto quedan cubiertos al 100 %, y `App.tsx` pasa de **0 %** a **54 %**:
+  cinco pruebas de componente montan la aplicación y guardan desde el formulario de verdad. Antes ninguna suite
+  ejecutaba sus manejadores —medida la cobertura V8 real de los e2e, el recorrido interactivo completo aportaba dos
+  sentencias sobre el simple arranque—, y es justo donde se había colado el fallo del id.
+- Regresiones nuevas para el saneado de amistades (un id vacío conserva el que consta), para el mapeo de géneros
+  del importador y para el cifrado en reposo del canal social. En total, de 1274 a 1319 pruebas.
+
+### Security
+
+- **El token de GitHub ya no se guarda en claro en NINGÚN sitio del dispositivo.** Estaba cifrado en reposo en el
+  canal de juegos, pero el canal social guardaba una COPIA DEL MISMO PAT en claro en la clave de al lado, así que el
+  cifrado del primero no protegía nada: bastaba leer el registro del segundo. Ahora los dos canales usan el mismo
+  mecanismo (AES-GCM con la clave de dispositivo no exportable de IndexedDB), con migración automática del token en
+  claro que hubiera. Siguen siendo dos copias independientes a propósito: al desconectar la sincronización de
+  juegos, el token social es lo único con lo que aún se puede escribir en el canal.
+- **Y tampoco en IndexedDB.** El runner de migración local sembraba el token en la meta local, en claro, y NADIE lo
+  leía: el fallback de recuperación recibe el perfil de Firestore, no esa meta. Era un secreto en disco a cambio de
+  nada. Se retira la escritura y se vacía lo ya escrito al arrancar.
+- **Las respuestas de `/api/*` salen de la caché del service worker.** Son por usuario y revocables, pero la Cache
+  API guarda lo que se le manda ignorando su `Cache-Control: no-store`, y casa las entradas SOLO por URL (no hay
+  `Vary: Authorization`). Se quedaban guardados `/api/share/mine` (mis enlaces, mi cuota, mi veto) y
+  `/api/share/all` (el censo del panel), con tres consecuencias: sobrevivían a cerrar sesión y a borrar la cuenta,
+  en un navegador compartido el siguiente usuario veía en el primer pintado la lista del anterior, y un enlace
+  retirado se seguía sirviendo desde la caché local. El arreglo es retroactivo: al cambiar el identificador de
+  build cambia el nombre de la caché, y el `activate` borra las que no son la actual.
+- **El borrado de cuenta se lleva también la clave de dispositivo y la Cache Storage.** La clave AES vive en su
+  propia base (`mygamelist-secure`), aparte de la de datos, así que borrar la de datos no se la llevaba: quedaba
+  una clave huérfana después de ejercer el derecho de supresión.
+- **La purga de perfiles legacy cubre el token y los ids de gist.** `scripts/purge-profile-pii.js` retira ahora
+  `social.githubToken` —un PAT en claro en un documento que lee cualquier usuario autenticado— además del correo y
+  los ids, con respaldo local previo porque para algunos usuarios es la única copia que queda. Y deja de saltarse
+  los perfiles de id legacy, que eran los más antiguos y los más propensos a arrastrarlo.
+- **Un id de gist vacío ya no borra el que consta en las amistades.** Varios llamantes pasan
+  `mainSyncConfig?.gistId || ''`, y esa configuración se hidrata de forma asíncrona: un vacío significa «aquí y
+  ahora no lo sé», no «este usuario ya no tiene gist». De esos campos denormalizados sacan las amistades la lista
+  de juegos, así que guardar el perfil antes de que llegara la configuración se la dejaba en blanco a todas ellas.
 
 ## [1.0.0] - 2026-08-16
 
