@@ -5,7 +5,7 @@
 // ni nota precargada por esta vía). Estructura fija en inglés → robusta.
 
 import type { RawExternalGame } from '../../model/types/import';
-import { cleanNames, mapSource, normalizeGenreName, playtimeSecondsToHours, resolvePlatforms } from './playniteShared';
+import { cleanNames, mapSource, playtimeSecondsToHours, resolvePlatforms } from './playniteShared';
 
 function toRecordArray(value: unknown): Record<string, unknown>[] {
   return Array.isArray(value) ? value.filter((x): x is Record<string, unknown> => Boolean(x) && typeof x === 'object') : [];
@@ -38,7 +38,9 @@ export function parseLibraryExporter(input: unknown): RawExternalGame[] {
 
     const sourceName = str(game.sourceName);
     const gameSource = mapSource(sourceName);
-    const genres = cleanNames(strArray(game.genres).map(normalizeGenreName));
+    // `cleanNames` ya normaliza los géneros con su segundo argumento; mapear `normalizeGenreName` a mano antes
+    // repetía por fuera lo que la propia función hace por dentro.
+    const genres = cleanNames(strArray(game.genres), true);
     const platforms = resolvePlatforms(strArray(game.platforms), sourceName);
     const externalId =
       str(game.providerGameId) || (typeof game.steamAppId === 'number' ? String(game.steamAppId) : '') || str(game.playniteId);

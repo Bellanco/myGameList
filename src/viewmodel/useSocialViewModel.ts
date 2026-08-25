@@ -49,7 +49,7 @@ import { mapWithConcurrency } from '../core/utils/concurrency';
 import { matchSocialRoute, OWN_PROFILE_ALIAS } from './social/socialRoutes';
 import { useSocialCompose } from './social/useSocialCompose';
 import { useSocialLegalConsent } from './social/useSocialLegalConsent';
-import { DEFAULT_SOCIAL_VISIBILITY, getOrderedUniqueTabs, normalizeVisibility, useSocialProfileForm } from './social/useSocialProfileForm';
+import { DEFAULT_SOCIAL_VISIBILITY, normalizeVisibility, useSocialProfileForm } from './social/useSocialProfileForm';
 import { reviewActorsByGame } from '../core/social/moveActivity';
 import { useSocialFeed } from './social/socialFeed';
 // Re-exportados: las pantallas del hub los importan desde este ViewModel desde antes de la extracción.
@@ -251,6 +251,11 @@ export function useSocialViewModel(options?: {
   const {
     profileName, setProfileName, hiddenTabs, setHiddenTabs, showPhoto, setShowPhoto,
     hideReplayable, setHideReplayable, hideRetry, setHideRetry, hideGameTime, setHideGameTime,
+    // `hydrate` sale del objeto para poder LLAMARLA suelta: invocada como método (`hydrateProfileForm(...)`),
+    // la regla de dependencias exige el objeto entero, y `useSocialProfileForm` devuelve un literal nuevo en cada
+    // render — depender de él recrearía los callbacks siempre y traería de vuelta las hidrataciones repetidas que
+    // el resto del fichero evita. Desestructurada es una referencia estable (`useCallback([])`).
+    hydrate: hydrateProfileForm,
   } = profileForm;
   /**
    * La foto propia que SE PUEDE PUBLICAR, ya filtrada por las dos condiciones: que el usuario quiera mostrarla
@@ -1346,6 +1351,9 @@ export function useSocialViewModel(options?: {
       return;
     }
 
+    // C4: el token del canal social también se descifra de forma asíncrona. Sin esperarlo, una hidratación que
+    // llegue antes que la del arranque leería `token: ''` y abortaría con "falta el token" teniéndolo.
+    await ensureSyncConfigLoaded();
     const socialConfig = getSocialSyncConfig();
     if (!socialConfig?.token) {
       setFeedback('err', SOCIAL_UI.status.missingSocialToken);
@@ -1362,7 +1370,7 @@ export function useSocialViewModel(options?: {
       // criterio actual (nombre Y ≥1 juego completado) para que los perfiles incompletos ya guardados sean
       // redirigidos al editor sin esperar a que caduque la caché (~5 min).
       const cachedProfileExists = Boolean(cached.name.trim()) && hasCompletedGames;
-      profileForm.hydrate({ name: cached.name, visibility: cached });
+      hydrateProfileForm({ name: cached.name, visibility: cached });
       setHasCreatedProfile(cachedProfileExists);
 
       const cachedProfileUsable = Boolean(cached.name.trim()) && completedGamesRequirementMet;
@@ -1433,7 +1441,7 @@ export function useSocialViewModel(options?: {
       const profileExists = profileHasIdentity && hasCompletedGames;
 
       const normalizedVisibility = normalizeVisibility(profileVisibility);
-      profileForm.hydrate({ name: nextName, visibility: normalizedVisibility });
+      hydrateProfileForm({ name: nextName, visibility: normalizedVisibility });
       setHasCreatedProfile(profileExists);
 
       // Sembrar la caché para que la próxima navegación a social no relea el gist propio dentro de la ventana de TTL.
@@ -1482,11 +1490,18 @@ export function useSocialViewModel(options?: {
     }
   }, [
     authUser,
+    // Las DOS reglas que aplica este callback, y no basta con la primera: `profileExists` mira
+    // `hasCompletedGames` (estricta) y `mustCreate` mira `completedGamesRequirementMet` (indulgente cuando la
+    // biblioteca no está en este dispositivo). Faltaba la segunda, que se deriva además de
+    // `libraryPresentLocally`: abrir el espacio social antes de que llegara la biblioteca fijaba la vía
+    // indulgente y ahí se quedaba, porque al llegar la biblioteca con juegos y ningún completado
+    // `hasCompletedGames` seguía en `false` y el callback no se recreaba. El usuario sin completados dejaba de
+    // ir al editor de perfil.
     hasCompletedGames,
+    completedGamesRequirementMet,
     defaultSocialVisibility,
-    getOrderedUniqueTabs,
+    hydrateProfileForm,
     lockProfileEditor,
-    navigate,
     reportFailure,
     setFeedback,
     socialSpaceOpen,
@@ -2144,6 +2159,7 @@ export function useSocialViewModel(options?: {
   }, [hasMainSync, authUser, hasSocialGist, connecting, resolvingSocialGist, signingIn, handleCreateSocialGist]);
 
   const handleSaveProfile = useCallback(async () => {
+    await ensureSyncConfigLoaded(); // C4: igual que en `hydrateSocialProfile`, el token social se descifra async
     const socialConfig = getSocialSyncConfig();
     if (!authUser || !socialConfig?.token || !socialCfgGistId) {
       setFeedback('err', SOCIAL_UI.status.invalidSaveContext);
@@ -2271,8 +2287,11 @@ export function useSocialViewModel(options?: {
   }, [
     authUser,
     hasCompletedGames,
-    getOrderedUniqueTabs,
-    hiddenTabs,
+    // Memoizada sobre los cinco interruptores (`useSocialProfileForm`), así que su identidad solo cambia cuando
+    // cambia uno de ellos. Es LO QUE SE ESCRIBE en el gist, y cubre el que faltaba: `hiddenTabs`,
+    // `hideReplayable`, `hideRetry` y `hideGameTime` estaban enumerados sueltos, `showPhoto` no. Los tres de
+    // abajo siguen porque además se leen sueltos al sembrar la caché del perfil.
+    profileForm.visibility,
     hideReplayable,
     hideRetry,
     hideGameTime,
@@ -2288,6 +2307,13 @@ export function useSocialViewModel(options?: {
     // escribiría en el gist una decisión que ya no es la vigente.
     ownPhotoIsGeneric,
     ownPublishablePhoto,
+    // La configuración principal se hidrata de forma ASÍNCRONA (el token viaja cifrado), así que un render
+    // temprano la ve a `null`. Sin estas dos dependencias el guardado se quedaba con esa foto: publicaba el
+    // perfil con `gamesGistId: ''` —que `healOwnFriendshipIdentity` propagaba a TODOS mis docs de amistad, o sea
+    // que dejaba a mis amigos sin mi lista de juegos— y cifraba en `privateConfig` un token que ya no era el
+    // vigente. El repositorio ya no escribe ids vacíos, pero la foto correcta se consigue aquí.
+    mainSyncConfig?.gistId,
+    mainSyncConfig?.token,
   ]);
 
   const handleSignOut = useCallback(async () => {

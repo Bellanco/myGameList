@@ -39,7 +39,23 @@ export async function runMigration(options: { dryRun?: boolean } = {}): Promise<
   const dryRun = options.dryRun ?? false;
   const errors: string[] = [];
 
-  if (!(await isMigrationNeeded())) {
+  const meta = await getLocalMeta();
+
+  // C4 — PURGA DEL TOKEN EN CLARO, y va ANTES del corte por versión a propósito: los dispositivos que ya
+  // migraron no vuelven a entrar en el cuerpo de abajo, y son precisamente los que pueden tener la copia escrita.
+  //
+  // Este runner sembraba aquí el token de la `SyncConfig`, en claro, en IndexedDB. Y NADIE lo leía: el fallback de
+  // recuperación (`legacyTokenRecovery`) recibe el perfil de FIRESTORE, no este meta. Era un secreto en disco a
+  // cambio de nada, y anulaba en la práctica el cifrado en reposo de `gistConfigRepository`: da igual que el
+  // registro de localStorage vaya cifrado si el mismo PAT está en claro en la base de al lado.
+  //
+  // El campo se conserva en el tipo `LocalMeta` (es staging de la migración, no código muerto); lo que se retira
+  // es la escritura, y esto vacía lo ya escrito.
+  if (!dryRun && meta?.githubToken) {
+    await patchLocalMeta({ githubToken: '' });
+  }
+
+  if ((meta?.migrationVersion ?? 0) >= TARGET_MIGRATION_VERSION) {
     return { skipped: true, gamesImported: 0, dryRun, errors };
   }
 
@@ -70,12 +86,12 @@ export async function runMigration(options: { dryRun?: boolean } = {}): Promise<
     }
 
     if (!dryRun) {
-      // Sembrar LocalMeta con lo que tengamos sin Google (gistId/token desde SyncConfig) y marcar versión.
+      // Sembrar LocalMeta con lo que tengamos sin Google (el gistId y su ETag desde SyncConfig) y marcar versión.
+      // El TOKEN no se siembra: nadie lo lee de aquí y en claro sería un secreto en disco (ver la purga de arriba).
       const cfg = getSyncConfig();
       const patch: Partial<LocalMeta> = { migrationVersion: TARGET_MIGRATION_VERSION, gamesUpdatedAt: payload.updatedAt };
       if (cfg) {
         patch.gamesGistId = cfg.gistId;
-        patch.githubToken = cfg.token;
         patch.gamesEtag = cfg.etag;
       }
       await patchLocalMeta(patch);

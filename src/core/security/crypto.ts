@@ -158,13 +158,20 @@ export async function decrypt(encrypted: EncryptedData, seed: string): Promise<s
 // C4 — Clave de dispositivo NO exportable (IndexedDB) para cifrar secretos locales EN REPOSO.
 // ---------------------------------------------------------------------------
 
-const DEVICE_KEY_DB = 'mygamelist-secure';
+/**
+ * Base de datos de la clave de dispositivo. SEPARADA de la base de la app (`myGameList`) a propósito: aquí solo
+ * vive material criptográfico, y no se toca al migrar o limpiar stores de datos.
+ *
+ * Se exporta porque el borrado de cuenta tiene que eliminarla explícitamente: al estar aparte, borrar la base de
+ * la app NO se la lleva (ver `accountDeletionRepository`).
+ */
+export const DEVICE_KEY_DB_NAME = 'mygamelist-secure';
 const DEVICE_KEY_STORE = 'keys';
 const DEVICE_KEY_ID = 'token-key-v1';
 
 function openDeviceKeyDb(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
-    const req = indexedDB.open(DEVICE_KEY_DB, 1);
+    const req = indexedDB.open(DEVICE_KEY_DB_NAME, 1);
     req.onupgradeneeded = () => {
       const db = req.result;
       if (!db.objectStoreNames.contains(DEVICE_KEY_STORE)) {

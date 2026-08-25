@@ -122,6 +122,19 @@
   flex: 1 1 auto; overflow: visible;
 }
 
+/* Panel de administración a ANCHO COMPLETO: el resto de la app se corta en 1800px porque son textos y tarjetas,
+   donde una línea infinita se lee mal. Allí son fichas de datos en rejilla: cuanto más ancho, más fichas por fila
+   y menos scroll vertical. Se escribe `.main.main-admin` (y no `.main-admin` a secas) para GANAR por
+   especificidad al `max-width` de arriba, en vez de depender del orden de los `@use` en index.scss.
+
+   Vive aquí y no en `admin.scss` porque la clase la pone `App` —que no es perezoso— mientras que la hoja del
+   panel llega con su chunk: si la regla viajara con ella, el `<main>` se pintaría capado durante la espera. */
+.main.main-admin {
+  max-width: none;
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
+
 /* MARGEN LATERAL FLUIDO DEL HUB SOCIAL.
    ─────────────────────────────────────────────────────────────────────────────
    El contenido del hub vive dentro de DOS marcos concéntricos: este y el de `.hub-hub-card`. En escritorio dan

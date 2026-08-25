@@ -17,6 +17,13 @@ const root = path.join(__dirname, '..');
 // el gist social, así que ahora se carga bajo demanda (ver `loadSocialGistValidator`). El presupuesto se aprieta a
 // propósito, para que volver a importarlo de forma estática desde un módulo del arranque rompa el build en vez de
 // pasar desapercibido. El margen que queda es para crecimiento normal, no para reintroducir una librería entera.
+//
+// El TECHO no se ha movido desde entonces, pero el margen sí: llegó a quedar en 0,9 kB —el siguiente `import` de
+// cualquier cosa rompía el build— y se recuperó sacando del CSS de arranque las hojas de dos pantallas que ya
+// entraban por `lazy()`: el panel de administración (`admin.scss`, lo importa `AdminHub.tsx`) y el modal de la
+// ruleta (`roulette-modal.scss`, lo importa `RouletteModal.tsx`). Son ~24 kB sin comprimir que descargaba todo el
+// mundo para dos pantallas que casi nadie abre. Si algún día hace falta más margen, ese es el camino: mirar qué
+// hojas de `index.scss` pertenecen a un componente perezoso, no subir este número.
 const BOOT_PAYLOAD_BUDGET_KB = 215;
 const publicDir = path.join(root, 'public');
 const requiredFiles = [

@@ -5,6 +5,7 @@ import { SHARE_UI } from '../../core/constants/labels';
 import { Icon } from '../components/Icon';
 import { grantShareConsent, hasShareConsent } from '../../model/repository/shareConsentRepository';
 import type { ShareQuota } from '../../core/constants/tiers';
+import { copyText } from '../../core/utils/clipboard';
 
 /**
  * Diálogo de compartir una reseña con enlace público.
@@ -97,12 +98,10 @@ export const ShareReviewModal = memo(function ShareReviewModal({
   };
 
   const copy = async () => {
-    try {
-      await navigator.clipboard.writeText(publishedUrl);
+    // Sin portapapeles (permiso denegado, contexto no seguro) no se acusa nada: el enlace está a la vista y se
+    // puede copiar a mano, así que no se convierte en un error.
+    if (await copyText(publishedUrl)) {
       setCopied(true);
-    } catch {
-      // Sin portapapeles (permiso denegado, contexto no seguro): el enlace está a la vista y se puede copiar a
-      // mano, así que no se convierte en un error.
     }
   };
 

@@ -1,6 +1,6 @@
 import 'fake-indexeddb/auto';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { GIST_CFG_KEY } from '../../src/core/constants/storageKeys';
+import { GIST_CFG_KEY, SOCIAL_GIST_CFG_KEY } from '../../src/core/constants/storageKeys';
 
 // El token cifrado en reposo (C4) se cachea en estado de módulo. Para simular "sesiones" independientes
 // (recargas), se reimporta el módulo con vi.resetModules() — localStorage e IndexedDB son globales y persisten,
@@ -73,5 +73,72 @@ describe('gistConfigRepository (C4) — token cifrado en reposo', () => {
     mod.saveSyncConfig({ token: 't', gistId: 'g', etag: null, lastRemoteUpdatedAt: 0 });
     mod.clearSyncConfig();
     expect(mod.getSyncConfig()).toBeNull();
+  });
+});
+
+/**
+ * El canal SOCIAL guarda una copia del MISMO PAT (la hace `socialChannel.resolveSocialChannel`), y durante un
+ * tiempo la guardó en claro: el cifrado del canal de juegos quedaba anulado, porque el mismo secreto era legible
+ * en la clave de al lado. Estos tests fijan que los dos canales se tratan igual.
+ */
+describe('gistConfigRepository (C4) — el canal social se cifra igual que el de juegos', () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  async function esperarSocialCifrado(): Promise<string> {
+    return vi.waitFor(() => {
+      const raw = localStorage.getItem(SOCIAL_GIST_CFG_KEY) || '';
+      if (!raw.includes('encToken')) {
+        throw new Error('el cifrado en segundo plano todavía no ha escrito el encToken');
+      }
+      return raw;
+    }, { timeout: 5000, interval: 10 });
+  }
+
+  it('saveSocialSyncConfig NO guarda el token en claro y lo deja accesible en memoria', async () => {
+    const mod = await freshModule();
+    mod.saveSocialSyncConfig({ token: 'ghp_social', gistId: 'sid', etag: 'e1', lastRemoteUpdatedAt: 5 });
+    const raw = await esperarSocialCifrado();
+    expect(raw).not.toContain('ghp_social');
+    expect(raw).toContain('encToken');
+    expect(mod.getSocialSyncConfig()?.token).toBe('ghp_social');
+    expect(mod.getSocialSyncConfig()?.gistId).toBe('sid');
+  });
+
+  it('hidrata el token social cifrado en una nueva sesión', async () => {
+    const first = await freshModule();
+    first.saveSocialSyncConfig({ token: 'ghp_social_persistido', gistId: 'sid2', etag: null, lastRemoteUpdatedAt: 0 });
+    await esperarSocialCifrado();
+
+    const next = await freshModule();
+    await next.ensureSyncConfigLoaded(); // hidrata LOS DOS canales
+    expect(next.getSocialSyncConfig()?.token).toBe('ghp_social_persistido');
+  });
+
+  it('migra el token social legacy en claro a encToken al cargar', async () => {
+    localStorage.setItem(
+      SOCIAL_GIST_CFG_KEY,
+      JSON.stringify({ token: 'ghp_social_legacy', gistId: 'sid3', etag: 'e9', lastRemoteUpdatedAt: 1 }),
+    );
+    const mod = await freshModule();
+    await mod.ensureSyncConfigLoaded();
+
+    const raw = localStorage.getItem(SOCIAL_GIST_CFG_KEY) || '';
+    expect(raw).not.toContain('ghp_social_legacy');
+    expect(raw).toContain('encToken');
+    expect(mod.getSocialSyncConfig()?.token).toBe('ghp_social_legacy');
+  });
+
+  it('los dos canales son independientes: desconectar la sync de juegos no borra el token social', async () => {
+    const mod = await freshModule();
+    mod.saveSyncConfig({ token: 'ghp_juegos', gistId: 'gid', etag: null, lastRemoteUpdatedAt: 0 });
+    mod.saveSocialSyncConfig({ token: 'ghp_social', gistId: 'sid', etag: null, lastRemoteUpdatedAt: 0 });
+
+    mod.clearSyncConfig();
+
+    // Es lo único con lo que aún se puede escribir en el canal social (ver `socialChannel.resolveSocialChannel`).
+    expect(mod.getSyncConfig()).toBeNull();
+    expect(mod.getSocialSyncConfig()?.token).toBe('ghp_social');
   });
 });

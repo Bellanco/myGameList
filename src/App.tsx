@@ -3,9 +3,10 @@ import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-
 import { DIALOG_MESSAGES, ROUTE_TAB, SYNC_BADGE_TEXT, SYNC_MESSAGES, TAB_ROUTE, TAB_TITLES, UI_MESSAGES } from './core/constants/labels';
 import { LEGAL_ROUTES, type LegalDocId } from './core/constants/legal';
 import { TAB_IDS, type TabData, type TabId } from './model/types/game';
-import { resolveGrade } from './core/utils/scoreScale';
+import { decideReviewPublication } from './core/social/reviewPublication';
+import { applyReviewPublication } from './viewmodel/applyReviewPublication';
+import { copyText } from './core/utils/clipboard';
 import { normalizeData } from './model/repository/localRepository';
-import { patchLocalMeta } from './model/repository/indexedDbRepository';
 import { IconSprite } from './view/components/IconSprite';
 import { FloatingControls } from './view/components/FloatingControls';
 import { TabBar } from './view/components/TabBar';
@@ -43,17 +44,6 @@ import { parseLibraryExporter } from './core/import/libraryExporter';
 import { carryStamps } from './core/utils/gameStamps';
 import { importedToPartialGame, mergeImportedIntoGame } from './core/import/staging';
 import type { ImportedGame, RawExternalGame } from './model/types/import';
-
-/**
- * Marca que una publicación de actividad social se ha perdido, para que la reconciliación del hub la recupere.
- * Se escribe aquí directamente (no vía `socialActivityReconcile`) porque el fallo que se está tratando puede
- * ser precisamente el del import dinámico de ese módulo.
- */
-function markPendingSocialActivityFailure(): void {
-  void patchLocalMeta({ pendingSocialActivity: true }).catch(() => {
-    /* best-effort: no puede romper el guardado del juego. */
-  });
-}
 
 // Los tres modales se montan solo tras su primera apertura (ver `useMountedOnceOpen`), así que sus chunks ya no
 // entran en el arranque. Para que abrir siga siendo instantáneo, se precargan en idle: `import()` es idempotente
@@ -487,21 +477,16 @@ export default function App() {
   const flashTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const handleSaveDraft = useCallback((nextDraft: typeof vm.draft) => {
-    const predictedId =
-      nextDraft.id ||
-      Math.max(
-        0,
-        ...TAB_IDS.flatMap((tab) => vm.data[tab].map((item) => item.id)),
-      ) + 1;
-
-    const previousGame = [...vm.data.c, ...vm.data.v, ...vm.data.e, ...vm.data.p].find((entry) => entry.id === predictedId);
-    const cleanReview = nextDraft.review.trim();
-    const nextScore = Number(nextDraft.score || 0);
-    const nextGrade = resolveGrade(nextDraft); // nota fina 0–100 (real si la usa, si no derivada del score)
-
     // Si una validación corta el guardado (campos obligatorios, nombre ya en las listas) no hay nada que
     // encadenar: ni retirar el importado de la bandeja, ni destellar la fila, ni tocar el canal social.
-    if (!saveDraft(editingTab, nextDraft)) return;
+    //
+    // El id sale DEL PROPIO GUARDADO. Antes se predecía aquí repitiendo la regla de alta del ViewModel
+    // (`max(ids) + 1`): dos copias de la misma decisión, y la de aquí es la que elige sobre qué juego publica el
+    // canal social. Mientras coincidieran no se notaba nada; en cuanto dejaran de coincidir, la reseña se colgaba
+    // de otro juego sin error ni rastro. Ver el docblock de `saveDraft`.
+    const guardado = saveDraft(editingTab, nextDraft);
+    if (guardado === null) return;
+    const { id: savedId, previous: previousGame } = guardado;
 
     // Graduación desde la bandeja: si este guardado viene de clasificar un importado, se retira de la bandeja.
     if (graduatingIdRef.current !== null) {
@@ -510,54 +495,23 @@ export default function App() {
     }
 
     // Marca la fila guardada para el destello de localización (se limpia a los 1,4 s).
-    setRecentlyChangedId(predictedId);
+    setRecentlyChangedId(savedId);
     if (flashTimer.current) clearTimeout(flashTimer.current);
     flashTimer.current = setTimeout(() => setRecentlyChangedId(null), 1400);
 
-    // Sin reseña publicable (pestaña 'próximos' o texto vacío): si el juego TENÍA una reseña, se retira del feed
-    // para no dejar una entrada fantasma con el título/snippet viejos (p. ej. al vaciar el texto y renombrar). Si
-    // nunca la tuvo, `unpublishReviewActivity` es un no-op (no reescribe el gist).
-    if (editingTab === 'p' || !cleanReview) {
-      const hadPublishedReview = (previousGame?.review || '').trim().length > 0;
-      if (hadPublishedReview) {
-        void import('./model/repository/socialPublishRepository')
-          .then((m) => m.unpublishReviewActivity({ id: predictedId }))
-          .catch(() => {
-            markPendingSocialActivityFailure();
-            notify('warn', 'Juego guardado; la actividad social de reseña se actualizará al abrir el hub social.');
-          });
-      }
-      return;
-    }
+    // Qué hacer con el canal social. La decisión (cinco comparaciones, tres resultados) vive en `core/social/
+    // reviewPublication`, no aquí: era la parte con más ramas de este fichero y no tenía un solo test, que es
+    // justo donde se colocó el bug del id. Aquí queda el efecto: cargar el repositorio y contar los fallos.
+    const publicacion = decideReviewPublication({ tab: editingTab, previous: previousGame, next: nextDraft });
 
-    const reviewChanged = (previousGame?.review || '').trim() !== cleanReview;
-    const scoreChanged = Number(previousGame?.score || 0) !== nextScore;
-    // La nota fina puede cambiar sin mover las estrellas (p. ej. 73→77 = 4★): también hay que sincronizarla.
-    const gradeChanged = resolveGrade(previousGame || {}) !== nextGrade;
-    const nameChanged = (previousGame?.name || '').trim() !== nextDraft.name.trim();
-
-    if (!reviewChanged && !scoreChanged && !gradeChanged && !nameChanged) {
-      return;
-    }
-
-    void import('./model/repository/socialPublishRepository')
-      .then((m) => m.publishReviewActivity({
-        id: predictedId,
-        name: nextDraft.name.trim(),
-        review: cleanReview, // audit-allow: publishReviewActivity lo convierte a snippet antes de publicar
-        score: nextScore, // audit-allow: el canal social publica solo rating redondeado
-        grade: nextGrade, // nota fina 0–100 (misma nombre que en el listado)
-        // Solo cambiar el texto (re)publica en el feed. Cambiar solo nota/nombre sincroniza una reseña YA
-        // publicada sin recolocarla; si no había reseña publicada, publishReviewActivity es un no-op.
-        reviewChanged,
-      }))
-      .catch(() => {
-        // El fallo puede ser del propio import dinámico (index.html cacheado tras un despliegue, red
-        // intermitente) o de GitHub (403 por rate-limit, 5xx). En ambos casos la publicación se perdía sin
-        // rastro ni reintento: se marca como pendiente para que la reconciliación la recupere.
-        markPendingSocialActivityFailure();
-        notify('warn', 'Juego guardado; la actividad social de reseña se actualizará al abrir el hub social.');
-      });
+    // El EFECTO vive en el ViewModel (`applyReviewPublication`): la vista no importa repositorios —lo prohíbe
+    // `view.instructions.md`— y así el camino queda comprobable con el repositorio simulado. Aquí solo se decide
+    // qué contarle al usuario si la publicación no llega.
+    void applyReviewPublication({
+      id: savedId,
+      publication: publicacion,
+      onDeferred: () => notify('warn', 'Juego guardado; la actividad social de reseña se actualizará al abrir el hub social.'),
+    });
   }, [editingTab, inbox, notify, saveDraft, vm.data]);
 
   const handleEditTag = useCallback((key: 'genres' | 'platforms' | 'strengths' | 'weaknesses', oldValue: string, newValue: string) => {
@@ -578,12 +532,8 @@ export default function App() {
       return;
     }
 
-    try {
-      await navigator.clipboard.writeText(currentGistId);
-      notify('ok', SYNC_MESSAGES.copySuccess);
-    } catch {
-      notify('err', SYNC_MESSAGES.copyError);
-    }
+    const copied = await copyText(currentGistId);
+    notify(copied ? 'ok' : 'err', copied ? SYNC_MESSAGES.copySuccess : SYNC_MESSAGES.copyError);
   }, [notify, syncVm.connectedGistId, syncVm.currentConfig?.gistId, syncVm.gistId]);
 
   const handleRecoverGistId = useCallback(() => {

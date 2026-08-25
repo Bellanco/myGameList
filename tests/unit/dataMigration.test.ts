@@ -1,7 +1,8 @@
 import 'fake-indexeddb/auto';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { isMigrationNeeded, runMigration } from '../../src/model/repository/dataMigrationRepository';
-import { getGamesAsTabData, getLocalMeta } from '../../src/model/repository/indexedDbRepository';
+import { getGamesAsTabData, getLocalMeta, patchLocalMeta } from '../../src/model/repository/indexedDbRepository';
+import { saveSyncConfig } from '../../src/model/repository/gistConfigRepository';
 import { GAMES_STORE, META_STORE, openSharedDatabase } from '../../src/model/repository/idbConnectionRepository';
 import { saveLocalState } from '../../src/model/repository/localRepository';
 import type { GameItem, StoragePayload } from '../../src/model/types/game';
@@ -65,6 +66,42 @@ describe('dataMigrationRepository.runMigration (Vía A, local)', () => {
     const meta = await getLocalMeta();
     expect(meta?.migrationVersion).toBe(3);
     expect(await isMigrationNeeded()).toBe(false);
+  });
+
+  // C4 — el runner sembraba el PAT en claro en el meta de IndexedDB, y nadie lo leía de ahí: era un secreto en
+  // disco a cambio de nada, y dejaba sin efecto el cifrado en reposo del registro de localStorage.
+  it('no siembra el token de GitHub en el meta', async () => {
+    seed();
+    saveSyncConfig({ token: 'ghp_no_deberia_persistir', gistId: 'gid-mig', etag: 'e1', lastRemoteUpdatedAt: 0 });
+
+    await runMigration();
+
+    const meta = await getLocalMeta();
+    expect(meta?.gamesGistId).toBe('gid-mig'); // el id del gist sí se siembra: no es un secreto y se usa
+    expect(meta?.githubToken || '').toBe('');
+  });
+
+  it('purga un token en claro ya sembrado por una versión anterior, aunque la migración esté hecha', async () => {
+    seed();
+    await runMigration();
+    // Simula el residuo de la versión anterior en un dispositivo que YA migró.
+    await patchLocalMeta({ githubToken: 'ghp_residuo_de_antes' });
+    expect((await getLocalMeta())?.githubToken).toBe('ghp_residuo_de_antes');
+
+    const second = await runMigration();
+
+    expect(second.skipped).toBe(true); // sigue cortando por versión...
+    expect((await getLocalMeta())?.githubToken).toBe(''); // ...pero la purga se hace igual
+  });
+
+  it('el dry-run no purga (no escribe nada, por definición)', async () => {
+    seed();
+    await runMigration();
+    await patchLocalMeta({ githubToken: 'ghp_residuo_de_antes' });
+
+    await runMigration({ dryRun: true });
+
+    expect((await getLocalMeta())?.githubToken).toBe('ghp_residuo_de_antes');
   });
 
   it('es idempotente: una segunda ejecución se omite', async () => {

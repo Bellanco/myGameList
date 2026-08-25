@@ -145,4 +145,71 @@ describe('healOwnFriendshipIdentity', () => {
     expect(recipientUpdate).toMatchObject({ recipientName: 'MiNick' });
     expect(Object.keys(recipientUpdate)).not.toContain('requesterName');
   });
+
+  // Varios llamantes pasan `gamesGistId: mainSyncConfig?.gistId || ''`, y esa configuración se hidrata de forma
+  // asíncrona: un `''` significa "aquí y ahora no lo sé", nunca "este usuario ya no tiene gist". Y estos campos
+  // son de donde los AMIGOS sacan la lista de juegos, así que escribir el vacío se la dejaba en blanco a todos.
+  it('un id vacío CONSERVA el que ya consta en el doc (no lo borra)', async () => {
+    getDocsMock.mockResolvedValueOnce(
+      snapshot([
+        {
+          id: 'me__x',
+          data: {
+            users: ['me', 'x'], requester: 'me', recipient: 'x', status: 'accepted',
+            requesterName: 'MiNick', requesterPhoto: 'p', requesterSocialGistId: 'gs', requesterGamesGistId: 'gg',
+          },
+        },
+      ]),
+    );
+
+    // Mismo nick y foto que ya constan: lo único "nuevo" es el vacío. Al conservarse, nada diverge y no se escribe.
+    await healOwnFriendshipIdentity('me', { name: 'MiNick', photo: 'p', socialGistId: '', gamesGistId: '' });
+
+    expect(updateDocMock).not.toHaveBeenCalled();
+  });
+
+  it('un id vacío no impide propagar el resto (nick nuevo) y sigue conservando el id', async () => {
+    getDocsMock.mockResolvedValueOnce(
+      snapshot([
+        {
+          id: 'me__x',
+          data: {
+            users: ['me', 'x'], requester: 'me', recipient: 'x', status: 'accepted',
+            requesterName: 'NickViejo', requesterPhoto: 'p', requesterSocialGistId: 'gs', requesterGamesGistId: 'gg',
+          },
+        },
+      ]),
+    );
+
+    await healOwnFriendshipIdentity('me', { name: 'NickNuevo', photo: 'p', socialGistId: 'gs', gamesGistId: '' });
+
+    expect(updateDocMock).toHaveBeenCalledTimes(1);
+    expect(updateDocMock.mock.calls[0][1]).toMatchObject({
+      requesterName: 'NickNuevo',
+      requesterGamesGistId: 'gg',
+    });
+  });
+
+  // El caso que sí debe escribir: un id NUEVO reemplaza al anterior (migración de canal, gist recreado).
+  it('un id nuevo sí reemplaza al anterior', async () => {
+    getDocsMock.mockResolvedValueOnce(
+      snapshot([
+        {
+          id: 'me__x',
+          data: {
+            users: ['me', 'x'], requester: 'me', recipient: 'x', status: 'accepted',
+            requesterName: 'MiNick', requesterPhoto: 'p', requesterSocialGistId: 'gs', requesterGamesGistId: 'gg',
+          },
+        },
+      ]),
+    );
+
+    await healOwnFriendshipIdentity('me', { name: 'MiNick', photo: 'p', socialGistId: 'gs2', gamesGistId: 'gg2' });
+
+    expect(updateDocMock).toHaveBeenCalledTimes(1);
+    expect(updateDocMock.mock.calls[0][1]).toMatchObject({
+      requesterSocialGistId: 'gs2',
+      requesterGamesGistId: 'gg2',
+    });
+  });
 });

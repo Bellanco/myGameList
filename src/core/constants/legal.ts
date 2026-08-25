@@ -51,7 +51,7 @@ export const LEGAL_VERSION = '2026-08-22';
 // `firestore.rules` (`isAdmin`): son la misma persona, pero separar buzones evita mezclar avisos legales y
 // solicitudes de usuarios con el correo que da acceso a la base de datos. No unificar sin querer.
 export const LEGAL_CONTACT_EMAIL = 'bellancoxv@gmail.com';
-export const LEGAL_CONTROLLER = 'Bellanco';
+const LEGAL_CONTROLLER = 'Bellanco';
 
 export const LEGAL_ROUTES = {
   terms: '/legal/aviso',

@@ -130,6 +130,11 @@ tbody tr.main-row.striped { background: var(--surface-soft); }
 tbody td { padding: .95rem 1rem; font-size: .88rem; vertical-align: middle; }
 tbody tr.detail-row { display: none; background: var(--detail-row-bg); border-top: 1px dashed var(--border); }
 tbody tr.detail-row.open { display: table-row; }
+/* La celda del detalle NO lleva el relleno de una celda normal: su contenido (`.detail-content`) pone el suyo.
+   Estaba escrito como `style={{ padding: 0 }}` inline en las DOS tablas que tienen fila de detalle (el listado
+   principal y la bandeja de importados) porque el reset global `*` no puede con `tbody td`. Aquí una vez, donde
+   ya lo repiten los dos bloques responsive de `_overlays-and-responsive.scss`. */
+tbody tr.detail-row td { padding: 0; }
 /* Destello al añadir/editar un juego: la fila recién guardada se resalta y se desvanece, confirmando
    dónde quedó (antes no había ningún feedback al guardar). */
 tbody tr.main-row.just-changed { animation: rowFlash 1.3s ease-out; }
@@ -144,6 +149,11 @@ tbody tr.main-row.just-changed { animation: rowFlash 1.3s ease-out; }
 .detail-label { font-size: .72rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase; letter-spacing: .9px; }
 .detail-value { font-size: .88rem; line-height: 1.55; color: var(--text); background: var(--surface); padding: .9rem 1rem; border-radius: var(--radius-sm); border: 1px solid var(--border); white-space: pre-wrap; overflow-wrap: anywhere; }
 .detail-actions { display: flex; flex-wrap: wrap; gap: .75rem; justify-content: flex-end; grid-column: 1/-1; border-top: 1px solid var(--border); padding-top: 1rem; }
+/* Bloque de detalle a FILA COMPLETA (la reseña): un texto largo no debe caber en una de las dos columnas. */
+.detail-box.is-wide { grid-column: 1/-1; }
+/* Espaciadores de la tabla virtualizada: solo el ALTO se calcula al renderizar (va inline, es un dato); que no
+   lleven relleno ni filete es una decisión fija y vive aquí. */
+.table-spacer { padding: 0; border: 0; }
 
 /* Chips */
 .chips { display: flex; flex-wrap: wrap; gap: .4rem; min-width: 0; align-items: center; }
