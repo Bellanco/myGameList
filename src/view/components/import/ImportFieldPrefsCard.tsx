@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { ImportField, ImportFieldGroup, ImportFieldPrefs } from '../../../model/types/import';
-import { IMPORT_FIELDS } from '../../../core/import/fieldPrefs';
+import { IMPORT_FIELD_GROUPS, IMPORT_FIELDS } from '../../../core/import/fieldPrefs';
 import { UI_MESSAGES } from '../../../core/constants/labels';
 import { Icon } from '../Icon';
 import '../../../styles/import.scss';
@@ -50,7 +50,7 @@ export function ImportFieldPrefsCard({ prefs, onChange }: ImportFieldPrefsCardPr
 
       {open ? (
         <div className="import-fields">
-          {(['newGames', 'existingGames'] as const).map((group) => (
+          {IMPORT_FIELD_GROUPS.map((group) => (
             <fieldset key={group} className="import-fields-set">
               <legend className="settings-card-note import-fields-legend">{GROUP_TITLE[group]}</legend>
               <div className="import-fields-list">
@@ -74,7 +74,7 @@ export function ImportFieldPrefsCard({ prefs, onChange }: ImportFieldPrefsCardPr
         </div>
       ) : (
         <div className="import-fields">
-          {(['newGames', 'existingGames'] as const).map((group) => (
+          {IMPORT_FIELD_GROUPS.map((group) => (
             <p key={group} className="settings-card-note">
               <strong>{GROUP_TITLE[group]}: </strong>
               {summarize(prefs[group])}
