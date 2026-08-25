@@ -33,6 +33,7 @@ import { Icon } from './Icon';
 // La hoja del panel se importa AQUÍ y no desde `index.scss`: como el panel entra por `lazy()`, Vite emite su CSS
 // en el mismo chunk perezoso y el arranque no carga ni un byte de estilos de esta pantalla (igual que `stats.scss`).
 import '../../styles/admin.scss';
+import { copyText } from '../../core/utils/clipboard';
 
 const A = ADMIN_PANEL_UI;
 
@@ -165,16 +166,15 @@ export const AdminHub = memo(function AdminHub() {
   }, []);
 
   const copyUid = useCallback(async (uid: string) => {
-    try {
-      await navigator.clipboard.writeText(uid);
-      setNotice(A.copiedUid);
-      // El acuse se retira solo: es una confirmación de un gesto, no un estado de la pantalla, y dejarlo fijo
-      // hace dudar de a qué copia se refiere tras el segundo clic.
-      if (noticeTimerRef.current) clearTimeout(noticeTimerRef.current);
-      noticeTimerRef.current = setTimeout(() => setNotice(''), 2500);
-    } catch {
-      // Sin permiso de portapapeles no hay nada que decir: el uid está a la vista y se puede seleccionar.
+    // Sin permiso de portapapeles no hay nada que decir: el uid está a la vista y se puede seleccionar.
+    if (!(await copyText(uid))) {
+      return;
     }
+    setNotice(A.copiedUid);
+    // El acuse se retira solo: es una confirmación de un gesto, no un estado de la pantalla, y dejarlo fijo
+    // hace dudar de a qué copia se refiere tras el segundo clic.
+    if (noticeTimerRef.current) clearTimeout(noticeTimerRef.current);
+    noticeTimerRef.current = setTimeout(() => setNotice(''), 2500);
   }, []);
 
   const loadShares = useCallback(async () => {
