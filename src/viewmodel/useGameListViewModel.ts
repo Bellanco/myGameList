@@ -418,10 +418,18 @@ export function useGameListViewModel() {
     [data],
   );
 
-  // Devuelve si el guardado se ha llegado a hacer: quien llama encadena efectos (destello de fila, publicación
-  // de la reseña en el canal social) que no deben dispararse cuando una validación ha cortado el guardado.
+  /**
+   * Devuelve el ID DEL JUEGO GUARDADO, o `null` si una validación ha cortado el guardado.
+   *
+   * Lo segundo es lo que quien llama necesita para no encadenar efectos (destello de fila, publicación de la
+   * reseña en el canal social) sobre un guardado que no ha ocurrido. Lo primero existe porque esos mismos efectos
+   * necesitan SABER SOBRE QUÉ JUEGO actúan: mientras esto devolvía un booleano, `App` reimplementaba la regla de
+   * asignación de id de más abajo para adivinarlo, así que había dos copias de la misma decisión y la segunda
+   * podía colgar la actividad social de un id equivocado sin que nada fallara. El id nunca es 0 (el alta empieza
+   * en 1), así que el `null` sigue distinguiéndose por verdad/falsedad como antes.
+   */
   const saveDraft = useCallback(
-    (tab: TabId, nextDraft: GameDraft): boolean => {
+    (tab: TabId, nextDraft: GameDraft): number | null => {
       const now = Date.now();
       const id = nextDraft.id || Math.max(0, ...TAB_ORDER.flatMap((key) => data[key].map((item) => item.id))) + 1;
       const existing = data[tab].find((item) => item.id === id);
@@ -488,12 +496,12 @@ export function useGameListViewModel() {
 
       if (!base.name || !base.genres.length || !base.platforms.length) {
         notify('warn', 'Revisa los campos obligatorios antes de guardar.');
-        return false;
+        return null;
       }
 
       if (tab === 'c' && !base.years?.length) {
         notify('warn', 'Debes añadir al menos un año para completados.');
-        return false;
+        return null;
       }
 
       // Último cortafuegos contra el duplicado: el formulario ya avisa mientras se escribe, pero el alta también
@@ -502,7 +510,7 @@ export function useGameListViewModel() {
       const duplicate = findGameByName(base.name, id);
       if (duplicate) {
         notify('warn', VALIDATION_MESSAGES.duplicateName(duplicate.game.name, TAB_TOOLTIPS[duplicate.tab]));
-        return false;
+        return null;
       }
 
       const nextData: TabData = {
@@ -521,7 +529,7 @@ export function useGameListViewModel() {
       setDraft(EMPTY_DRAFT);
       notify('ok', 'Juego guardado correctamente');
       void trackAnalyticsEvent('game_saved', { tab, is_edit: Boolean(existing), has_review: Boolean(base.review) });
-      return true;
+      return base.id;
     },
     [data, findGameByName, notify, persist],
   );

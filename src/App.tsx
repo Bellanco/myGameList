@@ -487,21 +487,23 @@ export default function App() {
   const flashTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const handleSaveDraft = useCallback((nextDraft: typeof vm.draft) => {
-    const predictedId =
-      nextDraft.id ||
-      Math.max(
-        0,
-        ...TAB_IDS.flatMap((tab) => vm.data[tab].map((item) => item.id)),
-      ) + 1;
-
-    const previousGame = [...vm.data.c, ...vm.data.v, ...vm.data.e, ...vm.data.p].find((entry) => entry.id === predictedId);
     const cleanReview = nextDraft.review.trim();
     const nextScore = Number(nextDraft.score || 0);
     const nextGrade = resolveGrade(nextDraft); // nota fina 0–100 (real si la usa, si no derivada del score)
 
     // Si una validación corta el guardado (campos obligatorios, nombre ya en las listas) no hay nada que
     // encadenar: ni retirar el importado de la bandeja, ni destellar la fila, ni tocar el canal social.
-    if (!saveDraft(editingTab, nextDraft)) return;
+    //
+    // El id sale DEL PROPIO GUARDADO. Antes se predecía aquí repitiendo la regla de alta del ViewModel
+    // (`max(ids) + 1`): dos copias de la misma decisión, y la de aquí es la que elige sobre qué juego publica el
+    // canal social. Mientras coincidieran no se notaba nada; en cuanto dejaran de coincidir, la reseña se colgaba
+    // de otro juego sin error ni rastro. Ver el docblock de `saveDraft`.
+    const savedId = saveDraft(editingTab, nextDraft);
+    if (savedId === null) return;
+
+    // El juego TAL Y COMO ESTABA antes de este guardado. Se lee DESPUÉS del guardado a propósito y sigue siendo
+    // el estado previo: `vm.data` es la foto inmutable de este render, y el `setData` del guardado no la toca.
+    const previousGame = [...vm.data.c, ...vm.data.v, ...vm.data.e, ...vm.data.p].find((entry) => entry.id === savedId);
 
     // Graduación desde la bandeja: si este guardado viene de clasificar un importado, se retira de la bandeja.
     if (graduatingIdRef.current !== null) {
@@ -510,7 +512,7 @@ export default function App() {
     }
 
     // Marca la fila guardada para el destello de localización (se limpia a los 1,4 s).
-    setRecentlyChangedId(predictedId);
+    setRecentlyChangedId(savedId);
     if (flashTimer.current) clearTimeout(flashTimer.current);
     flashTimer.current = setTimeout(() => setRecentlyChangedId(null), 1400);
 
@@ -521,7 +523,7 @@ export default function App() {
       const hadPublishedReview = (previousGame?.review || '').trim().length > 0;
       if (hadPublishedReview) {
         void import('./model/repository/socialPublishRepository')
-          .then((m) => m.unpublishReviewActivity({ id: predictedId }))
+          .then((m) => m.unpublishReviewActivity({ id: savedId }))
           .catch(() => {
             markPendingSocialActivityFailure();
             notify('warn', 'Juego guardado; la actividad social de reseña se actualizará al abrir el hub social.');
@@ -542,7 +544,7 @@ export default function App() {
 
     void import('./model/repository/socialPublishRepository')
       .then((m) => m.publishReviewActivity({
-        id: predictedId,
+        id: savedId,
         name: nextDraft.name.trim(),
         review: cleanReview, // audit-allow: publishReviewActivity lo convierte a snippet antes de publicar
         score: nextScore, // audit-allow: el canal social publica solo rating redondeado

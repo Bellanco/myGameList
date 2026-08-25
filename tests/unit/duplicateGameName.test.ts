@@ -59,11 +59,12 @@ describe('alta con un nombre que ya está en las listas', () => {
     await act(async () => { result.current.saveDraft('p', draftFor('Hollow Knight')); });
     expect(result.current.data.p).toHaveLength(1);
 
-    let saved: boolean | undefined;
+    let saved: number | null | undefined;
     // Otra grafía y con espacios: la comparación normaliza igual que la importación y la ruleta.
     await act(async () => { saved = result.current.saveDraft('p', draftFor('  hollow knight ')); });
 
-    expect(saved).toBe(false);
+    // `saveDraft` devuelve el id guardado, así que un rechazo es `null` (nunca un id: el alta empieza en 1).
+    expect(saved).toBeNull();
     expect(result.current.data.p).toHaveLength(1);
     expect(result.current.notice?.message).toBe('Ya tienes "Hollow Knight" en Próximos.');
   });
@@ -84,12 +85,13 @@ describe('alta con un nombre que ya está en las listas', () => {
     await act(async () => { result.current.saveDraft('p', draftFor('Celeste')); });
     const created = result.current.data.p[0];
 
-    let saved: boolean | undefined;
+    let saved: number | null | undefined;
     await act(async () => {
       saved = result.current.saveDraft('p', draftFor('Celeste', { id: created.id, review: 'Precioso' }));
     });
 
-    expect(saved).toBe(true);
+    // Y devuelve el id del juego editado: es lo que `App` necesita para publicar la reseña sobre ESE juego.
+    expect(saved).toBe(created.id);
     expect(result.current.data.p).toHaveLength(1);
     expect(result.current.data.p[0].review).toBe('Precioso');
   });
