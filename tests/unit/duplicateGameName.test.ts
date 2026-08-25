@@ -59,11 +59,11 @@ describe('alta con un nombre que ya está en las listas', () => {
     await act(async () => { result.current.saveDraft('p', draftFor('Hollow Knight')); });
     expect(result.current.data.p).toHaveLength(1);
 
-    let saved: number | null | undefined;
+    let saved: ReturnType<typeof result.current.saveDraft> | undefined;
     // Otra grafía y con espacios: la comparación normaliza igual que la importación y la ruleta.
     await act(async () => { saved = result.current.saveDraft('p', draftFor('  hollow knight ')); });
 
-    // `saveDraft` devuelve el id guardado, así que un rechazo es `null` (nunca un id: el alta empieza en 1).
+    // `saveDraft` devuelve lo que ha hecho, así que un rechazo es `null` y no un objeto.
     expect(saved).toBeNull();
     expect(result.current.data.p).toHaveLength(1);
     expect(result.current.notice?.message).toBe('Ya tienes "Hollow Knight" en Próximos.');
@@ -85,13 +85,15 @@ describe('alta con un nombre que ya está en las listas', () => {
     await act(async () => { result.current.saveDraft('p', draftFor('Celeste')); });
     const created = result.current.data.p[0];
 
-    let saved: number | null | undefined;
+    let saved: ReturnType<typeof result.current.saveDraft> | undefined;
     await act(async () => {
       saved = result.current.saveDraft('p', draftFor('Celeste', { id: created.id, review: 'Precioso' }));
     });
 
-    // Y devuelve el id del juego editado: es lo que `App` necesita para publicar la reseña sobre ESE juego.
-    expect(saved).toBe(created.id);
+    // Devuelve el id del juego editado —es lo que `App` necesita para publicar la reseña sobre ESE juego— y cómo
+    // estaba ANTES, que es con lo que se decide si la reseña cambió. Recalcular esto fuera fue el defecto.
+    expect(saved?.id).toBe(created.id);
+    expect(saved?.previous).toMatchObject({ id: created.id, name: 'Celeste', review: '' });
     expect(result.current.data.p).toHaveLength(1);
     expect(result.current.data.p[0].review).toBe('Precioso');
   });

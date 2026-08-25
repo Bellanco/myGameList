@@ -419,17 +419,19 @@ export function useGameListViewModel() {
   );
 
   /**
-   * Devuelve el ID DEL JUEGO GUARDADO, o `null` si una validación ha cortado el guardado.
+   * Devuelve QUÉ HA HECHO el guardado —el id del juego y cómo estaba antes—, o `null` si una validación lo ha
+   * cortado.
    *
-   * Lo segundo es lo que quien llama necesita para no encadenar efectos (destello de fila, publicación de la
-   * reseña en el canal social) sobre un guardado que no ha ocurrido. Lo primero existe porque esos mismos efectos
-   * necesitan SABER SOBRE QUÉ JUEGO actúan: mientras esto devolvía un booleano, `App` reimplementaba la regla de
-   * asignación de id de más abajo para adivinarlo, así que había dos copias de la misma decisión y la segunda
-   * podía colgar la actividad social de un id equivocado sin que nada fallara. El id nunca es 0 (el alta empieza
-   * en 1), así que el `null` sigue distinguiéndose por verdad/falsedad como antes.
+   * El `null` es lo que evita encadenar efectos (destello de fila, publicación de la reseña en el canal social)
+   * sobre un guardado que no ha ocurrido. Los dos datos existen porque esos mismos efectos los necesitan, y
+   * porque recalcularlos fuera fue exactamente el defecto: mientras esto devolvía un booleano, `App`
+   * reimplementaba la regla de asignación de id de más abajo para adivinar el primero, y buscaba el segundo
+   * recorriendo las cuatro listas por su cuenta. Dos copias de reglas que aquí ya están resueltas, y la copia era
+   * la que decidía sobre qué juego publicaba el canal social: cuando dejaran de coincidir, la reseña se colgaría
+   * de otro juego sin error ni rastro.
    */
   const saveDraft = useCallback(
-    (tab: TabId, nextDraft: GameDraft): number | null => {
+    (tab: TabId, nextDraft: GameDraft): { id: number; previous: GameItem | undefined } | null => {
       const now = Date.now();
       const id = nextDraft.id || Math.max(0, ...TAB_ORDER.flatMap((key) => data[key].map((item) => item.id))) + 1;
       const existing = data[tab].find((item) => item.id === id);
@@ -529,7 +531,7 @@ export function useGameListViewModel() {
       setDraft(EMPTY_DRAFT);
       notify('ok', 'Juego guardado correctamente');
       void trackAnalyticsEvent('game_saved', { tab, is_edit: Boolean(existing), has_review: Boolean(base.review) });
-      return base.id;
+      return { id: base.id, previous };
     },
     [data, findGameByName, notify, persist],
   );
