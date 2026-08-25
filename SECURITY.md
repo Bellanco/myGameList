@@ -44,7 +44,9 @@ WebCrypto nativo (AES-GCM 256). Hay **dos** mecanismos con garantías **distinta
   origen (que podría usar la clave). Aplica a **los dos canales** (juegos y social): el token social
   es una copia del mismo PAT, así que dejarlo en claro anulaba el cifrado del otro — el mismo secreto
   quedaba legible en la clave de al lado. Se corrigió en `gistConfigRepository`, que cifra y descifra
-  ambos con el mismo mecanismo.
+  ambos con el mismo mecanismo. **Tampoco hay copia en claro en IndexedDB**: el runner de migración
+  sembraba el PAT en `LocalMeta` —donde nadie lo leía— y eso bastaba para dejar sin efecto todo lo
+  anterior; hoy no se escribe y se purga el residuo al arrancar (`dataMigrationRepository`).
 - **Token en Firestore (`privateConfig`) — ofuscación, no confidencialidad.** Se "cifra" con una
   clave derivada del `uid` (PBKDF2, salt aleatorio + 600k iteraciones). Como el `uid` es público, la
   **protección real es la regla owner-only de Firestore**, no el cifrado; este es defensa en
