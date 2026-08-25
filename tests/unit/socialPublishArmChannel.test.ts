@@ -28,6 +28,7 @@ const idbMocks = vi.hoisted(() => {
 vi.mock('../../src/model/repository/indexedDbRepository', () => idbMocks);
 
 import { publishReviewActivity } from '../../src/model/repository/socialPublishRepository';
+import { getSocialSyncConfig } from '../../src/model/repository/gistConfigRepository';
 
 const TOKEN = 'ghp_0123456789abcdefghij';
 const GIST_ID = 'ddee1122aabb3344';
@@ -106,7 +107,11 @@ describe('publishReviewActivity — armado del canal social', () => {
     expect(store.current().activity).toHaveLength(1);
     expect(store.current().activity[0]).toMatchObject({ gameId: 7, gameName: 'Hollow Knight', actorProfileId: 'pid-1' });
     // Y deja el canal armado para las siguientes publicaciones de este dispositivo.
-    expect(JSON.parse(localStorage.getItem('mis-listas-social-gist-config') || '{}')).toMatchObject({ gistId: GIST_ID, token: TOKEN });
+    expect(JSON.parse(localStorage.getItem('mis-listas-social-gist-config') || '{}')).toMatchObject({ gistId: GIST_ID });
+    // C4: el token del canal social NO se guarda en claro (es el mismo PAT que cifra el canal de juegos, así que
+    // dejarlo aquí legible anulaba el cifrado del otro). Queda accesible descifrado en memoria.
+    expect(localStorage.getItem('mis-listas-social-gist-config')).not.toContain(TOKEN);
+    expect(getSocialSyncConfig()?.token).toBe(TOKEN);
   });
 
   // El id del canal ha dejado de publicarse en el perfil, así que para una cuenta nueva `privateConfig` es la
@@ -168,7 +173,12 @@ describe('publishReviewActivity — armado del canal social', () => {
     await publishReviewActivity(REVIEW);
 
     expect(store.writes()).toBe(1);
-    expect(JSON.parse(localStorage.getItem('mis-listas-social-gist-config') || '{}').token).toBe(TOKEN);
+    // El token refrescado es el de la sync principal, y se guarda cifrado (C4): en el registro no queda ni el
+    // viejo ni el nuevo en claro.
+    const raw = localStorage.getItem('mis-listas-social-gist-config') || '';
+    expect(raw).not.toContain(TOKEN);
+    expect(raw).not.toContain('ghp_viejoviejoviejoviejo');
+    expect(getSocialSyncConfig()?.token).toBe(TOKEN);
     expect(firebaseMocks.resolveOwnProfile).not.toHaveBeenCalled(); // ya había gistId: no hace falta Firestore
   });
 });

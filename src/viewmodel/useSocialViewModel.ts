@@ -1351,6 +1351,9 @@ export function useSocialViewModel(options?: {
       return;
     }
 
+    // C4: el token del canal social también se descifra de forma asíncrona. Sin esperarlo, una hidratación que
+    // llegue antes que la del arranque leería `token: ''` y abortaría con "falta el token" teniéndolo.
+    await ensureSyncConfigLoaded();
     const socialConfig = getSocialSyncConfig();
     if (!socialConfig?.token) {
       setFeedback('err', SOCIAL_UI.status.missingSocialToken);
@@ -2156,6 +2159,7 @@ export function useSocialViewModel(options?: {
   }, [hasMainSync, authUser, hasSocialGist, connecting, resolvingSocialGist, signingIn, handleCreateSocialGist]);
 
   const handleSaveProfile = useCallback(async () => {
+    await ensureSyncConfigLoaded(); // C4: igual que en `hydrateSocialProfile`, el token social se descifra async
     const socialConfig = getSocialSyncConfig();
     if (!authUser || !socialConfig?.token || !socialCfgGistId) {
       setFeedback('err', SOCIAL_UI.status.invalidSaveContext);
