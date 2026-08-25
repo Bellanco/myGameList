@@ -56,4 +56,27 @@ describe('parseLibraryExporter (Playnite Library Exporter, JSON único)', () => 
     expect(parseLibraryExporter(null)).toEqual([]);
     expect(parseLibraryExporter('nope')).toEqual([]);
   });
+
+  // El mapeo de géneros lo hace `cleanNames(valores, true)`. Antes se mapeaba `normalizeGenreName` a mano ANTES
+  // de llamar a `cleanNames` (sin el flag), o sea la misma normalización escrita por fuera. Este test fija que la
+  // forma corta se comporta igual, incluidos los tres detalles donde podría no hacerlo:
+  //  - recorta los espacios (`normalizeGenreName` ya lo hace antes de buscar en el mapa),
+  //  - deduplica sin distinguir mayúsculas DESPUÉS de normalizar,
+  //  - y NO mapea un nombre con otra caja, porque la tabla de géneros es sensible a mayúsculas: 'Simulator' se
+  //    convierte en 'Simulation' pero 'simulator' se queda como está. Es el comportamiento de siempre; queda
+  //    escrito para que un cambio en la tabla no lo altere sin querer.
+  it('normaliza, recorta y deduplica los géneros en una sola pasada', () => {
+    const out = parseLibraryExporter({
+      games: [{
+        name: 'Con géneros sucios',
+        sourceName: 'Steam',
+        platforms: [],
+        genres: ['  Simulator  ', 'Simulation', 'Sport', '', '   ', 'Platform', 'PLATFORMER', 'simulator'],
+      }],
+    });
+    // 'Simulator' → 'Simulation', que colisiona con la entrada literal siguiente → una sola vez.
+    // 'Platform' → 'Platformer', que colisiona con 'PLATFORMER' (dedupe sin caja) → gana el primero.
+    // 'simulator' NO se mapea (otra caja) y sobrevive como género propio.
+    expect(out[0].genres).toEqual(['Simulation', 'Sports', 'Platformer', 'simulator']);
+  });
 });
