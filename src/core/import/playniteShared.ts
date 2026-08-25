@@ -17,7 +17,9 @@ const GENRE_MAP: Record<string, string> = {
   Sport: 'Sports',
 };
 
-export function normalizeGenreName(name: string): string {
+// Interna desde que `libraryExporter` usa el flag de `cleanNames` en vez de mapearla a mano: `cleanNames` es el
+// único punto de entrada, y así no hay dos formas de normalizar un género.
+function normalizeGenreName(name: string): string {
   const trimmed = name.trim();
   return GENRE_MAP[trimmed] ?? trimmed;
 }
