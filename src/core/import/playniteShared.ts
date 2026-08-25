@@ -1,7 +1,9 @@
-// Helpers PUROS compartidos por los dos parsers de Playnite (Json Library Import Export multi-fichero
-// y Library Exporter CSV). Mapeo de origen, regla PC→tienda, estado (EN/ES), horas y nota.
+// Helpers PUROS del parser de Playnite: mapeo de origen, regla PC→tienda y horas.
+//
+// Nacieron como "compartidos" porque había DOS vías de import (JSON multi-fichero y CSV) y el commit `6b03372`
+// las consolidó en una sola: `libraryExporter.ts`, hoy el único consumidor. Se quedan aquí, y no dentro de él,
+// porque son lógica pura y comprobable aparte del recorrido del JSON.
 
-import type { TabId } from '../../model/types/game';
 import type { ImportSource } from '../../model/types/import';
 
 // Normalización de nombres de género (IGDB/Playnite → forma corta habitual).
@@ -68,34 +70,9 @@ export function resolvePlatforms(rawPlatforms: string[], storeLabel: string): st
   return cleanNames(mapped);
 }
 
-/**
- * Estado de finalización de Playnite (localizado, EN/ES) → lista destino sugerida.
- * Orden importante: "no jugado/sin jugar/not played" se comprueba ANTES que "jugado/played".
- */
-export function mapCompletion(status: string): TabId | undefined {
-  const s = status.trim().toLowerCase();
-  if (!s) return undefined;
-  if (s.includes('sin jugar') || s.includes('no jugado') || s.includes('not played') || s.includes('backlog')) return 'p';
-  if (s.includes('plan') || s.includes('planeo')) return 'p';
-  if (s.includes('complet') || s.includes('beaten') || s.includes('superad') || s.includes('vencid') || s.includes('terminad'))
-    return 'c';
-  if (s.includes('abandon')) return 'v';
-  if (s.includes('jugando') || s.includes('playing') || s.includes('pausa') || s.includes('espera') || s.includes('hold'))
-    return 'e';
-  if (s.includes('jugado') || s.includes('played')) return 'e';
-  return undefined;
-}
-
 /** Playtime de Playnite (SEGUNDOS, confirmado: se serializa el ulong crudo) → horas con 1 decimal. */
 export function playtimeSecondsToHours(seconds: unknown): number | null {
   const n = typeof seconds === 'number' ? seconds : Number(seconds);
   if (!Number.isFinite(n) || n <= 0) return null;
   return Math.round((n / 3600) * 10) / 10;
-}
-
-/** UserScore/CriticScore de Playnite (0–100) → nota 0–100 acotada y redondeada. */
-export function clampScore(value: unknown): number | null {
-  const n = typeof value === 'number' ? value : Number(value);
-  if (!Number.isFinite(n)) return null;
-  return Math.max(0, Math.min(100, Math.round(n)));
 }
