@@ -9,8 +9,6 @@ on:
     types: [ published ]
 
 env:
-  # Node 20 salió de soporte en abril de 2026: el CI corría sobre un runtime sin parches de seguridad. La 22 es
-  # además el mínimo que exige html-validate 11 (`engines`), así que las dos cosas se mueven a la vez.
   NODE_VERSION: '22'
 
 jobs:
@@ -42,7 +40,7 @@ jobs:
 
       - name: Build project
         run: npm run build
-        
+
       - name: TypeScript check
         run: npx tsc --noEmit
 
@@ -77,6 +75,9 @@ jobs:
       - name: Privacy audit (no private data in public channels)
         run: npm run audit:privacy
 
-      - name: Security audit
+      - name: Security audit (dependencias de producción)
+        run: npm audit --omit=dev --audit-level=moderate
+
+      - name: Security audit (dependencias de desarrollo, informativo)
         run: npm audit --audit-level=moderate
         continue-on-error: true
