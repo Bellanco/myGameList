@@ -4,9 +4,9 @@ import { DIALOG_MESSAGES, ROUTE_TAB, SYNC_BADGE_TEXT, SYNC_MESSAGES, TAB_ROUTE, 
 import { LEGAL_ROUTES, type LegalDocId } from './core/constants/legal';
 import { TAB_IDS, type TabData, type TabId } from './model/types/game';
 import { decideReviewPublication } from './core/social/reviewPublication';
+import { applyReviewPublication } from './viewmodel/applyReviewPublication';
 import { copyText } from './core/utils/clipboard';
 import { normalizeData } from './model/repository/localRepository';
-import { patchLocalMeta } from './model/repository/indexedDbRepository';
 import { IconSprite } from './view/components/IconSprite';
 import { FloatingControls } from './view/components/FloatingControls';
 import { TabBar } from './view/components/TabBar';
@@ -44,17 +44,6 @@ import { parseLibraryExporter } from './core/import/libraryExporter';
 import { carryStamps } from './core/utils/gameStamps';
 import { importedToPartialGame, mergeImportedIntoGame } from './core/import/staging';
 import type { ImportedGame, RawExternalGame } from './model/types/import';
-
-/**
- * Marca que una publicación de actividad social se ha perdido, para que la reconciliación del hub la recupere.
- * Se escribe aquí directamente (no vía `socialActivityReconcile`) porque el fallo que se está tratando puede
- * ser precisamente el del import dinámico de ese módulo.
- */
-function markPendingSocialActivityFailure(): void {
-  void patchLocalMeta({ pendingSocialActivity: true }).catch(() => {
-    /* best-effort: no puede romper el guardado del juego. */
-  });
-}
 
 // Los tres modales se montan solo tras su primera apertura (ver `useMountedOnceOpen`), así que sus chunks ya no
 // entran en el arranque. Para que abrir siga siendo instantáneo, se precargan en idle: `import()` es idempotente
@@ -495,12 +484,9 @@ export default function App() {
     // (`max(ids) + 1`): dos copias de la misma decisión, y la de aquí es la que elige sobre qué juego publica el
     // canal social. Mientras coincidieran no se notaba nada; en cuanto dejaran de coincidir, la reseña se colgaba
     // de otro juego sin error ni rastro. Ver el docblock de `saveDraft`.
-    const savedId = saveDraft(editingTab, nextDraft);
-    if (savedId === null) return;
-
-    // El juego TAL Y COMO ESTABA antes de este guardado. Se lee DESPUÉS del guardado a propósito y sigue siendo
-    // el estado previo: `vm.data` es la foto inmutable de este render, y el `setData` del guardado no la toca.
-    const previousGame = [...vm.data.c, ...vm.data.v, ...vm.data.e, ...vm.data.p].find((entry) => entry.id === savedId);
+    const guardado = saveDraft(editingTab, nextDraft);
+    if (guardado === null) return;
+    const { id: savedId, previous: previousGame } = guardado;
 
     // Graduación desde la bandeja: si este guardado viene de clasificar un importado, se retira de la bandeja.
     if (graduatingIdRef.current !== null) {
@@ -518,30 +504,14 @@ export default function App() {
     // justo donde se colocó el bug del id. Aquí queda el efecto: cargar el repositorio y contar los fallos.
     const publicacion = decideReviewPublication({ tab: editingTab, previous: previousGame, next: nextDraft });
 
-    // Mismo aviso para las dos ramas: el fallo puede ser del propio import dinámico (index.html cacheado tras un
-    // despliegue, red intermitente) o de GitHub (403 por rate-limit, 5xx). En ambos casos la publicación se
-    // perdía sin rastro ni reintento: se marca como pendiente para que la reconciliación la recupere.
-    const alFallar = () => {
-      markPendingSocialActivityFailure();
-      notify('warn', 'Juego guardado; la actividad social de reseña se actualizará al abrir el hub social.');
-    };
-
-    if (publicacion.kind === 'unpublish') {
-      void import('./model/repository/socialPublishRepository')
-        .then((m) => m.unpublishReviewActivity({ id: savedId }))
-        .catch(alFallar);
-      return;
-    }
-
-    if (publicacion.kind === 'publish') {
-      void import('./model/repository/socialPublishRepository')
-        .then((m) => m.publishReviewActivity({
-          id: savedId,
-          // audit-allow: `publishReviewActivity` convierte el texto a snippet y publica solo el rating redondeado.
-          ...publicacion.payload,
-        }))
-        .catch(alFallar);
-    }
+    // El EFECTO vive en el ViewModel (`applyReviewPublication`): la vista no importa repositorios —lo prohíbe
+    // `view.instructions.md`— y así el camino queda comprobable con el repositorio simulado. Aquí solo se decide
+    // qué contarle al usuario si la publicación no llega.
+    void applyReviewPublication({
+      id: savedId,
+      publication: publicacion,
+      onDeferred: () => notify('warn', 'Juego guardado; la actividad social de reseña se actualizará al abrir el hub social.'),
+    });
   }, [editingTab, inbox, notify, saveDraft, vm.data]);
 
   const handleEditTag = useCallback((key: 'genres' | 'platforms' | 'strengths' | 'weaknesses', oldValue: string, newValue: string) => {
