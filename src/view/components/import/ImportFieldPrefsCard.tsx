@@ -1,18 +1,11 @@
-import { type CSSProperties, useState } from 'react';
+import { useState } from 'react';
 import type { ImportField, ImportFieldGroup, ImportFieldPrefs } from '../../../model/types/import';
 import { IMPORT_FIELDS } from '../../../core/import/fieldPrefs';
 import { UI_MESSAGES } from '../../../core/constants/labels';
 import { Icon } from '../Icon';
+import '../../../styles/import.scss';
 
 const M = UI_MESSAGES.import.inbox.fields;
-
-const gridStyle: CSSProperties = {
-  display: 'grid',
-  gridTemplateColumns: 'repeat(auto-fit, minmax(15rem, 1fr))',
-  gap: '1rem',
-};
-const groupStyle: CSSProperties = { display: 'flex', flexDirection: 'column', gap: '0.45rem' };
-const checkStyle: CSSProperties = { display: 'flex', gap: '0.5rem', alignItems: 'center', cursor: 'pointer' };
 
 const GROUP_TITLE: Record<ImportFieldGroup, string> = { newGames: M.newGames, existingGames: M.existingGames };
 
@@ -47,8 +40,7 @@ export function ImportFieldPrefsCard({ prefs, onChange }: ImportFieldPrefsCardPr
 
       <button
         type="button"
-        className="btn btn-secondary"
-        style={{ alignSelf: 'flex-start' }}
+        className="btn btn-secondary import-card-action"
         aria-expanded={open}
         onClick={() => setOpen((v) => !v)}
       >
@@ -57,15 +49,13 @@ export function ImportFieldPrefsCard({ prefs, onChange }: ImportFieldPrefsCardPr
       </button>
 
       {open ? (
-        <div style={gridStyle}>
+        <div className="import-fields">
           {(['newGames', 'existingGames'] as const).map((group) => (
-            <fieldset key={group} style={{ border: 'none', margin: 0, padding: 0 }}>
-              <legend className="settings-card-note" style={{ fontWeight: 600, padding: 0 }}>
-                {GROUP_TITLE[group]}
-              </legend>
-              <div style={groupStyle}>
+            <fieldset key={group} className="import-fields-set">
+              <legend className="settings-card-note import-fields-legend">{GROUP_TITLE[group]}</legend>
+              <div className="import-fields-list">
                 {IMPORT_FIELDS.map((field) => (
-                  <label key={field} style={checkStyle}>
+                  <label key={field} className="import-check">
                     <input
                       type="checkbox"
                       checked={prefs[group][field]}
@@ -77,15 +67,15 @@ export function ImportFieldPrefsCard({ prefs, onChange }: ImportFieldPrefsCardPr
                 ))}
               </div>
               {group === 'existingGames' ? (
-                <p className="settings-card-note" style={{ margin: '0.5rem 0 0' }}>{M.existingHint}</p>
+                <p className="settings-card-note import-fields-hint">{M.existingHint}</p>
               ) : null}
             </fieldset>
           ))}
         </div>
       ) : (
-        <div style={gridStyle}>
+        <div className="import-fields">
           {(['newGames', 'existingGames'] as const).map((group) => (
-            <p key={group} className="settings-card-note" style={{ margin: 0 }}>
+            <p key={group} className="settings-card-note">
               <strong>{GROUP_TITLE[group]}: </strong>
               {summarize(prefs[group])}
             </p>

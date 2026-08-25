@@ -1,42 +1,16 @@
-import { type CSSProperties, useState } from 'react';
+import { useState } from 'react';
 import { UI_MESSAGES } from '../../../core/constants/labels';
+// La hoja del flujo de importación se importa AQUÍ y no desde `index.scss`: este componente lo renderizan dos
+// pantallas perezosas (Integraciones y Cuenta), así que su CSS viaja en esos chunks y no pesa en el arranque.
+import '../../../styles/import.scss';
 
 const M = UI_MESSAGES.import.integrations;
 
-const linkStyle: CSSProperties = {
-  background: 'none',
-  border: 0,
-  padding: 0,
-  margin: 0,
-  font: 'inherit',
-  color: 'var(--steam)',
-  cursor: 'pointer',
-  textDecoration: 'underline',
-  textUnderlineOffset: '2px',
-  fontWeight: 600,
-};
-
-const panelStyle: CSSProperties = {
-  marginTop: '0.6rem',
-  padding: '0.75rem 0.9rem',
-  border: '1px solid var(--border)',
-  borderRadius: 'var(--radius-md)',
-  background: 'var(--surface)',
-};
-
-const stepsStyle: CSSProperties = {
-  margin: '0.35rem 0 0',
-  paddingLeft: '1.2rem',
-  display: 'flex',
-  flexDirection: 'column',
-  gap: '0.35rem',
-};
-
 function Guide({ title, steps }: { title: string; steps: readonly string[] }) {
   return (
-    <div className="settings-card-note" style={panelStyle}>
-      <p style={{ margin: 0, fontWeight: 700 }}>{title}</p>
-      <ol style={stepsStyle}>
+    <div className="settings-card-note import-guide">
+      <p className="import-steps-title">{title}</p>
+      <ol className="import-steps">
         {steps.map((step, i) => (
           <li key={i}>{step}</li>
         ))}
@@ -63,7 +37,7 @@ export function PlayniteNote() {
         {p >= 0 ? (
           <>
             {note.slice(0, p)}
-            <button type="button" style={linkStyle} aria-expanded={psnOpen} onClick={() => setPsnOpen((v) => !v)}>
+            <button type="button" className="import-guide-link" aria-expanded={psnOpen} onClick={() => setPsnOpen((v) => !v)}>
               PlayStation
             </button>
             {note.slice(p + 'PlayStation'.length)}
