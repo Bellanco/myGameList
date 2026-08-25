@@ -1,14 +1,10 @@
-/* Panel de administración (`/admin`, ruta oculta). Pantalla completa e independiente del hub de ajustes.
-
-   A ANCHO COMPLETO: el resto de la app se corta en 1800px porque son textos y tarjetas, donde una línea infinita
-   se lee mal. Aquí son fichas de datos en rejilla: cuanto más ancho, más fichas por fila y menos scroll vertical.
-   Se escribe `.main.main-admin` (y no `.main-admin` a secas) para GANAR por especificidad al `max-width: 1800px`
-   de `.main`, en vez de depender del orden de los `@use` en index.scss. */
-.main.main-admin {
-  max-width: none;
-  padding-left: 1rem;
-  padding-right: 1rem;
-}
+// Panel de administración (`/admin`, ruta oculta). Hoja SIN guion bajo y FUERA de `index.scss` a propósito: la
+// importa `AdminHub.tsx`, que entra por `lazy()`, así que Vite la emite en ese chunk perezoso. Antes viajaba en el
+// CSS de arranque —15 kB que descargaba TODO el mundo para una pantalla que abre una sola persona—. Mismo criterio
+// que `stats.scss` y que los skins de tema (ver `paletteSkin.ts`).
+//
+// Lo único que se quedó en el arranque es `.main.main-admin` (ahora en `_layout.scss`): esa clase la pone `App`,
+// que no es perezoso, así que su regla tiene que estar antes de que el chunk llegue.
 
 /* Tarjeta propia, sin heredar de `.settings-hub`: aquella es una rejilla de 12 columnas que a partir de 48rem
    reparte sus tarjetas en dos columnas (`_layout.scss`, `.settings-card:not(...)` → span 5/6), y eso partía el
@@ -76,7 +72,11 @@
 }
 .admin-result-count { margin: 0 auto 0 0; color: var(--text-muted); font-size: .85rem; }
 
-.admin-warning { color: var(--text-muted); font-size: .85rem; }
+/* ACOTADA al panel: escrita sin acotar, esta regla pisaba también el aviso del gestor de etiquetas de AJUSTES
+   (misma clase, base en `_overlays-and-responsive.scss`), que nada tiene que ver con este panel. Mientras la hoja
+   viajaba en el arranque el efecto era invisible; al salir del arranque, ese aviso cambiaría de tamaño según si
+   el chunk del panel se había cargado o no. Acotarla lo deja determinista. */
+.admin-hub .admin-warning { color: var(--text-muted); font-size: .85rem; }
 .admin-feedback { font-size: .85rem; }
 .admin-feedback.ok { color: var(--fg-sky); }
 .admin-feedback.warn { color: var(--text-muted); }
