@@ -38,10 +38,16 @@ const RECONCILE_TTL_MS = 12 * 60 * 60 * 1000;
 //   3 = F4: además de las reseñas, se proyectan los mensajes de lista (`moves`) desde los sellos `enteredAt`.
 //       Es lo que hace que la actividad de lista llegue a los gists que ya existen sin pedirle nada al usuario.
 //   4 = F4: se RETIRAN los mensajes que la biblioteca local desmiente teniendo el juego delante. Lo que había
-//       publicado antes del filtro de «jugar, no catalogar» —un «terminó tal cosa» de un juego que en realidad se
+//       publicado antes del filtro de «jugar, no catalogar» —un «finalizó tal cosa» de un juego que en realidad se
 //       pasó hace años— se quedaba para siempre: la regla anterior solo retiraba mensajes de juegos AUSENTES. Sube
 //       la versión para que la limpieza alcance a los gists que ya tocó la 3, sin esperar a que caduque el sello.
-export const RECONCILE_LOGIC_VERSION = 4;
+//   5 = F4: filtro de «movimientos, no altas» (ver `libraryEntryTab`). La lista por la que el juego entró en la
+//       biblioteca deja de publicar mensaje, y la retirada de la 4 es la que limpia los que ya estaban publicados
+//       —casi todos los de próximos, que suele ser la lista de entrada— en cuanto se abre el hub.
+//   6 = F4: de cada juego queda un solo mensaje por día, el último (ver `keepLatestPerDay`). Sube por lo mismo que
+//       la 5: los «comenzó» que ese día acabaron en «abandonó» o «finalizó» ya están publicados, y es la retirada
+//       la que los quita.
+export const RECONCILE_LOGIC_VERSION = 6;
 
 // Margen para no re-sellar fechas por diferencias de milisegundos: al guardar una reseña, `_ts` del juego y la
 // fecha de la publicación se estampan en la misma operación, con unos ms de diferencia.

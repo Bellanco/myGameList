@@ -3,9 +3,11 @@
 // Lo que se comprueba aquí, por orden de importancia:
 //  1. Que la proyección es idempotente y estable: la misma biblioteca da los mismos mensajes con las mismas
 //     fechas, publicando una vez o cien. Es lo que permite publicar a rebufo de otra escritura.
-//  2. Que las listas OCULTAS no publican mensaje. Es la misma promesa que el ajuste de visibilidad ya hacía.
-//  3. Que el campo `enteredAt` en crudo sigue sin poder llegar al gist, por mucho mensaje que se publique.
-//  4. Que los mensajes no le roban el sitio a las reseñas ni se pierden en el round-trip del gist.
+//  2. Que el ALTA de un juego no publica mensaje: solo se cuenta lo que va de una lista a otra, y que de un mismo
+//     día queda un solo mensaje por juego: el último («lo empecé y lo abandoné» se cuenta abandonado).
+//  3. Que las listas OCULTAS no publican mensaje. Es la misma promesa que el ajuste de visibilidad ya hacía.
+//  4. Que el campo `enteredAt` en crudo sigue sin poder llegar al gist, por mucho mensaje que se publique.
+//  5. Que los mensajes no le roban el sitio a las reseñas ni se pierden en el round-trip del gist.
 import { describe, expect, it } from 'vitest';
 import { deriveMoveActivity, MOVE_ACTIVITY_MAX, reconcileMoveActivity, reviewActorsByGame, type SocialMoveEntry } from '../../src/core/social/moveActivity';
 import {
@@ -65,10 +67,103 @@ describe('F4 — proyección de los mensajes de lista', () => {
 
     const moves = deriveMoveActivity(games);
 
-    expect(moves.map((entry) => entry.tab)).toEqual(['c', 'e', 'p']); // del más reciente al más antiguo
-    expect(moves.map((entry) => entry.at)).toEqual([C, E, P]);
+    // Próximos es por donde entró en la biblioteca: eso fue darlo de alta, no moverlo.
+    expect(moves.map((entry) => entry.tab)).toEqual(['c', 'e']); // del más reciente al más antiguo
+    expect(moves.map((entry) => entry.at)).toEqual([C, E]);
     expect(moves.every((entry) => entry.gameName === 'Hollow Knight' && entry.gameId === 7)).toBe(true);
-    expect(moves.map((entry) => entry.id)).toEqual(['7:c', '7:e', '7:p']);
+    expect(moves.map((entry) => entry.id)).toEqual(['7:c', '7:e']);
+  });
+
+  // ── MOVIMIENTOS, NO ALTAS ────────────────────────────────────────────────────────────────────────────────
+  it('un juego que acaba de entrar en la biblioteca no anuncia nada, en la lista que sea', () => {
+    // Un solo sello = está donde lo pusieron y no se ha movido. Vale para las cuatro listas, completados incluida
+    // (con su año en regla, que aquí no es lo que falla).
+    const games = tabData({
+      c: [game({ id: 1, enteredAt: { c: C } })],
+      v: [game({ id: 2, enteredAt: { v: E } })],
+      e: [game({ id: 3, enteredAt: { e: E } })],
+      p: [game({ id: 4, enteredAt: { p: P } })],
+    });
+
+    expect(deriveMoveActivity(games)).toEqual([]);
+  });
+
+  it('moverlo después sí cuenta: el alta calla, el movimiento habla', () => {
+    const alta = tabData({ p: [game({ id: 5, enteredAt: { p: P } })] });
+    expect(deriveMoveActivity(alta)).toEqual([]);
+
+    // El mismo juego, ya empezado: sale el mensaje del movimiento y solo ese.
+    const movido = tabData({ e: [game({ id: 5, enteredAt: { p: P, e: E } })] });
+    expect(deriveMoveActivity(movido).map((entry) => entry.id)).toEqual(['5:e']);
+  });
+
+  // ── UN JUEGO, UN MENSAJE AL DÍA: EL ÚLTIMO ───────────────────────────────────────────────────────────────
+  it('empezado y abandonado el mismo día: se cuenta abandonado', () => {
+    const manana = Date.parse('2026-08-20T09:30:00');
+    const tarde = Date.parse('2026-08-20T19:45:00');
+    const games = tabData({ v: [game({ id: 30, enteredAt: { p: P, e: manana, v: tarde } })] });
+
+    const moves = deriveMoveActivity(games);
+
+    expect(moves).toHaveLength(1);
+    expect(moves[0]).toMatchObject({ id: '30:v', tab: 'v', at: tarde });
+  });
+
+  it('empezado y terminado el mismo día: se cuenta terminado', () => {
+    const anio = new Date(Date.parse('2026-08-20T09:30:00')).getFullYear();
+    const manana = Date.parse('2026-08-20T09:30:00');
+    const noche = Date.parse('2026-08-20T23:10:00');
+    const games = tabData({ c: [game({ id: 31, years: [anio], enteredAt: { p: P, e: manana, c: noche } })] });
+
+    const moves = deriveMoveActivity(games);
+
+    expect(moves).toHaveLength(1);
+    expect(moves[0]).toMatchObject({ id: '31:c', tab: 'c', at: noche });
+  });
+
+  it('en días distintos se cuentan los dos: el colapso es solo dentro del día', () => {
+    const anio = new Date(Date.parse('2026-08-21T12:00:00')).getFullYear();
+    const games = tabData({
+      c: [game({ id: 32, years: [anio], enteredAt: { p: P, e: Date.parse('2026-08-20T22:00:00'), c: Date.parse('2026-08-21T12:00:00') } })],
+    });
+
+    expect(deriveMoveActivity(games).map((entry) => entry.tab)).toEqual(['c', 'e']);
+  });
+
+  it('a la misma hora exacta gana el estado más avanzado (guardar y mover en una sola operación)', () => {
+    const instante = Date.parse('2026-08-20T18:00:00');
+    const anio = new Date(instante).getFullYear();
+    const games = tabData({ c: [game({ id: 33, years: [anio], enteredAt: { p: P, e: instante, c: instante } })] });
+
+    expect(deriveMoveActivity(games).map((entry) => entry.tab)).toEqual(['c']);
+  });
+
+  it('un mensaje que no es publicable no tapa al del mismo día que sí lo es', () => {
+    // Empezado hoy y catalogado hoy como terminado… en 2019. El «finalizó» no se publica (jugar, no catalogar), así
+    // que el «comenzó» de esta mañana sigue en pie: pasó de verdad.
+    const games = tabData({
+      c: [game({ id: 34, years: [2019], enteredAt: { p: P, e: Date.parse('2026-08-20T09:00:00'), c: Date.parse('2026-08-20T20:00:00') } })],
+    });
+
+    expect(deriveMoveActivity(games).map((entry) => entry.tab)).toEqual(['e']);
+  });
+
+  it('una lista oculta tampoco tapa a la visible del mismo día', () => {
+    // Empezado y abandonado hoy, con la vergüenza escondida: el abandono no se publica y el «comenzó» se queda. No
+    // se puede deducir nada de la lista oculta, que es de lo que va el ajuste de visibilidad.
+    const games = tabData({
+      v: [game({ id: 35, enteredAt: { p: P, e: Date.parse('2026-08-20T09:00:00'), v: Date.parse('2026-08-20T20:00:00') } })],
+    });
+
+    expect(deriveMoveActivity(games, { hiddenTabs: ['v'] }).map((entry) => entry.tab)).toEqual(['e']);
+  });
+
+  it('la lista de entrada se decide con TODOS los sellos, también los de las listas ocultas', () => {
+    // Entró por la vergüenza (oculta) y luego se empezó. Si la lista oculta no contara como entrada, «comenzó»
+    // pasaría por alta y se perdería el único mensaje publicable que hay aquí.
+    const games = tabData({ e: [game({ id: 6, enteredAt: { v: P, e: E } })] });
+
+    expect(deriveMoveActivity(games, { hiddenTabs: ['v'] }).map((entry) => entry.id)).toEqual(['6:e']);
   });
 
   it('es idempotente: proyectar dos veces la misma biblioteca da exactamente lo mismo', () => {
@@ -91,7 +186,7 @@ describe('F4 — proyección de los mensajes de lista', () => {
   });
 
   it('un juego que hoy vive en una lista oculta sigue contando lo que hizo en las visibles', () => {
-    const games = tabData({ v: [game({ id: 4, enteredAt: { e: E, v: C } })] });
+    const games = tabData({ v: [game({ id: 4, enteredAt: { p: P, e: E, v: C } })] });
 
     const moves = deriveMoveActivity(games, { hiddenTabs: ['v'] });
 
@@ -118,7 +213,7 @@ describe('F4 — proyección de los mensajes de lista', () => {
       c: Array.from({ length: 10 }, (_, index) => game({
         id: index + 1,
         years: [new Date(P).getFullYear()], // el sello de estos es del año de P, y `years` tiene que acompañarlo
-        enteredAt: { c: P + index * 1000 },
+        enteredAt: { p: P - 1000, c: P + index * 1000 }, // el alta primero: si no, el de completados no es un movimiento
       })),
     });
 
@@ -131,36 +226,37 @@ describe('F4 — proyección de los mensajes de lista', () => {
   it('un juego terminado hace años y catalogado hoy NO anuncia que se ha terminado', () => {
     const hoy = Date.now();
     const games = tabData({
-      c: [game({ id: 20, name: 'Un clásico', years: [2019], enteredAt: { c: hoy } })],
+      c: [game({ id: 20, name: 'Un clásico', years: [2019], enteredAt: { p: P, c: hoy } })],
     });
 
-    // El sello es de hoy (acaba de entrar en la biblioteca), pero se pasó en 2019: no hay nada que anunciar.
+    // El movimiento a completados es de hoy, pero se pasó en 2019: no hay nada que anunciar.
     expect(deriveMoveActivity(games)).toEqual([]);
   });
 
   it('lo terminado en el año del sello sí se publica', () => {
-    const games = tabData({ c: [game({ id: 21, years: [ANIO_C], enteredAt: { c: C } })] });
+    const games = tabData({ c: [game({ id: 21, years: [ANIO_C], enteredAt: { p: P, c: C } })] });
 
     expect(deriveMoveActivity(games).map((entry) => entry.tab)).toEqual(['c']);
   });
 
   it('una rejugada cuenta: basta con que `years` incluya el año del sello', () => {
-    const games = tabData({ c: [game({ id: 22, years: [2019, ANIO_C], enteredAt: { c: C } })] });
+    const games = tabData({ c: [game({ id: 22, years: [2019, ANIO_C], enteredAt: { p: P, c: C } })] });
 
     expect(deriveMoveActivity(games)).toHaveLength(1);
   });
 
   it('sin años no se anuncia: el mensaje afirma una fecha que no se puede sostener', () => {
-    const games = tabData({ c: [game({ id: 23, years: [], enteredAt: { c: C } })] });
+    const games = tabData({ c: [game({ id: 23, years: [], enteredAt: { p: P, c: C } })] });
 
     expect(deriveMoveActivity(games)).toEqual([]);
   });
 
-  it('el filtro es SOLO de completados: apuntar o empezar un juego viejo sí es actividad de hoy', () => {
-    // Un juego de 1998 que hoy se apunta y se empieza: ocurre hoy, aunque el juego tenga treinta años.
+  it('el filtro es SOLO de completados: empezar un juego viejo sí es actividad de hoy', () => {
+    // Un juego de 1998 que se apuntó y hoy se empieza: empezarlo ocurre hoy, aunque el juego tenga treinta años y
+    // no tenga ni un año declarado.
     const games = tabData({ e: [game({ id: 24, years: [], enteredAt: { p: P, e: E } })] });
 
-    expect(deriveMoveActivity(games).map((entry) => entry.tab)).toEqual(['e', 'p']);
+    expect(deriveMoveActivity(games).map((entry) => entry.tab)).toEqual(['e']);
   });
 
   it('el tope por defecto acota lo que se publica en una biblioteca grande', () => {
@@ -168,13 +264,14 @@ describe('F4 — proyección de los mensajes de lista', () => {
       c: Array.from({ length: 200 }, (_, index) => game({ id: index + 1, enteredAt: { p: P + index, e: E + index, c: C + index } })),
     });
 
-    // 200 juegos × 3 listas = 600 mensajes candidatos.
+    // 200 juegos × (3 listas - el alta) = 400 mensajes candidatos.
     expect(deriveMoveActivity(games)).toHaveLength(MOVE_ACTIVITY_MAX);
   });
 });
 
 describe('F4 — sincronización con el gist social', () => {
-  const games = tabData({ c: [game({ id: 1, name: 'Celeste', enteredAt: { p: P, c: C } })] });
+  // Apuntado (alta, no publica), empezado y terminado: dos mensajes.
+  const games = tabData({ c: [game({ id: 1, name: 'Celeste', enteredAt: { p: P, e: E, c: C } })] });
 
   it('escribe los mensajes derivados y es no-op a la segunda (misma referencia)', () => {
     const data = baseGist();
@@ -193,8 +290,8 @@ describe('F4 — sincronización con el gist social', () => {
     const publicado = syncMoveActivity(baseGist(), deriveMoveActivity(games), 2000);
     expect(publicado.moves).toHaveLength(2);
 
-    // Su dueño esconde próximos: el mensaje de esa lista desaparece del canal sin pasada aparte.
-    const conListaOculta = syncMoveActivity(publicado, deriveMoveActivity(games, { hiddenTabs: ['p'] }), 3000);
+    // Su dueño esconde «en curso»: el mensaje de esa lista desaparece del canal sin pasada aparte.
+    const conListaOculta = syncMoveActivity(publicado, deriveMoveActivity(games, { hiddenTabs: ['e'] }), 3000);
     expect(conListaOculta.moves?.map((entry) => entry.tab)).toEqual(['c']);
 
     // Juego borrado: sin sellos locales no queda mensaje ninguno.
@@ -207,15 +304,17 @@ describe('F4 — sincronización con el gist social', () => {
 
     // Un cliente viejo pisó los sellos y `normalizeGame` los resembró desde `listedAt`: la fecha derivada es más
     // nueva que la real. La publicada manda.
-    const resembrado = tabData({ c: [game({ id: 1, name: 'Celeste', enteredAt: { p: C, c: C } })] });
+    // La re-siembra se pone unos días antes del sello de completados, no el mismo día: si cayeran en el mismo, el
+    // colapso por día se quedaría solo con el de completados y no habría nada que comparar.
+    const resembrado = tabData({ c: [game({ id: 1, name: 'Celeste', enteredAt: { p: P, e: C - 5 * 24 * 60 * 60 * 1000, c: C } })] });
     const next = syncMoveActivity(publicado, deriveMoveActivity(resembrado), 3000);
 
-    expect(next.moves?.find((entry) => entry.tab === 'p')?.at).toBe(P);
+    expect(next.moves?.find((entry) => entry.tab === 'e')?.at).toBe(E);
   });
 
   it('un nombre nuevo del juego sí actualiza el mensaje ya publicado', () => {
     const publicado = syncMoveActivity(baseGist(), deriveMoveActivity(games), 2000);
-    const renombrado = tabData({ c: [game({ id: 1, name: 'Celeste Classic', enteredAt: { p: P, c: C } })] });
+    const renombrado = tabData({ c: [game({ id: 1, name: 'Celeste Classic', enteredAt: { p: P, e: E, c: C } })] });
 
     const next = syncMoveActivity(publicado, deriveMoveActivity(renombrado), 3000);
 
@@ -344,7 +443,7 @@ describe('F4 — integridad del canal', () => {
     delete sinMoves.moves;
     expect(() => assertValidSocialGist(sinMoves)).not.toThrow();
 
-    const conMoves = syncMoveActivity(baseGist(), deriveMoveActivity(tabData({ c: [game({ id: 1, enteredAt: { c: C } })] })), 2000);
+    const conMoves = syncMoveActivity(baseGist(), deriveMoveActivity(tabData({ c: [game({ id: 1, enteredAt: { p: P, c: C } })] })), 2000);
     expect(() => assertValidSocialGist(conMoves)).not.toThrow();
 
     // Allowlist: un mensaje con un campo extra (aquí, el sello en crudo) no pasa.
@@ -356,7 +455,7 @@ describe('F4 — integridad del canal', () => {
   });
 
   it('la guarda de privacidad sigue rechazando el sello en crudo dentro del gist', () => {
-    const conMoves = syncMoveActivity(baseGist(), deriveMoveActivity(tabData({ c: [game({ id: 1, enteredAt: { c: C } })] })), 2000);
+    const conMoves = syncMoveActivity(baseGist(), deriveMoveActivity(tabData({ c: [game({ id: 1, enteredAt: { p: P, c: C } })] })), 2000);
 
     // Lo que se publica (juego, lista, instante) es limpio…
     expect(() => assertNoSocialPrivateFields(conMoves)).not.toThrow();

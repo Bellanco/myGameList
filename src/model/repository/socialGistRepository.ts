@@ -141,7 +141,7 @@ export interface SocialPostEntry {
 }
 
 /**
- * F4 — mensaje de LISTA («empezó», «terminó», «dejó», «apuntó»). El tipo y la proyección viven en
+ * F4 — mensaje de LISTA («comenzó», «finalizó», «abandonó», «añadió»). El tipo y la proyección viven en
  * `core/social/moveActivity` (capa pura); se re-exporta para que el resto del canal siga importando el modelo del
  * gist de un único sitio.
  */

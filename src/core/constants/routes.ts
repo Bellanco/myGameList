@@ -46,6 +46,15 @@ export const APP_ROUTES: ReadonlyArray<{ path: string; section: AppSection }> = 
 /** Ruta a la que rebota cualquier cosa no listada arriba. */
 export const FALLBACK_ROUTE = '/completados';
 
+/**
+ * ¿El pathname corresponde a una ruta DECLARADA? `matchAppSection` no sirve para preguntarlo: todo lo que no
+ * casa cae en `'lists'`. Lo usa el "Volver" con origen ({@link useReturnTo}) para no fiarse de un `state` que
+ * viene del historial del navegador.
+ */
+export function isKnownRoute(pathname: string): boolean {
+  return !!matchRoutes(APP_ROUTES as Array<{ path: string; section: AppSection }>, pathname)?.length;
+}
+
 /** Sección activa para un pathname, con el mismo matcher que usa `<Routes>`. */
 export function matchAppSection(pathname: string): AppSection {
   return matchRoutes(APP_ROUTES as Array<{ path: string; section: AppSection }>, pathname)?.[0]?.route.section

@@ -12,7 +12,7 @@ import { parseMoveTabsValue } from '../../core/social/moveTabsFilter';
 import { createPreferenceStore } from './preferenceStore';
 
 /**
- * De qué listas ve su dueño los mensajes de actividad («empezó», «terminó», «dejó», «apuntó»). Letras de lista en
+ * De qué listas ve su dueño los mensajes de actividad («comenzó», «finalizó», «abandonó», «añadió»). Letras de lista en
  * orden canónico; por defecto, todas. Sin efecto en el DOM: solo expone el valor que consume el feed.
  */
 export const feedMoveTabsPreference = createPreferenceStore<string>({

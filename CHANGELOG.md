@@ -5,6 +5,31 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
 
 ## [Unreleased]
 
+### Changed
+- **Actividad de listas: otras palabras, solo movimientos y tope por día.** Tres cambios sobre el aviso de una
+  línea del feed social («Ada finalizó Hollow Knight 18:42»):
+  - **Los verbos cambian de palabra:** «comenzó» en vez de «empezó», «finalizó» en vez de «terminó», «abandonó» en
+    vez de «dejó» y «añadió» en vez de «apuntó».
+  - **Movimientos, no altas.** La lista por la que un juego ENTRA en la biblioteca deja de publicar aviso: solo se
+    cuenta lo que va de una lista a otra. Dar de alta un juego —o catalogar una colección entera— ya no anuncia
+    nada, que era justo lo que dejaba a alguien recién llegado copando el feed de sus amistades. La lista de
+    entrada es la del sello más antiguo, y se decide con todos los sellos (también los de las listas ocultas), así
+    que un juego que entró por una lista escondida sí cuenta su siguiente movimiento. **Es retroactivo:** la
+    reconciliación retira de los canales que ya existen los avisos que en realidad eran altas
+    (`RECONCILE_LOGIC_VERSION` 5), sin que nadie tenga que hacer nada.
+  - **De un mismo día, un solo aviso por juego: el último.** Empezar algo y abandonarlo esa tarde es una cosa, no
+    dos: se cuenta **abandonado**. Empezarlo y terminarlo, **finalizado**. El colapso se aplica sobre los avisos ya
+    publicables, así que uno descartado (un «finalizó» de un juego que en realidad se pasó hace años) no se lleva
+    por delante el «comenzó» de ese día, y una lista oculta no tapa a una visible. Retroactivo por la misma vía que
+    lo anterior (`RECONCILE_LOGIC_VERSION` 6).
+  - **Tres avisos por persona y día.** Es un cupo de LECTURA, como el filtro de listas: recorta lo que el feed
+    pinta —de lo ya publicado por todo el mundo, sin republicar nada— y se cuenta en el día LOCAL de quien mira,
+    el mismo con el que el feed titula sus grupos. Las reseñas y las publicaciones no cuentan para él y siguen sin
+    tope: una reseña se escribe, un movimiento cuesta un clic.
+  - Política de privacidad al día: ahora se publica MENOS de lo ya declarado (el alta de un juego no sale), así que
+    el texto se corrige pero la versión no sube y no se vuelve a pedir conformidad. El cupo diario no se menciona
+    por lo mismo que el filtro de listas: cambia lo que ves tú, no lo que se publica de ti.
+
 ## [1.0.6] - 2026-08-25
 
 > Esta sección era `[Unreleased]` y se cierra aquí. Las versiones 1.0.1–1.0.5 nunca tuvieron sección propia, así

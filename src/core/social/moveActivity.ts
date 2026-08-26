@@ -1,4 +1,4 @@
-// Actividad de LISTA del canal social: el mensaje de «apuntó», «empezó», «terminó» o «dejó» un juego.
+// Actividad de LISTA del canal social: el mensaje de «añadió», «comenzó», «finalizó» o «abandonó» un juego.
 //
 // Se deriva del sello `enteredAt` del propio juego (ver `GameItem.enteredAt`), que registra cuándo entró en cada
 // lista la PRIMERA vez y nunca se reescribe. Eso es lo que hace que esto sea una PROYECCIÓN y no un registro de
@@ -10,15 +10,28 @@
 // que se salió —una rejugada— no genera uno nuevo, porque el sello no se reescribe. Registrar cada transición
 // exigiría un historial que sí crece sin techo y que ensuciaría el merge en cada guardado.
 //
-// Y una regla que no sale del sello sino del sentido común del feed: un juego que se TERMINÓ hace años y se mete
-// hoy en la biblioteca no anuncia nada («terminó tal cosa» sería falso), así que el mensaje de Completados exige
-// que el año de `years` coincida con el del sello. Ver `completedInStampYear`.
+// Y dos reglas que no salen del sello sino del sentido común del feed:
+//
+// MOVIMIENTOS, NO ALTAS. La lista por la que el juego ENTRÓ en la biblioteca no publica mensaje: apuntar —o
+// terminar, o abandonar— algo al catalogarlo por primera vez no es actividad, es rellenar una ficha, y quien llega
+// nuevo (o importa su colección) copaba el feed de sus amistades con su alta entera. Solo se cuenta lo que va DE
+// una lista A otra, que es exactamente lo que el sello más antiguo del juego distingue de los demás. Ver
+// `libraryEntryTab`.
+//
+// JUGAR, NO CATALOGAR. Un juego que se TERMINÓ hace años y se mete hoy en la biblioteca no anuncia nada
+// («finalizó tal cosa» sería falso), así que el mensaje de Completados exige que el año de `years` coincida con
+// el del sello. Ver `completedInStampYear`.
+//
+// UN JUEGO, UN MENSAJE AL DÍA: EL ÚLTIMO. Quien empieza algo y lo abandona la misma tarde no ha hecho dos cosas,
+// ha hecho una —abandonarlo—, y el feed contaba las dos, en orden inverso y a dos renglones. De cada juego queda
+// el mensaje más reciente de ese día; los que ese mismo día quedaron atrás desaparecen. Ver `keepLatestPerDay`.
 //
 // PRIVACIDAD. Aquí está la única excepción consentida a que los sellos no salgan de este aparato: lo que se
 // publica es el EVENTO derivado (juego, lista, instante), nunca el campo `enteredAt`, que sigue prohibido en el
 // gist social (ver `SOCIAL_PRIVATE_FIELDS`) y se sigue borrando de los listados que baja una amistad (ver
-// `applyProfileVisibility`). Las listas que el usuario tiene OCULTAS quedan fuera: publicar «dejó X» de una lista
+// `applyProfileVisibility`). Las listas que el usuario tiene OCULTAS quedan fuera: publicar «abandonó X» de una lista
 // escondida contaría por otra puerta justo lo que el ajuste de visibilidad esconde.
+import { localDayKey } from '../utils/dateTime';
 import { TAB_IDS, type TabData, type TabId } from '../../model/types/game';
 
 /**
@@ -70,7 +83,7 @@ export function buildMoveId(gameId: number, tab: TabId): string {
  *
  * Es el filtro que separa jugar de catalogar. `enteredAt.c` dice cuándo el juego llegó a Completados en ESTA
  * aplicación, no cuándo se terminó: quien mete hoy en su biblioteca algo que se pasó hace seis años estampa un
- * sello de hoy, y sin esta comprobación el feed de sus amistades anunciaba «terminó tal juego» como si acabara de
+ * sello de hoy, y sin esta comprobación el feed de sus amistades anunciaba «finalizó tal juego» como si acabara de
  * ocurrir. El año real del hecho solo lo sabe `years`, que es el único campo que el usuario rellena a mano con
  * él —y que en Completados es obligatorio—, así que es él quien manda.
  *
@@ -86,6 +99,68 @@ function completedInStampYear(game: { years?: number[] }, stamp: number): boolea
     return false;
   }
   return years.includes(new Date(stamp).getFullYear());
+}
+
+/**
+ * Lista por la que el juego ENTRÓ en la biblioteca: la del sello más antiguo.
+ *
+ * Es lo único que separa un movimiento de un alta. Los sellos no dicen «vine de tal lista», pero no hace falta:
+ * el más viejo es, por definición, el que estampó la primera vez que el juego apareció por aquí, y cualquier
+ * otro solo puede haberse puesto moviéndolo desde donde estaba.
+ *
+ * Se calcula sobre TODOS los sellos, también los de listas ocultas: la lista escondida sigue siendo por donde
+ * entró, y saltársela convertiría su alta en un movimiento falso hacia la siguiente lista.
+ *
+ * Empate a milisegundos (biblioteca corrupta, dos listas con el mismo sello): gana el primero en `TAB_IDS`. Da
+ * igual cuál, pero tiene que ser SIEMPRE el mismo, o la proyección dejaría de ser idempotente.
+ */
+function libraryEntryTab(stamps: Partial<Record<TabId, number>> | undefined): TabId | undefined {
+  let origin: TabId | undefined;
+  let earliest = Number.POSITIVE_INFINITY;
+  for (const tab of TAB_IDS) {
+    const at = Number(stamps?.[tab]);
+    if (!isPublishableTimestamp(at) || at >= earliest) {
+      continue;
+    }
+    earliest = at;
+    origin = tab;
+  }
+  return origin;
+}
+
+/**
+ * De los mensajes de UN juego, deja solo el ÚLTIMO de cada día.
+ *
+ * Es la regla del «parámetro correcto»: un juego empezado y abandonado el mismo día se cuenta abandonado, y uno
+ * empezado y terminado se cuenta terminado. Lo que quedó atrás en esas horas no es historia que valga la pena
+ * contar, es el camino hasta lo que de verdad pasó.
+ *
+ * Se aplica DESPUÉS de los demás filtros, sobre los mensajes que ya son publicables: así un «finalizó» que el
+ * filtro de «jugar, no catalogar» descarta no se lleva por delante el «comenzó» de ese mismo día, que sí ocurrió.
+ * Las listas ocultas, por lo mismo, no tapan a las visibles: quedan fuera antes de llegar aquí.
+ *
+ * El día es el LOCAL del aparato que proyecta, igual que el año de `completedInStampYear`: es el calendario de
+ * quien movió el juego, que es de quien se está contando algo. Dos aparatos en husos distintos pueden discrepar
+ * en un juego movido a caballo de la medianoche; el precio es una reescritura del canal, no un mensaje perdido.
+ *
+ * Empate a milisegundos: gana el primero en `TAB_IDS` (`c`, `v`, `e`, `p`), que va del estado más avanzado al menos
+ * avanzado. Guardar y mover en la misma operación estampa el mismo instante, y ahí lo que cuenta es el destino.
+ */
+function keepLatestPerDay(entries: SocialMoveEntry[]): SocialMoveEntry[] {
+  const byDay = new Map<string, SocialMoveEntry>();
+
+  for (const entry of entries) {
+    const day = localDayKey(entry.at);
+    const current = byDay.get(day);
+    const wins = !current
+      || entry.at > current.at
+      || (entry.at === current.at && TAB_IDS.indexOf(entry.tab) < TAB_IDS.indexOf(current.tab));
+    if (wins) {
+      byDay.set(day, entry);
+    }
+  }
+
+  return [...byDay.values()];
 }
 
 /**
@@ -122,9 +197,11 @@ export interface DeriveMoveActivityOptions {
 /**
  * Proyecta los mensajes de lista de una biblioteca. PURA: sin reloj propio, sin E/S y sin estado.
  *
- * Recorre TODOS los sellos de cada juego, no solo el de la lista en la que está ahora: un juego terminado que
- * pasó por próximos y por «en curso» aporta sus tres mensajes con sus tres fechas, que es lo que hace que la
- * actividad tenga historia el primer día en vez de empezar en blanco.
+ * Recorre TODOS los sellos de cada juego menos el de la lista por la que entró, no solo el de la lista en la que
+ * está ahora: un juego apuntado que luego se empezó y se terminó aporta esos dos mensajes con sus dos fechas —el
+ * de haberlo apuntado, no, que era su alta—, y eso es lo que hace que la actividad tenga historia el primer día
+ * en vez de empezar en blanco. Un juego con un solo sello no aporta nada: acaba de entrar y no se ha movido. Y si
+ * dos de esos sellos caen el MISMO día, solo sale el último (ver `keepLatestPerDay`).
  *
  * El filtro de listas ocultas se aplica a la lista DEL MENSAJE, no a la lista actual del juego: así un juego que
  * hoy está en una lista escondida sigue contando que se empezó (no revela dónde está), y uno que está a la vista
@@ -150,8 +227,14 @@ export function deriveMoveActivity(games: TabData, options: DeriveMoveActivityOp
         continue;
       }
 
+      // La lista de entrada se resuelve una vez por juego, antes del filtro de listas ocultas, porque el alta
+      // es un hecho de la biblioteca y no depende de lo que el usuario decida mostrar.
+      const entryTab = libraryEntryTab(game.enteredAt);
+      // Los mensajes de ESTE juego se juntan antes de escribirlos: el colapso por día necesita verlos todos.
+      const candidates: SocialMoveEntry[] = [];
+
       for (const stampTab of TAB_IDS) {
-        if (hidden.has(stampTab)) {
+        if (hidden.has(stampTab) || stampTab === entryTab) {
           continue;
         }
         const at = game.enteredAt?.[stampTab];
@@ -165,10 +248,13 @@ export function deriveMoveActivity(games: TabData, options: DeriveMoveActivityOp
           continue;
         }
 
-        const id = buildMoveId(gameId, stampTab);
-        const current = byId.get(id);
-        if (!current || Number(at) < current.at) {
-          byId.set(id, { id, gameId, gameName, tab: stampTab, at: Number(at) });
+        candidates.push({ id: buildMoveId(gameId, stampTab), gameId, gameName, tab: stampTab, at: Number(at) });
+      }
+
+      for (const entry of keepLatestPerDay(candidates)) {
+        const current = byId.get(entry.id);
+        if (!current || entry.at < current.at) {
+          byId.set(entry.id, entry);
         }
       }
     }
@@ -208,9 +294,10 @@ export interface ReconcileMoveActivityInput {
  *   · Lista OCULTA → se retira. Es el ajuste del propio usuario y ahí la autoridad es total.
  *   · El juego está en los listados y la proyección NO produce ese mensaje → se retira. Tengo el juego delante,
  *     con sus sellos y sus años: si de ahí no sale este mensaje, no debe seguir publicado. Es lo que limpia los
- *     mensajes que se publicaron ANTES de que existiera el filtro de «jugar, no catalogar» —el «terminó tal cosa»
- *     de un juego que en realidad se pasó hace años— y también lo que quita el sobrante cuando alguien corrige el
- *     año de un juego a mano.
+ *     mensajes que se publicaron ANTES de que existieran los filtros de la proyección —el «finalizó tal cosa» de
+ *     un juego que en realidad se pasó hace años, el «añadió» que en realidad era el alta del juego en la
+ *     biblioteca, o el «comenzó» que ese mismo día acabó en «abandonó»— y también lo que quita el sobrante cuando
+ *     alguien corrige el año de un juego a mano.
  *   · El juego NO está en los listados → solo se retira si el mensaje es anterior al reloj de esos listados. Un
  *     dispositivo recién instalado, o uno cuyo sync de juegos aún no ha llegado, tiene una biblioteca PARCIAL: no
  *     puede borrar del canal los mensajes de los juegos que aquí todavía no están.

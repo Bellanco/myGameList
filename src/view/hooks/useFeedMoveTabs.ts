@@ -5,7 +5,7 @@ import { feedMoveTabsPreference } from '../../model/repository/feedMovePreferenc
 import { usePreference } from './usePreference';
 
 /**
- * F4 — de qué listas ve QUIEN MIRA los mensajes de actividad («empezó», «terminó», «dejó», «apuntó»).
+ * F4 — de qué listas ve QUIEN MIRA los mensajes de actividad («comenzó», «finalizó», «abandonó», «añadió»).
  *
  * Es un ajuste de LECTURA, no de privacidad: no decide qué se publica —eso son las listas ocultas del perfil—,
  * solo qué aparece en el feed de quien lo toca, sea suyo o de sus amistades. Por defecto, todas.
