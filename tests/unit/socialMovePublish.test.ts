@@ -132,12 +132,13 @@ describe('F4 — los mensajes de lista viajan en la escritura que ya iba a ocurr
     const written = store.current();
     expect(store.writes()).toBe(1); // ni un PATCH de más por los mensajes
     expect(written.activity).toHaveLength(1);
-    expect((written.moves || []).map((entry) => entry.id)).toEqual(['7:c', '7:e', '7:p']);
+    // '7:p' no está: próximos fue el alta del juego, no un movimiento.
+    expect((written.moves || []).map((entry) => entry.id)).toEqual(['7:c', '7:e']);
   });
 
   it('una publicación de texto libre también los arrastra', async () => {
     armChannel('f4aa000000000002');
-    seedLocalGames({ e: [game({ id: 9, name: 'Tunic', enteredAt: { e: E } })] });
+    seedLocalGames({ e: [game({ id: 9, name: 'Tunic', enteredAt: { p: P, e: E } })] });
     const store = stubGistStore(socialGist());
 
     await publishPost({ text: 'Mirad qué he encontrado', maxLength: 1000 });
@@ -149,7 +150,7 @@ describe('F4 — los mensajes de lista viajan en la escritura que ya iba a ocurr
 
   it('no publica mensajes de las listas ocultas, aunque el usuario acabe de esconderlas', async () => {
     armChannel('f4aa000000000003');
-    seedLocalGames({ v: [game({ id: 11, name: 'Un juego dejado', review: 'No pudo ser', score: 2, enteredAt: { e: E, v: C } })] });
+    seedLocalGames({ v: [game({ id: 11, name: 'Un juego dejado', review: 'No pudo ser', score: 2, enteredAt: { p: P, e: E, v: C } })] });
     const store = stubGistStore(socialGist({
       profile: {
         name: 'Nick',
@@ -168,7 +169,7 @@ describe('F4 — los mensajes de lista viajan en la escritura que ya iba a ocurr
     // Sincronizar solo nota/nombre de una reseña NO publicada es un no-op histórico… salvo que haya mensajes
     // pendientes: entonces sí hay algo que decir y el gist se escribe una vez.
     armChannel('f4aa000000000004');
-    seedLocalGames({ e: [game({ id: 13, name: 'Sin reseña', enteredAt: { e: E } })] });
+    seedLocalGames({ e: [game({ id: 13, name: 'Sin reseña', enteredAt: { p: P, e: E } })] });
     const store = stubGistStore(socialGist());
 
     await publishReviewActivity({ id: 13, name: 'Sin reseña', review: 'Texto', score: 3, grade: 60, reviewChanged: false });
@@ -180,7 +181,7 @@ describe('F4 — los mensajes de lista viajan en la escritura que ya iba a ocurr
 
   it('sin nada nuevo que contar no se reescribe el gist', async () => {
     armChannel('f4aa000000000005');
-    seedLocalGames({ e: [game({ id: 15, name: 'Ya publicado', enteredAt: { e: E } })] });
+    seedLocalGames({ e: [game({ id: 15, name: 'Ya publicado', enteredAt: { p: P, e: E } })] });
     const store = stubGistStore(socialGist({
       moves: [{ id: '15:e', gameId: 15, gameName: 'Ya publicado', tab: 'e', at: E }],
     }));
@@ -194,7 +195,7 @@ describe('F4 — los mensajes de lista viajan en la escritura que ya iba a ocurr
     // Los listados de este dispositivo no tienen el juego 99 (sync de juegos aún sin llegar). Guardar una reseña
     // no es el momento de decidir que ese mensaje ya no vale.
     armChannel('f4aa000000000006');
-    seedLocalGames({ c: [game({ id: 7, name: 'Hollow Knight', review: 'Obra maestra', score: 5, enteredAt: { c: C } })] });
+    seedLocalGames({ c: [game({ id: 7, name: 'Hollow Knight', review: 'Obra maestra', score: 5, enteredAt: { e: E, c: C } })] });
     const store = stubGistStore(socialGist({
       moves: [{ id: '99:c', gameId: 99, gameName: 'De otro aparato', tab: 'c', at: P }],
     }));
@@ -207,11 +208,11 @@ describe('F4 — los mensajes de lista viajan en la escritura que ya iba a ocurr
   });
 
   it('catalogar hoy un juego terminado hace años no publica ningún mensaje', async () => {
-    // El caso que motivó el filtro: alguien mete en su biblioteca algo que se pasó en 2019. El sello de
-    // Completados es de HOY, así que sin el filtro el feed de sus amistades anunciaba «terminó tal cosa».
+    // El caso que motivó el filtro: alguien apunta algo que se pasó en 2019 y lo pasa a completados. El sello de
+    // Completados es de HOY, así que sin el filtro el feed de sus amistades anunciaba «finalizó tal cosa».
     armChannel('f4aa000000000008');
     seedLocalGames({
-      c: [game({ id: 31, name: 'Un clásico', review: 'Sigue siendo bueno', score: 5, years: [2019], enteredAt: { c: Date.now() } })],
+      c: [game({ id: 31, name: 'Un clásico', review: 'Sigue siendo bueno', score: 5, years: [2019], enteredAt: { p: P, c: Date.now() } })],
     });
     const store = stubGistStore(socialGist());
 
@@ -219,6 +220,22 @@ describe('F4 — los mensajes de lista viajan en la escritura que ya iba a ocurr
 
     // La reseña sí sube (es de hoy y es suya); el movimiento no, porque no terminó nada hoy.
     expect(store.current().activity).toHaveLength(1);
+    expect(store.current().moves || []).toEqual([]);
+  });
+
+  it('dar de alta un juego no arrastra ningún mensaje: hace falta haberlo movido', async () => {
+    // Quien se acaba de instalar la app (o acaba de importar su colección) tiene la biblioteca llena de juegos con
+    // un solo sello. Nada de eso es actividad, y publicarlo copaba el feed de sus amistades con su alta entera.
+    armChannel('f4aa000000000009');
+    seedLocalGames({
+      c: [game({ id: 41, name: 'Recién catalogado', review: 'Obra maestra', score: 5, enteredAt: { c: C } })],
+      p: [game({ id: 42, name: 'Recién apuntado', enteredAt: { p: P } })],
+    });
+    const store = stubGistStore(socialGist());
+
+    await publishReviewActivity({ id: 41, name: 'Recién catalogado', review: 'Obra maestra', score: 5, grade: 96, reviewChanged: true });
+
+    expect(store.current().activity).toHaveLength(1); // la reseña sí, que esa la escribió
     expect(store.current().moves || []).toEqual([]);
   });
 

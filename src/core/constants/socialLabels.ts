@@ -168,13 +168,17 @@ export const SOCIAL_UI = {
     analyzedAt: (date: Date) =>
       `Analizado el ${date.toLocaleDateString('es-ES', { day: '2-digit' })} de ${date.toLocaleDateString('es-ES', { month: 'long' })} a las ${date.toLocaleTimeString('es-ES', { hour: 'numeric', minute: '2-digit' })}`,
     // F4 — movimientos de lista. La tarjeta es UNA LÍNEA: nombre, verbo, juego y hora. No lleva nota ni texto, así
-    // que la frase ES la tarjeta, y por eso el verbo va en minúscula: se lee seguido del nombre («Ada terminó…»),
+    // que la frase ES la tarjeta, y por eso el verbo va en minúscula: se lee seguido del nombre («Ada finalizó…»),
     // no como un titular. En pasado, porque cuenta algo que ya pasó.
+    //
+    // Los verbos son los largos —«comenzó», «finalizó», «abandonó»— y no sus sinónimos cortos: dicen lo mismo con
+    // más cuerpo, que es lo que le falta a un renglón de cuatro palabras. Próximos dice «añadió» porque el mensaje
+    // solo sale cuando el juego LLEGA a esa lista desde otra, y eso es añadirlo a la cola, no apuntarlo de nuevas.
     moveHeadline: {
-      c: 'terminó',
-      v: 'dejó',
-      e: 'empezó',
-      p: 'apuntó',
+      c: 'finalizó',
+      v: 'abandonó',
+      e: 'comenzó',
+      p: 'añadió',
     } as Record<TabId, string>,
     // Solo la HORA en la tarjeta: el día ya lo dice la cabecera del grupo, y repetirlo era la línea que más peso
     // le daba a un mensaje que debe pesar poco. La fecha completa sigue disponible al pasar el ratón.
@@ -338,7 +342,7 @@ export const SOCIAL_UI = {
     // control de privacidad sería lo peor que podría pasar aquí.
     moveFeedTitle: 'Movimientos en tu actividad',
     moveFeedDescription:
-      'Solo para ti: elige de qué listas quieres ver los avisos de «empezó», «terminó», «dejó» o «apuntó» en la actividad. No cambia lo que ven los demás, y se aplica al instante.',
+      'Solo para ti: elige de qué listas quieres ver los avisos de «comenzó», «finalizó», «abandonó» o «añadió» en la actividad. No cambia lo que ven los demás, y se aplica al instante.',
     moveFeedSectionTitle: 'Mostrarme movimientos de',
     // Los nombres de las listas NO se repiten aquí: son los de `TAB_TOOLTIPS`, en este mismo módulo. Duplicarlos
     // era además la vía directa a que un día dijeran cosas distintas en dos sitios.

@@ -452,7 +452,7 @@ export function assembleChunkedSocial(
 // `enteredAt`/`gradedAt` siguen siendo privados: el CAMPO no se publica nunca, ni aquí ni en los listados que baja
 // una amistad (`applyProfileVisibility` lo borra para todos los rangos).
 //
-// Lo que sí se publica desde F4 es una PROYECCIÓN de `enteredAt`: el mensaje «empezó / terminó / dejó / apuntó tal
+// Lo que sí se publica desde F4 es una PROYECCIÓN de `enteredAt`: el mensaje «comenzó / finalizó / abandonó / añadió tal
 // juego», con su fecha y su hora, que es la actividad de lista del feed (ver `core/social/moveActivity`). Es una
 // decisión de producto tomada a sabiendas de lo que este comentario advertía —esas fechas describen hábitos— y
 // acotada a lo que hace falta para el feed: solo la primera entrada a cada lista, nunca las listas que el usuario

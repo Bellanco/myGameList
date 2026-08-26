@@ -36,7 +36,7 @@ export const STEAM_BUTTON_KEY = 'mis-listas-steam-button';
 // (antes de montar) no se pintan → quien los desactiva nunca ve un "flash" de efectos al cargar.
 export const EFFECTS_KEY = 'mis-listas-effects';
 
-// F4 — de qué listas quiero VER los mensajes de actividad («empezó», «terminó», «dejó», «apuntó») en mi feed.
+// F4 — de qué listas quiero VER los mensajes de actividad («comenzó», «finalizó», «abandonó», «añadió») en mi feed.
 // Valor: las letras de las listas visibles en orden canónico, p. ej. 'cevp' (todas, por defecto) o '' (ninguna).
 //
 // Es una cadena y no una lista a propósito: `PreferenceStore.get()` alimenta un `useSyncExternalStore`, que

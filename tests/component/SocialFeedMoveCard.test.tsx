@@ -82,7 +82,7 @@ describe('renglón de movimiento de lista', () => {
     // Un solo renglón, en este orden y sin nada más. La hora se compone con el mismo formateador que la vista: si se
     // escribe a mano, el test solo pasa en la zona horaria de quien lo escribió (en CI, que va en UTC, fallaba).
     expect(card.textContent?.replace(/\s+/g, ' ').trim()).toBe(
-      `Ada terminó Hollow Knight ${SOCIAL_UI.feed.movedAtHour(new Date(AT))}`,
+      `Ada finalizó Hollow Knight ${SOCIAL_UI.feed.movedAtHour(new Date(AT))}`,
     );
   });
 
@@ -98,11 +98,11 @@ describe('renglón de movimiento de lista', () => {
 
   it('un verbo por lista, en minúscula porque se lee seguido del nombre', () => {
     const { unmount } = renderFeed([move({ tab: 'e' })]);
-    expect(screen.getByRole('listitem').textContent).toContain('empezó');
+    expect(screen.getByRole('listitem').textContent).toContain('comenzó');
     unmount();
 
     renderFeed([move({ tab: 'v', id: '7:v' })]);
-    expect(screen.getByRole('listitem').textContent).toContain('dejó');
+    expect(screen.getByRole('listitem').textContent).toContain('abandonó');
   });
 
   it('con análisis detrás, el nombre del juego lo abre CON EL ACTOR DE LA RESEÑA', async () => {
