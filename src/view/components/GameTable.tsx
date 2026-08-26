@@ -17,6 +17,8 @@ interface GameTableProps {
   onDelete: (tab: TabId, id: number) => void;
   onMigrate: (tab: TabId, id: number, target: TabId) => void;
   onAddGame?: () => void;
+  /** Lleva a Integraciones para traer la biblioteca desde Playnite en vez de teclear juego a juego. */
+  onImportGames?: () => void;
   tabActions: TabAction[];
   readOnly?: boolean;
   /** Orden activo de la pestaña; si se pasa junto a `onSort`, las columnas ordenables son pulsables. */
@@ -136,6 +138,7 @@ export const GameTable = memo(function GameTable({
   onDelete,
   onMigrate,
   onAddGame,
+  onImportGames,
   tabActions,
   readOnly = false,
   sort,
@@ -375,11 +378,23 @@ export const GameTable = memo(function GameTable({
                     <use href={`#icon-${TAB_ICONS[currentTab]}`} />
                   </svg>
                   <p className="table-empty-title">{UI_MESSAGES.table.emptyTitle}</p>
-                  {!readOnly && onAddGame ? (
-                    <button type="button" className="btn btn-primary" onClick={onAddGame}>
-                      <Icon name={COMMON_ICONS.plus} />
-                      <span>{UI_MESSAGES.table.emptyCta}</span>
-                    </button>
+                  {/* Empezar de cero a mano es el camino largo: junto a "añadir" se ofrece la importación,
+                      que es lo que de verdad llena una lista vacía de golpe. */}
+                  {!readOnly && (onAddGame || onImportGames) ? (
+                    <div className="table-empty-actions">
+                      {onAddGame ? (
+                        <button type="button" className="btn btn-primary" onClick={onAddGame}>
+                          <Icon name={COMMON_ICONS.plus} />
+                          <span>{UI_MESSAGES.table.emptyCta}</span>
+                        </button>
+                      ) : null}
+                      {onImportGames ? (
+                        <button type="button" className="btn btn-secondary" onClick={onImportGames}>
+                          <Icon name={COMMON_ICONS.download} />
+                          <span>{UI_MESSAGES.table.emptyImportCta}</span>
+                        </button>
+                      ) : null}
+                    </div>
                   ) : null}
                 </div>
               </td>

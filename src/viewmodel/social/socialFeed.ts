@@ -74,6 +74,19 @@ type FeedSource = { activity?: SocialActivityFeedItem[]; posts?: SocialPostFeedI
 
 const FEED_PAGE_SIZE = 25;
 
+/**
+ * Cupo de mensajes de lista por AUTOR y DÍA. Las reseñas y las publicaciones no cuentan para él y no tienen tope:
+ * una reseña se escribe, y quien escribe cinco tiene cinco cosas que decir.
+ *
+ * Existe porque los movimientos son baratos de generar —mover diez juegos en una tarde es un minuto de trabajo— y
+ * el feed es común: sin cupo, una sola persona ordenando su biblioteca tapaba el día entero de todas las demás.
+ *
+ * Es un filtro de LECTURA, como el de listas: recorta lo que el feed pinta, no lo que el canal publica. De ahí que
+ * valga desde el primer momento para lo que ya está publicado —el de todo el mundo, sin republicar nada— y que
+ * subirlo o bajarlo mañana no obligue a tocar ningún gist.
+ */
+const MOVES_PER_AUTHOR_DAY = 3;
+
 /** Tope de elementos que se mezclan y ordenan; más allá, el feed no los pinta ni paginando. */
 const FEED_MAX_ITEMS = 300;
 
@@ -85,6 +98,39 @@ const MAX_VALID_DATE_MS = 8.64e15;
 export function hasRenderableTimestamp(value: unknown): boolean {
   const numeric = Number(value);
   return Number.isFinite(numeric) && numeric > 0 && numeric <= MAX_VALID_DATE_MS;
+}
+
+/**
+ * Se queda con los `MOVES_PER_AUTHOR_DAY` mensajes más recientes de cada autor en cada día.
+ *
+ * El día es el de QUIEN MIRA (`localDayKey`, hora local), el mismo con el que el feed titula sus grupos: contarlo
+ * en otro huso dejaría cabeceras con cuatro mensajes de la misma persona o con dos.
+ *
+ * Se ordena aquí y no se confía en el orden de entrada porque el directorio llega por perfiles: el recorte tiene
+ * que quedarse con los ÚLTIMOS del día, y para eso hay que verlos ordenados. El desempate por `id` mantiene la
+ * elección estable entre renders cuando dos mensajes comparten instante (un juego movido en la misma operación).
+ *
+ * Los mensajes con fecha inválida se dejan pasar: los descarta `hasRenderableTimestamp` al mezclar, y filtrarlos
+ * dos veces solo repartiría la misma decisión en dos sitios.
+ */
+function capMovesPerAuthorDay(moves: SocialMoveFeedItem[]): SocialMoveFeedItem[] {
+  const perAuthorDay = new Map<string, number>();
+
+  return [...moves]
+    .sort((a, b) => b.updatedAt - a.updatedAt || a.id.localeCompare(b.id))
+    .filter((move) => {
+      const dayKey = localDayKey(new Date(move.updatedAt));
+      if (!dayKey) {
+        return true;
+      }
+      const key = `${move.profileId}|${dayKey}`;
+      const used = perAuthorDay.get(key) || 0;
+      if (used >= MOVES_PER_AUTHOR_DAY) {
+        return false;
+      }
+      perAuthorDay.set(key, used + 1);
+      return true;
+    });
 }
 
 const FEED_DAY_MONTH_NAMES = [
@@ -129,9 +175,13 @@ export function useSocialFeed(directory: ReadonlyArray<FeedSource>): {
     const visibleTabs = new Set(moveTabsValue.split(''));
     const moves = visibleTabs.size === 0
       ? []
-      : directory
-        .flatMap((entry) => entry.moves || [])
-        .filter((move) => visibleTabs.has(move.tab))
+      : capMovesPerAuthorDay(
+        directory
+          .flatMap((entry) => entry.moves || [])
+          .filter((move) => visibleTabs.has(move.tab)),
+      )
+        // El cupo se aplica DESPUÉS del filtro de listas: quien solo mira «finalizó» ve sus tres de ese día, no
+        // los tres primeros de un día en el que la persona movió veinte juegos a otras listas.
         .map((move) => ({ ...move, kind: 'move' as const }));
 
     return [...activity, ...posts, ...moves]

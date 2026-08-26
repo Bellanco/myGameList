@@ -9,7 +9,7 @@ const M = UI_MESSAGES.import.integrations;
 interface IntegrationsScreenProps {
   /** El archivo JSON exportado por Playnite Library Exporter; App parsea/mapea/inserta y avisa. */
   onImport: (file: File) => void;
-  /** Volver a la pantalla anterior (Cuenta). */
+  /** Volver a la pantalla desde la que se abrió Integraciones (ajustes, un listado…). */
   onBack: () => void;
   /** Nº de juegos en la bandeja (para el acceso "Ver bandeja"). */
   inboxCount: number;
