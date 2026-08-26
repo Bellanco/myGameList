@@ -658,6 +658,7 @@ export const UI_MESSAGES = {
     removeTag: (value: string) => `Eliminar ${value}`,
     emptyTitle: 'No hay juegos aquí todavía',
     emptyCta: 'Añadir juego',
+    emptyImportCta: 'Importar juegos',
     moreCount: (count: number) => `+${count}`,
     replayHeaderTip: 'Indica si el juego es rejugable',
     retryHeaderTip: 'Indica si merece otra oportunidad',

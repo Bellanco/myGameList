@@ -608,6 +608,7 @@ export default function App() {
           onDelete={vm.deleteGame}
           onMigrate={vm.migrateGame}
           onAddGame={handleAddGame}
+          onImportGames={openIntegrations}
           tabActions={vm.tabActions[currentTab]}
           sort={vm.sort[currentTab]}
           onSort={vm.sortBy}

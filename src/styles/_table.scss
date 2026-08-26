@@ -416,6 +416,8 @@ tbody tr.detail-row.open .detail-content { animation: detailReveal .22s ease-out
   fill: currentColor; stroke: currentColor;
 }
 .table-empty-title { margin: 0; font-size: .95rem; font-weight: 600; }
+/* Los dos CTA caben en línea en escritorio; en móvil se apilan antes que encogerse hasta ser ilegibles. */
+.table-empty-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: .6rem; }
 /* Estado vacío con vida: entra con un fade suave y el icono "respira" en vez de quedarse inerte. */
 .table-empty { animation: emptyIn .5s ease both; }
 .table-empty-icon { animation: emptyFloat 3.4s ease-in-out infinite; }
