@@ -394,10 +394,11 @@ describe('reconcileReviewActivity', () => {
     });
 
     const moves = store.current().moves || [];
-    expect(moves.map((entry) => entry.tab)).toEqual(['c', 'e', 'p']);
+    // Próximos no sale: fue el alta del juego (ver `libraryEntryTab`).
+    expect(moves.map((entry) => entry.tab)).toEqual(['c', 'e']);
     expect(moves.every((entry) => entry.gameId === 7 && entry.gameName === 'Hollow Knight')).toBe(true);
     // El sello guarda el recuento de mensajes, que es lo que detecta un movimiento en la próxima apertura.
-    expect(idbMocks.__getMeta()).toMatchObject({ activityMoveCount: 3 });
+    expect(idbMocks.__getMeta()).toMatchObject({ activityMoveCount: 2 });
   });
 
   it('no publica mensajes de las listas que su dueño esconde', async () => {
@@ -408,9 +409,10 @@ describe('reconcileReviewActivity', () => {
     const store = stubGistStore(gistId, conVerguenzaOculta);
 
     await reconcileReviewActivity({
-      games: lists({ c: [game({ id: 7, name: 'Hollow Knight', review: 'Obra', score: 4, enteredAt: { v: 1_600_000_000_000, c: 1_700_000_000_000 } })] }),
+      games: lists({ c: [game({ id: 7, name: 'Hollow Knight', review: 'Obra', score: 4, enteredAt: { p: 1_550_000_000_000, v: 1_600_000_000_000, c: 1_700_000_000_000 } })] }),
     });
 
+    // El paso por la vergüenza es un movimiento como cualquier otro; se calla porque su dueño la esconde.
     expect((store.current().moves || []).map((entry) => entry.tab)).toEqual(['c']);
   });
 
@@ -422,9 +424,9 @@ describe('reconcileReviewActivity', () => {
     const store = stubGistStore(gistId, socialGist([reviewEntry(7, 'Hollow Knight', 1_700_000_000_000)]));
     const juego = { id: 7, name: 'Hollow Knight', review: 'Obra maestra', score: 5, _ts: 1_700_000_000_000 };
 
-    // Sello coherente con UN mensaje publicado (el juego solo había entrado en 'e').
+    // Sello coherente con UN mensaje publicado (el juego venía de próximos y solo había llegado a 'e').
     idbMocks.__setMeta({ activityReconciledAt: Date.now(), activityReviewCount: 1, activityMoveCount: 1, activityReconcileVersion: RECONCILE_LOGIC_VERSION });
-    const conMovimiento = lists({ c: [game({ ...juego, enteredAt: { e: 1_650_000_000_000, c: 1_700_000_000_000 } })] });
+    const conMovimiento = lists({ c: [game({ ...juego, enteredAt: { p: 1_600_000_000_000, e: 1_650_000_000_000, c: 1_700_000_000_000 } })] });
 
     const outcome = await reconcileReviewActivity({ games: conMovimiento });
 
@@ -438,7 +440,7 @@ describe('reconcileReviewActivity', () => {
     armChannel(gistId);
     const store = stubGistStore(gistId, socialGist([reviewEntry(7, 'Hollow Knight', 1_700_000_000_000)]));
     const games = lists({
-      c: [game({ id: 7, name: 'Hollow Knight', review: 'Obra maestra', score: 5, _ts: 1_700_000_000_000, enteredAt: { c: 1_700_000_000_000 } })],
+      c: [game({ id: 7, name: 'Hollow Knight', review: 'Obra maestra', score: 5, _ts: 1_700_000_000_000, enteredAt: { p: 1_600_000_000_000, c: 1_700_000_000_000 } })],
     });
 
     await reconcileReviewActivity({ games, force: true });
@@ -462,7 +464,7 @@ describe('reconcileReviewActivity', () => {
     const store = stubGistStore(gistId, conMensajes);
 
     await reconcileReviewActivity({
-      games: lists({ c: [game({ id: 7, name: 'Hollow Knight', review: 'Obra', score: 4, enteredAt: { c: 1_700_000_000_000 } })] }),
+      games: lists({ c: [game({ id: 7, name: 'Hollow Knight', review: 'Obra', score: 4, enteredAt: { p: 1_600_000_000_000, c: 1_700_000_000_000 } })] }),
     });
 
     const ids = (store.current().moves || []).map((entry) => entry.id);
@@ -471,7 +473,7 @@ describe('reconcileReviewActivity', () => {
     expect(ids).not.toContain('9:c');
   });
 
-  it('LIMPIA los mensajes que la biblioteca desmiente: el «terminó» de un juego pasado hace años', async () => {
+  it('LIMPIA los mensajes que la biblioteca desmiente: el «finalizó» de un juego pasado hace años', async () => {
     // El caso que se vio probando: el gist traía mensajes publicados ANTES del filtro de «jugar, no catalogar».
     // El juego sigue en la biblioteca (no es huérfano), así que la regla vieja los conservaba para siempre.
     const gistId = 'aabbcc26dd11ee22';
@@ -488,8 +490,8 @@ describe('reconcileReviewActivity', () => {
     const outcome = await reconcileReviewActivity({
       games: lists({
         c: [
-          game({ id: 40, name: 'Un clásico', review: 'Sigue bueno', score: 5, years: [2019], enteredAt: { c: 1_700_000_000_000 } }),
-          game({ id: 41, name: 'De este año', review: 'Recién', score: 4, years: [ANIO_C], enteredAt: { c: 1_700_000_000_000 } }),
+          game({ id: 40, name: 'Un clásico', review: 'Sigue bueno', score: 5, years: [2019], enteredAt: { p: 1_650_000_000_000, c: 1_700_000_000_000 } }),
+          game({ id: 41, name: 'De este año', review: 'Recién', score: 4, years: [ANIO_C], enteredAt: { p: 1_650_000_000_000, c: 1_700_000_000_000 } }),
         ],
       }),
     });
@@ -500,19 +502,38 @@ describe('reconcileReviewActivity', () => {
     expect(ids).toContain('41:c'); // se queda: coincide con su año
   });
 
+  it('LIMPIA lo que era un alta: el «añadió» de un juego que entró por próximos se retira', async () => {
+    // Retroactividad de «movimientos, no altas»: los canales que ya existen llevan publicadas las altas de sus
+    // dueños. Con el juego delante, la pasada tiene autoridad para retirarlas, y nadie tiene que hacer nada.
+    const gistId = 'aabbcc27dd11ee22';
+    armChannel(gistId);
+    const conAltas = socialGist([]);
+    conAltas.moves = [
+      { id: '50:p', gameId: 50, gameName: 'Tunic', tab: 'p', at: 1_600_000_000_000 }, // era el alta
+      { id: '50:e', gameId: 50, gameName: 'Tunic', tab: 'e', at: 1_650_000_000_000 }, // este sí lo movió
+    ];
+    const store = stubGistStore(gistId, conAltas);
+
+    await reconcileReviewActivity({
+      games: lists({ e: [game({ id: 50, name: 'Tunic', review: 'Precioso', score: 5, enteredAt: { p: 1_600_000_000_000, e: 1_650_000_000_000 } })] }),
+    });
+
+    expect((store.current().moves || []).map((entry) => entry.id)).toEqual(['50:e']);
+  });
+
   it('los mensajes no desplazan a las reseñas: cada canal tiene su cupo', async () => {
     const gistId = 'aabbcc25dd11ee22';
     armChannel(gistId);
     const store = stubGistStore(gistId, socialGist([]));
-    // 120 juegos con reseña y tres sellos cada uno: 360 mensajes candidatos, muy por encima del cupo de 320 que
-    // tiene la ACTIVIDAD. Si compartieran array, las reseñas se quedarían fuera.
+    // 120 juegos con reseña y cuatro sellos cada uno: descontada el alta, 360 mensajes candidatos, muy por encima
+    // del cupo de 320 que tiene la ACTIVIDAD. Si compartieran array, las reseñas se quedarían fuera.
     const juegos = Array.from({ length: 120 }, (_, index) => game({
       id: index + 1,
       name: `Juego ${index + 1}`,
       review: 'Reseña',
       score: 4,
       _ts: 1_700_000_000_000 + index,
-      enteredAt: { p: 1_600_000_000_000 + index, e: 1_650_000_000_000 + index, c: 1_700_000_000_000 + index },
+      enteredAt: { p: 1_550_000_000_000 + index, v: 1_600_000_000_000 + index, e: 1_650_000_000_000 + index, c: 1_700_000_000_000 + index },
     }));
 
     await reconcileReviewActivity({ games: lists({ c: juegos }), max: 120 });
