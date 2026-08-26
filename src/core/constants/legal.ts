@@ -46,8 +46,9 @@
 // dispositivo. El ajuste del perfil que filtra estos avisos NO se menciona: solo cambia lo que ves tú, no lo que
 // se publica, así que no es una obligación de transparencia sino funcionamiento del servicio.
 //
-// 2026-08-26: la actividad de listas se acota MÁS —solo el paso de una lista a otra; dar de alta un juego en la
-// biblioteca ya no publica nada— y los verbos del aviso cambian de palabra («comenzó», «finalizó», «abandonó»).
+// 2026-08-26: la actividad de listas se acota MÁS —solo el paso de una lista a otra, y de un mismo día un solo
+// aviso por juego (el último); dar de alta un juego en la biblioteca ya no publica nada— y los verbos del aviso
+// cambian de palabra («comenzó», «finalizó», «abandonó», «añadió»).
 // La versión NO sube y no se vuelve a pedir conformidad: lo que se publica de ti es un subconjunto de lo ya
 // declarado y aceptado, así que reabrir la aceptación por publicar menos sería ruido. El texto sí se corrige, que
 // es la obligación que queda. El cupo de avisos por persona y día tampoco se menciona: recorta lo que TÚ ves en tu
@@ -211,7 +212,7 @@ const PRIVACY: LegalDocument = {
       paragraphs: [
         'Tus ajustes de visibilidad —esconder una lista, la marca de «rejugable» o la de «merece otra oportunidad»— valen para todas tus amistades. Esconder una lista esconde también su actividad: de una lista oculta no se publica ningún aviso de entrada. La cuenta desde la que se administra el servicio es la única excepción, porque el mantenimiento y el soporte se hacen desde ella: en los perfiles de sus amistades ve las listas completas. Tus horas de juego quedan fuera de esa excepción: si eliges ocultarlas, no las ve nadie.',
         'Conviene entender qué hay en tu canal social y qué no: contiene tu nick, tus preferencias de visibilidad y, por cada reseña, el nombre del juego, la nota y un fragmento de hasta 160 caracteres del texto. Lleva además tu actividad de listas: por cada juego, en qué lista entró y la fecha y la hora en que lo hizo, para que tus amistades vean en su actividad que has comenzado, finalizado, abandonado o añadido algo. Tu biblioteca completa, tus reseñas enteras y tus horas de juego NO están ahí: viven en otro Gist que la app crea como secreto y cuyo identificador solo se comparte con tus amistades.',
-        'De esa actividad de listas se publica solo el paso de una lista a OTRA: la lista por la que el juego entró en tu biblioteca no se publica, tampoco la de las listas que tengas ocultas, y de cada lista solo su PRIMERA entrada. El registro interno del que sale —a qué hora mueves cada juego, cuándo cambias una nota— no se publica ni sale de tu dispositivo, ni lo ve la cuenta desde la que se administra el servicio.',
+        'De esa actividad de listas se publica solo el paso de una lista a OTRA: la lista por la que el juego entró en tu biblioteca no se publica, tampoco la de las listas que tengas ocultas, y de cada lista solo su PRIMERA entrada. De un mismo día queda además un único aviso por juego, el último: si lo empiezas y lo abandonas esa tarde, se publica que lo abandonaste y no que lo empezaste. El registro interno del que sale —a qué hora mueves cada juego, cuándo cambias una nota— no se publica ni sale de tu dispositivo, ni lo ve la cuenta desde la que se administra el servicio.',
         'Ten en cuenta que «secreto» en GitHub no significa privado, sino no listado: quien tenga el identificador de un Gist puede leerlo aunque no aparezca en tu perfil de GitHub ni en los buscadores. Por eso ni el identificador de tu biblioteca ni el de tu canal social se publican ya en tu perfil: solo se comparten con las personas con las que tienes amistad.',
         'Estos proveedores pueden tratar los datos fuera del Espacio Económico Europeo, amparados en las cláusulas contractuales tipo o los marcos de adecuación de sus respectivos programas.',
       ],

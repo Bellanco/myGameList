@@ -17,6 +17,11 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
     que un juego que entró por una lista escondida sí cuenta su siguiente movimiento. **Es retroactivo:** la
     reconciliación retira de los canales que ya existen los avisos que en realidad eran altas
     (`RECONCILE_LOGIC_VERSION` 5), sin que nadie tenga que hacer nada.
+  - **De un mismo día, un solo aviso por juego: el último.** Empezar algo y abandonarlo esa tarde es una cosa, no
+    dos: se cuenta **abandonado**. Empezarlo y terminarlo, **finalizado**. El colapso se aplica sobre los avisos ya
+    publicables, así que uno descartado (un «finalizó» de un juego que en realidad se pasó hace años) no se lleva
+    por delante el «comenzó» de ese día, y una lista oculta no tapa a una visible. Retroactivo por la misma vía que
+    lo anterior (`RECONCILE_LOGIC_VERSION` 6).
   - **Tres avisos por persona y día.** Es un cupo de LECTURA, como el filtro de listas: recorta lo que el feed
     pinta —de lo ya publicado por todo el mundo, sin republicar nada— y se cuenta en el día LOCAL de quien mira,
     el mismo con el que el feed titula sus grupos. Las reseñas y las publicaciones no cuentan para él y siguen sin
