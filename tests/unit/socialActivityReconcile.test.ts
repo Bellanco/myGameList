@@ -521,6 +521,29 @@ describe('reconcileReviewActivity', () => {
     expect((store.current().moves || []).map((entry) => entry.id)).toEqual(['50:e']);
   });
 
+  it('LIMPIA el mensaje que el mismo día quedó atrás: el «comenzó» de lo que se abandonó esa tarde', async () => {
+    // Retroactividad de «un juego, un mensaje al día»: lo publicado antes de la regla se retira con el juego
+    // delante, igual que las altas.
+    const gistId = 'aabbcc28dd11ee22';
+    armChannel(gistId);
+    const manana = Date.parse('2026-08-20T09:30:00');
+    const tarde = Date.parse('2026-08-20T19:45:00');
+    const conElCamino = socialGist([]);
+    conElCamino.moves = [
+      { id: '60:e', gameId: 60, gameName: 'Un juego cualquiera', tab: 'e', at: manana },
+      { id: '60:v', gameId: 60, gameName: 'Un juego cualquiera', tab: 'v', at: tarde },
+    ];
+    const store = stubGistStore(gistId, conElCamino);
+
+    await reconcileReviewActivity({
+      games: lists({
+        v: [game({ id: 60, name: 'Un juego cualquiera', review: 'No pudo ser', score: 2, enteredAt: { p: 1_600_000_000_000, e: manana, v: tarde } })],
+      }),
+    });
+
+    expect((store.current().moves || []).map((entry) => entry.id)).toEqual(['60:v']);
+  });
+
   it('los mensajes no desplazan a las reseñas: cada canal tiene su cupo', async () => {
     const gistId = 'aabbcc25dd11ee22';
     armChannel(gistId);
