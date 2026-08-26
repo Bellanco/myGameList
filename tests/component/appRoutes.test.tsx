@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { APP_ROUTES, FALLBACK_ROUTE, matchAppSection } from '../../src/core/constants/routes';
+import { APP_ROUTES, FALLBACK_ROUTE, isKnownRoute, matchAppSection } from '../../src/core/constants/routes';
 import { LEGAL_ROUTES } from '../../src/core/constants/legal';
 import { SOCIAL_ROUTES } from '../../src/viewmodel/social/socialRoutes';
 
@@ -57,5 +57,16 @@ describe('rutas de la app', () => {
   it('un camino desconocido cae a listados, que es a donde lo lleva el catch-all', () => {
     expect(matchAppSection('/no-existe')).toBe('lists');
     expect(matchAppSection(FALLBACK_ROUTE)).toBe('lists');
+  });
+
+  it('isKnownRoute distingue lo declarado de lo inventado, que `matchAppSection` no puede', () => {
+    // Justo por eso existe: al caer todo lo desconocido en 'lists', el matcher de sección no sirve para validar
+    // un pathname que viene de fuera (el origen del "Volver" guardado en el historial).
+    for (const { path } of APP_ROUTES) {
+      if (path.endsWith('/*') || path.includes(':')) continue;
+      expect(isKnownRoute(path), path).toBe(true);
+    }
+    expect(isKnownRoute('/social/requests')).toBe(true);
+    expect(isKnownRoute('/no-existe')).toBe(false);
   });
 });

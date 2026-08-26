@@ -29,6 +29,7 @@ import { useAppearanceSession } from './view/hooks/useAppearanceSession';
 import { useUppercase } from './view/hooks/useUppercase';
 import { useEffects } from './view/hooks/useEffects';
 import { useShowSteamButton } from './view/hooks/useShowSteamButton';
+import { useReturnTo } from './view/hooks/useReturnTo';
 import { useLegacyProfileHeal } from './view/hooks/useLegacyProfileHeal';
 import { useShootingStars } from './view/hooks/useShootingStars';
 import { useBacklogSnapshot } from './view/hooks/useBacklogSnapshot';
@@ -262,7 +263,12 @@ export default function App() {
   const handleDiscardImport = useCallback((id: number) => inbox.removeItem(id), [inbox]);
   const handleDiscardManyImport = useCallback((ids: number[]) => inbox.removeItems(ids), [inbox]);
   const handleClearInbox = useCallback(() => inbox.clear(), [inbox]);
-  const openIntegrations = useCallback(() => navigate('/integraciones'), [navigate]);
+  // Integraciones se abre desde ajustes y desde el estado vacío de un listado, así que su "Volver" sigue al
+  // origen (ver `useReturnTo`); la bandeja lo conserva para no perderlo al ir y venir dentro del flujo.
+  // Desestructurado (y no `importFlow.x`) porque el objeto del hook es nuevo en cada render: con él como
+  // dependencia, `openIntegrations` cambiaría de identidad y tiraría el `memo` de GameTable.
+  const { returnTo: importReturnTo, navigateFromHere, navigateKeepingOrigin } = useReturnTo('/ajustes');
+  const openIntegrations = useCallback(() => navigateFromHere('/integraciones'), [navigateFromHere]);
 
   // El sync lee el estado local vía refs (no closures del render) para que un ciclo EN VUELO vea las
   // ediciones confirmadas mientras estaba esperando la red. Con `() => vm.data` un ciclo iniciado antes
@@ -661,9 +667,9 @@ export default function App() {
       <Suspense fallback={null}>
         <IntegrationsScreen
           onImport={handleImportLibraryExporter}
-          onBack={() => navigate('/ajustes')}
+          onBack={() => navigate(importReturnTo)}
           inboxCount={inbox.count}
-          onOpenInbox={() => navigate('/bandeja')}
+          onOpenInbox={() => navigateKeepingOrigin('/bandeja')}
         />
       </Suspense>
     ),
@@ -681,7 +687,7 @@ export default function App() {
           onClear={handleClearInbox}
           fieldPrefs={importFields.prefs}
           onFieldPrefChange={importFields.setField}
-          onBack={() => navigate('/integraciones')}
+          onBack={() => navigateKeepingOrigin('/integraciones')}
           onGoIntegrations={() => navigate('/ajustes')}
         />
       </Suspense>
