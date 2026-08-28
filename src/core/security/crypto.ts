@@ -192,6 +192,25 @@ function idbRequest<T>(req: IDBRequest<T>): Promise<T> {
 
 let _deviceKeyPromise: Promise<CryptoKey> | null = null;
 
+/**
+ * Carga la clave de dispositivo, o la crea si es el primer arranque en este navegador.
+ *
+ * EL ORDEN DE LOS PASOS ES LA GARANTÍA, no un detalle. Antes esto eran DOS transacciones —una `readonly` para
+ * mirar y otra `readwrite` para escribir—, y entre las dos cabía otra pestaña: dos pestañas abiertas a la vez en
+ * el primer arranque leían las dos "no hay clave", generaban una cada una y escribían las dos. La última ganaba
+ * en IndexedDB y la otra se quedaba con una `CryptoKey` en memoria que ya no descifraba nada de lo guardado, así
+ * que el token cifrado en localStorage dejaba de leerse al recargar y parecía que la sesión de GitHub se había
+ * perdido sola.
+ *
+ * Ahora la escritura va en UNA transacción `readwrite` que mira y escribe sin soltar el turno: IndexedDB
+ * serializa las transacciones de escritura sobre el mismo store, así que la segunda pestaña ve la clave de la
+ * primera y descarta la suya. El vistazo `readonly` previo se conserva porque es el caso de todos los arranques
+ * menos el primero y evita generar una clave para tirarla.
+ *
+ * OJO al tocar esto: `crypto.subtle.generateKey` es asíncrono y una transacción de IndexedDB se cierra sola en
+ * cuanto el control vuelve al bucle de eventos sin peticiones pendientes. Por eso la clave se genera ANTES de
+ * abrir la transacción de escritura; generarla dentro la mataría antes de llegar al `put`.
+ */
 async function loadOrGenerateDeviceKey(): Promise<CryptoKey> {
   const db = await openDeviceKeyDb();
   try {
@@ -200,11 +219,19 @@ async function loadOrGenerateDeviceKey(): Promise<CryptoKey> {
     if (existing) {
       return existing as CryptoKey;
     }
-    // Clave aleatoria NO exportable: el material nunca sale de SubtleCrypto.
-    const key = await crypto.subtle.generateKey({ name: ALGORITHM, length: KEY_LENGTH }, false, ['encrypt', 'decrypt']);
+
+    // Clave aleatoria NO exportable: el material nunca sale de SubtleCrypto. Fuera de la transacción, ver arriba.
+    const candidate = await crypto.subtle.generateKey({ name: ALGORITHM, length: KEY_LENGTH }, false, ['encrypt', 'decrypt']);
+
     const writeTx = db.transaction(DEVICE_KEY_STORE, 'readwrite');
-    await idbRequest(writeTx.objectStore(DEVICE_KEY_STORE).put(key, DEVICE_KEY_ID));
-    return key;
+    const store = writeTx.objectStore(DEVICE_KEY_STORE);
+    // Segunda mirada, ya dentro de la transacción de escritura: si otra pestaña se adelantó, la suya manda.
+    const raced = await idbRequest(store.get(DEVICE_KEY_ID));
+    if (raced) {
+      return raced as CryptoKey;
+    }
+    await idbRequest(store.put(candidate, DEVICE_KEY_ID));
+    return candidate;
   } finally {
     db.close();
   }
