@@ -42,7 +42,13 @@ export function auditProfile(data) {
   const problemas = [];
   const has = (k) => Object.prototype.hasOwnProperty.call(data, k);
 
-  const extra = Object.keys(data).filter((k) => !PROFILE_ALLOWED_KEYS.includes(k));
+  // `email` va aparte del resto de claves desconocidas, y la distinción no es cosmética: el informe solo obliga a
+  // corregir lo marcado como NUEVO antes de desplegar. `email` ESTABA admitido y deja de estarlo con este
+  // despliegue, así que marcarlo como "ya rechazado antes" invitaría a desplegar y congelar a su dueño.
+  if (has('email')) {
+    problemas.push({ nuevo: true, motivo: 'email ya no cabe en el perfil público (lo lee cualquier autenticado)' });
+  }
+  const extra = Object.keys(data).filter((k) => k !== 'email' && !PROFILE_ALLOWED_KEYS.includes(k));
   if (extra.length) problemas.push({ nuevo: false, motivo: `claves fuera de la allowlist: ${extra.join(', ')}` });
 
   if (has('schemaVersion') && typeof data.schemaVersion !== 'number') {
