@@ -1,8 +1,8 @@
 import { memo, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { UI_MESSAGES } from '../../../core/constants/labels';
+import { STATS_UI } from '../../../core/constants/statsLabels';
 import type { StatsScope } from '../../../viewmodel/useStatsViewModel';
 
-const L = UI_MESSAGES.stats.scope;
+const L = STATS_UI.scope;
 
 /** Cuántos años se enseñan mientras no se ha medido nada (primer pintado y entornos sin layout, como los tests). */
 const YEARS_BEFORE_MEASURE = 6;

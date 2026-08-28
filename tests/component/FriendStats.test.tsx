@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
 import { FriendStats } from '../../src/view/components/stats/FriendStats';
-import { UI_MESSAGES } from '../../src/core/constants/labels';
+import { STATS_UI } from '../../src/core/constants/statsLabels';
 import { STATS_LABELS_OTHER } from '../../src/core/constants/statsOtherLabels';
 import type { SocialSharedGame } from '../../src/model/repository/socialGistRepository';
 import type { GameItem, TabId } from '../../src/model/types/game';
@@ -16,7 +16,7 @@ vi.mock('../../src/model/repository/scorePreferenceRepository', () => ({
 // son los de la voz ajena («Lo mejor de su biblioteca»), no los de la propia.
 const L = STATS_LABELS_OTHER;
 /** Textos sin voz (nombres de lista, escalas), que son los mismos en los dos paneles. */
-const OWN = UI_MESSAGES.stats;
+const OWN = STATS_UI;
 
 function shared(overrides: Partial<SocialSharedGame> & { id: number; name: string }): SocialSharedGame {
   return { platforms: ['PC'], genres: ['RPG'], rating: 4, grade: 80, snippet: '', ...overrides };
