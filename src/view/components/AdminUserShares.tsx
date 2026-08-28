@@ -1,5 +1,5 @@
 import { memo, useEffect, useState } from 'react';
-import { ADMIN_SHARES_UI } from '../../core/constants/labels';
+import { ADMIN_SHARES_UI } from '../../core/constants/adminLabels';
 import {
   PROFILE_TIER_LABELS,
   PROFILE_TIER_SHARE_MAX_ACTIVE,

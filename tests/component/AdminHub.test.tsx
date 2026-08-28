@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
-import { ADMIN_PANEL_UI, ADMIN_SHARES_UI } from '../../src/core/constants/labels';
+import { ADMIN_PANEL_UI, ADMIN_SHARES_UI } from '../../src/core/constants/adminLabels';
 import { ADMIN_EMAIL } from '../../src/core/security/admin';
 import {
   PROFILE_TIER_LABELS,

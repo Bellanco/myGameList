@@ -119,7 +119,7 @@ const shareMocks = vi.hoisted(() => ({
 vi.mock('../../src/viewmodel/useShareViewModel', () => shareMocks);
 
 import { SocialHub } from '../../src/view/components/SocialHub';
-import { SHARE_UI } from '../../src/core/constants/labels';
+import { SHARE_UI } from '../../src/core/constants/shareLabels';
 import { SOCIAL_UI } from '../../src/core/constants/socialLabels';
 import { LEGAL_CONSENT_UI, LEGAL_VERSION } from '../../src/core/constants/legal';
 
