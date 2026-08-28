@@ -182,7 +182,11 @@ export default function App() {
 
   // Bandeja de importados (local, no sincroniza). Se monta aquí para exponer su contador en los controles
   // flotantes y cablear la graduación (clasificar → formulario → retirar de la bandeja).
-  const inbox = useImportInbox();
+  // Desestructurado (y no `inbox.x`) por el mismo motivo que `useReturnTo` unas líneas más abajo: el objeto del
+  // hook es nuevo en cada render, así que usarlo como dependencia hacía que TODOS los manejadores de la bandeja
+  // estrenaran identidad en cada pasada y las pantallas de importación no pudieran memoizarse. Las funciones de
+  // dentro sí son estables (`useCallback` en el hook).
+  const { imported: inboxImported, count: inboxCount, addGames: inboxAddGames, removeItem: inboxRemoveItem, removeItems: inboxRemoveItems, clear: inboxClear } = useImportInbox();
   // Qué datos traslada el import a cada juego (global, por grupo: nuevos / ya en tus listas).
   const importFields = useImportFieldPrefs();
   const graduatingIdRef = useRef<number | null>(null);
@@ -216,11 +220,11 @@ export default function App() {
         notify('warn', UI_MESSAGES.import.integrations.parseError);
         return;
       }
-      const summary = inbox.addGames(games, listNames);
+      const summary = inboxAddGames(games, listNames);
       notify('ok', UI_MESSAGES.import.notice(summary.added, summary.merged, summary.duplicates));
       navigate('/bandeja');
     },
-    [inbox, listNames, navigate, notify],
+    [inboxAddGames, listNames, navigate, notify],
   );
 
   // Opción A: "Json Library Import Export" → varios .json (games.json + ficheros de lookup).
@@ -260,15 +264,22 @@ export default function App() {
     [findGameByName, importFields.prefs.existingGames, vm],
   );
 
-  const handleDiscardImport = useCallback((id: number) => inbox.removeItem(id), [inbox]);
-  const handleDiscardManyImport = useCallback((ids: number[]) => inbox.removeItems(ids), [inbox]);
-  const handleClearInbox = useCallback(() => inbox.clear(), [inbox]);
+  const handleDiscardImport = useCallback((id: number) => inboxRemoveItem(id), [inboxRemoveItem]);
+  const handleDiscardManyImport = useCallback((ids: number[]) => inboxRemoveItems(ids), [inboxRemoveItems]);
+  const handleClearInbox = useCallback(() => inboxClear(), [inboxClear]);
   // Integraciones se abre desde ajustes y desde el estado vacío de un listado, así que su "Volver" sigue al
   // origen (ver `useReturnTo`); la bandeja lo conserva para no perderlo al ir y venir dentro del flujo.
   // Desestructurado (y no `importFlow.x`) porque el objeto del hook es nuevo en cada render: con él como
   // dependencia, `openIntegrations` cambiaría de identidad y tiraría el `memo` de GameTable.
   const { returnTo: importReturnTo, navigateFromHere, navigateKeepingOrigin } = useReturnTo('/ajustes');
   const openIntegrations = useCallback(() => navigateFromHere('/integraciones'), [navigateFromHere]);
+  // Los cuatro manejadores de navegación de Integraciones y Bandeja, memoizados como el resto del fichero. En
+  // línea estrenaban identidad en cada render de `App` —y `sectionScreens` se reconstruye entero cada vez—, así
+  // que las dos pantallas no podían memoizarse por muchas envolturas que se les pusieran.
+  const backFromIntegrations = useCallback(() => navigate(importReturnTo), [navigate, importReturnTo]);
+  const openInboxKeepingOrigin = useCallback(() => navigateKeepingOrigin('/bandeja'), [navigateKeepingOrigin]);
+  const backToIntegrations = useCallback(() => navigateKeepingOrigin('/integraciones'), [navigateKeepingOrigin]);
+  const goToSettings = useCallback(() => navigate('/ajustes'), [navigate]);
 
   // El sync lee el estado local vía refs (no closures del render) para que un ciclo EN VUELO vea las
   // ediciones confirmadas mientras estaba esperando la red. Con `() => vm.data` un ciclo iniciado antes
@@ -499,7 +510,7 @@ export default function App() {
 
     // Graduación desde la bandeja: si este guardado viene de clasificar un importado, se retira de la bandeja.
     if (graduatingIdRef.current !== null) {
-      inbox.removeItem(graduatingIdRef.current);
+      inboxRemoveItem(graduatingIdRef.current);
       graduatingIdRef.current = null;
     }
 
@@ -521,7 +532,7 @@ export default function App() {
       publication: publicacion,
       onDeferred: () => notify('warn', 'Juego guardado; la actividad social de reseña se actualizará al abrir el hub social.'),
     });
-  }, [editingTab, inbox, notify, saveDraft]);
+  }, [editingTab, inboxRemoveItem, notify, saveDraft]);
 
   const handleEditTag = useCallback((key: 'genres' | 'platforms' | 'strengths' | 'weaknesses', oldValue: string, newValue: string) => {
     renameTagAcrossGames(key, oldValue, newValue);
@@ -671,9 +682,9 @@ export default function App() {
       <Suspense fallback={null}>
         <IntegrationsScreen
           onImport={handleImportLibraryExporter}
-          onBack={() => navigate(importReturnTo)}
-          inboxCount={inbox.count}
-          onOpenInbox={() => navigateKeepingOrigin('/bandeja')}
+          onBack={backFromIntegrations}
+          inboxCount={inboxCount}
+          onOpenInbox={openInboxKeepingOrigin}
         />
       </Suspense>
     ),
@@ -681,7 +692,7 @@ export default function App() {
 
       <Suspense fallback={null}>
         <InboxScreen
-          imported={inbox.imported}
+          imported={inboxImported}
           isInLists={isInLists}
           listOf={listOfName}
           onClassify={handleClassifyImport}
@@ -691,8 +702,8 @@ export default function App() {
           onClear={handleClearInbox}
           fieldPrefs={importFields.prefs}
           onFieldPrefChange={importFields.setField}
-          onBack={() => navigateKeepingOrigin('/integraciones')}
-          onGoIntegrations={() => navigate('/ajustes')}
+          onBack={backToIntegrations}
+          onGoIntegrations={goToSettings}
         />
       </Suspense>
     ),
