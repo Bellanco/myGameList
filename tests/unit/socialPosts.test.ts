@@ -156,6 +156,16 @@ describe('medios incrustables frente a la CSP', () => {
     expect(isSteamSharedFilePage('https://steamcommunity.com/sharedfiles/filedetails/?id=123')).toBe(true);
   });
 
+  // El avatar de Google no solo se pinta: `core/social/googlePhoto` lo DESCARGA con `fetch` para distinguir una
+  // foto real del monograma que Google genera solo. Eso pasa por `connect-src`, no por `img-src`, y estar en una
+  // sola de las dos es un fallo mudo: el navegador bloquea la petición, la comprobación resuelve "no se sabe" y
+  // la reciprocidad de fotos deja de aplicarse sin que salte ningún error. Pasó en producción.
+  it('el host del que se descarga el avatar de Google está en connect-src', () => {
+    const hosts = directive('connect-src');
+
+    expect(covers(hosts, 'lh3.googleusercontent.com')).toBe(true);
+  });
+
   it('un host desconocido nunca se incrusta', () => {
     expect(resolvePostMedia('https://ejemplo-cualquiera.com/pixel.png')).toBeNull();
   });

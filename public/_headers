@@ -1,5 +1,5 @@
 /*
-  Content-Security-Policy: default-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'; object-src 'none'; script-src 'self' 'sha256-u65XiyDU47Y8SJAE/q5MIyf3Vrcg7AZWhf/kbsnro6I=' https://static.cloudflareinsights.com https://www.googletagmanager.com https://apis.google.com https://www.google.com https://www.gstatic.com; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https://lh3.googleusercontent.com https://*.googleusercontent.com https://*.githubusercontent.com https://*.steamusercontent.com https://steamuserimages-a.akamaihd.net https://*.steamstatic.com https://*.playstation.net https://*.xboxlive.com; media-src 'self' https://*.githubusercontent.com https://*.steamusercontent.com https://steamuserimages-a.akamaihd.net https://*.steamstatic.com https://*.playstation.net https://*.xboxlive.com; connect-src 'self' https://www.google.com https://api.github.com https://firestore.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://www.googleapis.com https://firebase.googleapis.com https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com https://www.google-analytics.com; frame-src https://accounts.google.com https://*.firebaseapp.com https://www.google.com; worker-src 'self' blob:; manifest-src 'self'; upgrade-insecure-requests
+  Content-Security-Policy: default-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'; object-src 'none'; script-src 'self' 'sha256-u65XiyDU47Y8SJAE/q5MIyf3Vrcg7AZWhf/kbsnro6I=' https://static.cloudflareinsights.com https://www.googletagmanager.com https://apis.google.com https://www.google.com https://www.gstatic.com; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https://lh3.googleusercontent.com https://*.googleusercontent.com https://*.githubusercontent.com https://*.steamusercontent.com https://steamuserimages-a.akamaihd.net https://*.steamstatic.com https://*.playstation.net https://*.xboxlive.com; media-src 'self' https://*.githubusercontent.com https://*.steamusercontent.com https://steamuserimages-a.akamaihd.net https://*.steamstatic.com https://*.playstation.net https://*.xboxlive.com; connect-src 'self' https://www.google.com https://lh3.googleusercontent.com https://api.github.com https://firestore.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://www.googleapis.com https://firebase.googleapis.com https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com https://www.google-analytics.com; frame-src https://accounts.google.com https://*.firebaseapp.com https://www.google.com; worker-src 'self' blob:; manifest-src 'self'; upgrade-insecure-requests
   Strict-Transport-Security: max-age=15552000
   X-Frame-Options: DENY
   X-Content-Type-Options: nosniff
@@ -18,6 +18,19 @@
 # `firebaseappcheck.googleapis.com`— y en producción salieron cuatro violaciones de CSP seguidas.
 # Se pueden borrar las tres a la vez el día que se retire App Check (ver `model/repository/appCheckRepository`).
 # Ojo: NO implican ninguna petición por sí solas. reCAPTCHA solo se carga cuando hay sesión de Google iniciada.
+
+# `lh3.googleusercontent.com` en `connect-src` (además de en `img-src`): el avatar de Google no solo se PINTA, se
+# LEE. `core/social/googlePhoto` descarga la imagen con `fetch` y la mira con canvas para distinguir una foto de
+# verdad del monograma que Google genera solo (la inicial sobre un círculo de color), reutilizando con
+# `cache: 'force-cache'` la respuesta que el `<img>` ya trajo: no añade una descarga.
+#
+# Sin esta entrada el `fetch` se bloquea, la comprobación resuelve "no se ha podido saber" —que ante la duda es
+# "foto real"— y se cae toda la regla que cuelga de ella: los monogramas se pintan como si fueran caras, y sobre
+# todo la RECIPROCIDAD deja de aplicarse, porque `ownPhotoIsGeneric` nunca llega a ser cierto. Quien solo aporta
+# un monograma seguía viendo las caras de sus amigos sin poner la suya, que es justo lo que esa regla cierra.
+#
+# Solo `lh3`, y no el comodín de `*.googleusercontent.com` que sí lleva `img-src`: `connect-src` deja LEER la
+# respuesta, no solo mostrarla, y lo único que se lee son los avatares de cuenta de Google, que viven ahí.
 
 # Strict-Transport-Security (arriba): 6 meses. El navegador se niega a hablar http con este dominio durante ese
 # tiempo, y NO se puede revertir rápido —solo caduca—, así que el valor es conservador a propósito.
