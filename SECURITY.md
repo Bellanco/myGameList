@@ -118,9 +118,10 @@ WebCrypto nativo (AES-GCM 256). Hay **dos** mecanismos con garantías **distinta
   igual de seguro (el claim lo firma Firebase), no publica el correo del administrador en un repositorio
   público y permite rotarlo sin desplegar reglas. Pendiente porque exige provisionar el claim con el Admin
   SDK antes del cambio: hacerlo al revés deja el panel inaccesible.
-- **Que el saneado purgue también `social.gistId`.** Hoy `firebaseProfileHealRepository` pone a salvo y borra el
-  token y `social.gamesGistId`, pero no el id del canal social: ese se limpia por la otra vía
-  (`upsertProfileSocialReferences`, al guardar el perfil). Mientras siga así, `gistId` no puede salir de la
-  allowlist del mapa `social` sin congelar los documentos que el cutover deja a medias.
+- **Cerrar `gistId` y `gamesGistId` en la allowlist del mapa `social`.** Ya es posible: el saneado del arranque
+  rescata los DOS ids a `privateConfig` (owner-only) y los purga del documento público en la misma escritura, así
+  que el documento que el cutover deja a medias se limpia solo la próxima vez que su dueño entra. Antes de
+  cerrarlos hay que repasar la ventana entre el cutover y ese siguiente inicio de sesión, y pasar
+  `npm run audit:rules` como en cualquier endurecimiento.
 - Cifrado end-to-end del contenido del Gist (que los datos viajen cifrados por la API de GitHub).
 - Tokens en memoria de sesión en lugar de persistencia.
