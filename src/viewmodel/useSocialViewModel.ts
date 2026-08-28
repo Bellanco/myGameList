@@ -43,6 +43,7 @@ import { isOwnProfileIdentity } from './social/socialIdentity';
 import type { SocialDirectoryEntry } from './social/socialFeed';
 import { buildFriendshipViews } from './social/friendshipViews';
 import { useSocialDirectory } from './social/useSocialDirectory';
+import { resolveGateway } from './social/socialGateway';
 import { useSocialFriendships } from './social/useSocialFriendships';
 import { loadLocalState } from '../model/repository/localRepository';
 import { matchSocialRoute, OWN_PROFILE_ALIAS } from './social/socialRoutes';
@@ -488,14 +489,11 @@ export function useSocialViewModel(options?: {
     void navigate('/social');
   }, [hasReadyAccess, showSocialSpace, navigate]);
 
-  const gatewaySteps = SOCIAL_UI.steps.map((step, index) => ({
-    ...step,
-    done: index === 0 ? hasMainSync : index === 1 ? hasSocialSession : hasSocialGist,
-  }));
-
-  const currentStep = !hasMainSync ? 1 : !hasSocialSession ? 2 : !hasSocialGist ? 3 : 3;
-  const completedSteps = gatewaySteps.filter((step) => step.done).length;
-  const gatewayProgress = Math.round((completedSteps / gatewaySteps.length) * 100);
+  // Pasarela (pasos, paso actual y progreso): derivación pura en `social/socialGateway`.
+  const { steps: gatewaySteps, currentStep, progress: gatewayProgress } = useMemo(
+    () => resolveGateway({ hasMainSync, hasSocialSession, hasSocialGist }),
+    [hasMainSync, hasSocialSession, hasSocialGist],
+  );
 
   const attachExistingSocialGist = useCallback(async (user: SocialAuthUser): Promise<boolean> => {
     if (!mainSyncConfig?.token) {
