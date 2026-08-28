@@ -16,8 +16,11 @@ const TRUSTED_HOST_SUFFIXES = [
   'steamusercontent.com', // Steam: CDN directo de capturas/UGC (images.steamusercontent.com/ugc/…)
   'steamuserimages-a.akamaihd.net', // Steam: CDN antiguo de capturas (UGC)
   'steamstatic.com', // Steam: *.steamstatic.com (cabeceras/capsules de la tienda)
-  'steamcommunity.com', // Steam: de confianza, pero /sharedfiles/filedetails/?id=… es una PÁGINA → se queda como enlace
-  // (no está en IMAGE_DEFAULT_HOST_SUFFIXES a propósito: tratar la página como imagen mostraría HTML roto).
+  // `steamcommunity.com` NO está aquí, y su ausencia es deliberada. De ese host no se sirve media: lo que la
+  // gente pega es `/sharedfiles/filedetails/?id=…`, que es una PÁGINA —tratarla como imagen enseñaría HTML roto—
+  // y para reconocerla está `isSteamSharedFilePage`, que no depende de esta lista. Mientras estuvo aquí, una URL
+  // suya acabada en `.jpg` sí se pintaba como imagen, y como el host no está en el `img-src` de
+  // `public/_headers` la CSP la bloqueaba: un hueco en la publicación en lugar del enlace que se esperaba.
   'drive.google.com', // Google Drive: enlaces de compartir
   'googleusercontent.com', // Google: lh3.googleusercontent.com (Drive ya directo, fotos…)
   'playstation.net', // PSN (best-effort: sus URLs suelen caducar → fallback a enlace)

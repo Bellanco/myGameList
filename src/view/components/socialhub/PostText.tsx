@@ -35,6 +35,9 @@ function PostMedia({ media, href }: { media: PostMediaType; href: string }) {
         src={media.src}
         controls
         preload="metadata"
+        // Sin `referrerPolicy`: el atributo no existe para `<video>` (solo para img/iframe/script/link/a), así
+        // que aquí manda la política del documento — `strict-origin-when-cross-origin` (ver `public/_headers`),
+        // que ya manda el origen y no la URL completa.
         onError={() => setFailed(true)}
       />
     );
