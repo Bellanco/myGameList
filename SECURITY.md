@@ -23,13 +23,20 @@ del gist de juegos salieron de ahí: el perfil propio se resuelve leyendo el doc
 viven en `privateConfig/{uid}`, que solo lee su dueño (y, para las amistades, denormalizados en el documento
 de amistad, que solo leen las dos partes).
 
-**Restos legacy.** Los perfiles creados antes de ese cambio arrastran esos campos, y algunos además el PAT de
-GitHub **en claro** en `social.githubToken`. Como el documento es de lectura pública para cualquier
-autenticado, eso es un secreto expuesto, no una molestia. Hay dos vías de purga y hacen falta las dos:
-el cliente del propio usuario lo pone a salvo cifrado en `privateConfig` y lo borra al iniciar sesión
-(`firebaseProfileHealRepository`), lo que cubre a quien vuelve; y `scripts/purge-profile-pii.js` remata a los
-inactivos —token e ids incluidos, con respaldo local previo porque para algunos es la única copia que queda—.
-El contador `legacy` del panel `/admin` dice cuántos quedan.
+**Restos legacy: purgados, y ahora también cerrados por regla.** Los perfiles creados antes de ese cambio
+arrastraban esos campos, y algunos el PAT de GitHub **en claro** en `social.githubToken`. Se purgaron por las dos
+vías previstas: el cliente del propio usuario lo pone a salvo cifrado en `privateConfig` y lo borra al iniciar
+sesión (`firebaseProfileHealRepository`), que cubre a quien vuelve, y `scripts/purge-profile-pii.js` remató a los
+inactivos —con respaldo local previo, porque para algunos era la única copia que quedaba—. El contador `legacy`
+del panel `/admin` dice cuántos quedan; al cerrar esto estaba a cero.
+
+Con los datos ya limpios, las reglas dejaron de admitirlos, que es lo que impide que vuelvan por una regresión:
+`email` salió de la allowlist de `profiles`, y el mapa `social` pasó a tener la suya
+(`enabled`, `etag`, `gistId`, `gamesGistId`). Esto último cierra dos puertas que estaban abiertas por omisión:
+`social.githubToken` **pasaba** la validación —sin allowlist nadie miraba dentro del mapa— y el dueño podía colar
+ahí un `tier` propio. Los dos ids de gist siguen admitidos a propósito: el cutover de identidad del panel los
+deposita en el documento canónico para que el saneado del dueño los mueva a `privateConfig`, y prohibirlos
+congelaría ese documento justo en el caso que el cutover viene a rescatar.
 
 ## Medidas implementadas
 
@@ -111,10 +118,9 @@ WebCrypto nativo (AES-GCM 256). Hay **dos** mecanismos con garantías **distinta
   igual de seguro (el claim lo firma Firebase), no publica el correo del administrador en un repositorio
   público y permite rotarlo sin desplegar reglas. Pendiente porque exige provisionar el claim con el Admin
   SDK antes del cambio: hacerlo al revés deja el panel inaccesible.
-- **Allowlist de subclaves de `social`** en el perfil (`hasOnly` dentro del mapa). Hoy se validan las
-  subclaves conocidas, pero una inesperada pasa. No se ha activado porque en un merge
-  `request.resource.data` es el documento resultante: un perfil antiguo con una subclave rara quedaría
-  congelado para siempre y su dueño no podría arreglarlo (solo él o el admin escriben ahí). Necesita antes
-  una auditoría de los datos reales y, si hace falta, una purga desde el panel.
+- **Que el saneado purgue también `social.gistId`.** Hoy `firebaseProfileHealRepository` pone a salvo y borra el
+  token y `social.gamesGistId`, pero no el id del canal social: ese se limpia por la otra vía
+  (`upsertProfileSocialReferences`, al guardar el perfil). Mientras siga así, `gistId` no puede salir de la
+  allowlist del mapa `social` sin congelar los documentos que el cutover deja a medias.
 - Cifrado end-to-end del contenido del Gist (que los datos viajen cifrados por la API de GitHub).
 - Tokens en memoria de sesión en lugar de persistencia.
