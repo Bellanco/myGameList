@@ -1,4 +1,4 @@
-﻿import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+﻿import { Suspense, lazy, memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Icon } from '../Icon';
 import { GameTable } from '../GameTable';
 import { STATS_UI } from '../../../core/constants/statsLabels';
@@ -13,7 +13,12 @@ import { RouletteModal } from '../roulette/RouletteModal';
 import { buildProfilePool, profileWeight } from '../../../core/roulette/roulette';
 import { FriendshipButton } from './FriendshipButton';
 import { ProfileReviewsList } from './ProfileReviewsList';
-import { FriendStats } from '../stats/FriendStats';
+/**
+ * Las estadísticas de un amigo, PEREZOSAS. Con el import estático, `FriendStats` arrastraba al chunk del hub
+ * social el panel de estadísticas entero —`computeStats` y los ocho gráficos, unos 96 kB—, así que entrar al
+ * FEED descargaba unos gráficos que solo se ven al abrir el perfil de alguien y pulsar su pestaña.
+ */
+const FriendStats = lazy(() => import('../stats/FriendStats').then((m) => ({ default: m.FriendStats })));
 import type { ProfileTier } from '../../../core/constants/tiers';
 import { ADMIN_ONLY_TIER, DEFAULT_PROFILE_TIER } from '../../../core/constants/tiers';
 import type { RelationshipState } from '../../../model/types/social';
@@ -443,11 +448,13 @@ function SocialProfileDetailScreenBase({
             <div className="hub-detail-metadata">
               <div className="hub-metadata-section">
                 <strong>{FRIEND_STATS_TITLE}</strong>
-                <FriendStats
-                  sharedLists={activeProfileDetail.sharedLists || {}}
-                  viewerTier={viewerTier}
-                  viewerHiddenTabs={viewerHiddenTabs}
-                />
+                <Suspense fallback={null}>
+                  <FriendStats
+                    sharedLists={activeProfileDetail.sharedLists || {}}
+                    viewerTier={viewerTier}
+                    viewerHiddenTabs={viewerHiddenTabs}
+                  />
+                </Suspense>
               </div>
             </div>
           ) : (
