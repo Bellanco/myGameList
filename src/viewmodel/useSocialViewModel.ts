@@ -4,11 +4,11 @@ import { ensureSyncConfigLoaded, getSyncConfig } from '../model/repository/gistR
 import { createSocialGist, getSocialSyncConfig, mergeSocialGistData, readPublicSocialGistById, readSocialGist, remapSocialActorIds, saveSocialSyncConfig, type SocialGistData, type SocialProfileVisibility, type SocialSharedGame, deleteGist, ensureSecretSocialGist, socialGistHasContent, writeSocialGist } from '../model/repository/socialGistRepository';
 import { reconcileReviewActivity } from '../model/repository/socialActivityReconcile';
 import { invalidateProfileGames, loadForeignProfileGames } from '../model/repository/foreignProfileRepository';
-import { getCachedSocialDirectory, getCachedSocialProfile, getLocalMeta, invalidateCachedSocialDirectory, patchLocalMeta, putCachedSocialDirectory, putCachedSocialProfile, type CachedSocialProfileData } from '../model/repository/indexedDbRepository';
+import { getCachedSocialDirectory, getCachedSocialProfile, getLocalMeta, patchLocalMeta, putCachedSocialDirectory, putCachedSocialProfile, type CachedSocialProfileData } from '../model/repository/indexedDbRepository';
 import { applyProfileVisibility } from '../core/utils/profileVisibility';
 import { isNetworkFailure, isOffline } from '../core/utils/network';
 import { useOnlineStatus } from '../view/hooks/useOnlineStatus';
-import { photoForViewer, resolveViewer, withVisiblePhotos } from '../core/social/photoVisibility';
+import { resolveViewer, withVisiblePhotos } from '../core/social/photoVisibility';
 import { useGenericPhoto } from '../view/hooks/useGenericPhoto';
 import { SOCIAL_UI } from '../core/constants/socialLabels';
 import type { IconName } from '../core/constants/icons';
@@ -19,22 +19,17 @@ import {
 } from '../core/constants/tiers';
 import { TAB_IDS, type GameItem, type SyncConfig, type TabData, type TabId } from '../model/types/game';
 import {
-  acceptFriendRequest,
   clearAnalyticsUser,
-  deleteFriendship,
   ensureProfileByEmail,
   repairProfileDisplayName,
   getCurrentSocialAuthUser,
-  getMyFriendships,
   getPrivateConfig,
   purgeOwnPublicGistIds,
   setPrivateConfig,
   healOwnFriendshipIdentity,
   listSocialDirectory,
-  readFriendship,
   resolveOwnProfile,
   resolveStableProfileId,
-  sendFriendRequest,
   signInWithGoogle,
   signOutSocialUser,
   touchOwnProfileActivityThrottled,
@@ -42,7 +37,8 @@ import {
   type FriendshipSelfInfo,
   type SocialAuthUser,
 } from '../model/repository/firebaseRepository';
-import type { FriendshipView, MyFriendships, RelationshipState } from '../model/types/social';
+import { buildFriendshipViews } from './social/friendshipViews';
+import { useSocialFriendships } from './social/useSocialFriendships';
 import { loadLocalState } from '../model/repository/localRepository';
 import { normalizeTimestamp as toSafeTimestamp } from '../core/utils/normalize';
 import { mapWithConcurrency } from '../core/utils/concurrency';
@@ -300,17 +296,6 @@ export function useSocialViewModel(options?: {
   const [refreshCoolingDown, setRefreshCoolingDown] = useState(false);
   const cooldownTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Amistad (aceptación mutua). Todo el estado sale de UNA query `array-contains` (cacheada en el repositorio).
-  const [friendships, setFriendships] = useState<MyFriendships>({ friends: [], incoming: [], outgoing: [], byOtherUid: {} });
-  const [loadingFriendships, setLoadingFriendships] = useState(false);
-  // ¿Se ha resuelto ya el estado de amistad al menos una vez? El feed solo-amigos lee gists SOLO de `friendships.friends`;
-  // si el directorio se hidratara (y cacheara) ANTES de conocer a los amigos, cachearía a los amigos como index-only
-  // (sin actividad) y el feed quedaría en blanco hasta invalidar la caché. Se espera a esta resolución antes de hidratar.
-  const [friendshipsResolved, setFriendshipsResolved] = useState(false);
-  // uid del "otro" sobre el que hay una mutación en curso (para deshabilitar su botón sin bloquear el resto).
-  const [friendshipBusyUid, setFriendshipBusyUid] = useState<string>('');
-  // Confirmación de "dejar de ser amigos" (evita pulsaciones accidentales): guarda a quién se va a eliminar.
-  const [removeFriendTarget, setRemoveFriendTarget] = useState<{ uid: string; name: string } | null>(null);
 
   /**
    * Temporizador que borra el mensaje de estado. Uno SOLO, reutilizado.
@@ -475,6 +460,41 @@ export function useSocialViewModel(options?: {
   // el alta) filtrado por la puerta legal. Todo lo que carga o publica datos sociales cuelga de esto, así que un
   // usuario sin la aceptación vigente no llega a leer ni escribir nada del canal social.
   const socialSpaceOpen = showSocialSpace && legalGateOpen;
+
+  /** Identidad denormalizada que viaja al documento de amistad: nick público, foto publicable y los dos gists. */
+  const buildFriendshipSelfInfo = useCallback((): FriendshipSelfInfo => ({
+    name: profileName.trim(),
+    photo: ownPublishablePhoto,
+    socialGistId: socialCfgGistId,
+    gamesGistId: mainSyncConfig?.gistId || '',
+  }), [ownPublishablePhoto, mainSyncConfig?.gistId, profileName, socialCfgGistId]);
+
+  // Amistades: estado, derivados y mutaciones (ver `social/useSocialFriendships`). Se monta AQUÍ y no más abajo
+  // porque `friendUidSet` lo necesita la política de fotos del directorio, que se calcula a continuación.
+  const {
+    friendships,
+    loadingFriendships,
+    friendshipsResolved,
+    friendshipBusyUid,
+    friendUidSet,
+    pendingIncomingCount,
+    relationshipWith,
+    refreshFriendships,
+    handleAddOrAcceptFriend,
+    handleCancelFriendRequest,
+    handleRejectFriendRequest,
+    handleRemoveFriend,
+    removeFriendTarget,
+    confirmRemoveFriend,
+    cancelRemoveFriend,
+  } = useSocialFriendships({
+    myUid: authUser?.uid,
+    socialGistId: socialCfgGistId,
+    socialSpaceOpen,
+    buildSelfInfo: buildFriendshipSelfInfo,
+    setFeedback,
+    reportFailure,
+  });
   const legalConsentPending = legalConsent.pending;
   const hasReadyAccess = hasSocialSession && hasSocialGist && legalGateOpen;
   const profileEditorLocked = isProfileEditorLocked(mustCreateProfile, hasBlockingSocialIssue);
@@ -590,33 +610,6 @@ export function useSocialViewModel(options?: {
   }, [authUser?.uid]);
 
   // Carga el estado de amistad (amigos + peticiones) con UNA query cacheada. Degrada a vacío si Firestore falla.
-  const refreshFriendships = useCallback(async (forceRefresh = false) => {
-    const uid = authUser?.uid;
-    if (!uid) {
-      setFriendships({ friends: [], incoming: [], outgoing: [], byOtherUid: {} });
-      setFriendshipsResolved(true);
-      return;
-    }
-    try {
-      setLoadingFriendships(true);
-      const next = await getMyFriendships(uid, { forceRefresh });
-      setFriendships(next);
-    } catch {
-      /* best-effort: sin amistad el resto del social sigue usable. */
-    } finally {
-      setLoadingFriendships(false);
-      // Marca resuelto SIEMPRE (incluso si Firestore falló): degrada a feed sin amigos en vez de bloquearlo para siempre.
-      setFriendshipsResolved(true);
-    }
-  }, [authUser?.uid]);
-
-  useEffect(() => {
-    if (!socialSpaceOpen || !authUser?.uid) {
-      return;
-    }
-    void refreshFriendships();
-  }, [socialSpaceOpen, authUser?.uid, refreshFriendships]);
-
   // PRIVACIDAD (saneo al abrir social): una vez por sesión, cuando el nick ya está hidratado, propaga mi nick actual a
   // mis docs de amistad ya existentes (que pudieron guardar un nombre antiguo/real antes del arreglo). Se espera a que
   // el nick esté cargado (`profileName` no vacío) para NO sanear con vacío.
@@ -780,19 +773,6 @@ export function useSocialViewModel(options?: {
   // Tras un cambio de amistad (aceptar/eliminar), el conjunto de amigos cambia y con él la actividad que debe salir
   // en el feed. Se invalida la caché del directorio (feed solo-amigos) y se refresca la amistad; el efecto que
   // depende de `friendships.friends` rehidrata el directorio releyendo los gists de los amigos actuales.
-  const refreshAfterFriendshipChange = useCallback(async () => {
-    if (socialCfgGistId) {
-      await invalidateCachedSocialDirectory(socialCfgGistId);
-    }
-    await refreshFriendships(true);
-  }, [refreshFriendships, socialCfgGistId]);
-
-  // Estado de relación con OTRO usuario (para pintar el botón correcto en tarjetas/perfil).
-  const relationshipWith = useCallback((otherUid: string): RelationshipState => {
-    if (!otherUid) return 'none';
-    return friendships.byOtherUid[otherUid]?.state ?? 'none';
-  }, [friendships]);
-
   // RECIPROCIDAD DE LA FOTO (ver core/social/photoVisibility): quien esconde la suya no ve la de nadie, y la de los
   // demás solo se ve con amistad aceptada. Mithril queda exento.
   //
@@ -826,10 +806,6 @@ export function useSocialViewModel(options?: {
     if (authUser.photoURL && !ownPhotoIsGeneric) return;
     if (showPhoto) setShowPhoto(false);
   }, [authUser?.uid, authUser?.photoURL, ownPhotoIsGeneric, showPhoto, setShowPhoto]);
-  const friendUidSet = useMemo(
-    () => new Set(friendships.friends.map((friend) => friend.otherUid)),
-    [friendships.friends],
-  );
   const socialDirectory = useMemo(
     () =>
       withVisiblePhotos(rawSocialDirectory, {
@@ -840,43 +816,12 @@ export function useSocialViewModel(options?: {
     [rawSocialDirectory, photoViewer, friendUidSet, authUser?.uid, ownProfileId],
   );
 
-  const pendingIncomingCount = friendships.incoming.length;
-
-  // Vista de solicitud para la bandeja: enriquece nombre/foto desde el directorio cuando el doc no los trae aún
-  // (p. ej. una petición ENVIADA no tiene los datos del destinatario hasta que acepta). Directorio ya cargado → gratis.
-  const enrichFriendRequest = useCallback((view: FriendshipView) => {
-    const dir = socialDirectory.find((entry) => entry.uid === view.otherUid);
-    return {
-      docId: view.docId,
-      otherUid: view.otherUid,
-      // PRIVACIDAD: el nombre sale SOLO del nick denormalizado en el doc de amistad (`otherName`). NO se cae al
-      // `displayName` del directorio (Firestore), que puede ser el nombre real; si no hay nick, "Usuario".
-      name: view.otherName || SOCIAL_UI.requests.unknownUser,
-      // La foto pasa por la misma política que el directorio. Consecuencia buscada: en la BANDEJA, la cara de quien
-      // te manda una solicitud no se ve —todavía no hay amistad—, igual que no se ve la suya en el directorio de
-      // descubrimiento del que salió. El nick sigue ahí, que es lo que identifica la petición.
-      photo: photoForViewer({
-        photoURL: view.otherPhoto || dir?.photoURL || '',
-        isOwn: false,
-        isFriend: friendUidSet.has(view.otherUid),
-        viewer: photoViewer,
-      }),
-    };
-  }, [socialDirectory, friendUidSet, photoViewer]);
-
-  const incomingRequests = useMemo(
-    () => friendships.incoming.map(enrichFriendRequest),
-    [friendships.incoming, enrichFriendRequest],
-  );
-  const outgoingRequests = useMemo(
-    () => friendships.outgoing.map(enrichFriendRequest),
-    [friendships.outgoing, enrichFriendRequest],
-  );
-  // Lista de amigos (aceptados) para gestión: se deriva de los docs de amistad, NO del directorio, así SIEMPRE se
-  // puede ver y eliminar a un amigo aunque no esté en el top-30 del directorio o haya desactivado su social.
-  const friendsList = useMemo(
-    () => friendships.friends.map(enrichFriendRequest),
-    [friendships.friends, enrichFriendRequest],
+  // Filas enriquecidas de la bandeja y la gestión. El cálculo vive en `social/friendshipViews` (puro): necesita el
+  // directorio, que a su vez necesita saber quiénes son tus amigos, así que dentro del hook de amistades cerraría
+  // un círculo entre los dos.
+  const { incoming: incomingRequests, outgoing: outgoingRequests, friends: friendsList } = useMemo(
+    () => buildFriendshipViews(friendships, { directory: socialDirectory, friendUids: friendUidSet, viewer: photoViewer }),
+    [friendships, socialDirectory, friendUidSet, photoViewer],
   );
 
   // MISMA fuente que la reconciliación (`reconcileGames`, más abajo): los listados VIVOS de la app, y la foto de
@@ -2328,106 +2273,6 @@ export function useSocialViewModel(options?: {
   // PRIVACIDAD: el nombre es SIEMPRE el nick del perfil social (`profileName`), NUNCA el nombre real de Google
   // (`authUser.displayName`) ni el email. Si el nick aún no está cargado, se guarda vacío (el lector muestra un
   // placeholder) en lugar de filtrar el nombre real.
-  const buildFriendshipSelfInfo = useCallback((): FriendshipSelfInfo => ({
-    name: profileName.trim(),
-    photo: ownPublishablePhoto,
-    socialGistId: socialCfgGistId,
-    gamesGistId: mainSyncConfig?.gistId || '',
-  }), [ownPublishablePhoto, mainSyncConfig?.gistId, profileName, socialCfgGistId]);
-
-  // "Añadir amigo" o "Aceptar": según el estado actual. Si no hay relación, envía petición; si el otro ya me pidió,
-  // acepta. Maneja la carrera de petición simultánea (el doc canónico ya existe) releyendo y aceptando si procede.
-  const handleAddOrAcceptFriend = useCallback(async (otherUid: string) => {
-    const myUid = authUser?.uid;
-    if (!myUid || !otherUid || myUid === otherUid) {
-      return;
-    }
-    const relation = relationshipWith(otherUid);
-    if (relation === 'friends' || relation === 'outgoing') {
-      return; // ya gestionado desde otra acción específica.
-    }
-    try {
-      setFriendshipBusyUid(otherUid);
-      if (relation === 'incoming') {
-        const docId = friendships.byOtherUid[otherUid]?.docId;
-        if (docId) {
-          await acceptFriendRequest({ myUid, docId, self: buildFriendshipSelfInfo() });
-          await refreshAfterFriendshipChange();
-          setFeedback('ok', SOCIAL_UI.status.friendRequestAccepted);
-        }
-        return;
-      }
-      try {
-        await sendFriendRequest({ myUid, otherUid, self: buildFriendshipSelfInfo() });
-        await refreshAfterFriendshipChange();
-        setFeedback('ok', SOCIAL_UI.status.friendRequestSent);
-      } catch (error) {
-        // Carrera: el doc canónico ya existía. Releer y decidir.
-        const existing = await readFriendship(myUid, otherUid);
-        if (existing?.state === 'incoming') {
-          await acceptFriendRequest({ myUid, docId: existing.docId, self: buildFriendshipSelfInfo() });
-          await refreshAfterFriendshipChange();
-          setFeedback('ok', SOCIAL_UI.status.friendRequestAccepted);
-          return;
-        }
-        if (existing) {
-          await refreshAfterFriendshipChange(); // ya outgoing/friends: reflejar el estado real sin error ruidoso.
-          return;
-        }
-        throw error;
-      }
-    } catch (error) {
-      reportFailure(error, SOCIAL_UI.status.friendActionFailed);
-    } finally {
-      setFriendshipBusyUid('');
-    }
-  }, [authUser?.uid, buildFriendshipSelfInfo, friendships, refreshAfterFriendshipChange, relationshipWith, reportFailure, setFeedback]);
-
-  // Borra el doc de amistad (cancelar enviada / rechazar recibida / eliminar amistad), con mensaje específico.
-  const deleteRelationship = useCallback(async (otherUid: string, successMsg: string) => {
-    const myUid = authUser?.uid;
-    const docId = friendships.byOtherUid[otherUid]?.docId;
-    if (!myUid || !docId) {
-      return;
-    }
-    try {
-      setFriendshipBusyUid(otherUid);
-      await deleteFriendship({ myUid, docId });
-      await refreshAfterFriendshipChange();
-      setFeedback('ok', successMsg);
-    } catch (error) {
-      reportFailure(error, SOCIAL_UI.status.friendActionFailed);
-    } finally {
-      setFriendshipBusyUid('');
-    }
-  }, [authUser?.uid, friendships, refreshAfterFriendshipChange, reportFailure, setFeedback]);
-
-  const handleCancelFriendRequest = useCallback(
-    (otherUid: string) => deleteRelationship(otherUid, SOCIAL_UI.status.friendRequestCanceled),
-    [deleteRelationship],
-  );
-  const handleRejectFriendRequest = useCallback(
-    (otherUid: string) => deleteRelationship(otherUid, SOCIAL_UI.status.friendRequestRejected),
-    [deleteRelationship],
-  );
-  // "Dejar de ser amigos": NO borra directamente; abre un diálogo de confirmación (evita pulsaciones sin querer).
-  const handleRemoveFriend = useCallback((otherUid: string) => {
-    const view = friendships.byOtherUid[otherUid];
-    const name = view ? enrichFriendRequest(view).name : SOCIAL_UI.requests.unknownUser;
-    setRemoveFriendTarget({ uid: otherUid, name });
-  }, [friendships, enrichFriendRequest]);
-
-  const cancelRemoveFriend = useCallback(() => setRemoveFriendTarget(null), []);
-
-  const confirmRemoveFriend = useCallback(async () => {
-    const target = removeFriendTarget;
-    if (!target) {
-      return;
-    }
-    setRemoveFriendTarget(null);
-    await deleteRelationship(target.uid, SOCIAL_UI.status.friendRemoved);
-  }, [removeFriendTarget, deleteRelationship]);
-
   const primaryGatewayCta = useMemo(() => {
     type GatewayCta = {
       icon: IconName;
