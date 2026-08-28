@@ -2,7 +2,7 @@
 import { ScoreDisplay } from '../ScoreDisplay';
 import { NoScoreMedal } from '../NoScoreMedal';
 import { resolveGrade } from '../../../core/utils/scoreScale';
-import { MetaSection } from '../MetaSection';
+import { ReviewDetailBody } from '../ReviewDetailBody';
 import { HubAvatar } from './HubAvatar';
 import type { SocialUiLabels } from '../../../core/constants/socialLabels';
 import type { GameItem } from '../../../model/types/game';
@@ -121,17 +121,13 @@ export function SocialDetailScreen({
           {resolveGrade({ score: Number(activeDetailEvent.rating || 0), grade: activeDetailEvent.grade ?? null }) > 0
             ? <ScoreDisplay game={{ score: Number(activeDetailEvent.rating || 0), grade: activeDetailEvent.grade ?? null }} />
             : <NoScoreMedal />}
-          <div className="hub-detail-body">
-          {reviewText ? <p className="hub-feed-review-text">{reviewText}</p> : null}
-          {gameItem ? (
-            <div className="hub-detail-metadata">
-              <MetaSection label={SOCIAL_UI.feed.metadataPlatforms} items={gameItem.platforms} cls="chip-plat" />
-              <MetaSection label={SOCIAL_UI.feed.metadataGenres} items={gameItem.genres} cls="chip-genre" />
-              <MetaSection label={SOCIAL_UI.feed.metadataStrengths} items={gameItem.strengths} cls="chip-pf" />
-              <MetaSection label={SOCIAL_UI.feed.metadataWeaknesses} items={gameItem.weaknesses} cls="chip-pd" />
-            </div>
-          ) : null}
-          </div>
+          <ReviewDetailBody
+            review={reviewText}
+            platforms={gameItem?.platforms}
+            genres={gameItem?.genres}
+            strengths={gameItem?.strengths}
+            weaknesses={gameItem?.weaknesses}
+          />
         </article>
         <HubStatus status={status} statusKind={statusKind} />
       </div>

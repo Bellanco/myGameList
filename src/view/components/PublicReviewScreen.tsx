@@ -1,7 +1,7 @@
 import { memo, useEffect, useState } from 'react';
 import { SHARE_UI } from '../../core/constants/shareLabels';
 import { SOCIAL_UI } from '../../core/constants/socialLabels';
-import { MetaSection } from './MetaSection';
+import { ReviewDetailBody } from './ReviewDetailBody';
 import { NoScoreMedal } from './NoScoreMedal';
 import { ScoreDisplay } from './ScoreDisplay';
 import { readSharedReview } from '../../model/repository/publicShareRepository';
@@ -121,15 +121,13 @@ export const PublicReviewScreen = memo(function PublicReviewScreen({ token, stan
           </div>
           {hasValidDate ? <p className="hub-feed-date">{SOCIAL_UI.feed.analyzedAt(reviewedAt)}</p> : null}
           {hasScore ? <ScoreDisplay game={{ score: review.rating ?? 0, grade: review.grade }} /> : <NoScoreMedal />}
-          <div className="hub-detail-body">
-            {review.review ? <p className="hub-feed-review-text">{review.review}</p> : null}
-            <div className="hub-detail-metadata">
-              <MetaSection label={SOCIAL_UI.feed.metadataPlatforms} items={review.platforms} cls="chip-plat" />
-              <MetaSection label={SOCIAL_UI.feed.metadataGenres} items={review.genres} cls="chip-genre" />
-              <MetaSection label={SOCIAL_UI.feed.metadataStrengths} items={review.strengths} cls="chip-pf" />
-              <MetaSection label={SOCIAL_UI.feed.metadataWeaknesses} items={review.weaknesses} cls="chip-pd" />
-            </div>
-          </div>
+          <ReviewDetailBody
+            review={review.review}
+            platforms={review.platforms}
+            genres={review.genres}
+            strengths={review.strengths}
+            weaknesses={review.weaknesses}
+          />
         </article>
 
       </div>
