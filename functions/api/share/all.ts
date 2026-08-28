@@ -7,7 +7,7 @@
 // cuando llega un aviso sobre alguien.
 import { requireAdmin } from '../../_lib/context';
 import { json } from '../../_lib/http';
-import { overrideKey, type Env, type ShareIndexMetadata } from '../../_lib/keys';
+import { drainPages, overrideKey, type Env, type ShareIndexMetadata } from '../../_lib/keys';
 import type { ShareQuotaOverride } from '../../../src/core/constants/tiers';
 
 const PAGE_SIZE = 200;
@@ -31,7 +31,11 @@ export async function onRequestGet(context: { request: Request; env: Env }): Pro
   // Los vetos viajan con el censo (una sola pasada por el prefijo `ban:`) en vez de consultarse usuario a
   // usuario: el panel pinta decenas de fichas y preguntar por cada una serían decenas de peticiones para
   // un dato que cabe en una lista de identificadores.
-  const bans = await context.env.SHARES.list({ prefix: 'ban:', limit: 1_000 });
+  //
+  // `drainPages` y no un `limit` alto: KV pagina siempre, así que un tope es "hasta aquí" y no "todo". Con el
+  // `limit: 1000` de antes, un veto más allá de esa cifra desaparecía del censo y el panel pintaba como no
+  // vetado a alguien que sí lo estaba.
+  const banKeys = await drainPages((cursor) => context.env.SHARES.list({ prefix: 'ban:', cursor, limit: 1_000 }));
 
   // Los ajustes individuales de cuota viajan igual que los vetos, y por el mismo motivo: el panel precarga los
   // campos de cuota con lo que el usuario tiene AHORA, y sin esto tendría que preguntar ficha a ficha (o mentir
@@ -40,9 +44,11 @@ export async function onRequestGet(context: { request: Request; env: Env }): Pro
   //
   // El valor se lee de la `metadata` de la clave, que la escribe el POST de `/api/share/quota/:uid`. Los ajustes
   // guardados antes de que la metadata existiera no la traen, y esos —solo esos— se leen con un `get`.
-  const overrideKeys = await context.env.SHARES.list<ShareQuotaOverride>({ prefix: OVERRIDE_PREFIX, limit: 1_000 });
+  const overrideKeys = await drainPages<ShareQuotaOverride>((cursor) =>
+    context.env.SHARES.list<ShareQuotaOverride>({ prefix: OVERRIDE_PREFIX, cursor, limit: 1_000 }),
+  );
   const overrideEntries = await Promise.all(
-    overrideKeys.keys.map(async (key) => {
+    overrideKeys.map(async (key) => {
       const uid = key.name.slice(OVERRIDE_PREFIX.length);
       const meta = key.metadata;
       if (meta && (typeof meta.maxActive === 'number' || typeof meta.ttlDays === 'number')) {
@@ -66,7 +72,7 @@ export async function onRequestGet(context: { request: Request; env: Env }): Pro
 
   return json({
     shares: shares.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0)),
-    bans: bans.keys.map((key) => key.name.slice('ban:'.length)),
+    bans: banKeys.map((key) => key.name.slice('ban:'.length)),
     overrides: Object.fromEntries(overrideEntries),
     cursor: page.list_complete ? null : page.cursor,
     complete: page.list_complete,

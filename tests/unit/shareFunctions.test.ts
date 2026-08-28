@@ -4,11 +4,11 @@
 // resuelve el TypeScript igual, así que la lógica que no depende del runtime del Worker —escapado, recorte,
 // forma del token, clave del contador diario— sí se puede probar aquí. Lo que necesita KV o HTMLRewriter se
 // prueba con `wrangler pages dev`, no con mocks: simular el almacén no demostraría nada.
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { JWKS_URL } from '../../functions/_lib/firebaseAuth';
 import { shareDescription, shareTitle } from '../../functions/_lib/html';
 import { isValidToken, newToken } from '../../functions/_lib/http';
-import { dailyQuotaKey, ownerKey, shareKey, userShareKey } from '../../functions/_lib/keys';
+import { dailyQuotaKey, drainPages, ownerKey, shareKey, userShareKey } from '../../functions/_lib/keys';
 
 describe('metadatos de la previsualización', () => {
   it('builds a title with game, score and author', () => {
@@ -101,5 +101,60 @@ describe('claves de KV', () => {
   it('keys the daily counter by UTC day', () => {
     expect(dailyQuotaKey('uid1', Date.UTC(2026, 7, 16, 23, 30))).toBe('quota:uid1:2026-08-16');
     expect(dailyQuotaKey('uid1', Date.UTC(2026, 7, 17, 0, 30))).toBe('quota:uid1:2026-08-17');
+  });
+});
+
+/**
+ * S4 — El recorrido por cursor de KV.
+ *
+ * No se simula el almacén (ver la nota de la cabecera): `drainPages` recibe la función que trae una página, así
+ * que lo que se prueba aquí es el ITERADOR, que es donde estaba el fallo. El censo del panel pedía vetos y
+ * ajustes con un `limit` alto y sin cursor, y KV pagina siempre: lo que pasaba del tope desaparecía en silencio.
+ */
+describe('recorrido paginado de KV', () => {
+  const key = (name: string) => ({ name });
+
+  it('junta todas las páginas siguiendo el cursor', async () => {
+    const pages = [
+      { keys: [key('ban:a'), key('ban:b')], list_complete: false, cursor: 'c1' },
+      { keys: [key('ban:c')], list_complete: false, cursor: 'c2' },
+      { keys: [key('ban:d')], list_complete: true },
+    ];
+    const seen: (string | undefined)[] = [];
+    let call = 0;
+
+    const all = await drainPages(async (cursor) => {
+      seen.push(cursor);
+      return pages[call++];
+    });
+
+    expect(all.map((k) => k.name)).toEqual(['ban:a', 'ban:b', 'ban:c', 'ban:d']);
+    // La primera página va sin cursor; cada siguiente lleva el que devolvió la anterior.
+    expect(seen).toEqual([undefined, 'c1', 'c2']);
+  });
+
+  it('para en la primera página cuando ya está completa', async () => {
+    const fetchPage = vi.fn(async () => ({ keys: [key('ban:solo')], list_complete: true }));
+
+    const all = await drainPages(fetchPage);
+
+    expect(all.map((k) => k.name)).toEqual(['ban:solo']);
+    expect(fetchPage).toHaveBeenCalledTimes(1);
+  });
+
+  it('devuelve vacío sin claves, sin pedir una página de más', async () => {
+    const fetchPage = vi.fn(async () => ({ keys: [], list_complete: true }));
+
+    expect(await drainPages(fetchPage)).toEqual([]);
+    expect(fetchPage).toHaveBeenCalledTimes(1);
+  });
+
+  it('conserva la metadata de cada clave, que es de donde sale la fila del panel', async () => {
+    const all = await drainPages<{ gameId: number }>(async () => ({
+      keys: [{ name: 'user:u1:tok', metadata: { gameId: 42 } }],
+      list_complete: true,
+    }));
+
+    expect(all[0].metadata).toEqual({ gameId: 42 });
   });
 });
