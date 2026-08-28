@@ -1,5 +1,5 @@
 import { memo, useMemo } from 'react';
-import { UI_MESSAGES } from '../../../core/constants/labels';
+import { STATS_UI } from '../../../core/constants/statsLabels';
 import { SOCIAL_UI } from '../../../core/constants/socialLabels';
 import { Icon } from '../Icon';
 import { HubBackButton } from '../socialhub/HubBackButton';
@@ -9,7 +9,7 @@ import { ShareReviewButton } from './ShareReviewButton';
 import { resolveGrade, starsFromGrade } from '../../../core/utils/scoreScale';
 import { TAB_IDS, type GameItem, type TabData } from '../../../model/types/game';
 
-const L = UI_MESSAGES.stats.reviews;
+const L = STATS_UI.reviews;
 
 /** Tus reseñas, tomadas de las listas en memoria: cualquiera con texto, esté en la lista que esté. */
 function collectReviews(games: TabData): Array<ReviewEntry & { game: GameItem; effectiveGrade: number }> {

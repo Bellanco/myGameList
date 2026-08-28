@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { SYNC_MESSAGES } from '../core/constants/labels';
 import { getCurrentSocialAuthUser, getPrivateConfig, recoverGithubToken, resolveOwnProfile, resolveStableProfileId, setAnalyticsUser, setPrivateConfig, signInWithGoogle, trackAnalyticsEvent } from '../model/repository/firebaseGateway';
 import { mergeCrdt } from '../model/repository/syncRepository';
-import { clearSyncConfig, createGist, ensureSyncConfigLoaded, findGamesGistId, getRetryAfterMs, getSyncConfig, isDeferredNetworkError, readGist, saveSyncConfig, whoAmI, writeGist } from '../model/repository/gistRepository';
+import { clearSyncConfig, createGist, ensureSyncConfigLoaded, findGamesGistId, getRetryAfterMs, getSyncConfig, isDeferredNetworkError, readGist, saveSyncConfig, whoAmI, writeGist, type GistReadResponse } from '../model/repository/gistRepository';
 import { beginGithubOAuth, completeGithubOAuth, hasGithubOAuthRedirect, isGithubOAuthConfigured } from '../model/repository/githubOAuthRepository';
 import { normalizeData } from '../model/repository/localRepository';
 import { clearDirty, clearDirtyIfUnchanged, loadSyncDirtyState } from '../model/repository/syncStateRepository';
@@ -177,6 +177,74 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
     }, [getData, getMeta, persist, setMeta, writeWithConflictRecovery, reconcileWithLocal]);
 
     /**
+     * D1 — Tronco común de las CUATRO rutas que fusionan un remoto ya leído: `refreshRemote`, `syncNow`,
+     * `initializeSync` y `connectSyncWithCredentials`. Antes estaba copiado entero en cada una, unas cuarenta
+     * líneas por copia, y las copias ya habían divergido: la de conectar se había quedado sin `setMeta` y sin
+     * `persist(reconcileWithLocal(…))`, de modo que tras conectar el meta local no se sellaba y una edición
+     * guardada mientras la escritura estaba en vuelo se revertía. Ver `tests/unit/syncConnectRace.test.ts`.
+     *
+     * La LECTURA se queda fuera a propósito: cada ruta lee con su propio etag y decide qué hacer con un 304
+     * (ver `handleNotModified`). Aquí entra lo que va DESPUÉS, que es lo que tiene que ser idéntico.
+     *
+     * También queda fuera lo que cada ruta le cuenta al usuario: `syncNow` confirma siempre porque es una acción
+     * explícita y las demás solo hablan si han traído algo. Esa diferencia es deliberada y está fijada en
+     * `tests/unit/syncConnectRace.test.ts`.
+     *
+     * `cfg` llega por parámetro y no de `getSyncConfig()` porque al conectar todavía no hay config guardada: sus
+     * credenciales son justo las que se están estrenando.
+     */
+    const applyRemoteCycle = useCallback(
+      async (
+        cfg: { token: string; gistId: string },
+        remote: GistReadResponse,
+      ): Promise<{ remoteChanges: number; nextMeta: { updatedAt: number; etag: string | null; lastRemoteUpdatedAt: number } }> => {
+        const remoteData = remote.data as TabData;
+        const localMeta = getMeta();
+        const localData = getData();
+
+        transitionTo('merging');
+        const merged = mergeCrdt(localData, localMeta.updatedAt, remoteData, remoteData.updatedAt);
+        const remoteChanges = countRemoteChangesApplied(localData, remoteData, merged.merged);
+        setLastRemoteChangesApplied(remoteChanges);
+
+        if (merged.localNeedsUpdate) {
+          setData(merged.merged);
+        }
+
+        // Upgrade proactivo: si el remoto estaba en formato viejo, se reescribe en el actual aunque el merge no
+        // lo pidiera, para que el gist quede migrado al primer sync en vez de esperar a una edición.
+        let writeOutcome: WriteOutcome = { data: merged.merged, etag: remote.etag || null, remoteUpdatedAt: remoteData.updatedAt };
+        if (merged.remoteNeedsUpdate || remote.wasLegacy) {
+          writeOutcome = await writeWithConflictRecovery(cfg.token, cfg.gistId, merged.merged, Date.now());
+        }
+
+        // Aquí NO va un `setData(writeOutcome.data)`, y su ausencia es el arreglo, no un olvido. Las cuatro
+        // rutas lo hacían justo antes del persist, y como `reconcileWithLocal` resuelve leyendo `getData()`,
+        // ese setData le machacaba el estado local que venía a consultar: la reconciliación se comparaba
+        // consigo misma y una edición llegada durante la escritura se perdía. `persist` recibe los mismos
+        // datos —en `App.tsx` los dos son `persistFromSync`—, así que escribir una vez basta, y hacerlo DESPUÉS
+        // de reconciliar es lo que hace que la protección exista de verdad. `pushDirtyWithMerge` ya lo hacía
+        // así, que es por lo que la ruta del 304 sí estaba cubierta.
+        const nextMeta = {
+          updatedAt: Date.now(),
+          etag: writeOutcome.etag,
+          lastRemoteUpdatedAt: Math.max(remoteData.updatedAt, writeOutcome.remoteUpdatedAt),
+        };
+        setMeta(nextMeta);
+        // `SyncConfig` son exactamente estos cuatro campos, así que reconstruirla desde `cfg` es equivalente a
+        // extender la que hubiera guardada, y funciona igual en la conexión inicial, donde no hay ninguna.
+        saveSyncConfig({ ...cfg, etag: nextMeta.etag, lastRemoteUpdatedAt: nextMeta.lastRemoteUpdatedAt });
+        // `reconcileWithLocal` cierra la ventana de la escritura: si el usuario guardó algo mientras `writeGist`
+        // estaba en vuelo, su `_ts` es más reciente y gana, así que el persist del ciclo no lo pisa.
+        persist(reconcileWithLocal(writeOutcome.data, nextMeta.lastRemoteUpdatedAt), nextMeta);
+        transitionTo('idle', { lastReadAt: Date.now(), errorCount: 0, pendingAction: null });
+
+        return { remoteChanges, nextMeta };
+      },
+      [getData, getMeta, persist, setData, setMeta, writeWithConflictRecovery, reconcileWithLocal],
+    );
+
+    /**
      * 304: el remoto no cambió, pero si hay cambios locales pendientes (dirty) hay que empujarlos (C2),
      * re-mergeando contra el remoto fresco. Cierra el ciclo dejando la máquina en 'idle' y el estado 'ok'.
      */
@@ -215,34 +283,10 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
           return;
         }
 
-        const remoteData = remote.data as TabData;
-        const localMeta = getMeta();
-        const localData = getData();
-        transitionTo('merging');
-        const merged = mergeCrdt(localData, localMeta.updatedAt, remoteData, remoteData.updatedAt);
-        const remoteChanges = countRemoteChangesApplied(localData, remoteData, merged.merged);
-        setLastRemoteChangesApplied(remoteChanges);
-
-        if (merged.localNeedsUpdate) setData(merged.merged);
-
-        // Upgrade proactivo: si el remoto estaba en formato viejo, reescribirlo en el actual aunque el merge
-        // no requiera cambios (así el gist queda migrado al primer sync, sin esperar a una edición).
-        let writeOutcome: WriteOutcome = { data: merged.merged, etag: remote.etag || null, remoteUpdatedAt: remoteData.updatedAt };
-        if (merged.remoteNeedsUpdate || remote.wasLegacy) {
-          writeOutcome = await writeWithConflictRecovery(config.token, config.gistId, merged.merged, Date.now());
-        }
-
-        setData(writeOutcome.data);
-        const nextMeta = {
-          updatedAt: Date.now(),
-          etag: writeOutcome.etag,
-          lastRemoteUpdatedAt: Math.max(remoteData.updatedAt, writeOutcome.remoteUpdatedAt),
-        };
-        setMeta(nextMeta);
-        saveSyncConfig({ ...config, etag: nextMeta.etag, lastRemoteUpdatedAt: nextMeta.lastRemoteUpdatedAt });
-        persist(reconcileWithLocal(writeOutcome.data, nextMeta.lastRemoteUpdatedAt), nextMeta);
-        transitionTo('idle', { lastReadAt: Date.now(), errorCount: 0, pendingAction: null });
+        const { remoteChanges } = await applyRemoteCycle(config, remote);
         setStatus('ok');
+        // Ciclo automático: solo se habla si de verdad ha llegado algo (ver el contrato de avisos en
+        // `tests/unit/syncConnectRace.test.ts`).
         if (remoteChanges > 0) {
           onNotice('ok', `Fusión sincronizada correctamente: ${remoteChanges} cambios remotos aplicados`);
         }
@@ -252,7 +296,7 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
       } finally {
         lock.release();
       }
-    }, [getData, getMeta, onNotice, persist, setData, setMeta, writeWithConflictRecovery, pushDirtyWithMerge, reconcileWithLocal, handleSyncError, handleNotModified]);
+    }, [applyRemoteCycle, onNotice, handleSyncError, handleNotModified]);
 
     const startPolling = useCallback(() => {
       if (pollTimerRef.current !== null) return;
@@ -297,36 +341,17 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
       }
 
       const remote = await readGist(cleanToken, cleanGistId);
-      const remoteData = remote.data as TabData;
-      const localMeta = getMeta();
-      const localData = getData();
-      transitionTo('merging');
-      const merged = mergeCrdt(localData, localMeta.updatedAt, remoteData, remoteData.updatedAt);
-      const remoteChanges = countRemoteChangesApplied(localData, remoteData, merged.merged);
-      setLastRemoteChangesApplied(remoteChanges);
+      const { remoteChanges } = await applyRemoteCycle({ token: cleanToken, gistId: cleanGistId }, remote);
 
-      // apply local updates when needed
-      if (merged.localNeedsUpdate) {
-        setData(merged.merged);
-      }
-
-      let writeOutcome: WriteOutcome = { data: merged.merged, etag: remote.etag || null, remoteUpdatedAt: remoteData.updatedAt };
-      if (merged.remoteNeedsUpdate || remote.wasLegacy) {
-        writeOutcome = await writeWithConflictRecovery(cleanToken, cleanGistId, merged.merged, Date.now());
-      }
-
-      setData(writeOutcome.data);
-      saveSyncConfig({ token: cleanToken, gistId: cleanGistId, etag: writeOutcome.etag || remote.etag || null, lastRemoteUpdatedAt: Math.max(remoteData.updatedAt, writeOutcome.remoteUpdatedAt) });
       setConnectedGistId(cleanGistId);
       if (remoteChanges > 0) {
         onNotice('ok', `Sincronización configurada: ${remoteChanges} cambios remotos aplicados`);
       }
-      transitionTo('idle', { lastReadAt: Date.now(), errorCount: 0, pendingAction: null });
       setStatus('ok');
       setToken('');
       setGistId(cleanGistId);
     },
-    [getData, getMeta, onNotice, setData, writeWithConflictRecovery],
+    [applyRemoteCycle, getData, onNotice, writeWithConflictRecovery],
   );
 
   const initializeSync = useCallback(async () => {
@@ -354,42 +379,9 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
         return;
       }
 
-      const localMeta = getMeta();
-      const localData = getData();
-      const remoteData = remote.data as TabData;
-      transitionTo('merging');
-      const merged = mergeCrdt(localData, localMeta.updatedAt, remoteData, remoteData.updatedAt);
-      const remoteChanges = countRemoteChangesApplied(localData, remoteData, merged.merged);
-      setLastRemoteChangesApplied(remoteChanges);
-
-      // apply local updates if needed
-      if (merged.localNeedsUpdate) {
-        setData(merged.merged);
-      }
-
-      const nextMeta = {
-        updatedAt: Date.now(),
-        etag: remote.etag || null,
-        lastRemoteUpdatedAt: remoteData.updatedAt,
-      };
-
-      // Write remote only when needed (o si el remoto estaba en formato viejo → upgrade proactivo)
-      let writeOutcome: WriteOutcome = { data: merged.merged, etag: nextMeta.etag, remoteUpdatedAt: nextMeta.lastRemoteUpdatedAt };
-      if (merged.remoteNeedsUpdate || remote.wasLegacy) {
-        writeOutcome = await writeWithConflictRecovery(config.token, config.gistId, merged.merged, nextMeta.updatedAt);
-      }
-
-      setData(writeOutcome.data);
-      const finalMeta = {
-        updatedAt: Date.now(),
-        etag: writeOutcome.etag || nextMeta.etag,
-        lastRemoteUpdatedAt: Math.max(nextMeta.lastRemoteUpdatedAt, writeOutcome.remoteUpdatedAt),
-      };
-      setMeta(finalMeta);
-      saveSyncConfig({ ...config, etag: finalMeta.etag, lastRemoteUpdatedAt: finalMeta.lastRemoteUpdatedAt });
-      persist(reconcileWithLocal(writeOutcome.data, finalMeta.lastRemoteUpdatedAt), finalMeta);
-      transitionTo('idle', { lastReadAt: Date.now(), errorCount: 0, pendingAction: null });
+      const { remoteChanges } = await applyRemoteCycle(config, remote);
       setStatus('ok');
+      // Arranque automático: solo se habla si ha llegado algo.
       if (remoteChanges > 0) {
         onNotice('ok', `Sincronización inicial completada: ${remoteChanges} cambios remotos aplicados`);
       }
@@ -399,7 +391,7 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
     } finally {
       lock.release();
     }
-  }, [getData, getMeta, onNotice, persist, setData, setMeta, writeWithConflictRecovery, pushDirtyWithMerge, reconcileWithLocal, handleSyncError, handleNotModified]);
+  }, [applyRemoteCycle, onNotice, handleSyncError, handleNotModified]);
 
   const schedulePendingRemoteSync = useCallback(() => {
     if (!pendingRemoteSyncRef.current) return;
@@ -499,40 +491,18 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
         return;
       }
 
-      const remoteData = remote.data as TabData;
-      const localMeta = getMeta();
-      const localData = getData();
-      transitionTo('merging');
-      const merged = mergeCrdt(localData, localMeta.updatedAt, remoteData, remoteData.updatedAt);
-      const remoteChanges = countRemoteChangesApplied(localData, remoteData, merged.merged);
-      setLastRemoteChangesApplied(remoteChanges);
-
-      if (merged.localNeedsUpdate) setData(merged.merged);
-
-      let writeOutcome: WriteOutcome = { data: merged.merged, etag: remote.etag || null, remoteUpdatedAt: remoteData.updatedAt };
-      if (merged.remoteNeedsUpdate || remote.wasLegacy) {
-        writeOutcome = await writeWithConflictRecovery(config.token, config.gistId, merged.merged, Date.now());
-      }
-
-      setData(writeOutcome.data);
-      const nextMeta = {
-        updatedAt: Date.now(),
-        etag: writeOutcome.etag,
-        lastRemoteUpdatedAt: Math.max(remoteData.updatedAt, writeOutcome.remoteUpdatedAt),
-      };
-      setMeta(nextMeta);
-      saveSyncConfig({ ...config, etag: writeOutcome.etag, lastRemoteUpdatedAt: nextMeta.lastRemoteUpdatedAt });
-      persist(reconcileWithLocal(writeOutcome.data, nextMeta.lastRemoteUpdatedAt), nextMeta);
-      transitionTo('idle', { lastReadAt: Date.now(), errorCount: 0, pendingAction: null });
+      const { remoteChanges } = await applyRemoteCycle(config, remote);
 
       setStatus('ok');
+      // Acción explícita del usuario: confirma SIEMPRE, también con cero cambios. A diferencia de los ciclos
+      // automáticos, aquí callar se leería como que el botón no ha hecho nada.
       onNotice('ok', `Fusión sincronizada correctamente: ${remoteChanges} cambios remotos aplicados`);
     } catch (error) {
       handleSyncError(error, { fallback: SYNC_MESSAGES.syncError, logName: 'syncNow' });
     } finally {
       lock.release();
     }
-  }, [getData, getMeta, onNotice, persist, setData, setMeta, writeWithConflictRecovery, pushDirtyWithMerge, reconcileWithLocal, handleSyncError, handleNotModified]);
+  }, [applyRemoteCycle, onNotice, handleSyncError, handleNotModified]);
 
   useEffect(() => {
     const dirtyState = loadSyncDirtyState();

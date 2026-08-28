@@ -2,7 +2,7 @@
 // que fallan si alguien vuelve a calcular días con `toISOString()`: en UTC, un instante de las 22:06Z pertenece
 // al día 11 pase lo que pase, y aquí tiene que pertenecer al 12 en Madrid y al 11 en Los Ángeles.
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { localDayKey, localMonthKey, noonOfLocalDay, startOfLocalDay } from '../../src/core/utils/dateTime';
+import { localDayKey, localMonthKey, localWeekKey, mondayOfWeekKey, noonOfLocalDay, startOfLocalDay } from '../../src/core/utils/dateTime';
 
 /** Ejecuta el cuerpo con la zona indicada. Node revalida la caché de husos al reasignar `TZ`. */
 function enZona<T>(timeZone: string, body: () => T): T {
@@ -100,5 +100,44 @@ describe('localMonthKey', () => {
 
   it('devuelve cadena vacía ante un instante inválido', () => {
     expect(localMonthKey(Number.NaN)).toBe('');
+  });
+});
+
+/**
+ * D5 — `mondayOfWeekKey`, la inversa de `localWeekKey`. Estaba escrita dos veces (en `computeStats` y en el
+ * componente `WeekStreak`) sin un solo test; ahora hay una definición y estos casos.
+ *
+ * Los de frontera son los que importan: la semana 1 y la 53 son justo donde una implementación "a ojo" —contar
+ * semanas desde el 1 de enero— se desvía de ISO-8601.
+ */
+describe('mondayOfWeekKey', () => {
+  const iso = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
+  it('devuelve un lunes', () => {
+    for (const key of ['2026-W01', '2026-W15', '2026-W40', '2024-W53']) {
+      expect(mondayOfWeekKey(key).getDay()).toBe(1);
+    }
+  });
+
+  it('es la inversa de localWeekKey', () => {
+    for (const key of ['2023-W01', '2024-W09', '2025-W30', '2026-W52']) {
+      expect(localWeekKey(mondayOfWeekKey(key))).toBe(key);
+    }
+  });
+
+  it('la semana 1 de 2026 empieza el 29 de diciembre de 2025', () => {
+    // ISO-8601: la semana 1 es la que contiene el primer jueves del año, así que puede empezar en diciembre.
+    expect(iso(mondayOfWeekKey('2026-W01'))).toBe('2025-12-29');
+  });
+
+  it('acepta el año de 53 semanas', () => {
+    // 2020 tuvo 53 semanas ISO; la 53 empieza el 28 de diciembre.
+    expect(iso(mondayOfWeekKey('2020-W53'))).toBe('2020-12-28');
+  });
+
+  it('devuelve una fecha inválida si la clave no tiene la forma esperada', () => {
+    for (const bad of ['', '2026', '2026-W', '2026-W5', 'basura']) {
+      expect(Number.isNaN(mondayOfWeekKey(bad).getTime())).toBe(true);
+    }
   });
 });

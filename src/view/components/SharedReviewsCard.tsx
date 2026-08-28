@@ -1,5 +1,5 @@
 import { memo, useCallback, useEffect, useRef, useState } from 'react';
-import { SHARE_UI } from '../../core/constants/labels';
+import { SHARE_UI } from '../../core/constants/shareLabels';
 import { copyText } from '../../core/utils/clipboard';
 import { Icon } from './Icon';
 import { ConfirmModal } from '../modals/ConfirmModal';

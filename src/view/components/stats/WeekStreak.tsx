@@ -2,7 +2,7 @@ import { memo } from 'react';
 import { useStatsLabels } from './statsVoice';
 import { useChartFocus } from './useChartFocus';
 import { ChartDetail, ChartDetailHint } from './ChartDetail';
-import { localWeekKey } from '../../../core/utils/dateTime';
+import { localWeekKey, mondayOfWeekKey } from '../../../core/utils/dateTime';
 import type { ActivitySummary, WeekActivity } from '../../../core/stats/types';
 
 /** Semanas que se enseñan: un año redondo, repartido en cuatro filas de trece (un trimestre por fila). */
@@ -18,17 +18,6 @@ const TOP = 4;
 
 /** Cuántos niveles de intensidad. Cuatro se distinguen de un vistazo; con más, la rampa se vuelve un degradado. */
 const LEVELS = 4;
-
-/** Lunes de la semana ISO `AAAA-Www`, para poder nombrar su mes. */
-function mondayOf(key: string): Date {
-  const match = /^(\d{4})-W(\d{2})$/.exec(key);
-  if (!match) return new Date(NaN);
-  const [year, week] = [Number(match[1]), Number(match[2])];
-  const jan4 = new Date(year, 0, 4, 12);
-  const monday = new Date(jan4);
-  monday.setDate(jan4.getDate() - ((jan4.getDay() + 6) % 7) + (week - 1) * 7);
-  return monday;
-}
 
 const MONTH = new Intl.DateTimeFormat('es-ES', { month: 'short' });
 const DAY_MONTH = new Intl.DateTimeFormat('es-ES', { day: 'numeric', month: 'short' });
@@ -56,7 +45,7 @@ function windowWeeks(): string[] {
 
 /** Rótulo de una celda: la semana por su lunes ("12 may"), que es más legible que su número ISO. */
 function weekLabel(key: string): string {
-  const monday = mondayOf(key);
+  const monday = mondayOfWeekKey(key);
   return Number.isNaN(monday.getTime()) ? key : `sem. del ${DAY_MONTH.format(monday).replace('.', '')}`;
 }
 
@@ -142,7 +131,7 @@ export const WeekStreak = memo(function WeekStreak({ activity }: { activity: Act
               llenarlo de fechas. */}
           {Array.from({ length: rows }, (_unused, row) => {
             const first = weeks[row * COLUMNS];
-            const monday = first ? mondayOf(first.w) : new Date(NaN);
+            const monday = first ? mondayOfWeekKey(first.w) : new Date(NaN);
             return (
               <text key={row} className="week-heat-row" x="0" y={TOP + row * (CELL + GAP) + CELL / 2 + 4}>
                 {Number.isNaN(monday.getTime()) ? '' : MONTH.format(monday).replace('.', '')}

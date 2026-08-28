@@ -1,5 +1,6 @@
 import { createContext, useContext } from 'react';
-import { UI_MESSAGES, type StatsLabels } from '../../../core/constants/labels';
+import { type StatsLabels } from '../../../core/constants/labels';
+import { STATS_UI } from '../../../core/constants/statsLabels';
 import { STATS_LABELS_OTHER } from '../../../core/constants/statsOtherLabels';
 
 /**
@@ -14,7 +15,7 @@ import { STATS_LABELS_OTHER } from '../../../core/constants/statsOtherLabels';
 export type StatsVoice = 'own' | 'other';
 
 export const STATS_LABELS: Record<StatsVoice, StatsLabels> = {
-  own: UI_MESSAGES.stats,
+  own: STATS_UI,
   other: STATS_LABELS_OTHER,
 };
 
@@ -23,7 +24,7 @@ const StatsLabelsContext = createContext<StatsLabels>(STATS_LABELS.own);
 
 export const StatsLabelsProvider = StatsLabelsContext.Provider;
 
-/** Los textos del panel en la voz que toque. Sustituye al `UI_MESSAGES.stats` de nivel de módulo. */
+/** Los textos del panel en la voz que toque. Sustituye al `STATS_UI` de nivel de módulo. */
 export function useStatsLabels(): StatsLabels {
   return useContext(StatsLabelsContext);
 }

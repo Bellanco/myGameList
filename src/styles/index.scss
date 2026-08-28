@@ -4,6 +4,8 @@
 @use './fonts/dm-sans';
 @use './base';
 @use './layout';
+// El hub social NO se declara aquí: sus estilos exclusivos viven en `social.scss` y los importa `SocialHub.tsx`,
+// de modo que Vite los emite en el chunk perezoso del hub (mismo patrón que `stats.scss` y `admin.scss`).
 @use './forms-and-buttons';
 @use './table';
 @use './overlays-and-responsive';

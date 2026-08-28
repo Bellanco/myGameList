@@ -10,7 +10,7 @@ const shareMocks = vi.hoisted(() => ({ useShareViewModel: vi.fn() }));
 vi.mock('../../src/viewmodel/useShareViewModel', () => shareMocks);
 
 import { ShareReviewButton } from '../../src/view/components/stats/ShareReviewButton';
-import { SHARE_UI } from '../../src/core/constants/labels';
+import { SHARE_UI } from '../../src/core/constants/shareLabels';
 
 const game = {
   id: 99,

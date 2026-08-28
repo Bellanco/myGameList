@@ -3,7 +3,7 @@
 // Quién puede llamar a esto NO lo decide este fichero: lo decide la Pages Function, comprobando en el ID token
 // verificado que el correo es el del administrador y está verificado — el mismo criterio que `firestore.rules`.
 // Aquí no hay ninguna comprobación de permisos porque cualquiera que hiciera aquí una sería cosmética.
-import { initializeFirebaseServices } from './firebaseGateway';
+import { shareAuthHeaders } from './shareRepository';
 import type { ShareQuotaOverride } from '../../core/constants/tiers';
 
 const API_BASE = '/api/share';
@@ -17,24 +17,8 @@ export interface AdminShareRow {
   expiresAt: number;
 }
 
-async function adminHeaders(): Promise<Record<string, string>> {
-  const services = await initializeFirebaseServices();
-  await services?.auth.authStateReady();
-  const user = services?.auth.currentUser;
-  if (!user) {
-    throw new Error('Sin sesión');
-  }
-  const headers: Record<string, string> = {
-    Authorization: `Bearer ${await user.getIdToken()}`,
-    'Content-Type': 'application/json',
-  };
-  const { getAppCheckToken } = await import('./appCheckRepository');
-  const appCheck = await getAppCheckToken();
-  if (appCheck) {
-    headers['X-Firebase-AppCheck'] = appCheck;
-  }
-  return headers;
-}
+/** Las mismas cabeceras que usa cualquier llamada a la API de compartir (ver `shareAuthHeaders`). */
+const adminHeaders = (): Promise<Record<string, string>> => shareAuthHeaders(() => new Error('Sin sesión'));
 
 async function call(path: string, init: RequestInit = {}): Promise<Record<string, unknown>> {
   const response = await fetch(`${API_BASE}${path}`, { ...init, headers: await adminHeaders() });

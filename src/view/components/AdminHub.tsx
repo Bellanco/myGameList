@@ -1,6 +1,6 @@
 import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
-import { ADMIN_PANEL_UI } from '../../core/constants/labels';
+import { ADMIN_PANEL_UI } from '../../core/constants/adminLabels';
 import {
   ADMIN_ONLY_TIER,
   PROFILE_TIERS,
@@ -18,7 +18,7 @@ import type { AdminAnomaly } from '../../model/types/firestore';
 import { useAdminViewModel } from '../../viewmodel/useAdminViewModel';
 import { ConfirmModal } from '../modals/ConfirmModal';
 import { AdminUserShares, type ShareActionRequest } from './AdminUserShares';
-import { ADMIN_SHARES_UI } from '../../core/constants/labels';
+import { ADMIN_SHARES_UI } from '../../core/constants/adminLabels';
 import {
   adminRemoveShare,
   banUser,

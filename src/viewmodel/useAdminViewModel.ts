@@ -8,7 +8,7 @@
 // El repositorio se importa de forma estática y no por la fachada perezosa (`firebaseGateway`): este módulo solo
 // lo carga `AdminHub`, que ya es un chunk `lazy`, así que el SDK no entra en el grafo del arranque.
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ADMIN_PANEL_UI } from '../core/constants/labels';
+import { ADMIN_PANEL_UI } from '../core/constants/adminLabels';
 import { isAdminEmail } from '../core/security/admin';
 import { subscribeSocialAuth } from '../model/repository/firebaseGateway';
 import { ADMIN_ONLY_TIER, PROFILE_TIER_LABELS, type ProfileTier } from '../core/constants/tiers';

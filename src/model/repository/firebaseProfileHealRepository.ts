@@ -91,6 +91,8 @@ export interface LegacyHealResult {
   backedUpToken: boolean;
   /** El id del gist de juegos se sembró en `privateConfig` durante esta pasada. */
   seededGamesGistId: boolean;
+  /** El id del canal social se sembró en `privateConfig` durante esta pasada. */
+  seededSocialGistId: boolean;
   /** Se estableció la identidad pseudónima que faltaba (`userMap` + `privateConfig` + doc público). */
   establishedProfileId: boolean;
   /** Se volvió a sellar la marca de esquema del documento público. */
@@ -104,6 +106,7 @@ function result(status: LegacyHealStatus, details: HealDetails = {}): LegacyHeal
     status,
     backedUpToken: false,
     seededGamesGistId: false,
+    seededSocialGistId: false,
     establishedProfileId: false,
     stampedSchema: false,
     ...details,
@@ -268,18 +271,18 @@ export async function healOwnLegacyProfile(uid: string, email = '', sessionName 
 
     const legacyToken = String(profile.githubToken || '').trim(); // audit-allow: LECTURA del token legacy para ponerlo a salvo cifrado antes de borrarlo
     const legacyGamesGistId = String(profile.gamesGistId || '').trim();
+    const legacySocialGistId = String(profile.socialGistId || '').trim();
     const hasLegacyEmail = Boolean(String(profile.email || '').trim());
     const missingProfileId = !String(profile.profileId || '').trim();
     const staleSchema = Number(profile.schemaVersion || 0) < FIRESTORE_SCHEMA_VERSION;
 
-    if (!legacyToken && !legacyGamesGistId && !hasLegacyEmail && !missingProfileId && !staleSchema) {
+    if (!legacyToken && !legacyGamesGistId && !legacySocialGistId && !hasLegacyEmail && !missingProfileId && !staleSchema) {
       return result('clean');
     }
 
     // ---- 1) PRESERVAR. Si algo de esto falla, se sale sin escribir en el documento público. ----
     const privateConfig = await getPrivateConfig(uid).catch(() => null);
     let backedUpToken = false;
-    let seededGamesGistId = false;
 
     if (legacyToken && !privateConfig?.encryptedGithubToken) {
       // Si el respaldo cifrado falla, propagar: purgar aquí le dejaría sin token en el próximo dispositivo.
@@ -288,12 +291,22 @@ export async function healOwnLegacyProfile(uid: string, email = '', sessionName 
       backedUpToken = true;
     }
 
+    // Los dos ids de gist, con el mismo criterio que el cutover: se rescata a `privateConfig` (owner-only) lo que
+    // solo vive en el documento PÚBLICO, y solo si ahí no hay nada ya. Sin esto, purgarlos del perfil le dejaría
+    // sin el fallback de "Recuperar Gist ID" (el de juegos) y sin su canal (el social) en un dispositivo nuevo.
+    const rescuedIds: Record<string, string> = {};
     if (legacyGamesGistId && !String(privateConfig?.gamesGistId || '').trim()) {
-      // Sin esto, borrar `social.gamesGistId` rompería el fallback de "Recuperar Gist ID" en un dispositivo nuevo.
-      step = 'siembra-gist';
-      await setPrivateConfig(uid, { gamesGistId: legacyGamesGistId }); // audit-allow: destino owner-only (privateConfig), justo lo contrario de un canal público
-      seededGamesGistId = true;
+      rescuedIds.gamesGistId = legacyGamesGistId;
     }
+    if (legacySocialGistId && !String(privateConfig?.socialGistId || '').trim()) {
+      rescuedIds.socialGistId = legacySocialGistId;
+    }
+    if (Object.keys(rescuedIds).length > 0) {
+      step = 'siembra-gist';
+      await setPrivateConfig(uid, rescuedIds); // audit-allow: destino owner-only (privateConfig), justo lo contrario de un canal público
+    }
+    const seededGamesGistId = Boolean(rescuedIds.gamesGistId);
+    const seededSocialGistId = Boolean(rescuedIds.socialGistId);
 
     // Identidad pseudónima: mismo criterio de orden. `resolveStableProfileId` reconcilia primero con el remoto
     // canónico (`privateConfig`/`userMap`) y solo genera uno nuevo si no hay rastro en ninguna parte, así que un
@@ -331,6 +344,10 @@ export async function healOwnLegacyProfile(uid: string, email = '', sessionName 
       uid,
       email: deleteField(), // audit-allow: deleteField() ELIMINA el email legacy, no lo escribe
       'social.gamesGistId': deleteField(),
+      // El id del CANAL SOCIAL también sale del documento público. Faltaba: se purgaba por la otra vía
+      // (`upsertProfileSocialReferences`, al guardar el perfil), así que quien no volvía a guardarlo lo
+      // conservaba indefinidamente — y era justo lo que el cutover deposita aquí para que este saneado lo mueva.
+      'social.gistId': deleteField(),
       'social.githubToken': deleteField(), // audit-allow: deleteField() ELIMINA el token en claro legacy, no lo almacena
       ...(establishedProfileId ? { profileId: establishedProfileId } : {}),
       ...(staleSchema ? { schemaVersion: FIRESTORE_SCHEMA_VERSION } : {}),
@@ -342,6 +359,7 @@ export async function healOwnLegacyProfile(uid: string, email = '', sessionName 
     return result('healed', {
       backedUpToken,
       seededGamesGistId,
+      seededSocialGistId,
       establishedProfileId: Boolean(establishedProfileId),
       stampedSchema: staleSchema,
     });

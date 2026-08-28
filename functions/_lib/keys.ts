@@ -40,6 +40,30 @@ export interface Env {
   ADMIN_EMAIL?: string;
 }
 
+/**
+ * Recorre TODAS las páginas de un `list()` de KV y devuelve sus claves juntas.
+ *
+ * KV pagina siempre: un `limit` alto no es "todo", es "hasta aquí", y lo que pase de ahí se pierde en silencio.
+ * Eso ya mordió en el censo de `/api/share/all`, que pedía vetos y ajustes con `limit: 1000` y sin cursor: pasado
+ * ese número, el panel pintaba como NO vetado a alguien que sí lo estaba. Un fallo de moderación mudo es peor que
+ * uno ruidoso.
+ *
+ * Recibe la función que trae una página en vez del `KVNamespace` para que el bucle se pueda probar sin simular el
+ * almacén (ver la nota de `tests/unit/shareFunctions.test.ts` sobre por qué aquí no se simula KV).
+ */
+export async function drainPages<M>(
+  fetchPage: (cursor?: string) => Promise<KVListResult<M>>,
+): Promise<KVListKey<M>[]> {
+  const keys: KVListKey<M>[] = [];
+  let cursor: string | undefined;
+  do {
+    const page = await fetchPage(cursor);
+    keys.push(...page.keys);
+    cursor = page.list_complete ? undefined : page.cursor;
+  } while (cursor);
+  return keys;
+}
+
 export const shareKey = (token: string): string => `share:${token}`;
 export const ownerKey = (token: string): string => `owner:${token}`;
 export const userSharePrefix = (uid: string): string => `user:${uid}:`;

@@ -1,40 +1,33 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { ensureSyncConfigLoaded, getSyncConfig } from '../model/repository/gistRepository';
-import { createSocialGist, getSocialSyncConfig, mergeSocialGistData, readPublicSocialGistById, readSocialGist, remapSocialActorIds, saveSocialSyncConfig, type SocialGistData, type SocialProfileVisibility, type SocialSharedGame, deleteGist, ensureSecretSocialGist, socialGistHasContent, writeSocialGist } from '../model/repository/socialGistRepository';
+import { createSocialGist, getSocialSyncConfig, readPublicSocialGistById, readSocialGist, remapSocialActorIds, saveSocialSyncConfig, type SocialSharedGame, deleteGist, ensureSecretSocialGist, socialGistHasContent, writeSocialGist } from '../model/repository/socialGistRepository';
 import { reconcileReviewActivity } from '../model/repository/socialActivityReconcile';
 import { invalidateProfileGames, loadForeignProfileGames } from '../model/repository/foreignProfileRepository';
-import { getCachedSocialDirectory, getCachedSocialProfile, getLocalMeta, invalidateCachedSocialDirectory, patchLocalMeta, putCachedSocialDirectory, putCachedSocialProfile, type CachedSocialProfileData } from '../model/repository/indexedDbRepository';
+import { getCachedSocialProfile, getLocalMeta, patchLocalMeta, putCachedSocialProfile, type CachedSocialProfileData } from '../model/repository/indexedDbRepository';
 import { applyProfileVisibility } from '../core/utils/profileVisibility';
 import { isNetworkFailure, isOffline } from '../core/utils/network';
 import { useOnlineStatus } from '../view/hooks/useOnlineStatus';
-import { photoForViewer, resolveViewer, withVisiblePhotos } from '../core/social/photoVisibility';
+import { resolveViewer, withVisiblePhotos } from '../core/social/photoVisibility';
 import { useGenericPhoto } from '../view/hooks/useGenericPhoto';
 import { SOCIAL_UI } from '../core/constants/socialLabels';
 import type { IconName } from '../core/constants/icons';
 import {
   DEFAULT_PROFILE_TIER,
-  PROFILE_TIER_FEED_TTL_MS,
   type ProfileTier,
 } from '../core/constants/tiers';
 import { TAB_IDS, type GameItem, type SyncConfig, type TabData, type TabId } from '../model/types/game';
 import {
-  acceptFriendRequest,
   clearAnalyticsUser,
-  deleteFriendship,
   ensureProfileByEmail,
   repairProfileDisplayName,
   getCurrentSocialAuthUser,
-  getMyFriendships,
   getPrivateConfig,
   purgeOwnPublicGistIds,
   setPrivateConfig,
   healOwnFriendshipIdentity,
-  listSocialDirectory,
-  readFriendship,
   resolveOwnProfile,
   resolveStableProfileId,
-  sendFriendRequest,
   signInWithGoogle,
   signOutSocialUser,
   touchOwnProfileActivityThrottled,
@@ -42,15 +35,21 @@ import {
   type FriendshipSelfInfo,
   type SocialAuthUser,
 } from '../model/repository/firebaseRepository';
-import type { FriendshipView, MyFriendships, RelationshipState } from '../model/types/social';
+// Reexportados: las pantallas del hub y los tests los importan de aquí desde antes de que el ViewModel se
+// partiera, y cambiarles el import no aportaría nada.
+export { isOwnProfileIdentity } from './social/socialIdentity';
+export type { SocialDirectoryEntry } from './social/socialFeed';
+import { isOwnProfileIdentity } from './social/socialIdentity';
+import type { SocialDirectoryEntry } from './social/socialFeed';
+import { buildFriendshipViews } from './social/friendshipViews';
+import { useSocialDirectory } from './social/useSocialDirectory';
+import { resolveGateway } from './social/socialGateway';
+import { useSocialFriendships } from './social/useSocialFriendships';
 import { loadLocalState } from '../model/repository/localRepository';
-import { normalizeTimestamp as toSafeTimestamp } from '../core/utils/normalize';
-import { mapWithConcurrency } from '../core/utils/concurrency';
 import { matchSocialRoute, OWN_PROFILE_ALIAS } from './social/socialRoutes';
 import { useSocialCompose } from './social/useSocialCompose';
 import { useSocialLegalConsent } from './social/useSocialLegalConsent';
 import { DEFAULT_SOCIAL_VISIBILITY, normalizeVisibility, useSocialProfileForm } from './social/useSocialProfileForm';
-import { reviewActorsByGame } from '../core/social/moveActivity';
 import { useSocialFeed } from './social/socialFeed';
 // Re-exportados: las pantallas del hub los importan desde este ViewModel desde antes de la extracción.
 export type {
@@ -60,7 +59,7 @@ export type {
   SocialMoveFeedItem,
   SocialPostFeedItem,
 } from './social/socialFeed';
-import type { SocialActivityFeedItem, SocialMoveFeedItem, SocialPostFeedItem } from './social/socialFeed';
+import type { SocialActivityFeedItem } from './social/socialFeed';
 
 const shouldRequireProfileCreation = (profileExists: boolean, justSavedProfile: boolean): boolean => {
   return !profileExists && !justSavedProfile;
@@ -81,8 +80,6 @@ const isProfileEditorLocked = (mustCreateProfile: boolean, hasBlockingSocialIssu
  * pasen a ser secretos, esta será la diferencia entre "este amigo no ha publicado nada" y "tu token de GitHub ya
  * no vale". Degradar en silencio en el segundo caso deja al usuario con un feed vacío y sin pista de por qué.
  */
-const isGithubCredentialError = (error: unknown): boolean =>
-  error instanceof Error && /\b(401|403)\b/.test(error.message);
 
 const isNotFoundGistError = (error: unknown): boolean => {
   return error instanceof Error && /\b404\b/.test(error.message);
@@ -95,32 +92,25 @@ const isNotFoundGistError = (error: unknown): boolean => {
  * props como `any[]` — precisamente en la vista más caliente y con más ramas del hub (actividad vs publicación).
  * Al exportarlos, el discriminante `kind` deja de ser una convención tácita y pasa a comprobarlo el compilador.
  */
-const FORCED_REFRESH_MIN_MS = 12_000;
 // Tope de perfiles del directorio social, ORDENADOS POR USO RECIENTE (`profiles.updatedAt`). Solo los AMIGOS
 // cuestan una lectura de gist; los demás son index-only (nombre/foto de Firestore), así que subir este número
 // cuesta lecturas de documento de Firestore, no rate-limit de GitHub. Tunable.
-const SOCIAL_DIRECTORY_LIMIT = 50;
 // Antigüedad máxima del último uso de un AMIGO para que su actividad entre en el feed. Un amigo más inactivo
 // sigue en Perfiles y en la lista de amigos, y su perfil/reseñas se abren igual (salen de su gist de JUEGOS);
 // simplemente su actividad no ocupa el feed y no se gasta una lectura de su gist social. Si no se conoce su
 // recencia (no está en el directorio) NO se corta: nunca se oculta contenido por falta de datos. Tunable.
-const FRIEND_ACTIVITY_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
 // C3: el directorio se hidrata leyendo el gist social de cada perfil. En vez de disparar TODAS las lecturas a la
 // vez (ráfaga que puede activar los "secondary rate limits" de GitHub al crecer el directorio), se limita la
 // concurrencia. Las lecturas son baratas (caché de sesión + revalidación ETag/304), así que el coste en latencia
 // de la carga fría es pequeño y se gana robustez frente a 403 por ráfaga.
-const SOCIAL_DIRECTORY_FETCH_CONCURRENCY = 6;
 // Cuánta actividad se conserva por perfil al hidratar el directorio. El feed solo pinta las más recientes, pero la
 // pestaña Reseñas del perfil FECHA Y ORDENA cada reseña con su publicación: con un tope de 40, las reseñas por
 // debajo del corte se quedaban sin fecha publicada y caían al `_ts` del juego (que una importación sella en
 // bloque), así que el listado mostraba fechas distintas del feed. Se iguala al tope del propio gist (320).
-const SOCIAL_ACTIVITY_PER_PROFILE = 320;
 // Las publicaciones sí se quedan en el tope del feed: ninguna vista las lista por separado.
-const SOCIAL_POSTS_PER_PROFILE = 40;
 // F4 — mensajes de lista por perfil. Más alto que las publicaciones porque son varios por juego y el filtro de
 // quien mira puede dejar visible solo una lista: cortar corto dejaría esa lista casi vacía. Y más bajo que la
 // actividad porque ninguna vista los lista aparte del feed.
-const SOCIAL_MOVES_PER_PROFILE = 120;
 
 /**
  * ViewModel del Hub social (M3). Extraído VERBATIM de SocialHub.tsx (god component) sin cambio de
@@ -128,54 +118,8 @@ const SOCIAL_MOVES_PER_PROFILE = 120;
  * queda presentacional y consume este hook.
  */
 
-/**
- * P1 (privacidad index-only): ¿la entrada de perfil/directorio (`entryId`) es la del usuario actual?
- * Compara por IDENTIDAD (uid o profileId), no por `email` — que sale del documento público en el refactor
- * index-only (ST1). Tolera ambas eras sin tocar este código en el cutover: hoy el id del doc es el `uid`; tras
- * el corte index-only será el `profileId`. Ambos se comprueban.
- */
-export function isOwnProfileIdentity(
-  entryId: string | null | undefined,
-  uid: string | null | undefined,
-  ownProfileId: string | null | undefined,
-): boolean {
-  if (!entryId) return false;
-  return (Boolean(uid) && entryId === uid) || (Boolean(ownProfileId) && entryId === ownProfileId);
-}
 
 
-/**
- * Una entrada del DIRECTORIO social ya hidratada: el perfil más lo que se haya podido leer de su gist.
- * Exportado porque las pantallas del hub lo reciben por props; mientras vivía dentro del hook, no había forma
- * de nombrarlo desde fuera y acababan tipadas como `any[]`.
- */
-export type SocialDirectoryEntry = {
-  id: string;
-  uid: string; // uid de Firebase (para relaciones de amistad); hoy coincide con `id`, robusto ante el cutover uid→profileId
-  displayName: string;
-  socialGistId: string;
-  gamesGistId: string;
-  photoURL: string;
-  /**
-   * Rango del perfil, para el punto de color de su tarjeta en el directorio. OBLIGATORIO a propósito: este tipo
-   * LOCAL sombrea al del repositorio, y la hidratación reconstruye cada entrada campo a campo. Al declararlo
-   * requerido, olvidarse de copiarlo en cualquiera de esas reconstrucciones es un error de compilación y no un
-   * directorio entero pintado de bronce.
-   */
-  tier: ProfileTier;
-  activity: SocialActivityFeedItem[];
-  posts: SocialPostFeedItem[];
-  /** F4 — mensajes de lista del perfil, ya enriquecidos con su identidad. */
-  moves: SocialMoveFeedItem[];
-  // Index-only (SocialSharedGame) para perfiles ajenos; para el perfil PROPIO se repuebla con GameItem completos.
-  sharedLists: Partial<Record<TabId, Array<GameItem | SocialSharedGame>>>;
-  visibility: SocialProfileVisibility;
-  /**
-   * Amigo cuyo gist social NO se leyó por inactividad (corte de FRIEND_ACTIVITY_MAX_AGE_MS): su actividad no
-   * entra al feed, pero al abrir su perfil se hidrata bajo demanda para no mostrarlo a medias.
-   */
-  socialSkipped?: boolean;
-};
 
 export function useSocialViewModel(options?: {
   /**
@@ -274,7 +218,6 @@ export function useSocialViewModel(options?: {
   const [profileSearch, setProfileSearch] = useState('');
   const [hydratingProfile, setHydratingProfile] = useState(false);
   const [savingProfile, setSavingProfile] = useState(false);
-  const [loadingDirectory, setLoadingDirectory] = useState(false);
   /**
    * ¿Ha terminado ya una pasada de hidratación del directorio (por caché o por red)?
    *
@@ -287,30 +230,14 @@ export function useSocialViewModel(options?: {
    * Esta marca distingue "el directorio está vacío" de "el directorio aún no se sabe", que es lo que la pantalla
    * necesita para elegir entre el vacío y el esqueleto.
    */
-  const [directorySettled, setDirectorySettled] = useState(false);
   // Directorio CRUDO, tal y como lo deja la hidratación (y como se cachea en IndexedDB). Lo que consume la pantalla
   // es `socialDirectory`, unas líneas más abajo: el mismo directorio con la política de fotos ya aplicada.
-  const [rawSocialDirectory, setSocialDirectory] = useState<SocialDirectoryEntry[]>([]);
   // Listas completas de OTROS perfiles, cargadas bajo demanda (al abrir reseña/perfil) y filtradas por su
   // visibilidad. Clave = id del perfil del directorio. Alimenta getGameItemById y selectedProfileDetail.
   const [foreignGamesByProfile, setForeignGamesByProfile] = useState<Record<string, Record<TabId, GameItem[]>>>({});
   const [loadingForeignProfile, setLoadingForeignProfile] = useState(false);
-  const lastForcedHydrateRef = useRef(0);
   // Cooldown visible del botón "Actualizar": se deshabilita durante FORCED_REFRESH_MIN_MS tras un refresco forzado.
-  const [refreshCoolingDown, setRefreshCoolingDown] = useState(false);
-  const cooldownTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Amistad (aceptación mutua). Todo el estado sale de UNA query `array-contains` (cacheada en el repositorio).
-  const [friendships, setFriendships] = useState<MyFriendships>({ friends: [], incoming: [], outgoing: [], byOtherUid: {} });
-  const [loadingFriendships, setLoadingFriendships] = useState(false);
-  // ¿Se ha resuelto ya el estado de amistad al menos una vez? El feed solo-amigos lee gists SOLO de `friendships.friends`;
-  // si el directorio se hidratara (y cacheara) ANTES de conocer a los amigos, cachearía a los amigos como index-only
-  // (sin actividad) y el feed quedaría en blanco hasta invalidar la caché. Se espera a esta resolución antes de hidratar.
-  const [friendshipsResolved, setFriendshipsResolved] = useState(false);
-  // uid del "otro" sobre el que hay una mutación en curso (para deshabilitar su botón sin bloquear el resto).
-  const [friendshipBusyUid, setFriendshipBusyUid] = useState<string>('');
-  // Confirmación de "dejar de ser amigos" (evita pulsaciones accidentales): guarda a quién se va a eliminar.
-  const [removeFriendTarget, setRemoveFriendTarget] = useState<{ uid: string; name: string } | null>(null);
 
   /**
    * Temporizador que borra el mensaje de estado. Uno SOLO, reutilizado.
@@ -475,9 +402,80 @@ export function useSocialViewModel(options?: {
   // el alta) filtrado por la puerta legal. Todo lo que carga o publica datos sociales cuelga de esto, así que un
   // usuario sin la aceptación vigente no llega a leer ni escribir nada del canal social.
   const socialSpaceOpen = showSocialSpace && legalGateOpen;
+
+  /** Identidad denormalizada que viaja al documento de amistad: nick público, foto publicable y los dos gists. */
+  const buildFriendshipSelfInfo = useCallback((): FriendshipSelfInfo => ({
+    name: profileName.trim(),
+    photo: ownPublishablePhoto,
+    socialGistId: socialCfgGistId,
+    gamesGistId: mainSyncConfig?.gistId || '',
+  }), [ownPublishablePhoto, mainSyncConfig?.gistId, profileName, socialCfgGistId]);
+
+  // Amistades: estado, derivados y mutaciones (ver `social/useSocialFriendships`). Se monta AQUÍ y no más abajo
+  // porque `friendUidSet` lo necesita la política de fotos del directorio, que se calcula a continuación.
+  const {
+    friendships,
+    loadingFriendships,
+    friendshipsResolved,
+    friendshipBusyUid,
+    friendUidSet,
+    pendingIncomingCount,
+    relationshipWith,
+    refreshFriendships,
+    handleAddOrAcceptFriend,
+    handleCancelFriendRequest,
+    handleRejectFriendRequest,
+    handleRemoveFriend,
+    removeFriendTarget,
+    confirmRemoveFriend,
+    cancelRemoveFriend,
+  } = useSocialFriendships({
+    myUid: authUser?.uid,
+    socialGistId: socialCfgGistId,
+    socialSpaceOpen,
+    buildSelfInfo: buildFriendshipSelfInfo,
+    setFeedback,
+    reportFailure,
+  });
   const legalConsentPending = legalConsent.pending;
   const hasReadyAccess = hasSocialSession && hasSocialGist && legalGateOpen;
   const profileEditorLocked = isProfileEditorLocked(mustCreateProfile, hasBlockingSocialIssue);
+
+  /** Visibilidad con la que se interpreta un perfil ajeno que no declara la suya. */
+  const defaultSocialVisibility = DEFAULT_SOCIAL_VISIBILITY;
+
+  /**
+   * ¿Toca cargar directorio en la pantalla actual? Se extrae a un BOOLEANO en vez de mirar `activePanel` porque
+   * el disparo automático depende de él: con el panel entero, navegar feed→perfiles→feed rehidrataba el directorio
+   * en cada salto (lectura de IndexedDB + array nuevo + recálculo completo del feed) sin que hubiera cambiado
+   * absolutamente nada de lo que el directorio contiene. Así solo cambia al entrar o salir del editor de perfil.
+   */
+  const directoryPanelAllows = socialSpaceOpen && activePanel !== 'profile' && !profileEditorLocked;
+  /** Las tres resoluciones asíncronas que la hidratación necesita conocer antes de empezar (ver más abajo). */
+  const directoryInputsReady = friendshipsResolved && tierResolved && ownProfileIdResolved;
+
+  // Directorio y feed: el estado, la caché y las 350 líneas de hidratación viven en `social/useSocialDirectory`.
+  const {
+    rawSocialDirectory,
+    directoryLoading,
+    setDirectorySettled,
+    refreshCoolingDown,
+    hydrateSocialDirectory,
+    patchDirectoryEntries,
+  } = useSocialDirectory({
+    enabled: directoryPanelAllows,
+    inputsReady: directoryInputsReady,
+    authUser,
+    ownProfileId,
+    ownTier,
+    ownPublishablePhoto,
+    socialGistId: socialCfgGistId,
+    friends: friendships.friends,
+    defaultSocialVisibility,
+    setFeedback,
+    reportFailure,
+    setNetworkFailure,
+  });
   const canConnectSocialGist =
     hasMainSync && hasSocialSession && !hasSocialGist && !connecting && !resolvingSocialGist && legalGateOpen;
   const canSignInGoogle = hasMainSync && !hasSocialSession && !signingIn;
@@ -491,14 +489,11 @@ export function useSocialViewModel(options?: {
     void navigate('/social');
   }, [hasReadyAccess, showSocialSpace, navigate]);
 
-  const gatewaySteps = SOCIAL_UI.steps.map((step, index) => ({
-    ...step,
-    done: index === 0 ? hasMainSync : index === 1 ? hasSocialSession : hasSocialGist,
-  }));
-
-  const currentStep = !hasMainSync ? 1 : !hasSocialSession ? 2 : !hasSocialGist ? 3 : 3;
-  const completedSteps = gatewaySteps.filter((step) => step.done).length;
-  const gatewayProgress = Math.round((completedSteps / gatewaySteps.length) * 100);
+  // Pasarela (pasos, paso actual y progreso): derivación pura en `social/socialGateway`.
+  const { steps: gatewaySteps, currentStep, progress: gatewayProgress } = useMemo(
+    () => resolveGateway({ hasMainSync, hasSocialSession, hasSocialGist }),
+    [hasMainSync, hasSocialSession, hasSocialGist],
+  );
 
   const attachExistingSocialGist = useCallback(async (user: SocialAuthUser): Promise<boolean> => {
     if (!mainSyncConfig?.token) {
@@ -590,33 +585,6 @@ export function useSocialViewModel(options?: {
   }, [authUser?.uid]);
 
   // Carga el estado de amistad (amigos + peticiones) con UNA query cacheada. Degrada a vacío si Firestore falla.
-  const refreshFriendships = useCallback(async (forceRefresh = false) => {
-    const uid = authUser?.uid;
-    if (!uid) {
-      setFriendships({ friends: [], incoming: [], outgoing: [], byOtherUid: {} });
-      setFriendshipsResolved(true);
-      return;
-    }
-    try {
-      setLoadingFriendships(true);
-      const next = await getMyFriendships(uid, { forceRefresh });
-      setFriendships(next);
-    } catch {
-      /* best-effort: sin amistad el resto del social sigue usable. */
-    } finally {
-      setLoadingFriendships(false);
-      // Marca resuelto SIEMPRE (incluso si Firestore falló): degrada a feed sin amigos en vez de bloquearlo para siempre.
-      setFriendshipsResolved(true);
-    }
-  }, [authUser?.uid]);
-
-  useEffect(() => {
-    if (!socialSpaceOpen || !authUser?.uid) {
-      return;
-    }
-    void refreshFriendships();
-  }, [socialSpaceOpen, authUser?.uid, refreshFriendships]);
-
   // PRIVACIDAD (saneo al abrir social): una vez por sesión, cuando el nick ya está hidratado, propaga mi nick actual a
   // mis docs de amistad ya existentes (que pudieron guardar un nombre antiguo/real antes del arreglo). Se espera a que
   // el nick esté cargado (`profileName` no vacío) para NO sanear con vacío.
@@ -780,19 +748,6 @@ export function useSocialViewModel(options?: {
   // Tras un cambio de amistad (aceptar/eliminar), el conjunto de amigos cambia y con él la actividad que debe salir
   // en el feed. Se invalida la caché del directorio (feed solo-amigos) y se refresca la amistad; el efecto que
   // depende de `friendships.friends` rehidrata el directorio releyendo los gists de los amigos actuales.
-  const refreshAfterFriendshipChange = useCallback(async () => {
-    if (socialCfgGistId) {
-      await invalidateCachedSocialDirectory(socialCfgGistId);
-    }
-    await refreshFriendships(true);
-  }, [refreshFriendships, socialCfgGistId]);
-
-  // Estado de relación con OTRO usuario (para pintar el botón correcto en tarjetas/perfil).
-  const relationshipWith = useCallback((otherUid: string): RelationshipState => {
-    if (!otherUid) return 'none';
-    return friendships.byOtherUid[otherUid]?.state ?? 'none';
-  }, [friendships]);
-
   // RECIPROCIDAD DE LA FOTO (ver core/social/photoVisibility): quien esconde la suya no ve la de nadie, y la de los
   // demás solo se ve con amistad aceptada. Mithril queda exento.
   //
@@ -826,10 +781,6 @@ export function useSocialViewModel(options?: {
     if (authUser.photoURL && !ownPhotoIsGeneric) return;
     if (showPhoto) setShowPhoto(false);
   }, [authUser?.uid, authUser?.photoURL, ownPhotoIsGeneric, showPhoto, setShowPhoto]);
-  const friendUidSet = useMemo(
-    () => new Set(friendships.friends.map((friend) => friend.otherUid)),
-    [friendships.friends],
-  );
   const socialDirectory = useMemo(
     () =>
       withVisiblePhotos(rawSocialDirectory, {
@@ -840,43 +791,12 @@ export function useSocialViewModel(options?: {
     [rawSocialDirectory, photoViewer, friendUidSet, authUser?.uid, ownProfileId],
   );
 
-  const pendingIncomingCount = friendships.incoming.length;
-
-  // Vista de solicitud para la bandeja: enriquece nombre/foto desde el directorio cuando el doc no los trae aún
-  // (p. ej. una petición ENVIADA no tiene los datos del destinatario hasta que acepta). Directorio ya cargado → gratis.
-  const enrichFriendRequest = useCallback((view: FriendshipView) => {
-    const dir = socialDirectory.find((entry) => entry.uid === view.otherUid);
-    return {
-      docId: view.docId,
-      otherUid: view.otherUid,
-      // PRIVACIDAD: el nombre sale SOLO del nick denormalizado en el doc de amistad (`otherName`). NO se cae al
-      // `displayName` del directorio (Firestore), que puede ser el nombre real; si no hay nick, "Usuario".
-      name: view.otherName || SOCIAL_UI.requests.unknownUser,
-      // La foto pasa por la misma política que el directorio. Consecuencia buscada: en la BANDEJA, la cara de quien
-      // te manda una solicitud no se ve —todavía no hay amistad—, igual que no se ve la suya en el directorio de
-      // descubrimiento del que salió. El nick sigue ahí, que es lo que identifica la petición.
-      photo: photoForViewer({
-        photoURL: view.otherPhoto || dir?.photoURL || '',
-        isOwn: false,
-        isFriend: friendUidSet.has(view.otherUid),
-        viewer: photoViewer,
-      }),
-    };
-  }, [socialDirectory, friendUidSet, photoViewer]);
-
-  const incomingRequests = useMemo(
-    () => friendships.incoming.map(enrichFriendRequest),
-    [friendships.incoming, enrichFriendRequest],
-  );
-  const outgoingRequests = useMemo(
-    () => friendships.outgoing.map(enrichFriendRequest),
-    [friendships.outgoing, enrichFriendRequest],
-  );
-  // Lista de amigos (aceptados) para gestión: se deriva de los docs de amistad, NO del directorio, así SIEMPRE se
-  // puede ver y eliminar a un amigo aunque no esté en el top-30 del directorio o haya desactivado su social.
-  const friendsList = useMemo(
-    () => friendships.friends.map(enrichFriendRequest),
-    [friendships.friends, enrichFriendRequest],
+  // Filas enriquecidas de la bandeja y la gestión. El cálculo vive en `social/friendshipViews` (puro): necesita el
+  // directorio, que a su vez necesita saber quiénes son tus amigos, así que dentro del hook de amistades cerraría
+  // un círculo entre los dos.
+  const { incoming: incomingRequests, outgoing: outgoingRequests, friends: friendsList } = useMemo(
+    () => buildFriendshipViews(friendships, { directory: socialDirectory, friendUids: friendUidSet, viewer: photoViewer }),
+    [friendships, socialDirectory, friendUidSet, photoViewer],
   );
 
   // MISMA fuente que la reconciliación (`reconcileGames`, más abajo): los listados VIVOS de la app, y la foto de
@@ -918,8 +838,6 @@ export function useSocialViewModel(options?: {
   // El requisito de tener un juego completado solo se puede DAR POR INCUMPLIDO si la biblioteca está aquí para
   // comprobarlo. El guardado del perfil lo sigue exigiendo siempre (ahí el usuario está mirando sus propias listas).
   const completedGamesRequirementMet = hasCompletedGames || !libraryPresentLocally;
-
-  const defaultSocialVisibility = DEFAULT_SOCIAL_VISIBILITY;
 
   const visibleSocialDirectory = useMemo(() => {
     // Directorio de descubrimiento: se muestran TODOS los perfiles publicados (el propio excluido). No se filtra por
@@ -1221,19 +1139,12 @@ export function useSocialViewModel(options?: {
       .then((socialData) => {
         if (cancelled) return;
         const showsPhoto = socialData.profile.visibility?.showPhoto !== false;
-        setSocialDirectory((prev) =>
-          prev.map((item) =>
-            item.id === profileDetailId
-              ? {
-                  ...item,
-                  displayName: socialData.profile.name || item.displayName,
-                  photoURL: socialData.profile.photoURL || (showsPhoto ? item.photoURL : ''),
-                  visibility: socialData.profile.visibility || defaultSocialVisibility,
-                  socialSkipped: false,
-                }
-              : item,
-          ),
-        );
+        patchDirectoryEntries((item) => item.id === profileDetailId, {
+          displayName: socialData.profile.name || entry.displayName,
+          photoURL: socialData.profile.photoURL || (showsPhoto ? entry.photoURL : ''),
+          visibility: socialData.profile.visibility || defaultSocialVisibility,
+          socialSkipped: false,
+        });
       })
       .catch(() => {
         /* best-effort: el perfil se queda index-only, como hasta ahora. */
@@ -1242,7 +1153,7 @@ export function useSocialViewModel(options?: {
     return () => {
       cancelled = true;
     };
-  }, [activePanel, defaultSocialVisibility, mainSyncConfig?.token, profileDetailId, socialDirectory]);
+  }, [activePanel, defaultSocialVisibility, mainSyncConfig?.token, profileDetailId, socialDirectory, patchDirectoryEntries]);
 
   // Bloque 4 — refresco manual del perfil abierto: invalida la caché de IndexedDB y relee del gist de listados.
   const refreshProfileDetail = useCallback(async () => {
@@ -1589,385 +1500,10 @@ export function useSocialViewModel(options?: {
   // del efecto de hidratación para que, en un mismo commit, el reinicio corra primero.
   useEffect(() => {
     setDirectorySettled(false);
-  }, [authUser?.uid, socialCfgGistId]);
+  }, [authUser?.uid, socialCfgGistId, setDirectorySettled]);
 
-  /**
-   * ¿Toca cargar directorio en la pantalla actual? Se extrae a un BOOLEANO en vez de mirar `activePanel` porque
-   * el disparo automático depende de él: con el panel entero, navegar feed→perfiles→feed rehidrataba el directorio
-   * en cada salto (lectura de IndexedDB + array nuevo + recálculo completo del feed) sin que hubiera cambiado
-   * absolutamente nada de lo que el directorio contiene. Así solo cambia al entrar o salir del editor de perfil.
-   */
-  const directoryPanelAllows = socialSpaceOpen && activePanel !== 'profile' && !profileEditorLocked;
-  /** Las tres resoluciones asíncronas que la hidratación necesita conocer antes de empezar (ver más abajo). */
-  const directoryInputsReady = friendshipsResolved && tierResolved && ownProfileIdResolved;
 
-  const runDirectoryHydration = useCallback(async (forceRefresh: boolean) => {
-    if (!directoryPanelAllows || !authUser || !socialCfgGistId) {
-      return;
-    }
 
-    // TODO lo que la hidratación necesita saber ANTES de empezar. Las tres cosas se resuelven de forma asíncrona y
-    // ninguna admite un valor provisional:
-    //   - amigos: el feed es solo-amigos; hidratar sin conocerlos CACHEARÍA a los amigos como index-only (sin
-    //     actividad) y el feed quedaría en blanco hasta invalidar la caché;
-    //   - rango: de él sale el TTL con el que se evalúa la caché (30 min en bronce, 60 s en mithril);
-    //   - profileId propio: con él se decide cuál es la entrada PROPIA y, por tanto, si se lee el gist social de
-    //     uno mismo. Sin él, la propia actividad se queda fuera del propio feed.
-    //
-    // Va SEPARADO de la guarda de arriba porque las dos salidas significan cosas distintas para la pantalla: la de
-    // arriba es "aquí no hay directorio que cargar" (pasarela, editor de perfil) y esta es "todavía no se puede
-    // saber". Solo esta última debe seguir contando como carga (ver `directoryLoading`).
-    if (!directoryInputsReady) {
-      return;
-    }
-
-    // SIN RED, un refresco forzado no puede traer nada: lo único que haría es tirar la caché de sesión, fallar en
-    // la primera lectura y dejar el feed vacío con un error. Se avisa y se conserva lo que ya está en pantalla.
-    if (forceRefresh && isOffline()) {
-      setFeedback('warn', SOCIAL_UI.status.offline, 'long');
-      return;
-    }
-
-    // Anti-spam del refresco forzado: cada `forceRefresh` relee el directorio + ~50 gists sociales (cuenta contra el
-    // rate-limit del token aunque devuelvan 304). Si se pulsa "Actualizar feed" repetidamente en pocos segundos, se
-    // ignora y se avisa. Las cargas automáticas (forceRefresh=false) usan la caché de sesión y no entran aquí.
-    if (forceRefresh) {
-      const now = Date.now();
-      if (now - lastForcedHydrateRef.current < FORCED_REFRESH_MIN_MS) {
-        setFeedback('warn', SOCIAL_UI.status.refreshThrottled);
-        return;
-      }
-      lastForcedHydrateRef.current = now;
-      // Deshabilita el botón durante el cooldown (en vez de solo avisar al pulsar).
-      setRefreshCoolingDown(true);
-      if (cooldownTimerRef.current) clearTimeout(cooldownTimerRef.current);
-      cooldownTimerRef.current = setTimeout(() => setRefreshCoolingDown(false), FORCED_REFRESH_MIN_MS);
-    } else {
-      // Caché persistente: si el directorio sigue fresco (el TTL lo pone el rango), se sirve de IndexedDB sin releer
-      // ningún gist social. Evita el coste N+1 al navegar feed→detalle→feed o al re-renderizar.
-      //
-      // El `catch` no es decorativo: esta lectura vive FUERA del try/catch de más abajo, así que un IndexedDB roto
-      // (modo privado, cuota, base corrupta) hacía que la función entera rechazara antes de asentar el directorio
-      // —y con el esqueleto atado a ese asentamiento, la pantalla se quedaba cargando para siempre—. Sin caché
-      // utilizable lo correcto es seguir por la vía de red, que es justo lo que hace tratarla como un fallo.
-      const cachedDirectory = await getCachedSocialDirectory<SocialDirectoryEntry>(
-        socialCfgGistId,
-        PROFILE_TIER_FEED_TTL_MS[ownTier],
-      ).catch(() => null);
-      if (cachedDirectory) {
-        setSocialDirectory(cachedDirectory);
-        setDirectorySettled(true);
-        return;
-      }
-    }
-
-    try {
-      setLoadingDirectory(true);
-      const dirEntries = await listSocialDirectory(SOCIAL_DIRECTORY_LIMIT, { forceRefresh });
-      const socialConfig = getSocialSyncConfig();
-      // Foto propia inmediata (de la sesión Google) aunque aún no se haya re-guardado el perfil; respeta showPhoto y
-      // descarta el avatar genérico de Google.
-      const ownPhotoURL = ownPublishablePhoto;
-      // FEED SOLO-AMIGOS: el gist social (actividad/publicaciones) SOLO se lee de tus amigos y del propio.
-      // Los no-amigos quedan index-only (nombre/foto del directorio Firestore), sin lectura de gist → gran ahorro de
-      // llamadas. Como el feed deriva su actividad de estas entradas, mostrar solo la de amigos es automático.
-      const friendUids = new Set(friendships.friends.map((friend) => friend.otherUid));
-      // Para un AMIGO, el `otherSocialGistId` del doc de amistad es la fuente FIABLE de su gist social: se sanea en
-      // cada apertura del hub (healOwnFriendshipIdentity), mientras que el `social.gistId` del directorio Firestore
-      // solo se reescribe al re-publicar el perfil y puede quedar anclado a un gist viejo/vacío. Si divergen, leer el
-      // del directorio hace que sus reseñas nunca aparezcan en el feed (bug del amigo con perfil sin re-publicar).
-      const friendSocialGistByUid = new Map(
-        friendships.friends
-          .filter((friend) => friend.otherSocialGistId)
-          .map((friend) => [friend.otherUid, friend.otherSocialGistId] as const),
-      );
-      // L1: mismo razonamiento para el gist de JUEGOS. Ya no se publica en el directorio (era legible por cualquier
-      // usuario autenticado), así que para un amigo la fuente es su doc de amistad; del directorio solo puede venir
-      // el valor legacy de un perfil aún sin purgar. Un no-amigo se queda sin lista de juegos, que es lo pretendido.
-      const friendGamesGistByUid = new Map(
-        friendships.friends
-          .filter((friend) => friend.otherGamesGistId)
-          .map((friend) => [friend.otherUid, friend.otherGamesGistId] as const),
-      );
-
-      // Escalabilidad (>30 amigos): el directorio de descubrimiento está capado a SOCIAL_DIRECTORY_LIMIT y solo lista
-      // perfiles con `social.enabled`. Para que NINGÚN amigo desaparezca del feed / detalle / gestión por caer fuera
-      // de ese tope (o por desactivar social), se sintetizan entradas para los amigos ausentes usando los datos
-      // DENORMALIZADOS del doc de amistad (nombre/foto/gists). Así los amigos son autosuficientes e independientes del
-      // tope del directorio; los pendientes NO se sintetizan (no son amigos aún).
-      const directoryUids = new Set(dirEntries.map((entry) => entry.uid));
-      const friendOnlyEntries = friendships.friends
-        // No se exige `otherSocialGistId`: sin él el amigo desaparecía por completo del hub (ni perfil ni gestión).
-        // Entra igual como index-only; sin gist social simplemente no aporta actividad.
-        .filter((friend) => !directoryUids.has(friend.otherUid))
-        .map((friend) => ({
-          id: friend.otherUid,
-          uid: friend.otherUid,
-          displayName: friend.otherName || 'Usuario',
-          photoURL: friend.otherPhoto || '',
-          socialGistId: friend.otherSocialGistId,
-          gamesGistId: friend.otherGamesGistId,
-          // Amigo fuera del directorio: no hay marca de recencia. 0 = desconocida → no se le aplica el corte.
-          updatedAt: 0,
-          // El doc de amistad no denormaliza el rango, así que un amigo que caiga fuera del tope del directorio
-          // se pinta como bronce. Preferible a una lectura extra por amigo solo para un punto de color.
-          tier: DEFAULT_PROFILE_TIER,
-        }));
-      const entries = [...dirEntries, ...friendOnlyEntries];
-
-      // Lecturas que fallaron por credencial en esta hidratación. Se cuentan para avisar UNA vez al final, en vez
-      // de por cada amigo ilegible.
-      let credentialFailures = 0;
-
-      const withProfiles = await mapWithConcurrency(
-        entries,
-        SOCIAL_DIRECTORY_FETCH_CONCURRENCY,
-        async (entry) => {
-          // Identidad, NO gist. Antes se comparaba `entry.socialGistId === socialCfgGistId`, y al dejar de
-          // publicarse ese id en el perfil la comparación pasó a ser siempre falsa: la propia entrada dejaba de
-          // reconocerse como propia, se trataba como la de un desconocido y la actividad de uno desaparecía de su
-          // feed. `isOwnProfileIdentity` compara uid/profileId, que es lo que de verdad identifica.
-          const isOwnEntry = isOwnProfileIdentity(entry.id, authUser?.uid, ownProfileId);
-          const isFriend = friendUids.has(entry.uid);
-          // Amigo: se prefiere su gist social saneado desde la amistad, porque el del directorio solo se
-          // reescribe al re-publicar el perfil y puede quedar anclado a un gist viejo/vacío.
-          const friendSocialGistId = isFriend ? friendSocialGistByUid.get(entry.uid) : undefined;
-          // Para la entrada PROPIA la fuente es el gist de la sesión: el directorio ya no publica el id, así que
-          // sin esto uno se quedaba sin ningún candidato que leer y su propia actividad no aparecía en su feed.
-          const ownSocialGistId = isOwnEntry ? socialCfgGistId : '';
-          const effectiveSocialGistId = ownSocialGistId || friendSocialGistId || entry.socialGistId;
-          // Gist de juegos: la amistad manda; `entry.gamesGistId` solo trae valor en perfiles legacy sin purgar.
-          const effectiveGamesGistId = (isFriend ? friendGamesGistByUid.get(entry.uid) : undefined) || entry.gamesGistId;
-          // …pero la deriva puede ir en CUALQUIER dirección (publicar una reseña sanea el directorio y no los docs
-          // de amistad; abrir el hub sanea ambos), así que preferir a ciegas una de las dos fuentes deja al amigo
-          // sin actividad la mitad de las veces. Si divergen, se leen las DOS y se fusionan: una lectura extra en
-          // un caso raro a cambio de que su actividad no dependa de qué saneado corrió último.
-          const socialGistCandidates = [effectiveSocialGistId, ...(isFriend ? [entry.socialGistId] : [])]
-            .map((id) => String(id || '').trim())
-            .filter((id, index, all) => Boolean(id) && all.indexOf(id) === index);
-          // CORTE POR INACTIVIDAD: la actividad de un amigo que hace mucho que no usa la app no ocupa el feed (ni
-          // gasta una lectura de su gist). Solo se aplica si conocemos su recencia; el perfil propio nunca se corta.
-          const lastActiveAt = Number(entry.updatedAt || 0);
-          const isInactiveFriend =
-            !isOwnEntry && lastActiveAt > 0 && Date.now() - lastActiveAt > FRIEND_ACTIVITY_MAX_AGE_MS;
-          if (!isOwnEntry && (!isFriend || isInactiveFriend || socialGistCandidates.length === 0)) {
-            // Index-only, sin leer su gist. Solo nombre/foto (Firestore); sin actividad ni publicaciones.
-            return {
-              id: entry.id,
-              uid: entry.uid,
-              displayName: entry.displayName || 'Usuario',
-              // El id EFECTIVO (el del doc de amistad), no el del directorio: este último ya no se publica, y
-              // dejarlo vacío rompía la hidratación bajo demanda del perfil de un amigo inactivo, que se salta
-              // cuando no hay gist al que ir.
-              socialGistId: effectiveSocialGistId,
-              gamesGistId: effectiveGamesGistId,
-              photoURL: entry.photoURL || '',
-              tier: entry.tier,
-              activity: [],
-              posts: [],
-              moves: [],
-              // Marca para el detalle: es un amigo cuyo gist social NO se ha leído por inactividad. Al abrir su
-              // perfil se hidrata bajo demanda (nombre/visibilidad/foto) para que no se vea a medias.
-              socialSkipped: isFriend && isInactiveFriend,
-              sharedLists: {},
-              visibility: defaultSocialVisibility,
-            };
-          }
-          try {
-            // Lectura de los candidatos (normalmente uno). Con varios, se fusiona: perfil del más reciente y
-            // unión de actividad/publicaciones. Un candidato ilegible (gist borrado) no invalida al otro; si
-            // fallan todos, se propaga para caer en el `catch` de degradación index-only.
-            const reads = await Promise.allSettled(
-              socialGistCandidates.map((id) => readPublicSocialGistById(id, socialConfig?.token || null)),
-            );
-            const readable = reads
-              .map((result, index) => ({ result, gistId: socialGistCandidates[index] }))
-              .filter((item): item is { result: PromiseFulfilledResult<SocialGistData>; gistId: string } =>
-                item.result.status === 'fulfilled');
-            if (readable.length === 0) {
-              throw (reads[0] as PromiseRejectedResult | undefined)?.reason ?? new Error('Gist social ilegible');
-            }
-            const socialData = readable
-              .map((item) => item.result.value)
-              .reduce((merged, current) => mergeSocialGistData(merged, current));
-            // Id efectivo: el del payload más reciente de los legibles (el que "gana" la fusión del perfil).
-            const resolvedSocialGistId = readable
-              .reduce((best, item) => (item.result.value.updatedAt > best.result.value.updatedAt ? item : best))
-              .gistId;
-            // Foto: prioridad al gist (con su visibilidad); si no la trae, se usa la del directorio de Firestore
-            // (`entry.photoURL`) SIEMPRE QUE el usuario no la tenga desactivada. Esto propaga la foto de quienes
-            // tienen el gist antiguo (sin photoURL) sin esperar a que reentren. Para uno mismo, fallback a la sesión.
-            const showsPhoto = socialData.profile.visibility?.showPhoto !== false;
-            const resolvedPhoto = socialData.profile.photoURL || (showsPhoto ? entry.photoURL || '' : '') || (isOwnEntry ? ownPhotoURL : '');
-            // E3: el canal social NO lee el gist de juegos EN CRUDO de otros usuarios (privacidad + desacople del
-            // formato del gist de juegos). Las listas compartidas quedan index-only vacías para perfiles ajenos: el
-            // detalle de actividad muestra nombre/rating/snippet del propio evento social; los metadatos
-            // (plataformas/géneros) solo se ven para los juegos PROPIOS (fallback local en getGameItemById).
-            const sharedLists: Partial<Record<TabId, SocialSharedGame[]>> = {};
-
-            const activity = socialData.activity
-              .map((activityEntry) => {
-                const now = Date.now();
-                const createdAt = toSafeTimestamp(activityEntry.createdAt, now);
-                const updatedAt = toSafeTimestamp(activityEntry.updatedAt, createdAt);
-
-                return {
-                  ...activityEntry,
-                  createdAt,
-                  updatedAt,
-                  profileId: entry.id,
-                  profileDisplayName: socialData.profile.name || entry.displayName || 'Usuario',
-                  socialGistId: resolvedSocialGistId,
-                  photoURL: resolvedPhoto,
-                };
-              })
-              .slice(0, SOCIAL_ACTIVITY_PER_PROFILE);
-
-            const posts = (socialData.posts || [])
-              .map((postEntry) => {
-                const now = Date.now();
-                const createdAt = toSafeTimestamp(postEntry.createdAt, now);
-                const updatedAt = toSafeTimestamp(postEntry.updatedAt, createdAt);
-
-                return {
-                  ...postEntry,
-                  createdAt,
-                  updatedAt,
-                  profileId: entry.id,
-                  profileDisplayName: socialData.profile.name || entry.displayName || 'Usuario',
-                  socialGistId: resolvedSocialGistId,
-                  photoURL: resolvedPhoto,
-                };
-              })
-              .slice(0, SOCIAL_POSTS_PER_PROFILE);
-
-            // F4 — mensajes de lista. Se enriquecen con la identidad del autor como la actividad, y su `at` se
-            // copia a `updatedAt` para que el feed pueda mezclarlos sin saber de qué campo sale la fecha de cada
-            // tipo. NO se filtran aquí por la preferencia de quien mira: el directorio se cachea 30 minutos, así
-            // que guardarlo filtrado obligaría a releer todos los gists al encender una lista.
-            //
-            // `reviewActorId` sale de cruzarlos con la actividad de ESTE perfil, que acabamos de leer del mismo
-            // gist: es lo que permite que el nombre del juego ofrezca el gesto de abrir solo cuando hay algo que
-            // abrir, sin una lectura más y sin averiguarlo al pulsar. Y es el `actorProfileId` del gist, no el id
-            // de esta entrada del directorio: son identificadores distintos de la misma persona y el detalle
-            // resuelve por el primero (ver `reviewActorsByGame`).
-            const reviewActors = reviewActorsByGame(socialData.activity);
-            const moves = (socialData.moves || [])
-              .map((moveEntry) => ({
-                ...moveEntry,
-                updatedAt: toSafeTimestamp(moveEntry.at, Date.now()),
-                reviewActorId: reviewActors.get(moveEntry.gameId),
-                profileId: entry.id,
-                profileDisplayName: socialData.profile.name || entry.displayName || 'Usuario',
-                socialGistId: resolvedSocialGistId,
-                photoURL: resolvedPhoto,
-              }))
-              .slice(0, SOCIAL_MOVES_PER_PROFILE);
-
-            return {
-              id: entry.id,
-              uid: entry.uid,
-              displayName: socialData.profile.name || entry.displayName || 'Usuario',
-              socialGistId: resolvedSocialGistId,
-              gamesGistId: effectiveGamesGistId,
-              photoURL: resolvedPhoto,
-              // El rango sale SIEMPRE de Firestore (lo asigna el admin), nunca del gist: el gist lo controla su
-              // dueño y podría auto-otorgarse mithril editándolo a mano.
-              tier: entry.tier,
-              activity,
-              posts,
-              moves,
-              sharedLists,
-              visibility: socialData.profile.visibility || defaultSocialVisibility,
-            };
-          } catch (readError) {
-            // Se distingue "no se pudo leer" de "no se pudo leer POR EL TOKEN": lo segundo no es un gist vacío,
-            // es una credencial que ya no vale, y el usuario tiene que enterarse (abajo se avisa una sola vez).
-            if (isGithubCredentialError(readError)) {
-              credentialFailures += 1;
-            }
-            return {
-              id: entry.id,
-              uid: entry.uid,
-              displayName: entry.displayName || 'Usuario',
-              socialGistId: effectiveSocialGistId,
-              gamesGistId: effectiveGamesGistId,
-              // Gist ilegible: usamos la foto del directorio de Firestore (best-effort) para no perderla.
-              photoURL: entry.photoURL || (isOwnEntry ? ownPhotoURL : ''),
-              tier: entry.tier,
-              activity: [],
-              posts: [],
-              moves: [],
-              sharedLists: {},
-              visibility: defaultSocialVisibility,
-            };
-          }
-        },
-      );
-
-      setSocialDirectory(withProfiles);
-      // La red ha respondido: se retira el aviso de falta de conexión (que pudo encenderlo un fallo anterior con
-      // `navigator.onLine` diciendo que había red).
-      setNetworkFailure(false);
-      if (credentialFailures > 0) {
-        setFeedback('warn', SOCIAL_UI.status.socialReadUnauthorized);
-      }
-
-      void putCachedSocialDirectory(socialCfgGistId, withProfiles);
-    } catch (error) {
-      if (isNetworkFailure(error) || isOffline()) {
-        // Fallo de RED: en vez de vaciar el feed, se rescata la caché AUNQUE HAYA CADUCADO. Es el mismo criterio
-        // que aplica `getCachedSocialDirectory` cuando el navegador admite estar sin red, y hace falta aquí porque
-        // `navigator.onLine` puede decir que la hay (wifi sin salida) y entonces el TTL sí la habría descartado.
-        // Con caché o sin ella, lo que NO se hace es cambiar "esto es de hace un rato" por "aquí no hay nada".
-        const stale = await getCachedSocialDirectory<SocialDirectoryEntry>(socialCfgGistId, 0, { allowExpired: true })
-          .catch(() => null);
-        if (stale && stale.length > 0) {
-          setSocialDirectory(stale);
-        }
-      } else {
-        setSocialDirectory([]);
-      }
-      reportFailure(error, SOCIAL_UI.status.firestoreCheckFailed, 'warn');
-    } finally {
-      setLoadingDirectory(false);
-      // También en el camino de error: un fallo de red deja el directorio vacío DE VERDAD (con su aviso), y dejarlo
-      // sin asentar mantendría el esqueleto girando para siempre.
-      setDirectorySettled(true);
-    }
-    // `mainSyncConfig?.token` ESTUVO aquí y no lo usa nadie en el cuerpo (el token sale de `getSocialSyncConfig()`
-    // en el momento de leer): lo único que hacía era rehidratar el directorio entero cuando la configuración de
-    // sync terminaba de descifrarse. Se retira.
-  }, [directoryPanelAllows, directoryInputsReady, authUser, ownProfileId, defaultSocialVisibility, friendships.friends, ownTier, reportFailure, setFeedback, socialCfgGistId, ownPublishablePhoto]);
-
-  /**
-   * Pasada en vuelo, para que dos disparos no se solapen.
-   *
-   * Podían solaparse de verdad: al guardar el perfil se navega al feed Y se llama a la hidratación a mano, y la
-   * reconciliación de actividad dispara otra al terminar. Dos pasadas simultáneas son ~50 lecturas de gist por
-   * duplicado (las deduplica la caché de sesión del repositorio, pero no el trabajo de CPU ni la reescritura de la
-   * caché de IndexedDB) y, sobre todo, la que acaba primero apaga el esqueleto mientras la otra sigue corriendo.
-   */
-  const directoryHydrationRef = useRef<Promise<void> | null>(null);
-
-  const hydrateSocialDirectory = useCallback(async (forceRefresh = false) => {
-    const pending = directoryHydrationRef.current;
-    // Un refresco FORZADO (botón "Actualizar") sí quiere una pasada nueva: su anti-spam ya lo acota aparte.
-    if (pending && !forceRefresh) {
-      return pending;
-    }
-
-    const run = runDirectoryHydration(forceRefresh);
-    directoryHydrationRef.current = run;
-    try {
-      await run;
-    } finally {
-      // Solo se limpia si sigue siendo LA pasada en curso: un forzado posterior pudo relevarla.
-      if (directoryHydrationRef.current === run) {
-        directoryHydrationRef.current = null;
-      }
-    }
-  }, [runDirectoryHydration]);
 
   // F3 — compositor de publicaciones. Se invoca AQUÍ, y no arriba con el resto del estado, porque necesita
   // `hydrateSocialDirectory` para refrescar el feed tras publicar; el orden de los hooks es estable entre renders,
@@ -2076,10 +1612,10 @@ export function useSocialViewModel(options?: {
     };
   }, [authUser?.uid, hydrateSocialDirectory, profileEditorLocked, reconcileGames, socialSpaceOpen, socialCfgGistId]);
 
-  // Limpia los timers al desmontar (evita setState tras desmontar): el del cooldown del botón "Actualizar" y el
-  // que borra el mensaje de estado. El hub se desmonta al salir de /social, así que esto ocurre a menudo.
+  // Limpia al desmontar el timer que borra el mensaje de estado (evita setState tras desmontar). El hub se
+  // desmonta al salir de /social, así que esto ocurre a menudo. El del cooldown del botón "Actualizar" lo limpia
+  // `useSocialDirectory`, que es quien lo arma.
   useEffect(() => () => {
-    if (cooldownTimerRef.current) clearTimeout(cooldownTimerRef.current);
     if (statusTimerRef.current) clearTimeout(statusTimerRef.current);
   }, []);
 
@@ -2137,7 +1673,7 @@ export function useSocialViewModel(options?: {
           });
           // 2a — sin re-hidratación completa (~30 lecturas). La foto propia ya se ve por el fallback de sesión; solo
           // parcheamos la entrada propia del directorio en memoria por si acaso, y la del directorio cacheado.
-          setSocialDirectory((prev) => prev.map((e) => (e.socialGistId === socialCfgGistId ? { ...e, photoURL: target } : e)));
+          patchDirectoryEntries((e) => e.socialGistId === socialCfgGistId, { photoURL: target });
         }
         // Propaga (o borra) también la foto en el doc público de Firestore (la lee el directorio), para que los demás
         // lo vean sin depender de que cada uno reabra la app y re-publique su gist. Best-effort.
@@ -2149,7 +1685,7 @@ export function useSocialViewModel(options?: {
         // best-effort: no bloquea el feed; se reintenta la próxima sesión.
       }
     })();
-  }, [authUser?.uid, authUser?.photoURL, ownPhotoIsGeneric, ownPhotoVerdictPending, showPhoto, socialSpaceOpen, socialCfgGistId]);
+  }, [authUser?.uid, authUser?.photoURL, ownPhotoIsGeneric, ownPhotoVerdictPending, showPhoto, socialSpaceOpen, socialCfgGistId, patchDirectoryEntries]);
 
   // Auto-crear gist social si tenemos token + Google pero no gist
   useEffect(() => {
@@ -2328,106 +1864,6 @@ export function useSocialViewModel(options?: {
   // PRIVACIDAD: el nombre es SIEMPRE el nick del perfil social (`profileName`), NUNCA el nombre real de Google
   // (`authUser.displayName`) ni el email. Si el nick aún no está cargado, se guarda vacío (el lector muestra un
   // placeholder) en lugar de filtrar el nombre real.
-  const buildFriendshipSelfInfo = useCallback((): FriendshipSelfInfo => ({
-    name: profileName.trim(),
-    photo: ownPublishablePhoto,
-    socialGistId: socialCfgGistId,
-    gamesGistId: mainSyncConfig?.gistId || '',
-  }), [ownPublishablePhoto, mainSyncConfig?.gistId, profileName, socialCfgGistId]);
-
-  // "Añadir amigo" o "Aceptar": según el estado actual. Si no hay relación, envía petición; si el otro ya me pidió,
-  // acepta. Maneja la carrera de petición simultánea (el doc canónico ya existe) releyendo y aceptando si procede.
-  const handleAddOrAcceptFriend = useCallback(async (otherUid: string) => {
-    const myUid = authUser?.uid;
-    if (!myUid || !otherUid || myUid === otherUid) {
-      return;
-    }
-    const relation = relationshipWith(otherUid);
-    if (relation === 'friends' || relation === 'outgoing') {
-      return; // ya gestionado desde otra acción específica.
-    }
-    try {
-      setFriendshipBusyUid(otherUid);
-      if (relation === 'incoming') {
-        const docId = friendships.byOtherUid[otherUid]?.docId;
-        if (docId) {
-          await acceptFriendRequest({ myUid, docId, self: buildFriendshipSelfInfo() });
-          await refreshAfterFriendshipChange();
-          setFeedback('ok', SOCIAL_UI.status.friendRequestAccepted);
-        }
-        return;
-      }
-      try {
-        await sendFriendRequest({ myUid, otherUid, self: buildFriendshipSelfInfo() });
-        await refreshAfterFriendshipChange();
-        setFeedback('ok', SOCIAL_UI.status.friendRequestSent);
-      } catch (error) {
-        // Carrera: el doc canónico ya existía. Releer y decidir.
-        const existing = await readFriendship(myUid, otherUid);
-        if (existing?.state === 'incoming') {
-          await acceptFriendRequest({ myUid, docId: existing.docId, self: buildFriendshipSelfInfo() });
-          await refreshAfterFriendshipChange();
-          setFeedback('ok', SOCIAL_UI.status.friendRequestAccepted);
-          return;
-        }
-        if (existing) {
-          await refreshAfterFriendshipChange(); // ya outgoing/friends: reflejar el estado real sin error ruidoso.
-          return;
-        }
-        throw error;
-      }
-    } catch (error) {
-      reportFailure(error, SOCIAL_UI.status.friendActionFailed);
-    } finally {
-      setFriendshipBusyUid('');
-    }
-  }, [authUser?.uid, buildFriendshipSelfInfo, friendships, refreshAfterFriendshipChange, relationshipWith, reportFailure, setFeedback]);
-
-  // Borra el doc de amistad (cancelar enviada / rechazar recibida / eliminar amistad), con mensaje específico.
-  const deleteRelationship = useCallback(async (otherUid: string, successMsg: string) => {
-    const myUid = authUser?.uid;
-    const docId = friendships.byOtherUid[otherUid]?.docId;
-    if (!myUid || !docId) {
-      return;
-    }
-    try {
-      setFriendshipBusyUid(otherUid);
-      await deleteFriendship({ myUid, docId });
-      await refreshAfterFriendshipChange();
-      setFeedback('ok', successMsg);
-    } catch (error) {
-      reportFailure(error, SOCIAL_UI.status.friendActionFailed);
-    } finally {
-      setFriendshipBusyUid('');
-    }
-  }, [authUser?.uid, friendships, refreshAfterFriendshipChange, reportFailure, setFeedback]);
-
-  const handleCancelFriendRequest = useCallback(
-    (otherUid: string) => deleteRelationship(otherUid, SOCIAL_UI.status.friendRequestCanceled),
-    [deleteRelationship],
-  );
-  const handleRejectFriendRequest = useCallback(
-    (otherUid: string) => deleteRelationship(otherUid, SOCIAL_UI.status.friendRequestRejected),
-    [deleteRelationship],
-  );
-  // "Dejar de ser amigos": NO borra directamente; abre un diálogo de confirmación (evita pulsaciones sin querer).
-  const handleRemoveFriend = useCallback((otherUid: string) => {
-    const view = friendships.byOtherUid[otherUid];
-    const name = view ? enrichFriendRequest(view).name : SOCIAL_UI.requests.unknownUser;
-    setRemoveFriendTarget({ uid: otherUid, name });
-  }, [friendships, enrichFriendRequest]);
-
-  const cancelRemoveFriend = useCallback(() => setRemoveFriendTarget(null), []);
-
-  const confirmRemoveFriend = useCallback(async () => {
-    const target = removeFriendTarget;
-    if (!target) {
-      return;
-    }
-    setRemoveFriendTarget(null);
-    await deleteRelationship(target.uid, SOCIAL_UI.status.friendRemoved);
-  }, [removeFriendTarget, deleteRelationship]);
-
   const primaryGatewayCta = useMemo(() => {
     type GatewayCta = {
       icon: IconName;
@@ -2480,18 +1916,6 @@ export function useSocialViewModel(options?: {
     return null;
   }, [canConnectSocialGist, canSignInGoogle, connecting, handleCreateSocialGist, handleSignInGoogle, hasMainSync, navigate, resolvingSocialGist, signingIn]);
 
-  /**
-   * Lo que las pantallas deben tratar como "el directorio está cargando": la hidratación en vuelo MÁS la ventana
-   * previa que no cubría nadie (amistades + caché de IndexedDB). Sin esto, el feed y el directorio pintaban su
-   * estado vacío durante esa ventana y luego saltaban al esqueleto: carga → vacío → carga → contenido.
-   *
-   * Las condiciones replican las guardas de `hydrateSocialDirectory` que significan "aquí no hay directorio que
-   * cargar" (pasarela sin sesión/canal, editor de perfil bloqueado por un error). Sin ellas, un estado en el que la
-   * hidratación nunca llega a correr dejaría el esqueleto girando indefinidamente en lugar de mostrar el aviso.
-   */
-  const directoryLoading =
-    loadingDirectory ||
-    (!directorySettled && socialSpaceOpen && !profileEditorLocked && Boolean(authUser) && Boolean(socialCfgGistId));
 
   return {
     navigate,

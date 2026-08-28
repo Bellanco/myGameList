@@ -1,8 +1,8 @@
 import { memo, type CSSProperties } from 'react';
-import { UI_MESSAGES } from '../../../core/constants/labels';
+import { STATS_UI } from '../../../core/constants/statsLabels';
 import type { TagBucket } from '../../../core/stats/types';
 
-const L = UI_MESSAGES.stats.reviews;
+const L = STATS_UI.reviews;
 
 /** Filas por lado. Más abajo la cola es de etiquetas escritas una o dos veces, que no dicen nada. */
 const MAX_ROWS = 8;

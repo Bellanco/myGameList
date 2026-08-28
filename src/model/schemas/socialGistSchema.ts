@@ -3,14 +3,17 @@
 // (p.ej. un `review`/`score`/`hours` filtrado por un bug) hace fallar la validación ANTES de subir el gist.
 // Modernización (Fase 6.1): integridad + privacidad verificadas en runtime con Zod.
 import { z } from 'zod';
+import { SOCIAL_NAME_MAX, SOCIAL_SNIPPET_MAX, SOCIAL_TEXT_MAX } from '../../core/constants/socialLimits';
+import { POST_HARD_CEILING } from '../../core/constants/tiers';
 
 const tabId = z.enum(['c', 'v', 'e', 'p']);
 
 // ST8 — cotas de longitud/rango (defensa positiva): un bug aguas arriba o un gist construido a mano no puede
-// publicar texto sin límite ni un rating fuera de rango. Generosas: nunca rechazan datos válidos actuales.
-const NAME_MAX = 500;
-const SNIPPET_MAX = 200; // el snippet real es ≤160 (SNIPPET_MAX_CHARS); margen por trimEnd/legacy
-const TEXT_MAX = 5000;
+// publicar texto sin límite ni un rating fuera de rango. Viven en `core/constants/socialLimits` porque la
+// LECTURA de un gist ajeno tiene que aplicar las mismas y no puede cargar Zod para conocerlas.
+const NAME_MAX = SOCIAL_NAME_MAX;
+const SNIPPET_MAX = SOCIAL_SNIPPET_MAX;
+const TEXT_MAX = SOCIAL_TEXT_MAX;
 const ratingSchema = z.number().min(0).max(5);
 // F2: nota fina 0–100 (aditiva, opcional). Clientes antiguos ignoran el campo al leer; el espejo `rating` 0–5 se mantiene.
 const gradeSchema = z.number().min(0).max(100).nullable().optional();
@@ -75,7 +78,12 @@ const post = z.strictObject({
   id: z.string(),
   authorProfileId: z.string(),
   authorName: z.string().max(NAME_MAX),
-  text: z.string().max(TEXT_MAX),
+  // El TECHO DEL RANGO, no el tope genérico de texto. `TEXT_MAX` son 5.000 caracteres, pero oro publica hasta
+  // 10.000 y mithril hasta 100.000: con el tope genérico, este esquema RECHAZABA la publicación de los dos
+  // rangos altos en cuanto pasaban de 5.000 — y como la validación aborta la escritura del gist, la publicación
+  // fallaba entera. Cuánto puede escribir cada uno lo decide `PROFILE_TIER_POST_MAX_LENGTH`; aquí solo se
+  // comprueba que nadie pase del techo absoluto.
+  text: z.string().max(POST_HARD_CEILING),
   createdAt: z.number(),
   updatedAt: z.number(),
 });

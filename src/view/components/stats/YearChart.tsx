@@ -1,5 +1,5 @@
 import { memo, useId, type CSSProperties } from 'react';
-import { UI_MESSAGES } from '../../../core/constants/labels';
+import { STATS_UI } from '../../../core/constants/statsLabels';
 import { useStatsLabels } from './statsVoice';
 import type { YearBucket } from '../../../core/stats/types';
 import type { YearMetric } from '../../../viewmodel/useStatsViewModel';
@@ -48,7 +48,7 @@ const BANDS = [5, 4, 3, 2, 1].map((stars) => ({
   key: `s${stars}`,
   // Las estrellas de la tira no tienen voz —son una escala, no una frase—, así que este rótulo no depende de si
   // el panel habla de ti o de otra persona y puede quedarse a nivel de módulo.
-  label: UI_MESSAGES.stats.years.quality.stars(stars),
+  label: STATS_UI.years.quality.stars(stars),
   of: (bucket: YearBucket) => bucket.stars[stars - 1],
 }));
 

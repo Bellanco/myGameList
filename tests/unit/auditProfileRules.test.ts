@@ -21,10 +21,14 @@ describe('auditoría previa al despliegue de reglas', () => {
   it('los límites del script son los mismos que exigen las reglas', () => {
     expect(rules).toContain(`request.resource.data.displayName.size() <= ${LIMITS.displayName}`);
     expect(rules).toContain(`request.resource.data.profileId.size() <= ${LIMITS.profileId}`);
-    expect(rules).toContain(`request.resource.data.email.size() <= ${LIMITS.email}`);
     expect(rules).toContain(`request.resource.data.photoURL.size() <= ${LIMITS.photoURL}`);
     expect(rules).toContain(`request.resource.data.social.etag.size() <= ${LIMITS.etag}`);
     expect(rules).toContain(`request.resource.data.social.gistId.size() <= ${LIMITS.gistId}`);
+    // L1: `email` ya no está en la allowlist del perfil público, así que tampoco puede quedar su validación de
+    // tamaño; si volviera, es que alguien lo readmitió sin querer.
+    expect(rules).not.toContain('request.resource.data.email');
+    // S2: la allowlist de subclaves de `social` es lo que cierra la puerta a `githubToken` y a las inventadas.
+    expect(rules).toContain('request.resource.data.social.keys().hasOnly(["enabled", "etag", "gistId", "gamesGistId"])');
   });
 
   describe('perfiles', () => {
@@ -35,10 +39,10 @@ describe('auditoría previa al despliegue de reglas', () => {
         photoURL: 'https://lh3.googleusercontent.com/a/foto', social: { enabled: true, etag: null },
         updatedAt: 1, createdAt: 1000, tier: 'gold',
       })).toEqual([]);
-      // Legacy: email y restos en `social` que las escrituras nuevas ya no mandan.
+      // Los ids de gist siguen admitidos: el cutover del panel los deposita a propósito para que el saneado del
+      // dueño los mueva a `privateConfig` (ver la nota de `profileSocialIsSane` en las reglas).
       expect(auditProfile({
-        uid: 'uid-a', email: 'legacy@example.com', photoURL: '',
-        social: { enabled: true, gistId: 'gs', gamesGistId: 'gg', githubToken: 'ghp_x' },
+        uid: 'uid-a', photoURL: '', social: { enabled: true, gistId: 'gs', gamesGistId: 'gg' },
       })).toEqual([]);
       // `updatedAt` como Timestamp del Admin SDK (tiene toMillis), no como número.
       expect(auditProfile({ uid: 'uid-a', updatedAt: { toMillis: () => 1 } })).toEqual([]);
@@ -50,7 +54,14 @@ describe('auditoría previa al despliegue de reglas', () => {
       expect(motivos({ ...perfilValido(), displayName: big(121) })).toMatch(/displayName/);
       expect(motivos({ ...perfilValido(), displayName: 123 })).toMatch(/displayName/);
       expect(motivos({ ...perfilValido(), profileId: big(129) })).toMatch(/profileId/);
-      expect(motivos({ ...perfilValido(), email: big(321) })).toMatch(/email/);
+      // L1 — el correo ya no cabe en el perfil público: su sola PRESENCIA rechaza la escritura, tenga el tamaño
+      // que tenga. Un documento así quedaría congelado, que es lo que esta auditoría existe para avisar antes.
+      expect(motivos({ ...perfilValido(), email: 'legacy@example.com' })).toMatch(/email ya no cabe/);
+      // Y se marca como NUEVO: es la etiqueta que decide si el informe deja desplegar o no.
+      expect(auditProfile({ ...perfilValido(), email: 'a@b.c' }).every((p) => p.nuevo)).toBe(true);
+      // S2 — el token en claro es la subclave que más importa cerrar: hoy pasaba porque nadie la miraba.
+      expect(motivos({ uid: 'uid-a', social: { enabled: true, githubToken: 'ghp_x' } })).toMatch(/githubToken/);
+      expect(motivos({ uid: 'uid-a', social: { enabled: true, loQueSea: 1 } })).toMatch(/loQueSea/);
       expect(motivos({ ...perfilValido(), schemaVersion: 'uno' })).toMatch(/schemaVersion/);
       expect(motivos({ ...perfilValido(), updatedAt: 'ayer' })).toMatch(/updatedAt/);
       expect(motivos({ ...perfilValido(), photoURL: 'javascript:alert(1)' })).toMatch(/no es https/);

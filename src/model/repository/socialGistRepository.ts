@@ -8,7 +8,10 @@
 //
 // Lo común a los dos canales (base de la API, cabecera de auth, formateo de errores, borrado de gists) vive en
 // `githubGistApi`.
-import { isValidGistId, isValidGithubToken, isValidHttpUrl, safePostText } from '../../core/security/sanitize';
+import { isValidGistId, isValidGithubToken, isValidHttpUrl, safePostText, safeTrim } from '../../core/security/sanitize';
+// Topes de longitud del canal social: los MISMOS que exige el esquema Zod al escribir. Aquí gobiernan la
+// LECTURA de un gist ajeno, que no pasa por ese esquema (ver `core/constants/socialLimits`).
+import { SOCIAL_ID_MAX, SOCIAL_NAME_MAX, SOCIAL_TEXT_MAX } from '../../core/constants/socialLimits';
 import {
   MOVE_ACTIVITY_MAX,
   buildMoveId,
@@ -368,7 +371,7 @@ const MAX_SHARED_YEARS = 24;
 function normalizeSocialSharedGame(value: unknown): SocialSharedGame | null {
   const source = (value && typeof value === 'object' ? value : {}) as Record<string, unknown>;
   const id = Number(source.id || 0);
-  const name = String(source.name || '').trim();
+  const name = safeTrim(source.name, SOCIAL_NAME_MAX);
   if (id <= 0 || !name) {
     return null;
   }
@@ -462,7 +465,7 @@ function normalizeRecommendationItems(items: unknown): SocialRecommendationEntry
       const record = (entry && typeof entry === 'object' ? entry : {}) as Record<string, unknown>;
       const gameId = Number(record.gameId || 0);
       const fromProfileId = pickLegacyFromId(record);
-      const gameName = String(record.gameName || '').trim();
+      const gameName = safeTrim(record.gameName, SOCIAL_NAME_MAX);
       const createdAt = normalizeTimestamp(record.createdAt, Date.now());
       const updatedAt = normalizeTimestamp(record.updatedAt, createdAt);
 
@@ -497,7 +500,7 @@ function normalizeActivityItems(items: unknown): SocialActivityEntry[] {
       const type = normalizeActivityType(record.type);
       const actorProfileId = pickLegacyActorId(record);
       const gameId = Number(record.gameId || 0);
-      const gameName = String(record.gameName || '').trim();
+      const gameName = safeTrim(record.gameName, SOCIAL_NAME_MAX);
       const createdAt = normalizeTimestamp(record.createdAt, Date.now());
       const updatedAt = normalizeTimestamp(record.updatedAt, createdAt);
 
@@ -505,19 +508,19 @@ function normalizeActivityItems(items: unknown): SocialActivityEntry[] {
         return null;
       }
 
-      const key = String(record.key || buildActivityKey(actorProfileId, gameId, type)).trim() || buildActivityKey(actorProfileId, gameId, type);
+      const key = safeTrim(record.key, SOCIAL_ID_MAX) || buildActivityKey(actorProfileId, gameId, type);
 
       return {
-        id: String(record.id || buildActivityKey(actorProfileId, gameId, type)),
+        id: safeTrim(record.id, SOCIAL_ID_MAX) || buildActivityKey(actorProfileId, gameId, type),
         key,
         type,
         actorProfileId,
-        actorName: String(record.actorName || '').trim(),
+        actorName: safeTrim(record.actorName, SOCIAL_NAME_MAX),
         gameId,
         gameName,
         rating: clampRating(record.rating),
         grade: resolveGrade({ grade: typeof record.grade === 'number' ? record.grade : null, score: clampRating(record.rating) }), // audit-allow: 'score' es el nombre del argumento de resolveGrade, no un campo publicado; lo que se escribe es 'rating' (ya redondeado)
-        recommendationText: String(record.recommendationText || '').trim(),
+        recommendationText: safeTrim(record.recommendationText, SOCIAL_TEXT_MAX),
         snippet: buildReviewSnippet(pickLegacyReviewText(record)),
         createdAt,
         updatedAt,
@@ -546,9 +549,9 @@ function normalizePostItems(items: unknown): SocialPostEntry[] {
       }
 
       return {
-        id: String(record.id || `${authorProfileId}:${createdAt}`),
+        id: safeTrim(record.id, SOCIAL_ID_MAX) || `${authorProfileId}:${createdAt}`,
         authorProfileId,
-        authorName: String(record.authorName || '').trim(),
+        authorName: safeTrim(record.authorName, SOCIAL_NAME_MAX),
         text,
         createdAt,
         updatedAt,
@@ -580,7 +583,7 @@ function normalizeMoveItems(items: unknown): SocialMoveEntry[] {
   for (const item of items) {
     const record = (item && typeof item === 'object' ? item : {}) as Record<string, unknown>;
     const gameId = Number(record.gameId || 0);
-    const gameName = String(record.gameName || '').trim().slice(0, 500);
+    const gameName = safeTrim(record.gameName, SOCIAL_NAME_MAX);
     const tab = normalizeTabId(record.tab);
     const at = Number(record.at);
 
@@ -836,6 +839,15 @@ export function upsertPost(data: SocialGistData, input: UpsertPostInput): Social
   };
 }
 
+/**
+ * Puerta de pruebas de {@link normalizeSocialGistData}. Se exporta SOLO para los tests: es la frontera por la que
+ * entra el gist de otra persona, y su comportamiento con datos hostiles no se puede comprobar de otra forma sin
+ * simular la red entera.
+ */
+export function normalizeSocialGistForTests(data: unknown): SocialGistData {
+  return normalizeSocialGistData(data);
+}
+
 function normalizeSocialGistData(data: unknown): SocialGistData {
   const source = (data && typeof data === 'object' ? data : {}) as Partial<SocialGistData>;
   const profile = (source.profile && typeof source.profile === 'object' ? source.profile : {}) as Partial<SocialGistProfile>;
@@ -852,7 +864,7 @@ function normalizeSocialGistData(data: unknown): SocialGistData {
 
   const normalized: SocialGistData = {
     profile: {
-      name: String(profile.name || '').trim(),
+      name: safeTrim(profile.name, SOCIAL_NAME_MAX),
       private: Boolean(profile.private),
       // `favoriteGames` de gists antiguos se descarta aquí a propósito: el producto ya no tiene favoritos, así que
       // no vuelve a escribirse y desaparece del gist en la primera reescritura del perfil.

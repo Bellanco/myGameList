@@ -113,3 +113,24 @@ export function localWeekKey(value: number | Date): string {
   const week = 1 + Math.round((anchor.getTime() - firstThursday.getTime()) / (7 * 24 * 60 * 60 * 1000));
   return `${isoYear}-W${pad2(week)}`;
 }
+
+/**
+ * Lunes (a mediodía) de la semana ISO `AAAA-Www`. Inversa de {@link localWeekKey}.
+ *
+ * Vive aquí y no en quien la usa porque estaba escrita DOS veces —en `core/stats/computeStats` y en el
+ * componente `stats/WeekStreak`—, byte a byte. Que un cálculo de fecha viviera en un componente contradice
+ * además `.github/instructions/view.instructions.md`.
+ *
+ * Mediodía por el mismo motivo que `localWeekKey`: así ningún cambio de horario de verano puede mover el día.
+ * Devuelve una fecha inválida si la clave no tiene la forma esperada, para que quien la use pueda decidir.
+ */
+export function mondayOfWeekKey(key: string): Date {
+  const match = /^(\d{4})-W(\d{2})$/.exec(key);
+  if (!match) return new Date(NaN);
+  const [year, week] = [Number(match[1]), Number(match[2])];
+  // El 4 de enero cae siempre en la semana 1; desde su lunes se avanzan las semanas que falten.
+  const jan4 = new Date(year, 0, 4, 12);
+  const monday = new Date(jan4);
+  monday.setDate(jan4.getDate() - ((jan4.getDay() + 6) % 7) + (week - 1) * 7);
+  return monday;
+}

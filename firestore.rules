@@ -31,8 +31,11 @@ service cloud.firestore {
     function profileWriteIsValid() {
       return request.resource.data.uid is string
         && request.resource.data.uid == request.auth.uid
+        // SIN `email`: el perfil lo lee cualquier usuario autenticado, así que el correo no puede vivir aquí. El
+        // código dejó de escribirlo hace tiempo y los documentos que lo arrastraban ya se purgaron
+        // (`scripts/purge-profile-pii.js`); esto cierra la puerta para que no pueda volver por una regresión.
         && request.resource.data.keys().hasOnly([
-          "schemaVersion", "uid", "profileId", "email", "displayName", "photoURL", "social", "updatedAt", "tier",
+          "schemaVersion", "uid", "profileId", "displayName", "photoURL", "social", "updatedAt", "tier",
           "createdAt"
         ])
         && profileTierNotSelfAssigned()
@@ -66,8 +69,6 @@ service cloud.firestore {
             || (request.resource.data.profileId is string && request.resource.data.profileId.size() <= 128))
         && (!("displayName" in request.resource.data)
             || (request.resource.data.displayName is string && request.resource.data.displayName.size() <= 120))
-        && (!("email" in request.resource.data)
-            || (request.resource.data.email is string && request.resource.data.email.size() <= 320))
         && profilePhotoUrlIsSafe()
         && (!("social" in request.resource.data) || profileSocialIsSane())
         && (!("updatedAt" in request.resource.data)
@@ -87,8 +88,25 @@ service cloud.firestore {
             && (request.resource.data.photoURL == "" || request.resource.data.photoURL.matches("^https://.+")));
     }
 
+    // El mapa `social` del perfil PÚBLICO, que lee cualquier usuario autenticado.
+    //
+    // EL CAMBIO ES EL `hasOnly`. Antes se validaban las subclaves conocidas pero una inesperada pasaba, así que un
+    // cliente hostil podía inflar su propio perfil con lo que quisiera —del tamaño que quisiera— y todo el
+    // directorio se lo descargaba. De paso cierra la puerta a `social.githubToken`: el PAT en claro que
+    // arrastraban los perfiles antiguos hoy PASA esta validación, porque sin allowlist nadie lo mira.
+    //
+    // `gistId` y `gamesGistId` SIGUEN admitidos, y no por descuido. El código ya no los escribe (los purga con
+    // `deleteField()`), pero el cutover de identidad del panel los DEPOSITA a propósito en el documento canónico
+    // para que el saneado del dueño los mueva a `privateConfig` y los borre: es lo único que salva esos ids
+    // cuando el perfil huérfano desaparece. Prohibirlos aquí dejaría ese documento congelado —su dueño no podría
+    // escribir nada— justo en el caso que el cutover viene a rescatar.
+    //
+    // OJO, hueco conocido: `firebaseProfileHealRepository` purga `social.gamesGistId` y `social.githubToken`,
+    // pero NO `social.gistId`; ese se limpia por la otra vía (`upsertProfileSocialReferences`, al guardar el
+    // perfil). Cerrar `gistId` aquí exige antes que el saneado lo rescate y lo purgue como hace con los otros.
     function profileSocialIsSane() {
       return request.resource.data.social is map
+        && request.resource.data.social.keys().hasOnly(["enabled", "etag", "gistId", "gamesGistId"])
         && (!("enabled" in request.resource.data.social) || request.resource.data.social.enabled is bool)
         && (!("etag" in request.resource.data.social)
             || request.resource.data.social.etag == null
