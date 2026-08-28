@@ -498,6 +498,19 @@ export function useSocialViewModel(options?: {
   const legalConsentPending = legalConsent.pending;
   const hasReadyAccess = hasSocialSession && hasSocialGist && legalGateOpen;
   const profileEditorLocked = isProfileEditorLocked(mustCreateProfile, hasBlockingSocialIssue);
+
+  /** Visibilidad con la que se interpreta un perfil ajeno que no declara la suya. */
+  const defaultSocialVisibility = DEFAULT_SOCIAL_VISIBILITY;
+
+  /**
+   * ¿Toca cargar directorio en la pantalla actual? Se extrae a un BOOLEANO en vez de mirar `activePanel` porque
+   * el disparo automático depende de él: con el panel entero, navegar feed→perfiles→feed rehidrataba el directorio
+   * en cada salto (lectura de IndexedDB + array nuevo + recálculo completo del feed) sin que hubiera cambiado
+   * absolutamente nada de lo que el directorio contiene. Así solo cambia al entrar o salir del editor de perfil.
+   */
+  const directoryPanelAllows = socialSpaceOpen && activePanel !== 'profile' && !profileEditorLocked;
+  /** Las tres resoluciones asíncronas que la hidratación necesita conocer antes de empezar (ver más abajo). */
+  const directoryInputsReady = friendshipsResolved && tierResolved && ownProfileIdResolved;
   const canConnectSocialGist =
     hasMainSync && hasSocialSession && !hasSocialGist && !connecting && !resolvingSocialGist && legalGateOpen;
   const canSignInGoogle = hasMainSync && !hasSocialSession && !signingIn;
@@ -863,8 +876,6 @@ export function useSocialViewModel(options?: {
   // El requisito de tener un juego completado solo se puede DAR POR INCUMPLIDO si la biblioteca está aquí para
   // comprobarlo. El guardado del perfil lo sigue exigiendo siempre (ahí el usuario está mirando sus propias listas).
   const completedGamesRequirementMet = hasCompletedGames || !libraryPresentLocally;
-
-  const defaultSocialVisibility = DEFAULT_SOCIAL_VISIBILITY;
 
   const visibleSocialDirectory = useMemo(() => {
     // Directorio de descubrimiento: se muestran TODOS los perfiles publicados (el propio excluido). No se filtra por
@@ -1536,15 +1547,6 @@ export function useSocialViewModel(options?: {
     setDirectorySettled(false);
   }, [authUser?.uid, socialCfgGistId]);
 
-  /**
-   * ¿Toca cargar directorio en la pantalla actual? Se extrae a un BOOLEANO en vez de mirar `activePanel` porque
-   * el disparo automático depende de él: con el panel entero, navegar feed→perfiles→feed rehidrataba el directorio
-   * en cada salto (lectura de IndexedDB + array nuevo + recálculo completo del feed) sin que hubiera cambiado
-   * absolutamente nada de lo que el directorio contiene. Así solo cambia al entrar o salir del editor de perfil.
-   */
-  const directoryPanelAllows = socialSpaceOpen && activePanel !== 'profile' && !profileEditorLocked;
-  /** Las tres resoluciones asíncronas que la hidratación necesita conocer antes de empezar (ver más abajo). */
-  const directoryInputsReady = friendshipsResolved && tierResolved && ownProfileIdResolved;
 
   const runDirectoryHydration = useCallback(async (forceRefresh: boolean) => {
     if (!directoryPanelAllows || !authUser || !socialCfgGistId) {
