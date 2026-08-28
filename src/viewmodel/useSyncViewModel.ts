@@ -392,42 +392,9 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
         return;
       }
 
-      const localMeta = getMeta();
-      const localData = getData();
-      const remoteData = remote.data as TabData;
-      transitionTo('merging');
-      const merged = mergeCrdt(localData, localMeta.updatedAt, remoteData, remoteData.updatedAt);
-      const remoteChanges = countRemoteChangesApplied(localData, remoteData, merged.merged);
-      setLastRemoteChangesApplied(remoteChanges);
-
-      // apply local updates if needed
-      if (merged.localNeedsUpdate) {
-        setData(merged.merged);
-      }
-
-      const nextMeta = {
-        updatedAt: Date.now(),
-        etag: remote.etag || null,
-        lastRemoteUpdatedAt: remoteData.updatedAt,
-      };
-
-      // Write remote only when needed (o si el remoto estaba en formato viejo → upgrade proactivo)
-      let writeOutcome: WriteOutcome = { data: merged.merged, etag: nextMeta.etag, remoteUpdatedAt: nextMeta.lastRemoteUpdatedAt };
-      if (merged.remoteNeedsUpdate || remote.wasLegacy) {
-        writeOutcome = await writeWithConflictRecovery(config.token, config.gistId, merged.merged, nextMeta.updatedAt);
-      }
-
-      setData(writeOutcome.data);
-      const finalMeta = {
-        updatedAt: Date.now(),
-        etag: writeOutcome.etag || nextMeta.etag,
-        lastRemoteUpdatedAt: Math.max(nextMeta.lastRemoteUpdatedAt, writeOutcome.remoteUpdatedAt),
-      };
-      setMeta(finalMeta);
-      saveSyncConfig({ ...config, etag: finalMeta.etag, lastRemoteUpdatedAt: finalMeta.lastRemoteUpdatedAt });
-      persist(reconcileWithLocal(writeOutcome.data, finalMeta.lastRemoteUpdatedAt), finalMeta);
-      transitionTo('idle', { lastReadAt: Date.now(), errorCount: 0, pendingAction: null });
+      const { remoteChanges } = await applyRemoteCycle(config, remote);
       setStatus('ok');
+      // Arranque automático: solo se habla si ha llegado algo.
       if (remoteChanges > 0) {
         onNotice('ok', `Sincronización inicial completada: ${remoteChanges} cambios remotos aplicados`);
       }
@@ -437,7 +404,7 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
     } finally {
       lock.release();
     }
-  }, [getData, getMeta, onNotice, persist, setData, setMeta, writeWithConflictRecovery, pushDirtyWithMerge, reconcileWithLocal, handleSyncError, handleNotModified]);
+  }, [applyRemoteCycle, onNotice, handleSyncError, handleNotModified]);
 
   const schedulePendingRemoteSync = useCallback(() => {
     if (!pendingRemoteSyncRef.current) return;
