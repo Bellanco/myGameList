@@ -157,7 +157,12 @@ async function handleNavigation(request, url) {
 
   try {
     const response = await fetch(controller ? new Request(target, { signal: controller.signal }) : target);
-    if (isCacheable(response, request)) {
+    // El shell se refresca desde cualquier navegación MENOS las de `/r/:token`. Esas las sirve una Function que
+    // reescribe `<title>` y las etiquetas `og:` con los datos de UNA reseña concreta (ver `functions/r/[token]`),
+    // así que guardarla bajo la clave `/` deja el shell de todo el mundo firmado con la reseña de otra persona.
+    // No afecta a las previsualizaciones —los agentes de los chats no pasan por el service worker— pero el
+    // documento que se sirve offline no tiene por qué llevar los metadatos del último enlace que se abrió.
+    if (!url.pathname.startsWith('/r/') && isCacheable(response, request)) {
       await cache.put('/', response.clone());
     }
     return response;
