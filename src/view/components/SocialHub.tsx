@@ -176,6 +176,33 @@ const SocialHubInner = memo(function SocialHubInner({
     />
   );
 
+  // Identidad del perfil abierto en el detalle, y los manejadores que dependen de ella.
+  //
+  // Van MEMOIZADOS y antes del primer `return` condicional. `SocialProfileDetailScreen` está envuelta en `memo`,
+  // pero recibía cinco flechas creadas en el sitio: props nuevas en cada render, así que ese `memo` no llegaba a
+  // ahorrar un solo repintado. Con la identidad estable, la pantalla solo se vuelve a pintar cuando cambia algo
+  // que de verdad le incumbe.
+  const detailId = (selectedProfileDetail as { id?: string })?.id || profileDetailId;
+  const detailUid = (selectedProfileDetail as { uid?: string })?.uid || '';
+
+  const toggleDetailReviews = useCallback(
+    () => (profileReviewsView ? closeProfileReviews(detailId) : openProfileReviews(detailId)),
+    [profileReviewsView, closeProfileReviews, openProfileReviews, detailId],
+  );
+  const openDetailReview = useCallback(
+    (gameId: number) => openProfileReviewDetail(detailId, gameId),
+    [openProfileReviewDetail, detailId],
+  );
+  const addOrAcceptDetailFriend = useCallback(
+    () => handleAddOrAcceptFriend(detailUid),
+    [handleAddOrAcceptFriend, detailUid],
+  );
+  const cancelDetailFriendRequest = useCallback(
+    () => handleCancelFriendRequest(detailUid),
+    [handleCancelFriendRequest, detailUid],
+  );
+  const removeDetailFriend = useCallback(() => handleRemoveFriend(detailUid), [handleRemoveFriend, detailUid]);
+
   // Mismo esqueleto que el `fallback` del `Suspense` que trae este chunk: encadenados, se ven como UNA sola
   // escena de carga en vez de un blanco seguido de una tarjeta distinta.
   if (loading) {
@@ -228,7 +255,6 @@ const SocialHubInner = memo(function SocialHubInner({
       );
     }
     if (activePanel === 'profile-detail') {
-      const detailId = (selectedProfileDetail as { id?: string })?.id || profileDetailId;
       return (
         <>
         <SocialProfileDetailScreen
@@ -238,8 +264,8 @@ const SocialHubInner = memo(function SocialHubInner({
           onEditProfile={goToProfileEdit}
           onBack={goToSocial}
           showReviews={profileReviewsView}
-          onToggleReviews={() => (profileReviewsView ? closeProfileReviews(detailId) : openProfileReviews(detailId))}
-          onOpenReview={(gameId) => openProfileReviewDetail(detailId, gameId)}
+          onToggleReviews={toggleDetailReviews}
+          onOpenReview={openDetailReview}
           status={status}
           statusKind={statusKind}
           onAddToProximos={onAddToProximos}
@@ -247,9 +273,9 @@ const SocialHubInner = memo(function SocialHubInner({
           moveGameToCurrentByName={moveGameToCurrentByName}
           friendshipState={selectedProfileDetail ? relationshipWith((selectedProfileDetail as { uid?: string }).uid || '') : 'none'}
           friendshipBusy={Boolean(selectedProfileDetail) && friendshipBusyUid === (selectedProfileDetail as { uid?: string }).uid}
-          onAddOrAcceptFriend={() => handleAddOrAcceptFriend((selectedProfileDetail as { uid?: string }).uid || '')}
-          onCancelFriendRequest={() => handleCancelFriendRequest((selectedProfileDetail as { uid?: string }).uid || '')}
-          onRemoveFriend={() => handleRemoveFriend((selectedProfileDetail as { uid?: string }).uid || '')}
+          onAddOrAcceptFriend={addOrAcceptDetailFriend}
+          onCancelFriendRequest={cancelDetailFriendRequest}
+          onRemoveFriend={removeDetailFriend}
           viewerTier={ownTier}
           viewerHiddenTabs={hiddenTabs}
         />
