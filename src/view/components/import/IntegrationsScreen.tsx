@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { UI_MESSAGES } from '../../../core/constants/labels';
 import { COMMON_ICONS } from '../../../core/constants/icons';
 import { Icon } from '../Icon';
@@ -18,7 +19,7 @@ interface IntegrationsScreenProps {
 }
 
 /** Pantalla de Integraciones. Única vía: importar el JSON de la extensión «Playnite Library Exporter». */
-export function IntegrationsScreen({ onImport, onBack, inboxCount, onOpenInbox }: IntegrationsScreenProps) {
+function IntegrationsScreenBase({ onImport, onBack, inboxCount, onOpenInbox }: IntegrationsScreenProps) {
   return (
     <div className="import-screen">
       <div className="import-actions">
@@ -68,3 +69,10 @@ export function IntegrationsScreen({ onImport, onBack, inboxCount, onOpenInbox }
     </div>
   );
 }
+
+/**
+ * Memoizada: `App` reconstruye el mapa de secciones en cada render, así que sin esto la pantalla se volvía a
+ * renderizar por cualquier cambio de la aplicación. Sus cuatro props son estables (manejadores en `useCallback`
+ * y un número), que es lo que hace que el `memo` sirva de algo y no solo añada una comparación.
+ */
+export const IntegrationsScreen = memo(IntegrationsScreenBase);
