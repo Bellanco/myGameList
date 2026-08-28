@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { ensureSyncConfigLoaded, getSyncConfig } from '../model/repository/gistRepository';
-import { createSocialGist, getSocialSyncConfig, mergeSocialGistData, readPublicSocialGistById, readSocialGist, remapSocialActorIds, saveSocialSyncConfig, type SocialGistData, type SocialProfileVisibility, type SocialSharedGame, deleteGist, ensureSecretSocialGist, socialGistHasContent, writeSocialGist } from '../model/repository/socialGistRepository';
+import { createSocialGist, getSocialSyncConfig, mergeSocialGistData, readPublicSocialGistById, readSocialGist, remapSocialActorIds, saveSocialSyncConfig, type SocialGistData, type SocialSharedGame, deleteGist, ensureSecretSocialGist, socialGistHasContent, writeSocialGist } from '../model/repository/socialGistRepository';
 import { reconcileReviewActivity } from '../model/repository/socialActivityReconcile';
 import { invalidateProfileGames, loadForeignProfileGames } from '../model/repository/foreignProfileRepository';
 import { getCachedSocialDirectory, getCachedSocialProfile, getLocalMeta, patchLocalMeta, putCachedSocialDirectory, putCachedSocialProfile, type CachedSocialProfileData } from '../model/repository/indexedDbRepository';
@@ -37,6 +37,12 @@ import {
   type FriendshipSelfInfo,
   type SocialAuthUser,
 } from '../model/repository/firebaseRepository';
+// Reexportados: las pantallas del hub y los tests los importan de aquí desde antes de que el ViewModel se
+// partiera, y cambiarles el import no aportaría nada.
+export { isOwnProfileIdentity } from './social/socialIdentity';
+export type { SocialDirectoryEntry } from './social/socialFeed';
+import { isOwnProfileIdentity } from './social/socialIdentity';
+import type { SocialDirectoryEntry } from './social/socialFeed';
 import { buildFriendshipViews } from './social/friendshipViews';
 import { useSocialFriendships } from './social/useSocialFriendships';
 import { loadLocalState } from '../model/repository/localRepository';
@@ -56,7 +62,7 @@ export type {
   SocialMoveFeedItem,
   SocialPostFeedItem,
 } from './social/socialFeed';
-import type { SocialActivityFeedItem, SocialMoveFeedItem, SocialPostFeedItem } from './social/socialFeed';
+import type { SocialActivityFeedItem } from './social/socialFeed';
 
 const shouldRequireProfileCreation = (profileExists: boolean, justSavedProfile: boolean): boolean => {
   return !profileExists && !justSavedProfile;
@@ -124,54 +130,8 @@ const SOCIAL_MOVES_PER_PROFILE = 120;
  * queda presentacional y consume este hook.
  */
 
-/**
- * P1 (privacidad index-only): ¿la entrada de perfil/directorio (`entryId`) es la del usuario actual?
- * Compara por IDENTIDAD (uid o profileId), no por `email` — que sale del documento público en el refactor
- * index-only (ST1). Tolera ambas eras sin tocar este código en el cutover: hoy el id del doc es el `uid`; tras
- * el corte index-only será el `profileId`. Ambos se comprueban.
- */
-export function isOwnProfileIdentity(
-  entryId: string | null | undefined,
-  uid: string | null | undefined,
-  ownProfileId: string | null | undefined,
-): boolean {
-  if (!entryId) return false;
-  return (Boolean(uid) && entryId === uid) || (Boolean(ownProfileId) && entryId === ownProfileId);
-}
 
 
-/**
- * Una entrada del DIRECTORIO social ya hidratada: el perfil más lo que se haya podido leer de su gist.
- * Exportado porque las pantallas del hub lo reciben por props; mientras vivía dentro del hook, no había forma
- * de nombrarlo desde fuera y acababan tipadas como `any[]`.
- */
-export type SocialDirectoryEntry = {
-  id: string;
-  uid: string; // uid de Firebase (para relaciones de amistad); hoy coincide con `id`, robusto ante el cutover uid→profileId
-  displayName: string;
-  socialGistId: string;
-  gamesGistId: string;
-  photoURL: string;
-  /**
-   * Rango del perfil, para el punto de color de su tarjeta en el directorio. OBLIGATORIO a propósito: este tipo
-   * LOCAL sombrea al del repositorio, y la hidratación reconstruye cada entrada campo a campo. Al declararlo
-   * requerido, olvidarse de copiarlo en cualquiera de esas reconstrucciones es un error de compilación y no un
-   * directorio entero pintado de bronce.
-   */
-  tier: ProfileTier;
-  activity: SocialActivityFeedItem[];
-  posts: SocialPostFeedItem[];
-  /** F4 — mensajes de lista del perfil, ya enriquecidos con su identidad. */
-  moves: SocialMoveFeedItem[];
-  // Index-only (SocialSharedGame) para perfiles ajenos; para el perfil PROPIO se repuebla con GameItem completos.
-  sharedLists: Partial<Record<TabId, Array<GameItem | SocialSharedGame>>>;
-  visibility: SocialProfileVisibility;
-  /**
-   * Amigo cuyo gist social NO se leyó por inactividad (corte de FRIEND_ACTIVITY_MAX_AGE_MS): su actividad no
-   * entra al feed, pero al abrir su perfil se hidrata bajo demanda para no mostrarlo a medias.
-   */
-  socialSkipped?: boolean;
-};
 
 export function useSocialViewModel(options?: {
   /**
