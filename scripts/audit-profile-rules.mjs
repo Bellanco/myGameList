@@ -34,9 +34,16 @@
 import { auditFriendship, auditProfile, LIMITS } from './lib/profile-rules-predicates.mjs';
 
 async function main() {
-  let admin;
+  // Los SUBPATHS (`firebase-admin/app`, `firebase-admin/firestore`) y no el paquete raíz: desde la v13 el
+  // espacio de nombres antiguo dejó de traer `credential` y `firestore`, así que `admin.credential
+  // .applicationDefault()` revienta con un `Cannot read properties of undefined`. Los subpaths existen desde la
+  // v10 y son la forma estable de pedir estas dos cosas.
+  let initializeApp;
+  let applicationDefault;
+  let getFirestore;
   try {
-    admin = (await import('firebase-admin')).default;
+    ({ initializeApp, applicationDefault } = await import('firebase-admin/app'));
+    ({ getFirestore } = await import('firebase-admin/firestore'));
   } catch {
     console.error('Falta firebase-admin. Instálalo sin guardarlo:  npm i --no-save firebase-admin');
     process.exit(1);
@@ -46,8 +53,8 @@ async function main() {
     process.exit(1);
   }
 
-  admin.initializeApp({ credential: admin.credential.applicationDefault() });
-  const db = admin.firestore();
+  initializeApp({ credential: applicationDefault() });
+  const db = getFirestore();
 
   let revisados = 0;
   const hallazgos = [];

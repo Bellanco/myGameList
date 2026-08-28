@@ -55,9 +55,16 @@ function backupPath() {
 }
 
 async function main() {
-  let admin;
+  // Los SUBPATHS y no el paquete raíz: desde firebase-admin v13 el espacio de nombres antiguo dejó de traer
+  // `credential` y `firestore`, así que `admin.credential.applicationDefault()` revienta con un
+  // `Cannot read properties of undefined`. Estos dos existen desde la v10 y son la forma estable de pedirlos.
+  let initializeApp;
+  let applicationDefault;
+  let getFirestore;
+  let FieldValue;
   try {
-    admin = require('firebase-admin');
+    ({ initializeApp, applicationDefault } = require('firebase-admin/app'));
+    ({ getFirestore, FieldValue } = require('firebase-admin/firestore'));
   } catch {
     console.error('Falta firebase-admin. Instálalo sin guardarlo:  npm i --no-save firebase-admin');
     process.exit(1);
@@ -68,9 +75,8 @@ async function main() {
     process.exit(1);
   }
 
-  admin.initializeApp({ credential: admin.credential.applicationDefault() });
-  const db = admin.firestore();
-  const { FieldValue } = admin.firestore;
+  initializeApp({ credential: applicationDefault() });
+  const db = getFirestore();
 
   const snapshot = await db.collection('profiles').get();
 
