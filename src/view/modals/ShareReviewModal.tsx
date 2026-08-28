@@ -1,7 +1,7 @@
 import { memo, useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useNativeDialog } from './useNativeDialog';
-import { SHARE_UI } from '../../core/constants/labels';
+import { SHARE_UI } from '../../core/constants/shareLabels';
 import { Icon } from '../components/Icon';
 import { grantShareConsent, hasShareConsent } from '../../model/repository/shareConsentRepository';
 import type { ShareQuota } from '../../core/constants/tiers';
