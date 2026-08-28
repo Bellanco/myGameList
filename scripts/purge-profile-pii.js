@@ -70,9 +70,23 @@ async function main() {
     process.exit(1);
   }
 
-  if (!process.env.GOOGLE_APPLICATION_CREDENTIALS) {
+  const credenciales = process.env.GOOGLE_APPLICATION_CREDENTIALS;
+  if (!credenciales) {
     console.error('Falta GOOGLE_APPLICATION_CREDENTIALS (ruta a la clave de servicio, fuera del repo).');
     process.exit(1);
+  }
+  // Mismo diagnóstico temprano que en `audit-profile-rules.mjs`, y aquí importa más: este script SÍ escribe, y
+  // conviene que falle antes de tocar nada en vez de a mitad de un barrido.
+  const rutaCredenciales = path.resolve(credenciales);
+  if (!fs.existsSync(rutaCredenciales)) {
+    console.error(`GOOGLE_APPLICATION_CREDENTIALS apunta a un fichero que no existe:\n  ${rutaCredenciales}`);
+    console.error('Descarga la clave de servicio desde la consola de Firebase (Configuración → Cuentas de');
+    console.error('servicio → Generar nueva clave privada) y apunta la variable a donde la hayas dejado.');
+    process.exit(1);
+  }
+  if (!path.relative(process.cwd(), rutaCredenciales).startsWith('..')) {
+    console.warn(`AVISO: la clave de servicio está DENTRO del repositorio (${rutaCredenciales}).`);
+    console.warn('Muévela fuera: se salta las reglas y App Check, y un `git add .` la publicaría.\n');
   }
 
   initializeApp({ credential: applicationDefault() });
