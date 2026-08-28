@@ -2,6 +2,7 @@
 import { HubAvatar } from './HubAvatar';
 import { TAB_TOOLTIPS } from '../../../core/constants/labels';
 import { type SocialUiLabels } from '../../../core/constants/socialLabels';
+import { HubScreen } from './HubScreen';
 import { HubStatus } from './HubStatus';
 import { HubBackButton } from './HubBackButton';
 import { TAB_IDS, type TabId } from '../../../model/types/game';
@@ -94,19 +95,18 @@ export function SocialProfileScreen({
   const missingCompletedGames = completedGames.length === 0;
 
   return (
-    <section className="hub-hub hub-screen" aria-label={SOCIAL_UI.profile.sectionAria}>
-      <div className="hub-hub-card hub-screen-card hub-profile-card">
-        <header className="hub-screen-header">
-          <div className="hub-hub-title-wrap">
-            <Icon name="bottom-hub" className="hub-hub-icon" />
-            <h2>{SOCIAL_UI.profile.title}</h2>
-            <span className={`hub-profile-sync-chip ${hasCreatedProfile ? 'is-synced' : ''}`}>
-              <span className="dot" aria-hidden="true" />
-              {hasCreatedProfile ? SOCIAL_UI.profile.statusSynced : SOCIAL_UI.profile.statusUnpublished}
-            </span>
-          </div>
-          <p>{SOCIAL_UI.profile.subtitle}</p>
-        </header>
+    <HubScreen
+      ariaLabel={SOCIAL_UI.profile.sectionAria}
+      title={SOCIAL_UI.profile.title}
+      subtitle={SOCIAL_UI.profile.subtitle}
+      cardClassName="hub-profile-card"
+      titleExtra={
+        <span className={`hub-profile-sync-chip ${hasCreatedProfile ? 'is-synced' : ''}`}>
+          <span className="dot" aria-hidden="true" />
+          {hasCreatedProfile ? SOCIAL_UI.profile.statusSynced : SOCIAL_UI.profile.statusUnpublished}
+        </span>
+      }
+    >
         <div className="hub-screen-actions hub-screen-actions-split" aria-label={SOCIAL_UI.profile.actionsAria}>
           <div className="hub-screen-actions-left">
             {hasCreatedProfile ? (
@@ -316,9 +316,8 @@ export function SocialProfileScreen({
           </article>
           {hydratingProfile ? <p>{SOCIAL_UI.profile.hydrating}</p> : null}
         </div>
-        <HubStatus status={status} statusKind={statusKind} />
-      </div>
-    </section>
+      <HubStatus status={status} statusKind={statusKind} />
+    </HubScreen>
   );
 }
 

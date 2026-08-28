@@ -1,6 +1,7 @@
 import { Icon } from '../Icon';
 import { HubAvatar } from './HubAvatar';
 import type { SocialUiLabels } from '../../../core/constants/socialLabels';
+import { HubScreen } from './HubScreen';
 import { HubStatus } from './HubStatus';
 import { HubBackButton } from './HubBackButton';
 
@@ -39,15 +40,7 @@ export function SocialRequestsScreen({
   const R = SOCIAL_UI.requests;
 
   return (
-    <section className="hub-hub hub-screen" aria-label={R.sectionAria}>
-      <div className="hub-hub-card hub-screen-card hub-feed-card-shell">
-        <header className="hub-screen-header">
-          <div className="hub-hub-title-wrap">
-            <Icon name="bottom-hub" className="hub-hub-icon" />
-            <h2>{R.title}</h2>
-          </div>
-          <p>{R.subtitle}</p>
-        </header>
+    <HubScreen ariaLabel={R.sectionAria} title={R.title} subtitle={R.subtitle}>
 
         <div className="hub-screen-actions" aria-label={R.actionsAria}>
           <HubBackButton onBack={onBack} label={R.back} />
@@ -176,7 +169,6 @@ export function SocialRequestsScreen({
         </div>
 
         <HubStatus status={status} statusKind={statusKind} />
-      </div>
-    </section>
+    </HubScreen>
   );
 }
