@@ -1,4 +1,4 @@
-import { act, renderHook } from '@testing-library/react';
+import { act, renderHook, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { GameItem, TabData } from '../../src/model/types/game';
 
@@ -30,6 +30,12 @@ let remoteSnapshot: TabData;
 /** Gate de la ESCRITURA: mientras esté armado, `writeGist` se queda en vuelo. */
 let pendingWrite: { promise: Promise<void>; resolve: (v: void) => void } | null = null;
 
+/**
+ * Config guardada. `null` en los tests de conexión —así el `initializeSync` del montaje sale por su primera
+ * guarda y no mete ruido—; con valor en los que ejercitan `syncNow` / `initializeSync`, que sí la necesitan.
+ */
+let syncConfig: { token: string; gistId: string; etag: string | null; lastRemoteUpdatedAt: number } | null = null;
+
 const writeGistMock = vi.fn(async (_t: string, _g: string, _payload: TabData) => {
   if (pendingWrite) await pendingWrite.promise;
   return { etag: 'etag-written', updatedAt: 5_000 };
@@ -43,9 +49,7 @@ vi.mock('../../src/model/repository/gistRepository', () => ({
     etag: 'etag-remote',
   })),
   writeGist: (...args: [string, string, TabData]) => writeGistMock(...args),
-  // `null` a propósito: sin config guardada, el `initializeSync` del montaje sale por su primera guarda y no
-  // mete ruido en el ciclo que se quiere observar. `connectSyncWithCredentials` no lee la config: la recibe.
-  getSyncConfig: () => null,
+  getSyncConfig: () => syncConfig,
   saveSyncConfig: (...args: unknown[]) => saveSyncConfigMock(...args),
   ensureSyncConfigLoaded: vi.fn(async () => {}),
   clearSyncConfig: vi.fn(),
@@ -74,7 +78,7 @@ vi.mock('../../src/model/migration/legacyTokenRecovery', () => ({
 
 import { useSyncViewModel } from '../../src/viewmodel/useSyncViewModel';
 import { clearDirty, markDirty } from '../../src/model/repository/syncStateRepository';
-import { transitionTo } from '../../src/model/repository/syncMachineRepository';
+import { resetSyncState } from '../../src/model/repository/syncMachineRepository';
 
 function makeGame(over: Partial<GameItem>): GameItem {
   return {
@@ -129,14 +133,15 @@ beforeEach(() => {
   localStorage.clear();
   clearDirty();
   pendingWrite = null;
-  transitionTo('idle', { errorCount: 0, pendingAction: null });
+  syncConfig = null;
+  resetSyncState();
 });
 
 afterEach(() => {
   vi.clearAllMocks();
   pendingWrite = null;
   localStorage.clear();
-  transitionTo('idle', { errorCount: 0, pendingAction: null });
+  resetSyncState();
 });
 
 describe('conexión inicial contra un gist existente', () => {
@@ -209,6 +214,63 @@ describe('conexión inicial contra un gist existente', () => {
     expect(local.data.e).toHaveLength(0);
     expect(local.data.c.map((g) => g.id).sort()).toEqual([1, 2]);
     expect(local.data.c.find((g) => g.id === 1)).toMatchObject({ score: 5, hours: 42 });
+
+    unmount();
+  });
+});
+
+/**
+ * Contrato de avisos, FIJADO ANTES de unificar el ciclo CRDT en `applyRemoteCycle`.
+ *
+ * Las cuatro rutas comparten el bloque de merge/escritura pero NO lo que le cuentan al usuario, y esa diferencia
+ * es deliberada: `syncNow` es una acción explícita («Sincronizar ahora»), así que confirma siempre; las demás
+ * corren solas y solo hablan cuando de verdad han traído algo. Al extraer el tronco común es fácil llevarse por
+ * delante esa distinción, así que queda escrita aquí.
+ *
+ * Vive en este fichero por reutilizar sus mocks: montar el hook exige simular todo `gistRepository`, y duplicar
+ * esas ochenta líneas en un fichero aparte sería la misma duplicación que este trabajo viene a quitar.
+ */
+describe('contrato de avisos del ciclo de sync', () => {
+  /** Remoto y local idénticos: el merge no aplica ningún cambio remoto (`remoteChanges === 0`). */
+  function settledScenario() {
+    remoteSnapshot = { ...emptyTabData(), updatedAt: 3_000, c: [makeGame({ id: 1, _ts: 1_000 })] };
+    syncConfig = { token: 'ghp_tokentokentokentoken', gistId: 'gist-1', etag: 'etag-remote', lastRemoteUpdatedAt: 3_000 };
+    return mountWithLocalState({
+      data: { ...emptyTabData(), updatedAt: 3_000, c: [makeGame({ id: 1, _ts: 1_000 })] },
+      meta: { updatedAt: 3_000, etag: 'etag-remote', lastRemoteUpdatedAt: 3_000 },
+    });
+  }
+
+  it('initializeSync calla cuando no ha traído ningún cambio', async () => {
+    const { deps, result, unmount } = settledScenario();
+
+    // El efecto de montaje ya dispara initializeSync con esta config.
+    await waitFor(() => expect(result.current.connectedGistId).toBe('gist-1'));
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    const messages = deps.onNotice.mock.calls.map((call) => String(call[1]));
+    expect(messages.some((message) => message.includes('Sincronización inicial'))).toBe(false);
+
+    unmount();
+  });
+
+  it('syncNow confirma siempre, aunque no haya cambios remotos', async () => {
+    const { deps, result, unmount } = settledScenario();
+
+    await waitFor(() => expect(result.current.connectedGistId).toBe('gist-1'));
+    await act(async () => {
+      await Promise.resolve();
+    });
+    deps.onNotice.mockClear();
+
+    await act(async () => {
+      await result.current.syncNow();
+    });
+
+    const messages = deps.onNotice.mock.calls.map((call) => String(call[1]));
+    expect(messages.some((message) => message.includes('Fusión sincronizada'))).toBe(true);
 
     unmount();
   });
