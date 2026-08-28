@@ -61,7 +61,10 @@ function profile(overrides: Record<string, unknown> = {}) {
     displayName: 'Ada',
     email: '',
     photoURL: '',
-    socialGistId: 'gs',
+    // Vacío por defecto: el id del canal social dejó de publicarse en el perfil PÚBLICO (lo lee cualquier
+    // autenticado y con él se lee el gist entero), así que un perfil al día ya no lo trae. Los casos que lo
+    // ponen están comprobando justo el saneado que lo retira.
+    socialGistId: '',
     gamesGistId: '',
     githubToken: '',
     socialEnabled: true,
@@ -156,6 +159,40 @@ describe('healOwnLegacyProfile', () => {
     expect(setPrivateConfigMock).toHaveBeenCalledWith('uid-a', { gamesGistId: 'gg-legacy' });
   });
 
+  it('siembra el id del CANAL SOCIAL antes de borrarlo del perfil público', async () => {
+    // Faltaba: se purgaba solo por la otra vía (al guardar el perfil), así que quien no volvía a guardarlo lo
+    // conservaba indefinidamente en un documento que lee cualquier usuario autenticado.
+    getOwnProfileRefMock.mockResolvedValue(profile({ socialGistId: 'gs-legacy' }));
+
+    const healResult = await healOwnLegacyProfile('uid-a');
+
+    expect(healResult).toMatchObject({ status: 'healed', seededSocialGistId: true });
+    expect(setPrivateConfigMock).toHaveBeenCalledWith('uid-a', { socialGistId: 'gs-legacy' });
+    expect(updateDocMock.mock.calls[0][1]).toMatchObject({ 'social.gistId': '__del__' });
+  });
+
+  it('rescata los dos ids de gist en UNA sola escritura', async () => {
+    getOwnProfileRefMock.mockResolvedValue(profile({ gamesGistId: 'gg', socialGistId: 'gs' }));
+
+    const healResult = await healOwnLegacyProfile('uid-a');
+
+    expect(healResult).toMatchObject({ seededGamesGistId: true, seededSocialGistId: true });
+    expect(setPrivateConfigMock).toHaveBeenCalledTimes(1);
+    expect(setPrivateConfigMock).toHaveBeenCalledWith('uid-a', { gamesGistId: 'gg', socialGistId: 'gs' });
+  });
+
+  it('no pisa el id del canal social que ya tenga la configuración privada', async () => {
+    getOwnProfileRefMock.mockResolvedValue(profile({ socialGistId: 'gs-viejo' }));
+    getPrivateConfigMock.mockResolvedValue({ socialGistId: 'gs-bueno' });
+
+    const healResult = await healOwnLegacyProfile('uid-a');
+
+    expect(healResult).toMatchObject({ status: 'healed', seededSocialGistId: false });
+    expect(setPrivateConfigMock).not.toHaveBeenCalled();
+    // Pero SÍ se retira del documento público: lo que se conserva es la copia privada, no la publicada.
+    expect(updateDocMock.mock.calls[0][1]).toMatchObject({ 'social.gistId': '__del__' });
+  });
+
   it('no pisa el id del gist que ya tenga la configuración privada', async () => {
     getOwnProfileRefMock.mockResolvedValue(profile({ gamesGistId: 'gg-viejo' }));
     getPrivateConfigMock.mockResolvedValue({ gamesGistId: 'gg-bueno' });
@@ -176,6 +213,7 @@ describe('healOwnLegacyProfile', () => {
       uid: 'uid-a',
       email: '__del__',
       'social.gamesGistId': '__del__',
+      'social.gistId': '__del__',
       'social.githubToken': '__del__',
     });
     // El directorio y el perfil propio cacheados ya no valen tras la purga.
