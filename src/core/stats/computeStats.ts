@@ -7,7 +7,7 @@
 //
 // REGLA DE ORO: esto solo LEE, y lee lo que la app ya tiene en memoria (el gist de juegos). No hay campos
 // nuevos en `GameItem`, no se escribe en el gist, no se proyecta al canal social y no se consulta la red.
-import { localMonthKey, localWeekKey } from '../utils/dateTime';
+import { localMonthKey, localWeekKey, mondayOfWeekKey } from '../utils/dateTime';
 import { SCORE_BUCKET_FLOORS, STARS_MAX, GRADE_MAX, resolveGrade, starsFromGrade } from '../utils/scoreScale';
 import { sortEs } from '../utils/compare';
 import { TAB_IDS, type GameItem, type TabData, type TabId } from '../../model/types/game';
@@ -475,18 +475,6 @@ function weekRange(from: string, to: string): string[] {
     cursor.setDate(cursor.getDate() + 7);
   }
   return out;
-}
-
-/** Lunes (a mediodía) de la semana ISO `AAAA-Www`. Inversa de `localWeekKey`. */
-function mondayOfWeekKey(key: string): Date {
-  const match = /^(\d{4})-W(\d{2})$/.exec(key);
-  if (!match) return new Date(NaN);
-  const [year, week] = [Number(match[1]), Number(match[2])];
-  // El 4 de enero cae siempre en la semana 1; desde su lunes se avanzan las semanas que falten.
-  const jan4 = new Date(year, 0, 4, 12);
-  const monday = new Date(jan4);
-  monday.setDate(jan4.getDate() - ((jan4.getDay() + 6) % 7) + (week - 1) * 7);
-  return monday;
 }
 
 /**
