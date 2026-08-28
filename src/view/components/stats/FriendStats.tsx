@@ -1,5 +1,5 @@
 import { memo, useMemo, useState } from 'react';
-import { UI_MESSAGES } from '../../../core/constants/labels';
+import { STATS_UI } from '../../../core/constants/statsLabels';
 import { computeStats } from '../../../core/stats/computeStats';
 import {
   FRIEND_STATS_MAX_BLOCKS,
@@ -19,7 +19,7 @@ import type { StatsScope, YearMetric } from '../../../viewmodel/useStatsViewMode
 // Misma hoja que el panel propio: entra en el chunk del hub social, que también es perezoso.
 import '../../../styles/stats.scss';
 
-const L = UI_MESSAGES.stats;
+const L = STATS_UI;
 
 /** Nombre de cada lista para el aviso de reciprocidad. */
 const TAB_NAMES: Record<TabId, string> = L.backlog.lists;

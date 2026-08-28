@@ -1,7 +1,7 @@
 ﻿import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Icon } from '../Icon';
 import { GameTable } from '../GameTable';
-import { UI_MESSAGES } from '../../../core/constants/labels';
+import { STATS_UI } from '../../../core/constants/statsLabels';
 import { type SocialUiLabels } from '../../../core/constants/socialLabels';
 import { HubStatus } from './HubStatus';
 import { HubBackButton } from './HubBackButton';
@@ -23,9 +23,9 @@ const LIST_PAGE_SIZE = 15;
 
 
 /** Rótulos de la vista de estadísticas dentro del perfil ajeno. */
-const FRIEND_STATS_TITLE = UI_MESSAGES.stats.friend.title;
-const FRIEND_STATS_BUTTON = UI_MESSAGES.stats.friend.button;
-const FRIEND_STATS_BACK = UI_MESSAGES.stats.friend.buttonBack;
+const FRIEND_STATS_TITLE = STATS_UI.friend.title;
+const FRIEND_STATS_BUTTON = STATS_UI.friend.button;
+const FRIEND_STATS_BACK = STATS_UI.friend.buttonBack;
 
 const TAB_LABELS = {
   c: 'profileListTabCompleted',

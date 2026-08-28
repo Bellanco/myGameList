@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 // El panel enlaza a la pantalla de reseñas del hub social, así que necesita un router alrededor.
 import { MemoryRouter } from 'react-router-dom';
 import { StatsHub } from '../../src/view/components/stats/StatsHub';
-import { UI_MESSAGES } from '../../src/core/constants/labels';
+import { STATS_UI } from '../../src/core/constants/statsLabels';
 import type { GameItem, TabData } from '../../src/model/types/game';
 
 // La escala de puntuación se sirve desde un store que se hidrata de Firestore; aquí se fija a mano para no
@@ -23,7 +23,7 @@ vi.mock('../../src/model/repository/statsSnapshotRepository', () => ({
   loadBacklogHistory: () => Promise.resolve(history),
 }));
 
-const L = UI_MESSAGES.stats;
+const L = STATS_UI;
 
 function game(overrides: Partial<GameItem> & { name: string }): GameItem {
   return { id: 1, _ts: 0, platforms: [], genres: [], steamDeck: false, review: '', ...overrides };
