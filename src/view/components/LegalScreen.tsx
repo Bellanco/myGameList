@@ -2,7 +2,8 @@ import { memo, useCallback } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { COMMON_ICONS } from '../../core/constants/icons';
 import { UI_MESSAGES } from '../../core/constants/labels';
-import { LEGAL_CONTACT_EMAIL, LEGAL_DOCUMENTS, LEGAL_ROUTES, type LegalDocId } from '../../core/constants/legal';
+import { LEGAL_CONTACT_EMAIL, LEGAL_ROUTES, type LegalDocId } from '../../core/constants/legal';
+import { LEGAL_DOCUMENTS } from '../../core/constants/legalContent';
 import { Icon } from './Icon';
 
 interface LegalScreenProps {
@@ -12,7 +13,7 @@ interface LegalScreenProps {
 const L = UI_MESSAGES.settings.legal;
 
 /**
- * L4 — Pantalla de los documentos legales. El texto vive en `core/constants/legal.ts`; aquí solo se pinta,
+ * L4 — Pantalla de los documentos legales. El texto vive en `core/constants/legalContent.ts`; aquí solo se pinta,
  * reutilizando las tarjetas de Ajustes para que herede tema, tipografía y responsive sin CSS nuevo.
  */
 export const LegalScreen = memo(function LegalScreen({ docId }: LegalScreenProps) {
