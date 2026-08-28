@@ -1,7 +1,7 @@
 import { memo, useCallback } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { COMMON_ICONS } from '../../core/constants/icons';
-import { UI_MESSAGES } from '../../core/constants/labels';
+import { SETTINGS_UI } from '../../core/constants/settingsLabels';
 import { LEGAL_CONTACT_EMAIL, LEGAL_ROUTES, type LegalDocId } from '../../core/constants/legal';
 import { LEGAL_DOCUMENTS } from '../../core/constants/legalContent';
 import { Icon } from './Icon';
@@ -10,7 +10,7 @@ interface LegalScreenProps {
   docId: LegalDocId;
 }
 
-const L = UI_MESSAGES.settings.legal;
+const L = SETTINGS_UI.legal;
 
 /**
  * L4 — Pantalla de los documentos legales. El texto vive en `core/constants/legalContent.ts`; aquí solo se pinta,

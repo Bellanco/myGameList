@@ -1,5 +1,5 @@
+import { APPEARANCE_UI } from '../../core/constants/labels';
 import { memo, type CSSProperties } from 'react';
-import { UI_MESSAGES } from '../../core/constants/labels';
 import { PALETTES } from '../../core/constants/palettes';
 import { usePalette } from '../hooks/usePalette';
 import { useTheme } from '../hooks/useTheme';
@@ -7,7 +7,7 @@ import { useUppercase } from '../hooks/useUppercase';
 import { useShowSteamButton } from '../hooks/useShowSteamButton';
 import { useEffects } from '../hooks/useEffects';
 
-const A = UI_MESSAGES.settings.appearance;
+const A = APPEARANCE_UI;
 
 /**
  * F1 — Selector de apariencia dentro de "Ajustes de cuenta": paleta (tema) + modo claro/oscuro.

@@ -6,7 +6,7 @@
 // que aquí solo se descargan cuando alguien abre `/admin`.
 import type { AdminAnomaly } from '../../model/types/firestore';
 
-// Panel de administración (`/admin`, ruta oculta). Nada que ver con `UI_MESSAGES.settings.admin`, que es la
+// Panel de administración (`/admin`, ruta oculta). Nada que ver con `SETTINGS_UI.admin`, que es la
 // administración de ETIQUETAS de la propia biblioteca.
 export const ADMIN_PANEL_UI = {
   sectionAria: 'Panel de administración',

@@ -1,10 +1,11 @@
 import { memo, useCallback, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { DIALOG_MESSAGES, UI_MESSAGES } from '../../core/constants/labels';
+import { DIALOG_MESSAGES } from '../../core/constants/labels';
+import { SETTINGS_UI } from '../../core/constants/settingsLabels';
 import { getCurrentSocialAuthUser } from '../../model/repository/firebaseGateway';
 import { useNativeDialog } from '../modals/useNativeDialog';
 
-const D = UI_MESSAGES.settings.danger;
+const D = SETTINGS_UI.danger;
 
 type Feedback = { kind: 'ok' | 'warn' | 'err'; text: string } | null;
 
