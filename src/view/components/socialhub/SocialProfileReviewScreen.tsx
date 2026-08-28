@@ -2,7 +2,7 @@ import { Icon } from '../Icon';
 import { ScoreDisplay } from '../ScoreDisplay';
 import { NoScoreMedal } from '../NoScoreMedal';
 import { resolveGrade } from '../../../core/utils/scoreScale';
-import { MetaSection } from '../MetaSection';
+import { ReviewDetailBody } from '../ReviewDetailBody';
 import type { SocialUiLabels } from '../../../core/constants/socialLabels';
 import { HubStatus } from './HubStatus';
 import { HubBackButton } from './HubBackButton';
@@ -99,15 +99,13 @@ export function SocialProfileReviewScreen({
           </div>
           {hasValidDate ? <p className="hub-feed-date">{SOCIAL_UI.feed.analyzedAt(reviewDate)}</p> : null}
           {hasScore ? <ScoreDisplay game={{ score: review.score, grade: review.grade }} /> : <NoScoreMedal />}
-          <div className="hub-detail-body">
-            {review.review ? <p className="hub-feed-review-text">{review.review}</p> : null}
-            <div className="hub-detail-metadata">
-              <MetaSection label={SOCIAL_UI.feed.metadataPlatforms} items={review.platforms} cls="chip-plat" />
-              <MetaSection label={SOCIAL_UI.feed.metadataGenres} items={review.genres} cls="chip-genre" />
-              <MetaSection label={SOCIAL_UI.feed.metadataStrengths} items={review.strengths} cls="chip-pf" />
-              <MetaSection label={SOCIAL_UI.feed.metadataWeaknesses} items={review.weaknesses} cls="chip-pd" />
-            </div>
-          </div>
+          <ReviewDetailBody
+            review={review.review}
+            platforms={review.platforms}
+            genres={review.genres}
+            strengths={review.strengths}
+            weaknesses={review.weaknesses}
+          />
         </article>
         <HubStatus status={status} statusKind={statusKind} />
       </div>
