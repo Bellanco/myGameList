@@ -1,8 +1,8 @@
+import { APPEARANCE_UI } from '../../core/constants/labels';
 import { memo } from 'react';
-import { UI_MESSAGES } from '../../core/constants/labels';
 import { useTheme } from '../hooks/useTheme';
 
-const APPEARANCE = UI_MESSAGES.settings.appearance;
+const APPEARANCE = APPEARANCE_UI;
 
 function SunIcon() {
   return (

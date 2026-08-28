@@ -1,6 +1,7 @@
 import { memo, useMemo, useState } from 'react';
 import { COMMON_ICONS } from '../../core/constants/icons';
 import { UI_MESSAGES, VALIDATION_MESSAGES } from '../../core/constants/labels';
+import { SETTINGS_UI } from '../../core/constants/settingsLabels';
 import { Icon } from './Icon';
 import { PlayniteNote } from './import/PlayniteNote';
 
@@ -80,10 +81,10 @@ export const SettingsHub = memo(function SettingsHub({
   const categories = useMemo(
     () =>
       [
-        { key: 'genres' as const, label: UI_MESSAGES.settings.admin.genres, values: lookups.genres },
-        { key: 'platforms' as const, label: UI_MESSAGES.settings.admin.platforms, values: lookups.platforms },
-        { key: 'strengths' as const, label: UI_MESSAGES.settings.admin.strengths, values: lookups.strengths },
-        { key: 'weaknesses' as const, label: UI_MESSAGES.settings.admin.weaknesses, values: lookups.weaknesses },
+        { key: 'genres' as const, label: SETTINGS_UI.admin.genres, values: lookups.genres },
+        { key: 'platforms' as const, label: SETTINGS_UI.admin.platforms, values: lookups.platforms },
+        { key: 'strengths' as const, label: SETTINGS_UI.admin.strengths, values: lookups.strengths },
+        { key: 'weaknesses' as const, label: SETTINGS_UI.admin.weaknesses, values: lookups.weaknesses },
       ],
     [lookups.genres, lookups.platforms, lookups.strengths, lookups.weaknesses],
   );
@@ -127,7 +128,7 @@ export const SettingsHub = memo(function SettingsHub({
   };
 
   return (
-    <section className="settings-hub" aria-label={UI_MESSAGES.settings.title}>
+    <section className="settings-hub" aria-label={SETTINGS_UI.title}>
       <div className="settings-card" style={{ gridColumn: '1 / -1' }}>
         <div className="settings-card-head">
           <h2>{UI_MESSAGES.import.integrations.title}</h2>
@@ -140,18 +141,18 @@ export const SettingsHub = memo(function SettingsHub({
       </div>
 
       <div className="settings-card settings-card-status">
-        <h2>{UI_MESSAGES.settings.sync.title}</h2>
+        <h2>{SETTINGS_UI.sync.title}</h2>
         <p>
-          {UI_MESSAGES.settings.sync.status}: <strong>{syncStatus}</strong>
+          {SETTINGS_UI.sync.status}: <strong>{syncStatus}</strong>
         </p>
         {hasSyncConfig && configuredGistId ? (
           <div className="sync-help">
-            {UI_MESSAGES.settings.sync.gistConnectedPrefix}: {configuredGistId}
+            {SETTINGS_UI.sync.gistConnectedPrefix}: {configuredGistId}
             <button
               className="sync-gist-action"
               type="button"
-              aria-label={UI_MESSAGES.settings.sync.copyAriaLabel}
-              title={UI_MESSAGES.settings.sync.copyBtn}
+              aria-label={SETTINGS_UI.sync.copyAriaLabel}
+              title={SETTINGS_UI.sync.copyBtn}
               onClick={onCopyGistId}
               style={{ marginLeft: '0.5rem' }}
             >
@@ -163,14 +164,14 @@ export const SettingsHub = memo(function SettingsHub({
         {!hasSyncConfig && (
           <>
             <div className="sync-help">
-              <strong>{UI_MESSAGES.settings.sync.helpGithubTitle}</strong>
+              <strong>{SETTINGS_UI.sync.helpGithubTitle}</strong>
               <br />
-              {UI_MESSAGES.settings.sync.helpGithubBody}
+              {SETTINGS_UI.sync.helpGithubBody}
             </div>
 
             {githubOAuthEnabled && (
               <>
-                <div className="sync-help">{UI_MESSAGES.settings.sync.oauthHelpBody}</div>
+                <div className="sync-help">{SETTINGS_UI.sync.oauthHelpBody}</div>
                 <div className="settings-actions">
                   <button
                     className="btn btn-steam btn-connect"
@@ -181,7 +182,7 @@ export const SettingsHub = memo(function SettingsHub({
                   >
                     <Icon name="cloud-sync" />
                     <span className="btn-label">
-                      {githubLoggingIn ? UI_MESSAGES.settings.sync.oauthConnectingBtn : UI_MESSAGES.settings.sync.oauthConnectBtn}
+                      {githubLoggingIn ? SETTINGS_UI.sync.oauthConnectingBtn : SETTINGS_UI.sync.oauthConnectBtn}
                     </span>
                   </button>
                 </div>
@@ -192,7 +193,7 @@ export const SettingsHub = memo(function SettingsHub({
                     onClick={() => setShowManual((prev) => !prev)}
                     aria-expanded={showManual}
                   >
-                    {showManual ? UI_MESSAGES.settings.sync.manualToggleHide : UI_MESSAGES.settings.sync.manualToggleShow}
+                    {showManual ? SETTINGS_UI.sync.manualToggleHide : SETTINGS_UI.sync.manualToggleShow}
                   </button>
                 </div>
               </>
@@ -201,16 +202,16 @@ export const SettingsHub = memo(function SettingsHub({
             {manualVisible && (
             <>
             <div className="sync-help">
-              <strong>{UI_MESSAGES.settings.sync.helpConfigTitle}</strong>
+              <strong>{SETTINGS_UI.sync.helpConfigTitle}</strong>
               <br />
-              {UI_MESSAGES.settings.sync.helpConfigBody}
+              {SETTINGS_UI.sync.helpConfigBody}
               <br />
               <a
-                href={UI_MESSAGES.settings.sync.helpConfigLinkUrl}
+                href={SETTINGS_UI.sync.helpConfigLinkUrl}
                 target="_blank"
                 rel="noopener noreferrer"
               >
-                {UI_MESSAGES.settings.sync.helpConfigLinkLabel}
+                {SETTINGS_UI.sync.helpConfigLinkLabel}
               </a>
               <div className="sync-help-actions">
                 <button
@@ -219,25 +220,25 @@ export const SettingsHub = memo(function SettingsHub({
                   onClick={() => setShowConfigHelp((prev) => !prev)}
                   aria-expanded={showConfigHelp}
                 >
-                  {showConfigHelp ? UI_MESSAGES.settings.sync.helpConfigCollapse : UI_MESSAGES.settings.sync.helpConfigExpand}
+                  {showConfigHelp ? SETTINGS_UI.sync.helpConfigCollapse : SETTINGS_UI.sync.helpConfigExpand}
                 </button>
               </div>
               {showConfigHelp ? (
                 <ol>
-                  <li>{UI_MESSAGES.settings.sync.helpConfigStep1}</li>
-                  <li>{UI_MESSAGES.settings.sync.helpConfigStep2}</li>
-                  <li>{UI_MESSAGES.settings.sync.helpConfigStep3}</li>
-                  <li>{UI_MESSAGES.settings.sync.helpConfigStep4}</li>
-                  <li>{UI_MESSAGES.settings.sync.helpConfigStep5}</li>
-                  <li>{UI_MESSAGES.settings.sync.helpConfigStep6}</li>
-                  <li>{UI_MESSAGES.settings.sync.helpConfigStep7}</li>
+                  <li>{SETTINGS_UI.sync.helpConfigStep1}</li>
+                  <li>{SETTINGS_UI.sync.helpConfigStep2}</li>
+                  <li>{SETTINGS_UI.sync.helpConfigStep3}</li>
+                  <li>{SETTINGS_UI.sync.helpConfigStep4}</li>
+                  <li>{SETTINGS_UI.sync.helpConfigStep5}</li>
+                  <li>{SETTINGS_UI.sync.helpConfigStep6}</li>
+                  <li>{SETTINGS_UI.sync.helpConfigStep7}</li>
                 </ol>
               ) : null}
             </div>
 
             <div className="fg">
               <label htmlFor="settings-sync-token" className="flabel">
-                {UI_MESSAGES.settings.sync.tokenLabel}
+                {SETTINGS_UI.sync.tokenLabel}
               </label>
               <div className="token-row">
                 <input
@@ -246,7 +247,7 @@ export const SettingsHub = memo(function SettingsHub({
                   type={showToken ? 'text' : 'password'}
                   value={token}
                   onChange={(event) => onTokenChange(event.target.value)}
-                  placeholder={UI_MESSAGES.settings.sync.tokenPlaceholder}
+                  placeholder={SETTINGS_UI.sync.tokenPlaceholder}
                 />
                 <button className="token-toggle" type="button" onClick={() => setShowToken((prev) => !prev)}>
                   <Icon name={showToken ? COMMON_ICONS.eyeOff : COMMON_ICONS.eye} />
@@ -256,7 +257,7 @@ export const SettingsHub = memo(function SettingsHub({
 
             <div className="fg">
               <label htmlFor="settings-sync-gist" className="flabel">
-                {UI_MESSAGES.settings.sync.gistLabel}
+                {SETTINGS_UI.sync.gistLabel}
               </label>
               <div className="sync-gist-row">
                 <input
@@ -264,7 +265,7 @@ export const SettingsHub = memo(function SettingsHub({
                   className="finput"
                   value={gistId}
                   onChange={(event) => onGistIdChange(event.target.value)}
-                  placeholder={UI_MESSAGES.settings.sync.gistPlaceholder}
+                  placeholder={SETTINGS_UI.sync.gistPlaceholder}
                 />
               </div>
             </div>
@@ -277,7 +278,7 @@ export const SettingsHub = memo(function SettingsHub({
                 style={{ marginRight: 'auto' }}
               >
                 <Icon name="cloud-sync" />
-                <span className="btn-label desktop-only">{UI_MESSAGES.settings.sync.connectBtn}</span>
+                <span className="btn-label desktop-only">{SETTINGS_UI.sync.connectBtn}</span>
               </button>
               <button
                 className="btn btn-secondary btn-recover"
@@ -287,7 +288,7 @@ export const SettingsHub = memo(function SettingsHub({
                 style={{ marginLeft: 'auto' }}
               >
                 <Icon name={COMMON_ICONS.googleRecover} />
-                <span className="btn-label desktop-only">{recoveringGistId ? UI_MESSAGES.settings.sync.recoveringBtn : UI_MESSAGES.settings.sync.recoverBtn}</span>
+                <span className="btn-label desktop-only">{recoveringGistId ? SETTINGS_UI.sync.recoveringBtn : SETTINGS_UI.sync.recoverBtn}</span>
               </button>
             </div>
             </>
@@ -301,7 +302,7 @@ export const SettingsHub = memo(function SettingsHub({
           <div className="settings-actions">
             <button className="btn btn-danger" type="button" onClick={onDisconnectSync}>
               <Icon name={COMMON_ICONS.close} />
-              <span>{UI_MESSAGES.settings.sync.disconnectBtn}</span>
+              <span>{SETTINGS_UI.sync.disconnectBtn}</span>
             </button>
           </div>
         )}
@@ -309,28 +310,28 @@ export const SettingsHub = memo(function SettingsHub({
 
       <div className="settings-card settings-card-backup">
         <div className="settings-card-head">
-          <h2>{UI_MESSAGES.settings.backup.title}</h2>
-          <p className="settings-card-note">{UI_MESSAGES.settings.backup.note}</p>
+          <h2>{SETTINGS_UI.backup.title}</h2>
+          <p className="settings-card-note">{SETTINGS_UI.backup.note}</p>
         </div>
 
         <div className="settings-backup-row">
           <div className="settings-backup-info">
-            <p>{UI_MESSAGES.settings.backup.description}</p>
+            <p>{SETTINGS_UI.backup.description}</p>
           </div>
 
           <div className="settings-backup-actions">
             <button className="btn btn-secondary" type="button" onClick={onExport}>
               <Icon name={COMMON_ICONS.download} />
-              <span>{UI_MESSAGES.settings.backup.exportBtn}</span>
+              <span>{SETTINGS_UI.backup.exportBtn}</span>
             </button>
             <label className="btn btn-secondary settings-import-label">
               <Icon name={COMMON_ICONS.upload} />
-              <span>{UI_MESSAGES.settings.backup.importBtn}</span>
+              <span>{SETTINGS_UI.backup.importBtn}</span>
               <input
                 type="file"
                 accept=".json"
                 className="input-hidden"
-                aria-label={UI_MESSAGES.settings.backup.importAriaLabel}
+                aria-label={SETTINGS_UI.backup.importAriaLabel}
                 onChange={(event) => {
                   const file = event.target.files?.[0];
                   if (file) onImport(file, overwriteImport);
@@ -351,22 +352,22 @@ export const SettingsHub = memo(function SettingsHub({
             <span className="settings-backup-toggle-thumb" />
           </span>
           <span className="settings-backup-toggle-label">
-            {UI_MESSAGES.settings.backup.overwriteLabel}
+            {SETTINGS_UI.backup.overwriteLabel}
           </span>
         </label>
 
         <div className="settings-backup-warning">
-          {UI_MESSAGES.settings.backup.overwriteHint}
+          {SETTINGS_UI.backup.overwriteHint}
         </div>
       </div>
 
       <div className="settings-card settings-card-admin">
-        <h2>{UI_MESSAGES.settings.admin.title}</h2>
-        <p>{UI_MESSAGES.settings.admin.description}</p>
+        <h2>{SETTINGS_UI.admin.title}</h2>
+        <p>{SETTINGS_UI.admin.description}</p>
 
         {adminNotice ? <div className={`admin-warning show ${adminNotice.kind}`}>{adminNotice.message}</div> : null}
 
-        <div className="settings-admin-tabs" role="tablist" aria-label={UI_MESSAGES.settings.admin.title}>
+        <div className="settings-admin-tabs" role="tablist" aria-label={SETTINGS_UI.admin.title}>
           {categories.map((category) => (
             <button
               key={category.key}

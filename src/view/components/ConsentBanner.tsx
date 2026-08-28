@@ -1,11 +1,11 @@
 import { memo, useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { UI_MESSAGES } from '../../core/constants/labels';
+import { ANALYTICS_UI } from '../../core/constants/labels';
 import { LEGAL_ROUTES } from '../../core/constants/legal';
 import { ANALYTICS_CONSENT_EVENT, persistAnalyticsConsent, readAnalyticsConsent } from '../../model/repository/analyticsConsentRepository';
 import { enableAnalyticsAfterConsent } from '../../model/repository/firebaseGateway';
 
-const A = UI_MESSAGES.settings.analytics;
+const A = ANALYTICS_UI;
 
 /**
  * L2 — Aviso de consentimiento de la analítica. Se muestra UNA vez, mientras no haya decisión guardada; tanto
