@@ -537,40 +537,18 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
         return;
       }
 
-      const remoteData = remote.data as TabData;
-      const localMeta = getMeta();
-      const localData = getData();
-      transitionTo('merging');
-      const merged = mergeCrdt(localData, localMeta.updatedAt, remoteData, remoteData.updatedAt);
-      const remoteChanges = countRemoteChangesApplied(localData, remoteData, merged.merged);
-      setLastRemoteChangesApplied(remoteChanges);
-
-      if (merged.localNeedsUpdate) setData(merged.merged);
-
-      let writeOutcome: WriteOutcome = { data: merged.merged, etag: remote.etag || null, remoteUpdatedAt: remoteData.updatedAt };
-      if (merged.remoteNeedsUpdate || remote.wasLegacy) {
-        writeOutcome = await writeWithConflictRecovery(config.token, config.gistId, merged.merged, Date.now());
-      }
-
-      setData(writeOutcome.data);
-      const nextMeta = {
-        updatedAt: Date.now(),
-        etag: writeOutcome.etag,
-        lastRemoteUpdatedAt: Math.max(remoteData.updatedAt, writeOutcome.remoteUpdatedAt),
-      };
-      setMeta(nextMeta);
-      saveSyncConfig({ ...config, etag: writeOutcome.etag, lastRemoteUpdatedAt: nextMeta.lastRemoteUpdatedAt });
-      persist(reconcileWithLocal(writeOutcome.data, nextMeta.lastRemoteUpdatedAt), nextMeta);
-      transitionTo('idle', { lastReadAt: Date.now(), errorCount: 0, pendingAction: null });
+      const { remoteChanges } = await applyRemoteCycle(config, remote);
 
       setStatus('ok');
+      // Acción explícita del usuario: confirma SIEMPRE, también con cero cambios. A diferencia de los ciclos
+      // automáticos, aquí callar se leería como que el botón no ha hecho nada.
       onNotice('ok', `Fusión sincronizada correctamente: ${remoteChanges} cambios remotos aplicados`);
     } catch (error) {
       handleSyncError(error, { fallback: SYNC_MESSAGES.syncError, logName: 'syncNow' });
     } finally {
       lock.release();
     }
-  }, [getData, getMeta, onNotice, persist, setData, setMeta, writeWithConflictRecovery, pushDirtyWithMerge, reconcileWithLocal, handleSyncError, handleNotModified]);
+  }, [applyRemoteCycle, onNotice, handleSyncError, handleNotModified]);
 
   useEffect(() => {
     const dirtyState = loadSyncDirtyState();
