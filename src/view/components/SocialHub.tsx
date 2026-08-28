@@ -1,5 +1,8 @@
 import { memo, useCallback } from 'react';
 import { Link, useLocation } from 'react-router-dom';
+// La hoja del hub se importa AQUÍ y no desde `index.scss`: como el hub entra por `lazy()`, Vite emite su CSS en
+// el mismo chunk perezoso y el arranque no carga ni un byte de estilos de estas pantallas (igual que `stats.scss`).
+import '../../styles/social.scss';
 import { SOCIAL_UI } from '../../core/constants/socialLabels';
 import { LEGAL_CONSENT_UI, LEGAL_ROUTES } from '../../core/constants/legal';
 import type { GameItem, TabData } from '../../model/types/game';

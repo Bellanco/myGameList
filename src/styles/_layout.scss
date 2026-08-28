@@ -1,4 +1,19 @@
-﻿/* Header */
+﻿// Armazón de la aplicación: cabecera, navegación, pestañas, ajustes, pantallas legales y el CROMO COMPARTIDO del
+// hub social.
+//
+// LO EXCLUSIVO DEL HUB YA NO ESTÁ AQUÍ: vive en `social.scss`, que importa `SocialHub.tsx` para que Vite lo emita
+// con el chunk perezoso del hub. Este fichero llegó a 2.831 líneas y sus estilos del hub —que nadie que no entre
+// en él necesita— viajaban en el CSS de arranque de todo el mundo.
+//
+// Lo que SÍ se quedó, y por qué: la cáscara de pantalla (`hub-hub`, `hub-screen*`, `hub-hub-card`), la tarjeta del
+// feed, el cuerpo del detalle de una reseña, el avatar y el esqueleto. No son solo del hub: los pintan también la
+// pantalla pública de un enlace compartido —que se monta SIN el hub, en modo artículo—, la ficha de la ruleta y
+// el esqueleto de carga que se ve mientras el hub se descarga. Moverlas dejaría esas pantallas sin estilos.
+//
+// Al añadir una regla nueva: si su selector menciona SOLO clases que no usa nadie fuera del hub, va en
+// `social.scss`; si toca alguna de las compartidas de arriba, va aquí.
+
+/* Header */
 .app-header {
   background: linear-gradient(90deg, var(--surface) 0%, var(--surface-hover) 100%);
   padding: 1rem 1.2rem;
@@ -12,8 +27,11 @@
   flex: 0 0 auto;
   backdrop-filter: blur(2px);
 }
+
 .header-left { display: flex; align-items: center; gap: 1rem; }
+
 .app-title { font-weight: 800; font-size: 1.25rem; letter-spacing: .3px; background: linear-gradient(135deg, var(--steam-hover), var(--steam)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+
 .header-subtitle {
   display: inline-flex;
   align-items: center;
@@ -29,33 +47,45 @@
   text-transform: uppercase;
   box-shadow: inset 0 1px 0 var(--overlay-hover), 0 6px 16px rgba(var(--steam-rgb),.14);
 }
+
 .header-actions { display: flex; gap: .6rem; align-items: center; flex-wrap: wrap; justify-content: flex-end; }
+
 .header-actions .btn { border-radius: var(--radius-pill); transition: all .25s; }
+
 .header-actions .btn:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(var(--steam-rgb),.15); }
 
 /* Status */
 .status-banner { max-width: 1800px; margin: .9rem auto 0; padding: 0 1.2rem; flex: 0 0 auto; width: 100%; }
+
 .status-banner > div {
   border: 1px solid var(--border); border-left-width: 4px;
   background: var(--surface); border-radius: var(--radius-md);
   padding: .8rem 1rem; box-shadow: var(--shadow); font-size: .92rem;
 }
+
 .status-banner .ok   { border-left-color: var(--success); }
+
 .status-banner .warn { border-left-color: var(--warn); }
+
 .status-banner .err  { border-left-color: var(--danger); }
 
 /* Aviso de versión nueva: mismo lenguaje que el de estado (misma franja, misma tarjeta, mismo acento verde) más
    el botón de recargar. La forma la sigue poniendo cada tema por sus tokens (--surface, --border, --radius-md). */
 .update-notice { max-width: 1800px; margin: .9rem auto 0; padding: 0 1.2rem; flex: 0 0 auto; width: 100%; }
+
 .update-notice-card {
   display: flex; align-items: center; flex-wrap: wrap; gap: .8rem;
   border: 1px solid var(--border); border-left: 4px solid var(--success);
   background: var(--surface); border-radius: var(--radius-md);
   padding: .8rem 1rem; box-shadow: var(--shadow); font-size: .92rem;
 }
+
 .update-notice-text { flex: 1 1 240px; display: grid; gap: .2rem; }
+
 .update-notice-text strong { font-size: .95rem; }
+
 .update-notice-text span { color: var(--text-muted); font-size: .82rem; line-height: 1.4; }
+
 .update-notice-card .btn { margin-left: auto; }
 
 /* Tabs */
@@ -69,8 +99,11 @@
   overflow-x: auto; scrollbar-width: thin; flex: 0 0 auto;
   width: 100%; justify-content: safe center;
 }
+
 .tabs::-webkit-scrollbar { height: 4px; }
+
 .tabs::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
 .tab-btn {
   background: transparent; color: var(--text-dim);
   border: none;
@@ -79,23 +112,35 @@
   white-space: nowrap; display: inline-flex; align-items: center; gap: .5rem;
   font-family: inherit; position: relative;
 }
+
 /* Barra inferior con brillo centrado (G2): se desvanece en los extremos. Solo en la activa. */
 .tab-btn::before {
   content: ''; position: absolute; left: 0; right: 0; bottom: -1px; height: 0;
   background: var(--tab-bar); border-radius: 2px; transition: height .2s;
 }
+
 .tab-btn:focus-visible { outline: none; box-shadow: inset 0 -2px 0 var(--steam-hover); border-radius: 6px; }
-@media (hover:hover) { .tab-btn:hover { color: var(--text-muted); } }
+
+@media (hover:hover) {
+ .tab-btn:hover { color: var(--text-muted); }
+}
+
 .tab-btn.active { color: var(--tab-active); font-weight: 700; }
+
 /* El subrayado activo ahora lo dibuja el indicador deslizante `.tab-underline` (posicionado por JS). */
 .count-badge {
   color: var(--text-dim); font-size: .78rem; font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
+
 .tab-btn.active .count-badge { color: var(--tab-active); }
+
 .tab-icon { width: 1.1rem; height: 1.1rem; opacity: .55; fill: currentColor; stroke: currentColor; transition: opacity .2s; }
+
 .tab-btn.active .tab-icon { opacity: 1; }
+
 .tab-btn[data-tooltip] { position: relative; }
+
 .tab-btn[data-tooltip]:hover::after {
   content: attr(data-tooltip);
   position: absolute; bottom: -35px; left: 50%; transform: translateX(-50%);
@@ -104,13 +149,18 @@
   white-space: nowrap; border: 1px solid var(--border); z-index: 10;
   animation: fadeIn .2s ease-in; pointer-events: none;
 }
+
 @keyframes fadeIn { from { opacity: 0; transform: translateX(-50%) translateY(-5px); } to { opacity: 1; transform: translateX(-50%) translateY(0); } }
+
 /* Tablet y móvil: las etiquetas largas de las pestañas se recortan; pasamos a iconos. */
 @media (max-width:1024px) {
   .tab-btn { padding: .8rem .7rem; font-size: .85rem; }
+
   .tab-btn .tab-text-full { display: none; }
+
   .count-badge { font-size: .72rem; }
 }
+
 @media (max-width:720px) {
   thead { display: none; }
 }
@@ -201,11 +251,14 @@
 
 /* Ajustes de cuenta: todo el cuerpo (escala + apariencia) se bloquea sin sesión de Google (atributo `inert`). */
 .settings-account-body { display: flex; flex-direction: column; gap: .8rem; }
+
 .settings-account-body[inert] { opacity: .55; }
 
 /* F2 — selector de escala de puntuación (estrellas / nota) en Ajustes. */
 .score-scale-choice { display: grid; gap: .6rem; }
+
 .score-scale-choice.is-locked { opacity: .6; }
+
 .score-scale-opt {
   display: flex; align-items: center; gap: .8rem;
   padding: .7rem .85rem;
@@ -213,28 +266,44 @@
   cursor: pointer; text-align: left; color: var(--text); font: inherit;
   transition: background .16s, border-color .16s;
 }
+
 .score-scale-opt:hover:not(:disabled) { background: var(--surface-hover); }
+
 .score-scale-opt:disabled { cursor: not-allowed; }
+
 .score-scale-opt.on { border-color: var(--fg-sky); }
+
 .score-scale-opt:focus-visible { outline: 2px solid var(--fg-sky); outline-offset: 2px; }
+
 .score-scale-dot {
   width: 17px; height: 17px; border-radius: 50%; border: 2px solid var(--text-dim);
   flex: 0 0 auto; display: grid; place-items: center;
 }
+
 .score-scale-opt.on .score-scale-dot { border-color: var(--fg-sky); }
+
 .score-scale-opt.on .score-scale-dot::after { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--fg-sky); }
+
 .score-scale-txt { flex: 1 1 auto; display: grid; gap: .1rem; }
+
 .score-scale-txt b { font-size: .92rem; font-weight: 600; }
+
 .score-scale-txt span { color: var(--text-muted); font-size: .8rem; }
+
 .score-scale-sample { flex: 0 0 auto; display: inline-flex; align-items: center; }
+
 .score-scale-locked { display: flex; align-items: center; gap: .35rem; color: var(--text-dim); font-size: .8rem; }
+
 .score-scale-locked .ui-icon { width: 1em; height: 1em; flex: 0 0 auto; }
 
 /* F1 — selector de apariencia (tema/paleta + claro/oscuro) dentro de "Ajustes de cuenta". */
 .settings-appearance { margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--border); }
+
 .settings-appearance .settings-card-sub { margin: 0 0 .5rem; }
+
 .settings-appearance .settings-card-sub + .settings-card-sub,
 .settings-appearance .theme-mode-row + .settings-card-sub { margin-top: 1rem; }
+
 /* Cada opción de tema es una MINI-PREVISUALIZACIÓN: tarjeta con el fondo oscuro del tema, una barra de
    acento arriba y una esquina con el fondo claro → previsualiza los tres colores de un vistazo. Los colores
    llegan por variables (`--sw-*`) fijadas en el botón de la opción. */
@@ -248,23 +317,31 @@
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .16);
   transition: transform .16s ease;
 }
+
 .palette-swatch::before { /* barra de acento superior: acento + color secundario si el tema es dual (p. ej. azul+naranja) */
   content: ''; position: absolute; inset: 0 0 auto 0; height: 6px;
   background: linear-gradient(90deg, var(--sw-accent, var(--steam)) 0 60%, var(--sw-accent2, var(--sw-accent, var(--steam))) 60% 100%);
 }
+
 .palette-swatch::after { /* esquina inferior derecha con el fondo claro del tema */
   content: ''; position: absolute; right: 0; bottom: 0; width: 46%; height: 62%;
   background: var(--sw-light, #fff); clip-path: polygon(100% 0, 100% 100%, 0 100%);
 }
+
 .score-scale-opt:hover:not(:disabled) .palette-swatch { transform: translateY(-1px) scale(1.04); }
 
 /* En el selector de TEMA, la opción activa se resalta con el ACENTO DEL PROPIO TEMA (no el azul genérico),
    para que cada identidad "pegue" con su color. Ámbito acotado a Ajustes de apariencia. */
 .settings-appearance .score-scale-opt.on { border-color: var(--sw-accent); box-shadow: 0 0 0 1px var(--sw-accent), 0 6px 18px color-mix(in srgb, var(--sw-accent) 22%, transparent); }
+
 .settings-appearance .score-scale-opt.on .score-scale-dot { border-color: var(--sw-accent); }
+
 .settings-appearance .score-scale-opt.on .score-scale-dot::after { background: var(--sw-accent); }
+
 .settings-appearance .score-scale-opt:focus-visible { outline-color: var(--sw-accent); }
+
 .theme-mode-row { display: flex; gap: .5rem; }
+
 /* `flex: 1 1 0` → ambos botones ocupan la misma mitad aunque el texto sea más largo (antes `auto` los
    dimensionaba por contenido y quedaban de tamaños distintos). */
 .theme-mode-row .btn { flex: 1 1 0; min-width: 0; justify-content: center; }
@@ -401,27 +478,9 @@
   margin-bottom: .75rem;
 }
 
-.settings-admin-tab {
-  border: 1px solid var(--border);
-  background: var(--hub-card-bg);
-  color: var(--text-muted);
-  border-radius: var(--radius-sm);
-  padding: .45rem .6rem;
-  font-weight: 700;
-  font-size: .82rem;
-  text-align: center;
-  transition: all .2s ease;
-}
-
 .settings-admin-tab:hover {
   border-color: rgba(var(--steam-rgb),.35);
   color: var(--text);
-}
-
-.settings-admin-tab.active {
-  background: rgba(var(--steam-rgb),.14);
-  border-color: rgba(var(--steam-rgb),.55);
-  color: var(--hub-text);
 }
 
 .settings-admin-empty {
@@ -474,6 +533,7 @@
   max-width: 70ch;
   margin: 0 auto;
 }
+
 .legal-card {
   background: var(--surface);
   border: 1px solid var(--border);
@@ -484,58 +544,27 @@
   flex-direction: column;
   gap: .6rem;
 }
+
 .legal-actions { display: flex; }
+
 .legal-card h2 { font-size: 1rem; }
+
 .legal-card p { color: var(--text-muted); font-size: .88rem; line-height: 1.5; }
 
 /* L4 — enlaces a los documentos legales en Ajustes de cuenta. */
 .settings-legal-links { display: flex; flex-wrap: wrap; gap: .35rem 1rem; font-size: .88rem; }
+
 .legal-list { display: grid; gap: .35rem; padding-left: 1.1rem; color: var(--text-muted); font-size: .88rem; line-height: 1.4; }
+
 .legal-list li { list-style: disc; }
-
-/* L4 — puerta de aceptación de condiciones en el gateway social. */
-.hub-gateway-consent {
-  display: grid;
-  gap: .5rem;
-  margin: .8rem 0;
-  padding: .85rem;
-  background: var(--surface-soft);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  text-align: left;
-}
-.hub-gateway-consent p { color: var(--text-muted); font-size: .85rem; line-height: 1.4; margin: 0; }
-
-/* La casilla es la acción de la pantalla: se presenta como una fila pulsable (no un check suelto perdido en el
-   texto), con el acento del tema y área de toque cómoda en móvil. */
-.hub-gateway-consent-check {
-  display: flex;
-  align-items: center;
-  gap: .6rem;
-  margin-top: .2rem;
-  padding: .7rem .85rem;
-  background: var(--surface);
-  border: 1px solid color-mix(in srgb, var(--fg-sky) 45%, var(--border));
-  border-radius: 9px;
-  font-size: .92rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background .16s, border-color .16s;
-}
-.hub-gateway-consent-check:hover { background: var(--surface-hover); border-color: var(--fg-sky); }
-.hub-gateway-consent-check input {
-  flex: 0 0 auto;
-  width: 1.25rem;
-  height: 1.25rem;
-  accent-color: var(--fg-sky);
-  cursor: pointer;
-}
-.hub-gateway-consent-check:focus-within { outline: 2px solid var(--fg-sky); outline-offset: 2px; }
 
 /* L3 — zona de riesgo (borrado de cuenta): se marca en rojo para que no se confunda con el resto de ajustes. */
 .settings-card-danger { border-color: color-mix(in srgb, var(--danger) 45%, var(--border)); }
+
 .settings-card-danger h2 { color: var(--danger); }
+
 .settings-danger-confirm { display: grid; gap: .3rem; margin: .6rem 0; font-size: .85rem; text-align: left; }
+
 .settings-danger-confirm input {
   width: 100%;
   padding: .45rem .6rem;
@@ -545,9 +574,13 @@
   color: var(--text);
   font: inherit;
 }
+
 .settings-danger-feedback { font-size: .85rem; }
+
 .settings-danger-feedback.ok { color: var(--fg-sky); }
+
 .settings-danger-feedback.warn { color: var(--text-muted); }
+
 .settings-danger-feedback.err { color: var(--danger); }
 
 /* L2 — aviso de consentimiento de la analítica. Se apoya SOBRE la barra inferior (z-index mayor y desplazado por
@@ -573,9 +606,13 @@
 }
 
 .consent-banner-text { flex: 1 1 260px; display: grid; gap: .25rem; }
+
 .consent-banner-text strong { font-size: .95rem; }
+
 .consent-banner-text p { color: var(--text-muted); font-size: .82rem; line-height: 1.4; margin: 0; }
+
 .consent-banner-text a { font-size: .8rem; }
+
 .consent-banner-actions { display: flex; gap: .5rem; margin-left: auto; }
 
 .bottom-nav {
@@ -705,12 +742,6 @@
   height: .98rem;
 }
 
-.hub-screen-actions-split {
-  width: 100%;
-  justify-content: space-between;
-  align-items: center;
-}
-
 .hub-screen-actions-left,
 .hub-screen-actions-right {
   display: flex;
@@ -718,20 +749,6 @@
   align-items: center;
   min-width: 0;
 }
-
-// Botón "Solicitudes": contador de pendientes inscrito en un círculo (gris si 0, verde si hay alguna).
-.hub-requests-btn {
-  position: relative;
-}
-
-/* Botón de solicitudes: icono de campana cuadrado; el contador va como badge en la esquina inferior derecha. */
-.btn.hub-requests-btn {
-  width: 2.7rem;
-  padding: 0;
-  display: inline-grid;
-  place-items: center;
-}
-.hub-requests-btn .ui-icon { width: 1.25rem; height: 1.25rem; }
 
 .hub-requests-count {
   position: absolute;
@@ -756,38 +773,6 @@
   }
 }
 
-// Acciones (aceptar/rechazar/cancelar) de cada tarjeta de solicitud.
-.hub-request-actions {
-  display: flex;
-  gap: .5rem;
-  flex-wrap: wrap;
-  margin-top: .4rem;
-}
-
-// Aviso de SIN CONEXIÓN del espacio social. Mismo lenguaje que el requisito de alta del perfil
-// (`.hub-profile-requirement`): banda ámbar de aviso, borde fino y dos líneas con distinto peso —el guiño del tema
-// y, debajo, qué está pasando—. No es un error, así que no toma el rojo; y la forma (radio, color, tipografía) sale
-// de las variables, que es lo que cada tema redefine.
-.hub-offline {
-  margin: 0;
-  padding: .6rem .75rem;
-  border-radius: var(--radius-sm);
-  background: color-mix(in srgb, var(--warn) 10%, transparent);
-  border: 1px solid color-mix(in srgb, var(--warn) 34%, transparent);
-}
-.hub-offline-lead {
-  margin: 0;
-  display: flex; align-items: center; gap: .45rem;
-  font-weight: 700;
-  color: var(--fg-amber);
-}
-.hub-offline-lead .ui-icon { flex: 0 0 auto; }
-.hub-offline-body {
-  margin: .25rem 0 0;
-  font-size: .82rem;
-  color: var(--text-muted);
-}
-
 // Estado vacío del feed (sin amigos): mensaje + CTA para descubrir perfiles.
 .hub-feed-empty {
   display: flex;
@@ -796,81 +781,7 @@
   gap: .7rem;
 }
 
-/* ── Rediseño "Mi perfil social" (edición): pasos numerados, hero de identidad y chip de estado ── */
-.hub-block-head { display: flex; align-items: center; gap: .55rem; }
-.hub-block-head h3 { margin: 0; }
-.hub-block-step {
-  flex: 0 0 auto;
-  width: 1.5rem; height: 1.5rem; border-radius: 50%;
-  display: inline-grid; place-items: center;
-  font-size: .78rem; font-weight: 800;
-  background: var(--steam-soft); color: var(--steam-hover);
-  border: 1px solid color-mix(in srgb, var(--steam) 35%, transparent);
-}
-/* Hero de identidad: avatar (tamaño contenido) centrado verticalmente con el campo, que ocupa el resto. */
-.hub-identity-hero { display: flex; align-items: center; gap: .8rem; }
 .hub-identity-hero .hub-avatar { flex: 0 0 auto; width: 2.5rem; height: 2.5rem; font-size: 1rem; }
-.hub-identity-hero .finput { flex: 1; min-width: 0; }
-/* Requisito de alta sin cumplir (sin juegos completados): explica por qué "Guardar perfil" está deshabilitado. */
-.hub-profile-requirement {
-  margin: .6rem 0 0;
-  padding: .55rem .7rem;
-  border-radius: var(--radius-sm);
-  background: color-mix(in srgb, var(--warn) 12%, transparent);
-  border: 1px solid color-mix(in srgb, var(--warn) 38%, transparent);
-  color: var(--fg-amber);
-  font-size: .82rem;
-}
-.hub-profile-sync-chip {
-  margin-left: auto;
-  display: inline-flex; align-items: center; gap: .4rem;
-  font-size: .72rem; font-weight: 700;
-  padding: .3rem .65rem; border-radius: var(--radius-pill);
-  background: var(--surface-soft); border: 1px solid var(--border); color: var(--text-muted);
-}
-.hub-profile-sync-chip .dot { width: .5rem; height: .5rem; border-radius: 50%; background: var(--text-dim); flex: 0 0 auto; }
-.hub-profile-sync-chip.is-synced {
-  background: color-mix(in srgb, var(--success) 14%, transparent);
-  border-color: color-mix(in srgb, var(--success) 40%, transparent);
-  color: var(--fg-green);
-}
-.hub-profile-sync-chip.is-synced .dot { background: var(--success); box-shadow: 0 0 0 3px color-mix(in srgb, var(--success) 22%, transparent); }
-
-/* ── Detalle de perfil · Juegos: control segmentado con pastilla deslizante; encabezado si hay una sola categoría ── */
-.hub-seg {
-  position: relative;
-  display: inline-flex;
-  max-width: 100%;
-  background: var(--surface-soft);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-pill);
-  padding: 4px; gap: 2px;
-  overflow-x: auto; scrollbar-width: none;
-}
-.hub-seg::-webkit-scrollbar { display: none; }
-.hub-seg-ind {
-  position: absolute; top: 4px; bottom: 4px; left: 0; z-index: 0;
-  border-radius: var(--radius-pill);
-  background: linear-gradient(180deg, var(--steam), color-mix(in srgb, var(--steam) 72%, #000));
-  box-shadow: 0 6px 16px rgba(var(--steam-rgb),.4);
-  transition: transform .32s cubic-bezier(.2,.8,.25,1), width .32s cubic-bezier(.2,.8,.25,1);
-}
-.hub-seg-btn {
-  position: relative; z-index: 1;
-  border: none; background: transparent;
-  color: var(--text-muted); font: inherit; font-weight: 700; font-size: .82rem;
-  padding: .5rem .95rem; border-radius: var(--radius-pill);
-  cursor: pointer; white-space: nowrap;
-  transition: color .22s ease;
-}
-.hub-seg-btn.is-active { color: #fff; }
-.hub-seg-btn:not(.is-active):hover { color: var(--text); }
-.hub-seg-btn:focus-visible { outline: 2px solid var(--steam); outline-offset: 2px; }
-.hub-games-solo { display: inline-flex; align-items: center; gap: .55rem; }
-.hub-games-solo-label { font-size: .95rem; font-weight: 800; color: var(--hub-text); }
-@media (prefers-reduced-motion: reduce) {
-  .hub-seg-ind { transition: none; }
-}
 
 /* ═══════════════════ Micro-interacciones (efectos añadidos) ═══════════════════
    Todas con su guarda `prefers-reduced-motion` al final de este bloque. */
@@ -878,6 +789,7 @@
 /* Aviso de estado: entra con un leve fade+desplazamiento al aparecer (antes surgía de golpe). */
 .status-banner > div,
 .update-notice-card { animation: statusBannerIn .3s ease both; }
+
 @keyframes statusBannerIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
 
 /* Pestañas: subrayado que se desliza bajo la activa (posición y ancho los fija TabBar por JS). */
@@ -895,34 +807,36 @@
   box-shadow: inset 0 0 0 1px rgba(var(--steam-rgb),.25);
   transition: transform .3s cubic-bezier(.2,.8,.25,1), width .3s cubic-bezier(.2,.8,.25,1);
 }
+
 .bottom-nav-btn.active .bottom-nav-icon { transform: translateY(-2px) scale(1.08); }
 
 /* Feed social: las tarjetas de actividad entran escalonadas al cargar. */
 .hub-feed-activity-item { animation: feedItemIn .42s ease-out both; }
+
 .hub-feed-activity-list .hub-feed-activity-item:nth-child(2) { animation-delay: .06s; }
+
 .hub-feed-activity-list .hub-feed-activity-item:nth-child(3) { animation-delay: .12s; }
+
 .hub-feed-activity-list .hub-feed-activity-item:nth-child(4) { animation-delay: .18s; }
+
 .hub-feed-activity-list .hub-feed-activity-item:nth-child(5) { animation-delay: .24s; }
+
 .hub-feed-activity-list .hub-feed-activity-item:nth-child(n+6) { animation-delay: .28s; }
+
 @keyframes feedItemIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
 /* Contador de peticiones: "pop" al volverse activo (llega una petición). */
 .hub-requests-count.is-active { animation: badgePop .45s cubic-bezier(.2,1.4,.3,1); }
+
 @keyframes badgePop { 0% { transform: scale(.4); } 55% { transform: scale(1.35); } 100% { transform: scale(1); } }
 
 /* Estado "Amigos": el chip aparece con un "pop" de confirmación al aceptar la amistad. */
 .hub-friend-chip { animation: friendChipPop .42s cubic-bezier(.2,1.3,.3,1) both; }
+
 @keyframes friendChipPop { 0% { opacity: 0; transform: scale(.6); } 60% { transform: scale(1.12); } 100% { opacity: 1; transform: scale(1); } }
 
 /* Estado vacío del feed (sin amigos): entra con fade (reutiliza emptyIn de _table). */
 .hub-feed-empty { animation: emptyIn .5s ease both; }
-
-/* Spinner del botón de publicar mientras se envía el post (reutiliza hubSpin de _overlays). */
-.hub-spinner {
-  display: inline-block; width: 1.05rem; height: 1.05rem; border-radius: 50%;
-  border: 2px solid currentColor; border-right-color: transparent;
-  animation: hubSpin .7s linear infinite;
-}
 
 @media (prefers-reduced-motion: reduce) {
   .status-banner > div,
@@ -931,21 +845,10 @@
   .hub-requests-count.is-active,
   .hub-friend-chip,
   .hub-feed-empty { animation: none; }
+
   .tab-underline, .bottom-nav-ind { transition: none; }
+
   .bottom-nav-btn.active .bottom-nav-icon { transform: none; }
-}
-
-// Botón de amistad en las tarjetas del directorio (no debe empujar el layout de la tarjeta).
-.hub-card-friend-action {
-  margin-top: .5rem;
-  display: flex;
-}
-
-// Estado "Amigos" (chip) + posible botón de eliminar en el detalle.
-.hub-friend-state {
-  display: inline-flex;
-  align-items: center;
-  gap: .5rem;
 }
 
 .hub-friend-chip {
@@ -965,128 +868,10 @@
   min-width: 0;
 }
 
-.hub-feed-metrics {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: .35rem;
-}
-
-.hub-metric-card {
-  border: 1px solid rgba(var(--steam-rgb),.26);
-  border-radius: var(--radius-md);
-  background: linear-gradient(145deg, rgba(var(--steam-rgb),.14), var(--hub-grad-end));
-  padding: .35rem .4rem;
-  display: flex;
-  flex-direction: column;
-  gap: .12rem;
-  justify-content: center;
-  align-items: center;
-  text-align: center;
-  min-height: 3.2rem;
-}
-
-.hub-metric-card span {
-  color: var(--hub-text-muted);
-  font-size: .55rem;
-  letter-spacing: .01em;
-  text-transform: uppercase;
-  font-weight: 700;
-  line-height: 1.1;
-  word-break: break-word;
-  display: block;
-  width: 100%;
-}
-
-.hub-metric-card strong {
-  font-size: .82rem;
-  color: var(--hub-text);
-  line-height: 1;
-  font-weight: 800;
-}
-
-@media (min-width: 48rem) {
-  .hub-feed-metrics {
-    gap: .4rem;
-  }
-
-  .hub-metric-card {
-    padding: .5rem .5rem;
-    min-height: 3.5rem;
-  }
-
-  .hub-metric-card span {
-    font-size: .62rem;
-  }
-
-  .hub-metric-card strong {
-    font-size: .95rem;
-  }
-}
-
-@media (min-width: 80rem) {
-  .hub-feed-metrics {
-    gap: .6rem;
-  }
-
-  .hub-metric-card {
-    padding: .65rem .75rem;
-    min-height: 3.8rem;
-  }
-
-  .hub-metric-card span {
-    font-size: .71rem;
-  }
-
-  .hub-metric-card strong {
-    font-size: 1.2rem;
-  }
-}
-
-
 .hub-feed-card header {
   display: flex;
   flex-direction: column;
   gap: .2rem;
-}
-
-.hub-profile-card {
-  gap: 1.1rem;
-}
-
-.hub-profile-layout {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 1rem;
-  min-width: 0;
-}
-
-.hub-profile-block {
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  background: var(--hub-card-bg);
-  padding: 1rem;
-  display: flex;
-  flex-direction: column;
-  gap: .75rem;
-  min-width: 0;
-  overflow-x: hidden;
-}
-
-.hub-profile-block h3 {
-  font-size: .95rem;
-  color: var(--hub-text);
-  margin: 0;
-}
-
-.hub-profile-block p {
-  font-size: .82rem;
-  line-height: 1.4;
-  margin: 0;
-  color: var(--hub-text-muted);
-}
-
-.hub-profile-block-wide {
-  grid-column: span 1;
 }
 
 /* Visibilidad (rediseño): secciones con subtítulo y filas tipo "ajustes": etiqueta a la izquierda,
@@ -1095,16 +880,8 @@
   display: flex;
   flex-direction: column;
 }
-.visibility-section + .visibility-section { margin-top: .6rem; }
 
-.visibility-label {
-  font-size: .7rem;
-  font-weight: 700;
-  color: var(--hub-text-muted);
-  text-transform: uppercase;
-  letter-spacing: .06em;
-  padding: .1rem 0;
-}
+.visibility-section + .visibility-section { margin-top: .6rem; }
 
 .visibility-group {
   display: flex;
@@ -1135,6 +912,7 @@
   cursor: not-allowed;
   opacity: .55;
 }
+
 .visibility-check:has(input:disabled):hover { background-color: transparent; }
 
 .visibility-check input {
@@ -1186,54 +964,6 @@
   .visibility-toggle-track, .visibility-toggle-thumb { transition: none; }
 }
 
-/* Solo la etiqueta (span suelto), NO el `<span class="visibility-toggle-track">` — si no, el switch heredaría
-   flex:1 y crecería ocupando media fila. */
-.visibility-check > span:not(.visibility-toggle-track) {
-  order: 1; /* etiqueta a la izquierda, ocupa el resto */
-  flex: 1;
-  font-size: .88rem;
-  color: var(--hub-text);
-  font-weight: 500;
-}
-
-.hub-profile-checkbox {
-  display: inline-flex;
-  align-items: center;
-  gap: .45rem;
-  font-weight: 700;
-  color: var(--text);
-}
-
-.hub-profile-checkbox input {
-  accent-color: var(--steam);
-}
-
-.hub-hub-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: .7rem;
-  flex-wrap: wrap;
-}
-
-.hub-state-pill {
-  display: inline-flex;
-  align-items: center;
-  padding: .28rem .62rem;
-  border-radius: var(--radius-pill);
-  border: 1px solid rgba(var(--warn-rgb),.35);
-  background: rgba(var(--warn-rgb),.12);
-  color: var(--fg-amber-soft);
-  font-size: .74rem;
-  font-weight: 700;
-}
-
-.hub-state-pill-ok {
-  border-color: rgba(var(--success-rgb),.35);
-  background: rgba(var(--success-rgb),.12);
-  color: var(--fg-green-soft);
-}
-
 .hub-hub-title-wrap {
   display: flex;
   align-items: center;
@@ -1251,246 +981,10 @@
   line-height: 1.5;
 }
 
-.hub-lead {
-  font-size: .92rem;
-}
-
-.hub-status-grid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: .7rem;
-}
-
-.hub-status-card {
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  padding: .75rem .85rem;
-  background: var(--hub-card-bg);
-  display: flex;
-  flex-direction: column;
-  gap: .35rem;
-}
-
-.hub-status-card.is-ok {
-  border-color: rgba(var(--success-rgb),.35);
-  background: rgba(var(--success-rgb),.08);
-}
-
-.hub-status-card.is-pending {
-  border-color: rgba(var(--steam-rgb),.25);
-}
-
-.hub-status-label {
-  color: var(--text-muted);
-  font-size: .75rem;
-  letter-spacing: .02em;
-}
-
-.hub-status-card strong {
-  color: var(--text);
-  font-size: .88rem;
-}
-
-.hub-hub-card-space {
-  gap: 1rem;
-}
-
-.hub-space-welcome {
-  border: 1px solid rgba(var(--steam-rgb),.25);
-  border-radius: var(--radius-sm);
-  background: linear-gradient(145deg, rgba(var(--steam-rgb),.14), var(--hub-grad-end));
-  padding: .85rem .95rem;
-}
-
-.hub-space-welcome h3 {
-  margin: 0;
-  font-size: 1.02rem;
-  color: var(--hub-text);
-}
-
-.hub-space-welcome p {
-  margin: .35rem 0 0;
-}
-
-.hub-hub-tags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: .5rem;
-  margin-top: .8rem;
-}
-
-.hub-chip {
-  display: inline-flex;
-  align-items: center;
-  padding: .28rem .62rem;
-  border-radius: var(--radius-pill);
-  background: rgba(var(--steam-rgb),.1);
-  border: 1px solid rgba(var(--steam-rgb),.28);
-  color: var(--steam-hover);
-  font-size: .74rem;
-  font-weight: 700;
-}
-
-button.hub-chip {
-  cursor: pointer;
-  font-family: inherit;
-  transition: background .2s ease, border-color .2s ease, color .2s ease;
-}
-
-button.hub-chip.active {
-  background: rgba(var(--success-rgb),.2);
-  border-color: rgba(var(--success-rgb),.55);
-  color: var(--fg-green);
-}
-
-.hub-feed-list {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
-  gap: .7rem;
-}
-
-/* Rejilla del directorio de perfiles: las tarjetas ENVUELVEN en filas en vez de irse a la derecha.
-   ─────────────────────────────────────────────────────────────────────────────
-   Sustituye al carrusel horizontal (`.hub-feed-row`, abajo), que era el contenedor equivocado para una lista
-   que se explora: escondía el contenido a la derecha, no daba ninguna pista de cuántos perfiles había y
-   obligaba a arrastrar con el ratón. Medido, la tarjeta del hub tiene 71 rem de interior a 1280 px y 80 rem a
-   1440, así que caben 3 columnas de sobra: el carrusel desperdiciaba ese ancho a propósito.
-
-   SIN TOPE DE COLUMNAS, y esto se decidió midiendo. Hubo un tope de 3 columnas (acotando el ancho del
-   contenedor, que es la única forma de limitar las pistas de un `auto-fit`), pero dejaba sin usar el 20% del
-   ancho a 1440px y el 70% en 4K, con todo el hueco a un lado. Se quitó al comprobar que el tope NO protegía el
-   tamaño de las tarjetas: de eso ya se encarga el mínimo del `minmax`, así que sin tope pasan de 336px a
-   277-312px —siguen por encima del mínimo— y lo único que cambia es cuántas caben por fila. El número de
-   columnas lo decide el ancho disponible, sin `media queries`, y responde al de la TARJETA (container query) y
-   no al de la ventana, que es lo correcto porque el hub vive en un contenedor propio.
-
-   `min(100%, 17rem)` y no `17rem`: en un móvil estrecho el mínimo de 17rem desbordaría el contenedor y
-   aparecería scroll horizontal, que es justo lo que se venía a quitar.
-
-   LAS PISTAS SE ESTIRAN (`1fr` como máximo). Con un máximo fijo de 21rem, en los anchos donde no cabe otra
-   columna la fila se quedaba a medias: a 600px de ventana, una tarjeta de 336px dentro de un contenedor de 560
-   dejaba el 40% en blanco. Con `1fr` la fila se reparte entre las columnas que haya, así que en móvil y tablet
-   se aprovecha todo el ancho.
-
-   `auto-fill` y no `auto-fit`: `auto-fit` colapsa las pistas vacías y reparte su espacio entre las llenas, de
-   modo que con dos amigos en escritorio saldrían dos tarjetas enormes. `auto-fill` conserva las pistas, así que
-   pocas tarjetas mantienen el tamaño de columna y se alinean a la izquierda.
-
-   SIN PADDING HORIZONTAL: venía del carrusel, donde hacía sitio a la barra de scroll horizontal; sin scroll no
-   tiene función, y solo restaba ancho a las pistas. */
-.hub-profile-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 17rem), 1fr));
-  gap: .75rem;
-  padding: .35rem 0 .55rem;
-}
-
-/* Recuento junto al título de cada sección. */
-.hub-section-count {
-  color: var(--text-muted);
-  font-weight: 600;
-}
-
-.hub-feed-row {
-  display: grid;
-  grid-auto-flow: column;
-  grid-auto-columns: minmax(17rem, 21rem);
-  gap: .75rem;
-  overflow-x: auto;
-  overflow-y: hidden;
-  padding: .35rem .1rem .55rem;
-  scrollbar-width: thin;
-  cursor: grab;
-}
-
-.hub-feed-row.is-dragging {
-  cursor: grabbing;
-}
-
-.hub-feed-row::-webkit-scrollbar {
-  height: 7px;
-}
-
-.hub-feed-row::-webkit-scrollbar-thumb {
-  background: rgba(var(--steam-rgb),.36);
-  border-radius: 999px;
-}
-
-.hub-feed-toolbar {
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  background: var(--hub-card-bg);
-  padding: .78rem;
-  display: grid;
-  gap: .6rem;
-}
-
-/* Header del feed: texto a la izquierda, avatar (clica → mi perfil) a la derecha. */
-.hub-feed-header {
-  flex-direction: row;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 1rem;
-}
-
-.hub-feed-header-text {
-  display: flex;
-  flex-direction: column;
-  gap: .45rem;
-  min-width: 0;
-}
-
-.hub-feed-owner-avatar {
-  margin-top: .1rem;
-}
-
 .hub-feed-owner-avatar .hub-avatar {
   width: 3.2rem;
   height: 3.2rem;
   font-size: 1.2rem;
-}
-
-.hub-feed-search {
-  display: grid;
-  gap: .3rem;
-}
-
-.hub-feed-search span {
-  color: var(--text-muted);
-  font-size: .75rem;
-  text-transform: uppercase;
-  letter-spacing: .03em;
-  font-weight: 700;
-}
-
-.hub-feed-filters {
-  display: flex;
-  flex-wrap: wrap;
-  gap: .45rem;
-}
-
-.hub-filter-chip {
-  border: 1px solid rgba(var(--steam-rgb),.35);
-  background: rgba(var(--steam-rgb),.1);
-  color: var(--hub-text-muted);
-  border-radius: 999px;
-  padding: .28rem .72rem;
-  font-size: .76rem;
-  font-weight: 700;
-  font-family: inherit;
-  transition: border-color .2s ease, background .2s ease, color .2s ease;
-}
-
-.hub-filter-chip.is-active {
-  border-color: rgba(var(--success-rgb),.65);
-  background: rgba(var(--success-rgb),.2);
-  color: var(--fg-green);
-}
-
-.hub-feed-result-count {
-  margin: 0;
-  font-size: .78rem;
-  color: var(--text-muted);
 }
 
 .hub-feed-card {
@@ -1502,24 +996,6 @@ button.hub-chip.active {
   display: flex;
   flex-direction: column;
   gap: .45rem;
-}
-
-.hub-feed-profile-item {
-  cursor: pointer;
-  transition: transform .2s ease, border-color .2s ease, box-shadow .2s ease;
-}
-/* Botón "Mostrar más" del feed, centrado bajo la lista. */
-.hub-feed-load-more {
-  align-self: center;
-  margin-top: .5rem;
-}
-
-.hub-feed-profile-item:hover,
-.hub-feed-profile-item:focus-visible {
-  transform: translateY(-1px);
-  border-color: rgba(var(--steam-rgb),.42);
-  box-shadow: 0 8px 16px rgba(0,0,0,.18);
-  outline: none;
 }
 
 .hub-feed-card h3 {
@@ -1537,24 +1013,10 @@ button.hub-chip.active {
   line-height: 1.35;
 }
 
-.hub-feed-game-subtitle {
-  display: block;
-  margin-top: .2rem;
-  color: var(--hub-text);
-  font-size: .78rem;
-  font-weight: 600;
-  letter-spacing: .02em;
-}
-
 .hub-feed-activity-list {
   display: flex;
   flex-direction: column;
   gap: 1rem;
-}
-
-.hub-feed-day-group {
-  gap: .7rem;
-  margin-bottom: 1rem;
 }
 
 /* Fase 2 — tarjeta tranquila: superficie plana + borde de acento por tipo. Burbuja de chat: ancho a
@@ -1583,9 +1045,6 @@ button.hub-chip.active {
   cursor: pointer;
 }
 
-/* Pantalla "Reseñas" de un perfil: layout de lectura. Título del juego prominente, fila de
-   meta (estrellas + fecha) y texto COMPLETO (sin recorte) con tipografía cómoda. */
-.hub-profile-reviews-list { gap: .8rem; }
 /* Reseña rediseñada: medallón con la nota (color rojo→verde según puntuación: 1=rojo, 2=amarillo, 3→5 verde)
    + barra lateral del mismo color; título como encabezado, meta (estrellas + fecha) y texto/“ver más” a lo ancho.
    El tono lo aporta cada tarjeta con `--rev-hue` en línea; la luz sale de `--acc-l` (theme-aware). */
@@ -1599,12 +1058,15 @@ button.hub-chip.active {
   gap: .5rem .9rem;
   padding: 1rem 1.15rem 1rem 1.35rem;
 }
+
 .hub-profile-reviews-list .hub-review-entry.is-review { border-left-color: transparent; }
+
 /* Superficie plana (sin degradado) + sombra sutil. */
 .hub-profile-reviews-list .hub-review-entry {
   background: var(--hub-card-bg);
   box-shadow: 0 1px 2px rgba(0, 0, 0, .14);
 }
+
 /* Barra lateral con el color de la nota. */
 .hub-review-entry::before {
   content: '';
@@ -1613,69 +1075,13 @@ button.hub-chip.active {
   width: 4px;
   background: var(--acc);
 }
-/* Medallón circular con la nota (número entero), coloreado por puntuación. */
-.hub-review-medal {
-  grid-area: medal;
-  align-self: start;
-  width: 3.4rem; height: 3.4rem;
-  border-radius: 50%;
-  display: grid; place-items: center;
-  font-size: 1.45rem; font-weight: 800; line-height: 1;
-  font-variant-numeric: tabular-nums;
-  color: var(--acc);
-  background: var(--acc-soft);
-  border: 2px solid var(--acc);
-}
+
 /* Reseña sin puntuación (lista de la vergüenza y demás): medallón "??" en azul suave (poco contraste), sin estrellas. */
 .hub-review-entry.is-noscore { --acc: var(--noscore); --acc-soft: var(--noscore-soft); }
+
 /* Estrellas de la reseña: llenas con el color de la propia nota (las vacías quedan tenues). */
 .hub-review-entry .stars .f { color: var(--acc); }
-.hub-review-entry-head {
-  grid-area: head;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: .3rem;
-  min-width: 0;
-}
-/* Título del juego como encabezado (ya no un chip): protagonista y legible. */
-.hub-review-game {
-  align-self: stretch;
-  margin: 0;
-  font-size: 1.02rem;
-  font-weight: 800;
-  color: var(--hub-text);
-  line-height: 1.25;
-  overflow-wrap: anywhere;
-}
-.hub-review-meta {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  width: 100%;
-  gap: .6rem;
-  flex-wrap: wrap;
-}
-.hub-review-date {
-  font-size: .72rem;
-  color: var(--hub-text-muted);
-  letter-spacing: .02em;
-}
-/* Aviso de "juego sin pasar", en el hueco de la fecha (tus reseñas del panel no la enseñan: esa fecha es la de
-   publicación del canal social). Ámbar del tema tirado al naranja, para no confundirlo con un aviso amarillo. */
-.hub-review-unfinished {
-  font-size: .72rem;
-  font-weight: 700;
-  letter-spacing: .02em;
-  color: color-mix(in srgb, var(--warn), var(--danger) 40%);
-}
-/* Texto + botón "ver más" ocupan las dos columnas (a lo ancho de la tarjeta). */
-.hub-review-body {
-  grid-area: body;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-}
+
 /* Reseña recortada a 3 líneas; el botón suave la expande (.is-expanded).
    Prefijo .hub-feed-card-detail para ganar a la regla que desactiva el clamp en ese contenedor. */
 .hub-feed-card-detail .hub-profile-reviews-list .hub-review-text {
@@ -1691,6 +1097,7 @@ button.hub-chip.active {
   line-height: 1.6;
   color: var(--text-muted);
 }
+
 .hub-feed-card-detail .hub-profile-reviews-list .hub-review-text.is-expanded {
   display: block;
   -webkit-line-clamp: unset;
@@ -1699,52 +1106,13 @@ button.hub-chip.active {
   white-space: pre-wrap;
 }
 
-/* Botón "ver más/menos" discreto: solo un chevron centrado, sin texto, que no llama la atención.
-   Mismo tratamiento para el "ver más" de reseñas y el "mostrar más" de las listas/feed del hub. */
-.hub-more-soft {
-  align-self: center;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  background: none;
-  border: none;
-  padding: .35rem;
-  color: var(--text-dim);
-  cursor: pointer;
-  border-radius: 50%;
-  transition: color .2s ease, background .2s ease;
-}
-.hub-more-soft .ui-icon { width: .95rem; height: .95rem; }
-.hub-more-soft:hover { color: var(--steam-hover); background: var(--surface-soft); }
-.hub-more-soft:focus-visible { outline: 2px solid var(--steam-hover); outline-offset: 2px; }
-/* "Ver más/menos" de cada reseña: a todo el ancho, igual que el "Mostrar más". */
-.hub-review-more {
-  align-self: stretch;
-  width: 100%;
-  margin-top: .35rem;
-  border-radius: var(--radius-md);
-  /* Texto "Ver más/menos" en lugar del chevron; el botón conserva el mismo tamaño (barra a todo el ancho). */
-  font-size: .8rem;
-  font-weight: 700;
-}
-.hub-review-more:hover { background: var(--surface-soft); color: var(--steam-hover); }
-.hub-review-more:active { background: var(--overlay-hover); }
-/* "Mostrar más": misma altura, pero la zona pulsable abarca todo el ancho de la columna,
-   con feedback de botón muy sutil (hover/active). Va tras .hub-more-soft para ganar en cascada. */
-.hub-feed-load-more {
-  align-self: stretch;
-  width: 100%;
-  margin-top: .5rem;
-  border-radius: var(--radius-md);
-}
-.hub-feed-load-more:hover { background: var(--surface-soft); color: var(--steam-hover); }
-.hub-feed-load-more:active { background: var(--overlay-hover); }
-.hub-game-filter-empty { color: var(--text-muted); font-size: .88rem; padding: .6rem .2rem; margin: 0; }
-
 /* Acento por tipo de evento */
 .hub-feed-activity-item.is-review { border-left-color: var(--steam); }
+
 .hub-feed-activity-item.is-recommendation { border-left-color: var(--success); }
+
 .hub-feed-activity-item.is-post { border-left-color: var(--text-muted); cursor: default; }
+
 /* F4 — MOVIMIENTO DE LISTA: la tarjeta más callada del feed, y a propósito.
    Un renglón —quién, qué hizo, con qué juego, a qué hora— en una burbuja que conserva la silueta de las demás
    pero renuncia a todo lo que reclama atención: el lomo va en el gris del borde (el color queda reservado a lo
@@ -1762,51 +1130,6 @@ button.hub-chip.active {
      que mide distinto a cada línea rompe esa rejilla. Lo que hace ligero a este mensaje es su altura y su color,
      no su anchura. */
 }
-
-/* El renglón. Un `p` con elementos EN LÍNEA, no una fila de flex: así el texto fluye y parte por donde tenga que
-   partir en una pantalla estrecha, en vez de empujar la hora fuera de la burbuja. */
-.hub-feed-move-line {
-  flex: 1 1 auto;
-  min-width: 0;
-  margin: 0;
-  font-size: .84rem;
-  line-height: 1.35;
-  color: var(--text-muted);
-}
-/* Autor: el mismo azul de enlace que en el resto del feed, un punto menos de cuerpo. */
-.hub-feed-move-who { font-weight: 700; color: var(--steam-hover); }
-.hub-feed-move-verb { color: var(--text-muted); }
-
-/* NOMBRE DEL JUEGO. Es lo único de la tarjeta que puede llevar a algún sitio, así que se distingue por COLOR y
-   peso —no por cápsula ni subrayado permanente, que es justo lo que hacía que gritara—. El subrayado aparece al
-   pasar por encima, que es donde hace falta la promesa de «esto se pulsa». */
-.hub-feed-move-game {
-  display: inline;
-  padding: 0;
-  border: 0;
-  background: none;
-  font: inherit;
-  font-weight: 600;
-  /* El acento de la paleta, rebajado hacia el gris del texto: así el enlace lleva el MATIZ del tema —azul en el
-     clásico, rojo en Persona, verde en Grimdark— sin el brillo pleno del acento, que es lo que gritaba. Se mezcla
-     y no se usa `--hub-text-muted` porque en varias paletas ese token y `--text-muted` son casi el mismo gris, y
-     entonces el nombre pulsable y el que no lo es se volvían indistinguibles. */
-  color: color-mix(in srgb, var(--steam) 62%, var(--text-muted));
-  cursor: pointer;
-  text-align: left;
-  text-underline-offset: .18em;
-}
-.hub-feed-move-game:hover { color: var(--steam-hover); text-decoration: underline; }
-.hub-feed-move-game:focus-visible {
-  outline: 2px solid var(--steam);
-  outline-offset: 2px;
-  border-radius: .2rem;
-}
-/* Sin reseña detrás no hay nada que abrir: el nombre se queda en el color del propio renglón y se distingue solo
-   por el peso. Antes iba en `--text` (casi blanco) y acababa BRILLANDO MÁS que el que sí es enlace, que es
-   exactamente la señal contraria a la que hay que dar. */
-.hub-feed-move-game.is-plain { color: var(--text-muted); cursor: default; }
-.hub-feed-move-game.is-plain:hover { color: var(--text-muted); text-decoration: none; }
 
 /* La hora, al final del renglón. Clase propia y NO `hub-feed-date`: varias paletas convierten esa clase en una
    cápsula o le cuelgan un prefijo («//», «>»), y aquí tiene que ser el dato más pequeño de la línea. */
@@ -1838,23 +1161,6 @@ button.hub-chip.active {
   outline-offset: 2px;
 }
 
-/* Reseñas pulsables: capa transparente que abarca toda la tarjeta y captura el click sin envolver el contenido
-   (así el título/estrellas/texto siguen siendo texto seleccionable y el foco recae en un único control). */
-.hub-review-open {
-  position: absolute;
-  inset: 0;
-  z-index: 1;
-  border: 0;
-  padding: 0;
-  margin: 0;
-  background: none;
-  cursor: pointer;
-  border-radius: inherit;
-}
-.hub-review-open:focus-visible {
-  outline: 2px solid var(--acc);
-  outline-offset: 2px;
-}
 /* Realce sutil al pasar/enfocar, coherente con el resto de tarjetas pulsables del hub. */
 .hub-profile-reviews-list .hub-review-entry.is-review:hover,
 .hub-profile-reviews-list .hub-review-entry.is-review:has(.hub-review-open:focus-visible) {
@@ -1869,6 +1175,7 @@ button.hub-chip.active {
   align-items: center;
   gap: .6rem;
 }
+
 .hub-feed-card-head-text {
   flex: 1 1 auto;
   min-width: 0;
@@ -1878,6 +1185,7 @@ button.hub-chip.active {
   text-align: center;
   gap: .15rem;
 }
+
 .hub-avatar {
   flex: 0 0 auto;
   width: 2.1rem;
@@ -1891,53 +1199,14 @@ button.hub-chip.active {
   line-height: 1;
   user-select: none;
 }
-/* Avatar sin foto: disco tintado por el acento de la paleta + silueta a trazo. Los tokens viven en la CAPA 3 de
-   `_base.scss`; aquí solo se montan. El anillo va como sombra INSET y no como `border`, para que no reste espacio
-   al contenido ni descuadre la altura de las filas del feed. */
-.hub-avatar-blank {
-  background: var(--deco-avatar-bg);
-  color: var(--deco-avatar-line);
-  box-shadow: inset 0 0 0 1px var(--deco-avatar-ring);
-}
-:root[data-effects="on"] .hub-avatar-blank {
-  box-shadow: inset 0 0 0 1px var(--deco-avatar-ring), var(--deco-avatar-glow);
-}
-.hub-avatar-icon {
-  width: 62%;
-  height: 62%;
-  fill: none;
-  stroke: currentColor;
-  /* `stroke-width` es heredable en SVG, así que llega al contenido del `<use>` sin tocar el sprite. */
-  stroke-width: var(--deco-avatar-stroke);
-  stroke-linecap: var(--deco-avatar-cap);
-  stroke-linejoin: var(--deco-avatar-cap);
-  /* La silueta se apoya en el borde inferior del disco (los hombros se cortan, como en una foto de carnet), así que
-     se baja un pelo para que el aire quede arriba y no partido en dos. */
-  margin-block-start: 8%;
-}
-.hub-avatar-img { object-fit: cover; background: var(--surface-hover); }
+
 /* Avatar grande para el hero de la página de perfil (debe ir tras .hub-avatar para ganar el tamaño). */
 .hub-avatar-lg {
   width: 4.5rem;
   height: 4.5rem;
   font-size: 1.6rem;
 }
-/* F4 — el avatar del renglón de movimiento: presente para saber de quién es, sin ser el protagonista. */
-.hub-avatar-xs {
-  width: 1.45rem;
-  height: 1.45rem;
-  font-size: .62rem;
-}
 
-/* social/profiles — hero de página de perfil: avatar grande + nombre + recuento, centrado. */
-.hub-profile-hero {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
-  gap: .35rem;
-  padding: .4rem 0 .2rem;
-}
 .hub-feed-card .hub-profile-hero-name {
   font-size: clamp(1.05rem, .95rem + .5vw, 1.35rem);
   font-weight: 800;
@@ -1945,11 +1214,6 @@ button.hub-chip.active {
   white-space: normal;
   overflow: visible;
   text-overflow: clip;
-}
-.hub-profile-hero-meta {
-  margin: 0;
-  color: var(--text-muted);
-  font-size: .82rem;
 }
 
 /* Juego como chip sutil */
@@ -1968,17 +1232,17 @@ button.hub-chip.active {
   white-space: nowrap;
 }
 
-/* Fase 3 — skeletons de carga */
-@keyframes hub-skeleton-pulse { 0%,100% { opacity: .55; } 50% { opacity: 1; } }
 .hub-skeleton {
   background: var(--surface-hover);
   border-radius: var(--radius-sm);
   animation: hub-skeleton-pulse 1.2s ease-in-out infinite;
 }
+
 .hub-skeleton-line {
   display: block;
   height: .7rem;
 }
+
 .hub-skeleton-card { cursor: default; }
 
 .hub-feed-review-text {
@@ -2004,60 +1268,11 @@ button.hub-chip.active {
   white-space: pre-wrap;
 }
 
-.hub-feed-email {
-  color: var(--text);
-  font-weight: 700;
-}
-
-/* F3 — Publicaciones (texto libre + enlaces). Compositor de una línea que CRECE con el contenido: el textarea
-   arranca a la altura del campo de antes y se estira al saltar de línea o desbordar (la altura la calcula
-   `SocialFeedScreen` con `scrollHeight`). */
-.hub-post-composer {
-  display: flex;
-  /* Centrado y no `stretch`: con el campo creciendo, estirar el botón lo convertiría en una columna enorme.
-     Centrado se queda cuadrado y a media altura del campo, sea de una línea o de varias. */
-  align-items: center;
-  gap: .6rem;
-}
-/* SELECTOR DE DOS CLASES a propósito, no `.hub-post-input` a secas: `.ftextarea` impone `min-height: 128px`
-   (pensada para el análisis del formulario) y `resize: vertical`, y vive en `_overlays-and-responsive.scss`, que
-   se compila DESPUÉS de este fichero. Con una sola clase empatan en especificidad y gana la última: el compositor
-   nacía con la altura de un párrafo y con tirador de redimensión. Subir la especificidad lo hace independiente del
-   orden de los `@use`. */
-.hub-post-composer .hub-post-input {
-  flex: 1 1 auto;
-  min-width: 0;
-  /* Arranca en UNA línea; la altura real la calcula `SocialFeedScreen` con `scrollHeight`. */
-  min-height: 0;
-  resize: none;
-  overflow-y: auto;
-  /* Tope de crecimiento: a partir de aquí hace scroll interno en vez de empujar el feed fuera de la pantalla.
-     Con el cupo de oro (10.000 caracteres) el campo sería impracticable sin este límite. */
-  max-height: 11rem;
-}
-/* Dos clases por el mismo motivo que el campo: `.btn` se declara después (`_forms-and-buttons.scss`) y con una
-   sola clase le ganaba el empate, así que su `padding: .55rem 1rem` anulaba el `padding: 0` de aquí y descentraba
-   el icono dentro del cuadrado. */
-.hub-post-composer .hub-post-publish {
-  flex: 0 0 auto;
-  aspect-ratio: 1; /* icono solo → botón cuadrado */
-  padding: 0;
-  /* Altura propia: al no estirarse ya con el campo, sin esto se encogería a la de su icono. Coincide con la de
-     una línea del compositor, así que en el caso normal parecen del mismo alto. */
-  height: 2.55rem;
-}
 /* Tarjeta de post dentro del feed: mismo estilo que la reseña pero sin afordancia de clic. */
 .hub-feed-activity-item.is-post {
   cursor: default;
 }
-.hub-post-text {
-  margin: .25rem 0 0;
-  max-width: 65ch; /* medida de lectura cómoda aunque la tarjeta sea ancha */
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
-  line-height: 1.45;
-  color: var(--text);
-}
+
 /* Recorte de publicaciones largas (el cupo por rango llega a 100.000 caracteres). Mismo mecanismo que el de las
    reseñas (`.hub-feed-review-text`), con más líneas porque una publicación es el contenido principal de su
    tarjeta, no un extracto. Lo despliega el botón de al lado; `PostBody` decide si hace falta midiendo el
@@ -2068,46 +1283,6 @@ button.hub-chip.active {
   line-clamp: 8;
   -webkit-line-clamp: 8;
   overflow: hidden;
-}
-.hub-post-more {
-  align-self: flex-start;
-  margin-top: .3rem;
-  padding: 0;
-  border: 0;
-  background: none;
-  color: var(--steam-hover);
-  font: inherit;
-  font-size: .82rem;
-  font-weight: 600;
-  cursor: pointer;
-  text-decoration: underline;
-}
-.hub-post-more:hover,
-.hub-post-more:focus-visible {
-  color: var(--text);
-}
-.hub-post-text a {
-  color: var(--steam-hover);
-  text-decoration: underline;
-  overflow-wrap: anywhere;
-}
-.hub-post-media-link {
-  display: inline-block;
-  text-decoration: none;
-}
-.hub-post-media {
-  display: block;
-  max-width: 100%;
-  max-height: 420px;
-  border-radius: 8px;
-  margin: .4rem 0;
-}
-.hub-post-hint {
-  display: block;
-  margin-top: .25rem;
-  font-size: .82em;
-  font-style: italic;
-  opacity: .7;
 }
 
 .hub-hub-icon {
@@ -2120,202 +1295,6 @@ button.hub-chip.active {
   justify-content: center;
 }
 
-/* Social gateway login-like */
-.hub-hub-gateway {
-  min-height: calc(100vh - 190px);
-  align-items: center;
-}
-
-.hub-hub-gateway-card {
-  min-height: min(78vh, 760px);
-  justify-content: center;
-  gap: .9rem;
-}
-
-.hub-gateway-lead {
-  max-width: 56ch;
-}
-
-.hub-gateway-step-caption {
-  margin: -.15rem 0 .1rem;
-  font-size: .82rem;
-  color: var(--hub-text-muted);
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: .04em;
-}
-
-.hub-gateway-progress {
-  width: 100%;
-  max-width: 36rem;
-  align-self: center;
-  display: flex;
-  flex-direction: column;
-  gap: .32rem;
-}
-
-.hub-gateway-progress small {
-  color: var(--text-muted);
-  font-size: .74rem;
-  font-weight: 700;
-  letter-spacing: .02em;
-}
-
-.hub-gateway-progress-track {
-  width: 100%;
-  height: .52rem;
-  border-radius: 999px;
-  border: 1px solid rgba(var(--steam-rgb),.3);
-  background: var(--hub-card-bg);
-  overflow: hidden;
-}
-
-.hub-gateway-progress-fill {
-  display: block;
-  height: 100%;
-  width: 0;
-  background: linear-gradient(90deg, rgba(var(--steam-rgb),.82), rgba(var(--success-rgb),.88));
-  border-radius: 999px;
-  box-shadow: 0 0 14px rgba(var(--steam-rgb),.28);
-  transition: width .42s ease-out;
-}
-
-.hub-gateway-actions {
-  width: 100%;
-  max-width: 36rem;
-  align-self: center;
-  display: flex;
-  flex-direction: column;
-  gap: .7rem;
-}
-
-.hub-gateway-btn {
-  min-height: 3.1rem;
-  border-radius: .8rem;
-  font-size: .98rem;
-  font-weight: 800;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: .55rem;
-  width: 100%;
-}
-
-.hub-gateway-btn-primary {
-  min-height: 3.8rem;
-  font-size: 1.06rem;
-  box-shadow: 0 10px 22px rgba(var(--steam-rgb),.16);
-  animation: socialCtaIn .36s ease-out;
-}
-
-.hub-gateway-btn .ui-icon {
-  width: 1.05rem;
-  height: 1.05rem;
-}
-
-.hub-gateway-details {
-  width: 100%;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  background: var(--hub-card-bg);
-  padding: .4rem .6rem .65rem;
-}
-
-.hub-gateway-details > summary {
-  cursor: pointer;
-  color: var(--steam-hover);
-  font-weight: 700;
-  font-size: .88rem;
-  padding: .35rem .15rem .5rem;
-  list-style: none;
-}
-
-.hub-gateway-details > summary::-webkit-details-marker {
-  display: none;
-}
-
-.hub-gateway-details > summary::before {
-  content: '▸';
-  margin-right: .4rem;
-}
-
-.hub-gateway-details[open] > summary::before {
-  content: '▾';
-}
-
-.hub-gateway-steps {
-  width: 100%;
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: .55rem;
-}
-
-.hub-gateway-step {
-  border: 1px solid var(--border);
-  border-radius: .8rem;
-  padding: .62rem .66rem;
-  background: var(--hub-card-bg);
-  display: flex;
-  align-items: center;
-  gap: .6rem;
-  min-height: 3.35rem;
-}
-
-.hub-gateway-step.is-current {
-  border-color: rgba(var(--steam-rgb),.55);
-  background: rgba(var(--steam-rgb),.12);
-}
-
-.hub-gateway-step.is-done {
-  border-color: rgba(var(--success-rgb),.55);
-  background: rgba(var(--success-rgb),.14);
-}
-
-.hub-gateway-step-badge {
-  width: 1.45rem;
-  height: 1.45rem;
-  border-radius: 999px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-size: .69rem;
-  font-weight: 900;
-  border: 1px solid var(--border);
-  color: var(--hub-text);
-  background: var(--overlay-hover);
-  flex: 0 0 auto;
-}
-
-.hub-gateway-step.is-done .hub-gateway-step-badge {
-  color: #fff;
-  background: var(--success);
-  border-color: rgba(var(--success-rgb),.55);
-}
-
-.hub-gateway-step-copy {
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  line-height: 1.1;
-  gap: .2rem;
-}
-
-.hub-gateway-step-copy strong {
-  color: var(--text);
-  font-size: .8rem;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.hub-gateway-step-copy small {
-  color: var(--text-muted);
-  font-size: .72rem;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
 @keyframes socialCtaIn {
   from {
     opacity: 0;
@@ -2325,39 +1304,6 @@ button.hub-chip.active {
     opacity: 1;
     transform: translateY(0);
   }
-}
-
-/* Activity feed day grouping */
-/* Chat: hilo cronológico en columna; las burbujas se alinean a izquierda (otros) o derecha (tú).
-   El separador de día va centrado y sticky. */
-.hub-feed-day-group {
-  display: flex;
-  flex-direction: column;
-}
-
-.hub-feed-day-header {
-  align-self: center;
-  position: sticky;
-  top: 0;
-  z-index: 2;
-  display: inline-flex;
-  align-items: center;
-  gap: .5rem;
-  margin: .2rem 0 .6rem;
-  padding: .25rem .8rem;
-  border-radius: var(--radius-pill);
-  /* opaco al quedar fijo (tinte steam sobre superficie) para que las tarjetas no se transparenten */
-  background: linear-gradient(0deg, var(--steam-soft), var(--steam-soft)), var(--surface);
-  border: 1px solid var(--border);
-}
-
-.hub-feed-day-header h4 {
-  margin: 0;
-  font-size: .88rem;
-  font-weight: 700;
-  letter-spacing: .02em;
-  color: var(--hub-text-muted);
-  text-transform: uppercase;
 }
 
 /* Detail panel metadata */
@@ -2380,6 +1326,7 @@ button.hub-chip.active {
   gap: .9rem;
   min-width: 0;
 }
+
 .hub-detail-body .hub-feed-review-text {
   min-width: 0;
 }
@@ -2390,11 +1337,13 @@ button.hub-chip.active {
     align-items: flex-start;
     gap: 1.1rem;
   }
+
   .hub-detail-body .hub-feed-review-text {
     flex: 1 1 0;
     /* En el detalle la reseña llena el hueco hasta los metadatos (sin el tope de 65ch global). */
     max-width: none;
   }
+
   .hub-detail-body .hub-detail-metadata {
     flex: 0 0 17rem;
     margin-top: 0;
@@ -2426,91 +1375,13 @@ button.hub-chip.active {
   font-weight: 700;
 }
 
-.hub-detail-profile-link {
-  display: inline-flex;
-  align-items: center;
-  justify-content: flex-start;
-  min-height: 2.75rem;
-  min-width: 2.75rem;
-  margin: -.25rem -.35rem;
-  padding: .25rem .35rem;
-  border: 1px solid transparent;
-  border-radius: .5rem;
-  background: transparent;
-  color: var(--steam-hover);
-  font-size: inherit;
-  font-weight: inherit;
-  line-height: 1.2;
-  text-align: left;
-  cursor: pointer;
-  transition: border-color .2s ease, background .2s ease, color .2s ease;
-}
-
-.hub-detail-profile-link:hover {
-  color: var(--hub-text);
-}
-
-.hub-detail-profile-link:focus-visible {
-  outline: none;
-  border-color: rgba(var(--steam-rgb),.42);
-  background: rgba(var(--steam-rgb),.12);
-  box-shadow: 0 0 0 2px rgba(var(--steam-rgb),.2);
-}
-
-/* Avatar clicable (feed/detalle): botón sin chrome que envuelve la foto/inicial y navega al perfil. */
-.hub-avatar-link {
-  flex: 0 0 auto;
-  display: inline-flex;
-  padding: 0;
-  border: 1px solid transparent;
-  border-radius: 50%;
-  background: transparent;
-  cursor: pointer;
-  transition: box-shadow .2s ease, border-color .2s ease;
-}
-.hub-avatar-link:hover { box-shadow: 0 0 0 2px rgba(var(--steam-rgb),.28); }
-.hub-avatar-link:focus-visible {
-  outline: none;
-  border-color: rgba(var(--steam-rgb),.42);
-  box-shadow: 0 0 0 2px rgba(var(--steam-rgb),.2);
-}
-
-/* Nombre clicable (feed): botón inline con apariencia de texto que navega al perfil. */
-.hub-name-link {
-  display: inline;
-  margin: 0;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  color: inherit;
-  font: inherit;
-  text-align: left;
-  cursor: pointer;
-}
-.hub-name-link:hover { color: var(--steam-hover); text-decoration: underline; }
-.hub-name-link:focus-visible {
-  outline: none;
-  border-radius: .25rem;
-  box-shadow: 0 0 0 2px rgba(var(--steam-rgb),.2);
-}
-
 @container social-card (max-width: 66rem) {
-  .hub-feed-metrics {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
   .hub-feed-card {
     padding: .72rem;
   }
 }
 
 @container social-card (max-width: 58rem) {
-  .hub-screen-actions-split {
-    flex-direction: column;
-    align-items: stretch;
-    gap: .55rem;
-  }
-
   .hub-screen-actions-left,
   .hub-screen-actions-right {
     width: 100%;
@@ -2525,15 +1396,6 @@ button.hub-chip.active {
 @container social-card (max-width: 48rem) {
   .hub-screen-actions .btn {
     width: 100%;
-  }
-
-  .hub-feed-metrics {
-    grid-template-columns: 1fr;
-  }
-
-  .hub-filter-chip {
-    font-size: .72rem;
-    padding: .24rem .62rem;
   }
 }
 
@@ -2554,18 +1416,6 @@ button.hub-chip.active {
 
   .hub-hub-card {
     width: min(100%, 100%);
-  }
-
-  .hub-status-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .hub-profile-layout {
-    grid-template-columns: 1fr;
-  }
-
-  .hub-profile-block-wide {
-    grid-column: span 1;
   }
 
   .visibility-group {
@@ -2607,11 +1457,6 @@ button.hub-chip.active {
     flex: 0 0 auto;
   }
 
-  .hub-profile-card .hub-screen-actions-split {
-    justify-content: space-between;
-    align-items: center;
-  }
-
   .hub-profile-card .hub-screen-actions-right {
     margin-left: auto;
   }
@@ -2631,63 +1476,7 @@ button.hub-chip.active {
     width: 1rem;
     height: 1rem;
   }
-
-  .hub-profile-card .hub-profile-block > p {
-    display: none;
-  }
-
-  .hub-feed-row {
-    grid-auto-columns: minmax(14rem, 17rem);
-  }
-
-  .hub-hub-gateway {
-    min-height: calc(100vh - 150px);
-  }
-
-  .hub-hub-gateway-card {
-    min-height: calc(100vh - 170px);
-    justify-content: flex-start;
-  }
-
-  .hub-gateway-btn {
-    min-height: 3.25rem;
-    font-size: 1rem;
-  }
-
-  .hub-gateway-btn-primary {
-    min-height: 3.95rem;
-    font-size: 1.05rem;
-  }
-
-  .hub-gateway-progress {
-    max-width: 100%;
-  }
-
-  .hub-gateway-steps {
-    grid-template-columns: 1fr;
-    gap: .45rem;
-  }
-
-  .hub-gateway-step {
-    min-height: 3rem;
-  }
 }
-
-@media (min-width:48rem) {
-  .hub-gateway-actions {
-    max-width: 38rem;
-  }
-
-  .hub-gateway-details {
-    padding-top: .6rem;
-  }
-
-  .hub-gateway-details > summary {
-    display: none;
-  }
-}
-
-
 
 /* ── Pantallas de error ────────────────────────────────────────────────────────────────────────────
    Las dos (boundary RAÍZ y del hub social) comparten armazón: `.error-card` sobre `.hub-hub-card`.
