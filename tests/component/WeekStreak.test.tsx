@@ -5,10 +5,10 @@ import { describe, expect, it } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { WeekStreak } from '../../src/view/components/stats/WeekStreak';
 import { localWeekKey } from '../../src/core/utils/dateTime';
-import { UI_MESSAGES } from '../../src/core/constants/labels';
+import { STATS_UI } from '../../src/core/constants/statsLabels';
 import type { ActivitySummary, WeekActivity } from '../../src/core/stats/types';
 
-const L = UI_MESSAGES.stats.activity;
+const L = STATS_UI.activity;
 
 /** Clave ISO de la semana que cayó `back` semanas antes de la actual. */
 function weekKeyBack(back: number): string {

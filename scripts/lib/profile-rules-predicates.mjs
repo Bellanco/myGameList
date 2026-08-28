@@ -20,10 +20,13 @@ export const LIMITS = {
   gistId: 128,
 };
 
-/** Claves admitidas en `profiles` (allowlist `hasOnly` de `profileWriteIsValid`). Pre-C7. */
+/** Claves admitidas en `profiles` (allowlist `hasOnly` de `profileWriteIsValid`). SIN `email` desde L1. */
 const PROFILE_ALLOWED_KEYS = [
-  'schemaVersion', 'uid', 'profileId', 'email', 'displayName', 'photoURL', 'social', 'updatedAt', 'tier', 'createdAt',
+  'schemaVersion', 'uid', 'profileId', 'displayName', 'photoURL', 'social', 'updatedAt', 'tier', 'createdAt',
 ];
+
+/** Subclaves admitidas en `social` (allowlist `hasOnly` de `profileSocialIsSane`). `githubToken` NO está. */
+const SOCIAL_ALLOWED_KEYS = ['enabled', 'etag', 'gistId', 'gamesGistId'];
 
 const isTimestampLike = (v) => Boolean(v) && typeof v === 'object' && typeof v.toMillis === 'function';
 const isNumberOrTimestamp = (v) => typeof v === 'number' || isTimestampLike(v);
@@ -39,7 +42,13 @@ export function auditProfile(data) {
   const problemas = [];
   const has = (k) => Object.prototype.hasOwnProperty.call(data, k);
 
-  const extra = Object.keys(data).filter((k) => !PROFILE_ALLOWED_KEYS.includes(k));
+  // `email` va aparte del resto de claves desconocidas, y la distinción no es cosmética: el informe solo obliga a
+  // corregir lo marcado como NUEVO antes de desplegar. `email` ESTABA admitido y deja de estarlo con este
+  // despliegue, así que marcarlo como "ya rechazado antes" invitaría a desplegar y congelar a su dueño.
+  if (has('email')) {
+    problemas.push({ nuevo: true, motivo: 'email ya no cabe en el perfil público (lo lee cualquier autenticado)' });
+  }
+  const extra = Object.keys(data).filter((k) => k !== 'email' && !PROFILE_ALLOWED_KEYS.includes(k));
   if (extra.length) problemas.push({ nuevo: false, motivo: `claves fuera de la allowlist: ${extra.join(', ')}` });
 
   if (has('schemaVersion') && typeof data.schemaVersion !== 'number') {
@@ -56,9 +65,6 @@ export function auditProfile(data) {
       })`,
     });
   }
-  if (has('email') && !isStringWithin(data.email, LIMITS.email)) {
-    problemas.push({ nuevo: true, motivo: `email inválido o de más de ${LIMITS.email} caracteres` });
-  }
   if (has('photoURL')) {
     if (!isStringWithin(data.photoURL, LIMITS.photoURL)) {
       problemas.push({ nuevo: true, motivo: `photoURL inválido o de más de ${LIMITS.photoURL} caracteres` });
@@ -72,6 +78,11 @@ export function auditProfile(data) {
       problemas.push({ nuevo: true, motivo: 'social no es un mapa' });
     } else {
       const hasS = (k) => Object.prototype.hasOwnProperty.call(s, k);
+      const extraSocial = Object.keys(s).filter((k) => !SOCIAL_ALLOWED_KEYS.includes(k));
+      if (extraSocial.length) {
+        // `social.githubToken` cae aquí: es el resto legacy más grave y ahora la allowlist lo rechaza.
+        problemas.push({ nuevo: true, motivo: `subclaves de social fuera de la allowlist: ${extraSocial.join(', ')}` });
+      }
       if (hasS('enabled') && typeof s.enabled !== 'boolean') {
         problemas.push({ nuevo: true, motivo: `social.enabled no es booleano (${typeof s.enabled})` });
       }

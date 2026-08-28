@@ -1,5 +1,5 @@
 import { ScoreDisplay } from '../ScoreDisplay';
-import { MetaSection } from '../MetaSection';
+import { ReviewDetailBody } from '../ReviewDetailBody';
 import { HubAvatar } from '../socialhub/HubAvatar';
 import type { GameItem } from '../../../model/types/game';
 
@@ -33,15 +33,13 @@ export function ReviewDetail({ game, author }: ReviewDetailProps) {
         </header>
         {/* Puntuación según la escala elegida por quien mira (estrellas 0–5 o aro 0–100). */}
         <ScoreDisplay game={game} />
-        <div className="hub-detail-body">
-          {review ? <p className="hub-feed-review-text">{review}</p> : null}
-          <div className="hub-detail-metadata">
-            <MetaSection label="Plataformas" items={game.platforms} cls="chip-plat" />
-            <MetaSection label="Géneros" items={game.genres} cls="chip-genre" />
-            <MetaSection label="Puntos fuertes" items={game.strengths} cls="chip-pf" />
-            <MetaSection label="Puntos débiles" items={game.weaknesses} cls="chip-pd" />
-          </div>
-        </div>
+        <ReviewDetailBody
+          review={review}
+          platforms={game.platforms}
+          genres={game.genres}
+          strengths={game.strengths}
+          weaknesses={game.weaknesses}
+        />
       </article>
     </div>
   );

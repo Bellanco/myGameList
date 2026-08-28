@@ -3,6 +3,7 @@ import { Icon } from '../Icon';
 import { HubAvatar } from './HubAvatar';
 import type { SocialUiLabels } from '../../../core/constants/socialLabels';
 import { PROFILE_TIER_LABELS, normalizeTier } from '../../../core/constants/tiers';
+import { HubScreen } from './HubScreen';
 import { HubStatus } from './HubStatus';
 import { HubBackButton } from './HubBackButton';
 import { FriendshipButton } from './FriendshipButton';
@@ -179,15 +180,11 @@ function SocialProfilesScreenBase({
   };
 
   return (
-    <section className="hub-hub hub-screen" aria-label={SOCIAL_UI.profiles.sectionAria}>
-      <div className="hub-hub-card hub-screen-card hub-feed-card-shell">
-        <header className="hub-screen-header">
-          <div className="hub-hub-title-wrap">
-            <Icon name="bottom-hub" className="hub-hub-icon" />
-            <h2>{SOCIAL_UI.profiles.title}</h2>
-          </div>
-          <p>{SOCIAL_UI.profiles.subtitle}</p>
-        </header>
+    <HubScreen
+      ariaLabel={SOCIAL_UI.profiles.sectionAria}
+      title={SOCIAL_UI.profiles.title}
+      subtitle={SOCIAL_UI.profiles.subtitle}
+    >
         <div className="hub-screen-actions hub-screen-actions-split" aria-label={SOCIAL_UI.profiles.actionsAria}>
           <div className="hub-screen-actions-left">
             <HubBackButton onBack={onBack} label={SOCIAL_UI.profiles.back} />
@@ -246,8 +243,7 @@ function SocialProfilesScreenBase({
           </>
         )}
         <HubStatus status={status} statusKind={statusKind} />
-      </div>
-    </section>
+    </HubScreen>
   );
 }
 

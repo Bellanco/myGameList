@@ -113,94 +113,159 @@ async function healFriendshipGistIfChanged(input: {
   }
 }
 
-/** Publica/actualiza la actividad social de una reseña. Sin canal social utilizable la deja como pendiente. */
-export async function publishReviewActivity(input: { id: number; name: string; review: string; score: number; grade?: number | null; reviewChanged?: boolean }): Promise<void> {
+/**
+ * Todo lo que hace falta saber para escribir en el gist social propio, resuelto una sola vez.
+ *
+ * Las tres funciones que escriben —publicar una reseña, retirarla y publicar un post— repetían este preámbulo
+ * entero: sesión, canal, lectura del gist, identidad pseudónima y remapeo de las entradas legacy. Eran unas
+ * veinte líneas por copia, y el remapeo de identidad es justo el tipo de paso que no puede divergir entre ellas:
+ * si una lo omitiera, la actividad de esa persona se partiría en dos autores dentro de su propio feed.
+ */
+interface SocialWriteContext {
+  authUser: NonNullable<Awaited<ReturnType<typeof getCurrentSocialAuthUser>>>;
+  socialConfig: NonNullable<Awaited<ReturnType<typeof armSocialChannel>>>;
+  socialRead: Awaited<ReturnType<typeof readSocialGist>>;
+  /** Pseudónimo estable (6.2a). La identidad pública NUNCA es el uid de Firebase. */
+  profileId: string;
+  /** El gist con las entradas legacy ya remapeadas a `profileId`. Es la base de comparación del no-op. */
+  migratedData: SocialGistData;
+  /** Nick del perfil social. PRIVACIDAD: nunca el nombre real de Google ni el correo. */
+  socialNick: string;
+  now: number;
+}
+
+/**
+ * Abre una escritura en el gist social. Distingue los dos motivos de no poder seguir porque sus llamadores
+ * reaccionan distinto: publicar una reseña lo aplaza en silencio (`markPendingSocialActivity`) y publicar un post
+ * avisa al usuario, que está mirando el compositor y ha pulsado un botón.
+ */
+type SocialWriteGate =
+  | { ok: true; ctx: SocialWriteContext }
+  | { ok: false; reason: 'no-session' | 'no-channel' };
+
+async function openSocialWrite(): Promise<SocialWriteGate> {
   const authUser = await getCurrentSocialAuthUser();
   if (!authUser) {
-    await markPendingSocialActivity();
-    return;
+    return { ok: false, reason: 'no-session' };
   }
 
   const socialConfig = await armSocialChannel(authUser.email);
   if (!socialConfig) {
-    return;
+    return { ok: false, reason: 'no-channel' };
   }
 
-  const socialRead = await readSocialGist(
-    socialConfig.token,
-    socialConfig.gistId,
-    socialConfig.etag || null,
-  );
+  const socialRead = await readSocialGist(socialConfig.token, socialConfig.gistId, socialConfig.etag || null);
 
-  // 6.2b: identidad por profileId (pseudónimo estable, 6.2a) en vez del uid de Firebase. Remapea las
-  // entradas legacy del gist propio (actorUid==miUid → miProfileId) antes de insertar la nueva actividad,
-  // de modo que el uid sale del canal público y toda nuestra actividad queda agrupada por profileId.
+  // 6.2b: identidad por profileId (pseudónimo estable, 6.2a) en vez del uid de Firebase. Remapea las entradas
+  // legacy del gist propio (actorUid==miUid → miProfileId) antes de insertar nada, de modo que el uid sale del
+  // canal público y toda nuestra actividad queda agrupada por profileId.
   const profileId = await resolveStableProfileId(authUser.uid);
   const migratedData = remapSocialActorIds(socialRead.data, { [authUser.uid]: profileId });
 
-  // PRIVACIDAD: el nombre público en la actividad es el NICK del perfil social (del gist), NUNCA el nombre real de Google.
-  const socialNick = String(socialRead.data.profile.name || '').trim();
-  const now = Date.now();
-  const withReview = upsertReviewActivity(migratedData, {
-    actorProfileId: profileId,
-    actorName: socialNick,
+  return {
+    ok: true,
+    ctx: {
+      authUser,
+      socialConfig,
+      socialRead,
+      profileId,
+      migratedData,
+      socialNick: String(socialRead.data.profile.name || '').trim(),
+      now: Date.now(),
+    },
+  };
+}
+
+/** Escribe el gist y sella la configuración local con el etag nuevo. Devuelve el etag resultante. */
+async function commitSocialWrite(ctx: SocialWriteContext, nextPayload: SocialGistData): Promise<string | null> {
+  const writeResult = await writeSocialGist(ctx.socialConfig.token, ctx.socialConfig.gistId, nextPayload);
+  const etag = writeResult.etag || ctx.socialConfig.etag || null;
+
+  saveSocialSyncConfig({
+    token: ctx.socialConfig.token,
+    gistId: ctx.socialConfig.gistId,
+    etag,
+    lastRemoteUpdatedAt: ctx.now,
+  });
+
+  return etag;
+}
+
+/**
+ * Sincroniza la identidad pública tras publicar: el perfil de Firestore y los datos denormalizados en los
+ * documentos de amistad. Va aparte del `commit` porque RETIRAR una reseña no lo necesita —no cambia quién eres—,
+ * y meterlo dentro obligaría a una bandera para apagarlo en ese único caso.
+ */
+async function syncPublicIdentity(ctx: SocialWriteContext, etag: string | null): Promise<void> {
+  const mainSyncConfig = getSyncConfig();
+
+  await ensureProfileByEmail({
+    user: ctx.authUser,
+    socialGistId: ctx.socialConfig.gistId,
+    gamesGistId: mainSyncConfig?.gistId || '',
+    githubToken: mainSyncConfig?.token || ctx.socialConfig.token, // audit-allow: ensureProfileByEmail lo cifra en privateConfig (B1)
+    socialGistEtag: etag,
+    // Si el gist no tiene nick, `ensureProfileByEmail` cae al nombre de la cuenta de Google (nunca al correo): más
+    // vale un nombre razonable que un perfil sin nombre —la anomalía `no-display-name`— o un guardado abortado.
+    preferredName: ctx.socialNick,
+  });
+
+  await healFriendshipGistIfChanged({
+    uid: ctx.authUser.uid,
+    socialGistId: ctx.socialConfig.gistId,
+    gamesGistId: mainSyncConfig?.gistId || '',
+    // Mismo criterio que el perfil público: si el gist no tiene nick, el nombre de la cuenta de Google antes que
+    // dejar a sus amistades con un nombre vacío en la bandeja. El correo, nunca.
+    nick: ctx.socialNick || String(ctx.authUser.displayName || '').trim(),
+    photoURL: publicPhotoURL(ctx.socialRead.data, ctx.authUser.photoURL),
+  });
+}
+
+/** Publica/actualiza la actividad social de una reseña. Sin canal social utilizable la deja como pendiente. */
+export async function publishReviewActivity(input: { id: number; name: string; review: string; score: number; grade?: number | null; reviewChanged?: boolean }): Promise<void> {
+  const gate = await openSocialWrite();
+  if (!gate.ok) {
+    // Sin sesión se aplaza en silencio; sin canal no hay nada que aplazar (el hub lo resolverá al abrirse).
+    if (gate.reason === 'no-session') {
+      await markPendingSocialActivity();
+    }
+    return;
+  }
+  const { ctx } = gate;
+
+  const withReview = upsertReviewActivity(ctx.migratedData, {
+    actorProfileId: ctx.profileId,
+    actorName: ctx.socialNick,
     gameId: input.id,
     gameName: input.name,
     reviewText: input.review, // audit-allow: upsertReviewActivity lo convierte a snippet (no se publica el review completo)
     rating: input.score,
     grade: input.grade ?? null, // nota fina 0–100 (aditiva; el espejo 0–5 va en rating)
-    timestamp: now,
+    timestamp: ctx.now,
     // Solo se recoloca al principio del feed si cambió el texto de la reseña. Editar solo nota/nombre sincroniza
     // esos datos en la tarjeta social pero conserva la posición/fecha original (no cuenta como reseña nueva).
     bumpOrder: input.reviewChanged ?? true,
   });
 
   // F4: los mensajes de lista pendientes viajan en esta misma escritura (no piden la suya).
-  const nextPayload = withMoveActivity(withReview, now);
+  const nextPayload = withMoveActivity(withReview, ctx.now);
 
   // Sincronización de solo nota/nombre sobre una reseña que aún no estaba publicada: no hay nada que sincronizar
   // ni que publicar, así que no se reescribe el gist (mismo patrón de no-op que unpublishReviewActivity). La
   // comparación es contra `migratedData` —no contra `withReview`— para que un mensaje de lista nuevo cuente como
   // motivo suficiente para escribir aunque la reseña no haya cambiado nada.
-  if (nextPayload === migratedData) {
+  if (nextPayload === ctx.migratedData) {
     return;
   }
 
-  const writeResult = await writeSocialGist(socialConfig.token, socialConfig.gistId, nextPayload);
-  const mainSyncConfig = getSyncConfig();
-
-  saveSocialSyncConfig({
-    token: socialConfig.token,
-    gistId: socialConfig.gistId,
-    etag: writeResult.etag || socialConfig.etag || null,
-    lastRemoteUpdatedAt: now,
-  });
+  const etag = await commitSocialWrite(ctx, nextPayload);
 
   // El feed sirve `gameName` desde la caché IndexedDB del directorio (TTL 30 min), una capa por delante de la caché
   // de sesión del gist. Sin invalidarla, tras publicar/renombrar una reseña el propio autor seguiría viendo el
   // título viejo en su feed hasta 30 min. La invalidamos para que el próximo montaje del hub relea el directorio.
-  await invalidateCachedSocialDirectory(socialConfig.gistId);
+  await invalidateCachedSocialDirectory(ctx.socialConfig.gistId);
 
-  await ensureProfileByEmail({
-    user: authUser,
-    socialGistId: socialConfig.gistId,
-    gamesGistId: mainSyncConfig?.gistId || '',
-    githubToken: mainSyncConfig?.token || socialConfig.token, // audit-allow: ensureProfileByEmail lo cifra en privateConfig (B1)
-    socialGistEtag: writeResult.etag || socialConfig.etag || null,
-    // Si el gist no tiene nick, `ensureProfileByEmail` cae al nombre de la cuenta de Google (nunca al correo): más
-    // vale un nombre razonable que un perfil sin nombre —la anomalía `no-display-name`— o un guardado abortado.
-    preferredName: socialNick,
-  });
-
-  await healFriendshipGistIfChanged({
-    uid: authUser.uid,
-    socialGistId: socialConfig.gistId,
-    gamesGistId: mainSyncConfig?.gistId || '',
-    // Mismo criterio que el perfil público: si el gist no tiene nick, el nombre de la cuenta de Google antes que
-    // dejar a sus amistades con un nombre vacío en la bandeja. El correo, nunca.
-    nick: socialNick || String(authUser.displayName || '').trim(),
-    photoURL: publicPhotoURL(socialRead.data, authUser.photoURL),
-  });
+  await syncPublicIdentity(ctx, etag);
 }
 
 /**
@@ -209,43 +274,31 @@ export async function publishReviewActivity(input: { id: number; name: string; r
  * No-op sin sesión Google ni gist social configurado; NO reescribe el gist si no había nada que quitar.
  */
 export async function unpublishReviewActivity(input: { id: number }): Promise<void> {
-  const authUser = await getCurrentSocialAuthUser();
-  if (!authUser) {
-    await markPendingSocialActivity();
+  const gate = await openSocialWrite();
+  if (!gate.ok) {
+    if (gate.reason === 'no-session') {
+      await markPendingSocialActivity();
+    }
     return;
   }
+  const { ctx } = gate;
 
-  const socialConfig = await armSocialChannel(authUser.email);
-  if (!socialConfig) {
-    return;
-  }
-
-  const socialRead = await readSocialGist(
-    socialConfig.token,
-    socialConfig.gistId,
-    socialConfig.etag || null,
-  );
-
-  // Misma identidad que al publicar: profileId estable (remapea entradas legacy uid→profileId).
-  const profileId = await resolveStableProfileId(authUser.uid);
-  const migratedData = remapSocialActorIds(socialRead.data, { [authUser.uid]: profileId });
-
-  const now = Date.now();
-  const nextPayload = removeReviewActivity(migratedData, { actorProfileId: profileId, gameId: input.id, timestamp: now });
-  if (nextPayload === migratedData) {
+  const nextPayload = removeReviewActivity(ctx.migratedData, {
+    actorProfileId: ctx.profileId,
+    gameId: input.id,
+    timestamp: ctx.now,
+  });
+  if (nextPayload === ctx.migratedData) {
     return; // no había reseña que despublicar
   }
 
-  const writeResult = await writeSocialGist(socialConfig.token, socialConfig.gistId, nextPayload);
-  saveSocialSyncConfig({
-    token: socialConfig.token,
-    gistId: socialConfig.gistId,
-    etag: writeResult.etag || socialConfig.etag || null,
-    lastRemoteUpdatedAt: now,
-  });
+  await commitSocialWrite(ctx, nextPayload);
 
   // Igual que al publicar: invalida la caché del directorio para que el feed no siga mostrando la reseña retirada.
-  await invalidateCachedSocialDirectory(socialConfig.gistId);
+  await invalidateCachedSocialDirectory(ctx.socialConfig.gistId);
+
+  // NO se sincroniza la identidad pública: retirar una reseña no cambia quién eres ni el gist al que apuntan tus
+  // amistades, así que `syncPublicIdentity` sería una escritura en Firestore sin nada que escribir.
 }
 
 /**
@@ -254,68 +307,33 @@ export async function unpublishReviewActivity(input: { id: number }): Promise<vo
  * Google ni gist social configurado. Los hipervínculos se derivan del texto al renderizar (no se publican como HTML).
  */
 export async function publishPost(input: { text: string; maxLength?: number }): Promise<void> {
-  const authUser = await getCurrentSocialAuthUser();
-  if (!authUser) {
-    throw new Error('Inicia sesión con Google para publicar');
+  const gate = await openSocialWrite();
+  if (!gate.ok) {
+    // Aquí SÍ se lanza: al usuario le acaba de fallar un botón que pulsó, y el compositor conserva su texto.
+    throw new Error(
+      gate.reason === 'no-session'
+        ? 'Inicia sesión con Google para publicar'
+        : 'No se pudo resolver tu canal social en este dispositivo',
+    );
   }
+  const { ctx } = gate;
 
-  const socialConfig = await armSocialChannel(authUser.email);
-  if (!socialConfig) {
-    throw new Error('No se pudo resolver tu canal social en este dispositivo');
-  }
-
-  const socialRead = await readSocialGist(
-    socialConfig.token,
-    socialConfig.gistId,
-    socialConfig.etag || null,
-  );
-
-  const profileId = await resolveStableProfileId(authUser.uid);
-  const migratedData = remapSocialActorIds(socialRead.data, { [authUser.uid]: profileId });
-
-  // PRIVACIDAD: el nombre público del post es el NICK del perfil social (del gist), NUNCA el nombre real de Google.
-  const socialNick = String(socialRead.data.profile.name || '').trim();
-  const now = Date.now();
   const nextPayload = withMoveActivity(
-    upsertPost(migratedData, {
-      authorProfileId: profileId,
-      authorName: socialNick,
+    upsertPost(ctx.migratedData, {
+      authorProfileId: ctx.profileId,
+      authorName: ctx.socialNick,
       text: input.text,
       // Cupo del rango de quien publica: lo decide el llamador, que es quien conoce la sesión.
       maxLength: input.maxLength,
-      timestamp: now,
+      timestamp: ctx.now,
     }),
-    now, // F4: los mensajes de lista pendientes se suben con la publicación, sin escritura propia.
+    ctx.now, // F4: los mensajes de lista pendientes se suben con la publicación, sin escritura propia.
   );
 
-  const writeResult = await writeSocialGist(socialConfig.token, socialConfig.gistId, nextPayload);
-  const mainSyncConfig = getSyncConfig();
+  const etag = await commitSocialWrite(ctx, nextPayload);
 
-  saveSocialSyncConfig({
-    token: socialConfig.token,
-    gistId: socialConfig.gistId,
-    etag: writeResult.etag || socialConfig.etag || null,
-    lastRemoteUpdatedAt: now,
-  });
-
-  await ensureProfileByEmail({
-    user: authUser,
-    socialGistId: socialConfig.gistId,
-    gamesGistId: mainSyncConfig?.gistId || '',
-    githubToken: mainSyncConfig?.token || socialConfig.token, // audit-allow: ensureProfileByEmail lo cifra en privateConfig (B1)
-    socialGistEtag: writeResult.etag || socialConfig.etag || null,
-    // Si el gist no tiene nick, `ensureProfileByEmail` cae al nombre de la cuenta de Google (nunca al correo): más
-    // vale un nombre razonable que un perfil sin nombre —la anomalía `no-display-name`— o un guardado abortado.
-    preferredName: socialNick,
-  });
-
-  await healFriendshipGistIfChanged({
-    uid: authUser.uid,
-    socialGistId: socialConfig.gistId,
-    gamesGistId: mainSyncConfig?.gistId || '',
-    // Mismo criterio que el perfil público: si el gist no tiene nick, el nombre de la cuenta de Google antes que
-    // dejar a sus amistades con un nombre vacío en la bandeja. El correo, nunca.
-    nick: socialNick || String(authUser.displayName || '').trim(),
-    photoURL: publicPhotoURL(socialRead.data, authUser.photoURL),
-  });
+  // SIN `invalidateCachedSocialDirectory`, a diferencia de los dos de arriba: quien publica un post refresca el
+  // feed acto seguido con `hydrateSocialDirectory(true)` (ver `useSocialCompose`), y un refresco forzado se salta
+  // la caché de todas formas. Añadir aquí la invalidación sería una escritura en IndexedDB que nadie leería.
+  await syncPublicIdentity(ctx, etag);
 }

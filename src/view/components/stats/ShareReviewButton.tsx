@@ -1,5 +1,5 @@
 import { memo, useCallback, useEffect, useState } from 'react';
-import { SHARE_UI } from '../../../core/constants/labels';
+import { SHARE_UI } from '../../../core/constants/shareLabels';
 import { Icon } from '../Icon';
 import { ShareReviewModal } from '../../modals/ShareReviewModal';
 import { useShareViewModel } from '../../../viewmodel/useShareViewModel';

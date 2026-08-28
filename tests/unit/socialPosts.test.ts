@@ -1,4 +1,7 @@
 import { describe, expect, it } from 'vitest';
+// `?raw` de Vite y no `node:fs`: los tests unitarios corren sin `@types/node` a propósito (ver tsconfig.json).
+import headersFile from '../../public/_headers?raw';
+import { isSteamSharedFilePage, resolvePostMedia } from '../../src/core/social/postMedia';
 import { upsertPost, type SocialGistData } from '../../src/model/repository/socialGistRepository';
 import { assertValidSocialGist } from '../../src/model/schemas/socialGistSchema';
 
@@ -73,5 +76,87 @@ describe('F3 — publicaciones del feed social', () => {
       review: 'fuga',
     }];
     expect(() => assertValidSocialGist(hostile)).toThrow();
+  });
+});
+
+/**
+ * S7 — Todo lo que la app pinta como imagen o vídeo tiene que estar permitido por la CSP.
+ *
+ * Son dos ficheros que nadie obliga a mover juntos: `postMedia` decide qué URL se convierte en un `src`, y
+ * `public/_headers` decide de qué hosts deja el navegador cargarlo. Cuando divergen no salta ningún error —la
+ * CSP bloquea, el `onError` degrada a enlace y la publicación se ve peor sin que nadie sepa por qué—, así que la
+ * comprobación vive aquí. Es el mismo patrón con el que ya se atan los límites de `firestore.rules`.
+ *
+ * Se comprueba el `src` RESUELTO y no la lista de hosts de confianza, porque no son lo mismo y confundirlos da
+ * un falso positivo: `drive.google.com` está en la lista para CONVERTIRLO a `lh3.googleusercontent.com` (que es
+ * el host del que se carga de verdad), y `steamcommunity.com` está para RECONOCER su página de captura y dejarla
+ * como enlace. De ninguno de los dos se sirve un `src`, así que ninguno tiene que estar en la CSP.
+ */
+describe('medios incrustables frente a la CSP', () => {
+  const headers = headersFile;
+
+  /** Los hosts de una directiva de la CSP, tal y como están escritos en el fichero. */
+  function directive(name: string): string[] {
+    const csp = /Content-Security-Policy:([^\n]*)/.exec(headers)?.[1] ?? '';
+    const found = new RegExp(`(?:^|;)\\s*${name}\\s([^;]*)`).exec(csp)?.[1] ?? '';
+    return found.trim().split(/\s+/).filter(Boolean);
+  }
+
+  /** ¿Alguna entrada de la directiva cubre este host, en su forma exacta o por comodín? */
+  function covers(hosts: string[], hostname: string): boolean {
+    return hosts.some((entry) => {
+      const bare = entry.replace(/^https:\/\//, '');
+      if (bare === hostname) return true;
+      if (!bare.startsWith('*.')) return false;
+      const suffix = bare.slice(2);
+      return hostname === suffix || hostname.endsWith(`.${suffix}`);
+    });
+  }
+
+  /** Una URL representativa por cada host del que la app llega a servir media. */
+  const SAMPLES = [
+    'https://raw.githubusercontent.com/usuario/repo/main/captura.png',
+    'https://user-images.githubusercontent.com/1/captura.jpg',
+    'https://images.steamusercontent.com/ugc/1234567890/',
+    'https://steamuserimages-a.akamaihd.net/ugc/1234567890/',
+    'https://cdn.cloudflare.steamstatic.com/steam/apps/1/header.jpg',
+    'https://drive.google.com/file/d/ABC123def456/view',
+    'https://lh3.googleusercontent.com/d/ABC123def456',
+    'https://gs2.ww.prod.dl.playstation.net/gs2/captura.jpg',
+    'https://images-eds.xboxlive.com/image/captura.png',
+    'https://raw.githubusercontent.com/usuario/repo/main/clip.mp4',
+  ];
+
+  it('la CSP declara img-src y media-src', () => {
+    expect(directive('img-src').length).toBeGreaterThan(0);
+    expect(directive('media-src').length).toBeGreaterThan(0);
+  });
+
+  it('todo src que se llega a pintar cae dentro de la CSP', () => {
+    const images = directive('img-src');
+    const videos = directive('media-src');
+
+    const blocked = SAMPLES.map((url) => {
+      const media = resolvePostMedia(url);
+      if (!media) return null;
+      const allowed = media.kind === 'video' ? videos : images;
+      return covers(allowed, new URL(media.src).hostname) ? null : `${media.kind} ${media.src}`;
+    }).filter(Boolean);
+
+    // Si esto falla, o falta un host en `public/_headers` o sobra en `postMedia`. Las dos listas se tocan juntas.
+    expect(blocked).toEqual([]);
+  });
+
+  it('nada de steamcommunity.com se incrusta, ni siquiera con extensión de imagen', () => {
+    // La página de la captura es lo que la gente pega, y no es una imagen; y una URL suya acabada en `.jpg` sí
+    // se pintaba antes, para que la CSP la bloqueara acto seguido. De ese host se enlaza, no se incrusta.
+    expect(resolvePostMedia('https://steamcommunity.com/sharedfiles/filedetails/?id=123')).toBeNull();
+    expect(resolvePostMedia('https://steamcommunity.com/algo/captura.jpg')).toBeNull();
+    // El aviso para pegar la URL directa no depende de la lista de incrustables: sigue reconociendo la página.
+    expect(isSteamSharedFilePage('https://steamcommunity.com/sharedfiles/filedetails/?id=123')).toBe(true);
+  });
+
+  it('un host desconocido nunca se incrusta', () => {
+    expect(resolvePostMedia('https://ejemplo-cualquiera.com/pixel.png')).toBeNull();
   });
 });

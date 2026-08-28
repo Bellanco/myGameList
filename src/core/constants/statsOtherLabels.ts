@@ -1,5 +1,5 @@
 // La voz de TERCERA persona del panel de estadísticas: «Lo mejor de su biblioteca» donde tu panel dice «Lo mejor
-// de tu biblioteca». Solo van los rótulos que CAMBIAN; el resto se hereda de `UI_MESSAGES.stats`, de modo que no
+// de tu biblioteca». Solo van los rótulos que CAMBIAN; el resto se hereda de `STATS_UI`, de modo que no
 // hay dos juegos de literales que mantener en paralelo y un retoque en el texto propio no deja el ajeno atrás.
 //
 // Vive en su propio módulo y no en `labels.ts` por el mismo motivo que la hoja de estilos del panel no está en
@@ -9,9 +9,10 @@
 //
 // Los guiños se conservan uno a uno (el aventurero de Skyrim, la princesa de Mario, el arma de Bloodborne): son la
 // voz del panel, y perderlos al hablar de otra persona lo convertiría en otra pantalla.
-import { UI_MESSAGES, type StatsLabels } from './labels';
+import { type StatsLabels } from './labels';
+import { STATS_UI } from './statsLabels';
 
-const STATS_OWN = UI_MESSAGES.stats;
+const STATS_OWN = STATS_UI;
 
 export const STATS_LABELS_OTHER: StatsLabels = {
   ...STATS_OWN,

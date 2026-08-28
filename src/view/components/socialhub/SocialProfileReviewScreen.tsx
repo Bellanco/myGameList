@@ -1,9 +1,9 @@
-import { Icon } from '../Icon';
 import { ScoreDisplay } from '../ScoreDisplay';
 import { NoScoreMedal } from '../NoScoreMedal';
 import { resolveGrade } from '../../../core/utils/scoreScale';
-import { MetaSection } from '../MetaSection';
+import { ReviewDetailBody } from '../ReviewDetailBody';
 import type { SocialUiLabels } from '../../../core/constants/socialLabels';
+import { HubScreen } from './HubScreen';
 import { HubStatus } from './HubStatus';
 import { HubBackButton } from './HubBackButton';
 
@@ -54,33 +54,31 @@ export function SocialProfileReviewScreen({
    */
   actions?: React.ReactNode;
 }) {
-  const header = (
-    <>
-      <header className="hub-screen-header">
-        <div className="hub-hub-title-wrap">
-          <Icon name="signature" className="hub-hub-icon" />
-          <h2>{SOCIAL_UI.feed.reviewDetailTitle}</h2>
-        </div>
-        <p>{SOCIAL_UI.feed.reviewDetailSubtitle}</p>
-      </header>
-      <div className="hub-screen-actions hub-screen-actions-split" aria-label={SOCIAL_UI.feed.detailActionsAria}>
-        <div className="hub-screen-actions-left">
-          <HubBackButton onBack={onBack} label={backLabel || SOCIAL_UI.feed.reviewsBackToList} />
-        </div>
-        {actions ? <div className="hub-screen-actions-right">{actions}</div> : null}
+  /** Fila de acciones bajo el encabezado. El encabezado en sí lo pone `HubScreen`. */
+  const actionsRow = (
+    <div className="hub-screen-actions hub-screen-actions-split" aria-label={SOCIAL_UI.feed.detailActionsAria}>
+      <div className="hub-screen-actions-left">
+        <HubBackButton onBack={onBack} label={backLabel || SOCIAL_UI.feed.reviewsBackToList} />
       </div>
-    </>
+      {actions ? <div className="hub-screen-actions-right">{actions}</div> : null}
+    </div>
   );
+
+  /** Props comunes de la cáscara: las dos salidas de esta pantalla pintan el mismo encabezado. */
+  const shell = {
+    ariaLabel: SOCIAL_UI.feed.sectionAria,
+    title: SOCIAL_UI.feed.reviewDetailTitle,
+    subtitle: SOCIAL_UI.feed.reviewDetailSubtitle,
+    icon: 'signature' as const,
+  };
 
   if (!review) {
     return (
-      <section className="hub-hub hub-screen" aria-label={SOCIAL_UI.feed.sectionAria}>
-        <div className="hub-hub-card hub-screen-card hub-feed-card-shell">
-          {header}
-          <p>{SOCIAL_UI.feed.detailMissing}</p>
-          <HubStatus status={status} statusKind={statusKind} />
-        </div>
-      </section>
+      <HubScreen {...shell}>
+        {actionsRow}
+        <p>{SOCIAL_UI.feed.detailMissing}</p>
+        <HubStatus status={status} statusKind={statusKind} />
+      </HubScreen>
     );
   }
 
@@ -89,9 +87,8 @@ export function SocialProfileReviewScreen({
   const hasValidDate = review.ts > 0 && !Number.isNaN(reviewDate.getTime());
 
   return (
-    <section className="hub-hub hub-screen" aria-label={SOCIAL_UI.feed.sectionAria}>
-      <div className="hub-hub-card hub-screen-card hub-feed-card-shell">
-        {header}
+    <HubScreen {...shell}>
+      {actionsRow}
         <article className="hub-feed-card hub-feed-card-detail">
           <div className="hub-feed-card-head-text">
             {review.name ? <h3 className="hub-review-detail-game">{review.name}</h3> : null}
@@ -99,18 +96,15 @@ export function SocialProfileReviewScreen({
           </div>
           {hasValidDate ? <p className="hub-feed-date">{SOCIAL_UI.feed.analyzedAt(reviewDate)}</p> : null}
           {hasScore ? <ScoreDisplay game={{ score: review.score, grade: review.grade }} /> : <NoScoreMedal />}
-          <div className="hub-detail-body">
-            {review.review ? <p className="hub-feed-review-text">{review.review}</p> : null}
-            <div className="hub-detail-metadata">
-              <MetaSection label={SOCIAL_UI.feed.metadataPlatforms} items={review.platforms} cls="chip-plat" />
-              <MetaSection label={SOCIAL_UI.feed.metadataGenres} items={review.genres} cls="chip-genre" />
-              <MetaSection label={SOCIAL_UI.feed.metadataStrengths} items={review.strengths} cls="chip-pf" />
-              <MetaSection label={SOCIAL_UI.feed.metadataWeaknesses} items={review.weaknesses} cls="chip-pd" />
-            </div>
-          </div>
+          <ReviewDetailBody
+            review={review.review}
+            platforms={review.platforms}
+            genres={review.genres}
+            strengths={review.strengths}
+            weaknesses={review.weaknesses}
+          />
         </article>
-        <HubStatus status={status} statusKind={statusKind} />
-      </div>
-    </section>
+      <HubStatus status={status} statusKind={statusKind} />
+    </HubScreen>
   );
 }

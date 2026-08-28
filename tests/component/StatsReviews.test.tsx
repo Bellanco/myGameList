@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { StatsReviews } from '../../src/view/components/stats/StatsReviews';
-import { UI_MESSAGES } from '../../src/core/constants/labels';
+import { STATS_UI } from '../../src/core/constants/statsLabels';
 import type { GameItem, TabData } from '../../src/model/types/game';
 
 // En modo NOTA el medallón enseña la cifra 0–100, que es donde se veía el fallo: dos reseñas con un 100 y una
@@ -12,7 +12,7 @@ vi.mock('../../src/model/repository/scorePreferenceRepository', () => ({
   subscribeScoreScale: () => () => {},
 }));
 
-const L = UI_MESSAGES.stats.reviews;
+const L = STATS_UI.reviews;
 
 function game(overrides: Partial<GameItem> & { name: string }): GameItem {
   return { id: 1, _ts: 0, platforms: [], genres: [], steamDeck: false, review: 'Reseña de prueba.', ...overrides };

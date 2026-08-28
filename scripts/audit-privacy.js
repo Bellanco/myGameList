@@ -104,7 +104,10 @@ function detectForbiddenFields(code, file) {
 const B_PATTERNS = [
   { pattern: /\bsnippet\s*[:=]/, file: /ViewModel\.ts$/, message: 'snippet computado en un ViewModel (debe estar en toPublicGame)' },
   { pattern: /fetch\(['"]https:\/\/api\.github/, notFile: /gistRepository/, message: 'API de Gist fuera de gistRepository' },
-  { pattern: /\b(setDoc|updateDoc|addDoc)\b/, notFile: /firebase\w*Repository/, message: 'escritura a Firestore fuera de los repositorios firebase' },
+  // `repository/admin/` cuenta como repositorio designado: es donde vive el antiguo `firebaseAdminRepository`
+  // desde que se partió por operación (censo, moderación, cutover). Sin esto, la regla marcaba como sospechosas
+  // seis escrituras que llevaban ahí desde siempre y solo habían cambiado de fichero.
+  { pattern: /\b(setDoc|updateDoc|addDoc)\b/, notFile: /firebase\w*Repository|model\/repository\/admin\//, message: 'escritura a Firestore fuera de los repositorios firebase' },
   { pattern: /localStorage\.setItem/, notFile: /(localRepository|syncStateRepository|gistRepository|gistConfigRepository|preferenceStore)/, message: 'localStorage fuera de los repositorios designados' },
   { pattern: /console\.log[^\n]*\b(token|uid)\b/i, message: 'posible fuga de token/uid en console.log' },
 ];

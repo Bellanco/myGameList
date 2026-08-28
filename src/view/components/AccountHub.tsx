@@ -1,8 +1,10 @@
 import { memo } from 'react';
 import { Link } from 'react-router-dom';
 import { COMMON_ICONS } from '../../core/constants/icons';
-import { UI_MESSAGES } from '../../core/constants/labels';
-import { LEGAL_DOCUMENTS, LEGAL_ROUTES } from '../../core/constants/legal';
+import { ANALYTICS_UI } from '../../core/constants/labels';
+import { SETTINGS_UI } from '../../core/constants/settingsLabels';
+import { LEGAL_ROUTES } from '../../core/constants/legal';
+import { LEGAL_DOCUMENTS } from '../../core/constants/legalContent';
 import { SCORE_SCALES } from '../../core/utils/scoreScale';
 import { persistScoreScale } from '../../model/repository/scorePreferenceRepository';
 import { useAnalyticsConsent } from '../hooks/useAnalyticsConsent';
@@ -27,14 +29,14 @@ interface AccountHubProps {
  */
 export const AccountHub = memo(function AccountHub({ scoreScaleUid, hasSocialProfile }: AccountHubProps) {
   const scoreScale = useScoreScale();
-  const scoreScaleLabels = UI_MESSAGES.settings.scoreScale;
-  const analyticsLabels = UI_MESSAGES.settings.analytics;
+  const scoreScaleLabels = SETTINGS_UI.scoreScale;
+  const analyticsLabels = ANALYTICS_UI;
   const { consent, setConsent } = useAnalyticsConsent();
 
   return (
-    <section className="settings-hub" aria-label={UI_MESSAGES.settings.account.title}>
+    <section className="settings-hub" aria-label={SETTINGS_UI.account.title}>
       <div className="settings-card settings-card-score">
-        <h2>{UI_MESSAGES.settings.account.title}</h2>
+        <h2>{SETTINGS_UI.account.title}</h2>
         <p className="settings-card-sub">{scoreScaleLabels.subtitle}</p>
         {!scoreScaleUid ? (
           <p className="score-scale-locked">
@@ -99,8 +101,8 @@ export const AccountHub = memo(function AccountHub({ scoreScaleUid, hasSocialPro
 
       {/* L4 — los documentos legales deben ser accesibles desde la app, no solo desde el aviso de cookies. */}
       <div className="settings-card">
-        <h2>{UI_MESSAGES.settings.legal.title}</h2>
-        <p className="settings-card-sub">{UI_MESSAGES.settings.legal.subtitle}</p>
+        <h2>{SETTINGS_UI.legal.title}</h2>
+        <p className="settings-card-sub">{SETTINGS_UI.legal.subtitle}</p>
         <div className="settings-legal-links">
           <Link to={LEGAL_ROUTES.terms}>{LEGAL_DOCUMENTS.terms.title}</Link>
           <Link to={LEGAL_ROUTES.privacy}>{LEGAL_DOCUMENTS.privacy.title}</Link>

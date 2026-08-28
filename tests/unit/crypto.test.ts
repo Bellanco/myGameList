@@ -1,5 +1,5 @@
 import 'fake-indexeddb/auto';
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   decrypt,
   decryptFromString,
@@ -57,5 +57,55 @@ describe('crypto (C4) — clave de dispositivo no exportable', () => {
     const blob = await encryptWithDeviceKey('ghp_local');
     expect(blob).not.toContain('ghp_local'); // no hay token en claro en el blob
     expect(await decryptWithDeviceKey(blob)).toBe('ghp_local');
+  });
+});
+
+/**
+ * S3 — La clave de dispositivo se genera UNA sola vez aunque dos pestañas arranquen a la vez.
+ *
+ * Dos pestañas son dos instancias del módulo (cada una con su caché en memoria de `_deviceKeyPromise`) sobre el
+ * MISMO IndexedDB. `vi.resetModules()` + dos `import()` reproduce eso: sin el arreglo, las dos leían "no hay
+ * clave", generaban una cada una y escribían las dos, así que lo cifrado por la perdedora quedaba ilegible.
+ */
+describe('crypto (S3) — clave de dispositivo bajo concurrencia', () => {
+  function deleteSecureDb(): Promise<void> {
+    return new Promise((resolve) => {
+      const req = indexedDB.deleteDatabase('mygamelist-secure');
+      req.onsuccess = () => resolve();
+      req.onerror = () => resolve();
+      req.onblocked = () => resolve();
+    });
+  }
+
+  beforeEach(async () => {
+    await deleteSecureDb();
+    vi.resetModules();
+  });
+
+  it('dos pestañas que arrancan a la vez acaban con la misma clave', async () => {
+    // Dos instancias del módulo = dos pestañas: cachés en memoria distintas, un solo IndexedDB.
+    const tabA = await import('../../src/core/security/crypto');
+    vi.resetModules();
+    const tabB = await import('../../src/core/security/crypto');
+    expect(tabA).not.toBe(tabB);
+
+    // Arrancan a la vez, cada una cifrando su secreto.
+    const [blobA, blobB] = await Promise.all([
+      tabA.encryptWithDeviceKey('ghp_secreto-de-A'),
+      tabB.encryptWithDeviceKey('ghp_secreto-de-B'),
+    ]);
+
+    // Si cada pestaña se hubiera quedado con una clave distinta, el cruce no descifraría.
+    expect(await tabB.decryptWithDeviceKey(blobA)).toBe('ghp_secreto-de-A');
+    expect(await tabA.decryptWithDeviceKey(blobB)).toBe('ghp_secreto-de-B');
+  });
+
+  it('la clave sobrevive al reinicio del módulo (queda persistida, no solo en memoria)', async () => {
+    const first = await import('../../src/core/security/crypto');
+    const blob = await first.encryptWithDeviceKey('ghp_persistente');
+
+    vi.resetModules();
+    const afterReload = await import('../../src/core/security/crypto');
+    expect(await afterReload.decryptWithDeviceKey(blob)).toBe('ghp_persistente');
   });
 });

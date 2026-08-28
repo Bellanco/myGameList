@@ -21,10 +21,15 @@ export function fail(status: number, error: string, extra: Record<string, unknow
   return json({ error, ...extra }, status);
 }
 
-/** El cuerpo JSON de la petición, o `null` si no es JSON válido o excede el tope. */
+/**
+ * El cuerpo JSON de la petición, o `null` si no es JSON válido o excede el tope.
+ *
+ * El tope se mide en BYTES de verdad, no en `raw.length`: eso último son unidades UTF-16, así que un cuerpo de
+ * emoji o de texto asiático pesaba hasta el triple de lo que decía el contador y pasaba el corte igual.
+ */
 export async function readJson(request: Request, maxBytes = 200_000): Promise<Record<string, unknown> | null> {
   const raw = await request.text();
-  if (raw.length > maxBytes) {
+  if (new TextEncoder().encode(raw).byteLength > maxBytes) {
     return null;
   }
   try {

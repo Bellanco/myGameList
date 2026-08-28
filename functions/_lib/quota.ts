@@ -16,7 +16,7 @@ import {
   type ShareQuota,
   type ShareQuotaOverride,
 } from '../../src/core/constants/tiers';
-import { banKey, dailyQuotaKey, overrideKey, userSharePrefix, type Env, type KVNamespace, type ShareIndexMetadata } from './keys';
+import { banKey, dailyQuotaKey, drainPages, overrideKey, userSharePrefix, type Env, type KVNamespace, type ShareIndexMetadata } from './keys';
 import type { AuthUser } from './firebaseAuth';
 
 export interface ShareBan {
@@ -137,19 +137,11 @@ export interface ShareRow {
   meta: ShareIndexMetadata | null;
 }
 
-/** Enlaces vivos del usuario. Un solo `list()`: los datos de cada fila viajan en la metadata de la clave. */
+/** Enlaces vivos del usuario. Los datos de cada fila viajan en la metadata de la clave: no se lee un solo artículo. */
 export async function listActiveShares(kv: KVNamespace, uid: string): Promise<ShareRow[]> {
   const prefix = userSharePrefix(uid);
-  const rows: ShareRow[] = [];
-  let cursor: string | undefined;
-  do {
-    const page = await kv.list<ShareIndexMetadata>({ prefix, cursor, limit: 1_000 });
-    for (const key of page.keys) {
-      rows.push({ token: key.name.slice(prefix.length), meta: key.metadata ?? null });
-    }
-    cursor = page.list_complete ? undefined : page.cursor;
-  } while (cursor);
-  return rows;
+  const keys = await drainPages<ShareIndexMetadata>((cursor) => kv.list<ShareIndexMetadata>({ prefix, cursor, limit: 1_000 }));
+  return keys.map((key) => ({ token: key.name.slice(prefix.length), meta: key.metadata ?? null }));
 }
 
 /** Todo lo que hace falta saber de un usuario antes de dejarle publicar (o para pintarle su pantalla). */

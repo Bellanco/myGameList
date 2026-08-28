@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { ReviewTraits } from '../../src/view/components/stats/ReviewTraits';
-import { UI_MESSAGES } from '../../src/core/constants/labels';
+import { STATS_UI } from '../../src/core/constants/statsLabels';
 
-const L = UI_MESSAGES.stats.reviews;
+const L = STATS_UI.reviews;
 
 const tag = (name: string, games: number) => ({ tag: name, games, hours: 0 });
 

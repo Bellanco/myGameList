@@ -46,6 +46,13 @@ audit-report.json
 # `profiles`. Es material sensible y de un solo uso; nunca puede acabar en un commit.
 profile-legacy-backup-*.json
 
+# Clave de servicio de Firebase. Lo correcto es tenerla FUERA del repositorio (los scripts lo avisan), pero la
+# variable GOOGLE_APPLICATION_CREDENTIALS se apunta a menudo aquí por comodidad y basta un `git add .` para
+# publicarla. Una clave de servicio se salta las reglas y App Check: es la llave maestra del proyecto.
+service-account*.json
+*-service-account.json
+firebase-adminsdk-*.json
+
 # Claude Code: compartir settings.json, ignorar config local/personal
 .claude/settings.local.json
 

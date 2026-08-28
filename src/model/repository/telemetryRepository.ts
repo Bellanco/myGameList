@@ -12,6 +12,23 @@ function truncate(value: string, max = GA4_PARAM_MAX): string {
   return value.length > max ? `${value.slice(0, max - 1)}…` : value;
 }
 
+/**
+ * Tapa secretos antes de que un texto salga hacia Analytics.
+ *
+ * El mensaje y la pila de un error los escribe quien lanza, no este módulo, así que basta con que algún día
+ * alguien interpole el token en un `throw` para publicarlo en un servicio de terceros. Es barato cerrarlo aquí,
+ * que es el único sitio por el que salen, en vez de confiar en que ningún mensaje futuro lo incluya.
+ *
+ * Los ids de gist se tapan por lo mismo: no son un secreto de autenticación, pero un gist privado dejaría de
+ * serlo en la práctica si su id anda suelto en un panel de analítica.
+ */
+const GITHUB_TOKEN_PATTERN = /(?:ghp_|gho_|github_pat_)[A-Za-z0-9_]{10,}/g;
+const GIST_ID_PATTERN = /\b[a-f0-9]{20,}\b/gi;
+
+function redact(value: string): string {
+  return value.replace(GITHUB_TOKEN_PATTERN, '[token]').replace(GIST_ID_PATTERN, '[gist]');
+}
+
 /** Ruta actual (sin query ni datos personales) para localizar dónde ocurrió el error/evento. */
 function currentPage(): string {
   if (typeof window === 'undefined') {
@@ -30,7 +47,7 @@ function summarizeStack(error: unknown): string {
     .slice(0, 4)
     .map((line) => line.trim())
     .join(' | ');
-  return truncate(lines);
+  return truncate(redact(lines));
 }
 
 /** Resuelve Analytics + módulo si el servicio está disponible; null si no (dev, sin config, sin soporte). */
@@ -62,8 +79,8 @@ export async function reportHandledError(error: unknown, fatal = false, context 
     return;
   }
 
-  const description = truncate(error instanceof Error ? error.message : String(error));
-  const errorName = error instanceof Error ? truncate(error.name) : 'unknown';
+  const description = truncate(redact(error instanceof Error ? error.message : String(error)));
+  const errorName = error instanceof Error ? truncate(redact(error.name)) : 'unknown';
 
   pair.module.logEvent(pair.analytics, 'exception', {
     description,
