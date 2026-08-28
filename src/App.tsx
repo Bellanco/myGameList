@@ -19,7 +19,7 @@ import { APP_ROUTES, FALLBACK_ROUTE, matchAppSection, type AppSection } from './
 import { ScrollToTop } from './view/components/ScrollToTop';
 import { ConsentBanner } from './view/components/ConsentBanner';
 import { SocialHubSkeleton } from './view/components/SocialHubSkeleton';
-import { useGameListViewModel } from './viewmodel/useGameListViewModel';
+import { useGameListViewModel, type GameDraft } from './viewmodel/useGameListViewModel';
 import { useToolbarFilters } from './viewmodel/useToolbarFilters';
 import { computeTabOptions, countActiveFilters } from './viewmodel/toolbarFilters';
 import { useSyncViewModel } from './viewmodel/useSyncViewModel';
@@ -362,7 +362,10 @@ export default function App() {
     a.href = href;
     a.download = 'myGames.json';
     a.click();
-    URL.revokeObjectURL(href);
+    // La revocación va en el siguiente turno del bucle de eventos, no aquí mismo: `click()` ENCOLA la descarga,
+    // no la completa. Revocar en la misma vuelta funciona en Chrome y Firefox por cómo capturan el blob, pero en
+    // Safari es una carrera que puede dejar al usuario sin fichero y sin ningún error que lo explique.
+    setTimeout(() => URL.revokeObjectURL(href), 0);
   }, [vm.data.c, vm.data.v, vm.data.e, vm.data.p]);
 
   const importData = useCallback(async (file: File, overwrite = false) => {
@@ -482,7 +485,7 @@ export default function App() {
   const [recentlyChangedId, setRecentlyChangedId] = useState<number | null>(null);
   const flashTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const handleSaveDraft = useCallback((nextDraft: typeof vm.draft) => {
+  const handleSaveDraft = useCallback((nextDraft: GameDraft) => {
     // Si una validación corta el guardado (campos obligatorios, nombre ya en las listas) no hay nada que
     // encadenar: ni retirar el importado de la bandeja, ni destellar la fila, ni tocar el canal social.
     //
@@ -518,7 +521,7 @@ export default function App() {
       publication: publicacion,
       onDeferred: () => notify('warn', 'Juego guardado; la actividad social de reseña se actualizará al abrir el hub social.'),
     });
-  }, [editingTab, inbox, notify, saveDraft, vm.data]);
+  }, [editingTab, inbox, notify, saveDraft]);
 
   const handleEditTag = useCallback((key: 'genres' | 'platforms' | 'strengths' | 'weaknesses', oldValue: string, newValue: string) => {
     renameTagAcrossGames(key, oldValue, newValue);
