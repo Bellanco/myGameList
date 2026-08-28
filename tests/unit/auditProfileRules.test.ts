@@ -56,7 +56,9 @@ describe('auditoría previa al despliegue de reglas', () => {
       expect(motivos({ ...perfilValido(), profileId: big(129) })).toMatch(/profileId/);
       // L1 — el correo ya no cabe en el perfil público: su sola PRESENCIA rechaza la escritura, tenga el tamaño
       // que tenga. Un documento así quedaría congelado, que es lo que esta auditoría existe para avisar antes.
-      expect(motivos({ ...perfilValido(), email: 'legacy@example.com' })).toMatch(/allowlist/);
+      expect(motivos({ ...perfilValido(), email: 'legacy@example.com' })).toMatch(/email ya no cabe/);
+      // Y se marca como NUEVO: es la etiqueta que decide si el informe deja desplegar o no.
+      expect(auditProfile({ ...perfilValido(), email: 'a@b.c' }).every((p) => p.nuevo)).toBe(true);
       // S2 — el token en claro es la subclave que más importa cerrar: hoy pasaba porque nadie la miraba.
       expect(motivos({ uid: 'uid-a', social: { enabled: true, githubToken: 'ghp_x' } })).toMatch(/githubToken/);
       expect(motivos({ uid: 'uid-a', social: { enabled: true, loQueSea: 1 } })).toMatch(/loQueSea/);
