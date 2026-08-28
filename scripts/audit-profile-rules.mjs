@@ -31,6 +31,9 @@
  * usa los mismos casos que los tests de emulador; si cambias un límite en las reglas, ese test falla.
  */
 
+import { existsSync } from 'node:fs';
+import { relative, resolve } from 'node:path';
+
 import { auditFriendship, auditProfile, LIMITS } from './lib/profile-rules-predicates.mjs';
 
 async function main() {
@@ -48,9 +51,26 @@ async function main() {
     console.error('Falta firebase-admin. Instálalo sin guardarlo:  npm i --no-save firebase-admin');
     process.exit(1);
   }
-  if (!process.env.GOOGLE_APPLICATION_CREDENTIALS) {
+  const credenciales = process.env.GOOGLE_APPLICATION_CREDENTIALS;
+  if (!credenciales) {
     console.error('Falta GOOGLE_APPLICATION_CREDENTIALS (ruta al service-account.json, FUERA del repo).');
     process.exit(1);
+  }
+  // Comprobar el fichero AQUÍ y no dejar que reviente la librería de auth: su fallo llega como veinte líneas de
+  // pila de `google-auth-library` envueltas en un error de Firestore, y cuesta ver que lo único que pasa es que
+  // la ruta no existe.
+  const ruta = resolve(credenciales);
+  if (!existsSync(ruta)) {
+    console.error(`GOOGLE_APPLICATION_CREDENTIALS apunta a un fichero que no existe:\n  ${ruta}`);
+    console.error('Descarga la clave de servicio desde la consola de Firebase (Configuración → Cuentas de');
+    console.error('servicio → Generar nueva clave privada) y apunta la variable a donde la hayas dejado.');
+    process.exit(1);
+  }
+  if (!relative(process.cwd(), ruta).startsWith('..')) {
+    // No se aborta: puede ser deliberado y el .gitignore ya cubre los nombres habituales. Pero conviene decirlo:
+    // una clave de servicio en el árbol del repositorio está a un `git add .` de acabar publicada.
+    console.warn(`AVISO: la clave de servicio está DENTRO del repositorio (${ruta}).`);
+    console.warn('Muévela fuera: se salta las reglas y App Check, y un `git add .` la publicaría.\n');
   }
 
   initializeApp({ credential: applicationDefault() });
