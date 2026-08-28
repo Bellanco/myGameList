@@ -1,5 +1,4 @@
-﻿import { Icon } from '../Icon';
-import { ScoreDisplay } from '../ScoreDisplay';
+﻿import { ScoreDisplay } from '../ScoreDisplay';
 import { NoScoreMedal } from '../NoScoreMedal';
 import { resolveGrade } from '../../../core/utils/scoreScale';
 import { ReviewDetailBody } from '../ReviewDetailBody';
@@ -7,6 +6,7 @@ import { HubAvatar } from './HubAvatar';
 import type { SocialUiLabels } from '../../../core/constants/socialLabels';
 import type { GameItem } from '../../../model/types/game';
 import type { SocialActivityFeedItem } from '../../../viewmodel/useSocialViewModel';
+import { HubScreen } from './HubScreen';
 import { HubStatus } from './HubStatus';
 import { HubBackButton } from './HubBackButton';
 import { ShareReviewButton } from '../stats/ShareReviewButton';
@@ -45,15 +45,11 @@ export function SocialDetailScreen({
 }) {
   if (!activeDetailEvent) {
     return (
-      <section className="hub-hub hub-screen" aria-label={SOCIAL_UI.feed.sectionAria}>
-        <div className="hub-hub-card hub-screen-card hub-feed-card-shell">
-          <header className="hub-screen-header">
-            <div className="hub-hub-title-wrap">
-              <Icon name="bottom-hub" className="hub-hub-icon" />
-              <h2>{SOCIAL_UI.feed.detailTitle}</h2>
-            </div>
-            <p>{SOCIAL_UI.feed.detailSubtitle}</p>
-          </header>
+      <HubScreen
+        ariaLabel={SOCIAL_UI.feed.sectionAria}
+        title={SOCIAL_UI.feed.detailTitle}
+        subtitle={SOCIAL_UI.feed.detailSubtitle}
+      >
           <div className="hub-screen-actions hub-screen-actions-split" aria-label={SOCIAL_UI.feed.detailActionsAria}>
             <div className="hub-screen-actions-left">
               <HubBackButton onBack={onBack} label={SOCIAL_UI.feed.backToFeed} />
@@ -61,8 +57,7 @@ export function SocialDetailScreen({
           </div>
           <p>{SOCIAL_UI.feed.detailMissing}</p>
           <HubStatus status={status} statusKind={statusKind} />
-        </div>
-      </section>
+      </HubScreen>
     );
   }
   const gameItem = getGameItemById(activeDetailEvent.profileId, activeDetailEvent.gameId);
@@ -74,15 +69,11 @@ export function SocialDetailScreen({
     ? SOCIAL_UI.feed.analyzedAt(updatedAtDate)
     : SOCIAL_UI.feed.analyzedRecently;
   return (
-    <section className="hub-hub hub-screen" aria-label={SOCIAL_UI.feed.sectionAria}>
-      <div className="hub-hub-card hub-screen-card hub-feed-card-shell">
-        <header className="hub-screen-header">
-          <div className="hub-hub-title-wrap">
-            <Icon name="bottom-hub" className="hub-hub-icon" />
-            <h2>{SOCIAL_UI.feed.detailTitle}</h2>
-          </div>
-          <p>{SOCIAL_UI.feed.detailSubtitle}</p>
-        </header>
+    <HubScreen
+      ariaLabel={SOCIAL_UI.feed.sectionAria}
+      title={SOCIAL_UI.feed.detailTitle}
+      subtitle={SOCIAL_UI.feed.detailSubtitle}
+    >
         <div className="hub-screen-actions hub-screen-actions-split" aria-label={SOCIAL_UI.feed.detailActionsAria}>
           <div className="hub-screen-actions-left">
             <HubBackButton onBack={onBack} label={SOCIAL_UI.feed.backToFeed} />
@@ -130,8 +121,7 @@ export function SocialDetailScreen({
           />
         </article>
         <HubStatus status={status} statusKind={statusKind} />
-      </div>
-    </section>
+    </HubScreen>
   );
 }
 
