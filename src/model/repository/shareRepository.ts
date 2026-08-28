@@ -27,16 +27,23 @@ function shareError(status: number, message: string, details: Record<string, unk
   return error;
 }
 
-/** Cabeceras de identidad. Lanza si no hay sesión: compartir exige haber entrado con Google. */
-async function authHeaders(): Promise<Record<string, string>> {
+/**
+ * Cabeceras de identidad para la API de compartir. Lanza si no hay sesión: todo lo que hay detrás la exige.
+ *
+ * Se exporta porque el panel de moderación (`shareAdminRepository`) necesita exactamente las mismas, y tenerlas
+ * escritas dos veces significaba que el día que cambie el nombre de la cabecera de App Check hay que acordarse
+ * de los dos sitios. El error de "sin sesión" sí es de cada llamante —el usuario ve un aviso y el panel un fallo
+ * técnico—, así que llega como parámetro en vez de fijarse aquí.
+ */
+export async function shareAuthHeaders(missingSession: () => Error): Promise<Record<string, string>> {
   const services = await initializeFirebaseServices();
   if (!services) {
-    throw shareError(401, 'Necesitas iniciar sesión para compartir');
+    throw missingSession();
   }
   await services.auth.authStateReady();
   const user = services.auth.currentUser;
   if (!user) {
-    throw shareError(401, 'Necesitas iniciar sesión para compartir');
+    throw missingSession();
   }
 
   const headers: Record<string, string> = {
@@ -54,6 +61,10 @@ async function authHeaders(): Promise<Record<string, string>> {
   }
   return headers;
 }
+
+/** Las de este repositorio: sin sesión, el aviso que el usuario puede accionar. */
+const authHeaders = (): Promise<Record<string, string>> =>
+  shareAuthHeaders(() => shareError(401, 'Necesitas iniciar sesión para compartir'));
 
 async function parse(response: Response): Promise<Record<string, unknown>> {
   const body = (await response.json().catch(() => ({}))) as Record<string, unknown>;
