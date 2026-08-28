@@ -123,12 +123,57 @@ describe('firestore.rules', () => {
 
     it('C5/T4: acepta el esquema esperado y rechaza campos fuera de la allowlist', async () => {
       await assertSucceeds(setDoc(doc(ownerDb('uid-a'), 'profiles', 'uid-a'), {
-        schemaVersion: 1, uid: 'uid-a', profileId: 'p', email: 'a@b.c', displayName: 'A', photoURL: '', social: { enabled: true }, updatedAt: 1,
+        schemaVersion: 1, uid: 'uid-a', profileId: 'p', displayName: 'A', photoURL: '', social: { enabled: true }, updatedAt: 1,
       }));
       // Campo arbitrario no permitido → denegado.
       await assertFails(setDoc(doc(ownerDb('uid-a'), 'profiles', 'uid-a'), { uid: 'uid-a', social: { enabled: true }, hackField: 'x' }));
       // Token en claro a nivel raíz → denegado.
       await assertFails(setDoc(doc(ownerDb('uid-a'), 'profiles', 'uid-a'), { uid: 'uid-a', social: { enabled: true }, githubToken: 'ghp_x' }));
+    });
+
+    // L1 — el CORREO ya no cabe en el perfil público, que lee cualquier usuario autenticado. El código dejó de
+    // escribirlo y los documentos que lo arrastraban se purgaron; esto impide que vuelva por una regresión.
+    it('L1: el correo ya no se admite en el perfil público', async () => {
+      await assertFails(setDoc(doc(ownerDb('uid-a'), 'profiles', 'uid-a'), {
+        uid: 'uid-a', email: 'a@b.c', social: { enabled: true },
+      }));
+    });
+
+    // S2 — sin la allowlist DENTRO de `social`, una subclave inesperada pasaba: un cliente hostil podía inflar su
+    // propio perfil con lo que quisiera y todo el directorio se lo descargaba. El caso que más importa es el token.
+    describe('S2 — allowlist de subclaves de social', () => {
+      it('rechaza el token en claro dentro de social', async () => {
+        await assertFails(setDoc(doc(ownerDb('uid-a'), 'profiles', 'uid-a'), {
+          uid: 'uid-a', social: { enabled: true, githubToken: 'ghp_x' },
+        }));
+      });
+
+      it('rechaza cualquier subclave inventada', async () => {
+        await assertFails(setDoc(doc(ownerDb('uid-a'), 'profiles', 'uid-a'), {
+          uid: 'uid-a', social: { enabled: true, relleno: 'x'.repeat(2000) },
+        }));
+      });
+
+      // Los ids de gist SIGUEN admitidos a propósito: el cutover del panel los deposita en el documento canónico
+      // para que el saneado del dueño los mueva a `privateConfig`. Prohibirlos congelaría ese documento justo en
+      // el caso que el cutover viene a rescatar (ver la nota de `profileSocialIsSane`).
+      it('sigue admitiendo los ids de gist, que el cutover deposita para el saneado', async () => {
+        await assertSucceeds(setDoc(doc(ownerDb('uid-a'), 'profiles', 'uid-a'), {
+          uid: 'uid-a', social: { enabled: true, gistId: 'gs', gamesGistId: 'gg' },
+        }));
+      });
+
+      // Y el saneado tiene que poder limpiar lo que el cutover dejó: si esta escritura se denegara, el perfil se
+      // quedaría con el token para siempre y su dueño sin poder guardar nada.
+      it('el saneado del dueño puede purgar lo que el cutover depositó', async () => {
+        await seed('profiles', 'uid-a', {
+          uid: 'uid-a', displayName: 'A', social: { enabled: true, githubToken: 'ghp_x', gamesGistId: 'gg' },
+        });
+        await assertSucceeds(setDoc(
+          doc(ownerDb('uid-a'), 'profiles', 'uid-a'),
+          { uid: 'uid-a', social: { enabled: true } },
+        ));
+      });
     });
 
     // LATIDO DE RECENCIA: corre en cada publicación y es un merge de SOLO `uid` + `updatedAt` sobre un perfil que ya
@@ -519,10 +564,13 @@ describe('firestore.rules', () => {
         // El allowlist de claves es de PRIMER NIVEL: dentro de `social` el dueño puede escribir lo que quiera. Que
         // eso no sirva para falsear el rango depende de que el lector use SIEMPRE el campo de primer nivel.
         // La contraparte de este test vive en tests/unit/socialDirectoryRecency.test.ts.
-        it('puede escribir `social.tier`, pero es un campo que nadie lee', async () => {
+        // S2 — ANTES esto se PERMITÍA: `social` no tenía allowlist, así que el dueño podía colar ahí un `tier`.
+        // Era inofensivo porque nadie lo lee (el rango de verdad está en la raíz del documento y solo lo escribe
+        // el admin), pero era un intento de auto-asignarse rango que las reglas dejaban pasar. Ya no.
+        it('no puede colar un `tier` dentro de social', async () => {
           await seed('profiles', 'uid-a', { uid: 'uid-a', social: { enabled: true } });
 
-          await assertSucceeds(
+          await assertFails(
             setDoc(
               doc(ownerDb('uid-a'), 'profiles', 'uid-a'),
               { uid: 'uid-a', social: { enabled: true, tier: 'mithril' } },
@@ -639,8 +687,13 @@ describe('firestore.rules', () => {
       await seed('profiles', 'uid-a', { email: 'legacy@example.com', social: { enabled: true, githubToken: 'ghp' } });
 
       await assertFails(updateDoc(doc(ownerDb('uid-a'), 'profiles', 'uid-a'), { 'social.githubToken': deleteField() }));
+      // L1: la escritura tiene que purgar TAMBIÉN el correo, porque ya no cabe en la allowlist y en un update el
+      // documento resultante lo arrastra. Es justo lo que manda `firebaseProfileHealRepository` en una sola
+      // operación: `uid`, `email: deleteField()` y los restos de `social`.
       await assertSucceeds(
-        updateDoc(doc(ownerDb('uid-a'), 'profiles', 'uid-a'), { uid: 'uid-a', 'social.githubToken': deleteField() }),
+        updateDoc(doc(ownerDb('uid-a'), 'profiles', 'uid-a'), {
+          uid: 'uid-a', email: deleteField(), 'social.githubToken': deleteField(),
+        }),
       );
     });
 
