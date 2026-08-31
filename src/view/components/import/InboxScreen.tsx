@@ -21,7 +21,6 @@ interface InboxScreenProps {
   onClassify: (item: ImportedGame, tab: TabId) => void;
   onEnrich: (item: ImportedGame) => void;
   onDiscard: (id: number) => void;
-  onDiscardMany: (ids: number[]) => void;
   onClear: () => void;
   /** Preferencia global de qué datos traer (nuevos / ya en tus listas). */
   fieldPrefs: ImportFieldPrefs;
@@ -32,9 +31,8 @@ interface InboxScreenProps {
   onGoSettings: () => void;
 }
 
-/** Bandeja: buscador por texto + scroll infinito (render incremental) + multiselección. */
-function InboxScreenBase({ imported, isInLists, listOf, onClassify, onEnrich, onDiscard, onDiscardMany, onClear, fieldPrefs, onFieldPrefChange, onBack, onGoSettings }: InboxScreenProps) {
-  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+/** Bandeja: buscador por texto + scroll infinito (render incremental). */
+function InboxScreenBase({ imported, isInLists, listOf, onClassify, onEnrich, onDiscard, onClear, fieldPrefs, onFieldPrefChange, onBack, onGoSettings }: InboxScreenProps) {
   const [query, setQuery] = useState('');
   const [visible, setVisible] = useState(PAGE);
   const sentinelRef = useRef<HTMLDivElement>(null);
@@ -69,9 +67,6 @@ function InboxScreenBase({ imported, isInLists, listOf, onClassify, onEnrich, on
     return () => io.disconnect();
   }, [filtered.length]);
 
-  const selectedCount = useMemo(() => imported.filter((g) => selectedIds.has(g.id)).length, [imported, selectedIds]);
-  const allFilteredSelected = filtered.length > 0 && filtered.every((g) => selectedIds.has(g.id));
-
   const backRow = (
     <div className="import-actions">
       <button type="button" className="btn btn-secondary" onClick={onBack}>
@@ -99,23 +94,6 @@ function InboxScreenBase({ imported, isInLists, listOf, onClassify, onEnrich, on
     );
   }
 
-  const toggleSelect = (id: number) =>
-    setSelectedIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-
-  const toggleAll = () => setSelectedIds(allFilteredSelected ? new Set() : new Set(filtered.map((g) => g.id)));
-
-  const deleteSelected = () => {
-    const ids = imported.filter((g) => selectedIds.has(g.id)).map((g) => g.id);
-    if (ids.length === 0) return;
-    onDiscardMany(ids);
-    setSelectedIds(new Set());
-  };
-
   const copyName = async (name: string) => {
     showToast((await copyText(name)) ? M.copyNameSuccess(name) : M.copyNameError);
   };
@@ -129,16 +107,6 @@ function InboxScreenBase({ imported, isInLists, listOf, onClassify, onEnrich, on
           <p className="settings-card-note">{M.note}</p>
         </div>
         <div className="import-toolbar">
-          <label className="import-check">
-            <input type="checkbox" checked={allFilteredSelected} onChange={toggleAll} aria-label={M.selectAll} />
-            <span>{M.selectAll}</span>
-          </label>
-          {selectedCount > 0 ? <span className="settings-card-note">{M.selectedCount(selectedCount)}</span> : null}
-          <span className="import-toolbar-spacer" />
-          <button type="button" className="btn btn-danger" onClick={deleteSelected} disabled={selectedCount === 0}>
-            <Icon name={COMMON_ICONS.trash} />
-            <span>{M.deleteSelected}</span>
-          </button>
           <button type="button" className="btn btn-secondary" onClick={onClear}>
             <Icon name={COMMON_ICONS.trash} />
             <span>{M.clear}</span>
@@ -162,8 +130,6 @@ function InboxScreenBase({ imported, isInLists, listOf, onClassify, onEnrich, on
         items={shown}
         isInLists={isInLists}
         listOf={listOf}
-        selectedIds={selectedIds}
-        onToggleSelect={toggleSelect}
         onClassify={onClassify}
         onEnrich={onEnrich}
         onDiscard={onDiscard}
