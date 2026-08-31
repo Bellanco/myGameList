@@ -478,8 +478,43 @@
   margin-bottom: .75rem;
 }
 
+/* Pestañas de categoría del administrador de filtros. Su aspecto vivía en `social.scss` —el chunk perezoso del
+   hub—, así que en Ajustes solo se pintaban si antes se había abierto el hub social: sin esa hoja el botón
+   activo era indistinguible del resto. Van aquí, con su rejilla, porque la pantalla no es perezosa. */
+.settings-admin-tab {
+  border: 1px solid var(--border);
+  background: var(--hub-card-bg);
+  color: var(--text-muted);
+  border-radius: var(--radius-sm);
+  padding: .45rem .6rem;
+  font-weight: 700;
+  font-size: .82rem;
+  text-align: center;
+  transition: all .2s ease;
+}
+
 .settings-admin-tab:hover {
   border-color: rgba(var(--steam-rgb),.35);
+  color: var(--text);
+}
+
+.settings-admin-tab:focus-visible {
+  outline: 2px solid var(--steam);
+  outline-offset: 2px;
+}
+
+/* La pestaña pulsada no se fía de un solo indicio: tinte de acento, borde de acento a plena intensidad, texto sin
+   atenuar y una barra fina abajo. Cada paleta la viste con su propio `--steam`, y la barra la mantiene legible
+   incluso donde el tinte translúcido se pierde sobre el fondo del tema. */
+.settings-admin-tab.active {
+  background: rgba(var(--steam-rgb),.18);
+  border-color: rgba(var(--steam-rgb),.75);
+  color: var(--text);
+  box-shadow: inset 0 -2px 0 0 var(--steam);
+}
+
+.settings-admin-tab.active:hover {
+  border-color: rgba(var(--steam-rgb),.9);
   color: var(--text);
 }
 

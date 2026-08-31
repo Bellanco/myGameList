@@ -15,24 +15,6 @@
 //
 // Se importa desde `SocialHub.tsx`, igual que `stats.scss` desde `StatsHub` y `admin.scss` desde `AdminHub`.
 
-.settings-admin-tab {
-  border: 1px solid var(--border);
-  background: var(--hub-card-bg);
-  color: var(--text-muted);
-  border-radius: var(--radius-sm);
-  padding: .45rem .6rem;
-  font-weight: 700;
-  font-size: .82rem;
-  text-align: center;
-  transition: all .2s ease;
-}
-
-.settings-admin-tab.active {
-  background: rgba(var(--steam-rgb),.14);
-  border-color: rgba(var(--steam-rgb),.55);
-  color: var(--hub-text);
-}
-
 /* L4 — puerta de aceptación de condiciones en el gateway social. */
 .hub-gateway-consent {
   display: grid;
