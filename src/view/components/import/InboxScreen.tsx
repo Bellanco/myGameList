@@ -21,19 +21,18 @@ interface InboxScreenProps {
   onClassify: (item: ImportedGame, tab: TabId) => void;
   onEnrich: (item: ImportedGame) => void;
   onDiscard: (id: number) => void;
-  onDiscardMany: (ids: number[]) => void;
   onClear: () => void;
   /** Preferencia global de qué datos traer (nuevos / ya en tus listas). */
   fieldPrefs: ImportFieldPrefs;
   onFieldPrefChange: (group: ImportFieldGroup, field: ImportField, on: boolean) => void;
-  /** Volver a la pantalla anterior (Integraciones). */
+  /** Volver a la pantalla desde la que se abrió la bandeja (ajustes, un listado…). */
   onBack: () => void;
-  onGoIntegrations: () => void;
+  /** Ir a Ajustes, que es donde se importa (la bandeja vacía no puede llenarse desde aquí). */
+  onGoSettings: () => void;
 }
 
-/** Bandeja: buscador por texto + scroll infinito (render incremental) + multiselección. */
-function InboxScreenBase({ imported, isInLists, listOf, onClassify, onEnrich, onDiscard, onDiscardMany, onClear, fieldPrefs, onFieldPrefChange, onBack, onGoIntegrations }: InboxScreenProps) {
-  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+/** Bandeja: buscador por texto + scroll infinito (render incremental). */
+function InboxScreenBase({ imported, isInLists, listOf, onClassify, onEnrich, onDiscard, onClear, fieldPrefs, onFieldPrefChange, onBack, onGoSettings }: InboxScreenProps) {
   const [query, setQuery] = useState('');
   const [visible, setVisible] = useState(PAGE);
   const sentinelRef = useRef<HTMLDivElement>(null);
@@ -68,9 +67,6 @@ function InboxScreenBase({ imported, isInLists, listOf, onClassify, onEnrich, on
     return () => io.disconnect();
   }, [filtered.length]);
 
-  const selectedCount = useMemo(() => imported.filter((g) => selectedIds.has(g.id)).length, [imported, selectedIds]);
-  const allFilteredSelected = filtered.length > 0 && filtered.every((g) => selectedIds.has(g.id));
-
   const backRow = (
     <div className="import-actions">
       <button type="button" className="btn btn-secondary" onClick={onBack}>
@@ -89,31 +85,14 @@ function InboxScreenBase({ imported, isInLists, listOf, onClassify, onEnrich, on
             <h2>{M.title}</h2>
             <p className="settings-card-note">{M.empty}</p>
           </div>
-          <button type="button" className="btn btn-secondary import-card-action" onClick={onGoIntegrations}>
+          <button type="button" className="btn btn-secondary import-card-action" onClick={onGoSettings}>
             <Icon name={COMMON_ICONS.upload} />
-            <span>{M.goIntegrations}</span>
+            <span>{M.goSettings}</span>
           </button>
         </div>
       </div>
     );
   }
-
-  const toggleSelect = (id: number) =>
-    setSelectedIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-
-  const toggleAll = () => setSelectedIds(allFilteredSelected ? new Set() : new Set(filtered.map((g) => g.id)));
-
-  const deleteSelected = () => {
-    const ids = imported.filter((g) => selectedIds.has(g.id)).map((g) => g.id);
-    if (ids.length === 0) return;
-    onDiscardMany(ids);
-    setSelectedIds(new Set());
-  };
 
   const copyName = async (name: string) => {
     showToast((await copyText(name)) ? M.copyNameSuccess(name) : M.copyNameError);
@@ -128,16 +107,6 @@ function InboxScreenBase({ imported, isInLists, listOf, onClassify, onEnrich, on
           <p className="settings-card-note">{M.note}</p>
         </div>
         <div className="import-toolbar">
-          <label className="import-check">
-            <input type="checkbox" checked={allFilteredSelected} onChange={toggleAll} aria-label={M.selectAll} />
-            <span>{M.selectAll}</span>
-          </label>
-          {selectedCount > 0 ? <span className="settings-card-note">{M.selectedCount(selectedCount)}</span> : null}
-          <span className="import-toolbar-spacer" />
-          <button type="button" className="btn btn-danger" onClick={deleteSelected} disabled={selectedCount === 0}>
-            <Icon name={COMMON_ICONS.trash} />
-            <span>{M.deleteSelected}</span>
-          </button>
           <button type="button" className="btn btn-secondary" onClick={onClear}>
             <Icon name={COMMON_ICONS.trash} />
             <span>{M.clear}</span>
@@ -161,8 +130,6 @@ function InboxScreenBase({ imported, isInLists, listOf, onClassify, onEnrich, on
         items={shown}
         isInLists={isInLists}
         listOf={listOf}
-        selectedIds={selectedIds}
-        onToggleSelect={toggleSelect}
         onClassify={onClassify}
         onEnrich={onEnrich}
         onDiscard={onDiscard}
@@ -179,5 +146,9 @@ function InboxScreenBase({ imported, isInLists, listOf, onClassify, onEnrich, on
   );
 }
 
-/** Memoizada por el mismo motivo que `IntegrationsScreen`: ver la nota de allí. */
+/**
+ * Memoizada: `App` reconstruye el mapa de secciones en cada render, así que sin esto la pantalla se volvía a
+ * renderizar por cualquier cambio de la aplicación. Sus manejadores son estables (`useCallback` en `App`), que
+ * es lo que hace que el `memo` sirva de algo y no solo añada una comparación.
+ */
 export const InboxScreen = memo(InboxScreenBase);

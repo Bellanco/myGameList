@@ -68,6 +68,7 @@ export const SETTINGS_UI = {
     helpConfigStep7: 'Si es tu primera conexión, deja el Gist ID vacío. Si ya tenías uno, pégalo para reutilizarlo.',
     tokenLabel: 'Token *',
     tokenPlaceholder: 'ghp_xxxxxxxxxxxxxxxxxxxxxxx',
+    tokenToggle: (shown: boolean) => (shown ? 'Ocultar el token' : 'Mostrar el token'),
     gistLabel: 'Gist ID (vacío la primera vez)',
     gistPlaceholder: 'Ej: a1b2c3d4e5f6...',
     oauthConnectBtn: 'Conectar con GitHub',

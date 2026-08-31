@@ -74,14 +74,28 @@ export const DIALOG_MESSAGES = {
   confirmDelete: 'Eliminar',
 } as const;
 
+/**
+ * Textos de validación del formulario de juego. Cada uno dice QUÉ falta y DÓNDE, sin mecánicas ("pulsa Guardar
+ * otra vez"): el aviso sale dentro del propio modal —junto al campo y resumido en el pie— porque el banner de
+ * la página queda detrás del `<dialog>` y no llega a verse mientras el formulario está abierto.
+ */
 export const VALIDATION_MESSAGES = {
-  yearInvalid: 'El año debe tener exactamente 4 dígitos. Pulsa Guardar de nuevo para ignorarlo.',
+  yearInvalid: (maxYear: number) => `Escribe el año con 4 cifras, entre 1000 y ${maxYear} (ej: ${maxYear}).`,
   fieldsInvalid: 'Revisa los campos marcados antes de guardar.',
   tagExists: 'Ya existe. Pulsa Guardar otra vez para fusionar.',
   duplicateName: (name: string, list: string) => `Ya tienes "${name}" en ${list}.`,
   tagMerged: 'Fusionado correctamente',
   tagUpdated: 'Actualizado correctamente',
+  nameRequired: 'Escribe el nombre del juego.',
+  genresRequired: 'Añade al menos un género.',
+  platformsRequired: 'Añade al menos una plataforma.',
+  yearsRequired: 'Añade al menos un año de finalización.',
   scoreRequired: 'Selecciona una puntuación',
+  hoursInvalid: 'Escribe las horas como un número, con decimales si hace falta (ej: 12,5).',
+  hoursNegative: 'Las horas jugadas no pueden ser negativas.',
+  /** Cabecera del resumen del pie del modal; debajo va la lista de lo que falta. */
+  formSummary: (count: number) =>
+    count === 1 ? 'Falta 1 cosa para poder guardar:' : `Faltan ${count} cosas para poder guardar:`,
 } as const;
 
 export const SYNC_MESSAGES = {
@@ -158,7 +172,9 @@ export const UI_MESSAGES = {
     closeAria: 'Cerrar modal',
   },
   form: {
-    enterToAddHint: 'Pulsa Enter para añadir',
+    // El hint también hace de "spacer" invisible (aria-hidden) en los campos que no son de etiquetas, para que
+    // las columnas de una misma fila queden alineadas aunque solo una lleve texto de ayuda.
+    enterToAddHint: 'Pulsa Enter o separa con comas',
     newTitle: 'Nuevo juego',
     editTitle: 'Editar juego',
     nameLabel: 'Nombre *',
@@ -189,6 +205,7 @@ export const UI_MESSAGES = {
     // cruzar el umbral, no en cada pulsación). El conteo numérico se deja como texto visible SIN aria-live.
     charNearLimit: 'Te acercas al límite de caracteres del análisis.',
     charLimitReached: 'Has alcanzado el límite de caracteres del análisis.',
+    close: 'Cerrar',
     cancel: 'Cancelar',
     save: 'Guardar',
   },
@@ -204,7 +221,6 @@ export const UI_MESSAGES = {
     social: 'Social',
     settings: 'Ajustes',
     account: 'Cuenta',
-    integrations: 'Integraciones',
     inbox: 'Bandeja de importados',
     admin: 'Administración',
     legal: 'Información legal',
@@ -212,6 +228,12 @@ export const UI_MESSAGES = {
     'shared-review': 'Reseña compartida',
   },
   skipToContent: 'Saltar al contenido',
+  // Los dos botones flotantes del listado son solo icono: el `aria-label` los nombra para un lector de pantalla y
+  // el mismo texto va en `title` para que quien usa el ratón sepa qué hace cada uno al pasar por encima.
+  fab: {
+    roulette: 'Elige tu próximo juego',
+    addGame: 'Añadir juego',
+  },
   // A11y-4: nombre accesible de cada pestaña de listado. Hace falta explícito porque el título visible
   // (`.tab-text-full`) se oculta en pantallas estrechas: ahí dentro del botón solo quedaba el icono
   // (`aria-hidden`) y el contador, así que las cuatro pestañas —la navegación principal de la app— se anunciaban
@@ -224,7 +246,6 @@ export const UI_MESSAGES = {
     settings: 'Ajustes',
     account: 'Cuenta',
     inbox: 'Bandeja',
-    integrations: 'Integraciones',
     // La pestaña se llama "Estadísticas": son las de las listas propias. La ruta sigue siendo `/perfil` y la
     // sección `stats`. No confundir con el PERFIL SOCIAL (`/social/profile`), que es la ficha pública.
     stats: 'Estadísticas',
@@ -248,7 +269,7 @@ export const UI_MESSAGES = {
         'Dentro de Playnite, ve al menú principal (arriba a la izquierda) → «Complementos» → «Explorar complementos» y entra en la pestaña «Genérica».',
         'Busca «Playnite Library Exporter», pulsa «Instalar» y, cuando termine, cierra y vuelve a abrir Playnite.',
         'Abre de nuevo el menú principal → «Playnite Library Exporter» → «Export» y confirma. Deja el formato JSON (el que viene por defecto): se guardará un único archivo con extensión «.json».',
-        'Vuelve a esta pantalla, pulsa «Importar de Playnite», elige ese archivo «.json» y tus juegos aparecerán en la bandeja de importados.',
+        'Vuelve aquí, pulsa «Importar de Playnite», elige ese archivo «.json» y tus juegos aparecerán en la bandeja de importados.',
       ],
       importBtn: 'Importar de Playnite',
       importAria: 'Seleccionar el archivo JSON exportado por Playnite Library Exporter',
@@ -272,8 +293,8 @@ export const UI_MESSAGES = {
       note: 'Estos juegos se guardan en este equipo y caducan a los 30 días si no los clasificas.',
       sectionNew: 'Nuevos',
       sectionExisting: 'Ya en tus listas',
-      empty: 'No hay juegos en la bandeja. Importa desde Integraciones.',
-      goIntegrations: 'Ir a Integraciones',
+      empty: 'No hay juegos en la bandeja. Impórtalos desde Ajustes.',
+      goSettings: 'Ir a Ajustes',
       classifyTo: 'Clasificar en',
       discard: 'Descartar',
       clear: 'Vaciar bandeja',
@@ -281,10 +302,6 @@ export const UI_MESSAGES = {
       suggested: 'sugerida',
       origin: 'Origen',
       game: 'Juego',
-      selectAll: 'Seleccionar todo',
-      selectRowAria: (name: string) => `Seleccionar ${name}`,
-      deleteSelected: 'Eliminar seleccionados',
-      selectedCount: (n: number) => `${n} seleccionado${n === 1 ? '' : 's'}`,
       search: 'Buscar por nombre',
       enrich: 'Actualizar en tus listas',
       enrichHint: 'Ya lo tienes: añade género/plataforma/horas que falten al juego de tu lista.',
@@ -351,7 +368,6 @@ export const UI_MESSAGES = {
     removeTag: (value: string) => `Eliminar ${value}`,
     emptyTitle: 'No hay juegos aquí todavía',
     emptyCta: 'Añadir juego',
-    emptyImportCta: 'Importar juegos',
     moreCount: (count: number) => `+${count}`,
     replayHeaderTip: 'Indica si el juego es rejugable',
     retryHeaderTip: 'Indica si merece otra oportunidad',

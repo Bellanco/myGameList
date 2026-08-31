@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { TAB_ACTIONS, TAB_ORDER, TAB_TOOLTIPS, VALIDATION_MESSAGES } from '../core/constants/labels';
 import { sortEs, uniqueCaseInsensitive } from '../core/utils/compare';
+import { tagKey } from '../core/utils/tags';
 import { DEFAULT_SORT, nextSort, sortGames } from '../core/utils/sortGames';
 import { clampRating } from '../core/utils/normalize';
 import { clampGrade, gradeFromStars, resolveStars, starsFromGrade } from '../core/utils/scoreScale';
@@ -80,7 +81,9 @@ function toNormalizedDraft(game?: Partial<GameItem>): GameDraft {
     genres: game?.genres || [],
     platforms: game?.platforms || [],
     review: game?.review || '',
-    hours: game?.hours === null ? null : Number(game?.hours),
+    // `null` para cualquier valor que no sea un número de horas usable (ausente, NaN heredado, negativo): el
+    // campo del formulario se pinta vacío en vez de con un "NaN" que además viajaría al guardar.
+    hours: Number.isFinite(Number(game?.hours)) && Number(game?.hours) >= 0 ? Number(game?.hours) : null,
     scored: Boolean(game?.scored),
   };
 }
@@ -477,7 +480,14 @@ export function useGameListViewModel() {
         reasons: uniqueCaseInsensitive((nextDraft.reasons || []).map(normalizeTag).filter(Boolean)),
         replayable: nextDraft.replayable,
         retry: nextDraft.retry,
-        hours: nextDraft.hours === null ? null : Number(nextDraft.hours),
+        // Horas: el formulario ya impide teclear un negativo, pero por aquí también entran los importados y los
+        // datos antiguos. Lo que no sea un número finito y >= 0 se guarda como "sin dato" (null), no como 0: un
+        // cero es una afirmación ("lo jugué 0 horas") y falsearía las medias de las estadísticas.
+        hours: (() => {
+          if (nextDraft.hours === null) return null;
+          const parsedHours = Number(nextDraft.hours);
+          return Number.isFinite(parsedHours) && parsedHours >= 0 ? parsedHours : null;
+        })(),
         listedAt: existing ? (existing.listedAt ?? existing._ts ?? now) : now,
         // Fecha de la RESEÑA: se estrena solo cuando cambia el texto. Editar la nota, mover de lista o importar
         // datos no la mueven (a diferencia de `_ts`, que es el reloj del merge). Es la que publica el canal
@@ -561,7 +571,7 @@ export function useGameListViewModel() {
 
   const removeTagAcrossGames = useCallback(
     (tabKey: TagCategory, value: string) => {
-      const keep = (entry: string) => entry.toLowerCase() !== value.toLowerCase();
+      const keep = (entry: string) => tagKey(entry) !== tagKey(value);
       const nextData = mapTabDataTags(data, tabKey, (values) => values.filter(keep), Date.now());
       persist(nextData);
       notify('ok', 'Etiqueta eliminada');
@@ -575,13 +585,15 @@ export function useGameListViewModel() {
       if (!normalized) return;
 
       const targetSet = lookups[tabKey];
-      const existing = targetSet.find((value) => value.toLowerCase() === normalized.toLowerCase());
+      // La coincidencia ignora mayúsculas Y tildes (`tagKey`): renombrar a "accion" adopta la "Acción" que ya
+      // existe en las listas en lugar de crear una etiqueta gemela.
+      const existing = targetSet.find((value) => tagKey(value) === tagKey(normalized));
       const finalValue = existing || normalized;
-      const wasMerge = Boolean(existing && existing.toLowerCase() !== oldValue.toLowerCase());
+      const wasMerge = Boolean(existing && tagKey(existing) !== tagKey(oldValue));
 
       const replace = (values: string[]) => {
-        if (!values.some((value) => value.toLowerCase() === oldValue.toLowerCase())) return values;
-        return uniqueCaseInsensitive(values.map((value) => (value.toLowerCase() === oldValue.toLowerCase() ? finalValue : value)));
+        if (!values.some((value) => tagKey(value) === tagKey(oldValue))) return values;
+        return uniqueCaseInsensitive(values.map((value) => (tagKey(value) === tagKey(oldValue) ? finalValue : value)));
       };
 
       const nextData = mapTabDataTags(data, tabKey, replace, Date.now());

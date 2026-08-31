@@ -15,8 +15,6 @@ interface ImportInboxTableProps {
   isInLists: (name: string) => boolean;
   /** ¿En qué lista está el juego? (para mostrarlo junto a la marca "Ya en tus listas"). null si no está. */
   listOf: (name: string) => TabId | null;
-  selectedIds: Set<number>;
-  onToggleSelect: (id: number) => void;
   onClassify: (item: ImportedGame, tab: TabId) => void;
   onEnrich: (item: ImportedGame) => void;
   onDiscard: (id: number) => void;
@@ -39,12 +37,12 @@ function chips(values: string[], className: string) {
 
 /**
  * Tabla de la Bandeja de importados. Reutiliza las clases visuales de `GameTable`, incluida su vista
- * móvil: en pantallas estrechas solo se muestra la PRIMERA columna, así que el checkbox, el nombre y un
- * `row-meta` (plataforma/género en mini-píldoras) van todos en ella. El `.table-wrap` es un contenedor
+ * móvil: en pantallas estrechas solo se muestra la PRIMERA columna, así que el nombre y un
+ * `row-meta` (plataforma/género en mini-píldoras) van los dos en ella. El `.table-wrap` es un contenedor
  * `gamelist` para que el revelado progresivo del meta funcione igual que en el listado principal.
  * El detalle está siempre abierto y contiene solo los botones (clasificar/actualizar + descartar).
  */
-export function ImportInboxTable({ items, isInLists, listOf, selectedIds, onToggleSelect, onClassify, onEnrich, onDiscard, onCopyName }: ImportInboxTableProps) {
+export function ImportInboxTable({ items, isInLists, listOf, onClassify, onEnrich, onDiscard, onCopyName }: ImportInboxTableProps) {
   return (
     <div className="table-wrap import-inbox">
       <table>
@@ -64,12 +62,6 @@ export function ImportInboxTable({ items, isInLists, listOf, selectedIds, onTogg
                 <tr className={`main-row ${index % 2 === 0 ? 'striped' : ''}`.trim()}>
                   <td>
                     <div className="import-name-cell">
-                      <input
-                        type="checkbox"
-                        checked={selectedIds.has(item.id)}
-                        aria-label={M.selectRowAria(item.name)}
-                        onChange={() => onToggleSelect(item.id)}
-                      />
                       <span className="row-toggle-body">
                         <span className="import-name-line">
                           <button
