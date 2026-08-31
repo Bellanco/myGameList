@@ -185,7 +185,7 @@ export default function App() {
   // hook es nuevo en cada render, así que usarlo como dependencia hacía que TODOS los manejadores de la bandeja
   // estrenaran identidad en cada pasada y las pantallas de importación no pudieran memoizarse. Las funciones de
   // dentro sí son estables (`useCallback` en el hook).
-  const { imported: inboxImported, count: inboxCount, addGames: inboxAddGames, removeItem: inboxRemoveItem, removeItems: inboxRemoveItems, clear: inboxClear } = useImportInbox();
+  const { imported: inboxImported, count: inboxCount, addGames: inboxAddGames, removeItem: inboxRemoveItem, clear: inboxClear } = useImportInbox();
   // Qué datos traslada el import a cada juego (global, por grupo: nuevos / ya en tus listas).
   const importFields = useImportFieldPrefs();
   const graduatingIdRef = useRef<number | null>(null);
@@ -278,7 +278,6 @@ export default function App() {
   );
 
   const handleDiscardImport = useCallback((id: number) => inboxRemoveItem(id), [inboxRemoveItem]);
-  const handleDiscardManyImport = useCallback((ids: number[]) => inboxRemoveItems(ids), [inboxRemoveItems]);
   const handleClearInbox = useCallback(() => inboxClear(), [inboxClear]);
 
   // El sync lee el estado local vía refs (no closures del render) para que un ciclo EN VUELO vea las
@@ -684,7 +683,6 @@ export default function App() {
           onClassify={handleClassifyImport}
           onEnrich={handleEnrichImport}
           onDiscard={handleDiscardImport}
-          onDiscardMany={handleDiscardManyImport}
           onClear={handleClearInbox}
           fieldPrefs={importFields.prefs}
           onFieldPrefChange={importFields.setField}

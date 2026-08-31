@@ -139,15 +139,6 @@ export function removeFromInbox(inbox: ImportInbox, id: number, now: number): Im
   return { imported, updatedAt: now };
 }
 
-/** Elimina varias entradas por id en una sola pasada (borrado en lote). Pura; identidad estable si no cambia. */
-export function removeManyFromInbox(inbox: ImportInbox, ids: number[], now: number): ImportInbox {
-  if (ids.length === 0) return inbox;
-  const idSet = new Set(ids);
-  const imported = inbox.imported.filter((g) => !idSet.has(g.id));
-  if (imported.length === inbox.imported.length) return inbox;
-  return { imported, updatedAt: now };
-}
-
 /**
  * Fusión para ENRIQUECER un juego que YA existe en las listas con lo aportado por el importado: une
  * géneros y plataformas (sin duplicar) y rellena las horas si el existente no tenía. NO toca el nombre.

@@ -431,7 +431,7 @@ tbody tr.detail-row.open .detail-content { animation: detailReveal .22s ease-out
   container-name: gamelist;
 }
 
-/* Primera columna: checkbox + nombre + meta (todo junto, porque en móvil solo se muestra esta columna). */
+/* Primera columna: nombre + meta (juntos, porque en móvil solo se muestra esta columna). */
 .import-name-cell {
   display: flex;
   align-items: flex-start;

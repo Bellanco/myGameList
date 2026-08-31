@@ -79,17 +79,12 @@
   text-underline-offset: 2px;
 }
 
-/* Barra de herramientas de la bandeja: seleccionar todo, recuento y acciones destructivas al otro extremo. */
+/* Barra de herramientas de la bandeja: acciones sobre el conjunto de la bandeja. */
 .import-toolbar {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 0.75rem;
-}
-
-/* Empuja al extremo derecho lo que venga después (las acciones). Al envolver en móvil se anula solo. */
-.import-toolbar-spacer {
-  flex: 1;
 }
 
 /* Casilla con su etiqueta al lado: toda la etiqueta es zona de clic. */
