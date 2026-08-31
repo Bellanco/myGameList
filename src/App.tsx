@@ -62,7 +62,6 @@ const SocialHub = lazy(() => import('./view/components/SocialHub').then((module)
 const StatsHub = lazy(() => import('./view/components/stats/StatsHub').then((module) => ({ default: module.StatsHub })));
 const AccountHub = lazy(() => import('./view/components/AccountHub').then((module) => ({ default: module.AccountHub })));
 const RouletteModal = lazy(() => importRouletteModal().then((module) => ({ default: module.RouletteModal })));
-const IntegrationsScreen = lazy(() => import('./view/components/import/IntegrationsScreen').then((module) => ({ default: module.IntegrationsScreen })));
 const PublicReviewScreen = lazy(() => import('./view/components/PublicReviewScreen').then((module) => ({ default: module.PublicReviewScreen })));
 const InboxScreen = lazy(() => import('./view/components/import/InboxScreen').then((module) => ({ default: module.InboxScreen })));
 const LegalScreen = lazy(() => import('./view/components/LegalScreen').then((module) => ({ default: module.LegalScreen })));
@@ -213,6 +212,18 @@ export default function App() {
   // ¿En QUÉ lista está? (para mostrarlo junto a la marca "Ya en tus listas" en la bandeja). null si no está.
   const listOfName = useCallback((name: string): TabId | null => findGameByName(name)?.tab ?? null, [findGameByName]);
 
+  // La bandeja se abre desde ajustes y desde el estado vacío de un listado, así que su "Volver" sigue al origen
+  // (ver `useReturnTo`) en vez de ir a una ruta fija.
+  // Desestructurado (y no `importFlow.x`) porque el objeto del hook es nuevo en cada render: con él como
+  // dependencia, `openInbox` cambiaría de identidad y tiraría el `memo` de GameTable.
+  const { returnTo: importReturnTo, navigateFromHere } = useReturnTo('/ajustes');
+  // Manejadores de navegación de la bandeja, memoizados como el resto del fichero. En línea estrenaban identidad
+  // en cada render de `App` —y `sectionScreens` se reconstruye entero cada vez—, así que la pantalla no podía
+  // memoizarse por muchas envolturas que se le pusieran.
+  const openInbox = useCallback(() => navigateFromHere('/bandeja'), [navigateFromHere]);
+  const backFromInbox = useCallback(() => navigate(importReturnTo), [navigate, importReturnTo]);
+  const goToSettings = useCallback(() => navigate('/ajustes'), [navigate]);
+
   // Inserta en la bandeja el resultado de un parser y avisa; navega a la bandeja si hubo algo.
   const importGames = useCallback(
     (games: RawExternalGame[]) => {
@@ -222,9 +233,11 @@ export default function App() {
       }
       const summary = inboxAddGames(games, listNames);
       notify('ok', UI_MESSAGES.import.notice(summary.added, summary.merged, summary.duplicates));
-      navigate('/bandeja');
+      // Con el origen: se importa desde ajustes y desde un listado vacío, y el "Volver" de la bandeja tiene que
+      // devolver a quien la abrió, no a una ruta fija.
+      openInbox();
     },
-    [inboxAddGames, listNames, navigate, notify],
+    [inboxAddGames, listNames, notify, openInbox],
   );
 
   // Opción A: "Json Library Import Export" → varios .json (games.json + ficheros de lookup).
@@ -267,19 +280,6 @@ export default function App() {
   const handleDiscardImport = useCallback((id: number) => inboxRemoveItem(id), [inboxRemoveItem]);
   const handleDiscardManyImport = useCallback((ids: number[]) => inboxRemoveItems(ids), [inboxRemoveItems]);
   const handleClearInbox = useCallback(() => inboxClear(), [inboxClear]);
-  // Integraciones se abre desde ajustes y desde el estado vacío de un listado, así que su "Volver" sigue al
-  // origen (ver `useReturnTo`); la bandeja lo conserva para no perderlo al ir y venir dentro del flujo.
-  // Desestructurado (y no `importFlow.x`) porque el objeto del hook es nuevo en cada render: con él como
-  // dependencia, `openIntegrations` cambiaría de identidad y tiraría el `memo` de GameTable.
-  const { returnTo: importReturnTo, navigateFromHere, navigateKeepingOrigin } = useReturnTo('/ajustes');
-  const openIntegrations = useCallback(() => navigateFromHere('/integraciones'), [navigateFromHere]);
-  // Los cuatro manejadores de navegación de Integraciones y Bandeja, memoizados como el resto del fichero. En
-  // línea estrenaban identidad en cada render de `App` —y `sectionScreens` se reconstruye entero cada vez—, así
-  // que las dos pantallas no podían memoizarse por muchas envolturas que se les pusieran.
-  const backFromIntegrations = useCallback(() => navigate(importReturnTo), [navigate, importReturnTo]);
-  const openInboxKeepingOrigin = useCallback(() => navigateKeepingOrigin('/bandeja'), [navigateKeepingOrigin]);
-  const backToIntegrations = useCallback(() => navigateKeepingOrigin('/integraciones'), [navigateKeepingOrigin]);
-  const goToSettings = useCallback(() => navigate('/ajustes'), [navigate]);
 
   // El sync lee el estado local vía refs (no closures del render) para que un ciclo EN VUELO vea las
   // ediciones confirmadas mientras estaba esperando la red. Con `() => vm.data` un ciclo iniciado antes
@@ -469,11 +469,6 @@ export default function App() {
       return;
     }
 
-    if (section === 'integrations') {
-      navigate('/integraciones');
-      return;
-    }
-
     if (section === 'inbox') {
       navigate('/bandeja');
       return;
@@ -622,7 +617,9 @@ export default function App() {
           onDelete={vm.deleteGame}
           onMigrate={vm.migrateGame}
           onAddGame={handleAddGame}
-          onImportGames={openIntegrations}
+          onImportLibrary={handleImportLibraryExporter}
+          inboxCount={inboxCount}
+          onOpenInbox={openInbox}
           tabActions={vm.tabActions[currentTab]}
           sort={vm.sort[currentTab]}
           onSort={vm.sortBy}
@@ -677,17 +674,6 @@ export default function App() {
         <LegalScreen docId={legalDocId} />
       </Suspense>
     ),
-    integrations: (
-
-      <Suspense fallback={null}>
-        <IntegrationsScreen
-          onImport={handleImportLibraryExporter}
-          onBack={backFromIntegrations}
-          inboxCount={inboxCount}
-          onOpenInbox={openInboxKeepingOrigin}
-        />
-      </Suspense>
-    ),
     inbox: (
 
       <Suspense fallback={null}>
@@ -702,8 +688,8 @@ export default function App() {
           onClear={handleClearInbox}
           fieldPrefs={importFields.prefs}
           onFieldPrefChange={importFields.setField}
-          onBack={backToIntegrations}
-          onGoIntegrations={goToSettings}
+          onBack={backFromInbox}
+          onGoSettings={goToSettings}
         />
       </Suspense>
     ),
@@ -733,7 +719,9 @@ export default function App() {
           lookups={vm.lookups}
           onEditTag={handleEditTag}
           onDeleteTag={handleDeleteTag}
-          onOpenIntegrations={openIntegrations}
+          onImportLibrary={handleImportLibraryExporter}
+          inboxCount={inboxCount}
+          onOpenInbox={openInbox}
         />
       </Suspense>
     ),

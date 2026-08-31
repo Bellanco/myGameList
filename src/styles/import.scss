@@ -1,4 +1,4 @@
-// Flujo de IMPORTACIÓN (Integraciones, bandeja, preferencias de campos y la guía de Playnite).
+// Flujo de IMPORTACIÓN (tarjeta de Ajustes, bandeja, preferencias de campos y la guía de Playnite).
 //
 // Hoja SIN guion bajo y fuera de `index.scss` a propósito: la importan los componentes del flujo, que entran por
 // `lazy()`, así que Vite la emite en sus chunks perezosos (mismo criterio que `stats.scss`, `admin.scss` y
@@ -7,8 +7,8 @@
 // POR QUÉ EXISTE: estas cuatro pantallas se escribieron con el layout en objetos `CSSProperties` inline —28 en
 // total— mientras el resto de la aplicación lo pone en clases. Eso traía tres problemas:
 //
-//  1. DUPLICACIÓN. `screenStyle` estaba copiado byte a byte en `InboxScreen` y en `IntegrationsScreen`, y
-//     `stepsStyle` estaba copiado CON DERIVA entre `IntegrationsScreen` (margen .25rem, sangría 1.25rem) y
+//  1. DUPLICACIÓN. `screenStyle` estaba copiado byte a byte en `InboxScreen` y en la desaparecida
+//     `IntegrationsScreen`, y `stepsStyle` estaba copiado CON DERIVA entre aquella (margen .25rem, sangría 1.25rem) y
 //     `PlayniteNote` (.35rem, 1.2rem): dos listas del mismo flujo con espaciados distintos por accidente. Aquí
 //     hay un solo `.import-steps` y una sola sangría.
 //  2. REGLAS QUE NO HACÍAN NADA. `_base.scss` aplica un reset global `* { margin: 0; padding: 0 }`, así que todos
@@ -18,7 +18,7 @@
 //     (`themes/*.scss`) no podían dar forma a estas pantallas —justo lo contrario del criterio del proyecto, donde
 //     la forma la pone cada tema—. Ahora son clases y se pueden alcanzar.
 
-/* Marco de pantalla del flujo: columna centrada con el mismo ancho útil en Integraciones y en la bandeja. */
+/* Marco de pantalla del flujo: columna centrada con el ancho útil de la bandeja. */
 .import-screen {
   display: flex;
   flex-direction: column;
@@ -50,7 +50,7 @@
   gap: 0.35rem;
 }
 
-/* Panel plegable de la guía de consola dentro de la nota de Integraciones. */
+/* Panel plegable de la guía de consola dentro de la nota de importación. */
 .import-guide {
   margin-top: 0.6rem;
   padding: 0.75rem 0.9rem;
@@ -143,7 +143,7 @@
   height: 1px;
 }
 
-/* Las acciones de Integraciones van algo separadas de los pasos que las explican. El resto del layout de la
+/* Las acciones de importación van algo separadas de los pasos que las explican. El resto del layout de la
    fila ya lo pone `.settings-backup-actions` (`_layout.scss`), que antes se redeclaraba inline. */
 .settings-backup-actions.import-integrations-actions {
   margin-top: 0.9rem;

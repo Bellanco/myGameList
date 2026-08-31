@@ -128,7 +128,7 @@ libres de la app, con tablas y **fallback al nombre crudo**; luego `getCanonical
 ampliarán para IGDB cuando llegue.)
 
 ### E. UI
-Detallada en *Parte visual / UX*: botón **"Integraciones"** en Ajustes → pantalla de Integraciones
+Detallada en *Parte visual / UX*: tarjeta **"Integraciones"** en Ajustes (antes, una pantalla aparte)
 (de momento **solo la tarjeta de Playnite**) → **Bandeja** → clasificar a c/v/e/p.
 
 ### F. "Qué datos traer" (preferencia global de la Bandeja) — *añadido posterior*
@@ -153,13 +153,18 @@ se sincroniza, como la propia bandeja).
 
 ## Parte visual / UX (pantallas y flujos)
 
-Dos pantallas nuevas, un acceso persistente y el almacén Bandeja (sección A). Rutas con
-`react-router-dom@7` (ya en uso).
+> **Actualizado tras implementar:** la pantalla `/integraciones` **ya no existe**. Era un salto de
+> pantalla para una sola tarjeta, así que su contenido (nota de Playnite, manual paso a paso —hoy
+> plegable—, "Importar de Playnite" y "Ver bandeja") vive en la **tarjeta de Ajustes** que antes solo
+> navegaba hasta ella, y los mismos botones se ofrecen en el **estado vacío de un listado**. Cuando
+> haya varias vías (Steam/Xbox/PSN/GOG/EGS) habrá que decidir si una pantalla propia vuelve a pagar
+> el salto. Queda **una** pantalla nueva, la Bandeja.
 
 ```
-Ajustes ──[botón "Integraciones"]──▶ Pantalla Integraciones (tarjeta Playnite: soltar .json)
-                                          │  (import + dedupe/fusión)
-                                          ▼
+Ajustes ─┐
+         ├─[Importar de Playnite: elegir .json]──▶ (import + dedupe/fusión)
+Listado ─┘                                │
+vacío                                     ▼
                                    BANDEJA de importados  ◀── se guarda en el equipo (30 días)
                                           ▲
         [acceso persistente: entrada de menú con contador, solo si hay elementos]
@@ -171,9 +176,9 @@ Ajustes ──[botón "Integraciones"]──▶ Pantalla Integraciones (tarjeta 
                     el juego SALE de la bandeja y entra en la lista (sync, editar, mover…)
 ```
 
-1. **Ajustes → botón "Integraciones"** (junto al import/export de backup, `SettingsHub.tsx:312-326`).
-2. **Pantalla "Integraciones"** — una tarjeta por vía; hoy **solo Playnite** (input de fichero
-   `.json` + botón Importar). Las tarjetas de Steam/Xbox/PSN/GOG/EGS se añadirán con cada futuro.
+1. **Ajustes → tarjeta "Integraciones"** (junto al import/export de backup): nota de Playnite, manual
+   plegable, "Importar de Playnite" y "Ver bandeja (n)" cuando quedan importados sin clasificar.
+2. **Estado vacío de un listado** — los mismos dos botones, para llenar la lista sin pasar por Ajustes.
 3. **Bandeja** — almacén `ImportInbox` local; caducidad 30 días. Dos secciones: **"Nuevos"** y
    **"Ya en tus listas"** (los `existsInLists`). Renderizable con `@tanstack/react-virtual`.
 4. **Acceso persistente** — **entrada de menú con contador**, visible solo si `imported.length > 0`;
@@ -189,8 +194,8 @@ Ajustes ──[botón "Integraciones"]──▶ Pantalla Integraciones (tarjeta 
 - [ ] **IndexedDB**: object store dedicado para la bandeja ⇒ bump `DB_VERSION`
       (`idbConnectionRepository.ts:2`) + crear el store en `onupgradeneeded`; y bump
       `LOCAL_SCHEMA_VERSION` (`storageKeys.ts:5`).
-- [ ] **Routing**: añadir `/integraciones` y `/bandeja` a `APP_ROUTE_PATHS` (`App.tsx:57`; hay
-      test de regresión de rutas) y extender `AppSection` (`BottomNavigation.tsx:6`).
+- [ ] **Routing**: añadir `/bandeja` a la tabla de rutas (`routes.ts`; hay test de regresión de
+      rutas) y extender `AppSection`. (`/integraciones` llegó a existir y se eliminó después.)
 - [ ] **JSON de muestra de Playnite**: elegir **la** extensión de export soportada y capturar un
       **export real** — sin él no se puede escribir/validar el `playniteMapper`. Fijar y documentar aquí su esquema.
 - **No hace falta**: ni CSP (Playnite no carga carátulas remotas), ni Cloudflare Functions, ni
@@ -226,7 +231,7 @@ Ajustes ──[botón "Integraciones"]──▶ Pantalla Integraciones (tarjeta 
 - [ ] `purgeStaleImports(now)` — purga los no clasificados pasados 30 días.
 - [ ] Interfaz `LibraryConnector` + carpeta `src/model/repository/import/`.
 - [ ] Normalización de tags `metadataNormalize.ts` (tablas Playnite + `getCanonicalTag`).
-- [ ] **UI**: ruta+botón "Integraciones" en Ajustes, pantalla Integraciones (solo Playnite),
+- [ ] **UI**: tarjeta "Integraciones" en Ajustes (solo Playnite) y en el estado vacío de un listado,
       pantalla de la Bandeja (secciones "Nuevos"/"Ya en tus listas") y entrada de menú con contador.
 
 **Conector Playnite**:
@@ -318,7 +323,7 @@ Tablas `PLATFORM_MAP`/`GENRE_MAP` (empezando por la taxonomía de Playnite, p. e
 
 **Definición de hecho (Entrega 1)**: `ImportInbox` local persistido con TTL; `addGamesToStaging`
 (dedupe+fusión, un persist), `graduateFromStaging` (vía formulario) y `purgeStaleImports`, más el
-`playniteMapper`, cubiertos por tests (Vitest); UI navegable (Integraciones + Bandeja + menú).
+`playniteMapper`, cubiertos por tests (Vitest); UI navegable (tarjeta de Ajustes + Bandeja + menú).
 
 ---
 
@@ -345,7 +350,7 @@ sin IGDB; reutiliza el import de fichero existente; y el riesgo de no-oficialida
 1. El usuario instala Playnite + los plugins de sus tiendas (una vez).
 2. Instala una extensión de export a JSON (p. ej. *Playnite Game Data Exporter* o *playnite-json*)
    y exporta.
-3. En la app: **Integraciones → Playnite**, suelta/selecciona el `.json`.
+3. En la app: **Ajustes → Importar de Playnite**, selecciona el `.json`.
 4. Preview (duplicados avisados) → confirmar → van a la Bandeja → clasificar.
 
 ## Qué campos trae el export (confirmado contra el modelo `Game` del SDK y `playnite-json`)

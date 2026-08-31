@@ -17,8 +17,11 @@ interface GameTableProps {
   onDelete: (tab: TabId, id: number) => void;
   onMigrate: (tab: TabId, id: number, target: TabId) => void;
   onAddGame?: () => void;
-  /** Lleva a Integraciones para traer la biblioteca desde Playnite en vez de teclear juego a juego. */
-  onImportGames?: () => void;
+  /** Trae la biblioteca desde el JSON de «Playnite Library Exporter» en vez de teclear juego a juego. */
+  onImportLibrary?: (file: File) => void;
+  /** Nº de juegos esperando en la bandeja; con 0 no se ofrece el acceso. */
+  inboxCount?: number;
+  onOpenInbox?: () => void;
   tabActions: TabAction[];
   readOnly?: boolean;
   /** Orden activo de la pestaña; si se pasa junto a `onSort`, las columnas ordenables son pulsables. */
@@ -81,6 +84,7 @@ function yearsDesc(years?: number[]) {
 }
 
 const MAX_ROW_CHIPS = 3;
+const IMPORT_UI = UI_MESSAGES.import.integrations;
 
 // Clase por columna en Completados (c): controla ancho por importancia y permite ocultar
 // progresivamente las columnas menos importantes en escritorio estrecho (ver _table.scss).
@@ -138,7 +142,9 @@ export const GameTable = memo(function GameTable({
   onDelete,
   onMigrate,
   onAddGame,
-  onImportGames,
+  onImportLibrary,
+  inboxCount = 0,
+  onOpenInbox,
   tabActions,
   readOnly = false,
   sort,
@@ -379,8 +385,11 @@ export const GameTable = memo(function GameTable({
                   </svg>
                   <p className="table-empty-title">{UI_MESSAGES.table.emptyTitle}</p>
                   {/* Empezar de cero a mano es el camino largo: junto a "añadir" se ofrece la importación,
-                      que es lo que de verdad llena una lista vacía de golpe. */}
-                  {!readOnly && (onAddGame || onImportGames) ? (
+                      que es lo que de verdad llena una lista vacía de golpe. El selector de archivo se abre
+                      AQUÍ (antes esto era un enlace a `/integraciones`, que ya no existe), y si quedan juegos
+                      sin clasificar de una importación anterior se ofrece también la bandeja.
+                      Solo clases globales: esta tabla no carga la hoja del flujo de importación. */}
+                  {!readOnly && (onAddGame || onImportLibrary) ? (
                     <div className="table-empty-actions">
                       {onAddGame ? (
                         <button type="button" className="btn btn-primary" onClick={onAddGame}>
@@ -388,10 +397,27 @@ export const GameTable = memo(function GameTable({
                           <span>{UI_MESSAGES.table.emptyCta}</span>
                         </button>
                       ) : null}
-                      {onImportGames ? (
-                        <button type="button" className="btn btn-secondary" onClick={onImportGames}>
+                      {onImportLibrary ? (
+                        <label className="btn btn-secondary settings-import-label">
+                          <Icon name={COMMON_ICONS.upload} />
+                          <span>{IMPORT_UI.importBtn}</span>
+                          <input
+                            type="file"
+                            accept=".json,application/json"
+                            className="input-hidden"
+                            aria-label={IMPORT_UI.importAria}
+                            onChange={(event) => {
+                              const file = event.target.files?.[0];
+                              if (file) onImportLibrary(file);
+                              event.currentTarget.value = '';
+                            }}
+                          />
+                        </label>
+                      ) : null}
+                      {onOpenInbox && inboxCount > 0 ? (
+                        <button type="button" className="btn btn-secondary btn-accent" onClick={onOpenInbox}>
                           <Icon name={COMMON_ICONS.download} />
-                          <span>{UI_MESSAGES.table.emptyImportCta}</span>
+                          <span>{IMPORT_UI.viewInbox(inboxCount)}</span>
                         </button>
                       ) : null}
                     </div>

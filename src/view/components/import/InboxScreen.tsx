@@ -26,13 +26,14 @@ interface InboxScreenProps {
   /** Preferencia global de qué datos traer (nuevos / ya en tus listas). */
   fieldPrefs: ImportFieldPrefs;
   onFieldPrefChange: (group: ImportFieldGroup, field: ImportField, on: boolean) => void;
-  /** Volver a la pantalla anterior (Integraciones). */
+  /** Volver a la pantalla desde la que se abrió la bandeja (ajustes, un listado…). */
   onBack: () => void;
-  onGoIntegrations: () => void;
+  /** Ir a Ajustes, que es donde se importa (la bandeja vacía no puede llenarse desde aquí). */
+  onGoSettings: () => void;
 }
 
 /** Bandeja: buscador por texto + scroll infinito (render incremental) + multiselección. */
-function InboxScreenBase({ imported, isInLists, listOf, onClassify, onEnrich, onDiscard, onDiscardMany, onClear, fieldPrefs, onFieldPrefChange, onBack, onGoIntegrations }: InboxScreenProps) {
+function InboxScreenBase({ imported, isInLists, listOf, onClassify, onEnrich, onDiscard, onDiscardMany, onClear, fieldPrefs, onFieldPrefChange, onBack, onGoSettings }: InboxScreenProps) {
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [query, setQuery] = useState('');
   const [visible, setVisible] = useState(PAGE);
@@ -89,9 +90,9 @@ function InboxScreenBase({ imported, isInLists, listOf, onClassify, onEnrich, on
             <h2>{M.title}</h2>
             <p className="settings-card-note">{M.empty}</p>
           </div>
-          <button type="button" className="btn btn-secondary import-card-action" onClick={onGoIntegrations}>
+          <button type="button" className="btn btn-secondary import-card-action" onClick={onGoSettings}>
             <Icon name={COMMON_ICONS.upload} />
-            <span>{M.goIntegrations}</span>
+            <span>{M.goSettings}</span>
           </button>
         </div>
       </div>
@@ -179,5 +180,9 @@ function InboxScreenBase({ imported, isInLists, listOf, onClassify, onEnrich, on
   );
 }
 
-/** Memoizada por el mismo motivo que `IntegrationsScreen`: ver la nota de allí. */
+/**
+ * Memoizada: `App` reconstruye el mapa de secciones en cada render, así que sin esto la pantalla se volvía a
+ * renderizar por cualquier cambio de la aplicación. Sus manejadores son estables (`useCallback` en `App`), que
+ * es lo que hace que el `memo` sirva de algo y no solo añada una comparación.
+ */
 export const InboxScreen = memo(InboxScreenBase);

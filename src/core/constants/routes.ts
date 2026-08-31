@@ -11,7 +11,7 @@ import { matchRoutes } from 'react-router-dom';
 import { LEGAL_ROUTES } from './legal';
 
 /** Zona de la app; decide la navegación inferior, el encabezado y el cromo alrededor del contenido. */
-export type AppSection = 'lists' | 'social' | 'stats' | 'settings' | 'account' | 'integrations' | 'inbox' | 'legal' | 'admin' | 'shared-review';
+export type AppSection = 'lists' | 'social' | 'stats' | 'settings' | 'account' | 'inbox' | 'legal' | 'admin' | 'shared-review';
 
 export const APP_ROUTES: ReadonlyArray<{ path: string; section: AppSection }> = [
   { path: '/completados', section: 'lists' },
@@ -30,7 +30,6 @@ export const APP_ROUTES: ReadonlyArray<{ path: string; section: AppSection }> = 
   { path: '/perfil', section: 'stats' },
   { path: '/ajustes', section: 'settings' },
   { path: '/cuenta', section: 'account' },
-  { path: '/integraciones', section: 'integrations' },
   { path: '/bandeja', section: 'inbox' },
   { path: LEGAL_ROUTES.terms, section: 'legal' },
   { path: LEGAL_ROUTES.privacy, section: 'legal' },

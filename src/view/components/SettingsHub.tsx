@@ -7,6 +7,8 @@ import { PlayniteNote } from './import/PlayniteNote';
 
 type AdminCategoryKey = 'genres' | 'platforms' | 'strengths' | 'weaknesses';
 
+const IMPORT_UI = UI_MESSAGES.import.integrations;
+
 interface SettingsHubProps {
   syncStatus: string;
   hasSyncConfig: boolean;
@@ -35,7 +37,11 @@ interface SettingsHubProps {
   };
   onEditTag: (key: AdminCategoryKey, oldValue: string, newValue: string) => void;
   onDeleteTag: (key: AdminCategoryKey, value: string) => void;
-  onOpenIntegrations: () => void; // navega a la pantalla de Integraciones (importar de Playnite)
+  /** Archivo JSON de «Playnite Library Exporter»: App lo parsea, lo mete en la bandeja y avisa. */
+  onImportLibrary: (file: File) => void;
+  /** Nº de juegos esperando en la bandeja (el acceso solo se ofrece si hay alguno). */
+  inboxCount: number;
+  onOpenInbox: () => void;
 }
 
 /**
@@ -64,10 +70,15 @@ export const SettingsHub = memo(function SettingsHub({
   lookups,
   onEditTag,
   onDeleteTag,
-  onOpenIntegrations,
+  onImportLibrary,
+  inboxCount,
+  onOpenInbox,
 }: SettingsHubProps) {
   const [showToken, setShowToken] = useState(false);
   const [showConfigHelp, setShowConfigHelp] = useState(false);
+  // El manual de Playnite llega plegado: son cinco pasos que solo hacen falta la primera vez, y esta pantalla
+  // ya es larga. La nota de arriba basta para saber qué hace la importación.
+  const [showImportSteps, setShowImportSteps] = useState(false);
   // Con OAuth disponible, el modo manual (PAT) queda plegado como opción avanzada; sin OAuth, se muestra siempre.
   const [showManual, setShowManual] = useState(false);
   const manualVisible = !githubOAuthEnabled || showManual;
@@ -129,15 +140,53 @@ export const SettingsHub = memo(function SettingsHub({
 
   return (
     <section className="settings-hub" aria-label={SETTINGS_UI.title}>
+      {/* Importación de la biblioteca. Vivía en una pantalla aparte (`/integraciones`) a la que esta tarjeta solo
+          sabía navegar; ahora la acción está donde se busca, con su manual al lado. */}
       <div className="settings-card" style={{ gridColumn: '1 / -1' }}>
         <div className="settings-card-head">
-          <h2>{UI_MESSAGES.import.integrations.title}</h2>
+          <h2>{IMPORT_UI.title}</h2>
           <PlayniteNote />
         </div>
-        <button type="button" className="btn btn-primary" style={{ alignSelf: 'flex-start' }} onClick={onOpenIntegrations}>
-          <Icon name={COMMON_ICONS.download} />
-          <span>{UI_MESSAGES.import.integrations.importBtn}</span>
-        </button>
+        <div className="settings-backup-info">
+          <button
+            type="button"
+            className="import-guide-link"
+            aria-expanded={showImportSteps}
+            onClick={() => setShowImportSteps((prev) => !prev)}
+          >
+            {IMPORT_UI.stepsTitle}
+          </button>
+          {showImportSteps ? (
+            <ol className="settings-card-note import-steps">
+              {IMPORT_UI.steps.map((step, i) => (
+                <li key={i}>{step}</li>
+              ))}
+            </ol>
+          ) : null}
+        </div>
+        <div className="settings-backup-actions import-integrations-actions">
+          {inboxCount > 0 ? (
+            <button type="button" className="btn btn-secondary btn-accent" onClick={onOpenInbox}>
+              <Icon name={COMMON_ICONS.download} />
+              <span>{IMPORT_UI.viewInbox(inboxCount)}</span>
+            </button>
+          ) : null}
+          <label className="btn btn-primary settings-import-label">
+            <Icon name={COMMON_ICONS.upload} />
+            <span>{IMPORT_UI.importBtn}</span>
+            <input
+              type="file"
+              accept=".json,application/json"
+              className="input-hidden"
+              aria-label={IMPORT_UI.importAria}
+              onChange={(event) => {
+                const file = event.target.files?.[0];
+                if (file) onImportLibrary(file);
+                event.currentTarget.value = '';
+              }}
+            />
+          </label>
+        </div>
       </div>
 
       <div className="settings-card settings-card-status">

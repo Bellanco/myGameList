@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { UI_MESSAGES } from '../../../core/constants/labels';
 // La hoja del flujo de importación se importa AQUÍ y no desde `index.scss`: este componente lo renderizan dos
-// pantallas perezosas (Integraciones y Cuenta), así que su CSS viaja en esos chunks y no pesa en el arranque.
+// pantallas perezosas (Ajustes y Cuenta), así que su CSS viaja en esos chunks y no pesa en el arranque.
 import '../../../styles/import.scss';
 
 const M = UI_MESSAGES.import.integrations;
@@ -20,10 +20,10 @@ function Guide({ title, steps }: { title: string; steps: readonly string[] }) {
 }
 
 /**
- * Nota de Integraciones: la palabra «PlayStation» del propio texto es pulsable y despliega
+ * Nota de la importación: la palabra «PlayStation» del propio texto es pulsable y despliega
  * (mostrar/ocultar) una guía paso a paso para instalar su complemento de biblioteca en Playnite.
  * (Xbox no lleva guía: su complemento viene integrado en Playnite por defecto.)
- * Se usa igual en /integraciones y en /cuenta.
+ * Se usa igual en /ajustes y en /cuenta.
  */
 export function PlayniteNote() {
   const [psnOpen, setPsnOpen] = useState(false);
