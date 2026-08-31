@@ -767,14 +767,21 @@ export default function App() {
           <button
             className="fab-roulette"
             type="button"
-            aria-label="Sortear próximo juego"
+            aria-label={UI_MESSAGES.fab.roulette}
+            title={UI_MESSAGES.fab.roulette}
             onClick={() => setRouletteOpen(true)}
           >
             <svg className="ui-icon" aria-hidden="true">
               <use href="#icon-dice-d20" />
             </svg>
           </button>
-          <button className="fab" type="button" aria-label="Añadir juego" onClick={handleAddGame}>
+          <button
+            className="fab"
+            type="button"
+            aria-label={UI_MESSAGES.fab.addGame}
+            title={UI_MESSAGES.fab.addGame}
+            onClick={handleAddGame}
+          >
             <svg aria-hidden="true">
               <use href="#icon-plus" />
             </svg>
@@ -813,7 +820,7 @@ export default function App() {
           <RouletteModal
             open={rouletteOpen}
             onClose={() => setRouletteOpen(false)}
-            title="Elige tu próximo juego"
+            title={UI_MESSAGES.fab.roulette}
             candidates={roulettePool}
             weight={rouletteWeight}
             tag={(candidate) => TAB_TITLES[candidate.sourceTab]}

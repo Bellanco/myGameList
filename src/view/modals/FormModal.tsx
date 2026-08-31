@@ -286,7 +286,13 @@ export function FormModal({ open, draft: initialDraft, currentTab, lookups, find
       <div className="modal">
         <div className="modal-hd">
           <div className="modal-title">{draft.id ? UI_MESSAGES.form.editTitle : UI_MESSAGES.form.newTitle}</div>
-          <button className="btn-icon" type="button" onClick={onClose}>
+          <button
+            className="btn-icon"
+            type="button"
+            aria-label={UI_MESSAGES.form.close}
+            title={UI_MESSAGES.form.close}
+            onClick={onClose}
+          >
             <Icon name={COMMON_ICONS.close} />
           </button>
         </div>

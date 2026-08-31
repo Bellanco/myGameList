@@ -298,7 +298,14 @@ export const SettingsHub = memo(function SettingsHub({
                   onChange={(event) => onTokenChange(event.target.value)}
                   placeholder={SETTINGS_UI.sync.tokenPlaceholder}
                 />
-                <button className="token-toggle" type="button" onClick={() => setShowToken((prev) => !prev)}>
+                <button
+                  className="token-toggle"
+                  type="button"
+                  aria-label={SETTINGS_UI.sync.tokenToggle(showToken)}
+                  title={SETTINGS_UI.sync.tokenToggle(showToken)}
+                  aria-pressed={showToken}
+                  onClick={() => setShowToken((prev) => !prev)}
+                >
                   <Icon name={showToken ? COMMON_ICONS.eyeOff : COMMON_ICONS.eye} />
                 </button>
               </div>

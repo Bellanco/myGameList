@@ -105,6 +105,7 @@ export function TagInput({
               type="button"
               className="chip-rm"
               aria-label={UI_MESSAGES.table.removeTag(String(value))}
+              title={UI_MESSAGES.table.removeTag(String(value))}
               onClick={() => onRemove(value)}
             >
               <Icon name={COMMON_ICONS.close} />
