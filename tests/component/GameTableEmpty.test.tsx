@@ -5,8 +5,11 @@ import { GameTable } from '../../src/view/components/GameTable';
 import { UI_MESSAGES } from '../../src/core/constants/labels';
 
 // Una lista vacía se llena de dos maneras y la pantalla solo ofrecía UNA: añadir juego a juego. La importación
-// desde Playnite es la que la llena de golpe, así que el estado vacío la ofrece al lado. Cada CTA es opcional
-// por separado, y en modo lectura (el perfil de otra persona) no se ofrece ninguno.
+// desde Playnite es la que la llena de golpe, así que el estado vacío la ofrece al lado. Desde que se eliminó
+// la pantalla `/integraciones`, el selector de archivo se abre AQUÍ mismo en vez de navegar a otra pantalla.
+// Cada CTA es opcional por separado, y en modo lectura (el perfil de otra persona) no se ofrece ninguno.
+
+const IMPORT_UI = UI_MESSAGES.import.integrations;
 
 function renderEmpty(props: Partial<Parameters<typeof GameTable>[0]> = {}) {
   return render(
@@ -26,32 +29,61 @@ function renderEmpty(props: Partial<Parameters<typeof GameTable>[0]> = {}) {
 
 describe('GameTable — estado vacío', () => {
   it('ofrece añadir e importar', () => {
-    renderEmpty({ onAddGame: vi.fn(), onImportGames: vi.fn() });
+    renderEmpty({ onAddGame: vi.fn(), onImportLibrary: vi.fn() });
 
     expect(screen.getByRole('button', { name: UI_MESSAGES.table.emptyCta })).toBeTruthy();
-    expect(screen.getByRole('button', { name: UI_MESSAGES.table.emptyImportCta })).toBeTruthy();
+    expect(screen.getByLabelText(IMPORT_UI.importAria)).toBeTruthy();
   });
 
-  it('avisa a quien lo pide al pulsar importar', async () => {
-    const onImportGames = vi.fn();
-    renderEmpty({ onAddGame: vi.fn(), onImportGames });
+  it('entrega el fichero elegido a quien lo pide', async () => {
+    const onImportLibrary = vi.fn();
+    renderEmpty({ onAddGame: vi.fn(), onImportLibrary });
 
-    await userEvent.click(screen.getByRole('button', { name: UI_MESSAGES.table.emptyImportCta }));
-    expect(onImportGames).toHaveBeenCalledTimes(1);
+    const file = new File(['[]'], 'biblioteca.json', { type: 'application/json' });
+    await userEvent.upload(screen.getByLabelText(IMPORT_UI.importAria) as HTMLInputElement, file);
+
+    expect(onImportLibrary).toHaveBeenCalledTimes(1);
+    expect(onImportLibrary.mock.calls[0][0]).toBe(file);
+  });
+
+  it('ofrece la bandeja solo si quedan importados sin clasificar', () => {
+    const onOpenInbox = vi.fn();
+    const { rerender } = renderEmpty({ onAddGame: vi.fn(), onImportLibrary: vi.fn(), inboxCount: 0, onOpenInbox });
+
+    expect(screen.queryByRole('button', { name: IMPORT_UI.viewInbox(0) })).toBeNull();
+
+    rerender(
+      <GameTable
+        games={[]}
+        currentTab="c"
+        expandedId={null}
+        onExpandedChange={vi.fn()}
+        onEdit={vi.fn()}
+        onDelete={vi.fn()}
+        onMigrate={vi.fn()}
+        tabActions={[]}
+        onAddGame={vi.fn()}
+        onImportLibrary={vi.fn()}
+        inboxCount={3}
+        onOpenInbox={onOpenInbox}
+      />,
+    );
+
+    expect(screen.getByRole('button', { name: IMPORT_UI.viewInbox(3) })).toBeTruthy();
   });
 
   it('pinta solo el CTA que recibe', () => {
     renderEmpty({ onAddGame: vi.fn() });
 
     expect(screen.getByRole('button', { name: UI_MESSAGES.table.emptyCta })).toBeTruthy();
-    expect(screen.queryByRole('button', { name: UI_MESSAGES.table.emptyImportCta })).toBeNull();
+    expect(screen.queryByLabelText(IMPORT_UI.importAria)).toBeNull();
   });
 
   it('en modo lectura no ofrece ninguno', () => {
-    renderEmpty({ onAddGame: vi.fn(), onImportGames: vi.fn(), readOnly: true });
+    renderEmpty({ onAddGame: vi.fn(), onImportLibrary: vi.fn(), readOnly: true });
 
     expect(screen.getByText(UI_MESSAGES.table.emptyTitle)).toBeTruthy();
     expect(screen.queryByRole('button', { name: UI_MESSAGES.table.emptyCta })).toBeNull();
-    expect(screen.queryByRole('button', { name: UI_MESSAGES.table.emptyImportCta })).toBeNull();
+    expect(screen.queryByLabelText(IMPORT_UI.importAria)).toBeNull();
   });
 });
