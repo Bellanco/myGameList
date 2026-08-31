@@ -305,6 +305,7 @@ function SocialFeedScreenBase({
                               className="hub-avatar-link"
                               type="button"
                               aria-label={SOCIAL_UI.feed.openProfileAria(entry.profileDisplayName || entry.authorName)}
+                              title={SOCIAL_UI.feed.openProfileAria(entry.profileDisplayName || entry.authorName)}
                               onClick={() => openProfileDetail(entry.profileId)}
                             >
                               <HubAvatar photoURL={entry.photoURL} />
@@ -350,6 +351,7 @@ function SocialFeedScreenBase({
                             className="hub-avatar-link"
                             type="button"
                             aria-label={SOCIAL_UI.feed.openProfileAria(nombreAutor)}
+                            title={SOCIAL_UI.feed.openProfileAria(nombreAutor)}
                             onClick={() => openProfileDetail(entry.profileId)}
                           >
                             <HubAvatar photoURL={entry.photoURL} sizeClass="hub-avatar-xs" />
@@ -408,6 +410,7 @@ function SocialFeedScreenBase({
                             className="hub-avatar-link"
                             type="button"
                             aria-label={SOCIAL_UI.feed.openProfileAria(entry.profileDisplayName)}
+                            title={SOCIAL_UI.feed.openProfileAria(entry.profileDisplayName)}
                             onClick={(event) => { event.stopPropagation(); openProfileDetail(entry.profileId); }}
                           >
                             <HubAvatar photoURL={entry.photoURL} />

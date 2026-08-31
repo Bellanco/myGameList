@@ -189,6 +189,7 @@ export const UI_MESSAGES = {
     // cruzar el umbral, no en cada pulsación). El conteo numérico se deja como texto visible SIN aria-live.
     charNearLimit: 'Te acercas al límite de caracteres del análisis.',
     charLimitReached: 'Has alcanzado el límite de caracteres del análisis.',
+    close: 'Cerrar',
     cancel: 'Cancelar',
     save: 'Guardar',
   },
@@ -211,6 +212,12 @@ export const UI_MESSAGES = {
     'shared-review': 'Reseña compartida',
   },
   skipToContent: 'Saltar al contenido',
+  // Los dos botones flotantes del listado son solo icono: el `aria-label` los nombra para un lector de pantalla y
+  // el mismo texto va en `title` para que quien usa el ratón sepa qué hace cada uno al pasar por encima.
+  fab: {
+    roulette: 'Elige tu próximo juego',
+    addGame: 'Añadir juego',
+  },
   // A11y-4: nombre accesible de cada pestaña de listado. Hace falta explícito porque el título visible
   // (`.tab-text-full`) se oculta en pantallas estrechas: ahí dentro del botón solo quedaba el icono
   // (`aria-hidden`) y el contador, así que las cuatro pestañas —la navegación principal de la app— se anunciaban

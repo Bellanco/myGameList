@@ -257,12 +257,12 @@ export function RouletteModal({ open, onClose, title, candidates, weight, tag, r
         <div className={`modal rl-modal ${reviewOpen ? 'is-review' : ''}`.trim()}>
           <div className="modal-hd">
             {reviewOpen ? (
-              <button className="btn-icon" type="button" onClick={() => setReviewOpen(false)} aria-label="Atrás">
+              <button className="btn-icon" type="button" onClick={() => setReviewOpen(false)} aria-label="Atrás" title="Atrás">
                 <Icon name="arrow-back" />
               </button>
             ) : null}
             <div className="modal-title">{title}</div>
-            <button className="btn-icon" type="button" onClick={onClose} aria-label="Cerrar">
+            <button className="btn-icon" type="button" onClick={onClose} aria-label="Cerrar" title="Cerrar">
               <Icon name="close" />
             </button>
           </div>
