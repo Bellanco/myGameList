@@ -74,14 +74,28 @@ export const DIALOG_MESSAGES = {
   confirmDelete: 'Eliminar',
 } as const;
 
+/**
+ * Textos de validación del formulario de juego. Cada uno dice QUÉ falta y DÓNDE, sin mecánicas ("pulsa Guardar
+ * otra vez"): el aviso sale dentro del propio modal —junto al campo y resumido en el pie— porque el banner de
+ * la página queda detrás del `<dialog>` y no llega a verse mientras el formulario está abierto.
+ */
 export const VALIDATION_MESSAGES = {
-  yearInvalid: 'El año debe tener exactamente 4 dígitos. Pulsa Guardar de nuevo para ignorarlo.',
+  yearInvalid: (maxYear: number) => `Escribe el año con 4 cifras, entre 1000 y ${maxYear} (ej: ${maxYear}).`,
   fieldsInvalid: 'Revisa los campos marcados antes de guardar.',
   tagExists: 'Ya existe. Pulsa Guardar otra vez para fusionar.',
   duplicateName: (name: string, list: string) => `Ya tienes "${name}" en ${list}.`,
   tagMerged: 'Fusionado correctamente',
   tagUpdated: 'Actualizado correctamente',
+  nameRequired: 'Escribe el nombre del juego.',
+  genresRequired: 'Añade al menos un género.',
+  platformsRequired: 'Añade al menos una plataforma.',
+  yearsRequired: 'Añade al menos un año de finalización.',
   scoreRequired: 'Selecciona una puntuación',
+  hoursInvalid: 'Escribe las horas como un número, con decimales si hace falta (ej: 12,5).',
+  hoursNegative: 'Las horas jugadas no pueden ser negativas.',
+  /** Cabecera del resumen del pie del modal; debajo va la lista de lo que falta. */
+  formSummary: (count: number) =>
+    count === 1 ? 'Falta 1 cosa para poder guardar:' : `Faltan ${count} cosas para poder guardar:`,
 } as const;
 
 export const SYNC_MESSAGES = {
@@ -158,7 +172,9 @@ export const UI_MESSAGES = {
     closeAria: 'Cerrar modal',
   },
   form: {
-    enterToAddHint: 'Pulsa Enter para añadir',
+    // El hint también hace de "spacer" invisible (aria-hidden) en los campos que no son de etiquetas, para que
+    // las columnas de una misma fila queden alineadas aunque solo una lleve texto de ayuda.
+    enterToAddHint: 'Pulsa Enter o separa con comas',
     newTitle: 'Nuevo juego',
     editTitle: 'Editar juego',
     nameLabel: 'Nombre *',

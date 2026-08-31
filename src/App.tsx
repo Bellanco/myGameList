@@ -803,7 +803,6 @@ export default function App() {
             findDuplicate={vm.findGameByName}
             onClose={handleCloseFormModal}
             onSave={handleSaveDraft}
-            onNotice={vm.notify}
           />
         ) : null}
 

@@ -1,15 +1,20 @@
 import { COMMON_ICONS } from '../../core/constants/icons';
 import { UI_MESSAGES } from '../../core/constants/labels';
+import { splitTagInput, TAG_SEPARATOR } from '../../core/utils/tags';
 import { Icon } from './Icon';
-import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
+import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 
 interface TagInputProps {
   label: string;
   values: Array<string | number>;
   pendingValue: string;
   onPendingValueChange: (value: string) => void;
-  /** Se actualizó para permitir pasar el valor directamente y evitar race conditions */
-  onAdd: (explicitValue?: string) => void;
+  /**
+   * Commit de etiquetas. Recibe SIEMPRE una lista ya troceada por separadores y sin espacios sobrantes: escribir
+   * "Acción, RPG" o pegar tres líneas entra por aquí en una sola llamada, y así el padre las añade en un único
+   * cambio de estado (encadenar un `onAdd` por etiqueta perdía todas menos la última).
+   */
+  onAdd: (values: string[]) => void;
   onRemove: (value: string | number) => void;
   listId?: string;
   options?: string[]; // Propiedad recomendada para escalabilidad
@@ -19,6 +24,10 @@ interface TagInputProps {
   invalid?: boolean;
   warning?: boolean;
   required?: boolean;
+  /** Texto de error del campo: sustituye al `hint` y marca el campo como inválido para un lector de pantalla. */
+  errorMessage?: string;
+  /** Id del `<input>` (para el `htmlFor` de la etiqueta y para poder enfocarlo desde el guardado). */
+  inputId?: string;
 }
 
 // Se extrae la detección del agente para ejecutarla solo una vez en la carga del script
@@ -29,6 +38,9 @@ const IS_FIREFOX_MOBILE = typeof navigator !== 'undefined'
     || navigator.maxTouchPoints > 1
     || (typeof window !== 'undefined' && window.matchMedia?.('(pointer: coarse)').matches)
   );
+
+/** `true` si lo escrito termina en separador ("Acción, ") → no queda nada a medias que dejar en el campo. */
+const ENDS_WITH_SEPARATOR = /[,;\t\r\n]\s*$/;
 
 export function TagInput({
   label,
@@ -45,12 +57,17 @@ export function TagInput({
   invalid = false,
   warning = false,
   required = false,
+  errorMessage,
+  inputId,
 }: TagInputProps) {
   const [localOptions, setLocalOptions] = useState<string[]>([]);
   const [filtered, setFiltered] = useState<string[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [activeIndex, setActiveIndex] = useState<number>(-1);
   const inputRef = useRef<HTMLInputElement | null>(null);
+  const generatedId = useId();
+  const fieldId = inputId || `tag-input-${generatedId}`;
+  const messageId = `${fieldId}-msg`;
 
   // Sincronizar opciones internas priorizando la prop directa sobre el DOM scraping
   useEffect(() => {
@@ -72,8 +89,8 @@ export function TagInput({
     if (!IS_FIREFOX_MOBILE || !localOptions.length) return setShowSuggestions(false);
 
     const lower = val.toLowerCase().trim();
-    const matched = !lower 
-      ? localOptions.slice(0, 8) 
+    const matched = !lower
+      ? localOptions.slice(0, 8)
       : localOptions.filter((o) => o.toLowerCase().includes(lower)).slice(0, 8);
 
     setFiltered(matched);
@@ -81,9 +98,18 @@ export function TagInput({
     setShowSuggestions(matched.length > 0);
   }, [localOptions]);
 
+  /** Commit de lo que hay escrito (Enter, o el trozo cerrado por un separador). */
+  const commitRaw = (raw: string) => {
+    const parts = splitTagInput(raw);
+    onPendingValueChange('');
+    setShowSuggestions(false);
+    setActiveIndex(-1);
+    if (parts.length) onAdd(parts);
+  };
+
   const handleSelectSuggestion = (value: string) => {
     onPendingValueChange('');
-    onAdd(value); // Pasamos el valor directamente eliminando el setTimeout peligroso
+    onAdd([value]); // Pasamos el valor directamente eliminando el setTimeout peligroso
     setShowSuggestions(false);
     setActiveIndex(-1);
     inputRef.current?.focus();
@@ -93,11 +119,11 @@ export function TagInput({
 
   return (
     <div className="fg">
-      <label className="flabel">
+      <label className="flabel" htmlFor={fieldId}>
         {label}
         {required ? ' *' : ''}
       </label>
-      <div className={`tag-inp-wrap ${invalid ? 'has-error' : ''} ${warning ? 'has-warning' : ''}`.trim()}>
+      <div className={`tag-inp-wrap ${invalid || errorMessage ? 'has-error' : ''} ${warning ? 'has-warning' : ''}`.trim()}>
         {values.map((value) => (
           <span key={`${label}-${String(value)}`} className={`chip ${chipClassName}`}>
             {String(value)}
@@ -112,16 +138,19 @@ export function TagInput({
             </button>
           </span>
         ))}
-        
+
         <div style={{ position: 'relative', display: 'inline-block', flexGrow: 1 }}>
           <input
             type="text"
+            id={fieldId}
             className="finput"
             list={IS_FIREFOX_MOBILE ? undefined : listId}
             value={pendingValue}
             placeholder={placeholder}
             enterKeyHint="done"
             autoComplete="off"
+            aria-invalid={errorMessage ? true : undefined}
+            aria-describedby={errorMessage || hint ? messageId : undefined}
             ref={inputRef}
             onKeyDown={(event: KeyboardEvent<HTMLInputElement>) => {
               const key = event.key;
@@ -149,18 +178,24 @@ export function TagInput({
                 if (IS_FIREFOX_MOBILE && showSuggestions && activeIndex >= 0 && filtered[activeIndex]) {
                   handleSelectSuggestion(filtered[activeIndex]);
                 } else {
-                  onAdd(); // Añade el valor pendiente desde el estado del padre
+                  commitRaw(pendingValue);
                 }
               }
             }}
             onChange={(event) => {
-              const val = event.target.value;
-              if (val.includes('\n') || val.includes('\r')) {
-                const cleaned = val.replace(/\r|\n/g, '').trim();
-                onPendingValueChange('');
-                onAdd(cleaned);
+              // Tras cerrar una etiqueta con un separador se suele teclear un espacio ("Acción, RPG"): no se
+              // arrastra al principio de la siguiente.
+              const val = pendingValue === '' ? event.target.value.replace(/^\s+/, '') : event.target.value;
+              // Comas, punto y coma, tabuladores y saltos de línea cierran etiqueta: escribir "Acción, RPG" crea
+              // dos chips y pegar una lista entera las reparte. Lo escrito tras el último separador sigue en el
+              // campo para poder terminarlo (salvo que el texto acabe justo en el separador).
+              if (TAG_SEPARATOR.test(val)) {
+                const parts = splitTagInput(val);
+                const tail = ENDS_WITH_SEPARATOR.test(val) ? '' : (parts.pop() ?? '');
+                onPendingValueChange(tail);
                 setShowSuggestions(false);
                 setActiveIndex(-1);
+                if (parts.length) onAdd(parts);
                 return;
               }
               onPendingValueChange(val);
@@ -174,10 +209,10 @@ export function TagInput({
           />
 
           {IS_FIREFOX_MOBILE && showSuggestions && filtered.length ? (
-            <div 
-              className="tag-suggestions" 
-              role="listbox" 
-              id={suggestionListId} 
+            <div
+              className="tag-suggestions"
+              role="listbox"
+              id={suggestionListId}
               style={{ position: 'absolute', zIndex: 20, width: '100%' }}
             >
               {filtered.map((opt, idx) => {
@@ -213,7 +248,11 @@ export function TagInput({
           ) : null}
         </div>
       </div>
-      {hint ? <small className="tag-hint">{hint}</small> : null}
+      {errorMessage ? (
+        <small id={messageId} className="tag-hint is-error">{errorMessage}</small>
+      ) : hint ? (
+        <small id={messageId} className="tag-hint">{hint}</small>
+      ) : null}
     </div>
   );
 }
