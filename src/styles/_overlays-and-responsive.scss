@@ -78,6 +78,34 @@ dialog.modal-dialog[open]::backdrop { animation: modalBackdropIn .28s ease both;
 }
 .tag-inp-wrap input { background: transparent; border: none; color: var(--text); outline: none; flex: 1 1 14ch; min-width: 10ch; }
 
+/* Mensaje de error DEBAJO de un campo del formulario (ocupa el mismo hueco que el `tag-hint`, en rojo). */
+.tag-hint.is-error { color: var(--fg-red); }
+/* Aviso que NO impide guardar (p. ej. se ha descartado un signo menos en las horas): ámbar, no rojo. */
+.tag-hint.is-warning { color: var(--fg-amber-soft); }
+
+/* Resumen de validación del pie del modal: dice de una vez todo lo que impide guardar, y lo dice junto al propio
+   botón Guardar. Ocupa la fila entera del `.modal-ft` (flex) y empuja los botones a la línea siguiente. */
+.form-error-summary {
+  flex: 1 1 100%;
+  display: flex; flex-direction: column; gap: .35rem;
+  background: rgba(var(--danger-rgb),.10);
+  border: 1px solid rgba(var(--danger-rgb),.26);
+  border-left: 3px solid var(--danger);
+  border-radius: var(--radius-sm);
+  padding: .7rem .9rem;
+  font-size: .85rem; text-align: left;
+  /* En una pantalla baja (móvil apaisado, portátil pequeño) la lista no puede comerse el pie: se limita y
+     desplaza dentro de sí misma, con los botones siempre a la vista. */
+  max-height: 34vh; overflow-y: auto; overscroll-behavior: contain;
+  animation: slideInDown .25s ease-out;
+}
+@media (prefers-reduced-motion: reduce) { .form-error-summary { animation: none; } }
+/* La cabecera va en el color de texto normal, no en rojo: a 12,5 px en negrita el rojo del tema claro se queda
+   en 3,9:1 de contraste (AA pide 4,5:1). El rojo lo ponen el filete lateral y el fondo, que no llevan texto. */
+.form-error-summary strong { color: var(--text); font-size: .78rem; text-transform: uppercase; letter-spacing: .4px; }
+.form-error-summary ul { margin: 0; padding-left: 1.1rem; display: flex; flex-direction: column; gap: .22rem; }
+.form-error-summary li { color: var(--text); }
+
 /* Admin */
 .admin-description { background: rgba(var(--steam-rgb),.08); border: 1px solid rgba(var(--steam-rgb),.15); border-radius: var(--radius-md); padding: .85rem 1rem; margin-bottom: .5rem; font-size: .88rem; color: var(--text-muted); line-height: 1.5; }
 .admin-description p { margin: 0; }

@@ -10,10 +10,10 @@ interface ReturnState {
 /**
  * "Volver" que apunta al ORIGEN y no a una pantalla fija.
  *
- * Una pantalla a la que se llega desde varios sitios (Integraciones se abre desde ajustes y desde el estado
- * vacío de un listado) no puede tener el botón de volver cableado a una ruta: quien entró desde un listado
- * acababa en ajustes. El origen viaja en el `state` de la navegación —que react-router guarda en el historial
- * del navegador, así que sobrevive a una recarga, cosa que un estado en memoria no haría—.
+ * Una pantalla a la que se llega desde varios sitios (la bandeja se abre desde ajustes, desde el estado vacío de
+ * un listado y al terminar una importación) no puede tener el botón de volver cableado a una ruta: quien entró
+ * desde un listado acababa en ajustes. El origen viaja en el `state` de la navegación —que react-router guarda
+ * en el historial del navegador, así que sobrevive a una recarga, cosa que un estado en memoria no haría—.
  *
  * El origen se VALIDA contra la tabla de rutas: un `state` manipulado o de una versión anterior de la app no
  * puede mandar a nadie a un camino que ya no existe (rebotaría al fallback global), y una pantalla nunca
@@ -26,8 +26,6 @@ export function useReturnTo(fallback: string): {
   returnTo: string;
   /** Navega a `to` recordando la pantalla ACTUAL como origen de su "Volver". */
   navigateFromHere: (to: string) => void;
-  /** Navega a `to` CONSERVANDO el origen actual; para saltos dentro de un mismo flujo (integraciones ↔ bandeja). */
-  navigateKeepingOrigin: (to: string) => void;
 } {
   const location = useLocation();
   const navigate = useNavigate();
@@ -39,10 +37,6 @@ export function useReturnTo(fallback: string): {
     (to: string) => navigate(to, { state: { from: location.pathname } satisfies ReturnState }),
     [navigate, location.pathname],
   );
-  const navigateKeepingOrigin = useCallback(
-    (to: string) => navigate(to, { state: { from: returnTo } satisfies ReturnState }),
-    [navigate, returnTo],
-  );
 
-  return { returnTo, navigateFromHere, navigateKeepingOrigin };
+  return { returnTo, navigateFromHere };
 }

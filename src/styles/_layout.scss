@@ -96,7 +96,11 @@
      para que el cluster no se mezcle con las pestañas. */
   padding: 3.4rem clamp(1rem, 5vw, 2rem) 0;
   background: var(--surface); border-bottom: 1px solid var(--border);
-  overflow-x: auto; scrollbar-width: thin; flex: 0 0 auto;
+  /* `overflow-y: hidden` NO es redundante: con `overflow-x: auto` el eje vertical pasa de `visible` a `auto`,
+     así que cualquier hijo absoluto que asome por abajo (el subrayado, el tooltip al pasar el ratón) convertía
+     la franja en un contenedor scrolleable y pintaba una barra vertical de ancho completo justo al lado de los
+     controles flotantes. Se ve solo en algunas resoluciones porque la altura de la franja es fraccionaria. */
+  overflow-x: auto; overflow-y: hidden; scrollbar-width: thin; flex: 0 0 auto;
   width: 100%; justify-content: safe center;
 }
 
@@ -115,7 +119,7 @@
 
 /* Barra inferior con brillo centrado (G2): se desvanece en los extremos. Solo en la activa. */
 .tab-btn::before {
-  content: ''; position: absolute; left: 0; right: 0; bottom: -1px; height: 0;
+  content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 0;
   background: var(--tab-bar); border-radius: 2px; transition: height .2s;
 }
 
@@ -478,8 +482,43 @@
   margin-bottom: .75rem;
 }
 
+/* Pestañas de categoría del administrador de filtros. Su aspecto vivía en `social.scss` —el chunk perezoso del
+   hub—, así que en Ajustes solo se pintaban si antes se había abierto el hub social: sin esa hoja el botón
+   activo era indistinguible del resto. Van aquí, con su rejilla, porque la pantalla no es perezosa. */
+.settings-admin-tab {
+  border: 1px solid var(--border);
+  background: var(--hub-card-bg);
+  color: var(--text-muted);
+  border-radius: var(--radius-sm);
+  padding: .45rem .6rem;
+  font-weight: 700;
+  font-size: .82rem;
+  text-align: center;
+  transition: all .2s ease;
+}
+
 .settings-admin-tab:hover {
   border-color: rgba(var(--steam-rgb),.35);
+  color: var(--text);
+}
+
+.settings-admin-tab:focus-visible {
+  outline: 2px solid var(--steam);
+  outline-offset: 2px;
+}
+
+/* La pestaña pulsada no se fía de un solo indicio: tinte de acento, borde de acento a plena intensidad, texto sin
+   atenuar y una barra fina abajo. Cada paleta la viste con su propio `--steam`, y la barra la mantiene legible
+   incluso donde el tinte translúcido se pierde sobre el fondo del tema. */
+.settings-admin-tab.active {
+  background: rgba(var(--steam-rgb),.18);
+  border-color: rgba(var(--steam-rgb),.75);
+  color: var(--text);
+  box-shadow: inset 0 -2px 0 0 var(--steam);
+}
+
+.settings-admin-tab.active:hover {
+  border-color: rgba(var(--steam-rgb),.9);
   color: var(--text);
 }
 
@@ -793,8 +832,10 @@
 @keyframes statusBannerIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
 
 /* Pestañas: subrayado que se desliza bajo la activa (posición y ancho los fija TabBar por JS). */
+/* Pegado al borde inferior POR DENTRO (antes `bottom: -1px`): asomando 1px generaba desbordamiento vertical
+   en `.tabs` y, con ello, la barra de scroll fantasma de la franja superior. */
 .tab-underline {
-  position: absolute; bottom: -1px; left: 0; height: 1.5px;
+  position: absolute; bottom: 0; left: 0; height: 1.5px;
   background: var(--tab-bar); border-radius: 2px; pointer-events: none;
   transition: transform .28s cubic-bezier(.2,.8,.25,1), width .28s cubic-bezier(.2,.8,.25,1);
 }

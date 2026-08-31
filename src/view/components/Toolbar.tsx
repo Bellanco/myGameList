@@ -109,6 +109,7 @@ export const Toolbar = memo(function Toolbar({
               type="button"
               className="search-clear"
               aria-label={UI_MESSAGES.toolbar.clearSearch}
+              title={UI_MESSAGES.toolbar.clearSearch}
               onClick={() => {
                 setSearchDraft('');
                 onClearFilter('search');
@@ -123,6 +124,7 @@ export const Toolbar = memo(function Toolbar({
             className="btn-icon btn-filter-toggle"
             type="button"
             aria-label={UI_MESSAGES.toolbar.toggleFilters(filtersOpen)}
+            title={UI_MESSAGES.toolbar.toggleFilters(filtersOpen)}
             aria-expanded={filtersOpen}
             onClick={onFiltersToggle}
           >
@@ -243,6 +245,7 @@ export const Toolbar = memo(function Toolbar({
                 type="button"
                 className="chip-x"
                 aria-label={UI_MESSAGES.toolbar.removeFilter(item.label)}
+                title={UI_MESSAGES.toolbar.removeFilter(item.label)}
                 onClick={item.onRemove}
               >
                 <Icon name={COMMON_ICONS.close} />

@@ -90,6 +90,7 @@ export function SocialDetailScreen({
               className="hub-avatar-link"
               type="button"
               aria-label={SOCIAL_UI.feed.openProfileAria(activeDetailEvent.profileDisplayName)}
+              title={SOCIAL_UI.feed.openProfileAria(activeDetailEvent.profileDisplayName)}
               onClick={() => onOpenProfileDetail(activeDetailEvent.profileId)}
             >
               <HubAvatar photoURL={activeDetailEvent.photoURL} />
