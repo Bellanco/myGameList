@@ -82,6 +82,33 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
   se quedan en ICONO —los mismos de las pestañas de listas de la aplicación—, conservando el nombre para el
   lector de pantalla y al pasar el ratón. Además el control ocupa todo el ancho y reparte sus categorías a partes
   iguales, así que cada una es una diana grande en lugar de una palabra estrecha.
+- **La barra inferior deja de sobresalir en la pantalla de perfil (móvil).** En un teléfono, la barra fija de
+  Listados / Social / Estadísticas se salía por la derecha y quedaba cortada. La culpa era del globo de detalle de
+  «Evolución del backlog»: el del último mes se abría hacia la derecha y se salía del lienzo, y como sigue
+  midiendo aunque esté oculto, estiraba el ancho de scroll de la página; en móvil eso ensancha el viewport de
+  composición y con él todo lo que va fijo al 100%. Ahora el globo se coloca según dónde caiga su mes —los
+  primeros abren a la derecha, los últimos a la izquierda y los de en medio cuelgan centrados sobre su punto—,
+  así que no se sale ni con dos meses ni con tres años de histórico, tampoco en pantallas de 320 px.
+- **«Cómo cambia tu gusto» abre por los años recientes.** En un móvil el gráfico no cabe entero y se desplaza de
+  lado, pero empezaba por el año más antiguo: se veía menos de la mitad de la figura y, como los nombres de los
+  géneros viven en el extremo derecho, se leía a ciegas hasta el final del arrastre. Ahora arranca por el FINAL
+  —en qué anda hoy tu gusto, con cada línea rotulada— y el pasado queda a un arrastre. El aire entre columnas se
+  respeta a propósito: apretar el dibujo hasta el ancho de la pantalla lo hacía caber de una vez, pero dejaba
+  siete trazos hechos un nudo. De paso, el suelo de ancho lo pone ahora el propio dibujo (56 px por año) en vez
+  de un valor redondo de la hoja de estilo, que se le quedaba corto a un histórico largo y lo apelmazaba igual.
+- **La barra inferior se ve entera en cualquier pantalla.** En un móvil estrecho los tres rótulos no caben en una
+  línea y el más largo se salía de su pastilla: «Estadísticas» pegado al borde de la barra. Ahora la barra baja un
+  escalón cuando hace falta: primero APILA el icono sobre el nombre —el gesto clásico de una barra inferior, que
+  deja de pagar el ancho del icono y devuelve el rótulo a un móvil de 340 px—, y solo si tampoco así hay sitio se
+  queda en ICONO, con el nombre en el DOM para el lector de pantalla. Las tres dianas siguen midiendo 48 px en
+  todos los casos. El escalón no lo decide un ancho de corte a ojo, sino la medida real del rótulo: lo que ocupa
+  cambia con el ajuste de MAYÚSCULAS y con el cuerpo de letra del navegador, y se vuelve a medir cuando entra la
+  tipografía de la app —con la de reserva, más estrecha, la barra creía caber y luego se quedaba sin aire—.
+- **Los nombres de «Tus géneros» ya no se cortan.** En el hexágono, los ejes de izquierda y derecha rotulan hacia
+  fuera, así que un nombre largo —«Plataformas», «Metroidvania»— se salía del lienzo y la tarjeta lo cortaba a
+  media palabra en cuanto la pantalla era estrecha. Ahora la figura pide el lienzo que sus nombres necesitan, a
+  partes iguales por los dos lados para no descentrarla, y donde hay sitio el hexágono se sigue viendo igual de
+  grande que antes: lo que crece es el margen del texto, no el dibujo.
 
 ### Changed
 - **Actividad de listas: otras palabras, solo movimientos y tope por día.** Tres cambios sobre el aviso de una

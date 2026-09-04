@@ -1,4 +1,4 @@
-import { memo, useId } from 'react';
+import { memo, useId, type CSSProperties } from 'react';
 import { useStatsLabels } from './statsVoice';
 import { useChartFocus } from './useChartFocus';
 import { ChartDetail, ChartDetailHint } from './ChartDetail';
@@ -17,6 +17,23 @@ const CENTER = SIZE / 2;
 const RADIUS = 82;
 const LABEL_RADIUS = RADIUS + 22;
 const RINGS = [0.25, 0.5, 0.75, 1];
+/** Aire entre el final de un nombre y el borde del lienzo. */
+const LABEL_EDGE = 5;
+
+/**
+ * Ancho aproximado de un rótulo, en unidades del lienzo.
+ *
+ * Se estima por caracteres —contando aparte las mayúsculas, que en esta tipografía son un 25% más anchas y son
+ * justo lo que hay en los nombres cortos tipo «RPG»— en vez de medirse en el DOM, que obligaría a pintar dos
+ * veces. Solo hace falta saber cuánto sitio pedir a los lados, no ajustarlo al píxel.
+ */
+function labelSpan(lines: string[]): number {
+  const of = (line: string) => [...line].reduce(
+    (width, char) => width + (char !== char.toLowerCase() && char === char.toUpperCase() ? 7.6 : 6),
+    0,
+  );
+  return Math.max(...lines.map(of));
+}
 
 interface Point {
   x: number;
@@ -76,11 +93,39 @@ export const GenreRadar = memo(function GenreRadar({ tags }: { tags: GenreAffini
   const shape = axes.map((tag, index) => vertex(index, total, Math.max(tag.weight / max, 0.12)));
   const shown = axes.find((tag) => tag.tag === focus.active) || null;
 
+  const labels = axes.map((tag, index) => {
+    const at = vertex(index, total, 1, LABEL_RADIUS);
+    const dx = at.x - CENTER;
+    const anchor: 'start' | 'middle' | 'end' = Math.abs(dx) < 6 ? 'middle' : dx > 0 ? 'start' : 'end';
+    const lines = labelLines(tag.tag);
+    const span = labelSpan(lines);
+    const from = anchor === 'start' ? at.x : anchor === 'end' ? at.x - span : at.x - span / 2;
+    return { tag, at, anchor, lines, from, to: from + span };
+  });
+
+  /**
+   * El lienzo se ENSANCHA lo justo para que quepan los nombres de los lados.
+   *
+   * Los ejes de izquierda y derecha rotulan hacia fuera, así que un nombre largo —«Plataformas»,
+   * «Metroidvania»— se salía del cuadrado de 260 y la tarjeta lo cortaba a media palabra. Acercar el rótulo a la
+   * figura no arregla nada (el texto mide más que el hueco entre la figura y el borde), así que lo que se hace es
+   * pedir más lienzo. El ensanche va a PARTES IGUALES a los dos lados para que la figura siga centrada, y el
+   * `max-width` de la hoja de estilo crece en la misma proporción (`--radar-span`): donde hay sitio, el hexágono
+   * se ve igual de grande que antes; donde no —un móvil—, encoge un poco, que es mejor que leer «lataformas».
+   */
+  const pad = Math.ceil(Math.max(
+    0,
+    ...labels.map((label) => LABEL_EDGE - label.from),
+    ...labels.map((label) => label.to + LABEL_EDGE - SIZE),
+  ));
+  const span = SIZE + pad * 2;
+
   return (
     <div className="genre-radar">
       <svg
-        viewBox={`0 0 ${SIZE} ${SIZE}`}
+        viewBox={`${-pad} 0 ${span} ${SIZE}`}
         className="genre-radar-svg"
+        style={{ '--radar-span': span / SIZE } as CSSProperties}
         // `group` y no `img`: dentro hay un control por eje, y con `img` un lector de pantalla se saltaría su
         // contenido. El resumen entero se sigue anunciando aquí.
         role="group"
@@ -125,30 +170,25 @@ export const GenreRadar = memo(function GenreRadar({ tags }: { tags: GenreAffini
           );
         })}
 
-        {axes.map((tag, index) => {
-          const label = vertex(index, total, 1, LABEL_RADIUS);
-          const dx = label.x - CENTER;
-          const anchor = Math.abs(dx) < 6 ? 'middle' : dx > 0 ? 'start' : 'end';
-          return (
-            <text
-              key={tag.tag}
-              className="genre-radar-label"
-              x={label.x}
-              y={label.y}
-              textAnchor={anchor}
-              dominantBaseline="middle"
-            >
-              {/* Solo el nombre del género: la cifra de afinidad no es una cantidad que nadie vaya a comparar
-                  —lo que se lee es la FORMA de la figura—, y quitándola cabe un cuerpo de letra mayor. El dato
-                  numérico sigue en el `aria-label`, para quien no ve la silueta. */}
-              {labelLines(tag.tag).map((line, row, all) => (
-                <tspan key={line} x={label.x} dy={row === 0 ? (all.length > 1 ? '-0.5em' : '0') : '1.1em'}>
-                  {line}
-                </tspan>
-              ))}
-            </text>
-          );
-        })}
+        {labels.map((label) => (
+          <text
+            key={label.tag.tag}
+            className="genre-radar-label"
+            x={label.at.x}
+            y={label.at.y}
+            textAnchor={label.anchor}
+            dominantBaseline="middle"
+          >
+            {/* Solo el nombre del género: la cifra de afinidad no es una cantidad que nadie vaya a comparar
+                —lo que se lee es la FORMA de la figura—, y quitándola cabe un cuerpo de letra mayor. El dato
+                numérico sigue en el `aria-label`, para quien no ve la silueta. */}
+            {label.lines.map((line, row, all) => (
+              <tspan key={line} x={label.at.x} dy={row === 0 ? (all.length > 1 ? '-0.5em' : '0') : '1.1em'}>
+                {line}
+              </tspan>
+            ))}
+          </text>
+        ))}
       </svg>
 
       {/* En reposo el pie habla del eje que MANDA (el primero, que es el de más afinidad): es el que la silueta
