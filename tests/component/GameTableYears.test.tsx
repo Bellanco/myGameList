@@ -46,9 +46,14 @@ describe('GameTable — años de más reciente a más antiguo', () => {
     expect(Array.from(chips).map((chip) => chip.textContent)).toEqual(['2024', '2018', '2017', '+2']);
   });
 
-  it('shows the most recent year in the compact meta (mobile)', () => {
+  // El año NO viaja al meta compacto de la tarjeta (móvil/tablet). Ahí solo cabía el más reciente con un
+  // contador al lado —«2026 +2»—, que se lee como una operación aritmética en vez de como «ese año y otros
+  // dos», y su ancho es justo el que necesita el género para verse entero. Los años siguen contándose donde
+  // caben de verdad: su columna en escritorio y el detalle desplegado.
+  it('no lleva el año al meta compacto (móvil), donde solo cabría el último con un contador', () => {
     const { container } = renderTable([makeGame({ years: [2019, 2023] })]);
-    expect(container.querySelector('.rm-year')?.textContent).toBe('2023+1');
+    expect(container.querySelector('.row-meta .rm-year')).toBeNull();
+    expect(container.querySelector('td.col-c-year')?.textContent).toContain('2023');
   });
 
   it('renders the expanded detail years in descending order', () => {

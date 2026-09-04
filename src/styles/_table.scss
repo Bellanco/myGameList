@@ -20,8 +20,8 @@ table { width: 100%; border-collapse: collapse; text-align: left; min-width: 105
 .hub-feed-card-detail {
   container-type: inline-size;
   /* Mismo nombre de contenedor que `.main-lists`, para que el revelado progresivo del meta
-     (estrellas → año → plataforma → género) use la misma lógica en el perfil social que en el
-     listado principal, respondiendo al ancho de la tarjeta. */
+     (estrellas → plataforma → género → puntos fuertes) use la misma lógica en el perfil
+     social que en el listado principal, respondiendo al ancho de la tarjeta. */
   container-name: gamelist;
 }
 
@@ -108,10 +108,18 @@ thead th.sorted.desc .th-sort-caret { transform: rotate(180deg); }
   .col-c-strong { display: none; }
 }
 
-/* Tablet/móvil: la tabla colapsa a tarjeta con `table-layout: fixed`, donde el ancho de columna
-   lo fija la 1ª fila. Forzamos la 1ª columna al 100% y anulamos el resto para que la tarjeta
-   ocupe todo el ancho (las demás celdas están ocultas). */
+/* Tablet/móvil: la tabla colapsa a tarjeta con `table-layout: fixed`. La 1ª columna se lleva el 100% y el
+   resto se anula, para que la tarjeta ocupe todo el ancho (las demás celdas están ocultas).
+   Manda el `<colgroup>`, no las celdas: con `fixed`, la rejilla se construye con la PRIMERA fila de la tabla, y
+   en una biblioteca de más de 120 juegos esa fila es un espaciador del virtualizador que declara `colSpan` con
+   todas las columnas de escritorio. El navegador repartía entonces el ancho a partes iguales entre esas 6–8
+   columnas —46 px cada una en un móvil de 412— y el `width: 100%` de la celda visible no ganaba: el nombre salía
+   a UN CARÁCTER POR LÍNEA y la fila medía 322 px (pasaba en Firefox y en Chrome). Los `<col>` tienen prioridad
+   sobre la primera fila en el algoritmo de `fixed`, así que la rejilla deja de depender de qué fila se pinte
+   primero. Las reglas de celda se quedan como red por si algún día se pinta la tabla sin `colgroup`. */
 @media (max-width: 1100px) {
+  col.col-row-main { width: 100%; }
+  col.col-row-rest { width: 0; }
   .col-c-name { width: 100%; }
   .col-c-year, .col-c-plat, .col-c-genre,
   .col-c-strong, .col-c-weak, .col-c-score, .col-c-replay { width: 0; }
@@ -336,43 +344,127 @@ tbody tr.main-row.just-changed { animation: rowFlash 1.3s ease-out; }
 .row-meta-item { display: none; align-items: center; gap: .2rem; }
 .rm-more { font-weight: 700; font-size: .62rem; opacity: .7; }
 .row-meta .stars { font-size: .74rem; letter-spacing: .5px; }
+/* Nota 0–100 (F2) en el meta compacto: el aro de la columna de escritorio mide 2.35rem, y en esta línea —donde
+   las estrellas van a .74rem— levantaba la fila de 75 a 93 px y se comía el ancho que las píldoras necesitan.
+   Se reduce igual que en los otros sitios compactos que ya lo hacen (`.top-chip-meta`, `.game-cards`). */
+.row-meta .score-ring { --sz: 1.7rem; }
 
-/* Plataforma y género como mini-píldoras discretas, con el color de su categoría
-   (mismos tokens que .chip-plat / .chip-genre) para poder diferenciarlas. */
-.rm-plat, .rm-genre, .rm-year {
+/* Plataforma, género y puntos fuertes como mini-píldoras discretas, con el color de su categoría
+   (mismos tokens que .chip-plat / .chip-genre / .chip-pf) para poder diferenciarlas. */
+.rm-plat, .rm-genre, .rm-strong {
   padding: .04rem .4rem; border-radius: var(--radius-sm);
   font-size: .68rem; font-weight: 600; line-height: 1.5;
   border: 1px solid transparent;
+  /* La línea del meta no envuelve (`nowrap`), así que una píldora que no cabe tiene que ENCOGERSE, no
+     desbordar: sin `min-width: 0` un ítem flex se niega a bajar de su contenido y antes de esta regla el
+     valor se partía en dos líneas («Xbox Series / X»), desnivelando la altura de unas filas respecto a otras. */
+  min-width: 0; overflow: hidden;
 }
 .rm-plat  { background: var(--chip-plat-bg); color: var(--chip-plat-fg); border-color: var(--chip-plat-border); }
 .rm-genre { background: rgba(var(--steam-rgb),.14); color: var(--fg-sky);    border-color: rgba(var(--steam-rgb),.3); }
-.rm-year  { background: rgba(var(--warn-rgb),.16); color: var(--fg-amber); border-color: rgba(var(--warn-rgb),.32); }
+.rm-strong { background: rgba(var(--success-rgb),.14); color: var(--fg-green); border-color: rgba(var(--success-rgb),.3); }
+/* Valor de la píldora: se recorta con puntos suspensivos cuando el ancho aprieta. */
+.rm-val { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* El "+N" vive DENTRO de la píldora, que sigue siendo un contenedor flex: no se encoge nunca. */
+.rm-more { flex: 0 0 auto; }
 
-/* Orden visual del meta (móvil/tablet): estrellas → año → plataforma → género.
-   Es independiente de la ocultación por ancho: cada píldora aparece/desaparece según su umbral
-   de container query (ver más abajo), pero su posición en la fila es fija. */
-.rm-score { order: 1; }
-.rm-year  { order: 2; }
-.rm-plat  { order: 3; }
-.rm-genre { order: 4; }
+/* Columna de cada categoría en la rejilla del meta (móvil/tablet): nota → plataforma → género → puntos
+   fuertes. Es una posición FIJA, no un orden relativo: a un juego le puede faltar el género y el resto no se
+   corre de sitio, que es lo que hace que las filas se lean en columnas. Qué columnas existen y cuánto miden se
+   decide más abajo, según el ancho y la lista.
+   El AÑO no está: en la tarjeta se pintaba como «2026 +2», que se lee como una operación aritmética y no como
+   «ese año y otros dos», y ocupaba el ancho que el género necesita para verse entero. Sigue en su columna de
+   escritorio y en el detalle desplegado, que es donde se ven todos los años y no solo el último. */
+.rm-score  { grid-column: 1; }
+.rm-plat   { grid-column: 2; }
+.rm-genre  { grid-column: 3; }
+.rm-strong { grid-column: 4; }
 
 /* En vista colapsada (≤1100px) la tabla pasa a una sola columna: chevron + meta. */
 @media (max-width: 1100px) {
   .row-chevron { display: block; }
+  /* El disparador ocupa la CELDA ENTERA. Era `inline-flex` a secas, así que se encogía al ancho de su
+     contenido: en un móvil de 412 px eran 152 px de los 368 de la tarjeta. Eso tenía dos consecuencias, y la
+     segunda es la que se ve: la mitad derecha de la fila no era zona pulsable —solo respondía al `onClick` de
+     ratón del `<tr>`, que no es un control— y el meta se quedaba amontonado a la izquierda dejando el resto de
+     la tarjeta vacío. Con el ancho completo, el objetivo táctil es la fila y el meta dispone de todo el ancho. */
+  tbody tr.main-row .row-toggle { width: 100%; }
+  .row-toggle-body { flex: 1 1 auto; }
+  /* El meta es una REJILLA, no una fila suelta. Con las píldoras sueltas, cada fila las colocaba donde le
+     tocaba según lo que midiera su texto, y la lista se leía desordenada: la plataforma de una fila empezaba
+     en un sitio y la de la siguiente en otro. Con columnas fijas —siempre las mismas, en el mismo sitio— las
+     categorías se alinean de fila a fila igual que en escritorio, y a un juego le puede faltar un dato sin que
+     el resto se corra de columna. Las columnas que la lista no usa se quedan a 0 y no dejan hueco: por eso la
+     separación NO es `gap` (que también separa columnas vacías) sino el margen que cada píldora se reserva en
+     su propia columna vía `max-width`. */
   .row-meta {
-    display: flex; flex-wrap: nowrap; align-items: center;
-    gap: .4rem; margin-top: .15rem; color: var(--text-muted);
-    overflow: hidden;
+    display: grid;
+    grid-template-columns:
+      var(--rm-col-score, 0px)
+      var(--rm-col-plat, 0px)
+      var(--rm-col-genre, 0px)
+      var(--rm-col-strong, 0px);
+    align-items: center;
+    margin-top: .15rem; color: var(--text-muted);
+    overflow: hidden; width: 100%;
   }
+  /* Cada píldora se pega al principio de SU columna (no la rellena: un fondo estirado con dos palabras dentro
+     no se lee como una etiqueta) y deja libre el hueco de separación con la siguiente. */
+  /* Fila 1 SIEMPRE, y columna fija: las dos coordenadas puestas a mano. Con la fila en automático, el
+     algoritmo de colocación de grid recorre las píldoras en orden del documento y nunca retrocede, así que a
+     un juego sin género —cuya píldora no llega a existir— la siguiente le caía en una segunda fila y esa
+     tarjeta salía 19 px más alta que las demás. */
+  .row-meta-item { grid-row: 1; justify-self: start; max-width: calc(100% - .4rem); }
+  /* La nota no se recorta JAMÁS: su columna se dimensiona para que quepa entera. */
+  .rm-score { max-width: none; }
   .rm-score { display: inline-flex; } /* la puntuación siempre que haya meta */
+
+  /* Ancho de la columna de la nota, cuando la lista la tiene (`meta-score`, mismo criterio que la cabecera de
+     escritorio). Se reserva para TODAS las filas de la lista aunque un juego no esté puntuado, o las filas
+     dejarían de alinearse entre sí. Las cinco estrellas ocupan bastante más que el aro de la nota 0–100, y cuál
+     se pinta lo dice la escala elegida (F2), no la fila: de ahí la clase `meta-grade`. */
+  /* Esta columna lleva MÁS aire del que se reserva entre píldoras: la nota no es una pastilla como las demás
+     —es un aro o una fila de estrellas, sin fondo que marque dónde acaba—, y con la separación normal la
+     plataforma parecía pegada a ella. El aro necesita más que las estrellas: es una figura maciza y cerrada,
+     mientras que la fila de estrellas termina en glifos vacíos que ya dejan aire por sí solos. */
+  .meta-score .row-meta { --rm-col-score: 4.9rem; }
+  .meta-score.meta-grade .row-meta { --rm-col-score: 2.6rem; }
 }
 
 /* Revelado progresivo "según lo que quepa", en el mismo orden de importancia que las columnas
-   de escritorio: tras puntuación (siempre), aparecen plataforma → género → año a medida que
-   crece el ancho de la tarjeta, y desaparecen al estrecharse. Misma lógica en todas las vistas. */
-@container gamelist (min-width: 240px) { .rm-plat   { display: inline-flex; } }
-@container gamelist (min-width: 320px) { .rm-genre  { display: inline-flex; } }
-@container gamelist (min-width: 430px) { .rm-year   { display: inline-flex; } }
+   de escritorio: tras puntuación (siempre), aparecen plataforma → género → puntos fuertes a medida
+   que crece el ancho de la tarjeta, y desaparecen al estrecharse. Misma lógica en todas las vistas.
+   Los umbrales se miden contra el CONTENEDOR (`.main-lists` o la tarjeta del perfil social), que en un móvil
+   es el ancho de pantalla completo; la tarjeta útil son unos 44 px menos (relleno del `main` y de la celda). */
+@container gamelist (min-width: 240px) {
+  .rm-plat  { display: inline-flex; }
+  .row-meta { --rm-col-plat: minmax(0, 1fr); }
+}
+@container gamelist (min-width: 320px) {
+  .rm-genre { display: inline-flex; }
+  /* El género pesa más que las otras columnas elásticas: es donde está el texto largo de verdad —«Estrategia
+     en tiempo real» mide 159 px con su «+1»— mientras que la plataforma suele ser una tienda o una consola de
+     una o dos palabras. A partes iguales el género salía recortado en casi todas las filas. */
+  .row-meta { --rm-col-genre: minmax(0, 1.4fr); }
+}
+/* Puntos fuertes: la última columna que le queda por recoger al meta, y en el teléfono ocupa EL SITIO de la
+   nota en las listas que no tienen columna de nota (`meta-score`): En curso nunca la tiene, y Abandonados solo
+   si algún juego está puntuado, que es el mismo criterio con el que aparece o no esa columna en escritorio.
+   Así ninguna lista se queda con la tarjeta a medias, y ninguna mete cinco columnas en un teléfono —a 340 px
+   útiles saldrían a 67 px cada una y todo quedaría en dos letras y puntos suspensivos—. En tablet, donde sí
+   hay sitio, entra en todas. */
+@container gamelist (min-width: 320px) {
+  table:not(.meta-score) .rm-strong { display: inline-flex; }
+  table:not(.meta-score) .row-meta  { --rm-col-strong: minmax(0, .8fr); }
+}
+@container gamelist (min-width: 560px) {
+  .rm-strong { display: inline-flex; }
+  /* Pesa menos que plataforma y género: es la última de la escalera, sus valores son cortos («Ritmo +1») y en
+     En curso —la lista que la muestra ya en el teléfono— el ancho que no se lleva es el que le queda al
+     género. */
+  .row-meta  { --rm-col-strong: minmax(0, .8fr); }
+}
+
 
 /* Despliegue del detalle: aparición suave (no altera la altura medida por el virtualizador,
    solo opacidad y un leve desplazamiento, así no pelea con la medición de filas). */
