@@ -15,7 +15,7 @@ export type AppSection = 'lists' | 'social' | 'stats' | 'settings' | 'account' |
 
 export const APP_ROUTES: ReadonlyArray<{ path: string; section: AppSection }> = [
   { path: '/completados', section: 'lists' },
-  { path: '/visitados', section: 'lists' },
+  { path: '/abandonados', section: 'lists' },
   { path: '/en-curso', section: 'lists' },
   { path: '/proximos', section: 'lists' },
   // Comodín: las sub-rutas sociales (perfil, directorio, solicitudes, detalle de reseña…) las resuelve el propio
@@ -42,6 +42,16 @@ export const APP_ROUTES: ReadonlyArray<{ path: string; section: AppSection }> = 
   { path: '/r/:token', section: 'shared-review' },
 ];
 
+/**
+ * Rutas RETIRADAS que siguen resolviendo, redirigiendo a su nombre actual. La lista de abandonados nació como
+ * `/visitados` —un nombre que no decía lo que era— y renombrarla en seco habría mandado a `FALLBACK_ROUTE`
+ * cualquier marcador, acceso directo o enlace compartido que ya apuntase allí. Las pinta `App` como `<Navigate>`
+ * antes del catch-all; no van en `APP_ROUTES` porque ahí pintarían la pantalla en vez de redirigir.
+ */
+export const LEGACY_ROUTE_REDIRECTS: ReadonlyArray<{ from: string; to: string }> = [
+  { from: '/visitados', to: '/abandonados' },
+];
+
 /** Ruta a la que rebota cualquier cosa no listada arriba. */
 export const FALLBACK_ROUTE = '/completados';
 
@@ -51,6 +61,7 @@ export const FALLBACK_ROUTE = '/completados';
  * viene del historial del navegador.
  */
 export function isKnownRoute(pathname: string): boolean {
+  if (LEGACY_ROUTE_REDIRECTS.some(({ from }) => from === pathname)) return true;
   return !!matchRoutes(APP_ROUTES as Array<{ path: string; section: AppSection }>, pathname)?.length;
 }
 
