@@ -59,6 +59,18 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
     10». Estas reglas viven solo aquí: detectar duplicados al guardar o al importar sigue con el casado estricto
     de siempre, porque allí una coincidencia de más te impediría añadir un juego o fundiría dos al importar.
 
+### Fixed
+- **Las acciones de las pantallas del hub vuelven a una sola fila.** Por debajo de cierto ancho se apilaban en
+  una torre alineada a la izquierda —«volver» y «compartir» en dos renglones, y lo mismo en la actividad y en el
+  perfil de alguien— porque cada lado de la fila tomaba el ancho entero. Ahora cada lado mide lo que miden sus
+  botones y es la fila la que pasa de línea solo cuando de verdad no hay sitio; en móvil, donde los botones ya
+  son cuadrados de icono, entran todos en un renglón con sus extremos en su sitio.
+- **Las categorías de juegos de un perfil ya no piden scroll en móvil.** Las cuatro con su nombre no caben en una
+  pantalla estrecha y había que arrastrar el control para descubrir que existían «En curso» y «Próximos». Ahora
+  se quedan en ICONO —los mismos de las pestañas de listas de la aplicación—, conservando el nombre para el
+  lector de pantalla y al pasar el ratón. Además el control ocupa todo el ancho y reparte sus categorías a partes
+  iguales, así que cada una es una diana grande en lugar de una palabra estrecha.
+
 ### Changed
 - **Actividad de listas: otras palabras, solo movimientos y tope por día.** Tres cambios sobre el aviso de una
   línea del feed social («Ada finalizó Hollow Knight 18:42»):

@@ -164,7 +164,7 @@
 }
 .admin-uid svg { width: .85em; height: .85em; flex: 0 0 auto; }
 .admin-uid:hover { color: var(--text-muted); text-decoration: underline; }
-.admin-uid:focus-visible { outline: 2px solid var(--fg-sky); outline-offset: 2px; }
+.admin-uid:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
 
 /* Estado de la foto. Solo se destaca "oculta": es el único de los tres que dice que hay una decisión del usuario
    detrás, y leerlo como "no tiene" era justo el malentendido que este campo viene a deshacer. */
@@ -276,7 +276,7 @@
 }
 .admin-legacy-tag:hover:not(:disabled) { background: color-mix(in srgb, var(--danger) 12%, transparent); }
 .admin-legacy-tag:disabled { cursor: not-allowed; opacity: .55; }
-.admin-legacy-tag:focus-visible { outline: 2px solid var(--fg-sky); outline-offset: 2px; }
+.admin-legacy-tag:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
 .admin-legacy-clean { color: var(--text-dim); font-size: .78rem; }
 
 .admin-actions { display: flex; flex-wrap: wrap; gap: .4rem; }

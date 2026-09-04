@@ -40,7 +40,7 @@
   border: 1px solid rgba(var(--steam-rgb),.25);
   border-top-color: rgba(var(--steam-rgb),.45);
   background: var(--steam-soft);
-  color: var(--steam-hover);
+  color: var(--fg-link);
   font-size: .76rem;
   font-weight: 800;
   letter-spacing: .035em;
@@ -123,7 +123,7 @@
   background: var(--tab-bar); border-radius: 2px; transition: height .2s;
 }
 
-.tab-btn:focus-visible { outline: none; box-shadow: inset 0 -2px 0 var(--steam-hover); border-radius: 6px; }
+.tab-btn:focus-visible { outline: none; box-shadow: inset 0 -2px 0 var(--focus-ring); border-radius: 6px; }
 
 @media (hover:hover) {
  .tab-btn:hover { color: var(--text-muted); }
@@ -277,7 +277,7 @@
 
 .score-scale-opt.on { border-color: var(--fg-sky); }
 
-.score-scale-opt:focus-visible { outline: 2px solid var(--fg-sky); outline-offset: 2px; }
+.score-scale-opt:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
 
 .score-scale-dot {
   width: 17px; height: 17px; border-radius: 50%; border: 2px solid var(--text-dim);
@@ -342,7 +342,10 @@
 
 .settings-appearance .score-scale-opt.on .score-scale-dot::after { background: var(--sw-accent); }
 
-.settings-appearance .score-scale-opt:focus-visible { outline-color: var(--sw-accent); }
+/* El anillo NO sigue a `--sw-accent`: esa variable es el color de la MUESTRA de cada paleta del selector, así
+   que el foco heredaba un color arbitrario (el oro de Mar de estrellas sobre su propio turquesa, por ejemplo) y
+   podía quedar invisible. El resto de la tarjeta sí se viste con la muestra. */
+.settings-appearance .score-scale-opt:focus-visible { outline-color: var(--focus-ring); }
 
 .theme-mode-row { display: flex; gap: .5rem; }
 
@@ -418,7 +421,7 @@
 }
 
 .settings-backup-toggle:hover {
-  color: var(--steam-hover);
+  color: var(--fg-link);
 }
 
 .settings-backup-toggle input {
@@ -503,7 +506,7 @@
 }
 
 .settings-admin-tab:focus-visible {
-  outline: 2px solid var(--steam);
+  outline: 2px solid var(--focus-ring);
   outline-offset: 2px;
 }
 
@@ -701,7 +704,7 @@
 }
 
 .bottom-nav-btn.active {
-  color: var(--steam-hover);
+  color: var(--fg-link);
   /* El fondo/relieve del activo lo dibuja ahora la pastilla deslizante `.bottom-nav-ind`. */
 }
 
@@ -1014,7 +1017,7 @@
 
 .hub-hub-card h2 {
   font-size: 1.1rem;
-  color: var(--steam-hover);
+  color: var(--fg-link);
 }
 
 .hub-hub-card p {
@@ -1042,7 +1045,7 @@
 .hub-feed-card h3 {
   font-size: clamp(.9rem, .84rem + .3vw, 1.02rem);
   font-weight: 700;
-  color: var(--steam-hover);
+  color: var(--fg-link);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1206,7 +1209,7 @@
 }
 
 .hub-feed-activity-item:focus-visible {
-  outline: 2px solid var(--steam);
+  outline: 2px solid var(--focus-ring);
   outline-offset: 2px;
 }
 
@@ -1339,7 +1342,7 @@
 .hub-hub-icon {
   width: 1.6rem;
   height: 1.6rem;
-  color: var(--steam-hover);
+  color: var(--fg-link);
   flex: 0 0 auto;
   display: flex;
   align-items: center;
@@ -1432,17 +1435,14 @@
   }
 }
 
-@container social-card (max-width: 58rem) {
-  .hub-screen-actions-left,
-  .hub-screen-actions-right {
-    width: 100%;
-    flex-wrap: wrap;
-  }
-
-  .hub-screen-actions-right {
-    justify-content: flex-start;
-  }
-}
+/* Aquí vivía un ajuste para pantalla estrecha que daba a cada LADO de la fila de acciones el 100% del ancho y
+   `flex-wrap`. Las dos cosas sobran y hacían daño:
+   · el 100% partía la fila en dos renglones aunque cupieran de sobra, dejando las acciones en una torre
+     alineada a la izquierda en vez de repartidas a los extremos;
+   · el `flex-wrap` sobre un lado con `min-width: 0` le permitía encogerse hasta su botón más ancho y apilar los
+     demás debajo, con media fila vacía al lado.
+   Sin ellas, cada lado mide lo que miden sus botones y es la fila —que ya envuelve— la que pasa de línea cuando
+   de verdad no hay sitio. Por debajo de 620px los botones se vuelven cuadrados de icono y caben de sobra. */
 
 @container social-card (max-width: 48rem) {
   .hub-screen-actions .btn {

@@ -496,8 +496,18 @@ const SocialHubInner = memo(function SocialHubInner({
           ) : null}
         </div>
 
-        <div className="hub-gateway-progress" aria-label={SOCIAL_UI.gateway.progressAria}>
-          <div className="hub-gateway-progress-track" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={gatewayProgress}>
+        {/* El nombre accesible va en el elemento con `role="progressbar"`, no en el contenedor: un `aria-label`
+            sobre un `<div>` sin rol no lo expone ninguna API de accesibilidad, así que la barra se anunciaba sin
+            nombre (violación `aria-progressbar-name` de axe, en las doce combinaciones de tema y paleta). */}
+        <div className="hub-gateway-progress">
+          <div
+            className="hub-gateway-progress-track"
+            role="progressbar"
+            aria-label={SOCIAL_UI.gateway.progressAria}
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuenow={gatewayProgress}
+          >
             <span className="hub-gateway-progress-fill" style={{ width: `${gatewayProgress}%` }} />
           </div>
           <small>{SOCIAL_UI.gateway.progress(gatewayProgress)}</small>
