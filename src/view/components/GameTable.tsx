@@ -7,6 +7,7 @@ import type { TabAction } from '../../viewmodel/useGameListViewModel';
 import { resolveGrade } from '../../core/utils/scoreScale';
 import { Icon } from './Icon';
 import { ScoreDisplay } from './ScoreDisplay';
+import { useScoreScale } from '../hooks/useScoreScale';
 
 interface GameTableProps {
   games: GameItem[];
@@ -65,13 +66,17 @@ function renderTags(values: string[], className: string, maxVisible?: number) {
   );
 }
 
-/* Meta compacto (móvil/tablet): primer valor de una categoría + recuento "+N". */
+/* Meta compacto (móvil/tablet): primer valor de una categoría + recuento "+N".
+   El valor va en su propio `<span>` (y no como texto suelto) porque la píldora es un contenedor flex: un texto
+   suelto ahí es un ítem flex anónimo, al que `text-overflow` no le llega. Con el span, un valor largo
+   («Estrategia en tiempo real») se recorta con puntos suspensivos en vez de partirse en dos líneas y desnivelar
+   la altura de la fila, y el "+N" sigue entero al lado. */
 function metaValue(values?: string[]) {
   if (!values?.length) return null;
   const extra = values.length - 1;
   return (
     <>
-      {values[0]}
+      <span className="rm-val">{values[0]}</span>
       {extra > 0 ? <span className="rm-more">{UI_MESSAGES.table.moreCount(extra)}</span> : null}
     </>
   );
@@ -327,16 +332,48 @@ export const GameTable = memo(function GameTable({
 
   const gameMap = useMemo(() => new Map(games.map((g) => [g.id, g])), [games]);
 
+  // Una sola lectura de las cabeceras: la usan el `<thead>` y el `<colgroup>`, y si discrepasen en número el
+  // ancho de columna se repartiría entre columnas que no existen.
+  const tableHeaders = getTableHeaders();
+
+  // ¿Esta lista tiene COLUMNA de puntuación? Mismo criterio que las cabeceras de escritorio: Completados y
+  // Próximos siempre, la vergüenza solo si algún juego está puntuado, En curso nunca. En la vista de tarjeta
+  // decide dos cosas del meta compacto: si se reserva la columna de la nota —se reserva aunque un juego
+  // concreto no la tenga, o las filas de la misma lista dejarían de estar alineadas entre sí— y, cuando no la
+  // hay, que su sitio lo ocupen los puntos fuertes.
+  const hasScoreColumn = currentTab === 'c' || currentTab === 'p' || (currentTab === 'v' && showShameScore);
+  // La escala (F2) cambia el ANCHO de esa columna: cinco estrellas ocupan bastante más que el aro de la nota.
+  const scoreScale = useScoreScale();
+  const tableClass = [
+    `list-${currentTab}`,
+    hasScoreColumn ? 'meta-score' : '',
+    scoreScale === 'grade' ? 'meta-grade' : '',
+  ].filter(Boolean).join(' ');
+
   return (
     <div className="table-wrap" ref={parentRef}>
-      <table>
+      {/* La clase de lista la usa el CSS para la escalera de revelado del meta compacto: cada pestaña tiene un
+          juego de datos distinto (En curso no lleva nota ni año), así que la píldora que llena la línea en un
+          móvil no es la misma en todas. */}
+      <table className={tableClass}>
         {/* A11y-4: la tabla no se anunciaba con ningún nombre, así que en la lista de tablas de un lector de
             pantalla aparecía como "tabla" sin más. Con varias listas (completados, vergüenza, en curso…) el
             nombre es lo único que las distingue. */}
         <caption className="sr-only">{UI_MESSAGES.table.caption(TAB_TITLES[currentTab], games.length)}</caption>
+        {/* Anchos de columna de la vista colapsada (móvil/tablet), donde la tabla es `table-layout: fixed` y
+            solo se ve la primera columna. Con `fixed` la rejilla se construye con la PRIMERA fila, y en una
+            biblioteca grande esa fila es un espaciador del virtualizador que declara `colSpan` con TODAS las
+            columnas de escritorio: el navegador repartía el ancho entre esas 6–8 columnas (46 px cada una en un
+            móvil) e ignoraba el `width: 100%` de la celda visible. Los `<col>` tienen prioridad sobre la primera
+            fila en ese algoritmo, así que fijan la rejilla sin depender de qué fila se pinte primero. */}
+        <colgroup>
+          {tableHeaders.map((header, index) => (
+            <col key={header} className={index === 0 ? 'col-row-main' : 'col-row-rest'} />
+          ))}
+        </colgroup>
         <thead>
           <tr>
-            {getTableHeaders().map((header) => {
+            {tableHeaders.map((header) => {
               const sortKey = SORT_COLUMN[header];
               const sortable = Boolean(onSort && sortKey);
               const isSorted = sortable && sort?.col === sortKey;
@@ -499,8 +536,12 @@ export const GameTable = memo(function GameTable({
                               {game.genres?.length ? (
                                 <span className="row-meta-item rm-genre">{metaValue(game.genres)}</span>
                               ) : null}
-                              {currentTab === 'c' && showYears && game.years?.length ? (
-                                <span className="row-meta-item rm-year">{metaValue(yearsDesc(game.years))}</span>
+                              {/* Puntos fuertes: la columna que en escritorio tienen estas tres listas y que el
+                                  meta no recogía. Entra la última de la escalera —salvo en En curso, que sin nota
+                                  ni año se queda en dos píldoras y la línea a medias— y es lo que llena el ancho
+                                  de la tarjeta en un móvil. */}
+                              {(currentTab === 'c' || currentTab === 'v' || currentTab === 'e') && game.strengths?.length ? (
+                                <span className="row-meta-item rm-strong">{metaValue(game.strengths)}</span>
                               ) : null}
                             </span>
                           </span>

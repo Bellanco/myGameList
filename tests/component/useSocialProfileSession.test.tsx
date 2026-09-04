@@ -56,7 +56,7 @@ describe('useSocialProfileSession — de dónde se relee la identidad cacheada',
 
     // Cambiar de pestaña de listados es la navegación más frecuente de la app; no toca el perfil social.
     view.rerender();
-    goTo('/visitados');
+    goTo('/abandonados');
     view.rerender();
     goTo('/en-curso');
     view.rerender();
