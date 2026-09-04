@@ -6,7 +6,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
 ## [Unreleased]
 
 ### Added
-- **Reseñas relacionadas al final de una reseña.** Al leer una reseña en el espacio social —tanto desde el feed
+- **Análisis relacionados al final de una reseña.** Al leer una reseña en el espacio social —tanto desde el feed
   como desde la lista de reseñas de un perfil— aparece al pie un bloque con hasta seis reseñas por las que seguir
   leyendo. Cada una lleva un chip que dice POR QUÉ está ahí, que es lo que la convierte en una respuesta y no en
   una sugerencia suelta:
@@ -26,7 +26,12 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
   - Un autor no pone más de dos reseñas en el bloque y ningún tipo de vínculo se lleva más de tres, para que la
     lista no la copie quien más escribe. Si no hay nada que ofrecer, no se pinta el bloque.
   - **El género suma en vez de competir:** entre dos análisis de la misma persona sube el del género que estás
-    leyendo, y quien no comparte ni juego ni autor sigue entrando solo por él.
+    leyendo, y quien no comparte ni juego ni autor sigue entrando solo por él. Compartir género (30) pesa más que
+    compartir firma (25): que alguien haya escrito de otro juego del género que lees dice más que el mero hecho de
+    ser la misma persona.
+  - **Tus propios análisis quedan detrás de los de otra gente**, porque tu opinión ya la conoces — salvo sobre el
+    MISMO juego, donde precisamente interesa comparar y siguen arriba. Cuando no hay nada de nadie más, los tuyos
+    salen igual: el descuento los baja, no los elimina.
   - **Abrir una reseña empieza por su principio:** el hub no rehacía el desplazamiento al cambiar de pantalla, y
     con el bloque al pie la pantalla creció lo bastante como para que abrir una reseña desde el final de una lista
     larga te dejara leyendo por el medio. Volver atrás sigue conservando dónde estabas.

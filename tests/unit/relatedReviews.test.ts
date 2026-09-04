@@ -116,7 +116,9 @@ describe('rankRelatedReviews — la reseña abierta no se ofrece a sí misma', (
 });
 
 describe('rankRelatedReviews — jerarquía de motivos', () => {
-  it('mismo juego por delante de mismo autor y de mismo género', () => {
+  it('mismo juego primero, y el género por delante del mero hecho de ser la misma firma', () => {
+    // El género (30) pesa más que el autor (25) a propósito: que alguien haya escrito de otro juego del género
+    // que estás leyendo dice más que compartir firma y nada más.
     const result = rankRelatedReviews(
       anchor({ authorId: 'luis' }),
       [
@@ -127,7 +129,7 @@ describe('rankRelatedReviews — jerarquía de motivos', () => {
       genres({ 'Elden Ring': ['Acción', 'RPG'], 'Nioh 2': ['Acción'] }),
     );
 
-    expect(result.map((entry) => entry.key)).toEqual(['juego', 'autor', 'genero']);
+    expect(result.map((entry) => entry.key)).toEqual(['juego', 'genero', 'autor']);
   });
 
   it('un candidato que cumple dos motivos se ofrece por el de más peso', () => {
@@ -224,6 +226,56 @@ describe('rankRelatedReviews — género', () => {
     );
 
     expect(result[0]?.reason).toBe('genre');
+  });
+});
+
+// Tu propia opinión ya la conoces: a igualdad de lo demás va detrás de la de otra persona. Pero sobre el MISMO
+// juego sí interesa comparar, y cuando no hay nada de nadie más tus reseñas siguen saliendo.
+describe('rankRelatedReviews — lo tuyo resta, menos en el mismo juego', () => {
+  it('del mismo género, la de otra persona va por delante de la tuya', () => {
+    const result = rankRelatedReviews(
+      anchor({ genres: ['Acción'] }),
+      [
+        candidate({ key: 'mia', authorId: 'yo', isOwn: true, gameName: 'Nioh 2' }),
+        candidate({ key: 'ajena', authorId: 'ana', gameName: 'Sekiro', updatedAt: T - 5000 }),
+      ],
+      genres({ 'Nioh 2': ['Acción'], Sekiro: ['Acción'] }),
+    );
+
+    // La ajena gana pese a ser MÁS ANTIGUA: no lo decide la fecha, lo decide el descuento.
+    expect(result.map((entry) => entry.key)).toEqual(['ajena', 'mia']);
+  });
+
+  it('sobre el mismo juego, la tuya sigue arriba: ahí sí quieres comparar', () => {
+    const result = rankRelatedReviews(
+      anchor({ authorId: 'luis', genres: ['Acción'] }),
+      [
+        candidate({ key: 'mia-mismo-juego', authorId: 'yo', isOwn: true, gameName: 'Elden Ring' }),
+        candidate({ key: 'ajena-autor-genero', authorId: 'luis', gameName: 'Nioh 2' }),
+      ],
+      genres({ 'Nioh 2': ['Acción'] }),
+    );
+
+    expect(result[0].key).toBe('mia-mismo-juego');
+  });
+
+  it('si no hay nada de nadie más, tus reseñas salen igual: restar las baja, no las elimina', () => {
+    const result = rankRelatedReviews(
+      anchor({ genres: ['Acción'] }),
+      [candidate({ key: 'mia', authorId: 'yo', isOwn: true, gameName: 'Nioh 2' })],
+      genres({ 'Nioh 2': ['Acción'] }),
+    );
+
+    expect(result.map((entry) => entry.key)).toEqual(['mia']);
+  });
+
+  it('leyendo lo tuyo, otra reseña tuya no cobra el premio de autor: solo el descuento', () => {
+    const result = rankRelatedReviews(
+      anchor({ authorId: 'yo', isOwn: true }),
+      [candidate({ key: 'mia', authorId: 'yo', isOwn: true, gameName: 'Hollow Knight' })],
+    );
+
+    expect(result[0].score).toBe(-15);
   });
 });
 
