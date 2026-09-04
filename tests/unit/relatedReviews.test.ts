@@ -11,10 +11,10 @@
 import { describe, expect, it } from 'vitest';
 import {
   rankRelatedReviews,
-  reviewNameKey,
   type RelatedReviewAnchor,
   type RelatedReviewCandidate,
 } from '../../src/core/social/relatedReviews';
+import { gameTitleKey } from '../../src/core/utils/gameTitleKey';
 
 const T = 1_780_000_000_000;
 
@@ -39,7 +39,7 @@ function anchor(extra: Partial<RelatedReviewAnchor> = {}): RelatedReviewAnchor {
 
 /** Índice de géneros como lo construye el recolector: por la MISMA clave con la que se cruzan los nombres. */
 function genres(entries: Record<string, string[]>): Map<string, string[]> {
-  return new Map(Object.entries(entries).map(([name, list]) => [reviewNameKey(name), list]));
+  return new Map(Object.entries(entries).map(([name, list]) => [gameTitleKey(name), list]));
 }
 
 describe('rankRelatedReviews — cruce por nombre', () => {
@@ -59,6 +59,26 @@ describe('rankRelatedReviews — cruce por nombre', () => {
 
   it('no relaciona títulos distintos aunque compartan id', () => {
     const result = rankRelatedReviews(anchor(), [candidate({ key: 'a', gameId: 1, gameName: 'Hollow Knight' })]);
+
+    expect(result).toEqual([]);
+  });
+
+  // Las reglas de casado son de `gameTitleKey` y allí se prueban una a una; aquí solo se comprueba que llegan
+  // hasta el final, que es lo que se rompería si alguien cambiase la clave en un sitio y no en el otro.
+  it('reconoce el mismo juego escrito de otra manera', () => {
+    const result = rankRelatedReviews(
+      { gameName: 'The Witcher 3: Wild Hunt — Game of the Year Edition', authorId: 'luis', isOwn: false },
+      [candidate({ key: 'a', gameName: 'Witcher 3 Wild Hunt' })],
+    );
+
+    expect(result[0]?.reason).toBe('same-game');
+  });
+
+  it('sigue sin fundir un remake con su original', () => {
+    const result = rankRelatedReviews(
+      { gameName: 'Final Fantasy VII', authorId: 'luis', isOwn: false },
+      [candidate({ key: 'a', gameName: 'Final Fantasy VII Remake' })],
+    );
 
     expect(result).toEqual([]);
   });

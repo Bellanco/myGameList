@@ -10,10 +10,12 @@
 //
 // EL CRUCE ES POR NOMBRE, NO POR ID. El `id` de un juego se asigna por biblioteca (`max(ids)+1` en
 // `useGameListViewModel.saveDraft`), así que el juego 42 de una amistad no tiene nada que ver con el 42 propio.
-// El único identificador que significa lo mismo en dos aparatos distintos es el nombre normalizado, que es
-// exactamente con lo que el hub social ya casa los juegos ajenos contra los propios (`hasGameInLists`). De ahí
-// `reviewNameKey`, que tiene que ser la MISMA función con la que se indexen los géneros o el cruce falla en
-// silencio.
+// El único identificador que significa lo mismo en dos aparatos distintos es el título, y de reconocerlo escrito
+// de dos maneras se encarga `gameTitleKey`, que tiene que ser la MISMA función con la que el recolector indexe
+// los juegos o el cruce falla en silencio.
+//
+// Los GÉNEROS, en cambio, se comparan con `normalizeName` a secas. No son títulos: nadie escribe «Acción
+// Remastered» ni «The Acción», y aplicarles las reglas de los títulos solo añadiría formas de equivocarse.
 //
 // LOS GÉNEROS NO VIAJAN POR EL CANAL. Una entrada de actividad lleva juego, nota y adelanto de texto, y las
 // listas compartidas quedan vacías para perfiles ajenos a propósito (decisión E3 de privacidad). Los géneros
@@ -26,6 +28,7 @@
 // Este módulo no amplía el alcance de nada; reordena lo que ya se podía leer.
 //
 // PURO: sin reloj, sin E/S y sin estado. Recibe los candidatos aplanados y devuelve una lista ordenada.
+import { gameTitleKey } from '../utils/gameTitleKey';
 import { normalizeName } from '../roulette/roulette';
 import { isPublishableTimestamp } from './moveActivity';
 
@@ -110,17 +113,6 @@ const SCORE_GENRE_EXTRA = 5;
 const SCORE_GENRE_EXTRA_MAX = 15;
 
 /**
- * Clave con la que se casan juegos entre bibliotecas distintas. La MISMA con la que hay que indexar los géneros.
- *
- * Es `normalizeName` (recortar y minúsculas), la que ya usa el hub para saber si un juego ajeno está en tus
- * listas. Deliberadamente conservadora: afinarla —quitar puntuación, «Remastered», «Deluxe»— casaría más
- * títulos, pero también fundiría juegos distintos, y de momento importa más no mentir que relacionar de más.
- */
-export function reviewNameKey(name: string): string {
-  return normalizeName(String(name || ''));
-}
-
-/**
  * Identidad de autor a efectos de comparación.
  *
  * Lo propio se compara por `isOwn` y no por `authorId` porque una reseña propia llega con dos identificadores
@@ -150,7 +142,7 @@ function genreKeys(genres: readonly string[] | undefined): Set<string> {
 /** ¿Es un candidato que valga la pena ofrecer? Con nombre, con texto y con una fecha que `Date` sepa pintar. */
 function isOfferable(candidate: RelatedReviewCandidate): boolean {
   return Boolean(
-    reviewNameKey(candidate.gameName)
+    gameTitleKey(candidate.gameName)
     && String(candidate.snippet || '').trim()
     && isPublishableTimestamp(candidate.updatedAt),
   );
@@ -182,7 +174,7 @@ function dedupeCandidates(candidates: readonly RelatedReviewCandidate[]): Relate
     if (!isOfferable(candidate)) {
       continue;
     }
-    const key = `${authorKey(candidate)}|${reviewNameKey(candidate.gameName)}`;
+    const key = `${authorKey(candidate)}|${gameTitleKey(candidate.gameName)}`;
     const current = best.get(key);
     if (!current || compareDuplicates(candidate, current) < 0) {
       best.set(key, candidate);
@@ -210,7 +202,7 @@ export function rankRelatedReviews(
   const limit = Math.max(0, options.limit ?? DEFAULT_LIMIT);
   const maxPerAuthor = Math.max(1, options.maxPerAuthor ?? DEFAULT_MAX_PER_AUTHOR);
   const maxPerReason = Math.max(1, options.maxPerReason ?? DEFAULT_MAX_PER_REASON);
-  const anchorNameKey = reviewNameKey(anchor.gameName);
+  const anchorNameKey = gameTitleKey(anchor.gameName);
   if (limit === 0 || !anchorNameKey) {
     return [];
   }
@@ -230,7 +222,7 @@ export function rankRelatedReviews(
   const scored: RelatedReview[] = [];
 
   for (const candidate of dedupeCandidates(candidates)) {
-    const nameKey = reviewNameKey(candidate.gameName);
+    const nameKey = gameTitleKey(candidate.gameName);
     const sameAuthor = authorKey(candidate) === anchorAuthor;
     const sameGame = nameKey === anchorNameKey;
     // La reseña abierta no se ofrece a sí misma. Es el mismo autor hablando del mismo juego: tras el dedupe, la

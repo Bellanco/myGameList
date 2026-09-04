@@ -16,11 +16,11 @@
 import { useMemo } from 'react';
 import {
   rankRelatedReviews,
-  reviewNameKey,
   type RelatedReview,
   type RelatedReviewAnchor,
   type RelatedReviewCandidate,
 } from '../../core/social/relatedReviews';
+import { gameTitleKey } from '../../core/utils/gameTitleKey';
 import { resolveGrade, starsFromGrade } from '../../core/utils/scoreScale';
 import { TAB_IDS, type GameItem, type TabData, type TabId } from '../../model/types/game';
 import type { SocialActivityFeedItem } from './socialFeed';
@@ -55,7 +55,7 @@ function ownReviewTimestamp(game: GameItem): number {
 
 /** Añade los géneros de un juego al índice sin pisar lo que ya hubiera: la primera fuente en llegar manda. */
 function indexGenres(index: Map<string, string[]>, game: { name?: string; genres?: string[] }): void {
-  const key = reviewNameKey(String(game?.name || ''));
+  const key = gameTitleKey(String(game?.name || ''));
   const genres = Array.isArray(game?.genres) ? game.genres.filter(Boolean) : [];
   if (!key || genres.length === 0 || index.has(key)) {
     return;

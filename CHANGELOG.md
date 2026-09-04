@@ -25,6 +25,13 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
     significa lo mismo en dos bibliotecas distintas.
   - Un autor no pone más de dos reseñas en el bloque y ningún motivo se lleva más de tres, para que la lista no la
     copie quien más escribe. Si no hay nada que ofrecer, no se pinta el bloque.
+  - **El mismo juego se reconoce aunque cada cual lo escriba a su manera:** «Marvel's Spider-Man» y «Marvels
+    Spider Man», «Pokémon» y «Pokemon», «The Last of Us» y «Last of Us», «Final Fantasy VII» y «Final Fantasy 7»,
+    y las reediciones con su original («Dark Souls Remastered», «…Game of the Year Edition», «Okami HD»). Lo que
+    NO se funde: un remake con su original —«Final Fantasy VII Remake» es otro juego—, una secuela con su
+    original (los números nunca se borran: «Nioh» y «Nioh 2» siguen siendo dos) ni «Mega Man X» con «Mega Man
+    10». Estas reglas viven solo aquí: detectar duplicados al guardar o al importar sigue con el casado estricto
+    de siempre, porque allí una coincidencia de más te impediría añadir un juego o fundiría dos al importar.
 
 ### Changed
 - **Actividad de listas: otras palabras, solo movimientos y tope por día.** Tres cambios sobre el aviso de una
