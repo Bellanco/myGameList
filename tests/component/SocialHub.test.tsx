@@ -1604,14 +1604,19 @@ describe('SocialHub — reciprocidad de la foto', () => {
     ownProfile(true); // el perfil que ya existe llega con `showPhoto: true`
     renderHub('/social/profile');
 
+    // Se espera a que la hidratación acabe (es la que trae el `showPhoto: true` del gist): antes de eso el editor
+    // no ha leído nada todavía, el botón sigue deshabilitado y el clic no guardaría nada.
+    const save = await screen.findByRole('button', { name: SOCIAL_UI.profile.save });
+    await waitFor(() => expect(save).toBeEnabled());
+
     // El interruptor del ajuste, apagado y bloqueado.
-    const toggle = await screen.findByLabelText(SOCIAL_UI.profile.showPhotoField) as HTMLInputElement;
+    const toggle = screen.getByLabelText(SOCIAL_UI.profile.showPhotoField) as HTMLInputElement;
     await waitFor(() => expect(toggle.checked).toBe(false));
     expect(toggle.disabled).toBe(true);
     expect(screen.getByText(SOCIAL_UI.profile.photoMissingInGoogle)).toBeInTheDocument();
 
     // Y lo que se escribe en el gist al guardar ya va apagado.
-    fireEvent.click(screen.getByRole('button', { name: new RegExp(SOCIAL_UI.profile.save) }));
+    fireEvent.click(save);
     await waitFor(() => expect(gistMocks.writeSocialGist).toHaveBeenCalled());
     const ultimaEscritura = gistMocks.writeSocialGist.mock.calls.at(-1) as unknown as [unknown, unknown, { profile: { visibility: { showPhoto: boolean }; photoURL?: string } }];
     const payload = ultimaEscritura[2];
