@@ -105,7 +105,7 @@
 
 /* ── §4 · Tabla: cabecera = LECTURA DE COGITADOR (VT323 verde, filete verde inferior). ── */
 :root[data-palette="grimdark"] thead th { background: transparent; color: var(--grim-green); border-bottom: 1px solid rgba(67, 245, 88, .4); font-size: .95rem; }
-:root[data-palette="grimdark"][data-theme="light"] thead th { color: var(--steam); border-bottom-color: rgba(21, 122, 55, .45); }
+:root[data-palette="grimdark"][data-theme="light"] thead th { color: var(--fg-link); border-bottom-color: rgba(21, 122, 55, .45); }
 
 /* ── §5 · Botones: sello imperial — rectos, borde de oro. Acento = COMANDO de terminal (relleno VERDE fósforo
    con texto negro + glow), en ambos temas. Semánticos rellenos; texto tinta en OSCURO y blanco en CLARO
@@ -129,7 +129,7 @@
 :root[data-palette="grimdark"] .btn-inprogress { background: var(--warn) !important; color: #1a1200 !important; border-color: color-mix(in srgb, var(--warn) 55%, #000) !important; }
 :root[data-palette="grimdark"] .btn-danger,
 :root[data-palette="grimdark"] .btn-abandoned,
-:root[data-palette="grimdark"] .btn-recommend-active { background: var(--danger) !important; color: #fff !important; border-color: color-mix(in srgb, var(--danger) 55%, #000) !important; }
+:root[data-palette="grimdark"] .btn-recommend-active { background: var(--danger-fill) !important; color: #fff !important; border-color: color-mix(in srgb, var(--danger) 55%, #000) !important; }
 :root[data-palette="grimdark"][data-theme="light"] .btn-complete,
 :root[data-palette="grimdark"][data-theme="light"] .btn-recommend,
 :root[data-palette="grimdark"][data-theme="light"] .btn-inprogress { color: #fff !important; }
@@ -227,7 +227,10 @@
 
 /* ── §12 · FAB = DUALIDAD: añadir "+" = VERDE (comando de terminal); ruleta = ORO (imperial). Discos con halo
    (redondos por naturaleza: sin desplazamiento de sombra, regla 5). ── */
-:root[data-palette="grimdark"] .fab { background: var(--grim-green); border: 1px solid var(--grim-green); color: #04140a; box-shadow: 0 0 16px rgba(67, 245, 88, .6); }
+/* El glifo va con `--on-accent` y no con la tinta fija: en el CÓDICE (tema claro) el verde imperial es
+   profundo y la tinta encima se quedaba en 2,86:1 —por debajo del 3:1 que la 1.4.11 pide a un icono—; el
+   token ya lleva blanco allí y la misma tinta en el tema oscuro, donde el fósforo sí la pide. */
+:root[data-palette="grimdark"] .fab { background: var(--grim-green); border: 1px solid var(--grim-green); color: var(--on-accent); box-shadow: 0 0 16px rgba(67, 245, 88, .6); }
 :root[data-palette="grimdark"] .fab-roulette { background: var(--grim-gold); border: 1px solid var(--grim-gold); color: #1a1200; box-shadow: 0 0 16px rgba(224, 169, 43, .55); }
 :root[data-palette="grimdark"] .fab:hover { filter: none; box-shadow: 0 0 22px rgba(67, 245, 88, .85); }
 :root[data-palette="grimdark"] .fab-roulette:hover { filter: none; box-shadow: 0 0 22px rgba(224, 169, 43, .8); }

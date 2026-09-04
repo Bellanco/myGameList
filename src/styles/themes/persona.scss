@@ -106,7 +106,10 @@
 :root[data-palette="persona"][data-theme="light"] .alert-dialog { border-color: #151011 !important; box-shadow: 7px 7px 0 rgba(230, 0, 18, .22) !important; }
 
 /* ── §4 · Tabla: cabecera como barra negra con texto de acento. ── */
-:root[data-palette="persona"] thead th { background: #0a0a0a; color: var(--steam); }
+/* El color va FIJO y no por `--fg-link`: la barra es negra en los DOS temas, así que el acento del tema claro
+   —un rojo profundo, pensado para leerse sobre pergamino— se quedaba en 2,76:1 sobre ella. Este rojo pop
+   (el mismo `--tab-active` del oscuro) da 6,75:1 y sirve para ambos. */
+:root[data-palette="persona"] thead th { background: #0a0a0a; color: #ff6070; }
 
 /* ── §5 · Botones (cómic, estilo v3 del artefacto): sesgados, con CONTORNO NEGRO grueso uniforme y
    SOMBRA DURA DE BLOQUE. Sin clip-path (recortaba el borde y anulaba la sombra; ver regla 2/3). La
@@ -144,7 +147,7 @@
 :root[data-palette="persona"] .btn-inprogress { background: var(--warn) !important; color: #1a1400 !important; }
 :root[data-palette="persona"] .btn-danger,
 :root[data-palette="persona"] .btn-abandoned,
-:root[data-palette="persona"] .btn-recommend-active { background: var(--danger) !important; color: #fff !important; }
+:root[data-palette="persona"] .btn-recommend-active { background: var(--danger-fill) !important; color: #fff !important; }
 /* Botones fantasma (p. ej. "Limpiar filtros"): limpios, sin corte/sombra/sesgo. */
 :root[data-palette="persona"] .btn-ghost { font-style: italic; filter: none; clip-path: none; transform: none; }
 /* Hover: el hover base hace un giro 3D que rompe el sesgo P5; aquí se mantiene el sesgo + elevación leve. */
@@ -282,7 +285,7 @@
   box-shadow: 0 0 0 3px #0a0a0a, inset 0 0 0 1px #0a0a0a;
 }
 /* Rótulo de instrucción del tambor. */
-:root[data-palette="persona"] .rl-hint { color: var(--steam); font-style: italic; }
+:root[data-palette="persona"] .rl-hint { color: var(--fg-link); font-style: italic; }
 /* Tarjeta fantasma (reposo) y tarjeta de resultado: stickers negros de esquinas rectas + sombra roja. */
 :root[data-palette="persona"] .rl-ghost,
 :root[data-palette="persona"] .rl-card {

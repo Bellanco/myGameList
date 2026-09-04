@@ -91,4 +91,34 @@ describe('SocialDetailScreen — game/:id/review', () => {
     fireEvent.click(links[0]);
     expect(onOpenProfileDetail).toHaveBeenCalledWith('p1');
   });
+
+  // El bloque de relacionadas llega montado desde el hub (es quien tiene el directorio con el que relacionar), y
+  // la pantalla solo decide DÓNDE va: al pie del análisis, fuera de su tarjeta. Que esté fuera importa —es
+  // material de al lado, no parte de la reseña— y es lo que hace que no herede el «sin recorte» del detalle.
+  it('pinta el bloque de relacionadas al pie, fuera de la tarjeta del análisis', () => {
+    render(
+      <SocialDetailScreen
+        SOCIAL_UI={SOCIAL_UI}
+        activeDetailEvent={baseEvent}
+        getGameItemById={() => fullGame}
+        onOpenProfileDetail={vi.fn()}
+        onBack={vi.fn()}
+        status=""
+        statusKind=""
+        related={<div data-testid="relacionadas">bloque</div>}
+      />,
+    );
+
+    const bloque = screen.getByTestId('relacionadas');
+    expect(bloque).toBeInTheDocument();
+    expect(bloque.closest('.hub-feed-card-detail')).toBeNull();
+  });
+
+  it('sin bloque de relacionadas la pantalla se pinta igual', () => {
+    // El hub lo pasa siempre, pero el panel de estadísticas reutiliza estas pantallas y no lo pasa: la prop es
+    // opcional de verdad, no opcional de mentira.
+    renderDetail(() => fullGame);
+
+    expect(screen.getByText(/Reseña COMPLETA con muchos detalles/)).toBeInTheDocument();
+  });
 });

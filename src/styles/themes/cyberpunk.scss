@@ -41,16 +41,16 @@
 /* Glitch de aberración cromática (signature) en los títulos hero: SUTIL — 1px y colores semitransparentes,
    un matiz de fleco cian/magenta que no dobla el texto ni impide leerlo. */
 :root[data-palette="cyberpunk"] h2,
-:root[data-palette="cyberpunk"] .rl-card-name { color: var(--steam); font-weight: 700; text-shadow: -1px 0 rgba(255, 42, 109, .5), 1px 0 rgba(0, 240, 255, .5); }
+:root[data-palette="cyberpunk"] .rl-card-name { color: var(--fg-link); font-weight: 700; text-shadow: -1px 0 rgba(255, 42, 109, .5), 1px 0 rgba(0, 240, 255, .5); }
 :root[data-palette="cyberpunk"][data-theme="light"] h2,
 :root[data-palette="cyberpunk"][data-theme="light"] .rl-card-name { text-shadow: none; }
-:root[data-palette="cyberpunk"] thead th { color: var(--steam); }
+:root[data-palette="cyberpunk"] thead th { color: var(--fg-link); }
 /* Enlaces "ver perfil" (nombre del feed y del detalle de actividad): AZUL ELÉCTRICO del juego (cian), no amarillo;
    al pasar el ratón, halo neón cian. Es el color de interacción de la UI de Cyberpunk. */
 :root[data-palette="cyberpunk"] .hub-name-link,
-:root[data-palette="cyberpunk"] .hub-detail-profile-link { color: var(--cyber-cyan); }
+:root[data-palette="cyberpunk"] .hub-detail-profile-link { color: var(--cyber-cyan-fg); }
 :root[data-palette="cyberpunk"] .hub-name-link:hover,
-:root[data-palette="cyberpunk"] .hub-detail-profile-link:hover { color: var(--cyber-cyan); text-shadow: 0 0 8px rgba(0, 240, 255, .55); }
+:root[data-palette="cyberpunk"] .hub-detail-profile-link:hover { color: var(--cyber-cyan-fg); text-shadow: 0 0 8px rgba(0, 240, 255, .55); }
 
 /* ── §1b · GLITCH ambiental (signature del juego): aberración RGB + micro-slice con clip-path/transform. MUY sutil
    y de vez en cuando — el corte ocupa ~1% de un ciclo largo (≈ una vez cada 11–17 s) con 3 microflashes; el resto
@@ -221,7 +221,7 @@
 :root[data-palette="cyberpunk"] .btn-secondary.btn-accent {
   background: transparent !important;
   border-color: transparent !important;
-  color: var(--cyber-cyan) !important;
+  color: var(--cyber-cyan-fg) !important;
   --hud-edge: var(--cyber-cyan);
   --hud-fill: color-mix(in srgb, var(--cyber-cyan) 16%, var(--surface));
 }
@@ -326,7 +326,7 @@
   border-radius: 0;
   background: rgba(0, 240, 255, .08);
   border: 1px solid var(--cyber-cyan);
-  color: var(--cyber-cyan);
+  color: var(--cyber-cyan-fg);
 }
 :root[data-palette="cyberpunk"] .hub-friend-chip { border-radius: 0; }
 
@@ -350,7 +350,7 @@
    un prefijo cian `//`; la cabecera de día es un rótulo con filete de peligro cian. La barra fija (sticky)
    se mantiene (fondo opaco, sin tocar `position`). ── */
 :root[data-palette="cyberpunk"] .hub-feed-day-header { background: var(--bg) !important; border: none !important; border-radius: 0 !important; box-shadow: none !important; padding: .15rem .6rem .45rem; }
-:root[data-palette="cyberpunk"] .hub-feed-day-header h4 { font-family: 'Rajdhani', system-ui, sans-serif; font-weight: 700; letter-spacing: .06em; color: var(--steam); }
+:root[data-palette="cyberpunk"] .hub-feed-day-header h4 { font-family: 'Rajdhani', system-ui, sans-serif; font-weight: 700; letter-spacing: .06em; color: var(--fg-link); }
 :root[data-palette="cyberpunk"] .hub-feed-day-header::after { content: ''; position: absolute; left: 8%; right: 8%; bottom: 0; height: 2px; background: linear-gradient(90deg, transparent, var(--cyber-cyan), transparent); }
 :root[data-palette="cyberpunk"] .hub-feed-date,
 :root[data-palette="cyberpunk"] .hub-review-date {
@@ -367,16 +367,16 @@
   transform: none;
 }
 :root[data-palette="cyberpunk"] .hub-feed-date::before,
-:root[data-palette="cyberpunk"] .hub-review-date::before { content: '//'; color: var(--cyber-cyan); font-weight: 700; }
+:root[data-palette="cyberpunk"] .hub-review-date::before { content: '//'; color: var(--cyber-cyan-fg); font-weight: 700; }
 
 /* ── §11 · Ruleta = escáner HUD. Tambor/tarjetas = paneles rectos; el visor de selección es un marco
    AMARILLO/CIAN luminoso (objetivo de escaneo); nombres en Rajdhani (§1). ── */
 :root[data-palette="cyberpunk"] .rl-drum { border: 1px solid rgba(0, 240, 255, .35); border-radius: 0; background: var(--surface); box-shadow: inset 0 0 26px rgba(0, 0, 0, .5); }
 :root[data-palette="cyberpunk"] .rl-frame { border: 2px solid var(--cyber-yellow); border-radius: 0; box-shadow: 0 0 14px rgba(252, 238, 10, .5), inset 0 0 10px rgba(0, 240, 255, .18); }
-:root[data-palette="cyberpunk"] .rl-hint { color: var(--cyber-cyan); letter-spacing: .12em; }
+:root[data-palette="cyberpunk"] .rl-hint { color: var(--cyber-cyan-fg); letter-spacing: .12em; }
 :root[data-palette="cyberpunk"] .rl-ghost,
 :root[data-palette="cyberpunk"] .rl-card { border: 1px solid rgba(0, 240, 255, .35); border-left: 3px solid var(--cyber-yellow); border-radius: 0; box-shadow: 0 0 16px rgba(0, 240, 255, .06); }
-:root[data-palette="cyberpunk"] .rl-card-tag { color: var(--steam); }
+:root[data-palette="cyberpunk"] .rl-card-tag { color: var(--fg-link); }
 
 /* ── §12 · FAB neón: añadir "+" = AMARILLO; ruleta = CIAN. Discos con halo (redondos por naturaleza). ── */
 :root[data-palette="cyberpunk"] .fab { background: var(--cyber-yellow); border: 1px solid var(--cyber-yellow); color: #08090d; box-shadow: 0 0 16px rgba(252, 238, 10, .6); }
@@ -541,4 +541,4 @@
   font-family: 'Share Tech Mono', ui-monospace, monospace;
   letter-spacing: .02em;
 }
-:root[data-palette="cyberpunk"] .hub-feed-move-hour::before { content: '// '; color: var(--cyber-cyan); font-weight: 700; }
+:root[data-palette="cyberpunk"] .hub-feed-move-hour::before { content: '// '; color: var(--cyber-cyan-fg); font-weight: 700; }

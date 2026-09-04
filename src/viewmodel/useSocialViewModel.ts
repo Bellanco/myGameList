@@ -51,6 +51,9 @@ import { useSocialCompose } from './social/useSocialCompose';
 import { useSocialLegalConsent } from './social/useSocialLegalConsent';
 import { DEFAULT_SOCIAL_VISIBILITY, normalizeVisibility, useSocialProfileForm } from './social/useSocialProfileForm';
 import { useSocialFeed } from './social/socialFeed';
+import { useRelatedReviews } from './social/useRelatedReviews';
+import type { RelatedReviewAnchor } from '../core/social/relatedReviews';
+export type { RelatedReview } from '../core/social/relatedReviews';
 // Re-exportados: las pantallas del hub los importan desde este ViewModel desde antes de la extracción.
 export type {
   SocialActivityFeedItem,
@@ -1084,6 +1087,87 @@ export function useSocialViewModel(options?: {
     [activeDetailEvent, authUser, ownProfileId],
   );
 
+  /** El mismo criterio de "esto es mío" que usan el perfil y el detalle, en forma de función reutilizable. */
+  const isOwnProfileEntry = useCallback(
+    (profileId: string) => isOwnProfileIdentity(profileId, authUser?.uid, ownProfileId),
+    [authUser?.uid, ownProfileId],
+  );
+
+  /**
+   * La reseña abierta, en la forma que necesita el bloque de RELACIONADAS. Sale de una pantalla o de la otra
+   * según el panel, porque una reseña se lee por dos caminos: el detalle del feed y la lista de reseñas de un
+   * perfil. Fuera de esos dos paneles es `null` y no se recolecta ninguna candidata.
+   *
+   * El autor se identifica con el `actorProfileId` DEL GIST en los dos casos. En el detalle viene en la propia
+   * entrada; en la reseña de un perfil hay que buscarlo en su actividad, porque lo que la pantalla tiene a mano
+   * es el id de la entrada del directorio —que para una amistad es su uid de Firebase— y son cosas distintas.
+   */
+  const activeReviewAnchor = useMemo<RelatedReviewAnchor | null>(() => {
+    if (activePanel === 'detail' && activeDetailEvent) {
+      return {
+        gameName: activeDetailEvent.gameName,
+        authorId: activeDetailEvent.actorProfileId,
+        isOwn: isOwnDetailEvent,
+        // Los géneros de la reseña abierta solo se conocen si su juego está en unos listados que tengamos: los
+        // propios, o los de la amistad cuyo perfil se haya bajado. Si no, el bloque se relaciona por los otros
+        // dos motivos y ya está.
+        genres: getGameItemById(activeDetailEvent.profileId, activeDetailEvent.gameId)?.genres,
+      };
+    }
+    if (activePanel === 'profile-review' && activeProfileReview && selectedProfileDetail) {
+      const actorProfileId = (selectedProfileDetail.activity || []).find(
+        (entry) => entry.type === 'review' && entry.gameId === activeProfileReview.id,
+      )?.actorProfileId;
+      return {
+        gameName: activeProfileReview.name,
+        authorId: String(actorProfileId || selectedProfileDetail.id || ''),
+        isOwn: isOwnProfileDetail,
+        genres: activeProfileReview.genres,
+      };
+    }
+    return null;
+  }, [
+    activeDetailEvent,
+    activePanel,
+    activeProfileReview,
+    getGameItemById,
+    isOwnDetailEvent,
+    isOwnProfileDetail,
+    selectedProfileDetail,
+  ]);
+
+  const relatedReviews = useRelatedReviews({
+    anchor: activeReviewAnchor,
+    directory: socialDirectory,
+    localGames: localState,
+    foreignGames: foreignGamesByProfile,
+    isOwnProfile: isOwnProfileEntry,
+    ownDisplayName: socialDisplayName,
+  });
+
+  /**
+   * Abre una reseña relacionada. Las dos rutas que existen para leer una reseña, y cada una por su motivo:
+   *
+   *  · AJENA → el detalle de actividad, que se resuelve por el `actorProfileId` del gist. Es la única vía: de un
+   *    perfil ajeno no tenemos listados salvo que se hayan bajado, pero su ENTRADA de actividad —de donde salió
+   *    esta candidata— siempre está.
+   *  · PROPIA → la reseña dentro del perfil propio, con el comodín `me` de la URL. Tiene que ser esta y no la de
+   *    actividad porque una reseña propia puede no estar publicada, y entonces no hay entrada que abrir; el
+   *    perfil propio, en cambio, repuebla sus listados desde los locales y las encuentra todas.
+   */
+  const openRelatedReview = useCallback((entry: { isOwn: boolean; authorId: string; gameId: number }) => {
+    const target = entry.isOwn
+      ? `/social/profiles/${OWN_PROFILE_ALIAS}/game/${entry.gameId}/review`
+      : `/social/user/${encodeURIComponent(entry.authorId)}/game/${entry.gameId}/review`;
+    // De dónde se viene, para que el botón de volver lleve AHÍ y no al sitio por defecto de la pantalla que se
+    // abre. Sin esto, saltar a un análisis propio ofrecía «volver a las reseñas» —la lista de tus reseñas— a
+    // quien venía del feed y no había pasado por esa lista en su vida.
+    //
+    // Se usa `backTo`, que es el mecanismo que el hub YA tiene para esto (lo estrenó el panel de estadísticas al
+    // enlazar tus reseñas), en vez de inventar un segundo canal para decir lo mismo.
+    void navigate(target, { state: { backTo: location.pathname } });
+  }, [location.pathname, navigate]);
+
   // Bloque 3/4 — al abrir el detalle de una reseña o un perfil AJENO, baja su lista completa de juegos (cache-first
   // 24h en IndexedDB; sin red si está fresca) y la guarda filtrada por su visibilidad. El perfil propio no se baja
   // (ya tiene datos locales). Sin token o ante fallo de red se queda index-only (snippet del evento).
@@ -1999,6 +2083,8 @@ export function useSocialViewModel(options?: {
     refreshCoolingDown,
     activeDetailEvent,
     getGameItemById,
+    relatedReviews,
+    openRelatedReview,
     groupedFeedItems,
     hasMoreFeed,
     showMoreFeed,

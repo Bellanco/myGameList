@@ -88,10 +88,18 @@
 /* Acciones destructivas = TORRETA: rojo del ojo/láser + halo tenue de "puntería". */
 :root[data-palette="portal"] .btn-danger,
 :root[data-palette="portal"] .btn-abandoned,
-:root[data-palette="portal"] .btn-recommend-active { background: var(--portal-turret) !important; color: #fff !important; border-color: color-mix(in srgb, var(--portal-turret) 55%, #000) !important; box-shadow: 0 0 10px color-mix(in srgb, var(--portal-turret) 40%, transparent) !important; }
+:root[data-palette="portal"] .btn-recommend-active { background: var(--danger-fill) !important; color: #fff !important; border-color: color-mix(in srgb, var(--portal-turret) 55%, #000) !important; box-shadow: 0 0 10px color-mix(in srgb, var(--portal-turret) 40%, transparent) !important; }
 :root[data-palette="portal"][data-theme="light"] .btn-complete,
 :root[data-palette="portal"][data-theme="light"] .btn-recommend,
 :root[data-palette="portal"][data-theme="light"] .btn-inprogress { color: #fff !important; }
+/* En la Aperture ANTIGUA el acento es naranja quemado, no el azul clínico del oscuro: sobre él, la tinta del
+   resto de rellenos se quedaba en 3,89:1. Se le da la vuelta como a los tres botones de arriba —naranja un
+   punto más hondo y rótulo blanco, señalética industrial de la época— y sube a 5,48:1. En el tema oscuro la
+   regla general no cambia: allí el acento es un azul claro y la tinta encima ya da 7:1. */
+:root[data-palette="portal"][data-theme="light"] .btn-accent,
+:root[data-palette="portal"][data-theme="light"] .btn-steam,
+:root[data-palette="portal"][data-theme="light"] .btn.is-active,
+:root[data-palette="portal"][data-theme="light"] .btn-toggle.active { background: color-mix(in srgb, var(--steam) 85%, #000) !important; color: #fff !important; }
 :root[data-palette="portal"] .btn-ghost { font-family: 'Oswald', system-ui, sans-serif; letter-spacing: .05em; }
 /* Hover: plano (sin el giro 3D base) — elevación leve + brillo. */
 :root[data-palette="portal"] .btn:not(.btn-icon):not(.btn-ghost):hover { transform: translateY(-2px); filter: brightness(1.06); box-shadow: 0 6px 16px rgba(0, 0, 0, .28); }
@@ -189,7 +197,7 @@
   transform: none;
 }
 :root[data-palette="portal"] .hub-feed-date::before,
-:root[data-palette="portal"] .hub-review-date::before { content: '>'; color: var(--steam); font-weight: 700; }
+:root[data-palette="portal"] .hub-review-date::before { content: '>'; color: var(--fg-link); font-weight: 700; }
 
 /* ── §11 · Ruleta = selector de cámara de pruebas. Tambor/tarjetas = placas; el visor de selección es un
    PORTAL AZUL LUMINOSO (elipse con halo); nombres en Oswald (§1). ── */
@@ -201,10 +209,10 @@
   box-shadow: inset 0 0 34px rgba(0, 0, 0, .4);
 }
 :root[data-palette="portal"] .rl-frame { border: 2.5px solid var(--steam); border-radius: 999px; box-shadow: 0 0 16px rgba(var(--steam-rgb), .5), inset 0 0 12px rgba(var(--steam-rgb), .25); }
-:root[data-palette="portal"] .rl-hint { color: var(--steam); letter-spacing: .12em; }
+:root[data-palette="portal"] .rl-hint { color: var(--fg-link); letter-spacing: .12em; }
 :root[data-palette="portal"] .rl-ghost,
 :root[data-palette="portal"] .rl-card { border: 1px solid var(--border); border-radius: var(--radius-md); box-shadow: 0 6px 22px rgba(0, 0, 0, .18); }
-:root[data-palette="portal"] .rl-card-tag { color: var(--steam); }
+:root[data-palette="portal"] .rl-card-tag { color: var(--fg-link); }
 
 /* ── §12 · FAB = LOS DOS PORTALES: añadir "+" = portal AZUL; ruleta = portal NARANJA. Discos con halo de
    portal. Redondos por naturaleza (regla 5: sin desplazamiento de sombra en un círculo). ── */

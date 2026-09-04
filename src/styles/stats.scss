@@ -478,7 +478,7 @@
 }
 
 .stat-tile.is-link:focus-visible {
-  outline: 2px solid var(--steam);
+  outline: 2px solid var(--focus-ring);
   outline-offset: 2px;
 }
 
@@ -1787,7 +1787,7 @@
 .gauge-subs li.is-dim { opacity: .45; }
 
 .gauge-sub:focus-visible {
-  outline: 2px solid var(--steam);
+  outline: 2px solid var(--focus-ring);
   outline-offset: -2px;
 }
 
@@ -2106,7 +2106,7 @@
   z-index: 1;
 }
 
-.top-chip-open:focus-visible { outline: 2px solid var(--steam); outline-offset: -2px; border-radius: var(--stats-radius); }
+.top-chip-open:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: -2px; border-radius: var(--stats-radius); }
 
 .top-chip-name {
   position: relative;
@@ -2371,7 +2371,7 @@
 .donut-legend-row.is-dim { opacity: .55; }
 
 .donut-legend-row:focus-visible {
-  outline: 2px solid var(--steam);
+  outline: 2px solid var(--focus-ring);
   outline-offset: -2px;
 }
 
@@ -2452,7 +2452,7 @@
 }
 
 .shine-row:focus-visible {
-  outline: 2px solid var(--steam);
+  outline: 2px solid var(--focus-ring);
   outline-offset: -2px;
   border-radius: var(--stats-radius);
 }
@@ -2603,7 +2603,7 @@
 .dot-matrix li.is-dim { opacity: .5; }
 
 .dot-matrix-row:focus-visible {
-  outline: 2px solid var(--steam);
+  outline: 2px solid var(--focus-ring);
   outline-offset: -2px;
 }
 

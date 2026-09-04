@@ -1,4 +1,4 @@
-import { memo, useCallback } from 'react';
+import { memo, useCallback, useEffect, useMemo } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 // La hoja del hub se importa AQUÍ y no desde `index.scss`: como el hub entra por `lazy()`, Vite emite su CSS en
 // el mismo chunk perezoso y el arranque no carga ni un byte de estilos de estas pantallas (igual que `stats.scss`).
@@ -7,6 +7,7 @@ import { SOCIAL_UI } from '../../core/constants/socialLabels';
 import { LEGAL_CONSENT_UI, LEGAL_ROUTES } from '../../core/constants/legal';
 import type { GameItem, TabData } from '../../model/types/game';
 import { useSocialViewModel } from '../../viewmodel/useSocialViewModel';
+import { matchSocialRoute } from '../../viewmodel/social/socialRoutes';
 import { Icon } from './Icon';
 import { SocialHubSkeleton } from './SocialHubSkeleton';
 
@@ -14,6 +15,7 @@ import { SocialProfileScreen } from './socialhub/SocialProfileScreen';
 import { SocialDetailScreen } from './socialhub/SocialDetailScreen';
 import { SocialProfileDetailScreen } from './socialhub/SocialProfileDetailScreen';
 import { SocialProfileReviewScreen } from './socialhub/SocialProfileReviewScreen';
+import { RelatedReviews } from './socialhub/RelatedReviews';
 import { SocialProfilesScreen } from './socialhub/SocialProfilesScreen';
 import { SocialFeedScreen } from './socialhub/SocialFeedScreen';
 import { SocialRequestsScreen } from './socialhub/SocialRequestsScreen';
@@ -111,6 +113,8 @@ const SocialHubInner = memo(function SocialHubInner({
     feedItems,
     activeDetailEvent,
     getGameItemById,
+    relatedReviews,
+    openRelatedReview,
     groupedFeedItems,
     hasMoreFeed,
     showMoreFeed,
@@ -151,6 +155,30 @@ const SocialHubInner = memo(function SocialHubInner({
   const location = useLocation();
   const backTo = (location.state as { backTo?: string } | null)?.backTo;
   const goToSocial = useCallback(() => navigate(backTo || '/social'), [navigate, backTo]);
+
+  /**
+   * Rótulo del botón de volver cuando se ha llegado saltando desde otra pantalla del hub (el bloque de análisis
+   * relacionados, o el enlace del panel de estadísticas). Nombra el sitio al que de verdad se vuelve.
+   *
+   * El destino se reconoce con `matchSocialRoute`, el mismo enrutado que decide qué pantalla se pinta, para que
+   * el rótulo no pueda decir una cosa y el enlace llevar a otra. Una ruta de fuera del hub —estadísticas— no casa
+   * con ninguna y se queda en el «Volver» genérico, que es honesto: desde aquí no se sabe qué hay allí.
+   */
+  const backToLabel = useMemo(() => {
+    if (!backTo) {
+      return '';
+    }
+    const target = matchSocialRoute(backTo);
+    if (target.activePanel === 'detail' || target.activePanel === 'profile-review') {
+      return SOCIAL_UI.feed.backToReview;
+    }
+    if (target.activePanel === 'profile-detail') {
+      return target.profileReviewsView ? SOCIAL_UI.feed.reviewsBackToList : SOCIAL_UI.feed.backToProfile;
+    }
+    // `feed` es también lo que devuelve el enrutado para cualquier ruta ajena al hub, así que se distingue el
+    // feed de verdad por su camino y no por el panel.
+    return backTo.startsWith('/social') ? SOCIAL_UI.feed.backToFeed : SOCIAL_UI.feed.backGeneric;
+  }, [backTo]);
   const goToProfileEdit = useCallback(() => navigate('/social/profile'), [navigate]);
   const goToProfiles = useCallback(() => navigate('/social/profiles'), [navigate]);
   const goToRequests = useCallback(() => navigate('/social/requests'), [navigate]);
@@ -184,6 +212,25 @@ const SocialHubInner = memo(function SocialHubInner({
   // que de verdad le incumbe.
   const detailId = (selectedProfileDetail as { id?: string })?.id || profileDetailId;
   const detailUid = (selectedProfileDetail as { uid?: string })?.uid || '';
+
+  /**
+   * Abrir una reseña empieza por su principio.
+   *
+   * El hub no rehacía el desplazamiento al cambiar de pantalla, y eso pasaba desapercibido mientras el detalle de
+   * una reseña era corto. Al añadirle el bloque de relacionadas la pantalla creció, y abrir una reseña desde el
+   * final de una lista larga —o desde ese mismo bloque, que está abajo del todo— te dejaba a media altura: en
+   * mitad del texto, o directamente en las relacionadas de la reseña nueva. Leer empieza por arriba.
+   *
+   * Solo al ENTRAR en una reseña, y por eso la dependencia es cuál está abierta: volver a la lista no dispara
+   * nada y conserva el sitio donde el lector la dejó, que es lo que se espera de un «atrás».
+   */
+  const openReviewKey = activePanel === 'detail' || activePanel === 'profile-review'
+    ? `${activePanel}:${activeDetailEvent?.gameId ?? activeProfileReview?.id ?? 0}`
+    : '';
+  useEffect(() => {
+    if (!openReviewKey) return;
+    window.scrollTo({ top: 0 });
+  }, [openReviewKey]);
 
   const toggleDetailReviews = useCallback(
     () => (profileReviewsView ? closeProfileReviews(detailId) : openProfileReviews(detailId)),
@@ -251,6 +298,8 @@ const SocialHubInner = memo(function SocialHubInner({
           status={status}
           statusKind={statusKind}
           shareable={isOwnDetailEvent}
+          backLabel={backToLabel || undefined}
+          related={<RelatedReviews SOCIAL_UI={SOCIAL_UI} items={relatedReviews} onOpen={openRelatedReview} />}
         />
       );
     }
@@ -298,12 +347,16 @@ const SocialHubInner = memo(function SocialHubInner({
           SOCIAL_UI={SOCIAL_UI}
           review={activeProfileReview}
           profileName={(selectedProfileDetail as { displayName?: string })?.displayName || ''}
-          onBack={() => openProfileReviews(profileDetailId)}
+          // Quien llega saltando desde un análisis relacionado vuelve A DONDE ESTABA. El destino por defecto —la
+          // lista de reseñas de este perfil— solo vale para quien ha entrado por ella.
+          onBack={backTo ? goToSocial : () => openProfileReviews(profileDetailId)}
+          backLabel={backToLabel || undefined}
           status={status}
           statusKind={statusKind}
           actions={
             ownReviewGame && ownReviewText ? <ShareReviewButton game={ownReviewGame} reviewText={ownReviewText} /> : null
           }
+          related={<RelatedReviews SOCIAL_UI={SOCIAL_UI} items={relatedReviews} onOpen={openRelatedReview} />}
         />
       );
     }
@@ -443,8 +496,18 @@ const SocialHubInner = memo(function SocialHubInner({
           ) : null}
         </div>
 
-        <div className="hub-gateway-progress" aria-label={SOCIAL_UI.gateway.progressAria}>
-          <div className="hub-gateway-progress-track" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={gatewayProgress}>
+        {/* El nombre accesible va en el elemento con `role="progressbar"`, no en el contenedor: un `aria-label`
+            sobre un `<div>` sin rol no lo expone ninguna API de accesibilidad, así que la barra se anunciaba sin
+            nombre (violación `aria-progressbar-name` de axe, en las doce combinaciones de tema y paleta). */}
+        <div className="hub-gateway-progress">
+          <div
+            className="hub-gateway-progress-track"
+            role="progressbar"
+            aria-label={SOCIAL_UI.gateway.progressAria}
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuenow={gatewayProgress}
+          >
             <span className="hub-gateway-progress-fill" style={{ width: `${gatewayProgress}%` }} />
           </div>
           <small>{SOCIAL_UI.gateway.progress(gatewayProgress)}</small>

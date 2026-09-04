@@ -199,6 +199,101 @@ describe('SocialHub (componente, post-M3)', () => {
     });
   });
 
+  // Abrir una reseña tiene que empezar por su principio. El hub no rehacía el desplazamiento al cambiar de
+  // pantalla, y con el bloque de reseñas relacionadas al pie la pantalla creció lo bastante como para que abrir
+  // una desde el final de una lista larga te dejara a media altura, leyendo por el medio.
+  it('al abrir el detalle de una reseña sube al principio de la pantalla', async () => {
+    firebaseMocks.getCurrentSocialAuthUser.mockResolvedValue({
+      uid: 'uid-1',
+      email: 'jaime@example.com',
+      displayName: 'Jaime',
+      photoURL: null,
+    });
+    gistMocks.getSocialSyncConfig.mockReturnValue({ token: 'ghp_x', gistId: 'social-gist', etag: null, lastRemoteUpdatedAt: 0 });
+    const scrollTo = vi.fn();
+    vi.stubGlobal('scrollTo', scrollTo);
+
+    renderHub('/social/user/pseudonimo-de-ana/game/7/review');
+
+    await waitFor(() => {
+      expect(scrollTo).toHaveBeenCalledWith(expect.objectContaining({ top: 0 }));
+    });
+  });
+
+  it('volver del detalle NO reposiciona: el «atrás» conserva dónde estaba el lector', async () => {
+    firebaseMocks.getCurrentSocialAuthUser.mockResolvedValue({
+      uid: 'uid-1',
+      email: 'jaime@example.com',
+      displayName: 'Jaime',
+      photoURL: null,
+    });
+    gistMocks.getSocialSyncConfig.mockReturnValue({ token: 'ghp_x', gistId: 'social-gist', etag: null, lastRemoteUpdatedAt: 0 });
+    const scrollTo = vi.fn();
+    vi.stubGlobal('scrollTo', scrollTo);
+
+    renderHub('/social');
+
+    await waitFor(() => {
+      expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
+    });
+    expect(scrollTo).not.toHaveBeenCalled();
+  });
+
+  // Saltar de un análisis a otro por el bloque de relacionados: el botón de volver tiene que nombrar y llevar al
+  // sitio de DONDE SE VIENE. Un análisis propio se abre en la pantalla de reseñas del perfil, cuyo volver por
+  // defecto es la lista de tus reseñas: a quien llegó desde el feed le ofrecía volver a una lista por la que no
+  // había pasado.
+  describe('volver desde un análisis abierto por el bloque de relacionados', () => {
+    function renderConOrigen(pathname: string, backTo?: string) {
+      firebaseMocks.getCurrentSocialAuthUser.mockResolvedValue({
+        uid: 'uid-1',
+        email: 'jaime@example.com',
+        displayName: 'Jaime',
+        photoURL: null,
+      });
+      gistMocks.getSocialSyncConfig.mockReturnValue({ token: 'ghp_x', gistId: 'social-gist', etag: null, lastRemoteUpdatedAt: 0 });
+      return render(
+        <MemoryRouter initialEntries={[{ pathname, state: backTo ? { backTo } : null }]}>
+          <SocialHub />
+        </MemoryRouter>,
+      );
+    }
+
+    it('desde otro análisis, vuelve a ese análisis', async () => {
+      renderConOrigen('/social/profiles/me/game/7/review', '/social/user/ana/game/3/review');
+
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: SOCIAL_UI.feed.backToReview })).toBeInTheDocument();
+      });
+      expect(screen.queryByRole('button', { name: SOCIAL_UI.feed.reviewsBackToList })).not.toBeInTheDocument();
+    });
+
+    it('desde el feed, vuelve a la actividad', async () => {
+      renderConOrigen('/social/profiles/me/game/7/review', '/social');
+
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: SOCIAL_UI.feed.backToFeed })).toBeInTheDocument();
+      });
+    });
+
+    it('sin origen conserva el destino propio de la pantalla: la lista de reseñas del perfil', async () => {
+      renderConOrigen('/social/profiles/me/game/7/review');
+
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: SOCIAL_UI.feed.reviewsBackToList })).toBeInTheDocument();
+      });
+    });
+
+    it('el detalle de un análisis ajeno también nombra de dónde se viene', async () => {
+      renderConOrigen('/social/user/ana/game/3/review', '/social/profiles/me/game/7/review');
+
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: SOCIAL_UI.feed.backToReview })).toBeInTheDocument();
+      });
+      expect(screen.queryByRole('button', { name: SOCIAL_UI.feed.backToFeed })).not.toBeInTheDocument();
+    });
+  });
+
   // L4 — puerta de aceptación de condiciones. Bloquea SOLO el espacio social; nunca las listas propias.
   it('sin consentimiento vigente NO entra al espacio social y pide la aceptación', async () => {
     firebaseMocks.getCurrentSocialAuthUser.mockResolvedValue({ uid: 'uid-1', email: 'jaime@example.com', displayName: 'Jaime', photoURL: null });
@@ -1509,14 +1604,19 @@ describe('SocialHub — reciprocidad de la foto', () => {
     ownProfile(true); // el perfil que ya existe llega con `showPhoto: true`
     renderHub('/social/profile');
 
+    // Se espera a que la hidratación acabe (es la que trae el `showPhoto: true` del gist): antes de eso el editor
+    // no ha leído nada todavía, el botón sigue deshabilitado y el clic no guardaría nada.
+    const save = await screen.findByRole('button', { name: SOCIAL_UI.profile.save });
+    await waitFor(() => expect(save).toBeEnabled());
+
     // El interruptor del ajuste, apagado y bloqueado.
-    const toggle = await screen.findByLabelText(SOCIAL_UI.profile.showPhotoField) as HTMLInputElement;
+    const toggle = screen.getByLabelText(SOCIAL_UI.profile.showPhotoField) as HTMLInputElement;
     await waitFor(() => expect(toggle.checked).toBe(false));
     expect(toggle.disabled).toBe(true);
     expect(screen.getByText(SOCIAL_UI.profile.photoMissingInGoogle)).toBeInTheDocument();
 
     // Y lo que se escribe en el gist al guardar ya va apagado.
-    fireEvent.click(screen.getByRole('button', { name: new RegExp(SOCIAL_UI.profile.save) }));
+    fireEvent.click(save);
     await waitFor(() => expect(gistMocks.writeSocialGist).toHaveBeenCalled());
     const ultimaEscritura = gistMocks.writeSocialGist.mock.calls.at(-1) as unknown as [unknown, unknown, { profile: { visibility: { showPhoto: boolean }; photoURL?: string } }];
     const payload = ultimaEscritura[2];

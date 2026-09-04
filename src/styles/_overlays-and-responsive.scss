@@ -67,7 +67,7 @@ dialog.modal-dialog[open]::backdrop { animation: modalBackdropIn .28s ease both;
   border-radius: var(--radius-sm); padding: .78rem .85rem; width: 100%;
   transition: border-color .2s, box-shadow .2s; outline: none; min-width: 0;
 }
-.finput:focus, .ftextarea:focus { border-color: var(--steam); box-shadow: 0 0 0 3px rgba(var(--steam-rgb),.12); }
+.finput:focus, .ftextarea:focus { border-color: var(--focus-ring); box-shadow: 0 0 0 3px rgba(var(--steam-rgb),.12); }
 .ftextarea { min-height: 128px; resize: vertical; }
 .field-error,  .has-error   { border-color: var(--danger)!important; box-shadow: 0 0 0 3px rgba(var(--danger-rgb),.15)!important; }
 .field-warning,.has-warning  { border-color: var(--warn)!important;  box-shadow: 0 0 0 3px rgba(var(--warn-rgb),.15)!important; }
@@ -112,7 +112,7 @@ dialog.modal-dialog[open]::backdrop { animation: modalBackdropIn .28s ease both;
 .admin-tabs { display: flex; flex-wrap: wrap; gap: .5rem; border-bottom: 1px solid var(--border); margin-bottom: .8rem; padding-bottom: .6rem; }
 .admin-tabs .admin-tab { font-size: .85rem; padding: .5rem .85rem; border-radius: var(--radius-sm); color: var(--text-muted); transition: all .25s; }
 .admin-tabs .admin-tab:hover { background: rgba(var(--steam-rgb),.08); color: var(--text); }
-.admin-tabs .admin-tab.active { background: rgba(var(--steam-rgb),.15); color: var(--steam-hover); border-bottom: none; }
+.admin-tabs .admin-tab.active { background: rgba(var(--steam-rgb),.15); color: var(--fg-link); border-bottom: none; }
 .admin-warning { display: none; padding: .85rem 1rem; border-radius: var(--radius-sm); font-size: .88rem; border-left: 3px solid transparent; animation: slideInDown .3s ease-out; }
 .admin-warning.show { display: block; }
 .admin-warning.ok   { background: rgba(var(--success-rgb),.12); border-left-color: var(--success); color: var(--fg-green); }
@@ -172,7 +172,7 @@ dialog.modal-dialog[open]::backdrop { animation: modalBackdropIn .28s ease both;
 /* Botones flotantes de navegación (Cuenta / Ajustes): mismo diseño que el cambio de tema; solo cambia
    el icono. En la sección activa se resaltan con el acento (como el estado hover). */
 .floating-controls .floating-nav-btn.is-active {
-  color: var(--steam);
+  color: var(--fg-link);
   background: var(--steam-soft);
   border-color: rgba(var(--steam-rgb),.35);
 }
@@ -474,7 +474,7 @@ body.compact-filters .filters-row.open .btn-toggle { justify-content: center; al
   background:var(--surface-elevated); border-radius:var(--radius-sm);
   padding:.8rem 1rem; border:1px solid var(--border);
 }
-.sync-help a { color:var(--steam-hover); text-decoration:none; }
+.sync-help a { color:var(--fg-link); text-decoration:none; }
 .sync-help a:hover { text-decoration:underline; }
 .sync-help ol { padding-left:1.2rem; }
 .sync-help li { margin-top:.28rem; }
