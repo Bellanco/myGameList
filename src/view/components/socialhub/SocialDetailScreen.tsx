@@ -22,6 +22,7 @@ export function SocialDetailScreen({
   statusKind,
   shareable = false,
   related = null,
+  backLabel,
 }: {
   SOCIAL_UI: SocialUiLabels;
   /**
@@ -49,6 +50,11 @@ export function SocialDetailScreen({
    * hub —que tiene el directorio— y no un componente de presentación.
    */
   related?: React.ReactNode;
+  /**
+   * Rótulo del botón de volver. Por defecto, la actividad; quien haya llegado saltando desde otro análisis pasa
+   * el suyo, porque vuelve ahí y no al feed.
+   */
+  backLabel?: string;
 }) {
   if (!activeDetailEvent) {
     return (
@@ -59,7 +65,7 @@ export function SocialDetailScreen({
       >
           <div className="hub-screen-actions hub-screen-actions-split hub-screen-actions-inline" aria-label={SOCIAL_UI.feed.detailActionsAria}>
             <div className="hub-screen-actions-left">
-              <HubBackButton onBack={onBack} label={SOCIAL_UI.feed.backToFeed} />
+              <HubBackButton onBack={onBack} label={backLabel || SOCIAL_UI.feed.backToFeed} />
             </div>
           </div>
           <p>{SOCIAL_UI.feed.detailMissing}</p>
@@ -83,7 +89,7 @@ export function SocialDetailScreen({
     >
         <div className="hub-screen-actions hub-screen-actions-split hub-screen-actions-inline" aria-label={SOCIAL_UI.feed.detailActionsAria}>
           <div className="hub-screen-actions-left">
-            <HubBackButton onBack={onBack} label={SOCIAL_UI.feed.backToFeed} />
+            <HubBackButton onBack={onBack} label={backLabel || SOCIAL_UI.feed.backToFeed} />
           </div>
           {shareable && gameItem && reviewText ? (
             <div className="hub-screen-actions-right">

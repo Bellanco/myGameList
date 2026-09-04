@@ -237,6 +237,11 @@ export const SOCIAL_UI = {
     profileListTabPlaying: 'En curso',
     profileListTabPlanned: 'Próximos',
     backToFeed: 'Volver a la actividad',
+    // Rótulos del volver cuando se ha llegado saltando de un análisis a otro por el bloque de relacionados: el
+    // botón nombra el sitio al que de verdad se vuelve, no el que la pantalla tiene por defecto.
+    backToReview: 'Volver al análisis',
+    backToProfile: 'Volver al perfil',
+    backGeneric: 'Volver',
     searchLabel: 'Buscar perfiles',
     searchPlaceholder: 'Buscar por nombre, email o juego',
     filterAll: 'Todos',
