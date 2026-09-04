@@ -719,6 +719,23 @@
   transition: transform .25s cubic-bezier(.2,.8,.25,1);
 }
 
+/* Los dos escalones de pantalla estrecha los decide `BottomNavigation` midiendo si el rótulo cabe; aquí solo se
+   dibujan. En los dos, el alto de 48px y las columnas iguales siguen intactos, así que la pastilla del activo
+   cuadra igual y la barra se ve entera hasta en una pantalla de 280px.
+
+   APILADO: el icono encima del nombre. El botón deja de pagar el ancho del icono, que es lo que devuelve el
+   rótulo a un móvil donde en una línea ya no cabía. */
+.bottom-nav.is-stacked .bottom-nav-btn {
+  flex-direction: column;
+  gap: .1rem;
+}
+
+/* SOLO ICONO: sin texto que mirar, el icono crece para seguir siendo una diana clara de un vistazo. */
+.bottom-nav.is-icons .bottom-nav-icon {
+  width: 1.5rem;
+  height: 1.5rem;
+}
+
 .hub-hub {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
@@ -1252,6 +1269,14 @@
   font-size: .85rem;
   line-height: 1;
   user-select: none;
+}
+
+/* Avatar de la tarjeta de persona del directorio y la bandeja: la cara es lo que se reconoce de un vistazo en
+   una rejilla, así que pide más presencia que el del feed, sin llegar al del hero. */
+.hub-avatar-md {
+  width: 3.1rem;
+  height: 3.1rem;
+  font-size: 1.15rem;
 }
 
 /* Avatar grande para el hero de la página de perfil (debe ir tras .hub-avatar para ganar el tamaño). */

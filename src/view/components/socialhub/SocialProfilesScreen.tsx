@@ -1,8 +1,7 @@
-import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { Icon } from '../Icon';
-import { HubAvatar } from './HubAvatar';
+import React from 'react';
+import { HubUserCard, HubUserCardSkeleton } from './HubUserCard';
+import { HubUserSection } from './HubUserSection';
 import type { SocialUiLabels } from '../../../core/constants/socialLabels';
-import { PROFILE_TIER_LABELS, normalizeTier } from '../../../core/constants/tiers';
 import { HubScreen } from './HubScreen';
 import { HubStatus } from './HubStatus';
 import { HubBackButton } from './HubBackButton';
@@ -10,19 +9,11 @@ import { FriendshipButton } from './FriendshipButton';
 import type { RelationshipState } from '../../../model/types/social';
 import type { SocialDirectoryEntry } from '../../../viewmodel/useSocialViewModel';
 
-/** Lo que esta pantalla necesita de una entrada del directorio: identidad, nombre, foto y rango. Nada más. */
-type DirectoryCard = Pick<SocialDirectoryEntry, 'id' | 'uid' | 'displayName' | 'photoURL' | 'tier'>;
+/** Lo que esta pantalla necesita de una entrada del directorio: identidad, nombre, foto, rango y recencia. */
+type DirectoryCard = Pick<SocialDirectoryEntry, 'id' | 'uid' | 'displayName' | 'photoURL' | 'tier' | 'lastActiveAt'>;
 
-/**
- * Cuántas FILAS se pintan de entrada en cada sección, y cuántas añade cada "mostrar más".
- *
- * En filas y no en un número fijo de tarjetas: la rejilla tiene de 1 a 12 columnas según el ancho, así que un tope
- * fijo sería una pantalla razonable en escritorio y una pila interminable en un móvil de una columna. Con cuatro
- * filas, el primer golpe de vista ocupa lo mismo en cualquier dispositivo.
- * El precio es que en móvil cada pulsación añade solo cuatro tarjetas; se aceptó a cambio de no tener que bajar
- * dos pantallas de scroll antes de encontrar el botón.
- */
-const PROFILE_ROWS_PER_PAGE = 4;
+/** Filas visibles de entrada en cada sección (y cuántas añade cada "mostrar más"). */
+const PROFILE_ROWS_PER_PAGE = 3;
 
 /** Pantalla de perfiles sociales (directorio), con filtro por nombre. */
 function SocialProfilesScreenBase({
@@ -57,127 +48,37 @@ function SocialProfilesScreenBase({
   statusKind: string;
 }) {
   // Dos listas: amigos y no-amigos. La relación sale de `relationshipWith`.
-  const friendProfiles = filteredSocialDirectory.filter((entry) => relationshipWith(entry.uid) === 'friends');
+  //
+  // Los AMIGOS se ordenan aquí por último uso de la aplicación, primero quien más recientemente ha estado. El
+  // directorio ya llega ordenado por ese mismo campo desde Firestore, así que casi siempre este `sort` no mueve
+  // nada; existe por los dos casos en que sí: cuando falta el índice compuesto y la consulta degrada a sin orden,
+  // y cuando un amigo entra por el documento de amistad en vez de por el directorio. Es el mismo criterio que usa
+  // la bandeja (`buildFriendshipViews`), para que las dos pantallas no digan cosas distintas.
+  const friendProfiles = filteredSocialDirectory
+    .filter((entry) => relationshipWith(entry.uid) === 'friends')
+    .sort((a, b) => (b.lastActiveAt || 0) - (a.lastActiveAt || 0));
   const otherProfiles = filteredSocialDirectory.filter((entry) => relationshipWith(entry.uid) !== 'friends');
 
-  // CUÁNTAS COLUMNAS HAY DE VERDAD. Se lee del propio layout (`grid-template-columns` resuelto) y no se deduce de
-  // un breakpoint: quien decide el número de columnas es el CSS —con `auto-fill` sobre el ancho de la TARJETA del
-  // hub, no de la ventana—, y duplicar aquí esa cuenta sería una segunda fuente de verdad que se desincroniza en
-  // el primer ajuste de tamaños. Solo se usa para el tamaño de página; si fallara, la consecuencia máxima es
-  // paginar de 4 en 4 en vez de por filas completas.
-  const gridRef = useRef<HTMLDivElement | null>(null);
-  const [columnas, setColumnas] = useState(1);
-  const haySecciones = friendProfiles.length > 0 || otherProfiles.length > 0;
-
-  useLayoutEffect(() => {
-    const medir = () => {
-      const el = gridRef.current;
-      if (!el) return;
-      const tracks = getComputedStyle(el).gridTemplateColumns.split(' ').filter(Boolean).length;
-      setColumnas((prev) => (prev === tracks ? prev : Math.max(1, tracks)));
-    };
-
-    medir();
-    const observer = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(medir) : null;
-    if (gridRef.current) observer?.observe(gridRef.current);
-    window.addEventListener('resize', medir);
-    return () => {
-      observer?.disconnect();
-      window.removeEventListener('resize', medir);
-    };
-  }, [haySecciones]);
-
-  const pageSize = Math.max(1, columnas) * PROFILE_ROWS_PER_PAGE;
-
-  // Se guardan PÁGINAS y no un número de tarjetas: así, al cambiar de columnas (girar el móvil, redimensionar), lo
-  // visible se recalcula solo y se mantiene en "cuatro filas" en vez de quedarse en la cuenta de otro ancho.
-  const [friendPages, setFriendPages] = useState(1);
-  const [otherPages, setOtherPages] = useState(1);
-
-  // Al cambiar la búsqueda se vuelve a empezar: si venías de pulsar "mostrar más" varias veces, la siguiente
-  // búsqueda arrancaría ya expandida y el filtro parecería no haber hecho nada.
-  useEffect(() => {
-    setFriendPages(1);
-    setOtherPages(1);
-  }, [profileSearch]);
-
   const renderProfileCard = (entry: DirectoryCard) => (
-    <article
-      key={entry.id}
-      className="hub-feed-card hub-feed-profile-item"
-      tabIndex={0}
-      aria-label={SOCIAL_UI.profiles.openProfileAria(entry.displayName)}
-      onClick={() => openProfileDetail(entry.id)}
+    <HubUserCard
+      name={entry.displayName}
+      photoURL={entry.photoURL}
+      tier={entry.tier}
+      busy={friendshipBusyUid === entry.uid}
+      onOpen={() => openProfileDetail(entry.id)}
+      openAriaLabel={SOCIAL_UI.profiles.openProfileAria(entry.displayName)}
       onKeyDown={(event) => handleProfileCardKeyDown(event, entry.id)}
     >
-      {/* Punto de rango, esquina superior derecha. El color solo no informa a quien no lo distingue: el nombre
-          del rango va en `title` y, para lectores de pantalla, en un texto oculto. */}
-      <span className={`hub-tier-dot tier-${normalizeTier(entry.tier)}`} title={PROFILE_TIER_LABELS[normalizeTier(entry.tier)]}>
-        <span className="sr-only">{PROFILE_TIER_LABELS[normalizeTier(entry.tier)]}</span>
-      </span>
-      <header className="hub-feed-card-head">
-        <HubAvatar photoURL={entry.photoURL} />
-        <div className="hub-feed-card-head-text">
-          <h3>{entry.displayName}</h3>
-        </div>
-      </header>
-      {/* La acción de amistad no debe abrir el detalle: se detiene la propagación del click/teclado. */}
-      <div
-        className="hub-card-friend-action"
-        onClick={(event) => event.stopPropagation()}
-        onKeyDown={(event) => event.stopPropagation()}
-        role="presentation"
-      >
-        <FriendshipButton
-          SOCIAL_UI={SOCIAL_UI}
-          state={relationshipWith(entry.uid)}
-          name={entry.displayName}
-          busy={friendshipBusyUid === entry.uid}
-          onAddOrAccept={() => onAddOrAcceptFriend(entry.uid)}
-          onCancel={() => onCancelFriendRequest(entry.uid)}
-        />
-      </div>
-    </article>
+      <FriendshipButton
+        SOCIAL_UI={SOCIAL_UI}
+        state={relationshipWith(entry.uid)}
+        name={entry.displayName}
+        busy={friendshipBusyUid === entry.uid}
+        onAddOrAccept={() => onAddOrAcceptFriend(entry.uid)}
+        onCancel={() => onCancelFriendRequest(entry.uid)}
+      />
+    </HubUserCard>
   );
-
-  /** Sección con su recuento, su rejilla y su "mostrar más". Las dos comparten forma; solo cambian los datos. */
-  const renderSection = (
-    title: string,
-    perfiles: DirectoryCard[],
-    vacio: string,
-    pages: number,
-    verMas: () => void,
-  ) => {
-    const visibles = pages * pageSize;
-    const restantes = perfiles.length - visibles;
-    return (
-      <div className="fg">
-        <span className="flabel">
-          {title} <span className="hub-section-count">· {perfiles.length}</span>
-        </span>
-        {perfiles.length === 0 ? (
-          <p>{vacio}</p>
-        ) : (
-          <>
-            <div
-              ref={gridRef}
-              className="hub-profile-grid"
-              aria-label={SOCIAL_UI.profiles.sectionGroupAria(title, perfiles.length)}
-              role="group"
-            >
-              {perfiles.slice(0, visibles).map(renderProfileCard)}
-            </div>
-            {restantes > 0 ? (
-              <button className="hub-more-soft hub-feed-load-more" type="button" onClick={verMas}>
-                <Icon name="chevron-down" />
-                <span>{SOCIAL_UI.profiles.showMore(restantes)}</span>
-              </button>
-            ) : null}
-          </>
-        )}
-      </div>
-    );
-  };
 
   return (
     <HubScreen
@@ -208,17 +109,9 @@ function SocialProfilesScreenBase({
         {loadingDirectory ? (
           <div className="fg">
             <p className="sr-only">{SOCIAL_UI.profiles.loading}</p>
-            <div className="hub-profile-grid" aria-hidden="true">
-              {[0, 1, 2, 3].map((i) => (
-                <article key={i} className="hub-feed-card hub-feed-profile-item hub-skeleton-card">
-                  <header className="hub-feed-card-head">
-                    <span className="hub-avatar hub-skeleton" />
-                    <div className="hub-feed-card-head-text">
-                      <span className="hub-skeleton hub-skeleton-line" style={{ width: '60%' }} />
-                    </div>
-                  </header>
-                  <span className="hub-skeleton hub-skeleton-line" style={{ width: '85%' }} />
-                </article>
+            <div className="hub-user-grid" aria-hidden="true">
+              {[0, 1, 2, 3, 4, 5].map((i) => (
+                <HubUserCardSkeleton key={i} />
               ))}
             </div>
           </div>
@@ -226,20 +119,28 @@ function SocialProfilesScreenBase({
           <div className="fg"><p>{SOCIAL_UI.profiles.empty}</p></div>
         ) : (
           <>
-            {renderSection(
-              SOCIAL_UI.profiles.friendsTitle,
-              friendProfiles,
-              SOCIAL_UI.profiles.friendsEmpty,
-              friendPages,
-              () => setFriendPages((n) => n + 1),
-            )}
-            {renderSection(
-              SOCIAL_UI.profiles.othersTitle,
-              otherProfiles,
-              SOCIAL_UI.profiles.othersEmpty,
-              otherPages,
-              () => setOtherPages((n) => n + 1),
-            )}
+            <HubUserSection
+              title={SOCIAL_UI.profiles.friendsTitle}
+              items={friendProfiles}
+              keyOf={(entry) => entry.id}
+              renderItem={renderProfileCard}
+              emptyText={SOCIAL_UI.profiles.friendsEmpty}
+              groupAriaLabel={SOCIAL_UI.profiles.sectionGroupAria}
+              showMoreLabel={SOCIAL_UI.profiles.showMore}
+              rowsPerPage={PROFILE_ROWS_PER_PAGE}
+              resetKey={profileSearch}
+            />
+            <HubUserSection
+              title={SOCIAL_UI.profiles.othersTitle}
+              items={otherProfiles}
+              keyOf={(entry) => entry.id}
+              renderItem={renderProfileCard}
+              emptyText={SOCIAL_UI.profiles.othersEmpty}
+              groupAriaLabel={SOCIAL_UI.profiles.sectionGroupAria}
+              showMoreLabel={SOCIAL_UI.profiles.showMore}
+              rowsPerPage={PROFILE_ROWS_PER_PAGE}
+              resetKey={profileSearch}
+            />
           </>
         )}
         <HubStatus status={status} statusKind={statusKind} />

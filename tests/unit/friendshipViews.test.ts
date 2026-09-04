@@ -80,6 +80,73 @@ describe('friendshipViews', () => {
     expect(row.photo).toBe('https://lh3.googleusercontent.com/a/dir');
   });
 
+  // El rango y la ficha del directorio son OPCIONALES: los amigos salen de los documentos de amistad, así que hay
+  // gente en la bandeja que no está en el directorio (fuera del tope, o con el espacio social cerrado).
+  it('trae el rango y la ficha del directorio cuando esa persona está en él', () => {
+    const row = toFriendshipRequestView(
+      makeView(),
+      deps({ directory: [{ id: 'perfil-b', uid: 'uid-b', photoURL: '', tier: 'gold' }] }),
+    );
+
+    expect(row.tier).toBe('gold');
+    expect(row.profileId).toBe('perfil-b');
+  });
+
+  it('deja rango y ficha sin definir para quien no está en el directorio', () => {
+    const row = toFriendshipRequestView(makeView(), deps({ directory: [{ uid: 'otro', photoURL: '' }] }));
+
+    // Sin punto de rango inventado ni perfil que abrir: la tarjeta se pinta sin ellos.
+    expect(row.tier).toBeUndefined();
+    expect(row.profileId).toBeUndefined();
+  });
+
+  // Los amigos se listan por último uso de la APLICACIÓN, no por cuándo se aceptó la amistad: ese segundo orden
+  // se congela el día que os hicisteis amigos y no dice nada de quién está activo.
+  it('ordena a los amigos por su último uso de la aplicación', () => {
+    const friendships = {
+      incoming: [],
+      outgoing: [],
+      friends: [
+        makeView({ otherUid: 'vieja', otherName: 'Vieja' }),
+        makeView({ otherUid: 'reciente', otherName: 'Reciente' }),
+        makeView({ otherUid: 'fuera', otherName: 'Fuera del directorio' }),
+      ],
+      byOtherUid: {},
+    } as unknown as MyFriendships;
+
+    const views = buildFriendshipViews(friendships, deps({
+      directory: [
+        { uid: 'vieja', photoURL: '', lastActiveAt: 1_000 },
+        { uid: 'reciente', photoURL: '', lastActiveAt: 9_000 },
+      ],
+    }));
+
+    // Quien no está en el directorio no tiene marca de recencia y cae al final, sin desaparecer.
+    expect(views.friends.map((r) => r.name)).toEqual(['Reciente', 'Vieja', 'Fuera del directorio']);
+  });
+
+  // Las peticiones NO se reordenan: ahí importa cuál llegó antes, y eso ya lo resuelve el repositorio.
+  it('conserva el orden de llegada en las peticiones', () => {
+    const friendships = {
+      incoming: [
+        makeView({ otherUid: 'primera', otherName: 'Primera' }),
+        makeView({ otherUid: 'segunda', otherName: 'Segunda' }),
+      ],
+      outgoing: [],
+      friends: [],
+      byOtherUid: {},
+    } as unknown as MyFriendships;
+
+    const views = buildFriendshipViews(friendships, deps({
+      directory: [
+        { uid: 'primera', photoURL: '', lastActiveAt: 1 },
+        { uid: 'segunda', photoURL: '', lastActiveAt: 9_999 },
+      ],
+    }));
+
+    expect(views.incoming.map((r) => r.name)).toEqual(['Primera', 'Segunda']);
+  });
+
   it('reparte las tres listas conservando el orden de cada una', () => {
     const friendships = {
       incoming: [makeView({ otherUid: 'in-1', otherName: 'Entrante' })],

@@ -284,8 +284,8 @@ export const SOCIAL_UI = {
     incomingTitle: 'Recibidas',
     outgoingTitle: 'Enviadas',
     friendsTitle: 'Amigos',
-    incomingEmpty: 'No tienes peticiones de amistad pendientes.',
-    outgoingEmpty: 'No has enviado peticiones pendientes.',
+    // Recibidas y enviadas NO tienen texto de vacío: sin peticiones, su bloque no se pinta (ver
+    // `SocialRequestsScreen`). Amigos sí lo tiene, porque ahí el vacío dice dónde se piden.
     friendsEmpty: 'Aún no tienes amigos. Envía peticiones desde Perfiles.',
     loading: 'Cargando solicitudes...',
     accept: 'Aceptar',
@@ -297,6 +297,12 @@ export const SOCIAL_UI = {
     cancelAria: (name: string) => `Cancelar la petición enviada a ${name}`,
     removeAria: (name: string) => `Dejar de ser amigo de ${name}`,
     unknownUser: 'Usuario',
+    // Los tres bloques se pintan como rejilla paginada (mismo componente que el directorio), así que necesitan lo
+    // mismo que él: nombrar el grupo y decir cuánta gente queda por mostrar.
+    sectionGroupAria: (title: string, count: number) => `${title}: ${count} personas`,
+    showMore: (remaining: number) => `Mostrar más (quedan ${remaining})`,
+    // Solo se puede abrir el perfil de un AMIGO: en recibidas y enviadas todavía no hay relación aceptada.
+    openFriendAria: (name: string) => `Abrir perfil social de ${name}`,
   },
   friendship: {
     add: 'Añadir amigo',
@@ -310,6 +316,15 @@ export const SOCIAL_UI = {
     removeAria: (name: string) => `Dejar de ser amigo de ${name}`,
     removeConfirmTitle: (name: string) => `¿Dejar de ser amigo de ${name}?`,
     removeConfirmAction: 'Dejar de ser amigos',
+    // Rechazar y retirar tampoco se deshacen —borran el documento de amistad—, así que pasan por la misma
+    // confirmación que "dejar de ser amigos". Con los botones juntos dentro de la tarjeta, un toque de más ya no
+    // deshace una petición.
+    rejectConfirmTitle: (name: string) => `¿Rechazar la petición de ${name}?`,
+    rejectConfirmAction: 'Rechazar',
+    // "Retirar" y no "cancelar": el botón de cerrar el propio diálogo ya dice "Cancelar" y dos "cancelar" en la
+    // misma caja no dicen nada.
+    cancelConfirmTitle: (name: string) => `¿Retirar la petición enviada a ${name}?`,
+    cancelConfirmAction: 'Retirar petición',
   },
   profile: {
     sectionAria: 'Social',

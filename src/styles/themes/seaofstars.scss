@@ -108,6 +108,9 @@
 :root[data-palette="seaofstars"] .modal,
 :root[data-palette="seaofstars"] .alert-dialog { border: 2px solid var(--border) !important; border-radius: 0 !important; box-shadow: 0 0 0 3px var(--bg), 0 0 0 5px color-mix(in srgb, var(--sos-turq) 55%, var(--border)) !important; }
 
+/* Muesca de rango: el marco pixelado es de 2px. */
+:root[data-palette="seaofstars"] .hub-user-card { --tier-notch-top: 2px; --tier-notch-right: 2px; }
+
 /* ── §4 · Tabla: cabecera pixelada — etiqueta dorada y filete turquesa inferior. ── */
 :root[data-palette="seaofstars"] thead th { background: transparent; color: var(--fg-link); border-bottom: 2px solid color-mix(in srgb, var(--sos-turq) 60%, transparent); }
 

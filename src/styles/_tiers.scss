@@ -14,33 +14,62 @@
 .tier-gold    { --tier: #ffc107; }
 .tier-mithril { --tier: #22d3ee; }
 
-/* Contenedor del punto. Se posiciona la tarjeta de PERFIL, no `.hub-feed-card` entera: el punto solo existe en el
-   directorio y no hay por qué tocar el resto del feed. */
-.hub-feed-profile-item { position: relative; }
+/* El contenedor de la marca es la tarjeta de PERSONA (`.hub-user-card`), que ya se posiciona en `social.scss`:
+   la marca solo existe ahí —directorio y bandeja— y no hay por qué tocar el resto del feed. */
 
-/* Punto de rango en la esquina superior derecha de cada tarjeta de perfil del directorio. El halo lo despega del
-   fondo de la tarjeta sin necesidad de borde opaco, que en la paleta clara se veía sucio. */
-.hub-tier-dot {
+/* MUESCA de rango en la esquina superior derecha de cada tarjeta de persona.
+   ─────────────────────────────────────────────────────────────────────────
+   Sustituye al punto de color que había antes. Un punto es un elemento MÁS dentro de la tarjeta: se ve como algo
+   puesto encima, y en una rejilla de muchas tarjetas la fila entera se llenaba de topos. La muesca no añade nada:
+   tiñe un tramo del borde que ya estaba ahí.
+
+   Es un triángulo rectángulo isósceles pegado a la esquina. Los dos CATETOS son el propio borde de la tarjeta
+   —los últimos milímetros del borde superior y del derecho, en el color del rango—, y la HIPOTENUSA es la
+   diagonal que los cierra. Dentro, un velo del mismo color al 14%, que es lo que hace que se lea como una pieza
+   y no como dos rayas sueltas.
+
+   TODO SE PINTA CON UN SOLO ELEMENTO: los catetos con `border-top`/`border-right`, y el velo y la hipotenusa con
+   un degradado de bandas. La diagonal del degradado (`to bottom left`) reparte el cuadrado en dos triángulos
+   justo por la hipotenusa; la banda de 1px en el color puro ES la hipotenusa.
+
+   La muesca se MONTA sobre el borde de la tarjeta (desplazamiento negativo igual a su grosor) en vez de dibujarse
+   por dentro: eso es lo que la convierte en el borde y no en un adorno pegado a él.
+
+   EL GROSOR VA POR TOKEN, uno por cateto, y no en duro, porque cada paleta le pone a la tarjeta un borde distinto:
+   1px en el Clásico, 2px arriba en Cámara de pruebas (su filete naranja), 3px en Ladrones fantasma, 2px en Mar de
+   estrellas. Con el px fijo, en esos temas la muesca no tapaba el borde: quedaba una raya del rango pegada a otra
+   del tema, chocando. Cada skin declara lo suyo (mismo patrón que `--btn-notch` en Sin futuro) y aquí no hace
+   falta saber nada de ellos; quien no diga nada se queda con 1px, que es el borde base.
+
+   El radio se hereda (`inherit`), así que la muesca curva exactamente lo que curve la tarjeta en cada tema —y en
+   los que la dejan a escuadra (Sin futuro, Solo hay guerra, Mar de estrellas), queda a escuadra también. */
+.hub-tier-notch {
   position: absolute;
-  top: .55rem;
-  right: .55rem;
-  width: .6rem;
-  height: .6rem;
-  border-radius: 50%;
-  background: var(--tier, var(--text-dim));
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--tier, var(--text-dim)) 28%, transparent);
-  pointer-events: none; /* la tarjeta entera es clicable: el punto no debe robar el clic */
+  top: calc(-1 * var(--tier-notch-top, 1px));
+  right: calc(-1 * var(--tier-notch-right, 1px));
+  width: 1.35rem;
+  height: 1.35rem;
+  border-top: var(--tier-notch-top, 1px) solid var(--tier, var(--text-dim));
+  border-right: var(--tier-notch-right, 1px) solid var(--tier, var(--text-dim));
+  border-top-right-radius: inherit;
+  background: linear-gradient(
+    to bottom left,
+    color-mix(in srgb, var(--tier, var(--text-dim)) 14%, transparent) 0 calc(50% - .5px),
+    var(--tier, var(--text-dim)) calc(50% - .5px) calc(50% + .5px),
+    transparent calc(50% + .5px)
+  );
+  pointer-events: none; /* la tarjeta entera es clicable: la muesca no debe robar el clic */
 }
 
 /* El mithril, al ser único, respira un poco: un pulso muy tenue que no distrae. Se desactiva si el usuario
    pide menos movimiento. */
-.hub-tier-dot.tier-mithril { animation: tier-mithril-pulse 2.8s ease-in-out infinite; }
+.hub-tier-notch.tier-mithril { animation: tier-mithril-pulse 2.8s ease-in-out infinite; }
 
 @keyframes tier-mithril-pulse {
-  0%, 100% { box-shadow: 0 0 0 2px color-mix(in srgb, var(--tier) 28%, transparent); }
-  50%      { box-shadow: 0 0 0 5px color-mix(in srgb, var(--tier) 36%, transparent); }
+  0%, 100% { opacity: .72; }
+  50%      { opacity: 1; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .hub-tier-dot.tier-mithril { animation: none; }
+  .hub-tier-notch.tier-mithril { animation: none; }
 }
