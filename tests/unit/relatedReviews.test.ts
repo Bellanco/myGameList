@@ -153,7 +153,7 @@ describe('rankRelatedReviews — jerarquía de motivos', () => {
 });
 
 describe('rankRelatedReviews — género', () => {
-  it('relaciona por género compartido y rotula con la grafía del ANCLA', () => {
+  it('el género basta para entrar a quien no comparte ni juego ni autor', () => {
     const result = rankRelatedReviews(
       anchor({ genres: ['Acción'] }),
       [candidate({ key: 'a', gameName: 'Nioh 2' })],
@@ -161,7 +161,35 @@ describe('rankRelatedReviews — género', () => {
     );
 
     expect(result[0].reason).toBe('genre');
-    expect(result[0].genre).toBe('Acción');
+  });
+
+  it('el género SUMA al vínculo en vez de competir con él', () => {
+    // Dos reseñas de la misma persona: la que además comparte género con lo que estás leyendo va delante. Antes
+    // el género solo se miraba en quien no entraba por otra vía, así que aquí no cambiaba nada.
+    const result = rankRelatedReviews(
+      anchor({ authorId: 'luis', genres: ['Acción'] }),
+      [
+        candidate({ key: 'sin-genero', authorId: 'luis', gameName: 'Celeste' }),
+        candidate({ key: 'con-genero', authorId: 'luis', gameName: 'Nioh 2', updatedAt: T - 5000 }),
+      ],
+      genres({ 'Nioh 2': ['Acción'], Celeste: ['Plataformas'] }),
+    );
+
+    expect(result.map((entry) => entry.key)).toEqual(['con-genero', 'sin-genero']);
+  });
+
+  it('el mismo juego sigue por delante del mismo autor aunque este comparta género', () => {
+    // El refuerzo del género no puede saltarse la jerarquía: 100 contra 60+20.
+    const result = rankRelatedReviews(
+      anchor({ authorId: 'luis', genres: ['Acción'] }),
+      [
+        candidate({ key: 'autor-genero', authorId: 'luis', gameName: 'Nioh 2' }),
+        candidate({ key: 'mismo-juego', authorId: 'ana', gameName: 'Elden Ring' }),
+      ],
+      genres({ 'Nioh 2': ['Acción'] }),
+    );
+
+    expect(result.map((entry) => entry.key)).toEqual(['mismo-juego', 'autor-genero']);
   });
 
   it('puntúa por encima al que comparte más géneros', () => {

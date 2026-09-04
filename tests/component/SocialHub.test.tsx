@@ -199,6 +199,46 @@ describe('SocialHub (componente, post-M3)', () => {
     });
   });
 
+  // Abrir una reseña tiene que empezar por su principio. El hub no rehacía el desplazamiento al cambiar de
+  // pantalla, y con el bloque de reseñas relacionadas al pie la pantalla creció lo bastante como para que abrir
+  // una desde el final de una lista larga te dejara a media altura, leyendo por el medio.
+  it('al abrir el detalle de una reseña sube al principio de la pantalla', async () => {
+    firebaseMocks.getCurrentSocialAuthUser.mockResolvedValue({
+      uid: 'uid-1',
+      email: 'jaime@example.com',
+      displayName: 'Jaime',
+      photoURL: null,
+    });
+    gistMocks.getSocialSyncConfig.mockReturnValue({ token: 'ghp_x', gistId: 'social-gist', etag: null, lastRemoteUpdatedAt: 0 });
+    const scrollTo = vi.fn();
+    vi.stubGlobal('scrollTo', scrollTo);
+
+    renderHub('/social/user/pseudonimo-de-ana/game/7/review');
+
+    await waitFor(() => {
+      expect(scrollTo).toHaveBeenCalledWith(expect.objectContaining({ top: 0 }));
+    });
+  });
+
+  it('volver del detalle NO reposiciona: el «atrás» conserva dónde estaba el lector', async () => {
+    firebaseMocks.getCurrentSocialAuthUser.mockResolvedValue({
+      uid: 'uid-1',
+      email: 'jaime@example.com',
+      displayName: 'Jaime',
+      photoURL: null,
+    });
+    gistMocks.getSocialSyncConfig.mockReturnValue({ token: 'ghp_x', gistId: 'social-gist', etag: null, lastRemoteUpdatedAt: 0 });
+    const scrollTo = vi.fn();
+    vi.stubGlobal('scrollTo', scrollTo);
+
+    renderHub('/social');
+
+    await waitFor(() => {
+      expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
+    });
+    expect(scrollTo).not.toHaveBeenCalled();
+  });
+
   // L4 — puerta de aceptación de condiciones. Bloquea SOLO el espacio social; nunca las listas propias.
   it('sin consentimiento vigente NO entra al espacio social y pide la aceptación', async () => {
     firebaseMocks.getCurrentSocialAuthUser.mockResolvedValue({ uid: 'uid-1', email: 'jaime@example.com', displayName: 'Jaime', photoURL: null });

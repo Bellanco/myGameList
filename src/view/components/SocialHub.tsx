@@ -1,4 +1,4 @@
-import { memo, useCallback } from 'react';
+import { memo, useCallback, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 // La hoja del hub se importa AQUÍ y no desde `index.scss`: como el hub entra por `lazy()`, Vite emite su CSS en
 // el mismo chunk perezoso y el arranque no carga ni un byte de estilos de estas pantallas (igual que `stats.scss`).
@@ -188,6 +188,25 @@ const SocialHubInner = memo(function SocialHubInner({
   const detailId = (selectedProfileDetail as { id?: string })?.id || profileDetailId;
   const detailUid = (selectedProfileDetail as { uid?: string })?.uid || '';
 
+  /**
+   * Abrir una reseña empieza por su principio.
+   *
+   * El hub no rehacía el desplazamiento al cambiar de pantalla, y eso pasaba desapercibido mientras el detalle de
+   * una reseña era corto. Al añadirle el bloque de relacionadas la pantalla creció, y abrir una reseña desde el
+   * final de una lista larga —o desde ese mismo bloque, que está abajo del todo— te dejaba a media altura: en
+   * mitad del texto, o directamente en las relacionadas de la reseña nueva. Leer empieza por arriba.
+   *
+   * Solo al ENTRAR en una reseña, y por eso la dependencia es cuál está abierta: volver a la lista no dispara
+   * nada y conserva el sitio donde el lector la dejó, que es lo que se espera de un «atrás».
+   */
+  const openReviewKey = activePanel === 'detail' || activePanel === 'profile-review'
+    ? `${activePanel}:${activeDetailEvent?.gameId ?? activeProfileReview?.id ?? 0}`
+    : '';
+  useEffect(() => {
+    if (!openReviewKey) return;
+    window.scrollTo({ top: 0 });
+  }, [openReviewKey]);
+
   const toggleDetailReviews = useCallback(
     () => (profileReviewsView ? closeProfileReviews(detailId) : openProfileReviews(detailId)),
     [profileReviewsView, closeProfileReviews, openProfileReviews, detailId],
@@ -195,21 +214,6 @@ const SocialHubInner = memo(function SocialHubInner({
   const openDetailReview = useCallback(
     (gameId: number) => openProfileReviewDetail(detailId, gameId),
     [openProfileReviewDetail, detailId],
-  );
-  /**
-   * Abrir una reseña relacionada, y volver ARRIBA al hacerlo.
-   *
-   * El bloque de relacionadas está al pie de la pantalla, así que se pulsa desde abajo del todo; sin este salto,
-   * la reseña siguiente se estrena por la mitad —o directamente por su propio bloque de relacionadas—, que es la
-   * única parte de ella que ya se había visto. El salto se hace aquí y no en un efecto de ruta a propósito: solo
-   * este gesto necesita reposicionar, y volver atrás debe conservar dónde estaba el lector.
-   */
-  const openRelated = useCallback(
-    (entry: Parameters<typeof openRelatedReview>[0]) => {
-      openRelatedReview(entry);
-      window.scrollTo({ top: 0 });
-    },
-    [openRelatedReview],
   );
   const addOrAcceptDetailFriend = useCallback(
     () => handleAddOrAcceptFriend(detailUid),
@@ -269,7 +273,7 @@ const SocialHubInner = memo(function SocialHubInner({
           status={status}
           statusKind={statusKind}
           shareable={isOwnDetailEvent}
-          related={<RelatedReviews SOCIAL_UI={SOCIAL_UI} items={relatedReviews} onOpen={openRelated} />}
+          related={<RelatedReviews SOCIAL_UI={SOCIAL_UI} items={relatedReviews} onOpen={openRelatedReview} />}
         />
       );
     }
@@ -323,7 +327,7 @@ const SocialHubInner = memo(function SocialHubInner({
           actions={
             ownReviewGame && ownReviewText ? <ShareReviewButton game={ownReviewGame} reviewText={ownReviewText} /> : null
           }
-          related={<RelatedReviews SOCIAL_UI={SOCIAL_UI} items={relatedReviews} onOpen={openRelated} />}
+          related={<RelatedReviews SOCIAL_UI={SOCIAL_UI} items={relatedReviews} onOpen={openRelatedReview} />}
         />
       );
     }

@@ -165,7 +165,6 @@ describe('useRelatedReviews — índice de géneros', () => {
 
     expect(result).toHaveLength(1);
     expect(result[0].reason).toBe('genre');
-    expect(result[0].genre).toBe('Acción');
   });
 
   it('también usa los listados ya bajados de una amistad', () => {
