@@ -230,7 +230,7 @@ export const SOCIAL_UI = {
     // título y la firma, así que el motivo se lee solo y la etiqueta repetía con palabras lo que estaba dos
     // centímetros más arriba. Las propias se firman con el nombre de uno, como las demás: un «Tú» era la única
     // firma del bloque que no parecía una persona.
-    relatedTitle: 'Reseñas relacionadas',
+    relatedTitle: 'Análisis relacionados',
     relatedOpenAria: (gameName: string, author: string) => `Abrir la reseña de ${author} sobre ${gameName}`,
     profileListTabCompleted: 'Completados',
     profileListTabVisited: 'Abandonados',

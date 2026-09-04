@@ -110,26 +110,44 @@ export interface RankRelatedOptions {
    LOS MANDOS DEL BLOQUE. Todo lo que decide QUÉ sale y EN QUÉ ORDEN está aquí y en ningún otro sitio: para
    cambiar el criterio no hay que tocar una línea de lógica, solo estos números.
 
-   La puntuación de una reseña es la suma de dos cosas:
+   La puntuación de una reseña es la suma de tres cosas:
 
-       puntos = vínculo (mismo juego o mismo autor) + refuerzo de género
+       puntos = vínculo (mismo juego o mismo autor) + refuerzo de género + descuento por ser tuya
 
    y la lista se ordena de más a menos. Con los valores de abajo, el orden que sale es:
 
-       mismo juego + género ......... 120
-       mismo juego .................. 100
-       mismo autor + género .......... 80
-       mismo autor ................... 60
-       solo género ................... 20  (+5 por cada género extra en común, hasta +15)
+       mismo juego + género ......... 130      · tuya: 115
+       mismo juego .................. 100      · tuya:  85
+       mismo autor + género .......... 55      · tuya:  15
+       género ........................ 30      · tuya:  15   (+10 por género extra en común, hasta +20)
+       mismo autor ................... 25      · tuya: -15
 
-   Subir `SCORE_GENRE` por encima de 40 haría que «mismo autor + género» adelantara a «mismo juego»; ponerlo a 0
+   Dos decisiones que explican esos números:
+
+   · EL GÉNERO PESA MÁS QUE EL AUTOR (30 contra 25). Que alguien haya escrito de otro juego del género que estás
+     leyendo dice más que el mero hecho de ser la misma firma.
+   · LO TUYO RESTA, MENOS EN EL MISMO JUEGO. Tu propia opinión ya la conoces, así que en igualdad de condiciones
+     va detrás de la de otra persona; pero sobre el MISMO juego sí interesa comparar, y ahí los 100 del vínculo
+     dejan tu reseña arriba de sobra. Cuando no hay nada de nadie más, las tuyas siguen saliendo: restar las
+     baja, no las elimina.
+
+   Subir `SCORE_GENRE` por encima de 75 haría que «mismo autor + género» adelantara a «mismo juego»; ponerlo a 0
    deja el género sin efecto y solo relaciona por juego y por autor.
    ──────────────────────────────────────────────────────────────────────────────────────────────────────────── */
 
 /** Otra persona ha reseñado el MISMO juego que estás leyendo. El vínculo de más valor. */
 const SCORE_SAME_GAME = 100;
-/** Otra reseña de QUIEN FIRMA la que estás leyendo (o tuya, si la abierta es tuya). */
-const SCORE_SAME_AUTHOR = 60;
+/**
+ * Otra reseña de QUIEN FIRMA la que estás leyendo. Solo lo cobran las AJENAS: es un premio por seguir leyendo a
+ * esa persona, y eso no significa nada cuando la persona eres tú (una reseña tuya en ese caso se queda con el
+ * descuento de abajo y nada más).
+ */
+const SCORE_SAME_AUTHOR = 25;
+/**
+ * Descuento por ser TUYA la reseña que se ofrece. Tu opinión ya la conoces, así que a igualdad de todo lo demás
+ * va detrás de la de otra persona. No la excluye: si no hay nada de nadie más, tus reseñas siguen apareciendo.
+ */
+const SCORE_OWN = -15;
 
 /**
  * El género SUMA, no clasifica.
@@ -144,10 +162,10 @@ const SCORE_SAME_AUTHOR = 60;
  * género` (80) por delante de `más de esta persona` (60); y quien SOLO comparte género sigue entrando, que es lo
  * que era antes.
  */
-const SCORE_GENRE = 20;
-/** Cada género compartido de más acerca dos juegos, con tope para que no se coma la distancia entre vínculos. */
-const SCORE_GENRE_EXTRA = 5;
-const SCORE_GENRE_EXTRA_MAX = 15;
+const SCORE_GENRE = 30;
+/** Cada género compartido DE MÁS (el primero ya va en `SCORE_GENRE`): 2 géneros 40, 3 géneros 50, y ahí el tope. */
+const SCORE_GENRE_EXTRA = 10;
+const SCORE_GENRE_EXTRA_MAX = 20;
 
 /**
  * Cuántas candidatas devuelve el ranking. NO es lo que se ve: el bloque las pinta en rejilla y enseña las que
@@ -282,17 +300,27 @@ export function rankRelatedReviews(
       ? 0
       : SCORE_GENRE + Math.min((sharedGenres - 1) * SCORE_GENRE_EXTRA, SCORE_GENRE_EXTRA_MAX);
 
+    // Lo tuyo resta siempre: tu opinión ya la conoces. No te deja fuera —cuando no hay nada de nadie más, tus
+    // reseñas siguen saliendo—, solo te pone detrás a igualdad de lo demás.
+    const ownScore = candidate.isOwn ? SCORE_OWN : 0;
+
     if (sameGame) {
-      scored.push({ ...candidate, reason: 'same-game', score: SCORE_SAME_GAME + genreScore });
+      scored.push({ ...candidate, reason: 'same-game', score: SCORE_SAME_GAME + genreScore + ownScore });
       continue;
     }
     if (sameAuthor) {
-      scored.push({ ...candidate, reason: 'same-author', score: SCORE_SAME_AUTHOR + genreScore });
+      // El premio de autor es por seguir leyendo a ESA persona, así que no lo cobra lo propio: una reseña tuya
+      // aquí se queda solo con el descuento.
+      scored.push({
+        ...candidate,
+        reason: 'same-author',
+        score: (candidate.isOwn ? 0 : SCORE_SAME_AUTHOR) + genreScore + ownScore,
+      });
       continue;
     }
     // Sin vínculo de juego ni de autor, el género es lo único que puede meterla en la lista.
     if (genreScore > 0) {
-      scored.push({ ...candidate, reason: 'genre', score: genreScore });
+      scored.push({ ...candidate, reason: 'genre', score: genreScore + ownScore });
     }
   }
 
