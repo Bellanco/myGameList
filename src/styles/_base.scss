@@ -29,6 +29,24 @@
      una paleta con acento claro lo sobrescribe (p. ej. amarillo → texto casi negro). */
   --on-accent: #fff;
 
+  /* A11Y — El acento NO sirve para todo. Se separan tres papeles que antes compartían `--steam`:
+       · RELLENO (`--steam`): el color de identidad, sin restricción de contraste.
+       · ANILLO DE FOCO (`--focus-ring`): parte no textual de un control, así que la 1.4.11 le pide 3:1
+         contra CUALQUIER fondo sobre el que se dibuje (--bg, --surface, --surface-elevated, --surface-hover).
+       · TEXTO DE ACENTO (`--fg-link`): enlaces y titulares teñidos; texto normal, así que 4.5:1 de la AA.
+     Casi todas las paletas cumplen las tres con el acento tal cual, y por eso cuelgan de él; las que no
+     (Mar de estrellas en claro, con su oro sobre turquesa a 1,05:1, y Cámara de pruebas en claro sobre el
+     pergamino) los sobrescriben abajo. Antes esto no se medía porque axe NO comprueba el contraste no
+     textual: el anillo de foco podía ser invisible y los tests seguían en verde. */
+  --focus-ring: var(--steam);
+  --fg-link: var(--steam-hover);
+
+  /* Relleno de las acciones DESTRUCTIVAS con texto blanco encima (los skins las pintan sólidas). En oscuro
+     los rojos semánticos son luminosos —los quiere así la identidad de cada paleta—, y el blanco encima se
+     quedaba entre 2,8:1 y 4,2:1; una pizca de negro en el relleno los deja por encima del 4,5:1 sin cambiar
+     el tono. En claro los rojos ya son profundos y el relleno va tal cual. */
+  --danger-fill: color-mix(in srgb, var(--danger) 75%, #000);
+
   /* Overlays y tintes neutros (oscuro: blanco/negro). */
   --surface-soft: rgba(255,255,255,.03);
   --overlay-hover: rgba(255,255,255,.05);
@@ -40,7 +58,8 @@
   --fg-amber: #fcd34d;
   --fg-amber-soft: #f5d080;
   --fg-indigo: #c7d2fe;
-  --fg-sky: var(--steam-hover);
+  /* Cuelga de `--fg-link` (y no ya de `--steam-hover`) para heredar los ajustes por paleta de arriba. */
+  --fg-sky: var(--fg-link);
   --fg-green: #86efac;
   --fg-green-soft: #84d5a8;
   --fg-red: #ff9d9a;
@@ -101,6 +120,8 @@
   --hub-btn-depth: rgba(var(--tint-rgb),.2);
   --hub-btn-depth-soft: rgba(var(--tint-rgb),.1);
 
+  --danger-fill: var(--danger);
+
   --shadow: 0 8px 24px rgba(var(--tint-rgb),.14);
   --acc-l: 40%;
   --score-track: rgba(var(--tint-rgb),.12);
@@ -127,7 +148,10 @@
   --surface-elevated: #31363e;
   --border: #3d4450;
   --text: #dcdedf;
-  --text-muted: #8f98a0;
+  /* Sube solo la luminosidad (mismo delta en los tres canales, tono y saturación intactos): con el valor
+     anterior, #8f98a0, el texto atenuado sobre `--surface-elevated` se quedaba en 4,15:1 —es el fondo de las
+     cajas de ayuda del modal de sincronización—. Sobre `--surface` ya cumplía de sobra. */
+  --text-muted: #99a2aa;
   --text-dim: #858d93;
   --steam: #1a9fff;
   --steam-hover: #66c0f4;
@@ -273,9 +297,13 @@
   --radius-sm: 3px;
   --radius-md: 6px;
   --radius-lg: 10px;
+  /* Azul clínico de la Aperture moderna: encima va la tinta oscura del propio skin (7,06:1); el blanco por
+     defecto se quedaría en 2,30:1. */
+  --on-accent: #062330;
   --portal-orange: #ff9e1b;
   --portal-cube: #f0559c;
   --portal-turret: #ff3b30; /* ojo/láser de torreta (rojo) — acento de las acciones destructivas */
+  --danger-fill: color-mix(in srgb, var(--portal-turret) 75%, #000);
 }
 /* CLARO = APERTURE ANTIGUA (años 50–70): pergamino/pared cálida, paneles de madera, ámbar y naranja quemado,
    verde oliva y rojo teja. El azul clínico se reserva al OSCURO (Aperture moderna). Alternar claro/oscuro
@@ -307,9 +335,17 @@
   --hub-text: #392a18;
   --hub-text-muted: #6e5a3e;
   --tint-rgb: 57,42,24;
+  /* En la Aperture antigua el acento es naranja quemado: ahí manda el blanco, como en la señalética de la
+     época y como ya hacen los botones de esta paleta en claro. */
+  --on-accent: #fff;
   --portal-orange: #c25a12;
   --portal-cube: #b04a78;
   --portal-turret: #b23b1f; /* torreta en tono óxido para la zona antigua */
+  --danger-fill: var(--portal-turret);
+  /* El naranja quemado del acento se queda en 4,00:1 como TEXTO sobre el pergamino del fondo. Un punto más
+     de profundidad y llega a 4,73:1 sin salirse de la gama de la Aperture antigua. El anillo de foco sí
+     cumple con el acento tal cual (3,02:1), así que no se toca. */
+  --fg-link: #8a4f0b;
 }
 
 /* ── Sin futuro (Cyberpunk 2077) — HUD de Night City: amarillo ácido + cian + magenta sobre
@@ -344,9 +380,15 @@
   --radius-sm: 0px;
   --radius-md: 0px;
   --radius-lg: 2px;
+  /* El acento de esta paleta es AMARILLO ÁCIDO: el blanco por defecto encima se queda en 1,21:1, así que la
+     tinta del HUD toma su relevo. Sirve también en claro, donde el acento es un teal profundo (4,84:1). */
+  --on-accent: #08090d;
   --cyber-yellow: #fcee0a;
   --cyber-cyan: #00f0ff;
   --cyber-magenta: #ff2a6d;
+  /* El cian tiene dos papeles en el skin: RELLENO/filete HUD y TEXTO (enlaces del hub, pistas de la ruleta,
+     los `//` de las fechas). En oscuro el mismo valor sirve para los dos; en claro no, y por eso se separan. */
+  --cyber-cyan-fg: var(--cyber-cyan);
 }
 :root[data-palette="cyberpunk"][data-theme="light"] {
   --bg: #e7eaee;
@@ -378,6 +420,10 @@
   --cyber-yellow: #f2df00;
   --cyber-cyan: #0097b3;
   --cyber-magenta: #cc0057;
+  /* Como TEXTO sobre los grises claros de esta paleta el cian de relleno se queda en 2,86:1; un punto más
+     hondo y cumple sobre los tres fondos (4,52:1 en el peor). Los rellenos y filetes siguen con el cian de
+     arriba, que es donde se ve el neón. */
+  --cyber-cyan-fg: #00757f;
 }
 
 /* ── Solo hay guerra (Warhammer 40.000) — grimdark gótico imperial: pantalla de COGITADOR verde fósforo sobre
@@ -412,6 +458,8 @@
   --radius-sm: 0px;
   --radius-md: 2px;
   --radius-lg: 3px;
+  /* Verde fósforo de cogitador: el blanco encima da 1,45:1. Tinta casi negra, como los botones del skin. */
+  --on-accent: #04140a;
   --grim-green: #43f558;
   --grim-gold: #e0a92b;
   --grim-red: #e63b3b;
@@ -447,6 +495,9 @@
   --hub-text: #1b1e1a;
   --hub-text-muted: #565b4e;
   --tint-rgb: 26,30,24;
+  /* En el códice el acento es verde imperial PROFUNDO, así que se vuelve al blanco (6,62:1); la tinta del
+     bloque oscuro se quedaría en 2,86:1 sobre él. */
+  --on-accent: #fff;
   --grim-green: #136b30;
   --grim-gold: #9a6f14;
   --grim-red: #b3261e;
@@ -505,7 +556,10 @@
   --surface-elevated: #9ee2e8;
   --border: #57c2cf;
   --text: #0a2a3a;
-  --text-muted: #3a5c6b;
+  /* Los turquesas de esta paleta son fondos CLAROS pero saturados, así que el atenuado se quedaba entre
+     4,17:1 y 4,27:1 sobre `--surface-hover` y `--surface`. Con el mismo azul de mar un punto más hondo hay
+     5:1 en el peor de los cuatro fondos. */
+  --text-muted: #31505d;
   --text-dim: #3a5563;
   --steam: #ffc01f;
   --steam-hover: #e89a00;
@@ -531,6 +585,12 @@
   --sos-pink: #ff6fa5;
   --sos-green: #3fb84f;
   --sos-line: #0a2a3a;
+  /* El sol dorado del acento es lo que da alegría a los RELLENOS de esta paleta, pero sobre los turquesas
+     claros de sus fondos se queda en 1,05:1: como anillo de foco era invisible y como texto ilegible. Los dos
+     papeles pasan a un TEAL PROFUNDO de fondo marino (5,3:1 en el peor de los cuatro fondos), que sigue siendo
+     mar y no compite con el oro. `--steam` no se toca: los botones y barras conservan su sol. */
+  --focus-ring: #00505e;
+  --fg-link: #00505e;
 }
 
 /* ══ CAPA 3 · DECORATIVOS / EXPRESIVOS ═════════════════════════════════════════

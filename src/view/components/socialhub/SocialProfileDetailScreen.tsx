@@ -1,5 +1,6 @@
 ﻿import { Suspense, lazy, memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Icon } from '../Icon';
+import { TAB_ICONS } from '../../../core/constants/icons';
 import { GameTable } from '../GameTable';
 import { STATS_UI } from '../../../core/constants/statsLabels';
 import { type SocialUiLabels } from '../../../core/constants/socialLabels';
@@ -59,12 +60,22 @@ function GameCategoryTabs({
   const [indicator, setIndicator] = useState<{ left: number; width: number } | null>(null);
 
   useLayoutEffect(() => {
-    const active = segRef.current?.querySelector<HTMLElement>('.hub-seg-btn.is-active');
-    if (!active) return;
+    const container = segRef.current;
+    const active = container?.querySelector<HTMLElement>('.hub-seg-btn.is-active');
+    if (!container || !active) return;
     const update = () => setIndicator({ left: active.offsetLeft, width: active.offsetWidth });
     update();
-    window.addEventListener('resize', update);
-    return () => window.removeEventListener('resize', update);
+    // Se vigila el CONTENEDOR y no solo la ventana: los botones cambian de ancho cuando el rótulo se esconde y
+    // se quedan en icono, y eso lo decide una consulta sobre el ancho del contenedor, que puede cambiar sin que
+    // la ventana se mueva. Escuchando solo `resize` la pastilla se quedaba con la medida del texto y tapaba tres
+    // botones. `ResizeObserver` cubre los dos casos: al redimensionar la ventana también cambia el contenedor.
+    if (typeof ResizeObserver === 'undefined') {
+      window.addEventListener('resize', update);
+      return () => window.removeEventListener('resize', update);
+    }
+    const observer = new ResizeObserver(update);
+    observer.observe(container);
+    return () => observer.disconnect();
   }, [currentTab, tabs]);
 
   if (tabs.length === 0) return null;
@@ -92,9 +103,16 @@ function GameCategoryTabs({
           role="tab"
           aria-selected={currentTab === tab}
           className={`hub-seg-btn ${currentTab === tab ? 'is-active' : ''}`}
+          // El rótulo se esconde en pantalla estrecha y el botón se queda en icono, así que el nombre accesible
+          // tiene que ser explícito: sin esto, un lector de pantalla anunciaría una pestaña sin nombre.
+          aria-label={labelFor(tab)}
+          title={labelFor(tab)}
           onClick={() => onChange(tab)}
         >
-          {labelFor(tab)}
+          {/* Icono SIEMPRE presente, texto solo cuando cabe. Mismo reparto —y los mismos iconos— que las pestañas
+              de listas de la aplicación (`TabBar`), que es de donde el usuario ya conoce estas cuatro listas. */}
+          <Icon name={TAB_ICONS[tab]} className="hub-seg-icon" />
+          <span className="hub-seg-text">{labelFor(tab)}</span>
         </button>
       ))}
     </div>
