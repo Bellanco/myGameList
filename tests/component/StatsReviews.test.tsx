@@ -3,6 +3,7 @@ import { render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { StatsReviews } from '../../src/view/components/stats/StatsReviews';
 import { STATS_UI } from '../../src/core/constants/statsLabels';
+import { SOCIAL_UI } from '../../src/core/constants/socialLabels';
 import type { GameItem, TabData } from '../../src/model/types/game';
 
 // En modo NOTA el medallón enseña la cifra 0–100, que es donde se veía el fallo: dos reseñas con un 100 y una
@@ -61,5 +62,18 @@ describe('StatsReviews', () => {
     expect(within(items[1]).queryByText(L.unfinished)).not.toBeInTheDocument();
     expect(within(items[2]).getByText(L.unfinished)).toBeInTheDocument();
     expect(screen.getAllByText(L.unfinished)).toHaveLength(1);
+  });
+
+  // Este panel reutiliza la pantalla de detalle del hub social, así que el bloque de reseñas relacionadas podría
+  // colarse aquí sin querer con solo pasar la prop. No debe: el panel de estadísticas funciona para quien NO tiene
+  // montado el espacio social, y meterle contenido social lo ataría a un canal que puede no existir.
+  it('abre una reseña sin bloque de relacionadas: aquí no hay canal social del que tirar', () => {
+    render(
+      <StatsReviews games={GAMES} gameId={1} onBack={() => {}} onOpenReview={() => {}} onBackToList={() => {}} />,
+      { wrapper: MemoryRouter },
+    );
+
+    expect(screen.getByText('Reseña de prueba.')).toBeInTheDocument();
+    expect(screen.queryByText(SOCIAL_UI.feed.relatedTitle)).not.toBeInTheDocument();
   });
 });
