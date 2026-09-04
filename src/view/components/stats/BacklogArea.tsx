@@ -29,6 +29,22 @@ const MAX_TICKS = 8;
 /** Series cortas: sin suavizado. Una curva entre tres puntos se inventa una forma que el dato no tiene. */
 const SMOOTH_FROM = 6;
 
+/**
+ * Hacia dónde abre el globo del mes para no salirse del lienzo: el primer cuarto de la serie lo abre a la
+ * DERECHA, el último a la IZQUIERDA y todo lo de en medio va CENTRADO sobre su punto.
+ *
+ * Que un globo se salga no es solo un feo: mide aunque esté oculto (`visibility`, no `display`), así que estira
+ * el ancho de scroll de la página. En móvil eso ensancha el viewport de composición y la barra inferior —fija y
+ * al 100%— acaba sobresaliendo de la pantalla. Antes solo se volteaba la mitad derecha, y con eso se salían
+ * tanto el último punto de una serie de dos meses (`1 > 2 / 2` es falso) como el punto central en pantallas
+ * estrechas, donde el globo mide más que el hueco que le queda a su derecha.
+ */
+function tipAnchor(index: number, total: number): string {
+  const position = total > 1 ? index / (total - 1) : .5;
+  if (position < .25) return '';
+  return position > .75 ? ' is-left' : ' is-center';
+}
+
 interface BacklogAreaProps {
   points: ArrivalPoint[];
   /** `real` = instantáneas registradas (tamaño de las listas); `derived` = altas deducidas de `listedAt`. */
@@ -199,7 +215,7 @@ export const BacklogArea = memo(function BacklogArea({ points, mode }: BacklogAr
           <div className="backlog-hits">
             {series.map((point, index) => (
               <div className="backlog-hit" key={point.m}>
-                <div className={`backlog-tip${index > series.length / 2 ? ' is-left' : ''}`}>
+                <div className={`backlog-tip${tipAnchor(index, series.length)}`}>
                   <strong>{formatMonthLabel(point.m)}</strong>
                   {SERIES.map((tab) => (
                     <span key={tab}>

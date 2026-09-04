@@ -1,4 +1,4 @@
-import { memo, type CSSProperties } from 'react';
+import { memo, useLayoutEffect, useRef, type CSSProperties } from 'react';
 import { useStatsLabels } from './statsVoice';
 import { useChartFocus } from './useChartFocus';
 import { ChartDetail, ChartDetailHint } from './ChartDetail';
@@ -33,6 +33,12 @@ function labelWidth(tags: string[]): number {
  * doblaban el ruido—, así que este lado solo tiene que dar cabida al rótulo de la banda de descartados.
  */
 const LEFT = 96;
+
+/**
+ * Ancho aproximado de una letra en los rótulos que van DENTRO del lienzo (10px, seminegrita). Se estima igual que
+ * el de la columna lateral —por número de caracteres— y por el mismo motivo: solo hace falta saber que cabe.
+ */
+const FLOAT_CHAR = 5.8;
 
 /** Ancho del lienzo. Se estira con los años para que dos puntos nunca queden pegados. */
 function widthFor(years: number, right: number): number {
@@ -134,6 +140,50 @@ function spread(values: number[]): number[] {
   return out;
 }
 
+/** Rótulo que va DENTRO del lienzo, colgado sobre un punto de su línea. */
+interface FloatingLabel {
+  /** Dónde se ancla el texto (con `anchor` decide hacia qué lado se extiende). */
+  x: number;
+  y: number;
+  /** Centro y semiancho APROXIMADOS de la caja del texto, para saber si dos rótulos se cruzan. */
+  center: number;
+  half: number;
+  anchor: 'end' | 'middle';
+}
+
+/**
+ * Aparta en vertical los rótulos de dentro del lienzo que se pisarían.
+ *
+ * Dos géneros pueden caerse de la tabla en años distintos y a la misma altura; como el nombre se extiende a los
+ * lados de su punto, los dos se imprimían uno encima del otro y no se leía ninguno. Se colocan de arriba abajo y,
+ * cuando dos cajas se cruzan, el de abajo baja lo justo para despegarse. Se repasa hasta que nadie se mueve
+ * porque bajar a uno puede acercarlo al siguiente, con un tope por si acaso.
+ */
+function stackFloating(labels: Array<FloatingLabel | null>): Array<FloatingLabel | null> {
+  const out = labels.slice();
+  const order = out
+    .map((_unused, index) => index)
+    .filter((index) => out[index] !== null)
+    .sort((a, b) => out[a]!.y - out[b]!.y);
+  for (let pass = 0; pass < 8; pass += 1) {
+    let moved = false;
+    for (let at = 1; at < order.length; at += 1) {
+      const label = out[order[at]]!;
+      for (let before = 0; before < at; before += 1) {
+        const other = out[order[before]]!;
+        const crosses = Math.abs(other.center - label.center) < other.half + label.half;
+        if (crosses && Math.abs(other.y - label.y) < LABEL_GAP) {
+          out[order[at]] = { ...label, y: other.y + LABEL_GAP };
+          moved = true;
+          break;
+        }
+      }
+    }
+    if (!moved) break;
+  }
+  return out;
+}
+
 /**
  * CÓMO CAMBIA TU GUSTO: el puesto de cada género, año a año. Un *bump chart*.
  *
@@ -159,15 +209,32 @@ function spread(values: number[]): number[] {
 export const GenreBump = memo(function GenreBump({ ranks }: { ranks: GenreRanks }) {
   const L = useStatsLabels().genreRanks;
   const focus = useChartFocus();
+  const canvasRef = useRef<HTMLDivElement>(null);
+
+  // El lienzo arranca por el FINAL, en los años recientes. Cuando no cabe entero, lo que se quiere ver primero es
+  // en qué anda hoy el gusto —y es también donde están los nombres de cada línea—; el pasado queda a un
+  // arrastre. Va en `useLayoutEffect` para que la posición entre antes del primer pintado, y no depende del
+  // estado del gráfico (señalar una línea no devuelve la vista al principio).
+  useLayoutEffect(() => {
+    const node = canvasRef.current;
+    if (node) node.scrollLeft = node.scrollWidth;
+  }, [ranks]);
 
   if (ranks.series.length === 0 || ranks.years.length < 2) {
     return <p className="stats-empty">{L.empty}</p>;
   }
 
   const { years, series } = ranks;
-  const right = labelWidth(series.map((entry) => entry.tag));
-  const width = widthFor(years.length, right);
   const total = series.length;
+  const right = labelWidth(series.map((entry) => entry.tag));
+  /**
+   * El lienzo pide EXACTAMENTE el ancho que necesita su dibujo, y si no cabe en la tarjeta se desplaza dentro de
+   * su caja (nunca empuja el ancho de la página). Apretarlo hasta el hueco disponible sí cabía de una vez, pero
+   * dejaba los años unos encima de otros y las líneas hechas un nudo: en una figura de siete trazos que se
+   * cruzan, el aire entre columnas ES la lectura. Antes el suelo lo ponía el CSS con un valor redondo, así que
+   * un histórico largo se apelmazaba igual; ahora sale del propio dibujo (56 px por año).
+   */
+  const width = widthFor(years.length, right);
   const height = PAD_Y.top + total * ROW + OUT_ROW + PAD_Y.bottom;
   const outY = PAD_Y.top + total * ROW + OUT_ROW / 2;
 
@@ -201,22 +268,30 @@ export const GenreBump = memo(function GenreBump({ ranks }: { ranks: GenreRanks 
   const inChart = (index: number, position: number) => series[index].points[position].games > 0;
   const lastPosition = years.length - 1;
   const tailY = spread(coords.map((line, index) => (inChart(index, lastPosition) ? line[lastPosition].y : Number.NaN)));
-  /** Quien acaba fuera de la tabla no tiene rótulo a la derecha: se le pone junto a su último punto dentro. */
-  const floating = series.map((entry, index) => {
+  /**
+   * Quien acaba fuera de la tabla no tiene rótulo en la columna de la derecha: se le pone DENTRO del lienzo,
+   * sobre el último punto que pisa en el gráfico y con contorno. Se centra sobre ese punto sin pasarse de los
+   * bordes —un nombre largo colgado del primer año se salía por la izquierda— y, si dos se cruzan, se apartan.
+   */
+  const floating = stackFloating(series.map((entry, index): FloatingLabel | null => {
     if (inChart(index, lastPosition)) return null;
     const position = entry.points.reduce((found, point, at) => (point.games > 0 ? at : found), -1);
-    return position < 0 ? null : coords[index][position];
-  });
+    if (position < 0) return null;
+    const spot = coords[index][position];
+    const half = (entry.tag.length * FLOAT_CHAR) / 2;
+    const x = Math.min(Math.max(spot.x, half + 4), width - half - 4);
+    return { x, y: spot.y, center: x, half, anchor: 'middle' };
+  }));
 
   return (
     <div className="genre-bump">
-      <div className="genre-bump-canvas">
+      <div className="genre-bump-canvas" ref={canvasRef}>
         <svg
           viewBox={`0 0 ${width} ${height}`}
           className="genre-bump-svg"
           role="group"
           aria-label={L.chartAria}
-          style={{ '--n': total } as CSSProperties}
+          style={{ '--n': total, minWidth: width } as CSSProperties}
         >
           {series.map((_unused, index) => (
             <line
@@ -288,7 +363,7 @@ export const GenreBump = memo(function GenreBump({ ranks }: { ranks: GenreRanks 
                     className="genre-bump-tag is-floating"
                     x={floating[index].x}
                     y={floating[index].y - 12}
-                    textAnchor="middle"
+                    textAnchor={floating[index].anchor}
                   >
                     {entry.tag}
                   </text>

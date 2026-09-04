@@ -140,9 +140,9 @@ const SocialHubInner = memo(function SocialHubInner({
     handleRejectFriendRequest,
     handleCancelFriendRequest,
     handleRemoveFriend,
-    removeFriendTarget,
-    confirmRemoveFriend,
-    cancelRemoveFriend,
+    friendActionTarget,
+    confirmFriendAction,
+    cancelFriendAction,
   } = useSocialViewModel({ games });
 
   // Handlers de navegación estables (misma identidad entre renders): permiten que las pantallas hoja
@@ -193,14 +193,33 @@ const SocialHubInner = memo(function SocialHubInner({
     [navigate, openProfileDetail],
   );
 
-  // Diálogo de confirmación de "Dejar de ser amigos" (se dispara desde el detalle y desde la bandeja).
-  const removeFriendDialog = (
+  /**
+   * Confirmación de las acciones que BORRAN el documento de amistad: dejar de ser amigos, rechazar una petición
+   * recibida y retirar una enviada. Un solo diálogo para las tres —cambia el rótulo, no la consecuencia—, y va en
+   * las tres pantallas desde las que se disparan: el detalle de un perfil, la bandeja y el directorio (donde el
+   * botón "Pendiente" retira la petición).
+   */
+  const friendActionDialog = (
     <ConfirmModal
-      open={Boolean(removeFriendTarget)}
-      title={removeFriendTarget ? SOCIAL_UI.friendship.removeConfirmTitle(removeFriendTarget.name) : ''}
-      confirmLabel={SOCIAL_UI.friendship.removeConfirmAction}
-      onCancel={cancelRemoveFriend}
-      onConfirm={confirmRemoveFriend}
+      open={Boolean(friendActionTarget)}
+      title={
+        friendActionTarget
+          ? friendActionTarget.action === 'reject'
+            ? SOCIAL_UI.friendship.rejectConfirmTitle(friendActionTarget.name)
+            : friendActionTarget.action === 'cancel'
+              ? SOCIAL_UI.friendship.cancelConfirmTitle(friendActionTarget.name)
+              : SOCIAL_UI.friendship.removeConfirmTitle(friendActionTarget.name)
+          : ''
+      }
+      confirmLabel={
+        friendActionTarget?.action === 'reject'
+          ? SOCIAL_UI.friendship.rejectConfirmAction
+          : friendActionTarget?.action === 'cancel'
+            ? SOCIAL_UI.friendship.cancelConfirmAction
+            : SOCIAL_UI.friendship.removeConfirmAction
+      }
+      onCancel={cancelFriendAction}
+      onConfirm={confirmFriendAction}
     />
   );
 
@@ -328,7 +347,7 @@ const SocialHubInner = memo(function SocialHubInner({
           viewerTier={ownTier}
           viewerHiddenTabs={hiddenTabs}
         />
-        {removeFriendDialog}
+        {friendActionDialog}
         </>
       );
     }
@@ -374,32 +393,37 @@ const SocialHubInner = memo(function SocialHubInner({
             onReject={handleRejectFriendRequest}
             onCancel={handleCancelFriendRequest}
             onRemove={handleRemoveFriend}
+            onOpenProfile={openDirectoryProfile}
             onBack={goToSocial}
             status={status}
             statusKind={statusKind}
           />
-          {removeFriendDialog}
+          {friendActionDialog}
         </>
       );
     }
     if (activePanel === 'profiles') {
       return (
-        <SocialProfilesScreen
-          SOCIAL_UI={SOCIAL_UI}
-          profileSearch={profileSearch}
-          setProfileSearch={setProfileSearch}
-          filteredSocialDirectory={filteredSocialDirectory}
-          loadingDirectory={loadingDirectory}
-          openProfileDetail={openDirectoryProfile}
-          handleProfileCardKeyDown={handleProfileCardKeyDown}
-          relationshipWith={relationshipWith}
-          friendshipBusyUid={friendshipBusyUid}
-          onAddOrAcceptFriend={handleAddOrAcceptFriend}
-          onCancelFriendRequest={handleCancelFriendRequest}
-          onBack={goToSocial}
-          status={status}
-          statusKind={statusKind}
-        />
+        <>
+          <SocialProfilesScreen
+            SOCIAL_UI={SOCIAL_UI}
+            profileSearch={profileSearch}
+            setProfileSearch={setProfileSearch}
+            filteredSocialDirectory={filteredSocialDirectory}
+            loadingDirectory={loadingDirectory}
+            openProfileDetail={openDirectoryProfile}
+            handleProfileCardKeyDown={handleProfileCardKeyDown}
+            relationshipWith={relationshipWith}
+            friendshipBusyUid={friendshipBusyUid}
+            onAddOrAcceptFriend={handleAddOrAcceptFriend}
+            onCancelFriendRequest={handleCancelFriendRequest}
+            onBack={goToSocial}
+            status={status}
+            statusKind={statusKind}
+          />
+          {/* Aquí el botón "Pendiente" retira la petición enviada, y eso ahora se confirma. */}
+          {friendActionDialog}
+        </>
       );
     }
     return (

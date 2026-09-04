@@ -1006,6 +1006,37 @@ describe('SocialHub (componente, post-M3)', () => {
     await waitFor(() => expect(firebaseMocks.deleteFriendship).toHaveBeenCalledWith({ myUid: 'me', docId: 'ada__me' }));
   });
 
+  // Rechazar tampoco se deshace: borra el documento de amistad y obliga a la otra persona a volver a pedirlo. Con
+  // los botones dentro de la tarjeta —juntos y pequeños— pasa por la misma confirmación que "dejar de ser amigos".
+  it('bandeja: rechazar una petición recibida pide confirmación antes de borrar', async () => {
+    firebaseMocks.getCurrentSocialAuthUser.mockResolvedValue({ uid: 'me', email: 'me@x.com', displayName: 'Me', photoURL: null });
+    gistMocks.getSocialSyncConfig.mockReturnValue({ token: 'ghp_x', gistId: 'my-social', etag: null, lastRemoteUpdatedAt: 0 });
+    localMocks.loadLocalState.mockReturnValue({
+      c: [{ id: 1, name: 'Halo', _ts: 1, platforms: [], genres: [], steamDeck: false, review: '', score: 5, years: [], strengths: [], weaknesses: [], reasons: [], replayable: false, retry: false, hours: 0 }],
+      v: [], e: [], p: [], deleted: [], updatedAt: 0,
+    });
+    gistMocks.readSocialGist.mockResolvedValue({
+      data: {
+        profile: { name: 'Me', private: false, visibility: { hiddenTabs: [], hideReplayable: false, hideRetry: false, hideGameTime: false, showPhoto: true }, sharedLists: {} },
+        recommendations: [], activity: [], posts: [], updatedAt: 0,
+      },
+      etag: null,
+    });
+    firebaseMocks.listSocialDirectory.mockResolvedValue([]);
+    const zoeView = { docId: 'zoe__me', otherUid: 'zoe', otherName: 'Zoe', otherPhoto: '', otherSocialGistId: '', otherGamesGistId: '', state: 'incoming', createdAt: 0, updatedAt: 1 };
+    firebaseMocks.getMyFriendships.mockResolvedValue({ friends: [], incoming: [zoeView], outgoing: [], byOtherUid: { zoe: zoeView } });
+
+    renderHub('/social/requests');
+
+    fireEvent.click(await screen.findByLabelText(SOCIAL_UI.requests.rejectAria('Zoe')));
+
+    expect(await screen.findByText(SOCIAL_UI.friendship.rejectConfirmTitle('Zoe'))).toBeInTheDocument();
+    expect(firebaseMocks.deleteFriendship).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole('button', { name: SOCIAL_UI.friendship.rejectConfirmAction }));
+    await waitFor(() => expect(firebaseMocks.deleteFriendship).toHaveBeenCalledWith({ myUid: 'me', docId: 'zoe__me' }));
+  });
+
   it('directorio: muestra a los NO-amigos (sin leer su gist) para poder enviarles petición', async () => {
     firebaseMocks.getCurrentSocialAuthUser.mockResolvedValue({ uid: 'me', email: 'me@x.com', displayName: 'Me', photoURL: null });
     gistMocks.getSocialSyncConfig.mockReturnValue({ token: 'ghp_x', gistId: 'my-social', etag: null, lastRemoteUpdatedAt: 0 });

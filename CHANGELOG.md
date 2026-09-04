@@ -82,8 +82,64 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
   se quedan en ICONO —los mismos de las pestañas de listas de la aplicación—, conservando el nombre para el
   lector de pantalla y al pasar el ratón. Además el control ocupa todo el ancho y reparte sus categorías a partes
   iguales, así que cada una es una diana grande en lugar de una palabra estrecha.
+- **La barra inferior deja de sobresalir en la pantalla de perfil (móvil).** En un teléfono, la barra fija de
+  Listados / Social / Estadísticas se salía por la derecha y quedaba cortada. La culpa era del globo de detalle de
+  «Evolución del backlog»: el del último mes se abría hacia la derecha y se salía del lienzo, y como sigue
+  midiendo aunque esté oculto, estiraba el ancho de scroll de la página; en móvil eso ensancha el viewport de
+  composición y con él todo lo que va fijo al 100%. Ahora el globo se coloca según dónde caiga su mes —los
+  primeros abren a la derecha, los últimos a la izquierda y los de en medio cuelgan centrados sobre su punto—,
+  así que no se sale ni con dos meses ni con tres años de histórico, tampoco en pantallas de 320 px.
+- **«Cómo cambia tu gusto» abre por los años recientes.** En un móvil el gráfico no cabe entero y se desplaza de
+  lado, pero empezaba por el año más antiguo: se veía menos de la mitad de la figura y, como los nombres de los
+  géneros viven en el extremo derecho, se leía a ciegas hasta el final del arrastre. Ahora arranca por el FINAL
+  —en qué anda hoy tu gusto, con cada línea rotulada— y el pasado queda a un arrastre. El aire entre columnas se
+  respeta a propósito: apretar el dibujo hasta el ancho de la pantalla lo hacía caber de una vez, pero dejaba
+  siete trazos hechos un nudo. De paso, el suelo de ancho lo pone ahora el propio dibujo (56 px por año) en vez
+  de un valor redondo de la hoja de estilo, que se le quedaba corto a un histórico largo y lo apelmazaba igual.
+- **La barra inferior se ve entera en cualquier pantalla.** En un móvil estrecho los tres rótulos no caben en una
+  línea y el más largo se salía de su pastilla: «Estadísticas» pegado al borde de la barra. Ahora la barra baja un
+  escalón cuando hace falta: primero APILA el icono sobre el nombre —el gesto clásico de una barra inferior, que
+  deja de pagar el ancho del icono y devuelve el rótulo a un móvil de 340 px—, y solo si tampoco así hay sitio se
+  queda en ICONO, con el nombre en el DOM para el lector de pantalla. Las tres dianas siguen midiendo 48 px en
+  todos los casos. El escalón no lo decide un ancho de corte a ojo, sino la medida real del rótulo: lo que ocupa
+  cambia con el ajuste de MAYÚSCULAS y con el cuerpo de letra del navegador, y se vuelve a medir cuando entra la
+  tipografía de la app —con la de reserva, más estrecha, la barra creía caber y luego se quedaba sin aire—.
+- **Los nombres de «Tus géneros» ya no se cortan.** En el hexágono, los ejes de izquierda y derecha rotulan hacia
+  fuera, así que un nombre largo —«Plataformas», «Metroidvania»— se salía del lienzo y la tarjeta lo cortaba a
+  media palabra en cuanto la pantalla era estrecha. Ahora la figura pide el lienzo que sus nombres necesitan, a
+  partes iguales por los dos lados para no descentrarla, y donde hay sitio el hexágono se sigue viendo igual de
+  grande que antes: lo que crece es el margen del texto, no el dibujo.
 
 ### Changed
+- **Perfiles y solicitudes: una sola tarjeta de persona, en rejilla.** Las dos pantallas del hub que listan gente
+  (`/social/profiles` y `/social/requests`) comparten ahora la misma pieza y la misma rejilla, en vez de una
+  tarjeta por pantalla —el directorio— y la burbuja del feed —la bandeja—.
+  - **Se ve mucha más gente sin bajar.** La tarjeta es vertical y compacta (avatar, nombre y acción), y la rejilla
+    pasa de tres columnas a cinco o seis en escritorio y garantiza DOS en móvil, donde la bandeja apilaba una
+    burbuja debajo de otra: sus tres bloques —recibidas, enviadas y amigos— caben ahora de un vistazo.
+  - **Cada bloque dice cuánta gente tiene y se pagina por filas**, con «Mostrar más (quedan N)», también en la
+    bandeja: una lista larga de amigos ya no entierra las peticiones que hay que contestar.
+  - **El rango se marca con una muesca en la esquina**, no con un punto: un triángulo pegado a la esquina superior
+    derecha cuyos catetos son el propio borde de la tarjeta, en el color del rango, con la diagonal cerrándolo y un
+    velo tenue dentro. El punto era un elemento más puesto encima, y en una rejilla la fila se llenaba de topos.
+    La muesca se adapta al borde de cada tema (2px en Cámara de pruebas, 3px en Ladrones fantasma…) y hereda su
+    radio, así que queda a escuadra donde el tema lo está.
+  - **El rango llega también a la bandeja**, para quien esté en el directorio; de quien no lo esté no se inventa
+    ninguno.
+  - **Los amigos se listan por último uso de la aplicación**, primero quien más recientemente ha estado, en la
+    bandeja y en Perfiles. La bandeja los ordenaba por la fecha del documento de amistad —cuándo se aceptó—, que es
+    un orden congelado el día que os hicisteis amigos. Las peticiones siguen por fecha de petición: ahí lo que
+    importa es cuál llegó antes.
+  - **Sin peticiones no se dice que no las hay:** los bloques de recibidas y enviadas desaparecen enteros cuando
+    están vacíos, en vez de dos frases anunciando la nada. El de amigos conserva la suya, que explica dónde se
+    piden.
+  - **Desde la bandeja se abre el perfil de un amigo** pulsando su tarjeta. Solo de un amigo: en una petición
+    pendiente todavía no hay relación aceptada.
+  - **Rechazar una petición y retirar una enviada piden confirmación**, como «dejar de ser amigos». Ninguna de las
+    tres se deshace, y con los botones dentro de la tarjeta un toque de más costaba una petición.
+  - En pantalla estrecha los botones se quedan en su icono —con la acción entera en el texto accesible— para que
+    «Dejar de ser amigos» no ocupe tres líneas dentro de una tarjeta.
+
 - **Actividad de listas: otras palabras, solo movimientos y tope por día.** Tres cambios sobre el aviso de una
   línea del feed social («Ada finalizó Hollow Knight 18:42»):
   - **Los verbos cambian de palabra:** «comenzó» en vez de «empezó», «finalizó» en vez de «terminó», «abandonó» en
