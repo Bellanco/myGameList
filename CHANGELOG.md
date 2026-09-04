@@ -12,10 +12,11 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
   una sugerencia suelta:
   - **«Mismo juego»:** otra persona hablando de lo que acabas de leer. Es el motivo de más peso y el único de
     cobertura completa.
+  - **La misma saga:** otra entrega de lo que estás leyendo, como «Persona 3 Reloaded» bajo «Persona 5 Royal».
   - **«Más de Ana»:** otras reseñas de quien firma la que estás leyendo.
   - **El género** (**«Acción»**): otros juegos del mismo género. Cobertura irregular a propósito: los géneros no
     viajan por el canal social, así que solo se conocen los de tu biblioteca y los de la amistad cuyo perfil hayas
-    abierto. Cuando no se sabe, el bloque se llena con los otros dos motivos.
+    abierto. Cuando no se sabe, el bloque se llena con los otros motivos.
   - **Tus reseñas cuentan, estén publicadas o no.** Son tuyas y solo las ves tú, así que ofrecerlas no enseña nada
     a nadie y multiplica lo que el bloque encuentra. Se firman como «Tú», y si la misma reseña llega también por el
     canal se ofrece una sola vez y con el texto completo, no con el adelanto de 160 caracteres.
@@ -25,6 +26,17 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
     significa lo mismo en dos bibliotecas distintas.
   - Un autor no pone más de dos reseñas en el bloque y ningún tipo de vínculo se lleva más de tres, para que la
     lista no la copie quien más escribe. Si no hay nada que ofrecer, no se pinta el bloque.
+  - **La saga tiene preferencia, y se reconoce sin lista de franquicias.** Otra entrega de lo que estás leyendo
+    habla casi de lo mismo, así que pesa (60) casi como el mismo juego (100) y mucho más que el género (30) o la
+    firma (25); con eso, una reseña de otro Persona se pone por delante de cualquier cosa que solo comparta autor.
+    La saga es el principio del título que dos juegos comparten, y para que cuente tiene que **nombrar algo**: los
+    números, los artículos, las preposiciones y los pronombres no hacen saga, así que «Call of Duty» no es «Call of
+    Cthulhu» ni «The Last of Us» es «The Last Guardian». Cuando lo compartido es una sola palabra —de una palabra
+    son «dark», «star» o «super», que empiezan medio catálogo— hace falta además marca de serie: que en uno de los
+    dos títulos esa palabra sea el título entero o vaya seguida de un número. Así entran «Doom» ~ «Doom Eternal»,
+    «Halo 3» ~ «Halo Infinite» o «Nioh» ~ «Nioh 2», y se quedan fuera «Dark Souls» ~ «Dark Sector» o «Journey» ~
+    «Journey to the Savage Planet». El precio, asumido: se escapan las sagas que solo se distinguen por subtítulo
+    («Nier Automata» ~ «Nier Replicant»), que sale más barato que emparentar «Dead Space» con «Dead Cells».
   - **El género suma en vez de competir:** entre dos análisis de la misma persona sube el del género que estás
     leyendo, y quien no comparte ni juego ni autor sigue entrando solo por él. Compartir género (30) pesa más que
     compartir firma (25): que alguien haya escrito de otro juego del género que lees dice más que el mero hecho de
