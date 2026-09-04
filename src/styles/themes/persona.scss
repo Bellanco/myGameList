@@ -96,6 +96,9 @@
 :root[data-palette="persona"] .hub-hub-card,
 :root[data-palette="persona"] .modal,
 :root[data-palette="persona"] .alert-dialog { border: 3px solid var(--pop-line) !important; box-shadow: 7px 7px 0 rgba(255, 78, 100, .5) !important; border-radius: 6px !important; }
+
+/* Muesca de rango: el contorno de tinta es de 3px por los cuatro lados. */
+:root[data-palette="persona"] .hub-user-card { --tier-notch-top: 3px; --tier-notch-right: 3px; }
 :root[data-palette="persona"][data-theme="light"] .toolbar,
 :root[data-palette="persona"][data-theme="light"] .table-wrap,
 :root[data-palette="persona"][data-theme="light"] .settings-card,

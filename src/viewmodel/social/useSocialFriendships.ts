@@ -43,12 +43,28 @@ export interface SocialFriendships {
   /** Tras una mutación: tira la caché del directorio y relee las amistades. */
   refreshAfterFriendshipChange: () => Promise<void>;
   handleAddOrAcceptFriend: (otherUid: string) => Promise<void>;
-  handleCancelFriendRequest: (otherUid: string) => Promise<void>;
-  handleRejectFriendRequest: (otherUid: string) => Promise<void>;
+  /** Retirar una petición enviada. NO borra: abre confirmación (ver `friendActionTarget`). */
+  handleCancelFriendRequest: (otherUid: string) => void;
+  /** Rechazar una petición recibida. NO borra: abre confirmación. */
+  handleRejectFriendRequest: (otherUid: string) => void;
+  /** Deshacer una amistad. NO borra: abre confirmación. */
   handleRemoveFriend: (otherUid: string) => void;
-  removeFriendTarget: { uid: string; name: string } | null;
-  confirmRemoveFriend: () => Promise<void>;
-  cancelRemoveFriend: () => void;
+  /** Acción destructiva pendiente de confirmar, si la hay. Quien la pinta decide el rótulo por `action`. */
+  friendActionTarget: FriendActionTarget | null;
+  confirmFriendAction: () => Promise<void>;
+  cancelFriendAction: () => void;
+}
+
+/**
+ * Las tres acciones que BORRAN el documento de amistad. Comparten diálogo porque comparten consecuencia: ninguna
+ * se deshace, y la única diferencia entre ellas es cómo se llama lo que se pierde.
+ */
+export type FriendAction = 'remove' | 'reject' | 'cancel';
+
+export interface FriendActionTarget {
+  uid: string;
+  name: string;
+  action: FriendAction;
 }
 
 export interface SocialFriendshipsOptions {
@@ -73,7 +89,7 @@ export function useSocialFriendships(options: SocialFriendshipsOptions): SocialF
   const [loadingFriendships, setLoadingFriendships] = useState(false);
   const [friendshipsResolved, setFriendshipsResolved] = useState(false);
   const [friendshipBusyUid, setFriendshipBusyUid] = useState<string>('');
-  const [removeFriendTarget, setRemoveFriendTarget] = useState<{ uid: string; name: string } | null>(null);
+  const [friendActionTarget, setFriendActionTarget] = useState<FriendActionTarget | null>(null);
 
   const refreshFriendships = useCallback(async (forceRefresh = false) => {
     if (!myUid) {
@@ -184,37 +200,48 @@ export function useSocialFriendships(options: SocialFriendshipsOptions): SocialF
     }
   }, [myUid, friendships, refreshAfterFriendshipChange, reportFailure, setFeedback]);
 
-  const handleCancelFriendRequest = useCallback(
-    (otherUid: string) => deleteRelationship(otherUid, SOCIAL_UI.status.friendRequestCanceled),
-    [deleteRelationship],
-  );
-  const handleRejectFriendRequest = useCallback(
-    (otherUid: string) => deleteRelationship(otherUid, SOCIAL_UI.status.friendRequestRejected),
-    [deleteRelationship],
-  );
-
   /**
-   * "Dejar de ser amigos" NO borra: abre confirmación, porque es la única acción de aquí que no se deshace.
+   * Rechazar, retirar y dejar de ser amigos NO borran de inmediato: piden confirmación, porque ninguna de las tres
+   * se deshace. Rechazar y retirar antes iban directas, y con los botones ya dentro de la tarjeta —juntos y
+   * pequeños— un toque de más costaba una petición que había que volver a mandar (y esperar a que la acepten).
    *
    * El nombre sale del nick denormalizado en el propio documento de amistad, que es de donde lo saca también la
-   * fila de la pantalla. Por eso este hook no necesita el directorio ni siquiera aquí: de él solo venía la FOTO,
-   * y un diálogo de confirmación no la enseña.
+   * tarjeta de la pantalla. Por eso este hook no necesita el directorio ni siquiera aquí: de él solo venía la
+   * FOTO, y un diálogo de confirmación no la enseña.
    */
-  const handleRemoveFriend = useCallback((otherUid: string) => {
+  const askFriendAction = useCallback((otherUid: string, action: FriendAction) => {
     const name = friendships.byOtherUid[otherUid]?.otherName || SOCIAL_UI.requests.unknownUser;
-    setRemoveFriendTarget({ uid: otherUid, name });
+    setFriendActionTarget({ uid: otherUid, name, action });
   }, [friendships]);
 
-  const cancelRemoveFriend = useCallback(() => setRemoveFriendTarget(null), []);
+  const handleCancelFriendRequest = useCallback(
+    (otherUid: string) => askFriendAction(otherUid, 'cancel'),
+    [askFriendAction],
+  );
+  const handleRejectFriendRequest = useCallback(
+    (otherUid: string) => askFriendAction(otherUid, 'reject'),
+    [askFriendAction],
+  );
+  const handleRemoveFriend = useCallback(
+    (otherUid: string) => askFriendAction(otherUid, 'remove'),
+    [askFriendAction],
+  );
 
-  const confirmRemoveFriend = useCallback(async () => {
-    const target = removeFriendTarget;
+  const cancelFriendAction = useCallback(() => setFriendActionTarget(null), []);
+
+  const confirmFriendAction = useCallback(async () => {
+    const target = friendActionTarget;
     if (!target) {
       return;
     }
-    setRemoveFriendTarget(null);
-    await deleteRelationship(target.uid, SOCIAL_UI.status.friendRemoved);
-  }, [removeFriendTarget, deleteRelationship]);
+    setFriendActionTarget(null);
+    const message = target.action === 'reject'
+      ? SOCIAL_UI.status.friendRequestRejected
+      : target.action === 'cancel'
+        ? SOCIAL_UI.status.friendRequestCanceled
+        : SOCIAL_UI.status.friendRemoved;
+    await deleteRelationship(target.uid, message);
+  }, [friendActionTarget, deleteRelationship]);
 
   return {
     friendships,
@@ -230,8 +257,8 @@ export function useSocialFriendships(options: SocialFriendshipsOptions): SocialF
     handleCancelFriendRequest,
     handleRejectFriendRequest,
     handleRemoveFriend,
-    removeFriendTarget,
-    confirmRemoveFriend,
-    cancelRemoveFriend,
+    friendActionTarget,
+    confirmFriendAction,
+    cancelFriendAction,
   };
 }

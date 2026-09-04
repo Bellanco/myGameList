@@ -261,6 +261,18 @@ export type SocialDirectoryEntry = {
    * directorio entero pintado de bronce.
    */
   tier: ProfileTier;
+  /**
+   * Cuándo usó esta persona la aplicación por última vez (`profiles.updatedAt`). 0 = no se sabe (un amigo que
+   * cayó fuera del tope del directorio: sus datos salen del documento de amistad, que no lleva esa marca).
+   *
+   * Sale del hook porque la ORDENACIÓN por uso reciente la necesitan las pantallas, no solo la hidratación: la
+   * consulta de Firestore ya pide `orderBy('updatedAt', 'desc')`, pero ese orden se pierde en cuanto una lista se
+   * arma con otra fuente —la de amigos de la bandeja sale de los documentos de amistad— y también cuando falta el
+   * índice compuesto y la consulta degrada a sin orden. Con el dato a mano, quien lista ordena y no depende de
+   * que se lo hayan dado ordenado. OBLIGATORIO por el mismo motivo que `tier`: que olvidarlo sea un error de
+   * compilación y no una lista en orden arbitrario.
+   */
+  lastActiveAt: number;
   activity: SocialActivityFeedItem[];
   posts: SocialPostFeedItem[];
   /** F4 — mensajes de lista del perfil, ya enriquecidos con su identidad. */

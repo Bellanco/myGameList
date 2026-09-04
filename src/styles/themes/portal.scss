@@ -56,6 +56,10 @@
 :root[data-palette="portal"] .hub-hub-card,
 :root[data-palette="portal"] .modal,
 :root[data-palette="portal"] .alert-dialog { border: 1px solid var(--border) !important; border-top: 2px solid var(--portal-orange) !important; border-radius: var(--radius-md) !important; box-shadow: inset 0 1px 0 rgba(255, 255, 255, .07), inset 0 0 46px rgba(41, 182, 246, .05), 0 8px 26px rgba(0, 0, 0, .26) !important; }
+
+/* Muesca de rango: aquí el borde superior es el filete naranja de 2px, así que el cateto de arriba mide 2px y lo
+   sustituye limpiamente en la esquina en vez de quedarse debajo, chocando con él. El derecho es el de 1px. */
+:root[data-palette="portal"] .hub-user-card { --tier-notch-top: 2px; }
 /* En claro, placa blanca "iluminada desde arriba": filo superior claro + tenue tinte frío + sombra limpia. */
 :root[data-palette="portal"][data-theme="light"] .toolbar,
 :root[data-palette="portal"][data-theme="light"] .table-wrap,
