@@ -36,6 +36,22 @@ export function hueFromGrade(grade: unknown): number {
   return Math.round((clampGrade(grade) / GRADE_MAX) * 135);
 }
 
+/**
+ * Acento de una tarjeta de reseña a partir de sus ESTRELLAS: el tono del medallón y de la barra lateral.
+ *
+ * No es `hueFromGrade`, que reparte el arco de forma continua: aquí los cinco escalones se separan a mano —1
+ * rojo, 2 amarillo, y 3/4/5 bien distintos entre sí en tono y en luz— porque lo que hay que distinguir de un
+ * vistazo en una lista son las notas ENTERAS, no los puntos intermedios.
+ *
+ * Se devuelven las dos variables que la hoja de estilos espera en línea (`--rev-hue`, `--rev-ladj`). Vive aquí,
+ * y no en la lista de reseñas donde nació, porque el bloque de relacionadas pinta las mismas tarjetas y dos
+ * copias de esta tabla se separarían al primer retoque.
+ */
+export function reviewAccent(rating: unknown): { hue: number; lightnessAdjust: number } {
+  const stars = Math.max(1, Math.min(STARS_MAX, Math.round(Number(rating) || 0)));
+  return { hue: [0, 4, 50, 82, 120, 156][stars], lightnessAdjust: [0, 0, 0, 10, 5, 0][stars] };
+}
+
 /** Acota una nota fina al rango [0, 100]; 0 si no es finita. */
 export function clampGrade(value: unknown): number {
   const numeric = Number(value);

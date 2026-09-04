@@ -2,7 +2,7 @@ import { memo, useEffect, useMemo, useRef, useState, type CSSProperties } from '
 import { Icon } from '../Icon';
 import { StarRating } from '../StarRating';
 import { useScoreScale } from '../../hooks/useScoreScale';
-import { resolveGrade } from '../../../core/utils/scoreScale';
+import { resolveGrade, reviewAccent } from '../../../core/utils/scoreScale';
 import type { SocialUiLabels } from '../../../core/constants/socialLabels';
 
 /** Lote inicial; se amplía por scroll infinito para no pintar cien reseñas de golpe. */
@@ -115,15 +115,13 @@ export const ProfileReviewsList = memo(function ProfileReviewsList({
             const itemDate = new Date(review.ts || 0);
             const hasValidDate = review.ts > 0 && !Number.isNaN(itemDate.getTime());
             // Color por nota: 1=rojo, 2=amarillo; 3/4/5 bien separados en tono y en luminosidad.
-            const rScore = Math.max(1, Math.min(5, Math.round(rating)));
-            const reviewHue = [0, 4, 50, 82, 120, 156][rScore];
-            const reviewLAdj = [0, 0, 0, 10, 5, 0][rScore];
+            const accent = reviewAccent(rating);
             return (
               <article
                 key={review.id}
                 className={`hub-feed-card hub-feed-activity-item is-review hub-review-entry ${hasRating ? '' : 'is-noscore'}`.trim()}
                 role="listitem"
-                style={hasRating ? ({ '--rev-hue': String(reviewHue), '--rev-ladj': `${reviewLAdj}%` } as CSSProperties) : undefined}
+                style={hasRating ? ({ '--rev-hue': String(accent.hue), '--rev-ladj': `${accent.lightnessAdjust}%` } as CSSProperties) : undefined}
               >
                 {/* Tarjeta pulsable: abre el detalle de la reseña (todo el análisis) con vuelta a esta lista. */}
                 <button
