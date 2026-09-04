@@ -32,6 +32,10 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
     larga te dejara leyendo por el medio. Volver atrás sigue conservando dónde estabas.
   - **En pantalla estrecha, «volver» y «compartir» vuelven a la misma línea**, uno a cada extremo, en lugar de
     apilarse en dos renglones.
+  - **El bloque es una rejilla, no una lista.** Una reseña relacionada es un renglón corto, y a lo ancho de la
+    pantalla ese renglón acababa a media línea dejando media tarjeta vacía. En columnas, el mismo alto enseña
+    dos o tres. Se adapta al ancho disponible sin una sola consulta de medios —de una columna en el móvil a cinco
+    en un monitor grande— y las tarjetas de una misma fila miden lo mismo.
   - **El mismo juego se reconoce aunque cada cual lo escriba a su manera:** «Marvel's Spider-Man» y «Marvels
     Spider Man», «Pokémon» y «Pokemon», «The Last of Us» y «Last of Us», «Final Fantasy VII» y «Final Fantasy 7»,
     y las reediciones con su original («Dark Souls Remastered», «…Game of the Year Edition», «Okami HD»). Lo que

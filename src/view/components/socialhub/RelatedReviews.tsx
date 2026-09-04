@@ -67,13 +67,11 @@ export const RelatedReviews = memo(function RelatedReviews({
                     : Math.round(rating))
                   : '¿?'}
               </span>
-              {/* Título y firma en un solo renglón: el autor va detrás del juego, separado por un punto, en vez
-                  de en su propia línea. Es la mitad de alto por tarjeta y se lee igual de bien. */}
+              {/* Título y firma apilados: en una columna estrecha no caben en el mismo renglón, y el nombre del
+                  juego es lo que se busca, así que se queda con la línea entera. */}
               <header className="hub-review-entry-head">
-                <h5 className="hub-review-game">
-                  {entry.gameName}
-                  {author ? <span className="hub-related-author"> · {author}</span> : null}
-                </h5>
+                <h5 className="hub-review-game">{entry.gameName}</h5>
+                {author ? <span className="hub-related-author">{author}</span> : null}
               </header>
               {entry.snippet ? (
                 <div className="hub-review-body">
