@@ -538,20 +538,28 @@ function SocialProfileDetailScreenBase({
                 // Si ya es tuyo (perfil propio o duplicado por nombre) → llevarlo a "En curso";
                 // si no, añadirlo a tu lista de próximos.
                 const owned = isOwnProfile || (hasGameInLists?.(game.name) ?? false);
+                // Aquí no hay lista a la que llevar al usuario (está en el perfil de otra persona): la ruleta se
+                // cierra y el aviso de la app ("… pasa a En curso" / "… añadido a próximos") dice dónde ha ido.
                 return owned
                   ? {
                       btnClass: 'btn-complete',
                       icon: 'play',
                       label: 'Pasa a "En curso"',
                       doneLabel: '✓ En curso',
-                      onAct: (candidate) => moveGameToCurrentByName?.(candidate.game.name),
+                      onAct: (candidate) => {
+                        moveGameToCurrentByName?.(candidate.game.name);
+                        setRouletteOpen(false);
+                      },
                     }
                   : {
                       btnClass: 'btn-accent',
                       icon: 'plus',
                       label: 'Añadir a próximos',
                       doneLabel: '✓ Añadido a próximos',
-                      onAct: (candidate) => onAddToProximos(candidate.game),
+                      onAct: (candidate) => {
+                        onAddToProximos(candidate.game);
+                        setRouletteOpen(false);
+                      },
                     };
               }
             : null

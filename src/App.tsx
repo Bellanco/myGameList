@@ -36,7 +36,7 @@ import { useBacklogSnapshot } from './view/hooks/useBacklogSnapshot';
 import { useSignatureEffects } from './view/hooks/useSignatureEffects';
 import { useAppliedPalette } from './view/hooks/usePalette';
 import { hasGithubOAuthRedirect } from './model/repository/githubOAuthRepository';
-import { buildListsPool, buildListsWeigher, normalizeName } from './core/roulette/roulette';
+import { buildListsPool, buildListsWeigher, normalizeName, type RouletteCandidate } from './core/roulette/roulette';
 import { useImportInbox } from './viewmodel/useImportInbox';
 import { useImportFieldPrefs } from './viewmodel/useImportFieldPrefs';
 import { useMountedOnceOpen } from './view/modals/useMountedOnceOpen';
@@ -442,6 +442,14 @@ export default function App() {
     setExpandedId(null);
   }, [navigate, setExpandedId]);
 
+  // Ruleta de listados: el juego elegido pasa a "En curso" y la ruleta deja paso a esa lista, que es donde el
+  // usuario quiere acabar. El aviso del propio movimiento lo da el viewmodel.
+  const handleRouletteToCurrent = useCallback((candidate: RouletteCandidate) => {
+    vm.moveGameToTab(candidate.sourceTab, candidate.game.id, 'e');
+    setRouletteOpen(false);
+    handleTabChange('e');
+  }, [vm, handleTabChange]);
+
   const handleSectionChange = useCallback((section: AppSection) => {
     setExpandedId(null);
     if (section !== 'lists') {
@@ -826,9 +834,7 @@ export default function App() {
               icon: 'play',
               label: 'Pasa a "En curso"',
               doneLabel: '✓ En curso',
-              onAct: (candidate) => {
-                vm.moveGameToTab(candidate.sourceTab, candidate.game.id, 'e');
-              },
+              onAct: handleRouletteToCurrent,
             })}
           />
         ) : null}
