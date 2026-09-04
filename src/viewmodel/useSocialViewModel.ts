@@ -429,9 +429,9 @@ export function useSocialViewModel(options?: {
     handleCancelFriendRequest,
     handleRejectFriendRequest,
     handleRemoveFriend,
-    removeFriendTarget,
-    confirmRemoveFriend,
-    cancelRemoveFriend,
+    friendActionTarget,
+    confirmFriendAction,
+    cancelFriendAction,
   } = useSocialFriendships({
     myUid: authUser?.uid,
     socialGistId: socialCfgGistId,
@@ -2116,8 +2116,8 @@ export function useSocialViewModel(options?: {
     handleCancelFriendRequest,
     handleRejectFriendRequest,
     handleRemoveFriend,
-    removeFriendTarget,
-    confirmRemoveFriend,
-    cancelRemoveFriend,
+    friendActionTarget,
+    confirmFriendAction,
+    cancelFriendAction,
   };
 }

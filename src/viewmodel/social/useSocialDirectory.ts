@@ -276,6 +276,7 @@ export function useSocialDirectory(options: SocialDirectoryOptions) {
               gamesGistId: effectiveGamesGistId,
               photoURL: entry.photoURL || '',
               tier: entry.tier,
+              lastActiveAt,
               activity: [],
               posts: [],
               moves: [],
@@ -387,6 +388,7 @@ export function useSocialDirectory(options: SocialDirectoryOptions) {
               // El rango sale SIEMPRE de Firestore (lo asigna el admin), nunca del gist: el gist lo controla su
               // dueño y podría auto-otorgarse mithril editándolo a mano.
               tier: entry.tier,
+              lastActiveAt,
               activity,
               posts,
               moves,
@@ -408,6 +410,7 @@ export function useSocialDirectory(options: SocialDirectoryOptions) {
               // Gist ilegible: usamos la foto del directorio de Firestore (best-effort) para no perderla.
               photoURL: entry.photoURL || (isOwnEntry ? ownPhotoURL : ''),
               tier: entry.tier,
+              lastActiveAt,
               activity: [],
               posts: [],
               moves: [],

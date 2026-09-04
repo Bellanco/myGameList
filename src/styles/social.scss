@@ -79,14 +79,6 @@
 
 .hub-requests-btn .ui-icon { width: 1.25rem; height: 1.25rem; }
 
-// Acciones (aceptar/rechazar/cancelar) de cada tarjeta de solicitud.
-.hub-request-actions {
-  display: flex;
-  gap: .5rem;
-  flex-wrap: wrap;
-  margin-top: .4rem;
-}
-
 // Aviso de SIN CONEXIÓN del espacio social. Mismo lenguaje que el requisito de alta del perfil
 // (`.hub-profile-requirement`): banda ámbar de aviso, borde fino y dos líneas con distinto peso —el guiño del tema
 // y, debajo, qué está pasando—. No es un error, así que no toma el rojo; y la forma (radio, color, tipografía) sale
@@ -241,12 +233,6 @@
   display: inline-block; width: 1.05rem; height: 1.05rem; border-radius: 50%;
   border: 2px solid currentColor; border-right-color: transparent;
   animation: hubSpin .7s linear infinite;
-}
-
-// Botón de amistad en las tarjetas del directorio (no debe empujar el layout de la tarjeta).
-.hub-card-friend-action {
-  margin-top: .5rem;
-  display: flex;
 }
 
 // Estado "Amigos" (chip) + posible botón de eliminar en el detalle.
@@ -528,40 +514,144 @@ button.hub-chip.active {
   gap: .7rem;
 }
 
-/* Rejilla del directorio de perfiles: las tarjetas ENVUELVEN en filas en vez de irse a la derecha.
+/* Rejilla de PERSONAS: la comparten el directorio de perfiles y la bandeja de solicitudes.
    ─────────────────────────────────────────────────────────────────────────────
    Sustituye al carrusel horizontal (`.hub-feed-row`, abajo), que era el contenedor equivocado para una lista
-   que se explora: escondía el contenido a la derecha, no daba ninguna pista de cuántos perfiles había y
-   obligaba a arrastrar con el ratón. Medido, la tarjeta del hub tiene 71 rem de interior a 1280 px y 80 rem a
-   1440, así que caben 3 columnas de sobra: el carrusel desperdiciaba ese ancho a propósito.
+   que se explora: escondía el contenido a la derecha, no daba ninguna pista de cuánta gente había y obligaba a
+   arrastrar con el ratón. Y sustituye también a la columna de burbujas de la bandeja, que apilaba las tres
+   listas —recibidas, enviadas y amigos— a pantalla y media de distancia unas de otras.
 
    SIN TOPE DE COLUMNAS, y esto se decidió midiendo. Hubo un tope de 3 columnas (acotando el ancho del
    contenedor, que es la única forma de limitar las pistas de un `auto-fit`), pero dejaba sin usar el 20% del
    ancho a 1440px y el 70% en 4K, con todo el hueco a un lado. Se quitó al comprobar que el tope NO protegía el
-   tamaño de las tarjetas: de eso ya se encarga el mínimo del `minmax`, así que sin tope pasan de 336px a
-   277-312px —siguen por encima del mínimo— y lo único que cambia es cuántas caben por fila. El número de
-   columnas lo decide el ancho disponible, sin `media queries`, y responde al de la TARJETA (container query) y
-   no al de la ventana, que es lo correcto porque el hub vive en un contenedor propio.
+   tamaño de las tarjetas: de eso ya se encarga el mínimo del `minmax`. El número de columnas lo decide el ancho
+   disponible, sin `media queries`, y responde al de la TARJETA (container query) y no al de la ventana, que es
+   lo correcto porque el hub vive en un contenedor propio.
 
-   `min(100%, 17rem)` y no `17rem`: en un móvil estrecho el mínimo de 17rem desbordaría el contenedor y
-   aparecería scroll horizontal, que es justo lo que se venía a quitar.
+   EL MÍNIMO CEDE ANTES QUE ROMPER LA SEGUNDA COLUMNA: `min(11rem, calc(50% - .35rem))`. Las 11rem son el ancho
+   cómodo de la tarjeta en pantalla ancha —caben 5 o 6 por fila en escritorio, frente a las 3 de antes—, pero en
+   un móvil de 360px ese mínimo dejaría UNA sola columna y una lista de amigos volvería a ser una torre. El
+   segundo término (la mitad del contenedor menos el hueco) garantiza dos columnas siempre, y en cuanto hay
+   sitio para dos de 11rem manda el primero. Con `100%` en su lugar solo se evitaba el desbordamiento, que es
+   quedarse a medio camino.
 
-   LAS PISTAS SE ESTIRAN (`1fr` como máximo). Con un máximo fijo de 21rem, en los anchos donde no cabe otra
-   columna la fila se quedaba a medias: a 600px de ventana, una tarjeta de 336px dentro de un contenedor de 560
-   dejaba el 40% en blanco. Con `1fr` la fila se reparte entre las columnas que haya, así que en móvil y tablet
-   se aprovecha todo el ancho.
+   LAS PISTAS SE ESTIRAN (`1fr` como máximo): en los anchos donde no cabe otra columna, la fila se reparte entre
+   las que hay en vez de dejar el sobrante a un lado.
 
    `auto-fill` y no `auto-fit`: `auto-fit` colapsa las pistas vacías y reparte su espacio entre las llenas, de
    modo que con dos amigos en escritorio saldrían dos tarjetas enormes. `auto-fill` conserva las pistas, así que
-   pocas tarjetas mantienen el tamaño de columna y se alinean a la izquierda.
-
-   SIN PADDING HORIZONTAL: venía del carrusel, donde hacía sitio a la barra de scroll horizontal; sin scroll no
-   tiene función, y solo restaba ancho a las pistas. */
-.hub-profile-grid {
+   pocas tarjetas mantienen el tamaño de columna y se alinean a la izquierda. */
+.hub-user-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 17rem), 1fr));
-  gap: .75rem;
+  grid-template-columns: repeat(auto-fill, minmax(min(11rem, calc(50% - .35rem)), 1fr));
+  gap: .7rem;
   padding: .35rem 0 .55rem;
+}
+
+/* Tarjeta de PERSONA (`HubUserCard`): avatar, nombre y acciones, en vertical y centrada.
+   El orden vertical es lo que sostiene la rejilla: todas las columnas de una fila miden lo mismo sin depender
+   de lo largo que sea cada nombre, que es justo lo que descuadraba la fila horizontal que hubo antes. */
+.hub-user-card {
+  position: relative;
+  align-items: center;
+  text-align: center;
+  gap: .4rem;
+  padding: .8rem .55rem .65rem;
+  transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease, background .2s ease;
+}
+
+/* Solo abre perfil quien tiene a dónde ir (el directorio entero; en la bandeja, solo los amigos). El resto no
+   finge ser pulsable: ni cursor de mano ni relieve al pasar por encima. */
+.hub-user-card.is-clickable { cursor: pointer; }
+
+.hub-user-card.is-clickable:hover {
+  transform: translateY(-2px);
+  border-color: color-mix(in srgb, var(--steam) 45%, var(--border));
+  box-shadow: 0 6px 16px var(--hub-btn-depth-soft);
+  background: var(--surface-hover);
+}
+
+.hub-user-card:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+
+/* El nombre CABE EN DOS LÍNEAS en vez de cortarse con puntos suspensivos: la columna es estrecha y con una sola
+   línea la mitad de los nicks se quedaban en "Alejandro Fern…". Las dos líneas están reservadas siempre
+   (`min-height`), así que los botones de todas las tarjetas de una fila quedan a la misma altura.
+   El selector va DOBLE (`.hub-user-card .hub-user-card-name`) para ganar en especificidad a `.hub-feed-card h3`
+   —clase + elemento—, que es quien impone el `nowrap` y los puntos suspensivos del feed. */
+.hub-user-card .hub-user-card-name {
+  width: 100%;
+  white-space: normal;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  line-height: 1.25;
+  min-height: 2.5em;
+}
+
+/* Las acciones se pegan al pie (`margin-top: auto`): si una tarjeta crece —un nombre de dos líneas frente a uno
+   de una—, los botones de la fila siguen alineados entre sí. */
+.hub-user-card-actions {
+  margin-top: auto;
+  width: 100%;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: .35rem;
+}
+
+/* Botones a escala de la tarjeta: el tamaño de página del hub sería aquí desproporcionado, y con dos acciones
+   (aceptar / rechazar) no cabrían en la misma línea. */
+.hub-user-card-actions .btn {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: .32rem .55rem;
+  font-size: .78rem;
+  gap: .3rem;
+}
+
+.hub-user-card-actions .btn .ui-icon { width: .9rem; height: .9rem; }
+
+.hub-user-card-actions .hub-friend-chip { font-size: .74rem; }
+
+/* Tarjeta con una acción en curso (aceptar / rechazar / retirar / dejar de ser amigos): se atenúa y muestra un
+   spinner, feedback uniforme para las cinco listas. Sustituye a `.hub-request-item.is-busy`, que solo existía en
+   la bandeja. */
+.hub-user-card.is-busy { opacity: .6; pointer-events: none; }
+
+.hub-user-card.is-busy::after {
+  content: "";
+  position: absolute;
+  top: .55rem;
+  left: .55rem;
+  width: 1rem;
+  height: 1rem;
+  border-radius: 50%;
+  border: 2px solid var(--steam);
+  border-right-color: transparent;
+  animation: hubSpin .7s linear infinite;
+}
+
+/* PANTALLA ESTRECHA: los botones se quedan en su icono y el rótulo se va (`.btn-label`). El nombre de la acción
+   no se pierde —cada botón lleva su `aria-label` completo—, y a cambio "Dejar de ser amigos" deja de ocupar tres
+   líneas dentro de una tarjeta de 160px. Se mide el CONTENEDOR del hub, no la ventana: 36rem de tarjeta son unos
+   620px de pantalla.
+   "Pendiente" no lleva `.btn-label` a propósito (ver `FriendshipButton`): no tiene icono, y nombra un estado. */
+@container social-card (max-width: 36rem) {
+  .hub-user-card-actions .btn-label { display: none; }
+
+  /* El cuadrado es SOLO para el botón que se ha quedado sin rótulo (`:has(.btn-label)`). "Pendiente" no lo lleva,
+     y encerrarlo también en 2,2rem le sacaba la palabra fuera del círculo. */
+  .hub-user-card-actions .btn:has(.btn-label) {
+    flex: 0 1 auto;
+    width: 2.2rem;
+    height: 2.2rem;
+    padding: 0;
+  }
+
+  /* Los que conservan texto encogen la letra en vez de la caja. */
+  .hub-user-card-actions .btn { font-size: .72rem; }
 }
 
 /* Recuento junto al título de cada sección. */
@@ -666,23 +756,10 @@ button.hub-chip.active {
   color: var(--text-muted);
 }
 
-.hub-feed-profile-item {
-  cursor: pointer;
-  transition: transform .2s ease, border-color .2s ease, box-shadow .2s ease;
-}
-
 /* Botón "Mostrar más" del feed, centrado bajo la lista. */
 .hub-feed-load-more {
   align-self: center;
   margin-top: .5rem;
-}
-
-.hub-feed-profile-item:hover,
-.hub-feed-profile-item:focus-visible {
-  transform: translateY(-1px);
-  border-color: rgba(var(--steam-rgb),.42);
-  box-shadow: 0 8px 16px rgba(0,0,0,.18);
-  outline: none;
 }
 
 .hub-feed-game-subtitle {

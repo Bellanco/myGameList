@@ -567,15 +567,8 @@ body.compact-filters .filters-row.open .btn-toggle { justify-content: center; al
 .active-filter-chip { animation: chipPopIn .26s cubic-bezier(.2,1.3,.3,1) both; }
 @keyframes chipPopIn { from { opacity: 0; transform: scale(.6); } to { opacity: 1; transform: scale(1); } }
 
-/* Tarjeta de petición mientras se resuelve (aceptar/rechazar/cancelar): se atenúa y muestra un spinner,
-   feedback uniforme para las tres listas. */
-.hub-request-item.is-busy { position: relative; opacity: .6; pointer-events: none; }
-.hub-request-item.is-busy::after {
-  content: ""; position: absolute; top: .8rem; right: .8rem;
-  width: 1.1rem; height: 1.1rem; border-radius: 50%;
-  border: 2px solid var(--steam); border-right-color: transparent;
-  animation: hubSpin .7s linear infinite;
-}
+/* El estado "resolviéndose" de una tarjeta de persona vive con la tarjeta (`.hub-user-card.is-busy`, en
+   `social.scss`); aquí queda solo el giro, que comparten ese spinner y el del botón de publicar. */
 @keyframes hubSpin { to { transform: rotate(360deg); } }
 
 @media (prefers-reduced-motion: reduce) {

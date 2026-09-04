@@ -111,6 +111,35 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
   grande que antes: lo que crece es el margen del texto, no el dibujo.
 
 ### Changed
+- **Perfiles y solicitudes: una sola tarjeta de persona, en rejilla.** Las dos pantallas del hub que listan gente
+  (`/social/profiles` y `/social/requests`) comparten ahora la misma pieza y la misma rejilla, en vez de una
+  tarjeta por pantalla —el directorio— y la burbuja del feed —la bandeja—.
+  - **Se ve mucha más gente sin bajar.** La tarjeta es vertical y compacta (avatar, nombre y acción), y la rejilla
+    pasa de tres columnas a cinco o seis en escritorio y garantiza DOS en móvil, donde la bandeja apilaba una
+    burbuja debajo de otra: sus tres bloques —recibidas, enviadas y amigos— caben ahora de un vistazo.
+  - **Cada bloque dice cuánta gente tiene y se pagina por filas**, con «Mostrar más (quedan N)», también en la
+    bandeja: una lista larga de amigos ya no entierra las peticiones que hay que contestar.
+  - **El rango se marca con una muesca en la esquina**, no con un punto: un triángulo pegado a la esquina superior
+    derecha cuyos catetos son el propio borde de la tarjeta, en el color del rango, con la diagonal cerrándolo y un
+    velo tenue dentro. El punto era un elemento más puesto encima, y en una rejilla la fila se llenaba de topos.
+    La muesca se adapta al borde de cada tema (2px en Cámara de pruebas, 3px en Ladrones fantasma…) y hereda su
+    radio, así que queda a escuadra donde el tema lo está.
+  - **El rango llega también a la bandeja**, para quien esté en el directorio; de quien no lo esté no se inventa
+    ninguno.
+  - **Los amigos se listan por último uso de la aplicación**, primero quien más recientemente ha estado, en la
+    bandeja y en Perfiles. La bandeja los ordenaba por la fecha del documento de amistad —cuándo se aceptó—, que es
+    un orden congelado el día que os hicisteis amigos. Las peticiones siguen por fecha de petición: ahí lo que
+    importa es cuál llegó antes.
+  - **Sin peticiones no se dice que no las hay:** los bloques de recibidas y enviadas desaparecen enteros cuando
+    están vacíos, en vez de dos frases anunciando la nada. El de amigos conserva la suya, que explica dónde se
+    piden.
+  - **Desde la bandeja se abre el perfil de un amigo** pulsando su tarjeta. Solo de un amigo: en una petición
+    pendiente todavía no hay relación aceptada.
+  - **Rechazar una petición y retirar una enviada piden confirmación**, como «dejar de ser amigos». Ninguna de las
+    tres se deshace, y con los botones dentro de la tarjeta un toque de más costaba una petición.
+  - En pantalla estrecha los botones se quedan en su icono —con la acción entera en el texto accesible— para que
+    «Dejar de ser amigos» no ocupe tres líneas dentro de una tarjeta.
+
 - **Actividad de listas: otras palabras, solo movimientos y tope por día.** Tres cambios sobre el aviso de una
   línea del feed social («Ada finalizó Hollow Knight 18:42»):
   - **Los verbos cambian de palabra:** «comenzó» en vez de «empezó», «finalizó» en vez de «terminó», «abandonó» en

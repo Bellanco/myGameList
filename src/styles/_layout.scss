@@ -1271,6 +1271,14 @@
   user-select: none;
 }
 
+/* Avatar de la tarjeta de persona del directorio y la bandeja: la cara es lo que se reconoce de un vistazo en
+   una rejilla, así que pide más presencia que el del feed, sin llegar al del hero. */
+.hub-avatar-md {
+  width: 3.1rem;
+  height: 3.1rem;
+  font-size: 1.15rem;
+}
+
 /* Avatar grande para el hero de la página de perfil (debe ir tras .hub-avatar para ganar el tamaño). */
 .hub-avatar-lg {
   width: 4.5rem;
