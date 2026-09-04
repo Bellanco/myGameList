@@ -224,11 +224,24 @@ export const SOCIAL_UI = {
     reviewDetailTitle: 'Reseña',
     reviewDetailSubtitle: 'Análisis completo de este juego.',
     reviewsBackToList: 'Volver a las reseñas',
+    // Reseñas relacionadas, al final de una reseña abierta.
+    //
+    // Cada tarjeta llevó un chip con el motivo («Mismo juego», «Otra tuya») y se retiró: la tarjeta ya enseña el
+    // título y la firma, así que el motivo se lee solo y la etiqueta repetía con palabras lo que estaba dos
+    // centímetros más arriba. Las propias se firman con el nombre de uno, como las demás: un «Tú» era la única
+    // firma del bloque que no parecía una persona.
+    relatedTitle: 'Análisis relacionados',
+    relatedOpenAria: (gameName: string, author: string) => `Abrir la reseña de ${author} sobre ${gameName}`,
     profileListTabCompleted: 'Completados',
     profileListTabVisited: 'Abandonados',
     profileListTabPlaying: 'En curso',
     profileListTabPlanned: 'Próximos',
     backToFeed: 'Volver a la actividad',
+    // Rótulos del volver cuando se ha llegado saltando de un análisis a otro por el bloque de relacionados: el
+    // botón nombra el sitio al que de verdad se vuelve, no el que la pantalla tiene por defecto.
+    backToReview: 'Volver al análisis',
+    backToProfile: 'Volver al perfil',
+    backGeneric: 'Volver',
     searchLabel: 'Buscar perfiles',
     searchPlaceholder: 'Buscar por nombre, email o juego',
     filterAll: 'Todos',

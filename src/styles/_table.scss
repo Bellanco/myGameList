@@ -124,7 +124,7 @@ tbody tr.main-row .row-toggle {
   background: none; border: 0; padding: 0; margin: 0;
   font: inherit; color: inherit; text-align: left; cursor: pointer;
 }
-tbody tr.main-row .row-toggle:focus-visible { outline: 2px solid var(--steam, #66c0f4); outline-offset: 2px; border-radius: 3px; }
+tbody tr.main-row .row-toggle:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; border-radius: 3px; }
 tbody tr.main-row.striped { background: var(--surface-soft); }
 @media (hover:hover) { tbody tr.main-row:hover { background: var(--surface-hover); box-shadow: inset 3px 0 0 var(--steam, #66c0f4); } }
 tbody td { padding: .95rem 1rem; font-size: .88rem; vertical-align: middle; }
@@ -240,7 +240,7 @@ tbody tr.main-row.just-changed { animation: rowFlash 1.3s ease-out; }
   background: conic-gradient(hsl(var(--score-hue, 0) 58% var(--acc-l)) calc(var(--score-pct, 0) * 1%), var(--score-track) 0);
 }
 .score-dial::after { content: ""; position: absolute; inset: var(--track-w); border-radius: 50%; background: var(--surface); box-shadow: inset 0 1px 3px rgba(0,0,0,.22); }
-.score-dial:focus-visible { outline: 3px solid var(--fg-sky); outline-offset: 4px; }
+.score-dial:focus-visible { outline: 3px solid var(--focus-ring); outline-offset: 4px; }
 .score-dial-num {
   position: absolute; inset: 0; z-index: 1;
   display: grid; place-items: center;
@@ -490,6 +490,6 @@ tbody tr.detail-row.open .detail-content { animation: detailReveal .22s ease-out
 
   &:hover strong { text-decoration: underline; text-underline-offset: 2px; }
   &:hover { color: var(--steam, currentColor); }
-  &:focus-visible { outline: 2px solid var(--steam, currentColor); outline-offset: 2px; }
+  &:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
 }
 

@@ -56,7 +56,7 @@
   cursor: pointer;
 }
 
-.hub-gateway-consent-check:focus-within { outline: 2px solid var(--fg-sky); outline-offset: 2px; }
+.hub-gateway-consent-check:focus-within { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
 
 .hub-screen-actions-split {
   width: 100%;
@@ -124,7 +124,7 @@
   width: 1.5rem; height: 1.5rem; border-radius: 50%;
   display: inline-grid; place-items: center;
   font-size: .78rem; font-weight: 800;
-  background: var(--steam-soft); color: var(--steam-hover);
+  background: var(--steam-soft); color: var(--fg-link);
   border: 1px solid color-mix(in srgb, var(--steam) 35%, transparent);
 }
 
@@ -163,10 +163,13 @@
 .hub-profile-sync-chip.is-synced .dot { background: var(--success); box-shadow: 0 0 0 3px color-mix(in srgb, var(--success) 22%, transparent); }
 
 /* ── Detalle de perfil · Juegos: control segmentado con pastilla deslizante; encabezado si hay una sola categoría ── */
+/* Ocupa el ANCHO ENTERO y reparte sus categorías a partes iguales: cada pestaña es entonces una diana grande en
+   vez de una palabra estrecha, que es lo que se agradece con el pulgar. Antes era `inline-flex` y medía lo que
+   midieran sus rótulos, así que en pantalla ancha dejaba media barra de aire y en estrecha se salía. */
 .hub-seg {
   position: relative;
-  display: inline-flex;
-  max-width: 100%;
+  display: flex;
+  width: 100%;
   background: var(--surface-soft);
   border: 1px solid var(--border);
   border-radius: var(--radius-pill);
@@ -186,6 +189,12 @@
 
 .hub-seg-btn {
   position: relative; z-index: 1;
+  /* `1 1 0`, no `1 1 auto`: la base a cero reparte el ancho a partes IGUALES en vez de dar más sitio al rótulo
+     más largo, así que todas las categorías son dianas del mismo tamaño y la pastilla no cambia de anchura al
+     saltar de una a otra. */
+  flex: 1 1 0;
+  min-width: 0;
+  display: inline-flex; align-items: center; justify-content: center; gap: .4rem;
   border: none; background: transparent;
   color: var(--text-muted); font: inherit; font-weight: 700; font-size: .82rem;
   padding: .5rem .95rem; border-radius: var(--radius-pill);
@@ -193,11 +202,31 @@
   transition: color .22s ease;
 }
 
+.hub-seg-icon { width: 1rem; height: 1rem; fill: currentColor; flex: 0 0 auto; }
+
+/* En estrecho, las cuatro categorías con su nombre no caben y el control se quedaba con scroll horizontal: había
+   que arrastrarlo para descubrir que existían «En curso» y «Próximos». Se pasa a ICONOS, que es lo que ya hacen
+   las pestañas de listas de la aplicación (y con los mismos dibujos, así que no hay nada nuevo que aprender).
+   El nombre sigue estando para quien navega con lector de pantalla y al pasar el ratón: va en `aria-label` y
+   `title`, no en el texto que se esconde. */
+@container social-card (max-width: 40rem) {
+  .hub-seg-btn .hub-seg-text { display: none; }
+
+  /* Sin rótulo, la pestaña se quedaba en 32px de alto: ancha pero baja para un dedo. El alto mínimo la lleva a
+     un objetivo de toque cómodo sin cambiar nada del aspecto en escritorio. */
+  .hub-seg-btn {
+    padding: .5rem .8rem;
+    min-height: 2.5rem;
+  }
+
+  .hub-seg-icon { width: 1.15rem; height: 1.15rem; }
+}
+
 .hub-seg-btn.is-active { color: #fff; }
 
 .hub-seg-btn:not(.is-active):hover { color: var(--text); }
 
-.hub-seg-btn:focus-visible { outline: 2px solid var(--steam); outline-offset: 2px; }
+.hub-seg-btn:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
 
 .hub-games-solo { display: inline-flex; align-items: center; gap: .55rem; }
 
@@ -476,7 +505,7 @@
   border-radius: var(--radius-pill);
   background: rgba(var(--steam-rgb),.1);
   border: 1px solid rgba(var(--steam-rgb),.28);
-  color: var(--steam-hover);
+  color: var(--fg-link);
   font-size: .74rem;
   font-weight: 700;
 }
@@ -732,6 +761,108 @@ button.hub-chip.active {
   color: color-mix(in srgb, var(--warn), var(--danger) 40%);
 }
 
+/* ── Reseñas relacionadas ─────────────────────────────────────────────────────────────────────────────────
+   Bloque al pie de una reseña abierta. Va FUERA de la tarjeta del análisis (es material de al lado, no parte
+   de él) y se separa con un filete: sin él, tres tarjetas más colgando del final se leen como una continuación
+   de lo que se acaba de terminar de leer.
+
+   Las tarjetas son las mismas de la lista de reseñas de un perfil —medallón, barra de color, texto recortado—,
+   heredadas por `.hub-related-list` en `_layout.scss`. Aquí solo va lo que este bloque tiene de propio: el
+   encabezado, el chip del motivo y una escala algo menor, porque esto es el epílogo de la pantalla y no puede
+   pesar como lo que hay encima. */
+.hub-related {
+  margin-top: 1.2rem;
+  padding-top: .9rem;
+  border-top: 1px solid var(--border);
+}
+
+.hub-related-title {
+  margin: 0 0 .55rem;
+  font-size: .82rem;
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--hub-text-muted);
+}
+
+/* REJILLA, no lista. Una reseña relacionada es un renglón de texto corto, y en una lista a lo ancho de la
+   pantalla ese renglón acaba a media línea: el resto de la fila es hueco, y cada tarjeta gasta el alto de toda
+   una fila para no decir nada en la mitad derecha. Puestas en columnas, el mismo alto enseña dos o tres.
+
+   `repeat(auto-fill, minmax(min(100%, 17rem), 1fr))` es el patrón corriente para esto y no necesita una sola
+   consulta de medios: el navegador mete las columnas que quepan y las reparte. Tres detalles que sí importan:
+
+   · `auto-fill` y NO `auto-fit`. `auto-fit` colapsa las columnas que sobran y estira las tarjetas que hay para
+     llenar la fila, así que con dos reseñas volveríamos justo al problema de partida: dos tarjetas enormes con
+     media línea de texto. Con `auto-fill` la tarjeta mide lo que tiene que medir y lo que sobra queda vacío.
+   · El `min(100%, 17rem)` evita que en una pantalla más estrecha que una tarjeta la rejilla desborde.
+   · Mide el CONTENEDOR, no la ventana, así que se adapta igual dentro del hub que en cualquier ancho. */
+.hub-related-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 17rem), 1fr));
+  gap: .5rem;
+}
+
+/* Tarjeta más CUADRADA que la de la lista de un perfil: cabecera compacta (medallón, título y firma) y el texto
+   debajo, a todo el ancho de la tarjeta. En vertical el texto respira sin necesitar una fila entera de pantalla. */
+.hub-related-entry {
+  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-areas: 'medal head' 'body body';
+  align-items: center;
+  align-content: start;
+  gap: .45rem .6rem;
+  padding: .7rem .85rem .75rem 1rem;
+}
+
+.hub-related-entry .hub-review-medal {
+  align-self: center;
+  width: 2.3rem; height: 2.3rem;
+  font-size: .95rem;
+  border-width: 1px;
+}
+
+.hub-related-entry .hub-review-entry-head { gap: .1rem; }
+
+.hub-related-entry .hub-review-game {
+  font-size: .88rem;
+  line-height: 1.25;
+  /* Hasta dos líneas: en una columna estrecha, cortar «Sekiro: Shadows Die Twice» al primer renglón deja el
+     título irreconocible, y dejarlo crecer sin tope descuadra la altura de toda la fila. */
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  line-clamp: 2;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+}
+
+/* La firma, bajo el título y en segundo plano: aquí se busca el juego, no quién lo escribió. */
+.hub-related-author {
+  display: block;
+  font-size: .74rem;
+  font-weight: 600;
+  color: var(--hub-text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* La firma PROPIA lleva tu nombre como las demás, y se distingue por el color, no por el texto: el azul de la
+   aplicación tirado hacia el gris de las otras firmas, lo justo para reconocer de un vistazo lo que ya has
+   escrito tú sin que la tarjeta pida más atención que las de al lado. */
+.hub-related-author.is-own {
+  color: color-mix(in srgb, var(--steam), var(--hub-text-muted) 30%);
+}
+
+/* Tres líneas de adelanto: lo justo para decidir si vale la pena abrirla, y lo que da a la tarjeta su forma. */
+.hub-related-entry .hub-review-text {
+  max-width: none;
+  line-clamp: 3;
+  -webkit-line-clamp: 3;
+  font-size: .8rem;
+  line-height: 1.45;
+  color: var(--hub-text-muted);
+}
+
 /* Texto + botón "ver más" ocupan las dos columnas (a lo ancho de la tarjeta). */
 .hub-review-body {
   grid-area: body;
@@ -758,9 +889,9 @@ button.hub-chip.active {
 
 .hub-more-soft .ui-icon { width: .95rem; height: .95rem; }
 
-.hub-more-soft:hover { color: var(--steam-hover); background: var(--surface-soft); }
+.hub-more-soft:hover { color: var(--fg-link); background: var(--surface-soft); }
 
-.hub-more-soft:focus-visible { outline: 2px solid var(--steam-hover); outline-offset: 2px; }
+.hub-more-soft:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
 
 /* "Ver más/menos" de cada reseña: a todo el ancho, igual que el "Mostrar más". */
 .hub-review-more {
@@ -773,7 +904,7 @@ button.hub-chip.active {
   font-weight: 700;
 }
 
-.hub-review-more:hover { background: var(--surface-soft); color: var(--steam-hover); }
+.hub-review-more:hover { background: var(--surface-soft); color: var(--fg-link); }
 
 .hub-review-more:active { background: var(--overlay-hover); }
 
@@ -786,7 +917,7 @@ button.hub-chip.active {
   border-radius: var(--radius-md);
 }
 
-.hub-feed-load-more:hover { background: var(--surface-soft); color: var(--steam-hover); }
+.hub-feed-load-more:hover { background: var(--surface-soft); color: var(--fg-link); }
 
 .hub-feed-load-more:active { background: var(--overlay-hover); }
 
@@ -804,7 +935,7 @@ button.hub-chip.active {
 }
 
 /* Autor: el mismo azul de enlace que en el resto del feed, un punto menos de cuerpo. */
-.hub-feed-move-who { font-weight: 700; color: var(--steam-hover); }
+.hub-feed-move-who { font-weight: 700; color: var(--fg-link); }
 
 .hub-feed-move-verb { color: var(--text-muted); }
 
@@ -828,10 +959,10 @@ button.hub-chip.active {
   text-underline-offset: .18em;
 }
 
-.hub-feed-move-game:hover { color: var(--steam-hover); text-decoration: underline; }
+.hub-feed-move-game:hover { color: var(--fg-link); text-decoration: underline; }
 
 .hub-feed-move-game:focus-visible {
-  outline: 2px solid var(--steam);
+  outline: 2px solid var(--focus-ring);
   outline-offset: 2px;
   border-radius: .2rem;
 }
@@ -977,7 +1108,7 @@ button.hub-chip.active {
   padding: 0;
   border: 0;
   background: none;
-  color: var(--steam-hover);
+  color: var(--fg-link);
   font: inherit;
   font-size: .82rem;
   font-weight: 600;
@@ -991,7 +1122,7 @@ button.hub-chip.active {
 }
 
 .hub-post-text a {
-  color: var(--steam-hover);
+  color: var(--fg-link);
   text-decoration: underline;
   overflow-wrap: anywhere;
 }
@@ -1120,7 +1251,7 @@ button.hub-chip.active {
 
 .hub-gateway-details > summary {
   cursor: pointer;
-  color: var(--steam-hover);
+  color: var(--fg-link);
   font-weight: 700;
   font-size: .88rem;
   padding: .35rem .15rem .5rem;
@@ -1257,7 +1388,7 @@ button.hub-chip.active {
   border: 1px solid transparent;
   border-radius: .5rem;
   background: transparent;
-  color: var(--steam-hover);
+  color: var(--fg-link);
   font-size: inherit;
   font-weight: inherit;
   line-height: 1.2;
@@ -1310,7 +1441,7 @@ button.hub-chip.active {
   cursor: pointer;
 }
 
-.hub-name-link:hover { color: var(--steam-hover); text-decoration: underline; }
+.hub-name-link:hover { color: var(--fg-link); text-decoration: underline; }
 
 .hub-name-link:focus-visible {
   outline: none;
@@ -1321,14 +1452,6 @@ button.hub-chip.active {
 @container social-card (max-width: 66rem) {
   .hub-feed-metrics {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-
-@container social-card (max-width: 58rem) {
-  .hub-screen-actions-split {
-    flex-direction: column;
-    align-items: stretch;
-    gap: .55rem;
   }
 }
 

@@ -5,6 +5,84 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
 
 ## [Unreleased]
 
+### Added
+- **Análisis relacionados al final de una reseña.** Al leer una reseña en el espacio social —tanto desde el feed
+  como desde la lista de reseñas de un perfil— aparece al pie un bloque con hasta seis reseñas por las que seguir
+  leyendo. Cada una lleva un chip que dice POR QUÉ está ahí, que es lo que la convierte en una respuesta y no en
+  una sugerencia suelta:
+  - **«Mismo juego»:** otra persona hablando de lo que acabas de leer. Es el motivo de más peso y el único de
+    cobertura completa.
+  - **La misma saga:** otra entrega de lo que estás leyendo, como «Persona 3 Reloaded» bajo «Persona 5 Royal».
+  - **«Más de Ana»:** otras reseñas de quien firma la que estás leyendo.
+  - **El género** (**«Acción»**): otros juegos del mismo género. Cobertura irregular a propósito: los géneros no
+    viajan por el canal social, así que solo se conocen los de tu biblioteca y los de la amistad cuyo perfil hayas
+    abierto. Cuando no se sabe, el bloque se llena con los otros motivos.
+  - **Tus reseñas cuentan, estén publicadas o no.** Son tuyas y solo las ves tú, así que ofrecerlas no enseña nada
+    a nadie y multiplica lo que el bloque encuentra. Se firman como «Tú», y si la misma reseña llega también por el
+    canal se ofrece una sola vez y con el texto completo, no con el adelanto de 160 caracteres.
+  - **Ningún dato nuevo, ninguna lectura nueva.** Todo sale del directorio social ya cargado y de tus listados: no
+    se publica nada, no se lee ningún gist de más, y solo puede aparecer gente cuyas reseñas ya veías en tu feed
+    (el canal solo lee el gist de las amistades). Los juegos se cruzan por NOMBRE y no por id, que es lo único que
+    significa lo mismo en dos bibliotecas distintas.
+  - Un autor no pone más de dos reseñas en el bloque y ningún tipo de vínculo se lleva más de tres, para que la
+    lista no la copie quien más escribe. Si no hay nada que ofrecer, no se pinta el bloque.
+  - **La saga tiene preferencia, y se reconoce sin lista de franquicias.** Otra entrega de lo que estás leyendo
+    habla casi de lo mismo, así que pesa (60) casi como el mismo juego (100) y mucho más que el género (30) o la
+    firma (25); con eso, una reseña de otro Persona se pone por delante de cualquier cosa que solo comparta autor.
+    La saga es el principio del título que dos juegos comparten, y para que cuente tiene que **nombrar algo**: los
+    números, los artículos, las preposiciones y los pronombres no hacen saga, así que «Call of Duty» no es «Call of
+    Cthulhu» ni «The Last of Us» es «The Last Guardian». Cuando lo compartido es una sola palabra —de una palabra
+    son «dark», «star» o «super», que empiezan medio catálogo— hace falta además marca de serie: que en uno de los
+    dos títulos esa palabra sea el título entero o vaya seguida de un número. Así entran «Doom» ~ «Doom Eternal»,
+    «Halo 3» ~ «Halo Infinite» o «Nioh» ~ «Nioh 2», y se quedan fuera «Dark Souls» ~ «Dark Sector» o «Journey» ~
+    «Journey to the Savage Planet». El precio, asumido: se escapan las sagas que solo se distinguen por subtítulo
+    («Nier Automata» ~ «Nier Replicant»), que sale más barato que emparentar «Dead Space» con «Dead Cells».
+  - **El género suma en vez de competir:** entre dos análisis de la misma persona sube el del género que estás
+    leyendo, y quien no comparte ni juego ni autor sigue entrando solo por él. Compartir género (30) pesa más que
+    compartir firma (25): que alguien haya escrito de otro juego del género que lees dice más que el mero hecho de
+    ser la misma persona.
+  - **Tus propios análisis quedan detrás de los de otra gente**, porque tu opinión ya la conoces — salvo sobre el
+    MISMO juego, donde precisamente interesa comparar y siguen arriba. Cuando no hay nada de nadie más, los tuyos
+    salen igual: el descuento los baja, no los elimina.
+  - **El botón de volver nombra de dónde vienes.** Al saltar a un análisis propio desde el bloque, la pantalla
+    ofrecía «volver a las reseñas» —la lista de las tuyas— a quien venía del feed y no había pasado por esa lista.
+    Ahora se vuelve a la pantalla desde la que se saltó, con el rótulo del sitio al que de verdad se llega, y
+    encadenando saltos se deshace el camino paso a paso.
+  - **Abrir una reseña empieza por su principio:** el hub no rehacía el desplazamiento al cambiar de pantalla, y
+    con el bloque al pie la pantalla creció lo bastante como para que abrir una reseña desde el final de una lista
+    larga te dejara leyendo por el medio. Volver atrás sigue conservando dónde estabas.
+  - **En pantalla estrecha, «volver» y «compartir» vuelven a la misma línea**, uno a cada extremo, en lugar de
+    apilarse en dos renglones.
+  - **Tu propia reseña se firma con tu nombre**, como las de los demás, y se distingue por el color de la firma en
+    lugar de por un «Tú» que era la única del bloque que no parecía una persona.
+  - **Se pintan las que llenen filas enteras.** Cuántas salen no es un número fijo: sale de cuántas columnas quepan
+    en el ancho disponible —tres en el móvil, hasta quince en un monitor grande—, y si sobran candidatas se
+    recorta a un múltiplo de las columnas para que no quede una tarjeta suelta con huecos al lado. La única fila
+    que puede quedar a medias es la primera, cuando sencillamente no hay más reseñas que ofrecer.
+  - **El bloque es una rejilla, no una lista.** Una reseña relacionada es un renglón corto, y a lo ancho de la
+    pantalla ese renglón acababa a media línea dejando media tarjeta vacía. En columnas, el mismo alto enseña
+    dos o tres. Se adapta al ancho disponible sin una sola consulta de medios —de una columna en el móvil a cinco
+    en un monitor grande— y las tarjetas de una misma fila miden lo mismo.
+  - **El mismo juego se reconoce aunque cada cual lo escriba a su manera:** «Marvel's Spider-Man» y «Marvels
+    Spider Man», «Pokémon» y «Pokemon», «The Last of Us» y «Last of Us», «Final Fantasy VII» y «Final Fantasy 7»,
+    y las reediciones con su original («Dark Souls Remastered», «…Game of the Year Edition», «Okami HD»). Lo que
+    NO se funde: un remake con su original —«Final Fantasy VII Remake» es otro juego—, una secuela con su
+    original (los números nunca se borran: «Nioh» y «Nioh 2» siguen siendo dos) ni «Mega Man X» con «Mega Man
+    10». Estas reglas viven solo aquí: detectar duplicados al guardar o al importar sigue con el casado estricto
+    de siempre, porque allí una coincidencia de más te impediría añadir un juego o fundiría dos al importar.
+
+### Fixed
+- **Las acciones de las pantallas del hub vuelven a una sola fila.** Por debajo de cierto ancho se apilaban en
+  una torre alineada a la izquierda —«volver» y «compartir» en dos renglones, y lo mismo en la actividad y en el
+  perfil de alguien— porque cada lado de la fila tomaba el ancho entero. Ahora cada lado mide lo que miden sus
+  botones y es la fila la que pasa de línea solo cuando de verdad no hay sitio; en móvil, donde los botones ya
+  son cuadrados de icono, entran todos en un renglón con sus extremos en su sitio.
+- **Las categorías de juegos de un perfil ya no piden scroll en móvil.** Las cuatro con su nombre no caben en una
+  pantalla estrecha y había que arrastrar el control para descubrir que existían «En curso» y «Próximos». Ahora
+  se quedan en ICONO —los mismos de las pestañas de listas de la aplicación—, conservando el nombre para el
+  lector de pantalla y al pasar el ratón. Además el control ocupa todo el ancho y reparte sus categorías a partes
+  iguales, así que cada una es una diana grande en lugar de una palabra estrecha.
+
 ### Changed
 - **Actividad de listas: otras palabras, solo movimientos y tope por día.** Tres cambios sobre el aviso de una
   línea del feed social («Ada finalizó Hollow Knight 18:42»):

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { TAB_ACTIONS, TAB_ORDER, TAB_TOOLTIPS, VALIDATION_MESSAGES } from '../core/constants/labels';
+import { TAB_ACTIONS, TAB_ORDER, TAB_TITLES, TAB_TOOLTIPS, VALIDATION_MESSAGES } from '../core/constants/labels';
 import { sortEs, uniqueCaseInsensitive } from '../core/utils/compare';
 import { tagKey } from '../core/utils/tags';
 import { DEFAULT_SORT, nextSort, sortGames } from '../core/utils/sortGames';
@@ -632,7 +632,7 @@ export function useGameListViewModel() {
         [targetTab]: [...data[targetTab], moved],
       };
       persist(nextData);
-      notify('ok', 'Juego pasado a En curso');
+      notify('ok', `"${moved.name}" pasa a ${TAB_TITLES[targetTab]}`);
       void trackAnalyticsEvent('game_moved', { from: sourceTab, to: targetTab });
     },
     [data, persist, notify],
