@@ -732,6 +732,76 @@ button.hub-chip.active {
   color: color-mix(in srgb, var(--warn), var(--danger) 40%);
 }
 
+/* ── Reseñas relacionadas ─────────────────────────────────────────────────────────────────────────────────
+   Bloque al pie de una reseña abierta. Va FUERA de la tarjeta del análisis (es material de al lado, no parte
+   de él) y se separa con un filete: sin él, tres tarjetas más colgando del final se leen como una continuación
+   de lo que se acaba de terminar de leer.
+
+   Las tarjetas son las mismas de la lista de reseñas de un perfil —medallón, barra de color, texto recortado—,
+   heredadas por `.hub-related-list` en `_layout.scss`. Aquí solo va lo que este bloque tiene de propio: el
+   encabezado, el chip del motivo y una escala algo menor, porque esto es el epílogo de la pantalla y no puede
+   pesar como lo que hay encima. */
+.hub-related {
+  margin-top: 1.6rem;
+  padding-top: 1.2rem;
+  border-top: 1px solid var(--border);
+}
+
+.hub-related-title {
+  margin: 0 0 .8rem;
+  font-size: .82rem;
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--hub-text-muted);
+}
+
+.hub-related-list { gap: .7rem; }
+
+/* Tarjeta más contenida que la de la lista de un perfil: menos aire y medallón más pequeño. */
+.hub-related-entry {
+  padding: .8rem .95rem .8rem 1.1rem;
+}
+
+.hub-related-entry .hub-review-medal {
+  width: 2.6rem; height: 2.6rem;
+  font-size: 1.1rem;
+  border-width: 2px;
+}
+
+.hub-related-entry .hub-review-game {
+  font-size: .95rem;
+}
+
+/* Adelanto a dos líneas: lo justo para decidir si vale la pena abrirla. */
+.hub-related-entry .hub-review-text {
+  max-width: none;
+  line-clamp: 2;
+  -webkit-line-clamp: 2;
+  font-size: .86rem;
+  line-height: 1.45;
+  color: var(--hub-text-muted);
+}
+
+/* Chip del MOTIVO. Es lo que convierte la lista en una respuesta —«esto está aquí porque habla del mismo
+   juego»—, así que se distingue del chip del autor: aquel nombra a alguien, este explica. Va en el acento de la
+   propia tarjeta (`--acc`, el color de la nota) para que no compita con el medallón por atención. */
+.hub-related-reason {
+  flex-shrink: 0;
+  padding: .08rem .5rem;
+  border-radius: var(--radius-pill);
+  background: var(--acc-soft, var(--surface-soft));
+  border: 1px solid transparent;
+  color: var(--acc, var(--text-muted));
+  font-size: .68rem;
+  font-weight: 700;
+  letter-spacing: .02em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 12rem;
+}
+
 /* Texto + botón "ver más" ocupan las dos columnas (a lo ancho de la tarjeta). */
 .hub-review-body {
   grid-area: body;

@@ -224,6 +224,18 @@ export const SOCIAL_UI = {
     reviewDetailTitle: 'Reseña',
     reviewDetailSubtitle: 'Análisis completo de este juego.',
     reviewsBackToList: 'Volver a las reseñas',
+    // Reseñas relacionadas, al final de una reseña abierta. El chip dice POR QUÉ está ahí cada una, que es lo que
+    // convierte una lista de sugerencias en una respuesta: sin el motivo, quien lee no sabe si se le ofrece otra
+    // opinión sobre el mismo juego o un juego parecido, y son cosas distintas.
+    //
+    // «Tú» en la firma de las propias, y no tu nombre: en un bloque donde lo demás son terceros, la primera
+    // persona es lo que distingue de un vistazo lo que ya has escrito de lo que han escrito otros.
+    relatedTitle: 'Reseñas relacionadas',
+    relatedSameGame: 'Mismo juego',
+    relatedSameAuthor: (name: string) => `Más de ${name}`,
+    relatedSameAuthorOwn: 'Otra tuya',
+    relatedOwn: 'Tú',
+    relatedOpenAria: (gameName: string, author: string) => `Abrir la reseña de ${author} sobre ${gameName}`,
     profileListTabCompleted: 'Completados',
     profileListTabVisited: 'Abandonados',
     profileListTabPlaying: 'En curso',
