@@ -1156,12 +1156,17 @@ export function useSocialViewModel(options?: {
    *    perfil propio, en cambio, repuebla sus listados desde los locales y las encuentra todas.
    */
   const openRelatedReview = useCallback((entry: { isOwn: boolean; authorId: string; gameId: number }) => {
-    if (entry.isOwn) {
-      void navigate(`/social/profiles/${OWN_PROFILE_ALIAS}/game/${entry.gameId}/review`);
-      return;
-    }
-    void navigate(`/social/user/${encodeURIComponent(entry.authorId)}/game/${entry.gameId}/review`);
-  }, [navigate]);
+    const target = entry.isOwn
+      ? `/social/profiles/${OWN_PROFILE_ALIAS}/game/${entry.gameId}/review`
+      : `/social/user/${encodeURIComponent(entry.authorId)}/game/${entry.gameId}/review`;
+    // De dónde se viene, para que el botón de volver lleve AHÍ y no al sitio por defecto de la pantalla que se
+    // abre. Sin esto, saltar a un análisis propio ofrecía «volver a las reseñas» —la lista de tus reseñas— a
+    // quien venía del feed y no había pasado por esa lista en su vida.
+    //
+    // Se usa `backTo`, que es el mecanismo que el hub YA tiene para esto (lo estrenó el panel de estadísticas al
+    // enlazar tus reseñas), en vez de inventar un segundo canal para decir lo mismo.
+    void navigate(target, { state: { backTo: location.pathname } });
+  }, [location.pathname, navigate]);
 
   // Bloque 3/4 — al abrir el detalle de una reseña o un perfil AJENO, baja su lista completa de juegos (cache-first
   // 24h en IndexedDB; sin red si está fresca) y la guarda filtrada por su visibilidad. El perfil propio no se baja

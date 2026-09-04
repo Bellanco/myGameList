@@ -32,6 +32,10 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
   - **Tus propios análisis quedan detrás de los de otra gente**, porque tu opinión ya la conoces — salvo sobre el
     MISMO juego, donde precisamente interesa comparar y siguen arriba. Cuando no hay nada de nadie más, los tuyos
     salen igual: el descuento los baja, no los elimina.
+  - **El botón de volver nombra de dónde vienes.** Al saltar a un análisis propio desde el bloque, la pantalla
+    ofrecía «volver a las reseñas» —la lista de las tuyas— a quien venía del feed y no había pasado por esa lista.
+    Ahora se vuelve a la pantalla desde la que se saltó, con el rótulo del sitio al que de verdad se llega, y
+    encadenando saltos se deshace el camino paso a paso.
   - **Abrir una reseña empieza por su principio:** el hub no rehacía el desplazamiento al cambiar de pantalla, y
     con el bloque al pie la pantalla creció lo bastante como para que abrir una reseña desde el final de una lista
     larga te dejara leyendo por el medio. Volver atrás sigue conservando dónde estabas.

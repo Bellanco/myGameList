@@ -239,6 +239,61 @@ describe('SocialHub (componente, post-M3)', () => {
     expect(scrollTo).not.toHaveBeenCalled();
   });
 
+  // Saltar de un análisis a otro por el bloque de relacionados: el botón de volver tiene que nombrar y llevar al
+  // sitio de DONDE SE VIENE. Un análisis propio se abre en la pantalla de reseñas del perfil, cuyo volver por
+  // defecto es la lista de tus reseñas: a quien llegó desde el feed le ofrecía volver a una lista por la que no
+  // había pasado.
+  describe('volver desde un análisis abierto por el bloque de relacionados', () => {
+    function renderConOrigen(pathname: string, backTo?: string) {
+      firebaseMocks.getCurrentSocialAuthUser.mockResolvedValue({
+        uid: 'uid-1',
+        email: 'jaime@example.com',
+        displayName: 'Jaime',
+        photoURL: null,
+      });
+      gistMocks.getSocialSyncConfig.mockReturnValue({ token: 'ghp_x', gistId: 'social-gist', etag: null, lastRemoteUpdatedAt: 0 });
+      return render(
+        <MemoryRouter initialEntries={[{ pathname, state: backTo ? { backTo } : null }]}>
+          <SocialHub />
+        </MemoryRouter>,
+      );
+    }
+
+    it('desde otro análisis, vuelve a ese análisis', async () => {
+      renderConOrigen('/social/profiles/me/game/7/review', '/social/user/ana/game/3/review');
+
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: SOCIAL_UI.feed.backToReview })).toBeInTheDocument();
+      });
+      expect(screen.queryByRole('button', { name: SOCIAL_UI.feed.reviewsBackToList })).not.toBeInTheDocument();
+    });
+
+    it('desde el feed, vuelve a la actividad', async () => {
+      renderConOrigen('/social/profiles/me/game/7/review', '/social');
+
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: SOCIAL_UI.feed.backToFeed })).toBeInTheDocument();
+      });
+    });
+
+    it('sin origen conserva el destino propio de la pantalla: la lista de reseñas del perfil', async () => {
+      renderConOrigen('/social/profiles/me/game/7/review');
+
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: SOCIAL_UI.feed.reviewsBackToList })).toBeInTheDocument();
+      });
+    });
+
+    it('el detalle de un análisis ajeno también nombra de dónde se viene', async () => {
+      renderConOrigen('/social/user/ana/game/3/review', '/social/profiles/me/game/7/review');
+
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: SOCIAL_UI.feed.backToReview })).toBeInTheDocument();
+      });
+      expect(screen.queryByRole('button', { name: SOCIAL_UI.feed.backToFeed })).not.toBeInTheDocument();
+    });
+  });
+
   // L4 — puerta de aceptación de condiciones. Bloquea SOLO el espacio social; nunca las listas propias.
   it('sin consentimiento vigente NO entra al espacio social y pide la aceptación', async () => {
     firebaseMocks.getCurrentSocialAuthUser.mockResolvedValue({ uid: 'uid-1', email: 'jaime@example.com', displayName: 'Jaime', photoURL: null });

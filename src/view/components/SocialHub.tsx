@@ -1,4 +1,4 @@
-import { memo, useCallback, useEffect } from 'react';
+import { memo, useCallback, useEffect, useMemo } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 // La hoja del hub se importa AQUÍ y no desde `index.scss`: como el hub entra por `lazy()`, Vite emite su CSS en
 // el mismo chunk perezoso y el arranque no carga ni un byte de estilos de estas pantallas (igual que `stats.scss`).
@@ -7,6 +7,7 @@ import { SOCIAL_UI } from '../../core/constants/socialLabels';
 import { LEGAL_CONSENT_UI, LEGAL_ROUTES } from '../../core/constants/legal';
 import type { GameItem, TabData } from '../../model/types/game';
 import { useSocialViewModel } from '../../viewmodel/useSocialViewModel';
+import { matchSocialRoute } from '../../viewmodel/social/socialRoutes';
 import { Icon } from './Icon';
 import { SocialHubSkeleton } from './SocialHubSkeleton';
 
@@ -154,6 +155,30 @@ const SocialHubInner = memo(function SocialHubInner({
   const location = useLocation();
   const backTo = (location.state as { backTo?: string } | null)?.backTo;
   const goToSocial = useCallback(() => navigate(backTo || '/social'), [navigate, backTo]);
+
+  /**
+   * Rótulo del botón de volver cuando se ha llegado saltando desde otra pantalla del hub (el bloque de análisis
+   * relacionados, o el enlace del panel de estadísticas). Nombra el sitio al que de verdad se vuelve.
+   *
+   * El destino se reconoce con `matchSocialRoute`, el mismo enrutado que decide qué pantalla se pinta, para que
+   * el rótulo no pueda decir una cosa y el enlace llevar a otra. Una ruta de fuera del hub —estadísticas— no casa
+   * con ninguna y se queda en el «Volver» genérico, que es honesto: desde aquí no se sabe qué hay allí.
+   */
+  const backToLabel = useMemo(() => {
+    if (!backTo) {
+      return '';
+    }
+    const target = matchSocialRoute(backTo);
+    if (target.activePanel === 'detail' || target.activePanel === 'profile-review') {
+      return SOCIAL_UI.feed.backToReview;
+    }
+    if (target.activePanel === 'profile-detail') {
+      return target.profileReviewsView ? SOCIAL_UI.feed.reviewsBackToList : SOCIAL_UI.feed.backToProfile;
+    }
+    // `feed` es también lo que devuelve el enrutado para cualquier ruta ajena al hub, así que se distingue el
+    // feed de verdad por su camino y no por el panel.
+    return backTo.startsWith('/social') ? SOCIAL_UI.feed.backToFeed : SOCIAL_UI.feed.backGeneric;
+  }, [backTo]);
   const goToProfileEdit = useCallback(() => navigate('/social/profile'), [navigate]);
   const goToProfiles = useCallback(() => navigate('/social/profiles'), [navigate]);
   const goToRequests = useCallback(() => navigate('/social/requests'), [navigate]);
@@ -273,6 +298,7 @@ const SocialHubInner = memo(function SocialHubInner({
           status={status}
           statusKind={statusKind}
           shareable={isOwnDetailEvent}
+          backLabel={backToLabel || undefined}
           related={<RelatedReviews SOCIAL_UI={SOCIAL_UI} items={relatedReviews} onOpen={openRelatedReview} />}
         />
       );
@@ -321,7 +347,10 @@ const SocialHubInner = memo(function SocialHubInner({
           SOCIAL_UI={SOCIAL_UI}
           review={activeProfileReview}
           profileName={(selectedProfileDetail as { displayName?: string })?.displayName || ''}
-          onBack={() => openProfileReviews(profileDetailId)}
+          // Quien llega saltando desde un análisis relacionado vuelve A DONDE ESTABA. El destino por defecto —la
+          // lista de reseñas de este perfil— solo vale para quien ha entrado por ella.
+          onBack={backTo ? goToSocial : () => openProfileReviews(profileDetailId)}
+          backLabel={backToLabel || undefined}
           status={status}
           statusKind={statusKind}
           actions={
