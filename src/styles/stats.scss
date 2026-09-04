@@ -935,6 +935,9 @@
 }
 
 .backlog-tip.is-left { left: auto; right: 50%; }
+/* Los meses de en medio cuelgan centrados sobre su punto: es donde mejor se lee y, en pantallas estrechas, lo
+   único que cabe (abriendo hacia un lado se saldría del lienzo). Los extremos siguen abriendo hacia dentro. */
+.backlog-tip.is-center { transform: translateX(-50%); }
 
 .backlog-hit:hover .backlog-tip {
   opacity: 1;
@@ -1578,7 +1581,10 @@
 
 .genre-radar-svg {
   width: 100%;
-  max-width: 20rem;
+  /* El tope crece con el lienzo (`--radar-span`, que pone `GenreRadar` cuando ensancha su caja para que quepan
+     los nombres de los lados): así la figura conserva su tamaño de siempre donde hay sitio, en vez de encogerse
+     por el hecho de haberle dado más margen al texto. */
+  max-width: calc(20rem * var(--radar-span, 1));
   height: auto;
   overflow: visible;
 }
@@ -3001,13 +3007,12 @@
    ═══════════════════════════════════════════════════════════════════════════════════════════════════ */
 .genre-bump { display: flex; flex-direction: column; gap: .5rem; }
 
-/* El lienzo se desplaza si no cabe (muchos años); la tarjeta nunca empuja el ancho de la página. */
+/* El lienzo se desplaza si no cabe (muchos años, o un móvil); la tarjeta nunca empuja el ancho de la página.
+   Arranca por el final, en los años recientes: lo pone `GenreBump` al montarse. El suelo de ancho ya no está
+   aquí, sino en el propio dibujo (`min-width` en línea, ver `widthFor`): así es el gráfico el que dice cuánto
+   sitio necesita —56 px por año— en vez de un valor redondo que se le quedaba corto a un histórico largo. */
 .genre-bump-canvas { overflow-x: auto; overflow-y: hidden; max-width: 100%; }
-/* Suelo de ancho: siete líneas, doce años y un nombre de género a la derecha no caben en un móvil, y dejar que
-   el SVG se encoja al contenedor reducía los rótulos a cuatro píxeles. Por debajo de este ancho el lienzo se
-   desplaza dentro de su caja —el mismo trato que el gráfico anual y el selector de años—, y la página nunca se
-   mueve de lado. */
-.genre-bump-svg { height: auto; min-width: min(44rem, 190vw); width: 100%; overflow: visible; }
+.genre-bump-svg { height: auto; width: 100%; overflow: visible; }
 
 .genre-bump-grid { stroke: var(--border); stroke-width: 1; opacity: .5; }
 .genre-bump-year,
