@@ -24,7 +24,7 @@ function related(extra: Partial<RelatedReview> & { key: string }): RelatedReview
     snippet: 'Un mundo que respeta al jugador.',
     updatedAt: Date.UTC(2026, 0, 15, 10, 0),
     reason: 'same-game',
-    score: 100,
+    score: 120,
     ...extra,
   };
 }
@@ -38,22 +38,24 @@ describe('RelatedReviews', () => {
     expect(container).toBeEmptyDOMElement();
   });
 
-  it('explica el motivo de cada tarjeta', () => {
+  it('no etiqueta por qué está cada tarjeta: el título y la firma ya lo dicen', () => {
     render(
       <RelatedReviews
         SOCIAL_UI={SOCIAL_UI}
         items={[
           related({ key: 'a', reason: 'same-game' }),
           related({ key: 'b', gameName: 'Hollow Knight', reason: 'same-author', score: 60 }),
-          related({ key: 'c', gameName: 'Nioh 2', reason: 'genre', genre: 'Acción', score: 40 }),
+          related({ key: 'c', gameName: 'Nioh 2', reason: 'genre', score: 20 }),
         ]}
         onOpen={vi.fn()}
       />,
     );
 
-    expect(screen.getByText('Mismo juego')).toBeInTheDocument();
-    expect(screen.getByText('Más de Ana')).toBeInTheDocument();
-    expect(screen.getByText('Acción')).toBeInTheDocument();
+    expect(screen.getByText(/Elden Ring/)).toBeInTheDocument();
+    expect(screen.getByText(/Hollow Knight/)).toBeInTheDocument();
+    expect(screen.queryByText('Mismo juego')).not.toBeInTheDocument();
+    expect(screen.queryByText('Más de Ana')).not.toBeInTheDocument();
+    expect(screen.queryByText('Otra tuya')).not.toBeInTheDocument();
   });
 
   it('firma las propias en primera persona, no con el nombre del perfil', () => {
@@ -65,10 +67,8 @@ describe('RelatedReviews', () => {
       />,
     );
 
-    expect(screen.getByText('Tú')).toBeInTheDocument();
-    expect(screen.queryByText('Diego')).not.toBeInTheDocument();
-    // Y el motivo no puede quedar en «Más de Tú».
-    expect(screen.getByText('Otra tuya')).toBeInTheDocument();
+    expect(screen.getByText(/Tú/)).toBeInTheDocument();
+    expect(screen.queryByText(/Diego/)).not.toBeInTheDocument();
   });
 
   it('abre la reseña al pulsar la tarjeta, con un rótulo que dice de quién y sobre qué es', () => {

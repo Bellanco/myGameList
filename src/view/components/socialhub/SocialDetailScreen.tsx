@@ -57,7 +57,7 @@ export function SocialDetailScreen({
         title={SOCIAL_UI.feed.detailTitle}
         subtitle={SOCIAL_UI.feed.detailSubtitle}
       >
-          <div className="hub-screen-actions hub-screen-actions-split" aria-label={SOCIAL_UI.feed.detailActionsAria}>
+          <div className="hub-screen-actions hub-screen-actions-split hub-screen-actions-inline" aria-label={SOCIAL_UI.feed.detailActionsAria}>
             <div className="hub-screen-actions-left">
               <HubBackButton onBack={onBack} label={SOCIAL_UI.feed.backToFeed} />
             </div>
@@ -81,7 +81,7 @@ export function SocialDetailScreen({
       title={SOCIAL_UI.feed.detailTitle}
       subtitle={SOCIAL_UI.feed.detailSubtitle}
     >
-        <div className="hub-screen-actions hub-screen-actions-split" aria-label={SOCIAL_UI.feed.detailActionsAria}>
+        <div className="hub-screen-actions hub-screen-actions-split hub-screen-actions-inline" aria-label={SOCIAL_UI.feed.detailActionsAria}>
           <div className="hub-screen-actions-left">
             <HubBackButton onBack={onBack} label={SOCIAL_UI.feed.backToFeed} />
           </div>

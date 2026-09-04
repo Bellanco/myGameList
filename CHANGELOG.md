@@ -23,8 +23,15 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
     se publica nada, no se lee ningún gist de más, y solo puede aparecer gente cuyas reseñas ya veías en tu feed
     (el canal solo lee el gist de las amistades). Los juegos se cruzan por NOMBRE y no por id, que es lo único que
     significa lo mismo en dos bibliotecas distintas.
-  - Un autor no pone más de dos reseñas en el bloque y ningún motivo se lleva más de tres, para que la lista no la
-    copie quien más escribe. Si no hay nada que ofrecer, no se pinta el bloque.
+  - Un autor no pone más de dos reseñas en el bloque y ningún tipo de vínculo se lleva más de tres, para que la
+    lista no la copie quien más escribe. Si no hay nada que ofrecer, no se pinta el bloque.
+  - **El género suma en vez de competir:** entre dos análisis de la misma persona sube el del género que estás
+    leyendo, y quien no comparte ni juego ni autor sigue entrando solo por él.
+  - **Abrir una reseña empieza por su principio:** el hub no rehacía el desplazamiento al cambiar de pantalla, y
+    con el bloque al pie la pantalla creció lo bastante como para que abrir una reseña desde el final de una lista
+    larga te dejara leyendo por el medio. Volver atrás sigue conservando dónde estabas.
+  - **En pantalla estrecha, «volver» y «compartir» vuelven a la misma línea**, uno a cada extremo, en lugar de
+    apilarse en dos renglones.
   - **El mismo juego se reconoce aunque cada cual lo escriba a su manera:** «Marvel's Spider-Man» y «Marvels
     Spider Man», «Pokémon» y «Pokemon», «The Last of Us» y «Last of Us», «Final Fantasy VII» y «Final Fantasy 7»,
     y las reediciones con su original («Dark Souls Remastered», «…Game of the Year Edition», «Okami HD»). Lo que

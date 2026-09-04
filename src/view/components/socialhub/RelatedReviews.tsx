@@ -7,17 +7,16 @@ import type { RelatedReview } from '../../../core/social/relatedReviews';
 /**
  * Reseñas relacionadas al final de una reseña abierta: por dónde seguir leyendo.
  *
- * UNA LISTA MEZCLADA, NO UNA SECCIÓN POR MOTIVO. Cada tarjeta lleva un chip que dice por qué está ahí —«Mismo
- * juego», «Más de Ana», «Acción»— y eso hace el trabajo que harían tres encabezados, sin dejar huecos: con
- * secciones fijas, un motivo sin resultados (el género, que es el de cobertura irregular) obliga a elegir entre
- * un título vacío o un bloque que cambia de forma según la reseña.
+ * UNA LISTA MEZCLADA, SIN DECIR POR QUÉ ESTÁ CADA UNA. Llevaron un chip con el motivo —«Mismo juego», «Otra
+ * tuya»— y sobraba: la tarjeta ya enseña el título y la firma, así que el motivo se lee solo, y escribirlo era
+ * repetir con una etiqueta lo que estaba dos centímetros más arriba. El orden ya hace ese trabajo.
+ *
+ * DENSA A PROPÓSITO. Esto es el epílogo de la pantalla y su tarea es que quepan varias opciones de un vistazo,
+ * no lucirse: una línea de texto, medallón pequeño y el mínimo aire entre tarjetas. Quien quiera leer una, la
+ * abre.
  *
  * NO PINTA NADA SI NO HAY NADA. Un «no hay reseñas relacionadas» al final de cada reseña sería ruido en la
  * mayoría de las bibliotecas pequeñas, que es justo donde este bloque tiene menos que ofrecer.
- *
- * Reutiliza la anatomía de tarjeta de `ProfileReviewsList` (medallón con la nota, barra lateral del color de la
- * nota, texto recortado) porque es la misma cosa: una reseña en una lista. Lo único propio es el chip del motivo
- * y que aquí se firma con el autor, que en la lista de un perfil se sobreentiende y aquí no.
  */
 export const RelatedReviews = memo(function RelatedReviews({
   SOCIAL_UI,
@@ -46,11 +45,6 @@ export const RelatedReviews = memo(function RelatedReviews({
           // Firma en primera persona para lo propio: en un bloque donde el resto son terceros, es lo que
           // distingue de un vistazo lo que ya has escrito tú.
           const author = entry.isOwn ? SOCIAL_UI.feed.relatedOwn : entry.authorName;
-          const reason = entry.reason === 'same-game'
-            ? SOCIAL_UI.feed.relatedSameGame
-            : entry.reason === 'same-author'
-              ? (entry.isOwn ? SOCIAL_UI.feed.relatedSameAuthorOwn : SOCIAL_UI.feed.relatedSameAuthor(author))
-              : entry.genre || '';
 
           return (
             <article
@@ -73,12 +67,13 @@ export const RelatedReviews = memo(function RelatedReviews({
                     : Math.round(rating))
                   : '¿?'}
               </span>
+              {/* Título y firma en un solo renglón: el autor va detrás del juego, separado por un punto, en vez
+                  de en su propia línea. Es la mitad de alto por tarjeta y se lee igual de bien. */}
               <header className="hub-review-entry-head">
-                {entry.gameName ? <h5 className="hub-review-game">{entry.gameName}</h5> : null}
-                <div className="hub-review-meta">
-                  {author ? <span className="hub-feed-game-chip">{author}</span> : null}
-                  {reason ? <span className="hub-related-reason">{reason}</span> : null}
-                </div>
+                <h5 className="hub-review-game">
+                  {entry.gameName}
+                  {author ? <span className="hub-related-author"> · {author}</span> : null}
+                </h5>
               </header>
               {entry.snippet ? (
                 <div className="hub-review-body">

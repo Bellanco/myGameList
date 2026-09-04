@@ -1,12 +1,15 @@
 // Reseñas RELACIONADAS: las que se ofrecen al final de una reseña abierta para poder seguir leyendo.
 //
-// Tres motivos, y el orden entre ellos no es un gusto sino lo que cada uno vale para quien acaba de leer:
+// DOS VÍNCULOS Y UN REFUERZO, y el orden entre ellos no es un gusto sino lo que cada uno vale para quien acaba
+// de leer:
 //
-//   1. MISMO JUEGO. Otra persona hablando de lo que acabas de leer. Es el motivo con más valor —comparar dos
+//   1. MISMO JUEGO. Otra persona hablando de lo que acabas de leer. Es el vínculo con más valor —comparar dos
 //      opiniones sobre lo mismo es media razón de tener un espacio social— y el único de cobertura completa.
 //   2. MÁS DE ESTA PERSONA. Quien te ha convencido (o no) escribiendo esto tiene más escrito. Siempre hay
 //      material, y es la navegación natural hacia su perfil.
-//   3. MISMO GÉNERO. El más débil de los tres y, además, el de cobertura irregular (ver más abajo).
+//   3. EL GÉNERO SUMA A LOS DOS ANTERIORES en vez de competir con ellos: entre dos análisis del mismo autor,
+//      sube el del género que estás leyendo. Y a quien no tiene ninguno de los dos vínculos, el género le basta
+//      para entrar. Cobertura irregular (ver más abajo).
 //
 // EL CRUCE ES POR NOMBRE, NO POR ID. El `id` de un juego se asigna por biblioteca (`max(ids)+1` en
 // `useGameListViewModel.saveDraft`), así que el juego 42 de una amistad no tiene nada que ver con el 42 propio.
@@ -82,9 +85,12 @@ export interface RelatedReviewAnchor {
 }
 
 export interface RelatedReview extends RelatedReviewCandidate {
+  /**
+   * El vínculo con la reseña abierta. NO se enseña: la tarjeta ya lleva el título y el autor, que es de donde
+   * sale el «mismo juego» o el «otra suya» sin necesidad de escribirlo. Existe para que las cuotas puedan
+   * repartir el bloque entre tipos de vínculo.
+   */
   reason: RelatedReason;
-  /** Género que motivó la relación; solo con `reason: 'genre'`, y con la grafía del ANCLA (es la que rotula). */
-  genre?: string;
   score: number;
 }
 
@@ -104,11 +110,25 @@ const DEFAULT_LIMIT = 6;
 const DEFAULT_MAX_PER_AUTHOR = 2;
 const DEFAULT_MAX_PER_REASON = 3;
 
-/** Puntuación base de cada motivo. La distancia entre ellas es la jerarquía descrita en la cabecera. */
+/** Puntuación base del vínculo. La distancia entre las dos es la jerarquía descrita en la cabecera. */
 const SCORE_SAME_GAME = 100;
 const SCORE_SAME_AUTHOR = 60;
-const SCORE_GENRE = 40;
-/** Cada género compartido de más acerca dos juegos, pero nunca hasta alcanzar al motivo de encima. */
+
+/**
+ * El género SUMA, no clasifica.
+ *
+ * Antes era el tercer motivo y funcionaba como los otros dos: excluyente, y solo se miraba en quien no fuera ni
+ * del mismo juego ni del mismo autor. Con eso, compartir género no servía absolutamente de nada en las reseñas
+ * que ya entraban por otra vía —de dos análisis de la misma persona, el del género que estás leyendo salía igual
+ * de arriba que el de un juego que no tiene nada que ver—, y eso es justo lo contrario de lo que el género
+ * aporta: no es una manera de entrar en la lista, es una razón para estar más arriba dentro de ella.
+ *
+ * Así, `mismo juego + mismo género` (120) va por delante de `mismo juego` (100), y `más de esta persona + mismo
+ * género` (80) por delante de `más de esta persona` (60); y quien SOLO comparte género sigue entrando, que es lo
+ * que era antes.
+ */
+const SCORE_GENRE = 20;
+/** Cada género compartido de más acerca dos juegos, con tope para que no se coma la distancia entre vínculos. */
 const SCORE_GENRE_EXTRA = 5;
 const SCORE_GENRE_EXTRA_MAX = 15;
 
@@ -187,11 +207,12 @@ function dedupeCandidates(candidates: readonly RelatedReviewCandidate[]): Relate
 /**
  * Reseñas que ofrecer al final de la que se está leyendo, ya ordenadas y recortadas.
  *
- * Cada candidato se queda con UN motivo, el de más peso de los que cumple: quien ha reseñado el mismo juego se
- * ofrece por eso aunque además comparta género, porque es lo que mejor explica por qué está ahí.
+ * La puntuación de cada una es su VÍNCULO (mismo juego o mismo autor) más lo que sume compartir género. Por eso
+ * el género no aparece en `reason`: no es una manera de entrar en la lista sino una razón para subir dentro de
+ * ella, y quien entra solo por él lleva `reason: 'genre'` únicamente para que las cuotas puedan contarlo.
  *
  * Las cuotas se aplican al recorrer la lista YA ordenada, no antes: así el bloque se llena siempre con lo mejor
- * disponible y un autor (o un motivo) solo cede el sitio cuando ya ha puesto lo suyo.
+ * disponible y un autor (o un tipo de vínculo) solo cede el sitio cuando ya ha puesto lo suyo.
  */
 export function rankRelatedReviews(
   anchor: RelatedReviewAnchor,
@@ -208,16 +229,8 @@ export function rankRelatedReviews(
   }
 
   const anchorAuthor = authorKey(anchor);
-  // Los géneros del ancla pueden venir dados (la pantalla del detalle ya los tiene) o salir del índice. La
-  // grafía se conserva para rotular el chip: al lector le sirve «Acción», no la clave con la que se comparó.
-  const anchorGenres = (anchor.genres?.length ? anchor.genres : genresByName.get(anchorNameKey)) || [];
-  const anchorGenreLabels = new Map<string, string>();
-  for (const genre of anchorGenres) {
-    const key = normalizeName(String(genre || ''));
-    if (key && !anchorGenreLabels.has(key)) {
-      anchorGenreLabels.set(key, String(genre).trim());
-    }
-  }
+  // Los géneros del ancla pueden venir dados (la pantalla del detalle ya los tiene) o salir del índice.
+  const anchorGenres = genreKeys(anchor.genres?.length ? anchor.genres : genresByName.get(anchorNameKey));
 
   const scored: RelatedReview[] = [];
 
@@ -231,26 +244,25 @@ export function rankRelatedReviews(
       continue;
     }
 
+    // Géneros en común. Lo normal es no conocerlos —no viajan por el canal—, y eso no es un fallo: sin ellos la
+    // reseña se ordena por su vínculo a secas, que es lo único que se sabe de ella.
+    const sharedGenres = [...genreKeys(genresByName.get(nameKey))].filter((key) => anchorGenres.has(key)).length;
+    const genreScore = sharedGenres === 0
+      ? 0
+      : SCORE_GENRE + Math.min((sharedGenres - 1) * SCORE_GENRE_EXTRA, SCORE_GENRE_EXTRA_MAX);
+
     if (sameGame) {
-      scored.push({ ...candidate, reason: 'same-game', score: SCORE_SAME_GAME });
+      scored.push({ ...candidate, reason: 'same-game', score: SCORE_SAME_GAME + genreScore });
       continue;
     }
     if (sameAuthor) {
-      scored.push({ ...candidate, reason: 'same-author', score: SCORE_SAME_AUTHOR });
+      scored.push({ ...candidate, reason: 'same-author', score: SCORE_SAME_AUTHOR + genreScore });
       continue;
     }
-
-    // Género: solo si se conocen los dos lados. Lo normal es que no se conozcan (los géneros no viajan por el
-    // canal), y por eso la ausencia no es un fallo: este candidato simplemente no entra por aquí.
-    const shared = genreKeys(genresByName.get(nameKey));
-    // Se recorren los géneros DEL ANCLA y no los del candidato porque el bloque cuelga de la reseña abierta: con
-    // varios géneros en común, el chip tiene que rotular el primero de ella, que es desde donde se lee.
-    const matched = [...anchorGenreLabels.entries()].filter(([key]) => shared.has(key));
-    if (matched.length === 0) {
-      continue;
+    // Sin vínculo de juego ni de autor, el género es lo único que puede meterla en la lista.
+    if (genreScore > 0) {
+      scored.push({ ...candidate, reason: 'genre', score: genreScore });
     }
-    const extra = Math.min((matched.length - 1) * SCORE_GENRE_EXTRA, SCORE_GENRE_EXTRA_MAX);
-    scored.push({ ...candidate, reason: 'genre', genre: matched[0][1], score: SCORE_GENRE + extra });
   }
 
   scored.sort((a, b) => b.score - a.score || b.updatedAt - a.updatedAt || a.key.localeCompare(b.key));

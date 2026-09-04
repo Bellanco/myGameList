@@ -742,13 +742,13 @@ button.hub-chip.active {
    encabezado, el chip del motivo y una escala algo menor, porque esto es el epílogo de la pantalla y no puede
    pesar como lo que hay encima. */
 .hub-related {
-  margin-top: 1.6rem;
-  padding-top: 1.2rem;
+  margin-top: 1.2rem;
+  padding-top: .9rem;
   border-top: 1px solid var(--border);
 }
 
 .hub-related-title {
-  margin: 0 0 .8rem;
+  margin: 0 0 .55rem;
   font-size: .82rem;
   font-weight: 700;
   letter-spacing: .06em;
@@ -756,50 +756,53 @@ button.hub-chip.active {
   color: var(--hub-text-muted);
 }
 
-.hub-related-list { gap: .7rem; }
+.hub-related-list { gap: .4rem; }
 
-/* Tarjeta más contenida que la de la lista de un perfil: menos aire y medallón más pequeño. */
+/* Tarjeta DENSA: dos renglones (título·autor y una línea de texto) con el medallón a la izquierda, en vez de la
+   rejilla de tres zonas que usa la lista de un perfil. Ahí cada reseña es el contenido de la pantalla y puede
+   ocupar; aquí son las salidas del final y lo que importa es ver varias sin desplazarse. */
 .hub-related-entry {
-  padding: .8rem .95rem .8rem 1.1rem;
+  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-areas: 'medal head' 'medal body';
+  align-items: center;
+  gap: .05rem .7rem;
+  padding: .5rem .8rem .5rem .95rem;
 }
 
 .hub-related-entry .hub-review-medal {
-  width: 2.6rem; height: 2.6rem;
-  font-size: 1.1rem;
-  border-width: 2px;
+  grid-row: span 2;
+  align-self: center;
+  width: 2.1rem; height: 2.1rem;
+  font-size: .9rem;
+  border-width: 1px;
 }
+
+.hub-related-entry .hub-review-entry-head { gap: 0; }
 
 .hub-related-entry .hub-review-game {
-  font-size: .95rem;
-}
-
-/* Adelanto a dos líneas: lo justo para decidir si vale la pena abrirla. */
-.hub-related-entry .hub-review-text {
-  max-width: none;
-  line-clamp: 2;
-  -webkit-line-clamp: 2;
-  font-size: .86rem;
-  line-height: 1.45;
-  color: var(--hub-text-muted);
-}
-
-/* Chip del MOTIVO. Es lo que convierte la lista en una respuesta —«esto está aquí porque habla del mismo
-   juego»—, así que se distingue del chip del autor: aquel nombra a alguien, este explica. Va en el acento de la
-   propia tarjeta (`--acc`, el color de la nota) para que no compita con el medallón por atención. */
-.hub-related-reason {
-  flex-shrink: 0;
-  padding: .08rem .5rem;
-  border-radius: var(--radius-pill);
-  background: var(--acc-soft, var(--surface-soft));
-  border: 1px solid transparent;
-  color: var(--acc, var(--text-muted));
-  font-size: .68rem;
-  font-weight: 700;
-  letter-spacing: .02em;
+  font-size: .9rem;
+  line-height: 1.3;
+  /* Una sola línea: un título largo se corta antes que empujar la tarjeta a un tercer renglón. */
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  max-width: 12rem;
+  overflow-wrap: normal;
+}
+
+/* La firma, dentro del mismo renglón del título y en segundo plano: se busca el juego, no quién lo escribió. */
+.hub-related-author {
+  font-weight: 600;
+  color: var(--hub-text-muted);
+}
+
+/* Un renglón de texto: lo justo para decidir si vale la pena abrirla. */
+.hub-related-entry .hub-review-text {
+  max-width: none;
+  line-clamp: 1;
+  -webkit-line-clamp: 1;
+  font-size: .8rem;
+  line-height: 1.4;
+  color: var(--hub-text-muted);
 }
 
 /* Texto + botón "ver más" ocupan las dos columnas (a lo ancho de la tarjeta). */
@@ -1394,11 +1397,22 @@ button.hub-chip.active {
   }
 }
 
+/* En pantalla estrecha, una fila de acciones con varios botones anchos a la derecha se apila para que ninguno
+   quede recortado. Se exceptúan las que solo llevan un botón a cada lado (`-inline`): esas caben de sobra, y
+   apilarlas separaba «volver» de «compartir» en dos renglones cuando su sitio es uno a cada extremo del mismo. */
 @container social-card (max-width: 58rem) {
-  .hub-screen-actions-split {
+  .hub-screen-actions-split:not(.hub-screen-actions-inline) {
     flex-direction: column;
     align-items: stretch;
     gap: .55rem;
+  }
+
+  /* La otra mitad de lo mismo: `_layout.scss` da el 100% del ancho a cada lado en esta franja, y con el
+     `flex-wrap` de la fila eso basta para partirlos en dos renglones aunque la fila siga siendo horizontal.
+     Devolverles su ancho natural es lo que deja «volver» y «compartir» uno a cada extremo del mismo renglón. */
+  .hub-screen-actions-inline .hub-screen-actions-left,
+  .hub-screen-actions-inline .hub-screen-actions-right {
+    width: auto;
   }
 }
 
