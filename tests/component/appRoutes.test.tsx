@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { APP_ROUTES, FALLBACK_ROUTE, isKnownRoute, matchAppSection } from '../../src/core/constants/routes';
+import { APP_ROUTES, FALLBACK_ROUTE, LEGACY_ROUTE_REDIRECTS, isKnownRoute, matchAppSection } from '../../src/core/constants/routes';
 import { LEGAL_ROUTES } from '../../src/core/constants/legal';
 import { SOCIAL_ROUTES } from '../../src/viewmodel/social/socialRoutes';
 
@@ -59,6 +59,17 @@ describe('rutas de la app', () => {
     expect(matchAppSection(FALLBACK_ROUTE)).toBe('lists');
   });
 
+  it('el nombre retirado de una lista redirige al actual en vez de rebotar a completados', () => {
+    // `/visitados` era el nombre de la lista de abandonados. Renombrarla en seco habría mandado al rebote
+    // cualquier marcador o acceso directo ya guardado, que es la razón de que la redirección exista.
+    expect(LEGACY_ROUTE_REDIRECTS).toContainEqual({ from: '/visitados', to: '/abandonados' });
+    // El destino de cada redirección tiene que ser una ruta declarada; si no, el salto acaba en el catch-all.
+    for (const { from, to } of LEGACY_ROUTE_REDIRECTS) {
+      expect(APP_ROUTES.some((route) => route.path === to), to).toBe(true);
+      expect(APP_ROUTES.some((route) => route.path === from), from).toBe(false);
+    }
+  });
+
   it('isKnownRoute distingue lo declarado de lo inventado, que `matchAppSection` no puede', () => {
     // Justo por eso existe: al caer todo lo desconocido en 'lists', el matcher de sección no sirve para validar
     // un pathname que viene de fuera (el origen del "Volver" guardado en el historial).
@@ -67,6 +78,8 @@ describe('rutas de la app', () => {
       expect(isKnownRoute(path), path).toBe(true);
     }
     expect(isKnownRoute('/social/requests')).toBe(true);
+    // Un nombre retirado SIGUE resolviendo (redirige), así que el "Volver" puede fiarse de él.
+    expect(isKnownRoute('/visitados')).toBe(true);
     expect(isKnownRoute('/no-existe')).toBe(false);
   });
 });

@@ -29,16 +29,20 @@ export const TAB_TOOLTIPS: Record<TabId, string> = {
 
 export const TAB_ROUTE: Record<TabId, string> = {
   c: '/completados',
-  v: '/visitados',
+  v: '/abandonados',
   e: '/en-curso',
   p: '/proximos',
 };
 
 export const ROUTE_TAB: Record<string, TabId> = {
   '/completados': 'c',
-  '/visitados': 'v',
+  '/abandonados': 'v',
   '/en-curso': 'e',
   '/proximos': 'p',
+  // Nombre ANTIGUO de la lista de abandonados, que sigue resolviendo por redirección
+  // (`LEGACY_ROUTE_REDIRECTS`). Se mantiene aquí para que el fotograma previo al salto pinte ya su pestaña, en
+  // vez de asomar «completados» por el `|| 'c'` de `getCurrentTab`.
+  '/visitados': 'v',
 };
 
 export const TAB_ACTIONS: Record<TabId, TabAction[]> = {

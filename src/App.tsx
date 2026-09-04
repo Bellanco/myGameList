@@ -15,7 +15,7 @@ import { GameTable } from './view/components/GameTable';
 import { StatusBanner } from './view/components/StatusBanner';
 import { UpdateNotice } from './view/components/UpdateNotice';
 import { BottomNavigation } from './view/components/BottomNavigation';
-import { APP_ROUTES, FALLBACK_ROUTE, matchAppSection, type AppSection } from './core/constants/routes';
+import { APP_ROUTES, FALLBACK_ROUTE, LEGACY_ROUTE_REDIRECTS, matchAppSection, type AppSection } from './core/constants/routes';
 import { ScrollToTop } from './view/components/ScrollToTop';
 import { ConsentBanner } from './view/components/ConsentBanner';
 import { SocialHubSkeleton } from './view/components/SocialHubSkeleton';
@@ -763,6 +763,11 @@ export default function App() {
         <Routes>
           {APP_ROUTES.map(({ path, section }) => (
             <Route key={path} path={path} element={sectionScreens[section]} />
+          ))}
+          {/* Nombres retirados: redirigen al actual en vez de caer en el catch-all. Van DESPUÉS de la tabla
+              (no hay solape, pero el orden deja claro cuál manda) y ANTES del rebote a `FALLBACK_ROUTE`. */}
+          {LEGACY_ROUTE_REDIRECTS.map(({ from, to }) => (
+            <Route key={from} path={from} element={<Navigate to={to} replace />} />
           ))}
           <Route path="*" element={<Navigate to={FALLBACK_ROUTE} replace />} />
         </Routes>
