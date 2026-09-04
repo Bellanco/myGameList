@@ -5,7 +5,7 @@
 //     mismo en dos aparatos distintos (el id de juego se asigna por biblioteca).
 //  2. Que la reseña abierta nunca se recomienda a sí misma, incluso cuando la propia llega con dos
 //     identificadores de autor distintos (biblioteca local vs. pseudónimo del gist).
-//  3. Que la jerarquía de motivos se respeta: mismo juego > mismo autor > mismo género.
+//  3. Que la jerarquía de motivos se respeta: mismo juego > misma saga > mismo autor > mismo género.
 //  4. Que las cuotas impiden que un autor prolífico —o un solo motivo— se lleve el bloque entero.
 //  5. Que la falta de géneros, de texto o de una fecha válida no rompe nada: son casos NORMALES en este canal.
 import { describe, expect, it } from 'vitest';
@@ -74,13 +74,16 @@ describe('rankRelatedReviews — cruce por nombre', () => {
     expect(result[0]?.reason).toBe('same-game');
   });
 
-  it('sigue sin fundir un remake con su original', () => {
+  it('sigue sin fundir un remake con su original: es la misma saga, no el mismo juego', () => {
+    // Un remake es una obra NUEVA, así que no puede entrar como «mismo juego» (ver `gameTitleKey`). Pero es
+    // evidentemente la misma saga, y por ahí sí se ofrece.
     const result = rankRelatedReviews(
       { gameName: 'Final Fantasy VII', authorId: 'luis', isOwn: false },
       [candidate({ key: 'a', gameName: 'Final Fantasy VII Remake' })],
     );
 
-    expect(result).toEqual([]);
+    expect(result).toHaveLength(1);
+    expect(result[0].reason).toBe('saga');
   });
 });
 
@@ -226,6 +229,86 @@ describe('rankRelatedReviews — género', () => {
     );
 
     expect(result[0]?.reason).toBe('genre');
+  });
+});
+
+// Otra entrega de la saga que se está leyendo. Las reglas de qué es una saga son de `gameSaga` y allí se
+// prueban una a una con títulos reales; aquí se comprueba lo que hace la saga DENTRO del bloque: cuánto pesa,
+// contra qué gana y que entra sola.
+describe('rankRelatedReviews — misma saga', () => {
+  const persona = () => anchor({ gameName: 'Persona 5 Royal', authorId: 'luis' });
+
+  it('la saga basta para entrar a quien no comparte juego, autor ni género', () => {
+    const result = rankRelatedReviews(persona(), [candidate({ key: 'a', gameName: 'Persona 3 Reloaded' })]);
+
+    expect(result).toHaveLength(1);
+    expect(result[0].reason).toBe('saga');
+  });
+
+  it('la saga va por delante del género y de la firma', () => {
+    // 60 contra 30 y contra 25: otra entrega de lo que estás leyendo habla casi de lo mismo.
+    const result = rankRelatedReviews(
+      persona(),
+      [
+        candidate({ key: 'autor', authorId: 'luis', gameName: 'Celeste' }),
+        candidate({ key: 'genero', authorId: 'ana', gameName: 'Nioh 2' }),
+        candidate({ key: 'saga', authorId: 'bea', gameName: 'Persona 3 Reloaded' }),
+      ],
+      genres({ 'Persona 5 Royal': ['RPG'], 'Nioh 2': ['RPG'] }),
+    );
+
+    expect(result.map((entry) => entry.key)).toEqual(['saga', 'genero', 'autor']);
+  });
+
+  it('el mismo juego sigue por delante de la saga', () => {
+    const result = rankRelatedReviews(persona(), [
+      candidate({ key: 'saga', authorId: 'bea', gameName: 'Persona 3 Reloaded' }),
+      candidate({ key: 'mismo-juego', authorId: 'ana', gameName: 'Persona 5 Royal' }),
+    ]);
+
+    expect(result.map((entry) => entry.key)).toEqual(['mismo-juego', 'saga']);
+  });
+
+  it('sobre el mismo juego la saga no suma: coincide por definición y no distingue a nadie', () => {
+    const result = rankRelatedReviews(persona(), [
+      candidate({ key: 'a', authorId: 'ana', gameName: 'Persona 5 Royal' }),
+    ]);
+
+    expect(result[0].score).toBe(100);
+  });
+
+  it('quien comparte saga Y firma cobra las dos cosas, y se ofrece por la saga', () => {
+    const result = rankRelatedReviews(persona(), [
+      candidate({ key: 'saga-autor', authorId: 'luis', gameName: 'Persona 3 Reloaded' }),
+      candidate({ key: 'saga', authorId: 'bea', gameName: 'Persona 4 Golden', updatedAt: T + 5000 }),
+    ]);
+
+    expect(result.map((entry) => entry.key)).toEqual(['saga-autor', 'saga']);
+    expect(result[0].reason).toBe('saga');
+    expect(result[0].score).toBe(85);
+  });
+
+  it('lo tuyo resta también en la saga', () => {
+    const result = rankRelatedReviews(persona(), [
+      candidate({ key: 'mia', authorId: 'yo', isOwn: true, gameName: 'Persona 3 Reloaded' }),
+      candidate({ key: 'ajena', authorId: 'ana', gameName: 'Persona 4 Golden', updatedAt: T - 5000 }),
+    ]);
+
+    expect(result.map((entry) => entry.key)).toEqual(['ajena', 'mia']);
+  });
+
+  it('empezar por la misma palabra no es compartir saga', () => {
+    // La regla completa está en `gameSaga`; esto vigila que llegue hasta aquí, que es lo que se rompería si
+    // alguien relajase el cruce y el bloque empezase a emparentar catálogos enteros.
+    const result = rankRelatedReviews(
+      anchor({ gameName: 'The Last of Us Part II', authorId: 'luis' }),
+      [
+        candidate({ key: 'articulo', authorId: 'ana', gameName: 'The Last Guardian' }),
+        candidate({ key: 'palabra', authorId: 'bea', gameName: 'Dark Souls' }),
+      ],
+    );
+
+    expect(result).toEqual([]);
   });
 });
 
