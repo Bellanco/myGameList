@@ -20,7 +20,8 @@ export function SocialDetailScreen({
   onBack,
   status,
   statusKind,
-  shareable = false
+  shareable = false,
+  related = null,
 }: {
   SOCIAL_UI: SocialUiLabels;
   /**
@@ -42,6 +43,12 @@ export function SocialDetailScreen({
    * del viewmodel, no esta pantalla: aquí solo se pinta lo que corresponda.
    */
   shareable?: boolean;
+  /**
+   * Bloque de reseñas RELACIONADAS al pie del análisis. Llega montado, como `actions`, y por el mismo motivo:
+   * quién puede relacionar reseñas depende de qué datos tenga a mano quien usa esta pantalla, y eso lo sabe el
+   * hub —que tiene el directorio— y no un componente de presentación.
+   */
+  related?: React.ReactNode;
 }) {
   if (!activeDetailEvent) {
     return (
@@ -121,6 +128,7 @@ export function SocialDetailScreen({
             weaknesses={gameItem?.weaknesses}
           />
         </article>
+        {related}
         <HubStatus status={status} statusKind={statusKind} />
     </HubScreen>
   );

@@ -5,6 +5,27 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
 
 ## [Unreleased]
 
+### Added
+- **Reseñas relacionadas al final de una reseña.** Al leer una reseña en el espacio social —tanto desde el feed
+  como desde la lista de reseñas de un perfil— aparece al pie un bloque con hasta seis reseñas por las que seguir
+  leyendo. Cada una lleva un chip que dice POR QUÉ está ahí, que es lo que la convierte en una respuesta y no en
+  una sugerencia suelta:
+  - **«Mismo juego»:** otra persona hablando de lo que acabas de leer. Es el motivo de más peso y el único de
+    cobertura completa.
+  - **«Más de Ana»:** otras reseñas de quien firma la que estás leyendo.
+  - **El género** (**«Acción»**): otros juegos del mismo género. Cobertura irregular a propósito: los géneros no
+    viajan por el canal social, así que solo se conocen los de tu biblioteca y los de la amistad cuyo perfil hayas
+    abierto. Cuando no se sabe, el bloque se llena con los otros dos motivos.
+  - **Tus reseñas cuentan, estén publicadas o no.** Son tuyas y solo las ves tú, así que ofrecerlas no enseña nada
+    a nadie y multiplica lo que el bloque encuentra. Se firman como «Tú», y si la misma reseña llega también por el
+    canal se ofrece una sola vez y con el texto completo, no con el adelanto de 160 caracteres.
+  - **Ningún dato nuevo, ninguna lectura nueva.** Todo sale del directorio social ya cargado y de tus listados: no
+    se publica nada, no se lee ningún gist de más, y solo puede aparecer gente cuyas reseñas ya veías en tu feed
+    (el canal solo lee el gist de las amistades). Los juegos se cruzan por NOMBRE y no por id, que es lo único que
+    significa lo mismo en dos bibliotecas distintas.
+  - Un autor no pone más de dos reseñas en el bloque y ningún motivo se lleva más de tres, para que la lista no la
+    copie quien más escribe. Si no hay nada que ofrecer, no se pinta el bloque.
+
 ### Changed
 - **Actividad de listas: otras palabras, solo movimientos y tope por día.** Tres cambios sobre el aviso de una
   línea del feed social («Ada finalizó Hollow Knight 18:42»):

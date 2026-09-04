@@ -36,6 +36,7 @@ export function SocialProfileReviewScreen({
   status,
   statusKind,
   actions = null,
+  related = null,
 }: {
   SOCIAL_UI: SocialUiLabels;
   review: ProfileReview | null;
@@ -53,6 +54,13 @@ export function SocialProfileReviewScreen({
    * (donde es tuya). En vez de meter aquí un `esMía`, cada sitio pasa lo que le corresponde.
    */
   actions?: React.ReactNode;
+  /**
+   * Bloque de reseñas RELACIONADAS al pie del análisis, montado por quien usa la pantalla. Existe por lo mismo
+   * que `actions`: el hub social lo pasa porque tiene el directorio con el que relacionar, y el panel de
+   * estadísticas —que reutiliza esta misma pantalla para TUS reseñas— no pasa nada, porque allí no hay canal
+   * social del que tirar y no debe haberlo (funciona sin tenerlo montado).
+   */
+  related?: React.ReactNode;
 }) {
   /** Fila de acciones bajo el encabezado. El encabezado en sí lo pone `HubScreen`. */
   const actionsRow = (
@@ -104,6 +112,7 @@ export function SocialProfileReviewScreen({
             weaknesses={review.weaknesses}
           />
         </article>
+      {related}
       <HubStatus status={status} statusKind={statusKind} />
     </HubScreen>
   );

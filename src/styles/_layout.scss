@@ -1100,10 +1100,13 @@
   padding: 1rem 1.15rem 1rem 1.35rem;
 }
 
-.hub-profile-reviews-list .hub-review-entry.is-review { border-left-color: transparent; }
+.hub-profile-reviews-list .hub-review-entry.is-review,
+.hub-related-list .hub-review-entry.is-review { border-left-color: transparent; }
 
-/* Superficie plana (sin degradado) + sombra sutil. */
-.hub-profile-reviews-list .hub-review-entry {
+/* Superficie plana (sin degradado) + sombra sutil. El bloque de reseñas relacionadas comparte estas reglas
+   porque pinta la misma tarjeta: es una reseña en una lista, esté en el perfil de alguien o al pie de otra. */
+.hub-profile-reviews-list .hub-review-entry,
+.hub-related-list .hub-review-entry {
   background: var(--hub-card-bg);
   box-shadow: 0 1px 2px rgba(0, 0, 0, .14);
 }
@@ -1204,7 +1207,9 @@
 
 /* Realce sutil al pasar/enfocar, coherente con el resto de tarjetas pulsables del hub. */
 .hub-profile-reviews-list .hub-review-entry.is-review:hover,
-.hub-profile-reviews-list .hub-review-entry.is-review:has(.hub-review-open:focus-visible) {
+.hub-profile-reviews-list .hub-review-entry.is-review:has(.hub-review-open:focus-visible),
+.hub-related-list .hub-review-entry.is-review:hover,
+.hub-related-list .hub-review-entry.is-review:has(.hub-review-open:focus-visible) {
   transform: translateY(-1px);
   border-color: var(--acc);
   box-shadow: 0 4px 12px rgba(0, 0, 0, .18);

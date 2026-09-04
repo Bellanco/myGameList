@@ -14,6 +14,7 @@ import { SocialProfileScreen } from './socialhub/SocialProfileScreen';
 import { SocialDetailScreen } from './socialhub/SocialDetailScreen';
 import { SocialProfileDetailScreen } from './socialhub/SocialProfileDetailScreen';
 import { SocialProfileReviewScreen } from './socialhub/SocialProfileReviewScreen';
+import { RelatedReviews } from './socialhub/RelatedReviews';
 import { SocialProfilesScreen } from './socialhub/SocialProfilesScreen';
 import { SocialFeedScreen } from './socialhub/SocialFeedScreen';
 import { SocialRequestsScreen } from './socialhub/SocialRequestsScreen';
@@ -111,6 +112,8 @@ const SocialHubInner = memo(function SocialHubInner({
     feedItems,
     activeDetailEvent,
     getGameItemById,
+    relatedReviews,
+    openRelatedReview,
     groupedFeedItems,
     hasMoreFeed,
     showMoreFeed,
@@ -193,6 +196,21 @@ const SocialHubInner = memo(function SocialHubInner({
     (gameId: number) => openProfileReviewDetail(detailId, gameId),
     [openProfileReviewDetail, detailId],
   );
+  /**
+   * Abrir una reseña relacionada, y volver ARRIBA al hacerlo.
+   *
+   * El bloque de relacionadas está al pie de la pantalla, así que se pulsa desde abajo del todo; sin este salto,
+   * la reseña siguiente se estrena por la mitad —o directamente por su propio bloque de relacionadas—, que es la
+   * única parte de ella que ya se había visto. El salto se hace aquí y no en un efecto de ruta a propósito: solo
+   * este gesto necesita reposicionar, y volver atrás debe conservar dónde estaba el lector.
+   */
+  const openRelated = useCallback(
+    (entry: Parameters<typeof openRelatedReview>[0]) => {
+      openRelatedReview(entry);
+      window.scrollTo({ top: 0 });
+    },
+    [openRelatedReview],
+  );
   const addOrAcceptDetailFriend = useCallback(
     () => handleAddOrAcceptFriend(detailUid),
     [handleAddOrAcceptFriend, detailUid],
@@ -251,6 +269,7 @@ const SocialHubInner = memo(function SocialHubInner({
           status={status}
           statusKind={statusKind}
           shareable={isOwnDetailEvent}
+          related={<RelatedReviews SOCIAL_UI={SOCIAL_UI} items={relatedReviews} onOpen={openRelated} />}
         />
       );
     }
@@ -304,6 +323,7 @@ const SocialHubInner = memo(function SocialHubInner({
           actions={
             ownReviewGame && ownReviewText ? <ShareReviewButton game={ownReviewGame} reviewText={ownReviewText} /> : null
           }
+          related={<RelatedReviews SOCIAL_UI={SOCIAL_UI} items={relatedReviews} onOpen={openRelated} />}
         />
       );
     }
