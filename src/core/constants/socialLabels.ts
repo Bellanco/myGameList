@@ -228,12 +228,9 @@ export const SOCIAL_UI = {
     //
     // Cada tarjeta llevó un chip con el motivo («Mismo juego», «Otra tuya») y se retiró: la tarjeta ya enseña el
     // título y la firma, así que el motivo se lee solo y la etiqueta repetía con palabras lo que estaba dos
-    // centímetros más arriba.
-    //
-    // «Tú» en la firma de las propias, y no tu nombre: en un bloque donde lo demás son terceros, la primera
-    // persona es lo que distingue de un vistazo lo que ya has escrito de lo que han escrito otros.
+    // centímetros más arriba. Las propias se firman con el nombre de uno, como las demás: un «Tú» era la única
+    // firma del bloque que no parecía una persona.
     relatedTitle: 'Reseñas relacionadas',
-    relatedOwn: 'Tú',
     relatedOpenAria: (gameName: string, author: string) => `Abrir la reseña de ${author} sobre ${gameName}`,
     profileListTabCompleted: 'Completados',
     profileListTabVisited: 'Abandonados',

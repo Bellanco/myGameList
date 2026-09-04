@@ -32,6 +32,12 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
     larga te dejara leyendo por el medio. Volver atrás sigue conservando dónde estabas.
   - **En pantalla estrecha, «volver» y «compartir» vuelven a la misma línea**, uno a cada extremo, en lugar de
     apilarse en dos renglones.
+  - **Tu propia reseña se firma con tu nombre**, como las de los demás, y se distingue por el color de la firma en
+    lugar de por un «Tú» que era la única del bloque que no parecía una persona.
+  - **Se pintan las que llenen filas enteras.** Cuántas salen no es un número fijo: sale de cuántas columnas quepan
+    en el ancho disponible —tres en el móvil, hasta quince en un monitor grande—, y si sobran candidatas se
+    recorta a un múltiplo de las columnas para que no quede una tarjeta suelta con huecos al lado. La única fila
+    que puede quedar a medias es la primera, cuando sencillamente no hay más reseñas que ofrecer.
   - **El bloque es una rejilla, no una lista.** Una reseña relacionada es un renglón corto, y a lo ancho de la
     pantalla ese renglón acababa a media línea dejando media tarjeta vacía. En columnas, el mismo alto enseña
     dos o tres. Se adapta al ancho disponible sin una sola consulta de medios —de una columna en el móvil a cinco

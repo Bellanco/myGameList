@@ -250,22 +250,27 @@ describe('rankRelatedReviews — duplicados', () => {
   });
 });
 
+// Las cuotas se ejercitan pasando su valor a mano y no confiando en el de por defecto: esos números son mandos
+// pensados para retocarse (ver la cabecera del módulo), y una prueba que los fije de tapadillo convierte cada
+// ajuste en un test roto que no señala ningún fallo.
 describe('rankRelatedReviews — cuotas y tope', () => {
   it('no deja que un autor prolífico copie el bloque', () => {
     const result = rankRelatedReviews(
       anchor({ authorId: 'luis' }),
       ['a', 'b', 'c', 'd'].map((suffix, index) =>
         candidate({ key: `luis-${suffix}`, authorId: 'luis', gameName: `Juego ${suffix}`, updatedAt: T - index })),
+      new Map(),
+      { maxPerAuthor: 2 },
     );
 
     expect(result).toHaveLength(2);
   });
 
-  it('reparte entre motivos: ninguno se lleva el bloque entero', () => {
+  it('reparte entre tipos de vínculo: ninguno se lleva el bloque entero', () => {
     const sameGame = ['ana', 'bea', 'cris', 'dani'].map((author, index) =>
       candidate({ key: `juego-${author}`, authorId: author, gameName: 'Elden Ring', updatedAt: T - index }));
 
-    const result = rankRelatedReviews(anchor({ authorId: 'luis' }), sameGame);
+    const result = rankRelatedReviews(anchor({ authorId: 'luis' }), sameGame, new Map(), { maxPerReason: 3 });
 
     expect(result).toHaveLength(3);
     expect(result.every((entry) => entry.reason === 'same-game')).toBe(true);
