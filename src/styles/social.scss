@@ -817,6 +817,13 @@ button.hub-chip.active {
   white-space: nowrap;
 }
 
+/* La firma PROPIA lleva tu nombre como las demás, y se distingue por el color, no por el texto: el azul de la
+   aplicación tirado hacia el gris de las otras firmas, lo justo para reconocer de un vistazo lo que ya has
+   escrito tú sin que la tarjeta pida más atención que las de al lado. */
+.hub-related-author.is-own {
+  color: color-mix(in srgb, var(--steam), var(--hub-text-muted) 30%);
+}
+
 /* Tres líneas de adelanto: lo justo para decidir si vale la pena abrirla, y lo que da a la tarjeta su forma. */
 .hub-related-entry .hub-review-text {
   max-width: none;

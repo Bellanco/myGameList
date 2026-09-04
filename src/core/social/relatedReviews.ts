@@ -106,12 +106,29 @@ export interface RankRelatedOptions {
   maxPerReason?: number;
 }
 
-const DEFAULT_LIMIT = 6;
-const DEFAULT_MAX_PER_AUTHOR = 2;
-const DEFAULT_MAX_PER_REASON = 3;
+/* ─────────────────────────────────────────────────────────────────────────────────────────────────────────────
+   LOS MANDOS DEL BLOQUE. Todo lo que decide QUÉ sale y EN QUÉ ORDEN está aquí y en ningún otro sitio: para
+   cambiar el criterio no hay que tocar una línea de lógica, solo estos números.
 
-/** Puntuación base del vínculo. La distancia entre las dos es la jerarquía descrita en la cabecera. */
+   La puntuación de una reseña es la suma de dos cosas:
+
+       puntos = vínculo (mismo juego o mismo autor) + refuerzo de género
+
+   y la lista se ordena de más a menos. Con los valores de abajo, el orden que sale es:
+
+       mismo juego + género ......... 120
+       mismo juego .................. 100
+       mismo autor + género .......... 80
+       mismo autor ................... 60
+       solo género ................... 20  (+5 por cada género extra en común, hasta +15)
+
+   Subir `SCORE_GENRE` por encima de 40 haría que «mismo autor + género» adelantara a «mismo juego»; ponerlo a 0
+   deja el género sin efecto y solo relaciona por juego y por autor.
+   ──────────────────────────────────────────────────────────────────────────────────────────────────────────── */
+
+/** Otra persona ha reseñado el MISMO juego que estás leyendo. El vínculo de más valor. */
 const SCORE_SAME_GAME = 100;
+/** Otra reseña de QUIEN FIRMA la que estás leyendo (o tuya, si la abierta es tuya). */
 const SCORE_SAME_AUTHOR = 60;
 
 /**
@@ -131,6 +148,20 @@ const SCORE_GENRE = 20;
 /** Cada género compartido de más acerca dos juegos, con tope para que no se coma la distancia entre vínculos. */
 const SCORE_GENRE_EXTRA = 5;
 const SCORE_GENRE_EXTRA_MAX = 15;
+
+/**
+ * Cuántas candidatas devuelve el ranking. NO es lo que se ve: el bloque las pinta en rejilla y enseña las que
+ * llenen filas completas según el ancho, así que este número es la RESERVA de la que tira. Conviene que sobren
+ * —una pantalla ancha con cinco columnas quiere diez para dos filas— y las que no caben no cuestan nada.
+ */
+const DEFAULT_LIMIT = 15;
+/**
+ * Tope por autor. Sin él, una amistad prolífica copaba el bloque entero por «más de esta persona» y la lista
+ * mezclada dejaba de estar mezclada. Bajarlo a 1 da más variedad de gente; subirlo, más de quien más escribe.
+ */
+const DEFAULT_MAX_PER_AUTHOR = 3;
+/** Tope por tipo de vínculo, por lo mismo: que ninguno de los tres se lleve el bloque él solo. */
+const DEFAULT_MAX_PER_REASON = 6;
 
 /**
  * Identidad de autor a efectos de comparación.
