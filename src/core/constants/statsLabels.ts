@@ -322,8 +322,8 @@ export const STATS_UI = {
      */
     unfinished: 'Contrato sin cerrar',
     backToStats: 'Volver a las estadísticas',
-    /** Nombre del autor en el detalle de una reseña propia. */
-    mine: 'Tus reseñas',
+    // Aquí vivía `mine: 'Tus reseñas'`, que firmaba el detalle de una reseña propia. Se ha retirado con la
+    // firma: en esta pantalla todas son tuyas, así que nombrarte no distinguía ninguna (ver `ReviewDetailHead`).
   },
   /** Panel de estadísticas de OTRA persona, dentro de su perfil del hub social. */
   friend: {

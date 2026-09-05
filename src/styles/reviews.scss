@@ -11,7 +11,7 @@
 // La regla que se rompió está escrita en la cabecera de `social.scss` —«solo entran las clases que no usa nadie
 // fuera del chunk del hub»— y el arreglo no es mover estas reglas al arranque (las pagaría todo el mundo, y la
 // mayoría no abre una reseña) sino atarlas a los COMPONENTES que las necesitan: la importan
-// `ProfileReviewsList`, `RelatedReviews`, `SocialProfileReviewScreen` y `PublicReviewScreen`, así que Vite las
+// `ProfileReviewsList`, `RelatedReviews`, `ReviewDetailHead` y `SocialProfileReviewScreen`, así que Vite las
 // emite en cada chunk que de verdad pinta una reseña, venga del hub, del panel o del enlace público.
 //
 // Lo que NO está aquí: el armazón de pantalla, la tarjeta del feed y el cuerpo del detalle (`hub-detail-body`,
@@ -58,9 +58,34 @@
   margin: 0;
   font-size: 1.02rem;
   font-weight: 800;
+  /* El color de texto fuerte, NO el tono de "nombre de juego": en una tarjeta de la lista el título ya destaca
+     por tamaño y peso, y va junto al medallón, que es quien pone color ahí. El tono de la paleta se reserva para
+     cuando el juego es el TITULAR de una pantalla (ver `.hub-review-detail-game`). */
   color: var(--hub-text);
   line-height: 1.25;
   overflow-wrap: anywhere;
+}
+
+/* El juego cuando es el TITULAR del detalle, es decir cuando no hay firma que dar (tus reseñas del panel).
+   Iba en el azul de enlace de cualquier título, que es EXACTAMENTE el del encabezado de la pantalla: dos
+   títulos del mismo color, uno encima del otro, y ninguno destacando.
+   Ahora se dice con la MISMA etiqueta con la que el hub social nombra un juego —el elemento lleva también
+   `hub-feed-game-chip`, así que hereda el fondo, el filete y el color que cada tema le da en su §6: rótulo de
+   señalética naranja en Portal, etiqueta de HUD cian en Cyberpunk…—, y aquí solo se le devuelve el TAMAÑO de
+   titular, que es lo único que no debe copiar de un chip.
+   El `:root` del selector no es decorativo: los temas ajustan el tamaño de sus chips desde
+   `:root[data-palette="…"] .hub-feed-game-chip`, que suma (0,3,0) —`:root` y `[data-palette]` cuentan como
+   clases—, así que hay que llegar a (0,3,1) para ganarles. Sin él, en Persona el titular se quedaba en los
+   .68rem de su etiqueta. Todo lo demás se deja pasar A PROPÓSITO: el color, el relleno y la forma son cosa del
+   tema, y esta regla solo discute el tamaño. */
+:root .hub-feed-card h3.hub-review-detail-game {
+  font-size: clamp(.9rem, .84rem + .3vw, 1.02rem);
+  font-weight: 700;
+  /* El hueco, en `em`: es lo único del tamaño que no puede quedarse en el del chip pequeño. Con los `rem` fijos
+     de cada tema, un rótulo del doble de cuerpo salía con el aire de uno diminuto —apretado contra su filete—, y
+     en la paleta por defecto (.08rem) casi sin margen arriba. Al ir en `em` crece con la letra, así que el
+     rótulo guarda las mismas proporciones que su hermano pequeño del hub en vez de una medida nueva. */
+  padding: .18em .6em;
 }
 
 .hub-review-meta {
@@ -274,4 +299,59 @@
 .hub-review-open:focus-visible {
   outline: 2px solid var(--acc);
   outline-offset: 2px;
+}
+
+/* ── Cabecera del detalle: la firma ─────────────────────────────────────────────────────────────────────
+   Vienen de `social.scss`. Las emite `ReviewDetailHead`, que montan también el panel de estadísticas y la
+   página pública de un enlace, así que no pueden vivir en el chunk del hub. El nombre del autor es un botón
+   con apariencia de texto (y el avatar, un botón sin cromo) solo cuando su perfil es alcanzable. */
+.hub-detail-profile-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  min-height: 2.75rem;
+  min-width: 2.75rem;
+  margin: -.25rem -.35rem;
+  padding: .25rem .35rem;
+  border: 1px solid transparent;
+  border-radius: .5rem;
+  background: transparent;
+  color: var(--fg-link);
+  font-size: inherit;
+  font-weight: inherit;
+  line-height: 1.2;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color .2s ease, background .2s ease, color .2s ease;
+}
+
+.hub-detail-profile-link:hover {
+  color: var(--hub-text);
+}
+
+.hub-detail-profile-link:focus-visible {
+  outline: none;
+  border-color: rgba(var(--steam-rgb),.42);
+  background: rgba(var(--steam-rgb),.12);
+  box-shadow: 0 0 0 2px rgba(var(--steam-rgb),.2);
+}
+
+/* Avatar clicable (feed/detalle): botón sin chrome que envuelve la foto/inicial y navega al perfil. */
+.hub-avatar-link {
+  flex: 0 0 auto;
+  display: inline-flex;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 50%;
+  background: transparent;
+  cursor: pointer;
+  transition: box-shadow .2s ease, border-color .2s ease;
+}
+
+.hub-avatar-link:hover { box-shadow: 0 0 0 2px rgba(var(--steam-rgb),.28); }
+
+.hub-avatar-link:focus-visible {
+  outline: none;
+  border-color: rgba(var(--steam-rgb),.42);
+  box-shadow: 0 0 0 2px rgba(var(--steam-rgb),.2);
 }

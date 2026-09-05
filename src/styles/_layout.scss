@@ -1062,10 +1062,18 @@
 .hub-feed-card h3 {
   font-size: clamp(.9rem, .84rem + .3vw, 1.02rem);
   font-weight: 700;
-  color: var(--fg-link);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* El color va aparte y EXCLUYENDO la etiqueta de juego. Cuando el titular de un detalle es el propio juego se
+   pinta con `.hub-feed-game-chip` —la misma etiqueta con la que el hub social nombra un juego, que cada tema
+   viste en su §6—, y esa etiqueta trae su color. Si el azul de enlace se declarara aquí sin más, le ganaría por
+   especificidad (0,1,1 contra 0,1,0) y la etiqueta saldría azul en la paleta por defecto y del color del tema en
+   las demás: el mismo elemento pintado de dos maneras según la paleta. */
+.hub-feed-card h3:not(.hub-feed-game-chip) {
+  color: var(--fg-link);
 }
 
 .hub-feed-card p {

@@ -91,7 +91,9 @@ export const StatsReviews = memo(function StatsReviews({ games, gameId, onBack, 
           hours: game.hours ?? null,
           ts: open.ts,
         }}
-        profileName={L.mine}
+        // SIN firma: todas estas reseñas son tuyas, así que nombrarte no distingue ninguna de las demás y la
+        // cabecera se queda con el juego, que es lo único que aquí las diferencia. Antes se pasaba un chip con
+        // «Tus reseñas», que ni siquiera era un nombre y repetía lo que ya dice el encabezado de la pantalla.
         onBack={onBackToList}
         backLabel={backToPanel ? L.backToStats : undefined}
         status=""
