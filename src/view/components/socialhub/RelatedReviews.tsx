@@ -3,6 +3,9 @@ import { resolveGrade, reviewAccent } from '../../../core/utils/scoreScale';
 import { useScoreScale } from '../../hooks/useScoreScale';
 import type { SocialUiLabels } from '../../../core/constants/socialLabels';
 import type { RelatedReview } from '../../../core/social/relatedReviews';
+// Ver `ProfileReviewsList`: este bloque lo pinta también la pantalla pública de un enlace compartido, que se
+// monta SIN el hub.
+import '../../../styles/reviews.scss';
 
 /**
  * Filas que se pintan como mucho. El ancho decide cuántas tarjetas caben en cada una, así que esto es lo que
