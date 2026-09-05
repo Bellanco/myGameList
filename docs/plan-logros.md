@@ -587,10 +587,19 @@ y a cambio da tres cosas que el plan necesitaba:
 3. **Prioridad de recorte** al empaquetar (§5.3).
 4. **Los puntos del nivel** (§6.10.2), que es lo que hace que un logro difícil pese más que el tutorial.
 
-**Regla de higiene:** la rareza **no cambia el metal de la medalla**. El metal dice el nivel (§8.5); la rareza va
-en una etiqueta de texto. Meter dos variables en el mismo color es cómo se vuelve ilegible una vitrina — es la
-misma lección que ya está escrita en la cabecera de `_tiers.scss` sobre por qué los cuatro rangos se separan por
-tono, luminosidad y saturación a la vez.
+**Cómo se pinta: aura exterior, escala de loot de RPG.** La rareza va en un **halo de color alrededor de la
+medalla**, con la escala que cualquiera que haya jugado a un RPG lee sin que se la expliquen: gris apagado el
+común, verde el infrecuente, morado el raro y naranja de legendario el excepcional.
+
+**La regla de higiene sigue en pie, y es lo que hace que esto funcione: son dos canales distintos.** La moldura
+dice el **nivel** —cuánto llevas— y el aura dice la **rareza** —cuánto pesa—; lo prohibido era meter las dos
+variables en el *mismo* elemento, no darle color a la segunda. Con eso, la lección de `_tiers.scss` sobre separar
+por tono, luminosidad y saturación se aplica dentro de cada escala, no entre ellas.
+
+**Y la escala se salta el azul a propósito.** La clásica de RPG es gris → verde → azul → morado, pero el azul ya
+es el acento de la app y el color de la moldura: ahí chocarían las dos cosas que había que separar. Se sube un
+peldaño —morado para el raro, naranja para el excepcional— y de paso el tope se lleva el naranja de legendario,
+que es el que todo el mundo asocia con lo mejor.
 
 ### 6.7 Ocultos: la parte que no se puede planificar
 
@@ -1077,27 +1086,59 @@ la tarjeta del directorio, que no añade un adorno encima sino que **tiñe un tr
 Las medallas van igual: un token `--medal` por nivel, una forma base sobria, y que **cada tema las vista** en su
 `themes/*.scss` si tiene algo que decir. Acabado sobre el diseño base, no un lenguaje visual paralelo.
 
-**La forma: cuadrado de esquinas redondeadas.** Es la de Steam y la de Xbox, y aquí gana por una razón que no es
-de gusto: la rejilla de `/perfil/logros` tiene cuarenta y ocho celdas y una fila de medallas en la ficha social
-comparte espacio con el avatar y la muesca de rango. Un cuadrado teselado se alinea solo; un escudo o una copa
-—la forma de PSN— deja huecos irregulares y obliga a inventar una caja invisible alrededor de cada uno.
+**La forma: cuadrado de esquinas redondeadas, y la imagen A SANGRE.** El cuadrado gana por una razón que no es de
+gusto: la rejilla de `/perfil/logros` tiene casi cuarenta celdas y la fila de la ficha social comparte espacio con
+el avatar y la muesca de rango. Un cuadrado teselado se alinea solo; un escudo o una copa —la forma de PSN— deja
+huecos irregulares y obliga a inventar una caja invisible alrededor de cada uno. **Y no hay marco**: la imagen
+ocupa el cuadrado entero, con apenas un 4 % de redondeo.
 
 | Pieza | Valor |
 |---|---|
 | Lado | 72 px en `/perfil/logros` · 48 px en la vitrina de la ficha · 28 px en la tira de novedades |
-| Radio | **22 % del lado** (≈16 px sobre 72). Redondeo generoso, no una píldora: por debajo del 15 % parece un botón y por encima del 30 % deja de leerse como cuadrado |
-| Marco | 2 px **hacia dentro** (`box-shadow: inset`), no borde: así el lado exterior no cambia entre estados y la rejilla no baila |
-| Relieve | Sombra fina o ninguna. Nada de bisel metálico: choca con las seis paletas y envejece fatal |
-| Glifo | `viewBox` de 24, centrado, al ~55 % del lado |
-| Numeral | Romano (`IV`), esquina inferior derecha, **en texto** y con `tabular-nums` |
+| Radio | **4 % del lado.** Lo justo para que no sea un cuadrado crudo |
+| Marco | **Ninguno** |
+| Imagen | `viewBox` de 32, **a sangre**, recortada por el radio |
+| Aura | Halo exterior de color: dice la **rareza** (§6.6) |
+| Triángulo | 48 % del lado en el ángulo inferior derecho, con degradado a 135°: dice el **grado** |
+| Numeral | Romano I–IV, dentro del triángulo, en texto y con `tabular-nums` |
+| Pintura | `filter: url(#imp)` — turbulencia, desenfoque y empaste (`feDiffuseLighting`) |
 
-**El nivel NO se pinta con los cuatro metales, y esto es un fallo a punto de pasar.** La tentación es obvia
-—bronce, plata, oro, platino, como PSN— y es justo la que no se puede permitir: esos cuatro metales **ya
-significan otra cosa en esta app**, son el rango de perfil de `_tiers.scss`. Y no en una pantalla cualquiera: en
-la ficha social, la tarjeta que lleva la muesca de rango es **la misma** que va a llevar la vitrina de medallas.
-Dos escalas de cuatro colores idénticos, a dos centímetros, significando cosas distintas. El nivel va en
-**cuatro escalones de intensidad del acento del tema** (`--medal`, derivado del acento como se derivan hoy los
-demás tokens) más el numeral en texto; los metales se quedan donde están.
+**Todas miden exactamente lo mismo**, tenga el logro el grado que tenga y esté conseguido, bloqueado u oculto:
+una rejilla de medallas de distinto tamaño no cuadricula.
+
+> Los tres activos —el catálogo medido, el sprite de los 38 cuadros y la hoja de estilos— están escritos y listos
+> en **[`docs/logros/`](logros/)**, con su `README`. No hay que rehacerlos: F1 y F2 los recogen tal cual.
+
+**El grado NO se pinta sobre la imagen ni sobre un marco: vive entero en el triángulo.** Lo único que cambia
+entre un grado y otro es el numeral. La imagen no se toca y el tamaño tampoco.
+
+Se llegó ahí descartando tres versiones, y las tres merecen quedar escritas porque son las que se vuelven a
+proponer solas:
+
+- **Teñir un marco con el grado** (cuatro escalones del acento). Se cae porque el acento azul está en toda la app
+  y porque compite con el aura de rareza (§6.6), que es la señal que sí tiene que verse de lejos.
+- **Engordar el marco con el grado.** Se cae porque cambia el tamaño de la imagen y del bulto: una rejilla de
+  medallas de distinto tamaño no cuadricula.
+- **Tener marco, siquiera neutro.** Se cae porque no aportaba nada una vez que el grado salió de él, y le quitaba
+  sitio a lo único que de verdad importa, que es el cuadro.
+
+Y sigue en pie la prohibición de fondo: **nada de los cuatro metales**. Bronce, plata, oro y platino ya son el
+rango de perfil de `_tiers.scss`, y en la ficha social la tarjeta que lleva la muesca de rango es **la misma** que
+va a llevar la vitrina de medallas.
+
+**Consecuencia asumida, y va dicha:** el grado deja de leerse de un vistazo en una rejilla — hay que buscarlo en
+el triángulo. Es deliberado: lo que se compara de lejos es el **peso** del logro (el aura), no cuántas vueltas
+lleva su contador.
+
+**El acabado es pictórico, y también está resuelto.** Las escenas se dibujan planas y las pinta un único filtro
+compartido por las 38 (`#imp`): dos desplazamientos por turbulencia que rompen el contorno, un desenfoque que
+funde los tonos y un relieve de **empaste** iluminado a contraluz con `feDiffuseLighting`, que es lo que hace que
+parezca tener grosor. Encima, grano de lienzo y una luz cálida arriba / índigo abajo. Coste: cero por icono.
+
+> **Lo que se probó y se quitó:** superponer trazos curvos dibujados a mano sobre cada cuadro. Eran los mismos en
+> las 38 y no sabían nada de lo que tenían debajo, así que no leían como pincelada sino como garabato encima del
+> dibujo. La textura tiene que salir del propio cuadro —el relieve reacciona a cada forma— y no de una capa
+> postiza.
 
 **El sprite va aparte y es perezoso.** `IconSprite` lo monta `App.tsx` en el arranque —28 kB de paths— y el
 presupuesto es de 215 kB comprimidos (`BOOT_PAYLOAD_BUDGET_KB` en `scripts/ci-validate.js`). Meter ahí cuarenta y
@@ -1123,6 +1164,15 @@ otros cinco. Al medir, mirar el color calculado **en las seis paletas**, no solo
 y darles forma de medalla haría creer que se pueden conseguir. En `/perfil` van con su barra hacia el siguiente
 nivel (con `aria-valuenow`/`aria-valuemin`/`aria-valuemax`, que es una barra de progreso de verdad); en la ficha
 ajena van sin barra, porque el progreso de otra persona hacia algo que no tiene no es asunto de nadie (§3).
+
+**Tamaño constante, pase lo que pase.** La medalla mide **exactamente lo mismo** en los cinco estados —nivel I a
+IV, bloqueada y oculta—. El nivel no puede cambiar ni una medida: se lee en el color de la moldura, el filete
+interior, el hilo del canto y el numeral. La versión que engordaba el marco con el nivel se descartó porque
+cambiaba el tamaño del lienzo y del bulto, y una rejilla de medallas de distinto tamaño no cuadricula.
+
+**El numeral, en la esquina inferior derecha y bajito.** Pequeño, muy espaciado y a poco contraste: quien quiere
+el dato exacto lo lee, y quien recorre la rejilla ve antes el color de la moldura y el aura, que es lo que de
+verdad se compara de un vistazo. Un numeral grande convierte cada medalla en una etiqueta.
 
 **Bloqueado.** El logro que no se tiene es **la misma forma, desaturada** —no un hueco, no un candado que sea el
 único indicio—, y esto solo pasa en `/perfil`: en la ficha ajena no hay bloqueados que pintar (§3). La

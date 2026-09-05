@@ -1,0 +1,153 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  AchievementSprite · los 38 cuadros de los logros (docs/plan-logros.md §6.11)
+
+  QUE ES: un sprite de symbol con prefijo "ach-", mas el filtro "imp" que los
+  pinta. Cada cuadro es una ESCENA DE VIDEOJUEGO plana sobre viewBox 32, en
+  cinco tonos (sc-sky, sc-far, sc-near, sc-hi, sc-lt, definidos en
+  docs/logros/achievements.scss), que el filtro convierte en pintura: dos
+  desplazamientos por turbulencia, desenfoque y relieve de empaste con luz
+  rasante.
+
+  COMO SE USA: se monta UNA vez por pantalla, desde la rejilla de /perfil/logros
+  y desde la vitrina de la ficha social, NUNCA desde App.tsx, que arranca con
+  215 kB de presupuesto (BOOT_PAYLOAD_BUDGET_KB en scripts/ci-validate.js).
+  Ver la seccion 8.5 del plan. Luego, por cada medalla:
+
+      &lt;svg class="art" viewBox="0 0 32 32" filter="url(#imp)"&gt;
+        &lt;use href="#ach-completados" /&gt;
+      &lt;/svg&gt;
+
+  Los estilos que lo acompanan estan en docs/logros/achievements.scss.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <!-- Pincelada: la turbulencia desplaza los bordes para que ninguno quede recto
+       ni limpio, y un desenfoque mínimo funde los tonos donde se tocan. Es lo
+       que separa una escena plana de una pintada. Un solo filtro para los 38. -->
+  <filter id="imp" x="-8%" y="-8%" width="116%" height="116%" color-interpolation-filters="sRGB">
+    <feTurbulence type="turbulence" baseFrequency="0.055" numOctaves="2" seed="11" result="sw"/>
+    <feDisplacementMap in="SourceGraphic" in2="sw" scale="1.9" xChannelSelector="R" yChannelSelector="G" result="d1"/>
+    <feTurbulence type="fractalNoise" baseFrequency="0.4" numOctaves="2" seed="5" result="br"/>
+    <feDisplacementMap in="d1" in2="br" scale="0.65" xChannelSelector="R" yChannelSelector="B" result="d2"/>
+    <feGaussianBlur in="d2" stdDeviation="0.3" result="paint"/>
+    <feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="4" seed="9" result="bump"/>
+    <feDiffuseLighting in="bump" lighting-color="#ffffff" surfaceScale="1.35" diffuseConstant="1" result="lit">
+      <feDistantLight azimuth="228" elevation="52"/>
+    </feDiffuseLighting>
+    <feComposite in="lit" in2="paint" operator="arithmetic" k1="1" k2="0" k3="0" k4="0"/>
+  </filter>
+
+  <!-- Créditos finales · la tanda de créditos en la pantalla, al terminar -->
+  <symbol id="ach-completados" viewBox="0 0 32 32"><rect width="32" height="32" fill="var(--sc-near)"/><rect x="2" y="3" width="28" height="21" rx="2" fill="var(--sc-sky)" opacity=".22"/><rect x="9" y="6" width="14" height="3.4" rx="1.2" fill="var(--sc-hi)"/><rect x="6" y="13" width="20" height="2.2" rx="1.1" fill="var(--sc-lt)" opacity=".85"/><rect x="8" y="17" width="16" height="2.2" rx="1.1" fill="var(--sc-lt)" opacity=".5"/><rect x="10" y="21" width="12" height="2.2" rx="1.1" fill="var(--sc-lt)" opacity=".25"/><rect x="6" y="27" width="20" height="3" rx="1.5" fill="var(--sc-far)"/></symbol>
+
+  <!-- Retirada táctica · XCOM: la nave de extracción despegando de la zona -->
+  <symbol id="ach-abandonos-razonados" viewBox="0 0 32 32"><rect width="32" height="32" fill="var(--sc-sky)"/><rect y="24" width="32" height="8" fill="var(--sc-near)"/><path d="M6 16l2.5 8h4l-1.5-8z" fill="var(--sc-hi)" opacity=".45"/><path d="M17 16l1 8h4l-2-8z" fill="var(--sc-hi)" opacity=".45"/><path d="M3 7h13l6 4.5-6 4.5H3z" fill="var(--sc-far)"/><path d="M3 7l3-5h3l-1 5z" fill="var(--sc-far)"/><circle cx="8" cy="11.5" r="2.3" fill="var(--sc-lt)"/><rect x="10" y="27" width="12" height="2.6" rx="1.3" fill="var(--sc-hi)"/></symbol>
+
+  <!-- Aún estás aquí · PORTAL: el par de portales y el cubo cruzando -->
+  <symbol id="ach-constancia" viewBox="0 0 32 32"><rect width="32" height="32" fill="var(--sc-near)"/><rect x="1" y="1" width="30" height="30" fill="var(--sc-sky)" opacity=".14"/><ellipse cx="7" cy="16" rx="4.6" ry="9" fill="var(--sc-far)"/><ellipse cx="7" cy="16" rx="2.6" ry="6.6" fill="var(--sc-near)"/><ellipse cx="25" cy="16" rx="4.6" ry="9" fill="var(--sc-hi)"/><ellipse cx="25" cy="16" rx="2.6" ry="6.6" fill="var(--sc-near)"/><rect x="13" y="12.5" width="7" height="7" rx="1" fill="var(--sc-lt)"/><path d="M14.6 14.2h3.8v3.8h-3.8z" fill="var(--sc-far)" opacity=".5"/></symbol>
+
+  <!-- Mundo abierto · la silueta en el risco frente al valle y la torre lejana -->
+  <symbol id="ach-generos" viewBox="0 0 32 32"><rect width="32" height="32" fill="var(--sc-sky)"/><circle cx="24" cy="7.5" r="4.4" fill="var(--sc-hi)"/><path d="M0 23l8-8 5.5 5 5-6L32 23v9H0z" fill="var(--sc-far)"/><rect x="25" y="12" width="3" height="8" fill="var(--sc-far)"/><path d="M25 10.5l1.5-2.5L28 10.5z" fill="var(--sc-far)"/><path d="M0 25h13l3 7H0z" fill="var(--sc-near)"/><rect x="6" y="19" width="2" height="6.5" fill="var(--sc-near)"/><circle cx="7" cy="17.6" r="1.9" fill="var(--sc-near)"/></symbol>
+
+  <!-- Guerra de consolas · el cartucho contra el disco -->
+  <symbol id="ach-plataformas" viewBox="0 0 32 32"><rect width="32" height="32" fill="var(--sc-sky)"/><rect x="1" y="7" width="13" height="17" rx="1" fill="var(--sc-near)"/><rect x="3" y="9.5" width="9" height="6" rx="1" fill="var(--sc-lt)" opacity=".75"/><rect x="4" y="20" width="7" height="2.4" fill="var(--sc-hi)"/><circle cx="23" cy="15" r="7.6" fill="var(--sc-far)"/><path d="M23 7.4a7.6 7.6 0 0 1 6.6 3.8L23 15z" fill="var(--sc-lt)" opacity=".45"/><circle cx="23" cy="15" r="2.4" fill="var(--sc-sky)"/></symbol>
+
+  <!-- New Game + · CHRONO TRIGGER: la puerta temporal, y el «+» dentro -->
+  <symbol id="ach-rejugados" viewBox="0 0 32 32"><rect width="32" height="32" fill="var(--sc-near)"/><ellipse cx="16" cy="15" rx="12" ry="13.5" fill="var(--sc-far)"/><ellipse cx="16" cy="15" rx="8.2" ry="9.6" fill="var(--sc-sky)"/><ellipse cx="16" cy="15" rx="4.6" ry="5.8" fill="var(--sc-lt)" opacity=".6"/><rect x="14.4" y="10.4" width="3.2" height="9.2" rx="1.5" fill="var(--sc-hi)"/><rect x="11.4" y="13.4" width="9.2" height="3.2" rx="1.5" fill="var(--sc-hi)"/></symbol>
+
+  <!-- Un verano entero · PERSONA 5: el antifaz de los Ladrones Fantasma -->
+  <symbol id="ach-maraton" viewBox="0 0 32 32"><rect width="32" height="32" fill="var(--sc-near)"/><path d="M0 0h32v32H0z" fill="var(--sc-hi)" opacity=".1"/><path d="M2 24L14 0h6L8 24z" fill="var(--sc-hi)" opacity=".22"/><path d="M2.5 13.5C2.5 9.4 8.5 6.6 16 6.6s13.5 2.8 13.5 6.9c0 5.2-5 8.6-13.5 8.6S2.5 18.7 2.5 13.5z" fill="var(--sc-lt)"/><path d="M6.6 13c1.9-2.6 5.3-2.6 7.2 0-1.9 2.6-5.3 2.6-7.2 0z" fill="var(--sc-near)"/><path d="M18.2 13c1.9-2.6 5.3-2.6 7.2 0-1.9 2.6-5.3 2.6-7.2 0z" fill="var(--sc-near)"/><rect x="14.6" y="6.8" width="2.8" height="15" fill="var(--sc-near)" opacity=".18"/></symbol>
+
+  <!-- Ya iba siendo hora · la caja criando polvo en la balda, con telaraña -->
+  <symbol id="ach-paciencia" viewBox="0 0 32 32"><rect width="32" height="32" fill="var(--sc-near)"/><path d="M0 0h12v12z" fill="var(--sc-lt)" opacity=".2"/><path d="M0 0l12 12M0 6l6 6M6 0l6 6M0 12L12 0" stroke="var(--sc-lt)" stroke-width="1" opacity=".55" fill="none"/><rect x="1" y="24" width="30" height="3.5" fill="var(--sc-far)"/><rect x="8" y="7" width="11" height="17" rx="1" fill="var(--sc-far)"/><rect x="9.5" y="9" width="8" height="7" rx="1" fill="var(--sc-lt)" opacity=".5"/><rect x="9.5" y="19" width="8" height="1.8" fill="var(--sc-hi)"/><rect x="20" y="10" width="4" height="14" rx="1" fill="var(--sc-near)" opacity=".7"/></symbol>
+
+  <!-- Nota del crítico · la telaraña de estadísticas de un RPG, irregular -->
+  <symbol id="ach-criterio" viewBox="0 0 32 32"><rect width="32" height="32" fill="var(--sc-near)"/><path d="M16 3l13 9.5-5 15.5H8L3 12.5z" fill="var(--sc-far)" opacity=".45"/><path d="M16 3v25M3 12.5h26M16 3l8 25M16 3L8 28" stroke="var(--sc-sky)" stroke-width=".7" opacity=".5" fill="none"/><path d="M16 6.5l9.5 7-3 8-8.5 3-7-9z" fill="var(--sc-hi)"/><circle cx="16" cy="6.5" r="1.6" fill="var(--sc-lt)"/><circle cx="25.5" cy="13.5" r="1.6" fill="var(--sc-lt)"/><circle cx="7" cy="15.5" r="1.6" fill="var(--sc-lt)"/></symbol>
+
+  <!-- Partida guardada · la tarjeta de memoria de PS1, con su muesca -->
+  <symbol id="ach-memoria-larga" viewBox="0 0 32 32"><rect width="32" height="32" fill="var(--sc-sky)"/><path d="M5 4h22v24H10l-5-5z" fill="var(--sc-lt)"/><rect x="5" y="4" width="22" height="6.5" fill="var(--sc-far)"/><rect x="8" y="6" width="7" height="2.6" rx="1" fill="var(--sc-near)" opacity=".55"/><rect x="9" y="13" width="14" height="9" rx="1" fill="var(--sc-hi)"/><rect x="11" y="15.5" width="10" height="1.6" fill="var(--sc-near)" opacity=".45"/><rect x="11" y="18.5" width="7" height="1.6" fill="var(--sc-near)" opacity=".45"/></symbol>
+
+  <!-- El deshielo · nivel de hielo: el cofre atrapado que empieza a salir -->
+  <symbol id="ach-deshielo" viewBox="0 0 32 32"><rect width="32" height="32" fill="var(--sc-sky)"/><circle cx="26" cy="6" r="4" fill="var(--sc-hi)"/><rect y="25" width="32" height="7" fill="var(--sc-near)"/><path d="M5 6h17v17H5z" fill="var(--sc-lt)" opacity=".9"/><path d="M5 23h17l-2.5 3H7.5z" fill="var(--sc-lt)" opacity=".45"/><rect x="8.5" y="12" width="10" height="8" rx="1" fill="var(--sc-hi)"/><rect x="8.5" y="15" width="10" height="2" fill="var(--sc-near)"/><ellipse cx="12" cy="26" rx="10" ry="2.4" fill="var(--sc-far)"/></symbol>
+
+  <!-- La pila de la vergüenza · la torre de cajas de juego sin abrir -->
+  <symbol id="ach-estanteria" viewBox="0 0 32 32"><rect width="32" height="32" fill="var(--sc-sky)"/><rect x="2" y="23" width="27" height="6" rx="1" fill="var(--sc-near)"/><rect x="4" y="24.4" width="5" height="3.2" fill="var(--sc-lt)" opacity=".35"/><rect x="4" y="16" width="23" height="6" rx="1" fill="var(--sc-far)"/><rect x="6" y="17.4" width="5" height="3.2" fill="var(--sc-lt)" opacity=".35"/><rect x="3" y="9" width="25" height="6" rx="1" fill="var(--sc-near)"/><rect x="5" y="10.4" width="5" height="3.2" fill="var(--sc-lt)" opacity=".35"/><rect x="6" y="2" width="20" height="6" rx="1" fill="var(--sc-hi)"/><rect x="8" y="3.4" width="5" height="3.2" fill="var(--sc-near)" opacity=".35"/></symbol>
+
+  <!-- De la vieja escuela · el CRT con el cartucho encima -->
+  <symbol id="ach-veterano" viewBox="0 0 32 32"><rect width="32" height="32" fill="var(--sc-sky)"/><rect x="11" y="1" width="9" height="7" rx="1" fill="var(--sc-hi)"/><rect x="13" y="2.6" width="5" height="2.6" fill="var(--sc-near)" opacity=".4"/><rect x="2" y="9" width="28" height="18" rx="3" fill="var(--sc-near)"/><rect x="5" y="12" width="18" height="12" rx="1.5" fill="var(--sc-far)"/><rect x="7.5" y="14.5" width="8" height="5" fill="var(--sc-lt)" opacity=".4"/><circle cx="26.5" cy="15" r="1.6" fill="var(--sc-lt)" opacity=".6"/><circle cx="26.5" cy="20" r="1.6" fill="var(--sc-lt)" opacity=".35"/><rect x="8" y="27" width="13" height="3" rx="1.5" fill="var(--sc-far)"/></symbol>
+
+  <!-- Tiempo jugado · el reloj del HUD, con su arco de tiempo -->
+  <symbol id="ach-horas" viewBox="0 0 32 32"><rect width="32" height="32" fill="var(--sc-near)"/><rect x="2" y="2" width="28" height="28" rx="4" fill="var(--sc-sky)" opacity=".2"/><circle cx="16" cy="15" r="11.5" fill="var(--sc-far)"/><path d="M16 3.5a11.5 11.5 0 0 1 11.5 11.5H16z" fill="var(--sc-hi)"/><circle cx="16" cy="15" r="8" fill="var(--sc-near)"/><rect x="14.9" y="7.8" width="2.2" height="8" rx="1.1" fill="var(--sc-lt)"/><rect x="15.4" y="14" width="7" height="2.1" rx="1" fill="var(--sc-lt)"/></symbol>
+
+  <!-- Con mis palabras · la caja de diálogo de RPG, con su flecha de avanzar -->
+  <symbol id="ach-resenas" viewBox="0 0 32 32"><rect width="32" height="32" fill="var(--sc-near)"/><rect x="1.5" y="6" width="29" height="19" rx="2.5" fill="var(--sc-far)"/><rect x="3.5" y="8" width="25" height="15" rx="1.5" fill="var(--sc-near)"/><rect x="6" y="11" width="20" height="2.4" rx="1.2" fill="var(--sc-lt)" opacity=".9"/><rect x="6" y="15.5" width="13" height="2.4" rx="1.2" fill="var(--sc-lt)" opacity=".6"/><path d="M13.5 20h5l-2.5 3z" fill="var(--sc-hi)"/></symbol>
+
+  <!-- Sin cabos sueltos · el diario de misiones: tres hechas, una a medias -->
+  <symbol id="ach-cobertura" viewBox="0 0 32 32"><rect width="32" height="32" fill="var(--sc-far)"/><rect x="2.5" y="2.5" width="27" height="27" rx="2" fill="var(--sc-lt)"/><rect x="5.5" y="6" width="4.5" height="4.5" rx="1" fill="var(--sc-hi)"/><rect x="12" y="7.2" width="14" height="2.2" fill="var(--sc-near)" opacity=".55"/><rect x="5.5" y="13" width="4.5" height="4.5" rx="1" fill="var(--sc-hi)"/><rect x="12" y="14.2" width="14" height="2.2" fill="var(--sc-near)" opacity=".55"/><rect x="5.5" y="20" width="4.5" height="4.5" rx="1" fill="var(--sc-hi)"/><rect x="12" y="21.2" width="9" height="2.2" fill="var(--sc-near)" opacity=".55"/><path d="M6.4 8.2l1.3 1.3 2-2.4M6.4 15.2l1.3 1.3 2-2.4M6.4 22.2l1.3 1.3 2-2.4" stroke="var(--sc-near)" stroke-width="1.1" fill="none"/></symbol>
+
+  <!-- Ficha de manual · la rejilla de inventario con las cuatro casillas llenas -->
+  <symbol id="ach-ficha-completa" viewBox="0 0 32 32"><rect width="32" height="32" fill="var(--sc-near)"/><rect x="2" y="2" width="13" height="13" rx="1.5" fill="var(--sc-far)"/><rect x="17" y="2" width="13" height="13" rx="1.5" fill="var(--sc-far)"/><rect x="2" y="17" width="13" height="13" rx="1.5" fill="var(--sc-far)"/><rect x="17" y="17" width="13" height="13" rx="1.5" fill="var(--sc-far)"/><rect x="7.4" y="4.5" width="2.2" height="8" fill="var(--sc-lt)"/><path d="M5.6 6.5h5.8" stroke="var(--sc-lt)" stroke-width="1.6"/><path d="M23.5 4.5a3 3 0 0 1 3 3v5h-6v-5a3 3 0 0 1 3-3z" fill="var(--sc-hi)"/><path d="M8.5 19.5h5l1.2 4-3.7 5-3.7-5z" fill="var(--sc-lt)"/><rect x="20" y="19.5" width="7" height="9" rx="1" fill="var(--sc-hi)"/></symbol>
+
+  <!-- Informe forense · la calavera de GAME OVER sobre el rótulo -->
+  <symbol id="ach-autopsia" viewBox="0 0 32 32"><rect width="32" height="32" fill="var(--sc-near)"/><path d="M16 2c6.6 0 11 4.6 11 10.6 0 3.7-1.9 6.4-4.4 8v3.4H9.4v-3.4C6.9 19 5 16.3 5 12.6 5 6.6 9.4 2 16 2z" fill="var(--sc-lt)"/><ellipse cx="11.6" cy="13.4" rx="3" ry="3.4" fill="var(--sc-near)"/><ellipse cx="20.4" cy="13.4" rx="3" ry="3.4" fill="var(--sc-near)"/><path d="M14.4 18h3.2l-1.6-3.2z" fill="var(--sc-near)"/><rect x="3" y="26" width="26" height="4" rx="1" fill="var(--sc-hi)"/></symbol>
+
+  <!-- Luces y sombras · el mismo paisaje, mundo de luz y mundo oscuro -->
+  <symbol id="ach-luces-y-sombras" viewBox="0 0 32 32"><rect width="32" height="32" fill="var(--sc-sky)"/><rect x="16" width="16" height="32" fill="var(--sc-near)"/><path d="M0 22l6-7 4 4.5 5-6.5v19H0z" fill="var(--sc-hi)"/><path d="M32 22l-6-7-4 4.5-5-6.5v19h15z" fill="var(--sc-far)" opacity=".55"/><rect y="28" width="16" height="4" fill="var(--sc-far)"/><rect x="16" y="28" width="16" height="4" fill="var(--sc-lt)" opacity=".18"/></symbol>
+
+  <!-- Modo cooperativo · dos mandos, jugador 1 y jugador 2 -->
+  <symbol id="ach-amistades" viewBox="0 0 32 32"><rect width="32" height="32" fill="var(--sc-sky)"/><rect x="0.5" y="7" width="15" height="10" rx="4.5" fill="var(--sc-far)"/><rect x="4.4" y="9.6" width="1.7" height="4.8" rx=".8" fill="var(--sc-near)"/><rect x="2.8" y="11.2" width="4.9" height="1.7" rx=".8" fill="var(--sc-near)"/><circle cx="11.8" cy="11.2" r="1.2" fill="var(--sc-near)"/><circle cx="11.8" cy="14" r="1.2" fill="var(--sc-near)"/><rect x="16.5" y="16" width="15" height="10" rx="4.5" fill="var(--sc-hi)"/><rect x="20.4" y="18.6" width="1.7" height="4.8" rx=".8" fill="var(--sc-near)"/><rect x="18.8" y="20.2" width="4.9" height="1.7" rx=".8" fill="var(--sc-near)"/><circle cx="27.8" cy="20.2" r="1.2" fill="var(--sc-near)"/></symbol>
+
+  <!-- Charla de taberna · la jarra de la posada, con su asa y su espuma -->
+  <symbol id="ach-conversador" viewBox="0 0 32 32"><rect width="32" height="32" fill="var(--sc-sky)"/><rect y="26" width="32" height="6" fill="var(--sc-near)"/><path d="M20 13h2.8a4.2 4.2 0 0 1 0 8.4H20" stroke="var(--sc-lt)" stroke-width="2.8" fill="none"/><path d="M5 9h15v17H5z" fill="var(--sc-far)"/><path d="M5 9c0-3.3 3.4-5.2 7.5-5.2S20 5.7 20 9z" fill="var(--sc-lt)"/><rect x="5" y="15.5" width="15" height="2.2" fill="var(--sc-hi)"/><rect x="5" y="20" width="15" height="1.6" fill="var(--sc-hi)" opacity=".5"/></symbol>
+
+  <!-- Solsticio a solsticio · SEA OF STARS: el sol y la luna sobre el mar de estrellas -->
+  <symbol id="ach-ano-redondo" viewBox="0 0 32 32"><rect width="32" height="32" fill="var(--sc-near)"/><circle cx="4" cy="4" r=".9" fill="var(--sc-lt)"/><circle cx="16" cy="3" r=".7" fill="var(--sc-lt)" opacity=".7"/><circle cx="28" cy="6" r=".9" fill="var(--sc-lt)" opacity=".8"/><circle cx="10" cy="19" r=".7" fill="var(--sc-lt)" opacity=".5"/><circle cx="9.5" cy="11" r="5.5" fill="var(--sc-hi)"/><path d="M25 5.5a6.6 6.6 0 0 0 0 13 7.2 7.2 0 0 1 0-13z" fill="var(--sc-lt)"/><path d="M0 22c5-2.4 9 2.4 13.5 0S23 20 32 22v10H0z" fill="var(--sc-far)"/><path d="M3 26c4-1.6 7 1.6 11 0" stroke="var(--sc-lt)" stroke-width="1.1" opacity=".45" fill="none"/></symbol>
+
+  <!-- Cosecha del año · STARDEW: los surcos labrados y la mata que sale -->
+  <symbol id="ach-buena-cosecha" viewBox="0 0 32 32"><rect width="32" height="32" fill="var(--sc-sky)"/><rect y="19" width="32" height="13" fill="var(--sc-near)"/><path d="M0 22h32M0 26h32M0 30h32" stroke="var(--sc-far)" stroke-width="1.6" opacity=".55"/><rect x="14.9" y="9" width="2.2" height="13" fill="var(--sc-far)"/><path d="M16 9c0-3.6 2.8-6.2 6.4-6.2C22.4 6.4 19.6 9 16 9zM16 9c0-3.6-2.8-6.2-6.4-6.2C9.6 6.4 12.4 9 16 9z" fill="var(--sc-hi)"/><path d="M16 15.5c0-2.9 2.2-5 5.1-5-.1 2.9-2.2 5-5.1 5zM16 15.5c0-2.9-2.2-5-5.1-5 .1 2.9 2.2 5 5.1 5z" fill="var(--sc-hi)" opacity=".68"/></symbol>
+
+  <!-- Obra maestra · el cuadro dentro del cuadro, con marco de oro -->
+  <symbol id="ach-obra-maestra" viewBox="0 0 32 32"><rect width="32" height="32" fill="var(--sc-near)"/><rect x="2.5" y="3" width="27" height="21" fill="var(--sc-hi)"/><rect x="5.5" y="6" width="21" height="15" fill="var(--sc-sky)"/><circle cx="21" cy="10.5" r="2.6" fill="var(--sc-lt)"/><path d="M5.5 21l6-6.5 4.5 4 3.5-3 7 5.5z" fill="var(--sc-far)"/><rect x="10" y="26" width="12" height="2.4" rx="1.2" fill="var(--sc-hi)" opacity=".5"/></symbol>
+
+  <!-- Jugado en el sofá · la Steam Deck delante del sofá -->
+  <symbol id="ach-sofa" viewBox="0 0 32 32"><rect width="32" height="32" fill="var(--sc-sky)"/><path d="M2 12h28v10H2z" fill="var(--sc-far)" opacity=".55"/><rect x="0" y="15" width="4" height="10" rx="2" fill="var(--sc-far)"/><rect x="28" y="15" width="4" height="10" rx="2" fill="var(--sc-far)"/><rect x="2" y="10" width="28" height="12" rx="5" fill="var(--sc-near)"/><rect x="9" y="12.5" width="14" height="7" rx="1" fill="var(--sc-hi)"/><circle cx="5.8" cy="14" r="1.9" fill="var(--sc-lt)" opacity=".8"/><circle cx="26.2" cy="14" r="1.9" fill="var(--sc-lt)" opacity=".8"/><circle cx="5.8" cy="19" r="1.2" fill="var(--sc-lt)" opacity=".4"/></symbol>
+
+  <!-- Speedrun · el cronómetro de splits y las líneas de velocidad -->
+  <symbol id="ach-speedrun" viewBox="0 0 32 32"><rect width="32" height="32" fill="var(--sc-near)"/><rect x="1" y="5" width="11" height="2.4" rx="1.2" fill="var(--sc-far)"/><rect x="0" y="10" width="8" height="2.4" rx="1.2" fill="var(--sc-far)" opacity=".65"/><rect x="2" y="15" width="10" height="2.4" rx="1.2" fill="var(--sc-far)" opacity=".4"/><path d="M23 1l-9 15h5.5l-2.5 12 10.5-16H22z" fill="var(--sc-hi)"/><rect x="1" y="21" width="18" height="7" rx="1.5" fill="var(--sc-far)"/><rect x="3" y="23" width="3.4" height="3" fill="var(--sc-lt)"/><rect x="8" y="23" width="3.4" height="3" fill="var(--sc-lt)"/><rect x="13" y="23" width="3.4" height="3" fill="var(--sc-lt)" opacity=".6"/></symbol>
+
+  <!-- Volver a la hoguera · DARK SOULS: la espada espiral clavada en la ceniza -->
+  <symbol id="ach-segunda-vuelta" viewBox="0 0 32 32"><rect width="32" height="32" fill="var(--sc-near)"/><path d="M16 1c1.8 5.6-1.2 7.4-1.2 10.8 0 1.9 1.5 3.1 1.5 3.1s-3.4-.7-4.5-3.4C10 15 7.5 18 7.5 21.2a8.5 8.5 0 0 0 17 0c0-5.4-4.5-9.6-8.5-20.2z" fill="var(--sc-hi)"/><path d="M16 12.5c1.9 3.4 3.9 5.2 3.9 7.9a3.9 3.9 0 0 1-7.8 0c0-2.4 2-4.2 3.9-7.9z" fill="var(--sc-lt)" opacity=".85"/><rect x="15.1" y="3" width="1.8" height="22" fill="var(--sc-lt)"/><rect x="10.5" y="9" width="11" height="1.8" rx=".9" fill="var(--sc-lt)"/><path d="M0 26c5-3.4 21-3.4 26 0v6H0z" fill="var(--sc-far)"/></symbol>
+
+  <!-- Exterminatus · 40k: la nave en órbita y la lanza sobre el planeta -->
+  <symbol id="ach-estanteria-cero" viewBox="0 0 32 32"><rect width="32" height="32" fill="var(--sc-near)"/><circle cx="26" cy="3" r=".8" fill="var(--sc-lt)" opacity=".6"/><circle cx="4" cy="6" r=".8" fill="var(--sc-lt)" opacity=".45"/><path d="M6 1h17l-3.5 4h-10z" fill="var(--sc-far)"/><rect x="12" y="4" width="4" height="2" fill="var(--sc-far)"/><path d="M11.5 6h5l6 15h-17z" fill="var(--sc-hi)" opacity=".33"/><rect x="12.8" y="6" width="2.6" height="15" fill="var(--sc-hi)"/><circle cx="14" cy="23" r="7.6" fill="var(--sc-far)"/><path d="M6.8 20.4c4.6 2.3 9.6 2.3 14.2 0" stroke="var(--sc-sky)" stroke-width="1.7" fill="none"/><path d="M6.5 25.6h15" stroke="var(--sc-sky)" stroke-width="1.5" opacity=".5" fill="none"/></symbol>
+
+  <!-- Lo terminé por orgullo · la bandera clavada en la cima -->
+  <symbol id="ach-orgullo" viewBox="0 0 32 32"><rect width="32" height="32" fill="var(--sc-sky)"/><path d="M0 32l14-20 6 8 4-5 8 17z" fill="var(--sc-far)"/><path d="M0 32l14-20 5 7L9 32z" fill="var(--sc-near)"/><rect x="12.6" y="3" width="2.2" height="12" fill="var(--sc-near)"/><path d="M14.8 3.8h11l-3 4 3 4h-11z" fill="var(--sc-hi)"/></symbol>
+
+  <!-- No eres tú, soy yo · el contenedor de corazón, en píxeles y partido -->
+  <symbol id="ach-no-eres-tu" viewBox="0 0 32 32"><rect width="32" height="32" fill="var(--sc-sky)"/><path d="M8 5h6v3h4V5h6v3h3v6h-3v3h-3v3h-3v3h-4v-3h-3v-3H8v-3H5V8h3z" fill="var(--sc-far)"/><path d="M8 5h6v3h4V5h6v3h3v6h-3v3h-3v3h-3v3h-2V5z" fill="var(--sc-near)" opacity=".35"/><path d="M17 3l-3.4 7.5 5 2.8-4 8.7" stroke="var(--sc-hi)" stroke-width="2.1" fill="none"/><rect y="27" width="32" height="5" fill="var(--sc-near)"/></symbol>
+
+  <!-- Tesis doctoral · el tomo de lore abierto, y no cabe más texto -->
+  <symbol id="ach-tesis" viewBox="0 0 32 32"><rect width="32" height="32" fill="var(--sc-near)"/><path d="M2 5c5-2.2 10-2.2 13.2 1.4V28C12 24.8 7 24.8 2 27z" fill="var(--sc-lt)"/><path d="M30 5c-5-2.2-10-2.2-13.2 1.4V28c3.2-3.2 8.2-3.2 13.2-1z" fill="var(--sc-lt)" opacity=".82"/><path d="M4.5 9.5h8.5M4.5 13h8.5M4.5 16.5h8.5M4.5 20h6" stroke="var(--sc-near)" stroke-width="1.2" opacity=".5" fill="none"/><path d="M19 9.5h8.5M19 13h8.5M19 16.5h8.5M19 20h6" stroke="var(--sc-near)" stroke-width="1.2" opacity=".35" fill="none"/><rect x="14.9" y="5" width="2.2" height="23" fill="var(--sc-far)"/><rect x="22" y="2" width="3.5" height="9" fill="var(--sc-hi)"/><path d="M22 11l1.75 2L25.5 11z" fill="var(--sc-hi)"/></symbol>
+
+  <!-- Una vida entera · el contador de horas al tope en la pantalla de guardado -->
+  <symbol id="ach-vida-entera" viewBox="0 0 32 32"><rect width="32" height="32" fill="var(--sc-near)"/><rect x="2" y="3" width="28" height="24" rx="2.5" fill="var(--sc-far)"/><rect x="5" y="6" width="22" height="4" rx="2" fill="var(--sc-near)"/><rect x="5" y="6" width="22" height="4" rx="2" fill="var(--sc-hi)"/><rect x="5" y="13.5" width="5.5" height="9" rx="1" fill="var(--sc-lt)"/><rect x="12" y="13.5" width="5.5" height="9" rx="1" fill="var(--sc-lt)"/><rect x="19" y="13.5" width="5.5" height="9" rx="1" fill="var(--sc-lt)"/><rect x="6.4" y="17" width="2.7" height="1.6" fill="var(--sc-near)"/><rect x="13.4" y="17" width="2.7" height="1.6" fill="var(--sc-near)"/><rect x="20.4" y="17" width="2.7" height="1.6" fill="var(--sc-near)"/></symbol>
+
+  <!-- Empieza la partida · la pantalla de título con el PRESS START -->
+  <symbol id="ach-paso-primer-juego" viewBox="0 0 32 32"><rect width="32" height="32" fill="var(--sc-near)"/><rect x="2" y="4" width="28" height="24" rx="2.5" fill="var(--sc-far)" opacity=".45"/><rect x="7" y="9" width="18" height="3.6" rx="1.2" fill="var(--sc-lt)" opacity=".8"/><rect x="10" y="14" width="12" height="2" rx="1" fill="var(--sc-lt)" opacity=".4"/><rect x="7" y="19.5" width="18" height="5" rx="2.5" fill="var(--sc-hi)"/></symbol>
+
+  <!-- Despierta, samurái · CYBERPUNK 2077: el skyline de neón y la franja de peligro -->
+  <symbol id="ach-paso-resena" viewBox="0 0 32 32"><rect width="32" height="32" fill="var(--sc-near)"/><path d="M0 20h5v12H0zM7 13h4.5v19H7zM13.5 23h5v9h-5zM20 9h5.5v23H20zM27.5 17H32v15h-4.5z" fill="var(--sc-far)"/><rect x="8" y="16" width="2.2" height="9" fill="var(--sc-hi)"/><rect x="21.5" y="12" width="2.5" height="6" fill="var(--sc-hi)"/><rect x="1.5" y="22" width="2" height="6" fill="var(--sc-hi)" opacity=".6"/><rect y="2" width="32" height="5" fill="var(--sc-hi)"/><path d="M-1 2l4 5M5 2l4 5M11 2l4 5M17 2l4 5M23 2l4 5M29 2l4 5" stroke="var(--sc-near)" stroke-width="2.2"/></symbol>
+
+  <!-- Partida en la nube · el disquete de guardado subiendo a la nube -->
+  <symbol id="ach-paso-sync" viewBox="0 0 32 32"><rect width="32" height="32" fill="var(--sc-sky)"/><path d="M8.5 20a6 6 0 0 1-.5-12 8 8 0 0 1 15.3 2 5 5 0 0 1-1.3 10z" fill="var(--sc-lt)"/><path d="M16 30V22M16 20.5l-4 4.5M16 20.5l4 4.5" stroke="var(--sc-hi)" stroke-width="2.6" fill="none"/><rect x="12" y="10" width="8" height="8" rx="1" fill="var(--sc-far)"/><rect x="14" y="10" width="4" height="3.4" fill="var(--sc-lt)"/></symbol>
+
+  <!-- Del 0 al 100 · el medidor de puntuación con la aguja arriba del todo -->
+  <symbol id="ach-paso-nota" viewBox="0 0 32 32"><rect width="32" height="32" fill="var(--sc-near)"/><path d="M16 4a13 13 0 0 1 13 13v3H3v-3A13 13 0 0 1 16 4z" fill="var(--sc-far)"/><path d="M16 4a13 13 0 0 1 13 13h-8a5 5 0 0 0-5-5z" fill="var(--sc-hi)"/><path d="M16 9.5a7.5 7.5 0 0 1 7.5 7.5v3h-15v-3A7.5 7.5 0 0 1 16 9.5z" fill="var(--sc-near)"/><path d="M14.6 20l8-8.6 2.4 2L17.4 21z" fill="var(--sc-lt)"/><rect x="3" y="20" width="26" height="4" rx="1.5" fill="var(--sc-far)"/></symbol>
+
+  <!-- Tira el dado · el d20 -->
+  <symbol id="ach-paso-ruleta" viewBox="0 0 32 32"><rect width="32" height="32" fill="var(--sc-sky)"/><path d="M16 1.5l13 7.5v14L16 30.5 3 23V9z" fill="var(--sc-far)"/><path d="M16 1.5l13 7.5L16 13.5 3 9z" fill="var(--sc-hi)"/><path d="M16 13.5L29 9v14L16 30.5z" fill="var(--sc-near)" opacity=".45"/><path d="M10.5 17l5.5-2 5.5 2-5.5 6.5z" fill="var(--sc-lt)" opacity=".7"/></symbol>
+
+  <!-- Ajustes de vídeo · la barra de calibración de gamma, de negro a blanco -->
+  <symbol id="ach-paso-tema" viewBox="0 0 32 32"><rect width="32" height="32" fill="var(--sc-near)"/><rect x="2" y="5" width="7" height="13" fill="var(--sc-near)"/><rect x="9" y="5" width="7" height="13" fill="var(--sc-far)" opacity=".55"/><rect x="16" y="5" width="7" height="13" fill="var(--sc-far)"/><rect x="23" y="5" width="7" height="13" fill="var(--sc-lt)"/><rect x="2" y="22" width="28" height="3" rx="1.5" fill="var(--sc-far)"/><rect x="18" y="19.5" width="4.5" height="8" rx="1.5" fill="var(--sc-hi)"/></symbol>
+</svg>
