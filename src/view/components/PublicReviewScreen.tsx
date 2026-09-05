@@ -1,10 +1,12 @@
-import { memo, useEffect, useState } from 'react';
+import { memo, useEffect, useMemo, useState } from 'react';
 import { SHARE_UI } from '../../core/constants/shareLabels';
 import { SOCIAL_UI } from '../../core/constants/socialLabels';
 import { ReviewDetailBody } from './ReviewDetailBody';
 import { ReviewDetailHead } from './ReviewDetailHead';
-import { readSharedReview } from '../../model/repository/publicShareRepository';
-import type { SharedReview } from '../../model/types/share';
+import { RelatedReviews } from './socialhub/RelatedReviews';
+import { readSharedReview, readSharedReviewSuggestions } from '../../model/repository/publicShareRepository';
+import type { RelatedReview } from '../../core/social/relatedReviews';
+import type { SharedReview, SharedReviewSuggestion } from '../../model/types/share';
 // La hoja de la RESEÑA. Esta pantalla la pinta sin el hub social —en modo artículo no hay hub—, así que sin
 // esto se quedaba sin el medallón y sin el bloque del pie. Ver `styles/reviews.scss`.
 import '../../styles/reviews.scss';
@@ -26,6 +28,7 @@ import '../../styles/reviews.scss';
 export const PublicReviewScreen = memo(function PublicReviewScreen({ token, standalone = false }: { token: string; standalone?: boolean }) {
   const [state, setState] = useState<'loading' | 'ready' | 'gone'>('loading');
   const [review, setReview] = useState<SharedReview | null>(null);
+  const [suggestions, setSuggestions] = useState<SharedReviewSuggestion[]>([]);
 
   useEffect(() => {
     let alive = true;
@@ -40,6 +43,51 @@ export const PublicReviewScreen = memo(function PublicReviewScreen({ token, stan
       alive = false;
     };
   }, [token]);
+
+  // Los sugeridos van en su PROPIA petición y con su propio estado, para que el pie no retrase la reseña: quien
+  // abre el enlace la ve en cuanto llega, y el bloque aparece después (o no aparece, que es lo normal cuando el
+  // autor no tiene nada más publicado que se parezca). Empieza vacío y termina vacío si algo falla: no hay
+  // "cargando" ni "no hay sugerencias" porque un hueco anunciando que no hay nada sería peor que el silencio.
+  useEffect(() => {
+    let alive = true;
+    void readSharedReviewSuggestions(token).then((items) => {
+      if (alive) {
+        setSuggestions(items);
+      }
+    });
+    return () => {
+      alive = false;
+    };
+  }, [token]);
+
+  /**
+   * Las sugerencias con la forma que pinta `RelatedReviews`, que es el MISMO bloque del hub social: la tarjeta,
+   * el medallón y la rejilla ya están resueltos ahí y no tiene sentido mantener dos.
+   *
+   * El orden y el filtro los ha hecho el servidor (ver `functions/api/share/related/[token].ts`), así que aquí
+   * `reason` y `score` no deciden nada: van con lo que el componente necesita para tipar y nada más.
+   */
+  const suggestionCards = useMemo<RelatedReview[]>(
+    () =>
+      suggestions.map((item) => ({
+        // El token es la clave de render Y la dirección de la tarjeta (ver `hrefFor`).
+        key: item.token,
+        gameId: 0,
+        gameName: item.gameName,
+        // Sin firma: todas son de quien firma la reseña abierta, y repetir su nombre en cada tarjeta sería
+        // decir seis veces lo que ya está dos centímetros más arriba.
+        authorId: '',
+        authorName: '',
+        isOwn: false,
+        rating: item.rating ?? 0,
+        grade: item.grade,
+        snippet: item.snippet,
+        updatedAt: item.reviewedAt,
+        reason: 'same-author',
+        score: 0,
+      })),
+    [suggestions],
+  );
 
   /**
    * Salida única, con la forma de la barra inferior de la app.
@@ -162,6 +210,20 @@ export const PublicReviewScreen = memo(function PublicReviewScreen({ token, stan
           />
         </article>
 
+        {/* Más análisis DEL MISMO AUTOR, y solo los que se parecen a este (mismo juego, saga o género): quien
+            los elige es el servidor, ver `functions/api/share/related/[token].ts`. Nada de otras personas —eso
+            es del espacio social, donde hay una amistad que lo justifique— y nada de firmar cada tarjeta, que
+            aquí sería repetir seis veces el nick que ya está arriba.
+
+            Cada tarjeta es un ENLACE a `/r/{token}`, no un botón: es otra página del sitio, así que tiene que
+            poder abrirse en otra pestaña; y en modo artículo no hay enrutador al que pedirle una navegación. */}
+        <RelatedReviews
+          SOCIAL_UI={SOCIAL_UI}
+          items={suggestionCards}
+          title={SOCIAL_UI.feed.suggestedTitle}
+          openAria={(entry) => SOCIAL_UI.feed.suggestedOpenAria(entry.gameName)}
+          hrefFor={(entry) => `/r/${entry.key}`}
+        />
       </div>
     </section>,
   );

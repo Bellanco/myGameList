@@ -71,14 +71,39 @@ export const RelatedReviews = memo(function RelatedReviews({
   SOCIAL_UI,
   items,
   onOpen,
+  title,
+  openAria,
+  hrefFor,
 }: {
   SOCIAL_UI: SocialUiLabels;
   items: RelatedReview[];
-  onOpen: (entry: RelatedReview) => void;
+  /** Abrir dentro de la aplicación. Se ignora cuando hay `hrefFor`: allí la tarjeta es un enlace de verdad. */
+  onOpen?: (entry: RelatedReview) => void;
+  /** Rótulo del bloque. Por defecto, «Análisis relacionados»; la página pública pasa «Análisis sugeridos». */
+  title?: string;
+  /** Nombre accesible de cada tarjeta. Lo pone quien monta el bloque porque no todos firman igual (ver abajo). */
+  openAria?: (entry: RelatedReview) => string;
+  /**
+   * Dirección de cada tarjeta. Cuando se pasa, la superficie pulsable es un `<a>` en vez de un `<button>`.
+   *
+   * Es lo que necesita la página pública de un enlace compartido: allí cada sugerencia es OTRA página del sitio
+   * (`/r/{token}`), no un cambio de pantalla dentro de la aplicación, así que tiene que poder abrirse en otra
+   * pestaña y enseñar su destino en la barra de estado. Además esa página se monta en modo artículo, sin
+   * enrutador, y un `onClick` que navegue no tendría a quién pedírselo.
+   */
+  hrefFor?: (entry: RelatedReview) => string;
 }) {
   const scoreScale = useScoreScale();
   const listRef = useRef<HTMLDivElement>(null);
   const columns = useGridColumns(listRef);
+
+  /**
+   * Nombre accesible de una tarjeta. El de serie nombra a quien firma («Abrir la reseña de Ana sobre X»), que es
+   * lo que hace falta en una lista donde cada una es de una persona distinta; donde todas son del mismo autor
+   * —la página pública— eso sería repetir la misma firma seis veces, y quien monta el bloque pasa el suyo.
+   */
+  const ariaFor = (entry: RelatedReview, author: string): string =>
+    openAria ? openAria(entry) : SOCIAL_UI.feed.relatedOpenAria(entry.gameName, author);
 
   const visible = useMemo(() => {
     // Menos candidatas que columnas: caben todas en una fila y no hay nada que recortar (el hueco sobrante no es
@@ -95,8 +120,8 @@ export const RelatedReviews = memo(function RelatedReviews({
   }
 
   return (
-    <section className="hub-related" aria-label={SOCIAL_UI.feed.relatedTitle}>
-      <h4 className="hub-related-title">{SOCIAL_UI.feed.relatedTitle}</h4>
+    <section className="hub-related" aria-label={title || SOCIAL_UI.feed.relatedTitle}>
+      <h4 className="hub-related-title">{title || SOCIAL_UI.feed.relatedTitle}</h4>
       <div ref={listRef} className="hub-feed-activity-list hub-related-list" role="list">
         {visible.map((entry) => {
           const rating = Number(entry.rating || 0);
@@ -115,13 +140,18 @@ export const RelatedReviews = memo(function RelatedReviews({
               role="listitem"
               style={hasRating ? ({ '--rev-hue': String(accent.hue), '--rev-ladj': `${accent.lightnessAdjust}%` } as CSSProperties) : undefined}
             >
-              {/* Toda la tarjeta es pulsable; el botón cubre la superficie y se queda con el foco y el rótulo. */}
-              <button
-                type="button"
-                className="hub-review-open"
-                aria-label={SOCIAL_UI.feed.relatedOpenAria(entry.gameName, author)}
-                onClick={() => onOpen(entry)}
-              />
+              {/* Toda la tarjeta es pulsable; el control cubre la superficie y se queda con el foco y el
+                  rótulo. Enlace o botón según a dónde lleve: ver `hrefFor`. */}
+              {hrefFor ? (
+                <a className="hub-review-open" href={hrefFor(entry)} aria-label={ariaFor(entry, author)} />
+              ) : (
+                <button
+                  type="button"
+                  className="hub-review-open"
+                  aria-label={ariaFor(entry, author)}
+                  onClick={() => onOpen?.(entry)}
+                />
+              )}
               <span className="hub-review-medal" aria-hidden="true">
                 {hasRating
                   ? (scoreScale === 'grade'
