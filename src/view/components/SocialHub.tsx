@@ -365,7 +365,9 @@ const SocialHubInner = memo(function SocialHubInner({
         <SocialProfileReviewScreen
           SOCIAL_UI={SOCIAL_UI}
           review={activeProfileReview}
-          profileName={(selectedProfileDetail as { displayName?: string })?.displayName || ''}
+          // Aquí SÍ hay firma que dar: se está leyendo la reseña de otra persona. Sin `onOpen` a propósito —ya se
+          // está dentro de su perfil, no hay a dónde llevar—, así que el nombre va como texto y sin avatar.
+          author={{ name: (selectedProfileDetail as { displayName?: string })?.displayName || '' }}
           // Quien llega saltando desde un análisis relacionado vuelve A DONDE ESTABA. El destino por defecto —la
           // lista de reseñas de este perfil— solo vale para quien ha entrado por ella.
           onBack={backTo ? goToSocial : () => openProfileReviews(profileDetailId)}

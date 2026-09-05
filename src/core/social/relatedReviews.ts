@@ -113,6 +113,19 @@ export interface RankRelatedOptions {
   maxPerAuthor?: number;
   /** Tope por motivo, por lo mismo: que ninguno de ellos se lleve el bloque él solo. */
   maxPerReason?: number;
+  /**
+   * La FIRMA no cuenta: ni puntúa, ni mete a nadie en la lista por sí sola, ni reparte cuota.
+   *
+   * Existe para la página pública de un enlace compartido (`/r/:token`), donde todos los candidatos son del
+   * MISMO autor por definición —solo se sugieren otros análisis suyos— y por tanto la firma no distingue a
+   * ninguno de los demás: premiarla subiría a todos por igual (que es no hacer nada con más números) y, peor,
+   * dejaría entrar en el bloque cualquier análisis suyo aunque no tenga nada que ver con lo que se está
+   * leyendo. Con esto, ahí solo relacionan el juego, la saga y el género, que es lo que de verdad informa.
+   *
+   * El tope por autor se desactiva con la misma llave y por el mismo motivo: si la firma no es una dimensión,
+   * repartir cuota por ella dejaría el bloque en `maxPerAuthor` tarjetas.
+   */
+  ignoreAuthorLink?: boolean;
 }
 
 /* ─────────────────────────────────────────────────────────────────────────────────────────────────────────────
@@ -298,7 +311,10 @@ export function rankRelatedReviews(
   options: RankRelatedOptions = {},
 ): RelatedReview[] {
   const limit = Math.max(0, options.limit ?? DEFAULT_LIMIT);
-  const maxPerAuthor = Math.max(1, options.maxPerAuthor ?? DEFAULT_MAX_PER_AUTHOR);
+  const authorLinkCounts = options.ignoreAuthorLink !== true;
+  // Sin señal de autor no hay cuota de autor que repartir: todos los candidatos son de la misma firma, así que
+  // el tope la aplicaría a la lista entera y la dejaría en tres tarjetas.
+  const maxPerAuthor = authorLinkCounts ? Math.max(1, options.maxPerAuthor ?? DEFAULT_MAX_PER_AUTHOR) : Infinity;
   const maxPerReason = Math.max(1, options.maxPerReason ?? DEFAULT_MAX_PER_REASON);
   const anchorNameKey = gameTitleKey(anchor.gameName);
   if (limit === 0 || !anchorNameKey) {
@@ -314,6 +330,9 @@ export function rankRelatedReviews(
   for (const candidate of dedupeCandidates(candidates)) {
     const nameKey = gameTitleKey(candidate.gameName);
     const sameAuthor = authorKey(candidate) === anchorAuthor;
+    // La firma como VÍNCULO. Se separa de `sameAuthor` porque la exclusión de la reseña abierta sigue
+    // necesitando saber que es del mismo autor aunque su firma no puntúe (ver `ignoreAuthorLink`).
+    const authorLink = sameAuthor && authorLinkCounts;
     const sameGame = nameKey === anchorNameKey;
     // La reseña abierta no se ofrece a sí misma. Es el mismo autor hablando del mismo juego: tras el dedupe, la
     // única entrada que puede cumplir las dos condiciones a la vez.
@@ -334,7 +353,7 @@ export function rankRelatedReviews(
 
     // El premio de autor es por seguir leyendo a ESA persona, así que no lo cobra lo propio: una reseña tuya se
     // queda con el vínculo de juego y el descuento, y nada más.
-    const authorScore = sameAuthor && !candidate.isOwn ? SCORE_SAME_AUTHOR : 0;
+    const authorScore = authorLink && !candidate.isOwn ? SCORE_SAME_AUTHOR : 0;
 
     if (sameGame) {
       // La saga no se suma aquí: sobre el mismo juego coincide por definición y no distingue a nadie.
@@ -347,7 +366,7 @@ export function rankRelatedReviews(
       scored.push({ ...candidate, reason: 'saga', score: SCORE_SAGA + authorScore + genreScore + ownScore });
       continue;
     }
-    if (sameAuthor) {
+    if (authorLink) {
       scored.push({ ...candidate, reason: 'same-author', score: authorScore + genreScore + ownScore });
       continue;
     }

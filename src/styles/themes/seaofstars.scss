@@ -141,7 +141,25 @@
 /* ── §6 · Chips: rectos (píxel); el color por categoría lo pone la base (adaptado a la paleta). ── */
 :root[data-palette="seaofstars"] .chip,
 :root[data-palette="seaofstars"] .rl-chip { border-radius: 0; transform: none; clip-path: none; }
-:root[data-palette="seaofstars"] .hub-feed-game-chip { border-radius: 0; }
+/* Chip del juego (nombre) = RÓTULO DE SOL, con el MISMO esquema que su gemelo en las demás paletas: velo tenue
+   del tono, filete OPACO y texto sólido (compárese con Portal, Cyberpunk y Grimdark en sus §6). Hasta ahora
+   solo se le cuadraban las esquinas y el resto caía en la píldora gris genérica de base, es decir, era la única
+   etiqueta de la paleta que no era de la paleta; se nota más desde que ese mismo rótulo encabeza el detalle de
+   una reseña propia.
+   EL ORO, que es el color principal de esta paleta (el sol de Zale) y el que la nombra. Lo que lo separa del
+   chip de GÉNERO —que también cuelga de `--steam-rgb` y sale en la misma tarjeta unos centímetros más abajo— no
+   es el tono sino el peso del contorno: aquel lleva un filete translúcido (`rgba(…,.35)`) y este uno macizo,
+   igual que en el resto de temas.
+   EL ORO QUE SÍ ES TINTA es `--tab-active`, no `--steam`. En el tema CLARO el sol se queda en 1,05:1 sobre los
+   turquesas de esta paleta —lo dice su propio bloque en `_base.scss`, que por eso desvió `--fg-link` a un teal
+   profundo—, así que como texto sería ilegible y como filete, invisible. `--tab-active` es justo el oro que
+   cada tema deja legible: el sol en oscuro y un ámbar hondo (#7a5000) en claro. */
+:root[data-palette="seaofstars"] .hub-feed-game-chip {
+  border-radius: 0;
+  background: rgba(var(--steam-rgb), .12);
+  border: 1px solid var(--tab-active);
+  color: var(--tab-active);
+}
 
 /* ── §7 · Segmentos y campos: rectos, con borde de contenedor (el foco lo da --steam en base). ── */
 :root[data-palette="seaofstars"] .hub-seg { border-radius: 0; }

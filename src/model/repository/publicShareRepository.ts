@@ -5,7 +5,7 @@
 // arrastre el SDK convertiría una página de lectura en una carga de app entera, que es justo lo que se evita.
 //
 // La escritura (publicar, retirar, cuota) vive en `shareRepository.ts`, que sí necesita sesión.
-import type { SharedReview } from '../types/share';
+import type { SharedReview, SharedReviewSuggestion, SharedReviewSuggestionsResponse } from '../types/share';
 
 /** El artículo, o `null` si el enlace no existe, ha caducado o lo retiraron. No lanza: no hay nada que reintentar. */
 export async function readSharedReview(token: string): Promise<SharedReview | null> {
@@ -27,6 +27,35 @@ export async function readSharedReview(token: string): Promise<SharedReview | nu
     return body as SharedReview;
   } catch {
     return null;
+  }
+}
+
+/**
+ * Los análisis que se sugieren al pie, o lista vacía. Nunca lanza y nunca es un error que no haya ninguno: lo
+ * normal en un autor con un enlace suelto es que no haya nada que ofrecer, y entonces el bloque no se pinta.
+ *
+ * Va en una petición APARTE de la del artículo, y no dentro de ella, para no retrasar lo único que el visitante
+ * ha venido a leer: quien abre el enlace ve la reseña en cuanto llega, y el pie aparece después. De paso, los
+ * agentes de previsualización de enlaces —que solo quieren los metadatos— no pagan esta consulta.
+ */
+export async function readSharedReviewSuggestions(token: string): Promise<SharedReviewSuggestion[]> {
+  if (!token) {
+    return [];
+  }
+  try {
+    const response = await fetch(`/api/share/related/${encodeURIComponent(token)}`);
+    if (!response.ok) {
+      return [];
+    }
+    const body = (await response.json()) as Partial<SharedReviewSuggestionsResponse> | null;
+    // Comprobación mínima y sin Zod, por lo mismo que en `readSharedReview`: cada tarjeta se pinta con lo que
+    // traiga, y una entrada sin nombre de juego no tiene nada que enseñar.
+    if (!body || !Array.isArray(body.items)) {
+      return [];
+    }
+    return body.items.filter((item) => item && typeof item.token === 'string' && typeof item.gameName === 'string');
+  } catch {
+    return [];
   }
 }
 

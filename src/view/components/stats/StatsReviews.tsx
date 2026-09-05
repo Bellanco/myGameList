@@ -5,7 +5,10 @@ import { Icon } from '../Icon';
 import { HubBackButton } from '../socialhub/HubBackButton';
 import { ProfileReviewsList, type ReviewEntry } from '../socialhub/ProfileReviewsList';
 import { SocialProfileReviewScreen } from '../socialhub/SocialProfileReviewScreen';
+import { RelatedReviews } from '../socialhub/RelatedReviews';
 import { ShareReviewButton } from './ShareReviewButton';
+import { rankRelatedReviews, type RelatedReviewCandidate } from '../../../core/social/relatedReviews';
+import { gameTitleKey } from '../../../core/utils/gameTitleKey';
 import { resolveGrade, starsFromGrade } from '../../../core/utils/scoreScale';
 import { TAB_IDS, type GameItem, type TabData } from '../../../model/types/game';
 
@@ -72,6 +75,56 @@ export const StatsReviews = memo(function StatsReviews({ games, gameId, onBack, 
   const reviews = useMemo(() => collectReviews(games), [games]);
   const open = gameId > 0 ? reviews.find((entry) => entry.id === gameId) : undefined;
 
+  /**
+   * Los análisis que se sugieren al pie del que está abierto. Todos TUYOS: aquí no hay más biblioteca que la
+   * tuya, y esa es justamente la razón por la que la firma no se usa para relacionarlos (`ignoreAuthorLink`).
+   * Solo relacionan el JUEGO, la SAGA y el GÉNERO, que es lo único que aquí distingue una reseña de otra.
+   *
+   * Es el mismo bloque —y el mismo módulo de orden— que el del hub social, pero con esa señal apagada: allí se
+   * mezclan firmas y «otra de esta persona» es una razón de peso para seguir leyendo; aquí sería «otra tuya»,
+   * que no dice nada porque todas lo son.
+   *
+   * Los GÉNEROS sí se conocen, al revés que en el canal social: salen de tus propias fichas.
+   */
+  const related = useMemo(() => {
+    if (!open) {
+      return [];
+    }
+    const candidates: RelatedReviewCandidate[] = [];
+    const genresByName = new Map<string, string[]>();
+
+    for (const entry of reviews) {
+      const genres = entry.game.genres || [];
+      if (genres.length > 0) {
+        genresByName.set(gameTitleKey(entry.gameName), genres);
+      }
+      candidates.push({
+        key: String(entry.id),
+        gameId: entry.id,
+        gameName: entry.gameName,
+        // Sin firma: son todas tuyas y el bloque no las rotula (ver `suggestedOpenAria`). Que no puntúe lo
+        // garantiza `ignoreAuthorLink`, no este campo.
+        authorId: '',
+        authorName: '',
+        isOwn: true,
+        rating: entry.rating,
+        grade: entry.grade,
+        // El texto COMPLETO: la tarjeta ya lo recorta a tres líneas, y aquí no hay canal que lo haya mutilado.
+        snippet: entry.reviewText,
+        // La fecha de la reseña cuando existe; si no, la de la ficha, que es lo que enseña el resto del panel.
+        updatedAt: Number(entry.game.reviewedAt) || entry.ts,
+        full: true,
+      });
+    }
+
+    return rankRelatedReviews(
+      { gameName: open.gameName, authorId: '', isOwn: true, genres: open.game.genres || [] },
+      candidates,
+      genresByName,
+      { ignoreAuthorLink: true },
+    );
+  }, [open, reviews]);
+
   if (open) {
     const { game } = open;
     return (
@@ -91,7 +144,9 @@ export const StatsReviews = memo(function StatsReviews({ games, gameId, onBack, 
           hours: game.hours ?? null,
           ts: open.ts,
         }}
-        profileName={L.mine}
+        // SIN firma: todas estas reseñas son tuyas, así que nombrarte no distingue ninguna de las demás y la
+        // cabecera se queda con el juego, que es lo único que aquí las diferencia. Antes se pasaba un chip con
+        // «Tus reseñas», que ni siquiera era un nombre y repetía lo que ya dice el encabezado de la pantalla.
         onBack={onBackToList}
         backLabel={backToPanel ? L.backToStats : undefined}
         status=""
@@ -99,6 +154,18 @@ export const StatsReviews = memo(function StatsReviews({ games, gameId, onBack, 
         // El botón de compartir solo aparece aquí, sobre TUS reseñas. La misma pantalla se usa en el hub social
         // para las de otras personas, y allí no se pasa nada.
         actions={<ShareReviewButton game={game} reviewText={open.reviewText} />}
+        // Análisis sugeridos: los tuyos, relacionados por juego, saga o género. Salen de las listas que ya están
+        // en memoria, sin tocar el canal social —esta pantalla funciona sin tenerlo montado— y abren dentro del
+        // panel, no en el hub.
+        related={
+          <RelatedReviews
+            SOCIAL_UI={SOCIAL_UI}
+            items={related}
+            title={SOCIAL_UI.feed.suggestedTitle}
+            openAria={(entry) => SOCIAL_UI.feed.suggestedOpenAria(entry.gameName)}
+            onOpen={(entry) => onOpenReview(entry.gameId)}
+          />
+        }
       />
     );
   }
