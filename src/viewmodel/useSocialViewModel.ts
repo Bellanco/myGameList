@@ -683,12 +683,14 @@ export function useSocialViewModel(options?: {
           // si el borrado ganaba la carrera, un amigo que hidratara en ese hueco leía un gist ya inexistente y se
           // quedaba sin su actividad —cacheada 30 minutos— hasta la siguiente rehidratación.
           await setPrivateConfig(owner.uid, { socialGistId: result.gistId }).catch(() => {});
+          // `force`: aquí la garantía manda sobre el ahorro. Lo que viene después BORRA el gist antiguo, así que
+          // un saneado que se saltara por huella dejaría a los amigos apuntando a un id que va a desaparecer.
           await healOwnFriendshipIdentity(owner.uid, {
             name: profileName.trim(),
             photo: ownPublishablePhoto,
             socialGistId: result.gistId,
             gamesGistId: mainSyncConfig?.gistId || '',
-          }).catch(() => {});
+          }, { force: true }).catch(() => {});
           // Ya está repuntado; el efecto de saneado no tiene que repetirlo.
           friendshipHealedRef.current = true;
 
