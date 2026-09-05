@@ -232,6 +232,13 @@ export const SOCIAL_UI = {
     // firma del bloque que no parecía una persona.
     relatedTitle: 'Análisis relacionados',
     relatedOpenAria: (gameName: string, author: string) => `Abrir la reseña de ${author} sobre ${gameName}`,
+    // El MISMO bloque cuando todo lo que ofrece lo firma UNA sola persona: tus reseñas del panel y la página
+    // pública de un enlace compartido. Se llama "sugeridos" y no "relacionados" porque el criterio no es el
+    // mismo: donde se mezclan firmas, la firma es una de las razones para ofrecer algo; donde solo hay una, no
+    // distingue nada y solo relacionan el juego, la saga y el género. Y por eso el rótulo de cada tarjeta no
+    // nombra a nadie: repetir la misma firma seis veces no informa de nada.
+    suggestedTitle: 'Análisis sugeridos',
+    suggestedOpenAria: (gameName: string) => `Abrir el análisis sobre ${gameName}`,
     profileListTabCompleted: 'Completados',
     profileListTabVisited: 'Abandonados',
     profileListTabPlaying: 'En curso',
