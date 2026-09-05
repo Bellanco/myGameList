@@ -6,6 +6,9 @@ import type { SocialUiLabels } from '../../../core/constants/socialLabels';
 import { HubScreen } from './HubScreen';
 import { HubStatus } from './HubStatus';
 import { HubBackButton } from './HubBackButton';
+// Ver `ProfileReviewsList`: esta pantalla la reutiliza el panel de estadísticas para TUS reseñas, y allí no se
+// carga el chunk del hub.
+import '../../../styles/reviews.scss';
 
 /** Reseña de un juego abierta a pantalla completa desde la lista de reseñas de un perfil. */
 export type ProfileReview = {
