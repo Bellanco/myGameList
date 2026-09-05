@@ -1,7 +1,5 @@
-import { ScoreDisplay } from '../ScoreDisplay';
-import { NoScoreMedal } from '../NoScoreMedal';
-import { resolveGrade } from '../../../core/utils/scoreScale';
 import { ReviewDetailBody } from '../ReviewDetailBody';
+import { ReviewDetailHead, type ReviewAuthor } from '../ReviewDetailHead';
 import type { SocialUiLabels } from '../../../core/constants/socialLabels';
 import { HubScreen } from './HubScreen';
 import { HubStatus } from './HubStatus';
@@ -33,7 +31,7 @@ export type ProfileReview = {
 export function SocialProfileReviewScreen({
   SOCIAL_UI,
   review,
-  profileName,
+  author = null,
   onBack,
   backLabel,
   status,
@@ -43,7 +41,11 @@ export function SocialProfileReviewScreen({
 }: {
   SOCIAL_UI: SocialUiLabels;
   review: ProfileReview | null;
-  profileName: string;
+  /**
+   * Quien firma. AUSENTE en el panel de estadísticas: allí todas las reseñas son tuyas, así que la firma no
+   * distingue ninguna de las demás y la cabecera se queda con el nombre del juego (ver `ReviewDetailHead`).
+   */
+  author?: ReviewAuthor | null;
   onBack: () => void;
   /** Rótulo del botón de volver. Por defecto, la lista de reseñas; el panel de estadísticas pasa el suyo. */
   backLabel?: string;
@@ -93,7 +95,6 @@ export function SocialProfileReviewScreen({
     );
   }
 
-  const hasScore = resolveGrade({ score: review.score, grade: review.grade }) > 0;
   const reviewDate = new Date(review.ts || 0);
   const hasValidDate = review.ts > 0 && !Number.isNaN(reviewDate.getTime());
 
@@ -101,12 +102,12 @@ export function SocialProfileReviewScreen({
     <HubScreen {...shell}>
       {actionsRow}
         <article className="hub-feed-card hub-feed-card-detail">
-          <div className="hub-feed-card-head-text">
-            {review.name ? <h3 className="hub-review-detail-game">{review.name}</h3> : null}
-            {profileName ? <span className="hub-feed-game-chip">{profileName}</span> : null}
-          </div>
-          {hasValidDate ? <p className="hub-feed-date">{SOCIAL_UI.feed.analyzedAt(reviewDate)}</p> : null}
-          {hasScore ? <ScoreDisplay game={{ score: review.score, grade: review.grade }} /> : <NoScoreMedal />}
+          <ReviewDetailHead
+            gameName={review.name}
+            author={author}
+            dateLabel={hasValidDate ? SOCIAL_UI.feed.analyzedAt(reviewDate) : ''}
+            score={{ score: review.score, grade: review.grade }}
+          />
           <ReviewDetailBody
             review={review.review}
             platforms={review.platforms}

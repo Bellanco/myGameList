@@ -2,10 +2,12 @@ import { memo, useEffect, useState } from 'react';
 import { SHARE_UI } from '../../core/constants/shareLabels';
 import { SOCIAL_UI } from '../../core/constants/socialLabels';
 import { ReviewDetailBody } from './ReviewDetailBody';
-import { NoScoreMedal } from './NoScoreMedal';
-import { ScoreDisplay } from './ScoreDisplay';
+import { ReviewDetailHead } from './ReviewDetailHead';
 import { readSharedReview } from '../../model/repository/publicShareRepository';
 import type { SharedReview } from '../../model/types/share';
+// La hoja de la RESEÑA. Esta pantalla la pinta sin el hub social —en modo artículo no hay hub—, así que sin
+// esto se quedaba sin el medallón y sin el bloque del pie. Ver `styles/reviews.scss`.
+import '../../styles/reviews.scss';
 
 /**
  * Página que ve quien abre un enlace compartido (`/r/:token`).
@@ -70,6 +72,31 @@ export const PublicReviewScreen = memo(function PublicReviewScreen({ token, stan
   );
 
   /**
+   * Encabezado de la pantalla: el MISMO que el detalle de un análisis dentro de la aplicación (`HubScreen` con
+   * el icono `signature`, ver `SocialProfileReviewScreen`). Aquí va escrito a mano en vez de reutilizar aquel
+   * componente por una sola razón: `HubScreen` pinta el icono con `<Icon>`, que apunta al sprite que monta la
+   * app, y en modo artículo no hay app. El símbolo va incrustado por lo mismo que el de la barra de abajo.
+   *
+   * NO LLEVA BOTÓN DE VOLVER, y no por olvido: la fila de acciones de aquella pantalla existe para regresar a la
+   * lista de reseñas del perfil, y desde un enlace público no se ha venido de ninguna parte. La única salida
+   * sigue siendo la barra de abajo.
+   */
+  const header = (
+    <header className="hub-screen-header">
+      <div className="hub-hub-title-wrap">
+        <svg className="hub-hub-icon" viewBox="0 0 640 512" aria-hidden="true">
+          <path
+            fill="currentColor"
+            d="M192 128c0-17.7 14.3-32 32-32s32 14.3 32 32l0 7.8c0 27.7-2.4 55.3-7.1 82.5l-84.4 25.3c-40.6 12.2-68.4 49.6-68.4 92l0 71.9c0 40 32.5 72.5 72.5 72.5c26 0 50-13.9 62.9-36.5l13.9-24.3c26.8-47 46.5-97.7 58.4-150.5l94.4-28.3-12.5 37.5c-3.3 9.8-1.6 20.5 4.4 28.8s15.7 13.3 26 13.3l128 0c17.7 0 32-14.3 32-32s-14.3-32-32-32l-83.6 0 18-53.9c3.8-11.3 .9-23.8-7.4-32.4s-20.7-11.8-32.2-8.4L316.4 198.1c2.4-20.7 3.6-41.4 3.6-62.3l0-7.8c0-53-43-96-96-96s-96 43-96 96l0 32c0 17.7 14.3 32 32 32s32-14.3 32-32l0-32zm-9.2 177l49-14.7c-10.4 33.8-24.5 66.4-42.1 97.2l-13.9 24.3c-1.5 2.6-4.3 4.3-7.4 4.3c-4.7 0-8.5-3.8-8.5-8.5l0-71.9c0-14.1 9.3-26.6 22.8-30.7zM24 368c-13.3 0-24 10.7-24 24s10.7 24 24 24l40.3 0c-.2-2.8-.3-5.6-.3-8.5L64 368l-40 0zm592 48c13.3 0 24-10.7 24-24s-10.7-24-24-24l-310.1 0c-6.7 16.3-14.2 32.3-22.3 48L616 416z"
+          />
+        </svg>
+        <h2>{SOCIAL_UI.feed.reviewDetailTitle}</h2>
+      </div>
+      <p>{SOCIAL_UI.feed.reviewDetailSubtitle}</p>
+    </header>
+  );
+
+  /**
    * Marco de la página. En modo artículo se envuelve en el MISMO `<main class="main">` que usa la app, en vez de
    * darle un ancho propio: así el contenido mide y respira exactamente igual con sesión y sin ella. Imitarlo con
    * un `max-width` a medida era justo lo que hacía que la reseña se viera más estrecha para quien llegaba de
@@ -89,12 +116,16 @@ export const PublicReviewScreen = memo(function PublicReviewScreen({ token, stan
     return frame(
       <section className="hub-hub hub-screen" aria-label={SHARE_UI.publicAria}>
         <div className="hub-hub-card hub-screen-card hub-feed-card-shell">
+          {header}
           <p>{SHARE_UI.publicLoading}</p>
         </div>
       </section>,
     );
   }
 
+  // Los tres finales malos comparten pantalla, y esta es la ÚNICA que no lleva el encabezado de "Reseña":
+  // anunciar un análisis encima de "este enlace ya no está disponible" prometería algo que no hay. Aquí el
+  // título de la página es el propio mensaje.
   if (state === 'gone' || !review) {
     return frame(
       <section className="hub-hub hub-screen" aria-label={SHARE_UI.publicAria}>
@@ -106,21 +137,22 @@ export const PublicReviewScreen = memo(function PublicReviewScreen({ token, stan
     );
   }
 
-  const hasScore = typeof review.grade === 'number' || typeof review.rating === 'number';
   const reviewedAt = new Date(review.reviewedAt || 0);
   const hasValidDate = (review.reviewedAt || 0) > 0 && !Number.isNaN(reviewedAt.getTime());
 
   return frame(
     <section className="hub-hub hub-screen" aria-label={SHARE_UI.publicAria}>
       <div className="hub-hub-card hub-screen-card hub-feed-card-shell">
+        {header}
         <article className="hub-feed-card hub-feed-card-detail">
-          <div className="hub-feed-card-head-text">
-            <h3 className="hub-review-detail-game">{review.gameName}</h3>
-            {/* Texto plano, NUNCA un enlace: el perfil del autor no es público. */}
-            {review.authorNick ? <span className="hub-feed-game-chip">{review.authorNick}</span> : null}
-          </div>
-          {hasValidDate ? <p className="hub-feed-date">{SOCIAL_UI.feed.analyzedAt(reviewedAt)}</p> : null}
-          {hasScore ? <ScoreDisplay game={{ score: review.rating ?? 0, grade: review.grade }} /> : <NoScoreMedal />}
+          {/* La firma va SIN `onOpen`, y eso es justo lo que la deja en texto plano y sin avatar: el perfil del
+              autor no es público y desde aquí no se llega a él. La foto tampoco viaja en el artículo. */}
+          <ReviewDetailHead
+            gameName={review.gameName}
+            author={review.authorNick ? { name: review.authorNick } : null}
+            dateLabel={hasValidDate ? SOCIAL_UI.feed.analyzedAt(reviewedAt) : ''}
+            score={{ score: review.rating ?? 0, grade: review.grade }}
+          />
           <ReviewDetailBody
             review={review.review}
             platforms={review.platforms}
