@@ -6,6 +6,24 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
 ## [Unreleased]
 
 ### Added
+- **Análisis sugeridos también fuera del espacio social.** El bloque de "por dónde seguir leyendo" que ya existía
+  en el hub aparece ahora en dos sitios más, y en los dos ofrece análisis de UNA sola persona, que es lo que
+  cambia el criterio: donde se mezclan firmas, la firma es una razón para ofrecer algo; donde solo hay una, no
+  distingue nada, así que ahí solo relacionan el JUEGO, la SAGA y el GÉNERO.
+  - **En la página pública de un enlace compartido** (`/r/:token`), con otros enlaces públicos del MISMO autor.
+    Los elige y los ordena el SERVIDOR (`GET /api/share/related/:token`), no el navegador: el filtro es también
+    el límite de lo que se enseña, así que mandar la lista entera para recortarla en el cliente la dejaría
+    igualmente a la vista en la respuesta. Como mucho seis, y solo los que se parecen al que se está leyendo, de
+    modo que desde un enlace no se puede enumerar todo lo que esa persona tiene publicado. No viaja el uid del
+    autor ni el texto completo de ninguna reseña: solo un adelanto, porque para leer una entera se abre SU
+    enlace, que es el gesto que su autor autorizó. Cada tarjeta es un enlace de verdad a `/r/{token}`, así que se
+    puede abrir en otra pestaña.
+  - **En tus reseñas del panel** (`/perfil/resenas/:id`), con las tuyas, tomadas de las listas que ya están en
+    memoria: ni una consulta de red, y funciona sin tener montado el espacio social.
+  - Los relacionados del espacio social no cambian: conservan sus ponderaciones y su señal de autor.
+- **Cada paleta nombra los juegos con su color.** "Clásico" y "Mar de estrellas" eran las dos que no vestían la
+  etiqueta del nombre de un juego y caían en una píldora gris genérica; ahora llevan la suya —ámbar de insignia
+  la primera, oro de sol la segunda—, con la misma fórmula de velo, filete y texto que el resto de etiquetas.
 - **Análisis relacionados al final de una reseña.** Al leer una reseña en el espacio social —tanto desde el feed
   como desde la lista de reseñas de un perfil— aparece al pie un bloque con hasta seis reseñas por las que seguir
   leyendo. Cada una lleva un chip que dice POR QUÉ está ahí, que es lo que la convierte en una respuesta y no en
@@ -72,6 +90,13 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
     de siempre, porque allí una coincidencia de más te impediría añadir un juego o fundiría dos al importar.
 
 ### Fixed
+- **Los estilos de una reseña se cargaban solo dentro del espacio social.** Vivían en la hoja del hub, que se
+  descarga con su chunk perezoso, pero el marcado que pintan lo usan también tus reseñas del panel y la página
+  pública de un enlace. En esas dos pantallas la hoja no llegaba nunca y se veía: el medallón de la nota se
+  quedaba en un número suelto a lo ancho de la tarjeta. Ahora viven en una hoja propia que importa cada
+  componente que de verdad pinta una reseña.
+- **El icono de las reseñas se veía negro** en `/perfil/resenas` y en el detalle de cualquier análisis, mientras
+  el título de al lado sí salía en color: le faltaba el relleno, que estos iconos no heredan.
 - **Las acciones de las pantallas del hub vuelven a una sola fila.** Por debajo de cierto ancho se apilaban en
   una torre alineada a la izquierda —«volver» y «compartir» en dos renglones, y lo mismo en la actividad y en el
   perfil de alguien— porque cada lado de la fila tomaba el ancho entero. Ahora cada lado mide lo que miden sus
@@ -111,6 +136,17 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
   grande que antes: lo que crece es el margen del texto, no el dibujo.
 
 ### Changed
+- **La cabecera del detalle de una reseña es una sola pieza.** Estaba escrita cuatro veces —detalle del feed,
+  reseña de un perfil, ficha de la ruleta y página pública— y de esas copias habían salido DOS órdenes distintos
+  para lo mismo. Ahora manda una sola regla: cuando hay firma que dar, el titular es la PERSONA y el juego baja a
+  su etiqueta; cuando no la hay, el titular es el JUEGO. El avatar y el enlace al perfil solo aparecen cuando ese
+  perfil se puede visitar.
+- **Tus reseñas ya no se firman.** En `/perfil/resenas/:id` todas son tuyas, así que el chip que ponía "Tus
+  reseñas" —que ni siquiera era un nombre— desaparece, y la cabecera se queda con el nombre del juego, que es lo
+  único que ahí distingue una reseña de otra.
+- **La página pública de un enlace compartido se parece por fin al detalle de dentro de la aplicación:** lleva su
+  mismo encabezado (icono, título y subtítulo). Sigue sin botón de volver: desde un enlace no se ha venido de
+  ninguna parte.
 - **Perfiles y solicitudes: una sola tarjeta de persona, en rejilla.** Las dos pantallas del hub que listan gente
   (`/social/profiles` y `/social/requests`) comparten ahora la misma pieza y la misma rejilla, en vez de una
   tarjeta por pantalla —el directorio— y la burbuja del feed —la bandeja—.

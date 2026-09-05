@@ -58,12 +58,6 @@
 
 .hub-gateway-consent-check:focus-within { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
 
-.hub-screen-actions-split {
-  width: 100%;
-  justify-content: space-between;
-  align-items: center;
-}
-
 // Botón "Solicitudes": contador de pendientes inscrito en un círculo (gris si 0, verde si hay alguna).
 .hub-requests-btn {
   position: relative;
@@ -756,12 +750,6 @@ button.hub-chip.active {
   color: var(--text-muted);
 }
 
-/* Botón "Mostrar más" del feed, centrado bajo la lista. */
-.hub-feed-load-more {
-  align-self: center;
-  margin-top: .5rem;
-}
-
 .hub-feed-game-subtitle {
   display: block;
   margin-top: .2rem;
@@ -775,230 +763,6 @@ button.hub-chip.active {
   gap: .7rem;
   margin-bottom: 1rem;
 }
-
-/* Pantalla "Reseñas" de un perfil: layout de lectura. Título del juego prominente, fila de
-   meta (estrellas + fecha) y texto COMPLETO (sin recorte) con tipografía cómoda. */
-.hub-profile-reviews-list { gap: .8rem; }
-
-/* Medallón circular con la nota (número entero), coloreado por puntuación. */
-.hub-review-medal {
-  grid-area: medal;
-  align-self: start;
-  width: 3.4rem; height: 3.4rem;
-  border-radius: 50%;
-  display: grid; place-items: center;
-  font-size: 1.45rem; font-weight: 800; line-height: 1;
-  font-variant-numeric: tabular-nums;
-  color: var(--acc);
-  background: var(--acc-soft);
-  border: 2px solid var(--acc);
-}
-
-.hub-review-entry-head {
-  grid-area: head;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: .3rem;
-  min-width: 0;
-}
-
-/* Título del juego como encabezado (ya no un chip): protagonista y legible. */
-.hub-review-game {
-  align-self: stretch;
-  margin: 0;
-  font-size: 1.02rem;
-  font-weight: 800;
-  color: var(--hub-text);
-  line-height: 1.25;
-  overflow-wrap: anywhere;
-}
-
-.hub-review-meta {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  width: 100%;
-  gap: .6rem;
-  flex-wrap: wrap;
-}
-
-.hub-review-date {
-  font-size: .72rem;
-  color: var(--hub-text-muted);
-  letter-spacing: .02em;
-}
-
-/* Aviso de "juego sin pasar", en el hueco de la fecha (tus reseñas del panel no la enseñan: esa fecha es la de
-   publicación del canal social). Ámbar del tema tirado al naranja, para no confundirlo con un aviso amarillo. */
-.hub-review-unfinished {
-  font-size: .72rem;
-  font-weight: 700;
-  letter-spacing: .02em;
-  color: color-mix(in srgb, var(--warn), var(--danger) 40%);
-}
-
-/* ── Reseñas relacionadas ─────────────────────────────────────────────────────────────────────────────────
-   Bloque al pie de una reseña abierta. Va FUERA de la tarjeta del análisis (es material de al lado, no parte
-   de él) y se separa con un filete: sin él, tres tarjetas más colgando del final se leen como una continuación
-   de lo que se acaba de terminar de leer.
-
-   Las tarjetas son las mismas de la lista de reseñas de un perfil —medallón, barra de color, texto recortado—,
-   heredadas por `.hub-related-list` en `_layout.scss`. Aquí solo va lo que este bloque tiene de propio: el
-   encabezado, el chip del motivo y una escala algo menor, porque esto es el epílogo de la pantalla y no puede
-   pesar como lo que hay encima. */
-.hub-related {
-  margin-top: 1.2rem;
-  padding-top: .9rem;
-  border-top: 1px solid var(--border);
-}
-
-.hub-related-title {
-  margin: 0 0 .55rem;
-  font-size: .82rem;
-  font-weight: 700;
-  letter-spacing: .06em;
-  text-transform: uppercase;
-  color: var(--hub-text-muted);
-}
-
-/* REJILLA, no lista. Una reseña relacionada es un renglón de texto corto, y en una lista a lo ancho de la
-   pantalla ese renglón acaba a media línea: el resto de la fila es hueco, y cada tarjeta gasta el alto de toda
-   una fila para no decir nada en la mitad derecha. Puestas en columnas, el mismo alto enseña dos o tres.
-
-   `repeat(auto-fill, minmax(min(100%, 17rem), 1fr))` es el patrón corriente para esto y no necesita una sola
-   consulta de medios: el navegador mete las columnas que quepan y las reparte. Tres detalles que sí importan:
-
-   · `auto-fill` y NO `auto-fit`. `auto-fit` colapsa las columnas que sobran y estira las tarjetas que hay para
-     llenar la fila, así que con dos reseñas volveríamos justo al problema de partida: dos tarjetas enormes con
-     media línea de texto. Con `auto-fill` la tarjeta mide lo que tiene que medir y lo que sobra queda vacío.
-   · El `min(100%, 17rem)` evita que en una pantalla más estrecha que una tarjeta la rejilla desborde.
-   · Mide el CONTENEDOR, no la ventana, así que se adapta igual dentro del hub que en cualquier ancho. */
-.hub-related-list {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 17rem), 1fr));
-  gap: .5rem;
-}
-
-/* Tarjeta más CUADRADA que la de la lista de un perfil: cabecera compacta (medallón, título y firma) y el texto
-   debajo, a todo el ancho de la tarjeta. En vertical el texto respira sin necesitar una fila entera de pantalla. */
-.hub-related-entry {
-  grid-template-columns: auto minmax(0, 1fr);
-  grid-template-areas: 'medal head' 'body body';
-  align-items: center;
-  align-content: start;
-  gap: .45rem .6rem;
-  padding: .7rem .85rem .75rem 1rem;
-}
-
-.hub-related-entry .hub-review-medal {
-  align-self: center;
-  width: 2.3rem; height: 2.3rem;
-  font-size: .95rem;
-  border-width: 1px;
-}
-
-.hub-related-entry .hub-review-entry-head { gap: .1rem; }
-
-.hub-related-entry .hub-review-game {
-  font-size: .88rem;
-  line-height: 1.25;
-  /* Hasta dos líneas: en una columna estrecha, cortar «Sekiro: Shadows Die Twice» al primer renglón deja el
-     título irreconocible, y dejarlo crecer sin tope descuadra la altura de toda la fila. */
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  line-clamp: 2;
-  -webkit-line-clamp: 2;
-  overflow: hidden;
-}
-
-/* La firma, bajo el título y en segundo plano: aquí se busca el juego, no quién lo escribió. */
-.hub-related-author {
-  display: block;
-  font-size: .74rem;
-  font-weight: 600;
-  color: var(--hub-text-muted);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-/* La firma PROPIA lleva tu nombre como las demás, y se distingue por el color, no por el texto: el azul de la
-   aplicación tirado hacia el gris de las otras firmas, lo justo para reconocer de un vistazo lo que ya has
-   escrito tú sin que la tarjeta pida más atención que las de al lado. */
-.hub-related-author.is-own {
-  color: color-mix(in srgb, var(--steam), var(--hub-text-muted) 30%);
-}
-
-/* Tres líneas de adelanto: lo justo para decidir si vale la pena abrirla, y lo que da a la tarjeta su forma. */
-.hub-related-entry .hub-review-text {
-  max-width: none;
-  line-clamp: 3;
-  -webkit-line-clamp: 3;
-  font-size: .8rem;
-  line-height: 1.45;
-  color: var(--hub-text-muted);
-}
-
-/* Texto + botón "ver más" ocupan las dos columnas (a lo ancho de la tarjeta). */
-.hub-review-body {
-  grid-area: body;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-}
-
-/* Botón "ver más/menos" discreto: solo un chevron centrado, sin texto, que no llama la atención.
-   Mismo tratamiento para el "ver más" de reseñas y el "mostrar más" de las listas/feed del hub. */
-.hub-more-soft {
-  align-self: center;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  background: none;
-  border: none;
-  padding: .35rem;
-  color: var(--text-dim);
-  cursor: pointer;
-  border-radius: 50%;
-  transition: color .2s ease, background .2s ease;
-}
-
-.hub-more-soft .ui-icon { width: .95rem; height: .95rem; }
-
-.hub-more-soft:hover { color: var(--fg-link); background: var(--surface-soft); }
-
-.hub-more-soft:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
-
-/* "Ver más/menos" de cada reseña: a todo el ancho, igual que el "Mostrar más". */
-.hub-review-more {
-  align-self: stretch;
-  width: 100%;
-  margin-top: .35rem;
-  border-radius: var(--radius-md);
-  /* Texto "Ver más/menos" en lugar del chevron; el botón conserva el mismo tamaño (barra a todo el ancho). */
-  font-size: .8rem;
-  font-weight: 700;
-}
-
-.hub-review-more:hover { background: var(--surface-soft); color: var(--fg-link); }
-
-.hub-review-more:active { background: var(--overlay-hover); }
-
-/* "Mostrar más": misma altura, pero la zona pulsable abarca todo el ancho de la columna,
-   con feedback de botón muy sutil (hover/active). Va tras .hub-more-soft para ganar en cascada. */
-.hub-feed-load-more {
-  align-self: stretch;
-  width: 100%;
-  margin-top: .5rem;
-  border-radius: var(--radius-md);
-}
-
-.hub-feed-load-more:hover { background: var(--surface-soft); color: var(--fg-link); }
-
-.hub-feed-load-more:active { background: var(--overlay-hover); }
-
-.hub-game-filter-empty { color: var(--text-muted); font-size: .88rem; padding: .6rem .2rem; margin: 0; }
 
 /* El renglón. Un `p` con elementos EN LÍNEA, no una fila de flex: así el texto fluye y parte por donde tenga que
    partir en una pantalla estrecha, en vez de empujar la hora fuera de la burbuja. */
@@ -1050,25 +814,6 @@ button.hub-chip.active {
 .hub-feed-move-game.is-plain { color: var(--text-muted); cursor: default; }
 
 .hub-feed-move-game.is-plain:hover { color: var(--text-muted); text-decoration: none; }
-
-/* Reseñas pulsables: capa transparente que abarca toda la tarjeta y captura el click sin envolver el contenido
-   (así el título/estrellas/texto siguen siendo texto seleccionable y el foco recae en un único control). */
-.hub-review-open {
-  position: absolute;
-  inset: 0;
-  z-index: 1;
-  border: 0;
-  padding: 0;
-  margin: 0;
-  background: none;
-  cursor: pointer;
-  border-radius: inherit;
-}
-
-.hub-review-open:focus-visible {
-  outline: 2px solid var(--acc);
-  outline-offset: 2px;
-}
 
 /* Avatar sin foto: disco tintado por el acento de la paleta + silueta a trazo. Los tokens viven en la CAPA 3 de
    `_base.scss`; aquí solo se montan. El anillo va como sombra INSET y no como `border`, para que no reste espacio
@@ -1452,57 +1197,6 @@ button.hub-chip.active {
   letter-spacing: .02em;
   color: var(--hub-text-muted);
   text-transform: uppercase;
-}
-
-.hub-detail-profile-link {
-  display: inline-flex;
-  align-items: center;
-  justify-content: flex-start;
-  min-height: 2.75rem;
-  min-width: 2.75rem;
-  margin: -.25rem -.35rem;
-  padding: .25rem .35rem;
-  border: 1px solid transparent;
-  border-radius: .5rem;
-  background: transparent;
-  color: var(--fg-link);
-  font-size: inherit;
-  font-weight: inherit;
-  line-height: 1.2;
-  text-align: left;
-  cursor: pointer;
-  transition: border-color .2s ease, background .2s ease, color .2s ease;
-}
-
-.hub-detail-profile-link:hover {
-  color: var(--hub-text);
-}
-
-.hub-detail-profile-link:focus-visible {
-  outline: none;
-  border-color: rgba(var(--steam-rgb),.42);
-  background: rgba(var(--steam-rgb),.12);
-  box-shadow: 0 0 0 2px rgba(var(--steam-rgb),.2);
-}
-
-/* Avatar clicable (feed/detalle): botón sin chrome que envuelve la foto/inicial y navega al perfil. */
-.hub-avatar-link {
-  flex: 0 0 auto;
-  display: inline-flex;
-  padding: 0;
-  border: 1px solid transparent;
-  border-radius: 50%;
-  background: transparent;
-  cursor: pointer;
-  transition: box-shadow .2s ease, border-color .2s ease;
-}
-
-.hub-avatar-link:hover { box-shadow: 0 0 0 2px rgba(var(--steam-rgb),.28); }
-
-.hub-avatar-link:focus-visible {
-  outline: none;
-  border-color: rgba(var(--steam-rgb),.42);
-  box-shadow: 0 0 0 2px rgba(var(--steam-rgb),.2);
 }
 
 /* Nombre clicable (feed): botón inline con apariencia de texto que navega al perfil. */

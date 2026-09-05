@@ -38,6 +38,33 @@ export interface SharedReview {
 }
 
 /**
+ * Una tarjeta del bloque «Análisis sugeridos» del pie de un enlace público (`GET /api/share/related/:token`).
+ *
+ * QUÉ SE OFRECE Y QUÉ NO. Solo OTROS enlaces públicos DEL MISMO AUTOR, y de esos solo los que hablan del mismo
+ * juego, de la misma saga o comparten género con el que se está leyendo. Lo de otras personas se queda para el
+ * espacio social, que es donde hay una relación que lo justifique; aquí, quien llega no es nadie conocido.
+ *
+ * NO LLEVA IDENTIDAD, igual que {@link SharedReview}: ni uid, ni `profileId`, ni el nick (que ya va en el
+ * artículo, y es el mismo para todas). Y lleva un ADELANTO del texto, nunca la reseña entera: para leerla
+ * completa se abre su enlace, que es el gesto que el autor autorizó al publicarla.
+ */
+export interface SharedReviewSuggestion {
+  /** Token del OTRO enlace: es a la vez su dirección (`/r/{token}`) y la clave de render de la tarjeta. */
+  token: string;
+  gameName: string;
+  grade: number | null;
+  rating: number | null;
+  /** Adelanto del texto, recortado en el servidor. */
+  snippet: string;
+  reviewedAt: number;
+}
+
+/** Lo que devuelve `GET /api/share/related/:token`. Lista vacía cuando no hay nada que sugerir (no es un error). */
+export interface SharedReviewSuggestionsResponse {
+  items: SharedReviewSuggestion[];
+}
+
+/**
  * Entrada del índice privado del propietario (`user:{uid}:{token}`). Es lo que alimenta la pantalla de gestión y
  * el recuento de cuota, así que lleva lo justo para pintar una fila sin releer el artículo entero.
  */

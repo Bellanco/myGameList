@@ -73,4 +73,6 @@ export const SHARE_UI = {
   publicGoneBody: 'Puede haber caducado o haberlo retirado quien lo compartió.',
   publicCta: 'Ir a la página principal',
   publicNavAria: 'Navegación',
+  // El rótulo del bloque de análisis sugeridos del pie NO está aquí: vive en `SOCIAL_UI.feed` junto al del
+  // bloque del hub, porque es el mismo componente y lo comparte con tus reseñas del panel.
 } as const;

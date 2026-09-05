@@ -1062,10 +1062,18 @@
 .hub-feed-card h3 {
   font-size: clamp(.9rem, .84rem + .3vw, 1.02rem);
   font-weight: 700;
-  color: var(--fg-link);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* El color va aparte y EXCLUYENDO la etiqueta de juego. Cuando el titular de un detalle es el propio juego se
+   pinta con `.hub-feed-game-chip` —la misma etiqueta con la que el hub social nombra un juego, que cada tema
+   viste en su §6—, y esa etiqueta trae su color. Si el azul de enlace se declarara aquí sin más, le ganaría por
+   especificidad (0,1,1 contra 0,1,0) y la etiqueta saldría azul en la paleta por defecto y del color del tema en
+   las demás: el mismo elemento pintado de dos maneras según la paleta. */
+.hub-feed-card h3:not(.hub-feed-game-chip) {
+  color: var(--fg-link);
 }
 
 .hub-feed-card p {
@@ -1311,6 +1319,24 @@
   white-space: nowrap;
 }
 
+/* La etiqueta de juego de la paleta POR DEFECTO ("Clásico"), que hasta ahora no tenía: caía en la píldora gris
+   genérica de arriba —el respaldo para un tema que no la vista en su §6— y por eso era la única paleta en la que
+   el nombre de un juego no se distinguía de un dato cualquiera. Se nota sobre todo desde que ese mismo rótulo
+   encabeza el detalle de una reseña propia (ver `.hub-review-detail-game`).
+   El selector es `:root:not([data-palette])` porque "Clásico" es la ausencia de atributo (ver `preferences.ts`),
+   y suma (0,3,0): lo mismo que las reglas de los temas, así que ni les gana ni les pierde — cada paleta sigue
+   mandando en la suya.
+   ÁMBAR, y no el azul del acento, por dos motivos: el azul ya es el de los géneros, que salen justo debajo en la
+   misma tarjeta, y el ámbar es el color con el que esta paleta ya escribe una INSIGNIA (`--deco-badge-idle-fg`),
+   que es exactamente lo que aquí se está pintando. La fórmula —velo del tono, texto del `--fg-*` y filete del
+   mismo tono— es la de toda la familia de chips (`.chip-genre`, `.chip-pf`, `.chip-pd`), así que el contraste ya
+   está medido en los dos temas y la etiqueta se lee como una más de la casa. */
+:root:not([data-palette]) .hub-feed-game-chip {
+  background: rgba(var(--warn-rgb), .16);
+  border: 1px solid rgba(var(--warn-rgb), .34);
+  color: var(--fg-amber);
+}
+
 .hub-skeleton {
   background: var(--surface-hover);
   border-radius: var(--radius-sm);
@@ -1368,6 +1394,12 @@
   width: 1.6rem;
   height: 1.6rem;
   color: var(--fg-link);
+  /* El `fill` hay que decirlo aquí: `<Icon>` SUSTITUYE la clase, así que estos iconos no llevan `ui-icon` y no
+     heredan su `fill: currentColor`. Con los símbolos que traen `fill="currentColor"` en su propio trazado
+     (`bottom-hub`) no se notaba, pero los que no lo traen —`signature`, el de las reseñas— se pintaban con el
+     relleno por defecto del navegador, es decir, NEGROS: así se veía el icono de `/perfil/resenas` y el del
+     detalle de cualquier análisis, mientras el título de al lado sí salía azul. */
+  fill: currentColor;
   flex: 0 0 auto;
   display: flex;
   align-items: center;

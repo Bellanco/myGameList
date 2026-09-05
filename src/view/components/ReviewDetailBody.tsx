@@ -12,8 +12,10 @@ import { MetaSection } from './MetaSection';
  * Los rótulos salen de `SOCIAL_UI` en los cuatro. La ruleta usaba literales sin dos puntos («Plataformas») y
  * ahora dice lo mismo que el resto: eran la única excepción de las cuatro.
  *
- * NO incluye la cabecera (nombre del juego, autor, fecha, nota): cada pantalla la compone distinto y forzarla
- * aquí habría exigido media docena de props para tapar las diferencias.
+ * NO incluye la cabecera (nombre del juego, autor, fecha, nota): esa es `ReviewDetailHead`, y las dos se montan
+ * juntas. Estuvieron separadas porque "cada pantalla la componía distinto", que era cierto y era el problema:
+ * de las cuatro copias habían salido dos órdenes distintos para lo mismo. Siguen siendo dos componentes porque
+ * son dos piezas —una identifica la reseña y la otra la cuenta—, no porque la cabecera no se pueda compartir.
  */
 export interface ReviewDetailBodyProps {
   /** Texto de la reseña. Vacío o ausente: no se pinta el párrafo. */

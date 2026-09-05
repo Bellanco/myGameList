@@ -1,8 +1,5 @@
-﻿import { ScoreDisplay } from '../ScoreDisplay';
-import { NoScoreMedal } from '../NoScoreMedal';
-import { resolveGrade } from '../../../core/utils/scoreScale';
-import { ReviewDetailBody } from '../ReviewDetailBody';
-import { HubAvatar } from './HubAvatar';
+﻿import { ReviewDetailBody } from '../ReviewDetailBody';
+import { ReviewDetailHead } from '../ReviewDetailHead';
 import type { SocialUiLabels } from '../../../core/constants/socialLabels';
 import type { GameItem } from '../../../model/types/game';
 import type { SocialActivityFeedItem } from '../../../viewmodel/useSocialViewModel';
@@ -98,34 +95,19 @@ export function SocialDetailScreen({
           ) : null}
         </div>
         <article className="hub-feed-card hub-feed-card-detail">
-          <header className="hub-feed-card-head">
-            <button
-              className="hub-avatar-link"
-              type="button"
-              aria-label={SOCIAL_UI.feed.openProfileAria(activeDetailEvent.profileDisplayName)}
-              title={SOCIAL_UI.feed.openProfileAria(activeDetailEvent.profileDisplayName)}
-              onClick={() => onOpenProfileDetail(activeDetailEvent.profileId)}
-            >
-              <HubAvatar photoURL={activeDetailEvent.photoURL} />
-            </button>
-            <div className="hub-feed-card-head-text">
-              <h3>
-                <button
-                  className="hub-detail-profile-link"
-                  type="button"
-                  aria-label={SOCIAL_UI.feed.openProfileAria(activeDetailEvent.profileDisplayName)}
-                  onClick={() => onOpenProfileDetail(activeDetailEvent.profileId)}
-                >
-                  {activeDetailEvent.profileDisplayName}
-                </button>
-              </h3>
-              {activeDetailEvent.gameName ? <span className="hub-feed-game-chip">{activeDetailEvent.gameName}</span> : null}
-            </div>
-          </header>
-          <p className="hub-feed-date">{analyzedAtLabel}</p>
-          {resolveGrade({ score: Number(activeDetailEvent.rating || 0), grade: activeDetailEvent.grade ?? null }) > 0
-            ? <ScoreDisplay game={{ score: Number(activeDetailEvent.rating || 0), grade: activeDetailEvent.grade ?? null }} />
-            : <NoScoreMedal />}
+          {/* Aquí la firma SÍ lleva avatar y enlace: se llega desde el feed, donde lo que se sigue es a la
+              persona, y su perfil está a un clic. Ver `ReviewDetailHead`. */}
+          <ReviewDetailHead
+            gameName={activeDetailEvent.gameName}
+            author={{
+              name: activeDetailEvent.profileDisplayName,
+              photoURL: activeDetailEvent.photoURL,
+              onOpen: () => onOpenProfileDetail(activeDetailEvent.profileId),
+              openAria: SOCIAL_UI.feed.openProfileAria(activeDetailEvent.profileDisplayName),
+            }}
+            dateLabel={analyzedAtLabel}
+            score={{ score: Number(activeDetailEvent.rating || 0), grade: activeDetailEvent.grade ?? null }}
+          />
           <ReviewDetailBody
             review={reviewText}
             platforms={gameItem?.platforms}

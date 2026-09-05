@@ -443,3 +443,53 @@ describe('rankRelatedReviews — entradas que no se pueden ofrecer', () => {
     expect(rankRelatedReviews(anchor({ gameName: '' }), [candidate({ key: 'a' })])).toEqual([]);
   });
 });
+
+// La página PÚBLICA de un enlace compartido (`/r/:token`) solo sugiere otros análisis DEL MISMO AUTOR, así que
+// allí la firma no distingue a ninguna candidata de las demás: si puntuara, subiría a todas por igual y —peor—
+// dejaría entrar en el bloque cualquier análisis suyo aunque no tenga nada que ver con lo que se está leyendo.
+// Eso es lo que apaga `ignoreAuthorLink`, y es lo que decide qué devuelve `functions/api/share/related/[token]`.
+describe('rankRelatedReviews — sin señal de autor (página pública)', () => {
+  const mismoAutor = (extra: Partial<RelatedReviewCandidate> & { key: string }) =>
+    candidate({ authorId: 'luis', ...extra });
+
+  it('deja fuera lo que solo comparte firma', () => {
+    const sinRelacion = mismoAutor({ key: 'a', gameName: 'Stardew Valley' });
+
+    expect(rankRelatedReviews(anchor(), [sinRelacion], new Map(), { ignoreAuthorLink: true })).toEqual([]);
+    // Con la señal encendida —el bloque del hub— esa misma reseña sí entra, por «más de esta persona».
+    expect(rankRelatedReviews(anchor(), [sinRelacion]).map((entry) => entry.reason)).toEqual(['same-author']);
+  });
+
+  it('deja entrar lo que comparte juego o género aunque la firma sea la misma', () => {
+    const candidatos = [
+      mismoAutor({ key: 'juego', gameName: 'Elden Ring' }),
+      mismoAutor({ key: 'genero', gameName: 'Stardew Valley' }),
+      mismoAutor({ key: 'nada', gameName: 'Tetris' }),
+    ];
+    const ranked = rankRelatedReviews(
+      anchor({ gameName: 'Elden Ring', genres: ['RPG'] }),
+      candidatos,
+      genres({ 'Stardew Valley': ['RPG'], Tetris: ['Puzzle'] }),
+      { ignoreAuthorLink: true },
+    );
+
+    // «Elden Ring» del mismo autor ES el ancla, así que no se ofrece a sí misma; «Tetris» no comparte nada.
+    expect(ranked.map((entry) => entry.key)).toEqual(['genero']);
+    expect(ranked[0].reason).toBe('genre');
+  });
+
+  it('el tope por autor no recorta el bloque: todas son de la misma firma', () => {
+    const seis = Array.from({ length: 6 }, (_, index) =>
+      mismoAutor({ key: `k-${index}`, gameName: `Juego ${index}`, updatedAt: T - index }));
+
+    const ranked = rankRelatedReviews(
+      anchor({ gameName: 'Elden Ring', genres: ['RPG'] }),
+      seis,
+      genres(Object.fromEntries(seis.map((entry) => [entry.gameName, ['RPG']]))),
+      { limit: 6, maxPerReason: 6, ignoreAuthorLink: true },
+    );
+
+    // Con la cuota de autor por defecto (3) se habrían quedado tres.
+    expect(ranked).toHaveLength(6);
+  });
+});
