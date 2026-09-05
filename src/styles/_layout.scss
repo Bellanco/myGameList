@@ -1368,6 +1368,12 @@
   width: 1.6rem;
   height: 1.6rem;
   color: var(--fg-link);
+  /* El `fill` hay que decirlo aquí: `<Icon>` SUSTITUYE la clase, así que estos iconos no llevan `ui-icon` y no
+     heredan su `fill: currentColor`. Con los símbolos que traen `fill="currentColor"` en su propio trazado
+     (`bottom-hub`) no se notaba, pero los que no lo traen —`signature`, el de las reseñas— se pintaban con el
+     relleno por defecto del navegador, es decir, NEGROS: así se veía el icono de `/perfil/resenas` y el del
+     detalle de cualquier análisis, mientras el título de al lado sí salía azul. */
+  fill: currentColor;
   flex: 0 0 auto;
   display: flex;
   align-items: center;
