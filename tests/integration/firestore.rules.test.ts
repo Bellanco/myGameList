@@ -7,7 +7,7 @@ import {
   initializeTestEnvironment,
   type RulesTestEnvironment,
 } from '@firebase/rules-unit-testing';
-import { collection, deleteDoc, deleteField, doc, getDoc, getDocs, query, serverTimestamp, setDoc, updateDoc, where } from 'firebase/firestore';
+import { collection, deleteDoc, deleteField, doc, getDoc, getDocs, limit, query, serverTimestamp, setDoc, updateDoc, where, writeBatch } from 'firebase/firestore';
 import { ADMIN_EMAIL } from '../../src/core/security/admin';
 import { PUBLIC_NAME_MAX_LENGTH } from '../../src/core/security/sanitize';
 
@@ -813,6 +813,54 @@ describe('firestore.rules', () => {
       const q = (uid: string) => query(collection(ownerDb(uid), 'friendships'), where('users', 'array-contains', uid));
       await assertSucceeds(getDocs(q('uid-a')));
       await assertSucceeds(getDocs(q('uid-b')));
+    });
+
+    // La lectura de la UI lleva un tope duro (`FRIENDSHIPS_HARD_CAP`). `limit` sobre `array-contains` NO exige
+    // índice compuesto —un `orderBy` sí lo exigiría—, así que la consulta tiene que seguir pasando las reglas tal
+    // cual. Si esto fallara, el espacio social entero se caería con "requires an index".
+    it('query: el tope duro (limit sin orderBy) no rompe la consulta ni exige índice', async () => {
+      await seed('friendships', DOC_ID, pendingFromAtoB());
+      await assertSucceeds(
+        getDocs(query(
+          collection(ownerDb('uid-a'), 'friendships'),
+          where('users', 'array-contains', 'uid-a'),
+          limit(1000),
+        )),
+      );
+    });
+
+    // El saneado de identidad escribe en LOTES (`writeBatch`), no con updateDoc sueltos. Las reglas validan cada
+    // operación del lote por separado, así que `friendshipHealOwnFields` debe seguir admitiéndolo igual.
+    it('update en lote: el saneado propio pasa las reglas escrito con writeBatch', async () => {
+      await seed('friendships', DOC_ID, { ...pendingFromAtoB(), status: 'accepted' });
+      await seed('friendships', 'uid-a__uid-c', {
+        users: ['uid-a', 'uid-c'], requester: 'uid-c', recipient: 'uid-a', status: 'accepted',
+        createdAt: 1, updatedAt: 1, recipientName: 'A', recipientPhoto: '',
+        recipientSocialGistId: 'gsA', recipientGamesGistId: 'ggA',
+      });
+
+      const dbA = ownerDb('uid-a');
+      const batch = writeBatch(dbA);
+      // Donde soy requester → campos requester*; donde soy recipient → campos recipient*.
+      batch.update(doc(dbA, 'friendships', DOC_ID), {
+        requesterName: 'Ada', requesterPhoto: '', requesterSocialGistId: 'gsA2', requesterGamesGistId: 'ggA2', updatedAt: 9,
+      });
+      batch.update(doc(dbA, 'friendships', 'uid-a__uid-c'), {
+        recipientName: 'Ada', recipientPhoto: '', recipientSocialGistId: 'gsA2', recipientGamesGistId: 'ggA2', updatedAt: 9,
+      });
+      await assertSucceeds(batch.commit());
+    });
+
+    // Un lote es ATÓMICO: si una sola operación toca los campos de la otra parte, las reglas deben tumbarlo
+    // ENTERO. Es lo que garantiza que el lote no sea una vía para colar de rebote lo que suelto se denegaría.
+    it('update en lote: una sola operación ilegítima tumba el lote entero', async () => {
+      await seed('friendships', DOC_ID, { ...pendingFromAtoB(), status: 'accepted' });
+
+      const dbA = ownerDb('uid-a');
+      const batch = writeBatch(dbA);
+      batch.update(doc(dbA, 'friendships', DOC_ID), { requesterName: 'Ada', updatedAt: 9 }); // legítima
+      batch.update(doc(dbA, 'friendships', DOC_ID), { recipientName: 'Suplantado' }); // de la OTRA parte
+      await assertFails(batch.commit());
     });
 
     it('query+create: el requester crea y luego SE VE su petición en la consulta (read-your-write)', async () => {

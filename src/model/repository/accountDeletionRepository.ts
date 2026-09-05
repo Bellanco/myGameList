@@ -58,6 +58,13 @@ export async function deleteOwnAccount(uid: string): Promise<AccountDeletionResu
   return { remoteComplete: failures.length === 0, failures };
 }
 
+/**
+ * Pasadas máximas del borrado de amistades. Cada una se lleva hasta `FRIENDSHIPS_HARD_CAP` (mil) documentos, así
+ * que veinte cubren veinte mil amistades: muy por encima de cualquier caso real. Es un tope de seguridad, no un
+ * límite de diseño; el bucle normalmente sale antes, al no quedar nada que borrar.
+ */
+const FRIENDSHIP_DELETION_MAX_PASSES = 20;
+
 async function deleteRemoteData(uid: string, failures: string[]): Promise<void> {
   const services = await initializeFirebaseServices().catch(() => null);
   if (!services) {
@@ -67,13 +74,48 @@ async function deleteRemoteData(uid: string, failures: string[]): Promise<void> 
 
   // 1) Amistades: un doc por par. Se borran todas (aceptadas y pendientes en ambos sentidos) porque el doc
   //    contiene también la identidad denormalizada del usuario que se va.
+  //
+  //    EN VARIAS PASADAS, y no por gusto: `getMyFriendships` lleva un tope duro de lectura
+  //    (`FRIENDSHIPS_HARD_CAP`) como cinturón de seguridad. Una sola pasada dejaría sobrevivir lo que quedara por
+  //    encima del tope, y aquí eso no es una ineficiencia: es el derecho de supresión (L3, RGPD art. 17)
+  //    incumplido en silencio, con la identidad denormalizada de quien se va guardada en documentos ajenos. Se
+  //    repite hasta que no vuelva nada, y se corta si una pasada no consigue borrar nada nuevo para no quedarse
+  //    en bucle cuando las reglas denieguen.
   try {
-    const friendships = await getMyFriendships(uid, { forceRefresh: true });
-    const all = [...friendships.friends, ...friendships.incoming, ...friendships.outgoing];
-    const results = await Promise.allSettled(all.map((item) => deleteFriendship({ myUid: uid, docId: item.docId })));
-    const failed = results.filter((result) => result.status === 'rejected').length;
-    if (failed > 0) {
-      failures.push(`amistades: ${failed} de ${all.length} no se pudieron borrar`);
+    let deletedTotal = 0;
+    let remaining: string[] = [];
+    let previousPass = '';
+
+    for (let pass = 0; pass < FRIENDSHIP_DELETION_MAX_PASSES; pass += 1) {
+      const friendships = await getMyFriendships(uid, { forceRefresh: true });
+      const all = [...friendships.friends, ...friendships.incoming, ...friendships.outgoing];
+      remaining = all.map((item) => item.docId);
+      if (remaining.length === 0) {
+        break;
+      }
+      /**
+       * CORTE POR FALTA DE PROGRESO, y hace falta que sea por el CONJUNTO de ids y no por su número.
+       *
+       * `deleteFriendship` trata `permission-denied` como éxito idempotente —correcto para su caso de uso: el doc
+       * ya no está—, así que un documento que las reglas NO dejen borrar se contaría como borrado y volvería en
+       * la siguiente lectura: bucle infinito, y en producción, no solo en un test. Contar cuántos quedan tampoco
+       * vale: con más amistades que el tope de lectura, dos pasadas seguidas devuelven 1000 y 1000 aunque se
+       * esté avanzando. Comparar los ids distingue las dos cosas sin ambigüedad.
+       */
+      const signature = [...remaining].sort().join(',');
+      if (signature === previousPass) {
+        break;
+      }
+      previousPass = signature;
+
+      const results = await Promise.allSettled(all.map((item) => deleteFriendship({ myUid: uid, docId: item.docId })));
+      deletedTotal += results.filter((result) => result.status === 'fulfilled').length;
+    }
+
+    // Se reporta lo que SIGUE EXISTIENDO tras el bucle, no lo que falló en la última pasada: el borrado de cuenta
+    // nunca puede darse por terminado en silencio dejando documentos con la identidad de quien se va.
+    if (remaining.length > 0) {
+      failures.push(`amistades: ${remaining.length} no se pudieron borrar (${deletedTotal} sí)`);
     }
   } catch (error) {
     failures.push(`amistades: ${describe(error)}`);
