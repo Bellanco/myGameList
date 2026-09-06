@@ -130,11 +130,10 @@ pasa de la primera ejecución.
 
 Las reglas de la casa, sacadas de reescribir las cincuenta:
 
-- **Infinitivo y la cifra dentro de la frase**: «Terminar 100 juegos», «Anotar razón y reseña en 75 abandonos».
-  No «Juegos terminados: 100».
-- **Los primeros pasos van en imperativo**, que es su registro: «Añade tu primer juego», «Prueba la ruleta». Son
-  instrucciones, no metas.
-- **Resuelve el singular.** `step === 1 ? 'Terminar un juego' : \`Terminar ${step} juegos\`` — «Terminar 1 juegos»
+- **Imperativo, de tú, y la cifra dentro de la frase**: «Termina 100 juegos», «Anota razón y reseña en 75
+  abandonos». Ni «Juegos terminados: 100» ni el infinitivo de manual («Terminar 100 juegos»): esto le habla a
+  quien lo lee, no describe una tarea. Hablan así los cincuenta, primeros pasos incluidos.
+- **Resuelve el singular.** `step === 1 ? 'Termina un juego' : \`Termina ${step} juegos\`` — «Termina 1 juegos»
   se lee como un bug, porque lo es.
 - **Di lo que la métrica mide de verdad, aunque cueste una palabra más.** «Cerrar juegos de tres géneros
   distintos en 3 meses **distintos**»: sin ese «distintos» se lee como un plazo de tres meses, que es otra cosa.
@@ -150,6 +149,20 @@ Las reglas de la casa, sacadas de reescribir las cincuenta:
 escalones: un escalón alto no es «más raro» por estar arriba, ya suma más porque hay más escalones debajo.
 
 ---
+
+## 3bis. En qué orden salen
+
+En el listado y en la tira, **lo conseguido va primero, por día, de la jornada más reciente a la más antigua** —y
+dentro del mismo día, **lo más raro arriba**, que es el criterio con el que el feed ordena esa misma jornada—. A
+igualdad de rareza, el nombre, para que el orden no baile entre recargas.
+
+Por día y no por instante porque el día es lo que se ve: la fila enseña «31 ago 2026», y dos logros de esa
+jornada ordenados por milisegundos quedaban en un orden que no se corresponde con nada de lo que hay en pantalla.
+Lo conseguido **sin fecha** cae al final de lo conseguido: son los de la primera evaluación del dispositivo, los
+que ya estaban antes de que hubiera con qué fecharlos.
+
+Lo que falta va detrás, **por lo cerca que está de caer**, que es la información útil de esa mitad. El comparador
+es `compareEarned()` en `viewmodel/useAchievements.ts` y lo comparten la tira y el listado.
 
 ## 4. Antes de dar por bueno un logro nuevo
 
