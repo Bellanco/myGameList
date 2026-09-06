@@ -194,15 +194,40 @@ describe('SocialFeedScreen — la tarjeta de LOGROS', () => {
     expect(screen.getByText('Ha conseguido 2 logros')).toBeInTheDocument();
   });
 
-  it('con UNO solo dice cuál —con la medalla en la misma línea— y no «1 logro»', () => {
+  it('con UNO solo dice cuál y no «1 logro»', () => {
     renderFeed([logros({ items: [{ id: 'completados-75', level: 1 }] })]);
 
-    // El verbo, la medalla y el nombre comparten renglón, así que el texto va en varios elementos: lo que se
-    // comprueba es que la línea entera lo dice y que la medalla está DENTRO de ella.
     const linea = screen.getByText('Ha conseguido').closest('p') as HTMLElement;
     expect(within(linea).getByText('Créditos finales IV')).toBeInTheDocument();
-    expect(within(linea).getByRole('img', { name: /Créditos finales IV/ })).toBeInTheDocument();
+    // La medalla NO va incrustada en la frase: vive en el canto contrario al avatar, tenga uno o nueve logros.
+    // Que esté siempre en el mismo sitio es lo que permite leer la tarjeta igual en los dos casos.
+    expect(within(linea).queryByRole('img')).toBeNull();
+    expect(screen.getByRole('img', { name: /Créditos finales IV/ })).toBeInTheDocument();
     expect(screen.queryByText(/1 logros?/)).not.toBeInTheDocument();
+  });
+
+  it('con más de cinco enseña cinco medallas y cuenta el resto', () => {
+    // El tope existe para que la burbuja no se convierta en una parrilla. Lo que se queda dentro es lo más raro
+    // del día —`buildAchievementFeed` ordena por rareza—, así que el recorte se lleva lo más común.
+    renderFeed([logros({
+      items: [
+        { id: 'completados-50', level: 1 },
+        { id: 'tesis-1', level: 1 },
+        { id: 'resenas-5', level: 1 },
+        { id: 'horas-10', level: 1 },
+        { id: 'amistades-1', level: 1 },
+        { id: 'sofa-5', level: 1 },
+        { id: 'speedrun-1', level: 1 },
+      ],
+    })]);
+
+    expect(screen.getByText('Ha conseguido 7 logros')).toBeInTheDocument();
+    expect(screen.getAllByRole('img', { name: /./ }).filter((el) => el.className.includes('ach-medal'))).toHaveLength(5);
+    expect(screen.getByText('+2')).toBeInTheDocument();
+    // Y lo que queda fuera del corte no está en ninguna parte de la tarjeta: el titular no lo nombra —para eso
+    // está el contador— y su medalla tampoco se pinta. Sigue estando en el `aria-label` de la tarjeta, que es
+    // quien no puede perder ningún nombre.
+    expect(screen.queryByText('Speedrun I')).not.toBeInTheDocument();
   });
 
   it('cada medalla dice qué se ha desbloqueado al pasar por encima', () => {
