@@ -231,9 +231,21 @@
 .ach-strip-btn:hover .ach-strip-tip,
 .ach-strip-btn:focus-visible .ach-strip-tip { opacity: 1; visibility: visible; }
 @media (prefers-reduced-motion: reduce) { .ach-strip-tip { transition: none; } }
+// EL «+N» ES UNA MEDALLA MÁS, no una nota al margen. Mismo disco, mismo tamaño y mismo sitio en la fila: lo que
+// cuenta son medallas, así que tiene que pesar lo mismo que ellas o la fila se descuadra al final. Sin aura y
+// sin temple —no es un logro— pero con la misma penumbra y el mismo filo apagado.
 .ach-strip-more {
-  align-self: center; font-size: 13px; color: var(--text-muted);
-  font-variant-numeric: tabular-nums; padding-left: 2px;
+  display: grid; place-items: center;
+  width: var(--sz); height: var(--sz);
+  border-radius: 50%;
+  background: radial-gradient(72% 66% at 27% 17%, #241a0d 0%, #140e07 46%, #090705 78%);
+  box-shadow:
+    inset 0 0 0 max(1px, calc(var(--sz) * .022)) rgba(4, 3, 2, .92),
+    inset 0 0 0 max(2px, calc(var(--sz) * .05)) rgba(206, 158, 74, .22);
+  color: rgba(238, 206, 150, .82);
+  font-family: var(--ach-mono); font-weight: 600; font-variant-numeric: tabular-nums;
+  font-size: max(10px, calc(var(--sz) * .3));
+  line-height: 1;
 }
 
 // ── LA CIFRA ─────────────────────────────────────────────────────────────
@@ -346,7 +358,17 @@
 // forense I») y bajaba a una tira propia cuando había varias. Se cambia porque esas dos formas obligaban a leer
 // la tarjeta de dos maneras distintas según un dato —cuántos logros hizo esa persona ese día— que no tiene nada
 // que ver con cómo se lee. Ahora la medalla está SIEMPRE en el mismo sitio, tenga uno o nueve.
-.hub-feed-card.is-achievements { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+// `flex-direction: row` VA EXPLÍCITO y no se puede quitar: `.hub-feed-card` es `column`, y sin esta línea la
+// tarjeta se apila —avatar arriba, texto en medio, medallas abajo— y además el `flex-basis` del cuerpo pasa a
+// ser ALTO, que es lo que la estiraba a 160 px de nada. Una entrada de feed es una línea, no un cartel.
+.hub-feed-card.is-achievements {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding-block: .6rem;
+}
 .hub-feed-ach-body { display: flex; flex-direction: column; gap: 8px; min-width: 0; flex: 1 1 10rem; }
 .hub-feed-ach-line { margin: 0; }
 .hub-feed-ach-name { font-weight: 700; }
@@ -358,7 +380,6 @@
 // `nowrap` en la tira: aquí no debe envolver nunca. Si no caben, para eso está el «+N» del tope de cinco.
 .hub-feed-ach-medals { margin-left: auto; flex: none; }
 .hub-feed-ach-medals .ach-strip { flex-wrap: nowrap; justify-content: flex-end; }
-.hub-feed-ach-medals .ach-strip-more { font-size: 12px; }
 
 // ── LOGROS GLOBALES · el catálogo por lo común que es cada logro ─────────
 // El RECUADRO marca lo conseguido, como en la pantalla de logros globales de Steam en móvil. Y no es la única
@@ -425,17 +446,19 @@
 .ach-strip-all {
   display: grid; place-items: center;
   width: var(--sz); height: var(--sz);
-  padding: 0; border-radius: 4%;
-  background: color-mix(in srgb, var(--text) 6%, transparent);
-  border: 1px dashed var(--border, rgba(255,255,255,.22));
-  color: var(--text-muted);
+  padding: 0; border-radius: 50%;
+  // La MISMA penumbra que la medalla y que el «+N»: en una fila de discos oscuros, una baldosa clara se lee como
+  // un hueco. Lo que la separa de un logro es el borde DISCONTINUO —«aquí hay más, y esto se pulsa»—, no el
+  // color, que es lo que la ataba al resto de la fila.
+  background: radial-gradient(72% 66% at 27% 17%, #241a0d 0%, #140e07 46%, #090705 78%);
+  border: 1px dashed rgba(206, 158, 74, .34);
+  color: rgba(238, 206, 150, .82);
   cursor: pointer;
   transition: background .15s ease, color .15s ease, border-color .15s ease;
 }
 .ach-strip-all:hover, .ach-strip-all:focus-visible {
-  background: color-mix(in srgb, var(--accent, var(--steam)) 14%, transparent);
-  border-color: var(--accent, var(--steam));
-  color: var(--text);
+  border-color: rgba(240, 196, 96, .7);
+  color: #f8eeda;
 }
 .ach-strip-all-count {
   font-size: calc(var(--sz) * .3); font-weight: 700;
