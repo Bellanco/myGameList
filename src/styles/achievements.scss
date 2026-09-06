@@ -251,15 +251,35 @@
 // ── LA CIFRA ─────────────────────────────────────────────────────────────
 // En plural cuando había dos (fracción y nivel de perfil); hoy solo está la fracción, y el contenedor se queda
 // porque el nivel volverá a su lado en cuanto se decida cómo se presenta.
+//
+// LA FIGURA OCUPA EL ANCHO Y LA BARRA TAMBIÉN. Era una columna de `min-width: 8.5em` con todo dentro, así que la
+// barra medía 130 px y a su derecha quedaba media tarjeta vacía —el hueco se veía especialmente en el panel, que
+// es ancho—. Ahora es una rejilla de dos columnas: la cifra a la izquierda, el «% del catálogo» al otro extremo
+// de su misma línea base, y la barra cruzando las dos de lado a lado.
+//
+// Y la barra gana con ello más de lo que parece: un 48 % en 130 px es un muñón que no se lee; en el ancho de la
+// tarjeta es una escala en la que se ve dónde estás.
 .ach-figures { display: flex; flex-wrap: wrap; gap: 12px 28px; margin: 14px 0 0; }
-.ach-figure { margin: 0; display: flex; flex-direction: column; gap: 2px; min-width: 8.5em; }
+.ach-figure {
+  margin: 0;
+  flex: 1 1 auto;
+  min-width: 0;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: baseline;
+  column-gap: 16px;
+  row-gap: 2px;
+}
 .ach-figure-label {
+  grid-column: 1 / -1;
   font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--text-muted);
 }
 .ach-figure-value { font-size: 30px; line-height: 1; font-weight: 700; font-variant-numeric: tabular-nums; }
-.ach-figure-hint { font-size: 12.5px; color: var(--text-muted); }
+// Al otro extremo de la línea de la cifra: es su unidad, y ahí sujeta el ancho en vez de dejarlo caer.
+.ach-figure-hint { justify-self: end; text-align: right; font-size: 12.5px; color: var(--text-muted); }
 .ach-figure-bar {
-  display: block; height: 4px; margin-top: 6px; border-radius: 2px;
+  grid-column: 1 / -1;
+  display: block; height: 6px; margin-top: 10px; border-radius: 3px;
   background: var(--score-track, rgba(255,255,255,.10)); overflow: hidden;
 }
 .ach-figure-bar i { display: block; height: 100%; width: var(--pct, 0%); background: var(--accent, var(--steam)); }
@@ -338,7 +358,20 @@
 // ── EL APARTADO DEL PANEL ────────────────────────────────────────────────
 // La tira pinta TODAS las medallas y se reparte el ancho sola: es lo que la persona viene a mirar, y un «+16»
 // escondía justo eso para ahorrar un espacio que la rejilla ya sabe repartir.
-.ach-card .ach-strip { margin-top: 16px; }
+// LA TIRA DEL PANEL SE ESTIRA AL ANCHO. En `flex` las medallas se apelotonaban a la izquierda y sobraba media
+// baldosa larga a la derecha —el apartado del panel es ancho y el número de medallas es fijo, así que el sobrante
+// dependía de la pantalla—. Con `auto-fit` + `1fr` las columnas vacías se colapsan y las que hay reparten el
+// ancho entero: la fila llega de canto a canto tenga las medallas que tenga, y al envolver las de abajo caen en
+// las mismas columnas que las de arriba en vez de amontonarse.
+//
+// Sólo aquí: en la ficha del hub la tira es corta y va centrada bajo el nombre, y estirarla la desmontaría.
+.ach-card .ach-strip {
+  margin-top: 16px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(48px, 1fr));
+  justify-items: center;
+  gap: 10px 8px;
+}
 
 // ── LA TIRA EN LA FICHA · debajo del nombre ──────────────────────────────
 // El hero ya es una columna centrada (avatar, nombre), así que la tira cae bajo el nombre sola: aquí solo se le
