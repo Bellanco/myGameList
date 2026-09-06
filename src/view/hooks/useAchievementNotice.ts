@@ -87,9 +87,10 @@ export function useAchievementNotice(
       if (risen.length === 0) return;
 
       if (risen.length === 1) {
+        // El nombre YA trae su grado desde el catálogo («Créditos finales III»): componerlo otra vez aquí hacía
+        // que el aviso lo dijera dos veces seguidas.
         const def = catalog.ACHIEVEMENTS_BY_ID.get(risen[0].id);
-        const numeral = def ? labels.romanLevel(def.grade, def.grades) : '';
-        const name = def ? `${def.labels.name}${numeral ? ` ${numeral}` : ''}` : '';
+        const name = def ? def.labels.name : '';
         if (name) notify('ok', labels.ACHIEVEMENTS_UI.unlockedOne(name));
         return;
       }

@@ -1569,6 +1569,17 @@ Reglas para que no se convierta en ruido:
 
 ### 8.5 Diseño de las medallas
 
+> **⚑ REVISIÓN — lo de abajo describe el diseño ANTERIOR.** La medalla ya no es un cuadro a sangre con un
+> triángulo: es **un disco en penumbra** con el dibujo en oro (trazos de Lucide, tres pasadas de relieve) y el
+> grado dicho por el **temple del filo**. Lo que sigue vale como registro de lo que se probó y por qué se
+> descartó cada alternativa —sigue siendo útil, porque las tres que se caen se vuelven a proponer solas—, pero la
+> referencia viva, y el manual para añadir logros nuevos, es **[`logros/receta-medalla.md`](logros/receta-medalla.md)**.
+>
+> Lo que cambió y por qué: la forma (el filo continuo se lee a 28 px, el triángulo no), el origen del dibujo (50
+> escenas a mano → una librería de 1.737 iconos, sprite de 40 kB a 16 kB) y la señal de grado (el numeral romano
+> no sobrevivía a la tira de 28 px). Lo que NO cambió: el aura de rareza, que todas midan lo mismo, que el oculto
+> no enseñe nada y la prohibición de teñir el cuerpo con metales, que son del rango de perfil.
+
 **El contrato visual ya está inventado en esta casa y es el de los rangos.** `_tiers.scss` lo dice en su cabecera:
 *«cada clase solo aporta su color de metal en `--tier`; quien la use decide la forma»*, y de ahí sale la muesca de
 la tarjeta del directorio, que no añade un adorno encima sino que **tiñe un tramo del borde que ya estaba ahí**.
@@ -1863,7 +1874,10 @@ Consecuencias que hay que atender antes de entregar la fase 3:
 - **§6.6bis, el porcentaje medido.** El documento lo descartaba por no tener con qué medirlo; sí lo hay, cuesta
   cero y a la escala de hoy es exacto. Está documentado en su sección.
 - **Los logros globales** (`/social/profiles/:id/globales`), que son donde ese porcentaje se lee, con recuadro en
-  lo que ese perfil tiene y relleno de fondo por porcentaje.
+  lo que ese perfil tiene y relleno de fondo por porcentaje. **Se abren SOLO desde el hub**, en el listado de
+  logros de una ficha, y nunca desde `/logros`: son una lectura de los espejos de OTRAS personas —que el panel de
+  estadísticas no mira, porque ahí solo se ve lo propio— y viven en otra sección, así que un botón en `/logros`
+  sacaba al usuario del panel y el «volver» de la pantalla de destino ya no sabía regresar a donde estaba.
 - **La baldosa final de la tira**, del tamaño de una medalla, que cuenta lo que no cabe y lleva al listado. Antes
   el acceso era un enlace pequeño debajo, y en la ficha de una amistad no existía ninguno.
 

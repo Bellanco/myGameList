@@ -51,15 +51,6 @@ export const StatsHub = memo(function StatsHub({ games }: { games: TabData }) {
   const openReviews = useCallback(() => { void navigate(REVIEWS_ROUTE); }, [navigate]);
   const openAchievements = useCallback(() => { void navigate(ACHIEVEMENTS_ROUTE); }, [navigate]);
   /**
-   * Los logros globales de TU perfil viven en el hub social, y no es un rodeo: el porcentaje sale de los espejos
-   * del directorio, que solo el hub descarga. Traerlo a `/logros` costaría una consulta a Firestore desde el
-   * chunk del panel para pintar una cifra que allí no se puede sostener.
-   *
-   * El comodín `me` de la ruta lo resuelve el propio hub (`OWN_PROFILE_ALIAS`), que es el mismo mecanismo con el
-   * que el panel enlaza a tus reseñas sin conocer tu pseudónimo público.
-   */
-  const openOwnGlobals = useCallback(() => { void navigate('/social/profiles/me/globales'); }, [navigate]);
-  /**
    * Abrir una reseña recuerda DE DÓNDE se vino: quien la abre desde el podio o desde una ficha del top espera
    * volver al panel, y quien la abre desde el listado, al listado. El origen viaja en el estado de la ruta, así
    * que el atrás del navegador y el botón de la pantalla llevan al mismo sitio.
@@ -82,13 +73,17 @@ export const StatsHub = memo(function StatsHub({ games }: { games: TabData }) {
       <AchievementsScreen
         items={listForScreen(achievements.byId)}
         summary={achievements.summary}
-        // El porcentaje comparado sale de los espejos que el DIRECTORIO trae, y aquí no está cargado: a `/logros`
-        // se llega sin pasar por el hub. Por eso el botón de globales no pinta la lista aquí, sino que lleva a la
-        // pantalla del hub para tu propio perfil, que es donde el directorio ya está en memoria.
+        // NADA DE OTRAS PERSONAS EN ESTE PANEL. El porcentaje comparado sale de los espejos que descarga el
+        // directorio del hub: aquí no está cargado —a `/logros` se llega sin pasar por el hub— y, sobre todo,
+        // son datos ajenos, que es justo lo que esta sección no mira.
         rarity={null}
         backLabel={ACHIEVEMENTS_UI.backToPanel}
         onBack={backToPanel}
-        onToggleGlobals={openOwnGlobals}
+        // Y POR ESO TAMPOCO HAY BOTÓN DE «LOGROS GLOBALES». Lo hubo, y llevaba a la pantalla del hub para tu
+        // propio perfil (`/social/profiles/me/globales`): se entraba por el panel y el «volver» de allí dejaba
+        // al usuario en el hub social —otra sección, otra navegación inferior— sin camino de vuelta al sitio
+        // desde el que había entrado. Una pantalla vuelve por donde se entró; los globales se quedan en el hub,
+        // que es donde viven sus datos, y se abren desde el listado de logros de tu ficha.
       />
     );
   }

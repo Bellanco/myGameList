@@ -265,6 +265,49 @@ describe('los logros que miden sobre otros logros', () => {
   });
 });
 
+describe('la fecha de cada escalón', () => {
+  it('una racha fecha cada escalón cuando de verdad lo alcanzó', () => {
+    // `at` viene indexado por VALOR —«cuándo llegué a siete semanas»— y los escalones son 2, 4, 8… Indexarlo por
+    // la posición del escalón le colgaba a «Aún estás aquí IV» la fecha del segundo, años antes de conseguirlo.
+    const semanas = [0, 1, 2, 3, 4, 5, 6, 7].map((n) => Date.parse('2026-01-05T10:00:00Z') + n * 7 * DAY);
+    const games = library({
+      c: semanas.map((at, index) => game({ id: index + 1, enteredAt: { c: at } })),
+    });
+    const states = evaluate(games);
+    // Ocho semanas seguidas: los escalones de 2, 4 y 8 caen, y cada uno con su propia semana.
+    expect(states.get('constancia-2')?.unlockedAt).toBe(semanas[1]);
+    expect(states.get('constancia-4')?.unlockedAt).toBe(semanas[3]);
+    expect(states.get('constancia-8')?.unlockedAt).toBe(semanas[7]);
+    expect(states.get('constancia-12')?.level).toBe(0);
+  });
+
+  it('lo que se cuenta se fecha con la unidad que hace el número', () => {
+    const games = library({
+      c: Array.from({ length: 12 }, (_u, i) => game({ id: i + 1, enteredAt: { c: Date.parse('2026-01-01') + i * DAY } })),
+    });
+    const states = evaluate(games);
+    // El décimo juego es el que hace el diez, no el último de la lista.
+    expect(states.get('completados-10')?.unlockedAt).toBe(Date.parse('2026-01-01') + 9 * DAY);
+  });
+});
+
+describe('lo que pasa cuando una métrica no sabe medir', () => {
+  it('hacia abajo, «no sé» NO es cero: una escalera descendente no se regala', () => {
+    // `reaches` en descendente pregunta `valor <= umbral`, así que un cero de respaldo concedía «Exterminatus»
+    // entero —cinco escalones excepcionales— y la marca de agua lo dejaba puesto para siempre.
+    const rota = { ...library(), get p(): never { throw new Error('boom'); } } as unknown as TabData;
+    const states = evaluateAchievements(
+      { games: rota, social: NO_SOCIAL, device: NO_DEVICE, now: NOW },
+      '',
+    );
+    const byId = new Map(states.map((state) => [state.id, state]));
+    expect(byId.get('estanteria-cero-50')?.level).toBe(0);
+    expect(byId.get('estanteria-cero-1')?.level).toBe(0);
+    // Y hacia arriba sigue siendo cero, que es lo correcto ahí.
+    expect(byId.get('completados-10')?.level).toBe(0);
+  });
+});
+
 describe('la marca de agua — lo conseguido no se devuelve', () => {
   it('una biblioteca que encoge no retira el logro', () => {
     const llena = library({ c: Array.from({ length: 12 }, (_u, i) => game({ id: i + 1 })) });
@@ -379,6 +422,18 @@ describe('el espejo — mapa de bits y lectura defensiva', () => {
     const [item] = parseMirror(list, NOW);
     expect(item.id).toBe('completados-10');
     expect(item.unlockedAt).toBe(0);
+  });
+
+  it('lo conseguido esta mañana llega CON su fecha', () => {
+    // El día se codifica en el calendario local del dueño y se reconstruye a mediodía UTC: sin margen, un logro
+    // de esta mañana se leía como futuro, se quedaba sin fecha y por tanto fuera del feed, que se salta lo que no
+    // puede situar.
+    const manana = Date.parse('2026-09-06T07:30:00.000Z');
+    const list = packAchievements([
+      { id: 'completados-10', level: 1, value: 10, next: null, unlockedAt: manana },
+    ]);
+    const [item] = parseMirror(list, manana);
+    expect(item.unlockedAt).toBeGreaterThan(0);
   });
 
   it('quince destacados marcados se recortan a tres', () => {

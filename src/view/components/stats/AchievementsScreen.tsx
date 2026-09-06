@@ -38,7 +38,13 @@ interface AchievementsScreenProps {
   lead?: string;
   onBack?: () => void;
   backLabel?: string;
-  /** Ir y volver de los logros globales. Es el ÚNICO acceso a esa vista. */
+  /**
+   * Ir y volver de los logros globales. Es el ÚNICO acceso a esa vista, y solo lo pasa el HUB SOCIAL.
+   *
+   * En `/logros` —el listado del panel— NO se pasa, y por dos motivos que apuntan al mismo sitio: los globales
+   * se miden contra los espejos de otras personas, que el panel no mira, y la pantalla vive en el hub, así que
+   * el botón sacaba de la sección y el «volver» de allí ya no sabía regresar al panel.
+   */
   onToggleGlobals?: () => void;
   /** Rótulo del botón cuando se está EN los globales: nombra a dónde vuelve («Tus logros» / «Sus logros»). */
   globalsBackLabel?: string;
@@ -95,7 +101,10 @@ export const AchievementsScreen = memo(function AchievementsScreen({
             {onBack ? <HubBackButton onBack={onBack} label={backLabel || ACHIEVEMENTS_UI.back} /> : null}
             {/* LOS LOGROS GLOBALES se abren DESDE AQUÍ y solo desde aquí. Estuvieron en la barra de la ficha, y
                 ahí competían con «sus reseñas» y «sus estadísticas» sin ser de la misma familia: aquello dice
-                QUÉ mirar de esa persona, y esto es otra vista de la pantalla en la que ya estás. */}
+                QUÉ mirar de esa persona, y esto es otra vista de la pantalla en la que ya estás.
+
+                Y «desde aquí» quiere decir desde esta pantalla EN EL HUB: en `/logros`, que es esta misma
+                pantalla montada por el panel, no llega `onToggleGlobals` y el botón no existe. */}
             {onToggleGlobals ? (
               <button
                 className={`btn btn-secondary ${global ? 'is-active' : ''}`.trim()}
@@ -120,7 +129,11 @@ export const AchievementsScreen = memo(function AchievementsScreen({
 
             {children}
 
-            {!children && items.length === 0 ? (
+            {/* El vacío se pinta cuando NADA lo explica ya. Con un `lead` propio —«todavía no hay gente
+                suficiente para decir lo común que es cada logro»— la lista está vacía por un motivo que la
+                pantalla acaba de decir, y añadir debajo «añade juegos, ponles nota» le da a alguien con cien
+                medallas el consejo de quien no tiene ninguna. */}
+            {!children && !lead && items.length === 0 ? (
               <div className="ach-empty">
                 <strong>{ACHIEVEMENTS_UI.empty.title}</strong>
                 <p>{ACHIEVEMENTS_UI.empty.body}</p>

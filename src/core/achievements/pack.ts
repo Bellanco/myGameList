@@ -115,6 +115,17 @@ function msFromDay(day: number): number {
 }
 
 /**
+ * Margen al comparar contra «ahora» una fecha que viene del espejo.
+ *
+ * El día se codifica en el calendario LOCAL de su dueño y se reconstruye a mediodía UTC, así que las dos cosas no
+ * caen en el mismo instante: un logro conseguido esta mañana en Madrid vuelve como «hoy a las 14:00 hora local»
+ * y, sin margen, se leía como una fecha en el futuro y se descartaba — hasta el mediodía, tu propio logro salía
+ * sin fecha y por tanto NO entraba en el feed, que se salta lo que no puede situar. Un día de holgura cubre
+ * cualquier huso sin dejar pasar una fecha inventada de verdad.
+ */
+const FUTURE_TOLERANCE_MS = DAY_MS;
+
+/**
  * Empaqueta los logros CONSEGUIDOS. El progreso hacia lo que no se tiene no sale del aparato (§3).
  *
  * QUÉ SE RECORTA CUANDO NO CABE: el bitmap NUNCA — va entero y es lo que sostiene la vitrina y el porcentaje.
@@ -187,7 +198,12 @@ export function parseMirror(raw: unknown, now = Date.now()): MirroredAchievement
       : '';
   if (!list) return [];
 
-  const [head, tail] = list.slice(0, ACHIEVEMENTS_LIST_MAX).split('~');
+  // Se parte por el PRIMER `~` y el resto se queda entero: con `split` sin límite, un segundo `~` en una cadena
+  // fabricada se llevaría por delante la mitad de las fechas en silencio.
+  const clipped = list.slice(0, ACHIEVEMENTS_LIST_MAX);
+  const cut = clipped.indexOf('~');
+  const head = cut < 0 ? clipped : clipped.slice(0, cut);
+  const tail = cut < 0 ? '' : clipped.slice(cut + 1);
   const [version, encoded] = String(head || '').split(':');
   if (Number(version) !== MIRROR_VERSION || !encoded) return [];
 
@@ -215,7 +231,7 @@ export function parseMirror(raw: unknown, now = Date.now()): MirroredAchievement
     const day = parseInt(rawDay || '', 36);
     if (Number.isFinite(day) && day > 0) {
       const candidate = msFromDay(day);
-      if (candidate <= now) item.unlockedAt = candidate;
+      if (candidate <= now + FUTURE_TOLERANCE_MS) item.unlockedAt = candidate;
     }
     if (featured && featuredLeft > 0) {
       item.featured = true;
