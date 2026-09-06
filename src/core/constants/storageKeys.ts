@@ -61,3 +61,24 @@ export const IMPORT_FIELDS_KEY = 'mis-listas-import-fields';
 // la primera vez; luego basta con el resumen. Se guarda la versión y no un simple `true` a propósito: si cambia
 // lo que se publica, `LEGAL_VERSION` cambia y el aviso vuelve a mostrarse completo.
 export const SHARE_CONSENT_KEY = 'mis-listas-share-consent';
+
+// Logros — marca de agua (§5.5 del plan) y lo que su dueño ya ha visto (§7.3), en el formato compacto
+// `id.nivel,id.nivel`. Es estado de DISPOSITIVO, como `friendshipHealedForGist`, y por eso no sube a ningún
+// canal. Vive en localStorage y no en `LocalMeta` MIENTRAS la publicación esté apagada
+// (`ENABLE_ACHIEVEMENTS_PUBLISH`): en cuanto el espejo se escriba, la marca de agua tiene que viajar junto a la
+// lógica de publicación y se muda allí, que es donde el plan la sitúa.
+//
+// La marca de agua es lo que impide que un logro se RETIRE: borras cinco duplicados, corriges unos años mal
+// puestos, y una medalla que llevaba meses ahí se esfumaría. Lo conseguido no se devuelve.
+//
+// ⚑ EL SUFIJO `-2` MARCA EL CAMBIO DE CATÁLOGO. Al pasar a un logro por escalón, los `id` dejaron de ser
+// `completados` para ser `completados-50`: la marca de agua anterior habla de logros que ya no existen y se
+// quedaría dentro para siempre, engordando una cadena que nadie lee. Con clave nueva, la vieja se abandona y el
+// catálogo se recalcula entero en el primer render — que es exactamente lo que hace la retroactividad (§7.3).
+export const ACHIEVEMENTS_PEAK_KEY = 'mis-listas-achievements-peak-2';
+
+// Logros — sello de la primera vez que se usó la ruleta. Es el ÚNICO dato de todo el evolutivo que hay que
+// registrar en vez de derivar: `core/roulette/roulette.ts` es una función pura —tira, devuelve un juego y no
+// persiste ni un byte—, así que sin esto no hay forma de saber que alguien la probó. No sube y no se publica
+// (los «primeros pasos» nunca lo hacen).
+export const ROULETTE_USED_KEY = 'mis-listas-roulette-used';
