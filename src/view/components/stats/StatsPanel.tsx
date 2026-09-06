@@ -57,6 +57,14 @@ export interface StatsPanelProps {
   onOpenReviews: (() => void) | null;
   /** Abre la reseña de un juego desde el podio o el top; null = las fichas no son pulsables. */
   onOpenReview: ((gameId: number) => void) | null;
+  /**
+   * El apartado de LOGROS, que va justo debajo de «Lo mejor de tu biblioteca».
+   *
+   * Llega como nodo y no como datos a propósito: así este componente —que lo comparten tu panel y el de una
+   * amistad, en dos chunks distintos— no importa `core/achievements` ni arrastra el sprite de las medallas a
+   * donde no se pintan. Quien lo monta es `StatsHub`, que ya sabe que el panel es el propio.
+   */
+  achievements?: ReactNode;
   /** Avisos de la vista bajo las cifras destacadas (reciprocidad de listas, por ejemplo). */
   notes?: ReactNode;
   /** Aviso de cierre (lo que el rango de quien mira todavía no alcanza). */
@@ -92,6 +100,7 @@ export const StatsPanel = memo(function StatsPanel({
   backlog,
   onOpenReviews,
   onOpenReview,
+  achievements,
   notes,
   footNote,
 }: StatsPanelProps) {
@@ -253,6 +262,11 @@ export const StatsPanel = memo(function StatsPanel({
             />
           </div>
         ) : null}
+
+        {/* LOS LOGROS, justo después de «Lo mejor de tu biblioteca» y antes de los años. El sitio no es casual:
+            `top` es lo que la biblioteca tiene de mejor y los logros son lo que su dueño ha hecho con ella;
+            leídos seguidos, cuentan la misma historia desde los dos lados. */}
+        {achievements}
 
         {has('years') && (own || stats.years.length > 0) ? (
           <div className="stats-card">
