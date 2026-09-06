@@ -50,6 +50,25 @@ describe('catálogo — reglas que no se pueden romper sin avisar', () => {
     expect(new Set(ids).size).toBe(ids.length);
   });
 
+  it('cada escalera escribe su condición en una frase, no en «condición: número»', () => {
+    // El fallback de `expand` compone «Juegos terminados en un mismo año natural: 20», que es como habla una
+    // máquina y no como se lee una lista. Toda escalera declara su `goal`, y este test es lo que impide que la
+    // próxima se cuele sin él: el fallback sigue existiendo como red, pero nadie debe aterrizar en él.
+    const sinFrase = LADDERS.filter((ladder) => !ladder.goal).map((ladder) => ladder.key);
+    expect(sinFrase, `escaleras sin goal: ${sinFrase.join(', ')}`).toEqual([]);
+  });
+
+  it('ninguna condición acaba en «: número»', () => {
+    // La cifra va DENTRO de la frase («Terminar 100 juegos»). Acabar en dos puntos y el umbral es la firma del
+    // fallback, y es justo lo que no queremos leer en el listado.
+    //
+    // No se comprueba que el número aparezca UNA sola vez, porque hay frases donde sale dos veces con razón:
+    // «Llegar a 40 h en 40 juegos» tiene el umbral de la escalera y las horas que la definen, y ambas son 40.
+    for (const def of ACHIEVEMENTS) {
+      expect(def.labels.condition.endsWith(`: ${def.step}`), `${def.id}: «${def.labels.condition}»`).toBe(false);
+    }
+  });
+
   it('el `id` de un escalón lleva su umbral, no su posición', () => {
     // Es lo que hace ADITIVO insertar un escalón intermedio. Con el índice dentro del `id`, meter el 25 entre el
     // 10 y el 50 correría todos los siguientes y retiraría un logro ya publicado a todo el mundo.
@@ -82,7 +101,7 @@ describe('catálogo — reglas que no se pueden romper sin avisar', () => {
   it('el nombre de un escalón se lee solo', () => {
     // Cada fila del listado es ya un logro completo: sin el grado en el nombre, media pantalla dice lo mismo.
     expect(ACHIEVEMENTS_BY_ID.get('completados-50')?.labels.name).toBe('Créditos finales III');
-    expect(ACHIEVEMENTS_BY_ID.get('completados-50')?.labels.condition).toBe('Juegos que has terminado: 50');
+    expect(ACHIEVEMENTS_BY_ID.get('completados-50')?.labels.condition).toBe('Terminar 50 juegos');
     // Y una escalera de un solo escalón no lleva numeral: un «I» en algo que no tiene II es ruido.
     expect(ACHIEVEMENTS_BY_ID.get('paso-ruleta-1')?.labels.name).toBe('Tira el dado');
   });

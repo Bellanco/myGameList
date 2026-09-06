@@ -121,6 +121,29 @@ En `core/achievements/catalog.ts`, un objeto en `LADDERS`:
    vacía. En descendentes, el valor de respaldo es `UNREACHABLE`, nunca 0.
 8. **Los primeros pasos (`onboarding`) no puntúan ni se publican**, y con un solo escalón no llevan temple.
 
+### Cómo se escribe la condición
+
+**Siempre con `goal`, nunca con el fallback.** Sin `goal`, `expand()` compone `«condición: umbral»` —«Juegos
+terminados en un mismo año natural: 20»— que es como habla una máquina y no como se lee una lista. Hay un test
+que lo impide (*«cada escalera escribe su condición en una frase»*), así que una escalera nueva sin `goal` no
+pasa de la primera ejecución.
+
+Las reglas de la casa, sacadas de reescribir las cincuenta:
+
+- **Infinitivo y la cifra dentro de la frase**: «Terminar 100 juegos», «Anotar razón y reseña en 75 abandonos».
+  No «Juegos terminados: 100».
+- **Los primeros pasos van en imperativo**, que es su registro: «Añade tu primer juego», «Prueba la ruleta». Son
+  instrucciones, no metas.
+- **Resuelve el singular.** `step === 1 ? 'Terminar un juego' : \`Terminar ${step} juegos\`` — «Terminar 1 juegos»
+  se lee como un bug, porque lo es.
+- **Di lo que la métrica mide de verdad, aunque cueste una palabra más.** «Cerrar juegos de tres géneros
+  distintos en 3 meses **distintos**»: sin ese «distintos» se lee como un plazo de tres meses, que es otra cosa.
+- **Cuidado con los verbos que no se dicen.** «Cerrar un año natural» no existe; lo que se hace es «tener
+  actividad los doce meses de un año natural».
+- **Las descendentes se dicen hacia abajo**: «Dejar Próximos en 5 juegos o menos», nunca «Próximos: 5».
+- **La unidad va en la frase, no en la medalla.** La píldora del disco lleva la cifra sola; quien pone «semanas»,
+  «meses» o «horas» es esta condición.
+
 ### Cuánto vale cada rareza
 
 `comun` 5 · `infrecuente` 10 · `raro` 25 · `excepcional` 60. La rareza la pone la **escalera** y la heredan sus

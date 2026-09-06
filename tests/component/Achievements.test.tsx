@@ -163,7 +163,7 @@ describe('el listado propio', () => {
     render(<AchievementsScreen items={lista} summary={summarize([])} rarity={null} />);
     const fila = screen.getByText('Créditos finales II').closest('li') as HTMLElement;
     expect(within(fila).getByRole('img')).toBeInTheDocument();
-    expect(within(fila).getByText('Juegos que has terminado: 25')).toBeInTheDocument();
+    expect(within(fila).getByText('Terminar 25 juegos')).toBeInTheDocument();
     expect(within(fila).getByText('12 mar 2026')).toBeInTheDocument();
   });
 
