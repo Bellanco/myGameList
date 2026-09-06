@@ -1,5 +1,10 @@
 import { memo, type CSSProperties } from 'react';
-import { ACHIEVEMENTS_UI, ACHIEVEMENT_RARITY_LABELS, temperClass } from '../../../core/constants/achievementLabels';
+import {
+  ACHIEVEMENTS_UI,
+  ACHIEVEMENT_RARITY_LABELS,
+  medalThreshold,
+  temperClass,
+} from '../../../core/constants/achievementLabels';
 import type { AchievementDef } from '../../../core/achievements/types';
 // LA HOJA SE IMPORTA AQUÍ, y es la decisión que evita un fallo mudo. Las medallas se pintan en DOS chunks
 // perezosos distintos —el panel con `/logros` y la ficha del hub social—, así que colgar sus estilos de
@@ -35,17 +40,21 @@ interface AchievementMedalProps {
  * con el degradado de oro y una tercera, finísima y clara, desplazada al contrario. Esas tres pasadas son todo el
  * relieve; no hay filtro, no hay imagen y no hay coste por icono.
  *
- * DOS SEÑALES Y CADA UNA EN SU CANAL, que es lo que impide que se pisen:
+ * TRES SEÑALES Y CADA UNA EN SU CANAL, que es lo que impide que se pisen:
  *   · **aura exterior** → la RAREZA (escala de loot de RPG, saltándose el azul porque el azul es el acento)
  *   · **temple del filo** → el TRAMO de la escalera: cobre abajo, plata en medio, oro arriba
+ *   · **píldora del canto** → LA CIFRA de ese escalón: «×100», «≤5», «75%»
  *
- * Y NO HAY UNA TERCERA CON EL UMBRAL. Se probó una píldora con «×100» dentro del disco y no cabe en esta app: la
- * medalla mide 48 px en las dos vistas —y eso está decidido en `AchievementRow`, porque a 72 px la lista se lee
- * como una pila de fichas—, así que su texto se quedaba por debajo de los 8 px. El umbral no se pierde: cada fila
- * del listado ya lo dice dos veces, en el nombre («Créditos finales V») y en la condición («…terminado: 100»).
+ * LA PÍLDORA VA MONTADA EN EL BORDE DE ABAJO, no dentro. Es lo que la hace caber: a 48 px una pastilla centrada
+ * en el disco tapaba el dibujo, y en la esquina se salía por la curva. Cruzando el canto se apoya en el filo,
+ * deja el dibujo entero y gana el fondo oscuro que necesita para leerse.
  *
- * El temple es también la razón por la que se retiró el numeral romano que había antes: el romano no sobrevivía
- * a la tira de 28 px y el filo del disco sí.
+ * Y VA SIN UNIDAD: dentro de una escalera la unidad es siempre la misma, así que «52» dice lo mismo que «52 sem»
+ * en la mitad de sitio. La unidad la pone la fila del listado, que escribe la condición entera.
+ *
+ * NO SALE EN `sm` (28 px). Ahí no cabe nada legible y la tarjeta del feed no es un sitio donde se comparen
+ * escalones; la señal de escalón que sí sobrevive a ese tamaño es el temple, que es del tamaño del disco entero.
+ * Es también la razón por la que se retiró el numeral romano: el romano no sobrevivía a la tira y el filo sí.
  *
  * TODAS MIDEN EXACTAMENTE LO MISMO, tenga el logro el grado que tenga y esté conseguido, bloqueado u oculto: una
  * rejilla de medallas de distinto tamaño no cuadricula.
@@ -66,6 +75,10 @@ export const AchievementMedal = memo(function AchievementMedal({
   // Y EL OCULTO NO LO LLEVA, por lo mismo que no lleva su aura (§6.7): un filo de oro sobre un «?» dice que hay
   // una escalera larga detrás y que estás al final de ella, que es media pista.
   const temper = masked ? '' : temperClass(def.grade, def.grades);
+  // El OCULTO no la lleva —la cifra de un «?» dice cuántos escalones tiene la escalera y por dónde vas, que es
+  // media pista (§6.7)—, y el bloqueado sí: ahí la cifra es el objetivo, que es lo que hace útil la mitad de
+  // abajo del listado. Lo que cambia en el bloqueado es el tono, como con el temple.
+  const threshold = masked || size === 'sm' ? '' : medalThreshold(def.ladder, def.step, def.grades, def.descending);
 
   // El nombre accesible lo lleva la MEDALLA, no un `title`: el `title` no sale con teclado, no sale en táctil y
   // los lectores de pantalla lo tratan de forma desigual. Sin esto, la tira solo-imagen de la ficha social sería
@@ -112,6 +125,9 @@ export const AchievementMedal = memo(function AchievementMedal({
         <span className="ach-light" />
         <span className="ach-grain" />
       </span>
+      {/* Decorativa: lo que dice el escalón a un lector de pantalla es el nombre del logro, que ya trae su
+          romano del catálogo («Créditos finales V»). */}
+      {threshold ? <span className="ach-step" aria-hidden="true">{threshold}</span> : null}
     </span>
   );
 });

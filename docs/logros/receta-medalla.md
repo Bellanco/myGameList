@@ -23,17 +23,22 @@ Dragon y óleo generativo) sobre los mismos cuatro logros.
 | Relieve | **Tres pasadas del mismo símbolo**: sombra negra (+0,5 / +0,7), oro (`#ach-lux`) y chispa clara (−0,3 / −0,4) |
 | Aura | Halo exterior de color: dice la **rareza** |
 | Temple | Filo interior en tres tramos: dice el **tramo de la escalera** |
-| Píldora | **No hay.** El umbral no cabe a 48 px; lo dicen el nombre y la condición de la fila |
+| Píldora | Cifra del escalón montada en el **canto de abajo**, sin unidad. No sale en `sm` (28 px) |
 
 **Las unidades del relieve son del `viewBox`, no píxeles de pantalla.** Es lo que hace que el desplazamiento
 encoja con el disco en vez de comerse el dibujo en la tira pequeña.
 
-### Las dos señales, y por qué van donde van
+### Las tres señales, y por qué van donde van
 
 - **Aura exterior → la rareza.** Escala de loot de RPG: gris común, verde infrecuente, morado raro, naranja
   excepcional. Se salta el azul porque el azul es el acento de la app.
 - **Temple del filo → el tramo.** Cobre hasta 1/3 de la escalera, plata hasta 0,7, oro por encima
   (`temperClass()` en `core/constants/achievementLabels.ts`).
+- **Píldora del canto → la cifra del escalón.** `×100` para lo que cuenta cosas, `≤5` en las descendentes, `75%`
+  en la única de porcentaje y **la cifra sola** en las de racha —«12 meses seguidos» no son doce cosas contadas,
+  así que ahí el aspa mentiría—. Va **sin unidad**: dentro de una escalera la unidad es siempre la misma, y la
+  escribe la condición de la fila. Montada en el borde de abajo y no dentro, que es lo que la hace caber a 48 px:
+  centrada tapa el dibujo y en la esquina se sale por la curva. `medalThreshold()`.
 
 **El orden de los anillos es la mitad del diseño.** De fuera adentro: halo difuso → anillo de rareza → **canto
 negro** → filo del temple → cuerpo. Sin ese canto de por medio, a 48 px las dos señales se leen como una sola y

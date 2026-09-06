@@ -6,11 +6,11 @@
 // la ficha del hub); colgarlas de cualquiera de los dos deja la otra pantalla
 // sin estilos y SIN QUE SALTE NINGÚN ERROR. Es el fallo mudo del §12.
 //
-// DOS SEÑALES, DOS CANALES:
+// TRES SEÑALES, TRES CANALES:
 //   · aura exterior   → la RAREZA (escala de loot de RPG)
 //   · temple del filo → el TRAMO de la escalera: cobre, plata, oro
-// El disco es redondo y el dibujo va centrado, sin tocar ninguna de las dos. El
-// umbral no se pinta: no cabe a 48 px y la fila del listado ya lo escribe.
+//   · píldora del canto → LA CIFRA del escalón («×100»), sin unidad y salvo en sm
+// El disco es redondo y el dibujo va centrado, sin tocar ninguna de las tres.
 //
 // DEPENDE de los tokens --ach-* de abajo y del degradado #ach-lux, que vive en
 // el sprite porque un `stroke` sólo referencia gradientes del documento.
@@ -47,7 +47,8 @@
    TRES SEÑALES, TRES CANALES:
      · AURA exterior  → la rareza (escala de loot de RPG)
      · TEMPLE del filo → el tramo de la escalera: cobre, plata, oro
-   El dibujo va en el centro y no lo toca ninguna de las dos. ───────────── */
+     · PÍLDORA del canto → la cifra del escalón, montada en el borde de abajo
+   El dibujo va en el centro y no lo toca ninguna de las tres. ──────────── */
 .ach-medal {
   --edge: var(--ach-edge);
   --g1: transparent; --g2: transparent;
@@ -108,6 +109,33 @@
 .ach-medal.is-temple-1 { --edge: rgba(184, 118, 54, .72); }
 .ach-medal.is-temple-2 { --edge: rgba(202, 210, 222, .62); }
 .ach-medal.is-temple-3 { --edge: rgba(244, 200, 96, .82); }
+
+/* LA PÍLDORA · la cifra del escalón, montada en el canto de abajo.
+   Ahí y no dentro por una razón de tamaño: a 48 px una pastilla centrada tapa el dibujo y en la esquina se sale
+   por la curva del disco. Cruzando el borde se apoya en el filo, respeta el dibujo entero y se lleva por delante
+   sólo un arco del temple, que da la vuelta completa y no lo echa en falta.
+
+   El tipo NO escala del todo con el disco: `max()` le pone un suelo de 9 px, que es donde una cifra deja de
+   leerse. Por eso tampoco se pinta en `sm` — ver `AchievementMedal`. */
+.ach-medal .ach-step {
+  position: absolute; z-index: 6;
+  left: 50%; bottom: -3%;
+  transform: translateX(-50%);
+  padding: 2px 5px 3px;
+  border-radius: 999px;
+  background: rgba(10, 8, 5, .92);
+  box-shadow: inset 0 0 0 1px rgba(232, 190, 120, .34), 0 1px 2px rgba(0, 0, 0, .5);
+  color: #f8eeda;
+  font-family: var(--ach-mono); font-weight: 600; font-variant-numeric: tabular-nums;
+  font-size: max(9px, calc(var(--sz) * .17));
+  line-height: 1; letter-spacing: .01em; white-space: nowrap;
+}
+// El bloqueado la conserva —ahí la cifra es el objetivo— y la dice en peltre, como el filo.
+.ach-medal.is-locked .ach-step {
+  color: rgba(214, 218, 226, .72);
+  background: rgba(12, 13, 16, .92);
+  box-shadow: inset 0 0 0 1px rgba(150, 162, 178, .3), 0 1px 2px rgba(0, 0, 0, .5);
+}
 
 /* RAREZA · el aura. La escala de loot de cualquier RPG, saltándose el azul
    porque el azul es el acento de la app y sale por todas partes. */

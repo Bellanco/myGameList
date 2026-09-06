@@ -126,6 +126,41 @@ export function romanLevel(level: number, maxLevel: number): string {
 }
 
 /**
+ * LA CIFRA DEL ESCALÓN, para la píldora de la medalla. Vive aquí y no en el catálogo a propósito: el catálogo
+ * declara lo que se MIDE (`steps`) y la condición en llano; cómo se rotula esa cifra dentro de un disco de 48 px
+ * es una decisión de la vista, y meterla en `AchievementLadder` obligaría a tocar el contrato de datos —y el
+ * espejo que viaja al gist— por un rótulo.
+ *
+ * VA SIN UNIDAD, y es lo que hace que quepa. Dentro de una escalera la unidad es constante —todos los escalones
+ * de «Aún estás aquí» son semanas—, así que escribirla en cada medalla gasta la mitad del disco para no añadir
+ * nada: «52 sem» son siete caracteres y «52» son dos. Lo que la unidad aporta lo aporta ya la fila del listado,
+ * que dice la condición entera.
+ *
+ * El aspa se queda porque no es unidad, es la señal de que eso es un contador; las descendentes llevan «≤»,
+ * porque «Exterminatus» pide dejar Próximos en 5 o MENOS, no en 5; y la única en porcentaje lleva su símbolo,
+ * que sin él sería un número imposible.
+ */
+const PERCENT_LADDERS = new Set(['cobertura']);
+
+/**
+ * Escaleras que miden TIEMPO SEGUIDO —semanas, meses, años— y por eso van sin aspa.
+ *
+ * El aspa dice «tantas veces», y eso es verdad en «×100 juegos terminados» y mentira en «12 meses seguidos»:
+ * ahí el 12 no cuenta doce cosas, mide una racha. Sin el aspa, la cifra se apoya en la condición de la fila
+ * («12 meses seguidos cerrando al menos un juego») y no promete lo que no es.
+ */
+const STREAK_LADDERS = new Set([
+  'constancia', 'conversador', 'ritmo', 'degustacion', 'deshielo', 'cadena-de-anos', 'ano-redondo', 'veterano',
+]);
+
+export function medalThreshold(ladder: string, step: number, grades: number, descending: boolean): string {
+  if (grades <= 1) return '';
+  if (PERCENT_LADDERS.has(ladder)) return `${step}%`;
+  if (STREAK_LADDERS.has(ladder)) return String(step);
+  return `${descending ? '≤' : '×'}${step}`;
+}
+
+/**
  * TEMPLE: la aleación del filo dice a qué altura de su escalera está el logro, en tres tramos.
  *
  * Es la señal de grado que sustituye al numeral, y se eligió por lo que sobrevive al tamaño: el filo es el borde
