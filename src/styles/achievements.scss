@@ -337,15 +337,28 @@
 // ── LA TARJETA DE LOGROS EN EL FEED ──────────────────────────────────────
 // Una entrada por persona y DÍA, con todos sus logros de ese día dentro. Las medallas las pinta la MISMA tira
 // que va bajo el nombre en la ficha; aquí son decorativas, porque la pulsable es la tarjeta entera.
-.hub-feed-ach-body { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
-
-// CON UN SOLO LOGRO todo va en una línea: «Ada Ha conseguido [medalla] Informe forense I». `inline-flex` con
-// `align-items: center` es lo que centra la medalla contra la altura del texto; con la medalla como bloque
-// suelto, la frase quedaba partida en dos renglones y había que juntarla a mano al leer.
+//
+// LA FILA SE LEE DE FUERA HACIA DENTRO: avatar, frase, medallas. Es la forma que tienen Steam y el feed de Xbox
+// de contar lo mismo, y funciona porque las tres piezas contestan a tres preguntas distintas en el orden en que
+// se hacen —quién, qué, cuáles— sin que ninguna tenga que leerse para entender la siguiente.
+//
+// Antes la medalla iba INCRUSTADA en la frase cuando había una sola («Ada Ha conseguido [medalla] Informe
+// forense I») y bajaba a una tira propia cuando había varias. Se cambia porque esas dos formas obligaban a leer
+// la tarjeta de dos maneras distintas según un dato —cuántos logros hizo esa persona ese día— que no tiene nada
+// que ver con cómo se lee. Ahora la medalla está SIEMPRE en el mismo sitio, tenga uno o nueve.
+.hub-feed-card.is-achievements { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.hub-feed-ach-body { display: flex; flex-direction: column; gap: 8px; min-width: 0; flex: 1 1 10rem; }
 .hub-feed-ach-line { margin: 0; }
-.hub-feed-ach-single { display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap; }
-.hub-feed-ach-single .ach-medal { flex: none; }
 .hub-feed-ach-name { font-weight: 700; }
+
+// EL CANTO CONTRARIO AL AVATAR. `margin-left: auto` las empuja al final de la fila; con `flex-wrap` en la
+// tarjeta, en un móvil estrecho caen a la línea de abajo y siguen alineadas a la derecha, que es lo que hace que
+// la burbuja no se descuadre.
+//
+// `nowrap` en la tira: aquí no debe envolver nunca. Si no caben, para eso está el «+N» del tope de cinco.
+.hub-feed-ach-medals { margin-left: auto; flex: none; }
+.hub-feed-ach-medals .ach-strip { flex-wrap: nowrap; justify-content: flex-end; }
+.hub-feed-ach-medals .ach-strip-more { font-size: 12px; }
 
 // ── LOGROS GLOBALES · el catálogo por lo común que es cada logro ─────────
 // El RECUADRO marca lo conseguido, como en la pantalla de logros globales de Steam en móvil. Y no es la única

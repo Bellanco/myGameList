@@ -14,8 +14,17 @@ import { PostBody } from './PostText';
 import { HubAvatar } from './HubAvatar';
 import { HubOfflineNotice } from './HubOfflineNotice';
 import { AchievementStrip } from '../stats/AchievementStrip';
-import { AchievementMedal } from '../stats/AchievementMedal';
 import { AchievementSprite } from '../AchievementSprite';
+
+/**
+ * Cuántas medallas caben en una entrada del feed antes del «+N».
+ *
+ * Cinco es lo que cabe en la burbuja sin empujar el texto a otra línea en un móvil estrecho, y también donde se
+ * quedan las plataformas: Steam recorta su fila de iconos y pone el resto detrás de un contador. Lo que se
+ * queda dentro no es arbitrario —`buildAchievementFeed` ordena el día por rareza—, así que el recorte se lleva
+ * lo más común y deja lo que de verdad es noticia.
+ */
+const FEED_MEDALS = 5;
 import { ENABLE_ACHIEVEMENTS } from '../../../core/achievements/flags';
 import { ACHIEVEMENTS_UI } from '../../../core/constants/achievementLabels';
 
@@ -343,40 +352,41 @@ function SocialFeedScreenBase({
                                 {quien}
                               </button>
                               {' '}
-                              {/* CON UNO SOLO, la medalla va EN LA MISMA LÍNEA que el texto: «Ha conseguido 🏅
-                                  Informe forense I» se lee de una vez, mientras que partirlo en dos renglones
-                                  obligaba a juntar a mano una frase y su imagen. Con varios no cabe, y entonces
-                                  el texto dice cuántos y la tira va debajo. */}
+                              {/* EL NOMBRE DEL LOGRO SOLO SE ESCRIBE CUANDO HAY UNO. Con varios, la frase dice
+                                  cuántos y las medallas dicen cuáles: enumerar cinco nombres en una burbuja de
+                                  feed la convierte en un párrafo, y es justo la lista que nadie lee. Es lo que
+                                  hacen Steam («ha desbloqueado N logros» + la fila de iconos) y el feed de
+                                  Xbox. */}
                               {entry.items.length === 1 ? (
-                                <span className="hub-feed-ach-single">
+                                <>
                                   <span className="hub-feed-move-verb">{ACHIEVEMENTS_UI.feedVerb}</span>
-                                  {' '}
-                                  {/* La medalla a secas, no la tira: con un solo logro el nombre ya está escrito
-                                      al lado, así que el rótulo de la tira lo diría dos veces. */}
-                                  <AchievementMedal def={entry.items[0].def} level={entry.items[0].level} size="sm" />
                                   {' '}
                                   <strong className="hub-feed-ach-name">
                                     {entry.items[0].def.labels.name}
                                   </strong>
-                                </span>
+                                </>
                               ) : (
                                 <span className="hub-feed-move-verb">{ACHIEVEMENTS_UI.feedMany(entry.items.length)}</span>
                               )}
                             </p>
-                            {/* La MISMA tira que va bajo el nombre en la ficha y en el panel. Decorativa aquí: la
-                                pulsable es la tarjeta, y los nombres van en su nombre accesible. */}
-                            {entry.items.length > 1 ? (
-                              <AchievementStrip
-                                items={entry.items.map((item) => ({
-                                  id: item.def.id,
-                                  level: item.level,
-                                  date: '',
-                                }))}
-                                size="sm"
-                                interactive={false}
-                              />
-                            ) : null}
                           </div>
+                          {/* LAS MEDALLAS, EN EL CANTO CONTRARIO AL AVATAR. La foto abre la fila por la
+                              izquierda y las medallas la cierran por la derecha, que es como se lee una línea de
+                              feed: quién, qué, y el sello al final. La MISMA tira que va bajo el nombre en la
+                              ficha y en el panel, decorativa aquí porque la pulsable es la tarjeta entera y los
+                              nombres van completos en su `aria-label` —incluidos los que la tira recorta—. */}
+                          <span className="hub-feed-ach-medals">
+                            <AchievementStrip
+                              items={entry.items.map((item) => ({
+                                id: item.def.id,
+                                level: item.level,
+                                date: '',
+                              }))}
+                              limit={FEED_MEDALS}
+                              size="sm"
+                              interactive={false}
+                            />
+                          </span>
                         </article>
                       );
                     }
