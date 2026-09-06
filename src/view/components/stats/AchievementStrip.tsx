@@ -125,7 +125,14 @@ export const AchievementStrip = memo(function AchievementStrip({
           </button>
         </li>
       ) : items.length > shown.length ? (
-        <li className="ach-strip-more" aria-hidden="true">+{items.length - shown.length}</li>
+        // Sin destino al que llevar, el resto se cuenta y ya. Va con el tamaño de la medalla porque ES una
+        // medalla más en la fila; decorativo, porque los nombres de lo que no cabe viven en el `aria-label` de
+        // quien contiene la tira.
+        <li className="ach-strip-item" aria-hidden="true">
+          <span className="ach-strip-more" style={{ '--sz': `${size === 'sm' ? 28 : 48}px` } as CSSProperties}>
+            +{items.length - shown.length}
+          </span>
+        </li>
       ) : null}
     </ul>
   );
