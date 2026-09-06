@@ -40,9 +40,10 @@ function agrupar(items: SocialActivityFeedItem[]) {
   return result.current.groupedFeedItems;
 }
 
-/** Los `gameId` de las RESEÑAS de un grupo. El feed devuelve la unión con publicaciones (que no tienen juego) y
- *  con los movimientos de lista (que sí lo tienen, pero no son actividad de reseña). */
-function juegosDe(group: { items: ReadonlyArray<{ kind?: 'post' | 'move' }> }): number[] {
+/** Los `gameId` de las RESEÑAS de un grupo. El feed devuelve la unión con publicaciones (que no tienen juego),
+ *  con los movimientos de lista (que sí lo tienen, pero no son actividad de reseña) y con los logros (que ni
+ *  tienen juego ni son de un juego). El `kind` de la reseña es el único ausente, y en eso se apoya el filtro. */
+function juegosDe(group: { items: ReadonlyArray<{ kind?: string }> }): number[] {
   return group.items
     .filter((item) => item.kind === undefined)
     .map((item) => (item as SocialActivityFeedItem).gameId);
