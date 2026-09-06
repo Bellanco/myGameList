@@ -9,6 +9,8 @@ import { localDayKey, startOfLocalDay } from '../../core/utils/dateTime';
 import { normalizeTimestamp as toSafeTimestamp } from '../../core/utils/normalize';
 import type { SocialActivityEntry, SocialMoveEntry, SocialPostEntry } from '../../model/repository/socialGistRepository';
 import { useFeedMoveTabs } from '../../view/hooks/useFeedMoveTabs';
+import { achievementFeedEntries, type AchievementFeedEntry } from '../../core/achievements/feed';
+import { ENABLE_ACHIEVEMENTS } from '../../core/achievements/flags';
 import type { ProfileTier } from '../../core/constants/tiers';
 import type { GameItem, TabId } from '../../model/types/game';
 import type { SocialProfileVisibility, SocialSharedGame } from '../../model/repository/socialGistRepository';
@@ -62,7 +64,8 @@ export type SocialMoveFeedItem = SocialMoveEntry & SocialFeedAuthor & {
 export type SocialFeedItem =
   | (SocialActivityFeedItem & { kind?: undefined })
   | (SocialPostFeedItem & { kind: 'post' })
-  | (SocialMoveFeedItem & { kind: 'move' });
+  | (SocialMoveFeedItem & { kind: 'move' })
+  | (AchievementFeedEntry & { kind: 'achievements' });
 
 /** Un día del feed agrupado, tal y como lo pinta la pantalla. */
 export type SocialFeedDayGroup = {
@@ -73,9 +76,21 @@ export type SocialFeedDayGroup = {
 };
 
 /** Lo único que el feed necesita de una entrada del directorio. */
-type FeedSource = { activity?: SocialActivityFeedItem[]; posts?: SocialPostFeedItem[]; moves?: SocialMoveFeedItem[] };
+type FeedSource = {
+  activity?: SocialActivityFeedItem[];
+  posts?: SocialPostFeedItem[];
+  moves?: SocialMoveFeedItem[];
+  /** Identidad y espejo de logros, para deducir sus desbloqueos sin publicar ni un byte (§8.4). */
+  id?: string;
+  displayName?: string;
+  photoURL?: string;
+  achievements?: { list?: string };
+};
 
 const FEED_PAGE_SIZE = 25;
+
+/** Referencia estable para el valor por defecto: un `new Map()` en la firma rompería el memo en cada render. */
+const EMPTY_MIRRORS: ReadonlyMap<string, string> = new Map();
 
 /**
  * Cupo de mensajes de lista por AUTOR y DÍA. Las reseñas y las publicaciones no cuentan para él y no tienen tope:
@@ -156,7 +171,19 @@ function formatDayHeader(date: Date): string {
  * F3 — feed COMBINADO: reseñas/recomendaciones (actividad) + publicaciones, mezcladas y ordenadas por fecha.
  * Los posts llevan `kind:'post'` para distinguirlos al renderizar; la actividad conserva su `type`.
  */
-export function useSocialFeed(directory: ReadonlyArray<FeedSource>): {
+export function useSocialFeed(
+  directory: ReadonlyArray<FeedSource>,
+  /** Espejos de logros por perfil, cuando el hub los ha resuelto (en desarrollo, los siembra `dev/`). */
+  achievementMirrors: ReadonlyMap<string, string> = EMPTY_MIRRORS,
+  /**
+   * TUS logros, para que aparezcan en tu propio lado de la actividad como el resto de lo que publicas.
+   *
+   * Llegan aparte y no por el directorio porque hoy no están ahí: mientras la publicación esté apagada, tu
+   * espejo no existe en `profiles/{uid}`. Y aunque estuviera, seguiría llegando aparte: el evaluador es la
+   * fuente fresca —sabe lo de hace un minuto— y el espejo va siempre un paso por detrás.
+   */
+  ownAchievements?: { profileId: string; displayName: string; photoURL: string; mirror: string },
+): {
   feedItems: SocialFeedItem[];
   groupedFeedItems: SocialFeedDayGroup[];
   hasMoreFeed: boolean;
@@ -187,13 +214,40 @@ export function useSocialFeed(directory: ReadonlyArray<FeedSource>): {
         // los tres primeros de un día en el que la persona movió veinte juegos a otras listas.
         .map((move) => ({ ...move, kind: 'move' as const }));
 
-    return [...activity, ...posts, ...moves]
+    // LOGROS: una entrada por persona y DÍA, con todos sus logros de ese día dentro (§8.4). No cuesta una
+    // petición ni un byte de canal: sale de los espejos que el directorio ya trajo.
+    const achievements = ENABLE_ACHIEVEMENTS
+      ? achievementFeedEntries([
+        ...directory
+          .map((entry) => ({
+            id: String(entry.id || ''),
+            displayName: entry.displayName,
+            photoURL: entry.photoURL,
+            mirror: String(entry.achievements?.list || achievementMirrors.get(String(entry.id || '')) || ''),
+            own: false,
+          }))
+          // Tu propia entrada del directorio se descarta: la tuya la pone `ownAchievements`, que está más fresca
+          // y no depende de que el espejo se haya publicado.
+          .filter((entry) => entry.id && entry.mirror && entry.id !== ownAchievements?.profileId),
+        ...(ownAchievements?.mirror
+          ? [{
+            id: ownAchievements.profileId,
+            displayName: ownAchievements.displayName,
+            photoURL: ownAchievements.photoURL,
+            mirror: ownAchievements.mirror,
+            own: true,
+          }]
+          : []),
+      ]).map((entry) => ({ ...entry, kind: 'achievements' as const }))
+      : [];
+
+    return [...activity, ...posts, ...moves, ...achievements]
       // Descarta ítems con timestamp inválido/fuera de rango ANTES de ordenar y cortar: si no, ordenarían arriba,
       // coparían el corte visible y el agrupado por día los eliminaría, dejando el feed en blanco (ver bug del 2º amigo).
       .filter((item) => hasRenderableTimestamp(item.updatedAt))
       .sort((a, b) => b.updatedAt - a.updatedAt)
       .slice(0, FEED_MAX_ITEMS);
-  }, [directory, moveTabsValue]);
+  }, [directory, moveTabsValue, achievementMirrors, ownAchievements]);
 
   const groupedFeedItems = useMemo<SocialFeedDayGroup[]>(() => {
     const groups: SocialFeedDayGroup[] = [];

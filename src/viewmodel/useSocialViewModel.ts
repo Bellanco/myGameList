@@ -47,6 +47,15 @@ import { resolveGateway } from './social/socialGateway';
 import { useSocialFriendships } from './social/useSocialFriendships';
 import { loadLocalState } from '../model/repository/localRepository';
 import { matchSocialRoute, OWN_PROFILE_ALIAS } from './social/socialRoutes';
+import { ENABLE_ACHIEVEMENTS } from '../core/achievements/flags';
+import { packAchievements } from '../core/achievements/pack';
+import { useAchievements } from './useAchievements';
+
+/** Biblioteca vacía estable: el hub puede montarse sin `games` y un literal nuevo rompería el memo. */
+const EMPTY_LIBRARY = { c: [], v: [], e: [], p: [], deleted: [], updatedAt: 0 };
+
+/** Referencia estable: un `new Map()` inline rompería el memo del feed en cada render. */
+const EMPTY_MIRRORS: ReadonlyMap<string, string> = new Map();
 import { useSocialCompose } from './social/useSocialCompose';
 import { useSocialLegalConsent } from './social/useSocialLegalConsent';
 import { DEFAULT_SOCIAL_VISIBILITY, normalizeVisibility, useSocialProfileForm } from './social/useSocialProfileForm';
@@ -144,7 +153,7 @@ export function useSocialViewModel(options?: {
   const online = useOnlineStatus();
 
   const routeState = useMemo(() => matchSocialRoute(location.pathname), [location.pathname]);
-  const { activePanel, profileDetailId, profileReviewsView, profileReviewGameId, detailActorUid, detailGameId, detailEventType } = routeState;
+  const { activePanel, profileDetailId, profileReviewsView, profileAchievementsView, profileGlobalsView, profileReviewGameId, detailActorUid, detailGameId, detailEventType } = routeState;
 
 
   const [socialCfgGistId, setSocialCfgGistId] = useState<string>('');
@@ -968,7 +977,54 @@ export function useSocialViewModel(options?: {
    * De paso deja de estar limitado a esas 300: un evento más antiguo que el corte no se podía abrir por URL.
    * Ante duplicados (posibles al fusionar dos gists sociales) sigue ganando el más reciente, como antes.
    */
-  const { feedItems, groupedFeedItems, hasMoreFeed, showMoreFeed } = useSocialFeed(socialDirectory);
+  /**
+   * Espejos de logros SEMBRADOS, solo en desarrollo y solo mientras nadie publique de verdad
+   * (`ENABLE_ACHIEVEMENTS_PUBLISH`). Entra por `import()` dinámico bajo `import.meta.env.DEV`, igual que
+   * `dev/socialDateTools`: con un import estático, el módulo de andamio entraría en el chunk del hub aunque la
+   * rama estuviera muerta. Al encender la publicación se borran estas veinte líneas y el feed lee `achievements`
+   * de cada entrada del directorio, que es de donde ya lo intenta leer primero.
+   */
+  const [seededMirrors, setSeededMirrors] = useState<ReadonlyMap<string, string>>(EMPTY_MIRRORS);
+  useEffect(() => {
+    if (!ENABLE_ACHIEVEMENTS || !import.meta.env.DEV || import.meta.env.TEST || socialDirectory.length === 0) return;
+    if (socialDirectory.some((entry) => (entry as { achievements?: { list?: string } }).achievements?.list)) return;
+    void import('../dev/achievementsSeed').then((module) => {
+      setSeededMirrors(new Map(socialDirectory.map((entry) => [
+        String((entry as { id?: string }).id || ''),
+        module.seededMirrorFor(String((entry as { id?: string }).id || '')),
+      ])));
+    });
+  }, [socialDirectory]);
+
+  /**
+   * TUS logros para el feed. Se empaquetan con la MISMA gramática que se publicaría (`packAchievements`) y se
+   * leen con el mismo parser, así que tu tarjeta y la de una amistad recorren exactamente el mismo camino: si
+   * algo se pinta mal en la tuya, se pintaría igual de mal en la suya, y eso se ve enseguida.
+   *
+   * Depende de `games`, que el hub ya recibe: no hay lectura nueva.
+   */
+  /**
+   * TUS logros, evaluados AQUÍ y no en la vista: los necesitan tres cosas del hub —tu tarjeta del feed, tu lista
+   * global y tu ficha— y evaluarlos en cada una sería recorrer la biblioteca tres veces por render.
+   */
+  const ownAchievements = useAchievements({ games: options?.games || EMPTY_LIBRARY });
+  const ownAchievementStates = ENABLE_ACHIEVEMENTS ? ownAchievements.states : null;
+
+  const ownAchievementsFeed = useMemo(() => {
+    if (!ENABLE_ACHIEVEMENTS || !ownAchievementStates) return undefined;
+    return {
+      profileId: ownProfileId || OWN_PROFILE_ALIAS,
+      displayName: socialDisplayName || '',
+      photoURL: authUser?.photoURL || '',
+      mirror: packAchievements(ownAchievementStates),
+    };
+  }, [ownAchievementStates, ownProfileId, socialDisplayName, authUser?.photoURL]);
+
+  const { feedItems, groupedFeedItems, hasMoreFeed, showMoreFeed } = useSocialFeed(
+    socialDirectory,
+    seededMirrors,
+    ownAchievementsFeed,
+  );
 
   const activeDetailEvent = useMemo(() => {
     if (activePanel !== 'detail' || !detailActorUid || detailGameId <= 0 || !detailEventType) {
@@ -1059,6 +1115,18 @@ export function useSocialViewModel(options?: {
   }, [navigate]);
   const openProfileReviewDetail = useCallback((profileId: string, gameId: number) => {
     void navigate(`/social/profiles/${encodeURIComponent(profileId)}/game/${gameId}/review`);
+  }, [navigate]);
+
+  // Logros de ese perfil: mismo par abrir/cerrar que las reseñas, y por el mismo motivo —es una vista del mismo
+  // perfil, no otra pantalla—, así que el botón de atrás del navegador se comporta igual en las dos.
+  const openProfileAchievements = useCallback((profileId: string) => {
+    void navigate(`/social/profiles/${encodeURIComponent(profileId)}/logros`);
+  }, [navigate]);
+  const closeProfileAchievements = useCallback((profileId: string) => {
+    void navigate(`/social/profiles/${encodeURIComponent(profileId)}`);
+  }, [navigate]);
+  const openProfileGlobals = useCallback((profileId: string) => {
+    void navigate(`/social/profiles/${encodeURIComponent(profileId)}/globales`);
   }, [navigate]);
 
   // Abre el DETALLE del perfil propio (vista pública con sus listados), no el editor. Si aún no existe entrada
@@ -2076,9 +2144,15 @@ export function useSocialViewModel(options?: {
     selectedProfileDetail,
     profileDetailId,
     profileReviewsView,
+    profileAchievementsView,
+    profileGlobalsView,
+    ownAchievements,
     activeProfileReview,
     openProfileReviews,
     closeProfileReviews,
+    openProfileAchievements,
+    closeProfileAchievements,
+    openProfileGlobals,
     openProfileReviewDetail,
     refreshProfileDetail,
     loadingForeignProfile,
