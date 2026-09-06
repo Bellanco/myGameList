@@ -87,6 +87,7 @@ export const LADDERS: readonly AchievementLadder[] = [
     rarity: 'raro',
     icon: 'completados',
     labels: { name: 'Créditos finales', condition: 'Juegos que has terminado' },
+    goal: (step) => (step === 1 ? 'Terminar un juego' : `Terminar ${step} juegos`),
     metric: ({ games }) => count((games.c || []).map((game) => ({ ok: true, at: enteredAt(game, 'c') }))),
   },
   {
@@ -96,6 +97,7 @@ export const LADDERS: readonly AchievementLadder[] = [
     rarity: 'infrecuente',
     icon: 'abandonos-razonados',
     labels: { name: 'Retirada táctica', condition: 'Abandonos con la razón anotada' },
+    goal: (step) => (step === 1 ? 'Abandonar un juego anotando por qué' : `Abandonar ${step} juegos anotando por qué`),
     metric: ({ games }) => count((games.v || []).map((game) => ({ ok: hasReason(game), at: enteredAt(game, 'v') }))),
   },
   {
@@ -105,7 +107,7 @@ export const LADDERS: readonly AchievementLadder[] = [
     rarity: 'raro',
     icon: 'constancia',
     labels: { name: 'Aún estás aquí', condition: 'Semanas seguidas con actividad' },
-    goal: (step) => `${step} semanas seguidas con actividad`,
+    goal: (step) => `Encadenar ${step} semanas seguidas con actividad`,
     metric: ({ games }) => bestWeekStreak(activityStamps(games)),
   },
   {
@@ -115,7 +117,7 @@ export const LADDERS: readonly AchievementLadder[] = [
     rarity: 'raro',
     icon: 'ritmo',
     labels: { name: 'Sin prisa pero sin pausa', condition: 'Meses seguidos cerrando algún juego' },
-    goal: (step) => `${step} meses seguidos cerrando al menos un juego`,
+    goal: (step) => `Cerrar al menos un juego ${step} meses seguidos`,
     // NO es «Aún estás aquí» con otra unidad: aquella cuenta CUALQUIER actividad —catalogar incluido— y esta
     // exige cerrar. Es la única métrica del catálogo que no se puede satisfacer ordenando fichas.
     metric: ({ games }) => bestMonthStreak(closedStamps(games)),
@@ -127,6 +129,7 @@ export const LADDERS: readonly AchievementLadder[] = [
     rarity: 'infrecuente',
     icon: 'generos',
     labels: { name: 'Mundo abierto', condition: 'Géneros distintos con algo cerrado' },
+    goal: (step) => `Cerrar algo de ${step} géneros distintos`,
     metric: ({ games }) => firstOfEach(closedGames(games), (game) => game.genres),
   },
   {
@@ -136,6 +139,9 @@ export const LADDERS: readonly AchievementLadder[] = [
     rarity: 'infrecuente',
     icon: 'degustacion',
     labels: { name: 'Menú degustación', condition: 'Meses en que cierras juegos de tres géneros distintos' },
+    goal: (step) => (step === 1
+      ? 'Cerrar juegos de tres géneros distintos en un mismo mes'
+      : `Cerrar juegos de tres géneros distintos en ${step} meses distintos`),
     // Variedad SIN volumen: un mes bueno son tres juegos, no treinta. Es el contrapeso de «Mundo abierto», que
     // premia el catálogo entero y por tanto también a quien lo llenó de una tacada.
     metric: ({ games }) => {
@@ -165,6 +171,7 @@ export const LADDERS: readonly AchievementLadder[] = [
     rarity: 'comun',
     icon: 'plataformas',
     labels: { name: 'Guerra de consolas', condition: 'Plataformas distintas en tu biblioteca' },
+    goal: (step) => `Reunir ${step} plataformas distintas en la biblioteca`,
     metric: ({ games }) => firstOfEach(allGames(games).map((entry) => entry.game), (game) => game.platforms),
   },
   {
@@ -174,6 +181,7 @@ export const LADDERS: readonly AchievementLadder[] = [
     rarity: 'infrecuente',
     icon: 'rejugados',
     labels: { name: 'New Game +', condition: 'Vueltas extra registradas' },
+    goal: (step) => (step === 1 ? 'Anotar una vuelta extra' : `Anotar ${step} vueltas extra`),
     metric: ({ games }) => {
       const stamps: number[] = [];
       for (const { game } of allGames(games)) {
@@ -192,6 +200,7 @@ export const LADDERS: readonly AchievementLadder[] = [
     rarity: 'comun',
     icon: 'volvere',
     labels: { name: 'Aquí volveré', condition: 'Juegos marcados como rejugables' },
+    goal: (step) => `Marcar ${step} juegos como rejugables`,
     metric: ({ games }) =>
       count(allGames(games).map(({ game }) => ({ ok: Boolean(game.replayable), at: firstEnteredAt(game) }))),
   },
@@ -202,6 +211,7 @@ export const LADDERS: readonly AchievementLadder[] = [
     rarity: 'comun',
     icon: 'revancha',
     labels: { name: 'Cuenta pendiente', condition: 'Abandonos marcados para reintentar' },
+    goal: (step) => (step === 1 ? 'Marcar un abandono para reintentar' : `Marcar ${step} abandonos para reintentar`),
     // Pareja de «Volver a la hoguera»: marcar la revancha aquí, cumplirla allí.
     metric: ({ games }) =>
       count((games.v || []).map((game) => ({ ok: Boolean(game.retry), at: enteredAt(game, 'v') }))),
@@ -213,6 +223,9 @@ export const LADDERS: readonly AchievementLadder[] = [
     rarity: 'raro',
     icon: 'maraton',
     labels: { name: 'Un verano entero', condition: `Juegos con ${MARATHON_HOURS} h o más anotadas` },
+    goal: (step) => (step === 1
+      ? `Llegar a ${MARATHON_HOURS} h en un juego`
+      : `Llegar a ${MARATHON_HOURS} h en ${step} juegos`),
     metric: ({ games }) =>
       count(allGames(games).map(({ game }) => ({ ok: (hoursOf(game) ?? 0) >= MARATHON_HOURS, at: firstEnteredAt(game) }))),
   },
@@ -223,6 +236,9 @@ export const LADDERS: readonly AchievementLadder[] = [
     rarity: 'excepcional',
     icon: 'paciencia',
     labels: { name: 'Ya iba siendo hora', condition: 'Terminados tras más de un año en Próximos' },
+    goal: (step) => (step === 1
+      ? 'Terminar un juego que llevaba más de un año en Próximos'
+      : `Terminar ${step} juegos que llevaban más de un año en Próximos`),
     metric: ({ games }) =>
       count(
         (games.c || []).map((game) => {
@@ -239,6 +255,7 @@ export const LADDERS: readonly AchievementLadder[] = [
     rarity: 'infrecuente',
     icon: 'criterio',
     labels: { name: 'Nota del crítico', condition: 'Juegos puntuados, si tus notas no son todas iguales' },
+    goal: (step) => `Puntuar ${step} juegos sin ponerles a todos la misma nota`,
     metric: ({ games }) => {
       // GUARDA (§7.5): solo las notas que EXISTEN. Los juegos sin puntuar resuelven a 0, y contarlos inflaría a la
       // vez el número de notas y la dispersión —un montón de ceros junto a notas reales dispara la desviación—,
@@ -257,6 +274,7 @@ export const LADDERS: readonly AchievementLadder[] = [
     rarity: 'raro',
     icon: 'memoria-larga',
     labels: { name: 'Partida guardada', condition: 'Años naturales distintos con algo completado' },
+    goal: (step) => `Completar algo en ${step} años naturales distintos`,
     // Mide sobre `years` y NO sobre `enteredAt`: sobre una biblioteca real, `enteredAt.c` daba 1 año y `years`
     // daba 22, poblado al 100 % (§6.8).
     metric: ({ games }) => {
@@ -272,7 +290,7 @@ export const LADDERS: readonly AchievementLadder[] = [
     rarity: 'raro',
     icon: 'cadena-de-anos',
     labels: { name: 'Toda una vida', condition: 'Años seguidos con algo jugado' },
-    goal: (step) => `${step} años seguidos con algo jugado`,
+    goal: (step) => `Encadenar ${step} años con algo jugado`,
     // Años SEGUIDOS, no distintos: es lo que «Partida guardada» no puede decir. Y sale de `years`, así que
     // reconoce al veterano desde el primer día en vez de pedirle que empiece a contar ahora.
     metric: ({ games }) => {
@@ -288,7 +306,7 @@ export const LADDERS: readonly AchievementLadder[] = [
     rarity: 'excepcional',
     icon: 'deshielo',
     labels: { name: 'El deshielo', condition: 'Meses seguidos con Próximos a la baja' },
-    goal: (step) => `${step} meses seguidos con Próximos a la baja`,
+    goal: (step) => `Bajar Próximos ${step} meses seguidos`,
     metric: ({ games }) => bestDownStreak(backlogDeltas(games)),
   },
   {
@@ -298,6 +316,7 @@ export const LADDERS: readonly AchievementLadder[] = [
     rarity: 'raro',
     icon: 'estanteria',
     labels: { name: 'La pila de la vergüenza', condition: 'Juegos rescatados de Próximos y jugados' },
+    goal: (step) => `Rescatar ${step} juegos de Próximos y jugarlos`,
     metric: ({ games }) =>
       count(
         allGames(games).map(({ game }) => {
@@ -336,7 +355,7 @@ export const LADDERS: readonly AchievementLadder[] = [
     rarity: 'comun',
     icon: 'veterano',
     labels: { name: 'De la vieja escuela', condition: 'Años con perfil en la app' },
-    goal: (step) => `${step} años con perfil en la app`,
+    goal: (step) => (step === 1 ? 'Cumplir un año con perfil en la app' : `Cumplir ${step} años con perfil en la app`),
     // EL ÚNICO LOGRO VERIFICABLE DE TODO EL CATÁLOGO, y por eso está: `createdAt` lo sella el SERVIDOR
     // (`serverTimestamp()`) y a partir de ahí las reglas lo congelan, incluso para su dueño
     // (`profileCreatedAtIsImmutable`). No se puede falsear sin que el panel de administración lo cante.
@@ -361,7 +380,7 @@ export const LADDERS: readonly AchievementLadder[] = [
     rarity: 'comun',
     icon: 'tutorial',
     labels: { name: 'Tutorial superado', condition: 'Todos los primeros pasos, hechos' },
-    goal: () => 'Todos los primeros pasos, hechos',
+    goal: () => 'Hacer todos los primeros pasos',
     // META: se calcula sobre OTROS logros, en la segunda pasada del evaluador (`earned`). Y NO es de familia
     // «primeros pasos» a propósito: aquella no puntúa ni se publica porque se apaga sola, y este es justo el que
     // se queda —«ya sabes usar esto»— y el único de los diez que merece contar.
@@ -395,6 +414,7 @@ export const LADDERS: readonly AchievementLadder[] = [
     rarity: 'comun',
     icon: 'sofa',
     labels: { name: 'Jugado en el sofá', condition: 'Juegos marcados como Steam Deck' },
+    goal: (step) => `Marcar ${step} juegos como Steam Deck`,
     metric: ({ games }) =>
       count(allGames(games).map(({ game }) => ({ ok: Boolean(game.steamDeck), at: firstEnteredAt(game) }))),
   },
@@ -407,6 +427,9 @@ export const LADDERS: readonly AchievementLadder[] = [
     rarity: 'excepcional',
     icon: 'speedrun',
     labels: { name: 'Speedrun', condition: 'Un juego que entró en Próximos y se cerró el mismo día' },
+    goal: (step) => (step === 1
+      ? 'Cerrar un juego el mismo día que entró en Próximos'
+      : `Cerrar ${step} juegos el mismo día que entraron en Próximos`),
     // RETIRADO, no borrado (§6.4): deja de ofrecerse y de contar en la fracción, pero se sigue pintando a quien
     // lo tenga. Se retira porque pide el par de sellos que ninguna biblioteca preexistente tiene (0 de 302) Y
     // además el mismo día: era la casilla más dormida del catálogo.
@@ -431,6 +454,9 @@ export const LADDERS: readonly AchievementLadder[] = [
     rarity: 'raro',
     icon: 'segunda-vuelta',
     labels: { name: 'Volver a la hoguera', condition: 'Terminar un juego que habías abandonado' },
+    goal: (step) => (step === 1
+      ? 'Terminar un juego que habías abandonado'
+      : `Terminar ${step} juegos que habías abandonado`),
     metric: ({ games }) =>
       count(
         (games.c || []).map((game) => {
@@ -449,7 +475,7 @@ export const LADDERS: readonly AchievementLadder[] = [
     rarity: 'excepcional',
     icon: 'estanteria-cero',
     labels: { name: 'Exterminatus', condition: 'Dejar Próximos bajo mínimos' },
-    goal: (step) => (step === 1 ? 'Dejar Próximos en 1 juego o ninguno' : `Dejar Próximos en ${step} juegos o menos`),
+    goal: (step) => (step === 1 ? 'Dejar Próximos en un juego o ninguno' : `Dejar Próximos en ${step} juegos o menos`),
     // MENOS ES MEJOR, y por eso es la única escalera descendente del catálogo. El escalón único de «dejarlo a
     // cero» le pasaba a quien no usa Próximos y no le llegaba jamás a quien tiene sesenta: escalonarlo lo
     // convierte en el trayecto que de verdad se recorre.
@@ -473,6 +499,9 @@ export const LADDERS: readonly AchievementLadder[] = [
     rarity: 'raro',
     icon: 'orgullo',
     labels: { name: 'Lo terminé por orgullo', condition: 'Terminar un juego al que pusiste menos de 50' },
+    goal: (step) => (step === 1
+      ? 'Terminar un juego al que pusiste menos de 50'
+      : `Terminar ${step} juegos a los que pusiste menos de 50`),
     metric: ({ games }) =>
       count(
         (games.c || []).map((game) => {
@@ -491,6 +520,9 @@ export const LADDERS: readonly AchievementLadder[] = [
     rarity: 'raro',
     icon: 'no-eres-tu',
     labels: { name: 'No eres tú, soy yo', condition: 'Abandonar un juego al que pusiste 70 o más' },
+    goal: (step) => (step === 1
+      ? 'Abandonar un juego al que pusiste 70 o más'
+      : `Abandonar ${step} juegos a los que pusiste 70 o más`),
     metric: ({ games }) =>
       count(
         (games.v || []).map((game) => {
@@ -507,6 +539,9 @@ export const LADDERS: readonly AchievementLadder[] = [
     rarity: 'raro',
     icon: 'vida-entera',
     labels: { name: 'Una vida entera', condition: '300 horas o más en un solo juego' },
+    goal: (step) => (step === 1
+      ? 'Pasar de 300 h en un solo juego'
+      : `Pasar de 300 h en ${step} juegos distintos`),
     metric: ({ games }) =>
       count(allGames(games).map(({ game }) => ({ ok: (hoursOf(game) ?? 0) >= 300, at: firstEnteredAt(game) }))),
   },
@@ -545,6 +580,7 @@ export const LADDERS: readonly AchievementLadder[] = [
     rarity: 'comun',
     icon: 'horas',
     labels: { name: 'Tiempo jugado', condition: 'Juegos con las horas anotadas' },
+    goal: (step) => `Anotar las horas de ${step} juegos`,
     metric: ({ games }) =>
       count(allGames(games).map(({ game }) => ({ ok: hoursOf(game) !== null, at: firstEnteredAt(game) }))),
   },
@@ -555,6 +591,7 @@ export const LADDERS: readonly AchievementLadder[] = [
     rarity: 'infrecuente',
     icon: 'resenas',
     labels: { name: 'Con mis palabras', condition: 'Reseñas escritas' },
+    goal: (step) => (step === 1 ? 'Escribir una reseña' : `Escribir ${step} reseñas`),
     metric: ({ games }) =>
       count(allGames(games).map(({ game }) => ({ ok: hasReview(game), at: game.reviewedAt || 0 }))),
   },
@@ -585,6 +622,7 @@ export const LADDERS: readonly AchievementLadder[] = [
     rarity: 'infrecuente',
     icon: 'ficha-completa',
     labels: { name: 'Ficha de manual', condition: 'Géneros, plataforma, nota y reseña, los cuatro' },
+    goal: (step) => `Completar la ficha de ${step} juegos: géneros, plataforma, nota y reseña`,
     metric: ({ games }) =>
       count(
         allGames(games).map(({ game }) => ({
@@ -604,6 +642,7 @@ export const LADDERS: readonly AchievementLadder[] = [
     rarity: 'infrecuente',
     icon: 'autopsia',
     labels: { name: 'Informe forense', condition: 'Abandonos con razón y reseña' },
+    goal: (step) => `Anotar razón y reseña en ${step} abandonos`,
     metric: ({ games }) =>
       count(
         (games.v || []).map((game) => ({
@@ -619,6 +658,7 @@ export const LADDERS: readonly AchievementLadder[] = [
     rarity: 'infrecuente',
     icon: 'luces-y-sombras',
     labels: { name: 'Luces y sombras', condition: 'Reseñas con puntos fuertes y débiles' },
+    goal: (step) => `Escribir ${step} reseñas con puntos fuertes y débiles`,
     metric: ({ games }) =>
       count(
         allGames(games).map(({ game }) => ({
@@ -635,6 +675,9 @@ export const LADDERS: readonly AchievementLadder[] = [
     rarity: 'infrecuente',
     icon: 'tesis',
     labels: { name: 'Tesis doctoral', condition: `Reseñas de más de ${THESIS_CHARS} caracteres` },
+    goal: (step) => (step === 1
+      ? `Escribir una reseña de más de ${THESIS_CHARS} caracteres`
+      : `Escribir ${step} reseñas de más de ${THESIS_CHARS} caracteres`),
     // Oculto y de familia `datos`, que no es contradictorio: lo que hace dañino a un oculto no es su familia, es
     // pedir un trabajo largo que no se puede empezar porque no se sabe cuál es. Esto es un hecho suelto que se
     // reconoce, no una campaña por toda la biblioteca (§6.7).
@@ -657,6 +700,7 @@ export const LADDERS: readonly AchievementLadder[] = [
     rarity: 'comun',
     icon: 'amistades',
     labels: { name: 'Modo cooperativo', condition: 'Amistades confirmadas' },
+    goal: (step) => (step === 1 ? 'Confirmar una amistad' : `Confirmar ${step} amistades`),
     metric: ({ social }) => ({ value: Math.max(0, social.friends) }),
   },
   {
@@ -679,6 +723,7 @@ export const LADDERS: readonly AchievementLadder[] = [
     rarity: 'infrecuente',
     icon: 'escaparate',
     labels: { name: 'Puertas abiertas', condition: 'Juegos compartidos al canal público' },
+    goal: (step) => (step === 1 ? 'Compartir un juego al canal público' : `Compartir ${step} juegos al canal público`),
     // Usa `shared`, que hasta ahora no daba nada. Arranca en cero para todo el mundo —nadie tiene juegos
     // compartidos todavía— y despierta con un clic, no con años: es conducta futura, no historia.
     metric: ({ games }) =>
@@ -695,7 +740,9 @@ export const LADDERS: readonly AchievementLadder[] = [
     rarity: 'excepcional',
     icon: 'ano-redondo',
     labels: { name: 'Solsticio a solsticio', condition: 'Años naturales con actividad los doce meses' },
-    goal: (step) => (step === 1 ? 'Un año natural con actividad los doce meses' : `${step} años naturales con actividad los doce meses`),
+    goal: (step) => (step === 1
+      ? 'Tener actividad los doce meses de un año natural'
+      : `Tener actividad los doce meses en ${step} años naturales`),
     metric: ({ games }) => {
       const monthsByYear = new Map<number, Set<string>>();
       for (const stamp of activityStamps(games)) {
@@ -720,6 +767,7 @@ export const LADDERS: readonly AchievementLadder[] = [
     rarity: 'raro',
     icon: 'buena-cosecha',
     labels: { name: 'Cosecha del año', condition: 'Juegos terminados en un mismo año natural' },
+    goal: (step) => `Terminar ${step} juegos en un mismo año`,
     // El valor es LA MEJOR COSECHA, no cuántos años buenos llevas. Mide sobre `years`, como `memoria-larga`.
     metric: ({ games }) => {
       const perYear = new Map<number, number>();
@@ -743,7 +791,9 @@ export const LADDERS: readonly AchievementLadder[] = [
     rarity: 'raro',
     icon: 'aniversario',
     labels: { name: 'Otro año más', condition: 'Aniversarios de tu perfil con actividad ese mes' },
-    goal: (step) => `${step} aniversarios de tu perfil celebrados con actividad`,
+    goal: (step) => (step === 1
+      ? 'Celebrar el aniversario de tu perfil con actividad ese mes'
+      : `Celebrar ${step} aniversarios de tu perfil con actividad`),
     // El segundo repetible anual, y el que de verdad premia VOLVER: no basta con que pase el tiempo —eso ya lo
     // cuenta «De la vieja escuela»—, hay que estar ahí el mes en que la cuenta cumple años.
     metric: ({ games, social, now }) => {
