@@ -163,7 +163,7 @@ describe('el listado propio', () => {
     render(<AchievementsScreen items={lista} summary={summarize([])} rarity={null} />);
     const fila = screen.getByText('Créditos finales II').closest('li') as HTMLElement;
     expect(within(fila).getByRole('img')).toBeInTheDocument();
-    expect(within(fila).getByText('Terminar 25 juegos')).toBeInTheDocument();
+    expect(within(fila).getByText('Termina 25 juegos')).toBeInTheDocument();
     expect(within(fila).getByText('12 mar 2026')).toBeInTheDocument();
   });
 
@@ -393,6 +393,36 @@ describe('/logros — un solo listado, conseguidos primero', () => {
     expect(conseguidos).toHaveLength(2);
     // Y `completados-10`, sin conseguir, cae en la segunda mitad.
     expect(pendientes).toContain('completados-10');
+  });
+
+  it('dentro de un mismo día manda la rareza, no la hora', () => {
+    // El listado enseña el DÍA, así que ordenar por milisegundos dejaba dos logros de la misma jornada en un
+    // orden que no se corresponde con nada visible —y que baila, porque unas métricas deducen su sello de un
+    // juego y otras lo ponen a medianoche—. Dentro del día manda la rareza, igual que en el feed.
+    const manana = Date.parse('2026-08-01T09:00:00Z');
+    const tarde = Date.parse('2026-08-01T21:00:00Z');
+    const byId = new Map([
+      // `horas-10` es común y cae por la tarde; `paciencia-1` es excepcional y cae por la mañana.
+      ['horas-10', { id: 'horas-10', level: 1, value: 20, next: null, unlockedAt: tarde }],
+      ['paciencia-1', { id: 'paciencia-1', level: 1, value: 1, next: null, unlockedAt: manana }],
+    ]);
+    const orden = listForScreen(byId)
+      .filter((entry) => entry.state.level >= 1)
+      .map((entry) => entry.def.id);
+    expect(orden).toEqual(['paciencia-1', 'horas-10']);
+  });
+
+  it('lo conseguido sin fecha cae al final de lo conseguido', () => {
+    // Son los de la primera evaluación del dispositivo, los que ya estaban antes de que hubiera con qué
+    // fecharlos. Van detrás de todo lo fechado, nunca antes.
+    const byId = new Map([
+      ['horas-10', { id: 'horas-10', level: 1, value: 20, next: null, unlockedAt: 0 }],
+      ['resenas-5', { id: 'resenas-5', level: 1, value: 30, next: null, unlockedAt: Date.parse('2026-05-01') }],
+    ]);
+    const orden = listForScreen(byId)
+      .filter((entry) => entry.state.level >= 1)
+      .map((entry) => entry.def.id);
+    expect(orden).toEqual(['resenas-5', 'horas-10']);
   });
 
   it('entre lo que falta, lo que está más cerca va arriba', () => {

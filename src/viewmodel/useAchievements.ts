@@ -6,6 +6,7 @@ import { ACHIEVEMENTS_PEAK_KEY } from '../core/constants/storageKeys';
 import { rouletteUsedAt } from '../core/achievements/deviceSignals';
 import { DEFAULT_PALETTE } from '../core/constants/palettes';
 import { palettePreference } from '../view/hooks/preferences';
+import { RARITY_POINTS } from '../core/achievements/types';
 import type { AchievementDef, AchievementItem, AchievementState, AchievementSummary } from '../core/achievements/types';
 import type { TabData } from '../model/types/game';
 
@@ -96,7 +97,7 @@ export function useAchievements({
       .map((def) => ({ def, state: byId.get(def.id) }))
       .filter((entry): entry is { def: AchievementDef; state: AchievementState } =>
         Boolean(entry.state && entry.state.level >= 1))
-      .sort((a, b) => b.state.unlockedAt - a.state.unlockedAt);
+      .sort(compareEarned);
 
     return { states, byId, summary: summarize(states), earned, justUnlocked };
   }, [games, friends, postWeeks, profileCreatedAt, hasSync]);
@@ -117,6 +118,36 @@ export function useAchievements({
  * responde con un solo corte. La familia sigue en el catálogo, donde hace su trabajo: el filtro del feed y el
  * denominador.
  */
+/**
+ * EL DÍA en que cayó un logro, en el calendario LOCAL de quien mira. 0 cuando no hay fecha deducible.
+ *
+ * Por día y no por instante, que es lo que se ve: la fila enseña «31 ago 2026», así que dos logros del mismo día
+ * ordenados por milisegundos quedaban en un orden que no se corresponde con nada de lo que hay en pantalla —y
+ * que además baila, porque media docena de métricas deducen su sello de un sello de juego y otras lo ponen a
+ * medianoche—. Con el día como clave, lo que decide dentro de la jornada es el desempate de abajo, que sí se ve.
+ */
+function dayOf(ts: number): number {
+  if (!ts) return 0;
+  const d = new Date(ts);
+  return d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate();
+}
+
+/**
+ * Orden de lo CONSEGUIDO: por día, del más reciente al más antiguo, y dentro del día lo más raro primero.
+ *
+ * El desempate por rareza no es un capricho: es el mismo criterio con el que el feed ordena los logros de una
+ * persona en un día (§8.4), así que la tira del panel, el listado y el feed cuentan la misma jornada en el mismo
+ * orden. A igualdad de rareza, el nombre, para que el orden sea estable entre recargas.
+ *
+ * Lo conseguido SIN fecha cae al final —día 0—, que es donde tiene que estar: son los de la primera evaluación,
+ * los que ya estaban antes de que hubiera con qué fecharlos.
+ */
+export function compareEarned(a: AchievementItem, b: AchievementItem): number {
+  return dayOf(b.state.unlockedAt) - dayOf(a.state.unlockedAt)
+    || RARITY_POINTS[b.def.rarity] - RARITY_POINTS[a.def.rarity]
+    || a.def.labels.name.localeCompare(b.def.labels.name, 'es');
+}
+
 export function listForScreen(byId: ReadonlyMap<string, AchievementState>): AchievementItem[] {
   const stateOf = (def: AchievementDef): AchievementState =>
     byId.get(def.id) || { id: def.id, level: 0, value: 0, next: def.step, unlockedAt: 0 };
@@ -158,9 +189,10 @@ export function listForScreen(byId: ReadonlyMap<string, AchievementState>): Achi
       const aEarned = a.state.level >= 1;
       const bEarned = b.state.level >= 1;
       if (aEarned !== bEarned) return aEarned ? -1 : 1;
-      // Lo conseguido, por fecha: lo último primero. Lo que falta, por lo cerca que está de caer —así lo que
-      // está a punto queda arriba, que es la información útil de esa mitad— y a igualdad, por nombre.
-      if (aEarned) return b.state.unlockedAt - a.state.unlockedAt;
+      // Lo conseguido, por DÍA: la jornada más reciente arriba y dentro de ella lo más raro primero. Lo que
+      // falta, por lo cerca que está de caer —así lo que está a punto queda arriba, que es la información útil
+      // de esa mitad— y a igualdad, por nombre.
+      if (aEarned) return compareEarned(a, b);
       return progressOf(b) - progressOf(a) || a.def.labels.name.localeCompare(b.def.labels.name, 'es');
     });
 }

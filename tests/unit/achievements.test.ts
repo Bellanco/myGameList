@@ -101,7 +101,7 @@ describe('catálogo — reglas que no se pueden romper sin avisar', () => {
   it('el nombre de un escalón se lee solo', () => {
     // Cada fila del listado es ya un logro completo: sin el grado en el nombre, media pantalla dice lo mismo.
     expect(ACHIEVEMENTS_BY_ID.get('completados-50')?.labels.name).toBe('Créditos finales III');
-    expect(ACHIEVEMENTS_BY_ID.get('completados-50')?.labels.condition).toBe('Terminar 50 juegos');
+    expect(ACHIEVEMENTS_BY_ID.get('completados-50')?.labels.condition).toBe('Termina 50 juegos');
     // Y una escalera de un solo escalón no lleva numeral: un «I» en algo que no tiene II es ruido.
     expect(ACHIEVEMENTS_BY_ID.get('paso-ruleta-1')?.labels.name).toBe('Tira el dado');
   });
