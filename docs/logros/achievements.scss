@@ -14,6 +14,15 @@
 // DEPENDE de los tokens --sc-* de abajo. No depende de --accent: el grado dejó
 // de teñir nada a propósito (ver §8.5, «lo que se probó y se descartó»).
 
+// ⚑ REVISIÓN 6-sep-2026 — tres cosas que el activo daba por hechas y no lo eran:
+//   1. Las clases eran genéricas (`.medal`, `.num`, `.light`, `.canvas`, `.grain`, `.rar`) en una hoja GLOBAL.
+//      El proyecto nombra con prefijo (`hub-detail-body`, `hub-feed-card`…) justo para que dos chunks no se
+//      pisen. Ahora todo va bajo `ach-`, el mismo prefijo que los símbolos del sprite.
+//   2. Usaba `var(--ink)` y `var(--ink-2)`, que NO EXISTEN en `_base.scss`. Son `--text` y `--text-muted`.
+//   3. Pedía "JetBrains Mono" y "Chivo", que no son fuentes de esta app (es 'DM Sans' más las de cada tema) y
+//      caían al sistema en silencio. El numeral usa ahora la pila mono del sistema con `tabular-nums`, que es
+//      lo único que de verdad necesita, y sin pedir una fuente nueva a la red desde un chunk perezoso.
+//
 // ── Paleta de los cuadros ────────────────────────────────────────────────
 // Mundo propio, separado del cromo de la app: índigo y oro de La noche
 // estrellada. La sombra es azul, nunca negra.
@@ -23,6 +32,8 @@
   --sc-near: #1b2f52;
   --sc-hi: #f0c14b;
   --sc-lt: #f2ecda;
+  // Pila del sistema: el numeral solo necesita cifras de ancho fijo, no una fuente propia.
+  --ach-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -51,7 +62,7 @@
      · TRIÁNGULO en la esquina inferior derecha → el grado, de I a IV
    El triángulo es lo único que se dibuja sobre la imagen, y se funde con
    ella por la hipotenusa para no leerse como una pegatina. ────────────── */
-.medal {
+.ach-medal {
   --num-ink: rgba(255, 255, 255, .85);
   --g1: transparent; --g2: transparent;
   position: relative;
@@ -67,11 +78,11 @@
     0 0 0 max(2px, calc(var(--sz) * .022)) var(--g1),
     0 0 calc(var(--sz) * .16) calc(var(--sz) * .02) var(--g2);
 }
-.medal .canvas { position: absolute; inset: 0; overflow: hidden; }
-.medal svg.art { width: 100%; height: 100%; display: block; }
+.ach-medal .ach-canvas { position: absolute; inset: 0; overflow: hidden; }
+.ach-medal .ach-art { width: 100%; height: 100%; display: block; }
 
 /* grano de lienzo */
-.medal .grain {
+.ach-medal .ach-grain {
   position: absolute; inset: 0; pointer-events: none;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E");
   background-size: 26%;
@@ -79,7 +90,7 @@
   opacity: .26;
 }
 /* luz: cálida arriba a la izquierda, índigo abajo */
-.medal .light {
+.ach-medal .ach-light {
   position: absolute; inset: 0; pointer-events: none;
   background:
     radial-gradient(118% 98% at 18% 8%, rgba(255, 232, 178, .75), rgba(255, 232, 178, 0) 60%),
@@ -88,7 +99,7 @@
 }
 
 /* EL TRIÁNGULO · el grado, y nada más */
-.medal .corner {
+.ach-medal .ach-corner {
   position: absolute; right: 0; bottom: 0;
   width: 48%; height: 48%;
   clip-path: polygon(100% 0, 100% 100%, 0 100%);
@@ -99,10 +110,10 @@
     rgba(6, 12, 26, .92) 100%);
   pointer-events: none;
 }
-.medal .num {
+.ach-medal .ach-num {
   position: absolute;
   right: 6.5%; bottom: 4%;
-  font-family: "JetBrains Mono", monospace; font-weight: 700;
+  font-family: var(--ach-mono); font-weight: 700; font-variant-numeric: tabular-nums;
   font-size: 1em; line-height: 1; letter-spacing: .14em;
   color: var(--num-ink);
   text-shadow: 0 1px 2px rgba(0, 0, 0, .65);
@@ -110,33 +121,48 @@
 
 /* RAREZA · el aura. La escala de loot de cualquier RPG, saltándose el azul
    porque el azul es el acento de la app y sale por todas partes. */
-.medal.r-comun       { --g1: rgba(150, 162, 178, .30); --g2: rgba(150, 162, 178, .16); }
-.medal.r-infrecuente { --g1: rgba( 63, 190, 114, .48); --g2: rgba( 63, 190, 114, .34); }
-.medal.r-raro        { --g1: rgba(168,  85, 247, .55); --g2: rgba(168,  85, 247, .42); }
-.medal.r-excepcional { --g1: rgba(255, 140,  26, .62); --g2: rgba(255, 140,  26, .50); }
+.ach-medal.is-comun       { --g1: rgba(150, 162, 178, .30); --g2: rgba(150, 162, 178, .16); }
+.ach-medal.is-infrecuente { --g1: rgba( 63, 190, 114, .48); --g2: rgba( 63, 190, 114, .34); }
+.ach-medal.is-raro        { --g1: rgba(168,  85, 247, .55); --g2: rgba(168,  85, 247, .42); }
+.ach-medal.is-excepcional { --g1: rgba(255, 140,  26, .62); --g2: rgba(255, 140,  26, .50); }
 
-.medal.locked { --num-ink: rgba(255, 255, 255, .42); --g1: rgba(150, 162, 178, .22); --g2: rgba(150, 162, 178, .10); }
-.medal.locked svg.art { filter: url(#imp) grayscale(1) contrast(.62) opacity(.62); }
-.medal.locked .light { opacity: .35; }
-.medal.locked .corner { opacity: .5; }
-.medal.qmark svg.art { display: none; }
-.medal.qmark { background: #2c3550; }
-.medal.qmark .canvas::after {
+.ach-medal.is-locked { --num-ink: rgba(255, 255, 255, .42); --g1: rgba(150, 162, 178, .22); --g2: rgba(150, 162, 178, .10); }
+.ach-medal.is-locked .ach-art { filter: url(#imp) grayscale(1) contrast(.62) opacity(.62); }
+.ach-medal.is-locked .ach-light { opacity: .35; }
+.ach-medal.is-locked .ach-corner { opacity: .5; }
+.ach-medal.is-hidden .ach-art { display: none; }
+.ach-medal.is-hidden { background: #2c3550; }
+.ach-medal.is-hidden .ach-canvas::after {
   content: "?";
   position: absolute; inset: 0;
   display: grid; place-items: center;
-  font-family: Chivo, sans-serif; font-weight: 900;
+  font-weight: 900;
   font-size: 2.2em; color: rgba(255, 255, 255, .32);
 }
 
 // ── Chip de rareza, para listados en texto ───────────────────────────────
-.rar {
+.ach-rarity {
   display: inline-flex; align-items: center; gap: 6px;
-  font-family: "JetBrains Mono", monospace; font-size: 11px;
-  letter-spacing: .04em; text-transform: uppercase; color: var(--ink-2); white-space: nowrap;
+  font-family: var(--ach-mono); font-size: 11px;
+  letter-spacing: .04em; text-transform: uppercase; color: var(--text-muted); white-space: nowrap;
 }
-.rar::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--rc); box-shadow: 0 0 6px var(--rc); }
-.rar[data-r="comun"]       { --rc: #96a2b2; }
-.rar[data-r="infrecuente"] { --rc: #3fbe72; }
-.rar[data-r="raro"]        { --rc: #a855f7; color: var(--ink); font-weight: 700; }
-.rar[data-r="excepcional"] { --rc: #ff8c1a; color: var(--ink); font-weight: 700; }
+.ach-rarity::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--rc); box-shadow: 0 0 6px var(--rc); }
+.ach-rarity[data-r="comun"]       { --rc: #96a2b2; }
+.ach-rarity[data-r="infrecuente"] { --rc: #3fbe72; }
+.ach-rarity[data-r="raro"]        { --rc: #a855f7; color: var(--text); font-weight: 700; }
+.ach-rarity[data-r="excepcional"] { --rc: #ff8c1a; color: var(--text); font-weight: 700; }
+
+// ── Coste de pintado · el fallback plano ─────────────────────────────────
+// El acabado es un filtro con DOS turbulencias, un desenfoque y un relieve iluminado, y se rasteriza POR
+// ELEMENTO: en la vitrina de una ficha son cinco, pero en la rejilla de /perfil/logros son 38 a la vez. Está
+// medido en escritorio y no en un móvil de gama baja (plan §8.5), así que la salida está puesta antes de
+// necesitarla: quien apaga los efectos —o pide menos movimiento— se lleva el cuadro plano, que se lee igual de
+// bien. Es el mismo interruptor que ya gobierna el destello del desbloqueo (§7.4), no uno nuevo.
+:root[data-effects='off'] .ach-medal .ach-art { filter: none; }
+:root[data-effects='off'] .ach-medal .ach-grain,
+:root[data-effects='off'] .ach-medal .ach-light { display: none; }
+:root[data-effects='off'] .ach-medal.is-locked .ach-art { filter: grayscale(1) contrast(.62) opacity(.62); }
+
+@media (prefers-reduced-motion: reduce) {
+  .ach-medal .ach-grain { opacity: .14; }
+}
