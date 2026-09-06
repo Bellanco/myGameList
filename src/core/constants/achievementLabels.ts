@@ -11,7 +11,11 @@ export const ACHIEVEMENTS_UI = {
   /** Rótulo del apartado del panel y de la pantalla. */
   title: 'Logros',
   // Dark Souls: la hoguera es donde se cuenta lo que uno lleva hecho.
-  subtitle: 'Lo que llevas hecho con tu biblioteca, contado en medallas.',
+  //
+  // «Con tus juegos» y no «con tu biblioteca»: lo que se cuenta aquí son partidas —lo terminado, lo abandonado,
+  // las horas—, y «biblioteca» nombra el continente en vez del contenido. Además es la palabra con la que la app
+  // llama a la pantalla de listas, así que en el panel se leía como si los logros fueran de esa pantalla.
+  subtitle: 'Lo que llevas hecho con tus juegos, contado en medallas.',
   titleOf: (owner: string) => `Logros de ${owner}`,
   back: 'Volver',
   backToPanel: 'Volver al panel',
