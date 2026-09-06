@@ -58,7 +58,13 @@ export interface AchievementMeasure {
   value: number;
   /** Sello (ms) de cada unidad contada. 0 = esa unidad no tiene fecha deducible. Sin ordenar. */
   stamps?: number[];
-  /** Instante (ms) por ESCALÓN de la escalera, empezando por el primero. 0 = sin fecha deducible. */
+  /**
+   * Instante (ms) por VALOR alcanzado: `at[n-1]` es cuándo la métrica llegó a `n`. 0 = sin fecha deducible.
+   *
+   * Por valor y no por escalón, porque es lo único que una racha sabe decir: sabe cuándo llegó a siete semanas,
+   * no cuándo cruzó «el tercer umbral» —eso depende de unos umbrales que la métrica no conoce—. El evaluador
+   * hace la conversión con el umbral de cada escalón.
+   */
   at?: number[];
 }
 

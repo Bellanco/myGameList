@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { ensureSyncConfigLoaded, getSyncConfig } from '../model/repository/gistRepository';
+import { localWeekKey } from '../core/utils/dateTime';
 import { createSocialGist, getSocialSyncConfig, readPublicSocialGistById, readSocialGist, remapSocialActorIds, saveSocialSyncConfig, type SocialSharedGame, deleteGist, ensureSecretSocialGist, socialGistHasContent, writeSocialGist } from '../model/repository/socialGistRepository';
 import { reconcileReviewActivity } from '../model/repository/socialActivityReconcile';
 import { invalidateProfileGames, loadForeignProfileGames } from '../model/repository/foreignProfileRepository';
@@ -1007,7 +1008,39 @@ export function useSocialViewModel(options?: {
    * TUS logros, evaluados AQUÍ y no en la vista: los necesitan tres cosas del hub —tu tarjeta del feed, tu lista
    * global y tu ficha— y evaluarlos en cada una sería recorrer la biblioteca tres veces por render.
    */
-  const ownAchievements = useAchievements({ games: options?.games || EMPTY_LIBRARY });
+  /**
+   * Los contadores de logro que NO salen de la biblioteca (§7.1 del plan).
+   *
+   * Se calculan aquí y no en la pantalla porque es el hub el único sitio donde existen los tres, y hasta ahora no
+   * se pasaba ninguno: `useAchievements({ games })` los dejaba a cero para siempre, así que «Modo cooperativo»,
+   * «Charla de taberna» y «Partida en la nube» eran inalcanzables **y seguían contando en el denominador**. La
+   * cifra de la cabecera estaba mal para todo el mundo, y con un escalón por umbral el error se multiplicaba.
+   *
+   * Salen de lo que el hub YA tiene en memoria: ninguna lectura nueva.
+   */
+  const achievementCounters = useMemo(() => {
+    const own = rawSocialDirectory.find((entry) => isOwnProfileIdentity(entry.id, authUser?.uid, ownProfileId));
+    // SEMANAS DISTINTAS con publicación, no publicaciones: si midiera volumen, el premio sería llenar el feed
+    // ajeno. Cuentan las reseñas publicadas y los posts, que son las dos cosas que aparecen en el feed.
+    const weeks = new Set<string>();
+    for (const entry of [...(own?.activity || []), ...(own?.posts || [])]) {
+      const stamp = Number(entry.createdAt) || 0;
+      if (stamp > 0) weeks.add(localWeekKey(stamp));
+    }
+    return {
+      friends: friendUidSet.size,
+      postWeeks: weeks.size,
+      // ⚑ PENDIENTE, y es la única pieza que falta: `profiles/{uid}.createdAt` no se mapea en la lectura del
+      // perfil propio, así que «De la vieja escuela» y «Otro año más» siguen a cero. El §11-F1 del plan ya lo
+      // anotaba como parte de esta fase. Se deja explícito en vez de improvisar una fecha: es el único logro
+      // verificable del catálogo justo porque esa marca la pone el servidor, y sembrarla desde el cliente lo
+      // convertiría en uno más.
+      profileCreatedAt: 0,
+      hasSync: Boolean(mainSyncConfig?.gistId),
+    };
+  }, [rawSocialDirectory, authUser?.uid, ownProfileId, friendUidSet, mainSyncConfig?.gistId]);
+
+  const ownAchievements = useAchievements({ games: options?.games || EMPTY_LIBRARY, ...achievementCounters });
   const ownAchievementStates = ENABLE_ACHIEVEMENTS ? ownAchievements.states : null;
 
   const ownAchievementsFeed = useMemo(() => {
@@ -1019,6 +1052,16 @@ export function useSocialViewModel(options?: {
       mirror: packAchievements(ownAchievementStates),
     };
   }, [ownAchievementStates, ownProfileId, socialDisplayName, authUser?.photoURL]);
+
+  /**
+   * TU espejo, el mismo que va al feed.
+   *
+   * Se expone porque el hub lo necesita para pintar TU ficha de logros: `detailMirror` lo busca en el directorio
+   * filtrado, y ese excluye tu entrada por identidad (es lo que impide que te salgas a ti mismo en la lista de
+   * gente). Sin esto, abrir tu propia tarjeta del feed llevaba a una pantalla que decía «todavía no hay nada que
+   * contar» con cien medallas detrás — y en desarrollo ni se veía, porque la siembra te fabricaba uno falso.
+   */
+  const ownAchievementMirror = ownAchievementsFeed?.mirror || '';
 
   const { feedItems, groupedFeedItems, hasMoreFeed, showMoreFeed } = useSocialFeed(
     socialDirectory,
@@ -2147,6 +2190,7 @@ export function useSocialViewModel(options?: {
     profileAchievementsView,
     profileGlobalsView,
     ownAchievements,
+    ownAchievementMirror,
     activeProfileReview,
     openProfileReviews,
     closeProfileReviews,

@@ -8,6 +8,8 @@ import {
   ProfileGlobalAchievements,
 } from '../../src/view/components/socialhub/ProfileAchievements';
 import { AchievementsScreen } from '../../src/view/components/stats/AchievementsScreen';
+import { AchievementsCard } from '../../src/view/components/stats/AchievementsCard';
+import { ACHIEVEMENTS } from '../../src/core/achievements/catalog';
 import { ACHIEVEMENTS_BY_ID } from '../../src/core/achievements/catalog';
 import { summarize } from '../../src/core/achievements/summary';
 import { packAchievements } from '../../src/core/achievements/pack';
@@ -245,6 +247,9 @@ describe('logros globales — el catálogo por lo común que es cada uno', () =>
     render(<ProfileGlobalAchievements mirror={espejo(['completados-10'])} directoryMirrors={[espejo(['completados-10'])]} owner="Fulano" self={false} onBack={() => {}} />);
     expect(screen.queryByRole('listitem')).not.toBeInTheDocument();
     expect(screen.getByText(/Todavía no hay gente suficiente/)).toBeInTheDocument();
+    // Y NADA de «añade juegos, ponles nota»: la lista está vacía porque falta muestra, no porque falte
+    // biblioteca. Ese consejo, debajo de una cifra que dice que tienes logros, se contradice con ella.
+    expect(screen.queryByText(/Todavía no hay nada que contar/)).not.toBeInTheDocument();
   });
 
   it('no pinta barras de progreso: aquí no se mide un camino, se mide una pertenencia', () => {
@@ -401,14 +406,136 @@ describe('/logros — un solo listado, conseguidos primero', () => {
   });
 
   it('un logro sin conseguir enseña su dibujo y qué escalón es', () => {
-    // El dibujo es lo ÚNICO que dice de qué va algo que aún no tienes, y el numeral dice por dónde va la
-    // escalera. Antes el numeral salía del NIVEL, así que un bloqueado no tenía ninguno; ahora sale del escalón,
-    // que es un dato del catálogo y no del progreso.
+    // El dibujo es lo ÚNICO que dice de qué va algo que aún no tienes, y el temple del filo dice por dónde va la
+    // escalera. Sale del ESCALÓN, que es un dato del catálogo, y no del progreso: por eso un bloqueado también
+    // lo tiene. Lo que no tiene es el metal —el filo va en peltre— para que no se lea como conseguido.
     render(<AchievementsScreen items={lista} summary={summarize([])} rarity={null} />);
     const fila = screen.getByText('Ya iba siendo hora I').closest('li') as HTMLElement;
     const medalla = within(fila).getByRole('img');
     expect(medalla.className).toContain('is-locked');
     expect(medalla.querySelector('.ach-art')).not.toBeNull();
-    expect(medalla.querySelector('.ach-num')?.textContent).toBe('I');
+    expect(medalla.className).toContain('is-temple-1');
+  });
+});
+
+describe('la zanahoria — se ve lo conseguido y un escalón más', () => {
+  it('de una escalera larga solo asoma el siguiente', () => {
+    const byId = new Map([
+      ['completados-10', { id: 'completados-10', level: 1, value: 30, next: null, unlockedAt: 0 }],
+      ['completados-25', { id: 'completados-25', level: 1, value: 30, next: null, unlockedAt: 0 }],
+      ['completados-50', { id: 'completados-50', level: 0, value: 30, next: 50, unlockedAt: 0 }],
+    ]);
+    const vistos = listForScreen(byId).filter((e) => e.def.ladder === 'completados').map((e) => e.def.id);
+    // Los dos conseguidos y el siguiente. Los ocho escalones de detrás no se pintan: enseñarle los once a quien
+    // lleva treinta juegos no le dice cuánto le falta, le dice que no va a llegar.
+    expect(vistos).toEqual(['completados-10', 'completados-25', 'completados-50']);
+  });
+
+  it('un conseguido NUNCA se esconde, aunque el anterior se haya caído', () => {
+    // La marca de agua puede sostener un escalón alto cuyo anterior ya no se cumple (una biblioteca que encoge).
+    // Cortando en el primer hueco, esa medalla desaparecía de la pantalla sin dejar de contar en la cabecera.
+    const byId = new Map([
+      ['completados-10', { id: 'completados-10', level: 0, value: 0, next: 10, unlockedAt: 0 }],
+      ['completados-25', { id: 'completados-25', level: 1, value: 0, next: null, unlockedAt: 0 }],
+    ]);
+    const vistos = listForScreen(byId).filter((e) => e.def.ladder === 'completados').map((e) => e.def.id);
+    expect(vistos).toContain('completados-25');
+    expect(vistos).toContain('completados-10');
+  });
+
+  it('lo retirado no es la zanahoria de nadie', () => {
+    const vistos = listForScreen(new Map()).map((e) => e.def.id);
+    expect(vistos.some((id) => id.startsWith('speedrun-'))).toBe(false);
+  });
+});
+
+describe('el apartado del panel', () => {
+  it('enseña las últimas medallas, no las ciento y pico', () => {
+    // Aquí no había tope: con 32 logros, «todas las conseguidas» eran dos filas. Desde que cada escalón es un
+    // logro son ciento y pico medallas —con su filtro cada una— dentro del titular de un panel que ya está lleno.
+    const earned = ACHIEVEMENTS.slice(0, 60).map((def) => ({
+      def,
+      state: { id: def.id, level: 1, value: def.step, next: null, unlockedAt: 0 },
+    }));
+    render(<AchievementsCard summary={summarize(earned.map((e) => e.state))} earned={earned} onOpen={() => {}} />);
+
+    expect(screen.getAllByRole('img')).toHaveLength(23);
+    // Y las que no caben no se pierden: la baldosa las cuenta y lleva al listado.
+    expect(screen.getByRole('button', { name: 'Ver todos tus logros' })).toHaveTextContent('+37');
+  });
+});
+
+/**
+ * DÓNDE VIVE EL BOTÓN DE «LOGROS GLOBALES»: en el hub social y en ningún otro sitio.
+ *
+ * Los globales se miden contra los espejos que descarga el directorio —datos de OTRAS personas—, así que la
+ * pantalla solo puede vivir donde esos datos están. El listado del panel (`/logros`) monta esta misma pantalla
+ * sin `onToggleGlobals`, y por eso el botón no aparece allí (lo fija `tests/component/StatsHub.test.tsx`).
+ */
+describe('el paso a los globales, y la vuelta', () => {
+  it('en el hub el listado ofrece el botón, y lleva a los globales', async () => {
+    const alternar = vi.fn();
+    render(
+      <ProfileAchievementsScreen
+        mirror={ESPEJO}
+        directoryMirrors={[]}
+        owner="Fulano"
+        onBack={() => {}}
+        onToggleGlobals={alternar}
+      />,
+    );
+
+    const boton = screen.getByRole('button', { name: 'Logros globales' });
+    expect(boton).toHaveAttribute('aria-pressed', 'false');
+    await userEvent.click(boton);
+    expect(alternar).toHaveBeenCalledTimes(1);
+  });
+
+  it('sin `onToggleGlobals` —el listado del panel— el botón NO existe', () => {
+    render(<ProfileAchievementsScreen mirror={ESPEJO} directoryMirrors={[]} owner="Fulano" onBack={() => {}} />);
+    expect(screen.queryByRole('button', { name: /Logros globales/ })).not.toBeInTheDocument();
+  });
+
+  it('desde los globales el botón NOMBRA SU DESTINO y devuelve al listado de esa persona', async () => {
+    const alternar = vi.fn();
+    render(
+      <ProfileGlobalAchievements
+        mirror={ESPEJO}
+        directoryMirrors={[]}
+        owner="Fulano"
+        self={false}
+        onBack={() => {}}
+        onToggleGlobals={alternar}
+        globalsBackLabel="Logros de Fulano"
+      />,
+    );
+
+    // Pulsado: se está EN los globales, y lo que ofrece es salir de ellos.
+    const boton = screen.getByRole('button', { name: 'Logros de Fulano' });
+    expect(boton).toHaveAttribute('aria-pressed', 'true');
+    await userEvent.click(boton);
+    expect(alternar).toHaveBeenCalledTimes(1);
+  });
+
+  it('y el «volver» de las dos vistas es el mismo: la ficha por la que se entró', () => {
+    // Las dos pantallas son sub-rutas del MISMO perfil, así que salen por donde se entró. Ni una de ellas puede
+    // devolver al panel de estadísticas: allí no se llega desde aquí.
+    const { unmount } = render(
+      <ProfileAchievementsScreen mirror={ESPEJO} directoryMirrors={[]} owner="Fulano" onBack={() => {}} onToggleGlobals={() => {}} />,
+    );
+    expect(screen.getByRole('button', { name: /Volver al perfil/ })).toBeInTheDocument();
+    unmount();
+
+    render(
+      <ProfileGlobalAchievements
+        mirror={ESPEJO}
+        directoryMirrors={[]}
+        owner="Fulano"
+        self={false}
+        onBack={() => {}}
+        onToggleGlobals={() => {}}
+      />,
+    );
+    expect(screen.getByRole('button', { name: /Volver al perfil/ })).toBeInTheDocument();
   });
 });

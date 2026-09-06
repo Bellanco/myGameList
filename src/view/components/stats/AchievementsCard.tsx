@@ -21,6 +21,9 @@ interface AchievementsCardProps {
  * Y lleva poco a propósito —las dos cifras, la barra y las últimas medallas— porque el panel ya está lleno y los
  * logros no son su tema: lo que hay aquí es el titular, y el detalle está en `/logros`.
  */
+/** Cuántas medallas caben sin que el apartado se coma el panel: dos filas holgadas más la baldosa del final. */
+const CARD_MEDALS = 23;
+
 export const AchievementsCard = memo(function AchievementsCard({ summary, earned, onOpen }: AchievementsCardProps) {
   const items: StripItem[] = earned.map(({ def, state }) => ({
     id: def.id,
@@ -36,10 +39,18 @@ export const AchievementsCard = memo(function AchievementsCard({ summary, earned
 
       <AchievementFigures summary={summary} />
 
-      {/* TODAS, sin tope: la rejilla envuelve y se reparte el ancho sola. Y al final, la baldosa que lleva al
-          listado: del tamaño de una medalla y en la misma fila, para que el acceso no dependa de un enlace
-          pequeño perdido debajo. */}
-      <AchievementStrip items={items} size="md" onOpen={onOpen} onSeeAll={onOpen} seeAllLabel={ACHIEVEMENTS_UI.cardAction} />
+      {/* LAS ÚLTIMAS, NO TODAS. Aquí no había tope —con 32 logros la rejilla envolvía en dos filas y se
+          repartía el ancho sola—, pero desde que cada escalón es un logro, «todas las conseguidas» son ciento y
+          pico medallas con su filtro cada una, y este apartado es el titular de un panel que ya está lleno. El
+          resto no se pierde: la baldosa del final las cuenta y lleva al listado, que es donde se miran. */}
+      <AchievementStrip
+        items={items}
+        limit={CARD_MEDALS}
+        size="md"
+        onOpen={onOpen}
+        onSeeAll={onOpen}
+        seeAllLabel={ACHIEVEMENTS_UI.cardAction}
+      />
     </div>
   );
 });

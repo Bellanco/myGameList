@@ -124,3 +124,22 @@ export function romanLevel(level: number, maxLevel: number): string {
   if (level < 1 || maxLevel <= 1) return '';
   return ROMAN[Math.min(level, ROMAN.length - 1)] || String(level);
 }
+
+/**
+ * TEMPLE: la aleación del filo dice a qué altura de su escalera está el logro, en tres tramos.
+ *
+ * Es la señal de grado que sustituye al numeral, y se eligió por lo que sobrevive al tamaño: el filo es el borde
+ * del disco entero, así que se lee a 28 px, mientras que un romano de 7 px no. Que sean tres tramos y no once no
+ * es una pérdida: la cifra exacta ya la dicen la píldora y el nombre del logro; esto es «vas empezando / vas por
+ * la mitad / estás arriba», de un vistazo y sin leer.
+ *
+ * OJO CON LOS METALES DEL RANGO (`_tiers.scss`): son otra escala y viven en la misma tarjeta del hub social. Por
+ * eso el temple se queda en el FILO —un hilo de un par de píxeles— y nunca tiñe el cuerpo de la medalla.
+ */
+export function temperClass(grade: number, grades: number): string {
+  if (grades <= 1 || grade < 1) return '';
+  const frac = grade / grades;
+  if (frac <= 1 / 3) return 'is-temple-1';
+  if (frac <= 0.7) return 'is-temple-2';
+  return 'is-temple-3';
+}

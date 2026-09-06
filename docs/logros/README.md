@@ -6,8 +6,9 @@ web que ya no es necesario: todo lo que había allí vive aquí.
 | Fichero | Qué es | Destino |
 |---|---|---|
 | [`catalogo.json`](catalogo.json) | Las 50 escaleras y sus 251 escalones publicables, con umbrales, rarezas y su valor real medido | `core/achievements/catalog.ts` |
-| [`achievement-sprite.svg`](achievement-sprite.svg) | Los 38 cuadros originales y el filtro `#imp` que los pinta | `view/components/AchievementSprite.tsx` |
-| [`achievements.scss`](achievements.scss) | Forma de la medalla, aura de rareza y triángulo del grado | `styles/achievements.scss` |
+| [`achievement-sprite.svg`](achievement-sprite.svg) | ⚑ **Histórico.** Los 38 cuadros originales y el filtro `#imp`. Ya no es la fuente: el sprite lo hacen los trazos de Lucide | — |
+| [`achievements.scss`](achievements.scss) | ⚑ **Histórico.** Forma cuadrada, aura y triángulo del grado | — |
+| [`receta-medalla.md`](receta-medalla.md) | **Cómo se hace un logro nuevo**, hoy: el disco, el icono, la escalera y la lista de comprobación | — |
 
 El plan y el porqué de cada decisión están en [`../plan-logros.md`](../plan-logros.md).
 
@@ -91,15 +92,30 @@ existe (`IconSprite`, 48 símbolos) pesa 26 kB sin comprimir y el presupuesto so
 **La hoja de estilos es propia.** Ni colgada de `stats.scss` ni de `social.scss`: las medallas se pintan en dos
 chunks perezosos distintos y colgarlas de uno deja la otra pantalla sin estilos **sin que salte ningún error**.
 
+## ⚑ Revisión: el cuadro se va, entra el disco
+
+La medalla dejó de ser un cuadro cuadrado con un triángulo y pasó a ser **un disco en penumbra** con el dibujo en
+oro. Cambian tres cosas y cada una por una razón medida:
+
+1. **La forma**: círculo. El filo continuo es lo que permite que el grado se lea a 28 px.
+2. **El dibujo**: trazos de **Lucide** pintados a tres pasadas, en vez de 50 escenas dibujadas a mano. El sprite
+   baja de ~40 kB a ~16 kB y un logro nuevo cuesta pegar un icono. El filtro `#imp` desaparece.
+3. **El grado**: **temple del filo** (cobre / plata / oro por tramos) en vez de numeral romano, que no sobrevivía
+   a la tira pequeña.
+
+Los dos activos de arriba marcados como *históricos* describen el diseño anterior y se dejan como registro de lo
+que se probó. **La referencia viva es [`receta-medalla.md`](receta-medalla.md)**, que es también el manual para
+añadir logros nuevos sin volver a decidir nada.
+
 ## La medalla, en corto
 
-La imagen va **a sangre**, sin marco, y solo lleva dos señales encima, cada una en su canal:
+Sólo lleva dos señales encima, cada una en su canal:
 
 - **Aura exterior → la rareza.** Escala de loot de RPG: gris el común, verde el infrecuente, morado el raro,
   naranja de legendario el excepcional. Se salta el azul de la escala clásica porque el azul es el acento de la
   app y aparece por todas partes.
-- **Triángulo en el ángulo inferior derecho → el grado**, de I a IV. Se funde con la imagen por la hipotenusa
-  para no leerse como una pegatina.
+- **Temple del filo → el tramo de la escalera**: cobre hasta un tercio, plata hasta 0,7, oro por encima. Entre el
+  aura y el filo va un canto negro, porque sin él las dos señales se leen como una sola.
 
 **Todas miden exactamente lo mismo**, tenga el logro el grado que tenga y esté conseguido, bloqueado u oculto.
 

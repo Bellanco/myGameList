@@ -1,5 +1,5 @@
 import { memo, type CSSProperties } from 'react';
-import { ACHIEVEMENTS_UI, ACHIEVEMENT_RARITY_LABELS, romanLevel } from '../../../core/constants/achievementLabels';
+import { ACHIEVEMENTS_UI, ACHIEVEMENT_RARITY_LABELS, temperClass } from '../../../core/constants/achievementLabels';
 import type { AchievementDef } from '../../../core/achievements/types';
 // LA HOJA SE IMPORTA AQUÍ, y es la decisión que evita un fallo mudo. Las medallas se pintan en DOS chunks
 // perezosos distintos —el panel con `/logros` y la ficha del hub social—, así que colgar sus estilos de
@@ -25,18 +25,30 @@ interface AchievementMedalProps {
 }
 
 /**
- * La medalla. Cuadrada de esquinas redondeadas, la imagen A SANGRE y **sin marco**.
+ * La medalla. UN DISCO EN PENUMBRA: fondo pardo casi negro con un foco cálido entrando por arriba a la
+ * izquierda, y el dibujo en oro recogiendo esa luz. La referencia es el tenebrismo —Caravaggio, Ribera—, y no es
+ * un capricho: un disco oscuro con una sola cosa iluminada dentro es lo que aguanta los 28 px de la tira de
+ * novedades sin volverse una mancha.
  *
- * DOS SEÑALES Y CADA UNA EN SU CANAL, que es lo que impide que se pisen: el **aura exterior** dice la RAREZA
- * —escala de loot de RPG, saltándose el azul porque el azul es el acento de la app— y el **triángulo del ángulo
- * inferior derecho** dice el GRADO. Lo prohibido era meter las dos variables en el mismo elemento, no darle color
- * a la segunda.
+ * EL DIBUJO NO SE DIBUJA. Sale del sprite (`AchievementSprite`), que a su vez copia los trazos de Lucide, y aquí
+ * se pinta TRES VECES sobre el mismo símbolo: una en negro desplazada hacia abajo —la sombra que proyecta—, otra
+ * con el degradado de oro y una tercera, finísima y clara, desplazada al contrario. Esas tres pasadas son todo el
+ * relieve; no hay filtro, no hay imagen y no hay coste por icono.
+ *
+ * DOS SEÑALES Y CADA UNA EN SU CANAL, que es lo que impide que se pisen:
+ *   · **aura exterior** → la RAREZA (escala de loot de RPG, saltándose el azul porque el azul es el acento)
+ *   · **temple del filo** → el TRAMO de la escalera: cobre abajo, plata en medio, oro arriba
+ *
+ * Y NO HAY UNA TERCERA CON EL UMBRAL. Se probó una píldora con «×100» dentro del disco y no cabe en esta app: la
+ * medalla mide 48 px en las dos vistas —y eso está decidido en `AchievementRow`, porque a 72 px la lista se lee
+ * como una pila de fichas—, así que su texto se quedaba por debajo de los 8 px. El umbral no se pierde: cada fila
+ * del listado ya lo dice dos veces, en el nombre («Créditos finales V») y en la condición («…terminado: 100»).
+ *
+ * El temple es también la razón por la que se retiró el numeral romano que había antes: el romano no sobrevivía
+ * a la tira de 28 px y el filo del disco sí.
  *
  * TODAS MIDEN EXACTAMENTE LO MISMO, tenga el logro el grado que tenga y esté conseguido, bloqueado u oculto: una
- * rejilla de medallas de distinto tamaño no cuadricula. Lo único que cambia entre un grado y otro es el numeral.
- *
- * Y NADA DE LOS CUATRO METALES: bronce, plata, oro y mithril son el rango de perfil (`_tiers.scss`), y en la
- * ficha social la misma tarjeta lleva la muesca de rango y la tira de medallas a dos centímetros.
+ * rejilla de medallas de distinto tamaño no cuadricula.
  */
 export const AchievementMedal = memo(function AchievementMedal({
   def,
@@ -47,16 +59,17 @@ export const AchievementMedal = memo(function AchievementMedal({
 }: AchievementMedalProps) {
   const side = SIZES[size];
   const locked = level < 1;
-  // EL TRIÁNGULO DICE QUÉ ESCALÓN ES, no en qué nivel está: el nivel de un escalón solo puede ser 0 o 1, así
-  // que dibujarlo desde el estado dejaría todas las medallas sin numeral.
+
+  // EL TEMPLE DICE QUÉ ESCALÓN ES, no en qué nivel está: el nivel de un escalón solo puede ser 0 o 1, así que
+  // sacarlo del estado dejaría todas las medallas con el mismo filo.
   //
-  // Y EL OCULTO NO LO LLEVA, por lo mismo que no lleva su aura (§6.7): el «III» de un cuadro tapado dice que hay
-  // una escalera de al menos tres detrás, que es media pista.
-  const numeral = masked ? '' : romanLevel(def.grade, def.grades);
+  // Y EL OCULTO NO LO LLEVA, por lo mismo que no lleva su aura (§6.7): un filo de oro sobre un «?» dice que hay
+  // una escalera larga detrás y que estás al final de ella, que es media pista.
+  const temper = masked ? '' : temperClass(def.grade, def.grades);
 
   // El nombre accesible lo lleva la MEDALLA, no un `title`: el `title` no sale con teclado, no sale en táctil y
   // los lectores de pantalla lo tratan de forma desigual. Sin esto, la tira solo-imagen de la ficha social sería
-  // ilegible para quien no ve el cuadro.
+  // ilegible para quien no ve el disco.
   const label = masked
     ? ACHIEVEMENTS_UI.medalHiddenAria
     : locked
@@ -69,9 +82,16 @@ export const AchievementMedal = memo(function AchievementMedal({
     // seis excepcionales en el catálogo, un halo naranja sobre un «?» reduce la adivinanza a seis casillas. La
     // regla del §6.7 es «nunca una pista», y esto lo era. Al conseguirlo aparece el aura como en cualquier otro.
     masked ? 'is-comun' : `is-${def.rarity}`,
+    // EL BLOQUEADO SÍ LLEVA TEMPLE, y el oculto no. No es una excepción caprichosa: de un logro bloqueado se
+    // enseña a propósito de qué va y por dónde va su escalera —es lo que hace útil la mitad de abajo del
+    // listado—, mientras que del oculto no se enseña nada. Lo que cambia en el bloqueado es el tono: el filo se
+    // queda en peltre, con la misma gradación pero sin metal, para que no se lea como conseguido.
+    masked ? '' : temper,
     locked ? 'is-locked' : '',
     masked ? 'is-hidden' : '',
   ].filter(Boolean).join(' ');
+
+  const icon = `#ach-${def.icon}`;
 
   return (
     <span
@@ -83,22 +103,15 @@ export const AchievementMedal = memo(function AchievementMedal({
     >
       <span className="ach-canvas" aria-hidden="true">
         {masked ? null : (
-          <svg className="ach-art" viewBox="0 0 32 32" filter="url(#imp)">
-            <use href={`#ach-${def.icon}`} />
+          <svg className="ach-art" viewBox="0 0 24 24">
+            <g className="ach-sh"><use href={icon} /></g>
+            <g className="ach-fg"><use href={icon} /></g>
+            <g className="ach-hl"><use href={icon} /></g>
           </svg>
         )}
-        <span className="ach-grain" />
         <span className="ach-light" />
+        <span className="ach-grain" />
       </span>
-      {/* El grado vive ENTERO en el triángulo: la imagen no se toca y el tamaño tampoco. Se descartaron teñir un
-          marco (choca con el aura, que es la señal que sí tiene que verse de lejos) y engordarlo (cambia el
-          tamaño del bulto). Decorativo: lo que dice el nivel a un lector de pantalla es el `aria-label`. */}
-      {numeral ? (
-        <>
-          <span className="ach-corner" aria-hidden="true" />
-          <span className="ach-num" aria-hidden="true">{numeral}</span>
-        </>
-      ) : null}
     </span>
   );
 });

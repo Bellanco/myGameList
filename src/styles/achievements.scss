@@ -1,4 +1,4 @@
-// Medalla de logro · forma, filtro y escalas (docs/plan-logros.md §8.5)
+// Medalla de logro · forma, señales y escalas (docs/plan-logros.md §8.5)
 //
 // DESTINO: src/styles/achievements.scss — HOJA PROPIA, importada desde el
 // componente de la medalla y NUNCA colgada de stats.scss ni de social.scss.
@@ -7,117 +7,107 @@
 // sin estilos y SIN QUE SALTE NINGÚN ERROR. Es el fallo mudo del §12.
 //
 // DOS SEÑALES, DOS CANALES:
-//   · aura exterior  → la RAREZA (escala de loot de RPG)
-//   · triángulo      → el GRADO, de I a IV
-// La imagen va a sangre: no hay marco.
+//   · aura exterior   → la RAREZA (escala de loot de RPG)
+//   · temple del filo → el TRAMO de la escalera: cobre, plata, oro
+// El disco es redondo y el dibujo va centrado, sin tocar ninguna de las dos. El
+// umbral no se pinta: no cabe a 48 px y la fila del listado ya lo escribe.
 //
-// DEPENDE de los tokens --sc-* de abajo. No depende de --accent: el grado dejó
-// de teñir nada a propósito (ver §8.5, «lo que se probó y se descartó»).
-
-// ⚑ REVISIÓN 6-sep-2026 — tres cosas que el activo daba por hechas y no lo eran:
-//   1. Las clases eran genéricas (`.medal`, `.num`, `.light`, `.canvas`, `.grain`, `.rar`) en una hoja GLOBAL.
-//      El proyecto nombra con prefijo (`hub-detail-body`, `hub-feed-card`…) justo para que dos chunks no se
-//      pisen. Ahora todo va bajo `ach-`, el mismo prefijo que los símbolos del sprite.
-//   2. Usaba `var(--ink)` y `var(--ink-2)`, que NO EXISTEN en `_base.scss`. Son `--text` y `--text-muted`.
-//   3. Pedía "JetBrains Mono" y "Chivo", que no son fuentes de esta app (es 'DM Sans' más las de cada tema) y
-//      caían al sistema en silencio. El numeral usa ahora la pila mono del sistema con `tabular-nums`, que es
-//      lo único que de verdad necesita, y sin pedir una fuente nueva a la red desde un chunk perezoso.
+// DEPENDE de los tokens --ach-* de abajo y del degradado #ach-lux, que vive en
+// el sprite porque un `stroke` sólo referencia gradientes del documento.
+// ⚑ REVISIÓN 6-sep-2026 — clases con prefijo `ach-` (una hoja global con `.medal` o `.num` se pisa con otro
+//   chunk), tokens `--text`/`--text-muted` (no `--ink`, que no existe en `_base.scss`) y pila mono del sistema
+//   con `tabular-nums` en vez de pedirle a la red una fuente nueva desde un chunk perezoso.
 //
-// ── Paleta de los cuadros ────────────────────────────────────────────────
-// Mundo propio, separado del cromo de la app: índigo y oro de La noche
-// estrellada. La sombra es azul, nunca negra.
+// ⚑ REVISIÓN — EL CUADRO SE VA, ENTRA EL DISCO. Lo que había era una escena plana de cinco tonos pasada por un
+//   filtro de óleo (`#imp`: dos turbulencias, desenfoque y relieve iluminado) dentro de un cuadrado, con el
+//   grado en un triángulo. Se cambian tres cosas y cada una por una razón medida:
+//     1. La forma: disco. El filo continuo es lo que permite que el grado se lea a 28 px.
+//     2. El dibujo: trazos de Lucide (ver `AchievementSprite`) pintados a tres pasadas, en vez de 50 escenas
+//        dibujadas a mano. El sprite baja de ~40 kB a ~16 kB y un logro nuevo cuesta pegar un icono.
+//     3. El grado: temple del filo en vez de numeral romano. El romano no sobrevivía a la tira; el filo sí.
+//
+// ── Paleta de la penumbra ────────────────────────────────────────────────
+// Mundo propio, y esta vez EL MISMO EN LOS DOS TEMAS. Una medalla es un objeto, no cromo de la app: si la
+// penumbra se aclarase en tema claro dejaría de ser penumbra, que es justo lo que la hace legible. Los tres
+// pardos son el fondo —foco arriba a la izquierda, sombra abajo a la derecha— y el oro vive en el degradado
+// `#ach-lux` del sprite, porque un `stroke` sólo puede referenciar un gradiente del documento.
 :root {
-  --sc-sky: #9dbcd9;
-  --sc-far: #45719f;
-  --sc-near: #1b2f52;
-  --sc-hi: #f0c14b;
-  --sc-lt: #f2ecda;
-  // Pila del sistema: el numeral solo necesita cifras de ancho fijo, no una fuente propia.
+  --ach-gnd-1: #33240f;
+  --ach-gnd-2: #170f08;
+  --ach-gnd-3: #090705;
+  --ach-edge: rgba(206, 158, 74, .32);
+  // Pila del sistema: el umbral solo necesita cifras de ancho fijo, no una fuente propia.
   --ach-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme='light']) {
-    --sc-sky: #1d3a63;
-    --sc-far: #3d72ab;
-    --sc-near: #0c1a33;
-    --sc-hi: #f2c65c;
-    --sc-lt: #e7edf6;
-  }
-}
-
-:root[data-theme='dark'] {
-  --sc-sky: #1d3a63;
-  --sc-far: #3d72ab;
-  --sc-near: #0c1a33;
-  --sc-hi: #f2c65c;
-  --sc-lt: #e7edf6;
-}
-
 // ── La medalla ───────────────────────────────────────────────────────────
-/* ── medalla · la imagen A SANGRE, sin marco ───────────────────────────
-   Nada de moldura: el cuadro ocupa el cuadrado entero. Solo dos señales
-   encima, y cada una en su canal:
-     · AURA exterior → la rareza (escala de loot de RPG)
-     · TRIÁNGULO en la esquina inferior derecha → el grado, de I a IV
-   El triángulo es lo único que se dibuja sobre la imagen, y se funde con
-   ella por la hipotenusa para no leerse como una pegatina. ────────────── */
+/* UN DISCO EN PENUMBRA. Redondo y no cuadrado porque el disco es lo que dice «medalla» sin decir nada más, y
+   porque el filo —que es donde vive el temple— necesita ser una línea continua para leerse a 28 px.
+
+   TRES SEÑALES, TRES CANALES:
+     · AURA exterior  → la rareza (escala de loot de RPG)
+     · TEMPLE del filo → el tramo de la escalera: cobre, plata, oro
+   El dibujo va en el centro y no lo toca ninguna de las dos. ───────────── */
 .ach-medal {
-  --num-ink: rgba(255, 255, 255, .85);
+  --edge: var(--ach-edge);
   --g1: transparent; --g2: transparent;
   position: relative;
   display: block;
   width: var(--sz); height: var(--sz);
-  font-size: calc(var(--sz) * .17);
-  border-radius: 4%;
-  overflow: hidden;
+  border-radius: 50%;
   flex: none;
-  background: var(--sc-near);
+  background: radial-gradient(72% 66% at 27% 17%, var(--ach-gnd-1) 0%, var(--ach-gnd-2) 46%, var(--ach-gnd-3) 78%);
+  // EL ORDEN DE LOS ANILLOS ES LA MITAD DEL DISEÑO. Aura y temple son dos señales distintas y las dos viven en
+  // el borde, así que sin un canto negro entre medias se leen como una sola: a 48 px el filo desaparecía bajo el
+  // anillo de rareza. De fuera adentro: halo difuso, anillo de rareza, canto negro, filo del temple, cuerpo.
   box-shadow:
-    inset 0 0 0 1px rgba(8, 14, 28, .45),
+    inset 0 0 0 max(1px, calc(var(--sz) * .022)) rgba(4, 3, 2, .92),
+    inset 0 0 0 max(2px, calc(var(--sz) * .058)) var(--edge),
+    inset 0 calc(var(--sz) * -.05) calc(var(--sz) * .1) rgba(0, 0, 0, .8),
+    inset 0 calc(var(--sz) * .03) calc(var(--sz) * .07) rgba(255, 214, 140, .1),
+    0 1px 2px rgba(6, 5, 4, .45),
     0 0 0 max(2px, calc(var(--sz) * .022)) var(--g1),
     0 0 calc(var(--sz) * .16) calc(var(--sz) * .02) var(--g2);
 }
-.ach-medal .ach-canvas { position: absolute; inset: 0; overflow: hidden; }
-.ach-medal .ach-art { width: 100%; height: 100%; display: block; }
+.ach-medal .ach-canvas { position: absolute; inset: 0; border-radius: 50%; overflow: hidden; }
+
+/* EL DIBUJO · tres pasadas del mismo trazo, que es todo el relieve que hay.
+   Las unidades de `transform` y `stroke-width` son del viewBox 24, no píxeles de pantalla: así el relieve
+   encoge con el disco en vez de comerse el dibujo en la tira de 28 px. */
+.ach-medal .ach-art {
+  position: absolute; left: 50%; top: 45%;
+  width: 54%; height: 54%;
+  transform: translate(-50%, -50%);
+  display: block;
+  filter: drop-shadow(0 0 calc(var(--sz) * .05) rgba(232, 173, 61, .3));
+}
+.ach-medal .ach-art g { fill: none; stroke-linecap: round; stroke-linejoin: round; }
+.ach-medal .ach-art .ach-sh { stroke: rgba(0, 0, 0, .85); stroke-width: 2.6; transform: translate(.5px, .7px); }
+.ach-medal .ach-art .ach-fg { stroke: url(#ach-lux); stroke-width: 1.9; }
+.ach-medal .ach-art .ach-hl { stroke: rgba(255, 235, 196, .55); stroke-width: .75; transform: translate(-.3px, -.4px); }
 
 /* grano de lienzo */
 .ach-medal .ach-grain {
-  position: absolute; inset: 0; pointer-events: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E");
-  background-size: 26%;
+  position: absolute; inset: 0; pointer-events: none; border-radius: 50%;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 30%;
   mix-blend-mode: overlay;
-  opacity: .26;
+  opacity: .2;
 }
-/* luz: cálida arriba a la izquierda, índigo abajo */
+/* el foco: cálido arriba a la izquierda, sombra cerrada abajo a la derecha */
 .ach-medal .ach-light {
-  position: absolute; inset: 0; pointer-events: none;
+  position: absolute; inset: 0; pointer-events: none; border-radius: 50%;
   background:
-    radial-gradient(118% 98% at 18% 8%, rgba(255, 232, 178, .75), rgba(255, 232, 178, 0) 60%),
-    linear-gradient(152deg, rgba(255, 255, 255, 0) 38%, rgba(18, 32, 66, .55) 100%);
-  mix-blend-mode: soft-light;
+    radial-gradient(64% 58% at 26% 12%, rgba(255, 226, 164, .34), rgba(255, 226, 164, 0) 62%),
+    radial-gradient(112% 108% at 76% 96%, rgba(3, 2, 1, .8), rgba(3, 2, 1, .2) 54%, rgba(3, 2, 1, 0) 76%);
 }
 
-/* EL TRIÁNGULO · el grado, y nada más */
-.ach-medal .ach-corner {
-  position: absolute; right: 0; bottom: 0;
-  width: 48%; height: 48%;
-  clip-path: polygon(100% 0, 100% 100%, 0 100%);
-  background: linear-gradient(135deg,
-    rgba(6, 12, 26, 0) 4%,
-    rgba(6, 12, 26, .5) 34%,
-    rgba(6, 12, 26, .84) 72%,
-    rgba(6, 12, 26, .92) 100%);
-  pointer-events: none;
-}
-.ach-medal .ach-num {
-  position: absolute;
-  right: 6.5%; bottom: 4%;
-  font-family: var(--ach-mono); font-weight: 700; font-variant-numeric: tabular-nums;
-  font-size: 1em; line-height: 1; letter-spacing: .14em;
-  color: var(--num-ink);
-  text-shadow: 0 1px 2px rgba(0, 0, 0, .65);
-}
+/* EL TEMPLE · la aleación del filo, y nada más.
+   Sólo el filo: los cuatro metales del rango de perfil (`_tiers.scss`) viven en la misma tarjeta del hub, y
+   teñir el cuerpo del disco pondría dos escalas de metal a dos centímetros la una de la otra. */
+.ach-medal.is-temple-1 { --edge: rgba(184, 118, 54, .72); }
+.ach-medal.is-temple-2 { --edge: rgba(202, 210, 222, .62); }
+.ach-medal.is-temple-3 { --edge: rgba(244, 200, 96, .82); }
 
 /* RAREZA · el aura. La escala de loot de cualquier RPG, saltándose el azul
    porque el azul es el acento de la app y sale por todas partes. */
@@ -126,22 +116,27 @@
 .ach-medal.is-raro        { --g1: rgba(168,  85, 247, .55); --g2: rgba(168,  85, 247, .42); }
 .ach-medal.is-excepcional { --g1: rgba(255, 140,  26, .62); --g2: rgba(255, 140,  26, .50); }
 
-.ach-medal.is-locked { --num-ink: rgba(255, 255, 255, .42); --g1: rgba(150, 162, 178, .22); --g2: rgba(150, 162, 178, .10); }
-// EL BLOQUEADO SE VE. Sin grado —no hay nivel que enseñar, así que no hay triángulo ni numeral— pero con su
-// dibujo legible: es lo ÚNICO que dice de qué va un logro que aún no tienes, y a `opacity(.62)` se perdía justo
-// cuando más falta hacía. Desaturado sigue, para que la mitad conseguida destaque; pero desaturado no es borroso.
-.ach-medal.is-locked .ach-art { filter: url(#imp) grayscale(.85) contrast(.9) opacity(.8); }
-.ach-medal.is-locked .ach-light { opacity: .5; }
-.ach-medal.is-locked .ach-corner { opacity: .5; }
+// EL BLOQUEADO SE VE. Sin temple —no hay escalón que enseñar— y sin oro, pero con su dibujo legible: es lo ÚNICO
+// que dice de qué va un logro que aún no tienes. Se apaga el oro y se quita la chispa, que es lo que lo hacía
+// parecer conseguido; el trazo se queda en gris de peltre sobre la misma penumbra.
+.ach-medal.is-locked { --edge: rgba(150, 162, 178, .2); --g1: rgba(150, 162, 178, .22); --g2: rgba(150, 162, 178, .10); }
+// El bloqueado conserva la GRADACIÓN del temple y pierde el METAL: mismo escalonado, en peltre.
+.ach-medal.is-locked.is-temple-1 { --edge: rgba(150, 162, 178, .16); }
+.ach-medal.is-locked.is-temple-2 { --edge: rgba(150, 162, 178, .28); }
+.ach-medal.is-locked.is-temple-3 { --edge: rgba(150, 162, 178, .42); }
+.ach-medal.is-locked .ach-art { filter: none; }
+.ach-medal.is-locked .ach-art .ach-fg { stroke: rgba(186, 190, 198, .62); }
+.ach-medal.is-locked .ach-art .ach-hl { display: none; }
+.ach-medal.is-locked .ach-light { opacity: .55; }
 .ach-medal.is-hidden .ach-art { display: none; }
-.ach-medal.is-hidden { background: #2c3550; }
 .ach-medal.is-hidden .ach-canvas::after {
   content: "?";
   position: absolute; inset: 0;
   display: grid; place-items: center;
   font-weight: 900;
-  font-size: 2.2em; color: rgba(255, 255, 255, .32);
+  font-size: calc(var(--sz) * .38); color: rgba(238, 206, 150, .3);
 }
+
 
 // ── Chip de rareza, para listados en texto ───────────────────────────────
 // ── Chip de rareza · el punto lleva el color, el texto no ────────────────
@@ -169,19 +164,21 @@
 .ach-rarity[data-r="excepcional"], .ach-row-rarity[data-r="excepcional"] { --rc: #ff8c1a; color: var(--text); font-weight: 700; }
 
 // ── Coste de pintado · el fallback plano ─────────────────────────────────
-// El acabado es un filtro con DOS turbulencias, un desenfoque y un relieve iluminado, y se rasteriza POR
-// ELEMENTO: en la vitrina de una ficha son cinco, pero en la rejilla de /perfil/logros son 38 a la vez. Está
-// medido en escritorio y no en un móvil de gama baja (plan §8.5), así que la salida está puesta antes de
-// necesitarla: quien apaga los efectos —o pide menos movimiento— se lleva el cuadro plano, que se lee igual de
-// bien. Es el mismo interruptor que ya gobierna el destello del desbloqueo (§7.4), no uno nuevo.
+// El acabado ya no es un filtro rasterizado por elemento —eso se fue con los cuadros al óleo—, pero sigue
+// habiendo tres pasadas del trazo, un grano y un `drop-shadow` por medalla, y en la rejilla de /perfil/logros
+// son más de cien a la vez. Quien apaga los efectos se lleva el disco liso: una sola pasada de oro sobre la
+// penumbra, que se lee igual de bien. Es el mismo interruptor que ya gobierna el destello del desbloqueo (§7.4),
+// no uno nuevo.
 :root[data-effects='off'] .ach-medal .ach-art { filter: none; }
+:root[data-effects='off'] .ach-medal .ach-art .ach-sh,
+:root[data-effects='off'] .ach-medal .ach-art .ach-hl { display: none; }
 :root[data-effects='off'] .ach-medal .ach-grain,
 :root[data-effects='off'] .ach-medal .ach-light { display: none; }
-:root[data-effects='off'] .ach-medal.is-locked .ach-art { filter: grayscale(1) contrast(.62) opacity(.62); }
 
 @media (prefers-reduced-motion: reduce) {
-  .ach-medal .ach-grain { opacity: .14; }
+  .ach-medal .ach-grain { opacity: .12; }
 }
+
 
 // ── LA TIRA · solo imagen, el nombre al pasar por encima ─────────────────
 // El rótulo NO es un `title` de HTML: ese no sale con teclado, no sale en táctil y los lectores de pantalla lo
@@ -257,6 +254,13 @@
   grid-template-columns: auto minmax(0, 1fr);
   grid-template-areas: "medal body" ". meta";
   align-items: start;
+  // LA VISTA GLOBAL PINTA EL CATÁLOGO ENTERO: 251 filas, cada una con su medalla, y cada medalla con un filtro
+  // de turbulencia y relieve. Con 32 logros eso no se notaba; con 251 son 251 filtros compuestos en el primer
+  // pintado. `content-visibility` deja que el navegador se salte el layout y el pintado de lo que está fuera de
+  // la ventana —el contenido sigue en el DOM, accesible y localizable con la búsqueda del navegador— y el
+  // tamaño reservado evita que la barra de scroll dé saltos al acercarse.
+  content-visibility: auto;
+  contain-intrinsic-size: auto 74px;
 }
 @media (min-width: 700px) {
   .ach-row {

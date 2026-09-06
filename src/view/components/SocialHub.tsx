@@ -112,6 +112,7 @@ const SocialHubInner = memo(function SocialHubInner({
     profileAchievementsView,
     profileGlobalsView,
     ownAchievements,
+    ownAchievementMirror,
     activeProfileReview,
     openProfileReviews,
     closeProfileReviews,
@@ -280,10 +281,15 @@ const SocialHubInner = memo(function SocialHubInner({
 
   const detailMirror = useMemo(() => {
     if (!ENABLE_ACHIEVEMENTS || !detailId) return '';
+    // TU FICHA ES EL PRIMER CASO, no el último: el directorio filtrado te excluye por identidad —es lo que
+    // impide que aparezcas en tu propia lista de gente— así que buscarte ahí devolvía siempre vacío, y tu ficha
+    // de logros decía «todavía no hay nada que contar» con cien medallas detrás. En desarrollo ni se notaba: la
+    // siembra te fabricaba un espejo ajeno y lo pintaba como tuyo.
+    if (isOwnProfileDetail) return ownAchievementMirror;
     const entry = filteredSocialDirectory.find((candidate) => (candidate as { id?: string }).id === detailId);
     const real = String((entry as { achievements?: { list?: string } } | undefined)?.achievements?.list || '');
     return real || seeded?.forId(detailId) || '';
-  }, [detailId, filteredSocialDirectory, seeded]);
+  }, [detailId, filteredSocialDirectory, seeded, isOwnProfileDetail, ownAchievementMirror]);
 
   /**
    * Abrir una reseña empieza por su principio.

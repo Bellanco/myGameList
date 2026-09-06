@@ -7,7 +7,7 @@
 //
 // NO IMPORTA `core/stats`: arrastraría el chunk perezoso del panel (~96 kB) a cualquier sitio desde el que se
 // evalúe, y `ci-validate` corta por presupuesto de arranque (§7.2).
-import { ACHIEVEMENTS_BY_LADDER, LADDERS, META_LADDERS } from './catalog';
+import { ACHIEVEMENTS, ACHIEVEMENTS_BY_LADDER, LADDERS, META_LADDERS, UNREACHABLE } from './catalog';
 import { reaches } from './types';
 import type { AchievementDef, AchievementInput, AchievementLadder, AchievementMeasure, AchievementState } from './types';
 
@@ -31,10 +31,14 @@ function statesOfLadder(
   measure: AchievementMeasure,
   peak: Map<string, number>,
 ): AchievementState[] {
-  const value = Number.isFinite(measure.value) ? Math.max(0, measure.value) : 0;
+  // EL VALOR DE RESPALDO NO ES CERO EN UNA ESCALERA DESCENDENTE, y no es un detalle: ahí «menos es mejor», así
+  // que un cero de una métrica rota o de un `NaN` concede TODOS los escalones —«Exterminatus» entero, sesenta
+  // puntos por escalón— y la marca de agua lo deja puesto para siempre. Hacia abajo, lo seguro es lo inalcanzable.
+  const fallback = ladder.descending ? UNREACHABLE : 0;
+  const value = Number.isFinite(measure.value) ? Math.max(0, measure.value) : fallback;
   const steps = ACHIEVEMENTS_BY_LADDER.get(ladder.key) || [];
 
-  return steps.map((def, index) => {
+  return steps.map((def) => {
     const earnedNow = reaches(def, value);
     // LA MARCA DE AGUA (§5.5). Lo conseguido no se devuelve: borras cinco duplicados, corriges unos años mal
     // puestos, y una medalla que llevaba meses ahí se esfumaría.
@@ -43,9 +47,13 @@ function statesOfLadder(
 
     // La fecha se queda con el escalón, y solo si lo sostiene la medición de hoy: si el nivel lo sostiene la
     // marca de agua, no hay fecha que enseñar —recalcularla diría que se consiguió hoy, que es falso—.
+    // `at` VIENE INDEXADO POR VALOR, no por escalón: `at[n-1]` es cuándo la métrica llegó a `n` (una racha sabe
+    // cuándo alcanzó siete semanas, no cuándo alcanzó «el tercer escalón»). Indexarlo por la posición del escalón
+    // le colgaba a «Aún estás aquí VIII» la fecha en que la racha llegó a 3 — un logro fechado años antes de
+    // conseguirse, y de los que no saltan en ningún test porque el nivel sale bien y solo miente el día.
     let unlockedAt = 0;
     if (earnedNow) {
-      unlockedAt = measure.at ? measure.at[index] || 0 : dateFromStamps(def, measure.stamps ?? []);
+      unlockedAt = measure.at ? measure.at[def.step - 1] || 0 : dateFromStamps(def, measure.stamps ?? []);
     }
 
     return { id: def.id, level, value, next: level >= 1 ? null : def.step, unlockedAt };
@@ -58,8 +66,9 @@ function measureLadder(ladder: AchievementLadder, input: AchievementInput): Achi
     return ladder.metric(input);
   } catch {
     // Una métrica que revienta no puede tumbar la pantalla ni, peor, retirarle logros a nadie: se trata como «hoy
-    // no sé medir esto» y la marca de agua conserva lo que ya estaba.
-    return { value: 0 };
+    // no sé medir esto» y la marca de agua conserva lo que ya estaba. Hacia abajo, «no sé» es el valor que no
+    // alcanza ningún umbral, nunca el cero — ver la nota de `statesOfLadder`.
+    return { value: ladder.descending ? UNREACHABLE : 0 };
   }
 }
 
@@ -89,7 +98,7 @@ export function evaluateAchievements(input: AchievementInput, peakRaw = ''): Ach
   // En el orden del catálogo, no en el de evaluación: el orden de `ACHIEVEMENTS` es contrato (es el del espejo) y
   // devolverlo revuelto obligaría a cada consumidor a reordenar.
   const byId = new Map(states.map((state) => [state.id, state]));
-  return [...ACHIEVEMENTS_BY_LADDER.values()].flat().map((def) => byId.get(def.id)!).filter(Boolean);
+  return ACHIEVEMENTS.map((def) => byId.get(def.id)).filter((state): state is AchievementState => Boolean(state));
 }
 
 /** La marca de agua serializada: `id:nivel,id:nivel`. Formato de `localStorage`, nunca sale del aparato. */

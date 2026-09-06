@@ -121,14 +121,25 @@ export function listForScreen(byId: ReadonlyMap<string, AchievementState>): Achi
   const stateOf = (def: AchievementDef): AchievementState =>
     byId.get(def.id) || { id: def.id, level: 0, value: 0, next: def.step, unlockedAt: 0 };
 
-  // Qué escalones se enseñan: los conseguidos de cada escalera y el primero que falte.
+  // Qué escalones se enseñan: TODOS los conseguidos de cada escalera y el primero que falte.
+  //
+  // «Todos los conseguidos» y no «hasta el primero que falte», que era lo mismo salvo en el caso que importa: la
+  // marca de agua puede sostener un escalón alto cuyo anterior ya no se cumple —una biblioteca que encoge, unos
+  // años corregidos—, y cortando en el primer hueco esa medalla desaparecía de la pantalla sin dejar de contar
+  // en la cifra de la cabecera. Un logro conseguido que no se ve en ninguna parte es el peor fallo posible aquí.
   const visible = new Set<string>();
   for (const steps of ACHIEVEMENTS_BY_LADDER.values()) {
+    let carrotShown = false;
     for (const def of steps) {
       const earned = stateOf(def).level >= 1;
-      if (def.retired && !earned) break;
+      if (earned) {
+        visible.add(def.id);
+        continue;
+      }
+      // Lo retirado deja de ofrecerse: no es la zanahoria de nadie (§6.4).
+      if (carrotShown || def.retired) continue;
       visible.add(def.id);
-      if (!earned) break;
+      carrotShown = true;
     }
   }
 
