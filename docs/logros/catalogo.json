@@ -1,5 +1,11 @@
 {
-  "_": "Catálogo de logros, medido. Fuente para core/achievements/catalog.ts (F1). Ver docs/plan-logros.md §6.9 y §6.11.",
+  "_": "Catálogo de logros, medido. Fuente de diseño de src/core/achievements/catalog.ts. Ver docs/plan-logros.md §6.3bis, §6.9 y §6.11.",
+  "modelo": {
+    "_": "CADA ESCALÓN ES UN LOGRO. Se declaran escaleras (una métrica, unos umbrales) y se publica un logro por umbral, con id `<key>-<umbral>`.",
+    "escaleras": 50,
+    "logrosPublicables": 251,
+    "bitsDelEspejo": 253
+  },
   "medidoSobre": {
     "juegos": 302,
     "terminados": 149,
@@ -8,7 +14,7 @@
     "enCurso": 2,
     "nota": "Réplica de normalizeGame, siembra de sellos incluida. Los valorReal son de esa biblioteca: un usuario del extremo alto, no la media."
   },
-  "puntosPorNivelSegunRareza": {
+  "puntosPorEscalonSegunRareza": {
     "comun": 5,
     "infrecuente": 10,
     "raro": 25,
@@ -17,31 +23,33 @@
   "curvaDeNivel": [
     {
       "tramo": "2-10",
-      "costePorNivel": 20,
-      "acumuladoAlFinal": 180
+      "costePorNivel": 40,
+      "acumuladoAlFinal": 360
     },
     {
       "tramo": "11-25",
-      "costePorNivel": 60,
-      "acumuladoAlFinal": 1080
+      "costePorNivel": 120,
+      "acumuladoAlFinal": 2160
     },
     {
       "tramo": "26-50",
-      "costePorNivel": 120,
-      "acumuladoAlFinal": 4080
+      "costePorNivel": 240,
+      "acumuladoAlFinal": 8160
     },
     {
       "tramo": "51+",
-      "costePorNivel": 250,
+      "costePorNivel": 500,
       "acumuladoAlFinal": null
     }
   ],
   "resultadoSobreEsaBiblioteca": {
-    "conseguidos": 22,
-    "de": 32,
-    "porcentaje": 69,
-    "puntos": 915,
-    "nivel": 22
+    "conseguidos": 113,
+    "de": 251,
+    "porcentaje": 45,
+    "puntos": 1765,
+    "nivel": 21,
+    "espejoEnCaracteres": 186,
+    "topeDelEspejo": 1024
   },
   "auraDeRareza": {
     "comun": {
@@ -65,194 +73,424 @@
       "puntosPorNivel": 60
     }
   },
-  "logros": [
+  "escaleras": [
     {
-      "id": "completados",
+      "key": "completados",
       "nombre": "Créditos finales",
-      "familia": "espejo",
+      "familia": "mirror",
       "condicion": "Juegos que has terminado",
       "umbrales": [
         10,
+        25,
         50,
+        75,
+        100,
         150,
-        400
+        200,
+        250,
+        300,
+        400,
+        500
       ],
+      "descendente": false,
       "rareza": "raro",
-      "puntosPorNivel": 25,
+      "puntosPorEscalon": 25,
       "oculto": false,
-      "estado": "hoy",
-      "complejidad": "simple",
-      "fuenteDelDato": "longitud de la lista c",
+      "retirado": false,
+      "ids": [
+        "completados-10",
+        "completados-25",
+        "completados-50",
+        "completados-75",
+        "completados-100",
+        "completados-150",
+        "completados-200",
+        "completados-250",
+        "completados-300",
+        "completados-400",
+        "completados-500"
+      ],
       "valorReal": 149,
-      "nivelReal": 2
+      "escalonesConseguidos": 5
     },
     {
-      "id": "abandonos-razonados",
+      "key": "abandonos-razonados",
       "nombre": "Retirada táctica",
-      "familia": "espejo",
+      "familia": "mirror",
       "condicion": "Abandonos con la razón anotada",
       "umbrales": [
         5,
+        10,
         20,
-        60,
+        35,
+        50,
+        75,
+        100,
         150
       ],
+      "descendente": false,
       "rareza": "infrecuente",
-      "puntosPorNivel": 10,
+      "puntosPorEscalon": 10,
       "oculto": false,
-      "estado": "hoy",
-      "complejidad": "simple",
-      "fuenteDelDato": "reasons no vacío en v",
+      "retirado": false,
+      "ids": [
+        "abandonos-razonados-5",
+        "abandonos-razonados-10",
+        "abandonos-razonados-20",
+        "abandonos-razonados-35",
+        "abandonos-razonados-50",
+        "abandonos-razonados-75",
+        "abandonos-razonados-100",
+        "abandonos-razonados-150"
+      ],
       "valorReal": 87,
-      "nivelReal": 3
+      "escalonesConseguidos": 6
     },
     {
-      "id": "constancia",
+      "key": "constancia",
       "nombre": "Aún estás aquí",
-      "familia": "espejo",
+      "familia": "mirror",
       "condicion": "Semanas seguidas con actividad",
       "umbrales": [
         2,
         4,
+        8,
         12,
-        26
+        18,
+        26,
+        39,
+        52
       ],
+      "descendente": false,
       "rareza": "raro",
-      "puntosPorNivel": 25,
+      "puntosPorEscalon": 25,
       "oculto": false,
-      "estado": "hoy",
-      "complejidad": "media",
-      "fuenteDelDato": "reviewedAt + enteredAt por semana ISO",
+      "retirado": false,
+      "ids": [
+        "constancia-2",
+        "constancia-4",
+        "constancia-8",
+        "constancia-12",
+        "constancia-18",
+        "constancia-26",
+        "constancia-39",
+        "constancia-52"
+      ],
       "valorReal": 11,
-      "nivelReal": 2
+      "escalonesConseguidos": 3
     },
     {
-      "id": "generos",
+      "key": "ritmo",
+      "nombre": "Sin prisa pero sin pausa",
+      "familia": "mirror",
+      "condicion": "Meses seguidos cerrando algún juego",
+      "umbrales": [
+        2,
+        3,
+        6,
+        9,
+        12,
+        18,
+        24,
+        36
+      ],
+      "descendente": false,
+      "rareza": "raro",
+      "puntosPorEscalon": 25,
+      "oculto": false,
+      "retirado": false,
+      "ids": [
+        "ritmo-2",
+        "ritmo-3",
+        "ritmo-6",
+        "ritmo-9",
+        "ritmo-12",
+        "ritmo-18",
+        "ritmo-24",
+        "ritmo-36"
+      ],
+      "valorReal": 3,
+      "escalonesConseguidos": 2
+    },
+    {
+      "key": "generos",
       "nombre": "Mundo abierto",
-      "familia": "espejo",
+      "familia": "mirror",
       "condicion": "Géneros distintos con algo cerrado",
       "umbrales": [
         5,
+        8,
         12,
+        16,
+        20,
         25,
+        30,
         40
       ],
+      "descendente": false,
       "rareza": "infrecuente",
-      "puntosPorNivel": 10,
+      "puntosPorEscalon": 10,
       "oculto": false,
-      "estado": "hoy",
-      "complejidad": "simple",
-      "fuenteDelDato": "genres de c+v",
+      "retirado": false,
+      "ids": [
+        "generos-5",
+        "generos-8",
+        "generos-12",
+        "generos-16",
+        "generos-20",
+        "generos-25",
+        "generos-30",
+        "generos-40"
+      ],
       "valorReal": 34,
-      "nivelReal": 3
+      "escalonesConseguidos": 7
     },
     {
-      "id": "plataformas",
+      "key": "degustacion",
+      "nombre": "Menú degustación",
+      "familia": "mirror",
+      "condicion": "Meses en que cierras juegos de tres géneros distintos",
+      "umbrales": [
+        1,
+        3,
+        5,
+        10,
+        15,
+        25
+      ],
+      "descendente": false,
+      "rareza": "infrecuente",
+      "puntosPorEscalon": 10,
+      "oculto": false,
+      "retirado": false,
+      "ids": [
+        "degustacion-1",
+        "degustacion-3",
+        "degustacion-5",
+        "degustacion-10",
+        "degustacion-15",
+        "degustacion-25"
+      ],
+      "valorReal": 3,
+      "escalonesConseguidos": 2
+    },
+    {
+      "key": "plataformas",
       "nombre": "Guerra de consolas",
-      "familia": "espejo",
+      "familia": "mirror",
       "condicion": "Plataformas distintas en tu biblioteca",
       "umbrales": [
         3,
-        6,
+        5,
+        7,
+        9,
         12,
-        20
+        15
       ],
+      "descendente": false,
       "rareza": "comun",
-      "puntosPorNivel": 5,
+      "puntosPorEscalon": 5,
       "oculto": false,
-      "estado": "hoy",
-      "complejidad": "simple",
-      "fuenteDelDato": "platforms",
+      "retirado": false,
+      "ids": [
+        "plataformas-3",
+        "plataformas-5",
+        "plataformas-7",
+        "plataformas-9",
+        "plataformas-12",
+        "plataformas-15"
+      ],
       "valorReal": 18,
-      "nivelReal": 3
+      "escalonesConseguidos": 6
     },
     {
-      "id": "rejugados",
+      "key": "rejugados",
       "nombre": "New Game +",
-      "familia": "espejo",
+      "familia": "mirror",
       "condicion": "Vueltas extra registradas",
       "umbrales": [
         1,
+        2,
+        3,
         5,
-        15,
-        40
+        7,
+        10
       ],
+      "descendente": false,
       "rareza": "infrecuente",
-      "puntosPorNivel": 10,
+      "puntosPorEscalon": 10,
       "oculto": false,
-      "estado": "hoy",
-      "complejidad": "simple",
-      "fuenteDelDato": "years, por encima de la primera",
+      "retirado": false,
+      "ids": [
+        "rejugados-1",
+        "rejugados-2",
+        "rejugados-3",
+        "rejugados-5",
+        "rejugados-7",
+        "rejugados-10"
+      ],
       "valorReal": 28,
-      "nivelReal": 3
+      "escalonesConseguidos": 6
     },
     {
-      "id": "maraton",
+      "key": "volvere",
+      "nombre": "Aquí volveré",
+      "familia": "mirror",
+      "condicion": "Juegos marcados como rejugables",
+      "umbrales": [
+        3,
+        10,
+        20,
+        30,
+        40,
+        50
+      ],
+      "descendente": false,
+      "rareza": "comun",
+      "puntosPorEscalon": 5,
+      "oculto": false,
+      "retirado": false,
+      "ids": [
+        "volvere-3",
+        "volvere-10",
+        "volvere-20",
+        "volvere-30",
+        "volvere-40",
+        "volvere-50"
+      ],
+      "valorReal": 73,
+      "escalonesConseguidos": 6
+    },
+    {
+      "key": "revancha",
+      "nombre": "Cuenta pendiente",
+      "familia": "mirror",
+      "condicion": "Abandonos marcados para reintentar",
+      "umbrales": [
+        1,
+        5,
+        10,
+        20,
+        35,
+        50
+      ],
+      "descendente": false,
+      "rareza": "comun",
+      "puntosPorEscalon": 5,
+      "oculto": false,
+      "retirado": false,
+      "ids": [
+        "revancha-1",
+        "revancha-5",
+        "revancha-10",
+        "revancha-20",
+        "revancha-35",
+        "revancha-50"
+      ],
+      "valorReal": 70,
+      "escalonesConseguidos": 6
+    },
+    {
+      "key": "maraton",
       "nombre": "Un verano entero",
-      "familia": "espejo",
-      "condicion": "Juegos con 60 h o más anotadas",
+      "familia": "mirror",
+      "condicion": "Juegos con 40 h o más anotadas",
       "umbrales": [
         1,
         3,
+        5,
         10,
-        25
+        15,
+        25,
+        40,
+        60,
+        75
       ],
+      "descendente": false,
       "rareza": "raro",
-      "puntosPorNivel": 25,
+      "puntosPorEscalon": 25,
       "oculto": false,
-      "estado": "hoy",
-      "complejidad": "simple",
-      "fuenteDelDato": "hours >= 60",
-      "valorReal": 11,
-      "nivelReal": 3
+      "retirado": false,
+      "ids": [
+        "maraton-1",
+        "maraton-3",
+        "maraton-5",
+        "maraton-10",
+        "maraton-15",
+        "maraton-25",
+        "maraton-40",
+        "maraton-60",
+        "maraton-75"
+      ],
+      "valorReal": 19,
+      "escalonesConseguidos": 5
     },
     {
-      "id": "paciencia",
+      "key": "paciencia",
       "nombre": "Ya iba siendo hora",
-      "familia": "espejo",
+      "familia": "mirror",
       "condicion": "Terminados tras más de un año en Próximos",
       "umbrales": [
         1,
-        3
+        2,
+        3,
+        4,
+        5
       ],
+      "descendente": false,
       "rareza": "excepcional",
-      "puntosPorNivel": 60,
+      "puntosPorEscalon": 60,
       "oculto": false,
-      "estado": "dormido",
-      "complejidad": "compleja",
-      "fuenteDelDato": "PAR enteredAt.p + enteredAt.c",
+      "retirado": false,
+      "ids": [
+        "paciencia-1",
+        "paciencia-2",
+        "paciencia-3",
+        "paciencia-4",
+        "paciencia-5"
+      ],
       "valorReal": 0,
-      "nivelReal": 0,
-      "dormido": {
-        "queLeFalta": "Más de un año entre el sello de Próximos y el de terminado.",
-        "primerDesbloqueo": "30-jun-2027",
-        "problema": "Tu sello de Próximos más viejo es del 30-jun-2026. Ninguno de los 302 juegos actuales puede adelantar esa fecha."
-      }
+      "escalonesConseguidos": 0
     },
     {
-      "id": "criterio",
+      "key": "criterio",
       "nombre": "Nota del crítico",
-      "familia": "espejo",
-      "condicion": "Tus notas tienen criterio, no una sola para todo",
+      "familia": "mirror",
+      "condicion": "Juegos puntuados, si tus notas no son todas iguales",
       "umbrales": [
-        20,
+        25,
+        50,
         75,
+        100,
+        150,
         200,
+        300,
+        400,
         500
       ],
+      "descendente": false,
       "rareza": "infrecuente",
-      "puntosPorNivel": 10,
+      "puntosPorEscalon": 10,
       "oculto": false,
-      "estado": "hoy",
-      "complejidad": "media",
-      "fuenteDelDato": "nº de notas, con desviación >= 12",
-      "valorReal": 274,
-      "nivelReal": 3
+      "retirado": false,
+      "ids": [
+        "criterio-25",
+        "criterio-50",
+        "criterio-75",
+        "criterio-100",
+        "criterio-150",
+        "criterio-200",
+        "criterio-300",
+        "criterio-400",
+        "criterio-500"
+      ],
+      "valorReal": 283,
+      "escalonesConseguidos": 6
     },
     {
-      "id": "memoria-larga",
+      "key": "memoria-larga",
       "nombre": "Partida guardada",
-      "familia": "espejo",
+      "familia": "mirror",
       "condicion": "Años naturales distintos con algo completado",
       "umbrales": [
         3,
@@ -260,67 +498,134 @@
         15,
         25
       ],
+      "descendente": false,
       "rareza": "raro",
-      "puntosPorNivel": 25,
+      "puntosPorEscalon": 25,
       "oculto": false,
-      "estado": "hoy",
-      "complejidad": "media",
-      "fuenteDelDato": "years — NO enteredAt (daría 1)",
+      "retirado": false,
+      "ids": [
+        "memoria-larga-3",
+        "memoria-larga-8",
+        "memoria-larga-15",
+        "memoria-larga-25"
+      ],
       "valorReal": 22,
-      "nivelReal": 3
+      "escalonesConseguidos": 3
     },
     {
-      "id": "deshielo",
+      "key": "cadena-de-anos",
+      "nombre": "Toda una vida",
+      "familia": "mirror",
+      "condicion": "Años seguidos con algo jugado",
+      "umbrales": [
+        3,
+        5,
+        8,
+        10,
+        12,
+        15,
+        17,
+        20
+      ],
+      "descendente": false,
+      "rareza": "raro",
+      "puntosPorEscalon": 25,
+      "oculto": false,
+      "retirado": false,
+      "ids": [
+        "cadena-de-anos-3",
+        "cadena-de-anos-5",
+        "cadena-de-anos-8",
+        "cadena-de-anos-10",
+        "cadena-de-anos-12",
+        "cadena-de-anos-15",
+        "cadena-de-anos-17",
+        "cadena-de-anos-20"
+      ],
+      "valorReal": 17,
+      "escalonesConseguidos": 7
+    },
+    {
+      "key": "deshielo",
       "nombre": "El deshielo",
-      "familia": "espejo",
+      "familia": "mirror",
       "condicion": "Meses seguidos con Próximos a la baja",
       "umbrales": [
         2,
-        4
+        3,
+        4,
+        6,
+        8
       ],
+      "descendente": false,
       "rareza": "excepcional",
-      "puntosPorNivel": 60,
+      "puntosPorEscalon": 60,
       "oculto": false,
-      "estado": "dormido",
-      "complejidad": "compleja",
-      "fuenteDelDato": "curva de stock con enteredAt",
+      "retirado": false,
+      "ids": [
+        "deshielo-2",
+        "deshielo-3",
+        "deshielo-4",
+        "deshielo-6",
+        "deshielo-8"
+      ],
       "valorReal": 0,
-      "nivelReal": 0,
-      "dormido": {
-        "queLeFalta": "Entradas y salidas de Próximos, para reconstruir el stock mes a mes.",
-        "primerDesbloqueo": "Finales de 2026",
-        "problema": "Hoy la curva solo sube: hay 42 entradas con sello y cero salidas. Necesita dos meses seguidos a la baja."
-      }
+      "escalonesConseguidos": 0
     },
     {
-      "id": "estanteria",
+      "key": "estanteria",
       "nombre": "La pila de la vergüenza",
-      "familia": "espejo",
+      "familia": "mirror",
       "condicion": "Juegos rescatados de Próximos y jugados",
       "umbrales": [
         5,
+        10,
         20,
-        60,
-        150
+        35,
+        50,
+        75,
+        100
       ],
+      "descendente": false,
       "rareza": "raro",
-      "puntosPorNivel": 25,
+      "puntosPorEscalon": 25,
       "oculto": false,
-      "estado": "dormido",
-      "complejidad": "compleja",
-      "fuenteDelDato": "PAR enteredAt.p + lista jugada",
+      "retirado": false,
+      "ids": [
+        "estanteria-5",
+        "estanteria-10",
+        "estanteria-20",
+        "estanteria-35",
+        "estanteria-50",
+        "estanteria-75",
+        "estanteria-100"
+      ],
       "valorReal": 0,
-      "nivelReal": 0,
-      "dormido": {
-        "queLeFalta": "Que un pendiente con sello llegue a una lista jugada.",
-        "primerDesbloqueo": "Cualquier día",
-        "problema": "42 de tus 64 pendientes ya tienen sello: en cuanto termines uno, cuenta. Los otros 22 no contarán nunca."
-      }
+      "escalonesConseguidos": 0
     },
     {
-      "id": "veterano",
+      "key": "dieta",
+      "nombre": "A régimen",
+      "familia": "mirror",
+      "condicion": "Bajar Próximos a la mitad de lo que llegó a ser",
+      "umbrales": [
+        1
+      ],
+      "descendente": false,
+      "rareza": "raro",
+      "puntosPorEscalon": 25,
+      "oculto": false,
+      "retirado": false,
+      "ids": [
+        "dieta-1"
+      ],
+      "valorReal": 0,
+      "escalonesConseguidos": 0
+    },
+    {
+      "key": "veterano",
       "nombre": "De la vieja escuela",
-      "familia": "espejo",
+      "familia": "mirror",
       "condicion": "Años con perfil en la app",
       "umbrales": [
         1,
@@ -328,433 +633,818 @@
         3,
         5
       ],
+      "descendente": false,
       "rareza": "comun",
-      "puntosPorNivel": 5,
+      "puntosPorEscalon": 5,
       "oculto": false,
-      "estado": "hoy",
-      "complejidad": "simple",
-      "fuenteDelDato": "profiles.createdAt (inmutable)",
-      "valorReal": null,
-      "nivelReal": 0
+      "retirado": false,
+      "ids": [
+        "veterano-1",
+        "veterano-2",
+        "veterano-3",
+        "veterano-5"
+      ],
+      "valorReal": 0,
+      "escalonesConseguidos": 0
     },
     {
-      "id": "horas",
-      "nombre": "Tiempo jugado",
-      "familia": "datos",
-      "condicion": "Juegos con las horas anotadas",
+      "key": "tutorial",
+      "nombre": "Tutorial superado",
+      "familia": "mirror",
+      "condicion": "Todos los primeros pasos, hechos",
       "umbrales": [
-        10,
-        40,
-        100,
-        250
+        1
       ],
+      "descendente": false,
       "rareza": "comun",
-      "puntosPorNivel": 5,
+      "puntosPorEscalon": 5,
       "oculto": false,
-      "estado": "hoy",
-      "complejidad": "simple",
-      "fuenteDelDato": "hours presente",
-      "valorReal": 76,
-      "nivelReal": 2
-    },
-    {
-      "id": "resenas",
-      "nombre": "Con mis palabras",
-      "familia": "datos",
-      "condicion": "Reseñas escritas",
-      "umbrales": [
-        5,
-        25,
-        75,
-        200
+      "retirado": false,
+      "ids": [
+        "tutorial-1"
       ],
-      "rareza": "infrecuente",
-      "puntosPorNivel": 10,
-      "oculto": false,
-      "estado": "hoy",
-      "complejidad": "simple",
-      "fuenteDelDato": "review no vacía",
-      "valorReal": 98,
-      "nivelReal": 3
+      "valorReal": 0,
+      "escalonesConseguidos": 0
     },
     {
-      "id": "cobertura",
-      "nombre": "Sin cabos sueltos",
-      "familia": "datos",
-      "condicion": "Parte de lo que cierras que acaba con reseña",
-      "umbrales": [
-        25,
-        50,
-        75,
-        90
-      ],
-      "rareza": "raro",
-      "puntosPorNivel": 25,
-      "oculto": false,
-      "estado": "hoy",
-      "complejidad": "simple",
-      "fuenteDelDato": "% de c+v con review",
-      "valorReal": 42,
-      "nivelReal": 1
-    },
-    {
-      "id": "ficha-completa",
-      "nombre": "Ficha de manual",
-      "familia": "datos",
-      "condicion": "Géneros, plataforma, nota y reseña, los cuatro",
-      "umbrales": [
-        10,
-        40,
-        100,
-        250
-      ],
-      "rareza": "infrecuente",
-      "puntosPorNivel": 10,
-      "oculto": false,
-      "estado": "hoy",
-      "complejidad": "simple",
-      "fuenteDelDato": "los cuatro campos a la vez",
-      "valorReal": 92,
-      "nivelReal": 2
-    },
-    {
-      "id": "autopsia",
-      "nombre": "Informe forense",
-      "familia": "datos",
-      "condicion": "Abandonos con razón y reseña",
-      "umbrales": [
-        3,
-        10,
-        30,
-        75
-      ],
-      "rareza": "infrecuente",
-      "puntosPorNivel": 10,
-      "oculto": false,
-      "estado": "hoy",
-      "complejidad": "simple",
-      "fuenteDelDato": "reasons + review en v",
-      "valorReal": 15,
-      "nivelReal": 2
-    },
-    {
-      "id": "luces-y-sombras",
-      "nombre": "Luces y sombras",
-      "familia": "datos",
-      "condicion": "Reseñas con puntos fuertes y débiles",
-      "umbrales": [
-        5,
-        25,
-        75,
-        150
-      ],
-      "rareza": "infrecuente",
-      "puntosPorNivel": 10,
-      "oculto": false,
-      "estado": "hoy",
-      "complejidad": "simple",
-      "fuenteDelDato": "review + strengths + weaknesses",
-      "valorReal": 85,
-      "nivelReal": 3
-    },
-    {
-      "id": "amistades",
-      "nombre": "Modo cooperativo",
-      "familia": "social",
-      "condicion": "Amistades confirmadas",
-      "umbrales": [
-        1,
-        3,
-        10
-      ],
-      "rareza": "comun",
-      "puntosPorNivel": 5,
-      "oculto": false,
-      "estado": "hoy",
-      "complejidad": "media",
-      "fuenteDelDato": "MyFriendships (ya en el hub)",
-      "valorReal": null,
-      "nivelReal": 0
-    },
-    {
-      "id": "conversador",
-      "nombre": "Charla de taberna",
-      "familia": "social",
-      "condicion": "Semanas distintas en que has publicado algo",
-      "umbrales": [
-        2,
-        8,
-        26
-      ],
-      "rareza": "infrecuente",
-      "puntosPorNivel": 10,
-      "oculto": false,
-      "estado": "hoy",
-      "complejidad": "media",
-      "fuenteDelDato": "gist social propio, por semana",
-      "valorReal": null,
-      "nivelReal": 0
-    },
-    {
-      "id": "ano-redondo",
-      "nombre": "Solsticio a solsticio",
-      "familia": "anual",
-      "condicion": "Un año natural con actividad los doce meses",
+      "key": "obra-maestra",
+      "nombre": "Obra maestra",
+      "familia": "mirror",
+      "condicion": "Poner un 100 a un juego",
       "umbrales": [
         1,
         2
       ],
+      "descendente": false,
       "rareza": "excepcional",
-      "puntosPorNivel": 60,
-      "oculto": false,
-      "estado": "dormido",
-      "complejidad": "compleja",
-      "fuenteDelDato": "12 meses con sello; hoy hay 10 semanas",
-      "valorReal": 0,
-      "nivelReal": 0,
-      "dormido": {
-        "queLeFalta": "Los doce meses de un año natural con alguna actividad fechada.",
-        "primerDesbloqueo": "31-dic-2027",
-        "problema": "2027 es el primer año natural que puede estar completo. Un solo mes sin tocar la app lo empuja a 2028."
-      }
-    },
-    {
-      "id": "buena-cosecha",
-      "nombre": "Cosecha del año",
-      "familia": "anual",
-      "condicion": "Un año natural con muchos juegos terminados",
-      "umbrales": [
-        5,
-        12,
-        20,
-        30
-      ],
-      "rareza": "raro",
-      "puntosPorNivel": 25,
-      "oculto": false,
-      "estado": "hoy",
-      "complejidad": "media",
-      "fuenteDelDato": "years agrupado por año",
-      "valorReal": 24,
-      "nivelReal": 3
-    },
-    {
-      "id": "obra-maestra",
-      "nombre": "Obra maestra",
-      "familia": "oculto",
-      "condicion": "Poner un 100 a un juego",
-      "umbrales": [
-        1,
-        3
-      ],
-      "rareza": "excepcional",
-      "puntosPorNivel": 60,
+      "puntosPorEscalon": 60,
       "oculto": true,
-      "estado": "hoy",
-      "complejidad": "simple",
-      "fuenteDelDato": "grade == 100",
-      "valorReal": 1,
-      "nivelReal": 1
+      "retirado": false,
+      "ids": [
+        "obra-maestra-1",
+        "obra-maestra-2"
+      ],
+      "valorReal": 2,
+      "escalonesConseguidos": 2
     },
     {
-      "id": "sofa",
+      "key": "sofa",
       "nombre": "Jugado en el sofá",
-      "familia": "oculto",
+      "familia": "mirror",
       "condicion": "Juegos marcados como Steam Deck",
       "umbrales": [
         5,
+        15,
         25,
+        50,
         75
       ],
+      "descendente": false,
       "rareza": "comun",
-      "puntosPorNivel": 5,
+      "puntosPorEscalon": 5,
       "oculto": true,
-      "estado": "hoy",
-      "complejidad": "simple",
-      "fuenteDelDato": "steamDeck true",
+      "retirado": false,
+      "ids": [
+        "sofa-5",
+        "sofa-15",
+        "sofa-25",
+        "sofa-50",
+        "sofa-75"
+      ],
       "valorReal": 70,
-      "nivelReal": 2
+      "escalonesConseguidos": 4
     },
     {
-      "id": "speedrun",
+      "key": "speedrun",
       "nombre": "Speedrun",
-      "familia": "oculto",
-      "condicion": "Entró en Próximos y se cerró el mismo día",
+      "familia": "mirror",
+      "condicion": "Un juego que entró en Próximos y se cerró el mismo día",
       "umbrales": [
         1,
         3
       ],
+      "descendente": false,
       "rareza": "excepcional",
-      "puntosPorNivel": 60,
+      "puntosPorEscalon": 60,
       "oculto": true,
-      "estado": "dormido",
-      "complejidad": "compleja",
-      "fuenteDelDato": "PAR de sellos · NUNCA listedAt",
+      "retirado": true,
+      "ids": [
+        "speedrun-1",
+        "speedrun-3"
+      ],
       "valorReal": 0,
-      "nivelReal": 0,
-      "dormido": {
-        "queLeFalta": "Un juego que entre en Próximos y se cierre el mismo día.",
-        "primerDesbloqueo": "Cualquier día",
-        "problema": "Técnicamente posible ya, pero es una conducta que puede no darse nunca: si catalogas hacia atrás, no ocurre."
-      }
+      "escalonesConseguidos": 0
     },
     {
-      "id": "segunda-vuelta",
+      "key": "segunda-vuelta",
       "nombre": "Volver a la hoguera",
-      "familia": "oculto",
+      "familia": "mirror",
       "condicion": "Terminar un juego que habías abandonado",
       "umbrales": [
         1,
         3,
-        10
+        5,
+        10,
+        20,
+        35,
+        50
       ],
+      "descendente": false,
       "rareza": "raro",
-      "puntosPorNivel": 25,
+      "puntosPorEscalon": 25,
       "oculto": true,
-      "estado": "dormido",
-      "complejidad": "compleja",
-      "fuenteDelDato": "PAR enteredAt.v + enteredAt.c",
+      "retirado": false,
+      "ids": [
+        "segunda-vuelta-1",
+        "segunda-vuelta-3",
+        "segunda-vuelta-5",
+        "segunda-vuelta-10",
+        "segunda-vuelta-20",
+        "segunda-vuelta-35",
+        "segunda-vuelta-50"
+      ],
       "valorReal": 0,
-      "nivelReal": 0,
-      "dormido": {
-        "queLeFalta": "Terminar un abandonado que tenga enteredAt.v.",
-        "primerDesbloqueo": "Cualquier día",
-        "problema": "Solo 13 de tus 87 abandonados tienen el sello. Los otros 74 pueden terminarse sin que salte nada."
-      }
+      "escalonesConseguidos": 0
     },
     {
-      "id": "estanteria-cero",
+      "key": "estanteria-cero",
       "nombre": "Exterminatus",
-      "familia": "oculto",
-      "condicion": "Dejar Próximos a cero",
+      "familia": "mirror",
+      "condicion": "Dejar Próximos bajo mínimos",
       "umbrales": [
+        50,
+        25,
+        10,
+        5,
         1
       ],
+      "descendente": true,
       "rareza": "excepcional",
-      "puntosPorNivel": 60,
+      "puntosPorEscalon": 60,
       "oculto": true,
-      "estado": "hoy",
-      "complejidad": "simple",
-      "fuenteDelDato": "len(p) == 0 · ahora hay 64",
-      "valorReal": 0,
-      "nivelReal": 0
+      "retirado": false,
+      "ids": [
+        "estanteria-cero-50",
+        "estanteria-cero-25",
+        "estanteria-cero-10",
+        "estanteria-cero-5",
+        "estanteria-cero-1"
+      ],
+      "valorReal": 64,
+      "escalonesConseguidos": 0
     },
     {
-      "id": "orgullo",
+      "key": "orgullo",
       "nombre": "Lo terminé por orgullo",
-      "familia": "oculto",
-      "condicion": "Terminar un juego al que pusiste menos de 40",
+      "familia": "mirror",
+      "condicion": "Terminar un juego al que pusiste menos de 50",
       "umbrales": [
         1,
         3,
-        10
+        5
       ],
+      "descendente": false,
       "rareza": "raro",
-      "puntosPorNivel": 25,
+      "puntosPorEscalon": 25,
       "oculto": true,
-      "estado": "hoy",
-      "complejidad": "simple",
-      "fuenteDelDato": "grade < 40 en c",
-      "valorReal": 7,
-      "nivelReal": 2
+      "retirado": false,
+      "ids": [
+        "orgullo-1",
+        "orgullo-3",
+        "orgullo-5"
+      ],
+      "valorReal": 19,
+      "escalonesConseguidos": 3
     },
     {
-      "id": "no-eres-tu",
+      "key": "no-eres-tu",
       "nombre": "No eres tú, soy yo",
-      "familia": "oculto",
+      "familia": "mirror",
       "condicion": "Abandonar un juego al que pusiste 70 o más",
       "umbrales": [
         1,
         3,
-        10
+        5
       ],
+      "descendente": false,
       "rareza": "raro",
-      "puntosPorNivel": 25,
+      "puntosPorEscalon": 25,
       "oculto": true,
-      "estado": "hoy",
-      "complejidad": "simple",
-      "fuenteDelDato": "grade >= 70 en v",
-      "valorReal": 11,
-      "nivelReal": 3
-    },
-    {
-      "id": "tesis",
-      "nombre": "Tesis doctoral",
-      "familia": "oculto",
-      "condicion": "Escribir una reseña de más de 1.000 caracteres",
-      "umbrales": [
-        1,
-        5,
-        20
+      "retirado": false,
+      "ids": [
+        "no-eres-tu-1",
+        "no-eres-tu-3",
+        "no-eres-tu-5"
       ],
-      "rareza": "infrecuente",
-      "puntosPorNivel": 10,
-      "oculto": true,
-      "estado": "hoy",
-      "complejidad": "simple",
-      "fuenteDelDato": "len(review) > 1000",
-      "valorReal": 29,
-      "nivelReal": 3
+      "valorReal": 11,
+      "escalonesConseguidos": 3
     },
     {
-      "id": "vida-entera",
+      "key": "vida-entera",
       "nombre": "Una vida entera",
-      "familia": "oculto",
+      "familia": "mirror",
       "condicion": "300 horas o más en un solo juego",
       "umbrales": [
         1,
         2,
         4
       ],
+      "descendente": false,
       "rareza": "raro",
-      "puntosPorNivel": 25,
+      "puntosPorEscalon": 25,
       "oculto": true,
-      "estado": "hoy",
-      "complejidad": "simple",
-      "fuenteDelDato": "hours >= 300",
+      "retirado": false,
+      "ids": [
+        "vida-entera-1",
+        "vida-entera-2",
+        "vida-entera-4"
+      ],
       "valorReal": 4,
-      "nivelReal": 3
+      "escalonesConseguidos": 3
+    },
+    {
+      "key": "platino",
+      "nombre": "Cien por cien",
+      "familia": "mirror",
+      "condicion": "Escaleras llevadas hasta su último escalón",
+      "umbrales": [
+        3,
+        10
+      ],
+      "descendente": false,
+      "rareza": "excepcional",
+      "puntosPorEscalon": 60,
+      "oculto": true,
+      "retirado": false,
+      "ids": [
+        "platino-3",
+        "platino-10"
+      ],
+      "valorReal": 8,
+      "escalonesConseguidos": 1
+    },
+    {
+      "key": "horas",
+      "nombre": "Tiempo jugado",
+      "familia": "data",
+      "condicion": "Juegos con las horas anotadas",
+      "umbrales": [
+        10,
+        25,
+        40,
+        60,
+        80,
+        100,
+        125,
+        150
+      ],
+      "descendente": false,
+      "rareza": "comun",
+      "puntosPorEscalon": 5,
+      "oculto": false,
+      "retirado": false,
+      "ids": [
+        "horas-10",
+        "horas-25",
+        "horas-40",
+        "horas-60",
+        "horas-80",
+        "horas-100",
+        "horas-125",
+        "horas-150"
+      ],
+      "valorReal": 76,
+      "escalonesConseguidos": 4
+    },
+    {
+      "key": "resenas",
+      "nombre": "Con mis palabras",
+      "familia": "data",
+      "condicion": "Reseñas escritas",
+      "umbrales": [
+        5,
+        25,
+        50,
+        75,
+        100,
+        150,
+        200
+      ],
+      "descendente": false,
+      "rareza": "infrecuente",
+      "puntosPorEscalon": 10,
+      "oculto": false,
+      "retirado": false,
+      "ids": [
+        "resenas-5",
+        "resenas-25",
+        "resenas-50",
+        "resenas-75",
+        "resenas-100",
+        "resenas-150",
+        "resenas-200"
+      ],
+      "valorReal": 98,
+      "escalonesConseguidos": 4
+    },
+    {
+      "key": "cobertura",
+      "nombre": "Sin cabos sueltos",
+      "familia": "data",
+      "condicion": "Parte de lo que cierras que acaba con reseña",
+      "umbrales": [
+        25,
+        40,
+        50,
+        60,
+        75,
+        90
+      ],
+      "descendente": false,
+      "rareza": "raro",
+      "puntosPorEscalon": 25,
+      "oculto": false,
+      "retirado": false,
+      "ids": [
+        "cobertura-25",
+        "cobertura-40",
+        "cobertura-50",
+        "cobertura-60",
+        "cobertura-75",
+        "cobertura-90"
+      ],
+      "valorReal": 42,
+      "escalonesConseguidos": 2
+    },
+    {
+      "key": "ficha-completa",
+      "nombre": "Ficha de manual",
+      "familia": "data",
+      "condicion": "Géneros, plataforma, nota y reseña, los cuatro",
+      "umbrales": [
+        10,
+        25,
+        50,
+        100,
+        150,
+        250
+      ],
+      "descendente": false,
+      "rareza": "infrecuente",
+      "puntosPorEscalon": 10,
+      "oculto": false,
+      "retirado": false,
+      "ids": [
+        "ficha-completa-10",
+        "ficha-completa-25",
+        "ficha-completa-50",
+        "ficha-completa-100",
+        "ficha-completa-150",
+        "ficha-completa-250"
+      ],
+      "valorReal": 98,
+      "escalonesConseguidos": 3
+    },
+    {
+      "key": "autopsia",
+      "nombre": "Informe forense",
+      "familia": "data",
+      "condicion": "Abandonos con razón y reseña",
+      "umbrales": [
+        3,
+        10,
+        20,
+        30,
+        50,
+        75
+      ],
+      "descendente": false,
+      "rareza": "infrecuente",
+      "puntosPorEscalon": 10,
+      "oculto": false,
+      "retirado": false,
+      "ids": [
+        "autopsia-3",
+        "autopsia-10",
+        "autopsia-20",
+        "autopsia-30",
+        "autopsia-50",
+        "autopsia-75"
+      ],
+      "valorReal": 15,
+      "escalonesConseguidos": 2
+    },
+    {
+      "key": "luces-y-sombras",
+      "nombre": "Luces y sombras",
+      "familia": "data",
+      "condicion": "Reseñas con puntos fuertes y débiles",
+      "umbrales": [
+        5,
+        25,
+        50,
+        75,
+        100,
+        150,
+        200,
+        250
+      ],
+      "descendente": false,
+      "rareza": "infrecuente",
+      "puntosPorEscalon": 10,
+      "oculto": false,
+      "retirado": false,
+      "ids": [
+        "luces-y-sombras-5",
+        "luces-y-sombras-25",
+        "luces-y-sombras-50",
+        "luces-y-sombras-75",
+        "luces-y-sombras-100",
+        "luces-y-sombras-150",
+        "luces-y-sombras-200",
+        "luces-y-sombras-250"
+      ],
+      "valorReal": 85,
+      "escalonesConseguidos": 4
+    },
+    {
+      "key": "tesis",
+      "nombre": "Tesis doctoral",
+      "familia": "data",
+      "condicion": "Reseñas de más de 1000 caracteres",
+      "umbrales": [
+        1,
+        5,
+        20,
+        50,
+        100
+      ],
+      "descendente": false,
+      "rareza": "infrecuente",
+      "puntosPorEscalon": 10,
+      "oculto": true,
+      "retirado": false,
+      "ids": [
+        "tesis-1",
+        "tesis-5",
+        "tesis-20",
+        "tesis-50",
+        "tesis-100"
+      ],
+      "valorReal": 29,
+      "escalonesConseguidos": 3
+    },
+    {
+      "key": "amistades",
+      "nombre": "Modo cooperativo",
+      "familia": "social",
+      "condicion": "Amistades confirmadas",
+      "umbrales": [
+        1,
+        3,
+        5,
+        10,
+        15,
+        20,
+        30,
+        40
+      ],
+      "descendente": false,
+      "rareza": "comun",
+      "puntosPorEscalon": 5,
+      "oculto": false,
+      "retirado": false,
+      "ids": [
+        "amistades-1",
+        "amistades-3",
+        "amistades-5",
+        "amistades-10",
+        "amistades-15",
+        "amistades-20",
+        "amistades-30",
+        "amistades-40"
+      ],
+      "valorReal": 0,
+      "escalonesConseguidos": 0
+    },
+    {
+      "key": "conversador",
+      "nombre": "Charla de taberna",
+      "familia": "social",
+      "condicion": "Semanas distintas en que has publicado algo",
+      "umbrales": [
+        2,
+        8,
+        16,
+        26,
+        39,
+        52,
+        78,
+        104
+      ],
+      "descendente": false,
+      "rareza": "infrecuente",
+      "puntosPorEscalon": 10,
+      "oculto": false,
+      "retirado": false,
+      "ids": [
+        "conversador-2",
+        "conversador-8",
+        "conversador-16",
+        "conversador-26",
+        "conversador-39",
+        "conversador-52",
+        "conversador-78",
+        "conversador-104"
+      ],
+      "valorReal": 0,
+      "escalonesConseguidos": 0
+    },
+    {
+      "key": "escaparate",
+      "nombre": "Puertas abiertas",
+      "familia": "social",
+      "condicion": "Juegos compartidos al canal público",
+      "umbrales": [
+        1,
+        5,
+        15,
+        30,
+        50,
+        75,
+        100,
+        150
+      ],
+      "descendente": false,
+      "rareza": "infrecuente",
+      "puntosPorEscalon": 10,
+      "oculto": false,
+      "retirado": false,
+      "ids": [
+        "escaparate-1",
+        "escaparate-5",
+        "escaparate-15",
+        "escaparate-30",
+        "escaparate-50",
+        "escaparate-75",
+        "escaparate-100",
+        "escaparate-150"
+      ],
+      "valorReal": 0,
+      "escalonesConseguidos": 0
+    },
+    {
+      "key": "ano-redondo",
+      "nombre": "Solsticio a solsticio",
+      "familia": "annual",
+      "condicion": "Años naturales con actividad los doce meses",
+      "umbrales": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        10,
+        15,
+        20,
+        25,
+        30
+      ],
+      "descendente": false,
+      "rareza": "excepcional",
+      "puntosPorEscalon": 60,
+      "oculto": false,
+      "retirado": false,
+      "ids": [
+        "ano-redondo-1",
+        "ano-redondo-2",
+        "ano-redondo-3",
+        "ano-redondo-4",
+        "ano-redondo-5",
+        "ano-redondo-10",
+        "ano-redondo-15",
+        "ano-redondo-20",
+        "ano-redondo-25",
+        "ano-redondo-30"
+      ],
+      "valorReal": 0,
+      "escalonesConseguidos": 0
+    },
+    {
+      "key": "buena-cosecha",
+      "nombre": "Cosecha del año",
+      "familia": "annual",
+      "condicion": "Juegos terminados en un mismo año natural",
+      "umbrales": [
+        5,
+        8,
+        12,
+        16,
+        20,
+        25
+      ],
+      "descendente": false,
+      "rareza": "raro",
+      "puntosPorEscalon": 25,
+      "oculto": false,
+      "retirado": false,
+      "ids": [
+        "buena-cosecha-5",
+        "buena-cosecha-8",
+        "buena-cosecha-12",
+        "buena-cosecha-16",
+        "buena-cosecha-20",
+        "buena-cosecha-25"
+      ],
+      "valorReal": 24,
+      "escalonesConseguidos": 5
+    },
+    {
+      "key": "aniversario",
+      "nombre": "Otro año más",
+      "familia": "annual",
+      "condicion": "Aniversarios de tu perfil con actividad ese mes",
+      "umbrales": [
+        1,
+        2,
+        3,
+        5,
+        10,
+        15,
+        20,
+        25,
+        30
+      ],
+      "descendente": false,
+      "rareza": "raro",
+      "puntosPorEscalon": 25,
+      "oculto": false,
+      "retirado": false,
+      "ids": [
+        "aniversario-1",
+        "aniversario-2",
+        "aniversario-3",
+        "aniversario-5",
+        "aniversario-10",
+        "aniversario-15",
+        "aniversario-20",
+        "aniversario-25",
+        "aniversario-30"
+      ],
+      "valorReal": 0,
+      "escalonesConseguidos": 0
+    },
+    {
+      "key": "paso-primer-juego",
+      "nombre": "Empieza la partida",
+      "familia": "onboarding",
+      "condicion": "Añade tu primer juego",
+      "umbrales": [
+        1
+      ],
+      "descendente": false,
+      "rareza": "comun",
+      "puntosPorEscalon": 5,
+      "oculto": false,
+      "retirado": false,
+      "ids": [
+        "paso-primer-juego-1"
+      ],
+      "valorReal": 1,
+      "escalonesConseguidos": 1
+    },
+    {
+      "key": "paso-proximos",
+      "nombre": "La pila empieza aquí",
+      "familia": "onboarding",
+      "condicion": "Añade tu primer juego a Próximos",
+      "umbrales": [
+        1
+      ],
+      "descendente": false,
+      "rareza": "comun",
+      "puntosPorEscalon": 5,
+      "oculto": false,
+      "retirado": false,
+      "ids": [
+        "paso-proximos-1"
+      ],
+      "valorReal": 1,
+      "escalonesConseguidos": 1
+    },
+    {
+      "key": "paso-resena",
+      "nombre": "Despierta, samurái",
+      "familia": "onboarding",
+      "condicion": "Escribe tu primera reseña",
+      "umbrales": [
+        1
+      ],
+      "descendente": false,
+      "rareza": "comun",
+      "puntosPorEscalon": 5,
+      "oculto": false,
+      "retirado": false,
+      "ids": [
+        "paso-resena-1"
+      ],
+      "valorReal": 1,
+      "escalonesConseguidos": 1
+    },
+    {
+      "key": "paso-abandono",
+      "nombre": "Corta por lo sano",
+      "familia": "onboarding",
+      "condicion": "Abandona un juego anotando la razón",
+      "umbrales": [
+        1
+      ],
+      "descendente": false,
+      "rareza": "comun",
+      "puntosPorEscalon": 5,
+      "oculto": false,
+      "retirado": false,
+      "ids": [
+        "paso-abandono-1"
+      ],
+      "valorReal": 1,
+      "escalonesConseguidos": 1
+    },
+    {
+      "key": "paso-sync",
+      "nombre": "Partida en la nube",
+      "familia": "onboarding",
+      "condicion": "Conecta la sincronización",
+      "umbrales": [
+        1
+      ],
+      "descendente": false,
+      "rareza": "comun",
+      "puntosPorEscalon": 5,
+      "oculto": false,
+      "retirado": false,
+      "ids": [
+        "paso-sync-1"
+      ],
+      "valorReal": 1,
+      "escalonesConseguidos": 1
+    },
+    {
+      "key": "paso-nota",
+      "nombre": "Del 0 al 100",
+      "familia": "onboarding",
+      "condicion": "Pon tu primera nota fina",
+      "umbrales": [
+        1
+      ],
+      "descendente": false,
+      "rareza": "comun",
+      "puntosPorEscalon": 5,
+      "oculto": false,
+      "retirado": false,
+      "ids": [
+        "paso-nota-1"
+      ],
+      "valorReal": 1,
+      "escalonesConseguidos": 1
+    },
+    {
+      "key": "paso-ruleta",
+      "nombre": "Tira el dado",
+      "familia": "onboarding",
+      "condicion": "Prueba la ruleta",
+      "umbrales": [
+        1
+      ],
+      "descendente": false,
+      "rareza": "comun",
+      "puntosPorEscalon": 5,
+      "oculto": false,
+      "retirado": false,
+      "ids": [
+        "paso-ruleta-1"
+      ],
+      "valorReal": 0,
+      "escalonesConseguidos": 0
+    },
+    {
+      "key": "paso-tema",
+      "nombre": "Ajustes de vídeo",
+      "familia": "onboarding",
+      "condicion": "Estrena un tema",
+      "umbrales": [
+        1
+      ],
+      "descendente": false,
+      "rareza": "comun",
+      "puntosPorEscalon": 5,
+      "oculto": false,
+      "retirado": false,
+      "ids": [
+        "paso-tema-1"
+      ],
+      "valorReal": 0,
+      "escalonesConseguidos": 0
     }
-  ],
-  "primerosPasos": {
-    "_": "Un nivel, rareza comun, 5 pts. NO se publican nunca, no dan tema y se apagan solos. Fuera del denominador.",
-    "entradas": [
-      {
-        "id": "paso-primer-juego",
-        "nombre": "Empieza la partida",
-        "condicion": "Añade tu primer juego",
-        "guino": "—"
-      },
-      {
-        "id": "paso-resena",
-        "nombre": "Despierta, samurái",
-        "condicion": "Escribe tu primera reseña",
-        "guino": "Cyberpunk 2077"
-      },
-      {
-        "id": "paso-sync",
-        "nombre": "Partida en la nube",
-        "condicion": "Conecta la sincronización",
-        "guino": "—"
-      },
-      {
-        "id": "paso-nota",
-        "nombre": "Del 0 al 100",
-        "condicion": "Pon tu primera nota fina",
-        "guino": "—"
-      },
-      {
-        "id": "paso-ruleta",
-        "nombre": "Tira el dado",
-        "condicion": "Prueba la ruleta",
-        "guino": "RPG de mesa"
-      },
-      {
-        "id": "paso-tema",
-        "nombre": "Ajustes de vídeo",
-        "condicion": "Estrena un tema",
-        "guino": "cultura gamer"
-      }
-    ]
-  }
+  ]
 }
