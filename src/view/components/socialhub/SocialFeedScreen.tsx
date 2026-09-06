@@ -13,6 +13,11 @@ import { HubStatus } from './HubStatus';
 import { PostBody } from './PostText';
 import { HubAvatar } from './HubAvatar';
 import { HubOfflineNotice } from './HubOfflineNotice';
+import { AchievementStrip } from '../stats/AchievementStrip';
+import { AchievementMedal } from '../stats/AchievementMedal';
+import { AchievementSprite } from '../AchievementSprite';
+import { ENABLE_ACHIEVEMENTS } from '../../../core/achievements/flags';
+import { ACHIEVEMENTS_UI } from '../../../core/constants/achievementLabels';
 
 /** Pantalla principal del feed social. */
 function SocialFeedScreenBase({
@@ -22,6 +27,7 @@ function SocialFeedScreenBase({
   currentSocialGistId,
   loadingDirectory,
   openProfileDetail,
+  openProfileAchievements,
   onOpenProfiles,
   onOpenOwnProfile,
   onOpenRequests,
@@ -52,6 +58,8 @@ function SocialFeedScreenBase({
   currentSocialGistId: string;
   loadingDirectory: boolean;
   openProfileDetail: (id: string) => void;
+  /** Pulsar una medalla del feed lleva a los logros de esa persona, no a su ficha. */
+  openProfileAchievements: (id: string) => void;
   onOpenProfiles: () => void;
   onOpenOwnProfile: () => void;
   onOpenRequests: () => void;
@@ -139,6 +147,9 @@ function SocialFeedScreenBase({
 
   return (
     <section className="hub-hub hub-screen" aria-label={SOCIAL_UI.feed.sectionAria}>
+      {/* El sprite de las medallas, montado UNA vez por pantalla y nunca en `App.tsx` (§8.5). Aquí y no dentro de
+          cada medalla, que lo montaría treinta y ocho veces. */}
+      {ENABLE_ACHIEVEMENTS ? <AchievementSprite /> : null}
       <div className="hub-hub-card hub-screen-card hub-feed-card-shell">
         <header className="hub-screen-header hub-feed-header">
           <div className="hub-feed-header-text">
@@ -288,6 +299,88 @@ function SocialFeedScreenBase({
                   {group.items.map((entry) => {
                     const itemDate = new Date(entry.updatedAt || '');
                     const hasValidDate = !Number.isNaN(itemDate.getTime());
+
+                    // LOGROS: una entrada por persona y DÍA, con todos los de ese día dentro. Va la primera de
+                    // la cadena de tipos porque no comparte NADA con las demás —no tiene gist, ni juego, ni
+                    // texto—, así que estrecharla aquí deja el resto del bloque leyéndose igual que antes.
+                    if (entry.kind === 'achievements') {
+                      const quien = entry.authorName || 'Usuario';
+                      const nombres = entry.items
+                        .map((item) => item.def.labels.name)
+                        .join(', ');
+                      const irALogros = () => openProfileAchievements(entry.profileId);
+                      return (
+                        /* LA TARJETA ENTERA ES PULSABLE, como la de una reseña. Antes solo lo eran el avatar, el
+                           nombre y las medallas, y la tarjeta ya traía `cursor: pointer` de
+                           `.hub-feed-activity-item`: el puntero prometía en toda la superficie algo que solo
+                           respondía arriba. Mismo patrón que `is-review` —`tabIndex`, `onClick`, `onKeyDown` y
+                           `stopPropagation` en lo de dentro— para no inventar una interacción distinta. */
+                        <article
+                          key={entry.key}
+                          className={`hub-feed-card hub-feed-activity-item is-achievements ${entry.own ? 'is-own-activity' : 'is-external-activity'}`}
+                          role="listitem"
+                          tabIndex={0}
+                          aria-label={SOCIAL_UI.feed.openProfileAria(quien) + '. ' + nombres}
+                          onClick={irALogros}
+                          onKeyDown={(event) => {
+                            if (event.key !== 'Enter' && event.key !== ' ') return;
+                            event.preventDefault();
+                            irALogros();
+                          }}
+                        >
+                          {/* EL AVATAR YA NO ES UN CONTROL: la tarjeta entera lleva a los logros y **solo el
+                              nombre** lleva a otro sitio (la ficha). Con el avatar pulsable había dos destinos
+                              en el mismo gesto —tocar la foto o tocar al lado hacían cosas distintas— sin nada
+                              que lo anunciara. */}
+                          <HubAvatar photoURL={entry.photoURL} sizeClass="hub-avatar-xs" />
+                          <div className="hub-feed-ach-body">
+                            <p className="hub-feed-ach-line">
+                              <button
+                                className="hub-name-link hub-feed-move-who"
+                                type="button"
+                                onClick={(event) => { event.stopPropagation(); openProfileDetail(entry.profileId); }}
+                              >
+                                {quien}
+                              </button>
+                              {' '}
+                              {/* CON UNO SOLO, la medalla va EN LA MISMA LÍNEA que el texto: «Ha conseguido 🏅
+                                  Informe forense I» se lee de una vez, mientras que partirlo en dos renglones
+                                  obligaba a juntar a mano una frase y su imagen. Con varios no cabe, y entonces
+                                  el texto dice cuántos y la tira va debajo. */}
+                              {entry.items.length === 1 ? (
+                                <span className="hub-feed-ach-single">
+                                  <span className="hub-feed-move-verb">{ACHIEVEMENTS_UI.feedVerb}</span>
+                                  {' '}
+                                  {/* La medalla a secas, no la tira: con un solo logro el nombre ya está escrito
+                                      al lado, así que el rótulo de la tira lo diría dos veces. */}
+                                  <AchievementMedal def={entry.items[0].def} level={entry.items[0].level} size="sm" />
+                                  {' '}
+                                  <strong className="hub-feed-ach-name">
+                                    {entry.items[0].def.labels.name}
+                                  </strong>
+                                </span>
+                              ) : (
+                                <span className="hub-feed-move-verb">{ACHIEVEMENTS_UI.feedMany(entry.items.length)}</span>
+                              )}
+                            </p>
+                            {/* La MISMA tira que va bajo el nombre en la ficha y en el panel. Decorativa aquí: la
+                                pulsable es la tarjeta, y los nombres van en su nombre accesible. */}
+                            {entry.items.length > 1 ? (
+                              <AchievementStrip
+                                items={entry.items.map((item) => ({
+                                  id: item.def.id,
+                                  level: item.level,
+                                  date: '',
+                                }))}
+                                size="sm"
+                                interactive={false}
+                              />
+                            ) : null}
+                          </div>
+                        </article>
+                      );
+                    }
+
                     // El id vacío NO es propiedad: sin la guarda, dos ids desconocidos casaban entre sí y la
                     // actividad ajena se pintaba como propia.
                     const isOwnActivity = Boolean(currentSocialGistId) && entry.socialGistId === currentSocialGistId;
