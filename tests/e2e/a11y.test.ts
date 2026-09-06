@@ -107,6 +107,25 @@ async function panelDeEstadisticas(page: Page): Promise<void> {
 }
 
 /**
+ * El LISTADO DE LOGROS, que es la pantalla con más color PROPIO de toda la app y la que más papeletas tiene de
+ * romperse sin que nadie lo note:
+ *
+ *  - cada medalla lleva un aura de rareza (cuatro colores fijos), un numeral en blanco con `text-shadow` sobre
+ *    un triángulo en degradado, y el cuadro pintado con un filtro de turbulencia y relieve;
+ *  - los rótulos de rareza usan esos mismos cuatro colores COMO TEXTO, que es donde el contraste sí se mide;
+ *  - y todo eso convive con las seis paletas, que redefinen `--text`, `--surface` y el acento por debajo.
+ *
+ * Va con la biblioteca AMPLIA para que la lista traiga conseguidos y bloqueados a la vez: los bloqueados llevan
+ * el cuadro desaturado y su texto atenuado, que es otro juego de contraste distinto del de los conseguidos.
+ */
+async function listadoDeLogros(page: Page): Promise<void> {
+  await page.goto('/logros');
+  await expect(page.getByRole('heading', { level: 2, name: 'Logros' })).toBeVisible();
+  await expect(page.locator('.ach-row').first()).toBeVisible();
+  await animacionesDeEntradaTerminadas(page);
+}
+
+/**
  * Los nombres del tambor de la ruleta quedan FUERA del contraste: el tambor los pinta en 3D con opacidad y
  * desenfoque crecientes según se alejan del centro (ver `drumStyle` en `RouletteModal.tsx`), así que los de los
  * extremos bajan a ~1,8:1 A PROPÓSITO. Es el gesto de la máquina, no un descuido de color, y el nombre que
@@ -169,6 +188,7 @@ const PANTALLAS = [
   { nombre: 'ajustes', amplia: false, abrir: pantallaDeAjustes },
   { nombre: 'hub social', amplia: false, abrir: puertaDelHubSocial },
   { nombre: 'ruleta', amplia: false, abrir: ruletaAbierta },
+  { nombre: 'logros', amplia: true, abrir: listadoDeLogros },
 ] as const;
 
 for (const palette of PALETAS) {

@@ -5,11 +5,12 @@
 // la cabecera del grupo, y de ella solo llevan a algún sitio dos cosas: el autor y, cuando de verdad hay un
 // análisis detrás, el nombre del juego.
 import { describe, expect, it, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { SOCIAL_UI } from '../../src/core/constants/socialLabels';
 import { SocialFeedScreen } from '../../src/view/components/socialhub/SocialFeedScreen';
 import type { SocialFeedDayGroup, SocialFeedItem, SocialMoveFeedItem } from '../../src/viewmodel/social/socialFeed';
+import { ACHIEVEMENTS_BY_ID } from '../../src/core/achievements/catalog';
 import type { TabId } from '../../src/model/types/game';
 
 const AT = Date.parse('2026-08-12T16:42:00.000Z');
@@ -35,6 +36,7 @@ function renderFeed(
   over: {
     openActivityDetail?: () => void;
     openProfileDetail?: (id: string) => void;
+    openProfileAchievements?: (id: string) => void;
     openMoveReview?: (profileId: string, gameId: number) => void;
   } = {},
 ) {
@@ -47,6 +49,7 @@ function renderFeed(
       currentSocialGistId="ffee1122aabb0001"
       loadingDirectory={false}
       openProfileDetail={over.openProfileDetail ?? (() => {})}
+      openProfileAchievements={over.openProfileAchievements ?? (() => {})}
       onOpenProfiles={() => {}}
       onOpenOwnProfile={() => {}}
       onOpenRequests={() => {}}
@@ -164,5 +167,97 @@ describe('renglón de movimiento de lista', () => {
     renderFeed([move({ tab: 'c', updatedAt: Number.NaN })]);
 
     expect(screen.getByText(SOCIAL_UI.feed.moveRecently)).toBeInTheDocument();
+  });
+});
+
+
+describe('SocialFeedScreen — la tarjeta de LOGROS', () => {
+  const logros = (over: Partial<{ items: Array<{ id: string; level: number }>; profileId: string }> = {}) => ({
+    key: 'pid-2:2026-08-12',
+    profileId: over.profileId ?? 'pid-2',
+    authorName: 'Ada',
+    photoURL: '',
+    updatedAt: AT,
+    items: (over.items ?? [{ id: 'completados-50', level: 1 }, { id: 'tesis-1', level: 1 }]).map((entry) => ({
+      def: ACHIEVEMENTS_BY_ID.get(entry.id)!,
+      level: entry.level,
+    })),
+    own: false,
+    kind: 'achievements' as const,
+  });
+
+  /** La tarjeta, no los `li` de la tira de medallas —que también son `listitem`—. */
+  const tarjetaDeLogros = () => screen.getByRole('listitem', { name: /Créditos finales/ });
+
+  it('con varios logros dice cuántos, no los enumera en el titular', () => {
+    renderFeed([logros()]);
+    expect(screen.getByText('Ha conseguido 2 logros')).toBeInTheDocument();
+  });
+
+  it('con UNO solo dice cuál —con la medalla en la misma línea— y no «1 logro»', () => {
+    renderFeed([logros({ items: [{ id: 'completados-75', level: 1 }] })]);
+
+    // El verbo, la medalla y el nombre comparten renglón, así que el texto va en varios elementos: lo que se
+    // comprueba es que la línea entera lo dice y que la medalla está DENTRO de ella.
+    const linea = screen.getByText('Ha conseguido').closest('p') as HTMLElement;
+    expect(within(linea).getByText('Créditos finales IV')).toBeInTheDocument();
+    expect(within(linea).getByRole('img', { name: /Créditos finales IV/ })).toBeInTheDocument();
+    expect(screen.queryByText(/1 logros?/)).not.toBeInTheDocument();
+  });
+
+  it('cada medalla dice qué se ha desbloqueado al pasar por encima', () => {
+    // El rótulo es un elemento propio —no un `title`— para que salga también con el tabulador.
+    renderFeed([logros()]);
+    expect(screen.getByText('Créditos finales III')).toHaveAttribute('aria-hidden', 'true');
+    expect(screen.getByRole('img', { name: /Créditos finales III/ })).toBeInTheDocument();
+  });
+
+  it('la tarjeta ENTERA lleva a los logros, no solo su parte de arriba', async () => {
+    // La tarjeta ya traía `cursor: pointer` de `.hub-feed-activity-item`, así que el puntero prometía en toda la
+    // superficie algo que solo respondía en el avatar, el nombre y las medallas.
+    const alPerfil = vi.fn();
+    const aLosLogros = vi.fn();
+    renderFeed([logros()], { openProfileDetail: alPerfil, openProfileAchievements: aLosLogros });
+
+    await userEvent.click(tarjetaDeLogros());
+
+    expect(aLosLogros).toHaveBeenCalledWith('pid-2');
+    expect(alPerfil).not.toHaveBeenCalled();
+  });
+
+  it('y responde también con el teclado', async () => {
+    const aLosLogros = vi.fn();
+    renderFeed([logros()], { openProfileAchievements: aLosLogros });
+
+    tarjetaDeLogros().focus();
+    await userEvent.keyboard('{Enter}');
+
+    expect(aLosLogros).toHaveBeenCalledWith('pid-2');
+  });
+
+  it('el nombre del autor sigue llevando a su ficha, sin disparar la tarjeta', async () => {
+    // `stopPropagation`: sin él, pulsar el nombre haría las dos cosas y ganaría la última.
+    const alPerfil = vi.fn();
+    const aLosLogros = vi.fn();
+    renderFeed([logros()], { openProfileDetail: alPerfil, openProfileAchievements: aLosLogros });
+
+    await userEvent.click(screen.getByRole('button', { name: 'Ada' }));
+
+    expect(alPerfil).toHaveBeenCalledWith('pid-2');
+    expect(aLosLogros).not.toHaveBeenCalled();
+  });
+
+  it('las medallas no son paradas de tabulador: la pulsable es la tarjeta', async () => {
+    renderFeed([logros()]);
+    const medalla = screen.getByRole('img', { name: /Créditos finales III/ });
+    expect(medalla.closest('button')).toBeNull();
+    // Pero el rótulo sigue ahí para el ratón, y los nombres van en el nombre accesible de la tarjeta.
+    expect(screen.getByText('Créditos finales III')).toHaveAttribute('aria-hidden', 'true');
+    expect(tarjetaDeLogros()).toHaveAccessibleName(/Créditos finales III, Tesis doctoral/);
+  });
+
+  it('tus propios logros salen marcados como actividad PROPIA', async () => {
+    renderFeed([{ ...logros(), own: true }]);
+    expect(tarjetaDeLogros().className).toContain('is-own-activity');
   });
 });
