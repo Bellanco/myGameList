@@ -415,6 +415,8 @@ describe('/logros — un solo listado, conseguidos primero', () => {
     expect(medalla.className).toContain('is-locked');
     expect(medalla.querySelector('.ach-art')).not.toBeNull();
     expect(medalla.className).toContain('is-temple-1');
+    // Y la píldora dice la cifra que hace falta: en un bloqueado el umbral es el objetivo.
+    expect(medalla.querySelector('.ach-step')?.textContent).toBe('×1');
   });
 });
 
