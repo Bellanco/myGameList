@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { AdminAchievements, suggestStep } from '../../src/view/components/AdminAchievements';
+import { AdminAchievements, measuredFrontier, unseenSteps } from '../../src/view/components/AdminAchievements';
 import { ADMIN_ACHIEVEMENTS_UI as A } from '../../src/core/constants/adminLabels';
 import { ACHIEVEMENTS, ACHIEVEMENTS_BY_LADDER, LADDERS, SCORING_ACHIEVEMENTS } from '../../src/core/achievements/catalog';
 import { MIRROR_ORDER, packAchievements } from '../../src/core/achievements/pack';
@@ -11,6 +11,16 @@ import type { AchievementState } from '../../src/core/achievements/types';
 function espejo(ids: readonly string[]): string {
   const states: AchievementState[] = ids.map((id) => ({ id, level: 1, value: 0, next: null, unlockedAt: 0 }));
   return packAchievements(states, []);
+}
+
+/**
+ * Abre la ficha de «preparar un escalón» desde el PIE de una escalera, que es el único sitio desde el que se
+ * abre: los enlaces por fila («Preparar escalón 15») se retiraron con la señal de salto de umbrales que los
+ * acompañaba. El botón propone alargar la escalera, así que el umbral de partida es el doble del último.
+ */
+async function abrirPlan(escalera: string): Promise<void> {
+  const ficha = screen.getByText(escalera).closest('.admin-card') as HTMLElement;
+  await userEvent.click(within(ficha).getByRole('button', { name: A.prepareAny }));
 }
 
 describe('catálogo de logros — la vista de revisión del panel de administración', () => {
@@ -59,7 +69,7 @@ describe('catálogo de logros — la vista de revisión del panel de administrac
     render(<AdminAchievements onBack={() => {}} />);
     expect(screen.getByText(/Todavía no hay espejos publicados/)).toBeInTheDocument();
     expect(screen.queryByText(/·\s*\d+\/\d+$/)).not.toBeInTheDocument();
-    // «Dormido» sale en el esquema como término explicado; lo que no puede haber es ninguna FILA marcada.
+    // «Nadie ha llegado» sale en el esquema como término explicado; lo que no puede haber es una FILA marcada.
     expect(document.querySelectorAll('tbody .admin-ach-warn-soft')).toHaveLength(0);
   });
 
@@ -73,55 +83,230 @@ describe('catálogo de logros — la vista de revisión del panel de administrac
     expect(within(primero).getByText('100 % · 3/3')).toBeInTheDocument();
     const segundo = screen.getByText('Créditos finales II').closest('tr') as HTMLElement;
     expect(within(segundo).getByText('33 % · 1/3')).toBeInTheDocument();
+
+    // Y LA MISMA CIFRA, DIBUJADA: la barra es lo que deja ver de un vistazo dónde se queda la gente al subir la
+    // escalera. Sale de la cifra, no de un cálculo aparte, así que no pueden decir cosas distintas.
+    const barra = (fila: HTMLElement) => (fila.querySelector('.admin-ach-meter-fill') as HTMLElement).style.width;
+    expect(barra(primero)).toBe('100%');
+    expect(barra(segundo)).toBe('33%');
+    // Repite lo que ya dice el texto de al lado, así que no se anuncia dos veces.
+    expect(primero.querySelector('.admin-ach-meter')).toHaveAttribute('aria-hidden', 'true');
+  });
+
+  /** Sin muestra no hay barra: dibujar un canal vacío afirmaría un 0 % que nadie ha medido. */
+  it('sin espejos publicados no pinta ninguna barra', () => {
+    render(<AdminAchievements onBack={() => {}} />);
+    expect(document.querySelectorAll('.admin-ach-meter')).toHaveLength(0);
   });
 
   /** Las dos decisiones que la pantalla tiene que servir en bandeja: sobra escalón o falta uno. */
-  it('marca el escalón que se regala', () => {
+  it('marca el escalón que tiene casi todo el mundo', () => {
     const mirrors = [espejo(['completados-10']), espejo(['completados-10']), espejo(['completados-10'])];
     render(<AdminAchievements onBack={() => {}} mirrors={mirrors} />);
     const regalado = screen.getByText('Créditos finales I').closest('tr') as HTMLElement;
-    expect(within(regalado).getByText('Regalado')).toBeInTheDocument();
-    // Y la cabecera lleva la cuenta de los dormidos, que es lo que se mira de un vistazo.
-    expect(screen.getByText('Dormidos')).toBeInTheDocument();
+    expect(within(regalado).getByText(A.gift)).toBeInTheDocument();
+    // Y la cabecera lleva la cuenta de los escalones sin nadie, que es lo que se mira de un vistazo.
+    expect(screen.getByText(A.asleepTotal)).toBeInTheDocument();
   });
 
   /**
-   * «DORMIDO» ES LA FRONTERA, no todos los ceros. Por encima del primero al que nadie llega, todos están a cero
-   * por definición: marcarlos los diez tapaba justo la línea que se busca —hasta dónde llega hoy la gente— con
-   * nueve repeticiones de lo mismo.
+   * «NADIE HA LLEGADO» ES LA FRONTERA, no todos los ceros. Por encima del primero al que no llega nadie, todos
+   * están a cero por definición: marcarlos los diez tapaba justo la línea que se busca —hasta dónde llega hoy la
+   * gente— con nueve repeticiones de lo mismo.
    */
-  it('solo marca «Dormido» en el primer escalón al que nadie llega', () => {
+  it('solo marca «nadie ha llegado» en el primer escalón al que no llega nadie', () => {
     const mirrors = [espejo(['completados-10']), espejo(['completados-10']), espejo(['completados-10'])];
     render(<AdminAchievements onBack={() => {}} mirrors={mirrors} />);
 
     const frontera = screen.getByText('Créditos finales II').closest('tr') as HTMLElement;
-    expect(within(frontera).getByText('Dormido')).toBeInTheDocument();
+    expect(within(frontera).getByText(A.asleep)).toBeInTheDocument();
     // Y los de más arriba, con su 0 % pero sin la marca.
     for (const nombre of ['Créditos finales III', 'Créditos finales IV', 'Créditos finales XI']) {
       const fila = screen.getByText(nombre).closest('tr') as HTMLElement;
       expect(within(fila).getByText('0 % · 0/3'), nombre).toBeInTheDocument();
-      expect(within(fila).queryByText('Dormido'), nombre).not.toBeInTheDocument();
+      expect(within(fila).queryByText(A.asleep), nombre).not.toBeInTheDocument();
     }
   });
 
   /**
-   * EL SALTO SALE DE LOS UMBRALES, así que se ve aunque no haya nadie a quien medir: es la señal de «entre estos
-   * dos escalones hay un trayecto largo sin ninguna medalla», que es la pregunta de los intermedios.
+   * LA LÍNEA HASTA DONDE LLEGA LA ESCALERA HOY. Es la regla de la zanahoria leída sobre la muestra, y el caso que
+   * la fija es el de «Un verano entero»: al 25 no ha llegado nadie y aun así SE VE —es el siguiente reto de los
+   * dos que tienen el 15—, mientras que del 40 para arriba no le aparecen a una sola persona, porque para que un
+   * escalón te salga tienes que tener el de debajo.
    */
-  it('señala el salto de umbrales sin necesidad de muestra', () => {
-    render(<AdminAchievements onBack={() => {}} />);
-    // «Créditos finales II» pide 25 tras 10: dos veces y media el anterior.
-    const fila = screen.getByText('Créditos finales II').closest('tr') as HTMLElement;
-    expect(within(fila).getByText('Salto ×2.5')).toBeInTheDocument();
-    // Y de 300 a 400 no hay salto que avisar (×1,33).
-    const suave = screen.getByText('Créditos finales X').closest('tr') as HTMLElement;
-    expect(within(suave).queryByText(/^Salto/)).not.toBeInTheDocument();
+  describe('los escalones que hoy no ve nadie', () => {
+    const maraton = ACHIEVEMENTS_BY_LADDER.get('maraton') || [];
+    const conGente = (porEscalon: Record<number, number>) =>
+      unseenSteps(maraton, (def) => porEscalon[def.step] ?? 0, false);
+
+    it('deja fuera la frontera y marca lo que hay por encima', () => {
+      const fuera = conGente({ 1: 6, 3: 5, 5: 4, 10: 3, 15: 2 });
+      // El 25 se ve: nadie ha llegado, pero es el siguiente de quien tiene el 15.
+      expect(fuera.has('maraton-25')).toBe(false);
+      expect([...fuera]).toEqual(['maraton-40', 'maraton-60', 'maraton-75']);
+    });
+
+    it('la línea sube sola en cuanto alguien alcanza el escalón de debajo', () => {
+      const fuera = conGente({ 1: 6, 3: 5, 5: 4, 10: 3, 15: 2, 25: 1 });
+      expect([...fuera]).toEqual(['maraton-60', 'maraton-75']);
+    });
+
+    /** Sin nadie en toda la escalera se sigue viendo el primero: es la zanahoria de quien no tiene nada. */
+    it('el primer escalón lo ve todo el mundo aunque no lo tenga nadie', () => {
+      const fuera = conGente({});
+      expect(fuera.has('maraton-1')).toBe(false);
+      expect(fuera.size).toBe(maraton.length - 1);
+    });
+
+    /**
+     * OCULTA NO HAY ZANAHORIA: `withoutHidden` se lleva todo lo que no esté conseguido, así que la frontera deja
+     * de verse también. Es la consecuencia del interruptor, y aquí se ve dibujada.
+     */
+    it('con la escalera oculta, lo que nadie tiene no lo ve nadie', () => {
+      const porEscalon: Record<number, number> = { 1: 6, 3: 5, 5: 4, 10: 3, 15: 2 };
+      const oculta = unseenSteps(maraton, (def) => porEscalon[def.step] ?? 0, true);
+      expect([...oculta]).toEqual(['maraton-25', 'maraton-40', 'maraton-60', 'maraton-75']);
+    });
+
+    /** Un retirado no se ofrece a nadie, y tampoco gasta el turno: el siguiente ocupa su sitio. */
+    it('los retirados no se ven, y dejan pasar el turno al siguiente', () => {
+      const speedrun = ACHIEVEMENTS_BY_LADDER.get('speedrun') || [];
+      expect(speedrun.every((def) => def.retired)).toBe(true);
+      expect(unseenSteps(speedrun, () => 0, false).size).toBe(speedrun.length);
+    });
+
+    it('lo marca en la fila, y solo con muestra que lo sostenga', () => {
+      const mirrors = [espejo(['maraton-1']), espejo(['maraton-1', 'maraton-3'])];
+      const { unmount } = render(<AdminAchievements onBack={() => {}} mirrors={mirrors} />);
+      // El 5 es la frontera y se ve; el 10 ya no lo tiene nadie delante.
+      const frontera = screen.getByText('Un verano entero III').closest('tr') as HTMLElement;
+      expect(within(frontera).queryByText(A.unseen)).not.toBeInTheDocument();
+      const muerto = screen.getByText('Un verano entero IV').closest('tr') as HTMLElement;
+      expect(within(muerto).getByText(A.unseen)).toBeInTheDocument();
+      expect(muerto).toHaveClass('is-unseen');
+      // El rótulo va UNA vez, en la primera del tramo: el raíl del canto une el resto. Las de más arriba llevan
+      // la marca de fila pero no repiten el texto.
+      const siguiente = screen.getByText('Un verano entero V').closest('tr') as HTMLElement;
+      expect(siguiente).toHaveClass('is-unseen');
+      expect(within(siguiente).queryByText(A.unseen)).not.toBeInTheDocument();
+      unmount();
+
+      // Sin espejos no hay con qué saberlo, así que no se marca ninguna FILA. (El término sigue saliendo en el
+      // esquema, que es una lista de definiciones: por eso se mira el cuerpo de la tabla y no la pantalla.)
+      render(<AdminAchievements onBack={() => {}} />);
+      expect(document.querySelectorAll('tbody tr.is-unseen')).toHaveLength(0);
+      expect(document.querySelectorAll('tbody .admin-ach-unseen')).toHaveLength(0);
+    });
   });
 
-  it('el retirado deja de ofrecerse, y se dice', () => {
+  /**
+   * LA APERTURA COMUNITARIA es lo único de esta pantalla que cambia lo que ve TODO EL MUNDO sin tocar el
+   * interruptor de una escalera, así que se publica a mano: mirar el panel no puede escribir nada.
+   */
+  describe('publicar la apertura', () => {
+    const mirrors = [espejo(['completados-10', 'completados-25']), espejo(['completados-10'])];
+
+    it('mide la frontera de cada escalera y ofrece publicarla cuando no es la que hay', async () => {
+      const onPublishFrontier = vi.fn().mockResolvedValue(undefined);
+      render(<AdminAchievements onBack={() => {}} mirrors={mirrors} openFrontier={{}} onPublishFrontier={onPublishFrontier} />);
+
+      await userEvent.click(screen.getByRole('button', { name: A.frontierPublish }));
+      // El `id` del escalón más alto al que ha llegado alguien, por escalera. Nada de escaleras sin nadie.
+      expect(onPublishFrontier).toHaveBeenCalledWith({ completados: 'completados-25' });
+      expect(screen.getByText(A.frontierPublished)).toBeInTheDocument();
+    });
+
+    it('con la apertura ya publicada no ofrece publicar nada', () => {
+      render(<AdminAchievements onBack={() => {}} mirrors={mirrors} openFrontier={{ completados: 'completados-25' }} onPublishFrontier={vi.fn()} />);
+      expect(screen.getByText(A.frontierSame(1))).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: A.frontierPublish })).not.toBeInTheDocument();
+    });
+
+    it('sin espejos no hay nada que abrir, y se dice', () => {
+      render(<AdminAchievements onBack={() => {}} onPublishFrontier={vi.fn()} />);
+      expect(screen.getByText(A.frontierNone)).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: A.frontierPublish })).not.toBeInTheDocument();
+    });
+
+    it('si la publicación falla, lo dice', async () => {
+      const onPublishFrontier = vi.fn().mockRejectedValue(new Error('permission-denied'));
+      render(<AdminAchievements onBack={() => {}} mirrors={mirrors} openFrontier={{}} onPublishFrontier={onPublishFrontier} />);
+      await userEvent.click(screen.getByRole('button', { name: A.frontierPublish }));
+      expect(screen.getByText(A.frontierFailed)).toBeInTheDocument();
+    });
+
+    /** Una escalera descendente ordena al revés, así que «lo más lejos» es la POSICIÓN, no el número mayor. */
+    it('en una escalera descendente toma el escalón más avanzado, no el umbral más alto', () => {
+      const grupos = [{
+        ladder: LADDERS.find((l) => l.key === 'estanteria-cero')!,
+        steps: ACHIEVEMENTS_BY_LADDER.get('estanteria-cero') || [],
+      }];
+      // Umbrales [50, 25, 10, 5, 1]: alguien ha bajado hasta 25, que es el SEGUNDO escalón.
+      const alcanzado = new Set(['estanteria-cero-50', 'estanteria-cero-25']);
+      expect(measuredFrontier(grupos, (def) => (alcanzado.has(def.id) ? 1 : 0)))
+        .toEqual({ 'estanteria-cero': 'estanteria-cero-25' });
+    });
+  });
+
+  /**
+   * LAS SEÑALES DE ESTA COLUMNA HABLAN DE GENTE Y DE NADA MÁS. La que salía de los umbrales («Salto ×2.5») se
+   * retiró: en una columna titulada «quién ha llegado» era el único dato que no medía a nadie, y decía lo mismo
+   * que la caída con otra unidad. Este test defiende que no vuelva a colarse.
+   */
+  it('no mezcla señales de umbrales en la columna de gente', () => {
+    render(<AdminAchievements onBack={() => {}} />);
+    expect(screen.queryByText(/^Salto ×/)).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^Preparar escalón \d/ })).not.toBeInTheDocument();
+  });
+
+  /**
+   * LO QUE VE EL USUARIO NO SE DEDUCE DE LA MUESTRA, y era la confusión que se llevaba la pantalla por delante:
+   * un escalón al que no ha llegado nadie se sigue ofreciendo igual. Lo único que decide qué se enseña es el
+   * interruptor de la escalera, y por eso las dos cosas se dicen con palabras que no se parecen.
+   */
+  it('dice qué ve cada usuario sin mezclarlo con lo que mide la muestra', () => {
+    const mirrors = [espejo(['completados-10']), espejo(['completados-10'])];
+    render(<AdminAchievements onBack={() => {}} mirrors={mirrors} onToggleHidden={vi.fn()} />);
+
+    // La escalera se ofrece, y la línea de estado dice la regla entera: lo tuyo, y UNO más.
+    const creditos = screen.getByText('Créditos finales').closest('.admin-card') as HTMLElement;
+    expect(within(creditos).getByText(A.visibleNow)).toBeInTheDocument();
+    // Aunque a su segundo escalón no haya llegado nadie: eso no lo esconde.
+    const frontera = screen.getByText('Créditos finales II').closest('tr') as HTMLElement;
+    expect(within(frontera).getByText(A.asleep)).toBeInTheDocument();
+    expect(within(creditos).queryByText(A.hiddenNow)).not.toBeInTheDocument();
+
+    // Y una oculta dice justo lo contrario, incluida la consecuencia: quien no la tiene se queda sin ese reto.
+    const oculta = screen.getByText('Obra maestra').closest('.admin-card') as HTMLElement;
+    expect(within(oculta).getByText(A.hiddenNow)).toBeInTheDocument();
+  });
+
+  /**
+   * SE MARCA LA EXCEPCIÓN, NO LA REGLA. Era una columna «Ofrecido» que decía «Sí» en 259 de los 261 escalones:
+   * una columna entera de ruido para señalar dos filas. Ahora la marca va junto al nombre del que no se ofrece, y
+   * lo que este test defiende es justo eso — que la marca solo salga donde toca.
+   */
+  it('el retirado deja de ofrecerse, y se dice en su fila', () => {
     render(<AdminAchievements onBack={() => {}} />);
     const fila = screen.getByText('Speedrun I').closest('tr') as HTMLElement;
-    expect(within(fila).getByText('No')).toBeInTheDocument();
+    expect(within(fila).getByText(A.notOffered)).toBeInTheDocument();
+    // Y el que sí se ofrece no lleva nada: la regla se calla.
+    const vigente = screen.getByText('Créditos finales I').closest('tr') as HTMLElement;
+    expect(within(vigente).queryByText(A.notOffered)).not.toBeInTheDocument();
+  });
+
+  /**
+   * EL LISTADO SE PARTE POR FAMILIAS, y el orden de los tramos sale del catálogo: una familia nueva aparece sola
+   * y donde se declaró, en vez de caerse en silencio de una lista escrita a mano en la vista.
+   */
+  it('agrupa las escaleras por familia, en el orden en que el catálogo las declara', () => {
+    render(<AdminAchievements onBack={() => {}} />);
+    const declarado = [...new Set(LADDERS.map((ladder) => ladder.family))].map((family) => A.families[family]);
+    const pintado = [...document.querySelectorAll('.admin-ach-family-head > span')].map((node) => node.textContent);
+    expect(pintado).toEqual(declarado);
+    // Y cada tramo dice cuántas escaleras trae, que es lo que permite situarse sin contarlas.
+    const espejo = LADDERS.filter((ladder) => ladder.family === 'mirror').length;
+    expect(screen.getAllByText(A.familyCount(espejo)).length).toBeGreaterThan(0);
   });
 
   /**
@@ -147,8 +332,8 @@ describe('catálogo de logros — la vista de revisión del panel de administrac
 
     // «Obra maestra» nace oculta en el catálogo, así que el botón ofrece mostrarla.
     const oculta = screen.getByText('Obra maestra').closest('.admin-card') as HTMLElement;
-    expect(within(oculta).getByText('Oculto: quien no lo tiene no lo ve')).toBeInTheDocument();
-    await userEvent.click(within(oculta).getByRole('button', { name: 'Mostrar a todos' }));
+    expect(within(oculta).getByText(A.hiddenNow)).toBeInTheDocument();
+    await userEvent.click(within(oculta).getByRole('button', { name: A.show }));
     expect(onToggleHidden).toHaveBeenCalledWith('obra-maestra', false);
     // Y se dice que el usuario lo verá al abrir sus logros, porque no es instantáneo.
     expect(within(oculta).getByText(/Cada usuario lo verá al abrir sus logros/)).toBeInTheDocument();
@@ -157,7 +342,7 @@ describe('catálogo de logros — la vista de revisión del panel de administrac
   it('respeta el interruptor guardado: una escalera revelada ofrece volver a ocultarla', () => {
     render(<AdminAchievements onBack={() => {}} onToggleHidden={vi.fn()} hiddenOverrides={{ 'obra-maestra': false }} />);
     const revelada = screen.getByText('Obra maestra').closest('.admin-card') as HTMLElement;
-    expect(within(revelada).getByText('A la vista de todos')).toBeInTheDocument();
+    expect(within(revelada).getByText(A.visibleNow)).toBeInTheDocument();
     expect(within(revelada).getByRole('button', { name: 'Ocultar hasta conseguirlo' })).toBeInTheDocument();
   });
 
@@ -165,15 +350,14 @@ describe('catálogo de logros — la vista de revisión del panel de administrac
     const onToggleHidden = vi.fn().mockRejectedValue(new Error('permission-denied'));
     render(<AdminAchievements onBack={() => {}} onToggleHidden={onToggleHidden} />);
     const oculta = screen.getByText('Obra maestra').closest('.admin-card') as HTMLElement;
-    await userEvent.click(within(oculta).getByRole('button', { name: 'Mostrar a todos' }));
+    await userEvent.click(within(oculta).getByRole('button', { name: A.show }));
     expect(within(oculta).getByText(/No se ha podido guardar/)).toBeInTheDocument();
   });
 
   /** EL NÚMERO LO ELIGE QUIEN MIRA, y la lista se recoloca sola: da igual por dónde entre el umbral. */
   it('acepta el umbral que se le escriba y recoloca la lista', async () => {
     render(<AdminAchievements onBack={() => {}} />);
-    const fila = screen.getByText('Créditos finales II').closest('tr') as HTMLElement;
-    await userEvent.click(within(fila).getByRole('button', { name: 'Preparar escalón 15' }));
+    await abrirPlan('Créditos finales');
 
     const campo = screen.getByRole('spinbutton');
     await userEvent.clear(campo);
@@ -186,8 +370,7 @@ describe('catálogo de logros — la vista de revisión del panel de administrac
 
   it('un umbral que ya existe se rechaza con su motivo, sin generar pasos falsos', async () => {
     render(<AdminAchievements onBack={() => {}} />);
-    const fila = screen.getByText('Créditos finales II').closest('tr') as HTMLElement;
-    await userEvent.click(within(fila).getByRole('button', { name: 'Preparar escalón 15' }));
+    await abrirPlan('Créditos finales');
 
     const campo = screen.getByRole('spinbutton');
     await userEvent.clear(campo);
@@ -227,28 +410,23 @@ describe('catálogo de logros — la vista de revisión del panel de administrac
    * pasos van juntos porque olvidarse del segundo —el `id` en `MIRROR_IDS`— es lo que deja un logro que no se
    * publica, en silencio.
    */
-  it('prepara el escalón del hueco con los tres pasos y las cifras de hoy', async () => {
+  it('prepara el escalón con los tres pasos y las cifras de hoy', async () => {
     render(<AdminAchievements onBack={() => {}} />);
-    // Entre 10 y 25 hay «salto ×2.5»; la media geométrica redondeada son 15. (El mismo hueco sale en varias
-    // escaleras, así que el botón se busca DENTRO de la fila de esta.)
-    const fila = screen.getByText('Créditos finales II').closest('tr') as HTMLElement;
-    await userEvent.click(within(fila).getByRole('button', { name: 'Preparar escalón 15' }));
+    // El botón propone alargar la escalera: el doble del último escalón (500 → 1000).
+    await abrirPlan('Créditos finales');
 
-    expect(screen.getByText('Insertar 15 en «completados»')).toBeInTheDocument();
-    expect(screen.getByText(/steps: \[10, 15, 25, 50/)).toBeInTheDocument();
-    expect(screen.getByText(/al FINAL de MIRROR_IDS: 'completados-15',/)).toBeInTheDocument();
+    expect(screen.getByText('Insertar 1000 en «completados»')).toBeInTheDocument();
+    expect(screen.getByText(/steps: \[10, 25, 50, .*, 500, 1000\]/)).toBeInTheDocument();
+    expect(screen.getByText(/al FINAL de MIRROR_IDS: 'completados-1000',/)).toBeInTheDocument();
     expect(screen.getByText(new RegExp(`total ${SCORING_ACHIEVEMENTS.length} → ${SCORING_ACHIEVEMENTS.length + 1}`))).toBeInTheDocument();
     expect(screen.getByText(new RegExp(`MIRROR_ORDER ${MIRROR_ORDER.length} → ${MIRROR_ORDER.length + 1}`))).toBeInTheDocument();
-    // Y avisa de lo único que no se puede evitar: los de arriba corren de romano.
-    expect(screen.getByText(/corren de romano \(Créditos finales II/)).toBeInTheDocument();
-  });
 
-  it('el umbral propuesto parte el hueco en dos, no por la mitad aritmética', () => {
-    // Entre 10 y 100, la media aritmética (55) deja el primer tramo diez veces más corto que el segundo.
-    expect(suggestStep(10, 100)).toBe(30);
-    expect(suggestStep(10, 25)).toBe(15);
-    expect(suggestStep(100, 500)).toBe(225);
-    // Y donde no cabe ningún entero —las escaleras que empiezan en 1, 2, 3…— no propone nada.
-    expect(suggestStep(1, 2)).toBe(0);
+    // Alargando por arriba no se renumera nadie, así que el aviso de romanos no sale. Con un intermedio sí:
+    // es el único efecto que insertar un escalón no puede evitar.
+    expect(screen.queryByText(/corren de romano/)).not.toBeInTheDocument();
+    const campo = screen.getByRole('spinbutton');
+    await userEvent.clear(campo);
+    await userEvent.type(campo, '15');
+    expect(screen.getByText(/corren de romano \(Créditos finales II/)).toBeInTheDocument();
   });
 });

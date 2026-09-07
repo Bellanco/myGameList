@@ -15,7 +15,8 @@ export const ADMIN_PANEL_UI = {
   checking: 'Comprobando permisos...',
   loading: 'Cargando usuarios...',
   refresh: 'Actualizar',
-  back: 'Volver a mis listas',
+  // SIN «volver a mis listas»: la navegación de secciones sigue arriba en `/admin` (la cabecera no se oculta en
+  // esta ruta), así que el botón repetía una salida que ya estaba a la vista y ocupaba el sitio de la barra.
   searchLabel: 'Buscar',
   searchPlaceholder: 'Nombre o identificador',
   // Filtro de atención. Se nombra por lo que deja ver, no por lo que esconde: al abrir el panel la pregunta es
@@ -387,8 +388,10 @@ export const ADMIN_ACHIEVEMENTS_UI = {
     aria: 'Cifras del catálogo',
     ladders: 'Escaleras',
     steps: 'Escalones',
-    hidden: 'Ocultos',
-    retired: 'Retirados',
+    // En femenino: las tres primeras cifras cuentan ESCALERAS, no escalones, y en masculino se leían como si
+    // contaran lo mismo que la casilla de al lado.
+    hidden: 'Ocultas',
+    retired: 'Retiradas',
   },
 
   /** Filtro por texto: con 261 escalones, buscar es parte de revisar. */
@@ -399,59 +402,95 @@ export const ADMIN_ACHIEVEMENTS_UI = {
 
   /** Cabecera de una escalera. La `key` se enseña porque es el prefijo de los `id`, que no se renombran jamás. */
   ladderKey: (key: string) => `key: ${key}`,
-  ladderSteps: (steps: readonly number[]) => `Umbrales: ${steps.join(' · ')}`,
   ladderIcon: (icon: string) => `Icono: ${icon}`,
-  ladderCondition: 'Condición de la escalera (el respaldo, sin cifra)',
+  // SIN «Umbrales: 10 · 25 · 50…» en la cabecera: es exactamente la primera columna de la tabla que va debajo, y
+  // repetirla en cada una de las 50 fichas era la línea que más sitio ocupaba sin decir nada nuevo.
+  ladderCondition: 'Condición base',
+  /** Encabezado de familia: agrupa las 50 escaleras en cinco tramos para que el listado se pueda barrer. */
+  familyCount: (count: number) => (count === 1 ? '1 escalera' : `${count} escaleras`),
+  // Las tres califican a la ESCALERA, no a un escalón: en masculino se leían como propiedades de la fila de al
+  // lado, que es justo la confusión que esta pantalla venía a deshacer.
   descending: 'Menos es mejor',
-  hidden: 'Oculto',
-  retired: 'Retirado',
+  hidden: 'Oculta',
+  retired: 'Retirada',
 
   /** Columnas de los escalones. Los dos textos, uno al lado del otro: es lo que se viene a comparar. */
   colStep: 'Escalón',
-  colOffered: 'Ofrecido',
-  colReached: 'Alcanzado',
+  // «Alcanzado» no decía por QUIÉN, y en una pantalla que también habla de lo que ve cada usuario se leía como
+  // «alcanzado por ti». Lo que hay en esta columna es siempre gente del censo.
+  colReached: 'Quién ha llegado',
   colName: 'Nombre',
   colGoal: 'Meta (lo que falta)',
   colDone: 'Hecho (lo conseguido)',
   /** ⚑ Señal de que una escalera se dejó el `done`: el respaldo copia la meta y se lee como una tarea pendiente. */
   sameText: 'Sin texto propio: repite la meta',
 
-  /** ¿El catálogo lo sigue proponiendo? Un retirado no se ofrece, pero se sigue pintando a quien lo tenga. */
-  offeredYes: 'Sí',
-  offeredNo: 'No',
+  /**
+   * ¿El catálogo lo sigue proponiendo? Un retirado no se ofrece, pero se sigue pintando a quien lo tenga.
+   *
+   * ERA UNA COLUMNA y ahora es una MARCA junto al nombre. De 261 escalones, 259 decían «Sí»: una columna entera
+   * de ruido para señalar dos filas. La excepción se marca donde pasa y la regla se calla, que es lo que hace
+   * que la excepción se vea.
+   */
+  notOffered: 'No se ofrece',
 
   /**
    * Cuánta gente lo tiene, SIEMPRE con su denominador: es la única forma de que «el 4 %» no se lea como una
    * afirmación global cuando la muestra son 25 perfiles.
    */
   reached: (percent: number, holders: number, sample: number) => `${percent} % · ${holders}/${sample}`,
-  /** Nadie ha llegado: candidato a que el umbral esté demasiado alto o a que sobre el escalón. */
-  asleep: 'Dormido',
-  /** Casi todo el mundo lo tiene: el escalón no mide nada, se regala al entrar. */
-  gift: 'Regalado',
   /**
-   * El hueco: entre este escalón y el anterior el umbral se multiplica por mucho, así que en medio hay un
-   * trayecto largo sin ninguna medalla. Es la señal que dice «aquí cabe un intermedio», y se ve SIN muestra:
-   * sale de los propios umbrales.
+   * LAS TRES SEÑALES DE LA MUESTRA HABLAN DE GENTE, y sus nombres tienen que decirlo.
+   *
+   * «Dormido» y «Regalado» describían el escalón como si fuera un estado suyo, y en una pantalla que además
+   * decide qué VE cada usuario, «Dormido» se leía como «apagado, no se enseña» — que es justo lo contrario de lo
+   * que mide: un escalón al que no ha llegado nadie se sigue ofreciendo a todo el mundo. Lo que se oculta o se
+   * ofrece lo dice el interruptor de la escalera, y nada más.
    */
-  gap: (factor: string) => `Salto ×${factor}`,
-  /** Y con muestra, la caída: del escalón anterior a este se pierde a casi todo el mundo. */
-  cliff: 'Se cae aquí',
+  asleep: 'Nadie ha llegado',
+  gift: 'Casi todos lo tienen',
+  /** La caída: del escalón anterior a este se pierde a casi todo el mundo. */
+  cliff: 'Aquí se cae la gente',
+  /**
+   * CERRADO PARA TODOS. No es lo mismo que «nadie ha llegado» y por eso no se parece: al que nadie ha llegado se
+   * le sigue ofreciendo —es el siguiente reto de quien tiene el de debajo, así que está ABIERTO—, mientras que
+   * estos, los de más arriba, no se le enseñan a nadie. En cuanto alguien alcance el de debajo, el primero de
+   * ellos se abre para todo el mundo y la línea sube sola.
+   */
+  unseen: 'Cerrado para todos',
 
   sampleNote: (sample: number) => `Medido sobre ${sample} espejos publicados del censo.`,
+
+  /**
+   * LA APERTURA COMUNITARIA, que es lo único de esta pantalla que decide lo que ve la gente sin que nadie pulse
+   * un interruptor. Se publica a mano y no al abrir el panel: es una escritura que cambia el listado de todo el
+   * mundo, y hacerla sola por el hecho de mirar sería exactamente lo que no debe pasar.
+   */
+  frontierTitle: 'Apertura de las escaleras',
+  frontierNone: 'Sin espejos que medir, así que no hay nada que abrir: cada usuario ve hasta donde llegue su propio progreso, que es el comportamiento de siempre.',
+  frontierSame: (ladders: number) => `Publicada y al día: ${ladders === 1 ? '1 escalera abierta' : `${ladders} escaleras abiertas`} por lo que ha alcanzado la gente.`,
+  frontierStale: (ladders: number) => `La medición de ahora abre ${ladders === 1 ? '1 escalera' : `${ladders} escaleras`} y no es la que está publicada: hasta que se publique, la gente ve la anterior.`,
+  frontierPublish: 'Publicar la apertura',
+  frontierPublishing: 'Publicando…',
+  frontierPublished: 'Publicada. Cada usuario la verá al abrir sus logros.',
+  frontierFailed: 'No se ha podido publicar. ¿Sesión de administrador iniciada?',
 
   /**
    * EL INTERRUPTOR DE VERDAD: cambia lo que ve TODO EL MUNDO, no lo que ve el panel.
    *
    * Aquí los logros se enseñan siempre destapados —taparlos en la pantalla de revisión no tiene sentido: es
-   * justo donde hay que leer sus textos—. Lo que este botón decide es si el logro se le esconde a quien AÚN NO
-   * LO TIENE; a quien ya lo consiguió no se le quita nunca.
+   * justo donde hay que leer sus textos—. Lo que este botón decide es si la escalera se le esconde a quien AÚN
+   * NO LA TIENE; a quien ya consiguió un escalón no se le quita nunca.
+   *
+   * LOS DOS ESTADOS SE ESCRIBEN ENTEROS, y no con un «a la vista de todos» que era falso por los dos lados:
+   * nadie ve la escalera entera —se ofrece de uno en uno— y ocultarla no esconde «un logro», deja a quien no la
+   * tiene sin ningún escalón de ella y, por tanto, sin ese reto. Es la consecuencia que hay que tener delante al
+   * pulsar, así que se dice en la propia línea de estado en vez de en una leyenda que puede no abrirse.
    */
-  hiddenTitle: 'Visible para quien no lo tiene',
-  show: 'Mostrar a todos',
+  show: 'Ofrecerla a todos',
   hide: 'Ocultar hasta conseguirlo',
-  hiddenNow: 'Oculto: quien no lo tiene no lo ve',
-  visibleNow: 'A la vista de todos',
+  hiddenNow: 'Oculta: quien no tiene ningún escalón no ve la escalera, ni el siguiente reto',
+  visibleNow: 'Se ofrece: todos ven lo mismo, hasta el primer escalón que nadie ha alcanzado',
   /** El panel escribe en Firestore y la app lo lee al abrir la pantalla: no es instantáneo y se dice. */
   hiddenSaved: 'Guardado. Cada usuario lo verá al abrir sus logros.',
   hiddenFailed: 'No se ha podido guardar. ¿Sesión de administrador iniciada?',
@@ -477,24 +516,33 @@ export const ADMIN_ACHIEVEMENTS_UI = {
   prepareCopied: 'Copiado.',
   prepareClose: 'Cerrar',
 
-  /** EL ESQUEMA. Va plegado: se abre la primera vez y no vuelve a estorbar. */
+  /**
+   * EL ESQUEMA. Va plegado: se abre la primera vez y no vuelve a estorbar.
+   *
+   * ABRE CON LA REGLA DE QUÉ SE VE, y no con la primera columna, porque es la que no se deduce mirando la
+   * pantalla y la que hacía leer mal todo lo demás: sin ella, «nadie ha llegado» se entiende como «no se enseña»,
+   * y no tienen nada que ver. Un escalón al que no llega nadie se sigue ofreciendo; lo único que decide qué se
+   * enseña es el interruptor de la escalera.
+   */
   legendTitle: 'Qué significa cada dato',
   legend: [
+    ['Qué ve cada usuario', 'LO MISMO QUE TODOS. En cuanto un usuario ve un escalón, ese escalón queda abierto para todo el mundo, así que la escalera se enseña igual a quien empieza que a quien va en cabeza. Lo que cambia de una persona a otra es lo que lleva CONSEGUIDO, no la lista. La línea es el primer escalón al que no ha llegado nadie: ese se ofrece (es el reto del que va delante) y de ahí para arriba no se enseña nada todavía. Así nadie se queda sin un reto a la vista y nadie ve una escalera entera de golpe.'],
+    ['Ocultar hasta conseguirlo', 'El interruptor de cada escalera. Ocultarla la retira ENTERA para quien no tiene ningún escalón suyo: ni la escalera, ni el siguiente reto, ni un hueco con un «?». A quien ya tiene un escalón no se le quita nunca, y ni los puntos ni el espejo publicado se mueven. Es la forma de que un logro sea una sorpresa, al precio de que deje de tirar de nadie.'],
     ['Escalón', 'El umbral que hay que alcanzar. Es también lo que lleva el `id` del logro (`completados-50`), y por eso no se renombra nunca.'],
     ['Nombre', 'Lo que ve la gente, con su grado en romano. El romano sale de la POSICIÓN dentro de la escalera, así que insertar un escalón renumera los de arriba.'],
-    ['Ofrecido', '¿El catálogo lo sigue proponiendo? Un retirado deja de ofrecerse y de contar en la fracción, pero se sigue pintando a quien ya lo tenga.'],
-    ['Alcanzado', 'Qué parte de la gente lo tiene, medido sobre los espejos publicados del censo. Siempre con su denominador: con 43 espejos, «2 %» es una persona.'],
-    ['Dormido', 'El PRIMER escalón de la escalera al que no ha llegado nadie: la frontera de lo que hoy está en juego. Los de más arriba también están a cero y no se marcan, que sería repetir lo mismo.'],
-    ['Regalado', 'Lo tiene el 90 % o más. No mide nada: se consigue por estar aquí.'],
-    ['Se cae aquí', 'Del escalón anterior a este se pierde a casi todo el mundo. Con el salto de umbrales al lado, es la señal de que el paso es demasiado grande.'],
-    ['Salto ×N', 'El umbral se multiplica por N respecto al anterior. Es lo que dice «entre estos dos cabe un intermedio», y se ve aunque no haya nadie a quien medir.'],
+    ['No se ofrece', 'El catálogo ya no lo propone: un retirado deja de ofrecerse y de contar en la fracción, y tampoco gasta el turno del siguiente reto. Se sigue pintando a quien ya lo tenga. Solo se marca la excepción; lo normal es que se ofrezca.'],
+    ['Quién ha llegado', 'Qué parte de la GENTE lo tiene, medido sobre los espejos publicados del censo. No tiene nada que ver con lo que se le enseña a cada uno. Siempre con su denominador: con 43 espejos, «2 %» es una persona.'],
+    ['Nadie ha llegado', 'El PRIMER escalón de la escalera al que no ha llegado ninguna persona del censo: la frontera de lo que hoy está en juego. Se sigue ofreciendo con normalidad —es el siguiente reto de quien tiene el de debajo—, así que esto no lo esconde.'],
+    ['Cerrado para todos', 'Los escalones POR ENCIMA de esa frontera, marcados con un raíl en el canto de la fila: no se le enseñan a nadie, ni al que va en cabeza. En cuanto alguien alcance el anterior, el primero de ellos se abre para todo el mundo y la línea sube sola. Con la escalera OCULTA son todos los que nadie tiene: ahí no se abre ninguno.'],
+    ['Casi todos lo tienen', 'Lo tiene el 90 % o más de la gente. No mide nada: se consigue por estar aquí.'],
+    ['Aquí se cae la gente', 'Del escalón anterior a este se pierde a casi todo el mundo: el paso es demasiado grande y en medio cabe un intermedio.'],
     ['Meta / Hecho', 'Los dos textos del escalón: lo que se pide cuando te falta y lo que se cuenta cuando ya lo tienes.'],
-    ['Oculto', 'Su nombre y su condición se tapan hasta conseguirlo. El panel los enseña tapados; el interruptor de arriba los destapa solo aquí.'],
     ['key', 'El prefijo de los `id` de la escalera. Es contrato: no se renombra jamás.'],
   ] as const,
   /** Sin espejos no se inventa un 0 %: se dice por qué no hay muestra. */
   noSample: 'Todavía no hay espejos publicados que medir (la publicación del espejo está apagada), así que no se puede decir cuánta gente tiene cada escalón. Lo demás sí se lee.',
-  asleepTotal: 'Dormidos',
+  /** Cifra de cabecera: escalones a los que no ha llegado nadie del censo. Nombrada por lo que cuenta. */
+  asleepTotal: 'Sin nadie',
 
   families: {
     mirror: 'Espejo',
