@@ -1,7 +1,7 @@
 import { lazy, memo, Suspense, useCallback, useEffect, useRef, useState } from 'react';
-import { Navigate, useNavigate } from 'react-router-dom';
+import { Navigate } from 'react-router-dom';
 import { ADMIN_ACHIEVEMENTS_UI, ADMIN_PANEL_UI } from '../../core/constants/adminLabels';
-import type { HiddenOverrides } from '../../core/achievements/visibility';
+import type { HiddenOverrides, OpenFrontier } from '../../core/achievements/visibility';
 import {
   ADMIN_ONLY_TIER,
   PROFILE_TIERS,
@@ -153,7 +153,6 @@ function describePhoto(user: AdminUserRow): {
  * Todo se apoya en `isAdmin()` de firestore.rules; esta pantalla solo evita que quien no manda vea una tabla rota.
  */
 export const AdminHub = memo(function AdminHub() {
-  const navigate = useNavigate();
   const vm = useAdminViewModel();
   // Dos vistas y no dos rutas: `/admin` es una ruta oculta que ya cuelga de la guarda de `isAdmin()`, y partirla
   // en dos obligaría a repetir esa guarda y a inventar un «volver» que no lleva a ninguna sección de la app.
@@ -161,6 +160,9 @@ export const AdminHub = memo(function AdminHub() {
   // La configuración de ocultación de logros: se lee al entrar en su vista y se reescribe al pulsar. Vive aquí
   // —y no en la pantalla— porque es este componente el que ya habla con Firestore.
   const [hiddenAchievements, setHiddenAchievements] = useState<HiddenOverrides>({});
+  // La apertura comunitaria PUBLICADA. Llega con la misma lectura que la ocultación (mismo documento) y sirve
+  // para que el catálogo pueda decir si lo que mide ahora es lo que la gente está viendo.
+  const [openFrontier, setOpenFrontier] = useState<OpenFrontier>({});
   const [pending, setPending] = useState<PendingAction>(null);
   // Los enlaces de TODOS se piden una vez y se agrupan por usuario: el panel pinta decenas de fichas y una
   // petición por ficha sería absurda para un dato que cabe en una sola respuesta.
@@ -185,7 +187,9 @@ export const AdminHub = memo(function AdminHub() {
     void import('../../model/repository/achievementsConfigRepository')
       .then((module) => module.loadAchievementsConfig(true))
       .then((value) => {
-        if (!cancelled) setHiddenAchievements(value.hidden);
+        if (cancelled) return;
+        setHiddenAchievements(value.hidden);
+        setOpenFrontier(value.open);
       })
       .catch(() => {
         // Sin configuración manda el catálogo; la pantalla lo enseña tal cual.
@@ -199,6 +203,16 @@ export const AdminHub = memo(function AdminHub() {
   const toggleHiddenAchievement = useCallback(async (ladderKey: string, hidden: boolean) => {
     const module = await import('../../model/repository/achievementsConfigRepository');
     setHiddenAchievements(await module.setLadderHidden(ladderKey, hidden));
+  }, []);
+
+  /**
+   * Publica hasta dónde ha abierto cada escalera la comunidad. Es lo que decide qué escalones se le enseñan a
+   * TODO EL MUNDO, así que la mide el catálogo (que tiene los espejos delante) y la escribe esto. Si falla,
+   * LANZA: la ficha del catálogo lo dice.
+   */
+  const publishOpenFrontier = useCallback(async (open: OpenFrontier) => {
+    const module = await import('../../model/repository/achievementsConfigRepository');
+    setOpenFrontier(await module.publishOpenFrontier(open));
   }, []);
 
   useEffect(() => () => {
@@ -282,6 +296,8 @@ export const AdminHub = memo(function AdminHub() {
           mirrors={vm.census?.mirrors}
           hiddenOverrides={hiddenAchievements}
           onToggleHidden={toggleHiddenAchievement}
+          openFrontier={openFrontier}
+          onPublishFrontier={publishOpenFrontier}
         />
       </Suspense>
     );
@@ -361,13 +377,12 @@ export const AdminHub = memo(function AdminHub() {
             <span>{A.onlyFlaggedLabel}</span>
           </label>
           <p className="admin-result-count">{A.resultCount(vm.users.length)}</p>
+          {/* Actualizar y NADA MÁS. La salida del panel («volver a mis listas») se retiró de aquí: la cabecera de
+              secciones sigue montada en `/admin` —`App` no la esconde en esta ruta—, así que era un segundo
+              camino a lo mismo compitiendo por sitio con la búsqueda y el filtro. */}
           <button type="button" className="btn btn-secondary" onClick={() => void vm.refresh()} disabled={vm.loading}>
             <Icon name="refresh" />
             <span>{A.refresh}</span>
-          </button>
-          <button type="button" className="btn btn-secondary" onClick={() => navigate('/completados')}>
-            <Icon name="arrow-back" />
-            <span>{A.back}</span>
           </button>
         </div>
 

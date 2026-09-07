@@ -415,19 +415,47 @@
 /* ── CATÁLOGO DE LOGROS · la vista de revisión (`AdminAchievements`) ────────────────────────────────────────
    Una tarjeta por escalera y una tabla dentro con los escalones. Tabla y no tarjetas: lo que se viene a hacer
    aquí es COMPARAR los dos textos de escalones consecutivos, y para eso hacen falta columnas alineadas. Se
-   apoya en `.admin-card` y `.admin-totals`, que ya existen; lo de abajo es solo lo que no había. */
-.admin-card-actions { margin: .2rem 0 0; }
-/* La vuelta atrás va arriba y sola, antes del título: es la salida de la pantalla, no una acción de la tarjeta. */
-.admin-ach-back { margin: 0; }
+   apoya en `.admin-card`, que ya existe; lo de abajo es solo lo que no había.
 
-.admin-ach-tools {
+   LA PANTALLA MIDE CINCUENTA FICHAS, y de ahí salen las tres decisiones de esta hoja: la barra se queda pegada
+   arriba (la salida y el buscador se usan desde cualquier punto), las cifras de cabecera van en una línea de
+   números en vez de en cinco cajas (ocupaban más alto que la primera escalera), y el listado se separa por
+   familias con un encabezado fino. */
+.admin-card-actions { margin: .2rem 0 0; }
+
+/* Las tarjetas del catálogo son MUCHAS y hermanas: sin esto se apilaban pegadas, borde contra borde, y las
+   cincuenta se leían como un solo bloque. Va acotado a esta vista — el censo tiene una sola tarjeta. */
+.admin-ach {
+  /* FLEX EN COLUMNA Y NO GRID, y no es indiferente: el bloque contenedor de un elemento `sticky` dentro de una
+     rejilla es SU CELDA, que aquí mide justo lo que mide la barra, así que no le queda recorrido y no se queda
+     pegada a nada. En un contenedor flexible el bloque contenedor es el contenedor entero, que es lo que la
+     barra necesita para acompañar a las cincuenta fichas. */
+  display: flex;
+  flex-direction: column;
+  gap: .75rem;
+}
+
+/* ── La barra: salida, buscador y recuento ────────────────────────────────────────────────────────────────── */
+.admin-ach-bar {
+  position: sticky;
+  top: 0;
+  z-index: 2;
   display: flex;
   flex-wrap: wrap;
-  align-items: flex-end;
+  align-items: center;
   gap: .6rem;
-  margin-top: .2rem;
+  padding: .5rem .7rem;
+  /* UNA SUPERFICIE, NO EL FONDO DE LA PÁGINA. Al quedarse fija tiene que tapar del todo lo que pasa por debajo,
+     y `var(--bg)` a secas dejaba un rectángulo plano deslizándose sobre la trama que varias paletas pintan en el
+     `body` (la rejilla de Portal, el barrido de Cyberpunk). Con superficie, filete y sombra se lee como una barra
+     que flota encima —el mismo recurso que `.hub-feed-day-header`—, y la forma la sigue poniendo cada tema:
+     aquí solo hay fichas (`--surface`, `--border`, `--radius-md`, `--shadow`). */
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow);
 }
-.admin-ach-filter { display: grid; gap: .25rem; flex: 1 1 16rem; min-width: 0; font-size: .85rem; color: var(--text-muted); }
+.admin-ach-filter { flex: 1 1 14rem; min-width: 0; display: block; }
 .admin-ach-filter input {
   width: 100%;
   padding: .45rem .6rem;
@@ -437,23 +465,107 @@
   color: var(--text);
   font: inherit;
 }
-.admin-ach-tools .admin-card-note { flex: 0 0 auto; margin: 0; }
+.admin-ach-count {
+  flex: 0 0 auto;
+  margin: 0;
+  color: var(--text-muted);
+  font-size: .82rem;
+  font-variant-numeric: tabular-nums;
+}
 
-.admin-ach-head { display: flex; align-items: flex-start; gap: .8rem; }
-.admin-ach-head-body { min-width: 0; display: grid; gap: .25rem; }
-.admin-ach-head h3 { margin: 0; font-size: 1rem; }
+/* ── La cabecera: título, cifras y lo que explica la pantalla ─────────────────────────────────────────────── */
+.admin-ach-intro { gap: .7rem; }
 
-/* La ficha técnica de la escalera: familia, rareza, clave, icono y sus señales. En una sola línea que envuelve,
-   porque son datos sueltos que se leen de un barrido, no una lista que se recorra. */
+/* Las cifras del catálogo, en línea: el número manda y el rótulo va debajo en pequeño. `column-reverse` y no el
+   orden al revés en el HTML, que en una `<dl>` exige `dt` antes de `dd`. */
+.admin-ach-figures {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .3rem 1.6rem;
+  margin: 0;
+}
+.admin-ach-figures > div { display: flex; flex-direction: column-reverse; gap: 0; }
+.admin-ach-figures dt { color: var(--text-muted); font-size: .72rem; letter-spacing: .03em; text-transform: uppercase; }
+.admin-ach-figures dd { margin: 0; font-size: 1.35rem; font-weight: 700; line-height: 1.1; font-variant-numeric: tabular-nums; }
+/* Dormidos con algo dentro no es un fallo, es una decisión pendiente: ámbar, como el resto de esta pantalla. */
+.admin-ach-figure-flagged dd { color: var(--fg-amber); }
+
+.admin-ach-empty { margin: 0; color: var(--text-muted); font-size: .88rem; }
+
+/* LA APERTURA COMUNITARIA. Se recuadra dentro de la cabecera y no se deja como un párrafo más: es lo único de
+   esta pantalla que cambia lo que ve TODA la gente sin tocar un interruptor por escalera, así que tiene que
+   distinguirse de las notas que solo explican. */
+.admin-ach-frontier {
+  display: grid;
+  gap: .35rem;
+  padding: .6rem .75rem;
+  background: var(--surface-soft);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+.admin-ach-frontier h3 { margin: 0; font-size: .85rem; }
+.admin-ach-frontier .admin-card-actions { margin: .15rem 0 0; }
+.admin-ach-frontier .btn { font-size: .8rem; padding: .35rem .7rem; }
+
+/* ── El tramo de una familia ──────────────────────────────────────────────────────────────────────────────── */
+/* `minmax(0, 1fr)` y no `1fr` a secas: el tamaño mínimo automático de un elemento de rejilla es su contenido
+   MÍNIMO, y el de una ficha es el ancho de su tabla (46rem). Con `1fr`, el tramo entero se estiraba hasta ahí y
+   en móvil la página entera se desplazaba de lado en vez de desplazarse la tabla dentro de su ficha. */
+.admin-ach-family { display: grid; grid-template-columns: minmax(0, 1fr); gap: .6rem; }
+/* Un rótulo con un filete que se come el resto del ancho: separa sin pesar como una tarjeta más. */
+.admin-ach-family-head {
+  display: flex;
+  align-items: baseline;
+  gap: .6rem;
+  margin: .5rem 0 0;
+  font-size: .82rem;
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.admin-ach-family-head::after {
+  content: '';
+  flex: 1 1 auto;
+  height: 1px;
+  background: var(--border);
+}
+.admin-ach-family-head small {
+  order: 1; /* tras el filete: el recuento cierra la línea por la derecha */
+  font-weight: 400;
+  letter-spacing: 0;
+  text-transform: none;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── La ficha de una escalera ─────────────────────────────────────────────────────────────────────────────── */
+.admin-ach-ladder { gap: .6rem; padding: .85rem 1rem; }
+/* Envuelve: en móvil el interruptor de visibilidad se llevaba media cabecera y el nombre de la escalera se
+   partía en cuatro renglones. Con `wrap` cae debajo y cada cosa recupera su ancho. */
+.admin-ach-head { display: flex; flex-wrap: wrap; align-items: flex-start; gap: .8rem; }
+.admin-ach-head-body { min-width: 0; flex: 1 1 14rem; display: grid; gap: .15rem; }
+.admin-ach-head h4 { margin: 0; font-size: 1rem; }
+
+/* La condición base, en una línea con su rótulo delante: apilada gastaba dos renglones por ficha, y por
+   cincuenta fichas eso es media pantalla de nada. */
+.admin-ach-condition { margin: 0; font-size: .85rem; }
+.admin-ach-condition small { color: var(--text-muted); font-size: .72rem; margin-right: .4rem; }
+
+/* La ficha técnica de la escalera: rareza, clave, icono y sus señales. En una sola línea que envuelve, porque
+   son datos sueltos que se leen de un barrido, no una lista que se recorra. */
 .admin-ach-meta {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   gap: .3rem .6rem;
   margin: 0;
   font-size: .78rem;
   color: var(--text-muted);
 }
 .admin-ach-meta code { font-family: var(--ach-mono, ui-monospace, monospace); font-size: .74rem; }
+/* La rareza es lo único de esa línea que es una PROPIEDAD del logro (decide puntos y aura), así que se lee
+   primero: en el color del texto y no en el atenuado de los datos técnicos. */
+.admin-ach-rarity { color: var(--text); font-weight: 600; }
 /* Las señales que cambian cómo se comporta la escalera (descendente, oculta, retirada) van marcadas: son la
    causa de casi cualquier rareza que uno venga a mirar aquí. */
 .admin-ach-flag {
@@ -461,72 +573,136 @@
   border: 1px solid color-mix(in srgb, var(--fg-amber) 45%, var(--border));
   border-radius: var(--radius-pill);
   color: var(--fg-amber);
+  font-size: .72rem;
+  white-space: nowrap;
 }
-.admin-ach-condition { margin: 0; font-size: .85rem; display: grid; gap: .1rem; }
-.admin-ach-condition small { color: var(--text-muted); font-size: .72rem; }
 
+/* ── La tabla de escalones ────────────────────────────────────────────────────────────────────────────────── */
+/* El desplazamiento va aquí y no en la tarjeta: con `overflow` en la tarjeta, la cabecera de la escalera se
+   desplazaba con la tabla y el nombre se iba de viaje justo cuando hacía falta para situarse. */
+.admin-ach-scroll { overflow-x: auto; min-width: 0; }
 .admin-ach-table {
   width: 100%;
   border-collapse: collapse;
-  margin-top: .6rem;
   font-size: .85rem;
+  /* COLUMNAS FIJAS Y NO AUTOMÁTICAS. Son cincuenta tablas, una por escalera, y con el ancho automático cada una
+     lo repartía según su propio contenido: al bajar por la pantalla, «Alcanzado» empezaba en una x distinta en
+     cada ficha y el ojo tenía que volver a buscar las columnas en cada escalera. Fijas, la rejilla es la misma
+     de arriba abajo, y los dos textos —a los que se viene— se quedan con todo lo que sobra. */
+  table-layout: fixed;
+  /* Por debajo de esto no se aprieta: se desplaza dentro de `.admin-ach-scroll`, que para eso está. */
+  min-width: 46rem;
 }
+.admin-ach-table th:nth-child(1) { width: 4.5rem; }
+.admin-ach-table th:nth-child(2) { width: 15rem; }
+.admin-ach-table th:nth-child(3) { width: 10rem; }
 .admin-ach-table th {
   text-align: left;
   padding: .3rem .5rem;
   border-bottom: 1px solid var(--border);
   color: var(--text-muted);
-  font-size: .74rem;
+  font-size: .72rem;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: .04em;
 }
-.admin-ach-table td { padding: .35rem .5rem; border-bottom: 1px solid color-mix(in srgb, var(--border) 55%, transparent); vertical-align: top; }
-.admin-ach-table tr:last-child td { border-bottom: 0; }
-.admin-ach-step { font-variant-numeric: tabular-nums; font-weight: 700; white-space: nowrap; }
-.admin-ach-offered { color: var(--text-muted); white-space: nowrap; }
+/* SIN FILETE ENTRE FILAS, con bandas. Doscientas sesenta y una líneas horizontales cuadriculaban la pantalla;
+   la banda hace el mismo trabajo —seguir una fila larga hasta la última columna— sin dibujar nada. */
+.admin-ach-table td { padding: .38rem .5rem; vertical-align: top; }
+/* Banda y realce con los MISMOS tokens que la tabla de la biblioteca (`_table.scss`: `.striped` sobre
+   `--surface-soft`, realce sobre `--surface-hover`): así cada paleta los tiñe una sola vez y esta pantalla no
+   estrena colores propios que un tema no sepa reescribir. */
+.admin-ach-table tbody tr:nth-child(even) { background: var(--surface-soft); }
+@media (hover: hover) {
+  .admin-ach-table tbody tr:hover { background: var(--surface-hover); }
+}
+.admin-ach-step {
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  white-space: nowrap;
+  text-align: right;
+}
+.admin-ach-name .admin-ach-flag { margin-left: .4rem; }
 /* «Alcanzado» apila la cifra y sus señales: son la misma pregunta —cuánta gente llega hasta aquí— y en columnas
    separadas se leían como datos sueltos. Ancho fijo para que las cifras de escalones consecutivos se comparen. */
-.admin-ach-reached { white-space: nowrap; font-variant-numeric: tabular-nums; min-width: 9rem; }
+.admin-ach-reached { font-variant-numeric: tabular-nums; }
 .admin-ach-reached small { display: block; font-size: .72rem; }
+
+/* LA MISMA CIFRA, DIBUJADA. Once porcentajes en columna hay que leerlos de uno en uno para ver dónde se queda la
+   gente; con las barras alineadas, la caída de la escalera se ve de un vistazo, que es lo que se viene a decidir.
+   Fina y del color del acento, para que sea una lectura y no un elemento más que compita con el texto. */
+.admin-ach-meter {
+  display: block;
+  width: 100%;
+  max-width: 7rem;
+  height: 4px;
+  margin: .25rem 0;
+  border-radius: var(--radius-pill);
+  /* Un canal que se vea SIEMPRE, también en las paletas claras: `--surface-soft` es casi transparente y sobre la
+     banda de la fila desaparecía, y una barra sin canal no dice «vacío», parece un fallo de pintado. */
+  background: color-mix(in srgb, var(--text-muted) 22%, transparent);
+  overflow: hidden;
+}
+.admin-ach-meter-fill {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--fg-link);
+}
 .admin-ach-nodata { color: var(--text-muted); }
+
+/* EL TRAMO QUE HOY NO VE NADIE. Son siempre los de arriba y siempre seguidos, así que se marcan como un BLOQUE
+   —un raíl por el canto izquierdo— y no fila a fila: lo que se quiere ver de un vistazo es dónde deja la escalera
+   de tirar de alguien, y una etiqueta repetida cuatro veces no dibuja esa línea.
+
+   No se atenúan los dos textos: son lo que se viene a leer, y estas filas se leen igual que las demás. Lo que se
+   apaga es el número del escalón, que es el que dice «este peldaño está a oscuras». Y el color NO es el ámbar de
+   «nadie ha llegado» ni el rojo de la caída: aquello son decisiones pendientes sobre los umbrales, y esto es un
+   hecho sobre lo que hay en pantalla. */
+.admin-ach-table tbody tr.is-unseen td:first-child {
+  box-shadow: inset 3px 0 0 color-mix(in srgb, var(--text-muted) 55%, transparent);
+}
+.admin-ach-table tbody tr.is-unseen .admin-ach-step { color: var(--text-dim); }
+.admin-ach-unseen { display: block; color: var(--text-dim); }
 /* Dormido o regalado: no es un fallo, es una decisión pendiente. Ámbar, no rojo. */
 .admin-ach-warn-soft { color: var(--fg-amber); }
-/* El salto de umbrales es el dato que se busca para meter un intermedio: con el acento, no con una alarma. */
-.admin-ach-gap { color: var(--fg-link); }
 /* El aviso de «esta escalera no escribió su hecho»: en rojo de la app, porque es un texto que en producción se
    lee como una tarea pendiente debajo de una medalla ya ganada. */
 .admin-ach-warn { display: block; color: var(--danger); font-size: .74rem; }
 
-/* La tabla no puede empujar el ancho de la página: en móvil se desplaza dentro de su tarjeta. */
-.admin-ach-ladder { overflow-x: auto; }
+/* LAS REGLAS RESPONSIVE GLOBALES NO VALEN AQUÍ. Por debajo de 720px la app deja CUALQUIER tabla sin cabecera y
+   en una sola columna: `_layout.scss` esconde el `thead` entero y `_overlays-and-responsive.scss` remata columna
+   por columna. Es el recurso de la tabla de la BIBLIOTECA, que en móvil se lee como fichas —esconde la cabecera a
+   juego con las celdas que también esconde (`tbody tr.main-row td:not(:first-child)`)—.
+
+   Esta tabla no es esa, y por dos motivos: lo que se viene a hacer aquí es COMPARAR los dos textos, y con una
+   columna no queda nada que comparar; y sus filas no llevan `.main-row`, así que de aquella pareja de reglas solo
+   se aplicaba la que esconde, dejando cinco columnas de cuerpo sin un solo rótulo encima. Se desmarca de las dos
+   —con `!important` en la segunda, porque la global lo lleva— y la tabla se desplaza dentro de
+   `.admin-ach-scroll`, que para eso está. */
+@media (max-width: 720px) {
+  .admin-ach-table thead { display: table-header-group; }
+  .admin-ach-table thead th:not(:first-child) { display: table-cell !important; }
+}
+
+/* El pie de la ficha: «preparar un escalón nuevo» es lo que se hace cuando ya se ha leído la escalera entera.
+   Es un botón de los de siempre (`.btn`), no un enlace de puntitos: aquel tamaño venía de cuando cada fila
+   llevaba el suyo y convenía que no compitieran entre ellos, y retirados aquellos se quedaba pequeño para ser la
+   única acción de la ficha. */
+.admin-ach-foot { margin: 0; text-align: right; }
+.admin-ach-foot .btn { font-size: .8rem; padding: .35rem .7rem; }
 
 /* ── Catálogo de logros · el esquema, el interruptor de ocultos y la ficha de «preparar escalón» ───────────── */
-.admin-ach-legend { margin-top: .6rem; font-size: .85rem; }
+.admin-ach-legend { font-size: .85rem; }
 .admin-ach-legend summary { cursor: pointer; color: var(--fg-link); }
 .admin-ach-legend dl {
   display: grid;
   gap: .45rem;
-  margin: .6rem 0 0;
+  margin: .6rem 0 .6rem;
   padding-left: .2rem;
 }
 .admin-ach-legend dt { font-weight: 700; font-size: .8rem; }
 .admin-ach-legend dd { margin: 0; color: var(--text-muted); font-size: .8rem; line-height: 1.4; }
-
-/* El botón de preparar va DENTRO de la celda del salto, en pequeño: es la acción de ese dato, no de la fila. */
-.admin-ach-prepare {
-  display: block;
-  margin-top: .2rem;
-  padding: 0;
-  background: none;
-  border: 0;
-  border-bottom: 1px dashed currentColor;
-  color: var(--fg-link);
-  font: inherit;
-  font-size: .72rem;
-  cursor: pointer;
-}
-.admin-ach-prepare:hover { color: var(--text); }
 
 /* La ficha del plan: lo que hay que pegar, en tres pasos numerados y con el código a la vista. */
 .admin-ach-plan h3 { margin: 0; font-size: .95rem; }
@@ -540,17 +716,25 @@
 .admin-ach-plan .admin-card-actions { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; }
 .admin-ach-copied { color: var(--fg-green); font-size: .8rem; }
 
-/* El interruptor de visibilidad y el campo del umbral. Los dos viven en la ficha de la escalera porque los dos
-   son decisiones SOBRE ESA escalera; sacarlos a una barra de la pantalla los desligaba de a quién afectan. */
+/* El interruptor de visibilidad vive en la CABECERA de la escalera, a la derecha: es la única acción que cambia
+   lo que ve la gente, y sacarla a una barra de la pantalla la desligaba de a qué escalera afecta. Se encoge a
+   una columna propia y cae debajo cuando la ficha no da de sí. */
 .admin-ach-visibility {
+  /* Más ancha que antes (13rem) porque el estado ya no es una etiqueta de tres palabras sino la regla entera —qué
+     ve quien no tiene la escalera—, y esa frase es lo que evita tener que abrir la leyenda para pulsar con
+     criterio. Sigue cayendo debajo en cuanto la ficha no da de sí. */
+  flex: 0 1 19rem;
+  margin-left: auto;
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: .5rem;
-  margin: .3rem 0 0;
-  font-size: .8rem;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: .3rem;
+  margin: 0;
+  font-size: .78rem;
+  color: var(--text-muted);
 }
 .admin-ach-visibility .btn { padding: .3rem .6rem; font-size: .8rem; }
+.admin-ach-visibility small { line-height: 1.35; }
 
 .admin-ach-plan-field { display: grid; gap: .2rem; margin: .5rem 0; font-size: .85rem; max-width: 16rem; }
 .admin-ach-plan-field input {
