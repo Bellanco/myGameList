@@ -152,6 +152,9 @@ export const AchievementsScreen = memo(function AchievementsScreen({
                     next={state.next}
                     date={formatUnlockDate(state.unlockedAt)}
                     global={global}
+                    // De quién es la lista decide la voz de lo conseguido. `owner` vacío = tuya; en la vista
+                    // global lo dice `self`, que es el dato que esa vista sí tiene.
+                    mine={global ? global.self : !owner}
                     rarity={
                       rarity && typeof holders === 'number'
                         ? {

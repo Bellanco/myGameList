@@ -163,8 +163,34 @@ describe('el listado propio', () => {
     render(<AchievementsScreen items={lista} summary={summarize([])} rarity={null} />);
     const fila = screen.getByText('Créditos finales II').closest('li') as HTMLElement;
     expect(within(fila).getByRole('img')).toBeInTheDocument();
-    expect(within(fila).getByText('Termina 25 juegos')).toBeInTheDocument();
+    expect(within(fila).getByText('Has terminado 25 juegos')).toBeInTheDocument();
     expect(within(fila).getByText('12 mar 2026')).toBeInTheDocument();
+  });
+
+  /**
+   * LOS DOS TEXTOS, cada uno en su mitad de la lista. Con uno solo, una de las dos se leía mal: en imperativo,
+   * una medalla ya ganada parece una tarea pendiente; en pasado, te felicita por lo que no has hecho.
+   */
+  it('lo conseguido se cuenta en pasado y lo que falta se pide en imperativo', () => {
+    render(<AchievementsScreen items={lista} summary={summarize([])} rarity={null} />);
+    const hecho = screen.getByText('Créditos finales II').closest('li') as HTMLElement;
+    expect(within(hecho).getByText('Has terminado 25 juegos')).toBeInTheDocument();
+    expect(within(hecho).queryByText('Termina 25 juegos')).not.toBeInTheDocument();
+
+    const falta = screen.getByText('Ya iba siendo hora I').closest('li') as HTMLElement;
+    expect(within(falta).getByText(/^Termina un juego que llevaba/)).toBeInTheDocument();
+  });
+
+  /**
+   * EL PASADO HABLA DE TI, así que no vale para la ficha de otra persona: «Has terminado 25 juegos» bajo la
+   * medalla de una amistad es, literalmente, falso. Ahí se enseña la meta, que describe el logro sin
+   * atribuírselo a nadie.
+   */
+  it('en la ficha de otra persona NO se dice «te has»: se describe el logro', () => {
+    render(<AchievementsScreen items={lista} summary={summarize([])} rarity={null} owner="Ana" />);
+    const fila = screen.getByText('Créditos finales II').closest('li') as HTMLElement;
+    expect(within(fila).getByText('Termina 25 juegos')).toBeInTheDocument();
+    expect(within(fila).queryByText('Has terminado 25 juegos')).not.toBeInTheDocument();
   });
 
   it('el oculto sin conseguir no da NINGUNA pista, ni siquiera su rareza', () => {
@@ -216,7 +242,7 @@ describe('logros globales — el catálogo por lo común que es cada uno', () =>
     const nombres = screen.getAllByRole('listitem').map((fila) => fila.querySelector('.ach-row-name')?.textContent);
     // Arriba lo que casi todo el mundo tiene: un hueco ahí se ve enseguida.
     expect(nombres[0]).toBe('Créditos finales I');
-    expect(nombres[1]).toBe('Tiempo jugado I');
+    expect(nombres[1]).toBe('El contador de horas I');
     // Y lo menos común, más abajo. (Un OCULTO no se puede buscar por su nombre aquí: sigue tapado mientras no se
     // consiga, también en esta lista — lo comprueba el último test de este bloque.)
     expect(nombres.indexOf('Guerra de consolas I')).toBeGreaterThan(1);

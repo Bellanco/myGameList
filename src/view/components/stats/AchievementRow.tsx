@@ -25,6 +25,12 @@ export interface AchievementRowData {
    * lección que `statsVoice`, que ya existe para el panel por el mismo motivo.
    */
   global?: { self: boolean };
+  /**
+   * ¿Son TUYOS? Decide cuál de los dos textos del catálogo se enseña en lo conseguido: el HECHO («Te has
+   * terminado 100 juegos») solo vale si el que lee es el que lo hizo. En la ficha de otra persona se sigue
+   * enseñando la META, que describe el logro sin atribuírselo a nadie — la misma lección que `statsVoice`.
+   */
+  mine?: boolean;
 }
 
 /**
@@ -46,6 +52,7 @@ export const AchievementRow = memo(function AchievementRow({
   date,
   rarity,
   global,
+  mine = true,
 }: AchievementRowData) {
   const isGlobal = Boolean(global);
   const earned = level >= 1;
@@ -53,7 +60,12 @@ export const AchievementRow = memo(function AchievementRow({
   // El grado ya viene EN EL NOMBRE («Créditos finales III»): lo pone el catálogo al expandir la escalera, que
   // es el único sitio que sabe cuántos escalones tiene. Componerlo aquí otra vez lo escribiría dos veces.
   const name = masked ? ACHIEVEMENTS_UI.hiddenName : def.labels.name;
-  const condition = masked ? ACHIEVEMENTS_UI.hiddenCondition : def.labels.condition;
+  // DOS TEXTOS, Y EL QUE TOCA: lo conseguido se cuenta en pasado («Te has terminado 100 juegos») y lo que falta
+  // se pide en imperativo («Termina 100 juegos»). Con un solo texto, una de las dos mitades de la lista se leía
+  // mal: en imperativo, una medalla ya ganada parecía una tarea pendiente.
+  const condition = masked
+    ? ACHIEVEMENTS_UI.hiddenCondition
+    : (earned && mine ? def.labels.done : def.labels.condition);
 
   // «Sin cabos sueltos» mide un porcentaje y las demás cuentan cosas: el progreso tiene que decirlo o «42 de 75»
   // se lee como 42 juegos.
