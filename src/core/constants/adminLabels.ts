@@ -439,6 +439,41 @@ export const ADMIN_ACHIEVEMENTS_UI = {
   cliff: 'Se cae aquí',
 
   sampleNote: (sample: number) => `Medido sobre ${sample} espejos publicados del censo.`,
+
+  /** El interruptor de los ocultos. Por defecto el panel los enseña TAPADOS, como los ve la gente. */
+  revealHidden: 'Revelar ocultos',
+  hideHidden: 'Tapar los ocultos como se ven',
+
+  /**
+   * PREPARAR UN ESCALÓN INTERMEDIO. El panel no lo añade —el `id` tiene que llegar al código para que el logro
+   * se publique en el espejo— pero sí deja el cambio escrito y listo para pegar, que es la parte que se olvida.
+   */
+  prepare: (step: number) => `Preparar escalón ${step}`,
+  prepareTitle: (key: string, step: number) => `Insertar ${step} en «${key}»`,
+  prepareCatalog: (steps: string) => `1 · catalog.ts — steps: [${steps}]`,
+  prepareMirror: (id: string) => `2 · mirrorOrder.ts — al FINAL de MIRROR_IDS: '${id}',`,
+  prepareTests: (total: [number, number], points: [number, number], bits: [number, number]) =>
+    `3 · tests/unit/achievements.test.ts — total ${total[0]} → ${total[1]} · techo ${points[0]} → ${points[1]} · MIRROR_ORDER ${bits[0]} → ${bits[1]}`,
+  prepareRename: (name: string) => `Ojo: los escalones por encima corren de romano (${name} y los siguientes).`,
+  prepareCopy: 'Copiar los tres pasos',
+  prepareCopied: 'Copiado.',
+  prepareClose: 'Cerrar',
+
+  /** EL ESQUEMA. Va plegado: se abre la primera vez y no vuelve a estorbar. */
+  legendTitle: 'Qué significa cada dato',
+  legend: [
+    ['Escalón', 'El umbral que hay que alcanzar. Es también lo que lleva el `id` del logro (`completados-50`), y por eso no se renombra nunca.'],
+    ['Nombre', 'Lo que ve la gente, con su grado en romano. El romano sale de la POSICIÓN dentro de la escalera, así que insertar un escalón renumera los de arriba.'],
+    ['Ofrecido', '¿El catálogo lo sigue proponiendo? Un retirado deja de ofrecerse y de contar en la fracción, pero se sigue pintando a quien ya lo tenga.'],
+    ['Alcanzado', 'Qué parte de la gente lo tiene, medido sobre los espejos publicados del censo. Siempre con su denominador: con 43 espejos, «2 %» es una persona.'],
+    ['Dormido', 'El PRIMER escalón de la escalera al que no ha llegado nadie: la frontera de lo que hoy está en juego. Los de más arriba también están a cero y no se marcan, que sería repetir lo mismo.'],
+    ['Regalado', 'Lo tiene el 90 % o más. No mide nada: se consigue por estar aquí.'],
+    ['Se cae aquí', 'Del escalón anterior a este se pierde a casi todo el mundo. Con el salto de umbrales al lado, es la señal de que el paso es demasiado grande.'],
+    ['Salto ×N', 'El umbral se multiplica por N respecto al anterior. Es lo que dice «entre estos dos cabe un intermedio», y se ve aunque no haya nadie a quien medir.'],
+    ['Meta / Hecho', 'Los dos textos del escalón: lo que se pide cuando te falta y lo que se cuenta cuando ya lo tienes.'],
+    ['Oculto', 'Su nombre y su condición se tapan hasta conseguirlo. El panel los enseña tapados; el interruptor de arriba los destapa solo aquí.'],
+    ['key', 'El prefijo de los `id` de la escalera. Es contrato: no se renombra jamás.'],
+  ] as const,
   /** Sin espejos no se inventa un 0 %: se dice por qué no hay muestra. */
   noSample: 'Todavía no hay espejos publicados que medir (la publicación del espejo está apagada), así que no se puede decir cuánta gente tiene cada escalón. Lo demás sí se lee.',
   asleepTotal: 'Dormidos',

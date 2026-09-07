@@ -500,3 +500,42 @@
 
 /* La tabla no puede empujar el ancho de la página: en móvil se desplaza dentro de su tarjeta. */
 .admin-ach-ladder { overflow-x: auto; }
+
+/* ── Catálogo de logros · el esquema, el interruptor de ocultos y la ficha de «preparar escalón» ───────────── */
+.admin-ach-legend { margin-top: .6rem; font-size: .85rem; }
+.admin-ach-legend summary { cursor: pointer; color: var(--fg-link); }
+.admin-ach-legend dl {
+  display: grid;
+  gap: .45rem;
+  margin: .6rem 0 0;
+  padding-left: .2rem;
+}
+.admin-ach-legend dt { font-weight: 700; font-size: .8rem; }
+.admin-ach-legend dd { margin: 0; color: var(--text-muted); font-size: .8rem; line-height: 1.4; }
+
+/* El botón de preparar va DENTRO de la celda del salto, en pequeño: es la acción de ese dato, no de la fila. */
+.admin-ach-prepare {
+  display: block;
+  margin-top: .2rem;
+  padding: 0;
+  background: none;
+  border: 0;
+  border-bottom: 1px dashed currentColor;
+  color: var(--fg-link);
+  font: inherit;
+  font-size: .72rem;
+  cursor: pointer;
+}
+.admin-ach-prepare:hover { color: var(--text); }
+
+/* La ficha del plan: lo que hay que pegar, en tres pasos numerados y con el código a la vista. */
+.admin-ach-plan h3 { margin: 0; font-size: .95rem; }
+.admin-ach-plan ol { margin: .5rem 0 0; padding-left: 1.2rem; display: grid; gap: .35rem; }
+.admin-ach-plan code {
+  font-family: var(--ach-mono, ui-monospace, monospace);
+  font-size: .78rem;
+  color: var(--text);
+  overflow-wrap: anywhere;
+}
+.admin-ach-plan .admin-card-actions { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; }
+.admin-ach-copied { color: var(--fg-green); font-size: .8rem; }
