@@ -969,6 +969,48 @@ describe('firestore.rules', () => {
     });
 
     /**
+     * EL BORRADO DEL ESPEJO DESDE EL PANEL, tal y como lo hace la app: `updateDoc` con `deleteField()` sobre el
+     * perfil de OTRA persona, firmando como admin.
+     *
+     * SE PRUEBA CONTRA EL EMULADOR Y NO RAZONANDO LA REGLA, porque el punto exacto donde se caería no se ve
+     * leyendo: `profileWriteIsValid()` exige `uid == request.auth.uid`, así que si el admin pasara por esa
+     * validación —en vez de cortocircuitar antes con `isAdmin()`— este borrado fallaría con `permission-denied`
+     * EN SILENCIO, y el panel diría que ha borrado sin haber borrado nada.
+     *
+     * Y se comprueba lo que SOBREVIVE, que es el otro riesgo: `deleteField()` tiene que llevarse el espejo y nada
+     * más. Un borrado que además se comiera el nick o el `social.enabled` sacaría a esa persona del directorio.
+     */
+    it('el admin borra el espejo de otro perfil, y solo el espejo', async () => {
+      await seed('profiles', 'uid-a', {
+        uid: 'uid-a',
+        displayName: 'Fulano',
+        social: { enabled: true },
+        tier: 'plata',
+        achievements: { v: 2, at: 1735689600000, list: '2:AAAA' },
+      });
+
+      await assertSucceeds(updateDoc(doc(adminDb(), 'profiles', 'uid-a'), { achievements: deleteField() }));
+
+      const despues = await assertSucceeds(getDoc(doc(adminDb(), 'profiles', 'uid-a')));
+      const datos = despues.data() as Record<string, unknown>;
+      expect(datos.achievements, 'el espejo sigue ahí').toBeUndefined();
+      // Y el resto del perfil, intacto: el borrado es quirúrgico.
+      expect(datos.displayName).toBe('Fulano');
+      expect(datos.tier).toBe('plata');
+      expect((datos.social as { enabled?: boolean }).enabled).toBe(true);
+    });
+
+    /** Y no lo puede hacer cualquiera: el espejo de otro no se toca sin ser el admin. */
+    it('un usuario cualquiera no puede borrar el espejo de otro', async () => {
+      await seed('profiles', 'uid-a', {
+        uid: 'uid-a',
+        social: { enabled: true },
+        achievements: { v: 2, at: 1735689600000, list: '2:AAAA' },
+      });
+      await assertFails(updateDoc(doc(ownerDb('uid-b'), 'profiles', 'uid-a'), { achievements: deleteField() }));
+    });
+
+    /**
      * BORRAR EL PERFIL SE LLEVA EL ESPEJO, sin purgarlo aparte: la vitrina vive DENTRO del documento, así que
      * `deleteDoc` la borra con todo lo demás. Se fija aquí porque es fácil dar por hecho lo contrario y añadir un
      * borrado redundante — o peor, creer que sobrevive y dejar vitrinas de perfiles que ya no existen.
