@@ -309,4 +309,57 @@ export async function purgeLegacyProfileFields(
   invalidateSocialDirectoryCache();
 }
 
+/**
+ * BORRA EL ESPEJO DE LOGROS de un perfil (`profiles/{uid}.achievements`).
+ *
+ * QUÉ HACE Y QUÉ NO. Retira la vitrina publicada: sus amistades dejan de verle logros y su espejo sale de la
+ * muestra con la que se mide el porcentaje comparado. NO le quita ningún logro a esa persona — los logros se
+ * derivan de su biblioteca en su propio aparato y siguen ahí.
+ *
+ * ⚑ Y SE DESHACE SOLO. La marca de agua vive en el `localStorage` de cada dispositivo, así que la próxima vez que
+ * esa persona abra la app volverá a publicar lo suyo. Esto no es un borrado permanente: es un borrado del
+ * SERVIDOR, útil para dejar el censo limpio antes de un estreno o para retirar una vitrina concreta. Que aguante
+ * exigiría una marca de corte que los clientes respetaran, y eso es otra función.
+ */
+export async function clearProfileAchievements(profileDocId: string): Promise<void> {
+  if (!profileDocId || profileDocId === PLACEHOLDER_ID) {
+    throw new Error('Identificador de perfil no válido');
+  }
+
+  const services = await requireServices();
+  try {
+    await updateDoc(doc(services.firestore, 'profiles', profileDocId), { achievements: deleteField() });
+  } catch (error) {
+    throw toAdminError(error, 'borrar el espejo de logros');
+  }
+
+  invalidateOwnProfileCache(profileDocId);
+  invalidateSocialDirectoryCache();
+}
+
+/**
+ * BORRA EL ESPEJO DE TODOS LOS PERFILES QUE SE LE PASEN. Devuelve cuántos se han borrado.
+ *
+ * NO PARA AL PRIMER FALLO, y es deliberado: un perfil que no se deje escribir no puede dejar a medias la limpieza
+ * de los otros cuarenta. Se cuentan los que salieron y el panel dice el número; si no coincide con los que había,
+ * se vuelve a pulsar.
+ *
+ * Se aplica el mismo aviso que arriba: cada dispositivo vuelve a publicar lo suyo la próxima vez que abra.
+ */
+export async function clearAllAchievements(profileDocIds: readonly string[]): Promise<number> {
+  const services = await requireServices();
+  let borrados = 0;
+  for (const id of profileDocIds) {
+    if (!id || id === PLACEHOLDER_ID) continue;
+    try {
+      await updateDoc(doc(services.firestore, 'profiles', id), { achievements: deleteField() });
+      borrados += 1;
+    } catch {
+      // Un perfil que no se deja escribir no puede tumbar la limpieza de los demás.
+    }
+  }
+  invalidateSocialDirectoryCache();
+  return borrados;
+}
+
 /** Qué hizo el cutover de identidad. Lo cuenta el panel, y distingue las dos situaciones posibles. */

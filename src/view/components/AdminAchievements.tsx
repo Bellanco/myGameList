@@ -171,6 +171,8 @@ export const AdminAchievements = memo(function AdminAchievements({
   onToggleHidden,
   openFrontier,
   onPublishFrontier,
+  onResetAll,
+  censusSize = 0,
 }: {
   onBack: () => void;
   /**
@@ -192,6 +194,13 @@ export const AdminAchievements = memo(function AdminAchievements({
    * existe una base de datos, y así se puede probar sin emulador.
    */
   onPublishFrontier?: (open: OpenFrontier) => Promise<void>;
+  /**
+   * Borra el espejo de TODO el censo y la apertura publicada. Lo ejecuta el hub, como el resto: esta pantalla
+   * pide y cuenta, no habla con la base de datos. Devuelve cuántos espejos se borraron.
+   */
+  onResetAll?: () => Promise<number>;
+  /** Cuántos perfiles hay en el censo, para que la confirmación diga a cuántos afecta. */
+  censusSize?: number;
 }) {
   const [query, setQuery] = useState('');
   // El escalón que se está preparando: la escalera y el umbral propuesto. `null` = ninguno abierto.
@@ -202,6 +211,9 @@ export const AdminAchievements = memo(function AdminAchievements({
   const [saved, setSaved] = useState<Record<string, 'saving' | 'ok' | 'error'>>({});
   // Cómo fue la última publicación de la apertura. `null` = no se ha tocado en esta visita.
   const [publishing, setPublishing] = useState<'saving' | 'ok' | 'error' | null>(null);
+  // El borrado total: `null` = no se ha pedido, `confirm` = esperando el sí, y luego cómo fue.
+  const [resetting, setResetting] = useState<'confirm' | 'working' | 'error' | null>(null);
+  const [resetDone, setResetDone] = useState<number | null>(null);
 
   /**
    * EL REPARTO, con `minSample: 1`. En el hub el mínimo son 20 personas —debajo de eso, «el 14 %» es una persona
@@ -380,17 +392,19 @@ export const AdminAchievements = memo(function AdminAchievements({
             cincuenta, y se publica A MANO: es la única escritura de esta pantalla que cambia el listado de todo
             el mundo sin que nadie toque un interruptor, y hacerla sola por el hecho de mirar sería justo lo que
             no debe pasar. */}
-        {onPublishFrontier ? (
+        {onPublishFrontier || onResetAll ? (
           <div className="admin-ach-frontier">
             <h3>{A.frontierTitle}</h3>
-            <p className="admin-card-note">
-              {!frontier
-                ? A.frontierNone
-                : frontier.same
-                  ? A.frontierSame(frontier.ladders)
-                  : A.frontierStale(frontier.ladders)}
-            </p>
-            {frontier && !frontier.same ? (
+            {onPublishFrontier ? (
+              <p className="admin-card-note">
+                {!frontier
+                  ? A.frontierNone
+                  : frontier.same
+                    ? A.frontierSame(frontier.ladders)
+                    : A.frontierStale(frontier.ladders)}
+              </p>
+            ) : null}
+            {onPublishFrontier && frontier && !frontier.same ? (
               <p className="admin-card-actions">
                 <button
                   type="button"
@@ -409,6 +423,48 @@ export const AdminAchievements = memo(function AdminAchievements({
             ) : null}
             {publishing === 'ok' ? <p className="admin-ach-copied">{A.frontierPublished}</p> : null}
             {publishing === 'error' ? <p className="admin-ach-warn">{A.frontierFailed}</p> : null}
+
+            {/* EL BORRADO TOTAL, dentro de la misma ficha porque es la otra cara de lo mismo: aquí se decide qué
+                hay publicado para todo el mundo. Va en DOS PASOS y no con un `confirm()` del navegador: es la
+                acción más destructiva de la pantalla y el aviso tiene que poder leerse entero, incluido que nadie
+                pierde un logro y que cada dispositivo volverá a publicar el suyo. */}
+            {onResetAll ? (
+              resetting === 'confirm' ? (
+                <div className="admin-ach-danger">
+                  <p className="admin-ach-warn">{A.resetAllConfirm(censusSize)}</p>
+                  <p className="admin-card-actions">
+                    <button
+                      type="button"
+                      className="btn btn-danger"
+                      onClick={() => {
+                        setResetting('working');
+                        void onResetAll()
+                          .then((cleared) => { setResetDone(cleared); setResetting(null); })
+                          .catch(() => setResetting('error'));
+                      }}
+                    >
+                      {A.resetAll}
+                    </button>
+                    <button type="button" className="btn btn-secondary" onClick={() => setResetting(null)}>
+                      {A.prepareClose}
+                    </button>
+                  </p>
+                </div>
+              ) : (
+                <p className="admin-card-actions">
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    disabled={resetting === 'working'}
+                    onClick={() => { setResetDone(null); setResetting('confirm'); }}
+                  >
+                    {resetting === 'working' ? A.resetAllWorking : A.resetAll}
+                  </button>
+                </p>
+              )
+            ) : null}
+            {resetDone !== null ? <p className="admin-ach-copied">{A.resetAllDone(resetDone)}</p> : null}
+            {resetting === 'error' ? <p className="admin-ach-warn">{A.resetAllFailed}</p> : null}
           </div>
         ) : null}
 

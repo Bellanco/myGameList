@@ -504,6 +504,15 @@
   border-radius: var(--radius-sm);
 }
 .admin-ach-frontier h3 { margin: 0; font-size: .85rem; }
+/* El borrado total, separado por un filete DENTRO de la misma ficha: es la otra cara de «qué hay publicado», pero
+   no se puede leer como un botón más de la fila de arriba. */
+.admin-ach-danger {
+  display: grid;
+  gap: .35rem;
+  margin-top: .2rem;
+  padding-top: .5rem;
+  border-top: 1px solid color-mix(in srgb, var(--danger) 40%, var(--border));
+}
 .admin-ach-frontier .admin-card-actions { margin: .15rem 0 0; }
 .admin-ach-frontier .btn { font-size: .8rem; padding: .35rem .7rem; }
 

@@ -303,14 +303,25 @@ export const ADMIN_PANEL_UI = {
     gamesGistId: (name: string) => `¿Borrar el id del gist de juegos del perfil público de ${name}? No es un secreto (es un gist público), pero es el respaldo que usa "Recuperar Gist ID": si su configuración privada no lo tiene, tendrá que reintroducirlo a mano en un dispositivo nuevo.`,
     token: (name: string) => `¿Borrar el token de GitHub en claro de ${name}? Hoy lo puede leer cualquier usuario autenticado, así que conviene. Si aún no tiene el respaldo cifrado, la próxima vez que entre en un dispositivo nuevo tendrá que volver a conectar GitHub.`,
   },
+  /**
+   * BORRAR EL ESPEJO DE LOGROS de un perfil. La confirmación dice las dos cosas que hay que saber antes: que no
+   * le quita ningún logro a esa persona (los suyos se derivan de su biblioteca) y que **se deshace solo** en
+   * cuanto vuelva a abrir la app, porque la marca de agua vive en su dispositivo.
+   */
+  achievementsBtn: 'Borrar sus logros publicados',
+  achievementsConfirm: (name: string) => `¿Borrar el espejo de logros publicado de ${name}? Sus amistades dejarán de verle medallas y su espejo sale de la muestra del porcentaje comparado. NO pierde ningún logro: los suyos se calculan en su dispositivo. Y volverá a publicarlos la próxima vez que abra la app.`,
+  achievementsDone: 'Espejo de logros borrado.',
   disableBtn: 'Desactivar social',
   enableBtn: 'Activar social',
   deleteBtn: 'Borrar perfil',
   working: 'Trabajando...',
   confirmDisable: (name: string) => `¿Desactivar el social de ${name}? Sale del directorio y del feed, pero conserva su perfil y sus amistades.`,
   confirmEnable: (name: string) => `¿Reactivar el social de ${name}?`,
-  confirmDelete: (name: string) => `¿Borrar el perfil de ${name} y todas sus amistades? No se puede deshacer.`,
-  deleteScope: 'No se borran su configuración privada (token cifrado), su cuenta de Google ni sus gists de GitHub: las reglas los reservan a su dueño. Al volver a entrar se le creará un perfil nuevo.',
+  confirmDelete: (name: string) => `¿Borrar el perfil de ${name}, todas sus amistades y su espejo de logros? No se puede deshacer.`,
+  // El espejo de logros se nombra porque VA DENTRO del documento de perfil: `deleteUserProfile` borra el
+  // documento entero, así que la vitrina se va con él sin que haya que purgarla aparte. Decirlo evita el susto de
+  // creer que hay que borrarla antes, y evita el error contrario: dar por hecho que sobrevive.
+  deleteScope: 'Se va también su espejo de logros, que vive dentro del propio perfil. No se borran su configuración privada (token cifrado), su cuenta de Google ni sus gists de GitHub: las reglas los reservan a su dueño. Al volver a entrar se le creará un perfil nuevo, y volverá a publicar sus logros desde su dispositivo.',
   confirmCancel: 'Cancelar',
   confirmAccept: 'Confirmar',
   okTier: (tier: string) => `Rango cambiado a ${tier}.`,
@@ -470,6 +481,15 @@ export const ADMIN_ACHIEVEMENTS_UI = {
   frontierNone: 'Sin espejos que medir, así que no hay nada que abrir: cada usuario ve hasta donde llegue su propio progreso, que es el comportamiento de siempre.',
   frontierSame: (ladders: number) => `Publicada y al día: ${ladders === 1 ? '1 escalera abierta' : `${ladders} escaleras abiertas`} por lo que ha alcanzado la gente.`,
   frontierStale: (ladders: number) => `La medición de ahora abre ${ladders === 1 ? '1 escalera' : `${ladders} escaleras`} y no es la que está publicada: hasta que se publique, la gente ve la anterior.`,
+  /**
+   * BORRAR TODAS LAS VITRINAS. Es la acción más destructiva de esta pantalla y la única que toca a todo el censo,
+   * así que el texto dice qué se lleva por delante y qué NO: nadie pierde un logro, se pierde lo publicado.
+   */
+  resetAll: 'Borrar todos los logros publicados',
+  resetAllConfirm: (profiles: number) => `¿Borrar el espejo de logros de los ${profiles} perfiles del censo y la apertura publicada? Las vitrinas se vacían para todo el mundo y el porcentaje comparado se queda sin muestra. NADIE pierde un logro: los de cada cual se calculan en su dispositivo, y cada uno volverá a publicar el suyo la próxima vez que abra la app.`,
+  resetAllDone: (cleared: number) => `Borrados ${cleared} espejos y la apertura publicada.`,
+  resetAllFailed: 'No se ha podido borrar. ¿Sesión de administrador iniciada?',
+  resetAllWorking: 'Borrando…',
   frontierPublish: 'Publicar la apertura',
   frontierPublishing: 'Publicando…',
   frontierPublished: 'Publicada. Cada usuario la verá al abrir sus logros.',
