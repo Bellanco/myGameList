@@ -366,3 +366,59 @@ export const ADMIN_SHARES_UI = {
   quotaCleared: 'Ajuste retirado: vuelve a la cuota de su rango.',
   failed: 'La operación no se ha completado.',
 } as const;
+
+/**
+ * CATÁLOGO DE LOGROS · la vista de revisión del panel de administración.
+ *
+ * Es una pantalla de LECTURA, y eso no es una limitación: el catálogo es CÓDIGO (`core/achievements/catalog.ts`),
+ * no datos: sus métricas son funciones y sus `id` son contrato (§6.4). Lo que hace falta —y no había— es poder
+ * leer de un tirón los 261 escalones con sus dos textos al lado, que es la única forma de cazar una condición que
+ * desafina o una cifra que no cuadra.
+ */
+export const ADMIN_ACHIEVEMENTS_UI = {
+  open: 'Catálogo de logros',
+  title: 'Catálogo de logros',
+  subtitle: 'Las escaleras del catálogo con sus escalones, sus dos textos y su medalla, tal como se ven en la app.',
+  note: 'Solo lectura: el catálogo vive en el código (`core/achievements/catalog.ts`), donde cada escalera lleva su métrica. Aquí se revisa lo que la gente lee.',
+  back: 'Volver al censo',
+  sectionAria: 'Catálogo de logros',
+
+  totals: {
+    aria: 'Cifras del catálogo',
+    ladders: 'Escaleras',
+    steps: 'Escalones',
+    hidden: 'Ocultos',
+    retired: 'Retirados',
+  },
+
+  /** Filtro por texto: con 261 escalones, buscar es parte de revisar. */
+  filterLabel: 'Buscar en nombres y textos',
+  filterPlaceholder: 'Créditos finales, semanas, reseña…',
+  filterEmpty: 'Ningún logro coincide con esa búsqueda.',
+  matches: (shown: number, total: number) => `${shown} de ${total} escaleras`,
+
+  /** Cabecera de una escalera. La `key` se enseña porque es el prefijo de los `id`, que no se renombran jamás. */
+  ladderKey: (key: string) => `key: ${key}`,
+  ladderSteps: (steps: readonly number[]) => `Umbrales: ${steps.join(' · ')}`,
+  ladderIcon: (icon: string) => `Icono: ${icon}`,
+  ladderCondition: 'Condición de la escalera (el respaldo, sin cifra)',
+  descending: 'Menos es mejor',
+  hidden: 'Oculto',
+  retired: 'Retirado',
+
+  /** Columnas de los escalones. Los dos textos, uno al lado del otro: es lo que se viene a comparar. */
+  colStep: 'Escalón',
+  colName: 'Nombre',
+  colGoal: 'Meta (lo que falta)',
+  colDone: 'Hecho (lo conseguido)',
+  /** ⚑ Señal de que una escalera se dejó el `done`: el respaldo copia la meta y se lee como una tarea pendiente. */
+  sameText: 'Sin texto propio: repite la meta',
+
+  families: {
+    mirror: 'Espejo',
+    data: 'Fichas',
+    social: 'Social',
+    annual: 'Anual',
+    onboarding: 'Primeros pasos',
+  },
+} as const;
