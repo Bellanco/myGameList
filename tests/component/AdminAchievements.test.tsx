@@ -7,6 +7,15 @@ import { ACHIEVEMENTS, ACHIEVEMENTS_BY_LADDER, LADDERS, SCORING_ACHIEVEMENTS } f
 import { MIRROR_ORDER, packAchievements } from '../../src/core/achievements/pack';
 import type { AchievementState } from '../../src/core/achievements/types';
 
+/**
+ * EL LÍMITE DE 5 s NO MIDE NADA EN ESTE FICHERO. La pantalla pinta las 50 escaleras con sus 314 escalones —4.239
+ * nodos— en CADA test, así que un render cuesta cientos de milisegundos con la máquina desahogada y se acerca al
+ * límite en cuanto va cargada: en el CI, con los procesos compitiendo, es donde saltó. Aquí no hay nada asíncrono
+ * de verdad que esperar, o sea que el temporizador solo está para cazar un cuelgue, y para eso 20 s sobran. Sin
+ * esto, una máquina ocupada tumba media docena de tests sin que nada esté roto.
+ */
+vi.setConfig({ testTimeout: 20_000 });
+
 /** Un espejo de verdad, empaquetado por el empaquetador: el bitmap se indexa por `MIRROR_ORDER`, no a mano. */
 function espejo(ids: readonly string[]): string {
   const states: AchievementState[] = ids.map((id) => ({ id, level: 1, value: 0, next: null, unlockedAt: 0 }));
