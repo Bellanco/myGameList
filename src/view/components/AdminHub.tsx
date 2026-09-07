@@ -183,9 +183,9 @@ export const AdminHub = memo(function AdminHub() {
     if (view !== 'achievements') return;
     let cancelled = false;
     void import('../../model/repository/achievementsConfigRepository')
-      .then((module) => module.loadHiddenOverrides(true))
+      .then((module) => module.loadAchievementsConfig(true))
       .then((value) => {
-        if (!cancelled) setHiddenAchievements(value);
+        if (!cancelled) setHiddenAchievements(value.hidden);
       })
       .catch(() => {
         // Sin configuración manda el catálogo; la pantalla lo enseña tal cual.

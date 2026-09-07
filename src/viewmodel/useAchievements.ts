@@ -7,7 +7,12 @@ import { rouletteUsedAt } from '../core/achievements/deviceSignals';
 import { DEFAULT_PALETTE } from '../core/constants/palettes';
 import { palettePreference } from '../view/hooks/preferences';
 import { RARITY_POINTS } from '../core/achievements/types';
-import { withoutHidden, type HiddenOverrides } from '../core/achievements/visibility';
+import {
+  NO_ACHIEVEMENTS_CONFIG,
+  openThrough,
+  withoutHidden,
+  type AchievementsConfig,
+} from '../core/achievements/visibility';
 import type { AchievementDef, AchievementItem, AchievementState, AchievementSummary } from '../core/achievements/types';
 import type { TabData } from '../model/types/game';
 
@@ -151,31 +156,36 @@ export function compareEarned(a: AchievementItem, b: AchievementItem): number {
 
 export function listForScreen(
   byId: ReadonlyMap<string, AchievementState>,
-  hiddenOverrides: HiddenOverrides = {},
+  config: AchievementsConfig = NO_ACHIEVEMENTS_CONFIG,
 ): AchievementItem[] {
   const stateOf = (def: AchievementDef): AchievementState =>
     byId.get(def.id) || { id: def.id, level: 0, value: 0, next: def.step, unlockedAt: 0 };
 
-  // Qué escalones se enseñan: TODOS los conseguidos de cada escalera y el primero que falte.
+  // QUÉ ESCALONES SE ENSEÑAN: los que la escalera tiene ABIERTOS, más todo lo que uno tenga conseguido.
   //
-  // «Todos los conseguidos» y no «hasta el primero que falte», que era lo mismo salvo en el caso que importa: la
-  // marca de agua puede sostener un escalón alto cuyo anterior ya no se cumple —una biblioteca que encoge, unos
-  // años corregidos—, y cortando en el primer hueco esa medalla desaparecía de la pantalla sin dejar de contar
-  // en la cifra de la cabecera. Un logro conseguido que no se ve en ninguna parte es el peor fallo posible aquí.
+  // ABIERTO ES COMUNITARIO Y NO PERSONAL, que es la regla que esto se dejaba: en cuanto un usuario ve un escalón,
+  // ese escalón queda abierto para TODO EL MUNDO y a partir de ahí se enseña igual a todos. Aquí se decidía solo
+  // con el progreso de quien mira —cada dispositivo abría su propia escalera— así que quien empezaba veía un
+  // peldaño donde otro ya veía nueve. Lo que distingue a dos personas es lo que llevan CONSEGUIDO, no la lista.
+  // La línea la calcula `openThrough`, y con la configuración vacía se queda en el progreso propio, que es
+  // exactamente lo que se hacía antes: por eso esto no cambia nada mientras no haya espejos publicados.
+  //
+  // Y ADEMÁS, TODO LO CONSEGUIDO, esté abierto o no. La marca de agua puede sostener un escalón alto cuyo
+  // anterior ya no se cumple —una biblioteca que encoge, unos años corregidos—, y sin esta unión esa medalla
+  // desaparecía de la pantalla sin dejar de contar en la cifra de la cabecera. Un logro conseguido que no se ve
+  // en ninguna parte es el peor fallo posible aquí.
   const visible = new Set<string>();
   for (const steps of ACHIEVEMENTS_BY_LADDER.values()) {
-    let carrotShown = false;
-    for (const def of steps) {
-      const earned = stateOf(def).level >= 1;
-      if (earned) {
+    const openTo = openThrough(steps, config.open, (def) => stateOf(def).level >= 1);
+    steps.forEach((def, index) => {
+      if (stateOf(def).level >= 1) {
         visible.add(def.id);
-        continue;
+        return;
       }
-      // Lo retirado deja de ofrecerse: no es la zanahoria de nadie (§6.4).
-      if (carrotShown || def.retired) continue;
-      visible.add(def.id);
-      carrotShown = true;
-    }
+      // Lo retirado deja de ofrecerse: no se le enseña a quien no lo tenga (§6.4).
+      if (def.retired) return;
+      if (index <= openTo) visible.add(def.id);
+    });
   }
 
   const items: AchievementItem[] = ACHIEVEMENTS
@@ -190,7 +200,7 @@ export function listForScreen(
   // LOS OCULTOS QUE NO TIENES NO SALEN, ni con un «?». La decisión y su motivo están en
   // `core/achievements/visibility.ts`; aquí solo se aplica, y se aplica al final para que un oculto tampoco
   // gaste la zanahoria de su escalera.
-  return withoutHidden(items, hiddenOverrides)
+  return withoutHidden(items, config.hidden)
     .filter((entry) => !(hideOnboarding && entry.def.family === 'onboarding'))
     .sort((a, b) => {
       const aEarned = a.state.level >= 1;
