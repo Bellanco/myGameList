@@ -26,8 +26,10 @@ async function abrirPlan(escalera: string): Promise<void> {
 describe('catálogo de logros — la vista de revisión del panel de administración', () => {
   it('enseña TODAS las escaleras con sus escalones: es una revisión, no una muestra', () => {
     render(<AdminAchievements onBack={() => {}} />);
+    // De una pasada: buscar las 50 por separado recorre el documento entero 50 veces y se come el test.
+    const pintadas = new Set(screen.getAllByText(/^key: /).map((node) => node.textContent));
     for (const ladder of LADDERS) {
-      expect(screen.getByText(`key: ${ladder.key}`), ladder.key).toBeInTheDocument();
+      expect(pintadas.has(`key: ${ladder.key}`), ladder.key).toBe(true);
     }
     // Una fila por escalón del catálogo, más una cabecera por escalera.
     expect(screen.getAllByRole('row')).toHaveLength(ACHIEVEMENTS.length + LADDERS.length);
