@@ -111,7 +111,15 @@ export const ProfileAchievementsScreen = memo(function ProfileAchievementsScreen
       owner={owner}
       backLabel={ACHIEVEMENTS_UI.backToProfile}
       onBack={onBack}
-      onToggleGlobals={onToggleGlobals}
+      /* LA PUERTA A LOS GLOBALES SE OFRECE SI HAY ALGO DETRÁS, y `rarity` es exactamente esa pregunta: es la
+         misma medición que hace la vista global, así que aquí no se puede colar un umbral distinto del suyo.
+
+         Sin muestra —por debajo de los 20 espejos del §6.6bis— esa vista no puede pintar ninguna lista: se
+         declara sin muestra y ya está. Mientras el botón se enseñaba igualmente, pulsarlo llevaba a una pantalla
+         con una excusa y nada más, que es un callejón sin salida. Y no era un caso raro de desarrollo: el día
+         del estreno nadie ha publicado su espejo todavía, así que le pasaría a todo el mundo. Se cura solo
+         según la gente publica, y hasta entonces la puerta no está. */
+      onToggleGlobals={rarity ? onToggleGlobals : undefined}
       globalsBackLabel={globalsBackLabel}
     />
   );
