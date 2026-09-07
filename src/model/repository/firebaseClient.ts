@@ -59,6 +59,15 @@ export interface SocialProfileReference {
   socialEnabled: boolean;
   /** Rango asignado por el administrador. Determina la frescura del feed de QUIEN MIRA (ver `tiers.ts`). */
   tier: ProfileTier;
+  /**
+   * FECHA DE ALTA del perfil (ms), sellada por el servidor al crearlo e inmutable por reglas. 0 = el documento es
+   * anterior a que existiera la marca.
+   *
+   * Solo la rellenan las lecturas del perfil PROPIO, y la usan los logros «De la vieja escuela» y «Otro año más»:
+   * son los dos únicos del catálogo que se apoyan en un dato VERIFICABLE que pone el servidor, y precisamente por
+   * eso no se puede sembrar desde el cliente (§7.1).
+   */
+  createdAt?: number;
 }
 
 export interface SocialDirectoryEntry {

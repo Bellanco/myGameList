@@ -177,6 +177,14 @@ export function useSocialViewModel(options?: {
   // quien mira porque las lecturas de gists ajenos van con SU token y cuentan contra SU rate-limit.
   const [ownTier, setOwnTier] = useState<ProfileTier>(DEFAULT_PROFILE_TIER);
   /**
+   * Tu fecha de alta (ms), del documento de perfil. La necesitan «De la vieja escuela» y «Otro año más», que son
+   * los dos únicos logros del catálogo que miden algo que NO sale de tu biblioteca.
+   *
+   * Viaja con la misma lectura que el rango —una sola, ya cacheada 60 s por `getOwnProfileRef`— así que no cuesta
+   * ni una petición. 0 mientras no se sepa, que es lo que deja los dos logros sin conceder en vez de regalarlos.
+   */
+  const [ownProfileCreatedAt, setOwnProfileCreatedAt] = useState(0);
+  /**
    * ¿Se sabe ya el rango propio? `ownTier` arranca en bronce porque es el valor por defecto real, pero "bronce
    * porque aún no se ha leído el perfil" y "bronce porque ese es su rango" NO son lo mismo para el directorio: el
    * primero elegiría el TTL de caché equivocado y obligaría a rehidratarlo entero al conocerse el rango.
@@ -1009,15 +1017,14 @@ export function useSocialViewModel(options?: {
     return {
       friends: friendUidSet.size,
       postWeeks: weeks.size,
-      // ⚑ PENDIENTE, y es la única pieza que falta: `profiles/{uid}.createdAt` no se mapea en la lectura del
-      // perfil propio, así que «De la vieja escuela» y «Otro año más» siguen a cero. El §11-F1 del plan ya lo
-      // anotaba como parte de esta fase. Se deja explícito en vez de improvisar una fecha: es el único logro
-      // verificable del catálogo justo porque esa marca la pone el servidor, y sembrarla desde el cliente lo
-      // convertiría en uno más.
-      profileCreatedAt: 0,
+      // Tu fecha de alta, del documento de perfil (`profiles/{uid}.createdAt`). Es lo que hace verificables «De
+      // la vieja escuela» y «Otro año más»: la sella el SERVIDOR al crear el perfil y las reglas la declaran
+      // inmutable, así que no se puede adelantar desde el cliente. 0 mientras no se haya leído —o en un perfil
+      // anterior a que existiera la marca—, y entonces los dos logros no se conceden, que es el lado correcto.
+      profileCreatedAt: ownProfileCreatedAt,
       hasSync: Boolean(mainSyncConfig?.gistId),
     };
-  }, [rawSocialDirectory, authUser?.uid, ownProfileId, friendUidSet, mainSyncConfig?.gistId]);
+  }, [rawSocialDirectory, authUser?.uid, ownProfileId, friendUidSet, mainSyncConfig?.gistId, ownProfileCreatedAt]);
 
   const ownAchievements = useAchievements({ games: options?.games || EMPTY_LIBRARY, ...achievementCounters });
   const ownAchievementStates = ENABLE_ACHIEVEMENTS ? ownAchievements.states : null;
@@ -1649,13 +1656,17 @@ export function useSocialViewModel(options?: {
   useEffect(() => {
     if (!authUser?.uid) {
       setOwnTier(DEFAULT_PROFILE_TIER);
+      setOwnProfileCreatedAt(0);
       setTierResolved(false);
       return;
     }
     let cancelled = false;
     void resolveOwnProfile(authUser)
       .then((profile) => {
-        if (!cancelled) setOwnTier(profile?.tier || DEFAULT_PROFILE_TIER);
+        if (cancelled) return;
+        setOwnTier(profile?.tier || DEFAULT_PROFILE_TIER);
+        // De paso, la fecha de alta: es el mismo documento y la misma lectura.
+        setOwnProfileCreatedAt(profile?.createdAt || 0);
       })
       .catch(() => {
         /* sin rango conocido → bronce */
