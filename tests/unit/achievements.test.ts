@@ -397,6 +397,46 @@ describe('el espejo — mapa de bits y lectura defensiva', () => {
     expect(MIRROR_ORDER.some((id) => id.startsWith('paso-'))).toBe(false);
   });
 
+  /**
+   * LAS DOS GUARDAS DE LA LISTA CONGELADA (`mirrorOrder.ts`). El orden de los bits ya NO se deriva del catálogo,
+   * y eso es lo que permite insertar un umbral intermedio sin reescribir la vitrina de nadie. El precio es que
+   * hay dos listas que pueden desincronizarse, y son estos dos tests los que lo impiden:
+   *
+   *  - un escalón publicable que no esté en la lista NO SE PUBLICARÍA, en silencio;
+   *  - un `id` en la lista que ya no exista en el catálogo significa que alguien borró un logro en vez de
+   *    retirarlo, que es justo lo que el §6.4 prohíbe.
+   *
+   * Cuando este test falle al añadir un logro nuevo, la solución es UNA: su `id` al final de `MIRROR_IDS`.
+   */
+  it('todo escalón publicable tiene su bit, y al final de la lista', () => {
+    const publicables = ACHIEVEMENTS.filter((def) => def.family !== 'onboarding').map((def) => def.id);
+    const enLaLista = new Set(MIRROR_ORDER);
+    const olvidados = publicables.filter((id) => !enLaLista.has(id));
+    expect(olvidados, `añade estos ids AL FINAL de MIRROR_IDS: ${olvidados.join(', ')}`).toEqual([]);
+  });
+
+  it('la lista no tiene bits huérfanos ni repetidos', () => {
+    const existentes = new Set(ACHIEVEMENTS.map((def) => def.id));
+    const huerfanos = MIRROR_ORDER.filter((id) => !existentes.has(id));
+    expect(huerfanos, `estos ids ya no están en el catálogo: ${huerfanos.join(', ')}`).toEqual([]);
+    expect(new Set(MIRROR_ORDER).size).toBe(MIRROR_ORDER.length);
+    // Y ni un «primer paso»: no se publican jamás.
+    expect(MIRROR_ORDER.some((id) => id.startsWith('paso-'))).toBe(false);
+  });
+
+  /**
+   * EL ORDEN, CLAVADO. Es lo único que de verdad protege las vitrinas ya publicadas: cualquier reordenación —o
+   * una inserción a mitad de lista— cambia lo que significa cada bit, y ningún otro test lo notaría. Si este
+   * falla y no has añadido nada al final, lo que has hecho rompe los espejos de todo el mundo.
+   */
+  it('los primeros bits son los que eran, y la lista tiene la longitud que tenía', () => {
+    expect(MIRROR_ORDER.length).toBe(253);
+    expect(MIRROR_ORDER.slice(0, 4)).toEqual([
+      'completados-10', 'completados-25', 'completados-50', 'completados-75',
+    ]);
+    expect(MIRROR_ORDER[MIRROR_ORDER.length - 1]).toBe('aniversario-30');
+  });
+
   it('lo que se empaqueta es lo que se lee', () => {
     const list = packAchievements(states, ['plataformas-5']);
     const back = parseMirror(list, NOW);
