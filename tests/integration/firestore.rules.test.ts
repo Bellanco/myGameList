@@ -912,9 +912,50 @@ describe('firestore.rules', () => {
     });
   });
 
+  /**
+   * CONFIGURACIÓN DEL CATÁLOGO DE LOGROS. El panel la escribe y la app la lee para saber qué escaleras están
+   * ocultas. Es el único documento del proyecto que escribe el admin y lee todo el mundo, así que lo que hay que
+   * fijar es justo eso: que NADIE más lo pueda escribir.
+   */
+  describe('appConfig (catálogo de logros)', () => {
+    it('lo lee cualquiera con sesión, y quien no la tiene no', async () => {
+      await seed('appConfig', 'achievements', { hidden: { 'obra-maestra': false } });
+      await assertSucceeds(getDoc(doc(ownerDb('uid-a'), 'appConfig', 'achievements')));
+      await assertFails(getDoc(doc(anonDb(), 'appConfig', 'achievements')));
+    });
+
+    it('solo el admin lo escribe', async () => {
+      await assertSucceeds(setDoc(doc(adminDb(), 'appConfig', 'achievements'), { hidden: { 'obra-maestra': false } }));
+      await assertFails(setDoc(doc(ownerDb('uid-a'), 'appConfig', 'achievements'), { hidden: { 'obra-maestra': false } }));
+      await assertFails(setDoc(doc(anonDb(), 'appConfig', 'achievements'), { hidden: {} }));
+      // Y borrarlo también es cosa suya: al desaparecer, la app cae a lo que dice el código.
+      await assertSucceeds(deleteDoc(doc(adminDb(), 'appConfig', 'achievements')));
+      await assertFails(deleteDoc(doc(ownerDb('uid-a'), 'appConfig', 'achievements')));
+    });
+
+    it('acota el contenido: una sola clave y un mapa, no un almacén', async () => {
+      await assertFails(setDoc(doc(adminDb(), 'appConfig', 'achievements'), { hidden: {}, basura: 'x' }));
+      await assertFails(setDoc(doc(adminDb(), 'appConfig', 'achievements'), { hidden: 'todo' }));
+      const grande: Record<string, boolean> = {};
+      for (let i = 0; i < 101; i += 1) grande[`ladder-${i}`] = true;
+      await assertFails(setDoc(doc(adminDb(), 'appConfig', 'achievements'), { hidden: grande }));
+    });
+  });
+
   describe('catch-all', () => {
     it('deniega cualquier otra colección', async () => {
       await assertFails(getDoc(doc(ownerDb('uid-a'), 'whatever', 'x')));
+    });
+
+    /**
+     * LA REGLA NUEVA NO ABRE NADA MÁS. `appConfig` es un `match` propio, así que no puede tocar a las demás
+     * colecciones; esto lo comprueba desde fuera, que es como se rompería si algún día se cambiara por un
+     * comodín (`/{coleccion}/{docId}`) sin darse cuenta.
+     */
+    it('la configuración global no da acceso a ninguna otra colección', async () => {
+      await assertFails(getDoc(doc(ownerDb('uid-a'), 'appConfigOtro', 'x')));
+      await assertFails(setDoc(doc(adminDb(), 'appConfig_', 'x'), { hidden: {} }));
+      await assertFails(getDoc(doc(anonDb(), 'appConfig', '_placeholder')));
     });
   });
 });

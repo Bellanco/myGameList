@@ -56,16 +56,16 @@ export const AchievementRow = memo(function AchievementRow({
 }: AchievementRowData) {
   const isGlobal = Boolean(global);
   const earned = level >= 1;
-  const masked = Boolean(def.hidden) && !earned;
+  // YA NO HAY FILA TAPADA. Un logro oculto que no tienes no llega a esta fila: se filtra antes
+  // (`core/achievements/visibility.ts`), porque una fila con «?» y «se revela al conseguirlo» contaba que
+  // existe algo que no puedes saber qué es y gastaba el sitio de la pantalla en no decir nada.
   // El grado ya viene EN EL NOMBRE («Créditos finales III»): lo pone el catálogo al expandir la escalera, que
   // es el único sitio que sabe cuántos escalones tiene. Componerlo aquí otra vez lo escribiría dos veces.
-  const name = masked ? ACHIEVEMENTS_UI.hiddenName : def.labels.name;
+  const name = def.labels.name;
   // DOS TEXTOS, Y EL QUE TOCA: lo conseguido se cuenta en pasado («Te has terminado 100 juegos») y lo que falta
   // se pide en imperativo («Termina 100 juegos»). Con un solo texto, una de las dos mitades de la lista se leía
   // mal: en imperativo, una medalla ya ganada parecía una tarea pendiente.
-  const condition = masked
-    ? ACHIEVEMENTS_UI.hiddenCondition
-    : (earned && mine ? def.labels.done : def.labels.condition);
+  const condition = earned && mine ? def.labels.done : def.labels.condition;
 
   // «Sin cabos sueltos» mide un porcentaje y las demás cuentan cosas: el progreso tiene que decirlo o «42 de 75»
   // se lee como 42 juegos.
@@ -89,7 +89,7 @@ export const AchievementRow = memo(function AchievementRow({
       {/* `md` (48 px) en LAS DOS VISTAS. La medalla manda en la altura de la fila, y a 72 px cada una era casi
           tan alta como ancho su cuadro: la lista se leía como una pila de fichas en vez de como una lista. El
           tamaño se decide aquí y no en la hoja, para que no haya dos sitios donde cambiarlo. */}
-      <AchievementMedal def={def} level={level} size="md" date={date} masked={masked} />
+      <AchievementMedal def={def} level={level} size="md" date={date} />
 
       <div className="ach-row-body">
         <p className="ach-row-name">{name}</p>
@@ -98,7 +98,7 @@ export const AchievementRow = memo(function AchievementRow({
             En la vista global solo sale en TU perfil: el espejo de otra persona lleva los logros CONSEGUIDOS y
             nada más, así que de una amistad no se sabe por dónde va —ni debe saberse, que es la línea del §3—.
             Por eso la condición mira `global.self` y no solo `global`. */}
-        {(!isGlobal || global?.self) && !earned && !masked && next !== null && value > 0 ? (
+        {(!isGlobal || global?.self) && !earned && next !== null && value > 0 ? (
           <p className="ach-row-progress">
             <span className="ach-row-bar" aria-hidden="true">
               <i style={{ '--pct': `${pct}%` } as CSSProperties} />
@@ -127,12 +127,11 @@ export const AchievementRow = memo(function AchievementRow({
         {/* Y la rareza, con las dos cifras que van juntas SIEMPRE: la declarada, dicha con palabras porque el aura
             es color puro; y la medida, que nunca se dice sin su denominador.
 
-            DE UN OCULTO NO SE DICE NINGUNA DE LAS DOS. Escribir «EXCEPCIONAL» junto a un «Logro oculto» es una
-            pista de cuál es —el catálogo solo tiene seis— y la regla del §6.7 es que un oculto no da ninguna. */}
-        {masked ? null : (
-          <span className="ach-row-rarity" data-r={def.rarity}>{ACHIEVEMENT_RARITY_LABELS[def.rarity]}</span>
-        )}
-        {!masked && rarity ? (
+            YA NO HACE FALTA CALLARLAS EN LOS OCULTOS. Antes se ocultaban porque «EXCEPCIONAL» junto a un «Logro
+            oculto» era una pista de cuál es (el catálogo solo tiene seis excepcionales); ahora un oculto que no
+            tienes no ocupa fila ninguna, así que la única fila que llega aquí es de algo que ya conseguiste. */}
+        <span className="ach-row-rarity" data-r={def.rarity}>{ACHIEVEMENT_RARITY_LABELS[def.rarity]}</span>
+        {rarity ? (
           <span className="ach-row-share">
             {ACHIEVEMENTS_UI.rarityPercent(rarity.percent, rarity.holders, rarity.sample)}
           </span>

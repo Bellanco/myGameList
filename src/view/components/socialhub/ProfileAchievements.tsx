@@ -6,6 +6,8 @@ import { measureRarity, parseMirror, sortMirror } from '../../../core/achievemen
 import { summarizeMirror } from '../../../core/achievements/summary';
 import { ACHIEVEMENTS_BY_ID, SCORING_ACHIEVEMENTS } from '../../../core/achievements/catalog';
 import { ACHIEVEMENTS_UI } from '../../../core/constants/achievementLabels';
+import { withoutHidden } from '../../../core/achievements/visibility';
+import { useHiddenAchievements } from '../../hooks/useHiddenAchievements';
 import type { AchievementItem, AchievementState } from '../../../core/achievements/types';
 
 /**
@@ -155,6 +157,10 @@ export const ProfileGlobalAchievements = memo(function ProfileGlobalAchievements
   onToggleGlobals?: () => void;
   globalsBackLabel?: string;
 }) {
+  // La ficha de una amistad lista SOLO lo conseguido, así que no hay nada que esconder ahí; esta vista, en
+  // cambio, recorre el catálogo entero, y es donde un oculto sin conseguir se asomaría.
+  const hiddenAchievements = useHiddenAchievements();
+
   const { entries, rarity, summary } = useMemo(() => {
     const measured = measureRarity(directoryMirrors);
     // El resumen se calcula SIEMPRE, incluso sin muestra: la cifra de la cabecera («113/251 · 45 %») no depende del
@@ -189,8 +195,8 @@ export const ProfileGlobalAchievements = memo(function ProfileGlobalAchievements
       .sort((a, b) => (b.percent - a.percent) || a.def.labels.name.localeCompare(b.def.labels.name, 'es'))
       .map(({ def, state }) => ({ def, state }));
 
-    return { entries: items, rarity: measured, summary };
-  }, [mirror, directoryMirrors, ownStates]);
+    return { entries: withoutHidden(items, hiddenAchievements), rarity: measured, summary };
+  }, [mirror, directoryMirrors, ownStates, hiddenAchievements]);
 
   return (
     <AchievementsScreen
