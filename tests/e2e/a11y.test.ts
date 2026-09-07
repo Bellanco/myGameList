@@ -48,12 +48,24 @@ const TEMAS = ['dark', 'light'] as const;
  * insignias no terminan nunca, así que esperarlas colgaría el recorrido.
  */
 async function animacionesDeEntradaTerminadas(page: Page): Promise<void> {
-  await page.waitForFunction(() =>
-    document
+  // TRES COMPROBACIONES SEGUIDAS EN CALMA, no una. Con una sola quedaba una carrera: una animación ya creada pero
+  // que todavía no ha arrancado está en `idle`, que este filtro da por terminada, así que la espera podía pasar
+  // justo ANTES de que empezara el fundido y axe medía los colores a medias. Se ve solo con la máquina cargada
+  // —la suite repartida entre trabajadores—, y sale como una violación de contraste que no existe: el color final
+  // de `.admin-item-name` mide 12,29 sobre su fondo y axe llegó a leer 4,21.
+  // El contador vive en `window` y esta función se llama más de una vez por página (tras navegar y tras abrir
+  // algo), así que se pone a cero al entrar: si no, la segunda llamada heredaba una calma vieja y daba por buena
+  // una pantalla cuya animación aún no había arrancado.
+  await page.evaluate(() => { (window as unknown as { __framesEnCalma?: number }).__framesEnCalma = 0; });
+  await page.waitForFunction(() => {
+    const quieta = document
       .getAnimations()
       .filter((a) => (a.effect?.getComputedTiming().iterations ?? 1) !== Infinity)
-      .every((a) => a.playState === 'finished' || a.playState === 'idle'),
-  );
+      .every((a) => a.playState === 'finished' || a.playState === 'idle');
+    const marca = window as unknown as { __framesEnCalma?: number };
+    marca.__framesEnCalma = quieta ? (marca.__framesEnCalma ?? 0) + 1 : 0;
+    return (marca.__framesEnCalma ?? 0) >= 3;
+  });
 }
 
 /** Deja la lista pintada y una fila abierta: es el estado con más color y más controles a la vista. */
