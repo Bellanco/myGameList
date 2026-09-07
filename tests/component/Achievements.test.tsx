@@ -630,12 +630,15 @@ describe('el apartado del panel', () => {
  * sin `onToggleGlobals`, y por eso el botón no aparece allí (lo fija `tests/component/StatsHub.test.tsx`).
  */
 describe('el paso a los globales, y la vuelta', () => {
+  /** Muestra suficiente para que el porcentaje comparado signifique algo: el corte del §6.6bis son 20 espejos. */
+  const MUESTRA = Array.from({ length: 20 }, () => ESPEJO);
+
   it('en el hub el listado ofrece el botón, y lleva a los globales', async () => {
     const alternar = vi.fn();
     render(
       <ProfileAchievementsScreen
         mirror={ESPEJO}
-        directoryMirrors={[]}
+        directoryMirrors={MUESTRA}
         owner="Fulano"
         onBack={() => {}}
         onToggleGlobals={alternar}
@@ -649,8 +652,62 @@ describe('el paso a los globales, y la vuelta', () => {
   });
 
   it('sin `onToggleGlobals` —el listado del panel— el botón NO existe', () => {
-    render(<ProfileAchievementsScreen mirror={ESPEJO} directoryMirrors={[]} owner="Fulano" onBack={() => {}} />);
+    render(<ProfileAchievementsScreen mirror={ESPEJO} directoryMirrors={MUESTRA} owner="Fulano" onBack={() => {}} />);
     expect(screen.queryByRole('button', { name: /Logros globales/ })).not.toBeInTheDocument();
+  });
+
+  /**
+   * SIN MUESTRA NO SE OFRECE LA PUERTA. Los globales miden el catálogo contra los espejos del directorio y por
+   * debajo del corte no pueden pintar ninguna lista: la pantalla se declara sin muestra y ya está. Mientras el
+   * botón se enseñaba igualmente, pulsarlo llevaba a una excusa y nada más — un callejón sin salida.
+   *
+   * NO ERA UN CASO RARO DE DESARROLLO: el día del estreno nadie ha publicado su espejo todavía, así que le
+   * pasaba a todo el mundo. Se cura solo según la gente publica, y hasta entonces la puerta no está.
+   */
+  it('sin espejos suficientes no se ofrece el botón, aunque haya a dónde ir', () => {
+    const { unmount } = render(
+      <ProfileAchievementsScreen
+        mirror={ESPEJO}
+        directoryMirrors={[]}
+        owner="Fulano"
+        onBack={() => {}}
+        onToggleGlobals={vi.fn()}
+      />,
+    );
+    expect(screen.queryByRole('button', { name: /Logros globales/ })).not.toBeInTheDocument();
+    unmount();
+
+    // Justo por debajo del corte tampoco: 19 espejos siguen sin dar para un porcentaje.
+    render(
+      <ProfileAchievementsScreen
+        mirror={ESPEJO}
+        directoryMirrors={MUESTRA.slice(0, 19)}
+        owner="Fulano"
+        onBack={() => {}}
+        onToggleGlobals={vi.fn()}
+      />,
+    );
+    expect(screen.queryByRole('button', { name: /Logros globales/ })).not.toBeInTheDocument();
+  });
+
+  /**
+   * Y LA SALIDA DE LOS GLOBALES NO SE GUARDA NUNCA. Se entra con muestra, pero si por lo que sea se está dentro
+   * sin ella, el botón de volver tiene que seguir ahí: quedarse encerrado en una pantalla vacía es peor que la
+   * pantalla vacía.
+   */
+  it('dentro de los globales, la salida no depende de la muestra', () => {
+    render(
+      <ProfileGlobalAchievements
+        mirror={ESPEJO}
+        directoryMirrors={[]}
+        owner="Fulano"
+        self={false}
+        onBack={() => {}}
+        onToggleGlobals={vi.fn()}
+        globalsBackLabel="Logros de Fulano"
+      />,
+    );
+    expect(screen.getByRole('button', { name: 'Logros de Fulano' })).toBeInTheDocument();
   });
 
   it('desde los globales el botón NOMBRA SU DESTINO y devuelve al listado de esa persona', async () => {
