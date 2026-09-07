@@ -3,6 +3,7 @@ import { act, render, screen, waitFor, fireEvent } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom';
 import type { SecretSocialGistResult } from '../../src/model/repository/socialGistRepository';
 import type { SocialAuthUser, SocialProfileReference } from '../../src/model/repository/firebaseClient';
+import { parseMirror } from '../../src/core/achievements/pack';
 
 // Mock de los repos que consume useSocialViewModel: aísla la UI de red/Firebase/IndexedDB.
 // Valida que tras M3 (extracción del viewmodel) SocialHub sigue renderizando ambas ramas sin romper.
@@ -122,6 +123,15 @@ const shareMocks = vi.hoisted(() => ({
 
 vi.mock('../../src/viewmodel/useShareViewModel', () => shareMocks);
 
+// F3 — el interruptor de publicación, FORZADO A ENCENDIDO. Se mockea en vez de leer la constante para que este
+// fichero pruebe la conducta y no la configuración del día: «con la publicación activa, el hub publica» tiene que
+// seguir siendo cierto tanto antes del estreno como después, y sin esto el test se volvería verde por vacío en
+// cuanto alguien apagara el interruptor.
+vi.mock('../../src/core/achievements/flags', () => ({
+  ENABLE_ACHIEVEMENTS: true,
+  ENABLE_ACHIEVEMENTS_PUBLISH: true,
+}));
+
 import { SocialHub } from '../../src/view/components/SocialHub';
 import { SHARE_UI } from '../../src/core/constants/shareLabels';
 import { SOCIAL_UI } from '../../src/core/constants/socialLabels';
@@ -134,6 +144,70 @@ function renderHub(initialPath = '/social', games?: unknown) {
     </MemoryRouter>,
   );
 }
+
+/**
+ * F3 — QUE ENCENDER EL INTERRUPTOR PUBLIQUE DE VERDAD.
+ *
+ * Es la conducta que se estrena al poner `ENABLE_ACHIEVEMENTS_PUBLISH` a `true`, y hasta ahora no la probaba
+ * nadie: había tests de la ESCRITURA (`publishAchievementMirror`) y de la UNIÓN (`mergeForPublish`), pero ninguno
+ * del efecto que las llama. Es decir, el día del estreno el camino entero corría por primera vez en producción.
+ */
+describe('la publicación del espejo de logros', () => {
+  const biblioteca = (cuantos: number) => ({
+    c: Array.from({ length: cuantos }, (_u, i) => ({
+      id: i + 1, name: `Juego ${i + 1}`, _ts: Date.now(),
+      platforms: [], genres: [], steamDeck: false, review: '',
+    })),
+    v: [], e: [], p: [], deleted: [], updatedAt: Date.now(),
+  });
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    localStorage.clear();
+    gistMocks.getSocialSyncConfig.mockReturnValue({ token: 'ghp_x', gistId: 'social-gist', etag: null, lastRemoteUpdatedAt: 0 });
+    firebaseMocks.getCurrentSocialAuthUser.mockResolvedValue({ uid: 'uid-1', email: 'yo@example.com', displayName: 'Yo', photoURL: null });
+  });
+
+  it('publica el espejo de quien tiene el perfil publicado', async () => {
+    firebaseMocks.resolveOwnProfile.mockResolvedValue({
+      id: 'uid-1', profileId: 'uid-1', email: '', displayName: 'Yo', photoURL: '',
+      socialGistId: '', gamesGistId: '', githubToken: '', socialEnabled: true, tier: 'bronce',
+    } as never);
+
+    renderHub('/social', biblioteca(12));
+
+    await waitFor(() => expect(firebaseMocks.publishAchievementMirror).toHaveBeenCalled());
+    const [uid, espejo] = firebaseMocks.publishAchievementMirror.mock.calls[0] as unknown as [string, string];
+    expect(uid).toBe('uid-1');
+    // Doce completados: el primer escalón de «Créditos finales» tiene que ir dentro.
+    expect(parseMirror(espejo).map((item) => item.id)).toContain('completados-10');
+  });
+
+  /**
+   * SIN PERFIL PUBLICADO NO SE ESCRIBE NADA. Un `merge` sobre ese uid le CREARÍA el perfil a quien nunca abrió el
+   * social: publicarle una presencia que no ha pedido.
+   */
+  it('no publica nada si el perfil no está publicado', async () => {
+    firebaseMocks.resolveOwnProfile.mockResolvedValue(null);
+    renderHub('/social', biblioteca(12));
+
+    await waitFor(() => expect(firebaseMocks.getCurrentSocialAuthUser).toHaveBeenCalled());
+    expect(firebaseMocks.publishAchievementMirror).not.toHaveBeenCalled();
+  });
+
+  /** Y sin un solo logro conseguido tampoco: un espejo vacío no es la cadena vacía, son 45 caracteres de ceros. */
+  it('no publica una vitrina vacía', async () => {
+    firebaseMocks.resolveOwnProfile.mockResolvedValue({
+      id: 'uid-1', profileId: 'uid-1', email: '', displayName: 'Yo', photoURL: '',
+      socialGistId: '', gamesGistId: '', githubToken: '', socialEnabled: true, tier: 'bronce',
+    } as never);
+
+    renderHub('/social', biblioteca(0));
+
+    await waitFor(() => expect(firebaseMocks.getCurrentSocialAuthUser).toHaveBeenCalled());
+    expect(firebaseMocks.publishAchievementMirror).not.toHaveBeenCalled();
+  });
+});
 
 describe('SocialHub (componente, post-M3)', () => {
   beforeEach(() => {
