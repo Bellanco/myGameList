@@ -68,6 +68,14 @@ export interface SocialProfileReference {
    * eso no se puede sembrar desde el cliente (§7.1).
    */
   createdAt?: number;
+  /**
+   * TU ESPEJO DE LOGROS tal y como está PUBLICADO ahora mismo (`achievements.list`).
+   *
+   * Solo lo rellenan las lecturas del perfil PROPIO, y existe para una cosa: publicar la UNIÓN y no el
+   * reemplazo. La marca de agua que impide que un logro se retire es de dispositivo, así que sin esto un
+   * aparato con la biblioteca a medio sincronizar le borraría medallas a la vitrina (ver `mergeForPublish`).
+   */
+  achievementsMirror?: string;
 }
 
 export interface SocialDirectoryEntry {

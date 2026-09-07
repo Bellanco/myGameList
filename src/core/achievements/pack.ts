@@ -174,13 +174,62 @@ export function packAchievements(states: readonly AchievementState[], featured: 
 /**
  * El documento completo, listo para el `merge` de `profiles/{uid}`.
  *
- * TODAVÍA NO LA LLAMA NADIE, y es a propósito: la escritura del espejo va detrás de
- * `ENABLE_ACHIEVEMENTS_PUBLISH` y ese interruptor sigue apagado. Vive aquí —y no en el repositorio que
- * escribirá— porque la FORMA del documento es asunto de este módulo: quien empaqueta la cadena es quien sabe qué
- * versión de gramática lleva.
+ * La llama `publishAchievementMirror` (`firebaseRepository`), que es quien escribe. Vive aquí —y no allí— porque
+ * la FORMA del documento es asunto de este módulo: quien empaqueta la cadena es quien sabe qué versión de
+ * gramática lleva.
  */
 export function buildMirror(list: string, now: number): AchievementMirror {
   return { v: MIRROR_VERSION, at: now, list };
+}
+
+/**
+ * LO QUE SE PUBLICA: lo que YA ESTABA PUBLICADO unido a lo que este dispositivo ha evaluado.
+ *
+ * EL FALLO QUE ESTO EVITA. La marca de agua (`ACHIEVEMENTS_PEAK_KEY`) es de DISPOSITIVO: garantiza que un logro
+ * no se retire en el aparato donde se consiguió. Pero el espejo es UNO por cuenta y lo escribe cualquiera de tus
+ * dispositivos, así que sin esta unión bastaba con abrir la app en el móvil —con la biblioteca a medio
+ * sincronizar, o en un navegador recién estrenado— para que el espejo se recalculara MÁS PEQUEÑO y le borrara
+ * medallas a tu vitrina delante de tus amistades. Es justo lo que el §5.5 prohíbe: lo conseguido no se devuelve.
+ *
+ * Se une por `id` y lo publicado es el SUELO: un dispositivo puede añadir logros y afinar fechas, nunca quitar.
+ *
+ * LA FECHA QUE GANA ES LA MÁS ANTIGUA de las dos que existan, que es la verdadera: el día que de verdad cayó.
+ * Un dispositivo que llegó tarde a la biblioteca deduce sellos posteriores, y dejarle pisar el bueno movería la
+ * medalla de día en la vitrina de todo el mundo.
+ *
+ * LOS DESTACADOS SE CONSERVAN de lo publicado. Son una preferencia del dueño que puede haber elegido en otro
+ * aparato, y este no tiene forma de saberla: descartarlos sería que cambiar de móvil te deshiciera la vitrina.
+ */
+export function mergeForPublish(
+  published: unknown,
+  states: readonly AchievementState[],
+  now = Date.now(),
+): string {
+  const previous = parseMirror(published, now);
+  const byId = new Map<string, AchievementState>();
+  for (const item of previous) {
+    byId.set(item.id, { id: item.id, level: 1, value: 0, next: null, unlockedAt: item.unlockedAt });
+  }
+  for (const state of states) {
+    if (state.level < 1) continue;
+    const before = byId.get(state.id);
+    byId.set(state.id, {
+      ...state,
+      level: 1,
+      // La más antigua de las conocidas. Un 0 es «no se sabe» y pierde siempre contra una fecha de verdad.
+      unlockedAt: earliestStamp(before?.unlockedAt, state.unlockedAt),
+    });
+  }
+  return packAchievements([...byId.values()], previous.filter((item) => item.featured).map((item) => item.id));
+}
+
+/** La más antigua de dos fechas, tratando el 0 como «sin fecha» en vez de como el año 1970. */
+function earliestStamp(a: number | undefined, b: number | undefined): number {
+  const left = Number(a) || 0;
+  const right = Number(b) || 0;
+  if (left <= 0) return right;
+  if (right <= 0) return left;
+  return Math.min(left, right);
 }
 
 /**

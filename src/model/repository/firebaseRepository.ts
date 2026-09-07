@@ -26,6 +26,7 @@ import {
 } from './firebaseSocialRepository';
 import { DEFAULT_PROFILE_TIER } from '../../core/constants/tiers';
 import { FIRESTORE_SCHEMA_VERSION } from '../../core/constants/schema';
+import { buildMirror } from '../../core/achievements/pack';
 import type { FirestorePrivateConfig, FirestorePublicConfig } from '../types/firestore';
 
 // --- RE-EXPORTS: API pública estable (los consumidores siguen importando desde firebaseRepository) ---
@@ -576,6 +577,37 @@ export async function updateProfilePhoto(uid: string, photoURL: string): Promise
     // `updatedAt` es obligatorio de facto: el directorio ordena por él y un doc sin el campo NO saldría en la
     // consulta. Este merge puede crear el doc si aún no existía, así que lo estampa también aquí.
     { uid, photoURL: photoURL || '', updatedAt: serverTimestamp() },
+    { merge: true },
+  );
+  invalidateOwnProfileCache(uid);
+  invalidateSocialDirectoryCache();
+}
+
+/**
+ * PUBLICA TU ESPEJO DE LOGROS en `profiles/{uid}.achievements` (F3 del plan, §9.1).
+ *
+ * QUÉ SALE DE AQUÍ, y conviene tenerlo delante: este documento lo lee CUALQUIER usuario autenticado, así que lo
+ * que se publica es exactamente lo que `packAchievements` empaqueta y nada más — un mapa de bits de qué logros
+ * tienes y, para unos pocos, el DÍA en que cayeron. Sin horas (un sello al minuto diría a qué horas usas la app),
+ * sin progreso de lo que te falta y sin un solo dato de tu biblioteca. Los «primeros pasos» ni siquiera tienen
+ * bit: la vitrina de alguien con quinientos juegos no puede empezar por «escribió su primera reseña».
+ *
+ * LA FORMA LA DECIDE `buildMirror`, que es quien sabe qué versión de gramática lleva la cadena. Aquí solo se
+ * escribe.
+ *
+ * `uid` y `updatedAt` van en el merge por lo mismo que en `updateProfilePhoto`: las reglas exigen el primero y el
+ * directorio ordena por el segundo, de modo que un documento sin él no saldría en la consulta.
+ *
+ * Best-effort: no lanza. Un espejo que no se publica se vuelve a intentar en la sesión siguiente, y mientras
+ * tanto lo único que pasa es que las amistades ven tu vitrina un poco desactualizada.
+ */
+export async function publishAchievementMirror(uid: string, list: string): Promise<void> {
+  if (!uid || !list) return;
+  const services = await initializeFirebaseServices();
+  if (!services) return;
+  await setDoc(
+    doc(services.firestore, 'profiles', uid),
+    { uid, achievements: buildMirror(list, Date.now()), updatedAt: serverTimestamp() },
     { merge: true },
   );
   invalidateOwnProfileCache(uid);

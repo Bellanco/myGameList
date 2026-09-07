@@ -152,6 +152,7 @@ function mapProfileReference(id: string, data: Record<string, unknown>): SocialP
     // Rango: lo asigna el admin y el dueño no puede tocarlo. Del PROPIO perfil sale la cadencia del feed.
     tier: normalizeTier(data.tier),
     createdAt: profileCreatedAtMillis(data.createdAt),
+    achievementsMirror: String((data.achievements as { list?: unknown } | undefined)?.list || ''),
   };
 }
 
