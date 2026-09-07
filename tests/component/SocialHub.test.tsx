@@ -23,6 +23,10 @@ const firebaseMocks = vi.hoisted(() => ({
   signOutSocialUser: vi.fn(async () => {}),
   resolveStableProfileId: vi.fn(async (uid: string) => uid), // P1: detección de propiedad por identidad
   updateProfilePhoto: vi.fn(async () => {}),
+  // F3: la publicación del espejo de logros. Va en el mock aunque hoy no se llame —el interruptor
+  // `ENABLE_ACHIEVEMENTS_PUBLISH` está apagado— porque al encenderlo el hub la importa, y un mock sin ella
+  // tumba el render entero con «No export is defined on the mock».
+  publishAchievementMirror: vi.fn(async () => {}),
   // Amistad
   getMyFriendships: vi.fn(async (): Promise<any> => ({ friends: [], incoming: [], outgoing: [], byOtherUid: {} })),
   acceptFriendRequest: vi.fn(async () => {}),

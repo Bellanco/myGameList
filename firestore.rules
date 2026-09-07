@@ -36,7 +36,7 @@ service cloud.firestore {
         // (`scripts/purge-profile-pii.js`); esto cierra la puerta para que no pueda volver por una regresión.
         && request.resource.data.keys().hasOnly([
           "schemaVersion", "uid", "profileId", "displayName", "photoURL", "social", "updatedAt", "tier",
-          "createdAt"
+          "createdAt", "achievements"
         ])
         && profileTierNotSelfAssigned()
         && profileCreatedAtIsImmutable()
@@ -74,7 +74,32 @@ service cloud.firestore {
         && (!("updatedAt" in request.resource.data)
             || request.resource.data.updatedAt is number || request.resource.data.updatedAt is timestamp)
         && (!("createdAt" in request.resource.data)
-            || request.resource.data.createdAt is number || request.resource.data.createdAt is timestamp);
+            || request.resource.data.createdAt is number || request.resource.data.createdAt is timestamp)
+        && (!("achievements" in request.resource.data) || profileAchievementsAreSane());
+    }
+
+    /**
+     * EL ESPEJO DE LOGROS (`profiles/{uid}.achievements`), que lo escribe su dueño y lo lee cualquier autenticado.
+     *
+     * Es `{ v, at, list }`: la versión de la gramática, el sello de la publicación y el mapa de bits en base64url
+     * (ver `core/achievements/pack.ts`). El TOPE DE `list` ES EL MISMO NÚMERO que aplica el empaquetador
+     * (`ACHIEVEMENTS_LIST_MAX`, 1024): esa cadena se la descarga entera el directorio social de todo el mundo, así
+     * que el límite tiene que estar también aquí y no solo en el cliente que la escribe.
+     *
+     * NO se valida el CONTENIDO de `list` —Firestore no puede parsear base64url ni recorrer una cola de índices— y
+     * no hace falta: quien la lee es un parser deliberadamente defensivo (§9.3) que ante cualquier cosa rara pinta
+     * una vitrina vacía en vez de lanzar. Lo que sí importa aquí es que nadie pueda usar este campo como almacén.
+     */
+    function profileAchievementsAreSane() {
+      return request.resource.data.achievements is map
+        && request.resource.data.achievements.keys().hasOnly(["v", "at", "list"])
+        && (!("v" in request.resource.data.achievements) || request.resource.data.achievements.v is int)
+        && (!("at" in request.resource.data.achievements)
+            || request.resource.data.achievements.at is number
+            || request.resource.data.achievements.at is timestamp)
+        && (!("list" in request.resource.data.achievements)
+            || (request.resource.data.achievements.list is string
+                && request.resource.data.achievements.list.size() <= 1024));
     }
 
     // La foto es el único campo del perfil que acaba en un atributo de URL (`<img src>`), así que aquí no

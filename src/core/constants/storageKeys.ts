@@ -77,6 +77,16 @@ export const SHARE_CONSENT_KEY = 'mis-listas-share-consent';
 // catálogo se recalcula entero en el primer render — que es exactamente lo que hace la retroactividad (§7.3).
 export const ACHIEVEMENTS_PEAK_KEY = 'mis-listas-achievements-peak-2';
 
+// Logros — el ÚLTIMO ESPEJO PUBLICADO en este dispositivo, para no reescribir en Firestore una cadena idéntica.
+//
+// Es una caché de escritura, no un dato: si se pierde (navegador limpio, otro dispositivo) lo único que pasa es
+// que se publica una vez de más, y publicar lo mismo dos veces no rompe nada. Por eso vive en localStorage y no
+// viaja a ningún canal.
+//
+// Va con el uid dentro de la clave: en un navegador compartido, dos cuentas tienen espejos distintos y una clave
+// única haría que la segunda creyera publicado el de la primera —y se quedaría sin publicar el suyo.
+export const achievementsPublishedKey = (uid: string): string => `mis-listas-achievements-published-${uid}`;
+
 // Logros — sello de la primera vez que se usó la ruleta. Es el ÚNICO dato de todo el evolutivo que hay que
 // registrar en vez de derivar: `core/roulette/roulette.ts` es una función pura —tira, devuelve un juego y no
 // persiste ni un byte—, así que sin esto no hay forma de saber que alguien la probó. No sube y no se publica

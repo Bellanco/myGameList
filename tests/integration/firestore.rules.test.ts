@@ -102,6 +102,33 @@ describe('firestore.rules', () => {
   });
 
   describe('profiles', () => {
+    /**
+     * EL ESPEJO DE LOGROS (F3). Lo escribe su dueño y lo lee cualquier autenticado, así que lo que hay que fijar
+     * es el tamaño y la forma: esa cadena se la descarga entera el directorio social de todo el mundo, y sin tope
+     * el campo sería un almacén gratis en un documento público.
+     */
+    it('el dueño publica su espejo de logros, acotado en forma y tamaño', async () => {
+      const espejo = { v: 2, at: 1735689600000, list: '2:AAAA' };
+      await assertSucceeds(setDoc(doc(ownerDb('uid-a'), 'profiles', 'uid-a'), { uid: 'uid-a', achievements: espejo }));
+      // Ajeno: el espejo es tuyo y lo escribes tú.
+      await assertFails(setDoc(doc(ownerDb('uid-b'), 'profiles', 'uid-a'), { uid: 'uid-a', achievements: espejo }));
+      // Nada de subclaves inventadas, ni de una cadena que no es cadena.
+      await assertFails(setDoc(doc(ownerDb('uid-a'), 'profiles', 'uid-a'), {
+        uid: 'uid-a',
+        achievements: { ...espejo, basura: 'x' },
+      }));
+      await assertFails(setDoc(doc(ownerDb('uid-a'), 'profiles', 'uid-a'), { uid: 'uid-a', achievements: 'todo' }));
+      // Y el tope: el MISMO número que aplica el empaquetador (`ACHIEVEMENTS_LIST_MAX`).
+      await assertSucceeds(setDoc(doc(ownerDb('uid-a'), 'profiles', 'uid-a'), {
+        uid: 'uid-a',
+        achievements: { ...espejo, list: 'x'.repeat(1024) },
+      }));
+      await assertFails(setDoc(doc(ownerDb('uid-a'), 'profiles', 'uid-a'), {
+        uid: 'uid-a',
+        achievements: { ...espejo, list: 'x'.repeat(1025) },
+      }));
+    });
+
     it('el dueño y un autenticado pueden leer un perfil social.enabled; el anónimo no', async () => {
       await seed('profiles', 'uid-a', { uid: 'uid-a', social: { enabled: true } });
       await assertSucceeds(getDoc(doc(ownerDb('uid-a'), 'profiles', 'uid-a')));
@@ -940,6 +967,7 @@ describe('firestore.rules', () => {
       for (let i = 0; i < 101; i += 1) grande[`ladder-${i}`] = true;
       await assertFails(setDoc(doc(adminDb(), 'appConfig', 'achievements'), { hidden: grande }));
     });
+
     /**
      * LA APERTURA COMUNITARIA (`open`) viaja en el mismo documento: es lo que decide, para TODO EL MUNDO, hasta
      * qué escalón está abierta cada escalera. Se acota igual que `hidden` —mapa y con tope— porque es escritura
