@@ -22,7 +22,8 @@
 //
 // GRANULARIDAD DE DÍA, NO DE INSTANTE, y es deliberado: un sello al minuto diría a qué horas usas la app, que es
 // justo el dato que `applyProfileVisibility` borra de los listados que baja una amistad.
-import { ACHIEVEMENTS, ACHIEVEMENTS_BY_ID } from './catalog';
+import { ACHIEVEMENTS_BY_ID } from './catalog';
+import { MIRROR_IDS } from './mirrorOrder';
 import { RARITY_POINTS } from './types';
 import type { AchievementState } from './types';
 
@@ -40,14 +41,16 @@ export const FEATURED_MAX = 3;
 export const MIRROR_VERSION = 2;
 
 /**
- * EL ORDEN DE LOS BITS. Todo lo publicable, retirados incluidos, en el orden del catálogo.
+ * EL ORDEN DE LOS BITS. Todo lo publicable, retirados incluidos, y **congelado a mano** en `mirrorOrder.ts`.
  *
- * Los «primeros pasos» no entran porque no se publican jamás (§5.3): la vitrina de alguien con quinientos juegos
+ * NO SE DERIVA DEL CATÁLOGO, y es lo que permite añadir un umbral intermedio: el catálogo declara sus escalones
+ * en orden —para que el grado y el romano digan la verdad— y el bit de cada logro se queda donde estaba. Ver la
+ * cabecera de `mirrorOrder.ts`, que explica cómo se añade uno nuevo (al final de la lista, siempre).
+ *
+ * Los «primeros pasos» no están porque no se publican jamás (§5.3): la vitrina de alguien con quinientos juegos
  * no puede empezar por «escribió su primera reseña».
  */
-export const MIRROR_ORDER: readonly string[] = ACHIEVEMENTS
-  .filter((def) => def.family !== 'onboarding')
-  .map((def) => def.id);
+export const MIRROR_ORDER: readonly string[] = MIRROR_IDS;
 
 export interface AchievementMirror {
   v: number;
