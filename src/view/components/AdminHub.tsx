@@ -1,6 +1,6 @@
-import { memo, useCallback, useEffect, useRef, useState } from 'react';
+import { lazy, memo, Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
-import { ADMIN_PANEL_UI } from '../../core/constants/adminLabels';
+import { ADMIN_ACHIEVEMENTS_UI, ADMIN_PANEL_UI } from '../../core/constants/adminLabels';
 import {
   ADMIN_ONLY_TIER,
   PROFILE_TIERS,
@@ -36,6 +36,13 @@ import '../../styles/admin.scss';
 import { copyText } from '../../core/utils/clipboard';
 
 const A = ADMIN_PANEL_UI;
+
+/**
+ * El catálogo de logros, aparte y perezoso: son 250 escalones y los 50 símbolos del sprite, y el censo de
+ * usuarios —que es a lo que se entra— no tiene por qué cargarlos para nada.
+ */
+const AdminAchievements = lazy(() =>
+  import('./AdminAchievements').then((module) => ({ default: module.AdminAchievements })));
 
 const DATE_FORMAT = new Intl.DateTimeFormat('es-ES', { dateStyle: 'medium', timeStyle: 'short' });
 /** Para fechas de alta: el día basta y ocupa la mitad. */
@@ -147,6 +154,9 @@ function describePhoto(user: AdminUserRow): {
 export const AdminHub = memo(function AdminHub() {
   const navigate = useNavigate();
   const vm = useAdminViewModel();
+  // Dos vistas y no dos rutas: `/admin` es una ruta oculta que ya cuelga de la guarda de `isAdmin()`, y partirla
+  // en dos obligaría a repetir esa guarda y a inventar un «volver» que no lleva a ninguna sección de la app.
+  const [view, setView] = useState<'users' | 'achievements'>('users');
   const [pending, setPending] = useState<PendingAction>(null);
   // Los enlaces de TODOS se piden una vez y se agrupan por usuario: el panel pinta decenas de fichas y una
   // petición por ficha sería absurda para un dato que cabe en una sola respuesta.
@@ -231,6 +241,15 @@ export const AdminHub = memo(function AdminHub() {
     return <Navigate to="/completados" replace />;
   }
 
+  // El catálogo de logros va DESPUÉS de las dos guardas de arriba: quien no manda aquí no lo ve tampoco.
+  if (view === 'achievements') {
+    return (
+      <Suspense fallback={null}>
+        <AdminAchievements onBack={() => setView('users')} />
+      </Suspense>
+    );
+  }
+
   const totals = vm.census?.totals;
 
   // Tarjeta contenedora propia y NO `.settings-hub`/`.settings-card`: ese hub reparte sus tarjetas en una rejilla
@@ -243,6 +262,12 @@ export const AdminHub = memo(function AdminHub() {
         <p className="admin-card-sub">{A.subtitle}</p>
         <p className="admin-card-note">{A.scopeNote}</p>
         <p className="admin-card-note">{A.legacyNote}</p>
+
+        <p className="admin-card-actions">
+          <button type="button" className="btn btn-secondary" onClick={() => setView('achievements')}>
+            {ADMIN_ACHIEVEMENTS_UI.open}
+          </button>
+        </p>
 
         {totals ? (
           <dl className="admin-totals" aria-label={A.totals.aria}>
