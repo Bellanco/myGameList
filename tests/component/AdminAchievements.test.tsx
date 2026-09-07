@@ -118,29 +118,83 @@ describe('catálogo de logros — la vista de revisión del panel de administrac
     expect(within(suave).queryByText(/^Salto/)).not.toBeInTheDocument();
   });
 
-  it('el retirado deja de ofrecerse, y se dice', async () => {
+  it('el retirado deja de ofrecerse, y se dice', () => {
     render(<AdminAchievements onBack={() => {}} />);
-    // «Speedrun» es retirado Y oculto, así que primero hay que destaparlo.
-    await userEvent.click(screen.getByRole('button', { name: 'Revelar ocultos' }));
     const fila = screen.getByText('Speedrun I').closest('tr') as HTMLElement;
     expect(within(fila).getByText('No')).toBeInTheDocument();
   });
 
   /**
-   * LOS OCULTOS, TAPADOS COMO LOS VE LA GENTE. Es una pantalla de revisión: si enseña de entrada lo que el §6.7
-   * manda esconder, no se puede comprobar que el secreto se guarda bien. El interruptor los destapa SOLO aquí.
+   * AQUÍ NO SE TAPA NADA. Es la pantalla donde hay que LEER los textos de cada escalón, y un «?» no se revisa:
+   * taparlos convertía la única vista que puede auditarlos en la misma adivinanza que ve el usuario.
    */
-  it('tapa los ocultos como los ve la gente, y el interruptor los destapa', async () => {
+  it('los ocultos se leen enteros: es la pantalla donde hay que revisarlos', () => {
     render(<AdminAchievements onBack={() => {}} />);
-    expect(screen.queryByText('Obra maestra I')).not.toBeInTheDocument();
-    expect(screen.getAllByText('Logro oculto').length).toBeGreaterThan(0);
-
-    await userEvent.click(screen.getByRole('button', { name: 'Revelar ocultos' }));
     expect(screen.getByText('Obra maestra I')).toBeInTheDocument();
     expect(screen.getByText('Ponle un 100 a un juego')).toBeInTheDocument();
+    expect(screen.queryByText('Logro oculto')).not.toBeInTheDocument();
+    expect(screen.queryByText('Se revela al conseguirlo.')).not.toBeInTheDocument();
+  });
 
-    await userEvent.click(screen.getByRole('button', { name: 'Tapar los ocultos como se ven' }));
-    expect(screen.queryByText('Obra maestra I')).not.toBeInTheDocument();
+  /**
+   * EL INTERRUPTOR QUE SÍ AFECTA A LA GENTE. La pantalla no habla con Firestore: pide el cambio y cuenta lo que
+   * pasó. Eso es lo que permite probarlo sin emulador, y lo que hace que un fallo de reglas se vea EN SU FICHA
+   * —no en un aviso global— porque lo que hay que saber es cuál no se guardó.
+   */
+  it('muestra el estado de ocultación y pide el cambio contrario', async () => {
+    const onToggleHidden = vi.fn().mockResolvedValue(undefined);
+    render(<AdminAchievements onBack={() => {}} onToggleHidden={onToggleHidden} />);
+
+    // «Obra maestra» nace oculta en el catálogo, así que el botón ofrece mostrarla.
+    const oculta = screen.getByText('Obra maestra').closest('.admin-card') as HTMLElement;
+    expect(within(oculta).getByText('Oculto: quien no lo tiene no lo ve')).toBeInTheDocument();
+    await userEvent.click(within(oculta).getByRole('button', { name: 'Mostrar a todos' }));
+    expect(onToggleHidden).toHaveBeenCalledWith('obra-maestra', false);
+    // Y se dice que el usuario lo verá al abrir sus logros, porque no es instantáneo.
+    expect(within(oculta).getByText(/Cada usuario lo verá al abrir sus logros/)).toBeInTheDocument();
+  });
+
+  it('respeta el interruptor guardado: una escalera revelada ofrece volver a ocultarla', () => {
+    render(<AdminAchievements onBack={() => {}} onToggleHidden={vi.fn()} hiddenOverrides={{ 'obra-maestra': false }} />);
+    const revelada = screen.getByText('Obra maestra').closest('.admin-card') as HTMLElement;
+    expect(within(revelada).getByText('A la vista de todos')).toBeInTheDocument();
+    expect(within(revelada).getByRole('button', { name: 'Ocultar hasta conseguirlo' })).toBeInTheDocument();
+  });
+
+  it('si el guardado falla, lo dice en la ficha de esa escalera', async () => {
+    const onToggleHidden = vi.fn().mockRejectedValue(new Error('permission-denied'));
+    render(<AdminAchievements onBack={() => {}} onToggleHidden={onToggleHidden} />);
+    const oculta = screen.getByText('Obra maestra').closest('.admin-card') as HTMLElement;
+    await userEvent.click(within(oculta).getByRole('button', { name: 'Mostrar a todos' }));
+    expect(within(oculta).getByText(/No se ha podido guardar/)).toBeInTheDocument();
+  });
+
+  /** EL NÚMERO LO ELIGE QUIEN MIRA, y la lista se recoloca sola: da igual por dónde entre el umbral. */
+  it('acepta el umbral que se le escriba y recoloca la lista', async () => {
+    render(<AdminAchievements onBack={() => {}} />);
+    const fila = screen.getByText('Créditos finales II').closest('tr') as HTMLElement;
+    await userEvent.click(within(fila).getByRole('button', { name: 'Preparar escalón 15' }));
+
+    const campo = screen.getByRole('spinbutton');
+    await userEvent.clear(campo);
+    await userEvent.type(campo, '33');
+    expect(screen.getByText(/steps: \[10, 25, 33, 50/)).toBeInTheDocument();
+    expect(screen.getByText(/'completados-33',/)).toBeInTheDocument();
+    // Y el que se renumera ya no es el 25, sino el 50: la recolocación cambia a quién le corre el romano.
+    expect(screen.getByText(/corren de romano \(Créditos finales III/)).toBeInTheDocument();
+  });
+
+  it('un umbral que ya existe se rechaza con su motivo, sin generar pasos falsos', async () => {
+    render(<AdminAchievements onBack={() => {}} />);
+    const fila = screen.getByText('Créditos finales II').closest('tr') as HTMLElement;
+    await userEvent.click(within(fila).getByRole('button', { name: 'Preparar escalón 15' }));
+
+    const campo = screen.getByRole('spinbutton');
+    await userEvent.clear(campo);
+    await userEvent.type(campo, '50');
+    expect(screen.getByText('El umbral 50 ya existe en esta escalera.')).toBeInTheDocument();
+    expect(screen.queryByText(/al FINAL de MIRROR_IDS/)).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Copiar los tres pasos' })).toBeDisabled();
   });
 
   it('el buscador recorta por nombre y por texto, y dice cuántas quedan', async () => {
