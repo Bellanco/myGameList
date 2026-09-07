@@ -171,6 +171,22 @@ service cloud.firestore {
     // porque es dato del dueño, no del directorio, y así le sigue entre dispositivos. `effects` faltaba en la
     // allowlist aunque el cliente ya lo escribía (`appearancePreferenceRepository`): sin él, esa preferencia se
     // denegaba en silencio y nunca sincronizaba.
+    /**
+     * CONFIGURACIÓN DEL CATÁLOGO DE LOGROS (`appConfig/achievements`), escrita SOLO por el panel de
+     * administración y leída por todo el mundo con sesión.
+     *
+     * Es un mapa `hidden` de clave de escalera a booleano: `true` = oculta, `false` = a la vista, ausente = lo
+     * que diga el código. Solo presentación: no toca `id`, ni el espejo publicado, ni la fracción del catálogo.
+     *
+     * Se acota como el resto: una sola clave permitida, y el mapa con tope de entradas para que este documento
+     * no se pueda usar como almacén de nada.
+     */
+    function achievementsConfigIsValid() {
+      return request.resource.data.keys().hasOnly(["hidden"])
+        && (!("hidden" in request.resource.data)
+            || (request.resource.data.hidden is map && request.resource.data.hidden.size() <= 100));
+    }
+
     function publicConfigWriteIsValid() {
       return request.resource.data.keys().hasOnly(["schemaVersion", "scoreScale", "palette", "theme", "uppercase", "showSteamButton", "effects", "consent", "feedMoveTabs"])
         && (!("scoreScale" in request.resource.data)
@@ -378,6 +394,19 @@ service cloud.firestore {
 
     match /activity_events/{docId} {
       allow read, write: if !isPlaceholder(docId) && isAdmin();
+    }
+
+    // ==========================================
+    // CONFIGURACIÓN GLOBAL (LEE TODO EL MUNDO, ESCRIBE EL ADMIN)
+    // ==========================================
+
+    // Ajustes del catálogo de logros que el panel cambia sin desplegar (hoy: qué escaleras están ocultas).
+    // LECTURA con sesión y ESCRITURA solo `isAdmin()`. Sin este documento —o sin sesión, o sin red— la app cae a
+    // lo que dice el código, que es el lado seguro: un logro oculto sigue oculto.
+    match /appConfig/{docId} {
+      allow read: if isSignedIn();
+      allow create, update: if !isPlaceholder(docId) && isAdmin() && achievementsConfigIsValid();
+      allow delete: if !isPlaceholder(docId) && isAdmin();
     }
 
     // ==========================================

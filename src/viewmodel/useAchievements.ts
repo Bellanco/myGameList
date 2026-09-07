@@ -7,6 +7,7 @@ import { rouletteUsedAt } from '../core/achievements/deviceSignals';
 import { DEFAULT_PALETTE } from '../core/constants/palettes';
 import { palettePreference } from '../view/hooks/preferences';
 import { RARITY_POINTS } from '../core/achievements/types';
+import { withoutHidden, type HiddenOverrides } from '../core/achievements/visibility';
 import type { AchievementDef, AchievementItem, AchievementState, AchievementSummary } from '../core/achievements/types';
 import type { TabData } from '../model/types/game';
 
@@ -148,7 +149,10 @@ export function compareEarned(a: AchievementItem, b: AchievementItem): number {
     || a.def.labels.name.localeCompare(b.def.labels.name, 'es');
 }
 
-export function listForScreen(byId: ReadonlyMap<string, AchievementState>): AchievementItem[] {
+export function listForScreen(
+  byId: ReadonlyMap<string, AchievementState>,
+  hiddenOverrides: HiddenOverrides = {},
+): AchievementItem[] {
   const stateOf = (def: AchievementDef): AchievementState =>
     byId.get(def.id) || { id: def.id, level: 0, value: 0, next: def.step, unlockedAt: 0 };
 
@@ -183,7 +187,10 @@ export function listForScreen(byId: ReadonlyMap<string, AchievementState>): Achi
   const onboarding = items.filter((entry) => entry.def.family === 'onboarding');
   const hideOnboarding = onboarding.length > 0 && onboarding.every((entry) => entry.state.level >= 1);
 
-  return items
+  // LOS OCULTOS QUE NO TIENES NO SALEN, ni con un «?». La decisión y su motivo están en
+  // `core/achievements/visibility.ts`; aquí solo se aplica, y se aplica al final para que un oculto tampoco
+  // gaste la zanahoria de su escalera.
+  return withoutHidden(items, hiddenOverrides)
     .filter((entry) => !(hideOnboarding && entry.def.family === 'onboarding'))
     .sort((a, b) => {
       const aEarned = a.state.level >= 1;

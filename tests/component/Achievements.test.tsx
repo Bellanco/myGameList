@@ -9,7 +9,7 @@ import {
 } from '../../src/view/components/socialhub/ProfileAchievements';
 import { AchievementsScreen } from '../../src/view/components/stats/AchievementsScreen';
 import { AchievementsCard } from '../../src/view/components/stats/AchievementsCard';
-import { ACHIEVEMENTS } from '../../src/core/achievements/catalog';
+import { ACHIEVEMENTS, SCORING_ACHIEVEMENTS } from '../../src/core/achievements/catalog';
 import { ACHIEVEMENTS_BY_ID } from '../../src/core/achievements/catalog';
 import { summarize } from '../../src/core/achievements/summary';
 import { packAchievements } from '../../src/core/achievements/pack';
@@ -193,13 +193,44 @@ describe('el listado propio', () => {
     expect(within(fila).queryByText('Has terminado 25 juegos')).not.toBeInTheDocument();
   });
 
-  it('el oculto sin conseguir no da NINGUNA pista, ni siquiera su rareza', () => {
-    // «Logro oculto · EXCEPCIONAL» reduce la adivinanza a las seis casillas excepcionales del catálogo.
-    render(<AchievementsScreen items={lista} summary={summarize([])} rarity={null} />);
-    const fila = screen.getByText('Logro oculto').closest('li') as HTMLElement;
-    expect(within(fila).getByText('Se revela al conseguirlo.')).toBeInTheDocument();
-    expect(within(fila).queryByText('EXCEPCIONAL')).not.toBeInTheDocument();
-    expect(within(fila).queryByText('Speedrun')).not.toBeInTheDocument();
+  /**
+   * EL OCULTO QUE NO TIENES NI OCUPA FILA. Antes se le daba una con «?» y «se revela al conseguirlo»; esa fila
+   * contaba que existe algo que no puedes saber qué es y gastaba el sitio de la pantalla en no decir nada. Y de
+   * paso desaparece el problema que tenía: cualquier dato que se pintara al lado (la rareza, el porcentaje) era
+   * una pista de cuál era.
+   */
+  it('el oculto que no tienes no aparece: ni fila, ni «?», ni pista', () => {
+    const conOculto = [
+      ...lista,
+      { def: ACHIEVEMENTS_BY_ID.get('obra-maestra-1')!, state: { id: 'obra-maestra-1', level: 0, value: 0, next: 1, unlockedAt: 0 } },
+    ];
+    render(<AchievementsScreen items={listForScreen(new Map(conOculto.map((e) => [e.state.id, e.state])))} summary={summarize([])} rarity={null} />);
+    expect(screen.queryByText('Logro oculto')).not.toBeInTheDocument();
+    expect(screen.queryByText('Se revela al conseguirlo.')).not.toBeInTheDocument();
+    expect(screen.queryByText('Obra maestra')).not.toBeInTheDocument();
+  });
+
+  it('el oculto CONSEGUIDO sale con su nombre: es la sorpresa que venía a ser', () => {
+    const estados = new Map([['obra-maestra-1', { id: 'obra-maestra-1', level: 1, value: 1, next: null, unlockedAt: dia(2311) }]]);
+    render(<AchievementsScreen items={listForScreen(estados)} summary={summarize([])} rarity={null} />);
+    expect(screen.getByText('Obra maestra I')).toBeInTheDocument();
+  });
+
+  /**
+   * Y EL INTERRUPTOR DEL PANEL manda sobre el catálogo: al revelar la escalera, sus escalones sin conseguir
+   * aparecen como los de cualquier otra.
+   */
+  it('si el panel lo revela, el oculto sin conseguir SÍ aparece', () => {
+    const estados = new Map([['obra-maestra-1', { id: 'obra-maestra-1', level: 0, value: 0, next: 1, unlockedAt: 0 }]]);
+    render(
+      <AchievementsScreen
+        items={listForScreen(estados, { 'obra-maestra': false })}
+        summary={summarize([])}
+        rarity={null}
+      />,
+    );
+    expect(screen.getByText('Obra maestra I')).toBeInTheDocument();
+    expect(screen.getByText('Ponle un 100 a un juego')).toBeInTheDocument();
   });
 
   it('los avisos de «empieza a contar desde que instalaste la app» NO salen nunca', () => {
@@ -250,9 +281,10 @@ describe('logros globales — el catálogo por lo común que es cada uno', () =>
     expect(nombres[nombres.length - 1]).not.toBe('Créditos finales I');
   });
 
-  it('lista el catálogo ENTERO, no solo lo que alguien tiene', () => {
+  it('lista el catálogo ENTERO menos los ocultos que ese perfil no tiene', () => {
     render(<ProfileGlobalAchievements mirror={espejo(['completados-10'])} directoryMirrors={MUESTRA} owner="Fulano" self={false} onBack={() => {}} />);
-    expect(screen.getAllByRole('listitem')).toHaveLength(251);
+    const ocultosSinConseguir = SCORING_ACHIEVEMENTS.filter((def) => def.hidden).length;
+    expect(screen.getAllByRole('listitem')).toHaveLength(SCORING_ACHIEVEMENTS.length - ocultosSinConseguir);
   });
 
   it('marca con recuadro lo que tiene el perfil que se está mirando', () => {
@@ -283,10 +315,10 @@ describe('logros globales — el catálogo por lo común que es cada uno', () =>
     expect(document.querySelectorAll('.ach-row-bar')).toHaveLength(0);
   });
 
-  it('el oculto que no se tiene sigue tapado también aquí', () => {
+  it('el oculto que no se tiene tampoco aparece aquí', () => {
     render(<ProfileGlobalAchievements mirror="" directoryMirrors={MUESTRA} owner="Fulano" self={false} onBack={() => {}} />);
     expect(screen.queryByText('Speedrun')).not.toBeInTheDocument();
-    expect(screen.getAllByText('Logro oculto').length).toBeGreaterThan(0);
+    expect(screen.queryByText('Logro oculto')).not.toBeInTheDocument();
   });
 });
 
