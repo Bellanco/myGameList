@@ -6,7 +6,7 @@ import { StatsReviews } from './StatsReviews';
 import { AchievementsCard } from './AchievementsCard';
 import { AchievementsScreen } from './AchievementsScreen';
 import { listForScreen, useAchievements } from '../../../viewmodel/useAchievements';
-import { useHiddenAchievements } from '../../hooks/useHiddenAchievements';
+import { useAchievementsConfig } from '../../hooks/useAchievementsConfig';
 import { ENABLE_ACHIEVEMENTS } from '../../../core/achievements/flags';
 import { ACHIEVEMENTS_UI } from '../../../core/constants/achievementLabels';
 import { OWN_STATS_BLOCKS } from '../../../core/stats/types';
@@ -47,9 +47,10 @@ function reviewIdFrom(pathname: string): number {
 export const StatsHub = memo(function StatsHub({ games }: { games: TabData }) {
   const vm = useStatsViewModel(games);
   const achievements = useAchievements({ games });
-  // Qué escaleras están ocultas hoy, según el panel. Llega vacío y se pone al día un instante después: la
-  // pantalla no espera a la red para pintarse (ver `useHiddenAchievements`).
-  const hiddenAchievements = useHiddenAchievements();
+  // Lo que el panel decide para todo el mundo: qué escaleras están ocultas y hasta dónde las ha abierto la
+  // comunidad. Llega vacío y se pone al día un instante después: la pantalla no espera a la red para pintarse
+  // (ver `useAchievementsConfig`), y vacío significa el comportamiento de siempre.
+  const achievementsConfig = useAchievementsConfig();
   const navigate = useNavigate();
   const location = useLocation();
   const openReviews = useCallback(() => { void navigate(REVIEWS_ROUTE); }, [navigate]);
@@ -75,7 +76,7 @@ export const StatsHub = memo(function StatsHub({ games }: { games: TabData }) {
   if (ENABLE_ACHIEVEMENTS && location.pathname.startsWith(ACHIEVEMENTS_ROUTE)) {
     return (
       <AchievementsScreen
-        items={listForScreen(achievements.byId, hiddenAchievements)}
+        items={listForScreen(achievements.byId, achievementsConfig)}
         summary={achievements.summary}
         // NADA DE OTRAS PERSONAS EN ESTE PANEL. El porcentaje comparado sale de los espejos que descarga el
         // directorio del hub: aquí no está cargado —a `/logros` se llega sin pasar por el hub— y, sobre todo,

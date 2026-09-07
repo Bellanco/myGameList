@@ -933,12 +933,30 @@ describe('firestore.rules', () => {
       await assertFails(deleteDoc(doc(ownerDb('uid-a'), 'appConfig', 'achievements')));
     });
 
-    it('acota el contenido: una sola clave y un mapa, no un almacén', async () => {
+    it('acota el contenido: dos claves y dos mapas, no un almacén', async () => {
       await assertFails(setDoc(doc(adminDb(), 'appConfig', 'achievements'), { hidden: {}, basura: 'x' }));
       await assertFails(setDoc(doc(adminDb(), 'appConfig', 'achievements'), { hidden: 'todo' }));
       const grande: Record<string, boolean> = {};
       for (let i = 0; i < 101; i += 1) grande[`ladder-${i}`] = true;
       await assertFails(setDoc(doc(adminDb(), 'appConfig', 'achievements'), { hidden: grande }));
+    });
+    /**
+     * LA APERTURA COMUNITARIA (`open`) viaja en el mismo documento: es lo que decide, para TODO EL MUNDO, hasta
+     * qué escalón está abierta cada escalera. Se acota igual que `hidden` —mapa y con tope— porque es escritura
+     * de admin pero lectura de todos, y un documento sin tope es un almacén gratis.
+     */
+    it('acepta la apertura comunitaria, con las mismas ataduras', async () => {
+      await assertSucceeds(setDoc(doc(adminDb(), 'appConfig', 'achievements'), { open: { maraton: 'maraton-15' } }));
+      // Las dos claves juntas, que es como queda el documento tras publicar las dos cosas.
+      await assertSucceeds(setDoc(doc(adminDb(), 'appConfig', 'achievements'), {
+        hidden: { 'obra-maestra': false },
+        open: { maraton: 'maraton-15' },
+      }));
+      await assertFails(setDoc(doc(ownerDb('uid-a'), 'appConfig', 'achievements'), { open: { maraton: 'maraton-75' } }));
+      await assertFails(setDoc(doc(adminDb(), 'appConfig', 'achievements'), { open: 'maraton-15' }));
+      const grande: Record<string, string> = {};
+      for (let i = 0; i < 101; i += 1) grande[`ladder-${i}`] = 'x';
+      await assertFails(setDoc(doc(adminDb(), 'appConfig', 'achievements'), { open: grande }));
     });
   });
 

@@ -224,7 +224,7 @@ describe('el listado propio', () => {
     const estados = new Map([['obra-maestra-1', { id: 'obra-maestra-1', level: 0, value: 0, next: 1, unlockedAt: 0 }]]);
     render(
       <AchievementsScreen
-        items={listForScreen(estados, { 'obra-maestra': false })}
+        items={listForScreen(estados, { hidden: { 'obra-maestra': false }, open: {} })}
         summary={summarize([])}
         rarity={null}
       />,
@@ -536,6 +536,73 @@ describe('la zanahoria — se ve lo conseguido y un escalón más', () => {
   it('lo retirado no es la zanahoria de nadie', () => {
     const vistos = listForScreen(new Map()).map((e) => e.def.id);
     expect(vistos.some((id) => id.startsWith('speedrun-'))).toBe(false);
+  });
+
+  /**
+   * LA APERTURA ES COMUNITARIA, NO PERSONAL. En cuanto un usuario ve un escalón, ese escalón queda abierto para
+   * TODO EL MUNDO: la escalera se enseña igual a quien empieza que a quien va en cabeza, y lo que distingue a dos
+   * personas es lo que llevan CONSEGUIDO, no la lista.
+   *
+   * Aquí se decidía solo con el progreso de quien miraba —cada dispositivo abría su propia escalera— y por eso
+   * estos tests son la red del fallo: sin ellos, volver a la apertura por usuario no rompe nada.
+   */
+  describe('lo que ha abierto la comunidad se le enseña a todo el mundo', () => {
+    const deCompletados = (byId: Parameters<typeof listForScreen>[0], open = {}) =>
+      listForScreen(byId, { hidden: {}, open }).filter((e) => e.def.ladder === 'completados').map((e) => e.def.id);
+
+    it('quien no tiene nada ve hasta donde ha llegado la comunidad', () => {
+      const vistos = deCompletados(new Map(), { completados: 'completados-50' });
+      // Los cuatro abiertos: los tres que alguien ha alcanzado y el siguiente, que es su reto.
+      expect(vistos).toEqual(['completados-10', 'completados-25', 'completados-50', 'completados-75']);
+    });
+
+    it('el que va en cabeza y el que empieza ven exactamente la misma lista', () => {
+      const open = { completados: 'completados-50' };
+      const lider = new Map([
+        ['completados-10', { id: 'completados-10', level: 1, value: 60, next: null, unlockedAt: 0 }],
+        ['completados-25', { id: 'completados-25', level: 1, value: 60, next: null, unlockedAt: 0 }],
+        ['completados-50', { id: 'completados-50', level: 1, value: 60, next: null, unlockedAt: 0 }],
+      ]);
+      expect(deCompletados(lider, open)).toEqual(deCompletados(new Map(), open));
+    });
+
+    /**
+     * TÚ TAMBIÉN ERES «ALGUIEN»: si vas por delante de lo publicado, tu propio progreso abre igual. Es lo que
+     * hace que esto se pueda desplegar con la publicación del espejo apagada, y lo que impide que el que lidera
+     * se quede sin reto esperando a que la comunidad le alcance.
+     */
+    it('quien va por delante de lo publicado abre con lo suyo', () => {
+      const byId = new Map([
+        ['completados-10', { id: 'completados-10', level: 1, value: 120, next: null, unlockedAt: 0 }],
+        ['completados-25', { id: 'completados-25', level: 1, value: 120, next: null, unlockedAt: 0 }],
+        ['completados-50', { id: 'completados-50', level: 1, value: 120, next: null, unlockedAt: 0 }],
+        ['completados-75', { id: 'completados-75', level: 1, value: 120, next: null, unlockedAt: 0 }],
+        ['completados-100', { id: 'completados-100', level: 1, value: 120, next: null, unlockedAt: 0 }],
+      ]);
+      const vistos = deCompletados(byId, { completados: 'completados-25' });
+      expect(vistos[vistos.length - 1]).toBe('completados-150');
+    });
+
+    /** Sin configuración, exactamente lo de siempre: cada quien abre con su propio progreso. */
+    it('sin apertura publicada no cambia nada de lo anterior', () => {
+      const byId = new Map([
+        ['completados-10', { id: 'completados-10', level: 1, value: 30, next: null, unlockedAt: 0 }],
+        ['completados-25', { id: 'completados-25', level: 1, value: 30, next: null, unlockedAt: 0 }],
+      ]);
+      expect(deCompletados(byId)).toEqual(['completados-10', 'completados-25', 'completados-50']);
+      expect(deCompletados(new Map())).toEqual(['completados-10']);
+    });
+
+    /** Un `id` que ya no existe no abre la escalera de par en par: se ignora y manda el progreso propio. */
+    it('una apertura con un id desconocido se ignora', () => {
+      expect(deCompletados(new Map(), { completados: 'completados-999' })).toEqual(['completados-10']);
+    });
+
+    /** Y la ocultación sigue mandando por encima: abierta o no, quien no tiene ningún escalón no la ve. */
+    it('la apertura no destapa una escalera oculta', () => {
+      const vistos = listForScreen(new Map(), { hidden: { 'obra-maestra': true }, open: { 'obra-maestra': 'obra-maestra-1' } });
+      expect(vistos.some((e) => e.def.ladder === 'obra-maestra')).toBe(false);
+    });
   });
 });
 

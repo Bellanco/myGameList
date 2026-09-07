@@ -175,16 +175,26 @@ service cloud.firestore {
      * CONFIGURACIÓN DEL CATÁLOGO DE LOGROS (`appConfig/achievements`), escrita SOLO por el panel de
      * administración y leída por todo el mundo con sesión.
      *
-     * Es un mapa `hidden` de clave de escalera a booleano: `true` = oculta, `false` = a la vista, ausente = lo
-     * que diga el código. Solo presentación: no toca `id`, ni el espejo publicado, ni la fracción del catálogo.
+     * Lleva dos mapas y los dos son SOLO PRESENTACIÓN: no tocan ningún `id`, ni el espejo publicado, ni la
+     * fracción del catálogo.
      *
-     * Se acota como el resto: una sola clave permitida, y el mapa con tope de entradas para que este documento
-     * no se pueda usar como almacén de nada.
+     *   · `hidden` — clave de escalera → booleano. `true` = oculta, `false` = a la vista, ausente = lo que diga
+     *     el código.
+     *   · `open`   — clave de escalera → `id` del escalón más alto al que ha llegado alguien. Es lo que abre la
+     *     escalera para todo el mundo: en cuanto un usuario ve un escalón, se le enseña a todos. Lo publica el
+     *     panel midiendo los espejos del censo, porque es el único que puede verlos todos.
+     *
+     * Se acota como el resto: solo esas dos claves, y cada mapa con tope de entradas para que este documento no
+     * se pueda usar como almacén de nada. Los VALORES de `open` no se validan uno a uno —Firestore no sabe
+     * recorrer un mapa— pero no hace falta: el cliente descarta lo que no sea cadena (`sanitizeOpen`) y un `id`
+     * que no exista en el catálogo se ignora al aplicarlo (`openThrough`).
      */
     function achievementsConfigIsValid() {
-      return request.resource.data.keys().hasOnly(["hidden"])
+      return request.resource.data.keys().hasOnly(["hidden", "open"])
         && (!("hidden" in request.resource.data)
-            || (request.resource.data.hidden is map && request.resource.data.hidden.size() <= 100));
+            || (request.resource.data.hidden is map && request.resource.data.hidden.size() <= 100))
+        && (!("open" in request.resource.data)
+            || (request.resource.data.open is map && request.resource.data.open.size() <= 100));
     }
 
     function publicConfigWriteIsValid() {

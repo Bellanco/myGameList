@@ -7,7 +7,7 @@ import { summarizeMirror } from '../../../core/achievements/summary';
 import { ACHIEVEMENTS_BY_ID, SCORING_ACHIEVEMENTS } from '../../../core/achievements/catalog';
 import { ACHIEVEMENTS_UI } from '../../../core/constants/achievementLabels';
 import { withoutHidden } from '../../../core/achievements/visibility';
-import { useHiddenAchievements } from '../../hooks/useHiddenAchievements';
+import { useAchievementsConfig } from '../../hooks/useAchievementsConfig';
 import type { AchievementItem, AchievementState } from '../../../core/achievements/types';
 
 /**
@@ -159,7 +159,7 @@ export const ProfileGlobalAchievements = memo(function ProfileGlobalAchievements
 }) {
   // La ficha de una amistad lista SOLO lo conseguido, así que no hay nada que esconder ahí; esta vista, en
   // cambio, recorre el catálogo entero, y es donde un oculto sin conseguir se asomaría.
-  const hiddenAchievements = useHiddenAchievements();
+  const hiddenAchievements = useAchievementsConfig().hidden;
 
   const { entries, rarity, summary } = useMemo(() => {
     const measured = measureRarity(directoryMirrors);
