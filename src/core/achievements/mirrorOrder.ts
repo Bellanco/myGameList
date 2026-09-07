@@ -81,4 +81,17 @@ export const MIRROR_IDS: readonly string[] = [
   'aniversario-1', 'aniversario-2', 'aniversario-3', 'aniversario-5',
   'aniversario-10', 'aniversario-15', 'aniversario-20', 'aniversario-25',
   'aniversario-30',
+
+  // ── AMPLIACIÓN DEL CATÁLOGO: 54 escalones nuevos en 20 escaleras. VAN AL FINAL, como manda la cabecera de
+  // este fichero: aquí no se ordena nada, se numeran bits, y colocar un umbral intermedio en su sitio
+  // «natural» correría el significado de todos los que van detrás en las vitrinas ya publicadas.
+  'abandonos-razonados-200', 'abandonos-razonados-250', 'generos-50', 'generos-60', 'plataformas-18',
+  'plataformas-20', 'volvere-60', 'volvere-75', 'volvere-100', 'revancha-70', 'revancha-100', 'criterio-250',
+  'criterio-350', 'memoria-larga-20', 'cadena-de-anos-25', 'cadena-de-anos-30', 'cadena-de-anos-35',
+  'obra-maestra-3', 'obra-maestra-5', 'sofa-100', 'sofa-125', 'orgullo-8', 'orgullo-12', 'orgullo-15',
+  'no-eres-tu-10', 'no-eres-tu-20', 'no-eres-tu-35', 'no-eres-tu-50', 'vida-entera-7', 'vida-entera-10',
+  'vida-entera-15', 'vida-entera-20', 'platino-5', 'platino-7', 'platino-15', 'resenas-10',
+  'resenas-125', 'resenas-175', 'resenas-250', 'ficha-completa-75', 'ficha-completa-125', 'ficha-completa-200',
+  'autopsia-5', 'autopsia-15', 'autopsia-40', 'autopsia-60', 'tesis-10', 'tesis-35', 'tesis-75', 'tesis-150',
+  'conversador-130', 'conversador-150', 'buena-cosecha-30',
 ];

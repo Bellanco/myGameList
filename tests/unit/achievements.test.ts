@@ -111,7 +111,7 @@ describe('catálogo — reglas que no se pueden romper sin avisar', () => {
     // nivel y su amistad —que lo reconstruye desde el espejo— le vería otro.
     expect(SCORING_ACHIEVEMENTS.some((def) => def.family === 'onboarding')).toBe(false);
     expect(SCORING_ACHIEVEMENTS.some((def) => def.retired)).toBe(false);
-    expect(SCORING_ACHIEVEMENTS.length).toBe(251);
+    expect(SCORING_ACHIEVEMENTS.length).toBe(304);
   });
 
   it('un excepcional no tiene escalera larga… salvo los que cuenta el calendario', () => {
@@ -148,6 +148,42 @@ describe('métricas — donde la ausencia de dato se leería como dato', () => {
       c: Array.from({ length: 5 }, (_u, i) => game({ id: i + 1, enteredAt: { p: NOW - 10 * DAY, c: NOW - DAY } })),
     });
     expect(evaluate(vaciada).get('estanteria-cero-1')?.level).toBe(1);
+  });
+
+  /**
+   * LA PILA TUVO QUE SER UNA PILA. Con un mínimo absoluto, a quien tiene ocho juegos en total y llegó a apilar
+   * cinco se le regalaban de golpe los escalones de 50, 25 y 10 sin haber bajado nada: premiarle por «dejar
+   * Próximos en 50 o menos» a quien jamás pasó de cinco no dice nada de nadie.
+   *
+   * Ahora la exigencia es RELATIVA: más del 15 % de la biblioteca en el punto más alto. Es la misma vara leída a
+   * la escala de cada cual, que es justo lo que un número absoluto no puede hacer.
+   */
+  it('«Exterminatus» pide que la pila fuera una parte real de la colección', () => {
+    const apilado = (id: number) => game({ id, enteredAt: { p: NOW - 10 * DAY, c: NOW - DAY } });
+    const suelto = (id: number) => game({ id, enteredAt: { c: NOW - DAY } });
+
+    // Biblioteca grande con una pila ridícula: 300 juegos y sólo 20 pasaron por Próximos (el 6,6 %). No cuenta.
+    const pilaRidicula = library({
+      c: [
+        ...Array.from({ length: 20 }, (_u, i) => apilado(i + 1)),
+        ...Array.from({ length: 280 }, (_u, i) => suelto(100 + i)),
+      ],
+    });
+    expect(evaluate(pilaRidicula).get('estanteria-cero-50')?.level, 'pila del 6 %').toBe(0);
+
+    // La misma pila de 20, pero sobre una biblioteca de 40: el 50 %. Eso sí fue una pila, y sí cuenta.
+    const pilaDeVerdad = library({
+      c: [
+        ...Array.from({ length: 20 }, (_u, i) => apilado(i + 1)),
+        ...Array.from({ length: 20 }, (_u, i) => suelto(100 + i)),
+      ],
+    });
+    expect(evaluate(pilaDeVerdad).get('estanteria-cero-50')?.level, 'pila del 50 %').toBe(1);
+
+    // Y el mínimo absoluto se queda ADEMÁS del porcentaje: en una biblioteca de tres, el 15 % es medio juego, y
+    // «tuve un juego apilado» no es una pila por mucho que sea el 33 %.
+    const bibliotecaMinima = library({ c: [apilado(1), suelto(2), suelto(3)] });
+    expect(evaluate(bibliotecaMinima).get('estanteria-cero-50')?.level, 'biblioteca de tres').toBe(0);
   });
 
   it('la escalera descendente se recorre de arriba abajo', () => {
@@ -262,23 +298,22 @@ describe('los logros que miden sobre otros logros', () => {
   });
 
   it('«Cien por cien» cuenta escaleras terminadas, no escalones sueltos', () => {
-    // Tres escaleras cortas al tope: `obra-maestra` (2), `vida-entera` (3) y `no-eres-tu` (3).
+    // Tres escaleras al TOPE, no a media altura: `obra-maestra` (hasta 5), `vida-entera` (hasta 20) y
+    // `no-eres-tu` (hasta 50). El fixture es grande a propósito — es justo lo que mide este logro: llevar una
+    // escalera hasta su último escalón, no coleccionar escalones sueltos de muchas.
     const games = library({
       c: [
-        game({ id: 1, grade: 100, hours: 400 }),
-        game({ id: 2, grade: 100, hours: 900 }),
-        game({ id: 3, hours: 500 }),
-        game({ id: 4, hours: 320 }),
+        // Cinco cienes → `obra-maestra` completa. Y veinte juegos de más de 300 h → `vida-entera` completa.
+        ...Array.from({ length: 5 }, (_u, i) => game({ id: i + 1, grade: 100, hours: 400 })),
+        ...Array.from({ length: 15 }, (_u, i) => game({ id: 100 + i, hours: 320 })),
       ],
-      v: [
-        game({ id: 5, grade: 90 }), game({ id: 6, grade: 75 }), game({ id: 7, grade: 71 }),
-        game({ id: 8, grade: 88 }), game({ id: 9, grade: 70 }),
-      ],
+      // Cincuenta dejados con un 70 o más → `no-eres-tu` completa.
+      v: Array.from({ length: 50 }, (_u, i) => game({ id: 200 + i, grade: 70 + (i % 20) })),
     });
     const states = evaluate(games);
-    expect(states.get('obra-maestra-2')?.level).toBe(1);
-    expect(states.get('vida-entera-4')?.level).toBe(1);
-    expect(states.get('no-eres-tu-5')?.level).toBe(1);
+    expect(states.get('obra-maestra-5')?.level, 'obra-maestra').toBe(1);
+    expect(states.get('vida-entera-20')?.level, 'vida-entera').toBe(1);
+    expect(states.get('no-eres-tu-50')?.level, 'no-eres-tu').toBe(1);
     expect(states.get('platino-3')?.value).toBe(3);
     expect(states.get('platino-3')?.level).toBe(1);
   });
@@ -371,8 +406,8 @@ describe('las dos cifras', () => {
     const todos = SCORING_ACHIEVEMENTS.map((def) => ({ id: def.id, level: 1, value: 0, next: null, unlockedAt: 0 }));
     const full = summarize(todos);
     expect(full.percent).toBe(100);
-    expect(full.points).toBe(5135);
-    expect(full.level).toBe(37);
+    expect(full.points).toBe(6110);
+    expect(full.level).toBe(41);
   });
 
   it('cada escalón suma una vez', () => {
@@ -430,11 +465,11 @@ describe('el espejo — mapa de bits y lectura defensiva', () => {
    * falla y no has añadido nada al final, lo que has hecho rompe los espejos de todo el mundo.
    */
   it('los primeros bits son los que eran, y la lista tiene la longitud que tenía', () => {
-    expect(MIRROR_ORDER.length).toBe(253);
+    expect(MIRROR_ORDER.length).toBe(306);
     expect(MIRROR_ORDER.slice(0, 4)).toEqual([
       'completados-10', 'completados-25', 'completados-50', 'completados-75',
     ]);
-    expect(MIRROR_ORDER[MIRROR_ORDER.length - 1]).toBe('aniversario-30');
+    expect(MIRROR_ORDER[MIRROR_ORDER.length - 1]).toBe('buena-cosecha-30');
   });
 
   it('lo que se empaqueta es lo que se lee', () => {
