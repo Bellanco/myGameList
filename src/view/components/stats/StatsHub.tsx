@@ -46,11 +46,13 @@ function reviewIdFrom(pathname: string): number {
  */
 export const StatsHub = memo(function StatsHub({ games }: { games: TabData }) {
   const vm = useStatsViewModel(games);
-  const achievements = useAchievements({ games });
   // Lo que el panel decide para todo el mundo: qué escaleras están ocultas y hasta dónde las ha abierto la
   // comunidad. Llega vacío y se pone al día un instante después: la pantalla no espera a la red para pintarse
   // (ver `useAchievementsConfig`), y vacío significa el comportamiento de siempre.
   const achievementsConfig = useAchievementsConfig();
+  // La apertura entra también en la FRACCIÓN: el denominador cuenta lo que hoy está abierto, no el catálogo
+  // entero, así que ampliar el catálogo no le baja el porcentaje de golpe a nadie.
+  const achievements = useAchievements({ games, open: achievementsConfig.open });
   const navigate = useNavigate();
   const location = useLocation();
   const openReviews = useCallback(() => { void navigate(REVIEWS_ROUTE); }, [navigate]);

@@ -12,6 +12,7 @@ import {
   openThrough,
   withoutHidden,
   type AchievementsConfig,
+  type OpenFrontier,
 } from '../core/achievements/visibility';
 import type { AchievementDef, AchievementItem, AchievementState, AchievementSummary } from '../core/achievements/types';
 import type { TabData } from '../model/types/game';
@@ -49,6 +50,11 @@ export interface AchievementsInput {
   postWeeks?: number;
   profileCreatedAt?: number;
   hasSync?: boolean;
+  /**
+   * Hasta dónde ha abierto cada escalera la comunidad. Solo entra en la FRACCIÓN: el denominador cuenta lo que
+   * hoy está abierto, no el catálogo entero (ver `summarize`). Vacío = cada quien abre con su propio progreso.
+   */
+  open?: OpenFrontier;
 }
 
 /**
@@ -68,6 +74,7 @@ export function useAchievements({
   postWeeks = 0,
   profileCreatedAt = 0,
   hasSync = false,
+  open = {},
 }: AchievementsInput): AchievementsViewModel {
   // El estado inmediatamente anterior, para saber qué ha subido EN ESTA evaluación. Un `ref` y no un estado:
   // compararse consigo mismo no debe provocar un render más.
@@ -105,8 +112,8 @@ export function useAchievements({
         Boolean(entry.state && entry.state.level >= 1))
       .sort(compareEarned);
 
-    return { states, byId, summary: summarize(states), earned, justUnlocked };
-  }, [games, friends, postWeeks, profileCreatedAt, hasSync]);
+    return { states, byId, summary: summarize(states, open), earned, justUnlocked };
+  }, [games, friends, postWeeks, profileCreatedAt, hasSync, open]);
 }
 
 /**
