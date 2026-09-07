@@ -440,15 +440,33 @@ export const ADMIN_ACHIEVEMENTS_UI = {
 
   sampleNote: (sample: number) => `Medido sobre ${sample} espejos publicados del censo.`,
 
-  /** El interruptor de los ocultos. Por defecto el panel los enseña TAPADOS, como los ve la gente. */
-  revealHidden: 'Revelar ocultos',
-  hideHidden: 'Tapar los ocultos como se ven',
+  /**
+   * EL INTERRUPTOR DE VERDAD: cambia lo que ve TODO EL MUNDO, no lo que ve el panel.
+   *
+   * Aquí los logros se enseñan siempre destapados —taparlos en la pantalla de revisión no tiene sentido: es
+   * justo donde hay que leer sus textos—. Lo que este botón decide es si el logro se le esconde a quien AÚN NO
+   * LO TIENE; a quien ya lo consiguió no se le quita nunca.
+   */
+  hiddenTitle: 'Visible para quien no lo tiene',
+  show: 'Mostrar a todos',
+  hide: 'Ocultar hasta conseguirlo',
+  hiddenNow: 'Oculto: quien no lo tiene no lo ve',
+  visibleNow: 'A la vista de todos',
+  /** El panel escribe en Firestore y la app lo lee al abrir la pantalla: no es instantáneo y se dice. */
+  hiddenSaved: 'Guardado. Cada usuario lo verá al abrir sus logros.',
+  hiddenFailed: 'No se ha podido guardar. ¿Sesión de administrador iniciada?',
+  hiddenSaving: 'Guardando…',
 
   /**
    * PREPARAR UN ESCALÓN INTERMEDIO. El panel no lo añade —el `id` tiene que llegar al código para que el logro
    * se publique en el espejo— pero sí deja el cambio escrito y listo para pegar, que es la parte que se olvida.
    */
   prepare: (step: number) => `Preparar escalón ${step}`,
+  prepareAny: 'Preparar un escalón nuevo',
+  prepareField: 'Umbral',
+  prepareHelp: 'Escribe el umbral que quieras: la lista se recoloca sola y el resto de pasos se recalcula.',
+  prepareTaken: (step: number) => `El umbral ${step} ya existe en esta escalera.`,
+  prepareInvalid: 'Escribe un número entero mayor que cero.',
   prepareTitle: (key: string, step: number) => `Insertar ${step} en «${key}»`,
   prepareCatalog: (steps: string) => `1 · catalog.ts — steps: [${steps}]`,
   prepareMirror: (id: string) => `2 · mirrorOrder.ts — al FINAL de MIRROR_IDS: '${id}',`,

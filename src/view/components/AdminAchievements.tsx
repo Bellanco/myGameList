@@ -1,11 +1,12 @@
 import { memo, useCallback, useMemo, useState } from 'react';
 import { ADMIN_ACHIEVEMENTS_UI } from '../../core/constants/adminLabels';
-import { ACHIEVEMENTS_UI, ACHIEVEMENT_RARITY_LABELS } from '../../core/constants/achievementLabels';
+import { ACHIEVEMENT_RARITY_LABELS } from '../../core/constants/achievementLabels';
 import { ACHIEVEMENTS_BY_LADDER, LADDERS, SCORING_ACHIEVEMENTS } from '../../core/achievements/catalog';
 import { MIRROR_ORDER, measureRarity } from '../../core/achievements/pack';
 import { RARITY_POINTS } from '../../core/achievements/types';
 import { copyText } from '../../core/utils/clipboard';
 import type { AchievementDef, AchievementLadder } from '../../core/achievements/types';
+import { isHidden, type HiddenOverrides } from '../../core/achievements/visibility';
 import { AchievementMedal } from './stats/AchievementMedal';
 import { AchievementSprite } from './AchievementSprite';
 import { HubBackButton } from './socialhub/HubBackButton';
@@ -34,6 +35,20 @@ export function suggestStep(previous: number, next: number): number {
   const rounded = Math.round(raw / grain) * grain;
   return Math.min(next - 1, Math.max(previous + 1, rounded));
 }
+
+/** Lo que hay que escribir para insertar un escalón. Con `error`, lo demás va vacío y no se pinta. */
+interface Plan {
+  error: string;
+  id: string;
+  steps: string;
+  total: [number, number];
+  points: [number, number];
+  bits: [number, number];
+  renamed: string;
+}
+
+const NO_PLAN = (error: string): Plan =>
+  ({ error, id: '', steps: '', total: [0, 0], points: [0, 0], bits: [0, 0], renamed: '' });
 
 /** Todo lo que se puede buscar de una escalera: su nombre, su clave y los textos de todos sus escalones. */
 function haystack(group: Group): string {
@@ -64,6 +79,8 @@ function haystack(group: Group): string {
 export const AdminAchievements = memo(function AdminAchievements({
   onBack,
   mirrors = [],
+  hiddenOverrides = {},
+  onToggleHidden,
 }: {
   onBack: () => void;
   /**
@@ -71,14 +88,21 @@ export const AdminAchievements = memo(function AdminAchievements({
    * «alcanzado» se calla en vez de pintar un 0 % que parecería un dato.
    */
   mirrors?: readonly string[];
+  /** Lo que hoy dice la configuración: qué escaleras están ocultas para quien no las tiene. */
+  hiddenOverrides?: HiddenOverrides;
+  /**
+   * Guarda el cambio. Lo hace el hub (que es quien habla con Firestore) y no esta pantalla: así se puede probar
+   * sin emulador y la pantalla sigue sin saber que existe una base de datos.
+   */
+  onToggleHidden?: (ladderKey: string, hidden: boolean) => Promise<void>;
 }) {
   const [query, setQuery] = useState('');
-  // Los ocultos se enseñan TAPADOS por defecto —así se revisa lo que la gente ve de verdad— y este interruptor
-  // los destapa SOLO en esta pantalla: no cambia el catálogo ni lo que ve nadie.
-  const [reveal, setReveal] = useState(false);
   // El escalón que se está preparando: la escalera y el umbral propuesto. `null` = ninguno abierto.
   const [draft, setDraft] = useState<{ key: string; step: number } | null>(null);
   const [copied, setCopied] = useState(false);
+  // Cómo fue el último guardado de cada escalera. Se dice en su ficha, no en un aviso global: cuando fallan las
+  // reglas hay que saber CUÁL no se guardó.
+  const [saved, setSaved] = useState<Record<string, 'saving' | 'ok' | 'error'>>({});
 
   /**
    * EL REPARTO, con `minSample: 1`. En el hub el mínimo son 20 personas —debajo de eso, «el 14 %» es una persona
@@ -114,10 +138,15 @@ export const AdminAchievements = memo(function AdminAchievements({
    * divergen. El total y el techo salen de `SCORING_ACHIEVEMENTS` —lo que puntúa: fuera primeros pasos y
    * retirados— y los bits, de la longitud del orden congelado.
    */
-  const plan = useMemo(() => {
+  const plan = useMemo<Plan | null>(() => {
     if (!draft) return null;
     const ladder = LADDERS.find((entry) => entry.key === draft.key);
     if (!ladder) return null;
+    // EL NÚMERO LO ELIGE QUIEN MIRA, así que hay dos formas de equivocarse y las dos se dicen: un umbral que no
+    // es un entero positivo y uno que ya existe (que daría dos escalones con el mismo `id`).
+    if (!Number.isInteger(draft.step) || draft.step <= 0) return NO_PLAN(A.prepareInvalid);
+    if (ladder.steps.includes(draft.step)) return NO_PLAN(A.prepareTaken(draft.step));
+    // Y SE RECOLOCA: la lista se ordena, así que da igual por dónde entre el umbral nuevo.
     const steps = [...ladder.steps, draft.step].sort((a, b) => a - b);
     const index = steps.indexOf(draft.step);
     const total = SCORING_ACHIEVEMENTS.length;
@@ -129,6 +158,7 @@ export const AdminAchievements = memo(function AdminAchievements({
     // El primero que se renumera: el que hoy ocupa la posición del nuevo.
     const renamed = (ACHIEVEMENTS_BY_LADDER.get(ladder.key) || [])[index];
     return {
+      error: '',
       id: `${ladder.key}-${draft.step}`,
       steps: steps.join(', '),
       total: [total, scores ? total + 1 : total] as [number, number],
@@ -190,14 +220,6 @@ export const AdminAchievements = memo(function AdminAchievements({
             />
           </label>
           <p className="admin-card-note">{A.matches(shown.length, groups.length)}</p>
-          <button
-            type="button"
-            className={`btn btn-secondary ${reveal ? 'is-active' : ''}`.trim()}
-            aria-pressed={reveal}
-            onClick={() => setReveal((value) => !value)}
-          >
-            {reveal ? A.hideHidden : A.revealHidden}
-          </button>
         </div>
 
         {/* EL ESQUEMA, plegado. La pantalla enseña nueve datos por fila y tres de ellos son señales que no se
@@ -218,14 +240,33 @@ export const AdminAchievements = memo(function AdminAchievements({
       {plan && draft ? (
         <div className="admin-card admin-ach-plan">
           <h3>{A.prepareTitle(draft.key, draft.step)}</h3>
+
+          <label className="admin-ach-plan-field">
+            {A.prepareField}
+            <input
+              type="number"
+              min={1}
+              step={1}
+              value={draft.step}
+              onChange={(event) => {
+                setCopied(false);
+                setDraft({ key: draft.key, step: Math.trunc(Number(event.target.value)) });
+              }}
+            />
+            <small>{A.prepareHelp}</small>
+          </label>
+
+          {plan.error ? <p className="admin-ach-warn">{plan.error}</p> : null}
+          {plan.error ? null : (
           <ol>
             <li><code>{A.prepareCatalog(plan.steps)}</code></li>
             <li><code>{A.prepareMirror(plan.id)}</code></li>
             <li><code>{A.prepareTests(plan.total, plan.points, plan.bits)}</code></li>
           </ol>
+          )}
           {plan.renamed ? <p className="admin-ach-warn-soft">{A.prepareRename(plan.renamed)}</p> : null}
           <p className="admin-card-actions">
-            <button type="button" className="btn" onClick={copyPlan}>{A.prepareCopy}</button>
+            <button type="button" className="btn" onClick={copyPlan} disabled={Boolean(plan.error)}>{A.prepareCopy}</button>
             <button type="button" className="btn btn-secondary" onClick={() => setDraft(null)}>{A.prepareClose}</button>
             {copied ? <span className="admin-ach-copied">{A.prepareCopied}</span> : null}
           </p>
@@ -235,19 +276,23 @@ export const AdminAchievements = memo(function AdminAchievements({
       {shown.length === 0 ? <p className="admin-card-note">{A.filterEmpty}</p> : null}
 
       {shown.map(({ ladder, steps }) => {
-        // TAPADO = es oculto y el interruptor está apagado. Lo que se enseña entonces es literalmente lo que ve
-        // la gente que aún no lo tiene: el «?» de la medalla, «Logro oculto» y «Se revela al conseguirlo».
-        const masked = Boolean(ladder.hidden) && !reveal;
+        // AQUÍ NO SE TAPA NADA: es la pantalla donde hay que LEER los textos, y un «?» no se revisa. Lo que se
+        // enseña es si el logro está escondido para quien no lo tiene, y el botón lo cambia para todo el mundo.
+        // El estado efectivo de la escalera: el interruptor si lo hay, y si no, lo que declara el catálogo.
+        const hidden = steps.length > 0
+          ? isHidden(steps[0], hiddenOverrides)
+          : Boolean(ladder.hidden);
+        const state = saved[ladder.key];
         return (
         <div className="admin-card admin-ach-ladder" key={ladder.key}>
           <header className="admin-ach-head">
             {/* La medalla del ÚLTIMO escalón: es la que lleva el temple más alto, así que de un vistazo se ve
                 el dibujo y hasta dónde llega la escalera. Bloqueada da igual — aquí no se mide a nadie. */}
             {steps.length > 0 ? (
-              <AchievementMedal def={steps[steps.length - 1]} level={1} size="md" masked={masked} />
+              <AchievementMedal def={steps[steps.length - 1]} level={1} size="md" />
             ) : null}
             <div className="admin-ach-head-body">
-              <h3>{masked ? ACHIEVEMENTS_UI.hiddenName : ladder.labels.name}</h3>
+              <h3>{ladder.labels.name}</h3>
               <p className="admin-ach-meta">
                 <span>{A.families[ladder.family]}</span>
                 <span>{ACHIEVEMENT_RARITY_LABELS[ladder.rarity]}</span>
@@ -259,9 +304,51 @@ export const AdminAchievements = memo(function AdminAchievements({
               </p>
               <p className="admin-ach-condition">
                 <small>{A.ladderCondition}</small>
-                {masked ? ACHIEVEMENTS_UI.hiddenCondition : ladder.labels.condition}
+                {ladder.labels.condition}
               </p>
               <p className="admin-card-note">{A.ladderSteps(ladder.steps)}</p>
+
+              {onToggleHidden ? (
+                <p className="admin-ach-visibility">
+                  <span className={hidden ? 'admin-ach-warn-soft' : undefined}>
+                    {hidden ? A.hiddenNow : A.visibleNow}
+                  </span>
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    disabled={state === 'saving'}
+                    onClick={() => {
+                      setSaved((prev) => ({ ...prev, [ladder.key]: 'saving' }));
+                      void onToggleHidden(ladder.key, !hidden)
+                        .then(() => setSaved((prev) => ({ ...prev, [ladder.key]: 'ok' })))
+                        .catch(() => setSaved((prev) => ({ ...prev, [ladder.key]: 'error' })));
+                    }}
+                  >
+                    {hidden ? A.show : A.hide}
+                  </button>
+                  {state === 'saving' ? <small>{A.hiddenSaving}</small> : null}
+                  {/* El guardado no es instantáneo para los usuarios y se dice: la app lee este ajuste al abrir
+                      la pantalla de logros, no en vivo (`firestore/lite` no tiene listeners). */}
+                  {state === 'ok' ? <small className="admin-ach-copied">{A.hiddenSaved}</small> : null}
+                  {state === 'error' ? <small className="admin-ach-warn">{A.hiddenFailed}</small> : null}
+                </p>
+              ) : null}
+
+              {/* Los enlaces de la tabla proponen el umbral del hueco; este abre la ficha para escribir el que
+                  sea —también por encima del último escalón, que es cómo se alarga una escalera—. */}
+              <p className="admin-card-actions">
+                <button
+                  type="button"
+                  className="admin-ach-prepare"
+                  onClick={() => {
+                    setCopied(false);
+                    const last = ladder.steps[ladder.steps.length - 1] || 1;
+                    setDraft({ key: ladder.key, step: ladder.descending ? Math.max(1, last - 1) : last * 2 });
+                  }}
+                >
+                  {A.prepareAny}
+                </button>
+              </p>
             </div>
           </header>
 
@@ -301,7 +388,7 @@ export const AdminAchievements = memo(function AdminAchievements({
                 return (
                 <tr key={def.id}>
                   <td className="admin-ach-step">{def.step}</td>
-                  <td>{masked ? ACHIEVEMENTS_UI.hiddenName : def.labels.name}</td>
+                  <td>{def.labels.name}</td>
                   <td className="admin-ach-offered">{offered ? A.offeredYes : A.offeredNo}</td>
                   <td className="admin-ach-reached">
                     {measured ? (
@@ -320,7 +407,7 @@ export const AdminAchievements = memo(function AdminAchievements({
                     {/* EL PANEL NO AÑADE EL ESCALÓN: deja el cambio escrito. El `id` tiene que llegar al código
                         para que el logro se publique en el espejo, así que lo útil aquí es no olvidarse de
                         ninguno de los tres pasos, y eso es lo que da el botón. Solo donde hay hueco. */}
-                    {gap && previous && !masked && suggestStep(previous.step, def.step) > 0 ? (
+                    {gap && previous && suggestStep(previous.step, def.step) > 0 ? (
                       <button
                         type="button"
                         className="admin-ach-prepare"
@@ -333,13 +420,13 @@ export const AdminAchievements = memo(function AdminAchievements({
                       </button>
                     ) : null}
                   </td>
-                  <td>{masked ? ACHIEVEMENTS_UI.hiddenCondition : def.labels.condition}</td>
+                  <td>{def.labels.condition}</td>
                   <td>
-                    {masked ? ACHIEVEMENTS_UI.hiddenCondition : def.labels.done}
+                    {def.labels.done}
                     {/* Si el hecho y la meta son la misma frase, la escalera no escribió su `done` y el
                         respaldo la copió: se dice aquí porque en la app se lee como una tarea pendiente
                         debajo de una medalla ya ganada, y eso no salta en ningún test. */}
-                    {!masked && def.labels.done === def.labels.condition ? (
+                    {def.labels.done === def.labels.condition ? (
                       <small className="admin-ach-warn">{A.sameText}</small>
                     ) : null}
                   </td>

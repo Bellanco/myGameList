@@ -539,3 +539,27 @@
 }
 .admin-ach-plan .admin-card-actions { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; }
 .admin-ach-copied { color: var(--fg-green); font-size: .8rem; }
+
+/* El interruptor de visibilidad y el campo del umbral. Los dos viven en la ficha de la escalera porque los dos
+   son decisiones SOBRE ESA escalera; sacarlos a una barra de la pantalla los desligaba de a quién afectan. */
+.admin-ach-visibility {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: .5rem;
+  margin: .3rem 0 0;
+  font-size: .8rem;
+}
+.admin-ach-visibility .btn { padding: .3rem .6rem; font-size: .8rem; }
+
+.admin-ach-plan-field { display: grid; gap: .2rem; margin: .5rem 0; font-size: .85rem; max-width: 16rem; }
+.admin-ach-plan-field input {
+  padding: .4rem .6rem;
+  background: var(--surface-soft);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font: inherit;
+  font-variant-numeric: tabular-nums;
+}
+.admin-ach-plan-field small { color: var(--text-muted); font-size: .75rem; }

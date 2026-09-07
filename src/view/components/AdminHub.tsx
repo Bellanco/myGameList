@@ -1,6 +1,7 @@
 import { lazy, memo, Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { ADMIN_ACHIEVEMENTS_UI, ADMIN_PANEL_UI } from '../../core/constants/adminLabels';
+import type { HiddenOverrides } from '../../core/achievements/visibility';
 import {
   ADMIN_ONLY_TIER,
   PROFILE_TIERS,
@@ -157,6 +158,9 @@ export const AdminHub = memo(function AdminHub() {
   // Dos vistas y no dos rutas: `/admin` es una ruta oculta que ya cuelga de la guarda de `isAdmin()`, y partirla
   // en dos obligaría a repetir esa guarda y a inventar un «volver» que no lleva a ninguna sección de la app.
   const [view, setView] = useState<'users' | 'achievements'>('users');
+  // La configuración de ocultación de logros: se lee al entrar en su vista y se reescribe al pulsar. Vive aquí
+  // —y no en la pantalla— porque es este componente el que ya habla con Firestore.
+  const [hiddenAchievements, setHiddenAchievements] = useState<HiddenOverrides>({});
   const [pending, setPending] = useState<PendingAction>(null);
   // Los enlaces de TODOS se piden una vez y se agrupan por usuario: el panel pinta decenas de fichas y una
   // petición por ficha sería absurda para un dato que cabe en una sola respuesta.
@@ -170,6 +174,32 @@ export const AdminHub = memo(function AdminHub() {
   const [sharesSummary, setSharesSummary] = useState<{ total: number; complete: boolean } | null>(null);
   const [notice, setNotice] = useState('');
   const noticeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  /**
+   * Carga la configuración de ocultación al entrar en la vista del catálogo, y solo entonces: el censo de
+   * usuarios —que es a lo que se entra— no la necesita para nada.
+   */
+  useEffect(() => {
+    if (view !== 'achievements') return;
+    let cancelled = false;
+    void import('../../model/repository/achievementsConfigRepository')
+      .then((module) => module.loadHiddenOverrides(true))
+      .then((value) => {
+        if (!cancelled) setHiddenAchievements(value);
+      })
+      .catch(() => {
+        // Sin configuración manda el catálogo; la pantalla lo enseña tal cual.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [view]);
+
+  /** Guarda el cambio y se queda con lo que de verdad ha quedado escrito. Si falla, LANZA: la ficha lo dice. */
+  const toggleHiddenAchievement = useCallback(async (ladderKey: string, hidden: boolean) => {
+    const module = await import('../../model/repository/achievementsConfigRepository');
+    setHiddenAchievements(await module.setLadderHidden(ladderKey, hidden));
+  }, []);
 
   useEffect(() => () => {
     if (noticeTimerRef.current) clearTimeout(noticeTimerRef.current);
@@ -247,7 +277,12 @@ export const AdminHub = memo(function AdminHub() {
       <Suspense fallback={null}>
         {/* Los espejos ya vienen en el censo (un campo más del documento que se baja de todos modos), así que
             medir el reparto no cuesta ni una petición. Vacío = sin muestra, y la pantalla lo dice. */}
-        <AdminAchievements onBack={() => setView('users')} mirrors={vm.census?.mirrors} />
+        <AdminAchievements
+          onBack={() => setView('users')}
+          mirrors={vm.census?.mirrors}
+          hiddenOverrides={hiddenAchievements}
+          onToggleHidden={toggleHiddenAchievement}
+        />
       </Suspense>
     );
   }
