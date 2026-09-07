@@ -33,6 +33,8 @@ export {
   healUserFriendshipIdentity,
   purgeFossilFriendshipRequests,
   purgeLegacyProfileFields,
+  clearProfileAchievements,
+  clearAllAchievements,
   setUserDisplayName,
   setUserSocialEnabled,
   setUserTier,

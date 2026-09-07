@@ -28,6 +28,12 @@ export const APP_ROUTES: ReadonlyArray<{ path: string; section: AppSection }> = 
   // hub social con las suyas.
   { path: '/perfil/*', section: 'stats' },
   { path: '/perfil', section: 'stats' },
+  // Los LOGROS son de primer nivel y no una sub-ruta del panel, a diferencia de `/perfil/resenas`. Cuesta esta
+  // línea, y a cambio es una dirección que se dice en voz alta. El comodín `/perfil/*` habría salido gratis, pero
+  // deja la pantalla escondida detrás del nombre de otra cosa: el panel se llama «Perfil» por herencia de cuando
+  // la pestaña se llamaba así, y meter los logros ahí dentro los ata a esa herencia para siempre. La sección
+  // sigue siendo `stats` porque el cromo es el mismo y lo resuelve `StatsHub`.
+  { path: '/logros', section: 'stats' },
   { path: '/ajustes', section: 'settings' },
   { path: '/cuenta', section: 'account' },
   { path: '/bandeja', section: 'inbox' },

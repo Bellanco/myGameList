@@ -1,4 +1,5 @@
 import { useCallback, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
+import { markRouletteUsed } from '../../../core/achievements/deviceSignals';
 import { useNativeDialog } from '../../modals/useNativeDialog';
 import { Icon } from '../Icon';
 import { ScoreDisplay } from '../ScoreDisplay';
@@ -162,6 +163,11 @@ export function RouletteModal({ open, onClose, title, candidates, weight, tag, r
   useLayoutEffect(() => {
     if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
     if (!open) return;
+    // EL ÚNICO DATO DE LOS LOGROS QUE HAY QUE REGISTRAR EN VEZ DE DERIVAR. `core/roulette/roulette` es una
+    // función pura —tira, devuelve un juego y no persiste ni un byte—, así que sin este sello no hay forma de
+    // saber que alguien probó la ruleta. Se escribe una sola vez, no sube a ningún canal y no se publica: los
+    // «primeros pasos» nunca lo hacen. Ver `core/achievements/catalog` (`paso-ruleta`).
+    markRouletteUsed();
     setPool(candidates);
     setPhase('idle');
     setWinner(null);

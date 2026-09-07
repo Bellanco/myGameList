@@ -102,6 +102,33 @@ describe('firestore.rules', () => {
   });
 
   describe('profiles', () => {
+    /**
+     * EL ESPEJO DE LOGROS (F3). Lo escribe su dueño y lo lee cualquier autenticado, así que lo que hay que fijar
+     * es el tamaño y la forma: esa cadena se la descarga entera el directorio social de todo el mundo, y sin tope
+     * el campo sería un almacén gratis en un documento público.
+     */
+    it('el dueño publica su espejo de logros, acotado en forma y tamaño', async () => {
+      const espejo = { v: 2, at: 1735689600000, list: '2:AAAA' };
+      await assertSucceeds(setDoc(doc(ownerDb('uid-a'), 'profiles', 'uid-a'), { uid: 'uid-a', achievements: espejo }));
+      // Ajeno: el espejo es tuyo y lo escribes tú.
+      await assertFails(setDoc(doc(ownerDb('uid-b'), 'profiles', 'uid-a'), { uid: 'uid-a', achievements: espejo }));
+      // Nada de subclaves inventadas, ni de una cadena que no es cadena.
+      await assertFails(setDoc(doc(ownerDb('uid-a'), 'profiles', 'uid-a'), {
+        uid: 'uid-a',
+        achievements: { ...espejo, basura: 'x' },
+      }));
+      await assertFails(setDoc(doc(ownerDb('uid-a'), 'profiles', 'uid-a'), { uid: 'uid-a', achievements: 'todo' }));
+      // Y el tope: el MISMO número que aplica el empaquetador (`ACHIEVEMENTS_LIST_MAX`).
+      await assertSucceeds(setDoc(doc(ownerDb('uid-a'), 'profiles', 'uid-a'), {
+        uid: 'uid-a',
+        achievements: { ...espejo, list: 'x'.repeat(1024) },
+      }));
+      await assertFails(setDoc(doc(ownerDb('uid-a'), 'profiles', 'uid-a'), {
+        uid: 'uid-a',
+        achievements: { ...espejo, list: 'x'.repeat(1025) },
+      }));
+    });
+
     it('el dueño y un autenticado pueden leer un perfil social.enabled; el anónimo no', async () => {
       await seed('profiles', 'uid-a', { uid: 'uid-a', social: { enabled: true } });
       await assertSucceeds(getDoc(doc(ownerDb('uid-a'), 'profiles', 'uid-a')));
@@ -912,9 +939,127 @@ describe('firestore.rules', () => {
     });
   });
 
+  /**
+   * CONFIGURACIÓN DEL CATÁLOGO DE LOGROS. El panel la escribe y la app la lee para saber qué escaleras están
+   * ocultas. Es el único documento del proyecto que escribe el admin y lee todo el mundo, así que lo que hay que
+   * fijar es justo eso: que NADIE más lo pueda escribir.
+   */
+  describe('appConfig (catálogo de logros)', () => {
+    it('lo lee cualquiera con sesión, y quien no la tiene no', async () => {
+      await seed('appConfig', 'achievements', { hidden: { 'obra-maestra': false } });
+      await assertSucceeds(getDoc(doc(ownerDb('uid-a'), 'appConfig', 'achievements')));
+      await assertFails(getDoc(doc(anonDb(), 'appConfig', 'achievements')));
+    });
+
+    it('solo el admin lo escribe', async () => {
+      await assertSucceeds(setDoc(doc(adminDb(), 'appConfig', 'achievements'), { hidden: { 'obra-maestra': false } }));
+      await assertFails(setDoc(doc(ownerDb('uid-a'), 'appConfig', 'achievements'), { hidden: { 'obra-maestra': false } }));
+      await assertFails(setDoc(doc(anonDb(), 'appConfig', 'achievements'), { hidden: {} }));
+      // Y borrarlo también es cosa suya: al desaparecer, la app cae a lo que dice el código.
+      await assertSucceeds(deleteDoc(doc(adminDb(), 'appConfig', 'achievements')));
+      await assertFails(deleteDoc(doc(ownerDb('uid-a'), 'appConfig', 'achievements')));
+    });
+
+    it('acota el contenido: dos claves y dos mapas, no un almacén', async () => {
+      await assertFails(setDoc(doc(adminDb(), 'appConfig', 'achievements'), { hidden: {}, basura: 'x' }));
+      await assertFails(setDoc(doc(adminDb(), 'appConfig', 'achievements'), { hidden: 'todo' }));
+      const grande: Record<string, boolean> = {};
+      for (let i = 0; i < 101; i += 1) grande[`ladder-${i}`] = true;
+      await assertFails(setDoc(doc(adminDb(), 'appConfig', 'achievements'), { hidden: grande }));
+    });
+
+    /**
+     * EL BORRADO DEL ESPEJO DESDE EL PANEL, tal y como lo hace la app: `updateDoc` con `deleteField()` sobre el
+     * perfil de OTRA persona, firmando como admin.
+     *
+     * SE PRUEBA CONTRA EL EMULADOR Y NO RAZONANDO LA REGLA, porque el punto exacto donde se caería no se ve
+     * leyendo: `profileWriteIsValid()` exige `uid == request.auth.uid`, así que si el admin pasara por esa
+     * validación —en vez de cortocircuitar antes con `isAdmin()`— este borrado fallaría con `permission-denied`
+     * EN SILENCIO, y el panel diría que ha borrado sin haber borrado nada.
+     *
+     * Y se comprueba lo que SOBREVIVE, que es el otro riesgo: `deleteField()` tiene que llevarse el espejo y nada
+     * más. Un borrado que además se comiera el nick o el `social.enabled` sacaría a esa persona del directorio.
+     */
+    it('el admin borra el espejo de otro perfil, y solo el espejo', async () => {
+      await seed('profiles', 'uid-a', {
+        uid: 'uid-a',
+        displayName: 'Fulano',
+        social: { enabled: true },
+        tier: 'plata',
+        achievements: { v: 2, at: 1735689600000, list: '2:AAAA' },
+      });
+
+      await assertSucceeds(updateDoc(doc(adminDb(), 'profiles', 'uid-a'), { achievements: deleteField() }));
+
+      const despues = await assertSucceeds(getDoc(doc(adminDb(), 'profiles', 'uid-a')));
+      const datos = despues.data() as Record<string, unknown>;
+      expect(datos.achievements, 'el espejo sigue ahí').toBeUndefined();
+      // Y el resto del perfil, intacto: el borrado es quirúrgico.
+      expect(datos.displayName).toBe('Fulano');
+      expect(datos.tier).toBe('plata');
+      expect((datos.social as { enabled?: boolean }).enabled).toBe(true);
+    });
+
+    /** Y no lo puede hacer cualquiera: el espejo de otro no se toca sin ser el admin. */
+    it('un usuario cualquiera no puede borrar el espejo de otro', async () => {
+      await seed('profiles', 'uid-a', {
+        uid: 'uid-a',
+        social: { enabled: true },
+        achievements: { v: 2, at: 1735689600000, list: '2:AAAA' },
+      });
+      await assertFails(updateDoc(doc(ownerDb('uid-b'), 'profiles', 'uid-a'), { achievements: deleteField() }));
+    });
+
+    /**
+     * BORRAR EL PERFIL SE LLEVA EL ESPEJO, sin purgarlo aparte: la vitrina vive DENTRO del documento, así que
+     * `deleteDoc` la borra con todo lo demás. Se fija aquí porque es fácil dar por hecho lo contrario y añadir un
+     * borrado redundante — o peor, creer que sobrevive y dejar vitrinas de perfiles que ya no existen.
+     */
+    it('borrar el perfil se lleva por delante su espejo de logros', async () => {
+      await seed('profiles', 'uid-a', {
+        uid: 'uid-a',
+        social: { enabled: true },
+        achievements: { v: 2, at: 1735689600000, list: '2:AAAA' },
+      });
+      await assertSucceeds(deleteDoc(doc(adminDb(), 'profiles', 'uid-a')));
+      const despues = await assertSucceeds(getDoc(doc(adminDb(), 'profiles', 'uid-a')));
+      expect(despues.exists()).toBe(false);
+    });
+
+    /**
+     * LA APERTURA COMUNITARIA (`open`) viaja en el mismo documento: es lo que decide, para TODO EL MUNDO, hasta
+     * qué escalón está abierta cada escalera. Se acota igual que `hidden` —mapa y con tope— porque es escritura
+     * de admin pero lectura de todos, y un documento sin tope es un almacén gratis.
+     */
+    it('acepta la apertura comunitaria, con las mismas ataduras', async () => {
+      await assertSucceeds(setDoc(doc(adminDb(), 'appConfig', 'achievements'), { open: { maraton: 'maraton-15' } }));
+      // Las dos claves juntas, que es como queda el documento tras publicar las dos cosas.
+      await assertSucceeds(setDoc(doc(adminDb(), 'appConfig', 'achievements'), {
+        hidden: { 'obra-maestra': false },
+        open: { maraton: 'maraton-15' },
+      }));
+      await assertFails(setDoc(doc(ownerDb('uid-a'), 'appConfig', 'achievements'), { open: { maraton: 'maraton-75' } }));
+      await assertFails(setDoc(doc(adminDb(), 'appConfig', 'achievements'), { open: 'maraton-15' }));
+      const grande: Record<string, string> = {};
+      for (let i = 0; i < 101; i += 1) grande[`ladder-${i}`] = 'x';
+      await assertFails(setDoc(doc(adminDb(), 'appConfig', 'achievements'), { open: grande }));
+    });
+  });
+
   describe('catch-all', () => {
     it('deniega cualquier otra colección', async () => {
       await assertFails(getDoc(doc(ownerDb('uid-a'), 'whatever', 'x')));
+    });
+
+    /**
+     * LA REGLA NUEVA NO ABRE NADA MÁS. `appConfig` es un `match` propio, así que no puede tocar a las demás
+     * colecciones; esto lo comprueba desde fuera, que es como se rompería si algún día se cambiara por un
+     * comodín (`/{coleccion}/{docId}`) sin darse cuenta.
+     */
+    it('la configuración global no da acceso a ninguna otra colección', async () => {
+      await assertFails(getDoc(doc(ownerDb('uid-a'), 'appConfigOtro', 'x')));
+      await assertFails(setDoc(doc(adminDb(), 'appConfig_', 'x'), { hidden: {} }));
+      await assertFails(getDoc(doc(anonDb(), 'appConfig', '_placeholder')));
     });
   });
 });

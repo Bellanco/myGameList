@@ -5,7 +5,47 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-09-07
+
 ### Added
+- **Logros.** El catálogo son 50 escaleras y 304 escalones, y cada escalón es un logro con su `id` propio: lo que
+  se cuenta, se publica y se pinta es el ESCALÓN, no la escalera. Todo sale de tu biblioteca —no hay nada que
+  activar ni ningún contador que llevar aparte— salvo un único dato que hay que registrar porque no deja rastro:
+  que has probado la ruleta. Los umbrales están MEDIDOS sobre una biblioteca real de 302 juegos, no supuestos.
+  - **`/logros`**, con la forma de Steam: medalla, nombre con su grado, lo que se pide o lo que conseguiste, y el
+    día. Una sola lista, sin agrupar por familia: la pregunta al abrirla es «qué tengo y qué me falta», no «qué
+    tengo de cada tipo». La misma pantalla sirve para lo tuyo, para lo de una amistad y para el catálogo global.
+  - **La medalla** es un disco en penumbra con tres señales en tres canales que no se pisan: el aura dice la
+    RAREZA, el temple del filo el TRAMO de la escalera y la píldora del canto LA CIFRA de ese escalón.
+  - **El instante del desbloqueo.** Al guardar algo que sube un logro se dice ahí mismo, por el aviso de siempre.
+    Uno por escritura: si una edición sube tres, el aviso dice «3 logros conseguidos».
+  - **En el espacio social**: la tira de medallas en cada ficha, el porcentaje de gente que tiene cada logro
+    —medido sobre los espejos que el directorio ya se ha bajado, sin una petición ni un byte de más— y una
+    entrada por persona y día en el feed.
+  - **Lo que se publica** es un mapa de bits de 44 caracteres, no una lista de nombres: con 304 escalones los
+    `id` solos pasarían de tres kilobytes. Va con granularidad de DÍA y nunca de instante, que es lo que evita
+    que la vitrina cuente a qué horas usas la app. Los «primeros pasos» no tienen bit: no se publican jamás.
+- **Panel de administración · catálogo de logros.** Las 50 escaleras con sus dos textos enfrentados —la meta y el
+  hecho—, que repartidos por la app no se pueden comparar. Deja ocultar una escalera para quien no la tenga,
+  publicar hasta dónde ha llegado la comunidad, y borrar las vitrinas publicadas de una persona o de todo el
+  censo. Y prepara el cambio escrito para insertar un escalón nuevo, que son tres pasos fáciles de olvidar.
+
+### Changed
+- **Un escalón se abre para todos en cuanto alguien lo ve.** No hay una escalera por persona: la línea es el
+  primer escalón al que no ha llegado nadie —ese se ofrece, es el reto de quien va delante— y de ahí para arriba
+  no se enseña. Lo que distingue a dos personas es lo que llevan CONSEGUIDO, no la lista. Antes lo decidía cada
+  dispositivo con el progreso de su dueño, así que quien empezaba veía un peldaño donde otro ya veía nueve.
+- **La fracción se mide contra lo que está abierto**, no contra el catálogo entero. Un escalón que nadie ha visto
+  no es una tarea pendiente, es una que aún no ha empezado; contarlo hacía que ampliar el catálogo le bajara el
+  porcentaje de golpe a todo el mundo sin que nadie hubiera perdido nada. A cambio, el denominador crece solo
+  según la comunidad avanza.
+- **Lo conseguido no se devuelve.** Una marca de agua sostiene cada logro aunque el dato que lo concedió deje de
+  cumplirse —borras duplicados, corriges unos años— y el espejo publicado se une con lo que ya había en vez de
+  reemplazarlo: sin eso, abrir la app en un móvil con la biblioteca a medio sincronizar le borraba medallas a la
+  vitrina delante de tus amistades.
+- **El aviso se queda a la vista.** Vivía en el flujo, arriba del todo, así que uno disparado con la lista
+  desplazada nacía fuera de la pantalla: se anunciaba al lector de pantalla, pero quien mira no veía nada.
+
 - **Análisis sugeridos también fuera del espacio social.** El bloque de "por dónde seguir leyendo" que ya existía
   en el hub aparece ahora en dos sitios más, y en los dos ofrece análisis de UNA sola persona, que es lo que
   cambia el criterio: donde se mezclan firmas, la firma es una razón para ofrecer algo; donde solo hay una, no
@@ -199,6 +239,42 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
   - Política de privacidad al día: ahora se publica MENOS de lo ya declarado (el alta de un juego no sale), así que
     el texto se corrige pero la versión no sube y no se vuelve a pedir conformidad. El cupo diario no se menciona
     por lo mismo que el filtro de listas: cambia lo que ves tú, no lo que se publica de ti.
+
+### Changed
+
+- **La política de privacidad declara los logros, y `LEGAL_VERSION` sube a `2026-09-07`.** Desde esta versión el
+  espejo de logros viaja en el perfil público, así que el texto legal dice qué lleva —las medallas con el DÍA de
+  cada una, nunca la hora—, que se calculan sobre la biblioteca ENTERA (también las listas ocultas: cuentan
+  cuántos juegos hay, no cuáles, y de una lista oculta sigue sin salir ni un nombre) y que el dato lo puede leer
+  cualquier usuario con sesión, tenga o no amistad contigo: que la vitrina solo se PINTE a las amistades es
+  presentación, no privacidad. Al subir la versión aceptada, todo el mundo vuelve a pasar por la puerta del hub.
+  Era requisito de entrada de la fase 3 (§9 de `docs/plan-logros.md`), que es la que enciende la publicación.
+- **Dependencias de producción al día**, todas dentro de su rango: `firebase` 12.17.1 → 12.18.0, `zod` 4.4.3 →
+  4.5.4, `react-router-dom` 7.18.2 → 7.18.3 y `@tanstack/react-virtual` 3.14.9 → 3.14.11. Se anotan aquí porque
+  viajan en el bundle: la versión que hornea el build es la que etiqueta la telemetría, y sin este apunte los
+  errores de este despliegue se atribuirían al anterior.
+- El utillaje también sube: **Vitest 5** (con `@vitest/coverage-v8`) y **html-validate 11.14**, que es la primera
+  que admite Vitest 5. **ESLint 10 y TypeScript 7 se quedan fuera a propósito**: `eslint-plugin-jsx-a11y` y
+  `eslint-plugin-react` topan en ESLint 9 —con ellos `npm ci` no resuelve y el CI se cae en la instalación— y
+  `typescript-eslint` exige `typescript <6.1`, sin versión publicada, ni canary, que admita TypeScript 7.
+- Las acciones del CI pasan a las que corren sobre **Node 24** (`checkout@v7`, `setup-node@v7`, `setup-java@v6`,
+  `codecov-action@v7`): las `@v4` declaraban `node20` y el runner ya avisa de su retirada.
+
+### Tests
+
+- **La auditoría de accesibilidad se reparte entre los trabajadores.** Es un solo fichero con 84 casos —el 88 % del
+  tiempo de la suite— y sin `fullyParallel` iba en fila por un único trabajador, así que sobraban los demás: 94 s de
+  reloj para 106 s de trabajo. Repartida, la suite pasa de **94,8 s a 59,1 s** con los mismos dos trabajadores.
+  Cada caso estrena su contexto de navegador, de modo que repartirlos no comparte nada.
+- **El catálogo de logros del panel deja de agotar el temporizador.** Buscaba las 50 escaleras de una en una y cada
+  búsqueda recorre el documento entero: 740 ms de los 1.031 del test. De una pasada baja a 19 ms. Y el fichero
+  entero se mide con 20 s de margen en vez de 5: pinta 4.239 nodos en cada caso, así que con la máquina cargada el
+  límite de 5 s no medía la pantalla, medía la carga de la máquina —era lo que tumbaba media docena de casos sin
+  que nada estuviera roto—.
+- **El aviso se mide con la página arriba.** El recorrido puede desplazarse solo: el «Guardar» del editor queda a
+  unos 65 px del borde inferior y basta con que las fuentes del sistema midan un poco más —las del CI miden más que
+  las de macOS— para que haya que ir a por él. Eso no dice nada del aviso, cuyo `sticky` se lee del desplazamiento
+  del instante, así que se vuelve arriba antes de medir y se comprueba contra el `top` que tendría pegado.
 
 ## [1.0.6] - 2026-08-25
 

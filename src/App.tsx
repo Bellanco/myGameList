@@ -13,6 +13,7 @@ import { TabBar } from './view/components/TabBar';
 import { Toolbar } from './view/components/Toolbar';
 import { GameTable } from './view/components/GameTable';
 import { StatusBanner } from './view/components/StatusBanner';
+import { useAchievementNotice } from './view/hooks/useAchievementNotice';
 import { UpdateNotice } from './view/components/UpdateNotice';
 import { BottomNavigation } from './view/components/BottomNavigation';
 import { APP_ROUTES, FALLBACK_ROUTE, LEGACY_ROUTE_REDIRECTS, matchAppSection, type AppSection } from './core/constants/routes';
@@ -178,6 +179,11 @@ export default function App() {
     persistFromSync,
     notify,
   } = vm;
+
+  // EL INSTANTE DEL DESBLOQUEO (§7.4 del plan de logros): tras cada escritura de la biblioteca se reevalúa y, si
+  // un nivel ha subido en ESA escritura, se dice por el `StatusBanner` que ya existe. El evaluador entra por
+  // `import()` dinámico dentro del hook: el catálogo no puede viajar en el arranque.
+  useAchievementNotice(vm.data, notify);
 
   // Bandeja de importados (local, no sincroniza). Se monta aquí para exponer su contador en los controles
   // flotantes y cablear la graduación (clasificar → formulario → retirar de la bandeja).
