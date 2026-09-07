@@ -76,6 +76,14 @@ const THESIS_CHARS = 1000;
 /** Géneros distintos que hacen variado un mes. */
 const VARIETY_GENRES = 3;
 
+/**
+ * Parte de la biblioteca que Próximos tuvo que llegar a ocupar para que «Exterminatus» sea alcanzable.
+ *
+ * Es una FRACCIÓN y no un número de juegos porque una pila es grande respecto a lo que tienes: cinco apilados
+ * sobre ocho juegos es una pila; cinco sobre trescientos, no es nada.
+ */
+const BACKLOG_MIN_SHARE = 0.15;
+
 export const LADDERS: readonly AchievementLadder[] = [
   // ─────────────────────────────────────────────────────────────────────────────────────────────────────────
   // ESPEJO — lo que ya haces. Sale de la biblioteca y no pide ningún cambio de conducta.
@@ -98,7 +106,7 @@ export const LADDERS: readonly AchievementLadder[] = [
   {
     key: 'abandonos-razonados',
     family: 'mirror',
-    steps: [5, 10, 20, 35, 50, 75, 100, 150],
+    steps: [5, 10, 20, 35, 50, 75, 100, 150, 200, 250],
     rarity: 'infrecuente',
     icon: 'abandonos-razonados',
     labels: { name: 'Retirada táctica', condition: 'Juegos que dejaste diciendo por qué' },
@@ -137,7 +145,7 @@ export const LADDERS: readonly AchievementLadder[] = [
   {
     key: 'generos',
     family: 'mirror',
-    steps: [5, 8, 12, 16, 20, 25, 30, 40],
+    steps: [5, 8, 12, 16, 20, 25, 30, 40, 50, 60],
     rarity: 'infrecuente',
     icon: 'generos',
     labels: { name: 'Mundo abierto', condition: 'Géneros distintos de los que ya has cerrado algo' },
@@ -183,7 +191,7 @@ export const LADDERS: readonly AchievementLadder[] = [
   {
     key: 'plataformas',
     family: 'mirror',
-    steps: [3, 5, 7, 9, 12, 15],
+    steps: [3, 5, 7, 9, 12, 15, 18, 20],
     rarity: 'comun',
     icon: 'plataformas',
     labels: { name: 'Guerra de consolas', condition: 'Plataformas distintas en tu biblioteca' },
@@ -218,7 +226,7 @@ export const LADDERS: readonly AchievementLadder[] = [
   {
     key: 'volvere',
     family: 'mirror',
-    steps: [3, 10, 20, 30, 40, 50],
+    steps: [3, 10, 20, 30, 40, 50, 60, 75, 100],
     rarity: 'comun',
     icon: 'volvere',
     labels: { name: 'Aquí volveré', condition: 'Juegos que has marcado como rejugables' },
@@ -230,7 +238,7 @@ export const LADDERS: readonly AchievementLadder[] = [
   {
     key: 'revancha',
     family: 'mirror',
-    steps: [1, 5, 10, 20, 35, 50],
+    steps: [1, 5, 10, 20, 35, 50, 70, 100],
     rarity: 'comun',
     icon: 'revancha',
     labels: { name: 'Cuenta pendiente', condition: 'Juegos que dejaste y quieres reintentar' },
@@ -285,7 +293,7 @@ export const LADDERS: readonly AchievementLadder[] = [
   {
     key: 'criterio',
     family: 'mirror',
-    steps: [25, 50, 75, 100, 150, 200, 300, 400, 500],
+    steps: [25, 50, 75, 100, 150, 200, 250, 300, 350, 400, 500],
     rarity: 'infrecuente',
     icon: 'criterio',
     labels: { name: 'Nota del crítico', condition: 'Juegos puntuados, y no todos igual' },
@@ -305,7 +313,7 @@ export const LADDERS: readonly AchievementLadder[] = [
   {
     key: 'memoria-larga',
     family: 'mirror',
-    steps: [3, 8, 15, 25],
+    steps: [3, 8, 15, 20, 25],
     rarity: 'raro',
     icon: 'memoria-larga',
     labels: { name: 'Partida guardada', condition: 'Años distintos en los que completaste algo' },
@@ -322,7 +330,7 @@ export const LADDERS: readonly AchievementLadder[] = [
   {
     key: 'cadena-de-anos',
     family: 'mirror',
-    steps: [3, 5, 8, 10, 12, 15, 17, 20],
+    steps: [3, 5, 8, 10, 12, 15, 17, 20, 25, 30, 35],
     rarity: 'raro',
     icon: 'cadena-de-anos',
     labels: { name: 'Toda una vida', condition: 'Años seguidos jugando' },
@@ -444,7 +452,7 @@ export const LADDERS: readonly AchievementLadder[] = [
     key: 'obra-maestra',
     family: 'mirror',
     hidden: true,
-    steps: [1, 2],
+    steps: [1, 2, 3, 5],
     rarity: 'excepcional',
     icon: 'obra-maestra',
     labels: { name: 'Obra maestra', condition: 'Un 100 a un juego' },
@@ -461,7 +469,7 @@ export const LADDERS: readonly AchievementLadder[] = [
     key: 'sofa',
     family: 'mirror',
     hidden: true,
-    steps: [5, 15, 25, 50, 75],
+    steps: [5, 15, 25, 50, 75, 100, 125],
     rarity: 'comun',
     icon: 'sofa',
     labels: { name: 'Jugado en el sofá', condition: 'Juegos que has marcado como Steam Deck' },
@@ -543,11 +551,22 @@ export const LADDERS: readonly AchievementLadder[] = [
     // cero» le pasaba a quien no usa Próximos y no le llegaba jamás a quien tiene sesenta: escalonarlo lo
     // convierte en el trayecto que de verdad se recorre.
     //
-    // GUARDA (§7.5): la lista vacía es cierta para quien vació su pila **y para quien acaba de instalar la app**.
-    // Hay que HABER TENIDO pila; sin ella el valor es deliberadamente inalcanzable, no cero.
+    // LA GUARDA ES RELATIVA A LA BIBLIOTECA, y ese es el arreglo: la lista vacía es cierta para quien vació su
+    // pila **y para quien nunca tuvo ninguna**. Con un mínimo absoluto de cuatro, a quien tiene ocho juegos en
+    // total y llegó a apilar cinco se le regalaban de golpe los escalones de 50, 25 y 10 sin haber bajado nada —
+    // no tiene sentido premiar por «dejar Próximos en 50 o menos» a quien jamás pasó de cinco.
+    //
+    // Por eso la pila TUVO QUE SER UNA PARTE REAL DE LA COLECCIÓN: más del 15 % de la biblioteca en su punto más
+    // alto. Con 300 juegos eso son 45 apilados; con 20, tres. Es la misma exigencia leída a la escala de cada
+    // cual, que es lo que un umbral absoluto no puede hacer.
+    //
+    // El mínimo de cuatro se queda ADEMÁS del porcentaje: en una biblioteca de seis juegos, el 15 % es uno, y
+    // «tuve un juego apilado» no es una pila.
     metric: ({ games }) => {
       const curve = backlogCurve(games);
-      if (curve.peak < 4) return { value: UNREACHABLE };
+      if (curve.peak < 4 || curve.peak <= allGames(games).length * BACKLOG_MIN_SHARE) {
+        return { value: UNREACHABLE };
+      }
       // Sin fecha por escalón: reconstruir cuándo cruzó cada umbral hacia abajo exigiría el stock día a día, y el
       // sello del último movimiento diría que todos se consiguieron a la vez. Conseguido sin fecha es un estado
       // previsto (§5.3).
@@ -558,7 +577,7 @@ export const LADDERS: readonly AchievementLadder[] = [
     key: 'orgullo',
     family: 'mirror',
     hidden: true,
-    steps: [1, 3, 5],
+    steps: [1, 3, 5, 8, 12, 15],
     rarity: 'raro',
     icon: 'orgullo',
     labels: { name: 'Por pura cabezonería', condition: 'Juegos terminados con menos de 50' },
@@ -582,7 +601,7 @@ export const LADDERS: readonly AchievementLadder[] = [
     key: 'no-eres-tu',
     family: 'mirror',
     hidden: true,
-    steps: [1, 3, 5],
+    steps: [1, 3, 5, 10, 20, 35, 50],
     rarity: 'raro',
     icon: 'no-eres-tu',
     labels: { name: 'No eres tú, soy yo', condition: 'Juegos que dejaste con un 70 o más' },
@@ -604,7 +623,7 @@ export const LADDERS: readonly AchievementLadder[] = [
     key: 'vida-entera',
     family: 'mirror',
     hidden: true,
-    steps: [1, 2, 4],
+    steps: [1, 2, 4, 7, 10, 15, 20],
     rarity: 'raro',
     icon: 'vida-entera',
     labels: { name: 'Ahí se te fue la vida', condition: 'Más de 300 h en un solo juego' },
@@ -621,7 +640,7 @@ export const LADDERS: readonly AchievementLadder[] = [
     key: 'platino',
     family: 'mirror',
     hidden: true,
-    steps: [3, 10],
+    steps: [3, 5, 7, 10, 15],
     rarity: 'excepcional',
     icon: 'platino',
     labels: { name: 'Cien por cien', condition: 'Logros llevados hasta su último escalón' },
@@ -661,7 +680,7 @@ export const LADDERS: readonly AchievementLadder[] = [
   {
     key: 'resenas',
     family: 'data',
-    steps: [5, 25, 50, 75, 100, 150, 200],
+    steps: [5, 10, 25, 50, 75, 100, 125, 150, 175, 200, 250],
     rarity: 'infrecuente',
     icon: 'resenas',
     labels: { name: 'Con tus palabras', condition: 'Reseñas que has escrito' },
@@ -698,7 +717,7 @@ export const LADDERS: readonly AchievementLadder[] = [
   {
     key: 'ficha-completa',
     family: 'data',
-    steps: [10, 25, 50, 100, 150, 250],
+    steps: [10, 25, 50, 75, 100, 125, 150, 200, 250],
     rarity: 'infrecuente',
     icon: 'ficha-completa',
     labels: { name: 'Ficha de manual', condition: 'Fichas con géneros, plataforma, nota y reseña' },
@@ -719,7 +738,7 @@ export const LADDERS: readonly AchievementLadder[] = [
   {
     key: 'autopsia',
     family: 'data',
-    steps: [3, 10, 20, 30, 50, 75],
+    steps: [3, 5, 10, 15, 20, 30, 40, 50, 60, 75],
     rarity: 'infrecuente',
     icon: 'autopsia',
     labels: { name: 'Informe forense', condition: 'Juegos que dejaste con motivo y reseña' },
@@ -754,7 +773,7 @@ export const LADDERS: readonly AchievementLadder[] = [
     key: 'tesis',
     family: 'data',
     hidden: true,
-    steps: [1, 5, 20, 50, 100],
+    steps: [1, 5, 10, 20, 35, 50, 75, 100, 150],
     rarity: 'infrecuente',
     icon: 'tesis',
     labels: { name: 'Tesis doctoral', condition: `Reseñas de más de ${THESIS_CHARS} caracteres` },
@@ -797,7 +816,7 @@ export const LADDERS: readonly AchievementLadder[] = [
   {
     key: 'conversador',
     family: 'social',
-    steps: [2, 8, 16, 26, 39, 52, 78, 104],
+    steps: [2, 8, 16, 26, 39, 52, 78, 104, 130, 150],
     rarity: 'infrecuente',
     icon: 'conversador',
     labels: { name: 'Charla de taberna', condition: 'Semanas distintas en las que has publicado algo' },
@@ -863,7 +882,7 @@ export const LADDERS: readonly AchievementLadder[] = [
   {
     key: 'buena-cosecha',
     family: 'annual',
-    steps: [5, 8, 12, 16, 20, 25],
+    steps: [5, 8, 12, 16, 20, 25, 30],
     rarity: 'raro',
     icon: 'buena-cosecha',
     labels: { name: 'Cosecha del año', condition: 'Juegos terminados en un mismo año' },
