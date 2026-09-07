@@ -413,8 +413,40 @@ describe('las dos cifras', () => {
   it('cada escalón suma una vez', () => {
     const uno = summarize([{ id: 'completados-400', level: 1, value: 400, next: null, unlockedAt: 0 }]);
     expect(uno.earned).toBe(1);
-    expect(uno.total).toBe(251);
     expect(uno.points).toBe(25); // un raro, una vez
+  });
+
+  /**
+   * EL DENOMINADOR ES LO ABIERTO, NO EL CATÁLOGO ENTERO. Un escalón que nadie ha visto todavía no es una tarea
+   * pendiente, es una que aún no ha empezado; contarlo hacía que ampliar el catálogo le bajara el porcentaje de
+   * golpe a todo el mundo sin que nadie hubiera perdido nada.
+   */
+  it('la fracción se mide contra lo que está abierto, no contra las 304', () => {
+    const uno = summarize([{ id: 'completados-400', level: 1, value: 400, next: null, unlockedAt: 0 }]);
+    // Muy por debajo del catálogo: de cada escalera solo está abierto lo alcanzado y el siguiente.
+    expect(uno.total).toBeLessThan(SCORING_ACHIEVEMENTS.length / 2);
+
+    // Y CRECE CUANDO LA COMUNIDAD ABRE. La frontera va en una escalera donde quien mira NO tiene nada —si fuera
+    // por debajo de su propio progreso no cambiaría nada, porque uno abre con lo suyo—: de «Guerra de consolas»
+    // solo estaría abierto el primer escalón, y con alguien que ha llegado al 12 se abren seis.
+    const conApertura = summarize(
+      [{ id: 'completados-400', level: 1, value: 400, next: null, unlockedAt: 0 }],
+      { plataformas: 'plataformas-12' },
+    );
+    expect(conApertura.total).toBeGreaterThan(uno.total);
+    // El numerador no se mueve: sigue teniendo un solo logro.
+    expect(conApertura.earned).toBe(1);
+
+    // LO CONSEGUIDO CUENTA SIEMPRE, esté abierto o no: un logro que tienes y no sale ni arriba ni abajo no existe.
+    expect(uno.earned).toBe(1);
+  });
+
+  /** Con el catálogo entero conseguido, lo abierto ES el catálogo entero: la fracción cierra en 100 %. */
+  it('completarlo todo sigue siendo el 100 % y el techo del nivel', () => {
+    const todos = SCORING_ACHIEVEMENTS.map((def) => ({ id: def.id, level: 1, value: 0, next: null, unlockedAt: 0 }));
+    const full = summarize(todos);
+    expect(full.total).toBe(SCORING_ACHIEVEMENTS.length);
+    expect(full.percent).toBe(100);
   });
 });
 

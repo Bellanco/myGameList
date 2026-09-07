@@ -7,9 +7,13 @@
 // NINGUNA DE LAS DOS SE PUBLICA (§6.10.3): el espejo ya lleva la lista de logros con su nivel y el catálogo lleva
 // la rareza de cada uno, así que cualquier cliente las reconstruye exactamente. Publicar un número que se puede
 // derivar crearía un segundo sitio donde mentir.
-import { ACHIEVEMENTS_BY_ID, SCORING_ACHIEVEMENTS } from './catalog';
+import { ACHIEVEMENTS_BY_ID, ACHIEVEMENTS_BY_LADDER, SCORING_ACHIEVEMENTS } from './catalog';
+import { openThrough, type OpenFrontier } from './visibility';
 import { RARITY_POINTS } from './types';
-import type { AchievementState, AchievementSummary } from './types';
+import type { AchievementDef, AchievementState, AchievementSummary } from './types';
+
+/** Los `id` que puntúan, en un conjunto: el recorrido de abajo va por escalera y necesita preguntarlo por `id`. */
+const SCORING_IDS: ReadonlySet<string> = new Set(SCORING_ACHIEVEMENTS.map((def) => def.id));
 
 /**
  * La curva de nivel: barata al principio, cara después, sin techo. Es la forma de PSN y por su mismo motivo —los
@@ -19,9 +23,13 @@ import type { AchievementState, AchievementSummary } from './types';
  * la escala de PSN dispara el nivel de golpe y la curva deja de sentirse ganada.
  *
  * ⚑ LOS TRAMOS SE DUPLICARON AL PASAR A UN LOGRO POR ESCALÓN, y no es un ajuste cosmético: el catálogo pasó de 32
- * logros a 251, y con ellos el máximo teórico de 895 puntos a **5.135**. Con la curva antigua, completarlo todo
- * daba el nivel 54 y los primeros escalones subían de tres en tres. Duplicada, el catálogo entero vale el nivel
- * 37 y queda sitio por encima.
+ * logros a 251, y con ellos el máximo teórico de 895 puntos a 5.135. Con la curva antigua, completarlo todo daba
+ * el nivel 54 y los primeros escalones subían de tres en tres. Duplicada, quedó en el 37 y con sitio por encima.
+ *
+ * ⚑ Y VUELVE A MOVERSE CADA VEZ QUE EL CATÁLOGO CRECE. Con la ampliación a 304 escalones el techo son **6.110
+ * puntos, nivel 41**. Las cifras van escritas aquí y probadas en `tests/unit/achievements.test.ts` justo para
+ * esto: al añadir escalones hay que venir a mirar si la curva sigue teniendo sitio por encima, en vez de
+ * enterarse cuando alguien llegue al final.
  *
  * ⚑ Y EL NIVEL YA NO ES INFINITO. Antes lo era porque las metas abiertas no tenían techo; ahora cada escalón es
  * un logro y el catálogo es finito, así que los puntos también. Lo que sostenía «siempre hay un paso más» pasa a
@@ -68,19 +76,42 @@ export function levelFromPoints(points: number): { level: number; into: number; 
  * en un castigo estadístico) y los retirados, y SÍ incluye los ocultos desde el principio —restarlos delataría
  * cuántos hay y, con el tiempo, cuáles—.
  */
-export function summarize(states: readonly AchievementState[]): AchievementSummary {
+export function summarize(
+  states: readonly AchievementState[],
+  open: OpenFrontier = {},
+): AchievementSummary {
   const byId = new Map(states.map((state) => [state.id, state]));
+  const isEarned = (def: AchievementDef): boolean => (byId.get(def.id)?.level ?? 0) >= 1;
   let earned = 0;
   let points = 0;
+  let total = 0;
 
-  for (const def of SCORING_ACHIEVEMENTS) {
-    const state = byId.get(def.id);
-    if (!state || state.level < 1) continue;
-    earned += 1;
-    points += RARITY_POINTS[def.rarity];
+  // SOLO CUENTA LO QUE ESTÁ ABIERTO. El denominador no es el catálogo entero sino lo que hoy se le enseña a
+  // alguien: un escalón que nadie ha visto todavía no es una tarea pendiente, es una que aún no ha empezado.
+  //
+  // ES LO QUE HACE QUE AMPLIAR EL CATÁLOGO NO CASTIGUE A NADIE. Con el catálogo entero de denominador, añadir
+  // cincuenta escalones le bajaba el porcentaje de golpe a todo el mundo sin que nadie hubiera perdido nada.
+  // Contando lo abierto, esos escalones entran en la cuenta según la comunidad los va alcanzando.
+  //
+  // A CAMBIO, EL DENOMINADOR CRECE SOLO: tu porcentaje puede bajar sin que toques nada, porque alguien abrió un
+  // escalón nuevo. Es deliberado — la fracción dice cuánto llevas de lo que hoy está en juego, y lo que está en
+  // juego lo mueve la gente.
+  //
+  // LO CONSEGUIDO CUENTA SIEMPRE, esté abierto o no: la marca de agua puede sostener un escalón cuyo tramo se
+  // haya quedado atrás, y un logro que tienes y no aparece ni en el numerador ni en el denominador no existe.
+  for (const steps of ACHIEVEMENTS_BY_LADDER.values()) {
+    const openTo = openThrough(steps, open, isEarned);
+    steps.forEach((def, index) => {
+      if (!SCORING_IDS.has(def.id)) return;
+      const mine = isEarned(def);
+      if (!mine && index > openTo) return;
+      total += 1;
+      if (!mine) return;
+      earned += 1;
+      points += RARITY_POINTS[def.rarity];
+    });
   }
 
-  const total = SCORING_ACHIEVEMENTS.length;
   const curve = levelFromPoints(points);
 
   return {

@@ -11,7 +11,7 @@ import { AchievementsScreen } from '../../src/view/components/stats/Achievements
 import { AchievementsCard } from '../../src/view/components/stats/AchievementsCard';
 import { ACHIEVEMENTS, SCORING_ACHIEVEMENTS } from '../../src/core/achievements/catalog';
 import { ACHIEVEMENTS_BY_ID } from '../../src/core/achievements/catalog';
-import { summarize } from '../../src/core/achievements/summary';
+import { summarize, summarizeMirror } from '../../src/core/achievements/summary';
 import { packAchievements } from '../../src/core/achievements/pack';
 import { listForScreen } from '../../src/viewmodel/useAchievements';
 import type { AchievementState } from '../../src/core/achievements/types';
@@ -243,9 +243,12 @@ describe('el listado propio', () => {
   it('la cabecera dice cuántos del catálogo, con esas palabras', () => {
     const summary = summarize([{ id: 'completados-25', level: 1, value: 60, next: null, unlockedAt: 0 }]);
     render(<AchievementsScreen items={lista} summary={summary} rarity={null} />);
-    expect(screen.getByText('1/251')).toBeInTheDocument();
-    // «del catálogo actual» no es un adorno: añadir logros baja la fracción de todo el mundo, y eso se dice.
-    expect(screen.getByText('0% del catálogo actual')).toBeInTheDocument();
+    // El denominador SALE DEL RESUMEN y no se escribe a mano: cuenta lo que hoy está ABIERTO, no el catálogo
+    // entero, así que se mueve con el catálogo y con lo que la comunidad va alcanzando. Clavarlo aquí obligaba a
+    // tocar este test cada vez que se añade un escalón, sin comprobar nada a cambio.
+    expect(screen.getByText(`${summary.earned}/${summary.total}`)).toBeInTheDocument();
+    expect(summary.earned).toBe(1);
+    expect(screen.getByText(`${summary.percent}% del catálogo actual`)).toBeInTheDocument();
   });
 
   it('el NIVEL de perfil no se enseña, aunque siga calculándose', () => {
@@ -399,9 +402,10 @@ describe('la cifra en la vista global', () => {
   ];
 
   it('sale también ahí, calculada sobre lo que tiene ese perfil', () => {
+    const suyo = summarizeMirror(new Map([['completados-10', 1], ['resenas-5', 1]]));
     render(<ProfileGlobalAchievements mirror={espejo(['completados-10', 'resenas-5'])} directoryMirrors={MUESTRA} owner="Fulano" self={false} onBack={() => {}} />);
-    expect(screen.getByText('2/251')).toBeInTheDocument();
-    expect(screen.getByText('1% del catálogo actual')).toBeInTheDocument();
+    expect(screen.getByText(`${suyo.earned}/${suyo.total}`)).toBeInTheDocument();
+    expect(suyo.earned).toBe(2);
   });
 
   it('en tu perfil se calcula con tus estados, no con el espejo', () => {
@@ -410,8 +414,10 @@ describe('la cifra en la vista global', () => {
       ['completados-10', { id: 'completados-10', level: 1, value: 60, next: null, unlockedAt: 0 }],
       ['resenas-5', { id: 'resenas-5', level: 0, value: 4, next: 5, unlockedAt: 0 }],
     ]);
+    const mio = summarizeMirror(new Map([['completados-10', 1]]));
     render(<ProfileGlobalAchievements mirror="" directoryMirrors={MUESTRA} owner="Yo" self ownStates={estados} onBack={() => {}} />);
-    expect(screen.getByText('1/251')).toBeInTheDocument();
+    expect(screen.getByText(`${mio.earned}/${mio.total}`)).toBeInTheDocument();
+    expect(mio.earned).toBe(1);
   });
 });
 
