@@ -56,10 +56,15 @@ service cloud.firestore {
     // merge `request.resource.data` es el documento RESULTANTE, así que los perfiles legacy llegan aquí con
     // campos que las escrituras nuevas ya no mandan (`email`, `social.gistId`, `social.githubToken`), y
     // exigirlos denegaría toda escritura sobre ellos —incluida la del auto-saneado que existe justo para
-    // limpiarlos—. Por el mismo motivo NO se pone un `hasOnly` sobre las claves de `social`: un documento
-    // antiguo con una subclave inesperada quedaría con el perfil congelado para siempre, y su dueño no
-    // tiene forma de arreglarlo (`profiles` solo lo escribe él o el admin). Eso exige antes una auditoría
-    // de los datos reales; está anotado como pendiente en SECURITY.md.
+    // limpiarlos—. Sobre las claves de `social` SÍ hay un `hasOnly` (ver `profileSocialIsSane`), y cerrarlo
+    // tuvo su precio: un documento antiguo con una subclave que no esté en esa lista —`social.githubToken`, el
+    // PAT en claro— queda congelado hasta que una escritura la borre, y su dueño no puede arreglarlo a mano
+    // (`profiles` solo lo escribe él o el admin). Se pudo cerrar por dos cosas: antes se pasó la purga de restos
+    // legacy (`scripts/purge-profile-pii.js`), y el auto-saneado del arranque borra el `email` y las tres
+    // subclaves viejas de `social` EN LA MISMA escritura (`healOwnLegacyProfile`), así que el documento
+    // RESULTANTE que llega aquí ya cumple la allowlist. Lo que sigue pendiente —anotado en SECURITY.md— es sacar
+    // de ella `gistId` y `gamesGistId`, que ya viven en `privateConfig`; eso pide repasar antes los datos reales
+    // con `npm run audit:rules`.
     //
     // Las fechas admiten número Y timestamp a propósito: el cliente escribe `serverTimestamp()` (que las
     // reglas ven como timestamp) y los documentos viejos llevan milisegundos.
