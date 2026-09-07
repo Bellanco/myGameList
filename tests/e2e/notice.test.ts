@@ -83,10 +83,15 @@ for (const [nombre, viewport] of [
       await page.getByRole('button', { name: /Guardar/i }).first().click();
       await expect(page.locator('.status-banner')).toBeVisible();
 
-      expect(await page.evaluate(() => window.scrollY), `${nombre}: la página se ha desplazado`).toBe(0);
+      // ARRIBA DEL TODO PARA MEDIR, porque el recorrido puede haberse desplazado por su cuenta: el «Guardar» del
+      // editor queda a unos 65 px del borde inferior, y basta con que las fuentes del sistema midan un poco más
+      // —las del CI miden más que las de macOS— para que caiga fuera y haya que ir a por él. Eso no dice nada del
+      // aviso: el `sticky` es CSS puro, sin memoria, y se lee del desplazamiento de ESTE instante.
+      await page.evaluate(() => window.scrollTo(0, 0));
+      expect(await page.evaluate(() => window.scrollY), `${nombre}: la página no ha vuelto arriba`).toBe(0);
       const sitio = await sitioDelAviso(page);
-      // Por debajo del borde superior: no está pegado arriba, está donde lo pone el flujo.
-      expect(sitio!.arriba, `${nombre}: el aviso se ha pegado arriba sin hacer falta`).toBeGreaterThan(0);
+      // Donde lo pone el flujo, bajo la cabecera. Pegado se quedaría en el `top: .5rem` del sticky, o sea 8.
+      expect(sitio!.arriba, `${nombre}: el aviso se ha pegado arriba sin hacer falta`).toBeGreaterThan(8);
     });
   });
 }
