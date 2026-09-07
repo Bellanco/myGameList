@@ -969,6 +969,22 @@ describe('firestore.rules', () => {
     });
 
     /**
+     * BORRAR EL PERFIL SE LLEVA EL ESPEJO, sin purgarlo aparte: la vitrina vive DENTRO del documento, así que
+     * `deleteDoc` la borra con todo lo demás. Se fija aquí porque es fácil dar por hecho lo contrario y añadir un
+     * borrado redundante — o peor, creer que sobrevive y dejar vitrinas de perfiles que ya no existen.
+     */
+    it('borrar el perfil se lleva por delante su espejo de logros', async () => {
+      await seed('profiles', 'uid-a', {
+        uid: 'uid-a',
+        social: { enabled: true },
+        achievements: { v: 2, at: 1735689600000, list: '2:AAAA' },
+      });
+      await assertSucceeds(deleteDoc(doc(adminDb(), 'profiles', 'uid-a')));
+      const despues = await assertSucceeds(getDoc(doc(adminDb(), 'profiles', 'uid-a')));
+      expect(despues.exists()).toBe(false);
+    });
+
+    /**
      * LA APERTURA COMUNITARIA (`open`) viaja en el mismo documento: es lo que decide, para TODO EL MUNDO, hasta
      * qué escalón está abierta cada escalera. Se acota igual que `hidden` —mapa y con tope— porque es escritura
      * de admin pero lectura de todos, y un documento sin tope es un almacén gratis.

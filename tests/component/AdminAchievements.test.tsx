@@ -249,6 +249,49 @@ describe('catálogo de logros — la vista de revisión del panel de administrac
   });
 
   /**
+   * BORRAR TODAS LAS VITRINAS es la acción más destructiva de la pantalla y la única que toca a todo el censo, así
+   * que va en DOS PASOS: el primer botón solo enseña el aviso, y hasta que no se confirma no se escribe nada.
+   */
+  describe('borrar todos los logros publicados', () => {
+    it('no borra nada hasta que se confirma, y dice a cuántos afecta', async () => {
+      const onResetAll = vi.fn().mockResolvedValue(7);
+      render(<AdminAchievements onBack={() => {}} onResetAll={onResetAll} censusSize={7} />);
+
+      await userEvent.click(screen.getByRole('button', { name: A.resetAll }));
+      expect(onResetAll, 'ha borrado sin confirmar').not.toHaveBeenCalled();
+      // El aviso dice el alcance y las dos cosas que hay que saber: nadie pierde un logro, y vuelve solo.
+      expect(screen.getByText(A.resetAllConfirm(7))).toBeInTheDocument();
+
+      await userEvent.click(screen.getByRole('button', { name: A.resetAll }));
+      expect(onResetAll).toHaveBeenCalledTimes(1);
+      expect(await screen.findByText(A.resetAllDone(7))).toBeInTheDocument();
+    });
+
+    it('se puede echar atrás sin borrar nada', async () => {
+      const onResetAll = vi.fn();
+      render(<AdminAchievements onBack={() => {}} onResetAll={onResetAll} censusSize={3} />);
+      await userEvent.click(screen.getByRole('button', { name: A.resetAll }));
+      await userEvent.click(screen.getByRole('button', { name: A.prepareClose }));
+      expect(onResetAll).not.toHaveBeenCalled();
+      expect(screen.queryByText(A.resetAllConfirm(3))).not.toBeInTheDocument();
+    });
+
+    it('si falla, lo dice y no se traga el error', async () => {
+      const onResetAll = vi.fn().mockRejectedValue(new Error('permission-denied'));
+      render(<AdminAchievements onBack={() => {}} onResetAll={onResetAll} censusSize={2} />);
+      await userEvent.click(screen.getByRole('button', { name: A.resetAll }));
+      await userEvent.click(screen.getByRole('button', { name: A.resetAll }));
+      expect(await screen.findByText(A.resetAllFailed)).toBeInTheDocument();
+    });
+
+    /** Sin la acción no hay botón: la pantalla se monta también en pruebas que no le pasan el hub. */
+    it('sin la acción, el botón no existe', () => {
+      render(<AdminAchievements onBack={() => {}} />);
+      expect(screen.queryByRole('button', { name: A.resetAll })).not.toBeInTheDocument();
+    });
+  });
+
+  /**
    * LAS SEÑALES DE ESTA COLUMNA HABLAN DE GENTE Y DE NADA MÁS. La que salía de los umbrales («Salto ×2.5») se
    * retiró: en una columna titulada «quién ha llegado» era el único dato que no medía a nadie, y decía lo mismo
    * que la caída con otra unidad. Este test defiende que no vuelva a colarse.

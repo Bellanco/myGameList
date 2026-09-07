@@ -12,6 +12,8 @@ import {
 } from '../../core/constants/tiers';
 import {
   ADMIN_PROFILES_LIMIT,
+  clearAllAchievements,
+  clearProfileAchievements,
   type AdminUserRow,
   type LegacyProfileField,
 } from '../../model/repository/firebaseAdminRepository';
@@ -210,10 +212,37 @@ export const AdminHub = memo(function AdminHub() {
    * TODO EL MUNDO, así que la mide el catálogo (que tiene los espejos delante) y la escribe esto. Si falla,
    * LANZA: la ficha del catálogo lo dice.
    */
+  /**
+   * Borra el espejo publicado de UNA persona y lo cuenta. No le quita ningún logro: los suyos se derivan de su
+   * biblioteca en su propio aparato, y los volverá a publicar en cuanto abra la app (lo dice la confirmación).
+   */
+  const clearAchievements = useCallback(async (profileDocId: string) => {
+    try {
+      await clearProfileAchievements(profileDocId);
+      setNotice(A.achievementsDone);
+      await vm.refresh();
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : ADMIN_SHARES_UI.failed);
+    }
+  }, [vm]);
+
   const publishOpenFrontier = useCallback(async (open: OpenFrontier) => {
     const module = await import('../../model/repository/achievementsConfigRepository');
     setOpenFrontier(await module.publishOpenFrontier(open));
   }, []);
+
+  /**
+   * Borra el espejo de TODO el censo y, con él, la apertura publicada — que se mide sobre esos espejos y sin
+   * ellos no significa nada. Devuelve cuántos se borraron para que la pantalla lo diga.
+   */
+  const resetAllAchievements = useCallback(async (): Promise<number> => {
+    const ids = (vm.census?.users || []).map((entry) => entry.id);
+    const cleared = await clearAllAchievements(ids);
+    const module = await import('../../model/repository/achievementsConfigRepository');
+    setOpenFrontier(await module.publishOpenFrontier({}));
+    await vm.refresh();
+    return cleared;
+  }, [vm]);
 
   useEffect(() => () => {
     if (noticeTimerRef.current) clearTimeout(noticeTimerRef.current);
@@ -298,6 +327,8 @@ export const AdminHub = memo(function AdminHub() {
           onToggleHidden={toggleHiddenAchievement}
           openFrontier={openFrontier}
           onPublishFrontier={publishOpenFrontier}
+          onResetAll={resetAllAchievements}
+          censusSize={vm.census?.users.length || 0}
         />
       </Suspense>
     );
@@ -817,6 +848,21 @@ export const AdminHub = memo(function AdminHub() {
                         }
                       >
                         {busy ? A.working : user.socialEnabled ? A.disableBtn : A.enableBtn}
+                      </button>
+                      {/* Borrar SU vitrina publicada. Va con los demás botones de la ficha porque es una acción
+                          sobre esta persona, y no en la pantalla del catálogo, que decide para todo el mundo. */}
+                      <button
+                        type="button"
+                        className="btn btn-secondary"
+                        disabled={busy}
+                        onClick={() =>
+                          setPending({
+                            title: A.achievementsConfirm(name),
+                            run: () => void clearAchievements(user.id),
+                          })
+                        }
+                      >
+                        {A.achievementsBtn}
                       </button>
                       <button
                         type="button"
