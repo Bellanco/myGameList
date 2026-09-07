@@ -408,11 +408,40 @@ export const ADMIN_ACHIEVEMENTS_UI = {
 
   /** Columnas de los escalones. Los dos textos, uno al lado del otro: es lo que se viene a comparar. */
   colStep: 'Escalón',
+  colOffered: 'Ofrecido',
+  colReached: 'Alcanzado',
   colName: 'Nombre',
   colGoal: 'Meta (lo que falta)',
   colDone: 'Hecho (lo conseguido)',
   /** ⚑ Señal de que una escalera se dejó el `done`: el respaldo copia la meta y se lee como una tarea pendiente. */
   sameText: 'Sin texto propio: repite la meta',
+
+  /** ¿El catálogo lo sigue proponiendo? Un retirado no se ofrece, pero se sigue pintando a quien lo tenga. */
+  offeredYes: 'Sí',
+  offeredNo: 'No',
+
+  /**
+   * Cuánta gente lo tiene, SIEMPRE con su denominador: es la única forma de que «el 4 %» no se lea como una
+   * afirmación global cuando la muestra son 25 perfiles.
+   */
+  reached: (percent: number, holders: number, sample: number) => `${percent} % · ${holders}/${sample}`,
+  /** Nadie ha llegado: candidato a que el umbral esté demasiado alto o a que sobre el escalón. */
+  asleep: 'Dormido',
+  /** Casi todo el mundo lo tiene: el escalón no mide nada, se regala al entrar. */
+  gift: 'Regalado',
+  /**
+   * El hueco: entre este escalón y el anterior el umbral se multiplica por mucho, así que en medio hay un
+   * trayecto largo sin ninguna medalla. Es la señal que dice «aquí cabe un intermedio», y se ve SIN muestra:
+   * sale de los propios umbrales.
+   */
+  gap: (factor: string) => `Salto ×${factor}`,
+  /** Y con muestra, la caída: del escalón anterior a este se pierde a casi todo el mundo. */
+  cliff: 'Se cae aquí',
+
+  sampleNote: (sample: number) => `Medido sobre ${sample} espejos publicados del censo.`,
+  /** Sin espejos no se inventa un 0 %: se dice por qué no hay muestra. */
+  noSample: 'Todavía no hay espejos publicados que medir (la publicación del espejo está apagada), así que no se puede decir cuánta gente tiene cada escalón. Lo demás sí se lee.',
+  asleepTotal: 'Dormidos',
 
   families: {
     mirror: 'Espejo',

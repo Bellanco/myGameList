@@ -3,6 +3,14 @@ import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { AdminAchievements } from '../../src/view/components/AdminAchievements';
 import { ACHIEVEMENTS, ACHIEVEMENTS_BY_LADDER, LADDERS } from '../../src/core/achievements/catalog';
+import { packAchievements } from '../../src/core/achievements/pack';
+import type { AchievementState } from '../../src/core/achievements/types';
+
+/** Un espejo de verdad, empaquetado por el empaquetador: el bitmap se indexa por `MIRROR_ORDER`, no a mano. */
+function espejo(ids: readonly string[]): string {
+  const states: AchievementState[] = ids.map((id) => ({ id, level: 1, value: 0, next: null, unlockedAt: 0 }));
+  return packAchievements(states, []);
+}
 
 describe('catálogo de logros — la vista de revisión del panel de administración', () => {
   it('enseña TODAS las escaleras con sus escalones: es una revisión, no una muestra', () => {
@@ -39,6 +47,63 @@ describe('catálogo de logros — la vista de revisión del panel de administrac
     for (const def of ACHIEVEMENTS) {
       expect(def.labels.done, `${def.id} repite su meta como hecho`).not.toBe(def.labels.condition);
     }
+  });
+
+  /**
+   * SIN MUESTRA NO SE INVENTA UN 0 %. Mientras la publicación del espejo esté apagada nadie publica, y una
+   * columna llena de ceros diría «nadie tiene ningún logro», que es falso: lo que pasa es que no hay con qué
+   * medir. La diferencia importa porque esta pantalla existe para DECIDIR si sobra o falta un escalón.
+   */
+  it('sin espejos publicados dice que no hay muestra, en vez de pintar ceros', () => {
+    render(<AdminAchievements onBack={() => {}} />);
+    expect(screen.getByText(/Todavía no hay espejos publicados/)).toBeInTheDocument();
+    expect(screen.queryByText(/·\s*\d+\/\d+$/)).not.toBeInTheDocument();
+    expect(screen.queryAllByText('Dormido')).toHaveLength(0);
+  });
+
+  it('con muestra da el porcentaje SIEMPRE con su denominador', () => {
+    // Tres perfiles: los tres tienen el primer escalón, uno solo tiene el segundo.
+    const mirrors = [espejo(['completados-10', 'completados-25']), espejo(['completados-10']), espejo(['completados-10'])];
+    render(<AdminAchievements onBack={() => {}} mirrors={mirrors} />);
+    expect(screen.getByText('Medido sobre 3 espejos publicados del censo.')).toBeInTheDocument();
+
+    const primero = screen.getByText('Créditos finales I').closest('tr') as HTMLElement;
+    expect(within(primero).getByText('100 % · 3/3')).toBeInTheDocument();
+    const segundo = screen.getByText('Créditos finales II').closest('tr') as HTMLElement;
+    expect(within(segundo).getByText('33 % · 1/3')).toBeInTheDocument();
+  });
+
+  /** Las dos decisiones que la pantalla tiene que servir en bandeja: sobra escalón o falta uno. */
+  it('marca el escalón que nadie alcanza y el que se regala', () => {
+    const mirrors = [espejo(['completados-10']), espejo(['completados-10']), espejo(['completados-10'])];
+    render(<AdminAchievements onBack={() => {}} mirrors={mirrors} />);
+
+    const regalado = screen.getByText('Créditos finales I').closest('tr') as HTMLElement;
+    expect(within(regalado).getByText('Regalado')).toBeInTheDocument();
+    const dormido = screen.getByText('Créditos finales V').closest('tr') as HTMLElement;
+    expect(within(dormido).getByText('Dormido')).toBeInTheDocument();
+    // Y la cabecera lleva la cuenta, que es lo que se viene a mirar de un vistazo.
+    expect(screen.getByText('Dormidos')).toBeInTheDocument();
+  });
+
+  /**
+   * EL SALTO SALE DE LOS UMBRALES, así que se ve aunque no haya nadie a quien medir: es la señal de «entre estos
+   * dos escalones hay un trayecto largo sin ninguna medalla», que es la pregunta de los intermedios.
+   */
+  it('señala el salto de umbrales sin necesidad de muestra', () => {
+    render(<AdminAchievements onBack={() => {}} />);
+    // «Créditos finales II» pide 25 tras 10: dos veces y media el anterior.
+    const fila = screen.getByText('Créditos finales II').closest('tr') as HTMLElement;
+    expect(within(fila).getByText('Salto ×2.5')).toBeInTheDocument();
+    // Y de 300 a 400 no hay salto que avisar (×1,33).
+    const suave = screen.getByText('Créditos finales X').closest('tr') as HTMLElement;
+    expect(within(suave).queryByText(/^Salto/)).not.toBeInTheDocument();
+  });
+
+  it('el retirado deja de ofrecerse, y se dice', () => {
+    render(<AdminAchievements onBack={() => {}} />);
+    const fila = screen.getByText('Speedrun I').closest('tr') as HTMLElement;
+    expect(within(fila).getByText('No')).toBeInTheDocument();
   });
 
   it('el buscador recorta por nombre y por texto, y dice cuántas quedan', async () => {

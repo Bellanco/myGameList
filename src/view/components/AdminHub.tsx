@@ -245,7 +245,9 @@ export const AdminHub = memo(function AdminHub() {
   if (view === 'achievements') {
     return (
       <Suspense fallback={null}>
-        <AdminAchievements onBack={() => setView('users')} />
+        {/* Los espejos ya vienen en el censo (un campo más del documento que se baja de todos modos), así que
+            medir el reparto no cuesta ni una petición. Vacío = sin muestra, y la pantalla lo dice. */}
+        <AdminAchievements onBack={() => setView('users')} mirrors={vm.census?.mirrors} />
       </Suspense>
     );
   }

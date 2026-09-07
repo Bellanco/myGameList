@@ -2,6 +2,7 @@ import { memo, useMemo, useState } from 'react';
 import { ADMIN_ACHIEVEMENTS_UI } from '../../core/constants/adminLabels';
 import { ACHIEVEMENT_RARITY_LABELS } from '../../core/constants/achievementLabels';
 import { ACHIEVEMENTS_BY_LADDER, LADDERS } from '../../core/achievements/catalog';
+import { measureRarity } from '../../core/achievements/pack';
 import type { AchievementDef, AchievementLadder } from '../../core/achievements/types';
 import { AchievementMedal } from './stats/AchievementMedal';
 import { AchievementSprite } from './AchievementSprite';
@@ -40,8 +41,25 @@ function haystack(group: Group): string {
  * MONTA EL SPRITE, como las otras dos pantallas que pintan medallas: los símbolos no entran nunca en el arranque
  * (`AchievementSprite`), y esta vive en el chunk perezoso del panel de administración.
  */
-export const AdminAchievements = memo(function AdminAchievements({ onBack }: { onBack: () => void }) {
+export const AdminAchievements = memo(function AdminAchievements({
+  onBack,
+  mirrors = [],
+}: {
+  onBack: () => void;
+  /**
+   * Los espejos publicados que el censo ya se ha bajado. Vacío = sin muestra, y entonces la columna de
+   * «alcanzado» se calla en vez de pintar un 0 % que parecería un dato.
+   */
+  mirrors?: readonly string[];
+}) {
   const [query, setQuery] = useState('');
+
+  /**
+   * EL REPARTO, con `minSample: 1`. En el hub el mínimo son 20 personas —debajo de eso, «el 14 %» es una persona
+   * y enseñarlo es peor que callarlo—, pero esto es una herramienta de trabajo y aquí la cifra va SIEMPRE con su
+   * denominador («4 % · 1/25»), que es lo que impide leerla como una afirmación global.
+   */
+  const measured = useMemo(() => measureRarity(mirrors, 1), [mirrors]);
 
   const groups = useMemo<Group[]>(
     () => LADDERS.map((ladder) => ({ ladder, steps: ACHIEVEMENTS_BY_LADDER.get(ladder.key) || [] })),
@@ -52,8 +70,16 @@ export const AdminAchievements = memo(function AdminAchievements({ onBack }: { o
     const steps = groups.reduce((sum, group) => sum + group.steps.length, 0);
     const hidden = groups.filter((group) => group.ladder.hidden).length;
     const retired = groups.filter((group) => group.ladder.retired).length;
-    return { ladders: groups.length, steps, hidden, retired };
-  }, [groups]);
+    // Los DORMIDOS solo se pueden contar con muestra; sin ella, la casilla se calla (`null`) en vez de decir que
+    // están dormidos todos, que es lo que saldría de contar ceros.
+    const asleep = measured
+      ? groups.reduce(
+        (sum, group) => sum + group.steps.filter((def) => (measured.percent.get(def.id) ?? 0) === 0).length,
+        0,
+      )
+      : null;
+    return { ladders: groups.length, steps, hidden, retired, asleep };
+  }, [groups, measured]);
 
   const shown = useMemo(() => {
     const needle = query.trim().toLowerCase();
@@ -79,7 +105,12 @@ export const AdminAchievements = memo(function AdminAchievements({ onBack }: { o
           <div><dt>{A.totals.steps}</dt><dd>{totals.steps}</dd></div>
           <div><dt>{A.totals.hidden}</dt><dd>{totals.hidden}</dd></div>
           <div><dt>{A.totals.retired}</dt><dd>{totals.retired}</dd></div>
+          <div className={totals.asleep ? 'admin-total-flagged' : undefined}>
+            <dt>{A.asleepTotal}</dt><dd>{totals.asleep === null ? '—' : totals.asleep}</dd>
+          </div>
         </dl>
+
+        <p className="admin-card-note">{measured ? A.sampleNote(measured.sample) : A.noSample}</p>
 
         <div className="admin-ach-tools">
           <label className="admin-ach-filter">
@@ -129,15 +160,48 @@ export const AdminAchievements = memo(function AdminAchievements({ onBack }: { o
               <tr>
                 <th scope="col">{A.colStep}</th>
                 <th scope="col">{A.colName}</th>
+                <th scope="col">{A.colOffered}</th>
+                <th scope="col">{A.colReached}</th>
                 <th scope="col">{A.colGoal}</th>
                 <th scope="col">{A.colDone}</th>
               </tr>
             </thead>
             <tbody>
-              {steps.map((def) => (
+              {steps.map((def, index) => {
+                // OFRECIDO es del catálogo: un retirado sigue pintándose a quien lo tenga, pero ya no se propone.
+                const offered = !def.retired;
+                const percent = measured?.percent.get(def.id) ?? 0;
+                const holders = measured ? Math.round((percent / 100) * measured.sample) : 0;
+                const previous = index > 0 ? steps[index - 1] : null;
+                // EL HUECO sale de los umbrales, así que se ve SIN muestra: es lo que dice «entre el 100 y el 200
+                // hay un trayecto largo sin ninguna medalla». Solo hacia arriba: en una escalera descendente el
+                // cociente no significa lo mismo.
+                const factor = previous && !def.descending && previous.step > 0 ? def.step / previous.step : 0;
+                const gap = factor >= 2 ? factor.toFixed(factor % 1 === 0 ? 0 : 1) : '';
+                // LA CAÍDA necesita muestra: del escalón anterior a este se pierde a casi todo el mundo, que es
+                // el mismo síntoma medido en gente en vez de en umbrales.
+                const previousPercent = previous && measured ? (measured.percent.get(previous.id) ?? 0) : 0;
+                const cliff = Boolean(measured) && previousPercent >= 10 && percent * 4 <= previousPercent;
+                return (
                 <tr key={def.id}>
                   <td className="admin-ach-step">{def.step}</td>
                   <td>{def.labels.name}</td>
+                  <td className="admin-ach-offered">{offered ? A.offeredYes : A.offeredNo}</td>
+                  <td className="admin-ach-reached">
+                    {measured ? (
+                      <>
+                        <span className={percent === 0 ? 'admin-ach-warn-soft' : undefined}>
+                          {A.reached(percent, holders, measured.sample)}
+                        </span>
+                        {percent === 0 ? <small className="admin-ach-warn-soft">{A.asleep}</small> : null}
+                        {percent >= 90 ? <small className="admin-ach-warn-soft">{A.gift}</small> : null}
+                        {cliff ? <small className="admin-ach-warn">{A.cliff}</small> : null}
+                      </>
+                    ) : <span className="admin-ach-nodata">—</span>}
+                    {/* El hueco va aquí aunque no dependa de la muestra: es la misma pregunta —«¿falta un
+                        escalón entre estos dos?»— y separarlo en otra columna la partía en dos. */}
+                    {gap ? <small className="admin-ach-gap">{A.gap(gap)}</small> : null}
+                  </td>
                   <td>{def.labels.condition}</td>
                   <td>
                     {def.labels.done}
@@ -149,7 +213,8 @@ export const AdminAchievements = memo(function AdminAchievements({ onBack }: { o
                     ) : null}
                   </td>
                 </tr>
-              ))}
+                );
+              })}
             </tbody>
           </table>
         </div>
