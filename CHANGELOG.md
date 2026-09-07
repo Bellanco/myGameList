@@ -240,6 +240,42 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
     el texto se corrige pero la versión no sube y no se vuelve a pedir conformidad. El cupo diario no se menciona
     por lo mismo que el filtro de listas: cambia lo que ves tú, no lo que se publica de ti.
 
+### Changed
+
+- **La política de privacidad declara los logros, y `LEGAL_VERSION` sube a `2026-09-07`.** Desde esta versión el
+  espejo de logros viaja en el perfil público, así que el texto legal dice qué lleva —las medallas con el DÍA de
+  cada una, nunca la hora—, que se calculan sobre la biblioteca ENTERA (también las listas ocultas: cuentan
+  cuántos juegos hay, no cuáles, y de una lista oculta sigue sin salir ni un nombre) y que el dato lo puede leer
+  cualquier usuario con sesión, tenga o no amistad contigo: que la vitrina solo se PINTE a las amistades es
+  presentación, no privacidad. Al subir la versión aceptada, todo el mundo vuelve a pasar por la puerta del hub.
+  Era requisito de entrada de la fase 3 (§9 de `docs/plan-logros.md`), que es la que enciende la publicación.
+- **Dependencias de producción al día**, todas dentro de su rango: `firebase` 12.17.1 → 12.18.0, `zod` 4.4.3 →
+  4.5.4, `react-router-dom` 7.18.2 → 7.18.3 y `@tanstack/react-virtual` 3.14.9 → 3.14.11. Se anotan aquí porque
+  viajan en el bundle: la versión que hornea el build es la que etiqueta la telemetría, y sin este apunte los
+  errores de este despliegue se atribuirían al anterior.
+- El utillaje también sube: **Vitest 5** (con `@vitest/coverage-v8`) y **html-validate 11.14**, que es la primera
+  que admite Vitest 5. **ESLint 10 y TypeScript 7 se quedan fuera a propósito**: `eslint-plugin-jsx-a11y` y
+  `eslint-plugin-react` topan en ESLint 9 —con ellos `npm ci` no resuelve y el CI se cae en la instalación— y
+  `typescript-eslint` exige `typescript <6.1`, sin versión publicada, ni canary, que admita TypeScript 7.
+- Las acciones del CI pasan a las que corren sobre **Node 24** (`checkout@v7`, `setup-node@v7`, `setup-java@v6`,
+  `codecov-action@v7`): las `@v4` declaraban `node20` y el runner ya avisa de su retirada.
+
+### Tests
+
+- **La auditoría de accesibilidad se reparte entre los trabajadores.** Es un solo fichero con 84 casos —el 88 % del
+  tiempo de la suite— y sin `fullyParallel` iba en fila por un único trabajador, así que sobraban los demás: 94 s de
+  reloj para 106 s de trabajo. Repartida, la suite pasa de **94,8 s a 59,1 s** con los mismos dos trabajadores.
+  Cada caso estrena su contexto de navegador, de modo que repartirlos no comparte nada.
+- **El catálogo de logros del panel deja de agotar el temporizador.** Buscaba las 50 escaleras de una en una y cada
+  búsqueda recorre el documento entero: 740 ms de los 1.031 del test. De una pasada baja a 19 ms. Y el fichero
+  entero se mide con 20 s de margen en vez de 5: pinta 4.239 nodos en cada caso, así que con la máquina cargada el
+  límite de 5 s no medía la pantalla, medía la carga de la máquina —era lo que tumbaba media docena de casos sin
+  que nada estuviera roto—.
+- **El aviso se mide con la página arriba.** El recorrido puede desplazarse solo: el «Guardar» del editor queda a
+  unos 65 px del borde inferior y basta con que las fuentes del sistema midan un poco más —las del CI miden más que
+  las de macOS— para que haya que ir a por él. Eso no dice nada del aviso, cuyo `sticky` se lee del desplazamiento
+  del instante, así que se vuelve arriba antes de medir y se comprueba contra el `top` que tendría pegado.
+
 ## [1.0.6] - 2026-08-25
 
 > Esta sección era `[Unreleased]` y se cierra aquí. Las versiones 1.0.1–1.0.5 nunca tuvieron sección propia, así
