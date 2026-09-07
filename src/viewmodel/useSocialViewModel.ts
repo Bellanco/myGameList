@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { ensureSyncConfigLoaded, getSyncConfig } from '../model/repository/gistRepository';
+import { localWeekKey } from '../core/utils/dateTime';
 import { createSocialGist, getSocialSyncConfig, readPublicSocialGistById, readSocialGist, remapSocialActorIds, saveSocialSyncConfig, type SocialSharedGame, deleteGist, ensureSecretSocialGist, socialGistHasContent, writeSocialGist } from '../model/repository/socialGistRepository';
 import { reconcileReviewActivity } from '../model/repository/socialActivityReconcile';
 import { invalidateProfileGames, loadForeignProfileGames } from '../model/repository/foreignProfileRepository';
@@ -26,6 +27,7 @@ import {
   purgeOwnPublicGistIds,
   setPrivateConfig,
   healOwnFriendshipIdentity,
+  publishAchievementMirror,
   resolveOwnProfile,
   resolveStableProfileId,
   signInWithGoogle,
@@ -47,6 +49,15 @@ import { resolveGateway } from './social/socialGateway';
 import { useSocialFriendships } from './social/useSocialFriendships';
 import { loadLocalState } from '../model/repository/localRepository';
 import { matchSocialRoute, OWN_PROFILE_ALIAS } from './social/socialRoutes';
+import { ENABLE_ACHIEVEMENTS, ENABLE_ACHIEVEMENTS_PUBLISH } from '../core/achievements/flags';
+import { mergeForPublish, packAchievements } from '../core/achievements/pack';
+import { achievementsPublishedKey } from '../core/constants/storageKeys';
+import { useAchievements } from './useAchievements';
+
+/** Biblioteca vacía estable: el hub puede montarse sin `games` y un literal nuevo rompería el memo. */
+const EMPTY_LIBRARY = { c: [], v: [], e: [], p: [], deleted: [], updatedAt: 0 };
+
+/** Referencia estable: un `new Map()` inline rompería el memo del feed en cada render. */
 import { useSocialCompose } from './social/useSocialCompose';
 import { useSocialLegalConsent } from './social/useSocialLegalConsent';
 import { DEFAULT_SOCIAL_VISIBILITY, normalizeVisibility, useSocialProfileForm } from './social/useSocialProfileForm';
@@ -144,7 +155,7 @@ export function useSocialViewModel(options?: {
   const online = useOnlineStatus();
 
   const routeState = useMemo(() => matchSocialRoute(location.pathname), [location.pathname]);
-  const { activePanel, profileDetailId, profileReviewsView, profileReviewGameId, detailActorUid, detailGameId, detailEventType } = routeState;
+  const { activePanel, profileDetailId, profileReviewsView, profileAchievementsView, profileGlobalsView, profileReviewGameId, detailActorUid, detailGameId, detailEventType } = routeState;
 
 
   const [socialCfgGistId, setSocialCfgGistId] = useState<string>('');
@@ -168,6 +179,24 @@ export function useSocialViewModel(options?: {
   // Rango del PROPIO usuario: decide cada cuánto se rehidrata el feed (ver PROFILE_TIER_FEED_TTL_MS). Manda el de
   // quien mira porque las lecturas de gists ajenos van con SU token y cuentan contra SU rate-limit.
   const [ownTier, setOwnTier] = useState<ProfileTier>(DEFAULT_PROFILE_TIER);
+  /**
+   * Tu fecha de alta (ms), del documento de perfil. La necesitan «De la vieja escuela» y «Otro año más», que son
+   * los dos únicos logros del catálogo que miden algo que NO sale de tu biblioteca.
+   *
+   * Viaja con la misma lectura que el rango —una sola, ya cacheada 60 s por `getOwnProfileRef`— así que no cuesta
+   * ni una petición. 0 mientras no se sepa, que es lo que deja los dos logros sin conceder en vez de regalarlos.
+   */
+  const [ownProfileCreatedAt, setOwnProfileCreatedAt] = useState(0);
+  /**
+   * ¿Tiene esta cuenta un perfil PUBLICADO? Es decir, existe `profiles/{uid}` y su social está activo.
+   *
+   * No vale `ownProfileId` para esto, aunque lo parezca: ese id se SIEMBRA en local (`seedProfileIdFromRemote`)
+   * aunque no haya documento en Firestore, así que lo tiene también quien nunca abrió el social. Lo que sí lo
+   * garantiza es haber leído el documento.
+   */
+  const [ownProfilePublished, setOwnProfilePublished] = useState(false);
+  /** Tu espejo tal y como está PUBLICADO. Es el suelo de la próxima publicación: de ahí no se baja. */
+  const [ownPublishedMirror, setOwnPublishedMirror] = useState('');
   /**
    * ¿Se sabe ya el rango propio? `ownTier` arranca en bronce porque es el valor por defecto real, pero "bronce
    * porque aún no se ha leído el perfil" y "bronce porque ese es su rango" NO son lo mismo para el directorio: el
@@ -968,7 +997,131 @@ export function useSocialViewModel(options?: {
    * De paso deja de estar limitado a esas 300: un evento más antiguo que el corte no se podía abrir por URL.
    * Ante duplicados (posibles al fusionar dos gists sociales) sigue ganando el más reciente, como antes.
    */
-  const { feedItems, groupedFeedItems, hasMoreFeed, showMoreFeed } = useSocialFeed(socialDirectory);
+  /**
+   * TUS logros para el feed. Se empaquetan con la MISMA gramática que se publicaría (`packAchievements`) y se
+   * leen con el mismo parser, así que tu tarjeta y la de una amistad recorren exactamente el mismo camino: si
+   * algo se pinta mal en la tuya, se pintaría igual de mal en la suya, y eso se ve enseguida.
+   *
+   * Depende de `games`, que el hub ya recibe: no hay lectura nueva.
+   */
+  /**
+   * TUS logros, evaluados AQUÍ y no en la vista: los necesitan tres cosas del hub —tu tarjeta del feed, tu lista
+   * global y tu ficha— y evaluarlos en cada una sería recorrer la biblioteca tres veces por render.
+   */
+  /**
+   * Los contadores de logro que NO salen de la biblioteca (§7.1 del plan).
+   *
+   * Se calculan aquí y no en la pantalla porque es el hub el único sitio donde existen los tres, y hasta ahora no
+   * se pasaba ninguno: `useAchievements({ games })` los dejaba a cero para siempre, así que «Modo cooperativo»,
+   * «Charla de taberna» y «Partida en la nube» eran inalcanzables **y seguían contando en el denominador**. La
+   * cifra de la cabecera estaba mal para todo el mundo, y con un escalón por umbral el error se multiplicaba.
+   *
+   * Salen de lo que el hub YA tiene en memoria: ninguna lectura nueva.
+   */
+  const achievementCounters = useMemo(() => {
+    const own = rawSocialDirectory.find((entry) => isOwnProfileIdentity(entry.id, authUser?.uid, ownProfileId));
+    // SEMANAS DISTINTAS con publicación, no publicaciones: si midiera volumen, el premio sería llenar el feed
+    // ajeno. Cuentan las reseñas publicadas y los posts, que son las dos cosas que aparecen en el feed.
+    const weeks = new Set<string>();
+    for (const entry of [...(own?.activity || []), ...(own?.posts || [])]) {
+      const stamp = Number(entry.createdAt) || 0;
+      if (stamp > 0) weeks.add(localWeekKey(stamp));
+    }
+    return {
+      friends: friendUidSet.size,
+      postWeeks: weeks.size,
+      // Tu fecha de alta, del documento de perfil (`profiles/{uid}.createdAt`). Es lo que hace verificables «De
+      // la vieja escuela» y «Otro año más»: la sella el SERVIDOR al crear el perfil y las reglas la declaran
+      // inmutable, así que no se puede adelantar desde el cliente. 0 mientras no se haya leído —o en un perfil
+      // anterior a que existiera la marca—, y entonces los dos logros no se conceden, que es el lado correcto.
+      profileCreatedAt: ownProfileCreatedAt,
+      hasSync: Boolean(mainSyncConfig?.gistId),
+    };
+  }, [rawSocialDirectory, authUser?.uid, ownProfileId, friendUidSet, mainSyncConfig?.gistId, ownProfileCreatedAt]);
+
+  const ownAchievements = useAchievements({ games: options?.games || EMPTY_LIBRARY, ...achievementCounters });
+  const ownAchievementStates = ENABLE_ACHIEVEMENTS ? ownAchievements.states : null;
+
+  const ownAchievementsFeed = useMemo(() => {
+    if (!ENABLE_ACHIEVEMENTS || !ownAchievementStates) return undefined;
+    return {
+      profileId: ownProfileId || OWN_PROFILE_ALIAS,
+      displayName: socialDisplayName || '',
+      photoURL: authUser?.photoURL || '',
+      mirror: packAchievements(ownAchievementStates),
+    };
+  }, [ownAchievementStates, ownProfileId, socialDisplayName, authUser?.photoURL]);
+
+  /**
+   * TU espejo, el mismo que va al feed.
+   *
+   * Se expone porque el hub lo necesita para pintar TU ficha de logros: `detailMirror` lo busca en el directorio
+   * filtrado, y ese excluye tu entrada por identidad (es lo que impide que te salgas a ti mismo en la lista de
+   * gente). Sin esto, abrir tu propia tarjeta del feed llevaba a una pantalla que decía «todavía no hay nada que
+   * contar» con cien medallas detrás — y en desarrollo ni se veía, porque la siembra te fabricaba uno falso.
+   */
+  const ownAchievementMirror = ownAchievementsFeed?.mirror || '';
+
+  /**
+   * F3 — PUBLICA TU ESPEJO, que es lo que hace que tus logros existan para los demás.
+   *
+   * DETRÁS DE `ENABLE_ACHIEVEMENTS_PUBLISH`, que es lo ÚNICO que hay que tocar para encender la función: la
+   * constante es `false` y el empaquetador se lleva por delante todo este bloque, así que hasta que se ponga a
+   * `true` no viaja ni una línea de esto ni se escribe nada en `profiles`.
+   *
+   * SOLO SI EL PERFIL ESTÁ PUBLICADO, y la señal es haber LEÍDO el documento (`ownProfilePublished`), no tener
+   * un `ownProfileId`: ese id se siembra en local aunque no exista documento, así que lo tiene también quien
+   * nunca abrió el social. Con la guarda floja, un `merge` sobre ese uid habría CREADO el perfil — publicarle
+   * una presencia a quien no la ha pedido. Y de paso es la guarda honesta: la regla de lectura de `profiles`
+   * exige `social.enabled == true`, así que un espejo escrito fuera de ahí no lo podría leer nadie.
+   *
+   * SOLO SI HA CAMBIADO. El espejo se recalcula en cada render del hub y es idéntico casi siempre; sin esta
+   * guarda, abrir el hub sería una escritura en Firestore por sesión y por dispositivo para no decir nada nuevo.
+   * Lo último publicado se recuerda por dispositivo (`achievementsPublishedKey`): perderlo solo cuesta una
+   * escritura de más, así que no hace falta que viaje a ningún sitio.
+   *
+   * Best-effort y en silencio: si falla, se reintenta en la sesión siguiente y mientras tanto tus amistades ven
+   * tu vitrina un poco desactualizada. No hay nada que contarle al usuario sobre esto.
+   */
+  useEffect(() => {
+    if (!ENABLE_ACHIEVEMENTS || !ENABLE_ACHIEVEMENTS_PUBLISH) return;
+    const uid = authUser?.uid;
+    // CON ALGO CONSEGUIDO, y se comprueba sobre los estados y NO sobre la cadena: un espejo sin un solo logro no
+    // es la cadena vacía, son 45 caracteres de ceros (`2:AAAA…`), así que un `if (!mirror)` lo daba por bueno y
+    // le escribía una vitrina vacía en Firestore a cada usuario nuevo del social. No hay nada que enseñar hasta
+    // que caiga el primero.
+    if (!uid || !ownProfilePublished) return;
+    if (!ownAchievementStates?.some((state) => state.level >= 1)) return;
+
+    // LA UNIÓN, no el reemplazo: lo que ya está publicado es el suelo. Sin esto, abrir la app en un aparato con
+    // la biblioteca a medio sincronizar le borra medallas a tu vitrina (ver `mergeForPublish`).
+    const mirror = mergeForPublish(ownPublishedMirror, ownAchievementStates);
+    const key = achievementsPublishedKey(uid);
+    let published = '';
+    try {
+      published = localStorage.getItem(key) || '';
+    } catch {
+      // Sin almacenamiento se publica siempre: es una escritura de más, no un fallo.
+    }
+    if (published === mirror) return;
+
+    void publishAchievementMirror(uid, mirror)
+      .then(() => {
+        try {
+          localStorage.setItem(key, mirror);
+        } catch {
+          // Publicado igualmente; solo se perdió el recordatorio de que ya se hizo.
+        }
+      })
+      .catch((error) => {
+        console.warn('[social] no se pudo publicar el espejo de logros:', error instanceof Error ? error.message : error);
+      });
+  }, [authUser?.uid, ownProfilePublished, ownPublishedMirror, ownAchievementStates]);
+
+  const { feedItems, groupedFeedItems, hasMoreFeed, showMoreFeed } = useSocialFeed(
+    socialDirectory,
+    ownAchievementsFeed,
+  );
 
   const activeDetailEvent = useMemo(() => {
     if (activePanel !== 'detail' || !detailActorUid || detailGameId <= 0 || !detailEventType) {
@@ -1059,6 +1212,18 @@ export function useSocialViewModel(options?: {
   }, [navigate]);
   const openProfileReviewDetail = useCallback((profileId: string, gameId: number) => {
     void navigate(`/social/profiles/${encodeURIComponent(profileId)}/game/${gameId}/review`);
+  }, [navigate]);
+
+  // Logros de ese perfil: mismo par abrir/cerrar que las reseñas, y por el mismo motivo —es una vista del mismo
+  // perfil, no otra pantalla—, así que el botón de atrás del navegador se comporta igual en las dos.
+  const openProfileAchievements = useCallback((profileId: string) => {
+    void navigate(`/social/profiles/${encodeURIComponent(profileId)}/logros`);
+  }, [navigate]);
+  const closeProfileAchievements = useCallback((profileId: string) => {
+    void navigate(`/social/profiles/${encodeURIComponent(profileId)}`);
+  }, [navigate]);
+  const openProfileGlobals = useCallback((profileId: string) => {
+    void navigate(`/social/profiles/${encodeURIComponent(profileId)}/globales`);
   }, [navigate]);
 
   // Abre el DETALLE del perfil propio (vista pública con sus listados), no el editor. Si aún no existe entrada
@@ -1560,13 +1725,21 @@ export function useSocialViewModel(options?: {
   useEffect(() => {
     if (!authUser?.uid) {
       setOwnTier(DEFAULT_PROFILE_TIER);
+      setOwnProfileCreatedAt(0);
+      setOwnProfilePublished(false);
+      setOwnPublishedMirror('');
       setTierResolved(false);
       return;
     }
     let cancelled = false;
     void resolveOwnProfile(authUser)
       .then((profile) => {
-        if (!cancelled) setOwnTier(profile?.tier || DEFAULT_PROFILE_TIER);
+        if (cancelled) return;
+        setOwnTier(profile?.tier || DEFAULT_PROFILE_TIER);
+        // De paso, la fecha de alta y si el perfil está publicado: es el mismo documento y la misma lectura.
+        setOwnProfileCreatedAt(profile?.createdAt || 0);
+        setOwnProfilePublished(Boolean(profile?.socialEnabled));
+        setOwnPublishedMirror(profile?.achievementsMirror || '');
       })
       .catch(() => {
         /* sin rango conocido → bronce */
@@ -2076,9 +2249,16 @@ export function useSocialViewModel(options?: {
     selectedProfileDetail,
     profileDetailId,
     profileReviewsView,
+    profileAchievementsView,
+    profileGlobalsView,
+    ownAchievements,
+    ownAchievementMirror,
     activeProfileReview,
     openProfileReviews,
     closeProfileReviews,
+    openProfileAchievements,
+    closeProfileAchievements,
+    openProfileGlobals,
     openProfileReviewDetail,
     refreshProfileDetail,
     loadingForeignProfile,

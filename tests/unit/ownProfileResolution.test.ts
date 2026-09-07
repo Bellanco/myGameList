@@ -67,6 +67,39 @@ describe('getOwnProfileRef — perfil propio por uid', () => {
     expect(getDocsMock).not.toHaveBeenCalled();
   });
 
+  /**
+   * LA FECHA DE ALTA, que es lo que hace VERIFICABLES «De la vieja escuela» y «Otro año más»: la sella el
+   * servidor al crear el perfil y las reglas la declaran inmutable, así que no se puede adelantar desde el
+   * cliente. No se mapeaba, y por eso esos dos logros —13 escalones— estaban a cero para todo el mundo mientras
+   * seguían contando en el denominador de la cabecera.
+   *
+   * Se admiten las DOS formas por el mismo motivo que las reglas: las escrituras actuales usan
+   * `serverTimestamp()` (que se lee como `Timestamp`) y los documentos anteriores llevan milisegundos.
+   */
+  it('mapea `createdAt` venga como Timestamp o como número', async () => {
+    getDocMock.mockResolvedValueOnce(docSnapshot('uid-1', {
+      ...PROFILE_DATA,
+      createdAt: { toMillis: () => 1735689600000 },
+    }));
+    expect((await getOwnProfileRef('uid-1'))?.createdAt).toBe(1735689600000);
+
+    invalidateOwnProfileCache();
+    getDocMock.mockResolvedValueOnce(docSnapshot('uid-1', { ...PROFILE_DATA, createdAt: 1700000000000 }));
+    expect((await getOwnProfileRef('uid-1'))?.createdAt).toBe(1700000000000);
+  });
+
+  /**
+   * SIN FECHA, CERO Y NO UNA INVENTADA. Un perfil anterior a que existiera la marca no tiene antigüedad que
+   * demostrar, y el cero deja los dos logros SIN conceder — que es el lado correcto de equivocarse.
+   */
+  it('sin `createdAt` legible se queda en 0, en vez de improvisar una antigüedad', async () => {
+    for (const raw of [undefined, null, 'ayer', 0, -1, {}]) {
+      invalidateOwnProfileCache();
+      getDocMock.mockResolvedValueOnce(docSnapshot('uid-1', { ...PROFILE_DATA, createdAt: raw }));
+      expect((await getOwnProfileRef('uid-1'))?.createdAt, String(raw)).toBe(0);
+    }
+  });
+
   it('cachea el resultado: dos lecturas seguidas hacen UNA sola lectura de red', async () => {
     getDocMock.mockResolvedValueOnce(docSnapshot('uid-1', PROFILE_DATA));
 

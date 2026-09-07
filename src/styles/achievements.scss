@@ -1,0 +1,501 @@
+// Medalla de logro · forma, señales y escalas (docs/plan-logros.md §8.5)
+//
+// DESTINO: src/styles/achievements.scss — HOJA PROPIA, importada desde el
+// componente de la medalla y NUNCA colgada de stats.scss ni de social.scss.
+// Las medallas se pintan en dos chunks perezosos distintos (/perfil/logros y
+// la ficha del hub); colgarlas de cualquiera de los dos deja la otra pantalla
+// sin estilos y SIN QUE SALTE NINGÚN ERROR. Es el fallo mudo del §12.
+//
+// TRES SEÑALES, TRES CANALES:
+//   · aura exterior   → la RAREZA (escala de loot de RPG)
+//   · temple del filo → el TRAMO de la escalera: cobre, plata, oro
+//   · píldora del canto → LA CIFRA del escalón («×100»), sin unidad y salvo en sm
+// El disco es redondo y el dibujo va centrado, sin tocar ninguna de las tres.
+//
+// DEPENDE de los tokens --ach-* de abajo y del degradado #ach-lux, que vive en
+// el sprite porque un `stroke` sólo referencia gradientes del documento.
+// ⚑ REVISIÓN 6-sep-2026 — clases con prefijo `ach-` (una hoja global con `.medal` o `.num` se pisa con otro
+//   chunk), tokens `--text`/`--text-muted` (no `--ink`, que no existe en `_base.scss`) y pila mono del sistema
+//   con `tabular-nums` en vez de pedirle a la red una fuente nueva desde un chunk perezoso.
+//
+// ⚑ REVISIÓN — EL CUADRO SE VA, ENTRA EL DISCO. Lo que había era una escena plana de cinco tonos pasada por un
+//   filtro de óleo (`#imp`: dos turbulencias, desenfoque y relieve iluminado) dentro de un cuadrado, con el
+//   grado en un triángulo. Se cambian tres cosas y cada una por una razón medida:
+//     1. La forma: disco. El filo continuo es lo que permite que el grado se lea a 28 px.
+//     2. El dibujo: trazos de Lucide (ver `AchievementSprite`) pintados a tres pasadas, en vez de 50 escenas
+//        dibujadas a mano. El sprite baja de ~40 kB a ~16 kB y un logro nuevo cuesta pegar un icono.
+//     3. El grado: temple del filo en vez de numeral romano. El romano no sobrevivía a la tira; el filo sí.
+//
+// ── Paleta de la penumbra ────────────────────────────────────────────────
+// Mundo propio, y esta vez EL MISMO EN LOS DOS TEMAS. Una medalla es un objeto, no cromo de la app: si la
+// penumbra se aclarase en tema claro dejaría de ser penumbra, que es justo lo que la hace legible. Los tres
+// pardos son el fondo —foco arriba a la izquierda, sombra abajo a la derecha— y el oro vive en el degradado
+// `#ach-lux` del sprite, porque un `stroke` sólo puede referenciar un gradiente del documento.
+:root {
+  --ach-gnd-1: #33240f;
+  --ach-gnd-2: #170f08;
+  --ach-gnd-3: #090705;
+  --ach-edge: rgba(206, 158, 74, .32);
+  // Pila del sistema: el umbral solo necesita cifras de ancho fijo, no una fuente propia.
+  --ach-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+}
+
+// ── La medalla ───────────────────────────────────────────────────────────
+/* UN DISCO EN PENUMBRA. Redondo y no cuadrado porque el disco es lo que dice «medalla» sin decir nada más, y
+   porque el filo —que es donde vive el temple— necesita ser una línea continua para leerse a 28 px.
+
+   TRES SEÑALES, TRES CANALES:
+     · AURA exterior  → la rareza (escala de loot de RPG)
+     · TEMPLE del filo → el tramo de la escalera: cobre, plata, oro
+     · PÍLDORA del canto → la cifra del escalón, montada en el borde de abajo
+   El dibujo va en el centro y no lo toca ninguna de las tres. ──────────── */
+.ach-medal {
+  --edge: var(--ach-edge);
+  --g1: transparent; --g2: transparent;
+  position: relative;
+  display: block;
+  width: var(--sz); height: var(--sz);
+  border-radius: 50%;
+  flex: none;
+  background: radial-gradient(72% 66% at 27% 17%, var(--ach-gnd-1) 0%, var(--ach-gnd-2) 46%, var(--ach-gnd-3) 78%);
+  // EL ORDEN DE LOS ANILLOS ES LA MITAD DEL DISEÑO. Aura y temple son dos señales distintas y las dos viven en
+  // el borde, así que sin un canto negro entre medias se leen como una sola: a 48 px el filo desaparecía bajo el
+  // anillo de rareza. De fuera adentro: halo difuso, anillo de rareza, canto negro, filo del temple, cuerpo.
+  box-shadow:
+    inset 0 0 0 max(1px, calc(var(--sz) * .022)) rgba(4, 3, 2, .92),
+    inset 0 0 0 max(2px, calc(var(--sz) * .058)) var(--edge),
+    inset 0 calc(var(--sz) * -.05) calc(var(--sz) * .1) rgba(0, 0, 0, .8),
+    inset 0 calc(var(--sz) * .03) calc(var(--sz) * .07) rgba(255, 214, 140, .1),
+    0 1px 2px rgba(6, 5, 4, .45),
+    0 0 0 max(2px, calc(var(--sz) * .022)) var(--g1),
+    0 0 calc(var(--sz) * .16) calc(var(--sz) * .02) var(--g2);
+}
+.ach-medal .ach-canvas { position: absolute; inset: 0; border-radius: 50%; overflow: hidden; }
+
+/* EL DIBUJO · tres pasadas del mismo trazo, que es todo el relieve que hay.
+   Las unidades de `transform` y `stroke-width` son del viewBox 24, no píxeles de pantalla: así el relieve
+   encoge con el disco en vez de comerse el dibujo en la tira de 28 px. */
+.ach-medal .ach-art {
+  position: absolute; left: 50%; top: 45%;
+  width: 54%; height: 54%;
+  transform: translate(-50%, -50%);
+  display: block;
+  filter: drop-shadow(0 0 calc(var(--sz) * .05) rgba(232, 173, 61, .3));
+}
+.ach-medal .ach-art g { fill: none; stroke-linecap: round; stroke-linejoin: round; }
+.ach-medal .ach-art .ach-sh { stroke: rgba(0, 0, 0, .85); stroke-width: 2.6; transform: translate(.5px, .7px); }
+.ach-medal .ach-art .ach-fg { stroke: url(#ach-lux); stroke-width: 1.9; }
+.ach-medal .ach-art .ach-hl { stroke: rgba(255, 235, 196, .55); stroke-width: .75; transform: translate(-.3px, -.4px); }
+
+/* grano de lienzo */
+.ach-medal .ach-grain {
+  position: absolute; inset: 0; pointer-events: none; border-radius: 50%;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 30%;
+  mix-blend-mode: overlay;
+  opacity: .2;
+}
+/* el foco: cálido arriba a la izquierda, sombra cerrada abajo a la derecha */
+.ach-medal .ach-light {
+  position: absolute; inset: 0; pointer-events: none; border-radius: 50%;
+  background:
+    radial-gradient(64% 58% at 26% 12%, rgba(255, 226, 164, .34), rgba(255, 226, 164, 0) 62%),
+    radial-gradient(112% 108% at 76% 96%, rgba(3, 2, 1, .8), rgba(3, 2, 1, .2) 54%, rgba(3, 2, 1, 0) 76%);
+}
+
+/* EL TEMPLE · la aleación del filo, y nada más.
+   Sólo el filo: los cuatro metales del rango de perfil (`_tiers.scss`) viven en la misma tarjeta del hub, y
+   teñir el cuerpo del disco pondría dos escalas de metal a dos centímetros la una de la otra. */
+.ach-medal.is-temple-1 { --edge: rgba(184, 118, 54, .72); }
+.ach-medal.is-temple-2 { --edge: rgba(202, 210, 222, .62); }
+.ach-medal.is-temple-3 { --edge: rgba(244, 200, 96, .82); }
+
+/* LA PÍLDORA · la cifra del escalón, montada en el canto de abajo.
+   Ahí y no dentro por una razón de tamaño: a 48 px una pastilla centrada tapa el dibujo y en la esquina se sale
+   por la curva del disco. Cruzando el borde se apoya en el filo, respeta el dibujo entero y se lleva por delante
+   sólo un arco del temple, que da la vuelta completa y no lo echa en falta.
+
+   El tipo NO escala del todo con el disco: `max()` le pone un suelo de 9 px, que es donde una cifra deja de
+   leerse. Por eso tampoco se pinta en `sm` — ver `AchievementMedal`. */
+.ach-medal .ach-step {
+  position: absolute; z-index: 6;
+  left: 50%; bottom: -3%;
+  transform: translateX(-50%);
+  padding: 2px 5px 3px;
+  border-radius: 999px;
+  background: rgba(10, 8, 5, .92);
+  box-shadow: inset 0 0 0 1px rgba(232, 190, 120, .34), 0 1px 2px rgba(0, 0, 0, .5);
+  color: #f8eeda;
+  font-family: var(--ach-mono); font-weight: 600; font-variant-numeric: tabular-nums;
+  font-size: max(9px, calc(var(--sz) * .17));
+  line-height: 1; letter-spacing: .01em; white-space: nowrap;
+}
+// El bloqueado la conserva —ahí la cifra es el objetivo— y la dice en peltre, como el filo.
+.ach-medal.is-locked .ach-step {
+  color: rgba(214, 218, 226, .72);
+  background: rgba(12, 13, 16, .92);
+  box-shadow: inset 0 0 0 1px rgba(150, 162, 178, .3), 0 1px 2px rgba(0, 0, 0, .5);
+}
+
+/* RAREZA · el aura. La escala de loot de cualquier RPG, saltándose el azul
+   porque el azul es el acento de la app y sale por todas partes. */
+.ach-medal.is-comun       { --g1: rgba(150, 162, 178, .30); --g2: rgba(150, 162, 178, .16); }
+.ach-medal.is-infrecuente { --g1: rgba( 63, 190, 114, .48); --g2: rgba( 63, 190, 114, .34); }
+.ach-medal.is-raro        { --g1: rgba(168,  85, 247, .55); --g2: rgba(168,  85, 247, .42); }
+.ach-medal.is-excepcional { --g1: rgba(255, 140,  26, .62); --g2: rgba(255, 140,  26, .50); }
+
+// EL BLOQUEADO SE VE. Sin temple —no hay escalón que enseñar— y sin oro, pero con su dibujo legible: es lo ÚNICO
+// que dice de qué va un logro que aún no tienes. Se apaga el oro y se quita la chispa, que es lo que lo hacía
+// parecer conseguido; el trazo se queda en gris de peltre sobre la misma penumbra.
+.ach-medal.is-locked { --edge: rgba(150, 162, 178, .2); --g1: rgba(150, 162, 178, .22); --g2: rgba(150, 162, 178, .10); }
+// El bloqueado conserva la GRADACIÓN del temple y pierde el METAL: mismo escalonado, en peltre.
+.ach-medal.is-locked.is-temple-1 { --edge: rgba(150, 162, 178, .16); }
+.ach-medal.is-locked.is-temple-2 { --edge: rgba(150, 162, 178, .28); }
+.ach-medal.is-locked.is-temple-3 { --edge: rgba(150, 162, 178, .42); }
+.ach-medal.is-locked .ach-art { filter: none; }
+.ach-medal.is-locked .ach-art .ach-fg { stroke: rgba(186, 190, 198, .62); }
+.ach-medal.is-locked .ach-art .ach-hl { display: none; }
+.ach-medal.is-locked .ach-light { opacity: .55; }
+.ach-medal.is-hidden .ach-art { display: none; }
+.ach-medal.is-hidden .ach-canvas::after {
+  content: "?";
+  position: absolute; inset: 0;
+  display: grid; place-items: center;
+  font-weight: 900;
+  font-size: calc(var(--sz) * .38); color: rgba(238, 206, 150, .3);
+}
+
+
+// ── Chip de rareza, para listados en texto ───────────────────────────────
+// ── Chip de rareza · el punto lleva el color, el texto no ────────────────
+// LO IMPORTANTE ESTÁ EN EL COLOR DEL PUNTO Y NO EN EL DEL TEXTO, y no es una preferencia: los cuatro colores de
+// la escala de loot están pensados para el AURA —un halo alrededor de un cuadro, donde la 1.4.11 pide 3:1— y como
+// texto de 11 px se quedan cortos frente al 4,5:1 que pide la 1.4.3. El morado del raro daba 3,07:1 sobre la
+// superficie del panel, y la auditoría de axe lo cazó en las doce combinaciones de paleta y tema.
+//
+// Así el color sigue diciendo la rareza —de un vistazo, con la misma escala que el aura— y el texto la dice con
+// palabras y con contraste de sobra. Que la palabra esté escrita es además lo que impide que el color sea la
+// única señal.
+.ach-rarity, .ach-row-rarity {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-family: var(--ach-mono); font-size: 11px;
+  letter-spacing: .04em; text-transform: uppercase; color: var(--text-muted); white-space: nowrap;
+}
+.ach-rarity::before, .ach-row-rarity::before {
+  content: ""; flex: none; width: 8px; height: 8px; border-radius: 50%;
+  background: var(--rc); box-shadow: 0 0 6px var(--rc);
+}
+.ach-rarity[data-r="comun"],       .ach-row-rarity[data-r="comun"]       { --rc: #96a2b2; }
+.ach-rarity[data-r="infrecuente"], .ach-row-rarity[data-r="infrecuente"] { --rc: #3fbe72; }
+// Lo raro y lo excepcional PESAN, y eso se dice con el texto —a `--text` y en negrita— no subiéndole el color.
+.ach-rarity[data-r="raro"],        .ach-row-rarity[data-r="raro"]        { --rc: #a855f7; color: var(--text); font-weight: 700; }
+.ach-rarity[data-r="excepcional"], .ach-row-rarity[data-r="excepcional"] { --rc: #ff8c1a; color: var(--text); font-weight: 700; }
+
+// ── Coste de pintado · el fallback plano ─────────────────────────────────
+// El acabado ya no es un filtro rasterizado por elemento —eso se fue con los cuadros al óleo—, pero sigue
+// habiendo tres pasadas del trazo, un grano y un `drop-shadow` por medalla, y en la rejilla de /perfil/logros
+// son más de cien a la vez. Quien apaga los efectos se lleva el disco liso: una sola pasada de oro sobre la
+// penumbra, que se lee igual de bien. Es el mismo interruptor que ya gobierna el destello del desbloqueo (§7.4),
+// no uno nuevo.
+:root[data-effects='off'] .ach-medal .ach-art { filter: none; }
+:root[data-effects='off'] .ach-medal .ach-art .ach-sh,
+:root[data-effects='off'] .ach-medal .ach-art .ach-hl { display: none; }
+:root[data-effects='off'] .ach-medal .ach-grain,
+:root[data-effects='off'] .ach-medal .ach-light { display: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  .ach-medal .ach-grain { opacity: .12; }
+}
+
+
+// ── LA TIRA · solo imagen, el nombre al pasar por encima ─────────────────
+// El rótulo NO es un `title` de HTML: ese no sale con teclado, no sale en táctil y los lectores de pantalla lo
+// tratan de forma desigual. Es un elemento propio que aparece en `:hover` Y en `:focus-visible`, para que llegue
+// igual por teclado; el nombre accesible completo lo lleva la medalla (`aria-label`).
+.ach-strip { display: flex; flex-wrap: wrap; gap: 8px; list-style: none; margin: 0; padding: 0; }
+.ach-strip[data-size="sm"] { gap: 6px; }
+.ach-strip-item { display: block; }
+.ach-strip-btn {
+  position: relative; display: block; padding: 0; border: 0; background: none;
+  cursor: pointer; line-height: 0; border-radius: 4px;
+}
+.ach-strip-tip {
+  position: absolute; left: 50%; bottom: calc(100% + 8px); transform: translateX(-50%);
+  background: var(--surface-elevated, var(--surface)); color: var(--text);
+  border: 1px solid var(--border, rgba(255,255,255,.14));
+  font-size: 12px; line-height: 1.3; white-space: nowrap;
+  padding: 4px 8px; border-radius: var(--radius-sm);
+  box-shadow: var(--shadow); pointer-events: none; z-index: 3;
+  opacity: 0; visibility: hidden; transition: opacity .12s ease;
+}
+.ach-strip-btn:hover .ach-strip-tip,
+.ach-strip-btn:focus-visible .ach-strip-tip { opacity: 1; visibility: visible; }
+@media (prefers-reduced-motion: reduce) { .ach-strip-tip { transition: none; } }
+// EL «+N» ES UNA MEDALLA MÁS, no una nota al margen. Mismo disco, mismo tamaño y mismo sitio en la fila: lo que
+// cuenta son medallas, así que tiene que pesar lo mismo que ellas o la fila se descuadra al final. Sin aura y
+// sin temple —no es un logro— pero con la misma penumbra y el mismo filo apagado.
+.ach-strip-more {
+  display: grid; place-items: center;
+  width: var(--sz); height: var(--sz);
+  border-radius: 50%;
+  background: radial-gradient(72% 66% at 27% 17%, #241a0d 0%, #140e07 46%, #090705 78%);
+  box-shadow:
+    inset 0 0 0 max(1px, calc(var(--sz) * .022)) rgba(4, 3, 2, .92),
+    inset 0 0 0 max(2px, calc(var(--sz) * .05)) rgba(206, 158, 74, .22);
+  color: rgba(238, 206, 150, .82);
+  font-family: var(--ach-mono); font-weight: 600; font-variant-numeric: tabular-nums;
+  font-size: max(10px, calc(var(--sz) * .3));
+  line-height: 1;
+}
+
+// ── LA CIFRA ─────────────────────────────────────────────────────────────
+// En plural cuando había dos (fracción y nivel de perfil); hoy solo está la fracción, y el contenedor se queda
+// porque el nivel volverá a su lado en cuanto se decida cómo se presenta.
+//
+// LA FIGURA OCUPA EL ANCHO Y LA BARRA TAMBIÉN. Era una columna de `min-width: 8.5em` con todo dentro, así que la
+// barra medía 130 px y a su derecha quedaba media tarjeta vacía —el hueco se veía especialmente en el panel, que
+// es ancho—. Ahora es una rejilla de dos columnas: la cifra a la izquierda, el «% del catálogo» al otro extremo
+// de su misma línea base, y la barra cruzando las dos de lado a lado.
+//
+// Y la barra gana con ello más de lo que parece: un 48 % en 130 px es un muñón que no se lee; en el ancho de la
+// tarjeta es una escala en la que se ve dónde estás.
+.ach-figures { display: flex; flex-wrap: wrap; gap: 12px 28px; margin: 14px 0 0; }
+.ach-figure {
+  margin: 0;
+  flex: 1 1 auto;
+  min-width: 0;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: baseline;
+  column-gap: 16px;
+  row-gap: 2px;
+}
+.ach-figure-label {
+  grid-column: 1 / -1;
+  font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--text-muted);
+}
+.ach-figure-value { font-size: 30px; line-height: 1; font-weight: 700; font-variant-numeric: tabular-nums; }
+// Al otro extremo de la línea de la cifra: es su unidad, y ahí sujeta el ancho en vez de dejarlo caer.
+.ach-figure-hint { justify-self: end; text-align: right; font-size: 12.5px; color: var(--text-muted); }
+.ach-figure-bar {
+  grid-column: 1 / -1;
+  display: block; height: 6px; margin-top: 10px; border-radius: 3px;
+  background: var(--score-track, rgba(255,255,255,.10)); overflow: hidden;
+}
+.ach-figure-bar i { display: block; height: 100%; width: var(--pct, 0%); background: var(--accent, var(--steam)); }
+
+// ── EL LISTADO · imagen, nombre, descripción y día (la forma de Steam) ───
+// Un listado y no una rejilla: con casi cuarenta entradas, la rejilla obliga a recortar la descripción o a
+// esconderla en un globo, y la descripción ES el contrato del logro (el nombre solo es un guiño).
+//
+// EL ARMAZÓN NO ESTÁ AQUÍ. La pantalla usa el de las demás —`hub-screen`, su tarjeta y su cabecera— igual que
+// `StatsReviews` para tus reseñas: esta pantalla se abre desde el panel y desde el hub, y un armazón propio se
+// notaría justo en la que existe para no notarse. Aquí solo va lo que es de los logros.
+.ach-screen .ach-figures { margin-bottom: 22px; }
+.ach-group + .ach-group { margin-top: 26px; }
+.ach-group h3 {
+  font-size: 13px; letter-spacing: .06em; text-transform: uppercase;
+  color: var(--text-muted); margin: 0 0 6px; font-weight: 700;
+}
+// Las filas SE SEPARAN, no se apilan pegadas. En la vista global cada conseguido lleva su recuadro, y dos
+// seguidos compartían línea: los dos bordes se tocaban y se leían como una caja única de dos pisos en vez de
+// como dos logros. La separación es lo que hace que cada recuadro se cierre sobre lo suyo.
+.ach-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+
+// LA GEOMETRÍA ES LA MISMA EN LAS DOS VISTAS —tus logros y los globales—: mismo alto, mismo aire, mismas
+// columnas. Lo único que cambia entre ellas es lo que cada una tiene que decir (la fecha frente al recuadro y el
+// relleno del porcentaje), y eso vive abajo, en `.is-global`. Sin esta base compartida eran dos maquetaciones
+// que había que mantener a la par a mano, y ya habían empezado a separarse.
+.ach-row {
+  display: grid; gap: 4px 16px; padding: 9px 12px;
+  border-radius: var(--radius-sm);
+  // El filete separador sobra desde que hay hueco entre filas: con los dos, cada fila queda encajonada.
+  border-bottom: 1px solid transparent;
+  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-areas: "medal body" ". meta";
+  align-items: start;
+  // LA VISTA GLOBAL PINTA EL CATÁLOGO ENTERO: 251 filas, cada una con su medalla, y cada medalla con un filtro
+  // de turbulencia y relieve. Con 32 logros eso no se notaba; con 251 son 251 filtros compuestos en el primer
+  // pintado. `content-visibility` deja que el navegador se salte el layout y el pintado de lo que está fuera de
+  // la ventana —el contenido sigue en el DOM, accesible y localizable con la búsqueda del navegador— y el
+  // tamaño reservado evita que la barra de scroll dé saltos al acercarse.
+  content-visibility: auto;
+  contain-intrinsic-size: auto 74px;
+}
+@media (min-width: 700px) {
+  .ach-row {
+    grid-template-columns: auto minmax(0, 1fr) max-content;
+    grid-template-areas: "medal body meta";
+  }
+}
+.ach-row > .ach-medal { grid-area: medal; }
+.ach-row-body { grid-area: body; min-width: 0; }
+.ach-row-meta { grid-area: meta; display: flex; flex-direction: column; gap: 2px; }
+@media (min-width: 700px) { .ach-row-meta { align-items: flex-end; text-align: right; } }
+
+.ach-row-name { margin: 0; font-weight: 700; font-size: 16px; line-height: 1.25; }
+.ach-row-condition { margin: 2px 0 0; color: var(--text-muted); font-size: 14.5px; line-height: 1.35; }
+.ach-row-progress { margin: 7px 0 0; display: flex; align-items: center; gap: 9px; }
+.ach-row-bar {
+  flex: 1; height: 4px; border-radius: 2px;
+  background: var(--score-track, rgba(255,255,255,.10)); overflow: hidden;
+}
+.ach-row-bar i { display: block; height: 100%; width: var(--pct, 0%); background: var(--text-dim); }
+.ach-row-progress-text { font-size: 12.5px; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+
+.ach-row-date { font-size: 13px; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+// El porcentaje medido NUNCA se dice sin su denominador: sin él es lo único de esta pantalla que se puede leer
+// como una afirmación global, y no lo es (§6.6bis).
+.ach-row-share { font-size: 12px; color: var(--text-dim); font-variant-numeric: tabular-nums; }
+
+// Bloqueado: la misma forma desaturada, NO un hueco. Y la desaturación no es la única señal —es color puro—,
+// así que el estado va también en el texto de la fila y en el nombre accesible.
+.ach-row.is-locked .ach-row-name { color: var(--text-muted); }
+
+.ach-empty { color: var(--text-muted); }
+.ach-empty strong { display: block; color: var(--text); font-size: 17px; margin-bottom: 4px; }
+
+// ── EL APARTADO DEL PANEL ────────────────────────────────────────────────
+// La tira pinta TODAS las medallas y se reparte el ancho sola: es lo que la persona viene a mirar, y un «+16»
+// escondía justo eso para ahorrar un espacio que la rejilla ya sabe repartir.
+// LA TIRA DEL PANEL SE ESTIRA AL ANCHO. En `flex` las medallas se apelotonaban a la izquierda y sobraba media
+// baldosa larga a la derecha —el apartado del panel es ancho y el número de medallas es fijo, así que el sobrante
+// dependía de la pantalla—. Con `auto-fit` + `1fr` las columnas vacías se colapsan y las que hay reparten el
+// ancho entero: la fila llega de canto a canto tenga las medallas que tenga, y al envolver las de abajo caen en
+// las mismas columnas que las de arriba en vez de amontonarse.
+//
+// Sólo aquí: en la ficha del hub la tira es corta y va centrada bajo el nombre, y estirarla la desmontaría.
+.ach-card .ach-strip {
+  margin-top: 16px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(48px, 1fr));
+  justify-items: center;
+  gap: 10px 8px;
+}
+
+// ── LA TIRA EN LA FICHA · debajo del nombre ──────────────────────────────
+// El hero ya es una columna centrada (avatar, nombre), así que la tira cae bajo el nombre sola: aquí solo se le
+// da aire y se centra su contenido, para que una fila de tres medallas no quede pegada al margen izquierdo.
+.hub-profile-achievements { margin-top: 8px; width: 100%; }
+.hub-profile-achievements .ach-strip { justify-content: center; }
+
+// ── LA TARJETA DE LOGROS EN EL FEED ──────────────────────────────────────
+// Una entrada por persona y DÍA, con todos sus logros de ese día dentro. Las medallas las pinta la MISMA tira
+// que va bajo el nombre en la ficha; aquí son decorativas, porque la pulsable es la tarjeta entera.
+//
+// LA FILA SE LEE DE FUERA HACIA DENTRO: avatar, frase, medallas. Es la forma que tienen Steam y el feed de Xbox
+// de contar lo mismo, y funciona porque las tres piezas contestan a tres preguntas distintas en el orden en que
+// se hacen —quién, qué, cuáles— sin que ninguna tenga que leerse para entender la siguiente.
+//
+// Antes la medalla iba INCRUSTADA en la frase cuando había una sola («Ada Ha conseguido [medalla] Informe
+// forense I») y bajaba a una tira propia cuando había varias. Se cambia porque esas dos formas obligaban a leer
+// la tarjeta de dos maneras distintas según un dato —cuántos logros hizo esa persona ese día— que no tiene nada
+// que ver con cómo se lee. Ahora la medalla está SIEMPRE en el mismo sitio, tenga uno o nueve.
+// `flex-direction: row` VA EXPLÍCITO y no se puede quitar: `.hub-feed-card` es `column`, y sin esta línea la
+// tarjeta se apila —avatar arriba, texto en medio, medallas abajo— y además el `flex-basis` del cuerpo pasa a
+// ser ALTO, que es lo que la estiraba a 160 px de nada. Una entrada de feed es una línea, no un cartel.
+.hub-feed-card.is-achievements {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding-block: .6rem;
+}
+.hub-feed-ach-body { display: flex; flex-direction: column; gap: 8px; min-width: 0; flex: 1 1 10rem; }
+.hub-feed-ach-line { margin: 0; }
+.hub-feed-ach-name { font-weight: 700; }
+
+// EL CANTO CONTRARIO AL AVATAR. `margin-left: auto` las empuja al final de la fila; con `flex-wrap` en la
+// tarjeta, en un móvil estrecho caen a la línea de abajo y siguen alineadas a la derecha, que es lo que hace que
+// la burbuja no se descuadre.
+//
+// `nowrap` en la tira: aquí no debe envolver nunca. Si no caben, para eso está el «+N» del tope de cinco.
+.hub-feed-ach-medals { margin-left: auto; flex: none; }
+.hub-feed-ach-medals .ach-strip { flex-wrap: nowrap; justify-content: flex-end; }
+
+// ── LOGROS GLOBALES · el catálogo por lo común que es cada logro ─────────
+// El RECUADRO marca lo conseguido, como en la pantalla de logros globales de Steam en móvil. Y no es la única
+// señal: el texto de la derecha lo dice con palabras, porque un recuadro es forma y color, y en una lista de
+// cuarenta filas casi idénticas eso no basta.
+// Lo ÚNICO propio de la vista global es lo que dice de más: el relleno del porcentaje y el recuadro de lo
+// conseguido. La forma de la fila ya viene de `.ach-row`.
+// Un poco más de aire entre las globales: ahí cada fila es una caja con su borde y su relleno, y con el hueco
+// justo del listado normal los recuadros de dos conseguidos seguidos quedaban a un pelo el uno del otro.
+.ach-list:has(.ach-row.is-global) { gap: 14px; }
+
+// Y el ancho de la barra de progreso, igual en las dos: es el mismo dato dicho en el mismo sitio.
+.ach-row-bar { max-width: 140px; }
+.ach-row.is-global.is-owned {
+  outline: 2px solid var(--accent, var(--steam));
+  outline-offset: -2px;
+  background: color-mix(in srgb, var(--accent, var(--steam)) 8%, transparent);
+}
+// Lo que NO se tiene se apaga, pero se sigue leyendo: es el hueco lo que da sentido a la lista.
+.ach-row.is-global:not(.is-owned) .ach-row-name { color: var(--text-muted); }
+.ach-row-owned {
+  font-size: 11px; letter-spacing: .06em; text-transform: uppercase;
+  color: var(--text-dim); white-space: nowrap;
+}
+.ach-row.is-global.is-owned .ach-row-owned { color: var(--accent, var(--steam)); font-weight: 700; }
+// El porcentaje es la columna que ordena la lista, así que aquí manda sobre la rareza declarada.
+.ach-row.is-global .ach-row-share { font-size: 14px; color: var(--text); font-weight: 600; }
+.ach-row.is-global .ach-row-rarity { order: 3; }
+
+
+// ── EL RELLENO DE LA FILA GLOBAL ─────────────────────────────────────────
+// La lista está ordenada por lo común que es cada logro, así que el fondo se llena con ese mismo porcentaje: el
+// orden deja de ser algo que hay que leer y pasa a verse, con la escalera bajando de arriba abajo.
+//
+// SUTIL A PROPÓSITO. Es el dato de fondo y no el contenido: si compitiera con el nombre y la descripción, la
+// lista se leería como un gráfico de barras con texto encima. Va en un pseudo-elemento y no en un degradado del
+// propio fondo para que el recuadro de lo conseguido —que sí tiene que verse— siga mandando encima.
+.ach-row.is-global { position: relative; isolation: isolate; }
+.ach-row.is-global::before {
+  content: ""; position: absolute; inset: 0; z-index: -1;
+  width: var(--fill, 0%);
+  // 2,5 %: lo justo para que el escalón se intuya al recorrer la lista. Es el dato de FONDO —la lista ya está
+  // ordenada por esa cifra y cada fila la dice con números—, así que su trabajo es acompañar, no informar. A 4 %
+  // (y antes a 7 %) la pantalla se leía como un gráfico de barras con texto encima.
+  background: color-mix(in srgb, var(--text) 2.5%, transparent);
+  border-radius: inherit;
+  pointer-events: none;
+}
+// En lo conseguido el relleno se tiñe del acento, para que el recuadro y la barra cuenten lo mismo.
+.ach-row.is-global.is-owned::before { background: color-mix(in srgb, var(--accent, var(--steam)) 5%, transparent); }
+
+
+
+// La medalla decorativa de la tarjeta del feed: sin control y sin parada de tabulador, pero el rótulo sigue
+// saliendo al pasar por encima. La pulsable ahí es la TARJETA entera.
+.ach-strip-btn.is-static { cursor: inherit; }
+
+// ── LA BALDOSA FINAL DE LA TIRA ──────────────────────────────────────────
+// Del tamaño exacto de una medalla y en su misma fila: es el acceso al listado puesto donde la vista lo pide, en
+// vez de un enlace pequeño debajo que en la ficha de una amistad ni siquiera existía. Cuando hay medallas fuera
+// del corte lleva su cuenta («+7»), que antes era un texto suelto sin destino.
+//
+// SE VE COMO UN HUECO Y NO COMO UNA MEDALLA, a propósito: si se pareciera a un logro, se leería como uno más.
+.ach-strip-all {
+  display: grid; place-items: center;
+  width: var(--sz); height: var(--sz);
+  padding: 0; border-radius: 50%;
+  // La MISMA penumbra que la medalla y que el «+N»: en una fila de discos oscuros, una baldosa clara se lee como
+  // un hueco. Lo que la separa de un logro es el borde DISCONTINUO —«aquí hay más, y esto se pulsa»—, no el
+  // color, que es lo que la ataba al resto de la fila.
+  background: radial-gradient(72% 66% at 27% 17%, #241a0d 0%, #140e07 46%, #090705 78%);
+  border: 1px dashed rgba(206, 158, 74, .34);
+  color: rgba(238, 206, 150, .82);
+  cursor: pointer;
+  transition: background .15s ease, color .15s ease, border-color .15s ease;
+}
+.ach-strip-all:hover, .ach-strip-all:focus-visible {
+  border-color: rgba(240, 196, 96, .7);
+  color: #f8eeda;
+}
+.ach-strip-all-count {
+  font-size: calc(var(--sz) * .3); font-weight: 700;
+  font-variant-numeric: tabular-nums; line-height: 1;
+}
+.ach-strip-all .ui-icon { width: calc(var(--sz) * .42); height: calc(var(--sz) * .42); }
+@media (prefers-reduced-motion: reduce) { .ach-strip-all { transition: none; } }

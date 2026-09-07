@@ -55,7 +55,35 @@
 .header-actions .btn:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(var(--steam-rgb),.15); }
 
 /* Status */
-.status-banner { max-width: 1800px; margin: .9rem auto 0; padding: 0 1.2rem; flex: 0 0 auto; width: 100%; }
+/* EL AVISO SE QUEDA A LA VISTA MIENTRAS DURA.
+   ─────────────────────────────────────────────────────────────────────────────
+   Vivía en el flujo, arriba del todo y sin `position`, así que un aviso disparado con la lista desplazada nacía
+   FUERA DE LA PANTALLA: medido, `top: -1708` en un Pixel 8 y `top: -1166` en escritorio. Se anunciaba por la
+   región viva —eso siempre funcionó, ver `StatusBanner`— pero quien mira no veía nada, y con 36 fichas en la
+   lista basta con editar algo de la mitad para caer en ello.
+
+   IMPORTA MÁS DESDE QUE HAY LOGROS. El §7.4 existe para que el desbloqueo se cuente EN EL INSTANTE, y su propio
+   texto describe el fallo que quiere evitar: «el logro aparece callado tres días después. Técnicamente correcto y
+   emocionalmente nulo». Un aviso que salta donde no se ve deja exactamente ese resultado.
+
+   `sticky` Y NO `fixed`: sin desplazar no cambia nada —el aviso sigue bajo la cabecera, en su sitio de siempre— y
+   solo se pega cuando el flujo se lo llevaría por arriba. Y no hace falta retirarlo a mano: el aviso ya se apaga
+   solo por temporizador (`useGameListViewModel`).
+
+   NO LLEVA FONDO PROPIO. La tarjeta de dentro ya es opaca (`--surface`, filete y sombra) y el contenido pasa por
+   detrás, que es el mismo recurso de `.hub-feed-day-header`. Pintar aquí una banda de `--bg` taparía la trama que
+   varias paletas dibujan en el `body` (la rejilla de Portal, el barrido de Cyberpunk).
+
+   z-index 90: por encima del contenido y POR DEBAJO de todo lo que debe seguir mandando — la cabecera (100), el
+   botón flotante (110), la barra inferior (120), el aviso de consentimiento (130) y los modales (500). */
+.status-banner {
+  max-width: 1800px; margin: .9rem auto 0; padding: 0 1.2rem; flex: 0 0 auto; width: 100%;
+  position: sticky;
+  /* Con `top: 0` la tarjeta queda a ras del borde de la pantalla: el navegador ancla la caja de borde y se come
+     el `.9rem` que tiene en el flujo. Medio rem le devuelve el aire sin gastar alto en un móvil. */
+  top: .5rem;
+  z-index: 90;
+}
 
 .status-banner > div {
   border: 1px solid var(--border); border-left-width: 4px;

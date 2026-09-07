@@ -14,6 +14,10 @@ export interface SocialRouteState {
   profileDetailId: string;
   /** ¿Se está en la pestaña de reseñas de ese perfil? */
   profileReviewsView: boolean;
+  /** ¿Se está en el listado de LOGROS de ese perfil? Mismo patrón que las reseñas y por el mismo motivo. */
+  profileAchievementsView: boolean;
+  /** ¿Y en el catálogo GLOBAL ordenado por rareza, con recuadro en lo que ese perfil tiene? */
+  profileGlobalsView: boolean;
   profileReviewGameId: number;
   detailActorUid: string;
   detailGameId: number;
@@ -26,6 +30,10 @@ export const SOCIAL_ROUTES = {
   requests: '/social/requests',
   profileDetail: '/social/profiles/:profileId',
   profileReviews: '/social/profiles/:profileId/reviews',
+  // El listado de logros de esa persona. Sub-ruta del hub y no de primer nivel (a diferencia de `/logros`, que es
+  // el tuyo): sin el perfil delante, la dirección no diría de quién son.
+  profileAchievements: '/social/profiles/:profileId/logros',
+  profileGlobals: '/social/profiles/:profileId/globales',
   profileReview: '/social/profiles/:profileId/game/:gameId/review',
   activityDetail: '/social/user/:userId/game/:gameId/:eventType',
 } as const;
@@ -34,6 +42,8 @@ const EMPTY: SocialRouteState = {
   activePanel: 'feed',
   profileDetailId: '',
   profileReviewsView: false,
+  profileAchievementsView: false,
+  profileGlobalsView: false,
   profileReviewGameId: 0,
   detailActorUid: '',
   detailGameId: 0,
@@ -95,6 +105,26 @@ export function matchSocialRoute(pathname: string): SocialRouteState {
       activePanel: 'profile-review',
       profileDetailId: decodeParam(review.params.profileId),
       profileReviewGameId: toGameId(review.params.gameId),
+    };
+  }
+
+  const globals = matchPath(SOCIAL_ROUTES.profileGlobals, pathname);
+  if (globals) {
+    return {
+      ...EMPTY,
+      activePanel: 'profile-detail',
+      profileDetailId: decodeParam(globals.params.profileId),
+      profileGlobalsView: true,
+    };
+  }
+
+  const achievements = matchPath(SOCIAL_ROUTES.profileAchievements, pathname);
+  if (achievements) {
+    return {
+      ...EMPTY,
+      activePanel: 'profile-detail',
+      profileDetailId: decodeParam(achievements.params.profileId),
+      profileAchievementsView: true,
     };
   }
 

@@ -151,7 +151,27 @@ function mapProfileReference(id: string, data: Record<string, unknown>): SocialP
     socialEnabled: Boolean(social.enabled),
     // Rango: lo asigna el admin y el dueño no puede tocarlo. Del PROPIO perfil sale la cadencia del feed.
     tier: normalizeTier(data.tier),
+    createdAt: profileCreatedAtMillis(data.createdAt),
+    achievementsMirror: String((data.achievements as { list?: unknown } | undefined)?.list || ''),
   };
+}
+
+/**
+ * `createdAt` en milisegundos, venga como venga. Las escrituras actuales usan `serverTimestamp()` —que se lee como
+ * `Timestamp`— y los documentos anteriores llevan un número; las reglas admiten los dos a propósito, así que el
+ * mapeo tiene que admitirlos también. Cualquier otra cosa vale 0, que es «no se sabe» y deja los dos logros que
+ * dependen de esto sin conceder, en vez de inventarse una antigüedad.
+ */
+function profileCreatedAtMillis(raw: unknown): number {
+  if (typeof raw === 'number') return Number.isFinite(raw) && raw > 0 ? raw : 0;
+  const millis = (raw as { toMillis?: () => number } | null)?.toMillis;
+  if (typeof millis !== 'function') return 0;
+  try {
+    const value = millis.call(raw);
+    return Number.isFinite(value) && value > 0 ? value : 0;
+  } catch {
+    return 0;
+  }
 }
 
 /**

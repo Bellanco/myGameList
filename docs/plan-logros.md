@@ -9,6 +9,18 @@
 > real del código (las líneas citadas pueden haberse movido) y actualiza este `.md`. Trátalo como código: se
 > revisa con la implementación.
 
+> 🔎 **Revisado contra el código el 6-sep-2026** (rama `develop`). Todo lo que el documento afirmaba del
+> repositorio se ha comprobado símbolo a símbolo y **se sostiene**; lo que no se sostenía está corregido en el
+> sitio donde se decía. Lo que cambió de verdad son cinco cosas, y las cinco están marcadas con **⚑ revisión**
+> allí donde viven: el opt-out necesita una clave en las reglas de `publicConfig` que el plan no pedía (§8.3),
+> los *primeros pasos* **no puntúan** (§6.10.2), las metas abiertas y los repetibles **se declaran** en el
+> catálogo (§5.1), F5 no puede leer la línea base de la caché del directorio (§8.4), y **cuatro métricas están
+> mal definidas y darían falsos positivos** (§7.5). El resto son números y nombres que habían quedado atrás.
+>
+> Se planteó además filtrar el espejo por los ajustes de visibilidad del dueño y **se decidió que no**: un logro
+> publica una magnitud, no un dato. El razonamiento y lo único que sí obliga —una frase en la política de
+> privacidad— están en el **§5.3bis**.
+
 ## Decisiones tomadas
 
 | Decisión | Valor |
@@ -21,7 +33,9 @@
 | Escalonado | Cada logro tiene niveles; los hay **abiertos** (sin techo) y **repetibles por año natural** (§6.3) |
 | Un logro nunca se retira | Marca de agua: lo conseguido no se pierde aunque la biblioteca encoja (§5.5) |
 | Visibilidad | Los ve **toda amistad**, con **interruptor de opt-out** del dueño (§8.3). Sin puertas por rango |
+| Ajustes de visibilidad | **No alcanzan al espejo**, y es una decisión, no un olvido: un logro publica una magnitud, no un dato (§5.3bis) |
 | Comparación entre usuarios | **Ni ranking, ni listas ordenadas, ni «tú 12 – él 30» en la misma vista**, ni contadores de visitas (§6.10.4) |
+| Porcentaje por logro | **Sí, medido y a la vista, como en Steam** («lo tiene el 14 % · 6 de 43»). Se enseña; no decide nada (§6.6bis) |
 | Porcentaje y nivel | **Se ven también en la ficha ajena**, como en Steam y PSN. Los **deriva el que lee** del espejo: no se publica ni un byte más (§6.10) |
 | Aviso a las amistades | Sí, en el feed, pero **deducido al leer** (§8.4): no publica ni un byte nuevo |
 | Recompensa | **Solo cosmética**: temas desbloqueables (§6.5), estrenando **«Casa de Hades»** con «New Game +». Ninguna funcionalidad depende de un logro (§4) |
@@ -31,6 +45,8 @@
 | Puntos del nivel | Por **rareza**, escala suave 5 / 10 / 25 / 60 por nivel alcanzado (§6.10.2) |
 | Nombres | **Con guiño a juegos concretos**, los seis temas incluidos; la descripción siempre dice la condición (§6.11) |
 | Medalla | **Cuadrada, esquinas redondeadas**, icono propio por logro en sprite perezoso (§8.5) |
+| Superficies, en detalle | Apartado en `/perfil` bajo «Lo mejor de tu biblioteca» · tira **solo-imagen** bajo el nombre en la ficha · listado estilo Steam en `/logros` (§8.1, §8.1b, §8.2) |
+| El feed | Una entrada **por persona y día**, con todos sus logros dentro; sin filtro de rareza (§8.4) |
 | El momento | El desbloqueo se dice **cuando ocurre**, en la región viva que ya existe (§7.4) |
 
 **Lo que NO se hace:** no se escribe nada en los gists (ni el de juegos ni el social); no se añade ningún campo a
@@ -176,8 +192,13 @@ Guardarlos en Firestore es la decisión correcta, pero conviene ser exacto con l
 - **Forma y tamaño.** La allowlist `hasOnly` de `profileWriteIsValid()` impide inventarse campos, y un tope de
   bytes impide que alguien infle lo que se descarga el directorio entero (§9.2).
 - **Rastro.** El panel `/admin` ya lee estos documentos: un blob manipulado es visible y sancionable.
-- **Coherencia.** Todo el mundo ve lo mismo que ve el dueño, incluso lo que se calcula con sellos privados que
-  nunca salen del aparato (`enteredAt`) o de listas que el dueño esconde.
+- **Coherencia de cálculo.** Todo el mundo ve el mismo número, porque lo calcula un solo sitio (el dueño) a
+  partir de sellos privados que nunca salen del aparato (`enteredAt`). Nadie tiene que rehacer la cuenta con
+  datos peores.
+
+- **Coherencia de alcance.** El espejo se calcula sobre la biblioteca **entera**, incluidas las listas que el
+  dueño esconde y las horas que no publica. No es un descuido: es lo que hace que el número signifique algo. Lo
+  que sostiene esa decisión —y por qué no choca con los ajustes de visibilidad— está en el **§5.3bis**.
 
 **Lo que NO garantiza, y no puede:**
 
@@ -225,9 +246,39 @@ export interface AchievementDef {
    * Slug de LO QUE SE MIDE, no el nombre visible: el nombre se puede retocar y este no (§6.4).
    */
   id: string;                       // p. ej. 'completados', 'constancia', 'fichas-completas'
-  family: 'mirror' | 'data' | 'social';
-  /** Umbrales de cada nivel, ascendentes. El último puede ser abierto (§6.3). */
+  /**
+   * ⚑ Revisión: cinco valores, no tres. El catálogo real (§6.9) tiene además los **repetibles por año natural**
+   * (§6.3) y los **primeros pasos** (§6.2), y los dos se comportan distinto —los anuales crecen sin techo, los
+   * primeros pasos ni se publican ni puntúan (§6.10.2)—, así que no pueden colarse dentro de `mirror`.
+   *
+   * Y `hidden` NO es una familia, es un estado previo al desbloqueo (§6.7): «Tesis doctoral» es de familia
+   * `data` y está oculto. Meterlo aquí como sexto valor rompería el agrupado por familia del §8.1 (una sección
+   * «ocultos» con nombre revela justo lo que se tapaba) y el filtro del feed del §8.4.
+   */
+  family: 'mirror' | 'data' | 'social' | 'annual' | 'onboarding';
+  /** Umbrales de cada nivel, ascendentes. Es el catálogo CERRADO: lo abierto se declara en `open`/`annual`. */
   steps: readonly number[];
+  /**
+   * ⚑ Revisión: **meta abierta** (§6.3). Pasado el último `steps`, cada `every` más suma un nivel. Sin este
+   * campo la meta abierta no existía en ninguna parte: ni el tipo ni `catalogo.json` decían qué logros la
+   * tienen ni con qué paso, y el lector defensivo del §9.3 —que recorta «al máximo definido por el
+   * catálogo»— no tenía máximo que aplicar, así que o clavaba el nivel en `steps.length` (matando la meta
+   * abierta) o no recortaba nada (matando la defensa).
+   *
+   * `cap` es ese máximo: el nivel más alto que este logro puede alcanzar nunca. No es un techo de producto —a
+   * los ritmos del §6.9 nadie lo roza— es la cota que el parser necesita para poder decir «esto es falso».
+   */
+  open?: { every: number; cap: number };
+  /**
+   * ⚑ Revisión: **repetible por año natural** (§6.3). El nivel es cuántos años se ha cumplido, así que crece
+   * solo con el calendario y `steps` no lo puede describir. `cap` acota igual que arriba: el año de estreno del
+   * catálogo más los años transcurridos, que es lo máximo que alguien puede haber cumplido de verdad.
+   *
+   * Deshace de paso la contradicción del §6.9 —«un excepcional tiene como mucho dos niveles»— con `ano-redondo`,
+   * que es excepcional y anual: la regla de los dos niveles es sobre `steps`, y un anual no tiene escalera de
+   * umbrales que estirar.
+   */
+  annual?: { since: number; cap: number };
   /** Métrica que se compara con los umbrales, y de dónde sale su fecha. */
   metric: (input: AchievementInput) => AchievementMeasure;
   /** Textos: nombre por nivel, qué mide y cómo se dice en el perfil de otra persona. */
@@ -235,7 +286,7 @@ export interface AchievementDef {
   icon: IconName;
   /** Cuánto pesa la medalla. Curado a mano; NO se mide sobre otros usuarios (§6.6). */
   rarity: 'comun' | 'infrecuente' | 'raro' | 'excepcional';
-  /** Nombre y condición tapados hasta el nivel 1. Solo familia `mirror` (§6.7). */
+  /** Nombre y condición tapados hasta el nivel 1. Estado, no familia; ver §6.7 para qué puede ser oculto. */
   hidden?: true;
   /** Retirado: no se ofrece, pero se sigue pintando a quien ya lo tenga (§6.4). */
   retired?: true;
@@ -246,7 +297,14 @@ export interface AchievementDef {
 /** Lo que devuelve una métrica: cuánto llevas y CUÁNDO alcanzaste cada umbral. */
 export interface AchievementMeasure {
   value: number;
-  /** Instante en que se alcanzó cada umbral, mismo índice que `steps`; 0 = alcanzado sin fecha deducible. */
+  /**
+   * Instante en que se alcanzó cada NIVEL, empezando por el 1. Índice `n-1` = nivel `n`; 0 = alcanzado sin
+   * fecha deducible.
+   *
+   * ⚑ Revisión: decía «mismo índice que `steps`», y con las metas abiertas y los repetibles eso no puede ser:
+   * `completados` admite el nivel 7 y `steps` solo tiene cuatro entradas. El array es tan largo como niveles
+   * haya alcanzado la métrica, y el evaluador no supone que mida `steps.length`.
+   */
   at: number[];
 }
 ```
@@ -281,6 +339,11 @@ export interface AchievementSummary {
 
 ### 5.3 El espejo (Firestore, `profiles/{uid}.achievements`)
 
+> ⚑ **La gramática de esta sección es la versión 1 y ya no se escribe.** Con un logro por escalón (§6.3bis) el
+> espejo es un **mapa de bits**; lo que sigue explica el porqué del canal —una cadena, no un array de mapas; día
+> y no instante; recorte por prioridad— y todo eso sigue en pie. Lo que cambió es la codificación, y está en la
+> cabecera de `core/achievements/pack.ts`.
+
 ```ts
 {
   v: 1,                 // versión del formato de empaquetado
@@ -304,8 +367,10 @@ tres; el que lea aplica ese tope aunque lleguen más. **Solo se publican los log
 progreso hacia lo que no se tiene no sale del aparato (§3). Los de la familia *primeros pasos* **no se publican
 nunca** (§6.2).
 
-**Qué se recorta cuando no cabe.** El tope de 1 kB (§9.2) da para ~70 logros y el catálogo previsto no llega,
-pero un plan que no dice qué hacer al desbordar acaba truncando por donde caiga el corte —que es el orden de
+**Qué se recorta cuando no cabe.** ⚑ El tope de 1 kB (§9.2) da para **~54 logros** con los `id` reales —no los
+~70 que suponía este párrafo estimando 14 bytes por entrada, cuando una completa son 20 (§9.2)— y los 32 de hoy
+ocupan 608 bytes en el peor caso, así que no llega. Pero un plan que no dice qué hacer al desbordar acaba
+truncando por donde caiga el corte —que es el orden de
 declaración del catálogo, o sea, ninguno—. La regla: se publica **primero lo destacado, luego lo más raro y a más
 nivel** (§6.6), y se corta la cola. Nunca al revés: si algo se pierde, que sea lo que menos dice de esa persona.
 El que lee **no sabe que hubo recorte** y no debe intentar deducirlo: una vitrina es siempre una selección.
@@ -314,6 +379,85 @@ El que lee **no sabe que hubo recorte** y no debe intentar deducirlo: una vitrin
 justo el dato que `applyProfileVisibility` borra de los listados que baja una amistad. El día basta para pintar
 «conseguido en marzo de 2026».
 
+### 5.3bis Los ajustes de visibilidad NO filtran el espejo, y por qué
+
+**La pregunta se hace sola en cuanto se mira la lista de logros:** si alguien esconde Abandonados, ¿debería seguir
+publicando «Retirada táctica III»? ¿Y quien esconde sus horas, «Un verano entero»? La respuesta es **sí**, y
+conviene dejar escrito el razonamiento, porque el reflejo contrario —filtrar por si acaso— parece lo prudente y
+no lo es.
+
+**Un logro no muestra información: muestra una magnitud.** Lo que `applyProfileVisibility` protege son **datos**:
+qué juegos hay en esa lista, cómo se llaman, qué nota tienen, cuántas horas les echaste, cuándo los moviste. Nada
+de eso sale al espejo. Lo que sale es «este señor ha abandonado más de sesenta juegos anotando por qué» — el
+orden de magnitud de una conducta, sin una sola fila de la lista que la produce. Son dos cosas distintas y
+mezclarlas confunde una vitrina con una filtración.
+
+**Y la asimetría lo confirma.** Una lista oculta lo está para que nadie hurgue en ella; un logro derivado de ella
+no permite hurgar nada: no se puede ir hacia atrás desde «60 abandonos» a ningún juego concreto. La operación es
+irreversible por construcción, igual que el porcentaje del §6.10 no permite reconstruir qué logros lo componen.
+
+**Lo que esto sí obliga**, y va como requisito de F3 y no como nota al pie: **decirlo en la política de
+privacidad** (§10). El texto vigente promete «si eliges ocultar tus horas, no las ve nadie» y «esconder una lista
+esconde también su actividad», y las dos frases siguen siendo verdad —nadie ve tus horas ni la entrada de un
+juego a una lista oculta— pero un lector cuidadoso puede leer «Un verano entero III» y preguntarse dónde encaja.
+La frase que lo cierra es una: **los logros se calculan sobre tu biblioteca entera y publican solo su nivel, sin
+ningún dato de los juegos que los producen**. Sin ella, la decisión es correcta y parece un descuido.
+
+> **Y la salida, para quien no la quiera, ya existe y es mejor que un filtro por lista:** el interruptor del §8.3,
+> que **borra el campo entero** del perfil público. Todo o nada es la forma honesta de un opt-out —un filtro
+> parcial deja al dueño creyendo que publica menos de lo que publica— y además evita el desfase de cifras del
+> §6.10.3, que un filtro por lista habría introducido para siempre.
+
+### 5.3ter ⚑ Inventario de campos: qué hay que tocar y qué no
+
+La afirmación central del plan es que esto **no añade nada al gist de juegos ni al canal social**. Se ha
+comprobado métrica a métrica contra los tipos reales y **se sostiene**. Aquí está el inventario entero, para que
+la próxima vez no haya que rehacerlo.
+
+**Lo que NO se toca. Ni un campo.**
+
+| Canal | Veredicto |
+|---|---|
+| `GameItem` (gist de juegos) | **Nada.** Las 32 métricas se derivan de lo que ya hay: `genres`, `platforms`, `steamDeck`, `review`, `grade`/`score`, `years`, `strengths`, `weaknesses`, `reasons`, `hours`, `scored`, `listedAt`, `reviewedAt`, `enteredAt`, `gradedAt` |
+| `SocialSharedGame` / `PublicGame` (proyección pública) | **Nada.** Ningún logro se calcula sobre lo que se publica de un juego |
+| `SocialGistData` (gist social) | **Nada.** `conversador` lee el gist **propio**, que su dueño ya tiene bajado: `posts[].createdAt` y `activity[].createdAt` (§7.5) |
+| `friendships/{docId}` | **Nada.** `amistades` cuenta `MyFriendships`, que el hub ya carga |
+| `SocialMoveEntry` (F4) | **Nada.** Los logros de trayecto salen de `enteredAt` en local, no de la proyección |
+
+**Lo que sí, y dónde.**
+
+| Sitio | Campo | Fase | Nota |
+|---|---|---|---|
+| `profiles/{uid}` | `achievements: { v, at, list }` | F3 | El único campo nuevo de todo el evolutivo en un canal compartido. Con su regla y su tope (§9.2) |
+| `publicConfig/{uid}` | `showAchievements: boolean` | F3 | Y sus **cuatro** piezas, no una (§8.3) |
+| `LocalMeta` | `achievementsPublished`, `achievementsSeen`, `achievementsSeenAt`, `achievementsPeak` | F2–F3 | Estado de dispositivo, nunca sube (§5.4) |
+| `LocalMeta` | `achievementsPeerSeen` | F5 | Línea base del feed (§8.4) |
+| `LocalMeta` | `rouletteUsedAt?: number` | F6 | ⚑ Ver abajo: es el único dato que hoy **no existe en ninguna parte** |
+
+**⚑ El único agujero de datos de todo el plan, y es diminuto: la ruleta no deja rastro.**
+
+Los seis *primeros pasos* se dan por derivables, y cinco lo son:
+
+| Logro | De dónde sale hoy |
+|---|---|
+| `paso-primer-juego` | Cualquier lista con algo dentro |
+| `paso-resena` | Algún `review` no vacío |
+| `paso-nota` | Algún `grade` puesto |
+| `paso-sync` | `LocalMeta.gamesGistId` no vacío |
+| `paso-tema` | `palettePreference.get() !== DEFAULT_PALETTE` — y si vuelve a «Clásico», la marca de agua (§5.5) lo conserva, que es justo para lo que está |
+| **`paso-ruleta`** | **Nada.** `core/roulette/roulette.ts` es una función pura: tira, devuelve un juego y no persiste ni un byte |
+
+Así que F6 necesita **un sello local**, `rouletteUsedAt`, escrito la primera vez que se abre la ruleta. Va en
+`LocalMeta` como todo lo demás —no sube, no se publica, no entra en el espejo (los *primeros pasos* no se
+publican nunca, §5.3)— y es la excepción que confirma la regla: **el único dato que este evolutivo tiene que
+empezar a registrar en vez de derivar**, y es un número que solo se escribe una vez, en el aparato, para un logro
+que nadie más ve. Con eso, el §1 sigue en pie sin asteriscos.
+
+> La alternativa era quitar `paso-ruleta` del catálogo, como se hizo con el logro de enlaces compartidos (§6.2).
+> No aplica: aquel se cayó porque **no convergía entre dispositivos** y su cifra habría dicho cosas distintas en
+> el móvil y en el portátil. Este no tiene ese problema —es de un solo nivel, no se publica, y lo peor que pasa
+> es que quien estrene un segundo aparato tenga que tirar la ruleta otra vez para verlo—, así que se queda.
+
 ### 5.4 Lo local (`LocalMeta`, nunca sube)
 
 ```ts
@@ -321,10 +465,18 @@ achievementsPublished?: string;  // último `list` ya escrito en Firestore: evit
 achievementsSeen?: string;       // lo que el dueño ya ha visto: alimenta el aviso de «nuevos» (§7.3)
 achievementsSeenAt?: number;
 achievementsPeak?: string;       // marca de agua: el nivel más alto alcanzado por cada logro (§5.5)
+achievementsPeerSeen?: Record<string, string>; // ⚑ último espejo visto de cada amistad: la línea base de F5 (§8.4)
 ```
 
+⚑ **`achievementsPeerSeen` es nuevo y no es un lujo:** el §8.4 daba por hecho que la línea base para deducir las
+novedades de una amistad se saca de la caché del directorio, y no se puede. El porqué está allí; lo que hay que
+saber aquí es que este mapa es `profileId → cadena` (una línea por amistad, del orden de 600 bytes cada una) y
+que **no caduca ni se invalida**: es una foto de lo último visto, no un caché. Se poda con el grafo de amistad,
+para que no crezca con gente que ya no está.
+
 Mismo patrón y mismo motivo que `friendshipHealedForGist` y `backlogHistory`: es estado de dispositivo, no dato
-del usuario.
+del usuario. Y como `backlogHistory`, **es por dispositivo y no converge**: un aparato recién estrenado no ha
+visto nada, así que calla en su primera pasada (§8.4) y recupera del espejo lo que necesita saber (§5.5).
 
 ### 5.5 Un logro no se retira: la marca de agua
 
@@ -373,23 +525,38 @@ forma de conseguirlo es hacer algo que te da igual, no entra en el catálogo.*
 
 | Logro | Métrica | Sello para la fecha |
 |---|---|---|
-| Créditos finales | Juegos completados | `enteredAt.c` |
-| Saber soltar | Abandonos con razón anotada | `enteredAt.v` |
-| Constancia | Mejor racha de semanas seguidas con actividad | `reviewedAt` / `enteredAt` |
-| Mundo ancho | Géneros distintos con al menos un juego cerrado | `enteredAt` del que estrena género |
-| Politeísta | Plataformas distintas | ídem |
-| Segunda vuelta | Vueltas extra registradas (`years` por encima de la primera) | último año de `years` |
-| Maratón | Juegos con 60 h o más anotadas | `enteredAt.c` |
-| La paciencia | Juegos que esperaron más de un año en Próximos y acabaron terminados | `enteredAt.c` |
-| Criterio propio | Desviación típica de tus notas, con un mínimo de notas puestas | `gradedAt` |
-| Memoria larga | Años naturales distintos con algo completado | fin del año que lo cumple |
-| Deshielo | Meses seguidos en que Próximos acabó con menos juegos de los que empezó | curva derivada (§6.2.1) |
-| Limpieza de estantería | Juegos que salieron de Próximos hacia una lista jugada | `enteredAt` de la lista de destino |
-| Veterano | Años con perfil, desde `profiles.createdAt` | el propio `createdAt` |
+| Créditos finales (`completados`) | Juegos completados | `enteredAt.c` |
+| Retirada táctica (`abandonos-razonados`) | Abandonos con razón anotada | `enteredAt.v` |
+| Aún estás aquí (`constancia`) | Mejor racha de semanas seguidas con actividad | `reviewedAt` / `enteredAt` |
+| Mundo abierto (`generos`) | Géneros distintos con al menos un juego cerrado | `enteredAt` del que estrena género |
+| Guerra de consolas (`plataformas`) | Plataformas distintas | ídem |
+| New Game + (`rejugados`) | Vueltas extra registradas (`years` por encima de la primera) | último año de `years` |
+| Un verano entero (`maraton`) | Juegos con 60 h o más anotadas | `enteredAt.c` |
+| Ya iba siendo hora (`paciencia`) | Juegos que esperaron más de un año en Próximos y acabaron terminados | `enteredAt.c` |
+| Nota del crítico (`criterio`) | Desviación típica de tus notas, con un mínimo de notas puestas | `gradedAt` |
+| Partida guardada (`memoria-larga`) | Años naturales distintos con algo completado | fin del año que lo cumple |
+| El deshielo (`deshielo`) | Meses seguidos en que Próximos acabó con menos juegos de los que empezó | curva derivada (§6.2.1) |
+| La pila de la vergüenza (`estanteria`) | Juegos que salieron de Próximos hacia una lista jugada | `enteredAt` de la lista de destino |
+| De la vieja escuela (`veterano`) | Años con perfil, desde `profiles.createdAt` | el propio `createdAt` |
 
-**«Veterano» es el único logro verificable de todo el catálogo**, y por eso está: `createdAt` lo sella el cliente
-al crear el perfil y a partir de ahí **las reglas lo congelan** (`profileCreatedAtIsImmutable`), incluso para su
-dueño. No se puede falsear sin que el panel de administración lo cante — de hecho ya existe la señal
+> ⚑ **Revisión — esta tabla llevaba los nombres viejos y uno de ellos era una bomba.** Llamaba «Segunda vuelta»
+> al logro de vueltas extra, que en §6.9, en §6.11 y en `catalogo.json` es `rejugados`; y `segunda-vuelta` es
+> otra cosa distinta —el oculto «Volver a la hoguera», terminar un juego que habías abandonado—. Como **un `id`
+> no se renombra ni se reutiliza jamás** (§6.4) y viaja en el canal y en el estado local de todos los
+> dispositivos, esto había que cerrarlo antes de escribir la primera línea de F1, no descubrirlo después. La
+> tabla lleva ahora el nombre del §6.11 con su `id` al lado, que es la única forma de que las dos no vuelvan a
+> separarse.
+
+**«Veterano» es el único logro verificable de todo el catálogo**, y por eso está: ⚑ `createdAt` lo sella el
+**servidor** (`serverTimestamp()` en `firebaseRepository`, no el reloj del cliente como decía este párrafo) y a
+partir de ahí **las reglas lo congelan** (`profileCreatedAtIsImmutable`), incluso para su dueño. Es decir, es
+todavía más sólido de lo que el plan presumía.
+
+> ⚑ **Pero hoy el cliente no lo lee, y sin eso el logro no se puede escribir.** `createdAt` se escribe en
+> `profiles/{uid}` y ninguna lectura lo mapea: no está en `SocialProfileReference` ni en `SocialDirectoryEntry`.
+> Tarea de F1/F2, pequeña y con una trampa conocida: llega como **Timestamp de Firestore, no como número**, así
+> que hay que convertirlo con el mismo patrón que ya usa `updatedAt` (`toMillis?.()` con caída a 0), o el logro
+> contará años desde 1970. No se puede falsear sin que el panel de administración lo cante — de hecho ya existe la señal
 `created-after-activity` para justo eso. Un catálogo entero de cosas autodeclaradas gana bastante con tener al
 menos una que no lo es.
 
@@ -478,6 +645,11 @@ pantalla: **si el catálogo no tiene techo, no hay 100 %**. En Steam los logros 
 existe el «juego perfecto» y existe la gente que lo persigue; un sistema con niveles infinitos le quita a esa
 persona su objetivo y, con él, la mitad de la motivación.
 
+> ⚑ **Esta sección se escribió cuando un logro tenía niveles.** Desde el §6.3bis cada escalón ES un logro, así
+> que la distinción de abajo desaparece: la fracción cuenta escalones y cada uno suma una vez. Las reglas del
+> denominador —fuera los primeros pasos y los retirados, dentro los ocultos, y decirlo en pantalla— siguen
+> valiendo tal cual.
+
 **La regla: la fracción cuenta LOGROS, no niveles.** Un logro está conseguido en cuanto se alcanza su nivel 1, y
 ahí deja de mover el numerador para siempre. Los niveles siguientes —incluidos los abiertos y los repetibles
 anuales— alimentan una segunda cifra distinta, la **profundidad** (la suma de niveles), que sí es infinita a
@@ -493,8 +665,66 @@ Y el denominador tiene sus propias reglas, porque si baila la cifra miente:
 - **Dentro los ocultos** (§6.7), y contados desde el principio. Restarlos del denominador delataría cuántos hay
   y, con el tiempo, cuáles.
 - **Añadir logros al catálogo baja la fracción de todo el mundo.** Es el mismo efecto que tiene en Steam publicar
-  logros de DLC, y no tiene arreglo bonito: se asume y **se dice en la pantalla** («14 de 48 del catálogo
+  logros de DLC, y no tiene arreglo bonito: se asume y **se dice en la pantalla** («22 de 32 del catálogo
   actual»). Lo que no se hace nunca es congelar la fracción por versión, que sería inventarse un número.
+
+### 6.3bis ⚑ Cada nivel es un logro
+
+**Decidido el 6-sep-2026, después de repasar el catálogo entero contra una biblioteca real.** Una escalera de
+cuatro escalones deja de ser *un logro con grados* y pasa a ser **cuatro logros**, cada uno con su `id`, su
+casilla en el porcentaje y su bit en el espejo. Es el cambio que reordena medio documento, así que va aquí, justo
+detrás del §6.3.1 que lo contradecía.
+
+**Por qué.** El catálogo medido era un retrato, no un motor: sobre 302 juegos catalogados hacia atrás, **22 de
+32 logros saltaban en el primer render** (69 %) y lo que quedaba dependía de terminar juegos de verdad, uno a
+uno. Con los escalones sueltos —y con las escaleras alargadas donde había recorrido— la misma biblioteca sale a
+**113 de 251 (45 %)**. La diferencia no es cosmética: es la diferencia entre una cuenta grande que ya lo ha visto
+todo y una a la que le queda más de la mitad.
+
+**Lo que se declara y lo que se publica.** El fichero sigue siendo una tabla de escaleras —`AchievementLadder`:
+una métrica, un dibujo, una rareza, unos umbrales— y `expand()` produce un `AchievementDef` por umbral. La métrica
+se escribe una vez y corre una vez; once escalones de «Créditos finales» no son once recorridos de la biblioteca.
+
+**El `id` lleva el umbral, no la posición** (`completados-50`, nunca `completados-3`). Es lo que hace ADITIVO
+insertar un escalón intermedio: meter el 25 entre el 10 y el 50 no toca a nadie. Con el índice dentro del `id`,
+esa misma inserción correría todos los siguientes y retiraría retroactivamente un logro ya publicado a todo el
+mundo, que es lo único que el §6.4 no permite.
+
+**La zanahoria.** El listado enseña los escalones conseguidos **y uno más**: el siguiente, con su barra. Los
+posteriores no se pintan. Sin esto, 251 filas no son una pantalla, son un inventario — y enseñarle los once
+escalones de «Créditos finales» a quien lleva diez juegos no le dice cuánto le falta, le dice que no va a llegar.
+
+**Lo que arrastra, y conviene no descubrirlo dos meses después:**
+
+| Qué | Antes | Ahora |
+|---|---|---|
+| Logros publicables | 32 | **251** |
+| Formato del espejo | `id.nivel.día`, 608 B en el peor caso | **mapa de bits**, 44 caracteres + cola de fechas |
+| Denominador | 32 | 251 · la fracción de todo el mundo baja, y se dice en pantalla |
+| Puntos con todo conseguido | 895 | **5.135** (curva del §6.10.2 duplicada) |
+| Nivel de perfil | infinito, por las metas abiertas | **finito**: el techo son 37 |
+| Medallas por dibujar | una por logro | una por **escalera**; el grado lo pone el triángulo |
+
+**El espejo, en concreto.** Un escalón solo puede estar conseguido o no, así que la lista de texto sobra: se
+publica un bit por entrada de `MIRROR_ORDER` en base64url —**44 caracteres para los 253 bits**— y detrás, tras un
+`~`, solo lo que el bitmap no sabe decir: la fecha (en días desde 2020-01-01, base 36) y el `!` de destacado. Sobre
+la biblioteca real el espejo entero ocupa **186 de los 1.024 caracteres** que valida la regla de Firestore.
+
+Y trae una regla nueva que antes no existía: **el orden del catálogo es contrato**. Cada bit significa lo que
+significa por su posición, así que `MIRROR_ORDER` incluye también los RETIRADOS —retirar un logro no puede correr
+los índices de los que van detrás— y los escalones nuevos se añaden al final de su escalera, nunca en medio de la
+lista.
+
+**Las dos metas abiertas desaparecen.** `open` y `annual` no tienen sentido cuando el `id` lleva el umbral: un
+número de escalones sin acotar es un número de `id` sin acotar. Los repetibles anuales se declaran ahora como lo
+que son —una escalera de umbrales sobre «cuántos años lo has cumplido»— con su último escalón como tope. El
+precio es el de la tabla: el nivel de perfil deja de ser infinito, y lo que sostiene el «siempre hay un paso más»
+pasa a ser el calendario y los escalones que se vayan añadiendo.
+
+**Los dos logros que miden sobre otros logros.** «Tutorial superado» y «Cien por cien» necesitan saber qué se ha
+concedido ya, así que el evaluador hace **dos pasadas**: la normal y, con el conjunto de `id` conseguidos en la
+mano, la de las escaleras marcadas como meta. No se ven entre ellas, así que el orden dentro de la segunda da
+igual.
 
 ### 6.4 Reglas del catálogo, para no romper el canal
 
@@ -566,12 +796,12 @@ solo alcanza el 2 % no cumple su función.
 Lo que hace que una medalla pese en Steam no es su icono, es el «0,8 % de los jugadores lo tiene». Sin esa
 señal, cuarenta medallas se leen todas igual y la vitrina del §8.2 es una fila de adornos intercambiables.
 
-La forma obvia de conseguirla aquí sería medirla: el hub ya se descarga hasta `SOCIAL_DIRECTORY_LIMIT` espejos al
-abrirse (§8.4), así que calcular «lo tienen 3 de tus 12 amistades» costaría cero peticiones. **Y no se hace**, por
-dos razones que se refuerzan: con doce amistades un porcentaje es ruido estadístico, y sobre todo es la
-**comparación entre usuarios entrando por la puerta de atrás** — justo lo que la tabla de decisiones descarta.
+⚑ **Y además se mide, que es lo que hace Steam.** El documento decía aquí que medir la rareza «no se hace»; se
+hace, y el §6.6bis explica cómo y con qué honestidad. Lo que sigue en pie —y hay que leerlo con eso delante— es
+que **la rareza DECLARADA no desaparece**: es la que gobierna los puntos, el aura y la prioridad de recorte, y
+tiene que ser estable. El porcentaje medido se **enseña**; no decide nada.
 
-**Lo que se hace: un campo más en el catálogo.**
+**Lo declarado: un campo más en el catálogo.**
 
 ```ts
 /** Cuánto pesa la medalla. Curado a mano, NO medido sobre nadie: es una propiedad del logro. */
@@ -600,6 +830,42 @@ por tono, luminosidad y saturación se aplica dentro de cada escala, no entre el
 es el acento de la app y el color de la moldura: ahí chocarían las dos cosas que había que separar. Se sube un
 peldaño —morado para el raro, naranja para el excepcional— y de paso el tope se lleva el naranja de legendario,
 que es el que todo el mundo asocia con lo mejor.
+
+### 6.6bis ⚑ El porcentaje medido: cuánta gente lo tiene
+
+En Steam, debajo de cada logro pone «lo tiene el 4,2 % de los jugadores», y **eso es lo que le da peso a la
+medalla**. Va en el listado del §8.1b, en la columna de la derecha, debajo del día del desbloqueo, y se ve tanto
+en el propio como en el de una amistad.
+
+**De dónde sale, y cuesta cero.** El hub ya se descarga hasta `SOCIAL_DIRECTORY_LIMIT` (50) perfiles al abrirse, y
+a partir de F3 cada uno de ellos trae su espejo. Contar cuántos llevan cada `id` es recorrer cincuenta cadenas de
+unos 600 bytes que **ya están en memoria**: ni una petición nueva, ni un campo nuevo, ni un byte más de canal.
+
+**Y a la escala de hoy, esa muestra ES el total.** El directorio son los perfiles públicos ordenados por uso
+reciente, y mientras haya menos de cincuenta el listado los contiene a todos: el porcentaje no es una
+aproximación, es la cifra. Eso es lo que hace que esto se pueda entregar en F4 sin backend y sin asteriscos.
+
+**Las cuatro reglas que lo mantienen honesto:**
+
+1. **Se dice sobre cuántos.** «Lo tiene el 14 % · 6 de 43» y no un porcentaje suelto. Un porcentaje sin
+   denominador es lo único de esta pantalla que se puede leer como una afirmación global, y no lo es.
+2. **Suelo de muestra.** Por debajo de **20** perfiles con espejo, **no se pinta nada**. Con siete personas, «el
+   14 %» es una persona: enseñarlo es peor que callarlo.
+3. **No decide nada.** Ni puntos, ni aura, ni orden de la vitrina, ni prioridad de recorte: todo eso lo sigue
+   gobernando la rareza declarada (§6.6). Si el porcentaje moviera los puntos, el nivel de perfil bailaría al
+   ritmo de quién ha abierto la app esta semana, y un nivel que baja solo es el único fallo que el §5.5 no
+   permite.
+4. **Sigue sin haber ranking.** Es una propiedad **del logro**, no de las personas: no ordena a nadie, no pone dos
+   personas en la misma vista y no aparece en el directorio ni en la bandeja. Las cuatro reglas del §6.10.4
+   aguantan enteras, porque lo que prohibían era **ordenar gente**, y esto no ordena gente.
+
+> **Cuándo deja de valer, y qué se hace entonces.** Pasados los ~50 perfiles públicos, el directorio deja de ser
+> el censo y pasa a ser una muestra sesgada hacia quien más usa la app —que es justo el sesgo que infla los
+> porcentajes—. El día que eso ocurra, la salida es un agregado de verdad: una **Pages Function** (ya hay
+> infraestructura, `functions/api/` valida tokens de Firebase y hay KV a mano) que recorra los perfiles públicos
+> una vez al día, cuente y deje `{ id → porcentaje, n }` en KV. **El cliente no cambia**: se le pide a esa
+> función lo mismo que hoy calcula él, con la misma forma. Se diseña así desde F4 —una fuente detrás de una
+> interfaz de una línea— para que ese cambio sea sustituir de dónde viene el objeto y nada más.
 
 ### 6.7 Ocultos: la parte que no se puede planificar
 
@@ -659,8 +925,10 @@ de sellos que hace falta para medir un trayecto solo aparece cuando el juego se 
 **Consecuencia asumida:** seis logros arrancan a cero y tardarán meses o años en despertar — `paciencia`,
 `estanteria`, `deshielo`, `ano-redondo` y los ocultos `speedrun` y `segunda-vuelta`. **Se quedan en el catálogo
 igualmente**, contando desde hoy, porque miden lo que hay que medir y el problema es de historia, no de diseño.
-Lo que sí hay que hacer es **decirlo en la tarjeta**: «este empieza a contar desde que lo instalaste». Un logro a
-cero sin explicación se lee como un fallo; con la línea, se lee como lo que es.
+Lo que sí parecía haber que hacer era **decirlo en la tarjeta** —«este empieza a contar desde que lo
+instalaste»—, y ⚑ **al verlo en pantalla se retiró**: seis logros con su párrafo de disculpa convertían el
+listado en una hoja de excusas, y el que llega nuevo no tiene con qué comparar para echar de menos nada. El campo
+`note` ya no existe en el catálogo (§10bis).
 
 > **El fallo mudo que la medición cazó, y que habría llegado a producción.** El oculto **Speedrun** («terminar un
 > juego el mismo día que lo añades») estaba a punto de implementarse como «`enteredAt.c` cae el mismo día que
@@ -683,6 +951,16 @@ como exacto»*. Aquí no se fabrica nada: se usa el año como año. **`memoria-l
 `years`.** (`ano-redondo`, que necesita los doce meses, no puede: se queda en el grupo de los que empiezan hoy.)
 
 ### 6.9 Umbrales y rarezas, medidos
+
+> ⚑ **La tabla de abajo es la primera calibración, la de 32 logros con cuatro niveles cada uno.** Los umbrales
+> vigentes están en `docs/logros/catalogo.json`, regenerado desde el código, y son más finos: las escaleras se
+> alargaron con escalones intermedios al pasar a un logro por escalón (§6.3bis). Lo que sigue valiendo es el
+> MÉTODO —medir contra una biblioteca real y no calibrar a ojo— y los tres hallazgos del §6.8, que no dependen de
+> dónde caiga cada listón. Cambios de fondo que sí hay que leer aquí: «Un verano entero» baja su listón de 60 h a
+> **40** (con 60 solo 11 juegos de 302 lo pasaban y el tope era inalcanzable), «Lo terminé por orgullo» pasa de
+> «menos de 40» a **menos de 50**, «Sin cabos sueltos» se queda en PORCENTAJE —contado en unidades decía
+> exactamente lo mismo que «Con mis palabras»— y «Speedrun» se retira: pedía el par de sellos que ninguna
+> biblioteca preexistente tiene Y además el mismo día.
 
 Fijados contra esa biblioteca. El criterio: **nivel 1 en las primeras semanas** y **nivel 4 por encima de un
 usuario intenso**, para que quede recorrido. La columna «real» es lo que da esa biblioteca de 302 juegos, que es
@@ -740,8 +1018,16 @@ de 1.000 caracteres · acumular 300 horas o más en un solo juego.
 
 **Reparto final:** 5 comunes · 10 infrecuentes · 11 raros · 6 excepcionales, sobre 32 logros publicables (más 6
 de primeros pasos). El §13.3 suponía ~12/16/9/5 sobre ~48; el catálogo real es más pequeño y con más peso en la
-mitad alta, y el dimensionado del §6.10.2 **aguanta**: esa biblioteca de 302 juegos sale a **22 de 32 (69 %)** y
-**nivel 22**, con recorrido de sobra hasta el 41 que predecía el documento para «casi todo al máximo».
+mitad alta, y el dimensionado del §6.10.2 **aguanta**: esa biblioteca de 302 juegos sale a **22 de 32 (69 %)**,
+**895 puntos** y **nivel 21**, con recorrido de sobra hasta el 41 que predecía el documento para «casi todo al
+máximo».
+
+> ⚑ **Revisión — la cuenta era 915 puntos y nivel 22, y no cuadra con esta misma tabla.** Sumando `nivelReal ×
+> puntos de su rareza` sobre las 32 filas de arriba salen **895**, y 895 en la curva del §6.10.2 (180 hasta el
+> nivel 10, luego 60 por nivel) dan **nivel 21 con 55 puntos hacia el 22**. Los 915 estaban también en
+> `docs/logros/catalogo.json`, que ya lleva el número corregido. No cambia ninguna decisión —el dimensionado
+> aguanta igual— pero era la única cifra del documento que no se podía reproducir desde sus propios datos, y una
+> cifra así es la que hace dudar de las demás.
 
 ### 6.10 Las dos cifras: porcentaje (Steam) y nivel (PlayStation)
 
@@ -753,7 +1039,7 @@ que abrió el §6.3.1, y estas dos cifras son su resolución.
 #### 6.10.1 El porcentaje: logros, no niveles
 
 ```
-Logros 14/48 · 29 %
+Logros 22/32 · 69 %
 ```
 
 Numerador: logros con nivel ≥ 1. Denominador: el catálogo actual **menos** los *primeros pasos* y **menos** los
@@ -761,8 +1047,20 @@ retirados, **con** los ocultos dentro desde el principio (§6.3.1). El 100 % es 
 
 #### 6.10.2 El nivel: puntos por rareza, curva por tramos
 
-Cada **nivel alcanzado de cada logro** suma los puntos de la **rareza de ese logro** (§6.6). No hay una moneda que
-se gane por usar la app: se gana por lo que hay en la biblioteca, igual que todo lo demás.
+Cada **nivel alcanzado de cada logro publicable** suma los puntos de la **rareza de ese logro** (§6.6). No hay una
+moneda que se gane por usar la app: se gana por lo que hay en la biblioteca, igual que todo lo demás.
+
+> ⚑ **Revisión — los «primeros pasos» NO puntúan, y esto era un fallo de verdad.** El ejemplo de abajo sumaba
+> `tutorial-resena · 5 pts` y el catálogo medido dice de esa familia «un nivel, rareza común, 5 pts». Pero los
+> primeros pasos **no se publican nunca** (§5.3), así que el amigo que reconstruye el nivel desde el espejo no
+> los tiene: el dueño se vería el nivel 7 y su amistad le vería el 6, con las dos cuentas correctas y ninguna
+> forma de conciliarlas. Eso rompe de frente la propiedad que el §6.10.3 declara como la que hace esto
+> defendible —«el dueño y quien mira ven lo mismo»— y la rompe en silencio, que es lo peor.
+>
+> **La regla queda simétrica y en una línea: lo que no se publica, no cuenta.** Ni en el numerador (ya estaba
+> así), ni en el denominador (ya estaba así), ni en los puntos (esto es lo que se corrige). Los primeros pasos
+> enseñan la app y se apagan solos; no son moneda. Igual que los retirados (§6.4), que dejan de contar en la
+> fracción pero **sí conservan sus puntos**: esos se publicaron en su día y el que mira los ve.
 
 | Rareza | Puntos por nivel |
 |---|---|
@@ -774,13 +1072,16 @@ se gane por usar la app: se gana por lo que hay en la biblioteca, igual que todo
 ```
 completados      nivel 3 · raro         → 3 × 25 = 75
 constancia       nivel 2 · infrecuente  → 2 × 10 = 20
-tutorial-resena  nivel 1 · común        → 1 ×  5 =  5
+plataformas      nivel 1 · común        → 1 ×  5 =  5
                                           ───────
                                            100 pts → Nivel 6 (faltan 20 para el 7)
+
+paso-resena      nivel 1 · primeros pasos → NO puntúa (§6.10.2): no se publica, no cuenta
 ```
 
-La escala es **suave a propósito** (5/10/25/60 y no 15/30/90/300 como PSN): con un catálogo de ~48 entradas, un
-solo logro excepcional con la escala de PSN dispara el nivel de golpe y la curva deja de sentirse ganada.
+La escala es **suave a propósito** (5/10/25/60 y no 15/30/90/300 como PSN): con un catálogo de 32 entradas
+publicables, un solo logro excepcional con la escala de PSN dispara el nivel de golpe y la curva deja de
+sentirse ganada.
 
 **La curva** — barata al principio, cara después, sin techo. Es la forma de PSN y por su mismo motivo: los
 primeros niveles tienen que llegar en la primera semana o nadie llega al segundo.
@@ -817,8 +1118,13 @@ dirección segura del error —nunca infla, siempre desmerece— y se corrige so
 **no** se hace es intentar taparlo publicando el número: eso cambia un desfase temporal por un dato falsable.
 
 La segunda: si algún día la cadena tocara el tope de 1 kB y hubiera que recortar (§5.3), el que mira contaría de
-menos. Con el catálogo previsto no pasa —caben ~70 y hay ~48— y, si pasara, el error vuelve a ir a la baja. Lo
-importante es no *arreglarlo* publicando la cifra, por lo mismo de siempre.
+menos. Con el catálogo medido no pasa —los 32 publicables ocupan **608 bytes en el peor caso** y el tope da para
+unos 54 con los `id` actuales— y, si pasara, el error vuelve a ir a la baja. Lo importante es no *arreglarlo*
+publicando la cifra, por lo mismo de siempre.
+
+Y no hay una tercera: se estudió filtrar el espejo por los ajustes de visibilidad, que habría metido un desfase
+permanente entre lo que ve el dueño y lo que ve su amistad, y **se descartó** (§5.3bis). Las dos cuentas salen
+iguales.
 
 #### 6.10.4 Las cifras se ven fuera, y esto es lo que las mantiene sanas
 
@@ -1002,37 +1308,157 @@ Cuatro condiciones para que no se vuelva molesto:
 > se memoiza, así que no hace falta ni diferirlo. Si algún día molestara, el arreglo es evaluar solo los logros de
 > la familia espejo en ese punto — nunca dejar de avisar.
 
+
+### 7.5 ⚑ Las métricas, una a una: dónde la ausencia de dato se lee como dato
+
+El §6.8 cazó un falso positivo —«Speedrun» comparando contra `listedAt`: 42 aciertos, los 42 falsos— y dejó la
+regla general escrita. Al recorrer las 32 métricas contra los tipos reales aparecen **cuatro más de la misma
+familia**, y todas por el mismo motivo: en este modelo **la ausencia de un dato tiene un valor numérico**, y ese
+valor cae dentro del rango que la métrica busca.
+
+**`orgullo` — «Lo terminé por orgullo», terminar un juego al que pusiste menos de 40.** `resolveGrade` devuelve
+**0** para un juego sin nota (`grade` ausente y `score` ausente), y 0 es menor que 40. Tal como está definida, la
+métrica cuenta **todos los completados sin puntuar**, que en una biblioteca normal son muchos. Es exactamente el
+error de «Speedrun» con otro campo.
+→ **Guarda: `grade > 0 && grade < 40`.** Y va en la definición, no en un comentario.
+
+**`criterio` — «Nota del crítico», desviación típica de tus notas.** Mismo campo, dos daños distintos: los
+juegos sin nota entran en el recuento con un 0 que **infla el contador** y a la vez **infla artificialmente la
+desviación** (un montón de ceros junto a notas reales dispara la dispersión, que es justo lo contrario de lo que
+el logro quiere premiar). El catálogo dice «nº de notas», y una nota que no existe no es una nota.
+→ **Guarda: contar y promediar solo `grade > 0`.**
+
+**`obra-maestra` y `no-eres-tu`** buscan hacia arriba (`== 100`, `>= 70`), así que el 0 no los toca. Se dejan
+escritas aquí igualmente para que quede constancia de que se miraron: el criterio no es «qué métricas tienen
+guarda», es «qué hace cada una con la nota ausente», y las cuatro tienen respuesta.
+
+**`estanteria-cero` — «Exterminatus», dejar Próximos a cero.** Es un **estado**, no un hecho, y ahí está la
+trampa: `p.length === 0` es cierto para quien vació su pila… y **también para quien acaba de instalar la app**.
+Un usuario nuevo desbloquearía en su primer render un logro **excepcional** de 60 puntos —el más caro del
+catálogo— por no tener nada. Y como la marca de agua no retira nada (§5.5), se lo quedaría para siempre.
+→ **Guarda: `p.length === 0 && existe algún juego con `enteredAt.p`.`** O sea: hay que haber **tenido** una pila
+para poder vaciarla. Encaja con su bloque `dormido` del catálogo y con el §6.8: mide un trayecto, y un trayecto
+necesita punto de partida.
+
+**`cobertura` — «Sin cabos sueltos», % de lo cerrado que tiene reseña.** Denominador `c + v`, que en una
+biblioteca vacía es 0.
+→ **Guarda: sin nada cerrado, el valor es 0, no `NaN`.** No es un falso positivo, es una división; se anota aquí
+porque es la única métrica del catálogo que puede dividir por cero y porque un `NaN` recorriendo el
+empaquetado ensucia la cadena sin que salte ningún error.
+
+**`conversador` — «Charla de taberna», semanas distintas en que has publicado algo.** No es un falso positivo,
+son dos definiciones que había que fijar:
+
+- **Qué cuenta como «publicar»:** las publicaciones de texto (`posts`) **y** las reseñas (`activity` de tipo
+  `review`). Las dos aparecen en el feed de sus amistades, que es lo que el logro mide. Contar solo `posts`
+  dejaría fuera a quien participa escribiendo reseñas, que es la forma principal de aparecer en el feed de esta
+  app.
+- **El histórico se pierde por arriba, y es tolerable:** `posts` está recortado a **100** entradas y `activity` a
+  **320** en el propio gist. Quien publique mucho durante años perderá las semanas más viejas y el **valor** de la
+  métrica bajará. La **marca de agua** (§5.5) impide que el nivel baje con él, y —esto es lo que separa este caso
+  del logro de enlaces compartidos que se cayó del catálogo (§6.2)— **el recorte lo hace el gist, que es
+  compartido**, así que los dos dispositivos del mismo usuario ven exactamente la misma lista recortada y siguen
+  convergiendo. Ese, y no otro, era el defecto que descalificaba a los enlaces.
+
+> **La regla que resume las cinco, y merece ir en el mismo sitio que la de `listedAt`:** *ninguna métrica puede
+> tratar un campo ausente como un valor.* Ni la nota que no está (0), ni la lista que aún no existe (vacía), ni
+> el denominador que todavía no tiene nada dentro. Un test por métrica con **una biblioteca recién creada** y con
+> **una biblioteca sin puntuar** las caza todas de golpe, y las dos fixtures cuestan diez líneas.
+
 ---
 
 ## 8. Interfaz
 
-### 8.1 `/perfil` — los tuyos
+### 8.1 `/perfil` — un apartado propio, debajo de «Lo mejor de tu biblioteca»
 
-- **En el panel**, una cifra destacada más —«Logros 14/48 · 29 %» con el **nivel** al lado— junto a las que ya
-  existen, y la tira de novedades si la hay. Nada más: el panel ya está lleno y los logros no son su tema. El 48
-  son **logros del catálogo actual**, no niveles, y la etiqueta lo dice con esas palabras (§6.3.1).
-- **`/perfil/logros`**, sub-ruta propia con la rejilla completa, exactamente el patrón que ya usa
-  `/perfil/resenas` (ver `StatsHub`: `PANEL_ROUTE` / `REVIEWS_ROUTE`). Agrupada por familia, con los conseguidos
-  arriba y el progreso de cada uno abajo. Cada tarjeta lleva, siempre, **la condición literal y el umbral del
-  siguiente nivel** (§6.4): es lo que hotukdeals hace bien en su «mis insignias» y lo que convierte una rejilla
-  de adornos en una pantalla que se puede usar.
-- **El nivel, con su barra.** En `/perfil/logros`, el nivel va con la barra hacia el siguiente y los puntos que
-  faltan («Nivel 12 · 40 pts para el 13»), que es lo que lo convierte en un horizonte y no en un adorno (§6.10.2).
-  El desglose por familia lleva su propio porcentaje.
-- La hoja de estilos entra en el chunk perezoso del panel, como `stats.scss`.
+⚑ **No es una cifra destacada en la cabecera: es una tarjeta más del panel**, con su `<h2>` y su subtítulo, como
+las demás. Va **inmediatamente después del bloque `top`** —«Lo mejor de tu biblioteca»— y antes de `years`. El
+sitio no es casual: `top` es lo que la biblioteca tiene de mejor y los logros son lo que su dueño ha hecho con
+ella; leídos seguidos, cuentan la misma historia desde los dos lados.
+
+El punto de enganche exacto es el `has('top') ? … : null` de `StatsPanel.tsx`, y la tarjeta nueva sigue su misma
+forma: `<div className="stats-card">` con título, subtítulo y contenido. Entra además en `OWN_STATS_BLOCKS`
+(`core/stats/types.ts`) como bloque `'achievements'`, que es lo que decide qué ve un espectador y qué no.
+
+**Qué lleva la tarjeta**, y nada más:
+
+- **La cifra** (§6.10): «Logros 22/32 · 69 %», con su barra. ⚑ El **nivel de perfil se calcula pero no se
+  enseña** mientras no esté decidido cómo se presenta (§10bis). ⚑ El denominador son **32**: los publicables del catálogo medido (§6.9), sin los
+  seis *primeros pasos* y sin los retirados. Son **logros**, no niveles, y la etiqueta lo dice con esas palabras
+  (§6.3.1).
+- **Una fila de las últimas medallas conseguidas**, solo imagen, con el mismo comportamiento que la de la ficha
+  social (§8.2): el nombre aparece al pasar por encima. Es un adelanto, no la rejilla.
+- **La tira de novedades** si la hay (§7.3), y el foco del mes (§6.3).
+- **Un enlace a `/logros`**, que es donde está todo.
+
+La hoja de la tarjeta entra en el chunk perezoso del panel, como `stats.scss`; **la de la medalla no** —esa es
+propia y la importa el componente (§8.5).
+
+### 8.1b `/logros` — el listado, como en Steam
+
+⚑ **Ruta de primer nivel, `/logros`**, y no una sub-ruta del panel. Cuesta **una línea** en `APP_ROUTES`
+(`core/constants/routes.ts`) con `section: 'stats'`, y a cambio es una dirección que se dice en voz alta y se
+comparte. El comodín `/perfil/*` habría salido gratis, pero deja la pantalla escondida detrás del nombre de otra
+cosa: el panel se llama «Perfil» por herencia de cuando la pestaña se llamaba así, y meter los logros ahí dentro
+los ata a esa herencia para siempre.
+
+**Y la forma es la de Steam: un listado, no una rejilla.** Una fila por logro, y cada fila lleva —siempre, en este
+orden— **la imagen, el nombre, la descripción y el día en que se desbloqueó**. Es la disposición que ese usuario
+ya sabe leer sin que nadie se la explique, y resuelve de paso lo que una rejilla de cuarenta cuadros no puede: la
+descripción cabe entera, sin recortes ni globos de ayuda.
+
+| Zona de la fila | Contenido |
+|---|---|
+| Izquierda | La medalla a **72 px**, con su aura de rareza y su triángulo de grado |
+| Centro | **Nombre** en una línea y **descripción** debajo — la condición literal y, si no está al tope, el progreso con la forma de Steam: ⚑ «13 de 20 · 65 %» (§6.4) |
+| Derecha | **El día del desbloqueo**, y debajo el **porcentaje de gente que lo tiene** (§6.6bis) |
+
+- ⚑ **Los conseguidos arriba y lo que falta debajo, en UNA sola lista y sin agrupar por familia** (§10bis).
+  Dentro de la primera mitad manda la fecha —lo último, primero—; en la segunda, **lo cerca que está de caer**,
+  que es lo útil de ese tramo. El **oculto** que no se tiene ocupa su fila con «?» y «se revela al conseguirlo»,
+  nunca una pista — ni siquiera su rareza, que con seis excepcionales en el catálogo ya sería una.
+- **Sin fecha, sin fila coja.** Un logro conseguido cuyo sello no se puede deducir (§5.3) deja ese hueco vacío, no
+  pone «desconocido» ni inventa una fecha.
+- **El nivel y su barra** encabezan la pantalla, con el desglose por familia y su propio porcentaje.
+- La misma pantalla sirve para una amistad (§8.2), cambiando de dónde salen los datos: es el patrón que ya usan
+  `StatsReviews` y `ProfileReviewsList`, que son la misma lista leyendo dos fuentes.
 
 ### 8.2 `/social/profiles/:profileId` — los de una amistad
 
-Una **vitrina**: el **nivel y el porcentaje** en la cabecera y, debajo, la fila de medallas conseguidas con su
-nombre y su fecha. Sin barras de progreso y sin huecos de lo que no tiene (§3). Es una lectura del espejo ya
-descargado —y las dos cifras las calcula el propio cliente a partir de él (§6.10.3)—: **cero peticiones nuevas y
-cero bytes más de canal**.
+⚑ **La fila de medallas va DEBAJO DEL NOMBRE, y ahí solo se ve la imagen.** El punto exacto es el
+`hub-profile-hero` de `SocialProfileDetailScreen.tsx`: avatar, `<h3 className="hub-profile-hero-name">` y, justo
+después, la tira. Sin rótulos, sin fechas, sin cifras alrededor: **una fila de cuadros a 48 px y nada más**.
+
+**El nombre aparece al pasar por encima**, y esa es toda la interacción de esa fila. Que sea solo imagen es lo que
+la hace funcionar en ese sitio: la cabecera de una ficha ya tiene avatar, nombre y muesca de rango, y una fila de
+medallas con su rótulo debajo la convertiría en un listado. Así es una firma —lo que esa persona ha hecho, de un
+vistazo— y quien quiera el detalle entra en el listado.
+
+**Cómo se dice el nombre, y no vale con un `title`.** El `title` de HTML no sale con teclado, no sale en táctil y
+los lectores de pantalla lo tratan de forma desigual. Cada medalla es un `<button>` (o un enlace al listado) con
+su **nombre accesible completo** —«Créditos finales IV, conseguido el 12 de marzo de 2026»— y el rótulo visible
+sale en `:hover` **y en `:focus-visible`**, para que llegue igual por teclado. En táctil no hay hover: ahí el toque
+lleva al listado, que es donde está el nombre escrito.
+
+**Las dos cifras** —nivel y porcentaje (§6.10)— van en la cabecera de la ficha, junto al nombre, **no dentro de la
+tira**. Y el resto —fechas, descripciones, el porcentaje de cada logro— vive en
+**`/social/profiles/:profileId/logros`**, que es el mismo listado del §8.1b leyendo el espejo de esa persona. Esa
+sub-ruta la resuelve el hub por su cuenta con `matchSocialRoute` (una entrada más en `SOCIAL_ROUTES`, junto a
+`profileReviews`), así que **no toca `routes.ts`**.
+
+Todo esto es una lectura del espejo ya descargado —y las dos cifras las calcula el propio cliente a partir de él
+(§6.10.3)—: **cero peticiones nuevas y cero bytes más de canal**. Sin barras de progreso y sin huecos de lo que no
+tiene (§3).
 
 Las cifras se pintan **aquí y en ningún otro sitio**: nunca en la tarjeta del directorio ni en la bandeja, que son
 rejillas de muchas personas y convertirían la pantalla en una tabla de clasificación (§6.10.4).
 
 Si el perfil no publica logros (opt-out, o cliente antiguo), **la vitrina no se pinta**. Ni marco vacío ni «este
 usuario no tiene logros»: no hay nada que decir.
+
+**Y la misma tira va en la ficha propia**, debajo del propio nombre, por la razón de siempre en este
+repositorio: lo que se enseña de uno mismo se mira en el mismo sitio en que lo miran los demás, o no hay forma de
+saber qué está viendo la otra persona.
 
 **Destacados.** El dueño puede fijar hasta **tres** medallas que van primero (marca `!` en la cadena, §5.3). Es
 personalización real por unos pocos bytes, y resuelve el problema de que la vitrina de alguien con treinta
@@ -1052,33 +1478,107 @@ En el editor del perfil social, junto a los que ya hay (foto, listas ocultas). S
 `publicConfig/{uid}.showAchievements`, con el mismo mecanismo que `feedMoveTabs` (`createPreferenceStore` con
 `cloudField`, ver `feedMovePreference.ts`), para que siga al dueño entre dispositivos.
 
+> ⚑ **Revisión — son cuatro sitios, no uno, y saltarse el cuarto es un fallo mudo ya documentado en las reglas.**
+> `createPreferenceStore` con `cloudField` no basta por sí solo:
+>
+> 1. **`publicConfigWriteIsValid()` en `firestore.rules`**: la allowlist es un `hasOnly` cerrado. Sin
+>    `"showAchievements"` dentro, Firestore **deniega la escritura entera** de `publicConfig` —no solo esa
+>    clave— y la preferencia no sincroniza nunca. Esto ya pasó en este repositorio y está escrito en el
+>    comentario de esa misma función: *«`effects` faltaba en la allowlist aunque el cliente ya lo escribía […]
+>    sin él, esa preferencia se denegaba en silencio y nunca sincronizaba»*. Va con su validación de tipo,
+>    como las demás: `!("showAchievements" in …) || … is bool`.
+> 2. **`FirestorePublicConfig`** (`model/types/firestore.ts`): `cloudField` está tipado como
+>    `keyof FirestorePublicConfig`, así que sin el campo no compila.
+> 3. **Una clave en `core/constants/storageKeys.ts`**, que es donde viven las de las demás preferencias.
+> 4. **Registrarla donde se declaran las preferencias con nube.** Lo dice la cabecera de `feedMovePreference.ts`:
+>    *«`hydratePreferencesFromCloud` solo hidrata las preferencias YA declaradas»*. Si el módulo solo se importa
+>    desde el hub, quien inicie sesión sin abrirlo no recibirá su propia preferencia del otro dispositivo. Y va
+>    en módulo propio por el mismo motivo que aquella: colgarla de `view/hooks/preferences` mete ese módulo y sus
+>    dependencias en el chunk de arranque y `ci-validate` lo corta.
+>
+> Test de reglas de F3, junto a los otros: **`publicConfig` con `showAchievements: false` se acepta; con
+> `showAchievements: "no"` se deniega.**
+
 **Apagarlo BORRA el campo del perfil público** (`deleteField()`), no lo esconde al pintar. Es la misma lección que
 la foto del autor en las reseñas compartidas: *ocultar al pintar no sirve de nada cuando el JSON llega igual al
 navegador del que mira*.
 
 ### 8.4 Novedades de tus amistades, sin publicar nada
 
-En el feed aparece «*Fulano* ha conseguido **Créditos finales IV**». Y **no cuesta ni un byte de canal**: el hub ya
-cachea el directorio en IndexedDB, así que el lector compara el espejo que acaba de bajar con el que tenía
-guardado de esa persona y deduce el cambio él solo. Ninguna escritura nueva, ningún campo nuevo, ninguna entrada
-en el gist social.
+En el feed aparece «*Fulano* ha conseguido **Créditos finales IV**». Y **no cuesta ni un byte de canal**: el
+lector compara el espejo que acaba de bajar con el último que vio de esa persona y deduce el cambio él solo.
+Ninguna escritura nueva, ningún campo nuevo, ninguna entrada en el gist social.
 
 Es la misma idea que sostiene todo el documento —derivar en vez de registrar— aplicada al otro lado del canal.
 
-Reglas para que no se convierta en ruido, calcadas de las que F4 se puso a sí mismo:
+> ⚑ **Revisión — la foto anterior NO puede ser la caché del directorio, y esto tumbaba F5 entero.** El plan decía
+> «el hub ya cachea el directorio en IndexedDB, así que el lector compara […] con el que tenía guardado». Esa
+> caché (`getCachedSocialDirectory`) es un **caché con TTL, no un registro**, y las tres propiedades que la hacen
+> buena para su trabajo la inhabilitan para este:
+>
+> 1. **Caduca, y el TTL lo pone el rango de quien mira** (`PROFILE_TIER_FEED_TTL_MS`: 30 min bronce, 15 plata, 10
+>    oro, **60 s mithril**). Pasado el TTL devuelve `null`, que para el §8.4 significa «no hay foto previa» y por
+>    tanto «sembrar y callar». El resultado sería exactamente el revés de lo que el rango promete: **cuanto más
+>    alto el rango, menos logros de amigos se anuncian**, y un mithril no vería ninguno jamás.
+> 2. **Se invalida con el grafo de amistad** (`invalidateCachedSocialDirectory` al aceptar o eliminar): aceptar a
+>    alguien borraría la línea base de todos los demás.
+> 3. **Se descarta entera al subir `SOCIAL_DIRECTORY_CACHE_VERSION`**, y añadir `achievements` a las entradas
+>    obliga a subirla a 5. La propia versión que estrena F5 se quedaría muda el primer día.
+>
+> **La línea base va aparte, en `achievementsPeerSeen` de `LocalMeta` (§5.4): un mapa `profileId → cadena`, sin
+> TTL, que se actualiza en cada hidratación y solo se poda cuando la amistad desaparece.** Es el mismo patrón que
+> `friendshipHealedForGist` y por el mismo motivo: lo que hay que recordar «hasta la próxima vez» no cabe en algo
+> que existe para caducar. La caché del directorio se sigue usando para lo que es —traer el espejo sin releer
+> Firestore—, y **sí** hay que subir su versión a 5 al añadir el campo.
+
+⚑ **Y se agrupa POR DÍA, no por logro.** Es la regla que ya se puso F4 a sí mismo y aquí se aplica igual: una
+entrada por persona y día, con **todos los logros de ese día dentro**. No cinco entradas seguidas del mismo
+nombre bajando por el feed.
+
+```
+Fulano · hace 2 días
+Ha conseguido 3 logros
+[🏅] Créditos finales IV   [🏅] Un verano entero II   [🏅] Tesis doctoral
+```
+
+La entrada lleva la medalla de cada uno y su nombre, y pincharla abre `/social/profiles/:profileId/logros`. Con un
+solo logro, el texto es «Ha conseguido **Créditos finales IV**» y la fila es una medalla: no se dice «1 logro».
+
+**El agrupado es de LECTURA, no de publicación**, y esa distinción importa: no se publica nada nuevo (§8.4 no
+escribe un byte), así que agrupar es simplemente cómo el lector presenta la diferencia que acaba de deducir. Es la
+misma decisión que F4 tomó con los mensajes de lista y por el mismo motivo.
+
+Reglas para que no se convierta en ruido:
 
 - **Solo lo reciente.** Un logro cuyo día caiga fuera de los últimos 30 no se anuncia, aunque el lector lo vea por
-  primera vez. Sin esto, quien lleva un mes sin abrir el hub recibe treinta anuncios de golpe (§7.3).
-- **Uno por persona y día.** Si a alguien le suben tres medallas la misma tarde, se cuenta una vez: «ha conseguido
-  tres logros». Es la regla de `keepLatestPerDay` de los mensajes de lista, por el mismo motivo.
-- **La primera vez no anuncia nada.** Sin caché previa no hay «cambio», hay una foto inicial. Sembrar y callar.
+  primera vez. Sin esto, quien lleva un mes sin abrir el hub recibe treinta anuncios de golpe (§7.3). Es el corte
+  que de verdad acota el volumen.
+- **La primera vez no anuncia nada.** Sin línea base no hay «cambio», hay una foto inicial. Sembrar y callar —y
+  ahora la línea base es duradera, así que «la primera vez» es de verdad una vez por dispositivo y no una vez
+  cada TTL.
 - **Respeta el opt-out** por construcción: quien no publica no tiene espejo que comparar.
-- **Nada común se anuncia.** El corte de 30 días limita *cuántos*; la rareza limita *cuáles* (§6.6). Que alguien
-  llegue a diez juegos terminados no es una noticia para nadie; que llegue al nivel excepcional de algo, sí. Sin
-  este filtro el feed acabaría siendo mayoritariamente de logros, que es lo que mata a los feeds de logros.
-- **Solo espejo y social**, nunca la familia *datos*: ver §13.6, que esta pasada da por resuelto.
+- ⚑ **Todos los logros cuentan, y el filtro de rareza se cae.** El documento reservaba el feed para lo raro, y ese
+  filtro existía para acotar el volumen — trabajo que **el agrupado por día ya hace, y mejor**: con una entrada
+  por persona y día, alguien que desbloquea seis medallas en una tarde ocupa un renglón, no seis. Filtrar además
+  por rareza dejaba fuera precisamente lo que más se celebra al principio, que es cuando alguien acaba de
+  empezar y todo lo que consigue es común.
+- **Solo espejo, anual y social**, nunca la familia *datos*: ver §13.6, que esta pasada da por resuelto. ⚑ Los
+  **anuales** entran con el espejo —«Cosecha del año» es una noticia y no empuja a rellenar nada— y los
+  **ocultos** entran cuando se consiguen, como cualquier otro (§6.7): anunciarlos no revela nada que el catálogo
+  del lector no supiera ya. Los *primeros pasos* no pueden entrar aunque se quisiera: no se publican (§5.3).
 
 ### 8.5 Diseño de las medallas
+
+> **⚑ REVISIÓN — lo de abajo describe el diseño ANTERIOR.** La medalla ya no es un cuadro a sangre con un
+> triángulo: es **un disco en penumbra** con el dibujo en oro (trazos de Lucide, tres pasadas de relieve) y el
+> grado dicho por el **temple del filo**. Lo que sigue vale como registro de lo que se probó y por qué se
+> descartó cada alternativa —sigue siendo útil, porque las tres que se caen se vuelven a proponer solas—, pero la
+> referencia viva, y el manual para añadir logros nuevos, es **[`logros/receta-medalla.md`](logros/receta-medalla.md)**.
+>
+> Lo que cambió y por qué: la forma (el filo continuo se lee a 28 px, el triángulo no), el origen del dibujo (50
+> escenas a mano → una librería de 1.737 iconos, sprite de 40 kB a 16 kB) y la señal de grado (el numeral romano
+> no sobrevivía a la tira de 28 px). Lo que NO cambió: el aura de rareza, que todas midan lo mismo, que el oculto
+> no enseñe nada y la prohibición de teñir el cuerpo con metales, que son del rango de perfil.
 
 **El contrato visual ya está inventado en esta casa y es el de los rangos.** `_tiers.scss` lo dice en su cabecera:
 *«cada clase solo aporta su color de metal en `--tier`; quien la use decide la forma»*, y de ahí sale la muesca de
@@ -1094,7 +1594,7 @@ ocupa el cuadrado entero, con apenas un 4 % de redondeo.
 
 | Pieza | Valor |
 |---|---|
-| Lado | 72 px en `/perfil/logros` · 48 px en la vitrina de la ficha · 28 px en la tira de novedades |
+| Lado | ⚑ **48 px** en el listado y en la tira de una ficha · 28 px en la tarjeta del feed. Los 72 px que decía este plan hacían cada fila casi tan alta como ancho su cuadro (§10bis) |
 | Radio | **4 % del lado.** Lo justo para que no sea un cuadrado crudo |
 | Marco | **Ninguno** |
 | Imagen | `viewBox` de 32, **a sangre**, recortada por el radio |
@@ -1140,11 +1640,12 @@ parezca tener grosor. Encima, grano de lienzo y una luz cálida arriba / índigo
 > dibujo. La textura tiene que salir del propio cuadro —el relieve reacciona a cada forma— y no de una capa
 > postiza.
 
-**El sprite va aparte y es perezoso.** `IconSprite` lo monta `App.tsx` en el arranque —28 kB de paths— y el
-presupuesto es de 215 kB comprimidos (`BOOT_PAYLOAD_BUDGET_KB` en `scripts/ci-validate.js`). Meter ahí cuarenta y
-ocho símbolos que solo se ven en dos rutas perezosas es exactamente el error que `ci-validate` está puesto para
-cazar. Va un **`AchievementSprite` propio**, con los `id` bajo el prefijo `#ach-`, montado por la rejilla y por la
-vitrina —nunca por `App.tsx`—. Las dos pantallas viven en chunks distintos, así que el empaquetador lo sacará a un
+**El sprite va aparte y es perezoso.** `IconSprite` lo monta `App.tsx` en el arranque —48 símbolos, 26 kB de
+paths— y el presupuesto es de 215 kB comprimidos (`BOOT_PAYLOAD_BUDGET_KB` en `scripts/ci-validate.js`). Meter
+ahí **otros 38 símbolos** que solo se ven en dos rutas perezosas es exactamente el error que `ci-validate` está
+puesto para cazar. Va un **`AchievementSprite` propio**, con los `id` bajo el prefijo `#ach-`, montado por la rejilla y por la
+vitrina —nunca por `App.tsx`—. (El sprite existente usa el prefijo `#icon-`, así que no hay forma de que
+colisionen.) Las dos pantallas viven en chunks distintos, así que el empaquetador lo sacará a un
 chunk compartido: es lo correcto y no hay que forzarlo. Y como son rutas distintas, nunca hay dos sprites montados
 a la vez y no hay colisión de `id` que temer.
 
@@ -1160,19 +1661,32 @@ medalla**, igual que se hizo con `styles/reviews.scss`.
 normal de (0,2,1) pierde, y el síntoma es de manual: el ajuste «funciona» en el tema por defecto y no en los
 otros cinco. Al medir, mirar el color calculado **en las seis paletas**, no solo en la clásica.
 
-**Las dos cifras.** El nivel y el porcentaje (§6.10) se pintan como texto, no como medalla: son cifras, no logros,
-y darles forma de medalla haría creer que se pueden conseguir. En `/perfil` van con su barra hacia el siguiente
+**Las dos cifras.** ⚑ Hoy solo se pinta el **porcentaje**: el nivel de perfil se calcula pero no se enseña
+(§10bis). Se pinta como texto, no como medalla: es una cifra, no un logro, y darle forma de medalla haría creer
+que se puede conseguir. En `/perfil` van con su barra hacia el siguiente
 nivel (con `aria-valuenow`/`aria-valuemin`/`aria-valuemax`, que es una barra de progreso de verdad); en la ficha
 ajena van sin barra, porque el progreso de otra persona hacia algo que no tiene no es asunto de nadie (§3).
 
-**Tamaño constante, pase lo que pase.** La medalla mide **exactamente lo mismo** en los cinco estados —nivel I a
-IV, bloqueada y oculta—. El nivel no puede cambiar ni una medida: se lee en el color de la moldura, el filete
-interior, el hilo del canto y el numeral. La versión que engordaba el marco con el nivel se descartó porque
-cambiaba el tamaño del lienzo y del bulto, y una rejilla de medallas de distinto tamaño no cuadricula.
+**Tamaño constante, pase lo que pase.** La medalla mide **exactamente lo mismo** en los cinco estados —grado I a
+IV, bloqueada y oculta—. ⚑ El grado no puede cambiar ni una medida y **vive entero en el triángulo**: este
+párrafo decía «se lee en el color de la moldura, el filete interior, el hilo del canto y el numeral», que es la
+versión anterior —la que tenía marco— y contradecía la tabla de tres párrafos más arriba, donde **Marco:
+Ninguno**. Lo que se lee es el numeral, y nada más.
 
-**El numeral, en la esquina inferior derecha y bajito.** Pequeño, muy espaciado y a poco contraste: quien quiere
-el dato exacto lo lee, y quien recorre la rejilla ve antes el color de la moldura y el aura, que es lo que de
-verdad se compara de un vistazo. Un numeral grande convierte cada medalla en una etiqueta.
+**El numeral, dentro del triángulo y bajito.** Pequeño, muy espaciado y a poco contraste: quien quiere el dato
+exacto lo lee, y quien recorre la rejilla ve antes el aura, que es lo que de verdad se compara de un vistazo. Un
+numeral grande convierte cada medalla en una etiqueta.
+
+⚑ **Y el coste de pintado, que no estaba medido y es el único riesgo abierto de F2.** El acabado es un
+`filter: url(#imp)` con `feTurbulence` × 2, `feGaussianBlur` y `feDiffuseLighting`, más dos capas con
+`mix-blend-mode` (`overlay` y `soft-light`) — por medalla. En la vitrina de una ficha son cinco o seis y no hay
+nada que discutir; en la rejilla de `/perfil/logros` son **38 a la vez**, y un filtro con turbulencia se
+rasteriza por elemento y no se comparte entre instancias por mucho que el `<filter>` esté declarado una sola vez.
+No se sabe si janquea porque no se ha medido en un móvil de gama baja. **Antes de cerrar F2: medir la rejilla
+completa con el perfil de rendimiento.** Si molesta, el arreglo ya está inventado en esta casa y es el mismo que
+el destello — atar el filtro a `data-effects` (§7.4), con el cuadro plano como fallback: los dibujos se leen
+perfectamente sin empaste, y quien apaga los efectos ya está pidiendo justo eso. Lo que no se hace es quitar el
+acabado para todos por un problema que quizá no exista.
 
 **Bloqueado.** El logro que no se tiene es **la misma forma, desaturada** —no un hueco, no un candado que sea el
 único indicio—, y esto solo pasa en `/perfil`: en la ficha ajena no hay bloqueados que pintar (§3). La
@@ -1212,7 +1726,8 @@ tener que revertir la versión.
 
 ### 9.2 Reglas de Firestore
 
-En `profileWriteIsValid()`, añadir `"achievements"` al `hasOnly` y una validación propia:
+En `profileWriteIsValid()`, añadir `"achievements"` al `hasOnly`, **encadenar la función nueva al `&&` de esa
+misma función** (o a `profileFieldsAreSane()`, que es donde viven sus hermanas) y escribirla así:
 
 ```
 function profileAchievementsAreSane() {
@@ -1229,8 +1744,19 @@ function profileAchievementsAreSane() {
 Como el resto de campos de `profileFieldsAreSane()`, se valida **solo si está presente**: en un `update` por
 merge, `request.resource.data` es el documento resultante, y exigirlo congelaría el perfil de quien no lo tenga.
 
-El tope de 1.024 caracteres es el que protege el coste ajeno: es lo que se descarga el directorio entero. Con la
-gramática de §5.3 caben ~70 logros, muy por encima del catálogo previsto.
+El tope de 1.024 caracteres es el que protege el coste ajeno: es lo que se descarga el directorio entero. ⚑ Con la
+gramática de §5.3 y los `id` reales del §6.9 —9,9 caracteres de media— caben **~54 logros**, no los ~70 que
+suponía el documento cuando las entradas se estimaron en 14 bytes: una entrada completa (`completados.12.4999`)
+son 20. Los 32 publicables de hoy ocupan **608 bytes en el peor caso** (todos conseguidos, niveles de dos
+dígitos, tres destacados), así que el margen sigue siendo de más del 40 % — pero es margen para veintitantos
+logros más, no para el doble del catálogo. Cuando el catálogo pase de ~45 entradas, toca revisar el tope o la
+gramática, y la regla de recorte del §5.3 deja de ser teórica.
+
+⚑ **Y lo que ese tope cuesta al que mira, dicho con el número delante:** el directorio baja hasta
+`SOCIAL_DIRECTORY_LIMIT` (50) perfiles por apertura, así que el peor caso absoluto que las reglas permiten son
+**+51 kB por hidratación**; el caso real de hoy, con 32 logros, son **~30 kB**. No cambia el número de lecturas
+de Firestore (siguen siendo 50 documentos), solo los bytes, y la caché del directorio ya evita releerlo dentro
+del TTL. Es asumible, y es exactamente por lo que el tope es duro y va en las reglas y no en el cliente.
 
 ### 9.3 Lectura defensiva
 
@@ -1239,7 +1765,9 @@ propio). El parser que lo lee es la única defensa y tiene que comportarse como 
 
 - tope de entradas procesadas y de longitud de cada `id` (`SOCIAL_ID_MAX` como referencia);
 - `id` desconocido → se ignora, no es un error;
-- nivel fuera del rango del catálogo → se recorta al máximo definido;
+- nivel fuera del rango del catálogo → se recorta al máximo definido, que es `steps.length` para un logro
+  cerrado y el `cap` de `open`/`annual` para los demás (§5.1: sin ese campo declarado, este recorte no se puede
+  escribir);
 - día negativo, no numérico o en el futuro → el logro se pinta **sin fecha**, no se descarta;
 - cadena entera ilegible → vitrina vacía, nunca una excepción que tumbe la ficha.
 
@@ -1269,7 +1797,8 @@ Consecuencias que hay que atender antes de entregar la fase 3:
 
 1. **Declararlo en la política de privacidad** (`core/constants/legalContent.ts`), en el apartado de lo que
    publica el espacio social, junto a la actividad de listas de F4.
-2. **Subir `LEGAL_VERSION`**, que hace que todo el mundo vuelva a pasar por la puerta del hub. Es lo que se hizo
+2. **Subir `LEGAL_VERSION`** (⚑ vive en `core/constants/legal.ts`, no en `legalContent.ts`, que solo la importa;
+   hoy vale `'2026-08-22'`), que hace que todo el mundo vuelva a pasar por la puerta del hub. Es lo que se hizo
    con las reseñas compartidas y por el mismo motivo: se publica algo que antes no se publicaba.
 3. **El borrado de cuenta ya lo cubre**: el campo vive dentro de `profiles/{uid}`, que se borra entero
    (`allow delete: if isOwner(userId)`). No hay ninguna vía nueva de supresión que escribir.
@@ -1280,6 +1809,88 @@ Consecuencias que hay que atender antes de entregar la fase 3:
    y quien puede verlos ya podía calcularlos. No hay nada nuevo que declarar por ellos — pero sí conviene que el
    texto legal hable de «logros conseguidos **y las cifras que se derivan de ellos**», para que nadie lea la
    política, vea un nivel en una ficha y piense que se publicó algo que no se contó.
+6. ⚑ **Y hay que decir que los logros se calculan sobre la biblioteca entera** (§5.3bis). Los ajustes de
+   visibilidad **no** filtran el espejo, y esa decisión no se puede dejar sin escribir: el texto vigente promete
+   «si eliges ocultarlas, no las ve nadie» y «esconder una lista esconde también su actividad», las dos siguen
+   siendo verdad —no sale ni una hora ni la entrada de un juego a una lista oculta— pero quien lea «Un verano
+   entero III» en una ficha tiene que poder situarlo. Una frase basta: **los logros se calculan sobre tu
+   biblioteca entera y publican solo su nivel, sin ningún dato de los juegos que los producen.** Es requisito de
+   entrada de F3, como el resto de este apartado.
+7. ⚑ **Y lo que el interruptor NO puede prometer**, dicho aquí y no descubierto luego: apagarlo borra el campo de
+   `profiles/{uid}` (§8.3), pero mientras esté encendido **el espejo llega en el JSON a cualquier usuario
+   autenticado**, sea amistad o no, porque el documento entero es legible con `social.enabled == true` y el hub
+   se lo descarga para el directorio. Que la vitrina solo se **pinte** a una amistad (§13.9) es producto, no
+   privacidad. Es exactamente lo mismo que ya pasa con el nick, la foto y el rango, y por eso no cambia nada del
+   diseño — pero el que lo lea tiene que saber cuál de las dos cosas le está protegiendo.
+
+---
+
+## 10bis. ⚑ Lo construido: F1 y F2 en modo maqueta
+
+> **Estado al 6-sep-2026.** F1 y F2 están escritas y funcionando detrás de `ENABLE_ACHIEVEMENTS`, con la
+> publicación (`ENABLE_ACHIEVEMENTS_PUBLISH`) **apagada**: no se escribe nada en `profiles/{uid}`, no hay reglas
+> nuevas y el texto legal no se ha tocado. Los espejos de otras personas los fabrica `dev/achievementsSeed`, que
+> solo existe en desarrollo. Esta sección dice **en qué se apartó la implementación del diseño**, porque probar
+> las pantallas con datos reales cambió cinco cosas y un plan que no lo recoge deja de servir de guía.
+
+**Dónde vive cada cosa**
+
+| Pieza | Fichero |
+|---|---|
+| Catálogo, evaluador, resumen, empaquetado, feed | `core/achievements/{types,catalog,metrics,evaluate,summary,pack,feed,flags,deviceSignals}.ts` |
+| Estado y lista de pantalla | `viewmodel/useAchievements.ts` · `view/hooks/useAchievementNotice.ts` |
+| Medalla, tira, fila, cifra, pantalla, tarjeta | `view/components/stats/Achievement*.tsx` |
+| Vitrina y globales de un perfil | `view/components/socialhub/ProfileAchievements.tsx` |
+| Sprite y hoja | `view/components/AchievementSprite.tsx` · `styles/achievements.scss` |
+
+**Lo que cambió respecto a este documento, y por qué**
+
+1. **El listado NO se agrupa por familia.** Las categorías partían la pantalla en cinco tramos y dentro de cada
+   uno volvía a empezar el orden, así que para saber qué llevas había que recorrerla entera. Es una sola lista:
+   **primero lo conseguido y luego lo que falta**, como en Steam. Dentro de la primera mitad manda la fecha; en la
+   segunda, **lo cerca que está de caer**, que es la información útil de ese tramo. La familia sigue en el
+   catálogo haciendo su trabajo —el filtro del feed y el denominador—, solo que ya no titula secciones.
+
+2. **El nivel de perfil no se enseña.** Los puntos por rareza y la curva por tramos se calculan y se prueban
+   igual (§6.10.2), pero no salen a pantalla mientras no esté decidido cómo se presentan. Hay un test que fija
+   justo eso: **se calcula y no se pinta**. Lo que sí se ve es la fracción con su porcentaje.
+
+3. **La línea «empieza a contar desde que lo instalaste» se retiró del catálogo entero.** El §6.8 la pedía en la
+   tarjeta de los seis logros dormidos; en pantalla resultó ser un párrafo de disculpa repetido seis veces. El
+   campo `note` ya no existe, así que no puede volver por descuido, y hay un test que lo comprueba.
+
+4. **La rareza NO se pinta como color de texto.** Los cuatro colores de la escala de loot están pensados para el
+   **aura** —un halo alrededor de un cuadro, donde la 1.4.11 pide 3:1— y como texto de 11 px se quedan cortos
+   frente al 4,5:1 de la 1.4.3: el morado del raro daba **3,07:1**. La auditoría de axe lo cazó en las doce
+   combinaciones de paleta y tema. El chip lleva ahora **punto de color y texto atenuado**, que es exactamente lo
+   que el activo de diseño ya proponía y que la implementación se había saltado.
+
+5. **La medalla mide 48 px en el listado**, no 72. A 72 cada fila era casi tan alta como ancho su cuadro y la
+   lista se leía como una pila de fichas. Y la decide el componente, no la hoja: llegó a haber dos sitios donde
+   cambiarla —un `!important` para la vista global y una prop para el listado— y ya habían empezado a separarse.
+
+**Lo que se añadió y no estaba escrito**
+
+- **§6.6bis, el porcentaje medido.** El documento lo descartaba por no tener con qué medirlo; sí lo hay, cuesta
+  cero y a la escala de hoy es exacto. Está documentado en su sección.
+- **Los logros globales** (`/social/profiles/:id/globales`), que son donde ese porcentaje se lee, con recuadro en
+  lo que ese perfil tiene y relleno de fondo por porcentaje. **Se abren SOLO desde el hub**, en el listado de
+  logros de una ficha, y nunca desde `/logros`: son una lectura de los espejos de OTRAS personas —que el panel de
+  estadísticas no mira, porque ahí solo se ve lo propio— y viven en otra sección, así que un botón en `/logros`
+  sacaba al usuario del panel y el «volver» de la pantalla de destino ya no sabía regresar a donde estaba.
+- **La baldosa final de la tira**, del tamaño de una medalla, que cuenta lo que no cabe y lleva al listado. Antes
+  el acceso era un enlace pequeño debajo, y en la ficha de una amistad no existía ninguno.
+
+**Lo que el plan pide y NO está construido** (por orden de lo que se echará en falta antes):
+
+| Falta | Dónde estaba previsto |
+|---|---|
+| La **tira de novedades** y el punto en la pestaña | §7.3 · F2 |
+| El **destello** del desbloqueo tras `data-effects` | §8.5 · F2 |
+| El **foco rotatorio** del mes | §6.3 · F2 |
+| Elegir **destacados** (el empaquetado y el parser ya los entienden) | §8.2 · F4 |
+| Todo F3 en bloque: escritura, reglas, opt-out, `/admin`, textos legales | §9, §10 |
+| El **coste de pintado** de 38 filtros: medido en escritorio, **no en móvil de gama baja** | §8.5 |
 
 ---
 
@@ -1287,11 +1898,18 @@ Consecuencias que hay que atender antes de entregar la fase 3:
 
 Cada fase es entregable por separado y deja la app en un estado coherente.
 
+**F0 · Cerrar el catálogo antes de escribir código** — ⚑ media hora y evita lo único irreversible de todo el
+plan. Fijar los 32 `id` definitivos (el choque de `segunda-vuelta` del §6.2 ya está resuelto en este documento) y
+recorrer `docs/logros/catalogo.json` comprobando que cada entrada trae, si le toca, `open` o `annual` con su
+`cap` (§5.1), y que las cuatro métricas del §7.5 llevan su guarda escrita en la definición. Un `id` no se renombra jamás (§6.4): esto se hace ahora o no se hace.
+
 **F1 · Núcleo puro** — `core/achievements/{types,catalog,evaluate}.ts` con la familia *espejo* (incluida la curva
-de pendientes del §6.2.1), la marca de agua, y ya con `rarity` y `hidden` en el catálogo (§6.6, §6.7): son campos
-declarativos, no cuestan nada aquí, y añadirlos después obligaría a revisar entrada por entrada. **Los umbrales y
-las rarezas entran ya fijados** desde §6.9 — están medidos, no supuestos. Dos tests que salen directos de esa
-medición: que **ninguna métrica compara contra `listedAt`** (el falso positivo de «Speedrun»: 42 aciertos, los 42
+de pendientes del §6.2.1), la marca de agua, y ya con `rarity`, `hidden`, ⚑ `open` y `annual` en el
+catálogo (§6.6, §6.7, §5.1): son campos declarativos, no cuestan nada aquí, y añadirlos después
+obligaría a revisar entrada por entrada. ⚑ Aquí entra también exponer `profiles.createdAt` en la lectura del
+perfil propio, que hoy no se mapea y sin lo cual `veterano` no se puede calcular (§6.2). **Los umbrales y
+las rarezas entran ya fijados** desde §6.9 — están medidos, no supuestos. ⚑ Y las **cinco guardas del §7.5** escritas en la definición de su métrica, no en un comentario. Tests que salen
+directos de esa medición: que **ninguna métrica compara contra `listedAt`** (el falso positivo de «Speedrun»: 42 aciertos, los 42
 falsos) y que `memoria-larga`/`buena-cosecha` **miden sobre `years`** y no sobre `enteredAt`, que da 1 año en vez
 de 22. Sin UI y sin
 publicación. Tests unitarios: cada métrica con su fixture, la fecha derivada de cada umbral, biblioteca vacía,
@@ -1300,29 +1918,43 @@ con `computeStats` (§7.2). Entra aquí también el cálculo de **porcentaje y n
 `AchievementState[]` + catálogo: se prueba con la tabla de tramos en la mano, incluidos el nivel 1 con cero puntos
 y el salto de tramo exacto (180 → nivel 10, 181 → nivel 11).
 
-**F2 · Tu panel** — la línea «empieza a contar desde que lo instalaste» en la tarjeta de los seis logros que
-arrancan dormidos (§6.8), cifras destacadas (porcentaje y nivel, §6.10), `/perfil/logros` con la barra hacia el
-siguiente nivel, novedades con `achievementsSeen`, **el aviso del instante del §7.4**, hoja propia
-`achievements.scss`, **`AchievementSprite` perezoso** y forma base de la medalla —cuadrado de radio 22 %— con sus
-tres estados —conseguido, bloqueado, oculto— (§8.5). Aquí ya hay producto completo para el dueño **sin publicar un
+**F2 · Tu panel** — ⚑ **el apartado del panel bajo «Lo mejor de tu biblioteca»** (§8.1) y ⚑ **el listado
+`/logros` estilo Steam** —imagen, nombre, descripción y día, en UNA sola lista con lo conseguido delante
+(§8.1b, §10bis)—, novedades con `achievementsSeen`, **el aviso del instante del §7.4**, hoja propia
+`achievements.scss`, **`AchievementSprite` perezoso** y forma base de la medalla —cuadrado de radio **4 %**, como
+dicen la tabla del §8.5 y el activo; el «22 %» que ponía aquí era el `--radius-lg` del cromo de la app, no el de
+la medalla— con sus tres estados —conseguido, bloqueado, oculto— (§8.5). Aquí ya hay producto completo para el dueño **sin publicar un
 solo byte**. Tests de componente sobre la rejilla y la sub-ruta (patrón de `StatsHub.test.tsx`), test de que el aviso
 salta al subir un nivel en una escritura y **no** salta en la primera evaluación del dispositivo, y paso de axe con
 las animaciones quietas.
 
-**F3 · El espejo** — empaquetado, escritura a rebufo tras `ENABLE_ACHIEVEMENTS_PUBLISH`, reglas, opt-out en
-`publicConfig`, señal y purga en `/admin`, textos legales y `LEGAL_VERSION`. Tests de reglas
-(`vitest.rules.config.js`): el dueño escribe lo suyo; otro usuario no; un blob de más de 1 kB se deniega; una
-clave inventada dentro de `achievements` se deniega; un perfil sin el campo sigue pudiendo escribirse.
+**F3 · El espejo** — empaquetado, escritura a rebufo tras
+`ENABLE_ACHIEVEMENTS_PUBLISH`, reglas, opt-out en `publicConfig` ⚑ **con sus cuatro piezas (§8.3)**, señal y purga
+en `/admin`, textos legales y `LEGAL_VERSION`. Tests de reglas (`vitest.rules.config.js`): el dueño escribe lo
+suyo; otro usuario no; un blob de más de 1 kB se deniega; una clave inventada dentro de `achievements` se
+deniega; un perfil sin el campo sigue pudiendo escribirse; ⚑ `publicConfig` acepta `showAchievements: false` y
+rechaza `showAchievements: "no"`.
 
-**F4 · La vitrina ajena** — parser defensivo, **nivel y porcentaje derivados del espejo** (§6.10.3), fila de
-medallas en la ficha, destacados, **orden automático por rareza cuando no los hay** (§8.2), silencio si no hay
-nada. Test de que las cifras NO aparecen en la tarjeta del directorio ni en la bandeja (§6.10.4): es una regla que
+> ⚑ **F3 tiene una dependencia de despliegue que conviene no descubrir el día del corte:** `audit-privacy.js`
+> marca `hours`, `steamDeck`, `review` y `score` como campos prohibidos en cualquier fichero que escriba a un
+> canal público. El módulo que empaqueta y publica el espejo **lee** esos campos (es su trabajo) pero no puede
+> **construir** un objeto con esas claves; si por lo que sea hiciera falta, se marca con `// audit-allow: <razón>`
+> como ya hace el resto del repositorio. `npm run audit:privacy` es puerta de CI (categoría A = 0).
+
+**F4 · La vitrina ajena** — parser defensivo, **nivel y porcentaje derivados del espejo** (§6.10.3), ⚑ **la tira
+solo-imagen bajo el nombre** con el rótulo en `hover` y en `focus-visible` (§8.2), ⚑ **el listado de esa persona en
+`/social/profiles/:profileId/logros`** reutilizando la pantalla de F2, ⚑ **el porcentaje medido sobre el
+directorio, con su denominador a la vista y su suelo de 20 perfiles** (§6.6bis), destacados, **orden automático
+por rareza cuando no los hay** (§8.2), silencio si no hay nada. Test de que las cifras NO aparecen en la tarjeta del directorio ni en la bandeja (§6.10.4): es una regla que
 se rompe sola en cuanto alguien reutiliza el componente de la ficha. Tests de componente con espejos corruptos,
 vacíos, con ids desconocidos y con quince destacados marcados. E2E de la ficha con la vitrina puesta.
 
-**F5 · Novedades en el feed** — comparación con el directorio cacheado (§8.4). Va **después** de la vitrina a
-propósito: sin espejos reales circulando no hay nada que comparar, y el corte de 30 días solo se puede afinar
-viendo datos de verdad.
+**F5 · Novedades en el feed** — ⚑ **una entrada por persona y día, con todos sus logros dentro** (§8.4), y
+comparación con ⚑ `achievementsPeerSeen` (§5.4), **no con la caché del directorio**: el porqué está en el §8.4 y es lo que impide que un mithril no vea jamás un logro ajeno. Incluye
+subir `SOCIAL_DIRECTORY_CACHE_VERSION` a 5 al añadir `achievements` a las entradas cacheadas. Va **después** de la
+vitrina a propósito: sin espejos reales circulando no hay nada que comparar, y el corte de 30 días solo se puede
+afinar viendo datos de verdad. Test: **con la caché del directorio caducada, la línea base sigue ahí y el aviso
+sale igual** — es justo el caso que el diseño anterior no pasaba.
 
 **F6 · Familias «datos», «social» y «primeros pasos» + foco rotatorio** — las que empujan conducta, al final y a
 sabiendas: conviene ver antes cómo se comporta el espejo con datos reales.
@@ -1338,8 +1970,19 @@ lleve tiempo demostrando que no retira nada, y porque el tema hay que dibujarlo:
 
 ## 12. Riesgos y trampas conocidas
 
+Las filas en **⚑** salieron de la revisión del 6-sep-2026 y no estaban en el documento.
+
 | Riesgo | Mitigación |
 |---|---|
+| ⚑ **Cuatro métricas dan falsos positivos: la nota ausente vale 0** | Guarda explícita en la definición y un test por métrica (§7.5). Es la misma familia del falso positivo de «Speedrun»: la ausencia de dato se lee como dato |
+| ⚑ **«Exterminatus» salta el primer día, con la biblioteca vacía** | Exige haber tenido pendientes: al menos un juego con `enteredAt.p` (§7.5). Sin la guarda, un usuario nuevo estrena 60 puntos por no tener nada |
+| Alguien lee «Un verano entero» de quien esconde sus horas y cree que es una fuga | No lo es —sale una magnitud, no un dato (§5.3bis)— pero **la política de privacidad tiene que decirlo** (§10.6): es requisito de entrada de F3 |
+| ⚑ **El opt-out no sincroniza nunca y nadie se entera** | `showAchievements` en el `hasOnly` de `publicConfigWriteIsValid()`, más el tipo, la clave y el registro de la preferencia (§8.3). Ya ocurrió aquí con `effects`, y su comentario en las reglas es la prueba |
+| ⚑ **El dueño se ve un nivel y su amistad le ve otro** | Los *primeros pasos* no puntúan: lo que no se publica, no cuenta (§6.10.2) |
+| ⚑ **Las metas abiertas no existen en ninguna parte y el parser no puede recortar** | `open: { every, cap }` y `annual: { since, cap }` declarados en el catálogo (§5.1); el recorte del §9.3 usa ese `cap` |
+| ⚑ **F5 calla justo para quien más mira (mithril, TTL de 60 s)** | Línea base propia y sin TTL en `LocalMeta`, no la caché del directorio (§8.4, §5.4) |
+| ⚑ **Dos logros distintos comparten el `id` `segunda-vuelta`** | Cerrado en F0 antes de escribir código: un `id` no se renombra jamás (§6.2, §6.4) |
+| ⚑ **38 filtros con turbulencia en una rejilla janquean el móvil** | Medir la rejilla completa antes de cerrar F2 y, si molesta, atar el filtro a `data-effects` con el cuadro plano de fallback (§8.5) |
 | Dos contadores de lo mismo divergen (panel vs. logro) | Test de coincidencia con `computeStats` (§7.2) |
 | El evaluador arrastra el chunk del panel al arranque | Prohibido importar `core/stats`; lo vigila `ci-validate` |
 | El estado de la pantalla va un render por detrás al publicar | Leer los listados con `loadLocalState()` en el momento de publicar, como hace `withMoveActivity`; **nunca** la foto del render (es el fallo de datos que ya costó una regresión de sincronización) |
@@ -1351,24 +1994,28 @@ lleve tiempo demostrando que no retira nada, y porque el tema hay que dibujarlo:
 | Inflación de logros con los años | Metas abiertas, repetibles anuales y temas de estreno (§6.3, §6.5), no catálogo nuevo cada temporada |
 | **La medalla sale sin estilos en una de las dos pantallas** | Hoja propia `achievements.scss` importada desde el componente, nunca colgada de `stats.scss` ni de `social.scss` (§8.5). Fallo MUDO: solo se ve abriendo la otra pantalla |
 | El ajuste visual funciona en el tema clásico y en ninguno más | Los skins pesan (0,3,0): medir en las seis paletas (§8.5) |
-| El feed se llena de anuncios de logros | Corte de 30 días, uno por persona y día, y silencio en la primera hidratación (§8.4) |
+| El feed se llena de anuncios de logros | ⚑ Agrupado **por día** (una entrada por persona, con todos sus logros dentro), corte de 30 días y silencio en la primera hidratación (§8.4). El agrupado hace el trabajo que antes se le pedía al filtro de rareza |
+| ⚑ **El porcentaje medido se lee como una cifra global y no lo es** | Se dice siempre con su denominador («14 % · 6 de 43») y no se pinta por debajo de 20 perfiles con espejo (§6.6bis) |
+| ⚑ **El porcentaje medido acaba moviendo los puntos y el nivel baila** | Prohibido: los puntos, el aura y el recorte los gobierna la rareza **declarada** (§6.6). Lo medido se enseña y no decide (§6.6bis) |
+| ⚑ **La tira bajo el nombre solo dice el nombre al pasar por encima, y con teclado no** | Nombre accesible completo en cada medalla y rótulo en `:hover` **y** `:focus-visible`; en táctil, el toque lleva al listado (§8.2) |
 | Quien vuelve tras un mes recibe una avalancha | Mismo corte, en las dos puntas: sus novedades (§7.3) y las de sus amistades (§8.4) |
 | **El logro salta callado y se pierde el momento** | Reevaluar tras cada escritura y avisar en el `StatusBanner` que ya existe (§7.4). Es el fallo que no da error y que vacía el sistema por dentro |
 | Con metas abiertas no hay 100 % y el completista se va | La fracción cuenta logros, no niveles; la profundidad es otra cifra aparte (§6.3.1) |
 | Todas las vitrinas se parecen | Orden automático por rareza cuando no hay destacados (§8.2, §6.6) |
-| El catálogo se lee como una lista de tareas | Cuatro o cinco ocultos de la familia espejo (§6.7) |
+| El catálogo se lee como una lista de tareas | **Nueve** ocultos sobre 32 publicables, y no todos son espejo: la regla es que ninguno pida una campaña por toda la biblioteca (§6.7) |
 | La rareza se convierte en comparación entre usuarios | Se **declara** en el catálogo, nunca se mide sobre el directorio, aunque salga gratis (§6.6) |
 | Un nombre elegido con prisa queda congelado | El `id` es el slug de lo medido y el nombre es texto retocable (§6.4) |
 | Se desborda el 1 kB y se trunca por donde caiga | Prioridad de recorte: destacados, luego rareza y nivel (§5.3) |
 | Alguien propone que los logros caduquen «para que valgan» | Ya contestado con el porqué del modelo Pepper (§5.5, §0.1) |
 | **El nivel se pinta en el directorio y nace un ranking sin querer** | Las cifras solo en la ficha individual (§6.10.4), con test que lo fija. Es la regla que se rompe sola al reutilizar el componente |
 | Las medallas usan los cuatro metales y se confunden con el rango | El nivel va en intensidad del acento + numeral; los metales son de `_tiers.scss` y ahí se quedan (§8.5). En la ficha social las dos escalas conviven a dos centímetros |
-| 48 iconos entran en el sprite del arranque | `AchievementSprite` propio y perezoso, prefijo `#ach-`, nunca en `App.tsx` (§8.5). Lo corta `ci-validate` a 215 kB |
+| Los 38 iconos entran en el sprite del arranque | `AchievementSprite` propio y perezoso, prefijo `#ach-`, nunca en `App.tsx` (§8.5). Lo corta `ci-validate` a 215 kB. El sprite ya está escrito (`docs/logros/achievement-sprite.svg`, 38 símbolos + el filtro `#imp`, 26 kB sin comprimir) |
 | Un cliente viejo enseña un nivel ajeno más bajo del real | Aceptado: los `id` desconocidos se ignoran, así que el error va siempre a la baja y se corrige al actualizar (§6.10.3). No se arregla publicando el número |
 | El nivel acaba desbloqueando algo | Prohibido en §6.10.4: los temas los abre un logro concreto, nunca una cifra agregada |
 | Un guiño que no se entiende deja el logro ilegible | La referencia va solo en el nombre; la condición, en llano debajo (§6.11) |
 | **Un logro compara contra `listedAt` y acierta en falso** | Prohibido (§6.8). En un juego catalogado hacia atrás esa fecha es la de catalogarlo. Medido: la definición ingenua de «Speedrun» daba **42 aciertos y los 42 falsos** |
-| Seis logros salen a cero y parecen rotos | Asumido: no hay sellos de listas anteriores en ninguna biblioteca preexistente (0 de 302). La tarjeta lo dice — «empieza a contar desde que lo instalaste» (§6.8) |
+| Seis logros salen a cero y parecen rotos | Asumido y **sin explicarlo en la tarjeta**: la línea se probó y se quitó (§10bis). No hay sellos de listas anteriores en ninguna biblioteca preexistente (0 de 302), y quien llega nuevo no echa de menos lo que nunca vio |
+| ⚑ **La rareza se pinta como color de texto y falla el contraste** | Va en el punto del chip, no en el texto: los colores del aura son para la 1.4.11 (3:1), no para la 1.4.3 (4,5:1). Lo cazó la auditoría de axe, que ahora recorre también `/logros` en las doce combinaciones (§10bis) |
 | Lo anual se mide con `enteredAt` y da 1 año en vez de 22 | `memoria-larga` y `buena-cosecha` miden sobre `years`, que está poblado al 100 % (§6.8) |
 | Un excepcional con escalera larga descuadra el nivel | Máximo dos niveles: cuatro serían 240 pts, más que ningún otro logro (§6.9) |
 

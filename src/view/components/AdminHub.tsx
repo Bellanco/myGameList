@@ -1,6 +1,7 @@
-import { memo, useCallback, useEffect, useRef, useState } from 'react';
-import { Navigate, useNavigate } from 'react-router-dom';
-import { ADMIN_PANEL_UI } from '../../core/constants/adminLabels';
+import { lazy, memo, Suspense, useCallback, useEffect, useRef, useState } from 'react';
+import { Navigate } from 'react-router-dom';
+import { ADMIN_ACHIEVEMENTS_UI, ADMIN_PANEL_UI } from '../../core/constants/adminLabels';
+import type { HiddenOverrides, OpenFrontier } from '../../core/achievements/visibility';
 import {
   ADMIN_ONLY_TIER,
   PROFILE_TIERS,
@@ -11,6 +12,8 @@ import {
 } from '../../core/constants/tiers';
 import {
   ADMIN_PROFILES_LIMIT,
+  clearAllAchievements,
+  clearProfileAchievements,
   type AdminUserRow,
   type LegacyProfileField,
 } from '../../model/repository/firebaseAdminRepository';
@@ -36,6 +39,13 @@ import '../../styles/admin.scss';
 import { copyText } from '../../core/utils/clipboard';
 
 const A = ADMIN_PANEL_UI;
+
+/**
+ * El catálogo de logros, aparte y perezoso: son 250 escalones y los 50 símbolos del sprite, y el censo de
+ * usuarios —que es a lo que se entra— no tiene por qué cargarlos para nada.
+ */
+const AdminAchievements = lazy(() =>
+  import('./AdminAchievements').then((module) => ({ default: module.AdminAchievements })));
 
 const DATE_FORMAT = new Intl.DateTimeFormat('es-ES', { dateStyle: 'medium', timeStyle: 'short' });
 /** Para fechas de alta: el día basta y ocupa la mitad. */
@@ -145,8 +155,16 @@ function describePhoto(user: AdminUserRow): {
  * Todo se apoya en `isAdmin()` de firestore.rules; esta pantalla solo evita que quien no manda vea una tabla rota.
  */
 export const AdminHub = memo(function AdminHub() {
-  const navigate = useNavigate();
   const vm = useAdminViewModel();
+  // Dos vistas y no dos rutas: `/admin` es una ruta oculta que ya cuelga de la guarda de `isAdmin()`, y partirla
+  // en dos obligaría a repetir esa guarda y a inventar un «volver» que no lleva a ninguna sección de la app.
+  const [view, setView] = useState<'users' | 'achievements'>('users');
+  // La configuración de ocultación de logros: se lee al entrar en su vista y se reescribe al pulsar. Vive aquí
+  // —y no en la pantalla— porque es este componente el que ya habla con Firestore.
+  const [hiddenAchievements, setHiddenAchievements] = useState<HiddenOverrides>({});
+  // La apertura comunitaria PUBLICADA. Llega con la misma lectura que la ocultación (mismo documento) y sirve
+  // para que el catálogo pueda decir si lo que mide ahora es lo que la gente está viendo.
+  const [openFrontier, setOpenFrontier] = useState<OpenFrontier>({});
   const [pending, setPending] = useState<PendingAction>(null);
   // Los enlaces de TODOS se piden una vez y se agrupan por usuario: el panel pinta decenas de fichas y una
   // petición por ficha sería absurda para un dato que cabe en una sola respuesta.
@@ -160,6 +178,71 @@ export const AdminHub = memo(function AdminHub() {
   const [sharesSummary, setSharesSummary] = useState<{ total: number; complete: boolean } | null>(null);
   const [notice, setNotice] = useState('');
   const noticeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  /**
+   * Carga la configuración de ocultación al entrar en la vista del catálogo, y solo entonces: el censo de
+   * usuarios —que es a lo que se entra— no la necesita para nada.
+   */
+  useEffect(() => {
+    if (view !== 'achievements') return;
+    let cancelled = false;
+    void import('../../model/repository/achievementsConfigRepository')
+      .then((module) => module.loadAchievementsConfig(true))
+      .then((value) => {
+        if (cancelled) return;
+        setHiddenAchievements(value.hidden);
+        setOpenFrontier(value.open);
+      })
+      .catch(() => {
+        // Sin configuración manda el catálogo; la pantalla lo enseña tal cual.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [view]);
+
+  /** Guarda el cambio y se queda con lo que de verdad ha quedado escrito. Si falla, LANZA: la ficha lo dice. */
+  const toggleHiddenAchievement = useCallback(async (ladderKey: string, hidden: boolean) => {
+    const module = await import('../../model/repository/achievementsConfigRepository');
+    setHiddenAchievements(await module.setLadderHidden(ladderKey, hidden));
+  }, []);
+
+  /**
+   * Publica hasta dónde ha abierto cada escalera la comunidad. Es lo que decide qué escalones se le enseñan a
+   * TODO EL MUNDO, así que la mide el catálogo (que tiene los espejos delante) y la escribe esto. Si falla,
+   * LANZA: la ficha del catálogo lo dice.
+   */
+  /**
+   * Borra el espejo publicado de UNA persona y lo cuenta. No le quita ningún logro: los suyos se derivan de su
+   * biblioteca en su propio aparato, y los volverá a publicar en cuanto abra la app (lo dice la confirmación).
+   */
+  const clearAchievements = useCallback(async (profileDocId: string) => {
+    try {
+      await clearProfileAchievements(profileDocId);
+      setNotice(A.achievementsDone);
+      await vm.refresh();
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : ADMIN_SHARES_UI.failed);
+    }
+  }, [vm]);
+
+  const publishOpenFrontier = useCallback(async (open: OpenFrontier) => {
+    const module = await import('../../model/repository/achievementsConfigRepository');
+    setOpenFrontier(await module.publishOpenFrontier(open));
+  }, []);
+
+  /**
+   * Borra el espejo de TODO el censo y, con él, la apertura publicada — que se mide sobre esos espejos y sin
+   * ellos no significa nada. Devuelve cuántos se borraron para que la pantalla lo diga.
+   */
+  const resetAllAchievements = useCallback(async (): Promise<number> => {
+    const ids = (vm.census?.users || []).map((entry) => entry.id);
+    const cleared = await clearAllAchievements(ids);
+    const module = await import('../../model/repository/achievementsConfigRepository');
+    setOpenFrontier(await module.publishOpenFrontier({}));
+    await vm.refresh();
+    return cleared;
+  }, [vm]);
 
   useEffect(() => () => {
     if (noticeTimerRef.current) clearTimeout(noticeTimerRef.current);
@@ -231,6 +314,26 @@ export const AdminHub = memo(function AdminHub() {
     return <Navigate to="/completados" replace />;
   }
 
+  // El catálogo de logros va DESPUÉS de las dos guardas de arriba: quien no manda aquí no lo ve tampoco.
+  if (view === 'achievements') {
+    return (
+      <Suspense fallback={null}>
+        {/* Los espejos ya vienen en el censo (un campo más del documento que se baja de todos modos), así que
+            medir el reparto no cuesta ni una petición. Vacío = sin muestra, y la pantalla lo dice. */}
+        <AdminAchievements
+          onBack={() => setView('users')}
+          mirrors={vm.census?.mirrors}
+          hiddenOverrides={hiddenAchievements}
+          onToggleHidden={toggleHiddenAchievement}
+          openFrontier={openFrontier}
+          onPublishFrontier={publishOpenFrontier}
+          onResetAll={resetAllAchievements}
+          censusSize={vm.census?.users.length || 0}
+        />
+      </Suspense>
+    );
+  }
+
   const totals = vm.census?.totals;
 
   // Tarjeta contenedora propia y NO `.settings-hub`/`.settings-card`: ese hub reparte sus tarjetas en una rejilla
@@ -243,6 +346,12 @@ export const AdminHub = memo(function AdminHub() {
         <p className="admin-card-sub">{A.subtitle}</p>
         <p className="admin-card-note">{A.scopeNote}</p>
         <p className="admin-card-note">{A.legacyNote}</p>
+
+        <p className="admin-card-actions">
+          <button type="button" className="btn btn-secondary" onClick={() => setView('achievements')}>
+            {ADMIN_ACHIEVEMENTS_UI.open}
+          </button>
+        </p>
 
         {totals ? (
           <dl className="admin-totals" aria-label={A.totals.aria}>
@@ -299,13 +408,12 @@ export const AdminHub = memo(function AdminHub() {
             <span>{A.onlyFlaggedLabel}</span>
           </label>
           <p className="admin-result-count">{A.resultCount(vm.users.length)}</p>
+          {/* Actualizar y NADA MÁS. La salida del panel («volver a mis listas») se retiró de aquí: la cabecera de
+              secciones sigue montada en `/admin` —`App` no la esconde en esta ruta—, así que era un segundo
+              camino a lo mismo compitiendo por sitio con la búsqueda y el filtro. */}
           <button type="button" className="btn btn-secondary" onClick={() => void vm.refresh()} disabled={vm.loading}>
             <Icon name="refresh" />
             <span>{A.refresh}</span>
-          </button>
-          <button type="button" className="btn btn-secondary" onClick={() => navigate('/completados')}>
-            <Icon name="arrow-back" />
-            <span>{A.back}</span>
           </button>
         </div>
 
@@ -740,6 +848,21 @@ export const AdminHub = memo(function AdminHub() {
                         }
                       >
                         {busy ? A.working : user.socialEnabled ? A.disableBtn : A.enableBtn}
+                      </button>
+                      {/* Borrar SU vitrina publicada. Va con los demás botones de la ficha porque es una acción
+                          sobre esta persona, y no en la pantalla del catálogo, que decide para todo el mundo. */}
+                      <button
+                        type="button"
+                        className="btn btn-secondary"
+                        disabled={busy}
+                        onClick={() =>
+                          setPending({
+                            title: A.achievementsConfirm(name),
+                            run: () => void clearAchievements(user.id),
+                          })
+                        }
+                      >
+                        {A.achievementsBtn}
                       </button>
                       <button
                         type="button"
