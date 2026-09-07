@@ -108,10 +108,6 @@ function bootApp(): void {
   // falso, en producción el bundler se lleva por delante el `import()` y el módulo entero.
   if (import.meta.env.DEV) {
     void import('./dev/socialDateTools').then((m) => m.installSocialDateTools());
-    // Siembra de los LOGROS mientras la publicación está apagada: fabrica los espejos de otras personas, que hoy
-    // no existen porque nadie publica. Los logros PROPIOS no se siembran — esos los calcula el evaluador de
-    // verdad sobre la biblioteca de verdad. Se borra este `import()` (y el módulo) al activar la función.
-    void import('./dev/achievementsSeed').then((m) => m.installAchievementTools());
   }
 
   runWhenIdle(() => {

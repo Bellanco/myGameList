@@ -90,7 +90,6 @@ type FeedSource = {
 const FEED_PAGE_SIZE = 25;
 
 /** Referencia estable para el valor por defecto: un `new Map()` en la firma rompería el memo en cada render. */
-const EMPTY_MIRRORS: ReadonlyMap<string, string> = new Map();
 
 /**
  * Cupo de mensajes de lista por AUTOR y DÍA. Las reseñas y las publicaciones no cuentan para él y no tienen tope:
@@ -173,8 +172,6 @@ function formatDayHeader(date: Date): string {
  */
 export function useSocialFeed(
   directory: ReadonlyArray<FeedSource>,
-  /** Espejos de logros por perfil, cuando el hub los ha resuelto (en desarrollo, los siembra `dev/`). */
-  achievementMirrors: ReadonlyMap<string, string> = EMPTY_MIRRORS,
   /**
    * TUS logros, para que aparezcan en tu propio lado de la actividad como el resto de lo que publicas.
    *
@@ -223,7 +220,7 @@ export function useSocialFeed(
             id: String(entry.id || ''),
             displayName: entry.displayName,
             photoURL: entry.photoURL,
-            mirror: String(entry.achievements?.list || achievementMirrors.get(String(entry.id || '')) || ''),
+            mirror: String(entry.achievements?.list || ''),
             own: false,
           }))
           // Tu propia entrada del directorio se descarta: la tuya la pone `ownAchievements`, que está más fresca
@@ -247,7 +244,7 @@ export function useSocialFeed(
       .filter((item) => hasRenderableTimestamp(item.updatedAt))
       .sort((a, b) => b.updatedAt - a.updatedAt)
       .slice(0, FEED_MAX_ITEMS);
-  }, [directory, moveTabsValue, achievementMirrors, ownAchievements]);
+  }, [directory, moveTabsValue, ownAchievements]);
 
   const groupedFeedItems = useMemo<SocialFeedDayGroup[]>(() => {
     const groups: SocialFeedDayGroup[] = [];
