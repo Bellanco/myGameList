@@ -96,11 +96,38 @@ export interface AchievementInput {
   earned?: ReadonlySet<string>;
 }
 
+/**
+ * Lo que declara una ESCALERA: su nombre y su condición genérica, sin cifra («Juegos que te has terminado»).
+ *
+ * No lleva `done` porque en la escalera el hecho es una FUNCIÓN del umbral (`done(step)`): sin la cifra, «Te has
+ * terminado juegos» no dice nada. Los textos con cifra los compone `expand()` para cada escalón.
+ */
+export interface LadderLabels {
+  name: string;
+  condition: string;
+}
+
 export interface AchievementLabels {
   /** Nombre visible. Es un guiño y SE PUEDE RETOCAR; el `id` no (§6.4). */
   name: string;
-  /** La condición literal, en llano. Es el contrato: sin ella el guiño se vuelve un acertijo. */
+  /**
+   * LA META: qué hay que hacer, en imperativo y con la cifra de ESTE escalón («Termina 100 juegos»).
+   *
+   * Es el texto de lo que AÚN NO TIENES —la fila bloqueada del listado, la zanahoria— y el contrato del logro:
+   * sin él el guiño se vuelve un acertijo.
+   */
   condition: string;
+  /**
+   * EL HECHO: lo mismo contado en pasado y de tú a tú («Te has terminado 100 juegos»).
+   *
+   * Existe porque una sola frase no puede hacer los dos trabajos: en imperativo, un logro CONSEGUIDO se lee como
+   * una tarea pendiente («Termina 100 juegos» debajo de una medalla que ya tienes), y en pasado, uno que te falta
+   * te felicita por algo que no has hecho. Lo usan tu listado y el aviso del desbloqueo (§7.4).
+   *
+   * OJO CON LA SEGUNDA PERSONA: habla de TI, así que no vale para la ficha de otra persona. Ahí se sigue
+   * enseñando `condition`, que describe el logro sin atribuírselo a nadie.
+   */
+  done: string;
 }
 
 /**
@@ -118,9 +145,12 @@ export interface AchievementLadder {
    */
   descending?: true;
   metric: (input: AchievementInput) => AchievementMeasure;
-  labels: AchievementLabels;
-  /** Cómo se dice el objetivo de un escalón concreto. Por defecto, `condición: umbral`. */
+  /** El nombre de la escalera y su condición genérica (sin cifra): el respaldo de `goal`/`done`. */
+  labels: LadderLabels;
+  /** LA META de un escalón concreto, en imperativo. Por defecto, `condición: umbral`. */
   goal?: (step: number) => string;
+  /** EL HECHO de un escalón concreto, en pasado y en segunda persona. Por defecto, la meta. */
+  done?: (step: number) => string;
   /** Símbolo del sprite perezoso, sin el prefijo `#ach-`. Lo comparten todos los escalones de la escalera. */
   icon: string;
   rarity: AchievementRarity;
