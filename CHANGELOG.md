@@ -5,7 +5,47 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-09-07
+
 ### Added
+- **Logros.** El catálogo son 50 escaleras y 304 escalones, y cada escalón es un logro con su `id` propio: lo que
+  se cuenta, se publica y se pinta es el ESCALÓN, no la escalera. Todo sale de tu biblioteca —no hay nada que
+  activar ni ningún contador que llevar aparte— salvo un único dato que hay que registrar porque no deja rastro:
+  que has probado la ruleta. Los umbrales están MEDIDOS sobre una biblioteca real de 302 juegos, no supuestos.
+  - **`/logros`**, con la forma de Steam: medalla, nombre con su grado, lo que se pide o lo que conseguiste, y el
+    día. Una sola lista, sin agrupar por familia: la pregunta al abrirla es «qué tengo y qué me falta», no «qué
+    tengo de cada tipo». La misma pantalla sirve para lo tuyo, para lo de una amistad y para el catálogo global.
+  - **La medalla** es un disco en penumbra con tres señales en tres canales que no se pisan: el aura dice la
+    RAREZA, el temple del filo el TRAMO de la escalera y la píldora del canto LA CIFRA de ese escalón.
+  - **El instante del desbloqueo.** Al guardar algo que sube un logro se dice ahí mismo, por el aviso de siempre.
+    Uno por escritura: si una edición sube tres, el aviso dice «3 logros conseguidos».
+  - **En el espacio social**: la tira de medallas en cada ficha, el porcentaje de gente que tiene cada logro
+    —medido sobre los espejos que el directorio ya se ha bajado, sin una petición ni un byte de más— y una
+    entrada por persona y día en el feed.
+  - **Lo que se publica** es un mapa de bits de 44 caracteres, no una lista de nombres: con 304 escalones los
+    `id` solos pasarían de tres kilobytes. Va con granularidad de DÍA y nunca de instante, que es lo que evita
+    que la vitrina cuente a qué horas usas la app. Los «primeros pasos» no tienen bit: no se publican jamás.
+- **Panel de administración · catálogo de logros.** Las 50 escaleras con sus dos textos enfrentados —la meta y el
+  hecho—, que repartidos por la app no se pueden comparar. Deja ocultar una escalera para quien no la tenga,
+  publicar hasta dónde ha llegado la comunidad, y borrar las vitrinas publicadas de una persona o de todo el
+  censo. Y prepara el cambio escrito para insertar un escalón nuevo, que son tres pasos fáciles de olvidar.
+
+### Changed
+- **Un escalón se abre para todos en cuanto alguien lo ve.** No hay una escalera por persona: la línea es el
+  primer escalón al que no ha llegado nadie —ese se ofrece, es el reto de quien va delante— y de ahí para arriba
+  no se enseña. Lo que distingue a dos personas es lo que llevan CONSEGUIDO, no la lista. Antes lo decidía cada
+  dispositivo con el progreso de su dueño, así que quien empezaba veía un peldaño donde otro ya veía nueve.
+- **La fracción se mide contra lo que está abierto**, no contra el catálogo entero. Un escalón que nadie ha visto
+  no es una tarea pendiente, es una que aún no ha empezado; contarlo hacía que ampliar el catálogo le bajara el
+  porcentaje de golpe a todo el mundo sin que nadie hubiera perdido nada. A cambio, el denominador crece solo
+  según la comunidad avanza.
+- **Lo conseguido no se devuelve.** Una marca de agua sostiene cada logro aunque el dato que lo concedió deje de
+  cumplirse —borras duplicados, corriges unos años— y el espejo publicado se une con lo que ya había en vez de
+  reemplazarlo: sin eso, abrir la app en un móvil con la biblioteca a medio sincronizar le borraba medallas a la
+  vitrina delante de tus amistades.
+- **El aviso se queda a la vista.** Vivía en el flujo, arriba del todo, así que uno disparado con la lista
+  desplazada nacía fuera de la pantalla: se anunciaba al lector de pantalla, pero quien mira no veía nada.
+
 - **Análisis sugeridos también fuera del espacio social.** El bloque de "por dónde seguir leyendo" que ya existía
   en el hub aparece ahora en dos sitios más, y en los dos ofrece análisis de UNA sola persona, que es lo que
   cambia el criterio: donde se mezclan firmas, la firma es una razón para ofrecer algo; donde solo hay una, no
