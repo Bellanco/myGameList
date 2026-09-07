@@ -484,6 +484,16 @@
 .admin-ach-table td { padding: .35rem .5rem; border-bottom: 1px solid color-mix(in srgb, var(--border) 55%, transparent); vertical-align: top; }
 .admin-ach-table tr:last-child td { border-bottom: 0; }
 .admin-ach-step { font-variant-numeric: tabular-nums; font-weight: 700; white-space: nowrap; }
+.admin-ach-offered { color: var(--text-muted); white-space: nowrap; }
+/* «Alcanzado» apila la cifra y sus señales: son la misma pregunta —cuánta gente llega hasta aquí— y en columnas
+   separadas se leían como datos sueltos. Ancho fijo para que las cifras de escalones consecutivos se comparen. */
+.admin-ach-reached { white-space: nowrap; font-variant-numeric: tabular-nums; min-width: 9rem; }
+.admin-ach-reached small { display: block; font-size: .72rem; }
+.admin-ach-nodata { color: var(--text-muted); }
+/* Dormido o regalado: no es un fallo, es una decisión pendiente. Ámbar, no rojo. */
+.admin-ach-warn-soft { color: var(--fg-amber); }
+/* El salto de umbrales es el dato que se busca para meter un intermedio: con el acento, no con una alarma. */
+.admin-ach-gap { color: var(--fg-link); }
 /* El aviso de «esta escalera no escribió su hecho»: en rojo de la app, porque es un texto que en producción se
    lee como una tarea pendiente debajo de una medalla ya ganada. */
 .admin-ach-warn { display: block; color: var(--danger); font-size: .74rem; }

@@ -139,6 +139,18 @@ export interface AdminUserRow {
 
 export interface AdminCensus {
   users: AdminUserRow[];
+  /**
+   * Los ESPEJOS de logros publicados, sueltos y sin dueño: es lo que mide qué parte de la gente tiene cada
+   * escalón (`measureRarity`) en la pantalla del catálogo.
+   *
+   * CUESTA CERO: el censo ya se baja el documento entero de cada perfil, así que esto es un campo más de un dato
+   * que ya está en memoria — ni una petición nueva ni un índice.
+   *
+   * VAN SIN UID A PROPÓSITO. Para decidir si un escalón necesita un intermedio hace falta el reparto, no quién
+   * tiene qué; y una lista de «los logros de cada usuario» en el panel es exactamente el tipo de dato que se
+   * acaba enseñando por accidente. Como cadenas sueltas no se puede.
+   */
+  mirrors: string[];
   /** true si se alcanzó `ADMIN_PROFILES_LIMIT` y por tanto la lista puede estar incompleta. */
   truncated: boolean;
   totals: {
@@ -406,6 +418,14 @@ export async function loadAdminCensus(limitCount = ADMIN_PROFILES_LIMIT): Promis
   // canónico en `profiles/{uid}` y, por tanto, si el cutover fusionará o moverá.
   const docIds = new Set(profilesSnapshot.docs.map((entry) => entry.id));
 
+  // Los espejos de logros, recogidos aparte del recuento de usuarios: son cadenas sueltas y ninguna fila del
+  // censo las necesita. El campo llega vacío mientras `ENABLE_ACHIEVEMENTS_PUBLISH` esté apagado, y entonces la
+  // pantalla del catálogo dice que no hay muestra en vez de pintar un 0 % que parecería un dato.
+  const mirrors = profilesSnapshot.docs
+    .filter((entry) => entry.id !== PLACEHOLDER_ID)
+    .map((entry) => String((entry.data() as { achievements?: { list?: string } }).achievements?.list || ''))
+    .filter(Boolean);
+
   const users = profilesSnapshot.docs
     .filter((entry) => entry.id !== PLACEHOLDER_ID)
     .map((entry) => {
@@ -476,6 +496,7 @@ export async function loadAdminCensus(limitCount = ADMIN_PROFILES_LIMIT): Promis
 
   return {
     users,
+    mirrors,
     truncated: profilesSnapshot.size >= normalizedLimit,
     totals: {
       profiles: users.length,
