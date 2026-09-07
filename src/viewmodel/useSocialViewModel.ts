@@ -55,8 +55,6 @@ import { useAchievements } from './useAchievements';
 /** Biblioteca vacía estable: el hub puede montarse sin `games` y un literal nuevo rompería el memo. */
 const EMPTY_LIBRARY = { c: [], v: [], e: [], p: [], deleted: [], updatedAt: 0 };
 
-/** Referencia estable: un `new Map()` inline rompería el memo del feed en cada render. */
-const EMPTY_MIRRORS: ReadonlyMap<string, string> = new Map();
 import { useSocialCompose } from './social/useSocialCompose';
 import { useSocialLegalConsent } from './social/useSocialLegalConsent';
 import { DEFAULT_SOCIAL_VISIBILITY, normalizeVisibility, useSocialProfileForm } from './social/useSocialProfileForm';
@@ -979,25 +977,6 @@ export function useSocialViewModel(options?: {
    * Ante duplicados (posibles al fusionar dos gists sociales) sigue ganando el más reciente, como antes.
    */
   /**
-   * Espejos de logros SEMBRADOS, solo en desarrollo y solo mientras nadie publique de verdad
-   * (`ENABLE_ACHIEVEMENTS_PUBLISH`). Entra por `import()` dinámico bajo `import.meta.env.DEV`, igual que
-   * `dev/socialDateTools`: con un import estático, el módulo de andamio entraría en el chunk del hub aunque la
-   * rama estuviera muerta. Al encender la publicación se borran estas veinte líneas y el feed lee `achievements`
-   * de cada entrada del directorio, que es de donde ya lo intenta leer primero.
-   */
-  const [seededMirrors, setSeededMirrors] = useState<ReadonlyMap<string, string>>(EMPTY_MIRRORS);
-  useEffect(() => {
-    if (!ENABLE_ACHIEVEMENTS || !import.meta.env.DEV || import.meta.env.TEST || socialDirectory.length === 0) return;
-    if (socialDirectory.some((entry) => (entry as { achievements?: { list?: string } }).achievements?.list)) return;
-    void import('../dev/achievementsSeed').then((module) => {
-      setSeededMirrors(new Map(socialDirectory.map((entry) => [
-        String((entry as { id?: string }).id || ''),
-        module.seededMirrorFor(String((entry as { id?: string }).id || '')),
-      ])));
-    });
-  }, [socialDirectory]);
-
-  /**
    * TUS logros para el feed. Se empaquetan con la MISMA gramática que se publicaría (`packAchievements`) y se
    * leen con el mismo parser, así que tu tarjeta y la de una amistad recorren exactamente el mismo camino: si
    * algo se pinta mal en la tuya, se pintaría igual de mal en la suya, y eso se ve enseguida.
@@ -1065,7 +1044,6 @@ export function useSocialViewModel(options?: {
 
   const { feedItems, groupedFeedItems, hasMoreFeed, showMoreFeed } = useSocialFeed(
     socialDirectory,
-    seededMirrors,
     ownAchievementsFeed,
   );
 

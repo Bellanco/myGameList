@@ -1,4 +1,4 @@
-import { memo, useCallback, useEffect, useMemo, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 // La hoja del hub se importa AQUÍ y no desde `index.scss`: como el hub entra por `lazy()`, Vite emite su CSS en
 // el mismo chunk perezoso y el arranque no carga ni un byte de estilos de estas pantallas (igual que `stats.scss`).
@@ -248,48 +248,25 @@ const SocialHubInner = memo(function SocialHubInner({
    * Sale del propio directorio —que el hub YA se ha descargado— así que no cuesta ni una petición ni un byte más
    * de canal: es exactamente la propiedad que hace que esto se pueda entregar sin backend.
    *
-   * MIENTRAS `ENABLE_ACHIEVEMENTS_PUBLISH` ESTÉ APAGADO nadie publica, así que el campo llega vacío y en
-   * desarrollo lo rellena la siembra (`dev/achievementsSeed`), que no existe en producción. Al encender la
-   * publicación, este bloque se queda con la primera mitad y se borra la segunda.
+   * Mientras nadie haya publicado el suyo el campo llega vacío, y entonces no hay muestra que medir: el
+   * porcentaje comparado se calla (§6.6bis) en vez de inventarse una cifra.
    */
-  const realMirrors = useMemo(() => {
+  const directoryMirrors = useMemo(() => {
     if (!ENABLE_ACHIEVEMENTS) return [] as string[];
     return filteredSocialDirectory
       .map((entry) => String((entry as { achievements?: { list?: string } }).achievements?.list || ''))
       .filter(Boolean);
   }, [filteredSocialDirectory]);
 
-  /**
-   * Espejos SEMBRADOS, solo en desarrollo y solo mientras no haya ninguno de verdad.
-   *
-   * Entra por `import()` dinámico bajo `import.meta.env.DEV` —el mismo patrón que `dev/socialDateTools`— y no por
-   * un import estático: con el estático, el módulo entraría en el chunk del hub aunque la rama estuviera muerta,
-   * y el presupuesto de arranque no está para pagar código de andamio.
-   */
-  const [seeded, setSeeded] = useState<{ list: string[]; forId: (id: string) => string } | null>(null);
-  useEffect(() => {
-    if (!ENABLE_ACHIEVEMENTS || !import.meta.env.DEV || import.meta.env.TEST || realMirrors.length > 0 || seeded) return;
-    void import('../../dev/achievementsSeed').then((module) => {
-      setSeeded({ list: module.seededMirrors(), forId: module.seededMirrorFor });
-    });
-  }, [realMirrors.length, seeded]);
-
-  const directoryMirrors = useMemo(
-    () => (realMirrors.length > 0 ? realMirrors : seeded?.list || []),
-    [realMirrors, seeded],
-  );
-
   const detailMirror = useMemo(() => {
     if (!ENABLE_ACHIEVEMENTS || !detailId) return '';
     // TU FICHA ES EL PRIMER CASO, no el último: el directorio filtrado te excluye por identidad —es lo que
     // impide que aparezcas en tu propia lista de gente— así que buscarte ahí devolvía siempre vacío, y tu ficha
-    // de logros decía «todavía no hay nada que contar» con cien medallas detrás. En desarrollo ni se notaba: la
-    // siembra te fabricaba un espejo ajeno y lo pintaba como tuyo.
+    // de logros decía «todavía no hay nada que contar» con cien medallas detrás.
     if (isOwnProfileDetail) return ownAchievementMirror;
     const entry = filteredSocialDirectory.find((candidate) => (candidate as { id?: string }).id === detailId);
-    const real = String((entry as { achievements?: { list?: string } } | undefined)?.achievements?.list || '');
-    return real || seeded?.forId(detailId) || '';
-  }, [detailId, filteredSocialDirectory, seeded, isOwnProfileDetail, ownAchievementMirror]);
+    return String((entry as { achievements?: { list?: string } } | undefined)?.achievements?.list || '');
+  }, [detailId, filteredSocialDirectory, isOwnProfileDetail, ownAchievementMirror]);
 
   /**
    * Abrir una reseña empieza por su principio.
