@@ -729,6 +729,45 @@ describe('el espejo — mapa de bits y lectura defensiva', () => {
     expect(back.some((item) => item.id.startsWith('paso-'))).toBe(false);
   });
 
+  /**
+   * LO QUE PUBLICA ESTA VERSIÓN LO SIGUE LEYENDO LA ANTERIOR, y esto es lo único que de verdad protege a quien
+   * no ha actualizado: el espejo viaja al directorio social y lo lee el cliente que sea.
+   *
+   * Se comprueba haciendo de LECTOR VIEJO a mano —decodificando el bitmap y mirando solo los 306 bits que
+   * conocía la versión anterior— porque `parseMirror` importa el orden actual y no se le puede pasar otro. Las
+   * dos mitades del contrato quedan fijadas: los bits de antes significan lo mismo, y la cola de fechas de un
+   * escalón NUEVO cae en un índice que el lector viejo no tiene y que su propio código ignora (`if (!item)`).
+   */
+  it('un espejo de esta versión lo lee sin romperse un cliente de la anterior', () => {
+    const BITS_DE_ANTES = 306;
+    const viejos = ['completados-50', 'criterio-100', 'buena-cosecha-30'];
+    const nuevos = ['marmota-3', 'vocabulario-75', 'palabra-40'];
+    const estados = [...viejos, ...nuevos].map((id) => ({
+      id, level: 1, value: 0, next: null, unlockedAt: Date.parse('2026-03-12T10:00:00.000Z'),
+    }));
+    const list = packAchievements(estados);
+
+    // El lector viejo: base64url → bytes → los 306 primeros bits, con SU lista de ids.
+    const [, encoded] = list.split('~')[0].split(':');
+    const base64 = encoded.replace(/-/g, '+').replace(/_/g, '/');
+    const bytes = Uint8Array.from(atob(base64.padEnd(Math.ceil(base64.length / 4) * 4, '=')), (c) => c.charCodeAt(0));
+    const suLista = MIRROR_ORDER.slice(0, BITS_DE_ANTES);
+    const loQueVe = suLista.filter((_id, index) => {
+      const byte = bytes[index >> 3];
+      return byte !== undefined && Boolean(byte & (0x80 >> (index & 7)));
+    });
+
+    // Ve los suyos, exactamente, y ni uno de los nuevos —que están fuera de su lista—.
+    expect(loQueVe.sort()).toEqual([...viejos].sort());
+
+    // Y la cola de fechas de un escalón nuevo apunta a un índice que él no tiene: lo salta, no lo confunde con
+    // otro logro. Los índices de la cola van en base 36.
+    const indicesDeLaCola = (list.split('~')[1] || '').split(',')
+      .map((entrada) => parseInt(entrada.replace('!', '').split('.')[0], 36));
+    expect(indicesDeLaCola.some((indice) => indice >= BITS_DE_ANTES), 'la siembra debería incluir un escalón nuevo').toBe(true);
+    expect(indicesDeLaCola.every((indice) => Number.isFinite(indice))).toBe(true);
+  });
+
   it('el catálogo entero cabe de sobra en el tope de las reglas', () => {
     const todos = MIRROR_ORDER.map((id) => ({ id, level: 1, value: 0, next: null, unlockedAt: NOW }));
     const list = packAchievements(todos);
