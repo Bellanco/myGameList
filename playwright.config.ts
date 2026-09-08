@@ -17,7 +17,11 @@ export default defineConfig({
   testDir: './tests/e2e',
   // Un smoke test que se reintenta esconde justo lo que debe delatar: si es inestable, es un test malo.
   retries: 0,
-  fullyParallel: false,
+  /* EN PARALELO DE VERDAD. Sin esto, los tests de un mismo fichero van en fila por un solo trabajador, y como
+     la auditoría de accesibilidad es UN fichero con 84 casos —el 88 % del tiempo de la suite—, sobraban los
+     trabajadores: 94 s de reloj para 106 s de trabajo. Cada test estrena su propio contexto de navegador, así que
+     repartirlos no comparte nada entre ellos. */
+  fullyParallel: true,
   reporter: process.env.CI ? 'github' : 'list',
   use: {
     baseURL: `http://127.0.0.1:${PORT}`,

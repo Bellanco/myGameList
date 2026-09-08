@@ -28,6 +28,7 @@ function renderFeed(over: { offline?: boolean; offlineHasCachedData?: boolean; i
       currentSocialGistId="ffee1122aabb0001"
       loadingDirectory={false}
       openProfileDetail={() => {}}
+      openProfileAchievements={() => {}}
       onOpenProfiles={() => {}}
       onOpenOwnProfile={() => {}}
       onOpenRequests={() => {}}

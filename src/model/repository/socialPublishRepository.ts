@@ -86,6 +86,19 @@ function withMoveActivity(data: SocialGistData, timestamp: number): SocialGistDa
   }
 }
 
+/**
+ * Propaga mi identidad a mis docs de amistad tras publicar, por si el canal cambió de id.
+ *
+ * CONSERVA su guarda propia (`friendshipHealedForGist`) aunque `healOwnFriendshipIdentity` ya traiga la suya —la
+ * huella de identidad—, y no es redundancia: es que ESTA ruta no sabe calcular la foto.
+ *
+ * El hub y el guardado del perfil usan `ownPublishablePhoto`, que descarta el monograma genérico de Google
+ * (`ownPhotoIsGeneric`, un veredicto de red que vive en el ViewModel). Aquí solo se tiene `publicPhotoURL`, que
+ * no puede aplicar esa regla. Sin esta guarda las dos rutas calcularían fotos distintas y se pelearían por la
+ * huella: cada publicación reescribiría MIS N documentos con el avatar genérico y la siguiente apertura del hub
+ * los reescribiría de vuelta, en bucle. Fijando la ruta de publicación a una vez por id de gist —que es lo único
+ * que esta ruta conoce de forma autoritativa, porque acaba de escribir en él— el bucle no existe.
+ */
 async function healFriendshipGistIfChanged(input: {
   uid: string;
   socialGistId: string;

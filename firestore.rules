@@ -36,7 +36,7 @@ service cloud.firestore {
         // (`scripts/purge-profile-pii.js`); esto cierra la puerta para que no pueda volver por una regresión.
         && request.resource.data.keys().hasOnly([
           "schemaVersion", "uid", "profileId", "displayName", "photoURL", "social", "updatedAt", "tier",
-          "createdAt"
+          "createdAt", "achievements"
         ])
         && profileTierNotSelfAssigned()
         && profileCreatedAtIsImmutable()
@@ -56,10 +56,15 @@ service cloud.firestore {
     // merge `request.resource.data` es el documento RESULTANTE, así que los perfiles legacy llegan aquí con
     // campos que las escrituras nuevas ya no mandan (`email`, `social.gistId`, `social.githubToken`), y
     // exigirlos denegaría toda escritura sobre ellos —incluida la del auto-saneado que existe justo para
-    // limpiarlos—. Por el mismo motivo NO se pone un `hasOnly` sobre las claves de `social`: un documento
-    // antiguo con una subclave inesperada quedaría con el perfil congelado para siempre, y su dueño no
-    // tiene forma de arreglarlo (`profiles` solo lo escribe él o el admin). Eso exige antes una auditoría
-    // de los datos reales; está anotado como pendiente en SECURITY.md.
+    // limpiarlos—. Sobre las claves de `social` SÍ hay un `hasOnly` (ver `profileSocialIsSane`), y cerrarlo
+    // tuvo su precio: un documento antiguo con una subclave que no esté en esa lista —`social.githubToken`, el
+    // PAT en claro— queda congelado hasta que una escritura la borre, y su dueño no puede arreglarlo a mano
+    // (`profiles` solo lo escribe él o el admin). Se pudo cerrar por dos cosas: antes se pasó la purga de restos
+    // legacy (`scripts/purge-profile-pii.js`), y el auto-saneado del arranque borra el `email` y las tres
+    // subclaves viejas de `social` EN LA MISMA escritura (`healOwnLegacyProfile`), así que el documento
+    // RESULTANTE que llega aquí ya cumple la allowlist. Lo que sigue pendiente —anotado en SECURITY.md— es sacar
+    // de ella `gistId` y `gamesGistId`, que ya viven en `privateConfig`; eso pide repasar antes los datos reales
+    // con `npm run audit:rules`.
     //
     // Las fechas admiten número Y timestamp a propósito: el cliente escribe `serverTimestamp()` (que las
     // reglas ven como timestamp) y los documentos viejos llevan milisegundos.
@@ -74,7 +79,32 @@ service cloud.firestore {
         && (!("updatedAt" in request.resource.data)
             || request.resource.data.updatedAt is number || request.resource.data.updatedAt is timestamp)
         && (!("createdAt" in request.resource.data)
-            || request.resource.data.createdAt is number || request.resource.data.createdAt is timestamp);
+            || request.resource.data.createdAt is number || request.resource.data.createdAt is timestamp)
+        && (!("achievements" in request.resource.data) || profileAchievementsAreSane());
+    }
+
+    /**
+     * EL ESPEJO DE LOGROS (`profiles/{uid}.achievements`), que lo escribe su dueño y lo lee cualquier autenticado.
+     *
+     * Es `{ v, at, list }`: la versión de la gramática, el sello de la publicación y el mapa de bits en base64url
+     * (ver `core/achievements/pack.ts`). El TOPE DE `list` ES EL MISMO NÚMERO que aplica el empaquetador
+     * (`ACHIEVEMENTS_LIST_MAX`, 1024): esa cadena se la descarga entera el directorio social de todo el mundo, así
+     * que el límite tiene que estar también aquí y no solo en el cliente que la escribe.
+     *
+     * NO se valida el CONTENIDO de `list` —Firestore no puede parsear base64url ni recorrer una cola de índices— y
+     * no hace falta: quien la lee es un parser deliberadamente defensivo (§9.3) que ante cualquier cosa rara pinta
+     * una vitrina vacía en vez de lanzar. Lo que sí importa aquí es que nadie pueda usar este campo como almacén.
+     */
+    function profileAchievementsAreSane() {
+      return request.resource.data.achievements is map
+        && request.resource.data.achievements.keys().hasOnly(["v", "at", "list"])
+        && (!("v" in request.resource.data.achievements) || request.resource.data.achievements.v is int)
+        && (!("at" in request.resource.data.achievements)
+            || request.resource.data.achievements.at is number
+            || request.resource.data.achievements.at is timestamp)
+        && (!("list" in request.resource.data.achievements)
+            || (request.resource.data.achievements.list is string
+                && request.resource.data.achievements.list.size() <= 1024));
     }
 
     // La foto es el único campo del perfil que acaba en un atributo de URL (`<img src>`), así que aquí no
@@ -171,6 +201,32 @@ service cloud.firestore {
     // porque es dato del dueño, no del directorio, y así le sigue entre dispositivos. `effects` faltaba en la
     // allowlist aunque el cliente ya lo escribía (`appearancePreferenceRepository`): sin él, esa preferencia se
     // denegaba en silencio y nunca sincronizaba.
+    /**
+     * CONFIGURACIÓN DEL CATÁLOGO DE LOGROS (`appConfig/achievements`), escrita SOLO por el panel de
+     * administración y leída por todo el mundo con sesión.
+     *
+     * Lleva dos mapas y los dos son SOLO PRESENTACIÓN: no tocan ningún `id`, ni el espejo publicado, ni la
+     * fracción del catálogo.
+     *
+     *   · `hidden` — clave de escalera → booleano. `true` = oculta, `false` = a la vista, ausente = lo que diga
+     *     el código.
+     *   · `open`   — clave de escalera → `id` del escalón más alto al que ha llegado alguien. Es lo que abre la
+     *     escalera para todo el mundo: en cuanto un usuario ve un escalón, se le enseña a todos. Lo publica el
+     *     panel midiendo los espejos del censo, porque es el único que puede verlos todos.
+     *
+     * Se acota como el resto: solo esas dos claves, y cada mapa con tope de entradas para que este documento no
+     * se pueda usar como almacén de nada. Los VALORES de `open` no se validan uno a uno —Firestore no sabe
+     * recorrer un mapa— pero no hace falta: el cliente descarta lo que no sea cadena (`sanitizeOpen`) y un `id`
+     * que no exista en el catálogo se ignora al aplicarlo (`openThrough`).
+     */
+    function achievementsConfigIsValid() {
+      return request.resource.data.keys().hasOnly(["hidden", "open"])
+        && (!("hidden" in request.resource.data)
+            || (request.resource.data.hidden is map && request.resource.data.hidden.size() <= 100))
+        && (!("open" in request.resource.data)
+            || (request.resource.data.open is map && request.resource.data.open.size() <= 100));
+    }
+
     function publicConfigWriteIsValid() {
       return request.resource.data.keys().hasOnly(["schemaVersion", "scoreScale", "palette", "theme", "uppercase", "showSteamButton", "effects", "consent", "feedMoveTabs"])
         && (!("scoreScale" in request.resource.data)
@@ -378,6 +434,19 @@ service cloud.firestore {
 
     match /activity_events/{docId} {
       allow read, write: if !isPlaceholder(docId) && isAdmin();
+    }
+
+    // ==========================================
+    // CONFIGURACIÓN GLOBAL (LEE TODO EL MUNDO, ESCRIBE EL ADMIN)
+    // ==========================================
+
+    // Ajustes del catálogo de logros que el panel cambia sin desplegar (hoy: qué escaleras están ocultas).
+    // LECTURA con sesión y ESCRITURA solo `isAdmin()`. Sin este documento —o sin sesión, o sin red— la app cae a
+    // lo que dice el código, que es el lado seguro: un logro oculto sigue oculto.
+    match /appConfig/{docId} {
+      allow read: if isSignedIn();
+      allow create, update: if !isPlaceholder(docId) && isAdmin() && achievementsConfigIsValid();
+      allow delete: if !isPlaceholder(docId) && isAdmin();
     }
 
     // ==========================================

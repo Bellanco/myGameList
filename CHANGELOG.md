@@ -6,6 +6,131 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
 ## [Unreleased]
 
 ### Added
+- **Catorce escaleras de logro nuevas** (64 escaleras, 412 escalones). No cuentan más de lo mismo: tapan los seis
+  huecos que dejaban las cincuenta primeras, que medían volumen y racha y nada más. Los umbrales están medidos
+  sobre la misma biblioteca real de 302 juegos que el resto del catálogo.
+  - **La FORMA, no el volumen** — el índice cuadrado, que exige amplitud y fondo a la vez y no se puede farmear
+    por un lado: «El día de la marmota» (N juegos jugados en N años distintos, el 3×3), «A todos los palos»
+    (N géneros con N cierres) y «Libro de cosechas» (N años con N juegos terminados). La píldora de la medalla
+    dice `3×3`, que es el nombre que tiene la cosa.
+  - **SUMAR, no contar** — no había ni una escalera que sumara lo que las fichas dicen: «El peso de las horas»
+    (horas sumadas, con las diez mil de la maestría por techo), «Obra completa» (palabras escritas en reseñas) y
+    «El bibliotecario», que cuenta lo que hay en la biblioteca y no lo medía nadie.
+  - **Las etiquetas**, que solo se leían como «existe»: «Diccionario de a bordo» (etiquetas distintas de virtudes
+    y defectos), «Sé lo que me gusta» (la misma virtud en N juegos) y «Ya sé cómo acaba esto» (N abandonos por el
+    mismo motivo, oculto). Ninguna dice CUÁL es la etiqueta, ni al conseguirse ni en el espejo.
+  - **La distancia, no la racha** — «Cuánto tiempo sin verte» (volver a un juego cinco años después o más) y
+    «Memoria de otro siglo» (los años que abarca tu historial, huecos incluidos).
+  - **Volver al mismo juego** — «Otra oportunidad», que mide la profundidad en UN juego: la segunda vez, la
+    tercera, la cuarta.
+  - Y las dos parejas que faltaban: **«Dicho y hecho»** (rejugar lo que marcaste como rejugable — «Aquí volveré»
+    premiaba marcarlo y nada premiaba cumplirlo) y **«Ni con un palo»** (poner menos de 30, que cierra el trío de
+    «Por pura cabezonería» y «No eres tú, soy yo»).
+  - **Los techos, subidos en siete de ellas** después de verlas en pantalla: «Diccionario de a bordo» llega a 75
+    etiquetas, «Dicho y hecho» a 40 rejugables cumplidos, «Cuánto tiempo sin verte» a 15 reencuentros, «Sé lo que
+    me gusta» a 200, «Ya sé cómo acaba esto» a 75, «Otra oportunidad» a la décima vuelta y «Libro de cosechas» al
+    15×15. Once escalones más, todos por arriba: un umbral declarado no se toca nunca, se añade otro encima.
+  - El techo del catálogo pasa a **7.410 puntos y nivel 46**, con la curva de nivel sin retocar.
+
+- **El AVISO DE LOGRO es una tarjeta, no una línea del banner.** Al conseguir algo sale una cápsula abajo a la
+  izquierda con la medalla de verdad a 64 px, el rótulo «Has desbloqueado», el nombre con su grado y la
+  descripción en pasado del catálogo. La **sombra dice la rareza** —la escala de loot que ya usa el aura— y no se
+  escribe en ninguna parte. Se va sola a los cinco segundos, la cuenta se para mientras la lees, y varios logros
+  de una misma escritura se funden en UNA cápsula con hasta tres medallas solapadas. El texto sigue yendo al
+  `StatusBanner` porque su región viva es la que lo ANUNCIA a un lector de pantalla.
+  - Sale de la maqueta `docs/logros/demo-toast.html`, que se cerró con los tokens reales delante y hasta ahora no
+    se había implementado. Dos paletas le cambian la forma: el chaflán del HUD en Sin futuro y el canto recto en
+    Cámara de pruebas.
+  - **Y los HITOS**: al cruzar la mitad de una escalera —o su recta final— se dice con la misma cápsula, la barra
+    de progreso y la medalla en peltre. Se CRUZAN, no se «están»: hace falta que el porcentaje anterior estuviera
+    por debajo, y esa comparación sale de la foto que ya se guardaba. Manda el desbloqueo: si una escritura sube
+    un logro y cruza un hito, se cuenta el logro.
+  - **Y LO QUE YA TENÍAS SE CUENTA AL VOLVER.** La primera evaluación de una sesión no puede anunciar lo que ya
+    estaba —cada arranque sería una traca— pero eso metía en el mismo saco dos cosas distintas: la primera vez en
+    un aparato, donde no hay noticia, y volver a abrir con noventa y ocho escalones nuevos en el catálogo, donde
+    sí la hay. Lo distingue la MARCA DE AGUA, que ya se guardaba: si existe, este aparato había evaluado antes, y
+    lo conseguido que no figura en ella es exactamente lo que ha caído desde entonces. Sale una cápsula con otro
+    rótulo —«Te estaban esperando · 171 logros nuevos»—, se dice una vez y no se repite. Sirve igual para el otro
+    camino por el que aparecen logros sin haber hecho nada aquí: la sincronización con otro dispositivo.
+  - El chunk son 2,2 kB y llega la primera vez que alguien consigue algo: el arranque sigue en 196,5 kB de 215.
+- **Treinta y tres recorridos end-to-end para los logros** (`tests/e2e/achievements.test.ts`), sobre el build de
+  producción y con la app arrancando de cero. Cubren lo que ni los unitarios ni los de componente pueden ver: que
+  el sprite entra en su chunk perezoso —un `<use>` sin `symbol` deja 400 discos vacíos y no salta ningún error—,
+  que las cifras de la cabecera cuadran con lo pintado, y que el aviso sale **en todas las pantallas y en las doce
+  combinaciones de paleta y tema**, pasando axe en cada una.
+  - **Y las avalanchas, que son el caso normal y no el raro**: quien llega con doscientos juegos catalogados
+    recibe ciento y pico escalones de una vez. Se comprueba que llegar con la biblioteca hecha **no suelta ni un
+    aviso** —no hay noticia, no se ha hecho nada ahora—, que importar una biblioteca entera saca UNA cápsula que
+    los cuenta (148 logros, en una), que con esa cuenta sigue cabiendo en un móvil de 412 px sin añadir
+    desplazamiento horizontal, y que sale igual con `prefers-reduced-motion` y sin efectos.
+  - **Y el estreno del catálogo**: con marca de agua previa se cuenta lo nuevo al abrir, no se repite en el
+    siguiente arranque, y sin marca —la primera vez de verdad— sigue callando.
+
+### Fixed
+- **Los logros que salen de `years` se fechaban en el futuro.** Se fechan en el 31 de diciembre de su año —toda
+  la precisión que da el dato—, así que uno del año EN CURSO nacía con una fecha que no ha llegado: la fila decía
+  «31 dic 2026» y el listado, que ordena de más reciente a más antiguo, lo ponía por delante de lo conseguido
+  hoy. Ahora el evaluador poda esa fecha y el logro se pinta SIN día, que es la misma regla que `parseMirror` ya
+  aplicaba al leer el espejo: lo que faltaba era que las dos caras dijeran lo mismo.
+- **La fecha de un logro de índice por etiqueta se movía.** «A todos los palos» se fechaba con el sello más
+  tardío de su grupo, así que cada juego nuevo de ese género empujaba la fecha hacia delante y un logro
+  conseguido en marzo pasaba a decir que fue en agosto — lo que el §6.4 prohíbe. Se consigue sin fecha, que es un
+  estado previsto (§5.3): la fecha buena sería la del juego que completó el grupo, y cuál es eso depende del
+  tamaño al que se mire, que lo decide el índice después.
+- **El aviso nacía debajo del banner de consentimiento.** La regla que sube su carril cuando el consentimiento
+  está en pantalla venía de la maqueta y **no se activaba nunca**: esperaba un `data-consent="pending"` en la raíz
+  que la app no ponía. Lo pone y lo quita `ConsentBanner`, que es el único que sabe si está pendiente.
+- **Con una avalancha, las tres medallas del aviso eran la misma.** Los tres logros más raros de una importación
+  entera son casi siempre tres escalones de la misma escalera, así que la cápsula enseñaba tres discos idénticos
+  con distinta cifra y parecía un fallo de pintado. Ahora es una por escalera, la más alta.
+- **Un solo sprite de medallas en el documento.** Lo montaban cinco pantallas que no coinciden nunca, así que la
+  duplicación era imposible; con el aviso —que puede salir encima de cualquiera de ellas— pasó a ser lo normal, y
+  dos `<symbol>` con el mismo `id` son HTML inválido. `AchievementSprite` reparte ahora un dueño único que se
+  devuelve al desmontar.
+- **El sprite de las medallas ya está comprobado.** Un `icon` sin su `symbol` dejaba la medalla vacía sin error y
+  sin que ningún test se enterase — lo avisaba la receta y no lo cazaba nadie. Ahora hay un test por escalera.
+
+## [1.2.0] - 2026-09-07
+
+### Added
+- **Logros.** El catálogo son 50 escaleras y 304 escalones, y cada escalón es un logro con su `id` propio: lo que
+  se cuenta, se publica y se pinta es el ESCALÓN, no la escalera. Todo sale de tu biblioteca —no hay nada que
+  activar ni ningún contador que llevar aparte— salvo un único dato que hay que registrar porque no deja rastro:
+  que has probado la ruleta. Los umbrales están MEDIDOS sobre una biblioteca real de 302 juegos, no supuestos.
+  - **`/logros`**, con la forma de Steam: medalla, nombre con su grado, lo que se pide o lo que conseguiste, y el
+    día. Una sola lista, sin agrupar por familia: la pregunta al abrirla es «qué tengo y qué me falta», no «qué
+    tengo de cada tipo». La misma pantalla sirve para lo tuyo, para lo de una amistad y para el catálogo global.
+  - **La medalla** es un disco en penumbra con tres señales en tres canales que no se pisan: el aura dice la
+    RAREZA, el temple del filo el TRAMO de la escalera y la píldora del canto LA CIFRA de ese escalón.
+  - **El instante del desbloqueo.** Al guardar algo que sube un logro se dice ahí mismo, por el aviso de siempre.
+    Uno por escritura: si una edición sube tres, el aviso dice «3 logros conseguidos».
+  - **En el espacio social**: la tira de medallas en cada ficha, el porcentaje de gente que tiene cada logro
+    —medido sobre los espejos que el directorio ya se ha bajado, sin una petición ni un byte de más— y una
+    entrada por persona y día en el feed.
+  - **Lo que se publica** es un mapa de bits de 44 caracteres, no una lista de nombres: con 304 escalones los
+    `id` solos pasarían de tres kilobytes. Va con granularidad de DÍA y nunca de instante, que es lo que evita
+    que la vitrina cuente a qué horas usas la app. Los «primeros pasos» no tienen bit: no se publican jamás.
+- **Panel de administración · catálogo de logros.** Las 50 escaleras con sus dos textos enfrentados —la meta y el
+  hecho—, que repartidos por la app no se pueden comparar. Deja ocultar una escalera para quien no la tenga,
+  publicar hasta dónde ha llegado la comunidad, y borrar las vitrinas publicadas de una persona o de todo el
+  censo. Y prepara el cambio escrito para insertar un escalón nuevo, que son tres pasos fáciles de olvidar.
+
+### Changed
+- **Un escalón se abre para todos en cuanto alguien lo ve.** No hay una escalera por persona: la línea es el
+  primer escalón al que no ha llegado nadie —ese se ofrece, es el reto de quien va delante— y de ahí para arriba
+  no se enseña. Lo que distingue a dos personas es lo que llevan CONSEGUIDO, no la lista. Antes lo decidía cada
+  dispositivo con el progreso de su dueño, así que quien empezaba veía un peldaño donde otro ya veía nueve.
+- **La fracción se mide contra lo que está abierto**, no contra el catálogo entero. Un escalón que nadie ha visto
+  no es una tarea pendiente, es una que aún no ha empezado; contarlo hacía que ampliar el catálogo le bajara el
+  porcentaje de golpe a todo el mundo sin que nadie hubiera perdido nada. A cambio, el denominador crece solo
+  según la comunidad avanza.
+- **Lo conseguido no se devuelve.** Una marca de agua sostiene cada logro aunque el dato que lo concedió deje de
+  cumplirse —borras duplicados, corriges unos años— y el espejo publicado se une con lo que ya había en vez de
+  reemplazarlo: sin eso, abrir la app en un móvil con la biblioteca a medio sincronizar le borraba medallas a la
+  vitrina delante de tus amistades.
+- **El aviso se queda a la vista.** Vivía en el flujo, arriba del todo, así que uno disparado con la lista
+  desplazada nacía fuera de la pantalla: se anunciaba al lector de pantalla, pero quien mira no veía nada.
+
 - **Análisis sugeridos también fuera del espacio social.** El bloque de "por dónde seguir leyendo" que ya existía
   en el hub aparece ahora en dos sitios más, y en los dos ofrece análisis de UNA sola persona, que es lo que
   cambia el criterio: donde se mezclan firmas, la firma es una razón para ofrecer algo; donde solo hay una, no
@@ -199,6 +324,42 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
   - Política de privacidad al día: ahora se publica MENOS de lo ya declarado (el alta de un juego no sale), así que
     el texto se corrige pero la versión no sube y no se vuelve a pedir conformidad. El cupo diario no se menciona
     por lo mismo que el filtro de listas: cambia lo que ves tú, no lo que se publica de ti.
+
+### Changed
+
+- **La política de privacidad declara los logros, y `LEGAL_VERSION` sube a `2026-09-07`.** Desde esta versión el
+  espejo de logros viaja en el perfil público, así que el texto legal dice qué lleva —las medallas con el DÍA de
+  cada una, nunca la hora—, que se calculan sobre la biblioteca ENTERA (también las listas ocultas: cuentan
+  cuántos juegos hay, no cuáles, y de una lista oculta sigue sin salir ni un nombre) y que el dato lo puede leer
+  cualquier usuario con sesión, tenga o no amistad contigo: que la vitrina solo se PINTE a las amistades es
+  presentación, no privacidad. Al subir la versión aceptada, todo el mundo vuelve a pasar por la puerta del hub.
+  Era requisito de entrada de la fase 3 (§9 de `docs/plan-logros.md`), que es la que enciende la publicación.
+- **Dependencias de producción al día**, todas dentro de su rango: `firebase` 12.17.1 → 12.18.0, `zod` 4.4.3 →
+  4.5.4, `react-router-dom` 7.18.2 → 7.18.3 y `@tanstack/react-virtual` 3.14.9 → 3.14.11. Se anotan aquí porque
+  viajan en el bundle: la versión que hornea el build es la que etiqueta la telemetría, y sin este apunte los
+  errores de este despliegue se atribuirían al anterior.
+- El utillaje también sube: **Vitest 5** (con `@vitest/coverage-v8`) y **html-validate 11.14**, que es la primera
+  que admite Vitest 5. **ESLint 10 y TypeScript 7 se quedan fuera a propósito**: `eslint-plugin-jsx-a11y` y
+  `eslint-plugin-react` topan en ESLint 9 —con ellos `npm ci` no resuelve y el CI se cae en la instalación— y
+  `typescript-eslint` exige `typescript <6.1`, sin versión publicada, ni canary, que admita TypeScript 7.
+- Las acciones del CI pasan a las que corren sobre **Node 24** (`checkout@v7`, `setup-node@v7`, `setup-java@v6`,
+  `codecov-action@v7`): las `@v4` declaraban `node20` y el runner ya avisa de su retirada.
+
+### Tests
+
+- **La auditoría de accesibilidad se reparte entre los trabajadores.** Es un solo fichero con 84 casos —el 88 % del
+  tiempo de la suite— y sin `fullyParallel` iba en fila por un único trabajador, así que sobraban los demás: 94 s de
+  reloj para 106 s de trabajo. Repartida, la suite pasa de **94,8 s a 59,1 s** con los mismos dos trabajadores.
+  Cada caso estrena su contexto de navegador, de modo que repartirlos no comparte nada.
+- **El catálogo de logros del panel deja de agotar el temporizador.** Buscaba las 50 escaleras de una en una y cada
+  búsqueda recorre el documento entero: 740 ms de los 1.031 del test. De una pasada baja a 19 ms. Y el fichero
+  entero se mide con 20 s de margen en vez de 5: pinta 4.239 nodos en cada caso, así que con la máquina cargada el
+  límite de 5 s no medía la pantalla, medía la carga de la máquina —era lo que tumbaba media docena de casos sin
+  que nada estuviera roto—.
+- **El aviso se mide con la página arriba.** El recorrido puede desplazarse solo: el «Guardar» del editor queda a
+  unos 65 px del borde inferior y basta con que las fuentes del sistema midan un poco más —las del CI miden más que
+  las de macOS— para que haya que ir a por él. Eso no dice nada del aviso, cuyo `sticky` se lee del desplazamiento
+  del instante, así que se vuelve arriba antes de medir y se comprueba contra el `top` que tendría pegado.
 
 ## [1.0.6] - 2026-08-25
 

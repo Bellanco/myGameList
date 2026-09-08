@@ -14,6 +14,8 @@ import { RouletteModal } from '../roulette/RouletteModal';
 import { buildProfilePool, profileWeight } from '../../../core/roulette/roulette';
 import { FriendshipButton } from './FriendshipButton';
 import { ProfileReviewsList } from './ProfileReviewsList';
+import { ProfileAchievementStrip } from './ProfileAchievements';
+import { ENABLE_ACHIEVEMENTS } from '../../../core/achievements/flags';
 /**
  * Las estadísticas de un amigo, PEREZOSAS. Con el import estático, `FriendStats` arrastraba al chunk del hub
  * social el panel de estadísticas entero —`computeStats` y los ocho gráficos, unos 96 kB—, así que entrar al
@@ -155,6 +157,8 @@ function SocialProfileDetailScreenBase({
   onEditProfile,
   onBack,
   showReviews,
+  achievementsMirror,
+  onOpenAchievements,
   onToggleReviews,
   onOpenReview,
   status,
@@ -177,6 +181,16 @@ function SocialProfileDetailScreenBase({
   onBack: () => void;
   // Vista de reseñas controlada por la URL (sub-ruta /reviews) para poder volver a ella desde el detalle.
   showReviews: boolean;
+  /**
+   * El espejo de logros de esa persona, tal y como llega de `profiles/{uid}`: la cadena empaquetada, cruda.
+   *
+   * Llega cruda y no parseada a propósito: el parser DEFENSIVO tiene que correr en el cliente que pinta, que es
+   * la única defensa que hay (el espejo de otra persona no pasa por Zod). Vacía = esa persona no publica logros,
+   * y entonces no se pinta nada — ni marco vacío ni «no tiene logros».
+   */
+  achievementsMirror?: string;
+  /** Abrir el listado de logros de este perfil. Es una PANTALLA aparte, no una vista dentro de la ficha. */
+  onOpenAchievements?: () => void;
   onToggleReviews: () => void;
   onOpenReview: (gameId: number) => void;
   status: string;
@@ -441,6 +455,14 @@ function SocialProfileDetailScreenBase({
           <div className="hub-profile-hero">
             <HubAvatar photoURL={activeProfileDetail.photoURL} sizeClass="hub-avatar-lg" />
             <h3 className="hub-profile-hero-name">{activeProfileDetail.displayName}</h3>
+            {/* LA TIRA DE LOGROS, justo debajo del nombre y SOLO LA IMAGEN: sin rótulos, sin fechas y sin cifras
+                alrededor. Es lo que la hace funcionar aquí — esta cabecera ya lleva avatar, nombre y muesca de
+                rango, y unas medallas rotuladas la convertirían en un listado. El nombre sale al pasar por
+                encima y también con el tabulador (ver `AchievementStrip`). Detrás de la misma puerta que el
+                resto de la ficha: para un no-amigo no se pinta. */}
+            {ENABLE_ACHIEVEMENTS && canSeeFullProfile && achievementsMirror ? (
+              <ProfileAchievementStrip mirror={achievementsMirror} onOpen={onOpenAchievements || (() => {})} />
+            ) : null}
           </div>
           {!canSeeFullProfile ? (
             <div className="hub-detail-metadata">

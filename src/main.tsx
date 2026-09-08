@@ -108,6 +108,10 @@ function bootApp(): void {
   // falso, en producción el bundler se lleva por delante el `import()` y el módulo entero.
   if (import.meta.env.DEV) {
     void import('./dev/socialDateTools').then((m) => m.installSocialDateTools());
+    // Reinicio de los logros (`logros.olvidar()`): la marca de agua no baja nunca, así que sin esto un usuario
+    // de pruebas arrastra para siempre lo que consiguió en sesiones anteriores. Solo BORRA lo local; no siembra
+    // nada, que es lo que distingue esto del andamio que se retiró.
+    void import('./dev/achievementsReset').then((m) => m.installAchievementReset());
   }
 
   runWhenIdle(() => {

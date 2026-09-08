@@ -1,0 +1,235 @@
+import { useMemo, useRef } from 'react';
+import { evaluateAchievements, levelUps, nextPeak } from '../core/achievements/evaluate';
+import { summarize } from '../core/achievements/summary';
+import { ACHIEVEMENTS, ACHIEVEMENTS_BY_LADDER } from '../core/achievements/catalog';
+import { ACHIEVEMENTS_PEAK_KEY } from '../core/constants/storageKeys';
+import { rouletteUsedAt } from '../core/achievements/deviceSignals';
+import { DEFAULT_PALETTE } from '../core/constants/palettes';
+import { palettePreference } from '../view/hooks/preferences';
+import { RARITY_POINTS } from '../core/achievements/types';
+import {
+  NO_ACHIEVEMENTS_CONFIG,
+  openThrough,
+  withoutHidden,
+  type AchievementsConfig,
+  type OpenFrontier,
+} from '../core/achievements/visibility';
+import type { AchievementDef, AchievementItem, AchievementState, AchievementSummary } from '../core/achievements/types';
+import type { TabData } from '../model/types/game';
+
+export interface AchievementsViewModel {
+  states: readonly AchievementState[];
+  byId: ReadonlyMap<string, AchievementState>;
+  summary: AchievementSummary;
+  /** Conseguidos, ordenados del más reciente al más antiguo. Es lo que alimenta la tira. */
+  earned: ReadonlyArray<{ def: AchievementDef; state: AchievementState }>;
+  /** Los que acaban de subir de nivel en la ÚLTIMA evaluación, para el aviso del instante (§7.4). */
+  justUnlocked: readonly AchievementState[];
+}
+
+/** Lee una clave de localStorage sin que un navegador en modo privado estricto tumbe el render. */
+function read(key: string): string {
+  try {
+    return localStorage.getItem(key) || '';
+  } catch {
+    return '';
+  }
+}
+
+function write(key: string, value: string): void {
+  try {
+    localStorage.setItem(key, value);
+  } catch {
+    // Sin persistencia: la marca de agua vale para la sesión en curso y no se recordará.
+  }
+}
+
+export interface AchievementsInput {
+  games: TabData;
+  friends?: number;
+  postWeeks?: number;
+  profileCreatedAt?: number;
+  hasSync?: boolean;
+  /**
+   * Hasta dónde ha abierto cada escalera la comunidad. Solo entra en la FRACCIÓN: el denominador cuenta lo que
+   * hoy está abierto, no el catálogo entero (ver `summarize`). Vacío = cada quien abre con su propio progreso.
+   */
+  open?: OpenFrontier;
+}
+
+/**
+ * Evalúa los logros del DUEÑO sobre su biblioteca.
+ *
+ * Se memoiza contra `games`, que es la misma referencia que ya memoiza el panel: una pasada sobre 2.000 juegos
+ * son unos pocos milisegundos, así que no hace falta diferirlo ni sacarlo a un worker.
+ *
+ * LOS CONTADORES SOCIALES PUEDEN FALTAR Y NO PASA NADA. Al evaluar fuera del hub, el grafo de amistades puede no
+ * estar cargado: esos contadores llegan a cero y sus logros evalúan a cero. La marca de agua es justo lo que
+ * impide que eso RETIRE lo ya conseguido, así que no hace falta bloquear nada ni ir a buscar datos que no están a
+ * mano — se ponen al día en la próxima apertura del hub.
+ */
+export function useAchievements({
+  games,
+  friends = 0,
+  postWeeks = 0,
+  profileCreatedAt = 0,
+  hasSync = false,
+  open = {},
+}: AchievementsInput): AchievementsViewModel {
+  // El estado inmediatamente anterior, para saber qué ha subido EN ESTA evaluación. Un `ref` y no un estado:
+  // compararse consigo mismo no debe provocar un render más.
+  const previous = useRef<AchievementState[]>([]);
+
+  return useMemo(() => {
+    const peak = read(ACHIEVEMENTS_PEAK_KEY);
+    const states = evaluateAchievements(
+      {
+        games,
+        social: { friends, postWeeks, profileCreatedAt },
+        device: {
+          hasSync,
+          rouletteUsedAt: rouletteUsedAt(),
+          themeChanged: palettePreference.get() !== DEFAULT_PALETTE,
+        },
+        now: Date.now(),
+      },
+      peak,
+    );
+
+    // La marca de agua se guarda SIEMPRE que sube, y nunca baja: `nextPeak` toma el máximo con lo que había.
+    const grown = nextPeak(states, peak);
+    if (grown !== peak) write(ACHIEVEMENTS_PEAK_KEY, grown);
+
+    // Solo lo que sube EN ESTA evaluación, nunca el arrastre de retroactividad: quien importa una biblioteca
+    // entera no recibe veinte avisos. La primera evaluación del dispositivo siembra y calla.
+    const justUnlocked = previous.current.length > 0 ? levelUps(previous.current, states) : [];
+    previous.current = states;
+
+    const byId = new Map(states.map((state) => [state.id, state]));
+    const earned = ACHIEVEMENTS
+      .map((def) => ({ def, state: byId.get(def.id) }))
+      .filter((entry): entry is { def: AchievementDef; state: AchievementState } =>
+        Boolean(entry.state && entry.state.level >= 1))
+      .sort(compareEarned);
+
+    return { states, byId, summary: summarize(states, open), earned, justUnlocked };
+  }, [games, friends, postWeeks, profileCreatedAt, hasSync, open]);
+}
+
+/**
+ * EL CATÁLOGO EN UNA SOLA LISTA: primero lo conseguido, luego lo que no. Como en Steam.
+ *
+ * LA ZANAHORIA (§6.3bis). De cada escalera se enseñan los escalones conseguidos **y uno más**: el siguiente, con
+ * su barra. Los posteriores no se pintan. Es lo que hace que un catálogo de 251 entradas siga siendo una pantalla
+ * y no un inventario — enseñar los once escalones de «Créditos finales» a quien lleva diez juegos no le dice
+ * cuánto le falta, le dice que no va a llegar—, y es la diferencia entre una meta y una lista de la compra.
+ *
+ * Los ocultos siguen tapados por su cuenta (§6.7), y los RETIRADOS solo aparecen si ya se tenían: dejan de
+ * ofrecerse, pero a quien los consiguió no se le borra la medalla (§6.4).
+ *
+ * Sin agrupar por familia. La pregunta que se hace uno al abrir esto es «qué tengo y qué me falta», y esa se
+ * responde con un solo corte. La familia sigue en el catálogo, donde hace su trabajo: el filtro del feed y el
+ * denominador.
+ */
+/**
+ * EL DÍA en que cayó un logro, en el calendario LOCAL de quien mira. 0 cuando no hay fecha deducible.
+ *
+ * Por día y no por instante, que es lo que se ve: la fila enseña «31 ago 2026», así que dos logros del mismo día
+ * ordenados por milisegundos quedaban en un orden que no se corresponde con nada de lo que hay en pantalla —y
+ * que además baila, porque media docena de métricas deducen su sello de un sello de juego y otras lo ponen a
+ * medianoche—. Con el día como clave, lo que decide dentro de la jornada es el desempate de abajo, que sí se ve.
+ */
+function dayOf(ts: number): number {
+  if (!ts) return 0;
+  const d = new Date(ts);
+  return d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate();
+}
+
+/**
+ * Orden de lo CONSEGUIDO: por día, del más reciente al más antiguo, y dentro del día lo más raro primero.
+ *
+ * El desempate por rareza no es un capricho: es el mismo criterio con el que el feed ordena los logros de una
+ * persona en un día (§8.4), así que la tira del panel, el listado y el feed cuentan la misma jornada en el mismo
+ * orden. A igualdad de rareza, el nombre, para que el orden sea estable entre recargas.
+ *
+ * Lo conseguido SIN fecha cae al final —día 0—, que es donde tiene que estar: son los de la primera evaluación,
+ * los que ya estaban antes de que hubiera con qué fecharlos.
+ */
+export function compareEarned(a: AchievementItem, b: AchievementItem): number {
+  return dayOf(b.state.unlockedAt) - dayOf(a.state.unlockedAt)
+    || RARITY_POINTS[b.def.rarity] - RARITY_POINTS[a.def.rarity]
+    || a.def.labels.name.localeCompare(b.def.labels.name, 'es');
+}
+
+export function listForScreen(
+  byId: ReadonlyMap<string, AchievementState>,
+  config: AchievementsConfig = NO_ACHIEVEMENTS_CONFIG,
+): AchievementItem[] {
+  const stateOf = (def: AchievementDef): AchievementState =>
+    byId.get(def.id) || { id: def.id, level: 0, value: 0, next: def.step, unlockedAt: 0 };
+
+  // QUÉ ESCALONES SE ENSEÑAN: los que la escalera tiene ABIERTOS, más todo lo que uno tenga conseguido.
+  //
+  // ABIERTO ES COMUNITARIO Y NO PERSONAL, que es la regla que esto se dejaba: en cuanto un usuario ve un escalón,
+  // ese escalón queda abierto para TODO EL MUNDO y a partir de ahí se enseña igual a todos. Aquí se decidía solo
+  // con el progreso de quien mira —cada dispositivo abría su propia escalera— así que quien empezaba veía un
+  // peldaño donde otro ya veía nueve. Lo que distingue a dos personas es lo que llevan CONSEGUIDO, no la lista.
+  // La línea la calcula `openThrough`, y con la configuración vacía se queda en el progreso propio, que es
+  // exactamente lo que se hacía antes: por eso esto no cambia nada mientras no haya espejos publicados.
+  //
+  // Y ADEMÁS, TODO LO CONSEGUIDO, esté abierto o no. La marca de agua puede sostener un escalón alto cuyo
+  // anterior ya no se cumple —una biblioteca que encoge, unos años corregidos—, y sin esta unión esa medalla
+  // desaparecía de la pantalla sin dejar de contar en la cifra de la cabecera. Un logro conseguido que no se ve
+  // en ninguna parte es el peor fallo posible aquí.
+  const visible = new Set<string>();
+  for (const steps of ACHIEVEMENTS_BY_LADDER.values()) {
+    const openTo = openThrough(steps, config.open, (def) => stateOf(def).level >= 1);
+    steps.forEach((def, index) => {
+      if (stateOf(def).level >= 1) {
+        visible.add(def.id);
+        return;
+      }
+      // Lo retirado deja de ofrecerse: no se le enseña a quien no lo tenga (§6.4).
+      if (def.retired) return;
+      if (index <= openTo) visible.add(def.id);
+    });
+  }
+
+  const items: AchievementItem[] = ACHIEVEMENTS
+    .filter((def) => visible.has(def.id))
+    .map((def) => ({ def, state: stateOf(def) }));
+
+  // LOS PRIMEROS PASOS SE APAGAN SOLOS: conseguidos todos, desaparecen y no vuelven. No es una categoría
+  // permanente que quede a medias para siempre en la cuenta.
+  const onboarding = items.filter((entry) => entry.def.family === 'onboarding');
+  const hideOnboarding = onboarding.length > 0 && onboarding.every((entry) => entry.state.level >= 1);
+
+  // LOS OCULTOS QUE NO TIENES NO SALEN, ni con un «?». La decisión y su motivo están en
+  // `core/achievements/visibility.ts`; aquí solo se aplica, y se aplica al final para que un oculto tampoco
+  // gaste la zanahoria de su escalera.
+  return withoutHidden(items, config.hidden)
+    .filter((entry) => !(hideOnboarding && entry.def.family === 'onboarding'))
+    .sort((a, b) => {
+      const aEarned = a.state.level >= 1;
+      const bEarned = b.state.level >= 1;
+      if (aEarned !== bEarned) return aEarned ? -1 : 1;
+      // Lo conseguido, por DÍA: la jornada más reciente arriba y dentro de ella lo más raro primero. Lo que
+      // falta, por lo cerca que está de caer —así lo que está a punto queda arriba, que es la información útil
+      // de esa mitad— y a igualdad, por nombre.
+      if (aEarned) return compareEarned(a, b);
+      return progressOf(b) - progressOf(a) || a.def.labels.name.localeCompare(b.def.labels.name, 'es');
+    });
+}
+
+/**
+ * Qué parte del umbral llevas, 0–1. Sin umbral (o sin nada hecho), cero.
+ *
+ * En una escalera DESCENDENTE el progreso va al revés —bajar de 64 a 30 con el listón en 25 es ir bien— y la
+ * división directa daría más de uno justo cuando más lejos estás.
+ */
+function progressOf(entry: AchievementItem): number {
+  const { value, next } = entry.state;
+  if (!next || next <= 0) return 0;
+  if (entry.def.descending) return value <= next ? 1 : Math.min(1, next / value);
+  return Math.min(1, value / next);
+}

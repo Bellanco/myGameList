@@ -542,3 +542,48 @@
   letter-spacing: .02em;
 }
 :root[data-palette="cyberpunk"] .hub-feed-move-hour::before { content: '// '; color: var(--cyber-cyan-fg); font-weight: 700; }
+
+/* ── El AVISO DE LOGRO · el chaflán del HUD de Night City, el mismo `polygon` que cortan sus botones ──────────
+   Y LA MISMA SOLUCIÓN QUE ELLOS, que ya está probada en este tema: recortar el elemento con `clip-path` deja la
+   DIAGONAL SIN FILETE —`clip-path` se come el `border` del propio elemento— así que la forma la dan DOS CAPAS
+   recortadas detrás del contenido: `::before` con el color del filete a todo el box y `::after` con el relleno
+   1 px más pequeño. El filete asoma 1 px en TODOS los cantos, la diagonal incluida, y el corte queda
+   transparente.
+
+   ⚑ LA TRAMPA QUE ESTO RESUELVE: `clip-path` RECORTA LAS SOMBRAS EXTERIORES (regla 2 de `persona.scss`), y la
+   sombra exterior es justo la que dice la RAREZA del logro. Por eso el halo se pinta con `filter: drop-shadow()`
+   en la capa recortada —que sí sigue la silueta del chaflán— en vez de con `box-shadow`. Sin esto, el aviso de un
+   logro excepcional en Sin futuro se quedaba sin su halo naranja y nadie sabría por qué. */
+:root[data-palette="cyberpunk"] .ach-toast {
+  border-radius: 0;
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+  isolation: isolate;
+  /* El halo del `::before` se pinta FUERA de la caja: con `overflow: hidden` el padre se lo comía. El barrido no
+     necesita ese recorte aquí porque lleva el suyo. */
+  overflow: visible;
+  --hud-cut: polygon(0 0, 100% 0, 100% calc(100% - 14px), calc(100% - 14px) 100%, 0 100%, 0 14px);
+}
+:root[data-palette="cyberpunk"] .ach-toast::before,
+:root[data-palette="cyberpunk"] .ach-toast::after {
+  content: '';
+  position: absolute;
+  clip-path: var(--hud-cut);
+  pointer-events: none;
+}
+/* Capa del filete, a todo el box, con el halo de rareza siguiendo su silueta. */
+:root[data-palette="cyberpunk"] .ach-toast::before {
+  inset: 0;
+  z-index: -2;
+  background: rgba(var(--glow), .55);
+  filter: drop-shadow(0 0 10px rgba(var(--glow), .45));
+}
+/* Capa del relleno, 1 px más pequeña: es lo que deja asomar el filete en la diagonal. */
+:root[data-palette="cyberpunk"] .ach-toast::after {
+  inset: 1px;
+  z-index: -1;
+  background: var(--surface-elevated);
+}
+/* El barrido también se recorta al chaflán; si no, asoma por la esquina cortada. */
+:root[data-palette="cyberpunk"] .ach-toast-sheen { clip-path: var(--hud-cut); }

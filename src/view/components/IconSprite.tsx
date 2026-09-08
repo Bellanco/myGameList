@@ -60,6 +60,18 @@ export function IconSprite() {
         <path d="M16.6 12.5c1.9.9 3.1 2.7 3.3 4.9l-3.3-1.5v-3.4Z" />
         <path d="M10.1 17.6h3.8L12 21.6l-1.9-4Z" />
       </symbol>
+      {/* Caballo de ajedrez (Font Awesome Free **7**, classic REGULAR). Es el icono de los LOGROS.
+          LA VERSIÓN IMPORTA: la 7 REDIBUJÓ este icono, y el de la 6 es un caballo distinto —parecido de
+          lejos y con otro trazo de cerca—. La web de Font Awesome sirve ya la 7, así que ese es el que se
+          ve al buscarlo y el que hay que traer.
+          Y EL `viewBox` NO ES EL DEL FICHERO: el SVG que publica Font Awesome trae `0 0 448 512`, pero su
+          trazado va de y=-32 a y=464, así que con esa caja el caballo sale RECORTADO POR ARRIBA —las orejas—.
+          Se sube el origen a -32 para que quepa entero, conservando el tamaño de caja (448×512) y por tanto las
+          proporciones con las que conviven los demás iconos.
+          ATRIBUCIÓN: los iconos de Font Awesome Free van bajo CC BY 4.0, que EXIGE citar la fuente —a
+          diferencia de los Material Symbols del resto del sprite, que son Apache 2.0—. La cita tiene que
+          estar en un sitio visible para el usuario; ver `core/constants/legalContent`. */}
+      <symbol id="icon-chess-knight" viewBox="0 -32 448 512"><path d="M232-32c110.5 0 200 89.5 200 200l0 127.7c0 18.9-6.1 37.1-17.2 52.2l-5.1 6.2-36.3 40.7 32.1 40.2c6.7 8.4 10.4 18.8 10.4 29.6l-.2 4.8c-2.4 23.9-22.6 42.5-47.1 42.5l-289.2 0-4.8-.2c-23.9-2.4-42.5-22.6-42.5-47.1 0-10.8 3.7-21.2 10.4-29.6l37.6-47 0-24.3c0-24.3 10.1-47.6 27.8-64.2l63.5-59.5-17.4 0-.2 .2c-20.3 20.3-49.6 28.2-77.1 21.1l-5.5-1.6c-30.9-10.3-52.3-38-54.9-70.1l-.2-6.4 0-1.4c0-19.7 7.1-38.8 19.9-53.8l76.1-88.8 0-47.1 .1-2.5C113.4-22.6 123.6-32 136-32l96 0zM80.7 464l286.6 0-38.4-48-209.9 0-38.4 48zM160 48c0 5.7-2.1 11.3-5.8 15.6L72.3 159.1C67 165.4 64 173.4 64 181.7l0 1.4 .4 5.2c1.9 11.9 10.3 21.9 21.9 25.8l4.5 1.1c10.5 1.9 21.3-1.4 29-9l7.2-7.2 3.7-3c3.9-2.6 8.5-4 13.3-4l88 0c9.8 0 18.7 6 22.3 15.2s1.3 19.6-5.9 26.3l-107.8 101c-8.1 7.6-12.7 18.1-12.7 29.2l0 4.3 205.2 0 40.7-45.8 2.3-2.8c5.1-6.8 7.8-15.2 7.8-23.7L384 168c0-83.9-68.1-152-152-152l-72 0 0 32zm32 72a24 24 0 1 1 0-48 24 24 0 1 1 0 48z" /></symbol>
       <symbol id="icon-trophy" viewBox="0 -960 960 960"><path d="M280-880h400v314q0 23-10 41t-28 29l-142 84 28 92h152l-124 88 48 152-124-94-124 94 48-152-124-88h152l28-92-142-84q-18-11-28-29t-10-41v-314Zm80 80v234l80 48v-282h-80Zm240 0h-80v282l80-48v-234ZM480-647Zm-40-12Zm80 0Z" /></symbol>
       <symbol id="icon-play" viewBox="0 -960 960 960"><path d="M480-654Zm174 174Zm-348 0Zm174 174Zm0-234L360-660v-220h240v220L480-540Zm180 180L540-480l120-120h220v240H660Zm-580 0v-240h220l120 120-120 120H80ZM360-80v-220l120-120 120 120v220H360Zm120-574 40-40v-106h-80v106l40 40ZM160-440h106l40-40-40-40H160v80Zm280 280h80v-106l-40-40-40 40v106Zm254-280h106v-80H694l-40 40 40 40Z" /></symbol>
       <symbol id="icon-abandoned" viewBox="0 -960 960 960"><path d="M440-200q-100 0-170-70t-70-170q0-11 1-22t3-22q-5 2-12 3t-12 1q-42 0-71-29t-29-71q0-42 27.5-71t69.5-29q33 0 59.5 18.5T274-614q33-30 75.5-48t90.5-18h440v160H680v80q0 100-70 170t-170 70ZM208.5-551.5Q220-563 220-580t-11.5-28.5Q197-620 180-620t-28.5 11.5Q140-597 140-580t11.5 28.5Q163-540 180-540t28.5-11.5ZM539-341q41-41 41-99t-41-99q-41-41-99-41t-99 41q-41 41-41 99t41 99q41 41 99 41t99-41Zm-42.5-42.5Q520-407 520-440t-23.5-56.5Q473-520 440-520t-56.5 23.5Q360-473 360-440t23.5 56.5Q407-360 440-360t56.5-23.5ZM440-440Z" /></symbol>
