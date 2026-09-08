@@ -3,7 +3,7 @@ import { act, render, screen, waitFor, fireEvent } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom';
 import type { SecretSocialGistResult } from '../../src/model/repository/socialGistRepository';
 import type { SocialAuthUser, SocialProfileReference } from '../../src/model/repository/firebaseClient';
-import { parseMirror } from '../../src/core/achievements/pack';
+import { packAchievements, parseMirror } from '../../src/core/achievements/pack';
 
 // Mock de los repos que consume useSocialViewModel: aísla la UI de red/Firebase/IndexedDB.
 // Valida que tras M3 (extracción del viewmodel) SocialHub sigue renderizando ambas ramas sin romper.
@@ -1773,5 +1773,104 @@ describe('SocialHub — reciprocidad de la foto', () => {
     // Y el mensaje de estado es el de la aplicación, no el del error.
     expect(await screen.findByText(SOCIAL_UI.status.offline)).toBeInTheDocument();
     expect(screen.queryByText('network offline')).not.toBeInTheDocument();
+  });
+});
+
+/**
+ * LOS LOGROS DE LOS DEMÁS, que es el otro lado del espejo: hasta aquí se probaba que se PUBLICA (arriba) y que
+ * el empaquetado va y vuelve (`tests/unit/achievements.test.ts`), pero nadie probaba que el espejo ajeno LLEGUE.
+ * Y no llegaba: el campo `achievements` del documento de perfil no entraba en la proyección del directorio, ni se
+ * copiaba en las cuatro reconstrucciones de la hidratación, y los consumidores lo leían con un cast a una
+ * propiedad OPCIONAL —así que compilaba y salía siempre vacío—. Resultado: cada persona veía solo sus propios
+ * logros, en el feed y en las fichas, y el administrador (que lee los documentos crudos) los veía todos.
+ *
+ * De ahí que estos tests entren por la INTERFAZ y no por el repositorio: el hueco no estaba en ninguna de las
+ * piezas, estaba en el cable entre ellas.
+ */
+describe('SocialHub — los logros de otras personas', () => {
+  // Un logro raro y con fecha de HOY: raro para que no lo tenga de rebote quien mira (su biblioteca de prueba
+  // tiene un juego), y de hoy porque el feed solo anuncia los últimos 30 días (`FEED_RECENT_DAYS`).
+  const ADA_LOGRO = 'completados-500';
+  const ADA_LOGRO_NOMBRE = 'Créditos finales XI';
+  const BOB_LOGRO = 'resenas-200';
+  const BOB_LOGRO_NOMBRE = 'Con tus palabras X';
+
+  const espejoDe = (id: string) =>
+    packAchievements([{ id, level: 1, value: 0, next: null, unlockedAt: Date.now() }]);
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    localStorage.clear();
+    firebaseMocks.getCurrentSocialAuthUser.mockResolvedValue({ uid: 'me', email: 'me@x.com', displayName: 'Me', photoURL: null });
+    firebaseMocks.getPublicConfig.mockResolvedValue({ consent: { version: LEGAL_VERSION, agreedAt: 1 } });
+    firebaseMocks.resolveOwnProfile.mockResolvedValue(null);
+    gistMocks.getSocialSyncConfig.mockReturnValue({ token: 'ghp_x', gistId: 'my-social', etag: null, lastRemoteUpdatedAt: 0 });
+    localMocks.loadLocalState.mockReturnValue({
+      c: [{ id: 1, name: 'Halo', _ts: 1, platforms: [], genres: [], steamDeck: false, review: '', score: 5, years: [], strengths: [], weaknesses: [], reasons: [], replayable: false, retry: false, hours: 0 }],
+      v: [], e: [], p: [], deleted: [], updatedAt: 0,
+    });
+    gistMocks.readSocialGist.mockResolvedValue({
+      data: {
+        profile: { name: 'Me', private: false, visibility: { hiddenTabs: [], hideReplayable: false, hideRetry: false, hideGameTime: false, showPhoto: true }, sharedLists: {} },
+        recommendations: [], activity: [], posts: [], updatedAt: 0,
+      },
+      etag: null,
+    });
+    // Ada es AMIGA y Bob solo está en el directorio. Las dos entradas traen espejo: es lo que llega de
+    // `profiles/{uid}.achievements.list`, legible para cualquier autenticado.
+    firebaseMocks.listSocialDirectory.mockResolvedValue([
+      {
+        id: 'friendUid', uid: 'friendUid', displayName: 'Ada', photoURL: '',
+        socialGistId: 'ada-social', gamesGistId: '', updatedAt: Date.now(), tier: 'bronce',
+        achievementsMirror: espejoDe(ADA_LOGRO),
+      },
+      {
+        id: 'strangerUid', uid: 'strangerUid', displayName: 'Bob', photoURL: '',
+        socialGistId: 'bob-social', gamesGistId: '', updatedAt: Date.now(), tier: 'bronce',
+        achievementsMirror: espejoDe(BOB_LOGRO),
+      },
+    ]);
+    const adaView = { docId: 'friendUid__me', otherUid: 'friendUid', otherName: 'Ada', otherPhoto: '', otherSocialGistId: 'ada-social', otherGamesGistId: '', state: 'friends', createdAt: 0, updatedAt: 1 };
+    firebaseMocks.getMyFriendships.mockResolvedValue({
+      // `byOtherUid` es lo que mira la ficha para saber que es amiga y enseñar su perfil completo.
+      friends: [adaView], incoming: [], outgoing: [], byOtherUid: { friendUid: adaView },
+    });
+    gistMocks.readPublicSocialGistById.mockResolvedValue({
+      profile: { name: 'Ada', visibility: { hiddenTabs: [], hideReplayable: false, hideRetry: false, hideGameTime: false, showPhoto: true } },
+      activity: [], posts: [], updatedAt: 10,
+    });
+  });
+
+  it('el feed anuncia los logros de una amistad, no solo los propios', async () => {
+    renderHub('/social');
+
+    // La tarjeta es de Ada y nombra su logro: las dos cosas en el mismo nodo, para que no pueda pasar por
+    // buena una tarjeta de logros de otra persona.
+    const tarjeta = await screen.findByLabelText(`${SOCIAL_UI.feed.openProfileAria('Ada')}. ${ADA_LOGRO_NOMBRE}`);
+    expect(tarjeta).toBeInTheDocument();
+    expect(tarjeta.textContent).toContain(ADA_LOGRO_NOMBRE);
+  });
+
+  /**
+   * Y NO LOS DE UN DESCONOCIDO. El espejo de Bob llega igual —viene de Firestore, no de su gist, así que la
+   * garantía implícita del resto del feed («solo se leen los gists de los amigos») aquí no sirve—, y sin el
+   * filtro por amistad arreglar la lectura habría metido en el feed los logros de hasta cincuenta perfiles
+   * públicos. Es la misma política que la ficha ya aplicaba con `canSeeFullProfile`.
+   */
+  it('el feed NO anuncia los logros de quien no es amistad', async () => {
+    renderHub('/social');
+
+    await screen.findByLabelText(`${SOCIAL_UI.feed.openProfileAria('Ada')}. ${ADA_LOGRO_NOMBRE}`);
+    expect(screen.queryByText(BOB_LOGRO_NOMBRE)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(`${SOCIAL_UI.feed.openProfileAria('Bob')}. ${BOB_LOGRO_NOMBRE}`)).not.toBeInTheDocument();
+  });
+
+  it('la ficha de una amistad pinta su vitrina', async () => {
+    renderHub('/social/profiles/friendUid');
+
+    // La medalla se nombra a sí misma (`medalAria`), que es lo que hace que la tira solo-imagen sirva con lector
+    // de pantalla: si el espejo no llegara, la tira no se pintaría en absoluto.
+    const medalla = await screen.findByRole('img', { name: new RegExp(`^${ADA_LOGRO_NOMBRE}`) });
+    expect(medalla).toBeInTheDocument();
   });
 });

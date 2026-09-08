@@ -19,7 +19,7 @@ const GIST = 'aabbcc0011223399';
 const DIR_KEY = `__dir__:${GIST}`;
 const PROFILE_KEY = `__profile__:${GIST}`;
 /** Versión de forma VIGENTE del directorio (ver `SOCIAL_DIRECTORY_CACHE_VERSION`). */
-const CURRENT_VERSION = 4;
+const CURRENT_VERSION = 5;
 
 async function writeRawRecord(record: Record<string, unknown>): Promise<void> {
   const db = await openSharedDatabase();

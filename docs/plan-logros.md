@@ -1557,6 +1557,14 @@ Reglas para que no se convierta en ruido:
   ahora la línea base es duradera, así que «la primera vez» es de verdad una vez por dispositivo y no una vez
   cada TTL.
 - **Respeta el opt-out** por construcción: quien no publica no tiene espejo que comparar.
+- ⚑ **Solo AMISTADES, y el filtro hay que escribirlo.** El resto del feed es solo-amigos de rebote: solo se leen
+  los gists sociales de los amigos, así que de un desconocido no hay actividad que mezclar. El espejo NO viaja por
+  ahí —viene del directorio de Firestore, legible para cualquier autenticado— así que esa garantía implícita no le
+  vale, y sin un filtro explícito el feed anunciaría los logros de los hasta cincuenta perfiles públicos del
+  directorio. Es además la política que la ficha ya aplicaba (`canSeeFullProfile`, §8.2): allí la vitrina de un
+  desconocido no se enseña, y sería incoherente que el feed cantara lo que su propia ficha calla. El **porcentaje
+  comparado** (§6.6bis) sigue midiéndose sobre el directorio entero: ahí no hay identidad, solo un porcentaje con
+  su denominador.
 - ⚑ **Todos los logros cuentan, y el filtro de rareza se cae.** El documento reservaba el feed para lo raro, y ese
   filtro existía para acotar el volumen — trabajo que **el agrupado por día ya hace, y mejor**: con una entrada
   por persona y día, alguien que desbloquea seis medallas en una tarde ocupa un renglón, no seis. Filtrar además
