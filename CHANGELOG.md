@@ -67,6 +67,11 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
     siguiente arranque, y sin marca —la primera vez de verdad— sigue callando.
 
 ### Fixed
+- **Los logros que salen de `years` se fechaban en el futuro.** Se fechan en el 31 de diciembre de su año —toda
+  la precisión que da el dato—, así que uno del año EN CURSO nacía con una fecha que no ha llegado: la fila decía
+  «31 dic 2026» y el listado, que ordena de más reciente a más antiguo, lo ponía por delante de lo conseguido
+  hoy. Ahora el evaluador poda esa fecha y el logro se pinta SIN día, que es la misma regla que `parseMirror` ya
+  aplicaba al leer el espejo: lo que faltaba era que las dos caras dijeran lo mismo.
 - **La fecha de un logro de índice por etiqueta se movía.** «A todos los palos» se fechaba con el sello más
   tardío de su grupo, así que cada juego nuevo de ese género empujaba la fecha hacia delante y un logro
   conseguido en marzo pasaba a decir que fue en agosto — lo que el §6.4 prohíbe. Se consigue sin fecha, que es un

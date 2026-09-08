@@ -113,6 +113,32 @@ test.describe('logros · el listado sobre el build', () => {
   });
 
   /**
+   * NINGUNA FILA LLEVA UNA FECHA QUE NO HA LLEGADO. Es el fallo que solo se ve con la pantalla delante: lo que
+   * sale de `years` se fecha en el 31 de diciembre de su año, así que un logro del año EN CURSO se pintaba con
+   * una fecha futura y el listado —que ordena de más reciente a más antiguo— lo ponía por delante de lo
+   * conseguido hoy. Se poda en el evaluador, igual que `parseMirror` ya hacía al leer el espejo, y esto lo
+   * comprueba donde importa: en las 216 filas de una biblioteca con veintidós años de historia.
+   */
+  test('ninguna medalla se fecha en el futuro', async ({ page }) => {
+    await sembrarBiblioteca(page, { logros: true });
+    await abrirLogros(page);
+
+    const futuras = await page.evaluate(() => {
+      const anoActual = new Date().getFullYear();
+      return [...document.querySelectorAll('.ach-row')]
+        .map((fila) => ({
+          nombre: fila.querySelector('.ach-row-name')?.textContent || '',
+          fecha: (fila.querySelector('.ach-row-date')?.textContent || '').trim(),
+        }))
+        .filter(({ fecha }) => {
+          const ano = /(\d{4})/.exec(fecha);
+          return ano !== null && Number(ano[1]) > anoActual;
+        });
+    });
+    expect(futuras, `hay medallas fechadas por venir: ${JSON.stringify(futuras)}`).toEqual([]);
+  });
+
+  /**
    * EL CONTADOR CONTRA LO PINTADO, con la resta que hay que hacer: los «primeros pasos» SE PINTAN mientras
    * quede alguno por hacer y NO PUNTÚAN nunca (`SCORING_ACHIEVEMENTS` los excluye, §6.3.1). Sin descontarlos, la
    * cabecera y la lista se llevan exactamente esa diferencia y parece un descuadre cuando es la regla.
