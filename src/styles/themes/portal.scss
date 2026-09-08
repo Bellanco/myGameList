@@ -470,3 +470,14 @@
 }
 /* Monoespaciada como el resto de los datos de la paleta: la hora es una lectura de instrumento. */
 :root[data-palette="portal"] .hub-feed-move-hour { font-family: 'Share Tech Mono', ui-monospace, monospace; }
+
+/* El AVISO DE LOGRO · placa de la sala: canto recto y junta clara entre piezas. Sin `clip-path`, así que aquí la
+   sombra de rareza se queda como está y solo se suma la junta. */
+:root[data-palette="portal"] .ach-toast {
+  border-radius: 0;
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, .08),
+    0 0 0 1px rgba(var(--glow), .5),
+    0 0 20px -2px rgba(var(--glow), .38),
+    var(--shadow);
+}

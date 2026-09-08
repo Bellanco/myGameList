@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Maqueta · aviso de logro</title>
+    <!-- MAQUETA DESECHABLE. No entra en el build (`vite build` solo toma index.html como entrada) y no la sirve
+         producción: existe para ver el aviso con los TOKENS REALES de la app antes de escribir el componente.
+         Se abre con el dev server: http://localhost:8000/docs/logros/demo-toast.html -->
+    <script type="module">
+      import '/src/styles/index.scss';
+      import '/src/styles/achievements.scss';
+    </script>
+    <style>
+      /* ─────────────────────────────────────────────────────────────────────────────────────────────────────
+         EL AVISO DEL INSTANTE · lo que iría a `achievements.scss`, atado al componente del aviso.
+
+         CARRIL DE ABAJO A LA IZQUIERDA, el mismo que ya usa `.consent-banner`: por encima de la altura de la
+         barra inferior fija (~4,6rem) y con su `env(safe-area-inset-bottom)`, así no tapa la navegación ni se
+         mete debajo del notch. z-index 125 — sobre la barra (120) y bajo el consentimiento (130), que es el
+         único aviso que sí tiene que ganar porque bloquea una decisión legal.
+         ───────────────────────────────────────────────────────────────────────────────────────────────────── */
+      .ach-toast-stack {
+        position: fixed;
+        left: .8rem;
+        bottom: calc(4.6rem + env(safe-area-inset-bottom, 0px));
+        z-index: 125;
+        /* `right` en vez de un ancho en `vw`: `100vw` cuenta la barra de desplazamiento y la tarjeta se salía
+           por la derecha en móvil. Es como se sujeta `.consent-banner`. */
+        right: .8rem;
+        /* 30rem y no 25: con 25 la descripción del catálogo se cortaba casi siempre, y una línea recortada a
+           mitad de frase se lee como un fallo, no como un resumen. */
+        max-width: 30rem;
+        display: grid;
+        gap: .5rem;
+        /* La cápsula mide lo que mide su texto, no el carril entero: con un ancho fijo sobraba media tarjeta
+           vacía a la derecha y dejaba de leerse como una píldora. */
+        justify-items: start;
+        pointer-events: none;
+      }
+      /* Con el consentimiento en pantalla el carril está ocupado: el aviso se sube por encima de él en vez de
+         taparlo. Lo marca la raíz (`data-consent="pending"`), que es un dato que el banner ya conoce. */
+      :root[data-consent='pending'] .ach-toast-stack { bottom: calc(4.6rem + 9.4rem + env(safe-area-inset-bottom, 0px)); }
+
+      /* LA CÁPSULA · el borde de la izquierda es OTRO CÍRCULO EXTERIOR de la medalla, no un radio elegido a ojo:
+         el relleno es el mismo por los cuatro lados (`--pad`), la medalla manda la altura, y el radio es la mitad
+         de esa altura. Así el filo del disco y el borde de la tarjeta quedan concéntricos.
+
+         SE ADAPTA A LA PALETA por color, no por forma: superficie, borde y sombra son los tokens de cada tema, y
+         el anillo de acento (`--steam-rgb`) es lo que hace que llame la atención sin salirse del conjunto. La
+         tipografía la hereda del `body`, que es donde cada skin pone la suya. */
+      .ach-toast {
+        --pad: 6px;
+        /* 64: la cápsula mide lo que mide la medalla, y dentro van hasta CUATRO filas (rótulo, nombre,
+           descripción y —en el hito— la barra). Con 56 entraban, pero pegadas unas a otras. */
+        --medal: 64px;
+        /* La sombra dice la RAREZA, y con varios logros la del más raro —que es el primero, porque el orden ya
+           es ese—. Gris de peltre por defecto: es lo que lleva un hito, que aún no se ha conseguido. */
+        --glow: 150, 162, 178;
+        pointer-events: auto;
+        position: relative;
+        display: flex;
+        align-items: center;
+        gap: .85rem;
+        min-height: calc(var(--medal) + var(--pad) * 2);
+        padding: var(--pad) 1.35rem var(--pad) var(--pad);
+        background: var(--surface-elevated);
+        border: 1px solid var(--border);
+        /* La mitad de la altura: cápsula exacta, no un radio grande cualquiera. */
+        border-radius: calc((var(--medal) + var(--pad) * 2) / 2);
+        /* TRES CAPAS Y CADA UNA DICE UNA COSA: el anillo fino y el halo llevan la RAREZA (la escala de loot que
+           ya usa el aura de la medalla), y la sombra de bloque es la de la app (`--shadow`), que es lo que lo
+           mantiene dentro del conjunto en cualquier paleta. La rareza NO se escribe: la dice la sombra. */
+        box-shadow:
+          0 0 0 1px rgba(var(--glow), .5),
+          0 0 20px -2px rgba(var(--glow), .38),
+          var(--shadow);
+        width: fit-content;
+        max-width: 100%;
+        overflow: hidden;
+        animation: ach-toast-in 200ms ease-out both;
+      }
+      /* Los cuatro tonos son los MISMOS del aura de la medalla (`.ach-medal.is-*` en esta hoja): una sola escala
+         de rareza en toda la app, saltándose el azul porque el azul es el acento. */
+      .ach-toast.is-comun       { --glow: 150, 162, 178; }
+      .ach-toast.is-infrecuente { --glow: 63, 190, 114; }
+      .ach-toast.is-raro        { --glow: 168, 85, 247; }
+      .ach-toast.is-excepcional { --glow: 255, 140, 26; }
+      /* ─── CAPA 3 · lo que iría en `themes/*.scss` ───────────────────────────────────────────────────────────
+         Solo las dos paletas cuya firma es «aquí no hay curvas». Las otras cuatro se quedan con la cápsula.
+
+         ⚑ LA TRAMPA: `clip-path` RECORTA las sombras exteriores (regla 2 de `themes/persona.scss`), y la sombra
+         exterior es justo la que dice la RAREZA. Por eso el chaflán se pinta con `filter: drop-shadow()` —que sí
+         sobrevive al recorte— y el anillo pasa a ser `inset`, que también lo respeta. Sin esto, el aviso de un
+         logro excepcional en Sin futuro se quedaba sin su halo naranja y nadie sabría por qué. ─────────────── */
+
+      /* SIN FUTURO (Cyberpunk) · el chaflán del HUD de Night City, el mismo `polygon` que cortan sus botones.
+         Y LA MISMA SOLUCIÓN QUE ELLOS, que ya está probada en este tema: recortar el elemento con `clip-path`
+         deja la DIAGONAL SIN FILETE —`clip-path` se come el `border` del propio elemento— así que la forma la dan
+         DOS CAPAS recortadas detrás del contenido: `::before` con el color del filete a todo el box y `::after`
+         con el relleno 1 px más pequeño. El filete asoma 1 px en TODOS los cantos, la diagonal incluida, y el
+         corte queda transparente. El aviso deja de recortarse y su fondo pasa a `::after`.
+         El filete y el halo llevan la RAREZA (`--glow`), que es la señal que no se puede perder por el camino;
+         el halo va en la capa recortada por `filter: drop-shadow()`, que sí sigue la silueta del chaflán. */
+      :root[data-palette='cyberpunk'] .ach-toast {
+        border-radius: 0;
+        background: transparent;
+        border-color: transparent;
+        box-shadow: none;
+        clip-path: none;
+        isolation: isolate;
+        /* El halo del `::before` se pinta FUERA de la caja: con `overflow: hidden` el padre se lo comía. El
+           barrido no necesita ese recorte aquí porque lleva el suyo (`--hud-cut`). */
+        overflow: visible;
+        --hud-cut: polygon(0 0, 100% 0, 100% calc(100% - 14px), calc(100% - 14px) 100%, 0 100%, 0 14px);
+      }
+      :root[data-palette='cyberpunk'] .ach-toast::before,
+      :root[data-palette='cyberpunk'] .ach-toast::after {
+        content: '';
+        position: absolute;
+        clip-path: var(--hud-cut);
+        pointer-events: none;
+      }
+      /* Capa del filete, a todo el box, con el halo de rareza siguiendo su silueta. */
+      :root[data-palette='cyberpunk'] .ach-toast::before {
+        inset: 0;
+        z-index: -2;
+        background: rgba(var(--glow), .55);
+        filter: drop-shadow(0 0 10px rgba(var(--glow), .45));
+      }
+      /* Capa del relleno, 1 px más pequeña: es lo que deja asomar el filete en la diagonal. */
+      :root[data-palette='cyberpunk'] .ach-toast::after {
+        inset: 1px;
+        z-index: -1;
+        background: var(--surface-elevated);
+      }
+      /* El barrido también se recorta al chaflán; si no, asoma por la esquina cortada. */
+      :root[data-palette='cyberpunk'] .ach-toast-sheen { clip-path: var(--hud-cut); }
+
+      /* CÁMARA DE PRUEBAS (Portal) · placa de la sala: canto recto y junta clara entre piezas. Sin `clip-path`,
+         así que aquí la sombra de rareza se queda como está y solo se suma la junta. */
+      :root[data-palette='portal'] .ach-toast {
+        border-radius: 0;
+        box-shadow:
+          inset 0 0 0 1px rgba(255, 255, 255, .08),
+          0 0 0 1px rgba(var(--glow), .5),
+          0 0 20px -2px rgba(var(--glow), .38),
+          var(--shadow);
+      }
+      /* El cuerpo entero es el enlace a /logros: el instante invita a mirar el detalle, y el detalle está ahí. */
+      .ach-toast-body {
+        flex: 1 1 auto;
+        display: flex;
+        align-items: center;
+        gap: .75rem;
+        min-width: 0;
+        color: inherit;
+        text-decoration: none;
+      }
+      .ach-toast-body:hover .ach-toast-name { color: var(--fg-link); }
+
+      /* LAS MEDALLAS, SOLAPADAS. Hasta tres; a partir de ahí la cuenta la dice el texto. El solape es lo que
+         permite que el agrupado no ensanche la tarjeta: tres discos de 48 px en fila son 144, solapados son 86. */
+      /* EL SOLAPE SE MIDE POR LA PÍLDORA, no por el disco: con -19px la cifra de escalón de cada medalla caía
+         debajo de la siguiente y las tres se leían como una sola. -13px es lo que deja las tres cifras a la
+         vista, y las de detrás van un paso más apagadas para que se separen los planos. */
+      .ach-toast-medals { display: flex; flex: none; align-items: center; }
+      .ach-toast-medals > * + * { margin-left: -15px; }
+      .ach-toast-medals > *:nth-child(1) { z-index: 3; }
+      .ach-toast-medals > *:nth-child(2) { z-index: 2; filter: brightness(.9); }
+      .ach-toast-medals > *:nth-child(3) { z-index: 1; filter: brightness(.8); }
+
+      .ach-toast-text { min-width: 0; display: grid; gap: .16rem; }
+      /* El rótulo, en la misma voz mono y versalitas que el chip de rareza de la hoja de logros. Lleva pegada la
+         segunda señal de la línea —la rareza, o el porcentaje del hito—: en una cápsula solo caben DOS líneas, y
+         el rótulo es la que puede compartirse. */
+      .ach-toast-kicker {
+        display: flex;
+        align-items: center;
+        gap: .4rem;
+        font-family: var(--ach-mono);
+        font-size: 11px;
+        letter-spacing: .07em;
+        text-transform: uppercase;
+        /* El rótulo con el acento del tema, no en gris: es la línea que dice QUÉ ha pasado, y en gris se leía
+           como un pie de foto. Es texto normal, así que va por `--fg-link`, que es el papel del acento que
+           cumple el 4,5:1 en las doce combinaciones de paleta y tema. */
+        color: var(--fg-link);
+      }
+      /* La cifra del hito, dentro del rótulo y con el color del acento: es el dato que cambia cada vez. */
+      .ach-toast-kicker b {
+        color: var(--text);
+        font-weight: 700;
+        font-variant-numeric: tabular-nums;
+        /* Sin versalitas: «50 DE 100» se lee peor que «50 de 100», y la cifra es el dato que se busca. */
+        text-transform: none;
+        letter-spacing: .02em;
+      }
+      /* UNA SOLA LÍNEA, y por geometría: la cápsula mide lo que mide la medalla, así que un nombre que salta de
+         línea rompe el círculo exterior. Lo que no cabe se recorta con puntos suspensivos. */
+      .ach-toast-name {
+        font-size: 1rem;
+        font-weight: 700;
+        color: var(--text);
+        line-height: 1.3;
+        transition: color 120ms ease;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      /* LA DESCRIPCIÓN · la condición del logro, en llano y tal como la escribe el catálogo. Una línea, y lo que
+         no cabe se recorta con puntos suspensivos: es la línea que explica de qué va la medalla, no un resumen
+         que haya que redactar aparte. */
+      .ach-toast-desc {
+        font-size: .82rem;
+        line-height: 1.35;
+        color: var(--text-muted);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      /* EL HITO · LA MISMA CÁPSULA, el mismo comportamiento y las mismas tres filas; lo que cambia es la
+         tercera: donde el desbloqueo pone la descripción del escalón, el hito pone la BARRA con su cifra al
+         lado. Es lo que informa aquí —cuánto llevas—, mientras que «de qué va» ya lo dicen el nombre y la cifra
+         del disco. Y la medalla va en peltre (`is-locked`, que la hoja ya pinta), así que se distingue de un
+         desbloqueo sin leer nada. */
+      /* La barra y su cifra van JUNTAS: un porcentaje suelto en el rótulo no dice de qué es, y al lado de la
+         barra es su rótulo — se leen como una sola cosa. */
+      .ach-toast-progress { display: flex; align-items: center; gap: .5rem; margin-top: 2px; }
+      .ach-toast-bar {
+        flex: 1 1 auto;
+        /* Suelo de la barra: la cápsula es `fit-content` y con un nombre corto la barra se quedaba en 47 px,
+           que ya no mide nada. */
+        min-width: 8rem;
+        height: 4px;
+        border-radius: 999px;
+        background: color-mix(in srgb, var(--text-muted) 26%, transparent);
+        overflow: hidden;
+      }
+      .ach-toast-bar > i { display: block; height: 100%; border-radius: 999px; background: var(--steam); }
+      .ach-toast-figure {
+        flex: none;
+        font-family: var(--ach-mono);
+        font-variant-numeric: tabular-nums;
+        font-size: 11px;
+        font-weight: 700;
+        color: var(--text);
+        white-space: nowrap;
+      }
+
+      /* EL DESTELLO, detrás de `data-effects`. Un barrido que cruza la tarjeta una vez, no un bucle: la noticia
+         es el logro y el brillo solo la señala. Sin efectos —o con `prefers-reduced-motion`— el aviso sale igual. */
+      .ach-toast-sheen {
+        position: absolute; inset: 0;
+        pointer-events: none;
+        background: linear-gradient(105deg, transparent 38%, rgba(255, 226, 164, .17) 50%, transparent 62%);
+        transform: translateX(-120%);
+        animation: ach-toast-sheen 900ms ease-out 120ms both;
+      }
+      :root[data-effects='off'] .ach-toast-sheen { display: none; }
+
+      @keyframes ach-toast-in { from { opacity: 0; transform: translateY(10px) scale(.98); } }
+      @keyframes ach-toast-sheen { to { transform: translateX(120%); } }
+      @media (prefers-reduced-motion: reduce) {
+        .ach-toast { animation: none; }
+        .ach-toast-sheen { display: none; }
+      }
+
+      /* ── Andamio de la maqueta (esto NO viaja al componente) ───────────────────────────────────────────── */
+      body { min-height: 100vh; }
+      .demo-wrap { max-width: 46rem; margin: 0 auto; padding: 1.5rem 1rem 12rem; display: grid; gap: 1rem; }
+      .demo-wrap h1 { font-size: 1.15rem; margin: 0; }
+      .demo-wrap p { color: var(--text-muted); font-size: .88rem; margin: 0; line-height: 1.5; }
+      .demo-row { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; }
+      .demo-row > span { font-size: .78rem; color: var(--text-muted); min-width: 5.5rem; }
+      .demo-note { border-left: 2px solid var(--border); padding-left: .7rem; font-size: .82rem; color: var(--text-muted); }
+      .demo-fake-nav { pointer-events: none; }
+    </style>
+  </head>
+  <body>
+    <!-- El sprite: el degradado de oro y los cinco dibujos que usa la maqueta, copiados de `AchievementSprite`. -->
+    <svg aria-hidden="true" class="svg-sprite" style="position:absolute;width:0;height:0;overflow:hidden">
+      <defs>
+        <linearGradient id="ach-lux" x1="14%" y1="0%" x2="86%" y2="100%">
+          <stop offset="0" stop-color="#ffeec2" />
+          <stop offset="0.34" stop-color="#eab545" />
+          <stop offset="0.72" stop-color="#8e5c20" />
+          <stop offset="1" stop-color="#412a0f" />
+        </linearGradient>
+      </defs>
+      <symbol id="ach-completados" viewBox="0 0 24 24"><path d="M20.2 6 3 11l-.9-2.4c-.3-1.1.3-2.2 1.3-2.5l13.5-4c1.1-.3 2.2.3 2.5 1.3Z" /><path d="m6.2 5.3 3.1 3.9" /><path d="m12.4 3.4 3.1 4" /><path d="M3 11h18v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z" /></symbol>
+      <symbol id="ach-constancia" viewBox="0 0 24 24"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z" /></symbol>
+      <symbol id="ach-plataformas" viewBox="0 0 24 24"><line x1="6" x2="10" y1="11" y2="11" /><line x1="8" x2="8" y1="9" y2="13" /><line x1="15" x2="15.01" y1="12" y2="12" /><line x1="18" x2="18.01" y1="10" y2="10" /><path d="M17.32 5H6.68a4 4 0 0 0-3.978 3.59c-.006.052-.01.101-.017.152C2.604 9.416 2 14.456 2 16a3 3 0 0 0 3 3c1 0 1.5-.5 2-1l1.414-1.414A2 2 0 0 1 9.828 16h4.344a2 2 0 0 1 1.414.586L17 18c.5.5 1 1 2 1a3 3 0 0 0 3-3c0-1.545-.604-6.584-.685-7.258-.007-.05-.011-.1-.017-.151A4 4 0 0 0 17.32 5z" /></symbol>
+      <symbol id="ach-maraton" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4" /><path d="M12 2v2" /><path d="M12 20v2" /><path d="m4.93 4.93 1.41 1.41" /><path d="m17.66 17.66 1.41 1.41" /><path d="M2 12h2" /><path d="M20 12h2" /><path d="m6.34 17.66-1.41 1.41" /><path d="m19.07 4.93-1.41 1.41" /></symbol>
+      <symbol id="ach-criterio" viewBox="0 0 24 24"><path d="M11.525 2.295a.53.53 0 0 1 .95 0l2.31 4.679a2.123 2.123 0 0 0 1.595 1.16l5.166.756a.53.53 0 0 1 .294.904l-3.736 3.638a2.123 2.123 0 0 0-.611 1.878l.882 5.14a.53.53 0 0 1-.771.56l-4.618-2.428a2.122 2.122 0 0 0-1.973 0L6.396 21.01a.53.53 0 0 1-.77-.56l.881-5.139a2.122 2.122 0 0 0-.611-1.879L2.16 9.795a.53.53 0 0 1 .294-.906l5.165-.755a2.122 2.122 0 0 0 1.597-1.16z" /></symbol>
+    </svg>
+
+    <div class="demo-wrap">
+      <h1>Aviso de logro · maqueta</h1>
+      <p>
+        Los cuatro casos, con los tokens, la medalla y la barra inferior reales. No hay botón de cerrar: se va
+        solo a los 5 s, y la cuenta se para mientras el ratón esté encima o algo dentro tenga el foco. Si llega
+        otro desbloqueo mientras el aviso vive, se fusiona en la misma cápsula en vez de apilar otra. La sombra
+        dice la rareza —la del más raro, si hay varios— y el texto lleva la descripción del catálogo.
+      </p>
+
+      <div class="demo-row">
+        <span>Desbloqueo</span>
+        <button type="button" class="btn" data-demo="one">Un logro</button>
+        <button type="button" class="btn" data-demo="three">Tres logros</button>
+        <button type="button" class="btn" data-demo="seven">Siete logros</button>
+      </div>
+      <div class="demo-row">
+        <span>Hito</span>
+        <button type="button" class="btn btn-secondary" data-demo="half">La mitad (50 %)</button>
+        <button type="button" class="btn btn-secondary" data-demo="near">Recta final (90 %)</button>
+      </div>
+      <div class="demo-row">
+        <span>Contexto</span>
+        <button type="button" class="btn btn-secondary" data-demo="theme">Tema claro / oscuro</button>
+        <button type="button" class="btn btn-secondary" data-demo="palette">Cambiar paleta</button>
+        <button type="button" class="btn btn-secondary" data-demo="effects">Efectos on / off</button>
+        <button type="button" class="btn btn-secondary" data-demo="consent">Consentimiento en pantalla</button>
+      </div>
+
+      <p class="demo-note">
+        Para ver la variante sin animación: DevTools › Rendering › «Emulate CSS prefers-reduced-motion».
+        El aviso sale igual; se van el barrido y la entrada.
+      </p>
+      <p class="demo-note" id="demo-log">—</p>
+    </div>
+
+    <!-- Barra inferior real (clases de `.bottom-nav`), para ver que el aviso se apoya encima y no la tapa. -->
+    <nav class="bottom-nav demo-fake-nav" aria-hidden="true">
+      <div class="bottom-nav-inner">
+        <button type="button" class="bottom-nav-btn active"><span>Biblioteca</span></button>
+        <button type="button" class="bottom-nav-btn"><span>Panel</span></button>
+        <button type="button" class="bottom-nav-btn"><span>Social</span></button>
+      </div>
+    </nav>
+
+    <div class="ach-toast-stack" id="stack"></div>
+
+    <script type="module">
+      const stack = document.getElementById('stack');
+      const log = document.getElementById('demo-log');
+
+      // Cinco escalones de verdad del catálogo, con su icono, su rareza, su temple y su cifra.
+      // Cinco escalones de verdad del catálogo, con su icono, su rareza, su temple, su cifra y su CONDICIÓN tal
+      // como está escrita en `catalog.ts` — que es la descripción que va en el aviso.
+      // LA DESCRIPCIÓN ES EL TEXTO «HECHO» DEL ESCALÓN (`AchievementDef.labels.done`), no la condición de la
+      // escalera ni la meta: el aviso de desbloqueo cuenta algo que YA has hecho, así que va en pasado y de tú a
+      // tú. La meta («Termina 100 juegos») es la de la fila que aún no tienes. Copiados de `catalog.ts` tal cual.
+      const LOGROS = {
+        creditos: { name: 'Créditos finales V', icon: 'completados', rarity: 'raro', temple: 2, step: '×100', desc: 'Has terminado 100 juegos' },
+        semanas: { name: 'Aún estás aquí VI', icon: 'constancia', rarity: 'raro', temple: 3, step: '26', desc: 'Llevas 26 semanas seguidas sin faltar' },
+        consolas: { name: 'Guerra de consolas II', icon: 'plataformas', rarity: 'comun', temple: 1, step: '×5', desc: 'Tienes juegos de 5 plataformas distintas' },
+        verano: { name: 'Un verano entero IV', icon: 'maraton', rarity: 'raro', temple: 2, step: '×10', desc: 'Le has metido 40 h a 10 juegos' },
+        critico: { name: 'Nota del crítico III', icon: 'criterio', rarity: 'infrecuente', temple: 1, step: '×75', desc: 'Has puntuado 75 juegos, y no todos igual' },
+      };
+      const RAREZA = { comun: 'Común', infrecuente: 'Infrecuente', raro: 'Raro', excepcional: 'Excepcional' };
+      /** Los puntos por rareza de `types.ts`: son los que ordenan, y por eso los que dicen cuál es «la mayor». */
+      const PESO = { comun: 5, infrecuente: 10, raro: 25, excepcional: 60 };
+
+      const SZ = 64;
+
+      /** «Créditos finales V y 2 más» — un nombre entero y la cuenta; una lista cortada a mitad de nombre parece
+          un fallo, y con dos nombres largos no cabía ni el primero. */
+      function lista(nombres) {
+        if (nombres.length === 2) return nombres.join(' y ');
+        return `${nombres[0]} y ${nombres.length - 1} más`;
+      }
+
+      function medalla(logro, { locked = false } = {}) {
+        const clases = [
+          'ach-medal',
+          `is-${logro.rarity}`,
+          `is-temple-${logro.temple}`,
+          locked ? 'is-locked' : '',
+        ].filter(Boolean).join(' ');
+        const aria = locked ? `${logro.name}, bloqueado` : `${logro.name}, conseguido hoy`;
+        return `
+          <span class="${clases}" style="--sz:${SZ}px" role="img" aria-label="${aria}" data-rarity="${RAREZA[logro.rarity]}">
+            <span class="ach-canvas" aria-hidden="true">
+              <svg class="ach-art" viewBox="0 0 24 24">
+                <g class="ach-sh"><use href="#ach-${logro.icon}" /></g>
+                <g class="ach-fg"><use href="#ach-${logro.icon}" /></g>
+                <g class="ach-hl"><use href="#ach-${logro.icon}" /></g>
+              </svg>
+              <span class="ach-light"></span>
+              <span class="ach-grain"></span>
+            </span>
+            <span class="ach-step" aria-hidden="true">${logro.step}</span>
+          </span>`;
+      }
+
+      let actual = null;    // la cápsula que está en pantalla, sea del tipo que sea: solo puede haber una
+      let vivo = null;      // …y si además admite fusión (un desbloqueo), es esta
+      let acumulado = [];   // los logros que lleva anunciados esa cápsula
+      let reloj = null;
+
+      /** 5 s, y en pausa mientras se lee: con el ratón encima o con el foco dentro. No hay cierre manual. */
+      const VIDA_MS = 5000;
+
+      function programar(card) {
+        clearTimeout(reloj);
+        reloj = setTimeout(() => cerrar(card), VIDA_MS);
+      }
+
+      function cerrar(card) {
+        clearTimeout(reloj);
+        card.remove();
+        if (actual === card) actual = null;
+        if (vivo === card) { vivo = null; acumulado = []; }
+      }
+
+      function pintar(html, { fusionable = false, rarity = '' } = {}) {
+        if (actual) cerrar(actual);
+        const card = document.createElement('div');
+        // La rareza va en la CLASE de la tarjeta y de ahí sale su sombra. Sin rareza (el hito, que aún no se ha
+        // conseguido) se queda con el peltre por defecto.
+        card.className = `ach-toast${rarity ? ` is-${rarity}` : ''}`;
+        card.innerHTML = html;
+        stack.append(card);
+        // El reloj se para mientras se lee: con el ratón encima o con el foco dentro de la tarjeta.
+        card.addEventListener('mouseenter', () => clearTimeout(reloj));
+        card.addEventListener('mouseleave', () => programar(card));
+        card.addEventListener('focusin', () => clearTimeout(reloj));
+        card.addEventListener('focusout', () => programar(card));
+        card.querySelector('.ach-toast-body')?.addEventListener('click', (e) => {
+          e.preventDefault();
+          log.textContent = 'Al tocar la tarjeta: navegaría a /logros.';
+        });
+        programar(card);
+        actual = card;
+        if (fusionable) vivo = card;
+        return card;
+      }
+
+      function desbloqueo(claves) {
+        // EL ORDEN ES EL DE LA RAREZA, de mayor a menor: es el mismo criterio con el que el listado y el feed
+        // ordenan los logros de un día, así que la medalla de delante y la sombra de la cápsula son las del más
+        // raro sin tener que elegirlas aparte.
+        const orden = [...claves].sort((a, b) => PESO[LOGROS[b].rarity] - PESO[LOGROS[a].rarity]);
+        const total = orden.length;
+        const mayor = LOGROS[orden[0]];
+        // Hasta tres medallas solapadas; de la cuarta en adelante, la cuenta la dice el texto.
+        const medallas = orden.slice(0, 3).map((k) => medalla(LOGROS[k])).join('');
+        const nombres = orden.map((k) => LOGROS[k].name);
+        // TRES LÍNEAS: el rótulo, el nombre y la descripción. Con varios logros, la descripción la ocupan los
+        // nombres —que es lo que se quiere leer ahí— y el detalle de cada condición está en /logros.
+        const texto = total === 1
+          ? `<span class="ach-toast-kicker">Has desbloqueado</span>
+             <span class="ach-toast-name">${mayor.name}</span>
+             <span class="ach-toast-desc">${mayor.desc}</span>`
+          : `<span class="ach-toast-kicker">Has desbloqueado</span>
+             <span class="ach-toast-name">${total} logros</span>
+             <span class="ach-toast-desc">${lista(nombres)}</span>`;
+        return pintar(`
+          <span class="ach-toast-sheen" aria-hidden="true"></span>
+          <a class="ach-toast-body" href="/logros">
+            <span class="ach-toast-medals">${medallas}</span>
+            <span class="ach-toast-text">${texto}</span>
+          </a>`, { fusionable: true, rarity: mayor.rarity });
+      }
+
+      /** El hito: MISMA cápsula y mismo comportamiento que el desbloqueo, con el porcentaje añadido al rótulo. */
+      function hito(clave, valor, umbral) {
+        const logro = LOGROS[clave];
+        const pct = Math.round((valor / umbral) * 100);
+        const kicker = pct >= 85 ? 'Casi lo tienes' : 'Vas por la mitad';
+        return pintar(`
+          <a class="ach-toast-body" href="/logros">
+            <span class="ach-toast-medals">${medalla(logro, { locked: true })}</span>
+            <span class="ach-toast-text">
+              <span class="ach-toast-kicker">${kicker}</span>
+              <span class="ach-toast-name">${logro.name}</span>
+              <span class="ach-toast-progress">
+                <span class="ach-toast-bar" aria-hidden="true"><i style="width:${pct}%"></i></span>
+                <span class="ach-toast-figure">${valor} de ${umbral} · ${pct} %</span>
+              </span>
+            </span>
+          </a>`);
+      }
+
+      // ── Controles de la maqueta ──────────────────────────────────────────
+      const PALETAS = ['steam', 'persona', 'portal', 'cyberpunk', 'grimdark', 'seaofstars'];
+      let paleta = 0;
+
+      // Los skins de CAPA 3 (tipografías, formas, texturas) se cargan bajo demanda, igual que hace
+      // `paletteSkin.ts` en la app: así el aviso se ve con la fuente y el acabado de verdad de cada paleta.
+      const SKINS = {
+        persona: () => import('/src/styles/themes/persona.scss'),
+        portal: () => import('/src/styles/themes/portal.scss'),
+        cyberpunk: () => import('/src/styles/themes/cyberpunk.scss'),
+        // Siete reglas de grimdark viven en la sección de cyberpunk y reutilizan sus keyframes.
+        grimdark: () => Promise.all([
+          import('/src/styles/themes/grimdark.scss'),
+          import('/src/styles/themes/cyberpunk.scss'),
+        ]),
+        seaofstars: () => import('/src/styles/themes/seaofstars.scss'),
+      };
+
+      const acciones = {
+        // El de la descripción MÁS LARGA del ejemplo: es el caso que decide si la línea cabe o se corta.
+        one: () => desbloqueo(['critico']),
+        three: () => desbloqueo(['creditos', 'verano', 'consolas']),
+        seven: () => desbloqueo(['creditos', 'verano', 'consolas', 'semanas', 'critico', 'creditos', 'verano']),
+        half: () => hito('creditos', 50, 100),
+        near: () => hito('semanas', 24, 26),
+        theme: () => {
+          const claro = document.documentElement.getAttribute('data-theme') === 'light';
+          document.documentElement.setAttribute('data-theme', claro ? 'dark' : 'light');
+          log.textContent = `Tema: ${claro ? 'oscuro' : 'claro'}.`;
+        },
+        palette: async () => {
+          paleta = (paleta + 1) % PALETAS.length;
+          const p = PALETAS[paleta];
+          if (SKINS[p]) await SKINS[p]();
+          if (p === 'steam') document.documentElement.removeAttribute('data-palette');
+          else document.documentElement.setAttribute('data-palette', p);
+          log.textContent = `Paleta: ${p} (con su skin de CAPA 3 cargado). Radio propio del tema: ${getComputedStyle(document.documentElement).getPropertyValue('--radius-md')}.`;
+          if (vivo) desbloqueo(['creditos']);
+        },
+        effects: () => {
+          const off = document.documentElement.getAttribute('data-effects') === 'off';
+          document.documentElement.setAttribute('data-effects', off ? 'on' : 'off');
+          log.textContent = `Efectos: ${off ? 'on' : 'off'}.`;
+        },
+        consent: () => {
+          const puesto = document.documentElement.getAttribute('data-consent') === 'pending';
+          if (puesto) {
+            document.documentElement.removeAttribute('data-consent');
+            document.querySelector('.consent-banner')?.remove();
+          } else {
+            document.documentElement.setAttribute('data-consent', 'pending');
+            const banner = document.createElement('div');
+            banner.className = 'consent-banner';
+            banner.innerHTML = `
+              <div class="consent-banner-text">
+                <strong>Analítica</strong>
+                <p>Usamos analítica para saber qué se usa. Puedes aceptar o rechazar.</p>
+              </div>
+              <div class="consent-banner-actions">
+                <button type="button" class="btn btn-secondary consent-btn">Rechazar</button>
+                <button type="button" class="btn consent-btn">Aceptar</button>
+              </div>`;
+            document.body.append(banner);
+          }
+          log.textContent = puesto ? 'Sin consentimiento en pantalla.' : 'Con el consentimiento en pantalla, el aviso se sube por encima.';
+        },
+      };
+
+      // También por consola, para pedir un caso concreto sin buscar el botón: `demo.three()`, `demo.near()`…
+      // `demo.hold()` para la cuenta de los 5 s y deja el aviso quieto para mirarlo con calma.
+      window.demo = { ...acciones, hold: () => clearTimeout(reloj) };
+
+      for (const boton of document.querySelectorAll('[data-demo]')) {
+        boton.addEventListener('click', () => acciones[boton.dataset.demo]());
+      }
+
+      desbloqueo(['creditos']);
+    </script>
+  </body>
+</html>

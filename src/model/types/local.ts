@@ -39,9 +39,16 @@ export interface LocalMeta {
   // corrección alcanza a los gists que tocó una versión anterior sin esperar a que caduque).
   activityReconcileVersion?: number;
   pendingSocialActivity?: boolean;
-  // Último gist social ya propagado a MIS docs de amistad desde este dispositivo. Evita lanzar la query de
-  // amistades en cada publicación: solo se sanea cuando el id del gist cambia de verdad.
+  // Último gist social ya propagado a MIS docs de amistad DESDE LA RUTA DE PUBLICACIÓN. Sigue vivo junto a
+  // `friendshipIdentityFingerprint` porque acota una ruta que la huella no puede acotar: la publicación no sabe
+  // descartar el monograma genérico de Google, así que se le fija a una pasada por id de gist para que no se
+  // pelee con el saneado del hub. Ver `healFriendshipGistIfChanged`.
   friendshipHealedForGist?: string;
+  // Huella de la identidad (nick, foto, gist social y gist de juegos) ya propagada a MIS docs de amistad desde
+  // ESTE dispositivo. Mientras no cambie, el saneado sale sin leer ni escribir nada; ver
+  // `identityFingerprint` en `firebaseFriendshipRepository`. Local por dispositivo a propósito: la foto
+  // publicable y el gist de la sesión se resuelven en cada uno por separado.
+  friendshipIdentityFingerprint?: string;
   // Último latido de uso enviado a `profiles.updatedAt` desde este dispositivo (acota a una escritura diaria).
   profileTouchedAt?: number;
   // Histórico del backlog: una instantánea por mes con el tamaño de cada lista. Es la ÚNICA forma de saber cómo

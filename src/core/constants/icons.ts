@@ -16,6 +16,7 @@ export type IconName =
   | 'refresh'
   | 'filter'
   | 'filter-active'
+  | 'chess-knight'
   | 'steamdeck'
   | 'repeat'
   | 'undo'

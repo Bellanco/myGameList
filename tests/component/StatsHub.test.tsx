@@ -450,3 +450,42 @@ describe('StatsHub · figuras interactivas del podio', () => {
     expect(document.querySelectorAll('.burst-piece.is-dim').length).toBeGreaterThan(0);
   });
 });
+
+/**
+ * `/logros` ES DEL PANEL, Y SE QUEDA EN EL PANEL.
+ *
+ * La pantalla la comparte con el hub social (`AchievementsScreen`), y de ahí venía el fallo: el botón de «Logros
+ * globales» llevaba a `/social/profiles/me/globales`, que es OTRA sección. Se entraba desde Perfil y el «volver»
+ * de la pantalla de destino dejaba al usuario en el hub social, sin camino de vuelta a donde estaba.
+ */
+describe('StatsHub · los logros del panel no se salen del panel', () => {
+  const enLogros = (games: TabData) =>
+    render(
+      <MemoryRouter initialEntries={['/logros']}>
+        <StatsHub games={games} />
+      </MemoryRouter>,
+    );
+
+  it('NO ofrece los logros globales: esta sección solo mira lo tuyo', () => {
+    enLogros(SAMPLE);
+
+    // La pantalla es la de logros, no el panel…
+    expect(document.querySelector('.ach-screen')).toBeInTheDocument();
+    // …y su única acción es volver.
+    expect(screen.queryByRole('button', { name: /Logros globales/ })).not.toBeInTheDocument();
+  });
+
+  it('tampoco pinta el porcentaje comparado, que sale de los espejos de otras personas', () => {
+    enLogros(SAMPLE);
+    expect(screen.queryByText(/lo tiene el/)).not.toBeInTheDocument();
+  });
+
+  it('el «volver» devuelve al panel, que es de donde se entra', async () => {
+    enLogros(SAMPLE);
+
+    await userEvent.click(screen.getByRole('button', { name: /Volver al panel/ }));
+
+    expect(document.querySelector('.ach-screen')).not.toBeInTheDocument();
+    expect(document.querySelector('.stats-tiles')).toBeInTheDocument();
+  });
+});

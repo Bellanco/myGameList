@@ -8,12 +8,15 @@ import { LEGAL_CONSENT_UI, LEGAL_ROUTES } from '../../core/constants/legal';
 import type { GameItem, TabData } from '../../model/types/game';
 import { useSocialViewModel } from '../../viewmodel/useSocialViewModel';
 import { matchSocialRoute } from '../../viewmodel/social/socialRoutes';
+import { ENABLE_ACHIEVEMENTS } from '../../core/achievements/flags';
 import { Icon } from './Icon';
 import { SocialHubSkeleton } from './SocialHubSkeleton';
 
 import { SocialProfileScreen } from './socialhub/SocialProfileScreen';
 import { SocialDetailScreen } from './socialhub/SocialDetailScreen';
 import { SocialProfileDetailScreen } from './socialhub/SocialProfileDetailScreen';
+import { ProfileAchievementsScreen, ProfileGlobalAchievements } from './socialhub/ProfileAchievements';
+import { ACHIEVEMENTS_UI } from '../../core/constants/achievementLabels';
 import { SocialProfileReviewScreen } from './socialhub/SocialProfileReviewScreen';
 import { RelatedReviews } from './socialhub/RelatedReviews';
 import { SocialProfilesScreen } from './socialhub/SocialProfilesScreen';
@@ -106,9 +109,16 @@ const SocialHubInner = memo(function SocialHubInner({
     selectedProfileDetail,
     profileDetailId,
     profileReviewsView,
+    profileAchievementsView,
+    profileGlobalsView,
+    ownAchievements,
+    ownAchievementMirror,
     activeProfileReview,
     openProfileReviews,
     closeProfileReviews,
+    openProfileAchievements,
+    closeProfileAchievements,
+    openProfileGlobals,
     openProfileReviewDetail,
     feedItems,
     activeDetailEvent,
@@ -233,6 +243,32 @@ const SocialHubInner = memo(function SocialHubInner({
   const detailUid = (selectedProfileDetail as { uid?: string })?.uid || '';
 
   /**
+   * EL ESPEJO DE LOGROS de las personas del directorio, y la muestra del porcentaje comparado.
+   *
+   * Sale del propio directorio —que el hub YA se ha descargado— así que no cuesta ni una petición ni un byte más
+   * de canal: es exactamente la propiedad que hace que esto se pueda entregar sin backend.
+   *
+   * Mientras nadie haya publicado el suyo el campo llega vacío, y entonces no hay muestra que medir: el
+   * porcentaje comparado se calla (§6.6bis) en vez de inventarse una cifra.
+   */
+  const directoryMirrors = useMemo(() => {
+    if (!ENABLE_ACHIEVEMENTS) return [] as string[];
+    return filteredSocialDirectory
+      .map((entry) => String((entry as { achievements?: { list?: string } }).achievements?.list || ''))
+      .filter(Boolean);
+  }, [filteredSocialDirectory]);
+
+  const detailMirror = useMemo(() => {
+    if (!ENABLE_ACHIEVEMENTS || !detailId) return '';
+    // TU FICHA ES EL PRIMER CASO, no el último: el directorio filtrado te excluye por identidad —es lo que
+    // impide que aparezcas en tu propia lista de gente— así que buscarte ahí devolvía siempre vacío, y tu ficha
+    // de logros decía «todavía no hay nada que contar» con cien medallas detrás.
+    if (isOwnProfileDetail) return ownAchievementMirror;
+    const entry = filteredSocialDirectory.find((candidate) => (candidate as { id?: string }).id === detailId);
+    return String((entry as { achievements?: { list?: string } } | undefined)?.achievements?.list || '');
+  }, [detailId, filteredSocialDirectory, isOwnProfileDetail, ownAchievementMirror]);
+
+  /**
    * Abrir una reseña empieza por su principio.
    *
    * El hub no rehacía el desplazamiento al cambiar de pantalla, y eso pasaba desapercibido mientras el detalle de
@@ -254,6 +290,15 @@ const SocialHubInner = memo(function SocialHubInner({
   const toggleDetailReviews = useCallback(
     () => (profileReviewsView ? closeProfileReviews(detailId) : openProfileReviews(detailId)),
     [profileReviewsView, closeProfileReviews, openProfileReviews, detailId],
+  );
+  const openDetailAchievements = useCallback(
+    () => openProfileAchievements(detailId),
+    [openProfileAchievements, detailId],
+  );
+  // Ida y vuelta entre las dos vistas de la MISMA pantalla, no entre la pantalla y la ficha.
+  const toggleDetailGlobals = useCallback(
+    () => (profileGlobalsView ? openProfileAchievements(detailId) : openProfileGlobals(detailId)),
+    [profileGlobalsView, openProfileAchievements, openProfileGlobals, detailId],
   );
   const openDetailReview = useCallback(
     (gameId: number) => openProfileReviewDetail(detailId, gameId),
@@ -322,6 +367,39 @@ const SocialHubInner = memo(function SocialHubInner({
         />
       );
     }
+    // LOS LOGROS DE UN PERFIL SON UNA PANTALLA, la misma que `/logros`. Van antes que la ficha porque su ruta es
+    // una sub-ruta de ella (`/social/profiles/:id/logros`) y, si no, la ficha se la comería por prefijo.
+    if (ENABLE_ACHIEVEMENTS && activePanel === 'profile-detail' && (profileAchievementsView || profileGlobalsView)) {
+      const nombre = (selectedProfileDetail as { displayName?: string } | null)?.displayName || '';
+      const volver = () => closeProfileAchievements(detailId);
+      const vuelta = isOwnProfileDetail
+        ? ACHIEVEMENTS_UI.ownAchievements
+        : ACHIEVEMENTS_UI.achievementsOf(nombre);
+      return profileGlobalsView ? (
+        <ProfileGlobalAchievements
+          mirror={detailMirror}
+          directoryMirrors={directoryMirrors}
+          owner={nombre}
+          self={isOwnProfileDetail}
+          // En TU perfil el progreso sale del evaluador, no del espejo: es lo que permite pintar «4 de 10» en lo
+          // que todavía no tienes. De una amistad no llega —ni debe llegar—.
+          ownStates={isOwnProfileDetail ? ownAchievements?.byId : undefined}
+          onBack={volver}
+          onToggleGlobals={toggleDetailGlobals}
+          globalsBackLabel={vuelta}
+        />
+      ) : (
+        <ProfileAchievementsScreen
+          mirror={detailMirror}
+          directoryMirrors={directoryMirrors}
+          owner={isOwnProfileDetail ? '' : nombre}
+          onBack={volver}
+          onToggleGlobals={toggleDetailGlobals}
+          globalsBackLabel={vuelta}
+        />
+      );
+    }
+
     if (activePanel === 'profile-detail') {
       return (
         <>
@@ -332,6 +410,8 @@ const SocialHubInner = memo(function SocialHubInner({
           onEditProfile={goToProfileEdit}
           onBack={goToSocial}
           showReviews={profileReviewsView}
+          achievementsMirror={detailMirror}
+          onOpenAchievements={openDetailAchievements}
           onToggleReviews={toggleDetailReviews}
           onOpenReview={openDetailReview}
           status={status}
@@ -436,6 +516,7 @@ const SocialHubInner = memo(function SocialHubInner({
         currentSocialGistId={socialCfgGistId}
         loadingDirectory={loadingDirectory}
         openProfileDetail={openDirectoryProfile}
+        openProfileAchievements={openProfileAchievements}
         onOpenProfiles={goToProfiles}
         onOpenOwnProfile={openOwnProfileDetail}
         onOpenRequests={goToRequests}

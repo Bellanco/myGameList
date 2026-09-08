@@ -53,7 +53,7 @@
 // declarado y aceptado, así que reabrir la aceptación por publicar menos sería ruido. El texto sí se corrige, que
 // es la obligación que queda. El cupo de avisos por persona y día tampoco se menciona: recorta lo que TÚ ves en tu
 // actividad, no lo que se publica de ti (mismo criterio que el filtro del perfil).
-export const LEGAL_VERSION = '2026-08-22';
+export const LEGAL_VERSION = '2026-09-07';
 
 // Correo de CONTACTO publicado en los documentos. A propósito distinto del de la cuenta de administración de
 // `firestore.rules` (`isAdmin`): son la misma persona, pero separar buzones evita mezclar avisos legales y
@@ -102,7 +102,7 @@ export const LEGAL_CONSENT_UI = {
   // La actividad se detalla un poco —«reseñas y movimientos de listas»— porque es lo que más gente lee de todo el
   // aparato legal, y lo segundo es nuevo: quien lo acepte tiene que saber que la app va a contar sola cuándo
   // empieza o termina un juego, no solo lo que él escriba.
-  body: 'La parte social publica tu nick, tu foto y tu actividad —tus reseñas y los movimientos de tus listas, con su fecha— a las personas con las que tengas amistad. Para activarla necesitamos que aceptes las condiciones de uso y la política de privacidad.',
+  body: 'La parte social publica tu nick, tu foto y tus logros —que puede leer cualquier usuario con sesión— y tu actividad —tus reseñas y los movimientos de tus listas, con su fecha— a las personas con las que tengas amistad. Para activarla necesitamos que aceptes las condiciones de uso y la política de privacidad.',
   checkbox: 'He leído y acepto las condiciones de uso y la política de privacidad',
   termsLink: 'Condiciones de uso',
   privacyLink: 'Política de privacidad',

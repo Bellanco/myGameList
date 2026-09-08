@@ -13,6 +13,7 @@ import { TabBar } from './view/components/TabBar';
 import { Toolbar } from './view/components/Toolbar';
 import { GameTable } from './view/components/GameTable';
 import { StatusBanner } from './view/components/StatusBanner';
+import { useAchievementNotice } from './view/hooks/useAchievementNotice';
 import { UpdateNotice } from './view/components/UpdateNotice';
 import { BottomNavigation } from './view/components/BottomNavigation';
 import { APP_ROUTES, FALLBACK_ROUTE, LEGACY_ROUTE_REDIRECTS, matchAppSection, type AppSection } from './core/constants/routes';
@@ -68,6 +69,13 @@ const LegalScreen = lazy(() => import('./view/components/LegalScreen').then((mod
 // Panel de administración: `lazy` como el resto de hubs, así que su código (y el correo del admin) solo se
 // descarga si alguien pide `/admin`. El acceso lo deciden las reglas de Firestore, no este import.
 const AdminHub = lazy(() => import('./view/components/AdminHub').then((module) => ({ default: module.AdminHub })));
+/**
+ * EL AVISO DE LOGRO, perezoso, y por la misma razón que el evaluador: se monta desde el arranque —puede salir
+ * encima de cualquier pantalla— pero arrastra la medalla, su hoja de estilos y el sprite de los dibujos, que no
+ * caben en el presupuesto de arranque (`BOOT_PAYLOAD_BUDGET_KB` en `ci-validate`). Así el chunk llega la primera
+ * vez que alguien consigue algo, que es justo cuando hace falta y ya no es el arranque.
+ */
+const AchievementToast = lazy(() => import('./view/components/stats/AchievementToast').then((module) => ({ default: module.AchievementToast })));
 
 function getCurrentTab(pathname: string): TabId {
   return ROUTE_TAB[pathname] || 'c';
@@ -178,6 +186,16 @@ export default function App() {
     persistFromSync,
     notify,
   } = vm;
+
+  // EL INSTANTE DEL DESBLOQUEO (§7.4 del plan de logros): tras cada escritura de la biblioteca se reevalúa y, si
+  // un nivel ha subido en ESA escritura, se dice ahí mismo. Lo VISUAL es la tarjeta (`AchievementToast`); el
+  // `StatusBanner` sigue recibiendo el texto porque su región viva es la que lo ANUNCIA a un lector de pantalla.
+  // El evaluador entra por `import()` dinámico dentro del hook: el catálogo no puede viajar en el arranque.
+  const { flash: achievementFlash, clear: clearAchievementFlash } = useAchievementNotice(vm.data, notify);
+  const openAchievements = useCallback(() => {
+    clearAchievementFlash();
+    navigate('/logros');
+  }, [clearAchievementFlash, navigate]);
 
   // Bandeja de importados (local, no sincroniza). Se monta aquí para exponer su contador en los controles
   // flotantes y cablear la graduación (clasificar → formulario → retirar de la bandeja).
@@ -746,6 +764,17 @@ export default function App() {
       />
       {activeSection === 'lists' ? <TabBar currentTab={currentTab} tabCounts={vm.tabCounts} onTabChange={handleTabChange} /> : null}
       <StatusBanner notice={vm.notice} remoteChangesApplied={syncVm.lastRemoteChangesApplied} />
+      {/* Fuera del `main` y sin `fallback`: es un carril fijo sobre la barra inferior, y mientras su chunk viaja
+          no hay nada que enseñar en su sitio. */}
+      {achievementFlash ? (
+        <Suspense fallback={null}>
+          <AchievementToast
+            flash={achievementFlash}
+            onDone={clearAchievementFlash}
+            onOpen={openAchievements}
+          />
+        </Suspense>
+      ) : null}
       <UpdateNotice />
       <main
         id="contenido"

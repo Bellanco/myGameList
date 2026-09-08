@@ -96,9 +96,48 @@ beforeEach(() => {
   });
 });
 
+describe('deleteOwnAccount · borrado de amistades por pasadas', () => {
+  const page = (docIds: string[]) => ({
+    friends: docIds.map((docId) => ({ docId })),
+    incoming: [],
+    outgoing: [],
+    byOtherUid: {},
+  });
+
+  // `getMyFriendships` lleva un tope duro de lectura. Con más amistades que el tope, una sola pasada dejaría
+  // documentos con la identidad de quien se va en las amistades de otros: el derecho de supresión incumplido.
+  it('sigue borrando en pasadas sucesivas mientras queden amistades', async () => {
+    getMyFriendshipsMock
+      .mockResolvedValueOnce(page(['a__b', 'b__c']) as never)
+      .mockResolvedValueOnce(page(['c__d']) as never)
+      .mockResolvedValueOnce(page([]) as never);
+
+    const result = await deleteOwnAccount('uid-1');
+
+    expect(deleteFriendshipMock).toHaveBeenCalledTimes(3);
+    expect(result.remoteComplete).toBe(true);
+  });
+
+  // `deleteFriendship` trata permission-denied como éxito idempotente, así que un doc que las reglas no dejen
+  // borrar volvería en cada lectura. Sin el corte por falta de progreso esto sería un bucle infinito.
+  it('corta y lo reporta si una amistad no se deja borrar (sin quedarse en bucle)', async () => {
+    getMyFriendshipsMock.mockResolvedValue(page(['a__b']) as never);
+
+    const result = await deleteOwnAccount('uid-1');
+
+    expect(result.remoteComplete).toBe(false);
+    expect(result.failures.join(' ')).toContain('amistades');
+    // Dos lecturas (la segunda detecta que no se ha avanzado) y un único intento de borrado.
+    expect(getMyFriendshipsMock).toHaveBeenCalledTimes(2);
+    expect(deleteFriendshipMock).toHaveBeenCalledTimes(1);
+  });
+});
+
 describe('deleteOwnAccount', () => {
   it('borra amistades y los cuatro documentos propios, cierra sesión y limpia el dispositivo', async () => {
-    getMyFriendshipsMock.mockResolvedValue({
+    // El borrado relee tras cada pasada (el tope de lectura de `getMyFriendships` puede truncar): la segunda
+    // lectura ya no devuelve nada, que es lo que ocurre de verdad una vez borradas.
+    getMyFriendshipsMock.mockResolvedValueOnce({
       friends: [{ docId: 'a__b' }],
       incoming: [{ docId: 'b__c' }],
       outgoing: [{ docId: 'c__d' }],
