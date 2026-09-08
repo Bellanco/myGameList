@@ -1121,6 +1121,10 @@ export function useSocialViewModel(options?: {
   const { feedItems, groupedFeedItems, hasMoreFeed, showMoreFeed } = useSocialFeed(
     socialDirectory,
     ownAchievementsFeed,
+    // Los logros ajenos solo se anuncian de tus AMISTADES: su espejo llega del directorio de Firestore, que
+    // cualquier autenticado puede leer, así que aquí no vale la garantía implícita del resto del feed («solo se
+    // leen los gists de los amigos»).
+    friendUidSet,
   );
 
   const activeDetailEvent = useMemo(() => {

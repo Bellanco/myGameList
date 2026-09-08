@@ -89,6 +89,20 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
   devuelve al desmontar.
 - **El sprite de las medallas ya está comprobado.** Un `icon` sin su `symbol` dejaba la medalla vacía sin error y
   sin que ningún test se enterase — lo avisaba la receta y no lo cazaba nadie. Ahora hay un test por escalera.
+- **Nadie veía los logros de nadie más.** El espejo se publicaba bien y las reglas lo dejaban leer, pero el campo
+  `achievements` del perfil no entraba en la proyección del directorio ni se copiaba en las cuatro
+  reconstrucciones de la hidratación, y quien lo consumía lo leía con un cast a una propiedad OPCIONAL: compilaba
+  y salía siempre vacío. Así que cada persona veía solo SUS logros —los propios llegan por otro camino, el
+  evaluador local— y el administrador los veía todos, porque el panel lee los documentos en crudo. Ahora el
+  espejo viaja en la misma lectura del directorio que el nombre y la foto (ni una petición más), el campo es
+  obligatorio en los dos tipos de entrada para que olvidar copiarlo sea un error de compilación en vez de una
+  vitrina en blanco, y la versión de forma de la caché sube a 5 para que una caché fresca no siga sirviendo
+  entradas sin él durante media hora.
+  - **Y en el feed, solo los de tus amistades.** El resto del feed es solo-amigos de rebote —solo se leen los
+    gists sociales de los amigos—, pero el espejo no viaja por ahí: viene del directorio, legible para cualquier
+    autenticado. Sin un filtro explícito, arreglar la lectura habría anunciado los logros de los hasta cincuenta
+    perfiles públicos del directorio. Es la política que la ficha ya aplicaba: la vitrina de un desconocido no se
+    enseña. El porcentaje comparado sigue midiéndose sobre el directorio entero, que no lleva identidad.
 
 ## [1.2.0] - 2026-09-07
 

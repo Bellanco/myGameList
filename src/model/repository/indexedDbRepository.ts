@@ -563,8 +563,11 @@ const SOCIAL_DIRECTORY_KEY_PREFIX = '__dir__:';
  *   3 = cada entrada trae `tier` (punto de rango en las tarjetas del directorio).
  *   4 = F4: cada entrada trae `moves` (mensajes de lista). Sin subirla, quien tuviera caché fresca no vería
  *       ningún movimiento hasta 30 minutos después, y sin forma de forzarlo desde la interfaz.
+ *   5 = cada entrada trae `achievementsMirror` (el espejo de logros de esa persona). Lo mismo: sin subirla, una
+ *       caché fresca seguiría sirviendo entradas sin espejo y los logros de los demás no aparecerían hasta media
+ *       hora después de actualizar.
  */
-const SOCIAL_DIRECTORY_CACHE_VERSION = 4;
+const SOCIAL_DIRECTORY_CACHE_VERSION = 5;
 
 interface CachedSocialDirectory<T> {
   profileId: string; // keyPath del store

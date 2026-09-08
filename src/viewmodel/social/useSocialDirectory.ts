@@ -225,6 +225,10 @@ export function useSocialDirectory(options: SocialDirectoryOptions) {
           // El doc de amistad no denormaliza el rango, así que un amigo que caiga fuera del tope del directorio
           // se pinta como bronce. Preferible a una lectura extra por amigo solo para un punto de color.
           tier: DEFAULT_PROFILE_TIER,
+          // Y por lo mismo tampoco denormaliza el espejo: un amigo fuera del tope se queda sin vitrina hasta que
+          // vuelva a entrar en el directorio. Vacío es exactamente «no ha publicado» para todo lo que lo lee, así
+          // que se calla en vez de inventarse una.
+          achievementsMirror: '',
         }));
       const entries = [...dirEntries, ...friendOnlyEntries];
 
@@ -277,6 +281,11 @@ export function useSocialDirectory(options: SocialDirectoryOptions) {
               photoURL: entry.photoURL || '',
               tier: entry.tier,
               lastActiveAt,
+              // El espejo viene de FIRESTORE, no del gist, así que llega también aquí, donde el gist no se lee:
+              // es lo que hace que la vitrina de un amigo inactivo se vea al abrir su ficha sin gastar esa
+              // lectura. Quién puede verlo lo deciden la ficha y el feed, y los dos exigen amistad; de un
+              // no-amigo solo lo usa el porcentaje comparado, que no lleva identidad.
+              achievementsMirror: entry.achievementsMirror,
               activity: [],
               posts: [],
               moves: [],
@@ -389,6 +398,9 @@ export function useSocialDirectory(options: SocialDirectoryOptions) {
               // dueño y podría auto-otorgarse mithril editándolo a mano.
               tier: entry.tier,
               lastActiveAt,
+              // Del directorio de Firestore, igual que el rango: el gist lo controla su dueño y el espejo no se
+              // publica ahí.
+              achievementsMirror: entry.achievementsMirror,
               activity,
               posts,
               moves,
@@ -411,6 +423,8 @@ export function useSocialDirectory(options: SocialDirectoryOptions) {
               photoURL: entry.photoURL || (isOwnEntry ? ownPhotoURL : ''),
               tier: entry.tier,
               lastActiveAt,
+              // Un gist ilegible no se lleva por delante la vitrina: el espejo no estaba ahí.
+              achievementsMirror: entry.achievementsMirror,
               activity: [],
               posts: [],
               moves: [],
