@@ -528,9 +528,17 @@
   justify-items: start;
   pointer-events: none;
 }
-// Con el consentimiento en pantalla el carril está ocupado: el aviso se sube por encima en vez de taparlo.
+/* Con el consentimiento en pantalla el carril está ocupado: el aviso se sube por encima en vez de taparlo.
+
+   SE APARTA LO QUE MIDE EL OTRO, y no una cantidad fija. Aquí había `9.4rem` escrita a mano, que era la altura
+   del banner medida una vez: pero el banner mide lo que mide su texto —su bloque es `flex: 1 1 260px`, así que
+   envuelve una línea más según el ancho y la fuente— y en el Linux de CI crecía 15px por encima de la constante y
+   se lo comía el aviso. `--consent-h` la publica el propio `ConsentBanner` con `ResizeObserver`, así que nadie
+   duplica la medida de nadie. El `.5rem` es el mismo hueco que el `gap` del carril, y el valor de reserva es lo
+   medido en escritorio: si la variable no ha llegado todavía, el aviso queda un pelo más alto, que es el lado
+   seguro (de más no tapa nada). */
 :root[data-consent='pending'] .ach-toast-stack {
-  bottom: calc(4.6rem + 9.4rem + env(safe-area-inset-bottom, 0px));
+  bottom: calc(4.6rem + var(--consent-h, 9.25rem) + .5rem + env(safe-area-inset-bottom, 0px));
 }
 
 /* LA CÁPSULA · el borde de la izquierda es OTRO CÍRCULO EXTERIOR de la medalla, no un radio elegido a ojo: el
