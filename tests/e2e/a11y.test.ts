@@ -56,6 +56,11 @@ async function animacionesDeEntradaTerminadas(page: Page): Promise<void> {
   // El contador vive en `window` y esta función se llama más de una vez por página (tras navegar y tras abrir
   // algo), así que se pone a cero al entrar: si no, la segunda llamada heredaba una calma vieja y daba por buena
   // una pantalla cuya animación aún no había arrancado.
+  // Y ANTES DE CONTAR, LAS FUENTES. Cada paleta trae la suya y al llegar repinta: el texto cambia de métrica, la
+  // caja se recoloca y eso dispara transiciones NUEVAS después de que la pantalla pareciera quieta. Es lo que
+  // dejaba pasar la espera con la máquina cargada, y sale como una violación de contraste que no existe —el
+  // `.btn-danger` de la zona de peligro medido a mitad de transición: 4,13 en vez de los 4,6 que da quieto—.
+  await page.evaluate(() => document.fonts.ready.then(() => undefined));
   await page.evaluate(() => { (window as unknown as { __framesEnCalma?: number }).__framesEnCalma = 0; });
   await page.waitForFunction(() => {
     const quieta = document
@@ -64,7 +69,10 @@ async function animacionesDeEntradaTerminadas(page: Page): Promise<void> {
       .every((a) => a.playState === 'finished' || a.playState === 'idle');
     const marca = window as unknown as { __framesEnCalma?: number };
     marca.__framesEnCalma = quieta ? (marca.__framesEnCalma ?? 0) + 1 : 0;
-    return (marca.__framesEnCalma ?? 0) >= 3;
+    // DOCE FRAMES Y NO TRES (~200 ms a 60 Hz). Tres bastaban con la máquina desahogada; repartida entre cinco
+    // trabajadores, las tres comprobaciones caben en el hueco anterior a que arranque una transición y la espera
+    // daba por buena una pantalla que aún se estaba pintando. Doce cuesta un pestañeo y cierra la carrera.
+    return (marca.__framesEnCalma ?? 0) >= 12;
   });
 }
 

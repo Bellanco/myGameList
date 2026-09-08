@@ -15,7 +15,57 @@
 // EL DEGRADADO `#ach-lux` vive aquí y no en la hoja porque un `stroke` sólo puede referenciar un gradiente que
 // esté en el documento. Es el que convierte un icono de línea en metal iluminado: marfil arriba a la izquierda,
 // oro en el medio, pardo casi negro en la esquina que queda a la sombra.
+import { useLayoutEffect, useRef, useSyncExternalStore } from 'react';
+
+/**
+ * UN SOLO SPRITE EN EL DOCUMENTO, aunque lo pidan varias pantallas a la vez.
+ *
+ * Antes no hacía falta: el sprite lo montaban cinco sitios que no coinciden nunca en pantalla (la pantalla de
+ * logros, la tarjeta del panel, la ficha del hub, el feed y el panel de administración). El AVISO DE LOGRO lo
+ * cambia: puede salir encima de CUALQUIERA de ellas, así que dos `<symbol id="ach-completados">` en el mismo
+ * documento pasó de imposible a lo normal — y eso es HTML inválido, con el navegador quedándose con el primero.
+ *
+ * QUIÉN LO PINTA: el PRIMERO que se monta, y al irse pasa el relevo al siguiente que siga montado. Se lleva con
+ * una lista por orden de llegada y no con un «dueño o nada», que era la primera versión y tenía un hueco: al
+ * soltarlo, todos los demás se creían con derecho a pintar a la vez —tres sprites montados y dos pintando en
+ * cuanto el aviso se cerraba—. Con la lista solo hay un primero, siempre.
+ *
+ * El alta va en `useLayoutEffect` a propósito: corre ANTES de que el navegador pinte, así que el relevo no deja
+ * ni un fotograma sin dibujos ni dos juegos de `<symbol>` a la vista.
+ */
+const oyentes = new Set<() => void>();
+const montados: symbol[] = [];
+
+function avisar(): void {
+  for (const oyente of oyentes) oyente();
+}
+
+function suscribir(oyente: () => void): () => void {
+  oyentes.add(oyente);
+  return () => {
+    oyentes.delete(oyente);
+  };
+}
+
 export function AchievementSprite() {
+  const token = useRef<symbol>(undefined as unknown as symbol);
+  if (!token.current) token.current = Symbol('ach-sprite');
+  const mio = token.current;
+
+  const pinta = useSyncExternalStore(suscribir, () => montados[0] === mio, () => true);
+
+  useLayoutEffect(() => {
+    montados.push(mio);
+    avisar();
+    return () => {
+      const donde = montados.indexOf(mio);
+      if (donde >= 0) montados.splice(donde, 1);
+      avisar();
+    };
+  }, [mio]);
+
+  if (!pinta) return null;
+
   return (
     <svg aria-hidden="true" className="svg-sprite">
       <defs>
@@ -126,6 +176,37 @@ export function AchievementSprite() {
         <symbol id="ach-paso-ruleta" viewBox="0 0 24 24"><rect width="12" height="12" x="2" y="10" rx="2" ry="2" /><path d="m17.92 14 3.5-3.5a2.24 2.24 0 0 0 0-3l-5-4.92a2.24 2.24 0 0 0-3 0L10 6" /><path d="M6 18h.01" /><path d="M10 14h.01" /><path d="M15 6h.01" /><path d="M18 9h.01" /></symbol>
         {/* Palette */}
         <symbol id="ach-paso-tema" viewBox="0 0 24 24"><circle cx="13.5" cy="6.5" r=".5" fill="currentColor" /><circle cx="17.5" cy="10.5" r=".5" fill="currentColor" /><circle cx="8.5" cy="7.5" r=".5" fill="currentColor" /><circle cx="6.5" cy="12.5" r=".5" fill="currentColor" /><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z" /></symbol>
+
+        {/* ── AMPLIACIÓN: los catorce dibujos de las escaleras nuevas. Mismo sitio, misma procedencia (Lucide) y
+            mismo trato: trazo sin relleno sobre viewBox 24, y el `id` es la `key` de su escalera. */}
+        {/* LayoutGrid */}
+        <symbol id="ach-marmota" viewBox="0 0 24 24"><rect width="7" height="7" x="3" y="3" rx="1" /><rect width="7" height="7" x="14" y="3" rx="1" /><rect width="7" height="7" x="14" y="14" rx="1" /><rect width="7" height="7" x="3" y="14" rx="1" /></symbol>
+        {/* Shapes */}
+        <symbol id="ach-todos-los-palos" viewBox="0 0 24 24"><path d="M8.3 10a.7.7 0 0 1-.626-1.079L11.4 3a.7.7 0 0 1 1.198-.043L16.3 8.9a.7.7 0 0 1-.572 1.1Z" /><rect x="3" y="14" width="7" height="7" rx="1" /><circle cx="17.5" cy="17.5" r="3.5" /></symbol>
+        {/* Wine */}
+        <symbol id="ach-anadas" viewBox="0 0 24 24"><path d="M8 22h8" /><path d="M7 10h10" /><path d="M12 15v7" /><path d="M12 15a5 5 0 0 0 5-5c0-2-.5-4-2-8H9c-1.5 4-2 6-2 8a5 5 0 0 0 5 5Z" /></symbol>
+        {/* Weight */}
+        <symbol id="ach-horas-totales" viewBox="0 0 24 24"><circle cx="12" cy="5" r="3" /><path d="M6.5 8a2 2 0 0 0-1.905 1.46L2.1 18.5A2 2 0 0 0 4 21h16a2 2 0 0 0 1.925-2.54L19.4 9.5A2 2 0 0 0 17.48 8Z" /></symbol>
+        {/* ScrollText */}
+        <symbol id="ach-obra-escrita" viewBox="0 0 24 24"><path d="M15 12h-5" /><path d="M15 8h-5" /><path d="M19 17V5a2 2 0 0 0-2-2H4" /><path d="M8 21h12a2 2 0 0 0 2-2v-1a1 1 0 0 0-1-1H11a1 1 0 0 0-1 1v1a2 2 0 1 1-4 0V5a2 2 0 1 0-4 0v2a1 1 0 0 0 1 1h3" /></symbol>
+        {/* Archive */}
+        <symbol id="ach-biblioteca" viewBox="0 0 24 24"><rect width="20" height="5" x="2" y="3" rx="1" /><path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8" /><path d="M10 12h4" /></symbol>
+        {/* Tags */}
+        <symbol id="ach-vocabulario" viewBox="0 0 24 24"><path d="m15 5 6.3 6.3a2.4 2.4 0 0 1 0 3.4L17 19" /><path d="M9.586 5.586A2 2 0 0 0 8.172 5H3a1 1 0 0 0-1 1v5.172a2 2 0 0 0 .586 1.414L8.29 18.29a2.426 2.426 0 0 0 3.42 0l3.58-3.58a2.426 2.426 0 0 0 0-3.42z" /><circle cx="6.5" cy="9.5" r=".5" /></symbol>
+        {/* Frown */}
+        <symbol id="ach-mania" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" /><path d="M16 16s-1.5-2-4-2-4 2-4 2" /><line x1="9" x2="9.01" y1="9" y2="9" /><line x1="15" x2="15.01" y1="9" y2="9" /></symbol>
+        {/* Fingerprint */}
+        <symbol id="ach-firma" viewBox="0 0 24 24"><path d="M12 10a2 2 0 0 0-2 2c0 1.02-.1 2.51-.26 4" /><path d="M14 13.12c0 2.38 0 6.38-1 8.88" /><path d="M17.29 21.02c.12-.6.43-2.3.5-3.02" /><path d="M2 12a10 10 0 0 1 18-6" /><path d="M2 16h.01" /><path d="M21.8 16c.2-2 .131-5.354 0-6" /><path d="M5 19.5C5.5 18 6 15 6 12a6 6 0 0 1 .34-2" /><path d="M8.65 22c.21-.66.45-1.32.57-2" /><path d="M9 6.8a6 6 0 0 1 9 5.2v2" /></symbol>
+        {/* CalendarClock */}
+        <symbol id="ach-reencuentro" viewBox="0 0 24 24"><path d="M21 7.5V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h3.5" /><path d="M16 2v4" /><path d="M8 2v4" /><path d="M3 10h5" /><path d="M17.5 17.5 16 16.3V14" /><circle cx="16" cy="16" r="6" /></symbol>
+        {/* Landmark */}
+        <symbol id="ach-arqueologia" viewBox="0 0 24 24"><line x1="3" x2="21" y1="22" y2="22" /><line x1="6" x2="6" y1="18" y2="11" /><line x1="10" x2="10" y1="18" y2="11" /><line x1="14" x2="14" y1="18" y2="11" /><line x1="18" x2="18" y1="18" y2="11" /><polygon points="12 2 20 7 4 7" /></symbol>
+        {/* ThumbsDown */}
+        <symbol id="ach-suspenso" viewBox="0 0 24 24"><path d="M17 14V2" /><path d="M9 18.12 10 14H4.17a2 2 0 0 1-1.92-2.56l2.33-8A2 2 0 0 1 6.5 2H20a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-2.76a2 2 0 0 0-1.79 1.11L12 22a3.13 3.13 0 0 1-3-3.88Z" /></symbol>
+        {/* BadgeCheck */}
+        <symbol id="ach-palabra" viewBox="0 0 24 24"><path d="M3.85 8.62a4 4 0 0 1 4.78-4.77 4 4 0 0 1 6.74 0 4 4 0 0 1 4.78 4.78 4 4 0 0 1 0 6.74 4 4 0 0 1-4.77 4.78 4 4 0 0 1-6.75 0 4 4 0 0 1-4.78-4.77 4 4 0 0 1 0-6.76Z" /><path d="m9 12 2 2 4-4" /></symbol>
+        {/* RefreshCcwDot */}
+        <symbol id="ach-otra-oportunidad" viewBox="0 0 24 24"><path d="M3 2v6h6" /><path d="M21 12A9 9 0 0 0 6 5.3L3 8" /><path d="M21 22v-6h-6" /><path d="M3 12a9 9 0 0 0 15 6.7l3-2.7" /><circle cx="12" cy="12" r="1" /></symbol>
     </svg>
   );
 }

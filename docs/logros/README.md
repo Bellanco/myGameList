@@ -5,7 +5,7 @@ web que ya no es necesario: todo lo que había allí vive aquí.
 
 | Fichero | Qué es | Destino |
 |---|---|---|
-| [`catalogo.json`](catalogo.json) | Las 50 escaleras y sus 251 escalones publicables, con umbrales, rarezas y su valor real medido | `core/achievements/catalog.ts` |
+| [`catalogo.json`](catalogo.json) | Las 64 escaleras y sus 404 escalones publicables, con umbrales, rarezas y su valor real medido | `core/achievements/catalog.ts` |
 | [`achievement-sprite.svg`](achievement-sprite.svg) | ⚑ **Histórico.** Los 38 cuadros originales y el filtro `#imp`. Ya no es la fuente: el sprite lo hacen los trazos de Lucide | — |
 | [`achievements.scss`](achievements.scss) | ⚑ **Histórico.** Forma cuadrada, aura y triángulo del grado | — |
 | [`receta-medalla.md`](receta-medalla.md) | **Cómo se hace un logro nuevo**, hoy: el disco, el icono, la escalera y la lista de comprobación | — |
@@ -67,16 +67,53 @@ que afecta a estos tres ficheros es:
 - **Un dibujo por ESCALERA, no por logro.** 251 medallas no se dibujan; los escalones de una misma escalera
   comparten cuadro y los distingue el triángulo del grado, que es justo para lo que se diseñó.
 
+## ⚑ Ampliación: catorce escaleras más (64 en total)
+
+El catálogo pasa de 50 escaleras a 64 y de 314 escalones a 412 (400 en la primera tanda y once techos más
+después, en siete de las escaleras nuevas). Las candidatas, con el dato que las sostiene y
+las siete que se midieron y se descartaron, están en
+[`propuestas-nuevas-escaleras.md`](propuestas-nuevas-escaleras.md). Lo que afecta a estos activos:
+
+- **`catalogo.json` se ha regenerado** con las 64. De paso se corrigió el coste del tramo abierto de la curva de
+  nivel, que decía 500 y el código cobra 250 (`OPEN_TIER_COST` en `summary.ts`).
+- **`achievement-sprite.svg` se queda otra vez corto**: los catorce dibujos nuevos están en
+  `view/components/AchievementSprite.tsx`, que es el que se monta. Este activo sigue llevando los 38 originales.
+- **Y ya hay un test que casa cada escalera con su dibujo** (`tests/component/Achievements.test.tsx`). Era el
+  agujero que avisaba el §2 de la receta y no cazaba nadie: un `icon` sin `symbol` deja la medalla vacía y no
+  salta nada.
+
+## ⚑ El aviso de logro ya no es una maqueta
+
+[`demo-toast.html`](demo-toast.html) describía la cápsula del instante —medalla, rótulo, rareza en la sombra, los
+cinco segundos, la fusión de varios y los hitos al 50 %— y nunca se había implementado: el aviso salía por el
+`StatusBanner`, con el rótulo «Correcto» delante y sin medalla. **Ya está en `src/`**
+(`view/components/stats/AchievementToast.tsx`), y con ello:
+
+- **La maqueta pasa a ser fuente de diseño, como los otros activos**: al retocar la cápsula se retoca allí y se
+  vuelve a llevar. Lo que vive en `src/` se apartó en dos cosas y las dos están anotadas en el componente: los
+  manejadores de ratón y foco cuelgan del BOTÓN y no de la cápsula —`jsx-a11y/no-static-element-interactions` está
+  en `error` y con razón—, y el área del botón se extiende a la cápsula entera desde la hoja.
+- **El sprite estrena dueño único.** El aviso puede salir encima de cualquier pantalla, incluidas las cinco que ya
+  montaban el sprite, y dos `<symbol>` con el mismo `id` son HTML inválido.
+- **Y los hitos existen**: se avisa al CRUZAR la mitad de una escalera o su recta final, con la barra y la medalla
+  en peltre. Lo comprueban seis recorridos e2e, más doce que lo miran en cada paleta y tema con axe.
+
 ## Lo que hay que saber antes de tocarlos
 
 **Los umbrales están medidos, no supuestos.** Salen de una biblioteca real de 302 juegos, replicando
 `normalizeGame` con la siembra de sellos incluida. El campo `valorReal` de cada logro es lo que daba esa
 biblioteca — que es un usuario del extremo alto, no la media. Ver §6.8 y §6.9 del plan.
 
-**El catálogo entero cabe en el espejo con sitio de sobra.** Un escalón solo puede estar conseguido o no, así que
-el espejo es un mapa de bits: 253 bits son 44 caracteres, y sobre la biblioteca real el espejo completo —fechas
-incluidas— ocupa 186 de los 1.024 que valida la regla. Lo que trae a cambio es que **el orden del catálogo es
+**El catálogo entero cabe en el espejo, y ya no de sobra.** Un escalón solo puede estar conseguido o no, así que
+el espejo es un mapa de bits: 404 bits son 68 caracteres, y sobre la biblioteca real el espejo completo —fechas
+incluidas— ocupa 424 de los 1.024 que valida la regla. Lo que trae a cambio es que **el orden del catálogo es
 contrato**: reordenar escaleras reescribe la vitrina de todo el mundo.
+
+⚑ **Y el margen de la cola de fechas se ha terminado.** Con el catálogo ENTERO conseguido la cadena llena 1.023
+de los 1.024 y solo 140 de los 404 logros conservan su fecha. **No se pierde ni un logro** —el bitmap va siempre
+entero y lo que se recorta es la cola, por rareza (`packAchievements`)—, pero la próxima ampliación grande ya no
+puede dar por hecho que las fechas caben: lo que hay que mirar antes de añadir otras catorce escaleras es
+`espejoEnCaracteres` en [`catalogo.json`](catalogo.json), no solo que el test pase.
 
 **Seis logros dan cero y no es un error.** Son los que necesitan el par de sellos `enteredAt` de dos listas
 distintas, y ese par **no existe en ninguna biblioteca preexistente** (0 de 302). Llevan un bloque `dormido` con

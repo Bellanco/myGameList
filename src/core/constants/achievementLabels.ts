@@ -80,9 +80,36 @@ export const ACHIEVEMENTS_UI = {
   medalLockedAria: (name: string) => `${name}, bloqueado`,
   medalHiddenAria: 'Logro oculto, se revela al conseguirlo',
 
-  /** Aviso del instante (§7.4). Va por el `StatusBanner` de siempre, con su `role="status"`. */
+  /**
+   * AVISO DEL INSTANTE (§7.4), la tarjeta. Sustituye al texto que iba por el `StatusBanner`, que sigue siendo el
+   * que ANUNCIA: la cápsula es visual y la región viva de siempre es la que lo dice a un lector de pantalla.
+   */
+  toastUnlocked: 'Has desbloqueado',
+  toastManyName: (count: number) => `${count} logros`,
+  /**
+   * «Créditos finales V y 2 más» — un nombre entero y la cuenta. Una lista cortada a mitad de nombre se lee como
+   * un fallo, y con dos nombres largos no cabía ni el primero.
+   */
+  toastNames: (names: readonly string[]) =>
+    (names.length === 2 ? names.join(' y ') : `${names[0]} y ${names.length - 1} más`),
+  /**
+   * EL ESTRENO: lo que ya estaba hecho y se concede al abrir. No felicita por algo que acabas de hacer —no lo
+   * has hecho ahora— sino por algo que llevabas hecho sin saberlo, que es otra cosa y se dice de otra manera.
+   */
+  toastWaiting: 'Te estaban esperando',
+  toastWaitingName: (count: number) => `${count} logros nuevos`,
+  toastWaitingBody: 'Salen de lo que ya tenías en tus listas',
+
+  /** El HITO: la mitad de una escalera, o su recta final. No es un logro, así que no felicita: sitúa. */
+  toastHalf: 'Vas por la mitad',
+  toastNear: 'Casi lo tienes',
+  toastFigure: (value: number, step: number, percent: number) => `${value} de ${step} · ${percent} %`,
+  toastLink: 'Ver tus logros',
+
+  /** Lo que ANUNCIA la región viva del banner. Lo visual lo pone la tarjeta; esto es lo que se oye. */
   unlockedOne: (name: string) => `Logro conseguido: ${name}`,
   unlockedMany: (count: number) => `${count} logros conseguidos`,
+  milestoneAria: (name: string, percent: number) => `${name}, ${percent} % completado`,
 
   /**
    * Feed social (§8.4): se agrupa por DÍA, no por logro.
@@ -157,10 +184,28 @@ const STREAK_LADDERS = new Set([
   'constancia', 'conversador', 'ritmo', 'degustacion', 'deshielo', 'cadena-de-anos', 'ano-redondo', 'veterano',
 ]);
 
+/**
+ * Escaleras de ÍNDICE CUADRADO: la píldora dice «3×3», que es el nombre que tiene la cosa.
+ *
+ * Ni «×3» ni «3» servirían, y por el mismo motivo: el escalón no pide tres juegos ni tres vueltas, pide tres de
+ * cada, y el aspa entre las dos cifras es justo lo que dice eso en dos caracteres. Es el único caso en que la
+ * píldora lleva DOS números, y cabe porque son de una cifra hasta el escalón más alto declarado.
+ */
+const SQUARE_LADDERS = new Set(['marmota', 'todos-los-palos', 'anadas']);
+
+/**
+ * Escaleras de MAGNITUD: horas sumadas, palabras escritas, años de anchura. Sin aspa, como las rachas.
+ *
+ * El aspa dice «tantas veces» y aquí sería mentira otra vez: 2.000 no son dos mil cosas contadas, es un total.
+ * La unidad la escribe la condición de la fila («Suma 2.000 horas entre todos tus juegos»), que es donde cabe.
+ */
+const MAGNITUDE_LADDERS = new Set(['horas-totales', 'obra-escrita', 'arqueologia']);
+
 export function medalThreshold(ladder: string, step: number, grades: number, descending: boolean): string {
   if (grades <= 1) return '';
   if (PERCENT_LADDERS.has(ladder)) return `${step}%`;
-  if (STREAK_LADDERS.has(ladder)) return String(step);
+  if (SQUARE_LADDERS.has(ladder)) return `${step}×${step}`;
+  if (STREAK_LADDERS.has(ladder) || MAGNITUDE_LADDERS.has(ladder)) return String(step);
   return `${descending ? '≤' : '×'}${step}`;
 }
 

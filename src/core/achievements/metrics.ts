@@ -314,3 +314,117 @@ export function backlogCurve(games: TabData): { peak: number; current: number; a
 export function backlogSize(games: TabData): number {
   return (games.p || []).length;
 }
+
+/**
+ * El fin del año de la ÚLTIMA vuelta anotada, o 0.
+ *
+ * Es la mejor fecha que `years` puede dar de una rejugada, y la única honesta: del año no sale ni el día ni la
+ * hora, así que se fecha en su 31 de diciembre igual que hace `endOfYear` en el resto del catálogo (§6.8).
+ */
+export function lastPlayedYearEnd(game: GameItem): number {
+  const years = playedYears(game);
+  return years.length > 0 ? endOfYear(Math.max(...years)) : 0;
+}
+
+/**
+ * Clave canónica de una etiqueta escrita a mano: «FPS», «fps» y « FPS » son la misma cosa, y contarlas por
+ * separado infla cualquier métrica de variedad sin que nadie haya jugado nada. Cadena vacía = no es etiqueta.
+ */
+export function labelKey(raw: unknown): string {
+  return String(raw || '').trim().toLowerCase();
+}
+
+/**
+ * Sellos agrupados por ETIQUETA: la máquina que comparten las tres métricas que leen géneros, plataformas,
+ * virtudes o motivos. Existía tres veces —una por métrica, con su propia normalización copiada— y de las tres
+ * salían las mismas dos preguntas: cuántos grupos hay y cuál es el más grande.
+ *
+ * Acumula con `push` y no rehaciendo el array: con 133 juegos compartiendo la misma virtud, copiar la lista en
+ * cada vuelta son 8.800 copias para llegar al mismo sitio.
+ */
+export function labelGroups(
+  entries: Array<{ labels: string[] | undefined; at: number }>,
+): Map<string, number[]> {
+  const groups = new Map<string, number[]>();
+  for (const entry of entries) {
+    for (const raw of entry.labels || []) {
+      const key = labelKey(raw);
+      if (!key) continue;
+      const stamps = groups.get(key);
+      if (stamps) stamps.push(entry.at);
+      else groups.set(key, [entry.at]);
+    }
+  }
+  return groups;
+}
+
+/**
+ * Tamaño de cada GRUPO de etiquetas, con el sello del juego que lo completó.
+ *
+ * Es la materia prima de los índices cuadrados por etiqueta: no interesa qué etiqueta es, solo cuántos juegos
+ * cayeron en ella. Se normaliza a minúsculas por lo mismo que `firstOfEach`: «FPS» y «fps» son la misma cosa y
+ * contarlas dos veces infla el índice sin que nadie haya jugado nada.
+ */
+export function groupSizes(
+  games: GameItem[],
+  pick: (game: GameItem) => string[] | undefined,
+): Array<{ size: number; at: number }> {
+  const groups = labelGroups(games.map((game) => ({ labels: pick(game), at: firstEnteredAt(game) })));
+  // SIN FECHA, Y A PROPÓSITO (§5.3). Devolvía el sello MÁS TARDÍO del grupo, y eso hacía que la fecha del logro
+  // se MOVIERA: cada juego nuevo de ese género empujaba el máximo hacia delante, así que un logro conseguido en
+  // marzo pasaba a decir que fue en agosto. La fecha honesta sería la del juego que completó el grupo, y para
+  // saber cuál es haría falta saber a qué tamaño se mira —que es justo lo que el índice decide después—. Entre
+  // una fecha que baila y ninguna, ninguna: un logro sin fecha es un estado previsto y se pinta como tal.
+  return [...groups.values()].map((stamps) => ({ size: stamps.length, at: 0 }));
+}
+
+/** Cuántos juegos caen en cada año de `years`, con el fin de ese año por sello. */
+export function yearSizes(games: GameItem[]): Array<{ size: number; at: number }> {
+  const byYear = new Map<number, number>();
+  for (const game of games) {
+    // Por juego se cuenta cada año UNA vez: `years` es multivalor y un duplicado no es una partida más.
+    for (const year of new Set(playedYears(game))) byYear.set(year, (byYear.get(year) || 0) + 1);
+  }
+  return [...byYear.entries()].map(([year, size]) => ({ size, at: endOfYear(year) }));
+}
+
+/** Horas SUMADAS de la biblioteca. Solo las anotadas: `hoursOf` ya descarta el hueco y el 0 (§7.5). */
+export function totalHours(games: TabData): number {
+  return allGames(games).reduce((sum, { game }) => sum + (hoursOf(game) || 0), 0);
+}
+
+/** Palabras escritas en todas las reseñas. Una reseña vacía no aporta una palabra en blanco. */
+export function reviewWords(games: TabData): number {
+  return allGames(games).reduce((sum, { game }) => {
+    const text = String(game.review || '').trim();
+    return sum + (text ? text.split(/\s+/).length : 0);
+  }, 0);
+}
+
+/**
+ * La etiqueta MÁS REPETIDA de un lote: cuántas veces sale y con qué sellos.
+ *
+ * No devuelve CUÁL es, a propósito: el logro dice «has dejado 20 juegos por el mismo motivo» y nunca cuál, que es
+ * lo que lo mantiene del lado del retrato y fuera del reproche. Y así la métrica no publica ni una etiqueta.
+ */
+export function topLabel(entries: Array<{ labels: string[] | undefined; at: number }>): {
+  value: number;
+  stamps: number[];
+} {
+  let best: number[] = [];
+  for (const stamps of labelGroups(entries).values()) if (stamps.length > best.length) best = stamps;
+  return { value: best.length, stamps: best };
+}
+
+/**
+ * ANCHURA del historial: años entre la primera vuelta anotada y la última.
+ *
+ * GUARDA (§7.5): con un solo año no hay anchura, hay un punto — y el 0 que devuelve es el correcto, no un «no
+ * sé». Se mide sobre `years` y nunca sobre sellos, que en esta biblioteca empiezan el día que se instaló la app.
+ */
+export function yearSpan(games: TabData): { value: number; first: number } {
+  const years = allGames(games).flatMap(({ game }) => playedYears(game));
+  if (years.length < 2) return { value: 0, first: 0 };
+  const first = Math.min(...years);
+  return { value: Math.max(...years) - first, first };
+}
