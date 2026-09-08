@@ -97,6 +97,16 @@ export interface SocialDirectoryEntry {
   updatedAt: number;
   /** Rango del perfil: es lo que pinta el punto de color en su tarjeta del directorio. */
   tier: ProfileTier;
+  /**
+   * ESPEJO DE LOGROS publicado por esa persona (`profiles/{uid}.achievements.list`), o cadena vacía si no ha
+   * publicado ninguno. Viaja en la misma lectura del directorio que el nombre y la foto.
+   *
+   * OBLIGATORIO a propósito, por el mismo motivo que `tier`: la hidratación reconstruye cada entrada campo a
+   * campo en cuatro sitios, y este campo se perdía en los cuatro sin que nada avisara —los consumidores lo
+   * leían con un cast a una propiedad OPCIONAL, así que compilaba y salía siempre vacío—. Declarado requerido,
+   * olvidar copiarlo es un error de compilación y no una vitrina en blanco.
+   */
+  achievementsMirror: string;
 }
 
 export interface GameRecommendation {

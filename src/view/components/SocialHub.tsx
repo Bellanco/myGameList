@@ -254,7 +254,7 @@ const SocialHubInner = memo(function SocialHubInner({
   const directoryMirrors = useMemo(() => {
     if (!ENABLE_ACHIEVEMENTS) return [] as string[];
     return filteredSocialDirectory
-      .map((entry) => String((entry as { achievements?: { list?: string } }).achievements?.list || ''))
+      .map((entry) => entry.achievementsMirror)
       .filter(Boolean);
   }, [filteredSocialDirectory]);
 
@@ -264,8 +264,8 @@ const SocialHubInner = memo(function SocialHubInner({
     // impide que aparezcas en tu propia lista de gente— así que buscarte ahí devolvía siempre vacío, y tu ficha
     // de logros decía «todavía no hay nada que contar» con cien medallas detrás.
     if (isOwnProfileDetail) return ownAchievementMirror;
-    const entry = filteredSocialDirectory.find((candidate) => (candidate as { id?: string }).id === detailId);
-    return String((entry as { achievements?: { list?: string } } | undefined)?.achievements?.list || '');
+    const entry = filteredSocialDirectory.find((candidate) => candidate.id === detailId);
+    return entry?.achievementsMirror || '';
   }, [detailId, filteredSocialDirectory, isOwnProfileDetail, ownAchievementMirror]);
 
   /**
