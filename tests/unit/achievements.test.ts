@@ -548,6 +548,32 @@ describe('lo que pasa cuando una métrica no sabe medir', () => {
   });
 });
 
+describe('la fecha que no ha llegado', () => {
+  /**
+   * UNA FECHA QUE NO HA LLEGADO NO SE PINTA. Lo que sale de `years` se fecha en el 31 de diciembre de su año
+   * —toda la precisión que da el dato— así que un logro del año EN CURSO nacía con una fecha futura: la fila
+   * decía «31 dic 2026» y el listado, que ordena por día de más reciente a más antiguo, la ponía por delante de
+   * lo conseguido hoy. Las medallas recién ganadas salían debajo de otras que aún no tocan.
+   *
+   * `parseMirror` ya hacía esta poda al LEER el espejo, así que lo de menos es el arreglo: lo que faltaba era que
+   * las dos caras dijeran lo mismo. El logro se queda; lo que se cae es el día.
+   */
+  it('un logro fechado en el futuro se queda, y sin fecha', () => {
+    const esteAno = new Date(NOW).getFullYear();
+    const games = library({ c: [game({ id: 1, years: [esteAno - 6, esteAno] })] });
+    const states = evaluate(games);
+
+    // Dos vueltas: el logro está.
+    expect(states.get('rejugados-1')?.level).toBe(1);
+    // Y su fecha sería el 31 de diciembre de este año, que no ha llegado: se pinta sin día.
+    expect(states.get('rejugados-1')?.unlockedAt).toBe(0);
+
+    // La misma escalera con la vuelta en un año PASADO sí se fecha, que es la mitad que no se toca.
+    const pasado = library({ c: [game({ id: 1, years: [esteAno - 6, esteAno - 1] })] });
+    expect(evaluate(pasado).get('rejugados-1')?.unlockedAt).toBe(new Date(esteAno - 1, 11, 31, 12).getTime());
+  });
+});
+
 describe('la marca de agua — lo conseguido no se devuelve', () => {
   it('una biblioteca que encoge no retira el logro', () => {
     const llena = library({ c: Array.from({ length: 12 }, (_u, i) => game({ id: i + 1 })) });

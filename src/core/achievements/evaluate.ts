@@ -25,11 +25,19 @@ function dateFromStamps(def: AchievementDef, stamps: number[]): number {
   return def.step > 0 && def.step <= sorted.length ? sorted[def.step - 1] || 0 : 0;
 }
 
+/**
+ * Holgura antes de tratar una fecha como FUTURA. Un día, el mismo número que usa `parseMirror` al leer el espejo
+ * y por el mismo motivo: los sellos pueden venir de otro dispositivo con el reloj algo adelantado, y descartar
+ * una fecha buena por unos minutos sería peor que aceptarla.
+ */
+const FUTURE_TOLERANCE_MS = 24 * 60 * 60 * 1000;
+
 /** Los estados de TODOS los escalones de una escalera, a partir de una sola medición. */
 function statesOfLadder(
   ladder: AchievementLadder,
   measure: AchievementMeasure,
   peak: Map<string, number>,
+  now: number,
 ): AchievementState[] {
   // EL VALOR DE RESPALDO NO ES CERO EN UNA ESCALERA DESCENDENTE, y no es un detalle: ahí «menos es mejor», así
   // que un cero de una métrica rota o de un `NaN` concede TODOS los escalones —«Exterminatus» entero, sesenta
@@ -54,6 +62,18 @@ function statesOfLadder(
     let unlockedAt = 0;
     if (earnedNow) {
       unlockedAt = measure.at ? measure.at[def.step - 1] || 0 : dateFromStamps(def, measure.stamps ?? []);
+      /**
+       * UNA FECHA EN EL FUTURO SE PINTA SIN FECHA, y el logro se queda. Es la misma regla que ya aplicaba
+       * `parseMirror` al LEER el espejo, y aquí faltaba: lo que sale de `years` se fecha en el 31 de diciembre de
+       * su año —toda la precisión que da el dato— así que un logro del año EN CURSO nacía con una fecha que
+       * todavía no ha llegado. Se veía: la fila decía «31 dic 2026» y el listado la ordenaba por delante de lo
+       * conseguido hoy, así que las medallas más recientes salían debajo de otras que aún no tocan.
+       *
+       * Sin fecha y no recortada a hoy, que sería la otra salida: de `years` no se sabe el día, y estampar el de
+       * hoy diría que lo hiciste hoy. «Conseguido, sin día» es un estado que el sistema ya tiene previsto (§5.3)
+       * y que la fila sabe pintar; una fecha inventada, no.
+       */
+      if (unlockedAt > now + FUTURE_TOLERANCE_MS) unlockedAt = 0;
     }
 
     return { id: def.id, level, value, next: level >= 1 ? null : def.step, unlockedAt };
@@ -85,14 +105,14 @@ export function evaluateAchievements(input: AchievementInput, peakRaw = ''): Ach
 
   for (const ladder of LADDERS) {
     if (META_LADDERS.has(ladder.key)) continue;
-    states.push(...statesOfLadder(ladder, measureLadder(ladder, input), peak));
+    states.push(...statesOfLadder(ladder, measureLadder(ladder, input), peak, input.now));
   }
 
   const earned = new Set(states.filter((state) => state.level >= 1).map((state) => state.id));
   const metaInput: AchievementInput = { ...input, earned };
   for (const ladder of LADDERS) {
     if (!META_LADDERS.has(ladder.key)) continue;
-    states.push(...statesOfLadder(ladder, measureLadder(ladder, metaInput), peak));
+    states.push(...statesOfLadder(ladder, measureLadder(ladder, metaInput), peak, input.now));
   }
 
   // En el orden del catálogo, no en el de evaluación: el orden de `ACHIEVEMENTS` es contrato (es el del espejo) y
