@@ -1,4 +1,4 @@
-import { memo, useCallback, useEffect, useState } from 'react';
+import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ANALYTICS_UI } from '../../core/constants/labels';
 import { LEGAL_ROUTES } from '../../core/constants/legal';
@@ -19,6 +19,7 @@ const A = ANALYTICS_UI;
  */
 export const ConsentBanner = memo(function ConsentBanner() {
   const [decided, setDecided] = useState(() => readAnalyticsConsent() !== null);
+  const bannerRef = useRef<HTMLDivElement | null>(null);
 
   // Otra pestaña (o Ajustes) puede fijar la preferencia: mantenerse en sincronía evita mostrar el aviso de nuevo.
   useEffect(() => {
@@ -53,12 +54,50 @@ export const ConsentBanner = memo(function ConsentBanner() {
     return () => document.documentElement.removeAttribute('data-consent');
   }, [decided]);
 
+  /**
+   * Y PUBLICA SU ALTURA REAL en `--consent-h`, porque el que se aparta necesita saber cuánto.
+   *
+   * EL FALLO QUE ESTO EVITA. La regla de arriba subía el aviso de logro una cantidad FIJA (`9.4rem`), que era la
+   * altura de este banner medida una vez en un escritorio. Pero este banner mide lo que mide su texto: su bloque
+   * de texto es `flex: 1 1 260px`, así que según el ancho de la ventana y las métricas de la fuente el párrafo
+   * envuelve una línea más y el banner crece. Medido: 9,23rem en macOS a 1280px —2,7px de holgura sobre la
+   * constante— y suficiente más en el Linux de CI para que el aviso lo pisara por 15px. Un test se rompía allí y
+   * no aquí, que es la peor forma de tener razón.
+   *
+   * Con la altura publicada, el que se aparta se aparta lo que hace falta y nadie duplica la medida del otro.
+   *
+   * `ResizeObserver` y no un `resize` de ventana: el banner también cambia de alto sin que la ventana cambie
+   * —cuando acaba de cargar la fuente, sobre todo—, y eso un `resize` no lo ve. Donde no exista (jsdom), se cae
+   * al listener, que cubre el caso que importa.
+   */
+  useEffect(() => {
+    if (decided) return;
+    const node = bannerRef.current;
+    if (!node) return;
+    const root = document.documentElement;
+    const publish = () => {
+      root.style.setProperty('--consent-h', `${Math.round(node.getBoundingClientRect().height)}px`);
+    };
+    publish();
+
+    const observer = typeof ResizeObserver === 'function' ? new ResizeObserver(publish) : null;
+    if (observer) observer.observe(node);
+    else window.addEventListener('resize', publish);
+
+    return () => {
+      if (observer) observer.disconnect();
+      else window.removeEventListener('resize', publish);
+      // Se retira con el banner: sin esto, el carril seguiría dejando su hueco cuando ya no hay nada que esquivar.
+      root.style.removeProperty('--consent-h');
+    };
+  }, [decided]);
+
   if (decided) {
     return null;
   }
 
   return (
-    <div className="consent-banner" role="region" aria-label={A.bannerAria}>
+    <div className="consent-banner" role="region" aria-label={A.bannerAria} ref={bannerRef}>
       <div className="consent-banner-text">
         <strong>{A.bannerTitle}</strong>
         <p>{A.bannerBody}</p>

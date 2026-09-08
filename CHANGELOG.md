@@ -103,6 +103,15 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
     autenticado. Sin un filtro explícito, arreglar la lectura habría anunciado los logros de los hasta cincuenta
     perfiles públicos del directorio. Es la política que la ficha ya aplicaba: la vitrina de un desconocido no se
     enseña. El porcentaje comparado sigue midiéndose sobre el directorio entero, que no lleva identidad.
+- **El aviso de logro se subía una cantidad fija sobre el consentimiento, y no siempre bastaba.** El carril de
+  abajo a la izquierda lo comparten los dos y el que se aparta es el aviso, pero lo hacía con `9.4rem` escritas a
+  mano: la altura del banner medida una vez en un escritorio. El banner mide lo que mide su texto, y a 412 px de
+  ancho ocupa 201 px —12,6 rem—, así que el aviso nacía cincuenta píxeles por debajo de donde debía y quedaba
+  tapado entero: ni se veía ni se podía pulsar. En escritorio sobraban 2,7 px, los justos para que el recorrido
+  pasara en local y fallara en el Linux de CI, donde una línea más de texto se los comía. Ahora `ConsentBanner`
+  publica su altura real en `--consent-h` con un `ResizeObserver` y el carril se aparta lo que hace falta, sin
+  que nadie duplique la medida del otro. El recorrido estrena el caso estrecho, que es el que lo delataba de
+  verdad, y las dos señales que el banner le da al carril tienen su test de componente.
 
 ## [1.2.0] - 2026-09-07
 
