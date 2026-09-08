@@ -120,7 +120,7 @@ function haystack(group: Group): string {
 /**
  * CATÁLOGO DE LOGROS · la pantalla de revisión del panel de administración.
  *
- * PARA QUÉ EXISTE. El catálogo son 50 escaleras y 261 escalones, y cada escalón lleva DOS textos —la meta en
+ * PARA QUÉ EXISTE. El catálogo son 64 escaleras y 400 escalones, y cada escalón lleva DOS textos —la meta en
  * imperativo y el hecho en pasado—. Repartidos por la app no se pueden comparar: el listado enseña uno o otro
  * según lo tengas, el aviso solo el del desbloqueo, y las condiciones de una misma escalera no salen juntas en
  * ninguna pantalla. Aquí salen las dos, una al lado de la otra y agrupadas por escalera, que es la única forma de

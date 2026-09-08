@@ -10,6 +10,7 @@ import { evaluateAchievements, nextPeak } from '../../src/core/achievements/eval
 import { levelFromPoints, summarize } from '../../src/core/achievements/summary';
 import { ACHIEVEMENTS_LIST_MAX, MIRROR_ORDER, buildMirror, measureRarity, packAchievements, parseMirror } from '../../src/core/achievements/pack';
 import type { AchievementState } from '../../src/core/achievements/types';
+import { medalThreshold } from '../../src/core/constants/achievementLabels';
 import type { GameItem, TabData } from '../../src/model/types/game';
 
 const NOW = Date.parse('2026-09-06T12:00:00.000Z');
@@ -111,7 +112,7 @@ describe('catálogo — reglas que no se pueden romper sin avisar', () => {
     // nivel y su amistad —que lo reconstruye desde el espejo— le vería otro.
     expect(SCORING_ACHIEVEMENTS.some((def) => def.family === 'onboarding')).toBe(false);
     expect(SCORING_ACHIEVEMENTS.some((def) => def.retired)).toBe(false);
-    expect(SCORING_ACHIEVEMENTS.length).toBe(304);
+    expect(SCORING_ACHIEVEMENTS.length).toBe(402);
   });
 
   it('un excepcional no tiene escalera larga… salvo los que cuenta el calendario', () => {
@@ -274,6 +275,191 @@ describe('métricas — donde la ausencia de dato se leería como dato', () => {
   });
 });
 
+describe('las escaleras nuevas — la forma, los agregados, las etiquetas y la distancia', () => {
+  it('el 3×3 no se cuela por un lado: hacen falta N juegos Y N vueltas', () => {
+    // Es lo que separa a «El día de la marmota» de «New Game +», que suma vueltas y no sabe cómo se reparten.
+    const unoMuyRejugado = library({ c: [game({ id: 1, years: [2018, 2019, 2020, 2021, 2022] })] });
+    expect(evaluate(unoMuyRejugado).get('marmota-2')?.value).toBe(1);
+    expect(evaluate(unoMuyRejugado).get('marmota-2')?.level).toBe(0);
+
+    const muchosDeUnaVuelta = library({ c: Array.from({ length: 10 }, (_u, i) => game({ id: i + 1, years: [2020] })) });
+    expect(evaluate(muchosDeUnaVuelta).get('marmota-2')?.level).toBe(0);
+
+    // Y el 3×3 de verdad: tres juegos con tres vueltas cada uno.
+    const tresPorTres = library({
+      c: [1, 2, 3].map((id) => game({ id, years: [2020, 2021, 2022] })),
+    });
+    const states = evaluate(tresPorTres);
+    expect(states.get('marmota-3')?.value).toBe(3);
+    expect(states.get('marmota-3')?.level).toBe(1);
+    expect(states.get('marmota-4')?.level).toBe(0);
+  });
+
+  it('el índice por etiqueta exige fondo Y amplitud, no una sola pila', () => {
+    const unSoloGenero = library({
+      c: Array.from({ length: 20 }, (_u, i) => game({ id: i + 1, genres: ['FPS'] })),
+      v: [game({ id: 90, genres: ['Puzles'] }), game({ id: 91, genres: ['Cartas'] })],
+    });
+    // Veinte de un género y uno de otros dos: el índice se queda en 1, aunque «Mundo abierto» diría 3.
+    expect(evaluate(unSoloGenero).get('todos-los-palos-3')?.value).toBe(1);
+
+    const repartido = library({
+      c: ['FPS', 'ARPG', 'Puzles'].flatMap((genre, g) => [1, 2, 3].map((n) => game({ id: g * 10 + n, genres: [genre] }))),
+    });
+    expect(evaluate(repartido).get('todos-los-palos-3')?.level).toBe(1);
+  });
+
+  /**
+   * LA FECHA DE UN LOGRO NO SE MUEVE. El índice por etiqueta fechaba con el sello MÁS TARDÍO de su grupo, así
+   * que cada juego nuevo de ese género empujaba la fecha hacia delante y «A todos los palos I» —conseguido hace
+   * meses— pasaba a decir que fue hoy. Se vio en la app, con la biblioteca real: aparecía fechado en el día en
+   * que se editó un juego cualquiera de un género que ya contaba.
+   *
+   * Ahora se consigue SIN fecha, que es un estado previsto (§5.3) y la única respuesta honesta: la fecha buena
+   * sería la del juego que completó el grupo, y cuál es eso depende del tamaño al que se mire, que lo decide el
+   * índice después.
+   */
+  it('el índice por etiqueta no cambia de fecha al crecer su grupo', () => {
+    const generos = ['FPS', 'FPS', 'FPS', 'RPG', 'RPG', 'RPG', 'Puzles', 'Puzles', 'Puzles'];
+    const enero = Date.parse('2026-01-10T10:00:00.000Z');
+    const base = generos.map((genre, index) => game({ id: index + 1, genres: [genre], enteredAt: { c: enero } }));
+
+    const antes = evaluate(library({ c: base })).get('todos-los-palos-3');
+    expect(antes?.level).toBe(1);
+    expect(antes?.unlockedAt).toBe(0);
+
+    // Un juego más del mismo género, sellado HOY: el logro sigue conseguido y sigue sin fecha propia.
+    const despues = evaluate(library({
+      c: [...base, game({ id: 99, genres: ['FPS'], enteredAt: { c: NOW } })],
+    })).get('todos-los-palos-3');
+    expect(despues?.level).toBe(1);
+    expect(despues?.unlockedAt).toBe(0);
+  });
+
+  it('«Libro de cosechas» cuenta años buenos, no el mejor año', () => {
+    const unAnoGrande = library({ c: Array.from({ length: 24 }, (_u, i) => game({ id: i + 1, years: [2025] })) });
+    expect(evaluate(unAnoGrande).get('buena-cosecha-20')?.level).toBe(1); // el mejor año sí lo premia otra
+    expect(evaluate(unAnoGrande).get('anadas-2')?.level).toBe(0);         // pero un solo año no es una cadena
+
+    const dosAnos = library({
+      c: [2024, 2025].flatMap((year, y) => [1, 2].map((n) => game({ id: y * 10 + n, years: [year] }))),
+    });
+    expect(evaluate(dosAnos).get('anadas-2')?.level).toBe(1);
+  });
+
+  it('«Otra oportunidad» mide UN juego, y fecha cada vuelta en su año', () => {
+    const dosJuegosDeUnaVuelta = library({ c: [game({ id: 1, years: [2020] }), game({ id: 2, years: [2021] })] });
+    expect(evaluate(dosJuegosDeUnaVuelta).get('otra-oportunidad-2')?.level).toBe(0);
+
+    const tresVueltas = library({ c: [game({ id: 1, years: [2018, 2019, 2020] })] });
+    const state = evaluate(tresVueltas).get('otra-oportunidad-3');
+    expect(state?.value).toBe(3);
+    expect(state?.level).toBe(1);
+    // La tercera vuelta se fecha en SU año y no en el último: un logro conseguido no cambia de fecha después.
+    expect(state?.unlockedAt).toBe(new Date(2020, 11, 31, 12).getTime());
+  });
+
+  it('«El peso de las horas» SUMA, y no cuenta juegos', () => {
+    const games = library({
+      c: [game({ id: 1, hours: 40 }), game({ id: 2, hours: 60 }), game({ id: 3, hours: null }), game({ id: 4 })],
+    });
+    const states = evaluate(games);
+    expect(states.get('horas-totales-100')?.value).toBe(100);
+    expect(states.get('horas-totales-100')?.level).toBe(1);
+    // Y las dos escaleras de horas no dicen lo mismo: «El contador de horas» cuenta fichas rellenas.
+    expect(states.get('horas-10')?.value).toBe(2);
+  });
+
+  it('«Obra completa» cuenta palabras, no reseñas ni caracteres', () => {
+    const games = library({
+      c: [game({ id: 1, review: 'Una reseña de cinco palabras' }), game({ id: 2, review: '   ' })],
+    });
+    expect(evaluate(games).get('obra-escrita-500')?.value).toBe(5);
+  });
+
+  it('«Ya sé cómo acaba esto» cuenta el motivo MÁS repetido, no todos los motivos', () => {
+    const games = library({
+      v: [
+        game({ id: 1, reasons: ['Frustración'] }),
+        game({ id: 2, reasons: ['Frustración'] }),
+        game({ id: 3, reasons: ['frustración'] }),   // la misma etiqueta con otra caja
+        game({ id: 4, reasons: ['Dificultad'] }),
+        game({ id: 5, reasons: ['Repetitividad'] }),
+      ],
+    });
+    // Cinco abandonos razonados, pero el motivo repetido son tres: la escalera no se llena con variedad.
+    expect(evaluate(games).get('mania-5')?.value).toBe(3);
+    expect(evaluate(games).get('abandonos-razonados-5')?.value).toBe(5);
+  });
+
+  it('«Diccionario de a bordo» junta virtudes y defectos y no cuenta dos veces la misma palabra', () => {
+    const games = library({
+      c: [
+        game({ id: 1, strengths: ['Jugabilidad', 'Historia'], weaknesses: ['jugabilidad'] }),
+        game({ id: 2, strengths: ['Historia'], weaknesses: ['Repetitividad'] }),
+      ],
+    });
+    expect(evaluate(games).get('vocabulario-5')?.value).toBe(3);
+  });
+
+  it('«Cuánto tiempo sin verte» pide el HUECO, no la rejugada', () => {
+    const seguido = library({ c: [game({ id: 1, years: [2020, 2021, 2022] })] });
+    expect(evaluate(seguido).get('reencuentro-1')?.value).toBe(0);
+
+    const conHueco = library({ c: [game({ id: 1, years: [2010, 2016] })] });
+    const state = evaluate(conHueco).get('reencuentro-1');
+    expect(state?.level).toBe(1);
+    // Fechado en el año de la VUELTA, que es toda la precisión que da `years`.
+    expect(state?.unlockedAt).toBe(new Date(2016, 11, 31, 12).getTime());
+  });
+
+  it('«Memoria de otro siglo» con un solo año da 0, que no es un «no sé»', () => {
+    const unAno = library({ c: [game({ id: 1, years: [2026] })] });
+    expect(evaluate(unAno).get('arqueologia-5')?.value).toBe(0);
+
+    const cuartoDeSiglo = library({ c: [game({ id: 1, years: [2000] }), game({ id: 2, years: [2026] })] });
+    const states = evaluate(cuartoDeSiglo);
+    expect(states.get('arqueologia-25')?.value).toBe(26);
+    expect(states.get('arqueologia-25')?.level).toBe(1);
+    expect(states.get('arqueologia-30')?.level).toBe(0);
+  });
+
+  it('«Ni con un palo» NO cuenta los juegos sin puntuar', () => {
+    // El mismo agujero que «Lo terminé por orgullo»: `resolveGrade` da 0 sin nota, y 0 es «menos de 30».
+    const sinNota = library({ c: Array.from({ length: 5 }, (_u, i) => game({ id: i + 1 })) });
+    expect(evaluate(sinNota).get('suspenso-1')?.value).toBe(0);
+
+    const conNotaBaja = library({ c: [game({ id: 1, grade: 20 }), game({ id: 2, grade: 30 })] });
+    // El 30 no entra: el listón es «menos de 30».
+    expect(evaluate(conNotaBaja).get('suspenso-1')?.value).toBe(1);
+  });
+
+  it('«Dicho y hecho» exige la casilla Y la vuelta', () => {
+    const games = library({
+      c: [
+        game({ id: 1, replayable: true, years: [2020, 2024] }),   // cumplido
+        game({ id: 2, replayable: true, years: [2020] }),         // prometido y sin cumplir
+        game({ id: 3, replayable: false, years: [2020, 2024] }),  // rejugado sin haberlo marcado
+      ],
+    });
+    const states = evaluate(games);
+    expect(states.get('palabra-1')?.value).toBe(1);
+    expect(states.get('volvere-3')?.value).toBe(2);  // la casilla, que es lo que cuenta «Aquí volveré»
+  });
+
+  it('«El bibliotecario» cuenta las cuatro listas', () => {
+    const games = library({ c: [game({ id: 1 })], v: [game({ id: 2 })], e: [game({ id: 3 })], p: [game({ id: 4 })] });
+    expect(evaluate(games).get('biblioteca-25')?.value).toBe(4);
+  });
+
+  it('la píldora de la medalla dice «3×3» donde el escalón pide tres de cada', () => {
+    expect(medalThreshold('marmota', 3, 5, false)).toBe('3×3');
+    expect(medalThreshold('horas-totales', 1000, 9, false)).toBe('1000');  // magnitud: sin aspa
+    expect(medalThreshold('biblioteca', 100, 8, false)).toBe('×100');      // contador: con aspa
+  });
+
+});
+
 describe('los logros que miden sobre otros logros', () => {
   it('«Tutorial superado» espera a los ocho primeros pasos', () => {
     const casi = evaluateAchievements(
@@ -406,8 +592,8 @@ describe('las dos cifras', () => {
     const todos = SCORING_ACHIEVEMENTS.map((def) => ({ id: def.id, level: 1, value: 0, next: null, unlockedAt: 0 }));
     const full = summarize(todos);
     expect(full.percent).toBe(100);
-    expect(full.points).toBe(6110);
-    expect(full.level).toBe(41);
+    expect(full.points).toBe(7410);
+    expect(full.level).toBe(46);
   });
 
   it('cada escalón suma una vez', () => {
@@ -497,11 +683,40 @@ describe('el espejo — mapa de bits y lectura defensiva', () => {
    * falla y no has añadido nada al final, lo que has hecho rompe los espejos de todo el mundo.
    */
   it('los primeros bits son los que eran, y la lista tiene la longitud que tenía', () => {
-    expect(MIRROR_ORDER.length).toBe(306);
+    expect(MIRROR_ORDER.length).toBe(404);
     expect(MIRROR_ORDER.slice(0, 4)).toEqual([
       'completados-10', 'completados-25', 'completados-50', 'completados-75',
     ]);
-    expect(MIRROR_ORDER[MIRROR_ORDER.length - 1]).toBe('buena-cosecha-30');
+    expect(MIRROR_ORDER[MIRROR_ORDER.length - 1]).toBe('vocabulario-75');
+  });
+
+  /**
+   * COMPATIBILIDAD HACIA ATRÁS DE LA AMPLIACIÓN. Las catorce escaleras nuevas se declaran a MITAD de `LADDERS`
+   * —al final de su familia, como manda la regla 2— y eso corre la posición de todo lo que va detrás en el
+   * catálogo. Que no pase nada depende de dos decisiones que hay que poder romper con un test delante:
+   *
+   *  - el ORDEN DE LOS BITS no sale de `LADDERS`, sale de `mirrorOrder.ts`, donde los nuevos van AL FINAL;
+   *  - la MARCA DE AGUA se guarda por `id` (`completados-10:1`) y no por índice.
+   *
+   * Sin la primera, cada espejo ya publicado pasaría a decir otra cosa. Sin la segunda, la marca de agua de todo
+   * el mundo se desalinearía y le retiraría —o le regalaría— logros en silencio.
+   */
+  it('los bits de antes de la ampliación siguen donde estaban', () => {
+    expect(MIRROR_ORDER.indexOf('completados-10')).toBe(0);
+    expect(MIRROR_ORDER.indexOf('buena-cosecha-30')).toBe(305);
+    expect(MIRROR_ORDER.indexOf('marmota-2')).toBe(306);
+  });
+
+  it('una marca de agua de antes de la ampliación no se desalinea', () => {
+    // Biblioteca VACÍA: lo único que puede sostener estos logros es la marca de agua.
+    const states = evaluate(library(), 'completados-10:1,buena-cosecha-5:1,tesis-1:1');
+    expect(states.get('completados-10')?.level).toBe(1);
+    expect(states.get('buena-cosecha-5')?.level).toBe(1);
+    expect(states.get('tesis-1')?.level).toBe(1);
+    // Y no ha regalado ni un escalón de los nuevos, que es la otra mitad del mismo riesgo.
+    expect(states.get('marmota-2')?.level).toBe(0);
+    expect(states.get('biblioteca-25')?.level).toBe(0);
+    expect(states.get('arqueologia-5')?.level).toBe(0);
   });
 
   it('lo que se empaqueta es lo que se lee', () => {

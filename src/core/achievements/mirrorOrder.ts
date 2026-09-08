@@ -94,4 +94,27 @@ export const MIRROR_IDS: readonly string[] = [
   'resenas-125', 'resenas-175', 'resenas-250', 'ficha-completa-75', 'ficha-completa-125', 'ficha-completa-200',
   'autopsia-5', 'autopsia-15', 'autopsia-40', 'autopsia-60', 'tesis-10', 'tesis-35', 'tesis-75', 'tesis-150',
   'conversador-130', 'conversador-150', 'buena-cosecha-30',
+
+  // ── SEGUNDA AMPLIACIÓN: 86 escalones nuevos en 14 escaleras (los índices cuadrados, los agregados, las
+  // etiquetas, la distancia y las dos parejas que faltaban). AL FINAL, como manda la cabecera: aquí no se
+  // ordena nada, se numeran bits, y meter uno a mitad de lista reescribe la vitrina de todo el mundo.
+  'marmota-2', 'marmota-3', 'marmota-4', 'marmota-5', 'marmota-6', 'todos-los-palos-3', 'todos-los-palos-4',
+  'todos-los-palos-5', 'todos-los-palos-6', 'todos-los-palos-8', 'todos-los-palos-10', 'todos-los-palos-12',
+  'anadas-2', 'anadas-3', 'anadas-5', 'anadas-7', 'anadas-9', 'anadas-12', 'otra-oportunidad-2', 'otra-oportunidad-3',
+  'otra-oportunidad-4', 'otra-oportunidad-5', 'otra-oportunidad-6', 'horas-totales-100', 'horas-totales-250', 'horas-totales-500',
+  'horas-totales-1000', 'horas-totales-2000', 'horas-totales-3000', 'horas-totales-5000', 'horas-totales-7500',
+  'horas-totales-10000', 'biblioteca-25', 'biblioteca-50', 'biblioteca-100', 'biblioteca-200', 'biblioteca-300',
+  'biblioteca-500', 'biblioteca-750', 'biblioteca-1000', 'mania-5', 'mania-10', 'mania-20', 'mania-35',
+  'mania-50', 'firma-10', 'firma-25', 'firma-50', 'firma-75', 'firma-100', 'firma-150', 'reencuentro-1',
+  'reencuentro-3', 'reencuentro-5', 'reencuentro-8', 'reencuentro-12', 'arqueologia-5', 'arqueologia-10',
+  'arqueologia-15', 'arqueologia-20', 'arqueologia-25', 'arqueologia-30', 'suspenso-1', 'suspenso-5',
+  'suspenso-10', 'suspenso-15', 'suspenso-25', 'palabra-1', 'palabra-3', 'palabra-5', 'palabra-10',
+  'palabra-15', 'palabra-25', 'obra-escrita-500', 'obra-escrita-2000', 'obra-escrita-5000', 'obra-escrita-10000',
+  'obra-escrita-25000', 'obra-escrita-50000', 'obra-escrita-100000', 'vocabulario-5', 'vocabulario-10',
+  'vocabulario-15', 'vocabulario-20', 'vocabulario-30', 'vocabulario-40', 'vocabulario-50',
+
+  // ── TERCERA AMPLIACIÓN: once escalones más en siete de las catorce escaleras nuevas. Todos son TECHO
+  // nuevo, ninguno intermedio, y aun así van AL FINAL: aquí no se ordena nada, se numeran bits.
+  'anadas-15', 'otra-oportunidad-7', 'otra-oportunidad-8', 'otra-oportunidad-10', 'mania-75', 'firma-200',
+  'reencuentro-15', 'palabra-30', 'palabra-40', 'vocabulario-60', 'vocabulario-75',
 ];

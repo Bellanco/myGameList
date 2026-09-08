@@ -8,8 +8,8 @@ import { MIRROR_ORDER, packAchievements } from '../../src/core/achievements/pack
 import type { AchievementState } from '../../src/core/achievements/types';
 
 /**
- * EL LÍMITE DE 5 s NO MIDE NADA EN ESTE FICHERO. La pantalla pinta las 50 escaleras con sus 314 escalones —4.239
- * nodos— en CADA test, así que un render cuesta cientos de milisegundos con la máquina desahogada y se acerca al
+ * EL LÍMITE DE 5 s NO MIDE NADA EN ESTE FICHERO. La pantalla pinta las 64 escaleras con sus 400 escalones —dos
+ * textos por escalón, miles de nodos— en CADA test, así que un render cuesta cientos de milisegundos con la máquina desahogada y se acerca al
  * límite en cuanto va cargada: en el CI, con los procesos compitiendo, es donde saltó. Aquí no hay nada asíncrono
  * de verdad que esperar, o sea que el temporizador solo está para cazar un cuelgue, y para eso 20 s sobran. Sin
  * esto, una máquina ocupada tumba media docena de tests sin que nada esté roto.
@@ -439,7 +439,7 @@ describe('catálogo de logros — la vista de revisión del panel de administrac
     await userEvent.type(screen.getByRole('searchbox'), 'plataformas');
     expect(screen.getByText('key: plataformas')).toBeInTheDocument();
     expect(screen.queryByText('key: completados')).not.toBeInTheDocument();
-    expect(screen.getByText(/de 50 escaleras$/)).toBeInTheDocument();
+    expect(screen.getByText(/de 64 escaleras$/)).toBeInTheDocument();
   });
 
   it('una búsqueda sin resultados lo dice, en vez de dejar la página en blanco', async () => {

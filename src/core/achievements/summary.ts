@@ -26,10 +26,12 @@ const SCORING_IDS: ReadonlySet<string> = new Set(SCORING_ACHIEVEMENTS.map((def) 
  * logros a 251, y con ellos el máximo teórico de 895 puntos a 5.135. Con la curva antigua, completarlo todo daba
  * el nivel 54 y los primeros escalones subían de tres en tres. Duplicada, quedó en el 37 y con sitio por encima.
  *
- * ⚑ Y VUELVE A MOVERSE CADA VEZ QUE EL CATÁLOGO CRECE. Con la ampliación a 304 escalones el techo son **6.110
- * puntos, nivel 41**. Las cifras van escritas aquí y probadas en `tests/unit/achievements.test.ts` justo para
- * esto: al añadir escalones hay que venir a mirar si la curva sigue teniendo sitio por encima, en vez de
- * enterarse cuando alguien llegue al final.
+ * ⚑ Y VUELVE A MOVERSE CADA VEZ QUE EL CATÁLOGO CRECE. Con la ampliación a 402 escalones que puntúan —las
+ * catorce escaleras de la forma, los agregados, las etiquetas y la distancia— el techo son **7.410 puntos, nivel
+ * 46**. Las cifras van escritas aquí y probadas en `tests/unit/achievements.test.ts` justo para esto: al añadir
+ * escalones hay que venir a mirar si la curva sigue teniendo sitio por encima, en vez de enterarse cuando
+ * alguien llegue al final. Con el 46 quedan cuatro niveles del tramo cerrado y el abierto entero por detrás, así
+ * que la curva aguanta la próxima ampliación sin retocarse.
  *
  * ⚑ Y EL NIVEL YA NO ES INFINITO. Antes lo era porque las metas abiertas no tenían techo; ahora cada escalón es
  * un logro y el catálogo es finito, así que los puntos también. Lo que sostenía «siempre hay un paso más» pasa a
