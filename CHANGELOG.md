@@ -5,6 +5,86 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
 
 ## [Unreleased]
 
+### Added
+- **Catorce escaleras de logro nuevas** (64 escaleras, 412 escalones). No cuentan más de lo mismo: tapan los seis
+  huecos que dejaban las cincuenta primeras, que medían volumen y racha y nada más. Los umbrales están medidos
+  sobre la misma biblioteca real de 302 juegos que el resto del catálogo.
+  - **La FORMA, no el volumen** — el índice cuadrado, que exige amplitud y fondo a la vez y no se puede farmear
+    por un lado: «El día de la marmota» (N juegos jugados en N años distintos, el 3×3), «A todos los palos»
+    (N géneros con N cierres) y «Libro de cosechas» (N años con N juegos terminados). La píldora de la medalla
+    dice `3×3`, que es el nombre que tiene la cosa.
+  - **SUMAR, no contar** — no había ni una escalera que sumara lo que las fichas dicen: «El peso de las horas»
+    (horas sumadas, con las diez mil de la maestría por techo), «Obra completa» (palabras escritas en reseñas) y
+    «El bibliotecario», que cuenta lo que hay en la biblioteca y no lo medía nadie.
+  - **Las etiquetas**, que solo se leían como «existe»: «Diccionario de a bordo» (etiquetas distintas de virtudes
+    y defectos), «Sé lo que me gusta» (la misma virtud en N juegos) y «Ya sé cómo acaba esto» (N abandonos por el
+    mismo motivo, oculto). Ninguna dice CUÁL es la etiqueta, ni al conseguirse ni en el espejo.
+  - **La distancia, no la racha** — «Cuánto tiempo sin verte» (volver a un juego cinco años después o más) y
+    «Memoria de otro siglo» (los años que abarca tu historial, huecos incluidos).
+  - **Volver al mismo juego** — «Otra oportunidad», que mide la profundidad en UN juego: la segunda vez, la
+    tercera, la cuarta.
+  - Y las dos parejas que faltaban: **«Dicho y hecho»** (rejugar lo que marcaste como rejugable — «Aquí volveré»
+    premiaba marcarlo y nada premiaba cumplirlo) y **«Ni con un palo»** (poner menos de 30, que cierra el trío de
+    «Por pura cabezonería» y «No eres tú, soy yo»).
+  - **Los techos, subidos en siete de ellas** después de verlas en pantalla: «Diccionario de a bordo» llega a 75
+    etiquetas, «Dicho y hecho» a 40 rejugables cumplidos, «Cuánto tiempo sin verte» a 15 reencuentros, «Sé lo que
+    me gusta» a 200, «Ya sé cómo acaba esto» a 75, «Otra oportunidad» a la décima vuelta y «Libro de cosechas» al
+    15×15. Once escalones más, todos por arriba: un umbral declarado no se toca nunca, se añade otro encima.
+  - El techo del catálogo pasa a **7.410 puntos y nivel 46**, con la curva de nivel sin retocar.
+
+- **El AVISO DE LOGRO es una tarjeta, no una línea del banner.** Al conseguir algo sale una cápsula abajo a la
+  izquierda con la medalla de verdad a 64 px, el rótulo «Has desbloqueado», el nombre con su grado y la
+  descripción en pasado del catálogo. La **sombra dice la rareza** —la escala de loot que ya usa el aura— y no se
+  escribe en ninguna parte. Se va sola a los cinco segundos, la cuenta se para mientras la lees, y varios logros
+  de una misma escritura se funden en UNA cápsula con hasta tres medallas solapadas. El texto sigue yendo al
+  `StatusBanner` porque su región viva es la que lo ANUNCIA a un lector de pantalla.
+  - Sale de la maqueta `docs/logros/demo-toast.html`, que se cerró con los tokens reales delante y hasta ahora no
+    se había implementado. Dos paletas le cambian la forma: el chaflán del HUD en Sin futuro y el canto recto en
+    Cámara de pruebas.
+  - **Y los HITOS**: al cruzar la mitad de una escalera —o su recta final— se dice con la misma cápsula, la barra
+    de progreso y la medalla en peltre. Se CRUZAN, no se «están»: hace falta que el porcentaje anterior estuviera
+    por debajo, y esa comparación sale de la foto que ya se guardaba. Manda el desbloqueo: si una escritura sube
+    un logro y cruza un hito, se cuenta el logro.
+  - **Y LO QUE YA TENÍAS SE CUENTA AL VOLVER.** La primera evaluación de una sesión no puede anunciar lo que ya
+    estaba —cada arranque sería una traca— pero eso metía en el mismo saco dos cosas distintas: la primera vez en
+    un aparato, donde no hay noticia, y volver a abrir con noventa y ocho escalones nuevos en el catálogo, donde
+    sí la hay. Lo distingue la MARCA DE AGUA, que ya se guardaba: si existe, este aparato había evaluado antes, y
+    lo conseguido que no figura en ella es exactamente lo que ha caído desde entonces. Sale una cápsula con otro
+    rótulo —«Te estaban esperando · 171 logros nuevos»—, se dice una vez y no se repite. Sirve igual para el otro
+    camino por el que aparecen logros sin haber hecho nada aquí: la sincronización con otro dispositivo.
+  - El chunk son 2,2 kB y llega la primera vez que alguien consigue algo: el arranque sigue en 196,5 kB de 215.
+- **Treinta y tres recorridos end-to-end para los logros** (`tests/e2e/achievements.test.ts`), sobre el build de
+  producción y con la app arrancando de cero. Cubren lo que ni los unitarios ni los de componente pueden ver: que
+  el sprite entra en su chunk perezoso —un `<use>` sin `symbol` deja 400 discos vacíos y no salta ningún error—,
+  que las cifras de la cabecera cuadran con lo pintado, y que el aviso sale **en todas las pantallas y en las doce
+  combinaciones de paleta y tema**, pasando axe en cada una.
+  - **Y las avalanchas, que son el caso normal y no el raro**: quien llega con doscientos juegos catalogados
+    recibe ciento y pico escalones de una vez. Se comprueba que llegar con la biblioteca hecha **no suelta ni un
+    aviso** —no hay noticia, no se ha hecho nada ahora—, que importar una biblioteca entera saca UNA cápsula que
+    los cuenta (148 logros, en una), que con esa cuenta sigue cabiendo en un móvil de 412 px sin añadir
+    desplazamiento horizontal, y que sale igual con `prefers-reduced-motion` y sin efectos.
+  - **Y el estreno del catálogo**: con marca de agua previa se cuenta lo nuevo al abrir, no se repite en el
+    siguiente arranque, y sin marca —la primera vez de verdad— sigue callando.
+
+### Fixed
+- **La fecha de un logro de índice por etiqueta se movía.** «A todos los palos» se fechaba con el sello más
+  tardío de su grupo, así que cada juego nuevo de ese género empujaba la fecha hacia delante y un logro
+  conseguido en marzo pasaba a decir que fue en agosto — lo que el §6.4 prohíbe. Se consigue sin fecha, que es un
+  estado previsto (§5.3): la fecha buena sería la del juego que completó el grupo, y cuál es eso depende del
+  tamaño al que se mire, que lo decide el índice después.
+- **El aviso nacía debajo del banner de consentimiento.** La regla que sube su carril cuando el consentimiento
+  está en pantalla venía de la maqueta y **no se activaba nunca**: esperaba un `data-consent="pending"` en la raíz
+  que la app no ponía. Lo pone y lo quita `ConsentBanner`, que es el único que sabe si está pendiente.
+- **Con una avalancha, las tres medallas del aviso eran la misma.** Los tres logros más raros de una importación
+  entera son casi siempre tres escalones de la misma escalera, así que la cápsula enseñaba tres discos idénticos
+  con distinta cifra y parecía un fallo de pintado. Ahora es una por escalera, la más alta.
+- **Un solo sprite de medallas en el documento.** Lo montaban cinco pantallas que no coinciden nunca, así que la
+  duplicación era imposible; con el aviso —que puede salir encima de cualquiera de ellas— pasó a ser lo normal, y
+  dos `<symbol>` con el mismo `id` son HTML inválido. `AchievementSprite` reparte ahora un dueño único que se
+  devuelve al desmontar.
+- **El sprite de las medallas ya está comprobado.** Un `icon` sin su `symbol` dejaba la medalla vacía sin error y
+  sin que ningún test se enterase — lo avisaba la receta y no lo cazaba nadie. Ahora hay un test por escalera.
+
 ## [1.2.0] - 2026-09-07
 
 ### Added
