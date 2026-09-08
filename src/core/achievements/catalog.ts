@@ -38,12 +38,20 @@ import {
   enteredAt,
   firstEnteredAt,
   gradeIfScored,
+  groupSizes,
   hasReason,
   hasReview,
   hoursOf,
+  labelKey,
+  lastPlayedYearEnd,
   playedYears,
+  reviewWords,
   sameLocalDay,
   stdDev,
+  topLabel,
+  totalHours,
+  yearSizes,
+  yearSpan,
 } from './metrics';
 import { localMonthKey } from '../utils/dateTime';
 import { romanLevel } from '../constants/achievementLabels';
@@ -62,6 +70,47 @@ function count(items: Array<{ ok: boolean; at: number }>): AchievementMeasure {
 /** Métrica de SÍ/NO, sin fecha: los «primeros pasos», que no se publican y no necesitan sello. */
 function flag(value: boolean): AchievementMeasure {
   return { value: value ? 1 : 0 };
+}
+
+/**
+ * Métrica de ÍNDICE CUADRADO: el mayor N con al menos N elementos de tamaño N o más (el índice h de las citas).
+ *
+ * Es la única forma del catálogo que mide FORMA en vez de volumen, y por eso no se puede farmear por un lado: ni
+ * un juego rejugado diez veces ni cincuenta juegos de una vuelta mueven el número. Hacen falta las dos cosas.
+ *
+ * `at[n-1]` es el sello MÁS TARDÍO de los N que sostienen el cuadrado, que es el que lo completó. Es una
+ * aproximación DECLARADA: un elemento pudo alcanzar su tamaño después de su propio sello, y de `years` no sale
+ * más precisión que el año. Monótona por construcción —el máximo de un conjunto mayor no baja—, que es lo que el
+ * evaluador necesita para no fechar un escalón alto antes que el de debajo.
+ */
+function squareIndex(items: Array<{ size: number; at: number }>): AchievementMeasure {
+  const sorted = items.filter((item) => item.size > 0).sort((a, b) => b.size - a.size);
+  const at: number[] = [];
+  for (let n = 1; n <= sorted.length; n += 1) {
+    if ((sorted[n - 1]?.size ?? 0) < n) break;
+    at.push(Math.max(...sorted.slice(0, n).map((item) => item.at)));
+  }
+  return { value: at.length, at };
+}
+
+/**
+ * El ordinal de una vuelta, en femenino («por tercera vez»).
+ *
+ * Con respaldo numérico y no con un `throw`: un umbral nuevo en «Otra oportunidad» tiene que poder añadirse sin
+ * que la pantalla se caiga por un rótulo que falta.
+ */
+const ORDINAL_TIMES: Readonly<Record<number, string>> = {
+  2: 'segunda', 3: 'tercera', 4: 'cuarta', 5: 'quinta', 6: 'sexta', 7: 'séptima', 8: 'octava',
+  9: 'novena', 10: 'décima',
+};
+
+function ordinalTime(step: number): string {
+  return ORDINAL_TIMES[step] || `${step}.ª`;
+}
+
+/** Miles con separador, para que «10000 horas» no se lea de un tirón. Locale fijo: la app habla en español. */
+function thousands(value: number): string {
+  return value.toLocaleString('es-ES');
 }
 
 /** Nota mínima de dispersión para que «Nota del crítico» cuente: por debajo, no hay criterio, hay una sola nota. */
@@ -83,6 +132,12 @@ const VARIETY_GENRES = 3;
  * sobre ocho juegos es una pila; cinco sobre trescientos, no es nada.
  */
 const BACKLOG_MIN_SHARE = 0.15;
+
+/** Años que hacen de una rejugada un REENCUENTRO. Medido: 10 juegos de 302 pasan el listón (§6.9bis). */
+const REUNION_YEARS = 5;
+
+/** Nota por debajo de la cual un juego es un suspenso de verdad, y no un «no me acabó de convencer». */
+const LOW_GRADE = 30;
 
 export const LADDERS: readonly AchievementLadder[] = [
   // ─────────────────────────────────────────────────────────────────────────────────────────────────────────
@@ -662,6 +717,227 @@ export const LADDERS: readonly AchievementLadder[] = [
     },
   },
 
+  // ── AMPLIACIÓN: la FORMA de la biblioteca, no su volumen. Van al final de la familia porque el orden de
+  // `LADDERS` es contrato; el significado de cada bit lo fija `mirrorOrder.ts` y allí también van al final.
+  {
+    key: 'marmota',
+    family: 'mirror',
+    steps: [2, 3, 4, 5, 6],
+    rarity: 'raro',
+    icon: 'marmota',
+    labels: { name: 'El día de la marmota', condition: 'Juegos rejugados tantas veces como juegos' },
+    goal: (step) => `Ten ${step} juegos jugados en ${step} años distintos`,
+    done: (step) => `Tienes ${step} juegos jugados en ${step} años distintos`,
+    // El 3×3 que da nombre a la idea. NO lo dice «New Game +», que suma vueltas y no sabe cómo están repartidas:
+    // diez vueltas de un mismo juego y diez juegos de una vuelta le dan el mismo número.
+    metric: ({ games }) => squareIndex(
+      allGames(games).map(({ game }) => ({ size: playedYears(game).length, at: lastPlayedYearEnd(game) })),
+    ),
+  },
+  {
+    key: 'todos-los-palos',
+    family: 'mirror',
+    steps: [3, 4, 5, 6, 8, 10, 12],
+    rarity: 'raro',
+    icon: 'todos-los-palos',
+    labels: { name: 'A todos los palos', condition: 'Géneros de los que has cerrado tantos juegos como géneros' },
+    goal: (step) => `Cierra ${step} juegos en cada uno de ${step} géneros distintos`,
+    done: (step) => `Has cerrado ${step} juegos en cada uno de ${step} géneros distintos`,
+    // El complemento de «Mundo abierto», que cuenta géneros distintos y no sabe si de cada uno cerraste uno o
+    // veintiséis. Aquí un género con un solo juego no suma: el índice exige fondo Y amplitud a la vez.
+    metric: ({ games }) => squareIndex(groupSizes(closedGames(games), (game) => game.genres)),
+  },
+  {
+    key: 'anadas',
+    family: 'mirror',
+    steps: [2, 3, 5, 7, 9, 12, 15],
+    rarity: 'raro',
+    icon: 'anadas',
+    labels: { name: 'Libro de cosechas', condition: 'Años en los que terminaste tantos juegos como años' },
+    goal: (step) => `Termina ${step} juegos en cada uno de ${step} años distintos`,
+    done: (step) => `Has terminado ${step} juegos en cada uno de ${step} años distintos`,
+    // Lo que «Cosecha del año» (el mejor año) y «Partida guardada» (años distintos) no pueden decir ni juntas:
+    // CUÁNTOS años buenos llevas. Un año de veinticuatro y veinte años de uno dan aquí el mismo 1.
+    metric: ({ games }) => squareIndex(yearSizes(games.c || [])),
+  },
+  {
+    key: 'otra-oportunidad',
+    family: 'mirror',
+    // DEL 7 AL 10 NO LOS ALCANZA NADIE en la biblioteca medida (el máximo es Portal, con 5), y van igual: sin
+    // techo por delante la escalera se completa de estreno para quien ya tiene un juego muy rejugado, y una
+    // escalera terminada el primer día no es un reconocimiento, es un regalo. El suelo está medido; el techo
+    // deja sitio. Volver a un mismo juego diez años distintos es la meta más lejana del catálogo, y eso es justo
+    // lo que tiene que ser: la que nadie tacha en una tarde.
+    steps: [2, 3, 4, 5, 6, 7, 8, 10],
+    rarity: 'infrecuente',
+    icon: 'otra-oportunidad',
+    labels: { name: 'Otra oportunidad', condition: 'Veces que has vuelto a un mismo juego' },
+    goal: (step) => `Vuelve a un mismo juego por ${ordinalTime(step)} vez`,
+    done: (step) => `Has vuelto a un mismo juego por ${ordinalTime(step)} vez`,
+    // La PROFUNDIDAD en un solo juego, que es la otra mitad de lo que mide «El día de la marmota»: allí hacen
+    // falta N juegos, aquí basta el que más veces hayas vuelto a jugar.
+    metric: ({ games }) => {
+      const at: number[] = [];
+      for (const { game } of allGames(games)) {
+        const years = playedYears(game).sort((a, b) => a - b);
+        // Cada vuelta se fecha con el fin de SU año, y se queda la más temprana: el logro de la tercera vuelta no
+        // puede cambiar de fecha porque después haya una cuarta.
+        for (let index = 0; index < years.length; index += 1) {
+          const stamp = endOfYear(years[index]);
+          if (at.length <= index || stamp < at[index]) at[index] = stamp;
+        }
+      }
+      return { value: at.length, at };
+    },
+  },
+  {
+    key: 'horas-totales',
+    family: 'mirror',
+    steps: [100, 250, 500, 1000, 2000, 3000, 5000, 7500, 10000],
+    rarity: 'infrecuente',
+    icon: 'horas-totales',
+    labels: { name: 'El peso de las horas', condition: 'Horas sumadas de toda la biblioteca' },
+    goal: (step) => `Suma ${thousands(step)} horas entre todos tus juegos`,
+    done: (step) => `Llevas ${thousands(step)} horas sumadas entre todos tus juegos`,
+    // SUMA, y en el catálogo no había ni una: «El contador de horas» premia APUNTAR horas y nadie premiaba lo
+    // que dicen. Va SIN FECHA a propósito (§5.3): no hay un sello «por hora» que sembrar, y fabricar un array de
+    // miles de sellos para fechar nueve escalones sería inventarse una precisión que el dato no tiene.
+    metric: ({ games }) => ({ value: Math.round(totalHours(games)) }),
+  },
+  {
+    key: 'biblioteca',
+    family: 'mirror',
+    steps: [25, 50, 100, 200, 300, 500, 750, 1000],
+    rarity: 'comun',
+    icon: 'biblioteca',
+    labels: { name: 'El bibliotecario', condition: 'Juegos que tienes catalogados' },
+    goal: (step) => `Cataloga ${step} juegos`,
+    done: (step) => `Tienes ${step} juegos catalogados`,
+    // El agujero más llamativo del catálogo: cincuenta escaleras y ninguna contaba lo que hay. Roza «Guerra de
+    // consolas» y «Nota del crítico», pero esas cuentan plataformas y notas, no juegos.
+    metric: ({ games }) => count(allGames(games).map(({ game }) => ({ ok: true, at: firstEnteredAt(game) }))),
+  },
+  {
+    key: 'mania',
+    family: 'mirror',
+    hidden: true,
+    steps: [5, 10, 20, 35, 50, 75],
+    rarity: 'infrecuente',
+    icon: 'mania',
+    labels: { name: 'Ya sé cómo acaba esto', condition: 'Abandonos que achacas al mismo motivo' },
+    goal: (step) => `Deja ${step} juegos por el mismo motivo`,
+    done: (step) => `Has dejado ${step} juegos por el mismo motivo`,
+    // OCULTO por el motivo bueno (§6.7): es un hecho que se reconoce cuando aparece, no una campaña que se
+    // persigue. Y la métrica no dice CUÁL es el motivo, ni al conseguirlo ni en el espejo.
+    metric: ({ games }) => {
+      const { value, stamps } = topLabel(
+        (games.v || []).map((game) => ({ labels: game.reasons, at: enteredAt(game, 'v') })),
+      );
+      return { value, stamps };
+    },
+  },
+  {
+    key: 'firma',
+    family: 'mirror',
+    steps: [10, 25, 50, 75, 100, 150, 200],
+    rarity: 'comun',
+    icon: 'firma',
+    labels: { name: 'Sé lo que me gusta', condition: 'Juegos en los que aplaudes lo mismo' },
+    goal: (step) => `Señala la misma virtud en ${step} juegos`,
+    done: (step) => `Has señalado la misma virtud en ${step} juegos`,
+    // Gemelo del anterior por el lado bueno. Los dos juntos dicen, sin una palabra de más, qué buscas y qué no
+    // aguantas. `strengths` y `weaknesses` llevaban aquí desde el principio y sólo se leían como «existe».
+    metric: ({ games }) => {
+      const { value, stamps } = topLabel(
+        allGames(games).map(({ game }) => ({ labels: game.strengths, at: firstEnteredAt(game) })),
+      );
+      return { value, stamps };
+    },
+  },
+  {
+    key: 'reencuentro',
+    family: 'mirror',
+    steps: [1, 3, 5, 8, 12, 15],
+    rarity: 'raro',
+    icon: 'reencuentro',
+    labels: { name: 'Cuánto tiempo sin verte', condition: `Juegos que retomaste ${REUNION_YEARS} años después o más` },
+    goal: (step) => (step === 1
+      ? `Vuelve a un juego más de ${REUNION_YEARS} años después`
+      : `Vuelve a ${step} juegos más de ${REUNION_YEARS} años después`),
+    done: (step) => (step === 1
+      ? `Has vuelto a un juego más de ${REUNION_YEARS} años después`
+      : `Has vuelto a ${step} juegos más de ${REUNION_YEARS} años después`),
+    // LA DISTANCIA, que no la medía nadie: «Toda una vida» cuenta años SEGUIDOS y aquí lo que cuenta es el
+    // hueco. Sale de `years`, así que funciona en una biblioteca catalogada hacia atrás.
+    metric: ({ games }) => count(allGames(games).map(({ game }) => {
+      const years = playedYears(game).sort((a, b) => a - b);
+      let reunion = 0;
+      for (let index = 1; index < years.length; index += 1) {
+        if (years[index] - years[index - 1] >= REUNION_YEARS) reunion = years[index];
+      }
+      return { ok: reunion > 0, at: reunion > 0 ? endOfYear(reunion) : 0 };
+    })),
+  },
+  {
+    key: 'arqueologia',
+    family: 'mirror',
+    steps: [5, 10, 15, 20, 25, 30],
+    rarity: 'raro',
+    icon: 'arqueologia',
+    labels: { name: 'Memoria de otro siglo', condition: 'Años entre tu primera vuelta anotada y la última' },
+    goal: (step) => `Anota partidas repartidas en ${step} años de historia`,
+    done: (step) => `Tus partidas anotadas abarcan ${step} años`,
+    // Se roza con «Partida guardada» (años distintos) y «Toda una vida» (años seguidos) y dice otra cosa: aquí
+    // los huecos no rompen nada. Es el logro de quien lleva un cuarto de siglo jugando y lo tiene apuntado.
+    metric: ({ games }) => {
+      const { value, first } = yearSpan(games);
+      if (value <= 0) return { value: 0 };
+      // at[n-1] = fin del año en que la anchura llegó a n. Monótono, y sin inventar ni día ni hora.
+      return { value, at: Array.from({ length: value }, (_, index) => endOfYear(first + index + 1)) };
+    },
+  },
+  {
+    key: 'suspenso',
+    family: 'mirror',
+    hidden: true,
+    steps: [1, 5, 10, 15, 25],
+    rarity: 'comun',
+    icon: 'suspenso',
+    labels: { name: 'Ni con un palo', condition: `Juegos a los que has puesto menos de ${LOW_GRADE}` },
+    goal: (step) => (step === 1
+      ? `Pon menos de ${LOW_GRADE} a un juego`
+      : `Pon menos de ${LOW_GRADE} a ${step} juegos`),
+    done: (step) => (step === 1
+      ? `Has puesto menos de ${LOW_GRADE} a un juego`
+      : `Has puesto menos de ${LOW_GRADE} a ${step} juegos`),
+    // Cierra el trío que estaba a medias: «Por pura cabezonería» (terminar con menos de 50) y «No eres tú, soy
+    // yo» (dejar con 70 o más). GUARDA (§7.5): sin nota no es un cero, es un juego sin puntuar.
+    metric: ({ games }) => count(allGames(games).map(({ game }) => {
+      const grade = gradeIfScored(game);
+      return { ok: grade !== null && grade < LOW_GRADE, at: game.gradedAt || 0 };
+    })),
+  },
+  {
+    key: 'palabra',
+    family: 'mirror',
+    steps: [1, 3, 5, 10, 15, 25, 30, 40],
+    rarity: 'infrecuente',
+    icon: 'palabra',
+    labels: { name: 'Dicho y hecho', condition: 'Juegos marcados como rejugables que has rejugado' },
+    goal: (step) => (step === 1
+      ? 'Rejuega un juego que marcaste como rejugable'
+      : `Rejuega ${step} juegos que marcaste como rejugables`),
+    done: (step) => (step === 1
+      ? 'Has rejugado un juego que marcaste como rejugable'
+      : `Has rejugado ${step} juegos que marcaste como rejugables`),
+    // La gemela que le faltaba a una pareja que ya funciona: «Cuenta pendiente» marca la revancha y «Volver a la
+    // hoguera» la cumple. «Aquí volveré» marcaba el rejugable y no había nada que premiara cumplirlo.
+    metric: ({ games }) => count(allGames(games).map(({ game }) => ({
+      ok: Boolean(game.replayable) && playedYears(game).length >= 2,
+      at: lastPlayedYearEnd(game),
+    }))),
+  },
+
   // ─────────────────────────────────────────────────────────────────────────────────────────────────────────
   // DATOS — rellenar la ficha. El único empuje con contraprestación: cada campo mejora TUS estadísticas.
   // ─────────────────────────────────────────────────────────────────────────────────────────────────────────
@@ -793,6 +1069,40 @@ export const LADDERS: readonly AchievementLadder[] = [
           at: game.reviewedAt || 0,
         })),
       ),
+  },
+
+
+  // ── AMPLIACIÓN: lo que SUMA la ficha, no cuántas fichas hay.
+  {
+    key: 'obra-escrita',
+    family: 'data',
+    steps: [500, 2000, 5000, 10000, 25000, 50000, 100000],
+    rarity: 'infrecuente',
+    icon: 'obra-escrita',
+    labels: { name: 'Obra completa', condition: 'Palabras escritas en tus reseñas' },
+    goal: (step) => `Escribe ${thousands(step)} palabras entre todas tus reseñas`,
+    done: (step) => `Llevas ${thousands(step)} palabras escritas en tus reseñas`,
+    // EN PALABRAS Y NO EN CARACTERES, a propósito: veinticinco mil palabras se entienden —es un trabajo de fin de
+    // carrera— y cien mil caracteres no se entienden de nada. No pisa a «Tesis doctoral», que mide UNA reseña
+    // larga: esto mide la obra entera. Sin fecha, por lo mismo que «El peso de las horas».
+    metric: ({ games }) => ({ value: reviewWords(games) }),
+  },
+  {
+    key: 'vocabulario',
+    family: 'data',
+    steps: [5, 10, 15, 20, 30, 40, 50, 60, 75],
+    rarity: 'comun',
+    icon: 'vocabulario',
+    labels: { name: 'Diccionario de a bordo', condition: 'Etiquetas distintas de virtudes y defectos que usas' },
+    goal: (step) => `Usa ${step} etiquetas distintas entre virtudes y defectos`,
+    done: (step) => `Usas ${step} etiquetas distintas entre virtudes y defectos`,
+    // `firstOfEach` es la misma máquina que cuenta géneros y plataformas, sellos incluidos. Es TEXTO LIBRE y por
+    // tanto se puede inflar escribiendo etiquetas inventadas: por eso es `comun` y de familia `datos` — lo que
+    // premia es rellenar la ficha, igual que las casillas de «Aquí volveré» o «Jugado en el sofá».
+    metric: ({ games }) => firstOfEach(
+      allGames(games).map((entry) => entry.game),
+      (game) => [...(game.strengths || []), ...(game.weaknesses || [])],
+    ),
   },
 
   // ─────────────────────────────────────────────────────────────────────────────────────────────────────────
@@ -1051,7 +1361,7 @@ function firstOfEach(games: GameItem[], pick: (game: GameItem) => string[] | und
   const ordered = [...games].sort((a, b) => firstEnteredAt(a) - firstEnteredAt(b));
   for (const game of ordered) {
     for (const raw of pick(game) || []) {
-      const label = String(raw || '').trim().toLowerCase();
+      const label = labelKey(raw);
       if (!label || firstSeen.has(label)) continue;
       firstSeen.set(label, firstEnteredAt(game));
     }

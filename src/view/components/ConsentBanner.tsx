@@ -39,6 +39,20 @@ export const ConsentBanner = memo(function ConsentBanner() {
     }
   }, []);
 
+  /**
+   * MARCA LA RAÍZ MIENTRAS ESTÁ PENDIENTE, porque el carril de abajo a la izquierda no es solo suyo: lo comparte
+   * con el aviso de logro, que se sube por encima cuando este banner está en pantalla
+   * (`:root[data-consent='pending'] .ach-toast-stack` en `achievements.scss`).
+   *
+   * Sin este atributo esa regla no se activaba nunca y el aviso nacía DEBAJO del consentimiento, tapado por él.
+   * Se pone aquí y no en la hoja porque quién está pendiente solo lo sabe este componente.
+   */
+  useEffect(() => {
+    if (decided) return;
+    document.documentElement.setAttribute('data-consent', 'pending');
+    return () => document.documentElement.removeAttribute('data-consent');
+  }, [decided]);
+
   if (decided) {
     return null;
   }

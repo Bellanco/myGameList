@@ -9,7 +9,8 @@ import {
 } from '../../src/view/components/socialhub/ProfileAchievements';
 import { AchievementsScreen } from '../../src/view/components/stats/AchievementsScreen';
 import { AchievementsCard } from '../../src/view/components/stats/AchievementsCard';
-import { ACHIEVEMENTS, SCORING_ACHIEVEMENTS } from '../../src/core/achievements/catalog';
+import { ACHIEVEMENTS, LADDERS, SCORING_ACHIEVEMENTS } from '../../src/core/achievements/catalog';
+import { AchievementSprite } from '../../src/view/components/AchievementSprite';
 import { ACHIEVEMENTS_BY_ID } from '../../src/core/achievements/catalog';
 import { summarize, summarizeMirror } from '../../src/core/achievements/summary';
 import { packAchievements } from '../../src/core/achievements/pack';
@@ -757,5 +758,50 @@ describe('el paso a los globales, y la vuelta', () => {
       />,
     );
     expect(screen.getByRole('button', { name: /Volver al perfil/ })).toBeInTheDocument();
+  });
+});
+
+/**
+ * EL AGUJERO QUE LA RECETA AVISABA Y NO CAZABA NADIE (§2 de `docs/logros/receta-medalla.md`): un `icon` sin su
+ * `symbol` en el sprite deja la medalla VACÍA, sin error, sin aviso y sin que ningún test se enterase. Con
+ * catorce escaleras nuevas de golpe deja de ser una posibilidad remota, así que aquí queda comprobado — y contra
+ * el DOM montado, que es donde de verdad se resuelve el `<use href="#ach-…">`.
+ */
+describe('el sprite de las medallas', () => {
+  /** Los `<symbol>` del sprite de logros que hay ahora mismo en el documento. */
+  const simbolos = () => [...document.querySelectorAll('symbol')].map((s) => s.id).filter((id) => id.startsWith('ach-'));
+
+  /**
+   * UNO SOLO, Y CON RELEVO. Desde que el aviso de logro puede salir encima de cualquier pantalla, el sprite lo
+   * piden dos sitios a la vez —la cápsula y la pantalla que haya debajo— y dos `<symbol>` con el mismo `id` son
+   * HTML inválido. Lo que este test fija es la parte que se rompe callada: que al DESMONTARSE el que lo estaba
+   * pintando, el relevo lo coge el otro en vez de quedarse todo sin dibujos… o de pintar los dos.
+   */
+  it('dos a la vez pintan uno, y al irse el primero el segundo coge el relevo', () => {
+    const primero = render(<svg><AchievementSprite /></svg>);
+    const cuantos = simbolos().length;
+    expect(cuantos).toBeGreaterThan(0);
+
+    const segundo = render(<svg><AchievementSprite /></svg>);
+    expect(simbolos().length, 'con dos montados debería haber UN juego de símbolos').toBe(cuantos);
+    expect(new Set(simbolos()).size).toBe(cuantos);
+
+    primero.unmount();
+    expect(simbolos().length, 'al irse el primero, el segundo tiene que pintar').toBe(cuantos);
+
+    segundo.unmount();
+    expect(simbolos()).toEqual([]);
+  });
+
+  it('cada escalera del catálogo tiene su dibujo', () => {
+    const { container } = render(
+      <svg>
+        <AchievementSprite />
+      </svg>,
+    );
+    const sinDibujo = LADDERS
+      .filter((ladder) => !container.querySelector(`#ach-${ladder.icon}`))
+      .map((ladder) => ladder.key);
+    expect(sinDibujo, `falta el symbol de: ${sinDibujo.join(', ')}`).toEqual([]);
   });
 });
