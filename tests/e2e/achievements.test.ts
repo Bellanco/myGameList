@@ -623,15 +623,14 @@ test.describe('logros · las esquinas del aviso', () => {
     await expect(capsula.locator('.ach-medal')).toHaveClass(/is-locked/);
   });
 
-  test('con el consentimiento en pantalla, el aviso se sube en vez de taparlo', async ({ page }) => {
-    /* El carril de abajo a la izquierda lo comparten los dos, y el consentimiento es el único aviso que tiene
-       que ganar: bloquea una decisión legal. Se siembra sin decidirlo para que el banner salga.
+  /* El carril de abajo a la izquierda lo comparten los dos, y el consentimiento es el único aviso que tiene que
+     ganar: bloquea una decisión legal. Se siembra sin decidirlo para que el banner salga.
 
-       ⚑ Y AQUÍ EL CLIC VA POR EVENTO, no por coordenadas: el banner de consentimiento ocupa el pie de la
-       ventana y tapa los botones de la fila, así que un clic normal se queda esperando a que se aparte y uno
-       forzado se lo lleva el banner —pulsando «Aceptar» o «Rechazar», que es justo lo que no queremos—.
-       `dispatchEvent` va al nodo y se salta el hit-testing. No es un fallo del aviso: el consentimiento gana a
-       todo a propósito. */
+     ⚑ Y AQUÍ EL CLIC VA POR EVENTO, no por coordenadas: el banner de consentimiento ocupa el pie de la ventana y
+     tapa los botones de la fila, así que un clic normal se queda esperando a que se aparte y uno forzado se lo
+     lleva el banner —pulsando «Aceptar» o «Rechazar», que es justo lo que no queremos—. `dispatchEvent` va al
+     nodo y se salta el hit-testing. No es un fallo del aviso: el consentimiento gana a todo a propósito. */
+  async function avisoConConsentimientoPendiente(page: Page) {
     await sembrarBiblioteca(page, { alBorde: 'uno' });
     await page.addInitScript(() => localStorage.removeItem('mis-listas-analytics-consent'));
     await page.goto('/en-curso');
@@ -652,6 +651,24 @@ test.describe('logros · las esquinas del aviso', () => {
     expect(abajo, 'el consentimiento debería tener caja').not.toBeNull();
     // La cápsula queda ENCIMA del consentimiento y sin solaparse con él.
     expect(arriba!.y + arriba!.height, 'el aviso pisa el consentimiento').toBeLessThanOrEqual(abajo!.y + 1);
+  }
+
+  test('con el consentimiento en pantalla, el aviso se sube en vez de taparlo', async ({ page }) => {
+    await avisoConConsentimientoPendiente(page);
+  });
+
+  /**
+   * Y SE SUBE LO QUE HAGA FALTA, que es la otra mitad y la que de verdad se rompía.
+   *
+   * El carril subía una cantidad FIJA (`9.4rem`) calcada de la altura del banner medida una vez en un escritorio,
+   * y el banner mide lo que mide su texto: aquí, a 412px, ocupa 201px —12,6rem— porque el párrafo y los botones
+   * envuelven. Sin la medida real, el aviso nacía cincuenta píxeles por debajo de donde debía y el banner lo
+   * tapaba entero: ni se veía ni se podía pulsar. Se le pasaba a este mismo recorrido por probar solo el ancho de
+   * escritorio, donde sobraban 2,7px, y por eso el fallo salía en CI —otra fuente, una línea más— y no en local.
+   */
+  test('con el consentimiento en pantalla y poco ancho, el aviso se sube lo que mide el banner', async ({ page }) => {
+    await page.setViewportSize({ width: 412, height: 720 });
+    await avisoConConsentimientoPendiente(page);
   });
 
   test('al pulsar la cápsula se va a los logros y el aviso se cierra', async ({ page }) => {

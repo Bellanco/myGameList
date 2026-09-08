@@ -82,14 +82,17 @@ type FeedSource = {
   moves?: SocialMoveFeedItem[];
   /** Identidad y espejo de logros, para deducir sus desbloqueos sin publicar ni un byte (§8.4). */
   id?: string;
+  /** uid de Firebase, que es por quien va el grafo de amistad (el `id` puede ser un profileId ajeno al uid). */
+  uid?: string;
   displayName?: string;
   photoURL?: string;
-  achievements?: { list?: string };
+  achievementsMirror?: string;
 };
 
 const FEED_PAGE_SIZE = 25;
 
-/** Referencia estable para el valor por defecto: un `new Map()` en la firma rompería el memo en cada render. */
+/** Referencia estable para el valor por defecto: un `new Set()` en la firma rompería el memo en cada render. */
+const NO_FRIENDS: ReadonlySet<string> = new Set();
 
 /**
  * Cupo de mensajes de lista por AUTOR y DÍA. Las reseñas y las publicaciones no cuentan para él y no tienen tope:
@@ -180,6 +183,19 @@ export function useSocialFeed(
    * fuente fresca —sabe lo de hace un minuto— y el espejo va siempre un paso por detrás.
    */
   ownAchievements?: { profileId: string; displayName: string; photoURL: string; mirror: string },
+  /**
+   * uid de tus AMISTADES. Solo se anuncian los logros de quien está aquí dentro, y es la misma política que ya
+   * aplicaba la ficha (`canSeeFullProfile`): allí la vitrina de un desconocido no se enseña.
+   *
+   * Hace falta explícitamente porque el espejo NO viaja por el gist social —viene del directorio de Firestore,
+   * legible para cualquier autenticado— así que, al contrario que la actividad, no se filtra solo por el hecho de
+   * que solo se lean los gists de los amigos. Sin este filtro, arreglar la lectura del espejo habría metido en el
+   * feed los logros de los hasta cincuenta perfiles públicos del directorio, gente con la que no tienes relación.
+   *
+   * El agregado del PORCENTAJE comparado (§6.6bis) sigue midiéndose sobre el directorio entero: ahí no hay
+   * identidad, solo un porcentaje con su denominador.
+   */
+  friendUids: ReadonlySet<string> = NO_FRIENDS,
 ): {
   feedItems: SocialFeedItem[];
   groupedFeedItems: SocialFeedDayGroup[];
@@ -216,11 +232,14 @@ export function useSocialFeed(
     const achievements = ENABLE_ACHIEVEMENTS
       ? achievementFeedEntries([
         ...directory
+          // SOLO AMISTADES, como el resto del feed. La comparación va por `uid` porque es la clave del grafo de
+          // amistad; el `id` de la entrada puede ser un profileId que no coincida con él.
+          .filter((entry) => friendUids.has(String(entry.uid || '')))
           .map((entry) => ({
             id: String(entry.id || ''),
             displayName: entry.displayName,
             photoURL: entry.photoURL,
-            mirror: String(entry.achievements?.list || ''),
+            mirror: String(entry.achievementsMirror || ''),
             own: false,
           }))
           // Tu propia entrada del directorio se descarta: la tuya la pone `ownAchievements`, que está más fresca
@@ -244,7 +263,7 @@ export function useSocialFeed(
       .filter((item) => hasRenderableTimestamp(item.updatedAt))
       .sort((a, b) => b.updatedAt - a.updatedAt)
       .slice(0, FEED_MAX_ITEMS);
-  }, [directory, moveTabsValue, ownAchievements]);
+  }, [directory, moveTabsValue, ownAchievements, friendUids]);
 
   const groupedFeedItems = useMemo<SocialFeedDayGroup[]>(() => {
     const groups: SocialFeedDayGroup[] = [];
@@ -324,6 +343,16 @@ export type SocialDirectoryEntry = {
    * compilación y no una lista en orden arbitrario.
    */
   lastActiveAt: number;
+  /**
+   * ESPEJO DE LOGROS de esa persona (`profiles/{uid}.achievements.list`), tal y como llega del directorio.
+   * Vacío si no ha publicado. De él salen su vitrina en la ficha, sus entradas de logros en el feed y la muestra
+   * del porcentaje comparado (§6.6bis).
+   *
+   * OBLIGATORIO por lo mismo que `tier` y `lastActiveAt`: este tipo LOCAL sombrea al del repositorio y la
+   * hidratación reconstruye cada entrada campo a campo. Mientras fue opcional —y se leía con un cast— las cuatro
+   * reconstrucciones lo dejaban fuera y nadie veía los logros de nadie más.
+   */
+  achievementsMirror: string;
   activity: SocialActivityFeedItem[];
   posts: SocialPostFeedItem[];
   /** F4 — mensajes de lista del perfil, ya enriquecidos con su identidad. */

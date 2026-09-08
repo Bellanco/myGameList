@@ -405,6 +405,7 @@ export async function listSocialDirectory(limitCount = 12, options?: { forceRefr
           tier?: string;
           social?: { gistId?: string; gamesGistId?: string; enabled?: boolean };
           updatedAt?: { toMillis?: () => number } | number;
+          achievements?: { list?: unknown };
         };
 
         return {
@@ -421,6 +422,11 @@ export async function listSocialDirectory(limitCount = 12, options?: { forceRefr
           enabled: Boolean(data.social?.enabled),
           updatedAt: toMillis(data.updatedAt),
           tier: normalizeTier(data.tier),
+          // EL ESPEJO DE LOGROS de esa persona, en la MISMA lectura que ya trae nombre y foto: no cuesta una
+          // petición ni un campo nuevo. Es la única fuente del que no eres tú —el propio sale del evaluador
+          // local— y sin él la vitrina de una amistad y el porcentaje comparado se quedaban en blanco para
+          // siempre, aunque el espejo estuviera publicado (lo estaba: la escritura nunca fue el problema).
+          achievementsMirror: String(data.achievements?.list || ''),
         };
       })
       // NO se exige `socialGistId`. Antes se filtraba por él, y eso ata el directorio a que ese id se publique en
@@ -469,6 +475,7 @@ export async function listSocialDirectory(limitCount = 12, options?: { forceRefr
         gamesGistId: entry.gamesGistId,
         updatedAt: entry.updatedAt,
         tier: entry.tier,
+        achievementsMirror: entry.achievementsMirror,
       }));
 
     saveSocialDirectoryCache(normalizedLimit, entries);
