@@ -15,6 +15,7 @@ import { ACHIEVEMENTS_BY_ID } from '../../src/core/achievements/catalog';
 import { summarize, summarizeMirror } from '../../src/core/achievements/summary';
 import { packAchievements } from '../../src/core/achievements/pack';
 import { listForScreen } from '../../src/viewmodel/useAchievements';
+import { ACHIEVEMENTS_UI } from '../../src/core/constants/achievementLabels';
 import type { AchievementState } from '../../src/core/achievements/types';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -129,6 +130,13 @@ describe('la ficha de una amistad', () => {
     expect(screen.getAllByRole('listitem')).toHaveLength(6);
     expect(screen.queryByText('Bloqueado')).not.toBeInTheDocument();
     expect(screen.getAllByText('30 abr 2026').length).toBe(6);
+  });
+
+  /** La MISMA pantalla sirve para lo tuyo y para lo de otra persona, así que la voz la decide de quién es. */
+  it('el texto de cabecera habla de esa persona, no de quien mira', () => {
+    render(<ProfileAchievementsScreen mirror={ESPEJO} directoryMirrors={[]} owner="Fulano" onBack={() => {}} />);
+    expect(screen.getByText(ACHIEVEMENTS_UI.subtitleOf('Fulano'))).toBeInTheDocument();
+    expect(screen.queryByText(ACHIEVEMENTS_UI.subtitle)).not.toBeInTheDocument();
   });
 
   it('sin NINGÚN espejo no hay porcentaje comparado: no se puede medir la nada', () => {

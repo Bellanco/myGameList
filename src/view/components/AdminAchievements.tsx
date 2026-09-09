@@ -781,8 +781,11 @@ export const AdminAchievements = memo(function AdminAchievements({
                             </>
                           ) : <span className="admin-ach-nodata">—</span>}
                         </td>
-                        <td>{def.labels.condition}</td>
-                        <td>
+                        {/* Los dos textos llevan su rótulo en un `data-col`: en móvil la tabla se lee como fichas
+                            —cinco columnas no caben— y es de ahí de donde sale la etiqueta de cada línea, porque
+                            la cabecera de la tabla no está (ver `admin.scss`). */}
+                        <td data-col={A.colGoalShort}>{def.labels.condition}</td>
+                        <td data-col={A.colDoneShort}>
                           {def.labels.done}
                           {/* Si el hecho y la meta son la misma frase, la escalera no escribió su `done` y el
                               respaldo la copió: se dice aquí porque en la app se lee como una tarea pendiente

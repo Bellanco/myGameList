@@ -85,6 +85,18 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
   —tu ficha y tus logros— abrían una pantalla que no encontraba nada, mientras las mismas direcciones con el id
   del directorio funcionaban. Ahora va con tu id del directorio (y con el comodín `me` si todavía no tienes
   entrada), que es lo que las rutas del hub saben resolver.
+- **El catálogo del panel se lee en un móvil.** La tabla de escalones son cinco columnas y 46 rem de ancho: en un
+  teléfono de 390 px se veían **dos y media** —los dos textos, que son a lo que se viene, quedaban enteros fuera
+  de la pantalla y solo se llegaba a ellos desplazando cada fila de lado—. Por debajo de 720 px cada escalón pasa
+  a leerse como una **ficha**: el número y el nombre en su línea, la cifra de alcance con su medidor debajo y las
+  dos frases una sobre otra, cada una con su rótulo delante («META · …», «HECHO · …»), que es lo que sustituye a
+  la cabecera de la tabla. El raíl que marca los tramos sin nadie pasa a la ficha entera, los rótulos del nombre
+  —«del panel», el nombre anterior de un escalón corrido— caen debajo en vez de pegarse a la última letra, y las
+  acciones de «preparar un escalón» se agrupan a la izquierda en vez de irse a las dos esquinas.
+- **El listado de logros de otra persona habla de esa persona.** La pantalla es la misma que la tuya y el texto de
+  debajo del título era el de siempre: la ficha de una amistad se titulaba «Logros de Fulano» y seguía con «lo que
+  llevas hecho con tus juegos», hablando de los juegos de quien mira.
+
 - **El catálogo se puede ampliar desde el panel, sin desplegar.** Escribes un umbral en una escalera que ya
   existe, pulsas «Añadir» y **es un logro de verdad**: se desbloquea, cuenta en la fracción, sale en el listado, en
   el feed y en la ficha que ven tus amistades. Se guarda en `appConfig` y todos los clientes reconstruyen el
