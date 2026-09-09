@@ -13,12 +13,15 @@ import type { AchievementDef } from '../../../core/achievements/types';
 // componente, Vite la emite en cada chunk que de verdad pinta una medalla. Ver `styles/reviews.scss`.
 import '../../../styles/achievements.scss';
 
-export type MedalSize = 'lg' | 'toast' | 'md' | 'sm';
+export type MedalSize = 'lg' | 'toast' | 'md' | 'list' | 'sm';
 
 /** Lado de la medalla en cada sitio: el listado, la tira de la ficha y la tira de novedades (§8.5). */
 // `toast` son 64 y no los 48 del listado: la cápsula del aviso mide lo que mide su medalla, y dentro van hasta
 // cuatro filas —rótulo, nombre, descripción y, en el hito, la barra—. Con 48 entraban pegadas unas a otras.
-const SIZES: Record<MedalSize, number> = { lg: 72, toast: 64, md: 48, sm: 28 };
+// `list` son 34: el listado se apretó a una fila de dos renglones —nombre y condición— y con los 48 de antes la
+// medalla mandaba en el alto de la fila y estiraba la lista a lo largo de quince pantallas. A 34 sigue teniendo
+// dibujo, filo y píldora legibles, que es lo que la distingue de la miniatura de 28 de la tira.
+const SIZES: Record<MedalSize, number> = { lg: 72, toast: 64, md: 48, list: 34, sm: 28 };
 
 interface AchievementMedalProps {
   def: AchievementDef;

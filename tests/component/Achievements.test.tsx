@@ -7,7 +7,7 @@ import {
   ProfileAchievementsScreen,
   ProfileGlobalAchievements,
 } from '../../src/view/components/socialhub/ProfileAchievements';
-import { AchievementsScreen } from '../../src/view/components/stats/AchievementsScreen';
+import { AchievementsScreen, formatUnlockDate } from '../../src/view/components/stats/AchievementsScreen';
 import { AchievementsCard } from '../../src/view/components/stats/AchievementsCard';
 import { ACHIEVEMENTS, LADDERS, SCORING_ACHIEVEMENTS } from '../../src/core/achievements/catalog';
 import { AchievementSprite } from '../../src/view/components/AchievementSprite';
@@ -18,6 +18,7 @@ import { listForScreen } from '../../src/viewmodel/useAchievements';
 import { ACHIEVEMENTS_UI } from '../../src/core/constants/achievementLabels';
 import type { AchievementState } from '../../src/core/achievements/types';
 
+const ROMANOS = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI', 'XII'];
 const DAY_MS = 24 * 60 * 60 * 1000;
 const EPOCH = Date.UTC(2020, 0, 1);
 /** El día 2311 desde 2020-01-01 es el 30 de abril de 2026, que es la fecha que buscan un par de tests. */
@@ -139,29 +140,146 @@ describe('la ficha de una amistad', () => {
     expect(screen.queryByText(ACHIEVEMENTS_UI.subtitle)).not.toBeInTheDocument();
   });
 
-  it('sin NINGÚN espejo no hay porcentaje comparado: no se puede medir la nada', () => {
-    render(<ProfileAchievementsScreen mirror={ESPEJO} directoryMirrors={[]} owner="Fulano" onBack={() => {}} />);
+  /**
+   * EL PORCENTAJE COMPARADO NO ES DE ESTA PANTALLA, aunque se pueda medir. «Lo tiene el 67 % · 2 de 3» responde a
+   * «cómo de raro es esto», que tiene su propia vista y su botón para llegar a ella; aquí la pregunta es cuándo
+   * cayó cada medalla, y la cifra competía justo con el sello. La rareza DECLARADA se queda: es del catálogo.
+   */
+  it('el listado no lleva porcentaje comparado ni aunque haya muestra: solo la fecha y el tipo', () => {
+    const muestra = Array.from({ length: 25 }, (_unused, index) => espejo([index < 10 ? 'completados-10' : 'horas-10']));
+    render(<ProfileAchievementsScreen mirror={ESPEJO} directoryMirrors={muestra} owner="Fulano" onBack={() => {}} />);
+
     expect(screen.queryByText(/lo tiene el/)).not.toBeInTheDocument();
+    expect(document.querySelectorAll('.ach-row-share')).toHaveLength(0);
+    // Y lo que sí lleva cada fila: el día y el tipo de logro.
+    const fila = screen.getByText('Créditos finales I').closest('li') as HTMLElement;
+    expect(within(fila).getByText('30 abr 2026')).toBeInTheDocument();
+    expect(fila.querySelector('.ach-row-rarity')).toBeInTheDocument();
   });
 
-  it('el porcentaje va SIEMPRE con su denominador, y desde el primer espejo', () => {
-    // Sin denominador es lo único de esta pantalla que se puede leer como una afirmación global, y no lo es. Por
-    // eso el suelo de veinte espejos se pudo quitar: con dos personas «50 % · 1 de 2» se lee por lo que es.
+  /**
+   * POR FECHA, DE LO MÁS RECIENTE A LO MÁS ANTIGUO, y lo que no trae sello al final. Se ordenaba por rareza
+   * declarada —el orden de la VITRINA, que enseña once medallas— y en una lista larga eso dejaba la única
+   * columna que se lee, el día, saltando de un año a otro sin orden aparente.
+   */
+  it('ordena por fecha, y lo que no tiene sello va al final', () => {
+    const conFechas = packAchievements([
+      { id: 'completados-10', level: 1, value: 0, next: null, unlockedAt: dia(2200) },
+      { id: 'horas-10', level: 1, value: 0, next: null, unlockedAt: dia(2311) },
+      // Sin sello deducible: es el caso de la primera evaluación, la de quien ya tenía todo hecho.
+      { id: 'plataformas-3', level: 1, value: 0, next: null, unlockedAt: 0 },
+    ]);
+    render(<ProfileAchievementsScreen mirror={conFechas} directoryMirrors={[]} owner="Fulano" onBack={() => {}} />);
+
+    const nombres = screen.getAllByRole('listitem').map((fila) => fila.querySelector('.ach-row-name')?.textContent);
+    expect(nombres).toEqual(['El contador de horas I', 'Créditos finales I', 'Guerra de consolas I']);
+  });
+
+  /**
+   * LO CONSEGUIDO ANTES DE QUE HUBIERA CON QUÉ FECHARLO SE FECHA CON EL SUELO. Media docena de métricas deducen
+   * su sello de los juegos y otras no tienen ninguno, así que la columna salía con huecos —un «—» sin más— justo
+   * en las medallas más viejas. El suelo es el día más antiguo del que hay constancia: en una vitrina ajena, su
+   * logro fechado más viejo; el logro cayó ese día o después, nunca antes, y lo aclara el rótulo del puntero.
+   */
+  it('lo que no trae sello se fecha con el día más antiguo del que hay constancia', () => {
+    const conHuecos = packAchievements([
+      { id: 'completados-10', level: 1, value: 0, next: null, unlockedAt: dia(2311) },
+      { id: 'horas-10', level: 1, value: 0, next: null, unlockedAt: dia(2200) },
+      { id: 'plataformas-3', level: 1, value: 0, next: null, unlockedAt: 0 },
+    ]);
+    render(<ProfileAchievementsScreen mirror={conHuecos} directoryMirrors={[]} owner="Fulano" onBack={() => {}} />);
+
+    const sinSello = screen.getByText('Guerra de consolas I').closest('li') as HTMLElement;
+    const fecha = sinSello.querySelector('.ach-row-date') as HTMLElement;
+    // El más viejo de su vitrina: el 9 de enero de 2026, no el 30 de abril.
+    expect(fecha.textContent).toBe(formatUnlockDate(dia(2200)));
+    expect(fecha.title).toBe(ACHIEVEMENTS_UI.floorDateTitle);
+    expect(screen.queryByText('—')).not.toBeInTheDocument();
+  });
+
+  it('en TU ficha el suelo lo pone la biblioteca, que es el día del que de verdad hay constancia', () => {
+    // Tu primer juego entró mucho antes que tu primer logro fechado: nada tuyo puede ser anterior a eso, así que
+    // ese es el suelo y no el sello más viejo de la vitrina.
+    const estados = new Map([
+      ['completados-10', { id: 'completados-10', level: 1, value: 12, next: null, unlockedAt: 0 }],
+    ]);
     render(
       <ProfileAchievementsScreen
-        mirror={ESPEJO}
-        directoryMirrors={[espejo(['completados-10']), espejo(['horas-10'])]}
-        owner="Fulano"
+        mirror={espejo(['completados-10'])}
+        directoryMirrors={[]}
+        owner=""
+        ownStates={estados}
+        since={dia(1000)}
         onBack={() => {}}
       />,
     );
-    expect(screen.getAllByText('lo tiene el 50 % · 1 de 2').length).toBeGreaterThan(0);
+    const fila = screen.getByText('Créditos finales I').closest('li') as HTMLElement;
+    expect((fila.querySelector('.ach-row-date') as HTMLElement).textContent).toBe(formatUnlockDate(dia(1000)));
   });
 
-  it('con una muestra grande, el porcentaje se afina', () => {
-    const muestra = Array.from({ length: 25 }, (_unused, index) => espejo([index < 10 ? 'completados-10' : 'horas-10']));
-    render(<ProfileAchievementsScreen mirror={ESPEJO} directoryMirrors={muestra} owner="Fulano" onBack={() => {}} />);
-    expect(screen.getAllByText('lo tiene el 40 % · 10 de 25').length).toBeGreaterThan(0);
+  /**
+   * UN LOGRO POR CONSEGUIR NO DICE NADA EN LA COLUMNA DEL DÍA. Ponía «Bloqueado», que es la lectura al revés: no
+   * tiene fecha porque no ha pasado, no porque esté en un estado que haya que anunciar —y esa palabra se repetía
+   * en las doscientas filas de la mitad de abajo—. Lo dicen ya la medalla apagada, el nombre en gris y el
+   * progreso; y para quien no ve la pantalla, el nombre accesible de la medalla.
+   */
+  it('lo que aún no tienes no pone «Bloqueado» ni nada en su sitio', () => {
+    const estados = new Map([
+      ['completados-10', { id: 'completados-10', level: 1, value: 12, next: null, unlockedAt: dia(2311) }],
+      ['completados-25', { id: 'completados-25', level: 0, value: 12, next: 25, unlockedAt: 0 }],
+    ]);
+    render(
+      <ProfileAchievementsScreen
+        mirror={espejo(['completados-10'])}
+        directoryMirrors={[]}
+        owner=""
+        ownStates={estados}
+        onBack={() => {}}
+      />,
+    );
+
+    expect(screen.queryByText(ACHIEVEMENTS_UI.locked)).not.toBeInTheDocument();
+    const pendiente = screen.getByText('Créditos finales II').closest('li') as HTMLElement;
+    expect(pendiente.querySelector('.ach-row-date')).toBeNull();
+    // Y lo conseguido sí lleva su día, que es de lo que va esa columna.
+    const hecho = screen.getByText('Créditos finales I').closest('li') as HTMLElement;
+    expect(hecho.querySelector('.ach-row-date')?.textContent).toBe(formatUnlockDate(dia(2311)));
+  });
+
+  it('sin ningún sello del que tirar se queda el hueco: no se inventa un día', () => {
+    const sinNada = packAchievements([
+      { id: 'completados-10', level: 1, value: 0, next: null, unlockedAt: 0 },
+    ]);
+    render(<ProfileAchievementsScreen mirror={sinNada} directoryMirrors={[]} owner="Fulano" onBack={() => {}} />);
+    const fecha = document.querySelector('.ach-row-date') as HTMLElement;
+    expect(fecha.textContent).toBe('—');
+    expect(fecha.title).toBe(ACHIEVEMENTS_UI.noDateTitle);
+  });
+
+  /**
+   * TU FICHA ES EL CATÁLOGO, la de otra persona es su vitrina. Lo que te falta y por dónde vas solo se puede
+   * pintar con los estados del evaluador, y esos únicamente existen en la tuya: el espejo publicado lleva los
+   * logros conseguidos y nada más.
+   */
+  it('en TU ficha salen también los que no tienes, con lo que falta para desbloquearlos', () => {
+    const estados = new Map([
+      ['completados-10', { id: 'completados-10', level: 1, value: 12, next: null, unlockedAt: dia(2311) }],
+      ['completados-25', { id: 'completados-25', level: 0, value: 12, next: 25, unlockedAt: 0 }],
+    ]);
+    render(
+      <ProfileAchievementsScreen
+        mirror={espejo(['completados-10'])}
+        directoryMirrors={[]}
+        owner=""
+        ownStates={estados}
+        onBack={() => {}}
+      />,
+    );
+
+    // El escalón siguiente, con lo que llevas y lo que hace falta.
+    const pendiente = screen.getByText('Créditos finales II').closest('li') as HTMLElement;
+    expect(within(pendiente).getByText('12 de 25')).toBeInTheDocument();
+    expect(pendiente.className).toContain('is-locked');
   });
 });
 
@@ -320,6 +438,23 @@ describe('logros globales — el catálogo por lo común que es cada uno', () =>
     expect(screen.getAllByText('Conseguido')).toHaveLength(2);
   });
 
+  /**
+   * «CONSEGUIDO» YA NO SE LEE, SE VE. El recuadro, el nombre encendido y el relleno teñido dicen lo mismo, y
+   * repetir la palabra en cada una de las 334 filas gastaba la línea que lleva la cifra que ordena la lista.
+   * SIGUE EN EL DOM para quien no ve el recuadro: forma y color no pueden ser la única señal de nada.
+   */
+  it('no pinta «Conseguido» a la vista, pero un lector de pantalla lo sigue oyendo', () => {
+    render(<ProfileGlobalAchievements mirror={espejo(['completados-10'])} directoryMirrors={MUESTRA} owner="Fulano" self={false} onBack={() => {}} />);
+    const conseguido = screen.getAllByText('Conseguido');
+    expect(conseguido).toHaveLength(1);
+    expect(conseguido[0].className).toContain('sr-only');
+    // Y lo que se ve de esa fila: el recuadro, el porcentaje y el tipo.
+    const fila = conseguido[0].closest('li') as HTMLElement;
+    expect(fila.className).toContain('is-owned');
+    expect(fila.querySelector('.ach-row-share')).toBeInTheDocument();
+    expect(fila.querySelector('.ach-row-rarity')).toBeInTheDocument();
+  });
+
   it('en tu propia ficha cambia la voz', () => {
     render(<ProfileGlobalAchievements mirror={espejo(['completados-10'])} directoryMirrors={MUESTRA} owner="Yo" self onBack={() => {}} />);
     expect(screen.getAllByText('Lo tienes').length).toBe(1);
@@ -347,6 +482,59 @@ describe('logros globales — el catálogo por lo común que es cada uno', () =>
   });
 });
 
+/**
+ * LA COLUMNA POR LA QUE ESTÁ ORDENADA LA LISTA TIENE QUE SALIR EN TODAS LAS FILAS. Se pintaba solo en los logros
+ * que tuviera alguien de la muestra, porque la medición únicamente apunta a quien tiene tenedores: la mitad de
+ * abajo —justo la de las rarezas, la que se abre a mirar— se quedaba sin cifra, y «no lo tiene nadie» era
+ * indistinguible de «no hay muestra para saberlo».
+ */
+describe('logros globales — el porcentaje de lo que no tiene nadie', () => {
+  const MUESTRA = Array.from({ length: 4 }, () => espejo(['completados-10']));
+
+  it('pinta el 0 % en lo que no tiene nadie, no un hueco', () => {
+    render(<ProfileGlobalAchievements mirror="" directoryMirrors={MUESTRA} owner="Fulano" self={false} onBack={() => {}} />);
+    // Una fila cualquiera de las de abajo: nadie de la muestra la tiene, y lo dice.
+    const nadie = ACHIEVEMENTS_BY_ID.get('horas-10')!.labels.name;
+    const fila = screen.getByText(nadie).closest('li') as HTMLElement;
+    expect(within(fila).getByText('lo tiene el 0 % · 0 de 4')).toBeInTheDocument();
+    // Y la columna está en TODAS las filas, que es lo que se puede recorrer con la vista.
+    expect(document.querySelectorAll('.ach-row-share')).toHaveLength(screen.getAllByRole('listitem').length);
+  });
+
+  it('el porcentaje va SIEMPRE con su denominador, y desde el primer espejo', () => {
+    // Sin denominador es lo único de esta pantalla que se puede leer como una afirmación global, y no lo es. Por
+    // eso el suelo de veinte espejos se pudo quitar: con dos personas «50 % · 1 de 2» se lee por lo que es.
+    const dos = [espejo(['completados-10']), espejo(['horas-10'])];
+    render(<ProfileGlobalAchievements mirror="" directoryMirrors={dos} owner="Fulano" self={false} onBack={() => {}} />);
+    expect(screen.getAllByText('lo tiene el 50 % · 1 de 2').length).toBeGreaterThan(0);
+  });
+
+  it('el denominador es el conteo, no el porcentaje deshecho', () => {
+    // 300 espejos y 100 tenedores: el 33 % redondeado devolvía «99 de 300» al reconstruir la cifra que lo
+    // sostiene. La cifra honrada del porcentaje no puede salir de él.
+    const MUCHOS = [
+      ...Array.from({ length: 100 }, () => espejo(['completados-10'])),
+      ...Array.from({ length: 200 }, () => espejo(['horas-10'])),
+    ];
+    render(<ProfileGlobalAchievements mirror="" directoryMirrors={MUCHOS} owner="Fulano" self={false} onBack={() => {}} />);
+    const fila = screen.getByText('Créditos finales I').closest('li') as HTMLElement;
+    expect(within(fila).getByText('lo tiene el 33 % · 100 de 300')).toBeInTheDocument();
+  });
+
+  it('a igualdad, los escalones de una escalera van por grado y no por su número romano', () => {
+    // La cola de la lista —todo a cero— es la que más escalones altos junta, y ordenados por nombre el IX se
+    // colaba delante del V.
+    render(<ProfileGlobalAchievements mirror="" directoryMirrors={MUESTRA} owner="Fulano" self={false} onBack={() => {}} />);
+    const nombres = screen.getAllByRole('listitem').map((fila) => fila.querySelector('.ach-row-name')?.textContent);
+    const escalera = nombres.filter((nombre) => nombre?.startsWith('Créditos finales '));
+    const grados = ACHIEVEMENTS_BY_ID.get('completados-10')!.grades;
+    expect(escalera.length).toBeGreaterThan(3);
+    // Los de esta escalera que nadie tiene salen en el orden de la escalera, del II para arriba.
+    expect(escalera[escalera.length - 1]).toBe(`Créditos finales ${ROMANOS[grados - 1]}`);
+    expect(escalera[1]).toBe('Créditos finales II');
+  });
+});
+
 describe('logros globales — el relleno y el progreso parcial', () => {
   const MUESTRA = [
     ...Array.from({ length: 20 }, () => espejo(['completados-10'])),
@@ -358,6 +546,22 @@ describe('logros globales — el relleno y el progreso parcial', () => {
     render(<ProfileGlobalAchievements mirror="" directoryMirrors={MUESTRA} owner="Fulano" self={false} onBack={() => {}} />);
     const fila = screen.getByText('Créditos finales I').closest('li') as HTMLElement;
     expect(fila.style.getPropertyValue('--fill')).toBe('80%');
+  });
+
+  /**
+   * LA COLUMNA ES UNA CIFRA, no una frase. Las 334 filas repetían «lo tiene el … % · … de …» con el mismo
+   * denominador en todas, así que la línea que se recorre para comparar estaba hecha casi entera de texto
+   * idéntico. El denominador no se pierde: sostiene el porcentaje (§6.6bis) y sigue a un puntero de distancia y
+   * entero para quien lee con lector de pantalla.
+   */
+  it('enseña la cifra sola, con el denominador en el rótulo y para el lector de pantalla', () => {
+    render(<ProfileGlobalAchievements mirror="" directoryMirrors={MUESTRA} owner="Fulano" self={false} onBack={() => {}} />);
+    const fila = screen.getByText('Créditos finales I').closest('li') as HTMLElement;
+    const cifra = fila.querySelector('.ach-row-share') as HTMLElement;
+
+    expect(cifra.querySelector('[aria-hidden="true"]')?.textContent).toBe('80 %');
+    expect(cifra.title).toBe('lo tiene el 80 % · 20 de 25');
+    expect(within(cifra).getByText('lo tiene el 80 % · 20 de 25').className).toContain('sr-only');
   });
 
   it('en TU perfil enseña el progreso de lo que aún no tienes, como Steam', () => {
@@ -374,8 +578,10 @@ describe('logros globales — el relleno y el progreso parcial', () => {
         onBack={() => {}}
       />,
     );
-    // Lo que llevas, lo que hace falta y qué parte es eso, como en Steam.
-    expect(screen.getByText('4 de 5 · 80 %')).toBeInTheDocument();
+    // Lo que llevas y lo que hace falta. El porcentaje no se escribe: lo dibuja la barra que va al lado, y
+    // decirlo también con letra era el mismo dato tres veces en la misma línea.
+    expect(screen.getByText('4 de 5')).toBeInTheDocument();
+    expect(screen.queryByText(/4 de 5 · /)).not.toBeInTheDocument();
   });
 
   it('de una AMISTAD no se enseña progreso: el espejo solo lleva lo conseguido', () => {

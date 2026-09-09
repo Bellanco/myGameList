@@ -43,6 +43,12 @@ export const ACHIEVEMENTS_UI = {
   /** Estado de una fila del listado. */
   unlockedOn: (date: string) => date,
   noDate: '—',
+  /**
+   * El rótulo de una fecha HEREDADA DEL SUELO. La fila la pinta como cualquier otra —una columna de fechas con
+   * huecos no se lee— pero el puntero dice de dónde sale: es el día más antiguo del que hay constancia, y el
+   * logro cayó ese día o después. Sin esta línea, la pantalla estaría afirmando un día que no sabe.
+   */
+  floorDateTitle: 'Sin sello propio: se enseña el día más antiguo del que hay constancia',
   noDateTitle: 'Conseguido antes de que hubiera con qué fecharlo',
   locked: 'Bloqueado',
   /** Vista global: el recuadro marca lo que tiene el perfil, y el texto lo dice para quien no ve el recuadro. */
@@ -55,8 +61,15 @@ export const ACHIEVEMENTS_UI = {
    * El porcentaje va detrás y pequeño —lo que se busca de un vistazo es «cuánto me falta», y eso lo dicen los dos
    * números— pero está, porque con umbrales como 500 la fracción sola no dice si estás cerca.
    */
-  progress: (value: number, next: number, percent: number) => `${value} de ${next} · ${percent} %`,
-  progressPercent: (value: number, next: number, percent: number) => `${value} % de ${next} % · ${percent} %`,
+  /**
+   * LO QUE LLEVAS, SIN EL PORCENTAJE. Decía «73 de 100 · 73 %» y esa tercera cifra ya la dibuja la barra que va
+   * al lado: el mismo dato tres veces —barra, cuenta y porcentaje— en una columna de doce píxeles. Lo que no se
+   * puede deducir de la barra es cuántos van y cuántos hacen falta, y eso es lo que se queda.
+   *
+   * `percent` sigue en la firma porque es lo que dibuja la barra, y el llamante lo tiene calculado ahí mismo.
+   */
+  progress: (value: number, next: number) => `${value} de ${next}`,
+  progressPercent: (value: number, next: number) => `${value} % de ${next} %`,
   maxed: 'Al máximo',
   hiddenName: 'Logro oculto',
   hiddenCondition: 'Se revela al conseguirlo.',
@@ -72,7 +85,23 @@ export const ACHIEVEMENTS_UI = {
   achievementsOf: (owner: string) => `Logros de ${owner}`,
   globalNoSample: 'Todavía no hay gente suficiente para decir lo común que es cada logro.',
 
-  /** El porcentaje medido (§6.6bis). NUNCA se dice sin su denominador. */
+  /**
+   * El porcentaje medido (§6.6bis), en la columna que ordena la vista global: LA CIFRA SOLA.
+   *
+   * La lista tiene 334 filas y todas repetían la misma frase con el mismo denominador —«lo tiene el 100 % · 3 de
+   * 3»—, así que la línea que se recorre con la vista para comparar cifras estaba hecha casi entera de texto
+   * idéntico. Lo que cambia de una fila a otra es el número, y es lo único que se queda.
+   */
+  rarityShare: (percent: number) => `${percent} %`,
+
+  /**
+   * Y LA FRASE ENTERA NO SE PIERDE: va en el `title` y en el texto para lector de pantalla de esa misma cifra.
+   *
+   * El denominador es lo que sostiene la honestidad del porcentaje —sin él, «el 100 %» se lee como una
+   * afirmación sobre todo el mundo y no lo es, que con muestras pequeñas pasa de recomendable a imprescindible—,
+   * así que sale de la columna pero no de la pantalla: está a un puntero de distancia, y quien no ve la pantalla
+   * lo oye igual que antes.
+   */
   rarityPercent: (percent: number, holders: number, sample: number) =>
     `lo tiene el ${percent} % · ${holders} de ${sample}`,
 

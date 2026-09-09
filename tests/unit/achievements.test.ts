@@ -7,6 +7,7 @@ import {
   SCORING_ACHIEVEMENTS,
 } from '../../src/core/achievements/catalog';
 import { evaluateAchievements, nextPeak } from '../../src/core/achievements/evaluate';
+import { libraryStart } from '../../src/core/achievements/metrics';
 import { levelFromPoints, summarize } from '../../src/core/achievements/summary';
 import { ACHIEVEMENTS_LIST_MAX, MIRROR_ORDER, buildMirror, measureRarity, packAchievements, parseMirror } from '../../src/core/achievements/pack';
 import type { AchievementState } from '../../src/core/achievements/types';
@@ -885,5 +886,25 @@ describe('el porcentaje comparado', () => {
     expect(measured?.sample).toBe(25);
     expect(measured?.percent.get('completados-10')).toBe(60);
     expect(measured?.percent.get('plataformas-3')).toBe(40);
+  });
+});
+
+/**
+ * EL SUELO DE LAS FECHAS. Es lo que permite fechar lo conseguido «antes de que hubiera con qué fecharlo» sin
+ * inventarse nada: ningún logro puede ser anterior al primer juego que entró en la biblioteca.
+ */
+describe('el día en que empieza la biblioteca', () => {
+  it('es el sello de entrada más antiguo, mire la lista que mire', () => {
+    const games = library({
+      c: [game({ id: 1, enteredAt: { c: NOW } })],
+      p: [game({ id: 2, enteredAt: { p: NOW - 5000 } })],
+      v: [game({ id: 3, enteredAt: { v: NOW - 200 } })],
+    });
+    expect(libraryStart(games)).toBe(NOW - 5000);
+  });
+
+  it('sin un solo sello es cero, y entonces no hay suelo que pintar', () => {
+    expect(libraryStart(library({ c: [game({ id: 1 })] }))).toBe(0);
+    expect(libraryStart(library())).toBe(0);
   });
 });

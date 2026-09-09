@@ -404,10 +404,29 @@ export function sortMirror(items: readonly MirroredAchievement[]): MirroredAchie
  * `minSample` se queda como parámetro —el panel de administración ya lo pasaba explícito— y `null` significa
  * ahora lo único que puede significar: que no hay ni un espejo que medir.
  */
+export interface RarityMeasure {
+  /** `id` → porcentaje REDONDEADO. Es la cifra que se pinta, y solo eso: no vale para ordenar ni para contar. */
+  percent: ReadonlyMap<string, number>;
+  /**
+   * `id` → cuánta gente lo tiene, SIN redondear. Es el dato de verdad, y hace falta por dos motivos:
+   *
+   *  - el DENOMINADOR se pintaba deshaciendo el porcentaje (`round(pct / 100 * muestra)`), que es exacto con
+   *    muestras pequeñas y deja de serlo en cuanto crecen: con 300 espejos y 100 tenedores, el 33 % vuelve como
+   *    «99 de 300». La cifra que acompaña al porcentaje para sostenerlo no puede ser una reconstrucción suya;
+   *  - y el ORDEN de la vista global, que con el porcentaje ya redondeado empataba a lo tonto —33,4 % y 32,6 %
+   *    son los dos «33 %»— y resolvía por nombre lo que la muestra sí sabía separar.
+   *
+   * Un `id` que no está en el mapa lo tiene CERO gente: es una medición, no una ausencia de dato. Quien pinta
+   * debe leerlo con `?? 0`, que es lo que hace que el 0 % salga en pantalla en vez de callarse.
+   */
+  holders: ReadonlyMap<string, number>;
+  sample: number;
+}
+
 export function measureRarity(
   mirrors: readonly string[],
   minSample = 1,
-): { percent: ReadonlyMap<string, number>; sample: number } | null {
+): RarityMeasure | null {
   const sample = mirrors.filter((mirror) => typeof mirror === 'string' && mirror.length > 0);
   // `Math.max(1, …)`: con `minSample` a 0 una muestra vacía daría un mapa de porcentajes sobre cero personas, y
   // dividir por cero no es «el 0 %», es «no se sabe». Sin espejos no hay medición y se dice con `null`.
@@ -422,5 +441,5 @@ export function measureRarity(
 
   const percent = new Map<string, number>();
   for (const [id, count] of holders) percent.set(id, Math.round((count / sample.length) * 100));
-  return { percent, sample: sample.length };
+  return { percent, holders, sample: sample.length };
 }
