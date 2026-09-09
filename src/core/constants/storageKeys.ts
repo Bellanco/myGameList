@@ -92,3 +92,15 @@ export const achievementsPublishedKey = (uid: string): string => `mis-listas-ach
 // persiste ni un byte—, así que sin esto no hay forma de saber que alguien la probó. No sube y no se publica
 // (los «primeros pasos» nunca lo hacen).
 export const ROULETTE_USED_KEY = 'mis-listas-roulette-used';
+
+// Logros — LOS CONTADORES QUE NO SALEN DE LA BIBLIOTECA (amistades, semanas con publicación, alta del perfil y
+// si hay sincronización), recordados del último paso por el hub.
+//
+// EXISTE PORQUE LA MISMA CIFRA SALÍA DISTINTA EN DOS PANTALLAS. Solo el hub conoce esos cuatro números, así que
+// el panel evaluaba con ceros: sus logros no se conseguían —numerador— y, al no conseguirse, tampoco abrían sus
+// escalones —denominador—. Con la misma biblioteca, `/logros` decía «36/88» y la ficha del hub «42/94»; y en
+// cuanto se pasaba por el hub, la marca de agua guardaba lo conseguido y el panel ya no lo soltaba: la cifra
+// «cambiaba sola» y se quedaba.
+//
+// Se guarda en el dispositivo, no se publica y no viaja: son datos propios que el hub ya tenía a la vista.
+export const ACHIEVEMENTS_SOCIAL_KEY = 'mis-listas-achievements-social';

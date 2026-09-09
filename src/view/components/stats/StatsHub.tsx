@@ -10,6 +10,7 @@ import { useAchievementsConfig } from '../../hooks/useAchievementsConfig';
 import { useOpenFrontier } from '../../hooks/useOpenFrontier';
 import { ENABLE_ACHIEVEMENTS } from '../../../core/achievements/flags';
 import { libraryStart } from '../../../core/achievements/metrics';
+import { socialCounters } from '../../../core/achievements/deviceSignals';
 import { ACHIEVEMENTS_UI } from '../../../core/constants/achievementLabels';
 import { OWN_STATS_BLOCKS } from '../../../core/stats/types';
 import type { TabData } from '../../../model/types/game';
@@ -54,7 +55,18 @@ export const StatsHub = memo(function StatsHub({ games }: { games: TabData }) {
   const achievementsConfig = useAchievementsConfig();
   // La apertura entra también en la FRACCIÓN: el denominador cuenta lo que hoy está abierto, no el catálogo
   // entero, así que ampliar el catálogo no le baja el porcentaje de golpe a nadie.
-  const achievements = useAchievements({ games, open: achievementsConfig.open });
+  /**
+   * LOS CONTADORES DEL HUB, RECORDADOS. Aquí no existen —las amistades, las semanas con publicación y el alta del
+   * perfil viven en Firestore, y el panel no monta Firebase a propósito—, así que se evaluaba con ceros: esos
+   * logros no se conseguían y, al no conseguirse, tampoco abrían sus escalones. La misma biblioteca contaba
+   * «36/88» aquí y «42/94» en la ficha del hub, y al volver de allí la marca de agua sostenía lo conseguido: la
+   * cifra del panel subía sola y se quedaba, que es como se ve el fallo desde fuera.
+   *
+   * Se leen una vez por montaje y no en cada render: son un dato de localStorage que solo cambia al pasar por el
+   * hub, y `useAchievements` se memoiza contra ellos.
+   */
+  const counters = useMemo(() => socialCounters(), []);
+  const achievements = useAchievements({ games, ...counters, open: achievementsConfig.open });
   // El día en que empieza la biblioteca, que es el suelo con el que se fecha lo conseguido antes de que hubiera
   // con qué fecharlo. Una pasada sobre la biblioteca, contra la misma referencia que ya memoiza el panel.
   const libraryFloor = useMemo(() => libraryStart(games), [games]);
