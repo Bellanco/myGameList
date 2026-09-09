@@ -53,6 +53,7 @@ import { loadLocalState } from '../model/repository/localRepository';
 import { matchSocialRoute, OWN_PROFILE_ALIAS } from './social/socialRoutes';
 import { ENABLE_ACHIEVEMENTS, ENABLE_ACHIEVEMENTS_PUBLISH } from '../core/achievements/flags';
 import { mergeForPublish, packAchievements } from '../core/achievements/pack';
+import { rememberSocialCounters } from '../core/achievements/deviceSignals';
 import { achievementsPublishedKey } from '../core/constants/storageKeys';
 import { useAchievements } from './useAchievements';
 
@@ -1047,6 +1048,17 @@ export function useSocialViewModel(options?: {
    * mientras `/logros` lo contaba sobre lo que está abierto — dos cifras distintas para la misma biblioteca.
    */
   const achievementsConfig = useAchievementsConfig();
+
+  /**
+   * Y SE RECUERDAN PARA EL PANEL, que es el único sitio donde estos cuatro números no existen: allí se evaluaba
+   * con ceros, así que sus logros no se conseguían y —al no conseguirse— tampoco abrían sus escalones. Con la
+   * misma biblioteca, `/logros` decía «36/88» y esta misma ficha «42/94»; y al volver del hub la marca de agua
+   * ya sostenía lo conseguido, así que la cifra del panel subía sola y se quedaba. Ver `deviceSignals`.
+   */
+  useEffect(() => {
+    if (!ENABLE_ACHIEVEMENTS) return;
+    rememberSocialCounters(achievementCounters);
+  }, [achievementCounters]);
 
   const ownAchievements = useAchievements({
     games: options?.games || EMPTY_LIBRARY,

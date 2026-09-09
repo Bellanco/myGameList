@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 import {
   ACHIEVEMENTS,
   ACHIEVEMENTS_BY_ID,
@@ -8,6 +8,7 @@ import {
 } from '../../src/core/achievements/catalog';
 import { evaluateAchievements, nextPeak } from '../../src/core/achievements/evaluate';
 import { libraryStart } from '../../src/core/achievements/metrics';
+import { rememberSocialCounters, socialCounters } from '../../src/core/achievements/deviceSignals';
 import { levelFromPoints, summarize } from '../../src/core/achievements/summary';
 import { ACHIEVEMENTS_LIST_MAX, MIRROR_ORDER, buildMirror, measureRarity, packAchievements, parseMirror } from '../../src/core/achievements/pack';
 import type { AchievementState } from '../../src/core/achievements/types';
@@ -906,5 +907,68 @@ describe('el día en que empieza la biblioteca', () => {
   it('sin un solo sello es cero, y entonces no hay suelo que pintar', () => {
     expect(libraryStart(library({ c: [game({ id: 1 })] }))).toBe(0);
     expect(libraryStart(library())).toBe(0);
+  });
+});
+
+/**
+ * LA MISMA BIBLIOTECA TIENE QUE DAR LA MISMA CIFRA EN TODAS LAS PANTALLAS, y no la daba: las amistades, las
+ * semanas con publicación y el alta del perfil solo existen en el hub, así que el panel evaluaba con ceros. Esos
+ * logros no se conseguían —numerador— y, al no conseguirse, `openThrough` tampoco abría sus escalones
+ * —denominador—: «36/88» en `/logros` contra «42/94» en la ficha del hub. Y al volver del hub la marca de agua
+ * ya sostenía lo conseguido, así que la cifra del panel subía sola y se quedaba ahí.
+ */
+describe('la cifra no puede cambiar de una pantalla a otra', () => {
+  const conBiblioteca = () => library({
+    c: Array.from({ length: 30 }, (_u, i) => game({
+      id: i + 1, enteredAt: { c: NOW - i * 86_400_000 }, review: 'una reseña', score: 8, hours: 20,
+    })),
+  });
+  const DEL_HUB = { friends: 6, postWeeks: 4, profileCreatedAt: NOW - 400 * 86_400_000, hasSync: true };
+  const cifra = (states: readonly AchievementState[]) => {
+    const s = summarize(states);
+    return `${s.earned}/${s.total}`;
+  };
+
+  beforeEach(() => localStorage.clear());
+
+  it('el panel cuenta lo mismo que el hub cuando los contadores están recordados', () => {
+    const games = conBiblioteca();
+    const hub = evaluateAchievements(
+      { games, social: DEL_HUB, device: { ...NO_DEVICE, hasSync: true }, now: NOW },
+      '',
+    );
+
+    // El panel SIN nada recordado: es el estado de quien no ha entrado nunca al hub, y ahí contar de menos es lo
+    // honesto —esos logros no se pueden verificar—.
+    const aCiegas = evaluateAchievements({ games, social: NO_SOCIAL, device: NO_DEVICE, now: NOW }, '');
+    expect(cifra(aCiegas)).not.toBe(cifra(hub));
+
+    // Con lo que el hub recordó, la cuenta es la misma en las dos pantallas.
+    rememberSocialCounters(DEL_HUB);
+    const recordados = socialCounters();
+    const panel = evaluateAchievements(
+      {
+        games,
+        social: { friends: recordados.friends, postWeeks: recordados.postWeeks, profileCreatedAt: recordados.profileCreatedAt },
+        device: { ...NO_DEVICE, hasSync: recordados.hasSync },
+        now: NOW,
+      },
+      '',
+    );
+    expect(cifra(panel)).toBe(cifra(hub));
+  });
+
+  it('lo recordado no baja con una lectura a medias del hub', () => {
+    rememberSocialCounters(DEL_HUB);
+    // Los primeros renders del hub traen ceros mientras llegan el grafo y el perfil: guardarlos tal cual dejaría
+    // al panel contando de menos otra vez, hasta la siguiente visita.
+    rememberSocialCounters({ friends: 0, postWeeks: 0, profileCreatedAt: 0, hasSync: false });
+    expect(socialCounters()).toEqual({ ...DEL_HUB, hasSync: false });
+  });
+
+  it('sin nada guardado —o con la clave corrupta— cuenta como que no hay contadores', () => {
+    expect(socialCounters()).toEqual({ friends: 0, postWeeks: 0, profileCreatedAt: 0, hasSync: false });
+    localStorage.setItem('mis-listas-achievements-social', '{no es json');
+    expect(socialCounters()).toEqual({ friends: 0, postWeeks: 0, profileCreatedAt: 0, hasSync: false });
   });
 });
