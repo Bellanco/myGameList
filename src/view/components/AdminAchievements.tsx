@@ -5,8 +5,8 @@ import { ACHIEVEMENTS_BY_LADDER, LADDERS, LADDERS_BY_KEY, SCORING_ACHIEVEMENTS, 
 import { MIRROR_ORDER, measureRarity } from '../../core/achievements/pack';
 import { RARITY_POINTS } from '../../core/achievements/types';
 import { copyText } from '../../core/utils/clipboard';
-import type { AchievementDef, AchievementLadder } from '../../core/achievements/types';
-import { isHidden, type HiddenOverrides, type OpenFrontier, type PendingSteps } from '../../core/achievements/visibility';
+import type { AchievementDef, AchievementLadder, ExtraSteps } from '../../core/achievements/types';
+import { isHidden, type HiddenOverrides, type OpenFrontier } from '../../core/achievements/visibility';
 import { AchievementMedal } from './stats/AchievementMedal';
 import { AchievementSprite } from './AchievementSprite';
 import { HubBackButton } from './socialhub/HubBackButton';
@@ -203,8 +203,8 @@ export const AdminAchievements = memo(function AdminAchievements({
   onToggleHidden,
   openFrontier,
   onPublishFrontier,
-  pendingSteps = {},
-  onSetPendingSteps,
+  extraSteps = {},
+  onSetExtraSteps,
   onResetAll,
   censusSize = 0,
 }: {
@@ -229,13 +229,12 @@ export const AdminAchievements = memo(function AdminAchievements({
    */
   onPublishFrontier?: (open: OpenFrontier) => Promise<void>;
   /**
-   * Los escalones ACORDADOS AQUÍ que todavía no están en el código, guardados para todos los administradores.
-   * No son catálogo y la app no los lee (ver `core/achievements/visibility.ts`): esta pantalla los enseña puestos
-   * en su escalera para poder decidirlos mirando cómo quedaría.
+   * Los escalones que el panel ha añadido a una escalera sin desplegar (§6.4bis). SON catálogo: al leerlos se
+   * reconstruye (`applyExtraSteps`), así que esta tabla los enseña puestos porque lo están de verdad.
    */
-  pendingSteps?: PendingSteps;
-  /** Guarda la lista entera de pendientes de una escalera. La escribe el hub, como los otros dos. */
-  onSetPendingSteps?: (ladderKey: string, steps: readonly number[]) => Promise<void>;
+  extraSteps?: ExtraSteps;
+  /** Guarda la lista entera de añadidos de una escalera. La escribe el hub, como los otros dos. */
+  onSetExtraSteps?: (ladderKey: string, steps: readonly number[]) => Promise<void>;
   /**
    * Borra el espejo de TODO el censo y la apertura publicada. Lo ejecuta el hub, como el resto: esta pantalla
    * pide y cuenta, no habla con la base de datos. Devuelve cuántos espejos se borraron.
@@ -252,8 +251,8 @@ export const AdminAchievements = memo(function AdminAchievements({
    * proponer uno, y proponerlo era meterlo. Se convierte al validar.
    */
   const [draft, setDraft] = useState<{ key: string; text: string } | null>(null);
-  /** Cómo fue el último guardado de pendientes de cada escalera. Se dice en su ficha, como el de la ocultación. */
-  const [pendingState, setPendingState] = useState<Record<string, 'saving' | 'ok' | 'error'>>({});
+  /** Cómo fue el último guardado de añadidos de cada escalera. Se dice en su ficha, como el de la ocultación. */
+  const [extraState, setExtraState] = useState<Record<string, 'saving' | 'ok' | 'error'>>({});
   const [copied, setCopied] = useState(false);
   // Cómo fue el último guardado de cada escalera. Se dice en su ficha, no en un aviso global: cuando fallan las
   // reglas hay que saber CUÁL no se guardó.
@@ -328,17 +327,17 @@ export const AdminAchievements = memo(function AdminAchievements({
   }, [groups, hiddenOf, measured]);
 
   /**
-   * LOS PENDIENTES DE UNA ESCALERA QUE TODAVÍA NO ESTÁN EN EL CÓDIGO. Los que ya llegaron se quedan fuera de todo
-   * lo de abajo: su trabajo está hecho, y lo único que queda es retirar la nota.
+   * LOS AÑADIDOS DE UNA ESCALERA QUE NO ESTÁN EN EL CÓDIGO. Los que ya llegaron a él se quedan fuera de todo lo
+   * de abajo: su escalón ya está declarado, y lo que queda es retirar la entrada de la configuración.
    */
-  const pendientesNuevos = useCallback(
+  const añadidosFuera = useCallback(
     (ladder: AchievementLadder): number[] =>
-      (pendingSteps[ladder.key] || []).filter((step) => !ladder.steps.includes(step)).slice().sort((a, b) => a - b),
-    [pendingSteps],
+      (extraSteps[ladder.key] || []).filter((step) => !ladder.steps.includes(step)).slice().sort((a, b) => a - b),
+    [extraSteps],
   );
 
   /**
-   * LO QUE HAY QUE ESCRIBIR para llevar al código los pendientes de la escalera abierta, con las cifras de HOY y
+   * LO QUE HAY QUE ESCRIBIR para consolidar en el código los añadidos de la escalera abierta, con las cifras de HOY y
    * las de después.
    *
    * Se calculan aquí y no se copian de los tests a mano por el motivo de siempre: dos sitios con el mismo número
@@ -349,7 +348,7 @@ export const AdminAchievements = memo(function AdminAchievements({
     if (!draft) return null;
     const ladder = LADDERS.find((entry) => entry.key === draft.key);
     if (!ladder) return null;
-    const nuevos = pendientesNuevos(ladder);
+    const nuevos = añadidosFuera(ladder);
     if (nuevos.length === 0) return null;
     // Y SE RECOLOCA: la lista se ordena, así que da igual por dónde entren los umbrales nuevos.
     const steps = [...ladder.steps, ...nuevos].sort((a, b) => a - b);
@@ -371,7 +370,7 @@ export const AdminAchievements = memo(function AdminAchievements({
       bits: [bits, publishes ? bits + cuantos : bits] as [number, number],
       renamed: renamed?.labels.name || '',
     };
-  }, [draft, pendientesNuevos]);
+  }, [draft, añadidosFuera]);
 
   /**
    * LAS ESCALERAS CON PENDIENTES, tal y como quedarían: por cada una, sus filas con los umbrales pendientes
@@ -383,10 +382,10 @@ export const AdminAchievements = memo(function AdminAchievements({
    */
   const previewRows = useMemo<ReadonlyMap<string, StepRow[]>>(() => {
     const byLadder = new Map<string, StepRow[]>();
-    for (const key of Object.keys(pendingSteps)) {
+    for (const key of Object.keys(extraSteps)) {
       const ladder = LADDERS_BY_KEY.get(key);
       if (!ladder) continue;
-      const nuevos = pendientesNuevos(ladder);
+      const nuevos = añadidosFuera(ladder);
       if (nuevos.length === 0) continue;
       const antes = new Map((ACHIEVEMENTS_BY_LADDER.get(key) || []).map((def) => [def.id, def.labels.name]));
       const steps = [...ladder.steps, ...nuevos].sort((a, b) => a - b);
@@ -402,7 +401,7 @@ export const AdminAchievements = memo(function AdminAchievements({
       }));
     }
     return byLadder;
-  }, [pendingSteps, pendientesNuevos]);
+  }, [extraSteps, añadidosFuera]);
 
   /**
    * QUÉ LE PASA AL UMBRAL ESCRITO. Cadena vacía = se puede añadir; con el campo en blanco tampoco hay error —no
@@ -418,42 +417,42 @@ export const AdminAchievements = memo(function AdminAchievements({
     if (!ladder) return '';
     // Las dos formas de repetirse, y se distinguen: en el código ya está puesto y aquí solo está apuntado.
     if (ladder.steps.includes(step)) return A.prepareTaken(step);
-    if ((pendingSteps[draft.key] || []).includes(step)) return A.pendingTaken(step);
+    if ((extraSteps[draft.key] || []).includes(step)) return A.extraTaken(step);
     return '';
-  }, [draft, pendingSteps]);
+  }, [draft, extraSteps]);
 
-  const canAdd = Boolean(draft && draft.text.trim() && !addError && onSetPendingSteps);
+  const canAdd = Boolean(draft && draft.text.trim() && !addError && onSetExtraSteps);
 
   /** Guarda la lista entera de esa escalera, que es la forma que tiene el escritor: añadir y quitar es lo mismo. */
-  const savePending = useCallback(async (key: string, steps: readonly number[]) => {
-    if (!onSetPendingSteps) return false;
-    setPendingState((prev) => ({ ...prev, [key]: 'saving' }));
+  const saveExtra = useCallback(async (key: string, steps: readonly number[]) => {
+    if (!onSetExtraSteps) return false;
+    setExtraState((prev) => ({ ...prev, [key]: 'saving' }));
     try {
-      await onSetPendingSteps(key, steps);
-      setPendingState((prev) => ({ ...prev, [key]: 'ok' }));
+      await onSetExtraSteps(key, steps);
+      setExtraState((prev) => ({ ...prev, [key]: 'ok' }));
       return true;
     } catch {
       // El admin tiene que enterarse: se dice en la ficha de esa escalera y no en un aviso global.
-      setPendingState((prev) => ({ ...prev, [key]: 'error' }));
+      setExtraState((prev) => ({ ...prev, [key]: 'error' }));
       return false;
     }
-  }, [onSetPendingSteps]);
+  }, [onSetExtraSteps]);
 
-  const addPending = useCallback(async () => {
+  const addExtra = useCallback(async () => {
     if (!draft || !canAdd) return;
     const step = Number(draft.text.trim());
     const key = draft.key;
     setCopied(false);
-    if (await savePending(key, [...(pendingSteps[key] || []), step])) {
+    if (await saveExtra(key, [...(extraSteps[key] || []), step])) {
       // El campo se vacía al guardar: lo normal después de añadir uno es añadir otro, no reescribir el mismo.
       setDraft({ key, text: '' });
     }
-  }, [draft, canAdd, pendingSteps, savePending]);
+  }, [draft, canAdd, extraSteps, saveExtra]);
 
-  const removePending = useCallback((key: string, step: number) => {
+  const removeExtra = useCallback((key: string, step: number) => {
     setCopied(false);
-    void savePending(key, (pendingSteps[key] || []).filter((entry) => entry !== step));
-  }, [pendingSteps, savePending]);
+    void saveExtra(key, (extraSteps[key] || []).filter((entry) => entry !== step));
+  }, [extraSteps, saveExtra]);
 
   const copyPlan = useCallback(() => {
     if (!plan || !draft) return;
@@ -647,8 +646,8 @@ export const AdminAchievements = memo(function AdminAchievements({
             // logros de la app.
             const filas = previewRows.get(ladder.key) || plainRows(steps);
             const preparando = draft?.key === ladder.key;
-            const pendientes = pendingSteps[ladder.key] || [];
-            const guardando = pendingState[ladder.key];
+            const añadidos = extraSteps[ladder.key] || [];
+            const guardando = extraState[ladder.key];
             return (
             <article className="admin-card admin-ach-ladder" key={ladder.key}>
               <header className="admin-ach-head">
@@ -752,7 +751,7 @@ export const AdminAchievements = memo(function AdminAchievements({
                           {def.labels.name}
                           {/* LA FILA NUEVA SE DICE, no solo se colorea: el color la separa de un vistazo y el
                               rótulo es lo que la deja clara con lector de pantalla y en monocromo. */}
-                          {nueva ? <small className="admin-ach-preview-flag">{A.pendingFlag}</small> : null}
+                          {nueva ? <small className="admin-ach-preview-flag">{A.extraFlag}</small> : null}
                           {/* Y A QUIEN LE CORRE EL ROMANO, su nombre de antes. Es el único efecto que insertar un
                               escalón no puede evitar, y aquí se ve escalón por escalón en vez de en un aviso. */}
                           {antes ? <small className="admin-ach-warn-soft">{A.previewMoved(antes)}</small> : null}
@@ -851,7 +850,7 @@ export const AdminAchievements = memo(function AdminAchievements({
                         // ningún formulario porque no hay ninguno alrededor.
                         if (event.key !== 'Enter') return;
                         event.preventDefault();
-                        void addPending();
+                        void addExtra();
                       }}
                     />
                     <small>{A.prepareHelp}</small>
@@ -860,45 +859,57 @@ export const AdminAchievements = memo(function AdminAchievements({
                   {addError ? <p className="admin-ach-warn">{addError}</p> : null}
 
                   <p className="admin-card-actions">
-                    <button type="button" className="btn" onClick={() => void addPending()} disabled={!canAdd}>
+                    <button type="button" className="btn" onClick={() => void addExtra()} disabled={!canAdd}>
                       {A.prepareAdd}
                     </button>
                     <button type="button" className="btn btn-secondary" onClick={() => setDraft(null)}>{A.prepareClose}</button>
-                    {guardando === 'saving' ? <span className="admin-ach-copied">{A.pendingSaving}</span> : null}
-                    {guardando === 'error' ? <span className="admin-ach-warn">{A.pendingFailed}</span> : null}
+                    {guardando === 'saving' ? <span className="admin-ach-copied">{A.extraSaving}</span> : null}
+                    {guardando === 'error' ? <span className="admin-ach-warn">{A.extraFailed}</span> : null}
                   </p>
 
-                  {/* LO QUE HAY APUNTADO, con lo que hay que escribir para llevarlo al código. Va debajo del
-                      campo porque es la consecuencia de haber añadido, y cada pendiente se quita por separado:
-                      apuntar dos umbrales de una escalera es un solo viaje, y desapuntar uno no debe llevarse el
-                      otro por delante. */}
-                  {pendientes.length > 0 ? (
+                  {/* LO QUE HA AÑADIDO EL PANEL en esta escalera, y debajo lo que hay que escribir para
+                      consolidarlo en el código —que es opcional: le da su bit en el espejo—. Va después del campo
+                      porque es la consecuencia de haber añadido, y cada uno se quita por separado: añadir dos
+                      umbrales de una escalera es un solo viaje, y quitar uno no debe llevarse el otro. */}
+                  {añadidos.length > 0 ? (
                     <div className="admin-ach-pending">
-                      <h5>{A.pendingTitle}</h5>
+                      <h5>{A.extraTitle}</h5>
                       <ul>
-                        {pendientes.map((step) => {
-                          // Ya en el catálogo: el trabajo está hecho y lo único que queda es retirar la nota. Se
-                          // dice en su línea en vez de borrarla sola, que sería hacerlo a espaldas de quien mira.
+                        {añadidos.map((step) => {
+                          // Ya declarado en el código: el escalón existe por partida doble y el catálogo se queda
+                          // con el del código (`applyExtraSteps` descarta el repetido), así que esta entrada ya
+                          // no hace nada y se puede retirar sin consecuencias. Se dice en su línea en vez de
+                          // borrarla sola, que sería hacerlo a espaldas de quien mira.
                           const enElCodigo = ladder.steps.includes(step);
+                          // QUITARLO A QUIEN YA LO TIENE ES RETIRARLE LA MEDALLA (§6.4). Con muestra, se sabe
+                          // quién lo tiene; sin muestra no hay espejos publicados, así que no lo tiene nadie.
+                          const suyoDeAlguien = !enElCodigo
+                            && Boolean(measured)
+                            && (measured?.percent.get(`${ladder.key}-${step}`) ?? 0) > 0;
                           return (
                             <li key={step}>
                               <code>{`${ladder.key}-${step}`}</code>
-                              {enElCodigo ? <small className="admin-ach-warn-soft">{A.pendingInCode}</small> : null}
-                              <button
-                                type="button"
-                                className="btn btn-secondary"
-                                onClick={() => removePending(ladder.key, step)}
-                                disabled={guardando === 'saving'}
-                              >
-                                {A.pendingRemove(step)}
-                              </button>
+                              {enElCodigo ? <small className="admin-ach-warn-soft">{A.extraInCode}</small> : null}
+                              {suyoDeAlguien ? (
+                                <small className="admin-ach-warn">{A.extraLocked}</small>
+                              ) : (
+                                <button
+                                  type="button"
+                                  className="btn btn-secondary"
+                                  onClick={() => removeExtra(ladder.key, step)}
+                                  disabled={guardando === 'saving'}
+                                >
+                                  {A.extraRemove(step)}
+                                </button>
+                              )}
                             </li>
                           );
                         })}
                       </ul>
-                      <p className="admin-card-note">{A.pendingNote}</p>
+                      <p className="admin-card-note">{A.extraNote}</p>
                       {plan ? (
                         <>
+                          <h5>{A.codeTitle}</h5>
                           <ol>
                             <li><code>{A.prepareCatalog(plan.steps)}</code></li>
                             <li><code>{A.prepareMirror(plan.ids)}</code></li>

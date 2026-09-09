@@ -758,37 +758,43 @@ igual.
   tenía, y eso es lo único que la gente no perdona en un sistema de logros. Si un listón está mal, se crea otro
   logro. (La marca de agua del §5.5 amortigua el accidente, pero no es excusa para provocarlo.)
 
-#### 6.4bis ⚑ Escalones pendientes: por qué el panel apunta y no añade
+#### 6.4bis ⚑ Ampliar el catálogo sin desplegar: umbrales desde el panel
 
-El panel de administración deja **preparar un escalón nuevo**: escribes el umbral, pulsas «Añadir» y la escalera
-lo enseña puesto en su sitio, con los romanos de encima corridos y su `id`. Se guarda en
-`appConfig/achievements.pendingSteps` —para todos los administradores, no en el navegador de uno— y **ahí se
-queda**: no entra en el catálogo. La app sigue leyendo el catálogo de `catalog.ts`, así que un umbral pendiente no
-existe para el evaluador, ni para la fracción, ni para el espejo, ni para la pantalla de logros de nadie.
+El panel de administración deja **añadir un escalón** a una escalera que ya existe: escribes el umbral, pulsas
+«Añadir» y es un logro de verdad —se desbloquea, cuenta en la fracción, sale en el listado, en el feed y en la
+ficha que ven tus amistades—. Se guarda en `appConfig/achievements.extraSteps` y **todos los clientes reconstruyen
+el catálogo con él dentro** al leer la configuración (`applyExtraSteps`).
 
-**Por qué se queda a medio camino, y no es pereza.** El umbral en sí es dato: el `id`, el nombre, el romano y los
-dos textos los deriva `expandLadder` de la escalera, y la métrica ya existe —es la de la escalera, no una nueva—.
-Lo que no es dato es el **espejo**: cada logro publicado es un bit en una POSICIÓN de `MIRROR_ORDER`, y ese orden
-es una lista congelada en el código justamente porque es lo que da significado a todas las vitrinas ya publicadas.
-Un escalón que solo viviera en Firestore no tendría bit, y entonces:
+**Por qué un umbral SÍ y una escalera NO.** Un umbral es dato: el `id` (`completados-125`), el grado, el romano y
+los dos textos los deriva `expandLadder` de la escalera, y la métrica —la función que recorre la biblioteca— es la
+de la escalera, que ya está escrita. Una escalera nueva es su métrica, y eso es código: sigue llegando por
+despliegue. Esa frontera es la que hace esto pequeño y seguro.
 
-- **contaría en la fracción** de quien lea esa configuración (el denominador crece),
-- pero **no viajaría a nadie**: `packAchievements` no tiene dónde escribirlo, así que no saldría en la vitrina de
-  su dueño, ni en su tarjeta del feed, ni en la ficha que ven sus amistades,
-- y **sin un solo error por medio**, que es la peor forma de fallar que tiene este subsistema (§9.1).
+**Cómo viaja en el espejo, que era el problema de verdad.** El espejo es un mapa de bits donde **la posición es el
+significado**: meter ahí un escalón nuevo exigiría que todos los clientes compartieran el mismo orden en el mismo
+instante, y uno con la configuración de hace una sesión leería el espejo de otro DESPLAZADO —medallas equivocadas
+en el perfil de otra persona, con su fecha y todo—. Así que no van al bitmap: van a la **cola, por su `id`**
+(`~#completados-125.<día>`), que es la parte del formato que ya existía para lo que los bits no pueden decir. Sin
+orden que compartir no hay desplazamiento posible, y de paso:
 
-**Y hacer dinámico también el orden de los bits es lo peligroso de verdad.** Si dos clientes tuvieran listas de
-bits distintas —uno con la configuración recién leída y otro con la de hace una sesión, o sin red— leerían el
-mismo espejo DESPLAZADO: medallas equivocadas en el perfil de otra persona, con su fecha y todo. No es un fallo
-que se note al ocurrir; es uno que se descubre semanas después y no se puede reconstruir.
+- el bitmap de lo publicado **no se mueve ni un bit** (hay test que lo fija: la cabecera de un espejo con
+  escalones de configuración es idéntica a la de uno sin ellos);
+- **un cliente antiguo no se rompe**: su parser parte la cola por comas y descarta la entrada cuyo índice no
+  reconoce (`parseInt('#…', 36)` es `NaN`), así que simplemente no ve esas medallas — la misma tolerancia que el
+  §6.4 ya exige para un `id` desconocido, y el logro reaparece en cuanto esa persona actualiza;
+- y **quien no ha leído la configuración** tampoco las ve, por el mismo camino: el `id` no está en su catálogo.
 
-**Lo que haría falta para cruzar esa línea**, si algún día conviene, escrito aquí para no volver a decidirlo desde
-cero: (1) el orden de bits pasa a ser un documento **versionado** y el espejo publica su versión —ya lleva prefijo
-(`2:…`)—, (2) un cliente que lea un espejo de una versión que no conoce **se calla** en vez de interpretarlo,
-(3) el catálogo entero (métricas incluidas, que son código) sigue mandando desde el despliegue, así que lo único
-que la configuración puede añadir son **umbrales de escaleras que ya existen**, y (4) la fracción se recalcula
-sobre la unión, con la regla de §6.3.1 —lo conseguido cuenta siempre— para que nadie pierda nada al migrar.
-Mientras eso no esté, el panel apunta y avisa, que es lo que hace hoy.
+**El precio, y es el que acota el tope.** Cada escalón de configuración ocupa unos veinte caracteres de la cola,
+de los 1.024 que valida la regla de Firestore, mientras uno declarado en el código ocupa **un bit**. Por eso van
+DELANTE en la cola —si algo se recorta, que no sea la medalla que solo el `id` puede declarar— y por eso el tope
+es de diez por escalera. Consolidar un umbral en el código (los tres pasos que redacta el panel) es opcional y lo
+único que hace es abaratarlo: en cuanto su `id` está en `MIRROR_IDS`, vuelve a viajar como un bit y la entrada de
+`extraSteps` se puede retirar.
+
+**Y una regla nueva del §6.4: un umbral que ya tiene alguien no se quita.** Quitarlo le retiraría la medalla, que
+es lo único que un sistema de logros no puede hacer. El panel solo ofrece «quitar» mientras la muestra dice que no
+lo tiene nadie; a partir de ahí, para dejar de ofrecerlo hay que marcarlo retirado en el código, como cualquier
+otro escalón (§6.4).
 
 ### 6.5 La recompensa: temas, y nada más
 

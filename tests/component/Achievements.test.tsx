@@ -238,7 +238,7 @@ describe('el listado propio', () => {
     const estados = new Map([['obra-maestra-1', { id: 'obra-maestra-1', level: 0, value: 0, next: 1, unlockedAt: 0 }]]);
     render(
       <AchievementsScreen
-        items={listForScreen(estados, { hidden: { 'obra-maestra': false }, open: {}, pendingSteps: {} })}
+        items={listForScreen(estados, { hidden: { 'obra-maestra': false }, open: {}, extraSteps: {} })}
         summary={summarize([])}
         rarity={null}
       />,
@@ -568,7 +568,7 @@ describe('la zanahoria — se ve lo conseguido y un escalón más', () => {
    */
   describe('lo que ha abierto la comunidad se le enseña a todo el mundo', () => {
     const deCompletados = (byId: Parameters<typeof listForScreen>[0], open = {}) =>
-      listForScreen(byId, { hidden: {}, open, pendingSteps: {} }).filter((e) => e.def.ladder === 'completados').map((e) => e.def.id);
+      listForScreen(byId, { hidden: {}, open, extraSteps: {} }).filter((e) => e.def.ladder === 'completados').map((e) => e.def.id);
 
     it('quien no tiene nada ve hasta donde ha llegado la comunidad', () => {
       const vistos = deCompletados(new Map(), { completados: 'completados-50' });
@@ -620,7 +620,7 @@ describe('la zanahoria — se ve lo conseguido y un escalón más', () => {
 
     /** Y la ocultación sigue mandando por encima: abierta o no, quien no tiene ningún escalón no la ve. */
     it('la apertura no destapa una escalera oculta', () => {
-      const vistos = listForScreen(new Map(), { hidden: { 'obra-maestra': true }, open: { 'obra-maestra': 'obra-maestra-1' }, pendingSteps: {} });
+      const vistos = listForScreen(new Map(), { hidden: { 'obra-maestra': true }, open: { 'obra-maestra': 'obra-maestra-1' }, extraSteps: {} });
       expect(vistos.some((e) => e.def.ladder === 'obra-maestra')).toBe(false);
     });
   });

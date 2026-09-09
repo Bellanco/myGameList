@@ -517,18 +517,18 @@ export const ADMIN_ACHIEVEMENTS_UI = {
   hiddenSaving: 'Guardando…',
 
   /**
-   * PREPARAR UN ESCALÓN INTERMEDIO. El panel no lo mete en el catálogo —el `id` tiene que llegar al código para
-   * que el logro se publique en el espejo— pero sí lo GUARDA como pendiente, lo enseña puesto en su escalera y
-   * deja el cambio escrito y listo para pegar, que es la parte que se olvida.
+   * AÑADIR UN ESCALÓN A UNA ESCALERA, sin desplegar y para todo el mundo (§6.4bis). El panel lo guarda en
+   * `appConfig`, el catálogo se reconstruye con él dentro y a partir de ahí es un logro como cualquier otro: se
+   * desbloquea, cuenta en la fracción y viaja en el espejo. Lo que no puede añadir es una escalera nueva.
    *
    * TRES CORRECCIONES QUE VIENEN DE VERLO EN USO, y las tres van juntas porque son la misma queja:
    *
    *  - la ficha se abre DENTRO de la escalera, debajo del botón. Salía arriba de la pantalla, lejos de la
-   *    escalera desde la que se pulsaba, así que escribir un umbral recalculaba el plan sin que se viera nada
-   *    desde donde estabas y parecía que el campo no hacía nada;
+   *    escalera desde la que se pulsaba, así que escribir un umbral no se veía desde donde estabas y parecía que
+   *    el campo no hacía nada;
    *  - se abre VACÍA. Proponía el doble del último escalón y ese número aparecía puesto sin que nadie lo pidiera;
-   *  - y el escalón entra al pulsar «Añadir», no al escribir. Entonces se GUARDA —para todos los
-   *    administradores— y se queda en la tabla, recolocado, hasta que se quita o llega al código.
+   *  - y el escalón entra al pulsar «Añadir», no al escribir. Entonces se guarda, la tabla lo enseña recolocado
+   *    y ahí se queda.
    */
   prepare: (step: number) => `Preparar escalón ${step}`,
   prepareAny: 'Preparar un escalón nuevo',
@@ -548,19 +548,26 @@ export const ADMIN_ACHIEVEMENTS_UI = {
   prepareClose: 'Cerrar',
 
   /**
-   * LOS PENDIENTES, que son la parte delicada de todo esto: están guardados y se ven puestos, pero NO son
-   * catálogo. Los cuatro textos de abajo son lo que impide que eso se malentienda —la fila se marca, la lista se
-   * titula «pendientes», la nota dice qué significa exactamente y el «ya en el código» cierra el ciclo—.
+   * LOS AÑADIDOS DESDE EL PANEL (§6.4bis). Son catálogo de verdad —se desbloquean, cuentan y viajan— pero no
+   * están en el código, y esa diferencia hay que poder verla: la fila se marca, la lista los agrupa, la nota dice
+   * exactamente qué son y el «ya en el código» cierra el ciclo cuando alguien los consolida.
    */
-  pendingTitle: 'Pendientes de llevar al código',
-  pendingFlag: 'pendiente',
-  pendingTaken: (step: number) => `El umbral ${step} ya está pendiente en esta escalera.`,
-  pendingRemove: (step: number) => `Quitar ${step}`,
-  pendingInCode: 'ya en el código',
-  pendingSaving: 'Guardando…',
-  pendingFailed: 'No se ha podido guardar. ¿Sesión de administrador iniciada?',
-  pendingNote: 'Guardado para todos los administradores, y solo para este panel: la app lee el catálogo del código, así que mientras el `id` no esté en MIRROR_ORDER el escalón no existe para nadie —ni cuenta en la fracción, ni se publica en el espejo—.',
-  /** El nombre que tenía un escalón antes de que el pendiente le corriera el romano. */
+  extraTitle: 'Añadidos desde el panel',
+  extraFlag: 'del panel',
+  extraTaken: (step: number) => `El umbral ${step} ya lo añadió el panel a esta escalera.`,
+  extraRemove: (step: number) => `Quitar ${step}`,
+  extraInCode: 'ya en el código',
+  extraSaving: 'Guardando…',
+  extraFailed: 'No se ha podido guardar. ¿Sesión de administrador iniciada?',
+  extraNote: 'En vigor para todo el mundo: se puede desbloquear, cuenta en la fracción y viaja en el espejo por su `id`. No añade escaleras nuevas —la métrica de una escalera es código—, solo escalones de las que ya existen.',
+  /**
+   * QUITAR UN UMBRAL QUE YA TIENE ALGUIEN RETIRA SU MEDALLA, y eso es lo único que el §6.4 no permite. El botón
+   * desaparece en cuanto la muestra dice que alguien lo tiene, y se explica por qué en su sitio.
+   */
+  extraLocked: 'Ya lo tiene alguien: quitarlo le retiraría la medalla (§6.4). Para dejar de ofrecerlo hay que marcarlo retirado en el código.',
+  /** Consolidar en el código es OPCIONAL: le da su bit en el espejo y deja de viajar por la cola. */
+  codeTitle: 'Consolidarlo en el código (opcional: le da su bit en el espejo)',
+  /** El nombre que tenía un escalón antes de que el añadido le corriera el romano. */
   previewMoved: (before: string) => `antes: ${before}`,
 
   /**

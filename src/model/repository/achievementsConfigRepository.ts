@@ -24,18 +24,20 @@ import {
   type AchievementsConfig,
   type HiddenOverrides,
   type OpenFrontier,
-  type PendingSteps,
 } from '../../core/achievements/visibility';
+import { applyExtraSteps } from '../../core/achievements/catalog';
+import type { ExtraSteps } from '../../core/achievements/types';
 
 const COLLECTION = 'appConfig';
 const DOC_ID = 'achievements';
 
 /**
- * Tope de escalones pendientes por escalera. No es una limitación de producto: es que esto es una nota de
- * trabajo —lo que hay que llevar al código— y una escalera con veinte umbrales pendientes es un rediseño, no una
- * inserción. La regla de Firestore acota el documento entero por su lado.
+ * Tope de escalones extra por escalera. Cada uno viaja en la COLA del espejo por su `id` —unos veinte caracteres
+ * de los 1.024 que valida la regla— así que el tope no es cosmético: es lo que impide que ampliar el catálogo
+ * desde el panel empiece a comerse las fechas de los demás logros. Diez por escalera es de sobra para insertar
+ * umbrales; una escalera que necesite más es un rediseño, y eso se hace en el código.
  */
-const PENDING_STEPS_PER_LADDER = 10;
+const EXTRA_STEPS_PER_LADDER = 10;
 
 /** Cache de sesión. `null` = todavía no se ha leído. Se invalida al escribir, que es cuando puede cambiar. */
 let cached: AchievementsConfig | null = null;
@@ -72,12 +74,12 @@ function sanitizeOpen(raw: unknown): OpenFrontier {
 }
 
 /**
- * Lo mismo para los escalones PENDIENTES: clave de escalera → umbrales. Se descarta lo que no sea un entero
- * positivo y se ordena, porque es como se van a leer siempre; el tope por escalera evita que una nota de trabajo
- * se convierta en un almacén. Un umbral que ya esté en el código lo descarta el panel, que es quien tiene el
- * catálogo delante.
+ * Lo mismo para los escalones EXTRA: clave de escalera → umbrales. Se descarta lo que no sea un entero positivo
+ * y se ordena, porque es como se van a leer siempre; el tope por escalera acota cuánto puede crecer el catálogo
+ * sin desplegar. Un umbral que ya esté declarado en el código lo descarta `applyExtraSteps`, que es quien tiene
+ * el catálogo delante.
  */
-function sanitizePendingSteps(raw: unknown): PendingSteps {
+function sanitizeExtraSteps(raw: unknown): ExtraSteps {
   if (!raw || typeof raw !== 'object') return {};
   const clean: Record<string, number[]> = {};
   for (const [key, value] of Object.entries(raw as Record<string, unknown>)) {
@@ -87,7 +89,7 @@ function sanitizePendingSteps(raw: unknown): PendingSteps {
       .filter((step) => Number.isInteger(step) && step > 0)
       .filter((step, index, all) => all.indexOf(step) === index)
       .sort((a, b) => a - b)
-      .slice(0, PENDING_STEPS_PER_LADDER);
+      .slice(0, EXTRA_STEPS_PER_LADDER);
     if (steps.length > 0) clean[key] = steps;
   }
   return clean;
@@ -110,13 +112,20 @@ export async function loadAchievementsConfig(force = false): Promise<Achievement
       if (!services) return NO_ACHIEVEMENTS_CONFIG;
       const snapshot = await getDoc(doc(services.firestore, COLLECTION, DOC_ID));
       const data = snapshot.exists()
-        ? (snapshot.data() as { hidden?: unknown; open?: unknown; pendingSteps?: unknown })
+        ? (snapshot.data() as { hidden?: unknown; open?: unknown; extraSteps?: unknown; pendingSteps?: unknown })
         : {};
       cached = {
         hidden: sanitizeHidden(data?.hidden),
         open: sanitizeOpen(data?.open),
-        pendingSteps: sanitizePendingSteps(data?.pendingSteps),
+        // `pendingSteps` es el nombre que tuvo este campo cuando el panel solo APUNTABA el umbral, antes de que
+        // el catálogo supiera leerlo. Se sigue admitiendo al leer para no perder lo apuntado entonces; la
+        // siguiente escritura del panel lo consolida en `extraSteps`.
+        extraSteps: sanitizeExtraSteps(data?.extraSteps ?? data?.pendingSteps),
       };
+      // EL CATÁLOGO SE RECONSTRUYE AQUÍ, y no en cada pantalla: es el único sitio por el que pasa la
+      // configuración, así que es donde se puede garantizar que el catálogo y el documento no divergen nunca.
+      // `applyExtraSteps` es idempotente y barato: una pasada por las 64 escaleras.
+      applyExtraSteps(cached.extraSteps);
       return cached;
     } catch {
       // Sin permisos, sin red o sin documento: el catálogo manda.
@@ -150,30 +159,35 @@ export async function setLadderHidden(key: string, hidden: boolean): Promise<Hid
 }
 
 /**
- * GUARDA LOS ESCALONES PENDIENTES de una escalera, para todos los administradores. Solo el admin puede (lo impone
- * la regla, no esta función).
+ * AMPLÍA UNA ESCALERA con escalones nuevos, para todo el mundo y sin desplegar (§6.4bis). Solo el admin puede (lo
+ * impone la regla, no esta función).
  *
- * NO ES CATÁLOGO: nada de esto entra en `catalog.ts`, así que un umbral guardado aquí no existe para el
- * evaluador, ni para la fracción, ni para el espejo, ni para la pantalla de logros de nadie (ver `PendingSteps`).
- * Es la nota de «esto hay que llevarlo al código», compartida en vez de apuntada en un papel.
+ * ES CATÁLOGO DE VERDAD: al escribir se reconstruye el catálogo de este cliente (`applyExtraSteps`) y los demás
+ * lo reconstruyen al leer la configuración, así que el escalón se desbloquea, cuenta en la fracción y viaja en el
+ * espejo por su `id`. Lo que NO puede añadir es una escalera nueva: su métrica es código.
+ *
+ * QUITAR UN UMBRAL RETIRA MEDALLAS AJENAS (§6.4), y esta función no lo puede impedir —no sabe quién tiene qué—,
+ * así que la guarda vive donde hay con qué decidirlo: el panel solo ofrece quitar lo que todavía no tiene nadie.
  *
  * Se escribe la LISTA ENTERA de esa escalera y se devuelve el mapa resultante, para que el panel pinte lo que de
  * verdad ha quedado guardado en vez de lo que creía. Una lista vacía borra la entrada: así «quitar el último»
  * deja el documento como estaba y no una escalera con una lista vacía dentro. Si falla, LANZA: el admin tiene
  * que enterarse.
  */
-export async function setPendingSteps(ladderKey: string, steps: readonly number[]): Promise<PendingSteps> {
+export async function setExtraSteps(ladderKey: string, steps: readonly number[]): Promise<ExtraSteps> {
   const services = await initializeFirebaseServices();
   if (!services) throw new Error('Firebase no está configurado en este entorno');
 
   const current = await loadAchievementsConfig(true);
-  const limpio = sanitizePendingSteps({ [ladderKey]: steps })[ladderKey] || [];
-  const next: Record<string, readonly number[]> = { ...current.pendingSteps };
+  const limpio = sanitizeExtraSteps({ [ladderKey]: steps })[ladderKey] || [];
+  const next: Record<string, readonly number[]> = { ...current.extraSteps };
   if (limpio.length > 0) next[ladderKey] = limpio;
   else delete next[ladderKey];
 
-  await setDoc(doc(services.firestore, COLLECTION, DOC_ID), { pendingSteps: next }, { merge: true });
-  cached = { ...current, pendingSteps: next };
+  await setDoc(doc(services.firestore, COLLECTION, DOC_ID), { extraSteps: next }, { merge: true });
+  cached = { ...current, extraSteps: next };
+  // El catálogo de ESTE cliente, al día sin esperar a la siguiente sesión: es el que la pantalla está mirando.
+  applyExtraSteps(next);
   return next;
 }
 
