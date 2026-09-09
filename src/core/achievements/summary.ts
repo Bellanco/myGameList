@@ -134,12 +134,19 @@ export function summarize(
  * denominador ya excluía los primeros pasos —que no se publican— y los retirados. Un `id` que este cliente no
  * conozca se ignora en silencio, así que un catálogo desactualizado cuenta de menos: es la dirección segura del
  * error —nunca infla, siempre desmerece— y se corrige sola al actualizar.
+ *
+ * LA FRONTERA COMUNITARIA HAY QUE PASARLA, y es lo que hace que la cifra de una ficha ajena sea la MISMA que esa
+ * persona ve en su aparato. Sin ella el denominador salía de su solo progreso: la ficha de quien empieza decía
+ * «0 de 55» mientras su dueño leía «0 de 249», y las dos pretendían medir el mismo catálogo.
  */
-export function summarizeMirror(levels: ReadonlyMap<string, number>): AchievementSummary {
+export function summarizeMirror(
+  levels: ReadonlyMap<string, number>,
+  open: OpenFrontier = {},
+): AchievementSummary {
   const states: AchievementState[] = [];
   for (const [id, level] of levels) {
     if (!ACHIEVEMENTS_BY_ID.has(id) || level < 1) continue;
     states.push({ id, level, value: 0, next: null, unlockedAt: 0 });
   }
-  return summarize(states);
+  return summarize(states, open);
 }

@@ -452,11 +452,13 @@ describe('StatsHub · figuras interactivas del podio', () => {
 });
 
 /**
- * `/logros` ES DEL PANEL, Y SE QUEDA EN EL PANEL.
+ * `/logros` ES DEL PANEL, Y AQUÍ NO SE LEE UN DATO QUE NO SEA TUYO.
  *
- * La pantalla la comparte con el hub social (`AchievementsScreen`), y de ahí venía el fallo: el botón de «Logros
- * globales» llevaba a `/social/profiles/me/globales`, que es OTRA sección. Se entraba desde Perfil y el «volver»
- * de la pantalla de destino dejaba al usuario en el hub social, sin camino de vuelta a donde estaba.
+ * La pantalla la comparte con el hub social (`AchievementsScreen`), y de ahí venían las dos tentaciones: el
+ * botón de «Logros globales» y el porcentaje comparado. Las dos viven de las vitrinas de OTRAS personas —los
+ * espejos que descarga el directorio— así que las dos se quedan en el hub, que es donde esos datos están. El
+ * botón estuvo aquí y llevaba a `/social/profiles/me/globales`: además de traer datos ajenos a esta sección,
+ * el «volver» de la pantalla de destino dejaba al usuario en el hub social sin camino de vuelta.
  */
 describe('StatsHub · los logros del panel no se salen del panel', () => {
   const enLogros = (games: TabData) =>
