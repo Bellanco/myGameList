@@ -214,6 +214,9 @@ service cloud.firestore {
      *     escalera para todo el mundo: en cuanto un usuario ve un escalón, se le enseña a todos. Es una MEDICIÓN,
      *     así que la adelanta el cliente de quien llega ahí (`openFrontierUpdateIsValid`) y también la publica el
      *     panel midiendo los espejos del censo.
+     *   · `pendingSteps` — clave de escalera → umbrales que el panel ha acordado y que TODAVÍA NO ESTÁN EN EL
+     *     CÓDIGO. No es catálogo y la app no lo lee: es la nota de trabajo compartida entre administradores (ver
+     *     `core/achievements/visibility.ts`). Solo el admin, como `hidden`.
      *
      * Se acota como el resto: solo esas dos claves, y cada mapa con tope de entradas para que este documento no
      * se pueda usar como almacén de nada. Los VALORES de `open` no se validan uno a uno —Firestore no sabe
@@ -221,11 +224,13 @@ service cloud.firestore {
      * que no exista en el catálogo se ignora al aplicarlo (`openThrough`).
      */
     function achievementsConfigIsValid() {
-      return request.resource.data.keys().hasOnly(["hidden", "open"])
+      return request.resource.data.keys().hasOnly(["hidden", "open", "pendingSteps"])
         && (!("hidden" in request.resource.data)
             || (request.resource.data.hidden is map && request.resource.data.hidden.size() <= 100))
         && (!("open" in request.resource.data)
-            || (request.resource.data.open is map && request.resource.data.open.size() <= 100));
+            || (request.resource.data.open is map && request.resource.data.open.size() <= 100))
+        && (!("pendingSteps" in request.resource.data)
+            || (request.resource.data.pendingSteps is map && request.resource.data.pendingSteps.size() <= 100));
     }
 
     /**

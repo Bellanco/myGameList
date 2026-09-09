@@ -745,6 +745,21 @@
   overflow-wrap: anywhere;
 }
 .admin-ach-plan .admin-card-actions { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; }
+
+/* LO QUE HAY APUNTADO Y NO ESTÁ EN EL CÓDIGO. Se separa del campo con un filete: el campo es «añade uno» y esto
+   es «esto es lo que llevas», y sin la línea las dos cosas se leían como un solo bloque. Cada pendiente en su
+   fila, con su `id` a la izquierda y su «quitar» a la derecha. */
+.admin-ach-pending { margin-top: .75rem; padding-top: .6rem; border-top: 1px solid var(--border); }
+.admin-ach-pending h5 { margin: 0 0 .4rem; font-size: .85rem; }
+.admin-ach-pending ul { list-style: none; margin: 0; padding: 0; display: grid; gap: .35rem; }
+.admin-ach-pending li { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; }
+.admin-ach-pending li code {
+  font-family: var(--ach-mono, ui-monospace, monospace);
+  font-size: .78rem;
+  color: var(--text);
+}
+.admin-ach-pending li .btn { padding: .25rem .55rem; font-size: .78rem; }
+.admin-ach-pending .admin-card-note { margin: .5rem 0 0; }
 .admin-ach-copied { color: var(--fg-green); font-size: .8rem; }
 
 /* El interruptor de visibilidad vive en la CABECERA de la escalera, a la derecha: es la única acción que cambia

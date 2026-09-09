@@ -24,10 +24,18 @@ import {
   type AchievementsConfig,
   type HiddenOverrides,
   type OpenFrontier,
+  type PendingSteps,
 } from '../../core/achievements/visibility';
 
 const COLLECTION = 'appConfig';
 const DOC_ID = 'achievements';
+
+/**
+ * Tope de escalones pendientes por escalera. No es una limitación de producto: es que esto es una nota de
+ * trabajo —lo que hay que llevar al código— y una escalera con veinte umbrales pendientes es un rediseño, no una
+ * inserción. La regla de Firestore acota el documento entero por su lado.
+ */
+const PENDING_STEPS_PER_LADDER = 10;
 
 /** Cache de sesión. `null` = todavía no se ha leído. Se invalida al escribir, que es cuando puede cambiar. */
 let cached: AchievementsConfig | null = null;
@@ -64,7 +72,29 @@ function sanitizeOpen(raw: unknown): OpenFrontier {
 }
 
 /**
- * Lee la configuración. Ante cualquier problema devuelve los dos mapas vacíos, que es el lado seguro: manda el
+ * Lo mismo para los escalones PENDIENTES: clave de escalera → umbrales. Se descarta lo que no sea un entero
+ * positivo y se ordena, porque es como se van a leer siempre; el tope por escalera evita que una nota de trabajo
+ * se convierta en un almacén. Un umbral que ya esté en el código lo descarta el panel, que es quien tiene el
+ * catálogo delante.
+ */
+function sanitizePendingSteps(raw: unknown): PendingSteps {
+  if (!raw || typeof raw !== 'object') return {};
+  const clean: Record<string, number[]> = {};
+  for (const [key, value] of Object.entries(raw as Record<string, unknown>)) {
+    if (!key || !Array.isArray(value)) continue;
+    const steps = value
+      .map((step) => Number(step))
+      .filter((step) => Number.isInteger(step) && step > 0)
+      .filter((step, index, all) => all.indexOf(step) === index)
+      .sort((a, b) => a - b)
+      .slice(0, PENDING_STEPS_PER_LADDER);
+    if (steps.length > 0) clean[key] = steps;
+  }
+  return clean;
+}
+
+/**
+ * Lee la configuración. Ante cualquier problema devuelve los tres mapas vacíos, que es el lado seguro: manda el
  * catálogo, y cada quien abre su escalera con su propio progreso (el comportamiento de toda la vida).
  *
  * `force` la vuelve a pedir aunque esté en caché: lo usa el panel después de guardar, para no quedarse
@@ -79,8 +109,14 @@ export async function loadAchievementsConfig(force = false): Promise<Achievement
       const services = await initializeFirebaseServices();
       if (!services) return NO_ACHIEVEMENTS_CONFIG;
       const snapshot = await getDoc(doc(services.firestore, COLLECTION, DOC_ID));
-      const data = snapshot.exists() ? (snapshot.data() as { hidden?: unknown; open?: unknown }) : {};
-      cached = { hidden: sanitizeHidden(data?.hidden), open: sanitizeOpen(data?.open) };
+      const data = snapshot.exists()
+        ? (snapshot.data() as { hidden?: unknown; open?: unknown; pendingSteps?: unknown })
+        : {};
+      cached = {
+        hidden: sanitizeHidden(data?.hidden),
+        open: sanitizeOpen(data?.open),
+        pendingSteps: sanitizePendingSteps(data?.pendingSteps),
+      };
       return cached;
     } catch {
       // Sin permisos, sin red o sin documento: el catálogo manda.
@@ -110,6 +146,34 @@ export async function setLadderHidden(key: string, hidden: boolean): Promise<Hid
   const next = { ...current.hidden, [key]: hidden };
   await setDoc(doc(services.firestore, COLLECTION, DOC_ID), { hidden: next }, { merge: true });
   cached = { ...current, hidden: next };
+  return next;
+}
+
+/**
+ * GUARDA LOS ESCALONES PENDIENTES de una escalera, para todos los administradores. Solo el admin puede (lo impone
+ * la regla, no esta función).
+ *
+ * NO ES CATÁLOGO: nada de esto entra en `catalog.ts`, así que un umbral guardado aquí no existe para el
+ * evaluador, ni para la fracción, ni para el espejo, ni para la pantalla de logros de nadie (ver `PendingSteps`).
+ * Es la nota de «esto hay que llevarlo al código», compartida en vez de apuntada en un papel.
+ *
+ * Se escribe la LISTA ENTERA de esa escalera y se devuelve el mapa resultante, para que el panel pinte lo que de
+ * verdad ha quedado guardado en vez de lo que creía. Una lista vacía borra la entrada: así «quitar el último»
+ * deja el documento como estaba y no una escalera con una lista vacía dentro. Si falla, LANZA: el admin tiene
+ * que enterarse.
+ */
+export async function setPendingSteps(ladderKey: string, steps: readonly number[]): Promise<PendingSteps> {
+  const services = await initializeFirebaseServices();
+  if (!services) throw new Error('Firebase no está configurado en este entorno');
+
+  const current = await loadAchievementsConfig(true);
+  const limpio = sanitizePendingSteps({ [ladderKey]: steps })[ladderKey] || [];
+  const next: Record<string, readonly number[]> = { ...current.pendingSteps };
+  if (limpio.length > 0) next[ladderKey] = limpio;
+  else delete next[ladderKey];
+
+  await setDoc(doc(services.firestore, COLLECTION, DOC_ID), { pendingSteps: next }, { merge: true });
+  cached = { ...current, pendingSteps: next };
   return next;
 }
 
@@ -151,7 +215,7 @@ export async function advanceOpenFrontier(open: OpenFrontier): Promise<void> {
     const current = await loadAchievementsConfig();
     await setDoc(doc(services.firestore, COLLECTION, DOC_ID), { open }, { merge: true });
     // La caché de sesión se pone al día para que la pantalla no vuelva a creer que hay algo que publicar.
-    cached = { hidden: current.hidden, open };
+    cached = { ...current, open };
   } catch {
     // Se queda sin abrir para los demás hasta la próxima. Nadie pierde nada de lo suyo por esto.
   }
