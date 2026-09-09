@@ -708,14 +708,23 @@ export const AdminAchievements = memo(function AdminAchievements({
               {/* La tabla no puede empujar el ancho de la página: se desplaza DENTRO de su envoltorio y no de la
                   tarjeta, para que la cabecera de la escalera no se vaya de viaje con ella. */}
               <div className="admin-ach-scroll">
-                <table className="admin-ach-table">
+                {/* LOS ROLES VAN ESCRITOS, y no es redundancia: en móvil esta tabla se lee como fichas y para eso
+                    la fila pasa a `display: grid` y la celda a `block` (ver `admin.scss`). Cambiar el `display`
+                    de un `tr`/`td` le QUITA su papel en el árbol de accesibilidad —deja de ser fila y celda, y
+                    la tabla deja de tener estructura que anunciar—, así que declarados a mano sobreviven al
+                    cambio de forma. Es el precio de una tabla que se reordena, y se paga aquí.
+
+                    En `thead` y `tbody` NO se escriben: su `display` no cambia —el de la cabecera es `none`, que
+                    es lo que se quiere— así que ahí el papel implícito aguanta y declararlo sería la redundancia
+                    que `jsx-a11y/no-redundant-roles` prohíbe. */}
+                <table className="admin-ach-table" role="table">
                   <thead>
-                    <tr>
-                      <th scope="col">{A.colStep}</th>
-                      <th scope="col">{A.colName}</th>
-                      <th scope="col">{A.colReached}</th>
-                      <th scope="col">{A.colGoal}</th>
-                      <th scope="col">{A.colDone}</th>
+                    <tr role="row">
+                      <th scope="col" role="columnheader">{A.colStep}</th>
+                      <th scope="col" role="columnheader">{A.colName}</th>
+                      <th scope="col" role="columnheader">{A.colReached}</th>
+                      <th scope="col" role="columnheader">{A.colGoal}</th>
+                      <th scope="col" role="columnheader">{A.colDone}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -745,9 +754,9 @@ export const AdminAchievements = memo(function AdminAchievements({
                       // de verse la escalera— con cuatro copias de lo mismo. Es el criterio de la frontera.
                       const opensUnseen = nobodySees && !(previous && unseen?.has(previous.id));
                       return (
-                      <tr key={def.id} className={nueva ? 'is-preview' : (nobodySees ? 'is-unseen' : undefined)}>
-                        <td className="admin-ach-step">{def.step}</td>
-                        <td className="admin-ach-name">
+                      <tr key={def.id} role="row" className={nueva ? 'is-preview' : (nobodySees ? 'is-unseen' : undefined)}>
+                        <td role="cell" className="admin-ach-step">{def.step}</td>
+                        <td role="cell" className="admin-ach-name">
                           {def.labels.name}
                           {/* LA FILA NUEVA SE DICE, no solo se colorea: el color la separa de un vistazo y el
                               rótulo es lo que la deja clara con lector de pantalla y en monocromo. */}
@@ -760,7 +769,7 @@ export const AdminAchievements = memo(function AdminAchievements({
                               excepción se vea. */}
                           {def.retired ? <small className="admin-ach-flag">{A.notOffered}</small> : null}
                         </td>
-                        <td className="admin-ach-reached">
+                        <td role="cell" className="admin-ach-reached">
                           {measured && !nueva ? (
                             <>
                               <span className={percent === 0 ? 'admin-ach-warn-soft' : undefined}>
@@ -784,8 +793,8 @@ export const AdminAchievements = memo(function AdminAchievements({
                         {/* Los dos textos llevan su rótulo en un `data-col`: en móvil la tabla se lee como fichas
                             —cinco columnas no caben— y es de ahí de donde sale la etiqueta de cada línea, porque
                             la cabecera de la tabla no está (ver `admin.scss`). */}
-                        <td data-col={A.colGoalShort}>{def.labels.condition}</td>
-                        <td data-col={A.colDoneShort}>
+                        <td role="cell" data-col={A.colGoalShort}>{def.labels.condition}</td>
+                        <td role="cell" data-col={A.colDoneShort}>
                           {def.labels.done}
                           {/* Si el hecho y la meta son la misma frase, la escalera no escribió su `done` y el
                               respaldo la copió: se dice aquí porque en la app se lee como una tarea pendiente

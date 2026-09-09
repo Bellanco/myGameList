@@ -91,6 +91,10 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
   del catálogo del panel, y la píldora se quedaba flotando encima de ella—, y lo mismo con cualquier cabecera
   pegajosa. La medalla pasa a ser una sola capa (`isolation`), con su interior en el mismo orden que tenía; los
   tres discos solapados del aviso siguen ordenándose porque su `z-index` está en las medallas, no dentro.
+- **Y la tabla del panel sigue siendo una tabla para quien no la ve.** Cambiar el `display` de una fila o una
+  celda le quita su papel en el árbol de accesibilidad, así que la tabla reordenada dejaba de anunciar estructura:
+  los roles van ahora escritos a mano en la tabla, las filas, las cabeceras y las celdas, que es lo que sobrevive
+  al cambio de forma.
 - **El catálogo del panel se lee en un móvil.** La tabla de escalones son cinco columnas y 46 rem de ancho: en un
   teléfono de 390 px se veían **dos y media** —los dos textos, que son a lo que se viene, quedaban enteros fuera
   de la pantalla y solo se llegaba a ellos desplazando cada fila de lado—. Por debajo de 720 px cada escalón pasa
