@@ -517,35 +517,51 @@ export const ADMIN_ACHIEVEMENTS_UI = {
   hiddenSaving: 'Guardando…',
 
   /**
-   * PREPARAR UN ESCALÓN INTERMEDIO. El panel no lo añade —el `id` tiene que llegar al código para que el logro
-   * se publique en el espejo— pero sí deja el cambio escrito y listo para pegar, que es la parte que se olvida.
+   * PREPARAR UN ESCALÓN INTERMEDIO. El panel no lo mete en el catálogo —el `id` tiene que llegar al código para
+   * que el logro se publique en el espejo— pero sí lo GUARDA como pendiente, lo enseña puesto en su escalera y
+   * deja el cambio escrito y listo para pegar, que es la parte que se olvida.
    *
-   * Y LO ENSEÑA PUESTO: la ficha se abre DENTRO de la escalera y su tabla pasa a enseñar cómo quedaría —la fila
-   * nueva en su sitio y los romanos de encima corridos—. Antes la ficha salía arriba de la pantalla, lejos de la
-   * escalera desde la que se pulsaba: escribir un umbral recalculaba el plan sin que se viera nada desde donde
-   * estabas, así que parecía que el campo no hacía nada.
+   * TRES CORRECCIONES QUE VIENEN DE VERLO EN USO, y las tres van juntas porque son la misma queja:
+   *
+   *  - la ficha se abre DENTRO de la escalera, debajo del botón. Salía arriba de la pantalla, lejos de la
+   *    escalera desde la que se pulsaba, así que escribir un umbral recalculaba el plan sin que se viera nada
+   *    desde donde estabas y parecía que el campo no hacía nada;
+   *  - se abre VACÍA. Proponía el doble del último escalón y ese número aparecía puesto sin que nadie lo pidiera;
+   *  - y el escalón entra al pulsar «Añadir», no al escribir. Entonces se GUARDA —para todos los
+   *    administradores— y se queda en la tabla, recolocado, hasta que se quita o llega al código.
    */
   prepare: (step: number) => `Preparar escalón ${step}`,
   prepareAny: 'Preparar un escalón nuevo',
   prepareField: 'Umbral',
-  prepareHelp: 'Escribe el umbral que quieras: la tabla de arriba enseña cómo queda la escalera.',
-  /** La fila que todavía no existe, en la tabla de la previsualización. */
-  previewNew: 'nueva',
-  /** El nombre que tenía un escalón antes de que el nuevo le corriera el romano. */
-  previewMoved: (before: string) => `antes: ${before}`,
-  /** Lo que la tabla está enseñando mientras la ficha está abierta, dicho donde se decide. */
-  previewNote: 'La tabla de esta escalera enseña cómo quedaría. No se guarda nada: al catálogo se lleva con estos tres pasos.',
+  prepareHelp: 'Escribe un umbral y pulsa Añadir. Hasta entonces no se toca nada.',
+  prepareAdd: 'Añadir',
   prepareTaken: (step: number) => `El umbral ${step} ya existe en esta escalera.`,
   prepareInvalid: 'Escribe un número entero mayor que cero.',
-  prepareTitle: (key: string, step: number) => `Insertar ${step} en «${key}»`,
+  prepareTitleOf: (key: string) => `Escalones nuevos en «${key}»`,
   prepareCatalog: (steps: string) => `1 · catalog.ts — steps: [${steps}]`,
-  prepareMirror: (id: string) => `2 · mirrorOrder.ts — al FINAL de MIRROR_IDS: '${id}',`,
+  prepareMirror: (ids: string) => `2 · mirrorOrder.ts — al FINAL de MIRROR_IDS: ${ids}`,
   prepareTests: (total: [number, number], points: [number, number], bits: [number, number]) =>
     `3 · tests/unit/achievements.test.ts — total ${total[0]} → ${total[1]} · techo ${points[0]} → ${points[1]} · MIRROR_ORDER ${bits[0]} → ${bits[1]}`,
   prepareRename: (name: string) => `Ojo: los escalones por encima corren de romano (${name} y los siguientes).`,
   prepareCopy: 'Copiar los tres pasos',
   prepareCopied: 'Copiado.',
   prepareClose: 'Cerrar',
+
+  /**
+   * LOS PENDIENTES, que son la parte delicada de todo esto: están guardados y se ven puestos, pero NO son
+   * catálogo. Los cuatro textos de abajo son lo que impide que eso se malentienda —la fila se marca, la lista se
+   * titula «pendientes», la nota dice qué significa exactamente y el «ya en el código» cierra el ciclo—.
+   */
+  pendingTitle: 'Pendientes de llevar al código',
+  pendingFlag: 'pendiente',
+  pendingTaken: (step: number) => `El umbral ${step} ya está pendiente en esta escalera.`,
+  pendingRemove: (step: number) => `Quitar ${step}`,
+  pendingInCode: 'ya en el código',
+  pendingSaving: 'Guardando…',
+  pendingFailed: 'No se ha podido guardar. ¿Sesión de administrador iniciada?',
+  pendingNote: 'Guardado para todos los administradores, y solo para este panel: la app lee el catálogo del código, así que mientras el `id` no esté en MIRROR_ORDER el escalón no existe para nadie —ni cuenta en la fracción, ni se publica en el espejo—.',
+  /** El nombre que tenía un escalón antes de que el pendiente le corriera el romano. */
+  previewMoved: (before: string) => `antes: ${before}`,
 
   /**
    * EL ESQUEMA. Va plegado: se abre la primera vez y no vuelve a estorbar.

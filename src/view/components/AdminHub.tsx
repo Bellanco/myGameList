@@ -1,7 +1,7 @@
 import { lazy, memo, Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import { ADMIN_ACHIEVEMENTS_UI, ADMIN_PANEL_UI } from '../../core/constants/adminLabels';
-import type { HiddenOverrides, OpenFrontier } from '../../core/achievements/visibility';
+import type { HiddenOverrides, OpenFrontier, PendingSteps } from '../../core/achievements/visibility';
 import {
   ADMIN_ONLY_TIER,
   PROFILE_TIERS,
@@ -165,6 +165,9 @@ export const AdminHub = memo(function AdminHub() {
   // La apertura comunitaria PUBLICADA. Llega con la misma lectura que la ocultación (mismo documento) y sirve
   // para que el catálogo pueda decir si lo que mide ahora es lo que la gente está viendo.
   const [openFrontier, setOpenFrontier] = useState<OpenFrontier>({});
+  // Los escalones que el panel ha acordado y que todavía no están en el código. Llegan con la MISMA lectura que
+  // los dos de arriba (mismo documento) y no son catálogo: la app no los lee (ver `PendingSteps`).
+  const [pendingSteps, setPendingSteps] = useState<PendingSteps>({});
   const [pending, setPending] = useState<PendingAction>(null);
   // Los enlaces de TODOS se piden una vez y se agrupan por usuario: el panel pinta decenas de fichas y una
   // petición por ficha sería absurda para un dato que cabe en una sola respuesta.
@@ -192,6 +195,7 @@ export const AdminHub = memo(function AdminHub() {
         if (cancelled) return;
         setHiddenAchievements(value.hidden);
         setOpenFrontier(value.open);
+        setPendingSteps(value.pendingSteps);
       })
       .catch(() => {
         // Sin configuración manda el catálogo; la pantalla lo enseña tal cual.
@@ -205,6 +209,15 @@ export const AdminHub = memo(function AdminHub() {
   const toggleHiddenAchievement = useCallback(async (ladderKey: string, hidden: boolean) => {
     const module = await import('../../model/repository/achievementsConfigRepository');
     setHiddenAchievements(await module.setLadderHidden(ladderKey, hidden));
+  }, []);
+
+  /**
+   * Guarda los escalones pendientes de una escalera, para todos los administradores. Igual que el interruptor de
+   * ocultación: lo escribe esto —que es quien habla con Firestore— y si falla LANZA, que la ficha lo dice.
+   */
+  const savePendingSteps = useCallback(async (ladderKey: string, steps: readonly number[]) => {
+    const module = await import('../../model/repository/achievementsConfigRepository');
+    setPendingSteps(await module.setPendingSteps(ladderKey, steps));
   }, []);
 
   /**
@@ -327,6 +340,8 @@ export const AdminHub = memo(function AdminHub() {
           onToggleHidden={toggleHiddenAchievement}
           openFrontier={openFrontier}
           onPublishFrontier={publishOpenFrontier}
+          pendingSteps={pendingSteps}
+          onSetPendingSteps={savePendingSteps}
           onResetAll={resetAllAchievements}
           censusSize={vm.census?.users.length || 0}
         />

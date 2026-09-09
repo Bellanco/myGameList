@@ -1045,6 +1045,37 @@ describe('firestore.rules', () => {
     });
 
     /**
+     * LOS ESCALONES PENDIENTES (`pendingSteps`) viajan en el mismo documento y son lo contrario de la apertura:
+     * una DECISIÓN de producto —qué se va a añadir al catálogo— así que solo el admin, como `hidden`. No son
+     * catálogo y la app no los lee; el panel los usa para enseñar cómo quedaría la escalera.
+     */
+    it('los escalones pendientes los escribe solo el admin', async () => {
+      await assertSucceeds(setDoc(doc(adminDb(), 'appConfig', 'achievements'), { pendingSteps: { completados: [125, 350] } }));
+      // Los tres mapas juntos, que es como queda el documento con todo decidido.
+      await assertSucceeds(setDoc(doc(adminDb(), 'appConfig', 'achievements'), {
+        hidden: { 'obra-maestra': false },
+        open: { completados: 'completados-50' },
+        pendingSteps: { completados: [125] },
+      }));
+
+      await assertFails(setDoc(doc(ownerDb('uid-a'), 'appConfig', 'achievements'), { pendingSteps: { completados: [125] } }));
+      // Con `merge` y un valor DISTINTO del que hay: repetir el mismo no cambia nada y una escritura que no
+      // cambia nada la deja pasar la regla de la apertura (no toca ninguna clave), que es correcto y no es esto.
+      await assertFails(setDoc(
+        doc(ownerDb('uid-a'), 'appConfig', 'achievements'),
+        { pendingSteps: { completados: [999] } },
+        { merge: true },
+      ));
+      await assertFails(setDoc(doc(anonDb(), 'appConfig', 'achievements'), { pendingSteps: {} }));
+
+      // Y con las mismas ataduras de forma y tope que los otros dos mapas.
+      await assertFails(setDoc(doc(adminDb(), 'appConfig', 'achievements'), { pendingSteps: 'completados' }));
+      const grande: Record<string, number[]> = {};
+      for (let i = 0; i < 101; i += 1) grande[`ladder-${i}`] = [1];
+      await assertFails(setDoc(doc(adminDb(), 'appConfig', 'achievements'), { pendingSteps: grande }));
+    });
+
+    /**
      * LA APERTURA LA ADELANTA CUALQUIERA CON SESIÓN, y es lo que hace verdad la promesa del `open`: en cuanto un
      * usuario alcanza un escalón, su propio cliente lo abre para todos y el denominador de la fracción deja de
      * depender de lo que cada cual tenga hecho. Es una MEDICIÓN («alguien llegó ahí»), no una decisión de
@@ -1077,6 +1108,13 @@ describe('firestore.rules', () => {
 
       // Un escalón abierto no se cierra: la escritura no puede DEJARSE ninguna escalera de las que ya estaban.
       await assertFails(setDoc(doc(ownerDb('uid-a'), 'appConfig', 'achievements'), { open: { maraton: 'maraton-75' } }));
+
+      // Ni cuela nada más por el mismo agujero: los pendientes son decisión del admin.
+      await assertFails(setDoc(
+        doc(ownerDb('uid-a'), 'appConfig', 'achievements'),
+        { open: { maraton: 'maraton-75', sofa: 'sofa-3' }, pendingSteps: { completados: [125] } },
+        { merge: true },
+      ));
 
       // Las mismas ataduras de forma y tope que para el admin, y sin sesión no se escribe nada.
       await assertFails(setDoc(doc(ownerDb('uid-a'), 'appConfig', 'achievements'), { open: 'maraton-15' }, { merge: true }));

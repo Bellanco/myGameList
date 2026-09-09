@@ -85,15 +85,22 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
   —tu ficha y tus logros— abrían una pantalla que no encontraba nada, mientras las mismas direcciones con el id
   del directorio funcionaban. Ahora va con tu id del directorio (y con el comodín `me` si todavía no tienes
   entrada), que es lo que las rutas del hub saben resolver.
-- **Preparar un escalón se hace donde está la escalera, y se ve puesto.** La ficha se abría arriba de la
-  pantalla, suelta: se pulsaba «preparar un escalón nuevo» al pie de una escalera y el cambio aparecía a diez
-  pantallas de allí, así que escribir un umbral recalculaba el plan sin que se viera nada desde donde estabas
-  —parecía que el campo no hacía nada— y no había con qué comparar lo que ibas a añadir. Ahora la ficha se abre
-  **dentro de esa escalera, debajo del botón** (que pasa a abrir y cerrar), y **su tabla enseña cómo quedaría**:
-  la fila nueva en su sitio, marcada como nueva, y los escalones de encima con el romano que les tocará y el
-  nombre que tenían antes. La previsualización la produce `expandLadder`, la misma función que produce el
-  catálogo, así que no puede decir una cosa y el código otra. Sigue sin guardar nada: al catálogo se lleva con
-  los tres pasos que copia el botón.
+- **Preparar un escalón se hace donde está la escalera, se guarda y se ve puesto.** Tres quejas que son la misma:
+  la ficha se abría **arriba de la pantalla**, suelta —se pulsaba «preparar un escalón nuevo» al pie de una
+  escalera y el cambio aparecía a diez pantallas de allí, así que escribir un umbral no se veía desde donde
+  estabas y parecía que el campo no hacía nada—; **proponía** el doble del último escalón, y proponerlo era
+  meterlo sin que nadie lo pidiera; y lo que escribías **no duraba** más que la visita. Ahora la ficha se abre
+  **dentro de esa escalera y debajo del botón** (que pasa a abrir y cerrar), **vacía**, y el escalón entra al
+  pulsar **«Añadir»**: entonces se guarda en `appConfig` —para todos los administradores— y la tabla lo enseña
+  **en su sitio**, marcado como «pendiente», con los escalones de encima llevando el romano que les tocará y el
+  nombre que tenían antes. Se pueden apuntar varios en la misma escalera —la línea `steps: [...]` que se copia
+  sale con todos dentro— y cada uno se quita por separado; cuando uno llega al código, su línea lo dice y la nota
+  se retira. La tabla la produce `expandLadder`, la misma función que produce el catálogo, así que no puede decir
+  una cosa y el código otra.
+  - **Y no es catálogo, que es la parte importante.** La app sigue leyendo el catálogo del código: mientras el
+    `id` no esté en `MIRROR_ORDER`, el escalón no existe para nadie —ni cuenta en la fracción, ni se publica en el
+    espejo—. La ficha lo dice donde se decide, y `docs/plan-logros.md §6.4bis` explica por qué el panel apunta en
+    vez de añadir, y qué haría falta para cruzar esa línea.
 - **El porcentaje comparado ya no espera a tener veinte personas.** Había un suelo de 20 espejos publicados y por
   debajo la pantalla se callaba, así que con una comunidad pequeña —el día del estreno, todo el mundo— no había
   cifra **ni lista global que ordenar**: «Logros globales» era una excusa y nada más. El argumento del suelo («con

@@ -33,14 +33,31 @@ export type HiddenOverrides = Readonly<Record<string, boolean>>;
  */
 export type OpenFrontier = Readonly<Record<string, string>>;
 
+/**
+ * ESCALONES ACORDADOS EN EL PANEL QUE TODAVÍA NO ESTÁN EN EL CÓDIGO: clave de escalera → umbrales pendientes.
+ *
+ * NO SON CATÁLOGO, y la distinción es toda la seguridad de esto: el catálogo lo produce `catalog.ts` y nada de
+ * aquí entra en él, así que un umbral pendiente **no existe** para el evaluador, ni para la fracción, ni para el
+ * espejo, ni para la pantalla de logros de nadie. Es una nota compartida entre administradores —«esto hay que
+ * llevarlo al código»— que el panel enseña puesta en su escalera para poder decidirla mirando cómo quedaría.
+ *
+ * POR QUÉ NO PUEDE SER MÁS QUE ESO, hoy: cada logro publicado es un bit en una POSICIÓN de `MIRROR_ORDER`, y ese
+ * orden es una lista congelada en el código porque es lo que da significado a todas las vitrinas ya publicadas.
+ * Un escalón que solo viviera aquí no tendría bit: contaría en la fracción de quien lo lea y no viajaría a nadie,
+ * sin un solo error por medio. Ver `docs/plan-logros.md §6.4bis` para lo que haría falta para cruzar esa línea.
+ */
+export type PendingSteps = Readonly<Record<string, readonly number[]>>;
+
 /** Lo que el panel de administración decide para todo el mundo. Vive en `appConfig/achievements`. */
 export interface AchievementsConfig {
   hidden: HiddenOverrides;
   open: OpenFrontier;
+  /** Umbrales pendientes de llevar al código. Solo los lee el panel; ver `PendingSteps`. */
+  pendingSteps: PendingSteps;
 }
 
 /** Sin configuración manda el catálogo, y cada quien abre con su propio progreso. Es el lado seguro. */
-export const NO_ACHIEVEMENTS_CONFIG: AchievementsConfig = { hidden: {}, open: {} };
+export const NO_ACHIEVEMENTS_CONFIG: AchievementsConfig = { hidden: {}, open: {}, pendingSteps: {} };
 
 /**
  * HASTA QUÉ ÍNDICE ESTÁ ABIERTA UNA ESCALERA. Devuelve el último índice que se le enseña a CUALQUIERA, o -1 si
