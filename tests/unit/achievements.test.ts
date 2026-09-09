@@ -853,12 +853,30 @@ describe('el porcentaje comparado', () => {
   const mirrorOf = (ids: string[]) =>
     packAchievements(ids.map((id) => ({ id, level: 1, value: 0, next: null, unlockedAt: 0 })));
 
-  it('no se pinta por debajo del suelo de muestra', () => {
-    // Con siete personas, «el 14 %» es una persona: enseñarlo es peor que callarlo.
-    expect(measureRarity(Array.from({ length: 7 }, () => mirrorOf(['completados-10'])))).toBeNull();
+  /**
+   * ⚑ SIN SUELO DE MUESTRA. Lo hubo —veinte espejos, «con siete personas el 14 % es una persona»— y describía
+   * bien la cifra sacando la conclusión contraria: con dos personas el porcentaje es 0, 50 o 100, y eso es lo
+   * que hay. Lo que hacía el suelo era apagar la función durante los primeros meses de una comunidad pequeña.
+   * Lo que sostiene la honestidad de la cifra es el DENOMINADOR, que la pantalla pinta siempre.
+   */
+  it('mide desde el primer espejo, sin esperar a tener veinte', () => {
+    const dos = measureRarity([mirrorOf(['completados-10']), mirrorOf(['plataformas-3'])]);
+    expect(dos?.sample).toBe(2);
+    expect(dos?.percent.get('completados-10')).toBe(50);
+    expect(dos?.percent.get('plataformas-3')).toBe(50);
+    // Y con uno solo: el 100 % de una persona, que es exactamente lo que dice su denominador.
+    expect(measureRarity([mirrorOf(['completados-10'])])?.percent.get('completados-10')).toBe(100);
   });
 
-  it('con muestra suficiente cuenta cuántos lo tienen', () => {
+  /** Lo único que no se puede medir es la nada: sin un solo espejo, `null` (y no «el 0 % de cero personas»). */
+  it('sin ningún espejo no hay medición', () => {
+    expect(measureRarity([])).toBeNull();
+    expect(measureRarity(['', ''])).toBeNull();
+    // Ni con un `minSample` a cero, que dividiría por cero: el suelo real es un espejo.
+    expect(measureRarity([], 0)).toBeNull();
+  });
+
+  it('con una muestra grande cuenta cuántos lo tienen', () => {
     const mirrors = [
       ...Array.from({ length: 15 }, () => mirrorOf(['completados-10'])),
       ...Array.from({ length: 10 }, () => mirrorOf(['plataformas-3'])),

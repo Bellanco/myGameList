@@ -316,16 +316,28 @@ export function sortMirror(items: readonly MirroredAchievement[]): MirroredAchie
  * Porcentaje de gente que tiene cada logro, medido sobre los espejos que el directorio YA se ha descargado
  * (§6.6bis). Cuesta cero: no hay petición nueva, no hay campo nuevo y las cadenas ya están en memoria.
  *
- * Devuelve `null` por debajo de `minSample`. Con siete personas, «el 14 %» es una persona: enseñarlo es peor que
- * callarlo. Y el llamante DEBE pintar el denominador junto al porcentaje —«14 % · 6 de 43»—: sin él, es lo único
- * de esa pantalla que se puede leer como una afirmación global, y no lo es.
+ * ⚑ **SIN SUELO DE MUESTRA.** Lo hubo —veinte espejos— con el argumento de que «con siete personas, el 14 % es
+ * una persona». El argumento describe bien la cifra pero saca la conclusión contraria: con dos personas el
+ * porcentaje es 0, 50 o 100 y eso es **exactamente lo que hay**, no un error de medición. Lo que hacía el suelo
+ * era apagar la función entera durante los primeros meses de vida de una comunidad pequeña —el día del estreno
+ * le pasaba a todo el mundo—, y de paso dejaba la vista global sin una lista que ordenar. Se mide desde el primer
+ * espejo y se va afinando según entra gente.
+ *
+ * Lo que sostiene la honestidad de la cifra no era el suelo, es el DENOMINADOR: el llamante DEBE pintarlo junto
+ * al porcentaje —«50 % · 1 de 2»—, porque sin él es lo único de esa pantalla que se puede leer como una
+ * afirmación global, y no lo es. Con muestras pequeñas eso pasa de recomendable a imprescindible.
+ *
+ * `minSample` se queda como parámetro —el panel de administración ya lo pasaba explícito— y `null` significa
+ * ahora lo único que puede significar: que no hay ni un espejo que medir.
  */
 export function measureRarity(
   mirrors: readonly string[],
-  minSample = 20,
+  minSample = 1,
 ): { percent: ReadonlyMap<string, number>; sample: number } | null {
   const sample = mirrors.filter((mirror) => typeof mirror === 'string' && mirror.length > 0);
-  if (sample.length < minSample) return null;
+  // `Math.max(1, …)`: con `minSample` a 0 una muestra vacía daría un mapa de porcentajes sobre cero personas, y
+  // dividir por cero no es «el 0 %», es «no se sabe». Sin espejos no hay medición y se dice con `null`.
+  if (sample.length < Math.max(1, minSample)) return null;
 
   const holders = new Map<string, number>();
   for (const mirror of sample) {
