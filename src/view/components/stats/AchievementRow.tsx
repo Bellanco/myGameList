@@ -8,8 +8,14 @@ export interface AchievementRowData {
   level: number;
   value: number;
   next: number | null;
-  /** Fecha ya formateada; vacía si no hay sello deducible, que es un estado legítimo (§5.3). */
+  /** Fecha ya formateada; vacía si no hay sello deducible ni suelo del que tirar. */
   date: string;
+  /**
+   * ¿La fecha viene del SUELO y no del logro? Se pinta igual —una columna de fechas con huecos no se lee— y lo
+   * dice el rótulo del puntero: el día es el más antiguo del que hay constancia, y el logro cayó ese día o
+   * después.
+   */
+  dateFromFloor?: boolean;
   /** Porcentaje de gente que lo tiene y sobre cuántos. `null` = muestra insuficiente, no se pinta (§6.6bis). */
   rarity: { percent: number; holders: number; sample: number } | null;
   /**
@@ -50,6 +56,7 @@ export const AchievementRow = memo(function AchievementRow({
   value,
   next,
   date,
+  dateFromFloor = false,
   rarity,
   global,
   mine = true,
@@ -72,12 +79,17 @@ export const AchievementRow = memo(function AchievementRow({
   const isPercent = def.id === 'cobertura';
   const pct = next !== null && next > 0 ? Math.max(0, Math.min(100, Math.round((value / next) * 100))) : 100;
   const progress = next !== null
-    ? (isPercent ? ACHIEVEMENTS_UI.progressPercent(value, next, pct) : ACHIEVEMENTS_UI.progress(value, next, pct))
+    ? (isPercent ? ACHIEVEMENTS_UI.progressPercent(value, next) : ACHIEVEMENTS_UI.progress(value, next))
     : ACHIEVEMENTS_UI.maxed;
 
   const classes = ['ach-row', earned ? '' : 'is-locked', isGlobal ? 'is-global' : '', isGlobal && earned ? 'is-owned' : '']
     .filter(Boolean)
     .join(' ');
+
+  // EL PROGRESO SALE DEL CUERPO Y SE VA A SU PROPIO RENGLÓN. Iba pegado bajo la condición y compartía columna con
+  // ella, así que en una fila apretada el «31 de 50 · 62 %» quedaba encajado entre el texto y la fecha. Ahora
+  // arranca a MEDIO CAMINO de la fila (lo coloca la hoja) y respira: el texto manda arriba, el avance abajo.
+  const showProgress = (!isGlobal || global?.self) && !earned && next !== null && value > 0;
 
   // EL FONDO DE LA FILA GLOBAL SE LLENA CON EL PORCENTAJE. Es la lista ordenada por esa cifra, así que el relleno
   // convierte el orden en algo que se ve sin leer: la escalera baja sola de arriba abajo. Sutil a propósito —es
@@ -85,58 +97,80 @@ export const AchievementRow = memo(function AchievementRow({
   const fill = isGlobal && rarity ? `${Math.max(0, Math.min(100, rarity.percent))}%` : undefined;
 
   return (
-    <li className={classes} style={fill ? ({ '--fill': fill } as CSSProperties) : undefined}>
-      {/* `md` (48 px) en LAS DOS VISTAS. La medalla manda en la altura de la fila, y a 72 px cada una era casi
-          tan alta como ancho su cuadro: la lista se leía como una pila de fichas en vez de como una lista. El
-          tamaño se decide aquí y no en la hoja, para que no haya dos sitios donde cambiarlo. */}
-      <AchievementMedal def={def} level={level} size="md" date={date} />
+    // `data-r` EN LA FILA y no solo en su rótulo: de ahí sale `--rc`, el color de la rareza con el que la hoja
+    // pinta el canto templado del borde izquierdo y el progreso. La dificultad dejó de ser un adorno de la
+    // esquina derecha para ser el canto de la fila, y eso lo tiene que saber la fila entera.
+    <li className={classes} data-r={def.rarity} style={fill ? ({ '--fill': fill } as CSSProperties) : undefined}>
+      {/* `list` (34 px) en LAS DOS VISTAS. La medalla manda en la altura de la fila: a 48 la lista de 334 entradas
+          se estiraba a quince pantallas, y a 34 sigue teniendo dibujo, filo y píldora legibles. El tamaño se
+          decide aquí y no en la hoja, para que no haya dos sitios donde cambiarlo. */}
+      <AchievementMedal def={def} level={level} size="list" date={date} />
 
       <div className="ach-row-body">
         <p className="ach-row-name">{name}</p>
         <p className="ach-row-condition">{condition}</p>
-        {/* EL PROGRESO DE LO QUE AÚN NO TIENES, como hace Steam con sus logros parciales («4 de 10»).
-            En la vista global solo sale en TU perfil: el espejo de otra persona lleva los logros CONSEGUIDOS y
-            nada más, así que de una amistad no se sabe por dónde va —ni debe saberse, que es la línea del §3—.
-            Por eso la condición mira `global.self` y no solo `global`. */}
-        {(!isGlobal || global?.self) && !earned && next !== null && value > 0 ? (
-          <p className="ach-row-progress">
-            <span className="ach-row-bar" aria-hidden="true">
-              <i style={{ '--pct': `${pct}%` } as CSSProperties} />
-            </span>
-            <span className="ach-row-progress-text">{progress}</span>
-          </p>
-        ) : null}
       </div>
 
       <div className="ach-row-meta">
         {/* El día del desbloqueo. Sin fecha deducible el hueco se queda VACÍO: no pone «desconocido» ni inventa
             un día, que es lo que haría creer que la app sabe algo que no sabe. */}
         {isGlobal ? (
-          /* EL RECUADRO NO PUEDE SER LA ÚNICA SEÑAL: es forma y color, y en una lista larga de filas casi
-             idénticas hay que poder saber por texto cuáles son los que tiene esta persona. */
-          <span className="ach-row-owned">
+          /* «CONSEGUIDO» YA NO SE LEE, SE VE: el recuadro, el nombre encendido y el relleno teñido dicen lo mismo
+             que esa palabra, y repetirlo en cada una de las 334 filas gastaba la línea que debe llevar la cifra
+             por la que está ordenada la lista.
+             PERO SIGUE AHÍ PARA QUIEN NO VE EL RECUADRO. El recuadro es forma y color, y eso no puede ser la
+             única señal de nada: el texto se va a `sr-only`, así que un lector de pantalla recorre la lista
+             sabiendo cuáles son suyos exactamente igual que antes. */
+          <span className="ach-row-owned sr-only">
             {global?.self
               ? (earned ? ACHIEVEMENTS_UI.ownedSelf : ACHIEVEMENTS_UI.notOwnedSelf)
               : (earned ? ACHIEVEMENTS_UI.owned : ACHIEVEMENTS_UI.notOwned)}
           </span>
         ) : (
-          <span className="ach-row-date" title={earned && !date ? ACHIEVEMENTS_UI.noDateTitle : undefined}>
-            {earned ? (date || ACHIEVEMENTS_UI.noDate) : ACHIEVEMENTS_UI.locked}
-          </span>
+          /* SOLO LO CONSEGUIDO LLEVA FECHA, y lo que no se tiene NO LLEVA NADA. Ponía «Bloqueado» en la columna
+             del día, que es la lectura de Steam al revés: un logro sin conseguir no tiene fecha porque no ha
+             pasado, no porque esté en un estado que haya que anunciar. La medalla apagada, el nombre en gris y
+             el progreso ya lo dicen tres veces, y el nombre accesible de la medalla lo dice con la palabra. */
+          earned ? (
+            <span
+              className="ach-row-date"
+              title={date && dateFromFloor ? ACHIEVEMENTS_UI.floorDateTitle : (date ? undefined : ACHIEVEMENTS_UI.noDateTitle)}
+            >
+              {date || ACHIEVEMENTS_UI.noDate}
+            </span>
+          ) : null
         )}
-        {/* Y la rareza, con las dos cifras que van juntas SIEMPRE: la declarada, dicha con palabras porque el aura
-            es color puro; y la medida, que nunca se dice sin su denominador.
 
-            YA NO HACE FALTA CALLARLAS EN LOS OCULTOS. Antes se ocultaban porque «EXCEPCIONAL» junto a un «Logro
-            oculto» era una pista de cuál es (el catálogo solo tiene seis excepcionales); ahora un oculto que no
-            tienes no ocupa fila ninguna, así que la única fila que llega aquí es de algo que ya conseguiste. */}
-        <span className="ach-row-rarity" data-r={def.rarity}>{ACHIEVEMENT_RARITY_LABELS[def.rarity]}</span>
+        {/* LA PALABRA NO SE PINTA YA: la dice el canto de la fila, que es la misma escala del aura de la medalla
+            y está en el sitio fijo de todas las filas. Pero el color no puede ser la única señal de nada —es
+            justo el motivo por el que esta palabra existe— así que se queda para lector de pantalla. */}
+        <span className="ach-row-rarity sr-only">{ACHIEVEMENT_RARITY_LABELS[def.rarity]}</span>
         {rarity ? (
-          <span className="ach-row-share">
-            {ACHIEVEMENTS_UI.rarityPercent(rarity.percent, rarity.holders, rarity.sample)}
+          <span className="ach-row-share" title={ACHIEVEMENTS_UI.rarityPercent(rarity.percent, rarity.holders, rarity.sample)}>
+            {/* A la vista, la cifra sola: es lo único que cambia de una fila a otra, y la frase completa repetida
+                334 veces convertía la columna en un párrafo. El denominador sigue estando —en el rótulo del
+                puntero y, entero, para quien lee con lector de pantalla—, porque es lo que impide leer «el 100 %»
+                como una afirmación sobre todo el mundo. */}
+            <span aria-hidden="true">{ACHIEVEMENTS_UI.rarityShare(rarity.percent)}</span>
+            <span className="sr-only">
+              {ACHIEVEMENTS_UI.rarityPercent(rarity.percent, rarity.holders, rarity.sample)}
+            </span>
           </span>
         ) : null}
       </div>
+
+      {/* EL RENGLÓN DEL PROGRESO, fuera del cuerpo y fuera de la meta: es una fila propia de la rejilla, así que
+          puede empezar a media anchura sin que el texto ni la fecha le dejen sitio a codazos.
+          En la vista global solo sale en TU perfil: el espejo de otra persona lleva los logros CONSEGUIDOS y
+          nada más, así que de una amistad no se sabe por dónde va —ni debe saberse, que es la línea del §3—. */}
+      {showProgress ? (
+        <p className="ach-row-progress">
+          <span className="ach-row-bar" aria-hidden="true">
+            <i style={{ '--pct': `${pct}%` } as CSSProperties} />
+          </span>
+          <span className="ach-row-progress-text">{progress}</span>
+        </p>
+      ) : null}
     </li>
   );
 });

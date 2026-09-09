@@ -2288,6 +2288,10 @@ export function useSocialViewModel(options?: {
     completedGames,
     socialDisplayName,
     filteredSocialDirectory,
+    // EL DIRECTORIO SIN EL BUSCADOR. Sale porque hay dos preguntas distintas y solo estaba la primera: a quién
+    // se le enseña la lista de personas —eso sí lo recorta el buscador— y sobre quién se mide (§6.6bis), que no
+    // puede depender de lo que haya escrito en una caja de texto.
+    visibleSocialDirectory,
     selectedProfileDetail,
     profileDetailId,
     profileReviewsView,

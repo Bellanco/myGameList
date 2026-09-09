@@ -1,4 +1,4 @@
-import { memo, useCallback } from 'react';
+import { memo, useCallback, useMemo } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useStatsViewModel } from '../../../viewmodel/useStatsViewModel';
 import { StatsPanel } from './StatsPanel';
@@ -9,6 +9,7 @@ import { listForScreen, useAchievements } from '../../../viewmodel/useAchievemen
 import { useAchievementsConfig } from '../../hooks/useAchievementsConfig';
 import { useOpenFrontier } from '../../hooks/useOpenFrontier';
 import { ENABLE_ACHIEVEMENTS } from '../../../core/achievements/flags';
+import { libraryStart } from '../../../core/achievements/metrics';
 import { ACHIEVEMENTS_UI } from '../../../core/constants/achievementLabels';
 import { OWN_STATS_BLOCKS } from '../../../core/stats/types';
 import type { TabData } from '../../../model/types/game';
@@ -54,6 +55,9 @@ export const StatsHub = memo(function StatsHub({ games }: { games: TabData }) {
   // La apertura entra también en la FRACCIÓN: el denominador cuenta lo que hoy está abierto, no el catálogo
   // entero, así que ampliar el catálogo no le baja el porcentaje de golpe a nadie.
   const achievements = useAchievements({ games, open: achievementsConfig.open });
+  // El día en que empieza la biblioteca, que es el suelo con el que se fecha lo conseguido antes de que hubiera
+  // con qué fecharlo. Una pasada sobre la biblioteca, contra la misma referencia que ya memoiza el panel.
+  const libraryFloor = useMemo(() => libraryStart(games), [games]);
   /**
    * Y ABRE PARA LOS DEMÁS lo que hayas alcanzado tú: en cuanto alguien llega a un escalón, ese escalón queda
    * abierto para todo el mundo, que es lo que hace que el denominador («196 de 249») sea el mismo en todos los
@@ -91,6 +95,7 @@ export const StatsHub = memo(function StatsHub({ games }: { games: TabData }) {
         // lee un dato que no sea tuyo. El porcentaje comparado sale de los espejos que descarga el directorio del
         // hub, así que aquí no se pinta — y tampoco se va a buscar.
         rarity={null}
+        since={libraryFloor}
         backLabel={ACHIEVEMENTS_UI.backToPanel}
         onBack={backToPanel}
         // Y POR ESO TAMPOCO HAY BOTÓN DE «LOGROS GLOBALES»: esa vista mide el catálogo contra las vitrinas de
