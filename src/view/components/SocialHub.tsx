@@ -253,10 +253,18 @@ const SocialHubInner = memo(function SocialHubInner({
    */
   const directoryMirrors = useMemo(() => {
     if (!ENABLE_ACHIEVEMENTS) return [] as string[];
-    return filteredSocialDirectory
-      .map((entry) => entry.achievementsMirror)
-      .filter(Boolean);
-  }, [filteredSocialDirectory]);
+    return [
+      // TU VITRINA CUENTA, y hace falta decirlo porque el directorio filtrado te EXCLUYE por identidad —es lo
+      // que impide que aparezcas en tu propia lista de gente—, así que la muestra se medía sobre «todos menos
+      // yo»: con dos personas publicando, el porcentaje se calculaba sobre una. Eres una persona más, es lo que
+      // hace honesto el «1 de 2», y es lo que ya cuenta el censo del panel de administración.
+      //
+      // Va el espejo del EVALUADOR y no el publicado: es el mismo que alimenta tu tarjeta del feed y va un paso
+      // por delante de lo que haya en Firestore.
+      ownAchievementMirror,
+      ...filteredSocialDirectory.map((entry) => entry.achievementsMirror),
+    ].filter(Boolean);
+  }, [filteredSocialDirectory, ownAchievementMirror]);
 
   const detailMirror = useMemo(() => {
     if (!ENABLE_ACHIEVEMENTS || !detailId) return '';

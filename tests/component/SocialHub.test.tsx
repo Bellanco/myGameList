@@ -1875,6 +1875,29 @@ describe('SocialHub — los logros de otras personas', () => {
   });
 
   /**
+   * TU VITRINA CUENTA EN LA MUESTRA del porcentaje comparado, y no contaba: sale del directorio ya FILTRADO, que
+   * te excluye por identidad —es lo que impide que aparezcas en tu propia lista de gente—, así que se medía sobre
+   * «todos menos yo». Con dos personas publicando, el porcentaje se calculaba sobre una y decía «el 100 %».
+   */
+  it('el porcentaje comparado te cuenta a ti también', async () => {
+    // Doce completados para tener vitrina propia, y ninguno de los de Ada: su logro lo tiene 1 de los 3.
+    const biblioteca = {
+      c: Array.from({ length: 12 }, (_u, i) => ({
+        id: i + 1, name: `Juego ${i + 1}`, _ts: Date.now(), enteredAt: { c: Date.now() },
+        platforms: [], genres: [], steamDeck: false, review: '',
+      })),
+      v: [], e: [], p: [], deleted: [], updatedAt: Date.now(),
+    };
+    localMocks.loadLocalState.mockReturnValue(biblioteca as never);
+
+    renderHub('/social/profiles/friendUid/logros', biblioteca);
+
+    // La fila del logro de Ada, con su porcentaje y su denominador. TRES en la muestra —Ada, Bob y yo— y no dos:
+    // el directorio del que sale son los dos, y el tercero soy yo, que es justo lo que se dejaba fuera.
+    expect(await screen.findByText('lo tiene el 33 % · 1 de 3')).toBeInTheDocument();
+  });
+
+  /**
    * TU PROPIA TARJETA DE LOGROS TIENE QUE LLEVAR A TU FICHA, y no llevaba: la entrada del feed se identificaba con
    * el `ownProfileId`, que es un UUID SEMBRADO EN EL DISPOSITIVO (`seedProfileIdFromRemote`) y no el id de ningún
    * documento. Las dos direcciones que salían de la tarjeta —`/social/profiles/<uuid>` y `.../logros`— abrían una
