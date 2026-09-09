@@ -290,7 +290,15 @@ test.describe('logros · el aviso del instante', () => {
       ['listados', () => page.getByRole('button', { name: /^Listados/ }).first().click()],
       ['estadísticas', () => page.getByRole('button', { name: /^Estadísticas/ }).first().click()],
       ['social', () => page.getByRole('button', { name: /^Social/ }).first().click()],
-      ['ajustes', () => page.getByRole('button', { name: /^Ajustes/ }).first().click()],
+      // AJUSTES VIVE EN LOS CONTROLES FLOTANTES, y ese grupo se esconde al bajar —con `pointer-events: none`— para
+      // no estorbar la lectura. Así que se sube arriba antes de pulsarlo, que es lo que haría cualquiera: sin
+      // esto, el clic se lo come lo que haya debajo y Playwright reintenta contra un botón «visible» hasta
+      // agotar el tiempo (le pasó al CI: «main intercepts pointer events», veinticinco segundos).
+      ['ajustes', async () => {
+        await page.evaluate(() => window.scrollTo(0, 0));
+        await expect(page.locator('.floating-controls')).not.toHaveClass(/is-hidden/);
+        await page.getByRole('button', { name: /^Ajustes/ }).first().click();
+      }],
     ];
     for (const [nombre, ir] of secciones) {
       await ir();
