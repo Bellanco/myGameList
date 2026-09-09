@@ -1,7 +1,7 @@
 import { useMemo, useRef } from 'react';
 import { evaluateAchievements, levelUps, nextPeak } from '../core/achievements/evaluate';
 import { summarize } from '../core/achievements/summary';
-import { ACHIEVEMENTS, ACHIEVEMENTS_BY_LADDER } from '../core/achievements/catalog';
+import { ACHIEVEMENTS, ACHIEVEMENTS_BY_LADDER, catalogEpoch } from '../core/achievements/catalog';
 import { ACHIEVEMENTS_PEAK_KEY } from '../core/constants/storageKeys';
 import { rouletteUsedAt } from '../core/achievements/deviceSignals';
 import { DEFAULT_PALETTE } from '../core/constants/palettes';
@@ -113,7 +113,12 @@ export function useAchievements({
       .sort(compareEarned);
 
     return { states, byId, summary: summarize(states, open), earned, justUnlocked };
-  }, [games, friends, postWeeks, profileCreatedAt, hasSync, open]);
+    // `catalogEpoch()` es una dependencia de verdad y no un adorno: el catálogo se puede ampliar en caliente con
+    // los umbrales del panel (§6.4bis) y sus contenedores NO cambian de referencia al hacerlo —se mutan en su
+    // sitio, que es lo que evita tocar quince firmas—, así que sin esto la evaluación se quedaría con la foto de
+    // antes de que llegara la configuración: el escalón nuevo no se conseguiría hasta recargar.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [games, friends, postWeeks, profileCreatedAt, hasSync, open, catalogEpoch()]);
 }
 
 /**

@@ -13,7 +13,7 @@
 //
 // POR ESCALERA Y NO POR ESCALÓN, porque es donde vive la propiedad y porque media escalera a la vista deja
 // adivinar la otra mitad: enseñar «Obra maestra I» y esconder el II no esconde nada.
-import type { AchievementDef, AchievementItem } from './types';
+import type { AchievementDef, AchievementItem, ExtraSteps } from './types';
 
 /**
  * Lo que decide el panel: `true` = oculta, `false` = a la vista, ausente = lo que diga el catálogo.
@@ -37,10 +37,18 @@ export type OpenFrontier = Readonly<Record<string, string>>;
 export interface AchievementsConfig {
   hidden: HiddenOverrides;
   open: OpenFrontier;
+  /**
+   * ESCALONES NUEVOS DE ESCALERAS QUE YA EXISTEN, decididos en el panel (§6.4bis). A diferencia de los otros dos
+   * mapas, este SÍ amplía el catálogo: al leer la configuración se reconstruye con ellos dentro
+   * (`applyExtraSteps`), así que se desbloquean, cuentan en la fracción y viajan en el espejo por su `id`.
+   *
+   * Sigue sin poder añadir una escalera NUEVA: su métrica es una función sobre la biblioteca, y eso es código.
+   */
+  extraSteps: ExtraSteps;
 }
 
 /** Sin configuración manda el catálogo, y cada quien abre con su propio progreso. Es el lado seguro. */
-export const NO_ACHIEVEMENTS_CONFIG: AchievementsConfig = { hidden: {}, open: {} };
+export const NO_ACHIEVEMENTS_CONFIG: AchievementsConfig = { hidden: {}, open: {}, extraSteps: {} };
 
 /**
  * HASTA QUÉ ÍNDICE ESTÁ ABIERTA UNA ESCALERA. Devuelve el último índice que se le enseña a CUALQUIERA, o -1 si

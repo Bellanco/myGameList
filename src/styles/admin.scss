@@ -632,6 +632,10 @@
   text-align: right;
 }
 .admin-ach-name .admin-ach-flag { margin-left: .4rem; }
+/* LOS RÓTULOS DEL NOMBRE CAEN DEBAJO —«del panel», el nombre anterior de un escalón que se ha corrido— y no en
+   línea: pegados a la última letra se leían como parte del nombre («Créditos finales VIIantes: …»). La píldora
+   de «no se ofrece» se queda en línea, que para eso es una píldora. */
+.admin-ach-name small:not(.admin-ach-flag) { display: block; }
 /* «Alcanzado» apila la cifra y sus señales: son la misma pregunta —cuánta gente llega hasta aquí— y en columnas
    separadas se leían como datos sueltos. Ancho fijo para que las cifras de escalones consecutivos se comparen. */
 .admin-ach-reached { font-variant-numeric: tabular-nums; }
@@ -672,6 +676,17 @@
   box-shadow: inset 3px 0 0 color-mix(in srgb, var(--text-muted) 55%, transparent);
 }
 .admin-ach-table tbody tr.is-unseen .admin-ach-step { color: var(--text-dim); }
+/* LA FILA QUE TODAVÍA NO EXISTE, mientras se prepara un escalón. Se marca en el canto como las demás señales de
+   esta tabla —el raíl del escalón, que es donde se lee el estado de la fila— y con el verde de «esto se añade»,
+   que no compite con el ámbar de las decisiones pendientes ni con el rojo de los avisos. El rótulo «nueva» va en
+   el nombre: el color separa de un vistazo y la palabra es lo que queda con lector de pantalla o en monocromo. */
+.admin-ach-table tbody tr.is-preview td:first-child {
+  box-shadow: inset 3px 0 0 var(--fg-green);
+}
+.admin-ach-table tbody tr.is-preview {
+  background: color-mix(in srgb, var(--fg-green) 8%, transparent);
+}
+.admin-ach-preview-flag { display: block; color: var(--fg-green); font-size: .74rem; text-transform: uppercase; letter-spacing: .04em; }
 .admin-ach-unseen { display: block; color: var(--text-dim); }
 /* Dormido o regalado: no es un fallo, es una decisión pendiente. Ámbar, no rojo. */
 .admin-ach-warn-soft { color: var(--fg-amber); }
@@ -679,19 +694,59 @@
    lee como una tarea pendiente debajo de una medalla ya ganada. */
 .admin-ach-warn { display: block; color: var(--danger); font-size: .74rem; }
 
-/* LAS REGLAS RESPONSIVE GLOBALES NO VALEN AQUÍ. Por debajo de 720px la app deja CUALQUIER tabla sin cabecera y
-   en una sola columna: `_layout.scss` esconde el `thead` entero y `_overlays-and-responsive.scss` remata columna
-   por columna. Es el recurso de la tabla de la BIBLIOTECA, que en móvil se lee como fichas —esconde la cabecera a
-   juego con las celdas que también esconde (`tbody tr.main-row td:not(:first-child)`)—.
-
-   Esta tabla no es esa, y por dos motivos: lo que se viene a hacer aquí es COMPARAR los dos textos, y con una
-   columna no queda nada que comparar; y sus filas no llevan `.main-row`, así que de aquella pareja de reglas solo
-   se aplicaba la que esconde, dejando cinco columnas de cuerpo sin un solo rótulo encima. Se desmarca de las dos
-   —con `!important` en la segunda, porque la global lo lleva— y la tabla se desplaza dentro de
-   `.admin-ach-scroll`, que para eso está. */
+/* ⚑ EN MÓVIL LA TABLA SE LEE COMO FICHAS, una por escalón.
+   Esta tabla se quedó tabla en móvil a propósito —lo que se viene a hacer aquí es COMPARAR los dos textos, y para
+   eso hacen falta las dos columnas— desplazándose dentro de `.admin-ach-scroll`. Al verlo en un teléfono de 390
+   px la decisión no se sostiene: la tabla mide 46rem (767 px), así que se ven **dos columnas y media de cinco** y
+   los dos textos se quedan enteros fuera de la pantalla, alcanzables solo desplazando cada fila de lado. Comparar
+   dos frases que no se pueden ver a la vez no es comparar.
+   Apiladas, las dos frases quedan una debajo de la otra —que es como se comparan dos textos en una pantalla
+   estrecha— y cada una lleva su rótulo delante (`data-col`), porque la cabecera de la tabla la esconde la regla
+   global de la app a partir de 720 px y aquí ya no se recupera. */
 @media (max-width: 720px) {
-  .admin-ach-table thead { display: table-header-group; }
-  .admin-ach-table thead th:not(:first-child) { display: table-cell !important; }
+  /* Nada que desplazar de lado: la ficha ya no se sale de su tarjeta. */
+  .admin-ach-scroll { overflow-x: visible; }
+  .admin-ach-table { min-width: 0; table-layout: auto; font-size: .88rem; }
+  /* Las bandas alternas se van con la tabla: entre bloques separados no dicen «esta fila sigue por aquí», que
+     era su único trabajo. Lo que separa ahora es el hueco y el filete de cada bloque. */
+  .admin-ach-table tbody tr:nth-child(even) { background: none; }
+  .admin-ach-table tbody tr {
+    display: grid;
+    /* El número del escalón manda la primera columna y el nombre ocupa el resto; lo demás cruza de lado a lado. */
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: baseline;
+    gap: .15rem .5rem;
+    padding: .5rem .1rem;
+    border-bottom: 1px solid var(--border);
+  }
+  .admin-ach-table tbody tr:last-child { border-bottom: 0; }
+  .admin-ach-table tbody td { display: block; padding: 0; }
+  .admin-ach-table tbody td.admin-ach-name { font-weight: 600; }
+  /* La cifra de alcance y los dos textos, a todo lo ancho del bloque. */
+  .admin-ach-table tbody td.admin-ach-reached,
+  .admin-ach-table tbody td[data-col] { grid-column: 1 / -1; }
+  .admin-ach-table tbody td[data-col]::before {
+    content: attr(data-col) ' · ';
+    color: var(--text-muted);
+    font-size: .72rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+  }
+  /* El medidor no se estira a lo ancho de la pantalla: es una cifra dibujada, no una barra de progreso. */
+  .admin-ach-meter { max-width: 11rem; }
+  /* Y EL RAÍL DE LAS SEÑALES PASA A LA FILA ENTERA. Vivía en la primera celda —el canto izquierdo de la tabla—
+     y en bloques esa celda es solo el número: la marca se quedaba en un cuadradito suelto. */
+  .admin-ach-table tbody tr.is-unseen td:first-child,
+  .admin-ach-table tbody tr.is-preview td:first-child { box-shadow: none; }
+  .admin-ach-table tbody tr.is-unseen {
+    box-shadow: inset 3px 0 0 color-mix(in srgb, var(--text-muted) 55%, transparent);
+    padding-left: .55rem;
+  }
+  .admin-ach-table tbody tr.is-preview {
+    box-shadow: inset 3px 0 0 var(--fg-green);
+    padding-left: .55rem;
+  }
 }
 
 /* El pie de la ficha: «preparar un escalón nuevo» es lo que se hace cuando ya se ha leído la escalera entera.
@@ -713,7 +768,18 @@
 .admin-ach-legend dt { font-weight: 700; font-size: .8rem; }
 .admin-ach-legend dd { margin: 0; color: var(--text-muted); font-size: .8rem; line-height: 1.4; }
 
-/* La ficha del plan: lo que hay que pegar, en tres pasos numerados y con el código a la vista. */
+/* La ficha del plan: lo que hay que pegar, en tres pasos numerados y con el código a la vista.
+   VIVE DENTRO DE LA ESCALERA, debajo de su botón, así que ya no es una tarjeta suelta (`.admin-card`) sino un
+   panel embutido: se separa con un filete arriba y un fondo un grado más hundido, que es lo que dice «esto
+   pertenece a la ficha que lo rodea» sin abrir una caja dentro de otra. */
+.admin-ach-plan {
+  margin-top: .75rem;
+  padding: .75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--surface-soft) 60%, transparent);
+}
+.admin-ach-plan h4 { margin: 0; font-size: .95rem; }
 .admin-ach-plan h3 { margin: 0; font-size: .95rem; }
 .admin-ach-plan ol { margin: .5rem 0 0; padding-left: 1.2rem; display: grid; gap: .35rem; }
 .admin-ach-plan code {
@@ -722,7 +788,31 @@
   color: var(--text);
   overflow-wrap: anywhere;
 }
-.admin-ach-plan .admin-card-actions { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; }
+/* AGRUPADOS A LA IZQUIERDA, y hay que decirlo porque la regla base los reparte a los extremos: eso está bien en
+   las fichas del censo —una acción a cada lado— y aquí deja «Añadir» y «Cerrar» en las dos esquinas de la
+   pantalla, como si no fueran del mismo gesto. */
+.admin-ach-plan .admin-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-start;
+  gap: .5rem;
+}
+
+/* LO QUE HAY APUNTADO Y NO ESTÁ EN EL CÓDIGO. Se separa del campo con un filete: el campo es «añade uno» y esto
+   es «esto es lo que llevas», y sin la línea las dos cosas se leían como un solo bloque. Cada pendiente en su
+   fila, con su `id` a la izquierda y su «quitar» a la derecha. */
+.admin-ach-pending { margin-top: .75rem; padding-top: .6rem; border-top: 1px solid var(--border); }
+.admin-ach-pending h5 { margin: 0 0 .4rem; font-size: .85rem; }
+.admin-ach-pending ul { list-style: none; margin: 0; padding: 0; display: grid; gap: .35rem; }
+.admin-ach-pending li { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; }
+.admin-ach-pending li code {
+  font-family: var(--ach-mono, ui-monospace, monospace);
+  font-size: .78rem;
+  color: var(--text);
+}
+.admin-ach-pending li .btn { padding: .25rem .55rem; font-size: .78rem; }
+.admin-ach-pending .admin-card-note { margin: .5rem 0 0; }
 .admin-ach-copied { color: var(--fg-green); font-size: .8rem; }
 
 /* El interruptor de visibilidad vive en la CABECERA de la escalera, a la derecha: es la única acción que cambia

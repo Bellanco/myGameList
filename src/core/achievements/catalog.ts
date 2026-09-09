@@ -55,7 +55,7 @@ import {
 } from './metrics';
 import { localMonthKey } from '../utils/dateTime';
 import { romanLevel } from '../constants/achievementLabels';
-import type { AchievementDef, AchievementLadder, AchievementMeasure } from './types';
+import type { AchievementDef, AchievementLadder, AchievementMeasure, ExtraSteps } from './types';
 import type { GameItem } from '../../model/types/game';
 
 /** Un año en milisegundos, para «esperó más de un año en Próximos». */
@@ -1372,11 +1372,15 @@ function firstOfEach(games: GameItem[], pick: (game: GameItem) => string[] | und
 /**
  * La expansión: de escalera a escalones.
  *
+ * SE EXPORTA para que el panel de administración pueda enseñar cómo QUEDARÍA una escalera al insertarle un
+ * escalón (los romanos corridos, el `id` nuevo, los textos) sin escribir una segunda copia de estas reglas: la
+ * previsualización la produce el mismo código que produce el catálogo, así que no puede mentir.
+ *
  * El nombre lleva el grado en romano y la condición lleva el umbral, porque cada fila del listado es ya un logro
  * completo y tiene que poder leerse sola: «Créditos finales III · Juegos que has terminado: 50». Sin las dos
  * cosas, media pantalla dice el mismo nombre cinco veces.
  */
-function expand(ladder: AchievementLadder): AchievementDef[] {
+export function expandLadder(ladder: AchievementLadder): AchievementDef[] {
   const grades = ladder.steps.length;
   return ladder.steps.map((step, index) => ({
     id: `${ladder.key}-${step}`,
@@ -1402,18 +1406,35 @@ function expand(ladder: AchievementLadder): AchievementDef[] {
   }));
 }
 
-/** EL CATÁLOGO: un logro por escalón, en el orden en que se declaran las escaleras. Ese orden es contrato. */
-export const ACHIEVEMENTS: readonly AchievementDef[] = LADDERS.flatMap(expand);
+/**
+ * EL CATÁLOGO: un logro por escalón, en el orden en que se declaran las escaleras. Ese orden es contrato.
+ *
+ * ⚑ **SE PUEDE AMPLIAR SIN DESPLEGAR, y solo con umbrales** (§6.4bis): el panel de administración guarda en
+ * `appConfig/achievements.extraSteps` escalones nuevos de escaleras que YA EXISTEN, y al leer la configuración se
+ * reconstruye el catálogo con ellos dentro (`applyExtraSteps`). Un umbral es dato: el `id`, el romano y los dos
+ * textos los deriva `expandLadder`, y la métrica es la de la escalera. Una escalera NUEVA, en cambio, es código
+ * —su métrica es una función sobre la biblioteca— y esa sigue llegando por despliegue.
+ *
+ * LOS CONTENEDORES SE MUTAN EN SU SITIO y nunca se reasignan. Es lo que permite que esto no cambie ni una firma
+ * en las quince piezas que leen el catálogo —el evaluador, la fracción, el listado, el feed, el espejo, el
+ * panel—: todas siguen mirando la misma referencia y ven lo que hay dentro. Lo que sí hace falta es que un memo
+ * que dependa del catálogo lleve `catalogEpoch()` en sus dependencias, porque el contenido cambia sin que cambie
+ * la referencia (ver `useAchievements`).
+ *
+ * EL ORDEN DE LOS BITS DEL ESPEJO NO SE TOCA: `MIRROR_ORDER` sigue congelado en `mirrorOrder.ts`, y los escalones
+ * añadidos por configuración viajan por su `id` en la cola del espejo, no por posición (ver `pack.ts`). Esa es la
+ * línea que hace todo esto seguro: nada de lo que pase aquí puede desplazar un bit ya publicado.
+ */
+const achievements: AchievementDef[] = [];
+export const ACHIEVEMENTS: readonly AchievementDef[] = achievements;
 
 /** Índice por `id`, para que el parser y la vista no recorran el catálogo entero en cada consulta. */
-export const ACHIEVEMENTS_BY_ID: ReadonlyMap<string, AchievementDef> = new Map(
-  ACHIEVEMENTS.map((def) => [def.id, def]),
-);
+const achievementsById = new Map<string, AchievementDef>();
+export const ACHIEVEMENTS_BY_ID: ReadonlyMap<string, AchievementDef> = achievementsById;
 
 /** Los escalones de una escalera, en orden. Lo usa la pantalla para enseñar solo el siguiente (§8.1ter). */
-export const ACHIEVEMENTS_BY_LADDER: ReadonlyMap<string, readonly AchievementDef[]> = new Map(
-  LADDERS.map((ladder) => [ladder.key, ACHIEVEMENTS.filter((def) => def.ladder === ladder.key)]),
-);
+const achievementsByLadder = new Map<string, readonly AchievementDef[]>();
+export const ACHIEVEMENTS_BY_LADDER: ReadonlyMap<string, readonly AchievementDef[]> = achievementsByLadder;
 
 export const LADDERS_BY_KEY: ReadonlyMap<string, AchievementLadder> = new Map(
   LADDERS.map((ladder) => [ladder.key, ladder]),
@@ -1426,9 +1447,56 @@ export const LADDERS_BY_KEY: ReadonlyMap<string, AchievementLadder> = new Map(
  * aparato, así que si puntuaran, el dueño se vería un nivel y su amistad —que reconstruye el nivel desde el
  * espejo— le vería otro, con las dos cuentas correctas y ninguna forma de conciliarlas.
  */
-export const SCORING_ACHIEVEMENTS: readonly AchievementDef[] = ACHIEVEMENTS.filter(
-  (def) => def.family !== 'onboarding' && !def.retired,
-);
+const scoringAchievements: AchievementDef[] = [];
+export const SCORING_ACHIEVEMENTS: readonly AchievementDef[] = scoringAchievements;
+
+/**
+ * Cuántas veces se ha reconstruido el catálogo. Es la dependencia honesta de cualquier memo que lo lea: los
+ * contenedores no cambian de referencia nunca —es lo que evita tocar quince firmas— así que sin esto un `useMemo`
+ * se quedaría con la cuenta de antes de que llegara la configuración.
+ */
+let epoch = 0;
+
+export function catalogEpoch(): number {
+  return epoch;
+}
+
+/**
+ * LOS ESCALONES EXTRA DE CADA ESCALERA, decididos en el panel: clave de escalera → umbrales.
+ *
+ * Es el único tipo de ampliación que puede llegar sin desplegar (ver arriba). Va en `types.ts` porque lo
+ * comparten el catálogo y la forma del documento de configuración.
+ */
+export function applyExtraSteps(extra: ExtraSteps = {}): void {
+  const defs = LADDERS.flatMap((ladder) => {
+    // Se descarta lo que no sea un entero positivo y lo que YA esté declarado en el código: un umbral repetido
+    // daría dos escalones con el mismo `id`, que es la única cosa que el catálogo no puede permitirse.
+    const añadidos = (extra[ladder.key] || [])
+      .filter((step) => Number.isInteger(step) && step > 0 && !ladder.steps.includes(step))
+      .filter((step, index, all) => all.indexOf(step) === index);
+    if (añadidos.length === 0) return expandLadder(ladder);
+    // Ordenados: el grado y el romano salen de la POSICIÓN, así que un umbral intermedio tiene que entrar en su
+    // sitio para que «Créditos finales III» siga queriendo decir el tercer escalón.
+    return expandLadder({ ...ladder, steps: [...ladder.steps, ...añadidos].sort((a, b) => a - b) });
+  });
+
+  achievements.length = 0;
+  achievements.push(...defs);
+  achievementsById.clear();
+  for (const def of defs) achievementsById.set(def.id, def);
+  achievementsByLadder.clear();
+  for (const ladder of LADDERS) {
+    achievementsByLadder.set(ladder.key, defs.filter((def) => def.ladder === ladder.key));
+  }
+  scoringAchievements.length = 0;
+  scoringAchievements.push(...defs.filter((def) => def.family !== 'onboarding' && !def.retired));
+  epoch += 1;
+}
+
+// El catálogo del CÓDIGO, al importar: sin configuración leída todavía, es exactamente el de siempre. Que esto
+// corra aquí y no lo llame nadie es lo que hace que la ampliación sea aditiva —quien no lea `appConfig` tiene el
+// catálogo declarado y nada más— y lo que mantiene los tests que no saben de configuración funcionando igual.
+applyExtraSteps();
 
 /** Las escaleras que se evalúan al FINAL porque miden sobre otros logros (`tutorial`, `platino`). */
 export const META_LADDERS: ReadonlySet<string> = new Set(['tutorial', 'platino']);

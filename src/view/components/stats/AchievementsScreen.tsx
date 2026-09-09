@@ -82,7 +82,11 @@ export const AchievementsScreen = memo(function AchievementsScreen({
   children,
 }: AchievementsScreenProps) {
   const title = heading || (owner ? ACHIEVEMENTS_UI.titleOf(owner) : ACHIEVEMENTS_UI.title);
-  const subtitle = lead ?? (global ? ACHIEVEMENTS_UI.globalLead : ACHIEVEMENTS_UI.subtitle);
+  // La voz la decide DE QUIÉN es la lista, igual que el título: en la de otra persona, el texto de siempre
+  // —«lo que llevas hecho con tus juegos»— hablaba de los juegos de quien mira.
+  const subtitle = lead ?? (global
+    ? ACHIEVEMENTS_UI.globalLead
+    : (owner ? ACHIEVEMENTS_UI.subtitleOf(owner) : ACHIEVEMENTS_UI.subtitle));
 
   return (
     <section className="hub-hub hub-screen ach-screen" aria-label={title}>

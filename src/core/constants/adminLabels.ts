@@ -433,6 +433,13 @@ export const ADMIN_ACHIEVEMENTS_UI = {
   colName: 'Nombre',
   colGoal: 'Meta (lo que falta)',
   colDone: 'Hecho (lo conseguido)',
+  /**
+   * Los mismos dos rótulos, cortos: en móvil la tabla se lee como FICHAS —cinco columnas no caben en 390 px— y
+   * cada celda lleva el suyo delante en vez de una cabecera arriba. «Meta (lo que falta)» delante de cada frase
+   * ocuparía más que la frase.
+   */
+  colGoalShort: 'Meta',
+  colDoneShort: 'Hecho',
   /** ⚑ Señal de que una escalera se dejó el `done`: el respaldo copia la meta y se lee como una tarea pendiente. */
   sameText: 'Sin texto propio: repite la meta',
 
@@ -517,24 +524,58 @@ export const ADMIN_ACHIEVEMENTS_UI = {
   hiddenSaving: 'Guardando…',
 
   /**
-   * PREPARAR UN ESCALÓN INTERMEDIO. El panel no lo añade —el `id` tiene que llegar al código para que el logro
-   * se publique en el espejo— pero sí deja el cambio escrito y listo para pegar, que es la parte que se olvida.
+   * AÑADIR UN ESCALÓN A UNA ESCALERA, sin desplegar y para todo el mundo (§6.4bis). El panel lo guarda en
+   * `appConfig`, el catálogo se reconstruye con él dentro y a partir de ahí es un logro como cualquier otro: se
+   * desbloquea, cuenta en la fracción y viaja en el espejo. Lo que no puede añadir es una escalera nueva.
+   *
+   * TRES CORRECCIONES QUE VIENEN DE VERLO EN USO, y las tres van juntas porque son la misma queja:
+   *
+   *  - la ficha se abre DENTRO de la escalera, debajo del botón. Salía arriba de la pantalla, lejos de la
+   *    escalera desde la que se pulsaba, así que escribir un umbral no se veía desde donde estabas y parecía que
+   *    el campo no hacía nada;
+   *  - se abre VACÍA. Proponía el doble del último escalón y ese número aparecía puesto sin que nadie lo pidiera;
+   *  - y el escalón entra al pulsar «Añadir», no al escribir. Entonces se guarda, la tabla lo enseña recolocado
+   *    y ahí se queda.
    */
   prepare: (step: number) => `Preparar escalón ${step}`,
   prepareAny: 'Preparar un escalón nuevo',
   prepareField: 'Umbral',
-  prepareHelp: 'Escribe el umbral que quieras: la lista se recoloca sola y el resto de pasos se recalcula.',
+  prepareHelp: 'Escribe un umbral y pulsa Añadir.',
+  prepareAdd: 'Añadir',
   prepareTaken: (step: number) => `El umbral ${step} ya existe en esta escalera.`,
   prepareInvalid: 'Escribe un número entero mayor que cero.',
-  prepareTitle: (key: string, step: number) => `Insertar ${step} en «${key}»`,
+  prepareTitleOf: (key: string) => `Escalones nuevos en «${key}»`,
   prepareCatalog: (steps: string) => `1 · catalog.ts — steps: [${steps}]`,
-  prepareMirror: (id: string) => `2 · mirrorOrder.ts — al FINAL de MIRROR_IDS: '${id}',`,
+  prepareMirror: (ids: string) => `2 · mirrorOrder.ts — al FINAL de MIRROR_IDS: ${ids}`,
   prepareTests: (total: [number, number], points: [number, number], bits: [number, number]) =>
     `3 · tests/unit/achievements.test.ts — total ${total[0]} → ${total[1]} · techo ${points[0]} → ${points[1]} · MIRROR_ORDER ${bits[0]} → ${bits[1]}`,
   prepareRename: (name: string) => `Ojo: los escalones por encima corren de romano (${name} y los siguientes).`,
   prepareCopy: 'Copiar los tres pasos',
   prepareCopied: 'Copiado.',
   prepareClose: 'Cerrar',
+
+  /**
+   * LOS AÑADIDOS DESDE EL PANEL (§6.4bis). Son catálogo de verdad —se desbloquean, cuentan y viajan— pero no
+   * están en el código, y esa diferencia hay que poder verla: la fila se marca, la lista los agrupa, la nota dice
+   * exactamente qué son y el «ya en el código» cierra el ciclo cuando alguien los consolida.
+   */
+  extraTitle: 'Añadidos desde el panel',
+  extraFlag: 'del panel',
+  extraTaken: (step: number) => `El umbral ${step} ya lo añadió el panel a esta escalera.`,
+  extraRemove: (step: number) => `Quitar ${step}`,
+  extraInCode: 'ya en el código',
+  extraSaving: 'Guardando…',
+  extraFailed: 'No se ha podido guardar. ¿Sesión de administrador iniciada?',
+  extraNote: 'En vigor para todo el mundo: se puede desbloquear, cuenta en la fracción y viaja en el espejo por su `id`. No añade escaleras nuevas —la métrica de una escalera es código—, solo escalones de las que ya existen.',
+  /**
+   * QUITAR UN UMBRAL QUE YA TIENE ALGUIEN RETIRA SU MEDALLA, y eso es lo único que el §6.4 no permite. El botón
+   * desaparece en cuanto la muestra dice que alguien lo tiene, y se explica por qué en su sitio.
+   */
+  extraLocked: 'Ya lo tiene alguien: quitarlo le retiraría la medalla (§6.4). Para dejar de ofrecerlo hay que marcarlo retirado en el código.',
+  /** Consolidar en el código es OPCIONAL: le da su bit en el espejo y deja de viajar por la cola. */
+  codeTitle: 'Consolidarlo en el código (opcional: le da su bit en el espejo)',
+  /** El nombre que tenía un escalón antes de que el añadido le corriera el romano. */
+  previewMoved: (before: string) => `antes: ${before}`,
 
   /**
    * EL ESQUEMA. Va plegado: se abre la primera vez y no vuelve a estorbar.

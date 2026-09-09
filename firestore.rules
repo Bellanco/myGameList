@@ -202,17 +202,23 @@ service cloud.firestore {
     // allowlist aunque el cliente ya lo escribía (`appearancePreferenceRepository`): sin él, esa preferencia se
     // denegaba en silencio y nunca sincronizaba.
     /**
-     * CONFIGURACIÓN DEL CATÁLOGO DE LOGROS (`appConfig/achievements`), escrita SOLO por el panel de
-     * administración y leída por todo el mundo con sesión.
+     * CONFIGURACIÓN DEL CATÁLOGO DE LOGROS (`appConfig/achievements`), leída por todo el mundo con sesión y
+     * escrita por el panel de administración — salvo `open`, que la adelanta cualquiera (ver abajo).
      *
-     * Lleva dos mapas y los dos son SOLO PRESENTACIÓN: no tocan ningún `id`, ni el espejo publicado, ni la
-     * fracción del catálogo.
+     * Lleva dos mapas y los dos son SOLO PRESENTACIÓN: no tocan ningún `id`, ni el espejo publicado, ni lo que
+     * nadie tenga conseguido.
      *
      *   · `hidden` — clave de escalera → booleano. `true` = oculta, `false` = a la vista, ausente = lo que diga
-     *     el código.
+     *     el código. Es una DECISIÓN de producto: solo el admin.
      *   · `open`   — clave de escalera → `id` del escalón más alto al que ha llegado alguien. Es lo que abre la
-     *     escalera para todo el mundo: en cuanto un usuario ve un escalón, se le enseña a todos. Lo publica el
-     *     panel midiendo los espejos del censo, porque es el único que puede verlos todos.
+     *     escalera para todo el mundo: en cuanto un usuario ve un escalón, se le enseña a todos. Es una MEDICIÓN,
+     *     así que la adelanta el cliente de quien llega ahí (`openFrontierUpdateIsValid`) y también la publica el
+     *     panel midiendo los espejos del censo.
+     *   · `extraSteps` — clave de escalera → umbrales que el panel ha AÑADIDO a esa escalera sin desplegar
+     *     (§6.4bis). Este SÍ amplía el catálogo: los clientes lo reconstruyen al leerlo, así que el escalón se
+     *     desbloquea, cuenta en la fracción y viaja en el espejo por su `id` (nunca por un bit: el orden de bits
+     *     sigue congelado en el código, y es lo que hace esto seguro). Solo el admin, como `hidden`, y por el
+     *     mismo motivo: es una decisión de producto.
      *
      * Se acota como el resto: solo esas dos claves, y cada mapa con tope de entradas para que este documento no
      * se pueda usar como almacén de nada. Los VALORES de `open` no se validan uno a uno —Firestore no sabe
@@ -220,11 +226,45 @@ service cloud.firestore {
      * que no exista en el catálogo se ignora al aplicarlo (`openThrough`).
      */
     function achievementsConfigIsValid() {
-      return request.resource.data.keys().hasOnly(["hidden", "open"])
+      return request.resource.data.keys().hasOnly(["hidden", "open", "extraSteps"])
         && (!("hidden" in request.resource.data)
             || (request.resource.data.hidden is map && request.resource.data.hidden.size() <= 100))
         && (!("open" in request.resource.data)
-            || (request.resource.data.open is map && request.resource.data.open.size() <= 100));
+            || (request.resource.data.open is map && request.resource.data.open.size() <= 100))
+        && (!("extraSteps" in request.resource.data)
+            || (request.resource.data.extraSteps is map && request.resource.data.extraSteps.size() <= 100));
+    }
+
+    /**
+     * LA APERTURA LA ADELANTA CUALQUIERA CON SESIÓN, y es la regla que hace verdad la promesa del `open`: en
+     * cuanto un usuario alcanza un escalón, ese escalón queda abierto para TODOS, así que el denominador de la
+     * fracción («196 de 249») es el mismo en todos los aparatos. Mientras solo el admin podía escribirlo, el mapa
+     * se quedaba vacío entre publicación y publicación y cada cliente abría con su propio progreso: quien tenía
+     * 196 medallas contaba sobre 249 y quien empezaba, sobre 55, con el mismo catálogo delante.
+     *
+     * ES UNA MEDICIÓN, NO UNA DECISIÓN, y de ahí que se pueda dejar en manos de todos: dice que alguien llegó a
+     * un escalón, sin quién ni cuándo. `hidden` —que sí es una decisión de producto— sigue siendo del admin, y
+     * esto no lo puede tocar.
+     *
+     * SOLO `open` Y SOLO HACIA DELANTE, hasta donde una regla puede comprobarlo: se acota la clave que cambia y
+     * se exige que no DESAPAREZCA ninguna escalera ya abierta. Los valores no se validan uno a uno —Firestore no
+     * sabe recorrer un mapa, ni conoce el orden de los escalones—, pero el daño posible es una cifra de cabecera
+     * distinta durante un rato: nada de lo que nadie tenga conseguido depende de este documento.
+     */
+    function openFrontierCreateIsValid(docId) {
+      return docId == "achievements"
+        && request.resource.data.keys().hasOnly(["open"])
+        && request.resource.data.open is map
+        && request.resource.data.open.size() <= 100;
+    }
+
+    function openFrontierUpdateIsValid(docId) {
+      return docId == "achievements"
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["open"])
+        && request.resource.data.open is map
+        && request.resource.data.open.size() <= 100
+        && (!("open" in resource.data)
+            || request.resource.data.open.keys().hasAll(resource.data.open.keys()));
     }
 
     function publicConfigWriteIsValid() {
@@ -445,7 +485,12 @@ service cloud.firestore {
     // lo que dice el código, que es el lado seguro: un logro oculto sigue oculto.
     match /appConfig/{docId} {
       allow read: if isSignedIn();
-      allow create, update: if !isPlaceholder(docId) && isAdmin() && achievementsConfigIsValid();
+      allow create: if !isPlaceholder(docId)
+        && ((isAdmin() && achievementsConfigIsValid())
+            || (isSignedIn() && openFrontierCreateIsValid(docId)));
+      allow update: if !isPlaceholder(docId)
+        && ((isAdmin() && achievementsConfigIsValid())
+            || (isSignedIn() && openFrontierUpdateIsValid(docId)));
       allow delete: if !isPlaceholder(docId) && isAdmin();
     }
 

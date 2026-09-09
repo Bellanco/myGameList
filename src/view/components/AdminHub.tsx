@@ -2,6 +2,7 @@ import { lazy, memo, Suspense, useCallback, useEffect, useRef, useState } from '
 import { Navigate } from 'react-router-dom';
 import { ADMIN_ACHIEVEMENTS_UI, ADMIN_PANEL_UI } from '../../core/constants/adminLabels';
 import type { HiddenOverrides, OpenFrontier } from '../../core/achievements/visibility';
+import type { ExtraSteps } from '../../core/achievements/types';
 import {
   ADMIN_ONLY_TIER,
   PROFILE_TIERS,
@@ -165,6 +166,9 @@ export const AdminHub = memo(function AdminHub() {
   // La apertura comunitaria PUBLICADA. Llega con la misma lectura que la ocultación (mismo documento) y sirve
   // para que el catálogo pueda decir si lo que mide ahora es lo que la gente está viendo.
   const [openFrontier, setOpenFrontier] = useState<OpenFrontier>({});
+  // Los escalones que el panel ha añadido a una escalera sin desplegar (§6.4bis). Llegan con la MISMA lectura
+  // que los dos de arriba —mismo documento— y sí son catálogo: al leerlos se reconstruye (`applyExtraSteps`).
+  const [extraSteps, setExtraSteps] = useState<ExtraSteps>({});
   const [pending, setPending] = useState<PendingAction>(null);
   // Los enlaces de TODOS se piden una vez y se agrupan por usuario: el panel pinta decenas de fichas y una
   // petición por ficha sería absurda para un dato que cabe en una sola respuesta.
@@ -192,6 +196,7 @@ export const AdminHub = memo(function AdminHub() {
         if (cancelled) return;
         setHiddenAchievements(value.hidden);
         setOpenFrontier(value.open);
+        setExtraSteps(value.extraSteps);
       })
       .catch(() => {
         // Sin configuración manda el catálogo; la pantalla lo enseña tal cual.
@@ -205,6 +210,15 @@ export const AdminHub = memo(function AdminHub() {
   const toggleHiddenAchievement = useCallback(async (ladderKey: string, hidden: boolean) => {
     const module = await import('../../model/repository/achievementsConfigRepository');
     setHiddenAchievements(await module.setLadderHidden(ladderKey, hidden));
+  }, []);
+
+  /**
+   * Amplía una escalera con escalones nuevos, para todo el mundo. Igual que el interruptor de ocultación: lo
+   * escribe esto —que es quien habla con Firestore— y si falla LANZA, que la ficha lo dice.
+   */
+  const saveExtraSteps = useCallback(async (ladderKey: string, steps: readonly number[]) => {
+    const module = await import('../../model/repository/achievementsConfigRepository');
+    setExtraSteps(await module.setExtraSteps(ladderKey, steps));
   }, []);
 
   /**
@@ -327,6 +341,8 @@ export const AdminHub = memo(function AdminHub() {
           onToggleHidden={toggleHiddenAchievement}
           openFrontier={openFrontier}
           onPublishFrontier={publishOpenFrontier}
+          extraSteps={extraSteps}
+          onSetExtraSteps={saveExtraSteps}
           onResetAll={resetAllAchievements}
           censusSize={vm.census?.users.length || 0}
         />

@@ -7,6 +7,7 @@ import { AchievementsCard } from './AchievementsCard';
 import { AchievementsScreen } from './AchievementsScreen';
 import { listForScreen, useAchievements } from '../../../viewmodel/useAchievements';
 import { useAchievementsConfig } from '../../hooks/useAchievementsConfig';
+import { useOpenFrontier } from '../../hooks/useOpenFrontier';
 import { ENABLE_ACHIEVEMENTS } from '../../../core/achievements/flags';
 import { ACHIEVEMENTS_UI } from '../../../core/constants/achievementLabels';
 import { OWN_STATS_BLOCKS } from '../../../core/stats/types';
@@ -53,6 +54,12 @@ export const StatsHub = memo(function StatsHub({ games }: { games: TabData }) {
   // La apertura entra también en la FRACCIÓN: el denominador cuenta lo que hoy está abierto, no el catálogo
   // entero, así que ampliar el catálogo no le baja el porcentaje de golpe a nadie.
   const achievements = useAchievements({ games, open: achievementsConfig.open });
+  /**
+   * Y ABRE PARA LOS DEMÁS lo que hayas alcanzado tú: en cuanto alguien llega a un escalón, ese escalón queda
+   * abierto para todo el mundo, que es lo que hace que el denominador («196 de 249») sea el mismo en todos los
+   * aparatos. Solo escribe cuando adelanta algo — ver `core/achievements/frontier.ts`.
+   */
+  useOpenFrontier(achievements.byId, achievementsConfig.open);
   const navigate = useNavigate();
   const location = useLocation();
   const openReviews = useCallback(() => { void navigate(REVIEWS_ROUTE); }, [navigate]);
@@ -80,17 +87,16 @@ export const StatsHub = memo(function StatsHub({ games }: { games: TabData }) {
       <AchievementsScreen
         items={listForScreen(achievements.byId, achievementsConfig)}
         summary={achievements.summary}
-        // NADA DE OTRAS PERSONAS EN ESTE PANEL. El porcentaje comparado sale de los espejos que descarga el
-        // directorio del hub: aquí no está cargado —a `/logros` se llega sin pasar por el hub— y, sobre todo,
-        // son datos ajenos, que es justo lo que esta sección no mira.
+        // NADA DE OTRAS PERSONAS EN ESTA SECCIÓN, y es la regla que decide las dos ausencias de abajo: aquí no se
+        // lee un dato que no sea tuyo. El porcentaje comparado sale de los espejos que descarga el directorio del
+        // hub, así que aquí no se pinta — y tampoco se va a buscar.
         rarity={null}
         backLabel={ACHIEVEMENTS_UI.backToPanel}
         onBack={backToPanel}
-        // Y POR ESO TAMPOCO HAY BOTÓN DE «LOGROS GLOBALES». Lo hubo, y llevaba a la pantalla del hub para tu
-        // propio perfil (`/social/profiles/me/globales`): se entraba por el panel y el «volver» de allí dejaba
-        // al usuario en el hub social —otra sección, otra navegación inferior— sin camino de vuelta al sitio
-        // desde el que había entrado. Una pantalla vuelve por donde se entró; los globales se quedan en el hub,
-        // que es donde viven sus datos, y se abren desde el listado de logros de tu ficha.
+        // Y POR ESO TAMPOCO HAY BOTÓN DE «LOGROS GLOBALES»: esa vista mide el catálogo contra las vitrinas de
+        // otras personas, así que vive donde esos datos están —la pantalla de logros del hub— y no aquí. Estuvo,
+        // llevando a `/social/profiles/me/globales`, y además de traerse datos ajenos al panel dejaba al usuario
+        // en otra sección sin camino de vuelta al sitio de entrada.
       />
     );
   }
