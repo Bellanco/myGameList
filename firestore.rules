@@ -218,8 +218,7 @@ service cloud.firestore {
      *     (§6.4bis). Este SÍ amplía el catálogo: los clientes lo reconstruyen al leerlo, así que el escalón se
      *     desbloquea, cuenta en la fracción y viaja en el espejo por su `id` (nunca por un bit: el orden de bits
      *     sigue congelado en el código, y es lo que hace esto seguro). Solo el admin, como `hidden`, y por el
-     *     mismo motivo: es una decisión de producto. `pendingSteps` es el nombre que tuvo el campo cuando el
-     *     panel solo apuntaba el umbral; se admite para no perder lo que se guardó entonces.
+     *     mismo motivo: es una decisión de producto.
      *
      * Se acota como el resto: solo esas dos claves, y cada mapa con tope de entradas para que este documento no
      * se pueda usar como almacén de nada. Los VALORES de `open` no se validan uno a uno —Firestore no sabe
@@ -227,15 +226,13 @@ service cloud.firestore {
      * que no exista en el catálogo se ignora al aplicarlo (`openThrough`).
      */
     function achievementsConfigIsValid() {
-      return request.resource.data.keys().hasOnly(["hidden", "open", "extraSteps", "pendingSteps"])
+      return request.resource.data.keys().hasOnly(["hidden", "open", "extraSteps"])
         && (!("hidden" in request.resource.data)
             || (request.resource.data.hidden is map && request.resource.data.hidden.size() <= 100))
         && (!("open" in request.resource.data)
             || (request.resource.data.open is map && request.resource.data.open.size() <= 100))
         && (!("extraSteps" in request.resource.data)
-            || (request.resource.data.extraSteps is map && request.resource.data.extraSteps.size() <= 100))
-        && (!("pendingSteps" in request.resource.data)
-            || (request.resource.data.pendingSteps is map && request.resource.data.pendingSteps.size() <= 100));
+            || (request.resource.data.extraSteps is map && request.resource.data.extraSteps.size() <= 100));
     }
 
     /**
