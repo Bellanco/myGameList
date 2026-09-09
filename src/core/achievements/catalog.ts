@@ -1372,11 +1372,15 @@ function firstOfEach(games: GameItem[], pick: (game: GameItem) => string[] | und
 /**
  * La expansión: de escalera a escalones.
  *
+ * SE EXPORTA para que el panel de administración pueda enseñar cómo QUEDARÍA una escalera al insertarle un
+ * escalón (los romanos corridos, el `id` nuevo, los textos) sin escribir una segunda copia de estas reglas: la
+ * previsualización la produce el mismo código que produce el catálogo, así que no puede mentir.
+ *
  * El nombre lleva el grado en romano y la condición lleva el umbral, porque cada fila del listado es ya un logro
  * completo y tiene que poder leerse sola: «Créditos finales III · Juegos que has terminado: 50». Sin las dos
  * cosas, media pantalla dice el mismo nombre cinco veces.
  */
-function expand(ladder: AchievementLadder): AchievementDef[] {
+export function expandLadder(ladder: AchievementLadder): AchievementDef[] {
   const grades = ladder.steps.length;
   return ladder.steps.map((step, index) => ({
     id: `${ladder.key}-${step}`,
@@ -1403,7 +1407,7 @@ function expand(ladder: AchievementLadder): AchievementDef[] {
 }
 
 /** EL CATÁLOGO: un logro por escalón, en el orden en que se declaran las escaleras. Ese orden es contrato. */
-export const ACHIEVEMENTS: readonly AchievementDef[] = LADDERS.flatMap(expand);
+export const ACHIEVEMENTS: readonly AchievementDef[] = LADDERS.flatMap(expandLadder);
 
 /** Índice por `id`, para que el parser y la vista no recorran el catálogo entero en cada consulta. */
 export const ACHIEVEMENTS_BY_ID: ReadonlyMap<string, AchievementDef> = new Map(

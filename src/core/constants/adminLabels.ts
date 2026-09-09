@@ -519,11 +519,22 @@ export const ADMIN_ACHIEVEMENTS_UI = {
   /**
    * PREPARAR UN ESCALÓN INTERMEDIO. El panel no lo añade —el `id` tiene que llegar al código para que el logro
    * se publique en el espejo— pero sí deja el cambio escrito y listo para pegar, que es la parte que se olvida.
+   *
+   * Y LO ENSEÑA PUESTO: la ficha se abre DENTRO de la escalera y su tabla pasa a enseñar cómo quedaría —la fila
+   * nueva en su sitio y los romanos de encima corridos—. Antes la ficha salía arriba de la pantalla, lejos de la
+   * escalera desde la que se pulsaba: escribir un umbral recalculaba el plan sin que se viera nada desde donde
+   * estabas, así que parecía que el campo no hacía nada.
    */
   prepare: (step: number) => `Preparar escalón ${step}`,
   prepareAny: 'Preparar un escalón nuevo',
   prepareField: 'Umbral',
-  prepareHelp: 'Escribe el umbral que quieras: la lista se recoloca sola y el resto de pasos se recalcula.',
+  prepareHelp: 'Escribe el umbral que quieras: la tabla de arriba enseña cómo queda la escalera.',
+  /** La fila que todavía no existe, en la tabla de la previsualización. */
+  previewNew: 'nueva',
+  /** El nombre que tenía un escalón antes de que el nuevo le corriera el romano. */
+  previewMoved: (before: string) => `antes: ${before}`,
+  /** Lo que la tabla está enseñando mientras la ficha está abierta, dicho donde se decide. */
+  previewNote: 'La tabla de esta escalera enseña cómo quedaría. No se guarda nada: al catálogo se lleva con estos tres pasos.',
   prepareTaken: (step: number) => `El umbral ${step} ya existe en esta escalera.`,
   prepareInvalid: 'Escribe un número entero mayor que cero.',
   prepareTitle: (key: string, step: number) => `Insertar ${step} en «${key}»`,

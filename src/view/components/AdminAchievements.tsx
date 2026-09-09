@@ -1,7 +1,7 @@
 import { memo, useCallback, useMemo, useState } from 'react';
 import { ADMIN_ACHIEVEMENTS_UI } from '../../core/constants/adminLabels';
 import { ACHIEVEMENT_RARITY_LABELS } from '../../core/constants/achievementLabels';
-import { ACHIEVEMENTS_BY_LADDER, LADDERS, SCORING_ACHIEVEMENTS } from '../../core/achievements/catalog';
+import { ACHIEVEMENTS_BY_LADDER, LADDERS, SCORING_ACHIEVEMENTS, expandLadder } from '../../core/achievements/catalog';
 import { MIRROR_ORDER, measureRarity } from '../../core/achievements/pack';
 import { RARITY_POINTS } from '../../core/achievements/types';
 import { copyText } from '../../core/utils/clipboard';
@@ -16,6 +16,36 @@ const A = ADMIN_ACHIEVEMENTS_UI;
 interface Group {
   ladder: AchievementLadder;
   steps: readonly AchievementDef[];
+}
+
+/**
+ * Una fila de la tabla de una escalera. `nueva` y `antes` solo llegan con algo dentro mientras se PREPARA un
+ * escalón en esa escalera: la fila que todavía no existe y las que el escalón nuevo les corre el romano.
+ *
+ * Existe el tipo —y no dos tablas— porque la tabla es la misma: lo que cambia es de qué lista sale.
+ */
+interface StepRow {
+  def: AchievementDef;
+  nueva: boolean;
+  antes: string;
+}
+
+/** Las filas de siempre: los escalones del catálogo, sin nada que previsualizar. */
+const plainRows = (steps: readonly AchievementDef[]): StepRow[] =>
+  steps.map((def) => ({ def, nueva: false, antes: '' }));
+
+/**
+ * El escalón anterior CON GENTE QUE MEDIR, saltándose la fila que se está previsualizando.
+ *
+ * Hace falta porque las dos señales de la columna de alcance se leen contra el escalón de debajo —la frontera y
+ * la caída— y la fila nueva no tiene a nadie: dejarla de vecina apagaba las dos en la fila siguiente, así que
+ * insertar un escalón cambiaba de sitio unas marcas que hablan de personas y no de umbrales.
+ */
+function previousMeasured(rows: readonly StepRow[], index: number): AchievementDef | null {
+  for (let i = index - 1; i >= 0; i -= 1) {
+    if (!rows[i].nueva) return rows[i].def;
+  }
+  return null;
 }
 
 /**
@@ -315,6 +345,36 @@ export const AdminAchievements = memo(function AdminAchievements({
     };
   }, [draft]);
 
+  /**
+   * LA ESCALERA CON EL ESCALÓN YA DENTRO, tal y como quedaría.
+   *
+   * La produce `expandLadder`, que es LA MISMA función que produce el catálogo: los romanos corridos, el `id`
+   * nuevo y los textos del escalón salen de ahí y no de una segunda copia de esas reglas, así que la
+   * previsualización no puede decir una cosa y el código otra.
+   *
+   * `null` mientras no se esté preparando nada o el umbral no valga: entonces la tabla es la de siempre.
+   */
+  const preview = useMemo<{ key: string; rows: StepRow[] } | null>(() => {
+    if (!draft || !plan || plan.error) return null;
+    const ladder = LADDERS.find((entry) => entry.key === draft.key);
+    if (!ladder) return null;
+    const steps = [...ladder.steps, draft.step].sort((a, b) => a - b);
+    const antes = new Map((ACHIEVEMENTS_BY_LADDER.get(ladder.key) || []).map((def) => [def.id, def.labels.name]));
+    return {
+      key: ladder.key,
+      rows: expandLadder({ ...ladder, steps }).map((def) => {
+        const previo = antes.get(def.id) || '';
+        return {
+          def,
+          // Sin nombre previo, el escalón no existía: es el que se está insertando.
+          nueva: !previo,
+          // Y solo se dice el nombre viejo cuando de verdad cambia: la mitad de la escalera no se mueve.
+          antes: previo && previo !== def.labels.name ? previo : '',
+        };
+      }),
+    };
+  }, [draft, plan]);
+
   const copyPlan = useCallback(() => {
     if (!plan || !draft) return;
     void copyText([
@@ -484,42 +544,6 @@ export const AdminAchievements = memo(function AdminAchievements({
         </details>
       </div>
 
-      {plan && draft ? (
-        <div className="admin-card admin-ach-plan">
-          <h3>{A.prepareTitle(draft.key, draft.step)}</h3>
-
-          <label className="admin-ach-plan-field">
-            {A.prepareField}
-            <input
-              type="number"
-              min={1}
-              step={1}
-              value={draft.step}
-              onChange={(event) => {
-                setCopied(false);
-                setDraft({ key: draft.key, step: Math.trunc(Number(event.target.value)) });
-              }}
-            />
-            <small>{A.prepareHelp}</small>
-          </label>
-
-          {plan.error ? <p className="admin-ach-warn">{plan.error}</p> : null}
-          {plan.error ? null : (
-          <ol>
-            <li><code>{A.prepareCatalog(plan.steps)}</code></li>
-            <li><code>{A.prepareMirror(plan.id)}</code></li>
-            <li><code>{A.prepareTests(plan.total, plan.points, plan.bits)}</code></li>
-          </ol>
-          )}
-          {plan.renamed ? <p className="admin-ach-warn-soft">{A.prepareRename(plan.renamed)}</p> : null}
-          <p className="admin-card-actions">
-            <button type="button" className="btn" onClick={copyPlan} disabled={Boolean(plan.error)}>{A.prepareCopy}</button>
-            <button type="button" className="btn btn-secondary" onClick={() => setDraft(null)}>{A.prepareClose}</button>
-            {copied ? <span className="admin-ach-copied">{A.prepareCopied}</span> : null}
-          </p>
-        </div>
-      ) : null}
-
       {shown.length === 0 ? <p className="admin-ach-empty">{A.filterEmpty}</p> : null}
 
       {sections.map(({ family, ladders }) => (
@@ -538,6 +562,11 @@ export const AdminAchievements = memo(function AdminAchievements({
             // Una vez por escalera y no por fila: la regla mira al escalón anterior, así que se resuelve
             // recorriéndola entera. Sin muestra no se marca nada — no habría con qué saberlo.
             const unseen = measured ? unseenSteps(steps, holdersOf, hidden) : null;
+            // DE QUÉ LISTA SALE LA TABLA: la del catálogo, o la de cómo quedaría si se está preparando un
+            // escalón en ESTA escalera. Una tabla, dos fuentes — el mismo patrón que usan las pantallas de
+            // logros de la app.
+            const filas = preview?.key === ladder.key ? preview.rows : plainRows(steps);
+            const preparando = draft?.key === ladder.key;
             return (
             <article className="admin-card admin-ach-ladder" key={ladder.key}>
               <header className="admin-ach-head">
@@ -609,10 +638,12 @@ export const AdminAchievements = memo(function AdminAchievements({
                     </tr>
                   </thead>
                   <tbody>
-                    {steps.map((def, index) => {
-                      const percent = measured?.percent.get(def.id) ?? 0;
+                    {filas.map(({ def, nueva, antes }, index) => {
+                      // La fila que se previsualiza no tiene a nadie: no hay gente que medir en un escalón que
+                      // todavía no existe, así que su columna de alcance se calla en vez de pintar un 0 %.
+                      const percent = nueva ? 0 : (measured?.percent.get(def.id) ?? 0);
                       const holders = measured ? Math.round((percent / 100) * measured.sample) : 0;
-                      const previous = index > 0 ? steps[index - 1] : null;
+                      const previous = previousMeasured(filas, index);
                       // LA FRONTERA: el PRIMER escalón de la escalera al que no ha llegado nadie. Es el que está en
                       // juego, y el único que merece la marca: los de más arriba también están a cero y repetir
                       // «Dormido» nueve veces tapaba justo la línea que se busca.
@@ -633,17 +664,23 @@ export const AdminAchievements = memo(function AdminAchievements({
                       // de verse la escalera— con cuatro copias de lo mismo. Es el criterio de la frontera.
                       const opensUnseen = nobodySees && !(previous && unseen?.has(previous.id));
                       return (
-                      <tr key={def.id} className={nobodySees ? 'is-unseen' : undefined}>
+                      <tr key={def.id} className={nueva ? 'is-preview' : (nobodySees ? 'is-unseen' : undefined)}>
                         <td className="admin-ach-step">{def.step}</td>
                         <td className="admin-ach-name">
                           {def.labels.name}
+                          {/* LA FILA NUEVA SE DICE, no solo se colorea: el color la separa de un vistazo y el
+                              rótulo es lo que la deja clara con lector de pantalla y en monocromo. */}
+                          {nueva ? <small className="admin-ach-preview-flag">{A.previewNew}</small> : null}
+                          {/* Y A QUIEN LE CORRE EL ROMANO, su nombre de antes. Es el único efecto que insertar un
+                              escalón no puede evitar, y aquí se ve escalón por escalón en vez de en un aviso. */}
+                          {antes ? <small className="admin-ach-warn-soft">{A.previewMoved(antes)}</small> : null}
                           {/* OFRECIDO ERA UNA COLUMNA y ahora es esta marca: de 261 escalones, 259 decían «Sí».
                               Se señala la excepción donde pasa y la regla se calla, que es lo que hace que la
                               excepción se vea. */}
                           {def.retired ? <small className="admin-ach-flag">{A.notOffered}</small> : null}
                         </td>
                         <td className="admin-ach-reached">
-                          {measured ? (
+                          {measured && !nueva ? (
                             <>
                               <span className={percent === 0 ? 'admin-ach-warn-soft' : undefined}>
                                 {A.reached(percent, holders, measured.sample)}
@@ -684,13 +721,21 @@ export const AdminAchievements = memo(function AdminAchievements({
                   un enlace de puntitos: era la herencia de cuando cada fila llevaba su propio «preparar escalón
                   15» y convenía que no compitieran. Retirados aquellos, este se queda solo y se anuncia como lo
                   que es. Abre la ficha para escribir el umbral que sea —también por encima del último, que es
-                  cómo se alarga una escalera— y va al PIE: es lo que se hace cuando ya se ha leído entera. */}
+                  cómo se alarga una escalera— y va al PIE: es lo que se hace cuando ya se ha leído entera.
+
+                  ALTERNA, porque la ficha se abre AQUÍ MISMO: con la ficha arriba de la pantalla el botón solo
+                  podía abrir, y cerrarla obligaba a buscarla. */}
               <p className="admin-ach-foot">
                 <button
                   type="button"
                   className="btn btn-secondary"
+                  aria-expanded={preparando}
                   onClick={() => {
                     setCopied(false);
+                    if (preparando) {
+                      setDraft(null);
+                      return;
+                    }
                     const last = ladder.steps[ladder.steps.length - 1] || 1;
                     setDraft({ key: ladder.key, step: ladder.descending ? Math.max(1, last - 1) : last * 2 });
                   }}
@@ -698,6 +743,50 @@ export const AdminAchievements = memo(function AdminAchievements({
                   {A.prepareAny}
                 </button>
               </p>
+
+              {/* LA FICHA, DENTRO DE LA ESCALERA Y DEBAJO DEL BOTÓN. Vivía arriba de la pantalla, suelta: se
+                  pulsaba «preparar» al pie de una escalera y el cambio aparecía a diez pantallas de allí, así que
+                  escribir un umbral recalculaba el plan sin que se viera nada desde donde estabas —parecía que el
+                  campo no hacía nada— y no había forma de comparar lo que ibas a añadir con lo que hay. Aquí la
+                  tabla de arriba es la previsualización y esto es lo que hay que escribir en el código. */}
+              {preparando && plan && draft ? (
+                <div className="admin-ach-plan">
+                  <h4>{A.prepareTitle(draft.key, draft.step)}</h4>
+
+                  <label className="admin-ach-plan-field">
+                    {A.prepareField}
+                    <input
+                      type="number"
+                      min={1}
+                      step={1}
+                      value={draft.step}
+                      onChange={(event) => {
+                        setCopied(false);
+                        setDraft({ key: draft.key, step: Math.trunc(Number(event.target.value)) });
+                      }}
+                    />
+                    <small>{A.prepareHelp}</small>
+                  </label>
+
+                  {plan.error ? <p className="admin-ach-warn">{plan.error}</p> : null}
+                  {plan.error ? null : (
+                    <>
+                      <p className="admin-card-note">{A.previewNote}</p>
+                      <ol>
+                        <li><code>{A.prepareCatalog(plan.steps)}</code></li>
+                        <li><code>{A.prepareMirror(plan.id)}</code></li>
+                        <li><code>{A.prepareTests(plan.total, plan.points, plan.bits)}</code></li>
+                      </ol>
+                    </>
+                  )}
+                  {plan.renamed ? <p className="admin-ach-warn-soft">{A.prepareRename(plan.renamed)}</p> : null}
+                  <p className="admin-card-actions">
+                    <button type="button" className="btn" onClick={copyPlan} disabled={Boolean(plan.error)}>{A.prepareCopy}</button>
+                    <button type="button" className="btn btn-secondary" onClick={() => setDraft(null)}>{A.prepareClose}</button>
+                    {copied ? <span className="admin-ach-copied">{A.prepareCopied}</span> : null}
+                  </p>
+                </div>
+              ) : null}
             </article>
             );
           })}

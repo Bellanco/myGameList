@@ -85,6 +85,15 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
   —tu ficha y tus logros— abrían una pantalla que no encontraba nada, mientras las mismas direcciones con el id
   del directorio funcionaban. Ahora va con tu id del directorio (y con el comodín `me` si todavía no tienes
   entrada), que es lo que las rutas del hub saben resolver.
+- **Preparar un escalón se hace donde está la escalera, y se ve puesto.** La ficha se abría arriba de la
+  pantalla, suelta: se pulsaba «preparar un escalón nuevo» al pie de una escalera y el cambio aparecía a diez
+  pantallas de allí, así que escribir un umbral recalculaba el plan sin que se viera nada desde donde estabas
+  —parecía que el campo no hacía nada— y no había con qué comparar lo que ibas a añadir. Ahora la ficha se abre
+  **dentro de esa escalera, debajo del botón** (que pasa a abrir y cerrar), y **su tabla enseña cómo quedaría**:
+  la fila nueva en su sitio, marcada como nueva, y los escalones de encima con el romano que les tocará y el
+  nombre que tenían antes. La previsualización la produce `expandLadder`, la misma función que produce el
+  catálogo, así que no puede decir una cosa y el código otra. Sigue sin guardar nada: al catálogo se lleva con
+  los tres pasos que copia el botón.
 - **El porcentaje comparado ya no espera a tener veinte personas.** Había un suelo de 20 espejos publicados y por
   debajo la pantalla se callaba, así que con una comunidad pequeña —el día del estreno, todo el mundo— no había
   cifra **ni lista global que ordenar**: «Logros globales» era una excusa y nada más. El argumento del suelo («con
