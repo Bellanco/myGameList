@@ -7,18 +7,30 @@
 //
 // GRAMÁTICA (versión 2):
 //
-//     2:<bits>[~<idx>.<día>[!],<idx>.<día>…]
+//     2:<bits>[~#<id>.<día>[!],<idx>.<día>[!],<idx>.<día>…]
 //
 //  - `bits` — base64url del mapa de bits, un bit por entrada de `MIRROR_ORDER`, el primero en el bit más alto del
 //    primer byte. Conseguido = 1.
 //  - la cola tras `~` lleva SOLO lo que el bitmap no puede decir: la fecha (días desde 2020-01-01, en base 36) y
 //    el `!` de destacado. Va por prioridad —destacados, luego lo más raro— y se corta al llegar al tope, así que
 //    un espejo lleno pierde fechas antes que perder logros.
+//  - ⚑ y las entradas que empiezan por `#` llevan el logro ENTERO por su `id`, no una fecha de un bit: son los
+//    escalones que el panel ha añadido por configuración (§6.4bis), que no tienen bit y no pueden tenerlo.
 //
 // EL ORDEN DE `MIRROR_ORDER` ES CONTRATO. Cada bit significa lo que significa por su posición: reordenar el
 // catálogo reescribe la vitrina de todo el mundo. Por eso incluye también los RETIRADOS —retirar un logro no
 // puede correr los índices de los que van detrás— y por eso los escalones nuevos se añaden al final de su
 // escalera y las escaleras nuevas al final de su familia (ver la cabecera de `catalog.ts`).
+//
+// ⚑ Y POR ESO LOS ESCALONES DE CONFIGURACIÓN VAN POR `id`. El catálogo se puede ampliar sin desplegar con
+// umbrales nuevos de escaleras que ya existen, y meterlos en el bitmap exigiría que todos los clientes
+// compartieran el mismo orden en el mismo instante: uno con la configuración de hace una sesión leería el espejo
+// de otro DESPLAZADO —medallas equivocadas en el perfil de otra persona, con su fecha y todo—. Por su `id` no hay
+// orden que compartir, así que no hay desplazamiento posible.
+//
+// Y UN CLIENTE ANTIGUO NO SE ROMPE: su parser parte la cola por comas y descarta la entrada cuyo índice no
+// reconoce (`parseInt('#…', 36)` es `NaN`), así que simplemente no ve esas medallas. Es la misma tolerancia que
+// el §6.4 ya exige para un `id` desconocido — el logro reaparece en cuanto esa persona actualiza.
 //
 // GRANULARIDAD DE DÍA, NO DE INSTANTE, y es deliberado: un sello al minuto diría a qué horas usas la app, que es
 // justo el dato que `applyProfileVisibility` borra de los listados que baja una amistad.
@@ -138,6 +150,7 @@ const FUTURE_TOLERANCE_MS = DAY_MS;
 export function packAchievements(states: readonly AchievementState[], featured: readonly string[] = []): string {
   const featuredSet = new Set(featured.slice(0, FEATURED_MAX));
   const byId = new Map(states.map((state) => [state.id, state]));
+  const conBit = new Set(MIRROR_ORDER);
 
   const bits = new Uint8Array(Math.ceil(MIRROR_ORDER.length / 8));
   const tail: Array<{ id: string; index: number; day: number; featured: boolean; weight: number }> = [];
@@ -154,6 +167,33 @@ export function packAchievements(states: readonly AchievementState[], featured: 
     }
   });
 
+  /**
+   * LOS ESCALONES DE CONFIGURACIÓN (§6.4bis): los que están en el catálogo pero no en el orden de bits. Van por
+   * su `id` y ENTEROS —el `id` es lo que dice que existen, no una posición— y por eso van DELANTE en la cola: si
+   * se recorta uno, no se pierde una fecha, se pierde la medalla.
+   *
+   * Se recorren los estados y no `MIRROR_ORDER`, que es justo el que no los tiene.
+   */
+  const extras = states
+    .map((state) => ({ state, def: ACHIEVEMENTS_BY_ID.get(state.id) }))
+    // LOS PRIMEROS PASOS SIGUEN SIN SALIR DEL APARATO (§5.3), y hay que decirlo aquí: no tienen bit —por eso no
+    // están en `MIRROR_ORDER`— así que sin esta guarda la puerta nueva los habría publicado a todos.
+    .filter(({ state, def }) => state.level >= 1
+      && Boolean(def)
+      && def!.family !== 'onboarding'
+      && !conBit.has(state.id))
+    .map(({ state, def }) => ({
+      id: state.id,
+      day: dayNumber(state.unlockedAt),
+      featured: featuredSet.has(state.id),
+      weight: def ? RARITY_POINTS[def.rarity] : 0,
+    }))
+    .sort((a, b) => {
+      if (a.featured !== b.featured) return a.featured ? -1 : 1;
+      if (a.weight !== b.weight) return b.weight - a.weight;
+      return b.day - a.day;
+    });
+
   tail.sort((a, b) => {
     if (a.featured !== b.featured) return a.featured ? -1 : 1;
     if (a.weight !== b.weight) return b.weight - a.weight;
@@ -162,8 +202,11 @@ export function packAchievements(states: readonly AchievementState[], featured: 
 
   let out = `${MIRROR_VERSION}:${toBase64(bits)}`;
   let separator = '~';
-  for (const entry of tail) {
-    const piece = `${entry.index.toString(36)}${entry.day > 0 ? `.${entry.day.toString(36)}` : ''}${entry.featured ? '!' : ''}`;
+  const piezas = [
+    ...extras.map((entry) => `#${entry.id}${entry.day > 0 ? `.${entry.day.toString(36)}` : ''}${entry.featured ? '!' : ''}`),
+    ...tail.map((entry) => `${entry.index.toString(36)}${entry.day > 0 ? `.${entry.day.toString(36)}` : ''}${entry.featured ? '!' : ''}`),
+  ];
+  for (const piece of piezas) {
     if (out.length + separator.length + piece.length > ACHIEVEMENTS_LIST_MAX) break;
     out += separator + piece;
     separator = ',';
@@ -262,6 +305,9 @@ export function parseMirror(raw: unknown, now = Date.now()): MirroredAchievement
   const bits = fromBase64(encoded);
   const out: MirroredAchievement[] = [];
   const byIndex = new Map<number, MirroredAchievement>();
+  // Los que llegan por `id` en la cola (§6.4bis). Aparte de `byIndex` porque no tienen índice, y con su propio
+  // índice de repetidos: una cadena fabricada con el mismo `id` dos veces no puede duplicar la medalla.
+  const byExtraId = new Map<string, MirroredAchievement>();
 
   MIRROR_ORDER.forEach((id, index) => {
     const byte = bits[index >> 3];
@@ -276,7 +322,35 @@ export function parseMirror(raw: unknown, now = Date.now()): MirroredAchievement
     const entry = rawEntry.trim();
     if (!entry) continue;
     const featured = entry.endsWith('!');
-    const [rawIndex, rawDay] = (featured ? entry.slice(0, -1) : entry).split('.');
+    const cuerpo = featured ? entry.slice(0, -1) : entry;
+
+    /**
+     * ⚑ LA ENTRADA POR `id` (§6.4bis): un escalón que el panel añadió por configuración y que por tanto no tiene
+     * bit. Aquí no hay «fecha de algo que ya está», hay un logro ENTERO, así que se añade a la lista.
+     *
+     * Se exige que el `id` esté en ESTE catálogo: si la configuración todavía no ha llegado —o llegó y ya no
+     * incluye ese umbral— el `id` es desconocido y se ignora en silencio, que es lo que manda el §6.4. Nunca es
+     * un error de parseo, y por eso un cliente antiguo tampoco se rompe: el suyo lo descarta por otro camino.
+     */
+    if (cuerpo.startsWith('#')) {
+      const [id, rawDayExtra] = cuerpo.slice(1).split('.');
+      if (!id || !ACHIEVEMENTS_BY_ID.has(id) || byExtraId.has(id)) continue;
+      const item: MirroredAchievement = { id, level: 1, unlockedAt: 0, featured: false };
+      const dayExtra = parseInt(rawDayExtra || '', 36);
+      if (Number.isFinite(dayExtra) && dayExtra > 0) {
+        const candidate = msFromDay(dayExtra);
+        if (candidate <= now + FUTURE_TOLERANCE_MS) item.unlockedAt = candidate;
+      }
+      if (featured && featuredLeft > 0) {
+        item.featured = true;
+        featuredLeft -= 1;
+      }
+      byExtraId.set(id, item);
+      out.push(item);
+      continue;
+    }
+
+    const [rawIndex, rawDay] = cuerpo.split('.');
     const item = byIndex.get(parseInt(rawIndex, 36));
     if (!item) continue;
 

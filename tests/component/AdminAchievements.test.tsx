@@ -434,27 +434,27 @@ describe('catálogo de logros — la vista de revisión del panel de administrac
   });
 
   /**
-   * PREPARAR UN ESCALÓN: el panel no lo mete en el catálogo —el `id` tiene que llegar al código para que el logro
-   * se publique en el espejo— pero sí lo GUARDA como pendiente, lo enseña puesto en su escalera y deja el cambio
-   * redactado. Los tres pasos van juntos porque olvidarse del segundo —el `id` en `MIRROR_IDS`— es lo que deja un
-   * logro que no se publica, en silencio.
+   * AÑADIR UN ESCALÓN A UNA ESCALERA, sin desplegar y para todo el mundo (§6.4bis). El panel lo guarda en
+   * `appConfig`, el catálogo se reconstruye con él dentro y desde ahí es un logro como cualquier otro. Estos
+   * tests fijan la CONDUCTA DE LA PANTALLA —abre vacía, entra al pulsar, se recoloca, se puede quitar— y el
+   * camino completo (evaluar, contar y publicar) va en `tests/unit/achievementsExtraSteps.test.ts`.
    */
   describe('preparar un escalón nuevo', () => {
     const fichaDe = (escalera: string) =>
       screen.getByText(escalera).closest('.admin-card') as HTMLElement;
 
-    /** El escritor de pendientes, con la misma forma que el del hub: guarda la lista entera de esa escalera. */
-    function conPendientes(iniciales: Record<string, readonly number[]> = {}) {
+    /** El escritor de añadidos, con la misma forma que el del hub: guarda la lista entera de esa escalera. */
+    function conAñadidos(iniciales: Record<string, readonly number[]> = {}) {
       let guardados: Record<string, readonly number[]> = { ...iniciales };
-      const onSetPendingSteps = vi.fn(async (key: string, steps: readonly number[]) => {
+      const onSetExtraSteps = vi.fn(async (key: string, steps: readonly number[]) => {
         guardados = { ...guardados, [key]: [...steps].sort((a, b) => a - b) };
         if (steps.length === 0) delete guardados[key];
-        vista.rerender(<AdminAchievements onBack={() => {}} pendingSteps={guardados} onSetPendingSteps={onSetPendingSteps} />);
+        vista.rerender(<AdminAchievements onBack={() => {}} extraSteps={guardados} onSetExtraSteps={onSetExtraSteps} />);
       });
       const vista = render(
-        <AdminAchievements onBack={() => {}} pendingSteps={guardados} onSetPendingSteps={onSetPendingSteps} />,
+        <AdminAchievements onBack={() => {}} extraSteps={guardados} onSetExtraSteps={onSetExtraSteps} />,
       );
-      return { onSetPendingSteps, guardados: () => guardados };
+      return { onSetExtraSteps, guardados: () => guardados };
     }
 
     /**
@@ -462,7 +462,7 @@ describe('catálogo de logros — la vista de revisión del panel de administrac
      * aparecía en la tabla sin que nadie lo hubiera pedido y había que borrarlo para escribir otro.
      */
     it('abre con el campo vacío y sin añadir ningún escalón', async () => {
-      conPendientes();
+      conAñadidos();
       const ficha = fichaDe('Créditos finales');
       const filasAntes = within(ficha).getAllByRole('row').length;
 
@@ -470,7 +470,7 @@ describe('catálogo de logros — la vista de revisión del panel de administrac
 
       expect(within(ficha).getByRole('spinbutton')).toHaveValue(null);
       expect(within(ficha).getAllByRole('row')).toHaveLength(filasAntes);
-      expect(within(ficha).queryByText(A.pendingFlag)).not.toBeInTheDocument();
+      expect(within(ficha).queryByText(A.extraFlag)).not.toBeInTheDocument();
       // Y sin nada escrito no se puede añadir: no hay error, simplemente no hay umbral.
       expect(within(ficha).getByRole('button', { name: A.prepareAdd })).toBeDisabled();
       expect(within(ficha).queryByText(A.prepareInvalid)).not.toBeInTheDocument();
@@ -478,27 +478,27 @@ describe('catálogo de logros — la vista de revisión del panel de administrac
 
     /** ESCRIBIR NO AÑADE: el escalón entra al pulsar, y hasta entonces la tabla se queda como está. */
     it('escribir el umbral no toca la tabla; añadir sí', async () => {
-      const { onSetPendingSteps } = conPendientes();
+      const { onSetExtraSteps } = conAñadidos();
       await abrirPlan('Créditos finales');
       const ficha = fichaDe('Créditos finales');
       const filasAntes = within(ficha).getAllByRole('row').length;
 
       await userEvent.type(within(ficha).getByRole('spinbutton'), '125');
       expect(within(ficha).getAllByRole('row')).toHaveLength(filasAntes);
-      expect(onSetPendingSteps).not.toHaveBeenCalled();
+      expect(onSetExtraSteps).not.toHaveBeenCalled();
 
       await userEvent.click(within(ficha).getByRole('button', { name: A.prepareAdd }));
 
-      expect(onSetPendingSteps).toHaveBeenCalledWith('completados', [125]);
+      expect(onSetExtraSteps).toHaveBeenCalledWith('completados', [125]);
       // Guardado: una fila más, en su sitio y marcada como pendiente. Y el campo se vacía para el siguiente.
       expect(within(fichaDe('Créditos finales')).getAllByRole('row')).toHaveLength(filasAntes + 1);
-      expect(within(fichaDe('Créditos finales')).getByText(A.pendingFlag)).toBeInTheDocument();
+      expect(within(fichaDe('Créditos finales')).getByText(A.extraFlag)).toBeInTheDocument();
       expect(within(fichaDe('Créditos finales')).getByRole('spinbutton')).toHaveValue(null);
     });
 
     /** Y SE RECOLOCA: el 15 entra como segundo escalón y los romanos de encima corren, cada uno con lo que era. */
     it('el escalón añadido se coloca en su sitio y corre los romanos de encima', async () => {
-      conPendientes({ completados: [15] });
+      conAñadidos({ completados: [15] });
       const ficha = fichaDe('Créditos finales');
 
       expect(within(ficha).getByText('Créditos finales II')).toBeInTheDocument();
@@ -508,8 +508,8 @@ describe('catálogo de logros — la vista de revisión del panel de administrac
       expect(within(ficha).queryByRole('spinbutton')).not.toBeInTheDocument();
     });
 
-    it('los tres pasos salen con TODOS los pendientes de esa escalera dentro', async () => {
-      conPendientes({ completados: [125, 350] });
+    it('los tres pasos de consolidación salen con TODOS los añadidos de esa escalera dentro', async () => {
+      conAñadidos({ completados: [125, 350] });
       await abrirPlan('Créditos finales');
       const ficha = fichaDe('Créditos finales');
 
@@ -525,26 +525,26 @@ describe('catálogo de logros — la vista de revisión del panel de administrac
 
     /** Alargando por arriba no se renumera nadie: el aviso de romanos no debe salir. */
     it('alargar la escalera por arriba no avisa de romanos', async () => {
-      conPendientes({ completados: [1000] });
+      conAñadidos({ completados: [1000] });
       await abrirPlan('Créditos finales');
       expect(within(fichaDe('Créditos finales')).queryByText(/corren de romano/)).not.toBeInTheDocument();
     });
 
-    it('cada pendiente se quita por separado', async () => {
-      const { onSetPendingSteps } = conPendientes({ completados: [125, 350] });
+    it('cada añadido se quita por separado', async () => {
+      const { onSetExtraSteps } = conAñadidos({ completados: [125, 350] });
       await abrirPlan('Créditos finales');
 
-      await userEvent.click(within(fichaDe('Créditos finales')).getByRole('button', { name: A.pendingRemove(125) }));
+      await userEvent.click(within(fichaDe('Créditos finales')).getByRole('button', { name: A.extraRemove(125) }));
 
-      expect(onSetPendingSteps).toHaveBeenCalledWith('completados', [350]);
+      expect(onSetExtraSteps).toHaveBeenCalledWith('completados', [350]);
       const ficha = fichaDe('Créditos finales');
-      expect(within(ficha).getByRole('button', { name: A.pendingRemove(350) })).toBeInTheDocument();
-      expect(within(ficha).queryByRole('button', { name: A.pendingRemove(125) })).not.toBeInTheDocument();
+      expect(within(ficha).getByRole('button', { name: A.extraRemove(350) })).toBeInTheDocument();
+      expect(within(ficha).queryByRole('button', { name: A.extraRemove(125) })).not.toBeInTheDocument();
     });
 
     /** Las dos formas de repetirse, y se distinguen: en el código ya está puesto y en los pendientes, apuntado. */
-    it('no deja repetir un umbral, ni del código ni de lo ya apuntado', async () => {
-      const { onSetPendingSteps } = conPendientes({ completados: [125] });
+    it('no deja repetir un umbral, ni del código ni de lo ya añadido', async () => {
+      const { onSetExtraSteps } = conAñadidos({ completados: [125] });
       await abrirPlan('Créditos finales');
       const campo = within(fichaDe('Créditos finales')).getByRole('spinbutton');
 
@@ -554,27 +554,28 @@ describe('catálogo de logros — la vista de revisión del panel de administrac
 
       await userEvent.clear(campo);
       await userEvent.type(campo, '125');
-      expect(within(fichaDe('Créditos finales')).getByText(A.pendingTaken(125))).toBeInTheDocument();
-      expect(onSetPendingSteps).not.toHaveBeenCalled();
+      expect(within(fichaDe('Créditos finales')).getByText(A.extraTaken(125))).toBeInTheDocument();
+      expect(onSetExtraSteps).not.toHaveBeenCalled();
     });
 
     /**
-     * CUANDO EL PENDIENTE YA ESTÁ EN EL CÓDIGO el trabajo está hecho: se dice en su línea y se puede retirar la
-     * nota. No se borra sola, que sería hacerlo a espaldas de quien mira, y no se cuenta dos veces en la tabla.
+     * CUANDO EL AÑADIDO YA ESTÁ EN EL CÓDIGO su entrada de configuración ya no hace nada —el catálogo se queda
+     * con el escalón declarado— así que se dice en su línea y se puede retirar. No se borra sola, que sería
+     * hacerlo a espaldas de quien mira, y no se cuenta dos veces en la tabla.
      */
-    it('un pendiente que ya llegó al código se dice, y no duplica su fila', async () => {
-      conPendientes({ completados: [50] });
+    it('un añadido que ya llegó al código se dice, y no duplica su fila', async () => {
+      conAñadidos({ completados: [50] });
       await abrirPlan('Créditos finales');
       const ficha = fichaDe('Créditos finales');
 
-      expect(within(ficha).getByText(A.pendingInCode)).toBeInTheDocument();
-      expect(within(ficha).queryByText(A.pendingFlag)).not.toBeInTheDocument();
-      // Y no hay nada que llevar al código: sin pendientes nuevos, no hay tres pasos.
+      expect(within(ficha).getByText(A.extraInCode)).toBeInTheDocument();
+      expect(within(ficha).queryByText(A.extraFlag)).not.toBeInTheDocument();
+      // Y no hay nada que consolidar: sin añadidos fuera del código, no hay tres pasos.
       expect(within(ficha).queryByText(/steps: \[/)).not.toBeInTheDocument();
     });
 
     it('la ficha sale dentro de la tarjeta de esa escalera, no fuera', async () => {
-      conPendientes();
+      conAñadidos();
       await abrirPlan('Créditos finales');
 
       const ficha = fichaDe('Créditos finales');
@@ -586,7 +587,7 @@ describe('catálogo de logros — la vista de revisión del panel de administrac
     });
 
     it('cerrar la ficha no se lleva lo guardado', async () => {
-      conPendientes({ completados: [125] });
+      conAñadidos({ completados: [125] });
       const ficha = fichaDe('Créditos finales');
       const conPendiente = within(ficha).getAllByRole('row').length;
 
@@ -594,22 +595,22 @@ describe('catálogo de logros — la vista de revisión del panel de administrac
       await userEvent.click(within(ficha).getByRole('button', { name: A.prepareClose }));
 
       expect(within(ficha).queryByRole('spinbutton')).not.toBeInTheDocument();
-      // La fila pendiente sigue puesta: está guardada, no era una previsualización de la ficha abierta.
+      // La fila del añadido sigue puesta: está guardada, no era una previsualización de la ficha abierta.
       expect(within(ficha).getAllByRole('row')).toHaveLength(conPendiente);
-      expect(within(ficha).getByText(A.pendingFlag)).toBeInTheDocument();
+      expect(within(ficha).getByText(A.extraFlag)).toBeInTheDocument();
     });
 
     /** Si la escritura falla, se dice en la ficha de esa escalera y el campo NO se vacía. */
     it('dice que no se ha guardado, y no pierde lo escrito', async () => {
-      const onSetPendingSteps = vi.fn(async () => { throw new Error('permission-denied'); });
-      render(<AdminAchievements onBack={() => {}} onSetPendingSteps={onSetPendingSteps} />);
+      const onSetExtraSteps = vi.fn(async () => { throw new Error('permission-denied'); });
+      render(<AdminAchievements onBack={() => {}} onSetExtraSteps={onSetExtraSteps} />);
       await abrirPlan('Créditos finales');
       const ficha = fichaDe('Créditos finales');
 
       await userEvent.type(within(ficha).getByRole('spinbutton'), '125');
       await userEvent.click(within(ficha).getByRole('button', { name: A.prepareAdd }));
 
-      expect(within(ficha).getByText(A.pendingFailed)).toBeInTheDocument();
+      expect(within(ficha).getByText(A.extraFailed)).toBeInTheDocument();
       expect(within(ficha).getByRole('spinbutton')).toHaveValue(125);
     });
   });

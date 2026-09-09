@@ -1045,34 +1045,34 @@ describe('firestore.rules', () => {
     });
 
     /**
-     * LOS ESCALONES PENDIENTES (`pendingSteps`) viajan en el mismo documento y son lo contrario de la apertura:
-     * una DECISIÓN de producto —qué se va a añadir al catálogo— así que solo el admin, como `hidden`. No son
-     * catálogo y la app no los lee; el panel los usa para enseñar cómo quedaría la escalera.
+     * LOS ESCALONES AÑADIDOS POR EL PANEL (`extraSteps`) viajan en el mismo documento y son lo contrario de la
+     * apertura: una DECISIÓN de producto —qué escalones tiene el catálogo— así que solo el admin, como `hidden`.
+     * Y aquí importa más que en los otros dos, porque este mapa SÍ amplía el catálogo de todo el mundo.
      */
-    it('los escalones pendientes los escribe solo el admin', async () => {
-      await assertSucceeds(setDoc(doc(adminDb(), 'appConfig', 'achievements'), { pendingSteps: { completados: [125, 350] } }));
+    it('los escalones añadidos por el panel los escribe solo el admin', async () => {
+      await assertSucceeds(setDoc(doc(adminDb(), 'appConfig', 'achievements'), { extraSteps: { completados: [125, 350] } }));
       // Los tres mapas juntos, que es como queda el documento con todo decidido.
       await assertSucceeds(setDoc(doc(adminDb(), 'appConfig', 'achievements'), {
         hidden: { 'obra-maestra': false },
         open: { completados: 'completados-50' },
-        pendingSteps: { completados: [125] },
+        extraSteps: { completados: [125] },
       }));
 
-      await assertFails(setDoc(doc(ownerDb('uid-a'), 'appConfig', 'achievements'), { pendingSteps: { completados: [125] } }));
+      await assertFails(setDoc(doc(ownerDb('uid-a'), 'appConfig', 'achievements'), { extraSteps: { completados: [125] } }));
       // Con `merge` y un valor DISTINTO del que hay: repetir el mismo no cambia nada y una escritura que no
       // cambia nada la deja pasar la regla de la apertura (no toca ninguna clave), que es correcto y no es esto.
       await assertFails(setDoc(
         doc(ownerDb('uid-a'), 'appConfig', 'achievements'),
-        { pendingSteps: { completados: [999] } },
+        { extraSteps: { completados: [999] } },
         { merge: true },
       ));
-      await assertFails(setDoc(doc(anonDb(), 'appConfig', 'achievements'), { pendingSteps: {} }));
+      await assertFails(setDoc(doc(anonDb(), 'appConfig', 'achievements'), { extraSteps: {} }));
 
       // Y con las mismas ataduras de forma y tope que los otros dos mapas.
-      await assertFails(setDoc(doc(adminDb(), 'appConfig', 'achievements'), { pendingSteps: 'completados' }));
+      await assertFails(setDoc(doc(adminDb(), 'appConfig', 'achievements'), { extraSteps: 'completados' }));
       const grande: Record<string, number[]> = {};
       for (let i = 0; i < 101; i += 1) grande[`ladder-${i}`] = [1];
-      await assertFails(setDoc(doc(adminDb(), 'appConfig', 'achievements'), { pendingSteps: grande }));
+      await assertFails(setDoc(doc(adminDb(), 'appConfig', 'achievements'), { extraSteps: grande }));
     });
 
     /**
@@ -1109,10 +1109,10 @@ describe('firestore.rules', () => {
       // Un escalón abierto no se cierra: la escritura no puede DEJARSE ninguna escalera de las que ya estaban.
       await assertFails(setDoc(doc(ownerDb('uid-a'), 'appConfig', 'achievements'), { open: { maraton: 'maraton-75' } }));
 
-      // Ni cuela nada más por el mismo agujero: los pendientes son decisión del admin.
+      // Ni cuela nada más por el mismo agujero: ampliar el catálogo es decisión del admin.
       await assertFails(setDoc(
         doc(ownerDb('uid-a'), 'appConfig', 'achievements'),
-        { open: { maraton: 'maraton-75', sofa: 'sofa-3' }, pendingSteps: { completados: [125] } },
+        { open: { maraton: 'maraton-75', sofa: 'sofa-3' }, extraSteps: { completados: [125] } },
         { merge: true },
       ));
 

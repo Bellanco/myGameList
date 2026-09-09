@@ -85,6 +85,27 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
   —tu ficha y tus logros— abrían una pantalla que no encontraba nada, mientras las mismas direcciones con el id
   del directorio funcionaban. Ahora va con tu id del directorio (y con el comodín `me` si todavía no tienes
   entrada), que es lo que las rutas del hub saben resolver.
+- **El catálogo se puede ampliar desde el panel, sin desplegar.** Escribes un umbral en una escalera que ya
+  existe, pulsas «Añadir» y **es un logro de verdad**: se desbloquea, cuenta en la fracción, sale en el listado, en
+  el feed y en la ficha que ven tus amistades. Se guarda en `appConfig` y todos los clientes reconstruyen el
+  catálogo con él dentro al leer la configuración — el `id`, el grado, el romano y los dos textos los deriva el
+  mismo código que produce el catálogo, y la métrica es la de la escalera, que ya existe. Una escalera NUEVA sigue
+  siendo código: su métrica es una función sobre la biblioteca.
+  - **Y no toca ni un bit de lo ya publicado**, que era el problema de verdad. El espejo es un mapa de bits donde
+    la posición ES el significado: meter ahí un escalón nuevo exigiría que todos los clientes compartieran el
+    mismo orden en el mismo instante, y uno con la configuración de hace una sesión leería el espejo de otro
+    desplazado —medallas equivocadas en el perfil de otra persona—. Así que estos escalones viajan en la **cola
+    del espejo por su `id`**, no por posición. El bitmap de un espejo con escalones de configuración es idéntico
+    al de uno sin ellos (hay test que lo fija), un cliente antiguo descarta esas entradas y no ve esas medallas
+    —la misma tolerancia que ya exige un `id` desconocido—, y quien todavía no ha leído la configuración, igual.
+  - **Un umbral que ya tiene alguien no se puede quitar**: le retiraría la medalla, y eso es lo único que un
+    sistema de logros no puede hacer. El panel solo ofrece quitarlo mientras nadie lo tenga; a partir de ahí se
+    marca retirado en el código, como cualquier otro escalón.
+  - **Consolidarlo en el código es opcional** y solo lo abarata: un escalón declarado ocupa un bit y uno de
+    configuración unos veinte caracteres de la cola, así que hay tope (diez por escalera) y van delante en la cola
+    —si algo se recorta, que no sea la medalla que solo el `id` puede declarar—. El panel sigue redactando los tres
+    pasos para llevarlo al código y dice cuándo ya está. El porqué de todo esto, en `docs/plan-logros.md §6.4bis`.
+
 - **Preparar un escalón se hace donde está la escalera, se guarda y se ve puesto.** Tres quejas que son la misma:
   la ficha se abría **arriba de la pantalla**, suelta —se pulsaba «preparar un escalón nuevo» al pie de una
   escalera y el cambio aparecía a diez pantallas de allí, así que escribir un umbral no se veía desde donde
@@ -97,10 +118,6 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
   sale con todos dentro— y cada uno se quita por separado; cuando uno llega al código, su línea lo dice y la nota
   se retira. La tabla la produce `expandLadder`, la misma función que produce el catálogo, así que no puede decir
   una cosa y el código otra.
-  - **Y no es catálogo, que es la parte importante.** La app sigue leyendo el catálogo del código: mientras el
-    `id` no esté en `MIRROR_ORDER`, el escalón no existe para nadie —ni cuenta en la fracción, ni se publica en el
-    espejo—. La ficha lo dice donde se decide, y `docs/plan-logros.md §6.4bis` explica por qué el panel apunta en
-    vez de añadir, y qué haría falta para cruzar esa línea.
 - **El porcentaje comparado ya no espera a tener veinte personas.** Había un suelo de 20 espejos publicados y por
   debajo la pantalla se callaba, así que con una comunidad pequeña —el día del estreno, todo el mundo— no había
   cifra **ni lista global que ordenar**: «Logros globales» era una excusa y nada más. El argumento del suelo («con
