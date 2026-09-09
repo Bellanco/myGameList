@@ -131,13 +131,26 @@ describe('la ficha de una amistad', () => {
     expect(screen.getAllByText('30 abr 2026').length).toBe(6);
   });
 
-  it('el porcentaje comparado NO se pinta sin muestra suficiente', () => {
-    render(<ProfileAchievementsScreen mirror={ESPEJO} directoryMirrors={[espejo(['completados-10'])]} owner="Fulano" onBack={() => {}} />);
+  it('sin NINGÚN espejo no hay porcentaje comparado: no se puede medir la nada', () => {
+    render(<ProfileAchievementsScreen mirror={ESPEJO} directoryMirrors={[]} owner="Fulano" onBack={() => {}} />);
     expect(screen.queryByText(/lo tiene el/)).not.toBeInTheDocument();
   });
 
-  it('con muestra suficiente, el porcentaje va SIEMPRE con su denominador', () => {
-    // Sin denominador es lo único de esta pantalla que se puede leer como una afirmación global, y no lo es.
+  it('el porcentaje va SIEMPRE con su denominador, y desde el primer espejo', () => {
+    // Sin denominador es lo único de esta pantalla que se puede leer como una afirmación global, y no lo es. Por
+    // eso el suelo de veinte espejos se pudo quitar: con dos personas «50 % · 1 de 2» se lee por lo que es.
+    render(
+      <ProfileAchievementsScreen
+        mirror={ESPEJO}
+        directoryMirrors={[espejo(['completados-10']), espejo(['horas-10'])]}
+        owner="Fulano"
+        onBack={() => {}}
+      />,
+    );
+    expect(screen.getAllByText('lo tiene el 50 % · 1 de 2').length).toBeGreaterThan(0);
+  });
+
+  it('con una muestra grande, el porcentaje se afina', () => {
     const muestra = Array.from({ length: 25 }, (_unused, index) => espejo([index < 10 ? 'completados-10' : 'horas-10']));
     render(<ProfileAchievementsScreen mirror={ESPEJO} directoryMirrors={muestra} owner="Fulano" onBack={() => {}} />);
     expect(screen.getAllByText('lo tiene el 40 % · 10 de 25').length).toBeGreaterThan(0);
@@ -305,8 +318,8 @@ describe('logros globales — el catálogo por lo común que es cada uno', () =>
     expect(screen.queryByText('Conseguido')).not.toBeInTheDocument();
   });
 
-  it('sin muestra suficiente NO se pinta la lista: una lista ordenada por una cifra que no existe no está ordenada', () => {
-    render(<ProfileGlobalAchievements mirror={espejo(['completados-10'])} directoryMirrors={[espejo(['completados-10'])]} owner="Fulano" self={false} onBack={() => {}} />);
+  it('sin ningún espejo NO se pinta la lista: una lista ordenada por una cifra que no existe no está ordenada', () => {
+    render(<ProfileGlobalAchievements mirror={espejo(['completados-10'])} directoryMirrors={[]} owner="Fulano" self={false} onBack={() => {}} />);
     expect(screen.queryByRole('listitem')).not.toBeInTheDocument();
     expect(screen.getByText(/Todavía no hay gente suficiente/)).toBeInTheDocument();
     // Y NADA de «añade juegos, ponles nota»: la lista está vacía porque falta muestra, no porque falte
@@ -637,7 +650,7 @@ describe('el apartado del panel', () => {
  * sin `onToggleGlobals`, y por eso el botón no aparece allí (lo fija `tests/component/StatsHub.test.tsx`).
  */
 describe('el paso a los globales, y la vuelta', () => {
-  /** Muestra suficiente para que el porcentaje comparado signifique algo: el corte del §6.6bis son 20 espejos. */
+  /** Una muestra cualquiera. Ya no hay corte: la medición arranca con el primer espejo publicado. */
   const MUESTRA = Array.from({ length: 20 }, () => ESPEJO);
 
   it('en el hub el listado ofrece el botón, y lleva a los globales', async () => {
@@ -664,14 +677,15 @@ describe('el paso a los globales, y la vuelta', () => {
   });
 
   /**
-   * SIN MUESTRA NO SE OFRECE LA PUERTA. Los globales miden el catálogo contra los espejos del directorio y por
-   * debajo del corte no pueden pintar ninguna lista: la pantalla se declara sin muestra y ya está. Mientras el
-   * botón se enseñaba igualmente, pulsarlo llevaba a una excusa y nada más — un callejón sin salida.
+   * SIN MUESTRA NO SE OFRECE LA PUERTA. Los globales miden el catálogo contra los espejos del directorio, y sin
+   * ninguno no hay lista que pintar: la pantalla se declararía sin muestra y ya está. Mientras el botón se
+   * enseñaba igualmente, pulsarlo llevaba a una excusa y nada más — un callejón sin salida.
    *
-   * NO ERA UN CASO RARO DE DESARROLLO: el día del estreno nadie ha publicado su espejo todavía, así que le
-   * pasaba a todo el mundo. Se cura solo según la gente publica, y hasta entonces la puerta no está.
+   * ⚑ AHORA ES UN CASO RARO DE VERDAD, y antes no: con el suelo de veinte espejos le pasaba a todo el mundo el
+   * día del estreno. Quitado el suelo, basta con que UNA persona haya publicado su vitrina —y la tuya cuenta— para
+   * que la puerta esté.
    */
-  it('sin espejos suficientes no se ofrece el botón, aunque haya a dónde ir', () => {
+  it('sin un solo espejo no se ofrece el botón, aunque haya a dónde ir', () => {
     const { unmount } = render(
       <ProfileAchievementsScreen
         mirror={ESPEJO}
@@ -684,17 +698,17 @@ describe('el paso a los globales, y la vuelta', () => {
     expect(screen.queryByRole('button', { name: /Logros globales/ })).not.toBeInTheDocument();
     unmount();
 
-    // Justo por debajo del corte tampoco: 19 espejos siguen sin dar para un porcentaje.
+    // Y con uno, sí: dos personas son muestra suficiente para una cifra que va con su denominador.
     render(
       <ProfileAchievementsScreen
         mirror={ESPEJO}
-        directoryMirrors={MUESTRA.slice(0, 19)}
+        directoryMirrors={MUESTRA.slice(0, 1)}
         owner="Fulano"
         onBack={() => {}}
         onToggleGlobals={vi.fn()}
       />,
     );
-    expect(screen.queryByRole('button', { name: /Logros globales/ })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Logros globales/ })).toBeInTheDocument();
   });
 
   /**
