@@ -133,6 +133,19 @@ export interface AchievementLabels {
 /**
  * UNA ESCALERA: la unidad de edición del catálogo. No se publica, no se cuenta y no se pinta — se expande.
  */
+/**
+ * ESCALONES EXTRA POR ESCALERA, decididos en el panel de administración y guardados en
+ * `appConfig/achievements.extraSteps`: clave de escalera → umbrales.
+ *
+ * Es la ÚNICA ampliación del catálogo que puede llegar sin desplegar (§6.4bis), y por un motivo concreto: un
+ * umbral es dato —el `id`, el romano y los dos textos los deriva `expandLadder`, y la métrica es la de la
+ * escalera, que ya existe—. Una escalera nueva es código.
+ *
+ * Vive aquí, en los tipos, porque lo comparten el catálogo (que lo aplica) y la forma del documento de
+ * configuración (que lo guarda).
+ */
+export type ExtraSteps = Readonly<Record<string, readonly number[]>>;
+
 export interface AchievementLadder {
   /** Prefijo estable de los `id` de sus escalones. Slug de LO QUE SE MIDE, nunca del nombre visible. */
   key: string;

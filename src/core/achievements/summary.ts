@@ -7,13 +7,29 @@
 // NINGUNA DE LAS DOS SE PUBLICA (§6.10.3): el espejo ya lleva la lista de logros con su nivel y el catálogo lleva
 // la rareza de cada uno, así que cualquier cliente las reconstruye exactamente. Publicar un número que se puede
 // derivar crearía un segundo sitio donde mentir.
-import { ACHIEVEMENTS_BY_ID, ACHIEVEMENTS_BY_LADDER, SCORING_ACHIEVEMENTS } from './catalog';
+import { ACHIEVEMENTS_BY_ID, ACHIEVEMENTS_BY_LADDER, SCORING_ACHIEVEMENTS, catalogEpoch } from './catalog';
 import { openThrough, type OpenFrontier } from './visibility';
 import { RARITY_POINTS } from './types';
 import type { AchievementDef, AchievementState, AchievementSummary } from './types';
 
-/** Los `id` que puntúan, en un conjunto: el recorrido de abajo va por escalera y necesita preguntarlo por `id`. */
-const SCORING_IDS: ReadonlySet<string> = new Set(SCORING_ACHIEVEMENTS.map((def) => def.id));
+/**
+ * Los `id` que puntúan, en un conjunto: el recorrido de abajo va por escalera y necesita preguntarlo por `id`.
+ *
+ * SE REHACE CUANDO EL CATÁLOGO CAMBIA, y no es un adorno: el catálogo se puede ampliar en caliente con los
+ * umbrales del panel (§6.4bis), y un conjunto calculado al importar se quedaría con la foto de antes de leer la
+ * configuración — el escalón nuevo se pintaría en el listado y no contaría en la fracción, que es justo la clase
+ * de incoherencia que este fichero existe para no tener.
+ */
+let scoringIds: ReadonlySet<string> = new Set();
+let scoringEpoch = -1;
+
+function scoringIdSet(): ReadonlySet<string> {
+  if (scoringEpoch !== catalogEpoch()) {
+    scoringIds = new Set(SCORING_ACHIEVEMENTS.map((def) => def.id));
+    scoringEpoch = catalogEpoch();
+  }
+  return scoringIds;
+}
 
 /**
  * La curva de nivel: barata al principio, cara después, sin techo. Es la forma de PSN y por su mismo motivo —los
@@ -101,10 +117,11 @@ export function summarize(
   //
   // LO CONSEGUIDO CUENTA SIEMPRE, esté abierto o no: la marca de agua puede sostener un escalón cuyo tramo se
   // haya quedado atrás, y un logro que tienes y no aparece ni en el numerador ni en el denominador no existe.
+  const scoring = scoringIdSet();
   for (const steps of ACHIEVEMENTS_BY_LADDER.values()) {
     const openTo = openThrough(steps, open, isEarned);
     steps.forEach((def, index) => {
-      if (!SCORING_IDS.has(def.id)) return;
+      if (!scoring.has(def.id)) return;
       const mine = isEarned(def);
       if (!mine && index > openTo) return;
       total += 1;
@@ -134,12 +151,19 @@ export function summarize(
  * denominador ya excluía los primeros pasos —que no se publican— y los retirados. Un `id` que este cliente no
  * conozca se ignora en silencio, así que un catálogo desactualizado cuenta de menos: es la dirección segura del
  * error —nunca infla, siempre desmerece— y se corrige sola al actualizar.
+ *
+ * LA FRONTERA COMUNITARIA HAY QUE PASARLA, y es lo que hace que la cifra de una ficha ajena sea la MISMA que esa
+ * persona ve en su aparato. Sin ella el denominador salía de su solo progreso: la ficha de quien empieza decía
+ * «0 de 55» mientras su dueño leía «0 de 249», y las dos pretendían medir el mismo catálogo.
  */
-export function summarizeMirror(levels: ReadonlyMap<string, number>): AchievementSummary {
+export function summarizeMirror(
+  levels: ReadonlyMap<string, number>,
+  open: OpenFrontier = {},
+): AchievementSummary {
   const states: AchievementState[] = [];
   for (const [id, level] of levels) {
     if (!ACHIEVEMENTS_BY_ID.has(id) || level < 1) continue;
     states.push({ id, level, value: 0, next: null, unlockedAt: 0 });
   }
-  return summarize(states);
+  return summarize(states, open);
 }

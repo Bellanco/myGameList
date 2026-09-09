@@ -664,6 +664,17 @@ Y el denominador tiene sus propias reglas, porque si baila la cifra miente:
   pintando, pero fuera de la fracción.
 - **Dentro los ocultos** (§6.7), y contados desde el principio. Restarlos del denominador delataría cuántos hay
   y, con el tiempo, cuáles.
+- ⚑ **Y solo lo ABIERTO.** El denominador no es el catálogo entero sino lo que hoy se le enseña a ALGUIEN: un
+  escalón que nadie ha visto todavía no es una tarea pendiente, es una que aún no ha empezado. La línea es
+  comunitaria —en cuanto un usuario alcanza un escalón, ese escalón queda abierto para todos— así que **la cifra
+  es la misma en todos los aparatos y lo que distingue a dos personas es lo que llevan CONSEGUIDO, no la lista**.
+  La frontera vive en `appConfig/achievements.open` (clave de escalera → `id` del escalón más alto alcanzado) y
+  **la adelanta el cliente de quien llega ahí**, no solo el panel: mientras solo la publicaba el panel a mano, el
+  mapa se quedaba vacío entre publicación y publicación y cada cliente volvía a abrir con su propio progreso —la
+  misma pantalla decía «196 de 249» en un aparato y «0 de 55» en otro—. Adelantarla es una MEDICIÓN y no una
+  decisión, y por eso la regla de Firestore deja escribir `open` a cualquiera con sesión (solo hacia delante, y
+  sin tocar `hidden`, que sí es decisión del administrador). A cambio de todo esto el denominador crece solo:
+  tu porcentaje puede bajar sin que toques nada, porque alguien abrió un escalón nuevo.
 - **Añadir logros al catálogo baja la fracción de todo el mundo.** Es el mismo efecto que tiene en Steam publicar
   logros de DLC, y no tiene arreglo bonito: se asume y **se dice en la pantalla** («22 de 32 del catálogo
   actual»). Lo que no se hace nunca es congelar la fracción por versión, que sería inventarse un número.
@@ -746,6 +757,44 @@ igual.
 - **Los umbrales no se endurecen.** Subir el listón de un nivel ya concedido lo retira retroactivamente a quien lo
   tenía, y eso es lo único que la gente no perdona en un sistema de logros. Si un listón está mal, se crea otro
   logro. (La marca de agua del §5.5 amortigua el accidente, pero no es excusa para provocarlo.)
+
+#### 6.4bis ⚑ Ampliar el catálogo sin desplegar: umbrales desde el panel
+
+El panel de administración deja **añadir un escalón** a una escalera que ya existe: escribes el umbral, pulsas
+«Añadir» y es un logro de verdad —se desbloquea, cuenta en la fracción, sale en el listado, en el feed y en la
+ficha que ven tus amistades—. Se guarda en `appConfig/achievements.extraSteps` y **todos los clientes reconstruyen
+el catálogo con él dentro** al leer la configuración (`applyExtraSteps`).
+
+**Por qué un umbral SÍ y una escalera NO.** Un umbral es dato: el `id` (`completados-125`), el grado, el romano y
+los dos textos los deriva `expandLadder` de la escalera, y la métrica —la función que recorre la biblioteca— es la
+de la escalera, que ya está escrita. Una escalera nueva es su métrica, y eso es código: sigue llegando por
+despliegue. Esa frontera es la que hace esto pequeño y seguro.
+
+**Cómo viaja en el espejo, que era el problema de verdad.** El espejo es un mapa de bits donde **la posición es el
+significado**: meter ahí un escalón nuevo exigiría que todos los clientes compartieran el mismo orden en el mismo
+instante, y uno con la configuración de hace una sesión leería el espejo de otro DESPLAZADO —medallas equivocadas
+en el perfil de otra persona, con su fecha y todo—. Así que no van al bitmap: van a la **cola, por su `id`**
+(`~#completados-125.<día>`), que es la parte del formato que ya existía para lo que los bits no pueden decir. Sin
+orden que compartir no hay desplazamiento posible, y de paso:
+
+- el bitmap de lo publicado **no se mueve ni un bit** (hay test que lo fija: la cabecera de un espejo con
+  escalones de configuración es idéntica a la de uno sin ellos);
+- **un cliente antiguo no se rompe**: su parser parte la cola por comas y descarta la entrada cuyo índice no
+  reconoce (`parseInt('#…', 36)` es `NaN`), así que simplemente no ve esas medallas — la misma tolerancia que el
+  §6.4 ya exige para un `id` desconocido, y el logro reaparece en cuanto esa persona actualiza;
+- y **quien no ha leído la configuración** tampoco las ve, por el mismo camino: el `id` no está en su catálogo.
+
+**El precio, y es el que acota el tope.** Cada escalón de configuración ocupa unos veinte caracteres de la cola,
+de los 1.024 que valida la regla de Firestore, mientras uno declarado en el código ocupa **un bit**. Por eso van
+DELANTE en la cola —si algo se recorta, que no sea la medalla que solo el `id` puede declarar— y por eso el tope
+es de diez por escalera. Consolidar un umbral en el código (los tres pasos que redacta el panel) es opcional y lo
+único que hace es abaratarlo: en cuanto su `id` está en `MIRROR_IDS`, vuelve a viajar como un bit y la entrada de
+`extraSteps` se puede retirar.
+
+**Y una regla nueva del §6.4: un umbral que ya tiene alguien no se quita.** Quitarlo le retiraría la medalla, que
+es lo único que un sistema de logros no puede hacer. El panel solo ofrece «quitar» mientras la muestra dice que no
+lo tiene nadie; a partir de ahí, para dejar de ofrecerlo hay que marcarlo retirado en el código, como cualquier
+otro escalón (§6.4).
 
 ### 6.5 La recompensa: temas, y nada más
 
@@ -848,9 +897,17 @@ aproximación, es la cifra. Eso es lo que hace que esto se pueda entregar en F4 
 **Las cuatro reglas que lo mantienen honesto:**
 
 1. **Se dice sobre cuántos.** «Lo tiene el 14 % · 6 de 43» y no un porcentaje suelto. Un porcentaje sin
-   denominador es lo único de esta pantalla que se puede leer como una afirmación global, y no lo es.
-2. **Suelo de muestra.** Por debajo de **20** perfiles con espejo, **no se pinta nada**. Con siete personas, «el
-   14 %» es una persona: enseñarlo es peor que callarlo.
+   denominador es lo único de esta pantalla que se puede leer como una afirmación global, y no lo es. Y desde que
+   no hay suelo (regla 2) esto pasa de recomendable a imprescindible: es lo ÚNICO que sostiene la honestidad de
+   la cifra.
+2. ⚑ **Sin suelo de muestra, y la tuya cuenta.** Hubo un suelo de **20** perfiles con espejo, con el argumento de
+   que «con siete personas, el 14 % es una persona». El argumento describe bien la cifra pero saca la conclusión
+   contraria: con dos personas el porcentaje es 0, 50 o 100 y **eso es exactamente lo que hay**, no un error de
+   medición. Lo que hacía el suelo era apagar la función entera durante los primeros meses de vida de una
+   comunidad pequeña —el día del estreno le pasaba a todo el mundo— y dejar la vista global (§8.1b) sin una lista
+   que ordenar. Se mide desde el primer espejo y se afina según entra gente; `null` significa ahora lo único que
+   puede significar, que no hay ni un espejo. Y la muestra incluye **tu propia vitrina**: sale del directorio, que
+   te excluye por identidad, así que se medía sobre «todos menos yo» y con dos personas contaba una.
 3. **No decide nada.** Ni puntos, ni aura, ni orden de la vitrina, ni prioridad de recorte: todo eso lo sigue
    gobernando la rareza declarada (§6.6). Si el porcentaje moviera los puntos, el nivel de perfil bailaría al
    ritmo de quién ha abierto la app esta semana, y un nivel que baja solo es el único fallo que el §5.5 no
@@ -1952,7 +2009,7 @@ rechaza `showAchievements: "no"`.
 **F4 · La vitrina ajena** — parser defensivo, **nivel y porcentaje derivados del espejo** (§6.10.3), ⚑ **la tira
 solo-imagen bajo el nombre** con el rótulo en `hover` y en `focus-visible` (§8.2), ⚑ **el listado de esa persona en
 `/social/profiles/:profileId/logros`** reutilizando la pantalla de F2, ⚑ **el porcentaje medido sobre el
-directorio, con su denominador a la vista y su suelo de 20 perfiles** (§6.6bis), destacados, **orden automático
+directorio, con su denominador siempre a la vista** (§6.6bis), destacados, **orden automático
 por rareza cuando no los hay** (§8.2), silencio si no hay nada. Test de que las cifras NO aparecen en la tarjeta del directorio ni en la bandeja (§6.10.4): es una regla que
 se rompe sola en cuanto alguien reutiliza el componente de la ficha. Tests de componente con espejos corruptos,
 vacíos, con ids desconocidos y con quince destacados marcados. E2E de la ficha con la vitrina puesta.
@@ -2003,7 +2060,7 @@ Las filas en **⚑** salieron de la revisión del 6-sep-2026 y no estaban en el 
 | **La medalla sale sin estilos en una de las dos pantallas** | Hoja propia `achievements.scss` importada desde el componente, nunca colgada de `stats.scss` ni de `social.scss` (§8.5). Fallo MUDO: solo se ve abriendo la otra pantalla |
 | El ajuste visual funciona en el tema clásico y en ninguno más | Los skins pesan (0,3,0): medir en las seis paletas (§8.5) |
 | El feed se llena de anuncios de logros | ⚑ Agrupado **por día** (una entrada por persona, con todos sus logros dentro), corte de 30 días y silencio en la primera hidratación (§8.4). El agrupado hace el trabajo que antes se le pedía al filtro de rareza |
-| ⚑ **El porcentaje medido se lee como una cifra global y no lo es** | Se dice siempre con su denominador («14 % · 6 de 43») y no se pinta por debajo de 20 perfiles con espejo (§6.6bis) |
+| ⚑ **El porcentaje medido se lee como una cifra global y no lo es** | Se dice siempre con su denominador («14 % · 6 de 43»), que es lo que lo ata a su muestra: el suelo de 20 perfiles se retiró porque apagaba la función en una comunidad pequeña (§6.6bis) |
 | ⚑ **El porcentaje medido acaba moviendo los puntos y el nivel baila** | Prohibido: los puntos, el aura y el recorte los gobierna la rareza **declarada** (§6.6). Lo medido se enseña y no decide (§6.6bis) |
 | ⚑ **La tira bajo el nombre solo dice el nombre al pasar por encima, y con teclado no** | Nombre accesible completo en cada medalla y rótulo en `:hover` **y** `:focus-visible`; en táctil, el toque lleva al listado (§8.2) |
 | Quien vuelve tras un mes recibe una avalancha | Mismo corte, en las dos puntas: sus novedades (§7.3) y las de sus amistades (§8.4) |

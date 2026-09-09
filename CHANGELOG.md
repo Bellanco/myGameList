@@ -67,6 +67,93 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
     siguiente arranque, y sin marca —la primera vez de verdad— sigue callando.
 
 ### Fixed
+- **Cada usuario contaba sus logros sobre un catálogo distinto.** La regla estaba escrita y aplicada —«en cuanto
+  alguien alcanza un escalón, ese escalón queda abierto para todos»— pero el mapa que la sostiene solo lo
+  rellenaba el panel de administración a mano, así que entre publicación y publicación cada cliente abría sus
+  escaleras con su PROPIO progreso: la misma pantalla decía «196 de 249» en un aparato y «0 de 55» en otro, con
+  el mismo catálogo delante. Ahora **el avance lo publica el cliente de quien llega**: si tu progreso pasa de lo
+  abierto, tu navegador adelanta la frontera y a partir de ahí todo el mundo cuenta sobre lo mismo. Es una
+  MEDICIÓN y no una decisión —dice que alguien llegó ahí, sin quién ni cuándo—, así que las reglas dejan
+  adelantarla a cualquiera con sesión, solo hacia delante y sin poder tocar la ocultación, que sigue siendo del
+  administrador. Solo escribe cuando adelanta algo: abrir la pantalla de logros no cuesta una escritura.
+  - **Y la ficha de una amistad cuenta igual que su dueño.** Su cifra sale del espejo publicado, y ese cálculo no
+    recibía la apertura: la ficha de quien empieza decía «0 de 55» mientras esa misma persona leía «0 de 249» en
+    su pantalla. Las tres vistas —tu listado, la ficha ajena y el catálogo global— miden ya con el mismo
+    denominador.
+- **Tu propia tarjeta de logros del feed llevaba a una ficha vacía.** Se identificaba con el `profileId` local,
+  que es un UUID sembrado en el dispositivo y no el id de ningún documento, así que los dos enlaces de la tarjeta
+  —tu ficha y tus logros— abrían una pantalla que no encontraba nada, mientras las mismas direcciones con el id
+  del directorio funcionaban. Ahora va con tu id del directorio (y con el comodín `me` si todavía no tienes
+  entrada), que es lo que las rutas del hub saben resolver.
+- **La cifra de la medalla ya no se cuela por encima de nada.** La píldora del canto («×500») va absoluta con
+  `z-index: 6` para montarse en el filo del disco, y su contenedor no creaba contexto de apilado: ese 6 competía
+  con la página entera. Al desplazarse se veía sin margen de duda —el disco desaparecía bien bajo la barra fija
+  del catálogo del panel, y la píldora se quedaba flotando encima de ella—, y lo mismo con cualquier cabecera
+  pegajosa. La medalla pasa a ser una sola capa (`isolation`), con su interior en el mismo orden que tenía; los
+  tres discos solapados del aviso siguen ordenándose porque su `z-index` está en las medallas, no dentro.
+- **Y la tabla del panel sigue siendo una tabla para quien no la ve.** Cambiar el `display` de una fila o una
+  celda le quita su papel en el árbol de accesibilidad, así que la tabla reordenada dejaba de anunciar estructura:
+  los roles van ahora escritos a mano en la tabla, las filas, las cabeceras y las celdas, que es lo que sobrevive
+  al cambio de forma.
+- **El catálogo del panel se lee en un móvil.** La tabla de escalones son cinco columnas y 46 rem de ancho: en un
+  teléfono de 390 px se veían **dos y media** —los dos textos, que son a lo que se viene, quedaban enteros fuera
+  de la pantalla y solo se llegaba a ellos desplazando cada fila de lado—. Por debajo de 720 px cada escalón pasa
+  a leerse como una **ficha**: el número y el nombre en su línea, la cifra de alcance con su medidor debajo y las
+  dos frases una sobre otra, cada una con su rótulo delante («META · …», «HECHO · …»), que es lo que sustituye a
+  la cabecera de la tabla. El raíl que marca los tramos sin nadie pasa a la ficha entera, los rótulos del nombre
+  —«del panel», el nombre anterior de un escalón corrido— caen debajo en vez de pegarse a la última letra, y las
+  acciones de «preparar un escalón» se agrupan a la izquierda en vez de irse a las dos esquinas.
+- **El listado de logros de otra persona habla de esa persona.** La pantalla es la misma que la tuya y el texto de
+  debajo del título era el de siempre: la ficha de una amistad se titulaba «Logros de Fulano» y seguía con «lo que
+  llevas hecho con tus juegos», hablando de los juegos de quien mira.
+
+- **El catálogo se puede ampliar desde el panel, sin desplegar.** Escribes un umbral en una escalera que ya
+  existe, pulsas «Añadir» y **es un logro de verdad**: se desbloquea, cuenta en la fracción, sale en el listado, en
+  el feed y en la ficha que ven tus amistades. Se guarda en `appConfig` y todos los clientes reconstruyen el
+  catálogo con él dentro al leer la configuración — el `id`, el grado, el romano y los dos textos los deriva el
+  mismo código que produce el catálogo, y la métrica es la de la escalera, que ya existe. Una escalera NUEVA sigue
+  siendo código: su métrica es una función sobre la biblioteca.
+  - **Y no toca ni un bit de lo ya publicado**, que era el problema de verdad. El espejo es un mapa de bits donde
+    la posición ES el significado: meter ahí un escalón nuevo exigiría que todos los clientes compartieran el
+    mismo orden en el mismo instante, y uno con la configuración de hace una sesión leería el espejo de otro
+    desplazado —medallas equivocadas en el perfil de otra persona—. Así que estos escalones viajan en la **cola
+    del espejo por su `id`**, no por posición. El bitmap de un espejo con escalones de configuración es idéntico
+    al de uno sin ellos (hay test que lo fija), un cliente antiguo descarta esas entradas y no ve esas medallas
+    —la misma tolerancia que ya exige un `id` desconocido—, y quien todavía no ha leído la configuración, igual.
+  - **Un umbral que ya tiene alguien no se puede quitar**: le retiraría la medalla, y eso es lo único que un
+    sistema de logros no puede hacer. El panel solo ofrece quitarlo mientras nadie lo tenga; a partir de ahí se
+    marca retirado en el código, como cualquier otro escalón.
+  - **Consolidarlo en el código es opcional** y solo lo abarata: un escalón declarado ocupa un bit y uno de
+    configuración unos veinte caracteres de la cola, así que hay tope (diez por escalera) y van delante en la cola
+    —si algo se recorta, que no sea la medalla que solo el `id` puede declarar—. El panel sigue redactando los tres
+    pasos para llevarlo al código y dice cuándo ya está. El porqué de todo esto, en `docs/plan-logros.md §6.4bis`.
+
+- **Preparar un escalón se hace donde está la escalera, se guarda y se ve puesto.** Tres quejas que son la misma:
+  la ficha se abría **arriba de la pantalla**, suelta —se pulsaba «preparar un escalón nuevo» al pie de una
+  escalera y el cambio aparecía a diez pantallas de allí, así que escribir un umbral no se veía desde donde
+  estabas y parecía que el campo no hacía nada—; **proponía** el doble del último escalón, y proponerlo era
+  meterlo sin que nadie lo pidiera; y lo que escribías **no duraba** más que la visita. Ahora la ficha se abre
+  **dentro de esa escalera y debajo del botón** (que pasa a abrir y cerrar), **vacía**, y el escalón entra al
+  pulsar **«Añadir»**: entonces se guarda en `appConfig` —para todos los administradores— y la tabla lo enseña
+  **en su sitio**, marcado como «pendiente», con los escalones de encima llevando el romano que les tocará y el
+  nombre que tenían antes. Se pueden apuntar varios en la misma escalera —la línea `steps: [...]` que se copia
+  sale con todos dentro— y cada uno se quita por separado; cuando uno llega al código, su línea lo dice y la nota
+  se retira. La tabla la produce `expandLadder`, la misma función que produce el catálogo, así que no puede decir
+  una cosa y el código otra.
+- **El porcentaje comparado ya no espera a tener veinte personas.** Había un suelo de 20 espejos publicados y por
+  debajo la pantalla se callaba, así que con una comunidad pequeña —el día del estreno, todo el mundo— no había
+  cifra **ni lista global que ordenar**: «Logros globales» era una excusa y nada más. El argumento del suelo («con
+  siete personas, el 14 % es una persona») describe bien la cifra pero saca la conclusión contraria: con dos
+  personas el porcentaje es 0, 50 o 100 y eso es exactamente lo que hay. Se mide **desde el primer espejo** y se
+  afina según entra gente; lo que sostiene la honestidad de la cifra no era el suelo, es el denominador, que va
+  siempre pegado a ella («50 % · 1 de 2»).
+- **Y tu propia vitrina cuenta en esa muestra.** Salía del directorio ya filtrado, que te excluye por identidad
+  —es lo que impide que aparezcas en tu propia lista de gente—, así que el porcentaje se medía sobre «todos menos
+  yo»: con dos personas publicando se calculaba sobre una. Eres una persona más, y es lo que hace honesto el «1
+  de 2».
+- **«Logros globales» sigue siendo del espacio social, no del panel.** El botón vive en la pantalla de logros del
+  hub y no en `/logros`: esa vista mide el catálogo contra las vitrinas de OTRAS personas, y en el panel de
+  estadísticas no se lee ni un dato que no sea tuyo.
 - **Los logros que salen de `years` se fechaban en el futuro.** Se fechan en el 31 de diciembre de su año —toda
   la precisión que da el dato—, así que uno del año EN CURSO nacía con una fecha que no ha llegado: la fila decía
   «31 dic 2026» y el listado, que ordena de más reciente a más antiguo, lo ponía por delante de lo conseguido

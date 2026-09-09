@@ -340,6 +340,18 @@ describe('catálogo de logros — la vista de revisión del panel de administrac
    * una columna entera de ruido para señalar dos filas. Ahora la marca va junto al nombre del que no se ofrece, y
    * lo que este test defiende es justo eso — que la marca solo salga donde toca.
    */
+  /**
+   * LOS DOS TEXTOS LLEVAN SU RÓTULO EN LA CELDA, y no solo en la cabecera de la tabla: en móvil esta tabla se lee
+   * como fichas —cinco columnas no caben en 390 px— y ahí la cabecera no está, así que el rótulo de cada línea
+   * sale de este atributo (`admin.scss`). Sin él, las dos frases quedan una debajo de otra sin saber cuál es cuál.
+   */
+  it('cada texto lleva su rótulo encima, que es lo que lo salva en móvil', () => {
+    render(<AdminAchievements onBack={() => {}} />);
+    const fila = screen.getByText('Termina 10 juegos').closest('td') as HTMLElement;
+    expect(fila).toHaveAttribute('data-col', A.colGoalShort);
+    expect(screen.getByText('Has terminado 10 juegos').closest('td')).toHaveAttribute('data-col', A.colDoneShort);
+  });
+
   it('el retirado deja de ofrecerse, y se dice en su fila', () => {
     render(<AdminAchievements onBack={() => {}} />);
     const fila = screen.getByText('Speedrun I').closest('tr') as HTMLElement;
@@ -408,32 +420,6 @@ describe('catálogo de logros — la vista de revisión del panel de administrac
     expect(within(oculta).getByText(/No se ha podido guardar/)).toBeInTheDocument();
   });
 
-  /** EL NÚMERO LO ELIGE QUIEN MIRA, y la lista se recoloca sola: da igual por dónde entre el umbral. */
-  it('acepta el umbral que se le escriba y recoloca la lista', async () => {
-    render(<AdminAchievements onBack={() => {}} />);
-    await abrirPlan('Créditos finales');
-
-    const campo = screen.getByRole('spinbutton');
-    await userEvent.clear(campo);
-    await userEvent.type(campo, '33');
-    expect(screen.getByText(/steps: \[10, 25, 33, 50/)).toBeInTheDocument();
-    expect(screen.getByText(/'completados-33',/)).toBeInTheDocument();
-    // Y el que se renumera ya no es el 25, sino el 50: la recolocación cambia a quién le corre el romano.
-    expect(screen.getByText(/corren de romano \(Créditos finales III/)).toBeInTheDocument();
-  });
-
-  it('un umbral que ya existe se rechaza con su motivo, sin generar pasos falsos', async () => {
-    render(<AdminAchievements onBack={() => {}} />);
-    await abrirPlan('Créditos finales');
-
-    const campo = screen.getByRole('spinbutton');
-    await userEvent.clear(campo);
-    await userEvent.type(campo, '50');
-    expect(screen.getByText('El umbral 50 ya existe en esta escalera.')).toBeInTheDocument();
-    expect(screen.queryByText(/al FINAL de MIRROR_IDS/)).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Copiar los tres pasos' })).toBeDisabled();
-  });
-
   it('el buscador recorta por nombre y por texto, y dice cuántas quedan', async () => {
     render(<AdminAchievements onBack={() => {}} />);
     await userEvent.type(screen.getByRole('searchbox'), 'plataformas');
@@ -460,27 +446,184 @@ describe('catálogo de logros — la vista de revisión del panel de administrac
   });
 
   /**
-   * PREPARAR UN ESCALÓN es la única acción de la pantalla, y no escribe nada: deja el cambio redactado. Los tres
-   * pasos van juntos porque olvidarse del segundo —el `id` en `MIRROR_IDS`— es lo que deja un logro que no se
-   * publica, en silencio.
+   * AÑADIR UN ESCALÓN A UNA ESCALERA, sin desplegar y para todo el mundo (§6.4bis). El panel lo guarda en
+   * `appConfig`, el catálogo se reconstruye con él dentro y desde ahí es un logro como cualquier otro. Estos
+   * tests fijan la CONDUCTA DE LA PANTALLA —abre vacía, entra al pulsar, se recoloca, se puede quitar— y el
+   * camino completo (evaluar, contar y publicar) va en `tests/unit/achievementsExtraSteps.test.ts`.
    */
-  it('prepara el escalón con los tres pasos y las cifras de hoy', async () => {
-    render(<AdminAchievements onBack={() => {}} />);
-    // El botón propone alargar la escalera: el doble del último escalón (500 → 1000).
-    await abrirPlan('Créditos finales');
+  describe('preparar un escalón nuevo', () => {
+    const fichaDe = (escalera: string) =>
+      screen.getByText(escalera).closest('.admin-card') as HTMLElement;
 
-    expect(screen.getByText('Insertar 1000 en «completados»')).toBeInTheDocument();
-    expect(screen.getByText(/steps: \[10, 25, 50, .*, 500, 1000\]/)).toBeInTheDocument();
-    expect(screen.getByText(/al FINAL de MIRROR_IDS: 'completados-1000',/)).toBeInTheDocument();
-    expect(screen.getByText(new RegExp(`total ${SCORING_ACHIEVEMENTS.length} → ${SCORING_ACHIEVEMENTS.length + 1}`))).toBeInTheDocument();
-    expect(screen.getByText(new RegExp(`MIRROR_ORDER ${MIRROR_ORDER.length} → ${MIRROR_ORDER.length + 1}`))).toBeInTheDocument();
+    /** El escritor de añadidos, con la misma forma que el del hub: guarda la lista entera de esa escalera. */
+    function conAñadidos(iniciales: Record<string, readonly number[]> = {}) {
+      let guardados: Record<string, readonly number[]> = { ...iniciales };
+      const onSetExtraSteps = vi.fn(async (key: string, steps: readonly number[]) => {
+        guardados = { ...guardados, [key]: [...steps].sort((a, b) => a - b) };
+        if (steps.length === 0) delete guardados[key];
+        vista.rerender(<AdminAchievements onBack={() => {}} extraSteps={guardados} onSetExtraSteps={onSetExtraSteps} />);
+      });
+      const vista = render(
+        <AdminAchievements onBack={() => {}} extraSteps={guardados} onSetExtraSteps={onSetExtraSteps} />,
+      );
+      return { onSetExtraSteps, guardados: () => guardados };
+    }
 
-    // Alargando por arriba no se renumera nadie, así que el aviso de romanos no sale. Con un intermedio sí:
-    // es el único efecto que insertar un escalón no puede evitar.
-    expect(screen.queryByText(/corren de romano/)).not.toBeInTheDocument();
-    const campo = screen.getByRole('spinbutton');
-    await userEvent.clear(campo);
-    await userEvent.type(campo, '15');
-    expect(screen.getByText(/corren de romano \(Créditos finales II/)).toBeInTheDocument();
+    /**
+     * ABRE VACÍA Y NO TOCA NADA. Proponía el doble del último escalón, y proponerlo era meterlo: el 1000
+     * aparecía en la tabla sin que nadie lo hubiera pedido y había que borrarlo para escribir otro.
+     */
+    it('abre con el campo vacío y sin añadir ningún escalón', async () => {
+      conAñadidos();
+      const ficha = fichaDe('Créditos finales');
+      const filasAntes = within(ficha).getAllByRole('row').length;
+
+      await abrirPlan('Créditos finales');
+
+      expect(within(ficha).getByRole('spinbutton')).toHaveValue(null);
+      expect(within(ficha).getAllByRole('row')).toHaveLength(filasAntes);
+      expect(within(ficha).queryByText(A.extraFlag)).not.toBeInTheDocument();
+      // Y sin nada escrito no se puede añadir: no hay error, simplemente no hay umbral.
+      expect(within(ficha).getByRole('button', { name: A.prepareAdd })).toBeDisabled();
+      expect(within(ficha).queryByText(A.prepareInvalid)).not.toBeInTheDocument();
+    });
+
+    /** ESCRIBIR NO AÑADE: el escalón entra al pulsar, y hasta entonces la tabla se queda como está. */
+    it('escribir el umbral no toca la tabla; añadir sí', async () => {
+      const { onSetExtraSteps } = conAñadidos();
+      await abrirPlan('Créditos finales');
+      const ficha = fichaDe('Créditos finales');
+      const filasAntes = within(ficha).getAllByRole('row').length;
+
+      await userEvent.type(within(ficha).getByRole('spinbutton'), '125');
+      expect(within(ficha).getAllByRole('row')).toHaveLength(filasAntes);
+      expect(onSetExtraSteps).not.toHaveBeenCalled();
+
+      await userEvent.click(within(ficha).getByRole('button', { name: A.prepareAdd }));
+
+      expect(onSetExtraSteps).toHaveBeenCalledWith('completados', [125]);
+      // Guardado: una fila más, en su sitio y marcada como pendiente. Y el campo se vacía para el siguiente.
+      expect(within(fichaDe('Créditos finales')).getAllByRole('row')).toHaveLength(filasAntes + 1);
+      expect(within(fichaDe('Créditos finales')).getByText(A.extraFlag)).toBeInTheDocument();
+      expect(within(fichaDe('Créditos finales')).getByRole('spinbutton')).toHaveValue(null);
+    });
+
+    /** Y SE RECOLOCA: el 15 entra como segundo escalón y los romanos de encima corren, cada uno con lo que era. */
+    it('el escalón añadido se coloca en su sitio y corre los romanos de encima', async () => {
+      conAñadidos({ completados: [15] });
+      const ficha = fichaDe('Créditos finales');
+
+      expect(within(ficha).getByText('Créditos finales II')).toBeInTheDocument();
+      expect(within(ficha).getByText(A.previewMoved('Créditos finales II'))).toBeInTheDocument();
+      expect(within(ficha).getByText('Créditos finales III')).toBeInTheDocument();
+      // La tabla lo enseña SIN abrir la ficha: está guardado, no es una previsualización de lo que escribes.
+      expect(within(ficha).queryByRole('spinbutton')).not.toBeInTheDocument();
+    });
+
+    it('los tres pasos de consolidación salen con TODOS los añadidos de esa escalera dentro', async () => {
+      conAñadidos({ completados: [125, 350] });
+      await abrirPlan('Créditos finales');
+      const ficha = fichaDe('Créditos finales');
+
+      expect(within(ficha).getByText(A.prepareTitleOf('completados'))).toBeInTheDocument();
+      expect(within(ficha).getByText(/steps: \[10, 25, 50, .*125, 150, .*350, 400, 500\]/)).toBeInTheDocument();
+      expect(within(ficha).getByText(/al FINAL de MIRROR_IDS: 'completados-125', 'completados-350',/)).toBeInTheDocument();
+      // Dos escalones nuevos, dos casillas más en el total y dos bits más en el orden del espejo.
+      expect(within(ficha).getByText(new RegExp(`total ${SCORING_ACHIEVEMENTS.length} → ${SCORING_ACHIEVEMENTS.length + 2}`))).toBeInTheDocument();
+      expect(within(ficha).getByText(new RegExp(`MIRROR_ORDER ${MIRROR_ORDER.length} → ${MIRROR_ORDER.length + 2}`))).toBeInTheDocument();
+      // Y el aviso de romanos, que es el único efecto que insertar un escalón no puede evitar.
+      expect(within(ficha).getByText(/corren de romano/)).toBeInTheDocument();
+    });
+
+    /** Alargando por arriba no se renumera nadie: el aviso de romanos no debe salir. */
+    it('alargar la escalera por arriba no avisa de romanos', async () => {
+      conAñadidos({ completados: [1000] });
+      await abrirPlan('Créditos finales');
+      expect(within(fichaDe('Créditos finales')).queryByText(/corren de romano/)).not.toBeInTheDocument();
+    });
+
+    it('cada añadido se quita por separado', async () => {
+      const { onSetExtraSteps } = conAñadidos({ completados: [125, 350] });
+      await abrirPlan('Créditos finales');
+
+      await userEvent.click(within(fichaDe('Créditos finales')).getByRole('button', { name: A.extraRemove(125) }));
+
+      expect(onSetExtraSteps).toHaveBeenCalledWith('completados', [350]);
+      const ficha = fichaDe('Créditos finales');
+      expect(within(ficha).getByRole('button', { name: A.extraRemove(350) })).toBeInTheDocument();
+      expect(within(ficha).queryByRole('button', { name: A.extraRemove(125) })).not.toBeInTheDocument();
+    });
+
+    /** Las dos formas de repetirse, y se distinguen: en el código ya está puesto y en los pendientes, apuntado. */
+    it('no deja repetir un umbral, ni del código ni de lo ya añadido', async () => {
+      const { onSetExtraSteps } = conAñadidos({ completados: [125] });
+      await abrirPlan('Créditos finales');
+      const campo = within(fichaDe('Créditos finales')).getByRole('spinbutton');
+
+      await userEvent.type(campo, '50');
+      expect(within(fichaDe('Créditos finales')).getByText(A.prepareTaken(50))).toBeInTheDocument();
+      expect(within(fichaDe('Créditos finales')).getByRole('button', { name: A.prepareAdd })).toBeDisabled();
+
+      await userEvent.clear(campo);
+      await userEvent.type(campo, '125');
+      expect(within(fichaDe('Créditos finales')).getByText(A.extraTaken(125))).toBeInTheDocument();
+      expect(onSetExtraSteps).not.toHaveBeenCalled();
+    });
+
+    /**
+     * CUANDO EL AÑADIDO YA ESTÁ EN EL CÓDIGO su entrada de configuración ya no hace nada —el catálogo se queda
+     * con el escalón declarado— así que se dice en su línea y se puede retirar. No se borra sola, que sería
+     * hacerlo a espaldas de quien mira, y no se cuenta dos veces en la tabla.
+     */
+    it('un añadido que ya llegó al código se dice, y no duplica su fila', async () => {
+      conAñadidos({ completados: [50] });
+      await abrirPlan('Créditos finales');
+      const ficha = fichaDe('Créditos finales');
+
+      expect(within(ficha).getByText(A.extraInCode)).toBeInTheDocument();
+      expect(within(ficha).queryByText(A.extraFlag)).not.toBeInTheDocument();
+      // Y no hay nada que consolidar: sin añadidos fuera del código, no hay tres pasos.
+      expect(within(ficha).queryByText(/steps: \[/)).not.toBeInTheDocument();
+    });
+
+    it('la ficha sale dentro de la tarjeta de esa escalera, no fuera', async () => {
+      conAñadidos();
+      await abrirPlan('Créditos finales');
+
+      const ficha = fichaDe('Créditos finales');
+      expect(within(ficha).getByText(A.prepareTitleOf('completados'))).toBeInTheDocument();
+      // Y el botón que la abre dice que está abierta, que es lo que la convierte en un interruptor.
+      expect(within(ficha).getByRole('button', { name: A.prepareAny })).toHaveAttribute('aria-expanded', 'true');
+      // Ninguna otra escalera se entera.
+      expect(within(fichaDe('Retirada táctica')).queryByRole('spinbutton')).not.toBeInTheDocument();
+    });
+
+    it('cerrar la ficha no se lleva lo guardado', async () => {
+      conAñadidos({ completados: [125] });
+      const ficha = fichaDe('Créditos finales');
+      const conPendiente = within(ficha).getAllByRole('row').length;
+
+      await abrirPlan('Créditos finales');
+      await userEvent.click(within(ficha).getByRole('button', { name: A.prepareClose }));
+
+      expect(within(ficha).queryByRole('spinbutton')).not.toBeInTheDocument();
+      // La fila del añadido sigue puesta: está guardada, no era una previsualización de la ficha abierta.
+      expect(within(ficha).getAllByRole('row')).toHaveLength(conPendiente);
+      expect(within(ficha).getByText(A.extraFlag)).toBeInTheDocument();
+    });
+
+    /** Si la escritura falla, se dice en la ficha de esa escalera y el campo NO se vacía. */
+    it('dice que no se ha guardado, y no pierde lo escrito', async () => {
+      const onSetExtraSteps = vi.fn(async () => { throw new Error('permission-denied'); });
+      render(<AdminAchievements onBack={() => {}} onSetExtraSteps={onSetExtraSteps} />);
+      await abrirPlan('Créditos finales');
+      const ficha = fichaDe('Créditos finales');
+
+      await userEvent.type(within(ficha).getByRole('spinbutton'), '125');
+      await userEvent.click(within(ficha).getByRole('button', { name: A.prepareAdd }));
+
+      expect(within(ficha).getByText(A.extraFailed)).toBeInTheDocument();
+      expect(within(ficha).getByRole('spinbutton')).toHaveValue(125);
+    });
   });
 });

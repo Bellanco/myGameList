@@ -11,6 +11,8 @@ import { isNetworkFailure, isOffline } from '../core/utils/network';
 import { useOnlineStatus } from '../view/hooks/useOnlineStatus';
 import { resolveViewer, withVisiblePhotos } from '../core/social/photoVisibility';
 import { useGenericPhoto } from '../view/hooks/useGenericPhoto';
+import { useAchievementsConfig } from '../view/hooks/useAchievementsConfig';
+import { useOpenFrontier } from '../view/hooks/useOpenFrontier';
 import { SOCIAL_UI } from '../core/constants/socialLabels';
 import type { IconName } from '../core/constants/icons';
 import {
@@ -1039,18 +1041,54 @@ export function useSocialViewModel(options?: {
     };
   }, [rawSocialDirectory, authUser?.uid, ownProfileId, friendUidSet, mainSyncConfig?.gistId, ownProfileCreatedAt]);
 
-  const ownAchievements = useAchievements({ games: options?.games || EMPTY_LIBRARY, ...achievementCounters });
+  /**
+   * Lo que el panel de administración decide para todo el mundo. Aquí solo hace falta la APERTURA COMUNITARIA: es
+   * el denominador común de la fracción, y sin pasarla el hub contaba tu porcentaje sobre tu propio progreso
+   * mientras `/logros` lo contaba sobre lo que está abierto — dos cifras distintas para la misma biblioteca.
+   */
+  const achievementsConfig = useAchievementsConfig();
+
+  const ownAchievements = useAchievements({
+    games: options?.games || EMPTY_LIBRARY,
+    ...achievementCounters,
+    open: achievementsConfig.open,
+  });
   const ownAchievementStates = ENABLE_ACHIEVEMENTS ? ownAchievements.states : null;
+
+  /**
+   * Y ABRE PARA LOS DEMÁS lo que tú has alcanzado. Va aquí y en el panel de estadísticas —las dos pantallas donde
+   * se evalúan tus logros— porque quien vive en el hub y no entra nunca al panel también abre escalones.
+   * Escribir dos veces no cuesta nada: solo se publica cuando adelanta algo (ver `useOpenFrontier`).
+   */
+  useOpenFrontier(ownAchievements.byId, achievementsConfig.open);
+
+  /**
+   * TU id EN EL DIRECTORIO, que es el único que las rutas de la ficha saben resolver
+   * (`/social/profiles/:profileId`).
+   *
+   * NO VALE `ownProfileId`: ese es un UUID SEMBRADO EN EL DISPOSITIVO (`seedProfileIdFromRemote`) que no
+   * identifica ningún documento de `profiles`, así que la tarjeta de TUS logros del feed enlazaba a
+   * `/social/profiles/<uuid>` —y a `.../logros`— y las dos direcciones abrían una ficha que no encontraba nada.
+   *
+   * Y de paso hace honesta la comparación con la que el feed descarta tu propia entrada del directorio: los dos
+   * lados de esa igualdad son ahora ids de directorio.
+   *
+   * Sin entrada propia todavía queda el comodín `me`, que la ficha resuelve por identidad.
+   */
+  const ownDirectoryProfileId = useMemo(
+    () => rawSocialDirectory.find((entry) => isOwnProfileIdentity(entry.id, authUser?.uid, ownProfileId))?.id || '',
+    [rawSocialDirectory, authUser?.uid, ownProfileId],
+  );
 
   const ownAchievementsFeed = useMemo(() => {
     if (!ENABLE_ACHIEVEMENTS || !ownAchievementStates) return undefined;
     return {
-      profileId: ownProfileId || OWN_PROFILE_ALIAS,
+      profileId: ownDirectoryProfileId || OWN_PROFILE_ALIAS,
       displayName: socialDisplayName || '',
       photoURL: authUser?.photoURL || '',
       mirror: packAchievements(ownAchievementStates),
     };
-  }, [ownAchievementStates, ownProfileId, socialDisplayName, authUser?.photoURL]);
+  }, [ownAchievementStates, ownDirectoryProfileId, socialDisplayName, authUser?.photoURL]);
 
   /**
    * TU espejo, el mismo que va al feed.
