@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { ENABLE_ACHIEVEMENTS } from '../../core/achievements/flags';
 import { NO_ACHIEVEMENTS_CONFIG, type AchievementsConfig } from '../../core/achievements/visibility';
+import { cachedAchievementsConfig } from '../../core/achievements/configCache';
 
 /**
  * LO QUE EL PANEL DE ADMINISTRACIÓN DECIDE PARA TODO EL MUNDO: qué escaleras están ocultas y hasta qué escalón
@@ -20,7 +21,14 @@ import { NO_ACHIEVEMENTS_CONFIG, type AchievementsConfig } from '../../core/achi
  * anterior a que la apertura fuera comunitaria.
  */
 export function useAchievementsConfig(): AchievementsConfig {
-  const [config, setConfig] = useState<AchievementsConfig>(NO_ACHIEVEMENTS_CONFIG);
+  // ARRANCA CON LO QUE YA SE LEYÓ EN ESTA SESIÓN, si lo hay. La caché vive en un módulo sin dependencias
+  // (`core/achievements/configCache`) precisamente para poder mirarla desde aquí sin traerse Firestore al chunk.
+  //
+  // Empezar siempre vacío tenía un coste visible: cada pantalla que monta este hook pintaba un fotograma con la
+  // configuración a cero antes de la buena, y con la apertura comunitaria a cero el denominador de la cabecera
+  // es solo el que abre tu propio progreso. Al pasar del listado a los globales, la cifra daba un salto y
+  // volvía. Con la caché a mano, a partir de la primera lectura no hay salto que ver.
+  const [config, setConfig] = useState<AchievementsConfig>(() => cachedAchievementsConfig() || NO_ACHIEVEMENTS_CONFIG);
 
   useEffect(() => {
     if (!ENABLE_ACHIEVEMENTS) return;
@@ -28,6 +36,8 @@ export function useAchievementsConfig(): AchievementsConfig {
     void import('../../model/repository/achievementsConfigRepository')
       .then((module) => module.loadAchievementsConfig())
       .then((value) => {
+        // La misma referencia que ya está puesta no provoca render: `loadAchievementsConfig` devuelve el objeto
+        // cacheado tal cual, así que montar una segunda pantalla no repinta nada.
         if (!cancelled) setConfig(value);
       })
       .catch(() => {

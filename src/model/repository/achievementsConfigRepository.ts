@@ -25,6 +25,7 @@ import {
   type HiddenOverrides,
   type OpenFrontier,
 } from '../../core/achievements/visibility';
+import { cachedAchievementsConfig, rememberAchievementsConfig } from '../../core/achievements/configCache';
 import { applyExtraSteps } from '../../core/achievements/catalog';
 import type { ExtraSteps } from '../../core/achievements/types';
 
@@ -39,8 +40,8 @@ const DOC_ID = 'achievements';
  */
 const EXTRA_STEPS_PER_LADDER = 10;
 
-/** Cache de sesión. `null` = todavía no se ha leído. Se invalida al escribir, que es cuando puede cambiar. */
-let cached: AchievementsConfig | null = null;
+// LA CACHÉ DE SESIÓN VIVE FUERA, en `core/achievements/configCache`: es un módulo sin dependencias, así que una
+// vista puede consultarla sin arrastrar Firestore a su chunk. Aquí solo se escribe al leer y al guardar.
 
 /**
  * La lectura EN VUELO, para que varias pantallas pidiendo a la vez sean una sola petición. Hace falta desde que
@@ -103,6 +104,7 @@ function sanitizeExtraSteps(raw: unknown): ExtraSteps {
  * enseñando el estado anterior.
  */
 export async function loadAchievementsConfig(force = false): Promise<AchievementsConfig> {
+  const cached = cachedAchievementsConfig();
   if (!force && cached) return cached;
   if (!force && inFlight) return inFlight;
 
@@ -114,19 +116,19 @@ export async function loadAchievementsConfig(force = false): Promise<Achievement
       const data = snapshot.exists()
         ? (snapshot.data() as { hidden?: unknown; open?: unknown; extraSteps?: unknown })
         : {};
-      cached = {
+      const leida = rememberAchievementsConfig({
         hidden: sanitizeHidden(data?.hidden),
         open: sanitizeOpen(data?.open),
         extraSteps: sanitizeExtraSteps(data?.extraSteps),
-      };
+      });
       // EL CATÁLOGO SE RECONSTRUYE AQUÍ, y no en cada pantalla: es el único sitio por el que pasa la
       // configuración, así que es donde se puede garantizar que el catálogo y el documento no divergen nunca.
       // `applyExtraSteps` es idempotente y barato: una pasada por las 64 escaleras.
-      applyExtraSteps(cached.extraSteps);
-      return cached;
+      applyExtraSteps(leida.extraSteps);
+      return leida;
     } catch {
       // Sin permisos, sin red o sin documento: el catálogo manda.
-      return cached || NO_ACHIEVEMENTS_CONFIG;
+      return cachedAchievementsConfig() || NO_ACHIEVEMENTS_CONFIG;
     }
   })();
 
@@ -151,7 +153,7 @@ export async function setLadderHidden(key: string, hidden: boolean): Promise<Hid
   const current = await loadAchievementsConfig(true);
   const next = { ...current.hidden, [key]: hidden };
   await setDoc(doc(services.firestore, COLLECTION, DOC_ID), { hidden: next }, { merge: true });
-  cached = { ...current, hidden: next };
+  rememberAchievementsConfig({ ...current, hidden: next });
   return next;
 }
 
@@ -182,7 +184,7 @@ export async function setExtraSteps(ladderKey: string, steps: readonly number[])
   else delete next[ladderKey];
 
   await setDoc(doc(services.firestore, COLLECTION, DOC_ID), { extraSteps: next }, { merge: true });
-  cached = { ...current, extraSteps: next };
+  rememberAchievementsConfig({ ...current, extraSteps: next });
   // El catálogo de ESTE cliente, al día sin esperar a la siguiente sesión: es el que la pantalla está mirando.
   applyExtraSteps(next);
   return next;
@@ -201,7 +203,7 @@ export async function publishOpenFrontier(open: OpenFrontier): Promise<OpenFront
 
   const current = await loadAchievementsConfig(true);
   await setDoc(doc(services.firestore, COLLECTION, DOC_ID), { open }, { merge: true });
-  cached = { ...current, open };
+  rememberAchievementsConfig({ ...current, open });
   return open;
 }
 
@@ -226,7 +228,7 @@ export async function advanceOpenFrontier(open: OpenFrontier): Promise<void> {
     const current = await loadAchievementsConfig();
     await setDoc(doc(services.firestore, COLLECTION, DOC_ID), { open }, { merge: true });
     // La caché de sesión se pone al día para que la pantalla no vuelva a creer que hay algo que publicar.
-    cached = { ...current, open };
+    rememberAchievementsConfig({ ...current, open });
   } catch {
     // Se queda sin abrir para los demás hasta la próxima. Nadie pierde nada de lo suyo por esto.
   }
