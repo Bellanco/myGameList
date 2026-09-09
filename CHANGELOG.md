@@ -85,6 +85,12 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
   —tu ficha y tus logros— abrían una pantalla que no encontraba nada, mientras las mismas direcciones con el id
   del directorio funcionaban. Ahora va con tu id del directorio (y con el comodín `me` si todavía no tienes
   entrada), que es lo que las rutas del hub saben resolver.
+- **La cifra de la medalla ya no se cuela por encima de nada.** La píldora del canto («×500») va absoluta con
+  `z-index: 6` para montarse en el filo del disco, y su contenedor no creaba contexto de apilado: ese 6 competía
+  con la página entera. Al desplazarse se veía sin margen de duda —el disco desaparecía bien bajo la barra fija
+  del catálogo del panel, y la píldora se quedaba flotando encima de ella—, y lo mismo con cualquier cabecera
+  pegajosa. La medalla pasa a ser una sola capa (`isolation`), con su interior en el mismo orden que tenía; los
+  tres discos solapados del aviso siguen ordenándose porque su `z-index` está en las medallas, no dentro.
 - **El catálogo del panel se lee en un móvil.** La tabla de escalones son cinco columnas y 46 rem de ancho: en un
   teléfono de 390 px se veían **dos y media** —los dos textos, que son a lo que se viene, quedaban enteros fuera
   de la pantalla y solo se llegaba a ellos desplazando cada fila de lado—. Por debajo de 720 px cada escalón pasa

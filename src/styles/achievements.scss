@@ -53,6 +53,14 @@
   --edge: var(--ach-edge);
   --g1: transparent; --g2: transparent;
   position: relative;
+  /* UNA CAPA, Y LO QUE PASA DENTRO SE QUEDA DENTRO.
+     La píldora de la cifra va absoluta con `z-index: 6` para montarse en el canto del disco, y `position:
+     relative` SIN `z-index` no crea contexto de apilado: ese 6 competía con toda la página. Resultado visible al
+     desplazarse: el disco desaparecía correctamente bajo la barra fija del panel (`z-index: 2`) o bajo cualquier
+     cabecera pegajosa, pero la píldora se pintaba ENCIMA, flotando sola sobre la barra. Con `isolation` la
+     medalla pasa a ser una sola capa —su interior conserva su orden— y no puede colarse por encima de nada.
+     Los tres discos solapados del aviso siguen ordenándose porque su `z-index` está en las MEDALLAS, no dentro. */
+  isolation: isolate;
   display: block;
   width: var(--sz); height: var(--sz);
   border-radius: 50%;

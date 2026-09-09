@@ -540,7 +540,7 @@ export const ADMIN_ACHIEVEMENTS_UI = {
   prepare: (step: number) => `Preparar escalón ${step}`,
   prepareAny: 'Preparar un escalón nuevo',
   prepareField: 'Umbral',
-  prepareHelp: 'Escribe un umbral y pulsa Añadir. Hasta entonces no se toca nada.',
+  prepareHelp: 'Escribe un umbral y pulsa Añadir.',
   prepareAdd: 'Añadir',
   prepareTaken: (step: number) => `El umbral ${step} ya existe en esta escalera.`,
   prepareInvalid: 'Escribe un número entero mayor que cero.',
