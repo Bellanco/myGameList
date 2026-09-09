@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { act, render, screen, waitFor, fireEvent } from '@testing-library/react';
+import { act, render, screen, waitFor, fireEvent, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import type { SecretSocialGistResult } from '../../src/model/repository/socialGistRepository';
 import type { SocialAuthUser, SocialProfileReference } from '../../src/model/repository/firebaseClient';
@@ -1890,11 +1890,57 @@ describe('SocialHub — los logros de otras personas', () => {
     };
     localMocks.loadLocalState.mockReturnValue(biblioteca as never);
 
-    renderHub('/social/profiles/friendUid/logros', biblioteca);
+    // En los GLOBALES, que es donde vive esa cifra: el listado de una ficha enseña el sello y el tipo, no el
+    // porcentaje comparado.
+    renderHub('/social/profiles/friendUid/globales', biblioteca);
 
     // La fila del logro de Ada, con su porcentaje y su denominador. TRES en la muestra —Ada, Bob y yo— y no dos:
     // el directorio del que sale son los dos, y el tercero soy yo, que es justo lo que se dejaba fuera.
-    expect(await screen.findByText('lo tiene el 33 % · 1 de 3')).toBeInTheDocument();
+    // `waitFor` y no `findBy`: la lista se pinta en cuanto hay UN espejo —el tuyo— y se rehace cuando llega el
+    // directorio, así que lo que hay que esperar es la cifra ya con los tres, no la fila.
+    await waitFor(
+      () => {
+        const fila = screen.getByText(ADA_LOGRO_NOMBRE).closest('li') as HTMLElement;
+        expect(within(fila).getByText('lo tiene el 33 % · 1 de 3')).toBeInTheDocument();
+      },
+      // Con la suite entera en marcha, el directorio tarda más que el segundo de cortesía por defecto: la lista
+      // se pinta con tu solo espejo y la cifra buena llega después. Es espera, no lentitud del hub.
+      { timeout: 5000 },
+    );
+  });
+
+  /**
+   * Y LA MUESTRA NO LA RECORTA EL BUSCADOR. Salía del directorio FILTRADO, que es el de la lista de personas: el
+   * buscador no se limpia al entrar en una ficha, así que buscar a alguien por su nombre y abrir sus logros medía
+   * el porcentaje sobre los perfiles que casaban con ese texto —«lo tiene el 50 % · 1 de 2», y con un nombre
+   * bastante concreto, el 100 %—. A quién se le enseña la lista de gente y sobre cuánta gente se mide son dos
+   * preguntas distintas, y esta segunda no la responde una caja de texto.
+   */
+  it('el porcentaje comparado no lo recorta el buscador de personas', async () => {
+    const biblioteca = {
+      c: Array.from({ length: 12 }, (_u, i) => ({
+        id: i + 1, name: `Juego ${i + 1}`, _ts: Date.now(), enteredAt: { c: Date.now() },
+        platforms: [], genres: [], steamDeck: false, review: '',
+      })),
+      v: [], e: [], p: [], deleted: [], updatedAt: Date.now(),
+    };
+    localMocks.loadLocalState.mockReturnValue(biblioteca as never);
+
+    renderHub('/social/profiles', biblioteca);
+
+    // Se busca a Ada por su nombre, que deja a Bob fuera de la LISTA.
+    const buscador = await screen.findByPlaceholderText(SOCIAL_UI.profiles.searchPlaceholder);
+    fireEvent.change(buscador, { target: { value: 'Ada' } });
+    fireEvent.click(await screen.findByLabelText(new RegExp(SOCIAL_UI.feed.openProfileAria('Ada'))));
+
+    // Y desde su ficha, a sus logros —la vitrina es el acceso— y de ahí a los globales, que es la pantalla que
+    // mide contra la comunidad.
+    fireEvent.click(await screen.findByRole('button', { name: new RegExp(`^${ADA_LOGRO_NOMBRE}`) }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Logros globales' }));
+
+    // TRES en la muestra —Ada, Bob y yo—, aunque en la lista de personas solo se viera a Ada.
+    const fila = (await screen.findByText(ADA_LOGRO_NOMBRE)).closest('li') as HTMLElement;
+    expect(within(fila).getByText('lo tiene el 33 % · 1 de 3')).toBeInTheDocument();
   });
 
   /**
@@ -1936,7 +1982,8 @@ describe('SocialHub — los logros de otras personas', () => {
     fireEvent.click(tarjeta);
 
     // La vitrina de la ficha a la que se ha llegado. Con el UUID en la dirección, la pantalla se abría igual pero
-    // sin espejo que pintar: ni una medalla.
-    expect(await screen.findByRole('img', { name: /^Créditos finales/ })).toBeInTheDocument();
+    // sin espejo que pintar: ni una medalla. (En tu propia ficha la lista es el catálogo, así que la escalera
+    // entera está ahí: lo que se comprueba es que hay medallas, no cuántas.)
+    expect(await screen.findAllByRole('img', { name: /^Créditos finales/ })).not.toHaveLength(0);
   });
 });

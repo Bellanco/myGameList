@@ -27,6 +27,7 @@ import { HubStatus } from './socialhub/HubStatus';
 import { ConfirmModal } from '../modals/ConfirmModal';
 import { SocialErrorBoundary } from './socialhub/SocialErrorBoundary';
 import { HubOfflineNotice } from './socialhub/HubOfflineNotice';
+import { libraryStart } from '../../core/achievements/metrics';
 
 /**
  * Hub social - Fase 1.
@@ -106,6 +107,7 @@ const SocialHubInner = memo(function SocialHubInner({
     completedGames,
     socialDisplayName,
     filteredSocialDirectory,
+    visibleSocialDirectory,
     selectedProfileDetail,
     profileDetailId,
     profileReviewsView,
@@ -154,6 +156,10 @@ const SocialHubInner = memo(function SocialHubInner({
     confirmFriendAction,
     cancelFriendAction,
   } = useSocialViewModel({ games });
+
+  // El día en que empieza tu biblioteca: el suelo con el que se fecha lo que conseguiste antes de que hubiera
+  // con qué fecharlo. Solo tuyo — de otra persona no llega, y su lista saca el suyo de su propia vitrina.
+  const libraryFloor = useMemo(() => (games ? libraryStart(games) : 0), [games]);
 
   // Handlers de navegación estables (misma identidad entre renders): permiten que las pantallas hoja
   // memoizadas no se re-rendericen cuando cambia un estado no relacionado del VM (status, cooldown, drag…).
@@ -254,17 +260,21 @@ const SocialHubInner = memo(function SocialHubInner({
   const directoryMirrors = useMemo(() => {
     if (!ENABLE_ACHIEVEMENTS) return [] as string[];
     return [
-      // TU VITRINA CUENTA, y hace falta decirlo porque el directorio filtrado te EXCLUYE por identidad —es lo
-      // que impide que aparezcas en tu propia lista de gente—, así que la muestra se medía sobre «todos menos
-      // yo»: con dos personas publicando, el porcentaje se calculaba sobre una. Eres una persona más, es lo que
-      // hace honesto el «1 de 2», y es lo que ya cuenta el censo del panel de administración.
+      // TU VITRINA CUENTA, y hace falta decirlo porque el directorio te EXCLUYE por identidad —es lo que impide
+      // que aparezcas en tu propia lista de gente—, así que la muestra se medía sobre «todos menos yo»: con dos
+      // personas publicando, el porcentaje se calculaba sobre una. Eres una persona más, es lo que hace honesto
+      // el «1 de 2», y es lo que ya cuenta el censo del panel de administración.
       //
       // Va el espejo del EVALUADOR y no el publicado: es el mismo que alimenta tu tarjeta del feed y va un paso
       // por delante de lo que haya en Firestore.
       ownAchievementMirror,
-      ...filteredSocialDirectory.map((entry) => entry.achievementsMirror),
+      // Y EL DIRECTORIO VISIBLE, NO EL DEL BUSCADOR. Salía del filtrado, así que buscar a alguien por su nombre
+      // —el buscador no se limpia al entrar en una ficha— reducía la muestra a quienes casaban con ese texto:
+      // se abrían los globales de esa persona y el porcentaje decía «100 % · 1 de 1». La cifra mide a la
+      // comunidad; a quién se le enseña la lista de gente es otra pregunta.
+      ...visibleSocialDirectory.map((entry) => entry.achievementsMirror),
     ].filter(Boolean);
-  }, [filteredSocialDirectory, ownAchievementMirror]);
+  }, [visibleSocialDirectory, ownAchievementMirror]);
 
   const detailMirror = useMemo(() => {
     if (!ENABLE_ACHIEVEMENTS || !detailId) return '';
@@ -272,9 +282,12 @@ const SocialHubInner = memo(function SocialHubInner({
     // impide que aparezcas en tu propia lista de gente— así que buscarte ahí devolvía siempre vacío, y tu ficha
     // de logros decía «todavía no hay nada que contar» con cien medallas detrás.
     if (isOwnProfileDetail) return ownAchievementMirror;
-    const entry = filteredSocialDirectory.find((candidate) => candidate.id === detailId);
+    // También sobre el visible: el perfil abierto lo resuelve `selectedProfileDetail` contra el directorio
+    // entero, así que buscarlo aquí en el filtrado dejaba su espejo en blanco en cuanto el texto del buscador
+    // dejaba de casar con su nombre —con la ficha ya abierta delante—.
+    const entry = visibleSocialDirectory.find((candidate) => candidate.id === detailId);
     return entry?.achievementsMirror || '';
-  }, [detailId, filteredSocialDirectory, isOwnProfileDetail, ownAchievementMirror]);
+  }, [detailId, visibleSocialDirectory, isOwnProfileDetail, ownAchievementMirror]);
 
   /**
    * Abrir una reseña empieza por su principio.
@@ -401,6 +414,13 @@ const SocialHubInner = memo(function SocialHubInner({
           mirror={detailMirror}
           directoryMirrors={directoryMirrors}
           owner={isOwnProfileDetail ? '' : nombre}
+          // En TU ficha manda el evaluador, y es lo que la convierte en el catálogo: con él salen los logros que
+          // aún no tienes y el «7 de 10» que dice cuánto falta. De una amistad no llega —ni debe llegar—, así que
+          // su ficha se queda en su vitrina.
+          ownStates={isOwnProfileDetail ? ownAchievements?.byId : undefined}
+          // Y el suelo de las fechas, que también es solo tuyo: el primer juego que entró en tu biblioteca. La
+          // vista global no lo necesita —ahí no hay columna de fechas—, así que solo va aquí.
+          since={isOwnProfileDetail ? libraryFloor : 0}
           onBack={volver}
           onToggleGlobals={toggleDetailGlobals}
           globalsBackLabel={vuelta}

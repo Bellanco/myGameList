@@ -58,6 +58,22 @@ export function firstEnteredAt(game: GameItem): number {
   return best;
 }
 
+/**
+ * EL DÍA EN QUE EMPIEZA LA BIBLIOTECA: el sello de entrada más antiguo de todos, o 0 si no hay ninguno.
+ *
+ * Es el SUELO de las fechas: nada de lo que la app sabe puede haber pasado antes, así que sirve para fechar lo
+ * que se consiguió «antes de que hubiera con qué fecharlo» —los logros de la primera evaluación, los de quien
+ * llega con la biblioteca ya hecha—. Es un mínimo, no el día exacto; quien lo pinte que sepa lo que pinta.
+ */
+export function libraryStart(games: TabData): number {
+  let best = 0;
+  for (const { game } of allGames(games)) {
+    const stamp = firstEnteredAt(game);
+    if (stamp > 0 && (best === 0 || stamp < best)) best = stamp;
+  }
+  return best;
+}
+
 /** Fin del año natural, en hora local. La fecha honesta de lo que solo se sabe por año (`years`, §6.8). */
 export function endOfYear(year: number): number {
   return new Date(year, 11, 31, 12, 0, 0, 0).getTime();

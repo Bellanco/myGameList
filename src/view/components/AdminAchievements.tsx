@@ -290,9 +290,9 @@ export const AdminAchievements = memo(function AdminAchievements({
 
   /** Cuánta gente tiene cada escalón, en personas. Es la unidad en la que se decide todo lo de esta pantalla. */
   const holdersOf = useCallback(
-    (def: AchievementDef): number => (measured
-      ? Math.round(((measured.percent.get(def.id) ?? 0) / 100) * measured.sample)
-      : 0),
+    // Del conteo de la medición, no deshaciendo su porcentaje: con censos grandes el redondeo devolvía «99» a
+    // un escalón que tienen 100 personas, y esta pantalla decide umbrales con esa cifra.
+    (def: AchievementDef): number => measured?.holders.get(def.id) ?? 0,
     [measured],
   );
 
@@ -732,7 +732,7 @@ export const AdminAchievements = memo(function AdminAchievements({
                       // La fila que se previsualiza no tiene a nadie: no hay gente que medir en un escalón que
                       // todavía no existe, así que su columna de alcance se calla en vez de pintar un 0 %.
                       const percent = nueva ? 0 : (measured?.percent.get(def.id) ?? 0);
-                      const holders = measured ? Math.round((percent / 100) * measured.sample) : 0;
+                      const holders = nueva ? 0 : holdersOf(def);
                       const previous = previousMeasured(filas, index);
                       // LA FRONTERA: el PRIMER escalón de la escalera al que no ha llegado nadie. Es el que está en
                       // juego, y el único que merece la marca: los de más arriba también están a cero y repetir
