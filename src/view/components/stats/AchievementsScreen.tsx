@@ -5,6 +5,7 @@ import { AchievementSprite } from '../AchievementSprite';
 import { HubBackButton } from '../socialhub/HubBackButton';
 import { ACHIEVEMENTS_UI } from '../../../core/constants/achievementLabels';
 import { Icon } from '../Icon';
+import type { RarityMeasure } from '../../../core/achievements/pack';
 import type { AchievementItem, AchievementSummary } from '../../../core/achievements/types';
 
 /** Fecha corta y legible. Sin hora: el día basta, y el minuto diría a qué horas usas la app (§5.3). */
@@ -22,8 +23,8 @@ interface AchievementsScreenProps {
    */
   items: readonly AchievementItem[];
   summary: AchievementSummary;
-  /** Porcentaje de gente que tiene cada logro, y sobre cuántos. `null` = muestra insuficiente (§6.6bis). */
-  rarity: { percent: ReadonlyMap<string, number>; sample: number } | null;
+  /** Porcentaje de gente que tiene cada logro, y sobre cuántos. `null` = NO HAY MUESTRA (§6.6bis). */
+  rarity: RarityMeasure | null;
   /** De quién son. Vacío = tuyos. */
   owner?: string;
   /**
@@ -32,6 +33,15 @@ interface AchievementsScreenProps {
    * se mide a nadie, se mide al catálogo.
    */
   global?: { self: boolean };
+  /**
+   * EL SUELO DE LAS FECHAS: el día más antiguo del que hay constancia (el primer juego que entró en la
+   * biblioteca; en una vitrina ajena, su logro fechado más viejo). Lo conseguido SIN sello propio se fecha con
+   * él en vez de dejar el hueco: no hay logro que pueda ser anterior, así que la columna deja de tener huecos
+   * sin que la pantalla se invente nada — la fila lo aclara en el rótulo del puntero.
+   *
+   * 0 = no hay ni suelo, y entonces se queda el «—» de siempre.
+   */
+  since?: number;
   /** Rótulo de la cabecera cuando no es el listado de siempre. */
   heading?: string;
   /** Texto bajo el título. */
@@ -72,6 +82,7 @@ export const AchievementsScreen = memo(function AchievementsScreen({
   summary,
   rarity,
   owner,
+  since = 0,
   global,
   heading,
   lead,
@@ -146,7 +157,16 @@ export const AchievementsScreen = memo(function AchievementsScreen({
 
             <ul className="ach-list">
               {items.map(({ def, state }) => {
-                const holders = rarity?.percent.get(def.id);
+                // AUSENTE DEL MAPA ES CERO, NO «NO SE SABE», y de ahí el `?? 0`: `measureRarity` solo apunta a
+                // quien tiene tenedores, así que un logro que no tiene nadie no aparecía en él y la fila se
+                // quedaba sin su cifra. Eso dejaba media lista global —justo la mitad de abajo, la de las
+                // rarezas— sin la columna por la que está ordenada, y hacía indistinguibles dos cosas muy
+                // distintas: «no lo tiene nadie» y «no hay muestra para saberlo». Lo segundo ya se dice con
+                // `rarity === null`, que apaga la columna entera.
+                const holders = rarity ? (rarity.holders.get(def.id) ?? 0) : null;
+                // Sin sello propio, el suelo. Solo para lo CONSEGUIDO: fechar lo que no se tiene no querría
+                // decir nada.
+                const fromFloor = state.level >= 1 && !state.unlockedAt && since > 0;
                 return (
                   <AchievementRow
                     key={def.id}
@@ -154,16 +174,19 @@ export const AchievementsScreen = memo(function AchievementsScreen({
                     level={state.level}
                     value={state.value}
                     next={state.next}
-                    date={formatUnlockDate(state.unlockedAt)}
+                    date={formatUnlockDate(fromFloor ? since : state.unlockedAt)}
+                    dateFromFloor={fromFloor}
                     global={global}
                     // De quién es la lista decide la voz de lo conseguido. `owner` vacío = tuya; en la vista
                     // global lo dice `self`, que es el dato que esa vista sí tiene.
                     mine={global ? global.self : !owner}
                     rarity={
-                      rarity && typeof holders === 'number'
+                      rarity && holders !== null
                         ? {
-                            percent: holders,
-                            holders: Math.round((holders / 100) * rarity.sample),
+                            // El porcentaje se PINTA redondeado; el denominador va tal cual lo contó la
+                            // medición, sin deshacer el redondeo para recuperarlo.
+                            percent: rarity.percent.get(def.id) ?? 0,
+                            holders,
                             sample: rarity.sample,
                           }
                         : null

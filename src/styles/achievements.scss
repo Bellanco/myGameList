@@ -184,20 +184,42 @@
 // Así el color sigue diciendo la rareza —de un vistazo, con la misma escala que el aura— y el texto la dice con
 // palabras y con contraste de sobra. Que la palabra esté escrita es además lo que impide que el color sea la
 // única señal.
+// ⚑ REVISIÓN — MÁS BAJO DE VOZ. El chip iba a 11 px con el punto de 8 y un resplandor de 6, y en una lista de
+// 334 filas eso son 334 lucecitas de colores compitiendo con las medallas, que son el objeto de la pantalla; el
+// «RARO» en negrita y a `--text` gritaba además más que el nombre del logro, que sí importa. La escala no se
+// toca —el color sigue siendo el mismo, y sigue estando escrito— pero se dice en voz baja:
+//
+//   · el punto pierde el resplandor y gana un CERCO del propio color, muy diluido. Un halo difuso mancha el
+//     fondo y engorda el punto sin dibujarlo; el cerco lo perfila, que es lo que hace que a 6 px se lea como
+//     una cuenta de color y no como una mancha.
+//   · el texto queda PAREJO en las cuatro rarezas: mismo peso y mismo tono, un punto más pequeño y con más
+//     tracking, que es lo que le da el aire de rótulo. Lo raro ya pesa por el nombre y por el aura de su
+//     medalla; no hace falta decirlo tres veces.
 .ach-rarity, .ach-row-rarity {
-  display: inline-flex; align-items: center; gap: 6px;
-  font-family: var(--ach-mono); font-size: 11px;
-  letter-spacing: .04em; text-transform: uppercase; color: var(--text-muted); white-space: nowrap;
+  display: inline-flex; align-items: center; gap: 7px;
+  font-family: var(--ach-mono); font-size: 10.5px;
+  // EL TONO NO BAJA MÁS. `--text-dim` a 10,5 px se sale del 4,5:1 que la 1.4.3 pide para texto pequeño en varias
+  // de las doce combinaciones de paleta y tema, y este rótulo existe precisamente porque el color de la escala no
+  // llega a ese listón (ver arriba). La sutileza se consigue con el tamaño, el tracking y el punto, no apagando
+  // la única señal que sí se puede leer.
+  letter-spacing: .11em; text-transform: uppercase; color: var(--text-muted); white-space: nowrap;
 }
 .ach-rarity::before, .ach-row-rarity::before {
-  content: ""; flex: none; width: 8px; height: 8px; border-radius: 50%;
-  background: var(--rc); box-shadow: 0 0 6px var(--rc);
+  content: ""; flex: none; width: 6px; height: 6px; border-radius: 50%;
+  background: var(--rc);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--rc) 20%, transparent);
 }
 .ach-rarity[data-r="comun"],       .ach-row-rarity[data-r="comun"]       { --rc: #96a2b2; }
 .ach-rarity[data-r="infrecuente"], .ach-row-rarity[data-r="infrecuente"] { --rc: #3fbe72; }
-// Lo raro y lo excepcional PESAN, y eso se dice con el texto —a `--text` y en negrita— no subiéndole el color.
-.ach-rarity[data-r="raro"],        .ach-row-rarity[data-r="raro"]        { --rc: #a855f7; color: var(--text); font-weight: 700; }
-.ach-rarity[data-r="excepcional"], .ach-row-rarity[data-r="excepcional"] { --rc: #ff8c1a; color: var(--text); font-weight: 700; }
+.ach-rarity[data-r="raro"],        .ach-row-rarity[data-r="raro"]        { --rc: #a855f7; }
+.ach-rarity[data-r="excepcional"], .ach-row-rarity[data-r="excepcional"] { --rc: #ff8c1a; }
+// LO QUE PESA SE DICE EN EL PUNTO, no en el texto: el cerco se abre un poco en las dos rarezas altas. Es la
+// misma señal, un grado más de luz, y no toca el contraste del rótulo —que es lo que la 1.4.3 mide— ni deja el
+// color como única señal, porque la palabra sigue escrita al lado.
+.ach-rarity[data-r="raro"]::before,        .ach-row-rarity[data-r="raro"]::before,
+.ach-rarity[data-r="excepcional"]::before, .ach-row-rarity[data-r="excepcional"]::before {
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--rc) 26%, transparent);
+}
 
 // ── Coste de pintado · el fallback plano ─────────────────────────────────
 // El acabado ya no es un filtro rasterizado por elemento —eso se fue con los cuadros al óleo—, pero sigue
@@ -305,23 +327,32 @@
   font-size: 13px; letter-spacing: .06em; text-transform: uppercase;
   color: var(--text-muted); margin: 0 0 6px; font-weight: 700;
 }
-// Las filas SE SEPARAN, no se apilan pegadas. En la vista global cada conseguido lleva su recuadro, y dos
-// seguidos compartían línea: los dos bordes se tocaban y se leían como una caja única de dos pisos en vez de
-// como dos logros. La separación es lo que hace que cada recuadro se cierre sobre lo suyo.
-.ach-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+// FILAS PEGADAS Y UN FILETE ENTRE ELLAS. El aire de diez píxeles estiraba el catálogo —334 entradas— a quince
+// pantallas de desplazamiento, y para separar dos filas basta una línea del color del borde: ocupa un píxel y
+// hace el mismo trabajo. La vista global recupera algo de hueco por su cuenta, más abajo, porque allí cada fila
+// conseguida lleva fondo propio y dos seguidas se leían como una caja de dos pisos.
+.ach-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+.ach-row + .ach-row { border-top: 1px solid color-mix(in srgb, var(--border) 55%, transparent); }
 
 // LA GEOMETRÍA ES LA MISMA EN LAS DOS VISTAS —tus logros y los globales—: mismo alto, mismo aire, mismas
 // columnas. Lo único que cambia entre ellas es lo que cada una tiene que decir (la fecha frente al recuadro y el
 // relleno del porcentaje), y eso vive abajo, en `.is-global`. Sin esta base compartida eran dos maquetaciones
 // que había que mantener a la par a mano, y ya habían empezado a separarse.
 .ach-row {
-  display: grid; gap: 4px 16px; padding: 9px 12px;
+  // EL COLOR DE LA DIFICULTAD, para toda la fila. Sale de `data-r` (lo pone `AchievementRow`) y lo usan el canto
+  // templado del borde y el renglón del progreso. Es la MISMA escala que el aura de la medalla: dos señales del
+  // mismo dato, una al lado de la otra, en vez de un punto de color perdido en la esquina contraria.
+  &[data-r="comun"]       { --rc: #96a2b2; }
+  &[data-r="infrecuente"] { --rc: #3fbe72; }
+  &[data-r="raro"]        { --rc: #a855f7; }
+  &[data-r="excepcional"] { --rc: #ff8c1a; }
+
+  position: relative;
+  display: grid; gap: 5px 12px; padding: 10px 12px 10px 16px;
   border-radius: var(--radius-sm);
-  // El filete separador sobra desde que hay hueco entre filas: con los dos, cada fila queda encajonada.
-  border-bottom: 1px solid transparent;
   grid-template-columns: auto minmax(0, 1fr);
-  grid-template-areas: "medal body" ". meta";
-  align-items: start;
+  grid-template-areas: "medal body" ". meta" ". prog";
+  align-items: center;
   // LA VISTA GLOBAL PINTA EL CATÁLOGO ENTERO: 251 filas, cada una con su medalla, y cada medalla con un filtro
   // de turbulencia y relieve. Con 32 logros eso no se notaba; con 251 son 251 filtros compuestos en el primer
   // pintado. `content-visibility` deja que el navegador se salte el layout y el pintado de lo que está fuera de
@@ -330,10 +361,52 @@
   content-visibility: auto;
   contain-intrinsic-size: auto 74px;
 }
+// EL CANTO TEMPLADO. La dificultad es el filete del borde izquierdo, degradándose hacia abajo: está en el sitio
+// fijo de todas las filas, así que al recorrer la lista los cantos forman una columna continua que se lee sin
+// leer. Sustituye al punto de color con su palabra, que vivía en la esquina derecha —el extremo opuesto de la
+// medalla, que dice lo mismo— y obligaba a cruzar la fila entera para comparar dos logros.
+//
+// LA PALABRA NO DESAPARECE, se va a `sr-only` (ver `AchievementRow`): el color no puede ser la única señal.
+.ach-row::after {
+  content: ""; position: absolute; left: 5px; top: 8px; bottom: 8px;
+  width: 3.5px; border-radius: 2px;
+  background: linear-gradient(to bottom, var(--rc), color-mix(in srgb, var(--rc) 45%, transparent));
+}
+// EN TEMA CLARO, EL CANTO SE OSCURECE. Los cuatro colores de la escala están calibrados para brillar sobre la
+// penumbra de la medalla, y el gris del común sobre un fondo claro casi desaparecía — justo ahora que el canto
+// es la única señal a la vista (la palabra vive en `sr-only`). Un punto de saturación y menos brillo le devuelve
+// la densidad sin cambiar el tono, que es lo que mantiene la escala reconocible entre los dos temas.
+:root[data-theme="light"] .ach-row::after { filter: saturate(1.2) brightness(.78); }
+
+// Lo que no se tiene lo dice también el canto: mismo color, a media luz.
+.ach-row.is-locked::after {
+  background: linear-gradient(to bottom,
+    color-mix(in srgb, var(--rc) 45%, transparent), color-mix(in srgb, var(--rc) 12%, transparent));
+}
+
+// SIN FECHA QUE ENSEÑAR, EL PROGRESO SE PONE EN SU SITIO. En el listado, un logro por conseguir ya no lleva nada
+// en la columna del día, así que el renglón de abajo dejaba un hueco encima y la fila quedaba descuadrada: el
+// avance se sube a la línea del nombre y la fila vuelve a medir lo mismo que las demás.
+// En la vista global NO, porque ahí esa esquina lleva el porcentaje de la comunidad y son dos datos distintos.
+@media (min-width: 700px) {
+  .ach-row.is-locked:not(.is-global) {
+    grid-template-areas: "medal body body prog";
+  }
+  // La meta se queda SIN área en esa plantilla, y un elemento sin área se coloca solo: la rejilla le abría una
+  // fila implícita —vacía, pero con su hueco— y la fila pendiente medía cinco píxeles más que las demás. Con
+  // `display: contents` el div desaparece de la rejilla y su único hijo, el rótulo para lector de pantalla, ya
+  // está fuera del flujo.
+  .ach-row.is-locked:not(.is-global) .ach-row-meta { display: contents; }
+}
+
 @media (min-width: 700px) {
   .ach-row {
-    grid-template-columns: auto minmax(0, 1fr) max-content;
-    grid-template-areas: "medal body meta";
+    // TRES COLUMNAS Y DOS RENGLONES. La segunda y la tercera se reparten el ancho a partes iguales, y ese corte
+    // es lo que sitúa el progreso A MEDIO CAMINO de la fila: el texto ocupa las dos de arriba y el avance
+    // arranca en la tercera, en el hueco que dejan la fecha y el porcentaje. Apretado contra la descripción no
+    // se leía ni lo uno ni lo otro.
+    grid-template-columns: auto minmax(0, 1fr) minmax(0, 1fr) max-content;
+    grid-template-areas: "medal body body meta" ".     .    prog prog";
   }
 }
 .ach-row > .ach-medal { grid-area: medal; }
@@ -341,19 +414,71 @@
 .ach-row-meta { grid-area: meta; display: flex; flex-direction: column; gap: 2px; }
 @media (min-width: 700px) { .ach-row-meta { align-items: flex-end; text-align: right; } }
 
-.ach-row-name { margin: 0; font-weight: 700; font-size: 16px; line-height: 1.25; }
-.ach-row-condition { margin: 2px 0 0; color: var(--text-muted); font-size: 14.5px; line-height: 1.35; }
-.ach-row-progress { margin: 7px 0 0; display: flex; align-items: center; gap: 9px; }
-.ach-row-bar {
-  flex: 1; height: 4px; border-radius: 2px;
-  background: var(--score-track, rgba(255,255,255,.10)); overflow: hidden;
+// UNA LÍNEA CADA UNO, con puntos suspensivos. El listado es de 334 entradas y una condición larga partiendo la
+// fila en tres renglones descuadraba la lista entera; el texto completo sigue estando para quien amplíe.
+.ach-row-name {
+  margin: 0; font-weight: 700; font-size: 15px; line-height: 1.3;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
-.ach-row-bar i { display: block; height: 100%; width: var(--pct, 0%); background: var(--text-dim); }
-.ach-row-progress-text { font-size: 12.5px; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.ach-row-condition {
+  margin: 1px 0 0; color: var(--text-muted); font-size: 13.5px; line-height: 1.35;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+// EL RENGLÓN DEL PROGRESO. Su sitio en la rejilla lo pone `.ach-row` (columna tres en adelante, o sea a media
+// fila); aquí solo va cómo se pinta. Pegado a la derecha, para que termine en la misma vertical que la fecha y
+// el porcentaje de las filas de arriba.
+// NI LA BARRA NI LA CIFRA BAILAN. Iban en una caja flexible pegada a la derecha, así que el ancho del texto
+// —«3 de 5 · 60 %» frente a «13683 de 25000 · 55 %»— empujaba la barra a un sitio distinto en cada fila: al
+// recorrer la lista, la columna se movía en zigzag. Con dos columnas de ancho FIJO cada cosa cae siempre en la
+// misma vertical, y el texto sobrante o faltante se lo come su propia columna.
+.ach-row-progress {
+  grid-area: prog; margin: 0; display: grid; align-items: center; gap: 9px;
+  // Más corta y con menos sitio para el texto: la cuenta ya no lleva porcentaje, así que «73 de 100» cabe de
+  // sobra en 92 px. Una barra de 130 px con su texto al lado pesaba más que el nombre del logro, que es lo que
+  // la fila viene a decir.
+  grid-template-columns: 96px 92px; justify-content: end;
+}
+.ach-row-bar {
+  // PASTILLA, no rectángulo: redondeada del todo y un pelo más fina. Es la misma forma de la píldora que la
+  // medalla lleva en el canto, así que las dos cosas que cuentan cifras en esta pantalla tienen la misma silueta.
+  width: 100%; height: 4px; border-radius: 999px;
+  // CARRIL PROPIO, y no el `--score-track` de las barras de nota. Aquel es `rgba(tinte,.12)` en los temas claros
+  // —un gris casi del color del papel— y contra él un relleno claro se quedaba en 1,3:1. Al 10 % de `--text` el
+  // carril tiene densidad en los dos temas, porque `--text` ya es lo contrario del fondo en cada uno.
+  background: color-mix(in srgb, var(--text) 10%, transparent);
+  overflow: hidden;
+}
+// EL AVANCE VA DEL COLOR DE SU DIFICULTAD, barra y cifra. En gris, el renglón entero se leía como una nota al
+// pie; con el color de la rareza, lo que te falta queda hermanado con el canto de su propia fila y la columna
+// gana un dato más sin añadir un solo elemento. Es color sobre un dato que TAMBIÉN está escrito, así que no
+// carga con ninguna señal en exclusiva.
+// EL RELLENO, DEL MISMO TONO QUE LA CIFRA. En color de rareza puro se quedaba entre 1,3:1 y 2,8:1 contra su
+// carril en 30 de las 48 combinaciones de paleta, tema y rareza —los cuatro colores están calibrados para el
+// aura de la medalla, sobre penumbra, no para una barra sobre el fondo del panel—. Con la misma mezcla del
+// texto, el peor caso sube a 4,15:1 (holgado sobre el 3:1 de la 1.4.11) y de paso la barra y su cifra dicen lo
+// mismo con el mismo color, que es lo que hace que se lean como una sola cosa.
+.ach-row-bar i {
+  display: block; height: 100%; width: var(--pct, 0%); border-radius: inherit;
+  background: color-mix(in srgb, var(--rc, var(--text-dim)) 38%, var(--text));
+}
+// A la IZQUIERDA de su columna: la cifra crece hacia la derecha —donde tiene sitio de sobra— en vez de empujar
+// la barra al crecer. Y con `tabular-nums`, los dígitos de dos filas seguidas caen en la misma vertical.
+//
+// ⚑ EL COLOR DE LA RAREZA, PERO NO EN CRUDO. Los cuatro colores de la escala están calibrados para el AURA de la
+// medalla —un halo, donde la 1.4.11 pide 3:1— y como texto de 12 px se quedan cortos frente al 4,5:1 de la
+// 1.4.3: el morado del raro da 3,07:1 sobre la superficie del panel, y es un fallo que la auditoría ya cazó una
+// vez en las doce combinaciones de paleta y tema. Mezclado con `--text` conserva el matiz —se sigue leyendo como
+// «esto es lo raro»— y el contraste lo pone el tono del tema, que es el que sí está medido. Un solo valor sirve
+// para los dos temas porque `--text` es claro en el oscuro y oscuro en el claro.
+.ach-row-progress-text {
+  font-size: 11.5px; white-space: nowrap; font-variant-numeric: tabular-nums;
+  color: color-mix(in srgb, var(--rc, var(--text-muted)) 38%, var(--text));
+}
 
 .ach-row-date { font-size: 13px; color: var(--text-muted); font-variant-numeric: tabular-nums; }
-// El porcentaje medido NUNCA se dice sin su denominador: sin él es lo único de esta pantalla que se puede leer
-// como una afirmación global, y no lo es (§6.6bis).
+// La cifra medida. A la vista va sola —«33 %»—; el denominador que la sostiene (§6.6bis) sigue en el rótulo del
+// puntero y en el texto para lector de pantalla, que es donde no estorba a la columna.
 .ach-row-share { font-size: 12px; color: var(--text-dim); font-variant-numeric: tabular-nums; }
 
 // Bloqueado: la misma forma desaturada, NO un hueco. Y la desaturación no es la única señal —es color puro—,
@@ -430,24 +555,22 @@
 // conseguido. La forma de la fila ya viene de `.ach-row`.
 // Un poco más de aire entre las globales: ahí cada fila es una caja con su borde y su relleno, y con el hueco
 // justo del listado normal los recuadros de dos conseguidos seguidos quedaban a un pelo el uno del otro.
-.ach-list:has(.ach-row.is-global) { gap: 14px; }
+.ach-list:has(.ach-row.is-global) { gap: 6px; }
 
-// Y el ancho de la barra de progreso, igual en las dos: es el mismo dato dicho en el mismo sitio.
-.ach-row-bar { max-width: 140px; }
+// LO CONSEGUIDO SE TIÑE, NO SE ENMARCA. El recuadro de dos píxeles encajonaba la fila y peleaba por el mismo
+// borde que el canto de la dificultad, que ya vive ahí; el tinte marca igual de bien —es otro COLOR, no otra
+// intensidad, así que se distingue del relleno del porcentaje— y deja la fila abierta.
 .ach-row.is-global.is-owned {
-  outline: 2px solid var(--accent, var(--steam));
-  outline-offset: -2px;
-  background: color-mix(in srgb, var(--accent, var(--steam)) 8%, transparent);
+  background: color-mix(in srgb, var(--accent, var(--steam)) 13%, transparent);
 }
 // Lo que NO se tiene se apaga, pero se sigue leyendo: es el hueco lo que da sentido a la lista.
 .ach-row.is-global:not(.is-owned) .ach-row-name { color: var(--text-muted); }
-.ach-row-owned {
-  font-size: 11px; letter-spacing: .06em; text-transform: uppercase;
-  color: var(--text-dim); white-space: nowrap;
-}
-.ach-row.is-global.is-owned .ach-row-owned { color: var(--accent, var(--steam)); font-weight: 700; }
-// El porcentaje es la columna que ordena la lista, así que aquí manda sobre la rareza declarada.
-.ach-row.is-global .ach-row-share { font-size: 14px; color: var(--text); font-weight: 600; }
+// `.ach-row-owned` no lleva aspecto: va en `sr-only` y solo existe para quien no ve el recuadro. Lo que se ve de
+// un logro conseguido son el recuadro, el nombre encendido y el relleno teñido, que ya lo dicen tres veces.
+// El porcentaje es la columna que ordena la lista, así que aquí manda sobre la rareza declarada. Ahora que es
+// solo la cifra puede permitirse el tamaño: son dos o tres caracteres que se recorren de arriba abajo, y con
+// `tabular-nums` —que viene de la regla de arriba— las unidades caen en la misma vertical.
+.ach-row.is-global .ach-row-share { font-size: 15px; color: var(--text); font-weight: 600; letter-spacing: .01em; }
 .ach-row.is-global .ach-row-rarity { order: 3; }
 
 
@@ -455,22 +578,23 @@
 // La lista está ordenada por lo común que es cada logro, así que el fondo se llena con ese mismo porcentaje: el
 // orden deja de ser algo que hay que leer y pasa a verse, con la escalera bajando de arriba abajo.
 //
-// SUTIL A PROPÓSITO. Es el dato de fondo y no el contenido: si compitiera con el nombre y la descripción, la
-// lista se leería como un gráfico de barras con texto encima. Va en un pseudo-elemento y no en un degradado del
-// propio fondo para que el recuadro de lo conseguido —que sí tiene que verse— siga mandando encima.
+// EL RELLENO ES LA BARRA. Estuvo al 2,5 % —tan bajo que era una intuición más que un dato— y ahora se ve: la
+// fila entera es la pista y el relleno es la carga, como una barra de progreso que ocupa toda la línea en vez de
+// ser un elemento aparte. Sigue por DEBAJO del texto (`z-index: -1`) y en un pseudo-elemento, así que ni tapa ni
+// desplaza nada; lo que ha cambiado es que ahora se lee.
 .ach-row.is-global { position: relative; isolation: isolate; }
 .ach-row.is-global::before {
   content: ""; position: absolute; inset: 0; z-index: -1;
   width: var(--fill, 0%);
-  // 2,5 %: lo justo para que el escalón se intuya al recorrer la lista. Es el dato de FONDO —la lista ya está
-  // ordenada por esa cifra y cada fila la dice con números—, así que su trabajo es acompañar, no informar. A 4 %
-  // (y antes a 7 %) la pantalla se leía como un gráfico de barras con texto encima.
-  background: color-mix(in srgb, var(--text) 2.5%, transparent);
+  background: color-mix(in srgb, var(--text) 9%, transparent);
   border-radius: inherit;
   pointer-events: none;
 }
-// En lo conseguido el relleno se tiñe del acento, para que el recuadro y la barra cuenten lo mismo.
-.ach-row.is-global.is-owned::before { background: color-mix(in srgb, var(--accent, var(--steam)) 5%, transparent); }
+// En lo conseguido, la carga va del acento y ENCIMA de su tinte: el fondo de la fila dice «lo tienes» y el
+// relleno, hasta dónde llega la cifra. Dos capas del mismo color, distinguibles porque una acaba y la otra no.
+.ach-row.is-global.is-owned::before {
+  background: color-mix(in srgb, var(--accent, var(--steam)) 22%, transparent);
+}
 
 
 

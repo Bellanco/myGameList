@@ -202,6 +202,77 @@ async function contrastesDelAnilloDeFoco(page: Page): Promise<Array<{ sobre: str
   });
 }
 
+/**
+ * EL CONTRASTE DE LA BARRA DE PROGRESO DEL LISTADO, que axe no mira: es contraste NO TEXTUAL —la 1.4.11 pide
+ * 3:1— y además se compara contra su propio carril, no contra el fondo de la pantalla.
+ *
+ * Aquí se rompió una vez y en grande: la barra y su cifra pasaron a llevar el color de la RAREZA, y esos cuatro
+ * colores están calibrados para el aura de la medalla —un halo sobre la penumbra del disco—, no para una barra
+ * sobre el fondo del panel. Treinta de las cuarenta y ocho combinaciones de paleta, tema y rareza quedaban por
+ * debajo del 3:1, con el verde del infrecuente en 1,35:1 sobre el claro de Mar de estrellas. Se arregló mezclando
+ * el color con `--text`, que es lo que hace que un mismo valor sirva para los dos temas.
+ */
+async function contrastesDeLaBarraDeProgreso(page: Page): Promise<Array<{ rareza: string; ratio: number }>> {
+  return page.evaluate(() => {
+    const RAREZAS = ['comun', 'infrecuente', 'raro', 'excepcional'];
+    // `color-mix` se computa como `color(srgb …)` con canales 0-1; `rgb()/rgba()` vienen en 0-255.
+    const leer = (valor: string): { rgb: [number, number, number]; a: number } => {
+      const n = (valor.match(/[\d.]+(?:e-?\d+)?/g) || []).map(Number);
+      const rgb = (valor.startsWith('color(') ? n.slice(0, 3).map((v) => v * 255) : n.slice(0, 3)) as [number, number, number];
+      return { rgb, a: n.length > 3 ? n[3] : 1 };
+    };
+    const sobre = (frente: number[], fondo: number[], alfa: number): [number, number, number] =>
+      frente.map((c, i) => c * alfa + fondo[i] * (1 - alfa)) as [number, number, number];
+    const luminancia = ([r, g, b]: [number, number, number]): number => {
+      const canal = (v: number): number => {
+        const x = v / 255;
+        return x <= 0.03928 ? x / 12.92 : ((x + 0.055) / 1.055) ** 2.4;
+      };
+      return 0.2126 * canal(r) + 0.7152 * canal(g) + 0.0722 * canal(b);
+    };
+    const contraste = (a: [number, number, number], b: [number, number, number]): number => {
+      const [x, y] = [luminancia(a), luminancia(b)];
+      const [alto, bajo] = x > y ? [x, y] : [y, x];
+      return (alto + 0.05) / (bajo + 0.05);
+    };
+    // El primer fondo OPACO de la cadena: el carril es translúcido y hay que componerlo sobre algo real.
+    const fondoDe = (nodo: Element | null): [number, number, number] => {
+      let n: Element | null = nodo;
+      while (n) {
+        const leido = leer(getComputedStyle(n).backgroundColor);
+        if (leido.a === 1) return leido.rgb;
+        n = n.parentElement;
+      }
+      return [0, 0, 0];
+    };
+
+    const fila = document.querySelector('.ach-row')!;
+    const carril = document.createElement('span');
+    carril.className = 'ach-row-bar';
+    const relleno = document.createElement('i');
+    relleno.style.width = '50%';
+    carril.appendChild(relleno);
+    const caja = document.createElement('p');
+    caja.className = 'ach-row-progress';
+    caja.appendChild(carril);
+    fila.appendChild(caja);
+
+    const previa = fila.getAttribute('data-r');
+    const fondo = fondoDe(fila);
+    const salida = RAREZAS.map((rareza) => {
+      fila.setAttribute('data-r', rareza);
+      const c = leer(getComputedStyle(carril).backgroundColor);
+      const pista = sobre(c.rgb, fondo, c.a);
+      const r = leer(getComputedStyle(relleno).backgroundColor);
+      return { rareza, ratio: contraste(sobre(r.rgb, pista, r.a), pista) };
+    });
+
+    caja.remove();
+    if (previa) fila.setAttribute('data-r', previa); else fila.removeAttribute('data-r');
+    return salida;
+  });
+}
+
 const PANTALLAS = [
   { nombre: 'lista', amplia: false, abrir: listaConDetalleAbierto },
   { nombre: 'panel', amplia: true, abrir: panelDeEstadisticas },
@@ -220,6 +291,13 @@ for (const palette of PALETAS) {
         expect(await violacionesDe(page), `Violaciones en ${nombre} con ${palette}/${theme}`).toEqual([]);
       });
     }
+
+    test(`barra de progreso de logros con contraste · paleta ${palette} · tema ${theme}`, async ({ page }) => {
+      await sembrarBiblioteca(page, { theme, palette, amplia: true });
+      await listadoDeLogros(page);
+      const flojas = (await contrastesDeLaBarraDeProgreso(page)).filter(({ ratio }) => ratio < 3);
+      expect(flojas, `Barra de progreso con menos de 3:1 sobre su carril en ${palette}/${theme}`).toEqual([]);
+    });
 
     test(`anillo de foco visible · paleta ${palette} · tema ${theme}`, async ({ page }) => {
       await sembrarBiblioteca(page, { theme, palette });

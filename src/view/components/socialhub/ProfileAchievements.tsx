@@ -3,10 +3,11 @@ import { AchievementStrip, type StripItem } from '../stats/AchievementStrip';
 import { AchievementsScreen, formatUnlockDate } from '../stats/AchievementsScreen';
 import { AchievementSprite } from '../AchievementSprite';
 import { measureRarity, parseMirror, sortMirror } from '../../../core/achievements/pack';
-import { summarizeMirror } from '../../../core/achievements/summary';
+import { summarize, summarizeMirror } from '../../../core/achievements/summary';
 import { ACHIEVEMENTS_BY_ID, SCORING_ACHIEVEMENTS } from '../../../core/achievements/catalog';
 import { ACHIEVEMENTS_UI } from '../../../core/constants/achievementLabels';
 import { withoutHidden } from '../../../core/achievements/visibility';
+import { compareEarned, listForScreen } from '../../../viewmodel/useAchievements';
 import { useAchievementsConfig } from '../../hooks/useAchievementsConfig';
 import type { AchievementItem, AchievementState } from '../../../core/achievements/types';
 
@@ -29,15 +30,20 @@ export const ProfileAchievementStrip = memo(function ProfileAchievementStrip({
   mirror: string;
   onOpen: () => void;
 }) {
-  const items = useMemo<StripItem[]>(
-    () =>
-      sortMirror(parseMirror(mirror)).map((item) => ({
-        id: item.id,
-        level: item.level,
-        date: formatUnlockDate(item.unlockedAt),
-      })),
-    [mirror],
-  );
+  const items = useMemo<StripItem[]>(() => {
+    const mirrored = sortMirror(parseMirror(mirror));
+    // EL MISMO SUELO QUE EL LISTADO, y por el mismo motivo: la medalla dice su fecha en el rótulo, y dos
+    // versiones del mismo dato —fechada en la lista, muda en la tira— es peor que cualquiera de las dos.
+    let floor = 0;
+    for (const item of mirrored) {
+      if (item.unlockedAt > 0 && (floor === 0 || item.unlockedAt < floor)) floor = item.unlockedAt;
+    }
+    return mirrored.map((item) => ({
+      id: item.id,
+      level: item.level,
+      date: formatUnlockDate(item.unlockedAt || floor),
+    }));
+  }, [mirror]);
 
   if (items.length === 0) return null;
 
@@ -52,25 +58,47 @@ export const ProfileAchievementStrip = memo(function ProfileAchievementStrip({
 });
 
 /**
- * EL LISTADO DE ESA PERSONA. La misma pantalla que la tuya, leyendo el espejo en vez del evaluador — que es el
- * patrón que ya usan `StatsReviews` y `ProfileReviewsList`: una lista, dos fuentes.
+ * EL LISTADO DE UNA FICHA, y son DOS listas con la misma forma:
  *
- * SOLO LO CONSEGUIDO. El progreso hacia lo que no tiene no se ve, y ese es el corte: una barra a medias diría
- * cuántas reseñas lleva o cuántas horas anota por una puerta lateral, y un logro conseguido solo dice el orden de
- * magnitud que ya declara al publicarlo.
+ *  - LA TUYA es el catálogo: lo conseguido y lo que falta, con su «7 de 10» y su barra. Sale del evaluador y es
+ *    exactamente la de `/logros` —misma función, `listForScreen`—, porque son la misma pregunta hecha desde dos
+ *    sitios y dos listas distintas para ella solo servirían para separarse con el tiempo.
+ *  - LA DE OTRA PERSONA es su VITRINA: solo lo conseguido, leído de su espejo. Lo que le falta no se enseña
+ *    porque no se sabe —el espejo lleva los logros conseguidos y nada más— y porque una barra a medias diría
+ *    cuántas reseñas lleva o cuántas horas anota por una puerta lateral (§3).
+ *
+ * ORDENADAS POR FECHA, de lo más reciente a lo más antiguo, y lo que no tiene sello deducible al final. Es el
+ * orden de `compareEarned`, el mismo con el que el feed cuenta una jornada.
+ *
+ * SIN EL PORCENTAJE COMPARADO. Esa cifra —«lo tiene el 67 % · 2 de 3»— es la respuesta a otra pregunta («cómo de
+ * raro es esto»), tiene su pantalla entera y su botón para llegar a ella. Aquí competía con el sello, que es lo
+ * que se viene a mirar: cuándo cayó cada medalla. La rareza DECLARADA se queda, que es del catálogo y no de la
+ * gente.
  */
 export const ProfileAchievementsScreen = memo(function ProfileAchievementsScreen({
   mirror,
   directoryMirrors,
   owner,
+  ownStates,
+  since = 0,
   onBack,
   onToggleGlobals,
   globalsBackLabel,
 }: {
   mirror: string;
-  /** Los espejos que el directorio ya trajo. Es la muestra del porcentaje comparado y no cuesta una petición. */
+  /** Los espejos que el directorio ya trajo. Solo deciden si hay puerta a los globales; aquí no se pintan. */
   directoryMirrors: readonly string[];
   owner: string;
+  /**
+   * TUS estados reales, del evaluador. Solo llegan en tu propia ficha, y son los que convierten esta pantalla en
+   * el catálogo: sin ellos no hay ni progreso ni logros por conseguir que enseñar.
+   */
+  ownStates?: ReadonlyMap<string, AchievementState>;
+  /**
+   * EL DÍA EN QUE EMPIEZA TU BIBLIOTECA, para fechar lo conseguido antes de que hubiera con qué fecharlo. Solo
+   * en tu ficha: de otra persona no llega ese dato, y ahí el suelo sale de su propia vitrina (abajo).
+   */
+  since?: number;
   onBack: () => void;
   /** Ir a los logros globales. El botón vive DENTRO de la pantalla, no en la barra de la ficha. */
   onToggleGlobals?: () => void;
@@ -78,9 +106,38 @@ export const ProfileAchievementsScreen = memo(function ProfileAchievementsScreen
 }) {
   // La APERTURA COMUNITARIA es la que hace que esta cifra sea la misma que esa persona ve en su aparato: el
   // denominador cuenta lo que hoy está abierto para todos, no lo que cada cual tenga hecho (ver `summarizeMirror`).
-  const { open } = useAchievementsConfig();
+  // Y la OCULTACIÓN recorta tu catálogo, que es la única de las dos listas que recorre lo no conseguido.
+  const config = useAchievementsConfig();
 
-  const { entries, summary, rarity } = useMemo(() => {
+  const { entries, summary, rarity, floor } = useMemo(() => {
+    const rarity = measureRarity(directoryMirrors);
+
+    /**
+     * EL SUELO DE LAS FECHAS. En tu ficha lo trae la biblioteca —el primer juego que entró, y nada tuyo puede
+     * ser anterior—. En la de otra persona ese dato no viaja: su espejo lleva el sello de cada logro y los que
+     * no tienen van en cero, así que el suelo es su logro fechado más viejo. No es el día en que empezó, pero
+     * sí uno del que hay constancia, y deja su lista sin huecos igual que la tuya.
+     */
+    const floorOf = (items: readonly AchievementItem[]): number => {
+      if (since > 0) return since;
+      let best = 0;
+      for (const { state } of items) {
+        if (state.unlockedAt > 0 && (best === 0 || state.unlockedAt < best)) best = state.unlockedAt;
+      }
+      return best;
+    };
+
+    // TU FICHA: el catálogo entero, tal cual lo monta `/logros`.
+    if (ownStates) {
+      const entries = listForScreen(ownStates, config);
+      return {
+        entries,
+        summary: summarize([...ownStates.values()], config.open),
+        rarity,
+        floor: floorOf(entries),
+      };
+    }
+
     const items = sortMirror(parseMirror(mirror));
     const levels = new Map(items.map((item) => [item.id, item.level]));
 
@@ -98,21 +155,29 @@ export const ProfileAchievementsScreen = memo(function ProfileAchievementsScreen
         };
         return { def, state };
       })
-      .filter((entry): entry is AchievementItem => entry !== null);
+      .filter((entry): entry is AchievementItem => entry !== null)
+      // Por fecha, de lo más reciente a lo más antiguo. `sortMirror` ordenaba por rareza declarada porque es el
+      // orden de la VITRINA —once medallas para enseñar—, y en una lista larga eso deja el sello, que es la
+      // columna que se lee, saltando de un año a otro sin orden aparente. Lo que no trae fecha cae al final.
+      .sort(compareEarned);
 
     return {
       entries,
-      summary: summarizeMirror(levels, open),
-      rarity: measureRarity(directoryMirrors),
+      summary: summarizeMirror(levels, config.open),
+      rarity,
+      floor: floorOf(entries),
     };
-  }, [mirror, directoryMirrors, open]);
+  }, [mirror, directoryMirrors, ownStates, since, config]);
 
   return (
     <AchievementsScreen
       items={entries}
       summary={summary}
-      rarity={rarity}
+      // El porcentaje comparado NO se pinta aquí, aunque se mida: la medición sigue haciendo falta para saber si
+      // hay algo detrás del botón de los globales, que es donde esa cifra sí es el asunto de la pantalla.
+      rarity={null}
       owner={owner}
+      since={floor}
       backLabel={ACHIEVEMENTS_UI.backToProfile}
       onBack={onBack}
       /* LA PUERTA A LOS GLOBALES SE OFRECE SI HAY ALGO DETRÁS, y `rarity` es exactamente esa pregunta: es la
@@ -201,12 +266,20 @@ export const ProfileGlobalAchievements = memo(function ProfileGlobalAchievements
             next: null,
             unlockedAt: 0,
           } satisfies AchievementState),
-          percent: measured.percent.get(def.id) ?? 0,
+          // SE ORDENA POR EL CONTEO, NO POR EL PORCENTAJE PINTADO. Es la misma cifra, pero el porcentaje viene
+          // ya redondeado y eso empata lo que la muestra sí distingue: con 300 espejos, 33,4 % y 32,6 % son los
+          // dos «33 %» y el orden entre ellos lo acababa decidiendo el nombre.
+          holders: measured.holders.get(def.id) ?? 0,
         };
       })
-      // De mayor a menor porcentaje. A igualdad, el nombre: un orden estable evita que la lista baile entre
-      // aperturas cuando dos logros empatan, que es lo que hace imposible acordarse de dónde estaba uno.
-      .sort((a, b) => (b.percent - a.percent) || a.def.labels.name.localeCompare(b.def.labels.name, 'es'))
+      // De mayor a menor. A igualdad, un orden estable —que la lista no baile entre aperturas, que es lo que
+      // hace imposible acordarse de dónde estaba uno—: dentro de una MISMA escalera manda el grado, porque el
+      // nombre lleva números romanos y alfabéticamente el IX se cuela delante del V. La cola de la lista, donde
+      // todo empata a cero, es justo la que más escalones altos junta.
+      .sort((a, b) => (b.holders - a.holders)
+        || (a.def.ladder === b.def.ladder
+          ? a.def.grade - b.def.grade
+          : a.def.labels.name.localeCompare(b.def.labels.name, 'es')))
       .map(({ def, state }) => ({ def, state }));
 
     return { entries: withoutHidden(items, hiddenAchievements), rarity: measured, summary };
