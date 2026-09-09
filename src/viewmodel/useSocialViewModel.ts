@@ -1062,15 +1062,33 @@ export function useSocialViewModel(options?: {
    */
   useOpenFrontier(ownAchievements.byId, achievementsConfig.open);
 
+  /**
+   * TU id EN EL DIRECTORIO, que es el único que las rutas de la ficha saben resolver
+   * (`/social/profiles/:profileId`).
+   *
+   * NO VALE `ownProfileId`: ese es un UUID SEMBRADO EN EL DISPOSITIVO (`seedProfileIdFromRemote`) que no
+   * identifica ningún documento de `profiles`, así que la tarjeta de TUS logros del feed enlazaba a
+   * `/social/profiles/<uuid>` —y a `.../logros`— y las dos direcciones abrían una ficha que no encontraba nada.
+   *
+   * Y de paso hace honesta la comparación con la que el feed descarta tu propia entrada del directorio: los dos
+   * lados de esa igualdad son ahora ids de directorio.
+   *
+   * Sin entrada propia todavía queda el comodín `me`, que la ficha resuelve por identidad.
+   */
+  const ownDirectoryProfileId = useMemo(
+    () => rawSocialDirectory.find((entry) => isOwnProfileIdentity(entry.id, authUser?.uid, ownProfileId))?.id || '',
+    [rawSocialDirectory, authUser?.uid, ownProfileId],
+  );
+
   const ownAchievementsFeed = useMemo(() => {
     if (!ENABLE_ACHIEVEMENTS || !ownAchievementStates) return undefined;
     return {
-      profileId: ownProfileId || OWN_PROFILE_ALIAS,
+      profileId: ownDirectoryProfileId || OWN_PROFILE_ALIAS,
       displayName: socialDisplayName || '',
       photoURL: authUser?.photoURL || '',
       mirror: packAchievements(ownAchievementStates),
     };
-  }, [ownAchievementStates, ownProfileId, socialDisplayName, authUser?.photoURL]);
+  }, [ownAchievementStates, ownDirectoryProfileId, socialDisplayName, authUser?.photoURL]);
 
   /**
    * TU espejo, el mismo que va al feed.

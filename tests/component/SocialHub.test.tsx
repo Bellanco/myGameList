@@ -1873,4 +1873,47 @@ describe('SocialHub — los logros de otras personas', () => {
     const medalla = await screen.findByRole('img', { name: new RegExp(`^${ADA_LOGRO_NOMBRE}`) });
     expect(medalla).toBeInTheDocument();
   });
+
+  /**
+   * TU PROPIA TARJETA DE LOGROS TIENE QUE LLEVAR A TU FICHA, y no llevaba: la entrada del feed se identificaba con
+   * el `ownProfileId`, que es un UUID SEMBRADO EN EL DISPOSITIVO (`seedProfileIdFromRemote`) y no el id de ningún
+   * documento. Las dos direcciones que salían de la tarjeta —`/social/profiles/<uuid>` y `.../logros`— abrían una
+   * pantalla que no encontraba nada, mientras las mismas con el id del directorio funcionaban.
+   *
+   * Se prueba PULSANDO y mirando el destino, porque el fallo no estaba en ninguna de las dos piezas: estaba en el
+   * identificador que viajaba entre ellas.
+   */
+  it('tu tarjeta del feed abre TUS logros aunque tu profileId local no sea el del directorio', async () => {
+    // El id sembrado en local, distinto del id del documento: es el caso real y el que rompía el enlace.
+    firebaseMocks.resolveStableProfileId.mockResolvedValue('78a51db9-96c0-4edd-a4de-45387db2f4be');
+    // Tu propia entrada del directorio, que es de donde sale el id que las rutas saben resolver.
+    firebaseMocks.listSocialDirectory.mockResolvedValue([
+      {
+        id: 'me', uid: 'me', displayName: 'Me', photoURL: '',
+        socialGistId: 'my-social', gamesGistId: '', updatedAt: Date.now(), tier: 'bronce',
+        achievementsMirror: '',
+      },
+    ]);
+    // Doce completados de hoy: el primer escalón de «Créditos finales» cae con fecha reciente, que es lo que hace
+    // falta para que el feed anuncie tus logros (`FEED_RECENT_DAYS`).
+    const biblioteca = {
+      // `enteredAt` es lo que FECHA el logro (§: el sello sale de la entrada en la lista, no de `_ts`), y sin
+      // fecha el feed no lo anuncia: se queda en la vitrina y no sale en la actividad.
+      c: Array.from({ length: 12 }, (_u, i) => ({
+        id: i + 1, name: `Juego ${i + 1}`, _ts: Date.now(), enteredAt: { c: Date.now() },
+        platforms: [], genres: [], steamDeck: false, review: '',
+      })),
+      v: [], e: [], p: [], deleted: [], updatedAt: Date.now(),
+    };
+    localMocks.loadLocalState.mockReturnValue(biblioteca as never);
+
+    renderHub('/social', biblioteca);
+
+    const tarjeta = await screen.findByLabelText(new RegExp(SOCIAL_UI.feed.openProfileAria('Me')));
+    fireEvent.click(tarjeta);
+
+    // La vitrina de la ficha a la que se ha llegado. Con el UUID en la dirección, la pantalla se abría igual pero
+    // sin espejo que pintar: ni una medalla.
+    expect(await screen.findByRole('img', { name: /^Créditos finales/ })).toBeInTheDocument();
+  });
 });
