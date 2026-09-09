@@ -483,4 +483,74 @@ describe('catálogo de logros — la vista de revisión del panel de administrac
     await userEvent.type(campo, '15');
     expect(screen.getByText(/corren de romano \(Créditos finales II/)).toBeInTheDocument();
   });
+
+  /**
+   * LA FICHA SE ABRE DENTRO DE LA ESCALERA, Y LA TABLA ENSEÑA CÓMO QUEDA.
+   *
+   * Vivía suelta arriba de la pantalla: se pulsaba «preparar» al pie de una escalera y el cambio aparecía a diez
+   * pantallas de allí, así que escribir un umbral recalculaba el plan sin que se viera nada desde donde estabas
+   * —parecía que el campo no hacía nada— y no había con qué comparar lo que se iba a añadir.
+   */
+  describe('la previsualización, dentro de la escalera', () => {
+    const fichaDe = (escalera: string) =>
+      screen.getByText(escalera).closest('.admin-card') as HTMLElement;
+
+    it('la ficha del plan sale dentro de la tarjeta de esa escalera, no fuera', async () => {
+      render(<AdminAchievements onBack={() => {}} />);
+      await abrirPlan('Créditos finales');
+
+      const ficha = fichaDe('Créditos finales');
+      expect(within(ficha).getByText('Insertar 1000 en «completados»')).toBeInTheDocument();
+      // Y el botón que la abre dice que está abierta, que es lo que la convierte en un interruptor.
+      expect(within(ficha).getByRole('button', { name: A.prepareAny })).toHaveAttribute('aria-expanded', 'true');
+      // Ninguna otra escalera se entera.
+      expect(within(fichaDe('Retirada táctica')).queryByText(/^Insertar /)).not.toBeInTheDocument();
+    });
+
+    it('la tabla mete la fila nueva EN SU SITIO y corre los romanos de encima', async () => {
+      render(<AdminAchievements onBack={() => {}} />);
+      const ficha = fichaDe('Créditos finales');
+      // El recuento se toma con la ficha CERRADA: abrirla ya previsualiza el escalón que propone el botón.
+      const filasAntes = within(ficha).getAllByRole('row').length;
+
+      await abrirPlan('Créditos finales');
+      await userEvent.clear(within(ficha).getByRole('spinbutton'));
+      await userEvent.type(within(ficha).getByRole('spinbutton'), '15');
+
+      // Una fila más, la del escalón que todavía no existe, y se dice que es nueva.
+      expect(within(ficha).getAllByRole('row')).toHaveLength(filasAntes + 1);
+      expect(within(ficha).getByText(A.previewNew)).toBeInTheDocument();
+      // El 15 entra como SEGUNDO escalón, así que se lleva el II…
+      expect(within(ficha).getByText('Créditos finales II')).toBeInTheDocument();
+      // …y el 25, que era el II, pasa a III diciendo lo que era antes.
+      expect(within(ficha).getByText(A.previewMoved('Créditos finales II'))).toBeInTheDocument();
+      expect(within(ficha).getByText('Créditos finales III')).toBeInTheDocument();
+    });
+
+    it('cerrar la ficha deja la tabla como estaba', async () => {
+      render(<AdminAchievements onBack={() => {}} />);
+      const ficha = fichaDe('Créditos finales');
+      const filasAntes = within(ficha).getAllByRole('row').length;
+
+      await abrirPlan('Créditos finales');
+      expect(within(ficha).getAllByRole('row')).toHaveLength(filasAntes + 1);
+
+      await userEvent.click(within(ficha).getByRole('button', { name: A.prepareClose }));
+      expect(within(ficha).getAllByRole('row')).toHaveLength(filasAntes);
+      expect(within(ficha).queryByText(/^Insertar /)).not.toBeInTheDocument();
+    });
+
+    /** Un umbral que no vale no previsualiza nada: la tabla se queda como está y el error se dice. */
+    it('con un umbral inválido la tabla no se toca', async () => {
+      render(<AdminAchievements onBack={() => {}} />);
+      await abrirPlan('Créditos finales');
+      const ficha = fichaDe('Créditos finales');
+
+      await userEvent.clear(within(ficha).getByRole('spinbutton'));
+      await userEvent.type(within(ficha).getByRole('spinbutton'), '50');
+
+      expect(within(ficha).getByText(A.prepareTaken(50))).toBeInTheDocument();
+      expect(within(ficha).queryByText(A.previewNew)).not.toBeInTheDocument();
+    });
+  });
 });

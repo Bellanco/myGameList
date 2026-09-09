@@ -672,6 +672,17 @@
   box-shadow: inset 3px 0 0 color-mix(in srgb, var(--text-muted) 55%, transparent);
 }
 .admin-ach-table tbody tr.is-unseen .admin-ach-step { color: var(--text-dim); }
+/* LA FILA QUE TODAVÍA NO EXISTE, mientras se prepara un escalón. Se marca en el canto como las demás señales de
+   esta tabla —el raíl del escalón, que es donde se lee el estado de la fila— y con el verde de «esto se añade»,
+   que no compite con el ámbar de las decisiones pendientes ni con el rojo de los avisos. El rótulo «nueva» va en
+   el nombre: el color separa de un vistazo y la palabra es lo que queda con lector de pantalla o en monocromo. */
+.admin-ach-table tbody tr.is-preview td:first-child {
+  box-shadow: inset 3px 0 0 var(--fg-green);
+}
+.admin-ach-table tbody tr.is-preview {
+  background: color-mix(in srgb, var(--fg-green) 8%, transparent);
+}
+.admin-ach-preview-flag { display: block; color: var(--fg-green); font-size: .74rem; text-transform: uppercase; letter-spacing: .04em; }
 .admin-ach-unseen { display: block; color: var(--text-dim); }
 /* Dormido o regalado: no es un fallo, es una decisión pendiente. Ámbar, no rojo. */
 .admin-ach-warn-soft { color: var(--fg-amber); }
@@ -713,7 +724,18 @@
 .admin-ach-legend dt { font-weight: 700; font-size: .8rem; }
 .admin-ach-legend dd { margin: 0; color: var(--text-muted); font-size: .8rem; line-height: 1.4; }
 
-/* La ficha del plan: lo que hay que pegar, en tres pasos numerados y con el código a la vista. */
+/* La ficha del plan: lo que hay que pegar, en tres pasos numerados y con el código a la vista.
+   VIVE DENTRO DE LA ESCALERA, debajo de su botón, así que ya no es una tarjeta suelta (`.admin-card`) sino un
+   panel embutido: se separa con un filete arriba y un fondo un grado más hundido, que es lo que dice «esto
+   pertenece a la ficha que lo rodea» sin abrir una caja dentro de otra. */
+.admin-ach-plan {
+  margin-top: .75rem;
+  padding: .75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--surface-soft) 60%, transparent);
+}
+.admin-ach-plan h4 { margin: 0; font-size: .95rem; }
 .admin-ach-plan h3 { margin: 0; font-size: .95rem; }
 .admin-ach-plan ol { margin: .5rem 0 0; padding-left: 1.2rem; display: grid; gap: .35rem; }
 .admin-ach-plan code {
