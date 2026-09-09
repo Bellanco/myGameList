@@ -340,6 +340,18 @@ describe('catálogo de logros — la vista de revisión del panel de administrac
    * una columna entera de ruido para señalar dos filas. Ahora la marca va junto al nombre del que no se ofrece, y
    * lo que este test defiende es justo eso — que la marca solo salga donde toca.
    */
+  /**
+   * LOS DOS TEXTOS LLEVAN SU RÓTULO EN LA CELDA, y no solo en la cabecera de la tabla: en móvil esta tabla se lee
+   * como fichas —cinco columnas no caben en 390 px— y ahí la cabecera no está, así que el rótulo de cada línea
+   * sale de este atributo (`admin.scss`). Sin él, las dos frases quedan una debajo de otra sin saber cuál es cuál.
+   */
+  it('cada texto lleva su rótulo encima, que es lo que lo salva en móvil', () => {
+    render(<AdminAchievements onBack={() => {}} />);
+    const fila = screen.getByText('Termina 10 juegos').closest('td') as HTMLElement;
+    expect(fila).toHaveAttribute('data-col', A.colGoalShort);
+    expect(screen.getByText('Has terminado 10 juegos').closest('td')).toHaveAttribute('data-col', A.colDoneShort);
+  });
+
   it('el retirado deja de ofrecerse, y se dice en su fila', () => {
     render(<AdminAchievements onBack={() => {}} />);
     const fila = screen.getByText('Speedrun I').closest('tr') as HTMLElement;

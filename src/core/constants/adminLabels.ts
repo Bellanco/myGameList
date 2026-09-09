@@ -433,6 +433,13 @@ export const ADMIN_ACHIEVEMENTS_UI = {
   colName: 'Nombre',
   colGoal: 'Meta (lo que falta)',
   colDone: 'Hecho (lo conseguido)',
+  /**
+   * Los mismos dos rótulos, cortos: en móvil la tabla se lee como FICHAS —cinco columnas no caben en 390 px— y
+   * cada celda lleva el suyo delante en vez de una cabecera arriba. «Meta (lo que falta)» delante de cada frase
+   * ocuparía más que la frase.
+   */
+  colGoalShort: 'Meta',
+  colDoneShort: 'Hecho',
   /** ⚑ Señal de que una escalera se dejó el `done`: el respaldo copia la meta y se lee como una tarea pendiente. */
   sameText: 'Sin texto propio: repite la meta',
 

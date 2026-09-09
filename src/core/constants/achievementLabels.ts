@@ -16,6 +16,12 @@ export const ACHIEVEMENTS_UI = {
   // las horas—, y «biblioteca» nombra el continente en vez del contenido. Además es la palabra con la que la app
   // llama a la pantalla de listas, así que en el panel se leía como si los logros fueran de esa pantalla.
   subtitle: 'Lo que llevas hecho con tus juegos, contado en medallas.',
+  /**
+   * El mismo texto para el listado de OTRA persona. Hacía falta porque el de arriba está en segunda persona y la
+   * pantalla es la misma: la ficha de una amistad se titulaba «Logros de Fulano» y debajo decía «lo que llevas
+   * hecho con tus juegos», hablando de los juegos de quien mira.
+   */
+  subtitleOf: (owner: string) => `Lo que ${owner} lleva hecho con sus juegos, contado en medallas.`,
   titleOf: (owner: string) => `Logros de ${owner}`,
   back: 'Volver',
   backToPanel: 'Volver al panel',
