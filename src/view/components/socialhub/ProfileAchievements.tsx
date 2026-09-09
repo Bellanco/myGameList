@@ -76,6 +76,10 @@ export const ProfileAchievementsScreen = memo(function ProfileAchievementsScreen
   onToggleGlobals?: () => void;
   globalsBackLabel?: string;
 }) {
+  // La APERTURA COMUNITARIA es la que hace que esta cifra sea la misma que esa persona ve en su aparato: el
+  // denominador cuenta lo que hoy está abierto para todos, no lo que cada cual tenga hecho (ver `summarizeMirror`).
+  const { open } = useAchievementsConfig();
+
   const { entries, summary, rarity } = useMemo(() => {
     const items = sortMirror(parseMirror(mirror));
     const levels = new Map(items.map((item) => [item.id, item.level]));
@@ -98,10 +102,10 @@ export const ProfileAchievementsScreen = memo(function ProfileAchievementsScreen
 
     return {
       entries,
-      summary: summarizeMirror(levels),
+      summary: summarizeMirror(levels, open),
       rarity: measureRarity(directoryMirrors),
     };
-  }, [mirror, directoryMirrors]);
+  }, [mirror, directoryMirrors, open]);
 
   return (
     <AchievementsScreen
@@ -165,9 +169,11 @@ export const ProfileGlobalAchievements = memo(function ProfileGlobalAchievements
   onToggleGlobals?: () => void;
   globalsBackLabel?: string;
 }) {
-  // La ficha de una amistad lista SOLO lo conseguido, así que no hay nada que esconder ahí; esta vista, en
-  // cambio, recorre el catálogo entero, y es donde un oculto sin conseguir se asomaría.
-  const hiddenAchievements = useAchievementsConfig().hidden;
+  // Las dos mitades de la configuración, en la misma lectura. La OCULTACIÓN recorta el catálogo de esta vista: la
+  // ficha de una amistad lista solo lo conseguido, así que allí no hay nada que esconder, pero esta recorre el
+  // catálogo entero y es donde un oculto sin conseguir se asomaría. Y la APERTURA COMUNITARIA es el denominador
+  // de su cabecera, el mismo con el que cuentan las otras dos pantallas.
+  const { hidden: hiddenAchievements, open } = useAchievementsConfig();
 
   const { entries, rarity, summary } = useMemo(() => {
     const measured = measureRarity(directoryMirrors);
@@ -177,7 +183,7 @@ export const ProfileGlobalAchievements = memo(function ProfileGlobalAchievements
     const levels = ownStates
       ? new Map([...ownStates].filter(([, state]) => state.level >= 1).map(([id, state]) => [id, state.level]))
       : new Map(parseMirror(mirror).map((item) => [item.id, item.level]));
-    const summary = summarizeMirror(levels);
+    const summary = summarizeMirror(levels, open);
     if (!measured) return { entries: [] as AchievementItem[], rarity: null, summary };
 
     const owned = new Map(parseMirror(mirror).map((item) => [item.id, item.level]));
@@ -204,7 +210,7 @@ export const ProfileGlobalAchievements = memo(function ProfileGlobalAchievements
       .map(({ def, state }) => ({ def, state }));
 
     return { entries: withoutHidden(items, hiddenAchievements), rarity: measured, summary };
-  }, [mirror, directoryMirrors, ownStates, hiddenAchievements]);
+  }, [mirror, directoryMirrors, ownStates, hiddenAchievements, open]);
 
   return (
     <AchievementsScreen

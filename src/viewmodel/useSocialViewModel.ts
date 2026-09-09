@@ -11,6 +11,8 @@ import { isNetworkFailure, isOffline } from '../core/utils/network';
 import { useOnlineStatus } from '../view/hooks/useOnlineStatus';
 import { resolveViewer, withVisiblePhotos } from '../core/social/photoVisibility';
 import { useGenericPhoto } from '../view/hooks/useGenericPhoto';
+import { useAchievementsConfig } from '../view/hooks/useAchievementsConfig';
+import { useOpenFrontier } from '../view/hooks/useOpenFrontier';
 import { SOCIAL_UI } from '../core/constants/socialLabels';
 import type { IconName } from '../core/constants/icons';
 import {
@@ -1039,8 +1041,26 @@ export function useSocialViewModel(options?: {
     };
   }, [rawSocialDirectory, authUser?.uid, ownProfileId, friendUidSet, mainSyncConfig?.gistId, ownProfileCreatedAt]);
 
-  const ownAchievements = useAchievements({ games: options?.games || EMPTY_LIBRARY, ...achievementCounters });
+  /**
+   * Lo que el panel de administración decide para todo el mundo. Aquí solo hace falta la APERTURA COMUNITARIA: es
+   * el denominador común de la fracción, y sin pasarla el hub contaba tu porcentaje sobre tu propio progreso
+   * mientras `/logros` lo contaba sobre lo que está abierto — dos cifras distintas para la misma biblioteca.
+   */
+  const achievementsConfig = useAchievementsConfig();
+
+  const ownAchievements = useAchievements({
+    games: options?.games || EMPTY_LIBRARY,
+    ...achievementCounters,
+    open: achievementsConfig.open,
+  });
   const ownAchievementStates = ENABLE_ACHIEVEMENTS ? ownAchievements.states : null;
+
+  /**
+   * Y ABRE PARA LOS DEMÁS lo que tú has alcanzado. Va aquí y en el panel de estadísticas —las dos pantallas donde
+   * se evalúan tus logros— porque quien vive en el hub y no entra nunca al panel también abre escalones.
+   * Escribir dos veces no cuesta nada: solo se publica cuando adelanta algo (ver `useOpenFrontier`).
+   */
+  useOpenFrontier(ownAchievements.byId, achievementsConfig.open);
 
   const ownAchievementsFeed = useMemo(() => {
     if (!ENABLE_ACHIEVEMENTS || !ownAchievementStates) return undefined;

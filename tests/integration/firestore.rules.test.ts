@@ -1028,8 +1028,8 @@ describe('firestore.rules', () => {
 
     /**
      * LA APERTURA COMUNITARIA (`open`) viaja en el mismo documento: es lo que decide, para TODO EL MUNDO, hasta
-     * qué escalón está abierta cada escalera. Se acota igual que `hidden` —mapa y con tope— porque es escritura
-     * de admin pero lectura de todos, y un documento sin tope es un almacén gratis.
+     * qué escalón está abierta cada escalera. Se acota igual que `hidden` —mapa y con tope— porque la lee
+     * cualquiera con sesión, y un documento sin tope es un almacén gratis.
      */
     it('acepta la apertura comunitaria, con las mismas ataduras', async () => {
       await assertSucceeds(setDoc(doc(adminDb(), 'appConfig', 'achievements'), { open: { maraton: 'maraton-15' } }));
@@ -1038,11 +1038,55 @@ describe('firestore.rules', () => {
         hidden: { 'obra-maestra': false },
         open: { maraton: 'maraton-15' },
       }));
-      await assertFails(setDoc(doc(ownerDb('uid-a'), 'appConfig', 'achievements'), { open: { maraton: 'maraton-75' } }));
       await assertFails(setDoc(doc(adminDb(), 'appConfig', 'achievements'), { open: 'maraton-15' }));
       const grande: Record<string, string> = {};
       for (let i = 0; i < 101; i += 1) grande[`ladder-${i}`] = 'x';
       await assertFails(setDoc(doc(adminDb(), 'appConfig', 'achievements'), { open: grande }));
+    });
+
+    /**
+     * LA APERTURA LA ADELANTA CUALQUIERA CON SESIÓN, y es lo que hace verdad la promesa del `open`: en cuanto un
+     * usuario alcanza un escalón, su propio cliente lo abre para todos y el denominador de la fracción deja de
+     * depender de lo que cada cual tenga hecho. Es una MEDICIÓN («alguien llegó ahí»), no una decisión de
+     * producto, y por eso no es del admin.
+     *
+     * Se prueba contra el emulador y no razonando la regla porque lo que hay que fijar es justo el borde: puede
+     * adelantar `open` y NO puede nada más.
+     */
+    it('un usuario cualquiera adelanta la apertura, y solo la apertura', async () => {
+      // Sin documento todavía: la primera escritura lo CREA, y solo con `open`.
+      await assertSucceeds(setDoc(doc(ownerDb('uid-a'), 'appConfig', 'achievements'), { open: { maraton: 'maraton-15' } }));
+      // Y sobre uno que ya existe, añadiendo escalera y adelantando la que había.
+      await assertSucceeds(setDoc(
+        doc(ownerDb('uid-b'), 'appConfig', 'achievements'),
+        { open: { maraton: 'maraton-75', sofa: 'sofa-3' } },
+        { merge: true },
+      ));
+
+      // `hidden` no lo toca: es una decisión de producto y sigue siendo del admin.
+      await assertFails(setDoc(
+        doc(ownerDb('uid-a'), 'appConfig', 'achievements'),
+        { hidden: { 'obra-maestra': false } },
+        { merge: true },
+      ));
+      await assertFails(setDoc(
+        doc(ownerDb('uid-a'), 'appConfig', 'achievements'),
+        { open: { maraton: 'maraton-75' }, hidden: { 'obra-maestra': false } },
+        { merge: true },
+      ));
+
+      // Un escalón abierto no se cierra: la escritura no puede DEJARSE ninguna escalera de las que ya estaban.
+      await assertFails(setDoc(doc(ownerDb('uid-a'), 'appConfig', 'achievements'), { open: { maraton: 'maraton-75' } }));
+
+      // Las mismas ataduras de forma y tope que para el admin, y sin sesión no se escribe nada.
+      await assertFails(setDoc(doc(ownerDb('uid-a'), 'appConfig', 'achievements'), { open: 'maraton-15' }, { merge: true }));
+      const grande: Record<string, string> = {};
+      for (let i = 0; i < 101; i += 1) grande[`ladder-${i}`] = 'x';
+      await assertFails(setDoc(doc(ownerDb('uid-a'), 'appConfig', 'achievements'), { open: grande }, { merge: true }));
+      await assertFails(setDoc(doc(anonDb(), 'appConfig', 'achievements'), { open: { maraton: 'maraton-15' } }, { merge: true }));
+
+      // Y borrar el documento sigue siendo cosa del admin: la apertura se adelanta, no se retira.
+      await assertFails(deleteDoc(doc(ownerDb('uid-a'), 'appConfig', 'achievements')));
     });
   });
 

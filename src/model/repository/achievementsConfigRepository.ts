@@ -32,6 +32,14 @@ const DOC_ID = 'achievements';
 /** Cache de sesión. `null` = todavía no se ha leído. Se invalida al escribir, que es cuando puede cambiar. */
 let cached: AchievementsConfig | null = null;
 
+/**
+ * La lectura EN VUELO, para que varias pantallas pidiendo a la vez sean una sola petición. Hace falta desde que
+ * la apertura la necesitan cuatro sitios —el listado, la ficha de otra persona, el catálogo global y el hub— que
+ * pueden montarse en el mismo render: la caché se siembra al RESOLVER, así que sin esto cada uno se traía el
+ * documento por su cuenta.
+ */
+let inFlight: Promise<AchievementsConfig> | null = null;
+
 /** Solo booleanos y solo claves de escalera: lo que venga raro del documento se ignora en vez de propagarse. */
 function sanitizeHidden(raw: unknown): HiddenOverrides {
   if (!raw || typeof raw !== 'object') return {};
@@ -64,16 +72,27 @@ function sanitizeOpen(raw: unknown): OpenFrontier {
  */
 export async function loadAchievementsConfig(force = false): Promise<AchievementsConfig> {
   if (!force && cached) return cached;
+  if (!force && inFlight) return inFlight;
+
+  const request = (async () => {
+    try {
+      const services = await initializeFirebaseServices();
+      if (!services) return NO_ACHIEVEMENTS_CONFIG;
+      const snapshot = await getDoc(doc(services.firestore, COLLECTION, DOC_ID));
+      const data = snapshot.exists() ? (snapshot.data() as { hidden?: unknown; open?: unknown }) : {};
+      cached = { hidden: sanitizeHidden(data?.hidden), open: sanitizeOpen(data?.open) };
+      return cached;
+    } catch {
+      // Sin permisos, sin red o sin documento: el catálogo manda.
+      return cached || NO_ACHIEVEMENTS_CONFIG;
+    }
+  })();
+
+  inFlight = request;
   try {
-    const services = await initializeFirebaseServices();
-    if (!services) return NO_ACHIEVEMENTS_CONFIG;
-    const snapshot = await getDoc(doc(services.firestore, COLLECTION, DOC_ID));
-    const data = snapshot.exists() ? (snapshot.data() as { hidden?: unknown; open?: unknown }) : {};
-    cached = { hidden: sanitizeHidden(data?.hidden), open: sanitizeOpen(data?.open) };
-    return cached;
-  } catch {
-    // Sin permisos, sin red o sin documento: el catálogo manda.
-    return cached || NO_ACHIEVEMENTS_CONFIG;
+    return await request;
+  } finally {
+    inFlight = null;
   }
 }
 
@@ -109,4 +128,31 @@ export async function publishOpenFrontier(open: OpenFrontier): Promise<OpenFront
   await setDoc(doc(services.firestore, COLLECTION, DOC_ID), { open }, { merge: true });
   cached = { ...current, open };
   return open;
+}
+
+/**
+ * ADELANTA LA FRONTERA COMUNITARIA DESDE EL CLIENTE, que es lo que hace que el denominador sea el mismo en todos
+ * los aparatos: en cuanto alguien alcanza un escalón, su propio navegador lo abre para el resto.
+ *
+ * ESCRIBE SOLO `open`, y las reglas no le dejan más: `hidden` sigue siendo del administrador (es una decisión de
+ * producto, no una medición), y la regla exige además que no se pierda ninguna escalera ya abierta.
+ *
+ * BEST-EFFORT Y EN SILENCIO, al contrario que las dos de arriba: aquí no hay un administrador mirando. Sin
+ * sesión, sin red o con las reglas denegando, la frontera se queda como estaba —cada cliente sigue abriendo con
+ * su propio progreso, el comportamiento anterior— y se reintenta en la apertura siguiente. Nada de lo que el
+ * usuario esté haciendo depende de esta escritura.
+ *
+ * El mapa que se pasa ya viene FUSIONADO con lo publicado (`mergeFrontiers`): esta función no decide, escribe.
+ */
+export async function advanceOpenFrontier(open: OpenFrontier): Promise<void> {
+  try {
+    const services = await initializeFirebaseServices();
+    if (!services) return;
+    const current = await loadAchievementsConfig();
+    await setDoc(doc(services.firestore, COLLECTION, DOC_ID), { open }, { merge: true });
+    // La caché de sesión se pone al día para que la pantalla no vuelva a creer que hay algo que publicar.
+    cached = { hidden: current.hidden, open };
+  } catch {
+    // Se queda sin abrir para los demás hasta la próxima. Nadie pierde nada de lo suyo por esto.
+  }
 }
