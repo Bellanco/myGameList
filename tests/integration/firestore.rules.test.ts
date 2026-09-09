@@ -1070,6 +1070,9 @@ describe('firestore.rules', () => {
 
       // Y con las mismas ataduras de forma y tope que los otros dos mapas.
       await assertFails(setDoc(doc(adminDb(), 'appConfig', 'achievements'), { extraSteps: 'completados' }));
+      // Y sin claves de más: el documento admite tres mapas y ni uno más, ni siquiera del admin. `pendingSteps`
+      // —el nombre que tuvo `extraSteps` mientras el panel solo apuntaba el umbral— ya no se admite.
+      await assertFails(setDoc(doc(adminDb(), 'appConfig', 'achievements'), { pendingSteps: { completados: [125] } }));
       const grande: Record<string, number[]> = {};
       for (let i = 0; i < 101; i += 1) grande[`ladder-${i}`] = [1];
       await assertFails(setDoc(doc(adminDb(), 'appConfig', 'achievements'), { extraSteps: grande }));

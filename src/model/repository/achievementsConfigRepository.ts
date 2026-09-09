@@ -112,15 +112,12 @@ export async function loadAchievementsConfig(force = false): Promise<Achievement
       if (!services) return NO_ACHIEVEMENTS_CONFIG;
       const snapshot = await getDoc(doc(services.firestore, COLLECTION, DOC_ID));
       const data = snapshot.exists()
-        ? (snapshot.data() as { hidden?: unknown; open?: unknown; extraSteps?: unknown; pendingSteps?: unknown })
+        ? (snapshot.data() as { hidden?: unknown; open?: unknown; extraSteps?: unknown })
         : {};
       cached = {
         hidden: sanitizeHidden(data?.hidden),
         open: sanitizeOpen(data?.open),
-        // `pendingSteps` es el nombre que tuvo este campo cuando el panel solo APUNTABA el umbral, antes de que
-        // el catálogo supiera leerlo. Se sigue admitiendo al leer para no perder lo apuntado entonces; la
-        // siguiente escritura del panel lo consolida en `extraSteps`.
-        extraSteps: sanitizeExtraSteps(data?.extraSteps ?? data?.pendingSteps),
+        extraSteps: sanitizeExtraSteps(data?.extraSteps),
       };
       // EL CATÁLOGO SE RECONSTRUYE AQUÍ, y no en cada pantalla: es el único sitio por el que pasa la
       // configuración, así que es donde se puede garantizar que el catálogo y el documento no divergen nunca.
