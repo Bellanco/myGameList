@@ -67,6 +67,38 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
     siguiente arranque, y sin marca —la primera vez de verdad— sigue callando.
 
 ### Fixed
+- **Cada usuario contaba sus logros sobre un catálogo distinto.** La regla estaba escrita y aplicada —«en cuanto
+  alguien alcanza un escalón, ese escalón queda abierto para todos»— pero el mapa que la sostiene solo lo
+  rellenaba el panel de administración a mano, así que entre publicación y publicación cada cliente abría sus
+  escaleras con su PROPIO progreso: la misma pantalla decía «196 de 249» en un aparato y «0 de 55» en otro, con
+  el mismo catálogo delante. Ahora **el avance lo publica el cliente de quien llega**: si tu progreso pasa de lo
+  abierto, tu navegador adelanta la frontera y a partir de ahí todo el mundo cuenta sobre lo mismo. Es una
+  MEDICIÓN y no una decisión —dice que alguien llegó ahí, sin quién ni cuándo—, así que las reglas dejan
+  adelantarla a cualquiera con sesión, solo hacia delante y sin poder tocar la ocultación, que sigue siendo del
+  administrador. Solo escribe cuando adelanta algo: abrir la pantalla de logros no cuesta una escritura.
+  - **Y la ficha de una amistad cuenta igual que su dueño.** Su cifra sale del espejo publicado, y ese cálculo no
+    recibía la apertura: la ficha de quien empieza decía «0 de 55» mientras esa misma persona leía «0 de 249» en
+    su pantalla. Las tres vistas —tu listado, la ficha ajena y el catálogo global— miden ya con el mismo
+    denominador.
+- **Tu propia tarjeta de logros del feed llevaba a una ficha vacía.** Se identificaba con el `profileId` local,
+  que es un UUID sembrado en el dispositivo y no el id de ningún documento, así que los dos enlaces de la tarjeta
+  —tu ficha y tus logros— abrían una pantalla que no encontraba nada, mientras las mismas direcciones con el id
+  del directorio funcionaban. Ahora va con tu id del directorio (y con el comodín `me` si todavía no tienes
+  entrada), que es lo que las rutas del hub saben resolver.
+- **El porcentaje comparado ya no espera a tener veinte personas.** Había un suelo de 20 espejos publicados y por
+  debajo la pantalla se callaba, así que con una comunidad pequeña —el día del estreno, todo el mundo— no había
+  cifra **ni lista global que ordenar**: «Logros globales» era una excusa y nada más. El argumento del suelo («con
+  siete personas, el 14 % es una persona») describe bien la cifra pero saca la conclusión contraria: con dos
+  personas el porcentaje es 0, 50 o 100 y eso es exactamente lo que hay. Se mide **desde el primer espejo** y se
+  afina según entra gente; lo que sostiene la honestidad de la cifra no era el suelo, es el denominador, que va
+  siempre pegado a ella («50 % · 1 de 2»).
+- **Y tu propia vitrina cuenta en esa muestra.** Salía del directorio ya filtrado, que te excluye por identidad
+  —es lo que impide que aparezcas en tu propia lista de gente—, así que el porcentaje se medía sobre «todos menos
+  yo»: con dos personas publicando se calculaba sobre una. Eres una persona más, y es lo que hace honesto el «1
+  de 2».
+- **«Logros globales» sigue siendo del espacio social, no del panel.** El botón vive en la pantalla de logros del
+  hub y no en `/logros`: esa vista mide el catálogo contra las vitrinas de OTRAS personas, y en el panel de
+  estadísticas no se lee ni un dato que no sea tuyo.
 - **Los logros que salen de `years` se fechaban en el futuro.** Se fechan en el 31 de diciembre de su año —toda
   la precisión que da el dato—, así que uno del año EN CURSO nacía con una fecha que no ha llegado: la fila decía
   «31 dic 2026» y el listado, que ordena de más reciente a más antiguo, lo ponía por delante de lo conseguido
