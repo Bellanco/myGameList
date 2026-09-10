@@ -97,7 +97,13 @@ export const Toolbar = memo(function Toolbar({
     <div className="toolbar">
       <div className="toolbar-top">
         <div className="search-wrap">
+          {/* El `<label>` va en `sr-only`: el diseño no quiere rótulo a la vista, pero el campo no puede
+              quedarse sin nombre accesible —el placeholder no vale, se borra al escribir— ni sin `name`, que es
+              lo que hace que el navegador guarde el historial de búsquedas en vez de tratarlo como anónimo. */}
+          <label className="sr-only" htmlFor="toolbar-search">{UI_MESSAGES.toolbar.searchLabel}</label>
           <input
+            id="toolbar-search"
+            name="buscar"
             type="search"
             className="input-base search-input"
             placeholder={UI_MESSAGES.toolbar.searchPlaceholder}
