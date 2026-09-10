@@ -1,7 +1,7 @@
 // Setup global para tests de componente (React Testing Library + jsdom).
 import '@testing-library/jest-dom/vitest';
 import { cleanup } from '@testing-library/react';
-import { afterEach } from 'vitest';
+import { afterAll, afterEach } from 'vitest';
 
 // jsdom no implementa HTMLDialogElement.showModal()/close() (A11y-1). Polyfill mínimo que refleja el atributo
 // `open` para que la lógica de `useNativeDialog` (showModal/close + evento `cancel`) se ejercite en los tests.
@@ -104,15 +104,32 @@ afterEach(() => {
  * en el mensaje. Un test que necesite ejercitar la red mockea `fetch` por su cuenta y sustituye a esto, que es lo
  * que ya hacen los que lo necesitan.
  */
+/** Intentos de salida a la red del test en curso. Los vacía y los revisa el `afterEach` de abajo. */
+const violacionesDeRed: string[] = [];
+
 const fetchReal = globalThis.fetch;
 if (typeof fetchReal === 'function') {
   const ES_LOCAL = /^(https?:\/\/)?(localhost|127\.0\.0\.1|\[::1\])(:|\/|$)/i;
+  /**
+   * Hosts que NO cuentan como salir a la red, y hay que distinguirlos o el guard no vale nada.
+   *
+   * Los fixtures usan URLs inventadas —`https://f/me.png`, `https://x/foto.png`— para probar el camino de la
+   * foto de perfil. No resuelven en ninguna parte y nunca fueron tráfico: marcarlas ponía 95 tests en rojo por
+   * ruido y escondía los cuatro intentos que sí importan. Un host SIN PUNTO no existe fuera de una red local, y
+   * los dominios de `example.*` están reservados por la RFC 2606 justo para esto.
+   */
+  const ES_FICTICIO = (host: string) => !host.includes('.')
+    || /(^|\.)(example\.(com|net|org)|test|invalid|localhost)$/i.test(host);
   globalThis.fetch = ((entrada: RequestInfo | URL, init?: RequestInit) => {
     const url = typeof entrada === 'string' ? entrada : entrada instanceof URL ? entrada.href : entrada?.url || '';
     // Las relativas no salen a ningún sitio en jsdom; las locales son emuladores y servidores de pruebas.
-    const esExterna = /^[a-z]+:\/\//i.test(url) && !ES_LOCAL.test(url);
+    const host = (() => { try { return new URL(url).host; } catch { return ''; } })();
+    const esExterna = /^[a-z]+:\/\//i.test(url) && !ES_LOCAL.test(url) && Boolean(host) && !ES_FICTICIO(host);
     if (esExterna) {
-      const host = (() => { try { return new URL(url).host; } catch { return url; } })();
+      // Se APUNTA además de lanzar. Lanzar solo no basta: el SDK de Firebase captura la excepción, la registra
+      // como «RPC_ERROR HTTP error has no status» y sigue, así que el test pasaba y el intento quedaba escondido
+      // entre el ruido. Con el registro, `afterEach` puede suspender el test que lo provocó.
+      violacionesDeRed.push(`${host} (${url.slice(0, 120)})`);
       throw new Error(
         `Un test ha intentado salir a la red: ${host}. Los tests no hablan con servidores reales —y menos con el ` +
         'proyecto de Firebase de producción, al que apunta el respaldo del cliente. Mockea el repositorio que hace ' +
@@ -122,3 +139,53 @@ if (typeof fetchReal === 'function') {
     return fetchReal(entrada as RequestInfo, init);
   }) as typeof globalThis.fetch;
 }
+
+/**
+ * RESUMEN AL FINAL DE LA EJECUCIÓN, y no un fallo por test. Es una decisión, no una rendición.
+ *
+ * Suspender el test que lo provoca sería lo ideal, pero hoy pondría 78 tests en rojo repartidos por cuatro
+ * ficheros: tres no mockean `achievementsConfigRepository` —por donde pasan `useAchievementsConfig`,
+ * `useOpenFrontier` y la caché— y uno lee de verdad el avatar de Google. Ninguno de esos fallos sería un fallo de
+ * la aplicación, y arreglarlos es una tarea aparte de la release que los destapó.
+ *
+ * Lo que NO se puede volver a perder es la señal: el intento se registra con su fichero y su host, y se imprime
+ * al acabar. Lanzar a secas no bastaba —el SDK de Firebase captura la excepción, la registra como
+ * «RPC_ERROR HTTP error has no status» y sigue—, así que la suite pasaba y el aviso se ahogaba en el ruido.
+ *
+ * Para pasar a bloquear: mockea los cuatro ficheros que salen en el resumen y cambia esto por un `throw` en un
+ * `afterEach`.
+ */
+const destinosPorFichero = new Map<string, Set<string>>();
+
+/** Tipo mínimo de `process.stderr`: el proyecto NO lleva `@types/node` a propósito (cambiaría los tipos globales
+ *  de todo el repositorio), así que se declara lo justo aquí, como se hace con `HTMLRewriter` en `functions/`. */
+declare const process: { stderr: { write(texto: string): void } };
+
+afterEach((contexto) => {
+  if (violacionesDeRed.length === 0) {
+    return;
+  }
+  const fichero = contexto?.task?.file?.name || 'fichero desconocido';
+  const destinos = destinosPorFichero.get(fichero) || new Set<string>();
+  violacionesDeRed.forEach((destino) => destinos.add(destino.replace(/ \(.*$/, '')));
+  destinosPorFichero.set(fichero, destinos);
+  violacionesDeRed.length = 0;
+});
+
+afterAll(() => {
+  if (destinosPorFichero.size === 0) {
+    return;
+  }
+  const lineas = [...destinosPorFichero.entries()]
+    .map(([fichero, destinos]) => `  · ${fichero} → ${[...destinos].join(', ')}`)
+    .join('\n');
+  // `process.stderr` y no `console.warn`: el reporter por defecto de vitest se guarda la consola de los ficheros
+  // que PASAN, que es justo el caso de todos estos. Escrito así, el aviso se ve siempre.
+  process.stderr.write(
+    '\n[red] INTENTOS DE SALIDA A LA RED BLOQUEADOS.\n'
+    + 'Ninguno llegó a salir, pero mientras estén ahí la suite depende de que el guard los pare.\n'
+    + lineas + '\n'
+    + 'Remedio: mockea el repositorio que hace la llamada. Para la configuración de logros, que no pasa por la\n'
+    + "fachada de Firebase, el sitio es `vi.mock('.../model/repository/achievementsConfigRepository', …)`.\n",
+  );
+});
