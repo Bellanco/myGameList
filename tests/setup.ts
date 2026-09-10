@@ -59,6 +59,33 @@ window.matchMedia = ((query: string) => {
   };
 }) as typeof window.matchMedia;
 
+/**
+ * LAS TRAZAS DE DIAGNÓSTICO NO SALEN EN LOS TESTS, y no es por limpieza de la salida: es lo que quita una carrera
+ * que rompía la suite entera de vez en cuando.
+ *
+ * La app deja trazas de sus pasadas asíncronas —la reconciliación del hub en cada visita, el índice que le falta
+ * a Firestore, la copia de localStorage que no cupo—. Cuando el trabajo que las emite termina justo mientras
+ * vitest cierra el worker del fichero, el mensaje llega tarde y la ejecución muere con un error que no es de
+ * ningún test: «EnvironmentTeardownError: Closing rpc while "onUserConsoleLog" was pending». La suite quedaba en
+ * verde y el proceso salía con error igualmente, así que el `pre-push` cortaba el envío sin nada que arreglar.
+ *
+ * Se descartan ANTES de llegar al reporter —ahí es donde se abre el canal— y solo las que llevan uno de los
+ * prefijos de la app. Cualquier otro mensaje sigue saliendo, y un test que quiera comprobar una traza puede
+ * seguir espiando `console` como siempre: su espía sustituye a esto.
+ */
+const PREFIJOS_DE_TRAZA = [
+  '[App]', '[IndexedDB]', '[SocialHub]', '[admin]', '[cuenta]', '[cutover]',
+  '[dev]', '[firebase]', '[gist]', '[saneado]', '[social]', '[sync]', '[estado local]',
+];
+for (const nivel of ['log', 'info', 'warn'] as const) {
+  const original = console[nivel].bind(console);
+  console[nivel] = (...args: unknown[]): void => {
+    const primero = args[0];
+    if (typeof primero === 'string' && PREFIJOS_DE_TRAZA.some((prefijo) => primero.startsWith(prefijo))) return;
+    original(...args);
+  };
+}
+
 afterEach(() => {
   cleanup();
 });
