@@ -7,3 +7,12 @@ export const HOURS_RANGES = [
   { key: '80-150', label: 'De 80 a 150 horas', shortLabel: '80 - 150h', check: (h: number) => h > 80 && h <= 150 },
   { key: '150+', label: 'Más de 150 horas', shortLabel: 'Más de 150h', check: (h: number) => h > 150 },
 ] as const;
+
+/**
+ * Anchos a los que el layout cambia de forma. Son los MISMOS números que las `@media` de las hojas
+ * (`_table.scss`, `_overlays-and-responsive.scss`), y viven aquí porque hay código que necesita saberlo:
+ * `App` conmuta las clases `compact-filters` / `table-compact` del `<body>`, y `GameTable` calcula con ellos la
+ * altura estimada de fila que usa el virtualizador. Si se mueven aquí, hay que moverlos también en el SCSS.
+ */
+export const COMPACT_TABLE_MAX_WIDTH = 1100;
+export const COMPACT_FILTERS_MAX_WIDTH = 1400;

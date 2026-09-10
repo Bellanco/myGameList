@@ -2,6 +2,7 @@ import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState, type
 import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import { DIALOG_MESSAGES, ROUTE_TAB, SYNC_BADGE_TEXT, SYNC_MESSAGES, TAB_ROUTE, TAB_TITLES, UI_MESSAGES } from './core/constants/labels';
 import { LEGAL_ROUTES, type LegalDocId } from './core/constants/legal';
+import { COMPACT_FILTERS_MAX_WIDTH, COMPACT_TABLE_MAX_WIDTH } from './core/constants/uiConfig';
 import { TAB_IDS, type TabData, type TabId } from './model/types/game';
 import { decideReviewPublication } from './core/social/reviewPublication';
 import { applyReviewPublication } from './viewmodel/applyReviewPublication';
@@ -111,11 +112,11 @@ function getLegalDocId(pathname: string): LegalDocId {
 }
 
 function isCompactFilters(): boolean {
-  return window.innerWidth <= 1400;
+  return window.innerWidth <= COMPACT_FILTERS_MAX_WIDTH;
 }
 
 function isCompactTable(): boolean {
-  return window.innerWidth <= 1100;
+  return window.innerWidth <= COMPACT_TABLE_MAX_WIDTH;
 }
 
 
@@ -335,6 +336,9 @@ export default function App() {
     } else {
       syncVm.initializeSync();
     }
+    // UNA VEZ AL MONTAR, a propósito: esto arranca el ciclo de sincronización (o cierra el retorno de OAuth), y
+    // `syncVm` se rehace en cada render. Listarlo relanzaría el arranque en bucle.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -374,6 +378,7 @@ export default function App() {
 
   // P2: `getFilteredList` ya está memoizado sobre data/filters/sort; basta con depender de la propia función
   // (cambia cuando cambian esos inputs) y de la pestaña, en vez de re-listar sus internals.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const list = useMemo(() => vm.getFilteredList(currentTab, filters), [vm.getFilteredList, currentTab, filters]);
   const activeFilterCount = useMemo(() => countActiveFilters(filters), [filters]);
 

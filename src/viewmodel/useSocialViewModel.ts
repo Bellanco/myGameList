@@ -23,10 +23,8 @@ import { TAB_IDS, type GameItem, type SyncConfig, type TabData, type TabId } fro
 import {
   clearAnalyticsUser,
   ensureProfileByEmail,
-  repairProfileDisplayName,
   getCurrentSocialAuthUser,
   getPrivateConfig,
-  purgeOwnPublicGistIds,
   setPrivateConfig,
   healOwnFriendshipIdentity,
   publishAchievementMirror,
@@ -34,7 +32,6 @@ import {
   resolveStableProfileId,
   signInWithGoogle,
   signOutSocialUser,
-  touchOwnProfileActivityThrottled,
   updateProfilePhoto,
   type FriendshipSelfInfo,
   type SocialAuthUser,
@@ -49,6 +46,7 @@ import { buildFriendshipViews } from './social/friendshipViews';
 import { useSocialDirectory } from './social/useSocialDirectory';
 import { resolveGateway } from './social/socialGateway';
 import { useSocialFriendships } from './social/useSocialFriendships';
+import { useSocialStartupTasks } from './social/useSocialStartupTasks';
 import { loadLocalState } from '../model/repository/localRepository';
 import { matchSocialRoute, OWN_PROFILE_ALIAS } from './social/socialRoutes';
 import { ENABLE_ACHIEVEMENTS, ENABLE_ACHIEVEMENTS_PUBLISH } from '../core/achievements/flags';
@@ -591,6 +589,9 @@ export function useSocialViewModel(options?: {
   // montaje bastaba con que la biblioteca aún no estuviera en localStorage en ese instante (dispositivo nuevo, otro
   // origen, o la sincronización terminando después) para que el perfil se considerase incompleto y el usuario
   // acabara en el editor teniéndolo bien configurado. Sin refresco, el rebote no se deshacía ni al sincronizar.
+  // `socialSpaceOpen` es el DISPARADOR, no una entrada del cálculo: `loadLocalState()` no lo lee, y por eso
+  // ESLint lo da por sobrante. Quitarlo devolvería el bug que este memo vino a arreglar (la relectura al abrir).
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const localState = useMemo(() => loadLocalState(), [socialSpaceOpen]);
 
   // P1: resuelve el profileId canónico del usuario actual (best-effort) para la detección de propiedad por identidad.
@@ -619,27 +620,19 @@ export function useSocialViewModel(options?: {
     };
   }, [authUser?.uid]);
 
-  // Carga el estado de amistad (amigos + peticiones) con UNA query cacheada. Degrada a vacío si Firestore falla.
-  // PRIVACIDAD (saneo al abrir social): una vez por sesión, cuando el nick ya está hidratado, propaga mi nick actual a
-  // mis docs de amistad ya existentes (que pudieron guardar un nombre antiguo/real antes del arreglo). Se espera a que
-  // el nick esté cargado (`profileName` no vacío) para NO sanear con vacío.
-  const friendshipHealedRef = useRef(false);
-  useEffect(() => {
-    if (friendshipHealedRef.current) return;
-    if (!socialSpaceOpen || !authUser?.uid || !socialCfgGistId) return;
-    const nick = profileName.trim();
-    if (!nick) return;
-    // Igual que se espera al nick para no sanear con vacío, se espera al veredicto de la foto para no sellar el
-    // avatar genérico de Google en los documentos de amistad, que es donde va denormalizado y donde más se ve.
-    if (ownPhotoVerdictPending) return;
-    friendshipHealedRef.current = true;
-    void healOwnFriendshipIdentity(authUser.uid, {
-      name: nick,
-      photo: ownPublishablePhoto,
-      socialGistId: socialCfgGistId,
-      gamesGistId: mainSyncConfig?.gistId || '',
-    });
-  }, [socialSpaceOpen, authUser?.uid, ownPublishablePhoto, ownPhotoVerdictPending, socialCfgGistId, profileName, mainSyncConfig?.gistId]);
+  // SANEADOS DE ARRANQUE. Eran cuatro efectos aquí —identidad en los docs de amistad, réplica del nick, retirada
+  // de los ids públicos y latido de uso—, cada uno con su `useRef` de una vez. Ese `useRef` moría con el
+  // desmontaje del hub, así que abrir el espacio social varias veces en una sesión los repetía todos. Ahora la
+  // política vive escrita una vez, con sello persistente por dispositivo: ver `useSocialStartupTasks`.
+  useSocialStartupTasks({
+    socialSpaceOpen,
+    uid: authUser?.uid,
+    socialGistId: socialCfgGistId,
+    gamesGistId: mainSyncConfig?.gistId || '',
+    profileName,
+    ownPublishablePhoto,
+    ownPhotoVerdictPending,
+  });
 
   // FASE 2 — MIGRACIÓN A CANAL SECRETO (una vez por sesión).
   //
@@ -659,19 +652,25 @@ export function useSocialViewModel(options?: {
     // Se fija el usuario aquí: dentro de las funciones anidadas el estado ya no se puede estrechar a no-nulo.
     const owner = authUser;
     secretMigrationRef.current = true;
+    let cancelled = false;
 
     // ¿Migró ya OTRO dispositivo? `privateConfig` es la fuente de verdad de la cuenta y solo la escribe su dueño.
     // Sin esta comprobación, dos dispositivos abriendo a la vez clonarían cada uno por su lado y recrearían la
     // deriva que esta migración viene a eliminar. Si ya hay un canal distinto ahí, se adopta en vez de clonar.
     void (async () => {
-      // Retirada del id que el perfil PÚBLICO aún anuncie. Va aquí, fuera de la migración, porque quien ya migró
-      // en otra sesión no vuelve a entrar en ella y se quedaba publicando un gist borrado indefinidamente: solo se
-      // limpiaba al publicar algo. Es best-effort y no escribe si no hay nada que retirar.
-      void purgeOwnPublicGistIds({
-        uid: owner.uid,
-        socialGistId: socialCfgGistId,
-        gamesGistId: mainSyncConfig?.gistId || '',
-      });
+      // La retirada de los ids que el perfil PÚBLICO aún anuncie ESTABA AQUÍ, y se ha ido a
+      // `useSocialStartupTasks`. Estaba dentro de esta cadena porque quien ya migró en otra sesión no vuelve a
+      // entrar en ella y se quedaba publicando un gist borrado; con esta migración ya sellada
+      // (`socialChannelPrivateFor`), quedarse aquí la habría dejado sin correr nunca más. Allí tiene su propio
+      // sello y sigue cubriendo ese caso.
+      //
+      // SELLO DEL CANAL YA SECRETO. `ensureSecretSocialGist` no puede saber si hay algo que migrar sin LISTAR los
+      // gists de la cuenta contra la API de GitHub, y eso pasaba en CADA apertura del hub para descubrir, casi
+      // siempre, que no había nada que hacer. Una vez que consta que este canal es secreto, no puede volver a ser
+      // público (GitHub no permite cambiar la visibilidad), así que el sello es definitivo para ese id.
+      const meta = await getLocalMeta().catch(() => null);
+      if (cancelled) return;
+      if (meta?.socialChannelPrivateFor === socialCfgGistId) return;
 
       const shared = await getPrivateConfig(owner.uid).catch(() => null);
       const sharedGistId = String(shared?.socialGistId || '').trim();
@@ -693,10 +692,17 @@ export function useSocialViewModel(options?: {
         // Demasiado grande para leerlo entero por la API: no se migra y se dice. Callarlo dejaría un canal
         // público para siempre sin que nadie sepa por qué.
         if (result.tooLarge) {
+          // Sin sellar a propósito: sigue siendo público y hay que reintentarlo (puede adelgazar al rotar la
+          // actividad). Sellarlo aquí lo dejaría público para siempre.
           setFeedback('warn', SOCIAL_UI.status.socialGistTooLarge);
           return;
         }
-        if (!result.migrated) return;
+        if (!result.migrated) {
+          // Nada que migrar: el canal ya era secreto (o no es de esta cuenta). Se sella para no volver a listar
+          // los gists en la próxima apertura.
+          void patchLocalMeta({ socialChannelPrivateFor: socialCfgGistId }).catch(() => {});
+          return;
+        }
 
         const currentConfig = getSocialSyncConfig();
         if (currentConfig) {
@@ -705,6 +711,8 @@ export function useSocialViewModel(options?: {
         }
         setSocialCfgGistId(result.gistId);
         setSocialCfgEtag(result.etag);
+        // El canal nuevo ya es secreto: se sella su id para que la próxima apertura no vuelva a listar los gists.
+        void patchLocalMeta({ socialChannelPrivateFor: result.gistId }).catch(() => {});
         // RETIRADA DEL GIST ANTIGUO. Es lo único que quita de circulación lo ya publicado: si se quedara, seguiría
         // siendo público e indexable para siempre. Se hace AL FINAL y con verificación previa, en este orden:
         // clonar → repuntar las tres referencias (arriba) → comprobar que el clon tiene el contenido → borrar.
@@ -723,8 +731,9 @@ export function useSocialViewModel(options?: {
             socialGistId: result.gistId,
             gamesGistId: mainSyncConfig?.gistId || '',
           }, { force: true }).catch(() => {});
-          // Ya está repuntado; el efecto de saneado no tiene que repetirlo.
-          friendshipHealedRef.current = true;
+          // Ya está repuntado. Antes había que decírselo al efecto de saneado poniéndole su `ref` a mano; ahora
+          // no hace falta: el saneado con `force` deja escrita la huella nueva, así que la tarea de arranque la
+          // encuentra al día y no repite nada.
 
           const copied = await socialGistHasContent(token, result.gistId, result.copiedEntries);
           if (!copied) {
@@ -759,6 +768,16 @@ export function useSocialViewModel(options?: {
         secretMigrationRef.current = false;
       });
     }
+
+    // El desmontaje del hub cancela la cadena: sin esto, cerrar el espacio social mientras la lectura de
+    // `LocalMeta` está en vuelo dejaba que la migración siguiera su curso contra un componente ya desmontado.
+    return () => {
+      cancelled = true;
+    };
+    // Se depende de `authUser?.uid` y NO del objeto `authUser` entero, que es lo que pide ESLint: Firebase
+    // entrega una instancia nueva en cada refresco de token, así que con el objeto esta migración se relanzaría
+    // sola cada hora sin que haya cambiado de usuario. Lo que decide aquí es la identidad, y esa es el uid.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [socialSpaceOpen, authUser?.uid, socialCfgGistId, mainSyncConfig?.token, setFeedback, profileName, ownPublishablePhoto, mainSyncConfig?.gistId]);
 
   // AUTO-HEAL DEL DIRECTORIO: RETIRADO. Su trabajo era mantener `profiles/{uid}.social.gistId` al día, y ese campo
@@ -768,19 +787,10 @@ export function useSocialViewModel(options?: {
   // Lo que sigue haciendo falta lo cubre `healOwnFriendshipIdentity`, arriba: propaga el gist de la sesión a los
   // documentos de amistad, que es donde ahora lo leen las amistades.
 
-  // LATIDO DE USO RECIENTE: refresca `profiles.updatedAt`, por el que ordena el directorio y con el que el feed
-  // decide si un amigo sigue activo. Cubre a quien entra solo a mirar; publicar lo refresca por su cuenta desde
-  // `ensureProfileByEmail`. El acotado (una escritura al día por dispositivo) vive en el propio repositorio, para
-  // que los dos latidos no puedan quedarse con intervalos distintos.
-  const profileTouchedRef = useRef(false);
-  useEffect(() => {
-    if (profileTouchedRef.current) return;
-    if (!socialSpaceOpen || !authUser?.uid || !socialCfgGistId) return;
-    profileTouchedRef.current = true;
-    const uid = authUser.uid;
-
-    void touchOwnProfileActivityThrottled(uid);
-  }, [socialSpaceOpen, authUser?.uid, socialCfgGistId]);
+  // EL LATIDO DE USO RECIENTE (`profiles.updatedAt`, por el que ordena el directorio y con el que el feed decide
+  // si un amigo sigue activo) también se ha ido a `useSocialStartupTasks`. Su acotado —una escritura al día por
+  // dispositivo— sigue viviendo en el repositorio, para que los dos latidos no puedan quedarse con intervalos
+  // distintos.
 
   // Tras un cambio de amistad (aceptar/eliminar), el conjunto de amigos cambia y con él la actividad que debe salir
   // en el feed. Se invalida la caché del directorio (feed solo-amigos) y se refresca la amistad; el efecto que
@@ -1742,30 +1752,10 @@ export function useSocialViewModel(options?: {
     void hydrateSocialProfile();
   }, [hydrateSocialProfile]);
 
-  /**
-   * REPARA LA RÉPLICA DEL NICK, una vez por sesión, al abrir el espacio social.
-   *
-   * El guardado del perfil escribe el gist y DESPUÉS replica el nombre en `profiles/{uid}`; si eso segundo falla, el
-   * feed sigue enseñando el nombre nuevo (lo lee del gist) y el directorio y el panel de administración se quedan con
-   * el viejo para siempre, porque nada lo reintentaba. Aquí se compara con lo que el perfil ya hidratado dice y se
-   * reescribe solo si difieren, igual que hace el saneado de las amistades unas líneas más arriba.
-   *
-   * Se espera a `profileName` (viene del gist, que es la fuente del nick) y a que haya canal configurado: sin eso, o
-   * no se sabe cuál es el nombre bueno o no hay perfil que reparar.
-   */
-  const nameRepairedRef = useRef(false);
-  useEffect(() => {
-    if (nameRepairedRef.current) return;
-    if (!socialSpaceOpen || !authUser?.uid || !socialCfgGistId) return;
-    const nick = profileName.trim();
-    if (!nick) return;
-    nameRepairedRef.current = true;
-    // Silenciosa cuando funciona: solo escribe si de verdad había desacuerdo, y no hay nada que contarle al usuario
-    // (su nombre es el que él puso). Si falla, se avisa por consola y se reintenta en la próxima sesión.
-    void repairProfileDisplayName(authUser.uid, nick).catch((error) => {
-      console.warn('[social] no se pudo reparar el nombre del perfil:', error instanceof Error ? error.message : error);
-    });
-  }, [socialSpaceOpen, authUser?.uid, socialCfgGistId, profileName]);
+  // LA REPARACIÓN DE LA RÉPLICA DEL NICK vive ahora en `useSocialStartupTasks`, con los otros saneados de
+  // arranque: el guardado del perfil escribe el gist y DESPUÉS replica el nombre en `profiles/{uid}`, y si eso
+  // segundo falla nada lo reintentaba. Allí lleva sello (`profileNameRepairedFor`), así que deja de costar una
+  // lectura de Firestore por apertura del hub para descubrir que el nombre ya estaba bien.
 
   // Rango propio → cadencia del feed. Una sola lectura del perfil propio (ya cacheada 60 s en memoria por
   // `getOwnProfileRef`). Cualquier fallo deja bronce: degradar es lo seguro.

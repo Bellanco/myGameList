@@ -51,6 +51,31 @@ export interface LocalMeta {
   friendshipIdentityFingerprint?: string;
   // Último latido de uso enviado a `profiles.updatedAt` desde este dispositivo (acota a una escritura diaria).
   profileTouchedAt?: number;
+  // Sellos de los SANEADOS DE ARRANQUE del espacio social (ver `viewmodel/social/useSocialStartupTasks`). Cada uno
+  // guarda la huella de las entradas con las que su tarea terminó bien; mientras no cambie, la tarea no se
+  // ejecuta. Sustituyen a un `useRef` por tarea, que moría con el desmontaje del hub y hacía que abrir el espacio
+  // social diez veces en una sesión repitiera diez veces cada saneado (medido con `npm run emulate:social`).
+  // Locales por dispositivo, por lo mismo que `friendshipIdentityFingerprint`.
+  /** Nick ya replicado a `profiles.displayName`. */
+  profileNameRepairedFor?: string;
+  /** `<socialGistId>|<gamesGistId>` ya retirados del perfil público. */
+  publicGistIdsPurgedFor?: string;
+  /** Gist social del que ya consta que es SECRETO: evita un listado de gists contra GitHub por apertura. */
+  socialChannelPrivateFor?: string;
+  /**
+   * DERIVA DE CANAL, resuelta y recordada: `uid del amigo` → id del gist social que ganó la última fusión.
+   *
+   * Cuando el directorio de Firestore y el documento de amistad anuncian gists distintos para la misma persona,
+   * la hidratación lee LOS DOS y fusiona, porque la deriva puede ir en cualquier dirección. Eso cuesta una lectura
+   * extra por amigo derivado en CADA hidratación en frío. No se puede arreglar en el origen desde aquí: las
+   * reglas solo dejan que cada parte sanee sus propios campos denormalizados, así que el que mira no puede
+   * reescribir el puntero del otro (y es correcto que no pueda).
+   *
+   * Lo que sí se puede es no volver a pagarlo: recordado el ganador, la siguiente hidratación lee solo ese. Si esa
+   * lectura falla —el gist se borró, el amigo cambió de canal—, se olvida y la pasada siguiente vuelve a
+   * aprender de las dos fuentes.
+   */
+  socialGistWinnerByFriend?: Record<string, string>;
   // Histórico del backlog: una instantánea por mes con el tamaño de cada lista. Es la ÚNICA forma de saber cómo
   // evoluciona el backlog —`listedAt` se reescribe al mover de lista, así que no se puede reconstruir a
   // posteriori— y por eso se registra desde ya aunque el gráfico llegue después. Local y por dispositivo: no

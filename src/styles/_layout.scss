@@ -389,6 +389,17 @@
 
 .settings-import-label {
   cursor: pointer;
+  /* Ancla el input recortado, que va en posición absoluta (ver `.input-hidden`). Sin esto se colgaría del
+     primer ancestro posicionado, que puede estar en cualquier parte de la página. */
+  position: relative;
+}
+
+/* El foco lo recibe el input, que está recortado y no se ve: si la etiqueta no pinta el anillo, quien navega con
+   teclado llega al control sin ninguna señal de que está ahí. `:focus-within` y no `:focus-visible` porque el
+   elemento enfocado es el hijo, no la etiqueta. */
+.settings-import-label:focus-within {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
 }
 
 .settings-card-backup {

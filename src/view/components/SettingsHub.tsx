@@ -2,6 +2,7 @@ import { memo, useMemo, useState } from 'react';
 import { COMMON_ICONS } from '../../core/constants/icons';
 import { UI_MESSAGES, VALIDATION_MESSAGES } from '../../core/constants/labels';
 import { SETTINGS_UI } from '../../core/constants/settingsLabels';
+import { FilePickerButton } from './FilePickerButton';
 import { Icon } from './Icon';
 import { PlayniteNote } from './import/PlayniteNote';
 
@@ -171,21 +172,14 @@ export const SettingsHub = memo(function SettingsHub({
               <span>{IMPORT_UI.viewInbox(inboxCount)}</span>
             </button>
           ) : null}
-          <label className="btn btn-primary settings-import-label">
-            <Icon name={COMMON_ICONS.upload} />
-            <span>{IMPORT_UI.importBtn}</span>
-            <input
-              type="file"
-              accept=".json,application/json"
-              className="input-hidden"
-              aria-label={IMPORT_UI.importAria}
-              onChange={(event) => {
-                const file = event.target.files?.[0];
-                if (file) onImportLibrary(file);
-                event.currentTarget.value = '';
-              }}
-            />
-          </label>
+          <FilePickerButton
+            id="import-library-settings"
+            className="btn btn-primary"
+            label={IMPORT_UI.importBtn}
+            ariaLabel={IMPORT_UI.importAria}
+            accept=".json,application/json"
+            onPick={onImportLibrary}
+          />
         </div>
       </div>
 
@@ -380,21 +374,14 @@ export const SettingsHub = memo(function SettingsHub({
               <Icon name={COMMON_ICONS.download} />
               <span>{SETTINGS_UI.backup.exportBtn}</span>
             </button>
-            <label className="btn btn-secondary settings-import-label">
-              <Icon name={COMMON_ICONS.upload} />
-              <span>{SETTINGS_UI.backup.importBtn}</span>
-              <input
-                type="file"
-                accept=".json"
-                className="input-hidden"
-                aria-label={SETTINGS_UI.backup.importAriaLabel}
-                onChange={(event) => {
-                  const file = event.target.files?.[0];
-                  if (file) onImport(file, overwriteImport);
-                  event.currentTarget.value = '';
-                }}
-              />
-            </label>
+            <FilePickerButton
+              id="import-backup-settings"
+              className="btn btn-secondary"
+              label={SETTINGS_UI.backup.importBtn}
+              ariaLabel={SETTINGS_UI.backup.importAriaLabel}
+              accept=".json"
+              onPick={(file) => onImport(file, overwriteImport)}
+            />
           </div>
         </div>
 

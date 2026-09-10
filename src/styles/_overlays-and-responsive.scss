@@ -607,7 +607,25 @@ body.compact-filters .filters-row.open .btn-toggle { justify-content: center; al
 /* === Clases de utilidad (inline styles migrados desde HTML) === */
 .svg-sprite   { position: absolute; width: 0; height: 0; overflow: hidden; }
 .header-left  { display: flex; align-items: center; gap: .75rem; min-width: 0; }
-.input-hidden { display: none; }
+/* A11y — El `<input type="file">` de los selectores de archivo (ver `FilePickerButton`). Se OCULTA SIN SACARLO
+   DEL ORDEN DE TABULACIÓN, y esa es toda la diferencia: antes era `display: none`, que además de esconderlo lo
+   hace inenfocable, y como el disparador visible es la `<label>` que lo envuelve —que no es focusable ni
+   responde a Intro—, importar la biblioteca y restaurar la copia de seguridad no se podían hacer con el teclado.
+   Se recorta con `clip-path` en lugar de esconderse, que es lo que conserva el foco.
+   No se reutiliza `.sr-only` porque ese lleva `!important` en todo y aquí hace falta poder ajustar el anclaje.
+   El anillo de foco lo pinta la etiqueta (`.settings-import-label:focus-within`): este input está recortado a
+   nada, así que el suyo no se vería. */
+.input-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
 .modal--sm    { max-width: 540px; }
 
 /* === Texto de ayuda bajo campos de etiquetas === */
