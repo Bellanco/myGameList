@@ -89,3 +89,36 @@ for (const nivel of ['log', 'info', 'warn'] as const) {
 afterEach(() => {
   cleanup();
 });
+
+/**
+ * NINGÚN TEST HABLA CON UN SERVIDOR DE VERDAD, y ahora se cumple en vez de confiarse.
+ *
+ * El motivo no es teórico. Al montar el emulador del espacio social (`npm run emulate:social`) sin aislar la
+ * configuración de logros, el hub habló con el Firestore de PRODUCCIÓN —`mylists-f7313`— e intentó un `Commit`
+ * sobre `appConfig/achievements`. Falló con `permission-denied` porque un test no tiene sesión, pero el intento
+ * salió del portátil: la app usa un respaldo con el proyecto real incrustado (ver `firebaseClient`), así que
+ * cualquier camino que no esté mockeado apunta a producción. Que la suite actual no lo provoque es cuestión de
+ * los datos que usa, no de que algo lo impida.
+ *
+ * Lo que hace: cualquier `fetch` a un host que no sea local rompe el test EN EL SITIO, con el host y el remedio
+ * en el mensaje. Un test que necesite ejercitar la red mockea `fetch` por su cuenta y sustituye a esto, que es lo
+ * que ya hacen los que lo necesitan.
+ */
+const fetchReal = globalThis.fetch;
+if (typeof fetchReal === 'function') {
+  const ES_LOCAL = /^(https?:\/\/)?(localhost|127\.0\.0\.1|\[::1\])(:|\/|$)/i;
+  globalThis.fetch = ((entrada: RequestInfo | URL, init?: RequestInit) => {
+    const url = typeof entrada === 'string' ? entrada : entrada instanceof URL ? entrada.href : entrada?.url || '';
+    // Las relativas no salen a ningún sitio en jsdom; las locales son emuladores y servidores de pruebas.
+    const esExterna = /^[a-z]+:\/\//i.test(url) && !ES_LOCAL.test(url);
+    if (esExterna) {
+      const host = (() => { try { return new URL(url).host; } catch { return url; } })();
+      throw new Error(
+        `Un test ha intentado salir a la red: ${host}. Los tests no hablan con servidores reales —y menos con el ` +
+        'proyecto de Firebase de producción, al que apunta el respaldo del cliente. Mockea el repositorio que hace ' +
+        `esa llamada (o el hook que lo usa) en este fichero. URL completa: ${url}`,
+      );
+    }
+    return fetchReal(entrada as RequestInfo, init);
+  }) as typeof globalThis.fetch;
+}
