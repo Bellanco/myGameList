@@ -5,6 +5,8 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
 
 ## [Unreleased]
 
+## [1.2.4] - 2026-09-10
+
 ### Added
 - **Catorce escaleras de logro nuevas** (64 escaleras, 412 escalones). No cuentan más de lo mismo: tapan los seis
   huecos que dejaban las cincuenta primeras, que medían volumen y racha y nada más. Los umbrales están medidos
@@ -199,6 +201,83 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
   publica su altura real en `--consent-h` con un `ResizeObserver` y el carril se aparta lo que hace falta, sin
   que nadie duplique la medida del otro. El recorrido estrena el caso estrecho, que es el que lo delataba de
   verdad, y las dos señales que el banner le da al carril tienen su test de componente.
+
+### Accessibility
+
+- **Importar la biblioteca y restaurar la copia de seguridad no se podían hacer con el teclado.** Los tres
+  selectores de archivo eran un `<input type="file">` oculto con `display: none` dentro de una `<label>`
+  disfrazada de botón, y `display: none` no solo esconde el campo: lo saca del orden de tabulación. Como una
+  `<label>` tampoco es enfocable ni responde a Intro, quien navega sin ratón se quedaba sin ninguna forma de
+  llegar al control — y el árbol de accesibilidad lo exponía como texto suelto, no como botón. Es un
+  incumplimiento de la 2.1.1, de nivel A, y no lo detecta ni Lighthouse (que da 100 en esa pantalla) ni axe: los
+  dos ven una etiqueta con texto y dan por bueno el conjunto. Ahora el campo se recorta con `clip-path`, que lo
+  esconde CONSERVANDO el foco, y el anillo lo pinta la etiqueta con `:focus-within`. Comprobado en el navegador:
+  el control entra en el orden de tabulación y se anuncia como botón con el nombre del archivo que espera. De
+  paso, el montaje estaba copiado en tres sitios y pasa a ser un `FilePickerButton`, para que la próxima pantalla
+  que necesite un selector no pueda volver a equivocarse.
+- **El buscador de la lista no tenía etiqueta, `id` ni `name`.** Su nombre accesible salía únicamente del
+  `placeholder`, que desaparece en cuanto se escribe: quien usa lector de pantalla perdía la referencia de qué
+  campo estaba editando justo al empezar a teclear (3.3.2). Y sin `name`, el navegador tampoco guardaba el
+  historial de búsquedas. Lleva ya `id`, `name` y una etiqueta en `sr-only` que además dice qué se busca.
+
+### Performance
+
+- **La altura estimada de fila del virtualizador no coincidía con la real en ningún ancho.** Era 50 px fijos y
+  venía de un diseño de fila anterior: hoy la fila de escritorio mide 63 y la tarjeta de móvil, 74. Solo se usa
+  para las filas que aún no se han medido, pero de ella sale el tamaño total que la tabla declara, así que con
+  1.500 juegos el documento se anunciaba un **20 % corto en escritorio y un 14 % en móvil**: la barra de
+  desplazamiento nacía corta y se recalibraba a saltos mientras el usuario bajaba, con `measureElement`
+  remidiendo sin parar (199 ms de reflujo forzado en el arranque). Ahora hay dos constantes medidas sobre el
+  build y el umbral compacto vive en `core/constants/uiConfig`, donde lo leen tanto `App` como la tabla en vez de
+  estar escrito dos veces. Medido antes y después, el desvío pasa de −20 % y −14 % a **0 % en los dos**, y
+  también al redimensionar cruzando el umbral sin recargar.
+- **Abrir el espacio social disparaba nueve cadenas de arranque aunque no hubiera nada que hacer.** Los saneados
+  —propagar la identidad a los documentos de amistad, reparar la réplica del nick, retirar los ids de gist que el
+  perfil público aún anunciara, comprobar si el canal sigue siendo un gist público— se guardaban con un `useRef`
+  de «una vez», y ese `useRef` muere con el desmontaje del hub: entrar y salir del espacio social varias veces en
+  una sesión los repetía todos. Con la caché del directorio caliente y CERO lecturas de gist, dos aperturas
+  seguían costando varias lecturas de documento de Firestore y un listado de gists contra GitHub antes de pintar
+  nada. Ahora la política se escribe una sola vez (`useSocialStartupTasks`): cada tarea declara la huella de sus
+  entradas y no corre si coincide con el sello que este dispositivo dejó la última vez que TERMINÓ BIEN, con el
+  sello en IndexedDB para que sobreviva al desmontaje y a la recarga. Un fallo no sella, así que se reintenta.
+  De nueve cadenas por apertura a cinco, y las cuatro que se van son las caras.
+- **Un amigo con el canal derivado costaba una lectura de más en cada hidratación.** Cuando el directorio de
+  Firestore y el documento de amistad anuncian gists distintos para la misma persona, la hidratación lee LOS DOS
+  y fusiona, porque la deriva puede ir en cualquier dirección y preferir a ciegas una de las dos fuentes deja al
+  amigo sin actividad la mitad de las veces. No se puede arreglar en el origen desde el lado de quien mira: las
+  reglas solo permiten que cada parte sanee sus propios campos denormalizados, así que nadie puede reescribir el
+  puntero de canal de otro — y es correcto que no pueda. Lo que sí se puede es no volver a pagarlo: resuelto el
+  ganador, se recuerda por amigo y la hidratación siguiente lee solo ese. Si esa lectura falla —gist borrado,
+  cambio de canal— se olvida y la pasada siguiente vuelve a aprender de las dos fuentes.
+- El bloque que sella la identidad del autor y normaliza las fechas de lo que sale de un gist social estaba
+  escrito tres veces (actividad, publicaciones y mensajes de lista). Ahora es uno, con el recorte ANTES del
+  sellado —normalizar 320 entradas para tirar 280 era trabajo de más— y con el respaldo de `updatedAt` cayendo en
+  la fecha de creación en vez de en «ahora», para que una fecha rota no ascienda al principio del feed.
+
+### Tests
+
+- **El espacio social se puede ejecutar sin cuenta.** No se podía observar sin una sesión de Google y un token de
+  GitHub, así que su coste y su comportamiento eran invisibles hasta abrirlo en producción. `npm run
+  emulate:social` monta el hub REAL con una población sintética —uno mismo, cuatro amigos activos, un amigo
+  inactivo, un amigo con el canal derivado, diez desconocidos y una solicitud recibida—, sustituye solo las tres
+  costuras de red y CUENTA lo que hace: lecturas de gist por identificador, consultas a Firestore, aciertos de
+  caché, cadenas de arranque y renders. No afirma nada a propósito: imprime, y por eso vive fuera de la suite.
+  Incluye un recorrido por las **catorce pantallas interiores** del hub que comprueba que ninguna cae en su error
+  boundary, que no queda ningún control sin nombre accesible y que no escriben errores en consola. De ahí salieron
+  los dos hallazgos de rendimiento de arriba.
+- **Presupuesto de llamadas del hub**, ya en la suite: en frío se lee el gist propio y el de cada amigo y ninguno
+  más —el coste crece con el número de AMIGOS y no con el tamaño del directorio—, en caliente no se lee ni uno, y
+  los saneados de arranque no se repiten al reabrir. Nadie vigilaba esto.
+- **Ningún test habla con un servidor de verdad, y ahora se cumple en vez de confiarse.** Al montar el emulador
+  sin aislar la configuración de logros, el hub habló con el Firestore de PRODUCCIÓN e intentó una escritura
+  sobre `appConfig/achievements`: falló por falta de sesión, pero el intento salió. Que la suite no lo provoque
+  era cuestión de los datos que usa, no de que algo lo impidiera. Cualquier `fetch` a un host no local rompe ya el
+  test en el sitio, con el host y el remedio en el mensaje. Cero violaciones en la suite actual.
+- **Las Pages Functions entran en el typecheck y en el linter.** Eran 1.612 líneas del edge —el canje de OAuth que
+  maneja el `client_secret`, los enlaces públicos de reseña y las cuotas— fuera de `tsconfig.json` y del bloque de
+  ESLint: el código con más superficie expuesta del repositorio era el único sin red que avisara antes. Van en su
+  propio `tsconfig.functions.json` con `lib: WebWorker`, separado del de la app a propósito, porque compartir
+  `lib` haría que el typecheck de la app dejara de avisar de un `document` usado por error en el edge.
 
 ## [1.2.0] - 2026-09-07
 

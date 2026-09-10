@@ -2,6 +2,8 @@ import { Fragment, memo, useCallback, useLayoutEffect, useMemo, useRef, useState
 import { useVirtualizer, useWindowVirtualizer } from '@tanstack/react-virtual';
 import { COMMON_ICONS, TAB_ICONS } from '../../core/constants/icons';
 import { TAB_TITLES, UI_MESSAGES } from '../../core/constants/labels';
+import { COMPACT_TABLE_MAX_WIDTH } from '../../core/constants/uiConfig';
+import { FilePickerButton } from './FilePickerButton';
 import type { GameItem, TabId, TabSort } from '../../model/types/game';
 import type { TabAction } from '../../viewmodel/useGameListViewModel';
 import { resolveGrade } from '../../core/utils/scoreScale';
@@ -45,6 +47,16 @@ interface VirtualRow {
   gameId: number;
   index: number;
 }
+
+/* Alturas de partida del virtualizador, en píxeles. MEDIDAS SOBRE EL BUILD, no elegidas a ojo: 63 px la fila de
+   tabla de escritorio (constante entre 1200 y 1500 px de ancho) y 74 px la tarjeta de móvil.
+   No hace falta que sean exactas —`measureElement` corrige cada fila en cuanto se pinta— pero sí que estén cerca,
+   porque son las que fijan el tamaño total mientras el resto de la lista sigue sin medir: con 1.500 juegos, un
+   error del 20 % son 19.000 px de barra de desplazamiento que aparecen de la nada mientras el usuario baja.
+   El valor de escritorio era 50 y venía de un diseño de fila anterior; hoy la fila mide 63. */
+const MAIN_ROW_ESTIMATE_PX = 63;
+const COMPACT_ROW_ESTIMATE_PX = 74;
+const DETAIL_ROW_ESTIMATE_PX = 320;
 
 function renderTags(values: string[], className: string, maxVisible?: number) {
   if (!values.length) return <span>—</span>;
@@ -250,8 +262,15 @@ export const GameTable = memo(function GameTable({
   // coordenadas de página, así que sin esto sus posiciones vendrían corridas por la altura de lo que hay encima
   // (barra de pestañas, toolbar, filtros abiertos…).
   const [scrollMargin, setScrollMargin] = useState(0);
+  // Por debajo de `COMPACT_TABLE_MAX_WIDTH` la fila deja de ser una fila de tabla y pasa a tarjeta (chevron +
+  // meta apilado), así que mide bastante más alto. Se calcula aquí y no con un listener propio porque este
+  // efecto ya escucha `resize` y observa el `<body>`: es exactamente el momento en el que puede haber cambiado.
+  const [compactRows, setCompactRows] = useState(() =>
+    typeof window !== 'undefined' && window.innerWidth <= COMPACT_TABLE_MAX_WIDTH,
+  );
   useLayoutEffect(() => {
     const update = () => {
+      setCompactRows(window.innerWidth <= COMPACT_TABLE_MAX_WIDTH);
       const el = parentRef.current;
       if (!el) return;
       setPageScrolls(el.scrollHeight <= el.clientHeight + 1);
@@ -286,9 +305,21 @@ export const GameTable = memo(function GameTable({
     },
     [virtualRows],
   );
+  // ESTIMACIÓN DE ALTURA. Solo la usa el virtualizador para las filas que todavía no ha medido, pero de ella
+  // depende el tamaño total que declara: con la estimación equivocada la barra de desplazamiento nace corta y se
+  // recalibra a saltos mientras el usuario baja, y `measureElement` remide sin parar (199 ms de reflujo forzado
+  // en el arranque con una biblioteca de 1.500 juegos).
+  //
+  // El valor de siempre —50— era el de la fila de tabla de ESCRITORIO, y se aplicaba también en móvil, donde la
+  // fila es una tarjeta de unos 74 px: el total salía un 14 % corto. Por eso ahora depende de `compactRows`.
   const estimateSize = useCallback(
-    (index: number) => (virtualRows[index]?.type === 'detail' ? 320 : 50),
-    [virtualRows],
+    (index: number) =>
+      virtualRows[index]?.type === 'detail'
+        ? DETAIL_ROW_ESTIMATE_PX
+        : compactRows
+          ? COMPACT_ROW_ESTIMATE_PX
+          : MAIN_ROW_ESTIMATE_PX,
+    [virtualRows, compactRows],
   );
   const measureElement = useCallback((element: Element) => element.getBoundingClientRect().height, []);
 
@@ -309,6 +340,22 @@ export const GameTable = memo(function GameTable({
     scrollMargin,
     overscan: 5,
   });
+
+  // Al cruzar el umbral compacto cambia la altura de TODAS las filas a la vez (de fila de tabla a tarjeta), así
+  // que las medidas ya guardadas dejan de valer. Sin este reinicio el virtualizador conserva el tamaño total del
+  // ancho anterior —cambiar `estimateSize` no invalida lo ya calculado— y la barra de desplazamiento se queda
+  // descuadrada hasta recargar. Solo pasa al redimensionar la ventana cruzando el umbral: quien entra desde un
+  // móvil ya arranca con la estimación correcta.
+  // La guarda NO es defensiva de más: `measure()` tira las medidas ya tomadas, y en el montaje eso llega justo
+  // después de que se midan las primeras filas. El resultado era un reinicio gratuito con la lista ya pintada
+  // (CLS de 0,10 en una biblioteca de 1.500 juegos). Aquí solo interesa el CAMBIO de umbral, nunca el arranque.
+  const lastCompactRef = useRef(compactRows);
+  useLayoutEffect(() => {
+    if (lastCompactRef.current === compactRows) return;
+    lastCompactRef.current = compactRows;
+    elementVirtualizer.measure();
+    windowVirtualizer.measure();
+  }, [compactRows, elementVirtualizer, windowVirtualizer]);
 
   const useWindowScroller = pageScrolls && virtualRows.length >= WINDOW_VIRTUALIZE_MIN_ROWS;
   const virtualize = !pageScrolls || useWindowScroller;
@@ -435,21 +482,14 @@ export const GameTable = memo(function GameTable({
                         </button>
                       ) : null}
                       {onImportLibrary ? (
-                        <label className="btn btn-secondary settings-import-label">
-                          <Icon name={COMMON_ICONS.upload} />
-                          <span>{IMPORT_UI.importBtn}</span>
-                          <input
-                            type="file"
-                            accept=".json,application/json"
-                            className="input-hidden"
-                            aria-label={IMPORT_UI.importAria}
-                            onChange={(event) => {
-                              const file = event.target.files?.[0];
-                              if (file) onImportLibrary(file);
-                              event.currentTarget.value = '';
-                            }}
-                          />
-                        </label>
+                        <FilePickerButton
+                          id="import-library-empty"
+                          className="btn btn-secondary"
+                          label={IMPORT_UI.importBtn}
+                          ariaLabel={IMPORT_UI.importAria}
+                          accept=".json,application/json"
+                          onPick={onImportLibrary}
+                        />
                       ) : null}
                       {onOpenInbox && inboxCount > 0 ? (
                         <button type="button" className="btn btn-secondary btn-accent" onClick={onOpenInbox}>

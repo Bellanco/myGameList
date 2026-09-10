@@ -338,6 +338,11 @@ export const UI_MESSAGES = {
   },
   toolbar: {
     searchPlaceholder: 'Buscar',
+    /* Etiqueta REAL del buscador (va en un `<label>` en `sr-only`). El `placeholder` no sirve de nombre
+       accesible: desaparece en cuanto se escribe, así que quien usa lector de pantalla pierde la referencia de
+       qué campo está editando en cuanto empieza a teclear (WCAG 3.3.2). Dice además QUÉ se busca, que el
+       «Buscar» a secas del placeholder no aclara. */
+    searchLabel: 'Buscar en la lista por nombre de juego',
     clearSearch: 'Limpiar búsqueda',
     toggleFilters: (open: boolean) => (open ? 'Ocultar filtros' : 'Mostrar filtros'),
     steamDeck: 'Steam Deck',
