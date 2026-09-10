@@ -294,6 +294,17 @@ vi.mock('../../src/viewmodel/useShareViewModel', () => ({
   })),
 }));
 
+// El repositorio de la configuración de logros NO pasa por la fachada de Firebase, así que sin esto el hub habla
+// con el Firestore de PRODUCCIÓN: por aquí van `useAchievementsConfig`, `useOpenFrontier` y la caché, y el
+// segundo además intenta ESCRIBIR la frontera abierta. Mockearlo aquí los cubre los tres de una vez.
+vi.mock('../../src/model/repository/achievementsConfigRepository', () => ({
+  loadAchievementsConfig: vi.fn(async () => ({ open: {}, hidden: {}, extraSteps: {} })),
+  setLadderHidden: vi.fn(async () => ({})),
+  setExtraSteps: vi.fn(async () => ({})),
+  publishOpenFrontier: vi.fn(async () => ({})),
+  advanceOpenFrontier: vi.fn(async () => {}),
+}));
+
 vi.mock('../../src/view/hooks/useAchievementsConfig', () => ({
   useAchievementsConfig: () => ({ open: {}, loading: false, error: '' }),
 }));
