@@ -129,5 +129,46 @@ module.exports = [
       "@typescript-eslint/await-thenable": "error",
       "@typescript-eslint/require-await": "error"
     }
+  },
+
+  /**
+   * PAGES FUNCTIONS — el código del edge (`functions/`).
+   *
+   * Estaba fuera de ESLint y de `tsconfig.json` por una razón que era buena cuando se escribió: lo compila
+   * Cloudflare Pages, no Vite, así que no formaba parte del programa de la app. El problema es lo que hay ahí
+   * dentro: el canje de OAuth que maneja `GITHUB_CLIENT_SECRET`, los enlaces públicos de reseña y las cuotas y
+   * baneos. Es el código con más superficie expuesta del repositorio y el único sin red que avise antes.
+   *
+   * NO lleva las reglas de React (no hay JSX aquí) ni la capa tipada (no está en el `tsconfig.json` de la app;
+   * su typecheck va aparte, con `npm run typecheck:functions`). Los globals son los del runtime de Workers, que
+   * es una plataforma distinta de la del navegador: aquí no hay `window` ni `localStorage`.
+   */
+  {
+    files: ["functions/**/*.ts"],
+    languageOptions: {
+      ecmaVersion: "latest",
+      sourceType: "module",
+      parser: tsParser,
+      globals: {
+        Request: "readonly",
+        Response: "readonly",
+        Headers: "readonly",
+        URL: "readonly",
+        fetch: "readonly",
+        crypto: "readonly",
+        TextEncoder: "readonly",
+        TextDecoder: "readonly",
+        atob: "readonly",
+        btoa: "readonly",
+        console: "readonly"
+      }
+    },
+    rules: {
+      "no-console": ["warn", { allow: ["warn", "error"] }],
+      "no-var": "error",
+      "prefer-const": "error",
+      "eqeqeq": ["error", "always"],
+      "no-restricted-globals": ["error", "isNaN", "isFinite"]
+    }
   }
 ];
