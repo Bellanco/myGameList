@@ -5,7 +5,7 @@ import { mapWithConcurrency } from '../../core/utils/concurrency';
 import { isNetworkFailure, isOffline } from '../../core/utils/network';
 import { normalizeTimestamp as toSafeTimestamp } from '../../core/utils/normalize';
 import { reviewActorsByGame } from '../../core/social/moveActivity';
-import { getCachedSocialDirectory, putCachedSocialDirectory } from '../../model/repository/indexedDbRepository';
+import { getCachedSocialDirectory, getLocalMeta, patchLocalMeta, putCachedSocialDirectory } from '../../model/repository/indexedDbRepository';
 import { getSocialSyncConfig, mergeSocialGistData, readPublicSocialGistById, type SocialGistData, type SocialProfileVisibility, type SocialSharedGame } from '../../model/repository/socialGistRepository';
 import { listSocialDirectory, type SocialAuthUser } from '../../model/repository/firebaseRepository';
 import { isOwnProfileIdentity } from './socialIdentity';
@@ -49,6 +49,42 @@ const SOCIAL_MOVES_PER_PROFILE = 120;
  */
 const isGithubCredentialError = (error: unknown): boolean =>
   error instanceof Error && /\b(401|403)\b/.test(error.message);
+
+/** Identidad del autor con la que se sella todo lo que sale de un mismo gist social. */
+interface FeedAuthor {
+  profileId: string;
+  profileDisplayName: string;
+  socialGistId: string;
+  photoURL: string;
+}
+
+/**
+ * Sella cada elemento con la identidad de su autor y NORMALIZA sus fechas, recortando al tope de su colección.
+ *
+ * Existe porque este bloque estaba escrito TRES veces —actividad, publicaciones y mensajes de lista— con el mismo
+ * encadenado de respaldos del nombre y la misma pareja de `toSafeTimestamp`. Tres copias de una regla de fechas
+ * son tres sitios donde arreglar el próximo desajuste de zona horaria, y ya ha habido dos.
+ *
+ * El recorte va ANTES del sellado: normalizar 320 entradas para tirar 280 es trabajo que no hace falta.
+ */
+function withAuthorAndDates<T extends { createdAt: number; updatedAt: number }>(
+  items: T[] | undefined,
+  author: FeedAuthor,
+  limit: number,
+): Array<T & FeedAuthor> {
+  const now = Date.now();
+  return (items || []).slice(0, limit).map((item) => {
+    const createdAt = toSafeTimestamp(item.createdAt, now);
+    return {
+      ...item,
+      createdAt,
+      // La de modificación cae en la de creación, no en «ahora»: un `updatedAt` roto no debe ascender la entrada
+      // a lo más nuevo del feed.
+      updatedAt: toSafeTimestamp(item.updatedAt, createdAt),
+      ...author,
+    };
+  });
+}
 
 /**
  * Directorio social y su hidratación: quién sale en el feed, con qué actividad y desde qué caché.
@@ -236,6 +272,14 @@ export function useSocialDirectory(options: SocialDirectoryOptions) {
       // de por cada amigo ilegible.
       let credentialFailures = 0;
 
+      // DERIVA DE CANAL YA RESUELTA (ver `LocalMeta.socialGistWinnerByFriend`). Una lectura de `LocalMeta` por
+      // hidratación —al lado de las N lecturas de gist que vienen— para no repetir la lectura doble de cada amigo
+      // cuyo directorio y documento de amistad no coinciden.
+      const rememberedWinners = (await getLocalMeta().catch(() => null))?.socialGistWinnerByFriend || {};
+      // Lo aprendido en ESTA pasada, para sellarlo de una vez al final en vez de una escritura por amigo.
+      const learnedWinners: Record<string, string> = {};
+      const forgottenWinners = new Set<string>();
+
       const withProfiles = await mapWithConcurrency(
         entries,
         SOCIAL_DIRECTORY_FETCH_CONCURRENCY,
@@ -259,9 +303,16 @@ export function useSocialDirectory(options: SocialDirectoryOptions) {
           // de amistad; abrir el hub sanea ambos), así que preferir a ciegas una de las dos fuentes deja al amigo
           // sin actividad la mitad de las veces. Si divergen, se leen las DOS y se fusionan: una lectura extra en
           // un caso raro a cambio de que su actividad no dependa de qué saneado corrió último.
-          const socialGistCandidates = [effectiveSocialGistId, ...(isFriend ? [entry.socialGistId] : [])]
+          const allSocialGistCandidates = [effectiveSocialGistId, ...(isFriend ? [entry.socialGistId] : [])]
             .map((id) => String(id || '').trim())
             .filter((id, index, all) => Boolean(id) && all.indexOf(id) === index);
+          // …y si en una pasada anterior ya se supo cuál de los dos gana, se lee SOLO ese. El ganador tiene que
+          // seguir siendo uno de los candidatos actuales: si el amigo ha cambiado de canal desde entonces, el
+          // recuerdo ya no vale y se vuelve a leer todo.
+          const remembered = rememberedWinners[entry.uid];
+          const socialGistCandidates = remembered && allSocialGistCandidates.includes(remembered)
+            ? [remembered]
+            : allSocialGistCandidates;
           // CORTE POR INACTIVIDAD: la actividad de un amigo que hace mucho que no usa la app no ocupa el feed (ni
           // gasta una lectura de su gist). Solo se aplica si conocemos su recencia; el perfil propio nunca se corta.
           const lastActiveAt = Number(entry.updatedAt || 0);
@@ -317,6 +368,11 @@ export function useSocialDirectory(options: SocialDirectoryOptions) {
             const resolvedSocialGistId = readable
               .reduce((best, item) => (item.result.value.updatedAt > best.result.value.updatedAt ? item : best))
               .gistId;
+            // Se recuerda el ganador solo cuando había DE VERDAD más de un candidato: con uno solo no hay deriva
+            // que resolver, y sellarlo convertiría el recuerdo en una copia del dato que ya está en la amistad.
+            if (allSocialGistCandidates.length > 1 && rememberedWinners[entry.uid] !== resolvedSocialGistId) {
+              learnedWinners[entry.uid] = resolvedSocialGistId;
+            }
             // Foto: prioridad al gist (con su visibilidad); si no la trae, se usa la del directorio de Firestore
             // (`entry.photoURL`) SIEMPRE QUE el usuario no la tenga desactivada. Esto propaga la foto de quienes
             // tienen el gist antiguo (sin photoURL) sin esperar a que reentren. Para uno mismo, fallback a la sesión.
@@ -328,41 +384,17 @@ export function useSocialDirectory(options: SocialDirectoryOptions) {
             // (plataformas/géneros) solo se ven para los juegos PROPIOS (fallback local en getGameItemById).
             const sharedLists: Partial<Record<TabId, SocialSharedGame[]>> = {};
 
-            const activity = socialData.activity
-              .map((activityEntry) => {
-                const now = Date.now();
-                const createdAt = toSafeTimestamp(activityEntry.createdAt, now);
-                const updatedAt = toSafeTimestamp(activityEntry.updatedAt, createdAt);
+            // Identidad del autor, resuelta UNA vez para las tres colecciones (antes se recalculaba en cada una
+            // de las tres pasadas, con el mismo encadenado de respaldos escrito tres veces).
+            const author = {
+              profileId: entry.id,
+              profileDisplayName: socialData.profile.name || entry.displayName || 'Usuario',
+              socialGistId: resolvedSocialGistId,
+              photoURL: resolvedPhoto,
+            };
 
-                return {
-                  ...activityEntry,
-                  createdAt,
-                  updatedAt,
-                  profileId: entry.id,
-                  profileDisplayName: socialData.profile.name || entry.displayName || 'Usuario',
-                  socialGistId: resolvedSocialGistId,
-                  photoURL: resolvedPhoto,
-                };
-              })
-              .slice(0, SOCIAL_ACTIVITY_PER_PROFILE);
-
-            const posts = (socialData.posts || [])
-              .map((postEntry) => {
-                const now = Date.now();
-                const createdAt = toSafeTimestamp(postEntry.createdAt, now);
-                const updatedAt = toSafeTimestamp(postEntry.updatedAt, createdAt);
-
-                return {
-                  ...postEntry,
-                  createdAt,
-                  updatedAt,
-                  profileId: entry.id,
-                  profileDisplayName: socialData.profile.name || entry.displayName || 'Usuario',
-                  socialGistId: resolvedSocialGistId,
-                  photoURL: resolvedPhoto,
-                };
-              })
-              .slice(0, SOCIAL_POSTS_PER_PROFILE);
+            const activity = withAuthorAndDates(socialData.activity, author, SOCIAL_ACTIVITY_PER_PROFILE);
+            const posts = withAuthorAndDates(socialData.posts, author, SOCIAL_POSTS_PER_PROFILE);
 
             // F4 — mensajes de lista. Se enriquecen con la identidad del autor como la actividad, y su `at` se
             // copia a `updatedAt` para que el feed pueda mezclarlos sin saber de qué campo sale la fecha de cada
@@ -376,16 +408,15 @@ export function useSocialDirectory(options: SocialDirectoryOptions) {
             // resuelve por el primero (ver `reviewActorsByGame`).
             const reviewActors = reviewActorsByGame(socialData.activity);
             const moves = (socialData.moves || [])
+              .slice(0, SOCIAL_MOVES_PER_PROFILE)
               .map((moveEntry) => ({
                 ...moveEntry,
+                // Los mensajes de lista fechan con `at`, no con `createdAt`/`updatedAt`: se copia a `updatedAt`
+                // para que el feed pueda mezclarlos sin saber de qué campo sale la fecha de cada tipo.
                 updatedAt: toSafeTimestamp(moveEntry.at, Date.now()),
                 reviewActorId: reviewActors.get(moveEntry.gameId),
-                profileId: entry.id,
-                profileDisplayName: socialData.profile.name || entry.displayName || 'Usuario',
-                socialGistId: resolvedSocialGistId,
-                photoURL: resolvedPhoto,
-              }))
-              .slice(0, SOCIAL_MOVES_PER_PROFILE);
+                ...author,
+              }));
 
             return {
               id: entry.id,
@@ -412,6 +443,12 @@ export function useSocialDirectory(options: SocialDirectoryOptions) {
             // es una credencial que ya no vale, y el usuario tiene que enterarse (abajo se avisa una sola vez).
             if (isGithubCredentialError(readError)) {
               credentialFailures += 1;
+            }
+            // Si se leyó SOLO el ganador recordado y ha fallado, el recuerdo ha caducado (gist borrado, canal
+            // cambiado): se olvida para que la pasada siguiente vuelva a aprender de las dos fuentes. Sin esto, un
+            // ganador que deja de existir dejaría al amigo sin actividad para siempre.
+            if (remembered && socialGistCandidates.length === 1) {
+              forgottenWinners.add(entry.uid);
             }
             return {
               id: entry.id,
@@ -441,6 +478,17 @@ export function useSocialDirectory(options: SocialDirectoryOptions) {
       setNetworkFailure(false);
       if (credentialFailures > 0) {
         setFeedback('warn', SOCIAL_UI.status.socialReadUnauthorized);
+      }
+
+      // Lo aprendido (y lo olvidado) sobre la deriva de canal, en UNA escritura al final. Solo si hay algo que
+      // cambiar: `patchLocalMeta` abre una transacción de IndexedDB y no hay motivo para abrirla en cada
+      // hidratación de un directorio sin deriva, que es el caso normal.
+      if (Object.keys(learnedWinners).length > 0 || forgottenWinners.size > 0) {
+        const nextWinners = { ...rememberedWinners, ...learnedWinners };
+        forgottenWinners.forEach((uid) => delete nextWinners[uid]);
+        // Con `catch`: `patchLocalMeta` rechaza si IndexedDB no está disponible (modo privado, cuota), y esto
+        // corre suelto. Sin él, no aprender la deriva se convertía en un rechazo no capturado.
+        void patchLocalMeta({ socialGistWinnerByFriend: nextWinners }).catch(() => {});
       }
 
       void putCachedSocialDirectory(socialCfgGistId, withProfiles);
