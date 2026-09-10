@@ -42,7 +42,7 @@ jobs:
         run: npm run build
 
       - name: TypeScript check
-        run: npx tsc --noEmit
+        run: npm run typecheck
 
       - name: Run unit tests
         run: npm run test -- --reporter=verbose

@@ -5,6 +5,8 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
 
 ## [Unreleased]
 
+## [1.2.4] - 2026-09-10
+
 ### Added
 - **Catorce escaleras de logro nuevas** (64 escaleras, 412 escalones). No cuentan más de lo mismo: tapan los seis
   huecos que dejaban las cincuenta primeras, que medían volumen y racha y nada más. Los umbrales están medidos
