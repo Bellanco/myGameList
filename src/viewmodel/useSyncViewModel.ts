@@ -412,7 +412,10 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
       pendingRemoteSyncTimerRef.current = null;
       schedulePendingRemoteSync();
     }, delay);
-  }, [canRead, getNextReadDelayMs, initializeSync]);
+    // `canRead` y `getNextReadDelayMs` NO van aquí: son importaciones de `syncMachineRepository`, no valores del
+    // render. Su identidad no cambia nunca, así que listarlas no cambiaba cuándo se recrea este callback — solo
+    // sugería que sí, y era lo que ESLint señalaba.
+  }, [initializeSync]);
 
   const connectSync = useCallback(async () => {
     const lock = acquireSyncLock(); // S2: no conectar/sincronizar en paralelo con un ciclo en vuelo

@@ -175,6 +175,9 @@ export function RouletteModal({ open, onClose, title, candidates, weight, tag, r
     setReviewOpen(false);
     picksRef.current = new Map();
     genrePicksRef.current = new Map();
+    // Solo `open`: CONGELAR el pool al abrir es justo lo que hace este efecto. Si `candidates` fuera dependencia,
+    // guardar un juego con la ruleta abierta reharía el pool a media tirada.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
   // Con el pool congelado, monta la cinta de reposo (síncrono → primer pintado correcto).
@@ -182,6 +185,10 @@ export function RouletteModal({ open, onClose, title, candidates, weight, tag, r
     if (!open || !n || phase !== 'idle') return;
     setReel(buildIdleReel(pool));
     posRef.current = IDLE_CENTER;
+    // `phase` se LEE en la guarda pero no es dependencia a propósito: la cinta de reposo se monta cuando cambia
+    // el pool, no cada vez que la fase vuelve a `idle` (eso la remontaría al terminar cada tirada, borrando la
+    // posición en la que quedó). `buildIdleReel` es estable y solo depende del pool que ya está listado.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, pool, n]);
 
   // Arranque del giro: tras montar la cinta de giro (useLayoutEffect → el DOM ya tiene los nombres), anima
