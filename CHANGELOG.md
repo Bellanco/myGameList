@@ -5,6 +5,15 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
 
 ## [Unreleased]
 
+### Fixed
+- **Los logros que no ve nadie ya no salen en los «Logros globales».** Un escalón CERRADO —uno al que no ha
+  llegado ninguna persona y que tampoco se le ofrece a nadie— no cuenta para el porcentaje desde que la apertura
+  es comunitaria, pero esa lista seguía recorriendo el catálogo entero y los pintaba con su «0 %»: enseñaba 402
+  filas debajo de una cabecera que decía «de 249», y contaba una escalera que todavía no está en juego. Ahora la
+  lista y la cifra salen de la misma regla (`visibleIds`): se enseña lo conseguido, lo que ha abierto la
+  comunidad y el siguiente escalón de cada escalera —que es el reto de quien está en la línea—, y nada por
+  encima. En cuanto alguien alcanza un escalón, se abre para todo el mundo y aparece solo.
+
 ## [1.2.4] - 2026-09-10
 
 ### Added

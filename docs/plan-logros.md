@@ -675,6 +675,12 @@ Y el denominador tiene sus propias reglas, porque si baila la cifra miente:
   decisión, y por eso la regla de Firestore deja escribir `open` a cualquiera con sesión (solo hacia delante, y
   sin tocar `hidden`, que sí es decisión del administrador). A cambio de todo esto el denominador crece solo:
   tu porcentaje puede bajar sin que toques nada, porque alguien abrió un escalón nuevo.
+  ⚑ **Y lo cerrado tampoco se PINTA en ninguna parte**, que es la otra mitad de la misma regla: si un escalón no
+  cuenta porque nadie lo ha visto, tampoco puede aparecer en una lista. El listado (`listForScreen`) y la
+  fracción (`summarize`) ya lo cumplían, pero los **logros globales** del hub recorrían el catálogo entero y
+  pintaban los cerrados con su «0 %» — 402 filas bajo una cabecera que decía «de 249». La regla vive en una sola
+  función, `visibleIds` (`core/achievements/visibility.ts`), y de ahí la toman las dos pantallas: dos listas del
+  mismo catálogo no pueden decidir por separado qué existe.
 - **Añadir logros al catálogo baja la fracción de todo el mundo.** Es el mismo efecto que tiene en Steam publicar
   logros de DLC, y no tiene arreglo bonito: se asume y **se dice en la pantalla** («22 de 32 del catálogo
   actual»). Lo que no se hace nunca es congelar la fracción por versión, que sería inventarse un número.

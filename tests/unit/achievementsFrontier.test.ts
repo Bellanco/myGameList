@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { frontierKey, mergeFrontiers, ownFrontier } from '../../src/core/achievements/frontier';
 import { summarize, summarizeMirror } from '../../src/core/achievements/summary';
-import { ACHIEVEMENTS_BY_LADDER } from '../../src/core/achievements/catalog';
+import { ACHIEVEMENTS_BY_LADDER, SCORING_ACHIEVEMENTS } from '../../src/core/achievements/catalog';
+import { visibleIds } from '../../src/core/achievements/visibility';
 import type { AchievementState } from '../../src/core/achievements/types';
 
 const earned = (ids: readonly string[]): Map<string, AchievementState> =>
@@ -112,5 +113,47 @@ describe('todos cuentan sobre el mismo catálogo', () => {
     const despues = mergeFrontiers(antes, ownFrontier(earned([...seis, steps('completados')[6]])));
 
     expect(summarize([], despues).total).toBe(summarize([], antes).total + 1);
+  });
+});
+
+/**
+ * LO CERRADO NO EXISTE TODAVÍA: ni se pinta ni cuenta. La regla estaba aplicada en el listado y en la fracción,
+ * pero los LOGROS GLOBALES del hub recorrían el catálogo entero y pintaban con su «0 %» los escalones a los que
+ * no ha llegado nadie — una lista de 402 filas bajo una cabecera que decía «de 249».
+ */
+describe('lo que está cerrado para todos no sale en ninguna lista', () => {
+  it('enseña lo abierto y su zanahoria, y nada por encima', () => {
+    const completados = steps('completados');
+    const frontier = mergeFrontiers({}, ownFrontier(earned(completados.slice(0, 3))));
+    const visible = visibleIds(ACHIEVEMENTS_BY_LADDER.values(), frontier, () => false);
+
+    // Alcanzado por alguien: se ve. Y el siguiente, que es su reto.
+    expect(visible.has(completados[2])).toBe(true);
+    expect(visible.has(completados[3])).toBe(true);
+    // De ahí para arriba no lo ve nadie, ni quien va en cabeza.
+    expect(visible.has(completados[4])).toBe(false);
+  });
+
+  it('lo que has conseguido se ve siempre, esté abierto o no', () => {
+    const completados = steps('completados');
+    const mio = completados[5];
+    const visible = visibleIds(ACHIEVEMENTS_BY_LADDER.values(), {}, (def) => def.id === mio);
+
+    expect(visible.has(mio)).toBe(true);
+    // Y tú también eres «alguien»: tenerlo abre el siguiente.
+    expect(visible.has(completados[6])).toBe(true);
+    expect(visible.has(completados[7])).toBe(false);
+  });
+
+  /** La lista y el denominador cuentan lo mismo: es lo que separaba a la cabecera de los globales de su lista. */
+  it('lo visible sin conseguir nada es exactamente lo que cuenta el denominador', () => {
+    const frontier = mergeFrontiers({}, ownFrontier(earned([
+      ...steps('completados').slice(0, 6),
+      ...steps('plataformas').slice(0, 4),
+    ])));
+    const visible = visibleIds(ACHIEVEMENTS_BY_LADDER.values(), frontier, () => false);
+    const puntuables = SCORING_ACHIEVEMENTS.filter((def) => visible.has(def.id));
+
+    expect(puntuables.length).toBe(summarize([], frontier).total);
   });
 });
