@@ -4,9 +4,9 @@ import { AchievementsScreen, formatUnlockDate } from '../stats/AchievementsScree
 import { AchievementSprite } from '../AchievementSprite';
 import { measureRarity, parseMirror, sortMirror } from '../../../core/achievements/pack';
 import { summarize, summarizeMirror } from '../../../core/achievements/summary';
-import { ACHIEVEMENTS_BY_ID, SCORING_ACHIEVEMENTS } from '../../../core/achievements/catalog';
+import { ACHIEVEMENTS_BY_ID, ACHIEVEMENTS_BY_LADDER, SCORING_ACHIEVEMENTS } from '../../../core/achievements/catalog';
 import { ACHIEVEMENTS_UI } from '../../../core/constants/achievementLabels';
-import { withoutHidden } from '../../../core/achievements/visibility';
+import { visibleIds, withoutHidden } from '../../../core/achievements/visibility';
 import { compareEarned, listForScreen } from '../../../viewmodel/useAchievements';
 import { useAchievementsConfig } from '../../hooks/useAchievementsConfig';
 import type { AchievementItem, AchievementState } from '../../../core/achievements/types';
@@ -236,8 +236,8 @@ export const ProfileGlobalAchievements = memo(function ProfileGlobalAchievements
 }) {
   // Las dos mitades de la configuración, en la misma lectura. La OCULTACIÓN recorta el catálogo de esta vista: la
   // ficha de una amistad lista solo lo conseguido, así que allí no hay nada que esconder, pero esta recorre el
-  // catálogo entero y es donde un oculto sin conseguir se asomaría. Y la APERTURA COMUNITARIA es el denominador
-  // de su cabecera, el mismo con el que cuentan las otras dos pantallas.
+  // catálogo entero y es donde un oculto sin conseguir se asomaría. Y la APERTURA COMUNITARIA recorta la LISTA
+  // igual que el denominador de su cabecera, que es lo que tenían que haber compartido desde el principio.
   const { hidden: hiddenAchievements, open } = useAchievementsConfig();
 
   const { entries, rarity, summary } = useMemo(() => {
@@ -253,7 +253,19 @@ export const ProfileGlobalAchievements = memo(function ProfileGlobalAchievements
 
     const owned = new Map(parseMirror(mirror).map((item) => [item.id, item.level]));
 
+    // LO QUE NO VE NADIE TAMPOCO SE PINTA AQUÍ. Esta lista recorría el catálogo entero, así que los escalones
+    // CERRADOS —los que están por encima de la frontera, a los que no ha llegado nadie ni se le ofrecen a nadie—
+    // aparecían con su «0 %» y le contaban a quien mira una escalera que todavía no está en juego. Y se
+    // contradecía con su propia cabecera, cuyo denominador sí sale de lo abierto (`summarizeMirror`): la lista
+    // tenía 402 filas y la cifra decía «de 249».
+    //
+    // LA APERTURA SE MIDE CON EL MISMO `levels` QUE LA CABECERA —lo conseguido por el dueño de esta ficha— para
+    // que la lista y la cifra no puedan separarse. Es lo que ya hacía `summarizeMirror`, aquí aplicado a las
+    // filas; y en cuanto alguien abre un escalón, la frontera publicada lo destapa para todo el mundo.
+    const visible = visibleIds(ACHIEVEMENTS_BY_LADDER.values(), open, (def) => (levels.get(def.id) ?? 0) >= 1);
+
     const items = SCORING_ACHIEVEMENTS
+      .filter((def) => visible.has(def.id))
       .map((def) => {
         // En tu perfil manda el evaluador —trae el progreso—; en el ajeno, el espejo, que solo trae el nivel.
         const own = ownStates?.get(def.id);

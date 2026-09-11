@@ -99,6 +99,45 @@ export function openThrough(
   return reached;
 }
 
+/**
+ * LOS `id` QUE SE ENSEÑAN, de todas las escaleras a la vez: lo que está ABIERTO más todo lo CONSEGUIDO.
+ *
+ * Es la regla de `openThrough` aplicada al catálogo entero, en un solo sitio porque la usan dos pantallas que
+ * tienen que contar lo mismo: el listado de `/logros` (`listForScreen`) y los **logros globales** del hub. La
+ * segunda recorría `SCORING_ACHIEVEMENTS` entero y solo quitaba los ocultos, así que pintaba con su «0 %» los
+ * escalones que no le aparecen a nadie —y contradecía a su propia cabecera, cuyo denominador sí era el abierto—.
+ *
+ * TRES REGLAS, y son las del §6.7:
+ *
+ *  1. lo CONSEGUIDO se ve siempre, esté abierto o no: la marca de agua puede sostener un escalón cuyo tramo se
+ *     haya quedado atrás, y una medalla que no aparece en ninguna parte es el peor fallo posible aquí;
+ *  2. de lo que falta, hasta donde llegue la apertura comunitaria (`openThrough`), que incluye la zanahoria: el
+ *     siguiente escalón que se ofrece es el reto de quien está en la línea, y ese SÍ se le enseña a todos;
+ *  3. un RETIRADO no se ofrece a quien no lo tenga (§6.4).
+ *
+ * Lo OCULTO no se decide aquí: es la otra capa (`withoutHidden`), que se aplica al final para que un oculto
+ * tampoco gaste la zanahoria de su escalera.
+ */
+export function visibleIds(
+  ladders: Iterable<readonly AchievementDef[]>,
+  frontier: OpenFrontier,
+  isEarned: (def: AchievementDef) => boolean,
+): ReadonlySet<string> {
+  const visible = new Set<string>();
+  for (const steps of ladders) {
+    const openTo = openThrough(steps, frontier, isEarned);
+    steps.forEach((def, index) => {
+      if (isEarned(def)) {
+        visible.add(def.id);
+        return;
+      }
+      if (def.retired) return;
+      if (index <= openTo) visible.add(def.id);
+    });
+  }
+  return visible;
+}
+
 /** ¿Está oculto este escalón? El interruptor manda; si no dice nada, el catálogo. */
 export function isHidden(def: AchievementDef, overrides: HiddenOverrides = {}): boolean {
   const override = overrides[def.ladder];
