@@ -16,6 +16,24 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
   TIPOS y no longitudes: un `id` que no es un número es corrupción y no se publica, pero cuánto ha escrito
   alguien es un dato suyo y legítimo. Lo que sí hay que acotar —el TAMAÑO de lo que se sube— lo sigue vigilando
   el límite del gist, con la medida real de GitHub y ya comprimido, que es la que de verdad protege.
+- **Quien tenía algo sin subir no volvía a actualizarse solo.** La recarga automática —la que estrenó la 1.2.5:
+  con la pestaña oculta, o a la vista pero quieta— se cancela si hay trabajo a medias, y como señal de «trabajo
+  a medias» se miraba la marca de cambios pendientes de subir al gist. Esa marca responde a otra pregunta
+  —«¿queda algo por subir?»— y puede ser cierta PARA SIEMPRE: solo se borra tras una escritura correcta. Así
+  que se quedaba puesta en dos grupos enteros: quien **no** usa sincronización (cualquier edición la marca y no
+  hay ningún ciclo que la limpie, o sea que basta con haber guardado un juego alguna vez) y quien la tiene
+  averiada. A todos ellos se les apagaba la puesta al día automática y se quedaban esperando a pulsar el aviso.
+  Lo peor era el segundo grupo: la persona cuya sincronización está rota es justo la que necesita la versión que
+  la arregla, y su avería impedía que llegara. Ahora lo que espera es lo único que había que respetar: un ciclo
+  de sincronización EN MARCHA. Recargar con cambios sin subir no pierde nada —viven en el dispositivo, la marca
+  sobrevive a la recarga y el primer ciclo tras arrancar los empuja—; recargar a mitad de un ciclo solo obliga a
+  repetirlo, y eso se sigue evitando.
+  - **Y de paso, un formulario a medio escribir tampoco se pierde.** Se miraban los modales y los campos de
+    texto largo, pero el nick del perfil social es un campo suelto en su pantalla y no lo veía ninguna de las
+    dos señales: se salvaba de rebote por la marca de cambios pendientes, o sea que quien tenía todo
+    sincronizado ya podía perderlo. Ahora cuenta tener el foco en un campo con algo escrito, que es donde de
+    verdad hay alguien tecleando; el buscador de la barra, que casi siempre lleva texto, solo frena la recarga
+    mientras se esté buscando de verdad.
 - **El detalle de una actividad social hacía pasar el adelanto por la reseña entera.** Por el canal social viajan
   160 caracteres; el texto completo, los puntos fuertes y los débiles viven en el gist de LISTADOS de su autor.
   Cuando ese no llega —porque aún está en camino, porque no se ha podido leer o porque esa persona no ha
@@ -39,6 +57,13 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
   fallar. Pero sellar dependía de que no fallaran, así que ese «no he podido mirar» quedaba grabado como «ya
   está hecho»; y como la huella es el propio nick, nadie volvía a intentarlo mientras no lo cambiara. Los sellos
   llevan fecha y caducan a la semana, igual que el de las amistades.
+- **Un nombre de cuenta muy largo dejaba a esa persona sin propagar su identidad.** El nick admite hasta 500
+  caracteres en el gist y el editor de perfil corta en 60, pero entre medias está el nombre de la cuenta de
+  Google, que entra por el respaldo sin pasar por ninguna pantalla. Las reglas de `friendships` aceptan 120, así
+  que con un nombre más largo cada saneado intentaba una escritura que se denegaba —en cada apertura del hub, y
+  sin que nada lo contara—: sus amigos no recibían ni su nombre ni el id de su gist de listados, que viaja con
+  él. Ahora el cliente recorta con la misma cota que ya usa para el perfil público, y un test de reglas ata los
+  dos números para que no puedan volver a separarse.
 - **El panel preguntaba por un nombre que nadie discutía.** El bloque de identidad de `/admin` aparece cuando está
   rancio el nombre O la foto, pero la confirmación usaba siempre el texto del nombre: con la foto desactualizada
   y el nick impecable, preguntaba «¿escribir «Ada» como nombre de Ada?» —el mismo nombre dos veces, señalando un
