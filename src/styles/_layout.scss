@@ -1481,6 +1481,20 @@
   min-width: 0;
 }
 
+/* Aviso de que lo de arriba es el ADELANTO del canal social y no la reseña entera (ver `detailPreviewOnly`).
+   Va FUERA de `.hub-detail-body` a propósito: en pantalla ancha ese cuerpo se pone en fila y la nota acabaría
+   de tercera columna, cuando lo que dice es de la tarjeta entera. Atenuada y con filo a la izquierda: es una
+   acotación al margen, no un error —no hay nada roto ni nada que el lector pueda hacer—. */
+.hub-detail-preview-note {
+  margin: .9rem 0 0;
+  padding-left: .7rem;
+  border-left: 2px solid var(--border);
+  color: var(--text-dim);
+  font-size: .82rem;
+  line-height: 1.35;
+  text-wrap: pretty;
+}
+
 @container (min-width: 44rem) {
   .hub-detail-body {
     flex-direction: row;

@@ -72,7 +72,16 @@ export function SocialDetailScreen({
   }
   const gameItem = getGameItemById(activeDetailEvent.profileId, activeDetailEvent.gameId);
   // Reseña COMPLETA para juegos propios (gameItem.review); para eventos ajenos cae al snippet (≤160) del evento.
-  const reviewText = String((gameItem?.review ?? activeDetailEvent.snippet) || '').trim();
+  const fullReview = String(gameItem?.review || '').trim();
+  const reviewText = fullReview || String(activeDetailEvent.snippet || '').trim();
+  /**
+   * ¿Lo que se está enseñando es el ADELANTO y no la reseña?
+   *
+   * Se dice, en vez de dejar que un texto cortado a mitad de palabra pase por una reseña entera. Pasó con un
+   * usuario real cuya sincronización de listas llevaba un mes rota: sus amigos veían 160 caracteres sin puntos
+   * fuertes ni débiles y lo que parecía es que la pantalla del detalle estuviera mal.
+   */
+  const previewOnly = Boolean(reviewText) && !fullReview;
   const updatedAtDate = new Date(activeDetailEvent.updatedAt);
   const hasValidUpdatedAt = !Number.isNaN(updatedAtDate.getTime());
   const analyzedAtLabel = hasValidUpdatedAt
@@ -115,6 +124,7 @@ export function SocialDetailScreen({
             strengths={gameItem?.strengths}
             weaknesses={gameItem?.weaknesses}
           />
+          {previewOnly ? <p className="hub-detail-preview-note">{SOCIAL_UI.feed.detailPreviewOnly}</p> : null}
         </article>
         {related}
         <HubStatus status={status} statusKind={statusKind} />

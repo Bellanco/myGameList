@@ -73,6 +73,21 @@ describe('SocialDetailScreen — game/:id/review', () => {
     expect(screen.queryByText(SOCIAL_UI.feed.metadataPlatforms)).not.toBeInTheDocument();
   });
 
+  /**
+   * Y LO DICE. El adelanto del canal social son ≤160 caracteres, así que se corta a mitad de palabra: sin
+   * avisar, se lee como una reseña que su autor dejó a medias. Pasó de verdad —una sincronización de listas
+   * rota durante un mes— y lo que pareció roto fue esta pantalla, no el canal que no llegaba.
+   */
+  it('avisa de que es un adelanto cuando no ha llegado la reseña completa', () => {
+    renderDetail(() => null);
+    expect(screen.getByText(SOCIAL_UI.feed.detailPreviewOnly)).toBeInTheDocument();
+  });
+
+  it('con la reseña completa delante no hay aviso que dar', () => {
+    renderDetail(() => fullGame);
+    expect(screen.queryByText(SOCIAL_UI.feed.detailPreviewOnly)).not.toBeInTheDocument();
+  });
+
   it('el avatar es clicable y abre el perfil del autor', () => {
     const onOpenProfileDetail = vi.fn();
     render(
