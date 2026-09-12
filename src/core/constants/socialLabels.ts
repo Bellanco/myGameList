@@ -197,6 +197,15 @@ export const SOCIAL_UI = {
     detailSubtitle: 'Contenido completo del análisis seleccionado.',
     detailActionsAria: 'Acciones del detalle social',
     detailMissing: 'No se encontró la actividad solicitada o ya no está disponible.',
+    /**
+     * El texto que se enseña es el ADELANTO del canal social (≤160 caracteres), no la reseña.
+     *
+     * La completa vive en el gist de LISTADOS de su autor, y hay motivos legítimos para que no esté aquí: que
+     * aún esté llegando, que no se haya podido leer, o que esa persona no haya sincronizado sus listas desde
+     * que la escribió. Sin decirlo, un adelanto cortado a mitad de palabra se lee como una reseña que alguien
+     * dejó a medias —y de paso se buscaba el fallo en el sitio equivocado—.
+     */
+    detailPreviewOnly: 'Esto es solo el adelanto: el texto completo está en los listados de su autor y todavía no ha llegado aquí.',
     metadataPlatforms: 'Plataformas:',
     metadataGenres: 'Géneros:',
     metadataStrengths: 'Puntos fuertes:',

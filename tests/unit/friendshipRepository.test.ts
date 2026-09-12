@@ -260,6 +260,49 @@ describe('healOwnFriendshipIdentity', () => {
     expect(batchedOps().at(-1)?.fields).toMatchObject({ requesterName: 'OtroNick' });
   });
 
+  /**
+   * EL AGUJERO QUE DEJABA LA HUELLA SOLA. Responde a «¿ha cambiado mi identidad?», y con eso se daba por
+   * respondida otra pregunta distinta: «¿están mis amistades al día?». Una amistad creada DESPUÉS del sellado
+   * guarda lo que hubiera al aceptarla —un `gamesGistId` aún sin hidratar, por ejemplo— y la huella sigue
+   * coincidiendo, así que el saneado salía en su primera línea para siempre: sus amigos le veían con el nick
+   * viejo y le leían las listas de un gist abandonado mientras él abría la aplicación a diario.
+   */
+  it('pasada la ventana de revisión vuelve a comprobar aunque la huella coincida', async () => {
+    getDocsMock.mockResolvedValue(
+      snapshot([{ id: 'me__x', data: { users: ['me', 'x'], requester: 'me', recipient: 'x', status: 'accepted' } }]),
+    );
+    const self = { name: 'MiNick', photo: 'p', socialGistId: 'gs', gamesGistId: 'gg' };
+
+    await healOwnFriendshipIdentity('me', self);
+    expect(getDocsMock).toHaveBeenCalledTimes(1);
+
+    // Recién sellada: sigue sin costar ni una lectura.
+    await healOwnFriendshipIdentity('me', self);
+    expect(getDocsMock).toHaveBeenCalledTimes(1);
+
+    // Ocho días después, la misma identidad vuelve a revisarse.
+    localMeta = { ...(localMeta || {}), friendshipIdentityHealedAt: Date.now() - 8 * 24 * 60 * 60 * 1000 };
+    await healOwnFriendshipIdentity('me', self);
+    expect(getDocsMock).toHaveBeenCalledTimes(2);
+  });
+
+  // ...y esa revisión no escribe nada si de verdad no hay desacuerdo: `diverges` sigue mandando sobre la escritura.
+  it('la revisión periódica no escribe cuando las amistades ya están de acuerdo', async () => {
+    const alDia = {
+      users: ['me', 'x'], requester: 'me', recipient: 'x', status: 'accepted',
+      requesterName: 'MiNick', requesterPhoto: 'p', requesterSocialGistId: 'gs', requesterGamesGistId: 'gg',
+    };
+    getDocsMock.mockResolvedValue(snapshot([{ id: 'me__x', data: alDia }]));
+    const self = { name: 'MiNick', photo: 'p', socialGistId: 'gs', gamesGistId: 'gg' };
+
+    await healOwnFriendshipIdentity('me', self);
+    localMeta = { ...(localMeta || {}), friendshipIdentityHealedAt: Date.now() - 8 * 24 * 60 * 60 * 1000 };
+    await healOwnFriendshipIdentity('me', self);
+
+    expect(getDocsMock).toHaveBeenCalledTimes(2);
+    expect(batchUpdateMock).not.toHaveBeenCalled();
+  });
+
   it('`force` sanea aunque la huella coincida (migración de canal: el gist viejo se va a borrar)', async () => {
     getDocsMock.mockResolvedValue(
       snapshot([{ id: 'me__x', data: { users: ['me', 'x'], requester: 'me', recipient: 'x', status: 'accepted' } }]),
