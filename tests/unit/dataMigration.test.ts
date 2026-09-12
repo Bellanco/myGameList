@@ -4,7 +4,7 @@ import { isMigrationNeeded, runMigration } from '../../src/model/repository/data
 import { getGamesAsTabData, getLocalMeta, patchLocalMeta } from '../../src/model/repository/indexedDbRepository';
 import { saveSyncConfig } from '../../src/model/repository/gistConfigRepository';
 import { GAMES_STORE, META_STORE, openSharedDatabase } from '../../src/model/repository/idbConnectionRepository';
-import { saveLocalState } from '../../src/model/repository/localRepository';
+import { flushLocalState, saveLocalState } from '../../src/model/repository/localRepository';
 import type { GameItem, StoragePayload } from '../../src/model/types/game';
 
 function makeGame(id: number): GameItem {
@@ -30,6 +30,10 @@ function seed(): void {
     deleted: [], updatedAt: Date.now(), etag: null, lastRemoteUpdatedAt: 0,
   };
   saveLocalState(payload);
+  // La copia COMPLETA (localStorage y el `appState` de IndexedDB) se vuelca en un hueco ocioso, no en el propio
+  // guardado; aquí se fuerza para partir del estado que tendría un arranque de verdad, con lo anterior ya en
+  // disco. Ver la nota de `saveLocalState`.
+  flushLocalState();
 }
 
 describe('dataMigrationRepository.runMigration (Vía A, local)', () => {
