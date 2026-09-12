@@ -32,6 +32,9 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
   desplazado a la derecha, y eso daba igual mientras la cápsula recortara su interior; en la paleta «Sin futuro»,
   que necesita `overflow: visible` para que el halo del chaflán asome, se veía una mancha clara parada al lado
   del aviso. Ahora se apaga al salir.
+- **La validación del catálogo de logros se ataba a cualquier documento de `appConfig`.** La regla dejaba al
+  administrador crear en esa colección documentos con cualquier nombre y un mapa `hidden` de cien entradas
+  dentro. Se ata a `appConfig/achievements`, que es de lo que habla.
 - **Dos logros decían pedir más de lo que piden.** «Ahí se te fue la vida» se consigue con 300 h en un juego y
   «Cuánto tiempo sin verte» con un hueco de cinco años justos, pero los dos se anunciaban con un «más de» que
   dejaba fuera el propio listón —y «Cuánto tiempo sin verte» se contradecía consigo mismo, porque su línea de
