@@ -1,9 +1,9 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { AdminAchievements, measuredFrontier, unseenSteps } from '../../src/view/components/AdminAchievements';
 import { ADMIN_ACHIEVEMENTS_UI as A } from '../../src/core/constants/adminLabels';
-import { ACHIEVEMENTS, ACHIEVEMENTS_BY_LADDER, LADDERS, SCORING_ACHIEVEMENTS } from '../../src/core/achievements/catalog';
+import { ACHIEVEMENTS, ACHIEVEMENTS_BY_LADDER, LADDERS, SCORING_ACHIEVEMENTS, applyExtraSteps } from '../../src/core/achievements/catalog';
 import { MIRROR_ORDER, packAchievements } from '../../src/core/achievements/pack';
 import type { AchievementState } from '../../src/core/achievements/types';
 
@@ -610,6 +610,103 @@ describe('catálogo de logros — la vista de revisión del panel de administrac
       // La fila del añadido sigue puesta: está guardada, no era una previsualización de la ficha abierta.
       expect(within(ficha).getAllByRole('row')).toHaveLength(conPendiente);
       expect(within(ficha).getByText(A.extraFlag)).toBeInTheDocument();
+    });
+
+    /**
+     * CORREGIR UN UMBRAL QUE SE ESCRIBIÓ MAL. Es lo que más falta hace de esta pantalla —equivocarse tecleando un
+     * número es lo más fácil que hay aquí— y por debajo es quitar y añadir: el `id` de un escalón ES su umbral.
+     * De ahí las dos propiedades que fijan estos tests: **un solo guardado** (o el catálogo se queda un rato con
+     * el umbral equivocado dentro) y **la misma guarda que quitar** (con alguien detrás, ni tocarlo).
+     */
+    describe('corregir un añadido', () => {
+      // El catálogo se deja como estaba: el test de la guarda lo amplía para poder EMPAQUETAR un espejo con el
+      // escalón dentro, y un catálogo ampliado a espaldas del resto del fichero desordena los que vienen detrás.
+      afterEach(() => applyExtraSteps());
+
+      it('cambia el umbral en un solo guardado', async () => {
+        const { onSetExtraSteps } = conAñadidos({ completados: [125, 350] });
+        await abrirPlan('Créditos finales');
+
+        await userEvent.click(within(fichaDe('Créditos finales')).getByRole('button', { name: A.extraEdit(125) }));
+        // Abre con su valor dentro: no se propone nada, se enseña lo que hay para cambiarle un dígito.
+        const campo = within(fichaDe('Créditos finales')).getByRole('spinbutton', { name: A.extraEditLabel('completados-125') });
+        expect(campo).toHaveValue(125);
+
+        await userEvent.clear(campo);
+        await userEvent.type(campo, '175');
+        await userEvent.click(within(fichaDe('Créditos finales')).getByRole('button', { name: A.extraEditSave }));
+
+        // UNA sola escritura, con la lista entera ya corregida: el otro añadido sigue donde estaba.
+        expect(onSetExtraSteps).toHaveBeenCalledTimes(1);
+        expect(onSetExtraSteps).toHaveBeenCalledWith('completados', [175, 350]);
+        const ficha = fichaDe('Créditos finales');
+        expect(within(ficha).getByRole('button', { name: A.extraEdit(175) })).toBeInTheDocument();
+        expect(within(ficha).queryByRole('button', { name: A.extraEdit(125) })).not.toBeInTheDocument();
+      });
+
+      it('no deja repetir un umbral, y el suyo propio no cuenta como repetido', async () => {
+        const { onSetExtraSteps } = conAñadidos({ completados: [125, 350] });
+        await abrirPlan('Créditos finales');
+        await userEvent.click(within(fichaDe('Créditos finales')).getByRole('button', { name: A.extraEdit(125) }));
+        const campo = within(fichaDe('Créditos finales')).getByRole('spinbutton', { name: A.extraEditLabel('completados-125') });
+
+        // Uno del código.
+        await userEvent.clear(campo);
+        await userEvent.type(campo, '50');
+        expect(within(fichaDe('Créditos finales')).getByText(A.prepareTaken(50))).toBeInTheDocument();
+        expect(within(fichaDe('Créditos finales')).getByRole('button', { name: A.extraEditSave })).toBeDisabled();
+
+        // Y otro añadido de la misma escalera.
+        await userEvent.clear(campo);
+        await userEvent.type(campo, '350');
+        expect(within(fichaDe('Créditos finales')).getByText(A.extraTaken(350))).toBeInTheDocument();
+
+        // El suyo, en cambio, no es un error: es no haber cambiado nada, así que no hay nada que guardar.
+        await userEvent.clear(campo);
+        await userEvent.type(campo, '125');
+        expect(within(fichaDe('Créditos finales')).queryByText(A.extraTaken(125))).not.toBeInTheDocument();
+        expect(within(fichaDe('Créditos finales')).getByRole('button', { name: A.extraEditSave })).toBeDisabled();
+        expect(onSetExtraSteps).not.toHaveBeenCalled();
+      });
+
+      it('cancelar lo deja como estaba', async () => {
+        const { onSetExtraSteps } = conAñadidos({ completados: [125] });
+        await abrirPlan('Créditos finales');
+        await userEvent.click(within(fichaDe('Créditos finales')).getByRole('button', { name: A.extraEdit(125) }));
+        const campo = within(fichaDe('Créditos finales')).getByRole('spinbutton', { name: A.extraEditLabel('completados-125') });
+        await userEvent.clear(campo);
+        await userEvent.type(campo, '150');
+
+        await userEvent.click(within(fichaDe('Créditos finales')).getByRole('button', { name: A.extraEditCancel }));
+
+        expect(onSetExtraSteps).not.toHaveBeenCalled();
+        expect(within(fichaDe('Créditos finales')).getByRole('button', { name: A.extraEdit(125) })).toBeInTheDocument();
+      });
+
+      /**
+       * LA MISMA GUARDA QUE QUITAR (§6.4): corregir cambia el `id`, así que a quien ya tuviera el escalón se le
+       * retiraría la medalla. Con la muestra diciendo que alguien lo tiene, no hay ni botón.
+       */
+      it('no se puede corregir lo que ya tiene alguien', async () => {
+        const onSetExtraSteps = vi.fn(async () => {});
+        // El escalón tiene que EXISTIR en el catálogo para que su espejo se pueda empaquetar: es lo que hace el
+        // repositorio al leer la configuración, y aquí se hace a mano porque la pantalla no habla con Firestore.
+        applyExtraSteps({ completados: [125] });
+        render(
+          <AdminAchievements
+            onBack={() => {}}
+            mirrors={[espejo(['completados-125'])]}
+            extraSteps={{ completados: [125] }}
+            onSetExtraSteps={onSetExtraSteps}
+          />,
+        );
+        await abrirPlan('Créditos finales');
+        const ficha = fichaDe('Créditos finales');
+
+        expect(within(ficha).getByText(A.extraLocked)).toBeInTheDocument();
+        expect(within(ficha).queryByRole('button', { name: A.extraEdit(125) })).not.toBeInTheDocument();
+        expect(within(ficha).queryByRole('button', { name: A.extraRemove(125) })).not.toBeInTheDocument();
+      });
     });
 
     /** Si la escritura falla, se dice en la ficha de esa escalera y el campo NO se vacía. */

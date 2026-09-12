@@ -251,6 +251,13 @@ export const AdminAchievements = memo(function AdminAchievements({
    * proponer uno, y proponerlo era meterlo. Se convierte al validar.
    */
   const [draft, setDraft] = useState<{ key: string; text: string } | null>(null);
+  /**
+   * EL AÑADIDO QUE SE ESTÁ CORRIGIENDO: en qué escalera, qué umbral tenía y el texto del campo. `null` = ninguno.
+   *
+   * `step` es la identidad de la fila —no hay dos iguales en una escalera— y `text` va en crudo por lo mismo que
+   * el del campo de añadir: mientras se escribe puede estar vacío, y vacío no es cero.
+   */
+  const [editing, setEditing] = useState<{ key: string; step: number; text: string } | null>(null);
   /** Cómo fue el último guardado de añadidos de cada escalera. Se dice en su ficha, como el de la ocultación. */
   const [extraState, setExtraState] = useState<Record<string, 'saving' | 'ok' | 'error'>>({});
   const [copied, setCopied] = useState(false);
@@ -453,6 +460,53 @@ export const AdminAchievements = memo(function AdminAchievements({
     setCopied(false);
     void saveExtra(key, (extraSteps[key] || []).filter((entry) => entry !== step));
   }, [extraSteps, saveExtra]);
+
+  /**
+   * QUÉ LE PASA AL UMBRAL CORREGIDO. Las mismas tres reglas que al añadir —entero positivo y sin repetirse, ni
+   * con el código ni con otro añadido— con una sola diferencia: **el suyo propio no cuenta como repetido**, o
+   * abrir el campo con su valor dentro sería ya un error.
+   */
+  const editError = useMemo(() => {
+    if (!editing) return '';
+    const raw = editing.text.trim();
+    if (!raw) return '';
+    const step = Number(raw);
+    if (!Number.isInteger(step) || step <= 0) return A.prepareInvalid;
+    if (step === editing.step) return '';
+    const ladder = LADDERS.find((entry) => entry.key === editing.key);
+    if (!ladder) return '';
+    if (ladder.steps.includes(step)) return A.prepareTaken(step);
+    if ((extraSteps[editing.key] || []).includes(step)) return A.extraTaken(step);
+    return '';
+  }, [editing, extraSteps]);
+
+  /** Sin cambio no hay nada que guardar: el mismo número es cerrar la fila, no una escritura. */
+  const canSaveEdit = Boolean(
+    editing && editing.text.trim() && !editError && Number(editing.text.trim()) !== editing.step && onSetExtraSteps,
+  );
+
+  /**
+   * ESTABLE A PROPÓSITO: un callback inline se vuelve a llamar en cada render —React lo suelta y lo vuelve a
+   * atar—, así que enfocaría otra vez en cada tecla. Con `useCallback` solo corre al montar el campo.
+   */
+  const focusOnMount = useCallback((node: HTMLInputElement | null) => {
+    node?.focus();
+  }, []);
+
+  /**
+   * CORREGIRLO ES UN SOLO GUARDADO, y esa es la razón de que exista: `setExtraSteps` escribe la LISTA ENTERA de
+   * la escalera, así que quitar el umbral viejo y poner el nuevo llega junto. Hacerlo a mano en dos viajes dejaba
+   * el catálogo de todo el mundo un rato con el umbral equivocado dentro —o sin ninguno de los dos, si el segundo
+   * fallaba—.
+   */
+  const applyEdit = useCallback(async () => {
+    if (!editing || !canSaveEdit) return;
+    const step = Number(editing.text.trim());
+    const { key } = editing;
+    setCopied(false);
+    const next = (extraSteps[key] || []).map((entry) => (entry === editing.step ? step : entry));
+    if (await saveExtra(key, next)) setEditing(null);
+  }, [editing, canSaveEdit, extraSteps, saveExtra]);
 
   const copyPlan = useCallback(() => {
     if (!plan || !draft) return;
@@ -828,6 +882,8 @@ export const AdminAchievements = memo(function AdminAchievements({
                     // ALTERNA, y abre con el campo VACÍO: proponer un umbral era meterlo en la tabla sin que
                     // nadie lo hubiera pedido.
                     setDraft(preparando ? null : { key: ladder.key, text: '' });
+                    // Y la corrección a medias no sobrevive a cerrar la ficha donde se estaba haciendo.
+                    setEditing(null);
                   }}
                 >
                   {A.prepareAny}
@@ -874,7 +930,16 @@ export const AdminAchievements = memo(function AdminAchievements({
                     <button type="button" className="btn" onClick={() => void addExtra()} disabled={!canAdd}>
                       {A.prepareAdd}
                     </button>
-                    <button type="button" className="btn btn-secondary" onClick={() => setDraft(null)}>{A.prepareClose}</button>
+                    <button
+                      type="button"
+                      className="btn btn-secondary"
+                      onClick={() => {
+                        setDraft(null);
+                        setEditing(null);
+                      }}
+                    >
+                      {A.prepareClose}
+                    </button>
                     {guardando === 'saving' ? <span className="admin-ach-copied">{A.extraSaving}</span> : null}
                     {guardando === 'error' ? <span className="admin-ach-warn">{A.extraFailed}</span> : null}
                   </p>
@@ -898,27 +963,93 @@ export const AdminAchievements = memo(function AdminAchievements({
                           const suyoDeAlguien = !enElCodigo
                             && Boolean(measured)
                             && (measured?.percent.get(`${ladder.key}-${step}`) ?? 0) > 0;
+                          const corrigiendo = editing?.key === ladder.key && editing.step === step;
                           return (
                             <li key={step}>
                               <code>{`${ladder.key}-${step}`}</code>
                               {enElCodigo ? <small className="admin-ach-warn-soft">{A.extraInCode}</small> : null}
+                              {/* CORREGIR ES QUITAR Y AÑADIR, así que pide lo mismo que quitar: mientras nadie lo
+                                  tenga. Con alguien detrás no hay ninguno de los dos botones, solo el porqué. */}
                               {suyoDeAlguien ? (
                                 <small className="admin-ach-warn">{A.extraLocked}</small>
+                              ) : corrigiendo && editing ? (
+                                <>
+                                  <input
+                                    type="number"
+                                    min={1}
+                                    step={1}
+                                    className="admin-ach-edit-field"
+                                    aria-label={A.extraEditLabel(`${ladder.key}-${step}`)}
+                                    // EL FOCO SE VA CON EL BOTÓN QUE ACABAS DE PULSAR: «Corregir» desaparece al
+                                    // abrir la fila, así que sin esto el foco cae al `body` y quien navega con
+                                    // teclado se queda sin sitio. Se mueve al campo que lo sustituye, que es lo
+                                    // que se venía a hacer.
+                                    ref={focusOnMount}
+                                    value={editing.text}
+                                    onChange={(event) => {
+                                      setCopied(false);
+                                      setEditing({ key: ladder.key, step, text: event.target.value });
+                                    }}
+                                    onKeyDown={(event) => {
+                                      // Enter guarda y Escape se sale: en una fila que se edita en su sitio, ir a
+                                      // buscar el botón con el ratón para confirmar un número es el camino largo.
+                                      if (event.key === 'Enter') {
+                                        event.preventDefault();
+                                        void applyEdit();
+                                      } else if (event.key === 'Escape') {
+                                        event.preventDefault();
+                                        setEditing(null);
+                                      }
+                                    }}
+                                  />
+                                  <button
+                                    type="button"
+                                    className="btn"
+                                    onClick={() => void applyEdit()}
+                                    disabled={!canSaveEdit || guardando === 'saving'}
+                                  >
+                                    {A.extraEditSave}
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className="btn btn-secondary"
+                                    onClick={() => setEditing(null)}
+                                  >
+                                    {A.extraEditCancel}
+                                  </button>
+                                  {editError ? <small className="admin-ach-warn">{editError}</small> : null}
+                                </>
                               ) : (
-                                <button
-                                  type="button"
-                                  className="btn btn-secondary"
-                                  onClick={() => removeExtra(ladder.key, step)}
-                                  disabled={guardando === 'saving'}
-                                >
-                                  {A.extraRemove(step)}
-                                </button>
+                                <>
+                                  <button
+                                    type="button"
+                                    className="btn btn-secondary"
+                                    // ABRE CON SU VALOR DENTRO, al revés que el campo de añadir: aquí no se
+                                    // propone nada, se enseña lo que hay para cambiarle un dígito.
+                                    onClick={() => {
+                                      setCopied(false);
+                                      setEditing({ key: ladder.key, step, text: String(step) });
+                                    }}
+                                    disabled={guardando === 'saving'}
+                                  >
+                                    {A.extraEdit(step)}
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className="btn btn-secondary"
+                                    onClick={() => removeExtra(ladder.key, step)}
+                                    disabled={guardando === 'saving'}
+                                  >
+                                    {A.extraRemove(step)}
+                                  </button>
+                                </>
                               )}
                             </li>
                           );
                         })}
                       </ul>
                       <p className="admin-card-note">{A.extraNote}</p>
+                      <p className="admin-card-note">{A.extraEditNote}</p>
                       {plan ? (
                         <>
                           <h5>{A.codeTitle}</h5>
