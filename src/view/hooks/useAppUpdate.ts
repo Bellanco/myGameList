@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { APP_UPDATE_EVENT, reloadNow } from '../../core/utils/appUpdate';
 import { flushLocalState } from '../../model/repository/localRepository';
-import { loadSyncDirtyState } from '../../model/repository/syncStateRepository';
+import { isSyncInFlight } from '../../model/repository/syncMachineRepository';
 
 /**
  * Qué hacer cuando `core/utils/appUpdate` avisa de que hay una versión nueva ya activa.
@@ -12,8 +12,8 @@ import { loadSyncDirtyState } from '../../model/repository/syncStateRepository';
  *  - Pestaña VISIBLE y EN USO → no se recarga sola. Recargar bajo los pies de quien está mirando pierde el
  *    scroll, los filtros y lo que tenga a medio escribir. Se enseña un aviso con un botón y decide el usuario.
  *  - Pestaña VISIBLE pero quieta desde hace rato → se recarga sola (ver abajo).
- *  - Con trabajo a medias (un modal abierto, cambios locales sin subir) → tampoco, ni siquiera oculta: un modal
- *    abierto suele ser una reseña a medio escribir, y eso vive solo en el DOM.
+ *  - Con trabajo a medias (un modal abierto, un borrador sin guardar, un ciclo de sincronización en marcha) →
+ *    tampoco, ni siquiera oculta: un modal abierto suele ser una reseña a medio escribir, y eso vive solo en el DOM.
  *
  * Si el usuario ignora el aviso y se va a otra app, la comprobación se repite al ocultarse la pestaña: entonces
  * sí se recarga sola. El aviso no se queda pegado para siempre esperando un clic.
@@ -70,18 +70,58 @@ function stampAutoReload(): void {
  *    la comprobación anterior no lo ve. Solo se miran textareas —no cualquier campo— a propósito: el buscador de
  *    la barra de herramientas casi siempre tiene algo escrito y bloquearía la recarga silenciosa a todas horas,
  *    y perder un filtro de búsqueda no es perder trabajo;
- *  - `isDirty`: hay ediciones locales que todavía no han subido al gist. Sobreviven a la recarga (están en
- *    localStorage e IndexedDB), pero si hay un ciclo de sync en vuelo, cortarlo obliga a repetirlo.
+ *  - un CICLO DE SINCRONIZACIÓN EN VUELO (`isSyncInFlight`, el mutex que los serializa): recargar a mitad
+ *    obliga a repetirlo;
+ *  - EL FOCO EN UN CAMPO DE TEXTO CON ALGO ESCRITO. Es lo que cubre los formularios que no son ni un modal ni un
+ *    textarea —el nick del perfil social es un `input` suelto en su pantalla—, y que hasta ahora se salvaban de
+ *    rebote: quien tuviera cambios sin subir quedaba protegido por la marca de pendiente, y quien lo tuviera
+ *    todo sincronizado no. Se exige el foco Y contenido a la vez, y ahí está la diferencia con mirar cualquier
+ *    campo con texto: el buscador de la barra casi siempre lleva algo escrito, pero solo tiene el foco mientras
+ *    alguien busca de verdad. Y no es un bloqueo que se enquiste —como el que se retiró abajo—: en cuanto se
+ *    toca otra cosa, la siguiente vuelta recarga.
+ *
+ * Lo que NO cuenta como trabajo a medias, aunque lo parezca: `isDirty`. Aquí se miraba esa marca, y responde a
+ * otra pregunta —«¿queda algo por subir?»— que puede ser cierta PARA SIEMPRE: solo se limpia tras una escritura
+ * correcta del gist, así que se quedaba puesta en quien no tiene sincronización configurada (cualquier edición
+ * la marca, y ahí no hay ciclo que la limpie jamás) y en quien la tiene rota. A esos dos grupos se les apagaba
+ * la recarga automática ENTERA —ni oculta ni en reposo— y se quedaban en la versión vieja esperando un clic en
+ * el aviso. El caso feo era el segundo: la persona cuya sincronización está averiada es justo la que necesita la
+ * versión que la arregla, y su avería impedía instalarla.
+ *
+ * Recargar con cambios sin subir no pierde nada: viven en localStorage e IndexedDB, la marca sobrevive a la
+ * recarga y el primer ciclo tras arrancar los empuja. Lo único que había que proteger de verdad es el ciclo EN
+ * MARCHA, y eso lo dice la máquina de estados, no la marca.
  */
+/** Campos donde se escribe de verdad. `checkbox`/`radio`/`file`… no guardan texto que se pueda perder. */
+const TEXT_INPUT_TYPES = ['text', 'search', 'email', 'url', 'tel', 'password', 'number'];
+
+/** ¿Está el foco en un campo de texto CON contenido? Entonces hay alguien escribiendo justo ahí. */
+function focusIsOnFilledTextField(): boolean {
+  const active = document.activeElement;
+  if (active instanceof HTMLTextAreaElement) {
+    return active.value.trim() !== '';
+  }
+  if (active instanceof HTMLInputElement) {
+    return TEXT_INPUT_TYPES.includes(active.type) && active.value.trim() !== '';
+  }
+  return active instanceof HTMLElement && active.isContentEditable && (active.textContent || '').trim() !== '';
+}
+
 function hasWorkInProgress(): boolean {
   if (document.querySelector('dialog[open]')) {
+    return true;
+  }
+  if (focusIsOnFilledTextField()) {
     return true;
   }
   const drafts = Array.from(document.querySelectorAll('textarea'));
   if (drafts.some((draft) => draft.value.trim() !== '')) {
     return true;
   }
-  return loadSyncDirtyState().isDirty;
+  // El mutex de `syncMachineRepository`, que es la señal canónica de «hay un ciclo en marcha» y no una lista de
+  // estados que haya que mantener al día. Su propio contrato dice lo que hace falta aquí: saltarse un ciclo es
+  // seguro porque la marca de pendiente está en disco y el siguiente empuja lo que quedara.
+  return isSyncInFlight();
 }
 
 export interface AppUpdateState {

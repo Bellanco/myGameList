@@ -5,6 +5,7 @@ import { UpdateNotice } from '../../src/view/components/UpdateNotice';
 import { UI_MESSAGES } from '../../src/core/constants/labels';
 import { APP_UPDATE_EVENT } from '../../src/core/utils/appUpdate';
 import { markDirty, clearDirty } from '../../src/model/repository/syncStateRepository';
+import { acquireSyncLock, type SyncLock } from '../../src/model/repository/syncMachineRepository';
 
 // La regla que se prueba: recargar sola solo cuando NO cuesta nada (pestaña oculta, nada a medias) y preguntar
 // en cualquier otro caso. Recargar bajo los pies de quien está mirando la app pierde scroll, filtros y lo que
@@ -39,8 +40,14 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-  document.querySelectorAll('dialog, textarea').forEach((element) => element.remove());
+  document.querySelectorAll('dialog, textarea, input').forEach((element) => element.remove());
+  // El mutex de sync es estado de MÓDULO: un test que lo deje tomado apagaría la recarga en todos los siguientes.
+  candado?.release();
+  candado = null;
 });
+
+/** Candado de sync tomado por el test de turno, para poder soltarlo pase lo que pase. */
+let candado: SyncLock | null = null;
 
 describe('aviso de versión nueva', () => {
   it('no enseña nada mientras no haya versión nueva', () => {
@@ -163,13 +170,98 @@ describe('aviso de versión nueva', () => {
     vi.useRealTimers();
   });
 
-  it('con cambios locales sin subir tampoco recarga sola: cortaría el ciclo de sincronización', () => {
-    markDirty();
+  /**
+   * LO QUE BLOQUEA ES EL CICLO EN MARCHA, NO LA MARCA DE PENDIENTE. Aquí se miraba `isDirty`, que responde a
+   * «¿queda algo por subir?» y puede ser cierta para siempre: solo se limpia tras una escritura correcta del
+   * gist. Quien no tiene sincronización configurada la deja puesta con su primera edición —no hay ciclo que la
+   * limpie— y quien la tiene rota, igual; a los dos se les apagaba la recarga automática entera. Y el caso
+   * feo: la persona con la sincronización averiada es justo la que necesita la versión que la arregla.
+   */
+  /**
+   * EL FORMULARIO QUE NO ES UN MODAL. El nick del perfil social es un `input` suelto en su pantalla: ni
+   * `dialog` ni `textarea`, así que las dos primeras señales no lo ven. Se salvaba de rebote —por la marca de
+   * cambios pendientes, que no tenía nada que ver— y solo para quien la tuviera puesta.
+   */
+  it('con el foco en un campo de texto a medio escribir espera', () => {
+    const campo = document.createElement('input');
+    campo.type = 'text';
+    campo.value = 'MiNick a medio';
+    document.body.appendChild(campo);
+    campo.focus();
 
     render(<UpdateNotice />);
     setVisibility('hidden');
     announceNewVersion();
 
     expect(reloadNow).not.toHaveBeenCalled();
+  });
+
+  // Y no bloquea «a todas horas», que es lo que se quería evitar al no mirar cualquier campo con texto: el
+  // buscador de la barra casi siempre lleva algo escrito, pero sin el foco no cuenta.
+  it('un campo con texto pero SIN el foco no cuenta como trabajo a medias', () => {
+    const buscador = document.createElement('input');
+    buscador.type = 'search';
+    buscador.value = 'zelda';
+    document.body.appendChild(buscador);
+
+    render(<UpdateNotice />);
+    setVisibility('hidden');
+    announceNewVersion();
+
+    expect(reloadNow).toHaveBeenCalledTimes(1);
+  });
+
+  it('ni un campo enfocado pero vacío', () => {
+    const campo = document.createElement('input');
+    campo.type = 'text';
+    document.body.appendChild(campo);
+    campo.focus();
+
+    render(<UpdateNotice />);
+    setVisibility('hidden');
+    announceNewVersion();
+
+    expect(reloadNow).toHaveBeenCalledTimes(1);
+  });
+
+  it('con cambios pendientes de subir SÍ recarga sola: no hay nada que perder', () => {
+    markDirty();
+
+    render(<UpdateNotice />);
+    setVisibility('hidden');
+    announceNewVersion();
+
+    expect(reloadNow).toHaveBeenCalledTimes(1);
+  });
+
+  it('pero con un ciclo de sincronización en vuelo espera: cortarlo obliga a repetirlo', () => {
+    candado = acquireSyncLock();
+
+    render(<UpdateNotice />);
+    setVisibility('hidden');
+    announceNewVersion();
+
+    expect(reloadNow).not.toHaveBeenCalled();
+  });
+
+  it('y en cuanto ese ciclo termina, la siguiente ocasión sí recarga', () => {
+    // Se guarda en una local ADEMÁS de en `candado`: el `afterEach` necesita la de fuera para soltarlo si el test
+    // falla a medias, pero aquí hace falta una referencia que el compilador sepa que no es nula.
+    const tomado = acquireSyncLock();
+    if (!tomado) throw new Error('el mutex de sync ya estaba tomado: otro test lo dejó sin soltar');
+    candado = tomado;
+
+    render(<UpdateNotice />);
+    setVisibility('hidden');
+    announceNewVersion();
+    expect(reloadNow).not.toHaveBeenCalled();
+
+    // El ciclo acaba y el usuario vuelve a dejar la app: la comprobación se repite al ocultarse la pestaña.
+    tomado.release();
+    candado = null;
+    setVisibility('visible');
+    setVisibility('hidden');
+
+    expect(reloadNow).toHaveBeenCalledTimes(1);
   });
 });
