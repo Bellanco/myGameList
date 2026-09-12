@@ -66,7 +66,7 @@ src/
 | `npm run test:all` | Suite completa |
 | `npm run test:watch` | Vitest en modo watch |
 | `npm run test:coverage` | Cobertura |
-| `npm run test:rules` | Tests de reglas de Firestore (emulador) |
+| `npm run test:rules` | Tests de reglas de Firestore (emulador; necesita un JDK 21 o superior) |
 | `npm run test:e2e` | Smoke end-to-end (Playwright) contra el build de producción |
 | `npm run typecheck` | `tsc --noEmit` |
 | `npm run validate` | Validación CI + HTML + ESLint |
