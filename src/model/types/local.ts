@@ -49,6 +49,14 @@ export interface LocalMeta {
   // `identityFingerprint` en `firebaseFriendshipRepository`. Local por dispositivo a propósito: la foto
   // publicable y el gist de la sesión se resuelven en cada uno por separado.
   friendshipIdentityFingerprint?: string;
+  // Cuándo se completó esa propagación. La huella sola daba por buena una suposición falsa —«si mi identidad
+  // no ha cambiado, mis documentos de amistad están al día»— y no lo están cuando la amistad se creó DESPUÉS
+  // de sellarla (sus campos los escribió la petición, con lo que hubiera entonces) ni cuando una escritura de
+  // aquel día se quedó a medias. Sin fecha, el saneado salía en su primera línea para siempre y esos
+  // documentos arrastraban el nombre —y el gist de listados— viejos indefinidamente: un amigo podía entrar a
+  // diario sin que nada de eso se corrigiera nunca. Con ella, se revisa de higos a brevas
+  // (`FRIENDSHIP_IDENTITY_RECHECK_MS`); ver `healOwnFriendshipIdentity`.
+  friendshipIdentityHealedAt?: number;
   // Último latido de uso enviado a `profiles.updatedAt` desde este dispositivo (acota a una escritura diaria).
   profileTouchedAt?: number;
   // Sellos de los SANEADOS DE ARRANQUE del espacio social (ver `viewmodel/social/useSocialStartupTasks`). Cada uno

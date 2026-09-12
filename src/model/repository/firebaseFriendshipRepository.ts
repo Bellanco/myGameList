@@ -71,6 +71,23 @@ function str(value: unknown): string {
  */
 const IDENTITY_FINGERPRINT_VERSION = 1;
 
+/**
+ * Cada cuánto se revisan las amistades AUNQUE la huella no haya cambiado.
+ *
+ * La huella responde a «¿ha cambiado mi identidad?», y con eso sola se daba por respondida otra pregunta que
+ * no es la misma: «¿están mis documentos de amistad al día?». No lo están cuando una amistad se creó DESPUÉS
+ * del sellado —sus campos los escribió la petición con lo que hubiera en ese instante, que pudo ser un
+ * `gamesGistId` aún sin hidratar— ni cuando un lote de aquel día se quedó a medias. En ambos casos la huella
+ * seguía coincidiendo, el saneado salía en su primera línea y esos documentos arrastraban el nombre y el gist
+ * de listados viejos INDEFINIDAMENTE: sus amigos le veían con el nick de hace meses y le leían las listas de
+ * un gist abandonado, mientras él abría la aplicación todos los días.
+ *
+ * Una semana: el coste es una consulta a `friendships` por dispositivo y semana —y ninguna escritura, porque el
+ * `diverges` de abajo sigue decidiendo si hay algo que escribir— a cambio de que ningún desacuerdo pueda
+ * quedarse para siempre.
+ */
+const FRIENDSHIP_IDENTITY_RECHECK_MS = 7 * 24 * 60 * 60 * 1000;
+
 function identityFingerprint(myUid: string, self: FriendshipSelfInfo): string {
   // Separador NUL: no puede aparecer en un nick, una URL ni un id de gist, así que dos identidades
   // distintas nunca colisionan por concatenación (un espacio sí valdría en un nick, y ahí `A B|x`
@@ -416,7 +433,9 @@ async function commitHealBatches(
  * la regla `friendshipHealOwnFields`. Best-effort: los fallos por doc no rompen el guardado del perfil.
  *
  * Coste: CERO lecturas y cero escrituras mientras mi identidad no cambie, gracias a la huella (ver
- * `identityFingerprint`). Cuando sí cambia, las escrituras van en lotes en vez de una por amigo.
+ * `identityFingerprint`), salvo la revisión semanal de `FRIENDSHIP_IDENTITY_RECHECK_MS` —una consulta, y
+ * escrituras solo si de verdad hay un desacuerdo—. Cuando sí cambia, las escrituras van en lotes en vez de una
+ * por amigo.
  *
  * @param options.force Salta la huella y sanea igualmente. Para cuando hace falta la garantía por encima del
  * ahorro (p. ej. tras clonar el canal social, donde el borrado del gist antiguo espera a que las referencias
@@ -434,7 +453,9 @@ export async function healOwnFriendshipIdentity(
   const fingerprint = identityFingerprint(myUid, self);
   if (!options?.force) {
     const meta = await getLocalMeta().catch(() => null);
-    if (meta?.friendshipIdentityFingerprint === fingerprint) {
+    const healedAt = Number(meta?.friendshipIdentityHealedAt || 0);
+    const reciente = healedAt > 0 && Date.now() - healedAt < FRIENDSHIP_IDENTITY_RECHECK_MS;
+    if (meta?.friendshipIdentityFingerprint === fingerprint && reciente) {
       return; // nada que propagar: ni una lectura.
     }
   }
@@ -517,7 +538,7 @@ export async function healOwnFriendshipIdentity(
   // El sello SOLO se pone si todo se escribió. Si algo falló (red, una regla que denegó), dejarlo sin sellar es
   // lo que hace que el próximo disparo lo reintente en vez de dar por propagado lo que no llegó.
   if (committed) {
-    await patchLocalMeta({ friendshipIdentityFingerprint: fingerprint }).catch(() => {
+    await patchLocalMeta({ friendshipIdentityFingerprint: fingerprint, friendshipIdentityHealedAt: Date.now() }).catch(() => {
       /* best-effort: sin sello se repite el saneado, que no rompe nada. */
     });
   }
