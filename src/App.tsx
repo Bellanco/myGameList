@@ -1,6 +1,6 @@
 import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
-import { DIALOG_MESSAGES, ROUTE_TAB, SYNC_BADGE_TEXT, SYNC_MESSAGES, TAB_ROUTE, TAB_TITLES, UI_MESSAGES } from './core/constants/labels';
+import { DIALOG_MESSAGES, ROUTE_TAB, SYNC_MESSAGES, TAB_ROUTE, TAB_TITLES, UI_MESSAGES } from './core/constants/labels';
 import { LEGAL_ROUTES, type LegalDocId } from './core/constants/legal';
 import { COMPACT_FILTERS_MAX_WIDTH, COMPACT_TABLE_MAX_WIDTH } from './core/constants/uiConfig';
 import { TAB_IDS, type TabData, type TabId } from './model/types/game';
@@ -26,6 +26,7 @@ import { useGameListViewModel, type GameDraft } from './viewmodel/useGameListVie
 import { useToolbarFilters } from './viewmodel/useToolbarFilters';
 import { computeTabOptions, countActiveFilters } from './viewmodel/toolbarFilters';
 import { useSyncViewModel } from './viewmodel/useSyncViewModel';
+import { resolveSyncBadge } from './viewmodel/syncBadge';
 import { useScoreScaleSession } from './view/hooks/useScoreScaleSession';
 import { useSocialProfileSession } from './view/hooks/useSocialProfileSession';
 import { useAppearanceSession } from './view/hooks/useAppearanceSession';
@@ -660,7 +661,7 @@ export default function App() {
     void importRouletteModal();
   }), []);
 
-  const syncBadgeText = SYNC_BADGE_TEXT[syncVm.status] || SYNC_BADGE_TEXT.idle;
+  const syncBadgeText = resolveSyncBadge(syncVm.status, syncVm.pendingUpload);
 
   /**
    * Pantalla de cada sección. Las cuatro rutas de listados comparten elemento a propósito: la pestaña activa se

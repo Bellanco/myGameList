@@ -5,7 +5,7 @@ import { mergeCrdt } from '../model/repository/syncRepository';
 import { clearSyncConfig, createGist, ensureSyncConfigLoaded, findGamesGistId, getRetryAfterMs, getSyncConfig, isDeferredNetworkError, readGist, saveSyncConfig, whoAmI, writeGist, type GistReadResponse } from '../model/repository/gistRepository';
 import { beginGithubOAuth, completeGithubOAuth, hasGithubOAuthRedirect, isGithubOAuthConfigured } from '../model/repository/githubOAuthRepository';
 import { normalizeData } from '../model/repository/localRepository';
-import { clearDirty, clearDirtyIfUnchanged, loadSyncDirtyState } from '../model/repository/syncStateRepository';
+import { clearDirty, clearDirtyIfUnchanged, loadSyncDirtyState, subscribeSyncDirtyState, type SyncDirtyState } from '../model/repository/syncStateRepository';
 import { acquireSyncLock, canRead, getBackoffMs, getNextReadDelayMs, getSyncState, subscribeSyncState, transitionTo, canReadNow } from '../model/repository/syncMachineRepository';
 import { countRemoteChangesApplied, isWriteConflict, logSyncError, type SyncOperation } from '../model/repository/syncLogicRepository';
 import { readLegacyPlaintextToken } from '../model/migration/legacyTokenRecovery';
@@ -29,6 +29,27 @@ interface WriteOutcome {
 }
 
 const SYNC_CHANNEL = 'mygamelist-sync';
+
+/**
+ * CUÁNTO SE ESPERA ANTES DE SUBIR UNA EDICIÓN.
+ *
+ * Guardar un juego marcaba lo pendiente y ahí se acababa: la subida esperaba a que algo disparase un ciclo —el
+ * sondeo del minuto, o volver a la pestaña—, así que quien editaba y cerraba antes se quedaba el cambio en su
+ * dispositivo hasta la próxima vez que abriera la app. En un segundo aparato, hasta entonces, no existía.
+ *
+ * Cinco segundos es el punto donde las dos cosas que importan siguen cumpliéndose: agrupa la ráfaga de quien
+ * guarda tres juegos seguidos en UNA escritura (cada edición reinicia la espera), y es poco tiempo para que
+ * cerrar la pestaña pille algo sin subir. Subirlo ahorra escrituras y arriesga más; bajarlo, al revés.
+ */
+const DIRTY_PUSH_DELAY_MS = 5_000;
+
+/**
+ * Y cuánto se espera cuando al vencer el plazo había un ciclo en vuelo. No se fuerza ni se encola: se vuelve a
+ * mirar un poco después, cuando el candado ya se habrá soltado. No hace falta un tope de reintentos porque el
+ * candado se libera SIEMPRE en un `finally`, y porque el propio reintento se para solo en cuanto no quede nada
+ * pendiente (puede haberlo subido el ciclo que tenía el candado, que es el caso normal).
+ */
+const DIRTY_PUSH_RETRY_MS = 2_000;
 
 /** Avisa a otras pestañas de una escritura remota (best-effort; ignora entornos sin BroadcastChannel). */
 function broadcastRemoteWrite(etag: string | null): void {
@@ -54,6 +75,17 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
   const pendingRemoteSyncTimerRef = useRef<number | null>(null);
   const pollTimerRef = useRef<number | null>(null);
   const POLL_INTERVAL_MS = 60_000; // 60s polling with ETag
+
+  /**
+   * ¿QUEDA ALGO POR SUBIR? Se pinta en el badge, así que no puede ser una lectura por render: se mantiene al día
+   * con el aviso de `syncStateRepository`.
+   *
+   * Vale `false` sin sincronización configurada, y no es un descuido: sin gist al que subir, «cambios sin subir»
+   * no significa nada para quien solo usa sus listas en este dispositivo. El badge ya dice «No sincronizado».
+   */
+  const pendingUploadFrom = (dirty: SyncDirtyState): boolean => dirty.isDirty && Boolean(getSyncConfig());
+  const [pendingUpload, setPendingUpload] = useState(() => pendingUploadFrom(loadSyncDirtyState()));
+  const dirtyPushTimerRef = useRef<number | null>(null);
 
   // Manejo común de errores de un ciclo de sync: backoff + estado 'error'. `notify:false` omite el toast
   // (arranques automáticos); `logName` registra en telemetría (ausente = no se registra).
@@ -175,6 +207,61 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
       persist(reconcileWithLocal(outcome.data, nextMeta.lastRemoteUpdatedAt), nextMeta);
       return outcome;
     }, [getData, getMeta, persist, setMeta, writeWithConflictRecovery, reconcileWithLocal]);
+
+    /**
+     * EL EMPUJÓN AUTOMÁTICO. Sube lo pendiente sin que nadie lo pida y sin esperar al siguiente ciclo.
+     *
+     * Es deliberadamente CALLADO (`notify:false`): nadie ha pulsado nada, así que un fallo aquí no debe sacar un
+     * aviso encima de lo que el usuario esté haciendo. Deja el estado en `error` y la máquina en backoff, que ya
+     * se encarga de reintentar, y lo pendiente sigue marcado: no se pierde nada.
+     */
+    const pushPendingChanges = useCallback(async () => {
+      await ensureSyncConfigLoaded(); // C4: el token puede seguir cifrado si aún no se ha usado
+      const config = getSyncConfig();
+      if (!config) return; // sin sincronización configurada no hay a dónde subir
+      if (!loadSyncDirtyState().isDirty) return; // lo subió otro ciclo mientras esperábamos
+
+      const lock = acquireSyncLock();
+      if (!lock) {
+        // Hay un ciclo en vuelo. Puede que lo esté subiendo él (un 304 con pendientes hace justo esto), así que
+        // no se compite: se vuelve a mirar en un momento.
+        scheduleDirtyPushRef.current(DIRTY_PUSH_RETRY_MS);
+        return;
+      }
+      try {
+        setStatus('syncing');
+        await pushDirtyWithMerge(config.token, config.gistId);
+        setStatus('ok');
+      } catch (error) {
+        handleSyncError(error, { fallback: SYNC_MESSAGES.syncError, logName: 'pushPendingChanges', notify: false });
+      } finally {
+        lock.release();
+      }
+    }, [handleSyncError, pushDirtyWithMerge]);
+
+    const pushPendingChangesRef = useRef(pushPendingChanges);
+    pushPendingChangesRef.current = pushPendingChanges;
+
+    /** Programa (o reprograma) el empujón. Cada edición reinicia la cuenta: eso es lo que agrupa las ráfagas. */
+    const scheduleDirtyPush = useCallback((delay: number = DIRTY_PUSH_DELAY_MS) => {
+      if (dirtyPushTimerRef.current !== null) window.clearTimeout(dirtyPushTimerRef.current);
+      dirtyPushTimerRef.current = window.setTimeout(() => {
+        dirtyPushTimerRef.current = null;
+        void pushPendingChangesRef.current();
+      }, delay);
+    }, []);
+
+    const cancelDirtyPush = useCallback(() => {
+      if (dirtyPushTimerRef.current !== null) {
+        window.clearTimeout(dirtyPushTimerRef.current);
+        dirtyPushTimerRef.current = null;
+      }
+    }, []);
+
+    // Por ref para que `pushPendingChanges` pueda reprogramarse a sí misma sin que las dos se persigan en las
+    // dependencias.
+    const scheduleDirtyPushRef = useRef(scheduleDirtyPush);
+    scheduleDirtyPushRef.current = scheduleDirtyPush;
 
     /**
      * D1 — Tronco común de las CUATRO rutas que fusionan un remoto ya leído: `refreshRemote`, `syncNow`,
@@ -556,6 +643,32 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
     }
   }, []);
 
+  /**
+   * LA MARCA DE PENDIENTES MANDA SOBRE DOS COSAS: el aviso del badge y el empujón automático.
+   *
+   * Se escucha la marca y no las transiciones de la máquina de sync, y la diferencia importa: la escritura pasa
+   * a `idle` ANTES de limpiar la marca (ver `writeWithConflictRecovery`), así que un ciclo que acaba de subirlo
+   * todo dejaría el aviso encendido hasta la siguiente transición que pasara por ahí.
+   */
+  const pendingUploadFromRef = useRef(pendingUploadFrom);
+  pendingUploadFromRef.current = pendingUploadFrom;
+
+  useEffect(() => {
+    const unsubscribe = subscribeSyncDirtyState((state) => {
+      setPendingUpload(pendingUploadFromRef.current(state));
+      if (!state.isDirty) {
+        cancelDirtyPush(); // ya no hay nada que subir: lo empujó otro ciclo
+        return;
+      }
+      if (!getSyncConfig()) return; // sin sincronización configurada no hay a dónde subir
+      scheduleDirtyPush();
+    });
+    return () => {
+      unsubscribe();
+      cancelDirtyPush();
+    };
+  }, [cancelDirtyPush, scheduleDirtyPush]);
+
   // start/stop polling when we have a connected gist id
   useEffect(() => {
     if (connectedGistId) {
@@ -824,6 +937,8 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
     beginGithubLogin,
     completeGithubLoginFromRedirect,
     connectedGistId,
+    /** ¿Hay ediciones marcadas que aún no están en el gist? Lo pinta el badge (ver `resolveSyncBadge`). */
+    pendingUpload,
     lastRemoteChangesApplied,
     recoveringGistId,
     hasConfig: Boolean(getSyncConfig()),

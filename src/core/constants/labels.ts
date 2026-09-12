@@ -70,6 +70,12 @@ export const SYNC_BADGE_TEXT = {
   ok: 'Sincronizado',
   syncing: 'Sincronizando…',
   error: 'Error de sincronización',
+  /**
+   * Hay ediciones guardadas que todavía no están en el gist. Faltaba, y su ausencia hacía MENTIR a la línea de
+   * estado: tras guardar un juego seguía diciendo «Sincronizado» hasta que un ciclo subía lo pendiente, así que
+   * no había forma de distinguir «todo a salvo» de «esto aún no ha salido de este dispositivo».
+   */
+  pending: 'Cambios sin subir',
 } as const;
 
 export const DIALOG_MESSAGES = {
