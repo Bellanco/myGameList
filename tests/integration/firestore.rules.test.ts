@@ -960,6 +960,15 @@ describe('firestore.rules', () => {
       await assertFails(deleteDoc(doc(ownerDb('uid-a'), 'appConfig', 'achievements')));
     });
 
+    /**
+     * ⚑ Y SOLO PARA SU DOCUMENTO. `achievementsConfigIsValid()` validaba la forma del catálogo para CUALQUIER
+     * `docId` de `appConfig`, así que el admin podía sembrar la colección de documentos con nombre libre y cien
+     * entradas dentro. La regla dice ahora lo que quiere decir: esta forma es la de `appConfig/achievements`.
+     */
+    it('esa forma vale solo para el documento del catálogo', async () => {
+      await assertFails(setDoc(doc(adminDb(), 'appConfig', 'otra-cosa'), { hidden: { maraton: true } }));
+    });
+
     it('acota el contenido: dos claves y dos mapas, no un almacén', async () => {
       await assertFails(setDoc(doc(adminDb(), 'appConfig', 'achievements'), { hidden: {}, basura: 'x' }));
       await assertFails(setDoc(doc(adminDb(), 'appConfig', 'achievements'), { hidden: 'todo' }));

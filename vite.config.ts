@@ -1,7 +1,11 @@
 import { createHash } from 'node:crypto';
-import { readFileSync, readdirSync, writeFileSync } from 'node:fs';
+import { readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import type { ServerResponse } from 'node:http';
 import { defineConfig, type Plugin } from 'vite';
 import react from '@vitejs/plugin-react';
+// El MISMO saneado que usan el cliente y la Pages Function: el servidor de desarrollo no puede ser más
+// permisivo que producción, o se prueba con textos que en la web real se recortan.
+import { sanitizeAnnouncement } from './src/core/announcement/announcement';
 
 const pkg = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf-8')) as { version?: string };
 
@@ -100,6 +104,94 @@ function serviceWorkerPrecache(): Plugin {
   };
 }
 
+/**
+ * `/api/announcement` EN EL SERVIDOR DE DESARROLLO. Solo en `serve`: ni una línea de esto entra en el build.
+ *
+ * POR QUÉ HACE FALTA. El aviso a los usuarios lo sirve una Pages Function (`functions/api/announcement.ts`), y
+ * las Pages Functions las ejecuta Cloudflare, no Vite: con `npm run dev` esa ruta devolvía el `index.html` del
+ * SPA, así que el panel no podía guardar y la cápsula no salía nunca. La alternativa era levantar
+ * `wrangler pages dev` sobre `dist` para cada prueba —sin recarga en caliente, y reconstruyendo a cada cambio—,
+ * que es exactamente lo que hace que un evolutivo no se pruebe.
+ *
+ * ES EL MISMO CONTRATO, no una imitación aproximada: los tres métodos, el mismo saneado (se importa el del
+ * núcleo, que es el que usa también la función de verdad) y el mismo cuerpo de respuesta. Lo único que NO tiene
+ * es la comprobación de administrador: aquí no hay tokens que verificar y quien llama es la persona que ha
+ * levantado el servidor en su propia máquina.
+ *
+ * EL AVISO VIVE EN UN FICHERO IGNORADO (`.announcement.local.json`), no en memoria: así sobrevive al reinicio
+ * del servidor, se puede editar a mano y se borra solo con borrar el fichero.
+ */
+function localAnnouncementApi(): Plugin {
+  const FILE = new URL('./.announcement.local.json', import.meta.url);
+  const ROUTE = '/api/announcement';
+
+  const send = (res: ServerResponse, status: number, body: unknown): void => {
+    res.statusCode = status;
+    res.setHeader('Content-Type', 'application/json; charset=utf-8');
+    // Sin caché, al contrario que en producción: en local se quiere ver el cambio al recargar, no en cinco
+    // minutos.
+    res.setHeader('Cache-Control', 'no-store');
+    res.end(JSON.stringify(body));
+  };
+
+  return {
+    name: 'local-announcement-api',
+    apply: 'serve',
+
+    configureServer(server) {
+      server.middlewares.use((req, res, next) => {
+        if (!req.url || req.url.split('?')[0] !== ROUTE) {
+          next();
+          return;
+        }
+
+        if (req.method === 'GET') {
+          let stored: unknown = null;
+          try {
+            stored = JSON.parse(readFileSync(FILE, 'utf-8'));
+          } catch {
+            // No hay aviso publicado en este entorno, que es el estado normal.
+          }
+          send(res, 200, sanitizeAnnouncement(stored));
+          return;
+        }
+
+        if (req.method === 'DELETE') {
+          try {
+            rmSync(FILE);
+          } catch {
+            // Ya no estaba.
+          }
+          send(res, 200, { ok: true });
+          return;
+        }
+
+        if (req.method !== 'PUT') {
+          send(res, 405, { error: 'Método no permitido' });
+          return;
+        }
+
+        const chunks: Buffer[] = [];
+        req.on('data', (chunk: Buffer) => chunks.push(chunk));
+        req.on('end', () => {
+          let clean = null;
+          try {
+            clean = sanitizeAnnouncement(JSON.parse(Buffer.concat(chunks).toString('utf-8')));
+          } catch {
+            clean = null;
+          }
+          if (!clean) {
+            send(res, 400, { error: 'El aviso necesita un identificador, un título y un enlace http(s)' });
+            return;
+          }
+          writeFileSync(FILE, `${JSON.stringify(clean, null, 2)}\n`);
+          send(res, 200, clean);
+        });
+      });
+    },
+  };
+}
+
 export default defineConfig({
   // Identificador de build inyectado en tiempo de compilación; lo usa la telemetría para etiquetar errores/eventos.
   define: {
@@ -108,6 +200,7 @@ export default defineConfig({
   plugins: [
     react(),
     serviceWorkerPrecache(),
+    localAnnouncementApi(),
   ],
   server: {
     port: 8000,
