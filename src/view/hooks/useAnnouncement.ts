@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
+  ANNOUNCEMENT_CHANNEL,
   ANNOUNCEMENT_PUBLISHED_EVENT,
   afterClicked,
   afterShown,
@@ -181,6 +182,21 @@ export function useAnnouncement(): AnnouncementState {
     };
     window.addEventListener(ANNOUNCEMENT_PUBLISHED_EVENT, alPublicar);
 
+    /**
+     * Y LO MISMO DESDE OTRA PESTAÑA. El evento de arriba no sale de la suya, así que publicar en una pestaña y
+     * mirar en otra —cómo se prueba esto— dejaba a la segunda esperando a una recarga. Aquí sí hay que forzar la
+     * lectura: la caché de sesión de ESTA pestaña sigue teniendo el aviso anterior.
+     */
+    let canal: BroadcastChannel | null = null;
+    try {
+      canal = new BroadcastChannel(ANNOUNCEMENT_CHANNEL);
+      canal.onmessage = () => {
+        if (!cancelled) preguntar(SHOW_DELAY_MS, true);
+      };
+    } catch {
+      // Sin canal se sigue como antes: al recargar o al volver pasado el rato.
+    }
+
     return () => {
       cancelled = true;
       cancelIdle();
@@ -189,6 +205,7 @@ export function useAnnouncement(): AnnouncementState {
       document.removeEventListener('visibilitychange', alVolver);
       window.removeEventListener('focus', alVolver);
       window.removeEventListener(ANNOUNCEMENT_PUBLISHED_EVENT, alPublicar);
+      canal?.close();
     };
   }, []);
 

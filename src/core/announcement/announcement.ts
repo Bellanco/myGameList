@@ -43,6 +43,18 @@ import { isValidHttpUrl } from '../security/sanitize';
 export const ANNOUNCEMENT_PUBLISHED_EVENT = 'mygamelist:announcement';
 
 /**
+ * El mismo aviso, pero para LAS DEMÁS PESTAÑAS del navegador.
+ *
+ * ⚑ POR QUÉ NO BASTA EL EVENTO DE ARRIBA: un `CustomEvent` en `window` no sale de su pestaña, así que publicar en
+ * una y mirar en otra —que es exactamente cómo se prueba esto— dejaba a la segunda sin enterarse hasta recargar
+ * o hasta volver a ella pasados cinco minutos. Comprobado en Firefox con dos pestañas.
+ *
+ * `BroadcastChannel` lo reparte a todas las pestañas del mismo origen y está en todos los navegadores que
+ * soporta la app. Donde no esté, no pasa nada: se sigue enterando al recargar o al volver pasado el rato.
+ */
+export const ANNOUNCEMENT_CHANNEL = 'mygamelist:announcement';
+
+/**
  * LOS LÍMITES SON ESPEJO DE `firestore.rules` (`announcementIsValid()`): si se cambian aquí, hay que cambiarlos
  * allí y desplegar las reglas. Hay un test que los ata, igual que con `PUBLIC_NAME_MAX_LENGTH`.
  *
