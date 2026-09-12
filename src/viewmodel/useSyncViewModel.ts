@@ -107,14 +107,25 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
     [onNotice],
   );
 
+  /**
+   * `knownRemoteFiles`: el cuerpo del gist que quien llama ACABA de leer, para que `writeGist` no vuelva a
+   * pedirlo. Subir una edición costaba tres peticiones (la lectura del ciclo, la de la escritura y el PATCH) y
+   * dos de ellas traían lo mismo. Se omite cuando no hay una lectura fresca detrás.
+   */
   const writeWithConflictRecovery = useCallback(
-    async (syncToken: string, syncGistId: string, localData: TabData, localUpdatedAt: number): Promise<WriteOutcome> => {
+    async (
+      syncToken: string,
+      syncGistId: string,
+      localData: TabData,
+      localUpdatedAt: number,
+      knownRemoteFiles?: GistReadResponse['remoteFiles'],
+    ): Promise<WriteOutcome> => {
       // Sello dirty al INICIAR la escritura: si una edición del usuario lo avanza mientras escribimos en red,
       // no debemos limpiar dirty (esa edición aún no está en el remoto). Ver clearDirtyIfUnchanged.
       const dirtyAtBefore = loadSyncDirtyState().dirtyAt;
       try {
         transitionTo('writing');
-        const writeResult = await writeGist(syncToken, syncGistId, localData);
+        const writeResult = await writeGist(syncToken, syncGistId, localData, { knownRemoteFiles });
         broadcastRemoteWrite(writeResult.etag || null);
         transitionTo('idle', { lastWriteAt: Date.now(), errorCount: 0 });
         clearDirtyIfUnchanged(dirtyAtBefore);
@@ -137,7 +148,9 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
 
         const remoteData = latest.data as TabData;
         const merged = mergeCrdt(localData, localUpdatedAt, remoteData, remoteData.updatedAt);
-        const retry = await writeGist(syncToken, syncGistId, merged.merged);
+        // Los ficheros de `latest`, no los que llegaron por parámetro: el conflicto significa justamente que el
+        // gist cambió por debajo, así que lo de antes ya no lo describe.
+        const retry = await writeGist(syncToken, syncGistId, merged.merged, { knownRemoteFiles: latest.remoteFiles });
         broadcastRemoteWrite(retry.etag || null);
         transitionTo('idle', { lastWriteAt: Date.now(), errorCount: 0 });
         clearDirtyIfUnchanged(dirtyAtBefore);
@@ -195,7 +208,8 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
         const merged = mergeCrdt(localData, localMeta.updatedAt, remoteData, remoteData.updatedAt);
         toWrite = merged.merged;
       }
-      const outcome = await writeWithConflictRecovery(syncToken, syncGistId, toWrite, Date.now());
+      // La lectura de arriba ya trajo el gist entero: se lo damos a la escritura en vez de que lo vuelva a pedir.
+      const outcome = await writeWithConflictRecovery(syncToken, syncGistId, toWrite, Date.now(), latest.remoteFiles);
       const nextMeta = {
         updatedAt: Date.now(),
         etag: outcome.etag,
@@ -302,7 +316,7 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
         // lo pidiera, para que el gist quede migrado al primer sync en vez de esperar a una edición.
         let writeOutcome: WriteOutcome = { data: merged.merged, etag: remote.etag || null, remoteUpdatedAt: remoteData.updatedAt };
         if (merged.remoteNeedsUpdate || remote.wasLegacy) {
-          writeOutcome = await writeWithConflictRecovery(cfg.token, cfg.gistId, merged.merged, Date.now());
+          writeOutcome = await writeWithConflictRecovery(cfg.token, cfg.gistId, merged.merged, Date.now(), remote.remoteFiles);
         }
 
         // Aquí NO va un `setData(writeOutcome.data)`, y su ausencia es el arreglo, no un olvido. Las cuatro

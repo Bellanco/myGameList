@@ -18,6 +18,7 @@ import {
   gamesChunkFilename,
   leanTabData,
 } from './socialProjection';
+import { getLocalMeta, patchLocalMeta } from './indexedDbRepository';
 import { mapWithConcurrency } from '../../core/utils/concurrency';
 import { decodeGistContent, encodeCompressed } from '../../core/utils/gistCompression';
 
@@ -93,6 +94,69 @@ const OVERFLOW_GIST_READ_CONCURRENCY = 4;
 // primer 304 para evaluar el formato; tras verla, confiamos en el 304 (barato). Se reinicia al recargar la página.
 const gamesGistFormatVerifiedThisSession = new Set<string>();
 
+/**
+ * FIRMA DEL FORMATO AL QUE ESCRIBIMOS HOY. Es la clave con la que se recuerda «este gist ya está al día», y por
+ * eso incluye los dos flags que deciden la forma de lo que se sube: cambiar cualquiera de ellos invalida por sí
+ * solo todos los sellos, sin tener que acordarse de borrarlos.
+ */
+function gamesFormatSignature(): string {
+  if (COMPRESS_GAMES_WRITES) return 'v4+gzip';
+  return ENABLE_GAMES_WRAPPER_WRITE ? 'v4' : 'plain';
+}
+
+/**
+ * ¿Sabemos ya —de esta sesión o de una anterior— que este gist está en el formato de destino?
+ *
+ * El sello vive en `LocalMeta` (IndexedDB) y no solo en memoria porque el caso que cierra es exactamente el de
+ * abrir la app: antes, el primer 304 de CADA sesión disparaba una relectura completa del gist —la grande, sin
+ * `If-None-Match`— para poder evaluar el formato. Diez aperturas al día eran diez descargas completas para
+ * confirmar diez veces lo mismo.
+ *
+ * Es seguro apoyarse en él precisamente porque solo se consulta en el camino del 304: ese 304 significa que el
+ * contenido es el MISMO que la última vez que lo leímos entero, que es cuando se selló. Si otro dispositivo
+ * escribe, el etag cambia, GitHub responde 200 y el formato se vuelve a evaluar con el contenido delante.
+ */
+async function gamesGistFormatIsVerified(gistId: string): Promise<boolean> {
+  if (gamesGistFormatVerifiedThisSession.has(gistId)) return true;
+  try {
+    const meta = await getLocalMeta();
+    if (meta?.gamesGistFormatVerified?.[gistId] === gamesFormatSignature()) {
+      gamesGistFormatVerifiedThisSession.add(gistId); // en memoria para los siguientes 304 de esta sesión
+      return true;
+    }
+  } catch {
+    // Sin IndexedDB (modo privado, cuota) se sigue como antes: una relectura por sesión.
+  }
+  return false;
+}
+
+/**
+ * Anota lo que acabamos de ver. Los dos sellos responden a preguntas distintas y por eso no se ponen a la vez:
+ *
+ *   · EL DE SESIÓN se pone SIEMPRE que hemos visto el contenido, esté al día o no. Responde a «¿hace falta
+ *     volver a descargarlo entero AHORA?», y la respuesta es no aunque toque migrarlo: el ciclo ya tiene los
+ *     datos y va a reescribirlo. Sin esto, un gist viejo que no se consigue migrar —porque la escritura falla,
+ *     por ejemplo— se descargaría completo en cada sondeo, cada minuto.
+ *   · EL DE DISCO solo cuando el formato ES el de destino. Responde a «¿puedo fiarme del 304 en la PRÓXIMA
+ *     sesión?», y ahí un gist pendiente de migrar tiene que seguir dando que hablar.
+ *
+ * `verified:false` además BORRA el sello de disco en vez de dejarlo estar: si el gist ha vuelto a una forma vieja
+ * —lo reescribió una versión anterior, o cambió el formato de destino—, lo que no puede pasar es que un sello
+ * obsoleto impida la migración.
+ */
+async function rememberGamesGistFormat(gistId: string, verified: boolean): Promise<void> {
+  gamesGistFormatVerifiedThisSession.add(gistId);
+  try {
+    const current = (await getLocalMeta())?.gamesGistFormatVerified || {};
+    const next = { ...current };
+    if (verified) next[gistId] = gamesFormatSignature();
+    else delete next[gistId];
+    await patchLocalMeta({ gamesGistFormatVerified: next });
+  } catch {
+    // Best-effort: sin sello se vuelve al comportamiento de antes (una relectura por sesión), no se rompe nada.
+  }
+}
+
 
 
 
@@ -104,6 +168,20 @@ export interface GistReadResponse {
   etag?: string | null;
   /** Upgrade proactivo: el remoto estaba en formato viejo; el ciclo de sync debe reescribirlo en el actual. */
   wasLegacy?: boolean;
+  /**
+   * LOS FICHEROS DEL GIST YA DESCOMPRIMIDOS, para que la escritura que venga detrás no tenga que volver a
+   * pedirlos.
+   *
+   * `writeGist` necesita el estado actual del gist para tres cosas: omitir del PATCH los chunks que no han
+   * cambiado, borrar los que sobran y repartir el excedente en gists de overflow. Los pedía con un GET propio,
+   * así que subir una edición costaba TRES peticiones —la lectura del ciclo, esta, y el PATCH— cuando la primera
+   * ya traía exactamente lo mismo. Decodificarlos aquí no cuesta nada: la lectura ya los descomprime para
+   * ensamblar los chunks.
+   *
+   * Quien los reenvía debe estar seguro de que son de ESTA lectura y de que entre medias no ha habido ninguna
+   * escritura propia. Ante la duda, se omiten y `writeGist` los pide como siempre.
+   */
+  remoteFiles?: Record<string, DecodedRemoteFile | undefined>;
 }
 
 
@@ -337,7 +415,11 @@ async function buildGamesFilesForStorage(
 // Descomprime el `content` de cada fichero de un mapa (no-op sobre contenido plano) y conserva si venía comprimido.
 // Se usa para que las comparaciones de reescritura incremental (checksum de chunk, refs del ancla) operen sobre JSON
 // plano aunque el remoto esté comprimido, y para saber si el chunk remoto ya está en el formato de compresión destino.
-type DecodedRemoteFile = { content: string; wasCompressed: boolean };
+/**
+ * Un fichero del gist ya descomprimido, tal y como está AHORA en GitHub. Se expone porque la lectura se lo pasa
+ * a la escritura: ver `GistReadResponse.remoteFiles`.
+ */
+export type DecodedRemoteFile = { content: string; wasCompressed: boolean };
 async function decodeFilesMap(
   files: Record<string, { content?: string } | undefined>,
 ): Promise<Record<string, DecodedRemoteFile | undefined>> {
@@ -397,14 +479,16 @@ async function buildGistReadResponse(
   // Fase 1: descomprime (si viene el sobre `enc`) el ancla y los chunks del MISMO gist ANTES de todo el pipeline,
   // que opera sobre JSON plano (`assembleChunkedGames`/`unwrapGamesFile`/detectores `wasLegacy`). No-op si nada
   // está comprimido (contenido plano se devuelve tal cual).
-  const decodedFiles: Record<string, { content: string }> = {};
+  // Se guarda también `wasCompressed` de CADA fichero, no solo el del ancla: es lo que `writeGist` compara para
+  // decidir si un chunk sin cambios hay que reescribirlo igualmente (un cambio de formato de almacenamiento).
+  const decodedFiles: Record<string, DecodedRemoteFile> = {};
   let anchorWasCompressed = false;
   await Promise.all(
     Object.entries(body.files ?? {}).map(async ([name, file]) => {
       const content = file?.content;
       if (typeof content !== 'string') return;
       const decoded = await decodeGistContent(content);
-      decodedFiles[name] = { content: decoded.content };
+      decodedFiles[name] = { content: decoded.content, wasCompressed: decoded.wasCompressed };
       if (name === GIST_FILENAME) anchorWasCompressed = decoded.wasCompressed;
     }),
   );
@@ -434,6 +518,7 @@ async function buildGistReadResponse(
     data,
     etag,
     wasLegacy: gamesGistWasLegacy(parsed, anchorWasCompressed),
+    remoteFiles: decodedFiles,
   };
 }
 
@@ -458,8 +543,9 @@ export async function readGist(token: string, gistId: string, etag: string | nul
   const response = await githubFetch(`${GIST_API_BASE}/${gistId}`, { headers });
 
   if (response.status === 304) {
-    // Si ya inspeccionamos el formato de este gist en esta sesión, confiamos en el 304 (no trae contenido).
-    if (gamesGistFormatVerifiedThisSession.has(gistId)) {
+    // Si ya sabemos que su formato está al día —de esta sesión o de una anterior, ver `gamesGistFormatIsVerified`—
+    // confiamos en el 304, que es la respuesta barata y no trae contenido.
+    if (await gamesGistFormatIsVerified(gistId)) {
       return { notModified: true };
     }
 
@@ -478,7 +564,9 @@ export async function readGist(token: string, gistId: string, etag: string | nul
       }
       const freshBody = (await freshResp.json()) as { files?: Record<string, { content: string }> };
       const result = await buildGistReadResponse(freshBody, freshResp.headers.get('etag'), token);
-      gamesGistFormatVerifiedThisSession.add(gistId);
+      // El veredicto se GUARDA, así que esta relectura se hace una vez por dispositivo y formato, no una por
+      // sesión. Si toca migrar no se sella: el sello llegará cuando la escritura lo deje en el formato actual.
+      await rememberGamesGistFormat(gistId, !result.wasLegacy);
       // Solo divergemos del camino 304 cuando hay que migrar: si el formato ya es el actual, devolvemos
       // notModified para conservar exactamente el comportamiento barato (el viewmodel empuja dirty si toca).
       if (!result.wasLegacy) {
@@ -496,8 +584,8 @@ export async function readGist(token: string, gistId: string, etag: string | nul
 
   const body = (await response.json()) as { files?: Record<string, { content: string }> };
   const result = await buildGistReadResponse(body, response.headers.get('etag'), token);
-  // Hemos visto el contenido completo: marca el formato como verificado para esta sesión (evita relecturas en 304).
-  gamesGistFormatVerifiedThisSession.add(gistId);
+  // Hemos visto el contenido completo: se sella el veredicto (o se retira, si resulta que hay que migrarlo).
+  await rememberGamesGistFormat(gistId, !result.wasLegacy);
   return result;
 }
 
@@ -683,7 +771,26 @@ async function assignAndWriteOverflowGists(
   return new Set(mainChunkNames);
 }
 
-export async function writeGist(token: string, gistId: string, payload: TabData): Promise<{ etag: string | null; updatedAt: number }> {
+/** Qué puede aportar quien llama para ahorrarle trabajo (y peticiones) a la escritura. */
+export interface WriteGistOptions {
+  /**
+   * El estado actual del gist, si quien llama ACABA de leerlo y no ha escrito nada por medio (ver
+   * `GistReadResponse.remoteFiles`). Con esto la escritura se ahorra su propio GET.
+   *
+   * Que esté un pelín desactualizado no cambia el resultado: sirve para comparar checksums contra lo que vamos a
+   * subir y para barrer ficheros obsoletos, y el contenido que se sube deriva justamente de esa misma lectura. Lo
+   * que NO se puede hacer es reutilizarlo después de haber escrito, porque entonces describiría un gist que ya no
+   * existe: por eso el reintento tras un conflicto vuelve a leer.
+   */
+  knownRemoteFiles?: Record<string, DecodedRemoteFile | undefined>;
+}
+
+export async function writeGist(
+  token: string,
+  gistId: string,
+  payload: TabData,
+  options: WriteGistOptions = {},
+): Promise<{ etag: string | null; updatedAt: number }> {
   if (!isValidGithubToken(token)) {
     throw new Error('Formato de token inválido');
   }
@@ -719,18 +826,24 @@ export async function writeGist(token: string, gistId: string, payload: TabData)
     const { anchorFile, chunkFiles } = await buildGamesFilesForStorage(lean);
     files = {};
 
-    // A7 (reescritura incremental) + B (reparto): lee el estado actual del gist principal UNA vez para (a) OMITIR
+    // A7 (reescritura incremental) + B (reparto): hace falta el estado actual del gist principal para (a) OMITIR
     // del PATCH los chunks sin cambios (checksum estable), (b) borrar obsoletos y (c) reutilizar gists de overflow.
+    // Se pide UNA vez, y ni siquiera eso cuando quien llama acaba de leerlo y nos lo pasa (`knownRemoteFiles`).
     let currentFiles: Record<string, DecodedRemoteFile | undefined> = {};
-    try {
-      const current = await githubFetch(`${GIST_API_BASE}/${gistId}`, { headers });
-      if (current.ok) {
-        const currentBody = (await current.json()) as { files?: Record<string, { content?: string }> };
-        // Fase 2: descomprime el remoto para que checksum/refs del ancla comparen JSON plano contra lo que construimos.
-        currentFiles = await decodeFilesMap(currentBody.files || {});
+    if (options.knownRemoteFiles) {
+      // Quien llama acaba de leer el gist y nos pasa lo que trajo: nos ahorramos repetir la misma petición.
+      currentFiles = options.knownRemoteFiles;
+    } else {
+      try {
+        const current = await githubFetch(`${GIST_API_BASE}/${gistId}`, { headers });
+        if (current.ok) {
+          const currentBody = (await current.json()) as { files?: Record<string, { content?: string }> };
+          // Fase 2: descomprime el remoto para que checksum/refs del ancla comparen JSON plano contra lo que construimos.
+          currentFiles = await decodeFilesMap(currentBody.files || {});
+        }
+      } catch {
+        // Sin estado actual: subimos el conjunto completo y no borramos nada.
       }
-    } catch {
-      // Sin estado actual: subimos el conjunto completo y no borramos nada.
     }
 
     // B (gated): si está activado, reparte el excedente en gists de OVERFLOW (los escribe ANTES que el ancla y fija
@@ -783,6 +896,9 @@ export async function writeGist(token: string, gistId: string, payload: TabData)
   }
 
   const body = (await response.json()) as { updated_at?: string };
+  // Acabamos de dejarlo en el formato al que escribimos hoy, así que el 304 de la próxima sesión ya no necesita
+  // releerlo para saberlo. Es lo que cierra el ciclo de una migración: se reescribe una vez y no se vuelve a mirar.
+  await rememberGamesGistFormat(gistId, true);
   return {
     etag: response.headers.get('etag'),
     updatedAt: body.updated_at ? Date.parse(body.updated_at) : Date.now(),
