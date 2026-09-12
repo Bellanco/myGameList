@@ -1,8 +1,9 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { AdminAnnouncement } from '../../src/view/components/AdminAnnouncement';
 import { ADMIN_ANNOUNCEMENT_UI } from '../../src/core/constants/adminLabels';
+import { DIALOG_MESSAGES } from '../../src/core/constants/labels';
 import type { Announcement } from '../../src/core/announcement/announcement';
 
 // LO QUE SE PRUEBA ES LA DIFERENCIA ENTRE LOS DOS BOTONES DE GUARDAR, que es la única decisión con consecuencias
@@ -68,23 +69,30 @@ describe('panel · aviso a los usuarios', () => {
     expect(escrito.url).toBe(ACTUAL.url);
   });
 
-  it('publicar de nuevo estrena campaña, y pregunta antes', async () => {
-    const confirmar = vi.spyOn(window, 'confirm').mockReturnValue(true);
+  /** La pregunta es el diálogo de la app, no el del navegador: mismo tema, foco atrapado y Esc para salir. */
+  it('publicar de nuevo estrena campaña, y pregunta antes con el diálogo de la app', async () => {
     const { onSave, user } = setup();
 
     await user.click(screen.getByRole('button', { name: A.republish }));
 
-    expect(confirmar).toHaveBeenCalledOnce();
+    // Nada escrito todavía: primero hay que responder.
+    expect(onSave).not.toHaveBeenCalled();
+    const dialogo = screen.getByRole('dialog', { name: A.republishConfirm });
+    await user.click(within(dialogo).getByRole('button', { name: A.republishAccept }));
+
     const escrito = onSave.mock.calls[0][0];
     expect(escrito.id).not.toBe('av-1');
     // Y sale encendido: publicar de nuevo algo apagado no tendría ningún sentido.
     expect(escrito.active).toBe(true);
   });
 
-  it('y no publica nada si se dice que no', async () => {
-    vi.spyOn(window, 'confirm').mockReturnValue(false);
+  it('y no publica nada si se cancela', async () => {
     const { onSave, user } = setup();
     await user.click(screen.getByRole('button', { name: A.republish }));
+
+    const dialogo = screen.getByRole('dialog', { name: A.republishConfirm });
+    await user.click(within(dialogo).getByRole('button', { name: DIALOG_MESSAGES.cancel }));
+
     expect(onSave).not.toHaveBeenCalled();
   });
 
