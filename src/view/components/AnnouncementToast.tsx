@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { ANNOUNCEMENT_UI } from '../../core/constants/announcementLabels';
 import type { Announcement } from '../../core/announcement/announcement';
 import { AnnouncementIcon, AnnouncementSprite } from './AnnouncementSprite';
+import { usePageVisible } from '../hooks/usePageVisible';
 // La hoja se importa AQUÍ, atada al componente, por lo mismo que la de la medalla: esta cápsula se pinta desde un
 // chunk perezoso y colgarla de `index.scss` la haría viajar en el arranque de todo el mundo por algo que casi
 // nunca hay. La forma común con el aviso de logro vive en `styles/_capsule.scss`, que esta hoja `@use`.
@@ -21,7 +22,8 @@ import '../../styles/announcement.scss';
  *  2. **El cuerpo es un `<a>` de verdad**, no un botón. Aquí no se navega por estado: se sale de la aplicación,
  *     así que tiene que poder abrirse en otra pestaña, copiarse y verse en la barra de estado antes de pulsar.
  *     De ahí también el `rel="noopener noreferrer"`, que es obligado en cualquier enlace con `target="_blank"`.
- *  3. **Vive OCHO segundos** y no cinco. El logro solo pide que lo mires; este pide que lo pulses, y cinco
+ *  3. **Vive OCHO segundos** y no cinco, y solo mientras se la pueda leer: con el ratón encima, con el foco
+ *     dentro o con la pestaña de fondo, el reloj se para. El logro solo pide que lo mires; este pide que lo pulses, y cinco
  *     segundos para leer tres filas y alcanzar el enlace se quedaban cortos. Sigue SIN botón de cerrar, como el
  *     del logro: una X en un aviso de cortesía es una X que nadie pulsa y un tabulador que roba.
  *  4. **Se anuncia solo.** El logro delega en la región viva del `StatusBanner`, que ya existía; este no tiene
@@ -69,6 +71,8 @@ export function AnnouncementToast({
 }: AnnouncementToastProps) {
   const [paused, setPaused] = useState(false);
   const [announced, setAnnounced] = useState('');
+  // Con la pestaña de fondo el reloj se para: al volver, la cápsula sigue ahí y estrena sus ocho segundos.
+  const visible = usePageVisible();
   const doneRef = useRef(onDone);
   doneRef.current = onDone;
   const shownRef = useRef(onShown);
@@ -82,10 +86,10 @@ export function AnnouncementToast({
   }, [preview, id]);
 
   useEffect(() => {
-    if (preview || paused) return;
+    if (preview || paused || !visible) return;
     const reloj = window.setTimeout(() => doneRef.current?.(), LIFE_MS);
     return () => window.clearTimeout(reloj);
-  }, [preview, paused, id]);
+  }, [preview, paused, visible, id]);
 
   useEffect(() => {
     if (preview) return;

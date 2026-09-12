@@ -38,6 +38,11 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
   área segura del gesto inferior la barra llega a 81 px: la cápsula se le metía 8 px por debajo. Ahora la barra
   publica su altura real (`--bottom-nav-h`, con `ResizeObserver`) y el carril se aparta lo que mide, igual que ya
   hacía con el banner de consentimiento. Afecta también al aviso de logro, que comparte carril.
+- **Las cápsulas gastaban su vida con la pestaña de fondo.** El aviso de logro y el del administrador se van
+  solos a los pocos segundos, y ese reloj corría igual con la pestaña en segundo plano: bastaba con irse a otra
+  cosa diez segundos para volver y no encontrar nada —y en el aviso del administrador, además, se había gastado
+  una de las veces que tenía para decirse—. Ahora el reloj se para mientras no se mira la pestaña, como ya se
+  paraba con el ratón encima o con el foco dentro.
 - **El destello del aviso se quedaba flotando fuera de la cápsula.** El barrido que la cruza al aparecer termina
   desplazado a la derecha, y eso daba igual mientras la cápsula recortara su interior; en la paleta «Sin futuro»,
   que necesita `overflow: visible` para que el halo del chaflán asome, se veía una mancha clara parada al lado

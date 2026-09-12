@@ -86,6 +86,29 @@ describe('la cápsula del aviso', () => {
     expect(onDone).toHaveBeenCalledTimes(1);
   });
 
+  /**
+   * ⚑ Y NO CORRE CON LA PESTAÑA DE FONDO. Sin esto, irse a otra pestaña doce segundos y volver dejaba la cápsula
+   * ya retirada —y en el aviso del administrador, además, gastada una de las veces que tenía para decirse—.
+   * Comprobado en Firefox con dos pestañas antes de arreglarlo.
+   */
+  it('el reloj se para mientras no se mira la pestaña', () => {
+    const onDone = vi.fn();
+    const visibility = vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('hidden');
+    render(<AnnouncementToast announcement={AVISO} onDone={onDone} />);
+    act(() => { document.dispatchEvent(new Event('visibilitychange')); });
+
+    act(() => { vi.advanceTimersByTime(30000); });
+    expect(onDone, 'con la pestaña de fondo no se va').not.toHaveBeenCalled();
+
+    // Al volver, estrena sus ocho segundos.
+    visibility.mockReturnValue('visible');
+    act(() => { document.dispatchEvent(new Event('visibilitychange')); });
+    act(() => { vi.advanceTimersByTime(7000); });
+    expect(onDone).not.toHaveBeenCalled();
+    act(() => { vi.advanceTimersByTime(1500); });
+    expect(onDone).toHaveBeenCalledTimes(1);
+  });
+
   it('avisa de que se pulsó', async () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const onOpen = vi.fn();
