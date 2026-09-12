@@ -683,6 +683,12 @@ export const ADMIN_ANNOUNCEMENT_UI = {
 
   previewTitle: 'Así se va a ver',
   previewNote: 'Es la cápsula de verdad, con el tema y la paleta que tengas puestos ahora mismo.',
+  /**
+   * Lo que enseña la muestra mientras el campo está vacío. NO se guarda: solo evita que la cápsula empiece
+   * siendo un disco suelto —sin forma que juzgar— justo cuando hay que decidir si el texto cabe.
+   */
+  sampleTitle: 'Título del aviso',
+  sampleBody: 'Aquí va la descripción, que puede ocupar dos líneas.',
 
   /** Los dos botones de guardar, separados porque hacen dos cosas muy distintas (ver `Announcement.id`). */
   save: 'Guardar cambios',

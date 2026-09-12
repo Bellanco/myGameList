@@ -12,6 +12,12 @@ import {
 import { isValidHttpUrl } from '../../core/security/sanitize';
 import { AnnouncementToast } from './AnnouncementToast';
 import { HubBackButton } from './socialhub/HubBackButton';
+// LA HOJA DEL PANEL SE IMPORTA AQUÍ, atada a la pantalla que la usa, y no se da por hecho que la haya traído
+// `AdminHub`. Es el fallo mudo de siempre (§12): esta pantalla se monta también desde la ruta de desarrollo
+// `/dev/aviso`, y colgando de otro componente salía SIN ESTILOS y sin que nada lo avisara — campos a todo lo
+// ancho, las ayudas pegadas al rótulo siguiente y los botones debajo de la barra. Vite la emite en cada chunk
+// que de verdad pinta esta pantalla.
+import '../../styles/admin.scss';
 
 const A = ADMIN_ANNOUNCEMENT_UI;
 
@@ -94,6 +100,17 @@ export function AdminAnnouncement({ current, onSave, onBack }: AdminAnnouncement
     updatedAt: Date.now(),
   }), [draft]);
 
+  /**
+   * LO QUE PINTA LA MUESTRA. Es `composed` con los huecos rellenos: mientras el título está vacío, la cápsula se
+   * quedaba en un disco con la palabra «AVISO» al lado y no había forma de juzgar si el texto va a caber, que es
+   * justo para lo que está la muestra. Los marcadores NO se guardan: solo viven aquí.
+   */
+  const sample = useMemo<Announcement>(() => ({
+    ...composed,
+    title: composed.title || A.sampleTitle,
+    body: composed.body || (composed.title ? '' : A.sampleBody),
+  }), [composed]);
+
   const run = useCallback(async (next: Announcement, done: string) => {
     setBusy(true);
     setNotice(A.saving);
@@ -149,7 +166,7 @@ export function AdminAnnouncement({ current, onSave, onBack }: AdminAnnouncement
         <p className="admin-card-note">{A.previewNote}</p>
         {/* La muestra necesita un título y un enlace para tener sentido; sin ellos se enseña igual con lo que
             haya escrito, que es lo que deja ver cómo va quedando mientras se escribe. */}
-        <AnnouncementToast announcement={composed} preview />
+        <AnnouncementToast announcement={sample} preview />
       </div>
 
       <div className="admin-card admin-ann-form">
@@ -270,13 +287,15 @@ export function AdminAnnouncement({ current, onSave, onBack }: AdminAnnouncement
             {draft.active ? A.retire : A.turnOn}
           </button>
         </p>
+        {/* EL ACUSE VA PEGADO A LOS BOTONES, y no al final de la ficha: es la respuesta a un gesto que se acaba de
+            hacer ahí mismo, y debajo de las tres notas quedaba a media pantalla de distancia del botón pulsado.
+            La región viva va SIEMPRE montada aunque esté vacía, igual que en `StatusBanner`: montarla junto con
+            el mensaje llega tarde y no se anuncia nada. */}
+        <p className="admin-ann-notice" role="status" aria-live="polite">{notice}</p>
+
         <p className="admin-card-note">{A.saveHelp}</p>
         <p className="admin-card-note">{A.republishHelp}</p>
         <p className="admin-card-note">{A.retireHelp}</p>
-
-        {/* La región viva va SIEMPRE montada aunque esté vacía, igual que en `StatusBanner`: montarla junto con el
-            mensaje llega tarde y no se anuncia nada. */}
-        <p className="admin-ann-notice" role="status" aria-live="polite">{notice}</p>
       </div>
     </section>
   );
