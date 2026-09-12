@@ -424,10 +424,29 @@ describe('logros globales — el catálogo por lo común que es cada uno', () =>
     expect(nombres[nombres.length - 1]).not.toBe('Créditos finales I');
   });
 
-  it('lista el catálogo ENTERO menos los ocultos que ese perfil no tiene', () => {
+  /**
+   * LO CERRADO NO SALE, TAMPOCO AQUÍ. Esta lista recorría el catálogo ENTERO y pintaba con su «0 %» los
+   * escalones a los que no ha llegado nadie: 402 filas bajo una cabecera cuyo denominador sí era el abierto.
+   * Ahora las dos usan la misma regla (`visibleIds`), y lo cerrado ni se ve ni cuenta.
+   */
+  it('lista lo ABIERTO, no el catálogo entero, y sin los ocultos que ese perfil no tiene', () => {
     render(<ProfileGlobalAchievements mirror={espejo(['completados-10'])} directoryMirrors={MUESTRA} owner="Fulano" self={false} onBack={() => {}} />);
-    const ocultosSinConseguir = SCORING_ACHIEVEMENTS.filter((def) => def.hidden).length;
-    expect(screen.getAllByRole('listitem')).toHaveLength(SCORING_ACHIEVEMENTS.length - ocultosSinConseguir);
+    const nombres = screen.getAllByRole('listitem').map((fila) => fila.querySelector('.ach-row-name')?.textContent);
+
+    // Lo conseguido y su zanahoria, que es lo que se le ofrece a quien tiene el de debajo.
+    expect(nombres).toContain('Créditos finales I');
+    expect(nombres).toContain('Créditos finales II');
+    // Y de ahí para arriba, nada: nadie lo ha visto todavía.
+    expect(nombres).not.toContain('Créditos finales III');
+
+    // El primer escalón de cada escalera se le ofrece a todo el mundo, así que la lista nunca se queda en nada.
+    expect(nombres).toContain('Guerra de consolas I');
+    expect(nombres.length).toBeGreaterThan(10);
+    expect(nombres.length).toBeLessThan(SCORING_ACHIEVEMENTS.length);
+
+    // Un oculto sin conseguir sigue tapado, que es la otra capa y va aparte.
+    const oculto = SCORING_ACHIEVEMENTS.find((def) => def.hidden);
+    expect(nombres).not.toContain(oculto?.labels.name);
   });
 
   it('marca con recuadro lo que tiene el perfil que se está mirando', () => {
@@ -523,15 +542,20 @@ describe('logros globales — el porcentaje de lo que no tiene nadie', () => {
 
   it('a igualdad, los escalones de una escalera van por grado y no por su número romano', () => {
     // La cola de la lista —todo a cero— es la que más escalones altos junta, y ordenados por nombre el IX se
-    // colaba delante del V.
-    render(<ProfileGlobalAchievements mirror="" directoryMirrors={MUESTRA} owner="Fulano" self={false} onBack={() => {}} />);
+    // colaba delante del V. Con un perfil que ha subido la escalera hay cuatro escalones suyos a la vista y solo
+    // el primero lo tiene alguien más de la muestra: los otros tres empatan a cero, que es el caso a ordenar.
+    const subida = espejo(['completados-10', 'completados-25', 'completados-50']);
+    render(<ProfileGlobalAchievements mirror={subida} directoryMirrors={MUESTRA} owner="Fulano" self={false} onBack={() => {}} />);
     const nombres = screen.getAllByRole('listitem').map((fila) => fila.querySelector('.ach-row-name')?.textContent);
     const escalera = nombres.filter((nombre) => nombre?.startsWith('Créditos finales '));
-    const grados = ACHIEVEMENTS_BY_ID.get('completados-10')!.grades;
-    expect(escalera.length).toBeGreaterThan(3);
-    // Los de esta escalera que nadie tiene salen en el orden de la escalera, del II para arriba.
-    expect(escalera[escalera.length - 1]).toBe(`Créditos finales ${ROMANOS[grados - 1]}`);
-    expect(escalera[1]).toBe('Créditos finales II');
+
+    // Lo suyo y la zanahoria: del I al IV, y nada por encima.
+    expect(escalera).toEqual([
+      'Créditos finales I',
+      'Créditos finales II',
+      'Créditos finales III',
+      `Créditos finales ${ROMANOS[3]}`,
+    ]);
   });
 });
 

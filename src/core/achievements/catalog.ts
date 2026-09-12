@@ -119,6 +119,9 @@ const CRITERIA_MIN_STDDEV = 12;
 /** Horas que hacen «un juego largo». Medido: 19 juegos de 302 lo pasan, contra 11 con el listón en 60 (§6.9bis). */
 const MARATHON_HOURS = 40;
 
+/** Horas que hacen «ahí se te fue la vida». Es un listón de «o más», como el de arriba: 300 cuenta. */
+const LIFETIME_HOURS = 300;
+
 /** Longitud de una reseña larga. No se sube de aquí: subirlo retira el logro a quien lo tenga por los pelos. */
 const THESIS_CHARS = 1000;
 
@@ -681,15 +684,18 @@ export const LADDERS: readonly AchievementLadder[] = [
     steps: [1, 2, 4, 7, 10, 15, 20],
     rarity: 'raro',
     icon: 'vida-entera',
-    labels: { name: 'Ahí se te fue la vida', condition: 'Más de 300 h en un solo juego' },
+    labels: { name: 'Ahí se te fue la vida', condition: `${LIFETIME_HOURS} h o más en un solo juego` },
     goal: (step) => (step === 1
-      ? 'Pasa de 300 h en un solo juego'
-      : `Pasa de 300 h en ${step} juegos distintos`),
+      ? `Llega a las ${LIFETIME_HOURS} h en un solo juego`
+      : `Llega a las ${LIFETIME_HOURS} h en ${step} juegos distintos`),
     done: (step) => (step === 1
-      ? 'Le has echado más de 300 h a un juego'
-      : `Le has echado más de 300 h a ${step} juegos`),
+      ? `Le has echado ${LIFETIME_HOURS} h o más a un juego`
+      : `Le has echado ${LIFETIME_HOURS} h o más a ${step} juegos`),
     metric: ({ games }) =>
-      count(allGames(games).map(({ game }) => ({ ok: (hoursOf(game) ?? 0) >= 300, at: firstEnteredAt(game) }))),
+      count(allGames(games).map(({ game }) => ({
+        ok: (hoursOf(game) ?? 0) >= LIFETIME_HOURS,
+        at: firstEnteredAt(game),
+      }))),
   },
   {
     key: 'platino',
@@ -862,11 +868,11 @@ export const LADDERS: readonly AchievementLadder[] = [
     icon: 'reencuentro',
     labels: { name: 'Cuánto tiempo sin verte', condition: `Juegos que retomaste ${REUNION_YEARS} años después o más` },
     goal: (step) => (step === 1
-      ? `Vuelve a un juego más de ${REUNION_YEARS} años después`
-      : `Vuelve a ${step} juegos más de ${REUNION_YEARS} años después`),
+      ? `Vuelve a un juego ${REUNION_YEARS} años después o más`
+      : `Vuelve a ${step} juegos ${REUNION_YEARS} años después o más`),
     done: (step) => (step === 1
-      ? `Has vuelto a un juego más de ${REUNION_YEARS} años después`
-      : `Has vuelto a ${step} juegos más de ${REUNION_YEARS} años después`),
+      ? `Has vuelto a un juego ${REUNION_YEARS} años después o más`
+      : `Has vuelto a ${step} juegos ${REUNION_YEARS} años después o más`),
     // LA DISTANCIA, que no la medía nadie: «Toda una vida» cuenta años SEGUIDOS y aquí lo que cuenta es el
     // hueco. Sale de `years`, así que funciona en una biblioteca catalogada hacia atrás.
     metric: ({ games }) => count(allGames(games).map(({ game }) => {

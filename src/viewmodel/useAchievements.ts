@@ -9,7 +9,7 @@ import { palettePreference } from '../view/hooks/preferences';
 import { RARITY_POINTS } from '../core/achievements/types';
 import {
   NO_ACHIEVEMENTS_CONFIG,
-  openThrough,
+  visibleIds,
   withoutHidden,
   type AchievementsConfig,
   type OpenFrontier,
@@ -173,32 +173,14 @@ export function listForScreen(
   const stateOf = (def: AchievementDef): AchievementState =>
     byId.get(def.id) || { id: def.id, level: 0, value: 0, next: def.step, unlockedAt: 0 };
 
-  // QUÉ ESCALONES SE ENSEÑAN: los que la escalera tiene ABIERTOS, más todo lo que uno tenga conseguido.
+  // QUÉ ESCALONES SE ENSEÑAN: los que la escalera tiene ABIERTOS, más todo lo que uno tenga conseguido. La regla
+  // y sus motivos viven en `visibleIds` (`core/achievements/visibility.ts`), que es de donde la toman también los
+  // logros globales del hub: dos listas que cuentan el mismo catálogo no pueden decidir por separado qué existe.
   //
-  // ABIERTO ES COMUNITARIO Y NO PERSONAL, que es la regla que esto se dejaba: en cuanto un usuario ve un escalón,
-  // ese escalón queda abierto para TODO EL MUNDO y a partir de ahí se enseña igual a todos. Aquí se decidía solo
-  // con el progreso de quien mira —cada dispositivo abría su propia escalera— así que quien empezaba veía un
-  // peldaño donde otro ya veía nueve. Lo que distingue a dos personas es lo que llevan CONSEGUIDO, no la lista.
-  // La línea la calcula `openThrough`, y con la configuración vacía se queda en el progreso propio, que es
-  // exactamente lo que se hacía antes: por eso esto no cambia nada mientras no haya espejos publicados.
-  //
-  // Y ADEMÁS, TODO LO CONSEGUIDO, esté abierto o no. La marca de agua puede sostener un escalón alto cuyo
-  // anterior ya no se cumple —una biblioteca que encoge, unos años corregidos—, y sin esta unión esa medalla
-  // desaparecía de la pantalla sin dejar de contar en la cifra de la cabecera. Un logro conseguido que no se ve
-  // en ninguna parte es el peor fallo posible aquí.
-  const visible = new Set<string>();
-  for (const steps of ACHIEVEMENTS_BY_LADDER.values()) {
-    const openTo = openThrough(steps, config.open, (def) => stateOf(def).level >= 1);
-    steps.forEach((def, index) => {
-      if (stateOf(def).level >= 1) {
-        visible.add(def.id);
-        return;
-      }
-      // Lo retirado deja de ofrecerse: no se le enseña a quien no lo tenga (§6.4).
-      if (def.retired) return;
-      if (index <= openTo) visible.add(def.id);
-    });
-  }
+  // ABIERTO ES COMUNITARIO Y NO PERSONAL: lo que distingue a dos personas es lo que llevan CONSEGUIDO, no la
+  // lista. Con la configuración vacía la línea se queda en el progreso propio, que es el comportamiento de
+  // siempre: por eso esto no cambia nada mientras no haya espejos publicados.
+  const visible = visibleIds(ACHIEVEMENTS_BY_LADDER.values(), config.open, (def) => stateOf(def).level >= 1);
 
   const items: AchievementItem[] = ACHIEVEMENTS
     .filter((def) => visible.has(def.id))

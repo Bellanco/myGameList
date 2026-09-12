@@ -675,6 +675,12 @@ Y el denominador tiene sus propias reglas, porque si baila la cifra miente:
   decisión, y por eso la regla de Firestore deja escribir `open` a cualquiera con sesión (solo hacia delante, y
   sin tocar `hidden`, que sí es decisión del administrador). A cambio de todo esto el denominador crece solo:
   tu porcentaje puede bajar sin que toques nada, porque alguien abrió un escalón nuevo.
+  ⚑ **Y lo cerrado tampoco se PINTA en ninguna parte**, que es la otra mitad de la misma regla: si un escalón no
+  cuenta porque nadie lo ha visto, tampoco puede aparecer en una lista. El listado (`listForScreen`) y la
+  fracción (`summarize`) ya lo cumplían, pero los **logros globales** del hub recorrían el catálogo entero y
+  pintaban los cerrados con su «0 %» — 402 filas bajo una cabecera que decía «de 249». La regla vive en una sola
+  función, `visibleIds` (`core/achievements/visibility.ts`), y de ahí la toman las dos pantallas: dos listas del
+  mismo catálogo no pueden decidir por separado qué existe.
 - **Añadir logros al catálogo baja la fracción de todo el mundo.** Es el mismo efecto que tiene en Steam publicar
   logros de DLC, y no tiene arreglo bonito: se asume y **se dice en la pantalla** («22 de 32 del catálogo
   actual»). Lo que no se hace nunca es congelar la fracción por versión, que sería inventarse un número.
@@ -795,6 +801,19 @@ es de diez por escalera. Consolidar un umbral en el código (los tres pasos que 
 es lo único que un sistema de logros no puede hacer. El panel solo ofrece «quitar» mientras la muestra dice que no
 lo tiene nadie; a partir de ahí, para dejar de ofrecerlo hay que marcarlo retirado en el código, como cualquier
 otro escalón (§6.4).
+
+⚑ **Corregir un umbral escrito mal.** Equivocarse tecleando un número es lo más fácil de esta pantalla, y hasta
+ahora la única salida era quitar y volver a añadir: dos escrituras, y entre una y otra el catálogo de TODO EL
+MUNDO con el umbral equivocado dentro —o sin ninguno de los dos, si la segunda fallaba—. Cada añadido lleva ahora
+su «Corregir», que abre el campo **con su valor dentro** (no se propone nada, se enseña lo que hay) y guarda la
+lista entera de la escalera de una vez, que es la forma que ya tenía el escritor.
+
+Pide **exactamente lo mismo que quitar, y por el mismo motivo**: el `id` de un escalón ES su umbral, así que
+cambiar el número es quitar `completados-125` y añadir `completados-175`. Con alguien detrás eso le retiraría la
+medalla, de modo que en cuanto la muestra dice que lo tiene alguien no hay ni «Corregir» ni «Quitar», solo el
+porqué. Las validaciones son las de añadir —entero positivo, sin chocar con un umbral del código ni con otro
+añadido— con una sola diferencia: **el suyo propio no cuenta como repetido**, o abrir el campo con su valor
+dentro sería ya un error; dejarlo igual no es un fallo, es no tener nada que guardar.
 
 ### 6.5 La recompensa: temas, y nada más
 
