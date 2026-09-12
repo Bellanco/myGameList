@@ -1,0 +1,88 @@
+// El AVISO DEL ADMINISTRADOR · la misma cápsula, otro disco
+//
+// DESTINO: hoja propia, importada desde `AnnouncementToast.tsx` — igual que `achievements.scss` cuelga de la
+// medalla. La cápsula (carril, forma, filas de texto, barrido y animaciones) NO se redefine aquí: viene entera
+// del parcial `_capsule.scss`, que es el mismo que usa la hoja de logros. Así la forma está escrita una vez y
+// los skins de paleta, que cuelgan de `.ach-toast`, la cuadran sin saber quién la está usando.
+//
+// LO QUE CAMBIA SON TRES COSAS, y cada una dice algo distinto de un logro:
+//   · el DISCO es un icono del sprite de la app dentro de un círculo, no una medalla. Un aviso no se ha
+//     conseguido, y ponerle una medalla sería prometer algo que no hay.
+//   · el HALO es el ACENTO del tema (`--steam-rgb`) y no la rareza. La rareza es una escala de logros; aquí no
+//     significaría nada, y el naranja de «excepcional» sobre un aviso se leería como una alarma.
+//   · la DESCRIPCIÓN puede ocupar DOS líneas. La del logro es una frase del catálogo, escrita para caber en una;
+//     esta la escribe el administrador en un formulario y la segunda línea es lo que evita tener que redactar
+//     mirando un contador de caracteres. Caben dentro de los 64 px del disco, así que el círculo exterior de la
+//     izquierda sigue siendo concéntrico y la cápsula no cambia de alto.
+@use './capsule';
+
+// El acento del tema, que es de donde sale también el halo del carril. Cada paleta trae el suyo, así que el
+// aviso se tiñe solo en las doce combinaciones sin una línea por tema.
+//
+// Y EL RADIO PASA A SER «LA MITAD DE LO QUE MIDA»: la cápsula del logro calcula el suyo a partir del disco
+// porque su alto es siempre el del disco, pero aquí la descripción puede ocupar dos líneas y estirarla unos
+// píxeles. Con el radio fijo, esos píxeles de más convertían el borde izquierdo en un rectángulo casi redondo —se
+// nota—, y con `999px` sigue siendo una cápsula mida lo que mida. Las paletas angulosas lo vuelven a poner recto
+// en su skin, como con el aviso de logro.
+.ach-toast.is-announce {
+  --glow: var(--steam-rgb);
+  border-radius: 999px;
+}
+
+/* EL DISCO · el sitio de la medalla, ocupado por un icono.
+   Conserva la geometría —el mismo lado (`--medal`), el mismo círculo— porque es lo que sostiene el radio de la
+   cápsula: el borde izquierdo es la circunferencia exterior de este disco. Lo que no conserva es la penumbra
+   parda de la medalla: esa es de las medallas, y un aviso con el mismo fondo se leería como un logro raro. Aquí
+   el disco es superficie de la app con el acento entrando por el filo. */
+.ach-toast-disc {
+  flex: none;
+  width: var(--medal);
+  height: var(--medal);
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  color: var(--fg-link);
+  background:
+    radial-gradient(70% 64% at 28% 18%,
+      color-mix(in srgb, var(--steam) 22%, var(--surface-elevated)) 0%,
+      var(--surface) 58%,
+      color-mix(in srgb, var(--surface) 82%, #000) 100%);
+  // Un filete de acento y una sombra interior abajo: el mismo relieve mínimo del resto de la app, sin inventar
+  // una dirección nueva de luz.
+  box-shadow:
+    inset 0 0 0 1px rgba(var(--steam-rgb), .42),
+    inset 0 -8px 14px -10px rgba(0, 0, 0, .65);
+}
+
+// 44% del disco: el mismo aire que deja el dibujo de la medalla dentro de su filo.
+.ach-toast-disc .ui-icon { width: 44%; height: 44%; }
+
+/* LA DESCRIPCIÓN, HASTA DOS LÍNEAS. `-webkit-line-clamp` está en todos los navegadores que soporta la app y es
+   lo único que recorta por líneas con puntos suspensivos; lo que sobre se corta igual que en el logro, así que
+   un texto largo se queda feo pero nunca rompe la cápsula. */
+.ach-toast.is-announce .ach-toast-desc {
+  white-space: normal;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+/* LA MUESTRA DEL PANEL. La misma cápsula, sin el carril fijo: el administrador tiene que ver lo que va a
+   publicar EN SU SITIO de la ficha, no pegada a la esquina de la pantalla mientras rellena el formulario.
+   Se pinta sobre el fondo de la app para que el borde y la sombra se lean como se van a leer. */
+.ann-preview {
+  display: flex;
+  padding: 1rem;
+  border: 1px dashed var(--border);
+  border-radius: 12px;
+  background: var(--surface-soft, transparent);
+  // El barrido y el halo se salen del borde de la cápsula: sin esto, la caja de la muestra se los comía.
+  overflow: visible;
+}
+
+/* ⚑ EL MISMO TOPE DE ANCHO QUE EL CARRIL (30rem). En la app lo pone `.ach-toast-stack`, que la muestra no tiene:
+   sin esto, la cápsula del panel se estiraba a lo ancho de la ficha y una descripción larga salía en UNA línea
+   —cuando a la gente le va a salir en dos, o recortada—. Una muestra que miente sobre el ancho no sirve para
+   decidir el texto, que es justo para lo que está. */
+.ann-preview .ach-toast { max-width: 30rem; }

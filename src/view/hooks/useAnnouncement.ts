@@ -1,0 +1,138 @@
+import { useCallback, useEffect, useRef, useState } from 'react';
+import {
+  afterClicked,
+  afterShown,
+  isAnnouncementDue,
+  parseSeen,
+  type Announcement,
+  type AnnouncementSeen,
+} from '../../core/announcement/announcement';
+import { ANNOUNCEMENT_SEEN_KEY } from '../../core/constants/storageKeys';
+import { runWhenIdle } from '../../core/utils/idle';
+
+/**
+ * EL AVISO DEL ADMINISTRADOR, decidido para ESTA apertura de la app.
+ *
+ * Tres cosas y ninguna más: traer el documento, preguntarle a la política pura si toca decirlo
+ * (`isAnnouncementDue`), y llevar la cuenta de lo que este dispositivo ya sabe. Todo lo que se puede decidir sin
+ * navegador vive en `core/announcement/announcement`; aquí solo está lo que necesita un reloj y un
+ * `localStorage`.
+ *
+ * SE DECIDE UNA VEZ, AL ABRIR. No hay reevaluación mientras la app está abierta: el ciclo de insistencia se mide
+ * en horas y volver a mirarlo cada minuto solo serviría para que una cápsula apareciera sola en medio de una
+ * sesión, que es exactamente lo que nadie espera de un aviso.
+ *
+ * NO COMPITE CON EL ARRANQUE. La lectura entra por `runWhenIdle` (la misma puerta que usa el resto del trabajo
+ * no crítico) y el repositorio por `import()` dinámico, para no arrastrar Firestore al bundle inicial por un
+ * documento que casi siempre dice que no hay nada.
+ *
+ * Y SALE CON RETRASO A PROPÓSITO. Una cápsula que aparece en el mismo fotograma que la app no se lee: la
+ * atención está en la lista que se acaba de pintar. `SHOW_DELAY_MS` es el tiempo que tarda alguien en dejar de
+ * mirar lo que venía a mirar.
+ *
+ * LA CUENTA SE APUNTA AL PINTAR, NO AL DECIDIR (`markShown` lo llama la cápsula al montarse). Es lo que hace que
+ * un desbloqueo de logro —que tiene preferencia en el carril y deja al aviso sin pintar— no gaste una de las
+ * veces.
+ */
+
+/** Lo que se espera desde que la app está en pie hasta que la cápsula aparece. */
+const SHOW_DELAY_MS = 2500;
+
+export interface AnnouncementState {
+  /** El aviso que toca enseñar AHORA, o `null` si no hay nada que decir. */
+  announcement: Announcement | null;
+  /** Lo llama la cápsula al montarse: gasta una de las veces. */
+  markShown: () => void;
+  /** Se pulsó el enlace: este aviso no se vuelve a decir en este dispositivo. */
+  markClicked: () => void;
+  /** Se agotó la vida de la cápsula. La cuenta ya está hecha; esto solo la retira de la pantalla. */
+  dismiss: () => void;
+}
+
+function readSeen(): AnnouncementSeen {
+  try {
+    return parseSeen(localStorage.getItem(ANNOUNCEMENT_SEEN_KEY));
+  } catch {
+    return parseSeen(null);
+  }
+}
+
+function writeSeen(seen: AnnouncementSeen): void {
+  try {
+    localStorage.setItem(ANNOUNCEMENT_SEEN_KEY, JSON.stringify(seen));
+  } catch {
+    // Sin persistencia, la cuenta vale para esta sesión: se volverá a decir en la siguiente apertura. Es el lado
+    // molesto pero inocuo del fallo, y el contrario —callarlo para siempre— haría inútil el canal.
+  }
+}
+
+export function useAnnouncement(): AnnouncementState {
+  const [announcement, setAnnouncement] = useState<Announcement | null>(null);
+  // La cuenta de este dispositivo, en un `ref`: cambia como efecto de pintar, no es algo que se pinte.
+  const seenRef = useRef<AnnouncementSeen>(readSeen());
+  // El mismo aviso, a mano y sin esperar al siguiente render: es lo que leen `markShown` y `markClicked`.
+  //
+  // ⚑ Y NO SE APUNTA DESDE EL ACTUALIZADOR de `setAnnouncement`: React puede invocarlo dos veces por render (es
+  // lo que hace el modo estricto en desarrollo para cazar efectos escondidos), y ahí dentro escribir la cuenta
+  // gastaría DOS de las veces por una sola cápsula.
+  const currentRef = useRef<Announcement | null>(null);
+  // El `id` cuya aparición ya está contada, para que montar la cápsula dos veces no cuente dos.
+  const countedRef = useRef('');
+  // Una sola vez por montaje, aunque React monte el efecto dos veces (modo estricto en desarrollo).
+  const askedRef = useRef(false);
+
+  useEffect(() => {
+    if (askedRef.current) return;
+    askedRef.current = true;
+
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+
+    const cancelIdle = runWhenIdle(() => {
+      void import('../../model/repository/announcementRepository')
+        .then((module) => module.loadAnnouncement())
+        .then((value) => {
+          if (cancelled || !isAnnouncementDue(value, seenRef.current, Date.now())) return;
+          timer = setTimeout(() => {
+            currentRef.current = value;
+            setAnnouncement(value);
+          }, SHOW_DELAY_MS);
+        })
+        .catch(() => {
+          // Sin aviso. No es un error de nada: la app no depende de esto para funcionar.
+        });
+    });
+
+    return () => {
+      cancelled = true;
+      cancelIdle();
+      if (timer) clearTimeout(timer);
+    };
+  }, []);
+
+  const markShown = useCallback(() => {
+    const current = currentRef.current;
+    if (!current || countedRef.current === current.id) return;
+    countedRef.current = current.id;
+    seenRef.current = afterShown(current, seenRef.current, Date.now());
+    writeSeen(seenRef.current);
+  }, []);
+
+  const markClicked = useCallback(() => {
+    const current = currentRef.current;
+    if (current) {
+      seenRef.current = afterClicked(current, seenRef.current);
+      writeSeen(seenRef.current);
+    }
+    // Pulsar cierra la cápsula: ya se está yendo a otro sitio.
+    currentRef.current = null;
+    setAnnouncement(null);
+  }, []);
+
+  const dismiss = useCallback(() => {
+    currentRef.current = null;
+    setAnnouncement(null);
+  }, []);
+
+  return { announcement, markShown, markClicked, dismiss };
+}

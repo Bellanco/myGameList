@@ -6,6 +6,20 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
 ## [Unreleased]
 
 ### Added
+- **Avisos a los usuarios desde el panel.** `/admin` estrena una tercera vista donde se escribe un aviso —rótulo,
+  título, descripción, icono y enlace— que se le enseña a todo el mundo al abrir la app, en la misma cápsula de
+  abajo a la izquierda que los logros y con el mismo comportamiento (ocho segundos en vez de cinco, en pausa
+  mientras se lee, sin botón de cerrar). Al pulsar lleva a la web que se haya puesto, en otra pestaña. **No es
+  una notificación del sistema**: esta app no tiene push, así que el aviso se ve al abrirla y no antes. Se
+  insiste hasta N veces mientras nadie pulse, con la espera que diga el panel (por defecto tres veces, una al
+  día), y la cuenta es de cada dispositivo: pulsar el enlace lo calla del todo. Lo lee **cualquiera, con cuenta o
+  sin ella** —media app se usa sin sesión de Firebase—, y por eso **no vive en Firestore sino en el propio
+  origen**: una Pages Function nueva (`/api/announcement`) sobre KV, pública al leer y solo del administrador al
+  escribir. Leerlo de Firestore habría hecho que abrir la app contactara con Google incluso sin sesión, que es
+  justo lo que la política de cookies promete que no pasa (y lo que comprueba el `smoke` de «una visita anónima
+  no contacta con terceros»). El panel enseña la cápsula de verdad mientras se redacta, y separa «Guardar
+  cambios» (corregir lo publicado) de «Publicar como aviso nuevo» (empezar de cero y volver a decírselo a todo
+  el mundo).
 - **Los escalones añadidos desde el panel se pueden corregir.** Un umbral escrito mal solo se podía quitar y
   volver a añadir: dos escrituras, y entre una y otra el catálogo de todo el mundo con el número equivocado
   dentro. Ahora cada añadido lleva su «Corregir», que abre el campo con su valor dentro y guarda la lista entera
@@ -14,6 +28,10 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
   «Corregir» ni «Quitar», solo el porqué.
 
 ### Fixed
+- **El destello del aviso se quedaba flotando fuera de la cápsula.** El barrido que la cruza al aparecer termina
+  desplazado a la derecha, y eso daba igual mientras la cápsula recortara su interior; en la paleta «Sin futuro»,
+  que necesita `overflow: visible` para que el halo del chaflán asome, se veía una mancha clara parada al lado
+  del aviso. Ahora se apaga al salir.
 - **Dos logros decían pedir más de lo que piden.** «Ahí se te fue la vida» se consigue con 300 h en un juego y
   «Cuánto tiempo sin verte» con un hueco de cinco años justos, pero los dos se anunciaban con un «más de» que
   dejaba fuera el propio listón —y «Cuánto tiempo sin verte» se contradecía consigo mismo, porque su línea de
