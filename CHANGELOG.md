@@ -16,6 +16,18 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
   TIPOS y no longitudes: un `id` que no es un número es corrupción y no se publica, pero cuánto ha escrito
   alguien es un dato suyo y legítimo. Lo que sí hay que acotar —el TAMAÑO de lo que se sube— lo sigue vigilando
   el límite del gist, con la medida real de GitHub y ya comprimido, que es la que de verdad protege.
+- **Quien tenía algo sin subir no volvía a actualizarse solo.** La recarga automática —la que estrenó la 1.2.5:
+  con la pestaña oculta, o a la vista pero quieta— se cancela si hay trabajo a medias, y como señal de «trabajo
+  a medias» se miraba la marca de cambios pendientes de subir al gist. Esa marca responde a otra pregunta
+  —«¿queda algo por subir?»— y puede ser cierta PARA SIEMPRE: solo se borra tras una escritura correcta. Así
+  que se quedaba puesta en dos grupos enteros: quien **no** usa sincronización (cualquier edición la marca y no
+  hay ningún ciclo que la limpie, o sea que basta con haber guardado un juego alguna vez) y quien la tiene
+  averiada. A todos ellos se les apagaba la puesta al día automática y se quedaban esperando a pulsar el aviso.
+  Lo peor era el segundo grupo: la persona cuya sincronización está rota es justo la que necesita la versión que
+  la arregla, y su avería impedía que llegara. Ahora lo que espera es lo único que había que respetar: un ciclo
+  de sincronización EN MARCHA. Recargar con cambios sin subir no pierde nada —viven en el dispositivo, la marca
+  sobrevive a la recarga y el primer ciclo tras arrancar los empuja—; recargar a mitad de un ciclo solo obliga a
+  repetirlo, y eso se sigue evitando.
 - **El detalle de una actividad social hacía pasar el adelanto por la reseña entera.** Por el canal social viajan
   160 caracteres; el texto completo, los puntos fuertes y los débiles viven en el gist de LISTADOS de su autor.
   Cuando ese no llega —porque aún está en camino, porque no se ha podido leer o porque esa persona no ha
