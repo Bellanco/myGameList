@@ -903,7 +903,7 @@
    "key": "vida-entera",
    "nombre": "Ahí se te fue la vida",
    "familia": "mirror",
-   "condicion": "Más de 300 h en un solo juego",
+   "condicion": "300 h o más en un solo juego",
    "umbrales": [
     1,
     2,
