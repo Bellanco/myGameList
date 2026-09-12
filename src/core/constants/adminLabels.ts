@@ -638,17 +638,15 @@ export const ADMIN_ACHIEVEMENTS_UI = {
 export const ADMIN_ANNOUNCEMENT_UI = {
   open: 'Aviso a los usuarios',
   title: 'Aviso a los usuarios',
-  subtitle: 'Un rótulo, un título, una descripción y un enlace. Se dice en la misma cápsula que los logros, abajo a la izquierda, al abrir la app.',
+  /**
+   * UNA LÍNEA, Y LA ÚNICA QUE HACE FALTA. Aquí hubo un párrafo y cinco notas —qué se ve, quién lo ve, cómo se
+   * insiste, cuánto tarda— y sobraban: la pantalla la usa quien hizo la función, y lo demás lo dicen los propios
+   * campos («Veces que se insiste», «Horas entre avisos») o se ve en la muestra. Lo que NO se deduce de nada de
+   * eso es que esto no es una notificación del móvil, así que es lo que se queda escrito.
+   */
+  subtitle: 'Se ve al abrir la app, no como notificación del móvil.',
   back: 'Volver al censo',
   sectionAria: 'Aviso a los usuarios',
-
-  /** Lo justo para no llevarse una sorpresa. Una línea por cosa; el porqué está en el código. */
-  notes: [
-    'Se ve al abrir la app, no como notificación del móvil.',
-    'Lo ve todo el mundo, con cuenta o sin ella.',
-    'Se insiste por dispositivo; pulsar el enlace lo calla.',
-    'Tarda unos minutos en llegar a quien ya la tenía abierta.',
-  ] as const,
 
   field: {
     kicker: 'Rótulo',
@@ -688,7 +686,6 @@ export const ADMIN_ANNOUNCEMENT_UI = {
   } as Record<string, string>,
 
   previewTitle: 'Así se va a ver',
-  previewNote: 'La cápsula de verdad, con tu tema y tu paleta.',
   /**
    * Lo que enseña la muestra mientras el campo está vacío. NO se guarda: solo evita que la cápsula empiece
    * siendo un disco suelto —sin forma que juzgar— justo cuando hay que decidir si el texto cabe.
@@ -698,15 +695,14 @@ export const ADMIN_ANNOUNCEMENT_UI = {
 
   /** Los dos botones de guardar, separados porque hacen dos cosas muy distintas (ver `Announcement.id`). */
   save: 'Guardar cambios',
-  saveHelp: 'Corrige lo publicado sin volver a avisar a quien ya lo vio.',
+  /** Lo único con consecuencias que no se ve en el propio botón: la diferencia entre los dos que guardan. */
+  actionsHelp: 'Guardar corrige lo publicado; publicar de nuevo vuelve a salirle a todo el mundo.',
   republish: 'Publicar como aviso nuevo',
-  republishHelp: 'Vuelve a salirle a todo el mundo, incluido quien ya lo pulsó.',
   republishConfirm: '¿Volver a enseñárselo a todo el mundo, incluido quien ya lo pulsó?',
   /** El botón del diálogo va CORTO: «Publicar como aviso nuevo» se partía en tres líneas dentro de la pastilla
    *  roja, y la pregunta de encima ya dice qué se va a publicar. */
   republishAccept: 'Publicar',
   retire: 'Apagar',
-  retireHelp: 'Deja de enseñarse; el texto se queda.',
   turnOn: 'Encender',
 
   saving: 'Guardando…',

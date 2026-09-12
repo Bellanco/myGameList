@@ -942,6 +942,15 @@
   margin-top: .4rem;
 }
 
+/* La muestra, ya dentro de la ficha del formulario y pegada a los botones. Una línea de separación arriba para
+   que se lea como «esto es lo que vas a publicar» y no como un campo más. */
+.admin-ann-preview {
+  margin-top: .4rem;
+  padding-top: .9rem;
+  border-top: 1px solid var(--border);
+}
+.admin-ann-preview h3 { margin: 0 0 .5rem; font-size: .95rem; }
+
 /* El acuse de guardado. Región viva SIEMPRE montada (aunque esté vacía), así que reserva su línea: si apareciera
    y desapareciera, los botones de encima darían un salto en cada guardado. */
 .admin-ann-notice { min-height: 1.2rem; margin: .2rem 0 0; color: var(--fg-link); font-size: .85rem; }
