@@ -7,6 +7,7 @@ import { reconcileReviewActivity } from '../model/repository/socialActivityRecon
 import { invalidateProfileGames, loadForeignProfileGames } from '../model/repository/foreignProfileRepository';
 import { getCachedSocialProfile, getLocalMeta, patchLocalMeta, putCachedSocialProfile, type CachedSocialProfileData } from '../model/repository/indexedDbRepository';
 import { applyProfileVisibility } from '../core/utils/profileVisibility';
+import { PUBLIC_NAME_MAX_LENGTH, safeTrim } from '../core/security/sanitize';
 import { isNetworkFailure, isOffline } from '../core/utils/network';
 import { useOnlineStatus } from '../view/hooks/useOnlineStatus';
 import { resolveViewer, withVisiblePhotos } from '../core/social/photoVisibility';
@@ -436,9 +437,18 @@ export function useSocialViewModel(options?: {
   // usuario sin la aceptación vigente no llega a leer ni escribir nada del canal social.
   const socialSpaceOpen = showSocialSpace && legalGateOpen;
 
-  /** Identidad denormalizada que viaja al documento de amistad: nick público, foto publicable y los dos gists. */
+  /**
+   * Identidad denormalizada que viaja al documento de amistad: nick público, foto publicable y los dos gists.
+   *
+   * El nombre va RECORTADO a `PUBLIC_NAME_MAX_LENGTH`, que es lo que aceptan las reglas de `friendships`
+   * (`denormTextIsSane`: 120). El nick del gist admite hasta 500 (`SOCIAL_NAME_MAX`) y el editor de perfil corta
+   * en 60, pero entre medias está el nombre de la cuenta de Google, que entra por el respaldo sin pasar por
+   * ninguna pantalla: con más de 120 caracteres, cada saneado intentaba una escritura que las reglas denegaban
+   * —en cada apertura del hub, para siempre— y su identidad no llegaba nunca a sus amistades. `profiles` ya
+   * recorta con esta misma cota (ver `repairProfileDisplayName`), así que los dos canales escriben lo mismo.
+   */
   const buildFriendshipSelfInfo = useCallback((): FriendshipSelfInfo => ({
-    name: profileName.trim(),
+    name: safeTrim(profileName, PUBLIC_NAME_MAX_LENGTH),
     photo: ownPublishablePhoto,
     socialGistId: socialCfgGistId,
     gamesGistId: mainSyncConfig?.gistId || '',

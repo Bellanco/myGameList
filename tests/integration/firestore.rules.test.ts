@@ -315,6 +315,21 @@ describe('firestore.rules', () => {
       expect(rulesSource).toContain(`request.resource.data.displayName.size() <= ${PUBLIC_NAME_MAX_LENGTH}`);
     });
 
+    /**
+     * Y el MISMO número en las amistades, que es el otro sitio donde el cliente escribe ese nombre.
+     *
+     * Aquí faltaba el espejo, y el hueco tenía consecuencias: el nick admite hasta 500 en el gist
+     * (`SOCIAL_NAME_MAX`) y el editor de perfil corta en 60, pero entre medias está el nombre de la cuenta de
+     * Google, que entra por el respaldo sin pasar por ninguna pantalla. Con más de 120 caracteres, el saneado de
+     * identidad intentaba una escritura que la regla denegaba —en cada apertura del hub, para siempre— y esa
+     * persona no lograba propagar su nombre ni su gist de listados a sus amigos. Ahora el cliente recorta con
+     * esta constante antes de escribir (ver `buildFriendshipSelfInfo`), así que los dos números tienen que
+     * seguir siendo el mismo.
+     */
+    it('los nombres denormalizados de una amistad se acotan con ese mismo límite', () => {
+      expect(rulesSource).toContain(`value is string && value.size() <= ${PUBLIC_NAME_MAX_LENGTH}`);
+    });
+
     it('rechaza un displayName desmedido y acepta uno normal', async () => {
       await assertSucceeds(setDoc(doc(ownerDb('uid-a'), 'profiles', 'uid-a'), {
         uid: 'uid-a', displayName: 'Ada Lovelace', social: { enabled: true },

@@ -39,6 +39,13 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
   fallar. Pero sellar dependía de que no fallaran, así que ese «no he podido mirar» quedaba grabado como «ya
   está hecho»; y como la huella es el propio nick, nadie volvía a intentarlo mientras no lo cambiara. Los sellos
   llevan fecha y caducan a la semana, igual que el de las amistades.
+- **Un nombre de cuenta muy largo dejaba a esa persona sin propagar su identidad.** El nick admite hasta 500
+  caracteres en el gist y el editor de perfil corta en 60, pero entre medias está el nombre de la cuenta de
+  Google, que entra por el respaldo sin pasar por ninguna pantalla. Las reglas de `friendships` aceptan 120, así
+  que con un nombre más largo cada saneado intentaba una escritura que se denegaba —en cada apertura del hub, y
+  sin que nada lo contara—: sus amigos no recibían ni su nombre ni el id de su gist de listados, que viaja con
+  él. Ahora el cliente recorta con la misma cota que ya usa para el perfil público, y un test de reglas ata los
+  dos números para que no puedan volver a separarse.
 - **El panel preguntaba por un nombre que nadie discutía.** El bloque de identidad de `/admin` aparece cuando está
   rancio el nombre O la foto, pero la confirmación usaba siempre el texto del nombre: con la foto desactualizada
   y el nick impecable, preguntaba «¿escribir «Ada» como nombre de Ada?» —el mismo nombre dos veces, señalando un
