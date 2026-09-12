@@ -26,6 +26,20 @@
 //        dibujadas a mano. El sprite baja de ~40 kB a ~16 kB y un logro nuevo cuesta pegar un icono.
 //     3. El grado: temple del filo en vez de numeral romano. El romano no sobrevivía a la tira; el filo sí.
 //
+// LA FORMA DE LA CÁPSULA DEL AVISO VIVE EN `_capsule.scss`, no aquí. Se extrajo el 12-sep-2026, al aparecer un
+// SEGUNDO inquilino del mismo carril: el aviso del administrador (`AnnouncementToast`), que reutiliza la cápsula
+// entera y solo cambia el disco de la izquierda. El parcial lo `@use`n las dos hojas —esta y `announcement.scss`—
+// para que la forma esté escrita UNA vez; el CSS se emite en los dos chunks, que son unas décimas de kB, y a
+// cambio no hay dos definiciones del mismo carril envejeciendo por separado.
+//
+// Las clases conservan el prefijo `ach-` A PROPÓSITO, aunque ya no sean solo de logros: los tres skins de paleta
+// (`themes/cyberpunk.scss`, `themes/portal.scss`) cuelgan de `.ach-toast` para cuadrarla en su propio lenguaje, y
+// renombrarla obligaría a tocar el chaflán de dos capas de Cyberpunk, que está afinado a mano.
+//
+// Lo que SÍ se queda en esta hoja es lo que solo sabe un logro: los cuatro tonos de rareza del halo, las medallas
+// solapadas y la barra del hito. Están al final del fichero.
+@use './capsule';
+
 // ── Paleta de la penumbra ────────────────────────────────────────────────
 // Mundo propio, y esta vez EL MISMO EN LOS DOS TEMAS. Una medalla es un objeto, no cromo de la app: si la
 // penumbra se aclarase en tema claro dejaría de ser penumbra, que es justo lo que la hace legible. Los tres
@@ -632,110 +646,10 @@
 .ach-strip-all .ui-icon { width: calc(var(--sz) * .42); height: calc(var(--sz) * .42); }
 @media (prefers-reduced-motion: reduce) { .ach-strip-all { transition: none; } }
 
-// ── El AVISO DEL INSTANTE · la cápsula ───────────────────────────────────
-/* Sale de la maqueta `docs/logros/demo-toast.html`, que es donde se decidió con los tokens reales delante. El
-   porqué de cada pieza está en el componente (`AchievementToast`); aquí van solo las razones de forma.
-
-   SUSTITUYE AL TEXTO QUE IBA POR EL BANNER. El banner sigue siendo quien ANUNCIA —su región viva es la que lo
-   dice a un lector de pantalla— y la cápsula es lo que se ve.
-
-   CARRIL DE ABAJO A LA IZQUIERDA, el mismo que ya usa `.consent-banner`: por encima de la barra inferior fija
-   (~4,6rem) y con su `env(safe-area-inset-bottom)`, así no tapa la navegación ni se mete debajo del notch.
-   z-index 125 — sobre la barra (120) y bajo el consentimiento (130), que es el único aviso que sí tiene que
-   ganar porque bloquea una decisión legal. */
-.ach-toast-stack {
-  position: fixed;
-  left: .8rem;
-  bottom: calc(4.6rem + env(safe-area-inset-bottom, 0px));
-  z-index: 125;
-  // `right` en vez de un ancho en `vw`: `100vw` cuenta la barra de desplazamiento y la tarjeta se salía por la
-  // derecha en móvil. Es como se sujeta `.consent-banner`.
-  right: .8rem;
-  // 30rem y no 25: con 25 la descripción del catálogo se cortaba casi siempre, y una línea recortada a mitad de
-  // frase se lee como un fallo, no como un resumen.
-  max-width: 30rem;
-  display: grid;
-  gap: .5rem;
-  // La cápsula mide lo que mide su texto, no el carril entero.
-  justify-items: start;
-  pointer-events: none;
-}
-/* Con el consentimiento en pantalla el carril está ocupado: el aviso se sube por encima en vez de taparlo.
-
-   SE APARTA LO QUE MIDE EL OTRO, y no una cantidad fija. Aquí había `9.4rem` escrita a mano, que era la altura
-   del banner medida una vez: pero el banner mide lo que mide su texto —su bloque es `flex: 1 1 260px`, así que
-   envuelve una línea más según el ancho y la fuente— y en el Linux de CI crecía 15px por encima de la constante y
-   se lo comía el aviso. `--consent-h` la publica el propio `ConsentBanner` con `ResizeObserver`, así que nadie
-   duplica la medida de nadie. El `.5rem` es el mismo hueco que el `gap` del carril, y el valor de reserva es lo
-   medido en escritorio: si la variable no ha llegado todavía, el aviso queda un pelo más alto, que es el lado
-   seguro (de más no tapa nada). */
-:root[data-consent='pending'] .ach-toast-stack {
-  bottom: calc(4.6rem + var(--consent-h, 9.25rem) + .5rem + env(safe-area-inset-bottom, 0px));
-}
-
-/* LA CÁPSULA · el borde de la izquierda es OTRO CÍRCULO EXTERIOR de la medalla, no un radio elegido a ojo: el
-   relleno es el mismo por los cuatro lados (`--pad`), la medalla manda la altura y el radio es la mitad de esa
-   altura. Así el filo del disco y el borde de la tarjeta quedan concéntricos.
-
-   SE ADAPTA A LA PALETA POR COLOR, NO POR FORMA: superficie, borde y sombra son los tokens de cada tema. La
-   tipografía la hereda del `body`, que es donde cada skin pone la suya. */
-.ach-toast {
-  --pad: 6px;
-  // 64: la cápsula mide lo que mide la medalla, y dentro van hasta cuatro filas (rótulo, nombre, descripción y
-  // —en el hito— la barra). Con 56 entraban, pero pegadas unas a otras.
-  --medal: 64px;
-  // La sombra dice la RAREZA, y con varios logros la del más raro —que es el primero, porque el orden ya es
-  // ese—. Gris de peltre por defecto: es lo que lleva un hito, que aún no se ha conseguido.
-  --glow: 150, 162, 178;
-  pointer-events: auto;
-  position: relative;
-  display: flex;
-  align-items: center;
-  gap: .85rem;
-  min-height: calc(var(--medal) + var(--pad) * 2);
-  padding: var(--pad) 1.35rem var(--pad) var(--pad);
-  background: var(--surface-elevated);
-  border: 1px solid var(--border);
-  border-radius: calc((var(--medal) + var(--pad) * 2) / 2);
-  /* TRES CAPAS Y CADA UNA DICE UNA COSA: el anillo fino y el halo llevan la RAREZA (la escala de loot que ya usa
-     el aura de la medalla), y la sombra de bloque es la de la app (`--shadow`), que es lo que lo mantiene dentro
-     del conjunto en cualquier paleta. La rareza NO se escribe: la dice la sombra. */
-  box-shadow:
-    0 0 0 1px rgba(var(--glow), .5),
-    0 0 20px -2px rgba(var(--glow), .38),
-    var(--shadow);
-  width: fit-content;
-  max-width: 100%;
-  overflow: hidden;
-  animation: ach-toast-in 200ms ease-out both;
-}
-// Los cuatro tonos son los MISMOS del aura de la medalla: una sola escala de rareza en toda la app.
 .ach-toast.is-comun       { --glow: 150, 162, 178; }
 .ach-toast.is-infrecuente { --glow: 63, 190, 114; }
 .ach-toast.is-raro        { --glow: 168, 85, 247; }
 .ach-toast.is-excepcional { --glow: 255, 140, 26; }
-
-// El cuerpo entero lleva a /logros: el instante invita a mirar el detalle, y el detalle está ahí. Es un botón y
-// no un enlace porque la navegación de esta app es por estado, no por URL con recarga.
-.ach-toast-body {
-  flex: 1 1 auto;
-  display: flex;
-  align-items: center;
-  gap: .75rem;
-  min-width: 0;
-  color: inherit;
-  background: none;
-  border: 0;
-  padding: 0;
-  font: inherit;
-  text-align: left;
-  cursor: pointer;
-}
-.ach-toast-body:hover .ach-toast-name { color: var(--fg-link); }
-/* EL ÁREA DEL BOTÓN ES LA CÁPSULA ENTERA. Dos cosas a la vez: el cuerpo entero lleva a /logros —lo pedía la
-   maqueta— y el reloj de los cinco segundos se para al pasar el ratón por CUALQUIER parte del aviso, relleno
-   incluido, sin colgar manejadores de un `div` que no se puede enfocar. */
-.ach-toast-body::after { content: ''; position: absolute; inset: 0; }
 
 /* LAS MEDALLAS, SOLAPADAS. Hasta tres; a partir de ahí la cuenta la dice el texto. El solape es lo que permite
    que el agrupado no ensanche la tarjeta.
@@ -747,43 +661,6 @@
 .ach-toast-medals > *:nth-child(1) { z-index: 3; }
 .ach-toast-medals > *:nth-child(2) { z-index: 2; filter: brightness(.9); }
 .ach-toast-medals > *:nth-child(3) { z-index: 1; filter: brightness(.8); }
-
-.ach-toast-text { min-width: 0; display: grid; gap: .16rem; }
-/* El rótulo, en la misma voz mono y versalitas que el chip de rareza. Con el acento del tema y no en gris: es la
-   línea que dice QUÉ ha pasado, y en gris se leía como un pie de foto. Es texto normal, así que va por
-   `--fg-link`, que es el papel del acento que cumple el 4,5:1 en las doce combinaciones de paleta y tema. */
-.ach-toast-kicker {
-  display: flex;
-  align-items: center;
-  gap: .4rem;
-  font-family: var(--ach-mono);
-  font-size: 11px;
-  letter-spacing: .07em;
-  text-transform: uppercase;
-  color: var(--fg-link);
-}
-/* UNA SOLA LÍNEA, y por geometría: la cápsula mide lo que mide la medalla, así que un nombre que salta de línea
-   rompe el círculo exterior. Lo que no cabe se recorta con puntos suspensivos. */
-.ach-toast-name {
-  font-size: 1rem;
-  font-weight: 700;
-  color: var(--text);
-  line-height: 1.3;
-  transition: color 120ms ease;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-// LA DESCRIPCIÓN · el texto en pasado del escalón, tal como lo escribe el catálogo. Una línea, y lo que no cabe
-// se recorta: es la línea que explica de qué va la medalla, no un resumen que haya que redactar aparte.
-.ach-toast-desc {
-  font-size: .82rem;
-  line-height: 1.35;
-  color: var(--text-muted);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
 
 /* EL HITO · LA MISMA CÁPSULA y el mismo comportamiento; lo que cambia es la tercera fila: donde el desbloqueo
    pone la descripción, el hito pone la BARRA con su cifra al lado. Es lo que informa aquí —cuánto llevas—,
@@ -811,20 +688,3 @@
   white-space: nowrap;
 }
 
-// EL DESTELLO, detrás de `data-effects`. Un barrido que cruza la tarjeta UNA vez, no un bucle: la noticia es el
-// logro y el brillo solo la señala. Sin efectos —o con `prefers-reduced-motion`— el aviso sale igual.
-.ach-toast-sheen {
-  position: absolute; inset: 0;
-  pointer-events: none;
-  background: linear-gradient(105deg, transparent 38%, rgba(255, 226, 164, .17) 50%, transparent 62%);
-  transform: translateX(-120%);
-  animation: ach-toast-sheen 900ms ease-out 120ms both;
-}
-:root[data-effects='off'] .ach-toast-sheen { display: none; }
-
-@keyframes ach-toast-in { from { opacity: 0; transform: translateY(10px) scale(.98); } }
-@keyframes ach-toast-sheen { to { transform: translateX(120%); } }
-@media (prefers-reduced-motion: reduce) {
-  .ach-toast { animation: none; }
-  .ach-toast-sheen { display: none; }
-}

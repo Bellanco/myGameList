@@ -15,6 +15,7 @@ import { Toolbar } from './view/components/Toolbar';
 import { GameTable } from './view/components/GameTable';
 import { StatusBanner } from './view/components/StatusBanner';
 import { useAchievementNotice } from './view/hooks/useAchievementNotice';
+import { useAnnouncement } from './view/hooks/useAnnouncement';
 import { UpdateNotice } from './view/components/UpdateNotice';
 import { BottomNavigation } from './view/components/BottomNavigation';
 import { APP_ROUTES, FALLBACK_ROUTE, LEGACY_ROUTE_REDIRECTS, matchAppSection, type AppSection } from './core/constants/routes';
@@ -78,6 +79,25 @@ const AdminHub = lazy(() => import('./view/components/AdminHub').then((module) =
  */
 const AchievementToast = lazy(() => import('./view/components/stats/AchievementToast').then((module) => ({ default: module.AchievementToast })));
 
+/**
+ * EL AVISO DEL ADMINISTRADOR, perezoso por lo mismo: comparte carril y forma con el de logro, se monta desde el
+ * arranque y casi nunca hay ninguno que enseñar. El documento que lo enciende lo lee `useAnnouncement` cuando el
+ * navegador está ocioso, así que ni el chunk ni la petición compiten con el primer pintado.
+ */
+const AnnouncementToast = lazy(() => import('./view/components/AnnouncementToast').then((module) => ({ default: module.AnnouncementToast })));
+
+/**
+ * LA PANTALLA DEL AVISO EN LOCAL (`/dev/aviso`), SOLO EN DESARROLLO. En producción `import.meta.env.DEV` es
+ * falso, el empaquetador se lleva por delante el `import()` y esta ruta no existe en la web publicada.
+ *
+ * Existe porque en local no hay Firebase —las claves solo están en el despliegue—, así que no hay sesión, y
+ * `/admin` rebota. Sin esto, el aviso era lo único que no se podía redactar ni ver sin desplegarlo. Ver
+ * `dev/DevAnnouncementScreen`.
+ */
+const DevAnnouncement = import.meta.env.DEV
+  ? lazy(() => import('./dev/DevAnnouncementScreen').then((module) => ({ default: module.DevAnnouncementScreen })))
+  : null;
+
 function getCurrentTab(pathname: string): TabId {
   return ROUTE_TAB[pathname] || 'c';
 }
@@ -124,7 +144,12 @@ export default function App() {
   const location = useLocation();
   const navigate = useNavigate();
   const currentTab = getCurrentTab(location.pathname);
-  const activeSection = matchAppSection(location.pathname);
+  // La ruta de desarrollo del aviso (`/dev/aviso`) no está en `APP_ROUTES`, así que caería en la sección de
+  // listas y saldría con las pestañas y la barra de abajo encima del formulario. Se le da el cromo de ajustes,
+  // que es el que usa el panel. En producción `DEV` es falso y esto se compila como la llamada de siempre.
+  const activeSection = import.meta.env.DEV && location.pathname === '/dev/aviso'
+    ? 'settings'
+    : matchAppSection(location.pathname);
   const legalDocId = getLegalDocId(location.pathname);
 
   const vm = useGameListViewModel();
@@ -197,6 +222,11 @@ export default function App() {
     clearAchievementFlash();
     navigate('/logros');
   }, [clearAchievementFlash, navigate]);
+
+  // EL AVISO DEL ADMINISTRADOR (`appConfig/announcement`): un texto y un enlace a otra web, dichos en la misma
+  // cápsula del carril de abajo a la izquierda. Se decide una vez al abrir la app y se insiste como mucho N
+  // veces mientras nadie pulse; la política entera vive en `core/announcement/announcement`.
+  const announcement = useAnnouncement();
 
   // Bandeja de importados (local, no sincroniza). Se monta aquí para exponer su contador en los controles
   // flotantes y cablear la graduación (clasificar → formulario → retirar de la bandeja).
@@ -771,12 +801,24 @@ export default function App() {
       <StatusBanner notice={vm.notice} remoteChangesApplied={syncVm.lastRemoteChangesApplied} />
       {/* Fuera del `main` y sin `fallback`: es un carril fijo sobre la barra inferior, y mientras su chunk viaja
           no hay nada que enseñar en su sitio. */}
+      {/* UNA CÁPSULA EN EL CARRIL, SIEMPRE, y con el logro por delante: lo que acabas de conseguir gana a lo que
+          alguien quiere contarte. El aviso no pierde su turno por esto —la cuenta de veces la apunta la cápsula
+          al MONTARSE, no al decidirse— así que volverá a intentarlo en la siguiente apertura. */}
       {achievementFlash ? (
         <Suspense fallback={null}>
           <AchievementToast
             flash={achievementFlash}
             onDone={clearAchievementFlash}
             onOpen={openAchievements}
+          />
+        </Suspense>
+      ) : announcement.announcement ? (
+        <Suspense fallback={null}>
+          <AnnouncementToast
+            announcement={announcement.announcement}
+            onShown={announcement.markShown}
+            onOpen={announcement.markClicked}
+            onDone={announcement.dismiss}
           />
         </Suspense>
       ) : null}
@@ -798,6 +840,14 @@ export default function App() {
           {APP_ROUTES.map(({ path, section }) => (
             <Route key={path} path={path} element={sectionScreens[section]} />
           ))}
+          {/* Solo en desarrollo, y fuera de `APP_ROUTES` a propósito: esa lista la recorren la navegación y los
+              tests de rutas, y una entrada que no existe en producción no pinta nada ahí. */}
+          {DevAnnouncement ? (
+            <Route
+              path="/dev/aviso"
+              element={<Suspense fallback={null}><DevAnnouncement /></Suspense>}
+            />
+          ) : null}
           {/* Nombres retirados: redirigen al actual en vez de caer en el catch-all. Van DESPUÉS de la tabla
               (no hay solape, pero el orden deja claro cuál manda) y ANTES del rebote a `FALLBACK_ROUTE`. */}
           {LEGACY_ROUTE_REDIRECTS.map(({ from, to }) => (

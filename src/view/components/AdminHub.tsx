@@ -1,6 +1,7 @@
 import { lazy, memo, Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { Navigate } from 'react-router-dom';
-import { ADMIN_ACHIEVEMENTS_UI, ADMIN_PANEL_UI } from '../../core/constants/adminLabels';
+import { ADMIN_ACHIEVEMENTS_UI, ADMIN_ANNOUNCEMENT_UI, ADMIN_PANEL_UI } from '../../core/constants/adminLabels';
+import type { Announcement } from '../../core/announcement/announcement';
 import type { HiddenOverrides, OpenFrontier } from '../../core/achievements/visibility';
 import type { ExtraSteps } from '../../core/achievements/types';
 import {
@@ -47,6 +48,13 @@ const A = ADMIN_PANEL_UI;
  */
 const AdminAchievements = lazy(() =>
   import('./AdminAchievements').then((module) => ({ default: module.AdminAchievements })));
+
+/**
+ * El aviso a los usuarios, también aparte y perezoso: trae la cápsula de verdad para la muestra —con su hoja— y
+ * el censo, que es a lo que se entra, no tiene por qué cargarla.
+ */
+const AdminAnnouncement = lazy(() =>
+  import('./AdminAnnouncement').then((module) => ({ default: module.AdminAnnouncement })));
 
 const DATE_FORMAT = new Intl.DateTimeFormat('es-ES', { dateStyle: 'medium', timeStyle: 'short' });
 /** Para fechas de alta: el día basta y ocupa la mitad. */
@@ -159,7 +167,7 @@ export const AdminHub = memo(function AdminHub() {
   const vm = useAdminViewModel();
   // Dos vistas y no dos rutas: `/admin` es una ruta oculta que ya cuelga de la guarda de `isAdmin()`, y partirla
   // en dos obligaría a repetir esa guarda y a inventar un «volver» que no lleva a ninguna sección de la app.
-  const [view, setView] = useState<'users' | 'achievements'>('users');
+  const [view, setView] = useState<'users' | 'achievements' | 'announcement'>('users');
   // La configuración de ocultación de logros: se lee al entrar en su vista y se reescribe al pulsar. Vive aquí
   // —y no en la pantalla— porque es este componente el que ya habla con Firestore.
   const [hiddenAchievements, setHiddenAchievements] = useState<HiddenOverrides>({});
@@ -169,6 +177,9 @@ export const AdminHub = memo(function AdminHub() {
   // Los escalones que el panel ha añadido a una escalera sin desplegar (§6.4bis). Llegan con la MISMA lectura
   // que los dos de arriba —mismo documento— y sí son catálogo: al leerlos se reconstruye (`applyExtraSteps`).
   const [extraSteps, setExtraSteps] = useState<ExtraSteps>({});
+  // El aviso a los usuarios que hay publicado ahora mismo. Se lee al entrar en su vista, saltándose la caché del
+  // dispositivo: aquí se está a punto de reescribirlo, y ver una versión de hace horas sería un fallo.
+  const [announcement, setAnnouncement] = useState<Announcement | null>(null);
   const [pending, setPending] = useState<PendingAction>(null);
   // Los enlaces de TODOS se piden una vez y se agrupan por usuario: el panel pinta decenas de fichas y una
   // petición por ficha sería absurda para un dato que cabe en una sola respuesta.
@@ -205,6 +216,34 @@ export const AdminHub = memo(function AdminHub() {
       cancelled = true;
     };
   }, [view]);
+
+  /** El aviso publicado, al entrar en su vista y solo entonces. `force`: sin caché, ver arriba. */
+  useEffect(() => {
+    if (view !== 'announcement') return;
+    let cancelled = false;
+    void import('../../model/repository/announcementRepository')
+      .then((module) => module.loadAnnouncement(true))
+      .then((value) => {
+        if (!cancelled) setAnnouncement(value);
+      })
+      .catch(() => {
+        // Sin documento (o sin red) la pantalla abre en blanco, que es lo que hay: un aviso por escribir.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [view]);
+
+  /**
+   * Guarda el aviso y se queda con lo que de verdad ha quedado escrito. Igual que los interruptores de logros:
+   * lo escribe esto —que es quien habla con Firestore— y si falla LANZA, que la pantalla lo dice.
+   */
+  const saveAnnouncement = useCallback(async (next: Announcement): Promise<Announcement> => {
+    const module = await import('../../model/repository/announcementRepository');
+    const saved = await module.saveAnnouncement(next);
+    setAnnouncement(saved);
+    return saved;
+  }, []);
 
   /** Guarda el cambio y se queda con lo que de verdad ha quedado escrito. Si falla, LANZA: la ficha lo dice. */
   const toggleHiddenAchievement = useCallback(async (ladderKey: string, hidden: boolean) => {
@@ -350,6 +389,18 @@ export const AdminHub = memo(function AdminHub() {
     );
   }
 
+  if (view === 'announcement') {
+    return (
+      <Suspense fallback={null}>
+        <AdminAnnouncement
+          current={announcement}
+          onSave={saveAnnouncement}
+          onBack={() => setView('users')}
+        />
+      </Suspense>
+    );
+  }
+
   const totals = vm.census?.totals;
 
   // Tarjeta contenedora propia y NO `.settings-hub`/`.settings-card`: ese hub reparte sus tarjetas en una rejilla
@@ -366,6 +417,9 @@ export const AdminHub = memo(function AdminHub() {
         <p className="admin-card-actions">
           <button type="button" className="btn btn-secondary" onClick={() => setView('achievements')}>
             {ADMIN_ACHIEVEMENTS_UI.open}
+          </button>
+          <button type="button" className="btn btn-secondary" onClick={() => setView('announcement')}>
+            {ADMIN_ANNOUNCEMENT_UI.open}
           </button>
         </p>
 

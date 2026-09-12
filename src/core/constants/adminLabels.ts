@@ -625,3 +625,102 @@ export const ADMIN_ACHIEVEMENTS_UI = {
     onboarding: 'Primeros pasos',
   },
 } as const;
+
+/**
+ * EL AVISO A LOS USUARIOS (`/admin` → «Avisos»). La pantalla donde se redacta lo que verá todo el mundo al abrir
+ * la app: un rótulo, un título, una descripción, un icono y el enlace a donde se les quiere llevar.
+ *
+ * LOS TEXTOS DE ESTA PANTALLA EXPLICAN EL CANAL, y no por ser didácticos: quien escribe aquí tiene que saber
+ * que esto NO es una notificación del móvil (no hay Web Push), que la cuenta de veces es por dispositivo y que
+ * un aviso publicado tarda un rato en llegar a quien ya tenía la app abierta. Sin eso, el primer aviso se
+ * escribe esperando otra cosa.
+ */
+export const ADMIN_ANNOUNCEMENT_UI = {
+  open: 'Aviso a los usuarios',
+  title: 'Aviso a los usuarios',
+  /**
+   * UNA LÍNEA, Y LA ÚNICA QUE HACE FALTA. Aquí hubo un párrafo y cinco notas —qué se ve, quién lo ve, cómo se
+   * insiste, cuánto tarda— y sobraban: la pantalla la usa quien hizo la función, y lo demás lo dicen los propios
+   * campos («Veces que se insiste», «Horas entre avisos») o se ve en la muestra. Lo que NO se deduce de nada de
+   * eso es que esto no es una notificación del móvil, así que es lo que se queda escrito.
+   */
+  subtitle: 'Se ve al abrir la app, no como notificación del móvil.',
+  back: 'Volver al censo',
+  sectionAria: 'Aviso a los usuarios',
+
+  field: {
+    kicker: 'Rótulo',
+    kickerHelp: 'La línea pequeña. En blanco pone «Aviso».',
+    title: 'Título',
+    titleHelp: 'Una sola línea.',
+    body: 'Descripción',
+    bodyHelp: 'Dos líneas como mucho.',
+    url: 'Enlace',
+    urlHelp: 'Se abre en otra pestaña.',
+    icon: 'Icono',
+    active: 'Encendido',
+    repeats: 'Veces que se insiste',
+    repeatsHelp: 'Si nadie pulsa.',
+    interval: 'Horas entre avisos',
+    intervalHelp: '24 = una vez al día.',
+  },
+
+  /** Nombre de cada icono: es lo que oye quien no ve el dibujo, y el `title` al pasar el ratón. */
+  iconNames: {
+    megafono: 'Megáfono',
+    votar: 'Votación',
+    fiesta: 'Celebración',
+    novedad: 'Novedad',
+    fecha: 'Fecha',
+    rayo: 'Urgente',
+    regalo: 'Regalo',
+    info: 'Información',
+    bell: 'Campana',
+    star: 'Estrella',
+    rocket: 'Cohete',
+    trophy: 'Trofeo',
+    'dice-d20': 'Dado',
+    'checkered-flag': 'Meta',
+    'share-nodes': 'Enlace',
+    signature: 'Firma',
+  } as Record<string, string>,
+
+  previewTitle: 'Así se va a ver',
+  /**
+   * Lo que enseña la muestra mientras el campo está vacío. NO se guarda: solo evita que la cápsula empiece
+   * siendo un disco suelto —sin forma que juzgar— justo cuando hay que decidir si el texto cabe.
+   */
+  sampleTitle: 'Título del aviso',
+  sampleBody: 'Aquí va la descripción, que puede ocupar dos líneas.',
+
+  /** Los dos botones de guardar, separados porque hacen dos cosas muy distintas (ver `Announcement.id`). */
+  save: 'Guardar cambios',
+  /** Lo único con consecuencias que no se ve en el propio botón: la diferencia entre los dos que guardan. */
+  actionsHelp: 'Guardar corrige lo publicado; publicar de nuevo vuelve a salirle a todo el mundo.',
+  republish: 'Publicar como aviso nuevo',
+  republishConfirm: '¿Volver a enseñárselo a todo el mundo, incluido quien ya lo pulsó?',
+  /** El botón del diálogo va CORTO: «Publicar como aviso nuevo» se partía en tres líneas dentro de la pastilla
+   *  roja, y la pregunta de encima ya dice qué se va a publicar. */
+  republishAccept: 'Publicar',
+  retire: 'Apagar',
+  turnOn: 'Encender',
+
+  saving: 'Guardando…',
+  saved: 'Guardado.',
+  savedNew: 'Publicado como aviso nuevo: vuelve a salirle a todo el mundo.',
+  retired: 'Apagado: ya no se le enseña a nadie.',
+  failed: 'No se ha podido guardar. Vuelve a intentarlo.',
+
+  /** Lo que falta para poder guardar. Se dice campo a campo, no como un «formulario inválido». */
+  needTitle: 'Hace falta un título.',
+  needUrl: 'Hace falta un enlace que empiece por https:// o http://.',
+
+  /** Estado del aviso que hay ahora mismo en Firestore. */
+  currentOn: 'Encendido',
+  currentOff: 'Apagado',
+  currentNone: 'Sin publicar todavía.',
+  currentSaved: (date: string) => `guardado el ${date}`,
+  currentId: (id: string) => `campaña ${id}`,
+  /** El mismo conteo que el de las reseñas, para que se lea igual en los dos sitios. */
+  counter: (used: number, max: number) => `${used} / ${max} caracteres`,
+} as const;

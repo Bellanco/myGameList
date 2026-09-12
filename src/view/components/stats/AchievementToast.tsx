@@ -3,6 +3,7 @@ import { AchievementMedal } from './AchievementMedal';
 import { AchievementSprite } from '../AchievementSprite';
 import { ACHIEVEMENTS_UI } from '../../../core/constants/achievementLabels';
 import { RARITY_POINTS } from '../../../core/achievements/types';
+import { usePageVisible } from '../../hooks/usePageVisible';
 import type { AchievementDef } from '../../../core/achievements/types';
 
 /**
@@ -24,8 +25,9 @@ import type { AchievementDef } from '../../../core/achievements/types';
  *
  * TRES DECISIONES QUE NO SE REVISITAN A CIEGAS:
  *
- *  1. **Cinco segundos y sin botón de cerrar.** La cuenta se para mientras se lee: con el ratón encima o con el
- *     foco dentro. Un aviso de cortesía con una X es una X que nadie pulsa y que roba un tabulador.
+ *  1. **Cinco segundos y sin botón de cerrar.** La cuenta se para mientras se lee: con el ratón encima, con el
+ *     foco dentro o con la pestaña de fondo (ver `usePageVisible`). Un aviso de cortesía con una X es una X que
+ *     nadie pulsa y que roba un tabulador.
  *  2. **Una sola cápsula.** Si llega otro desbloqueo mientras vive, se FUNDE en la misma —de ahí que el texto
  *     sepa contar— en vez de apilar una segunda: dos avisos superpuestos tapan la barra inferior.
  *  3. **Hasta tres medallas solapadas** y de la cuarta en adelante lo dice la cuenta. Tres discos de 64 px en
@@ -67,6 +69,8 @@ const NEAR_PERCENT = 85;
 
 export function AchievementToast({ flash, onDone, onOpen }: AchievementToastProps) {
   const [paused, setPaused] = useState(false);
+  // Y con la pestaña de fondo, igual que con el ratón encima: el reloj no corre si nadie puede leerla.
+  const visible = usePageVisible();
   const doneRef = useRef(onDone);
   doneRef.current = onDone;
 
@@ -78,10 +82,10 @@ export function AchievementToast({ flash, onDone, onOpen }: AchievementToastProp
       : flash.defs.map((def) => def.id).join(',');
 
   useEffect(() => {
-    if (!key || paused) return;
+    if (!key || paused || !visible) return;
     const reloj = window.setTimeout(() => doneRef.current(), LIFE_MS);
     return () => window.clearTimeout(reloj);
-  }, [key, paused]);
+  }, [key, paused, visible]);
 
   if (flash === null) return null;
 

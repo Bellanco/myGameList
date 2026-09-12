@@ -104,3 +104,16 @@ export const ROULETTE_USED_KEY = 'mis-listas-roulette-used';
 //
 // Se guarda en el dispositivo, no se publica y no viaja: son datos propios que el hub ya tenía a la vista.
 export const ACHIEVEMENTS_SOCIAL_KEY = 'mis-listas-achievements-social';
+
+// Avisos del administrador — lo que ESTE dispositivo ya sabe del aviso en curso: a qué campaña se refiere,
+// cuántas veces se ha pintado, cuándo fue la última y si se pulsó el enlace. JSON con la forma de
+// `AnnouncementSeen` (ver `core/announcement/announcement.ts`).
+//
+// ES DE DISPOSITIVO, como la marca de agua de los logros, y por el mismo motivo: la alternativa era una
+// escritura en Firestore por usuario y por aviso solo para recordar que ya se le dijo. Lo que se paga a cambio
+// es que quien usa móvil y ordenador recibe el aviso en los dos; lo que se gana es que quien NO tiene cuenta
+// también lo recibe (el documento se lee sin sesión).
+//
+// La cuenta cuelga del `id` de la campaña: publicar un aviso con `id` nuevo se lo vuelve a enseñar a todo el
+// mundo, aunque el anterior ya estuviera pulsado. Es lo que hace el botón «Volver a publicar» del panel.
+export const ANNOUNCEMENT_SEEN_KEY = 'mis-listas-announcement-seen';

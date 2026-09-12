@@ -485,11 +485,16 @@ service cloud.firestore {
     // lo que dice el código, que es el lado seguro: un logro oculto sigue oculto.
     match /appConfig/{docId} {
       allow read: if isSignedIn();
+      // ⚑ LA VALIDACIÓN DEL CATÁLOGO SE ATA A SU DOCUMENTO (`docId == "achievements"`), como ya hacía la de la
+      // apertura comunitaria. Sin eso, `achievementsConfigIsValid()` valía para CUALQUIER documento de
+      // `appConfig`: el admin podía crear ahí dentro un documento con cualquier nombre y un mapa `hidden` de cien
+      // entradas. No lo hacía nadie —el cliente escribe el único documento que existe, y con su forma— pero la
+      // regla decía más de lo que quiere decir, y una colección con la puerta entornada acaba usándose.
       allow create: if !isPlaceholder(docId)
-        && ((isAdmin() && achievementsConfigIsValid())
+        && ((isAdmin() && docId == "achievements" && achievementsConfigIsValid())
             || (isSignedIn() && openFrontierCreateIsValid(docId)));
       allow update: if !isPlaceholder(docId)
-        && ((isAdmin() && achievementsConfigIsValid())
+        && ((isAdmin() && docId == "achievements" && achievementsConfigIsValid())
             || (isSignedIn() && openFrontierUpdateIsValid(docId)));
       allow delete: if !isPlaceholder(docId) && isAdmin();
     }
