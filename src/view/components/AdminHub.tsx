@@ -784,8 +784,18 @@ export const AdminHub = memo(function AdminHub() {
                         disabled={busy}
                         onClick={() =>
                           setPending({
-                            // La confirmación dice el nombre EXACTO que se va a escribir, no solo a quién.
-                            title: A.healIdentity.confirmWithName(name, user.displayName.trim() || user.knownAs.trim()),
+                            /**
+                             * La confirmación dice el nombre EXACTO que se va a escribir… pero SOLO cuando el
+                             * nombre es lo que está en disputa.
+                             *
+                             * Este bloque sale también con la foto rancia y el nick impecable, y ahí preguntar
+                             * «¿escribir «Ada» como nombre de Ada?» es señalar un problema que no existe: el
+                             * administrador lee dos veces el mismo nombre y no entiende qué se le está pidiendo
+                             * (y de paso no se entera de que lo que se va a arreglar es la foto).
+                             */
+                            title: staleNames.length > 0
+                              ? A.healIdentity.confirmWithName(name, user.displayName.trim() || user.knownAs.trim())
+                              : A.healIdentity.confirm(name),
                             run: () => void vm.healIdentity(user),
                           })
                         }
