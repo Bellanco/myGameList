@@ -23,6 +23,16 @@ export interface LocalMeta {
   devices: Record<string, { name: string; lastSeen: number }>;
   migrationVersion?: number; // estado de la migración one-time (>=3 = migrado)
   gamesUpdatedAt?: number; // updatedAt del último espejo al store `games` (para elegir la fuente más fresca al cargar)
+  /**
+   * FORMATO DEL GIST DE JUEGOS YA COMPROBADO, por id de gist y con la firma del formato DESTINO como valor
+   * (p. ej. `v4+gzip`). Ver `readGist`: un 304 confirma que el contenido no ha cambiado, pero no lo trae, así que
+   * no se puede evaluar si toca migrarlo; sin esto había que releer el gist entero una vez POR SESIÓN para
+   * averiguar algo que ya se sabía.
+   *
+   * Guardar la firma y no un simple `true` es lo que hace que el sello caduque cuando debe: si una versión nueva
+   * cambia el formato de escritura, deja de coincidir y la comprobación vuelve a hacerse sola.
+   */
+  gamesGistFormatVerified?: Record<string, string>;
   photoHealedFor?: string; // última photoURL ya propagada al gist social (evita releer/reescribir cada sesión)
   // Reconciliación de la actividad social (reseñas publicadas en el gist social vs reseñas reales de los
   // listados). `activityReconciledAt` es el sello de la última pasada y `activityReviewCount` el número de
