@@ -66,8 +66,23 @@ export interface LocalMeta {
   // Locales por dispositivo, por lo mismo que `friendshipIdentityFingerprint`.
   /** Nick ya replicado a `profiles.displayName`. */
   profileNameRepairedFor?: string;
+  /**
+   * Cuándo se selló ese nick, para que el sello CADUQUE (ver `STARTUP_STAMP_RECHECK_MS`).
+   *
+   * `repairProfileDisplayName` devuelve `false` sin lanzar en tres caminos donde no ha comprobado nada —sin
+   * servicios, con el perfil ilegible o aún sin crear, y cuando el documento vive bajo otro id (el caso que
+   * resuelve el cutover del panel)—, y el gestor lo sellaba igual: «hecho» cuando en realidad era «no he
+   * podido mirar». Como la huella es el propio nick, nadie volvía a intentarlo mientras no lo cambiara.
+   */
+  profileNameRepairedAt?: number;
   /** `<socialGistId>|<gamesGistId>` ya retirados del perfil público. */
   publicGistIdsPurgedFor?: string;
+  /**
+   * Cuándo se selló esa purga, por lo mismo que `profileNameRepairedAt`: `purgeOwnPublicGistIds` también
+   * devuelve `false` sin lanzar cuando NO pudo purgar —típicamente porque aún no había respaldo en
+   * `privateConfig`—, y ese no es un estado definitivo: en cuanto el respaldo existe, sí se puede.
+   */
+  publicGistIdsPurgedAt?: number;
   /** Gist social del que ya consta que es SECRETO: evita un listado de gists contra GitHub por apertura. */
   socialChannelPrivateFor?: string;
   /**
