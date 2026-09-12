@@ -46,7 +46,7 @@ src/
   viewmodel/      hooks de estado: listas, filtros, CRUD, sync, social
   view/
     components/   piezas visuales reutilizables e iconos
-    hooks/        utilidades de UI (debounce, tema…)
+    hooks/        utilidades de UI (tema, preferencias) y los hooks de SESIÓN (ver nota)
     modals/       formularios y acciones de administración/sync
   core/
     constants/    labels, iconos, storage keys, configuración UI
@@ -54,6 +54,24 @@ src/
     utils/        comparadores y helpers puros
   styles/         SCSS: tokens de tema en _base.scss, resto por área
 ```
+
+**Dónde la práctica se separa del esquema, y por qué conviene saberlo.** Las flechas de arriba describen la
+intención, no una regla que nadie compruebe. Medido sobre el código: de los 24 ficheros de `view/` que importan
+un repositorio, **18 importan uno que habla con la red** (Firebase, Gist o nuestras Pages Functions) en vez de
+pasar por un view-model. No es descuido repartido: son dos grupos con forma propia.
+
+- `view/hooks/use*Session` (`useScoreScaleSession`, `useAppearanceSession`, `useSocialProfileSession`,
+  `useLegacyProfileHeal`…) son view-models de sesión en todo menos en el nombre: no pintan nada, enlazan la
+  sesión de Google con una preferencia y la hidratan. Su sitio natural sería `viewmodel/`, y moverlos es mudar
+  ficheros, no reescribir lógica.
+- Las pantallas que hablan con su repositorio directamente (`AdminHub`, `AccountHub`, `DangerZone`,
+  `PublicReviewScreen`…) sí son la desviación de verdad, y ordenarlas es un refactor amplio sin red de pruebas
+  de interfaz que lo respalde.
+
+Se intentó fijar la separación con una regla de ESLint y la medición la tumbó: prohibirlo alcanzaba a casi todo
+el directorio, lo que no significa que el código esté mal, sino que **la regla describía otra arquitectura**. La
+única frontera que sí está cerrada por herramienta es la de `core`, que no puede depender de repositorios
+(`eslint.config.cjs`). El resto queda escrito aquí, que es mejor que un esquema que promete lo que no se cumple.
 
 ## Scripts
 
