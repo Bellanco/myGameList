@@ -1,0 +1,283 @@
+import { useCallback, useMemo, useState } from 'react';
+import { ADMIN_ANNOUNCEMENT_UI } from '../../core/constants/adminLabels';
+import {
+  ANNOUNCEMENT_ICONS,
+  ANNOUNCEMENT_LIMITS,
+  DEFAULT_ANNOUNCEMENT_ICON,
+  DEFAULT_INTERVAL_HOURS,
+  DEFAULT_REPEATS,
+  type Announcement,
+  type AnnouncementIcon,
+} from '../../core/announcement/announcement';
+import { isValidHttpUrl } from '../../core/security/sanitize';
+import { AnnouncementToast } from './AnnouncementToast';
+import { HubBackButton } from './socialhub/HubBackButton';
+
+const A = ADMIN_ANNOUNCEMENT_UI;
+
+const DATE_FORMAT = new Intl.DateTimeFormat('es-ES', { dateStyle: 'medium', timeStyle: 'short' });
+
+/**
+ * LA PANTALLA DONDE SE ESCRIBE EL AVISO (`/admin` → «Aviso a los usuarios»).
+ *
+ * ES LA ÚNICA VISTA DEL PANEL QUE ESCRIBE UN TEXTO QUE VA A LEER TODO EL MUNDO —el censo modera y el catálogo de
+ * logros se lee—, y de ahí las dos decisiones que la gobiernan:
+ *
+ *  · **LA MUESTRA ES LA CÁPSULA DE VERDAD.** No un dibujo parecido: el mismo componente que se le va a pintar a
+ *    la gente (`AnnouncementToast` en modo `preview`), con el tema y la paleta que tenga puestos quien escribe.
+ *    Un título que no cabe se ve aquí, no en la primera queja.
+ *
+ *  · **GUARDAR Y VOLVER A PUBLICAR SON DOS BOTONES.** La diferencia no es de matiz: la cuenta de veces vistas de
+ *    cada dispositivo cuelga del `id` de la campaña, así que cambiarlo se lo vuelve a enseñar a TODO el mundo,
+ *    incluido quien ya pulsó el enlace. Un solo botón «guardar» que a veces hiciera eso sería una trampa; con
+ *    dos, corregir una errata no le grita a nadie.
+ *
+ * TODO LO QUE SE ESCRIBE PASA POR `sanitizeAnnouncement` AL GUARDAR (en el repositorio), que es donde se recorta
+ * y se valida de verdad. Aquí se comprueba lo justo para no dejar pulsar un botón que va a fallar.
+ */
+
+interface AdminAnnouncementProps {
+  /** El aviso que hay ahora mismo en Firestore, o `null` si no hay ninguno. */
+  current: Announcement | null;
+  /** Guarda y devuelve lo que de verdad ha quedado escrito. Si falla, LANZA: esta pantalla lo dice. */
+  onSave: (next: Announcement) => Promise<Announcement>;
+  onBack: () => void;
+}
+
+/** Identificador de campaña. La hora en base 36: corto, único de sobra y legible en el panel. */
+function newCampaignId(): string {
+  return `av-${Date.now().toString(36)}`;
+}
+
+function draftFrom(current: Announcement | null) {
+  return {
+    id: current?.id || '',
+    kicker: current?.kicker || '',
+    title: current?.title || '',
+    body: current?.body || '',
+    url: current?.url || '',
+    icon: (current?.icon || DEFAULT_ANNOUNCEMENT_ICON) as AnnouncementIcon,
+    active: current?.active ?? true,
+    repeats: String(current?.repeats ?? DEFAULT_REPEATS),
+    intervalHours: String(current?.intervalHours ?? DEFAULT_INTERVAL_HOURS),
+  };
+}
+
+export function AdminAnnouncement({ current, onSave, onBack }: AdminAnnouncementProps) {
+  const [draft, setDraft] = useState(() => draftFrom(current));
+  const [notice, setNotice] = useState('');
+  const [busy, setBusy] = useState(false);
+
+  const set = useCallback(<K extends keyof ReturnType<typeof draftFrom>>(
+    key: K,
+    value: ReturnType<typeof draftFrom>[K],
+  ) => {
+    setNotice('');
+    setDraft((previous) => ({ ...previous, [key]: value }));
+  }, []);
+
+  const titleOk = draft.title.trim().length > 0;
+  const urlOk = isValidHttpUrl(draft.url.trim());
+  const canSave = titleOk && urlOk && !busy;
+
+  /** Lo que se va a escribir, que es también lo que pinta la muestra: una cosa, no dos que puedan separarse. */
+  const composed = useMemo<Announcement>(() => ({
+    id: draft.id || newCampaignId(),
+    kicker: draft.kicker.trim(),
+    title: draft.title.trim(),
+    body: draft.body.trim(),
+    url: draft.url.trim(),
+    icon: draft.icon,
+    active: draft.active,
+    repeats: Number(draft.repeats) || DEFAULT_REPEATS,
+    intervalHours: Number(draft.intervalHours) || DEFAULT_INTERVAL_HOURS,
+    updatedAt: Date.now(),
+  }), [draft]);
+
+  const run = useCallback(async (next: Announcement, done: string) => {
+    setBusy(true);
+    setNotice(A.saving);
+    try {
+      const saved = await onSave(next);
+      setDraft(draftFrom(saved));
+      setNotice(done);
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : A.failed);
+    } finally {
+      setBusy(false);
+    }
+  }, [onSave]);
+
+  const save = useCallback(() => {
+    void run({ ...composed, id: draft.id || newCampaignId() }, A.saved);
+  }, [composed, draft.id, run]);
+
+  const republish = useCallback(() => {
+    // La confirmación es del navegador a propósito: es una pregunta de una línea en una pantalla que solo ve el
+    // administrador, y montar el modal de confirmación aquí traería su chunk por una frase.
+    if (!window.confirm(A.republishConfirm)) return;
+    void run({ ...composed, id: newCampaignId(), active: true }, A.savedNew);
+  }, [composed, run]);
+
+  const toggleActive = useCallback(() => {
+    const active = !draft.active;
+    void run({ ...composed, id: draft.id || newCampaignId(), active }, active ? A.saved : A.retired);
+  }, [composed, draft.active, draft.id, run]);
+
+  return (
+    <section className="admin-hub admin-ann" aria-label={A.sectionAria}>
+      <div className="admin-ann-bar">
+        <HubBackButton onBack={onBack} label={A.back} />
+      </div>
+
+      <div className="admin-card">
+        <h2>{A.title}</h2>
+        <p className="admin-card-sub">{A.subtitle}</p>
+        {A.notes.map((note) => <p className="admin-card-note" key={note}>{note}</p>)}
+
+        <p className="admin-card-note">
+          {!current
+            ? A.currentNone
+            : `${current.active ? A.currentOn : A.currentOff} ${A.currentSaved(
+              current.updatedAt ? DATE_FORMAT.format(new Date(current.updatedAt)) : '—',
+            )} ${A.currentId(current.id)}`}
+        </p>
+      </div>
+
+      <div className="admin-card">
+        <h3>{A.previewTitle}</h3>
+        <p className="admin-card-note">{A.previewNote}</p>
+        {/* La muestra necesita un título y un enlace para tener sentido; sin ellos se enseña igual con lo que
+            haya escrito, que es lo que deja ver cómo va quedando mientras se escribe. */}
+        <AnnouncementToast announcement={composed} preview />
+      </div>
+
+      <div className="admin-card admin-ann-form">
+        <label className="admin-ann-field">
+          <span>{A.field.kicker}</span>
+          <input
+            type="text"
+            className="finput"
+            value={draft.kicker}
+            maxLength={ANNOUNCEMENT_LIMITS.kicker}
+            onChange={(event) => set('kicker', event.target.value)}
+          />
+          <small>
+            {A.field.kickerHelp} {A.counter(draft.kicker.length, ANNOUNCEMENT_LIMITS.kicker)}
+          </small>
+        </label>
+
+        <label className="admin-ann-field">
+          <span>{A.field.title}</span>
+          <input
+            type="text"
+            className="finput"
+            value={draft.title}
+            maxLength={ANNOUNCEMENT_LIMITS.title}
+            onChange={(event) => set('title', event.target.value)}
+          />
+          <small>
+            {A.field.titleHelp} {A.counter(draft.title.length, ANNOUNCEMENT_LIMITS.title)}
+          </small>
+        </label>
+
+        <label className="admin-ann-field">
+          <span>{A.field.body}</span>
+          <textarea
+            className="finput"
+            rows={2}
+            value={draft.body}
+            maxLength={ANNOUNCEMENT_LIMITS.body}
+            onChange={(event) => set('body', event.target.value)}
+          />
+          <small>
+            {A.field.bodyHelp} {A.counter(draft.body.length, ANNOUNCEMENT_LIMITS.body)}
+          </small>
+        </label>
+
+        <label className="admin-ann-field">
+          <span>{A.field.url}</span>
+          <input
+            type="url"
+            className="finput"
+            inputMode="url"
+            placeholder="https://"
+            value={draft.url}
+            maxLength={ANNOUNCEMENT_LIMITS.url}
+            onChange={(event) => set('url', event.target.value)}
+          />
+          <small>{A.field.urlHelp}</small>
+        </label>
+
+        <label className="admin-ann-field">
+          <span>{A.field.icon}</span>
+          <select
+            className="finput"
+            value={draft.icon}
+            onChange={(event) => set('icon', event.target.value as AnnouncementIcon)}
+          >
+            {ANNOUNCEMENT_ICONS.map((icon) => (
+              <option value={icon} key={icon}>{A.iconNames[icon] || icon}</option>
+            ))}
+          </select>
+          <small>{A.field.iconHelp}</small>
+        </label>
+
+        <div className="admin-ann-pair">
+          <label className="admin-ann-field">
+            <span>{A.field.repeats}</span>
+            <input
+              type="number"
+              className="finput"
+              min={1}
+              max={ANNOUNCEMENT_LIMITS.repeats}
+              step={1}
+              value={draft.repeats}
+              onChange={(event) => set('repeats', event.target.value)}
+            />
+            <small>{A.field.repeatsHelp}</small>
+          </label>
+
+          <label className="admin-ann-field">
+            <span>{A.field.interval}</span>
+            <input
+              type="number"
+              className="finput"
+              min={1}
+              max={ANNOUNCEMENT_LIMITS.intervalHours}
+              step={1}
+              value={draft.intervalHours}
+              onChange={(event) => set('intervalHours', event.target.value)}
+            />
+            <small>{A.field.intervalHelp}</small>
+          </label>
+        </div>
+
+        {!titleOk ? <p className="admin-ann-warn">{A.needTitle}</p> : null}
+        {draft.url.trim() && !urlOk ? <p className="admin-ann-warn">{A.needUrl}</p> : null}
+
+        <p className="admin-card-actions">
+          <button type="button" className="btn" onClick={save} disabled={!canSave}>{A.save}</button>
+          <button type="button" className="btn btn-secondary" onClick={republish} disabled={!canSave}>
+            {A.republish}
+          </button>
+          <button
+            type="button"
+            className={draft.active ? 'btn btn-danger' : 'btn btn-secondary'}
+            onClick={toggleActive}
+            disabled={!canSave}
+          >
+            {draft.active ? A.retire : A.turnOn}
+          </button>
+        </p>
+        <p className="admin-card-note">{A.saveHelp}</p>
+        <p className="admin-card-note">{A.republishHelp}</p>
+        <p className="admin-card-note">{A.retireHelp}</p>
+
+        {/* La región viva va SIEMPRE montada aunque esté vacía, igual que en `StatusBanner`: montarla junto con el
+            mensaje llega tarde y no se anuncia nada. */}
+        <p className="admin-ann-notice" role="status" aria-live="polite">{notice}</p>
+      </div>
+    </section>
+  );
+}

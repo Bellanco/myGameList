@@ -859,3 +859,33 @@
   font-variant-numeric: tabular-nums;
 }
 .admin-ach-plan-field small { color: var(--text-muted); font-size: .75rem; }
+
+/* ── EL AVISO A LOS USUARIOS ──────────────────────────────────────────────
+   La tercera vista del panel (`AdminAnnouncement`). Es un formulario corto y una MUESTRA de lo que se va a
+   publicar, y el orden es ese a propósito: primero se ve la cápsula, después se escribe. Lo que se está haciendo
+   aquí no es rellenar campos, es redactar algo que va a salirle a todo el mundo en una tarjeta de 30 rem.
+
+   Los campos reutilizan `.finput`, que es el campo de formulario de la app: un aviso no necesita un lenguaje
+   propio de formulario y tenerlo solo habría añadido una tercera forma de caja de texto al proyecto. */
+.admin-ann-bar { display: flex; align-items: center; gap: .6rem; margin-bottom: .8rem; }
+
+.admin-ann-form { display: grid; gap: .9rem; }
+
+/* Rótulo encima, campo, y la ayuda debajo en gris: la ayuda explica qué pasa con lo que se escriba, así que va
+   pegada al campo y no en una leyenda al final de la ficha. */
+.admin-ann-field { display: grid; gap: .25rem; font-size: .88rem; }
+.admin-ann-field > span { font-weight: 600; }
+.admin-ann-field small { color: var(--text-muted); font-size: .75rem; line-height: 1.35; }
+.admin-ann-field textarea { resize: vertical; min-height: 3.2rem; font: inherit; }
+
+/* Las dos cifras del ciclo, juntas: son una sola decisión («cuántas veces y cada cuánto») y separadas en dos
+   filas se leían como dos ajustes sin relación. */
+.admin-ann-pair { display: grid; gap: .9rem; }
+@media (min-width: 34rem) { .admin-ann-pair { grid-template-columns: 1fr 1fr; } }
+.admin-ann-pair input { max-width: 10rem; }
+
+.admin-ann-warn { color: var(--danger); font-size: .8rem; margin: 0; }
+
+/* El acuse de guardado. Región viva SIEMPRE montada (aunque esté vacía), así que reserva su línea: si apareciera
+   y desapareciera, los botones de encima darían un salto en cada guardado. */
+.admin-ann-notice { min-height: 1.2rem; margin: .2rem 0 0; color: var(--fg-link); font-size: .85rem; }

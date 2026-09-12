@@ -625,3 +625,90 @@ export const ADMIN_ACHIEVEMENTS_UI = {
     onboarding: 'Primeros pasos',
   },
 } as const;
+
+/**
+ * EL AVISO A LOS USUARIOS (`/admin` → «Avisos»). La pantalla donde se redacta lo que verá todo el mundo al abrir
+ * la app: un rótulo, un título, una descripción, un icono y el enlace a donde se les quiere llevar.
+ *
+ * LOS TEXTOS DE ESTA PANTALLA EXPLICAN EL CANAL, y no por ser didácticos: quien escribe aquí tiene que saber
+ * que esto NO es una notificación del móvil (no hay Web Push), que la cuenta de veces es por dispositivo y que
+ * un aviso publicado tarda un rato en llegar a quien ya tenía la app abierta. Sin eso, el primer aviso se
+ * escribe esperando otra cosa.
+ */
+export const ADMIN_ANNOUNCEMENT_UI = {
+  open: 'Aviso a los usuarios',
+  title: 'Aviso a los usuarios',
+  subtitle: 'Un rótulo, un título, una descripción y un enlace. Se dice en la misma cápsula que los logros, abajo a la izquierda, al abrir la app.',
+  back: 'Volver al censo',
+  sectionAria: 'Aviso a los usuarios',
+
+  /** Las tres cosas que hay que saber antes de escribir. Se dicen aquí y no en un README que nadie tiene delante. */
+  notes: [
+    'No es una notificación del sistema: esta app no tiene notificaciones push, así que el aviso se ve cuando alguien abre la aplicación, no antes.',
+    'Lo ve todo el mundo, con cuenta o sin ella: el aviso se sirve desde la propia web, no desde Firestore, así que abrir la app no contacta con nadie de fuera.',
+    'La cuenta de «veces que se ha dicho» es de cada dispositivo. Quien use móvil y ordenador lo verá en los dos, y pulsar el enlace lo calla solo en el aparato donde se pulsó.',
+    'Un aviso recién guardado tarda unos minutos en llegar a quien ya tenía la app abierta: la respuesta se sirve de caché para no pedirla en cada apertura.',
+  ] as const,
+
+  field: {
+    kicker: 'Rótulo',
+    kickerHelp: 'La línea pequeña de arriba, en versalitas. Si se deja en blanco pone «Aviso».',
+    title: 'Título',
+    titleHelp: 'La línea gorda. Una sola línea: lo que no quepa se recorta.',
+    body: 'Descripción',
+    bodyHelp: 'Hasta dos líneas. Es lo que explica de qué va.',
+    url: 'Enlace',
+    urlHelp: 'A dónde lleva al pulsar. Tiene que empezar por https:// (o http://) y se abre en otra pestaña.',
+    icon: 'Icono',
+    iconHelp: 'Ocupa el sitio de la medalla. Son iconos que ya están en la app.',
+    active: 'Encendido',
+    activeHelp: 'Apagado no se le enseña a nadie, pero el texto se queda guardado para la próxima.',
+    repeats: 'Veces que se insiste',
+    repeatsHelp: 'Como máximo, y solo mientras nadie pulse el enlace.',
+    interval: 'Horas entre avisos',
+    intervalHelp: 'Lo que se espera desde la última vez que se le dijo a ese dispositivo. 24 = una vez al día.',
+  },
+
+  /** Nombres de los iconos que se pueden elegir. Se escriben porque un desplegable de dibujos no se lee en voz alta. */
+  iconNames: {
+    bell: 'Campana',
+    star: 'Estrella',
+    rocket: 'Cohete',
+    'share-nodes': 'Enlace',
+    trophy: 'Trofeo',
+    'dice-d20': 'Dado',
+    'checkered-flag': 'Meta',
+    signature: 'Firma',
+  } as Record<string, string>,
+
+  previewTitle: 'Así se va a ver',
+  previewNote: 'Es la cápsula de verdad, con el tema y la paleta que tengas puestos ahora mismo.',
+
+  /** Los dos botones de guardar, separados porque hacen dos cosas muy distintas (ver `Announcement.id`). */
+  save: 'Guardar cambios',
+  saveHelp: 'Corrige el aviso en curso. A quien ya se lo dijimos las veces acordadas, o ya pulsó, no se le vuelve a decir.',
+  republish: 'Publicar como aviso nuevo',
+  republishHelp: 'Empieza de cero: vuelve a decírselo a TODO el mundo, incluido quien ya lo pulsó.',
+  republishConfirm: 'Se le volverá a enseñar a todo el mundo, incluido quien ya lo había pulsado. ¿Publicar como aviso nuevo?',
+  retire: 'Apagar',
+  retireHelp: 'Deja de enseñarse. El texto no se borra.',
+  turnOn: 'Encender',
+
+  saving: 'Guardando…',
+  saved: 'Guardado.',
+  savedNew: 'Publicado como aviso nuevo: vuelve a salirle a todo el mundo.',
+  retired: 'Apagado: ya no se le enseña a nadie.',
+  failed: 'No se ha podido guardar. Vuelve a intentarlo.',
+
+  /** Lo que falta para poder guardar. Se dice campo a campo, no como un «formulario inválido». */
+  needTitle: 'Hace falta un título.',
+  needUrl: 'Hace falta un enlace que empiece por https:// o http://.',
+
+  /** Estado del aviso que hay ahora mismo en Firestore. */
+  currentOn: 'Encendido ahora mismo.',
+  currentOff: 'Apagado ahora mismo.',
+  currentNone: 'Todavía no hay ningún aviso publicado.',
+  currentSaved: (date: string) => `Última vez guardado: ${date}.`,
+  currentId: (id: string) => `Campaña: ${id}`,
+  counter: (used: number, max: number) => `${used}/${max}`,
+} as const;
