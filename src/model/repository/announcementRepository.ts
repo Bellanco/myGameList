@@ -16,10 +16,15 @@
 //
 // NUNCA LANZA AL LEER. Sin red, con la función sin desplegar o con la respuesta rota, devuelve `null`: no hay
 // aviso y no pasa nada. Al ESCRIBIR sí lanza, porque ahí hay un administrador esperando saber si se guardó.
-import { sanitizeAnnouncement, type Announcement } from '../../core/announcement/announcement';
+import {
+  ANNOUNCEMENT_PUBLISHED_EVENT,
+  sanitizeAnnouncement,
+  type Announcement,
+} from '../../core/announcement/announcement';
 import { shareAuthHeaders } from './shareRepository';
 
 const API = '/api/announcement';
+
 
 /** Lo leído en esta sesión (o `null` si se leyó y no había nada). `undefined` = todavía no se ha leído. */
 let cached: Announcement | null | undefined;
@@ -92,5 +97,7 @@ export async function saveAnnouncement(next: Announcement): Promise<Announcement
   const saved = sanitizeAnnouncement(body);
   if (!saved) throw new Error('El aviso guardado ha llegado incompleto');
   cached = saved;
+  // La caché de sesión ya lleva lo guardado, así que quien escuche esto no necesita pedir nada a la red.
+  window.dispatchEvent(new CustomEvent(ANNOUNCEMENT_PUBLISHED_EVENT));
   return saved;
 }

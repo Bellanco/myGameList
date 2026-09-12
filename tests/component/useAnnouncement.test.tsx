@@ -3,7 +3,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, renderHook } from '@testing-library/react';
 import { useAnnouncement } from '../../src/view/hooks/useAnnouncement';
 import { ANNOUNCEMENT_SEEN_KEY } from '../../src/core/constants/storageKeys';
-import { parseSeen, type Announcement } from '../../src/core/announcement/announcement';
+import {
+  ANNOUNCEMENT_PUBLISHED_EVENT,
+  parseSeen,
+  type Announcement,
+} from '../../src/core/announcement/announcement';
 
 // LO QUE SE PRUEBA ES LA CONVERSACIÓN ENTRE LAS TRES PIEZAS: el documento que llega, la política que decide y la
 // cuenta que se guarda en el aparato. La política en sí ya está probada suelta en `tests/unit/announcement`.
@@ -129,6 +133,74 @@ describe('el aviso del administrador en una apertura de la app', () => {
 
     expect(result.current.announcement).toBeNull();
     expect(parseSeen(localStorage.getItem(ANNOUNCEMENT_SEEN_KEY)).clicked).toBe(true);
+  });
+
+  /**
+   * ⚑ AL VOLVER A LA APP SE VUELVE A MIRAR. Sin esto, una pestaña abierta desde ayer —o la PWA del móvil, que no
+   * se cierra nunca del todo— no se enteraba de un aviso publicado después: había que recargar a mano. Se vio
+   * publicando desde el panel y volviendo a las listas sin que saliera nada.
+   */
+  it('se entera de un aviso publicado después, sin recargar', async () => {
+    const { result } = renderHook(() => useAnnouncement());
+    await llegaLaCapsula();
+
+    act(() => { result.current.markShown(); });
+    act(() => { result.current.dismiss(); });
+
+    // Se publica otra campaña mientras la app sigue abierta y se vuelve a ella pasado el rato.
+    loadAnnouncement.mockResolvedValue({ ...AVISO, id: 'av-2', title: 'Otra cosa' });
+    vi.advanceTimersByTime(6 * 60_000);
+    await act(async () => {
+      document.dispatchEvent(new Event('visibilitychange'));
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    // La cápsula sale SIN el retraso de la apertura: la app ya estaba en pie. El turno de reloj va en su propio
+    // `act` porque el `setTimeout` lo programa la promesa de la consulta, que se resuelve en el anterior.
+    await act(async () => {
+      vi.advanceTimersByTime(50);
+      await Promise.resolve();
+    });
+
+    expect(result.current.announcement?.id).toBe('av-2');
+  });
+
+  /**
+   * Y AL PUBLICARLO DESDE EL PANEL sale enseguida, sin recargar ni cambiar de pestaña: es la misma pestaña, y
+   * ese es el gesto de quien acaba de escribirlo —publicar y mirar si sale—.
+   */
+  it('sale al publicarlo desde el panel, en la misma pestaña', async () => {
+    loadAnnouncement.mockResolvedValue(null);
+    const { result } = renderHook(() => useAnnouncement());
+    await llegaLaCapsula();
+    expect(result.current.announcement).toBeNull();
+
+    loadAnnouncement.mockResolvedValue(AVISO);
+    await act(async () => {
+      window.dispatchEvent(new CustomEvent(ANNOUNCEMENT_PUBLISHED_EVENT));
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    await act(async () => {
+      vi.advanceTimersByTime(3000);
+      await Promise.resolve();
+    });
+
+    expect(result.current.announcement?.id).toBe('av-1');
+  });
+
+  /** Y no se pone a preguntar cada vez que se cambia de pestaña: hay un rato mínimo entre consultas. */
+  it('no vuelve a preguntar al volver si acaba de hacerlo', async () => {
+    renderHook(() => useAnnouncement());
+    await llegaLaCapsula();
+    expect(loadAnnouncement).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      document.dispatchEvent(new Event('visibilitychange'));
+      await Promise.resolve();
+    });
+
+    expect(loadAnnouncement).toHaveBeenCalledTimes(1);
   });
 
   it('no vuelve a salir si ya se dijo hace un rato', async () => {

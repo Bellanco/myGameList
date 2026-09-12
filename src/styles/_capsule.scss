@@ -12,7 +12,13 @@
 .ach-toast-stack {
   position: fixed;
   left: .8rem;
-  bottom: calc(4.6rem + env(safe-area-inset-bottom, 0px));
+  /* ⚑ SE APARTA LO QUE MIDE LA BARRA, no una cantidad fija. Aquí había `4.6rem`, que es lo que ocupa la barra en
+     un escritorio; en un móvil estrecho los botones pasan a icono-sobre-rótulo y con el área segura de un
+     teléfono con gesto inferior la barra crece hasta unos 81 px, así que la cápsula se le metía 8 px por debajo y
+     se veían pegadas. `--bottom-nav-h` la publica la propia barra con `ResizeObserver` (igual que `--consent-h`),
+     y el `.6rem` es el aire entre las dos. El valor de reserva es el de escritorio, para las pantallas donde no
+     hay barra que esquivar. */
+  bottom: calc(var(--bottom-nav-h, 4.6rem) + .6rem + env(safe-area-inset-bottom, 0px));
   z-index: 125;
   // `right` en vez de un ancho en `vw`: `100vw` cuenta la barra de desplazamiento y la tarjeta se salía por la
   // derecha en móvil. Es como se sujeta `.consent-banner`.
@@ -36,7 +42,7 @@
    medido en escritorio: si la variable no ha llegado todavía, el aviso queda un pelo más alto, que es el lado
    seguro (de más no tapa nada). */
 :root[data-consent='pending'] .ach-toast-stack {
-  bottom: calc(4.6rem + var(--consent-h, 9.25rem) + .5rem + env(safe-area-inset-bottom, 0px));
+  bottom: calc(var(--bottom-nav-h, 4.6rem) + var(--consent-h, 9.25rem) + 1.1rem + env(safe-area-inset-bottom, 0px));
 }
 
 /* LA CÁPSULA · el borde de la izquierda es OTRO CÍRCULO EXTERIOR de la medalla, no un radio elegido a ojo: el
