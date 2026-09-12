@@ -234,4 +234,31 @@ describe('presupuesto de llamadas del hub social', () => {
     // La migración a canal secreto lista los gists de la cuenta contra GitHub: una vez, y sellada para siempre.
     expect(gistMocks.ensureSecretSocialGist).toHaveBeenCalledTimes(1);
   });
+
+  /**
+   * …PERO EL SELLO CADUCA, y esa es la otra mitad de la política. Estas tareas son best-effort: devuelven `false`
+   * en vez de lanzar cuando no pudieron hacer su trabajo —sin servicios, con el perfil aún sin crear o bajo otro
+   * id, sin respaldo todavía en `privateConfig`— y el gestor las sellaba igual, porque sellar depende de que
+   * `run()` no lance. Como la huella es el nick (o el par de gists), ese «no he podido» se quedaba de «ya está
+   * hecho» para siempre: el nombre de esa persona no volvía a replicarse a `profiles` nunca más.
+   *
+   * Ojo a los mocks de arriba: los dos devuelven `false`, o sea que este test mide justo ese caso.
+   */
+  it('y vuelven a intentarse cuando el sello caduca', async () => {
+    const { unmount } = abrirHub();
+    await waitFor(() => expect(firebaseMocks.repairProfileDisplayName).toHaveBeenCalledTimes(1), { timeout: 5000 });
+    await reposar();
+    unmount();
+
+    // Ocho días después (la ventana son siete), con la misma huella que se selló.
+    const hace8Dias = Date.now() - 8 * 24 * 60 * 60 * 1000;
+    await patchLocalMeta({ profileNameRepairedAt: hace8Dias, publicGistIdsPurgedAt: hace8Dias });
+
+    abrirHub();
+    await waitFor(() => expect(firebaseMocks.repairProfileDisplayName).toHaveBeenCalledTimes(2), { timeout: 5000 });
+    await reposar();
+
+    expect(firebaseMocks.repairProfileDisplayName).toHaveBeenCalledTimes(2);
+    expect(firebaseMocks.purgeOwnPublicGistIds).toHaveBeenCalledTimes(2);
+  });
 });
