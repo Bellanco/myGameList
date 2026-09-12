@@ -64,3 +64,7 @@ firebase-adminsdk-*.json
 # Copia local completa del proyecto. Se ignora para que no pueda colarse en un commit con un `git add .`:
 # son ~5 MB que duplican ficheros ya versionados (src, functions, reglas de Firestore, CLAUDE.md).
 /base/
+
+# Aviso a los usuarios publicado en LOCAL (lo escribe el plugin `local-announcement-api` de vite.config.ts al
+# guardar desde `/admin` con `npm run dev`). Son datos de prueba de una sola máquina.
+/.announcement.local.json

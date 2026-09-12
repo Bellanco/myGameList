@@ -112,6 +112,10 @@ function bootApp(): void {
     // de pruebas arrastra para siempre lo que consiguió en sesiones anteriores. Solo BORRA lo local; no siembra
     // nada, que es lo que distingue esto del andamio que se retiró.
     void import('./dev/achievementsReset').then((m) => m.installAchievementReset());
+    // El aviso a los usuarios (`aviso.otravez()`): la cuenta de veces vistas es de dispositivo y se agota, así
+    // que sin esto solo se puede ver una vez al día. El TEXTO se cambia desde `/admin`, que en desarrollo guarda
+    // contra el plugin `local-announcement-api` de `vite.config.ts`.
+    void import('./dev/announcementTools').then((m) => m.installAnnouncementTools());
   }
 
   runWhenIdle(() => {
