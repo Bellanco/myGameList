@@ -113,6 +113,37 @@ export const JUEGOS_LOGROS = {
 };
 
 /**
+ * Biblioteca de CURVA LARGA: veinticuatro años de completados, pocos al principio y muchos al final.
+ *
+ * Existe para la GRÁFICA ANUAL en un móvil, que es donde sus rótulos se estorban: con veinticuatro puntos en
+ * 300 px de lienzo no caben las veinticuatro cifras, así que es la única forma de comprobar que se cae lo justo
+ * y que lo que queda no se pisa. La de logros no vale: son quince años planos de quince juegos cada uno, sin
+ * una curva que leer y con el récord empatado en todos ellos.
+ *
+ * El RÉCORD va en el PENÚLTIMO año a propósito: es la postura que destapó el fallo del año en curso —su cifra
+ * caía justo al lado de la píldora del récord, y la píldora se la llevaba por delante—.
+ */
+const CURVA: Array<[number, number]> = [
+  [2000, 3], [2003, 1], [2005, 1], [2006, 2], [2007, 2], [2009, 1], [2010, 2], [2011, 2],
+  [2012, 1], [2013, 1], [2014, 2], [2015, 3], [2016, 6], [2017, 9], [2018, 12], [2019, 19],
+  [2020, 11], [2021, 11], [2022, 9], [2023, 11], [2024, 10], [2025, 8], [2026, 24], [2027, 22],
+];
+
+export const JUEGOS_CURVA = CURVA.flatMap(([anio, cuantos], bloque) => Array.from({ length: cuantos }, (_unused, n) => ({
+  id: 9000 + bloque * 40 + n,
+  name: `Curva ${anio}-${n + 1}`,
+  grade: 40 + ((bloque * 7 + n) % 60),
+  score: 1 + ((bloque + n) % 5),
+  genres: ['Acción'],
+  platforms: ['PC'],
+  years: [anio],
+  hours: 10 + (n % 30),
+  review: 'Una reseña de prueba.',
+  strengths: ['Ritmo'],
+  weaknesses: [],
+})));
+
+/**
  * Biblioteca AL BORDE de un logro: nueve terminados y uno en curso, para que UN CLIC lo cruce.
  *
  * Existe para probar el AVISO DEL INSTANTE (§7.4), que es lo que no se puede comprobar con una biblioteca ya
@@ -182,6 +213,8 @@ interface SeedOptions {
    * Manda sobre `amplia` si se pasan las dos.
    */
   logros?: boolean;
+  /** Siembra la CURVA LARGA (`JUEGOS_CURVA`): veinticuatro años para la gráfica anual en pantalla estrecha. */
+  curva?: boolean;
   /** Siembra la biblioteca AL BORDE de un logro, en su variante de uno o de varios (`juegosAlBorde`). */
   alBorde?: 'uno' | 'varios' | 'hito' | 'casi';
   /**
@@ -195,7 +228,7 @@ interface SeedOptions {
 /** Siembra la biblioteca ANTES de que cargue la app (la clave la fija `core/constants/storageKeys`). */
 export async function sembrarBiblioteca(page: Page, options: SeedOptions = {}): Promise<void> {
   await page.addInitScript(
-    ({ juegos, amplios, amplia, deLogros, logros, borde, marca, theme, palette }) => {
+    ({ juegos, amplios, amplia, deLogros, logros, deCurva, curva, borde, marca, theme, palette }) => {
       const now = Date.now();
       const SEMANA = 7 * 24 * 60 * 60 * 1000;
       const ajustes = () => {
@@ -233,6 +266,18 @@ export async function sembrarBiblioteca(page: Page, options: SeedOptions = {}): 
             retry: false, reasons: [], reviewedAt: sellos[0], enteredAt: { e: sellos[0] },
           }],
           deleted: [], updatedAt: now, schemaVersion: 1,
+        }));
+        ajustes();
+        return;
+      }
+      if (curva) {
+        const sello = (j: { years: number[] }) => Date.UTC(j.years[0], 5, 15, 12);
+        localStorage.setItem('mis-listas-v12-unified', JSON.stringify({
+          c: deCurva.map((j) => ({
+            ...j, _ts: sello(j), listedAt: sello(j), steamDeck: false, replayable: false, retry: false,
+            reasons: [], reviewedAt: sello(j), gradedAt: sello(j), enteredAt: { c: sello(j) },
+          })),
+          v: [], e: [], p: [], deleted: [], updatedAt: now, schemaVersion: 1,
         }));
         ajustes();
         return;
@@ -281,8 +326,8 @@ export async function sembrarBiblioteca(page: Page, options: SeedOptions = {}): 
       ajustes();
     },
     {
-      juegos: JUEGOS, amplios: JUEGOS_AMPLIOS, deLogros: JUEGOS_LOGROS,
-      amplia: Boolean(options.amplia), logros: Boolean(options.logros),
+      juegos: JUEGOS, amplios: JUEGOS_AMPLIOS, deLogros: JUEGOS_LOGROS, deCurva: JUEGOS_CURVA,
+      amplia: Boolean(options.amplia), logros: Boolean(options.logros), curva: Boolean(options.curva),
       borde: options.alBorde ? juegosAlBorde(options.alBorde) : null,
       marca: options.marcaPrevia ?? null,
       theme: options.theme, palette: options.palette,
