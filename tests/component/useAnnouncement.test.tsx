@@ -1,3 +1,4 @@
+import { StrictMode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, renderHook } from '@testing-library/react';
 import { useAnnouncement } from '../../src/view/hooks/useAnnouncement';
@@ -51,6 +52,20 @@ afterEach(() => {
 });
 
 describe('el aviso del administrador en una apertura de la app', () => {
+  /**
+   * ⚑ EN MODO ESTRICTO, QUE ES COMO CORRE LA APP EN DESARROLLO. React monta, desmonta y vuelve a montar cada
+   * efecto para cazar los que no saben limpiarse, y una guarda de «esto ya se ha pedido» dejaba el aviso sin
+   * salir NUNCA: el primer montaje marcaba la guarda y se cancelaba al desmontar, y el segundo se la encontraba
+   * puesta. Se vio abriendo la app, no en esta batería, así que este caso se queda escrito.
+   */
+  it('sale también con el doble montaje del modo estricto, y pide el documento una sola vez', async () => {
+    const { result } = renderHook(() => useAnnouncement(), { wrapper: StrictMode });
+    await llegaLaCapsula();
+
+    expect(result.current.announcement?.id).toBe('av-1');
+    expect(loadAnnouncement).toHaveBeenCalledTimes(1);
+  });
+
   it('sale con retraso, no en el mismo fotograma que la app', async () => {
     const { result } = renderHook(() => useAnnouncement());
 

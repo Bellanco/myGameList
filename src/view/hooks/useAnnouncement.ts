@@ -78,13 +78,18 @@ export function useAnnouncement(): AnnouncementState {
   const currentRef = useRef<Announcement | null>(null);
   // El `id` cuya aparición ya está contada, para que montar la cápsula dos veces no cuente dos.
   const countedRef = useRef('');
-  // Una sola vez por montaje, aunque React monte el efecto dos veces (modo estricto en desarrollo).
-  const askedRef = useRef(false);
 
+  /**
+   * ⚑ AQUÍ NO HAY NINGUNA GUARDA DE «ESTO YA SE HA PEDIDO», y la hubo: un `ref` que se marcaba a la primera y
+   * hacía salir al efecto en las siguientes. Parecía la forma evidente de pedir el documento una sola vez, y
+   * dejaba el aviso SIN SALIR NUNCA en desarrollo —que es donde se prueba—: el modo estricto monta, desmonta y
+   * vuelve a montar cada efecto, así que el primer montaje marcaba el `ref` y se cancelaba a sí mismo al
+   * desmontar, y el segundo se encontraba la marca puesta y no pedía nada.
+   *
+   * No hace falta ninguna guarda: el efecto no tiene dependencias (una vez por montaje) y quien evita la
+   * petición repetida es la caché de sesión del repositorio, que además es la que sirve a las demás pantallas.
+   */
   useEffect(() => {
-    if (askedRef.current) return;
-    askedRef.current = true;
-
     let cancelled = false;
     let timer: ReturnType<typeof setTimeout> | null = null;
 
