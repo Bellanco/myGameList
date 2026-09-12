@@ -175,3 +175,49 @@ describe.skipIf(!ENABLE_GAMES_WRAPPER_WRITE)('writeGist con ENABLE_GAMES_WRAPPER
     expect(secondChunks.length).toBeLessThan(firstChunks.length);
   }, 20000);
 });
+
+/**
+ * EL CASO REAL QUE ROMPIÓ ESTO, de extremo a extremo y por la tubería de verdad.
+ *
+ * Una biblioteca corriente (100 juegos, 39 con análisis) donde UNO de ellos lleva una reseña de 21.265
+ * caracteres. Con la cota de 20.000 en el esquema de escritura, `writeGist` abortaba ANTES del PATCH y el gist
+ * remoto se quedaba como estaba: esa persona dejó de sincronizar durante un mes sin que el síntoma apuntara
+ * aquí. Lo que se comprueba es lo único que importa para ella: que la subida SALE, que el texto llega entero
+ * y que vuelve completo al leerlo.
+ */
+describe('una biblioteca con una reseña kilométrica se sube entera', () => {
+  const RESENA_LARGA = noisyText(4242, 21_265);
+
+  function bibliotecaDeVerdad(): TabData {
+    const c: GameItem[] = [];
+    for (let i = 1; i <= 100; i += 1) {
+      // 38 análisis normales más el del juego 42, que se lleva la kilométrica.
+      const review = i === 42 ? RESENA_LARGA : i <= 38 ? noisyText(i, 1_500) : '';
+      c.push(makeGame({ id: i, name: `Juego ${i}`, review }));
+    }
+    return { c, v: [], e: [], p: [], deleted: [], updatedAt: 1 };
+  }
+
+  it('emite el PATCH en vez de abortar la escritura', async () => {
+    const { patchBodies } = stubGistStore();
+
+    await expect(writeGist(TOKEN, GIST_ID, bibliotecaDeVerdad())).resolves.toBeTruthy();
+
+    expect(patchBodies.length).toBeGreaterThan(0);
+    expect(Object.keys(patchBodies[patchBodies.length - 1].files)).toContain(GIST_FILENAME);
+  }, 20000);
+
+  it('y al releerlo la reseña vuelve íntegra, sin recortes', async () => {
+    stubGistStore();
+
+    await writeGist(TOKEN, GIST_ID, bibliotecaDeVerdad());
+    const out = (await readGist(TOKEN, GIST_ID)).data as TabData;
+
+    const kilometrica = out.c.find((game) => game.id === 42);
+    expect(kilometrica?.review).toHaveLength(21_265);
+    expect(kilometrica?.review).toBe(RESENA_LARGA);
+    // Y no se ha perdido nada por el camino: los 100 juegos siguen ahí, con sus 39 análisis (38 + la larga).
+    expect(out.c).toHaveLength(100);
+    expect(out.c.filter((game) => (game.review || '').length > 0)).toHaveLength(39);
+  }, 20000);
+});
