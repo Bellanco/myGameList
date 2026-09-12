@@ -4,6 +4,7 @@ import { act, renderHook } from '@testing-library/react';
 import { useAnnouncement } from '../../src/view/hooks/useAnnouncement';
 import { ANNOUNCEMENT_SEEN_KEY } from '../../src/core/constants/storageKeys';
 import {
+  ANNOUNCEMENT_CHANNEL,
   ANNOUNCEMENT_PUBLISHED_EVENT,
   parseSeen,
   type Announcement,
@@ -185,6 +186,34 @@ describe('el aviso del administrador en una apertura de la app', () => {
       vi.advanceTimersByTime(3000);
       await Promise.resolve();
     });
+
+    expect(result.current.announcement?.id).toBe('av-1');
+  });
+
+  /**
+   * Y DESDE OTRA PESTAÑA, que es como se prueba esto de verdad: se publica en una y se mira en la otra. El
+   * evento de `window` no sale de su pestaña, así que la segunda se quedaba esperando una recarga —comprobado en
+   * Firefox con dos pestañas—; el canal lo reparte a todas.
+   */
+  it('se entera de lo publicado en otra pestaña', async () => {
+    if (typeof BroadcastChannel !== 'function') return;
+    loadAnnouncement.mockResolvedValue(null);
+    const { result } = renderHook(() => useAnnouncement());
+    await llegaLaCapsula();
+    expect(result.current.announcement).toBeNull();
+
+    loadAnnouncement.mockResolvedValue(AVISO);
+    const otraPestaña = new BroadcastChannel(ANNOUNCEMENT_CHANNEL);
+    await act(async () => {
+      otraPestaña.postMessage('av-1');
+      await new Promise((listo) => { setTimeout(listo, 0); vi.advanceTimersByTime(1); });
+      await Promise.resolve();
+    });
+    await act(async () => {
+      vi.advanceTimersByTime(3000);
+      await Promise.resolve();
+    });
+    otraPestaña.close();
 
     expect(result.current.announcement?.id).toBe('av-1');
   });

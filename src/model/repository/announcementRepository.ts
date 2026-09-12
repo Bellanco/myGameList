@@ -17,6 +17,7 @@
 // NUNCA LANZA AL LEER. Sin red, con la función sin desplegar o con la respuesta rota, devuelve `null`: no hay
 // aviso y no pasa nada. Al ESCRIBIR sí lanza, porque ahí hay un administrador esperando saber si se guardó.
 import {
+  ANNOUNCEMENT_CHANNEL,
   ANNOUNCEMENT_PUBLISHED_EVENT,
   sanitizeAnnouncement,
   type Announcement,
@@ -99,5 +100,16 @@ export async function saveAnnouncement(next: Announcement): Promise<Announcement
   cached = saved;
   // La caché de sesión ya lleva lo guardado, así que quien escuche esto no necesita pedir nada a la red.
   window.dispatchEvent(new CustomEvent(ANNOUNCEMENT_PUBLISHED_EVENT));
+
+  // Y a las DEMÁS pestañas, que tienen su propia caché y no oyen el evento de arriba. Best-effort: si el canal
+  // no existe o falla, esas pestañas se enteran igual al recargar o al volver a ellas pasado el rato.
+  try {
+    const canal = new BroadcastChannel(ANNOUNCEMENT_CHANNEL);
+    canal.postMessage(saved.id);
+    canal.close();
+  } catch {
+    // Sin canal. No es un fallo de nada: el aviso ya está publicado.
+  }
+
   return saved;
 }
