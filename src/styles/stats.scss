@@ -640,9 +640,29 @@
   font-weight: 700;
 }
 
-/* En pantalla estrecha las cifras se pisarían: se quedan las alternas y, siempre, la del récord. */
-@media (max-width: 34rem) {
-  .year-value:nth-of-type(2n):not(.is-peak) { display: none; }
+/* Qué rótulos —cifras y años— se quedan fuera lo decide `useFittingLabels` MIDIENDO la fila, no una consulta de
+   medios: el ancho de la ventana no dice lo que ocupa una cifra (la tipografía la pone cada tema) ni lo que
+   mide el lienzo dentro de su tarjeta, así que esconder uno de cada dos por debajo de 34 rem tapaba números que
+   cabían de sobra y seguía dejando que la píldora del récord se montase sobre su vecina.
+
+   `visibility` y no `display`: escondido con `display: none` un rótulo mide cero, y entonces ya no se puede
+   saber si volvería a caber al girar el aparato. El dato no se pierde —la figura va `aria-hidden` y todo está
+   en la tabla de abajo—, solo se despeja la imagen. */
+.year-value.is-crowded,
+.year-axis span.is-crowded {
+  visibility: hidden;
+}
+
+/* Los dos huecos de emergencia de los rótulos que no se caen nunca (el récord y el año en curso), para cuando
+   les toca caer uno al lado del otro: un renglón más arriba o al otro lado de su punto. Los saltos van en `%`
+   de la propia caja porque el cálculo que decide quién se aparta los mide así (`LABEL_LIFT` y `LABEL_DROP`);
+   en `em` o `rem` los dos números no cuadrarían. */
+.year-value.is-lifted {
+  transform: translate(-50%, -100%) translateY(-115%);
+}
+
+.year-value.is-below {
+  transform: translate(-50%, -100%) translateY(215%);
 }
 
 .year-axis {
@@ -658,12 +678,6 @@
   position: absolute;
   transform: translateX(-50%);
   white-space: nowrap;
-}
-
-/* En pantalla estrecha se cae una de cada dos etiquetas: el componente ya deja ocho como mucho, pero ocho años
-   de cuatro cifras no caben en 320 px. */
-@media (max-width: 34rem) {
-  .year-axis span:nth-child(2n) { display: none; }
 }
 
 /* ---- Tira de calidad (el reparto por nota de cada año, bajo la curva) ---------------------------------- */
