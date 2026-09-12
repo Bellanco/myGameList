@@ -8,18 +8,26 @@
 //
 //   · TIPOS: estrictos. Un `id` que no sea número o un `name` que no sea texto es corrupción, y publicarla es
 //     peor que no publicar nada, porque el gist es la fuente de la que beben los DEMÁS dispositivos. Se rechaza.
+//   · LONGITUDES: fuera. Un texto largo es un dato legítimo, y rechazarlo dejaba sin sincronizar a quien lo
+//     escribió (ver el bloque de `tagList`).
 //   · CAMPOS EXTRA: tolerados (sin `strictObject`). Este gist es del propio usuario y ya contiene todo lo suyo,
 //     así que un campo de más no filtra nada. Y fallar cerrado aquí tiene un coste que allí no existe: dejaría al
 //     usuario SIN PODER SINCRONIZAR —sus cambios se quedarían solo en el dispositivo— por haber añadido un campo
 //     nuevo en `leanGameItem` y no aquí. Un esquema aditivo no puede convertirse en una avería de pérdida de datos.
 import { z } from 'zod';
 
-// Cotas generosas: acotan el abuso y un fichero construido a mano, sin llegar nunca a rechazar datos reales.
-const NAME_MAX = 500;
-const TEXT_MAX = 20000; // el análisis (`review`) es texto largo por diseño
-const TAG_MAX = 200;
-
-const tagList = z.array(z.string().max(TAG_MAX));
+// SIN COTAS DE LONGITUD, y es la tercera regla de la asimetría de arriba —la que costó un mes de
+// sincronización a un usuario real—. Las hubo, y se describían como «generosas»: 500 caracteres el nombre,
+// 20.000 el análisis, 200 cada etiqueta, «sin llegar nunca a rechazar datos reales». Una reseña de 21.265
+// caracteres demostró lo contrario: abortaba la subida ENTERA de su gist en cada intento, desde el día en que
+// se desplegó esta validación. Y el síntoma no apuntaba aquí —su canal social, con otro esquema, seguía
+// publicando con normalidad—, así que lo único observable era que sus listas habían dejado de actualizarse,
+// para él y para todos sus amigos.
+//
+// Una longitud no distingue un dato corrupto de uno largo: solo dice cuánto escribió su dueño. Lo que sí hay
+// que acotar es el TAMAÑO de lo que se sube, y de eso se ocupa `assertGistSizeWithinLimit` en la escritura —con
+// el límite real de GitHub y ya comprimido—, que es la medida correcta y la que de verdad protege. Aquí, tipos.
+const tagList = z.array(z.string());
 
 /**
  * Un juego tal y como lo serializa `leanGameItem` (socialProjection): cinco campos siempre y el resto omitidos
@@ -28,11 +36,11 @@ const tagList = z.array(z.string().max(TAG_MAX));
 const gameItem = z.object({
   id: z.number(),
   _ts: z.number(),
-  name: z.string().max(NAME_MAX),
+  name: z.string(),
   platforms: tagList,
   genres: tagList,
   steamDeck: z.boolean().optional(),
-  review: z.string().max(TEXT_MAX).optional(),
+  review: z.string().optional(),
   score: z.number().min(0).max(5).nullable().optional(),
   grade: z.number().min(0).max(100).nullable().optional(),
   hours: z.number().nullable().optional(),
