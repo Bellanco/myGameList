@@ -642,47 +642,53 @@ export const ADMIN_ANNOUNCEMENT_UI = {
   back: 'Volver al censo',
   sectionAria: 'Aviso a los usuarios',
 
-  /** Las tres cosas que hay que saber antes de escribir. Se dicen aquí y no en un README que nadie tiene delante. */
+  /** Lo justo para no llevarse una sorpresa. Una línea por cosa; el porqué está en el código. */
   notes: [
-    'No es una notificación del sistema: esta app no tiene notificaciones push, así que el aviso se ve cuando alguien abre la aplicación, no antes.',
-    'Lo ve todo el mundo, con cuenta o sin ella: el aviso se sirve desde la propia web, no desde Firestore, así que abrir la app no contacta con nadie de fuera.',
-    'La cuenta de «veces que se ha dicho» es de cada dispositivo. Quien use móvil y ordenador lo verá en los dos, y pulsar el enlace lo calla solo en el aparato donde se pulsó.',
-    'Un aviso recién guardado tarda unos minutos en llegar a quien ya tenía la app abierta: la respuesta se sirve de caché para no pedirla en cada apertura.',
+    'Se ve al abrir la app, no como notificación del móvil.',
+    'Lo ve todo el mundo, con cuenta o sin ella.',
+    'Se insiste por dispositivo; pulsar el enlace lo calla.',
+    'Tarda unos minutos en llegar a quien ya la tenía abierta.',
   ] as const,
 
   field: {
     kicker: 'Rótulo',
-    kickerHelp: 'La línea pequeña de arriba, en versalitas. Si se deja en blanco pone «Aviso».',
+    kickerHelp: 'La línea pequeña. En blanco pone «Aviso».',
     title: 'Título',
-    titleHelp: 'La línea gorda. Una sola línea: lo que no quepa se recorta.',
+    titleHelp: 'Una sola línea.',
     body: 'Descripción',
-    bodyHelp: 'Hasta dos líneas. Es lo que explica de qué va.',
+    bodyHelp: 'Dos líneas como mucho.',
     url: 'Enlace',
-    urlHelp: 'A dónde lleva al pulsar. Tiene que empezar por https:// (o http://) y se abre en otra pestaña.',
+    urlHelp: 'Se abre en otra pestaña.',
     icon: 'Icono',
-    iconHelp: 'Ocupa el sitio de la medalla. Son iconos que ya están en la app.',
     active: 'Encendido',
-    activeHelp: 'Apagado no se le enseña a nadie, pero el texto se queda guardado para la próxima.',
     repeats: 'Veces que se insiste',
-    repeatsHelp: 'Como máximo, y solo mientras nadie pulse el enlace.',
+    repeatsHelp: 'Si nadie pulsa.',
     interval: 'Horas entre avisos',
-    intervalHelp: 'Lo que se espera desde la última vez que se le dijo a ese dispositivo. 24 = una vez al día.',
+    intervalHelp: '24 = una vez al día.',
   },
 
-  /** Nombres de los iconos que se pueden elegir. Se escriben porque un desplegable de dibujos no se lee en voz alta. */
+  /** Nombre de cada icono: es lo que oye quien no ve el dibujo, y el `title` al pasar el ratón. */
   iconNames: {
+    megafono: 'Megáfono',
+    votar: 'Votación',
+    fiesta: 'Celebración',
+    novedad: 'Novedad',
+    fecha: 'Fecha',
+    rayo: 'Urgente',
+    regalo: 'Regalo',
+    info: 'Información',
     bell: 'Campana',
     star: 'Estrella',
     rocket: 'Cohete',
-    'share-nodes': 'Enlace',
     trophy: 'Trofeo',
     'dice-d20': 'Dado',
     'checkered-flag': 'Meta',
+    'share-nodes': 'Enlace',
     signature: 'Firma',
   } as Record<string, string>,
 
   previewTitle: 'Así se va a ver',
-  previewNote: 'Es la cápsula de verdad, con el tema y la paleta que tengas puestos ahora mismo.',
+  previewNote: 'La cápsula de verdad, con tu tema y tu paleta.',
   /**
    * Lo que enseña la muestra mientras el campo está vacío. NO se guarda: solo evita que la cápsula empiece
    * siendo un disco suelto —sin forma que juzgar— justo cuando hay que decidir si el texto cabe.
@@ -692,12 +698,12 @@ export const ADMIN_ANNOUNCEMENT_UI = {
 
   /** Los dos botones de guardar, separados porque hacen dos cosas muy distintas (ver `Announcement.id`). */
   save: 'Guardar cambios',
-  saveHelp: 'Corrige el aviso en curso. A quien ya se lo dijimos las veces acordadas, o ya pulsó, no se le vuelve a decir.',
+  saveHelp: 'Corrige lo publicado sin volver a avisar a quien ya lo vio.',
   republish: 'Publicar como aviso nuevo',
-  republishHelp: 'Empieza de cero: vuelve a decírselo a TODO el mundo, incluido quien ya lo pulsó.',
+  republishHelp: 'Vuelve a salirle a todo el mundo, incluido quien ya lo pulsó.',
   republishConfirm: 'Se le volverá a enseñar a todo el mundo, incluido quien ya lo había pulsado. ¿Publicar como aviso nuevo?',
   retire: 'Apagar',
-  retireHelp: 'Deja de enseñarse. El texto no se borra.',
+  retireHelp: 'Deja de enseñarse; el texto se queda.',
   turnOn: 'Encender',
 
   saving: 'Guardando…',
@@ -711,10 +717,11 @@ export const ADMIN_ANNOUNCEMENT_UI = {
   needUrl: 'Hace falta un enlace que empiece por https:// o http://.',
 
   /** Estado del aviso que hay ahora mismo en Firestore. */
-  currentOn: 'Encendido ahora mismo.',
-  currentOff: 'Apagado ahora mismo.',
-  currentNone: 'Todavía no hay ningún aviso publicado.',
-  currentSaved: (date: string) => `Última vez guardado: ${date}.`,
-  currentId: (id: string) => `Campaña: ${id}`,
-  counter: (used: number, max: number) => `${used}/${max}`,
+  currentOn: 'Encendido',
+  currentOff: 'Apagado',
+  currentNone: 'Sin publicar todavía.',
+  currentSaved: (date: string) => `guardado el ${date}`,
+  currentId: (id: string) => `campaña ${id}`,
+  /** El mismo conteo que el de las reseñas, para que se lea igual en los dos sitios. */
+  counter: (used: number, max: number) => `${used} / ${max} caracteres`,
 } as const;

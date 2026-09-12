@@ -1,4 +1,3 @@
-import type { IconName } from '../constants/icons';
 import { isValidHttpUrl } from '../security/sanitize';
 
 /**
@@ -49,27 +48,41 @@ export const ANNOUNCEMENT_LIMITS = {
 } as const;
 
 /**
- * LOS ICONOS QUE PUEDE ELEGIR EL PANEL, y solo estos. Son símbolos que YA están en `IconSprite` —el sprite del
- * arranque, que se monta en la raíz—, así que el aviso no añade ni un byte de dibujo a nadie.
+ * LOS ICONOS QUE PUEDE ELEGIR EL PANEL, y solo estos. Ocupan el sitio de la medalla en la cápsula.
  *
- * La lista es cerrada por dos motivos: el disco es pequeño y no todos los iconos del sprite se leen a ese
- * tamaño, y un icono escrito a mano en el documento sería un `<use href="#icon-loquesea">` roto que nadie vería
- * hasta tenerlo delante.
+ * SALEN DE DOS SPRITES y da igual cuál: los ocho primeros los trae `AnnouncementSprite` (Material Symbols,
+ * pensados para avisos) y los ocho últimos ya estaban en el sprite general de la app. Los dos usan el prefijo
+ * `icon-`, así que quien pinta no tiene que saber de dónde viene cada dibujo.
+ *
+ * La lista es CERRADA por dos motivos: el disco es pequeño y no todo dibujo se lee a ese tamaño, y un nombre
+ * escrito a mano en el documento sería un `<use>` roto que nadie ve hasta tenerlo delante.
+ *
+ * ⚑ AÑADIR UNO: pegar su `symbol` en `AnnouncementSprite`, su `id` aquí y su nombre en `ADMIN_ANNOUNCEMENT_UI.
+ * iconNames`. Hay un test que exige que los tres pasos estén dados.
  */
 export const ANNOUNCEMENT_ICONS = [
+  'megafono',
+  'votar',
+  'fiesta',
+  'novedad',
+  'fecha',
+  'rayo',
+  'regalo',
+  'info',
   'bell',
   'star',
   'rocket',
-  'share-nodes',
   'trophy',
   'dice-d20',
   'checkered-flag',
+  'share-nodes',
   'signature',
-] as const satisfies readonly IconName[];
+] as const;
 
 export type AnnouncementIcon = (typeof ANNOUNCEMENT_ICONS)[number];
 
-export const DEFAULT_ANNOUNCEMENT_ICON: AnnouncementIcon = 'bell';
+/** El megáfono: un aviso es un anuncio, y es el dibujo que lo dice sin leer nada. */
+export const DEFAULT_ANNOUNCEMENT_ICON: AnnouncementIcon = 'megafono';
 
 /** Lo que se insiste y cada cuánto, si el panel no dice otra cosa. Tres veces, una al día. */
 export const DEFAULT_REPEATS = 3;
