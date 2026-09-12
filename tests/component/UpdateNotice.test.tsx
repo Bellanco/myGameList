@@ -114,6 +114,55 @@ describe('aviso de versión nueva', () => {
     expect(reloadNow).toHaveBeenCalledTimes(1);
   });
 
+  /**
+   * ⚑ «VISIBLE» NO ES «EN USO». La app se queda abierta en una pestaña durante horas, y ahí el aviso esperaba un
+   * clic que no llegaba nunca. Pasado el rato sin tocar nada, recargar no le quita nada a nadie.
+   */
+  it('con la app a la vista pero quieta un buen rato, se recarga sola', () => {
+    vi.useFakeTimers();
+    render(<UpdateNotice />);
+    announceNewVersion();
+    expect(reloadNow).not.toHaveBeenCalled();
+
+    act(() => { vi.advanceTimersByTime(6 * 60 * 1000); });
+    expect(reloadNow).toHaveBeenCalledTimes(1);
+    vi.useRealTimers();
+  });
+
+  it('pero no mientras haya alguien tocándola', () => {
+    vi.useFakeTimers();
+    render(<UpdateNotice />);
+    announceNewVersion();
+
+    // Cada par de minutos, una señal de vida: la cuenta vuelve a empezar y no se recarga por la espalda.
+    for (let i = 0; i < 5; i += 1) {
+      act(() => { vi.advanceTimersByTime(2 * 60 * 1000); });
+      act(() => { window.dispatchEvent(new Event('pointerdown')); });
+    }
+
+    expect(reloadNow).not.toHaveBeenCalled();
+    vi.useRealTimers();
+  });
+
+  it('y tampoco si lo que está quieto es un formulario a medio escribir', () => {
+    vi.useFakeTimers();
+    const draft = document.createElement('textarea');
+    draft.value = 'una reseña a medias';
+    document.body.appendChild(draft);
+
+    render(<UpdateNotice />);
+    announceNewVersion();
+    act(() => { vi.advanceTimersByTime(6 * 60 * 1000); });
+
+    expect(reloadNow).not.toHaveBeenCalled();
+
+    // Y en cuanto deja de haber nada que perder, la siguiente vuelta del reloj sí recarga.
+    draft.remove();
+    act(() => { vi.advanceTimersByTime(31 * 1000); });
+    expect(reloadNow).toHaveBeenCalledTimes(1);
+    vi.useRealTimers();
+  });
+
   it('con cambios locales sin subir tampoco recarga sola: cortaría el ciclo de sincronización', () => {
     markDirty();
 

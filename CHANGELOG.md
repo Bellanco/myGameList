@@ -6,6 +6,11 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
 ## [Unreleased]
 
 ### Added
+- **La versión nueva entra sola también con la app a la vista, si lleva un rato quieta.** Hasta ahora, con la
+  pestaña delante nunca se recargaba: se enseñaba «Hay una nueva versión» y se esperaba un clic que, en una
+  pestaña abierta toda la tarde, no llegaba nunca. Ahora, tras cinco minutos sin tocar nada —ratón, teclas o
+  desplazamiento— y sin trabajo a medias, se recarga sola. La regla de fondo no cambia: lo que protege es a quien
+  está USANDO la app, y quien lleva cinco minutos sin tocarla no tiene nada a medio escribir que perder.
 - **Avisos a los usuarios desde el panel.** `/admin` estrena una tercera vista donde se escribe un aviso —rótulo,
   título, descripción, icono y enlace— que se le enseña a todo el mundo al abrir la app, en la misma cápsula de
   abajo a la izquierda que los logros y con el mismo comportamiento (ocho segundos en vez de cinco, en pausa
