@@ -629,6 +629,25 @@ describe('AdminHub — identidad denormalizada y solicitudes fosilizadas', () =>
     expect(screen.getByRole('button', { name: ADMIN_PANEL_UI.healIdentity.btn })).toBeInTheDocument();
   });
 
+  /**
+   * …Y ENTONCES NO HABLA DEL NOMBRE. Con la foto rancia y el nick impecable, la confirmación preguntaba
+   * «¿escribir «Ada» como nombre de Ada?»: señala como problema algo que no lo es —el administrador lee dos
+   * veces el mismo nombre— y además esconde lo único que sí se va a arreglar, que es la foto.
+   */
+  it('y al confirmarlo no pregunta por un nombre que nadie discute', async () => {
+    loadAdminCensusMock.mockResolvedValue(
+      census([user({ photoURL: 'https://f/nueva.png', friendKnownPhotos: ['https://f/vieja.png'] })]),
+    );
+    renderHub();
+    signIn(ADMIN_EMAIL);
+    await screen.findByText('Ada');
+
+    await userEvent.click(screen.getByRole('button', { name: ADMIN_PANEL_UI.healIdentity.btn }));
+
+    expect(screen.getByText(ADMIN_PANEL_UI.healIdentity.confirm('Ada'))).toBeInTheDocument();
+    expect(screen.queryByText(ADMIN_PANEL_UI.healIdentity.confirmWithName('Ada', 'Ada'))).not.toBeInTheDocument();
+  });
+
   it('con la identidad al día no se ofrece propagar nada', async () => {
     loadAdminCensusMock.mockResolvedValue(census([user({ friendKnownNames: ['Ada'], friendKnownPhotos: [''] })]));
     renderHub();

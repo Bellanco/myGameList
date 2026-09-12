@@ -49,6 +49,14 @@ export interface LocalMeta {
   // `identityFingerprint` en `firebaseFriendshipRepository`. Local por dispositivo a propósito: la foto
   // publicable y el gist de la sesión se resuelven en cada uno por separado.
   friendshipIdentityFingerprint?: string;
+  // Cuándo se completó esa propagación. La huella sola daba por buena una suposición falsa —«si mi identidad
+  // no ha cambiado, mis documentos de amistad están al día»— y no lo están cuando la amistad se creó DESPUÉS
+  // de sellarla (sus campos los escribió la petición, con lo que hubiera entonces) ni cuando una escritura de
+  // aquel día se quedó a medias. Sin fecha, el saneado salía en su primera línea para siempre y esos
+  // documentos arrastraban el nombre —y el gist de listados— viejos indefinidamente: un amigo podía entrar a
+  // diario sin que nada de eso se corrigiera nunca. Con ella, se revisa de higos a brevas
+  // (`FRIENDSHIP_IDENTITY_RECHECK_MS`); ver `healOwnFriendshipIdentity`.
+  friendshipIdentityHealedAt?: number;
   // Último latido de uso enviado a `profiles.updatedAt` desde este dispositivo (acota a una escritura diaria).
   profileTouchedAt?: number;
   // Sellos de los SANEADOS DE ARRANQUE del espacio social (ver `viewmodel/social/useSocialStartupTasks`). Cada uno
@@ -58,8 +66,23 @@ export interface LocalMeta {
   // Locales por dispositivo, por lo mismo que `friendshipIdentityFingerprint`.
   /** Nick ya replicado a `profiles.displayName`. */
   profileNameRepairedFor?: string;
+  /**
+   * Cuándo se selló ese nick, para que el sello CADUQUE (ver `STARTUP_STAMP_RECHECK_MS`).
+   *
+   * `repairProfileDisplayName` devuelve `false` sin lanzar en tres caminos donde no ha comprobado nada —sin
+   * servicios, con el perfil ilegible o aún sin crear, y cuando el documento vive bajo otro id (el caso que
+   * resuelve el cutover del panel)—, y el gestor lo sellaba igual: «hecho» cuando en realidad era «no he
+   * podido mirar». Como la huella es el propio nick, nadie volvía a intentarlo mientras no lo cambiara.
+   */
+  profileNameRepairedAt?: number;
   /** `<socialGistId>|<gamesGistId>` ya retirados del perfil público. */
   publicGistIdsPurgedFor?: string;
+  /**
+   * Cuándo se selló esa purga, por lo mismo que `profileNameRepairedAt`: `purgeOwnPublicGistIds` también
+   * devuelve `false` sin lanzar cuando NO pudo purgar —típicamente porque aún no había respaldo en
+   * `privateConfig`—, y ese no es un estado definitivo: en cuanto el respaldo existe, sí se puede.
+   */
+  publicGistIdsPurgedAt?: number;
   /** Gist social del que ya consta que es SECRETO: evita un listado de gists contra GitHub por apertura. */
   socialChannelPrivateFor?: string;
   /**

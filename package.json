@@ -1,6 +1,6 @@
 {
   "name": "mygamelist",
-  "version": "1.2.4",
+  "version": "1.2.6",
   "description": "Application for managing video game lists with GitHub Gist synchronization",
   "private": true,
   "license": "GPL-3.0-or-later",
@@ -22,7 +22,7 @@
     "audit:rules": "node scripts/audit-profile-rules.mjs",
     "typecheck": "tsc --noEmit && tsc -p tsconfig.functions.json",
     "typecheck:functions": "tsc -p tsconfig.functions.json",
-    "test:rules": "firebase emulators:exec --only firestore \"vitest run --config vitest.rules.config.js\"",
+    "test:rules": "node scripts/run-rules-tests.mjs",
     "emulate:social": "vitest run --config vitest.emulacion.config.js",
     "test:e2e": "playwright test",
     "emulators": "firebase emulators:start --only firestore"

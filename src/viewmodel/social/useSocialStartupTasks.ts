@@ -40,6 +40,20 @@ import type { LocalMeta } from '../../model/types/local';
  * `photoHealedFor`), que es la parte que importaba.
  */
 
+/**
+ * Cada cuánto vuelve a intentarse una tarea YA SELLADA con la misma huella.
+ *
+ * «Solo se sella si terminó bien» es cierto a medias: se sella si `run()` no LANZÓ, y estas tareas son
+ * best-effort —devuelven `false` en vez de lanzar cuando no pudieron hacer su trabajo—. `repairProfileDisplayName`
+ * se rinde así sin servicios, con el perfil aún sin crear o cuando vive bajo otro id; `purgeOwnPublicGistIds`,
+ * mientras no haya respaldo en `privateConfig`. Ninguno de esos estados es definitivo, pero el sello los
+ * congelaba: como la huella es el nick (o el par de gists), no se reintentaba mientras no cambiaran.
+ *
+ * Una semana, lo mismo que `FRIENDSHIP_IDENTITY_RECHECK_MS`: una lectura de documento por dispositivo y semana
+ * para que ningún «no he podido» se quede como «ya está hecho».
+ */
+const STARTUP_STAMP_RECHECK_MS = 7 * 24 * 60 * 60 * 1000;
+
 /** Una tarea de arranque: cuándo puede correr, con qué huella y qué hace. */
 interface StartupTask {
   /** Nombre para la traza; también identifica la tarea en los avisos. */
@@ -51,6 +65,11 @@ interface StartupTask {
   fingerprint: string;
   /** Campo de `LocalMeta` donde vive el sello. `undefined` = la tarea se guarda por su cuenta (ya lo hacía). */
   stamp?: keyof LocalMeta;
+  /**
+   * Campo de `LocalMeta` con la FECHA de ese sello. Con él, el sello caduca a los `STARTUP_STAMP_RECHECK_MS`;
+   * sin él vale para siempre, que solo es correcto en una tarea que de verdad se haga una vez.
+   */
+  stampAt?: keyof LocalMeta;
   run: () => Promise<unknown>;
 }
 
@@ -117,6 +136,7 @@ export function useSocialStartupTasks(options: SocialStartupTasksOptions): void 
         name: 'profileName',
         fingerprint: nick,
         stamp: 'profileNameRepairedFor',
+        stampAt: 'profileNameRepairedAt',
         run: () => repairProfileDisplayName(uid, nick),
       },
       {
@@ -126,6 +146,7 @@ export function useSocialStartupTasks(options: SocialStartupTasksOptions): void 
         name: 'purgePublicGistIds',
         fingerprint: `${socialGistId}|${gamesGistId}`,
         stamp: 'publicGistIdsPurgedFor',
+        stampAt: 'publicGistIdsPurgedAt',
         run: () => purgeOwnPublicGistIds({ uid, socialGistId, gamesGistId }),
       },
       {
@@ -149,13 +170,20 @@ export function useSocialStartupTasks(options: SocialStartupTasksOptions): void 
         // Huella vacía = todavía no se puede saber. Ni corre ni se sella: se reintentará cuando se sepa.
         if (!task.fingerprint) continue;
         if (launchedRef.current.has(task.name)) continue;
-        if (task.stamp && meta?.[task.stamp] === task.fingerprint) continue;
+        const sellada = task.stamp && meta?.[task.stamp] === task.fingerprint;
+        // Con fecha, el sello caduca; sin ella vale para siempre (ver `STARTUP_STAMP_RECHECK_MS`).
+        const selladoAt = task.stampAt ? Number(meta?.[task.stampAt] || 0) : 0;
+        const vigente = !task.stampAt || (selladoAt > 0 && Date.now() - selladoAt < STARTUP_STAMP_RECHECK_MS);
+        if (sellada && vigente) continue;
 
         launchedRef.current.add(task.name);
         try {
           await task.run();
           if (task.stamp) {
-            await patchLocalMeta({ [task.stamp]: task.fingerprint } as Partial<LocalMeta>);
+            await patchLocalMeta({
+              [task.stamp]: task.fingerprint,
+              ...(task.stampAt ? { [task.stampAt]: Date.now() } : {}),
+            } as Partial<LocalMeta>);
           }
         } catch (error) {
           // Best-effort: ninguna de estas tareas es un requisito para usar el espacio social. Se deja SIN sellar
