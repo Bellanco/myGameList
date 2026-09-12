@@ -60,6 +60,28 @@ describe('gamesGistSchema — escritura (falla cerrado)', () => {
     const conCampoNuevo = { ...tabData(), c: [{ ...game(), campoDelFuturo: 'x' }] };
     expect(() => assertValidGamesGist(conCampoNuevo)).not.toThrow();
   });
+
+  /**
+   * REGRESIÓN CON NOMBRE Y APELLIDOS. El esquema tenía cotas de longitud «generosas» (20.000 caracteres el
+   * análisis) y un usuario real escribió una reseña de 21.265: su gist dejó de subir POR COMPLETO durante un
+   * mes —cada intento abortaba— y ni él ni sus amigos volvieron a ver una lista suya actualizada. El canal
+   * social, con otro esquema, seguía publicando el adelanto de 160 caracteres, así que por fuera parecía que
+   * sus reseñas «se veían a medias» y no que su sincronización estuviera rota.
+   *
+   * Lo que fija este test: la longitud de lo que escribe alguien NO puede abortar su sincronización.
+   */
+  it('never blocks the sync over how much someone wrote', () => {
+    const kilometrica = game({ review: 'a'.repeat(21_265) });
+    expect(() => assertValidGamesGist(leanTabData(tabData({ c: [kilometrica] })))).not.toThrow();
+
+    const desmesurado = game({
+      name: 'N'.repeat(600),
+      genres: ['G'.repeat(300)],
+      strengths: ['F'.repeat(250)],
+      review: 'a'.repeat(200_000),
+    });
+    expect(() => assertValidGamesGist(leanTabData(tabData({ c: [desmesurado] })))).not.toThrow();
+  });
 });
 
 describe('gamesGistSchema — lectura (falla abierto)', () => {
