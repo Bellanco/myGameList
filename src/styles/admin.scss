@@ -884,7 +884,21 @@
 @media (min-width: 34rem) { .admin-ann-pair { grid-template-columns: 1fr 1fr; } }
 .admin-ann-pair input { max-width: 10rem; }
 
-.admin-ann-warn { color: var(--danger); font-size: .8rem; margin: 0; }
+/* ⚑ EL AVISO DE LO QUE FALTA VA EN ROJO, y para eso hace falta ganarle a `.admin-card p` (línea 32), que tiñe
+   de gris apagado TODO párrafo de una ficha. Con una sola clase (0,1,0) contra clase+elemento (0,1,1) perdía sin
+   hacer ruido: el mensaje salía, pero del mismo color que las ayudas, o sea, como si no fuera un problema. */
+.admin-ann-form .admin-ann-warn { color: var(--danger); font-size: .8rem; margin: 0; }
+
+/* Los tres botones, JUNTOS Y A LA IZQUIERDA. `.admin-card-actions` reparte con `space-between`, que es lo que
+   quieren las fichas estrechas del censo (dos botones, uno en cada punta) y lo que aquí dejaba «Guardar», la
+   publicación y «Apagar» desperdigados de lado a lado de una tarjeta a pantalla completa, como si no tuvieran
+   nada que ver entre ellos. Son tres formas de guardar lo mismo: van seguidas. */
+.admin-ann-form .admin-card-actions {
+  justify-content: flex-start;
+  gap: .6rem;
+  flex-wrap: wrap;
+  margin-top: .4rem;
+}
 
 /* El acuse de guardado. Región viva SIEMPRE montada (aunque esté vacía), así que reserva su línea: si apareciera
    y desapareciera, los botones de encima darían un salto en cada guardado. */

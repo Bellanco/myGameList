@@ -37,6 +37,7 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.unstubAllGlobals();
+  vi.unstubAllEnvs();
 });
 
 function ok(body: unknown, status = 200) {
@@ -101,7 +102,13 @@ describe('lectura del aviso', () => {
 });
 
 describe('escritura del aviso', () => {
-  it('lo manda con la sesión y devuelve lo que ha quedado guardado', async () => {
+  /**
+   * EN PRODUCCIÓN VIAJA LA SESIÓN, que es lo que la Pages Function verifica antes de dejar escribir
+   * (`requireAdmin`). Se fuerza `DEV` a falso porque la batería corre en modo desarrollo, donde esta rama no es
+   * la que se ejecuta: sin esto, el camino que de verdad usa la web publicada se quedaba sin probar.
+   */
+  it('en producción lo manda con la sesión y devuelve lo que ha quedado guardado', async () => {
+    vi.stubEnv('DEV', false);
     fetchMock.mockResolvedValue(ok({ ...AVISO, title: 'Lo que guardó el servidor' }));
     const { saveAnnouncement } = await repo();
 
@@ -112,6 +119,21 @@ describe('escritura del aviso', () => {
     expect(init.method).toBe('PUT');
     expect(init.headers.Authorization).toBe('Bearer t');
     expect(saved.title).toBe('Lo que guardó el servidor');
+  });
+
+  /**
+   * Y EN LOCAL NO, porque no hay ninguna: `npm run dev` corre sin Firebase configurado, así que pedir el token
+   * lanzaría «Necesitas iniciar sesión» y el aviso sería lo único imposible de probar en la propia máquina. Quien
+   * atiende la petición ahí es el plugin de Vite, que no mira cabeceras y escribe un fichero ignorado por git.
+   */
+  it('en local guarda sin pedir sesión', async () => {
+    vi.stubEnv('DEV', true);
+    fetchMock.mockResolvedValue(ok(AVISO));
+    const { saveAnnouncement } = await repo();
+
+    await saveAnnouncement(AVISO);
+
+    expect(fetchMock.mock.calls[0][1].headers.Authorization).toBeUndefined();
   });
 
   it('si el servidor dice que no, lo dice con su motivo', async () => {

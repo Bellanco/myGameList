@@ -68,9 +68,19 @@ export function loadAnnouncement(force = false): Promise<Announcement | null> {
  * pinte eso y no lo que creía. Si falla, LANZA.
  */
 export async function saveAnnouncement(next: Announcement): Promise<Announcement> {
+  // EN LOCAL NO HAY SESIÓN QUE MANDAR, y no es una excepción de seguridad: en `npm run dev` no hay Firebase
+  // configurado (las claves viven en el entorno de despliegue), así que pedir el token aquí lanzaría «Necesitas
+  // iniciar sesión» y el aviso sería lo único del proyecto imposible de probar en la propia máquina. Quien
+  // atiende esta petición en desarrollo es el plugin de Vite, que escribe un fichero ignorado por git y no mira
+  // ninguna cabecera; en producción, la Pages Function EXIGE el token y comprueba que eres el administrador
+  // (`requireAdmin`), y esta rama ni siquiera se compila.
+  const headers = import.meta.env.DEV
+    ? { 'Content-Type': 'application/json' }
+    : await shareAuthHeaders(() => new Error('Necesitas iniciar sesión'));
+
   const response = await fetch(API, {
     method: 'PUT',
-    headers: await shareAuthHeaders(() => new Error('Necesitas iniciar sesión')),
+    headers,
     body: JSON.stringify(next),
   });
 

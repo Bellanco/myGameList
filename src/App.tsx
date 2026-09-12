@@ -86,6 +86,18 @@ const AchievementToast = lazy(() => import('./view/components/stats/AchievementT
  */
 const AnnouncementToast = lazy(() => import('./view/components/AnnouncementToast').then((module) => ({ default: module.AnnouncementToast })));
 
+/**
+ * LA PANTALLA DEL AVISO EN LOCAL (`/dev/aviso`), SOLO EN DESARROLLO. En producción `import.meta.env.DEV` es
+ * falso, el empaquetador se lleva por delante el `import()` y esta ruta no existe en la web publicada.
+ *
+ * Existe porque en local no hay Firebase —las claves solo están en el despliegue—, así que no hay sesión, y
+ * `/admin` rebota. Sin esto, el aviso era lo único que no se podía redactar ni ver sin desplegarlo. Ver
+ * `dev/DevAnnouncementScreen`.
+ */
+const DevAnnouncement = import.meta.env.DEV
+  ? lazy(() => import('./dev/DevAnnouncementScreen').then((module) => ({ default: module.DevAnnouncementScreen })))
+  : null;
+
 function getCurrentTab(pathname: string): TabId {
   return ROUTE_TAB[pathname] || 'c';
 }
@@ -132,7 +144,12 @@ export default function App() {
   const location = useLocation();
   const navigate = useNavigate();
   const currentTab = getCurrentTab(location.pathname);
-  const activeSection = matchAppSection(location.pathname);
+  // La ruta de desarrollo del aviso (`/dev/aviso`) no está en `APP_ROUTES`, así que caería en la sección de
+  // listas y saldría con las pestañas y la barra de abajo encima del formulario. Se le da el cromo de ajustes,
+  // que es el que usa el panel. En producción `DEV` es falso y esto se compila como la llamada de siempre.
+  const activeSection = import.meta.env.DEV && location.pathname === '/dev/aviso'
+    ? 'settings'
+    : matchAppSection(location.pathname);
   const legalDocId = getLegalDocId(location.pathname);
 
   const vm = useGameListViewModel();
@@ -823,6 +840,14 @@ export default function App() {
           {APP_ROUTES.map(({ path, section }) => (
             <Route key={path} path={path} element={sectionScreens[section]} />
           ))}
+          {/* Solo en desarrollo, y fuera de `APP_ROUTES` a propósito: esa lista la recorren la navegación y los
+              tests de rutas, y una entrada que no existe en producción no pinta nada ahí. */}
+          {DevAnnouncement ? (
+            <Route
+              path="/dev/aviso"
+              element={<Suspense fallback={null}><DevAnnouncement /></Suspense>}
+            />
+          ) : null}
           {/* Nombres retirados: redirigen al actual en vez de caer en el catch-all. Van DESPUÉS de la tabla
               (no hay solape, pero el orden deja claro cuál manda) y ANTES del rebote a `FALLBACK_ROUTE`. */}
           {LEGACY_ROUTE_REDIRECTS.map(({ from, to }) => (

@@ -9,7 +9,13 @@ export const ANNOUNCEMENT_UI = {
   /**
    * Lo que se anuncia y lo que lee el enlace. Dice ENTERO lo que la cápsula enseña y avisa de que se sale de la
    * app: quien no ve la pantalla no tiene otra forma de saber que el enlace abre otra pestaña.
+   *
+   * ⚑ EL PUNTO SE PONE SOLO SI FALTA. Los dos textos los escribe el administrador en un formulario, así que unos
+   * acaban en punto y otros no; encadenarlos con un punto fijo hacía que un lector de pantalla leyera
+   * «…en cinco categorías.. Se abre en otra pestaña». Se vio oyendo el aviso, no leyendo el código.
    */
-  linkAria: (title: string, body: string): string =>
-    `${title}${body ? `. ${body}` : ''}. Se abre en otra pestaña.`,
+  linkAria: (title: string, body: string): string => {
+    const cerrar = (text: string): string => (/[.!?…»)]$/.test(text.trim()) ? text.trim() : `${text.trim()}.`);
+    return `${cerrar(title)}${body.trim() ? ` ${cerrar(body)}` : ''} Se abre en otra pestaña.`;
+  },
 } as const;

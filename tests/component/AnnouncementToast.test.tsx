@@ -45,6 +45,19 @@ describe('la cápsula del aviso', () => {
     expect(enlace.getAttribute('rel')).toContain('noopener');
   });
 
+  /** Los dos textos los escribe una persona en un formulario: unos acaban en punto y otros no. */
+  it('el nombre accesible no duplica el punto final', () => {
+    render(<AnnouncementToast announcement={AVISO} />);
+    expect(screen.getByRole('link').getAttribute('aria-label')).toBe(
+      'Vota los juegos del año. La votación está abierta hasta el domingo. Se abre en otra pestaña.',
+    );
+
+    const { container } = render(
+      <AnnouncementToast announcement={{ ...AVISO, title: 'Vota ya', body: '' }} />,
+    );
+    expect(container.querySelector('a')?.getAttribute('aria-label')).toBe('Vota ya. Se abre en otra pestaña.');
+  });
+
   it('sin rótulo pone el de respaldo: la primera fila nunca va vacía', () => {
     render(<AnnouncementToast announcement={{ ...AVISO, kicker: '' }} />);
     expect(screen.getByText(ANNOUNCEMENT_UI.kickerFallback)).toBeInTheDocument();
