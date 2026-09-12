@@ -194,8 +194,6 @@ export function AdminAnnouncement({ current, onSave, onBack }: AdminAnnouncement
       <div className="admin-card">
         <h2>{A.title}</h2>
         <p className="admin-card-sub">{A.subtitle}</p>
-        {A.notes.map((note) => <p className="admin-card-note" key={note}>{note}</p>)}
-
         <p className="admin-card-note">
           {!current
             ? A.currentNone
@@ -205,14 +203,6 @@ export function AdminAnnouncement({ current, onSave, onBack }: AdminAnnouncement
               A.currentId(current.id),
             ].join(' · ')}
         </p>
-      </div>
-
-      <div className="admin-card">
-        <h3>{A.previewTitle}</h3>
-        <p className="admin-card-note">{A.previewNote}</p>
-        {/* La muestra necesita un título y un enlace para tener sentido; sin ellos se enseña igual con lo que
-            haya escrito, que es lo que deja ver cómo va quedando mientras se escribe. */}
-        <AnnouncementToast announcement={sample} preview />
       </div>
 
       <div className="admin-card admin-ann-form">
@@ -328,6 +318,14 @@ export function AdminAnnouncement({ current, onSave, onBack }: AdminAnnouncement
           </label>
         </div>
 
+        {/* LA MUESTRA VA AQUÍ ABAJO, entre el último campo y los botones, y no arriba del todo como estaba: es lo
+            último que se mira antes de publicar, y arriba obligaba a subir y bajar la pantalla entera para
+            comprobar cada cambio. Se enseña con lo que haya escrito, aunque esté a medias. */}
+        <div className="admin-ann-preview">
+          <h3>{A.previewTitle}</h3>
+          <AnnouncementToast announcement={sample} preview />
+        </div>
+
         {!titleOk ? <p className="admin-ann-warn">{A.needTitle}</p> : null}
         {draft.url.trim() && !urlOk ? <p className="admin-ann-warn">{A.needUrl}</p> : null}
 
@@ -351,9 +349,7 @@ export function AdminAnnouncement({ current, onSave, onBack }: AdminAnnouncement
             el mensaje llega tarde y no se anuncia nada. */}
         <p className="admin-ann-notice" role="status" aria-live="polite">{notice}</p>
 
-        <p className="admin-card-note">{A.saveHelp}</p>
-        <p className="admin-card-note">{A.republishHelp}</p>
-        <p className="admin-card-note">{A.retireHelp}</p>
+        <p className="admin-card-note">{A.actionsHelp}</p>
       </div>
 
       <ConfirmModal
