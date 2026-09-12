@@ -3,11 +3,12 @@ import { createRoot } from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import App from './App';
 import { AppErrorBoundary } from './view/components/AppErrorBoundary';
-import { initializeFirebaseServices, reportHandledError } from './model/repository/firebaseGateway';
+import { hasStoredAuthSession, initializeFirebaseServices, reportHandledError } from './model/repository/firebaseGateway';
 import { readPublicShareToken } from './model/repository/publicShareRepository';
 import { runMigration } from './model/repository/dataMigrationRepository';
 import { runWhenIdle } from './core/utils/idle';
 import { registerServiceWorker } from './core/utils/appUpdate';
+import { readAnalyticsConsent } from './model/repository/analyticsConsentRepository';
 import { isOffline } from './core/utils/network';
 import { SOCIAL_GIST_CFG_KEY, STORAGE_KEY } from './core/constants/storageKeys';
 import './styles/index.scss';
@@ -119,7 +120,16 @@ function bootApp(): void {
   }
 
   runWhenIdle(() => {
-    void initializeFirebaseServices();
+    // FIREBASE SOLO SI HACE FALTA. Son ~65 kB comprimidos y los descargaba todo el mundo, también quien nunca ha
+    // iniciado sesión: para ese visitante no hay ni sesión que restaurar ni nada que consultar, porque las reglas
+    // de Firestore exigen estar autenticado para toda lectura.
+    //
+    // La analítica sí lo necesita, pero solo cuando se ha ACEPTADO (`readAnalyticsConsent`): sin consentimiento
+    // no se inicializa igualmente, así que adelantarla no servía de nada. Con sesión o con analítica aceptada,
+    // esto sigue ocurriendo exactamente igual que antes, en el mismo hueco ocioso.
+    if (hasStoredAuthSession() || readAnalyticsConsent() === 'granted') {
+      void initializeFirebaseServices();
+    }
     // Migración local (Vía A): puebla el store `games` (v4) en idle. Es idempotente (guardada por
     // migrationVersion) y NO destructiva (appState sigue siendo la fuente de verdad), así que la app
     // funciona igual. Cualquier error queda aislado y no afecta al arranque.
