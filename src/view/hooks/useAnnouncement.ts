@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
+  ANNOUNCEMENT_PUBLISHED_EVENT,
   afterClicked,
   afterShown,
   isAnnouncementDue,
@@ -43,6 +44,19 @@ import { runWhenIdle } from '../../core/utils/idle';
 
 /** Lo que se espera desde que la app está en pie hasta que la cápsula aparece. */
 const SHOW_DELAY_MS = 2500;
+
+/**
+ * Cada cuánto, como mucho, se vuelve a preguntar por el aviso al VOLVER a la app.
+ *
+ * ⚑ LO QUE ESTO ARREGLA: el aviso se decidía UNA vez, al abrir, y nunca más. Una pestaña abierta desde ayer —o
+ * una PWA instalada en el móvil, que no se cierra del todo nunca— no se enteraba de un aviso publicado después:
+ * había que recargar a mano. Y al publicar desde el panel pasaba lo mismo, que es donde se ve a la primera:
+ * publicas, te vas a las listas y no sale nada.
+ *
+ * Cinco minutos es lo mismo que dura la respuesta en caché (`Cache-Control: max-age=300` en la función), así que
+ * preguntar más a menudo no traería nada nuevo.
+ */
+const RECHECK_MS = 5 * 60_000;
 
 export interface AnnouncementState {
   /** El aviso que toca enseñar AHORA, o `null` si no hay nada que decir. */
@@ -99,6 +113,7 @@ export function useAnnouncement(): AnnouncementState {
     let cancelled = false;
     let timer: ReturnType<typeof setTimeout> | null = null;
     let esperandoVista: (() => void) | null = null;
+    let ultimaConsulta = 0;
 
     /** Pinta la cápsula, o espera a que la pestaña se mire si ahora mismo está de fondo. */
     const pintar = (value: Announcement): void => {
@@ -118,24 +133,62 @@ export function useAnnouncement(): AnnouncementState {
       setAnnouncement(value);
     };
 
-    const cancelIdle = runWhenIdle(() => {
+    /**
+     * Pregunta por el aviso y, si toca decirlo, lo programa.
+     *
+     * ⚑ LA RECONSULTA SALTA LA CACHÉ (`force`). La de sesión vive en el repositorio y devuelve siempre lo que se
+     * leyó la primera vez, así que volver a preguntarle sin más daría exactamente la misma respuesta y esto no
+     * serviría para nada: lo que se viene a buscar al volver a la app es justo lo que ha cambiado fuera.
+     */
+    const preguntar = (espera: number, force = false): void => {
+      ultimaConsulta = Date.now();
       void import('../../model/repository/announcementRepository')
-        .then((module) => module.loadAnnouncement())
+        .then((module) => module.loadAnnouncement(force))
         .then((value) => {
           // `isAnnouncementDue` ya descarta el `null`; se comprueba aparte para que el tipo lo sepa.
           if (cancelled || !value || !isAnnouncementDue(value, seenRef.current, Date.now())) return;
-          timer = setTimeout(() => pintar(value), SHOW_DELAY_MS);
+          if (timer) clearTimeout(timer);
+          timer = setTimeout(() => pintar(value), espera);
         })
         .catch(() => {
           // Sin aviso. No es un error de nada: la app no depende de esto para funcionar.
         });
-    });
+    };
+
+    const cancelIdle = runWhenIdle(() => preguntar(SHOW_DELAY_MS));
+
+    /**
+     * AL VOLVER A LA APP se vuelve a mirar, si ha pasado el rato. Es lo que hace que un aviso publicado hoy le
+     * llegue a quien tiene la pestaña abierta desde ayer sin tener que recargar, y lo que hace que publicar
+     * desde el panel y volver a las listas enseñe lo que se acaba de publicar. Sale sin el retraso de la
+     * apertura: aquí la app ya estaba en pie y la atención vuelve a ella.
+     */
+    const alVolver = (): void => {
+      if (cancelled || document.visibilityState === 'hidden') return;
+      if (Date.now() - ultimaConsulta < RECHECK_MS) return;
+      preguntar(0, true);
+    };
+    document.addEventListener('visibilitychange', alVolver);
+    window.addEventListener('focus', alVolver);
+
+    /**
+     * Y AL PUBLICAR DESDE EL PANEL, al instante: es la misma pestaña, así que no hay ni recarga ni vuelta a la
+     * app que disparen lo de arriba. No hace falta forzar la lectura —el propio guardado ha dejado la caché de
+     * sesión con lo que se acaba de escribir—, y el nombre del evento viaja con el repositorio.
+     */
+    const alPublicar = (): void => {
+      if (!cancelled) preguntar(SHOW_DELAY_MS);
+    };
+    window.addEventListener(ANNOUNCEMENT_PUBLISHED_EVENT, alPublicar);
 
     return () => {
       cancelled = true;
       cancelIdle();
       if (timer) clearTimeout(timer);
       esperandoVista?.();
+      document.removeEventListener('visibilitychange', alVolver);
+      window.removeEventListener('focus', alVolver);
+      window.removeEventListener(ANNOUNCEMENT_PUBLISHED_EVENT, alPublicar);
     };
   }, []);
 

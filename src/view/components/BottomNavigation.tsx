@@ -1,4 +1,4 @@
-import { memo, useLayoutEffect, useRef, useState } from 'react';
+import { memo, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { IconName } from '../../core/constants/icons';
 import { UI_MESSAGES } from '../../core/constants/labels';
 import { Icon } from './Icon';
@@ -46,6 +46,7 @@ type NavLayout = 'row' | 'stack' | 'icon';
  */
 export const BottomNavigation = memo(function BottomNavigation({ currentSection, onSectionChange }: BottomNavigationProps) {
   const innerRef = useRef<HTMLDivElement>(null);
+  const navRef = useRef<HTMLElement>(null);
   const [indicator, setIndicator] = useState<{ left: number; width: number } | null>(null);
   const [layout, setLayout] = useState<NavLayout>('row');
   /** Espejo de `layout` para leerlo dentro del medidor sin re-suscribir el `resize` en cada cambio. */
@@ -121,8 +122,45 @@ export const BottomNavigation = memo(function BottomNavigation({ currentSection,
     return () => window.removeEventListener('resize', update);
   }, [currentSection, layout]);
 
+  /**
+   * PUBLICA SU ALTURA REAL en `--bottom-nav-h`, para que lo que se apoya encima sepa cuánto tiene que subir.
+   *
+   * ⚑ EL FALLO QUE CIERRA: el carril de las cápsulas (aviso de logro y aviso del administrador) se levantaba una
+   * cantidad FIJA de 4,6rem, que es la altura de esta barra en escritorio. Pero la barra crece: en un móvil
+   * estrecho los botones pasan a `stack` —icono encima del rótulo— y con el `env(safe-area-inset-bottom)` de un
+   * teléfono con gesto inferior sube todavía más. Medido en un Pixel de 390 px: la barra ocupaba 81 px y la
+   * cápsula se le metía 8 px por debajo, tocándola.
+   *
+   * Es el mismo recurso que ya usa `ConsentBanner` con `--consent-h`, y por la misma razón: quien se aparta no
+   * debe duplicar la medida de aquello de lo que se aparta.
+   *
+   * `ResizeObserver` y no un `resize` de ventana: la barra cambia de alto sin que la ventana cambie (al pasar de
+   * `row` a `stack`, o al terminar de cargar la fuente). Donde no exista, se cae al listener.
+   */
+  useEffect(() => {
+    const node = navRef.current;
+    if (!node) return;
+    const root = document.documentElement;
+    const publish = () => {
+      root.style.setProperty('--bottom-nav-h', `${Math.round(node.getBoundingClientRect().height)}px`);
+    };
+    publish();
+
+    const observer = typeof ResizeObserver === 'function' ? new ResizeObserver(publish) : null;
+    if (observer) observer.observe(node);
+    else window.addEventListener('resize', publish);
+
+    return () => {
+      if (observer) observer.disconnect();
+      else window.removeEventListener('resize', publish);
+      // La barra no está en todas las pantallas: al irse, quien se apartaba vuelve a su valor de reserva.
+      root.style.removeProperty('--bottom-nav-h');
+    };
+  }, [layout]);
+
   return (
     <nav
+      ref={navRef}
       className={`bottom-nav${layout === 'stack' ? ' is-stacked' : ''}${layout === 'icon' ? ' is-icons' : ''}`}
       aria-label={UI_MESSAGES.nav.ariaLabel}
     >

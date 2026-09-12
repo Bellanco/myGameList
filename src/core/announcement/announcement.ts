@@ -28,6 +28,21 @@ import { isValidHttpUrl } from '../security/sanitize';
  */
 
 /**
+ * Se acaba de publicar un aviso DESDE ESTA MISMA APP (el panel). Sin detalle: solo la noticia de que hay algo
+ * nuevo que mirar.
+ *
+ * ⚑ POR QUÉ HACE FALTA: el panel y la cápsula viven en la misma pestaña, y `useAnnouncement` decide al abrir la
+ * app y al volver a ella. Publicar desde `/admin` y navegar a las listas no es ninguna de las dos cosas —no hay
+ * recarga ni cambio de pestaña—, así que lo recién publicado no salía hasta recargar a mano. Es justo lo que
+ * hace quien acaba de escribirlo: publicar y mirar si sale.
+ *
+ * ⚑ Y VIVE AQUÍ, en el núcleo, y no junto a la escritura que lo emite: el hook lo escucha desde `App`, que es el
+ * arranque, e importar el repositorio para leer una cadena se llevaría por delante el `import()` dinámico y
+ * metería el SDK de Firebase en el bundle inicial. Este módulo no depende de nada.
+ */
+export const ANNOUNCEMENT_PUBLISHED_EVENT = 'mygamelist:announcement';
+
+/**
  * LOS LÍMITES SON ESPEJO DE `firestore.rules` (`announcementIsValid()`): si se cambian aquí, hay que cambiarlos
  * allí y desplegar las reglas. Hay un test que los ata, igual que con `PUBLIC_NAME_MAX_LENGTH`.
  *

@@ -22,7 +22,8 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
   el mundo). El icono se elige **viendo los dieciséis dibujos** —ocho nuevos de Material Symbols: megáfono,
   votación, celebración, novedad, fecha, urgente, regalo e información—, cada campo lleva su **conteo de
   caracteres** como el de las reseñas, y las explicaciones son de una línea. Con la pestaña en segundo plano el aviso **espera a que se mire** en vez de pintarse contra un
-  escritorio que nadie está viendo y gastar una de las veces que tenía para decirse.
+  escritorio que nadie está viendo y gastar una de las veces que tenía para decirse; al volver a la app pasado un
+  rato se vuelve a mirar si hay aviso nuevo, y al publicarlo desde el panel sale en el acto, sin recargar.
 - **Los escalones añadidos desde el panel se pueden corregir.** Un umbral escrito mal solo se podía quitar y
   volver a añadir: dos escrituras, y entre una y otra el catálogo de todo el mundo con el número equivocado
   dentro. Ahora cada añadido lleva su «Corregir», que abre el campo con su valor dentro y guarda la lista entera
@@ -31,6 +32,11 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
   «Corregir» ni «Quitar», solo el porqué.
 
 ### Fixed
+- **La cápsula de aviso se pegaba a la barra inferior en el móvil.** El carril se levantaba una cantidad fija de
+  4,6rem —la altura de la barra en un escritorio—, pero en un teléfono estrecho los botones se apilan y con el
+  área segura del gesto inferior la barra llega a 81 px: la cápsula se le metía 8 px por debajo. Ahora la barra
+  publica su altura real (`--bottom-nav-h`, con `ResizeObserver`) y el carril se aparta lo que mide, igual que ya
+  hacía con el banner de consentimiento. Afecta también al aviso de logro, que comparte carril.
 - **El destello del aviso se quedaba flotando fuera de la cápsula.** El barrido que la cruza al aparecer termina
   desplazado a la derecha, y eso daba igual mientras la cápsula recortara su interior; en la paleta «Sin futuro»,
   que necesita `overflow: visible` para que el halo del chaflán asome, se veía una mancha clara parada al lado
