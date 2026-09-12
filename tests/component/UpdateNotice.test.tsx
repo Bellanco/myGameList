@@ -5,6 +5,7 @@ import { UpdateNotice } from '../../src/view/components/UpdateNotice';
 import { UI_MESSAGES } from '../../src/core/constants/labels';
 import { APP_UPDATE_EVENT } from '../../src/core/utils/appUpdate';
 import { markDirty, clearDirty } from '../../src/model/repository/syncStateRepository';
+import { acquireSyncLock, type SyncLock } from '../../src/model/repository/syncMachineRepository';
 
 // La regla que se prueba: recargar sola solo cuando NO cuesta nada (pestaña oculta, nada a medias) y preguntar
 // en cualquier otro caso. Recargar bajo los pies de quien está mirando la app pierde scroll, filtros y lo que
@@ -40,7 +41,13 @@ beforeEach(() => {
 
 afterEach(() => {
   document.querySelectorAll('dialog, textarea').forEach((element) => element.remove());
+  // El mutex de sync es estado de MÓDULO: un test que lo deje tomado apagaría la recarga en todos los siguientes.
+  candado?.release();
+  candado = null;
 });
+
+/** Candado de sync tomado por el test de turno, para poder soltarlo pase lo que pase. */
+let candado: SyncLock | null = null;
 
 describe('aviso de versión nueva', () => {
   it('no enseña nada mientras no haya versión nueva', () => {
@@ -163,13 +170,47 @@ describe('aviso de versión nueva', () => {
     vi.useRealTimers();
   });
 
-  it('con cambios locales sin subir tampoco recarga sola: cortaría el ciclo de sincronización', () => {
+  /**
+   * LO QUE BLOQUEA ES EL CICLO EN MARCHA, NO LA MARCA DE PENDIENTE. Aquí se miraba `isDirty`, que responde a
+   * «¿queda algo por subir?» y puede ser cierta para siempre: solo se limpia tras una escritura correcta del
+   * gist. Quien no tiene sincronización configurada la deja puesta con su primera edición —no hay ciclo que la
+   * limpie— y quien la tiene rota, igual; a los dos se les apagaba la recarga automática entera. Y el caso
+   * feo: la persona con la sincronización averiada es justo la que necesita la versión que la arregla.
+   */
+  it('con cambios pendientes de subir SÍ recarga sola: no hay nada que perder', () => {
     markDirty();
 
     render(<UpdateNotice />);
     setVisibility('hidden');
     announceNewVersion();
 
+    expect(reloadNow).toHaveBeenCalledTimes(1);
+  });
+
+  it('pero con un ciclo de sincronización en vuelo espera: cortarlo obliga a repetirlo', () => {
+    candado = acquireSyncLock();
+
+    render(<UpdateNotice />);
+    setVisibility('hidden');
+    announceNewVersion();
+
     expect(reloadNow).not.toHaveBeenCalled();
+  });
+
+  it('y en cuanto ese ciclo termina, la siguiente ocasión sí recarga', () => {
+    candado = acquireSyncLock();
+
+    render(<UpdateNotice />);
+    setVisibility('hidden');
+    announceNewVersion();
+    expect(reloadNow).not.toHaveBeenCalled();
+
+    // El ciclo acaba y el usuario vuelve a dejar la app: la comprobación se repite al ocultarse la pestaña.
+    candado.release();
+    candado = null;
+    setVisibility('visible');
+    setVisibility('hidden');
+
+    expect(reloadNow).toHaveBeenCalledTimes(1);
   });
 });
