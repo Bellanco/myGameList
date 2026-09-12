@@ -30,7 +30,7 @@ export {
   gamesChunkFilename,
   leanTabData,
 } from './socialProjection';
-export { getSyncConfig, saveSyncConfig, clearSyncConfig, ensureSyncConfigLoaded } from './gistConfigRepository';
+export { getSyncConfig, saveSyncConfig, clearSyncConfig, ensureSyncConfigLoaded, subscribeSyncConfig } from './gistConfigRepository';
 
 const GIST_FILENAME = 'myGames.json';
 

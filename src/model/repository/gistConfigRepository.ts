@@ -107,6 +107,30 @@ async function hydrateChannelToken(key: string): Promise<void> {
   state.loaded = true;
 }
 
+/**
+ * Quién quiere enterarse de que la configuración del canal de JUEGOS ha cambiado (se ha conectado o desconectado
+ * la sincronización).
+ *
+ * Existe para que la pantalla no tenga que preguntarlo en cada render: `useSyncViewModel` exponía `hasConfig` y
+ * `currentConfig` llamando a `getSyncConfig()` en el cuerpo del hook, o sea un `localStorage.getItem` y un
+ * `JSON.parse` por render — y esta app re-renderiza con cada tecla del buscador.
+ */
+const configListeners = new Set<(config: SyncConfig | null) => void>();
+
+export function subscribeSyncConfig(listener: (config: SyncConfig | null) => void): () => void {
+  configListeners.add(listener);
+  return () => {
+    configListeners.delete(listener);
+  };
+}
+
+function notifyConfigChanged(key: string): void {
+  // Solo el canal de juegos: el social tiene sus propios avisos y nadie lo pinta desde aquí.
+  if (key !== GIST_CFG_KEY) return;
+  const current = readChannelConfig(key);
+  configListeners.forEach((listener) => listener(current));
+}
+
 function writeChannelConfig(key: string, config: SyncConfig): void {
   const state = tokenStates[key];
   state.token = config.token || null;
@@ -118,6 +142,7 @@ function writeChannelConfig(key: string, config: SyncConfig): void {
   };
   // Persiste ya lo no sensible (sin token en claro); cifra el token en segundo plano.
   writeStored(key, base);
+  notifyConfigChanged(key);
   if (config.token) {
     void encryptWithDeviceKey(config.token)
       .then((encToken) => {
@@ -136,6 +161,7 @@ function clearChannelConfig(key: string): void {
   state.token = null;
   state.loaded = true;
   localStorage.removeItem(key);
+  notifyConfigChanged(key);
 }
 
 export function getSyncConfig(): SyncConfig | null {
