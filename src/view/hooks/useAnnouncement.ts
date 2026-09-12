@@ -30,6 +30,12 @@ import { runWhenIdle } from '../../core/utils/idle';
  * atención está en la lista que se acaba de pintar. `SHOW_DELAY_MS` es el tiempo que tarda alguien en dejar de
  * mirar lo que venía a mirar.
  *
+ * ⚑ Y NO SE PINTA CON LA PESTAÑA DE FONDO. Es el caso que hace que un aviso «no salga nunca» sin que nadie
+ * entienda por qué: se abre la app en una pestaña y se sigue con otra cosa; a los dos segundos y medio la
+ * cápsula se pinta contra un escritorio que nadie está mirando, a los ocho se va sola, y ha gastado una de las
+ * tres veces que el aviso tenía para decirse. Al volver no hay nada, y mañana quedan dos. Así que si la pestaña
+ * está oculta se espera a que se mire: el reloj de la vida de la cápsula empieza cuando empieza a poder verse.
+ *
  * LA CUENTA SE APUNTA AL PINTAR, NO AL DECIDIR (`markShown` lo llama la cápsula al montarse). Es lo que hace que
  * un desbloqueo de logro —que tiene preferencia en el carril y deja al aviso sin pintar— no gaste una de las
  * veces.
@@ -92,16 +98,33 @@ export function useAnnouncement(): AnnouncementState {
   useEffect(() => {
     let cancelled = false;
     let timer: ReturnType<typeof setTimeout> | null = null;
+    let esperandoVista: (() => void) | null = null;
+
+    /** Pinta la cápsula, o espera a que la pestaña se mire si ahora mismo está de fondo. */
+    const pintar = (value: Announcement): void => {
+      if (cancelled) return;
+      if (typeof document !== 'undefined' && document.visibilityState === 'hidden') {
+        const alVolver = () => {
+          if (document.visibilityState === 'hidden') return;
+          document.removeEventListener('visibilitychange', alVolver);
+          esperandoVista = null;
+          pintar(value);
+        };
+        document.addEventListener('visibilitychange', alVolver);
+        esperandoVista = () => document.removeEventListener('visibilitychange', alVolver);
+        return;
+      }
+      currentRef.current = value;
+      setAnnouncement(value);
+    };
 
     const cancelIdle = runWhenIdle(() => {
       void import('../../model/repository/announcementRepository')
         .then((module) => module.loadAnnouncement())
         .then((value) => {
-          if (cancelled || !isAnnouncementDue(value, seenRef.current, Date.now())) return;
-          timer = setTimeout(() => {
-            currentRef.current = value;
-            setAnnouncement(value);
-          }, SHOW_DELAY_MS);
+          // `isAnnouncementDue` ya descarta el `null`; se comprueba aparte para que el tipo lo sepa.
+          if (cancelled || !value || !isAnnouncementDue(value, seenRef.current, Date.now())) return;
+          timer = setTimeout(() => pintar(value), SHOW_DELAY_MS);
         })
         .catch(() => {
           // Sin aviso. No es un error de nada: la app no depende de esto para funcionar.
@@ -112,6 +135,7 @@ export function useAnnouncement(): AnnouncementState {
       cancelled = true;
       cancelIdle();
       if (timer) clearTimeout(timer);
+      esperandoVista?.();
     };
   }, []);
 
