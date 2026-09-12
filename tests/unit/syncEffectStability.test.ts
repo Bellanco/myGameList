@@ -38,6 +38,8 @@ vi.mock('../../src/model/repository/gistRepository', () => ({
   saveSyncConfig: vi.fn(),
   clearSyncConfig: vi.fn(),
   ensureSyncConfigLoaded: vi.fn(async () => {}),
+  // Aviso de cambios en la configuración: el view-model se suscribe para no leer localStorage en cada render.
+  subscribeSyncConfig: () => () => {},
   createGist: vi.fn(),
   findGamesGistId: vi.fn(async () => ''),
   whoAmI: vi.fn(async () => {}),

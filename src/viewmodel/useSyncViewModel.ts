@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { SYNC_MESSAGES } from '../core/constants/labels';
 import { getCurrentSocialAuthUser, getPrivateConfig, recoverGithubToken, resolveOwnProfile, resolveStableProfileId, setAnalyticsUser, setPrivateConfig, signInWithGoogle, trackAnalyticsEvent } from '../model/repository/firebaseGateway';
 import { mergeCrdt } from '../model/repository/syncRepository';
-import { clearSyncConfig, createGist, ensureSyncConfigLoaded, findGamesGistId, getRetryAfterMs, getSyncConfig, isDeferredNetworkError, readGist, saveSyncConfig, whoAmI, writeGist, type GistReadResponse } from '../model/repository/gistRepository';
+import { clearSyncConfig, createGist, ensureSyncConfigLoaded, findGamesGistId, getRetryAfterMs, getSyncConfig, isDeferredNetworkError, readGist, saveSyncConfig, subscribeSyncConfig, whoAmI, writeGist, type GistReadResponse } from '../model/repository/gistRepository';
 import { beginGithubOAuth, completeGithubOAuth, hasGithubOAuthRedirect, isGithubOAuthConfigured } from '../model/repository/githubOAuthRepository';
 import { normalizeData } from '../model/repository/localRepository';
 import { clearDirty, clearDirtyIfUnchanged, loadSyncDirtyState, subscribeSyncDirtyState, type SyncDirtyState } from '../model/repository/syncStateRepository';
@@ -83,6 +83,16 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
    * Vale `false` sin sincronización configurada, y no es un descuido: sin gist al que subir, «cambios sin subir»
    * no significa nada para quien solo usa sus listas en este dispositivo. El badge ya dice «No sincronizado».
    */
+  /**
+   * La configuración de sincronización COMO ESTADO, no como lectura por render.
+   *
+   * `hasConfig` y `currentConfig` se resolvían llamando a `getSyncConfig()` en el cuerpo del hook, así que cada
+   * render de la aplicación —uno por tecla en el buscador— hacía dos `localStorage.getItem` con sus dos
+   * `JSON.parse` para acabar devolviendo lo mismo que la vez anterior. Ahora se mantiene al día con el aviso del
+   * repositorio, que es quien sabe cuándo cambia de verdad.
+   */
+  const [syncConfig, setSyncConfig] = useState(getSyncConfig);
+
   const pendingUploadFrom = (dirty: SyncDirtyState): boolean => dirty.isDirty && Boolean(getSyncConfig());
   const [pendingUpload, setPendingUpload] = useState(() => pendingUploadFrom(loadSyncDirtyState()));
   const dirtyPushTimerRef = useRef<number | null>(null);
@@ -683,6 +693,14 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
     };
   }, [cancelDirtyPush, scheduleDirtyPush]);
 
+  useEffect(() => {
+    return subscribeSyncConfig((next) => {
+      // Solo lo que la pantalla mira. Cada ciclo de sincronización reescribe la configuración con el etag nuevo,
+      // y eso no cambia nada de lo que se pinta: sin este filtro, cada 304 provocaría un render de la app entera.
+      setSyncConfig((prev) => (prev?.gistId === next?.gistId && Boolean(prev) === Boolean(next) ? prev : next));
+    });
+  }, []);
+
   // start/stop polling when we have a connected gist id
   useEffect(() => {
     if (connectedGistId) {
@@ -955,7 +973,7 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
     pendingUpload,
     lastRemoteChangesApplied,
     recoveringGistId,
-    hasConfig: Boolean(getSyncConfig()),
-    currentConfig: getSyncConfig(),
+    hasConfig: Boolean(syncConfig),
+    currentConfig: syncConfig,
   };
 }
