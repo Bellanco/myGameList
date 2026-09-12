@@ -1,4 +1,4 @@
-import { memo, useId, type CSSProperties } from 'react';
+import { memo, useId, useLayoutEffect, useRef, useState, type CSSProperties, type RefObject } from 'react';
 import { STATS_UI } from '../../../core/constants/statsLabels';
 import { useStatsLabels } from './statsVoice';
 import type { YearBucket } from '../../../core/stats/types';
@@ -6,12 +6,175 @@ import type { YearMetric } from '../../../viewmodel/useStatsViewModel';
 import type { ScoreScale } from '../../../core/utils/scoreScale';
 import { formatCount, formatHours } from './format';
 
-/** Cuántas etiquetas de año caben en el eje sin apelotonarse (en pantalla estrecha, el CSS aún quita la mitad). */
+/** Cuántos años rotula el eje como mucho: más que esto es una reja, no una guía. De ahí solo se caen los que
+ *  además no quepan (ver `useFittingLabels`). */
 const AXIS_LABELS = 8;
 /** Altura del lienzo en unidades del `viewBox`; el ancho es 100. */
 const H = 100;
 /** Aire por arriba, para que el punto más alto no se coma el borde ni su rótulo. */
 const TOP_ROOM = 12;
+/** Aire mínimo entre dos rótulos vecinos, en píxeles: por debajo de esto se leen como si fueran uno solo. */
+const LABEL_GAP = 6;
+/** Lo que sube un rótulo fijo cuando no cabe donde le toca, en proporción a su propia altura. */
+const LABEL_LIFT = 1.15;
+/** Y lo que baja si tampoco cabe arriba: al otro lado de su punto. Las dos medidas van con el CSS de la mano. */
+const LABEL_DROP = 2.15;
+
+interface LabelBox {
+  x0: number;
+  x1: number;
+  y0: number;
+  y1: number;
+  /** Alto propio: la unidad con la que se aparta el rótulo si hay que moverlo (ver `LABEL_LIFT`/`LABEL_DROP`). */
+  alto: number;
+  /** Los fijos no se caen nunca: el récord y el último año. */
+  pinned: boolean;
+}
+
+/** ¿Se pisan dos rótulos? En las DOS direcciones: vecinos en horizontal pueden estar a alturas muy distintas. */
+function overlap(a: LabelBox, b: LabelBox): boolean {
+  return a.x0 - LABEL_GAP < b.x1 && b.x0 - LABEL_GAP < a.x1 && a.y0 < b.y1 && b.y0 < a.y1;
+}
+
+/** El mismo rótulo, corrido un renglón: arriba (`LABEL_LIFT`) o al otro lado de su punto (`LABEL_DROP`). */
+function moved(box: LabelBox, saltos: number): LabelBox {
+  const salto = box.alto * saltos;
+  return { ...box, y0: box.y0 + salto, y1: box.y1 + salto };
+}
+
+/**
+ * Qué rótulos de una fila CABEN, y dónde se pintan: `0` donde les toca, `1` un renglón más arriba, `2` al otro
+ * lado de su punto y `-1` fuera.
+ *
+ * Se miden en el navegador en vez de contar dígitos: la familia tipográfica la pone cada tema
+ * (`themes/*.scss` cambia la del documento entero), así que una cuenta hecha a ojo sobra rótulos en una paleta
+ * y los tira de más en otra. Y se miden de verdad, en píxeles, porque el ancho útil del lienzo no se deduce del
+ * de la ventana: el mismo móvil da una caja distinta según lo que la tarjeta tenga alrededor.
+ *
+ * EN LAS DOS DIRECCIONES, que es la clave de cuántos números sobreviven: las cifras cuelgan de su punto, así
+ * que dos vecinas en horizontal suelen estar a alturas muy distintas y no se estorban. Mirando solo la
+ * horizontal se caían a pares en cuanto la serie pasaba de veinte años —y con ella la cifra del año en curso,
+ * que quedaba debajo de la píldora del récord sin llegar a tocarla—.
+ *
+ * Sustituye a la regla de CSS que escondía UNO DE CADA DOS por debajo de 34 rem. Aquella tapaba números que
+ * cabían de sobra —con ocho años en un móvil se perdían tres, el último incluido— y a la vez dejaba pasar los
+ * choques de verdad, porque la píldora del récord es mucho más ancha que una cifra suelta.
+ *
+ * Los que no caben se quedan en el DOM con `visibility: hidden`: siguen midiendo, que es lo que permite
+ * recalcular al girar el aparato. No le esconden el dato a nadie —la figura entera va `aria-hidden` y los años
+ * están en la tabla de abajo—, solo despejan la imagen.
+ *
+ * Los marcados `data-fit="pin"` no se caen: son los que dan sentido a la fila —el récord y el borde de la
+ * serie—. Si les pilla el sitio ocupado prueban a apartarse un renglón, arriba primero y debajo de su punto
+ * después, y solo entonces desalojan al vecino. Apartarse es el último recurso y no el reparto normal: una fila
+ * de números a varias alturas se lee peor que una fila con huecos.
+ *
+ * Y UN FIJO NUNCA DESALOJA A OTRO FIJO. El récord y el año en curso caen pegados en cuanto el mejor año es
+ * reciente, y ahí el desalojo sin más convertía un problema en el contrario: aparecía el año en curso y
+ * desaparecía la píldora del récord, que es la cifra que más se mira de toda la figura.
+ */
+function useFittingLabels(row: RefObject<HTMLElement | null>, signature: string): (index: number) => number {
+  // `null` es "todavía sin medir" —o sin `ResizeObserver`, como en las pruebas—: se pintan todos, que es el
+  // estado degradado correcto; sobrar rótulos se lee, y esconderlos sin saber si caben, no.
+  const [levels, setLevels] = useState<ReadonlyMap<number, number> | null>(null);
+
+  useLayoutEffect(() => {
+    const node = row.current;
+    if (!node || typeof ResizeObserver === 'undefined') {
+      return;
+    }
+    let vivo = true;
+    const measure = () => {
+      const labels = Array.from(node.querySelectorAll<HTMLElement>('[data-fit]'));
+      if (!vivo || node.clientWidth === 0 || labels.length === 0) {
+        return;
+      }
+      /* Cajas relativas al lienzo, DESHACIENDO el apartado que lleve puesto cada rótulo (`data-shift`).
+         Medir la caja tal y como está pintada parece lo natural y es justo lo que no se puede hacer: un rótulo
+         ya apartado se mide donde no estorba, la medición lo devuelve a su sitio, allí vuelve a estorbar y se
+         aparta otra vez — un vaivén que cada navegador resolvía de una manera. El reparto se calcula siempre
+         sobre el sitio de origen, que es el único dato que no depende del reparto anterior. */
+      const base = node.getBoundingClientRect();
+      const boxes: LabelBox[] = labels.map((label) => {
+        const caja = label.getBoundingClientRect();
+        const shift = Number(label.dataset.shift ?? 0);
+        const vuelta = (shift === 1 ? LABEL_LIFT : shift === 2 ? -LABEL_DROP : 0) * caja.height;
+        return {
+          x0: caja.left - base.left,
+          x1: caja.right - base.left,
+          y0: caja.top - base.top + vuelta,
+          y1: caja.bottom - base.top + vuelta,
+          alto: caja.height,
+          pinned: label.dataset.fit === 'pin',
+        };
+      });
+
+      const puestos: Array<{ index: number; box: LabelBox }> = [];
+      const reparto = new Map<number, number>();
+      const libre = (box: LabelBox) => puestos.every((puesto) => !overlap(box, puesto.box));
+      boxes.forEach((box, index) => {
+        if (libre(box)) {
+          puestos.push({ index, box });
+          reparto.set(index, 0);
+          return;
+        }
+        if (!box.pinned) {
+          reparto.set(index, -1);
+          return;
+        }
+        // Apartarse un renglón —arriba si hay techo, debajo de su punto si no— para convivir con el vecino en
+        // vez de llevárselo por delante. Es lo que deja ver a la vez el récord y el año en curso.
+        const arriba = moved(box, -LABEL_LIFT);
+        const abajo = moved(box, LABEL_DROP);
+        const hueco = [
+          { nivel: 1, box: arriba, cabe: arriba.y0 >= 0 },
+          { nivel: 2, box: abajo, cabe: abajo.y1 <= node.clientHeight },
+        ].find((sitio) => sitio.cabe && libre(sitio.box));
+        if (hueco) {
+          puestos.push({ index, box: hueco.box });
+          reparto.set(index, hueco.nivel);
+          return;
+        }
+        // Sin sitio propio, desaloja —pero solo a los que no son fijos—. Contra otro fijo se calla: perder la
+        // píldora del récord para enseñar el año en curso es cambiar un agujero por otro peor.
+        const estorban = puestos.filter((puesto) => overlap(box, puesto.box));
+        if (estorban.some((puesto) => boxes[puesto.index].pinned)) {
+          reparto.set(index, -1);
+          return;
+        }
+        estorban.forEach((puesto) => {
+          reparto.set(puesto.index, -1);
+          puestos.splice(puestos.indexOf(puesto), 1);
+        });
+        puestos.push({ index, box });
+        reparto.set(index, 0);
+      });
+
+      // Mismo reparto, mismo objeto: sin esta comparación cada medición dispararía otro render.
+      setLevels((previous) => (
+        previous && previous.size === reparto.size && [...reparto].every(([index, nivel]) => previous.get(index) === nivel)
+          ? previous
+          : reparto
+      ));
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(node);
+    /* Y CADA RÓTULO, no solo el lienzo. Media docena de temas traen su tipografía de la red, y hasta que entra,
+       las cifras se pintan con la de reserva y miden otra cosa; cuando llega la buena, el lienzo NO cambia de
+       tamaño, así que observarlo solo a él deja el reparto hecho con anchos que ya no son los suyos —en «Sin
+       salida» eso dejaba la cifra del año en curso encima de la del récord—. Vigilando los rótulos, el cambio
+       de letra dispara la medición él solo, sin depender de los eventos de `document.fonts`, que no todos los
+       navegadores dan a tiempo. Esconder o apartar un rótulo no cambia su caja, así que esto no se realimenta. */
+    node.querySelectorAll<HTMLElement>('[data-fit]').forEach((label) => observer.observe(label));
+    return () => {
+      vivo = false;
+      observer.disconnect();
+    };
+  }, [row, signature]);
+
+  return (index: number) => levels?.get(index) ?? 0;
+}
 
 interface YearChartProps {
   years: YearBucket[];
@@ -84,33 +247,43 @@ export const YearChart = memo(function YearChart({ years, metric, onMetricChange
   const grade = scale === 'grade';
   // Un id por instancia: el degradado del área es un `<defs>` y en el panel de un amigo hay otro gráfico igual.
   const fillId = useId();
-
-  if (years.length === 0) {
-    return <p className="stats-empty">{L.empty}</p>;
-  }
+  // Las dos filas de rótulos se miden por separado —cifras arriba, años abajo— porque no ocupan lo mismo.
+  const plotRef = useRef<HTMLDivElement>(null);
+  const axisRef = useRef<HTMLDivElement>(null);
 
   // La serie va de más antiguo a más reciente (el tiempo avanza a la derecha), al revés que los cubos, que
   // llegan del más reciente al más antiguo. El cajón "sin año" no es un punto del eje: sale a un chip aparte.
   const undated = years.find((bucket) => bucket.year === null) || null;
   const series = years.filter((bucket) => bucket.year !== null).slice().reverse();
 
-  if (series.length === 0) {
-    return <p className="stats-empty">{L.empty}</p>;
-  }
-
   const max = series.reduce((top, bucket) => Math.max(top, valueOf(bucket, metric)), 0) || 1;
   const span = series.length - 1 || 1;
+  const format = metric === 'hours' ? formatHours : formatCount;
   const points = series.map((bucket, index) => ({
     bucket,
     x: (index / span) * 100,
     y: H - (valueOf(bucket, metric) / max) * (H - TOP_ROOM),
   }));
+  const values = points.map((point) => format(valueOf(point.bucket, metric)));
+  const peakIndex = points.reduce((best, point, index) => (
+    valueOf(point.bucket, metric) > valueOf(points[best].bucket, metric) ? index : best
+  ), 0);
+  const axisStep = Math.max(1, Math.ceil(series.length / AXIS_LABELS));
+  const axisMarks = points.filter((_point, index) => index % axisStep === 0 || index === points.length - 1);
+
+  /* Los dos cálculos de sitio, ANTES del atajo de la serie vacía: los hooks se llaman siempre o no se llaman
+     nunca. La firma es lo que hay escrito en la fila —cambiar de métrica cambia el ancho de las cifras—, que es
+     justo cuando hay que volver a medir. */
+  const valueLevel = useFittingLabels(plotRef, `${metric}|${values.join('|')}`);
+  const axisLevel = useFittingLabels(axisRef, axisMarks.map((point) => point.bucket.year).join('|'));
+
+  if (points.length === 0) {
+    return <p className="stats-empty">{L.empty}</p>;
+  }
 
   const line = curveThrough(points);
   const area = `${line} L 100 ${H} L 0 ${H} Z`;
-  const peak = points.reduce((best, point) => (valueOf(point.bucket, metric) > valueOf(best.bucket, metric) ? point : best), points[0]);
-  const axisStep = Math.max(1, Math.ceil(series.length / AXIS_LABELS));
-  const format = metric === 'hours' ? formatHours : formatCount;
+  const peak = points[peakIndex];
   const metricName = metric === 'hours' ? L.metricHours.toLowerCase() : L.metricGames.toLowerCase();
   // Tres marcas en la escala: el máximo, la mitad y cero. Más líneas en un lienzo de 13 rem es reja, no guía.
   const ticks = [max, max / 2, 0];
@@ -149,7 +322,7 @@ export const YearChart = memo(function YearChart({ years, metric, onMetricChange
             ))}
           </div>
 
-          <div className="year-trend-plot">
+          <div className="year-trend-plot" ref={plotRef}>
             {/* `preserveAspectRatio="none"`: el lienzo se estira con la tarjeta y la curva con él. Por eso los
                 puntos, los rótulos y la escala son HTML —dentro del SVG saldrían deformados. */}
             <svg viewBox={`0 0 100 ${H}`} preserveAspectRatio="none" focusable="false">
@@ -173,7 +346,7 @@ export const YearChart = memo(function YearChart({ years, metric, onMetricChange
               const year = point.bucket.year as number;
               const summary = `${year}: ${format(valueOf(point.bucket, metric))} ${metricName}`;
               const style = { left: `${point.x}%`, top: `${point.y}%`, '--i': index } as CSSProperties;
-              const className = `year-node${point === peak ? ' is-peak' : ''}`;
+              const className = `year-node${index === peakIndex ? ' is-peak' : ''}`;
 
               // Con callback, el punto es un ATAJO para abrir ese año con el ratón o el dedo. Va fuera del
               // recorrido de teclado (`tabIndex={-1}`) a propósito: toda la figura está en `aria-hidden`, y un
@@ -197,23 +370,40 @@ export const YearChart = memo(function YearChart({ years, metric, onMetricChange
 
             {/* La cifra va ENCIMA de su punto, no al lado: a un lado se montaba sobre la propia línea y había
                 tramos donde la curva desaparecía detrás del rótulo. El récord va marcado. */}
-            {points.map((point, index) => (
-              <span
-                key={point.bucket.year}
-                className={`year-value${point === peak ? ' is-peak' : ''}`}
-                style={{ left: `${point.x}%`, top: `${point.y}%`, '--i': index } as CSSProperties}
-              >
-                {format(valueOf(point.bucket, metric))}
-              </span>
-            ))}
+            {points.map((point, index) => {
+              // Dos rótulos fijos: el RÉCORD y el ÚLTIMO AÑO. El récord porque es la cifra que se busca; el
+              // último porque es dónde estás ahora, y justo esos dos caen seguidos en cuanto el mejor año es
+              // reciente —era el número que faltaba—.
+              const fixed = index === peakIndex || index === points.length - 1;
+              const level = valueLevel(index);
+              return (
+                <span
+                  key={point.bucket.year}
+                  data-fit={fixed ? 'pin' : ''}
+                  data-shift={level}
+                  className={`year-value${index === peakIndex ? ' is-peak' : ''}${level === 1 ? ' is-lifted' : ''}${level === 2 ? ' is-below' : ''}${level < 0 ? ' is-crowded' : ''}`}
+                  style={{ left: `${point.x}%`, top: `${point.y}%`, '--i': index } as CSSProperties}
+                >
+                  {values[index]}
+                </span>
+              );
+            })}
           </div>
         </div>
 
-        <div className="year-axis">
-          {points.map((point, index) => (
-            index % axisStep === 0 || index === points.length - 1 ? (
-              <span key={point.bucket.year} style={{ left: `${point.x}%` } as CSSProperties}>{point.bucket.year}</span>
-            ) : null
+        {/* El eje empieza por una cadencia —como mucho `AXIS_LABELS` años, para no convertirlo en una reja— y
+            de ahí solo se caen los que además CHOCARÍAN. El último año es el rótulo fijo: es el borde de la
+            serie, y sin él la curva no dice hasta dónde llega. */}
+        <div className="year-axis" ref={axisRef}>
+          {axisMarks.map((point, index) => (
+            <span
+              key={point.bucket.year}
+              data-fit={index === axisMarks.length - 1 ? 'pin' : ''}
+              className={axisLevel(index) < 0 ? 'is-crowded' : undefined}
+              style={{ left: `${point.x}%` } as CSSProperties}
+            >
+              {point.bucket.year}
+            </span>
           ))}
         </div>
 
