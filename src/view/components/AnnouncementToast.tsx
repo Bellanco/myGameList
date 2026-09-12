@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { ANNOUNCEMENT_UI } from '../../core/constants/announcementLabels';
 import type { Announcement } from '../../core/announcement/announcement';
-import { Icon } from './Icon';
+import { AnnouncementIcon, AnnouncementSprite } from './AnnouncementSprite';
 // La hoja se importa AQUÍ, atada al componente, por lo mismo que la de la medalla: esta cápsula se pinta desde un
 // chunk perezoso y colgarla de `index.scss` la haría viajar en el arranque de todo el mundo por algo que casi
 // nunca hay. La forma común con el aviso de logro vive en `styles/_capsule.scss`, que esta hoja `@use`.
@@ -95,6 +95,9 @@ export function AnnouncementToast({
 
   const capsule = (
     <div className="ach-toast is-announce">
+      {/* El sprite viaja con la cápsula: estos dibujos no están en el del arranque. Se reparte un dueño único,
+          así que montarlo también aquí no duplica ni un `symbol` cuando el aviso salta sobre el panel. */}
+      <AnnouncementSprite />
       <span className="ach-toast-sheen" aria-hidden="true" />
       {/* La pausa la lleva el ENLACE, que es lo que de verdad se puede enfocar y pulsar; su área se extiende a la
           cápsula entera desde la hoja (`.ach-toast-body::after`), así que el reloj se para al pasar el ratón por
@@ -112,7 +115,7 @@ export function AnnouncementToast({
         onBlur={() => setPaused(false)}
       >
         <span className="ach-toast-disc" aria-hidden="true">
-          <Icon name={icon} />
+          <AnnouncementIcon name={icon} />
         </span>
         <span className="ach-toast-text">
           <span className="ach-toast-kicker">{kicker || ANNOUNCEMENT_UI.kickerFallback}</span>

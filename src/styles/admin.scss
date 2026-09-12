@@ -878,6 +878,48 @@
 .admin-ann-field small { color: var(--text-muted); font-size: .75rem; line-height: 1.35; }
 .admin-ann-field textarea { resize: vertical; min-height: 3.2rem; font: inherit; }
 
+/* EL CONTADOR VA DEBAJO DEL CAMPO, con la ayuda a su izquierda: es el mismo pie que la reseña de un juego
+   (`.field-footer` + `.tag-hint`, ver `FormModal`), para que contar caracteres se lea igual en los dos sitios.
+   Con `space-between` la ayuda queda a la izquierda y la cifra a la derecha; cuando no hay ayuda, el `<span>`
+   vacío del componente sujeta esa columna y la cifra no se desplaza. */
+.admin-ann-field .field-footer { justify-content: space-between; gap: .8rem; align-items: baseline; }
+.admin-ann-field .field-footer .tag-hint:last-child { white-space: nowrap; font-variant-numeric: tabular-nums; }
+
+/* LA REJILLA DE ICONOS · se elige viendo el dibujo, no leyendo su nombre.
+   `auto-fill` con un mínimo de 3rem: en escritorio caben los dieciséis en una o dos filas y en un teléfono se
+   reparten solos sin que haya que decidir cuántas columnas hay en cada ancho. */
+.admin-ann-icons { border: 0; padding: 0; margin: 0; min-width: 0; }
+.admin-ann-icons legend { padding: 0; font-size: .88rem; font-weight: 600; }
+.admin-ann-icon-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(3rem, 1fr));
+  gap: .4rem;
+  margin-top: .35rem;
+}
+.admin-ann-icon {
+  display: grid;
+  place-items: center;
+  /* 44 px de lado: el mínimo de área táctil. Con iconos de 3rem en una rejilla, en móvil se pulsa el de al lado. */
+  min-height: 2.9rem;
+  padding: .5rem;
+  background: var(--surface-soft);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: color .15s ease, border-color .15s ease, background .15s ease;
+}
+.admin-ann-icon .ui-icon { width: 1.4rem; height: 1.4rem; }
+.admin-ann-icon:hover { color: var(--text); border-color: color-mix(in srgb, var(--steam) 45%, var(--border)); }
+/* El elegido lleva TRES señales y no solo el color: fondo, filete de acento y el dibujo encendido. Una sola
+   —el borde— se pierde en una rejilla de dieciséis casillas iguales, y en tema claro casi no se ve. */
+.admin-ann-icon.is-picked {
+  color: var(--fg-link);
+  border-color: var(--steam);
+  background: color-mix(in srgb, var(--steam) 14%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--steam) 45%, transparent);
+}
+
 /* Las dos cifras del ciclo, juntas: son una sola decisión («cuántas veces y cada cuánto») y separadas en dos
    filas se leían como dos ajustes sin relación. */
 .admin-ann-pair { display: grid; gap: .9rem; }

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   ANNOUNCEMENT_ICONS,
   ANNOUNCEMENT_LIMITS,
+  DEFAULT_ANNOUNCEMENT_ICON,
   DEFAULT_INTERVAL_HOURS,
   DEFAULT_REPEATS,
   NO_SEEN,
@@ -76,7 +77,7 @@ describe('saneado del aviso', () => {
     });
     expect(limpio?.title).toHaveLength(ANNOUNCEMENT_LIMITS.title);
     expect(limpio?.body).toHaveLength(ANNOUNCEMENT_LIMITS.body);
-    expect(limpio?.icon).toBe('bell');
+    expect(limpio?.icon).toBe(DEFAULT_ANNOUNCEMENT_ICON);
     expect(limpio?.repeats).toBe(DEFAULT_REPEATS);
     expect(limpio?.intervalHours).toBe(DEFAULT_INTERVAL_HOURS);
     // Y el tope se aplica también por arriba: un documento no puede pedir doscientas insistencias.
@@ -89,10 +90,22 @@ describe('saneado del aviso', () => {
     expect(limpio?.active).toBe(false);
   });
 
-  it('todos los iconos que ofrece el panel están en el sprite de la app', async () => {
-    const { default: sprite } = await import('../../src/view/components/IconSprite?raw');
+  /**
+   * ⚑ AÑADIR UN ICONO SON TRES PASOS Y ESTE TEST LOS EXIGE: el dibujo en un sprite, el `id` en la lista y el
+   * nombre en el panel. Saltarse el primero no rompe nada visible en la batería —un `<use>` que no resuelve pinta
+   * un hueco—, y saltarse el tercero deja un botón sin nombre para quien no ve el dibujo.
+   */
+  it('cada icono del aviso tiene dibujo y nombre', async () => {
+    const [propio, general, { ADMIN_ANNOUNCEMENT_UI }] = await Promise.all([
+      import('../../src/view/components/AnnouncementSprite?raw'),
+      import('../../src/view/components/IconSprite?raw'),
+      import('../../src/core/constants/adminLabels'),
+    ]);
+    const dibujos = `${propio.default}${general.default}`;
+
     for (const icon of ANNOUNCEMENT_ICONS) {
-      expect(sprite, `falta #icon-${icon}`).toContain(`id="icon-${icon}"`);
+      expect(dibujos, `falta el dibujo de «${icon}»`).toContain(`id="icon-${icon}"`);
+      expect(ADMIN_ANNOUNCEMENT_UI.iconNames[icon], `falta el nombre de «${icon}»`).toBeTruthy();
     }
   });
 });

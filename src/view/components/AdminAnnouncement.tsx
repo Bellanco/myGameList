@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState, type ReactNode } from 'react';
 import { ADMIN_ANNOUNCEMENT_UI } from '../../core/constants/adminLabels';
 import {
   ANNOUNCEMENT_ICONS,
@@ -7,10 +7,11 @@ import {
   DEFAULT_INTERVAL_HOURS,
   DEFAULT_REPEATS,
   type Announcement,
-  type AnnouncementIcon,
+  type AnnouncementIcon as IconId,
 } from '../../core/announcement/announcement';
 import { isValidHttpUrl } from '../../core/security/sanitize';
 import { AnnouncementToast } from './AnnouncementToast';
+import { AnnouncementIcon, AnnouncementSprite } from './AnnouncementSprite';
 import { HubBackButton } from './socialhub/HubBackButton';
 // LA HOJA DEL PANEL SE IMPORTA AQUÍ, atada a la pantalla que la usa, y no se da por hecho que la haya traído
 // `AdminHub`. Es el fallo mudo de siempre (§12): esta pantalla se monta también desde la ruta de desarrollo
@@ -62,11 +63,39 @@ function draftFrom(current: Announcement | null) {
     title: current?.title || '',
     body: current?.body || '',
     url: current?.url || '',
-    icon: (current?.icon || DEFAULT_ANNOUNCEMENT_ICON) as AnnouncementIcon,
+    icon: (current?.icon || DEFAULT_ANNOUNCEMENT_ICON) as IconId,
     active: current?.active ?? true,
     repeats: String(current?.repeats ?? DEFAULT_REPEATS),
     intervalHours: String(current?.intervalHours ?? DEFAULT_INTERVAL_HOURS),
   };
+}
+
+/**
+ * UN CAMPO CON SU CONTADOR DEBAJO, el mismo que lleva la reseña al crear o editar un juego
+ * (`.field-footer` + `.tag-hint`, ver `FormModal`): el conteo va PEGADO al campo y a la derecha, se pone ámbar al
+ * 90 % y rojo al llegar al tope. Aquí importa más que en una reseña, porque estos textos no se recortan con
+ * puntos suspensivos en un párrafo: se quedan fuera de una cápsula de 30 rem.
+ */
+function Field({ label, help, count, max, children }: {
+  label: string;
+  help?: string;
+  count: number;
+  max: number;
+  children: ReactNode;
+}) {
+  const parte = max > 0 ? (count / max) * 100 : 0;
+  const aviso = parte >= 100 ? 'has-error' : parte >= 90 ? 'has-warning' : '';
+
+  return (
+    <label className="admin-ann-field">
+      <span>{label}</span>
+      {children}
+      <div className="field-footer">
+        {help ? <small className="tag-hint">{help}</small> : <span />}
+        <small className={`tag-hint ${aviso}`.trim()}>{A.counter(count, max)}</small>
+      </div>
+    </label>
+  );
 }
 
 export function AdminAnnouncement({ current, onSave, onBack }: AdminAnnouncementProps) {
@@ -143,6 +172,8 @@ export function AdminAnnouncement({ current, onSave, onBack }: AdminAnnouncement
 
   return (
     <section className="admin-hub admin-ann" aria-label={A.sectionAria}>
+      {/* Los dibujos de la rejilla no están en el sprite del arranque: viajan con esta pantalla. */}
+      <AnnouncementSprite />
       <div className="admin-ann-bar">
         <HubBackButton onBack={onBack} label={A.back} />
       </div>
@@ -155,9 +186,11 @@ export function AdminAnnouncement({ current, onSave, onBack }: AdminAnnouncement
         <p className="admin-card-note">
           {!current
             ? A.currentNone
-            : `${current.active ? A.currentOn : A.currentOff} ${A.currentSaved(
-              current.updatedAt ? DATE_FORMAT.format(new Date(current.updatedAt)) : '—',
-            )} ${A.currentId(current.id)}`}
+            : [
+              current.active ? A.currentOn : A.currentOff,
+              A.currentSaved(current.updatedAt ? DATE_FORMAT.format(new Date(current.updatedAt)) : '—'),
+              A.currentId(current.id),
+            ].join(' · ')}
         </p>
       </div>
 
@@ -170,8 +203,12 @@ export function AdminAnnouncement({ current, onSave, onBack }: AdminAnnouncement
       </div>
 
       <div className="admin-card admin-ann-form">
-        <label className="admin-ann-field">
-          <span>{A.field.kicker}</span>
+        <Field
+          label={A.field.kicker}
+          help={A.field.kickerHelp}
+          count={draft.kicker.length}
+          max={ANNOUNCEMENT_LIMITS.kicker}
+        >
           <input
             type="text"
             className="finput"
@@ -179,13 +216,14 @@ export function AdminAnnouncement({ current, onSave, onBack }: AdminAnnouncement
             maxLength={ANNOUNCEMENT_LIMITS.kicker}
             onChange={(event) => set('kicker', event.target.value)}
           />
-          <small>
-            {A.field.kickerHelp} {A.counter(draft.kicker.length, ANNOUNCEMENT_LIMITS.kicker)}
-          </small>
-        </label>
+        </Field>
 
-        <label className="admin-ann-field">
-          <span>{A.field.title}</span>
+        <Field
+          label={A.field.title}
+          help={A.field.titleHelp}
+          count={draft.title.length}
+          max={ANNOUNCEMENT_LIMITS.title}
+        >
           <input
             type="text"
             className="finput"
@@ -193,13 +231,14 @@ export function AdminAnnouncement({ current, onSave, onBack }: AdminAnnouncement
             maxLength={ANNOUNCEMENT_LIMITS.title}
             onChange={(event) => set('title', event.target.value)}
           />
-          <small>
-            {A.field.titleHelp} {A.counter(draft.title.length, ANNOUNCEMENT_LIMITS.title)}
-          </small>
-        </label>
+        </Field>
 
-        <label className="admin-ann-field">
-          <span>{A.field.body}</span>
+        <Field
+          label={A.field.body}
+          help={A.field.bodyHelp}
+          count={draft.body.length}
+          max={ANNOUNCEMENT_LIMITS.body}
+        >
           <textarea
             className="finput"
             rows={2}
@@ -207,10 +246,7 @@ export function AdminAnnouncement({ current, onSave, onBack }: AdminAnnouncement
             maxLength={ANNOUNCEMENT_LIMITS.body}
             onChange={(event) => set('body', event.target.value)}
           />
-          <small>
-            {A.field.bodyHelp} {A.counter(draft.body.length, ANNOUNCEMENT_LIMITS.body)}
-          </small>
-        </label>
+        </Field>
 
         <label className="admin-ann-field">
           <span>{A.field.url}</span>
@@ -223,22 +259,31 @@ export function AdminAnnouncement({ current, onSave, onBack }: AdminAnnouncement
             maxLength={ANNOUNCEMENT_LIMITS.url}
             onChange={(event) => set('url', event.target.value)}
           />
-          <small>{A.field.urlHelp}</small>
+          <small className="tag-hint">{A.field.urlHelp}</small>
         </label>
 
-        <label className="admin-ann-field">
-          <span>{A.field.icon}</span>
-          <select
-            className="finput"
-            value={draft.icon}
-            onChange={(event) => set('icon', event.target.value as AnnouncementIcon)}
-          >
+        {/* EL ICONO SE ELIGE VIÉNDOLO. Era un desplegable con dieciséis nombres, y el nombre de un dibujo no
+            dice cómo queda dentro del disco: había que elegir a ciegas, guardar y mirar la muestra. La rejilla
+            enseña los dieciséis a la vez y el elegido se marca; el nombre sigue estando para quien no ve el
+            dibujo (`aria-label` y `title`). */}
+        <fieldset className="admin-ann-icons">
+          <legend>{A.field.icon}</legend>
+          <div className="admin-ann-icon-grid">
             {ANNOUNCEMENT_ICONS.map((icon) => (
-              <option value={icon} key={icon}>{A.iconNames[icon] || icon}</option>
+              <button
+                type="button"
+                key={icon}
+                className={`admin-ann-icon${draft.icon === icon ? ' is-picked' : ''}`}
+                aria-pressed={draft.icon === icon}
+                aria-label={A.iconNames[icon] || icon}
+                title={A.iconNames[icon] || icon}
+                onClick={() => set('icon', icon)}
+              >
+                <AnnouncementIcon name={icon} />
+              </button>
             ))}
-          </select>
-          <small>{A.field.iconHelp}</small>
-        </label>
+          </div>
+        </fieldset>
 
         <div className="admin-ann-pair">
           <label className="admin-ann-field">

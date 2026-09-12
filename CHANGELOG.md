@@ -19,7 +19,9 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
   justo lo que la política de cookies promete que no pasa (y lo que comprueba el `smoke` de «una visita anónima
   no contacta con terceros»). El panel enseña la cápsula de verdad mientras se redacta, y separa «Guardar
   cambios» (corregir lo publicado) de «Publicar como aviso nuevo» (empezar de cero y volver a decírselo a todo
-  el mundo). Con la pestaña en segundo plano el aviso **espera a que se mire** en vez de pintarse contra un
+  el mundo). El icono se elige **viendo los dieciséis dibujos** —ocho nuevos de Material Symbols: megáfono,
+  votación, celebración, novedad, fecha, urgente, regalo e información—, cada campo lleva su **conteo de
+  caracteres** como el de las reseñas, y las explicaciones son de una línea. Con la pestaña en segundo plano el aviso **espera a que se mire** en vez de pintarse contra un
   escritorio que nadie está viendo y gastar una de las veces que tenía para decirse.
 - **Los escalones añadidos desde el panel se pueden corregir.** Un umbral escrito mal solo se podía quitar y
   volver a añadir: dos escrituras, y entre una y otra el catálogo de todo el mundo con el número equivocado
