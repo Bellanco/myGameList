@@ -564,14 +564,26 @@ export const ADMIN_ACHIEVEMENTS_UI = {
   extraTaken: (step: number) => `El umbral ${step} ya lo añadió el panel a esta escalera.`,
   extraRemove: (step: number) => `Quitar ${step}`,
   extraInCode: 'ya en el código',
+  /**
+   * CORREGIR UN UMBRAL QUE SE ESCRIBIÓ MAL. Es quitar y añadir en un solo guardado —el `id` de un escalón es su
+   * umbral, así que cambiar el número cambia el `id`— y por eso pide exactamente la misma condición que quitar:
+   * solo mientras no lo tenga nadie. Existe porque equivocarse escribiendo un número es lo más fácil de esta
+   * pantalla, y hacerlo en dos viajes dejaba el catálogo un rato con el umbral equivocado dentro.
+   */
+  extraEdit: (step: number) => `Corregir ${step}`,
+  extraEditLabel: (id: string) => `Nuevo umbral para ${id}`,
+  extraEditSave: 'Guardar',
+  extraEditCancel: 'Cancelar',
+  extraEditNote: 'Corregir un umbral cambia el `id` del escalón: es quitar el anterior y añadir otro en un solo guardado.',
   extraSaving: 'Guardando…',
   extraFailed: 'No se ha podido guardar. ¿Sesión de administrador iniciada?',
   extraNote: 'En vigor para todo el mundo: se puede desbloquear, cuenta en la fracción y viaja en el espejo por su `id`. No añade escaleras nuevas —la métrica de una escalera es código—, solo escalones de las que ya existen.',
   /**
-   * QUITAR UN UMBRAL QUE YA TIENE ALGUIEN RETIRA SU MEDALLA, y eso es lo único que el §6.4 no permite. El botón
-   * desaparece en cuanto la muestra dice que alguien lo tiene, y se explica por qué en su sitio.
+   * QUITAR O CORREGIR UN UMBRAL QUE YA TIENE ALGUIEN RETIRA SU MEDALLA, y eso es lo único que el §6.4 no
+   * permite: corregir cambia el `id`, así que por debajo es quitarlo. Los dos botones desaparecen en cuanto la
+   * muestra dice que alguien lo tiene, y se explica por qué en su sitio.
    */
-  extraLocked: 'Ya lo tiene alguien: quitarlo le retiraría la medalla (§6.4). Para dejar de ofrecerlo hay que marcarlo retirado en el código.',
+  extraLocked: 'Ya lo tiene alguien: quitarlo o corregirlo le retiraría la medalla (§6.4). Para dejar de ofrecerlo hay que marcarlo retirado en el código.',
   /** Consolidar en el código es OPCIONAL: le da su bit en el espejo y deja de viajar por la cola. */
   codeTitle: 'Consolidarlo en el código (opcional: le da su bit en el espejo)',
   /** El nombre que tenía un escalón antes de que el añadido le corriera el romano. */

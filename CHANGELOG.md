@@ -5,7 +5,20 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
 
 ## [Unreleased]
 
+### Added
+- **Los escalones añadidos desde el panel se pueden corregir.** Un umbral escrito mal solo se podía quitar y
+  volver a añadir: dos escrituras, y entre una y otra el catálogo de todo el mundo con el número equivocado
+  dentro. Ahora cada añadido lleva su «Corregir», que abre el campo con su valor dentro y guarda la lista entera
+  de la escalera **de una vez**. Pide lo mismo que quitar y por el mismo motivo —el `id` de un escalón es su
+  umbral, así que cambiarlo es quitar el anterior—: mientras la muestra diga que alguien lo tiene, no hay ni
+  «Corregir» ni «Quitar», solo el porqué.
+
 ### Fixed
+- **Dos logros decían pedir más de lo que piden.** «Ahí se te fue la vida» se consigue con 300 h en un juego y
+  «Cuánto tiempo sin verte» con un hueco de cinco años justos, pero los dos se anunciaban con un «más de» que
+  dejaba fuera el propio listón —y «Cuánto tiempo sin verte» se contradecía consigo mismo, porque su línea de
+  arriba ya decía «cinco años después o más»—. Se corrige el texto y no el umbral: endurecerlo retiraría una
+  medalla ya concedida (§6.4).
 - **Los logros que no ve nadie ya no salen en los «Logros globales».** Un escalón CERRADO —uno al que no ha
   llegado ninguna persona y que tampoco se le ofrece a nadie— no cuenta para el porcentaje desde que la apertura
   es comunitaria, pero esa lista seguía recorriendo el catálogo entero y los pintaba con su «0 %»: enseñaba 402
