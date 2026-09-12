@@ -3,7 +3,57 @@
 All notable changes to this project will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/); versioning follows the git tags.
 
-## [Unreleased]
+## [1.2.6] - 2026-09-12
+
+### Fixed
+- **Una reseña larga podía dejar tus listas sin sincronizar, para siempre y en silencio.** La validación que
+  protege el gist de juegos acotaba el análisis a 20.000 caracteres y falla CERRADA: si lo que se iba a publicar
+  no pasaba, se abortaba la subida entera. Alguien escribió una reseña de 21.265 caracteres y, desde el día en
+  que esa comprobación se desplegó, su gist no volvió a subir NI UNA VEZ: un mes entero de partidas, notas y
+  textos que no salían de su dispositivo. Lo peor fue lo bien escondido que estaba: su canal social —otro
+  esquema, sin esa cota— seguía publicando con normalidad, así que por fuera no parecía una sincronización rota
+  sino que sus reseñas «se veían a medias» en el detalle del feed de sus amigos. Ahora el esquema comprueba
+  TIPOS y no longitudes: un `id` que no es un número es corrupción y no se publica, pero cuánto ha escrito
+  alguien es un dato suyo y legítimo. Lo que sí hay que acotar —el TAMAÑO de lo que se sube— lo sigue vigilando
+  el límite del gist, con la medida real de GitHub y ya comprimido, que es la que de verdad protege.
+- **El detalle de una actividad social hacía pasar el adelanto por la reseña entera.** Por el canal social viajan
+  160 caracteres; el texto completo, los puntos fuertes y los débiles viven en el gist de LISTADOS de su autor.
+  Cuando ese no llega —porque aún está en camino, porque no se ha podido leer o porque esa persona no ha
+  sincronizado sus listas desde que la escribió— se caía al adelanto sin decirlo, y un texto cortado a mitad de
+  palabra se lee como una reseña que alguien dejó sin terminar. Ahora lo dice, con una acotación al margen: no
+  hay nada roto ni nada que el lector pueda hacer, pero tampoco se le miente sobre lo que tiene delante.
+- **El nombre con el que te ven tus amigos podía quedarse congelado para siempre.** Tu cliente propaga tu nick y
+  tu foto a tus documentos de amistad al abrir el espacio social, y se salta ese trabajo con un sello guardado en
+  el dispositivo. El sello responde a «¿ha cambiado mi identidad?», y con eso se daba por contestada otra
+  pregunta que no es la misma: «¿están mis amistades al día?». No lo están cuando una amistad se creó DESPUÉS
+  del sellado —sus campos los escribió la petición, con lo que hubiera en ese instante— ni cuando un lote de
+  aquel día se quedó a medias, y en los dos casos la huella seguía coincidiendo: se salía en la primera línea
+  para siempre. Esa persona podía abrir la aplicación a diario mientras sus amigos la veían con el nick de hace
+  meses. Ahora, además de cuando cambia algo, se revisa una vez por semana: una consulta por dispositivo, y
+  escrituras solo si hay un desacuerdo de verdad. Con el nombre viaja el id de tu gist de listados, que es de
+  donde una amistad saca tus listas, así que era también la vía por la que alguien podía quedarse leyendo un
+  canal abandonado.
+- **Los saneados de arranque se daban por hechos cuando no habían podido hacerse.** La réplica de tu nick al
+  perfil público y la retirada de los ids de gist que aún anuncie son best-effort: se rinden devolviendo `false`
+  —sin perfil todavía, con el documento bajo otro id, sin respaldo aún en la configuración privada— en vez de
+  fallar. Pero sellar dependía de que no fallaran, así que ese «no he podido mirar» quedaba grabado como «ya
+  está hecho»; y como la huella es el propio nick, nadie volvía a intentarlo mientras no lo cambiara. Los sellos
+  llevan fecha y caducan a la semana, igual que el de las amistades.
+- **El panel preguntaba por un nombre que nadie discutía.** El bloque de identidad de `/admin` aparece cuando está
+  rancio el nombre O la foto, pero la confirmación usaba siempre el texto del nombre: con la foto desactualizada
+  y el nick impecable, preguntaba «¿escribir «Ada» como nombre de Ada?» —el mismo nombre dos veces, señalando un
+  problema que no existía y escondiendo lo único que sí se iba a arreglar—.
+
+### Tests
+- **Una biblioteca con una reseña kilométrica se sube entera**, por la tubería real y de extremo a extremo: 100
+  juegos, 39 análisis, uno de ellos de 21.265 caracteres de texto poco compresible, escritos con `writeGist` y
+  reíedos con `readGist`. Comprueba lo único que le importa a quien lo sufrió: que el PATCH sale, que el texto
+  llega entero y que no se pierde ningún juego por el camino.
+- La regresión del esquema fija la regla en una frase —la longitud de lo que escribe alguien no puede abortar su
+  sincronización—, y la del saneado de amistades, las dos mitades de su política: que no se repita al reabrir el
+  hub y que SÍ vuelva a intentarse cuando el sello caduca.
+
+## [1.2.5] - 2026-09-12
 
 ### Added
 - **La versión nueva entra sola también con la app a la vista, si lleva un rato quieta.** Hasta ahora, con la
