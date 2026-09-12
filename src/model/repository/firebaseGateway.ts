@@ -19,17 +19,71 @@ type FacadeModule = typeof import('./firebaseRepository');
 
 let facadePromise: Promise<FacadeModule> | null = null;
 
+/**
+ * Suscriptores de sesión que esperan SIN haber cargado el SDK (ver `subscribeSocialAuth`). En cuanto alguien
+ * carga la fachada por cualquier otro motivo —pulsar «iniciar sesión», abrir el hub—, se enganchan a ella.
+ */
+const pendingAuthSubscribers = new Set<(facade: FacadeModule) => void>();
+
 /** Carga (una vez) la fachada de Firebase. El propio SDK queda en un chunk perezoso. */
 function loadFacade(): Promise<FacadeModule> {
   if (!facadePromise) {
     // El RECHAZO no se cachea: si el chunk no se pudo bajar (sin red, o un despliegue que rotó los hashes con la
     // pestaña abierta), la siguiente llamada vuelve a intentarlo en vez de heredar el fallo el resto de la sesión.
-    facadePromise = import('./firebaseRepository').catch((error: unknown) => {
-      facadePromise = null;
-      throw error;
-    });
+    facadePromise = import('./firebaseRepository')
+      .then((module) => {
+        // Los que esperaban sin sesión ya tienen a qué engancharse.
+        const waiting = [...pendingAuthSubscribers];
+        pendingAuthSubscribers.clear();
+        waiting.forEach((attach) => attach(module));
+        return module;
+      })
+      .catch((error: unknown) => {
+        facadePromise = null;
+        throw error;
+      });
   }
   return facadePromise;
+}
+
+/**
+ * PREFIJO CON EL QUE FIREBASE AUTH GUARDA LA SESIÓN en `localStorage` (persistencia `browserLocalPersistence`,
+ * la que fija `firebaseClient`). Su presencia es la señal, SÍNCRONA y sin descargar nada, de que este navegador
+ * ha iniciado sesión alguna vez y no la ha cerrado.
+ */
+const FIREBASE_AUTH_STORAGE_PREFIX = 'firebase:authUser:';
+
+/**
+ * ¿Hay sesión de Google guardada en este navegador?
+ *
+ * POR QUÉ MIRAMOS UNA CLAVE QUE NO ES NUESTRA. El SDK de Firebase son ~65 kB comprimidos que se descargaban en el
+ * arranque de TODO el mundo, también de quien solo usa sus listas y nunca ha iniciado sesión, porque la app se
+ * suscribe a los cambios de sesión nada más montarse. Para saltarnos esa descarga hace falta responder «¿hay
+ * sesión?» ANTES de cargar nada, y el único que lo sabe sin red es el propio almacenamiento del SDK.
+ *
+ * Leer su clave nos ata a un detalle interno suyo, sí, y a cambio no hace falta ninguna migración: los usuarios
+ * que YA tienen la sesión abierta siguen funcionando el día del despliegue, que es lo que no conseguiría una
+ * marca propia escrita a partir de ahora. Si Firebase cambiara el prefijo, lo peor que pasa es que volvemos a
+ * cargarlo siempre —el comportamiento de antes—, nunca que alguien pierda la sesión.
+ *
+ * Ante cualquier duda (sin `localStorage`, acceso denegado) se responde que SÍ: cargar de más es un coste;
+ * cargar de menos sería una regresión.
+ */
+export function hasStoredAuthSession(): boolean {
+  try {
+    for (let index = 0; index < localStorage.length; index += 1) {
+      const key = localStorage.key(index);
+      if (key && key.startsWith(FIREBASE_AUTH_STORAGE_PREFIX)) return true;
+    }
+    return false;
+  } catch {
+    return true;
+  }
+}
+
+/** ¿Ya se ha cargado (o se está cargando) la fachada? Entonces no hay nada que ahorrar. */
+export function isFirebaseFacadeLoaded(): boolean {
+  return facadePromise !== null;
 }
 
 /**
@@ -102,11 +156,31 @@ export async function signInWithGoogle(): Promise<SocialAuthUser> {
 export function subscribeSocialAuth(callback: (user: SocialAuthUser | null) => void): () => void {
   let unsubscribe: (() => void) | null = null;
   let cancelled = false;
+
+  const attach = (m: FacadeModule): void => {
+    if (cancelled) return;
+    unsubscribe = m.onSocialAuthChanged(callback);
+  };
+
+  // SIN SESIÓN GUARDADA NO SE DESCARGA EL SDK. Se responde «no hay sesión», que es la verdad, y se deja apuntado
+  // que en cuanto alguien cargue la fachada —el botón de iniciar sesión, el hub social, el panel— hay que
+  // engancharse a ella. Así quien solo usa sus listas no paga nunca esos kilobytes, y quien inicia sesión no nota
+  // ninguna diferencia: el propio flujo de login carga la fachada y este suscriptor entra con él.
+  if (!hasStoredAuthSession() && !isFirebaseFacadeLoaded()) {
+    pendingAuthSubscribers.add(attach);
+    // En microtarea, para conservar el contrato asíncrono de siempre (nadie espera un callback síncrono aquí).
+    void Promise.resolve().then(() => {
+      if (!cancelled) callback(null);
+    });
+    return () => {
+      cancelled = true;
+      pendingAuthSubscribers.delete(attach);
+      if (unsubscribe) unsubscribe();
+    };
+  }
+
   void loadFacade()
-    .then((m) => {
-      if (cancelled) return;
-      unsubscribe = m.onSocialAuthChanged(callback);
-    })
+    .then(attach)
     .catch(() => {
       if (!cancelled) callback(null);
     });
