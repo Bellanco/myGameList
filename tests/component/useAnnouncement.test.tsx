@@ -99,6 +99,27 @@ describe('el aviso del administrador en una apertura de la app', () => {
     expect(parseSeen(localStorage.getItem(ANNOUNCEMENT_SEEN_KEY)).shown).toBe(1);
   });
 
+  /**
+   * ⚑ CON LA PESTAÑA DE FONDO NO SE PINTA, Y NO GASTA. Es el caso que hace que un aviso «no salga nunca»: se abre
+   * la app y se sigue con otra cosa, la cápsula se pinta contra un escritorio que nadie mira, se va sola a los
+   * ocho segundos y ha gastado una de las tres veces. Al volver no queda nada.
+   */
+  it('espera a que se mire la pestaña antes de pintarse', async () => {
+    const visibility = vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('hidden');
+    const { result } = renderHook(() => useAnnouncement());
+    await llegaLaCapsula();
+
+    expect(result.current.announcement, 'no se pinta contra una pestaña oculta').toBeNull();
+
+    visibility.mockReturnValue('visible');
+    await act(async () => {
+      document.dispatchEvent(new Event('visibilitychange'));
+      await Promise.resolve();
+    });
+
+    expect(result.current.announcement?.id).toBe('av-1');
+  });
+
   it('pulsar lo cierra y lo calla para siempre en este aparato', async () => {
     const { result } = renderHook(() => useAnnouncement());
     await llegaLaCapsula();
