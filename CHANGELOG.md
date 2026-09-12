@@ -28,6 +28,12 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
   de sincronización EN MARCHA. Recargar con cambios sin subir no pierde nada —viven en el dispositivo, la marca
   sobrevive a la recarga y el primer ciclo tras arrancar los empuja—; recargar a mitad de un ciclo solo obliga a
   repetirlo, y eso se sigue evitando.
+  - **Y de paso, un formulario a medio escribir tampoco se pierde.** Se miraban los modales y los campos de
+    texto largo, pero el nick del perfil social es un campo suelto en su pantalla y no lo veía ninguna de las
+    dos señales: se salvaba de rebote por la marca de cambios pendientes, o sea que quien tenía todo
+    sincronizado ya podía perderlo. Ahora cuenta tener el foco en un campo con algo escrito, que es donde de
+    verdad hay alguien tecleando; el buscador de la barra, que casi siempre lleva texto, solo frena la recarga
+    mientras se esté buscando de verdad.
 - **El detalle de una actividad social hacía pasar el adelanto por la reseña entera.** Por el canal social viajan
   160 caracteres; el texto completo, los puntos fuertes y los débiles viven en el gist de LISTADOS de su autor.
   Cuando ese no llega —porque aún está en camino, porque no se ha podido leer o porque esa persona no ha

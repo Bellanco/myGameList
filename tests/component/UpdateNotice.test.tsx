@@ -40,7 +40,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-  document.querySelectorAll('dialog, textarea').forEach((element) => element.remove());
+  document.querySelectorAll('dialog, textarea, input').forEach((element) => element.remove());
   // El mutex de sync es estado de MÓDULO: un test que lo deje tomado apagaría la recarga en todos los siguientes.
   candado?.release();
   candado = null;
@@ -177,6 +177,53 @@ describe('aviso de versión nueva', () => {
    * limpie— y quien la tiene rota, igual; a los dos se les apagaba la recarga automática entera. Y el caso
    * feo: la persona con la sincronización averiada es justo la que necesita la versión que la arregla.
    */
+  /**
+   * EL FORMULARIO QUE NO ES UN MODAL. El nick del perfil social es un `input` suelto en su pantalla: ni
+   * `dialog` ni `textarea`, así que las dos primeras señales no lo ven. Se salvaba de rebote —por la marca de
+   * cambios pendientes, que no tenía nada que ver— y solo para quien la tuviera puesta.
+   */
+  it('con el foco en un campo de texto a medio escribir espera', () => {
+    const campo = document.createElement('input');
+    campo.type = 'text';
+    campo.value = 'MiNick a medio';
+    document.body.appendChild(campo);
+    campo.focus();
+
+    render(<UpdateNotice />);
+    setVisibility('hidden');
+    announceNewVersion();
+
+    expect(reloadNow).not.toHaveBeenCalled();
+  });
+
+  // Y no bloquea «a todas horas», que es lo que se quería evitar al no mirar cualquier campo con texto: el
+  // buscador de la barra casi siempre lleva algo escrito, pero sin el foco no cuenta.
+  it('un campo con texto pero SIN el foco no cuenta como trabajo a medias', () => {
+    const buscador = document.createElement('input');
+    buscador.type = 'search';
+    buscador.value = 'zelda';
+    document.body.appendChild(buscador);
+
+    render(<UpdateNotice />);
+    setVisibility('hidden');
+    announceNewVersion();
+
+    expect(reloadNow).toHaveBeenCalledTimes(1);
+  });
+
+  it('ni un campo enfocado pero vacío', () => {
+    const campo = document.createElement('input');
+    campo.type = 'text';
+    document.body.appendChild(campo);
+    campo.focus();
+
+    render(<UpdateNotice />);
+    setVisibility('hidden');
+    announceNewVersion();
+
+    expect(reloadNow).toHaveBeenCalledTimes(1);
+  });
+
   it('con cambios pendientes de subir SÍ recarga sola: no hay nada que perder', () => {
     markDirty();
 
@@ -198,7 +245,11 @@ describe('aviso de versión nueva', () => {
   });
 
   it('y en cuanto ese ciclo termina, la siguiente ocasión sí recarga', () => {
-    candado = acquireSyncLock();
+    // Se guarda en una local ADEMÁS de en `candado`: el `afterEach` necesita la de fuera para soltarlo si el test
+    // falla a medias, pero aquí hace falta una referencia que el compilador sepa que no es nula.
+    const tomado = acquireSyncLock();
+    if (!tomado) throw new Error('el mutex de sync ya estaba tomado: otro test lo dejó sin soltar');
+    candado = tomado;
 
     render(<UpdateNotice />);
     setVisibility('hidden');
@@ -206,7 +257,7 @@ describe('aviso de versión nueva', () => {
     expect(reloadNow).not.toHaveBeenCalled();
 
     // El ciclo acaba y el usuario vuelve a dejar la app: la comprobación se repite al ocultarse la pestaña.
-    candado.release();
+    tomado.release();
     candado = null;
     setVisibility('visible');
     setVisibility('hidden');

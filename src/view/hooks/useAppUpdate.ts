@@ -71,7 +71,14 @@ function stampAutoReload(): void {
  *    la barra de herramientas casi siempre tiene algo escrito y bloquearía la recarga silenciosa a todas horas,
  *    y perder un filtro de búsqueda no es perder trabajo;
  *  - un CICLO DE SINCRONIZACIÓN EN VUELO (`isSyncInFlight`, el mutex que los serializa): recargar a mitad
- *    obliga a repetirlo.
+ *    obliga a repetirlo;
+ *  - EL FOCO EN UN CAMPO DE TEXTO CON ALGO ESCRITO. Es lo que cubre los formularios que no son ni un modal ni un
+ *    textarea —el nick del perfil social es un `input` suelto en su pantalla—, y que hasta ahora se salvaban de
+ *    rebote: quien tuviera cambios sin subir quedaba protegido por la marca de pendiente, y quien lo tuviera
+ *    todo sincronizado no. Se exige el foco Y contenido a la vez, y ahí está la diferencia con mirar cualquier
+ *    campo con texto: el buscador de la barra casi siempre lleva algo escrito, pero solo tiene el foco mientras
+ *    alguien busca de verdad. Y no es un bloqueo que se enquiste —como el que se retiró abajo—: en cuanto se
+ *    toca otra cosa, la siguiente vuelta recarga.
  *
  * Lo que NO cuenta como trabajo a medias, aunque lo parezca: `isDirty`. Aquí se miraba esa marca, y responde a
  * otra pregunta —«¿queda algo por subir?»— que puede ser cierta PARA SIEMPRE: solo se limpia tras una escritura
@@ -85,8 +92,26 @@ function stampAutoReload(): void {
  * recarga y el primer ciclo tras arrancar los empuja. Lo único que había que proteger de verdad es el ciclo EN
  * MARCHA, y eso lo dice la máquina de estados, no la marca.
  */
+/** Campos donde se escribe de verdad. `checkbox`/`radio`/`file`… no guardan texto que se pueda perder. */
+const TEXT_INPUT_TYPES = ['text', 'search', 'email', 'url', 'tel', 'password', 'number'];
+
+/** ¿Está el foco en un campo de texto CON contenido? Entonces hay alguien escribiendo justo ahí. */
+function focusIsOnFilledTextField(): boolean {
+  const active = document.activeElement;
+  if (active instanceof HTMLTextAreaElement) {
+    return active.value.trim() !== '';
+  }
+  if (active instanceof HTMLInputElement) {
+    return TEXT_INPUT_TYPES.includes(active.type) && active.value.trim() !== '';
+  }
+  return active instanceof HTMLElement && active.isContentEditable && (active.textContent || '').trim() !== '';
+}
+
 function hasWorkInProgress(): boolean {
   if (document.querySelector('dialog[open]')) {
+    return true;
+  }
+  if (focusIsOnFilledTextField()) {
     return true;
   }
   const drafts = Array.from(document.querySelectorAll('textarea'));
