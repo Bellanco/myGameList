@@ -134,3 +134,35 @@ export interface SocialGistData {
   consent?: ConsentConfig;
   chunkIndex?: ChunkIndex;
 }
+
+/**
+ * Qué deja ver alguien de sus listas en su perfil público.
+ *
+ * Vive aquí y no en `socialGistRepository` porque es un contrato de datos que cruza las tres capas: lo escribe
+ * el formulario del perfil, viaja en el gist social y lo aplican las reglas puras de `core/utils/profileVisibility`
+ * — y `core` no puede depender de un repositorio sin invertir la dirección de las capas.
+ */
+export interface SocialProfileVisibility {
+  hiddenTabs: TabId[];
+  hideReplayable: boolean;
+  hideRetry: boolean;
+  hideGameTime: boolean;
+  /** Defecto `true`; controla la publicación y la visibilidad de la foto de perfil. */
+  showPhoto: boolean;
+}
+
+export interface SocialSharedGame {
+  id: number;
+  name: string;
+  platforms: string[];
+  genres: string[];
+  rating: number;
+  grade: number; // nota fina 0–100 (normalize la deriva del rating si el gist no la trae)
+  snippet: string;
+  /**
+   * Años en que lo completó. La proyección pública YA los escribía (`toPublicGame`) y esta lectura los tiraba;
+   * conservarlos es lo que permite el "año a año" y la marca de rejugado en el panel de un amigo, sin publicar
+   * ni un dato nuevo.
+   */
+  years?: number[];
+}

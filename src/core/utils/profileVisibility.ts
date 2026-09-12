@@ -1,6 +1,6 @@
 import { ADMIN_ONLY_TIER, type ProfileTier } from '../constants/tiers';
 import { TAB_IDS, type GameItem, type TabData, type TabId } from '../../model/types/game';
-import type { SocialProfileVisibility } from '../../model/repository/socialGistRepository';
+import type { SocialProfileVisibility } from '../../model/types/social';
 
 /**
  * Bloque 6 — Filtra la lista de juegos de OTRO perfil según la visibilidad que ese usuario publicó (respeto de la
