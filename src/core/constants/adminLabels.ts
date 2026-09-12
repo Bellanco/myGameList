@@ -701,7 +701,10 @@ export const ADMIN_ANNOUNCEMENT_UI = {
   saveHelp: 'Corrige lo publicado sin volver a avisar a quien ya lo vio.',
   republish: 'Publicar como aviso nuevo',
   republishHelp: 'Vuelve a salirle a todo el mundo, incluido quien ya lo pulsó.',
-  republishConfirm: 'Se le volverá a enseñar a todo el mundo, incluido quien ya lo había pulsado. ¿Publicar como aviso nuevo?',
+  republishConfirm: '¿Volver a enseñárselo a todo el mundo, incluido quien ya lo pulsó?',
+  /** El botón del diálogo va CORTO: «Publicar como aviso nuevo» se partía en tres líneas dentro de la pastilla
+   *  roja, y la pregunta de encima ya dice qué se va a publicar. */
+  republishAccept: 'Publicar',
   retire: 'Apagar',
   retireHelp: 'Deja de enseñarse; el texto se queda.',
   turnOn: 'Encender',

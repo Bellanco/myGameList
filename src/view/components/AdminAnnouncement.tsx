@@ -10,6 +10,7 @@ import {
   type AnnouncementIcon as IconId,
 } from '../../core/announcement/announcement';
 import { isValidHttpUrl } from '../../core/security/sanitize';
+import { ConfirmModal } from '../modals/ConfirmModal';
 import { AnnouncementToast } from './AnnouncementToast';
 import { AnnouncementIcon, AnnouncementSprite } from './AnnouncementSprite';
 import { HubBackButton } from './socialhub/HubBackButton';
@@ -102,6 +103,9 @@ export function AdminAnnouncement({ current, onSave, onBack }: AdminAnnouncement
   const [draft, setDraft] = useState(() => draftFrom(current));
   const [notice, setNotice] = useState('');
   const [busy, setBusy] = useState(false);
+  // Publicar de nuevo es lo único de esta pantalla que le vuelve a salir a quien ya lo había despachado, así que
+  // es lo único que se pregunta.
+  const [confirming, setConfirming] = useState(false);
 
   const set = useCallback(<K extends keyof ReturnType<typeof draftFrom>>(
     key: K,
@@ -158,10 +162,19 @@ export function AdminAnnouncement({ current, onSave, onBack }: AdminAnnouncement
     void run({ ...composed, id: draft.id || newCampaignId() }, A.saved);
   }, [composed, draft.id, run]);
 
+  /**
+   * LA CONFIRMACIÓN ES LA DE LA APP (`ConfirmModal`), no la del navegador. Empezó siendo un `window.confirm` por
+   * ahorrarse el chunk de un modal para una frase, y eso se nota en cuanto se ve: la del navegador sale con la
+   * tipografía del sistema, el nombre del sitio encima y unos botones que no son los de aquí, así que la única
+   * pregunta de la pantalla parecía venir de otro programa. La de la app respeta el tema y la paleta, atrapa el
+   * foco y se cierra con Esc, que es lo que hace el resto de la web.
+   */
   const republish = useCallback(() => {
-    // La confirmación es del navegador a propósito: es una pregunta de una línea en una pantalla que solo ve el
-    // administrador, y montar el modal de confirmación aquí traería su chunk por una frase.
-    if (!window.confirm(A.republishConfirm)) return;
+    setConfirming(true);
+  }, []);
+
+  const acceptRepublish = useCallback(() => {
+    setConfirming(false);
     void run({ ...composed, id: newCampaignId(), active: true }, A.savedNew);
   }, [composed, run]);
 
@@ -342,6 +355,14 @@ export function AdminAnnouncement({ current, onSave, onBack }: AdminAnnouncement
         <p className="admin-card-note">{A.republishHelp}</p>
         <p className="admin-card-note">{A.retireHelp}</p>
       </div>
+
+      <ConfirmModal
+        open={confirming}
+        title={A.republishConfirm}
+        confirmLabel={A.republishAccept}
+        onCancel={() => setConfirming(false)}
+        onConfirm={acceptRepublish}
+      />
     </section>
   );
 }
