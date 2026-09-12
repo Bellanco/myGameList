@@ -338,11 +338,27 @@ export default function App() {
   const metaRef = useRef(vm.meta);
   metaRef.current = vm.meta;
 
+  /**
+   * Las tres funciones que lee el ciclo de sync, ESTABLES entre renders.
+   *
+   * Escritas en línea (`getData: () => dataRef.current`) eran una función nueva en cada render, y de ahí colgaba
+   * toda la cadena de callbacks del hook: sus efectos se desmontaban y se volvían a montar con cada render de
+   * esta pantalla —que re-renderiza con cada tecla del buscador—. El sondeo periódico no llegaba nunca a sus
+   * 60 s y el reintento programado tras un error de sincronización se cancelaba solo. El detalle está en la nota
+   * de `refreshRemoteRef`, en `useSyncViewModel`.
+   *
+   * Siguen leyendo por REF y no por closure, que es lo que hace que un ciclo en vuelo vea las ediciones
+   * confirmadas mientras esperaba a la red (ver la nota de `dataRef`, justo arriba).
+   */
+  const getSyncData = useCallback(() => dataRef.current, []);
+  const getSyncMeta = useCallback(() => metaRef.current, []);
+  const setSyncData = useCallback((next: TabData) => persistFromSync(next), [persistFromSync]);
+
   // C1: el ciclo de sync persiste SIN marcar dirty (aplica merge/resultado remoto, no es edición de usuario).
   const syncVm = useSyncViewModel({
-    getData: () => dataRef.current,
-    setData: (next) => persistFromSync(next),
-    getMeta: () => metaRef.current,
+    getData: getSyncData,
+    setData: setSyncData,
+    getMeta: getSyncMeta,
     setMeta: vm.setMeta,
     onNotice: notify,
     persist: persistFromSync,

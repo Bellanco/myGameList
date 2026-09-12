@@ -298,15 +298,40 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
       }
     }, [applyRemoteCycle, onNotice, handleSyncError, handleNotModified]);
 
+    /**
+     * ⚑ LOS EFECTOS DE ESTE HOOK NO DEPENDEN DE LA IDENTIDAD DE SUS CALLBACKS, Y NO ES UN CAPRICHO.
+     *
+     * `refreshRemote` (y con él `initializeSync`, `startPolling`…) cuelga de `applyRemoteCycle`, que cuelga de
+     * `getData`/`getMeta`/`persist`, que los pone quien monta el hook. Basta con que ALGUNO de esos llegue como
+     * una función nueva en cada render —`App.tsx` pasaba tres— para que la cadena entera estrene identidad en
+     * cada render y los cinco efectos de abajo se desmonten y se vuelvan a montar con ella. Lo que eso provocaba,
+     * medido:
+     *
+     *   · el `setInterval` del sondeo se mataba y se recreaba en cada render, así que en una sesión con actividad
+     *     (teclear en el buscador ya re-renderiza) NUNCA llegaba a cumplir sus 60 s: el sondeo periódico no
+     *     existía. Quien sincronizaba de verdad era el efecto de montaje, que corría en cada render;
+     *   · los listeners de ventana y el `BroadcastChannel` se cerraban y reabrían en cada render;
+     *   · y lo más caro: el `setTimeout` del backoff vive en el efecto, así que su limpieza lo CANCELABA en cada
+     *     render y el reintento tras un error no llegaba nunca (el sync se quedaba en `error_backoff` esperando
+     *     a un focus).
+     *
+     * Se arregla en los dos extremos: quien monta pasa callbacks estables, y aquí los efectos leen la versión
+     * vigente por ref y se disparan por DATOS (`connectedGistId`). Así una regresión en el llamador vuelve a
+     * costar renders de más, no un ciclo de sincronización roto. Mismo patrón que `hydrateSocialDirectoryRef`
+     * en `useSocialViewModel`.
+     */
+    const refreshRemoteRef = useRef(refreshRemote);
+    refreshRemoteRef.current = refreshRemote;
+
     const startPolling = useCallback(() => {
       if (pollTimerRef.current !== null) return;
       pollTimerRef.current = window.setInterval(() => {
         const config = getSyncConfig();
         if (!config) return;
         if (document.visibilityState !== 'visible') return;
-        void refreshRemote(false);
+        void refreshRemoteRef.current(false);
       }, POLL_INTERVAL_MS);
-    }, [refreshRemote]);
+    }, []);
 
     const stopPolling = useCallback(() => {
       if (pollTimerRef.current !== null) {
@@ -393,6 +418,12 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
     }
   }, [applyRemoteCycle, onNotice, handleSyncError, handleNotModified]);
 
+  // Ver la nota de `refreshRemoteRef`: los efectos leen la versión vigente por ref.
+  const initializeSyncRef = useRef(initializeSync);
+  initializeSyncRef.current = initializeSync;
+  const retryPendingWriteRef = useRef(retryPendingWrite);
+  retryPendingWriteRef.current = retryPendingWrite;
+
   const schedulePendingRemoteSync = useCallback(() => {
     if (!pendingRemoteSyncRef.current) return;
 
@@ -416,6 +447,9 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
     // render. Su identidad no cambia nunca, así que listarlas no cambiaba cuándo se recrea este callback — solo
     // sugería que sí, y era lo que ESLint señalaba.
   }, [initializeSync]);
+
+  const schedulePendingRemoteSyncRef = useRef(schedulePendingRemoteSync);
+  schedulePendingRemoteSyncRef.current = schedulePendingRemoteSync;
 
   const connectSync = useCallback(async () => {
     const lock = acquireSyncLock(); // S2: no conectar/sincronizar en paralelo con un ciclo en vuelo
@@ -507,6 +541,9 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
     }
   }, [applyRemoteCycle, onNotice, handleSyncError, handleNotModified]);
 
+  // Arranque: una sola vez POR MONTAJE. Con `[initializeSync]` corría en cada render —el callback estrenaba
+  // identidad con él— y era, de hecho, lo que disparaba los ciclos periódicos: cualquier render pasado el
+  // throttle de 45 s arrancaba una sincronización. Funcionaba por accidente y tapaba que el sondeo no iba.
   useEffect(() => {
     const dirtyState = loadSyncDirtyState();
     if (dirtyState.isDirty) {
@@ -515,9 +552,9 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
 
     const config = getSyncConfig();
     if (config && canRead()) {
-      void initializeSync();
+      void initializeSyncRef.current();
     }
-  }, [initializeSync]);
+  }, []);
 
   // start/stop polling when we have a connected gist id
   useEffect(() => {
@@ -533,10 +570,24 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
 
   // Visibility/focus handlers to trigger reads when allowed
   useEffect(() => {
+    /**
+     * VOLVER A LA APP PIDE UNA LECTURA, PERO NO SALTÁNDOSE EL THROTTLE.
+     *
+     * Los dos handlers forzaban (`refreshRemote(true)`), y `force` se salta el mínimo de 45 s entre lecturas
+     * (`canReadNow`). Dos consecuencias: al volver a la pestaña se disparaban DOS ciclos —el navegador emite
+     * `visibilitychange` y `focus`— y alternar entre ventanas gastaba una petición a GitHub por cada vuelta,
+     * aunque se hubiera leído un segundo antes. Cuentan para el rate-limit igual que las demás, y ese mismo
+     * rate-limit lo comparte el hub social.
+     *
+     * Sin `force`, volver tras un rato (el caso normal) lee igual, y volver a los diez segundos no. El gesto
+     * EXPLÍCITO del usuario —el botón de sincronizar— no pasa por aquí ni por el throttle: `syncNow` solo
+     * respeta el candado, así que pedirlo a mano sigue funcionando siempre. Mismo criterio que ya aplica
+     * `useAnnouncement` al volver a la app.
+     */
     function handleVisibilityChange(): void {
       if (document.visibilityState === 'visible') {
         pendingRemoteSyncRef.current = false;
-        void refreshRemote(true);
+        void refreshRemoteRef.current(false);
         startPolling();
         return;
       }
@@ -547,7 +598,7 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
 
     function handleWindowFocus(): void {
       // on focus, attempt an immediate refresh
-      void refreshRemote(true);
+      void refreshRemoteRef.current(false);
     }
 
     // S3: al recuperar la red tras un fallo diferible (offline), no esperes al backoff: sal de
@@ -558,10 +609,12 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
       const pending = st.pendingAction;
       transitionTo('idle', { errorCount: 0, pendingAction: null });
       if (pending === 'write') {
-        retryPendingWrite();
+        retryPendingWriteRef.current();
         return;
       }
-      void refreshRemote(true);
+      // Aquí SÍ se fuerza, y es la excepción deliberada: se sale de `error_backoff` porque acaba de volver la
+      // red, es un evento raro y lo que se busca es justo no esperar. No es el caso de focus/visibility.
+      void refreshRemoteRef.current(true);
     }
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
@@ -572,7 +625,9 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
       window.removeEventListener('focus', handleWindowFocus);
       window.removeEventListener('online', handleOnline);
     };
-  }, [refreshRemote, startPolling, stopPolling, retryPendingWrite]);
+    // Sin `refreshRemote`/`retryPendingWrite` en las dependencias: se leen por ref (ver la nota de
+    // `refreshRemoteRef`). `startPolling`/`stopPolling` ya son estables y se listan porque se usan directamente.
+  }, [startPolling, stopPolling]);
 
   // BroadcastChannel: listen for remote writes from other tabs
   useEffect(() => {
@@ -583,7 +638,7 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
       if (!msg) return;
       if (msg.type === 'remote-write') {
         pendingRemoteSyncRef.current = true;
-        schedulePendingRemoteSync();
+        schedulePendingRemoteSyncRef.current();
       }
     };
     ch.addEventListener('message', onMsg as any);
@@ -591,13 +646,14 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
       ch.removeEventListener('message', onMsg as any);
       ch.close();
     };
-  }, [schedulePendingRemoteSync]);
+    // Un canal por MONTAJE. Con la dependencia del callback se cerraba y reabría en cada render.
+  }, []);
 
   useEffect(() => {
     let timer: number | null = null;
     const unsubscribe = subscribeSyncState((state) => {
       if (pendingRemoteSyncRef.current) {
-        schedulePendingRemoteSync();
+        schedulePendingRemoteSyncRef.current();
       }
 
       if (state.status !== 'error_backoff' || !state.pendingAction) return;
@@ -610,11 +666,11 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
       timer = window.setTimeout(() => {
         if (getSyncState().status !== 'error_backoff' || getSyncState().pendingAction !== state.pendingAction) return;
         if (state.pendingAction === 'read') {
-          void initializeSync();
+          void initializeSyncRef.current();
           return;
         }
         if (state.pendingAction === 'write') {
-          retryPendingWrite(); // S2: no solapar el reintento de escritura
+          retryPendingWriteRef.current(); // S2: no solapar el reintento de escritura
         }
       }, delay);
     });
@@ -624,7 +680,11 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
         window.clearTimeout(timer);
       }
     };
-  }, [initializeSync, schedulePendingRemoteSync, retryPendingWrite]);
+    // DEPENDENCIAS VACÍAS, Y AQUÍ ES LO QUE MÁS IMPORTA: el `timer` del reintento vive en este efecto, así que
+    // su limpieza lo cancela. Con las dependencias anteriores el efecto se rehacía en cada render y el reintento
+    // programado tras un error moría con él —el listener nuevo solo reacciona a transiciones futuras, y el
+    // estado ya estaba en `error_backoff`—, de modo que el sync se quedaba parado hasta el siguiente focus.
+  }, []);
 
   useEffect(() => {
     return () => {
