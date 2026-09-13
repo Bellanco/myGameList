@@ -587,3 +587,29 @@
 }
 /* El barrido también se recorta al chaflán; si no, asoma por la esquina cortada. */
 :root[data-palette="cyberpunk"] .ach-toast-sheen { clip-path: var(--hud-cut); }
+
+/* ── §14 · LIENZO DE LA ACTIVIDAD SOCIAL: EL BARRIDO ──────────────────────────────────────────────────────────
+   La zona vacía del feed (ver `.hub-feed-lienzo` en `_layout.scss`). SIN TRAMA DE FONDO: aquí el hueco no se
+   llena con una rejilla permanente sino con luz que pasa. Una banda muy ancha al 9 % de alfa recorriendo el
+   lienzo cada diez segundos — no se percibe un objeto moviéndose, se percibe que la luz de la sala cambia.
+   Esquinas rectas, como todos los paneles de este skin. ── */
+:root[data-palette="cyberpunk"] .hub-feed-lienzo {
+  --lz-radius: 0;
+  --lz-img2: linear-gradient(100deg, transparent 20%, rgba(0, 240, 255, .09) 50%, transparent 80%);
+  /* Alto en píxeles: al 100 % del lienzo, con la lista llena el barrido pasaba a ser una banda de dos mil px
+     que se leía como un cambio de brillo global en vez de como algo que cruza. */
+  --lz-size2: 240% 260px;
+  --lz-rep2: no-repeat;
+}
+
+:root[data-palette="cyberpunk"][data-theme="light"] .hub-feed-lienzo {
+  --lz-img2: linear-gradient(100deg, transparent 20%, rgba(0, 90, 110, .09) 50%, transparent 80%);
+}
+
+/* Sin el barrido no queda nada, que es justo lo correcto: la propuesta ERA la luz que pasa, así que apagada
+   deja el hueco como estaba. El alto mínimo del lienzo sigue haciendo su parte. */
+@media (prefers-reduced-motion: no-preference) {
+  :root[data-effects="on"][data-palette="cyberpunk"] .hub-feed-lienzo-fx::after { animation: lz-cyber-sweep 10s linear infinite; }
+}
+
+@keyframes lz-cyber-sweep { from { background-position: -130% 0; } to { background-position: 260% 0; } }
