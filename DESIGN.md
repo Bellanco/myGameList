@@ -47,6 +47,7 @@ Cada tema define los mismos tokens; el resto del sistema se deriva. **Nunca uses
 | `--border` | Borde nominal; para separar filas usa `--hair` (el mismo al 60 %) |
 | `--text` `--text-muted` `--text-dim` | Texto principal, secundario y atenuado (**AA 4,5:1 sobre `--surface`**) |
 | `--steam` `--steam-hover` `--steam-rgb` | Acento de identidad. `--steam-rgb` existe para componer `rgba()` |
+| `--patina` `--patina-rgb` | *(solo Clásico)* segundo acento. El latón **rellena** (acción principal, pestaña activa); la pátina **escribe y señala** (enlaces, anillo de foco, botón de acento) |
 | `--on-accent` | Texto **encima** del acento. Blanco por defecto; tinta oscura si el acento es claro |
 | `--focus-ring` | Anillo de foco. 3:1 contra las **cuatro** superficies (1.4.11). No siempre es `--steam` |
 | `--fg-link` | Acento **como texto**: 4,5:1. No siempre es `--steam-hover` |
@@ -60,7 +61,7 @@ Cada tema define los mismos tokens; el resto del sistema se deriva. **Nunca uses
 
 | id | Nombre | Acento oscuro | Fondo oscuro | Mundo |
 |---|---|---|---|---|
-| `steam` | Clásico | `#d9a13a` latón | `#1c1610` | Cuero, papel, cobre y latón. El único sin juego detrás |
+| `steam` | Clásico | `#d9a13a` latón | `#15100b` | Cuero, papel, cobre y latón, con la **pátina** (`#4ab396`) de segundo acento. El único sin juego detrás |
 | `persona` | Corazón rebelde | `#ff1f3d` | `#0d0d0d` | Persona 5: rojo, negro, blanco y oro de calendario |
 | `portal` | Cámara de pruebas | `#29b6f6` | `#12171b` | Aperture moderna en oscuro; la antigua (pergamino) en claro |
 | `cyberpunk` | Sin futuro | `#fcee0a` | `#08090d` | HUD de Night City: amarillo, cian, magenta |
