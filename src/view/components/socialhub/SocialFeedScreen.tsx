@@ -26,6 +26,20 @@ import { AchievementSprite } from '../AchievementSprite';
  * lo más común y deja lo que de verdad es noticia.
  */
 const FEED_MEDALS = 5;
+
+/**
+ * Cuántas variantes decorativas puede pedir el lienzo de la actividad.
+ *
+ * El componente NO sabe qué son: sortea un número y lo deja en `data-fx`, y cada `themes/*.scss` decide qué
+ * significa —hoy solo lo usa Solo hay guerra, que lo lee para elegir cuál de sus trece sellos pinta
+ * detrás del fósforo—. Es el mismo trato que las dos ranuras `<i>`: el armazón pone el hueco y la paleta lo
+ * llena, para que este fichero no tenga que conocer ningún tema.
+ *
+ * Se sortea UNA VEZ por montaje, así que el sello es estable mientras estás dentro de Social y cambia al volver
+ * a entrar. Si cambias este número hay que cambiar las reglas `[data-fx="N"]` de los temas que lo usen: el que
+ * no case se queda con el sello de reserva. Lo fija `tests/component/SocialFeedLienzo.test.tsx`.
+ */
+const LIENZO_FX_VARIANTS = 13;
 import { ENABLE_ACHIEVEMENTS } from '../../../core/achievements/flags';
 import { ACHIEVEMENTS_UI } from '../../../core/constants/achievementLabels';
 
@@ -106,6 +120,9 @@ function SocialFeedScreenBase({
   /** ¿Hay algo guardado que enseñar mientras no hay red? Decide cuál de los dos avisos toca. */
   offlineHasCachedData: boolean;
 }) {
+  // El sorteo va en `useState` con inicializador perezoso y no en el cuerpo: así se decide una sola vez por
+  // montaje y no cambia en cada repintado (esta pantalla re-renderiza con cualquier cambio del hub).
+  const [lienzoFx] = React.useState(() => Math.floor(Math.random() * LIENZO_FX_VARIANTS));
   const feedSentinelRef = React.useRef<HTMLButtonElement>(null);
   const composerRef = React.useRef<HTMLTextAreaElement>(null);
 
@@ -236,296 +253,312 @@ function SocialFeedScreenBase({
     >
       <div className="fg">
         <span className="flabel">{SOCIAL_UI.feed.activityTitle}</span>
-        {loadingDirectory ? (
-          <div className="hub-feed-activity-list" aria-hidden="true">
-            {[0, 1, 2, 3].map((i) => (
-              <article key={i} className="hub-feed-card hub-feed-activity-item hub-skeleton-card">
-                <header className="hub-feed-card-head">
-                  <span className="hub-avatar hub-skeleton" />
-                  <div className="hub-feed-card-head-text">
-                    <span className="hub-skeleton hub-skeleton-line" style={{ width: '45%' }} />
-                  </div>
-                </header>
-                <span className="hub-skeleton hub-skeleton-line" style={{ width: '30%' }} />
-                <span className="hub-skeleton hub-skeleton-line" style={{ width: '92%' }} />
-                <span className="hub-skeleton hub-skeleton-line" style={{ width: '70%' }} />
-              </article>
-            ))}
-          </div>
-        ) : null}
-        {/* Vacío SIN red: no es que no tengas amigos, es que no se ha podido leer nada. Mandar a "descubrir
-            perfiles" aquí sería un diagnóstico falso y además un botón que no puede funcionar. */}
-        {!loadingDirectory && feedItems.length === 0 && offline ? (
-          <div className="hub-feed-empty">
-            <p>{SOCIAL_UI.offline.bodyEmpty}</p>
-          </div>
-        ) : null}
-        {!loadingDirectory && feedItems.length === 0 && !offline ? (
-          <div className="hub-feed-empty">
-            <p>{SOCIAL_UI.feed.activityEmptyNoFriends}</p>
-            <button className="btn btn-secondary btn-accent" type="button" onClick={onOpenProfiles}>
-              <Icon name="bottom-hub" />
-              {SOCIAL_UI.feed.discoverFriends}
-            </button>
-          </div>
-        ) : null}
-        {!loadingDirectory && feedItems.length > 0 ? (
-          <div className="hub-feed-activity-list" role="list" aria-label={SOCIAL_UI.feed.activityListAria}>
-            {groupedFeedItems.map((group, groupIndex) => (
-              <div key={`${group.dayHeader}-${groupIndex}`} className="hub-feed-day-group">
-                <div className="hub-feed-day-header">
-                  <h4>{group.dayHeader}</h4>
-                </div>
-                {group.items.map((entry) => {
-                  const itemDate = new Date(entry.updatedAt || '');
-                  const hasValidDate = !Number.isNaN(itemDate.getTime());
+        {/* EL LIENZO. Da SUELO a la zona de actividad, que sin él no existe como superficie: el estado
+            vacío y su botón flotaban sobre el fondo de la tarjeta, y la tarjeta se encogía hasta ellos.
+            No cambia nada de lo de dentro —esqueleto, vacíos, lista y «mostrar más» entran tal cual—; solo
+            les pone debajo una superficie con alto mínimo y la textura que ponga cada paleta.
 
-                  // LOGROS: una entrada por persona y DÍA, con todos los de ese día dentro. Va la primera de
-                  // la cadena de tipos porque no comparte NADA con las demás —no tiene gist, ni juego, ni
-                  // texto—, así que estrecharla aquí deja el resto del bloque leyéndose igual que antes.
-                  if (entry.kind === 'achievements') {
-                    const quien = entry.authorName || 'Usuario';
-                    const nombres = entry.items
-                      .map((item) => item.def.labels.name)
-                      .join(', ');
-                    const irALogros = () => openProfileAchievements(entry.profileId);
-                    return (
-                      /* LA TARJETA ENTERA ES PULSABLE, como la de una reseña. Antes solo lo eran el avatar, el
-                         nombre y las medallas, y la tarjeta ya traía `cursor: pointer` de
-                         `.hub-feed-activity-item`: el puntero prometía en toda la superficie algo que solo
-                         respondía arriba. Mismo patrón que `is-review` —`tabIndex`, `onClick`, `onKeyDown` y
-                         `stopPropagation` en lo de dentro— para no inventar una interacción distinta. */
-                      <article
-                        key={entry.key}
-                        className={`hub-feed-card hub-feed-activity-item is-achievements ${entry.own ? 'is-own-activity' : 'is-external-activity'}`}
-                        role="listitem"
-                        tabIndex={0}
-                        aria-label={SOCIAL_UI.feed.openProfileAria(quien) + '. ' + nombres}
-                        onClick={irALogros}
-                        onKeyDown={(event) => {
-                          if (event.key !== 'Enter' && event.key !== ' ') return;
-                          event.preventDefault();
-                          irALogros();
-                        }}
-                      >
-                        {/* EL AVATAR YA NO ES UN CONTROL: la tarjeta entera lleva a los logros y **solo el
-                            nombre** lleva a otro sitio (la ficha). Con el avatar pulsable había dos destinos
-                            en el mismo gesto —tocar la foto o tocar al lado hacían cosas distintas— sin nada
-                            que lo anunciara. */}
-                        <HubAvatar photoURL={entry.photoURL} sizeClass="hub-avatar-xs" />
-                        <div className="hub-feed-ach-body">
-                          <p className="hub-feed-ach-line">
+            LAS DOS RANURAS (`<i>`) son deliberadamente ANÓNIMAS. Hay decoraciones que no caben en los dos
+            pseudoelementos del lienzo porque necesitan moverse por su cuenta: el punto del láser de Cámara
+            de pruebas, la estrella fugaz de Sol y luna, el cursor del cogitador de Solo hay guerra. Cada
+            paleta decide qué es cada ranura en su `themes/*.scss`; aquí no pueden tener nombre porque este
+            componente no sabe —ni debe saber— qué tema está puesto. Por defecto van ocultas. */}
+        <div className="hub-feed-lienzo">
+          <span className="hub-feed-lienzo-fx" data-fx={lienzoFx} aria-hidden="true">
+            <i />
+            <i />
+          </span>
+          {loadingDirectory ? (
+            <div className="hub-feed-activity-list" aria-hidden="true">
+              {[0, 1, 2, 3].map((i) => (
+                <article key={i} className="hub-feed-card hub-feed-activity-item hub-skeleton-card">
+                  <header className="hub-feed-card-head">
+                    <span className="hub-avatar hub-skeleton" />
+                    <div className="hub-feed-card-head-text">
+                      <span className="hub-skeleton hub-skeleton-line" style={{ width: '45%' }} />
+                    </div>
+                  </header>
+                  <span className="hub-skeleton hub-skeleton-line" style={{ width: '30%' }} />
+                  <span className="hub-skeleton hub-skeleton-line" style={{ width: '92%' }} />
+                  <span className="hub-skeleton hub-skeleton-line" style={{ width: '70%' }} />
+                </article>
+              ))}
+            </div>
+          ) : null}
+          {/* Vacío SIN red: no es que no tengas amigos, es que no se ha podido leer nada. Mandar a "descubrir
+              perfiles" aquí sería un diagnóstico falso y además un botón que no puede funcionar. */}
+          {!loadingDirectory && feedItems.length === 0 && offline ? (
+            <div className="hub-feed-empty">
+              <p>{SOCIAL_UI.offline.bodyEmpty}</p>
+            </div>
+          ) : null}
+          {!loadingDirectory && feedItems.length === 0 && !offline ? (
+            <div className="hub-feed-empty">
+              <p>{SOCIAL_UI.feed.activityEmptyNoFriends}</p>
+              <button className="btn btn-secondary btn-accent" type="button" onClick={onOpenProfiles}>
+                <Icon name="bottom-hub" />
+                {SOCIAL_UI.feed.discoverFriends}
+              </button>
+            </div>
+          ) : null}
+          {!loadingDirectory && feedItems.length > 0 ? (
+            <div className="hub-feed-activity-list" role="list" aria-label={SOCIAL_UI.feed.activityListAria}>
+              {groupedFeedItems.map((group, groupIndex) => (
+                <div key={`${group.dayHeader}-${groupIndex}`} className="hub-feed-day-group">
+                  <div className="hub-feed-day-header">
+                    <h4>{group.dayHeader}</h4>
+                  </div>
+                  {group.items.map((entry) => {
+                    const itemDate = new Date(entry.updatedAt || '');
+                    const hasValidDate = !Number.isNaN(itemDate.getTime());
+
+                    // LOGROS: una entrada por persona y DÍA, con todos los de ese día dentro. Va la primera de
+                    // la cadena de tipos porque no comparte NADA con las demás —no tiene gist, ni juego, ni
+                    // texto—, así que estrecharla aquí deja el resto del bloque leyéndose igual que antes.
+                    if (entry.kind === 'achievements') {
+                      const quien = entry.authorName || 'Usuario';
+                      const nombres = entry.items
+                        .map((item) => item.def.labels.name)
+                        .join(', ');
+                      const irALogros = () => openProfileAchievements(entry.profileId);
+                      return (
+                        /* LA TARJETA ENTERA ES PULSABLE, como la de una reseña. Antes solo lo eran el avatar, el
+                           nombre y las medallas, y la tarjeta ya traía `cursor: pointer` de
+                           `.hub-feed-activity-item`: el puntero prometía en toda la superficie algo que solo
+                           respondía arriba. Mismo patrón que `is-review` —`tabIndex`, `onClick`, `onKeyDown` y
+                           `stopPropagation` en lo de dentro— para no inventar una interacción distinta. */
+                        <article
+                          key={entry.key}
+                          className={`hub-feed-card hub-feed-activity-item is-achievements ${entry.own ? 'is-own-activity' : 'is-external-activity'}`}
+                          role="listitem"
+                          tabIndex={0}
+                          aria-label={SOCIAL_UI.feed.openProfileAria(quien) + '. ' + nombres}
+                          onClick={irALogros}
+                          onKeyDown={(event) => {
+                            if (event.key !== 'Enter' && event.key !== ' ') return;
+                            event.preventDefault();
+                            irALogros();
+                          }}
+                        >
+                          {/* EL AVATAR YA NO ES UN CONTROL: la tarjeta entera lleva a los logros y **solo el
+                              nombre** lleva a otro sitio (la ficha). Con el avatar pulsable había dos destinos
+                              en el mismo gesto —tocar la foto o tocar al lado hacían cosas distintas— sin nada
+                              que lo anunciara. */}
+                          <HubAvatar photoURL={entry.photoURL} sizeClass="hub-avatar-xs" />
+                          <div className="hub-feed-ach-body">
+                            <p className="hub-feed-ach-line">
+                              <button
+                                className="hub-name-link hub-feed-move-who"
+                                type="button"
+                                onClick={(event) => { event.stopPropagation(); openProfileDetail(entry.profileId); }}
+                              >
+                                {quien}
+                              </button>
+                              {' '}
+                              {/* EL NOMBRE DEL LOGRO SOLO SE ESCRIBE CUANDO HAY UNO. Con varios, la frase dice
+                                  cuántos y las medallas dicen cuáles: enumerar cinco nombres en una burbuja de
+                                  feed la convierte en un párrafo, y es justo la lista que nadie lee. Es lo que
+                                  hacen Steam («ha desbloqueado N logros» + la fila de iconos) y el feed de
+                                  Xbox. */}
+                              {entry.items.length === 1 ? (
+                                <>
+                                  <span className="hub-feed-move-verb">{ACHIEVEMENTS_UI.feedVerb}</span>
+                                  {' '}
+                                  <strong className="hub-feed-ach-name">
+                                    {entry.items[0].def.labels.name}
+                                  </strong>
+                                </>
+                              ) : (
+                                <span className="hub-feed-move-verb">{ACHIEVEMENTS_UI.feedMany(entry.items.length)}</span>
+                              )}
+                            </p>
+                          </div>
+                          {/* LAS MEDALLAS, EN EL CANTO CONTRARIO AL AVATAR. La foto abre la fila por la
+                              izquierda y las medallas la cierran por la derecha, que es como se lee una línea de
+                              feed: quién, qué, y el sello al final. La MISMA tira que va bajo el nombre en la
+                              ficha y en el panel, decorativa aquí porque la pulsable es la tarjeta entera y los
+                              nombres van completos en su `aria-label` —incluidos los que la tira recorta—. */}
+                          <span className="hub-feed-ach-medals">
+                            <AchievementStrip
+                              items={entry.items.map((item) => ({
+                                id: item.def.id,
+                                level: item.level,
+                                date: '',
+                              }))}
+                              limit={FEED_MEDALS}
+                              size="sm"
+                              interactive={false}
+                            />
+                          </span>
+                        </article>
+                      );
+                    }
+
+                    // El id vacío NO es propiedad: sin la guarda, dos ids desconocidos casaban entre sí y la
+                    // actividad ajena se pintaba como propia.
+                    const isOwnActivity = Boolean(currentSocialGistId) && entry.socialGistId === currentSocialGistId;
+                    const ownershipClass = isOwnActivity ? 'is-own-activity' : 'is-external-activity';
+
+                    if (entry.kind === 'post') {
+                      return (
+                        <article
+                          key={entry.id}
+                          className={`hub-feed-card hub-feed-activity-item is-post ${ownershipClass}`}
+                          role="listitem"
+                        >
+                          <header className="hub-feed-card-head">
+                            <button
+                              className="hub-avatar-link"
+                              type="button"
+                              aria-label={SOCIAL_UI.feed.openProfileAria(entry.profileDisplayName || entry.authorName)}
+                              title={SOCIAL_UI.feed.openProfileAria(entry.profileDisplayName || entry.authorName)}
+                              onClick={() => openProfileDetail(entry.profileId)}
+                            >
+                              <HubAvatar photoURL={entry.photoURL} />
+                            </button>
+                            <div className="hub-feed-card-head-text">
+                              <h3>
+                                <button className="hub-name-link" type="button" onClick={() => openProfileDetail(entry.profileId)}>
+                                  {entry.profileDisplayName || entry.authorName || 'Usuario'}
+                                </button>
+                              </h3>
+                            </div>
+                          </header>
+                          <p className="hub-feed-date">{hasValidDate ? SOCIAL_UI.feed.postedAt(itemDate) : SOCIAL_UI.feed.analyzedRecently}</p>
+                          <PostBody
+                            text={entry.text}
+                            sharedFilePageHint={SOCIAL_UI.feed.postSharedFileHint}
+                            expandLabel={SOCIAL_UI.feed.postExpand}
+                            collapseLabel={SOCIAL_UI.feed.postCollapse}
+                          />
+                        </article>
+                      );
+                    }
+
+                    // F4 — MOVIMIENTO DE LISTA. Una línea y se acaba: quién, qué hizo, con qué juego y a qué
+                    // hora. La tarjeta NO es pulsable —no hay pantalla de «movimiento» que abrir— y de ella solo
+                    // llevan a algún sitio dos cosas: el autor (su perfil) y, cuando de verdad existe, el nombre
+                    // del juego (el análisis de ese autor sobre él).
+                    //
+                    // La hora usa su propia clase y no `hub-feed-date`: varias paletas convierten esa clase en
+                    // una cápsula o le cuelgan un prefijo («//», «>»), y aquí tiene que ser un dato al final del
+                    // renglón. El día no se repite: lo dice la cabecera del grupo, y la fecha entera está en el
+                    // `title`.
+                    if (entry.kind === 'move') {
+                      const nombreAutor = entry.profileDisplayName || 'Usuario';
+                      const fechaCompleta = hasValidDate ? SOCIAL_UI.feed.movedAt(itemDate) : SOCIAL_UI.feed.moveRecently;
+                      return (
+                        <article
+                          key={`${entry.socialGistId}:${entry.id}`}
+                          className={`hub-feed-card hub-feed-activity-item is-move ${ownershipClass}`}
+                          role="listitem"
+                        >
+                          <button
+                            className="hub-avatar-link"
+                            type="button"
+                            aria-label={SOCIAL_UI.feed.openProfileAria(nombreAutor)}
+                            title={SOCIAL_UI.feed.openProfileAria(nombreAutor)}
+                            onClick={() => openProfileDetail(entry.profileId)}
+                          >
+                            <HubAvatar photoURL={entry.photoURL} sizeClass="hub-avatar-xs" />
+                          </button>
+                          <p className="hub-feed-move-line">
                             <button
                               className="hub-name-link hub-feed-move-who"
                               type="button"
-                              onClick={(event) => { event.stopPropagation(); openProfileDetail(entry.profileId); }}
+                              onClick={() => openProfileDetail(entry.profileId)}
                             >
-                              {quien}
+                              {nombreAutor}
                             </button>
                             {' '}
-                            {/* EL NOMBRE DEL LOGRO SOLO SE ESCRIBE CUANDO HAY UNO. Con varios, la frase dice
-                                cuántos y las medallas dicen cuáles: enumerar cinco nombres en una burbuja de
-                                feed la convierte en un párrafo, y es justo la lista que nadie lee. Es lo que
-                                hacen Steam («ha desbloqueado N logros» + la fila de iconos) y el feed de
-                                Xbox. */}
-                            {entry.items.length === 1 ? (
-                              <>
-                                <span className="hub-feed-move-verb">{ACHIEVEMENTS_UI.feedVerb}</span>
-                                {' '}
-                                <strong className="hub-feed-ach-name">
-                                  {entry.items[0].def.labels.name}
-                                </strong>
-                              </>
+                            <span className="hub-feed-move-verb">{SOCIAL_UI.feed.moveHeadline[entry.tab]}</span>
+                            {' '}
+                            {entry.reviewActorId ? (
+                              <button
+                                className="hub-feed-move-game"
+                                type="button"
+                                aria-label={SOCIAL_UI.feed.openMoveReviewAria(nombreAutor, entry.gameName)}
+                                // El actor de la RESEÑA, no el id de la entrada del directorio: el detalle resuelve
+                                // por `actorProfileId` y con el otro id no encontraba nada.
+                                onClick={() => openMoveReview(entry.reviewActorId as string, entry.gameId)}
+                              >
+                                {entry.gameName}
+                              </button>
                             ) : (
-                              <span className="hub-feed-move-verb">{ACHIEVEMENTS_UI.feedMany(entry.items.length)}</span>
+                              <span className="hub-feed-move-game is-plain">{entry.gameName}</span>
                             )}
+                            {' '}
+                            <span className="hub-feed-move-hour" title={fechaCompleta}>
+                              {hasValidDate ? SOCIAL_UI.feed.movedAtHour(itemDate) : SOCIAL_UI.feed.moveRecently}
+                            </span>
                           </p>
-                        </div>
-                        {/* LAS MEDALLAS, EN EL CANTO CONTRARIO AL AVATAR. La foto abre la fila por la
-                            izquierda y las medallas la cierran por la derecha, que es como se lee una línea de
-                            feed: quién, qué, y el sello al final. La MISMA tira que va bajo el nombre en la
-                            ficha y en el panel, decorativa aquí porque la pulsable es la tarjeta entera y los
-                            nombres van completos en su `aria-label` —incluidos los que la tira recorta—. */}
-                        <span className="hub-feed-ach-medals">
-                          <AchievementStrip
-                            items={entry.items.map((item) => ({
-                              id: item.def.id,
-                              level: item.level,
-                              date: '',
-                            }))}
-                            limit={FEED_MEDALS}
-                            size="sm"
-                            interactive={false}
-                          />
-                        </span>
-                      </article>
-                    );
-                  }
+                        </article>
+                      );
+                    }
 
-                  // El id vacío NO es propiedad: sin la guarda, dos ids desconocidos casaban entre sí y la
-                  // actividad ajena se pintaba como propia.
-                  const isOwnActivity = Boolean(currentSocialGistId) && entry.socialGistId === currentSocialGistId;
-                  const ownershipClass = isOwnActivity ? 'is-own-activity' : 'is-external-activity';
-
-                  if (entry.kind === 'post') {
+                    const reviewText = String(entry.snippet || '').trim();
+                    const analyzedAtLabel = hasValidDate
+                      ? SOCIAL_UI.feed.analyzedAt(itemDate)
+                      : SOCIAL_UI.feed.analyzedRecently;
+                    const cardTypeClass = entry.type === 'review' ? 'is-review' : 'is-recommendation';
                     return (
                       <article
                         key={entry.id}
-                        className={`hub-feed-card hub-feed-activity-item is-post ${ownershipClass}`}
+                        className={`hub-feed-card hub-feed-activity-item ${cardTypeClass} ${ownershipClass}`}
                         role="listitem"
+                        tabIndex={0}
+                        aria-label={SOCIAL_UI.feed.openActivityAria(entry.profileDisplayName, entry.gameName)}
+                        onClick={() => openActivityDetail(entry)}
+                        onKeyDown={(event) => handleActivityItemKeyDown(event, entry)}
                       >
                         <header className="hub-feed-card-head">
                           <button
                             className="hub-avatar-link"
                             type="button"
-                            aria-label={SOCIAL_UI.feed.openProfileAria(entry.profileDisplayName || entry.authorName)}
-                            title={SOCIAL_UI.feed.openProfileAria(entry.profileDisplayName || entry.authorName)}
-                            onClick={() => openProfileDetail(entry.profileId)}
+                            aria-label={SOCIAL_UI.feed.openProfileAria(entry.profileDisplayName)}
+                            title={SOCIAL_UI.feed.openProfileAria(entry.profileDisplayName)}
+                            onClick={(event) => { event.stopPropagation(); openProfileDetail(entry.profileId); }}
                           >
                             <HubAvatar photoURL={entry.photoURL} />
                           </button>
                           <div className="hub-feed-card-head-text">
                             <h3>
-                              <button className="hub-name-link" type="button" onClick={() => openProfileDetail(entry.profileId)}>
-                                {entry.profileDisplayName || entry.authorName || 'Usuario'}
+                              <button
+                                className="hub-name-link"
+                                type="button"
+                                onClick={(event) => { event.stopPropagation(); openProfileDetail(entry.profileId); }}
+                              >
+                                {entry.profileDisplayName}
                               </button>
                             </h3>
+                            {entry.gameName ? <span className="hub-feed-game-chip">{entry.gameName}</span> : null}
                           </div>
                         </header>
-                        <p className="hub-feed-date">{hasValidDate ? SOCIAL_UI.feed.postedAt(itemDate) : SOCIAL_UI.feed.analyzedRecently}</p>
-                        <PostBody
-                          text={entry.text}
-                          sharedFilePageHint={SOCIAL_UI.feed.postSharedFileHint}
-                          expandLabel={SOCIAL_UI.feed.postExpand}
-                          collapseLabel={SOCIAL_UI.feed.postCollapse}
-                        />
+                        <p className="hub-feed-date">{analyzedAtLabel}</p>
+                        {resolveGrade({ score: Number(entry.rating || 0), grade: entry.grade ?? null }) > 0
+                          ? <ScoreDisplay game={{ score: Number(entry.rating || 0), grade: entry.grade ?? null }} />
+                          : <NoScoreMedal />}
+                        {reviewText ? <p className="hub-feed-review-text" title={reviewText}>{reviewText}</p> : null}
                       </article>
                     );
-                  }
-
-                  // F4 — MOVIMIENTO DE LISTA. Una línea y se acaba: quién, qué hizo, con qué juego y a qué
-                  // hora. La tarjeta NO es pulsable —no hay pantalla de «movimiento» que abrir— y de ella solo
-                  // llevan a algún sitio dos cosas: el autor (su perfil) y, cuando de verdad existe, el nombre
-                  // del juego (el análisis de ese autor sobre él).
-                  //
-                  // La hora usa su propia clase y no `hub-feed-date`: varias paletas convierten esa clase en
-                  // una cápsula o le cuelgan un prefijo («//», «>»), y aquí tiene que ser un dato al final del
-                  // renglón. El día no se repite: lo dice la cabecera del grupo, y la fecha entera está en el
-                  // `title`.
-                  if (entry.kind === 'move') {
-                    const nombreAutor = entry.profileDisplayName || 'Usuario';
-                    const fechaCompleta = hasValidDate ? SOCIAL_UI.feed.movedAt(itemDate) : SOCIAL_UI.feed.moveRecently;
-                    return (
-                      <article
-                        key={`${entry.socialGistId}:${entry.id}`}
-                        className={`hub-feed-card hub-feed-activity-item is-move ${ownershipClass}`}
-                        role="listitem"
-                      >
-                        <button
-                          className="hub-avatar-link"
-                          type="button"
-                          aria-label={SOCIAL_UI.feed.openProfileAria(nombreAutor)}
-                          title={SOCIAL_UI.feed.openProfileAria(nombreAutor)}
-                          onClick={() => openProfileDetail(entry.profileId)}
-                        >
-                          <HubAvatar photoURL={entry.photoURL} sizeClass="hub-avatar-xs" />
-                        </button>
-                        <p className="hub-feed-move-line">
-                          <button
-                            className="hub-name-link hub-feed-move-who"
-                            type="button"
-                            onClick={() => openProfileDetail(entry.profileId)}
-                          >
-                            {nombreAutor}
-                          </button>
-                          {' '}
-                          <span className="hub-feed-move-verb">{SOCIAL_UI.feed.moveHeadline[entry.tab]}</span>
-                          {' '}
-                          {entry.reviewActorId ? (
-                            <button
-                              className="hub-feed-move-game"
-                              type="button"
-                              aria-label={SOCIAL_UI.feed.openMoveReviewAria(nombreAutor, entry.gameName)}
-                              // El actor de la RESEÑA, no el id de la entrada del directorio: el detalle resuelve
-                              // por `actorProfileId` y con el otro id no encontraba nada.
-                              onClick={() => openMoveReview(entry.reviewActorId as string, entry.gameId)}
-                            >
-                              {entry.gameName}
-                            </button>
-                          ) : (
-                            <span className="hub-feed-move-game is-plain">{entry.gameName}</span>
-                          )}
-                          {' '}
-                          <span className="hub-feed-move-hour" title={fechaCompleta}>
-                            {hasValidDate ? SOCIAL_UI.feed.movedAtHour(itemDate) : SOCIAL_UI.feed.moveRecently}
-                          </span>
-                        </p>
-                      </article>
-                    );
-                  }
-
-                  const reviewText = String(entry.snippet || '').trim();
-                  const analyzedAtLabel = hasValidDate
-                    ? SOCIAL_UI.feed.analyzedAt(itemDate)
-                    : SOCIAL_UI.feed.analyzedRecently;
-                  const cardTypeClass = entry.type === 'review' ? 'is-review' : 'is-recommendation';
-                  return (
-                    <article
-                      key={entry.id}
-                      className={`hub-feed-card hub-feed-activity-item ${cardTypeClass} ${ownershipClass}`}
-                      role="listitem"
-                      tabIndex={0}
-                      aria-label={SOCIAL_UI.feed.openActivityAria(entry.profileDisplayName, entry.gameName)}
-                      onClick={() => openActivityDetail(entry)}
-                      onKeyDown={(event) => handleActivityItemKeyDown(event, entry)}
-                    >
-                      <header className="hub-feed-card-head">
-                        <button
-                          className="hub-avatar-link"
-                          type="button"
-                          aria-label={SOCIAL_UI.feed.openProfileAria(entry.profileDisplayName)}
-                          title={SOCIAL_UI.feed.openProfileAria(entry.profileDisplayName)}
-                          onClick={(event) => { event.stopPropagation(); openProfileDetail(entry.profileId); }}
-                        >
-                          <HubAvatar photoURL={entry.photoURL} />
-                        </button>
-                        <div className="hub-feed-card-head-text">
-                          <h3>
-                            <button
-                              className="hub-name-link"
-                              type="button"
-                              onClick={(event) => { event.stopPropagation(); openProfileDetail(entry.profileId); }}
-                            >
-                              {entry.profileDisplayName}
-                            </button>
-                          </h3>
-                          {entry.gameName ? <span className="hub-feed-game-chip">{entry.gameName}</span> : null}
-                        </div>
-                      </header>
-                      <p className="hub-feed-date">{analyzedAtLabel}</p>
-                      {resolveGrade({ score: Number(entry.rating || 0), grade: entry.grade ?? null }) > 0
-                        ? <ScoreDisplay game={{ score: Number(entry.rating || 0), grade: entry.grade ?? null }} />
-                        : <NoScoreMedal />}
-                      {reviewText ? <p className="hub-feed-review-text" title={reviewText}>{reviewText}</p> : null}
-                    </article>
-                  );
-                })}
-              </div>
-            ))}
-          </div>
-        ) : null}
-        {!loadingDirectory && hasMoreFeed ? (
-          <button
-            ref={feedSentinelRef}
-            className="hub-more-soft hub-feed-load-more"
-            type="button"
-            aria-label={SOCIAL_UI.feed.feedLoadMore}
-            title={SOCIAL_UI.feed.feedLoadMore}
-            onClick={showMoreFeed}
-          >
-            <Icon name="chevron-down" />
-          </button>
-        ) : null}
+                  })}
+                </div>
+              ))}
+            </div>
+          ) : null}
+          {!loadingDirectory && hasMoreFeed ? (
+            <button
+              ref={feedSentinelRef}
+              className="hub-more-soft hub-feed-load-more"
+              type="button"
+              aria-label={SOCIAL_UI.feed.feedLoadMore}
+              title={SOCIAL_UI.feed.feedLoadMore}
+              onClick={showMoreFeed}
+            >
+              <Icon name="chevron-down" />
+            </button>
+          ) : null}
+        </div>
       </div>
       <HubStatus status={status} statusKind={statusKind} />
     </FeedShell>
@@ -535,4 +568,3 @@ function SocialFeedScreenBase({
 // Memoizada: el hub re-renderiza con cualquier cambio de estado del VM; con props estables (handlers de
 // SocialHub via useCallback + valores memoizados del VM) esta pantalla evita re-renders no relacionados.
 export const SocialFeedScreen = React.memo(SocialFeedScreenBase);
-

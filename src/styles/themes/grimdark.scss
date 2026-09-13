@@ -376,3 +376,193 @@
   color: var(--grim-green);
 }
 :root[data-palette="grimdark"] .hub-feed-move-hour::before { content: '> '; font-weight: 700; }
+
+/* ── §14 · LIENZO DE LA ACTIVIDAD SOCIAL: COGITADOR EN ESPERA + SELLO CON GLITCH ──────────────────────────────
+   La zona vacía del feed (ver `.hub-feed-lienzo` en `_layout.scss`). Un rectángulo de fósforo verde bajo
+   scanlines más densas que las del fondo, con el cursor de bloque parpadeando abajo a la izquierda: la terminal
+   está encendida y no ha recibido nada, que es exactamente lo que pasa cuando no tienes actividad de amigos.
+
+   EL SELLO va en el canto derecho y SANGRADO 26px, no centrado: centrado cae justo bajo el párrafo del estado
+   vacío y lo ensucia, y salirse por el borde lo hace leer como grabado en el cristal en vez de como un icono
+   pegado encima.
+
+   EL GLITCH es un SUCESO, no un estado: el sello está limpio —sin desdoblar— y cada ocho segundos la señal se
+   va un instante y vuelve partida en rojo y fósforo antes de asentarse. Tres copias apiladas con `mask-image`
+   (el SVG es de una sola capa, así que teñir cada copia exige máscara y no `background-image`). ── */
+:root[data-palette="grimdark"] .hub-feed-lienzo {
+  --lz-radius: 0;
+  --lz-bg: color-mix(in srgb, #02150a 55%, transparent);
+  /* Las scanlines se repiten por todo el alto (eso da continuidad con la lista larga); el resplandor de
+     fósforo va acotado y anclado arriba, o con la lista llena se volvía un tinte verde plano de dos mil px. */
+  --lz-img:
+    repeating-linear-gradient(0deg, rgba(0, 0, 0, .34) 0 1px, transparent 1px 3px),
+    radial-gradient(closest-side, rgba(67, 245, 88, .1), transparent 72%);
+  --lz-size: auto, 95% 260px;
+  --lz-pos: 0 0, 50% 0;
+  --lz-rep: repeat, no-repeat;
+  --lz-edge: 1px solid color-mix(in srgb, var(--grim-gold) 45%, transparent);
+}
+
+/* En claro no hay fósforo: el códice es pergamino, así que quedan las scanlines de monitor antiguo sobre la
+   vitela y nada más (misma decisión que la FIRMA de este skin). */
+:root[data-palette="grimdark"][data-theme="light"] .hub-feed-lienzo {
+  --lz-bg: color-mix(in srgb, var(--surface-elevated) 70%, transparent);
+  --lz-img: repeating-linear-gradient(0deg, rgba(40, 34, 12, .09) 0 1px, transparent 1px 3px);
+}
+
+/* Ranura 1 · el cursor de bloque. */
+/* El cursor va al pie de la FRANJA decorativa, no del lienzo: con la lista llena, colgado del lienzo se iba al
+   final del scroll y no se veía nunca. */
+:root[data-palette="grimdark"] .hub-feed-lienzo-fx > i:first-child {
+  display: block;
+  position: absolute;
+  left: .55rem;
+  bottom: .5rem;
+  width: 7px;
+  height: 13px;
+  background: var(--grim-green);
+  box-shadow: 0 0 8px rgba(67, 245, 88, .6);
+}
+
+/* Ranura 2 · el sello. El propio elemento es la copia de ORO; su `::before` y su `::after` son las copias roja
+   y de fósforo que solo aparecen durante el corte. Las tres comparten la misma máscara, que es lo que obliga a
+   pintarlas con `mask-image` y no con `background-image`: el SVG es de una sola capa, así que teñir cada copia
+   de un color distinto solo se puede hacer recortando un fondo liso. */
+:root[data-palette="grimdark"] .hub-feed-lienzo-fx > i:last-child,
+:root[data-palette="grimdark"] .hub-feed-lienzo-fx > i:last-child::before,
+:root[data-palette="grimdark"] .hub-feed-lienzo-fx > i:last-child::after {
+  -webkit-mask-image: var(--lz-sello);
+  mask-image: var(--lz-sello);
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
+  -webkit-mask-size: contain;
+  mask-size: contain;
+}
+
+/* ── EL SELLO ROTA ───────────────────────────────────────────────────────────────────────────────────────────
+   `SocialFeedScreen` sortea un número entre 0 y 11 al montarse y lo deja en `data-fx`; aquí se decide qué sello
+   es cada número. El componente no conoce ninguno de estos ficheros ni sabe que existe este tema: pone un hueco
+   numerado y esta hoja lo llena, igual que con las dos ranuras.
+
+   AL ENTRAR EN SOCIAL Y NO EN BUCLE: el sorteo va por montaje, así que el sello es estable mientras estás dentro
+   y cambia al volver a entrar.
+
+   LO QUE CUESTA, MEDIDO: ocho de los doce bajan de 4 kB, así que Vite los empotra como `data:` dentro de esta
+   misma hoja (`assetsInlineLimit`); los otros cuatro salen como fichero y solo se piden si el sorteo los saca.
+   O sea: no se descarga «uno», se descargan los ocho pequeños dentro del CSS y, como mucho, uno grande aparte.
+   La hoja entera de esta paleta queda en 11,5 kB comprimidos, y solo la baja quien active este tema. Rotando en
+   pantalla el coste sería el mismo, pero con los cuatro grandes también obligados a viajar.
+
+   TRECE SELLOS, Y NO TODOS SON IMPERIALES: hay cuatro del Caos y uno orko. No es un descuido — en una pantalla
+   cuya gracia es que la señal se corta y vuelve, que a veces regrese con una marca herética tiene su lectura.
+
+   El valor por defecto es la RESERVA: si alguien cambia `LIENZO_FX_VARIANTS` sin tocar esta lista, los números
+   que no casen salen con él en vez de dejar el canto vacío. ── */
+:root[data-palette="grimdark"] .hub-feed-lienzo-fx {
+  --lz-sello: url('./assets/seals/mechanicus.svg');
+}
+
+:root[data-palette="grimdark"] .hub-feed-lienzo-fx[data-fx="0"] { --lz-sello: url('./assets/seals/mechanicus.svg'); }
+:root[data-palette="grimdark"] .hub-feed-lienzo-fx[data-fx="1"] { --lz-sello: url('./assets/seals/custodes.svg'); }
+:root[data-palette="grimdark"] .hub-feed-lienzo-fx[data-fx="2"] { --lz-sello: url('./assets/seals/dark-angels.svg'); }
+:root[data-palette="grimdark"] .hub-feed-lienzo-fx[data-fx="3"] { --lz-sello: url('./assets/seals/raven-guard.svg'); }
+:root[data-palette="grimdark"] .hub-feed-lienzo-fx[data-fx="4"] { --lz-sello: url('./assets/seals/salamanders.svg'); }
+:root[data-palette="grimdark"] .hub-feed-lienzo-fx[data-fx="5"] { --lz-sello: url('./assets/seals/space-wolves.svg'); }
+:root[data-palette="grimdark"] .hub-feed-lienzo-fx[data-fx="6"] { --lz-sello: url('./assets/seals/black-legion.svg'); }
+:root[data-palette="grimdark"] .hub-feed-lienzo-fx[data-fx="7"] { --lz-sello: url('./assets/seals/iron-warriors.svg'); }
+:root[data-palette="grimdark"] .hub-feed-lienzo-fx[data-fx="8"] { --lz-sello: url('./assets/seals/the-fallen.svg'); }
+:root[data-palette="grimdark"] .hub-feed-lienzo-fx[data-fx="9"] { --lz-sello: url('./assets/seals/world-eaters.svg'); }
+:root[data-palette="grimdark"] .hub-feed-lienzo-fx[data-fx="10"] { --lz-sello: url('./assets/seals/gorkamorka.svg'); }
+
+/* LOS DOS APAISADOS. `Imperium of Man` es 2,73:1 y `Blood Ravens` 1,94:1; con la caja cuadrada de los demás
+   ocuparían el 37 % y el 51 % del alto, y no se leerían como variedad sino como un sello mal puesto. En vez de
+   dejarlos fuera, cobran su propia caja: más ancha y más baja, con la proporción de su dibujo, así que caben
+   enteros y a buen tamaño en la franja de arriba. Ocupan más ancho que los demás y menos alto, que es justo lo
+   que son. */
+:root[data-palette="grimdark"] .hub-feed-lienzo-fx[data-fx="11"] {
+  --lz-sello: url('./assets/seals/aquila.svg');
+  --lz-sello-ancho: 244px;
+  --lz-sello-alto: 90px;
+}
+:root[data-palette="grimdark"] .hub-feed-lienzo-fx[data-fx="12"] {
+  --lz-sello: url('./assets/seals/blood-ravens.svg');
+  --lz-sello-ancho: 215px;
+  --lz-sello-alto: 110px;
+}
+
+/* La caja del sello. ARRIBA A LA DERECHA Y ENTERO.
+   ─────────────────────────────────────────────────────────────────────────────────────────────────────────────
+   Estaba centrado y sangrado por el canto derecho, y las dos cosas estaban mal. Centrado, con la lista llena, el
+   sello se iba a mitad del scroll y no aparecía hasta bajar mucho (la capa que lo sostiene ya no se estira: ver
+   `.hub-feed-lienzo-fx` en `_layout.scss`). Y sangrado se cortaba por la derecha, que con un logotipo simétrico
+   —una aquila, un engranaje— se lee como un recorte mal hecho, no como un grabado.
+
+   Ahora va cerca de media altura de la capa —al 60 %, no clavado en el centro—, completo y con respiro por la
+   derecha. La capa es pegajosa y mide una pantalla, así que eso cae dentro de lo que se ve: el sello acompaña
+   mientras lees el feed en vez de quedarse en los primeros píxeles.
+
+   ANCHO Y ALTO SON VARIABLES porque no todos tienen la misma proporción (ver los dos apaisados de arriba). */
+:root[data-palette="grimdark"] .hub-feed-lienzo-fx > i:last-child {
+  display: block;
+  position: absolute;
+  /* A MEDIA ALTURA de la capa, centrado con `margin-top` y NO con `translate`: el glitch usa `translate` para
+     sacudir el sello, y meter aquí un `-50%` obligaba a arrastrarlo por dentro de cada keyframe — cuando se
+     olvidó una vez, el sello saltó 37 px fuera del lienzo sin que nada fallara. */
+  /* NO EN EL CENTRO EXACTO: al 60 % del alto, algo por debajo. Clavado en el 50 % el sello quedaba en el eje
+     de simetría de la ventana y se leía como un marcador puesto ahí a propósito; descentrado parece lo que
+     tiene que parecer, algo grabado en el cristal. */
+  top: 60%;
+  margin-top: calc(var(--lz-sello-alto, 138px) / -2);
+  right: .9rem;
+  width: var(--lz-sello-ancho, 138px);
+  height: var(--lz-sello-alto, 138px);
+  background: var(--grim-gold);
+  opacity: .26;
+}
+
+/* En claro el oro va sobre pergamino y no sobre fósforo: necesita un punto más para no desaparecer. */
+:root[data-palette="grimdark"][data-theme="light"] .hub-feed-lienzo-fx > i:last-child { opacity: .3; }
+
+/* Las dos copias del desdoblamiento cromático. Invisibles salvo durante el corte. */
+:root[data-palette="grimdark"] .hub-feed-lienzo-fx > i:last-child::before,
+:root[data-palette="grimdark"] .hub-feed-lienzo-fx > i:last-child::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+}
+
+:root[data-palette="grimdark"] .hub-feed-lienzo-fx > i:last-child::before { background: var(--grim-red); }
+:root[data-palette="grimdark"] .hub-feed-lienzo-fx > i:last-child::after { background: var(--grim-green); }
+
+/* El corte. `steps(1)` porque un glitch no se interpola: salta. Ocho segundos entre uno y otro, y el suceso
+   entero dura unos 550 ms — el resto del tiempo el sello está quieto y limpio. */
+@media (prefers-reduced-motion: no-preference) {
+  :root[data-effects="on"][data-palette="grimdark"] .hub-feed-lienzo-fx > i:first-child { animation: lz-grim-cursor 1.2s steps(1) infinite; }
+  :root[data-effects="on"][data-palette="grimdark"] .hub-feed-lienzo-fx > i:last-child { animation: lz-grim-recover 8s steps(1) infinite; }
+  :root[data-effects="on"][data-palette="grimdark"] .hub-feed-lienzo-fx > i:last-child::before { animation: lz-grim-split-r 8s steps(1) infinite; }
+  :root[data-effects="on"][data-palette="grimdark"] .hub-feed-lienzo-fx > i:last-child::after { animation: lz-grim-split-g 8s steps(1) infinite; }
+}
+
+@keyframes lz-grim-cursor { 0%, 52% { opacity: 1; } 53%, 100% { opacity: .08; } }
+/* El `translate` es SOLO horizontal: el sello ya no está centrado con `-50%`, así que arrastrarlo aquí lo subía
+   37 px por encima del lienzo en cuanto la animación tomaba el control de la propiedad. */
+@keyframes lz-grim-recover {
+  0%, 88%, 100% { opacity: .26; translate: 0; }
+  89% { opacity: .05; translate: 4px; }
+  91% { opacity: .32; translate: -3px; }
+  93% { opacity: .1; translate: 2px; }
+  95% { opacity: .26; translate: 0; }
+}
+@keyframes lz-grim-split-r {
+  0%, 88%, 95%, 100% { opacity: 0; translate: 0 0; }
+  89% { opacity: .32; translate: -9px 0; }
+  92% { opacity: .22; translate: -4px 1px; }
+}
+@keyframes lz-grim-split-g {
+  0%, 88%, 95%, 100% { opacity: 0; translate: 0 0; }
+  89% { opacity: .32; translate: 9px 0; }
+  92% { opacity: .22; translate: 4px -1px; }
+}

@@ -394,3 +394,90 @@
 }
 /* El renglón, en la pixelada de los diálogos y algo más grande para que se lea a ese cuerpo. */
 :root[data-palette="seaofstars"] .hub-feed-move-line { font-size: .9rem; }
+
+/* ── §16 · LIENZO DE LA ACTIVIDAD SOCIAL: EL CIELO EN LA CAJA ─────────────────────────────────────────────────
+   La zona vacía del feed (ver `.hub-feed-lienzo` en `_layout.scss`). Un trozo de campo de estrellas más denso
+   que el del fondo de pantalla, con el resplandor de horizonte púrpura asomando por abajo y el marco turquesa
+   de las cajas de diálogo. Las estrellas titilan en DOS capas desfasadas y A SALTOS (`steps(1)`, sin fundido):
+   es el parpadeo de un juego de píxel, no el de un degradado. Y cada quince segundos una fugaz lo cruza en
+   0,9 s y muere en un destello de cuatro puntas.
+
+   EN CLARO NO HAY CIELO: el tema claro de este skin es un mar de agua sólido a plena luz (ver §2), sin estrellas
+   ni degradados, así que aquí queda solo el resplandor de horizonte y la fugaz se retira. Forzar un cielo
+   estrellado sobre el agua sería contradecir la decisión del tema. ── */
+:root[data-palette="seaofstars"] .hub-feed-lienzo {
+  --lz-radius: 0;
+  --lz-bg: color-mix(in srgb, #0b1b3a 62%, transparent);
+  --lz-img:
+    radial-gradient(1.5px 1.5px at 14% 22%, #fff8d6 48%, transparent 50%),
+    radial-gradient(1.5px 1.5px at 64% 14%, var(--sos-turq) 48%, transparent 50%),
+    radial-gradient(1.5px 1.5px at 36% 62%, var(--sos-purple) 48%, transparent 50%),
+    radial-gradient(closest-side, rgba(155, 123, 224, .4), transparent 64%);
+  /* Las estrellas se repiten por todo el alto; el resplandor de horizonte va acotado y anclado ABAJO de la
+     primera pantalla, que es donde estaba pensado — al 100 % del lienzo se iba al final del scroll. */
+  --lz-size: 96px 96px, 118px 118px, 132px 132px, 170% 150px;
+  --lz-pos: 0 0, 0 0, 0 0, 50% 176px;
+  --lz-rep: repeat, repeat, repeat, no-repeat;
+  --lz-img2:
+    radial-gradient(1.5px 1.5px at 86% 44%, #fff 48%, transparent 50%),
+    radial-gradient(1.5px 1.5px at 22% 84%, #9fd6ff 48%, transparent 50%),
+    radial-gradient(1.5px 1.5px at 52% 34%, #fff8d6 48%, transparent 50%);
+  --lz-size2: 104px 104px, 126px 126px, 88px 88px;
+  --lz-edge: 2px solid color-mix(in srgb, var(--sos-turq) 45%, var(--border));
+}
+
+:root[data-palette="seaofstars"][data-theme="light"] .hub-feed-lienzo {
+  --lz-bg: color-mix(in srgb, var(--surface-elevated) 70%, transparent);
+  --lz-img: radial-gradient(closest-side, rgba(29, 132, 148, .22), transparent 64%);
+  --lz-size: 170% 150px;
+  --lz-pos: 50% 176px;
+  --lz-rep: no-repeat;
+  --lz-img2: none;
+}
+
+/* La fugaz (ranura 1) y su destello (ranura 2). Solo en oscuro: en el mar de día no hay estrellas que caer. */
+:root[data-palette="seaofstars"]:not([data-theme="light"]) .hub-feed-lienzo-fx > i:first-child {
+  display: block;
+  position: absolute;
+  top: 12%;
+  left: -20%;
+  width: 68px;
+  height: 2px;
+  opacity: 0;
+  background: linear-gradient(90deg, transparent, #fff8d6);
+}
+
+:root[data-palette="seaofstars"]:not([data-theme="light"]) .hub-feed-lienzo-fx > i:last-child {
+  display: block;
+  position: absolute;
+  right: 14%;
+  bottom: 22%;
+  width: 7px;
+  height: 7px;
+  opacity: 0;
+  background: #fff8d6;
+  clip-path: polygon(50% 0, 61% 39%, 100% 50%, 61% 61%, 50% 100%, 39% 61%, 0 50%, 39% 39%);
+}
+
+/* El ciclo de la fugaz es de 15 s y el paso dura 0,9 s: del 92 % al 98 % de la línea de tiempo. El resto del
+   tiempo está invisible y quieta, así que no cuesta nada. */
+@media (prefers-reduced-motion: no-preference) {
+  :root[data-effects="on"][data-palette="seaofstars"] .hub-feed-lienzo-fx::before { animation: lz-sos-twinkle-a 3.2s steps(1) infinite; }
+  :root[data-effects="on"][data-palette="seaofstars"] .hub-feed-lienzo-fx::after { animation: lz-sos-twinkle-b 2.3s steps(1) infinite; }
+  :root[data-effects="on"][data-palette="seaofstars"] .hub-feed-lienzo-fx > i:first-child { animation: lz-sos-shoot 15s linear infinite; }
+  :root[data-effects="on"][data-palette="seaofstars"] .hub-feed-lienzo-fx > i:last-child { animation: lz-sos-flash 15s linear infinite; }
+}
+
+@keyframes lz-sos-twinkle-a { 0%, 64% { opacity: 1; } 65%, 100% { opacity: .45; } }
+@keyframes lz-sos-twinkle-b { 0%, 48% { opacity: .5; } 49%, 100% { opacity: 1; } }
+@keyframes lz-sos-shoot {
+  0%, 92% { transform: translate(0, 0); opacity: 0; }
+  92.7% { opacity: 1; }
+  98% { transform: translate(330px, 84px); opacity: 0; }
+  100% { transform: translate(330px, 84px); opacity: 0; }
+}
+@keyframes lz-sos-flash {
+  0%, 96.4% { opacity: 0; transform: scale(.3); }
+  97.4% { opacity: 1; transform: scale(1); }
+  99.4%, 100% { opacity: 0; transform: scale(.4); }
+}

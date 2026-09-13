@@ -888,6 +888,158 @@
   gap: .7rem;
 }
 
+/* ═══════════════════════════════════════════════════════════════════════════════════════════════════════════════
+   EL LIENZO DE LA ACTIVIDAD — la superficie sobre la que se posa el feed.
+   ───────────────────────────────────────────────────────────────────────────────────────────────────────────────
+   POR QUÉ EXISTE. La pantalla de actividad tiene forma de chat —cabecera, botones, compositor— y debajo, casi
+   siempre, nada: la mayoría de la gente no tiene aún actividad de amigos que ver. Y esa zona NO EXISTÍA como
+   superficie: el mensaje del vacío y su botón flotaban sobre el degradado de `.hub-hub-card` y la tarjeta se
+   encogía hasta ellos, así que el hueco no se leía como "aquí irá la actividad" sino como "esto está a medias".
+   El arreglo no es añadir interfaz, es darle SUELO: una superficie con alto mínimo y una textura propia.
+
+   QUÉ APORTA CADA COSA. El `min-height` es la mitad del remedio: sin él, la trama más bonita sigue midiendo dos
+   renglones. La textura es la otra mitad, y NO se decide aquí: aquí solo se declaran las variables y sus valores
+   por defecto (que son los del tema Clásico, más abajo); cada paleta las redefine en su `themes/*.scss`.
+
+   POR QUÉ VARIABLES Y NO SELECTORES DE TEMA. Este fichero viaja en el arranque y los skins llegan por chunk
+   (ver `paletteSkin.ts`), así que el orden de inyección entre ambos no es fiable. Al declarar aquí solo valores
+   por defecto con especificidad (0,1,0) y redefinirlos allí con (0,3,0), el orden deja de importar. Además el
+   componente no tiene que saber qué paleta está puesta: pinta `.hub-feed-lienzo` y ya.
+
+   CON ACTIVIDAD NO ESTORBA. El alto lo pasa a poner el contenido y las tarjetas del feed son opacas, así que la
+   trama queda detrás; es fondo, no adorno superpuesto. Ninguna capa pasa del 24 % de alfa bajo texto.
+   ═══════════════════════════════════════════════════════════════════════════════════════════════════════════════ */
+.hub-feed-lienzo {
+  position: relative;
+  /* Crea contexto de apilamiento propio: es lo que permite que las capas decorativas vayan en `z-index: -1` y
+     se pinten SOBRE el fondo del lienzo pero DEBAJO del contenido, sin tener que tocar a los hijos. */
+  isolation: isolate;
+  /* `clip` Y NO `hidden`. Los dos recortan igual, pero `hidden` crea un contenedor de scroll, y eso convierte al
+     lienzo en el «scrollport» de la capa decorativa: el `position: sticky` de dentro se queda buscando un scroll
+     que este elemento no tiene y se comporta como `relative`, o sea que la decoración vuelve a irse con la
+     lista. `clip` recorta sin crear scrollport, así que el sticky sigue mirando al documento, que es quien de
+     verdad se desplaza. El recorte importa sobre todo con el feed vacío: ahí el lienzo mide 176 px y la capa
+     una pantalla entera, así que sin él la trama se derramaría fuera de la tarjeta. */
+  overflow: clip;
+  /* Contenedor de consulta: las decoraciones que recorren el lienzo se miden en `cqw` y así caen donde tienen
+     que caer a cualquier ancho (ver el láser de Cámara de pruebas). */
+  container-type: inline-size;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: .55rem;
+  min-height: var(--lz-min, 11rem);
+  padding: var(--lz-pad, .85rem);
+  border: var(--lz-edge, 0 solid transparent);
+  border-radius: var(--lz-radius, 8px);
+  background: var(--lz-bg, transparent);
+  box-shadow: var(--lz-inset, none);
+}
+
+/* ── LA CAPA DECORATIVA: PEGAJOSA, NO ANCLADA ─────────────────────────────────────────────────────────────────
+   Toda la decoración —las dos capas de textura y las dos ranuras— vive aquí, y esta capa es `sticky`.
+
+   POR QUÉ. El lienzo envuelve una lista con scroll infinito y puede medir miles de píxeles. Con la decoración
+   pegada al lienzo pasaba una de dos cosas, las dos malas: estirada con él, un foco se convertía en un tinte
+   plano de 2.500 px y lo anclado al centro o al pie acababa a mitad o al final del scroll; anclada a la parte de
+   arriba, se veía al entrar y desaparecía en cuanto bajabas tres tarjetas. En ambos casos, el rato que pasas
+   leyendo el feed —que es casi todo el rato— lo pasabas sin fondo.
+
+   Siendo `sticky`, la capa ACOMPAÑA a la ventana mientras el lienzo esté a la vista: el contenido se desliza por
+   encima y el fondo se queda quieto. Es el gesto de un fondo de escritorio, y hace que los efectos —el barrido,
+   el láser, el titileo, el glitch del sello— se vean siempre, no solo en los primeros 176 px.
+
+   CÓMO NO OCUPA SITIO. Un `sticky` es un elemento EN FLUJO (no admite `position: absolute`), así que empujaría
+   el contenido hacia abajo. El `margin-bottom` negativo de su mismo alto lo compensa exactamente: reserva cero.
+
+   POR QUÉ `100dvh` Y NO EL ALTO DEL LIENZO: la capa tiene que cubrir lo que se ve, y lo que se ve es la ventana.
+   `dvh` y no `vh` porque en móvil la barra del navegador entra y sale, y con `vh` la capa se quedaría corta
+   justo cuando la barra se retira. El `overflow: hidden` del lienzo la recorta a sus límites, así que la
+   decoración nunca se sale por arriba ni por abajo aunque la ventana sea más alta que el hueco.
+
+   Y POR QUÉ NO `background-attachment: fixed`, que sería lo obvio: mide los degradados contra la ventana en vez
+   de contra el elemento, lo que desbarata los tamaños en porcentaje y desalinea el láser (que se mide en `cqw`
+   del lienzo); y repinta el fondo en cada fotograma del scroll, que es caro justo donde más duele — una lista
+   larga en un móvil. ── */
+.hub-feed-lienzo-fx {
+  position: sticky;
+  top: 0;
+  height: 100dvh;
+  margin-bottom: -100dvh;
+  z-index: -1;
+  pointer-events: none;
+  overflow: hidden;
+  /* Su caja coincide en ANCHO con la del lienzo, así que un `cqw` medido aquí vale lo mismo que un 1 % de los
+     degradados de las capas de abajo. Midiendo contra el lienzo no coincidían —`cqw` descuenta el relleno— y las
+     decoraciones que se sincronizan con el fondo caían desplazadas. */
+  container-type: inline-size;
+}
+
+/* Las DOS capas de textura. Dos y no una porque varias paletas necesitan una trama quieta y algo que se mueva
+   por encima (el semitono y su destello, las estrellas y su titileo, el barrido sobre el fondo). */
+.hub-feed-lienzo-fx::before,
+.hub-feed-lienzo-fx::after {
+  content: '';
+  position: absolute;
+  pointer-events: none;
+}
+
+.hub-feed-lienzo-fx::before {
+  /* `--lz-bleed` la saca fuera de la capa para que pueda desplazarse sin descubrir el canto (Corazón rebelde). */
+  inset: var(--lz-bleed, 0);
+  background-image: var(--lz-img, none);
+  background-size: var(--lz-size, auto);
+  background-position: var(--lz-pos, 0 0);
+  background-repeat: var(--lz-rep, repeat);
+  opacity: var(--lz-img-o, 1);
+  -webkit-mask-image: var(--lz-mask, none);
+  mask-image: var(--lz-mask, none);
+  -webkit-mask-size: var(--lz-mask-size, auto);
+  mask-size: var(--lz-mask-size, auto);
+  -webkit-mask-repeat: var(--lz-mask-rep, repeat);
+  mask-repeat: var(--lz-mask-rep, repeat);
+}
+
+.hub-feed-lienzo-fx::after {
+  inset: 0;
+  background-image: var(--lz-img2, none);
+  background-size: var(--lz-size2, auto);
+  background-position: var(--lz-pos2, 0 0);
+  background-repeat: var(--lz-rep2, repeat);
+  opacity: var(--lz-img2-o, 1);
+}
+
+/* LAS RANURAS. Dos elementos vacíos para lo que no cabe en las capas de arriba: decoraciones que necesitan
+   moverse por su cuenta (el punto del láser, la estrella fugaz, el cursor del cogitador). Van ocultas salvo que
+   una paleta las encienda, así que a los temas que no las usan no les cuestan ni un píxel pintado.
+   Son anónimas a propósito: qué es cada una lo decide cada `themes/*.scss`. Ver `SocialFeedScreen`. */
+.hub-feed-lienzo-fx > i { display: none; }
+
+/* ── CLÁSICO · DOS FOCOS ──────────────────────────────────────────────────────────────────────────────────────
+   El tema por defecto no tiene skin propio (`paletteSkin.ts`), así que su lienzo vive aquí. `:not([data-palette])`
+   casa SOLO con él: la paleta por defecto es la única que no pone el atributo.
+   Un foco del acento entrando por la izquierda, detrás del texto, y otro más tenue arriba a la derecha. Laten a
+   contratiempo (11 y 8,5 s), lo justo para que el hueco se lea como una sala con dos luces y no como una mancha. */
+:root:not([data-palette]) .hub-feed-lienzo {
+  --lz-img: radial-gradient(closest-side, rgba(var(--steam-rgb), .19), transparent 72%);
+  --lz-size: 78% 300px;
+  --lz-pos: 4% 0;
+  --lz-rep: no-repeat;
+  --lz-img2: radial-gradient(closest-side, rgba(var(--steam-rgb), .14), transparent 70%);
+  --lz-size2: 62% 240px;
+  --lz-pos2: 100% 0;
+  --lz-rep2: no-repeat;
+}
+
+/* El latido es DECORACIÓN, así que cuelga de `data-effects` como la firma de cada tema: apagado, quedan los dos
+   focos quietos y el lienzo sigue haciendo su trabajo. */
+@media (prefers-reduced-motion: no-preference) {
+  :root[data-effects="on"]:not([data-palette]) .hub-feed-lienzo-fx::before { animation: lz-steam-breathe 11s ease-in-out infinite; }
+  :root[data-effects="on"]:not([data-palette]) .hub-feed-lienzo-fx::after { animation: lz-steam-breathe 8.5s ease-in-out -4s infinite; }
+}
+
+@keyframes lz-steam-breathe { 0%, 100% { opacity: .42; } 50% { opacity: 1; } }
+
 .hub-identity-hero .hub-avatar { flex: 0 0 auto; width: 2.5rem; height: 2.5rem; font-size: 1rem; }
 
 /* ═══════════════════ Micro-interacciones (efectos añadidos) ═══════════════════
