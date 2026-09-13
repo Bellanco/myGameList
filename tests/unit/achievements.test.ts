@@ -637,21 +637,28 @@ describe('las dos cifras', () => {
    */
   it('la fracción se mide contra lo que está abierto, no contra las 304', () => {
     const uno = summarize([{ id: 'completados-400', level: 1, value: 400, next: null, unlockedAt: 0 }]);
-    // Muy por debajo del catálogo: de cada escalera solo está abierto lo alcanzado y el siguiente.
+    // Muy por debajo del catálogo: sin frontera publicada, de cada escalera solo está abierto lo alcanzado y el
+    // siguiente (ver abajo: sin documento manda el progreso propio, que es el comportamiento de siempre).
     expect(uno.total).toBeLessThan(SCORING_ACHIEVEMENTS.length / 2);
 
-    // Y CRECE CUANDO LA COMUNIDAD ABRE. La frontera va en una escalera donde quien mira NO tiene nada —si fuera
-    // por debajo de su propio progreso no cambiaría nada, porque uno abre con lo suyo—: de «Guerra de consolas»
-    // solo estaría abierto el primer escalón, y con alguien que ha llegado al 12 se abren seis.
+    // Y CRECE CUANDO LA COMUNIDAD ABRE: con alguien que ha llegado al 12 de «Guerra de consolas» se abren seis
+    // escalones de esa escalera para todo el mundo, tenga lo que tenga quien mira.
+    const abierta = { plataformas: 'plataformas-12' };
+    expect(summarize([], abierta).total).toBeGreaterThan(summarize([], { plataformas: 'plataformas-1' }).total);
+
+    // Y CON LA FRONTERA PUBLICADA EL DENOMINADOR YA NO DEPENDE DE QUIÉN MIRA: el mismo número para quien lleva
+    // un logro raro y para quien no lleva ninguno. Es lo que hacía que tres fichas del mismo catálogo, medidas
+    // en la misma pantalla, dijeran «de 255», «de 253» y «de 251».
     const conApertura = summarize(
       [{ id: 'completados-400', level: 1, value: 400, next: null, unlockedAt: 0 }],
-      { plataformas: 'plataformas-12' },
+      abierta,
     );
-    expect(conApertura.total).toBeGreaterThan(uno.total);
+    expect(conApertura.total).toBe(summarize([], abierta).total);
     // El numerador no se mueve: sigue teniendo un solo logro.
     expect(conApertura.earned).toBe(1);
 
-    // LO CONSEGUIDO CUENTA SIEMPRE, esté abierto o no: un logro que tienes y no sale ni arriba ni abajo no existe.
+    // LO CONSEGUIDO CUENTA SIEMPRE ARRIBA, esté abierto o no: un logro que tienes y no sale en el numerador no
+    // existe, y la cabecera tiene que cuadrar con las medallas que la lista enseña debajo.
     expect(uno.earned).toBe(1);
   });
 

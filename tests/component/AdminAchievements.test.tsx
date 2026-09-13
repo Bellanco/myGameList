@@ -233,6 +233,27 @@ describe('catálogo de logros — la vista de revisión del panel de administrac
       expect(screen.queryByRole('button', { name: A.frontierPublish })).not.toBeInTheDocument();
     });
 
+    /**
+     * PUBLICAR NO CIERRA NADA, y es lo que hacía. La medición sale de los espejos del CENSO, pero la frontera
+     * publicada la adelanta además cada cliente al conseguir un escalón (`advanceOpenFrontier`), así que va de
+     * suyo que llegue más lejos que lo que se mide aquí. Escribiendo la medición encima, pulsar el botón
+     * retrocedía la línea y cerraba escalones que ya estaban abiertos para todo el mundo.
+     */
+    it('con la publicada por delante de la medición no ofrece publicar: la apertura solo avanza', () => {
+      render(<AdminAchievements onBack={() => {}} mirrors={mirrors} openFrontier={{ completados: 'completados-50' }} onPublishFrontier={vi.fn()} />);
+      expect(screen.getByText(A.frontierSame(1))).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: A.frontierPublish })).not.toBeInTheDocument();
+    });
+
+    /** Y lo que se publica lleva dentro lo que ya había: una escalera abierta por otra vía no se pierde. */
+    it('publica la medición FUSIONADA con lo que ya estaba abierto', async () => {
+      const onPublishFrontier = vi.fn().mockResolvedValue(undefined);
+      render(<AdminAchievements onBack={() => {}} mirrors={mirrors} openFrontier={{ plataformas: 'plataformas-5' }} onPublishFrontier={onPublishFrontier} />);
+
+      await userEvent.click(screen.getByRole('button', { name: A.frontierPublish }));
+      expect(onPublishFrontier).toHaveBeenCalledWith({ plataformas: 'plataformas-5', completados: 'completados-25' });
+    });
+
     it('sin espejos no hay nada que abrir, y se dice', () => {
       render(<AdminAchievements onBack={() => {}} onPublishFrontier={vi.fn()} />);
       expect(screen.getByText(A.frontierNone)).toBeInTheDocument();

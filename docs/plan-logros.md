@@ -675,6 +675,22 @@ Y el denominador tiene sus propias reglas, porque si baila la cifra miente:
   decisión, y por eso la regla de Firestore deja escribir `open` a cualquiera con sesión (solo hacia delante, y
   sin tocar `hidden`, que sí es decisión del administrador). A cambio de todo esto el denominador crece solo:
   tu porcentaje puede bajar sin que toques nada, porque alguien abrió un escalón nuevo.
+  ⚑ **Y el denominador NO lo mueve quien mira** (13-sep-2026). La cifra salía de `openThrough(steps, open,
+  isEarned)`, es decir, de la frontera publicada **fusionada con el progreso de la persona medida**: quien tenía
+  logros que la publicación todavía no recogía —la ventana entre conseguir algo y que su apertura llegue a los
+  demás— se abría esos escalones y su zanahoria, y se los sumaba a su propio total. Tres fichas medidas por el
+  mismo cliente, en la misma pantalla, decían **«121/255», «56/253» y «66/251»** del mismo catálogo: el que iba
+  en cabeza contaba sobre un catálogo más grande justo por ir en cabeza, que es lo contrario de lo que promete
+  el párrafo de arriba. Ahora el denominador sale **solo de la frontera publicada**: son los escalones que no
+  están *cerrados para todos*, y es el mismo número para cualquiera. Dos consecuencias que van con la decisión:
+  - **Sin documento publicado manda el progreso propio**, como siempre: sin sesión, sin red o en el primer
+    fotograma antes de que llegue la lectura no hay nada «cerrado para todos» que aplicar, y abrir solo el primer
+    escalón de cada escalera daría un «121 de 64». Es el mismo lado seguro que aplica `hidden`.
+  - **Lo conseguido cuenta siempre ARRIBA, con tope.** La cabecera tiene que cuadrar con las medallas que la
+    lista enseña debajo, así que en esa ventana hay medallas contadas en el numerador cuyo escalón aún no está
+    abierto en el denominador («122/251»); si llegaran a pasarlo, el total sube hasta igualarlas, que es la única
+    forma de que la fracción no se lea nunca como un error.
+
   ⚑ **Y lo cerrado tampoco se PINTA en ninguna parte**, que es la otra mitad de la misma regla: si un escalón no
   cuenta porque nadie lo ha visto, tampoco puede aparecer en una lista. El listado (`listForScreen`) y la
   fracción (`summarize`) ya lo cumplían, pero los **logros globales** del hub recorrían el catálogo entero y

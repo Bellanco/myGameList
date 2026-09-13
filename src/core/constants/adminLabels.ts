@@ -483,11 +483,16 @@ export const ADMIN_ACHIEVEMENTS_UI = {
    * LA APERTURA COMUNITARIA, que es lo único de esta pantalla que decide lo que ve la gente sin que nadie pulse
    * un interruptor. Se publica a mano y no al abrir el panel: es una escritura que cambia el listado de todo el
    * mundo, y hacerla sola por el hecho de mirar sería exactamente lo que no debe pasar.
+   *
+   * EL TEXTO DICE QUE SOLO AVANZA, y no es un adorno tranquilizador: lo que se publica es la medición FUSIONADA
+   * con lo que ya había, así que pulsar el botón no puede cerrarle a nadie un escalón que ya tenía abierto. Antes
+   * escribía la medición encima —y la medición sale de los espejos del censo, que van por detrás de lo que cada
+   * cliente abre por su cuenta—, así que publicar podía hacer retroceder la línea.
    */
   frontierTitle: 'Apertura de las escaleras',
   frontierNone: 'Sin espejos que medir, así que no hay nada que abrir: cada usuario ve hasta donde llegue su propio progreso, que es el comportamiento de siempre.',
   frontierSame: (ladders: number) => `Publicada y al día: ${ladders === 1 ? '1 escalera abierta' : `${ladders} escaleras abiertas`} por lo que ha alcanzado la gente.`,
-  frontierStale: (ladders: number) => `La medición de ahora abre ${ladders === 1 ? '1 escalera' : `${ladders} escaleras`} y no es la que está publicada: hasta que se publique, la gente ve la anterior.`,
+  frontierStale: (ladders: number) => `La medición de ahora llega más lejos que lo publicado: al publicarla quedarán ${ladders === 1 ? '1 escalera abierta' : `${ladders} escaleras abiertas`}. Solo avanza; ningún escalón ya abierto se cierra.`,
   /**
    * BORRAR TODAS LAS VITRINAS. Es la acción más destructiva de esta pantalla y la única que toca a todo el censo,
    * así que el texto dice qué se lleva por delante y qué NO: nadie pierde un logro, se pierde lo publicado.
