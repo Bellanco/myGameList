@@ -76,45 +76,11 @@
 
    z-index 90: por encima del contenido y POR DEBAJO de todo lo que debe seguir mandando — la cabecera (100), el
    botón flotante (110), la barra inferior (120), el aviso de consentimiento (130) y los modales (500). */
-.status-banner {
-  max-width: 1800px; margin: .9rem auto 0; padding: 0 1.2rem; flex: 0 0 auto; width: 100%;
-  position: sticky;
-  /* Con `top: 0` la tarjeta queda a ras del borde de la pantalla: el navegador ancla la caja de borde y se come
-     el `.9rem` que tiene en el flujo. Medio rem le devuelve el aire sin gastar alto en un móvil. */
-  top: .5rem;
-  z-index: 90;
-}
-
-.status-banner > div {
-  border: 1px solid var(--border); border-left-width: 4px;
-  background: var(--surface); border-radius: var(--radius-md);
-  padding: .8rem 1rem; box-shadow: var(--shadow); font-size: var(--fs-md);
-}
-
-.status-banner .ok   { border-left-color: var(--success); }
-
-.status-banner .warn { border-left-color: var(--warn); }
-
-.status-banner .err  { border-left-color: var(--danger); }
-
-/* Aviso de versión nueva: mismo lenguaje que el de estado (misma franja, misma tarjeta, mismo acento verde) más
-   el botón de recargar. La forma la sigue poniendo cada tema por sus tokens (--surface, --border, --radius-md). */
-.update-notice { max-width: 1800px; margin: .9rem auto 0; padding: 0 1.2rem; flex: 0 0 auto; width: 100%; }
-
-.update-notice-card {
-  display: flex; align-items: center; flex-wrap: wrap; gap: .8rem;
-  border: 1px solid var(--border); border-left: 4px solid var(--success);
-  background: var(--surface); border-radius: var(--radius-md);
-  padding: .8rem 1rem; box-shadow: var(--shadow); font-size: var(--fs-md);
-}
-
-.update-notice-text { flex: 1 1 240px; display: grid; gap: .2rem; }
-
-.update-notice-text strong { font-size: var(--fs-md); }
-
-.update-notice-text span { color: var(--text-muted); font-size: var(--fs-xs); line-height: 1.4; }
-
-.update-notice-card .btn { margin-left: auto; }
+/* ⚑ EL AVISO YA NO VIVE AQUÍ. Tenía dos franjas —una pegajosa bajo la cabecera para el de estado y otra a lo
+   ancho para el de versión nueva— y ahora los dos son cápsulas en el carril flotante de abajo a la izquierda,
+   el mismo del aviso de logro (`.ach-toast-stack` en `_capsule.scss`). Se van con ellas el `sticky` y su
+   `z-index`, que existían para resolver un problema que en el carril no se da: el aviso ya no puede nacer fuera
+   de la pantalla porque no depende de dónde esté el desplazamiento. */
 
 /* Tabs */
 .tabs {
@@ -1045,11 +1011,9 @@
 /* ═══════════════════ Micro-interacciones (efectos añadidos) ═══════════════════
    Todas con su guarda `prefers-reduced-motion` al final de este bloque. */
 
-/* Aviso de estado: entra con un leve fade+desplazamiento al aparecer (antes surgía de golpe). */
-.status-banner > div,
-.update-notice-card { animation: statusBannerIn .3s ease both; }
-
-@keyframes statusBannerIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+/* La entrada del aviso YA NO SE ANIMA AQUÍ: desde que es la cápsula del aviso de logro, la trae ella
+   (`ach-toast-in` en `_capsule.scss`), con su guarda de `prefers-reduced-motion` incluida. Dos animaciones
+   distintas para la misma pieza según dónde esté era exactamente lo que se venía a quitar. */
 
 /* Pestañas: subrayado que se desliza bajo la activa (posición y ancho los fija TabBar por JS). */
 /* Pegado al borde inferior POR DENTRO (antes `bottom: -1px`): asomando 1px generaba desbordamiento vertical
@@ -1100,8 +1064,6 @@
 .hub-feed-empty { animation: emptyIn .5s ease both; }
 
 @media (prefers-reduced-motion: reduce) {
-  .status-banner > div,
-  .update-notice-card,
   .hub-feed-activity-item,
   .hub-requests-count.is-active,
   .hub-friend-chip,
@@ -1821,8 +1783,6 @@
 /* El editor de perfil va siempre a una columna: los bloques comparten la MISMA anchura. */
 
 @media (min-width:1957px) {
-  .status-banner,
-  .update-notice,
   .main {
     max-width: 92vw;
   }

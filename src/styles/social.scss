@@ -59,37 +59,18 @@
 .hub-gateway-consent-check:focus-within { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
 
 
-// Aviso de SIN CONEXIÓN del espacio social. Mismo lenguaje que el requisito de alta del perfil
-// (`.hub-profile-requirement`): banda ámbar de aviso, borde fino y dos líneas con distinto peso —el guiño del tema
-// y, debajo, qué está pasando—. No es un error, así que no toma el rojo; y la forma (radio, color, tipografía) sale
-// de las variables, que es lo que cada tema redefine.
-.hub-offline {
-  margin: 0;
-  padding: .6rem .75rem;
-  border-radius: var(--radius-sm);
-  background: color-mix(in srgb, var(--warn) 10%, transparent);
-  border: 1px solid color-mix(in srgb, var(--warn) 34%, transparent);
-}
-
-.hub-offline-lead {
-  margin: 0;
-  display: flex; align-items: center; gap: .45rem;
-  font-weight: 700;
-  color: var(--fg-amber);
-}
-
-.hub-offline-lead .ui-icon { flex: 0 0 auto; }
-
-.hub-offline-body {
-  margin: .25rem 0 0;
-  font-size: var(--fs-xs);
-  color: var(--text-muted);
-}
+// El aviso de SIN CONEXIÓN y el de REQUISITO DE ALTA del perfil ya no se pintan aquí: los dos eran la misma banda
+// ámbar escrita dos veces, y ahora son `.notice.is-inline` (ver `_notice.scss`), que va en el bundle base. No
+// puede vivir en esta hoja: `social.scss` viaja en el chunk perezoso del hub y el aviso de estado de la app lo
+// necesita desde el arranque.
 
 /* ── Rediseño "Mi perfil social" (edición): pasos numerados, hero de identidad y chip de estado ── */
 .hub-block-head { display: flex; align-items: center; gap: .55rem; }
 
 .hub-block-head h3 { margin: 0; }
+
+/* Lo que se va al extremo del renglón del título (hoy, el sello de rango). */
+.hub-block-head-end { margin-left: auto; }
 
 .hub-block-step {
   flex: 0 0 auto;
@@ -105,16 +86,10 @@
 
 .hub-identity-hero .finput { flex: 1; min-width: 0; }
 
-/* Requisito de alta sin cumplir (sin juegos completados): explica por qué "Guardar perfil" está deshabilitado. */
-.hub-profile-requirement {
-  margin: .6rem 0 0;
-  padding: .55rem .7rem;
-  border-radius: var(--radius-sm);
-  background: color-mix(in srgb, var(--warn) 12%, transparent);
-  border: 1px solid color-mix(in srgb, var(--warn) 38%, transparent);
-  color: var(--fg-amber);
-  font-size: var(--fs-xs);
-}
+/* Requisito de alta sin cumplir (sin juegos completados, sin foto propia, sin pestañas en el feed): explica por
+   qué está bloqueado lo de al lado. Es `.notice.is-inline`; aquí solo se le da el aire que le toca dentro del
+   bloque, que es lo único que no sabe el aviso. */
+.hub-profile-block .ach-toast.is-compact { margin: .6rem 0 0; }
 
 .hub-profile-sync-chip {
   margin-left: auto;

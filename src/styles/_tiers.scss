@@ -14,6 +14,58 @@
 .tier-gold    { --tier: #ffc107; }
 .tier-mithril { --tier: #22d3ee; }
 
+/* ═══════════════════════════════════════════════════════════════════════════════════════════════════════════
+   EL SELLO DE RANGO · la tercera forma de decir lo mismo, y la única que se lee sin saber el código de colores
+   ═══════════════════════════════════════════════════════════════════════════════════════════════════════════
+   El rango ya se veía en dos sitios, y en los dos SOLO COMO COLOR: la muesca de la tarjeta de persona (abajo) y
+   el borde del selector del panel de administración. Funciona ahí porque son rejillas donde lo que importa es
+   recorrer y comparar. Pero en una PÁGINA DE PERFIL —la tuya o la de alguien— no hay nada con lo que comparar:
+   un topo de color en la esquina no dice «oro», dice «hay algo naranja». Por eso el sello escribe el nombre.
+
+   ES UNA PÍLDORA, NO UN DISCO, y esto es deliberado: en el hero del perfil el sello convive con la TIRA DE
+   MEDALLAS de los logros, que son discos en penumbra con el filo templado en cobre, plata y oro. Dos juegos de
+   metales a un centímetro uno del otro se confunden —lo avisa `docs/logros/receta-medalla.md`—, así que el
+   rango se queda en una forma que la medalla nunca usa: píldora teñida, disco pequeño y plano, y la palabra.
+   La medalla tiene dibujo y penumbra; el sello, color y nombre. No se pisan.
+
+   El disco lleva su canto de luz para que lea como metal y no como un punto de color. */
+.tier-seal {
+  display: inline-flex;
+  align-items: center;
+  gap: .4rem;
+  padding: .22rem .6rem .22rem .32rem;
+  border-radius: var(--radius-pill);
+  border: 1px solid color-mix(in srgb, var(--tier, var(--text-dim)) 38%, transparent);
+  background: color-mix(in srgb, var(--tier, var(--text-dim)) 12%, transparent);
+  font-family: var(--font-label, inherit);
+  font-size: var(--fs-2xs);
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  /* La PALABRA va en tinta normal, no en el metal: el oro y el mithril sobre su propio tinte no llegan a 4,5:1
+     en claro, y aquí el texto es la señal principal. El color lo pone el disco, que es gráfico (3:1). */
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.tier-seal-disc {
+  width: .85rem;
+  height: .85rem;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: var(--tier, var(--text-dim));
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, #fff 55%, transparent),
+    0 0 0 1px color-mix(in srgb, var(--tier, var(--text-dim)) 45%, transparent);
+}
+
+/* El mithril respira, igual que en la muesca: es el único rango irrepetible de la casa. */
+.tier-seal.tier-mithril .tier-seal-disc { animation: tier-mithril-pulse 2.8s ease-in-out infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  .tier-seal.tier-mithril .tier-seal-disc { animation: none; }
+}
+
 /* El contenedor de la marca es la tarjeta de PERSONA (`.hub-user-card`), que ya se posiciona en `social.scss`:
    la marca solo existe ahí —directorio y bandeja— y no hay por qué tocar el resto del feed. */
 

@@ -132,7 +132,20 @@ Doce pasos, razón ≈1,08 en la zona de interfaz. Multiplicados por `--font-sca
   para género y estado.
 - **Fila de tabla**: sin caja. La separa `--hair`; el color entra por un **lomo de 3 px** a la izquierda.
 - **Anillo de nota**: `conic-gradient` con la rampa roja→verde (`--acc-l` fija la luminosidad por tema).
-- **Sello/medalla**: disco en penumbra con el color del rango; receta en `docs/logros/receta-medalla.md`.
+- **Medalla**: disco en penumbra con dibujo de Lucide en oro; receta en `docs/logros/receta-medalla.md`.
+- **Cápsula** (`.ach-toast`, `_capsule.scss`): la pieza con la que la app dice algo. Disco a la izquierda +
+  rótulo / nombre / descripción, radio = media altura, anillo y halo de color, barrido bajo `data-effects`. Tres
+  inquilinos: el **logro** (disco = medalla, halo = rareza), el **aviso del administrador** (disco = icono, halo =
+  acento) y el **aviso de la app** (disco = icono del tono, halo = tono). Los skins de paleta cuelgan de
+  `.ach-toast`, así que la forma de cada tema sale sola.
+- **Aviso** (`.ach-toast.is-notice`): **uno solo** para los cuatro sitios que avisan (estado, versión nueva, sin
+  conexión del hub, requisito del perfil). Los dos primeros viven en el **carril flotante** de abajo a la
+  izquierda (`.ach-toast-stack`, que monta `App` una vez para las tres cápsulas); los del hub van `is-compact`
+  dentro de su bloque. Cada tono lleva dos colores: el `-rgb` para el gráfico (3:1) y la ficha `--fg-*` para el
+  texto (4,5:1). El `role`/`aria-live` lo pone quien lo usa, no la pieza.
+- **Sello de rango** (`.tier-seal`): el rango del perfil dicho con color **y palabra**. Píldora con disco del
+  metal, deliberadamente distinta de la medalla, con la que convive en el hero del perfil. El color solo (muesca
+  de la tarjeta del directorio, borde del selector de admin) vale para comparar en rejilla, no para informar.
 - **Estados vacíos**: icono grande del sprite + título + una acción. Nunca un párrafo gris suelto.
 - **Iconos**: sprite propio de 49 símbolos (`IconSprite`), `<Icon name="…" />`. Tamaño por ficha
   (`--ico-xs`…`--ico-2xl`), color por papel — no siempre `currentColor`.

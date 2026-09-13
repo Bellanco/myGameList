@@ -1,4 +1,4 @@
-import { Icon } from '../Icon';
+import { Notice } from '../Notice';
 import { SOCIAL_UI } from '../../../core/constants/socialLabels';
 import { usePalette } from '../../hooks/usePalette';
 
@@ -19,14 +19,16 @@ export function HubOfflineNotice({ hasCachedData }: { hasCachedData: boolean }) 
   const { palette } = usePalette();
 
   return (
-    <div className="hub-offline" role="status" aria-label={SOCIAL_UI.offline.sectionAria}>
-      <p className="hub-offline-lead">
-        <Icon name="cloud-sync" />
-        {SOCIAL_UI.offline.leadByPalette[palette]}
-      </p>
-      <p className="hub-offline-body">
-        {hasCachedData ? SOCIAL_UI.offline.body : SOCIAL_UI.offline.bodyEmpty}
-      </p>
-    </div>
+    <Notice
+      inline
+      tone="warn"
+      icon="cloud-sync"
+      role="status"
+      aria-label={SOCIAL_UI.offline.sectionAria}
+      kicker={SOCIAL_UI.offline.badge}
+      title={SOCIAL_UI.offline.leadByPalette[palette]}
+    >
+      {hasCachedData ? SOCIAL_UI.offline.body : SOCIAL_UI.offline.bodyEmpty}
+    </Notice>
   );
 }

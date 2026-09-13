@@ -133,8 +133,12 @@ export function AchievementToast({ flash, onDone, onOpen }: AchievementToastProp
       ? ACHIEVEMENTS_UI.toastWaiting
       : percent >= NEAR_PERCENT ? ACHIEVEMENTS_UI.toastNear : ACHIEVEMENTS_UI.toastHalf;
 
+  /* EL CARRIL YA NO ES SUYO: lo monta `App` una sola vez (`.ach-toast-stack`) y ahí conviven las tres cápsulas
+     —el logro, el aviso del administrador y el aviso de la app—. Cuando cada una traía el suyo, dos carriles
+     fijos caían en el mismo sitio y se superponían; y desde que el aviso de estado vive aquí, la coincidencia es
+     de todos los días: guardar un juego puede conceder un logro y sacar los dos a la vez. */
   return (
-    <div className="ach-toast-stack">
+    <>
       <AchievementSprite />
       {/* La rareza va en la clase y de ahí sale la sombra. Un HITO no la lleva: aún no se ha conseguido, así que
           se queda con el peltre por defecto, igual que su medalla. */}
@@ -193,6 +197,6 @@ export function AchievementToast({ flash, onDone, onOpen }: AchievementToastProp
           </span>
         </button>
       </div>
-    </div>
+    </>
   );
 }
