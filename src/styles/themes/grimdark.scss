@@ -392,13 +392,13 @@
 :root[data-palette="grimdark"] .hub-feed-lienzo {
   --lz-radius: 0;
   --lz-bg: color-mix(in srgb, #02150a 55%, transparent);
-  /* Las scanlines se repiten por todo el alto (eso da continuidad con la lista larga); el resplandor de
-     fósforo va acotado y anclado arriba, o con la lista llena se volvía un tinte verde plano de dos mil px. */
+  /* Las scanlines se repiten por todo el alto (eso da continuidad con la lista larga); el resplandor de fósforo
+     ocupa la capa entera, que es una pantalla. */
   --lz-img:
     repeating-linear-gradient(0deg, rgba(0, 0, 0, .34) 0 1px, transparent 1px 3px),
     radial-gradient(closest-side, rgba(67, 245, 88, .1), transparent 72%);
-  --lz-size: auto, 95% 260px;
-  --lz-pos: 0 0, 50% 0;
+  --lz-size: auto, 95% 100%;
+  --lz-pos: 0 0, 50% 50%;
   --lz-rep: repeat, no-repeat;
   --lz-edge: 1px solid color-mix(in srgb, var(--grim-gold) 45%, transparent);
 }
