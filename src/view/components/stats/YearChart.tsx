@@ -13,8 +13,16 @@ const AXIS_LABELS = 8;
 const H = 100;
 /** Aire por arriba, para que el punto más alto no se coma el borde ni su rótulo. */
 const TOP_ROOM = 12;
-/** Aire mínimo entre dos rótulos vecinos, en píxeles: por debajo de esto se leen como si fueran uno solo. */
-const LABEL_GAP = 6;
+/**
+ * Aire mínimo entre dos rótulos vecinos, en píxeles: por debajo de esto se leen como si fueran uno solo.
+ *
+ * Es un TERCIO de cuerpo escaso, y lo es a propósito. Con ocho años en un móvil, el paso entre dos años del eje
+ * es de unos 36 px y un año de cuatro cifras ocupa entre 26 y 31 según la tipografía del tema y según cómo
+ * redondee los glifos el sistema —el mismo año mide 28 px en macOS y 30 en el Linux de la integración—. Pidiendo
+ * medio cuerpo de aire, la misma figura que cabía holgada en un aparato perdía un año en otro por menos de un
+ * píxel. Con este margen el reparto lo decide el sitio de verdad, no el redondeo del rasterizador.
+ */
+const LABEL_GAP = 4;
 /** Lo que sube un rótulo fijo cuando no cabe donde le toca, en proporción a su propia altura. */
 const LABEL_LIFT = 1.15;
 /** Y lo que baja si tampoco cabe arriba: al otro lado de su punto. Las dos medidas van con el CSS de la mano. */
