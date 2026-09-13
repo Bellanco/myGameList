@@ -33,6 +33,7 @@ export function SocialProfileScreen({
   showPhoto,
   setShowPhoto,
   ownPhotoURL,
+  ownVisiblePhotoURL,
   ownPhotoIsGeneric,
 }: {
   SOCIAL_UI: SocialUiLabels;
@@ -59,6 +60,15 @@ export function SocialProfileScreen({
   showPhoto?: boolean;
   setShowPhoto?: (value: boolean) => void;
   ownPhotoURL?: string;
+  /**
+   * La cara propia YA RESUELTA por el interruptor (`ownPublishablePhoto`), que es la que se pinta. Es la MISMA que
+   * usa la cabecera del hub: la regla vive en el ViewModel y no repetida en cada pantalla, que es lo que dejaba a
+   * las dos diciendo cosas distintas —aquí la silueta, allí tu cara— con el interruptor apagado.
+   *
+   * El avatar no puede salir de `ownPhotoURL`: ese sigue crudo porque abajo hay que distinguir "tu cuenta no tiene
+   * foto" de "lo que tiene es el monograma de Google", y para eso hace falta la URL tal cual.
+   */
+  ownVisiblePhotoURL?: string;
   /** ¿Esa foto es el avatar genérico de Google (el monograma)? Ver `core/social/googlePhoto`. */
   ownPhotoIsGeneric?: boolean;
 }) {
@@ -138,7 +148,7 @@ export function SocialProfileScreen({
             <p>{SOCIAL_UI.profile.identityDescription}</p>
             <label className="flabel" htmlFor="hub-profile-name">{SOCIAL_UI.profile.nameLabel}</label>
             <div className="hub-identity-hero">
-              <HubAvatar photoURL={showPhoto !== false ? ownPhotoURL : undefined} />
+              <HubAvatar photoURL={ownVisiblePhotoURL} />
               <input
                 id="hub-profile-name"
                 className="finput"
