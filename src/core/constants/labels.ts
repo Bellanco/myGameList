@@ -238,6 +238,9 @@ export const UI_MESSAGES = {
     'shared-review': 'Reseña compartida',
   },
   skipToContent: 'Saltar al contenido',
+  // Lo que se ANUNCIA mientras baja el chunk de una pantalla. El esqueleto que se ve es decorativo
+  // (`aria-hidden`), así que sin esto un lector de pantalla no tendría forma de saber que hay algo en camino.
+  screenLoading: 'Cargando la pantalla...',
   // Los dos botones flotantes del listado son solo icono: el `aria-label` los nombra para un lector de pantalla y
   // el mismo texto va en `title` para que quien usa el ratón sepa qué hace cada uno al pasar por encima.
   fab: {

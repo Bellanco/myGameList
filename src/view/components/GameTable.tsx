@@ -1,4 +1,4 @@
-import { Fragment, memo, useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useVirtualizer, useWindowVirtualizer } from '@tanstack/react-virtual';
 import { COMMON_ICONS, TAB_ICONS } from '../../core/constants/icons';
 import { TAB_TITLES, UI_MESSAGES } from '../../core/constants/labels';
@@ -32,6 +32,8 @@ interface GameTableProps {
   onSort?: (tab: TabId, column: string) => void;
   /** Id del juego recién guardado (añadido/editado): su fila destella brevemente para localizar el cambio. */
   recentlyChangedId?: number | null;
+  /** Id del juego que se está ELIMINANDO: su fila se desvanece antes de que el borrado llegue a los datos. */
+  removingId?: number | null;
   visibility?: {
     showYears?: boolean;
     showReplayable?: boolean;
@@ -150,6 +152,53 @@ function renderBooleanBadge(type: 'replayable' | 'retry', value: boolean) {
   );
 }
 
+/* Cuántas filas nuevas como mucho se animan a la vez. Una o dos son "acabo de añadir un juego"; treinta son una
+   importación o un cambio de filtro, y treinta filas deslizándose a la vez no es una confirmación, es un mareo. */
+const MAX_ENTERING_ROWS = 4;
+/* Lo que se tarda en olvidar que una fila era nueva. Un pelo más que la animación (`rowEnter`, 260 ms) para que
+   no se corte si el navegador va justo de fotogramas. */
+const ENTERING_CLEAR_MS = 400;
+
+/**
+ * Ids de los juegos que ACABAN DE LLEGAR a la lista que se está viendo.
+ *
+ * Se calcula comparando con los ids del render anterior, y no se pasa desde fuera, porque a un listado se llega
+ * por muchas puertas —guardar en el formulario, graduar un importado, la ruleta, "añadir a próximos" desde el
+ * perfil de otra persona, mover de lista— y todas acaban en lo mismo: un id que antes no estaba. Mirar el dato
+ * las cubre todas sin que ninguna tenga que acordarse de avisar.
+ *
+ * NO SE ANIMA AL CAMBIAR DE PESTAÑA: ahí los ids son otros porque la lista es otra, no porque hayan llegado; de
+ * eso se encarga la entrada de pantalla completa (`useScreenTransition`). Tampoco se anima una llegada masiva
+ * (ver `MAX_ENTERING_ROWS`).
+ *
+ * Un cambio de FILTRO sí puede devolver a la lista juegos que ya estaban en la biblioteca (borrar una letra del
+ * buscador), y esos se animan como llegadas. Es deliberado: para quien mira, esas filas acaban de aparecer.
+ */
+function useEnteringRows(games: GameItem[], currentTab: TabId): ReadonlySet<number> {
+  const [entering, setEntering] = useState<ReadonlySet<number>>(() => new Set<number>());
+  const previousRef = useRef<{ tab: TabId; ids: Set<number> } | null>(null);
+
+  useEffect(() => {
+    const ids = new Set(games.map((game) => game.id));
+    const previous = previousRef.current;
+    previousRef.current = { tab: currentTab, ids };
+
+    // Primer pintado y cambio de pestaña: no hay "antes" con el que comparar (o el de antes era otra lista).
+    if (!previous || previous.tab !== currentTab) return;
+
+    const added = [...ids].filter((id) => !previous.ids.has(id));
+    if (added.length === 0 || added.length > MAX_ENTERING_ROWS) return;
+
+    setEntering(new Set(added));
+    // Esto vuelve a disparar el efecto, pero en esa pasada `previousRef` ya tiene los mismos ids, así que no hay
+    // ninguna llegada nueva y se sale por el `return` de arriba. No hay bucle.
+    const temporizador = window.setTimeout(() => setEntering(new Set<number>()), ENTERING_CLEAR_MS);
+    return () => window.clearTimeout(temporizador);
+  }, [games, currentTab]);
+
+  return entering;
+}
+
 export const GameTable = memo(function GameTable({
   games,
   currentTab,
@@ -168,7 +217,9 @@ export const GameTable = memo(function GameTable({
   onSort,
   visibility,
   recentlyChangedId = null,
+  removingId = null,
 }: GameTableProps) {
+  const enteringIds = useEnteringRows(games, currentTab);
   const showYears = visibility?.showYears ?? true;
   const showReplayable = visibility?.showReplayable ?? true;
   const showRetry = visibility?.showRetry ?? true;
@@ -522,7 +573,7 @@ export const GameTable = memo(function GameTable({
                       key={`main-${game.id}`}
                       data-index={rowIndex}
                       ref={virtualize ? virtualizer.measureElement : undefined}
-                      className={`main-row ${row.index % 2 === 0 ? 'striped' : ''} ${game.id === recentlyChangedId ? 'just-changed' : ''}`.trim()}
+                      className={`main-row ${row.index % 2 === 0 ? 'striped' : ''} ${game.id === recentlyChangedId ? 'just-changed' : ''} ${enteringIds.has(game.id) ? 'is-entering' : ''} ${game.id === removingId ? 'is-leaving' : ''}`.replace(/\s+/g, ' ').trim()}
                       // A11y-2: el disparador accesible es el botón de la 1ª celda (anunciado como botón + aria-controls).
                       // La fila conserva click/doble-click como atajos de RATÓN, pero ya no es un control focusable.
                       onClick={() => onExpandedChange(expanded ? null : game.id)}
@@ -610,7 +661,7 @@ export const GameTable = memo(function GameTable({
                 const reviewLines = game.review ? game.review.split('\n') : [];
 
                 return (
-                  <tr key={`detail-${game.id}`} id={`game-detail-${game.id}`} data-index={rowIndex} ref={virtualize ? virtualizer.measureElement : undefined} className="detail-row open">
+                  <tr key={`detail-${game.id}`} id={`game-detail-${game.id}`} data-index={rowIndex} ref={virtualize ? virtualizer.measureElement : undefined} className={`detail-row open ${game.id === removingId ? 'is-leaving' : ''}`.trim()}>
                     <td colSpan={getColSpan(currentTab)}>
                       <div className="detail-content">
                         <div className="detail-box">
