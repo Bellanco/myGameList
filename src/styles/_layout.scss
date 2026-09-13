@@ -1501,11 +1501,19 @@
   display: flex;
   align-items: center;
   gap: .6rem;
+  min-width: 0;
 }
 
+/* EL BLOQUE DE TEXTO NO PUEDE SER MÁS ANCHO QUE SU TARJETA, y aquí hace falta decirlo con `max-width` y no con
+   `min-width: 0`: esta cabecera se apila EN COLUMNA (`.hub-feed-card header`, avatar arriba y texto debajo), así
+   que el ancho es el eje TRANSVERSAL y con `align-items: center` cada hijo se dimensiona por su contenido. La
+   etiqueta del juego va en una sola línea, de modo que su contenido mide lo que mida el título: «Like a Dragon
+   Gaiden: The Man Who Erased His Name» estiraba este bloque hasta 320 px dentro de una tarjeta de 253 y se salía
+   por los dos lados, sin que su `text-overflow` llegara a entrar nunca. */
 .hub-feed-card-head-text {
   flex: 1 1 auto;
   min-width: 0;
+  max-width: 100%;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -1597,6 +1605,42 @@
 }
 
 .hub-skeleton-card { cursor: default; }
+
+/* ══ EL RENGLÓN DE CABECERA DE UNA RESEÑA · cuándo y cuánto ════════════════════════════════════════════════
+   La nota ocupaba una fila entera para ella sola en medio de la tarjeta. Aquí comparte renglón con la fecha —la
+   fecha a la izquierda, la nota al extremo—, que es donde se lee sin robarle sitio al texto de la reseña. Vale
+   igual para las dos escalas: el aro de nota y las cinco estrellas se alinean por su centro con el renglón.
+   NO ENVUELVE, y eso es lo importante en móvil: con `flex-wrap` la nota se iba a una línea nueva ella sola —el
+   problema que se venía a arreglar, pero más abajo—. Lo que cede es la FECHA, que parte en dos líneas si hace
+   falta mientras la nota se queda al extremo, encajada en el mismo bloque. */
+.hub-feed-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: nowrap;
+  gap: .7rem;
+  min-width: 0;
+}
+
+.hub-feed-meta > .hub-feed-date {
+  margin: 0;
+  min-width: 0;
+  flex: 1 1 auto;
+  /* Que envuelva: varias paletas visten esta fecha de cinta y alguna la deja en una sola línea. */
+  white-space: normal;
+}
+
+/* El aro, un punto más pequeño que en la tabla: aquí acompaña a un renglón de texto pequeño, y con su tamaño de
+   serie era él quien decidía el alto de la fila. */
+.hub-feed-meta .score-ring {
+  --sz: 1.95rem;
+  margin-left: auto;
+}
+
+.hub-feed-meta .stars {
+  margin-left: auto;
+  font-size: var(--fs-sm);
+}
 
 .hub-feed-review-text {
   margin: 0;
