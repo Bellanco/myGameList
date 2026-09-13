@@ -27,7 +27,7 @@
   text-align: left;
 }
 
-.hub-gateway-consent p { color: var(--text-muted); font-size: .85rem; line-height: 1.4; margin: 0; }
+.hub-gateway-consent p { color: var(--text-muted); font-size: var(--fs-sm); line-height: 1.4; margin: 0; }
 
 /* La casilla es la acción de la pantalla: se presenta como una fila pulsable (no un check suelto perdido en el
    texto), con el acento del tema y área de toque cómoda en móvil. */
@@ -168,7 +168,7 @@
   min-width: 0;
   display: inline-flex; align-items: center; justify-content: center; gap: .4rem;
   border: none; background: transparent;
-  color: var(--text-muted); font: inherit; font-weight: 700; font-size: .82rem;
+  color: var(--text-muted); font: inherit; font-weight: 700; font-size: var(--fs-xs);
   padding: .5rem .95rem; border-radius: var(--radius-pill);
   cursor: pointer; white-space: nowrap;
   transition: color .22s ease;
@@ -202,7 +202,7 @@
 
 .hub-games-solo { display: inline-flex; align-items: center; gap: .55rem; }
 
-.hub-games-solo-label { font-size: .95rem; font-weight: 800; color: var(--hub-text); }
+.hub-games-solo-label { font-size: var(--fs-md); font-weight: 800; color: var(--hub-text); }
 
 @media (prefers-reduced-motion: reduce) {
   .hub-seg-ind { transition: none; }
@@ -581,13 +581,13 @@ button.hub-chip.active {
   flex: 1 1 auto;
   min-width: 0;
   padding: .32rem .55rem;
-  font-size: .78rem;
+  font-size: var(--fs-xs);
   gap: .3rem;
 }
 
-.hub-user-card-actions .btn .ui-icon { width: .9rem; height: .9rem; }
+.hub-user-card-actions .btn .ui-icon { width: var(--ico-sm); height: var(--ico-sm); }
 
-.hub-user-card-actions .hub-friend-chip { font-size: .74rem; }
+.hub-user-card-actions .hub-friend-chip { font-size: var(--fs-2xs); }
 
 /* Tarjeta con una acción en curso (aceptar / rechazar / retirar / dejar de ser amigos): se atenúa y muestra un
    spinner, feedback uniforme para las cinco listas. Sustituye a `.hub-request-item.is-busy`, que solo existía en
@@ -625,7 +625,7 @@ button.hub-chip.active {
   }
 
   /* Los que conservan texto encogen la letra en vez de la caja. */
-  .hub-user-card-actions .btn { font-size: .72rem; }
+  .hub-user-card-actions .btn { font-size: var(--fs-2xs); }
 }
 
 /* Recuento junto al título de cada sección. */

@@ -9,12 +9,12 @@ import type {
   SocialFeedDayGroup,
   SocialFeedItem,
 } from '../../../viewmodel/useSocialViewModel';
+import { AchievementStrip } from '../stats/AchievementStrip';
 import { HubStatus } from './HubStatus';
 import { PostBody } from './PostText';
 import { HubAvatar } from './HubAvatar';
 import { HubOfflineNotice } from './HubOfflineNotice';
 import { FeedShell } from './FeedShell';
-import { AchievementStrip } from '../stats/AchievementStrip';
 import { AchievementSprite } from '../AchievementSprite';
 
 /**
@@ -25,7 +25,6 @@ import { AchievementSprite } from '../AchievementSprite';
  * queda dentro no es arbitrario —`buildAchievementFeed` ordena el día por rareza—, así que el recorte se lleva
  * lo más común y deja lo que de verdad es noticia.
  */
-const FEED_MEDALS = 5;
 
 /**
  * Cuántas variantes decorativas puede pedir el lienzo de la actividad.
@@ -44,6 +43,9 @@ import { ENABLE_ACHIEVEMENTS } from '../../../core/achievements/flags';
 import { ACHIEVEMENTS_UI } from '../../../core/constants/achievementLabels';
 
 /** Pantalla principal del feed social. */
+/** Medallas que abren el aviso de logro. Tres son las que caben en la línea sin convertirla en una tira. */
+const FEED_MEDALS = 3;
+
 function SocialFeedScreenBase({
   SOCIAL_UI,
   socialDisplayName,
@@ -344,7 +346,19 @@ function SocialFeedScreenBase({
                               nombre** lleva a otro sitio (la ficha). Con el avatar pulsable había dos destinos
                               en el mismo gesto —tocar la foto o tocar al lado hacían cosas distintas— sin nada
                               que lo anunciara. */}
-                          <HubAvatar photoURL={entry.photoURL} sizeClass="hub-avatar-xs" />
+                          {/* LA MEDALLA ABRE EL AVISO, y es la única marca del feed: no una estrella genérica,
+                              sino el sello del logro conseguido —el mismo dibujo que se ve en la pantalla de
+                              logros y en la ficha—. Con varios se enseñan hasta TRES: a partir de ahí la línea
+                              deja de ser una frase y el nombre ya dice cuántos son. Decorativa: los nombres
+                              completos van en el `aria-label` de la tarjeta. */}
+                          <span className="hub-feed-event-medals">
+                            <AchievementStrip
+                              items={entry.items.map((item) => ({ id: item.def.id, level: item.level, date: '' }))}
+                              limit={FEED_MEDALS}
+                              size="sm"
+                              interactive={false}
+                            />
+                          </span>
                           <div className="hub-feed-ach-body">
                             <p className="hub-feed-ach-line">
                               <button
@@ -378,18 +392,9 @@ function SocialFeedScreenBase({
                               feed: quién, qué, y el sello al final. La MISMA tira que va bajo el nombre en la
                               ficha y en el panel, decorativa aquí porque la pulsable es la tarjeta entera y los
                               nombres van completos en su `aria-label` —incluidos los que la tira recorta—. */}
-                          <span className="hub-feed-ach-medals">
-                            <AchievementStrip
-                              items={entry.items.map((item) => ({
-                                id: item.def.id,
-                                level: item.level,
-                                date: '',
-                              }))}
-                              limit={FEED_MEDALS}
-                              size="sm"
-                              interactive={false}
-                            />
-                          </span>
+                          {/* LAS MEDALLAS SE QUEDAN FUERA del aviso. La tira era el tercer adorno de la misma línea —icono,
+                              foto y sellos— y el nombre del logro ya va escrito al lado; quien quiera verlas pulsa y
+                              entra en sus logros, que es lo que hace la tarjeta entera. */}
                         </article>
                       );
                     }
@@ -451,17 +456,16 @@ function SocialFeedScreenBase({
                         <article
                           key={`${entry.socialGistId}:${entry.id}`}
                           className={`hub-feed-card hub-feed-activity-item is-move ${ownershipClass}`}
+                          /* El tipo de lista viaja al CSS para que el aviso lleve el color de lo que pasó:
+                             terminar es verde, abandonar rojo, empezar el acento y añadir el cuarto tono. Es
+                             un dato que ya está aquí; sacarlo evita que la hoja tenga que adivinarlo. */
+                          data-tab={entry.tab}
                           role="listitem"
                         >
-                          <button
-                            className="hub-avatar-link"
-                            type="button"
-                            aria-label={SOCIAL_UI.feed.openProfileAria(nombreAutor)}
-                            title={SOCIAL_UI.feed.openProfileAria(nombreAutor)}
-                            onClick={() => openProfileDetail(entry.profileId)}
-                          >
-                            <HubAvatar photoURL={entry.photoURL} sizeClass="hub-avatar-xs" />
-                          </button>
+                          {/* NI ICONO NI FOTO. El aviso es una FRASE, y la frase ya lo dice todo: quién, qué
+                              hizo y con qué juego. Llevaba las dos cosas —el icono de la lista y el avatar— y
+                              entre las dos ocupaban más que el propio texto; el color del filete ya distingue
+                              terminar de abandonar. El nombre sigue siendo el enlace al perfil. */}
                           <p className="hub-feed-move-line">
                             <button
                               className="hub-name-link hub-feed-move-who"
