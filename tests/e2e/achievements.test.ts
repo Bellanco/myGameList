@@ -591,7 +591,9 @@ test.describe('logros · bibliotecas grandes y avalanchas', () => {
     // movimiento sigue viendo su logro.
     await page.emulateMedia({ reducedMotion: 'reduce' });
     await sembrarBiblioteca(page, { alBorde: 'uno' });
-    await page.addInitScript(() => document.documentElement.setAttribute('data-effects', 'off'));
+    // Se apaga como lo apaga la aplicación: RETIRANDO el atributo (`toggleRootFlag`), no poniéndolo a "off".
+    // Con el valor "off" —que el DOM real nunca tiene— este test daba por bueno un apagado que no ocurría.
+    await page.addInitScript(() => document.documentElement.removeAttribute('data-effects'));
     await page.goto('/en-curso');
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
     await page.getByRole('button', { name: /El que cruza el umbral/ }).first().click();

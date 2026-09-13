@@ -244,11 +244,16 @@
 // son más de cien a la vez. Quien apaga los efectos se lleva el disco liso: una sola pasada de oro sobre la
 // penumbra, que se lee igual de bien. Es el mismo interruptor que ya gobierna el destello del desbloqueo (§7.4),
 // no uno nuevo.
-:root[data-effects='off'] .ach-medal .ach-art { filter: none; }
-:root[data-effects='off'] .ach-medal .ach-art .ach-sh,
-:root[data-effects='off'] .ach-medal .ach-art .ach-hl { display: none; }
-:root[data-effects='off'] .ach-medal .ach-grain,
-:root[data-effects='off'] .ach-medal .ach-light { display: none; }
+/* OJO AL SELECTOR: se apaga con `:not([data-effects="on"])` y NO con `[data-effects="off"]`. Al desactivar los
+   efectos, la preferencia RETIRA el atributo (ver `toggleRootFlag` en `view/hooks/preferences.ts`), así que el
+   valor "off" no existe nunca en el DOM real y este bloque entero no llegaba a aplicarse: apagar los efectos
+   dejaba el relieve y el grano de las medallas encendidos. El e2e no lo veía porque inyectaba a mano un estado
+   que la aplicación no produce. */
+:root:not([data-effects="on"]) .ach-medal .ach-art { filter: none; }
+:root:not([data-effects="on"]) .ach-medal .ach-art .ach-sh,
+:root:not([data-effects="on"]) .ach-medal .ach-art .ach-hl { display: none; }
+:root:not([data-effects="on"]) .ach-medal .ach-grain,
+:root:not([data-effects="on"]) .ach-medal .ach-light { display: none; }
 
 @media (prefers-reduced-motion: reduce) {
   .ach-medal .ach-grain { opacity: .12; }

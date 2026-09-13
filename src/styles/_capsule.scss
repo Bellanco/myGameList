@@ -187,7 +187,10 @@
   transform: translateX(-120%);
   animation: ach-toast-sheen 900ms ease-out 120ms both;
 }
-:root[data-effects='off'] .ach-toast-sheen { display: none; }
+/* Con `:not(...on)` y no con `[data-effects='off']`: al apagar los efectos el atributo se RETIRA (ver
+   `toggleRootFlag`), así que el valor "off" no existe en el DOM y el barrido seguía cruzando la cápsula de
+   quien había pedido no verlo. Mismo arreglo que en `achievements.scss`. */
+:root:not([data-effects="on"]) .ach-toast-sheen { display: none; }
 
 @keyframes ach-toast-in { from { opacity: 0; transform: translateY(10px) scale(.98); } }
 /* ⚑ EL BARRIDO SE APAGA AL SALIR, y no solo se va. Con `overflow: hidden` en la cápsula daba igual —el propio
