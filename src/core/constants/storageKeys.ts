@@ -117,3 +117,15 @@ export const ACHIEVEMENTS_SOCIAL_KEY = 'mis-listas-achievements-social';
 // La cuenta cuelga del `id` de la campaña: publicar un aviso con `id` nuevo se lo vuelve a enseñar a todo el
 // mundo, aunque el anterior ya estuviera pulsado. Es lo que hace el botón «Volver a publicar» del panel.
 export const ANNOUNCEMENT_SEEN_KEY = 'mis-listas-announcement-seen';
+
+// El ARMAZÓN de la actividad social — ¿podía publicar esta persona la última vez que entró?
+//
+// Es una PISTA de pintado, no un permiso: sirve para que el esqueleto de la actividad reserve (o no) el hueco del
+// compositor de publicaciones, que solo existe a partir del rango plata. El rango no se sabe hasta que el hub
+// resuelve el perfil, o sea, justo después de la espera que el esqueleto está cubriendo: sin esta pista había que
+// elegir entre dos saltos, hacia abajo para quien sí publica o hacia arriba para quien no.
+//
+// Quien decide de verdad si se puede publicar sigue siendo el rango, en el hub y en el repositorio de publicación.
+// Equivocarse aquí solo cuesta un rectángulo gris de más o de menos mientras carga, así que es de dispositivo y no
+// se replica a la nube.
+export const SOCIAL_CAN_POST_KEY = 'mis-listas-social-can-post';

@@ -13,6 +13,7 @@ import { HubStatus } from './HubStatus';
 import { PostBody } from './PostText';
 import { HubAvatar } from './HubAvatar';
 import { HubOfflineNotice } from './HubOfflineNotice';
+import { FeedShell } from './FeedShell';
 import { AchievementStrip } from '../stats/AchievementStrip';
 import { AchievementSprite } from '../AchievementSprite';
 
@@ -63,6 +64,10 @@ function SocialFeedScreenBase({
 }: {
   SOCIAL_UI: SocialUiLabels;
   socialDisplayName: string;
+  /**
+   * La cara propia YA RESUELTA por el interruptor «Mostrar mi foto de perfil» (`ownPublishablePhoto`): vacía si
+   * está apagado o si lo que hay en la cuenta es el monograma de Google. No es la foto de la sesión a secas.
+   */
   ownPhotoURL: string;
   currentSocialGistId: string;
   loadingDirectory: boolean;
@@ -155,410 +160,375 @@ function SocialFeedScreenBase({
   }, [loadingDirectory, hasMoreFeed, showMoreFeed, visibleFeedCount]);
 
   return (
-    <section className="hub-hub hub-screen" aria-label={SOCIAL_UI.feed.sectionAria}>
-      {/* El sprite de las medallas, montado UNA vez por pantalla y nunca en `App.tsx` (§8.5). Aquí y no dentro de
-          cada medalla, que lo montaría treinta y ocho veces. */}
-      {ENABLE_ACHIEVEMENTS ? <AchievementSprite /> : null}
-      <div className="hub-hub-card hub-screen-card hub-feed-card-shell">
-        <header className="hub-screen-header hub-feed-header">
-          <div className="hub-feed-header-text">
-            <div className="hub-hub-title-wrap">
-              <Icon name="bottom-hub" className="hub-hub-icon" />
-              <h2>{SOCIAL_UI.feed.title}</h2>
-            </div>
-            <p>{SOCIAL_UI.feed.subtitle}</p>
-          </div>
-          <button
-            className="hub-avatar-link hub-feed-owner-avatar"
-            type="button"
-            aria-label={SOCIAL_UI.feed.openOwnProfile}
-            title={socialDisplayName || SOCIAL_UI.feed.openOwnProfile}
-            onClick={onOpenOwnProfile}
-          >
-            <HubAvatar photoURL={ownPhotoURL} />
-          </button>
-        </header>
-        <div className="hub-screen-actions hub-screen-actions-split" aria-label={SOCIAL_UI.feed.actionsAria}>
-          <div className="hub-screen-actions-left">
-            <button className="btn btn-secondary btn-accent" type="button" onClick={onOpenProfiles}>
-              <Icon name="bottom-hub" />
-              {SOCIAL_UI.feed.openProfiles}
-            </button>
+    /* El ARMAZÓN —cabecera, fila de botones y hueco del compositor— lo pinta `FeedShell`, que es el MISMO
+       componente que usa el esqueleto de carga (`SocialHubSkeleton`). Vivía aquí escrito a mano, y el esqueleto
+       pintaba otra cosa más corta: al llegar este chunk aparecían de golpe unos 300 px de interfaz y las tarjetas
+       grises que se estaban mirando bajaban de sitio, así que la carga parecía arrancar dos veces. Con un solo
+       armazón no puede volver a pasar. Ver la cabecera de `FeedShell`. */
+    <FeedShell
+      /* El sprite de las medallas, montado UNA vez por pantalla y nunca en `App.tsx` (§8.5). Aquí y no dentro de
+         cada medalla, que lo montaría treinta y ocho veces. */
+      prelude={ENABLE_ACHIEVEMENTS ? <AchievementSprite /> : null}
+      avatar={(
+        <button
+          className="hub-avatar-link hub-feed-owner-avatar"
+          type="button"
+          aria-label={SOCIAL_UI.feed.openOwnProfile}
+          title={socialDisplayName || SOCIAL_UI.feed.openOwnProfile}
+          onClick={onOpenOwnProfile}
+        >
+          <HubAvatar photoURL={ownPhotoURL} />
+        </button>
+      )}
+      actions={{ pendingIncomingCount, onOpenProfiles, onOpenRequests, onSignOut: handleSignOut }}
+      notice={offline ? <HubOfflineNotice hasCachedData={offlineHasCachedData} /> : null}
+      composer={canPublishPosts ? (
+        <div className="fg">
+          <span className="flabel">{SOCIAL_UI.feed.postsTitle}</span>
+          <div className="hub-post-composer">
+            <label className="sr-only" htmlFor="hub-post-text">{SOCIAL_UI.feed.postComposerLabel}</label>
+            <textarea
+              id="hub-post-text"
+              ref={composerRef}
+              className="ftextarea hub-post-input"
+              // Arranca con la altura de una línea (como el campo de antes) y crece sola con el contenido.
+              rows={1}
+              value={composePostText}
+              placeholder={SOCIAL_UI.feed.postPlaceholder}
+              // Mithril no lleva tope: sin `maxLength`, el navegador no corta al escribir.
+              maxLength={showPostCounter ? postMaxLength : undefined}
+              onChange={(event) => setComposePostText(event.target.value.slice(0, postMaxLength))}
+              onKeyDown={(event) => {
+                // Enter ya NO publica: ahora hace lo que se espera en un campo de varias líneas, saltar de
+                // línea. Con textos de hasta 10.000 caracteres, publicar al pulsar Enter sería soltar el post
+                // a medio escribir. Se publica con el botón, o con Ctrl/⌘+Enter para quien va por teclado.
+                if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) {
+                  event.preventDefault();
+                  if (!publishingPost && composePostText.trim()) handlePublishPost();
+                }
+              }}
+            />
             <button
-              className="btn btn-secondary hub-requests-btn"
+              className="btn btn-steam hub-post-publish"
               type="button"
-              onClick={onOpenRequests}
-              aria-label={SOCIAL_UI.feed.openRequestsAria(pendingIncomingCount)}
-              title={SOCIAL_UI.feed.openRequests}
+              disabled={publishingPost || !composePostText.trim()}
+              onClick={handlePublishPost}
+              aria-label={publishingPost ? SOCIAL_UI.feed.postPublishing : SOCIAL_UI.feed.postPublish}
+              title={publishingPost ? SOCIAL_UI.feed.postPublishing : SOCIAL_UI.feed.postPublish}
             >
-              <Icon name="bell" />
-              {pendingIncomingCount > 0 ? (
-                <span className="hub-requests-count is-active" aria-hidden="true">
-                  {pendingIncomingCount}
-                </span>
-              ) : null}
+              {publishingPost ? <span className="hub-spinner" aria-hidden="true" /> : <Icon name="angle-right" />}
             </button>
           </div>
-          <div className="hub-screen-actions-right">
-            <button className="btn btn-danger" type="button" onClick={handleSignOut}>
-              <Icon name="logout" />
-              {SOCIAL_UI.feed.signOut}
-            </button>
-          </div>
+          {/* Mismo patrón que el contador de la reseña (FormModal): conteo visible SIN aria-live y una región
+              viva aparte que solo lleva texto en los umbrales, para no anunciar en cada pulsación. */}
+          {showPostCounter ? (
+            <div className="field-footer">
+              <small className={`tag-hint ${postProgressClass}`.trim()}>
+                {SOCIAL_UI.feed.postCharCount(composePostText.length, postMaxLength)}
+              </small>
+              <span className="sr-only" role="status" aria-live="polite">
+                {postLiveMessage}
+              </span>
+            </div>
+          ) : null}
         </div>
-        {/* Encima de todo lo que depende de la red (compositor y actividad), porque explica por qué nada de eso
-            se va a mover hasta que vuelva la conexión. */}
-        {offline ? <HubOfflineNotice hasCachedData={offlineHasCachedData} /> : null}
-        {/* Sin rango para publicar (bronce), el bloque entero desaparece: ni compositor ni título ni explicación.
-            Se oculta también el `flabel` porque este `fg` solo contiene el compositor; dejarlo sería un
-            encabezado presidiendo un hueco vacío. Las publicaciones ajenas se siguen leyendo en el feed. */}
-        {canPublishPosts ? (
-          <div className="fg">
-            <span className="flabel">{SOCIAL_UI.feed.postsTitle}</span>
-            <div className="hub-post-composer">
-                <label className="sr-only" htmlFor="hub-post-text">{SOCIAL_UI.feed.postComposerLabel}</label>
-                <textarea
-                  id="hub-post-text"
-                  ref={composerRef}
-                  className="ftextarea hub-post-input"
-                  // Arranca con la altura de una línea (como el campo de antes) y crece sola con el contenido.
-                  rows={1}
-                  value={composePostText}
-                  placeholder={SOCIAL_UI.feed.postPlaceholder}
-                  // Mithril no lleva tope: sin `maxLength`, el navegador no corta al escribir.
-                  maxLength={showPostCounter ? postMaxLength : undefined}
-                  onChange={(event) => setComposePostText(event.target.value.slice(0, postMaxLength))}
-                  onKeyDown={(event) => {
-                    // Enter ya NO publica: ahora hace lo que se espera en un campo de varias líneas, saltar de
-                    // línea. Con textos de hasta 10.000 caracteres, publicar al pulsar Enter sería soltar el post
-                    // a medio escribir. Se publica con el botón, o con Ctrl/⌘+Enter para quien va por teclado.
-                    if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) {
-                      event.preventDefault();
-                      if (!publishingPost && composePostText.trim()) handlePublishPost();
-                    }
-                  }}
-                />
-                <button
-                  className="btn btn-steam hub-post-publish"
-                  type="button"
-                  disabled={publishingPost || !composePostText.trim()}
-                  onClick={handlePublishPost}
-                  aria-label={publishingPost ? SOCIAL_UI.feed.postPublishing : SOCIAL_UI.feed.postPublish}
-                  title={publishingPost ? SOCIAL_UI.feed.postPublishing : SOCIAL_UI.feed.postPublish}
-                >
-                  {publishingPost ? <span className="hub-spinner" aria-hidden="true" /> : <Icon name="angle-right" />}
-                </button>
-              </div>
-              {/* Mismo patrón que el contador de la reseña (FormModal): conteo visible SIN aria-live y una región
-                  viva aparte que solo lleva texto en los umbrales, para no anunciar en cada pulsación. */}
-              {showPostCounter ? (
-                <div className="field-footer">
-                  <small className={`tag-hint ${postProgressClass}`.trim()}>
-                    {SOCIAL_UI.feed.postCharCount(composePostText.length, postMaxLength)}
-                  </small>
-                  <span className="sr-only" role="status" aria-live="polite">
-                    {postLiveMessage}
-                  </span>
-                </div>
-              ) : null}
+      ) : null}
+    >
+      <div className="fg">
+        <span className="flabel">{SOCIAL_UI.feed.activityTitle}</span>
+        {loadingDirectory ? (
+          <div className="hub-feed-activity-list" aria-hidden="true">
+            {[0, 1, 2, 3].map((i) => (
+              <article key={i} className="hub-feed-card hub-feed-activity-item hub-skeleton-card">
+                <header className="hub-feed-card-head">
+                  <span className="hub-avatar hub-skeleton" />
+                  <div className="hub-feed-card-head-text">
+                    <span className="hub-skeleton hub-skeleton-line" style={{ width: '45%' }} />
+                  </div>
+                </header>
+                <span className="hub-skeleton hub-skeleton-line" style={{ width: '30%' }} />
+                <span className="hub-skeleton hub-skeleton-line" style={{ width: '92%' }} />
+                <span className="hub-skeleton hub-skeleton-line" style={{ width: '70%' }} />
+              </article>
+            ))}
           </div>
         ) : null}
-        <div className="fg">
-          <span className="flabel">{SOCIAL_UI.feed.activityTitle}</span>
-          {loadingDirectory ? (
-            <div className="hub-feed-activity-list" aria-hidden="true">
-              {[0, 1, 2, 3].map((i) => (
-                <article key={i} className="hub-feed-card hub-feed-activity-item hub-skeleton-card">
-                  <header className="hub-feed-card-head">
-                    <span className="hub-avatar hub-skeleton" />
-                    <div className="hub-feed-card-head-text">
-                      <span className="hub-skeleton hub-skeleton-line" style={{ width: '45%' }} />
-                    </div>
-                  </header>
-                  <span className="hub-skeleton hub-skeleton-line" style={{ width: '30%' }} />
-                  <span className="hub-skeleton hub-skeleton-line" style={{ width: '92%' }} />
-                  <span className="hub-skeleton hub-skeleton-line" style={{ width: '70%' }} />
-                </article>
-              ))}
-            </div>
-          ) : null}
-          {/* Vacío SIN red: no es que no tengas amigos, es que no se ha podido leer nada. Mandar a "descubrir
-              perfiles" aquí sería un diagnóstico falso y además un botón que no puede funcionar. */}
-          {!loadingDirectory && feedItems.length === 0 && offline ? (
-            <div className="hub-feed-empty">
-              <p>{SOCIAL_UI.offline.bodyEmpty}</p>
-            </div>
-          ) : null}
-          {!loadingDirectory && feedItems.length === 0 && !offline ? (
-            <div className="hub-feed-empty">
-              <p>{SOCIAL_UI.feed.activityEmptyNoFriends}</p>
-              <button className="btn btn-secondary btn-accent" type="button" onClick={onOpenProfiles}>
-                <Icon name="bottom-hub" />
-                {SOCIAL_UI.feed.discoverFriends}
-              </button>
-            </div>
-          ) : null}
-          {!loadingDirectory && feedItems.length > 0 ? (
-            <div className="hub-feed-activity-list" role="list" aria-label={SOCIAL_UI.feed.activityListAria}>
-              {groupedFeedItems.map((group, groupIndex) => (
-                <div key={`${group.dayHeader}-${groupIndex}`} className="hub-feed-day-group">
-                  <div className="hub-feed-day-header">
-                    <h4>{group.dayHeader}</h4>
-                  </div>
-                  {group.items.map((entry) => {
-                    const itemDate = new Date(entry.updatedAt || '');
-                    const hasValidDate = !Number.isNaN(itemDate.getTime());
+        {/* Vacío SIN red: no es que no tengas amigos, es que no se ha podido leer nada. Mandar a "descubrir
+            perfiles" aquí sería un diagnóstico falso y además un botón que no puede funcionar. */}
+        {!loadingDirectory && feedItems.length === 0 && offline ? (
+          <div className="hub-feed-empty">
+            <p>{SOCIAL_UI.offline.bodyEmpty}</p>
+          </div>
+        ) : null}
+        {!loadingDirectory && feedItems.length === 0 && !offline ? (
+          <div className="hub-feed-empty">
+            <p>{SOCIAL_UI.feed.activityEmptyNoFriends}</p>
+            <button className="btn btn-secondary btn-accent" type="button" onClick={onOpenProfiles}>
+              <Icon name="bottom-hub" />
+              {SOCIAL_UI.feed.discoverFriends}
+            </button>
+          </div>
+        ) : null}
+        {!loadingDirectory && feedItems.length > 0 ? (
+          <div className="hub-feed-activity-list" role="list" aria-label={SOCIAL_UI.feed.activityListAria}>
+            {groupedFeedItems.map((group, groupIndex) => (
+              <div key={`${group.dayHeader}-${groupIndex}`} className="hub-feed-day-group">
+                <div className="hub-feed-day-header">
+                  <h4>{group.dayHeader}</h4>
+                </div>
+                {group.items.map((entry) => {
+                  const itemDate = new Date(entry.updatedAt || '');
+                  const hasValidDate = !Number.isNaN(itemDate.getTime());
 
-                    // LOGROS: una entrada por persona y DÍA, con todos los de ese día dentro. Va la primera de
-                    // la cadena de tipos porque no comparte NADA con las demás —no tiene gist, ni juego, ni
-                    // texto—, así que estrecharla aquí deja el resto del bloque leyéndose igual que antes.
-                    if (entry.kind === 'achievements') {
-                      const quien = entry.authorName || 'Usuario';
-                      const nombres = entry.items
-                        .map((item) => item.def.labels.name)
-                        .join(', ');
-                      const irALogros = () => openProfileAchievements(entry.profileId);
-                      return (
-                        /* LA TARJETA ENTERA ES PULSABLE, como la de una reseña. Antes solo lo eran el avatar, el
-                           nombre y las medallas, y la tarjeta ya traía `cursor: pointer` de
-                           `.hub-feed-activity-item`: el puntero prometía en toda la superficie algo que solo
-                           respondía arriba. Mismo patrón que `is-review` —`tabIndex`, `onClick`, `onKeyDown` y
-                           `stopPropagation` en lo de dentro— para no inventar una interacción distinta. */
-                        <article
-                          key={entry.key}
-                          className={`hub-feed-card hub-feed-activity-item is-achievements ${entry.own ? 'is-own-activity' : 'is-external-activity'}`}
-                          role="listitem"
-                          tabIndex={0}
-                          aria-label={SOCIAL_UI.feed.openProfileAria(quien) + '. ' + nombres}
-                          onClick={irALogros}
-                          onKeyDown={(event) => {
-                            if (event.key !== 'Enter' && event.key !== ' ') return;
-                            event.preventDefault();
-                            irALogros();
-                          }}
-                        >
-                          {/* EL AVATAR YA NO ES UN CONTROL: la tarjeta entera lleva a los logros y **solo el
-                              nombre** lleva a otro sitio (la ficha). Con el avatar pulsable había dos destinos
-                              en el mismo gesto —tocar la foto o tocar al lado hacían cosas distintas— sin nada
-                              que lo anunciara. */}
-                          <HubAvatar photoURL={entry.photoURL} sizeClass="hub-avatar-xs" />
-                          <div className="hub-feed-ach-body">
-                            <p className="hub-feed-ach-line">
-                              <button
-                                className="hub-name-link hub-feed-move-who"
-                                type="button"
-                                onClick={(event) => { event.stopPropagation(); openProfileDetail(entry.profileId); }}
-                              >
-                                {quien}
-                              </button>
-                              {' '}
-                              {/* EL NOMBRE DEL LOGRO SOLO SE ESCRIBE CUANDO HAY UNO. Con varios, la frase dice
-                                  cuántos y las medallas dicen cuáles: enumerar cinco nombres en una burbuja de
-                                  feed la convierte en un párrafo, y es justo la lista que nadie lee. Es lo que
-                                  hacen Steam («ha desbloqueado N logros» + la fila de iconos) y el feed de
-                                  Xbox. */}
-                              {entry.items.length === 1 ? (
-                                <>
-                                  <span className="hub-feed-move-verb">{ACHIEVEMENTS_UI.feedVerb}</span>
-                                  {' '}
-                                  <strong className="hub-feed-ach-name">
-                                    {entry.items[0].def.labels.name}
-                                  </strong>
-                                </>
-                              ) : (
-                                <span className="hub-feed-move-verb">{ACHIEVEMENTS_UI.feedMany(entry.items.length)}</span>
-                              )}
-                            </p>
-                          </div>
-                          {/* LAS MEDALLAS, EN EL CANTO CONTRARIO AL AVATAR. La foto abre la fila por la
-                              izquierda y las medallas la cierran por la derecha, que es como se lee una línea de
-                              feed: quién, qué, y el sello al final. La MISMA tira que va bajo el nombre en la
-                              ficha y en el panel, decorativa aquí porque la pulsable es la tarjeta entera y los
-                              nombres van completos en su `aria-label` —incluidos los que la tira recorta—. */}
-                          <span className="hub-feed-ach-medals">
-                            <AchievementStrip
-                              items={entry.items.map((item) => ({
-                                id: item.def.id,
-                                level: item.level,
-                                date: '',
-                              }))}
-                              limit={FEED_MEDALS}
-                              size="sm"
-                              interactive={false}
-                            />
-                          </span>
-                        </article>
-                      );
-                    }
-
-                    // El id vacío NO es propiedad: sin la guarda, dos ids desconocidos casaban entre sí y la
-                    // actividad ajena se pintaba como propia.
-                    const isOwnActivity = Boolean(currentSocialGistId) && entry.socialGistId === currentSocialGistId;
-                    const ownershipClass = isOwnActivity ? 'is-own-activity' : 'is-external-activity';
-
-                    if (entry.kind === 'post') {
-                      return (
-                        <article
-                          key={entry.id}
-                          className={`hub-feed-card hub-feed-activity-item is-post ${ownershipClass}`}
-                          role="listitem"
-                        >
-                          <header className="hub-feed-card-head">
-                            <button
-                              className="hub-avatar-link"
-                              type="button"
-                              aria-label={SOCIAL_UI.feed.openProfileAria(entry.profileDisplayName || entry.authorName)}
-                              title={SOCIAL_UI.feed.openProfileAria(entry.profileDisplayName || entry.authorName)}
-                              onClick={() => openProfileDetail(entry.profileId)}
-                            >
-                              <HubAvatar photoURL={entry.photoURL} />
-                            </button>
-                            <div className="hub-feed-card-head-text">
-                              <h3>
-                                <button className="hub-name-link" type="button" onClick={() => openProfileDetail(entry.profileId)}>
-                                  {entry.profileDisplayName || entry.authorName || 'Usuario'}
-                                </button>
-                              </h3>
-                            </div>
-                          </header>
-                          <p className="hub-feed-date">{hasValidDate ? SOCIAL_UI.feed.postedAt(itemDate) : SOCIAL_UI.feed.analyzedRecently}</p>
-                          <PostBody
-                            text={entry.text}
-                            sharedFilePageHint={SOCIAL_UI.feed.postSharedFileHint}
-                            expandLabel={SOCIAL_UI.feed.postExpand}
-                            collapseLabel={SOCIAL_UI.feed.postCollapse}
-                          />
-                        </article>
-                      );
-                    }
-
-                    // F4 — MOVIMIENTO DE LISTA. Una línea y se acaba: quién, qué hizo, con qué juego y a qué
-                    // hora. La tarjeta NO es pulsable —no hay pantalla de «movimiento» que abrir— y de ella solo
-                    // llevan a algún sitio dos cosas: el autor (su perfil) y, cuando de verdad existe, el nombre
-                    // del juego (el análisis de ese autor sobre él).
-                    //
-                    // La hora usa su propia clase y no `hub-feed-date`: varias paletas convierten esa clase en
-                    // una cápsula o le cuelgan un prefijo («//», «>»), y aquí tiene que ser un dato al final del
-                    // renglón. El día no se repite: lo dice la cabecera del grupo, y la fecha entera está en el
-                    // `title`.
-                    if (entry.kind === 'move') {
-                      const nombreAutor = entry.profileDisplayName || 'Usuario';
-                      const fechaCompleta = hasValidDate ? SOCIAL_UI.feed.movedAt(itemDate) : SOCIAL_UI.feed.moveRecently;
-                      return (
-                        <article
-                          key={`${entry.socialGistId}:${entry.id}`}
-                          className={`hub-feed-card hub-feed-activity-item is-move ${ownershipClass}`}
-                          role="listitem"
-                        >
-                          <button
-                            className="hub-avatar-link"
-                            type="button"
-                            aria-label={SOCIAL_UI.feed.openProfileAria(nombreAutor)}
-                            title={SOCIAL_UI.feed.openProfileAria(nombreAutor)}
-                            onClick={() => openProfileDetail(entry.profileId)}
-                          >
-                            <HubAvatar photoURL={entry.photoURL} sizeClass="hub-avatar-xs" />
-                          </button>
-                          <p className="hub-feed-move-line">
+                  // LOGROS: una entrada por persona y DÍA, con todos los de ese día dentro. Va la primera de
+                  // la cadena de tipos porque no comparte NADA con las demás —no tiene gist, ni juego, ni
+                  // texto—, así que estrecharla aquí deja el resto del bloque leyéndose igual que antes.
+                  if (entry.kind === 'achievements') {
+                    const quien = entry.authorName || 'Usuario';
+                    const nombres = entry.items
+                      .map((item) => item.def.labels.name)
+                      .join(', ');
+                    const irALogros = () => openProfileAchievements(entry.profileId);
+                    return (
+                      /* LA TARJETA ENTERA ES PULSABLE, como la de una reseña. Antes solo lo eran el avatar, el
+                         nombre y las medallas, y la tarjeta ya traía `cursor: pointer` de
+                         `.hub-feed-activity-item`: el puntero prometía en toda la superficie algo que solo
+                         respondía arriba. Mismo patrón que `is-review` —`tabIndex`, `onClick`, `onKeyDown` y
+                         `stopPropagation` en lo de dentro— para no inventar una interacción distinta. */
+                      <article
+                        key={entry.key}
+                        className={`hub-feed-card hub-feed-activity-item is-achievements ${entry.own ? 'is-own-activity' : 'is-external-activity'}`}
+                        role="listitem"
+                        tabIndex={0}
+                        aria-label={SOCIAL_UI.feed.openProfileAria(quien) + '. ' + nombres}
+                        onClick={irALogros}
+                        onKeyDown={(event) => {
+                          if (event.key !== 'Enter' && event.key !== ' ') return;
+                          event.preventDefault();
+                          irALogros();
+                        }}
+                      >
+                        {/* EL AVATAR YA NO ES UN CONTROL: la tarjeta entera lleva a los logros y **solo el
+                            nombre** lleva a otro sitio (la ficha). Con el avatar pulsable había dos destinos
+                            en el mismo gesto —tocar la foto o tocar al lado hacían cosas distintas— sin nada
+                            que lo anunciara. */}
+                        <HubAvatar photoURL={entry.photoURL} sizeClass="hub-avatar-xs" />
+                        <div className="hub-feed-ach-body">
+                          <p className="hub-feed-ach-line">
                             <button
                               className="hub-name-link hub-feed-move-who"
                               type="button"
-                              onClick={() => openProfileDetail(entry.profileId)}
+                              onClick={(event) => { event.stopPropagation(); openProfileDetail(entry.profileId); }}
                             >
-                              {nombreAutor}
+                              {quien}
                             </button>
                             {' '}
-                            <span className="hub-feed-move-verb">{SOCIAL_UI.feed.moveHeadline[entry.tab]}</span>
-                            {' '}
-                            {entry.reviewActorId ? (
-                              <button
-                                className="hub-feed-move-game"
-                                type="button"
-                                aria-label={SOCIAL_UI.feed.openMoveReviewAria(nombreAutor, entry.gameName)}
-                                // El actor de la RESEÑA, no el id de la entrada del directorio: el detalle resuelve
-                                // por `actorProfileId` y con el otro id no encontraba nada.
-                                onClick={() => openMoveReview(entry.reviewActorId as string, entry.gameId)}
-                              >
-                                {entry.gameName}
-                              </button>
+                            {/* EL NOMBRE DEL LOGRO SOLO SE ESCRIBE CUANDO HAY UNO. Con varios, la frase dice
+                                cuántos y las medallas dicen cuáles: enumerar cinco nombres en una burbuja de
+                                feed la convierte en un párrafo, y es justo la lista que nadie lee. Es lo que
+                                hacen Steam («ha desbloqueado N logros» + la fila de iconos) y el feed de
+                                Xbox. */}
+                            {entry.items.length === 1 ? (
+                              <>
+                                <span className="hub-feed-move-verb">{ACHIEVEMENTS_UI.feedVerb}</span>
+                                {' '}
+                                <strong className="hub-feed-ach-name">
+                                  {entry.items[0].def.labels.name}
+                                </strong>
+                              </>
                             ) : (
-                              <span className="hub-feed-move-game is-plain">{entry.gameName}</span>
+                              <span className="hub-feed-move-verb">{ACHIEVEMENTS_UI.feedMany(entry.items.length)}</span>
                             )}
-                            {' '}
-                            <span className="hub-feed-move-hour" title={fechaCompleta}>
-                              {hasValidDate ? SOCIAL_UI.feed.movedAtHour(itemDate) : SOCIAL_UI.feed.moveRecently}
-                            </span>
                           </p>
-                        </article>
-                      );
-                    }
+                        </div>
+                        {/* LAS MEDALLAS, EN EL CANTO CONTRARIO AL AVATAR. La foto abre la fila por la
+                            izquierda y las medallas la cierran por la derecha, que es como se lee una línea de
+                            feed: quién, qué, y el sello al final. La MISMA tira que va bajo el nombre en la
+                            ficha y en el panel, decorativa aquí porque la pulsable es la tarjeta entera y los
+                            nombres van completos en su `aria-label` —incluidos los que la tira recorta—. */}
+                        <span className="hub-feed-ach-medals">
+                          <AchievementStrip
+                            items={entry.items.map((item) => ({
+                              id: item.def.id,
+                              level: item.level,
+                              date: '',
+                            }))}
+                            limit={FEED_MEDALS}
+                            size="sm"
+                            interactive={false}
+                          />
+                        </span>
+                      </article>
+                    );
+                  }
 
-                    const reviewText = String(entry.snippet || '').trim();
-                    const analyzedAtLabel = hasValidDate
-                      ? SOCIAL_UI.feed.analyzedAt(itemDate)
-                      : SOCIAL_UI.feed.analyzedRecently;
-                    const cardTypeClass = entry.type === 'review' ? 'is-review' : 'is-recommendation';
+                  // El id vacío NO es propiedad: sin la guarda, dos ids desconocidos casaban entre sí y la
+                  // actividad ajena se pintaba como propia.
+                  const isOwnActivity = Boolean(currentSocialGistId) && entry.socialGistId === currentSocialGistId;
+                  const ownershipClass = isOwnActivity ? 'is-own-activity' : 'is-external-activity';
+
+                  if (entry.kind === 'post') {
                     return (
                       <article
                         key={entry.id}
-                        className={`hub-feed-card hub-feed-activity-item ${cardTypeClass} ${ownershipClass}`}
+                        className={`hub-feed-card hub-feed-activity-item is-post ${ownershipClass}`}
                         role="listitem"
-                        tabIndex={0}
-                        aria-label={SOCIAL_UI.feed.openActivityAria(entry.profileDisplayName, entry.gameName)}
-                        onClick={() => openActivityDetail(entry)}
-                        onKeyDown={(event) => handleActivityItemKeyDown(event, entry)}
                       >
                         <header className="hub-feed-card-head">
                           <button
                             className="hub-avatar-link"
                             type="button"
-                            aria-label={SOCIAL_UI.feed.openProfileAria(entry.profileDisplayName)}
-                            title={SOCIAL_UI.feed.openProfileAria(entry.profileDisplayName)}
-                            onClick={(event) => { event.stopPropagation(); openProfileDetail(entry.profileId); }}
+                            aria-label={SOCIAL_UI.feed.openProfileAria(entry.profileDisplayName || entry.authorName)}
+                            title={SOCIAL_UI.feed.openProfileAria(entry.profileDisplayName || entry.authorName)}
+                            onClick={() => openProfileDetail(entry.profileId)}
                           >
                             <HubAvatar photoURL={entry.photoURL} />
                           </button>
                           <div className="hub-feed-card-head-text">
                             <h3>
-                              <button
-                                className="hub-name-link"
-                                type="button"
-                                onClick={(event) => { event.stopPropagation(); openProfileDetail(entry.profileId); }}
-                              >
-                                {entry.profileDisplayName}
+                              <button className="hub-name-link" type="button" onClick={() => openProfileDetail(entry.profileId)}>
+                                {entry.profileDisplayName || entry.authorName || 'Usuario'}
                               </button>
                             </h3>
-                            {entry.gameName ? <span className="hub-feed-game-chip">{entry.gameName}</span> : null}
                           </div>
                         </header>
-                        <p className="hub-feed-date">{analyzedAtLabel}</p>
-                        {resolveGrade({ score: Number(entry.rating || 0), grade: entry.grade ?? null }) > 0
-                          ? <ScoreDisplay game={{ score: Number(entry.rating || 0), grade: entry.grade ?? null }} />
-                          : <NoScoreMedal />}
-                        {reviewText ? <p className="hub-feed-review-text" title={reviewText}>{reviewText}</p> : null}
+                        <p className="hub-feed-date">{hasValidDate ? SOCIAL_UI.feed.postedAt(itemDate) : SOCIAL_UI.feed.analyzedRecently}</p>
+                        <PostBody
+                          text={entry.text}
+                          sharedFilePageHint={SOCIAL_UI.feed.postSharedFileHint}
+                          expandLabel={SOCIAL_UI.feed.postExpand}
+                          collapseLabel={SOCIAL_UI.feed.postCollapse}
+                        />
                       </article>
                     );
-                  })}
-                </div>
-              ))}
-            </div>
-          ) : null}
-          {!loadingDirectory && hasMoreFeed ? (
-            <button
-              ref={feedSentinelRef}
-              className="hub-more-soft hub-feed-load-more"
-              type="button"
-              aria-label={SOCIAL_UI.feed.feedLoadMore}
-              title={SOCIAL_UI.feed.feedLoadMore}
-              onClick={showMoreFeed}
-            >
-              <Icon name="chevron-down" />
-            </button>
-          ) : null}
-        </div>
-        <HubStatus status={status} statusKind={statusKind} />
+                  }
+
+                  // F4 — MOVIMIENTO DE LISTA. Una línea y se acaba: quién, qué hizo, con qué juego y a qué
+                  // hora. La tarjeta NO es pulsable —no hay pantalla de «movimiento» que abrir— y de ella solo
+                  // llevan a algún sitio dos cosas: el autor (su perfil) y, cuando de verdad existe, el nombre
+                  // del juego (el análisis de ese autor sobre él).
+                  //
+                  // La hora usa su propia clase y no `hub-feed-date`: varias paletas convierten esa clase en
+                  // una cápsula o le cuelgan un prefijo («//», «>»), y aquí tiene que ser un dato al final del
+                  // renglón. El día no se repite: lo dice la cabecera del grupo, y la fecha entera está en el
+                  // `title`.
+                  if (entry.kind === 'move') {
+                    const nombreAutor = entry.profileDisplayName || 'Usuario';
+                    const fechaCompleta = hasValidDate ? SOCIAL_UI.feed.movedAt(itemDate) : SOCIAL_UI.feed.moveRecently;
+                    return (
+                      <article
+                        key={`${entry.socialGistId}:${entry.id}`}
+                        className={`hub-feed-card hub-feed-activity-item is-move ${ownershipClass}`}
+                        role="listitem"
+                      >
+                        <button
+                          className="hub-avatar-link"
+                          type="button"
+                          aria-label={SOCIAL_UI.feed.openProfileAria(nombreAutor)}
+                          title={SOCIAL_UI.feed.openProfileAria(nombreAutor)}
+                          onClick={() => openProfileDetail(entry.profileId)}
+                        >
+                          <HubAvatar photoURL={entry.photoURL} sizeClass="hub-avatar-xs" />
+                        </button>
+                        <p className="hub-feed-move-line">
+                          <button
+                            className="hub-name-link hub-feed-move-who"
+                            type="button"
+                            onClick={() => openProfileDetail(entry.profileId)}
+                          >
+                            {nombreAutor}
+                          </button>
+                          {' '}
+                          <span className="hub-feed-move-verb">{SOCIAL_UI.feed.moveHeadline[entry.tab]}</span>
+                          {' '}
+                          {entry.reviewActorId ? (
+                            <button
+                              className="hub-feed-move-game"
+                              type="button"
+                              aria-label={SOCIAL_UI.feed.openMoveReviewAria(nombreAutor, entry.gameName)}
+                              // El actor de la RESEÑA, no el id de la entrada del directorio: el detalle resuelve
+                              // por `actorProfileId` y con el otro id no encontraba nada.
+                              onClick={() => openMoveReview(entry.reviewActorId as string, entry.gameId)}
+                            >
+                              {entry.gameName}
+                            </button>
+                          ) : (
+                            <span className="hub-feed-move-game is-plain">{entry.gameName}</span>
+                          )}
+                          {' '}
+                          <span className="hub-feed-move-hour" title={fechaCompleta}>
+                            {hasValidDate ? SOCIAL_UI.feed.movedAtHour(itemDate) : SOCIAL_UI.feed.moveRecently}
+                          </span>
+                        </p>
+                      </article>
+                    );
+                  }
+
+                  const reviewText = String(entry.snippet || '').trim();
+                  const analyzedAtLabel = hasValidDate
+                    ? SOCIAL_UI.feed.analyzedAt(itemDate)
+                    : SOCIAL_UI.feed.analyzedRecently;
+                  const cardTypeClass = entry.type === 'review' ? 'is-review' : 'is-recommendation';
+                  return (
+                    <article
+                      key={entry.id}
+                      className={`hub-feed-card hub-feed-activity-item ${cardTypeClass} ${ownershipClass}`}
+                      role="listitem"
+                      tabIndex={0}
+                      aria-label={SOCIAL_UI.feed.openActivityAria(entry.profileDisplayName, entry.gameName)}
+                      onClick={() => openActivityDetail(entry)}
+                      onKeyDown={(event) => handleActivityItemKeyDown(event, entry)}
+                    >
+                      <header className="hub-feed-card-head">
+                        <button
+                          className="hub-avatar-link"
+                          type="button"
+                          aria-label={SOCIAL_UI.feed.openProfileAria(entry.profileDisplayName)}
+                          title={SOCIAL_UI.feed.openProfileAria(entry.profileDisplayName)}
+                          onClick={(event) => { event.stopPropagation(); openProfileDetail(entry.profileId); }}
+                        >
+                          <HubAvatar photoURL={entry.photoURL} />
+                        </button>
+                        <div className="hub-feed-card-head-text">
+                          <h3>
+                            <button
+                              className="hub-name-link"
+                              type="button"
+                              onClick={(event) => { event.stopPropagation(); openProfileDetail(entry.profileId); }}
+                            >
+                              {entry.profileDisplayName}
+                            </button>
+                          </h3>
+                          {entry.gameName ? <span className="hub-feed-game-chip">{entry.gameName}</span> : null}
+                        </div>
+                      </header>
+                      <p className="hub-feed-date">{analyzedAtLabel}</p>
+                      {resolveGrade({ score: Number(entry.rating || 0), grade: entry.grade ?? null }) > 0
+                        ? <ScoreDisplay game={{ score: Number(entry.rating || 0), grade: entry.grade ?? null }} />
+                        : <NoScoreMedal />}
+                      {reviewText ? <p className="hub-feed-review-text" title={reviewText}>{reviewText}</p> : null}
+                    </article>
+                  );
+                })}
+              </div>
+            ))}
+          </div>
+        ) : null}
+        {!loadingDirectory && hasMoreFeed ? (
+          <button
+            ref={feedSentinelRef}
+            className="hub-more-soft hub-feed-load-more"
+            type="button"
+            aria-label={SOCIAL_UI.feed.feedLoadMore}
+            title={SOCIAL_UI.feed.feedLoadMore}
+            onClick={showMoreFeed}
+          >
+            <Icon name="chevron-down" />
+          </button>
+        ) : null}
       </div>
-    </section>
+      <HubStatus status={status} statusKind={statusKind} />
+    </FeedShell>
   );
 }
 
