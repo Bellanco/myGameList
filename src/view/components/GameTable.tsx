@@ -1,6 +1,7 @@
 import { Fragment, memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useVirtualizer, useWindowVirtualizer } from '@tanstack/react-virtual';
 import { COMMON_ICONS, TAB_ICONS } from '../../core/constants/icons';
+import { categoryToneStyle } from '../../core/constants/categoryTone';
 import { TAB_TITLES, UI_MESSAGES } from '../../core/constants/labels';
 import { COMPACT_TABLE_MAX_WIDTH } from '../../core/constants/uiConfig';
 import { FilePickerButton } from './FilePickerButton';
@@ -60,14 +61,17 @@ const MAIN_ROW_ESTIMATE_PX = 63;
 const COMPACT_ROW_ESTIMATE_PX = 74;
 const DETAIL_ROW_ESTIMATE_PX = 320;
 
-function renderTags(values: string[], className: string, maxVisible?: number) {
+/** `tone`: tiñe cada píldora con el color que le toca a su nombre en la rampa categórica (`categoryTone`).
+    Solo lo piden los géneros; el resto de categorías ya tienen un color con significado propio (la plataforma
+    es neutra, los puntos fuertes verdes y los débiles rojos) y teñirlas rompería esa lectura. */
+function renderTags(values: string[], className: string, maxVisible?: number, tone = false) {
   if (!values.length) return <span>—</span>;
   const overflow = maxVisible && values.length > maxVisible ? values.length - maxVisible : 0;
   const visible = overflow ? values.slice(0, maxVisible) : values;
   return (
     <div className="chips">
       {visible.map((value) => (
-        <span key={value} className={`chip ${className}`}>
+        <span key={value} className={`chip ${className}`} style={tone ? categoryToneStyle(value) : undefined}>
           {value}
         </span>
       ))}
@@ -640,7 +644,7 @@ export const GameTable = memo(function GameTable({
                       </td>
                       {currentTab === 'c' && showYears ? <td className="col-c-year">{renderTags(yearsDesc(game.years), 'chip-generic', MAX_ROW_CHIPS)}</td> : null}
                       <td className={cCol('col-c-plat')}>{renderTags(game.platforms, 'chip-plat', MAX_ROW_CHIPS)}</td>
-                      <td className={cCol('col-c-genre')}>{renderTags(game.genres, 'chip-genre', MAX_ROW_CHIPS)}</td>
+                      <td className={cCol('col-c-genre')}>{renderTags(game.genres, 'chip-genre', MAX_ROW_CHIPS, true)}</td>
                       {(currentTab === 'c' || currentTab === 'v' || currentTab === 'e') ? (
                         <td className={cCol('col-c-strong')}>{renderTags(game.strengths || [], 'chip-pf', MAX_ROW_CHIPS)}</td>
                       ) : null}
@@ -679,7 +683,7 @@ export const GameTable = memo(function GameTable({
                         </div>
                         <div className="detail-box">
                           <span className="detail-label">{UI_MESSAGES.detail.genres}</span>
-                          <div>{renderTags(game.genres, 'chip-genre')}</div>
+                          <div>{renderTags(game.genres, 'chip-genre', undefined, true)}</div>
                         </div>
                         {currentTab === 'c' && showYears && game.years && game.years.length > 0 && (
                           <div className="detail-box">
