@@ -427,3 +427,40 @@
 }
 /* El renglón en la tipografía de la paleta, sin el tratamiento de titular que llevan los nombres del feed. */
 :root[data-palette="persona"] .hub-feed-move-line { letter-spacing: .01em; }
+
+/* ── §14 · LIENZO DE LA ACTIVIDAD SOCIAL: SEMITONO A CONTRALUZ ────────────────────────────────────────────────
+   La zona vacía del feed (ver `.hub-feed-lienzo` en `_layout.scss`). Aquí el semitono del fondo de pantalla,
+   pero del doble de tamaño y apelotonándose hacia la esquina superior derecha: los puntos de tinta cayendo en
+   diagonal sin parar, y cada trece segundos un destello que cruza la trama — el golpe de cámara del All-Out
+   Attack reducido a un aliento (5 % de alfa y muy ancho, sin filo). ── */
+:root[data-palette="persona"] .hub-feed-lienzo {
+  --lz-bg: color-mix(in srgb, var(--bg) 55%, transparent);
+  --lz-img: radial-gradient(rgba(var(--steam-rgb), .55) 2.4px, transparent 2.7px);
+  --lz-size: 9px 9px;
+  /* La máscara es lo que apelotona los puntos hacia la esquina: fuera de ella la trama no existe. Va ACOTADA
+     en píxeles y anclada arriba: medida en porcentaje del lienzo, con la lista llena se estiraba a dos mil px
+     y el semitono dejaba de estar apelotonado para cubrirlo todo por igual. */
+  --lz-mask: radial-gradient(closest-side, #000 12%, transparent 74%);
+  --lz-mask-size: 230% 420px;
+  --lz-mask-rep: no-repeat;
+  --lz-edge: 2px solid var(--pop-line);
+  --lz-radius: 6px;
+  /* La capa sangra 24px para poder desplazarse sin descubrir el canto. */
+  --lz-bleed: -24px;
+  --lz-img2: linear-gradient(118deg, transparent 26%, rgba(255,255,255,.05) 47%, rgba(var(--steam-rgb), .065) 53%, transparent 74%);
+  --lz-size2: 260% 100%;
+  --lz-rep2: no-repeat;
+}
+
+/* La DERIVA se mueve con `transform` y no con `background-position`: así la resuelve el compositor y no repinta
+   una trama de puntos en cada fotograma. El DESTELLO sí mueve el fondo, pero de una capa sin texto y cada 13 s. */
+@media (prefers-reduced-motion: no-preference) {
+  :root[data-effects="on"][data-palette="persona"] .hub-feed-lienzo-fx::before { animation: lz-pop-drift 9s linear infinite; }
+  :root[data-effects="on"][data-palette="persona"] .hub-feed-lienzo-fx::after { animation: lz-pop-flash 13s cubic-bezier(.5,0,.4,1) infinite; }
+}
+
+@keyframes lz-pop-drift { from { transform: translate(0, 0); } to { transform: translate(9px, -9px); } }
+@keyframes lz-pop-flash {
+  0%, 72% { background-position: -140% 0; }
+  92%, 100% { background-position: 260% 0; }
+}

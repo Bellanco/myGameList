@@ -17,13 +17,9 @@
 // Lo que NO está aquí: el armazón de pantalla, la tarjeta del feed y el cuerpo del detalle (`hub-detail-body`,
 // `hub-detail-metadata`, `hub-feed-card*`), que siguen en `_layout.scss` porque los comparten más pantallas.
 
-/* Fila de acciones del detalle de una reseña: "volver" a la izquierda y las acciones propias de cada pantalla
-   —hoy, compartir— a la derecha. */
-.hub-screen-actions-split {
-  width: 100%;
-  justify-content: space-between;
-  align-items: center;
-}
+// `.hub-screen-actions-split` ESTABA AQUÍ y se mudó a `_layout.scss`: la usa también el armazón de la actividad
+// (`FeedShell`), que lo pinta el esqueleto del arranque. Con la regla en esta hoja perezosa, ese armazón salía con
+// los tres botones agrupados a la izquierda y, al llegar el chunk, "Cerrar sesión" saltaba al otro extremo.
 
 /* Pantalla "Reseñas" de un perfil: layout de lectura. Título del juego prominente, fila de
    meta (estrellas + fecha) y texto COMPLETO (sin recorte) con tipografía cómoda. */
@@ -336,22 +332,4 @@
   box-shadow: 0 0 0 2px rgba(var(--steam-rgb),.2);
 }
 
-/* Avatar clicable (feed/detalle): botón sin chrome que envuelve la foto/inicial y navega al perfil. */
-.hub-avatar-link {
-  flex: 0 0 auto;
-  display: inline-flex;
-  padding: 0;
-  border: 1px solid transparent;
-  border-radius: 50%;
-  background: transparent;
-  cursor: pointer;
-  transition: box-shadow .2s ease, border-color .2s ease;
-}
 
-.hub-avatar-link:hover { box-shadow: 0 0 0 2px rgba(var(--steam-rgb),.28); }
-
-.hub-avatar-link:focus-visible {
-  outline: none;
-  border-color: rgba(var(--steam-rgb),.42);
-  box-shadow: 0 0 0 2px rgba(var(--steam-rgb),.2);
-}

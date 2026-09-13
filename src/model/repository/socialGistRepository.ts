@@ -74,34 +74,21 @@ export interface SocialGistProfile {
   photoURL?: string;
 }
 
-export interface SocialProfileVisibility {
-  hiddenTabs: TabId[];
-  hideReplayable: boolean;
-  hideRetry: boolean;
-  hideGameTime: boolean;
-  showPhoto: boolean; // defecto true; controla la publicación/visibilidad de la foto de perfil
-}
+// La visibilidad del perfil es un CONTRATO DE DATOS, no una pieza de este repositorio: la leen el hub, el
+// compositor del feed y las reglas de `core/utils/profileVisibility`. Vive en `model/types/social` y aquí se
+// reexporta para no obligar a nadie a cambiar sus imports.
+export type { SocialProfileVisibility } from '../types/social';
+import type { SocialProfileVisibility } from '../types/social';
 
 /**
  * Proyección PÚBLICA de un juego compartido (canal social, index-only).
  * NO contiene review completo, score exacto, hours, steamDeck, retry, replayable ni strengths/weaknesses/reasons.
  * Solo lo mínimo + `rating` (redondeado) y `snippet` (≤160, derivado del review).
  */
-export interface SocialSharedGame {
-  id: number;
-  name: string;
-  platforms: string[];
-  genres: string[];
-  rating: number;
-  grade: number; // nota fina 0–100 (normalize la deriva del rating si el gist no la trae)
-  snippet: string;
-  /**
-   * Años en que lo completó. La proyección pública YA los escribía (`toPublicGame`) y esta lectura los tiraba;
-   * conservarlos es lo que permite el "año a año" y la marca de rejugado en el panel de un amigo, sin publicar
-   * ni un dato nuevo.
-   */
-  years?: number[];
-}
+// Mismo caso que la visibilidad: es el CONTRATO de lo que viaja por el canal público, y lo leen tanto el hub
+// como las estadísticas comparadas de `core/stats`. Vive en `model/types/social` y se reexporta aquí.
+export type { SocialSharedGame } from '../types/social';
+import type { SocialSharedGame } from '../types/social';
 
 export type SocialActivityType = 'recommendation' | 'review';
 

@@ -152,7 +152,10 @@ export function useGameListViewModel() {
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const [notice, setNotice] = useState<StatusNotice | null>(null);
   const [formModalOpen, setFormModalOpen] = useState(false);
-  const [confirmState, setConfirmState] = useState<{ title: string; action: () => void } | null>(null);
+  // `subjectId` es OPCIONAL y solo lo rellena quien borra una fila del listado: es lo que le permite a la vista
+  // desvanecer esa fila antes de aplicar el borrado (ver `handleConfirmDelete` en `App`). Una confirmación que no
+  // tiene una fila detrás —borrar una etiqueta de todos los juegos— lo deja sin poner y se aplica en el acto.
+  const [confirmState, setConfirmState] = useState<{ title: string; action: () => void; subjectId?: number } | null>(null);
   const [editingTab, setEditingTab] = useState<TabId>('c');
   const [draft, setDraft] = useState<GameDraft>(EMPTY_DRAFT);
 
@@ -553,6 +556,7 @@ export function useGameListViewModel() {
 
       setConfirmState({
         title: `¿Eliminar "${game.name}"?`,
+        subjectId: id,
         action: () => {
           const nextData: TabData = {
             ...data,

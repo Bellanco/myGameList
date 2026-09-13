@@ -1,7 +1,7 @@
 import { TAB_IDS, type GameItem, type TabData, type TabId } from '../../model/types/game';
 import { ADMIN_ONLY_TIER, type ProfileTier } from '../constants/tiers';
 import type { StatsBlock } from './types';
-import type { SocialSharedGame } from '../../model/repository/socialGistRepository';
+import type { SocialSharedGame } from '../../model/types/social';
 
 /**
  * Estadísticas de un AMIGO: qué se puede enseñar, de qué listas y con qué datos.

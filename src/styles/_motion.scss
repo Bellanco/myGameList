@@ -1,0 +1,163 @@
+/* MOVIMIENTO DE LA INTERFAZ — lo que amortigua un CAMBIO DE ESTADO: entrar en una pantalla, esperar a que baje
+   su chunk, y la llegada o la marcha de una fila del listado.
+   ─────────────────────────────────────────────────────────────────────────────────────────────────────────────
+   POR QUÉ NO CUELGA DE `data-effects`. Esa preferencia apaga la FIRMA de cada tema (barridos, glitch, parpadeo
+   CRT, estrellas fugaces): decoración, y por eso se puede quitar sin perder nada. Esto no decora, informa —dice
+   que la pantalla ha cambiado, que algo está en camino, que esa fila acaba de llegar o se está yendo—, así que
+   apagarlo dejaría la interfaz saltando en seco, que es justo el problema que resuelve. La única guarda es
+   `prefers-reduced-motion`, que es la que de verdad pide menos movimiento; bajo ella todo esto queda en el
+   estado final y los esqueletos siguen viéndose (quietos), porque la señal de "cargando" no es movimiento.
+
+   PRESUPUESTO DE TIEMPO. Nada pasa de ~260 ms: por debajo de eso una transición se lee como continuidad y por
+   encima empieza a leerse como espera. Se anima solo `opacity` y `transform` (las dos propiedades que el
+   compositor resuelve sin recalcular estilo ni disposición), nunca alto, margen ni relleno. */
+
+/* ══ 1 · ENTRADA DE PANTALLA ═══════════════════════════════════════════════════════════════════════════════
+   La pone `useScreenTransition` sobre el `<main>` en cada cambio de camino y se retira sola al terminar. Un
+   desplazamiento de 6 px y no más: lo justo para que el ojo vea de dónde viene el contenido nuevo sin que la
+   pantalla "viaje". El `transform` convierte al `<main>` en el bloque contenedor de sus descendientes fijos
+   mientras dura, así que esto tiene que seguir siendo BREVE (los únicos fijos que viven dentro son toasts que
+   aparecen por una acción del usuario, nunca durante la entrada). */
+@media (prefers-reduced-motion: no-preference) {
+  .screen-enter { animation: screen-enter .2s ease-out; }
+}
+@keyframes screen-enter {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ══ 2 · ESPERA DE UN CHUNK PEREZOSO ═══════════════════════════════════════════════════════════════════════
+   Casi todas las pantallas llegan por `lazy()`, así que entre el clic y el primer píxel hay una descarga. Lo
+   que se enseña mientras son dos cosas a la vez: un HILO DE PROGRESO en el borde de arriba (dice "está pasando
+   algo" sin ocupar sitio ni mover nada de lo que ya hay) y un ESQUELETO con la forma aproximada de lo que
+   viene, para que la pantalla real no aterrice sobre un vacío. */
+
+/* Hilo de progreso: indeterminado a propósito —no hay ningún porcentaje que contar, solo una descarga cuya
+   duración no se conoce—. Va fijo arriba, por encima del contenido y por debajo de la cabecera (100). */
+.route-progress {
+  position: fixed;
+  inset: 0 0 auto;
+  height: 2px;
+  z-index: 95;
+  overflow: hidden;
+  pointer-events: none;
+  background: rgba(var(--steam-rgb), .12);
+}
+
+.route-progress::after {
+  content: "";
+  display: block;
+  height: 100%;
+  width: 34%;
+  border-radius: 2px;
+  background: linear-gradient(90deg, transparent, var(--steam), transparent);
+  transform: translateX(-100%);
+  animation: route-progress-sweep 1.05s ease-in-out infinite;
+}
+
+@keyframes route-progress-sweep {
+  from { transform: translateX(-100%); }
+  to   { transform: translateX(340%); }
+}
+
+/* Sin movimiento el barrido no puede decir nada, así que el hilo se queda ENTERO y quieto: sigue siendo la
+   marca de "hay algo en camino", que es para lo que está. */
+@media (prefers-reduced-motion: reduce) {
+  .route-progress::after { width: 100%; transform: none; animation: none; }
+}
+
+/* Esqueleto neutro de pantalla. No imita ninguna en particular —son ocho, con formas muy distintas— sino el
+   armazón que todas comparten: una tarjeta con su titular y unas cuantas líneas. Reutiliza las barras del
+   esqueleto del hub (`.hub-skeleton`, en `_layout.scss`) para no inventar un segundo lenguaje de carga. */
+/* Rejilla y no una sola tarjeta a lo ancho: en un escritorio de 1800 px una tarjeta única convierte las líneas
+   del esqueleto en franjas de dos palmos, que no se parece a ninguna pantalla de la app. Todas las que esperan
+   aquí reparten su contenido en tarjetas (la rejilla de ajustes, las fichas del panel de administración, los
+   bloques del perfil), así que el esqueleto reparte igual y en un móvil colapsa a una columna, como ellas. */
+.screen-skeleton {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 20rem), 1fr));
+  align-content: start;
+  gap: 1rem;
+  width: 100%;
+}
+
+.screen-skeleton-card {
+  display: flex;
+  flex-direction: column;
+  gap: .75rem;
+  padding: 1.15rem 1.2rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+
+.screen-skeleton-title { height: 1.15rem; width: 38%; }
+
+/* El pulso de las barras de esqueleto. VIVE AQUÍ Y NO EN `social.scss` a propósito: las reglas que lo usan
+   (`.hub-skeleton`) están en `_layout.scss`, que va en el arranque, mientras que `social.scss` viaja en el
+   chunk perezoso del hub. Con el fotograma allí, el esqueleto que se enseña MIENTRAS se descarga ese chunk se
+   pintaba sin pulso —la animación solo existía a partir del instante en que el esqueleto desaparecía—, que es
+   exactamente al revés de para lo que está. */
+@keyframes hub-skeleton-pulse { 0%,100% { opacity: .55; } 50% { opacity: 1; } }
+
+/* ══ 3 · ARRANQUE DE LA APP ════════════════════════════════════════════════════════════════════════════════
+   El hueco entre el primer pintado y el montaje de React. La hoja de estilos es bloqueante, así que cuando el
+   navegador pinta ya hay fondo y tipografía, pero el `#root` está vacío hasta que llega y se ejecuta el JS: un
+   rectángulo en blanco sin ninguna explicación. Este armazón lo rellena con la silueta de un listado; lo
+   escribe `index.html` (no React, que es justo lo que todavía no está) y React se lo lleva por delante al
+   montar, porque `createRoot` vacía su contenedor en el primer render. */
+.boot-shell {
+  max-width: 1800px;
+  margin: 0 auto;
+  padding: 4.6rem 1.2rem 0;
+  display: flex;
+  flex-direction: column;
+  gap: .8rem;
+}
+
+.boot-shell-row {
+  height: 3.4rem;
+  border-radius: var(--radius-md);
+  background: var(--surface-hover);
+  opacity: .5;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .boot-shell-row { animation: hub-skeleton-pulse 1.2s ease-in-out infinite; }
+  /* Escalonadas: una detrás de otra se lee como una lista cargando, y las cuatro a la vez como un parpadeo. */
+  .boot-shell-row:nth-child(2) { animation-delay: .12s; }
+  .boot-shell-row:nth-child(3) { animation-delay: .24s; }
+  .boot-shell-row:nth-child(4) { animation-delay: .36s; }
+  .boot-shell-row:nth-child(5) { animation-delay: .48s; }
+}
+
+/* ══ 4 · FILAS QUE LLEGAN Y FILAS QUE SE VAN ═══════════════════════════════════════════════════════════════
+   Hasta ahora un juego aparecía y desaparecía del listado en el mismo fotograma: el único rastro era el
+   destello de fondo del recién guardado (`.just-changed`, en `_table.scss`), que dice DÓNDE quedó pero no que
+   haya entrado. Estas dos dicen la dirección: lo nuevo baja a su sitio, lo eliminado se va por la izquierda.
+
+   Se anima la `<tr>`, no sus celdas: así el movimiento es uno solo y no ocho desincronizados. El `transform`
+   no cambia el alto que devuelve `getBoundingClientRect`, así que el virtualizador sigue midiendo bien la fila
+   mientras se anima (por eso son desplazamientos y no escalas). */
+@media (prefers-reduced-motion: no-preference) {
+  tbody tr.main-row.is-entering { animation: rowEnter .26s ease-out; }
+  /* También la fila de DETALLE: si el juego que se borra estaba desplegado, son dos `<tr>` y tienen que irse
+     juntas, o el detalle se quedaría un instante solo, colgando de una fila que ya no está. */
+  tbody tr.main-row.is-leaving,
+  tbody tr.detail-row.is-leaving { animation: rowLeave .22s ease-in forwards; }
+}
+
+@keyframes rowEnter {
+  from { opacity: 0; transform: translateY(-8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes rowLeave {
+  from { opacity: 1; transform: translateX(0); }
+  to   { opacity: 0; transform: translateX(-18px); }
+}
+
+/* La fila que se está yendo ya no es pulsable: durante esos 220 ms sigue en el DOM y un clic ahí abriría el
+   detalle de un juego que está a punto de no existir. */
+tbody tr.main-row.is-leaving,
+tbody tr.detail-row.is-leaving { pointer-events: none; }

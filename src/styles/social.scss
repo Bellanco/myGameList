@@ -58,20 +58,6 @@
 
 .hub-gateway-consent-check:focus-within { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
 
-// Botón "Solicitudes": contador de pendientes inscrito en un círculo (gris si 0, verde si hay alguna).
-.hub-requests-btn {
-  position: relative;
-}
-
-/* Botón de solicitudes: icono de campana cuadrado; el contador va como badge en la esquina inferior derecha. */
-.btn.hub-requests-btn {
-  width: 2.7rem;
-  padding: 0;
-  display: inline-grid;
-  place-items: center;
-}
-
-.hub-requests-btn .ui-icon { width: 1.25rem; height: 1.25rem; }
 
 // Aviso de SIN CONEXIÓN del espacio social. Mismo lenguaje que el requisito de alta del perfil
 // (`.hub-profile-requirement`): banda ámbar de aviso, borde fino y dos líneas con distinto peso —el guiño del tema
@@ -222,12 +208,6 @@
   .hub-seg-ind { transition: none; }
 }
 
-/* Spinner del botón de publicar mientras se envía el post (reutiliza hubSpin de _overlays). */
-.hub-spinner {
-  display: inline-block; width: 1.05rem; height: 1.05rem; border-radius: 50%;
-  border: 2px solid currentColor; border-right-color: transparent;
-  animation: hubSpin .7s linear infinite;
-}
 
 // Estado "Amigos" (chip) + posible botón de eliminar en el detalle.
 .hub-friend-state {
@@ -688,24 +668,6 @@ button.hub-chip.active {
   gap: .6rem;
 }
 
-/* Header del feed: texto a la izquierda, avatar (clica → mi perfil) a la derecha. */
-.hub-feed-header {
-  flex-direction: row;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 1rem;
-}
-
-.hub-feed-header-text {
-  display: flex;
-  flex-direction: column;
-  gap: .45rem;
-  min-width: 0;
-}
-
-.hub-feed-owner-avatar {
-  margin-top: .1rem;
-}
 
 .hub-feed-search {
   display: grid;
@@ -815,32 +777,6 @@ button.hub-chip.active {
 
 .hub-feed-move-game.is-plain:hover { color: var(--text-muted); text-decoration: none; }
 
-/* Avatar sin foto: disco tintado por el acento de la paleta + silueta a trazo. Los tokens viven en la CAPA 3 de
-   `_base.scss`; aquí solo se montan. El anillo va como sombra INSET y no como `border`, para que no reste espacio
-   al contenido ni descuadre la altura de las filas del feed. */
-.hub-avatar-blank {
-  background: var(--deco-avatar-bg);
-  color: var(--deco-avatar-line);
-  box-shadow: inset 0 0 0 1px var(--deco-avatar-ring);
-}
-
-:root[data-effects="on"] .hub-avatar-blank {
-  box-shadow: inset 0 0 0 1px var(--deco-avatar-ring), var(--deco-avatar-glow);
-}
-
-.hub-avatar-icon {
-  width: 62%;
-  height: 62%;
-  fill: none;
-  stroke: currentColor;
-  /* `stroke-width` es heredable en SVG, así que llega al contenido del `<use>` sin tocar el sprite. */
-  stroke-width: var(--deco-avatar-stroke);
-  stroke-linecap: var(--deco-avatar-cap);
-  stroke-linejoin: var(--deco-avatar-cap);
-  /* La silueta se apoya en el borde inferior del disco (los hombros se cortan, como en una foto de carnet), así que
-     se baja un pelo para que el aire quede arriba y no partido en dos. */
-  margin-block-start: 8%;
-}
 
 .hub-avatar-img { object-fit: cover; background: var(--surface-hover); }
 
@@ -867,53 +803,16 @@ button.hub-chip.active {
   font-size: .82rem;
 }
 
-/* Fase 3 — skeletons de carga */
-@keyframes hub-skeleton-pulse { 0%,100% { opacity: .55; } 50% { opacity: 1; } }
+/* Fase 3 — skeletons de carga. El FOTOGRAMA del pulso (`hub-skeleton-pulse`) ya no está aquí: se mudó a
+   `_motion.scss`, que va en el arranque. Aquí se quedaba sin efecto en el único momento en que hace falta —el
+   esqueleto se enseña MIENTRAS baja este chunk, así que su animación llegaba cuando ya no había nada que
+   animar—. Las reglas que lo usan (`.hub-skeleton`) viven en `_layout.scss`. */
 
 .hub-feed-email {
   color: var(--text);
   font-weight: 700;
 }
 
-/* F3 — Publicaciones (texto libre + enlaces). Compositor de una línea que CRECE con el contenido: el textarea
-   arranca a la altura del campo de antes y se estira al saltar de línea o desbordar (la altura la calcula
-   `SocialFeedScreen` con `scrollHeight`). */
-.hub-post-composer {
-  display: flex;
-  /* Centrado y no `stretch`: con el campo creciendo, estirar el botón lo convertiría en una columna enorme.
-     Centrado se queda cuadrado y a media altura del campo, sea de una línea o de varias. */
-  align-items: center;
-  gap: .6rem;
-}
-
-/* SELECTOR DE DOS CLASES a propósito, no `.hub-post-input` a secas: `.ftextarea` impone `min-height: 128px`
-   (pensada para el análisis del formulario) y `resize: vertical`, y vive en `_overlays-and-responsive.scss`, que
-   se compila DESPUÉS de este fichero. Con una sola clase empatan en especificidad y gana la última: el compositor
-   nacía con la altura de un párrafo y con tirador de redimensión. Subir la especificidad lo hace independiente del
-   orden de los `@use`. */
-.hub-post-composer .hub-post-input {
-  flex: 1 1 auto;
-  min-width: 0;
-  /* Arranca en UNA línea; la altura real la calcula `SocialFeedScreen` con `scrollHeight`. */
-  min-height: 0;
-  resize: none;
-  overflow-y: auto;
-  /* Tope de crecimiento: a partir de aquí hace scroll interno en vez de empujar el feed fuera de la pantalla.
-     Con el cupo de oro (10.000 caracteres) el campo sería impracticable sin este límite. */
-  max-height: 11rem;
-}
-
-/* Dos clases por el mismo motivo que el campo: `.btn` se declara después (`_forms-and-buttons.scss`) y con una
-   sola clase le ganaba el empate, así que su `padding: .55rem 1rem` anulaba el `padding: 0` de aquí y descentraba
-   el icono dentro del cuadrado. */
-.hub-post-composer .hub-post-publish {
-  flex: 0 0 auto;
-  aspect-ratio: 1; /* icono solo → botón cuadrado */
-  padding: 0;
-  /* Altura propia: al no estirarse ya con el campo, sin esto se encogería a la de su icono. Coincide con la de
-     una línea del compositor, así que en el caso normal parecen del mismo alto. */
-  height: 2.55rem;
-}
 
 .hub-post-text {
   margin: .25rem 0 0;

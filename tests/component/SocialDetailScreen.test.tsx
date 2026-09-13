@@ -35,7 +35,10 @@ const fullGame = {
   score: 5,
 };
 
-function renderDetail(getGameItemById: (profileId: string, id: number) => GameItem | null) {
+function renderDetail(
+  getGameItemById: (profileId: string, id: number) => GameItem | null,
+  reviewLoading = false,
+) {
   render(
     <SocialDetailScreen
       SOCIAL_UI={SOCIAL_UI}
@@ -45,6 +48,7 @@ function renderDetail(getGameItemById: (profileId: string, id: number) => GameIt
       onBack={vi.fn()}
       status=""
       statusKind=""
+      reviewLoading={reviewLoading}
     />,
   );
 }
@@ -135,5 +139,90 @@ describe('SocialDetailScreen — game/:id/review', () => {
     renderDetail(() => fullGame);
 
     expect(screen.getByText(/Reseña COMPLETA con muchos detalles/)).toBeInTheDocument();
+  });
+});
+
+/**
+ * EL ANÁLISIS COMPLETO NO LLEGA A LA VEZ QUE EL RESTO, y lo que se enseñaba mientras tanto era el adelanto de 160
+ * caracteres con el aviso de «esto es solo el adelanto» y los cuatro bloques de chips vacíos: contenido real pero a
+ * medias, y un aviso que en ese momento decía algo falso (no era un adelanto, es que aún no había llegado).
+ */
+describe('SocialDetailScreen — mientras el análisis completo viene de camino', () => {
+  it('espera con un esqueleto en vez de enseñar el adelanto con un aviso que todavía no es verdad', () => {
+    renderDetail(() => null, true);
+
+    // Ni el texto recortado ni la acotación que lo explica.
+    expect(screen.queryByText('Snippet corto truncado…')).not.toBeInTheDocument();
+    expect(screen.queryByText(SOCIAL_UI.feed.detailPreviewOnly)).not.toBeInTheDocument();
+    // Lo que sí hay: el hueco del cuerpo y lo que se anuncia a un lector de pantalla.
+    expect(document.querySelector('.hub-detail-body-skeleton')).not.toBeNull();
+    expect(screen.getByText(SOCIAL_UI.feed.detailLoadingReview)).toBeInTheDocument();
+  });
+
+  it('la cabecera NO espera: juego, autor y nota salen del propio evento y ya están', () => {
+    renderDetail(() => null, true);
+
+    expect(screen.getByText('The Witcher 3')).toBeInTheDocument();
+    expect(screen.getByText('Ada')).toBeInTheDocument();
+  });
+
+  it('en cuanto llega la reseña completa, el esqueleto se va y el aviso no aparece', () => {
+    renderDetail(() => fullGame, true);
+
+    expect(document.querySelector('.hub-detail-body-skeleton')).toBeNull();
+    expect(screen.getByText(/Reseña COMPLETA con muchos detalles/)).toBeInTheDocument();
+    expect(screen.queryByText(SOCIAL_UI.feed.detailPreviewOnly)).not.toBeInTheDocument();
+  });
+
+  it('cuando ya no viene nada, el adelanto vuelve con su aviso: ahí sí es la verdad', () => {
+    renderDetail(() => null, false);
+
+    expect(screen.getByText('Snippet corto truncado…')).toBeInTheDocument();
+    expect(screen.getByText(SOCIAL_UI.feed.detailPreviewOnly)).toBeInTheDocument();
+    expect(document.querySelector('.hub-detail-body-skeleton')).toBeNull();
+  });
+});
+
+/**
+ * SIN EVENTO HAY DOS SITUACIONES DISTINTAS. El detalle se resuelve buscando en el directorio social, así que
+ * llegar por un enlace, una recarga o un aviso lo deja vacío hasta que ese directorio se hidrata: la pantalla
+ * decía «no se ha encontrado» —definitivo— y a los pocos segundos aparecía la reseña.
+ */
+describe('SocialDetailScreen — sin evento todavía', () => {
+  function renderSinEvento(eventLoading: boolean) {
+    render(
+      <SocialDetailScreen
+        SOCIAL_UI={SOCIAL_UI}
+        activeDetailEvent={null}
+        getGameItemById={() => null}
+        onOpenProfileDetail={vi.fn()}
+        onBack={vi.fn()}
+        status=""
+        statusKind=""
+        eventLoading={eventLoading}
+      />,
+    );
+  }
+
+  it('mientras el directorio se hidrata espera, en vez de afirmar que no se ha encontrado', () => {
+    renderSinEvento(true);
+
+    expect(screen.queryByText(SOCIAL_UI.feed.detailMissing)).not.toBeInTheDocument();
+    expect(document.querySelector('.hub-detail-body-skeleton')).not.toBeNull();
+    // La firma reserva su sitio para que no salte al llegar (mismo armazón que `ReviewDetailHead`).
+    expect(document.querySelector('.hub-feed-card-head .hub-avatar')).not.toBeNull();
+    expect(screen.getByText(SOCIAL_UI.feed.detailLoadingReview)).toBeInTheDocument();
+  });
+
+  it('cuando la hidratación termina y sigue sin haber nada, entonces sí lo dice', () => {
+    renderSinEvento(false);
+
+    expect(screen.getByText(SOCIAL_UI.feed.detailMissing)).toBeInTheDocument();
+    expect(document.querySelector('.hub-detail-body-skeleton')).toBeNull();
+  });
+
+  it('se puede volver en los dos casos: el botón es navegación y no depende de ningún dato', () => {
+    renderSinEvento(true);
+    expect(screen.getByText(SOCIAL_UI.feed.backToFeed)).toBeInTheDocument();
   });
 });

@@ -40,8 +40,11 @@ export interface PhotoViewer {
  * sus amigos aportando un dibujo automático. Reconocerlo exige mirar la imagen, así que el veredicto se calcula
  * fuera (`core/social/googlePhoto`) y entra aquí ya resuelto, en `ownPhotoIsGeneric`.
  *
- * Mientras ese veredicto no está (llega por red), `undefined` cuenta como foto real: es el estado de siempre y dura
- * lo que tarda una respuesta cacheada.
+ * MIENTRAS EL VEREDICTO NO ESTÁ, SILUETA. `undefined` cuenta como genérica, así que quien mira no ve ninguna cara
+ * hasta que se sepa si aporta la suya. Es al revés que al PINTAR una foto concreta (`HubAvatar` la enseña y la
+ * retira si resulta genérica, porque allí el parpadeo lo pagarían todas las fotos reales para ahorrárselo a unas
+ * pocas): aquí lo que está en juego no es un parpadeo sino enseñar las caras de los demás a quien todavía no se
+ * sabe si esconde la suya, y eso no se puede deshacer una vez visto. Dura lo que tarda una respuesta cacheada.
  *
  * Lo que esta función NO puede saber: si la URL existe pero está caducada o rota. Eso solo se descubre al intentar
  * cargarla, y lo resuelve `HubAvatar` cayendo a la silueta.
@@ -51,13 +54,13 @@ export function resolveViewer(input: {
   showPhoto: boolean;
   /** La foto que de verdad tiene para publicar (la de su sesión de Google). */
   ownPhotoURL: string | null | undefined;
-  /** ¿Esa URL es el avatar genérico de Google? `undefined` = aún sin resolver, cuenta como foto real. */
+  /** ¿Esa URL es el avatar genérico de Google? `undefined` = aún sin resolver, y ante la duda cuenta como genérica. */
   ownPhotoIsGeneric?: boolean;
   tier: ProfileTier;
 }): PhotoViewer {
   return {
     showsOwnPhoto:
-      input.showPhoto && Boolean(String(input.ownPhotoURL || '').trim()) && !input.ownPhotoIsGeneric,
+      input.showPhoto && Boolean(String(input.ownPhotoURL || '').trim()) && input.ownPhotoIsGeneric === false,
     tier: input.tier,
   };
 }
@@ -109,13 +112,55 @@ interface PhotoBearing {
 interface DirectoryLike extends PhotoBearing {
   /** uid con el que se comprueba la amistad. */
   uid: string;
-  activity?: PhotoBearing[];
-  posts?: PhotoBearing[];
+}
+
+/**
+ * Reescribe la foto del autor en TODAS las colecciones de una entrada, sin enumerarlas.
+ *
+ * ENUMERARLAS FUE EL AGUJERO. Aquí había una lista escrita a mano —`activity` y `posts`— y F4 añadió una tercera
+ * colección con la identidad del autor denormalizada, `moves` (los mensajes «empezó / terminó / dejó»). Nadie la
+ * añadió a la lista, así que el feed seguía pintando la cara de todo el mundo a quien esconde la suya: la entrada
+ * quedaba limpia y las tarjetas de movimiento no. Un barrido no se olvida de la próxima.
+ *
+ * POR QUÉ VALE BARRER A CIEGAS: una entrada del directorio es UNA persona. Todo lo que cuelga de ella —su
+ * actividad, sus publicaciones, sus movimientos de lista— lleva su misma cara copiada, así que cualquier
+ * `photoURL` que aparezca ahí dentro es la suya y le toca la misma decisión. El día que una colección traiga la
+ * foto de OTRO (respuestas, menciones), esto deja de valer y habrá que decidir por colección.
+ *
+ * Devuelve el mismo array de una colección cuando ninguno de sus elementos lleva foto, para no crear objetos que
+ * nadie ha cambiado.
+ */
+function withAuthorPhoto<T extends DirectoryLike>(entry: T, visible: string): T {
+  // Se copia campo a campo en vez de esparcir y parchear porque el barrido ya recorre las claves: con el spread
+  // habría que volver a indexar un tipo genérico, que TypeScript no deja sin pasar por `unknown`.
+  const next: Record<string, unknown> = {};
+
+  for (const [key, value] of Object.entries(entry)) {
+    if (key === 'photoURL') {
+      next[key] = visible;
+      continue;
+    }
+    if (!Array.isArray(value)) {
+      next[key] = value;
+      continue;
+    }
+    let touched = false;
+    const items = value.map((item) => {
+      if (!item || typeof item !== 'object' || typeof (item as PhotoBearing).photoURL !== 'string') {
+        return item;
+      }
+      touched = true;
+      return { ...item, photoURL: visible };
+    });
+    next[key] = touched ? items : value;
+  }
+
+  return next as T;
 }
 
 /**
  * Aplica la política a un directorio social entero, incluidas las fotos de autor que van pegadas a cada entrada de
- * actividad y a cada publicación (el feed las lee de ahí, no de la entrada).
+ * actividad, a cada publicación y a cada movimiento de lista (el feed las lee de ahí, no de la entrada).
  *
  * Devuelve el MISMO array cuando no hay nada que ocultar —el caso normal de un espectador con foto y solo amigos
  * en el directorio— para no invalidar los `useMemo` que cuelgan de él en cada render.
@@ -146,14 +191,9 @@ export function withVisiblePhotos<T extends DirectoryLike>(
       return entry;
     }
     changed = true;
-    return {
-      ...entry,
-      photoURL: visible,
-      // La foto del autor viaja duplicada en cada evento y publicación: si solo se limpiara la de la entrada, el
-      // feed seguiría pintando la cara de la persona en cada una de sus tarjetas.
-      ...(entry.activity ? { activity: entry.activity.map((item) => ({ ...item, photoURL: visible })) } : {}),
-      ...(entry.posts ? { posts: entry.posts.map((item) => ({ ...item, photoURL: visible })) } : {}),
-    };
+    // La foto del autor viaja duplicada en cada evento, publicación y movimiento: si solo se limpiara la de la
+    // entrada, el feed seguiría pintando la cara de la persona en cada una de sus tarjetas.
+    return withAuthorPhoto(entry, visible);
   });
 
   return changed ? next : entries;

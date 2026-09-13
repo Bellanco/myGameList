@@ -111,6 +111,30 @@ module.exports = [
    * el lint pasa de segundos a decenas de segundos. Estas dos carpetas son donde vive el riesgo (el resto es
    * vista y constantes), así que el reparto coste/beneficio está aquí.
    */
+  /**
+   * LA CAPA `core` NO DEPENDE DE REPOSITORIOS, y esto lo sostiene.
+   *
+   * `core` son reglas puras —cálculos, saneado, catálogos— que se prueban sin navegador y sin red. Dos tipos que
+   * describían CONTRATOS de datos (`SocialProfileVisibility`, `SocialSharedGame`) vivían en
+   * `model/repository/socialGistRepository`, así que dos módulos de `core` importaban de un repositorio: no
+   * arrastraba código en tiempo de ejecución —eran `import type`— pero sí ataba la capa pura a una pieza de
+   * infraestructura, y esa arista es la que acaba justificando la siguiente, que ya no será de tipos.
+   *
+   * Los tipos se mudaron a `model/types`, que es donde vive el contrato. Esta regla impide que vuelvan: `core`
+   * puede depender de `model/types` (contratos) y de nada más de `model`.
+   */
+  {
+    files: ["src/core/**/*.{ts,tsx}"],
+    rules: {
+      "no-restricted-imports": ["error", {
+        patterns: [{
+          group: ["**/model/repository/**", "**/model/migration/**", "**/model/schemas/**"],
+          message: "`core` es la capa pura: solo puede depender de `model/types`. Si necesitas un tipo de un repositorio, el tipo está en el sitio equivocado — múdalo a `model/types`."
+        }]
+      }]
+    }
+  },
+
   {
     files: ["src/model/**/*.ts", "src/viewmodel/**/*.{ts,tsx}"],
     languageOptions: {

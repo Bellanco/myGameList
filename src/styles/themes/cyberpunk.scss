@@ -587,3 +587,35 @@
 }
 /* El barrido también se recorta al chaflán; si no, asoma por la esquina cortada. */
 :root[data-palette="cyberpunk"] .ach-toast-sheen { clip-path: var(--hud-cut); }
+
+/* ── §14 · LIENZO DE LA ACTIVIDAD SOCIAL: EL BARRIDO ──────────────────────────────────────────────────────────
+   La zona vacía del feed (ver `.hub-feed-lienzo` en `_layout.scss`). SIN TRAMA DE FONDO: aquí el hueco no se
+   llena con una rejilla permanente sino con luz que pasa. Una banda muy ancha al 9 % de alfa recorriendo el
+   lienzo cada diez segundos — no se percibe un objeto moviéndose, se percibe que la luz de la sala cambia.
+   Esquinas rectas, como todos los paneles de este skin. ── */
+:root[data-palette="cyberpunk"] .hub-feed-lienzo {
+  --lz-radius: 0;
+  /* La banda subió del 9 % al 16 % y se estrechó (de 20-80 a 26-74) al pasar la capa a una pantalla completa.
+     No es cambiar de idea sobre «muy suave»: el 9 % se eligió cuando el barrido recorría una franja de 176 px,
+     y repartido ahora sobre 700 px la misma tinta se diluye hasta no verse. Con 16 % sobre el alto nuevo la
+     presencia es la que tenía entonces. */
+  --lz-img2: linear-gradient(100deg, transparent 26%, rgba(0, 240, 255, .16) 50%, transparent 74%);
+  /* A TODO EL ALTO DE LA CAPA, que es una pantalla. Estuvo en 260 px mientras la capa se estiraba con la lista
+     —ahí un 100 % se volvía una banda de dos mil píxeles—, pero desde que la capa es pegajosa y mide lo que se
+     ve, esos 260 px dejaban el barrido en una franja pegada al borde de arriba: en un feed con contenido, el
+     único fondo de esta paleta pasaba desapercibido o quedaba fuera de la vista. */
+  --lz-size2: 240% 100%;
+  --lz-rep2: no-repeat;
+}
+
+:root[data-palette="cyberpunk"][data-theme="light"] .hub-feed-lienzo {
+  --lz-img2: linear-gradient(100deg, transparent 26%, rgba(0, 90, 110, .16) 50%, transparent 74%);
+}
+
+/* Sin el barrido no queda nada, que es justo lo correcto: la propuesta ERA la luz que pasa, así que apagada
+   deja el hueco como estaba. El alto mínimo del lienzo sigue haciendo su parte. */
+@media (prefers-reduced-motion: no-preference) {
+  :root[data-effects="on"][data-palette="cyberpunk"] .hub-feed-lienzo-fx::after { animation: lz-cyber-sweep 10s linear infinite; }
+}
+
+@keyframes lz-cyber-sweep { from { background-position: -130% 0; } to { background-position: 260% 0; } }
