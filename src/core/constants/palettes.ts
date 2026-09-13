@@ -35,7 +35,7 @@ export interface PaletteMeta {
 export const DEFAULT_PALETTE: PaletteId = 'steam';
 
 export const PALETTES: readonly PaletteMeta[] = [
-  { id: 'steam', label: 'Clásico', accent: '#1a9fff', bg: { dark: '#1a1e24', light: '#f0e9db' } },
+  { id: 'steam', label: 'Clásico', accent: '#d9a13a', accent2: '#e2903f', bg: { dark: '#1c1610', light: '#f4ece0' } },
   { id: 'persona', label: 'Corazón rebelde', accent: '#ff1f3d', bg: { dark: '#0d0d0d', light: '#f4f1ee' } },
   { id: 'portal', label: 'Cámara de pruebas', accent: '#0091d6', accent2: '#f57a00', bg: { dark: '#12171b', light: '#e7ecf0' } },
   { id: 'cyberpunk', label: 'Sin futuro', accent: '#fcee0a', accent2: '#00f0ff', bg: { dark: '#08090d', light: '#e7eaee' } },

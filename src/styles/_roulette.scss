@@ -31,4 +31,4 @@
   transform: translateY(-2px);
 }
 .fab-roulette:active { transform: translateY(0); }
-.fab-roulette .ui-icon { width: 1rem; height: 1rem; }
+.fab-roulette .ui-icon { width: var(--ico-md); height: var(--ico-md); }

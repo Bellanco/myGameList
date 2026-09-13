@@ -262,7 +262,7 @@ tbody tr.main-row.just-changed { animation: rowFlash 1.3s ease-out; }
   width: 1.35rem; height: 1.35rem; border-radius: 50%;
   background: #fff; border: 3px solid hsl(var(--score-hue, 0) 58% var(--acc-l));
   transform: translate(-50%, -50%);
-  box-shadow: 0 1px 5px rgba(0,0,0,.4);
+  box-shadow: var(--e1);
 }
 @media (prefers-reduced-motion: no-preference) {
   .score-ring, .score-dial { transition: background .25s; }
@@ -353,7 +353,7 @@ tbody tr.main-row.just-changed { animation: rowFlash 1.3s ease-out; }
    (mismos tokens que .chip-plat / .chip-genre / .chip-pf) para poder diferenciarlas. */
 .rm-plat, .rm-genre, .rm-strong {
   padding: .04rem .4rem; border-radius: var(--radius-sm);
-  font-size: .68rem; font-weight: 600; line-height: 1.5;
+  font-size: var(--fs-3xs); font-weight: 600; line-height: 1.5;
   border: 1px solid transparent;
   /* La línea del meta no envuelve (`nowrap`), así que una píldora que no cabe tiene que ENCOGERSE, no
      desbordar: sin `min-width: 0` un ítem flex se niega a bajar de su contenido y antes de esta regla el
@@ -550,7 +550,7 @@ tbody tr.detail-row.open .detail-content { animation: detailReveal .22s ease-out
   background: var(--surface-elevated, var(--surface));
   color: var(--text, inherit);
   border: 1px solid var(--border);
-  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.28);
+  box-shadow: var(--e3);
   font-weight: 600;
   text-align: center;
   pointer-events: none;

@@ -40,7 +40,7 @@
   background: var(--surface);
   border: 1px solid color-mix(in srgb, var(--fg-sky) 45%, var(--border));
   border-radius: 9px;
-  font-size: .92rem;
+  font-size: var(--fs-md);
   font-weight: 600;
   cursor: pointer;
   transition: background .16s, border-color .16s;
@@ -82,7 +82,7 @@
 
 .hub-offline-body {
   margin: .25rem 0 0;
-  font-size: .82rem;
+  font-size: var(--fs-xs);
   color: var(--text-muted);
 }
 
@@ -95,7 +95,7 @@
   flex: 0 0 auto;
   width: 1.5rem; height: 1.5rem; border-radius: 50%;
   display: inline-grid; place-items: center;
-  font-size: .78rem; font-weight: 800;
+  font-size: var(--fs-xs); font-weight: 800;
   background: var(--steam-soft); color: var(--fg-link);
   border: 1px solid color-mix(in srgb, var(--steam) 35%, transparent);
 }
@@ -113,13 +113,13 @@
   background: color-mix(in srgb, var(--warn) 12%, transparent);
   border: 1px solid color-mix(in srgb, var(--warn) 38%, transparent);
   color: var(--fg-amber);
-  font-size: .82rem;
+  font-size: var(--fs-xs);
 }
 
 .hub-profile-sync-chip {
   margin-left: auto;
   display: inline-flex; align-items: center; gap: .4rem;
-  font-size: .72rem; font-weight: 700;
+  font-size: var(--fs-2xs); font-weight: 700;
   padding: .3rem .65rem; border-radius: var(--radius-pill);
   background: var(--surface-soft); border: 1px solid var(--border); color: var(--text-muted);
 }
@@ -155,7 +155,7 @@
   position: absolute; top: 4px; bottom: 4px; left: 0; z-index: 0;
   border-radius: var(--radius-pill);
   background: linear-gradient(180deg, var(--steam), color-mix(in srgb, var(--steam) 72%, #000));
-  box-shadow: 0 6px 16px rgba(var(--steam-rgb),.4);
+  box-shadow: var(--glow-accent-strong);
   transition: transform .32s cubic-bezier(.2,.8,.25,1), width .32s cubic-bezier(.2,.8,.25,1);
 }
 
@@ -238,7 +238,7 @@
 
 .hub-metric-card span {
   color: var(--hub-text-muted);
-  font-size: .55rem;
+  font-size: var(--fs-3xs);
   letter-spacing: .01em;
   text-transform: uppercase;
   font-weight: 700;
@@ -249,7 +249,7 @@
 }
 
 .hub-metric-card strong {
-  font-size: .82rem;
+  font-size: var(--fs-xs);
   color: var(--hub-text);
   line-height: 1;
   font-weight: 800;
@@ -266,11 +266,11 @@
   }
 
   .hub-metric-card span {
-    font-size: .62rem;
+    font-size: var(--fs-3xs);
   }
 
   .hub-metric-card strong {
-    font-size: .95rem;
+    font-size: var(--fs-md);
   }
 }
 
@@ -285,11 +285,11 @@
   }
 
   .hub-metric-card span {
-    font-size: .71rem;
+    font-size: var(--fs-2xs);
   }
 
   .hub-metric-card strong {
-    font-size: 1.2rem;
+    font-size: var(--fs-xl);
   }
 }
 
@@ -317,13 +317,13 @@
 }
 
 .hub-profile-block h3 {
-  font-size: .95rem;
+  font-size: var(--fs-md);
   color: var(--hub-text);
   margin: 0;
 }
 
 .hub-profile-block p {
-  font-size: .82rem;
+  font-size: var(--fs-xs);
   line-height: 1.4;
   margin: 0;
   color: var(--hub-text-muted);
@@ -334,7 +334,7 @@
 }
 
 .visibility-label {
-  font-size: .7rem;
+  font-size: var(--fs-3xs);
   font-weight: 700;
   color: var(--hub-text-muted);
   text-transform: uppercase;
@@ -347,7 +347,7 @@
 .visibility-check > span:not(.visibility-toggle-track) {
   order: 1; /* etiqueta a la izquierda, ocupa el resto */
   flex: 1;
-  font-size: .88rem;
+  font-size: var(--fs-sm);
   color: var(--hub-text);
   font-weight: 500;
 }
@@ -380,7 +380,7 @@
   border: 1px solid rgba(var(--warn-rgb),.35);
   background: rgba(var(--warn-rgb),.12);
   color: var(--fg-amber-soft);
-  font-size: .74rem;
+  font-size: var(--fs-2xs);
   font-weight: 700;
 }
 
@@ -391,7 +391,7 @@
 }
 
 .hub-lead {
-  font-size: .92rem;
+  font-size: var(--fs-md);
 }
 
 .hub-status-grid {
@@ -421,13 +421,13 @@
 
 .hub-status-label {
   color: var(--text-muted);
-  font-size: .75rem;
+  font-size: var(--fs-2xs);
   letter-spacing: .02em;
 }
 
 .hub-status-card strong {
   color: var(--text);
-  font-size: .88rem;
+  font-size: var(--fs-sm);
 }
 
 .hub-hub-card-space {
@@ -443,7 +443,7 @@
 
 .hub-space-welcome h3 {
   margin: 0;
-  font-size: 1.02rem;
+  font-size: var(--fs-lg);
   color: var(--hub-text);
 }
 
@@ -466,7 +466,7 @@
   background: rgba(var(--steam-rgb),.1);
   border: 1px solid rgba(var(--steam-rgb),.28);
   color: var(--fg-link);
-  font-size: .74rem;
+  font-size: var(--fs-2xs);
   font-weight: 700;
 }
 
@@ -676,7 +676,7 @@ button.hub-chip.active {
 
 .hub-feed-search span {
   color: var(--text-muted);
-  font-size: .75rem;
+  font-size: var(--fs-2xs);
   text-transform: uppercase;
   letter-spacing: .03em;
   font-weight: 700;
@@ -694,7 +694,7 @@ button.hub-chip.active {
   color: var(--hub-text-muted);
   border-radius: 999px;
   padding: .28rem .72rem;
-  font-size: .76rem;
+  font-size: var(--fs-2xs);
   font-weight: 700;
   font-family: inherit;
   transition: border-color .2s ease, background .2s ease, color .2s ease;
@@ -708,7 +708,7 @@ button.hub-chip.active {
 
 .hub-feed-result-count {
   margin: 0;
-  font-size: .78rem;
+  font-size: var(--fs-xs);
   color: var(--text-muted);
 }
 
@@ -716,7 +716,7 @@ button.hub-chip.active {
   display: block;
   margin-top: .2rem;
   color: var(--hub-text);
-  font-size: .78rem;
+  font-size: var(--fs-xs);
   font-weight: 600;
   letter-spacing: .02em;
 }
@@ -732,7 +732,7 @@ button.hub-chip.active {
   flex: 1 1 auto;
   min-width: 0;
   margin: 0;
-  font-size: .84rem;
+  font-size: var(--fs-sm);
   line-height: 1.35;
   color: var(--text-muted);
 }
@@ -784,7 +784,7 @@ button.hub-chip.active {
 .hub-avatar-xs {
   width: 1.45rem;
   height: 1.45rem;
-  font-size: .62rem;
+  font-size: var(--fs-3xs);
 }
 
 /* social/profiles — hero de página de perfil: avatar grande + nombre + recuento, centrado. */
@@ -800,7 +800,7 @@ button.hub-chip.active {
 .hub-profile-hero-meta {
   margin: 0;
   color: var(--text-muted);
-  font-size: .82rem;
+  font-size: var(--fs-xs);
 }
 
 /* Fase 3 — skeletons de carga. El FOTOGRAMA del pulso (`hub-skeleton-pulse`) ya no está aquí: se mudó a
@@ -831,7 +831,7 @@ button.hub-chip.active {
   background: none;
   color: var(--fg-link);
   font: inherit;
-  font-size: .82rem;
+  font-size: var(--fs-xs);
   font-weight: 600;
   cursor: pointer;
   text-decoration: underline;
@@ -887,7 +887,7 @@ button.hub-chip.active {
 
 .hub-gateway-step-caption {
   margin: -.15rem 0 .1rem;
-  font-size: .82rem;
+  font-size: var(--fs-xs);
   color: var(--hub-text-muted);
   font-weight: 700;
   text-transform: uppercase;
@@ -905,7 +905,7 @@ button.hub-chip.active {
 
 .hub-gateway-progress small {
   color: var(--text-muted);
-  font-size: .74rem;
+  font-size: var(--fs-2xs);
   font-weight: 700;
   letter-spacing: .02em;
 }
@@ -925,7 +925,7 @@ button.hub-chip.active {
   width: 0;
   background: linear-gradient(90deg, rgba(var(--steam-rgb),.82), rgba(var(--success-rgb),.88));
   border-radius: 999px;
-  box-shadow: 0 0 14px rgba(var(--steam-rgb),.28);
+  box-shadow: var(--glow-accent-halo);
   transition: width .42s ease-out;
 }
 
@@ -941,7 +941,7 @@ button.hub-chip.active {
 .hub-gateway-btn {
   min-height: 3.1rem;
   border-radius: .8rem;
-  font-size: .98rem;
+  font-size: var(--fs-lg);
   font-weight: 800;
   display: inline-flex;
   align-items: center;
@@ -952,8 +952,8 @@ button.hub-chip.active {
 
 .hub-gateway-btn-primary {
   min-height: 3.8rem;
-  font-size: 1.06rem;
-  box-shadow: 0 10px 22px rgba(var(--steam-rgb),.16);
+  font-size: var(--fs-lg);
+  box-shadow: var(--glow-accent-lift);
   animation: socialCtaIn .36s ease-out;
 }
 
@@ -974,7 +974,7 @@ button.hub-chip.active {
   cursor: pointer;
   color: var(--fg-link);
   font-weight: 700;
-  font-size: .88rem;
+  font-size: var(--fs-sm);
   padding: .35rem .15rem .5rem;
   list-style: none;
 }
@@ -1027,7 +1027,7 @@ button.hub-chip.active {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: .69rem;
+  font-size: var(--fs-3xs);
   font-weight: 900;
   border: 1px solid var(--border);
   color: var(--hub-text);
@@ -1051,7 +1051,7 @@ button.hub-chip.active {
 
 .hub-gateway-step-copy strong {
   color: var(--text);
-  font-size: .8rem;
+  font-size: var(--fs-xs);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1059,7 +1059,7 @@ button.hub-chip.active {
 
 .hub-gateway-step-copy small {
   color: var(--text-muted);
-  font-size: .72rem;
+  font-size: var(--fs-2xs);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1091,7 +1091,7 @@ button.hub-chip.active {
 
 .hub-feed-day-header h4 {
   margin: 0;
-  font-size: .88rem;
+  font-size: var(--fs-sm);
   font-weight: 700;
   letter-spacing: .02em;
   color: var(--hub-text-muted);
@@ -1116,7 +1116,7 @@ button.hub-chip.active {
 .hub-name-link:focus-visible {
   outline: none;
   border-radius: .25rem;
-  box-shadow: 0 0 0 2px rgba(var(--steam-rgb),.2);
+  box-shadow: var(--ring-accent);
 }
 
 @container social-card (max-width: 66rem) {
@@ -1131,7 +1131,7 @@ button.hub-chip.active {
   }
 
   .hub-filter-chip {
-    font-size: .72rem;
+    font-size: var(--fs-2xs);
     padding: .24rem .62rem;
   }
 }
@@ -1175,12 +1175,12 @@ button.hub-chip.active {
 
   .hub-gateway-btn {
     min-height: 3.25rem;
-    font-size: 1rem;
+    font-size: var(--fs-lg);
   }
 
   .hub-gateway-btn-primary {
     min-height: 3.95rem;
-    font-size: 1.05rem;
+    font-size: var(--fs-lg);
   }
 
   .hub-gateway-progress {

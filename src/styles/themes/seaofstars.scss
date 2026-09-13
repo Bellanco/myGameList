@@ -15,7 +15,16 @@
 /* ── §1 · Tipografía pixel en TODO el texto (el `body` incluido, como el resto de skins fijan su fuente en el
    body → reseñas, notas y demás quedan temadas por herencia): LETRAS en Pixelify Sans (la fuente que quedaba perfecta para el texto)
    y NÚMEROS en Silkscreen (los mejores dígitos pixel) vía `unicode-range` + `size-adjust` (para igualar tamaños). ── */
-:root[data-palette="seaofstars"] body { font-family: 'SoS Digits', 'Pixelify Sans', system-ui, sans-serif; font-weight: 500; }
+/* PAPELES DE LETRA de este tema. CAPA 0 (`_base.scss`) declara los cuatro papeles y todas las hojas
+   los usan por ficha; aquí es donde este tema decide qué familia va en cada uno. Cambiar la letra del
+   tema es cambiar ESTE bloque, no buscar `font-family` por el fichero. */
+:root[data-palette="seaofstars"] {
+  --font-body: 'SoS Digits', 'Pixelify Sans', system-ui, sans-serif;
+  --font-label: var(--font-body);
+  --font-display: var(--font-body);
+  --font-mono: 'SoS Digits', ui-monospace, monospace;
+}
+:root[data-palette="seaofstars"] body { font-family: var(--font-body); font-weight: 500; }
 :root[data-palette="seaofstars"] h2,
 :root[data-palette="seaofstars"] h3,
 :root[data-palette="seaofstars"] h4,
@@ -37,10 +46,10 @@
 :root[data-palette="seaofstars"] .hub-review-game,
 :root[data-palette="seaofstars"] .active-filter-chip,
 :root[data-palette="seaofstars"] .rl-card-tag,
-:root[data-palette="seaofstars"] .chip { font-family: 'SoS Digits', 'Pixelify Sans', system-ui, sans-serif; font-weight: 600; }
+:root[data-palette="seaofstars"] .chip { font-family: var(--font-body); font-weight: 600; }
 :root[data-palette="seaofstars"] .score-ring-num,
 :root[data-palette="seaofstars"] .score-dial-num,
-:root[data-palette="seaofstars"] .hub-review-medal { font-family: 'SoS Digits', 'Pixelify Sans', system-ui, sans-serif; font-weight: 700; }
+:root[data-palette="seaofstars"] .hub-review-medal { font-family: var(--font-body); font-weight: 700; }
 /* El dígito de Silkscreen (con size-adjust 110%) hace que "100" quede pegado al borde del anillo: 1px menos. */
 :root[data-palette="seaofstars"] .score-ring-num { font-size: calc(var(--sz) * .36 - 1px); }
 /* Iconos de píxel sin suavizado. */
@@ -68,7 +77,10 @@
 /* Término pulsable "PlayStation" de la nota: usa `style` inline con var(--steam) (oro vivo, falla). El inline
    no lleva !important, así que esta regla lo gana y lo lleva a oro profundo accesible. */
 :root[data-palette="seaofstars"][data-theme="light"] .settings-card-note button { color: #6e4700 !important; }
-:root[data-palette="seaofstars"][data-theme="light"] .chip-genre   { color: #6e4700; background: rgba(255,192,31,.22); border-color: rgba(224,149,26,.6); }
+/* El GÉNERO se tiñe con la rampa categórica (CAPA 2b), cuyos valores para este tema en claro están medidos
+   contra sus turquesas —que son el peor fondo de las doce combinaciones—. El oro profundo se queda como
+   respaldo para cualquier chip que se pinte sin tono (formulario, bandeja de importación). */
+:root[data-palette="seaofstars"][data-theme="light"] .chip-genre   { color: var(--cat-fg, #6e4700); background: color-mix(in srgb, var(--cat, #ffc01f) 22%, transparent); border-color: color-mix(in srgb, var(--cat, #e0951a) 60%, transparent); }
 :root[data-palette="seaofstars"][data-theme="light"] .chip-pf      { color: #145c39; background: rgba(63,184,79,.22); border-color: rgba(47,156,86,.55); }
 :root[data-palette="seaofstars"][data-theme="light"] .chip-pd      { color: #8a2416; background: rgba(240,68,62,.20); border-color: rgba(210,58,40,.55); }
 :root[data-palette="seaofstars"][data-theme="light"] .chip-generic { color: #7a3d00; background: rgba(255,138,43,.22); border-color: rgba(219,111,22,.55); }
@@ -393,7 +405,7 @@
   box-shadow: 0 0 0 2px var(--bg) !important;
 }
 /* El renglón, en la pixelada de los diálogos y algo más grande para que se lea a ese cuerpo. */
-:root[data-palette="seaofstars"] .hub-feed-move-line { font-size: .9rem; }
+:root[data-palette="seaofstars"] .hub-feed-move-line { font-size: var(--fs-md); }
 
 /* ── §16 · LIENZO DE LA ACTIVIDAD SOCIAL: EL CIELO EN LA CAJA ─────────────────────────────────────────────────
    La zona vacía del feed (ver `.hub-feed-lienzo` en `_layout.scss`). Un trozo de campo de estrellas más denso

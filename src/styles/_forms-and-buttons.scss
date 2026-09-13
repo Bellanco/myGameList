@@ -13,9 +13,9 @@
   border-radius: var(--radius-pill); padding: .55rem 1rem; min-height: 42px;
   outline: none; transition: border-color .2s, box-shadow .2s; min-width: 0;
 }
-.input-base:focus { border-color: var(--focus-ring); box-shadow: 0 0 0 3px rgba(var(--steam-rgb),.12); }
+.input-base:focus { border-color: var(--focus-ring); box-shadow: var(--ring-accent-soft); }
 /* Filtro de juegos del perfil social: campo compacto (tras .input-base para ajustar tamaño). */
-.hub-game-filter { width: 100%; min-height: 36px; padding: .4rem .85rem; font-size: .88rem; }
+.hub-game-filter { width: 100%; min-height: 36px; padding: .4rem .85rem; font-size: var(--fs-sm); }
 .toolbar .search-input { width: 100%; padding-right: 2.7rem; }
 .search-clear {
   position: absolute; right: .7rem; top: 50%; transform: translateY(-50%);
@@ -76,7 +76,7 @@ dialog.alert-dialog[open]::backdrop { animation: alertBackdropIn .24s ease both;
   min-height: 0;
 }
 .dialog-title {
-  font-size: 1.1rem;
+  font-size: var(--fs-xl);
   font-weight: 600;
 }
 .dialog-actions {
@@ -105,12 +105,12 @@ dialog.alert-dialog[open]::backdrop { animation: alertBackdropIn .24s ease both;
   }
   .share-dialog-consent {
     padding: 0.65rem 0.75rem;
-    font-size: 0.86rem;
+    font-size: var(--fs-sm);
     gap: 0.4rem;
   }
   .share-dialog-note,
   .share-dialog-accept {
-    font-size: 0.86rem;
+    font-size: var(--fs-sm);
   }
 }
 .share-dialog-game {
@@ -124,7 +124,7 @@ dialog.alert-dialog[open]::backdrop { animation: alertBackdropIn .24s ease both;
   padding: 0.75rem 0.9rem;
   border-radius: var(--radius, 8px);
   background: var(--surface-2, rgba(127, 127, 127, 0.12));
-  font-size: 0.92rem;
+  font-size: var(--fs-md);
   line-height: 1.45;
 
   p {
@@ -136,14 +136,14 @@ dialog.alert-dialog[open]::backdrop { animation: alertBackdropIn .24s ease both;
 }
 .share-dialog-note {
   margin: 0;
-  font-size: 0.9rem;
+  font-size: var(--fs-md);
   opacity: 0.85;
 }
 .share-dialog-accept {
   display: flex;
   align-items: flex-start;
   gap: 0.55rem;
-  font-size: 0.92rem;
+  font-size: var(--fs-md);
   cursor: pointer;
 
   input {
@@ -153,7 +153,7 @@ dialog.alert-dialog[open]::backdrop { animation: alertBackdropIn .24s ease both;
 }
 .share-dialog-error {
   margin: 0;
-  font-size: 0.9rem;
+  font-size: var(--fs-md);
   color: var(--danger, #d33);
 }
 /* Caja del enlace publicado, con el botón de copiar DENTRO y al final: el gesto vive donde está el dato.
@@ -170,8 +170,8 @@ dialog.alert-dialog[open]::backdrop { animation: alertBackdropIn .24s ease both;
 .share-dialog-url-text {
   flex: 1 1 auto;
   min-width: 0;
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 0.85rem;
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
   overflow-wrap: anywhere;
 }
 .share-dialog-copy {
@@ -196,7 +196,7 @@ dialog.alert-dialog[open]::backdrop { animation: alertBackdropIn .24s ease both;
 }
 /* Distintivo junto al botón de compartir, en el detalle de tu reseña. */
 .share-expiry {
-  font-size: 0.82rem;
+  font-size: var(--fs-xs);
   opacity: 0.8;
   align-self: center;
 }
@@ -214,7 +214,7 @@ dialog.alert-dialog[open]::backdrop { animation: alertBackdropIn .24s ease both;
 .settings-shares-empty,
 .settings-shares-error {
   margin: 0;
-  font-size: 0.92rem;
+  font-size: var(--fs-md);
 }
 .settings-shares-error {
   color: var(--danger, #d33);
@@ -250,7 +250,7 @@ dialog.alert-dialog[open]::backdrop { animation: alertBackdropIn .24s ease both;
   display: flex;
   flex-direction: column;
   gap: 0.15rem;
-  font-size: 0.92rem;
+  font-size: var(--fs-md);
 }
 .settings-shares-item-actions {
   display: flex;
@@ -412,7 +412,7 @@ dialog.alert-dialog[open]::backdrop { animation: alertBackdropIn .24s ease both;
   background: var(--steam-soft);
   border-color: var(--steam-soft);
 }
-.theme-toggle-btn .ui-icon { width: 1.15rem; height: 1.15rem; transition: transform .25s; }
+.theme-toggle-btn .ui-icon { width: var(--ico-lg); height: var(--ico-lg); transition: transform .25s; }
 .theme-toggle-btn:hover .ui-icon { transform: rotate(12deg) scale(1.08); }
 
 /* F1 — selector de paleta (header): pastilla compacta con icono + <select> nativo (accesible y robusto). */
@@ -430,7 +430,7 @@ dialog.alert-dialog[open]::backdrop { animation: alertBackdropIn .24s ease both;
 .palette-select-icon { display: inline-flex; flex: 0 0 auto; }
 .palette-select-field {
   border: 0; background: transparent; color: var(--text);
-  font-weight: 600; font-size: .82rem; margin: 0; padding: 0;
+  font-weight: 600; font-size: var(--fs-xs); margin: 0; padding: 0;
   cursor: pointer; outline: none; max-width: 9rem;
 }
 .palette-select-field:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 3px; border-radius: 4px; }
@@ -443,7 +443,7 @@ dialog.alert-dialog[open]::backdrop { animation: alertBackdropIn .24s ease both;
   display: inline-flex; align-items: center; justify-content: center;
   transition: all .25s;
 }
-.btn-icon:hover { color: var(--fg-link); background: var(--steam-soft); border-color: rgba(var(--steam-rgb),.25); transform: translateY(-2px); box-shadow: 0 4px 12px rgba(var(--steam-rgb),.15); }
+.btn-icon:hover { color: var(--fg-link); background: var(--steam-soft); border-color: rgba(var(--steam-rgb),.25); transform: translateY(-2px); box-shadow: var(--glow-accent); }
 .btn-icon:active { transform: scale(.95); }
 /* Ghost: se mantiene plano y transparente (sin cristal ni inclinación 3D). */
 .btn-ghost { background: transparent; color: var(--text-muted); border: 1px solid transparent; box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; }
@@ -465,7 +465,7 @@ dialog.alert-dialog[open]::backdrop { animation: alertBackdropIn .24s ease both;
   border: 1px solid var(--border);
   border-radius: var(--radius-md, .6rem);
 }
-.noscript-notice h1 { margin: 0 0 .5rem; font-size: 1.25rem; }
+.noscript-notice h1 { margin: 0 0 .5rem; font-size: var(--fs-xl); }
 .noscript-notice p { margin: 0; }
 
 /* A11y-4 — Enlace "saltar al contenido": invisible hasta que recibe el foco, y entonces aparece arriba a la
@@ -503,7 +503,7 @@ dialog.alert-dialog[open]::backdrop { animation: alertBackdropIn .24s ease both;
   margin: 0; padding: .25rem 0; list-style: none;
   background: var(--surface-elevated); border: 1px solid var(--border);
   border-radius: 6px; min-width: 160px; max-width: 320px;
-  box-shadow: 0 6px 18px rgba(0,0,0,.12); overflow: hidden;
+  box-shadow: var(--e2); overflow: hidden;
 }
 .tag-suggestions li {
   padding: .6rem .8rem; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
@@ -590,7 +590,7 @@ dialog.alert-dialog[open]::backdrop { animation: alertBackdropIn .24s ease both;
   /* El icono va con `--on-accent`, que es justo el token para "texto encima de un relleno de acento", y no con
      un blanco fijo: sobre el amarillo de Sin futuro o el oro de Mar de estrellas se quedaba en ~1,2:1. */
   color: var(--on-accent);
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3);
+  box-shadow: var(--e2);
   display: grid;
   place-content: center;
   cursor: pointer;
