@@ -489,3 +489,35 @@
   0%, 72% { background-position: -140% 0; }
   92%, 100% { background-position: 260% 0; }
 }
+
+/* ══ MOMENTOS · EL CORTE DE TIJERA: la fila eliminada se recorta como una pieza de collage ══════════════════
+   El listado ya marca `.is-leaving` cuando un juego se va (ver `_motion.scss`), así que no hace falta ningún
+   disparador nuevo. Lo que cambia es CÓMO se va: en vez de deslizarse, la fila se corta en diagonal con un
+   borde dentado —el recorte de revista del que está hecha toda la interfaz del tema— y las dos mitades se
+   separan un instante antes de desaparecer. Es el mismo gesto con el que el juego tacha lo que ya no está. ══ */
+@media (prefers-reduced-motion: no-preference) {
+  :root[data-effects="on"][data-palette="persona"] tbody tr.main-row.is-leaving,
+  :root[data-effects="on"][data-palette="persona"] tbody tr.detail-row.is-leaving {
+    animation: p5-scissor-cut .3s cubic-bezier(.4, 0, .7, .2) forwards;
+  }
+
+  /* Los dos polígonos tienen los MISMOS vértices en el mismo orden —requisito para que `clip-path` interpole—:
+     lo que se mueve es la línea dentada, que baja en diagonal hasta comerse la fila entera. */
+  @keyframes p5-scissor-cut {
+    0% {
+      clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%, 0 100%, 0 100%, 0 100%, 0 100%);
+      opacity: 1;
+      transform: translateX(0) rotate(0deg);
+    }
+    45% {
+      clip-path: polygon(0 0, 100% 0, 100% 46%, 76% 58%, 52% 44%, 28% 60%, 0 48%, 0 0);
+      opacity: 1;
+      transform: translateX(-4px) rotate(-.6deg);
+    }
+    100% {
+      clip-path: polygon(0 0, 100% 0, 100% 0, 76% 6%, 52% 0, 28% 8%, 0 0, 0 0);
+      opacity: 0;
+      transform: translateX(-22px) rotate(-2.4deg);
+    }
+  }
+}

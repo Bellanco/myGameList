@@ -2,6 +2,7 @@ import { useCallback, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import type { ToolbarFilters } from '../model/types/game';
 import { DEFAULT_FILTERS, parseFilters, serializeFilters } from './toolbarFilters';
+import { emitMoment } from '../core/effects/moments';
 
 type MultiKey = 'genres' | 'platforms';
 
@@ -16,6 +17,9 @@ export function useToolbarFilters() {
   const setFilter = useCallback(
     (key: keyof ToolbarFilters, value: string | boolean | string[]) => {
       setSearchParams((prev) => serializeFilters({ ...parseFilters(prev), [key]: value }), { replace: true });
+      /* La BÚSQUEDA no cuenta como filtrar (ver `core/effects/moments`): se escribe letra a letra, así que un
+         tema que respondiera a esto dispararía su gesto una vez por tecla. Los demás filtros se eligen de una. */
+      if (key !== 'search') emitMoment('list-filtered');
     },
     [setSearchParams],
   );
@@ -31,6 +35,7 @@ export function useToolbarFilters() {
         },
         { replace: true },
       );
+      emitMoment('list-filtered');
     },
     [setSearchParams],
   );
@@ -38,12 +43,14 @@ export function useToolbarFilters() {
   const clearFilter = useCallback(
     (key: keyof ToolbarFilters) => {
       setSearchParams((prev) => serializeFilters({ ...parseFilters(prev), [key]: DEFAULT_FILTERS[key] }), { replace: true });
+      if (key !== 'search') emitMoment('list-filtered');
     },
     [setSearchParams],
   );
 
   const clearAllFilters = useCallback(() => {
     setSearchParams(new URLSearchParams(), { replace: true });
+    emitMoment('list-filtered');
   }, [setSearchParams]);
 
   return { filters, setFilter, toggleFilterValue, clearFilter, clearAllFilters };

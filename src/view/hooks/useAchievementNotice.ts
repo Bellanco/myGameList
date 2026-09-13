@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { ENABLE_ACHIEVEMENTS } from '../../core/achievements/flags';
+import { emitMoment } from '../../core/effects/moments';
 import type { AchievementFlash } from '../components/stats/AchievementToast';
 import type { StatusNotice } from '../../model/types/game';
 import type { TabData } from '../../model/types/game';
@@ -152,6 +153,9 @@ export function useAchievementNotice(
           .filter((def): def is NonNullable<typeof def> => Boolean(def));
         if (defs.length === 0) return;
         setFlash({ kind: 'unlock', defs });
+        // El momento que puede celebrar cada tema (ver `core/effects/moments`). Solo el DESBLOQUEO: el sembrado
+        // de una ampliación del catálogo y los hitos a mitad de escalera no son un logro conseguido ahora.
+        emitMoment('achievement-unlocked');
         // El texto sigue yendo al banner: es su región viva la que lo anuncia (A11y-4). El nombre YA trae su
         // grado desde el catálogo, así que componerlo otra vez lo diría dos veces.
         notify('ok', defs.length === 1

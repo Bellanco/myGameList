@@ -10,6 +10,7 @@ import { nextVersion, resolveGradedAt, stampEntry } from '../core/utils/gameStam
 import { mapTabDataTags, type TagCategory } from '../core/utils/tagMutations';
 import { normalizeTag, safeTrim } from '../core/security/sanitize';
 import { normalizeName } from '../core/roulette/roulette';
+import { emitMoment } from '../core/effects/moments';
 import { loadLocalState, loadLocalStateAsync, normalizeData, saveLocalState } from '../model/repository/localRepository';
 import { getGamesAsTabData, getLocalMeta, mirrorTabDataToGames } from '../model/repository/indexedDbRepository';
 import { markDirty } from '../model/repository/syncStateRepository';
@@ -544,6 +545,11 @@ export function useGameListViewModel() {
       setDraft(EMPTY_DRAFT);
       notify('ok', 'Juego guardado correctamente');
       void trackAnalyticsEvent('game_saved', { tab, is_edit: Boolean(existing), has_review: Boolean(base.review) });
+      /* Los dos momentos que cada tema celebra a su manera (ver `core/effects/moments`). CERRAR un juego es
+         llegar a la lista del completista desde fuera: guardar uno que YA estaba ahí es una edición, no un
+         final, y celebrarlo cada vez que se corrige una falta de la reseña lo convertiría en ruido. */
+      if (tab === 'c' && !existing) emitMoment('game-closed');
+      emitMoment('library-saved');
       return { id: base.id, previous };
     },
     [data, findGameByName, notify, persist],
@@ -638,6 +644,8 @@ export function useGameListViewModel() {
       persist(nextData);
       notify('ok', `"${moved.name}" pasa a ${TAB_TITLES[targetTab]}`);
       void trackAnalyticsEvent('game_moved', { from: sourceTab, to: targetTab });
+      if (targetTab === 'c') emitMoment('game-closed');
+      emitMoment('library-saved');
     },
     [data, persist, notify],
   );
