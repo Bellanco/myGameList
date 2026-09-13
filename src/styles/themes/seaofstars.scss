@@ -413,10 +413,11 @@
     radial-gradient(1.5px 1.5px at 64% 14%, var(--sos-turq) 48%, transparent 50%),
     radial-gradient(1.5px 1.5px at 36% 62%, var(--sos-purple) 48%, transparent 50%),
     radial-gradient(closest-side, rgba(155, 123, 224, .4), transparent 64%);
-  /* Las estrellas se repiten por todo el alto; el resplandor de horizonte va acotado y anclado ABAJO de la
-     primera pantalla, que es donde estaba pensado — al 100 % del lienzo se iba al final del scroll. */
-  --lz-size: 96px 96px, 118px 118px, 132px 132px, 170% 150px;
-  --lz-pos: 0 0, 0 0, 0 0, 50% 176px;
+  /* Las estrellas se repiten por todo el alto; el resplandor de horizonte se pega al PIE de la capa, que es
+     donde tiene que estar un horizonte. Estuvo anclado a 176 px del borde superior mientras la capa era una
+     franja de ese alto; con la capa a pantalla completa, ahí quedaba colgado en mitad del cielo. */
+  --lz-size: 96px 96px, 118px 118px, 132px 132px, 170% 34%;
+  --lz-pos: 0 0, 0 0, 0 0, 50% 100%;
   --lz-rep: repeat, repeat, repeat, no-repeat;
   --lz-img2:
     radial-gradient(1.5px 1.5px at 86% 44%, #fff 48%, transparent 50%),
@@ -429,8 +430,8 @@
 :root[data-palette="seaofstars"][data-theme="light"] .hub-feed-lienzo {
   --lz-bg: color-mix(in srgb, var(--surface-elevated) 70%, transparent);
   --lz-img: radial-gradient(closest-side, rgba(29, 132, 148, .22), transparent 64%);
-  --lz-size: 170% 150px;
-  --lz-pos: 50% 176px;
+  --lz-size: 170% 34%;
+  --lz-pos: 50% 100%;
   --lz-rep: no-repeat;
   --lz-img2: none;
 }

@@ -1022,11 +1022,11 @@
    contratiempo (11 y 8,5 s), lo justo para que el hueco se lea como una sala con dos luces y no como una mancha. */
 :root:not([data-palette]) .hub-feed-lienzo {
   --lz-img: radial-gradient(closest-side, rgba(var(--steam-rgb), .19), transparent 72%);
-  --lz-size: 78% 300px;
-  --lz-pos: 4% 0;
+  --lz-size: 78% 100%;
+  --lz-pos: 4% 50%;
   --lz-rep: no-repeat;
   --lz-img2: radial-gradient(closest-side, rgba(var(--steam-rgb), .14), transparent 70%);
-  --lz-size2: 62% 240px;
+  --lz-size2: 62% 62%;
   --lz-pos2: 100% 0;
   --lz-rep2: no-repeat;
 }
