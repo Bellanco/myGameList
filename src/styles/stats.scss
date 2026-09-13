@@ -665,11 +665,15 @@
   transform: translate(-50%, -100%) translateY(215%);
 }
 
+/* El eje va del mismo cuerpo que la escala de la izquierda: las dos son la GUÍA de la figura, no su contenido,
+   y un año de cuatro cifras es el rótulo más ancho de todo el lienzo. Con ocho años en un móvil, entre año y año
+   hay unos 36 px y a .72rem el rótulo se comía 30 de ellos —el aire que quedaba dependía de cómo redondease los
+   glifos cada sistema, y en el Linux de la integración se perdía un año que en un móvil de verdad cabía—. */
 .year-axis {
   position: relative;
   height: 1.1rem;
   margin-inline: var(--year-gutter) var(--year-edge);
-  font-size: .72rem;
+  font-size: .68rem;
   font-variant-numeric: tabular-nums;
   color: var(--stats-ink-2);
 }
