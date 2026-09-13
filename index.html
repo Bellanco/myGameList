@@ -84,9 +84,28 @@
          DM Sans (base de todas las paletas) entra por `src/styles/index.scss`; las fuentes propias de cada paleta,
          por su skin, que se carga bajo demanda (ver src/view/hooks/paletteSkin.ts). -->
     <link rel="preload" href="/fonts/dm-sans-latin-468d56b6.woff2" as="font" type="font/woff2" crossorigin>
+    <!-- SIN JAVASCRIPT, el armazón de arranque del `<body>` no es una espera: es una mentira. Nadie va a montar
+         nada encima, así que sus barras latirían para siempre por delante del aviso que explica lo que pasa.
+         Dentro de un `<noscript>` del `<head>`, que es donde el estándar admite un `<style>`: con JS activado el
+         navegador ni lee la regla. La CSP la admite por `style-src 'unsafe-inline'`. -->
+    <noscript><style>.boot-shell { display: none; }</style></noscript>
   </head>
   <body>
-    <div id="root"></div>
+    <!-- ARMAZÓN DE ARRANQUE. La hoja de estilos es bloqueante, así que cuando el navegador pinta ya hay fondo y
+         tipografía; el JS todavía no, y hasta que React monta el `#root` estaba VACÍO: un rectángulo en blanco,
+         sin ninguna señal de que la app venga de camino. Esto lo ocupa con la silueta de un listado.
+         Va escrito a mano aquí —y no en un componente— porque lo que falta en ese momento es precisamente React.
+         No hace falta quitarlo: `createRoot` vacía su contenedor en el primer render.
+         `aria-hidden` porque no es contenido, es una espera; su estilo vive en `src/styles/_motion.scss`. -->
+    <div id="root">
+      <div class="boot-shell" aria-hidden="true">
+        <div class="boot-shell-row"></div>
+        <div class="boot-shell-row"></div>
+        <div class="boot-shell-row"></div>
+        <div class="boot-shell-row"></div>
+        <div class="boot-shell-row"></div>
+      </div>
+    </div>
     <!-- A11y-4: sin JavaScript, `#root` se queda vacío y la página era un rectángulo en blanco sin explicación
          (ni un error, ni una pista). Esto al menos dice qué pasa. La app es un SPA: no hay versión sin JS. -->
     <noscript>

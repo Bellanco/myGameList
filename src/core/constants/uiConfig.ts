@@ -16,3 +16,11 @@ export const HOURS_RANGES = [
  */
 export const COMPACT_TABLE_MAX_WIDTH = 1100;
 export const COMPACT_FILTERS_MAX_WIDTH = 1400;
+
+/**
+ * Lo que tarda una fila en irse del listado, en milisegundos. Mismo número que la animación `rowLeave` de
+ * `_motion.scss`, y aquí porque `App` tiene que esperarlo: el borrado se APLAZA hasta que la fila termina de
+ * desvanecerse, o no habría nada que animar (el dato desaparece y con él la fila, en el mismo fotograma).
+ * Si se toca uno, hay que tocar el otro: de más, la fila ya invisible retrasa el borrado; de menos, se corta.
+ */
+export const ROW_EXIT_MS = 220;
