@@ -11,7 +11,16 @@
 
 /* ── §1 · Tipografía: Oswald (señalética condensada, versales) para titulares/etiquetas/botones/nombres;
    Saira (técnica) para el cuerpo; Share Tech Mono (terminal) para fechas y números de puntuación. ── */
-:root[data-palette="portal"] body { font-family: 'Saira', system-ui, sans-serif; }
+/* PAPELES DE LETRA de este tema. CAPA 0 (`_base.scss`) declara los cuatro papeles y todas las hojas
+   los usan por ficha; aquí es donde este tema decide qué familia va en cada uno. Cambiar la letra del
+   tema es cambiar ESTE bloque, no buscar `font-family` por el fichero. */
+:root[data-palette="portal"] {
+  --font-body: 'Saira', system-ui, sans-serif;
+  --font-label: 'Oswald', system-ui, sans-serif;
+  --font-display: 'Oswald', system-ui, sans-serif;
+  --font-mono: 'Share Tech Mono', ui-monospace, monospace;
+}
+:root[data-palette="portal"] body { font-family: var(--font-body); }
 :root[data-palette="portal"] h2,
 :root[data-palette="portal"] h3,
 :root[data-palette="portal"] h4,
@@ -31,12 +40,12 @@
 :root[data-palette="portal"] .hub-feed-game-chip,
 :root[data-palette="portal"] .hub-review-game,
 :root[data-palette="portal"] .active-filter-chip,
-:root[data-palette="portal"] .chip { font-family: 'Oswald', system-ui, sans-serif; letter-spacing: .04em; }
+:root[data-palette="portal"] .chip { font-family: var(--font-label); letter-spacing: .04em; }
 :root[data-palette="portal"] .score-ring-num,
 :root[data-palette="portal"] .score-dial-num,
 :root[data-palette="portal"] .hub-review-medal,
 :root[data-palette="portal"] .hub-feed-date,
-:root[data-palette="portal"] .hub-review-date { font-family: 'Share Tech Mono', ui-monospace, monospace; }
+:root[data-palette="portal"] .hub-review-date { font-family: var(--font-mono); }
 
 /* ── §2 · Fondo: rejilla tenue de paneles de sala de pruebas (juntas azuladas). ── */
 :root[data-palette="portal"] body {
@@ -104,7 +113,7 @@
 :root[data-palette="portal"][data-theme="light"] .btn-steam,
 :root[data-palette="portal"][data-theme="light"] .btn.is-active,
 :root[data-palette="portal"][data-theme="light"] .btn-toggle.active { background: color-mix(in srgb, var(--steam) 85%, #000) !important; color: #fff !important; }
-:root[data-palette="portal"] .btn-ghost { font-family: 'Oswald', system-ui, sans-serif; letter-spacing: .05em; }
+:root[data-palette="portal"] .btn-ghost { font-family: var(--font-label); letter-spacing: .05em; }
 /* Hover: plano (sin el giro 3D base) — elevación leve + brillo. */
 :root[data-palette="portal"] .btn:not(.btn-icon):not(.btn-ghost):hover { transform: translateY(-2px); filter: brightness(1.06); box-shadow: 0 6px 16px rgba(0, 0, 0, .28); }
 :root[data-palette="portal"] .btn:not(.btn-icon):not(.btn-ghost):active { transform: translateY(0); }
@@ -129,7 +138,7 @@
   color: var(--portal-cube);
   border: 1px solid var(--portal-cube);
   border-radius: var(--radius-sm);
-  font-family: 'Oswald', system-ui, sans-serif;
+  font-family: var(--font-label);
   letter-spacing: .04em;
 }
 :root[data-palette="portal"] .hub-friend-chip::before { content: '\2665'; margin-right: .3em; color: var(--portal-cube); }
@@ -165,7 +174,7 @@
   box-shadow: 0 2px 10px rgba(0, 0, 0, .42), inset 0 1px 0 rgba(255, 255, 255, .06) !important;
   padding: .3rem 1.05rem .44rem !important;
 }
-:root[data-palette="portal"] .hub-feed-day-header h4 { font-family: 'Oswald', system-ui, sans-serif; font-weight: 700; letter-spacing: .16em; color: #e6eef4; }
+:root[data-palette="portal"] .hub-feed-day-header h4 { font-family: var(--font-label); font-weight: 700; letter-spacing: .16em; color: #e6eef4; }
 :root[data-palette="portal"] .hub-feed-day-header::after {
   content: '';
   position: absolute;
@@ -196,7 +205,7 @@
   box-shadow: none;
   padding: 0;
   color: var(--text-muted);
-  font-size: .72rem;
+  font-size: var(--fs-2xs);
   letter-spacing: .02em;
   transform: none;
 }
@@ -322,7 +331,7 @@
 :root[data-palette="portal"] .donut-legend b,
 :root[data-palette="portal"] .year-trend-scale,
 :root[data-palette="portal"] .year-axis,
-:root[data-palette="portal"] .year-peak { font-family: 'Share Tech Mono', ui-monospace, monospace; }
+:root[data-palette="portal"] .year-peak { font-family: var(--font-mono); }
 
 /* Retícula de placa de prueba bajo los lienzos que la admiten (muy tenue, solo insinuada). */
 :root[data-palette="portal"] .backlog-canvas,
@@ -469,7 +478,7 @@
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, .7), 0 4px 12px rgba(20, 45, 70, .08) !important;
 }
 /* Monoespaciada como el resto de los datos de la paleta: la hora es una lectura de instrumento. */
-:root[data-palette="portal"] .hub-feed-move-hour { font-family: 'Share Tech Mono', ui-monospace, monospace; }
+:root[data-palette="portal"] .hub-feed-move-hour { font-family: var(--font-mono); }
 
 /* El AVISO DE LOGRO · placa de la sala: canto recto y junta clara entre piezas. Sin `clip-path`, así que aquí la
    sombra de rareza se queda como está y solo se suma la junta. */

@@ -29,7 +29,7 @@
 }
 .modal-ov.active .modal { transform: translateY(0) scale(1); }
 .modal-hd { padding: 1.2rem 1.5rem; border-bottom: 1px solid rgba(var(--steam-rgb),.12); display: flex; justify-content: space-between; align-items: center; gap: .75rem; background: linear-gradient(90deg, rgba(var(--steam-rgb),.05) 0%, transparent 100%); }
-.modal-title { font-weight: 800; color: var(--text); font-size: 1.05rem; letter-spacing: .3px; }
+.modal-title { font-weight: 800; color: var(--text); font-size: var(--fs-lg); letter-spacing: .3px; }
 .modal-body { padding: 1.25rem; overflow-y: auto; display: flex; flex-direction: column; gap: 1rem; scrollbar-width: none; }
 .modal-body::-webkit-scrollbar { display: none; }
 .modal-ft { padding: 1.2rem 1.5rem; border-top: 1px solid rgba(var(--steam-rgb),.12); display: flex; justify-content: flex-end; gap: .6rem; flex-wrap: wrap; background: rgba(var(--steam-rgb),.02); }
@@ -61,13 +61,13 @@ dialog.modal-dialog[open]::backdrop { animation: modalBackdropIn .28s ease both;
 /* Form */
 .fg    { display: flex; flex-direction: column; gap: .42rem; min-width: 0; }
 .frow  { display: grid; grid-template-columns: repeat(auto-fit,minmax(240px,1fr)); gap: 1rem; }
-.flabel { font-size: .75rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase; letter-spacing: .5px; }
+.flabel { font-size: var(--fs-2xs); font-weight: 800; color: var(--text-muted); text-transform: uppercase; letter-spacing: .5px; }
 .finput, .ftextarea {
   background: var(--bg); border: 1px solid var(--border); color: var(--text);
   border-radius: var(--radius-sm); padding: .78rem .85rem; width: 100%;
   transition: border-color .2s, box-shadow .2s; outline: none; min-width: 0;
 }
-.finput:focus, .ftextarea:focus { border-color: var(--focus-ring); box-shadow: 0 0 0 3px rgba(var(--steam-rgb),.12); }
+.finput:focus, .ftextarea:focus { border-color: var(--focus-ring); box-shadow: var(--ring-accent-soft); }
 .ftextarea { min-height: 128px; resize: vertical; }
 .field-error,  .has-error   { border-color: var(--danger)!important; box-shadow: 0 0 0 3px rgba(var(--danger-rgb),.15)!important; }
 .field-warning,.has-warning  { border-color: var(--warn)!important;  box-shadow: 0 0 0 3px rgba(var(--warn-rgb),.15)!important; }
@@ -93,7 +93,7 @@ dialog.modal-dialog[open]::backdrop { animation: modalBackdropIn .28s ease both;
   border-left: 3px solid var(--danger);
   border-radius: var(--radius-sm);
   padding: .7rem .9rem;
-  font-size: .85rem; text-align: left;
+  font-size: var(--fs-sm); text-align: left;
   /* En una pantalla baja (móvil apaisado, portátil pequeño) la lista no puede comerse el pie: se limita y
      desplaza dentro de sí misma, con los botones siempre a la vista. */
   max-height: 34vh; overflow-y: auto; overscroll-behavior: contain;
@@ -102,26 +102,26 @@ dialog.modal-dialog[open]::backdrop { animation: modalBackdropIn .28s ease both;
 @media (prefers-reduced-motion: reduce) { .form-error-summary { animation: none; } }
 /* La cabecera va en el color de texto normal, no en rojo: a 12,5 px en negrita el rojo del tema claro se queda
    en 3,9:1 de contraste (AA pide 4,5:1). El rojo lo ponen el filete lateral y el fondo, que no llevan texto. */
-.form-error-summary strong { color: var(--text); font-size: .78rem; text-transform: uppercase; letter-spacing: .4px; }
+.form-error-summary strong { color: var(--text); font-size: var(--fs-xs); text-transform: uppercase; letter-spacing: .4px; }
 .form-error-summary ul { margin: 0; padding-left: 1.1rem; display: flex; flex-direction: column; gap: .22rem; }
 .form-error-summary li { color: var(--text); }
 
 /* Admin */
-.admin-description { background: rgba(var(--steam-rgb),.08); border: 1px solid rgba(var(--steam-rgb),.15); border-radius: var(--radius-md); padding: .85rem 1rem; margin-bottom: .5rem; font-size: .88rem; color: var(--text-muted); line-height: 1.5; }
+.admin-description { background: rgba(var(--steam-rgb),.08); border: 1px solid rgba(var(--steam-rgb),.15); border-radius: var(--radius-md); padding: .85rem 1rem; margin-bottom: .5rem; font-size: var(--fs-sm); color: var(--text-muted); line-height: 1.5; }
 .admin-description p { margin: 0; }
 .admin-tabs { display: flex; flex-wrap: wrap; gap: .5rem; border-bottom: 1px solid var(--border); margin-bottom: .8rem; padding-bottom: .6rem; }
-.admin-tabs .admin-tab { font-size: .85rem; padding: .5rem .85rem; border-radius: var(--radius-sm); color: var(--text-muted); transition: all .25s; }
+.admin-tabs .admin-tab { font-size: var(--fs-sm); padding: .5rem .85rem; border-radius: var(--radius-sm); color: var(--text-muted); transition: all .25s; }
 .admin-tabs .admin-tab:hover { background: rgba(var(--steam-rgb),.08); color: var(--text); }
 .admin-tabs .admin-tab.active { background: rgba(var(--steam-rgb),.15); color: var(--fg-link); border-bottom: none; }
-.admin-warning { display: none; padding: .85rem 1rem; border-radius: var(--radius-sm); font-size: .88rem; border-left: 3px solid transparent; animation: slideInDown .3s ease-out; }
+.admin-warning { display: none; padding: .85rem 1rem; border-radius: var(--radius-sm); font-size: var(--fs-sm); border-left: 3px solid transparent; animation: slideInDown .3s ease-out; }
 .admin-warning.show { display: block; }
 .admin-warning.ok   { background: rgba(var(--success-rgb),.12); border-left-color: var(--success); color: var(--fg-green); }
 .admin-warning.warn { background: rgba(var(--warn-rgb),.12);  border-left-color: var(--warn);  color: var(--fg-amber-soft); }
 .admin-warning.err  { background: rgba(var(--danger-rgb),.12);   border-left-color: var(--danger);   color: var(--fg-red); }
 .admin-item { display: flex; justify-content: space-between; align-items: center; gap: .75rem; background: var(--bg); padding: 1rem 1.1rem; border-radius: var(--radius-md); border: 1px solid var(--border); transition: all .25s; animation: slideIn .25s ease-out; }
-.admin-item:hover { border-color: rgba(var(--steam-rgb),.25); background: var(--surface-elevated); box-shadow: 0 2px 8px rgba(var(--steam-rgb),.1); }
+.admin-item:hover { border-color: rgba(var(--steam-rgb),.25); background: var(--surface-elevated); box-shadow: var(--glow-accent-soft); }
 .admin-item .row-actions { display: flex; gap: .45rem; flex-wrap: nowrap; align-items: center; justify-content: flex-end; flex: 0 0 auto; }
-.admin-item.editing { border-color: rgba(var(--steam-rgb),.45); box-shadow: 0 0 0 3px rgba(var(--steam-rgb),.12), inset 0 0 0 1px rgba(var(--steam-rgb),.2); background: rgba(var(--steam-rgb),.06); }
+.admin-item.editing { border-color: rgba(var(--steam-rgb),.45); box-shadow: var(--ring-accent-soft), inset 0 0 0 1px rgba(var(--steam-rgb),.2); background: rgba(var(--steam-rgb),.06); }
 .admin-item.editing { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; }
 .admin-item-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .btn-icon-text { gap: .4rem; }
@@ -130,15 +130,21 @@ dialog.modal-dialog[open]::backdrop { animation: modalBackdropIn .28s ease both;
 
 /* Status line */
 .status-line { display: flex; gap: .8rem; align-items: center; justify-content: space-between; flex-wrap: wrap; }
-.status-line .status-copy { color: var(--text-muted); font-size: .82rem; }
+.status-line .status-copy { color: var(--text-muted); font-size: var(--fs-xs); }
 
 /* FAB */
 .fab {
   position: fixed; right: 1.2rem; bottom: calc(5.7rem + env(safe-area-inset-bottom,0px));
   z-index: 110; width: 58px; height: 58px; border-radius: 50%;
-  border: 1px solid rgba(var(--steam-rgb),.28); background: linear-gradient(180deg,var(--steam),#1377c0);
-  color: #fff; display: inline-flex; align-items: center; justify-content: center;
-  box-shadow: 0 16px 28px rgba(0,0,0,.32); cursor: pointer; transition: transform .2s, filter .2s;
+  border: 1px solid rgba(var(--steam-rgb),.28);
+  /* El pie del degradado y el color del icono SE DERIVAN del acento. Antes eran el azul de Steam en duro
+     (`#1377c0`) y un blanco fijo: en las otras cinco paletas el botón se apagaba hacia un azul que no era suyo
+     —verde arriba y azul abajo en «Solo hay guerra»— y con un acento claro el icono blanco encima se quedaba
+     sin contraste (en el latón del Clásico, 1,8:1). `--on-accent` es justo la ficha que cada paleta ya define
+     para esto. */
+  background: linear-gradient(180deg, var(--steam), color-mix(in srgb, var(--steam) 78%, #000));
+  color: var(--on-accent); display: inline-flex; align-items: center; justify-content: center;
+  box-shadow: var(--e3); cursor: pointer; transition: transform .2s, filter .2s;
 }
 .fab:hover { transform: translateY(-2px); filter: brightness(1.05); }
 .fab svg { width: 1.5rem; height: 1.5rem; fill: currentColor; }
@@ -166,7 +172,7 @@ dialog.modal-dialog[open]::backdrop { animation: modalBackdropIn .28s ease both;
   background: var(--surface-glass);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
-  box-shadow: 0 6px 18px rgba(0,0,0,.28);
+  box-shadow: var(--e2);
 }
 
 /* Botones flotantes de navegación (Cuenta / Ajustes): mismo diseño que el cambio de tema; solo cambia
@@ -241,7 +247,7 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
   display: inline-flex; align-items: center; gap: .35rem;
   padding: .34rem .65rem; border-radius: var(--radius-pill);
   background: var(--surface-elevated); border: 1px solid var(--border);
-  color: var(--text); font-size: .78rem; font-weight: 600;
+  color: var(--text); font-size: var(--fs-xs); font-weight: 600;
 }
 .chip-x {
   width: 1.15rem; height: 1.15rem; border: none; border-radius: 50%;
@@ -470,7 +476,7 @@ body.compact-filters .filters-row.open .btn-toggle { justify-content: center; al
 .sync-section { display:flex; flex-direction:column; gap:.6rem; }
 .sync-section + .sync-section { margin-top:.2rem; padding-top:1rem; border-top:1px solid var(--border); }
 .sync-help {
-  font-size:.8rem; color:var(--text-muted); line-height:1.6;
+  font-size: var(--fs-xs); color:var(--text-muted); line-height:1.6;
   background:var(--surface-elevated); border-radius:var(--radius-sm);
   padding:.8rem 1rem; border:1px solid var(--border);
 }
@@ -487,7 +493,7 @@ body.compact-filters .filters-row.open .btn-toggle { justify-content: center; al
   background: var(--overlay-hover);
   color: var(--text-muted);
   cursor: pointer;
-  font-size: .76rem;
+  font-size: var(--fs-2xs);
   font-weight: 700;
   line-height: 1;
   padding: .34rem .62rem;
@@ -502,8 +508,8 @@ body.compact-filters .filters-row.open .btn-toggle { justify-content: center; al
 .token-row .finput { padding-right:2.8rem; flex:1; }
 .token-toggle { position:absolute; right:.55rem; top:50%; transform:translateY(-50%);
   background:none; border:none; cursor:pointer; color:var(--text-muted);
-  font-size:.9rem; padding:.2rem; line-height:1; }
-.token-toggle .ui-icon { width: 1.15rem; height: 1.15rem; }
+  font-size: var(--fs-md); padding:.2rem; line-height:1; }
+.token-toggle .ui-icon { width: var(--ico-lg); height: var(--ico-lg); }
 .token-toggle:hover { color:var(--text); }
 .sync-gist-row {
   position: relative;
@@ -549,7 +555,7 @@ body.compact-filters .filters-row.open .btn-toggle { justify-content: center; al
   opacity: .5;
   cursor: not-allowed;
 }
-.sync-status-msg { font-size:.82rem; padding:.55rem .85rem; border-radius:var(--radius-sm); border:1px solid transparent; display:none; }
+.sync-status-msg { font-size: var(--fs-xs); padding:.55rem .85rem; border-radius:var(--radius-sm); border:1px solid transparent; display:none; }
 .sync-status-msg.ok   { background:rgba(var(--success-rgb),.1); border-color:rgba(var(--success-rgb),.25); color:var(--fg-green-soft); display:block; }
 .sync-status-msg.err  { background:rgba(var(--danger-rgb),.1);   border-color:rgba(var(--danger-rgb),.25);  color:var(--fg-red); display:block; }
 .sync-status-msg.warn { background:rgba(var(--warn-rgb),.1);  border-color:rgba(var(--warn-rgb),.25); color:var(--fg-amber-soft); display:block; }
@@ -630,7 +636,7 @@ body.compact-filters .filters-row.open .btn-toggle { justify-content: center; al
 
 /* === Texto de ayuda bajo campos de etiquetas === */
 .tag-hint {
-  font-size: .72rem;
+  font-size: var(--fs-2xs);
   color: var(--text-muted);
   margin-top: .18rem;
   display: block;

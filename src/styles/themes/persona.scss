@@ -67,11 +67,17 @@
 :root[data-palette="persona"] .hub-detail-profile-link,
 :root[data-palette="persona"] .hub-feed-game-chip,
 :root[data-palette="persona"] .hub-review-game,
+/* PAPELES DE LETRA de este tema. CAPA 0 (`_base.scss`) declara los cuatro papeles y todas las hojas
+   los usan por ficha; aquí es donde este tema decide qué familia va en cada uno. Cambiar la letra del
+   tema es cambiar ESTE bloque, no buscar `font-family` por el fichero. */
+:root[data-palette="persona"] {
+  --font-display: 'Arial Black', 'Arial Narrow', Impact, system-ui, sans-serif;
+}
 :root[data-palette="persona"] .score-ring-num,
 :root[data-palette="persona"] .score-dial-num,
 :root[data-palette="persona"] .hub-review-medal,
 :root[data-palette="persona"] .active-filter-chip {
-  font-family: 'Arial Black', 'Arial Narrow', Impact, system-ui, sans-serif;
+  font-family: var(--font-display);
   font-style: italic; letter-spacing: .01em;
 }
 
@@ -183,7 +189,7 @@
   padding: .26rem .72rem;
   color: #fff;
   letter-spacing: .02em;
-  font-size: .68rem;
+  font-size: var(--fs-3xs);
   line-height: 1.5;
   /* Misma FORMA rasgada + sesgo que los chips de género (§6), RELLENO rojo sólido (el corte da la silueta). */
   background: var(--steam);
@@ -227,10 +233,10 @@
 :root[data-palette="persona"][data-theme="light"] .hub-feed-day-header { box-shadow: 4px 4px 0 #151011; }
 :root[data-palette="persona"] .hub-feed-day-header h4 {
   transform: skewX(8deg); /* contra-sesgo del texto (regla 4) */
-  font-family: 'Arial Black', 'Arial Narrow', Impact, system-ui, sans-serif;
+  font-family: var(--font-display);
   font-style: italic;
   font-weight: 900;
-  font-size: .9rem;
+  font-size: var(--fs-md);
   letter-spacing: .04em;
   color: #0a0a0a;
 }
@@ -245,10 +251,10 @@
   background: #0a0a0a;
   border-left: .34em solid var(--steam);
   color: #fff;
-  font-family: 'Arial Black', 'Arial Narrow', Impact, system-ui, sans-serif;
+  font-family: var(--font-display);
   font-style: italic;
   font-weight: 900;
-  font-size: .68rem;
+  font-size: var(--fs-3xs);
   line-height: 1.25;
   text-transform: uppercase;
   letter-spacing: .05em;
@@ -334,8 +340,10 @@
    dualidad del tema—, y los gráficos heredan la línea de tinta: contorno negro grueso en los puntos y en las
    porciones, como una viñeta. Las tarjetas ya llevan el borde de tinta y la sombra de bloque de §3. ── */
 :root[data-palette="persona"] .stats-hub {
-  --chart-from: var(--steam);
-  --chart-to: var(--warn);
+  /* Atlus lo contó: P5 reserva los sub-colores para los datos (las barras de HP/MP). Aquí igual — el rojo
+     rebelde abre la rampa y la cierra el turquesa de datos, que es su par en el juego. */
+  --chart-from: var(--cat-1);
+  --chart-to: var(--cat-4);
 }
 
 /* La rampa de nota (`--grade-*`) no se toca: es la de la rueda de puntuar y es igual en todos los temas. Lo

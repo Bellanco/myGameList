@@ -12,7 +12,16 @@
 /* ── §1 · Tipografía: Rajdhani (fuente real del HUD) para todo; Share Tech Mono (terminal) para fechas y
    números de puntuación. Los momentos hero (título de sección, resultado de ruleta) llevan el GLITCH de
    aberración cromática: sombras cian/magenta desplazadas. En claro se apaga (sobre fondo claro ensucia). ── */
-:root[data-palette="cyberpunk"] body { font-family: 'Rajdhani', system-ui, sans-serif; }
+/* PAPELES DE LETRA de este tema. CAPA 0 (`_base.scss`) declara los cuatro papeles y todas las hojas
+   los usan por ficha; aquí es donde este tema decide qué familia va en cada uno. Cambiar la letra del
+   tema es cambiar ESTE bloque, no buscar `font-family` por el fichero. */
+:root[data-palette="cyberpunk"] {
+  --font-body: 'Rajdhani', system-ui, sans-serif;
+  --font-label: 'Rajdhani', system-ui, sans-serif;
+  --font-display: 'Rajdhani', system-ui, sans-serif;
+  --font-mono: 'Share Tech Mono', ui-monospace, monospace;
+}
+:root[data-palette="cyberpunk"] body { font-family: var(--font-body); }
 :root[data-palette="cyberpunk"] h2,
 :root[data-palette="cyberpunk"] h3,
 :root[data-palette="cyberpunk"] h4,
@@ -32,12 +41,12 @@
 :root[data-palette="cyberpunk"] .hub-feed-game-chip,
 :root[data-palette="cyberpunk"] .hub-review-game,
 :root[data-palette="cyberpunk"] .active-filter-chip,
-:root[data-palette="cyberpunk"] .chip { font-family: 'Rajdhani', system-ui, sans-serif; font-weight: 600; letter-spacing: .03em; }
+:root[data-palette="cyberpunk"] .chip { font-family: var(--font-label); font-weight: 600; letter-spacing: .03em; }
 :root[data-palette="cyberpunk"] .score-ring-num,
 :root[data-palette="cyberpunk"] .score-dial-num,
 :root[data-palette="cyberpunk"] .hub-review-medal,
 :root[data-palette="cyberpunk"] .hub-feed-date,
-:root[data-palette="cyberpunk"] .hub-review-date { font-family: 'Share Tech Mono', ui-monospace, monospace; }
+:root[data-palette="cyberpunk"] .hub-review-date { font-family: var(--font-mono); }
 /* Glitch de aberración cromática (signature) en los títulos hero: SUTIL — 1px y colores semitransparentes,
    un matiz de fleco cian/magenta que no dobla el texto ni impide leerlo. */
 :root[data-palette="cyberpunk"] h2,
@@ -254,7 +263,7 @@
 :root[data-palette="cyberpunk"][data-theme="light"] .btn-complete,
 :root[data-palette="cyberpunk"][data-theme="light"] .btn-recommend,
 :root[data-palette="cyberpunk"][data-theme="light"] .btn-inprogress { color: #fff !important; }
-:root[data-palette="cyberpunk"] .btn-ghost { font-family: 'Rajdhani', system-ui, sans-serif; font-weight: 600; letter-spacing: .05em; }
+:root[data-palette="cyberpunk"] .btn-ghost { font-family: var(--font-label); font-weight: 600; letter-spacing: .05em; }
 /* Hover: plano + glow neón cian (sin el giro 3D base). */
 :root[data-palette="cyberpunk"] .btn:not(.btn-icon):not(.btn-ghost):hover { transform: translateY(-1px); filter: brightness(1.08); box-shadow: 0 0 14px rgba(0, 240, 255, .3); }
 :root[data-palette="cyberpunk"] .btn:not(.btn-icon):not(.btn-ghost):active { transform: translateY(0); }
@@ -350,7 +359,7 @@
    un prefijo cian `//`; la cabecera de día es un rótulo con filete de peligro cian. La barra fija (sticky)
    se mantiene (fondo opaco, sin tocar `position`). ── */
 :root[data-palette="cyberpunk"] .hub-feed-day-header { background: var(--bg) !important; border: none !important; border-radius: 0 !important; box-shadow: none !important; padding: .15rem .6rem .45rem; }
-:root[data-palette="cyberpunk"] .hub-feed-day-header h4 { font-family: 'Rajdhani', system-ui, sans-serif; font-weight: 700; letter-spacing: .06em; color: var(--fg-link); }
+:root[data-palette="cyberpunk"] .hub-feed-day-header h4 { font-family: var(--font-label); font-weight: 700; letter-spacing: .06em; color: var(--fg-link); }
 :root[data-palette="cyberpunk"] .hub-feed-day-header::after { content: ''; position: absolute; left: 8%; right: 8%; bottom: 0; height: 2px; background: linear-gradient(90deg, transparent, var(--cyber-cyan), transparent); }
 :root[data-palette="cyberpunk"] .hub-feed-date,
 :root[data-palette="cyberpunk"] .hub-review-date {
@@ -362,7 +371,7 @@
   box-shadow: none;
   padding: 0;
   color: var(--text-muted);
-  font-size: .72rem;
+  font-size: var(--fs-2xs);
   letter-spacing: .02em;
   transform: none;
 }
@@ -538,7 +547,7 @@
 }
 /* La hora, en la monoespaciada de la paleta y con el mismo prefijo de dato que usan sus fechas. */
 :root[data-palette="cyberpunk"] .hub-feed-move-hour {
-  font-family: 'Share Tech Mono', ui-monospace, monospace;
+  font-family: var(--font-mono);
   letter-spacing: .02em;
 }
 :root[data-palette="cyberpunk"] .hub-feed-move-hour::before { content: '// '; color: var(--cyber-cyan-fg); font-weight: 700; }
