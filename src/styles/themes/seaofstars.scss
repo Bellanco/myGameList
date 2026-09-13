@@ -133,7 +133,7 @@
 :root[data-palette="seaofstars"] .btn-accent,
 :root[data-palette="seaofstars"] .btn-steam,
 :root[data-palette="seaofstars"] .btn.is-active,
-:root[data-palette="seaofstars"] .btn-toggle.active { background: var(--steam) !important; background-image: none !important; color: #0b1b3a !important; border-color: var(--steam) !important; }
+:root[data-palette="seaofstars"] .btn-toggle.active { background: var(--steam) !important; background-image: none !important; color: var(--on-accent) !important; border-color: var(--steam) !important; }
 :root[data-palette="seaofstars"] .btn-complete,
 :root[data-palette="seaofstars"] .btn-recommend { background: var(--success) !important; color: #06180a !important; }
 :root[data-palette="seaofstars"] .btn-inprogress { background: var(--warn) !important; color: #201200 !important; }

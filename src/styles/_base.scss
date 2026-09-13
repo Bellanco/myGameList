@@ -76,6 +76,11 @@
   --e3: 0 1px 0 rgba(var(--shadow-rgb),.20), 0 10px 28px -6px rgba(var(--shadow-rgb),.40);
   --e4: 0 2px 4px rgba(var(--shadow-rgb),.24), 0 18px 38px -8px rgba(var(--shadow-rgb),.48);
   --edge: inset 0 1px 0 rgba(255,255,255,.07);
+  /* Y el contrario: `--sunk` es el HUECO. La sombra va hacia DENTRO y cae desde el borde de arriba, que es
+     por donde entra la luz en toda la escala; el canto claro de abajo es el suelo del hueco. Sirve para
+     distinguir lo que se RELLENA de lo que se PULSA: hoy un campo de texto y un botón son la misma caja
+     plana con un borde, y por eso no se sabe dónde se escribe hasta que se prueba. */
+  --sunk: inset 0 2px 4px rgba(var(--shadow-rgb),.38), inset 0 -1px 0 rgba(255,255,255,.05);
   /* Filete: el borde a media tinta, para separar filas sin dibujar una reja. */
   --hair: color-mix(in srgb, var(--border), transparent 40%);
 
@@ -106,6 +111,7 @@
   --e3: 0 1px 0 rgba(var(--shadow-rgb),.08), 0 8px 24px -4px rgba(var(--shadow-rgb),.14);
   --e4: 0 2px 4px rgba(var(--shadow-rgb),.10), 0 18px 38px -8px rgba(var(--shadow-rgb),.18);
   --edge: inset 0 1px 0 rgba(255,255,255,.85);
+  --sunk: inset 0 2px 4px rgba(var(--shadow-rgb),.12), inset 0 -1px 0 rgba(255,255,255,.7);
 }
 
 /* ══ CAPA 1 · BASE — OSCURO (por defecto) ══════════════════════════════════════ */
@@ -230,6 +236,23 @@
   --score-track: rgba(var(--tint-rgb),.12);
 }
 
+/* LAS TRES TINTAS ROJAS DE CLÁSICO SIGUEN A SU BURDEOS. Las de arriba son las de la casa y valen para las seis
+   paletas —ninguna las redefine—, pero en Clásico el rojo dejó de ser coral, y un mensaje de error en coral
+   dentro de un tema de burdeos canta. Se acotan con `:not([data-palette])` porque Clásico es la paleta que NO
+   escribe el atributo (ver `preferences.ts`), así que esto no toca a las otras cinco. Medido sobre las cuatro
+   superficies de la paleta: 6,58:1 en el peor caso (la elevada), muy por encima del 4,5:1 del texto. */
+:root:not([data-palette]) {
+  --fg-red: #f5a0a8;
+  --fg-red-soft: #f0a6ae;
+  --fg-red-pink: #ffb0b8;
+}
+
+:root:not([data-palette])[data-theme="light"] {
+  --fg-red: #8f2f34;
+  --fg-red-soft: #8f2f34;
+  --fg-red-pink: #8c2b39;
+}
+
 /* ══ CAPA 2 · IDENTIDAD DE PALETA ═══════════════════════════════════════════════
    Cada paleta define el mismo juego de ~26 tokens. Los bloques oscuros viven en
    `:root[data-palette="x"]`; los claros añaden además `--tint-rgb`. "steam" es la
@@ -279,8 +302,12 @@
      solo —siempre lleva icono o texto—, mientras que el acento es relleno. */
   --warn: #e2903f;
   --warn-rgb: 226,144,63;
-  --danger: #ef6f5a;
-  --danger-rgb: 239,111,90;
+  /* BURDEOS DE ENCUADERNACIÓN, no coral. El rojo de esta paleta era un coral anaranjado (#ef6f5a) que caía justo
+     entre el cobre del aviso y el latón del acento: los tres eran el mismo calor, y el botón de borrar no se
+     distinguía del de añadir más que por el texto. El burdeos se separa por TONO —carmín, no naranja— sin salir
+     del mundo de cuero y papel: es el rojo de las cubiertas de una biblioteca vieja. */
+  --danger: #d9535f;
+  --danger-rgb: 217,83,95;
   --star-empty: #4a3c2c;
   --star-full: #ecc45c;
   --chip-plat-fg: #ddd0bd;
@@ -313,8 +340,9 @@
   --success-rgb: 31,122,77;
   --warn: #a3681a;
   --warn-rgb: 163,104,26;
-  --danger: #b3261e;
-  --danger-rgb: 179,38,30;
+  /* El mismo burdeos a la luz: más hondo, porque aquí tiene que leerse sobre crema. */
+  --danger: #8f2f34;
+  --danger-rgb: 143,47,52;
   --star-empty: #dbcab2;
   /* Las estrellas son un GRÁFICO, así que les aplica el 3:1 de la 1.4.11 y no el 4,5:1 del texto. El oro
      natural de esta paleta (#b3771a) se quedaba en 2,90:1 sobre `--surface-hover` —la fila con el puntero

@@ -64,7 +64,10 @@
      · PÍLDORA del canto → la cifra del escalón, montada en el borde de abajo
    El dibujo va en el centro y no lo toca ninguna de las tres. ──────────── */
 .ach-medal {
-  --edge: var(--ach-edge);
+  /* El FILO del temple. Se llamaba `--edge`, que es el nombre del canto de luz de `_base.scss` y ahí va una
+     CADENA DE SOMBRA, no un color: bastaba con una medalla sin `.is-temple-*` para que heredara la global y
+     tumbara todo este `box-shadow`. El nombre nuevo dice lo que es. */
+  --temple: var(--ach-edge);
   --g1: transparent; --g2: transparent;
   position: relative;
   /* UNA CAPA, Y LO QUE PASA DENTRO SE QUEDA DENTRO.
@@ -85,7 +88,7 @@
   // anillo de rareza. De fuera adentro: halo difuso, anillo de rareza, canto negro, filo del temple, cuerpo.
   box-shadow:
     inset 0 0 0 max(1px, calc(var(--sz) * .022)) rgba(4, 3, 2, .92),
-    inset 0 0 0 max(2px, calc(var(--sz) * .058)) var(--edge),
+    inset 0 0 0 max(2px, calc(var(--sz) * .058)) var(--temple),
     inset 0 calc(var(--sz) * -.05) calc(var(--sz) * .1) rgba(0, 0, 0, .8),
     inset 0 calc(var(--sz) * .03) calc(var(--sz) * .07) rgba(255, 214, 140, .1),
     0 1px 2px rgba(6, 5, 4, .45),
@@ -128,9 +131,9 @@
 /* EL TEMPLE · la aleación del filo, y nada más.
    Sólo el filo: los cuatro metales del rango de perfil (`_tiers.scss`) viven en la misma tarjeta del hub, y
    teñir el cuerpo del disco pondría dos escalas de metal a dos centímetros la una de la otra. */
-.ach-medal.is-temple-1 { --edge: rgba(184, 118, 54, .72); }
-.ach-medal.is-temple-2 { --edge: rgba(202, 210, 222, .62); }
-.ach-medal.is-temple-3 { --edge: rgba(244, 200, 96, .82); }
+.ach-medal.is-temple-1 { --temple: rgba(184, 118, 54, .72); }
+.ach-medal.is-temple-2 { --temple: rgba(202, 210, 222, .62); }
+.ach-medal.is-temple-3 { --temple: rgba(244, 200, 96, .82); }
 
 /* LA PÍLDORA · la cifra del escalón, montada en el canto de abajo.
    Ahí y no dentro por una razón de tamaño: a 48 px una pastilla centrada tapa el dibujo y en la esquina se sale
@@ -169,11 +172,11 @@
 // EL BLOQUEADO SE VE. Sin temple —no hay escalón que enseñar— y sin oro, pero con su dibujo legible: es lo ÚNICO
 // que dice de qué va un logro que aún no tienes. Se apaga el oro y se quita la chispa, que es lo que lo hacía
 // parecer conseguido; el trazo se queda en gris de peltre sobre la misma penumbra.
-.ach-medal.is-locked { --edge: rgba(150, 162, 178, .2); --g1: rgba(150, 162, 178, .22); --g2: rgba(150, 162, 178, .10); }
+.ach-medal.is-locked { --temple: rgba(150, 162, 178, .2); --g1: rgba(150, 162, 178, .22); --g2: rgba(150, 162, 178, .10); }
 // El bloqueado conserva la GRADACIÓN del temple y pierde el METAL: mismo escalonado, en peltre.
-.ach-medal.is-locked.is-temple-1 { --edge: rgba(150, 162, 178, .16); }
-.ach-medal.is-locked.is-temple-2 { --edge: rgba(150, 162, 178, .28); }
-.ach-medal.is-locked.is-temple-3 { --edge: rgba(150, 162, 178, .42); }
+.ach-medal.is-locked.is-temple-1 { --temple: rgba(150, 162, 178, .16); }
+.ach-medal.is-locked.is-temple-2 { --temple: rgba(150, 162, 178, .28); }
+.ach-medal.is-locked.is-temple-3 { --temple: rgba(150, 162, 178, .42); }
 .ach-medal.is-locked .ach-art { filter: none; }
 .ach-medal.is-locked .ach-art .ach-fg { stroke: rgba(186, 190, 198, .62); }
 .ach-medal.is-locked .ach-art .ach-hl { display: none; }
@@ -269,7 +272,7 @@
   border: 1px solid var(--border, rgba(255,255,255,.14));
   font-size: var(--fs-2xs); line-height: 1.3; white-space: nowrap;
   padding: 4px 8px; border-radius: var(--radius-sm);
-  box-shadow: var(--shadow); pointer-events: none; z-index: 3;
+  box-shadow: var(--e3); pointer-events: none; z-index: 3;
   opacity: 0; visibility: hidden; transition: opacity .12s ease;
 }
 .ach-strip-btn:hover .ach-strip-tip,
