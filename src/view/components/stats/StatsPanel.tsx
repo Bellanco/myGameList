@@ -165,6 +165,7 @@ export const StatsPanel = memo(function StatsPanel({
           <p className="stats-card-sub">{L.subtitle}</p>
           <div className="stats-tiles">
             <StatTile
+              tone={1}
               label={L.tiles.games}
               value={<CountUp value={stats.totalGames} />}
               // Sin nada en curso ni en próximos la pista no dice nada; con listas que no se comparten, mentiría.
@@ -172,6 +173,7 @@ export const StatsPanel = memo(function StatsPanel({
             />
             {own || hasHours ? (
               <StatTile
+              tone={2}
                 label={L.tiles.hours}
                 value={<CountUp value={stats.totalHours} format={formatHours} />}
                 unit="h"
@@ -179,6 +181,7 @@ export const StatsPanel = memo(function StatsPanel({
               />
             ) : null}
             <StatTile
+              tone={3}
               label={L.tiles.avgGrade}
               value={stats.scored.count ? <CountUp value={avgInScale} format={formatDecimal} /> : L.tiles.noData}
               unit={stats.scored.count ? (scale === 'grade' ? L.tiles.outOf100 : L.tiles.outOf5) : undefined}
@@ -186,6 +189,7 @@ export const StatsPanel = memo(function StatsPanel({
             />
             {own || (hasHours && stats.longest) ? (
               <StatTile
+              tone={4}
                 label={L.tiles.longest}
                 value={
                   <span
@@ -203,6 +207,7 @@ export const StatsPanel = memo(function StatsPanel({
                 como el total, así que con datos incompletos no se monta —el mismo criterio que apaga las horas—. */}
             {has('replay') && full && (own || stats.replay.total > 0) ? (
               <StatTile
+              tone={5}
                 label={L.replay.tile}
                 value={<CountUp value={replayPercent} />}
                 unit="%"
@@ -215,6 +220,7 @@ export const StatsPanel = memo(function StatsPanel({
                 el mismo criterio: solo con los datos completos. */}
             {has('shame') && full && (own || stats.shame.retry > 0) ? (
               <StatTile
+              tone={6}
                 label={L.shame.retryTile}
                 value={<CountUp value={retryPercent} />}
                 unit="%"
@@ -224,6 +230,7 @@ export const StatsPanel = memo(function StatsPanel({
             ) : null}
             {has('demand') && (own || stats.demand.count > 0) ? (
               <StatTile
+              tone={7}
                 label={L.demand.tile}
                 // El ± va pegado a la cifra: una desviación sin signo se lee como una nota («tu exigencia es
                 // 0,9»), que es justo lo que no es.
@@ -238,6 +245,7 @@ export const StatsPanel = memo(function StatsPanel({
             ) : null}
             {has('reviews') && stats.reviews.count > 0 && onOpenReviews ? (
               <StatTile
+              tone={1}
                 label={L.reviews.tile}
                 value={<CountUp value={stats.reviews.count} />}
                 hint={L.reviews.tileHint(Math.round(stats.reviews.coverage))}

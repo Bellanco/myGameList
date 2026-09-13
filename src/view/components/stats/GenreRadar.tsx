@@ -6,6 +6,7 @@ import { TagRanking } from './TagRanking';
 import { labelLines } from './labelLines';
 import { formatDecimal } from './format';
 import type { GenreAffinity } from '../../../core/stats/types';
+import { categoryToneStyle } from '../../../core/constants/categoryTone';
 
 /** Ejes de la figura. Seis como mucho —de ahí el hexágono—; con menos géneros sale un pentágono, cuadrado o triángulo. */
 const MAX_AXES = 6;
@@ -161,6 +162,11 @@ export const GenreRadar = memo(function GenreRadar({ tags }: { tags: GenreAffini
             <g
               key={tag.tag}
               className={`genre-radar-axis${focus.stateOf(tag.tag)}`}
+              /* EL COLOR DEL GÉNERO, en su vértice y en su rótulo (rampa categórica, CAPA 2b). La figura entera
+                 se queda en el acento —es la silueta de TU gusto, una sola cosa—, pero cada punta lleva el color
+                 con el que ese género aparece en la lista y en los chips. Así el radar deja de ser un polígono
+                 monocromo donde hay que leer la etiqueta para saber qué punta es cuál. */
+              style={categoryToneStyle(tag.tag)}
               {...focus.controlProps(tag.tag, L.axisValue(tag.tag, formatDecimal(tag.weight), tag.games, tag.avgGrade))}
             >
               <line className="genre-radar-reach" x1={CENTER} y1={CENTER} x2={point.x} y2={point.y} />
@@ -174,6 +180,7 @@ export const GenreRadar = memo(function GenreRadar({ tags }: { tags: GenreAffini
           <text
             key={label.tag.tag}
             className="genre-radar-label"
+            style={categoryToneStyle(label.tag.tag)}
             x={label.at.x}
             y={label.at.y}
             textAnchor={label.anchor}

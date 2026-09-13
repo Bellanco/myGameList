@@ -32,9 +32,15 @@
 
      Las mezclas que usan esta rampa acotan SIEMPRE el porcentaje con `clamp(0%, …, 100%)`, y no es adorno:
      Chrome recorta por su cuenta los porcentajes que se salen, pero Firefox devuelve un color TRANSPARENTE, y
-     con una lista más larga de lo previsto las últimas piezas desaparecían del gráfico. */
-  --chart-from: var(--steam);
-  --chart-to: var(--warn);
+     con una lista más larga de lo previsto las últimas piezas desaparecían del gráfico.
+
+     LOS DOS EXTREMOS TIENEN QUE ESTAR LEJOS. Estaban en `--steam` y `--warn`, que en varios temas son vecinos
+     —en el Clásico, latón y cobre—: la rampa entera caía dentro del mismo ámbar y el panel se leía de un solo
+     color, que es justo lo que esta rampa viene a evitar. Ahora va del primer tono de la rampa categórica al
+     cuarto (CAPA 2b), que en cada tema son colores de su mundo pero de familias distintas: latón → añil en el
+     Clásico, rojo → turquesa de datos en Corazón rebelde, amarillo → azul de marca en Sin futuro. */
+  --chart-from: var(--cat-1);
+  --chart-to: var(--cat-4);
 
   /* RAMPA DE NOTA: los colores con los que el panel habla de puntuaciones. Son EXACTAMENTE los de la rueda de
      puntuar (`.score-ring`, `.score-dial`): `hsl(tono 58% var(--acc-l))` con el tono que reparte
@@ -71,7 +77,10 @@
   gap: .85rem;
   padding: 1.1rem 1.15rem;
   /* Degradado muy leve en lugar de un plano: da profundidad sin inventar un color que la paleta no tenga. */
-  background: linear-gradient(160deg, var(--surface-elevated), var(--surface) 70%);
+  --cc: var(--steam);
+  background:
+    linear-gradient(160deg, color-mix(in srgb, var(--cc), transparent 94%), transparent 55%),
+    linear-gradient(160deg, var(--surface-elevated), var(--surface) 70%);
   /* Canto disuelto y sombra FINA, en lugar del marco entero y de `--shadow` (0 10px 28px .38): con las
      tarjetas en rejilla, una campana de tres centímetros por tarjeta dejaba un halo negro en cada junta. Un
      píxel de apoyo, una campana corta con desplazamiento negativo y un brillo de un píxel arriba que hace el
@@ -92,12 +101,26 @@
     inset 0 1px 0 rgba(255, 255, 255, .65);
 }
 
+/* CADA TARJETA, SU TONO. La maqueta proponía bandas a todo lo ancho —una sección, un suelo—, pero el panel no
+   es una pila de secciones: es una REJILLA de doce columnas donde las tarjetas conviven a dos y tres por fila.
+   Una banda ahí rompería la rejilla, así que la idea se traduce a lo que sí cabe: cada tarjeta se identifica
+   con un tono de la rampa —en la barrita del título y en un velo del fondo— en vez de ser la enésima caja
+   idéntica. El reparto va por posición y no por nombre: así una tarjeta nueva entra sin decidir nada.
+   Cambiar el reparto entero son estas siete líneas. */
+.stats-hub .stats-card:nth-of-type(7n + 1) { --cc: var(--cat-1); }
+.stats-hub .stats-card:nth-of-type(7n + 2) { --cc: var(--cat-2); }
+.stats-hub .stats-card:nth-of-type(7n + 3) { --cc: var(--cat-3); }
+.stats-hub .stats-card:nth-of-type(7n + 4) { --cc: var(--cat-4); }
+.stats-hub .stats-card:nth-of-type(7n + 5) { --cc: var(--cat-5); }
+.stats-hub .stats-card:nth-of-type(7n + 6) { --cc: var(--cat-6); }
+.stats-hub .stats-card:nth-of-type(7n + 7) { --cc: var(--cat-7); }
+
 /* Barrita de acento delante del título: ancla la vista al empezar cada bloque. */
 .stats-card h2 {
   display: flex;
   align-items: center;
   gap: .5rem;
-  font-size: 1rem;
+  font-size: var(--fs-lg);
 }
 
 .stats-card h2::before {
@@ -105,12 +128,13 @@
   width: 3px;
   height: 1em;
   border-radius: 2px;
-  background: var(--steam);
+  background: var(--cc);
+  box-shadow: 0 0 10px -2px var(--cc);
 }
 
 .stats-card h3 {
   margin: 0 0 .5rem;
-  font-size: .82rem;
+  font-size: var(--fs-xs);
   text-transform: uppercase;
   letter-spacing: .05em;
   color: var(--stats-ink-2);
@@ -254,19 +278,34 @@
   gap: .7rem;
 }
 
+/* Cada cifra, su color (`--cc`, un tono de la rampa categórica que pasa el componente). El color entra en el
+   filete lateral, en un velo del fondo y en la propia cifra —nunca en el rótulo ni en la pista, que son los que
+   cargan el contraste—. Sin tono, la tarjeta se queda exactamente como estaba. */
 .stat-tile {
+  --cc: var(--steam);
+  --cc-fg: var(--fg-link);
+  position: relative;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
   gap: .15rem;
-  padding: .75rem .85rem;
+  padding: .75rem .85rem .75rem 1rem;
   border: 1px solid var(--border);
   border-radius: var(--stats-radius);
-  background: var(--surface-soft);
+  background: linear-gradient(160deg, color-mix(in srgb, var(--cc), transparent 92%), var(--surface-soft) 68%);
   min-width: 0;
 }
+.stat-tile::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 3px;
+  background: var(--cc);
+}
+.stat-tile-value { color: var(--cc-fg, var(--cc)); }
 
 .stat-tile-label {
-  font-size: .72rem;
+  font-size: var(--fs-2xs);
   text-transform: uppercase;
   letter-spacing: .05em;
   color: var(--stats-ink-2);
@@ -465,7 +504,7 @@
 }
 
 /* El icono, un punto por debajo del estándar: la marca mide 28 px y un botón del header, 38. */
-.stat-tile-go .ui-icon { width: .82rem; height: .82rem; }
+.stat-tile-go .ui-icon { width: var(--ico-xs); height: var(--ico-xs); }
 
 .stat-tile.is-link:hover { border-color: color-mix(in oklch, var(--tile-go-tint) 78%, var(--border)); }
 
@@ -1048,7 +1087,7 @@
   gap: .4rem;
 }
 
-.beeswarm-lists .btn { padding: .3rem .6rem; font-size: .78rem; }
+.beeswarm-lists .btn { padding: .3rem .6rem; font-size: var(--fs-xs); }
 
 /* La cuenta de cada lista, dentro del propio botón: sin ella, apagar una lista es una apuesta a ciegas. */
 .beeswarm-list-count {
@@ -1655,7 +1694,7 @@
 }
 
 .genre-radar-dot {
-  fill: var(--steam);
+  fill: var(--cat, var(--steam));
   stroke: var(--surface);
   stroke-width: 1.5;
   transform-box: fill-box;
@@ -1674,7 +1713,7 @@
 /* El radio del eje señalado se enciende de punta a punta: es la magnitud que se está leyendo, y sin él solo se
    destacaría un punto suelto en el borde de la silueta. */
 .genre-radar-reach {
-  stroke: var(--steam);
+  stroke: var(--cat, var(--steam));
   stroke-width: 2;
   opacity: 0;
   transition: opacity .15s ease;
@@ -1694,10 +1733,14 @@
   scale: 1.55;
 }
 
-/* Sin la cifra al lado, el nombre del género puede crecer: es lo único que hay que leer en la punta. */
+/* Sin la cifra al lado, el nombre del género puede crecer: es lo único que hay que leer en la punta.
+   El color es el de SU GÉNERO, en la variante de TEXTO de la rampa (`--cat-fg`, CAPA 2b): el rótulo se lee
+   sobre la superficie de la tarjeta, así que le aplica el 4,5:1 de la AA y no sirve el tono de relleno que
+   lleva el vértice. Sin tono —cualquier otro uso del radar— se queda con el color de texto de siempre.
+   OJO: esta regla vive DESPUÉS de la de la animación, así que es la que manda sobre `fill`. */
 .genre-radar-label {
-  fill: var(--text);
-  font-size: 11.5px;
+  fill: var(--cat-fg, var(--text));
+  font-size: var(--fs-2xs);
   font-weight: 600;
 }
 
@@ -1947,10 +1990,26 @@
   --medal-bronze: color-mix(in oklch, var(--warn) 55%, var(--danger));
 }
 
-/* El metal va en el filo, en el rótulo y en el número del fondo: un bloque dorado se comería el nombre. */
-.podium-step.is-gold { border-color: color-mix(in srgb, var(--medal-gold) 60%, var(--border)); }
-.podium-step.is-silver { border-color: color-mix(in srgb, var(--medal-silver) 45%, var(--border)); }
-.podium-step.is-bronze { border-color: color-mix(in srgb, var(--medal-bronze) 45%, var(--border)); }
+/* El metal va en el filo, en el rótulo y en el número del fondo: un bloque dorado se comería el nombre.
+   Se le añade un VELO del propio metal en la superficie y una luz en el canto superior: el podio era tres
+   tarjetas del mismo gris que solo se distinguían por el color del borde, y el oro tiene que pesar más que el
+   bronce antes de leer el rótulo. El velo va al 92 % de transparencia —lo justo para que se note que la
+   tarjeta está teñida sin tocar el contraste del nombre, que sigue sobre la superficie de siempre—. */
+.podium-step.is-gold {
+  border-color: color-mix(in srgb, var(--medal-gold) 60%, var(--border));
+  background: linear-gradient(165deg, color-mix(in srgb, var(--medal-gold), transparent 90%), var(--surface-soft) 62%);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--medal-gold), transparent 72%);
+}
+.podium-step.is-silver {
+  border-color: color-mix(in srgb, var(--medal-silver) 45%, var(--border));
+  background: linear-gradient(165deg, color-mix(in srgb, var(--medal-silver), transparent 92%), var(--surface-soft) 62%);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--medal-silver), transparent 76%);
+}
+.podium-step.is-bronze {
+  border-color: color-mix(in srgb, var(--medal-bronze) 45%, var(--border));
+  background: linear-gradient(165deg, color-mix(in srgb, var(--medal-bronze), transparent 92%), var(--surface-soft) 62%);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--medal-bronze), transparent 76%);
+}
 
 /* La cifra se apoya en la esquina inferior derecha y cabe ENTERA: antes asomaba por debajo del borde
    (`bottom: -1.4rem`) y, con el `overflow: hidden` de la tarjeta, se le comía el tercio de abajo — un «1» sin
@@ -1970,14 +2029,23 @@
   animation: fade-in .6s ease-out .2s both;
 }
 
-.podium-step.is-gold .podium-ghost { color: var(--medal-gold); }
-.podium-step.is-silver .podium-ghost { color: var(--medal-silver); }
-.podium-step.is-bronze .podium-ghost { color: var(--medal-bronze); }
+/* La cifra deja de ser un color plano: un degradado corto del metal a su propia sombra le da VETA, que es lo
+   que distingue un metal de un color cualquiera. `background-clip: text` con el color transparente; si el
+   navegador no lo soportara, queda el `color` de respaldo que va justo antes. */
+.podium-step .podium-ghost {
+  background-image: linear-gradient(150deg, var(--metal) 8%, color-mix(in srgb, var(--metal) 45%, #000) 62%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.podium-step.is-gold .podium-ghost { color: var(--medal-gold); --metal: var(--medal-gold); }
+.podium-step.is-silver .podium-ghost { color: var(--medal-silver); --metal: var(--medal-silver); }
+.podium-step.is-bronze .podium-ghost { color: var(--medal-bronze); --metal: var(--medal-bronze); }
 
 /* El metal, dicho con palabras: quien no distinga los tonos sigue sabiendo cuál es el primero. */
 .podium-medal {
   position: relative;
-  font-size: .66rem;
+  font-size: var(--fs-3xs);
   font-weight: 700;
   letter-spacing: .12em;
   text-transform: uppercase;
@@ -2150,7 +2218,7 @@
 /* Las estrellas de la ficha, a escala reducida: son un apoyo, no el dato principal. El aro se encoge por su
    PROPIA variable (`--sz`), que es de la que cuelga el cuerpo del número: forzando `width`/`font-size` por
    fuera, la cifra se quedaba del tamaño original y se pegaba al borde del círculo. */
-.top-chip-meta .stars { font-size: .72rem; }
+.top-chip-meta .stars { font-size: var(--fs-2xs); }
 .top-chip-meta .score-ring { --sz: 1.75rem; }
 
 .top-chip-bar {
@@ -2350,8 +2418,8 @@
   line-height: 1.05;
 }
 
-.donut-share-center b { font-size: 1.5rem; font-weight: 700; }
-.donut-share-center small { font-size: .68rem; color: var(--stats-ink-2); }
+.donut-share-center b { font-size: var(--fs-2xl); font-weight: 700; }
+.donut-share-center small { font-size: var(--fs-3xs); color: var(--stats-ink-2); }
 
 .donut-legend {
   display: flex;
@@ -2417,7 +2485,7 @@
 }
 
 .donut-legend b { font-variant-numeric: tabular-nums; }
-.donut-legend small { color: var(--stats-ink-2); font-size: .72rem; font-variant-numeric: tabular-nums; }
+.donut-legend small { color: var(--stats-ink-2); font-size: var(--fs-2xs); font-variant-numeric: tabular-nums; }
 
 /* ---- Dónde brillas: filas con la barra al fondo --------------------------------------------------------- */
 
@@ -2874,7 +2942,7 @@
 
 /* La nota, a escala de apoyo: manda el nombre. El aro se encoge por su PROPIA variable, que es de la que
    cuelga el cuerpo de su número. */
-.game-cards .stars { font-size: .68rem; margin-left: auto; }
+.game-cards .stars { font-size: var(--fs-3xs); margin-left: auto; }
 .game-cards .score-ring { --sz: 1.55rem; margin-left: auto; }
 
 
@@ -3034,7 +3102,7 @@
 
 .genre-bump-grid { stroke: var(--border); stroke-width: 1; opacity: .5; }
 .genre-bump-year,
-.genre-bump-tag { fill: var(--stats-ink-2); font-size: 11px; }
+.genre-bump-tag { fill: var(--stats-ink-2); font-size: var(--fs-3xs); }
 .genre-bump-year { font-variant-numeric: tabular-nums; }
 .genre-bump-tag { font-weight: 600; }
 
@@ -3053,7 +3121,7 @@
   stroke-linejoin: round;
 }
 /* Rótulo flotante: para el género que no está en ninguno de los dos extremos y no tiene sitio a los lados. */
-.genre-bump-tag.is-floating { font-size: 10px; paint-order: stroke; stroke: var(--surface); stroke-width: 3.5; stroke-linejoin: round; }
+.genre-bump-tag.is-floating { font-size: var(--fs-3xs); paint-order: stroke; stroke: var(--surface); stroke-width: 3.5; stroke-linejoin: round; }
 
 .genre-bump-line { cursor: pointer; }
 .genre-bump-line:focus-visible { outline: none; }
@@ -3113,12 +3181,15 @@
 
 
 /* ═══════════════════════════════════════════════════════════════════════════════════════════════════
-   CONSTANCIA · mapa de calor por SEMANAS (`WeekStreak`)
+   CONSTANCIA · el PULSO del año, una barra por SEMANA (`WeekStreak`)
 
-   Un cuadro por semana y no por día: una lista de juegos no se toca a diario, así que el mapa diario
-   clásico saldría casi entero en blanco y haría parecer inactivo a quien no lo está. Cuatro niveles de
-   intensidad discretos (no una rampa continua) porque lo que se lee aquí es el PATRÓN —dónde hay racha y
+   Una barra por semana y no un cuadro por día: una lista de juegos no se toca a diario, así que el mapa
+   diario clásico saldría casi entero en blanco y haría parecer inactivo a quien no lo está. Cuatro niveles
+   de intensidad discretos (no una rampa continua) porque lo que se lee aquí es el PATRÓN —dónde hay racha y
    dónde hueco—, y los saltos se distinguen mejor que un degradado fino.
+
+   El nivel se ve DOS veces, en la altura de la barra y en su color: quien no distinga bien los tonos sigue
+   leyendo el ritmo por la silueta. Ese doble código es lo que la rejilla de cuadros no daba.
    ═══════════════════════════════════════════════════════════════════════════════════════════════════ */
 .week-heat { display: flex; flex-direction: column; gap: .6rem; }
 .week-heat-canvas { overflow-x: auto; overflow-y: hidden; max-width: 100%; }
@@ -3127,92 +3198,54 @@
    rejilla es lo que hay que mirar aquí, así que se le deja crecer con el contenedor. */
 .week-heat-svg { width: 100%; height: auto; }
 
-.week-heat-row { fill: var(--text-muted); font-size: 10.5px; }
+.week-heat-row { fill: var(--text-dim); font-size: var(--fs-3xs); }
+/* Pista de la semana: invisible, pero es lo que hace apuntable una barra de cinco píxeles de alto. */
+.week-heat-hit { fill: transparent; }
+@media (hover: hover) { .week-heat-cell:hover .week-heat-hit { fill: var(--overlay-hover); } }
+/* Corchete de la RACHA VIVA. Va en el cuarto tono de la rampa categórica (CAPA 2b) y no en el acento, para
+   que no se confunda con las propias barras, que son del acento. */
+.week-heat-streak path { fill: none; stroke: var(--cat-4); stroke-width: 1.5; opacity: .9; }
+.week-heat-streak text { fill: var(--cat-4-fg); font-size: var(--fs-3xs); font-weight: 700; letter-spacing: .1em; text-transform: uppercase; }
 .week-heat-cell { cursor: pointer; }
-.week-heat-cell rect { transition: opacity .15s; }
+.week-heat-bar { transition: opacity .15s; }
 .week-heat-cell:focus-visible { outline: none; }
-.week-heat-cell:focus-visible rect { stroke: var(--text); stroke-width: 2; }
-.week-heat-cell.is-active rect { stroke: var(--text); stroke-width: 2; }
-.week-heat-cell.is-dim rect { opacity: .45; }
+.week-heat-cell:focus-visible .week-heat-bar { stroke: var(--text); stroke-width: 2; }
+.week-heat-cell.is-active .week-heat-bar { stroke: var(--text); stroke-width: 2; }
+.week-heat-cell.is-dim .week-heat-bar { opacity: .45; }
 
 /* Rampa de intensidad: la misma mezcla en el mapa y en su leyenda, para que la leyenda no mienta. El nivel 0
    es la superficie hundida —un hueco tiene que verse como hueco, no como un azul muy claro—. */
-.week-heat-cell.is-l0 rect,
+.week-heat-cell.is-l0 .week-heat-bar,
 .week-heat-key.is-l0 { background: var(--surface-hover); fill: var(--surface-hover); }
-.week-heat-cell.is-l1 rect,
+.week-heat-cell.is-l1 .week-heat-bar,
 .week-heat-key.is-l1 { background: color-mix(in oklch, var(--steam) 28%, var(--surface)); fill: color-mix(in oklch, var(--steam) 28%, var(--surface)); }
-.week-heat-cell.is-l2 rect,
+.week-heat-cell.is-l2 .week-heat-bar,
 .week-heat-key.is-l2 { background: color-mix(in oklch, var(--steam) 50%, var(--surface)); fill: color-mix(in oklch, var(--steam) 50%, var(--surface)); }
-.week-heat-cell.is-l3 rect,
+.week-heat-cell.is-l3 .week-heat-bar,
 .week-heat-key.is-l3 { background: color-mix(in oklch, var(--steam) 72%, var(--surface)); fill: color-mix(in oklch, var(--steam) 72%, var(--surface)); }
-.week-heat-cell.is-l4 rect,
+.week-heat-cell.is-l4 .week-heat-bar,
 .week-heat-key.is-l4 { background: var(--steam); fill: var(--steam); }
 
-.week-heat-scale { display: flex; align-items: center; gap: .3rem; font-size: .74rem; color: var(--text-muted); }
+.week-heat-scale { display: flex; align-items: center; gap: .3rem; font-size: var(--fs-2xs); color: var(--text-muted); }
 .week-heat-key { width: .8rem; height: .8rem; border-radius: 3px; display: inline-block; }
 .week-heat-scale span:last-child { margin-left: .2rem; }
 .week-heat-scale span:first-child { margin-right: .2rem; }
 
 .week-heat-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(7rem, 1fr)); gap: .5rem; margin: 0; }
+/* Las tres cifras, cada una con su tono de la rampa: activas / mejor racha / racha viva. Antes eran tres
+   cajas idénticas y había que leer el rótulo para saber cuál era cuál. */
 .week-heat-stats div {
-  border: 1px solid var(--border);
+  --cc: var(--cat-1);
+  border: 1px solid color-mix(in srgb, var(--cc), transparent 62%);
   border-radius: var(--radius-sm);
-  padding: .45rem .6rem;
-  background: var(--surface);
+  padding: .45rem .65rem;
+  background: linear-gradient(160deg, color-mix(in srgb, var(--cc), transparent 88%), var(--surface) 72%);
+  box-shadow: var(--e1), var(--edge);
 }
-.week-heat-stats dt { font-size: .72rem; color: var(--text-muted); }
-.week-heat-stats dd { margin: 0; font-weight: 650; font-variant-numeric: tabular-nums; }
-
-
-/* ═══════════════════════════════════════════════════════════════════════════════════════════════════
-   CONSTANCIA · mapa de calor por SEMANAS (`WeekStreak`)
-
-   Un cuadro por semana y no por día: una lista de juegos no se toca a diario, así que el mapa diario
-   clásico saldría casi entero en blanco y haría parecer inactivo a quien no lo está. Cuatro niveles de
-   intensidad discretos (no una rampa continua) porque lo que se lee aquí es el PATRÓN —dónde hay racha y
-   dónde hueco—, y los saltos se distinguen mejor que un degradado fino.
-   ═══════════════════════════════════════════════════════════════════════════════════════════════════ */
-.week-heat { display: flex; flex-direction: column; gap: .6rem; }
-.week-heat-canvas { overflow-x: auto; overflow-y: hidden; max-width: 100%; }
-/* Sin tope de ancho: el mapa se queda con TODO el que le da su tarjeta. Con el antiguo `max-width` de 26rem, las
-   celdas se quedaban en un cuadradito arrinconado a la izquierda mientras media tarjeta quedaba en blanco; la
-   rejilla es lo que hay que mirar aquí, así que se le deja crecer con el contenedor. */
-.week-heat-svg { width: 100%; height: auto; }
-
-.week-heat-row { fill: var(--text-muted); font-size: 10.5px; }
-.week-heat-cell { cursor: pointer; }
-.week-heat-cell rect { transition: opacity .15s; }
-.week-heat-cell:focus-visible { outline: none; }
-.week-heat-cell:focus-visible rect { stroke: var(--text); stroke-width: 2; }
-.week-heat-cell.is-active rect { stroke: var(--text); stroke-width: 2; }
-.week-heat-cell.is-dim rect { opacity: .45; }
-
-/* Rampa de intensidad: la misma mezcla en el mapa y en su leyenda, para que la leyenda no mienta. El nivel 0
-   es la superficie hundida —un hueco tiene que verse como hueco, no como un azul muy claro—. */
-.week-heat-cell.is-l0 rect,
-.week-heat-key.is-l0 { background: var(--surface-hover); fill: var(--surface-hover); }
-.week-heat-cell.is-l1 rect,
-.week-heat-key.is-l1 { background: color-mix(in oklch, var(--steam) 28%, var(--surface)); fill: color-mix(in oklch, var(--steam) 28%, var(--surface)); }
-.week-heat-cell.is-l2 rect,
-.week-heat-key.is-l2 { background: color-mix(in oklch, var(--steam) 50%, var(--surface)); fill: color-mix(in oklch, var(--steam) 50%, var(--surface)); }
-.week-heat-cell.is-l3 rect,
-.week-heat-key.is-l3 { background: color-mix(in oklch, var(--steam) 72%, var(--surface)); fill: color-mix(in oklch, var(--steam) 72%, var(--surface)); }
-.week-heat-cell.is-l4 rect,
-.week-heat-key.is-l4 { background: var(--steam); fill: var(--steam); }
-
-.week-heat-scale { display: flex; align-items: center; gap: .3rem; font-size: .74rem; color: var(--text-muted); }
-.week-heat-key { width: .8rem; height: .8rem; border-radius: 3px; display: inline-block; }
-.week-heat-scale span:last-child { margin-left: .2rem; }
-.week-heat-scale span:first-child { margin-right: .2rem; }
-
-.week-heat-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(7rem, 1fr)); gap: .5rem; margin: 0; }
-.week-heat-stats div {
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  padding: .45rem .6rem;
-  background: var(--surface);
-}
-.week-heat-stats dt { font-size: .72rem; color: var(--text-muted); }
+.week-heat-stats div:nth-child(2) { --cc: var(--cat-2); }
+.week-heat-stats div:nth-child(3) { --cc: var(--cat-4); }
+.week-heat-stats dd { color: var(--cc); }
+.week-heat-stats dt { font-size: var(--fs-2xs); color: var(--text-muted); }
 .week-heat-stats dd { margin: 0; font-weight: 650; font-variant-numeric: tabular-nums; }
 
 
@@ -3225,17 +3258,17 @@
    pregunta: cómo se reparte un todo.
    ═══════════════════════════════════════════════════════════════════════════════════════════════════ */
 .stat-card-lead { display: flex; flex-direction: column; gap: .1rem; }
-.stat-card-label { font-size: .76rem; color: var(--text-muted); }
+.stat-card-label { font-size: var(--fs-2xs); color: var(--text-muted); }
 .stat-card-value {
-  font-size: 2.4rem;
+  font-size: var(--fs-5xl);
   font-weight: 650;
   line-height: 1.05;
   letter-spacing: -.03em;
   /* Cifra grande: figuras proporcionales. `tabular-nums` da a cada dígito el ancho de un cero y a este cuerpo
      se ve suelta; se reserva para las columnas de números, donde sí hay que alinear. */
 }
-.stat-card-value small { font-size: 1rem; font-weight: 500; color: var(--text-muted); margin-left: .2rem; letter-spacing: 0; }
-.stat-card-hint { font-size: .78rem; color: var(--text-muted); }
+.stat-card-value small { font-size: var(--fs-lg); font-weight: 500; color: var(--text-muted); margin-left: .2rem; letter-spacing: 0; }
+.stat-card-hint { font-size: var(--fs-xs); color: var(--text-muted); }
 /* El gráfico va al PIE y separado por una línea: es el apoyo de la cifra, no el protagonista. */
 .stat-card-figure {
   margin-top: .2rem;
@@ -3253,8 +3286,8 @@
 .replay-share { display: flex; flex-direction: column; gap: .6rem; }
 
 .replay-share-lead { margin: 0; display: flex; align-items: baseline; gap: .45rem; }
-.replay-share-lead strong { font-size: 2rem; font-weight: 650; letter-spacing: -.02em; line-height: 1; }
-.replay-share-lead span { color: var(--text-muted); font-size: .85rem; }
+.replay-share-lead strong { font-size: var(--fs-4xl); font-weight: 650; letter-spacing: -.02em; line-height: 1; }
+.replay-share-lead span { color: var(--text-muted); font-size: var(--fs-sm); }
 
 /* `height: auto` y no una altura fija: con altura fija el SVG conserva su relación de aspecto, se escala a lo
    alto y se queda centrado con dos huecos a los lados en vez de ocupar la tarjeta. */
@@ -3270,14 +3303,14 @@
 .replay-share-part.is-dim rect { opacity: .35; }
 
 .replay-share-legend { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: .35rem 1rem; }
-.replay-share-legend li { display: inline-flex; align-items: center; gap: .4rem; font-size: .82rem; color: var(--text-muted); }
+.replay-share-legend li { display: inline-flex; align-items: center; gap: .4rem; font-size: var(--fs-xs); color: var(--text-muted); }
 .replay-share-legend b { color: var(--text); font-variant-numeric: tabular-nums; }
 .replay-share-key { width: .65rem; height: .65rem; border-radius: 3px; background: var(--border); }
 .replay-share-legend .is-replayed .replay-share-key { background: var(--success); }
 .replay-share-legend .is-will .replay-share-key { background: var(--steam); }
 
 .replay-share-block { display: flex; flex-direction: column; gap: .35rem; }
-.replay-share-block h3 { margin: 0; font-size: .82rem; font-weight: 600; color: var(--stats-ink-2); }
+.replay-share-block h3 { margin: 0; font-size: var(--fs-xs); font-weight: 600; color: var(--stats-ink-2); }
 
 
 /* ═══════════════════════════════════════════════════════════════════════════════════════════════════
@@ -3304,11 +3337,11 @@
 .demand-meter-avg { stroke: var(--text); stroke-width: 2.5; stroke-linecap: round; }
 
 .demand-meter-legend { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: .35rem 1rem; }
-.demand-meter-legend li { display: inline-flex; align-items: center; gap: .4rem; font-size: .82rem; color: var(--text-muted); }
+.demand-meter-legend li { display: inline-flex; align-items: center; gap: .4rem; font-size: var(--fs-xs); color: var(--text-muted); }
 .demand-meter-legend b { color: var(--text); font-variant-numeric: tabular-nums; }
 .demand-meter-key { width: .65rem; height: .65rem; border-radius: 3px; background: var(--steam); }
 .demand-meter-legend .is-range .demand-meter-key { background: linear-gradient(90deg, color-mix(in oklch, var(--danger) 55%, var(--surface)), color-mix(in oklch, var(--success) 65%, var(--surface))); }
 /* La media no es una zona sino una marca: su clave es una línea, como en el gráfico. */
 .demand-meter-legend .is-avg .demand-meter-key { width: .2rem; height: .8rem; border-radius: 2px; background: var(--text); }
 
-.demand-meter-verdict { margin: 0; font-size: .88rem; color: var(--text); }
+.demand-meter-verdict { margin: 0; font-size: var(--fs-sm); color: var(--text); }
