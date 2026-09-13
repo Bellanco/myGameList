@@ -152,6 +152,34 @@
 :root[data-palette="cyberpunk"] .modal,
 :root[data-palette="cyberpunk"] .alert-dialog { border: 1px solid rgba(0, 240, 255, .35) !important; border-left: 3px solid var(--cyber-yellow) !important; border-radius: 0 !important; box-shadow: 0 0 18px rgba(0, 240, 255, .06), inset 0 0 0 1px rgba(0, 240, 255, .05) !important; }
 
+/* UNA SOLA BARRA AMARILLA POR BLOQUE, y esto es lo que la hace una marca. La regla de arriba se la da a cada
+   panel, y en las pantallas donde los paneles se ANIDAN —el detalle de un perfil social es el peor caso: la
+   tarjeta del hub, dentro su lienzo, dentro la ficha, y dentro la tabla de juegos— salían CUATRO barras
+   paralelas a 23 px una de otra, como una escalera amarilla pegada al margen izquierdo. Una marca repetida deja
+   de marcar nada: la conserva el panel de fuera, que es el que dice dónde empieza el bloque, y los de dentro se
+   quedan con el filete cian del resto del marco.
+
+   Se escribe con `:is()` en las dos posiciones para no enumerar las sesenta y cuatro combinaciones de paneles.
+   Suma (0,3,1) contra los (0,2,1) de la regla de §3, así que gana sin `!important` extra. */
+:root[data-palette="cyberpunk"] :is(.toolbar, .table-wrap, .settings-card, .stats-card, .hub-feed-card, .hub-hub-card, .modal, .alert-dialog)
+  :is(.toolbar, .table-wrap, .settings-card, .stats-card, .hub-feed-card, .hub-hub-card, .modal, .alert-dialog) {
+  border-left: 1px solid rgba(0, 240, 255, .35) !important;
+}
+
+/* LA FILA SEÑALADA SE MARCA EN CIAN, NO EN AMARILLO. El realce de la fila (`_table.scss`) es un filete de 3 px
+   del acento pegado al canto izquierdo… que es exactamente donde este tema pinta la barra del panel, también
+   amarilla y también de 3 px: las dos se tocaban y se leían como una sola barra de seis, que además parecía
+   salirse del marco de la tabla. El cian es el otro color del HUD y ya es el del filete de los paneles, así que
+   la fila señalada se distingue del canto del bloque sin estrenar ningún color. */
+@media (hover: hover) {
+  :root[data-palette="cyberpunk"] tbody tr.main-row:hover { box-shadow: inset 3px 0 0 var(--cyber-cyan); }
+}
+:root[data-palette="cyberpunk"] tbody tr.main-row.just-changed { animation-name: cyber-row-flash; }
+@keyframes cyber-row-flash {
+  0%   { background: rgba(0, 240, 255, .14); box-shadow: inset 3px 0 0 var(--cyber-cyan); }
+  100% { background: transparent; box-shadow: inset 3px 0 0 transparent; }
+}
+
 /* ── §4 · Tabla: cabecera HUD (Rajdhani, etiqueta amarilla, filete cian inferior). ── */
 :root[data-palette="cyberpunk"] thead th { background: transparent; letter-spacing: .06em; border-bottom: 1px solid rgba(0, 240, 255, .4); }
 
