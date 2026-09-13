@@ -275,24 +275,46 @@
    saturaciones): lo que los separaba era el skin, no el color. Ningún otro tema oscuro es CÁLIDO.
    El fondo es marrón VISIBLE, no un negro teñido —sube dos puntos respecto al azul—, y por eso el
    texto sube con él a hueso (#f5ece0) en vez de al gris claro de antes.
-   MEDIDAS, peor de los cuatro fondos (bg / surface / hover / elevated): texto 11,3:1 · atenuado 5,9:1
-   sobre `--surface` (4,7:1 en la elevada) · acento como anillo de foco 5,7:1 · `--steam-hover` como
-   texto de enlace 7,9:1 · tinta sobre el relleno del acento 7,4:1 — con el azul anterior ese último
-   caso eran 2,8:1, es decir, el botón primario NO llegaba a la AA en el tema por defecto. */
+   MEDIDAS, peor de los cuatro fondos (bg / surface / hover / elevated): texto 11,5:1 · atenuado 6,4:1 ·
+   pátina como anillo de foco 4,4:1 (le basta 3:1) · pátina como texto de enlace 5,9:1 · tinta sobre el
+   relleno del acento 7,4:1 — con el azul anterior ese último caso eran 2,8:1, es decir, el botón primario
+   NO llegaba a la AA en el tema por defecto. */
 :root {
-  --bg: #1c1610;
-  --surface: #251d15;
-  --surface-hover: #2f251b;
-  --surface-elevated: #3a2e21;
-  --border: #4a3c2c;
-  --text: #f5ece0;
-  --text-muted: #bcab96;
-  /* Pestaña INACTIVA sobre `--surface` (ver el bloque de arriba): 5,89:1, con margen de sobra. */
-  --text-dim: #a99785;
+  /* LOS CUATRO FONDOS, SEPARADOS DE VERDAD. Antes iban del 9 % al 18 % de luminosidad y el salto entre el fondo
+     y la superficie era de 1,08:1 —o sea, nada—: una tarjeta sobre el lienzo no se veía, y lo único que la
+     dibujaba era su borde. Ahora el fondo baja y la elevada sube, con un escalón parejo entre las cuatro. */
+  --bg: #15100b;
+  --surface: #221a13;
+  --surface-hover: #30251a;
+  --surface-elevated: #3f3122;
+  --border: #57452f;
+  --text: #f7efe4;
+  --text-muted: #c4b39d;
+  /* Pestaña INACTIVA sobre `--surface` (ver el bloque de arriba): 6,17:1, con margen de sobra. */
+  --text-dim: #ab9884;
   --steam: #d9a13a;
   --steam-hover: #ecc45c;
   --steam-rgb: 217,161,58;
   --tab-active: #ecc45c;
+
+  /* ── LA PÁTINA · el segundo acento ────────────────────────────────────────────────────────────────────
+     El tema entero vivía entre los 27° y los 43° de tono: cuero, cobre y latón, todo la misma familia, y por
+     eso se leía plano por mucho contraste que se le diera. La pátina es el verde azulado del cobre viejo —ya
+     estaba en su rampa de géneros—, así que no viene de fuera del mundo del tema: es el mismo metal, más
+     viejo. Se reparte POR PAPEL y no por adorno: el latón es lo que se RELLENA (la acción principal, la
+     pestaña activa) y la pátina es lo que se ESCRIBE y lo que SEÑALA (enlaces, nombres, anillo de foco,
+     botón de acento). Dos metales, dos trabajos.
+     VERDE CARDENILLO Y NO TURQUESA, y esto es una decisión de vecindario: un verde azulado luminoso se acercaba
+     al cian de «Cámara de pruebas» (h 199°, s 91%) y las dos paletas empezaban a parecerse pese a tener fondos
+     opuestos —cuero cálido contra gris azulado—. En OSCURO el parecido era el peor, porque ahí el color va
+     claro sobre fondo hondo y es cuando más canta: por eso aquí no basta con girar el tono, hay que APAGARLO.
+     El valor de abajo está a 51° del cian de Portal y con un tercio de su saturación (31-35 % contra 91 %), o
+     sea un verde de metal viejo y no un neón; y a 45° del verde salvia con el que esta misma paleta dice
+     «correcto», que es el otro color del que tenía que separarse.
+     `--patina` es el gráfico (filetes, rellenos tenues, 3:1) y `--fg-link` la tinta (4,5:1 sobre los cuatro
+     fondos: 5,96:1 en el peor, la superficie elevada). */
+  --patina: #5aa886;
+  --patina-rgb: 90,168,134;
   /* Verde SALVIA, no el verde menta de un tema frío: es el único semántico que no es cálido y tenía que
      convivir con el cuero sin parecer un injerto. */
   --success: #8fbf7a;
@@ -318,17 +340,23 @@
   /* El latón es un acento CLARO: el blanco encima se queda en 1,8:1 y la tinta oscura da 7,4:1 (misma
      regla que el amarillo de «Sin futuro» o el oro de «Sol y luna»). */
   --on-accent: #241a08;
+  /* Los dos papeles que se van a la pátina (ver arriba). El anillo de foco pide 3:1 no textual y da 5,4:1
+     sobre el peor de los cuatro fondos; la tinta de enlace pide 4,5:1 y da 7,2:1. */
+  --focus-ring: var(--patina);
+  --fg-link: #86bfa0;
 }
 /* CLARO = EL MISMO CUERO A LA LUZ: crema y cobre. Este claro ya era beis; lo único que desentonaba era
    el acento AZUL encima del beis, herencia de cuando el oscuro era azul. Con el cobre, los dos modos
    cuentan la misma historia, y el tema sigue siendo otra cosa que el pergamino de «Cámara de pruebas»
    (amarillo y envejecido, la Aperture antigua) y que la vitela de «Solo hay guerra». */
 :root[data-theme="light"] {
-  --bg: #f4ece0;
+  /* Los cuatro fondos también se separan aquí: el crema y el blanco roto se distinguían en 1,13:1 y una
+     tarjeta sobre el lienzo no se veía sin su borde. */
+  --bg: #f3e9da;
   --surface: #fffaf2;
-  --surface-hover: #ece0cf;
-  --surface-elevated: #faf3e8;
-  --border: #ddcbb0;
+  --surface-hover: #e8dbc5;
+  --surface-elevated: #fbf4e9;
+  --border: #d6c2a3;
   --text: #241a12;
   --text-muted: #6b5a48;
   --text-dim: #6f5d4b;
@@ -359,6 +387,12 @@
      claro) y, al ser `:root` a secas, se heredaría aquí. En claro el acento es cobre PROFUNDO y encima
      manda el blanco (5,25:1); la tinta se quedaría en 2,1:1. */
   --on-accent: #fff;
+  /* LA PÁTINA A LA LUZ: el mismo verde azulado del cobre viejo, profundo para leerse sobre crema. Gráfico
+     (`--patina`) a 3:1 y tinta (`--fg-link`) a 5,29:1 en el peor de los cuatro fondos. */
+  --patina: #10745f;
+  --patina-rgb: 16,116,95;
+  --focus-ring: var(--patina);
+  --fg-link: #0a5f4f;
 }
 
 /* ── Corazón rebelde (Persona 5) — rojo/negro/oro, pop-art ── */
