@@ -13,15 +13,15 @@ describe('resolveViewer', () => {
   // El interruptor dice lo que QUIERE; la foto de la cuenta dice lo que TIENE. Solo cuenta lo segundo, porque es lo
   // que los demás ven: quien lleva el "sí" activado y no tiene foto en Google no publica ninguna.
   it('querer mostrar la foto no basta: hay que tenerla', () => {
-    expect(resolveViewer({ showPhoto: true, ownPhotoURL: FOTO, tier: 'bronze' }).showsOwnPhoto).toBe(true);
-    expect(resolveViewer({ showPhoto: true, ownPhotoURL: '', tier: 'bronze' }).showsOwnPhoto).toBe(false);
-    expect(resolveViewer({ showPhoto: true, ownPhotoURL: null, tier: 'bronze' }).showsOwnPhoto).toBe(false);
-    expect(resolveViewer({ showPhoto: true, ownPhotoURL: undefined, tier: 'bronze' }).showsOwnPhoto).toBe(false);
-    expect(resolveViewer({ showPhoto: true, ownPhotoURL: '   ', tier: 'bronze' }).showsOwnPhoto).toBe(false);
+    expect(resolveViewer({ showPhoto: true, ownPhotoURL: FOTO, ownPhotoIsGeneric: false, tier: 'bronze' }).showsOwnPhoto).toBe(true);
+    expect(resolveViewer({ showPhoto: true, ownPhotoURL: '', ownPhotoIsGeneric: false, tier: 'bronze' }).showsOwnPhoto).toBe(false);
+    expect(resolveViewer({ showPhoto: true, ownPhotoURL: null, ownPhotoIsGeneric: false, tier: 'bronze' }).showsOwnPhoto).toBe(false);
+    expect(resolveViewer({ showPhoto: true, ownPhotoURL: undefined, ownPhotoIsGeneric: false, tier: 'bronze' }).showsOwnPhoto).toBe(false);
+    expect(resolveViewer({ showPhoto: true, ownPhotoURL: '   ', ownPhotoIsGeneric: false, tier: 'bronze' }).showsOwnPhoto).toBe(false);
   });
 
   it('tener foto no sirve si la ha escondido', () => {
-    expect(resolveViewer({ showPhoto: false, ownPhotoURL: FOTO, tier: 'bronze' }).showsOwnPhoto).toBe(false);
+    expect(resolveViewer({ showPhoto: false, ownPhotoURL: FOTO, ownPhotoIsGeneric: false, tier: 'bronze' }).showsOwnPhoto).toBe(false);
   });
 
   it('conserva el rango, que es lo que exime de la regla', () => {
@@ -43,11 +43,11 @@ describe('resolveViewer', () => {
     expect(photoForViewer({ photoURL: FOTO, isOwn: false, isFriend: true, viewer: conMonograma })).toBe('');
   });
 
-  // El veredicto llega por red. Mientras no está, manda lo de siempre: pintar la foto. Dura lo que una respuesta ya
-  // cacheada, y el otro lado del error —quitarle la cara a quien sí la tiene— es peor.
-  it('sin veredicto todavía, la foto se da por real', () => {
-    expect(resolveViewer({ showPhoto: true, ownPhotoURL: FOTO, tier: 'bronze' }).showsOwnPhoto).toBe(true);
-    expect(resolveViewer({ showPhoto: true, ownPhotoURL: FOTO, ownPhotoIsGeneric: undefined, tier: 'bronze' }).showsOwnPhoto).toBe(true);
+  // El veredicto llega por red. MIENTRAS NO ESTÁ, NO SE APORTA NADA: lo que está en juego no es un parpadeo, es
+  // enseñar las caras de los demás a quien todavía no se sabe si esconde la suya, y eso no se deshace una vez visto.
+  it('sin veredicto todavía, no se dan por buenas las caras ajenas', () => {
+    expect(resolveViewer({ showPhoto: true, ownPhotoURL: FOTO, tier: 'bronze' }).showsOwnPhoto).toBe(false);
+    expect(resolveViewer({ showPhoto: true, ownPhotoURL: FOTO, ownPhotoIsGeneric: undefined, tier: 'bronze' }).showsOwnPhoto).toBe(false);
     expect(resolveViewer({ showPhoto: true, ownPhotoURL: FOTO, ownPhotoIsGeneric: false, tier: 'bronze' }).showsOwnPhoto).toBe(true);
   });
 
@@ -107,6 +107,14 @@ describe('withVisiblePhotos', () => {
       photoURL,
       activity: [{ photoURL, gameId: 1 }],
       posts: [{ photoURL, text: 'hola' }],
+      // F4 — los mensajes «empezó / terminó / dejó» llevan la misma cara pegada. Se les olvidó al escribir la
+      // política y el feed seguía pintándolas: van en el fixture para que no se vuelva a olvidar.
+      moves: [{ photoURL, tab: 'c' }],
+      // Una colección que la política NO conoce: el barrido va por forma, no por lista de nombres, así que la
+      // próxima que alguien añada tiene que limpiarse sola.
+      futuro: [{ photoURL, lo: 'que venga' }],
+      // Y una que no lleva cara: se devuelve tal cual, sin objetos nuevos.
+      sharedLists: [{ gameId: 7 }],
     };
   }
 
@@ -129,6 +137,24 @@ describe('withVisiblePhotos', () => {
     expect(visible.posts[0].text).toBe('hola');
   });
 
+  it('borra también la de los movimientos de lista (F4) y la de cualquier colección futura', () => {
+    // El agujero real: `moves` nació después de la política y nadie lo añadió a la lista escrita a mano, así que
+    // el feed pintaba la cara de todo el mundo en las tarjetas de «empezó / terminó / dejó».
+    const original = entry('otro');
+    const [visible] = withVisiblePhotos([original], {
+      viewer: conFoto,
+      friendUids: new Set<string>(),
+      isOwnEntry: noEsPropia,
+    });
+
+    expect(visible.moves[0].photoURL).toBe('');
+    expect(visible.moves[0].tab).toBe('c');
+    expect(visible.futuro[0].photoURL).toBe('');
+    expect(visible.futuro[0].lo).toBe('que venga');
+    // Lo que no lleva cara se devuelve tal cual, sin copiar.
+    expect(visible.sharedLists).toBe(original.sharedLists);
+  });
+
   it('conserva la del amigo y la propia', () => {
     const entries = [entry('amiga'), entry('yo')];
     const visible = withVisiblePhotos(entries, {
@@ -149,6 +175,7 @@ describe('withVisiblePhotos', () => {
 
     expect(visible.map((item) => item.photoURL)).toEqual(['', '']);
     expect(visible.flatMap((item) => item.activity.map((a) => a.photoURL))).toEqual(['', '']);
+    expect(visible.flatMap((item) => item.moves.map((m) => m.photoURL))).toEqual(['', '']);
   });
 
   it('mithril recibe el directorio intacto (misma referencia: no invalida los memos)', () => {

@@ -1,8 +1,8 @@
 import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
-import { DIALOG_MESSAGES, ROUTE_TAB, SYNC_BADGE_TEXT, SYNC_MESSAGES, TAB_ROUTE, TAB_TITLES, UI_MESSAGES } from './core/constants/labels';
+import { DIALOG_MESSAGES, ROUTE_TAB, SYNC_MESSAGES, TAB_ROUTE, TAB_TITLES, UI_MESSAGES } from './core/constants/labels';
 import { LEGAL_ROUTES, type LegalDocId } from './core/constants/legal';
-import { COMPACT_FILTERS_MAX_WIDTH, COMPACT_TABLE_MAX_WIDTH } from './core/constants/uiConfig';
+import { COMPACT_FILTERS_MAX_WIDTH, COMPACT_TABLE_MAX_WIDTH, ROW_EXIT_MS } from './core/constants/uiConfig';
 import { TAB_IDS, type TabData, type TabId } from './model/types/game';
 import { decideReviewPublication } from './core/social/reviewPublication';
 import { applyReviewPublication } from './viewmodel/applyReviewPublication';
@@ -22,10 +22,12 @@ import { APP_ROUTES, FALLBACK_ROUTE, LEGACY_ROUTE_REDIRECTS, matchAppSection, ty
 import { ScrollToTop } from './view/components/ScrollToTop';
 import { ConsentBanner } from './view/components/ConsentBanner';
 import { SocialHubSkeleton } from './view/components/SocialHubSkeleton';
+import { ScreenSkeleton } from './view/components/ScreenSkeleton';
 import { useGameListViewModel, type GameDraft } from './viewmodel/useGameListViewModel';
 import { useToolbarFilters } from './viewmodel/useToolbarFilters';
 import { computeTabOptions, countActiveFilters } from './viewmodel/toolbarFilters';
 import { useSyncViewModel } from './viewmodel/useSyncViewModel';
+import { resolveSyncBadge } from './viewmodel/syncBadge';
 import { useScoreScaleSession } from './view/hooks/useScoreScaleSession';
 import { useSocialProfileSession } from './view/hooks/useSocialProfileSession';
 import { useAppearanceSession } from './view/hooks/useAppearanceSession';
@@ -37,6 +39,7 @@ import { useLegacyProfileHeal } from './view/hooks/useLegacyProfileHeal';
 import { useShootingStars } from './view/hooks/useShootingStars';
 import { useBacklogSnapshot } from './view/hooks/useBacklogSnapshot';
 import { useSignatureEffects } from './view/hooks/useSignatureEffects';
+import { useScreenTransition } from './view/hooks/useScreenTransition';
 import { useAppliedPalette } from './view/hooks/usePalette';
 import { hasGithubOAuthRedirect } from './model/repository/githubOAuthRepository';
 import { buildListsPool, buildListsWeigher, normalizeName, type RouletteCandidate } from './core/roulette/roulette';
@@ -129,6 +132,17 @@ function SharedReviewRoute(): ReactNode {
 function getLegalDocId(pathname: string): LegalDocId {
   const match = (Object.keys(LEGAL_ROUTES) as LegalDocId[]).find((id) => pathname.startsWith(LEGAL_ROUTES[id]));
   return match || 'terms';
+}
+
+/**
+ * ¿Pide el sistema MENOS MOVIMIENTO? Lo consultan las animaciones que no puede resolver el CSS solo, porque
+ * implican ESPERAR (aplazar un borrado hasta que su fila se desvanece): con menos movimiento no hay
+ * desvanecimiento que esperar y el retardo sería una lentitud gratuita, no un efecto.
+ */
+function prefersReducedMotion(): boolean {
+  return typeof window !== 'undefined'
+    && typeof window.matchMedia === 'function'
+    && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 }
 
 function isCompactFilters(): boolean {
@@ -338,11 +352,27 @@ export default function App() {
   const metaRef = useRef(vm.meta);
   metaRef.current = vm.meta;
 
+  /**
+   * Las tres funciones que lee el ciclo de sync, ESTABLES entre renders.
+   *
+   * Escritas en línea (`getData: () => dataRef.current`) eran una función nueva en cada render, y de ahí colgaba
+   * toda la cadena de callbacks del hook: sus efectos se desmontaban y se volvían a montar con cada render de
+   * esta pantalla —que re-renderiza con cada tecla del buscador—. El sondeo periódico no llegaba nunca a sus
+   * 60 s y el reintento programado tras un error de sincronización se cancelaba solo. El detalle está en la nota
+   * de `refreshRemoteRef`, en `useSyncViewModel`.
+   *
+   * Siguen leyendo por REF y no por closure, que es lo que hace que un ciclo en vuelo vea las ediciones
+   * confirmadas mientras esperaba a la red (ver la nota de `dataRef`, justo arriba).
+   */
+  const getSyncData = useCallback(() => dataRef.current, []);
+  const getSyncMeta = useCallback(() => metaRef.current, []);
+  const setSyncData = useCallback((next: TabData) => persistFromSync(next), [persistFromSync]);
+
   // C1: el ciclo de sync persiste SIN marcar dirty (aplica merge/resultado remoto, no es edición de usuario).
   const syncVm = useSyncViewModel({
-    getData: () => dataRef.current,
-    setData: (next) => persistFromSync(next),
-    getMeta: () => metaRef.current,
+    getData: getSyncData,
+    setData: setSyncData,
+    getMeta: getSyncMeta,
     setMeta: vm.setMeta,
     onNotice: notify,
     persist: persistFromSync,
@@ -547,9 +577,28 @@ export default function App() {
     setFormModalOpen(false);
   }, [setFormModalOpen]);
 
+  // ENTRADA DE PANTALLA: el `<main>` funde su contenido nuevo en cada cambio de camino en vez de sustituirlo en
+  // seco. La clave es el `pathname` y no la sección, para que también se note al moverse DENTRO del hub social
+  // (feed → perfil → detalle de una reseña), que son pantallas distintas aunque la sección sea la misma.
+  const mainRef = useScreenTransition<HTMLElement>(location.pathname);
+
   // Destello de fila: id del juego recién guardado; se limpia tras la animación.
   const [recentlyChangedId, setRecentlyChangedId] = useState<number | null>(null);
   const flashTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  /**
+   * LA FILA QUE SE ESTÁ YENDO. Id del juego cuyo borrado ya se ha confirmado pero todavía no se ha aplicado:
+   * durante ese rato la fila sigue en la tabla, desvaneciéndose (ver `handleConfirmDelete`).
+   */
+  const [removingId, setRemovingId] = useState<number | null>(null);
+  const removeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Los dos temporizadores de arriba sobreviven al desmontaje si nadie los para: el del destello ya se quedaba
+  // suelto, y el del borrado además dispararía un `setState` sobre un componente que ya no está.
+  useEffect(() => () => {
+    if (flashTimer.current) clearTimeout(flashTimer.current);
+    if (removeTimer.current) clearTimeout(removeTimer.current);
+  }, []);
 
   const handleSaveDraft = useCallback((nextDraft: GameDraft) => {
     // Si una validación corta el guardado (campos obligatorios, nombre ya en las listas) no hay nada que
@@ -619,12 +668,33 @@ export default function App() {
     setConfirmState(null);
   }, [setConfirmState]);
 
+  /**
+   * CONFIRMAR UN BORRADO, dándole a la fila tiempo de irse.
+   *
+   * Antes, el juego desaparecía del listado en el MISMO fotograma en que se pulsaba "Eliminar": el modal se
+   * cerraba y la fila ya no estaba, sin ningún rastro de dónde había estado ni de que se hubiera ido. Aquí la
+   * confirmación solo MARCA la fila (`removingId`) y el borrado de verdad espera a que termine de desvanecerse.
+   *
+   * El aplazamiento es de la VISTA, no del modelo. El ViewModel sigue borrando en cuanto se le pide; lo único
+   * que se retrasa es la petición, y solo cuando hay una fila que animar —`subjectId` lo pone únicamente el
+   * borrado de un juego, no el de una etiqueta— y cuando hay movimiento que enseñar.
+   */
   const handleConfirmDelete = useCallback(() => {
     const pending = confirmState;
-    if (pending) {
-      pending.action();
-    }
     setConfirmState(null);
+    if (!pending) return;
+
+    if (pending.subjectId === undefined || prefersReducedMotion()) {
+      pending.action();
+      return;
+    }
+
+    setRemovingId(pending.subjectId);
+    if (removeTimer.current) clearTimeout(removeTimer.current);
+    removeTimer.current = setTimeout(() => {
+      setRemovingId(null);
+      pending.action();
+    }, ROW_EXIT_MS);
   }, [confirmState, setConfirmState]);
 
 
@@ -644,11 +714,17 @@ export default function App() {
     void importRouletteModal();
   }), []);
 
-  const syncBadgeText = SYNC_BADGE_TEXT[syncVm.status] || SYNC_BADGE_TEXT.idle;
+  const syncBadgeText = resolveSyncBadge(syncVm.status, syncVm.pendingUpload);
 
   /**
    * Pantalla de cada sección. Las cuatro rutas de listados comparten elemento a propósito: la pestaña activa se
    * deriva del pathname ({@link getCurrentTab}), no de rutas distintas.
+   *
+   * EL `fallback` DE CADA UNA ES UN ESQUELETO, NO `null`. Todas menos los listados llegan por `lazy()`, así que
+   * entre el clic en la barra de abajo y el primer píxel hay una descarga; con `null`, lo que se veía en ese
+   * hueco era un rectángulo EN BLANCO. El esqueleto ({@link ScreenSkeleton}) ocupa ese sitio con la forma
+   * aproximada de lo que viene y un hilo de progreso arriba, que es la diferencia entre "esto está cargando" y
+   * "esto no ha hecho nada". El hub social ya lo hacía con el suyo, que además es fiel a su feed.
    */
   const sectionScreens: Record<AppSection, ReactNode> = {
     lists: (
@@ -684,6 +760,7 @@ export default function App() {
           sort={vm.sort[currentTab]}
           onSort={vm.sortBy}
           recentlyChangedId={recentlyChangedId}
+          removingId={removingId}
         />
       </>
     ),
@@ -703,19 +780,19 @@ export default function App() {
     ),
     stats: (
 
-      <Suspense fallback={null}>
+      <Suspense fallback={<ScreenSkeleton />}>
         <StatsHub games={vm.data} />
       </Suspense>
     ),
     account: (
 
-      <Suspense fallback={null}>
+      <Suspense fallback={<ScreenSkeleton />}>
         {scoreScaleUid ? <AccountHub scoreScaleUid={scoreScaleUid} hasSocialProfile={hasSocialProfile} /> : null}
       </Suspense>
     ),
     admin: (
 
-      <Suspense fallback={null}>
+      <Suspense fallback={<ScreenSkeleton />}>
         <AdminHub />
       </Suspense>
     ),
@@ -724,19 +801,19 @@ export default function App() {
     // enrutador, sin cromo y sin ninguna salida más que el enlace a la app.
     'shared-review': (
 
-      <Suspense fallback={null}>
+      <Suspense fallback={<ScreenSkeleton />}>
         <SharedReviewRoute />
       </Suspense>
     ),
     legal: (
 
-      <Suspense fallback={null}>
+      <Suspense fallback={<ScreenSkeleton />}>
         <LegalScreen docId={legalDocId} />
       </Suspense>
     ),
     inbox: (
 
-      <Suspense fallback={null}>
+      <Suspense fallback={<ScreenSkeleton />}>
         <InboxScreen
           imported={inboxImported}
           isInLists={isInLists}
@@ -754,7 +831,7 @@ export default function App() {
     ),
     settings: (
 
-      <Suspense fallback={null}>
+      <Suspense fallback={<ScreenSkeleton />}>
         <SettingsHub
           syncStatus={syncBadgeText}
           hasSyncConfig={syncVm.hasConfig}
@@ -825,6 +902,7 @@ export default function App() {
       <UpdateNotice />
       <main
         id="contenido"
+        ref={mainRef}
         className={`main ${
           activeSection === 'lists'
             ? 'main-lists'

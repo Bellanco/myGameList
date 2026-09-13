@@ -61,6 +61,13 @@ async function animacionesDeEntradaTerminadas(page: Page): Promise<void> {
   // dejaba pasar la espera con la máquina cargada, y sale como una violación de contraste que no existe —el
   // `.btn-danger` de la zona de peligro medido a mitad de transición: 4,13 en vez de los 4,6 que da quieto—.
   await page.evaluate(() => document.fonts.ready.then(() => undefined));
+  // Y CON LAS FUENTES, LO QUE AÚN ESTÁ EN CAMINO. La aplicación precarga en cuanto el navegador está
+  // ocioso varios trozos suyos (los modales, sus hojas de estilo), y cada hoja que entra recalcula los estilos y
+  // puede arrancar transiciones NUEVAS sobre una pantalla que ya parecía quieta — el mismo fallo que las fuentes,
+  // por otra puerta. Mientras la descarga del SDK de sesión ocupaba ese hueco, esos trozos llegaban después de la
+  // medición y el problema no se veía; al dejar de descargarlo para quien no ha iniciado sesión, se colaron justo
+  // dentro. Esperar a que la red se calme los mete a todos ANTES de contar frames.
+  await page.waitForLoadState('networkidle');
   await page.evaluate(() => { (window as unknown as { __framesEnCalma?: number }).__framesEnCalma = 0; });
   await page.waitForFunction(() => {
     const quieta = document

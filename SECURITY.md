@@ -38,6 +38,31 @@ ahí un `tier` propio. Los dos ids de gist siguen admitidos a propósito: el cut
 deposita en el documento canónico para que el saneado del dueño los mueva a `privateConfig`, y prohibirlos
 congelaría ese documento justo en el caso que el cutover viene a rescatar.
 
+### El identificador de un Gist ES la llave, y por eso una amistad no se puede revocar del todo
+
+Un Gist «secreto» de GitHub **no es privado**: no tiene lista de permitidos. Quien conozca su identificador lo
+lee, con cualquier token o sin ninguno. Eso es lo que hace que el modelo funcione sin servidor propio —tus
+amistades leen tus listas directamente de GitHub— y también lo que marca su límite.
+
+Para que una amistad pueda leer, los identificadores de tus dos canales se copian en el documento de amistad:
+el del canal **social** (actividad y publicaciones) y el de tu gist de **listados**, que es el que lleva la
+biblioteca completa **con las reseñas enteras, las notas y las horas**. Solo lo leen las dos partes, y esa parte
+está bien cerrada por reglas.
+
+**Lo que hay que saber al eliminar a alguien:** se borra el documento de amistad, así que deja de ver tu perfil
+en la aplicación y deja de recibir novedades por ella. Pero si esa persona guardó los identificadores mientras
+erais amigos —basta con haberlos leído una vez—, **puede seguir leyendo esos dos gists en GitHub**, también lo
+que publiques después. Borrar la amistad retira el permiso dentro de la aplicación; no puede retirar una llave
+que ya está copiada, igual que pasa con cualquier enlace secreto compartido.
+
+**Cómo se corta de verdad, hoy:** creando canales nuevos, que es lo único que invalida los identificadores
+antiguos. Se puede hacer a mano desde GitHub (borrar el gist y volver a conectar la sincronización: se crea uno
+nuevo y las amistades vivas recogen el identificador nuevo la próxima vez que se sanean). Está anotado como
+mejora pendiente ofrecerlo como un gesto de una sola pulsación en «Cuenta», que es donde corresponde.
+
+Conviene tenerlo presente antes que después: lo que se comparte con una amistad se comparte con quien esa
+persona siga siendo el día de mañana.
+
 ## Medidas implementadas
 
 ### Cifrado del token de GitHub (`src/core/security/crypto.ts`)
@@ -123,5 +148,10 @@ WebCrypto nativo (AES-GCM 256). Hay **dos** mecanismos con garantías **distinta
   que el documento que el cutover deja a medias se limpia solo la próxima vez que su dueño entra. Antes de
   cerrarlos hay que repasar la ventana entre el cutover y ese siguiente inicio de sesión, y pasar
   `npm run audit:rules` como en cualquier endurecimiento.
+- **Rotar los canales desde «Cuenta»**, en una pulsación: crear los gists nuevos, repuntar los identificadores
+  en las amistades vivas y borrar los viejos (`deleteGist` ya existe, y es lo que los retira de circulación de
+  verdad). Es la única forma de revocar el acceso de alguien a quien ya se le enseñó el identificador (ver arriba),
+  y hoy solo se puede hacer a mano. El orden importa: primero el canal nuevo con su contenido, después el
+  repunte, y el borrado del viejo al final y solo tras comprobar que el nuevo tiene lo que debe.
 - Cifrado end-to-end del contenido del Gist (que los datos viajen cifrados por la API de GitHub).
 - Tokens en memoria de sesión en lugar de persistencia.

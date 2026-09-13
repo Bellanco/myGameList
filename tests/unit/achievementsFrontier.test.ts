@@ -114,6 +114,60 @@ describe('todos cuentan sobre el mismo catálogo', () => {
 
     expect(summarize([], despues).total).toBe(summarize([], antes).total + 1);
   });
+
+  /**
+   * EL DENOMINADOR NO LO MUEVE QUIEN MIRA, y esto es lo que se veía en pantalla: tres fichas medidas por el MISMO
+   * cliente, con la MISMA frontera publicada delante, decían «121/255», «56/253» y «66/251» del mismo catálogo.
+   *
+   * Pasaba porque el denominador se calculaba con `openThrough(steps, open, isEarned)`: quien tuviera logros que
+   * la frontera publicada todavía no recogía —la ventana entre conseguir algo y que su apertura llegue a los
+   * demás— se abría esos escalones y su zanahoria, y se los sumaba a su propio total. El que iba en cabeza
+   * contaba sobre un catálogo más grande justo por ir en cabeza.
+   */
+  it('dos personas con progresos muy distintos cuentan sobre el mismo total', () => {
+    const publicada = mergeFrontiers({}, ownFrontier(earned([
+      ...steps('completados').slice(0, 4),
+      ...steps('plataformas').slice(0, 2),
+    ])));
+
+    // El que va en cabeza ha pasado de largo la frontera publicada en dos escaleras; el que empieza, no.
+    const cabeza = new Map([
+      ...steps('completados').slice(0, 6).map((id) => [id, 1] as const),
+      ...steps('plataformas').slice(0, 3).map((id) => [id, 1] as const),
+    ]);
+    const novato = new Map([[steps('completados')[0], 1]]);
+
+    expect(summarizeMirror(cabeza, publicada).total).toBe(summarizeMirror(novato, publicada).total);
+    expect(summarizeMirror(cabeza, publicada).total).toBe(summarize([], publicada).total);
+  });
+
+  /**
+   * EL TOPE. Lo conseguido cuenta SIEMPRE en el numerador —la cabecera tiene que cuadrar con las medallas que la
+   * lista enseña debajo—, así que en esa misma ventana hay medallas contadas arriba cuyo escalón todavía no está
+   * abierto abajo. Lo que no puede pasar es que la fracción se lea como un error.
+   */
+  it('quien va por delante de la frontera publicada no pasa del 100 %', () => {
+    const publicada = mergeFrontiers({}, ownFrontier(earned([steps('completados')[0]])));
+    const cabeza = new Map(steps('completados').map((id) => [id, 1] as const));
+
+    const suyo = summarizeMirror(cabeza, publicada);
+    expect(suyo.earned).toBe(cabeza.size); // todas sus medallas, contadas
+    expect(suyo.total).toBeGreaterThanOrEqual(suyo.earned);
+    expect(suyo.percent).toBeLessThanOrEqual(100);
+  });
+
+  /**
+   * SIN FRONTERA PUBLICADA manda el progreso propio, que es el comportamiento de siempre y el lado seguro: sin
+   * documento —sin sesión, sin red, o en el primer fotograma antes de que llegue la lectura— no hay nada
+   * «cerrado para todos» que aplicar, y abrir solo el primer escalón de cada escalera daría un «121 de 64».
+   */
+  it('sin documento publicado, cada quien abre con lo suyo', () => {
+    const veterano = [...steps('completados').slice(0, 6), ...steps('plataformas').slice(0, 4)];
+    const states = [...earned(veterano).values()];
+
+    expect(summarize(states).total).toBeGreaterThan(summarize([]).total);
+    expect(summarize(states).total).toBeGreaterThanOrEqual(veterano.length);
+  });
 });
 
 /**

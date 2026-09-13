@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { ensureSyncConfigLoaded, getSyncConfig } from '../model/repository/gistRepository';
+import { writeCanPublishHint } from '../model/repository/socialShellHint';
 import { localWeekKey } from '../core/utils/dateTime';
 import { createSocialGist, getSocialSyncConfig, readPublicSocialGistById, readSocialGist, remapSocialActorIds, saveSocialSyncConfig, type SocialSharedGame, deleteGist, ensureSecretSocialGist, socialGistHasContent, writeSocialGist } from '../model/repository/socialGistRepository';
 import { reconcileReviewActivity } from '../model/repository/socialActivityReconcile';
@@ -270,6 +271,17 @@ export function useSocialViewModel(options?: {
   // visibilidad. Clave = id del perfil del directorio. Alimenta getGameItemById y selectedProfileDetail.
   const [foreignGamesByProfile, setForeignGamesByProfile] = useState<Record<string, Record<TabId, GameItem[]>>>({});
   const [loadingForeignProfile, setLoadingForeignProfile] = useState(false);
+  /**
+   * Perfiles cuyo gist de listados se INTENTÓ bajar y no se pudo (sin red, gist borrado, token sin permiso).
+   *
+   * Hace falta para distinguir «todavía no ha llegado» de «no va a llegar», que es lo que decide si el detalle de
+   * una reseña enseña un esqueleto o el adelanto de 160 caracteres. Sin esto, un fallo dejaba la pantalla en
+   * esqueleto para siempre, esperando algo que ya no venía.
+   *
+   * NO bloquea el reintento: quien decide si se vuelve a pedir es `foreignGamesByProfile`, que sigue sin la
+   * entrada. Volver a abrir la reseña lo intenta otra vez, que es lo que ya hacía.
+   */
+  const [foreignProfileFailed, setForeignProfileFailed] = useState<Record<string, true>>({});
   // Cooldown visible del botón "Actualizar": se deshabilita durante FORCED_REFRESH_MIN_MS tras un refresco forzado.
 
 
@@ -1220,6 +1232,56 @@ export function useSocialViewModel(options?: {
   }, [activePanel, socialDirectory, detailActorUid, detailEventType, detailGameId]);
 
   /**
+   * ¿EL EVENTO DEL DETALLE TODAVÍA PUEDE APARECER?
+   *
+   * `activeDetailEvent` se resuelve buscando dentro del directorio, así que llegar a `/social/user/…` por un
+   * enlace directo, por una recarga o desde un aviso lo deja en `null` hasta que el directorio se hidrata. La
+   * pantalla enseñaba entonces su variante de «no se ha encontrado»: un mensaje DEFINITIVO para un estado
+   * TRANSITORIO, y a los pocos segundos la reseña aparecía de golpe.
+   *
+   * `directoryLoading` es el derivado que cubre la ventana ENTERA —resolver amistades, leer la caché y la
+   * hidratación en vuelo—, que es justo la que hacía falta: el crudo se apagaba antes de tiempo y volvía a dejar
+   * el «no se ha encontrado» a la vista. Ver su declaración en `useSocialDirectory`.
+   */
+  const detailEventLoading = activePanel === 'detail' && !activeDetailEvent && directoryLoading;
+
+  /**
+   * ¿EL CUERPO DE LA RESEÑA ABIERTA TODAVÍA VIENE DE CAMINO?
+   *
+   * El detalle de una actividad se pinta con dos fuentes distintas y no llegan a la vez: la cabecera —juego,
+   * autor, fecha, nota— sale del propio evento, que ya está en el directorio, y el ANÁLISIS COMPLETO (texto
+   * entero, plataformas, géneros, puntos fuertes y débiles) vive en el gist de listados de esa persona, que se
+   * baja aparte.
+   *
+   * Mientras no llegaba, la pantalla enseñaba el adelanto de 160 caracteres con el aviso de «esto es solo un
+   * adelanto» y los cuatro bloques de chips vacíos: contenido real pero a medias, y un aviso que decía algo
+   * FALSO —no era un adelanto, era que aún no había llegado—. Con esto, el cuerpo espera como esqueleto y el
+   * aviso queda para cuando de verdad no hay nada más que el adelanto.
+   *
+   * Se calcula con las MISMAS condiciones que usa el efecto que baja el gist (unas líneas más abajo), y no con
+   * un indicador de «en vuelo», a propósito: ese indicador lo enciende un efecto, que corre DESPUÉS de pintar,
+   * así que habría un fotograma con el adelanto y el aviso antes de que empezara la espera. Preguntar «¿va a
+   * llegar algo?» en vez de «¿está llegando?» no tiene ese hueco.
+   */
+  const detailReviewLoading = useMemo(() => {
+    if (activePanel !== 'detail' || !activeDetailEvent) return false;
+    const { profileId } = activeDetailEvent;
+    // Reseña propia: el texto sale de los listados locales, que ya están.
+    if (isOwnProfileIdentity(profileId, authUser?.uid, ownProfileId)) return false;
+    // Ya bajado. Aunque el juego no aparezca (su dueño esconde esa lista), no hay nada más que esperar.
+    if (foreignGamesByProfile[profileId]) return false;
+    // Se intentó y no se pudo: a partir de aquí, el adelanto es lo que hay.
+    if (foreignProfileFailed[profileId]) return false;
+    const entry = socialDirectory.find((item) => item.id === profileId);
+    // Sin gist de listados, o sin amistad, no se pide nada: tampoco hay nada que esperar.
+    if (!entry?.gamesGistId || relationshipWith(entry.uid) !== 'friends') return false;
+    return true;
+  }, [
+    activePanel, activeDetailEvent, authUser?.uid, ownProfileId,
+    foreignGamesByProfile, foreignProfileFailed, socialDirectory, relationshipWith,
+  ]);
+
+  /**
    * Obtiene un GameItem para un evento del feed. Para perfiles ajenos usa su lista bajada
    * (`foreignGamesByProfile`, filtrada por su visibilidad); para el propio, fallback local.
    */
@@ -1436,7 +1498,9 @@ export function useSocialViewModel(options?: {
         setForeignGamesByProfile((prev) => ({ ...prev, [targetProfileId]: visible }));
       })
       .catch(() => {
-        /* fallback index-only: el detalle/perfil muestra snippet/vacío sin romper la pantalla. */
+        /* fallback index-only: el detalle/perfil muestra snippet/vacío sin romper la pantalla. Se APUNTA el
+           perfil para que el detalle deje de esperar y enseñe el adelanto, que a partir de aquí es la verdad. */
+        if (!cancelled) setForeignProfileFailed((prev) => (prev[targetProfileId] ? prev : { ...prev, [targetProfileId]: true }));
       })
       .finally(() => {
         // Flag de UI (no datos rancios): debe bajar SIEMPRE, aunque el efecto se haya cancelado al navegar; si no,
@@ -1834,6 +1898,23 @@ export function useSocialViewModel(options?: {
     onPublished: useCallback(() => hydrateSocialDirectory(true), [hydrateSocialDirectory]),
     setFeedback,
   });
+
+  /**
+   * Se apunta si esta persona puede publicar, para el ESQUELETO de la próxima entrada.
+   *
+   * El compositor solo existe a partir de plata, y eso no se sabe hasta que el perfil resuelve el rango: justo
+   * después de la espera que el esqueleto está cubriendo. Sin esta pista, el armazón de carga tenía que elegir
+   * entre no reservar su hueco (y que el feed saltara hacia abajo a quien sí publica) o reservarlo siempre (y que
+   * saltara hacia arriba a quien no). Es una pista de pintado, no un permiso: ver `socialShellHint`.
+   *
+   * Espera a `tierResolved` porque `ownTier` arranca en bronce por defecto, y «bronce porque aún no se ha leído el
+   * perfil» no es lo mismo que «bronce porque ese es su rango»: apuntar el primero borraría el hueco a alguien que
+   * sí lo necesita.
+   */
+  useEffect(() => {
+    if (!tierResolved) return;
+    writeCanPublishHint(canPublish);
+  }, [tierResolved, canPublish]);
 
   // Disparo automático de la hidratación. Depende de DATOS, no de la identidad del callback.
   //
@@ -2274,6 +2355,11 @@ export function useSocialViewModel(options?: {
     // Para que la pantalla del perfil pueda decir POR QUÉ el interruptor está bloqueado: no es lo mismo no tener
     // foto que tener la que Google genera sola.
     ownPhotoIsGeneric,
+    // La cara propia que SE VE, ya resuelta: es la misma que sale al mundo. Las pantallas que solo pintan el avatar
+    // propio (la cabecera del hub, la ficha del editor) usan esta y no la de la sesión, para que el interruptor
+    // valga igual mirándose uno que mirándole los demás. `ownPhotoURL` crudo sigue haciendo falta donde hay que
+    // distinguir "no tienes foto" de "la has apagado": eso lo decide el propio editor.
+    ownPublishablePhoto,
     profileSearch,
     setProfileSearch,
     composePostText,
@@ -2322,6 +2408,10 @@ export function useSocialViewModel(options?: {
     loadingForeignProfile,
     refreshCoolingDown,
     activeDetailEvent,
+    // ¿Puede aparecer todavía el evento abierto? (ver arriba: decide esqueleto vs «no se ha encontrado»).
+    detailEventLoading,
+    // ¿Falta todavía el análisis completo de la reseña abierta? (ver arriba: decide esqueleto vs adelanto).
+    detailReviewLoading,
     getGameItemById,
     relatedReviews,
     openRelatedReview,

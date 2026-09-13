@@ -22,12 +22,34 @@ export function loadSyncDirtyState(): SyncDirtyState {
   }
 }
 
+/**
+ * Quién quiere enterarse de que la marca ha cambiado.
+ *
+ * Existe porque hay dos cosas que dependen de ella y no pueden ir preguntando: el empujón automático de lo
+ * pendiente y el aviso de «cambios sin subir» del badge. Deducirlo de las transiciones de la máquina de sync no
+ * vale —la escritura pasa a `idle` ANTES de limpiar la marca, así que el último aviso llegaría al revés—, y
+ * consultarlo en cada render significa leer y parsear `localStorage` en cada tecla.
+ *
+ * Se notifica desde `saveSyncDirtyState`, que es el único sitio por el que la marca se escribe.
+ */
+const dirtyListeners = new Set<(state: SyncDirtyState) => void>();
+
+export function subscribeSyncDirtyState(listener: (state: SyncDirtyState) => void): () => void {
+  dirtyListeners.add(listener);
+  return () => {
+    dirtyListeners.delete(listener);
+  };
+}
+
 export function saveSyncDirtyState(state: SyncDirtyState): void {
   try {
     localStorage.setItem(SYNC_STATE_KEY, JSON.stringify(state));
   } catch {
     // ignore
   }
+  // Fuera del try: que no se pueda escribir en disco no es motivo para que la pantalla se quede sin enterarse
+  // (el estado en memoria sigue siendo el bueno para esta sesión).
+  dirtyListeners.forEach((listener) => listener(state));
 }
 
 export function markDirty(): void {

@@ -83,6 +83,7 @@ const SocialHubInner = memo(function SocialHubInner({
     showPhoto,
     setShowPhoto,
     ownPhotoIsGeneric,
+    ownPublishablePhoto,
     profileSearch,
     setProfileSearch,
     composePostText,
@@ -124,6 +125,8 @@ const SocialHubInner = memo(function SocialHubInner({
     openProfileReviewDetail,
     feedItems,
     activeDetailEvent,
+    detailEventLoading,
+    detailReviewLoading,
     getGameItemById,
     relatedReviews,
     openRelatedReview,
@@ -368,6 +371,7 @@ const SocialHubInner = memo(function SocialHubInner({
           showPhoto={showPhoto}
           setShowPhoto={setShowPhoto}
           ownPhotoURL={authUser?.photoURL || ''}
+          ownVisiblePhotoURL={ownPublishablePhoto}
           ownPhotoIsGeneric={ownPhotoIsGeneric}
         />
       );
@@ -383,6 +387,8 @@ const SocialHubInner = memo(function SocialHubInner({
           status={status}
           statusKind={statusKind}
           shareable={isOwnDetailEvent}
+          eventLoading={detailEventLoading}
+          reviewLoading={detailReviewLoading}
           backLabel={backToLabel || undefined}
           related={<RelatedReviews SOCIAL_UI={SOCIAL_UI} items={relatedReviews} onOpen={openRelatedReview} />}
         />
@@ -540,7 +546,7 @@ const SocialHubInner = memo(function SocialHubInner({
       <SocialFeedScreen
         SOCIAL_UI={SOCIAL_UI}
         socialDisplayName={socialDisplayName}
-        ownPhotoURL={authUser?.photoURL || ''}
+        ownVisiblePhotoURL={ownPublishablePhoto}
         currentSocialGistId={socialCfgGistId}
         loadingDirectory={loadingDirectory}
         openProfileDetail={openDirectoryProfile}

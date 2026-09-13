@@ -70,6 +70,12 @@ export const SYNC_BADGE_TEXT = {
   ok: 'Sincronizado',
   syncing: 'Sincronizando…',
   error: 'Error de sincronización',
+  /**
+   * Hay ediciones guardadas que todavía no están en el gist. Faltaba, y su ausencia hacía MENTIR a la línea de
+   * estado: tras guardar un juego seguía diciendo «Sincronizado» hasta que un ciclo subía lo pendiente, así que
+   * no había forma de distinguir «todo a salvo» de «esto aún no ha salido de este dispositivo».
+   */
+  pending: 'Cambios sin subir',
 } as const;
 
 export const DIALOG_MESSAGES = {
@@ -232,6 +238,9 @@ export const UI_MESSAGES = {
     'shared-review': 'Reseña compartida',
   },
   skipToContent: 'Saltar al contenido',
+  // Lo que se ANUNCIA mientras baja el chunk de una pantalla. El esqueleto que se ve es decorativo
+  // (`aria-hidden`), así que sin esto un lector de pantalla no tendría forma de saber que hay algo en camino.
+  screenLoading: 'Cargando la pantalla...',
   // Los dos botones flotantes del listado son solo icono: el `aria-label` los nombra para un lector de pantalla y
   // el mismo texto va en `title` para que quien usa el ratón sepa qué hace cada uno al pasar por encima.
   fab: {

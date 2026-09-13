@@ -413,6 +413,16 @@ export function flushLocalState(): void {
     const payload = pendingState;
     pendingState = null;
     writeToLocalStorageNow(payload);
+    // La copia COMPLETA en IndexedDB viaja con el mismo volcado, y no en cada guardado, por lo que cuesta: es
+    // un `structuredClone` de la biblioteca entera, proporcional a lo grande que sea, y se hacía en cada
+    // edición. Lo que sí se escribe al instante en cada guardado es el espejo DIFERENCIAL del store `games`
+    // (ver `mirrorTabDataToGames`), que es donde viven los juegos de verdad; esto es la copia de respaldo.
+    //
+    // Qué se arriesga si la pestaña muere entre el guardado y el volcado, que es de milisegundos: que esta
+    // copia se quede con la meta de sincronización anterior (etag, marcas). NO los juegos —los tiene el espejo,
+    // y `loadLocalStateAsync` prefiere la fuente más fresca—, y un etag viejo solo cuesta una lectura de más en
+    // el siguiente ciclo. En `pagehide` el volcado se hace de todas formas.
+    void saveIndexedDbState(payload);
   }
 }
 
@@ -433,10 +443,6 @@ function attachFlushListeners(): void {
 export function saveLocalState(payload: StoragePayload): void {
   // Estampa la versión del esquema: marca el estado como "nuevo" para que el auto-upgrade no se repita.
   const stamped: StoragePayload = { ...payload, schemaVersion: LOCAL_SCHEMA_VERSION };
-
-  // IndexedDB, inmediato: es la copia que de verdad aguanta el crecimiento de la biblioteca (sin el tope de
-  // ~5 MB del origen) y su escritura no bloquea el hilo principal.
-  void saveIndexedDbState(stamped);
 
   pendingState = stamped;
   attachFlushListeners();

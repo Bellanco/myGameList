@@ -13,6 +13,7 @@ import { HubStatus } from './HubStatus';
 import { PostBody } from './PostText';
 import { HubAvatar } from './HubAvatar';
 import { HubOfflineNotice } from './HubOfflineNotice';
+import { FeedShell } from './FeedShell';
 import { AchievementStrip } from '../stats/AchievementStrip';
 import { AchievementSprite } from '../AchievementSprite';
 
@@ -25,6 +26,20 @@ import { AchievementSprite } from '../AchievementSprite';
  * lo más común y deja lo que de verdad es noticia.
  */
 const FEED_MEDALS = 5;
+
+/**
+ * Cuántas variantes decorativas puede pedir el lienzo de la actividad.
+ *
+ * El componente NO sabe qué son: sortea un número y lo deja en `data-fx`, y cada `themes/*.scss` decide qué
+ * significa —hoy solo lo usa Solo hay guerra, que lo lee para elegir cuál de sus trece sellos pinta
+ * detrás del fósforo—. Es el mismo trato que las dos ranuras `<i>`: el armazón pone el hueco y la paleta lo
+ * llena, para que este fichero no tenga que conocer ningún tema.
+ *
+ * Se sortea UNA VEZ por montaje, así que el sello es estable mientras estás dentro de Social y cambia al volver
+ * a entrar. Si cambias este número hay que cambiar las reglas `[data-fx="N"]` de los temas que lo usen: el que
+ * no case se queda con el sello de reserva. Lo fija `tests/component/SocialFeedLienzo.test.tsx`.
+ */
+const LIENZO_FX_VARIANTS = 13;
 import { ENABLE_ACHIEVEMENTS } from '../../../core/achievements/flags';
 import { ACHIEVEMENTS_UI } from '../../../core/constants/achievementLabels';
 
@@ -32,7 +47,7 @@ import { ACHIEVEMENTS_UI } from '../../../core/constants/achievementLabels';
 function SocialFeedScreenBase({
   SOCIAL_UI,
   socialDisplayName,
-  ownPhotoURL,
+  ownVisiblePhotoURL,
   currentSocialGistId,
   loadingDirectory,
   openProfileDetail,
@@ -63,7 +78,11 @@ function SocialFeedScreenBase({
 }: {
   SOCIAL_UI: SocialUiLabels;
   socialDisplayName: string;
-  ownPhotoURL: string;
+  /**
+   * La cara propia YA RESUELTA por el interruptor «Mostrar mi foto de perfil» (`ownPublishablePhoto`): vacía si
+   * está apagado o si lo que hay en la cuenta es el monograma de Google. No es la foto de la sesión a secas.
+   */
+  ownVisiblePhotoURL: string;
   currentSocialGistId: string;
   loadingDirectory: boolean;
   openProfileDetail: (id: string) => void;
@@ -101,6 +120,9 @@ function SocialFeedScreenBase({
   /** ¿Hay algo guardado que enseñar mientras no hay red? Decide cuál de los dos avisos toca. */
   offlineHasCachedData: boolean;
 }) {
+  // El sorteo va en `useState` con inicializador perezoso y no en el cuerpo: así se decide una sola vez por
+  // montaje y no cambia en cada repintado (esta pantalla re-renderiza con cualquier cambio del hub).
+  const [lienzoFx] = React.useState(() => Math.floor(Math.random() * LIENZO_FX_VARIANTS));
   const feedSentinelRef = React.useRef<HTMLButtonElement>(null);
   const composerRef = React.useRef<HTMLTextAreaElement>(null);
 
@@ -155,116 +177,97 @@ function SocialFeedScreenBase({
   }, [loadingDirectory, hasMoreFeed, showMoreFeed, visibleFeedCount]);
 
   return (
-    <section className="hub-hub hub-screen" aria-label={SOCIAL_UI.feed.sectionAria}>
-      {/* El sprite de las medallas, montado UNA vez por pantalla y nunca en `App.tsx` (§8.5). Aquí y no dentro de
-          cada medalla, que lo montaría treinta y ocho veces. */}
-      {ENABLE_ACHIEVEMENTS ? <AchievementSprite /> : null}
-      <div className="hub-hub-card hub-screen-card hub-feed-card-shell">
-        <header className="hub-screen-header hub-feed-header">
-          <div className="hub-feed-header-text">
-            <div className="hub-hub-title-wrap">
-              <Icon name="bottom-hub" className="hub-hub-icon" />
-              <h2>{SOCIAL_UI.feed.title}</h2>
-            </div>
-            <p>{SOCIAL_UI.feed.subtitle}</p>
-          </div>
-          <button
-            className="hub-avatar-link hub-feed-owner-avatar"
-            type="button"
-            aria-label={SOCIAL_UI.feed.openOwnProfile}
-            title={socialDisplayName || SOCIAL_UI.feed.openOwnProfile}
-            onClick={onOpenOwnProfile}
-          >
-            <HubAvatar photoURL={ownPhotoURL} />
-          </button>
-        </header>
-        <div className="hub-screen-actions hub-screen-actions-split" aria-label={SOCIAL_UI.feed.actionsAria}>
-          <div className="hub-screen-actions-left">
-            <button className="btn btn-secondary btn-accent" type="button" onClick={onOpenProfiles}>
-              <Icon name="bottom-hub" />
-              {SOCIAL_UI.feed.openProfiles}
-            </button>
-            <button
-              className="btn btn-secondary hub-requests-btn"
-              type="button"
-              onClick={onOpenRequests}
-              aria-label={SOCIAL_UI.feed.openRequestsAria(pendingIncomingCount)}
-              title={SOCIAL_UI.feed.openRequests}
-            >
-              <Icon name="bell" />
-              {pendingIncomingCount > 0 ? (
-                <span className="hub-requests-count is-active" aria-hidden="true">
-                  {pendingIncomingCount}
-                </span>
-              ) : null}
-            </button>
-          </div>
-          <div className="hub-screen-actions-right">
-            <button className="btn btn-danger" type="button" onClick={handleSignOut}>
-              <Icon name="logout" />
-              {SOCIAL_UI.feed.signOut}
-            </button>
-          </div>
-        </div>
-        {/* Encima de todo lo que depende de la red (compositor y actividad), porque explica por qué nada de eso
-            se va a mover hasta que vuelva la conexión. */}
-        {offline ? <HubOfflineNotice hasCachedData={offlineHasCachedData} /> : null}
-        {/* Sin rango para publicar (bronce), el bloque entero desaparece: ni compositor ni título ni explicación.
-            Se oculta también el `flabel` porque este `fg` solo contiene el compositor; dejarlo sería un
-            encabezado presidiendo un hueco vacío. Las publicaciones ajenas se siguen leyendo en el feed. */}
-        {canPublishPosts ? (
-          <div className="fg">
-            <span className="flabel">{SOCIAL_UI.feed.postsTitle}</span>
-            <div className="hub-post-composer">
-                <label className="sr-only" htmlFor="hub-post-text">{SOCIAL_UI.feed.postComposerLabel}</label>
-                <textarea
-                  id="hub-post-text"
-                  ref={composerRef}
-                  className="ftextarea hub-post-input"
-                  // Arranca con la altura de una línea (como el campo de antes) y crece sola con el contenido.
-                  rows={1}
-                  value={composePostText}
-                  placeholder={SOCIAL_UI.feed.postPlaceholder}
-                  // Mithril no lleva tope: sin `maxLength`, el navegador no corta al escribir.
-                  maxLength={showPostCounter ? postMaxLength : undefined}
-                  onChange={(event) => setComposePostText(event.target.value.slice(0, postMaxLength))}
-                  onKeyDown={(event) => {
-                    // Enter ya NO publica: ahora hace lo que se espera en un campo de varias líneas, saltar de
-                    // línea. Con textos de hasta 10.000 caracteres, publicar al pulsar Enter sería soltar el post
-                    // a medio escribir. Se publica con el botón, o con Ctrl/⌘+Enter para quien va por teclado.
-                    if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) {
-                      event.preventDefault();
-                      if (!publishingPost && composePostText.trim()) handlePublishPost();
-                    }
-                  }}
-                />
-                <button
-                  className="btn btn-steam hub-post-publish"
-                  type="button"
-                  disabled={publishingPost || !composePostText.trim()}
-                  onClick={handlePublishPost}
-                  aria-label={publishingPost ? SOCIAL_UI.feed.postPublishing : SOCIAL_UI.feed.postPublish}
-                  title={publishingPost ? SOCIAL_UI.feed.postPublishing : SOCIAL_UI.feed.postPublish}
-                >
-                  {publishingPost ? <span className="hub-spinner" aria-hidden="true" /> : <Icon name="angle-right" />}
-                </button>
-              </div>
-              {/* Mismo patrón que el contador de la reseña (FormModal): conteo visible SIN aria-live y una región
-                  viva aparte que solo lleva texto en los umbrales, para no anunciar en cada pulsación. */}
-              {showPostCounter ? (
-                <div className="field-footer">
-                  <small className={`tag-hint ${postProgressClass}`.trim()}>
-                    {SOCIAL_UI.feed.postCharCount(composePostText.length, postMaxLength)}
-                  </small>
-                  <span className="sr-only" role="status" aria-live="polite">
-                    {postLiveMessage}
-                  </span>
-                </div>
-              ) : null}
-          </div>
-        ) : null}
+    /* El ARMAZÓN —cabecera, fila de botones y hueco del compositor— lo pinta `FeedShell`, que es el MISMO
+       componente que usa el esqueleto de carga (`SocialHubSkeleton`). Vivía aquí escrito a mano, y el esqueleto
+       pintaba otra cosa más corta: al llegar este chunk aparecían de golpe unos 300 px de interfaz y las tarjetas
+       grises que se estaban mirando bajaban de sitio, así que la carga parecía arrancar dos veces. Con un solo
+       armazón no puede volver a pasar. Ver la cabecera de `FeedShell`. */
+    <FeedShell
+      /* El sprite de las medallas, montado UNA vez por pantalla y nunca en `App.tsx` (§8.5). Aquí y no dentro de
+         cada medalla, que lo montaría treinta y ocho veces. */
+      prelude={ENABLE_ACHIEVEMENTS ? <AchievementSprite /> : null}
+      avatar={(
+        <button
+          className="hub-avatar-link hub-feed-owner-avatar"
+          type="button"
+          aria-label={SOCIAL_UI.feed.openOwnProfile}
+          title={socialDisplayName || SOCIAL_UI.feed.openOwnProfile}
+          onClick={onOpenOwnProfile}
+        >
+          <HubAvatar photoURL={ownVisiblePhotoURL} />
+        </button>
+      )}
+      actions={{ pendingIncomingCount, onOpenProfiles, onOpenRequests, onSignOut: handleSignOut }}
+      notice={offline ? <HubOfflineNotice hasCachedData={offlineHasCachedData} /> : null}
+      composer={canPublishPosts ? (
         <div className="fg">
-          <span className="flabel">{SOCIAL_UI.feed.activityTitle}</span>
+          <span className="flabel">{SOCIAL_UI.feed.postsTitle}</span>
+          <div className="hub-post-composer">
+            <label className="sr-only" htmlFor="hub-post-text">{SOCIAL_UI.feed.postComposerLabel}</label>
+            <textarea
+              id="hub-post-text"
+              ref={composerRef}
+              className="ftextarea hub-post-input"
+              // Arranca con la altura de una línea (como el campo de antes) y crece sola con el contenido.
+              rows={1}
+              value={composePostText}
+              placeholder={SOCIAL_UI.feed.postPlaceholder}
+              // Mithril no lleva tope: sin `maxLength`, el navegador no corta al escribir.
+              maxLength={showPostCounter ? postMaxLength : undefined}
+              onChange={(event) => setComposePostText(event.target.value.slice(0, postMaxLength))}
+              onKeyDown={(event) => {
+                // Enter ya NO publica: ahora hace lo que se espera en un campo de varias líneas, saltar de
+                // línea. Con textos de hasta 10.000 caracteres, publicar al pulsar Enter sería soltar el post
+                // a medio escribir. Se publica con el botón, o con Ctrl/⌘+Enter para quien va por teclado.
+                if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) {
+                  event.preventDefault();
+                  if (!publishingPost && composePostText.trim()) handlePublishPost();
+                }
+              }}
+            />
+            <button
+              className="btn btn-steam hub-post-publish"
+              type="button"
+              disabled={publishingPost || !composePostText.trim()}
+              onClick={handlePublishPost}
+              aria-label={publishingPost ? SOCIAL_UI.feed.postPublishing : SOCIAL_UI.feed.postPublish}
+              title={publishingPost ? SOCIAL_UI.feed.postPublishing : SOCIAL_UI.feed.postPublish}
+            >
+              {publishingPost ? <span className="hub-spinner" aria-hidden="true" /> : <Icon name="angle-right" />}
+            </button>
+          </div>
+          {/* Mismo patrón que el contador de la reseña (FormModal): conteo visible SIN aria-live y una región
+              viva aparte que solo lleva texto en los umbrales, para no anunciar en cada pulsación. */}
+          {showPostCounter ? (
+            <div className="field-footer">
+              <small className={`tag-hint ${postProgressClass}`.trim()}>
+                {SOCIAL_UI.feed.postCharCount(composePostText.length, postMaxLength)}
+              </small>
+              <span className="sr-only" role="status" aria-live="polite">
+                {postLiveMessage}
+              </span>
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+    >
+      <div className="fg">
+        <span className="flabel">{SOCIAL_UI.feed.activityTitle}</span>
+        {/* EL LIENZO. Da SUELO a la zona de actividad, que sin él no existe como superficie: el estado
+            vacío y su botón flotaban sobre el fondo de la tarjeta, y la tarjeta se encogía hasta ellos.
+            No cambia nada de lo de dentro —esqueleto, vacíos, lista y «mostrar más» entran tal cual—; solo
+            les pone debajo una superficie con alto mínimo y la textura que ponga cada paleta.
+
+            LAS DOS RANURAS (`<i>`) son deliberadamente ANÓNIMAS. Hay decoraciones que no caben en los dos
+            pseudoelementos del lienzo porque necesitan moverse por su cuenta: el punto del láser de Cámara
+            de pruebas, la estrella fugaz de Sol y luna, el cursor del cogitador de Solo hay guerra. Cada
+            paleta decide qué es cada ranura en su `themes/*.scss`; aquí no pueden tener nombre porque este
+            componente no sabe —ni debe saber— qué tema está puesto. Por defecto van ocultas. */}
+        <div className="hub-feed-lienzo">
+          <span className="hub-feed-lienzo-fx" data-fx={lienzoFx} aria-hidden="true">
+            <i />
+            <i />
+          </span>
           {loadingDirectory ? (
             <div className="hub-feed-activity-list" aria-hidden="true">
               {[0, 1, 2, 3].map((i) => (
@@ -556,13 +559,12 @@ function SocialFeedScreenBase({
             </button>
           ) : null}
         </div>
-        <HubStatus status={status} statusKind={statusKind} />
       </div>
-    </section>
+      <HubStatus status={status} statusKind={statusKind} />
+    </FeedShell>
   );
 }
 
 // Memoizada: el hub re-renderiza con cualquier cambio de estado del VM; con props estables (handlers de
 // SocialHub via useCallback + valores memoizados del VM) esta pantalla evita re-renders no relacionados.
 export const SocialFeedScreen = React.memo(SocialFeedScreenBase);
-

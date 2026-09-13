@@ -1,5 +1,9 @@
+// La copia de respaldo vive en IndexedDB, así que sin esto los dos casos que la miran se degradarían en
+// silencio a «no hay dónde escribir» y pasarían por el motivo equivocado.
+import 'fake-indexeddb/auto';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { flushLocalState, loadLocalState, saveLocalState } from '../../src/model/repository/localRepository';
+import { loadIndexedDbState } from '../../src/model/repository/indexedDbRepository';
 import { STORAGE_KEY } from '../../src/core/constants/storageKeys';
 import type { GameItem, StoragePayload } from '../../src/model/types/game';
 
@@ -78,8 +82,38 @@ describe('estado local — escritura diferida', () => {
     expect(raw()?.schemaVersion).toBeGreaterThan(0);
   });
 
+  /**
+   * LA COPIA COMPLETA DE INDEXEDDB VIAJA EN EL MISMO VOLCADO.
+   *
+   * Se escribía en CADA guardado —un clon estructurado de la biblioteca entera, proporcional a lo grande que
+   * sea— mientras la de localStorage ya se aplazaba por ese mismo motivo. Lo que sigue siendo inmediato en cada
+   * edición es el espejo DIFERENCIAL del store `games`, que es donde viven los juegos; esto es el respaldo.
+   */
+  it('no clona la biblioteca entera en IndexedDB hasta el volcado', async () => {
+    saveLocalState(payload({ c: [makeGame(1, 'Tunic')], updatedAt: 9_000 }));
+    // Todavía no ha llegado al respaldo (los tests anteriores pudieron dejar ahí otro estado, así que lo que se
+    // comprueba es que NO es este, no que esté vacío).
+    expect((await loadIndexedDbState())?.updatedAt).not.toBe(9_000);
+
+    flushLocalState();
+
+    expect((await loadIndexedDbState())?.updatedAt).toBe(9_000);
+  });
+
+  it('al ocultarse la pestaña se vuelca también la copia de IndexedDB', async () => {
+    saveLocalState(payload({ c: [makeGame(2, 'Outer Wilds')], updatedAt: 11_000 }));
+
+    vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('hidden');
+    document.dispatchEvent(new Event('visibilitychange'));
+
+    expect(raw()?.updatedAt).toBe(11_000);
+    expect((await loadIndexedDbState())?.updatedAt).toBe(11_000);
+    vi.restoreAllMocks();
+  });
+
   // La cuota de localStorage es el techo que motivó todo esto: si peta, el estado NO se pierde porque
-  // IndexedDB ya lo tiene, y el fallo no puede propagarse al usuario.
+  // IndexedDB ya lo tiene (se escribe en este mismo volcado, después y con su propio manejo de errores), y el
+  // fallo no puede propagarse al usuario.
   it('survives a quota error without throwing', () => {
     const setItem = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
       throw new Error('QuotaExceededError');

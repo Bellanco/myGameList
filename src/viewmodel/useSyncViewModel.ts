@@ -2,10 +2,10 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { SYNC_MESSAGES } from '../core/constants/labels';
 import { getCurrentSocialAuthUser, getPrivateConfig, recoverGithubToken, resolveOwnProfile, resolveStableProfileId, setAnalyticsUser, setPrivateConfig, signInWithGoogle, trackAnalyticsEvent } from '../model/repository/firebaseGateway';
 import { mergeCrdt } from '../model/repository/syncRepository';
-import { clearSyncConfig, createGist, ensureSyncConfigLoaded, findGamesGistId, getRetryAfterMs, getSyncConfig, isDeferredNetworkError, readGist, saveSyncConfig, whoAmI, writeGist, type GistReadResponse } from '../model/repository/gistRepository';
+import { clearSyncConfig, createGist, ensureSyncConfigLoaded, findGamesGistId, getRetryAfterMs, getSyncConfig, isDeferredNetworkError, readGist, saveSyncConfig, subscribeSyncConfig, whoAmI, writeGist, type GistReadResponse } from '../model/repository/gistRepository';
 import { beginGithubOAuth, completeGithubOAuth, hasGithubOAuthRedirect, isGithubOAuthConfigured } from '../model/repository/githubOAuthRepository';
 import { normalizeData } from '../model/repository/localRepository';
-import { clearDirty, clearDirtyIfUnchanged, loadSyncDirtyState } from '../model/repository/syncStateRepository';
+import { clearDirty, clearDirtyIfUnchanged, loadSyncDirtyState, subscribeSyncDirtyState, type SyncDirtyState } from '../model/repository/syncStateRepository';
 import { acquireSyncLock, canRead, getBackoffMs, getNextReadDelayMs, getSyncState, subscribeSyncState, transitionTo, canReadNow } from '../model/repository/syncMachineRepository';
 import { countRemoteChangesApplied, isWriteConflict, logSyncError, type SyncOperation } from '../model/repository/syncLogicRepository';
 import { readLegacyPlaintextToken } from '../model/migration/legacyTokenRecovery';
@@ -29,6 +29,27 @@ interface WriteOutcome {
 }
 
 const SYNC_CHANNEL = 'mygamelist-sync';
+
+/**
+ * CUÁNTO SE ESPERA ANTES DE SUBIR UNA EDICIÓN.
+ *
+ * Guardar un juego marcaba lo pendiente y ahí se acababa: la subida esperaba a que algo disparase un ciclo —el
+ * sondeo del minuto, o volver a la pestaña—, así que quien editaba y cerraba antes se quedaba el cambio en su
+ * dispositivo hasta la próxima vez que abriera la app. En un segundo aparato, hasta entonces, no existía.
+ *
+ * Cinco segundos es el punto donde las dos cosas que importan siguen cumpliéndose: agrupa la ráfaga de quien
+ * guarda tres juegos seguidos en UNA escritura (cada edición reinicia la espera), y es poco tiempo para que
+ * cerrar la pestaña pille algo sin subir. Subirlo ahorra escrituras y arriesga más; bajarlo, al revés.
+ */
+const DIRTY_PUSH_DELAY_MS = 5_000;
+
+/**
+ * Y cuánto se espera cuando al vencer el plazo había un ciclo en vuelo. No se fuerza ni se encola: se vuelve a
+ * mirar un poco después, cuando el candado ya se habrá soltado. No hace falta un tope de reintentos porque el
+ * candado se libera SIEMPRE en un `finally`, y porque el propio reintento se para solo en cuanto no quede nada
+ * pendiente (puede haberlo subido el ciclo que tenía el candado, que es el caso normal).
+ */
+const DIRTY_PUSH_RETRY_MS = 2_000;
 
 /** Avisa a otras pestañas de una escritura remota (best-effort; ignora entornos sin BroadcastChannel). */
 function broadcastRemoteWrite(etag: string | null): void {
@@ -55,6 +76,27 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
   const pollTimerRef = useRef<number | null>(null);
   const POLL_INTERVAL_MS = 60_000; // 60s polling with ETag
 
+  /**
+   * ¿QUEDA ALGO POR SUBIR? Se pinta en el badge, así que no puede ser una lectura por render: se mantiene al día
+   * con el aviso de `syncStateRepository`.
+   *
+   * Vale `false` sin sincronización configurada, y no es un descuido: sin gist al que subir, «cambios sin subir»
+   * no significa nada para quien solo usa sus listas en este dispositivo. El badge ya dice «No sincronizado».
+   */
+  /**
+   * La configuración de sincronización COMO ESTADO, no como lectura por render.
+   *
+   * `hasConfig` y `currentConfig` se resolvían llamando a `getSyncConfig()` en el cuerpo del hook, así que cada
+   * render de la aplicación —uno por tecla en el buscador— hacía dos `localStorage.getItem` con sus dos
+   * `JSON.parse` para acabar devolviendo lo mismo que la vez anterior. Ahora se mantiene al día con el aviso del
+   * repositorio, que es quien sabe cuándo cambia de verdad.
+   */
+  const [syncConfig, setSyncConfig] = useState(getSyncConfig);
+
+  const pendingUploadFrom = (dirty: SyncDirtyState): boolean => dirty.isDirty && Boolean(getSyncConfig());
+  const [pendingUpload, setPendingUpload] = useState(() => pendingUploadFrom(loadSyncDirtyState()));
+  const dirtyPushTimerRef = useRef<number | null>(null);
+
   // Manejo común de errores de un ciclo de sync: backoff + estado 'error'. `notify:false` omite el toast
   // (arranques automáticos); `logName` registra en telemetría (ausente = no se registra).
   const handleSyncError = useCallback(
@@ -75,14 +117,25 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
     [onNotice],
   );
 
+  /**
+   * `knownRemoteFiles`: el cuerpo del gist que quien llama ACABA de leer, para que `writeGist` no vuelva a
+   * pedirlo. Subir una edición costaba tres peticiones (la lectura del ciclo, la de la escritura y el PATCH) y
+   * dos de ellas traían lo mismo. Se omite cuando no hay una lectura fresca detrás.
+   */
   const writeWithConflictRecovery = useCallback(
-    async (syncToken: string, syncGistId: string, localData: TabData, localUpdatedAt: number): Promise<WriteOutcome> => {
+    async (
+      syncToken: string,
+      syncGistId: string,
+      localData: TabData,
+      localUpdatedAt: number,
+      knownRemoteFiles?: GistReadResponse['remoteFiles'],
+    ): Promise<WriteOutcome> => {
       // Sello dirty al INICIAR la escritura: si una edición del usuario lo avanza mientras escribimos en red,
       // no debemos limpiar dirty (esa edición aún no está en el remoto). Ver clearDirtyIfUnchanged.
       const dirtyAtBefore = loadSyncDirtyState().dirtyAt;
       try {
         transitionTo('writing');
-        const writeResult = await writeGist(syncToken, syncGistId, localData);
+        const writeResult = await writeGist(syncToken, syncGistId, localData, { knownRemoteFiles });
         broadcastRemoteWrite(writeResult.etag || null);
         transitionTo('idle', { lastWriteAt: Date.now(), errorCount: 0 });
         clearDirtyIfUnchanged(dirtyAtBefore);
@@ -105,7 +158,9 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
 
         const remoteData = latest.data as TabData;
         const merged = mergeCrdt(localData, localUpdatedAt, remoteData, remoteData.updatedAt);
-        const retry = await writeGist(syncToken, syncGistId, merged.merged);
+        // Los ficheros de `latest`, no los que llegaron por parámetro: el conflicto significa justamente que el
+        // gist cambió por debajo, así que lo de antes ya no lo describe.
+        const retry = await writeGist(syncToken, syncGistId, merged.merged, { knownRemoteFiles: latest.remoteFiles });
         broadcastRemoteWrite(retry.etag || null);
         transitionTo('idle', { lastWriteAt: Date.now(), errorCount: 0 });
         clearDirtyIfUnchanged(dirtyAtBefore);
@@ -163,7 +218,8 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
         const merged = mergeCrdt(localData, localMeta.updatedAt, remoteData, remoteData.updatedAt);
         toWrite = merged.merged;
       }
-      const outcome = await writeWithConflictRecovery(syncToken, syncGistId, toWrite, Date.now());
+      // La lectura de arriba ya trajo el gist entero: se lo damos a la escritura en vez de que lo vuelva a pedir.
+      const outcome = await writeWithConflictRecovery(syncToken, syncGistId, toWrite, Date.now(), latest.remoteFiles);
       const nextMeta = {
         updatedAt: Date.now(),
         etag: outcome.etag,
@@ -175,6 +231,61 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
       persist(reconcileWithLocal(outcome.data, nextMeta.lastRemoteUpdatedAt), nextMeta);
       return outcome;
     }, [getData, getMeta, persist, setMeta, writeWithConflictRecovery, reconcileWithLocal]);
+
+    /**
+     * EL EMPUJÓN AUTOMÁTICO. Sube lo pendiente sin que nadie lo pida y sin esperar al siguiente ciclo.
+     *
+     * Es deliberadamente CALLADO (`notify:false`): nadie ha pulsado nada, así que un fallo aquí no debe sacar un
+     * aviso encima de lo que el usuario esté haciendo. Deja el estado en `error` y la máquina en backoff, que ya
+     * se encarga de reintentar, y lo pendiente sigue marcado: no se pierde nada.
+     */
+    const pushPendingChanges = useCallback(async () => {
+      await ensureSyncConfigLoaded(); // C4: el token puede seguir cifrado si aún no se ha usado
+      const config = getSyncConfig();
+      if (!config) return; // sin sincronización configurada no hay a dónde subir
+      if (!loadSyncDirtyState().isDirty) return; // lo subió otro ciclo mientras esperábamos
+
+      const lock = acquireSyncLock();
+      if (!lock) {
+        // Hay un ciclo en vuelo. Puede que lo esté subiendo él (un 304 con pendientes hace justo esto), así que
+        // no se compite: se vuelve a mirar en un momento.
+        scheduleDirtyPushRef.current(DIRTY_PUSH_RETRY_MS);
+        return;
+      }
+      try {
+        setStatus('syncing');
+        await pushDirtyWithMerge(config.token, config.gistId);
+        setStatus('ok');
+      } catch (error) {
+        handleSyncError(error, { fallback: SYNC_MESSAGES.syncError, logName: 'pushPendingChanges', notify: false });
+      } finally {
+        lock.release();
+      }
+    }, [handleSyncError, pushDirtyWithMerge]);
+
+    const pushPendingChangesRef = useRef(pushPendingChanges);
+    pushPendingChangesRef.current = pushPendingChanges;
+
+    /** Programa (o reprograma) el empujón. Cada edición reinicia la cuenta: eso es lo que agrupa las ráfagas. */
+    const scheduleDirtyPush = useCallback((delay: number = DIRTY_PUSH_DELAY_MS) => {
+      if (dirtyPushTimerRef.current !== null) window.clearTimeout(dirtyPushTimerRef.current);
+      dirtyPushTimerRef.current = window.setTimeout(() => {
+        dirtyPushTimerRef.current = null;
+        void pushPendingChangesRef.current();
+      }, delay);
+    }, []);
+
+    const cancelDirtyPush = useCallback(() => {
+      if (dirtyPushTimerRef.current !== null) {
+        window.clearTimeout(dirtyPushTimerRef.current);
+        dirtyPushTimerRef.current = null;
+      }
+    }, []);
+
+    // Por ref para que `pushPendingChanges` pueda reprogramarse a sí misma sin que las dos se persigan en las
+    // dependencias.
+    const scheduleDirtyPushRef = useRef(scheduleDirtyPush);
+    scheduleDirtyPushRef.current = scheduleDirtyPush;
 
     /**
      * D1 — Tronco común de las CUATRO rutas que fusionan un remoto ya leído: `refreshRemote`, `syncNow`,
@@ -215,7 +326,7 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
         // lo pidiera, para que el gist quede migrado al primer sync en vez de esperar a una edición.
         let writeOutcome: WriteOutcome = { data: merged.merged, etag: remote.etag || null, remoteUpdatedAt: remoteData.updatedAt };
         if (merged.remoteNeedsUpdate || remote.wasLegacy) {
-          writeOutcome = await writeWithConflictRecovery(cfg.token, cfg.gistId, merged.merged, Date.now());
+          writeOutcome = await writeWithConflictRecovery(cfg.token, cfg.gistId, merged.merged, Date.now(), remote.remoteFiles);
         }
 
         // Aquí NO va un `setData(writeOutcome.data)`, y su ausencia es el arreglo, no un olvido. Las cuatro
@@ -298,15 +409,40 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
       }
     }, [applyRemoteCycle, onNotice, handleSyncError, handleNotModified]);
 
+    /**
+     * ⚑ LOS EFECTOS DE ESTE HOOK NO DEPENDEN DE LA IDENTIDAD DE SUS CALLBACKS, Y NO ES UN CAPRICHO.
+     *
+     * `refreshRemote` (y con él `initializeSync`, `startPolling`…) cuelga de `applyRemoteCycle`, que cuelga de
+     * `getData`/`getMeta`/`persist`, que los pone quien monta el hook. Basta con que ALGUNO de esos llegue como
+     * una función nueva en cada render —`App.tsx` pasaba tres— para que la cadena entera estrene identidad en
+     * cada render y los cinco efectos de abajo se desmonten y se vuelvan a montar con ella. Lo que eso provocaba,
+     * medido:
+     *
+     *   · el `setInterval` del sondeo se mataba y se recreaba en cada render, así que en una sesión con actividad
+     *     (teclear en el buscador ya re-renderiza) NUNCA llegaba a cumplir sus 60 s: el sondeo periódico no
+     *     existía. Quien sincronizaba de verdad era el efecto de montaje, que corría en cada render;
+     *   · los listeners de ventana y el `BroadcastChannel` se cerraban y reabrían en cada render;
+     *   · y lo más caro: el `setTimeout` del backoff vive en el efecto, así que su limpieza lo CANCELABA en cada
+     *     render y el reintento tras un error no llegaba nunca (el sync se quedaba en `error_backoff` esperando
+     *     a un focus).
+     *
+     * Se arregla en los dos extremos: quien monta pasa callbacks estables, y aquí los efectos leen la versión
+     * vigente por ref y se disparan por DATOS (`connectedGistId`). Así una regresión en el llamador vuelve a
+     * costar renders de más, no un ciclo de sincronización roto. Mismo patrón que `hydrateSocialDirectoryRef`
+     * en `useSocialViewModel`.
+     */
+    const refreshRemoteRef = useRef(refreshRemote);
+    refreshRemoteRef.current = refreshRemote;
+
     const startPolling = useCallback(() => {
       if (pollTimerRef.current !== null) return;
       pollTimerRef.current = window.setInterval(() => {
         const config = getSyncConfig();
         if (!config) return;
         if (document.visibilityState !== 'visible') return;
-        void refreshRemote(false);
+        void refreshRemoteRef.current(false);
       }, POLL_INTERVAL_MS);
-    }, [refreshRemote]);
+    }, []);
 
     const stopPolling = useCallback(() => {
       if (pollTimerRef.current !== null) {
@@ -393,6 +529,12 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
     }
   }, [applyRemoteCycle, onNotice, handleSyncError, handleNotModified]);
 
+  // Ver la nota de `refreshRemoteRef`: los efectos leen la versión vigente por ref.
+  const initializeSyncRef = useRef(initializeSync);
+  initializeSyncRef.current = initializeSync;
+  const retryPendingWriteRef = useRef(retryPendingWrite);
+  retryPendingWriteRef.current = retryPendingWrite;
+
   const schedulePendingRemoteSync = useCallback(() => {
     if (!pendingRemoteSyncRef.current) return;
 
@@ -416,6 +558,9 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
     // render. Su identidad no cambia nunca, así que listarlas no cambiaba cuándo se recrea este callback — solo
     // sugería que sí, y era lo que ESLint señalaba.
   }, [initializeSync]);
+
+  const schedulePendingRemoteSyncRef = useRef(schedulePendingRemoteSync);
+  schedulePendingRemoteSyncRef.current = schedulePendingRemoteSync;
 
   const connectSync = useCallback(async () => {
     const lock = acquireSyncLock(); // S2: no conectar/sincronizar en paralelo con un ciclo en vuelo
@@ -507,6 +652,9 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
     }
   }, [applyRemoteCycle, onNotice, handleSyncError, handleNotModified]);
 
+  // Arranque: una sola vez POR MONTAJE. Con `[initializeSync]` corría en cada render —el callback estrenaba
+  // identidad con él— y era, de hecho, lo que disparaba los ciclos periódicos: cualquier render pasado el
+  // throttle de 45 s arrancaba una sincronización. Funcionaba por accidente y tapaba que el sondeo no iba.
   useEffect(() => {
     const dirtyState = loadSyncDirtyState();
     if (dirtyState.isDirty) {
@@ -515,9 +663,43 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
 
     const config = getSyncConfig();
     if (config && canRead()) {
-      void initializeSync();
+      void initializeSyncRef.current();
     }
-  }, [initializeSync]);
+  }, []);
+
+  /**
+   * LA MARCA DE PENDIENTES MANDA SOBRE DOS COSAS: el aviso del badge y el empujón automático.
+   *
+   * Se escucha la marca y no las transiciones de la máquina de sync, y la diferencia importa: la escritura pasa
+   * a `idle` ANTES de limpiar la marca (ver `writeWithConflictRecovery`), así que un ciclo que acaba de subirlo
+   * todo dejaría el aviso encendido hasta la siguiente transición que pasara por ahí.
+   */
+  const pendingUploadFromRef = useRef(pendingUploadFrom);
+  pendingUploadFromRef.current = pendingUploadFrom;
+
+  useEffect(() => {
+    const unsubscribe = subscribeSyncDirtyState((state) => {
+      setPendingUpload(pendingUploadFromRef.current(state));
+      if (!state.isDirty) {
+        cancelDirtyPush(); // ya no hay nada que subir: lo empujó otro ciclo
+        return;
+      }
+      if (!getSyncConfig()) return; // sin sincronización configurada no hay a dónde subir
+      scheduleDirtyPush();
+    });
+    return () => {
+      unsubscribe();
+      cancelDirtyPush();
+    };
+  }, [cancelDirtyPush, scheduleDirtyPush]);
+
+  useEffect(() => {
+    return subscribeSyncConfig((next) => {
+      // Solo lo que la pantalla mira. Cada ciclo de sincronización reescribe la configuración con el etag nuevo,
+      // y eso no cambia nada de lo que se pinta: sin este filtro, cada 304 provocaría un render de la app entera.
+      setSyncConfig((prev) => (prev?.gistId === next?.gistId && Boolean(prev) === Boolean(next) ? prev : next));
+    });
+  }, []);
 
   // start/stop polling when we have a connected gist id
   useEffect(() => {
@@ -533,10 +715,24 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
 
   // Visibility/focus handlers to trigger reads when allowed
   useEffect(() => {
+    /**
+     * VOLVER A LA APP PIDE UNA LECTURA, PERO NO SALTÁNDOSE EL THROTTLE.
+     *
+     * Los dos handlers forzaban (`refreshRemote(true)`), y `force` se salta el mínimo de 45 s entre lecturas
+     * (`canReadNow`). Dos consecuencias: al volver a la pestaña se disparaban DOS ciclos —el navegador emite
+     * `visibilitychange` y `focus`— y alternar entre ventanas gastaba una petición a GitHub por cada vuelta,
+     * aunque se hubiera leído un segundo antes. Cuentan para el rate-limit igual que las demás, y ese mismo
+     * rate-limit lo comparte el hub social.
+     *
+     * Sin `force`, volver tras un rato (el caso normal) lee igual, y volver a los diez segundos no. El gesto
+     * EXPLÍCITO del usuario —el botón de sincronizar— no pasa por aquí ni por el throttle: `syncNow` solo
+     * respeta el candado, así que pedirlo a mano sigue funcionando siempre. Mismo criterio que ya aplica
+     * `useAnnouncement` al volver a la app.
+     */
     function handleVisibilityChange(): void {
       if (document.visibilityState === 'visible') {
         pendingRemoteSyncRef.current = false;
-        void refreshRemote(true);
+        void refreshRemoteRef.current(false);
         startPolling();
         return;
       }
@@ -547,7 +743,7 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
 
     function handleWindowFocus(): void {
       // on focus, attempt an immediate refresh
-      void refreshRemote(true);
+      void refreshRemoteRef.current(false);
     }
 
     // S3: al recuperar la red tras un fallo diferible (offline), no esperes al backoff: sal de
@@ -558,10 +754,12 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
       const pending = st.pendingAction;
       transitionTo('idle', { errorCount: 0, pendingAction: null });
       if (pending === 'write') {
-        retryPendingWrite();
+        retryPendingWriteRef.current();
         return;
       }
-      void refreshRemote(true);
+      // Aquí SÍ se fuerza, y es la excepción deliberada: se sale de `error_backoff` porque acaba de volver la
+      // red, es un evento raro y lo que se busca es justo no esperar. No es el caso de focus/visibility.
+      void refreshRemoteRef.current(true);
     }
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
@@ -572,7 +770,9 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
       window.removeEventListener('focus', handleWindowFocus);
       window.removeEventListener('online', handleOnline);
     };
-  }, [refreshRemote, startPolling, stopPolling, retryPendingWrite]);
+    // Sin `refreshRemote`/`retryPendingWrite` en las dependencias: se leen por ref (ver la nota de
+    // `refreshRemoteRef`). `startPolling`/`stopPolling` ya son estables y se listan porque se usan directamente.
+  }, [startPolling, stopPolling]);
 
   // BroadcastChannel: listen for remote writes from other tabs
   useEffect(() => {
@@ -583,7 +783,7 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
       if (!msg) return;
       if (msg.type === 'remote-write') {
         pendingRemoteSyncRef.current = true;
-        schedulePendingRemoteSync();
+        schedulePendingRemoteSyncRef.current();
       }
     };
     ch.addEventListener('message', onMsg as any);
@@ -591,13 +791,14 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
       ch.removeEventListener('message', onMsg as any);
       ch.close();
     };
-  }, [schedulePendingRemoteSync]);
+    // Un canal por MONTAJE. Con la dependencia del callback se cerraba y reabría en cada render.
+  }, []);
 
   useEffect(() => {
     let timer: number | null = null;
     const unsubscribe = subscribeSyncState((state) => {
       if (pendingRemoteSyncRef.current) {
-        schedulePendingRemoteSync();
+        schedulePendingRemoteSyncRef.current();
       }
 
       if (state.status !== 'error_backoff' || !state.pendingAction) return;
@@ -610,11 +811,11 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
       timer = window.setTimeout(() => {
         if (getSyncState().status !== 'error_backoff' || getSyncState().pendingAction !== state.pendingAction) return;
         if (state.pendingAction === 'read') {
-          void initializeSync();
+          void initializeSyncRef.current();
           return;
         }
         if (state.pendingAction === 'write') {
-          retryPendingWrite(); // S2: no solapar el reintento de escritura
+          retryPendingWriteRef.current(); // S2: no solapar el reintento de escritura
         }
       }, delay);
     });
@@ -624,7 +825,11 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
         window.clearTimeout(timer);
       }
     };
-  }, [initializeSync, schedulePendingRemoteSync, retryPendingWrite]);
+    // DEPENDENCIAS VACÍAS, Y AQUÍ ES LO QUE MÁS IMPORTA: el `timer` del reintento vive en este efecto, así que
+    // su limpieza lo cancela. Con las dependencias anteriores el efecto se rehacía en cada render y el reintento
+    // programado tras un error moría con él —el listener nuevo solo reacciona a transiciones futuras, y el
+    // estado ya estaba en `error_backoff`—, de modo que el sync se quedaba parado hasta el siguiente focus.
+  }, []);
 
   useEffect(() => {
     return () => {
@@ -764,9 +969,11 @@ export function useSyncViewModel({ getData, setData, getMeta, setMeta, onNotice,
     beginGithubLogin,
     completeGithubLoginFromRedirect,
     connectedGistId,
+    /** ¿Hay ediciones marcadas que aún no están en el gist? Lo pinta el badge (ver `resolveSyncBadge`). */
+    pendingUpload,
     lastRemoteChangesApplied,
     recoveringGistId,
-    hasConfig: Boolean(getSyncConfig()),
-    currentConfig: getSyncConfig(),
+    hasConfig: Boolean(syncConfig),
+    currentConfig: syncConfig,
   };
 }

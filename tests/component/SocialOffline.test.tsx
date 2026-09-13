@@ -24,7 +24,7 @@ function renderFeed(over: { offline?: boolean; offlineHasCachedData?: boolean; i
     <SocialFeedScreen
       SOCIAL_UI={SOCIAL_UI}
       socialDisplayName="Yo"
-      ownPhotoURL=""
+      ownVisiblePhotoURL=""
       currentSocialGistId="ffee1122aabb0001"
       loadingDirectory={false}
       openProfileDetail={() => {}}
