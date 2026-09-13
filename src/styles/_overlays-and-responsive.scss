@@ -129,8 +129,6 @@ dialog.modal-dialog[open]::backdrop { animation: modalBackdropIn .28s ease both;
 .admin-action-btn { min-height: 40px; }
 
 /* Status line */
-.status-line { display: flex; gap: .8rem; align-items: center; justify-content: space-between; flex-wrap: wrap; }
-.status-line .status-copy { color: var(--text-muted); font-size: var(--fs-xs); }
 
 /* FAB */
 .fab {

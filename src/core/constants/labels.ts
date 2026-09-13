@@ -266,6 +266,8 @@ export const UI_MESSAGES = {
   // Aviso de versión nueva. Solo aparece cuando NO se ha podido recargar sola (ver `useAppUpdate`), así que el
   // texto asume que el usuario está delante y a medio hacer algo: dice qué pasa y deja la decisión en su mano.
   update: {
+    // El rótulo de la cápsula: dice de qué clase de aviso se trata, como «Correcto» o «Sin conexión».
+    kicker: 'Actualización',
     title: 'Hay una nueva versión',
     body: 'Recarga para verla. Tu información no se perderá.',
     action: 'Recargar',

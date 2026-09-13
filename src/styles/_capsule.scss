@@ -109,6 +109,38 @@
    incluido, sin colgar manejadores de un `div` que no se puede enfocar. */
 .ach-toast-body::after { content: ''; position: absolute; inset: 0; }
 
+/* EL DISCO · el sitio de la medalla, ocupado por un icono.
+   Lo usan el aviso del administrador y el aviso de la app; el logro no, porque ahí el disco ES la medalla.
+   Conserva la geometría —el mismo lado (`--medal`), el mismo círculo— porque es lo que sostiene el radio de la
+   cápsula: el borde izquierdo es la circunferencia exterior de este disco. Lo que no conserva es la penumbra
+   parda de la medalla: esa es de las medallas, y un aviso con el mismo fondo se leería como un logro raro. Aquí
+   el disco es superficie de la app con un color entrando por el filo.
+
+   QUÉ COLOR, lo dice quien lo usa con `--disc-tint` / `--disc-tint-rgb`: el anuncio no dice nada y se queda con
+   el acento del tema; el aviso pone el tono que le toca (verde, ámbar o rojo). Una receta, tres piezas. */
+.ach-toast-disc {
+  flex: none;
+  width: var(--medal);
+  height: var(--medal);
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  color: var(--disc-ink, var(--fg-link));
+  background:
+    radial-gradient(70% 64% at 28% 18%,
+      color-mix(in srgb, var(--disc-tint, var(--steam)) 22%, var(--surface-elevated)) 0%,
+      var(--surface) 58%,
+      color-mix(in srgb, var(--surface) 82%, #000) 100%);
+  // Un filete del color y una sombra interior abajo: el mismo relieve mínimo del resto de la app, sin inventar
+  // una dirección nueva de luz.
+  box-shadow:
+    inset 0 0 0 1px rgba(var(--disc-tint-rgb, var(--steam-rgb)), .42),
+    inset 0 -8px 14px -10px rgba(0, 0, 0, .65);
+}
+
+// 44% del disco: el mismo aire que deja el dibujo de la medalla dentro de su filo.
+.ach-toast-disc .ui-icon { width: 44%; height: 44%; }
+
 .ach-toast-text { min-width: 0; display: grid; gap: .16rem; }
 /* El rótulo, en la misma voz mono y versalitas que el chip de rareza. Con el acento del tema y no en gris: es la
    línea que dice QUÉ ha pasado, y en gris se leía como un pie de foto. Es texto normal, así que va por
