@@ -7,6 +7,7 @@ import { RARITY_POINTS } from '../../core/achievements/types';
 import { copyText } from '../../core/utils/clipboard';
 import type { AchievementDef, AchievementLadder, ExtraSteps } from '../../core/achievements/types';
 import { isHidden, type HiddenOverrides, type OpenFrontier } from '../../core/achievements/visibility';
+import { frontierKey, mergeFrontiers } from '../../core/achievements/frontier';
 import { AchievementMedal } from './stats/AchievementMedal';
 import { AchievementSprite } from './AchievementSprite';
 import { HubBackButton } from './socialhub/HubBackButton';
@@ -304,18 +305,22 @@ export const AdminAchievements = memo(function AdminAchievements({
   );
 
   /**
-   * LA APERTURA QUE SALE DE LA MUESTRA DE AHORA, y si coincide con la publicada. Se compara el mapa entero
-   * —cincuenta entradas— y no una marca de tiempo: lo que importa no es cuándo se publicó sino si lo que ve la
-   * gente es lo que se está viendo aquí.
+   * LA APERTURA QUE SALE DE LA MUESTRA DE AHORA, FUSIONADA CON LA PUBLICADA, y si eso adelanta algo. Se compara
+   * el mapa entero —cincuenta entradas— y no una marca de tiempo: lo que importa no es cuándo se publicó sino si
+   * lo que ve la gente es lo que se está viendo aquí.
+   *
+   * ⚑ SE FUSIONA, NO SE SOBRESCRIBE (`mergeFrontiers`), y es la diferencia entre adelantar la línea y cerrarla.
+   * La medición sale de los espejos del CENSO, pero la frontera publicada la adelanta además cada cliente por su
+   * cuenta al conseguir un escalón (`advanceOpenFrontier`), así que va de suyo que llegue más lejos que lo que se
+   * mide aquí — quien no publica espejo sí publica frontera—. Escribiendo la medición encima, pulsar el botón
+   * CERRABA escalones que ya estaban abiertos para todo el mundo, y las reglas no lo impiden: solo vigilan que no
+   * desaparezca una escalera entera, no que una retroceda de escalón. Fusionada, la apertura solo avanza.
    */
   const frontier = useMemo(() => {
     if (!measured) return null;
-    const next = measuredFrontier(groups, holdersOf);
-    const keys = Object.keys(next);
     const published = openFrontier || {};
-    const same = keys.length === Object.keys(published).length
-      && keys.every((key) => published[key] === next[key]);
-    return { next, ladders: keys.length, same };
+    const next = mergeFrontiers(published, measuredFrontier(groups, holdersOf));
+    return { next, ladders: Object.keys(next).length, same: frontierKey(next) === frontierKey(published) };
   }, [measured, groups, holdersOf, openFrontier]);
 
   const totals = useMemo(() => {

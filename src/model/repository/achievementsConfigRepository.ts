@@ -196,6 +196,12 @@ export async function setExtraSteps(ladderKey: string, steps: readonly number[])
  * Se escribe el mapa ENTERO y no escalera a escalera: sale de una sola medición de los espejos del censo, así
  * que partirlo en cincuenta escrituras solo serviría para dejarlo a medias si una falla. Si falla, LANZA: el
  * panel tiene que decir que no se ha guardado.
+ *
+ * ESTA FUNCIÓN NO DECIDE, ESCRIBE, igual que `advanceOpenFrontier`: el mapa llega ya FUSIONADO con lo publicado
+ * desde el panel (`mergeFrontiers`), que es donde se ve la medición y se puede comparar con lo que hay. Escribir
+ * aquí un mapa que retroceda CIERRA escalones que ya estaban abiertos para todo el mundo —las reglas solo
+ * vigilan que no desaparezca una escalera entera—, y el único sitio que lo hace a propósito es el borrado total,
+ * que pasa el mapa vacío.
  */
 export async function publishOpenFrontier(open: OpenFrontier): Promise<OpenFrontier> {
   const services = await initializeFirebaseServices();

@@ -92,7 +92,8 @@ export function levelFromPoints(points: number): { level: number; into: number; 
  *
  * El DENOMINADOR excluye los «primeros pasos» (se apagan solos, y un denominador que encoge convertiría un logro
  * en un castigo estadístico) y los retirados, y SÍ incluye los ocultos desde el principio —restarlos delataría
- * cuántos hay y, con el tiempo, cuáles—.
+ * cuántos hay y, con el tiempo, cuáles—. Y es el MISMO para todo el mundo: lo que no está cerrado para nadie,
+ * según la frontera publicada, sin mezclar lo que tenga conseguido quien se esté midiendo (ver abajo).
  */
 export function summarize(
   states: readonly AchievementState[],
@@ -115,21 +116,35 @@ export function summarize(
   // escalón nuevo. Es deliberado — la fracción dice cuánto llevas de lo que hoy está en juego, y lo que está en
   // juego lo mueve la gente.
   //
-  // LO CONSEGUIDO CUENTA SIEMPRE, esté abierto o no: la marca de agua puede sostener un escalón cuyo tramo se
-  // haya quedado atrás, y un logro que tienes y no aparece ni en el numerador ni en el denominador no existe.
+  // ⚑ Y NO DEPENDE DE QUIÉN MIRA: el denominador sale de la FRONTERA PUBLICADA y de nada más, así que es el
+  // MISMO NÚMERO para todo el mundo. Es lo que promete el §6.7 —«lo que distingue a dos personas es lo que
+  // llevan conseguido, no lo que ven»— y lo que aquí no se cumplía: pasando `isEarned` a `openThrough`, quien
+  // tenía logros que la frontera publicada todavía no recogía se abría escalones extra y se los sumaba a su
+  // propio denominador. Tres fichas medidas por el mismo cliente, en la misma pantalla, decían «121/255»,
+  // «56/253» y «66/251» del mismo catálogo. Ahora las tres dicen «de 251».
+  //
+  // SIN FRONTERA PUBLICADA manda el progreso propio, que es el comportamiento de siempre y el lado seguro: sin
+  // documento —sin sesión, sin red, o en el primer fotograma antes de que llegue la lectura— no hay nada
+  // «cerrado para todos» que aplicar, y contar solo el primer escalón de cada escalera daría una cifra falsa.
   const scoring = scoringIdSet();
+  const communal = Object.keys(open).length > 0;
   for (const steps of ACHIEVEMENTS_BY_LADDER.values()) {
-    const openTo = openThrough(steps, open, isEarned);
+    const openTo = openThrough(steps, open, communal ? () => false : isEarned);
     steps.forEach((def, index) => {
       if (!scoring.has(def.id)) return;
-      const mine = isEarned(def);
-      if (!mine && index > openTo) return;
-      total += 1;
-      if (!mine) return;
+      if (index <= openTo) total += 1;
+      if (!isEarned(def)) return;
       earned += 1;
       points += RARITY_POINTS[def.rarity];
     });
   }
+
+  // EL TOPE, para la ventana en que alguien va por delante de la frontera publicada. Lo CONSEGUIDO se cuenta
+  // siempre —la cabecera tiene que cuadrar con las medallas que la lista enseña debajo—, así que entre que uno
+  // rompe una frontera y su apertura llega a los demás hay medallas contadas arriba cuyo escalón todavía no
+  // está abierto abajo. Con el tope eso se queda en un «122/251» y nunca en un porcentaje por encima del 100 %,
+  // que es la única forma en que esta cifra podría llegar a leerse como un error.
+  if (earned > total) total = earned;
 
   const curve = levelFromPoints(points);
 
