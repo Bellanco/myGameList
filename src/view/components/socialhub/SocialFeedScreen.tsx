@@ -33,7 +33,7 @@ import { ACHIEVEMENTS_UI } from '../../../core/constants/achievementLabels';
 function SocialFeedScreenBase({
   SOCIAL_UI,
   socialDisplayName,
-  ownPhotoURL,
+  ownVisiblePhotoURL,
   currentSocialGistId,
   loadingDirectory,
   openProfileDetail,
@@ -68,7 +68,7 @@ function SocialFeedScreenBase({
    * La cara propia YA RESUELTA por el interruptor «Mostrar mi foto de perfil» (`ownPublishablePhoto`): vacía si
    * está apagado o si lo que hay en la cuenta es el monograma de Google. No es la foto de la sesión a secas.
    */
-  ownPhotoURL: string;
+  ownVisiblePhotoURL: string;
   currentSocialGistId: string;
   loadingDirectory: boolean;
   openProfileDetail: (id: string) => void;
@@ -177,7 +177,7 @@ function SocialFeedScreenBase({
           title={socialDisplayName || SOCIAL_UI.feed.openOwnProfile}
           onClick={onOpenOwnProfile}
         >
-          <HubAvatar photoURL={ownPhotoURL} />
+          <HubAvatar photoURL={ownVisiblePhotoURL} />
         </button>
       )}
       actions={{ pendingIncomingCount, onOpenProfiles, onOpenRequests, onSignOut: handleSignOut }}

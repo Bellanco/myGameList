@@ -83,6 +83,7 @@ const SocialHubInner = memo(function SocialHubInner({
     showPhoto,
     setShowPhoto,
     ownPhotoIsGeneric,
+    ownPublishablePhoto,
     profileSearch,
     setProfileSearch,
     composePostText,
@@ -370,6 +371,7 @@ const SocialHubInner = memo(function SocialHubInner({
           showPhoto={showPhoto}
           setShowPhoto={setShowPhoto}
           ownPhotoURL={authUser?.photoURL || ''}
+          ownVisiblePhotoURL={ownPublishablePhoto}
           ownPhotoIsGeneric={ownPhotoIsGeneric}
         />
       );
@@ -544,7 +546,7 @@ const SocialHubInner = memo(function SocialHubInner({
       <SocialFeedScreen
         SOCIAL_UI={SOCIAL_UI}
         socialDisplayName={socialDisplayName}
-        ownPhotoURL={authUser?.photoURL || ''}
+        ownVisiblePhotoURL={ownPublishablePhoto}
         currentSocialGistId={socialCfgGistId}
         loadingDirectory={loadingDirectory}
         openProfileDetail={openDirectoryProfile}

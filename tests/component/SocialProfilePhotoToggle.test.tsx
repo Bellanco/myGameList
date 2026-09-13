@@ -12,6 +12,7 @@ import { SocialProfileScreen } from '../../src/view/components/socialhub/SocialP
 function renderScreen(over: {
   showPhoto?: boolean;
   ownPhotoURL?: string;
+  ownVisiblePhotoURL?: string;
   ownPhotoIsGeneric?: boolean;
   setShowPhoto?: (v: boolean) => void;
 } = {}) {
@@ -40,6 +41,7 @@ function renderScreen(over: {
       showPhoto={over.showPhoto ?? true}
       setShowPhoto={over.setShowPhoto ?? (() => {})}
       ownPhotoURL={over.ownPhotoURL}
+      ownVisiblePhotoURL={over.ownVisiblePhotoURL}
       ownPhotoIsGeneric={over.ownPhotoIsGeneric}
     />,
   );
@@ -85,6 +87,33 @@ describe('interruptor de la foto de perfil', () => {
 
     await userEvent.click(toggle());
     expect(setShowPhoto).toHaveBeenCalledWith(false);
+  });
+
+  // LA FICHA PINTA LO MISMO QUE LA CABECERA DEL HUB. Las dos leen `ownPublishablePhoto` —la cara ya resuelta por el
+  // interruptor— en vez de repetir la regla cada una por su cuenta, que es lo que las tenía diciendo cosas
+  // distintas: aquí la silueta y allí tu cara, con el mismo ajuste apagado.
+  describe('el avatar de la ficha', () => {
+    it('pinta la foto cuando el interruptor la deja salir', () => {
+      const { container } = renderScreen({
+        showPhoto: true,
+        ownPhotoURL: 'https://f/ada.png',
+        ownVisiblePhotoURL: 'https://f/ada.png',
+      });
+
+      expect(container.querySelector('img.hub-avatar-img')).toHaveAttribute('src', 'https://f/ada.png');
+    });
+
+    it('cae a la silueta con el interruptor apagado, aunque la cuenta tenga foto', () => {
+      const { container } = renderScreen({
+        showPhoto: false,
+        ownPhotoURL: 'https://f/ada.png',
+        // Es lo que resuelve el ViewModel con el interruptor en false: no hay cara que sacar.
+        ownVisiblePhotoURL: '',
+      });
+
+      expect(container.querySelector('img.hub-avatar-img')).toBeNull();
+      expect(container.querySelector('span.hub-avatar-blank')).not.toBeNull();
+    });
   });
 
   it('el aviso es una sola línea: el estado del interruptor ya dice el resto', () => {
