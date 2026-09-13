@@ -30,7 +30,7 @@
 
 .header-left { display: flex; align-items: center; gap: 1rem; }
 
-.app-title { font-weight: 800; font-size: 1.25rem; letter-spacing: .3px; background: linear-gradient(135deg, var(--steam-hover), var(--steam)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+.app-title { font-weight: 800; font-size: var(--fs-xl); letter-spacing: .3px; background: linear-gradient(135deg, var(--steam-hover), var(--steam)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
 
 .header-subtitle {
   display: inline-flex;
@@ -52,7 +52,7 @@
 
 .header-actions .btn { border-radius: var(--radius-pill); transition: all .25s; }
 
-.header-actions .btn:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(var(--steam-rgb),.15); }
+.header-actions .btn:hover { transform: translateY(-2px); box-shadow: var(--glow-accent); }
 
 /* Status */
 /* EL AVISO SE QUEDA A LA VISTA MIENTRAS DURA.
@@ -88,7 +88,7 @@
 .status-banner > div {
   border: 1px solid var(--border); border-left-width: 4px;
   background: var(--surface); border-radius: var(--radius-md);
-  padding: .8rem 1rem; box-shadow: var(--shadow); font-size: .92rem;
+  padding: .8rem 1rem; box-shadow: var(--shadow); font-size: var(--fs-md);
 }
 
 .status-banner .ok   { border-left-color: var(--success); }
@@ -105,14 +105,14 @@
   display: flex; align-items: center; flex-wrap: wrap; gap: .8rem;
   border: 1px solid var(--border); border-left: 4px solid var(--success);
   background: var(--surface); border-radius: var(--radius-md);
-  padding: .8rem 1rem; box-shadow: var(--shadow); font-size: .92rem;
+  padding: .8rem 1rem; box-shadow: var(--shadow); font-size: var(--fs-md);
 }
 
 .update-notice-text { flex: 1 1 240px; display: grid; gap: .2rem; }
 
-.update-notice-text strong { font-size: .95rem; }
+.update-notice-text strong { font-size: var(--fs-md); }
 
-.update-notice-text span { color: var(--text-muted); font-size: .82rem; line-height: 1.4; }
+.update-notice-text span { color: var(--text-muted); font-size: var(--fs-xs); line-height: 1.4; }
 
 .update-notice-card .btn { margin-left: auto; }
 
@@ -139,7 +139,7 @@
 .tab-btn {
   background: transparent; color: var(--text-dim);
   border: none;
-  padding: .85rem 1rem; font-weight: 500; font-size: .95rem;
+  padding: .85rem 1rem; font-weight: 500; font-size: var(--fs-md);
   cursor: pointer; transition: color .2s, font-weight .2s;
   white-space: nowrap; display: inline-flex; align-items: center; gap: .5rem;
   font-family: inherit; position: relative;
@@ -161,7 +161,7 @@
 
 /* El subrayado activo ahora lo dibuja el indicador deslizante `.tab-underline` (posicionado por JS). */
 .count-badge {
-  color: var(--text-dim); font-size: .78rem; font-weight: 600;
+  color: var(--text-dim); font-size: var(--fs-xs); font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
 
@@ -177,7 +177,7 @@
   content: attr(data-tooltip);
   position: absolute; bottom: -35px; left: 50%; transform: translateX(-50%);
   background: var(--surface-elevated); color: var(--text);
-  padding: .5rem .75rem; border-radius: 6px; font-size: .75rem; font-weight: 600;
+  padding: .5rem .75rem; border-radius: 6px; font-size: var(--fs-2xs); font-weight: 600;
   white-space: nowrap; border: 1px solid var(--border); z-index: 10;
   animation: fadeIn .2s ease-in; pointer-events: none;
 }
@@ -186,11 +186,11 @@
 
 /* Tablet y móvil: las etiquetas largas de las pestañas se recortan; pasamos a iconos. */
 @media (max-width:1024px) {
-  .tab-btn { padding: .8rem .7rem; font-size: .85rem; }
+  .tab-btn { padding: .8rem .7rem; font-size: var(--fs-sm); }
 
   .tab-btn .tab-text-full { display: none; }
 
-  .count-badge { font-size: .72rem; }
+  .count-badge { font-size: var(--fs-2xs); }
 }
 
 @media (max-width:720px) {
@@ -318,13 +318,13 @@
 
 .score-scale-txt { flex: 1 1 auto; display: grid; gap: .1rem; }
 
-.score-scale-txt b { font-size: .92rem; font-weight: 600; }
+.score-scale-txt b { font-size: var(--fs-md); font-weight: 600; }
 
-.score-scale-txt span { color: var(--text-muted); font-size: .8rem; }
+.score-scale-txt span { color: var(--text-muted); font-size: var(--fs-xs); }
 
 .score-scale-sample { flex: 0 0 auto; display: inline-flex; align-items: center; }
 
-.score-scale-locked { display: flex; align-items: center; gap: .35rem; color: var(--text-dim); font-size: .8rem; }
+.score-scale-locked { display: flex; align-items: center; gap: .35rem; color: var(--text-dim); font-size: var(--fs-xs); }
 
 .score-scale-locked .ui-icon { width: 1em; height: 1em; flex: 0 0 auto; }
 
@@ -628,14 +628,14 @@
 
 .legal-actions { display: flex; }
 
-.legal-card h2 { font-size: 1rem; }
+.legal-card h2 { font-size: var(--fs-lg); }
 
-.legal-card p { color: var(--text-muted); font-size: .88rem; line-height: 1.5; }
+.legal-card p { color: var(--text-muted); font-size: var(--fs-sm); line-height: 1.5; }
 
 /* L4 — enlaces a los documentos legales en Ajustes de cuenta. */
-.settings-legal-links { display: flex; flex-wrap: wrap; gap: .35rem 1rem; font-size: .88rem; }
+.settings-legal-links { display: flex; flex-wrap: wrap; gap: .35rem 1rem; font-size: var(--fs-sm); }
 
-.legal-list { display: grid; gap: .35rem; padding-left: 1.1rem; color: var(--text-muted); font-size: .88rem; line-height: 1.4; }
+.legal-list { display: grid; gap: .35rem; padding-left: 1.1rem; color: var(--text-muted); font-size: var(--fs-sm); line-height: 1.4; }
 
 .legal-list li { list-style: disc; }
 
@@ -644,7 +644,7 @@
 
 .settings-card-danger h2 { color: var(--danger); }
 
-.settings-danger-confirm { display: grid; gap: .3rem; margin: .6rem 0; font-size: .85rem; text-align: left; }
+.settings-danger-confirm { display: grid; gap: .3rem; margin: .6rem 0; font-size: var(--fs-sm); text-align: left; }
 
 .settings-danger-confirm input {
   width: 100%;
@@ -656,7 +656,7 @@
   font: inherit;
 }
 
-.settings-danger-feedback { font-size: .85rem; }
+.settings-danger-feedback { font-size: var(--fs-sm); }
 
 .settings-danger-feedback.ok { color: var(--fg-sky); }
 
@@ -688,11 +688,11 @@
 
 .consent-banner-text { flex: 1 1 260px; display: grid; gap: .25rem; }
 
-.consent-banner-text strong { font-size: .95rem; }
+.consent-banner-text strong { font-size: var(--fs-md); }
 
-.consent-banner-text p { color: var(--text-muted); font-size: .82rem; line-height: 1.4; margin: 0; }
+.consent-banner-text p { color: var(--text-muted); font-size: var(--fs-xs); line-height: 1.4; margin: 0; }
 
-.consent-banner-text a { font-size: .8rem; }
+.consent-banner-text a { font-size: var(--fs-xs); }
 
 .consent-banner-actions { display: flex; gap: .5rem; margin-left: auto; }
 
@@ -1040,7 +1040,7 @@
 
 @keyframes lz-steam-breathe { 0%, 100% { opacity: .42; } 50% { opacity: 1; } }
 
-.hub-identity-hero .hub-avatar { flex: 0 0 auto; width: 2.5rem; height: 2.5rem; font-size: 1rem; }
+.hub-identity-hero .hub-avatar { flex: 0 0 auto; width: 2.5rem; height: 2.5rem; font-size: var(--fs-lg); }
 
 /* ═══════════════════ Micro-interacciones (efectos añadidos) ═══════════════════
    Todas con su guarda `prefers-reduced-motion` al final de este bloque. */
@@ -1390,28 +1390,75 @@
 
 .hub-feed-activity-item.is-post { border-left-color: var(--text-muted); cursor: default; }
 
-/* F4 — MOVIMIENTO DE LISTA: la tarjeta más callada del feed, y a propósito.
-   Un renglón —quién, qué hizo, con qué juego, a qué hora— en una burbuja que conserva la silueta de las demás
-   pero renuncia a todo lo que reclama atención: el lomo va en el gris del borde (el color queda reservado a lo
-   que alguien ESCRIBIÓ, reseñas y publicaciones), no hay realce al pasar por encima y el aire se aprieta. Lo que
-   la distingue de una reseña no es el color, es cuánto ocupa. */
-.hub-feed-activity-item.is-move {
-  border-left-color: var(--border);
+/* F4 — MOVIMIENTO DE LISTA: el AVISO DE SISTEMA del chat.
+   Un renglón —quién, qué hizo, con qué juego, a qué hora— que deja de ser una burbuja más para ser lo que es:
+   un apunte, no una conversación. Va CENTRADO y abraza su texto, como el «Fulano se ha unido al grupo» de
+   cualquier chat, con una marca delante y el color de lo que pasó.
+
+   Esto revisa una decisión anterior —«el ancho lo hereda de las reseñas: una burbuja que mide distinto a cada
+   línea rompe la rejilla»—. Sigue siendo cierto ENTRE BURBUJAS, y por eso las reseñas y las publicaciones
+   conservan su ancho; el aviso se sale de esa columna a propósito, y es eso lo que lo distingue de un mensaje
+   sin necesidad de gritar.
+
+   La FORMA la pone cada tema (`--sys-*`, CAPA 2, junto a los radios): píldora en el Clásico, rótulo sesgado en
+   Corazón rebelde, etiqueta de señalética en Cámara de pruebas, línea de registro en Sin futuro, renglón de
+   códice en Solo hay guerra y cartel de píxel en Sol y luna.
+
+   El COLOR (`--evc`) lo pone el tipo de lista y solo tiñe la marca, el filete y el velo —cosas NO textuales,
+   3:1—: el texto conserva los colores ya auditados, así que esto no puede romper el contraste. */
+/* Los LOGROS comparten aviso: también son algo que PASÓ —no algo que alguien escribió—, tienen la misma
+   anatomía (una línea: quién, qué, y el sello al final) y salían como una reseña más. Lo que los separa del
+   movimiento es su color, que es el del aviso/celebración, y que sí llevan a alguna parte. */
+.hub-feed-activity-item.is-move,
+.hub-feed-activity-item.is-achievements {
+  --evc: var(--text-dim);
+  align-self: center;
+  width: fit-content;
+  max-width: 100%;
+  border: 1px solid color-mix(in srgb, var(--evc), transparent 62%);
+  border-radius: var(--sys-radius);
+  background: color-mix(in srgb, var(--evc), transparent 92%);
+  box-shadow: none;
   cursor: default;
   flex-direction: row;
   align-items: center;
   gap: .5rem;
-  padding: .5rem .75rem;
-  /* El ancho lo hereda de `.hub-feed-activity-item`: el MISMO que las reseñas y las publicaciones. Se probó que
-     abrazara el texto (`fit-content`) y quedaba descartado: el feed es una columna de burbujas alineadas, y una
-     que mide distinto a cada línea rompe esa rejilla. Lo que hace ligero a este mensaje es su altura y su color,
-     no su anchura. */
+  padding: var(--sys-pad);
+  transform: var(--sys-skew);
+  clip-path: var(--sys-clip);
 }
+/* El sesgo de Corazón rebelde se contra-aplica al contenido para que el texto quede recto, igual que en sus
+   botones y chips (`themes/persona.scss` §5 y §6). */
+.hub-feed-activity-item.is-move > *,
+.hub-feed-activity-item.is-achievements > * { transform: var(--sys-unskew, none); }
+/* LA MEDALLA ABRE EL AVISO DE LOGRO, y es la única marca que queda en el feed. Los movimientos de lista no
+   llevan ninguna: su frase ya lo dice y el color del filete distingue terminar de abandonar; cuando TODOS los
+   avisos llevaban icono, el icono no distinguía nada. Aquí el sello es además el del logro conseguido, no un
+   símbolo genérico, así que se reconoce antes de leer el nombre. */
+.hub-feed-event-medals {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  margin-right: .1rem;
+}
+/* Cuatro verbos, cuatro colores. Los tres primeros son los semánticos que ya existen; «añadió» toma el cuarto
+   tono de la rampa categórica, que no significa nada por sí mismo y por eso vale para «esto cambió de sitio». */
+.hub-feed-activity-item.is-move[data-tab="c"] { --evc: var(--success); }
+.hub-feed-activity-item.is-move[data-tab="v"] { --evc: var(--danger); }
+.hub-feed-activity-item.is-move[data-tab="e"] { --evc: var(--steam); }
+.hub-feed-activity-item.is-move[data-tab="p"] { --evc: var(--cat-4); }
+/* El logro, en el ámbar del aviso: no es ninguno de los cuatro movimientos y se distingue de un vistazo.
+   Marca propia (`--sys-mark-ach`) y puntero, porque este sí abre los logros de quien lo consiguió. */
+.hub-feed-activity-item.is-achievements { --evc: var(--warn); cursor: pointer; }
+.hub-feed-activity-item.is-achievements .hub-feed-ach-medals { flex: 0 0 auto; }
+/* Un aviso no es «tuyo» ni «de otro»: es lo que pasó. Se queda centrado aunque sea propio. */
+.hub-feed-activity-item.is-move.is-own-activity,
+.hub-feed-activity-item.is-achievements.is-own-activity { align-self: center; background: color-mix(in srgb, var(--evc), transparent 88%); }
 
 /* La hora, al final del renglón. Clase propia y NO `hub-feed-date`: varias paletas convierten esa clase en una
    cápsula o le cuelgan un prefijo («//», «>»), y aquí tiene que ser el dato más pequeño de la línea. */
 .hub-feed-move-hour {
-  font-size: .72rem;
+  font-size: var(--fs-2xs);
   color: var(--text-dim);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
@@ -1421,6 +1468,39 @@
 .hub-feed-activity-item.is-own-activity {
   align-self: flex-end;
   background: var(--steam-soft);
+}
+
+/* ── EL AVATAR, FUERA DE LA BURBUJA ────────────────────────────────────────────────────────────────────
+   En un chat la foto acompaña al mensaje; no forma parte de él. Dentro de la tarjeta se comía una línea
+   entera de la cabecera y empujaba el nombre y el juego hacia abajo. Ahora cuelga del canto inferior —a la
+   izquierda si el mensaje es de otro, a la derecha si es tuyo—, que es donde la ponen todos los chats, y la
+   burbuja se sangra para dejarle ese hueco: sin el sangrado se saldría del lienzo, porque la burbuja arranca
+   pegada al borde.
+
+   Solo a partir de 700 px. Por debajo no sobra ancho para regalar cincuenta píxeles a un lado, así que la
+   foto se queda dentro, en la cabecera, como estaba. */
+@media (min-width: 700px) {
+  .hub-feed-activity-item.is-review,
+  .hub-feed-activity-item.is-recommendation {
+    overflow: visible;
+    margin-left: 3.2rem;
+  }
+  .hub-feed-activity-item.is-review.is-own-activity,
+  .hub-feed-activity-item.is-recommendation.is-own-activity {
+    margin-left: 0;
+    margin-right: 3.2rem;
+  }
+  .hub-feed-activity-item.is-review > .hub-feed-card-head > .hub-avatar-link,
+  .hub-feed-activity-item.is-recommendation > .hub-feed-card-head > .hub-avatar-link {
+    position: absolute;
+    left: -3.2rem;
+    bottom: .4rem;
+    z-index: 1;
+  }
+  .hub-feed-activity-item.is-own-activity > .hub-feed-card-head > .hub-avatar-link {
+    left: auto;
+    right: -3.2rem;
+  }
 }
 
 /* El realce de "esto se puede pulsar" queda para lo que de verdad abre algo: ni las publicaciones ni los
@@ -1992,7 +2072,7 @@
   place-items: center;
 }
 
-.hub-requests-btn .ui-icon { width: 1.25rem; height: 1.25rem; }
+.hub-requests-btn .ui-icon { width: var(--ico-xl); height: var(--ico-xl); }
 
 /* Spinner del botón de publicar mientras se envía el post (reutiliza hubSpin de _overlays). */
 .hub-spinner {
