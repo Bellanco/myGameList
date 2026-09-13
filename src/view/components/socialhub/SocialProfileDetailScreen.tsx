@@ -7,7 +7,6 @@ import { type SocialUiLabels } from '../../../core/constants/socialLabels';
 import { HubStatus } from './HubStatus';
 import { HubBackButton } from './HubBackButton';
 import { HubAvatar } from './HubAvatar';
-import { TierSeal } from '../TierSeal';
 import { TAB_IDS, type GameItem, type TabId, type TabSort } from '../../../model/types/game';
 import { DEFAULT_SORT, nextSort, sortGames } from '../../../core/utils/sortGames';
 import type { SocialSharedGame } from '../../../model/repository/socialGistRepository';
@@ -458,16 +457,14 @@ function SocialProfileDetailScreenBase({
           <div className="hub-profile-hero">
             <HubAvatar photoURL={activeProfileDetail.photoURL} sizeClass="hub-avatar-lg" />
             <h3 className="hub-profile-hero-name">{activeProfileDetail.displayName}</h3>
-            {/* EL SELLO DE RANGO. En el directorio el rango es una muesca de color en la esquina de la tarjeta,
-                que es lo que sirve para recorrer una rejilla; aquí no hay con qué comparar, así que se dice con
-                la palabra. Va ANTES de la tira de medallas y no después: es identidad de la persona, como el
-                nombre, mientras que las medallas son lo que ha hecho. */}
-            <TierSeal tier={activeProfileDetail.tier} />
+            {/* AQUÍ NO VA EL SELLO DE RANGO. En el perfil de otra persona el rango no se enseña por ahora; en el
+                directorio sigue estando la muesca de color de la tarjeta, que es la que sirve para recorrer la
+                rejilla, y el sello con la palabra se queda en el editor del perfil propio. */}
             {/* LA TIRA DE LOGROS, justo debajo del nombre y SOLO LA IMAGEN: sin rótulos, sin fechas y sin cifras
-                alrededor. Es lo que la hace funcionar aquí — esta cabecera ya lleva avatar, nombre y sello de
-                rango, y unas medallas rotuladas la convertirían en un listado. El nombre sale al pasar por
-                encima y también con el tabulador (ver `AchievementStrip`). Detrás de la misma puerta que el
-                resto de la ficha: para un no-amigo no se pinta. */}
+                alrededor. Es lo que la hace funcionar aquí — esta cabecera ya lleva avatar y nombre, y unas
+                medallas rotuladas la convertirían en un listado. El nombre sale al pasar por encima y también
+                con el tabulador (ver `AchievementStrip`). Detrás de la misma puerta que el resto de la ficha:
+                para un no-amigo no se pinta. */}
             {ENABLE_ACHIEVEMENTS && canSeeFullProfile && achievementsMirror ? (
               <ProfileAchievementStrip mirror={achievementsMirror} onOpen={onOpenAchievements || (() => {})} />
             ) : null}

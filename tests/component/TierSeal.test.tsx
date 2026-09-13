@@ -42,7 +42,7 @@ describe('TierSeal', () => {
 });
 
 describe('TierSeal — donde el rango no se veía', () => {
-  it('el perfil de alguien enseña SU rango', () => {
+  it('el perfil de alguien NO lo enseña: ahí el rango no se cuenta por ahora', () => {
     render(
       <SocialProfileDetailScreen
         SOCIAL_UI={SOCIAL_UI}
@@ -63,7 +63,9 @@ describe('TierSeal — donde el rango no se veía', () => {
       />,
     );
 
-    expect(screen.getByText(PROFILE_TIER_LABELS.silver)).toBeInTheDocument();
+    // Candado de la decisión: el rango de OTRA persona no se dice con la palabra en su ficha. Lo que queda es
+    // la muesca de color de la tarjeta del directorio, que sirve para recorrer una rejilla, no para informar.
+    expect(screen.queryByText(PROFILE_TIER_LABELS.silver)).toBeNull();
   });
 
   it('y el editor de perfil enseña el PROPIO, que era el que no salía en ninguna pantalla', () => {
