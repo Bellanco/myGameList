@@ -120,30 +120,31 @@ export const SOCIAL_UI = {
     flow: ['1. GitHub', '2. Google', '3. Espacio social', '4. Actividad'],
   },
   feed: {
-    sectionAria: 'Social',
-    title: 'Actividad social',
-    subtitle: 'Descubre perfiles públicos, análisis y recomendaciones destacadas de otros jugadores.',
-    actionsAria: 'Acciones de la actividad',
+    // Las que también pinta el ESQUELETO (que va en el arranque) salen de `SOCIAL_SHELL`: una sola fuente, o el
+    // armazón compartido y la pantalla real podrían acabar diciendo cosas distintas. Ver `socialShell`.
+    sectionAria: SOCIAL_SHELL.feed.sectionAria,
+    title: SOCIAL_SHELL.feed.title,
+    subtitle: SOCIAL_SHELL.feed.subtitle,
+    actionsAria: SOCIAL_SHELL.feed.actionsAria,
     activityListAria: 'Actividad social',
     toolbarAria: 'Búsqueda y filtros de la actividad',
     feedRowAria: 'Actividad social',
     profile: 'Editar mi perfil',
-    openProfiles: 'Ver perfiles',
-    openOwnProfile: 'Ver mi perfil',
-    openRequests: 'Solicitudes',
-    openRequestsAria: (count: number) =>
-      count > 0 ? `Solicitudes de amistad, ${count} pendiente${count === 1 ? '' : 's'}` : 'Solicitudes de amistad',
+    openProfiles: SOCIAL_SHELL.feed.openProfiles,
+    openOwnProfile: SOCIAL_SHELL.feed.openOwnProfile,
+    openRequests: SOCIAL_SHELL.feed.openRequests,
+    openRequestsAria: SOCIAL_SHELL.feed.openRequestsAria,
     refresh: 'Actualizar',
     refreshing: 'Actualizando...',
-    signOut: 'Cerrar sesión',
+    signOut: SOCIAL_SHELL.feed.signOut,
     statsProfiles: 'Perfiles visibles',
     statsActivities: 'Eventos de actividad',
     sectionTitle: 'Actividad de perfiles',
-    activityTitle: 'Actividad',
-    postsTitle: 'Publicaciones',
-    postComposerLabel: 'Comparte una noticia o un enlace',
-    postPlaceholder: 'Comparte una noticia o un enlace…',
-    postPublish: 'Publicar',
+    activityTitle: SOCIAL_SHELL.feed.activityTitle,
+    postsTitle: SOCIAL_SHELL.feed.postsTitle,
+    postComposerLabel: SOCIAL_SHELL.feed.postComposerLabel,
+    postPlaceholder: SOCIAL_SHELL.feed.postPlaceholder,
+    postPublish: SOCIAL_SHELL.feed.postPublish,
     postPublishing: 'Publicando...',
     // Cupo por rango. El contador replica el de las reseñas (conteo visible + aviso solo en los umbrales).
     postCharCount: (count: number, max: number) => `${count.toLocaleString()} / ${max.toLocaleString()} caracteres`,
@@ -205,6 +206,9 @@ export const SOCIAL_UI = {
      * que la escribió. Sin decirlo, un adelanto cortado a mitad de palabra se lee como una reseña que alguien
      * dejó a medias —y de paso se buscaba el fallo en el sitio equivocado—.
      */
+    // Lo que se anuncia mientras el análisis completo viene de camino (el esqueleto es decorativo). No se
+    // confunde con `detailPreviewOnly`: aquello es «esto es todo lo que hay», esto es «todavía no ha llegado».
+    detailLoadingReview: 'Cargando el análisis completo...',
     detailPreviewOnly: 'Esto es solo el adelanto: el texto completo está en los listados de su autor y todavía no ha llegado aquí.',
     metadataPlatforms: 'Plataformas:',
     metadataGenres: 'Géneros:',

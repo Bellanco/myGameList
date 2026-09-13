@@ -840,6 +840,15 @@
   height: .98rem;
 }
 
+/* Fila de acciones a dos extremos: "volver"/acciones principales a la izquierda y lo propio de cada pantalla
+   —compartir, cerrar sesión— a la derecha. Venía de `reviews.scss`; vive aquí porque la usa también el armazón de
+   la actividad social, y ese lo pinta el esqueleto que va en el arranque (ver `FeedShell`). */
+.hub-screen-actions-split {
+  width: 100%;
+  justify-content: space-between;
+  align-items: center;
+}
+
 .hub-screen-actions-left,
 .hub-screen-actions-right {
   display: flex;
@@ -1481,6 +1490,23 @@
   min-width: 0;
 }
 
+/* El cuerpo del detalle MIENTRAS el análisis completo viene de camino (ver `SocialDetailScreen`). Ocupa el sitio
+   de `.hub-feed-review-text` —incluido el reparto en fila de la container query de abajo— para que, al llegar el
+   texto, no se mueva nada. */
+.hub-detail-body-skeleton {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: .55rem;
+}
+
+/* Las barras de los metadatos son más altas que una línea de texto: lo que reservan es una fila de chips. */
+.hub-detail-meta-skeleton {
+  display: block;
+  height: 1.15rem;
+}
+
 /* Aviso de que lo de arriba es el ADELANTO del canal social y no la reseña entera (ver `detailPreviewOnly`).
    Va FUERA de `.hub-detail-body` a propósito: en pantalla ancha ese cuerpo se pone en fila y la nota acabaría
    de tercera columna, cuando lo que dice es de la tarjeta entera. Atenuada y con filo a la izquierda: es una
@@ -1778,4 +1804,153 @@
 
 @media (prefers-reduced-motion: reduce) {
   .error-plain { animation: none; }
+}
+
+/* Las partes del armazón que todavía NO funcionan (la fila de botones y el compositor mientras carga el hub).
+   Solo opacidad: ocupan exactamente el mismo sitio que cuando se encienden, así que al llegar la pantalla real no
+   se mueve nada; lo único que cambia es que dejan de verse apagadas. */
+.hub-screen-actions.is-placeholder,
+.fg.is-placeholder {
+  opacity: .5;
+}
+
+/* ══ ARMAZÓN DE LA ACTIVIDAD SOCIAL ════════════════════════════════════════════════════════════════════════
+   Estas reglas vivían en `social.scss` (y el avatar clicable, en `reviews.scss`), que viajan en chunks
+   PEREZOSOS. Bajaron aquí —al CSS del arranque— cuando el armazón del feed pasó a ser compartido: lo pinta
+   también `SocialHubSkeleton`, que es el `fallback` del `Suspense` que trae el hub, así que existe ANTES que
+   esas hojas. Con ellas allí, el esqueleto se pintaba desnudo justo en el único momento en que se le ve.
+
+   Es el camino contrario al que sigue el resto del proyecto —sacar del arranque lo que pertenece a una pantalla
+   perezosa— y por eso se anota: son ~2,7 kB sin comprimir, medidos, y es lo que cuesta que entrar en Social deje
+   de tener dos escenas de carga. Lo demás del hub sigue donde estaba. Ver `view/components/socialhub/FeedShell`.
+
+   Van AL FINAL del fichero a propósito: así conservan el orden relativo que tenían frente a las reglas de
+   `_layout` que comparten clase (`.hub-feed-owner-avatar .hub-avatar`, unas líneas más arriba). */
+
+// Botón "Solicitudes": contador de pendientes inscrito en un círculo (gris si 0, verde si hay alguna).
+.hub-requests-btn {
+  position: relative;
+}
+
+/* Botón de solicitudes: icono de campana cuadrado; el contador va como badge en la esquina inferior derecha. */
+.btn.hub-requests-btn {
+  width: 2.7rem;
+  padding: 0;
+  display: inline-grid;
+  place-items: center;
+}
+
+.hub-requests-btn .ui-icon { width: 1.25rem; height: 1.25rem; }
+
+/* Spinner del botón de publicar mientras se envía el post (reutiliza hubSpin de _overlays). */
+.hub-spinner {
+  display: inline-block; width: 1.05rem; height: 1.05rem; border-radius: 50%;
+  border: 2px solid currentColor; border-right-color: transparent;
+  animation: hubSpin .7s linear infinite;
+}
+
+/* Header del feed: texto a la izquierda, avatar (clica → mi perfil) a la derecha. */
+.hub-feed-header {
+  flex-direction: row;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.hub-feed-header-text {
+  display: flex;
+  flex-direction: column;
+  gap: .45rem;
+  min-width: 0;
+}
+
+.hub-feed-owner-avatar {
+  margin-top: .1rem;
+}
+
+/* Avatar sin foto: disco tintado por el acento de la paleta + silueta a trazo. Los tokens viven en la CAPA 3 de
+   `_base.scss`; aquí solo se montan. El anillo va como sombra INSET y no como `border`, para que no reste espacio
+   al contenido ni descuadre la altura de las filas del feed. */
+.hub-avatar-blank {
+  background: var(--deco-avatar-bg);
+  color: var(--deco-avatar-line);
+  box-shadow: inset 0 0 0 1px var(--deco-avatar-ring);
+}
+
+:root[data-effects="on"] .hub-avatar-blank {
+  box-shadow: inset 0 0 0 1px var(--deco-avatar-ring), var(--deco-avatar-glow);
+}
+
+.hub-avatar-icon {
+  width: 62%;
+  height: 62%;
+  fill: none;
+  stroke: currentColor;
+  /* `stroke-width` es heredable en SVG, así que llega al contenido del `<use>` sin tocar el sprite. */
+  stroke-width: var(--deco-avatar-stroke);
+  stroke-linecap: var(--deco-avatar-cap);
+  stroke-linejoin: var(--deco-avatar-cap);
+  /* La silueta se apoya en el borde inferior del disco (los hombros se cortan, como en una foto de carnet), así que
+     se baja un pelo para que el aire quede arriba y no partido en dos. */
+  margin-block-start: 8%;
+}
+
+/* F3 — Publicaciones (texto libre + enlaces). Compositor de una línea que CRECE con el contenido: el textarea
+   arranca a la altura del campo de antes y se estira al saltar de línea o desbordar (la altura la calcula
+   `SocialFeedScreen` con `scrollHeight`). */
+.hub-post-composer {
+  display: flex;
+  /* Centrado y no `stretch`: con el campo creciendo, estirar el botón lo convertiría en una columna enorme.
+     Centrado se queda cuadrado y a media altura del campo, sea de una línea o de varias. */
+  align-items: center;
+  gap: .6rem;
+}
+
+/* SELECTOR DE DOS CLASES a propósito, no `.hub-post-input` a secas: `.ftextarea` impone `min-height: 128px`
+   (pensada para el análisis del formulario) y `resize: vertical`, y vive en `_overlays-and-responsive.scss`, que
+   se compila DESPUÉS de este fichero. Con una sola clase empatan en especificidad y gana la última: el compositor
+   nacía con la altura de un párrafo y con tirador de redimensión. Subir la especificidad lo hace independiente del
+   orden de los `@use`. */
+.hub-post-composer .hub-post-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  /* Arranca en UNA línea; la altura real la calcula `SocialFeedScreen` con `scrollHeight`. */
+  min-height: 0;
+  resize: none;
+  overflow-y: auto;
+  /* Tope de crecimiento: a partir de aquí hace scroll interno en vez de empujar el feed fuera de la pantalla.
+     Con el cupo de oro (10.000 caracteres) el campo sería impracticable sin este límite. */
+  max-height: 11rem;
+}
+
+/* Dos clases por el mismo motivo que el campo: `.btn` se declara después (`_forms-and-buttons.scss`) y con una
+   sola clase le ganaba el empate, así que su `padding: .55rem 1rem` anulaba el `padding: 0` de aquí y descentraba
+   el icono dentro del cuadrado. */
+.hub-post-composer .hub-post-publish {
+  flex: 0 0 auto;
+  aspect-ratio: 1; /* icono solo → botón cuadrado */
+  padding: 0;
+  /* Altura propia: al no estirarse ya con el campo, sin esto se encogería a la de su icono. Coincide con la de
+     una línea del compositor, así que en el caso normal parecen del mismo alto. */
+  height: 2.55rem;
+}
+
+/* Avatar clicable (feed/detalle): botón sin chrome que envuelve la foto/inicial y navega al perfil. */
+.hub-avatar-link {
+  flex: 0 0 auto;
+  display: inline-flex;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 50%;
+  background: transparent;
+  cursor: pointer;
+  transition: box-shadow .2s ease, border-color .2s ease;
+}
+
+.hub-avatar-link:hover { box-shadow: 0 0 0 2px rgba(var(--steam-rgb),.28); }
+
+.hub-avatar-link:focus-visible {
+  outline: none;
+  border-color: rgba(var(--steam-rgb),.42);
+  box-shadow: 0 0 0 2px rgba(var(--steam-rgb),.2);
 }
