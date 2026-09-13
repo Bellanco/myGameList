@@ -207,7 +207,11 @@ están — y sus bordes tampoco, que ahí el marco de oro o el filete cian **son
 - Pide siempre una ficha: `var(--fs-sm)`, `var(--e2)`, `var(--sp-4)`, `var(--steam)`.
 - Mide el contraste antes de tocar `--text-dim`, `--focus-ring` o `--fg-link`: axe **no** ve el anillo de foco.
 - Usa `--on-accent` encima de cualquier relleno de acento.
-- Da a cada tema su gesto propio bajo `data-effects="on"`, y respeta `prefers-reduced-motion`.
+- Da a cada tema su gesto propio bajo `data-effects="on"`, y respeta `prefers-reduced-motion`. Si el gesto
+  responde a algo que pasa en la app —cerrar un juego, guardar, filtrar, un logro—, cuélgalo de un MOMENTO
+  (`core/effects/moments`) y no de un componente: el momento se emite una vez y lo escucha quien quiera.
+- Apaga los efectos con `:root:not([data-effects="on"])`. El valor `off` **no existe**: al desactivarlos el
+  atributo se retira, así que `[data-effects="off"]` no casa nunca y la regla no llega a aplicarse.
 - Siembra +120 juegos antes de juzgar la tabla: virtualizada y con tres juegos no enseña sus fallos.
 
 **Don't**

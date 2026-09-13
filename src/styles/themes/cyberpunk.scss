@@ -629,3 +629,25 @@
 }
 
 @keyframes lz-cyber-sweep { from { background-position: -130% 0; } to { background-position: 260% 0; } }
+
+/* ══ MOMENTOS · LAS CIFRAS SE DESCIFRAN AL ENTRAR ═══════════════════════════════════════════════════════════
+   Un contador del HUD no aparece: cuadra. Las nueve cifras del panel entran desenfocadas y saltando en
+   vertical, como un dígito que aún no ha fijado su valor, y se asientan una detrás de otra —el escalonado por
+   posición es lo que hace que se lea como una lectura en curso y no como una animación de entrada—.
+   No se toca el texto: solo el foco y el salto, así que la cifra es legible desde el primer fotograma para
+   quien no espere a que termine, y el lector de pantalla nunca ve nada raro. ══ */
+@media (prefers-reduced-motion: no-preference) {
+  :root[data-effects="on"][data-palette="cyberpunk"] .stat-tile-value {
+    animation: cyber-decipher .52s steps(6, end) both;
+  }
+  :root[data-effects="on"][data-palette="cyberpunk"] .stat-tile:nth-of-type(3n) .stat-tile-value { animation-delay: .08s; }
+  :root[data-effects="on"][data-palette="cyberpunk"] .stat-tile:nth-of-type(3n + 1) .stat-tile-value { animation-delay: .16s; }
+  :root[data-effects="on"][data-palette="cyberpunk"] .stat-tile:nth-of-type(3n + 2) .stat-tile-value { animation-delay: .24s; }
+
+  @keyframes cyber-decipher {
+    0%   { opacity: .25; filter: blur(3px); transform: translateY(-6px); }
+    50%  { opacity: .7;  filter: blur(1.6px); transform: translateY(3px); }
+    80%  { opacity: 1;   filter: blur(.6px); transform: translateY(-1px); }
+    100% { opacity: 1;   filter: none; transform: translateY(0); }
+  }
+}

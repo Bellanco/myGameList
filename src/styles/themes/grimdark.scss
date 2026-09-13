@@ -577,3 +577,40 @@
   89% { opacity: .32; translate: 9px 0; }
   92% { opacity: .22; translate: 4px -1px; }
 }
+
+/* ══ MOMENTOS · EL COGITADOR TARDA EN DESPERTAR: parpadeo de pantalla mientras carga ════════════════════════
+   La app ya enseña un esqueleto al entrar en una pantalla perezosa (`ScreenSkeleton`). En este tema esa espera
+   no es una barra de progreso: es una máquina vieja arrancando, así que las placas del esqueleto laten con el
+   brillo irregular del fósforo y una línea de barrido las cruza. Termina cuando termina la carga —el esqueleto
+   desaparece y con él el efecto—, que es justo lo que hace que se lea como «está despertando» y no como una
+   animación decorativa que sigue ahí cuando ya hay contenido. ══ */
+@media (prefers-reduced-motion: no-preference) {
+  :root[data-effects="on"][data-palette="grimdark"] .screen-skeleton-card {
+    position: relative;
+    animation: grim-cogitator-wake 1.9s steps(12, end) infinite;
+  }
+  :root[data-effects="on"][data-palette="grimdark"] .screen-skeleton-card:nth-of-type(2n) { animation-delay: -.7s; }
+  :root[data-effects="on"][data-palette="grimdark"] .screen-skeleton-card:nth-of-type(3n) { animation-delay: -1.2s; }
+
+  :root[data-effects="on"][data-palette="grimdark"] .screen-skeleton-card::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: linear-gradient(180deg, transparent 42%, rgba(67, 245, 88, .16) 50%, transparent 58%);
+    animation: grim-cogitator-scan 2.6s linear infinite;
+  }
+
+  @keyframes grim-cogitator-wake {
+    0%, 100% { opacity: 1; }
+    12% { opacity: .72; }
+    18% { opacity: 1; }
+    46% { opacity: .85; }
+    52% { opacity: 1; }
+  }
+
+  @keyframes grim-cogitator-scan {
+    from { transform: translateY(-100%); }
+    to   { transform: translateY(100%); }
+  }
+}
