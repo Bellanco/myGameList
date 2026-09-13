@@ -5,16 +5,23 @@ import { ChartDetail, ChartDetailHint } from './ChartDetail';
 import { localWeekKey, mondayOfWeekKey } from '../../../core/utils/dateTime';
 import type { ActivitySummary, WeekActivity } from '../../../core/stats/types';
 
-/** Semanas que se enseñan: un año redondo, repartido en cuatro filas de trece (un trimestre por fila). */
+/** Semanas que se enseñan: un año redondo, en UNA sola fila. */
 const WEEKS = 52;
-const COLUMNS = 13;
 /** Sin al menos esto no hay ritmo que enseñar, solo un par de marcas sueltas. */
 const MIN_WEEKS = 6;
 
-const CELL = 22;
-const GAP = 4;
-const LABEL = 34;
-const TOP = 4;
+/* Geometría del pulso. El lienzo es de ancho fijo y el SVG escala solo (`width: 100%`), así que estas cifras
+   son proporciones, no píxeles: lo que fijan es la relación entre el grosor de la barra y su separación. */
+const BAR = 12;
+const GAP = 3;
+const PAD = 2;
+/** Alto del área de barras y de la base que se deja para los rótulos de mes. */
+const PLOT = 86;
+const AXIS = 16;
+/** Alto mínimo de una semana SIN apuntes: un muñón, no un hueco invisible. Un hueco tiene que verse. */
+const STUB = 5;
+/** Sitio de arriba para el corchete de la racha viva y su rótulo. */
+const BRACKET = 22;
 
 /** Cuántos niveles de intensidad. Cuatro se distinguen de un vistazo; con más, la rampa se vuelve un degradado. */
 const LEVELS = 4;
@@ -50,7 +57,7 @@ function weekLabel(key: string): string {
 }
 
 /**
- * TU CONSTANCIA: un mapa de calor donde cada cuadro es una SEMANA.
+ * TU CONSTANCIA: el PULSO del último año, una barra por SEMANA.
  *
  * La unidad es la decisión que define el gráfico. El mapa de calor clásico pinta un cuadro por día, y aquí eso
  * sería engañoso: una lista de juegos no se toca a diario —se anota lo que se termina, y eso pasa cada pocos
@@ -61,8 +68,13 @@ function weekLabel(key: string): string {
  * Lo que cuenta son las fechas que la app registra SOLA (ver `enteredAt` y `reviewedAt`): mover un juego de lista
  * y escribir una reseña. Nada de esto se teclea, así que el mapa no premia rellenar campos, sino usar la app.
  *
- * Cuatro niveles de intensidad y no un degradado continuo: lo que se lee en un mapa de calor es el patrón —dónde
- * hay racha y dónde hay hueco—, y para eso los saltos discretos se distinguen mejor que una rampa fina.
+ * Cuatro niveles de intensidad y no un degradado continuo: lo que se lee es el patrón —dónde hay racha y dónde
+ * hay hueco—, y para eso los saltos discretos se distinguen mejor que una rampa fina. Aquí el nivel se ve DOS
+ * veces, en la altura de la barra y en su color: quien no distinga bien los tonos sigue leyendo el ritmo por la
+ * silueta, que es la razón de cambiar la rejilla de cuadros por barras.
+ *
+ * Arriba, el corchete de la RACHA VIVA marca hasta dónde llega la cuenta sin faltar; abajo, un rótulo de mes
+ * cada nueve semanas sitúa el año sin llenar el eje de fechas.
  */
 export const WeekStreak = memo(function WeekStreak({ activity }: { activity: ActivitySummary }) {
   const L = useStatsLabels().activity;
@@ -78,9 +90,6 @@ export const WeekStreak = memo(function WeekStreak({ activity }: { activity: Act
   const weeks: WeekActivity[] = windowWeeks().map(
     (key) => byKey.get(key) || { w: key, reviews: 0, moves: 0, total: 0 },
   );
-  const rows = Math.ceil(weeks.length / COLUMNS);
-  const width = LABEL + COLUMNS * (CELL + GAP);
-  const height = TOP + rows * (CELL + GAP) + 6;
   // Escala de intensidad: el techo es la semana más movida del periodo, no un número fijo, para que el mapa
   // signifique lo mismo en una biblioteca de diez juegos que en una de mil.
   const ceiling = Math.max(...weeks.map((week) => week.total)) || 1;
@@ -107,37 +116,77 @@ export const WeekStreak = memo(function WeekStreak({ activity }: { activity: Act
       ? L.weekAria(weekLabel(week.w), 0)
       : `${weekLabel(week.w)}: ${L.detail(week.moves, week.reviews)}`;
 
+  const width = PAD * 2 + WEEKS * (BAR + GAP);
+  const height = BRACKET + PLOT + AXIS;
+  const xOf = (index: number) => PAD + index * (BAR + GAP);
+  /**
+   * Altura por TOTAL (continua), color por NIVEL (discreto). Se probó la altura por nivel y con datos reales
+   * salía un peine: la mayoría de las semanas caen en el mismo nivel, así que todas las barras medían igual y
+   * solo se distinguían al acercarse. Con el total, dos semanas distintas se ven distintas —que es lo que uno
+   * viene a mirar— y el color sigue agrupando en cuatro escalones, que es donde los saltos discretos ayudan.
+   * La raíz cuadrada abre la parte baja de la escala: entre una semana de un apunte y otra de dos hay la misma
+   * diferencia real que entre nueve y diez, pero solo la primera cuenta algo.
+   */
+  const barOf = (total: number) =>
+    total === 0 ? STUB : STUB + (PLOT - STUB) * Math.sqrt(total / ceiling);
+  /** Un rótulo de mes cada nueve semanas: sitúa el año sin convertir el eje en un calendario. */
+  const ticks = weeks
+    .map((week, index) => ({ week, index }))
+    .filter(({ index }) => index % 9 === 0)
+    .map(({ week, index }) => {
+      const monday = mondayOfWeekKey(week.w);
+      return { x: xOf(index), label: Number.isNaN(monday.getTime()) ? '' : MONTH.format(monday).replace('.', '') };
+    });
+
   return (
     <div className="week-heat">
       <div className="week-heat-canvas">
         <svg viewBox={`0 0 ${width} ${height}`} className="week-heat-svg" role="group" aria-label={L.chartAria}>
+          {/* Corchete de la racha viva. Solo cuando hay más de una semana: con una, el corchete es más ruido
+              que dato, y la cifra ya está en el pie. */}
+          {liveStreak > 1 ? (
+            <g className="week-heat-streak" aria-hidden="true">
+              <path
+                d={`M ${xOf(weeks.length - liveStreak)} ${BRACKET - 2} v -6 H ${xOf(weeks.length - 1) + BAR} v 6`}
+              />
+              <text x={(xOf(weeks.length - liveStreak) + xOf(weeks.length - 1) + BAR) / 2} y={BRACKET - 12}>
+                {L.weeks(liveStreak)}
+              </text>
+            </g>
+          ) : null}
+
           {weeks.map((week, index) => {
-            const row = Math.floor(index / COLUMNS);
-            const column = index % COLUMNS;
             const level = levelOf(week.total);
+            const barHeight = barOf(week.total);
             return (
-              <g key={week.w} className={`week-heat-cell is-l${level}${focus.stateOf(week.w)}`} {...focus.controlProps(week.w, detailOf(week))}>
+              <g
+                key={week.w}
+                className={`week-heat-cell is-l${level}${focus.stateOf(week.w)}`}
+                {...focus.controlProps(week.w, detailOf(week))}
+              >
+                {/* Pista invisible a toda la altura: sin ella, apuntar a una semana floja pide precisión de
+                    cirujano — la barra mide cinco píxeles. Con la pista, el objetivo es toda la columna. */}
+                <rect className="week-heat-hit" x={xOf(index)} y={BRACKET} width={BAR} height={PLOT} />
+                {/* La barra lleva clase PROPIA. Sin ella, la rampa de intensidad (`.is-lN rect`) pintaba también
+                    la pista de arriba —que mide toda la altura— y cada semana salía como una columna entera del
+                    color de su nivel: 52 barras idénticas en las que solo se distinguía la punta. */}
                 <rect
-                  x={LABEL + column * (CELL + GAP)}
-                  y={TOP + row * (CELL + GAP)}
-                  width={CELL}
-                  height={CELL}
-                  rx="5"
+                  className="week-heat-bar"
+                  x={xOf(index)}
+                  y={BRACKET + PLOT - barHeight}
+                  width={BAR}
+                  height={barHeight}
+                  rx="3"
                 />
               </g>
             );
           })}
-          {/* Un rótulo por fila con el mes en que arranca ese trimestre: sitúa el mapa en el calendario sin
-              llenarlo de fechas. */}
-          {Array.from({ length: rows }, (_unused, row) => {
-            const first = weeks[row * COLUMNS];
-            const monday = first ? mondayOfWeekKey(first.w) : new Date(NaN);
-            return (
-              <text key={row} className="week-heat-row" x="0" y={TOP + row * (CELL + GAP) + CELL / 2 + 4}>
-                {Number.isNaN(monday.getTime()) ? '' : MONTH.format(monday).replace('.', '')}
-              </text>
-            );
-          })}
+
+          {ticks.map((tick) => (
+            <text key={tick.x} className="week-heat-row" x={tick.x} y={height - 4}>
+              {tick.label}
+            </text>
+          ))}
         </svg>
       </div>
 
