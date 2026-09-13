@@ -538,10 +538,16 @@ function SocialFeedScreenBase({
                             {entry.gameName ? <span className="hub-feed-game-chip">{entry.gameName}</span> : null}
                           </div>
                         </header>
-                        <p className="hub-feed-date">{analyzedAtLabel}</p>
-                        {resolveGrade({ score: Number(entry.rating || 0), grade: entry.grade ?? null }) > 0
-                          ? <ScoreDisplay game={{ score: Number(entry.rating || 0), grade: entry.grade ?? null }} />
-                          : <NoScoreMedal />}
+                        {/* LA FECHA Y LA NOTA VAN EN EL MISMO RENGLÓN. La nota tenía una fila entera para ella
+                            sola —un aro de 38 px o cinco estrellas flotando en medio de la tarjeta—, que es el
+                            sitio que necesita la reseña. Al extremo del renglón de la fecha se lee igual de
+                            rápido: son los dos datos de cabecera de lo mismo, cuándo y cuánto. */}
+                        <div className="hub-feed-meta">
+                          <p className="hub-feed-date">{analyzedAtLabel}</p>
+                          {resolveGrade({ score: Number(entry.rating || 0), grade: entry.grade ?? null }) > 0
+                            ? <ScoreDisplay game={{ score: Number(entry.rating || 0), grade: entry.grade ?? null }} />
+                            : <NoScoreMedal />}
+                        </div>
                         {reviewText ? <p className="hub-feed-review-text" title={reviewText}>{reviewText}</p> : null}
                       </article>
                     );
