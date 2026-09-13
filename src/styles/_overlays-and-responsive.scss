@@ -21,10 +21,13 @@
   opacity: 0; visibility: hidden; transition: opacity .25s, visibility .25s;
 }
 .modal-ov.active { opacity: 1; visibility: visible; }
+/* SIN BORDE, SOLO ALTURA. A `--e4` sobre el velo del fondo, el marco de 1 px no añade nada: lo que separa el
+   modal de la pantalla es la sombra. Los cinco skins siguen poniendo el suyo —el filete cian del HUD, el marco
+   de oro del códice—, que ahí sí es identidad y no delimitación. */
 .modal {
-  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg);
+  background: var(--surface); border: 0; border-radius: var(--radius-lg);
   width: 100%; max-width: 860px; max-height: 90vh;
-  display: flex; flex-direction: column; box-shadow: var(--shadow);
+  display: flex; flex-direction: column; box-shadow: var(--e4), var(--edge);
   transform: translateY(20px) scale(.99); transition: transform .25s; overflow: hidden;
 }
 .modal-ov.active .modal { transform: translateY(0) scale(1); }
@@ -62,18 +65,21 @@ dialog.modal-dialog[open]::backdrop { animation: modalBackdropIn .28s ease both;
 .fg    { display: flex; flex-direction: column; gap: .42rem; min-width: 0; }
 .frow  { display: grid; grid-template-columns: repeat(auto-fit,minmax(240px,1fr)); gap: 1rem; }
 .flabel { font-size: var(--fs-2xs); font-weight: 800; color: var(--text-muted); text-transform: uppercase; letter-spacing: .5px; }
+/* Los campos del formulario, hundidos como los de la barra (ver `.input-base`): la sombra va hacia dentro. */
 .finput, .ftextarea {
   background: var(--bg); border: 1px solid var(--border); color: var(--text);
   border-radius: var(--radius-sm); padding: .78rem .85rem; width: 100%;
+  box-shadow: var(--sunk);
   transition: border-color .2s, box-shadow .2s; outline: none; min-width: 0;
 }
-.finput:focus, .ftextarea:focus { border-color: var(--focus-ring); box-shadow: var(--ring-accent-soft); }
+.finput:focus, .ftextarea:focus { border-color: var(--focus-ring); box-shadow: var(--sunk), var(--ring-accent-soft); }
 .ftextarea { min-height: 128px; resize: vertical; }
 .field-error,  .has-error   { border-color: var(--danger)!important; box-shadow: 0 0 0 3px rgba(var(--danger-rgb),.15)!important; }
 .field-warning,.has-warning  { border-color: var(--warn)!important;  box-shadow: 0 0 0 3px rgba(var(--warn-rgb),.15)!important; }
 .tag-inp-wrap {
   display: flex; flex-wrap: wrap; align-items: center; gap: .45rem;
   background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-sm);
+  box-shadow: var(--sunk);
   padding: .55rem; min-height: 48px; transition: border-color .2s, box-shadow .2s;
 }
 .tag-inp-wrap input { background: transparent; border: none; color: var(--text); outline: none; flex: 1 1 14ch; min-width: 10ch; }

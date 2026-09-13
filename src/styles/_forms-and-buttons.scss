@@ -2,18 +2,23 @@
 .toolbar {
   display: flex; flex-direction: column; gap: .75rem;
   background: var(--surface); padding: 1rem;
-  border-radius: var(--radius-md); border: 1px solid var(--border);
-  box-shadow: var(--shadow); flex: 0 0 auto;
+  border-radius: var(--radius-md); border: 1px solid var(--hair);
+  box-shadow: var(--e2), var(--edge); flex: 0 0 auto;
   position: relative;
 }
 .toolbar-top { display: flex; align-items: center; gap: .6rem; width: 100%; }
 .search-wrap { position: relative; flex: 1 1 auto; min-width: 0; width: 100%; }
+/* LO QUE SE RELLENA SE HUNDE. El campo pide `--sunk` y el botón `--e2`: la misma caja con la luz al revés,
+   que es lo que dice de un vistazo dónde se escribe y dónde se pulsa. Antes los dos eran una caja plana con
+   un borde y solo se distinguían por el texto que llevaban dentro. */
 .input-base {
   background: var(--bg); border: 1px solid var(--border); color: var(--text);
   border-radius: var(--radius-pill); padding: .55rem 1rem; min-height: 42px;
+  box-shadow: var(--sunk);
   outline: none; transition: border-color .2s, box-shadow .2s; min-width: 0;
 }
-.input-base:focus { border-color: var(--focus-ring); box-shadow: var(--ring-accent-soft); }
+/* En foco el hueco SIGUE ahí: el anillo se suma, no lo sustituye — si no, el campo se aplana justo al usarlo. */
+.input-base:focus { border-color: var(--focus-ring); box-shadow: var(--sunk), var(--ring-accent-soft); }
 /* Filtro de juegos del perfil social: campo compacto (tras .input-base para ajustar tamaño). */
 .hub-game-filter { width: 100%; min-height: 36px; padding: .4rem .85rem; font-size: var(--fs-sm); }
 .toolbar .search-input { width: 100%; padding-right: 2.7rem; }
@@ -27,12 +32,12 @@
 
 /* Dialog */
 .alert-dialog {
-  border: 1px solid var(--border);
+  border: 0;
   border-radius: var(--radius-lg);
   background: var(--surface);
   color: var(--text);
   padding: 0;
-  box-shadow: var(--shadow);
+  box-shadow: var(--e4), var(--edge);
   /* El techo del ancho se mide contra el viewport y sustituye al del <dialog> nativo (`100% - 6px - 2em`), que
      en pantalla estrecha deja la caja más angosta de lo pedido y estira el texto en una columna larguísima. */
   width: fit-content;
@@ -353,12 +358,20 @@ dialog.alert-dialog[open]::backdrop { animation: alertBackdropIn .24s ease both;
    El relieve se conserva: sigue habiendo la misma caída de luz de arriba abajo, solo que un paso más honda.
    Las paletas cuyo skin repinta este botón (Cámara de pruebas, Sin futuro, Solo hay guerra, Mar de estrellas)
    no se ven afectadas: ya lo resolvían con relleno plano y texto oscuro. */
-.btn-steam {
+/* DOS NOMBRES, UN SOLO BOTÓN PRINCIPAL. `.btn-primary` se usaba en ocho sitios de la app —«Añadir juego» del
+   estado vacío, el «Aceptar» de compartir, el alta del hub— y NO TENÍA REGLA en ninguna hoja base: solo existía
+   dentro del skin de Mar de estrellas. En las otras cinco paletas esos ocho botones salían como cristal neutro,
+   idénticos a un secundario, así que la acción principal de varias pantallas no se distinguía de la de al lado.
+   El nombre se queda (lo dice mejor que `.btn-steam`, que es herencia de cuando el acento era el azul de Steam)
+   y los dos comparten declaración aquí y en los cinco skins. */
+.btn-steam,
+.btn-primary {
   background: linear-gradient(180deg, color-mix(in srgb, var(--steam) 77%, #000), color-mix(in srgb, var(--steam) 55%, #000)); color: var(--on-accent);
   border-color: color-mix(in srgb, var(--steam) 70%, #000);
   box-shadow: inset 0 1px 0 rgba(255,255,255,.25), 0 8px 18px rgba(var(--steam-rgb),.18);
 }
-.btn-steam:hover { background: linear-gradient(180deg, color-mix(in srgb, var(--steam) 77%, #000), color-mix(in srgb, var(--steam) 63%, #000)); box-shadow: inset 0 1px 0 rgba(255,255,255,.3), 0 16px 26px rgba(var(--steam-rgb),.22); }
+.btn-steam:hover,
+.btn-primary:hover { background: linear-gradient(180deg, color-mix(in srgb, var(--steam) 77%, #000), color-mix(in srgb, var(--steam) 63%, #000)); box-shadow: inset 0 1px 0 rgba(255,255,255,.3), 0 16px 26px rgba(var(--steam-rgb),.22); }
 
 /* Acento azul de la app (texto/icono/borde) sobre el cristal: navegación principal y toggles activos. */
 .btn-accent, .btn.is-active, .btn-toggle.active, .btn-toggle-deck.active {
@@ -370,8 +383,17 @@ dialog.alert-dialog[open]::backdrop { animation: alertBackdropIn .24s ease both;
 .btn-secondary { color: var(--text); }
 
 /* Roles: el color va en texto + borde; la superficie es el mismo cristal (sin rellenos planos). */
-.btn-danger { color: var(--fg-red); border-color: color-mix(in srgb, var(--danger) 42%, transparent); }
-.btn-danger:hover { border-color: color-mix(in srgb, var(--danger) 58%, transparent); }
+
+/* MENOS EL DESTRUCTIVO, QUE ES MACIZO. Los cinco skins ya lo rellenaban cada uno por su cuenta, así que la
+   paleta Clásico era la única de las seis donde borrar era un botón de contorno como cualquier otro rol. Y no
+   es un rol como los demás: `.btn-abandoned` y `.btn-recommend-active` se quedan en contorno a propósito —son
+   alternables, se deshacen— mientras que este no se deshace. `--danger-fill` es el relleno con tinta encima. */
+.btn-danger {
+  background: var(--danger-fill); color: #fff;
+  border-color: color-mix(in srgb, var(--danger) 55%, #000);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.18), 0 8px 18px rgba(var(--danger-rgb),.16);
+}
+.btn-danger:hover { border-color: color-mix(in srgb, var(--danger) 70%, #000); }
 .btn-complete { color: var(--fg-green-soft); border-color: color-mix(in srgb, var(--success) 42%, transparent); }
 .btn-complete:hover { border-color: color-mix(in srgb, var(--success) 58%, transparent); }
 .btn-inprogress { color: var(--fg-amber-soft); border-color: color-mix(in srgb, var(--warn) 42%, transparent); }
@@ -533,6 +555,8 @@ dialog.alert-dialog[open]::backdrop { animation: alertBackdropIn .24s ease both;
   border: 1.5px solid var(--border);
   border-radius: 0.4rem;
   background: var(--surface);
+  /* Vacío es un hueco; marcado es una pieza maciza de acento, así que la sombra interior se retira abajo. */
+  box-shadow: var(--sunk);
   cursor: pointer;
   display: inline-grid;
   place-content: center;
@@ -553,6 +577,7 @@ dialog.alert-dialog[open]::backdrop { animation: alertBackdropIn .24s ease both;
 :where(input[type='checkbox']:checked) {
   background: var(--steam);
   border-color: var(--steam);
+  box-shadow: var(--edge);
 }
 
 :where(input[type='checkbox']:checked)::after {

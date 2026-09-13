@@ -1,7 +1,7 @@
 /* Table */
 .table-wrap {
   background: var(--surface); border-radius: var(--radius-md);
-  overflow: auto; overflow-x: auto; border: 1px solid var(--border); box-shadow: var(--shadow);
+  overflow: auto; overflow-x: auto; border: 1px solid var(--hair); box-shadow: var(--e2), var(--edge);
   flex: 1 1 auto; min-height: 18rem; scrollbar-width: none;
 }
 .table-wrap::-webkit-scrollbar { display: none; }
@@ -125,7 +125,9 @@ thead th.sorted.desc .th-sort-caret { transform: rotate(180deg); }
   .col-c-strong, .col-c-weak, .col-c-score, .col-c-replay { width: 0; }
 }
 
-tbody tr.main-row { border-top: 1px solid var(--border); transition: background .2s ease, box-shadow .2s ease; cursor: pointer; }
+/* El separador de filas pide `--hair` —el mismo borde a media tinta— y no `--border`: con doscientos juegos en
+   pantalla, un filete entero por fila dibuja una reja y la reja se lee antes que los nombres. */
+tbody tr.main-row { border-top: 1px solid var(--hair); transition: background .2s ease, box-shadow .2s ease; cursor: pointer; }
 /* A11y-2: el disparador de detalles es un <button> real, pero se presenta como el texto del nombre. */
 tbody tr.main-row .row-toggle {
   display: inline-flex; align-items: center; gap: .4rem;
@@ -136,7 +138,7 @@ tbody tr.main-row .row-toggle:focus-visible { outline: 2px solid var(--focus-rin
 tbody tr.main-row.striped { background: var(--surface-soft); }
 @media (hover:hover) { tbody tr.main-row:hover { background: var(--surface-hover); box-shadow: inset 3px 0 0 var(--steam); } }
 tbody td { padding: .95rem 1rem; font-size: var(--fs-sm); vertical-align: middle; }
-tbody tr.detail-row { display: none; background: var(--detail-row-bg); border-top: 1px dashed var(--border); }
+tbody tr.detail-row { display: none; background: var(--detail-row-bg); border-top: 1px dashed var(--hair); }
 tbody tr.detail-row.open { display: table-row; }
 /* La celda del detalle NO lleva el relleno de una celda normal: su contenido (`.detail-content`) pone el suyo.
    Estaba escrito como `style={{ padding: 0 }}` inline en las DOS tablas que tienen fila de detalle (el listado
@@ -254,7 +256,7 @@ tbody tr.main-row.just-changed { animation: rowFlash 1.3s ease-out; }
   touch-action: none; cursor: pointer; user-select: none;
   background: conic-gradient(hsl(var(--score-hue, 0) 58% var(--acc-l)) calc(var(--score-pct, 0) * 1%), var(--score-track) 0);
 }
-.score-dial::after { content: ""; position: absolute; inset: var(--track-w); border-radius: 50%; background: var(--surface); box-shadow: inset 0 1px 3px rgba(0,0,0,.22); }
+.score-dial::after { content: ""; position: absolute; inset: var(--track-w); border-radius: 50%; background: var(--surface); box-shadow: var(--sunk); }
 .score-dial:focus-visible { outline: 3px solid var(--focus-ring); outline-offset: 4px; }
 .score-dial-num {
   position: absolute; inset: 0; z-index: 1;

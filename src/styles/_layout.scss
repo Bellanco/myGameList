@@ -225,12 +225,14 @@
   gap: 1rem;
 }
 
+/* BORDE POR PAPEL (DESIGN.md §8). La tarjeta ya se sostiene con su plano, así que el borde baja a filete: está
+   para decir dónde acaba, no para dibujarla. El marco entero se lo quedan las piezas sin elevación. */
 .settings-card {
   grid-column: span 12;
   background: var(--surface);
-  border: 1px solid var(--border);
+  border: 1px solid var(--hair);
   border-radius: var(--radius-md);
-  box-shadow: var(--shadow);
+  box-shadow: var(--e1), var(--edge);
   padding: 1rem;
   display: flex;
   flex-direction: column;
@@ -442,6 +444,9 @@
   border-radius: 999px;
   background: var(--overlay-hover);
   border: 1px solid var(--border);
+  /* La pista es el CARRIL —un hueco— y el mando, la pieza que va encima con su `--e2`: los dos juntos son lo
+     que hace que un interruptor se lea como algo que se desliza y no como dos rectángulos superpuestos. */
+  box-shadow: var(--sunk);
   position: relative;
   transition: background .2s ease, border-color .2s ease;
   flex-shrink: 0;
@@ -583,9 +588,9 @@
 
 .legal-card {
   background: var(--surface);
-  border: 1px solid var(--border);
+  border: 1px solid var(--hair);
   border-radius: var(--radius-md);
-  box-shadow: var(--shadow);
+  box-shadow: var(--e1), var(--edge);
   padding: 1rem;
   display: flex;
   flex-direction: column;
@@ -647,9 +652,9 @@
   gap: .8rem;
   padding: .85rem 1rem;
   background: var(--surface-elevated);
-  border: 1px solid var(--border);
+  border: 0;
   border-radius: var(--radius-md);
-  box-shadow: var(--shadow);
+  box-shadow: var(--e3), var(--edge);
 }
 
 .consent-banner-text { flex: 1 1 260px; display: grid; gap: .25rem; }
@@ -757,7 +762,7 @@
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
   background: linear-gradient(145deg, var(--hub-grad-start), var(--hub-grad-end));
-  box-shadow: var(--shadow);
+  box-shadow: var(--e2), var(--edge);
   /* Marco INTERIOR del hub, fluido (ver la nota de `.main.main-social`): es el segundo de los dos marcos que en
      móvil se comían el 19% del ancho. Se interpola con el viewport en vez de saltar en un breakpoint, y llega al
      valor de siempre (1.25rem) sobre los 1270px. El mínimo no baja de .65rem porque el contenido no debe tocar el
@@ -1155,6 +1160,7 @@
   border-radius: var(--radius-pill);
   background: var(--surface-hover);
   border: 1px solid var(--border);
+  box-shadow: var(--sunk);
   position: relative;
   transition: background .2s ease, border-color .2s ease;
 }
@@ -1472,7 +1478,7 @@
   transform: translateY(-1px);
   border-color: var(--steam);
   border-left-color: var(--steam);
-  box-shadow: var(--shadow);
+  box-shadow: var(--e2);
 }
 
 .hub-feed-activity-item:focus-visible {

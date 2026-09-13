@@ -258,10 +258,10 @@
   grid-template-columns: repeat(4, minmax(3.6rem, 1fr));
   gap: .3rem;
   padding: .5rem;
-  border: 1px solid var(--border);
+  border: 0;
   border-radius: var(--radius-md);
   background: var(--surface-elevated);
-  box-shadow: var(--shadow);
+  box-shadow: var(--e3), var(--edge);
   animation: fade-in .16s ease-out both;
 }
 
@@ -982,8 +982,8 @@
   padding: .5rem .6rem;
   border-radius: var(--stats-radius);
   background: var(--surface-elevated);
-  border: 1px solid var(--border);
-  box-shadow: var(--shadow);
+  border: 0;
+  box-shadow: var(--e3);
   font-size: var(--fs-2xs);
   opacity: 0;
   visibility: hidden;
@@ -2860,6 +2860,9 @@
   height: 10px;
   border-radius: 3px;
   background: var(--surface-soft);
+  /* Pista = carril hundido (ver `--sunk`). Se le da a esta y no a las de 3-4 px del panel: en una barra fina,
+     una sombra interior de dos píxeles se come la pista entera y lo único que se ve es suciedad. */
+  box-shadow: var(--sunk);
 }
 
 .traits-bar i {

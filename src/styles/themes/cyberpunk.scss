@@ -219,8 +219,9 @@
 :root[data-palette="cyberpunk"][data-theme="light"] .scope-tabs > .btn-toggle:first-child:not(.active) { --hud-edge: rgba(0, 137, 163, .95); }
 :root[data-palette="cyberpunk"] .btn-accent,
 :root[data-palette="cyberpunk"] .btn-steam,
+:root[data-palette="cyberpunk"] .btn-primary,
 :root[data-palette="cyberpunk"] .btn.is-active,
-:root[data-palette="cyberpunk"] .btn-toggle.active { background: var(--cyber-yellow) !important; color: #08090d !important; border-color: var(--cyber-yellow) !important; }
+:root[data-palette="cyberpunk"] .btn-toggle.active { background: var(--cyber-yellow) !important; color: var(--on-accent) !important; border-color: var(--cyber-yellow) !important; }
 /* Los botones secundarios "encendidos" —toggle activo (.is-active) y de acento (.btn-accent: Ver perfil/perfiles,
    Añadir amigo, etc.)— NO deben volverse amarillos: el relleno amarillo de §5 chocaba con la doble capa cian y
    asomaba un triángulo por la muesca (se veía roto). Se quedan en la familia HUD pero AZUL ELÉCTRICO "encendido":

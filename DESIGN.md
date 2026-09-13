@@ -165,19 +165,30 @@ Doce pasos, razón ≈1,08 en la zona de interfaz. Multiplicados por `--font-sca
 ## 6 · Elevación y profundidad
 
 Cuatro alturas, cada una con **dos sombras**: contacto de 1 px + difusa. Más `--edge`, el canto de luz que
-separa una superficie elevada de otra simplemente más clara.
+separa una superficie elevada de otra simplemente más clara, y `--sunk`, que es el canto al revés.
 
 | Ficha | Para |
 |---|---|
-| `--e1` | Filas, chips, campos |
-| `--e2` | Tarjetas, botón primario |
-| `--e3` | Menús, tooltips, avisos (alias histórico: `--shadow`) |
-| `--e4` | Modales y ruleta |
+| `--e1` | Filas, chips, tarjetas de contenido (ajustes, legal, admin) |
+| `--e2` | Tarjetas que mandan, toolbar, tabla, botón primario |
+| `--e3` | Lo que flota **sobre** el contenido: menús, tooltips, avisos, banner, lanzadores (alias histórico: `--shadow`) |
+| `--e4` | Modales, diálogo de confirmación y ruleta |
+| `--edge` | Canto de luz. Acompaña a la altura: `var(--e2), var(--edge)` |
+| `--sunk` | **El hueco.** Lo que se RELLENA: campos, pistas de interruptor, carriles |
 | `--glow-accent` `--glow-accent-strong` `--glow-accent-soft` `--glow-accent-halo` `--glow-accent-lift` | Halos del acento: **tiñen, no levantan** |
 | `--ring-accent` `--ring-accent-soft` | Anillos de selección dibujados con sombra |
 
+**Lo que se pulsa sube y lo que se rellena se hunde.** Es la mitad de la profundidad: un campo con `--sunk` y un
+botón con `--e2` son la misma caja con la luz al revés, y eso dice de un vistazo dónde se escribe. En foco el
+hueco no se sustituye —el anillo se **suma**—, o el campo se aplana justo al usarlo.
+
+**El borde se gasta por papel**, igual que la sombra: marco entero (`--border`) para lo que no tiene altura;
+filete (`--hair`) para delimitar una tarjeta que ya se sostiene sola y para separar filas sin dibujar una reja;
+y **ningún borde** para lo que flota a `--e3`/`--e4`, donde lo que separa la pieza del fondo es su sombra.
+
 `--shadow-rgb` es el color de la sombra: negro en oscuro, `--tint-rgb` del tema en claro.
-Las sombras de los cinco skins (`themes/*.scss`) **no** son elevación: son dirección de arte y se quedan como están.
+Las sombras de los cinco skins (`themes/*.scss`) **no** son elevación: son dirección de arte y se quedan como
+están — y sus bordes tampoco, que ahí el marco de oro o el filete cian **son** la identidad.
 
 ---
 

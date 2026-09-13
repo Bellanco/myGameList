@@ -17,9 +17,9 @@
 .admin-card {
   width: 100%;
   background: var(--surface);
-  border: 1px solid var(--border);
+  border: 1px solid var(--hair);
   border-radius: var(--radius-md);
-  box-shadow: var(--shadow);
+  box-shadow: var(--e1), var(--edge);
   padding: 1rem;
   display: flex;
   flex-direction: column;
@@ -449,11 +449,11 @@
      y `var(--bg)` a secas dejaba un rectángulo plano deslizándose sobre la trama que varias paletas pintan en el
      `body` (la rejilla de Portal, el barrido de Cyberpunk). Con superficie, filete y sombra se lee como una barra
      que flota encima —el mismo recurso que `.hub-feed-day-header`—, y la forma la sigue poniendo cada tema:
-     aquí solo hay fichas (`--surface`, `--border`, `--radius-md`, `--shadow`). */
+     aquí solo hay fichas (`--surface`, `--border`, `--radius-md`, `--e3`). */
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
-  box-shadow: var(--shadow);
+  box-shadow: var(--e3), var(--edge);
 }
 .admin-ach-filter { flex: 1 1 14rem; min-width: 0; display: block; }
 .admin-ach-filter input {

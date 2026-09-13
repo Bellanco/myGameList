@@ -20,7 +20,7 @@
   color: #fff;
   background: var(--surface-elevated);
   border: 1px solid var(--border);
-  box-shadow: var(--shadow);
+  box-shadow: var(--e3), var(--edge);
   cursor: pointer;
   transition: transform .16s ease, background .2s, border-color .2s, box-shadow .2s;
 }
