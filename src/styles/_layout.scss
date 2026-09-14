@@ -1425,13 +1425,20 @@
    Solo a partir de 700 px. Por debajo no sobra ancho para regalar cincuenta píxeles a un lado, así que la
    foto se queda dentro, en la cabecera, como estaba. */
 @media (min-width: 700px) {
-  .hub-feed-activity-item.is-review,
-  .hub-feed-activity-item.is-recommendation {
+  /* EL SANGRADO VA CON EL AVATAR, y por eso lo pide con `:has()` en vez de mirar la clase de la tarjeta.
+     `.is-review` no significa «esto está en el feed»: la MISMA tarjeta se reutiliza en la lista de reseñas de
+     un perfil y en la rejilla de «Análisis relacionados», donde no hay ninguna foto colgando. Allí el sangrado
+     no dejaba hueco a nada —solo corría la tarjeta 51 px a la derecha— y en la rejilla eso se veía: cada
+     tarjeta ocupa el ancho de su columna, así que las cuatro salían desplazadas y la última se iba FUERA del
+     contenedor por el lado. Con el `:has()` el hueco existe si y solo si hay algo que meter en él, en los ocho
+     temas y en cualquier sitio nuevo donde se reutilice la tarjeta. */
+  .hub-feed-activity-item.is-review:has(> .hub-feed-card-head > .hub-avatar-link),
+  .hub-feed-activity-item.is-recommendation:has(> .hub-feed-card-head > .hub-avatar-link) {
     overflow: visible;
     margin-left: 3.2rem;
   }
-  .hub-feed-activity-item.is-review.is-own-activity,
-  .hub-feed-activity-item.is-recommendation.is-own-activity {
+  .hub-feed-activity-item.is-review.is-own-activity:has(> .hub-feed-card-head > .hub-avatar-link),
+  .hub-feed-activity-item.is-recommendation.is-own-activity:has(> .hub-feed-card-head > .hub-avatar-link) {
     margin-left: 0;
     margin-right: 3.2rem;
   }

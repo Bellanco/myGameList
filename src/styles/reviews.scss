@@ -170,6 +170,21 @@
 
 .hub-related-entry .hub-review-entry-head { gap: .1rem; }
 
+/* EN EL EPÍLOGO EL TÍTULO ES UN TÍTULO, NO UN CARTEL. `.hub-review-game` se estira a todo el ancho de su
+   cabecera (`align-self: stretch`, arriba), que es lo que se quiere en una tarjeta ancha —el título manda—; pero
+   varios temas visten esta misma pieza con el traje de su chip de juego (la pegatina cian de «Inserte moneda»,
+   el cartel de pergamino de «Plata y acero»: cada uno en su §6), y un chip estirado dentro de una tarjeta de
+   17 rem deja de leerse como nombre y pasa a ser una BARRA de color de lado a lado. Aquí la etiqueta mide lo que
+   mide el nombre y se acabó.
+   El `:root` y el `h5` del selector no son adorno: los temas llegan a (0,3,0) desde
+   `:root[data-palette="…"] .hub-review-game`, así que hay que sumar (0,3,1) para ganarles — el mismo truco, y por
+   el mismo motivo, que `.hub-review-detail-game` unas líneas más arriba. Lo demás se les deja pasar a propósito:
+   el color, el relleno y la forma son cosa del tema; esta regla solo discute el ANCHO. */
+:root .hub-related-entry h5.hub-review-game {
+  align-self: start;
+  max-width: 100%;
+}
+
 .hub-related-entry .hub-review-game {
   font-size: var(--fs-sm);
   line-height: 1.25;
