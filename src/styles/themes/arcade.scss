@@ -512,6 +512,48 @@
 :root[data-palette="arcade"][data-theme="light"] .star-full,
 :root[data-palette="arcade"][data-theme="light"] .score-ring-num { filter: none; }
 
+/* ── §9b · LA NOTA 0–100 = EL MEDIDOR DE LA MÁQUINA ───────────────────────────────────────────────
+   Era la única pieza que se había quedado con el acabado de la casa: un degradado CONTINUO, un aro
+   fino y un disco del color del panel. Justo las tres cosas que este tema rechaza en su primera regla
+   —nada translúcido, nada difuminado, el relieve se dibuja con relleno sólido, filete de tinta y
+   sombra dura—. Aquí pasa a ser el medidor de energía de un mueble recreativo:
+
+     · EL ARCO SE PARTE EN BLOQUES. El `conic-gradient` de la hoja base sigue diciendo la nota —no se
+       toca, que es quien sabe el porcentaje—, y encima va un `repeating-conic-gradient` de rayas de
+       TINTA que lo trocea en veinte segmentos. No se pinta el valor dos veces: se le pone la rejilla.
+     · FILETE DE TINTA Y SOMBRA DURA, las dos herramientas del tema, las mismas de la tecla y la
+       pegatina. El filete crece hacia AFUERA (ver abajo), para no robarle sitio a la cifra.
+     · LA CIFRA, EN LA MONO DEL CARTEL: esto es un marcador, no un texto corrido.
+
+   EL GROSOR DEL ARO ES EL MISMO PARA TODAS LAS NOTAS, y se probó a que no lo fuera —que engordara con
+   el número, para decirlo también por grosor—. No sale: el aro se come el disco de dentro y un «100»,
+   que son tres dígitos, se sube encima del arco en los dos tamaños pequeños (le faltan 2,7 px en el
+   aro de 1,7 rem de la tarjeta del móvil y 2,3 px en el de 2,35 rem). Cabía bajando el filete y
+   encogiendo la cifra, pero eso es pagar dos piezas de la identidad del tema por una señal que ya dan
+   el arco y el color.
+
+   EL «¿?» SE QUEDA FUERA (`:not(.is-noscore)`): eso no es una nota baja, es la ausencia de nota, y un
+   medidor a cero diría lo que no es. ── */
+:root[data-palette="arcade"] .score-ring:not(.is-noscore),
+:root[data-palette="arcade"] .score-dial {
+  background-image:
+    repeating-conic-gradient(var(--arc-ink) 0 3deg, transparent 3deg 18deg),
+    conic-gradient(hsl(var(--score-hue, 0) 58% var(--acc-l)) calc(var(--score-pct, 0) * 1%), var(--score-track) 0);
+  /* EL FILETE VA POR FUERA, con `box-shadow` y no con `border`. Un borde se come el hueco de dentro —la
+     hoja base coloca el disco a 3 px del canto— y con 2 px de tinta por lado un «100», que son tres
+     dígitos, se subía al aro en el tamaño pequeño de la tarjeta del móvil (le faltaban 1,7 px, medidos).
+     Como sombra de spread el filete crece hacia afuera, así que el arco conserva el ancho que le da la
+     hoja base y la cifra su hueco entero. La sombra dura pasa a `--arc-cast-hi` (5 px) justamente para
+     esto: descontados los 2 px del filete, asoma los 3 px de siempre, los mismos que la tecla. */
+  box-shadow: 0 0 0 2px var(--arc-ink), var(--arc-cast-hi);
+}
+:root[data-palette="arcade"] .score-ring-num,
+:root[data-palette="arcade"] .score-dial-num {
+  font-family: var(--font-mono);
+  font-weight: 400;
+  letter-spacing: .04em;
+}
+
 /* ── §10 · FAB (añadir y ruleta): el botón grande de la consola. Se queda redondo —es la bola del joystick—,
    pero con el filete de tinta y la misma sombra dura que las teclas, y se desplaza igual al pulsarlo. ── */
 :root[data-palette="arcade"] .fab,
