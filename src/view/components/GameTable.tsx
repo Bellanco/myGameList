@@ -1,4 +1,4 @@
-import { Fragment, memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { useVirtualizer, useWindowVirtualizer } from '@tanstack/react-virtual';
 import { COMMON_ICONS, TAB_ICONS } from '../../core/constants/icons';
 import { categoryToneStyle } from '../../core/constants/categoryTone';
@@ -11,6 +11,7 @@ import { resolveGrade } from '../../core/utils/scoreScale';
 import { Icon } from './Icon';
 import { ScoreDisplay } from './ScoreDisplay';
 import { useScoreScale } from '../hooks/useScoreScale';
+import { useListShape } from '../hooks/useListShape';
 
 interface GameTableProps {
   games: GameItem[];
@@ -46,9 +47,12 @@ interface GameTableProps {
 }
 
 interface VirtualRow {
-  type: 'main' | 'detail';
+  /** `main` y `detail` son las de la forma de lista; `grid` es UNA FILA ENTERA del mosaico (varias cajas). */
+  type: 'main' | 'detail' | 'grid';
   gameId: number;
   index: number;
+  /** Solo en `grid`: los juegos que van en esa fila de la rejilla, en orden. */
+  ids?: number[];
 }
 
 /* Alturas de partida del virtualizador, en píxeles. MEDIDAS SOBRE EL BUILD, no elegidas a ojo: 63 px la fila de
@@ -60,6 +64,13 @@ interface VirtualRow {
 const MAIN_ROW_ESTIMATE_PX = 63;
 const COMPACT_ROW_ESTIMATE_PX = 74;
 const DETAIL_ROW_ESTIMATE_PX = 320;
+/* Mosaico: alto de una FILA de cajas (no de una caja) y ancho mínimo de caja, que es lo que decide cuántas
+   caben. El ancho tiene que coincidir con el `minmax` de `.game-grid` en `_table.scss`: es la misma cuenta
+   hecha en los dos idiomas —aquí para agrupar los juegos, allí para repartirlos— y si discrepan, una fila
+   pintaría más cajas de las que caben y la rejilla se desbordaría a una segunda línea. */
+const GRID_ROW_ESTIMATE_PX = 150;
+const GRID_CARD_MIN_PX = 232;
+const GRID_GAP_PX = 10;
 
 /** `tone`: tiñe cada píldora con el color que le toca a su nombre en la rampa categórica (`categoryTone`).
     Solo lo piden los géneros; el resto de categorías ya tienen un color con significado propio (la plataforma
@@ -285,9 +296,49 @@ export const GameTable = memo(function GameTable({
     return 4;
   };
 
+  // Por debajo de `COMPACT_TABLE_MAX_WIDTH` no cabe una fila de tabla, se pinte lo que se pinte. Se calcula
+  // aquí y no con un listener propio porque este efecto ya escucha `resize` y observa el `<body>`: es
+  // exactamente el momento en el que puede haber cambiado.
+  const [narrowScreen, setNarrowScreen] = useState(() =>
+    typeof window !== 'undefined' && window.innerWidth <= COMPACT_TABLE_MAX_WIDTH,
+  );
+
+  /* LA FORMA DEL LISTADO (F5). `shape` es lo que ha elegido quien mira —renglones o mosaico— y `narrowScreen`
+     lo que permite la pantalla. De los dos sale `cards`: si la forma es de renglones, la fila ES una tarjeta a
+     cualquier ancho; y por debajo del umbral lo es igualmente, porque ahí no caben columnas ni queriendo.
+     Antes esto lo decidía SOLO el ancho, y en dos idiomas a la vez: este componente (para estimar la altura de
+     la fila) y una media query de `_table.scss` (para ocultar las columnas). Ahora lo decide un sitio y el CSS
+     obedece a la clase `is-cards`, que es lo que permite que la forma sea una preferencia y no un breakpoint. */
+  const { shape } = useListShape();
+  const cards = shape === 'list' || narrowScreen;
+  /* COLUMNAS DEL MOSAICO. Se mide el contenedor y se divide, que es la misma cuenta que hará el `minmax` del
+     CSS; hacerlo aquí es lo que permite que el virtualizador siga midiendo FILAS de verdad (una fila virtual =
+     una fila de cajas) en vez de creer que cada caja va en su propio renglón, que es lo que descuadraría la
+     barra de desplazamiento en una biblioteca de mil juegos. */
+  const [gridWidth, setGridWidth] = useState(0);
+  const gridColumns = Math.max(1, Math.floor((gridWidth + GRID_GAP_PX) / (GRID_CARD_MIN_PX + GRID_GAP_PX)) || 1);
+  /* Y dentro de la forma de tarjeta, dos versiones del MISMO renglón: la ancha lleva los mismos datos que
+     llevaban las columnas —no un resumen—, porque hay sitio de sobra; la estrecha se queda con el meta
+     compacto de siempre (primer valor + «+N» repartido en columnas fijas), que es lo único que cabe en un
+     teléfono. Se elige aquí y no con CSS para no pintar los dos y dejar uno oculto: son bastantes nodos por
+     fila y esta lista puede tener mil y pico. */
+  const wideRow = cards && !narrowScreen;
+
   // Create virtual rows (main + optionally detail rows)
   const virtualRows = useMemo(() => {
     const rows: VirtualRow[] = [];
+    if (shape === 'grid' && !narrowScreen) {
+      /* MOSAICO: los juegos se reparten en filas de `gridColumns` cajas y cada fila es UNA fila virtual. El
+         detalle abierto se cuela justo detrás de la fila que contiene su caja —no detrás de la caja—, que es
+         donde el ojo lo espera: se despliega a lo ancho, debajo del renglón de cajas que se ha pulsado. */
+      for (let i = 0; i < games.length; i += gridColumns) {
+        const bloque = games.slice(i, i + gridColumns);
+        rows.push({ type: 'grid', gameId: bloque[0].id, index: i, ids: bloque.map((g) => g.id) });
+        const abierto = bloque.find((g) => g.id === expandedId);
+        if (abierto) rows.push({ type: 'detail', gameId: abierto.id, index: i });
+      }
+      return rows;
+    }
     games.forEach((game, index) => {
       rows.push({ type: 'main', gameId: game.id, index });
       if (expandedId === game.id) {
@@ -295,7 +346,7 @@ export const GameTable = memo(function GameTable({
       }
     });
     return rows;
-  }, [games, expandedId]);
+  }, [games, expandedId, shape, narrowScreen, gridColumns]);
 
   const parentRef = useRef<HTMLDivElement>(null);
 
@@ -317,17 +368,12 @@ export const GameTable = memo(function GameTable({
   // coordenadas de página, así que sin esto sus posiciones vendrían corridas por la altura de lo que hay encima
   // (barra de pestañas, toolbar, filtros abiertos…).
   const [scrollMargin, setScrollMargin] = useState(0);
-  // Por debajo de `COMPACT_TABLE_MAX_WIDTH` la fila deja de ser una fila de tabla y pasa a tarjeta (chevron +
-  // meta apilado), así que mide bastante más alto. Se calcula aquí y no con un listener propio porque este
-  // efecto ya escucha `resize` y observa el `<body>`: es exactamente el momento en el que puede haber cambiado.
-  const [compactRows, setCompactRows] = useState(() =>
-    typeof window !== 'undefined' && window.innerWidth <= COMPACT_TABLE_MAX_WIDTH,
-  );
   useLayoutEffect(() => {
     const update = () => {
-      setCompactRows(window.innerWidth <= COMPACT_TABLE_MAX_WIDTH);
+      setNarrowScreen(window.innerWidth <= COMPACT_TABLE_MAX_WIDTH);
       const el = parentRef.current;
       if (!el) return;
+      setGridWidth(el.clientWidth);
       setPageScrolls(el.scrollHeight <= el.clientHeight + 1);
       setScrollMargin(el.getBoundingClientRect().top + window.scrollY);
     };
@@ -371,10 +417,12 @@ export const GameTable = memo(function GameTable({
     (index: number) =>
       virtualRows[index]?.type === 'detail'
         ? DETAIL_ROW_ESTIMATE_PX
-        : compactRows
-          ? COMPACT_ROW_ESTIMATE_PX
-          : MAIN_ROW_ESTIMATE_PX,
-    [virtualRows, compactRows],
+        : virtualRows[index]?.type === 'grid'
+          ? GRID_ROW_ESTIMATE_PX
+          : cards
+            ? COMPACT_ROW_ESTIMATE_PX
+            : MAIN_ROW_ESTIMATE_PX,
+    [virtualRows, cards],
   );
   const measureElement = useCallback((element: Element) => element.getBoundingClientRect().height, []);
 
@@ -404,13 +452,13 @@ export const GameTable = memo(function GameTable({
   // La guarda NO es defensiva de más: `measure()` tira las medidas ya tomadas, y en el montaje eso llega justo
   // después de que se midan las primeras filas. El resultado era un reinicio gratuito con la lista ya pintada
   // (CLS de 0,10 en una biblioteca de 1.500 juegos). Aquí solo interesa el CAMBIO de umbral, nunca el arranque.
-  const lastCompactRef = useRef(compactRows);
+  const lastCompactRef = useRef(cards);
   useLayoutEffect(() => {
-    if (lastCompactRef.current === compactRows) return;
-    lastCompactRef.current = compactRows;
+    if (lastCompactRef.current === cards) return;
+    lastCompactRef.current = cards;
     elementVirtualizer.measure();
     windowVirtualizer.measure();
-  }, [compactRows, elementVirtualizer, windowVirtualizer]);
+  }, [cards, elementVirtualizer, windowVirtualizer]);
 
   const useWindowScroller = pageScrolls && virtualRows.length >= WINDOW_VIRTUALIZE_MIN_ROWS;
   const virtualize = !pageScrolls || useWindowScroller;
@@ -448,12 +496,53 @@ export const GameTable = memo(function GameTable({
   const scoreScale = useScoreScale();
   const tableClass = [
     `list-${currentTab}`,
+    // La FORMA, decidida arriba: con `is-cards` cada fila es una tarjeta y las columnas desaparecen; con
+    // `is-grid`, cada fila es un renglón de cajas.
+    shape === 'grid' && !narrowScreen ? 'is-grid' : '',
+    cards ? 'is-cards' : '',
     hasScoreColumn ? 'meta-score' : '',
     scoreScale === 'grade' ? 'meta-grade' : '',
   ].filter(Boolean).join(' ');
 
+  /* EL ORDEN, fuera de las cabeceras. En las formas nuevas no hay fila de cabeceras que pulsar —es justo lo
+     que las hacía parecer una hoja de cálculo—, así que el orden se dice con palabras: qué columna y en qué
+     sentido. Se pinta solo si esta lista se puede ordenar (el listado del hub social llega sin `onSort`). */
+  const sortableColumns = tableHeaders
+    .map((header) => ({ header, key: SORT_COLUMN[header] }))
+    .filter((c): c is { header: string; key: string } => Boolean(c.key));
+  const showSortBar = Boolean(onSort) && sortableColumns.length > 0 && (cards || shape === 'grid');
+
   return (
     <div className="table-wrap" ref={parentRef}>
+      {showSortBar ? (
+        <div className="list-sort">
+          <label className="list-sort-label" htmlFor={`list-sort-${currentTab}`}>{UI_MESSAGES.toolbar.sortLabel}</label>
+          <select
+            id={`list-sort-${currentTab}`}
+            className="input-base list-sort-select"
+            value={sortableColumns.find((c) => c.key === sort?.col)?.key ?? sortableColumns[0].key}
+            onChange={(event) => {
+              const elegida = sortableColumns.find((c) => c.key === event.target.value);
+              if (elegida && elegida.key !== sort?.col) onSort?.(currentTab, elegida.key);
+            }}
+          >
+            {sortableColumns.map(({ header, key }) => (
+              <option key={key} value={key}>{header}</option>
+            ))}
+          </select>
+          {/* La dirección es un botón aparte y no una opción más del desplegable: se cambia mucho más que la
+              columna, y así se alterna de una pulsada. */}
+          <button
+            type="button"
+            className={`btn-icon list-sort-dir${sort?.asc ? ' is-asc' : ''}`}
+            title={UI_MESSAGES.toolbar.sortDirection(Boolean(sort?.asc))}
+            aria-label={UI_MESSAGES.toolbar.sortDirection(Boolean(sort?.asc))}
+            onClick={() => { if (sort?.col) onSort?.(currentTab, sort.col); }}
+          >
+            <span className="list-sort-caret" aria-hidden="true" />
+          </button>
+        </div>
+      ) : null}
       {/* La clase de lista la usa el CSS para la escalera de revelado del meta compacto: cada pestaña tiene un
           juego de datos distinto (En curso no lleva nota ni año), así que la píldora que llena la línea en un
           móvil no es la misma en todas. */}
@@ -569,6 +658,61 @@ export const GameTable = memo(function GameTable({
                 const game = gameMap.get(row.gameId);
                 if (!game) return null;
 
+                if (row.type === 'grid') {
+                  /* UNA FILA DEL MOSAICO. Va dentro de una celda con `colSpan`, así que la tabla sigue siendo
+                     una tabla —y el virtualizador sigue midiendo filas— mientras que lo que se ve es una
+                     rejilla. Las cajas se reparten con el mismo mínimo que usa la cuenta de columnas. */
+                  const bloque = (row.ids ?? []).map((id) => gameMap.get(id)).filter(Boolean) as GameItem[];
+                  return (
+                    <tr
+                      key={`grid-${row.gameId}`}
+                      data-index={rowIndex}
+                      ref={virtualize ? virtualizer.measureElement : undefined}
+                      className="grid-row"
+                    >
+                      <td colSpan={getColSpan(currentTab)}>
+                        <div className="game-grid" style={{ '--grid-cols': gridColumns } as CSSProperties}>
+                          {bloque.map((game) => {
+                            const expanded = expandedId === game.id;
+                            return (
+                              <article
+                                key={game.id}
+                                className={`game-card${expanded ? ' is-open' : ''}${game.id === recentlyChangedId ? ' just-changed' : ''}${game.id === removingId ? ' is-leaving' : ''}`}
+                              >
+                                {/* Toda la caja abre el detalle; el botón cubre su superficie y se queda con el
+                                    foco y el nombre accesible, igual que en el bloque de reseñas del hub. */}
+                                <button
+                                  type="button"
+                                  className="game-card-open"
+                                  aria-expanded={expanded}
+                                  aria-controls={`game-detail-${game.id}`}
+                                  onClick={() => onExpandedChange(expanded ? null : game.id)}
+                                  onDoubleClick={() => { if (!readOnly) onEdit(currentTab, game.id); }}
+                                >
+                                  <span className="sr-only">{game.name}</span>
+                                </button>
+                                <header className="game-card-head">
+                                  <h3 className="game-card-name" title={game.name}>{game.name}</h3>
+                                  {(currentTab === 'c' || currentTab === 'p') || (showShameScore && hasScore(game)) ? (
+                                    <span className="game-card-score"><ScoreDisplay game={game} /></span>
+                                  ) : null}
+                                </header>
+                                <div className="game-card-tags">
+                                  {renderTags(game.genres, 'chip-genre', 2, true)}
+                                  {renderTags(game.platforms, 'chip-plat', 1)}
+                                  {currentTab === 'c' && showYears && game.years?.length
+                                    ? renderTags(yearsDesc(game.years), 'chip-generic', 1)
+                                    : null}
+                                </div>
+                              </article>
+                            );
+                          })}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                }
+
                 if (row.type === 'main') {
                   const expanded = expandedId === game.id;
                   const detailId = `game-detail-${game.id}`;
@@ -610,13 +754,40 @@ export const GameTable = memo(function GameTable({
                           <span className="row-chevron" aria-hidden="true" />
                           <span className="row-toggle-body">
                             <strong className="row-name">{game.name}</strong>
+                            {wideRow ? (
+                              /* LOS MISMOS DATOS QUE LAS COLUMNAS, en el orden en que estaban: lo que se ve
+                                 aquí es lo que se veía en la tabla, con sus mismas etiquetas y su mismo tope
+                                 de chips. Cambia la FORMA, no lo que se cuenta. */
+                              <span className="row-data">
+                                {currentTab === 'c' && showYears ? (
+                                  <span className="row-data-item">{renderTags(yearsDesc(game.years), 'chip-generic', MAX_ROW_CHIPS)}</span>
+                                ) : null}
+                                <span className="row-data-item">{renderTags(game.platforms, 'chip-plat', MAX_ROW_CHIPS)}</span>
+                                <span className="row-data-item">{renderTags(game.genres, 'chip-genre', MAX_ROW_CHIPS, true)}</span>
+                                {(currentTab === 'c' || currentTab === 'v' || currentTab === 'e') ? (
+                                  <span className="row-data-item">{renderTags(game.strengths || [], 'chip-pf', MAX_ROW_CHIPS)}</span>
+                                ) : null}
+                                {(currentTab === 'c' || currentTab === 'e') ? (
+                                  <span className="row-data-item">{renderTags(game.weaknesses || [], 'chip-pd', MAX_ROW_CHIPS)}</span>
+                                ) : null}
+                                {currentTab === 'v' ? (
+                                  <span className="row-data-item">{renderTags(game.reasons || [], 'chip-pd', MAX_ROW_CHIPS)}</span>
+                                ) : null}
+                                <span className="row-data-end">
+                                  {currentTab === 'c' && showReplayable ? renderBooleanBadge('replayable', Boolean(game.replayable)) : null}
+                                  {currentTab === 'v' && showRetry ? renderBooleanBadge('retry', Boolean(game.retry)) : null}
+                                  {(currentTab === 'c' || currentTab === 'p') ? <ScoreDisplay game={game} /> : null}
+                                  {showShameScore && hasScore(game) ? <ScoreDisplay game={game} /> : null}
+                                </span>
+                              </span>
+                            ) : null}
                             {/* Meta compacto solo en vista colapsada (móvil/tablet); revela categorías
                                 según el ancho disponible vía container queries. A11y-4: ya NO va
                                 `aria-hidden`. Lo llevaba con el razonamiento de que "la info ya está en las
                                 columnas", que es cierto en escritorio y falso en móvil: ahí las columnas son
                                 `display:none` y esto es lo único que queda, así que ocultarlo dejaba a un
                                 lector de pantalla sin la puntuación ni las plataformas. */}
-                            <span className="row-meta">
+                            <span className="row-meta" hidden={wideRow}>
                               {/* En móvil este meta es la ÚNICA presentación de la nota (las columnas son
                                   display:none), así que la vergüenza entra aquí con el mismo criterio que en su
                                   columna: solo si el juego tiene nota. */}

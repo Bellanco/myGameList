@@ -7,6 +7,33 @@
   position: relative;
 }
 .toolbar-top { display: flex; align-items: center; gap: .6rem; width: 100%; }
+
+/* F5 — CONMUTADOR DE FORMA (lista / cajas). Grupo segmentado: dos botones pegados dentro de una misma caja, que
+   es como se lee «esto son dos maneras de lo mismo» y no «dos acciones sueltas». El activo se rellena con el
+   velo del acento; el otro se queda en tinta atenuada, sin borde propio que compita con el del grupo. */
+.shape-switch {
+  display: flex;
+  flex: 0 0 auto;
+  gap: .15rem;
+  padding: .2rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+}
+.shape-switch-btn {
+  width: 2.1rem;
+  height: 2.1rem;
+  border: 0;
+  background: transparent;
+  color: var(--text-dim);
+  border-radius: calc(var(--radius-sm) - 2px);
+}
+.shape-switch-btn:hover { color: var(--text); background: var(--overlay-hover); }
+.shape-switch-btn.is-on {
+  background: var(--steam-soft);
+  color: var(--fg-link);
+}
+.shape-switch-btn .ui-icon { width: var(--ico-md); height: var(--ico-md); }
 .search-wrap { position: relative; flex: 1 1 auto; min-width: 0; width: 100%; }
 /* LO QUE SE RELLENA SE HUNDE. El campo pide `--sunk` y el botón `--e2`: la misma caja con la luz al revés,
    que es lo que dice de un vistazo dónde se escribe y dónde se pulsa. Antes los dos eran una caja plana con

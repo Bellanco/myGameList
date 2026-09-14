@@ -6,7 +6,7 @@
 //
 // La lógica de aplicación debe seguir siendo IDÉNTICA a la de `public/theme-init.js`, que corre antes del primer
 // render para evitar el flash de tema/paleta/caja.
-import { EFFECTS_KEY, PALETTE_KEY, STEAM_BUTTON_KEY, THEME_KEY, UPPERCASE_KEY } from '../../core/constants/storageKeys';
+import { EFFECTS_KEY, LIST_SHAPE_KEY, PALETTE_KEY, STEAM_BUTTON_KEY, THEME_KEY, UPPERCASE_KEY } from '../../core/constants/storageKeys';
 import { paletteBg, parsePaletteId, type PaletteId } from '../../core/constants/palettes';
 import { createPreferenceStore, hydratePreferencesFromCloud } from '../../model/repository/preferenceStore';
 import { loadPaletteSkin } from './paletteSkin';
@@ -106,6 +106,27 @@ export const effectsPreference = createPreferenceStore<boolean>({
   cloudField: 'effects',
   fromCloud: onOff.fromCloud,
   applyToDom: (on) => toggleRootFlag('data-effects', on),
+});
+
+/**
+ * F5 — FORMA DEL LISTADO. Dos maneras de mirar la misma biblioteca:
+ *   · `list`  — renglones: un juego por línea, con el nombre de titular y sus datos debajo. Para recorrer
+ *               mucho y buscar uno.
+ *   · `grid`  — mosaico: cajas en rejilla, con la nota de protagonista. Para pasear por la colección.
+ *
+ * Se escribe en `<html>` con `data-list-shape` porque hay CSS que cuelga de ella fuera del listado (la barra de
+ * herramientas marca el botón activo), y porque así un tema puede vestir cada forma a su manera sin que ningún
+ * componente le pase nada.
+ */
+export type ListShape = 'list' | 'grid';
+
+export const listShapePreference = createPreferenceStore<ListShape>({
+  key: LIST_SHAPE_KEY,
+  parse: (raw) => (raw === 'grid' ? 'grid' : 'list'),
+  serialize: (shape) => shape,
+  cloudField: 'listShape',
+  fromCloud: (value) => (value === 'grid' || value === 'list' ? value : null),
+  applyToDom: (shape) => document.documentElement.setAttribute('data-list-shape', shape),
 });
 
 /**

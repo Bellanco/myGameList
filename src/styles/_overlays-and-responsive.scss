@@ -317,22 +317,8 @@ body.compact-filters .filters-row.open .btn-toggle { justify-content: center; al
     scrollbar-width: none;
   }
 
-  table {
-    min-width: 0;
-    table-layout: fixed;
-  }
-
-  thead th:not(:first-child) {
-    display: none !important;
-  }
-
-  tbody tr.main-row td:not(:first-child) {
-    display: none !important;
-  }
-
-  tbody tr.main-row td:first-child {
-    width: 100%;
-  }
+  /* El colapso de la tabla a tarjeta ya no se decide aquí: lo pone `table.is-cards` (ver `_table.scss`), que
+     activa el propio listado por preferencia de forma o por pantalla estrecha. */
 
   /* El detalle sigue siendo FILA y CELDA de tabla de verdad: con `display: block` la celda deja de ser
      celda, su `colspan` se ignora y la caja anónima que la envuelve ocupa UNA sola columna. Al virtualizar,
@@ -412,10 +398,7 @@ body.compact-filters .filters-row.open .btn-toggle { justify-content: center; al
   .table-wrap::-webkit-scrollbar { display: block; height: 4px; width: 4px; }
   .table-wrap::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
 
-  table { min-width: 0; table-layout: fixed; }
-  thead th:not(:first-child) { display: none!important; }
-  tbody tr.main-row td:not(:first-child) { display: none!important; }
-  tbody tr.main-row td:first-child { width: 100%; }
+  /* Ídem: el colapso a tarjeta lo pone `table.is-cards` en `_table.scss`. */
   /* Ver la nota del bloque anterior: la celda del detalle NO puede pasar a `display: block` o pierde su
      `colspan` y se queda en el ancho de una columna. */
   tbody tr.detail-row td { padding: 0; border: none; }
