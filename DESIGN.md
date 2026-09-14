@@ -4,7 +4,7 @@ name: mis-listas-design
 description: |
   Biblioteca personal de videojuegos, 100 % tipográfica: no hay ni una carátula ni una imagen de juego
   en toda la aplicación, así que el color, la forma y la letra hacen el trabajo que en otras webs hace
-  el arte de portada. Seis TEMAS coexisten como mundos completos —uno neutro de casa y cinco tomados de
+  el arte de portada. Ocho TEMAS coexisten como mundos completos —uno neutro de casa y siete tomados de
   juegos— y cada uno redefine los mismos ~26 tokens de identidad, más su propia tipografía, sus radios y
   su ornamento. Cada tema tiene además modo claro y oscuro, y no son el mismo diseño invertido: en varios
   el claro cuenta otra historia (la Aperture antigua frente a la moderna, el códice frente al cogitador).
@@ -15,7 +15,8 @@ description: |
 
 # DESIGN.md — Mis Listas
 
-> Fuente de verdad del sistema visual. Los valores viven en `src/styles/_base.scss`; este documento explica
+> Fuente de verdad del sistema visual. Lo común vive en `src/styles/_base.scss` (medidas y derivaciones) y el
+> color de cada tema en `src/styles/themes/<id>/_colors.scss`; este documento explica
 > **qué significa cada uno y cuándo usarlo**. Si un valor de aquí no coincide con el código, manda el código.
 >
 > Formato inspirado en [VoltAgent/awesome-design-md](https://github.com/VoltAgent/awesome-design-md).
@@ -30,7 +31,7 @@ description: |
   color del **género** hace de arte de portada: es lo que llena la pantalla y lo que se reconoce de un vistazo.
 - **La identidad la pone el tema, no la aplicación.** Los componentes son neutros; el carácter entra por
   CAPA 2 (color) y CAPA 3 (letra, radios, texturas, ornamento).
-- **Oscuro por defecto**, claro de primera clase. Las doce combinaciones (6 temas × 2 modos) se auditan con
+- **Oscuro por defecto**, claro de primera clase. Las dieciséis combinaciones (8 temas × 2 modos) se auditan con
   axe en `tests/e2e/a11y.test.ts`: ninguna puede bajar de AA.
 
 ---
@@ -39,7 +40,7 @@ description: |
 
 Cada tema define los mismos tokens; el resto del sistema se deriva. **Nunca uses un hex en un componente.**
 
-### Identidad (CAPA 2 — uno por tema, `:root[data-palette="…"]`)
+### Identidad (CAPA 2 — uno por tema, en `styles/themes/<id>/_colors.scss`)
 
 | Ficha | Papel |
 |---|---|
@@ -61,6 +62,8 @@ Cada tema define los mismos tokens; el resto del sistema se deriva. **Nunca uses
 
 | id | Nombre | Acento oscuro | Fondo oscuro | Mundo |
 |---|---|---|---|---|
+| `forja` | **Forja y temple** (por defecto) | `#ff7a3c` metal al rojo | `#0f1315` | El taller. El único sin mundo detrás: es el que ve quien no ha elegido nada. Naranja que **rellena** y turquesa de temple (`#2fd6c0`) que **escribe y señala** |
+| `arcade` | Inserte moneda | `#b23cff` | `#150a24` | Sala de recreativos de los ochenta: violeta de neón, cian de tubo y rosa de pegatina |
 | `steam` | Clásico | `#d9a13a` latón | `#15100b` | Cuero, papel, cobre y latón, con la **pátina** (`#4ab396`) de segundo acento. El único sin juego detrás |
 | `persona` | Ladrones de corazones | `#ff1f3d` | `#0d0d0d` | Persona 5: rojo, negro, blanco y oro de calendario |
 | `portal` | Cámara de pruebas | `#29b6f6` | `#12171b` | Aperture moderna en oscuro; la antigua (pergamino) en claro |
@@ -91,12 +94,12 @@ grimdark   #e0a92b  #d8cfae  #e63b3b   (oro latón · hueso de pergamino · rojo
 
 ### Papeles (CAPA 0, reasignados por cada tema)
 
-| Ficha | Papel | Clásico | Cámara de pruebas | Sin futuro | Solo hay guerra | Sol y luna |
-|---|---|---|---|---|---|---|
-| `--font-body` | Cuerpo | DM Sans | Saira | Rajdhani | Chakra Petch | Pixelify Sans |
-| `--font-label` | Rótulos de interfaz | = cuerpo | **Oswald** | Rajdhani | Chakra Petch | = cuerpo |
-| `--font-display` | Titulares | = cuerpo | Oswald | Rajdhani | **UnifrakturCook** | = cuerpo |
-| `--font-mono` | Cifras y fechas | system mono | Share Tech Mono | Share Tech Mono | **VT323** | SoS Digits |
+| Ficha | Papel | Forja y temple | Clásico | Cámara de pruebas | Sin futuro | Solo hay guerra | Sol y luna |
+|---|---|---|---|---|---|---|---|
+| `--font-body` | Cuerpo | DM Sans | DM Sans | Saira | Rajdhani | Chakra Petch | Pixelify Sans |
+| `--font-label` | Rótulos de interfaz | **Saira** | = cuerpo | **Oswald** | Rajdhani | Chakra Petch | = cuerpo |
+| `--font-display` | Titulares | Saira | = cuerpo | Oswald | Rajdhani | **UnifrakturCook** | = cuerpo |
+| `--font-mono` | Cifras y fechas | **IBM Plex Mono** | system mono | Share Tech Mono | Share Tech Mono | **VT323** | SoS Digits |
 
 *Ladrones de corazones* no carga webfont: su display es `'Arial Black', Impact`.
 
@@ -188,7 +191,7 @@ filete (`--hair`) para delimitar una tarjeta que ya se sostiene sola y para sepa
 y **ningún borde** para lo que flota a `--e3`/`--e4`, donde lo que separa la pieza del fondo es su sombra.
 
 `--shadow-rgb` es el color de la sombra: negro en oscuro, `--tint-rgb` del tema en claro.
-Las sombras de los cinco skins (`themes/*.scss`) **no** son elevación: son dirección de arte y se quedan como
+Las sombras de los skins (`themes/<id>/<id>.scss`) **no** son elevación: son dirección de arte y se quedan como
 están — y sus bordes tampoco, que ahí el marco de oro o el filete cian **son** la identidad.
 
 ---
@@ -229,9 +232,12 @@ están — y sus bordes tampoco, que ahí el marco de oro o el filete cian **son
 
 Al construir interfaz en este proyecto:
 
-1. Lee `src/styles/_base.scss` de arriba abajo: CAPA 0 (medidas) y CAPA 1–2 (color) están comentadas con el porqué.
-2. Escribe el componente **neutro**, con fichas. Si necesita carácter propio de un tema, va en `themes/<id>.scss`.
-3. Añadir un tema es aditivo: `palettes.ts` + bloque en `_base.scss` + `BG` en `index.html`
+1. Lee `src/styles/_base.scss` (CAPA 0 y 1, lo común) y `src/styles/themes/_index.scss` (cómo se monta un tema):
+   los dos están comentados con el porqué.
+2. Escribe el componente **neutro**, con fichas. Si necesita carácter propio de un tema, va en `themes/<id>/<id>.scss`.
+3. Añadir un tema es aditivo y tiene receta propia: [`docs/temas.md`](docs/temas.md). En corto, una carpeta en
+   `styles/themes/`, dos ficheros en `core/constants/themes/` y cuatro índices; `tests/unit/themes.test.ts` avisa
+   de lo que falte
    (recalcula el hash CSP de `public/_headers`) + opcionalmente un skin.
 4. Verifica: `npm run build`, `npm test`, y `npx playwright test tests/e2e/a11y.test.ts` (96 recorridos).
 

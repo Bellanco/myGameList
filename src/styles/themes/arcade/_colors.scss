@@ -1,0 +1,114 @@
+/* COLOR de «Inserte moneda» (`data-palette="arcade"`) — CAPA 2 (identidad) y CAPA 2b (rampa categórica).
+   Va en el BUNDLE BASE: es lo que pinta el primer fotograma de quien tiene este tema elegido, así que no
+   puede llegar tarde. Lo que sí llega tarde —y por eso vive en el `<id>.scss` de al lado— es la CAPA 3.
+   Las reglas del sistema (qué token hay que definir y qué contraste le toca) están en `../_index.scss`. */
+
+/* ── Inserte moneda (arcade de los ochenta) — VIOLETA ELÉCTRICO sobre noche malva: la sala de recreativos y el
+   DeLorean. Un mundo de LUZ EMITIDA y no de luz reflejada: todo lo que manda brilla (acento violeta, cian de
+   tubo de neón y rosa chicle de pegatina), y el fondo es el violeta hondo del cartel de una máquina apagada.
+   Se separa de «Sin futuro» —el otro tema de neón— por TEMPERATURA y por forma: aquel es amarillo ácido sobre
+   negro azulado con marcos de HUD; este es violeta saturado sobre malva, con botón de consola y pegatina.
+   `--arc-cyan/pink/gold` y `--arc-line` (la rejilla del horizonte) son tokens extra del skin. ── */
+:root[data-palette="arcade"] {
+  --bg: #150a24;
+  --surface: #1f0f36;
+  --surface-hover: #2c1750;
+  --surface-elevated: #3a2066;
+  --border: #6134a3;
+  --text: #f8ecff;
+  --text-muted: #cfb1f2;
+  /* Pestaña INACTIVA sobre `--surface` (ver el bloque de CAPA 2): 5,21:1 en el peor de los cuatro fondos. */
+  --text-dim: #b394e0;
+  --steam: #b23cff;
+  --steam-hover: #d98cff;
+  --steam-rgb: 178,60,255;
+  --tab-active: #d98cff;
+  --success: #2ef0a6;
+  --success-rgb: 46,240,166;
+  --warn: #ffb43d;
+  --warn-rgb: 255,180,61;
+  --danger: #ff2e6a;
+  --danger-rgb: 255,46,106;
+  --star-empty: #40266e;
+  --star-full: #ffd24a;
+  --chip-plat-fg: #e3d3f9;
+  --chip-plat-bg: rgba(178,60,255,.14);
+  --chip-plat-border: rgba(216,140,255,.40);
+  --hub-text: #f8ecff;
+  --hub-text-muted: #c3a5e8;
+  /* El relleno del acento NO va a pelo en este tema: el skin pinta la acción principal con el violeta un paso
+     más hondo (#8f2be8 → #6d16b4), donde el blanco da 5,71:1. Sobre el violeta puro se quedaría en 4,21:1. */
+  --on-accent: #fff;
+  /* ESQUINA VIVA, que es la mitad de la identidad: el botón es una tecla de máquina recreativa, con bisel y
+     canto, no una pastilla. Los chips se salen de esta regla a propósito (son pegatinas ovaladas) y piden
+     `--radius-pill`, que no depende de la paleta. */
+  --radius-sm: 2px;
+  --radius-md: 3px;
+  --radius-lg: 4px;
+  /* EL CIAN ES EL SEÑALADOR. El violeta rellena (acción principal, pestaña activa) y el cian escribe y señala
+     (enlaces, anillo de foco): dos luces, dos trabajos, como el latón y la pátina de Clásico. Anillo de foco
+     8,95:1 sobre el peor de los cuatro fondos (le basta 3:1) y tinta de enlace 10:1. */
+  --arc-cyan: #22e5ff;
+  --arc-cyan-fg: #7df0ff;
+  --arc-pink: #ff3d9e;
+  --arc-gold: #ffd24a;
+  /* La rejilla del horizonte (fondo) y el filo de las pegatinas. */
+  --arc-line: rgba(178,60,255,.22);
+  --focus-ring: var(--arc-cyan);
+  --fg-link: var(--arc-cyan-fg);
+  /* El aviso del feed toma la forma de la pegatina: óvalo con filo. */
+  --sys-radius: var(--radius-pill); --sys-pad: .3rem .95rem;
+}
+/* CLARO = LA MISMA SALA CON LA LUZ DADA: lavanda de papel, violeta de tinta y el neón apagado a color plano.
+   No es el oscuro invertido: aquí no hay luz emitida, así que el brillo se cambia por TINTA SATURADA y por el
+   filo de la pegatina, que es lo que sobrevive sobre papel. */
+:root[data-palette="arcade"][data-theme="light"] {
+  --bg: #eee2fb;
+  --surface: #fdf9ff;
+  --surface-hover: #e0cff7;
+  --surface-elevated: #f7efff;
+  --border: #c2a4e8;
+  --text: #22093f;
+  --text-muted: #5b3d85;
+  --text-dim: #5f4289;
+  --steam: #7b1bd0;
+  --steam-hover: #5e0fa8;
+  --steam-rgb: 123,27,208;
+  --tab-active: #5e0fa8;
+  --success: #0f7a55;
+  --success-rgb: 15,122,85;
+  --warn: #9a5f06;
+  --warn-rgb: 154,95,6;
+  --danger: #c2004f;
+  --danger-rgb: 194,0,79;
+  --star-empty: #cdb6e8;
+  --star-full: #8a5a00;
+  --chip-plat-fg: #4a2b72;
+  --chip-plat-bg: rgba(123,27,208,.10);
+  --chip-plat-border: rgba(123,27,208,.34);
+  --hub-text: #22093f;
+  --hub-text-muted: #5b3d85;
+  --tint-rgb: 58,24,92;
+  --on-accent: #fff;
+  /* A LA LUZ EL CIAN NO SIRVE: como tinta sobre lavanda se queda en 1,8:1 y como anillo, invisible. Los dos
+     papeles vuelven al violeta profundo (5,95:1 de tinta; 5,90:1 de anillo), y el cian se queda solo donde es
+     GRÁFICO —el filo de las pegatinas y la rejilla—, un punto más hondo para que se vea sobre papel. */
+  --arc-cyan: #0a7f96;
+  --arc-cyan-fg: #6a12bc;
+  --arc-pink: #c2005f;
+  --arc-gold: #a06b00;
+  --arc-line: rgba(123,27,208,.16);
+  --focus-ring: #6b12bd;
+  --fg-link: #6a12bc;
+}
+/* arcade (Inserte moneda) — violeta de neón, cian de tubo, rosa chicle, oro de ficha, menta de fósforo, naranja de
+   atardecer y azul eléctrico: los siete colores de una máquina encendida */
+:root[data-palette="arcade"] {
+  --cat-1: #b23cff; --cat-2: #22e5ff; --cat-3: #ff3d9e; --cat-4: #ffd24a; --cat-5: #2ef0a6; --cat-6: #ff7a3d; --cat-7: #6d8cff;
+  --cat-1-fg: #d78bff; --cat-2-fg: #6ceeff; --cat-3-fg: #ff86c4; --cat-4-fg: #ffd96b; --cat-5-fg: #6ef5c0; --cat-6-fg: #ff9d6b; --cat-7-fg: #9fb2ff;
+}
+/* arcade (Inserte moneda) — los mismos siete a la luz: tinta saturada en vez de luz emitida */
+:root[data-palette="arcade"][data-theme="light"] {
+  --cat-1: #7b1bd0; --cat-2: #0a6f83; --cat-3: #b3005f; --cat-4: #8a5a00; --cat-5: #0f7a55; --cat-6: #a3450c; --cat-7: #2f42b5;
+  --cat-1-fg: #7515c7; --cat-2-fg: #065c6b; --cat-3-fg: #a8005a; --cat-4-fg: #74500a; --cat-5-fg: #0a6044; --cat-6-fg: #8a3a0c; --cat-7-fg: #2f42b5;
+}

@@ -1,6 +1,6 @@
 import { STATS_UI } from './statsLabels';
 import type { IconName } from './icons';
-import type { PaletteId } from './palettes';
+import { voiceByPalette } from './palettes';
 import { TAB_IDS, type TabId } from '../../model/types/game';
 import type { ImportField } from '../../model/types/import';
 
@@ -441,43 +441,18 @@ export type StatsLabels = WidenText<typeof STATS_UI>;
 // Cada tema cuenta el fallo en su propio idioma, igual que los bloques de estadísticas (la tarta de Portal en
 // «Géneros más jugados», los contratos de Cuphead en «Completados y abandonados», el corazón robado de Persona
 // en el podio): el guiño va INTEGRADO en la frase, sin comillas ni atribución, y la línea de debajo dice
-// siempre qué hacer. El tema por defecto se queda con el de Portal, que es el que mejor describe un error.
-const APP_ERROR_LEAD: Record<PaletteId, string> = {
-  steam: 'Esto no estaba en las pruebas.',
-  // Persona 5: los Palacios se desmoronan en cuanto les robas el Tesoro.
-  persona: 'El Palacio se ha derrumbado.',
-  // Portal: «sigues vivo» es con lo que GLaDOS cierra las pruebas, así que aquí le toca a la página no estarlo.
-  portal: 'Sigues vivo. La página no.',
-  // Cyberpunk 2077: en Night City todo pasa por un implante, y todo implante acaba fallando.
-  cyberpunk: 'Fallo en el implante.',
-  // Warhammer 40.000: el Omnissiah es la deidad máquina del Adeptus Mechanicus, a la que se le reza para que
-  // los aparatos funcionen.
-  grimdark: 'El Omnissiah no responde.',
-  // Sea of Stars: los Hijos del Solsticio y el eclipse que se lo traga todo.
-  seaofstars: 'El eclipse se lo ha tragado.',
-  // Arcade de los ochenta: la máquina se ha comido la ficha y la pantalla se ha quedado en negro.
-  arcade: 'La máquina se ha tragado la ficha.',
-};
+// siempre qué hacer.
+//
+// LAS FRASES NO ESTÁN AQUÍ: cada una vive en la ficha de su tema (`constants/themes/<id>.ts`, campo `voice`),
+// que es lo que hace que añadir un tema sea tocar UN fichero y no ir buscando los ocho mapas que lo nombraban.
+// El tipo `ThemeVoice` obliga a rellenarlas, así que un tema sin voz no compila.
+const APP_ERROR_LEAD = voiceByPalette('appError');
 
 // SIN CONEXIÓN, contado por el boundary RAÍZ. Es un caso real y distinto de una avería: al entrar sin red en una
 // sección que este dispositivo todavía no había visitado, su chunk no está en la caché del service worker, el
 // `import()` falla y el árbol cae. Decir "algo ha ido mal / vuelve a cargar" ahí es engañoso —no hay nada roto y
 // recargar no lo va a arreglar—, así que cada tema lo cuenta como lo que es: falta de comunicación.
-const APP_OFFLINE_LEAD: Record<PaletteId, string> = {
-  steam: 'No hay conexión con el servidor.',
-  // Persona 5: sin señal no hay entrada al Metaverso.
-  persona: 'Sin señal para entrar al Metaverso.',
-  // Portal: un portal necesita sus dos extremos.
-  portal: 'Falta el otro extremo del portal.',
-  // Cyberpunk 2077: todo pasa por el enlace a la red.
-  cyberpunk: 'Te has quedado sin enlace a la red.',
-  // Warhammer 40.000: los mensajes viajan por la Disformidad, y la Disformidad se los traga.
-  grimdark: 'La Disformidad se ha tragado la señal.',
-  // Sea of Stars: el camino sigue estando, pero ahora mismo no se puede pasar.
-  seaofstars: 'El camino está cortado.',
-  // Arcade: la sala sigue ahí, pero se ha ido la corriente y no hay nada encendido.
-  arcade: 'Se ha ido la luz de la sala.',
-};
+const APP_OFFLINE_LEAD = voiceByPalette('appOffline');
 
 // Pantalla de reemplazo del error boundary RAÍZ (fallo de render que tumbaría toda la app).
 export const APP_ERROR_UI = {

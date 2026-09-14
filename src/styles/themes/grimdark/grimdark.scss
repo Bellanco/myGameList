@@ -1,7 +1,7 @@
 /* Fuentes propias de esta paleta (fuera de la ruta crítica; solo cargan con este skin).
    Servidas desde el propio origen: antes esto era un `@import url(fonts.googleapis.com)`, que en
    runtime añadía dos saltos a dominios de terceros. Generado por `scripts/vendor-fonts.mjs`. */
-@use '../fonts/grimdark';
+@use './fonts';
 
 /* ═══════════════════════════════════════════════════════════════════════════════════════════════════
    TEMA · Solo hay guerra (Warhammer 40.000) — GRIMDARK GÓTICO IMPERIAL: la app como una PANTALLA DE
@@ -472,20 +472,20 @@
    El valor por defecto es la RESERVA: si alguien cambia `LIENZO_FX_VARIANTS` sin tocar esta lista, los números
    que no casen salen con él en vez de dejar el canto vacío. ── */
 :root[data-palette="grimdark"] .hub-feed-lienzo-fx {
-  --lz-sello: url('./assets/seals/mechanicus.svg');
+  --lz-sello: url('./seals/mechanicus.svg');
 }
 
-:root[data-palette="grimdark"] .hub-feed-lienzo-fx[data-fx="0"] { --lz-sello: url('./assets/seals/mechanicus.svg'); }
-:root[data-palette="grimdark"] .hub-feed-lienzo-fx[data-fx="1"] { --lz-sello: url('./assets/seals/custodes.svg'); }
-:root[data-palette="grimdark"] .hub-feed-lienzo-fx[data-fx="2"] { --lz-sello: url('./assets/seals/dark-angels.svg'); }
-:root[data-palette="grimdark"] .hub-feed-lienzo-fx[data-fx="3"] { --lz-sello: url('./assets/seals/raven-guard.svg'); }
-:root[data-palette="grimdark"] .hub-feed-lienzo-fx[data-fx="4"] { --lz-sello: url('./assets/seals/salamanders.svg'); }
-:root[data-palette="grimdark"] .hub-feed-lienzo-fx[data-fx="5"] { --lz-sello: url('./assets/seals/space-wolves.svg'); }
-:root[data-palette="grimdark"] .hub-feed-lienzo-fx[data-fx="6"] { --lz-sello: url('./assets/seals/black-legion.svg'); }
-:root[data-palette="grimdark"] .hub-feed-lienzo-fx[data-fx="7"] { --lz-sello: url('./assets/seals/iron-warriors.svg'); }
-:root[data-palette="grimdark"] .hub-feed-lienzo-fx[data-fx="8"] { --lz-sello: url('./assets/seals/the-fallen.svg'); }
-:root[data-palette="grimdark"] .hub-feed-lienzo-fx[data-fx="9"] { --lz-sello: url('./assets/seals/world-eaters.svg'); }
-:root[data-palette="grimdark"] .hub-feed-lienzo-fx[data-fx="10"] { --lz-sello: url('./assets/seals/gorkamorka.svg'); }
+:root[data-palette="grimdark"] .hub-feed-lienzo-fx[data-fx="0"] { --lz-sello: url('./seals/mechanicus.svg'); }
+:root[data-palette="grimdark"] .hub-feed-lienzo-fx[data-fx="1"] { --lz-sello: url('./seals/custodes.svg'); }
+:root[data-palette="grimdark"] .hub-feed-lienzo-fx[data-fx="2"] { --lz-sello: url('./seals/dark-angels.svg'); }
+:root[data-palette="grimdark"] .hub-feed-lienzo-fx[data-fx="3"] { --lz-sello: url('./seals/raven-guard.svg'); }
+:root[data-palette="grimdark"] .hub-feed-lienzo-fx[data-fx="4"] { --lz-sello: url('./seals/salamanders.svg'); }
+:root[data-palette="grimdark"] .hub-feed-lienzo-fx[data-fx="5"] { --lz-sello: url('./seals/space-wolves.svg'); }
+:root[data-palette="grimdark"] .hub-feed-lienzo-fx[data-fx="6"] { --lz-sello: url('./seals/black-legion.svg'); }
+:root[data-palette="grimdark"] .hub-feed-lienzo-fx[data-fx="7"] { --lz-sello: url('./seals/iron-warriors.svg'); }
+:root[data-palette="grimdark"] .hub-feed-lienzo-fx[data-fx="8"] { --lz-sello: url('./seals/the-fallen.svg'); }
+:root[data-palette="grimdark"] .hub-feed-lienzo-fx[data-fx="9"] { --lz-sello: url('./seals/world-eaters.svg'); }
+:root[data-palette="grimdark"] .hub-feed-lienzo-fx[data-fx="10"] { --lz-sello: url('./seals/gorkamorka.svg'); }
 
 /* LOS DOS APAISADOS. `Imperium of Man` es 2,73:1 y `Blood Ravens` 1,94:1; con la caja cuadrada de los demás
    ocuparían el 37 % y el 51 % del alto, y no se leerían como variedad sino como un sello mal puesto. En vez de
@@ -493,12 +493,12 @@
    enteros y a buen tamaño en la franja de arriba. Ocupan más ancho que los demás y menos alto, que es justo lo
    que son. */
 :root[data-palette="grimdark"] .hub-feed-lienzo-fx[data-fx="11"] {
-  --lz-sello: url('./assets/seals/aquila.svg');
+  --lz-sello: url('./seals/aquila.svg');
   --lz-sello-ancho: 244px;
   --lz-sello-alto: 90px;
 }
 :root[data-palette="grimdark"] .hub-feed-lienzo-fx[data-fx="12"] {
-  --lz-sello: url('./assets/seals/blood-ravens.svg');
+  --lz-sello: url('./seals/blood-ravens.svg');
   --lz-sello-ancho: 215px;
   --lz-sello-alto: 110px;
 }

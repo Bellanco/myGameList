@@ -2,6 +2,7 @@ import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
 import { sembrarBiblioteca } from './seed';
 import { ACHIEVEMENTS_BY_ID } from '../../src/core/achievements/catalog';
+import { PALETTES } from '../../src/core/constants/palettes';
 
 /**
  * LOS LOGROS, EN EL BUILD DE PRODUCCIÓN.
@@ -349,15 +350,17 @@ test.describe('logros · el aviso del instante', () => {
  * Por qué hace falta recorrerlas todas y no basta con una: la cápsula NO trae colores propios. Superficie, borde,
  * sombra y el acento de su rótulo son los tokens de cada tema (`--surface-elevated`, `--border`, `--shadow`,
  * `--fg-link`), y dos paletas además le cambian la FORMA —el chaflán del HUD en Sin futuro y el canto recto de
- * Cámara de pruebas—. Con seis paletas y dos temas, eso son doce sitios donde el mismo componente se pinta
+ * Cámara de pruebas—. Con ocho paletas y dos temas, eso son dieciséis sitios donde el mismo componente se pinta
  * distinto y uno donde puede romperse.
  *
  * Y LO QUE SE MIDE ES EL CONTRASTE, con axe y las mismas reglas que el resto de la auditoría. Es el fallo que la
  * maqueta ya avisaba: el rótulo va con el acento del tema y es TEXTO NORMAL, así que le toca el 4,5:1 de la
  * 1.4.3 — no el 3:1 de un adorno—. Un acento que cumple sobre el fondo de la app puede no cumplir sobre la
- * superficie elevada de la cápsula, y eso solo se ve mirándolo en las doce.
+ * superficie elevada de la cápsula, y eso solo se ve mirándolo en las dieciséis.
  */
-const PALETAS = ['steam', 'persona', 'portal', 'cyberpunk', 'seaofstars', 'grimdark', 'arcade'] as const;
+// Las paletas SE LEEN DEL REGISTRO, no se listan aquí: una lista a mano se queda corta en cuanto alguien añade
+// un tema, y justo entonces es cuando hace falta auditarlo. Ver `docs/temas.md`.
+const PALETAS = PALETTES.map((p) => p.id);
 const TEMAS = ['dark', 'light'] as const;
 
 for (const palette of PALETAS) {

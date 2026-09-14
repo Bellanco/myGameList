@@ -1,0 +1,113 @@
+/* COLOR de «Forja y temple» (`data-palette="forja"`) — CAPA 2 (identidad) y CAPA 2b (rampa categórica).
+   Va en el BUNDLE BASE: es lo que pinta el primer fotograma de quien tiene este tema elegido, así que no
+   puede llegar tarde. Lo que sí llega tarde —y por eso vive en el `<id>.scss` de al lado— es la CAPA 3.
+   Las reglas del sistema (qué token hay que definir y qué contraste le toca) están en `../_index.scss`. */
+
+/* ── forja · «Forja y temple» (el tema de casa) ──────────────────────────────────────────────────────
+   El taller: grafito de tinta fría —el yunque y la ceniza— y encima los dos estados del metal. No imita a
+   ningún juego, que es justo su papel: es el que ve quien abre la aplicación sin haber elegido nada, así que
+   tiene que ser SOBRIO de fondo y VIVO de color, y no disfrazarse de nada.
+
+   DOS ESTADOS DEL METAL, repartidos por PAPEL —la misma regla que la plata y el fuego de «Plata y acero»—:
+     · la FORJA (`--steam`, naranja de metal al rojo) es lo que se RELLENA: acción principal, pestaña activa,
+       lomo de la fila, botón de alta;
+     · el TEMPLE (`--forja-temple`, el turquesa del agua donde se enfría) es lo que SEÑALA y ESCRIBE: enlaces,
+       anillo de foco, barra inferior activa.
+   Son complementarios de verdad (naranja ↔ turquesa), y eso es lo que mete color sin abrir una tercera
+   familia: la interfaz tiene dos temperaturas y no un acento repetido.
+
+   MEDIDAS, peor de los cuatro fondos — oscuro: texto 11,37:1 · atenuado 7,17:1 · pestaña inactiva 5,75:1 ·
+   temple como tinta 6,77:1 y como anillo 6,77:1 (le basta 3:1) · tinta sobre el relleno de forja 7,44:1.
+   Claro: texto 12,94:1 · atenuado 6,35:1 · pestaña inactiva 5,98:1 · temple 4,55:1 · blanco sobre forja 6,13:1. */
+:root[data-palette="forja"] {
+  /* LAS CUATRO CHAPAS: grafito con una gota de azul, no gris neutro. Abiertas 1,10 / 1,14 / 1,21 y 1,51:1 de
+     punta a punta, que es la misma holgura que se le dio al acero de Clásico: con menos, una tarjeta sobre el
+     fondo solo existe por su sombra. */
+  --bg: #0f1315;
+  --surface: #171d20;
+  --surface-hover: #20282c;
+  --surface-elevated: #2c363b;
+  --border: #47555c;
+  --text: #f2f6f7;
+  --text-muted: #bcc7cb;
+  /* Pestaña INACTIVA sobre `--surface`: 5,75:1. */
+  --text-dim: #a6b3b8;
+  --steam: #ff7a3c;
+  --steam-hover: #ff9f6d;
+  --steam-rgb: 255,122,60;
+  --tab-active: #ff9f6d;
+  --success: #4fd493;
+  --success-rgb: 79,212,147;
+  --warn: #f5c451;
+  --warn-rgb: 245,196,81;
+  --danger: #ff7078;
+  --danger-rgb: 255,112,120;
+  --star-empty: #415056;
+  --star-full: #f5c451;
+  --chip-plat-fg: #bcc7cb;
+  --chip-plat-bg: rgba(255,122,60,.14);
+  --chip-plat-border: rgba(255,122,60,.34);
+  --hub-text: #f2f6f7;
+  --hub-text-muted: #bcc7cb;
+  /* El naranja es un acento CLARO: encima va tinta de forja, no blanco (7,44:1 sobre el relleno). */
+  --on-accent: #1a0a02;
+  /* Esquina viva pero no de cuchilla: la herramienta se lee antes con el canto un punto más cerrado que el
+     de la casa (8/12/22), y la píldora sigue siendo píldora donde es redonda por función. */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  /* EL TEMPLE · el segundo papel. Escribe (`--fg-link`) y señala (`--focus-ring`); nunca rellena. */
+  --forja-temple: #2fd6c0;
+  --focus-ring: var(--forja-temple);
+  --fg-link: var(--forja-temple);
+}
+/* CLARO = EL MISMO TALLER CON LA PERSIANA SUBIDA: papel frío en vez de grafito, y los dos metales en su
+   versión honda —el rojo del metal pasa a óxido de forja y el turquesa a verdín— para leerse sobre él.
+   No es el oscuro invertido: en oscuro los dos colores EMITEN, y aquí los dos son TINTA. */
+:root[data-palette="forja"][data-theme="light"] {
+  --bg: #dee7e9;
+  --surface: #fbfdfd;
+  --surface-hover: #d0dcdf;
+  --surface-elevated: #f0f5f6;
+  --border: #a6b6bb;
+  --text: #101718;
+  --text-muted: #3f4c50;
+  --text-dim: #425053;
+  --steam: #ad3c06;
+  --steam-hover: #8d3005;
+  --steam-rgb: 173,60,6;
+  --tab-active: #8d3005;
+  --success: #0f6b48;
+  --success-rgb: 15,107,72;
+  --warn: #845400;
+  --warn-rgb: 132,84,0;
+  --danger: #ae2727;
+  --danger-rgb: 174,39,39;
+  --star-empty: #b0bfc3;
+  --star-full: #845400;
+  --chip-plat-fg: #3f4c50;
+  --chip-plat-bg: rgba(173,60,6,.10);
+  --chip-plat-border: rgba(173,60,6,.30);
+  --hub-text: #101718;
+  --hub-text-muted: #3f4c50;
+  /* El tono con el que se tiñen sombras y veladuras: la pizarra azulada del taller, no un marrón. */
+  --tint-rgb: 24,44,50;
+  /* A la luz el relleno de forja es óxido profundo y encima manda el blanco (6,13:1). */
+  --on-accent: #fff;
+  /* El temple, hundido hasta el verdín para escribir sobre papel frío (4,55:1 de tinta y de anillo). */
+  --forja-temple: #006b65;
+  --focus-ring: var(--forja-temple);
+  --fg-link: var(--forja-temple);
+}
+/* forja (Forja y temple) — los siete del taller: metal al rojo, temple, latón, acero azulado, cobre rosado,
+   verdín de bronce y lila de temple frío. Peor relleno 4,25:1 y peor texto 4,55:1 en los cuatro fondos, muy
+   por encima del 3:1 que le toca a un relleno: la tabla coge color sin volverse un arcoíris. */
+:root[data-palette="forja"] {
+  --cat-1: #ff7a3c; --cat-2: #2fd6c0; --cat-3: #f5c451; --cat-4: #79b4ff; --cat-5: #ff85b8; --cat-6: #8ede6a; --cat-7: #c79bff;
+  --cat-1-fg: #ff8f5c; --cat-2-fg: #2fd6c0; --cat-3-fg: #f5c451; --cat-4-fg: #79b4ff; --cat-5-fg: #ff85b8; --cat-6-fg: #8ede6a; --cat-7-fg: #c79bff;
+}
+/* forja (Forja y temple) — los mismos siete a la luz: tinta honda en vez de metal encendido */
+:root[data-palette="forja"][data-theme="light"] {
+  --cat-1: #ad3c06; --cat-2: #00706a; --cat-3: #845400; --cat-4: #12559a; --cat-5: #a82060; --cat-6: #2c6a12; --cat-7: #6733b0;
+  --cat-1-fg: #a83a06; --cat-2-fg: #006b65; --cat-3-fg: #845400; --cat-4-fg: #12559a; --cat-5-fg: #a82060; --cat-6-fg: #2c6a12; --cat-7-fg: #6733b0;
+}

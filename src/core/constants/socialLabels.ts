@@ -10,49 +10,22 @@
 // `socialShell` (si de verdad es del armazón) o se pasa por props. Importar `SOCIAL_UI` desde código estático
 // devuelve los 8 kB al arranque de todos y rompe el presupuesto de `ci-validate`.
 import type { TabId } from '../../model/types/game';
-import type { PaletteId } from './palettes';
+import { socialVoiceByPalette } from './themes/social';
 import { SOCIAL_SHELL } from './socialShell';
 
 // Igual que `APP_ERROR_LEAD`, pero para el hub social: lo que ha caído es la parte de GENTE (amistades, feed,
 // reseñas compartidas), así que cada tema lo cuenta con su forma de quedarse sin compañía o sin comunicación.
-const SOCIAL_ERROR_LEAD: Record<PaletteId, string> = {
-  // Las salas de espera del multijugador, que es lo más social que tiene un cliente de juegos.
-  steam: 'La sala se ha quedado vacía.',
-  // Persona 5: los Confidentes son los vínculos que cultivas, y se llevan por teléfono.
-  persona: 'Tus Confidentes no cogen el teléfono.',
-  // Portal: el Cubo de Compañía, la única compañía que dan las pruebas.
-  portal: 'El Cubo de Compañía no ha venido.',
-  // Cyberpunk 2077: sin red no hay Night City, y todo pasa por la red.
-  cyberpunk: 'Night City se ha quedado sin red.',
-  // Warhammer 40.000: los astrópatas son quienes llevan los mensajes entre mundos.
-  grimdark: 'El astrópata ha perdido la señal.',
-  // Sea of Stars: acampar con el grupo es donde el viaje se vuelve compañía.
-  seaofstars: 'Nadie ha llegado al campamento.',
-  // Arcade: la sala de recreativos, con las máquinas encendidas y nadie delante de ellas.
-  arcade: 'No queda nadie en la sala de recreativos.',
-};
+//
+// Las dos frases de cada tema viven en su ficha (`constants/themes/<id>.ts`, el export `<id>Social`) y llegan
+// aquí por `themes/social.ts`, que es el índice que las junta SIN pasar por el registro de arranque: ver el
+// porqué en la cabecera de ese fichero y en `themes/theme.ts`.
+const SOCIAL_ERROR_LEAD = socialVoiceByPalette('error');
 
 // SIN CONEXIÓN, que no es lo mismo que un error: la aplicación arranca y las listas funcionan igual (el service
 // worker sirve el shell y los chunks desde su caché), pero el espacio social vive de la red y solo puede mostrar
 // lo último que se guardó aquí. Antes esto salía como `network offline` o `Failed to fetch` —el error de la
-// librería, en crudo—, y eso es lo que estas líneas sustituyen. Mismo formato que los otros titulares: el guiño
-// del tema INTEGRADO en la frase, y debajo qué está pasando de verdad.
-const SOCIAL_OFFLINE_LEAD: Record<PaletteId, string> = {
-  // Un cliente de juegos sin conexión no entra a la sala: se queda intentando conectar con el servidor.
-  steam: 'No hay conexión con el servidor.',
-  // Persona 5: a los Confidentes se les llama por teléfono, y sin cobertura no hay llamada que hacer.
-  persona: 'No hay cobertura para llamar a tus Confidentes.',
-  // Portal: un portal necesita sus DOS extremos; con uno solo no lleva a ninguna parte.
-  portal: 'Falta el otro extremo del portal.',
-  // Cyberpunk 2077: en Night City todo pasa por el enlace a la red, y sin enlace no hay ciudad.
-  cyberpunk: 'Te has quedado sin enlace a la red.',
-  // Warhammer 40.000: los mensajes entre mundos viajan por la Disformidad, y la Disformidad se los traga.
-  grimdark: 'La Disformidad se ha tragado la señal.',
-  // Sea of Stars: el campamento sigue ahí; lo que no hay ahora mismo es camino para llegar.
-  seaofstars: 'El camino al campamento está cortado.',
-  // Arcade: la sala sigue abierta, pero sin señal no se ve quién hay dentro.
-  arcade: 'La sala está a oscuras: no llega la señal.',
-};
+// librería, en crudo—, y eso es lo que estas líneas sustituyen.
+const SOCIAL_OFFLINE_LEAD = socialVoiceByPalette('offline');
 
 export const SOCIAL_UI = {
   // Las tres del armazón salen de `socialShell`, que es lo único de aquí que el arranque puede cargar (lo usa el

@@ -122,7 +122,7 @@ describe('lienzo de la actividad social', () => {
 
   it('Solo hay guerra tiene un sello escrito para cada número que el componente puede sortear', () => {
     // El acoplamiento es CSS↔TSX y ningún test de render lo ve: aquí se lee la hoja y se comprueba a mano.
-    const skin = readFileSync('src/styles/themes/grimdark.scss', 'utf8');
+    const skin = readFileSync('src/styles/themes/grimdark/grimdark.scss', 'utf8');
     const declarados = new Set([...skin.matchAll(/\.hub-feed-lienzo-fx\[data-fx="(\d+)"\]/g)].map((m) => Number(m[1])));
     for (let i = 0; i < 13; i += 1) {
       expect(declarados, `falta el sello para data-fx="${i}"`).toContain(i);

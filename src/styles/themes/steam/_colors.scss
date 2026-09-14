@@ -1,0 +1,153 @@
+/* COLOR de «Plata y acero» (`data-palette="steam"`) — CAPA 2 (identidad) y CAPA 2b (rampa categórica).
+   Va en el BUNDLE BASE: es lo que pinta el primer fotograma de quien tiene este tema elegido, así que no
+   puede llegar tarde. Lo que sí llega tarde —y por eso vive en el `<id>.scss` de al lado— es la CAPA 3.
+   Las reglas del sistema (qué token hay que definir y qué contraste le toca) están en `../_index.scss`. */
+
+/* LAS TINTAS ROJAS DE «PLATA Y ACERO». Las de CAPA 1 valen para las demás paletas; aquí el rojo es
+   SANGRE —el del contrato manchado— y no un coral, así que las tres se recalibran sobre el acero:
+   5,2:1 en el peor de los cuatro fondos, muy por encima del 4,5:1 del texto. */
+:root[data-palette="steam"] {
+  --fg-red: #ff9d95;
+  --fg-red-soft: #ff9089;
+  --fg-red-pink: #ffa9a2;
+}
+:root[data-palette="steam"][data-theme="light"] {
+  --fg-red: #9e2620;
+  --fg-red-soft: #9e2620;
+  --fg-red-pink: #8e1c14;
+}
+/* ── steam · «Plata y acero» (The Witcher) ────────────────────────────────────────────────────────
+   Deja de ser la biblioteca de cuero y latón: ahora es el ACERO del brujo. Las cuatro superficies son
+   metal templado —gris azulado, no negro— y sobre ellas el color entra por donde en esta aplicación
+   llena la pantalla: el GÉNERO. Los siete tonos de la rampa salen del mundo del juego y no de una
+   rueda de color (ver CAPA 2b): Igni, Aard, Golondrina, Yrden, Toussaint, Quen y Skellige.
+   DOS METALES Y UN FUEGO, repartidos por PAPEL igual que hacían el latón y la pátina:
+     · la PLATA (`--steam`) es lo que se RELLENA — la acción principal, la pestaña activa;
+     · el fuego de IGNI (`--fg-link`, `--focus-ring`) es lo que SEÑALA y lo que se ESCRIBE.
+   MEDIDAS, peor de los cuatro fondos: texto 9,5:1 · atenuado 6,1:1 · pestaña inactiva 4,9:1 · tinta
+   sobre el relleno de plata 6,5:1 en su extremo hondo · Igni como enlace 4,65:1 y como anillo 4,65:1
+   (le basta 3:1). El `--danger` sube a coral porque el rojo sangre del skin se usa como RELLENO, no
+   como tinta, y ahí manda `--danger-fill`. */
+:root[data-palette="steam"] {
+  /* LAS CUATRO CHAPAS, ABIERTAS UN PASO. Estaban a 1,10–1,15:1 entre vecinas y 1,41:1 entre los extremos:
+     cuatro grises que el ojo no separaba, y una tarjeta sobre el fondo solo existía por su sombra. Ahora van
+     a 1,20 / 1,17 / 1,20 y 1,68:1 de punta a punta. El hueco se ha abierto HACIA ABAJO a propósito: la chapa
+     más alta (`--surface-elevated`) es la que fija el contraste de todas las tintas —ahí el enlace se queda
+     en 4,65:1, que es el peor caso de la paleta— así que no se toca, y lo que baja es el fondo. Resultado:
+     más profundidad y las cuatro medidas de texto EXACTAMENTE iguales que antes (9,51 · 6,09 · 4,94 · 4,65). */
+  --bg: #141922;
+  --surface: #212932;
+  --surface-hover: #2c343f;
+  --surface-elevated: #36404d;
+  --border: #55606f;
+  --text: #f0f4f8;
+  --text-muted: #bcc6d3;
+  /* Pestaña INACTIVA sobre `--surface`: 4,94:1. */
+  --text-dim: #a7b3c2;
+  --steam: #c6ced8;
+  --steam-hover: #e3e9f0;
+  --steam-rgb: 198,206,216;
+  --tab-active: #e3e9f0;
+  --success: #8ecf7c;
+  --success-rgb: 142,207,124;
+  --warn: #f2c75c;
+  --warn-rgb: 242,199,92;
+  --danger: #ff6b62;
+  --danger-rgb: 255,107,98;
+  --star-empty: #4b5666;
+  --star-full: #f2c75c;
+  --chip-plat-fg: #cfd7e1;
+  --chip-plat-bg: rgba(198,206,216,.12);
+  --chip-plat-border: rgba(198,206,216,.32);
+  --hub-text: #f0f4f8;
+  --hub-text-muted: #bcc6d3;
+  /* La plata es un acento CLARO: encima va tinta, no blanco (11,5:1 sobre la plata pura). */
+  --on-accent: #12151a;
+  /* Esquina viva, de hoja: 2/3/4. La píldora sigue siendo píldora para lo que es redondo por función. */
+  --radius-sm: 2px;
+  --radius-md: 3px;
+  --radius-lg: 4px;
+  /* EL FUEGO DE IGNI · el segundo papel. `--wt-igni` es el gráfico; `--fg-link` la tinta. */
+  --wt-igni: #ff8f4a;
+  /* LAS CINCO SEÑALES · el tercer papel, y el que le quita el gris al tema. Igni ya estaba (es el fuego de
+     arriba); las otras cuatro entran aquí con sus colores del juego: Aard el azul del empujón, Yrden el
+     púrpura de la trampa, Quen el ámbar del escudo y Axii el verde del encantamiento.
+     QUÉ PINTAN Y QUÉ NO: filetes, marcas, puntos de leyenda y trazos —cosas NO textuales, que piden 3:1—.
+     Ninguna escribe: para eso está `--fg-link`, que es la única tinta de acento y está medida a 4,5:1. Por
+     eso Igni no se desdobla en un naranja «de pintar» y otro «de escribir»: el tema tiene UN fuego.
+     Peor caso de cada una contra las cuatro chapas: Aard 5,30 · Igni 4,65 · Yrden 3,54 · Quen 6,69 · Axii 6,04.
+     DÓNDE SE REPARTEN: `themes/steam.scss` §5c las ata a los cinco sucesos de la aplicación. */
+  --wt-aard: #4fc3ff;
+  --wt-yrden: #a97dff;
+  --wt-quen: #ffc62e;
+  --wt-axii: #6fdc5c;
+  --wt-sangre: #8e1c14;
+  --wt-papel: #e7d3b0;
+  --wt-tinta: #281e13;
+  --focus-ring: #ff8f4a;
+  --fg-link: #ff8f4a;
+  --sys-radius: var(--radius-sm); --sys-pad: .3rem .9rem;
+}
+/* CLARO = EL MISMO ACERO A LA LUZ: plomo pulido, no papel. Las cuatro superficies siguen siendo metal
+   —gris azulado claro— y las tintas bajan a su versión honda para leerse sobre él. El cartel de los
+   chips no cambia de color en claro: un pergamino es un pergamino a cualquier hora, y lo que hace que
+   siga destacando es que el metal de debajo es más frío que él. */
+:root[data-palette="steam"][data-theme="light"] {
+  /* LAS CUATRO CHAPAS, ABIERTAS UN PASO — el mismo trabajo que en oscuro y por el motivo contrario. Aquí el
+     suelo lo pone la chapa más HONDA (`--surface-hover`), que es donde peor lo tiene el texto atenuado, así
+     que la rampa se abre HACIA ARRIBA y a cambio las dos tintas grises bajan un punto. De 1,26:1 entre los
+     extremos a 1,51:1, y las tres tintas atenuadas salen MEJOR que antes (atenuado 5,37→5,56 · pestaña
+     inactiva 4,96→5,38 · enlace 5,51→4,88, todas por encima del 4,5:1). */
+  --bg: #d8e0e7;
+  --surface: #f6f9fb;
+  --surface-hover: #c4ced8;
+  --surface-elevated: #ecf1f5;
+  --border: #a9b5c2;
+  --text: #141b23;
+  --text-muted: #414b57;
+  --text-dim: #434d5a;
+  --steam: #47525f;
+  --steam-hover: #2f3945;
+  --steam-rgb: 71,82,95;
+  --tab-active: #2f3945;
+  --success: #196641;
+  --success-rgb: 25,102,65;
+  --warn: #6f4800;
+  --warn-rgb: 111,72,0;
+  --danger: #9e2620;
+  --danger-rgb: 158,38,32;
+  --star-empty: #b9c3cd;
+  --star-full: #6f4800;
+  --chip-plat-fg: #3f4a58;
+  --chip-plat-bg: rgba(71,82,95,.10);
+  --chip-plat-border: rgba(71,82,95,.30);
+  --hub-text: #141b23;
+  --hub-text-muted: #414b57;
+  --tint-rgb: 30,42,56;
+  /* En claro el acento es acero PROFUNDO y encima manda el blanco (7,95:1). */
+  --on-accent: #fff;
+  --wt-igni: #8f3608;
+  /* Las otras cuatro señales, en su versión honda para leerse sobre el acero claro. Peor caso contra las
+     cuatro chapas: Aard 4,43 · Igni 4,88 · Yrden 5,91 · Quen 4,62 · Axii 4,15 (piden 3:1). */
+  --wt-aard: #0a5c94;
+  --wt-yrden: #5622ad;
+  --wt-quen: #7d4a00;
+  --wt-axii: #1c6b1f;
+  --wt-sangre: #8e1c14;
+  --wt-papel: #e7d3b0;
+  --wt-tinta: #281e13;
+  --focus-ring: #8f3608;
+  --fg-link: #8f3608;
+}
+/* steam (Plata y acero) — las señales del brujo y los sitios del Continente: Igni, Aard, Golondrina,
+   Yrden, Toussaint, Quen y Skellige. Sobre el acero apagado cada género salta sin volver la tabla un
+   arcoíris; medidos todos por encima del 4,5:1 en los cuatro fondos. */
+:root[data-palette="steam"] {
+  --cat-1: #ff8f4a; --cat-2: #7fbcff; --cat-3: #8ecf7c; --cat-4: #c69ff7; --cat-5: #ff8ba8; --cat-6: #f2c75c; --cat-7: #45c3b8;
+  --cat-1-fg: #ff8f4a; --cat-2-fg: #7fbcff; --cat-3-fg: #8ecf7c; --cat-4-fg: #c69ff7; --cat-5-fg: #ff8ba8; --cat-6-fg: #f2c75c; --cat-7-fg: #45c3b8;
+}
+/* steam (Plata y acero) — los mismos siete a la luz, en su versión honda para leerse sobre el acero claro */
+:root[data-palette="steam"][data-theme="light"] {
+  --cat-1: #8f3608; --cat-2: #15538f; --cat-3: #266628; --cat-4: #5f33a3; --cat-5: #9c1f4b; --cat-6: #6f4800; --cat-7: #085a5e;
+  --cat-1-fg: #8f3608; --cat-2-fg: #15538f; --cat-3-fg: #266628; --cat-4-fg: #5f33a3; --cat-5-fg: #9c1f4b; --cat-6-fg: #6f4800; --cat-7-fg: #085a5e;
+}
