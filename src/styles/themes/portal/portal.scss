@@ -1,7 +1,7 @@
 /* Fuentes propias de esta paleta (fuera de la ruta crítica; solo cargan con este skin).
    Servidas desde el propio origen: antes esto era un `@import url(fonts.googleapis.com)`, que en
    runtime añadía dos saltos a dominios de terceros. Generado por `scripts/vendor-fonts.mjs`. */
-@use '../fonts/portal';
+@use './fonts';
 
 /* ═══════════════════════════════════════════════════════════════════════════════════════════════════
    TEMA · Cámara de pruebas (Portal / Aperture Science) — cámara de pruebas limpia: paneles con juntas,

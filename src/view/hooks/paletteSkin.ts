@@ -10,18 +10,20 @@ import type { PaletteId } from '../../core/constants/palettes';
 // @keyframes de glitch. Por eso, al activar grimdark cargamos también el skin de cyberpunk (evita
 // mover keyframes entre archivos y el riesgo de romper animaciones).
 const SKIN_LOADERS: Partial<Record<PaletteId, () => Promise<unknown>>> = {
-  steam: () => import('../../styles/themes/steam.scss'),
-  persona: () => import('../../styles/themes/persona.scss'),
-  portal: () => import('../../styles/themes/portal.scss'),
-  cyberpunk: () => import('../../styles/themes/cyberpunk.scss'),
+  arcade: () => import('../../styles/themes/arcade/arcade.scss'),
+  steam: () => import('../../styles/themes/steam/steam.scss'),
+  persona: () => import('../../styles/themes/persona/persona.scss'),
+  portal: () => import('../../styles/themes/portal/portal.scss'),
+  cyberpunk: () => import('../../styles/themes/cyberpunk/cyberpunk.scss'),
   grimdark: () => Promise.all([
-    import('../../styles/themes/grimdark.scss'),
-    import('../../styles/themes/cyberpunk.scss'),
+    import('../../styles/themes/grimdark/grimdark.scss'),
+    import('../../styles/themes/cyberpunk/cyberpunk.scss'),
   ]),
-  seaofstars: () => import('../../styles/themes/seaofstars.scss'),
-  // `arcade` NO está aquí a propósito: es la paleta POR DEFECTO y su skin viaja en el bundle base
-  // (`styles/index.scss`), porque es la que pinta el primer fotograma. Clásico tampoco, por el motivo
-  // contrario: no tiene skin.
+  seaofstars: () => import('../../styles/themes/seaofstars/seaofstars.scss'),
+  // `forja` NO está aquí a propósito: es la paleta POR DEFECTO y su skin viaja en el bundle base
+  // (`styles/index.scss`), porque es la que pinta el primer fotograma. `arcade` sí entra aquí desde que
+  // dejó de ser la de por defecto: su skin es de los más pesados (rejilla del horizonte, pegatinas,
+  // teclas de consola) y no tiene por qué descargarlo quien nunca elige ese tema.
 };
 
 const requested = new Set<PaletteId>();

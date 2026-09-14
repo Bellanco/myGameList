@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="theme-color" content="#150a24">
+    <meta name="theme-color" content="#0f1315">
     <!-- F1: aplica el tema/paleta guardados ANTES del primer render (evita el flash). Inline para
          ahorrar una petición bloqueante en la ruta crítica. Al no ser 'self' externo, la CSP lo
          admite por hash SHA-256: si tocas este bloque, recalcula el hash en `public/_headers`
@@ -11,11 +11,12 @@
          incluido el respaldo de la paleta, que es la de por defecto (`DEFAULT_PALETTE`). -->
     <script>(function () {
   var BG = {
-    steam: { dark: '#212832', light: '#dde3e9' },
+    forja: { dark: '#0f1315', light: '#dee7e9' },
+    steam: { dark: '#141922', light: '#d8e0e7' },
     persona: { dark: '#0d0d0d', light: '#f4f1ee' },
-    portal: { dark: '#12171b', light: '#e7ecf0' },
+    portal: { dark: '#12171b', light: '#e7dabd' },
     cyberpunk: { dark: '#08090d', light: '#e7eaee' },
-    grimdark: { dark: '#060b08', light: '#e4e2d4' },
+    grimdark: { dark: '#060b08', light: '#e7ddc3' },
     seaofstars: { dark: '#0e0c24', light: '#a6e9ec' },
     arcade: { dark: '#150a24', light: '#eee2fb' }
   };
@@ -29,7 +30,7 @@
     }
     var palette = localStorage.getItem('mis-listas-palette');
     if (!BG[palette]) {
-      palette = 'arcade';
+      palette = 'forja';
     }
     document.documentElement.setAttribute('data-palette', palette);
     if (localStorage.getItem('mis-listas-uppercase') === 'on') {

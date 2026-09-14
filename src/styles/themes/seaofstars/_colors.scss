@@ -1,0 +1,104 @@
+/* COLOR de «Sol y luna» (`data-palette="seaofstars"`) — CAPA 2 (identidad) y CAPA 2b (rampa categórica).
+   Va en el BUNDLE BASE: es lo que pinta el primer fotograma de quien tiene este tema elegido, así que no
+   puede llegar tarde. Lo que sí llega tarde —y por eso vive en el `<id>.scss` de al lado— es la CAPA 3.
+   Las reglas del sistema (qué token hay que definir y qué contraste le toca) están en `../_index.scss`. */
+
+/* ── Mar de estrellas (Sea of Stars) — OSCURO = NOCHE ESTRELLADA del juego: cielo ÍNDIGO-VIOLETA (no navy plano)
+   salpicado de estrellas, con una gama BIEN DIFERENCIADA por rol (un hue por rol, muestreada del key art oficial):
+   oro de sol (Zale) + turquesa de mar (Valere), verde isla (Garl), naranja/rojo, y púrpura mágico + magenta de
+   atardecer para dar variedad. `--sos-turq/purple/pink/green` y `--sos-line` son tokens extra del skin. ── */
+:root[data-palette="seaofstars"] {
+  --bg: #0e0c24;
+  --surface: #181633;
+  --surface-hover: #1f1c40;
+  --surface-elevated: #242247;
+  --border: #3c3a6e;
+  --text: #fff7d6;
+  --text-muted: #c3bce2;
+  --text-dim: #8b83b5;
+  --steam: #f5c13e;
+  --steam-hover: #ffd777;
+  --steam-rgb: 245,193,62;
+  --tab-active: #f5c13e;
+  --success: #72c24a;
+  --success-rgb: 114,194,74;
+  --warn: #f0862c;
+  --warn-rgb: 240,134,44;
+  --danger: #e4372e;
+  --danger-rgb: 228,55,46;
+  --star-empty: #3c3a6e;
+  --star-full: #2bb3c4;
+  --chip-plat-fg: #bfe9ef;
+  --chip-plat-bg: rgba(47,182,196,.16);
+  --chip-plat-border: rgba(47,182,196,.42);
+  --hub-text: #fff7d6;
+  --hub-text-muted: #9fb0d8;
+  /* Acento oro CLARO → texto tinta encima (regla del comentario de `--on-accent`). */
+  --on-accent: #0b1b3a;
+  --radius-sm: 0px;
+  --radius-md: 0px;
+  --radius-lg: 2px;
+  --sos-turq: #2bb3c4;
+  --sos-purple: #a472e8;
+  --sos-pink: #e85c9e;
+  --sos-green: #72c24a;
+  --sos-line: #fff7d6;
+  --sys-radius: 0; --sys-pad: .4rem 1rem;
+}
+:root[data-palette="seaofstars"][data-theme="light"] {
+  /* CLARO = DÍA EN EL MAR (Sea of Stars): mediodía sobre un mar TURQUESA cristalino — pixel-art SATURADO, cálido
+     y ALEGRE (no pastel apagado). Fondo de AZUL AGUA vivo y SÓLIDO, SOL dorado intenso como color PRINCIPAL y
+     turquesa de mar de secundario; verde de isla, naranja de atardecer y coral vivos como semánticos. Paleta
+     tomada del JUEGO (biomas + personajes: Zale/oro, Valere/turquesa, Garl/verde), no del menú. */
+  --bg: #a6e9ec;
+  --surface: #8ddce4;
+  --surface-hover: #7bd3dc;
+  --surface-elevated: #9ee2e8;
+  --border: #57c2cf;
+  --text: #0a2a3a;
+  /* Los turquesas de esta paleta son fondos CLAROS pero saturados, así que el atenuado se quedaba entre
+     4,17:1 y 4,27:1 sobre `--surface-hover` y `--surface`. Con el mismo azul de mar un punto más hondo hay
+     5:1 en el peor de los cuatro fondos. */
+  --text-muted: #31505d;
+  --text-dim: #3a5563;
+  --steam: #ffc01f;
+  --steam-hover: #e89a00;
+  --steam-rgb: 255,192,31;
+  --tab-active: #7a5000;
+  --success: #3fb84f;
+  --success-rgb: 63,184,79;
+  --warn: #ff8a2b;
+  --warn-rgb: 255,138,43;
+  --danger: #f0443e;
+  --danger-rgb: 240,68,62;
+  --star-empty: #79b7c2;
+  --star-full: #06788a;
+  --chip-plat-fg: #044c56;
+  --chip-plat-bg: rgba(15,181,201,.22);
+  --chip-plat-border: rgba(15,181,201,.55);
+  --hub-text: #0a2a3a;
+  --hub-text-muted: #3a5c6b;
+  --tint-rgb: 10,60,80;
+  --on-accent: #0a2a3a;
+  --sos-turq: #0fb5c9;
+  --sos-purple: #7a3fe4;
+  --sos-pink: #ff6fa5;
+  --sos-green: #3fb84f;
+  --sos-line: #0a2a3a;
+  /* El sol dorado del acento es lo que da alegría a los RELLENOS de esta paleta, pero sobre los turquesas
+     claros de sus fondos se queda en 1,05:1: como anillo de foco era invisible y como texto ilegible. Los dos
+     papeles pasan a un TEAL PROFUNDO de fondo marino (5,3:1 en el peor de los cuatro fondos), que sigue siendo
+     mar y no compite con el oro. `--steam` no se toca: los botones y barras conservan su sol. */
+  --focus-ring: #00505e;
+  --fg-link: #00505e;
+}
+/* seaofstars — oro de sol, azul de luna, verde de isla, púrpura de capa, coral, turquesa de mar y magenta */
+:root[data-palette="seaofstars"] {
+  --cat-1: #f5c13e; --cat-2: #6fb6ff; --cat-3: #8ad35f; --cat-4: #a472e8; --cat-5: #ff8a5c; --cat-6: #2bb3c4; --cat-7: #e85c9e;
+  --cat-1-fg: #f5c13e; --cat-2-fg: #6fb6ff; --cat-3-fg: #8ad35f; --cat-4-fg: #a879e9; --cat-5-fg: #ff8a5c; --cat-6-fg: #2bb3c4; --cat-7-fg: #e85c9e;
+}
+/* seaofstars — oro de sol, azul de luna, verde de isla, púrpura de capa, coral, turquesa de mar y magenta */
+:root[data-palette="seaofstars"][data-theme="light"] {
+  --cat-1: #7a5000; --cat-2: #0a5fa8; --cat-3: #2f7a24; --cat-4: #6a30c4; --cat-5: #a83a12; --cat-6: #06788a; --cat-7: #b0286a;
+  --cat-1-fg: #704900; --cat-2-fg: #095190; --cat-3-fg: #245c1b; --cat-4-fg: #642dba; --cat-5-fg: #8f310f; --cat-6-fg: #045865; --cat-7-fg: #932158;
+}

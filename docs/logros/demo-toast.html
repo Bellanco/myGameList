@@ -491,15 +491,16 @@
       // Los skins de CAPA 3 (tipografías, formas, texturas) se cargan bajo demanda, igual que hace
       // `paletteSkin.ts` en la app: así el aviso se ve con la fuente y el acabado de verdad de cada paleta.
       const SKINS = {
-        persona: () => import('/src/styles/themes/persona.scss'),
-        portal: () => import('/src/styles/themes/portal.scss'),
-        cyberpunk: () => import('/src/styles/themes/cyberpunk.scss'),
+        /* Espejo de SKIN_LOADERS (view/hooks/paletteSkin.ts); un tema nuevo hay que añadirlo también aquí. */
+        persona: () => import('/src/styles/themes/persona/persona.scss'),
+        portal: () => import('/src/styles/themes/portal/portal.scss'),
+        cyberpunk: () => import('/src/styles/themes/cyberpunk/cyberpunk.scss'),
         // Siete reglas de grimdark viven en la sección de cyberpunk y reutilizan sus keyframes.
         grimdark: () => Promise.all([
-          import('/src/styles/themes/grimdark.scss'),
-          import('/src/styles/themes/cyberpunk.scss'),
+          import('/src/styles/themes/grimdark/grimdark.scss'),
+          import('/src/styles/themes/cyberpunk/cyberpunk.scss'),
         ]),
-        seaofstars: () => import('/src/styles/themes/seaofstars.scss'),
+        seaofstars: () => import('/src/styles/themes/seaofstars/seaofstars.scss'),
       };
 
       const acciones = {

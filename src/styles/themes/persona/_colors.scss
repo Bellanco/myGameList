@@ -1,0 +1,79 @@
+/* COLOR de «Ladrones de corazones» (`data-palette="persona"`) — CAPA 2 (identidad) y CAPA 2b (rampa categórica).
+   Va en el BUNDLE BASE: es lo que pinta el primer fotograma de quien tiene este tema elegido, así que no
+   puede llegar tarde. Lo que sí llega tarde —y por eso vive en el `<id>.scss` de al lado— es la CAPA 3.
+   Las reglas del sistema (qué token hay que definir y qué contraste le toca) están en `../_index.scss`. */
+
+/* ── Ladrones de corazones (Persona 5) — rojo/negro/oro, pop-art ── */
+:root[data-palette="persona"] {
+  --bg: #0d0d0d;
+  --surface: #161317;
+  --surface-hover: #211c22;
+  --surface-elevated: #29242b;
+  --border: #3a2f39;
+  --text: #f4f2f5;
+  --text-muted: #a99daa;
+  --text-dim: #867d87;
+  --steam: #ff1f3d;
+  --steam-hover: #ff5566;
+  --steam-rgb: 255,31,61;
+  --tab-active: #ff6070;
+  --success: #37d98a;
+  --success-rgb: 55,217,138;
+  --warn: #ffcf33;
+  --warn-rgb: 255,207,51;
+  --danger: #ff6b3d;
+  --danger-rgb: 255,107,61;
+  --star-empty: #3a2f39;
+  --star-full: #ffcf33;
+  --chip-plat-fg: #ded6df;
+  --chip-plat-bg: rgba(210,200,212,.12);
+  --chip-plat-border: rgba(220,210,222,.28);
+  --hub-text: #fff0f2;
+  --hub-text-muted: #e0a3ac;
+  --radius-sm: 3px;
+  --radius-md: 4px;
+  --radius-lg: 8px;
+  /* Línea de tinta del cómic (bordes/contornos): CLARA en oscuro (se ve sobre el negro), oscura en claro.
+     Mismo criterio que las sombras de bloque (regla 1). */
+  --pop-line: #f4f2f5;
+  --sys-radius: 0; --sys-pad: .34rem 1.1rem; --sys-skew: skewX(-7deg); --sys-unskew: skewX(7deg); --sys-clip: polygon(0 0, 100% 0, 97% 100%, 3% 92%);
+}
+:root[data-palette="persona"][data-theme="light"] {
+  --bg: #f4f1ee;
+  --surface: #ffffff;
+  --surface-hover: #ece7e2;
+  --surface-elevated: #f8f5f2;
+  --border: #ded5cc;
+  --text: #120e0e;
+  --text-muted: #5f5550;
+  --text-dim: #766d67;
+  --steam: #e60012;
+  --steam-hover: #b3000e;
+  --steam-rgb: 230,0,18;
+  --tab-active: #c40010;
+  --success: #1f9457;
+  --success-rgb: 31,148,87;
+  --warn: #c79200;
+  --warn-rgb: 199,146,0;
+  --danger: #d43a00;
+  --danger-rgb: 212,58,0;
+  --star-empty: #ded5cc;
+  --star-full: #c79200;
+  --chip-plat-fg: #5f5550;
+  --chip-plat-bg: rgba(95,85,80,.12);
+  --chip-plat-border: rgba(95,85,80,.3);
+  --hub-text: #120e0e;
+  --hub-text-muted: #5f5550;
+  --tint-rgb: 40,10,10;
+  --pop-line: #151011;
+}
+/* persona — rojo rebelde, oro de calendario, verde, turquesa de datos, naranja, azul Terciopelo y hueso */
+:root[data-palette="persona"] {
+  --cat-1: #ff1f3d; --cat-2: #f2e852; --cat-3: #37d98a; --cat-4: #2ee6c8; --cat-5: #ff6b3d; --cat-6: #6d7cf0; --cat-7: #f4f2f5;
+  --cat-1-fg: #ff4a63; --cat-2-fg: #f2e852; --cat-3-fg: #37d98a; --cat-4-fg: #2ee6c8; --cat-5-fg: #ff6b3d; --cat-6-fg: #7986f1; --cat-7-fg: #f4f2f5;
+}
+/* persona — rojo rebelde, oro de calendario, verde, turquesa de datos, naranja, azul Terciopelo y hueso */
+:root[data-palette="persona"][data-theme="light"] {
+  --cat-1: #e60012; --cat-2: #9a7a00; --cat-3: #1f9457; --cat-4: #0c7f6d; --cat-5: #d43a00; --cat-6: #2f3ea8; --cat-7: #120e0e;
+  --cat-1-fg: #cf0010; --cat-2-fg: #7e6400; --cat-3-fg: #187444; --cat-4-fg: #0b7363; --cat-5-fg: #bd3400; --cat-6-fg: #2f3ea8; --cat-7-fg: #120e0e;
+}

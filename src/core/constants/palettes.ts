@@ -1,52 +1,53 @@
-// F1 — Registro de TEMAS (paletas de color). Fuente única para el TS/JS: id, etiqueta, acento y `--bg` de
-// cada tema. La apariencia real (colores + "skin") vive en CSS, un bloque por tema, de forma MODULAR: cada
-// tema está aislado en `[data-palette="<id>"]` y no afecta a los demás — TODOS, incluido el de por defecto,
-// que también escribe su atributo. Cambiar cuál es el de por defecto es cambiar `DEFAULT_PALETTE` y el
-// respaldo del anti-flash de `index.html`; no hay que mover ninguna declaración de CSS de sitio.
+// F1 — REGISTRO DE TEMAS (paletas de color). Este fichero es el ÍNDICE: la lista de los ocho y todo lo que
+// se deriva de ella —el tipo `PaletteId`, la lista del selector de Ajustes, cuál es el de por defecto y las
+// voces por tema—. Aquí NO se escribe ningún color ni ninguna frase: la ficha de cada tema vive en
+// `themes/<id>.ts` y su color en `src/styles/themes/<id>/`.
 //
-// ▟ CÓMO AÑADIR UN TEMA NUEVO (aditivo; nada más que tocar: el selector de Ajustes, la persistencia local y la
-//   sync en Firestore leen automáticamente de `PALETTES`):
-//   1) Aquí: añade el `id` al tipo `PaletteId` y una entrada a `PALETTES` (id, label, accent, bg.dark/light;
-//      `accent2` opcional si el tema es de dos colores, para distinguir su muestra en el selector).
-//   2) `src/styles/_base.scss` (CAPA 2 · identidad): añade `:root[data-palette="<id>"]` (oscuro) y su gemelo
-//      `:root[data-palette="<id>"][data-theme="light"]` con los ~26 tokens; el resto se deriva solo.
-//   3) `public/theme-init.js`: añade el `--bg` del tema al mapa `BG` (anti-flash antes del primer render).
-//   4) (Opcional) `src/styles/themes/<id>.scss` (CAPA 3 · skin): UN ÚNICO bloque `[data-palette="<id>"]` con la
-//      dirección de arte — plantilla §1–§13 en la cabecera del fichero, AUTOCONTENIDA (hover de botones y
-//      barra inferior incluidos). Si no lo añades, el tema usa solo sus colores.
-//   5) (Solo si usa fuente propia) `index.html`: añade la familia al `<link>` de Google Fonts; su .woff2 solo
-//      se descarga cuando ese tema pinta.
+// ▟ CREAR, EDITAR O BORRAR UN TEMA: la receta está en `docs/temas.md`, y `tests/unit/themes.test.ts` avisa
+//   si algo queda a medias. En corto, crear uno es:
+//     1) `constants/themes/<id>.ts` — la ficha (identidad, `--bg`, voz) y la voz social;
+//     2) `styles/themes/<id>/_colors.scss` — CAPA 2 y 2b (+ `<id>.scss` si quiere skin, y `_fonts.scss`
+//        si trae letra propia, que se genera con `scripts/vendor-fonts.mjs`);
+//     3) sumarlo a `THEMES` (aquí), a `themes/social.ts`, al índice `styles/themes/_index.scss` y al mapa
+//        `BG` del anti-flash de `index.html`;
+//     4) si tiene skin y NO es el de por defecto, a `SKIN_LOADERS` en `view/hooks/paletteSkin.ts`.
+//   Nada más: el selector de Ajustes, la persistencia local y la sincronización en Firestore leen de
+//   `PALETTES` y se enteran solos.
 
 import type { ThemePreference } from '../../view/hooks/useTheme';
+import type { ThemeDefinition, ThemeVoice } from './themes/theme';
+import { forja } from './themes/forja';
+import { arcade } from './themes/arcade';
+import { steam } from './themes/steam';
+import { persona } from './themes/persona';
+import { portal } from './themes/portal';
+import { cyberpunk } from './themes/cyberpunk';
+import { seaofstars } from './themes/seaofstars';
+import { grimdark } from './themes/grimdark';
 
-export type PaletteId = 'steam' | 'persona' | 'portal' | 'cyberpunk' | 'grimdark' | 'seaofstars' | 'arcade';
+/**
+ * LOS OCHO, en el orden en que se ofrecen. El de por defecto va primero por costumbre, no por regla.
+ * El mismo orden se repite en `styles/themes/_index.scss`, que es lo que hace que una lista y otra se
+ * lean igual; no es un acoplamiento (entre temas no hay dependencias), es cortesía para quien lee.
+ */
+export const THEMES = [forja, arcade, steam, persona, portal, cyberpunk, seaofstars, grimdark] as const;
 
-export interface PaletteMeta {
-  readonly id: PaletteId;
-  readonly label: string;
-  /** Color de acento (para la muestra en el selector). */
-  readonly accent: string;
-  /** Color secundario OPCIONAL para la muestra del selector (temas con dualidad de color, p. ej. el
-   *  azul+naranja de "Cámara de pruebas"), para distinguirlos de otros de acento parecido. */
-  readonly accent2?: string;
-  /** `--bg` de cada tema; debe coincidir con `_base.scss`. */
-  readonly bg: { readonly dark: string; readonly light: string };
-}
+/** El `data-palette` de cualquier tema del registro. Se DERIVA de `THEMES`: añadir un tema al array de
+ *  arriba es lo único que hace falta para que su id sea válido en todo el TypeScript del proyecto. */
+export type PaletteId = (typeof THEMES)[number]['id'];
 
-/** El tema que ve quien no ha elegido ninguno. Debe coincidir con el respaldo del anti-flash (`index.html`). */
-export const DEFAULT_PALETTE: PaletteId = 'arcade';
+/** La ficha de un tema tal y como la consume la interfaz (el selector de Ajustes). El `id` se estrecha al
+ *  de una paleta REAL: sin eso, `PALETTES.map(p => setPalette(p.id))` no compila, porque `ThemeDefinition`
+ *  admite cualquier cadena como id (es el contrato de un tema, no el registro). */
+export type PaletteMeta = ThemeDefinition & { readonly id: PaletteId };
 
-export const PALETTES: readonly PaletteMeta[] = [
-  { id: 'arcade', label: 'Inserte moneda', accent: '#b23cff', accent2: '#22e5ff', bg: { dark: '#150a24', light: '#eee2fb' } },
-  { id: 'steam', label: 'Plata y acero', accent: '#c6ced8', accent2: '#ff8f4a', bg: { dark: '#141922', light: '#d8e0e7' } },
-  { id: 'persona', label: 'Ladrones de corazones', accent: '#ff1f3d', bg: { dark: '#0d0d0d', light: '#f4f1ee' } },
-  { id: 'portal', label: 'Cámara de pruebas', accent: '#0091d6', accent2: '#f57a00', bg: { dark: '#12171b', light: '#e7ecf0' } },
-  { id: 'cyberpunk', label: 'Sin futuro', accent: '#fcee0a', accent2: '#00f0ff', bg: { dark: '#08090d', light: '#e7eaee' } },
-  { id: 'seaofstars', label: 'Sol y luna', accent: '#f5c13e', accent2: '#2bb3c4', bg: { dark: '#0e0c24', light: '#a6e9ec' } },
-  { id: 'grimdark', label: 'Solo hay guerra', accent: '#43f558', accent2: '#e0a92b', bg: { dark: '#060b08', light: '#e4e2d4' } },
-];
+/** El tema que ve quien no ha elegido ninguno. Debe coincidir con el respaldo del anti-flash de
+ *  `index.html` y con el skin que carga `styles/index.scss`; lo comprueba el test de temas. */
+export const DEFAULT_PALETTE: PaletteId = forja.id;
 
-const PALETTE_IDS = new Set<string>(PALETTES.map((p) => p.id));
+export const PALETTES: readonly PaletteMeta[] = THEMES;
+
+const PALETTE_IDS = new Set<string>(THEMES.map((t) => t.id));
 
 /** Valida un valor arbitrario (p. ej. de localStorage) y cae a la paleta por defecto si no es válido. */
 export function parsePaletteId(raw: string | null | undefined): PaletteId {
@@ -55,6 +56,16 @@ export function parsePaletteId(raw: string | null | undefined): PaletteId {
 
 /** `--bg` de la paleta para el tema dado (para el `theme-color` del navegador). */
 export function paletteBg(id: PaletteId, theme: ThemePreference): string {
-  const meta = PALETTES.find((p) => p.id === id) ?? PALETTES[0];
+  const meta = THEMES.find((p) => p.id === id) ?? THEMES[0];
   return meta.bg[theme];
+}
+
+/**
+ * Una de las frases de la voz de cada tema, indexada por paleta — lo que antes era un `Record<PaletteId,
+ * string>` escrito a mano en `labels.ts`, con ocho entradas que había que acordarse de añadir. Ahora la
+ * obligación la pone el tipo `ThemeVoice` en la ficha del tema, así que un tema nuevo no compila hasta que
+ * tiene voz, y este índice se rellena solo.
+ */
+export function voiceByPalette(key: keyof ThemeVoice): Record<PaletteId, string> {
+  return Object.fromEntries(THEMES.map((t) => [t.id, t.voice[key]])) as Record<PaletteId, string>;
 }
